@@ -1,0 +1,41 @@
+{
+  "name": "@harpa/api",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "scripts": {
+    "build": "tsc -b",
+    "typecheck": "tsc --noEmit",
+    "dev": "tsx watch src/server.ts",
+    "start": "node dist/server.js",
+    "test": "vitest run",
+    "test:unit": "vitest run",
+    "test:integration": "TESTCONTAINERS_RYUK_DISABLED=true vitest run --config vitest.integration.config.ts",
+    "test:watch": "vitest",
+    "lint": "echo 'eslint stub'",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "tsx src/db/migrate.ts",
+    "spec:emit": "tsx scripts/emit-openapi.ts"
+  },
+  "dependencies": {
+    "@harpa/api-contract": "workspace:*",
+    "@harpa/ai-fixtures": "workspace:*",
+    "@hono/node-server": "^1.13.2",
+    "@hono/zod-openapi": "^0.18.3",
+    "drizzle-orm": "^0.36.4",
+    "hono": "^4.6.5",
+    "pg": "^8.13.1",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@testcontainers/postgresql": "^10.13.2",
+    "@types/pg": "^8.11.10",
+    "@vitest/coverage-v8": "^2.1.2",
+    "drizzle-kit": "^0.28.1",
+    "testcontainers": "^10.13.2",
+    "tsx": "^4.19.1",
+    "typescript": "^5.6.2",
+    "vitest": "^2.1.2"
+  }
+}

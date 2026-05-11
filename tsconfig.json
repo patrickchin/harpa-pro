@@ -1,0 +1,9 @@
+{
+  "extends": "./tsconfig.base.json",
+  "files": [],
+  "references": [
+    { "path": "./packages/api-contract" },
+    { "path": "./packages/ai-fixtures" },
+    { "path": "./packages/api" }
+  ]
+}

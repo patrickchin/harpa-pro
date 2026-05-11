@@ -1,0 +1,9 @@
+node_modules
+dist
+.next
+.expo
+build
+coverage
+docs/legacy-v3
+packages/*/src/generated
+packages/api-contract/openapi.json

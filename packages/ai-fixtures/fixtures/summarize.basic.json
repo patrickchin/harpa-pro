@@ -1,0 +1,21 @@
+{
+  "vendor": "openai",
+  "model": "gpt-4o-mini",
+  "fixtureName": "summarize.basic",
+  "recordedAt": "2026-05-12T00:00:00.000Z",
+  "requestHash": "sha256:195fb0b8626b2e735176ae8e8d4c8b093fde22ccbc9da9d0d9529fabf8b5c26c",
+  "request": {
+    "kind": "chat",
+    "vendor": "openai",
+    "model": "gpt-4o-mini",
+    "systemPrompt": "Summarise the following transcript into a concise site-note body.",
+    "userPrompt": "Site arrival 8:15. Crew of three on rebar..."
+  },
+  "response": {
+    "text": "Crew arrived 8:15; rebar progress steady; concrete pour delayed 30 min by delivery; no incidents. Plan: close east footing tomorrow.",
+    "usage": {
+      "input": 64,
+      "output": 32
+    }
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "vendor": "openai",
+  "model": "whisper-1",
+  "fixtureName": "transcribe.basic",
+  "recordedAt": "2026-05-12T00:00:00.000Z",
+  "requestHash": "sha256:af30d0a0dc0ac0009f51eec30642453820535d9b3e4c1628a6a4ed8ff9f3889f",
+  "request": {
+    "kind": "transcribe",
+    "vendor": "openai",
+    "audioUrl": "https://fixtures.harpa.example/voice.fixture.m4a"
+  },
+  "response": {
+    "text": "Site arrival 8:15. Crew of three on rebar. Concrete pour delayed thirty minutes due to a delivery hold-up. No safety incidents. Tomorrow we close out the east footing.",
+    "durationSec": 22.4
+  }
+}

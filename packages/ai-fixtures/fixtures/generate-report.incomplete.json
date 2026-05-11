@@ -1,0 +1,21 @@
+{
+  "vendor": "openai",
+  "model": "gpt-4o",
+  "fixtureName": "generate-report.incomplete",
+  "recordedAt": "2026-05-12T00:00:00.000Z",
+  "requestHash": "sha256:ae815a2fe30b71998bdca4fda45cf9b6a55da977a284183701feff1ca98219b2",
+  "request": {
+    "kind": "chat",
+    "vendor": "openai",
+    "model": "gpt-4o",
+    "systemPrompt": "Generate a structured construction-site daily report from the provided notes.",
+    "userPrompt": "<sparse notes>"
+  },
+  "response": {
+    "text": "{\n  \"visitDate\": null,\n  \"weather\": null,\n  \"workers\": [],\n  \"materials\": [],\n  \"issues\": [],\n  \"nextSteps\": [],\n  \"summarySections\": [{ \"title\": \"Notes captured\", \"body\": \"Insufficient notes to produce a structured report.\" }]\n}",
+    "usage": {
+      "input": 80,
+      "output": 56
+    }
+  }
+}

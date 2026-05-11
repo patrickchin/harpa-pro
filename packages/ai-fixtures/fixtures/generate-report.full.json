@@ -1,0 +1,21 @@
+{
+  "vendor": "openai",
+  "model": "gpt-4o",
+  "fixtureName": "generate-report.full",
+  "recordedAt": "2026-05-12T00:00:00.000Z",
+  "requestHash": "sha256:e1d66862ffbef01957e1d9032cf5d78827363f8636fc5a2a847b9749a1ec9f94",
+  "request": {
+    "kind": "chat",
+    "vendor": "openai",
+    "model": "gpt-4o",
+    "systemPrompt": "Generate a structured construction-site daily report from the provided notes.",
+    "userPrompt": "<notes payload>"
+  },
+  "response": {
+    "text": "{\n  \"visitDate\": \"2026-05-12T00:00:00.000Z\",\n  \"weather\": { \"condition\": \"Cloudy\", \"temperatureC\": 14, \"windKph\": 12, \"impact\": \"Minor — light rain in afternoon\" },\n  \"workers\": [\n    { \"role\": \"Steel fixer\", \"count\": 3, \"hours\": 8, \"notes\": \"East footing rebar\" },\n    { \"role\": \"Carpenter\", \"count\": 2, \"hours\": 7, \"notes\": \"Formwork prep\" }\n  ],\n  \"materials\": [\n    { \"name\": \"Concrete C30\", \"quantity\": 12, \"unit\": \"m³\", \"status\": \"Delivered\", \"condition\": \"OK\", \"notes\": \"Delivery 30 min late\" }\n  ],\n  \"issues\": [\n    { \"title\": \"Concrete delivery delay\", \"severity\": \"medium\", \"description\": \"Delivery 30 min late, pour pushed back\", \"action\": \"Confirm next delivery window with supplier\" }\n  ],\n  \"nextSteps\": [\"Close east footing\", \"Begin column formwork\"],\n  \"summarySections\": [\n    { \"title\": \"Site overview\", \"body\": \"Steady progress on east footing despite minor delivery delay.\" }\n  ]\n}",
+    "usage": {
+      "input": 280,
+      "output": 320
+    }
+  }
+}

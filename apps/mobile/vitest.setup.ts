@@ -96,19 +96,84 @@ vi.mock('react-native', () => {
 // `lucide-react-native` ships ESM that re-exports icons backed by
 // `react-native-svg`. Render each icon as a stub host element so
 // snapshots show its name + size/color props.
+//
+// IMPORTANT: Vite SSR / vitest probe the mock with meta keys
+// (`__esModule`, `default`, `then`, Symbol.toPrimitive, etc.). A naive
+// Proxy returning a component for ANY key — including `then` — looks
+// like a thenable and Vite's interop awaits it forever. We filter
+// symbols + known interop keys, and implement `has` / `ownKeys` so
+// vitest's named-export validation accepts every icon name.
 vi.mock('lucide-react-native', () => {
-  return new Proxy(
-    {},
+  const META_KEYS = new Set([
+    '__esModule',
+    'default',
+    'then',
+    'toJSON',
+    'toString',
+    'valueOf',
+    'constructor',
+    'prototype',
+  ]);
+  const cache = new Map<string, unknown>();
+  const target: Record<string, unknown> = { __esModule: true };
+  return new Proxy(target, {
+    has: (_t, name) => typeof name === 'string' && !META_KEYS.has(name),
+    get: (_t, name) => {
+      if (typeof name === 'symbol') return undefined;
+      if (name === '__esModule') return true;
+      if (META_KEYS.has(name)) return undefined;
+      const cached = cache.get(name);
+      if (cached) return cached;
+      const Component = (props: AnyProps) =>
+        React.createElement(`lucide-${String(name)}`, props, null);
+      Component.displayName = `lucide.${String(name)}`;
+      cache.set(name, Component);
+      return Component;
+    },
+  });
+});
+
+// `expo-router` hooks (useRouter / usePathname / Redirect / Stack).
+// Tests that need different routing behaviour override per-test.
+const routerStub = {
+  push: vi.fn(),
+  replace: vi.fn(),
+  back: vi.fn(),
+  navigate: vi.fn(),
+  canGoBack: () => false,
+  setParams: vi.fn(),
+  dismiss: vi.fn(),
+  dismissAll: vi.fn(),
+};
+
+vi.mock('expo-router', () => {
+  const Redirect = (props: AnyProps) =>
+    React.createElement('rn-Redirect', { href: props.href }, null);
+  const StackComponent = (props: AnyProps) =>
+    React.createElement('rn-Stack', props, props.children);
+  // Stack has subcomponents (Stack.Screen) in expo-router — expose as
+  // function-component children so JSX accepts them in tests.
+  const Stack = Object.assign(StackComponent, {
+    Screen: (props: AnyProps) => React.createElement('rn-Stack.Screen', props, null),
+  });
+  const Tabs = Object.assign(
+    (props: AnyProps) => React.createElement('rn-Tabs', props, props.children),
     {
-      get: (_target, name) => {
-        if (name === '__esModule') return true;
-        const Component = (props: AnyProps) =>
-          React.createElement(`lucide-${String(name)}`, props, null);
-        Component.displayName = `lucide.${String(name)}`;
-        return Component;
-      },
+      Screen: (props: AnyProps) => React.createElement('rn-Tabs.Screen', props, null),
     },
   );
+  return {
+    Redirect,
+    Stack,
+    Tabs,
+    Link: (props: AnyProps) => React.createElement('rn-Link', props, props.children),
+    useRouter: () => routerStub,
+    usePathname: () => '/',
+    useLocalSearchParams: () => ({}),
+    useSegments: () => [] as string[],
+    useFocusEffect: (_cb: () => void) => undefined,
+    router: routerStub,
+  };
 });
 
 // `react-native-reanimated` binds natives. Provide just the surface

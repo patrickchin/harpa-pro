@@ -64,3 +64,14 @@
 - [ ] Triage `docs/bugs/README.md`.
 - [ ] All `// FIXME` resolved or filed.
 - [ ] Commit: `chore: bugs sweep + FIXME triage`.
+
+### P4.9 Universal links
+- [ ] `apple-app-site-association` served from the API origin.
+- [ ] `assetlinks.json` served from the API origin.
+- [ ] `app.json` `associatedDomains` + Android `intentFilters` wired.
+- [ ] `/p/:projectSlug` and `/r/:reportSlug` resolve from a cold
+      tap on a share link \u2014 Maestro flow `share-link-cold-start`.
+- [ ] Push-notification \u2192 deep-link routing (notif payload carries
+      canonical URL; tap handler `router.push`es it through the
+      auth gate's deferred-intent stash from P2.6).
+- [ ] Commit: `feat(mobile): universal links + push deep-link routing`.

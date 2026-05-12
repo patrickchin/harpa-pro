@@ -108,6 +108,11 @@
       `../haru3-reports/apps/mobile/app/(tabs)/projects.tsx`.
 - [ ] Real route: `app/(app)/projects/index.tsx`.
 - [ ] Dev mirror: `app/(dev)/projects.tsx` with mock data.
+- [ ] Tap pushes `/projects/${project.id}` (UUID, provisional). The
+      slug swap happens in P3.0 — see
+      [arch-ids-and-urls.md](arch-ids-and-urls.md). Keep the call
+      site shape `router.push(`/projects/${id}`)` so P3.0 only
+      changes the value, not the structure.
 - [ ] Commit: `feat(mobile): projects list ported from canonical source`.
 
 ### P2.8 P2 exit gate

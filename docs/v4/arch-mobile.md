@@ -35,14 +35,18 @@ apps/mobile/
       projects/
         index.tsx                      # thin wrapper around screens/projects-list.tsx
         new.tsx
-        [projectId]/
+        [projectSlug]/                 # prj_xxxxxx — see arch-ids-and-urls.md
           index.tsx
           edit.tsx
           members.tsx
           reports/
             index.tsx
             generate.tsx          # the big one — Notes/Report/Edit tabs
-            [reportId].tsx        # saved report
+            [number].tsx          # saved report — per-project number
+      p/
+        [projectSlug].tsx              # short link → router.replace canonical
+      r/
+        [reportSlug].tsx               # short link → router.replace canonical
       camera/
         capture.tsx
       profile/
@@ -154,6 +158,36 @@ gates which group renders via `_layout.tsx` redirects driven by
 `useAuthSession()`.
 
 No `setTimeout` in auth flows (Pitfall 5).
+
+### Deep-link readiness
+
+Deep links + universal links are wired in P4. The route shape
+above is already deep-link compatible because Expo Router maps
+files to URLs 1:1 and we use prefixed slugs (see
+[arch-ids-and-urls.md](arch-ids-and-urls.md)). To keep the door
+open without doing the work now, every screen P2/P3 ships must
+follow these rules:
+
+1. **URL params are sufficient to mount.** A screen MUST be able
+   to load from a cold start with only its route params \u2014 fetch
+   what it needs via React Query, never assume the previous
+   screen pre-populated a store.
+2. **Navigate by URL, not by ref.** Use
+   `router.push('/projects/prj_xxxxxx')`, not
+   `navigation.navigate('ProjectDetail', { id })`. Same code
+   path for in-app taps and deep links.
+3. **Auth gate stashes intent.** When an unauthed user hits a
+   protected URL, `(app)/_layout.tsx` records the intended path
+   and replays it after sign-in (P2.6 wires this).
+4. **Route shape = entity shape.** No funnelling everything
+   through `(app)/index` with local state. File routes only.
+5. **Reserve the scheme now.** `app.json` `scheme` and a
+   placeholder universal-link domain are set in P0 so dev share
+   links resolve.
+
+Universal Links / App Links infra (`apple-app-site-association`,
+`assetlinks.json`), push \u2192 deep-link routing, and any deferred
+deep-link install handling land in P4.
 
 ## API client (P2.3)
 

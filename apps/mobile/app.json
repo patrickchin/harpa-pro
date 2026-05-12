@@ -4,7 +4,6 @@
     "slug": "harpa-pro",
     "version": "0.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
     "scheme": "harpa",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,

@@ -15,6 +15,8 @@ import {
 } from '@harpa/api-contract';
 import type { AppEnv } from '../app.js';
 import { withAuth } from '../middleware/auth.js';
+import { withRateLimit } from '../middleware/rateLimit.js';
+import { withIdempotency } from '../middleware/idempotency.js';
 import {
   createReport,
   deleteReport,
@@ -34,6 +36,11 @@ import { renderReportPdf } from '../services/report-pdf.js';
 
 const projectIdParam = z.object({ id: uuid.openapi({ param: { name: 'id', in: 'path' } }) });
 const reportIdParam = z.object({ reportId: uuid.openapi({ param: { name: 'reportId', in: 'path' } }) });
+
+// AI route budgets (per arch-api-design.md §Rate limiting / §Idempotency).
+const MIN = 60_000;
+const generateRateLimit = withRateLimit({ name: 'reports.generate', limit: 30, windowMs: MIN });
+const generateIdempotency = withIdempotency({ name: 'reports.generate' });
 
 export const reportRoutes = new OpenAPIHono<AppEnv>();
 
@@ -230,7 +237,7 @@ reportRoutes.openapi(
     path: '/reports/{reportId}/generate',
     tags: ['reports'],
     security: [{ bearerAuth: [] }],
-    middleware: [withAuth()] as const,
+    middleware: [withAuth(), generateRateLimit, generateIdempotency] as const,
     request: {
       params: reportIdParam,
       body: { content: { 'application/json': { schema: reportSchemas.generateReportRequest } } },
@@ -253,7 +260,7 @@ reportRoutes.openapi(
     path: '/reports/{reportId}/regenerate',
     tags: ['reports'],
     security: [{ bearerAuth: [] }],
-    middleware: [withAuth()] as const,
+    middleware: [withAuth(), generateRateLimit, generateIdempotency] as const,
     request: {
       params: reportIdParam,
       body: { content: { 'application/json': { schema: reportSchemas.regenerateReportRequest } } },

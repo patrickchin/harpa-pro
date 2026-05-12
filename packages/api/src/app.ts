@@ -41,6 +41,16 @@ export function createApp(): OpenAPIHono<AppEnv> {
   app.use('*', requestId());
   app.onError(errorMapper());
 
+  // Register the Bearer security scheme that authed routes reference
+  // via `security: [{ bearerAuth: [] }]`. Without this the emitted
+  // spec is invalid OpenAPI (security requirements pointing at an
+  // undeclared scheme).
+  app.openAPIRegistry.registerComponent('securitySchemes', 'bearerAuth', {
+    type: 'http',
+    scheme: 'bearer',
+    bearerFormat: 'JWT',
+  });
+
   // Public routes
   app.route('/', health);
   app.route('/', authRoutes);

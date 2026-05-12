@@ -17,15 +17,19 @@ const specPath = resolve(here, '../openapi.json');
 if (!existsSync(specPath)) {
   writeFileSync(
     out,
-    `// AUTO-GENERATED — placeholder until @harpa/api emits openapi.json (P1.11).\n` +
-      `export type paths = Record<string, never>;\nexport type operations = Record<string, never>;\n`,
+    `// AUTO-GENERATED — placeholder until @harpa/api emits openapi.json (P1.11)
+.
+export type paths = Record<string, never>;
+export type operations = Record<string, never>;
+`,
   );
   console.log('Wrote placeholder', out);
   process.exit(0);
 }
 
 // Real generation path (works in P1+ once openapi.json exists).
-const { default: openapiTypescript } = await import('openapi-typescript');
+const { default: openapiTypescript, astToString } = await import('openapi-typescript');
 const ast = await openapiTypescript(new URL('file://' + specPath));
-writeFileSync(out, ast as unknown as string);
+const output = astToString(ast);
+writeFileSync(out, output);
 console.log('Wrote', out);

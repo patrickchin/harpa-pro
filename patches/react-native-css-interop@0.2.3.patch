@@ -1,0 +1,18 @@
+diff --git a/babel.js b/babel.js
+index d84e52b5ccf59123bb7aee019a853724b20ef99f..e3892c4fa6e0d2ea5dc4c5ca60eb6e200c332fae 100644
+--- a/babel.js
++++ b/babel.js
+@@ -9,8 +9,11 @@ module.exports = function () {
+           importSource: "react-native-css-interop",
+         },
+       ],
+-      // Use this plugin in reanimated 4 and later
+-      "react-native-worklets/plugin",
++      // Patched: removed "react-native-worklets/plugin". That plugin is
++      // only needed for reanimated v4+. We pin reanimated 3.16 (RN 0.76)
++      // which uses its own react-native-reanimated/plugin (already in
++      // apps/mobile/babel.config.js). Worklets 0.8+ requires RN 0.81+
++      // and breaks `pod install`.
+     ],
+   };
+ };

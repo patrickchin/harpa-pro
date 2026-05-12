@@ -35,13 +35,13 @@
 ## Tasks
 
 ### P2.0a Per-page prompt template + canonical source precedence
-- [ ] `docs/v4/prompts/page-template.md` — reusable per-screen prompt
+- [x] `docs/v4/prompts/page-template.md` — reusable per-screen prompt
       (canonical source path, primitives to use, dual-route + body
       component pattern, behaviour-only scope, deferred wiring).
-- [ ] One-paragraph note in this file's header: canonical port source
+- [x] One-paragraph note in this file's header: canonical port source
       is `../haru3-reports/apps/mobile@dev`. Screenshots, realignment
       docs, and the source dump are explicitly **not** used.
-- [ ] Commit: `docs(plan): P2.0a per-page prompt template + canonical source precedence`.
+- [x] Commit: `docs(plan): P2.0a per-page prompt template + canonical source precedence`.
 
 ### P2.0b Dev gallery + screens/ pattern
 - [ ] `apps/mobile/screens/` directory established (one body component

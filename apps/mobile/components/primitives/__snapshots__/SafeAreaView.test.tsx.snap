@@ -1,0 +1,61 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`SafeAreaView > renders with default edges (all four) 1`] = `
+<rn-View
+  style={
+    [
+      {
+        "paddingBottom": 34,
+        "paddingLeft": 0,
+        "paddingRight": 0,
+        "paddingTop": 44,
+      },
+      undefined,
+    ]
+  }
+>
+  <rn-Text>
+    Safe content
+  </rn-Text>
+</rn-View>
+`;
+
+exports[`SafeAreaView > renders with empty edges 1`] = `
+<rn-View
+  style={
+    [
+      {
+        "paddingBottom": 0,
+        "paddingLeft": 0,
+        "paddingRight": 0,
+        "paddingTop": 0,
+      },
+      undefined,
+    ]
+  }
+>
+  <rn-Text>
+    No safe area padding
+  </rn-Text>
+</rn-View>
+`;
+
+exports[`SafeAreaView > renders with explicit edges subset 1`] = `
+<rn-View
+  style={
+    [
+      {
+        "paddingBottom": 34,
+        "paddingLeft": 0,
+        "paddingRight": 0,
+        "paddingTop": 44,
+      },
+      undefined,
+    ]
+  }
+>
+  <rn-Text>
+    Top and bottom safe
+  </rn-Text>
+</rn-View>
+`;

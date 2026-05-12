@@ -44,16 +44,16 @@
 - [x] Commit: `docs(plan): P2.0a per-page prompt template + canonical source precedence`.
 
 ### P2.0b Dev gallery + screens/ pattern
-- [ ] `apps/mobile/screens/` directory established (one body component
+- [x] `apps/mobile/screens/` directory established (one body component
       per screen; props-driven, no API/auth dependencies inside).
-- [ ] `app/(dev)/_layout.tsx` + `app/(dev)/index.tsx` — gallery
+- [x] `app/(dev)/_layout.tsx` + `app/(dev)/index.tsx` — gallery
       listing every body component the app ships, each with canned
       mock props. Tap-through pushes the real route in dev mode.
-- [ ] Gallery + dev routes guarded by `__DEV__ || env.EXPO_PUBLIC_USE_FIXTURES`
+- [x] Gallery + dev routes guarded by `__DEV__ || env.EXPO_PUBLIC_USE_FIXTURES`
       so they never reach a production bundle.
-- [ ] Snapshot test for the empty gallery skeleton.
-- [ ] Documented in [arch-mobile.md](arch-mobile.md) §"Dev gallery".
-- [ ] Commit: `feat(mobile): P2.0b dev gallery scaffold + screens/ body-component pattern`.
+- [x] Snapshot test for the empty gallery skeleton.
+- [x] Documented in [arch-mobile.md](arch-mobile.md) §"Dev gallery".
+- [x] Commit: `feat(mobile): P2.0b dev gallery scaffold + screens/ body-component pattern`.
 
 ### P2.1 Tailwind tokens + NativeWind setup
 - [ ] Token table copied from `../haru3-reports/apps/mobile/tailwind.config.js`.

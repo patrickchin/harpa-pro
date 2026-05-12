@@ -1,0 +1,51 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`buildGalleryRows > emits a single empty-state row when no screens are registered 1`] = `
+[
+  {
+    "kind": "empty",
+    "label": "No screens registered yet. Add ports to apps/mobile/screens/ and register their dev mirror in apps/mobile/app/(dev)/registry.ts.",
+  },
+]
+`;
+
+exports[`buildGalleryRows > groups entries, sorts groups (misc last) and entries by name 1`] = `
+[
+  {
+    "kind": "header",
+    "label": "app",
+  },
+  {
+    "description": undefined,
+    "href": "/(dev)/projects",
+    "kind": "entry",
+    "name": "projects-list",
+  },
+  {
+    "kind": "header",
+    "label": "auth",
+  },
+  {
+    "description": "Phone OTP entry",
+    "href": "/(dev)/login",
+    "kind": "entry",
+    "name": "login",
+  },
+  {
+    "description": undefined,
+    "href": "/(dev)/verify",
+    "kind": "entry",
+    "name": "verify",
+  },
+  {
+    "kind": "header",
+    "label": "misc",
+  },
+  {
+    "description": undefined,
+    "href": "/(dev)/sandbox",
+    "kind": "entry",
+    "name": "sandbox",
+  },
+]
+`;

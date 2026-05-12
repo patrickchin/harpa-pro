@@ -68,8 +68,8 @@ Each task = one route file + its tests + its api-contract schemas
 - [x] Commit: `feat(api): report generation + finalize + PDF rendering`.
 
 ### P1.8 Settings
-- [ ] `GET/PATCH /settings/ai`.
-- [ ] Commit: `feat(api): per-user AI provider settings`.
+- [x] `GET/PATCH /settings/ai`.
+- [x] Commit: `feat(api): per-user AI provider settings`.
 
 ### P1.9 Rate limiting + idempotency
 - [ ] `@upstash/ratelimit` middleware with per-route budgets.

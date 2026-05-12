@@ -1,0 +1,12 @@
+name: e2e-maestro
+# Skeleton — full Maestro flow per-screen. Wired in P3.
+on:
+  pull_request:
+    paths: ['apps/mobile/**']
+jobs:
+  e2e:
+    if: false # disabled until P3
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: echo 'placeholder — wired in P3'

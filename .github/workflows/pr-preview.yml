@@ -1,0 +1,36 @@
+name: pr-preview
+# Per-PR Neon branch lifecycle. Creates on open/sync, deletes on close.
+# DATABASE_URL secret is set on the PR's preview environment by the create job.
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+jobs:
+  branch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 9.12.3 }
+      - uses: actions/setup-node@v4
+        with: { node-version: '22', cache: 'pnpm' }
+      - run: pnpm install --frozen-lockfile
+      - name: Create branch
+        if: github.event.action != 'closed'
+        env:
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+          NEON_PROJECT_ID: ${{ secrets.NEON_PROJECT_ID }}
+        run: |
+          URI=$(pnpm db:branch:create ${{ github.event.pull_request.number }})
+          echo "::add-mask::$URI"
+          echo "DATABASE_URL=$URI" >> "$GITHUB_ENV"
+      - name: Run migrations
+        if: github.event.action != 'closed'
+        env:
+          DATABASE_URL: ${{ env.DATABASE_URL }}
+        run: pnpm --filter @harpa/api db:migrate
+      - name: Delete branch
+        if: github.event.action == 'closed'
+        env:
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+          NEON_PROJECT_ID: ${{ secrets.NEON_PROJECT_ID }}
+        run: pnpm db:branch:delete ${{ github.event.pull_request.number }}

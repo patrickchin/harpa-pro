@@ -17,7 +17,11 @@ MISSING=()
 for f in "$ROUTES_DIR"/*.ts; do
   [ -f "$f" ] || continue
   name=$(basename "$f" .ts)
-  # Public auth routes don't need scope tests.
+  # Skip colocated unit tests.
+  case "$name" in
+    *.test) continue ;;
+  esac
+  # Public/unauthenticated routes don't need scope tests.
   case "$name" in
     auth|index|health|public) continue ;;
   esac

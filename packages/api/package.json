@@ -19,12 +19,13 @@
     "spec:emit": "tsx scripts/emit-openapi.ts"
   },
   "dependencies": {
-    "@harpa/api-contract": "workspace:*",
     "@harpa/ai-fixtures": "workspace:*",
+    "@harpa/api-contract": "workspace:*",
     "@hono/node-server": "^1.13.2",
     "@hono/zod-openapi": "^0.18.3",
     "drizzle-orm": "^0.36.4",
     "hono": "^4.6.5",
+    "jose": "^5.9.6",
     "pg": "^8.13.1",
     "zod": "^3.23.8"
   },

@@ -1,10 +1,11 @@
-import { View, Text, KeyboardAvoidingView, ScrollView } from 'react-native';
+import { View, Text, KeyboardAvoidingView, ScrollView, Pressable } from 'react-native';
 import { HardHat } from 'lucide-react-native';
 import { SafeAreaView } from '../components/primitives/SafeAreaView';
 import { Button } from '../components/primitives/Button';
 import { Input } from '../components/primitives/Input';
 import { InlineNotice } from '../components/primitives/InlineNotice';
 import { colors } from '../lib/design-tokens/colors';
+import { cn } from '../lib/utils';
 
 type Props = {
   phone: string;
@@ -77,41 +78,51 @@ export default function SignInVerify({
               {error && <InlineNotice tone="danger">{error}</InlineNotice>}
               {info && <InlineNotice tone="info">{info}</InlineNotice>}
 
-              <Button
-                testID="btn-verify-code"
-                variant="hero"
-                size="xl"
-                className="w-full"
-                disabled={isSubmitting || otp.trim().length < 6}
-                onPress={onSubmit}
-              >
-                {isSubmitting ? 'Verifying...' : 'Verify Code'}
-              </Button>
+              <View className="gap-3">
+                <Button
+                  testID="btn-verify-code"
+                  variant="hero"
+                  size="xl"
+                  className="w-full"
+                  disabled={isSubmitting || otp.trim().length < 6}
+                  onPress={onSubmit}
+                >
+                  {isSubmitting ? 'Verifying...' : 'Verify Code'}
+                </Button>
 
-              <View className="flex-row gap-3">
-                <View className="flex-1">
-                  <Button
-                    testID="btn-change-number"
-                    variant="outline"
-                    onPress={onChangeNumber}
-                    disabled={isSubmitting}
-                  >
-                    Change Number
-                  </Button>
-                </View>
-                <View className="flex-1">
-                  <Button
-                    testID="btn-resend-code"
-                    variant="ghost"
-                    onPress={onResend}
-                    disabled={resendDisabled}
+                <Button
+                  testID="btn-change-number"
+                  variant="outline"
+                  size="xl"
+                  className="w-full"
+                  onPress={onChangeNumber}
+                  disabled={isSubmitting}
+                >
+                  Change Number
+                </Button>
+              </View>
+
+              <Pressable
+                testID="link-resend-code"
+                accessibilityRole="button"
+                className="items-center py-2"
+                disabled={resendDisabled}
+                onPress={onResend}
+              >
+                <Text className="text-sm text-muted-foreground">
+                  Didn't get the code?{' '}
+                  <Text
+                    className={cn(
+                      'font-semibold underline',
+                      resendDisabled ? 'text-muted-foreground' : 'text-foreground'
+                    )}
                   >
                     {resendCountdownSeconds != null
                       ? `Resend in ${resendCountdownSeconds}s`
                       : 'Resend Code'}
-                  </Button>
-                </View>
-              </View>
+                  </Text>
+                </Text>
+              </Pressable>
             </View>
           </View>
         </ScrollView>

@@ -41,8 +41,9 @@ export default function SignInVerifyPage() {
 
   // Fallback if phone is missing
   if (!phone) {
-    // Cast needed until expo-router regenerates typed routes
-    return <Redirect href={"/(auth)/sign-in/phone" as any} />;
+    // expo-router typed-routes regenerates on next `expo start`; cast safe.
+    // @ts-expect-error — route exists but types not regenerated yet
+    return <Redirect href={"/(auth)/sign-in/phone"} />;
   }
 
   // Resend cooldown timer (UI-only, per Pitfall 5)
@@ -80,7 +81,7 @@ export default function SignInVerifyPage() {
         phone,
       });
 
-      router.replace('/' as Href);
+      router.replace('/');
     } catch (err) {
       const message =
         err instanceof Error ? err.message : 'Unable to verify your code.';
@@ -104,8 +105,9 @@ export default function SignInVerifyPage() {
   }, [startOtpMutation, phone]);
 
   const handleChangeNumber = useCallback(() => {
-    // Cast needed until expo-router regenerates typed routes
-    router.replace({ pathname: '/(auth)/sign-in/phone' as any });
+    // expo-router typed-routes regenerates on next `expo start`; cast safe.
+    // @ts-expect-error — route exists but types not regenerated yet
+    router.replace('/(auth)/sign-in/phone');
   }, [router]);
 
   const isSubmitting =

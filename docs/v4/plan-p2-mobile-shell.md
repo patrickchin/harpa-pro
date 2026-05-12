@@ -56,10 +56,10 @@
 - [x] Commit: `feat(mobile): P2.0b dev gallery scaffold + screens/ body-component pattern`.
 
 ### P2.1 Tailwind tokens + NativeWind setup
-- [ ] Token table copied from `../haru3-reports/apps/mobile/tailwind.config.js`.
-- [ ] `tailwind.config.js` ships every token; `global.css` imports.
-- [ ] Lint guard `check-no-hex-colors.sh` passes.
-- [ ] Commit: `feat(mobile): tailwind tokens locked from canonical port source`.
+- [x] Token table copied from `../haru3-reports/apps/mobile/tailwind.config.js`.
+- [x] `tailwind.config.js` ships every token; `global.css` imports.
+- [x] Lint guard `check-no-hex-colors.sh` passes (skips: no `components/` yet).
+- [x] Commit: `feat(mobile): tailwind tokens locked from canonical port source`.
 
 ### P2.2 Primitives
 - [ ] One commit per primitive: file + snapshot test + dev-gallery row.

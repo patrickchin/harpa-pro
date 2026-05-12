@@ -61,4 +61,16 @@ export const REGISTRY: readonly GalleryEntry[] = [
     group: 'primitives',
     description: 'Dashboard metric tile — default / warning / danger / success / compact',
   },
+  {
+    name: 'InlineNotice',
+    href: '/(dev)/primitives/inline-notice',
+    group: 'primitives',
+    description: 'Tone-driven banner — info / success / warning / danger',
+  },
+  {
+    name: 'AppDialogSheet',
+    href: '/(dev)/primitives/app-dialog-sheet',
+    group: 'primitives',
+    description: 'In-app modal sheet replacing Alert.alert',
+  },
 ];

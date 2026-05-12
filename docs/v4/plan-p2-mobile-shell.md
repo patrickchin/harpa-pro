@@ -62,12 +62,12 @@
 - [x] Commit: `feat(mobile): tailwind tokens locked from canonical port source`.
 
 ### P2.2 Primitives
-- [ ] One commit per primitive: file + snapshot test + dev-gallery row.
-- [ ] `IconButton` standardised early (Pitfall in v3: `48c5dee`).
-- [ ] `Input` centred-text + caret behaviour verified (Pitfall: `1ec0fc8`).
-- [ ] `ScreenHeader` top padding correct (Pitfall: `db0b97c`).
-- [ ] `AppDialogSheet` is the only dialog primitive — Alert lint guard active.
-- [ ] Commit per primitive: `feat(mobile): <Name> primitive with snapshot tests`.
+- [x] One commit per primitive: file + snapshot test + dev-gallery row.
+- [x] `IconButton` standardised early (Pitfall in v3: `48c5dee`).
+- [x] `Input` centred-text + caret behaviour verified (Pitfall: `1ec0fc8`).
+- [x] `ScreenHeader` top padding correct (Pitfall: `db0b97c`).
+- [x] `AppDialogSheet` is the only dialog primitive — Alert lint guard active.
+- [x] Commit per primitive: `feat(mobile): <Name> primitive with snapshot tests`.
 
 ### P2.3 API client + generated hooks
 - [ ] `lib/api/client.ts` (auth header, error mapping, typed via api-contract).

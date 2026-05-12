@@ -81,20 +81,31 @@ The whole v3 realignment effort
 ([`docs/legacy-v3/realignment/`](../legacy-v3/realignment/)) exists
 because of this drift.
 
-**v4 rule.** P2 ships **only after** every screen in the app passes
-a Maestro screenshot diff against
-[`docs/legacy-v3/screenshots/`](../legacy-v3/screenshots/) at iPhone
-14 Pro size. The diff threshold is 2% per screen. Cosmetic drift in
-later phases is a P0 bug.
+**v4 rule.** P2 ships screens by **direct port from the canonical
+source** at `../haru3-reports/apps/mobile` on branch `dev`. Both
+sides run NativeWind v4 — JSX and Tailwind classes copy across with
+no translation. Visual review is manual (side-by-side with the
+canonical source on the iOS sim, aided by the in-app dev-gallery
+at `app/(dev)/`). Cosmetic drift in later phases is a P0 bug.
+
+There is no automated screenshot-diff gate — the v3 attempt's
+`docs/legacy-v3/screenshots/`, `docs/legacy-v3/realignment/`, and
+`docs/legacy-v3/_work/mobile-old-source-dump.md` are explicitly
+**not** used as port sources in v4 (they are kept for historical
+context only).
 
 Tactical sub-rules:
 - Tailwind tokens defined in `apps/mobile/tailwind.config.js` once,
-  derived from `docs/legacy-v3/realignment/pages/*.md` "Visual tokens"
-  sections. No hex values in screen code.
+  derived from the canonical source's `tailwind.config.js`. No hex
+  values in screen code (lint guard `check-no-hex-colors.sh`).
 - Shared primitives (`Card`, `Input`, `Button`, `IconButton`,
   `ScreenHeader`, `EmptyState`, `Skeleton`, `AppDialogSheet`,
-  `StatTile`) ship in P2.1 with snapshot tests. Adding a new
+  `StatTile`) ship in P2.2 with snapshot tests. Adding a new
   one-off primitive is a code-review block.
+- Every screen ships **two routes** wrapping a single body component
+  in `apps/mobile/screens/<name>.tsx`: the real route under
+  `(auth)/` or `(app)/` (wired in P3), and a `(dev)/<name>.tsx`
+  mirror with mock props for fast manual visual review.
 
 ---
 
@@ -112,15 +123,16 @@ restore full v3 report note-taking parity` after a manual gap audit.
 Maestro flow**. We do not move to the next screen until the current
 one passes:
 
-- Visual diff vs reference screenshot.
-- Vitest behaviour test for every interaction listed in its
-  `pages/<NN>-<slug>.md` doc.
+- Manual visual review against the matching screen in
+  `../haru3-reports/apps/mobile@dev` (the dev-gallery makes this a
+  side-by-side simulator check).
+- Vitest behaviour test for every interaction the canonical source
+  exercises.
 - Maestro flow exercising the screen end-to-end (record + replay
   fixtures for any AI call).
 
-The acceptance contract for P3 is the per-page docs in
-[`docs/legacy-v3/realignment/pages/`](../legacy-v3/realignment/pages/).
-We literally check off the "Acceptance checklist" in each one.
+The acceptance contract for P3 is the matching screen in the
+canonical source at `../haru3-reports/apps/mobile@dev`.
 
 ---
 
@@ -288,8 +300,9 @@ Use `useAppDialogSheet()` everywhere else.
 The fact that v3 needed a 17-page realignment plan
 ([`docs/legacy-v3/realignment/`](../legacy-v3/realignment/)) means
 we were declaring phases done without a real acceptance contract.
-v4's per-page docs (the same ones — they're already correct) are
-the **upfront** acceptance contract for P3, not a retrospective fix.
+v4's acceptance contract is the live canonical port source at
+`../haru3-reports/apps/mobile@dev` — read it directly per screen;
+do **not** mine the legacy realignment docs.
 
 ### Subagent over-scoping
 

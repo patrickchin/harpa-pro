@@ -12,14 +12,16 @@
                     │
             Maestro (≈ 60 flows)
                     │
-       Screenshot diffs (≈ 19 screens)
-                    │
          API integration (Testcontainers)
                     │
    Vitest unit + behaviour (the bulk)
                     │
                     ▼
 ```
+
+> **No automated screenshot diffs.** Visual review is manual against
+> the canonical port source at `../haru3-reports/apps/mobile@dev`,
+> aided by the in-app dev gallery (`app/(dev)/`).
 
 ## Per-layer rules
 
@@ -67,14 +69,14 @@ Each AI-touching route has a test that:
 2. The route picks up the fixture name (test mode only).
 3. Asserts response matches the recorded fixture.
 
-### Mobile screenshot diffs
+### Mobile visual review
 
-- Maestro `takeScreenshot` per screen.
-- `pnpm visual:diff` compares to `docs/legacy-v3/screenshots/`
-  (the canonical reference) using `pixelmatch`.
-- Threshold: 2% pixel diff per screen at iPhone 14 Pro size.
-- CI workflow `visual-gate.yml` blocks merges that exceed the
-  threshold.
+- Manual, in the iOS simulator, side-by-side with the canonical
+  source at `../haru3-reports/apps/mobile@dev`.
+- The dev gallery (`app/(dev)/`) makes this a tap-through check:
+  no auth, no API, just the screen body with mock props.
+- There is no automated diff and no `pnpm visual:diff` script.
+  Cosmetic drift is caught by reviewer eye; it is still a P0 bug.
 
 ### Maestro E2E
 
@@ -99,7 +101,6 @@ Each AI-touching route has a test that:
 | `api-integration.yml` | every push | Testcontainers suite green at ≥ 90% line coverage |
 | `contract.yml` | every push | OpenAPI regen + diff clean; contract tests green |
 | `mobile-build.yml` | every PR | Expo prebuild + Metro bundle clean |
-| `visual-gate.yml` | every PR | Screenshot diff ≤ 2% per screen |
 | `e2e-maestro.yml` | every PR | Maestro flows pass on iOS + Android |
 | `pr-preview.yml` | PR open / push | Neon branch + Fly preview deploy |
 | `p1-exit-gate.yml` | PRs labelled `phase/p1-exit` | All P1 acceptance criteria |

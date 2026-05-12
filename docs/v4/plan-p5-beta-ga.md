@@ -32,8 +32,8 @@
 - [ ] Commit: `chore(ops): rollout monitor dashboards + alerts`.
 
 ### P5.4 GA
-- [ ] App Store + Play Store listings filled (screenshots from
-      `docs/legacy-v3/screenshots/`).
+- [ ] App Store + Play Store listings filled (screenshots captured
+      from the running v4 app on iOS sim / Android emu).
 - [ ] Phased rollout (1% → 10% → 50% → 100%) over 7 days.
 - [ ] Cutover doc `docs/runbooks/cutover.md`.
 - [ ] Commit: `chore: GA cutover runbook`.

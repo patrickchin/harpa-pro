@@ -12,7 +12,10 @@
 2. **Tested-first.** Every layer has its test strategy decided before
    it's built. No phase exits without its coverage gate.
 3. **Visual parity is acceptance.** P2+ ships only what matches the
-   reference screenshots in [`docs/legacy-v3/screenshots/`](../legacy-v3/screenshots/).
+   canonical port source at `../haru3-reports/apps/mobile` on `dev`.
+   Review is manual against that source — there is no automated
+   screenshot-diff gate. JSX + Tailwind classes copy across (both
+   sides are NativeWind v4); only the data layer changes.
 4. **Fixtures everywhere expensive.** LLMs, Twilio, R2 PUT — every
    external boundary has a record/replay layer baked in from P0.
 
@@ -82,7 +85,7 @@ flowchart TB
 | Contract | Zod + OpenAPI generated types | **same** | Working pattern, keep. |
 | LLM mocking | Bolt-on mock-ai (P5.3) | **`ai-fixtures` package, P0** | Fixtures-first per Pitfall 2. |
 | Mobile state | React Query + legend-state | **same** | Worked. |
-| E2E | Maestro | **Maestro + screenshot diff gate** | Visual parity gate per Pitfall 3. |
+| E2E | Maestro | **Maestro behaviour flows** | Per-page interaction tests; no automated visual diff (manual review against canonical port). |
 | CI gates | Coverage at end | **Per-phase gates** | Gates listed in each `plan-p*.md`. |
 
 ## Section index
@@ -97,7 +100,7 @@ flowchart TB
 | 6 | AI fixtures | [arch-ai-fixtures.md](arch-ai-fixtures.md) | record/replay/live modes, redaction, packaging |
 | 7 | Database (Neon) | [arch-database.md](arch-database.md) | Neon branching per PR, migrations, scoped roles, schema layout |
 | 8 | Shared packages | [arch-shared-packages.md](arch-shared-packages.md) | api-contract, ai-fixtures, ui (optional) |
-| 9 | Testing strategy | [arch-testing.md](arch-testing.md) | Test pyramid, Testcontainers, MSW, Maestro, screenshot diffs, fixture replay |
+| 9 | Testing strategy | [arch-testing.md](arch-testing.md) | Test pyramid, Testcontainers, MSW, Maestro behaviour flows, fixture replay |
 | 10 | Observability + ops | [arch-ops.md](arch-ops.md) | Fly metrics, Sentry, log shipping, deploy flow |
 
 ## Repo layout (target end of P0)
@@ -153,8 +156,8 @@ skills/                   # auto-loaded
 |---|---|---|
 | P0 | Foundation | All packages scaffold compiles. `ai-fixtures` works (replay + record). better-auth OTP route hits Twilio sandbox + integration test green. Neon branch script tested in CI. |
 | P1 | API Core | All routes implemented (zero stubs). `pnpm test:api && pnpm test:api:integration` green at ≥90% line coverage. Per-request scope tests cover every authed route. Fixture replay covers every AI route. |
-| P2 | Mobile Shell | Auth + nav + every primitive built. Every auth screen + projects list passes Maestro screenshot diff vs `docs/legacy-v3/screenshots/`. NativeWind tokens locked in `tailwind.config.js`. |
-| P3 | Feature Build | Every screen in `docs/legacy-v3/realignment/pages/` ships with: visual diff pass, behaviour test for each interaction, Maestro flow. No screen is "stubbed" or "TODO redesign". |
+| P2 | Mobile Shell | Auth + nav + every primitive built. Every auth screen + projects list ported from `../haru3-reports/apps/mobile@dev` and reviewed manually. NativeWind tokens locked in `tailwind.config.js`. Dev-gallery routes (`app/(dev)/`) render every screen with mock props. |
+| P3 | Feature Build | Every screen from `../haru3-reports/apps/mobile@dev` ported, with: behaviour test for each interaction, Maestro flow. No screen is "stubbed" or "TODO redesign". |
 | P4 | E2E + Hardening | Full Maestro journey green on iOS + Android. Sentry wired. Fly + Neon prod deploy green. PDF export bit-for-bit equivalent to mobile-old samples. |
 | P5 | Beta + GA | TestFlight + Play internal track distribution. Rollout monitor. Cutover. |
 

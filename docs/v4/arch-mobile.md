@@ -27,13 +27,13 @@ apps/mobile/
   app/                                 # expo-router
     (auth)/
       _layout.tsx
-      login.tsx
+      login.tsx                        # thin wrapper around screens/login.tsx
       verify.tsx
       onboarding.tsx
     (app)/
       _layout.tsx
       projects/
-        index.tsx
+        index.tsx                      # thin wrapper around screens/projects-list.tsx
         new.tsx
         [projectId]/
           index.tsx
@@ -49,8 +49,16 @@ apps/mobile/
         index.tsx
         account.tsx
         usage.tsx
+    (dev)/                             # P2.0b — dev gallery; never in prod
+      _layout.tsx
+      index.tsx                        # screen-list with mock-prop tap-through
+      <one route per screen>.tsx       # mounts the body with canned mock props
     +not-found.tsx
     _layout.tsx                        # providers (env, query, queue, dialogs, sentry)
+
+  screens/                             # P2.0b — props-driven screen bodies
+                                       # (no API/auth inside; consumed by
+                                       # both real routes and (dev) mirrors)
 
   components/
     primitives/                        # P2.1 — locked early, snapshot-tested
@@ -166,17 +174,37 @@ No `setTimeout` in auth flows (Pitfall 5).
 - Typography: a single scale (`text-xs`–`text-3xl`) — Pitfall ref:
   v3 needed `0f3db66 refactor(mobile): tighten typography scale`.
 
-These values come from the per-page docs' "Visual tokens" sections
-in [`docs/legacy-v3/realignment/pages/`](../legacy-v3/realignment/pages/).
+These values come from the canonical source's `tailwind.config.js`
+at `../haru3-reports/apps/mobile/tailwind.config.js`.
 **No hex values appear outside the config.** ESLint rule
 `no-restricted-syntax` flags hex literals in `apps/mobile/components/**`.
 
-## Primitives (locked in P2.1)
+## Dev gallery (P2.0b)
+
+Every screen the app ships has its body extracted into
+`apps/mobile/screens/<name>.tsx` as a presentational component
+that takes typed props and has **no** API / auth / persistence
+dependencies of its own. Two route files mount it:
+
+- `app/(auth|app)/<path>.tsx` — the real route. Wires hooks, auth
+  session, navigation params; passes them as props.
+- `app/(dev)/<name>.tsx` — the dev mirror. Imports the same body
+  with hand-crafted mock props. Modals, sheets, tabs, and
+  back/forward navigation work; nothing else does.
+
+The gallery index at `app/(dev)/index.tsx` lists every dev mirror
+for tap-through manual review. The `(dev)` group is guarded by
+`__DEV__ || env.EXPO_PUBLIC_USE_FIXTURES` so the routes never reach
+a production bundle. This is the canonical workflow for visual
+review against `../haru3-reports/apps/mobile@dev` — there is no
+automated screenshot-diff gate.
+
+## Primitives (locked in P2.2)
 
 Listed under "primitives" above. Each ships with:
 
 - a Vitest snapshot test,
-- a Maestro reference screenshot when used at full screen,
+- a row in the dev gallery so it can be eyeballed in the simulator,
 - documented props in `// JSDoc` only (no `.md` per primitive).
 
 Adding a new primitive needs the `architect` subagent first. The
@@ -201,8 +229,9 @@ to fix Android image uploads`).
 
 ## Voice note pipeline
 
-See [`docs/legacy-v3/realignment/pages/07-notes-tab.md`](../legacy-v3/realignment/pages/07-notes-tab.md)
-for behaviour. Implementation:
+Behaviour mirrors the canonical source's notes tab in
+`../haru3-reports/apps/mobile/app/projects/[projectId]/reports/generate.tsx`
+and its imported components. Implementation:
 
 - `useLiveTranscript` reads on-device speech-to-text *during*
   recording and streams interim text to the input bar (the
@@ -215,7 +244,8 @@ for behaviour. Implementation:
 
 ## Camera flow
 
-Per [`docs/legacy-v3/realignment/pages/13-camera.md`](../legacy-v3/realignment/pages/13-camera.md).
+Mirrors the canonical source's camera screen in
+`../haru3-reports/apps/mobile/app/(camera)/capture.tsx`.
 Uses `AppDialogSheet` for discard confirmation (Pitfall 12).
 Three-column thumbnail strip; shutter haptic; session commit
 back to the report.
@@ -251,7 +281,7 @@ outside `lib/env.ts`.
 | features/* | Vitest + MSW for API | ≥ 90% |
 | Screens | Vitest behaviour test (per-page interactions) | ≥ 80% |
 | End-to-end | Maestro on iOS sim + Android emu | All flows green |
-| Visual | Maestro screenshot diff vs `docs/legacy-v3/screenshots/` | ≤ 2% diff per screen |
+| Visual | Manual review against `../haru3-reports/apps/mobile@dev` via the dev gallery | n/a (no automated gate) |
 
 Per-page acceptance is the per-page doc's "Acceptance checklist"
 section.

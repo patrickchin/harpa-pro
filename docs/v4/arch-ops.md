@@ -38,7 +38,7 @@ PR open
   ↳ Neon branch pr-<n>
   ↳ Fly preview machine deploys api with NEON_BRANCH=pr-<n>
   ↳ EAS preview build (manual trigger)
-  ↳ Maestro + visual gate runs against the preview API
+  ↳ Maestro behaviour flows run against the preview API
 
 Merge to dev
   ↳ Neon migrations applied to `dev` branch

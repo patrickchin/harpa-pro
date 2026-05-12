@@ -8,6 +8,7 @@ import { errorMapper } from './middleware/errorMapper.js';
 import { health } from './routes/health.js';
 import { authRoutes } from './routes/auth.js';
 import { meRoutes } from './routes/me.js';
+import { projectRoutes } from './routes/projects.js';
 import type { ScopedDb } from './db/scope.js';
 
 /**
@@ -41,6 +42,7 @@ export function createApp(): OpenAPIHono<AppEnv> {
 
   // Authenticated routes
   app.route('/', meRoutes);
+  app.route('/', projectRoutes);
 
   // OpenAPI spec
   app.doc('/openapi.json', {

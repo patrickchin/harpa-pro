@@ -97,4 +97,10 @@ export const REGISTRY: readonly GalleryEntry[] = [
     group: 'auth',
     description: 'OTP verification — step 2 of sign-up flow',
   },
+  {
+    name: 'Onboarding',
+    href: '/(dev)/onboarding',
+    group: 'auth',
+    description: 'Post-OTP identity collection — full name + company',
+  },
 ];

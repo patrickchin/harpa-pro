@@ -19,4 +19,10 @@ export const REGISTRY: readonly GalleryEntry[] = [
     group: 'primitives',
     description: 'Variants, sizes, loading + disabled states',
   },
+  {
+    name: 'IconButton',
+    href: '/(dev)/primitives/icon-button',
+    group: 'primitives',
+    description: 'Square / circle icon-only buttons (xs / sm / default)',
+  },
 ];

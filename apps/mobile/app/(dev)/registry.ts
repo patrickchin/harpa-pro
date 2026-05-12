@@ -55,4 +55,10 @@ export const REGISTRY: readonly GalleryEntry[] = [
     group: 'primitives',
     description: 'Pulsing placeholder blocks + SkeletonRow flex layout',
   },
+  {
+    name: 'StatTile',
+    href: '/(dev)/primitives/stat-tile',
+    group: 'primitives',
+    description: 'Dashboard metric tile — default / warning / danger / success / compact',
+  },
 ];

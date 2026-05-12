@@ -1,14 +1,15 @@
 # P1 — API Core
 
-> **P1.10 shipped (2026-05-12).** Error mapper + property tests landed
-> on `dev`. Status: **10 / 12 P1 tasks complete** (P1.1 – P1.10);
-> P1.11 (OpenAPI freeze + contract tests) and P1.12 (exit gate +
-> `v0.1.0-api` tag) remain. Suite at this point: **18 integration
-> files / 140 tests + 4 unit files / 12 tests** (incl. 4 errorMapper
-> properties × 60 runs each). Typecheck + lint clean. The handoff
-> prompt's "P1 complete" framing was optimistic — P1 closes when
-> P1.11 + P1.12 ship. Next session can either finish P1.11/12 or
-> open P2 (Mobile Shell), per the operator's call.
+> **P1 complete (2026-05-12).** All 12 tasks (P1.1 – P1.12) shipped on
+> `dev`. Tagged `v0.1.0-api`.
+>
+> **Final test counts:** 5 unit files / 15 tests + 18 integration
+> files / 140 tests — all green.
+> **Coverage (integration suite, `packages/api/src/`):** 90.6% lines
+> overall; routes 99.01%; services 89.05%. Meets the ≥ 90% gate.
+> **Audits:** no real LLM calls in tests, no `TODO` /
+> `throw new Error('not implemented')` in route handlers, scope tests
+> present for every authed route, OpenAPI spec frozen + drift-gated.
 >
 > Goal: every endpoint in [arch-api-design.md](arch-api-design.md)
 > implemented, tested, scoped, and fixture-covered.
@@ -19,14 +20,16 @@
 
 ## Exit gate (`p1-exit-gate.yml`)
 
-- [ ] `pnpm test:api && pnpm test:api:integration` green.
-- [ ] Coverage on `packages/api/src/` ≥ 90% lines.
-- [ ] Zero `// TODO` / `throw new Error('not implemented')` in route handlers.
-- [ ] Per-request scope tests cover **every** authed route (paired own/cross + negative-control). `scripts/check-scope-tests.sh` green.
-- [ ] OpenAPI ↔ code in sync (`pnpm spec:emit && pnpm gen:types && git diff --exit-code`).
-- [ ] Every AI route has a fixture replay test.
-- [ ] No real LLM call in CI (audit grep).
-- [ ] Rate-limit + idempotency tests for routes that declare them.
+- [x] `pnpm test:api && pnpm test:api:integration` green.
+- [x] Coverage on `packages/api/src/` ≥ 90% lines (integration suite
+      reports 90.6%).
+- [x] Zero `// TODO` / `throw new Error('not implemented')` in route handlers.
+- [x] Per-request scope tests cover **every** authed route (paired own/cross + negative-control). `scripts/check-scope-tests.sh` green.
+- [x] OpenAPI ↔ code in sync (`scripts/check-spec-drift.sh` green;
+      wired into `pnpm lint`).
+- [x] Every AI route has a fixture replay test.
+- [x] No real LLM call in CI (audit grep clean).
+- [x] Rate-limit + idempotency tests for routes that declare them.
 
 ## Tasks
 
@@ -136,4 +139,10 @@ Each task = one route file + its tests + its api-contract schemas
 - [x] Commit: `chore(contract): freeze v1 OpenAPI spec`.
 
 ### P1.12 P1 exit gate
-- [ ] All boxes ticked. Tag `v0.1.0-api`.
+- [x] All boxes ticked. Tag `v0.1.0-api`.
+  - Verified 2026-05-12 via the gate checklist above. CI workflow
+    `p1-exit-gate.yml` is referenced in the plan but the repo has no
+    `.github/workflows/` yet — carved out as a P4 (Hardening) task
+    when CI infra lands. Until then, the gate is enforced locally
+    via `pnpm typecheck && pnpm lint && pnpm test:api &&
+    pnpm test:api:integration`.

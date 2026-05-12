@@ -1,0 +1,340 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`IconButton > applies the disabled opacity 1`] = `
+<rn-Pressable
+  accessibilityLabel="Disabled"
+  accessibilityRole="button"
+  className="items-center justify-center h-touch w-touch rounded-lg border border-border bg-card active:opacity-90 opacity-50"
+  disabled={true}
+  hitSlop={8}
+  onPress={[Function]}
+  style={
+    {
+      "elevation": 2,
+      "shadowColor": "#1a1a2e",
+      "shadowOffset": {
+        "height": 2,
+        "width": 0,
+      },
+      "shadowOpacity": 0.08,
+      "shadowRadius": 8,
+    }
+  }
+>
+  <rn-View
+    className="items-center justify-center"
+  />
+</rn-Pressable>
+`;
+
+exports[`IconButton > renders each size in square and circle shape > default-circle 1`] = `
+<rn-Pressable
+  accessibilityLabel="default-circle"
+  accessibilityRole="button"
+  className="items-center justify-center h-touch w-touch rounded-full border border-border bg-card active:opacity-90"
+  hitSlop={8}
+  onPress={[Function]}
+  style={
+    {
+      "elevation": 2,
+      "shadowColor": "#1a1a2e",
+      "shadowOffset": {
+        "height": 2,
+        "width": 0,
+      },
+      "shadowOpacity": 0.08,
+      "shadowRadius": 8,
+    }
+  }
+>
+  <rn-View
+    className="items-center justify-center"
+  />
+</rn-Pressable>
+`;
+
+exports[`IconButton > renders each size in square and circle shape > default-square 1`] = `
+<rn-Pressable
+  accessibilityLabel="default-square"
+  accessibilityRole="button"
+  className="items-center justify-center h-touch w-touch rounded-lg border border-border bg-card active:opacity-90"
+  hitSlop={8}
+  onPress={[Function]}
+  style={
+    {
+      "elevation": 2,
+      "shadowColor": "#1a1a2e",
+      "shadowOffset": {
+        "height": 2,
+        "width": 0,
+      },
+      "shadowOpacity": 0.08,
+      "shadowRadius": 8,
+    }
+  }
+>
+  <rn-View
+    className="items-center justify-center"
+  />
+</rn-Pressable>
+`;
+
+exports[`IconButton > renders each size in square and circle shape > sm-circle 1`] = `
+<rn-Pressable
+  accessibilityLabel="sm-circle"
+  accessibilityRole="button"
+  className="items-center justify-center h-9 w-9 rounded-full border border-border bg-card active:opacity-90"
+  hitSlop={8}
+  onPress={[Function]}
+  style={
+    {
+      "elevation": 2,
+      "shadowColor": "#1a1a2e",
+      "shadowOffset": {
+        "height": 2,
+        "width": 0,
+      },
+      "shadowOpacity": 0.08,
+      "shadowRadius": 8,
+    }
+  }
+>
+  <rn-View
+    className="items-center justify-center"
+  />
+</rn-Pressable>
+`;
+
+exports[`IconButton > renders each size in square and circle shape > sm-square 1`] = `
+<rn-Pressable
+  accessibilityLabel="sm-square"
+  accessibilityRole="button"
+  className="items-center justify-center h-9 w-9 rounded-md border border-border bg-card active:opacity-90"
+  hitSlop={8}
+  onPress={[Function]}
+  style={
+    {
+      "elevation": 2,
+      "shadowColor": "#1a1a2e",
+      "shadowOffset": {
+        "height": 2,
+        "width": 0,
+      },
+      "shadowOpacity": 0.08,
+      "shadowRadius": 8,
+    }
+  }
+>
+  <rn-View
+    className="items-center justify-center"
+  />
+</rn-Pressable>
+`;
+
+exports[`IconButton > renders each size in square and circle shape > xs-circle 1`] = `
+<rn-Pressable
+  accessibilityLabel="xs-circle"
+  accessibilityRole="button"
+  className="items-center justify-center h-7 w-7 rounded-full border border-border bg-card active:opacity-90"
+  hitSlop={8}
+  onPress={[Function]}
+  style={
+    {
+      "elevation": 2,
+      "shadowColor": "#1a1a2e",
+      "shadowOffset": {
+        "height": 2,
+        "width": 0,
+      },
+      "shadowOpacity": 0.08,
+      "shadowRadius": 8,
+    }
+  }
+>
+  <rn-View
+    className="items-center justify-center"
+  />
+</rn-Pressable>
+`;
+
+exports[`IconButton > renders each size in square and circle shape > xs-square 1`] = `
+<rn-Pressable
+  accessibilityLabel="xs-square"
+  accessibilityRole="button"
+  className="items-center justify-center h-7 w-7 rounded-md border border-border bg-card active:opacity-90"
+  hitSlop={8}
+  onPress={[Function]}
+  style={
+    {
+      "elevation": 2,
+      "shadowColor": "#1a1a2e",
+      "shadowOffset": {
+        "height": 2,
+        "width": 0,
+      },
+      "shadowOpacity": 0.08,
+      "shadowRadius": 8,
+    }
+  }
+>
+  <rn-View
+    className="items-center justify-center"
+  />
+</rn-Pressable>
+`;
+
+exports[`IconButton > renders each variant > destructive 1`] = `
+<rn-Pressable
+  accessibilityLabel="destructive"
+  accessibilityRole="button"
+  className="items-center justify-center h-touch w-touch rounded-lg bg-destructive active:opacity-85"
+  hitSlop={8}
+  onPress={[Function]}
+  style={
+    {
+      "elevation": 2,
+      "shadowColor": "#1a1a2e",
+      "shadowOffset": {
+        "height": 2,
+        "width": 0,
+      },
+      "shadowOpacity": 0.08,
+      "shadowRadius": 8,
+    }
+  }
+>
+  <rn-View
+    className="items-center justify-center"
+  />
+</rn-Pressable>
+`;
+
+exports[`IconButton > renders each variant > ghost 1`] = `
+<rn-Pressable
+  accessibilityLabel="ghost"
+  accessibilityRole="button"
+  className="items-center justify-center h-touch w-touch rounded-lg bg-transparent active:bg-secondary"
+  hitSlop={8}
+  onPress={[Function]}
+  style={
+    {
+      "elevation": 0,
+      "shadowColor": "#1a1a2e",
+      "shadowOffset": {
+        "height": 0,
+        "width": 0,
+      },
+      "shadowOpacity": 0,
+      "shadowRadius": 0,
+    }
+  }
+>
+  <rn-View
+    className="items-center justify-center"
+  />
+</rn-Pressable>
+`;
+
+exports[`IconButton > renders each variant > muted 1`] = `
+<rn-Pressable
+  accessibilityLabel="muted"
+  accessibilityRole="button"
+  className="items-center justify-center h-touch w-touch rounded-lg bg-surface-muted active:opacity-90"
+  hitSlop={8}
+  onPress={[Function]}
+  style={
+    {
+      "elevation": 0,
+      "shadowColor": "#1a1a2e",
+      "shadowOffset": {
+        "height": 0,
+        "width": 0,
+      },
+      "shadowOpacity": 0,
+      "shadowRadius": 0,
+    }
+  }
+>
+  <rn-View
+    className="items-center justify-center"
+  />
+</rn-Pressable>
+`;
+
+exports[`IconButton > renders each variant > outline 1`] = `
+<rn-Pressable
+  accessibilityLabel="outline"
+  accessibilityRole="button"
+  className="items-center justify-center h-touch w-touch rounded-lg border border-border bg-card active:opacity-90"
+  hitSlop={8}
+  onPress={[Function]}
+  style={
+    {
+      "elevation": 2,
+      "shadowColor": "#1a1a2e",
+      "shadowOffset": {
+        "height": 2,
+        "width": 0,
+      },
+      "shadowOpacity": 0.08,
+      "shadowRadius": 8,
+    }
+  }
+>
+  <rn-View
+    className="items-center justify-center"
+  />
+</rn-Pressable>
+`;
+
+exports[`IconButton > renders each variant > primary 1`] = `
+<rn-Pressable
+  accessibilityLabel="primary"
+  accessibilityRole="button"
+  className="items-center justify-center h-touch w-touch rounded-lg bg-primary active:opacity-85"
+  hitSlop={8}
+  onPress={[Function]}
+  style={
+    {
+      "elevation": 2,
+      "shadowColor": "#1a1a2e",
+      "shadowOffset": {
+        "height": 2,
+        "width": 0,
+      },
+      "shadowOpacity": 0.08,
+      "shadowRadius": 8,
+    }
+  }
+>
+  <rn-View
+    className="items-center justify-center"
+  />
+</rn-Pressable>
+`;
+
+exports[`IconButton > renders the default outline / default / square configuration 1`] = `
+<rn-Pressable
+  accessibilityLabel="Close"
+  accessibilityRole="button"
+  className="items-center justify-center h-touch w-touch rounded-lg border border-border bg-card active:opacity-90"
+  hitSlop={8}
+  onPress={[Function]}
+  style={
+    {
+      "elevation": 2,
+      "shadowColor": "#1a1a2e",
+      "shadowOffset": {
+        "height": 2,
+        "width": 0,
+      },
+      "shadowOpacity": 0.08,
+      "shadowRadius": 8,
+    }
+  }
+>
+  <rn-View
+    className="items-center justify-center"
+  />
+</rn-Pressable>
+`;

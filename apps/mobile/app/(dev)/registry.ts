@@ -12,4 +12,11 @@
  */
 import type { GalleryEntry } from '../../screens/dev-gallery.rows.js';
 
-export const REGISTRY: readonly GalleryEntry[] = [];
+export const REGISTRY: readonly GalleryEntry[] = [
+  {
+    name: 'Button',
+    href: '/(dev)/primitives/button',
+    group: 'primitives',
+    description: 'Variants, sizes, loading + disabled states',
+  },
+];

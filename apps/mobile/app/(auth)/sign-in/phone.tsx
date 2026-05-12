@@ -83,8 +83,9 @@ export default function SignInPhonePage() {
       await rememberPhoneNumber(normalizedPhone).catch(() => {
         // Silently ignore storage errors
       });
+      // Cast needed until expo-router regenerates typed routes
       router.push({
-        pathname: '/(auth)/sign-in/verify' as any, // TODO(P2.6): Remove cast when verify screen lands
+        pathname: '/(auth)/sign-in/verify' as any,
         params: { phone: normalizedPhone },
       });
     } catch (err) {

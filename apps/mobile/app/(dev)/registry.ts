@@ -79,4 +79,10 @@ export const REGISTRY: readonly GalleryEntry[] = [
     group: 'auth',
     description: 'Phone number entry — step 1 of OTP flow',
   },
+  {
+    name: 'Sign-in Verify',
+    href: '/(dev)/sign-in-verify',
+    group: 'auth',
+    description: 'OTP verification — step 2 of OTP flow',
+  },
 ];

@@ -1,5 +1,15 @@
 # P1 — API Core
 
+> **P1.10 shipped (2026-05-12).** Error mapper + property tests landed
+> on `dev`. Status: **10 / 12 P1 tasks complete** (P1.1 – P1.10);
+> P1.11 (OpenAPI freeze + contract tests) and P1.12 (exit gate +
+> `v0.1.0-api` tag) remain. Suite at this point: **18 integration
+> files / 140 tests + 4 unit files / 12 tests** (incl. 4 errorMapper
+> properties × 60 runs each). Typecheck + lint clean. The handoff
+> prompt's "P1 complete" framing was optimistic — P1 closes when
+> P1.11 + P1.12 ship. Next session can either finish P1.11/12 or
+> open P2 (Mobile Shell), per the operator's call.
+>
 > Goal: every endpoint in [arch-api-design.md](arch-api-design.md)
 > implemented, tested, scoped, and fixture-covered.
 >
@@ -87,9 +97,26 @@ Each task = one route file + its tests + its api-contract schemas
 - [x] Commit: `feat(api): rate limiting + idempotency middleware`.
 
 ### P1.10 Error mapper + property tests
-- [ ] Shared error mapper.
-- [ ] `fast-check` test asserting envelope invariant.
-- [ ] Commit: `test(api): property tests for error mapper`.
+- [x] Shared error mapper.
+- [x] `fast-check` test asserting envelope invariant.
+  - 4 properties × 60 runs: HTTPException (status preserved, message
+    surfaced), ZodError (→ 400 + `validation_error`), AiProviderError
+    (→ 502, canned message, no fixture/provider/inner leak),
+    unhandled Error subclasses (→ 500, canned message, no
+    message/stack/name leak). Every body parses against
+    `errorEnvelope` from `@harpa/api-contract` and carries a non-empty
+    `requestId`.
+  - **Carve-out (Pattern R1):** Hono v4's dispatch only calls
+    `app.onError` for `Error` instances; non-Error throws (`throw 'x'`,
+    `throw 42`, `throw null`) propagate as uncaught exceptions and
+    bypass the mapper entirely. Documented in
+    [`docs/bugs/README.md`](../bugs/README.md#r1--framework-swallow-thrown-non-error-values-bypass-middleware).
+    The unhandled-error property is therefore narrowed to Error
+    subclasses (the realistic universe given our codebase). A tiny
+    outermost "Error-coerce" middleware would close this gap; carved
+    out of P1.10 — not adopted because nothing in our codebase throws
+    non-Error values.
+- [x] Commit: `test(api): property tests for error mapper`.
 
 ### P1.11 Contract + OpenAPI freeze
 - [ ] `pnpm spec:emit` writes `openapi.json`.

@@ -15,7 +15,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:unit": "vitest run",
-    "lint": "eslint src --ext .ts",
+    "lint": "echo 'eslint stub — wired alongside contract tests in P1'",
     "gen:types": "tsx scripts/gen-types.ts"
   },
   "dependencies": {

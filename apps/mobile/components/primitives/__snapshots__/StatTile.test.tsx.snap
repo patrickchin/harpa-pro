@@ -1,0 +1,146 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`StatTile > renders compact min-height 1`] = `
+<rn-View
+  className="flex-1 items-center justify-center rounded-lg border px-3 py-3 border-border bg-card min-h-[82px]"
+  style={
+    {
+      "elevation": 2,
+      "shadowColor": "#1a1a2e",
+      "shadowOffset": {
+        "height": 2,
+        "width": 0,
+      },
+      "shadowOpacity": 0.08,
+      "shadowRadius": 8,
+    }
+  }
+>
+  <rn-Text
+    className="text-metric text-foreground"
+  >
+    5
+  </rn-Text>
+  <rn-Text
+    className="mt-1 text-label text-muted-foreground"
+  >
+    open
+  </rn-Text>
+</rn-View>
+`;
+
+exports[`StatTile > renders danger tone 1`] = `
+<rn-View
+  className="min-h-[92px] flex-1 items-center justify-center rounded-lg border px-3 py-3 border-danger-border bg-danger-soft"
+  style={
+    {
+      "elevation": 2,
+      "shadowColor": "#1a1a2e",
+      "shadowOffset": {
+        "height": 2,
+        "width": 0,
+      },
+      "shadowOpacity": 0.08,
+      "shadowRadius": 8,
+    }
+  }
+>
+  <rn-Text
+    className="text-metric text-foreground"
+  >
+    0
+  </rn-Text>
+  <rn-Text
+    className="mt-1 text-label text-muted-foreground"
+  >
+    failed
+  </rn-Text>
+</rn-View>
+`;
+
+exports[`StatTile > renders default tone 1`] = `
+<rn-View
+  className="min-h-[92px] flex-1 items-center justify-center rounded-lg border px-3 py-3 border-border bg-card"
+  style={
+    {
+      "elevation": 2,
+      "shadowColor": "#1a1a2e",
+      "shadowOffset": {
+        "height": 2,
+        "width": 0,
+      },
+      "shadowOpacity": 0.08,
+      "shadowRadius": 8,
+    }
+  }
+>
+  <rn-Text
+    className="text-metric text-foreground"
+  >
+    12
+  </rn-Text>
+  <rn-Text
+    className="mt-1 text-label text-muted-foreground"
+  >
+    reports
+  </rn-Text>
+</rn-View>
+`;
+
+exports[`StatTile > renders success tone 1`] = `
+<rn-View
+  className="min-h-[92px] flex-1 items-center justify-center rounded-lg border px-3 py-3 border-success-border bg-success-soft"
+  style={
+    {
+      "elevation": 2,
+      "shadowColor": "#1a1a2e",
+      "shadowOffset": {
+        "height": 2,
+        "width": 0,
+      },
+      "shadowOpacity": 0.08,
+      "shadowRadius": 8,
+    }
+  }
+>
+  <rn-Text
+    className="text-metric text-foreground"
+  >
+    42
+  </rn-Text>
+  <rn-Text
+    className="mt-1 text-label text-muted-foreground"
+  >
+    done
+  </rn-Text>
+</rn-View>
+`;
+
+exports[`StatTile > renders warning tone 1`] = `
+<rn-View
+  className="min-h-[92px] flex-1 items-center justify-center rounded-lg border px-3 py-3 border-warning-border bg-warning-soft"
+  style={
+    {
+      "elevation": 2,
+      "shadowColor": "#1a1a2e",
+      "shadowOffset": {
+        "height": 2,
+        "width": 0,
+      },
+      "shadowOpacity": 0.08,
+      "shadowRadius": 8,
+    }
+  }
+>
+  <rn-Text
+    className="text-metric text-foreground"
+  >
+    3
+  </rn-Text>
+  <rn-Text
+    className="mt-1 text-label text-muted-foreground"
+  >
+    overdue
+  </rn-Text>
+</rn-View>
+`;

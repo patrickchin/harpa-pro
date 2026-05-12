@@ -95,6 +95,17 @@ update.
 
 ## Conventions
 
+### Path identifiers
+
+From P3.0 onwards, path params use **prefixed slugs**
+(`prj_xxxxxx`, `rpt_xxxxxx`) instead of UUIDs. Reports also
+expose a per-project number for human-readable canonical URLs
+(`/projects/prj_xxxxxx/reports/42`). Two short-link routes
+(`/p/:projectSlug`, `/r/:reportSlug`) `308` to the canonical
+long URL. Full design in [arch-ids-and-urls.md](arch-ids-and-urls.md).
+The `:id` / `:reportId` paths in the route tables above are the
+pre-P3.0 shape and will be renamed by the P3.0 migration.
+
 ### Request / response shape
 
 - All bodies are JSON.

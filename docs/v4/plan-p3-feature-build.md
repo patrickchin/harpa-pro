@@ -89,6 +89,7 @@ For each screen in the scope list:
 Suggested order (parallelisable across agents once primitives lock):
 
 ```
+P3.0  IDs/slugs migration (BLOCKS every other P3 task)
 P3.1  Project list (visual confirm)
 P3.2  New / Edit project           ┐ Agent A
 P3.3  Project home                 ┘
@@ -103,6 +104,34 @@ P3.11 Camera                        ┘
 P3.12 Profile / Account / Usage
 P3.13 Maestro full-journey
 ```
+
+### P3.0 — IDs/slugs migration
+
+Full design: [arch-ids-and-urls.md](arch-ids-and-urls.md). Lands
+**before** any screen-port commit so URLs the app constructs are
+immediately on the final scheme — no rewriting share links later.
+
+- [ ] Drizzle schema: add `slug text` + (reports) `number int` +
+      `projects.next_report_number int`. Backfill nullable, then
+      flip `NOT NULL` + `UNIQUE` (4-step expand/contract).
+- [ ] UUIDv7 default on new rows (`uuidv7()` on PG ≥ 17 or
+      `pg_uuidv7` extension — verify on Neon at migration time).
+      Existing UUIDv4 rows untouched.
+- [ ] `packages/api/src/lib/slug.ts` — nanoid Crockford-base32
+      generator + retry-on-collision wrapper.
+- [ ] `packages/api-contract`: `projectSlug`, `reportSlug`,
+      `reportNumber` Zod schemas + branded TS types. Path params
+      switch from `:id`/`:reportId` to `:projectSlug` /
+      `:projectSlug/:number`. OpenAPI spec regenerated.
+- [ ] New routes: `GET /p/:projectSlug` + `GET /r/:reportSlug` →
+      `308` redirect to canonical long URL. Scope test for each.
+- [ ] Per-request scope tests cover slug-based lookups (Pitfall 6).
+- [ ] Mobile: `lib/api/hooks.ts` regenerated; `router.push` call
+      sites updated; `app/(app)/p/[projectSlug].tsx` +
+      `app/(app)/r/[reportSlug].tsx` resolver screens added
+      (each does `router.replace` after slug → canonical resolve).
+- [ ] Commit: `feat(api,mobile): P3.0 IDs/slugs migration —
+      prefixed slugs + per-project report numbers`.
 
 ## Pipelines exercised
 

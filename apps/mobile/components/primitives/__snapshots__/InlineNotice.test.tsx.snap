@@ -1,0 +1,101 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`InlineNotice > renders danger tone 1`] = `
+<rn-View
+  className="rounded-md border px-4 py-3 border-danger-border bg-danger-soft"
+  style={
+    {
+      "elevation": 2,
+      "shadowColor": "#1a1a2e",
+      "shadowOffset": {
+        "height": 2,
+        "width": 0,
+      },
+      "shadowOpacity": 0.08,
+      "shadowRadius": 8,
+    }
+  }
+>
+  <rn-Text
+    className="text-sm text-danger-text"
+    selectable={true}
+  >
+    Body copy.
+  </rn-Text>
+</rn-View>
+`;
+
+exports[`InlineNotice > renders info tone 1`] = `
+<rn-View
+  className="rounded-md border px-4 py-3 border-info-border bg-info-soft"
+  style={
+    {
+      "elevation": 2,
+      "shadowColor": "#1a1a2e",
+      "shadowOffset": {
+        "height": 2,
+        "width": 0,
+      },
+      "shadowOpacity": 0.08,
+      "shadowRadius": 8,
+    }
+  }
+>
+  <rn-Text
+    className="text-sm text-info-text"
+    selectable={true}
+  >
+    Body copy.
+  </rn-Text>
+</rn-View>
+`;
+
+exports[`InlineNotice > renders success tone 1`] = `
+<rn-View
+  className="rounded-md border px-4 py-3 border-success-border bg-success-soft"
+  style={
+    {
+      "elevation": 2,
+      "shadowColor": "#1a1a2e",
+      "shadowOffset": {
+        "height": 2,
+        "width": 0,
+      },
+      "shadowOpacity": 0.08,
+      "shadowRadius": 8,
+    }
+  }
+>
+  <rn-Text
+    className="text-sm text-success-text"
+    selectable={true}
+  >
+    Body copy.
+  </rn-Text>
+</rn-View>
+`;
+
+exports[`InlineNotice > renders warning tone 1`] = `
+<rn-View
+  className="rounded-md border px-4 py-3 border-warning-border bg-warning-soft"
+  style={
+    {
+      "elevation": 2,
+      "shadowColor": "#1a1a2e",
+      "shadowOffset": {
+        "height": 2,
+        "width": 0,
+      },
+      "shadowOpacity": 0.08,
+      "shadowRadius": 8,
+    }
+  }
+>
+  <rn-Text
+    className="text-sm text-warning-text"
+    selectable={true}
+  >
+    Body copy.
+  </rn-Text>
+</rn-View>
+`;

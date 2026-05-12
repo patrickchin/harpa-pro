@@ -88,14 +88,55 @@
       queries; the mutation gap was raised by security-reviewer §E).*
 - [x] Commit: `feat(mobile): auth session with secure-store + auto sign-out on 401`.
 
-### P2.5 Auth screens (login / verify / onboarding)
-- [ ] `screens/login.tsx`, `screens/verify.tsx`, `screens/onboarding.tsx`
-      bodies ported from `../haru3-reports/apps/mobile/app/`.
-- [ ] Real routes: `app/(auth)/{login,verify,onboarding}.tsx`.
-- [ ] Dev mirrors: `app/(dev)/{login,verify,onboarding}.tsx` with mock props.
-- [ ] `verify` uses a single async flow, no `setTimeout` (Pitfall 5).
-- [ ] Behaviour tests for each interaction the canonical source exercises.
-- [ ] Commits: `feat(mobile): <screen> ported from canonical source`.
+### P2.5 Auth screens (phone / OTP / onboarding — split per route)
+
+The canonical source (`../haru3-reports/apps/mobile/app/index.tsx` for
+sign-in and `app/signup.tsx` for sign-up) keeps phone-number entry
+**and** OTP entry inside a single screen with internal `step` state.
+v4 **splits each into its own route** so navigation stack, back button,
+deep-linking, and behaviour tests have a single responsibility per
+screen. Phone entry pushes to its OTP screen with the phone number as
+a navigation param; OTP screen owns resend + verify only.
+
+Bodies (one commit each):
+- [ ] `screens/sign-in-phone.tsx` — phone-number entry for existing
+      users (port from `app/index.tsx` step-1 JSX + Tailwind).
+- [ ] `screens/sign-in-verify.tsx` — OTP entry + resend for sign-in
+      (port from `app/index.tsx` step-2 JSX + Tailwind).
+- [ ] `screens/sign-up-phone.tsx` — phone-number entry for new users
+      (port from `app/signup.tsx` step-1).
+- [ ] `screens/sign-up-verify.tsx` — OTP entry + resend for sign-up
+      (port from `app/signup.tsx` step-2).
+- [ ] `screens/onboarding.tsx` — port from `app/onboarding.tsx`.
+
+Real routes mirror the bodies one-to-one:
+- [ ] `app/(auth)/sign-in/phone.tsx`, `app/(auth)/sign-in/verify.tsx`
+- [ ] `app/(auth)/sign-up/phone.tsx`, `app/(auth)/sign-up/verify.tsx`
+- [ ] `app/(auth)/onboarding.tsx`
+
+Dev mirrors:
+- [ ] `app/(dev)/sign-in-phone.tsx`, `app/(dev)/sign-in-verify.tsx`,
+      `app/(dev)/sign-up-phone.tsx`, `app/(dev)/sign-up-verify.tsx`,
+      `app/(dev)/onboarding.tsx` — each with mock props.
+
+Behaviour rules:
+- [ ] Verify screens use a **single async flow**, no `setTimeout` chains
+      (Pitfall 5). On success: `await signIn()` → `router.replace`
+      based on the resulting auth status (`needs-onboarding` →
+      onboarding, `authenticated` → `(app)`).
+- [ ] Resend uses an explicit cooldown timer (a UI-only `setInterval`
+      for the countdown is allowed; it must NOT gate navigation).
+- [ ] Phone number is passed via navigation param, never re-entered
+      on the verify screen. The verify screen reads it from
+      `useLocalSearchParams()` and renders it read-only.
+- [ ] No `Alert.alert` — error envelopes render through
+      `AppDialogSheet` or inline error rows.
+- [ ] Behaviour tests for each interaction the canonical source
+      exercises (input validation, error rendering, loading, resend).
+- [ ] Commit per body+route+mirror trio:
+      `feat(mobile): <screen> ported from canonical source` (one of
+      `sign-in-phone`, `sign-in-verify`, `sign-up-phone`,
+      `sign-up-verify`, `onboarding`).
 
 ### P2.6 App shell (`(app)/_layout.tsx`)
 - [ ] Tab + stack navigation.
@@ -108,11 +149,6 @@
       `../haru3-reports/apps/mobile/app/(tabs)/projects.tsx`.
 - [ ] Real route: `app/(app)/projects/index.tsx`.
 - [ ] Dev mirror: `app/(dev)/projects.tsx` with mock data.
-- [ ] Tap pushes `/projects/${project.id}` (UUID, provisional). The
-      slug swap happens in P3.0 — see
-      [arch-ids-and-urls.md](arch-ids-and-urls.md). Keep the call
-      site shape `router.push(`/projects/${id}`)` so P3.0 only
-      changes the value, not the structure.
 - [ ] Commit: `feat(mobile): projects list ported from canonical source`.
 
 ### P2.8 P2 exit gate

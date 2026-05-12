@@ -111,99 +111,83 @@ exports[`SignInVerify > matches snapshot at default props 1`] = `
               Most phones can autofill the code from Messages.
             </rn-Text>
           </rn-View>
-          <rn-Pressable
-            className="flex-row items-center justify-center rounded-md border border-accent bg-accent active:opacity-85 min-h-touch-lg px-6 py-4 opacity-50 w-full"
-            disabled={true}
-            onPress={[MockFunction spy]}
-            style={
-              [
-                {
-                  "elevation": 4,
-                  "shadowColor": "#1a1a2e",
-                  "shadowOffset": {
-                    "height": 4,
-                    "width": 0,
+          <rn-View
+            className="gap-3"
+          >
+            <rn-Pressable
+              className="flex-row items-center justify-center rounded-md border border-accent bg-accent active:opacity-85 min-h-touch-lg px-6 py-4 opacity-50 w-full"
+              disabled={true}
+              onPress={[MockFunction spy]}
+              style={
+                [
+                  {
+                    "elevation": 4,
+                    "shadowColor": "#1a1a2e",
+                    "shadowOffset": {
+                      "height": 4,
+                      "width": 0,
+                    },
+                    "shadowOpacity": 0.12,
+                    "shadowRadius": 14,
                   },
-                  "shadowOpacity": 0.12,
-                  "shadowRadius": 14,
-                },
-                undefined,
-              ]
-            }
-            testID="btn-verify-code"
+                  undefined,
+                ]
+              }
+              testID="btn-verify-code"
+            >
+              <rn-Text
+                className="text-accent-foreground font-semibold text-lg"
+              >
+                Verify Code
+              </rn-Text>
+            </rn-Pressable>
+            <rn-Pressable
+              className="flex-row items-center justify-center rounded-md border border-border bg-card active:opacity-90 min-h-touch-lg px-6 py-4 w-full"
+              disabled={false}
+              onPress={[MockFunction spy]}
+              style={
+                [
+                  {
+                    "elevation": 2,
+                    "shadowColor": "#1a1a2e",
+                    "shadowOffset": {
+                      "height": 2,
+                      "width": 0,
+                    },
+                    "shadowOpacity": 0.08,
+                    "shadowRadius": 8,
+                  },
+                  undefined,
+                ]
+              }
+              testID="btn-change-number"
+            >
+              <rn-Text
+                className="text-foreground font-semibold text-lg"
+              >
+                Change Number
+              </rn-Text>
+            </rn-Pressable>
+          </rn-View>
+          <rn-Pressable
+            accessibilityRole="button"
+            className="items-center py-2"
+            disabled={false}
+            onPress={[MockFunction spy]}
+            testID="link-resend-code"
           >
             <rn-Text
-              className="text-accent-foreground font-semibold text-lg"
+              className="text-sm text-muted-foreground"
             >
-              Verify Code
+              Didn't get the code?
+               
+              <rn-Text
+                className="font-semibold underline text-foreground"
+              >
+                Resend Code
+              </rn-Text>
             </rn-Text>
           </rn-Pressable>
-          <rn-View
-            className="flex-row gap-3"
-          >
-            <rn-View
-              className="flex-1"
-            >
-              <rn-Pressable
-                className="flex-row items-center justify-center rounded-md border border-border bg-card active:opacity-90 min-h-touch px-4 py-3"
-                disabled={false}
-                onPress={[MockFunction spy]}
-                style={
-                  [
-                    {
-                      "elevation": 2,
-                      "shadowColor": "#1a1a2e",
-                      "shadowOffset": {
-                        "height": 2,
-                        "width": 0,
-                      },
-                      "shadowOpacity": 0.08,
-                      "shadowRadius": 8,
-                    },
-                    undefined,
-                  ]
-                }
-                testID="btn-change-number"
-              >
-                <rn-Text
-                  className="text-foreground font-semibold text-base"
-                >
-                  Change Number
-                </rn-Text>
-              </rn-Pressable>
-            </rn-View>
-            <rn-View
-              className="flex-1"
-            >
-              <rn-Pressable
-                className="flex-row items-center justify-center rounded-md bg-transparent active:bg-secondary min-h-touch px-4 py-3"
-                disabled={false}
-                onPress={[MockFunction spy]}
-                style={
-                  [
-                    {
-                      "elevation": 0,
-                      "shadowColor": "#1a1a2e",
-                      "shadowOffset": {
-                        "height": 0,
-                        "width": 0,
-                      },
-                      "shadowOpacity": 0,
-                      "shadowRadius": 0,
-                    },
-                    undefined,
-                  ]
-                }
-                testID="btn-resend-code"
-              >
-                <rn-Text
-                  className="text-foreground font-semibold text-base"
-                >
-                  Resend Code
-                </rn-Text>
-              </rn-Pressable>
-            </rn-View>
-          </rn-View>
         </rn-View>
       </rn-View>
     </rn-ScrollView>

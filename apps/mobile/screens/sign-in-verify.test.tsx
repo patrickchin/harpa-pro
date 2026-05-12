@@ -62,13 +62,14 @@ describe('SignInVerify', () => {
     );
     const jsonNoCountdown = JSON.stringify(treeNoCountdown.toJSON());
     expect(jsonNoCountdown).toContain('Resend Code');
+    expect(jsonNoCountdown).toContain("Didn't get the code?");
     expect(jsonNoCountdown).not.toContain('Resend in');
   });
 
-  it('disables resend button when resendDisabled is true', () => {
+  it('disables resend link when resendDisabled is true', () => {
     const tree = render(<SignInVerify {...defaultProps} resendDisabled={true} />);
-    const button = tree.root.findByProps({ testID: 'btn-resend-code' });
-    expect(button.props.disabled).toBe(true);
+    const link = tree.root.findByProps({ testID: 'link-resend-code' });
+    expect(link.props.disabled).toBe(true);
   });
 
   it('renders error InlineNotice when error is provided', () => {
@@ -109,11 +110,11 @@ describe('SignInVerify', () => {
     const tree = render(
       <SignInVerify {...defaultProps} onResend={onResend} resendDisabled={true} />
     );
-    const button = tree.root.findByProps({ testID: 'btn-resend-code' });
-    expect(button.props.disabled).toBe(true);
-    // Button is disabled, so onPress shouldn't be called even if triggered
+    const link = tree.root.findByProps({ testID: 'link-resend-code' });
+    expect(link.props.disabled).toBe(true);
+    // Link is disabled, so onPress shouldn't be called even if triggered
     act(() => {
-      // In test-renderer, disabled buttons still have onPress defined
+      // In test-renderer, disabled Pressables still have onPress defined
       // but the press won't be registered by the real component
     });
     expect(onResend).not.toHaveBeenCalled();

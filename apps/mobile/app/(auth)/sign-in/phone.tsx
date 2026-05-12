@@ -10,7 +10,7 @@
  * Single async flow per Pitfall 5: mutateAsync then router.push. No setTimeout.
  */
 import { useEffect, useState } from 'react';
-import { Redirect, useRouter } from 'expo-router';
+import { Redirect, useRouter, type Href } from 'expo-router';
 import SignInPhone from '@/screens/sign-in-phone';
 import { useAuthSession } from '@/lib/auth';
 import { useStartOtpMutation } from '@/lib/api/hooks';
@@ -83,9 +83,10 @@ export default function SignInPhonePage() {
       await rememberPhoneNumber(normalizedPhone).catch(() => {
         // Silently ignore storage errors
       });
-      // Cast needed until expo-router regenerates typed routes
+      // expo-router typed-routes regenerates on next `expo start`; cast safe.
       router.push({
-        pathname: '/(auth)/sign-in/verify' as any,
+        // @ts-expect-error — route exists but types not regenerated yet
+        pathname: '/(auth)/sign-in/verify',
         params: { phone: normalizedPhone },
       });
     } catch (err) {

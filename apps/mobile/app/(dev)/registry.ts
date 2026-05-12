@@ -91,4 +91,10 @@ export const REGISTRY: readonly GalleryEntry[] = [
     group: 'auth',
     description: 'Phone number entry — step 1 of sign-up flow',
   },
+  {
+    name: 'Sign-up Verify',
+    href: '/(dev)/sign-up-verify',
+    group: 'auth',
+    description: 'OTP verification — step 2 of sign-up flow',
+  },
 ];

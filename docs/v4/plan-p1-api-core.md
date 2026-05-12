@@ -48,10 +48,10 @@ Each task = one route file + its tests + its api-contract schemas
 - [x] Commit: `feat(api): files + R2 signed URL minting`. (landed as `feat(api): files presign + register + signed-GET URL via storage abstraction`, commit `7f01870`)
 
 ### P1.6 Voice (AI)
-- [ ] `POST /voice/transcribe` (Whisper via ai-fixtures).
-- [ ] `POST /voice/summarize` (LLM via ai-fixtures).
-- [ ] Recorded fixtures: `transcribe.basic`, `summarize.basic`.
-- [ ] Commit: `feat(api): voice transcribe + summarize via ai-fixtures`.
+- [x] `POST /voice/transcribe` (Whisper via ai-fixtures).
+- [x] `POST /voice/summarize` (LLM via ai-fixtures).
+- [x] Recorded fixtures: `transcribe.basic`, `summarize.basic`.
+- [x] Commit: `feat(api): voice transcribe + summarize via ai-fixtures`.
 
 ### P1.7 Reports (AI)
 - [ ] `POST /reports/:id/generate` (LLM).

@@ -49,4 +49,10 @@ export const REGISTRY: readonly GalleryEntry[] = [
     group: 'primitives',
     description: 'Muted-card zero state with icon / action slots',
   },
+  {
+    name: 'Skeleton',
+    href: '/(dev)/primitives/skeleton',
+    group: 'primitives',
+    description: 'Pulsing placeholder blocks + SkeletonRow flex layout',
+  },
 ];

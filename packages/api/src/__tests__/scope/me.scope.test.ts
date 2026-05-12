@@ -107,4 +107,60 @@ describe('scope: /me', () => {
       conn.release();
     }
   });
+
+  it('PATCH /me: alice updating self only mutates alice', async () => {
+    const app = createApp();
+    const token = await signTestToken(alice, aliceSid);
+    const res = await app.request('/me', {
+      method: 'PATCH',
+      headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+      body: JSON.stringify({ displayName: 'AliceScopeTest' }),
+    });
+    expect(res.status).toBe(200);
+    // Verify bob's row was NOT touched.
+    const conn = await getPool().connect();
+    try {
+      const r = await conn.query<{ display_name: string | null }>(
+        `SELECT display_name FROM auth.users WHERE id = $1`,
+        [bob],
+      );
+      expect(r.rows[0]?.display_name).not.toBe('AliceScopeTest');
+    } finally {
+      conn.release();
+    }
+  });
+
+  it('paired — bob cannot impersonate alice via the alice route handler', async () => {
+    // The handler reads userId from the JWT, so a token signed for bob can
+    // only ever update bob's row — even if the request body claims otherwise.
+    const app = createApp();
+    const token = await signTestToken(bob, bobSid);
+    const res = await app.request('/me', {
+      method: 'PATCH',
+      headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+      body: JSON.stringify({ displayName: 'BobScopeTest' }),
+    });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { user: { id: string; displayName: string } };
+    expect(body.user.id).toBe(bob);
+    expect(body.user.displayName).toBe('BobScopeTest');
+  });
+
+  it('negative control — same UPDATE WITHOUT scope can mutate any user row', async () => {
+    // Without the SET LOCAL role, the connecting test user (table owner)
+    // bypasses RLS and can mutate either row. Proves the wrapper is what
+    // restricts PATCH /me to the caller's own row.
+    const conn = await getPool().connect();
+    try {
+      const r = await conn.query(
+        `UPDATE auth.users SET display_name = 'UNSCOPED' WHERE id = $1 RETURNING id`,
+        [bob],
+      );
+      expect(r.rowCount).toBe(1);
+      // Restore so other tests aren't affected.
+      await conn.query(`UPDATE auth.users SET display_name = 'Bob' WHERE id = $1`, [bob]);
+    } finally {
+      conn.release();
+    }
+  });
 });

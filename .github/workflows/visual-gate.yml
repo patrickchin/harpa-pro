@@ -1,0 +1,13 @@
+name: visual-gate
+# Skeleton — Maestro screenshot diff vs docs/legacy-v3/screenshots/.
+# Wired in P2 once shared primitives + first screens land.
+on:
+  pull_request:
+    paths: ['apps/mobile/**']
+jobs:
+  visual:
+    if: false # disabled until P2
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: echo 'placeholder — wired in P2'

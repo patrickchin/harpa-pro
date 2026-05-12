@@ -1,0 +1,20 @@
+name: api-integration
+on:
+  pull_request:
+  push:
+    branches: [dev, main]
+jobs:
+  integration:
+    runs-on: ubuntu-latest
+    env:
+      AI_FIXTURE_MODE: replay
+      TESTCONTAINERS_RYUK_DISABLED: 'true'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 9.12.3 }
+      - uses: actions/setup-node@v4
+        with: { node-version: '22', cache: 'pnpm' }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @harpa/api-contract build
+      - run: pnpm --filter @harpa/api test:integration

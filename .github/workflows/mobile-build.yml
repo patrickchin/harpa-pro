@@ -1,0 +1,22 @@
+name: mobile-build
+# Skeleton — full EAS build wired in P2. For now we just ensure the
+# Expo project type-checks and the unit suite passes.
+on:
+  pull_request:
+    paths: ['apps/mobile/**', 'packages/api-contract/**']
+  push:
+    branches: [dev, main]
+    paths: ['apps/mobile/**', 'packages/api-contract/**']
+jobs:
+  mobile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 9.12.3 }
+      - uses: actions/setup-node@v4
+        with: { node-version: '22', cache: 'pnpm' }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @harpa/api-contract build
+      - run: pnpm --filter @harpa/mobile typecheck
+      - run: pnpm --filter @harpa/mobile test

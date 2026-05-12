@@ -31,4 +31,10 @@ export const REGISTRY: readonly GalleryEntry[] = [
     group: 'primitives',
     description: 'Label / hint / error / read-only states',
   },
+  {
+    name: 'Card',
+    href: '/(dev)/primitives/card',
+    group: 'primitives',
+    description: 'Surface container — variants + padding steps',
+  },
 ];

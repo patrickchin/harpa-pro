@@ -1,0 +1,226 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Card > renders every padding step > lg 1`] = `
+<rn-View
+  className="rounded-lg border border-border bg-card p-5"
+  style={
+    [
+      {
+        "elevation": 2,
+        "shadowColor": "#1a1a2e",
+        "shadowOffset": {
+          "height": 2,
+          "width": 0,
+        },
+        "shadowOpacity": 0.08,
+        "shadowRadius": 8,
+      },
+      undefined,
+    ]
+  }
+>
+  <rn-Text>
+    lg
+  </rn-Text>
+</rn-View>
+`;
+
+exports[`Card > renders every padding step > md 1`] = `
+<rn-View
+  className="rounded-lg border border-border bg-card p-4"
+  style={
+    [
+      {
+        "elevation": 2,
+        "shadowColor": "#1a1a2e",
+        "shadowOffset": {
+          "height": 2,
+          "width": 0,
+        },
+        "shadowOpacity": 0.08,
+        "shadowRadius": 8,
+      },
+      undefined,
+    ]
+  }
+>
+  <rn-Text>
+    md
+  </rn-Text>
+</rn-View>
+`;
+
+exports[`Card > renders every padding step > sm 1`] = `
+<rn-View
+  className="rounded-lg border border-border bg-card p-3"
+  style={
+    [
+      {
+        "elevation": 2,
+        "shadowColor": "#1a1a2e",
+        "shadowOffset": {
+          "height": 2,
+          "width": 0,
+        },
+        "shadowOpacity": 0.08,
+        "shadowRadius": 8,
+      },
+      undefined,
+    ]
+  }
+>
+  <rn-Text>
+    sm
+  </rn-Text>
+</rn-View>
+`;
+
+exports[`Card > renders every variant > danger 1`] = `
+<rn-View
+  className="rounded-lg border border-danger-border bg-danger-soft p-4"
+  style={
+    [
+      {
+        "elevation": 2,
+        "shadowColor": "#1a1a2e",
+        "shadowOffset": {
+          "height": 2,
+          "width": 0,
+        },
+        "shadowOpacity": 0.08,
+        "shadowRadius": 8,
+      },
+      undefined,
+    ]
+  }
+>
+  <rn-Text>
+    danger
+  </rn-Text>
+</rn-View>
+`;
+
+exports[`Card > renders every variant > default 1`] = `
+<rn-View
+  className="rounded-lg border border-border bg-card p-4"
+  style={
+    [
+      {
+        "elevation": 2,
+        "shadowColor": "#1a1a2e",
+        "shadowOffset": {
+          "height": 2,
+          "width": 0,
+        },
+        "shadowOpacity": 0.08,
+        "shadowRadius": 8,
+      },
+      undefined,
+    ]
+  }
+>
+  <rn-Text>
+    default
+  </rn-Text>
+</rn-View>
+`;
+
+exports[`Card > renders every variant > emphasis 1`] = `
+<rn-View
+  className="rounded-lg border border-border bg-surface-emphasis p-4"
+  style={
+    [
+      {
+        "elevation": 4,
+        "shadowColor": "#1a1a2e",
+        "shadowOffset": {
+          "height": 4,
+          "width": 0,
+        },
+        "shadowOpacity": 0.12,
+        "shadowRadius": 14,
+      },
+      undefined,
+    ]
+  }
+>
+  <rn-Text>
+    emphasis
+  </rn-Text>
+</rn-View>
+`;
+
+exports[`Card > renders every variant > muted 1`] = `
+<rn-View
+  className="rounded-lg border border-border bg-surface-muted p-4"
+  style={
+    [
+      {
+        "elevation": 2,
+        "shadowColor": "#1a1a2e",
+        "shadowOffset": {
+          "height": 2,
+          "width": 0,
+        },
+        "shadowOpacity": 0.08,
+        "shadowRadius": 8,
+      },
+      undefined,
+    ]
+  }
+>
+  <rn-Text>
+    muted
+  </rn-Text>
+</rn-View>
+`;
+
+exports[`Card > renders the default variant with default padding 1`] = `
+<rn-View
+  className="rounded-lg border border-border bg-card p-4"
+  style={
+    [
+      {
+        "elevation": 2,
+        "shadowColor": "#1a1a2e",
+        "shadowOffset": {
+          "height": 2,
+          "width": 0,
+        },
+        "shadowOpacity": 0.08,
+        "shadowRadius": 8,
+      },
+      undefined,
+    ]
+  }
+>
+  <rn-Text>
+    Card body
+  </rn-Text>
+</rn-View>
+`;
+
+exports[`Card > respects an explicit depth override 1`] = `
+<rn-View
+  className="rounded-lg border border-border bg-card p-4"
+  style={
+    [
+      {
+        "elevation": 0,
+        "shadowColor": "#1a1a2e",
+        "shadowOffset": {
+          "height": 0,
+          "width": 0,
+        },
+        "shadowOpacity": 0,
+        "shadowRadius": 0,
+      },
+      undefined,
+    ]
+  }
+>
+  <rn-Text>
+    flat
+  </rn-Text>
+</rn-View>
+`;

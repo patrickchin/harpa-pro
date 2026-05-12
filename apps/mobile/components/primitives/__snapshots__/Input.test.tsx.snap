@@ -1,0 +1,158 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Input > renders a bare input 1`] = `
+<rn-View
+  className="gap-2"
+>
+  <rn-TextInput
+    className="min-h-touch rounded-md border px-4 py-3 text-base text-foreground border-border bg-card"
+    editable={true}
+    placeholder="Search"
+    placeholderTextColor="#5f5b66"
+    style={
+      [
+        {
+          "elevation": 2,
+          "shadowColor": "#1a1a2e",
+          "shadowOffset": {
+            "height": 2,
+            "width": 0,
+          },
+          "shadowOpacity": 0.08,
+          "shadowRadius": 8,
+        },
+        {
+          "paddingBottom": 0,
+          "paddingTop": 0,
+          "textAlignVertical": "center",
+        },
+        undefined,
+      ]
+    }
+  />
+</rn-View>
+`;
+
+exports[`Input > renders label + hint 1`] = `
+<rn-View
+  className="gap-2"
+>
+  <rn-Text
+    className="text-label text-muted-foreground"
+  >
+    Email
+  </rn-Text>
+  <rn-TextInput
+    className="min-h-touch rounded-md border px-4 py-3 text-base text-foreground border-border bg-card"
+    editable={true}
+    placeholder="you@example.com"
+    placeholderTextColor="#5f5b66"
+    style={
+      [
+        {
+          "elevation": 2,
+          "shadowColor": "#1a1a2e",
+          "shadowOffset": {
+            "height": 2,
+            "width": 0,
+          },
+          "shadowOpacity": 0.08,
+          "shadowRadius": 8,
+        },
+        {
+          "paddingBottom": 0,
+          "paddingTop": 0,
+          "textAlignVertical": "center",
+        },
+        undefined,
+      ]
+    }
+  />
+  <rn-Text
+    className="text-sm text-muted-foreground"
+  >
+    We never spam
+  </rn-Text>
+</rn-View>
+`;
+
+exports[`Input > renders the error tone 1`] = `
+<rn-View
+  className="gap-2"
+>
+  <rn-Text
+    className="text-label text-muted-foreground"
+  >
+    Phone
+  </rn-Text>
+  <rn-TextInput
+    className="min-h-touch rounded-md border px-4 py-3 text-base text-foreground bg-card border-danger-border"
+    editable={true}
+    placeholderTextColor="#5f5b66"
+    style={
+      [
+        {
+          "elevation": 2,
+          "shadowColor": "#1a1a2e",
+          "shadowOffset": {
+            "height": 2,
+            "width": 0,
+          },
+          "shadowOpacity": 0.08,
+          "shadowRadius": 8,
+        },
+        {
+          "paddingBottom": 0,
+          "paddingTop": 0,
+          "textAlignVertical": "center",
+        },
+        undefined,
+      ]
+    }
+    value="+1"
+  />
+  <rn-Text
+    className="text-sm text-danger-text"
+  >
+    Invalid phone number
+  </rn-Text>
+</rn-View>
+`;
+
+exports[`Input > renders the read-only state 1`] = `
+<rn-View
+  className="gap-2"
+>
+  <rn-Text
+    className="text-label text-muted-foreground"
+  >
+    Account ID
+  </rn-Text>
+  <rn-TextInput
+    className="min-h-touch rounded-md border px-4 py-3 text-base border-border bg-surface-muted text-muted-foreground"
+    editable={false}
+    placeholderTextColor="#5f5b66"
+    style={
+      [
+        {
+          "elevation": 0,
+          "shadowColor": "#1a1a2e",
+          "shadowOffset": {
+            "height": 0,
+            "width": 0,
+          },
+          "shadowOpacity": 0,
+          "shadowRadius": 0,
+        },
+        {
+          "paddingBottom": 0,
+          "paddingTop": 0,
+          "textAlignVertical": "center",
+        },
+        undefined,
+      ]
+    }
+    value="acct_123"
+  />
+</rn-View>
+`;

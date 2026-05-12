@@ -37,4 +37,10 @@ export const REGISTRY: readonly GalleryEntry[] = [
     group: 'primitives',
     description: 'Surface container — variants + padding steps',
   },
+  {
+    name: 'ScreenHeader',
+    href: '/(dev)/primitives/screen-header',
+    group: 'primitives',
+    description: 'Title / eyebrow / subtitle / back / actions',
+  },
 ];

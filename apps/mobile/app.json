@@ -1,0 +1,23 @@
+{
+  "expo": {
+    "name": "harpa-pro",
+    "slug": "harpa-pro",
+    "version": "0.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "scheme": "harpa",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "ios": {
+      "bundleIdentifier": "com.harpa.pro",
+      "supportsTablet": true
+    },
+    "android": {
+      "package": "com.harpa.pro"
+    },
+    "plugins": ["expo-router"],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}

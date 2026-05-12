@@ -73,4 +73,10 @@ export const REGISTRY: readonly GalleryEntry[] = [
     group: 'primitives',
     description: 'In-app modal sheet replacing Alert.alert',
   },
+  {
+    name: 'Sign-in Phone',
+    href: '/(dev)/sign-in-phone',
+    group: 'auth',
+    description: 'Phone number entry — step 1 of OTP flow',
+  },
 ];

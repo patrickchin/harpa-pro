@@ -1,0 +1,131 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`SignInPhone > matches snapshot at default props 1`] = `
+<rn-View
+  className="flex-1 bg-background"
+  style={
+    [
+      {
+        "paddingBottom": 34,
+        "paddingLeft": 0,
+        "paddingRight": 0,
+        "paddingTop": 44,
+      },
+      undefined,
+    ]
+  }
+>
+  <rn-KeyboardAvoidingView
+    behavior="padding"
+    className="flex-1"
+  >
+    <rn-ScrollView
+      className="flex-1"
+      contentContainerClassName="grow px-6 py-10"
+      keyboardShouldPersistTaps="handled"
+    >
+      <rn-View
+        className="w-full max-w-sm self-center"
+      >
+        <rn-View
+          className="flex-row items-center gap-3"
+        >
+          <rn-View
+            className="h-12 w-12 items-center justify-center rounded-lg bg-primary"
+          >
+            <lucide-HardHat
+              color="#f8f6f1"
+              size={24}
+            />
+          </rn-View>
+          <rn-View
+            className="flex-1"
+          >
+            <rn-Text
+              className="text-display text-foreground"
+            >
+              Harpa Pro
+            </rn-Text>
+          </rn-View>
+        </rn-View>
+        <rn-View
+          className="mt-8 gap-4"
+        >
+          <rn-View
+            className="gap-2"
+          >
+            <rn-Text
+              className="text-label text-muted-foreground"
+            >
+              Phone Number
+            </rn-Text>
+            <rn-TextInput
+              autoComplete="tel"
+              className="min-h-touch rounded-md border px-4 py-3 text-base text-foreground border-border bg-card"
+              editable={true}
+              keyboardType="phone-pad"
+              onChangeText={[MockFunction spy]}
+              placeholder="+15550000000"
+              placeholderTextColor="#5f5b66"
+              style={
+                [
+                  {
+                    "elevation": 2,
+                    "shadowColor": "#1a1a2e",
+                    "shadowOffset": {
+                      "height": 2,
+                      "width": 0,
+                    },
+                    "shadowOpacity": 0.08,
+                    "shadowRadius": 8,
+                  },
+                  {
+                    "paddingBottom": 0,
+                    "paddingTop": 0,
+                    "textAlignVertical": "center",
+                  },
+                  undefined,
+                ]
+              }
+              testID="input-phone"
+              value=""
+            />
+            <rn-Text
+              className="text-sm text-muted-foreground"
+            >
+              Start with + and your country code so we can text your code (e.g. +1 555 123 4567).
+            </rn-Text>
+          </rn-View>
+          <rn-Pressable
+            className="flex-row items-center justify-center rounded-md border border-accent bg-accent active:opacity-85 min-h-touch-lg px-6 py-4 w-full"
+            disabled={false}
+            onPress={[MockFunction spy]}
+            style={
+              [
+                {
+                  "elevation": 4,
+                  "shadowColor": "#1a1a2e",
+                  "shadowOffset": {
+                    "height": 4,
+                    "width": 0,
+                  },
+                  "shadowOpacity": 0.12,
+                  "shadowRadius": 14,
+                },
+                undefined,
+              ]
+            }
+            testID="btn-login-send-code"
+          >
+            <rn-Text
+              className="text-accent-foreground font-semibold text-lg"
+            >
+              Send Code
+            </rn-Text>
+          </rn-Pressable>
+        </rn-View>
+      </rn-View>
+    </rn-ScrollView>
+  </rn-KeyboardAvoidingView>
+</rn-View>
+`;

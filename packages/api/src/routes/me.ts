@@ -7,7 +7,6 @@ import { HTTPException } from 'hono/http-exception';
 import { auth as authSchemas } from '@harpa/api-contract';
 import type { AppEnv } from '../app.js';
 import { withAuth } from '../middleware/auth.js';
-import { withScopedConnection } from '../db/scope.js';
 import { fetchUser } from '../auth/service.js';
 
 const errorBody = z.object({
@@ -30,11 +29,9 @@ export const meRoutes = new OpenAPIHono<AppEnv>().openapi(
   }),
   async (c) => {
     const userId = c.get('userId');
-    const sessionId = c.get('sessionId');
-    if (!userId || !sessionId) throw new HTTPException(401);
-    const user = await withScopedConnection({ sub: userId, sid: sessionId }, (db) =>
-      fetchUser(db, userId),
-    );
+    const db = c.get('db');
+    if (!userId || !db) throw new HTTPException(401);
+    const user = await db((d) => fetchUser(d, userId));
     if (!user) throw new HTTPException(404, { message: 'User not found.' });
     return c.json({ user }, 200);
   },

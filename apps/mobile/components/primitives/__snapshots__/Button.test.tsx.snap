@@ -1,0 +1,444 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Button > renders each size > default 1`] = `
+<rn-Pressable
+  className="flex-row items-center justify-center rounded-md border border-primary bg-primary active:opacity-85 min-h-touch px-4 py-3"
+  disabled={false}
+  onPress={[Function]}
+  style={
+    [
+      {
+        "elevation": 2,
+        "shadowColor": "#1a1a2e",
+        "shadowOffset": {
+          "height": 2,
+          "width": 0,
+        },
+        "shadowOpacity": 0.08,
+        "shadowRadius": 8,
+      },
+      undefined,
+    ]
+  }
+>
+  <rn-Text
+    className="text-primary-foreground font-semibold text-base"
+  >
+    default
+  </rn-Text>
+</rn-Pressable>
+`;
+
+exports[`Button > renders each size > icon 1`] = `
+<rn-Pressable
+  className="flex-row rounded-md border border-primary bg-primary active:opacity-85 h-touch w-touch items-center justify-center"
+  disabled={false}
+  onPress={[Function]}
+  style={
+    [
+      {
+        "elevation": 2,
+        "shadowColor": "#1a1a2e",
+        "shadowOffset": {
+          "height": 2,
+          "width": 0,
+        },
+        "shadowOpacity": 0.08,
+        "shadowRadius": 8,
+      },
+      undefined,
+    ]
+  }
+>
+  <rn-Text
+    className="text-primary-foreground font-semibold text-base"
+  >
+    icon
+  </rn-Text>
+</rn-Pressable>
+`;
+
+exports[`Button > renders each size > lg 1`] = `
+<rn-Pressable
+  className="flex-row items-center justify-center rounded-md border border-primary bg-primary active:opacity-85 min-h-touch px-5 py-3.5"
+  disabled={false}
+  onPress={[Function]}
+  style={
+    [
+      {
+        "elevation": 2,
+        "shadowColor": "#1a1a2e",
+        "shadowOffset": {
+          "height": 2,
+          "width": 0,
+        },
+        "shadowOpacity": 0.08,
+        "shadowRadius": 8,
+      },
+      undefined,
+    ]
+  }
+>
+  <rn-Text
+    className="text-primary-foreground font-semibold text-base"
+  >
+    lg
+  </rn-Text>
+</rn-Pressable>
+`;
+
+exports[`Button > renders each size > sm 1`] = `
+<rn-Pressable
+  className="flex-row items-center justify-center rounded-md border border-primary bg-primary active:opacity-85 min-h-10 px-3 py-2.5"
+  disabled={false}
+  onPress={[Function]}
+  style={
+    [
+      {
+        "elevation": 2,
+        "shadowColor": "#1a1a2e",
+        "shadowOffset": {
+          "height": 2,
+          "width": 0,
+        },
+        "shadowOpacity": 0.08,
+        "shadowRadius": 8,
+      },
+      undefined,
+    ]
+  }
+>
+  <rn-Text
+    className="text-primary-foreground font-semibold text-sm"
+  >
+    sm
+  </rn-Text>
+</rn-Pressable>
+`;
+
+exports[`Button > renders each size > xl 1`] = `
+<rn-Pressable
+  className="flex-row items-center justify-center rounded-md border border-primary bg-primary active:opacity-85 min-h-touch-lg px-6 py-4"
+  disabled={false}
+  onPress={[Function]}
+  style={
+    [
+      {
+        "elevation": 2,
+        "shadowColor": "#1a1a2e",
+        "shadowOffset": {
+          "height": 2,
+          "width": 0,
+        },
+        "shadowOpacity": 0.08,
+        "shadowRadius": 8,
+      },
+      undefined,
+    ]
+  }
+>
+  <rn-Text
+    className="text-primary-foreground font-semibold text-lg"
+  >
+    xl
+  </rn-Text>
+</rn-Pressable>
+`;
+
+exports[`Button > renders each variant > default 1`] = `
+<rn-Pressable
+  className="flex-row items-center justify-center rounded-md border border-primary bg-primary active:opacity-85 min-h-touch px-4 py-3"
+  disabled={false}
+  onPress={[Function]}
+  style={
+    [
+      {
+        "elevation": 2,
+        "shadowColor": "#1a1a2e",
+        "shadowOffset": {
+          "height": 2,
+          "width": 0,
+        },
+        "shadowOpacity": 0.08,
+        "shadowRadius": 8,
+      },
+      undefined,
+    ]
+  }
+>
+  <rn-Text
+    className="text-primary-foreground font-semibold text-base"
+  >
+    default
+  </rn-Text>
+</rn-Pressable>
+`;
+
+exports[`Button > renders each variant > destructive 1`] = `
+<rn-Pressable
+  className="flex-row items-center justify-center rounded-md border border-danger-border bg-danger-soft active:opacity-85 min-h-touch px-4 py-3"
+  disabled={false}
+  onPress={[Function]}
+  style={
+    [
+      {
+        "elevation": 2,
+        "shadowColor": "#1a1a2e",
+        "shadowOffset": {
+          "height": 2,
+          "width": 0,
+        },
+        "shadowOpacity": 0.08,
+        "shadowRadius": 8,
+      },
+      undefined,
+    ]
+  }
+>
+  <rn-Text
+    className="text-danger-text font-semibold text-base"
+  >
+    destructive
+  </rn-Text>
+</rn-Pressable>
+`;
+
+exports[`Button > renders each variant > ghost 1`] = `
+<rn-Pressable
+  className="flex-row items-center justify-center rounded-md bg-transparent active:bg-secondary min-h-touch px-4 py-3"
+  disabled={false}
+  onPress={[Function]}
+  style={
+    [
+      {
+        "elevation": 0,
+        "shadowColor": "#1a1a2e",
+        "shadowOffset": {
+          "height": 0,
+          "width": 0,
+        },
+        "shadowOpacity": 0,
+        "shadowRadius": 0,
+      },
+      undefined,
+    ]
+  }
+>
+  <rn-Text
+    className="text-foreground font-semibold text-base"
+  >
+    ghost
+  </rn-Text>
+</rn-Pressable>
+`;
+
+exports[`Button > renders each variant > hero 1`] = `
+<rn-Pressable
+  className="flex-row items-center justify-center rounded-md border border-accent bg-accent active:opacity-85 min-h-touch px-4 py-3"
+  disabled={false}
+  onPress={[Function]}
+  style={
+    [
+      {
+        "elevation": 4,
+        "shadowColor": "#1a1a2e",
+        "shadowOffset": {
+          "height": 4,
+          "width": 0,
+        },
+        "shadowOpacity": 0.12,
+        "shadowRadius": 14,
+      },
+      undefined,
+    ]
+  }
+>
+  <rn-Text
+    className="text-accent-foreground font-semibold text-base"
+  >
+    hero
+  </rn-Text>
+</rn-Pressable>
+`;
+
+exports[`Button > renders each variant > outline 1`] = `
+<rn-Pressable
+  className="flex-row items-center justify-center rounded-md border border-border bg-card active:opacity-90 min-h-touch px-4 py-3"
+  disabled={false}
+  onPress={[Function]}
+  style={
+    [
+      {
+        "elevation": 2,
+        "shadowColor": "#1a1a2e",
+        "shadowOffset": {
+          "height": 2,
+          "width": 0,
+        },
+        "shadowOpacity": 0.08,
+        "shadowRadius": 8,
+      },
+      undefined,
+    ]
+  }
+>
+  <rn-Text
+    className="text-foreground font-semibold text-base"
+  >
+    outline
+  </rn-Text>
+</rn-Pressable>
+`;
+
+exports[`Button > renders each variant > quiet 1`] = `
+<rn-Pressable
+  className="flex-row items-center justify-center rounded-md bg-transparent active:bg-secondary min-h-touch px-4 py-3"
+  disabled={false}
+  onPress={[Function]}
+  style={
+    [
+      {
+        "elevation": 0,
+        "shadowColor": "#1a1a2e",
+        "shadowOffset": {
+          "height": 0,
+          "width": 0,
+        },
+        "shadowOpacity": 0,
+        "shadowRadius": 0,
+      },
+      undefined,
+    ]
+  }
+>
+  <rn-Text
+    className="text-muted-foreground font-semibold text-base"
+  >
+    quiet
+  </rn-Text>
+</rn-Pressable>
+`;
+
+exports[`Button > renders each variant > secondary 1`] = `
+<rn-Pressable
+  className="flex-row items-center justify-center rounded-md border border-border bg-secondary active:opacity-90 min-h-touch px-4 py-3"
+  disabled={false}
+  onPress={[Function]}
+  style={
+    [
+      {
+        "elevation": 2,
+        "shadowColor": "#1a1a2e",
+        "shadowOffset": {
+          "height": 2,
+          "width": 0,
+        },
+        "shadowOpacity": 0.08,
+        "shadowRadius": 8,
+      },
+      undefined,
+    ]
+  }
+>
+  <rn-Text
+    className="text-foreground font-semibold text-base"
+  >
+    secondary
+  </rn-Text>
+</rn-Pressable>
+`;
+
+exports[`Button > renders the default variant with a string label 1`] = `
+<rn-Pressable
+  className="flex-row items-center justify-center rounded-md border border-primary bg-primary active:opacity-85 min-h-touch px-4 py-3"
+  disabled={false}
+  onPress={[Function]}
+  style={
+    [
+      {
+        "elevation": 2,
+        "shadowColor": "#1a1a2e",
+        "shadowOffset": {
+          "height": 2,
+          "width": 0,
+        },
+        "shadowOpacity": 0.08,
+        "shadowRadius": 8,
+      },
+      undefined,
+    ]
+  }
+>
+  <rn-Text
+    className="text-primary-foreground font-semibold text-base"
+  >
+    Tap me
+  </rn-Text>
+</rn-Pressable>
+`;
+
+exports[`Button > respects the disabled prop 1`] = `
+<rn-Pressable
+  className="flex-row items-center justify-center rounded-md border border-primary bg-primary active:opacity-85 min-h-touch px-4 py-3 opacity-50"
+  disabled={true}
+  onPress={[Function]}
+  style={
+    [
+      {
+        "elevation": 2,
+        "shadowColor": "#1a1a2e",
+        "shadowOffset": {
+          "height": 2,
+          "width": 0,
+        },
+        "shadowOpacity": 0.08,
+        "shadowRadius": 8,
+      },
+      undefined,
+    ]
+  }
+>
+  <rn-Text
+    className="text-primary-foreground font-semibold text-base"
+  >
+    Cannot tap
+  </rn-Text>
+</rn-Pressable>
+`;
+
+exports[`Button > shows a spinner and disables the button when loading 1`] = `
+<rn-Pressable
+  className="flex-row items-center justify-center rounded-md border border-primary bg-primary active:opacity-85 min-h-touch px-4 py-3 opacity-50"
+  disabled={true}
+  onPress={[Function]}
+  style={
+    [
+      {
+        "elevation": 2,
+        "shadowColor": "#1a1a2e",
+        "shadowOffset": {
+          "height": 2,
+          "width": 0,
+        },
+        "shadowOpacity": 0.08,
+        "shadowRadius": 8,
+      },
+      undefined,
+    ]
+  }
+>
+  <rn-View
+    className="flex-row items-center gap-2"
+  >
+    <rn-ActivityIndicator
+      color="#f8f6f1"
+      size="small"
+    />
+    <rn-Text
+      className="text-primary-foreground font-semibold text-base"
+    >
+      Submitting
+    </rn-Text>
+  </rn-View>
+</rn-Pressable>
+`;

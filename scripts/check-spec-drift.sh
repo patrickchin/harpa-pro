@@ -8,13 +8,14 @@ cd "$ROOT"
 
 pnpm spec:emit >/dev/null
 pnpm --filter @harpa/api-contract gen:types >/dev/null
+pnpm --filter @harpa/mobile gen:hooks >/dev/null
 
-if ! git diff --quiet -- packages/api-contract/openapi.json packages/api-contract/src/generated/types.ts; then
+if ! git diff --quiet -- packages/api-contract/openapi.json packages/api-contract/src/generated/types.ts apps/mobile/lib/api/hooks.ts; then
   echo "❌ OpenAPI spec drift detected:"
-  git --no-pager diff --stat -- packages/api-contract/openapi.json packages/api-contract/src/generated/types.ts
+  git --no-pager diff --stat -- packages/api-contract/openapi.json packages/api-contract/src/generated/types.ts apps/mobile/lib/api/hooks.ts
   echo
-  echo "Run: pnpm spec:emit && pnpm --filter @harpa/api-contract gen:types"
-  echo "Then commit packages/api-contract/openapi.json + src/generated/types.ts."
+  echo "Run: pnpm gen:api"
+  echo "Then commit packages/api-contract/openapi.json + src/generated/types.ts + apps/mobile/lib/api/hooks.ts."
   exit 1
 fi
-echo "✅ openapi.json + generated types in sync with code"
+echo "✅ openapi.json + generated types + mobile hooks in sync with code"

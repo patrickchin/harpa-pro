@@ -14,7 +14,7 @@
  * it; do NOT move it back into (tabs).
  */
 import { View } from 'react-native';
-import { usePathname, useRouter } from 'expo-router';
+import { usePathname, useRouter, type Href } from 'expo-router';
 import { CircleUserRound } from 'lucide-react-native';
 
 import { Button } from '@/components/primitives/Button';
@@ -42,7 +42,10 @@ export function AppHeaderActions() {
         accessibilityLabel="Open profile"
         onPress={() => {
           if (isProfileActive) return;
-          router.push('/profile');
+          // Cast: /profile is added by the (app) shell in P2.6. Until that
+          // route exists, expo-router's typed-routes table doesn't include
+          // it. Once P2.6 lands, this cast can drop.
+          router.push('/profile' as unknown as Href);
         }}
       >
         <View className="items-center justify-center">

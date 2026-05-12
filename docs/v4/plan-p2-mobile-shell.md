@@ -70,10 +70,10 @@
 - [x] Commit per primitive: `feat(mobile): <Name> primitive with snapshot tests`.
 
 ### P2.3 API client + generated hooks
-- [ ] `lib/api/client.ts` (auth header, error mapping, typed via api-contract).
-- [ ] `lib/api/hooks.ts` generated (`pnpm gen:api`).
-- [ ] `lib/api/invalidation.ts` central rules + coverage test.
-- [ ] Commit: `feat(mobile): typed API client + generated React Query hooks`.
+- [x] `lib/api/client.ts` (auth header, error mapping, typed via api-contract).
+- [x] `lib/api/hooks.ts` generated (`pnpm gen:api`).
+- [x] `lib/api/invalidation.ts` central rules + coverage test.
+- [x] Commit: `feat(mobile): typed API client + generated React Query hooks`.
 
 ### P2.4 Auth session + secure store
 - [ ] `useAuthSession` (mirrors `expo-secure-store`).

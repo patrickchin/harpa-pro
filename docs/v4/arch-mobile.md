@@ -296,6 +296,66 @@ section.
 (These were applied late in v3 as `dbaa4c1`. We apply them as the
 default from P3.)
 
+## API client
+
+Lives in [`apps/mobile/lib/api/`](../../apps/mobile/lib/api/). Five files:
+
+```
+client.ts          ← typed fetch wrapper over `paths` from @harpa/api-contract
+auth.ts            ← swappable bearer-token getter (P2.4 plugs in useAuthSession)
+errors.ts          ← ApiError class + envelope mapping
+hooks.ts           ← AUTO-GENERATED — one React Query hook per endpoint
+invalidation.ts    ← post-mutation query-key invalidation rules
+```
+
+### Generator
+
+`apps/mobile/scripts/gen-hooks.ts` walks
+[`packages/api-contract/openapi.json`](../../packages/api-contract/openapi.json)
+and emits `hooks.ts` (committed). Run via `pnpm gen:api`.
+
+We do not use orval / openapi-react-query-codegen / swagger-typescript-api.
+The `paths` types are already emitted by `openapi-typescript` in
+`@harpa/api-contract`; the hook layer is ~20 lines per endpoint and a
+third-party generator would pull megabytes of deps for negligible win.
+The generator carries a fixed `ENDPOINTS` table (operation → hook
+name → invalidation hint) that reviewers eyeball — adding/renaming/
+removing a route means editing the table + the invalidation map in
+the same commit, so names cannot drift silently. The script throws
+if the table doesn't match `openapi.json` exactly.
+
+The spec-drift gate (`scripts/check-spec-drift.sh`, run by `pnpm lint`)
+re-runs `pnpm gen:api` and fails if any of `openapi.json`,
+`generated/types.ts`, or `apps/mobile/lib/api/hooks.ts` would change.
+
+### Bearer-token getter
+
+`auth.ts` exposes `setAuthTokenGetter(() => string | null | Promise<…>)`.
+The default returns `null` (no `Authorization` header). The auth session
+in P2.4 calls `setAuthTokenGetter` once at boot, pointing at its
+secure-store-backed cache. Keeping the getter outside `client.ts`
+avoids a circular `lib/api/* ⟷ lib/auth/*` import.
+
+### Error mapping
+
+Every non-2xx response is mapped to a typed `ApiError` matching the
+server's `errorEnvelope` (`{ error: { code, message, details?, requestId? } }`).
+Transport failures become `ApiError({ code: 'network_error', status: 0 })`.
+JSON parse failures on a 2xx body become `ApiError({ code: 'parse_error' })`.
+Callers pattern-match on `code` — they never inspect raw `Response`s.
+
+### Invalidation map
+
+`invalidation.ts` maps every generated mutation hook name to either an
+array of query-key prefixes or `INVALIDATIONS_NONE`. The generator wires
+each mutation's `onSuccess` to invalidate every prefix in its rule.
+
+`invalidation.test.ts` parses the generated `hooks.ts` and asserts:
+every mutation has a registered rule (no silent omissions); no rule
+references a hook that no longer exists; queries are not in the map
+(only mutations declare invalidations); each rule is a non-empty array
+of strings or the explicit `INVALIDATIONS_NONE` opt-out.
+
 ## Build modes
 
 | Mode | Command | Purpose |

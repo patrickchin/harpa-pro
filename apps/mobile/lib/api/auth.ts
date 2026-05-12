@@ -29,3 +29,35 @@ export function getAuthToken(): ReturnType<AuthTokenGetter> {
 export function resetAuthTokenGetter(): void {
   getter = () => null;
 }
+
+/**
+ * Global "unauthorized" notifier. The API client (`client.ts`) invokes
+ * this whenever a request returns HTTP 401 — regardless of whether it
+ * came from a query or a mutation. The auth session (P2.4) registers a
+ * callback that performs `signOut()` + redirect, so a single 401 path
+ * tears the session down everywhere.
+ *
+ * Synchronous fire-and-forget. The client still throws an
+ * `ApiError({ code: 'unauthorized' })` so the calling hook can render
+ * an error UI if it needs to.
+ */
+export type UnauthorizedHandler = () => void;
+
+let onUnauthorized: UnauthorizedHandler | null = null;
+
+export function setOnUnauthorizedCallback(fn: UnauthorizedHandler | null): void {
+  onUnauthorized = fn;
+}
+
+export function notifyUnauthorized(): void {
+  try {
+    onUnauthorized?.();
+  } catch {
+    // Never let a buggy handler mask the original 401.
+  }
+}
+
+/** Test helper. */
+export function resetOnUnauthorizedCallback(): void {
+  onUnauthorized = null;
+}

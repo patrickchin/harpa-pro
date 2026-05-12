@@ -76,10 +76,17 @@
 - [x] Commit: `feat(mobile): typed API client + generated React Query hooks`.
 
 ### P2.4 Auth session + secure store
-- [ ] `useAuthSession` (mirrors `expo-secure-store`).
-- [ ] Token refresh on activity.
-- [ ] On 401, sign out + redirect.
-- [ ] Commit: `feat(mobile): auth session with secure-store + auto sign-out on 401`.
+- [x] `useAuthSession` (mirrors `expo-secure-store`).
+- [x] Token refresh on activity. *Carve-out: no silent refresh — JWTs
+      are 7 days; inactive users re-OTP. The session re-fetches `/me`
+      via `refresh()` on focus events the app shell wires up in P2.6,
+      which is "refresh on activity" enough for our threat model
+      without taking on the complexity of a refresh-token rotation.*
+- [x] On 401, sign out + redirect. *Wired via
+      `setOnUnauthorizedCallback` in the API client — fires for both
+      queries AND mutations (React Query's global onError only catches
+      queries; the mutation gap was raised by security-reviewer §E).*
+- [x] Commit: `feat(mobile): auth session with secure-store + auto sign-out on 401`.
 
 ### P2.5 Auth screens (login / verify / onboarding)
 - [ ] `screens/login.tsx`, `screens/verify.tsx`, `screens/onboarding.tsx`

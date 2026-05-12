@@ -126,7 +126,13 @@ apps/mobile/
       useAppDialogSheet.ts             # the only place Alert is allowed
     api/
       client.ts                        # api-contract typed client
+      auth.ts                          # token getter + onUnauthorized callback
+      errors.ts                        # ApiError envelope
       hooks.ts                         # generated React Query hooks
+      invalidation.ts                  # mutation→queryKey invalidation map
+    auth/
+      session.tsx                      # AuthSessionProvider + useAuthSession
+      storage.ts                       # SecureStore (session) + AsyncStorage (lastPhone)
     section-icons.ts
     report-helpers.ts                  # toTitleCase, getItemMeta only
     mobile-ui.ts                       # getReportStats, getIssueSeverityTone
@@ -148,6 +154,95 @@ gates which group renders via `_layout.tsx` redirects driven by
 `useAuthSession()`.
 
 No `setTimeout` in auth flows (Pitfall 5).
+
+## API client (P2.3)
+
+`lib/api/client.ts` is a typed `fetch` wrapper. Generic over the
+`paths` tree from `@harpa/api-contract` (regenerated from the API's
+`openapi.json`), so request / response shapes stay in lock-step with
+the server contract — wrong path or wrong body fails at compile time.
+
+Surface:
+
+- `request(path, method, init?)` — base call. Resolves the URL via
+  `lib/env.ts` (`EXPO_PUBLIC_API_URL`), substitutes path params,
+  serialises query, attaches `Authorization: Bearer <token>` from
+  `lib/api/auth.ts:getAuthToken()`, and maps non-2xx + transport
+  failures into a single `ApiError` envelope `{ code, message, status,
+  requestId?, details? }`.
+- `lib/api/hooks.ts` — generated React Query hooks (one per
+  operationId). Mutations wire `onSuccess` into the central
+  `INVALIDATIONS` map in `lib/api/invalidation.ts`. The generator
+  (`scripts/gen-hooks.ts`) is committed; `pnpm gen:api` regenerates
+  it; `check-spec-drift.sh` fails CI if the file is stale.
+- `lib/api/auth.ts` exports two pluggable hooks the auth session
+  wires up at boot:
+  - `setAuthTokenGetter(fn)` — synchronous bearer source.
+  - `setOnUnauthorizedCallback(fn)` — fired on **every** HTTP 401
+    (queries _and_ mutations) before the `ApiError` is thrown, so a
+    single 401 path tears the session down everywhere.
+
+Multipart uploads (R2 presign PUTs) bypass this client — they go
+direct to R2 with the headers the presigner returned.
+
+## Auth session (P2.4)
+
+`lib/auth/session.tsx` exposes `<AuthSessionProvider>` and
+`useAuthSession()`. The provider is mounted once at the root of
+`app/_layout.tsx` (P2.6), above the React Query and dialog providers.
+
+State machine:
+
+```
+loading
+  ├─ no stored session                            → unauthenticated
+  ├─ stored session, /me ok, profile complete     → authenticated
+  ├─ stored session, /me ok, profile incomplete   → needs-onboarding
+  ├─ stored session, /me 401                      → unauthenticated (storage cleared)
+  └─ stored session, /me network error            → trust stored user (offline-usable)
+```
+
+Bootstrap is idempotent and **always** terminates `loading` — every
+error branch sets a status. Pitfall 5: no implicit ordering, no
+`setTimeout`, status is the single discriminator.
+
+Storage split (`lib/auth/storage.ts`):
+
+| Data | Backend | Why |
+|---|---|---|
+| `{ token, user }` (the credential) | `expo-secure-store` (Keychain on iOS, EncryptedSharedPreferences on Android) | 7-day JWT — must be encrypted at rest. |
+| `lastPhone` (UX hint) | `AsyncStorage` | Not a credential; SecureStore would be overkill. Survives sign-out so the next login pre-fills. |
+
+Token getter wiring (security review §B / §I):
+
+- The provider keeps the bearer in a module-level cache and registers
+  `setAuthTokenGetter(() => cachedToken)` once on mount. The getter is
+  synchronous so `client.ts` doesn't pay an async hop per request.
+- Until bootstrap completes, the cache is `null` and the
+  `onUnauthorized` callback is a no-op — a stale request that fires
+  pre-bootstrap and gets a 401 cannot silently nuke a valid stored
+  session.
+
+401 handling:
+
+- Any post-bootstrap 401 (query OR mutation) calls
+  `notifyUnauthorized()`, which clears the in-memory token + sets
+  status to `unauthenticated`. The route guard in `app/_layout.tsx`
+  redirects to `/(auth)/login`.
+
+Sign-out:
+
+- Best-effort `POST /auth/logout`, then clear SecureStore + state +
+  `queryClient.clear()`. Network failure on the POST does **not** stop
+  the local clear (we'd otherwise leak a session into a multi-user
+  device).
+
+What we deliberately do **not** have:
+
+- No silent JWT refresh. Tokens are 7 days; an inactive user re-OTPs.
+- No `Alert.alert` anywhere in the auth flow (Pitfall 12) — verify
+  errors surface through the dialog sheet primitive.
+- No Supabase, no Supabase auth (hard rule).
 
 ## State management
 

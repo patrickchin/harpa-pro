@@ -25,9 +25,17 @@ import { HTTPException } from 'hono/http-exception';
 import { voice as voiceSchemas, errorEnvelope } from '@harpa/api-contract';
 import type { AppEnv } from '../app.js';
 import { withAuth } from '../middleware/auth.js';
+import { withRateLimit } from '../middleware/rateLimit.js';
+import { withIdempotency } from '../middleware/idempotency.js';
 import { getFileById } from '../services/files.js';
 import { pickStorage } from '../services/storage.js';
 import { transcribe as aiTranscribe, chat as aiChat } from '../services/ai.js';
+
+// AI route budgets (per arch-api-design.md §Rate limiting / §Idempotency).
+const MIN = 60_000;
+const transcribeRateLimit = withRateLimit({ name: 'voice.transcribe', limit: 30, windowMs: MIN });
+const summarizeRateLimit = withRateLimit({ name: 'voice.summarize', limit: 60, windowMs: MIN });
+const transcribeIdempotency = withIdempotency({ name: 'voice.transcribe' });
 
 export const voiceRoutes = new OpenAPIHono<AppEnv>();
 
@@ -38,7 +46,7 @@ voiceRoutes.openapi(
     path: '/voice/transcribe',
     tags: ['voice'],
     security: [{ bearerAuth: [] }],
-    middleware: [withAuth()] as const,
+    middleware: [withAuth(), transcribeRateLimit, transcribeIdempotency] as const,
     request: {
       body: { content: { 'application/json': { schema: voiceSchemas.transcribeRequest } } },
     },
@@ -72,7 +80,7 @@ voiceRoutes.openapi(
     path: '/voice/summarize',
     tags: ['voice'],
     security: [{ bearerAuth: [] }],
-    middleware: [withAuth()] as const,
+    middleware: [withAuth(), summarizeRateLimit] as const,
     request: {
       body: { content: { 'application/json': { schema: voiceSchemas.summarizeRequest } } },
     },

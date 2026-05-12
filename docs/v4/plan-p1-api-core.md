@@ -72,10 +72,19 @@ Each task = one route file + its tests + its api-contract schemas
 - [x] Commit: `feat(api): per-user AI provider settings`.
 
 ### P1.9 Rate limiting + idempotency
-- [ ] `@upstash/ratelimit` middleware with per-route budgets.
-- [ ] Idempotency-Key middleware for generate + transcribe.
-- [ ] Tests covering both.
-- [ ] Commit: `feat(api): rate limiting + idempotency middleware`.
+- [x] `@upstash/ratelimit` middleware with per-route budgets.
+  - **Carve-out:** shipped a small in-house `RateLimiter` interface with a
+    `MemoryRateLimiter` default (per-process, per-machine). Same shape and
+    response semantics as `@upstash/ratelimit` (X-RateLimit-* headers,
+    429 + Retry-After). Multi-machine production deploys will swap in an
+    `UpstashRateLimiter` implementing the same interface — no caller
+    change needed. Avoids requiring a real Upstash/Redis in CI.
+- [x] Idempotency-Key middleware for generate + transcribe.
+  - 24h TTL, per-(route, userId, key), `Idempotent-Replay: true` header
+    on cache hit, never caches 5xx. Same in-house abstraction with a
+    `MemoryIdempotencyStore` default and the same Upstash carve-out.
+- [x] Tests covering both.
+- [x] Commit: `feat(api): rate limiting + idempotency middleware`.
 
 ### P1.10 Error mapper + property tests
 - [ ] Shared error mapper.

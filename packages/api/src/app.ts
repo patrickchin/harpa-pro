@@ -6,6 +6,8 @@ import { OpenAPIHono } from '@hono/zod-openapi';
 import { requestId } from './middleware/requestId.js';
 import { errorMapper } from './middleware/errorMapper.js';
 import { health } from './routes/health.js';
+import { authRoutes } from './routes/auth.js';
+import { meRoutes } from './routes/me.js';
 
 export type AppEnv = {
   Variables: {
@@ -24,6 +26,10 @@ export function createApp(): OpenAPIHono<AppEnv> {
 
   // Public routes
   app.route('/', health);
+  app.route('/', authRoutes);
+
+  // Authenticated routes
+  app.route('/', meRoutes);
 
   // OpenAPI spec
   app.doc('/openapi.json', {

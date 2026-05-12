@@ -23,6 +23,10 @@ export const otpVerifyResponse = z.object({
   user: userPublic,
 });
 
+export const logoutResponse = z.object({ ok: z.literal(true) });
+
+export const meResponse = z.object({ user: userPublic });
+
 export const updateMeRequest = z.object({
   displayName: z.string().min(1).max(120).optional(),
   companyName: z.string().min(1).max(120).optional(),

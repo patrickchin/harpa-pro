@@ -43,9 +43,9 @@ Each task = one route file + its tests + its api-contract schemas
 - [ ] Commit: `feat(api): notes routes with scope tests`.
 
 ### P1.5 Files
-- [ ] `presign`, `register`, `url`. R2 SDK wired with fixture mode.
-- [ ] Server-built object keys (`users/<id>/...`).
-- [ ] Commit: `feat(api): files + R2 signed URL minting`.
+- [x] `presign`, `register`, `url`. R2 SDK wired with fixture mode.
+- [x] Server-built object keys (`users/<id>/...`).
+- [x] Commit: `feat(api): files + R2 signed URL minting`. (landed as `feat(api): files presign + register + signed-GET URL via storage abstraction`, commit `7f01870`)
 
 ### P1.6 Voice (AI)
 - [ ] `POST /voice/transcribe` (Whisper via ai-fixtures).

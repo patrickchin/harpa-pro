@@ -204,3 +204,24 @@ vi.mock('react-native-reanimated', async () => {
     ),
   };
 });
+
+// `react-native-safe-area-context` reads native insets. Stub
+// `useSafeAreaInsets` with typical iPhone insets for snapshot
+// stability.
+vi.mock('react-native-safe-area-context', () => {
+  return {
+    useSafeAreaInsets: () => ({
+      top: 44,
+      bottom: 34,
+      left: 0,
+      right: 0,
+    }),
+    SafeAreaProvider: (props: AnyProps) =>
+      React.createElement('rn-SafeAreaProvider', props, props.children),
+    SafeAreaView: makeRNComponent('SafeAreaView'),
+    SafeAreaInsetsContext: {
+      Provider: (props: AnyProps) =>
+        React.createElement('rn-SafeAreaInsetsContext.Provider', props, props.children),
+    },
+  };
+});

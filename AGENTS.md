@@ -74,10 +74,12 @@ These rules exist because they were violated in the v3 attempt and
 caused weeks of rework. See [`docs/v4/pitfalls.md`](docs/v4/pitfalls.md)
 for the why.
 
-1. **Visual parity gate (P2 onwards).** Every screen we ship must
-   match its reference screenshot in
-   [`docs/legacy-v3/screenshots/`](docs/legacy-v3/screenshots/) before
-   the task is considered done. Maestro screenshot diffs run in CI.
+1. **Canonical port source (P2 onwards).** Every screen we ship is a
+   direct port of the matching screen in `../haru3-reports/apps/mobile`
+   on branch `dev` (Expo + NativeWind v4 — no Unistyles to translate).
+   JSX structure and Tailwind classes copy across; only the data layer
+   changes (legacy Supabase → v4 API contract). Visual review is manual
+   against that source — there is no automated screenshot-diff gate.
    Cosmetic drift is a P0 bug, not "polish for later".
 2. **API tests-first (P1 onwards).** No API route lands without:
    (a) Zod request + response schemas in `api-contract`,
@@ -121,7 +123,6 @@ an entry to the same file in the same PR.
 - API (Vitest):     `pnpm test:api`
 - API integration:  `pnpm test:api:integration` (Testcontainers)
 - Docs site E2E:    `pnpm test:docs:e2e` (Playwright)
-- Maestro E2E:      `cd apps/mobile && maestro test .maestro/`
 - LLM fixtures:     `pnpm fixtures:record <name>` /
                     `pnpm fixtures:replay`
 - Neon branch:      `pnpm db:branch:create <pr-number>` /
@@ -165,12 +166,25 @@ Before implementing a large feature, use the `architect` subagent to
 design it first. Write the design as a doc under `docs/v4/` if it
 will affect more than one screen or one route.
 
-## Reference: the v3 attempt
+## Reference: porting from the v3 attempt
 
-- All architecture docs → [`docs/legacy-v3/`](docs/legacy-v3/).
-- Per-page realignment design docs → [`docs/legacy-v3/realignment/pages/`](docs/legacy-v3/realignment/pages/)
-  (these are the canonical per-screen specs; treat them as the
-  P3 acceptance contract).
-- Mobile-old source dump → [`docs/legacy-v3/_work/mobile-old-source-dump.md`](docs/legacy-v3/_work/mobile-old-source-dump.md)
-  (the original implementation we are recreating).
-- Reference screenshots → [`docs/legacy-v3/screenshots/`](docs/legacy-v3/screenshots/).
+**Canonical port source (use this for P2/P3 screen work):**
+
+- `../haru3-reports/apps/mobile` on branch `dev` — Expo SDK 55,
+  expo-router, NativeWind v4. Read JSX + Tailwind classes directly
+  out of `app/` and `components/` and port them in. No Unistyles to
+  translate.
+
+**Historical only — DO NOT use as a port source:**
+
+- [`docs/legacy-v3/`](docs/legacy-v3/) — kept for historical context.
+- [`docs/legacy-v3/realignment/pages/`](docs/legacy-v3/realignment/pages/)
+  — superseded by the canonical port source above.
+- [`docs/legacy-v3/_work/mobile-old-source-dump.md`](docs/legacy-v3/_work/mobile-old-source-dump.md)
+  — superseded; read live source out of `../haru3-reports/apps/mobile`
+  instead of the dump.
+- [`docs/legacy-v3/screenshots/`](docs/legacy-v3/screenshots/) —
+  not used. Visual review is manual against the running canonical
+  port source.
+- `../haru3-reports/apps/mobile-v3` (and `mobile-v3-2`) — used
+  Unistyles, banned by hard rule #5. Ignore.

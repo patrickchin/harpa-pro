@@ -1,9 +1,10 @@
 # P3 — Feature Build
 
-> Goal: every screen in
-> [`docs/legacy-v3/realignment/pages/`](../legacy-v3/realignment/pages/)
-> ships with full behaviour, full visual parity, and a Maestro flow.
-> The per-page docs are the **acceptance contract**.
+> Goal: every screen in `../haru3-reports/apps/mobile` on branch
+> `dev` ported into v4 with full behaviour and a Maestro flow.
+> The canonical source IS the **acceptance contract** — read JSX +
+> Tailwind classes from there and port them directly (both apps run
+> NativeWind v4). Visual review is manual against that source.
 >
 > Resolves [Pitfall 4](pitfalls.md#pitfall-4--big-features-stubbed-then-forgotten):
 > no screen is "stubbed" or "TODO redesign" — features are either in
@@ -11,68 +12,79 @@
 
 ## Exit gate (`p3-exit-gate.yml`)
 
-- [ ] Every page in `docs/legacy-v3/realignment/pages/` has its
-      "Acceptance checklist" ticked, copied into
-      `docs/v4/pages/<NN>-<slug>.md`.
-- [ ] Visual diff ≤ 2% per screen against `docs/legacy-v3/screenshots/`.
+- [ ] Every screen in `../haru3-reports/apps/mobile/app/` (excluding
+      `e2e/` test scaffolds) has a v4 port with manual visual review
+      against the canonical source.
+- [ ] Every shipped screen has its `screens/<name>.tsx` body plus
+      its `(dev)/<name>.tsx` mirror (consistent with P2.0b).
 - [ ] Maestro full-journey flow `core-end-to-end` green on iOS + Android.
 - [ ] Mobile coverage ≥ 80% lines.
 - [ ] Upload pipeline integration test green for `image`, `voice`, `document` (Pitfall 8).
 - [ ] No `// TODO` / "Coming soon" / `Alert.alert` outside dialogs.
 
-## Scope (per the realignment page inventory)
+## Scope (canonical source: `../haru3-reports/apps/mobile/app/`)
 
-| # | File | Owner |
-|---|---|---|
-| 03 | projects-list.md (already in P2) | confirm screenshots after primitives finalised |
-| 04 | new-project.md | P3 |
-| 04b | edit-project.md | P3 |
-| 05 | project-home.md | P3 (last-report card, Documents/Materials Soon rows, copy chips) |
-| 06 | members.md | P3 |
-| 06b | reports-list.md | P3 |
-| 07 | notes-tab.md | P3 (the big one — composer states, voice live transcript) |
-| 08 | report-tab.md | P3 (CompletenessCard, regenerate, errors) |
-| 09 | report-edit-tab.md | P3 (we DO ship this in v4 — no "stripped" — Pitfall) |
-| 10 | saved-report.md | P3 (ReportActionsMenu, all section cards) |
-| 11 | pdf-preview.md | P3 (PdfPreviewModal, SavedReportSheet) |
-| 12 | files.md | P3 |
-| 13 | camera.md | P3 |
-| 14 | profile.md | P3 |
-| 14b | account.md | P3 |
-| 14c | usage.md | P3 (UsageBarChart) |
+Enumerate the screens to port from the canonical source's `app/`
+tree at the start of P3 and check them off here. Each row maps a
+canonical-source path → v4 destination (`screens/<name>.tsx` body +
+`app/(app|auth)/<route>.tsx` real route + `app/(dev)/<name>.tsx`
+mirror). Suggested grouping (one screen per commit):
+
+- new project / edit project
+- project home
+- members
+- reports list
+- generate — notes / report / edit tabs (the big one)
+- saved report + actions menu + PDF preview
+- files
+- camera
+- profile / account / usage
 
 ## Section card port
 
-| Card | Source | Destination |
-|---|---|---|
-| `StatBar` | mobile-old dump §1562 | `components/reports/sections/StatBar.tsx` |
-| `WeatherStrip` | §1591 | `…/sections/WeatherStrip.tsx` |
-| `SummarySectionCard` | §1654 | `…/sections/SummarySectionCard.tsx` |
-| `IssuesCard` | §1683 | `…/sections/IssuesCard.tsx` |
-| `WorkersCard` | §1792 | `…/sections/WorkersCard.tsx` |
-| `MaterialsCard` | §1859 | `…/sections/MaterialsCard.tsx` |
-| `NextStepsCard` | §1909 | `…/sections/NextStepsCard.tsx` |
-| `CompletenessCard` | §1949 | `…/sections/CompletenessCard.tsx` |
-| `ReportView` | §2028 | `components/reports/ReportView.tsx` |
-| `PdfPreviewModal` | §2101 | `components/reports/PdfPreviewModal.tsx` |
-| `ReportActionsMenu` | §2314 | `components/reports/ReportActionsMenu.tsx` |
-| `SavedReportSheet` | §2447 | `components/reports/SavedReportSheet.tsx` |
-| `ReportDetailTabBar` | §2700 | `components/reports/ReportDetailTabBar.tsx` |
-| `useReportPdfActions` | (search dump) | `features/reports/useReportPdfActions.ts` |
+All components import from `../haru3-reports/apps/mobile/components/`
+on branch `dev`. NativeWind classes copy directly — no Unistyles to
+translate (Pitfall 3 — we chose NativeWind specifically so the port
+is a copy, not a translation). Map per component, e.g.:
 
-NativeWind classes from mobile-old port directly (Pitfall 3 — we
-chose NativeWind specifically so the port is a copy, not a translation).
+| Card | Canonical source | v4 destination |
+|---|---|---|
+| `StatBar` | `components/reports/sections/StatBar.tsx` | same path |
+| `WeatherStrip` | `components/reports/sections/WeatherStrip.tsx` | same path |
+| `SummarySectionCard` | `components/reports/sections/SummarySectionCard.tsx` | same |
+| `IssuesCard` | `components/reports/sections/IssuesCard.tsx` | same |
+| `WorkersCard` | `components/reports/sections/WorkersCard.tsx` | same |
+| `MaterialsCard` | `components/reports/sections/MaterialsCard.tsx` | same |
+| `NextStepsCard` | `components/reports/sections/NextStepsCard.tsx` | same |
+| `CompletenessCard` | `components/reports/sections/CompletenessCard.tsx` | same |
+| `ReportView` | `components/reports/ReportView.tsx` | same |
+| `PdfPreviewModal` | `components/reports/PdfPreviewModal.tsx` | same |
+| `ReportActionsMenu` | `components/reports/ReportActionsMenu.tsx` | same |
+| `SavedReportSheet` | `components/reports/SavedReportSheet.tsx` | same |
+| `ReportDetailTabBar` | `components/reports/ReportDetailTabBar.tsx` | same |
+| `useReportPdfActions` | `features/reports/useReportPdfActions.ts` | same |
+
+(Confirm exact paths against the canonical source at port time —
+this table is illustrative.)
 
 ## Tasks (one screen per commit)
 
-For each row in the page inventory:
+For each screen in the scope list:
 
-1. Copy the `pages/<NN>-<slug>.md` doc into `docs/v4/pages/`.
-2. Build the screen + the components it needs.
-3. Behaviour tests for every interaction in the doc.
-4. Maestro flow exercising it.
-5. Tick the acceptance checklist.
-6. Commit: `feat(mobile): <screen> matching design with tests + flow`.
+1. Read the matching file(s) under `../haru3-reports/apps/mobile/app/`
+   and `components/` on `dev`.
+2. Build the screen body in `apps/mobile/screens/<name>.tsx`,
+   plus the components it needs (port classes verbatim where the
+   primitive matches).
+3. Wire the real route under `(auth)/` or `(app)/` with hooks +
+   navigation params.
+4. Add the `(dev)/<name>.tsx` mirror with mock props.
+5. Behaviour tests for every interaction the canonical source
+   exercises.
+6. Maestro flow exercising it.
+7. Manual visual review side-by-side with the canonical source on
+   the iOS sim.
+8. Commit: `feat(mobile): <screen> ported from canonical source with tests + flow`.
 
 Suggested order (parallelisable across agents once primitives lock):
 

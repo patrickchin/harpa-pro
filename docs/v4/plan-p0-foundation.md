@@ -80,7 +80,7 @@
 - [ ] Commit: `chore(ci): add removal verification gate scripts`.
 
 ### P0.10 CI workflows
-- [ ] `lint-typecheck.yml`, `unit.yml`, `api-integration.yml`, `contract.yml`, `mobile-build.yml`, `pr-preview.yml`, `visual-gate.yml` (skeleton — wired in P2), `e2e-maestro.yml` (skeleton — wired in P3), `p0-exit-gate.yml`.
+- [ ] `lint-typecheck.yml`, `unit.yml`, `api-integration.yml`, `contract.yml`, `mobile-build.yml`, `pr-preview.yml`, `e2e-maestro.yml` (skeleton — wired in P3), `p0-exit-gate.yml`.
 - [ ] Commit: `chore(ci): bootstrap workflows`.
 
 ### P0.11 Docs sync

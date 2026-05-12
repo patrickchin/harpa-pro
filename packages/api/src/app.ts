@@ -12,6 +12,7 @@ import { projectRoutes } from './routes/projects.js';
 import { reportRoutes } from './routes/reports.js';
 import { noteRoutes } from './routes/notes.js';
 import { fileRoutes } from './routes/files.js';
+import { voiceRoutes } from './routes/voice.js';
 import { settingsRoutes } from './routes/settings.js';
 import type { ScopedDb } from './db/scope.js';
 
@@ -50,6 +51,7 @@ export function createApp(): OpenAPIHono<AppEnv> {
   app.route('/', reportRoutes);
   app.route('/', noteRoutes);
   app.route('/', fileRoutes);
+  app.route('/', voiceRoutes);
   app.route('/', settingsRoutes);
 
   // OpenAPI spec

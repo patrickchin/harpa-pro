@@ -6,7 +6,12 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { request, substitutePath } from './client.js';
 import { ApiError } from './errors.js';
-import { setAuthTokenGetter, resetAuthTokenGetter } from './auth.js';
+import {
+  setAuthTokenGetter,
+  resetAuthTokenGetter,
+  setOnUnauthorizedCallback,
+  resetOnUnauthorizedCallback,
+} from './auth.js';
 
 interface FetchCall {
   url: string;
@@ -31,10 +36,12 @@ function jsonResponse(status: number, body: unknown): Response {
 describe('lib/api/client', () => {
   beforeEach(() => {
     resetAuthTokenGetter();
+    resetOnUnauthorizedCallback();
   });
   afterEach(() => {
     vi.unstubAllGlobals();
     resetAuthTokenGetter();
+    resetOnUnauthorizedCallback();
   });
 
   describe('substitutePath', () => {
@@ -195,6 +202,48 @@ describe('lib/api/client', () => {
       });
       const headers = fetchFn.mock.calls[0]![1]!.headers as Record<string, string>;
       expect(headers['Idempotency-Key']).toBe('idem-1');
+    });
+  });
+
+  describe('unauthorized callback', () => {
+    it('fires the global onUnauthorized callback on a 401, then throws', async () => {
+      const onUnauth = vi.fn();
+      setOnUnauthorizedCallback(onUnauth);
+      stubFetch(() =>
+        jsonResponse(401, {
+          error: { code: 'unauthorized', message: 'expired' },
+        }),
+      );
+      await expect(request('/me', 'get')).rejects.toBeInstanceOf(ApiError);
+      expect(onUnauth).toHaveBeenCalledTimes(1);
+    });
+
+    it('does NOT fire the callback on non-401 errors', async () => {
+      const onUnauth = vi.fn();
+      setOnUnauthorizedCallback(onUnauth);
+      stubFetch(() =>
+        jsonResponse(500, {
+          error: { code: 'server_error', message: 'boom' },
+        }),
+      );
+      await expect(request('/me', 'get')).rejects.toBeInstanceOf(ApiError);
+      expect(onUnauth).not.toHaveBeenCalled();
+    });
+
+    it('still throws ApiError(unauthorized) even if the callback throws', async () => {
+      setOnUnauthorizedCallback(() => {
+        throw new Error('handler bug');
+      });
+      stubFetch(() =>
+        jsonResponse(401, { error: { code: 'unauthorized', message: 'x' } }),
+      );
+      try {
+        await request('/me', 'get');
+        throw new Error('expected throw');
+      } catch (err) {
+        expect(err).toBeInstanceOf(ApiError);
+        expect((err as ApiError).code).toBe('unauthorized');
+      }
     });
   });
 });

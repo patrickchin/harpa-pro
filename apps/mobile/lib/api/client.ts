@@ -15,7 +15,7 @@
  */
 import type { paths } from '@harpa/api-contract';
 import { env } from '../env.js';
-import { getAuthToken } from './auth.js';
+import { getAuthToken, notifyUnauthorized } from './auth.js';
 import { ApiError, apiErrorFromResponse } from './errors.js';
 
 export type HttpMethod = 'get' | 'post' | 'put' | 'patch' | 'delete';
@@ -185,6 +185,11 @@ export async function request<
   }
 
   if (!res.ok) {
+    // Fire the global unauthorized notifier BEFORE throwing so the auth
+    // session can tear down state once, even for mutations that bypass
+    // React Query's global onError. The callback is sync + best-effort;
+    // the ApiError still propagates so the call site sees the failure.
+    if (res.status === 401) notifyUnauthorized();
     throw await apiErrorFromResponse(res);
   }
 

@@ -104,6 +104,82 @@ export async function fetchUser(db: Db, userId: string): Promise<PublicUser | nu
   return u ? toPublicUser(u) : null;
 }
 
+export interface UpdateUserInput {
+  displayName?: string;
+  companyName?: string;
+}
+
+/**
+ * Self-update for /me. The scope wrapper does not let one user mutate
+ * `auth.users` rows other than their own (only SELECT is granted on
+ * `auth.users` to `app_authenticated`); this helper runs against a
+ * pre-fetched id and returns the row through the scoped handle so the
+ * RLS path stays exercised on writes.
+ */
+export async function updateUser(
+  db: Db,
+  userId: string,
+  input: UpdateUserInput,
+): Promise<PublicUser | null> {
+  await db.execute(sql`
+    UPDATE auth.users
+    SET
+      display_name = COALESCE(${input.displayName ?? null}, display_name),
+      company_name = COALESCE(${input.companyName ?? null}, company_name),
+      updated_at = now()
+    WHERE id = ${userId}::uuid
+  `);
+  return fetchUser(db, userId);
+}
+
+export interface UsageMonth {
+  month: string; // YYYY-MM
+  reports: number;
+  voiceNotes: number;
+}
+
+export interface UsageSummary {
+  months: UsageMonth[];
+  totals: { reports: number; voiceNotes: number };
+}
+
+/**
+ * Per-month counts of reports authored + voice notes recorded by the
+ * caller. All filters use `author_id = userId` so the RLS path on
+ * `app.reports` / `app.notes` is what excludes other actors.
+ */
+export async function fetchUsage(db: Db, userId: string): Promise<UsageSummary> {
+  const reportsRes = await db.execute<{ month: string; count: string }>(sql`
+    SELECT to_char(created_at, 'YYYY-MM') AS month, count(*)::text AS count
+    FROM app.reports
+    WHERE author_id = ${userId}::uuid
+    GROUP BY month
+    ORDER BY month
+  `);
+  const notesRes = await db.execute<{ month: string; count: string }>(sql`
+    SELECT to_char(created_at, 'YYYY-MM') AS month, count(*)::text AS count
+    FROM app.notes
+    WHERE author_id = ${userId}::uuid AND kind = 'voice'
+    GROUP BY month
+    ORDER BY month
+  `);
+  const monthMap = new Map<string, UsageMonth>();
+  for (const r of reportsRes.rows) {
+    monthMap.set(r.month, { month: r.month, reports: Number(r.count), voiceNotes: 0 });
+  }
+  for (const r of notesRes.rows) {
+    const existing = monthMap.get(r.month) ?? { month: r.month, reports: 0, voiceNotes: 0 };
+    existing.voiceNotes = Number(r.count);
+    monthMap.set(r.month, existing);
+  }
+  const months = Array.from(monthMap.values()).sort((a, b) => a.month.localeCompare(b.month));
+  const totals = months.reduce(
+    (acc, m) => ({ reports: acc.reports + m.reports, voiceNotes: acc.voiceNotes + m.voiceNotes }),
+    { reports: 0, voiceNotes: 0 },
+  );
+  return { months, totals };
+}
+
 export async function sessionIsValid(db: Db, sessionId: string): Promise<boolean> {
   const rows = await db
     .select({ id: schema.sessions.id, expiresAt: schema.sessions.expiresAt })

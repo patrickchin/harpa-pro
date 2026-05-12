@@ -77,7 +77,7 @@ export default function SignUpPhone({
                 variant="hero"
                 size="xl"
                 className="w-full"
-                disabled={isSubmitting}
+                loading={isSubmitting}
                 onPress={onSubmit}
               >
                 {isSubmitting ? 'Sending Code…' : 'Send Code'}
@@ -89,7 +89,7 @@ export default function SignUpPhone({
                 className="mt-8 items-center py-2"
                 onPress={onGoToSignIn}
               >
-                <Text className="text-sm text-muted-foreground">
+                <Text className="text-base text-muted-foreground">
                   Already have an account?{' '}
                   <Text className="font-semibold text-foreground underline">
                     Sign In

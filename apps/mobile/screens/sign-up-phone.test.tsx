@@ -43,7 +43,7 @@ describe('SignUpPhone', () => {
   it('disables button when isSubmitting', () => {
     const tree = render(<SignUpPhone {...defaultProps} isSubmitting={true} />);
     const button = tree.root.findByProps({ testID: 'btn-signup-send-code' });
-    expect(button.props.disabled).toBe(true);
+    expect(button.props.loading).toBe(true);
   });
 
   it('triggers onBack when back arrow is pressed', () => {

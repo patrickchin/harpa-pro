@@ -1,0 +1,33 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`EmptyState > renders title + description only 1`] = `
+<rn-View
+  className="rounded-lg border border-border bg-surface-muted p-4 items-center py-8"
+  style={
+    [
+      {
+        "elevation": 2,
+        "shadowColor": "#1a1a2e",
+        "shadowOffset": {
+          "height": 2,
+          "width": 0,
+        },
+        "shadowOpacity": 0.08,
+        "shadowRadius": 8,
+      },
+      undefined,
+    ]
+  }
+>
+  <rn-Text
+    className="text-title-sm text-foreground"
+  >
+    No reports yet
+  </rn-Text>
+  <rn-Text
+    className="mt-2 text-center text-body text-muted-foreground"
+  >
+    Add one to begin.
+  </rn-Text>
+</rn-View>
+`;

@@ -12,7 +12,7 @@
  */
 import { Redirect, Stack } from 'expo-router';
 
-import { env } from '../../lib/env.js';
+import { env } from '../../lib/env';
 
 declare const __DEV__: boolean;
 

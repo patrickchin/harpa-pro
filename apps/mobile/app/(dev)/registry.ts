@@ -10,7 +10,7 @@
  * across P2.5–P2.7 (auth screens, app shell, projects list) and
  * throughout P3 (per-feature screens).
  */
-import type { GalleryEntry } from '../../screens/dev-gallery.rows.js';
+import type { GalleryEntry } from '../../screens/dev-gallery.rows';
 
 export const REGISTRY: readonly GalleryEntry[] = [
   {

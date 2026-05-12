@@ -9,7 +9,7 @@
  */
 import { Pressable, ScrollView, Text, View } from 'react-native';
 
-import type { GalleryRow } from './dev-gallery.rows.js';
+import type { GalleryRow } from './dev-gallery.rows';
 
 export type DevGalleryProps = {
   rows: readonly GalleryRow[];

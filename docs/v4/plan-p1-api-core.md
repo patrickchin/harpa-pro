@@ -54,12 +54,18 @@ Each task = one route file + its tests + its api-contract schemas
 - [x] Commit: `feat(api): voice transcribe + summarize via ai-fixtures`.
 
 ### P1.7 Reports (AI)
-- [ ] `POST /reports/:id/generate` (LLM).
-- [ ] `POST /reports/:id/regenerate`.
-- [ ] `POST /reports/:id/finalize`.
-- [ ] `POST /reports/:id/pdf` (renders HTML→PDF, stores to R2, returns signed URL).
-- [ ] Recorded fixtures: `generate-report.full`, `generate-report.incomplete`.
-- [ ] Commit: `feat(api): report generation + finalize + PDF rendering`.
+- [x] `POST /reports/:id/generate` (LLM).
+- [x] `POST /reports/:id/regenerate`.
+- [x] `POST /reports/:id/finalize`.
+- [x] `POST /reports/:id/pdf` (renders HTML→PDF, stores to R2, returns signed URL).
+      _PDF rendering runs through a deterministic stub renderer
+      (`services/report-pdf.ts`) and `Storage.putObject` — wired end-to-end
+      via `FixtureStorage` for CI. Real R2 upload + headless renderer
+      remain stubs (`R2Storage.putObject`/`signGet`/`presign` throw); they
+      land alongside live-mode infra in P1 follow-up. arch-storage.md
+      §"Fixture mode" still holds: no R2 calls in CI._
+- [x] Recorded fixtures: `generate-report.full`, `generate-report.incomplete`.
+- [x] Commit: `feat(api): report generation + finalize + PDF rendering`.
 
 ### P1.8 Settings
 - [ ] `GET/PATCH /settings/ai`.

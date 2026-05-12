@@ -19,6 +19,8 @@ let bobProj: string;
 beforeAll(async () => {
   fx = await startPg();
   process.env.DATABASE_URL = fx.url;
+  process.env.R2_FIXTURE_MODE = 'replay';
+  delete process.env.AI_LIVE;
   await resetPool();
   getPool(fx.url);
 
@@ -181,5 +183,211 @@ describe('reports CRUD', () => {
     expect(del.status).toBe(204);
     const get = await app.request(`/reports/${aliceReport}`, { headers: { authorization: `Bearer ${tok}` } });
     expect(get.status).toBe(404);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// P1.7 — generate / regenerate / finalize / pdf
+//
+// All four endpoints run against @harpa/ai-fixtures replay (no real provider,
+// no R2). Tests share one report row so state transitions chain naturally:
+//
+//   draft (no body) → generate → draft (full body)
+//                   → regenerate (incomplete fixture) → draft (sparse body)
+//                   → pdf → signed URL (body untouched)
+//                   → finalize → finalized
+//                   → regenerate → 409
+// ---------------------------------------------------------------------------
+describe('reports AI/PDF', () => {
+  let reportId: string;
+
+  beforeAll(async () => {
+    const app = createApp();
+    const tok = await signTestToken(alice, aliceSid);
+    const res = await app.request(`/projects/${aliceProj}/reports`, {
+      method: 'POST',
+      headers: headers(tok),
+      body: JSON.stringify({ visitDate: '2026-05-12T08:00:00.000Z' }),
+    });
+    expect(res.status).toBe(201);
+    reportId = ((await res.json()) as { id: string }).id;
+  });
+
+  it('POST /reports/:id/generate returns the recorded full body', async () => {
+    const app = createApp();
+    const tok = await signTestToken(alice, aliceSid);
+    const res = await app.request(`/reports/${reportId}/generate`, {
+      method: 'POST',
+      headers: headers(tok),
+      body: JSON.stringify({}),
+    });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      report: { status: string; body: { workers: unknown[]; weather: unknown }; generatedAt: string | null };
+    };
+    expect(body.report.status).toBe('draft');
+    expect(body.report.body).toBeTruthy();
+    expect(body.report.body.weather).toBeTruthy();
+    expect(body.report.body.workers.length).toBeGreaterThan(0);
+    expect(body.report.generatedAt).not.toBeNull();
+  });
+
+  it('POST /reports/:id/regenerate replaces body with the named fixture', async () => {
+    const app = createApp();
+    const tok = await signTestToken(alice, aliceSid);
+    const res = await app.request(`/reports/${reportId}/regenerate`, {
+      method: 'POST',
+      headers: headers(tok),
+      body: JSON.stringify({ fixtureName: 'generate-report.incomplete' }),
+    });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      report: { body: { workers: unknown[]; summarySections: { title: string }[] } };
+    };
+    expect(body.report.body.workers).toEqual([]);
+    expect(body.report.body.summarySections[0]?.title).toBe('Notes captured');
+  });
+
+  it('POST /reports/:id/pdf returns a signed URL pointing at the rendered key', async () => {
+    const app = createApp();
+    const tok = await signTestToken(alice, aliceSid);
+    const res = await app.request(`/reports/${reportId}/pdf`, {
+      method: 'POST',
+      headers: headers(tok),
+    });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { url: string; expiresAt: string };
+    // FixtureStorage builds keys as users/<userId>/pdf/<uuid>.pdf — the
+    // signed GET URL must reflect that server-built prefix (no client input).
+    expect(body.url).toContain(encodeURIComponent(`users/${alice}/pdf/`));
+    expect(body.url).toContain('.pdf');
+    expect(new Date(body.expiresAt).getTime()).toBeGreaterThan(Date.now());
+  });
+
+  it('POST /reports/:id/finalize freezes the report', async () => {
+    const app = createApp();
+    const tok = await signTestToken(alice, aliceSid);
+    const res = await app.request(`/reports/${reportId}/finalize`, {
+      method: 'POST',
+      headers: headers(tok),
+    });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { report: { status: string; finalizedAt: string | null } };
+    expect(body.report.status).toBe('finalized');
+    expect(body.report.finalizedAt).not.toBeNull();
+  });
+
+  it('POST /reports/:id/finalize is idempotent (200 on already-finalized)', async () => {
+    const app = createApp();
+    const tok = await signTestToken(alice, aliceSid);
+    const res = await app.request(`/reports/${reportId}/finalize`, {
+      method: 'POST',
+      headers: headers(tok),
+    });
+    expect(res.status).toBe(200);
+  });
+
+  it('POST /reports/:id/regenerate 409 once finalized', async () => {
+    const app = createApp();
+    const tok = await signTestToken(alice, aliceSid);
+    const res = await app.request(`/reports/${reportId}/regenerate`, {
+      method: 'POST',
+      headers: headers(tok),
+      body: JSON.stringify({}),
+    });
+    expect(res.status).toBe(409);
+  });
+
+  it('POST /reports/:id/finalize 409 when report has no body', async () => {
+    const app = createApp();
+    const tok = await signTestToken(alice, aliceSid);
+    // Fresh draft, never generated.
+    const created = await app.request(`/projects/${aliceProj}/reports`, {
+      method: 'POST',
+      headers: headers(tok),
+      body: JSON.stringify({}),
+    });
+    const empty = ((await created.json()) as { id: string }).id;
+    const res = await app.request(`/reports/${empty}/finalize`, {
+      method: 'POST',
+      headers: headers(tok),
+    });
+    expect(res.status).toBe(409);
+  });
+
+  it('POST /reports/:id/pdf 409 when report has no body', async () => {
+    const app = createApp();
+    const tok = await signTestToken(alice, aliceSid);
+    const created = await app.request(`/projects/${aliceProj}/reports`, {
+      method: 'POST',
+      headers: headers(tok),
+      body: JSON.stringify({}),
+    });
+    const empty = ((await created.json()) as { id: string }).id;
+    const res = await app.request(`/reports/${empty}/pdf`, {
+      method: 'POST',
+      headers: headers(tok),
+    });
+    expect(res.status).toBe(409);
+  });
+
+  it('all four endpoints 401 without auth', async () => {
+    const app = createApp();
+    for (const path of ['generate', 'regenerate', 'finalize', 'pdf']) {
+      const res = await app.request(`/reports/${reportId}/${path}`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: '{}',
+      });
+      expect(res.status).toBe(401);
+    }
+  });
+
+  it('all four endpoints 404 on unknown reportId', async () => {
+    const app = createApp();
+    const tok = await signTestToken(alice, aliceSid);
+    const missing = '00000000-0000-0000-0000-000000000000';
+    for (const path of ['generate', 'regenerate', 'finalize', 'pdf']) {
+      const res = await app.request(`/reports/${missing}/${path}`, {
+        method: 'POST',
+        headers: headers(tok),
+        body: '{}',
+      });
+      expect(res.status).toBe(404);
+    }
+  });
+
+  it('generate 400 rejects path-traversal-shaped fixtureName at the contract boundary', async () => {
+    const app = createApp();
+    const tok = await signTestToken(alice, aliceSid);
+    const res = await app.request(`/reports/${reportId}/generate`, {
+      method: 'POST',
+      headers: headers(tok),
+      body: JSON.stringify({ fixtureName: '../../../etc/passwd' }),
+    });
+    expect(res.status).toBe(400);
+  });
+
+  it('generate 502 with code=ai_provider_error on unknown fixtureName (no provider/fixture leak)', async () => {
+    const app = createApp();
+    const tok = await signTestToken(alice, aliceSid);
+    // Need a fresh draft (current `reportId` is finalized; would 409).
+    const created = await app.request(`/projects/${aliceProj}/reports`, {
+      method: 'POST',
+      headers: headers(tok),
+      body: JSON.stringify({}),
+    });
+    const fresh = ((await created.json()) as { id: string }).id;
+    const res = await app.request(`/reports/${fresh}/generate`, {
+      method: 'POST',
+      headers: headers(tok),
+      body: JSON.stringify({ fixtureName: 'generate-report.does-not-exist' }),
+    });
+    expect(res.status).toBe(502);
+    const body = (await res.json()) as { error: { code: string; message: string } };
+    expect(body.error.code).toBe('ai_provider_error');
+    expect(body.error.message).not.toContain('does-not-exist');
+    expect(body.error.message).not.toContain('fixture');
+    expect(body.error.message).not.toContain('openai');
   });
 });

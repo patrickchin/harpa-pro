@@ -173,3 +173,97 @@ export async function deleteReport(db: Db, reportId: string): Promise<boolean> {
   `);
   return r.rows.length > 0;
 }
+
+// ---------------------------------------------------------------------------
+// AI-generation surface (P1.7).
+// All of these run under the per-request scoped drizzle handle, so RLS
+// (`reports_member_*` policies) hides cross-project rows — a missing return
+// is indistinguishable from a non-existent id, surfaced as 404.
+// ---------------------------------------------------------------------------
+
+/**
+ * Build the user-prompt string for `services/ai.generateReport()` from
+ * the notes attached to this report. Replay-mode normalisation in
+ * services/ai.ts swaps this out for the canonical recorded prompt — but
+ * we still build it correctly so live mode (and future record passes)
+ * see the real notes.
+ */
+export async function collectNotesForGeneration(db: Db, reportId: string): Promise<string> {
+  const r = await db.execute<{ body: string | null; transcript: string | null }>(sql`
+    SELECT body, transcript
+    FROM app.notes
+    WHERE report_id = ${reportId}::uuid
+    ORDER BY created_at ASC, id ASC
+  `);
+  return r.rows
+    .map((n) => n.transcript ?? n.body ?? '')
+    .filter((s) => s.length > 0)
+    .join('\n\n');
+}
+
+/**
+ * Persist a freshly-generated body. Resets the post-generation note
+ * counter and stamps `generated_at`. Caller MUST verify status !==
+ * 'finalized' first (we don't enforce here so we can return null cleanly
+ * on RLS-hidden rows vs throw on state).
+ */
+export async function setReportBody(
+  db: Db,
+  reportId: string,
+  body: ReportBody,
+): Promise<ReportRow | null> {
+  const r = await db.execute<RawReport>(sql`
+    UPDATE app.reports
+    SET body = ${JSON.stringify(body)}::jsonb,
+        generated_at = now(),
+        notes_since_last_generation = 0,
+        updated_at = now()
+    WHERE id = ${reportId}::uuid
+    RETURNING id, project_id, status, visit_date, body,
+              notes_since_last_generation, generated_at, finalized_at,
+              pdf_file_id, created_at, updated_at
+  `);
+  const row = r.rows[0];
+  return row ? mapReport(row) : null;
+}
+
+/**
+ * Mark a report finalized. Idempotent — re-finalize keeps the original
+ * `finalized_at` so audit trails don't shift on retry.
+ */
+export async function finalizeReport(db: Db, reportId: string): Promise<ReportRow | null> {
+  const r = await db.execute<RawReport>(sql`
+    UPDATE app.reports
+    SET status = 'finalized',
+        finalized_at = COALESCE(finalized_at, now()),
+        updated_at = now()
+    WHERE id = ${reportId}::uuid
+    RETURNING id, project_id, status, visit_date, body,
+              notes_since_last_generation, generated_at, finalized_at,
+              pdf_file_id, created_at, updated_at
+  `);
+  const row = r.rows[0];
+  return row ? mapReport(row) : null;
+}
+
+/**
+ * Attach a rendered PDF (already uploaded + registered in app.files)
+ * to the report.
+ */
+export async function setReportPdfFileId(
+  db: Db,
+  reportId: string,
+  fileId: string,
+): Promise<ReportRow | null> {
+  const r = await db.execute<RawReport>(sql`
+    UPDATE app.reports
+    SET pdf_file_id = ${fileId}::uuid,
+        updated_at = now()
+    WHERE id = ${reportId}::uuid
+    RETURNING id, project_id, status, visit_date, body,
+              notes_since_last_generation, generated_at, finalized_at,
+              pdf_file_id, created_at, updated_at
+  `);
+  const row = r.rows[0];
+  return row ? mapReport(row) : null;
+}

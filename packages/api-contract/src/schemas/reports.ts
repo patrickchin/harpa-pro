@@ -77,12 +77,29 @@ export const updateReportRequest = z.object({
   visitDate: isoDateTime.nullable().optional(),
 });
 
+/**
+ * fixtureName is forwarded to @harpa/ai-fixtures FixtureStore which uses
+ * `path.join(dir, name + '.json')`. Restrict to a safe charset to prevent
+ * path traversal at the contract boundary (mirrors voice schemas).
+ */
+const fixtureNameSchema = z
+  .string()
+  .min(1)
+  .max(128)
+  .regex(/^[a-zA-Z0-9._-]+$/, 'fixtureName must match /^[a-zA-Z0-9._-]+$/');
+
 export const generateReportRequest = z.object({
-  fixtureName: z.string().optional(), // test-only override
+  fixtureName: fixtureNameSchema.optional(), // test-only fixture pin
 });
 export const generateReportResponse = z.object({
   report,
 });
+
+// regenerate is operationally identical to generate at the wire level;
+// the route distinguishes intent (replace existing body) but the request
+// shape is the same.
+export const regenerateReportRequest = generateReportRequest;
+export const regenerateReportResponse = generateReportResponse;
 
 export const finalizeReportResponse = z.object({ report });
 

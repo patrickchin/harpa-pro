@@ -1,0 +1,306 @@
+/**
+ * Integration tests for /projects + /projects/:id/members.
+ * Boots Testcontainers Postgres and exercises the full request →
+ * scope wrapper → SECURITY DEFINER helper path end-to-end.
+ */
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import pg from 'pg';
+import { createApp } from '../app.js';
+import { startPg, type PgFixture } from './setup-pg.js';
+import { resetPool, getPool } from '../db/client.js';
+import { signTestToken } from '../middleware/auth.js';
+
+let fx: PgFixture;
+let alice: string;
+let bob: string;
+let carol: string;
+let aliceSid: string;
+let bobSid: string;
+let carolSid: string;
+
+beforeAll(async () => {
+  fx = await startPg();
+  process.env.DATABASE_URL = fx.url;
+  await resetPool();
+  getPool(fx.url);
+
+  const admin = new pg.Client({ connectionString: fx.url });
+  await admin.connect();
+  const u = await admin.query<{ id: string }>(
+    `INSERT INTO auth.users(phone, display_name) VALUES ($1, 'Alice'), ($2, 'Bob'), ($3, 'Carol') RETURNING id`,
+    ['+15550400001', '+15550400002', '+15550400003'],
+  );
+  alice = u.rows[0]!.id;
+  bob = u.rows[1]!.id;
+  carol = u.rows[2]!.id;
+  const s = await admin.query<{ id: string }>(
+    `INSERT INTO auth.sessions(user_id, expires_at) VALUES ($1, now() + interval '7 days'), ($2, now() + interval '7 days'), ($3, now() + interval '7 days') RETURNING id`,
+    [alice, bob, carol],
+  );
+  aliceSid = s.rows[0]!.id;
+  bobSid = s.rows[1]!.id;
+  carolSid = s.rows[2]!.id;
+  await admin.end();
+}, 120_000);
+
+afterAll(async () => {
+  await fx?.stop();
+}, 60_000);
+
+async function authed(token: string) {
+  return { authorization: `Bearer ${token}`, 'content-type': 'application/json' };
+}
+
+describe('POST /projects', () => {
+  it('creates a project owned by the caller and bootstraps owner membership', async () => {
+    const app = createApp();
+    const token = await signTestToken(alice, aliceSid);
+    const res = await app.request('/projects', {
+      method: 'POST',
+      headers: await authed(token),
+      body: JSON.stringify({ name: 'Foundation Pour', clientName: 'ACME', address: '1 Pier' }),
+    });
+    expect(res.status).toBe(201);
+    const body = (await res.json()) as { id: string; ownerId: string; myRole: string; name: string };
+    expect(body.name).toBe('Foundation Pour');
+    expect(body.ownerId).toBe(alice);
+    expect(body.myRole).toBe('owner');
+  });
+
+  it('rejects 401 without auth', async () => {
+    const app = createApp();
+    const res = await app.request('/projects', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ name: 'x' }),
+    });
+    expect(res.status).toBe(401);
+  });
+
+  it('rejects 400 for empty name', async () => {
+    const app = createApp();
+    const token = await signTestToken(alice, aliceSid);
+    const res = await app.request('/projects', {
+      method: 'POST',
+      headers: await authed(token),
+      body: JSON.stringify({ name: '' }),
+    });
+    expect(res.status).toBe(400);
+  });
+});
+
+describe('GET /projects + GET /projects/:id', () => {
+  let projectId: string;
+
+  beforeAll(async () => {
+    const app = createApp();
+    const token = await signTestToken(bob, bobSid);
+    const res = await app.request('/projects', {
+      method: 'POST',
+      headers: await authed(token),
+      body: JSON.stringify({ name: 'Bob site' }),
+    });
+    const body = (await res.json()) as { id: string };
+    projectId = body.id;
+  });
+
+  it('lists projects for the caller (paginated)', async () => {
+    const app = createApp();
+    const token = await signTestToken(bob, bobSid);
+    const res = await app.request('/projects?limit=5', { headers: { authorization: `Bearer ${token}` } });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { items: Array<{ id: string }>; nextCursor: string | null };
+    expect(body.items.length).toBeGreaterThan(0);
+    expect(body.items.find((p) => p.id === projectId)).toBeTruthy();
+  });
+
+  it('cursor pagination round-trips', async () => {
+    const app = createApp();
+    const token = await signTestToken(bob, bobSid);
+    // Seed 4 more so we can paginate across.
+    for (let i = 0; i < 4; i++) {
+      await app.request('/projects', {
+        method: 'POST',
+        headers: await authed(token),
+        body: JSON.stringify({ name: `Bob extra ${i}` }),
+      });
+    }
+    const first = await app.request('/projects?limit=2', { headers: { authorization: `Bearer ${token}` } });
+    const firstBody = (await first.json()) as { items: Array<{ id: string }>; nextCursor: string | null };
+    expect(firstBody.items.length).toBe(2);
+    expect(firstBody.nextCursor).not.toBeNull();
+    const second = await app.request(`/projects?limit=2&cursor=${encodeURIComponent(firstBody.nextCursor!)}`, {
+      headers: { authorization: `Bearer ${token}` },
+    });
+    const secondBody = (await second.json()) as { items: Array<{ id: string }>; nextCursor: string | null };
+    expect(secondBody.items.length).toBe(2);
+    expect(new Set(firstBody.items.map((i) => i.id)).has(secondBody.items[0]!.id)).toBe(false);
+  });
+
+  it('GET /projects/:id returns stats', async () => {
+    const app = createApp();
+    const token = await signTestToken(bob, bobSid);
+    const res = await app.request(`/projects/${projectId}`, { headers: { authorization: `Bearer ${token}` } });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { stats?: { totalReports: number } };
+    expect(body.stats?.totalReports).toBe(0);
+  });
+
+  it('GET /projects/:id 404 when not a member', async () => {
+    const app = createApp();
+    const token = await signTestToken(carol, carolSid);
+    const res = await app.request(`/projects/${projectId}`, { headers: { authorization: `Bearer ${token}` } });
+    expect(res.status).toBe(404);
+  });
+
+  it('GET /projects/:id 401 without auth', async () => {
+    const app = createApp();
+    const res = await app.request(`/projects/${projectId}`);
+    expect(res.status).toBe(401);
+  });
+});
+
+describe('PATCH + DELETE /projects/:id', () => {
+  let projectId: string;
+  beforeAll(async () => {
+    const app = createApp();
+    const token = await signTestToken(alice, aliceSid);
+    const res = await app.request('/projects', {
+      method: 'POST',
+      headers: await authed(token),
+      body: JSON.stringify({ name: 'Patchable' }),
+    });
+    projectId = ((await res.json()) as { id: string }).id;
+  });
+
+  it('PATCH updates fields the caller can see', async () => {
+    const app = createApp();
+    const token = await signTestToken(alice, aliceSid);
+    const res = await app.request(`/projects/${projectId}`, {
+      method: 'PATCH',
+      headers: await authed(token),
+      body: JSON.stringify({ name: 'Patched' }),
+    });
+    expect(res.status).toBe(200);
+    expect(((await res.json()) as { name: string }).name).toBe('Patched');
+  });
+
+  it('DELETE returns 204 for owner', async () => {
+    const app = createApp();
+    const token = await signTestToken(alice, aliceSid);
+    const res = await app.request(`/projects/${projectId}`, {
+      method: 'DELETE',
+      headers: { authorization: `Bearer ${token}` },
+    });
+    expect(res.status).toBe(204);
+  });
+
+  it('DELETE 404 when not owner', async () => {
+    // alice creates, bob is invited as editor → cannot delete.
+    const app = createApp();
+    const aliceTok = await signTestToken(alice, aliceSid);
+    const bobTok = await signTestToken(bob, bobSid);
+    const created = await app.request('/projects', {
+      method: 'POST',
+      headers: await authed(aliceTok),
+      body: JSON.stringify({ name: 'NotYours' }),
+    });
+    const id = ((await created.json()) as { id: string }).id;
+    await app.request(`/projects/${id}/members`, {
+      method: 'POST',
+      headers: await authed(aliceTok),
+      body: JSON.stringify({ phone: '+15550400002', role: 'editor' }),
+    });
+    const res = await app.request(`/projects/${id}`, {
+      method: 'DELETE',
+      headers: { authorization: `Bearer ${bobTok}` },
+    });
+    expect(res.status).toBe(404);
+  });
+});
+
+describe('Members', () => {
+  let projectId: string;
+  beforeAll(async () => {
+    const app = createApp();
+    const token = await signTestToken(alice, aliceSid);
+    const res = await app.request('/projects', {
+      method: 'POST',
+      headers: await authed(token),
+      body: JSON.stringify({ name: 'MemberTest' }),
+    });
+    projectId = ((await res.json()) as { id: string }).id;
+  });
+
+  it('owner invites a member by phone', async () => {
+    const app = createApp();
+    const token = await signTestToken(alice, aliceSid);
+    const res = await app.request(`/projects/${projectId}/members`, {
+      method: 'POST',
+      headers: await authed(token),
+      body: JSON.stringify({ phone: '+15550400002', role: 'editor' }),
+    });
+    expect(res.status).toBe(201);
+    const body = (await res.json()) as { userId: string; phone: string; role: string };
+    expect(body.userId).toBe(bob);
+    expect(body.role).toBe('editor');
+  });
+
+  it('list members visible to a member', async () => {
+    const app = createApp();
+    const token = await signTestToken(bob, bobSid);
+    const res = await app.request(`/projects/${projectId}/members`, { headers: { authorization: `Bearer ${token}` } });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { items: Array<{ userId: string }> };
+    expect(body.items.length).toBe(2);
+  });
+
+  it('list members 404 for non-member', async () => {
+    const app = createApp();
+    const token = await signTestToken(carol, carolSid);
+    const res = await app.request(`/projects/${projectId}/members`, { headers: { authorization: `Bearer ${token}` } });
+    expect(res.status).toBe(404);
+  });
+
+  it('non-owner invite returns 403', async () => {
+    const app = createApp();
+    const token = await signTestToken(bob, bobSid);
+    const res = await app.request(`/projects/${projectId}/members`, {
+      method: 'POST',
+      headers: await authed(token),
+      body: JSON.stringify({ phone: '+15550400003', role: 'editor' }),
+    });
+    expect(res.status).toBe(403);
+  });
+
+  it('invite unknown phone returns 404', async () => {
+    const app = createApp();
+    const token = await signTestToken(alice, aliceSid);
+    const res = await app.request(`/projects/${projectId}/members`, {
+      method: 'POST',
+      headers: await authed(token),
+      body: JSON.stringify({ phone: '+15559999999', role: 'editor' }),
+    });
+    expect(res.status).toBe(404);
+  });
+
+  it('owner removes a member', async () => {
+    const app = createApp();
+    const token = await signTestToken(alice, aliceSid);
+    const res = await app.request(`/projects/${projectId}/members/${bob}`, {
+      method: 'DELETE',
+      headers: { authorization: `Bearer ${token}` },
+    });
+    expect(res.status).toBe(204);
+  });
+
+  it('cannot remove the last owner', async () => {
+    const app = createApp();
+    const token = await signTestToken(alice, aliceSid);
+    const res = await app.request(`/projects/${projectId}/members/${alice}`, {
+      method: 'DELETE',
+      headers: { authorization: `Bearer ${token}` },
+    });
+    expect(res.status).toBe(409);
+  });
+});

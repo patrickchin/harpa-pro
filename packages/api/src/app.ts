@@ -8,6 +8,15 @@ import { errorMapper } from './middleware/errorMapper.js';
 import { health } from './routes/health.js';
 import { authRoutes } from './routes/auth.js';
 import { meRoutes } from './routes/me.js';
+import type { ScopedDb } from './db/scope.js';
+
+/**
+ * Scoped DB accessor injected by withAuth (see middleware/auth.ts).
+ * Route handlers MUST go through `c.get('db')(fn)` rather than importing
+ * the raw drizzle handle; the lint rule in .eslintrc.cjs enforces this.
+ * See docs/v4/arch-auth-and-rls.md.
+ */
+export type ScopedDbAccessor = <T>(fn: (db: ScopedDb) => Promise<T>) => Promise<T>;
 
 export type AppEnv = {
   Variables: {
@@ -15,6 +24,8 @@ export type AppEnv = {
     // Auth-scoped claims, populated by withAuth middleware on protected routes.
     userId?: string;
     sessionId?: string;
+    // Per-request scoped DB accessor; populated by withAuth.
+    db?: ScopedDbAccessor;
   };
 };
 

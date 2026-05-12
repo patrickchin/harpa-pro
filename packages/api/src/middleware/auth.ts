@@ -11,6 +11,7 @@ import type { MiddlewareHandler } from 'hono';
 import { HTTPException } from 'hono/http-exception';
 import type { AppEnv } from '../app.js';
 import { signJwt, verifyJwt } from '../auth/jwt.js';
+import { withScopedConnection } from '../db/scope.js';
 
 export function withAuth(): MiddlewareHandler<AppEnv> {
   return async (c, next) => {
@@ -27,6 +28,7 @@ export function withAuth(): MiddlewareHandler<AppEnv> {
     }
     c.set('userId', claims.sub);
     c.set('sessionId', claims.sid);
+    c.set('db', (fn) => withScopedConnection({ sub: claims.sub, sid: claims.sid }, fn));
     await next();
   };
 }

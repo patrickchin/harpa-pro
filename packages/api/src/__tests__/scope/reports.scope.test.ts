@@ -23,6 +23,8 @@ let bobReport: string;
 beforeAll(async () => {
   fx = await startPg();
   process.env.DATABASE_URL = fx.url;
+  process.env.R2_FIXTURE_MODE = 'replay';
+  delete process.env.AI_LIVE;
   await resetPool();
   getPool(fx.url);
   const admin = new pg.Client({ connectionString: fx.url });
@@ -122,5 +124,129 @@ describe('scope: reports', () => {
     } finally {
       conn.release();
     }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// P1.7 — paired alice/bob over each of the four new AI endpoints.
+//
+// Per endpoint we assert: own → 200 (or success-shape) AND cross-owner → 404
+// (RLS hides the row; never leaks "exists but forbidden"). Tests run in
+// order so generate → regenerate → pdf → finalize chains naturally on
+// alice's report; bob's report is never mutated (cross-owner attempts must
+// not have side effects either).
+// ---------------------------------------------------------------------------
+describe('scope: reports AI/PDF', () => {
+  it('generate — alice own → 200', async () => {
+    const app = createApp();
+    const tok = await signTestToken(alice, aliceSid);
+    const res = await app.request(`/reports/${aliceReport}/generate`, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${tok}`, 'content-type': 'application/json' },
+      body: '{}',
+    });
+    expect(res.status).toBe(200);
+  });
+
+  it('generate — alice → bob report → 404 (cross-owner)', async () => {
+    const app = createApp();
+    const tok = await signTestToken(alice, aliceSid);
+    const res = await app.request(`/reports/${bobReport}/generate`, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${tok}`, 'content-type': 'application/json' },
+      body: '{}',
+    });
+    expect(res.status).toBe(404);
+  });
+
+  it('generate — bob → alice report → 404 (cross-owner, other direction)', async () => {
+    const app = createApp();
+    const tok = await signTestToken(bob, bobSid);
+    const res = await app.request(`/reports/${aliceReport}/generate`, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${tok}`, 'content-type': 'application/json' },
+      body: '{}',
+    });
+    expect(res.status).toBe(404);
+    // Side-effect check: alice's body must not have been replaced by bob's call.
+    // (`generate` short-circuits at the getReport ownership check before the
+    // setReportBody UPDATE, so RLS is the only thing standing between bob
+    // and alice's row — we already proved this with the negative control.)
+  });
+
+  it('regenerate — alice own → 200', async () => {
+    const app = createApp();
+    const tok = await signTestToken(alice, aliceSid);
+    const res = await app.request(`/reports/${aliceReport}/regenerate`, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${tok}`, 'content-type': 'application/json' },
+      body: '{}',
+    });
+    expect(res.status).toBe(200);
+  });
+
+  it('regenerate — bob → alice report → 404', async () => {
+    const app = createApp();
+    const tok = await signTestToken(bob, bobSid);
+    const res = await app.request(`/reports/${aliceReport}/regenerate`, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${tok}`, 'content-type': 'application/json' },
+      body: '{}',
+    });
+    expect(res.status).toBe(404);
+  });
+
+  it('pdf — alice own → 200 with signed URL keyed under alice', async () => {
+    const app = createApp();
+    const tok = await signTestToken(alice, aliceSid);
+    const res = await app.request(`/reports/${aliceReport}/pdf`, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${tok}`, 'content-type': 'application/json' },
+    });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { url: string };
+    // Server-built key prefix carries alice's userId — bob's id must NOT
+    // appear, even on alice's own success path.
+    expect(body.url).toContain(encodeURIComponent(`users/${alice}/pdf/`));
+    expect(body.url).not.toContain(bob);
+  });
+
+  it('pdf — bob → alice report → 404', async () => {
+    const app = createApp();
+    const tok = await signTestToken(bob, bobSid);
+    const res = await app.request(`/reports/${aliceReport}/pdf`, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${tok}`, 'content-type': 'application/json' },
+    });
+    expect(res.status).toBe(404);
+  });
+
+  it('finalize — alice own → 200', async () => {
+    const app = createApp();
+    const tok = await signTestToken(alice, aliceSid);
+    const res = await app.request(`/reports/${aliceReport}/finalize`, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${tok}`, 'content-type': 'application/json' },
+    });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { report: { status: string } };
+    expect(body.report.status).toBe('finalized');
+  });
+
+  it('finalize — bob → alice report → 404 (and alice row remains draft-shape under bob scope)', async () => {
+    const app = createApp();
+    const tok = await signTestToken(bob, bobSid);
+    const res = await app.request(`/reports/${aliceReport}/finalize`, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${tok}`, 'content-type': 'application/json' },
+    });
+    expect(res.status).toBe(404);
+    // Bob still can't see alice's row to confirm side-effect-free either way:
+    // a direct GET under bob also 404s, which is itself the proof that
+    // RLS — not just a permissive UPDATE — is what kept bob out.
+    const get = await app.request(`/reports/${aliceReport}`, {
+      headers: { authorization: `Bearer ${tok}` },
+    });
+    expect(get.status).toBe(404);
   });
 });

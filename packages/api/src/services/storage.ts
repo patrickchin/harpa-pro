@@ -35,9 +35,27 @@ export interface SignedUrl {
   expiresAt: string;
 }
 
+export interface PutObjectInput {
+  userId: string;
+  kind: FileKind;
+  contentType: string;
+  bytes: Uint8Array;
+}
+
+export interface PutObjectResult {
+  fileKey: string;
+  sizeBytes: number;
+}
+
 export interface Storage {
   presign(input: PresignInput): Promise<PresignResult>;
   signGet(fileKey: string): Promise<SignedUrl>;
+  /**
+   * Server-side upload (used by the report PDF render path: the API
+   * builds the bytes itself rather than handing the client a presigned
+   * PUT). Server constructs the key — never trust client input.
+   */
+  putObject(input: PutObjectInput): Promise<PutObjectResult>;
 }
 
 const DEFAULT_TTL_SEC = 300; // 5 minutes per arch-storage.md
@@ -72,6 +90,14 @@ export class FixtureStorage implements Storage {
       expiresAt: new Date(Date.now() + DEFAULT_TTL_SEC * 1000).toISOString(),
     };
   }
+
+  async putObject(input: PutObjectInput): Promise<PutObjectResult> {
+    // Fixture mode keeps PDF rendering deterministic + network-free in
+    // CI: we mint a server-built key but don't touch any blob store.
+    // Tests verify the resulting signed GET URL points at the same key.
+    const fileKey = buildKey(input.userId, input.kind, input.contentType);
+    return { fileKey, sizeBytes: input.bytes.length };
+  }
 }
 
 /**
@@ -85,6 +111,9 @@ export class R2Storage implements Storage {
   }
   async signGet(_fileKey: string): Promise<SignedUrl> {
     throw new Error('R2Storage.signGet not yet implemented — use R2_FIXTURE_MODE=replay in this env');
+  }
+  async putObject(_input: PutObjectInput): Promise<PutObjectResult> {
+    throw new Error('R2Storage.putObject not yet implemented — use R2_FIXTURE_MODE=replay in this env');
   }
 }
 

@@ -24,6 +24,8 @@ import {
   type FixtureMode,
   type Vendor,
 } from '@harpa/ai-fixtures';
+import { reports as reportSchemas } from '@harpa/api-contract';
+import type { z } from 'zod';
 
 export class AiProviderError extends Error {
   readonly code = 'ai_provider_error';
@@ -55,6 +57,23 @@ export const FIXTURE_CANONICALS = {
     model: 'gpt-4o-mini',
     systemPrompt: 'Summarise the following transcript into a concise site-note body.',
     userPrompt: 'Site arrival 8:15. Crew of three on rebar...',
+  },
+  /**
+   * Two report fixtures cover the success matrix:
+   *   - `full`: rich notes → fully populated structured body.
+   *   - `incomplete`: sparse notes → mostly-null body with a single
+   *     summary section explaining the gap.
+   * Source of truth:
+   *   packages/ai-fixtures/fixtures/generate-report.{full,incomplete}.json
+   */
+  report: {
+    vendor: 'openai' as Vendor,
+    model: 'gpt-4o',
+    systemPrompt: 'Generate a structured construction-site daily report from the provided notes.',
+    fixtures: {
+      full: { name: 'generate-report.full', userPrompt: '<notes payload>' },
+      incomplete: { name: 'generate-report.incomplete', userPrompt: '<sparse notes>' },
+    },
   },
 } as const;
 
@@ -139,4 +158,78 @@ export async function chat(input: ChatInput): Promise<ChatOutput> {
   const provider = buildProvider(FIXTURE_CANONICALS.summarize.vendor, fixtureName);
   const out = await withErrorWrap('chat', () => provider.chat(req));
   return { text: out.text };
+}
+
+// ---------------------------------------------------------------------------
+// Report generation
+// ---------------------------------------------------------------------------
+
+export type ReportBody = z.infer<typeof reportSchemas.reportBody>;
+
+export interface GenerateReportInput {
+  /**
+   * Concatenated note content to feed the model. Ignored in replay mode
+   * (the canonical user prompt is substituted so the request hash matches
+   * the recorded fixture).
+   */
+  notes: string;
+  fixtureName?: string;
+}
+
+export interface GenerateReportOutput {
+  /** Parsed + schema-validated body, ready to persist. */
+  body: ReportBody;
+  /** Raw model text (the JSON it returned, before parsing). */
+  text: string;
+}
+
+/**
+ * Generate a structured report body from notes via the AI provider.
+ *
+ * The model returns a JSON string matching `api-contract.reports.reportBody`.
+ * We parse + validate here so the route handler can persist a known-good
+ * shape; any parse/schema mismatch is wrapped as `AiProviderError` so it
+ * surfaces as a 502 (provider misbehaviour) rather than a 500.
+ */
+export async function generateReport(input: GenerateReportInput): Promise<GenerateReportOutput> {
+  const mode = pickMode();
+  const canonicals = FIXTURE_CANONICALS.report;
+  const defaultName = canonicals.fixtures.full.name;
+  const fixtureName = input.fixtureName ?? defaultName;
+
+  const req =
+    mode === 'replay'
+      ? {
+          model: canonicals.model,
+          systemPrompt: canonicals.systemPrompt,
+          // Map the requested fixture name to its recorded canonical user
+          // prompt. Unknown names fall through to the `full` prompt — they
+          // will FixtureMiss against the on-disk store and surface as a
+          // generic 502, matching the voice route's behaviour.
+          userPrompt:
+            fixtureName === canonicals.fixtures.incomplete.name
+              ? canonicals.fixtures.incomplete.userPrompt
+              : canonicals.fixtures.full.userPrompt,
+        }
+      : {
+          model: canonicals.model,
+          systemPrompt: canonicals.systemPrompt,
+          userPrompt: input.notes,
+        };
+
+  const provider = buildProvider(canonicals.vendor, fixtureName);
+  const out = await withErrorWrap('generateReport', () => provider.chat(req));
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(out.text);
+  } catch (err) {
+    throw new AiProviderError('generateReport: provider response was not valid JSON', err);
+  }
+  const result = reportSchemas.reportBody.safeParse(parsed);
+  if (!result.success) {
+    // Don't leak the failing payload — keep the error surface generic.
+    throw new AiProviderError('generateReport: provider response did not match report schema');
+  }
+  return { body: result.data, text: out.text };
 }

@@ -15,7 +15,7 @@
     "test:api:integration": "pnpm --filter @harpa/api test:integration",
     "test:mobile": "pnpm --filter @harpa/mobile test",
     "test:docs:e2e": "pnpm --filter @harpa/docs test:e2e",
-    "lint": "turbo run lint && bash scripts/check-no-supabase.sh && bash scripts/check-no-unistyles.sh && bash scripts/check-no-alert-alert.sh && bash scripts/check-no-process-env-bang.sh && bash scripts/check-no-hex-colors.sh && bash scripts/check-scope-tests.sh",
+    "lint": "turbo run lint && bash scripts/check-no-supabase.sh && bash scripts/check-no-unistyles.sh && bash scripts/check-no-alert-alert.sh && bash scripts/check-no-process-env-bang.sh && bash scripts/check-no-hex-colors.sh && bash scripts/check-scope-tests.sh && bash scripts/check-spec-drift.sh",
     "typecheck": "turbo run typecheck",
     "gen:api": "pnpm --filter @harpa/api-contract gen:types && pnpm --filter @harpa/mobile gen:hooks",
     "spec:emit": "pnpm --filter @harpa/api spec:emit",

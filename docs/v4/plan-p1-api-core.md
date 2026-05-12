@@ -119,9 +119,21 @@ Each task = one route file + its tests + its api-contract schemas
 - [x] Commit: `test(api): property tests for error mapper`.
 
 ### P1.11 Contract + OpenAPI freeze
-- [ ] `pnpm spec:emit` writes `openapi.json`.
-- [ ] Contract test passes for every route.
-- [ ] Commit: `chore(contract): freeze v1 OpenAPI spec`.
+- [x] `pnpm spec:emit` writes `openapi.json`.
+- [x] Contract test passes for every route.
+  - `packages/api/src/__tests__/contract.test.ts` (3 tests):
+    1. runtime spec deep-equals the frozen `packages/api-contract/openapi.json`,
+    2. every documented `(method, path)` pair is registered in `app.routes`,
+    3. authed routes declare a `bearerAuth` security requirement and
+       the scheme is registered at `components.securitySchemes`.
+- [x] Spec drift gate: `scripts/check-spec-drift.sh` re-emits +
+      regenerates types and fails on `git diff`. Wired into root
+      `pnpm lint`.
+- [x] `gen-types.ts` updated for `openapi-typescript@7` (`astToString`).
+- [x] `bearerAuth` security scheme registered in `createApp()` so the
+      32 `security: [{ bearerAuth: [] }]` references in the spec
+      resolve to a declared component (was a real gap in the spec).
+- [x] Commit: `chore(contract): freeze v1 OpenAPI spec`.
 
 ### P1.12 P1 exit gate
 - [ ] All boxes ticked. Tag `v0.1.0-api`.

@@ -1,0 +1,37 @@
+name: api-prod
+
+# Build + deploy @harpa/api to Fly.io on every push to `main`
+# (the default branch — see AGENTS.md hard rule #7). Manual deploys
+# can still be run via `./infra/fly/deploy.sh`.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "packages/api/**"
+      - "packages/api-contract/**"
+      - "packages/ai-fixtures/**"
+      - "infra/fly/**"
+      - ".github/workflows/api-prod.yml"
+      - "pnpm-lock.yaml"
+  # Allow manual re-deploys (e.g. rotating secrets without a code change).
+  workflow_dispatch: {}
+
+concurrency:
+  group: api-prod
+  cancel-in-progress: false # never cancel a prod deploy
+
+jobs:
+  prod:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Deploy to Fly.io
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: ./infra/fly/deploy.sh --remote-only

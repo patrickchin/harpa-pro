@@ -194,10 +194,11 @@ in P4.
   for any rows that exist; production has none yet because P3
   has not started.
 
-## Open questions deferred to P3.0
+## Implementation design
 
-- Exact migration ordering: add `slug` nullable → backfill →
-  add `NOT NULL` + `UNIQUE` → swap routes → drop `:id` route.
+See [**design-p30-ids-slugs.md**](design-p30-ids-slugs.md) for the
+complete migration plan, slug generator design, API contract surface,
+scope test plan, and worker dispatch sequence.
   Standard 4-step expand/contract.
 - Whether `/notes/:noteId` should also gain a slug. Lean **no** —
   notes are never shared in isolation, only as part of a report.

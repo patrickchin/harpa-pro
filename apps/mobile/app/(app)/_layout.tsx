@@ -10,7 +10,7 @@
  */
 import { useEffect, useRef, useCallback } from 'react';
 import { BackHandler, ToastAndroid, Platform, ActivityIndicator, View } from 'react-native';
-import { Tabs, useNavigation, useRouter } from 'expo-router';
+import { Tabs, useNavigation, Redirect } from 'expo-router';
 import { FolderOpen } from 'lucide-react-native';
 import { colors } from '@/lib/design-tokens/colors';
 import { useAuthSession } from '@/lib/auth/session';
@@ -18,17 +18,14 @@ import { decideAppRedirect } from '@/lib/auth/auth-gate';
 
 export default function AppLayout() {
   const { status } = useAuthSession();
-  const router = useRouter();
   const navigation = useNavigation();
   const lastBackPress = useRef(0);
 
-  // Auth gate: redirect unauthenticated / needs-onboarding users away.
-  useEffect(() => {
-    const target = decideAppRedirect(status);
-    if (target) {
-      router.replace(target as any);
-    }
-  }, [status, router]);
+  // Auth gate: redirect unauthenticated / needs-onboarding users away (FIRST).
+  const target = decideAppRedirect(status);
+  if (target) {
+    return <Redirect href={target as any} />;
+  }
 
   // Android double-back-to-exit handler (ported from canonical).
   const handleBackPress = useCallback(() => {

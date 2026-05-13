@@ -15,7 +15,31 @@
  */
 import { useRef, useState } from 'react';
 import { Turnstile, type TurnstileInstance } from '@marsidev/react-turnstile';
+import { waitlist } from '@harpa/api-contract';
 import { getPublicEnv } from '../../lib/env';
+
+// Single source of truth for request shape + caps. Mirrors the server.
+const { waitlistSignupRequest } = waitlist;
+
+// Pull the field caps out of the shared schema so the inputs enforce
+// exactly what the server enforces. If the schema changes, the form
+// follows automatically.
+function maxOf(field: 'email' | 'company' | 'role' | 'source'): number {
+  const shape = waitlistSignupRequest.shape;
+  // `optional()` wraps the inner schema; unwrap if needed.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const inner: any =
+    'unwrap' in shape[field] && typeof (shape[field] as any).unwrap === 'function'
+      ? (shape[field] as any).unwrap()
+      : shape[field];
+  return inner._def?.checks?.find((c: { kind: string }) => c.kind === 'max')?.value ?? 254;
+}
+const MAX = {
+  email: maxOf('email'),
+  company: maxOf('company'),
+  role: maxOf('role'),
+  source: maxOf('source'),
+};
 
 type FormState =
   | { kind: 'idle' }
@@ -50,8 +74,34 @@ export default function WaitlistFormIsland() {
       });
       return;
     }
-    if (!email) {
-      setState({ kind: 'error', message: 'Email is required.' });
+
+    // Validate against the SAME Zod schema the server uses. This
+    // catches over-length / malformed inputs before we round-trip
+    // and surfaces the server's own error messages.
+    const parsed = waitlistSignupRequest.safeParse({
+      email,
+      company: company || undefined,
+      role: role || undefined,
+      source: source || undefined,
+      turnstileToken,
+    });
+    if (!parsed.success) {
+      const first = parsed.error.issues[0];
+      const field = first?.path[0];
+      const label =
+        field === 'email'
+          ? 'Email'
+          : field === 'company'
+            ? 'Company'
+            : field === 'role'
+              ? 'Role'
+              : field === 'source'
+                ? 'Project description'
+                : 'Form';
+      setState({
+        kind: 'error',
+        message: `${label}: ${first?.message ?? 'invalid value'}.`,
+      });
       return;
     }
 
@@ -60,13 +110,7 @@ export default function WaitlistFormIsland() {
       const res = await fetch(`${env.apiBaseUrl}/waitlist`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          email,
-          company: company || undefined,
-          role: role || undefined,
-          source: source || undefined,
-          turnstileToken,
-        }),
+        body: JSON.stringify(parsed.data),
       });
       if (res.status === 202) {
         setState({ kind: 'success' });
@@ -126,6 +170,7 @@ export default function WaitlistFormIsland() {
             type="email"
             required
             autoComplete="email"
+            maxLength={MAX.email}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="jamie@buildco.com"
@@ -144,6 +189,7 @@ export default function WaitlistFormIsland() {
           <input
             type="text"
             autoComplete="organization"
+            maxLength={MAX.company}
             value={company}
             onChange={(e) => setCompany(e.target.value)}
             placeholder="BuildCo Construction"
@@ -177,6 +223,7 @@ export default function WaitlistFormIsland() {
           </span>
           <textarea
             rows={3}
+            maxLength={MAX.source}
             value={source}
             onChange={(e) => setSource(e.target.value)}
             placeholder="e.g. Multifamily wood-frame, light commercial, civil…"

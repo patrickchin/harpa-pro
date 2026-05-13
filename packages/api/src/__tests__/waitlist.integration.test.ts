@@ -167,6 +167,48 @@ describe('POST /waitlist', () => {
     expect(resend.sent).toHaveLength(0);
   });
 
+  it('default fakeTurnstile (compose / :mock builds) accepts any non-empty token end-to-end', async () => {
+    // Do NOT inject a Turnstile stub — we want the real default-mode
+    // `fakeTurnstile()` from createTurnstileClient(). This mirrors
+    // `docker compose up`, where the marketing site's Cloudflare
+    // test-key widget produces real-format tokens like
+    // `XXXX.DUMMY.TOKEN.XXXX`. Regression test for the silent
+    // empty-DB bug where fake mode required a `tt-` prefix.
+    const resend = recordingResend();
+    setWaitlistClients({ resend });
+    const app = createApp();
+    const res = await app.request('/waitlist', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        email: 'dev@buildco.com',
+        turnstileToken: 'XXXX.DUMMY.TOKEN.XXXX',
+      }),
+    });
+    expect(res.status).toBe(202);
+    const r = await getPool().query<{ c: number }>(
+      `SELECT count(*)::int AS c FROM app.waitlist_signups WHERE email = 'dev@buildco.com'`,
+    );
+    expect(Number(r.rows[0]!.c)).toBe(1);
+    expect(resend.sent).toHaveLength(1);
+  });
+
+  it('default fakeTurnstile rejects empty token (caller forgot to wire widget)', async () => {
+    const resend = recordingResend();
+    setWaitlistClients({ resend });
+    const app = createApp();
+    const res = await app.request('/waitlist', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      // Zod schema requires min(1), so an empty token is a 400 before
+      // it even reaches Turnstile. This guards both layers.
+      body: JSON.stringify({ email: 'x@buildco.com', turnstileToken: '' }),
+    });
+    expect(res.status).toBe(400);
+    const r = await getPool().query(`SELECT count(*)::int AS c FROM app.waitlist_signups`);
+    expect(Number((r.rows[0] as { c: number }).c)).toBe(0);
+  });
+
   it('disposable email: returns 202 neutral but no row inserted', async () => {
     const resend = recordingResend();
     setWaitlistClients({ turnstile: alwaysOkTurnstile(), resend });

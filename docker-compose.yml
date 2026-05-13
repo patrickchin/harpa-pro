@@ -7,20 +7,19 @@
 #   migrate  Runs `pnpm --filter @harpa/api db:migrate` once against pg,
 #            exits 0. Re-runs on every `compose up` (drizzle migrations
 #            are idempotent).
-#   api     `pnpm --filter @harpa/api exec tsx src/server.ts` on :8787,
-#            fixture-mode (no real Twilio / AI / R2).
+#   api     `tsx watch src/server.ts` on :8787, fixture-mode (no real
+#            Twilio / AI / R2). Source dirs are bind-mounted so edits
+#            on the host trigger a server restart inside the container.
 #
 # This is for "give me a fresh backend in one command" — demos, mobile
-# dev on a teammate's box, fixture-mode E2E. For day-to-day API hacking
-# you still want `pnpm --filter @harpa/api dev` (tsx watch, fast restart)
-# pointed at the `pg` service.
+# dev on a teammate's box, fixture-mode E2E, and day-to-day API hacking.
 #
 # Integration tests use Testcontainers and do NOT touch this stack.
 
 services:
   pg:
     image: postgres:16
-    container_name: harpa-pg
+    container_name: harpa-pro-pg
     environment:
       POSTGRES_PASSWORD: pg
       POSTGRES_DB: harpa
@@ -33,6 +32,19 @@ services:
       retries: 15
     volumes:
       - harpa-pg:/var/lib/postgresql/data
+
+  # Browser-based SQL UI for the local pg. Open http://localhost:8080
+  # and log in with: System=PostgreSQL, Server=pg, Username=postgres,
+  # Password=pg, Database=harpa.
+  adminer:
+    image: adminer:4
+    depends_on:
+      pg:
+        condition: service_healthy
+    environment:
+      ADMINER_DEFAULT_SERVER: pg
+    ports:
+      - "8080:8080"
 
   migrate:
     build:
@@ -69,6 +81,20 @@ services:
       BETTER_AUTH_URL: http://localhost:8787
       WAITLIST_IP_HASH_SALT: dev-only-waitlist-salt
       WAITLIST_CONFIRM_BASE_URL: http://localhost:3002/confirm
+      # tsx watch needs polling inside Docker on macOS/Windows where
+      # native fs events don't propagate across the VM boundary.
+      CHOKIDAR_USEPOLLING: "true"
+      CHOKIDAR_INTERVAL: "300"
+    # `tsx watch` restarts the server on edits to bind-mounted sources.
+    # `pnpm dev` would also work but adds an extra process layer.
+    command: ["pnpm", "--filter", "@harpa/api", "exec", "tsx", "watch", "src/server.ts"]
+    # Bind-mount only the source dirs we want hot-reloaded. node_modules
+    # (hoisted at /app/node_modules by the image) is intentionally NOT
+    # overlaid so the container keeps its installed deps.
+    volumes:
+      - ./packages/api/src:/app/packages/api/src
+      - ./packages/api-contract/src:/app/packages/api-contract/src
+      - ./packages/ai-fixtures/src:/app/packages/ai-fixtures/src
     ports:
       - "8787:8787"
 

@@ -23,12 +23,12 @@ export function renderWaitlistConfirmationEmail(
   const text = [
     "You're nearly on the harpapro.com waitlist.",
     '',
-    'Click the link below to confirm your spot — it expires in 7 days:',
+    'Click the link below to confirm your spot! (it expires in 7 days)',
     confirmUrl,
     '',
     "If you didn't sign up, you can safely ignore this email.",
     '',
-    '— The Harpa Pro team',
+    '— Patrick from the Harpa Pro team',
   ].join('\n');
 
   const html = `<!doctype html>

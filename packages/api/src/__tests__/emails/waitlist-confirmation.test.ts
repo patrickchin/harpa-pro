@@ -14,12 +14,12 @@ describe('renderWaitlistConfirmationEmail', () => {
     expect(text).toMatchInlineSnapshot(`
       "You're nearly on the harpapro.com waitlist.
 
-      Click the link below to confirm your spot — it expires in 7 days:
+      Click the link below to confirm your spot! (it expires in 7 days)
       https://harpapro.com/confirm?token=DETERMINISTIC_FIXTURE_TOKEN
 
       If you didn't sign up, you can safely ignore this email.
 
-      — The Harpa Pro team"
+      — Patrick from the Harpa Pro team"
     `);
     expect(html).toContain('https://harpapro.com/confirm?token=DETERMINISTIC_FIXTURE_TOKEN');
     expect(html).toContain('Confirm my spot');

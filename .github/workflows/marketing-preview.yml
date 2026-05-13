@@ -41,6 +41,11 @@ jobs:
       - name: Build marketing site
         run: pnpm --filter @harpa/marketing build
 
+      - name: Lighthouse CI (perf/a11y/bp/seo ≥ 0.95)
+        run: pnpm exec lhci autorun --config=./lighthouserc.json
+        env:
+          LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN }}
+
       - name: Deploy preview to Cloudflare Pages
         id: deploy
         uses: cloudflare/wrangler-action@v3
@@ -71,7 +76,7 @@ jobs:
             <details><summary>What this checks</summary>
 
             - Astro build of `apps/marketing` succeeds
+            - Lighthouse CI (perf/a11y/bp/seo ≥ 0.95) passes
             - Static output deploys to Cloudflare Pages
-            - Lighthouse gate runs in a separate workflow
 
             </details>

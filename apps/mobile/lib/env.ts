@@ -12,6 +12,12 @@
 import { z } from 'zod';
 
 const Env = z.object({
+  // Base URL of the v4 API. Production: `https://api.harpapro.com`
+  // (the client adds the `/v1` prefix once routes are rebased there
+  // in P4 — see docs/v4/arch-ops.md "P4 task: cut over to
+  // api.harpapro.com/v1/"). Dev defaults to local Hono on :8787.
+  // Set per-build via EAS env or `.env`; do NOT bake prod URL into
+  // this default — it would mask missing config in CI.
   EXPO_PUBLIC_API_URL: z
     .string()
     .url()

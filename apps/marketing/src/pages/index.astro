@@ -1,13 +1,27 @@
 ---
 import Layout from "../layouts/Layout.astro";
+import Header from "../components/landing/Header.astro";
+import Hero from "../components/landing/Hero.astro";
+import ProblemSection from "../components/landing/ProblemSection.astro";
+import HowItWorks from "../components/landing/HowItWorks.astro";
+import Features from "../components/landing/Features.astro";
+import WaitlistForm from "../components/landing/WaitlistForm.astro";
+import Footer from "../components/landing/Footer.astro";
 ---
 
-<Layout>
-  <main class="mx-auto max-w-3xl px-6 py-24">
-    <h1 class="text-4xl font-bold tracking-tight text-foreground">Harpa</h1>
-    <p class="mt-4 text-lg text-muted-foreground">
-      Voice-driven field reports. Marketing scaffold (M0.2 — design
-      tokens wired).
-    </p>
-  </main>
+<Layout
+  title="Harpa Pro — Daily construction reports before you leave the jobsite"
+  description="Harpa Pro turns field notes, photos, and voice updates into clean daily construction reports. Built for foremen and site supervisors. Join the waitlist."
+>
+  <div class="min-h-screen bg-background text-ink">
+    <Header />
+    <main>
+      <Hero />
+      <ProblemSection />
+      <HowItWorks />
+      <Features />
+      <WaitlistForm />
+    </main>
+    <Footer />
+  </div>
 </Layout>

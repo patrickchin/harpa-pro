@@ -96,6 +96,45 @@ disciplined to throw Error subclasses, and assert this contract
 narrowly in property tests (don't pretend the framework will save
 you).
 
+### R5 — DI stubs become the spec; default wiring silently broken
+
+Every test injects a "happy" stub for a collaborator
+(`alwaysOkTurnstile()`, `recordingResend()`, `inMemoryRateLimiter()`,
+…). The unit/integration suite goes green even though the **default**
+client returned by the factory (`createTurnstileClient()`,
+`createResendClient()`, …) is broken — the production-fake config
+that `docker compose up`, `:mock` builds, and PR previews actually
+run with is never exercised. Symptoms:
+
+- Form / endpoint returns 2xx in the browser.
+- Server logs look clean.
+- DB / outbound side-effect never happens.
+- No test in the suite ever called the factory without overriding it.
+
+The factory is, in effect, untested. Two recurrence vectors:
+
+1. Helper functions like `setWaitlistClients({ turnstile, resend })`
+   make injection so cheap that every test does it.
+2. Fake-mode helpers (`fakeTurnstile`, `fakeR2`, fake-Twilio) accept
+   only a hand-crafted token shape (`tt-…`, `fake-…`) that real-world
+   widgets never produce, so dev / mock builds silently fail closed.
+
+Mitigation:
+
+- For every collaborator factory, write **at least one integration
+  test that does NOT inject a stub**. Call the route through the
+  default-wired client and assert the real side-effect (a DB row,
+  a queued email, a recorded fixture call). See
+  [arch-testing.md → "Test the default wiring"](../v4/arch-testing.md#test-the-default-wiring).
+- Prefer fake-mode helpers that accept what the real widget /
+  client produces in dev. If you need a "rejected" branch for
+  tests, inject `alwaysFailX()` in that specific test — don't
+  encode rejection into a magic token shape the dev path will
+  trip over.
+- Browser/device E2E (Playwright for the marketing site, Maestro
+  for mobile) hitting the live compose stack closes the residual
+  gap. Treat E2E as the contract for the default wiring.
+
 ## Entries
 
 ### 2026-05-12 — Hono v4 onError ignores non-Error throws (Pattern R1)
@@ -216,3 +255,38 @@ after every commit) catches this regression. Run locally with
 commit).
 
 **Pattern.** R4 (new — added above).
+
+### 2026-05-14 — Waitlist 202s with empty DB; fake-Turnstile required a magic token shape (Pattern R5)
+
+**Symptom.** Submitting the marketing waitlist form against the
+local `docker compose` stack returned the "Check your inbox" state,
+yet `app.waitlist_signups` stayed empty and no confirmation email
+was queued. Caught by the human running it; no automated test
+flagged it.
+
+**Root cause.** `fakeTurnstile()` in
+`packages/api/src/lib/turnstile.ts` accepted only tokens starting
+with `tt-`. The Cloudflare test-key widget in the browser emits
+real-format tokens (e.g. `XXXX.DUMMY.TOKEN.XXXX`), so the route's
+Turnstile check failed and returned the neutral 202 (the deliberate
+silent rejection for bots). Every existing integration test
+injected `alwaysOkTurnstile()` via `setWaitlistClients({…})`, so
+the default factory was never exercised — classic DI-stubs-as-spec.
+
+**Fix.** Loosened `fakeTurnstile()` to accept any non-empty token
+(still rejects empty as "widget not wired") and added an integration
+test that calls `/waitlist` without injecting a Turnstile stub,
+asserting both the DB row and the queued email. The form was also
+moved onto the shared `waitlistSignupRequest` schema from
+`@harpa/api-contract` (`safeParse` + schema-derived `maxLength`
+attrs) so over-length submissions surface as field-level errors
+instead of generic 400s.
+
+**Test.** `packages/api/src/__tests__/waitlist.integration.test.ts`
+— two new cases: "default fakeTurnstile accepts any non-empty
+token end-to-end" and "default fakeTurnstile rejects empty token".
+Marketing site Playwright E2E (driving the live form against the
+compose stack) is the longer-term gate — tracked as the next step
+in `docs/v4/arch-testing.md`.
+
+**Pattern.** R5 (new — added above).

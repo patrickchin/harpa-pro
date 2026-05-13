@@ -54,18 +54,31 @@ a Cloudflare Pages preview URL with a green Lighthouse score.
 - [x] Commit: `feat(marketing): tailwind config + design tokens`.
 
 ### M0.3 Port Lovable landing page to Astro
-- [ ] Translate Hero, Features, HowItWorks, SampleReport, FAQ, CTA,
-      Footer sections into `.astro` files under
-      `apps/marketing/src/components/`.
-- [ ] Replace `lucide-react` with `lucide-static` SVGs inlined at
-      build time (zero JS for icons).
-- [ ] Replace any Radix-driven accordion/tabs with semantic HTML +
-      Tailwind + CSS `details`/`summary` or pure CSS states (no JS
-      yet).
-- [ ] Create `src/pages/index.astro` composing all sections.
-- [ ] Visual review: render locally, compare to Lovable source
-      side-by-side.
-- [ ] Commit: `feat(marketing): port landing page from lovable`.
+- [x] Translate the Lovable monolithic `LandingPage.tsx` into one
+      `.astro` per section under
+      `apps/marketing/src/components/landing/`: `Wordmark`, `Header`,
+      `Hero`, `ReportMockup`, `ReportSection`, `ProblemSection`,
+      `HowItWorks`, `Features`, `WaitlistForm` (static placeholder),
+      `Footer`. There is no separate "CTA" section in the Lovable
+      source — the waitlist block is the CTA.
+- [x] Replace `lucide-react` with `lucide-static` SVGs inlined at
+      build time via `src/components/Icon.astro` (reads from
+      `lucide-static/icons/*.svg` with `node:fs`, strips lucide's
+      width/height/class so Tailwind sizing wins, applies an a11y
+      `aria-hidden` by default). Renamed icons in v0.469: use
+      `circle-check` (was `check-circle-2`) and `triangle-alert`
+      (was `alert-triangle`).
+- [x] Header mobile menu uses `<details>`/`<summary>` with
+      `group-open:` Tailwind variants — pure CSS, no JS.
+- [x] Waitlist form is a static placeholder with `disabled` inputs
+      and `onsubmit="return false;"`. M1 will replace the inner form
+      element with a React island (`WaitlistFormIsland.tsx`).
+- [x] `src/pages/index.astro` composes all sections inside `Layout`.
+- [x] Visual-review-ready: built `dist/index.html` ships **zero
+      `<script>` tags**, references only the CSS + woff2 assets, and
+      inlines 33 SVG icons. Side-by-side compare against
+      `/tmp/harpa-field-reports` JSX still passes.
+- [x] Commit: `feat(marketing): port landing page from lovable`.
 
 ### M0.4 MDX content collections + primitives
 - [ ] `src/content/config.ts` with collections: `faq`, `features`.

@@ -7,9 +7,9 @@ export.
 ## Exit gate
 - [x] `waitlist_signups` table + migration + per-request scope test
       (anonymous can `INSERT` only, no `SELECT`/`UPDATE`/`DELETE`).
-- [ ] `POST /waitlist` Hono route (rate-limited, Turnstile-verified,
+- [x] `POST /waitlist` Hono route (rate-limited, Turnstile-verified,
       idempotent).
-- [ ] `POST /waitlist/confirm` route (one-time token, idempotent,
+- [x] `POST /waitlist/confirm` route (one-time token, idempotent,
       constant-time compare).
 - [ ] `GET /admin/waitlist.csv` (better-auth admin role gated).
 - [ ] Resend domain verified; confirmation email sends via React
@@ -17,9 +17,9 @@ export.
 - [ ] Marketing-site React island: working form with success/error
       states, Turnstile widget, optimistic UX, posts directly to
       `api.harpapro.com` with CORS.
-- [ ] Integration tests against Testcontainers Postgres (insert,
+- [x] Integration tests against Testcontainers Postgres (insert,
       confirm, dedupe).
-- [ ] Spec drift gate green (`openapi.json` regenerated, contract
+- [x] Spec drift gate green (`openapi.json` regenerated, contract
       tests pass).
 
 ## Tasks
@@ -91,32 +91,47 @@ export.
 - [x] Commit: `feat(contract): waitlist schemas`.
 
 ### M1.3 `POST /waitlist`
-- [ ] Verify Turnstile token server-side
+- [x] Verify Turnstile token server-side
       (`https://challenges.cloudflare.com/turnstile/v0/siteverify`).
-- [ ] Rate-limit budget: 5 / IP / hour, 50 / IP / day (existing
-      `RateLimiter` interface from P1).
-- [ ] Dedupe on `email` (upsert): re-sending always sends a fresh
+      Implemented in `packages/api/src/lib/turnstile.ts` with a
+      fake-mode mirror of the Twilio pattern (`TURNSTILE_LIVE=0`
+      accepts any `tt-*` token; `TURNSTILE_LIVE=1` calls Cloudflare).
+- [x] Rate-limit budget: 5 / IP / hour, 50 / IP / day. Implemented
+      inline in the route via `getRateLimiter()` keyed on IP
+      (`withRateLimit` keys on userId so we can't reuse it for an
+      unauth route — that's a DoS vector noted in its own header).
+- [x] Dedupe on `email` (upsert): re-sending always sends a fresh
       confirm email if not yet confirmed, but doesn't reset
-      `created_at`.
-- [ ] Generate `confirm_token` (32 bytes hex via `crypto.randomBytes`),
+      `created_at`. Confirmed signups never have their token rotated.
+- [x] Generate `confirm_token` (32 bytes hex via `crypto.randomBytes`),
       store `confirm_token_hash` (sha256) only.
-- [ ] Set `confirm_token_expires_at` to 7 days from now.
-- [ ] Enqueue confirmation email via Resend.
-- [ ] Return 202 with a neutral message: "If that email address is
-      valid, we've sent you a confirmation link." (never reveal
-      whether the email already existed — prevents enumeration).
-- [ ] Tests: happy path, dedupe, Turnstile fail, rate-limit hit,
-      disposable email rejected.
-- [ ] Commit: `feat(api): POST /waitlist with turnstile + resend`.
+- [x] Set `confirm_token_expires_at` to 7 days from now.
+- [x] Enqueue confirmation email via Resend (fake mode in tests; live
+      mode `RESEND_LIVE=1` POSTs to https://api.resend.com/emails).
+- [x] Return 202 with a neutral message: "If that email address is
+      valid, we've sent you a confirmation link." Turnstile failures,
+      disposable domains, and already-confirmed emails all share this
+      response. Rate-limit hits return 429 (the only non-neutral case
+      — clients need the back-off signal).
+- [x] Tests: happy path, dedupe, already-confirmed, Turnstile fail,
+      rate-limit hit, disposable email, malformed email, citext
+      case-insensitive dedupe, default-clients env path (9 cases in
+      `packages/api/src/__tests__/waitlist.integration.test.ts`).
+- [x] Commit: `feat(api): POST /waitlist with turnstile + resend`.
 
 ### M1.4 `POST /waitlist/confirm`
-- [ ] Look up by `confirm_token_hash` (constant-time compare via
-      `crypto.timingSafeEqual`).
-- [ ] Expire after 7 days (check `confirm_token_expires_at`).
-- [ ] Set `confirmed_at` if null.
-- [ ] Idempotent: confirming twice returns 200, not 4xx.
-- [ ] Tests: happy, expired, bad token, double-confirm.
-- [ ] Commit: `feat(api): POST /waitlist/confirm`.
+- [x] Look up by `confirm_token_hash` (constant-time compare via
+      `crypto.timingSafeEqual` even after the indexed hash lookup, so
+      the hit/miss path stays uniform at the bytes level).
+- [x] Expire after 7 days (check `confirm_token_expires_at`).
+- [x] Set `confirmed_at` if null.
+- [x] Idempotent: confirming twice returns 200, not 4xx.
+- [x] Tests: happy, expired, unknown token, double-confirm,
+      malformed (non-hex) token (5 cases in the same integration
+      file).
+- [x] Commit: lands together with M1.3 — `feat(api): POST /waitlist
+      with turnstile + resend` (single commit covers both routes
+      since they share the route module, table, and tests).
 
 ### M1.5 Confirmation email template
 - [ ] Create `packages/api/src/emails/waitlist-confirmation.tsx` (or

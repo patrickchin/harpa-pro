@@ -19,6 +19,14 @@ const Env = z.object({
   AI_LIVE: z.enum(['0', '1']).default('0'),
   R2_FIXTURE_MODE: z.enum(['replay', 'live']).default('replay'),
   REQUEST_LOG: z.enum(['true', 'false']).default('false'),
+  // Marketing waitlist (M1).
+  TURNSTILE_LIVE: z.enum(['0', '1']).default('0'),
+  TURNSTILE_SECRET_KEY: z.string().optional(),
+  RESEND_LIVE: z.enum(['0', '1']).default('0'),
+  RESEND_API_KEY: z.string().optional(),
+  WAITLIST_FROM_EMAIL: z.string().default('Harpa Pro <hello@harpapro.com>'),
+  WAITLIST_CONFIRM_BASE_URL: z.string().url().default('https://harpapro.com/confirm'),
+  WAITLIST_IP_HASH_SALT: z.string().min(8).default('dev-only-waitlist-salt-do-not-use-in-prod'),
 });
 
 export const env = Env.parse(process.env);

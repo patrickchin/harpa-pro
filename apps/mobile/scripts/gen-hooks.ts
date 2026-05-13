@@ -106,13 +106,27 @@ const spec = JSON.parse(readFileSync(specPath, 'utf8')) as {
   paths: Record<string, Record<string, unknown>>;
 };
 
+/**
+ * Endpoints that exist in the API but are not consumed by the mobile
+ * client. The marketing waitlist (M1) lives in apps/marketing and
+ * posts directly to api.harpapro.com; mobile has no need for a hook.
+ * Keep this list explicit so accidental new routes don't silently
+ * skip codegen.
+ */
+const MOBILE_SKIP_PATHS = new Set<string>([
+  'post /waitlist',
+  'post /waitlist/confirm',
+]);
+
 // Validate that ENDPOINTS matches the spec exactly. Drift here means
 // the generator (and the invalidation map) is stale.
 const specPairs = new Set<string>();
 for (const [path, ops] of Object.entries(spec.paths)) {
   for (const method of Object.keys(ops)) {
     if (!['get', 'post', 'patch', 'put', 'delete'].includes(method)) continue;
-    specPairs.add(`${method} ${path}`);
+    const pair = `${method} ${path}`;
+    if (MOBILE_SKIP_PATHS.has(pair)) continue;
+    specPairs.add(pair);
   }
 }
 const tablePairs = new Set(ENDPOINTS.map((e) => `${e.method} ${e.path}`));

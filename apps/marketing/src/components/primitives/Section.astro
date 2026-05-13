@@ -1,0 +1,39 @@
+---
+import type { HTMLAttributes } from "astro/types";
+
+interface Props extends HTMLAttributes<"section"> {
+  id?: string;
+  /**
+   * Background tone. `paper-2` matches the source's secondary band
+   * sections (ProblemSection, Features) used to break up the page.
+   */
+  tone?: "default" | "paper-2";
+  /**
+   * Whether to draw top + bottom hairline borders (matches the
+   * source's "border-y border-hairline bg-paper-2/60" wrapping
+   * pattern when combined with `tone="paper-2"`).
+   */
+  bordered?: boolean | "top" | "y";
+}
+
+const {
+  id,
+  tone = "default",
+  bordered = false,
+  class: extra = "",
+  ...rest
+} = Astro.props;
+
+const toneCls = tone === "paper-2" ? "bg-paper-2/60" : "";
+
+const borderCls =
+  bordered === true || bordered === "y"
+    ? "border-y border-hairline"
+    : bordered === "top"
+      ? "border-t border-hairline"
+      : "";
+
+const cls = [toneCls, borderCls, extra].filter(Boolean).join(" ");
+---
+
+<section id={id} class={cls} {...rest}><slot /></section>

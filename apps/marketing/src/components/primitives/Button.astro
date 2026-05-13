@@ -1,0 +1,36 @@
+---
+import type { HTMLAttributes } from "astro/types";
+
+type Variant = "accent" | "primary" | "ghost";
+type Size = "md" | "lg";
+
+interface Props extends HTMLAttributes<"a"> {
+  href: string;
+  variant?: Variant;
+  size?: Size;
+}
+
+const { href, variant = "accent", size = "md", class: extra = "", ...rest } =
+  Astro.props;
+
+const base =
+  "inline-flex items-center justify-center gap-2 rounded-md text-sm font-medium transition shadow-sm ring-focus";
+
+const sizes: Record<Size, string> = {
+  md: "h-9 px-4",
+  lg: "h-11 px-5",
+};
+
+const variants: Record<Variant, string> = {
+  accent: "bg-accent text-accent-foreground hover:brightness-95",
+  primary: "bg-primary text-primary-foreground hover:brightness-95",
+  ghost:
+    "border border-hairline bg-card text-ink hover:bg-secondary shadow-none",
+};
+
+const cls = [base, sizes[size], variants[variant], extra]
+  .filter(Boolean)
+  .join(" ");
+---
+
+<a href={href} class={cls} {...rest}><slot /></a>

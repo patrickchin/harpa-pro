@@ -81,13 +81,32 @@ a Cloudflare Pages preview URL with a green Lighthouse score.
 - [x] Commit: `feat(marketing): port landing page from lovable`.
 
 ### M0.4 MDX content collections + primitives
-- [ ] `src/content/config.ts` with collections: `faq`, `features`.
-- [ ] Port FAQ entries + feature cards into MDX files.
-- [ ] Create `.astro` primitives: `Button.astro`, `Section.astro`,
-      `Container.astro` — typed props, no JS, re-usable.
-- [ ] Update landing page to pull from content collections via
-      `getCollection('faq')`.
-- [ ] Commit: `feat(marketing): mdx content collections + primitives`.
+- [x] `src/content.config.ts` (Astro 5 root-level location) defines
+      `faq` and `features` collections, each loaded with the v5
+      `glob()` loader and validated with Zod (`question`/`title` +
+      `order` + `icon`).
+- [x] Six feature MDX files under `src/content/features/` (one per
+      Lovable feature card, copy verbatim).
+- [x] Five FAQ MDX files under `src/content/faq/` (additive content
+      — Lovable source has no FAQ section; copy is original and
+      conservative ahead of legal review in M3).
+- [x] Three `.astro` primitives under `src/components/primitives/`:
+      `Button` (accent / primary / ghost variants × md / lg sizes),
+      `Section` (id + tone + bordered props), `Container`
+      (max-w-6xl + padding rhythm). Typed via `HTMLAttributes` so
+      they pass through `aria-*` etc.
+- [x] New `FAQ.astro` section uses `getCollection("faq")` +
+      `render()` + `<details>` accordions (no JS). Inserted between
+      Features and WaitlistForm.
+- [x] `Features.astro` refactored to consume the `features`
+      collection via `getCollection()` + `render()` instead of an
+      inline array.
+- [x] Both data sections wrapped in the new `Section` + `Container`
+      primitives to dogfood them.
+- [x] Build verified: 5 FAQ questions + 6 feature titles render in
+      `dist/index.html`, still zero `<script>` tags, 6 `<details>`
+      elements (1 mobile menu + 5 FAQ).
+- [x] Commit: `feat(marketing): mdx content collections + primitives`.
 
 ### M0.5 Cloudflare Pages deploy
 - [ ] **No SSR adapter.** Output stays `static` and Pages serves

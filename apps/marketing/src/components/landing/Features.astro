@@ -1,42 +1,23 @@
 ---
+import { getCollection, render } from "astro:content";
 import Icon from "../Icon.astro";
+import Section from "../primitives/Section.astro";
+import Container from "../primitives/Container.astro";
 
-const feats = [
-  {
-    icon: "mic",
-    title: "Voice notes for hands-busy updates",
-    body: "Talk through what's happening while you walk the site. Harpa transcribes and files it.",
-  },
-  {
-    icon: "camera",
-    title: "Photo-backed documentation",
-    body: "Tag photos to a project and section. Context stays attached, not stuck in a camera roll.",
-  },
-  {
-    icon: "folder-kanban",
-    title: "Project-based report history",
-    body: "Every report archived under the right job. Look back across days, weeks, or trades.",
-  },
-  {
-    icon: "file-text",
-    title: "Clean report exports",
-    body: "Share PDFs that look like the report your office already expects — no formatting work.",
-  },
-  {
-    icon: "hard-hat",
-    title: "Built for jobsite pace",
-    body: "Big targets, offline-tolerant, glove-friendly. Designed for noise, dust, and gloves.",
-  },
-  {
-    icon: "sparkles",
-    title: "Drafts you actually review",
-    body: "You stay in control. Harpa drafts; you approve before anything is shared.",
-  },
-];
+const entries = (await getCollection("features")).sort(
+  (a, b) => a.data.order - b.data.order,
+);
+
+const feats = await Promise.all(
+  entries.map(async (entry) => {
+    const { Content } = await render(entry);
+    return { title: entry.data.title, icon: entry.data.icon, Content };
+  }),
+);
 ---
 
-<section class="border-t border-hairline bg-paper-2/60">
-  <div class="mx-auto max-w-6xl px-4 py-16 sm:px-6 md:py-24">
+<Section tone="paper-2" bordered="top">
+  <Container padding="lg">
     <div class="max-w-2xl">
       <span class="text-xs font-semibold uppercase tracking-wider text-accent">
         What you get
@@ -47,16 +28,18 @@ const feats = [
     </div>
     <div class="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {
-        feats.map((f) => (
+        feats.map(({ title, icon, Content }) => (
           <div class="rounded-xl border border-hairline bg-card p-5">
             <span class="grid h-9 w-9 place-items-center rounded-md border border-hairline bg-paper-2 text-ink">
-              <Icon name={f.icon} class="h-4 w-4" />
+              <Icon name={icon} class="h-4 w-4" />
             </span>
-            <h3 class="mt-4 text-base font-semibold text-ink">{f.title}</h3>
-            <p class="mt-1.5 text-sm leading-relaxed text-ink-soft">{f.body}</p>
+            <h3 class="mt-4 text-base font-semibold text-ink">{title}</h3>
+            <div class="mt-1.5 text-sm leading-relaxed text-ink-soft prose-p:m-0">
+              <Content />
+            </div>
           </div>
         ))
       }
     </div>
-  </div>
-</section>
+  </Container>
+</Section>

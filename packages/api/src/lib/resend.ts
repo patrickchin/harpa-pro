@@ -48,6 +48,15 @@ function fakeResend(): ResendClient {
   return {
     async send(params) {
       fakeRecord.push(params);
+      // In dev (e.g. docker compose) the raw confirm token only exists
+      // inside the email body — log it so the human can click through.
+      // Suppressed under NODE_ENV=test so vitest output stays clean.
+      if (env.NODE_ENV !== 'test') {
+        // eslint-disable-next-line no-console
+        console.log(
+          `[fakeResend] → ${params.to} | ${params.subject}\n${params.text ?? params.html}\n`,
+        );
+      }
       return { id: `fake-${fakeRecord.length}` };
     },
   };

@@ -1,0 +1,96 @@
+---
+import Layout from "../layouts/Layout.astro";
+import Header from "../components/landing/Header.astro";
+import Footer from "../components/landing/Footer.astro";
+import { getPublicEnv } from "../lib/env";
+
+const { apiBaseUrl } = getPublicEnv();
+---
+
+<Layout
+  title="Confirming your spot — Harpa Pro"
+  description="Confirming your Harpa Pro waitlist signup."
+>
+  <div class="min-h-screen bg-background text-ink flex flex-col">
+    <Header />
+    <main class="flex-1 flex items-center justify-center px-4 py-16">
+      <div
+        id="confirm-card"
+        class="w-full max-w-md rounded-xl border border-hairline bg-paper-2/70 p-6 sm:p-8 text-center"
+      >
+        <h1 id="confirm-title" class="text-xl font-semibold text-ink">
+          Confirming your spot…
+        </h1>
+        <p id="confirm-message" class="mt-3 text-sm text-ink-soft">
+          One moment while we verify your confirmation link.
+        </p>
+        <a
+          id="confirm-home"
+          href="/"
+          class="mt-6 inline-block text-sm font-medium text-accent hover:underline hidden"
+        >
+          ← Back to home
+        </a>
+      </div>
+    </main>
+    <Footer />
+  </div>
+</Layout>
+
+<script is:inline define:vars={{ apiBaseUrl }}>
+  (async () => {
+    const title = document.getElementById("confirm-title");
+    const message = document.getElementById("confirm-message");
+    const homeLink = document.getElementById("confirm-home");
+    if (!title || !message || !homeLink) return;
+
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get("token");
+
+    function show(t, m) {
+      title.textContent = t;
+      message.textContent = m;
+      homeLink.classList.remove("hidden");
+    }
+
+    if (!token) {
+      show(
+        "Missing confirmation token",
+        "This link is incomplete. Please use the link from your email.",
+      );
+      return;
+    }
+
+    try {
+      const res = await fetch(`${apiBaseUrl}/waitlist/confirm`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ token }),
+      });
+
+      if (res.ok) {
+        const body = await res.json().catch(() => ({}));
+        show("You're on the list", body.message ?? "Thanks for confirming.");
+        return;
+      }
+
+      if (res.status === 400) {
+        show(
+          "Invalid or expired link",
+          "This confirmation link is no longer valid. Please request a new one by signing up again.",
+        );
+        return;
+      }
+
+      show(
+        "Something went wrong",
+        "We couldn't confirm right now. Please try again in a few minutes.",
+      );
+    } catch {
+      show(
+        "Network error",
+        "We couldn't reach the server. Please check your connection and try again.",
+      );
+    }
+  })();
+</script>

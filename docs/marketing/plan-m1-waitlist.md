@@ -18,6 +18,10 @@ export.
 - [x] Marketing-site React island: working form with success/error
       states, Turnstile widget, optimistic UX, posts directly to
       `api.harpapro.com` with CORS.
+- [x] Marketing-site `/confirm` landing page: reads `?token=` from
+      the URL, POSTs to `/waitlist/confirm`, renders success /
+      invalid-or-expired / network-error states. Target of
+      `WAITLIST_CONFIRM_BASE_URL`.
 - [x] Integration tests against Testcontainers Postgres (insert,
       confirm, dedupe).
 - [x] Spec drift gate green (`openapi.json` regenerated, contract

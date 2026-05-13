@@ -13,7 +13,8 @@ export.
       constant-time compare).
 - [x] `GET /admin/waitlist.csv` (better-auth admin role gated).
 - [ ] Resend domain verified; confirmation email sends via React
-      Email template.
+      Email template. **(Operator action required — see M1.9.
+      Code-side is complete; needs DNS + secrets before launch.)**
 - [x] Marketing-site React island: working form with success/error
       states, Turnstile widget, optimistic UX, posts directly to
       `api.harpapro.com` with CORS.
@@ -240,11 +241,19 @@ export.
 - [x] Commit: `feat(api): cors for waitlist routes`.
 
 ### M1.9 Resend domain setup
-- [ ] Verify `harpapro.com` sending domain in Resend dashboard.
-- [ ] Add DKIM / SPF / DMARC records on Cloudflare DNS.
-- [ ] Test deliverability to Gmail, Outlook, ProtonMail, iCloud.
-- [ ] Document in `docs/marketing/ops-email.md`.
-- [ ] Commit: `docs(marketing): resend domain setup`.
+- [x] Wrote operator runbook
+      [`docs/marketing/ops-email.md`](./ops-email.md): six-step
+      checklist covering Resend domain add, Cloudflare DNS records
+      (SPF / DKIM / DMARC, all DNS-only / gray cloud), Fly secrets
+      (`RESEND_API_KEY`, `RESEND_LIVE=1`, optional
+      `WAITLIST_FROM_EMAIL`), 4-inbox deliverability smoke test,
+      post-launch DMARC hardening path
+      (`p=none` → `quarantine` → `reject`), and rollback.
+- [ ] **Operator action required** before launch: actually verify
+      `harpapro.com` in Resend, add the records, set the Fly
+      secrets, and run the four-inbox deliverability test. Once
+      done, the API can flip `RESEND_LIVE=1`.
+- [x] Commit: `docs(marketing): resend domain setup`.
 
 ### M1.10 M1 exit
 - [ ] Integration tests green (waitlist insert, confirm, dedupe,

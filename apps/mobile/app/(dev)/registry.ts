@@ -103,4 +103,10 @@ export const REGISTRY: readonly GalleryEntry[] = [
     group: 'auth',
     description: 'Post-OTP identity collection — full name + company',
   },
+  {
+    name: 'Projects List',
+    href: '/(dev)/projects-list',
+    group: 'app',
+    description: 'Projects list — empty / loading / populated states with pull-to-refresh',
+  },
 ];

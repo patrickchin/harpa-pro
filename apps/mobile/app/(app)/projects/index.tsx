@@ -1,19 +1,43 @@
 /**
- * Projects index — placeholder for P2.7.
+ * Projects index — real route wiring useListProjectsQuery.
  *
- * Real projects list lands in P2.7 with:
- *   - ProjectsScreen body component (screen pattern)
- *   - useProjects() hook wiring the API contract
- *   - Dev mirror at (dev)/projects
- *   - Empty state + skeleton + pull-to-refresh
+ * Replaces the placeholder from P2.6. Body component at
+ * `screens/projects-list.tsx`, dev mirror at `(dev)/projects-list.tsx`.
+ *
+ * The (app) auth gate (P2.6) guarantees an authenticated session, so
+ * this screen assumes a valid user context.
  */
-import { Text, View } from 'react-native';
+import { useRouter } from 'expo-router';
+import { useListProjectsQuery } from '@/lib/api/hooks';
+import { ProjectsList, type ProjectRow } from '@/screens/projects-list';
 
 export default function ProjectsIndex() {
+  const router = useRouter();
+  const result = useListProjectsQuery();
+
+  const projects: ProjectRow[] =
+    result.data?.items.map((p) => ({
+      id: p.id,
+      name: p.name,
+      role: p.myRole,
+      address: p.address,
+      updatedAt: p.updatedAt,
+    })) ?? [];
+
   return (
-    <View className="flex-1 items-center justify-center bg-background">
-      <Text className="text-foreground text-title">Projects</Text>
-      <Text className="text-muted-foreground mt-2">Coming in P2.7</Text>
-    </View>
+    <ProjectsList
+      projects={projects}
+      isLoading={result.isLoading}
+      refreshing={result.isRefetching}
+      onRefresh={() => result.refetch()}
+      onPressProject={(id) => {
+        // @ts-expect-error — typed-routes lag until expo regenerates
+        router.push(`/projects/${id}`);
+      }}
+      onPressNewProject={() => {
+        // @ts-expect-error — typed-routes lag until expo regenerates
+        router.push('/projects/new');
+      }}
+    />
   );
 }

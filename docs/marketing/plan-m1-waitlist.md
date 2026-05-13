@@ -256,11 +256,23 @@ export.
 - [x] Commit: `docs(marketing): resend domain setup`.
 
 ### M1.10 M1 exit
-- [ ] Integration tests green (waitlist insert, confirm, dedupe,
-      rate-limit, Turnstile).
-- [ ] Form works end-to-end on preview deploy.
-- [ ] Email lands in inbox (not spam).
-- [ ] Tag `v0.2.0-marketing`.
+- [x] Integration tests green: full API integration suite =
+      **22 files, 171 tests passed** (waitlist scope, waitlist
+      handlers + dedupe + rate-limit + Turnstile + idempotent
+      confirm, CORS, admin CSV). Unit suite = 136 tests passed.
+      api-contract = 14 tests. Marketing = 5 tests. Marketing
+      build clean.
+- [x] Quality gates: `check-spec-drift.sh`, `check-no-supabase.sh`,
+      `check-no-unistyles.sh` all green; working tree clean.
+- [ ] Form works end-to-end on preview deploy. **(Operator action:
+      deploy `apps/marketing` to Cloudflare Pages preview with
+      `PUBLIC_API_BASE_URL=https://api.harpapro.com` +
+      `PUBLIC_TURNSTILE_SITE_KEY` set, then submit a real signup.
+      Code-side is complete and tested.)**
+- [ ] Email lands in inbox (not spam). **(Operator action — see
+      M1.9 step 5: four-inbox deliverability smoke test once Resend
+      domain is verified and `RESEND_LIVE=1` is set.)**
+- [x] Tag `v0.2.0-marketing`.
 
 ## Out of scope for M1
 - Voice demo (M2).

@@ -40,6 +40,14 @@ jobs:
       - run: pnpm install --frozen-lockfile
 
       - name: Build marketing site
+        # PUBLIC_* env vars are inlined by Astro at build time, so they
+        # must be present here — setting them in the CF Pages dashboard
+        # is a no-op because we upload a pre-built dist/. Site key is
+        # technically public (it's in the browser bundle anyway) but
+        # kept as a secret so it doesn't end up in the workflow source.
+        env:
+          PUBLIC_TURNSTILE_SITE_KEY: ${{ secrets.PUBLIC_TURNSTILE_SITE_KEY }}
+          PUBLIC_API_BASE_URL: https://api.harpapro.com
         run: pnpm --filter @harpa/marketing build
 
       - name: Deploy to Cloudflare Pages (production)

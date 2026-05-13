@@ -39,6 +39,12 @@ jobs:
       - run: pnpm install --frozen-lockfile
 
       - name: Build marketing site
+        # See marketing-prod.yml for why PUBLIC_* must be set HERE
+        # (Astro inlines them at build time; CF Pages env vars don't
+        # apply to pre-built dist/ uploads).
+        env:
+          PUBLIC_TURNSTILE_SITE_KEY: ${{ secrets.PUBLIC_TURNSTILE_SITE_KEY }}
+          PUBLIC_API_BASE_URL: https://api.harpapro.com
         run: pnpm --filter @harpa/marketing build
 
       - name: Lighthouse CI (perf/a11y/bp/seo ≥ 0.95)

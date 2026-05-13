@@ -14,6 +14,7 @@ import { noteRoutes } from './routes/notes.js';
 import { fileRoutes } from './routes/files.js';
 import { voiceRoutes } from './routes/voice.js';
 import { settingsRoutes } from './routes/settings.js';
+import { waitlistRoutes } from './routes/waitlist.js';
 import type { ScopedDb } from './db/scope.js';
 
 /**
@@ -54,6 +55,7 @@ export function createApp(): OpenAPIHono<AppEnv> {
   // Public routes
   app.route('/', health);
   app.route('/', authRoutes);
+  app.route('/', waitlistRoutes);
 
   // Authenticated routes
   app.route('/', meRoutes);

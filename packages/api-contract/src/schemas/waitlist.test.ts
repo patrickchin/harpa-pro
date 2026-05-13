@@ -52,9 +52,8 @@ describe('waitlist schemas', () => {
       const parsed = waitlistSignupRequest.parse({
         email: 'a@b.co',
         turnstileToken: 't',
-        // @ts-expect-error — extra key allowed by zod default; just shouldn't appear in output
         admin: true,
-      });
+      } as unknown as { email: string; turnstileToken: string });
       expect('admin' in parsed).toBe(false);
     });
   });

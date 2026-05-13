@@ -18,7 +18,7 @@ const MOCK_PROJECTS: ProjectRow[] = [
   {
     id: '223e4567-e89b-12d3-a456-426614174001',
     name: 'Residential Tower B',
-    role: 'admin',
+    role: 'editor',
     address: null,
     updatedAt: '2024-05-11T09:15:00.000Z',
   },

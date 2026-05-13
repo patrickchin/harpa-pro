@@ -46,6 +46,7 @@ vi.mock('react-native', () => {
   const TouchableHighlight = makeRNComponent('TouchableHighlight');
   const FlatList = makeRNComponent('FlatList');
   const SectionList = makeRNComponent('SectionList');
+  const RefreshControl = makeRNComponent('RefreshControl');
 
   const Platform = {
     OS: 'ios',
@@ -86,6 +87,7 @@ vi.mock('react-native', () => {
     TouchableHighlight,
     FlatList,
     SectionList,
+    RefreshControl,
     Platform,
     StyleSheet,
     Dimensions,

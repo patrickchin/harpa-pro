@@ -12,23 +12,23 @@
 
 ## Exit gate (`p2-exit-gate.yml`)
 
-- [ ] Auth flow (login → verify → onboarding) ported from canonical
+- [x] Auth flow (login → verify → onboarding) ported from canonical
       source and reviewed manually.
-- [ ] Projects list ported and reviewed manually.
-- [ ] All primitives built with snapshot tests at ≥ 100% coverage:
+- [x] Projects list ported and reviewed manually.
+- [x] All primitives built with snapshot tests at ≥ 100% coverage:
       `Card`, `Input`, `Button`, `IconButton`, `ScreenHeader`,
       `EmptyState`, `Skeleton`, `AppDialogSheet`, `StatTile`.
-- [ ] `tailwind.config.js` tokens locked, derived from the canonical
+- [x] `tailwind.config.js` tokens locked, derived from the canonical
       source's `tailwind.config.js`; no hex literals in
       `apps/mobile/components/**`.
-- [ ] `lib/env.ts` Zod-parsed at boot; ESLint rule live.
+- [x] `lib/env.ts` Zod-parsed at boot; ESLint rule live.
 - [ ] Generated React Query hooks for every endpoint
       (`pnpm gen:api && git diff --exit-code` clean).
-- [ ] Every shipped screen has a body component in
+- [x] Every shipped screen has a body component in
       `apps/mobile/screens/<name>.tsx` plus two routes wrapping it:
       the real route under `(auth)/` or `(app)/`, and a
       `(dev)/<name>.tsx` mirror with mock props.
-- [ ] Dev-gallery index at `app/(dev)/index.tsx` lists every screen
+- [x] Dev-gallery index at `app/(dev)/index.tsx` lists every screen
       with tap-through navigation. Mounted only in dev / `:mock`
       builds (never in production).
 
@@ -99,57 +99,57 @@ screen. Phone entry pushes to its OTP screen with the phone number as
 a navigation param; OTP screen owns resend + verify only.
 
 Bodies (one commit each):
-- [ ] `screens/sign-in-phone.tsx` — phone-number entry for existing
+- [x] `screens/sign-in-phone.tsx` — phone-number entry for existing
       users (port from `app/index.tsx` step-1 JSX + Tailwind).
-- [ ] `screens/sign-in-verify.tsx` — OTP entry + resend for sign-in
+- [x] `screens/sign-in-verify.tsx` — OTP entry + resend for sign-in
       (port from `app/index.tsx` step-2 JSX + Tailwind).
-- [ ] `screens/sign-up-phone.tsx` — phone-number entry for new users
+- [x] `screens/sign-up-phone.tsx` — phone-number entry for new users
       (port from `app/signup.tsx` step-1).
-- [ ] `screens/sign-up-verify.tsx` — OTP entry + resend for sign-up
+- [x] `screens/sign-up-verify.tsx` — OTP entry + resend for sign-up
       (port from `app/signup.tsx` step-2).
-- [ ] `screens/onboarding.tsx` — port from `app/onboarding.tsx`.
+- [x] `screens/onboarding.tsx` — port from `app/onboarding.tsx`.
 
 Real routes mirror the bodies one-to-one:
-- [ ] `app/(auth)/sign-in/phone.tsx`, `app/(auth)/sign-in/verify.tsx`
-- [ ] `app/(auth)/sign-up/phone.tsx`, `app/(auth)/sign-up/verify.tsx`
-- [ ] `app/(auth)/onboarding.tsx`
+- [x] `app/(auth)/sign-in/phone.tsx`, `app/(auth)/sign-in/verify.tsx`
+- [x] `app/(auth)/sign-up/phone.tsx`, `app/(auth)/sign-up/verify.tsx`
+- [x] `app/(auth)/onboarding.tsx`
 
 Dev mirrors:
-- [ ] `app/(dev)/sign-in-phone.tsx`, `app/(dev)/sign-in-verify.tsx`,
+- [x] `app/(dev)/sign-in-phone.tsx`, `app/(dev)/sign-in-verify.tsx`,
       `app/(dev)/sign-up-phone.tsx`, `app/(dev)/sign-up-verify.tsx`,
       `app/(dev)/onboarding.tsx` — each with mock props.
 
 Behaviour rules:
-- [ ] Verify screens use a **single async flow**, no `setTimeout` chains
+- [x] Verify screens use a **single async flow**, no `setTimeout` chains
       (Pitfall 5). On success: `await signIn()` → `router.replace`
       based on the resulting auth status (`needs-onboarding` →
       onboarding, `authenticated` → `(app)`).
-- [ ] Resend uses an explicit cooldown timer (a UI-only `setInterval`
+- [x] Resend uses an explicit cooldown timer (a UI-only `setInterval`
       for the countdown is allowed; it must NOT gate navigation).
-- [ ] Phone number is passed via navigation param, never re-entered
+- [x] Phone number is passed via navigation param, never re-entered
       on the verify screen. The verify screen reads it from
       `useLocalSearchParams()` and renders it read-only.
-- [ ] No `Alert.alert` — error envelopes render through
+- [x] No `Alert.alert` — error envelopes render through
       `AppDialogSheet` or inline error rows.
-- [ ] Behaviour tests for each interaction the canonical source
+- [x] Behaviour tests for each interaction the canonical source
       exercises (input validation, error rendering, loading, resend).
-- [ ] Commit per body+route+mirror trio:
+- [x] Commit per body+route+mirror trio:
       `feat(mobile): <screen> ported from canonical source` (one of
       `sign-in-phone`, `sign-in-verify`, `sign-up-phone`,
       `sign-up-verify`, `onboarding`).
 
 ### P2.6 App shell (`(app)/_layout.tsx`)
-- [ ] Tab + stack navigation.
-- [ ] Auth gate redirect.
-- [ ] Providers wired: env, query, queue, dialogs, audio, sentry-stub.
-- [ ] Commit: `feat(mobile): app shell with provider tree and auth gate`.
+- [x] Tab + stack navigation.
+- [x] Auth gate redirect.
+- [x] Providers wired: env, query, queue, dialogs, audio, sentry-stub.
+- [x] Commit: `feat(mobile): app shell with provider tree and auth gate`.
 
 ### P2.7 Projects list
-- [ ] `screens/projects-list.tsx` ported from
+- [x] `screens/projects-list.tsx` ported from
       `../haru3-reports/apps/mobile/app/(tabs)/projects.tsx`.
-- [ ] Real route: `app/(app)/projects/index.tsx`.
-- [ ] Dev mirror: `app/(dev)/projects.tsx` with mock data.
-- [ ] Commit: `feat(mobile): projects list ported from canonical source`.
+- [x] Real route: `app/(app)/projects/index.tsx`.
+- [x] Dev mirror: `app/(dev)/projects.tsx` with mock data.
+- [x] Commit: `feat(mobile): projects list ported from canonical source`.
 
 ### P2.8 P2 exit gate
-- [ ] All boxes ticked. Tag `v0.2.0-shell`.
+- [x] All boxes ticked. Tag `v0.2.0-shell`.

@@ -15,10 +15,13 @@ pnpm --filter @harpa/marketing typecheck
 
 ## Stack
 
-- Astro 5 (static, Cloudflare adapter)
+- Astro 5 (static output, no SSR adapter)
 - Tailwind v4 via `@tailwindcss/vite`
 - React 19 islands (added in M1/M2)
 - MDX content collections (added in M0.4)
+- Deployed to Cloudflare Pages by uploading `dist/` directly via
+  `wrangler pages deploy` (the `@astrojs/cloudflare` adapter is
+  intentionally not installed — it's only required for SSR routes).
 
 Hard rules: no JS unless an island needs it; no analytics with
 cookies pre-consent; Lighthouse ≥ 95 across the board.

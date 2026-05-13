@@ -82,6 +82,11 @@ const AuthSessionContext = createContext<AuthSessionValue | undefined>(undefined
 let cachedToken: string | null = null;
 let bootstrapDone = false;
 
+/** Dev-only multi-mount guard. Security review §A: module-level state
+ * (cachedToken, bootstrapDone) is shared across all instances. Mounting
+ * this provider more than once will cause races. */
+let mountCount = 0;
+
 /**
  * Internal — used by the provider to register the synchronous token
  * getter exactly once. Exported only so tests can reset between cases.
@@ -89,6 +94,7 @@ let bootstrapDone = false;
 export function __resetSessionModule(): void {
   cachedToken = null;
   bootstrapDone = false;
+  mountCount = 0;
 }
 
 function deriveStatus(user: SessionUser | null): AuthStatus {
@@ -99,16 +105,33 @@ function deriveStatus(user: SessionUser | null): AuthStatus {
   return 'authenticated';
 }
 
+/**
+ * AuthSessionProvider — mount ONCE at app root.
+ *
+ * Security constraint (§A from P2.4 security review): module-level
+ * state (`cachedToken`, `bootstrapDone`, `mountCount`) is shared across
+ * all instances. Mounting this provider more than once will cause races.
+ * The app shell design ensures a single mount; if refactoring moves the
+ * provider, verify it stays singular.
+ *
+ * Bootstrap runs ONCE on mount with `[]` deps (§H from P2.4 security
+ * review) — the effect closes over the initial `storage` and `api` props
+ * from the first render and never re-runs. Callers MUST pass
+ * referentially stable refs (e.g. module-level constants, not inline
+ * literals) or the provider will ignore prop changes.
+ */
 interface ProviderProps {
   children: ReactNode;
-  /** Test seam — inject a fake storage layer. Defaults to the real one. */
+  /** Test seam — inject a fake storage layer. Defaults to the real one.
+   * MUST be referentially stable (module-level constant). */
   storage?: {
     readSession: typeof readSession;
     writeSession: typeof writeSession;
     clearSession: typeof clearSession;
     writeLastPhone: typeof writeLastPhone;
   };
-  /** Test seam — inject a custom `/me` fetcher / logout caller. */
+  /** Test seam — inject a custom `/me` fetcher / logout caller.
+   * MUST be referentially stable (module-level constant). */
   api?: {
     fetchMe: () => Promise<{ user: SessionUser }>;
     postLogout: () => Promise<void>;
@@ -136,6 +159,17 @@ export function AuthSessionProvider({
 }: ProviderProps): React.JSX.Element {
   const [status, setStatus] = useState<AuthStatus>('loading');
   const [user, setUser] = useState<SessionUser | null>(null);
+
+  // Dev-only multi-mount assertion (§A from P2.4 security review).
+  useEffect(() => {
+    mountCount += 1;
+    if (typeof __DEV__ !== 'undefined' && __DEV__ && mountCount > 1) {
+      throw new Error('[auth] AuthSessionProvider mounted more than once. Mount only at the app root.');
+    }
+    return () => {
+      mountCount -= 1;
+    };
+  }, []);
 
   // Wire the synchronous token getter + 401 callback exactly once,
   // before any data-fetching child can mount. Effect runs AFTER render
@@ -167,6 +201,10 @@ export function AuthSessionProvider({
   // Bootstrap once on mount: read the stored session, verify it with
   // /me, settle status. Always sets status — never leaves it in
   // 'loading' (security review §H / §I).
+  //
+  // Deps: [] (§H from P2.4 security review). Bootstrap runs ONCE; the
+  // effect closes over the initial `storage` and `api` props from the
+  // render above and never re-runs. Callers must pass stable refs.
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -192,7 +230,10 @@ export function AuthSessionProvider({
           setStatus(deriveStatus(fresh.user));
         } catch (err) {
           if (cancelled) return;
-          if (err instanceof ApiError && err.code === 'unauthorized') {
+          // §C from P2.4 security review: treat 404 as invalid session.
+          // The API returns 404 when the user row is deleted. Drop
+          // local state so the auth gate redirects to sign-in.
+          if (err instanceof ApiError && (err.code === 'unauthorized' || err.code === 'not_found')) {
             // Token rejected — clean up and stay unauthenticated.
             await storage.clearSession();
             cachedToken = null;
@@ -222,7 +263,12 @@ export function AuthSessionProvider({
     return () => {
       cancelled = true;
     };
-  }, [storage, api]);
+    // Deps: [] (§H from P2.4 security review). Bootstrap runs ONCE on
+    // mount. The effect closes over the `storage` and `api` props from
+    // the first render and never re-runs. If the parent passes unstable
+    // props (inline object literals), the component re-renders but the
+    // bootstrap effect doesn't re-fire.
+  }, []);
 
   const signIn = useCallback<AuthSessionValue['signIn']>(
     async ({ token, user: nextUser, phone }) => {

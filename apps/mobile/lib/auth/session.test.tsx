@@ -481,4 +481,95 @@ describe('lib/auth/session', () => {
       errorSpy.mockRestore();
     });
   });
+
+  describe('§C: 404 handling (security review)', () => {
+    it('bootstrap treats /me 404 as invalid session (clears local state)', async () => {
+      const storage = makeStorage({ token: 'jwt', user: COMPLETE_USER });
+      const api = makeApi({
+        fetchMe: vi.fn(async () => {
+          throw new ApiError({ code: 'not_found', message: 'User not found', status: 404 });
+        }),
+      });
+      const capture: Capture = { current: null };
+
+      renderProvider({ storage, api, capture });
+      await act(async () => {
+        await flush();
+      });
+
+      expect(capture.current?.status).toBe('unauthenticated');
+      expect(capture.current?.user).toBeNull();
+      expect(storage.clearSession).toHaveBeenCalledOnce();
+      expect(getAuthToken()).toBeNull();
+    });
+  });
+
+  describe('§H: prop-stability (security review)', () => {
+    it('re-rendering with new props does NOT re-fire bootstrap', async () => {
+      const storage1 = makeStorage(null);
+      const api1 = makeApi();
+      const capture: Capture = { current: null };
+
+      renderProvider({ storage: storage1, api: api1, capture });
+      await act(async () => {
+        await flush();
+      });
+      expect(capture.current?.status).toBe('unauthenticated');
+      expect(api1.fetchMe).toHaveBeenCalledTimes(0);
+
+      // Re-render with NEW props (inline object literals).
+      const storage2 = makeStorage(null);
+      const api2 = makeApi();
+      act(() => {
+        tree!.update(
+          <AuthSessionProvider storage={storage2} api={api2}>
+            <Capture capture={capture} />
+          </AuthSessionProvider>,
+        );
+      });
+      await act(async () => {
+        await flush();
+      });
+
+      // Bootstrap must NOT have re-run — fetchMe call count stays 0.
+      expect(api2.fetchMe).toHaveBeenCalledTimes(0);
+    });
+  });
+
+  describe('§A: multi-mount guard (security review)', () => {
+    it('throws in __DEV__ if provider mounts twice', () => {
+      // Set __DEV__ for this test
+      (globalThis as any).__DEV__ = true;
+
+      const storage = makeStorage(null);
+      const api = makeApi();
+      const capture: Capture = { current: null };
+
+      // First mount: OK
+      renderProvider({ storage, api, capture });
+
+      // Second mount: throws
+      expect(() => {
+        let tree2: ReactTestRenderer | null = null;
+        act(() => {
+          tree2 = create(
+            <AuthSessionProvider storage={storage} api={api}>
+              <Capture capture={capture} />
+            </AuthSessionProvider>,
+          );
+        });
+        act(() => {
+          tree2!.unmount();
+        });
+      }).toThrow('[auth] AuthSessionProvider mounted more than once');
+
+      // Clean up for next test
+      act(() => {
+        tree!.unmount();
+      });
+      tree = null;
+      __resetSessionModule();
+      delete (globalThis as any).__DEV__;
+    });
+  });
 });

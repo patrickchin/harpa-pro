@@ -5,7 +5,7 @@ protected by Turnstile, with a confirmation email and an admin CSV
 export.
 
 ## Exit gate
-- [ ] `waitlist_signups` table + migration + per-request scope test
+- [x] `waitlist_signups` table + migration + per-request scope test
       (anonymous can `INSERT` only, no `SELECT`/`UPDATE`/`DELETE`).
 - [ ] `POST /waitlist` Hono route (rate-limited, Turnstile-verified,
       idempotent).
@@ -25,7 +25,8 @@ export.
 ## Tasks
 
 ### M1.1 Schema + migration
-- [ ] Drizzle schema `packages/api/src/db/schema/waitlist.ts`:
+- [x] Drizzle schema (added to `packages/api/src/db/schema.ts` —
+      single-file schema matches existing convention):
       ```ts
       export const waitlistSignups = pgTable('waitlist_signups', {
         id: uuid('id').primaryKey().defaultRandom(),
@@ -40,7 +41,7 @@ export.
         createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
       });
       ```
-- [ ] SQL migration `packages/api/migrations/YYYYMMDDHHmm_waitlist.sql`:
+- [x] SQL migration `packages/api/migrations/202605130002_waitlist.sql`:
       ```sql
       CREATE EXTENSION IF NOT EXISTS citext;
       CREATE TABLE waitlist_signups (
@@ -59,10 +60,12 @@ export.
       GRANT INSERT ON waitlist_signups TO anon;
       -- No SELECT/UPDATE/DELETE for anon; admin role has full access
       ```
-- [ ] Per-request-scope test `packages/api/src/__tests__/scope/waitlist.test.ts`:
-      anon role can `INSERT` only; cannot `SELECT`, `UPDATE`, `DELETE`.
-      Admin role has full access.
-- [ ] Commit: `feat(api): waitlist_signups schema + migration + scope test`.
+- [x] Per-request-scope test
+      `packages/api/src/__tests__/scope/waitlist.scope.test.ts`:
+      `app_anonymous` role can `INSERT` only; cannot `SELECT`,
+      `UPDATE`, `DELETE`. Admin access is via superuser/`rawDb` for
+      now; an `admin` role is added in M1.6.
+- [x] Commit: `feat(api): waitlist_signups schema + migration + scope test`.
 
 ### M1.2 Contract schemas
 - [ ] `packages/api-contract/src/schemas/waitlist.ts`:

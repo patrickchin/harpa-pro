@@ -143,5 +143,26 @@ export const userSettings = appSchema.table('user_settings', {
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 });
 
+/**
+ * Marketing waitlist signups (double opt-in). Reachable from the public
+ * Astro site at harpapro.com via POST /waitlist. See migration
+ * 202605130002_waitlist.sql for the `app_anonymous` role + grants.
+ *
+ * The `email` column is `citext` in the database for case-insensitive
+ * uniqueness; Drizzle's `text` is wire-compatible.
+ */
+export const waitlistSignups = appSchema.table('waitlist_signups', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  email: text('email').notNull().unique(),
+  company: text('company'),
+  role: text('role'),
+  source: text('source'),
+  ipHash: text('ip_hash'),
+  confirmedAt: timestamp('confirmed_at', { withTimezone: true }),
+  confirmTokenHash: text('confirm_token_hash'),
+  confirmTokenExpiresAt: timestamp('confirm_token_expires_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
 /** Re-export the SQL helper for use in raw policies / migrations. */
 export { sql };

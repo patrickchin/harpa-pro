@@ -92,6 +92,44 @@ Each AI-touching route has a test that:
 - Smoke test that the docs site builds and the in-app guides
   render. Lightweight — a few specs.
 
+## Test the default wiring
+
+> Resolves [Pitfall 13](pitfalls.md#pitfall-13--di-stubs-become-the-spec-default-wiring-silently-broken)
+> and [Pattern R5](../bugs/README.md#r5--di-stubs-become-the-spec-default-wiring-silently-broken).
+
+DI helpers like `setWaitlistClients({ turnstile, resend })` make it
+trivial to swap collaborators for fakes. They also make it trivial
+to never actually run the route through its **default** wiring —
+the wiring that `docker compose up`, `:mock` builds, and PR
+previews depend on. When 100% of a route's tests inject a stub,
+the stub *is* the spec; the factory is untested.
+
+The rule, applied to every route that constructs a collaborator
+via a `createXClient()` factory:
+
+1. **One default-wiring integration test per factory.** Call the
+   route through `app.fetch()` without overriding the collaborator
+   in question. Assert the real side-effect (DB row, queued email,
+   recorded fixture call). Example: [`waitlist.integration.test.ts → "default fakeTurnstile (compose / :mock builds) accepts any non-empty token end-to-end"`](../../packages/api/src/__tests__/waitlist.integration.test.ts).
+2. **Negative-path stubs stay narrow.** Use `alwaysFailX()` only in
+   the test that asserts the failure branch. Do not encode the
+   "fail" signal into a magic input shape (`tt-…`, `fake-…`) the
+   real dev surface cannot generate — the dev path will trip over
+   it silently.
+3. **Fake-mode behaviour matches the real dev surface.** Whatever
+   token / payload the local widget or fixture-mode client emits
+   must be the happy path of the corresponding fake. Document the
+   accepted shape next to the fake's definition.
+4. **One browser/device E2E per critical user flow.** This is the
+   only test type that proves env wiring, CORS, real widget output,
+   and the default factory hang together. Playwright for
+   `apps/marketing`, Maestro for `apps/mobile`. The E2E hits the
+   live compose stack and asserts the persisted side-effect.
+
+Reviewer heuristic: if a PR adds a `setXClients(...)` call without
+adding a default-wiring test for the same surface, that's the
+review note.
+
 ## CI workflows
 
 Active today:

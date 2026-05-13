@@ -293,6 +293,43 @@ Use `useAppDialogSheet()` everywhere else.
 
 ---
 
+## Pitfall 13 — DI stubs become the spec; default wiring silently broken
+
+**What happened.** The marketing waitlist form returned 2xx in the
+browser but `app.waitlist_signups` stayed empty. Root cause:
+`fakeTurnstile()` accepted only tokens starting with `tt-`; the
+real dev widget emits `XXXX.DUMMY.TOKEN.XXXX` (Cloudflare test
+key). 16 integration tests were green because every single one
+called `setWaitlistClients({ turnstile: alwaysOkTurnstile() })` —
+the production-fake factory was never exercised. Captured in full
+as [Pattern R5](../bugs/README.md#r5--di-stubs-become-the-spec-default-wiring-silently-broken).
+
+**v4 rule.** Three layered defences, in order of cheapness:
+
+1. **Cover the default factory in integration tests.** For every
+   `createXClient()` factory, at least one route-level test calls
+   the route WITHOUT injecting that collaborator and asserts the
+   real side-effect (DB row, queued email, recorded fixture call).
+   The "always-OK" stub is for negative-path tests, not the spec.
+2. **Fake-mode helpers accept what the real dev surface produces.**
+   `fakeTurnstile`, fake-Twilio, fake-R2, fake-Resend should behave
+   on the inputs the local widget / dev surface actually sends.
+   Magic token shapes (`tt-…`) are a test-only convention; if a test
+   wants the failure branch, it injects `alwaysFailX()`, not a token
+   the dev path can't generate.
+3. **One browser/device E2E per critical user flow.** Playwright
+   for `apps/marketing`, Maestro for mobile. Drives the live form
+   against the live compose stack, asserts the persisted side-effect
+   (`SELECT count(*) FROM app.waitlist_signups WHERE email = …`).
+   This is the only test type that proves env wiring, CORS, real
+   widget output, and the default factory all hang together.
+
+The recurring-bugs log entry is the search hit for "I'm about to
+add another stub" — see [docs/bugs/README.md → R5](../bugs/README.md#r5--di-stubs-become-the-spec-default-wiring-silently-broken)
+before you write `setXClients({ … })`.
+
+---
+
 ## Process pitfalls
 
 ### "Realignment" is the smell

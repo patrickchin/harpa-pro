@@ -6,10 +6,10 @@ export {
   useAuthSession,
   type AuthStatus,
   type AuthSessionValue,
-} from './session.js';
+} from './session';
 export {
   readLastPhone,
   writeLastPhone,
   type SessionUser,
   type PersistedSession,
-} from './storage.js';
+} from './storage';

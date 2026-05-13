@@ -144,9 +144,9 @@ import {
   type UseQueryOptions,
   type UseMutationOptions,
 } from '@tanstack/react-query';
-import { request, type RequestBody, type ResponseBody, type PathParams, type QueryParams } from './client.js';
-import { ApiError } from './errors.js';
-import { INVALIDATIONS, INVALIDATIONS_NONE } from './invalidation.js';
+import { request, type RequestBody, type ResponseBody, type PathParams, type QueryParams } from './client';
+import { ApiError } from './errors';
+import { INVALIDATIONS, INVALIDATIONS_NONE } from './invalidation';
 `;
 
 function emitQueryHook(e: Endpoint): string {

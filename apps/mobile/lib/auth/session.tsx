@@ -36,12 +36,12 @@ import React, {
   useState,
   type ReactNode,
 } from 'react';
-import { request } from '../api/client.js';
+import { request } from '../api/client';
 import {
   setAuthTokenGetter,
   setOnUnauthorizedCallback,
-} from '../api/auth.js';
-import { ApiError } from '../api/errors.js';
+} from '../api/auth';
+import { ApiError } from '../api/errors';
 import {
   readSession,
   writeSession,
@@ -49,7 +49,7 @@ import {
   writeLastPhone,
   type PersistedSession,
   type SessionUser,
-} from './storage.js';
+} from './storage';
 
 export type AuthStatus =
   | 'loading'

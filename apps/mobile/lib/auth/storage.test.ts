@@ -38,7 +38,7 @@ import {
   clearLastPhone,
   __keys,
   type PersistedSession,
-} from './storage.js';
+} from './storage';
 
 const SAMPLE: PersistedSession = {
   token: 'jwt.signed.token',

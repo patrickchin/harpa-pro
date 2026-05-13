@@ -14,15 +14,15 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 import React from 'react';
-import { ApiError } from '../api/errors.js';
-import { getAuthToken, notifyUnauthorized, resetAuthTokenGetter, resetOnUnauthorizedCallback } from '../api/auth.js';
+import { ApiError } from '../api/errors';
+import { getAuthToken, notifyUnauthorized, resetAuthTokenGetter, resetOnUnauthorizedCallback } from '../api/auth';
 import {
   AuthSessionProvider,
   useAuthSession,
   __resetSessionModule,
   type AuthSessionValue,
-} from './session.js';
-import type { PersistedSession, SessionUser } from './storage.js';
+} from './session';
+import type { PersistedSession, SessionUser } from './storage';
 
 // Avoid pulling the real native modules. The session module imports
 // `lib/auth/storage.ts` which itself imports them; stub at the module

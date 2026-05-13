@@ -1,8 +1,8 @@
 /**
  * Public re-exports for `lib/api/*`. Consumers import via `@/lib/api`.
  */
-export * from './client.js';
-export * from './errors.js';
-export * from './auth.js';
-export * from './invalidation.js';
-export * from './hooks.js';
+export * from './client';
+export * from './errors';
+export * from './auth';
+export * from './invalidation';
+export * from './hooks';

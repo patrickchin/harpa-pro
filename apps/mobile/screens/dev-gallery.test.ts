@@ -9,7 +9,7 @@
  */
 import { describe, expect, it } from 'vitest';
 
-import { buildGalleryRows, type GalleryEntry } from './dev-gallery.rows.js';
+import { buildGalleryRows, type GalleryEntry } from './dev-gallery.rows';
 
 describe('buildGalleryRows', () => {
   it('emits a single empty-state row when no screens are registered', () => {

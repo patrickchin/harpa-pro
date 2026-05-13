@@ -25,6 +25,20 @@
 
 ## Patterns
 
+### R2 — `.js` extensions in relative TS imports break Metro bundling
+
+Mobile (Expo / Metro) cannot resolve `from './foo.js'` when the
+on-disk file is `foo.ts` / `foo.tsx`. TypeScript happily compiles
+it (it's the recommended ESM import shape and matches our
+`packages/*` style), and Vitest resolves it via tsconfig paths,
+so unit tests stay green while iOS bundling fails the moment
+that module is reached. The recurrence vector is twofold:
+(1) hand-written code mirroring the API package style,
+(2) the `gen-hooks.ts` template which emits `from './client.js'`
+into `lib/api/hooks.ts` on every regen. Mitigation: keep
+`apps/mobile/**/*.{ts,tsx}` free of `.js`-suffixed relative
+imports; fix the generator template too, not just its output.
+
 ### R1 — Framework swallow: thrown non-Error values bypass middleware
 
 A try/catch in a framework's dispatch loop that does
@@ -67,3 +81,32 @@ cover this, the fix is a tiny outermost middleware that wraps
 error property + comment pinning the limitation.
 
 **Pattern.** R1 (new — added above).
+
+### 2026-05-13 — `.js` extensions reappeared in mobile relative imports (Pattern R2)
+
+**Symptom.** `pnpm --filter @harpa/mobile ios` fails Metro bundling
+with `Unable to resolve "./session.js" from "apps/mobile/lib/auth/index.ts"`
+during P3.0 dev-gallery launch. Vitest stayed green; problem only
+visible when the simulator actually tried to load the bundle.
+
+**Root cause.** Same as commit `0036006`: mobile relative TS imports
+written as `./foo.js` (TS-recommended ESM shape, fine for Node /
+the API package, broken under Metro). Two re-introduction sources:
+(1) new auth/api modules added in P2.4–P2.7 mirroring the API
+style, and (2) the `apps/mobile/scripts/gen-hooks.ts` template
+emitting `from './client.js'` etc. into the regenerated
+`lib/api/hooks.ts`.
+
+**Fix.** Stripped `.js` from every relative import under
+`apps/mobile/**/*.{ts,tsx}` (24 sites across `lib/api/*`,
+`lib/auth/*`, `screens/dev-gallery.test.ts`), and updated the
+generator template in `scripts/gen-hooks.ts` so future regens
+don't bring it back. Catalogued as Pattern R2 above.
+
+**Test.** Manual: rerun `pnpm --filter @harpa/mobile ios` and
+confirm bundling succeeds. (No automated guard yet — a CI grep
+gate `apps/mobile/**/*.{ts,tsx}` for
+`from '\\./[^']+\\.js'` would have caught it; deferred to P4
+infra hardening with a carve-out note.)
+
+**Pattern.** R2 (new — added above).

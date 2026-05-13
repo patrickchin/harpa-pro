@@ -27,6 +27,13 @@ const Env = z.object({
   WAITLIST_FROM_EMAIL: z.string().default('Harpa Pro <hello@harpapro.com>'),
   WAITLIST_CONFIRM_BASE_URL: z.string().url().default('https://harpapro.com/confirm'),
   WAITLIST_IP_HASH_SALT: z.string().min(8).default('dev-only-waitlist-salt-do-not-use-in-prod'),
+  /**
+   * Comma-separated origins allowed to POST /waitlist (CORS allowlist).
+   * Defaults cover prod (harpapro.com + www) and local dev (Astro on 3002).
+   */
+  WAITLIST_CORS_ORIGINS: z
+    .string()
+    .default('https://harpapro.com,https://www.harpapro.com,http://localhost:3002'),
 });
 
 export const env = Env.parse(process.env);

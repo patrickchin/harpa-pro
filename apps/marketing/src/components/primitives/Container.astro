@@ -1,0 +1,27 @@
+---
+import type { HTMLAttributes } from "astro/types";
+
+interface Props extends HTMLAttributes<"div"> {
+  /**
+   * Vertical padding rhythm. `lg` matches the source's main section
+   * spacing (`py-16 md:py-24`); `md` matches the slimmer
+   * ProblemSection (`py-16 md:py-20`); `none` opts out.
+   */
+  padding?: "lg" | "md" | "none";
+}
+
+const { padding = "lg", class: extra = "", ...rest } = Astro.props;
+
+const padCls =
+  padding === "lg"
+    ? "py-16 sm:px-6 md:py-24"
+    : padding === "md"
+      ? "py-16 sm:px-6 md:py-20"
+      : "";
+
+const cls = ["mx-auto max-w-6xl px-4", padCls, extra]
+  .filter(Boolean)
+  .join(" ");
+---
+
+<div class={cls} {...rest}><slot /></div>

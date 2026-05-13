@@ -1,0 +1,57 @@
+---
+import { getCollection, render } from "astro:content";
+import Section from "../primitives/Section.astro";
+import Container from "../primitives/Container.astro";
+
+const entries = (await getCollection("faq")).sort(
+  (a, b) => a.data.order - b.data.order,
+);
+
+// Render MDX bodies with their default Content components.
+const items = await Promise.all(
+  entries.map(async (entry) => {
+    const { Content } = await render(entry);
+    return { question: entry.data.question, Content };
+  }),
+);
+---
+
+<Section id="faq" tone="paper-2" bordered="top">
+  <Container padding="lg">
+    <div class="max-w-2xl">
+      <span class="text-xs font-semibold uppercase tracking-wider text-accent">
+        Questions
+      </span>
+      <h2
+        class="mt-2 text-3xl font-semibold tracking-tight text-ink sm:text-4xl"
+      >
+        Things teams ask before joining the pilot.
+      </h2>
+    </div>
+
+    <div
+      class="mt-10 grid gap-3 overflow-hidden rounded-xl border border-hairline bg-card divide-y divide-[color:var(--color-border)]"
+    >
+      {
+        items.map(({ question, Content }) => (
+          <details class="group p-5">
+            <summary
+              class="flex cursor-pointer list-none items-center justify-between gap-6 text-base font-semibold text-ink [&::-webkit-details-marker]:hidden"
+            >
+              <span>{question}</span>
+              <span
+                aria-hidden="true"
+                class="grid h-6 w-6 shrink-0 place-items-center rounded-full border border-hairline bg-paper-2 text-ink-soft transition-transform group-open:rotate-45"
+              >
+                +
+              </span>
+            </summary>
+            <div class="mt-3 text-sm leading-relaxed text-ink-soft prose-p:m-0">
+              <Content />
+            </div>
+          </details>
+        ))
+      }
+    </div>
+  </Container>
+</Section>

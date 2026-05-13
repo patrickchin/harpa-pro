@@ -1,46 +1,35 @@
 /**
  * Centralised env access for the marketing site.
  *
- * Astro inlines `import.meta.env.PUBLIC_*` at build time. Read them
- * through this module so:
- *   1. There's a single typed entry point per variable.
- *   2. The defaults make `pnpm dev` work with no `.env` file.
- *   3. We never have a `process.env.PUBLIC_X!` non-null assertion
- *      scattered through components (banned by AGENTS.md hard rule #6).
+ * Astro inlines `import.meta.env.PUBLIC_*` at build time. Reading them
+ * through here gives us one typed entry point and avoids
+ * `process.env.PUBLIC_X!` non-null assertions (AGENTS.md hard rule #6).
  *
- * In CI / prod the values come from `apps/marketing/.env` and the
- * Cloudflare Pages env config.
+ * NO DEFAULTS — missing vars throw at module load. Dev-safe defaults
+ * (like Cloudflare's universal test Turnstile key) silently mask
+ * misconfigured prod builds; see docs/bugs/README.md (2026-05-14
+ * waitlist-shipped-with-test-sitekey). Local dev: copy
+ * `apps/marketing/.env.example` to `.env`. CI: workflow injects
+ * `PUBLIC_*` from GH secrets.
  */
 
-interface PublicEnv {
-  apiBaseUrl: string;
-  turnstileSiteKey: string;
-}
-
-// Astro types `import.meta.env` per-project; we narrow here.
-type MetaEnv = {
-  PUBLIC_API_BASE_URL?: string;
-  PUBLIC_TURNSTILE_SITE_KEY?: string;
-};
-
-function readMetaEnv(): MetaEnv {
-  try {
-    // import.meta.env is undefined in the vitest 'node' env unless we shim it,
-    // so we degrade gracefully there. The component tests don't care about
-    // the real values.
-    return (import.meta as unknown as { env?: MetaEnv }).env ?? {};
-  } catch {
-    return {};
+function required(
+  key: 'PUBLIC_API_BASE_URL' | 'PUBLIC_TURNSTILE_SITE_KEY',
+): string {
+  const v = (import.meta as unknown as { env?: Record<string, string | undefined> })
+    .env?.[key];
+  if (!v) {
+    throw new Error(
+      `[marketing/env] Missing ${key}. Set it in apps/marketing/.env (dev) ` +
+        `or as a GitHub Actions secret (CI — see .github/workflows/marketing-*.yml).`,
+    );
   }
+  return v;
 }
 
-export function getPublicEnv(): PublicEnv {
-  const e = readMetaEnv();
+export function getPublicEnv(): { apiBaseUrl: string; turnstileSiteKey: string } {
   return {
-    apiBaseUrl: e.PUBLIC_API_BASE_URL ?? 'https://api.harpapro.com',
-    // Cloudflare's universal test site key — always returns success in
-    // the widget. Safe default for `pnpm dev`.
-    // https://developers.cloudflare.com/turnstile/troubleshooting/testing/
-    turnstileSiteKey: e.PUBLIC_TURNSTILE_SITE_KEY ?? '1x00000000000000000000AA',
+    apiBaseUrl: required('PUBLIC_API_BASE_URL'),
+    turnstileSiteKey: required('PUBLIC_TURNSTILE_SITE_KEY'),
   };
 }

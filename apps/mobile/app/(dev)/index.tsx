@@ -9,7 +9,7 @@ import { useRouter } from 'expo-router';
 
 import { DevGallery } from '../../screens/dev-gallery';
 import { buildGalleryRows } from '../../screens/dev-gallery.rows';
-import { REGISTRY } from './registry';
+import { REGISTRY } from './_registry';
 
 export default function DevGalleryIndex() {
   const router = useRouter();

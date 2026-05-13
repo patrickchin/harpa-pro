@@ -42,7 +42,6 @@ export default function SignInVerifyPage() {
   // Fallback if phone is missing
   if (!phone) {
     // expo-router typed-routes regenerates on next `expo start`; cast safe.
-    // @ts-expect-error — route exists but types not regenerated yet
     return <Redirect href={"/(auth)/sign-in/phone"} />;
   }
 
@@ -106,7 +105,6 @@ export default function SignInVerifyPage() {
 
   const handleChangeNumber = useCallback(() => {
     // expo-router typed-routes regenerates on next `expo start`; cast safe.
-    // @ts-expect-error — route exists but types not regenerated yet
     router.replace('/(auth)/sign-in/phone');
   }, [router]);
 

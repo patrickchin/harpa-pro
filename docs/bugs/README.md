@@ -25,6 +25,49 @@
 
 ## Patterns
 
+### R4 — Test files inside `app/` get bundled into the mobile app
+
+`expo-router` auto-discovers routes by globbing `app/**/*.{ts,tsx}`.
+A colocated `*.test.tsx` inside that tree is therefore treated as a
+route and pulled into the Metro graph at runtime — transitively
+dragging in `vitest`, `@vitest/runner/utils`, `chai`, etc., none of
+which Metro can resolve. The app then explodes at app-open with
+`Unable to resolve "@vitest/runner/utils"`. Vitest itself stays
+green (it picks up the test fine), so CI is no help. Mitigation:
+keep tests outside `app/`. Use `apps/mobile/__tests__/...` (mirror
+the route path under that subtree), or `apps/mobile/screens/` for
+pure screen-body tests. Helper files (`*.ts` without a default
+export) that need to live in `app/` must be prefixed with `_` so
+the route scanner skips them.
+
+### R3 — Rules of Hooks violation in expo-router layouts with auth gates
+
+A layout that calls `useAuthSession()` (or any other hook) then
+returns `<Redirect />` early on `loading`/`unauthenticated` and only
+afterwards calls more hooks (`useCallback`, `useEffect`, …) will
+crash with `Rendered fewer hooks than expected` the moment the auth
+state flips. Vitest snapshot tests only render once, never re-render
+across an auth transition, so they catch nothing. The pattern:
+
+  // ❌ BAD — early return between hook calls
+  function Layout() {
+    const { status } = useAuthSession();
+    if (decideRedirect(status)) return <Redirect />;
+    useEffect(...);                // hook count varies between renders
+  }
+
+  // ✅ GOOD — all hooks before any conditional return
+  function Layout() {
+    const { status } = useAuthSession();
+    useEffect(...);
+    if (decideRedirect(status)) return <Redirect />;
+  }
+
+Mitigation: write a re-render test that flips auth state between
+`loading → unauthenticated → authenticated` and asserts the layout
+doesn't throw. Catalogued for all future layouts with auth gates,
+deep-link gates, or feature-flag gates.
+
 ### R2 — `.js` extensions in relative TS imports break Metro bundling
 
 Mobile (Expo / Metro) cannot resolve `from './foo.js'` when the
@@ -110,3 +153,66 @@ gate `apps/mobile/**/*.{ts,tsx}` for
 infra hardening with a carve-out note.)
 
 **Pattern.** R2 (new — added above).
+
+### 2026-05-13 — AppLayout hook-order crash on auth-gate flip (Pattern R3)
+
+**Symptom.** Cold-launching the app on the iOS simulator produced
+`Rendered fewer hooks than expected. This may be caused by an
+accidental early return statement.` in `AppLayout`, immediately
+unmounted to the dev error overlay. Vitest stayed green —
+no test re-rendered the layout across an auth-state transition.
+
+**Root cause.** `apps/mobile/app/(app)/_layout.tsx` called
+`useAuthSession()`, then on `loading` / `unauthenticated` returned
+`<Redirect href={…} />` **before** `useCallback(handleBackPress)`
+and `useEffect(BackHandler)` ran. The hook count therefore changed
+when the gate flipped from `loading` (early return, 3 hooks) to
+`authenticated` (no early return, 5 hooks) on the next render.
+
+**Fix.** Moved every hook above the conditional return.
+Added a regression test
+`apps/mobile/__tests__/layouts/app-layout.test.tsx` that mounts
+the layout with status `loading`, then re-renders with
+`unauthenticated`, then `authenticated`, asserting the layout
+never throws. Verified by `git stash`-ing the production fix and
+re-running the test — it captures the exact
+"Rendered fewer hooks" error message.
+
+**Test.** `apps/mobile/__tests__/layouts/app-layout.test.tsx` —
+specifically the "does not throw … when status flips" case. Three
+companion cases assert the rendered output for each terminal
+status.
+
+**Pattern.** R3 (new — added above).
+
+### 2026-05-13 — Vitest leaked into mobile bundle via colocated `*.test.tsx` (Pattern R4)
+
+**Symptom.** Right after landing the R3 regression test inside
+`apps/mobile/app/(app)/_layout.test.tsx`, the iOS bundle errored at
+runtime with
+`Unable to resolve "@vitest/runner/utils" from node_modules/vitest/dist/index.js`
+on every screen mount. Vitest itself ran the file fine; only the
+Metro bundle was affected.
+
+**Root cause.** `expo-router` auto-discovers routes by globbing
+`app/**/*.{ts,tsx}` via `require.context`. The test file matched
+that glob, was pulled into the Metro graph at app boot, and
+transitively dragged in `vitest` → `@vitest/runner/utils` →
+`chai`, none of which Metro can resolve.
+
+**Fix.** Moved the test to
+`apps/mobile/__tests__/layouts/app-layout.test.tsx` (outside the
+routed `app/` tree, mirroring the route path so it stays
+discoverable). Also renamed `apps/mobile/app/(dev)/registry.ts`
+→ `_registry.ts` — same root cause for the long-standing
+"Route registry.ts is missing the required default export"
+warning, since route-scanner conventions skip files prefixed with
+`_`.
+
+**Test.** Pattern-level guard, not a single test: the iOS bundle
+smoke-test added to `docs/v4/overnight-protocol.md` §5 (now run
+after every commit) catches this regression. Run locally with
+`pnpm --filter @harpa/mobile bundle:smoke` (added in the same
+commit).
+
+**Pattern.** R4 (new — added above).

@@ -153,3 +153,14 @@ Behaviour rules:
 
 ### P2.8 P2 exit gate
 - [x] All boxes ticked. Tag `v0.2.0-shell`.
+
+**Per-stage build gate (now enforced from P2.8 onwards — see
+`overnight-protocol.md` §5).** Before tagging any phase, the
+verification loop must include a green
+`pnpm --filter @harpa/mobile bundle:smoke`. Two whole classes of
+runtime-only bugs (Pattern R2 — `.js` extensions in relative TS
+imports; Pattern R4 — test files leaking into the app bundle via
+`expo-router`) only show up when Metro actually bundles the app.
+Vitest, typecheck, and lint all stayed green while shipping both of
+those bugs in P2.5–P2.7. Going forward, no phase tag lands without
+the bundle smoke-test passing on the tagged commit.

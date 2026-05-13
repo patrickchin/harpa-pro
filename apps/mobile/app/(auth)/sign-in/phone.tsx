@@ -85,7 +85,6 @@ export default function SignInPhonePage() {
       });
       // expo-router typed-routes regenerates on next `expo start`; cast safe.
       router.push({
-        // @ts-expect-error — route exists but types not regenerated yet
         pathname: '/(auth)/sign-in/verify',
         params: { phone: normalizedPhone },
       });

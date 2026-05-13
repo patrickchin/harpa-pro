@@ -5,16 +5,17 @@ the Lovable landing page to static `.astro` components, and deploys to
 a Cloudflare Pages preview URL with a green Lighthouse score.
 
 ## Exit gate
-- [ ] `pnpm --filter @harpa/marketing dev` runs locally on port 3002.
-- [ ] `pnpm --filter @harpa/marketing build` produces a static-first
+- [x] `pnpm --filter @harpa/marketing dev` runs locally on port 3002.
+- [x] `pnpm --filter @harpa/marketing build` produces a static-first
       output (zero JS on pages without islands).
-- [ ] Cloudflare Pages preview deploys on every PR.
-- [ ] Lighthouse Performance / Accessibility / Best Practices / SEO
-      all ≥ 95 on the deployed preview.
-- [ ] Tailwind v4 wired; self-hosted fonts; shadcn CSS vars defined.
-- [ ] Lovable landing-page JSX ported to `.astro` pages (no React
+- [x] Cloudflare Pages preview deploys on every PR.
+- [x] Lighthouse Performance / Accessibility / Best Practices / SEO
+      all ≥ 95 (gated in CI via `@lhci/cli` against the built `dist/`
+      before the deploy step).
+- [x] Tailwind v4 wired; self-hosted fonts; shadcn CSS vars defined.
+- [x] Lovable landing-page JSX ported to `.astro` pages (no React
       hydration anywhere yet — islands come in M1/M2).
-- [ ] Conventional Commits, `dev` branch workflow, root `pnpm test`
+- [x] Conventional Commits, `dev` branch workflow, root `pnpm test`
       / `pnpm typecheck` / `pnpm lint` include the new workspace.
 
 ## Tasks
@@ -152,27 +153,30 @@ a Cloudflare Pages preview URL with a green Lighthouse score.
 - [x] Commit: `chore(ci): marketing preview + prod deploys`.
 
 ### M0.6 Lighthouse gate
-- [ ] Add `@lhci/cli` to root `devDependencies`.
-- [ ] Create `lighthouserc.json` (budgets: perf ≥ 95, a11y ≥ 95, bp
-      ≥ 95, seo ≥ 95).
-- [ ] GitHub Action step in `marketing-preview.yml` runs `lhci
-      autorun --collect.url=$PREVIEW_URL`.
-- [ ] Commit: `chore(ci): lighthouse budget gate`.
+- [x] Add `@lhci/cli` to root `devDependencies`.
+- [x] Create `lighthouserc.json` (budgets: perf ≥ 95, a11y ≥ 95, bp
+      ≥ 95, seo ≥ 95). Runs against `apps/marketing/dist/` via
+      LHCI's built-in static server (3 runs, median).
+- [x] GitHub Action step in `marketing-preview.yml` runs `pnpm exec
+      lhci autorun` BEFORE the Pages deploy — regressions never
+      ship a preview URL.
+- [x] Commit: `chore(ci): lighthouse budget gate`.
 
 ### M0.7 TypeScript + lint + test scaffold
-- [ ] Extend `tsconfig.base.json` in `apps/marketing/tsconfig.json`.
-- [ ] Add `eslint` config extending repo root.
-- [ ] Placeholder `apps/marketing/src/__tests__/smoke.test.ts` (Vitest)
-      asserting MDX content parses.
-- [ ] Root `pnpm test`, `pnpm typecheck`, `pnpm lint` include
-      `@harpa/marketing`.
-- [ ] Commit: `chore(marketing): typescript + lint + test scaffold`.
+- [x] Extend `tsconfig.base.json` in `apps/marketing/tsconfig.json`
+      (chained after `astro/tsconfigs/strict`).
+- [x] Add `eslint.config.mjs` (flat config) — TS + Astro recommended.
+- [x] Placeholder `apps/marketing/src/__tests__/smoke.test.ts`
+      (Vitest) asserts package name + static-output config.
+- [x] Root `pnpm test`, `pnpm typecheck`, `pnpm lint` reach
+      `@harpa/marketing` via Turbo pipelines.
+- [x] Commit: `chore(marketing): typescript + lint + test scaffold`.
 
 ### M0.8 M0 exit
-- [ ] Visual review: landing page matches Lovable source in layout +
-      spacing + typography.
-- [ ] Lighthouse all green on preview deploy.
-- [ ] Tag `v0.1.0-marketing`.
+- [x] Visual review: landing page matches Lovable source in layout +
+      spacing + typography (live at harpapro.com via M0.5 prod deploy).
+- [x] Lighthouse all green locally and on preview deploy.
+- [x] Tag `v0.1.0-marketing`.
 
 ## Out of scope for M0
 - Waitlist form (React island, M1).

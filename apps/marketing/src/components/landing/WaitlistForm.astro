@@ -1,0 +1,64 @@
+---
+import Icon from "../Icon.astro";
+import WaitlistFormIsland from "./WaitlistFormIsland";
+
+/*
+ * M1: the form is now a real React island (`WaitlistFormIsland.tsx`)
+ * that posts directly to `POST {PUBLIC_API_BASE_URL}/waitlist`.
+ *
+ * The placeholder copy + grid layout stay in this Astro file; only
+ * the inner `<form>` is hydrated. We use `client:only="react"`
+ * (not `client:visible`) because `@marsidev/react-turnstile` touches
+ * browser globals during module init — SSR is impossible. The
+ * fallback below is what users see for the few-hundred-ms before
+ * hydration.
+ */
+---
+
+<section id="waitlist" class="mx-auto max-w-6xl px-4 py-16 sm:px-6 md:py-24">
+  <div
+    class="grid gap-10 rounded-2xl border border-hairline bg-card p-6 sm:p-10 lg:grid-cols-[1fr_1.05fr] lg:gap-14"
+  >
+    <div>
+      <span
+        class="text-xs font-semibold uppercase tracking-wider text-accent"
+      >
+        Early access
+      </span>
+      <h2
+        class="mt-2 text-3xl font-semibold tracking-tight text-ink sm:text-4xl"
+      >
+        Get Harpa Pro before everyone else.
+      </h2>
+      <p class="mt-4 text-sm leading-relaxed text-ink-soft sm:text-base">
+        Built with field teams. Early users will help shape the reporting
+        workflow — what gets captured, what gets generated, and what your
+        office sees.
+      </p>
+      <ul class="mt-6 space-y-2.5 text-sm text-ink">
+        <li class="flex items-start gap-2">
+          <Icon name="circle-check" class="mt-0.5 h-4 w-4 text-emerald-500" />
+          First access when iOS pilots open
+        </li>
+        <li class="flex items-start gap-2">
+          <Icon name="circle-check" class="mt-0.5 h-4 w-4 text-emerald-500" />
+          Direct line to the team building it
+        </li>
+        <li class="flex items-start gap-2">
+          <Icon name="circle-check" class="mt-0.5 h-4 w-4 text-emerald-500" />
+          Free during the early-access program
+        </li>
+      </ul>
+    </div>
+
+    <WaitlistFormIsland client:only="react">
+      <div
+        slot="fallback"
+        class="rounded-xl border border-hairline bg-paper-2/70 p-5 sm:p-6 text-sm text-ink-soft"
+        aria-busy="true"
+      >
+        Loading signup form…
+      </div>
+    </WaitlistFormIsland>
+  </div>
+</section>

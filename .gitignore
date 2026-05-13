@@ -25,7 +25,9 @@ coverage/
 .env
 .env.local
 .env.*.local
+.env.deploy
 !.env.example
+!.env.deploy.example
 
 # Expo / RN
 .expo/
@@ -59,3 +61,4 @@ pnpm-debug.log*
 .nyc_output/
 playwright-report/
 test-results/
+.lighthouseci/

@@ -1,0 +1,82 @@
+name: marketing-preview
+
+# Build + deploy a per-PR preview of apps/marketing to Cloudflare
+# Pages, then comment the unique preview URL on the PR. See
+# docs/marketing/deploy-cloudflare-pages.md for the one-time CF
+# setup.
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "apps/marketing/**"
+      - ".github/workflows/marketing-preview.yml"
+      - "pnpm-lock.yaml"
+
+# Cancel stale builds when a PR gets a new push.
+concurrency:
+  group: marketing-preview-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      deployments: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with: { version: 9.12.3 }
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "pnpm"
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Build marketing site
+        run: pnpm --filter @harpa/marketing build
+
+      - name: Lighthouse CI (perf/a11y/bp/seo ≥ 0.95)
+        run: pnpm exec lhci autorun --config=./lighthouserc.json
+        env:
+          LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN }}
+
+      - name: Deploy preview to Cloudflare Pages
+        id: deploy
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          # Branch name in CF must be lowercase + safe for URLs;
+          # github.head_ref is the source branch name on PRs.
+          command: >-
+            pages deploy apps/marketing/dist
+            --project-name=harpa-pro
+            --branch=${{ github.head_ref }}
+            --commit-dirty=true
+
+      - name: Comment preview URL on PR
+        if: steps.deploy.outputs.deployment-url
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: marketing-preview
+          message: |
+            ### 🚧 Marketing preview
+
+            **Preview URL:** ${{ steps.deploy.outputs.deployment-url }}
+
+            Built from commit `${{ github.event.pull_request.head.sha }}`
+            on branch `${{ github.head_ref }}`.
+
+            <details><summary>What this checks</summary>
+
+            - Astro build of `apps/marketing` succeeds
+            - Lighthouse CI (perf/a11y/bp/seo ≥ 0.95) passes
+            - Static output deploys to Cloudflare Pages
+
+            </details>

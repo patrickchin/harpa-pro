@@ -1,0 +1,41 @@
+# Keep host-only / build artefacts out of the Fly Docker context.
+# We CAN'T exclude workspace directories themselves (pnpm needs them
+# present for `pnpm install --frozen-lockfile` to resolve workspace:*
+# protocol entries in the lockfile). We only strip their build outputs
+# and host-side caches.
+
+# Host-side build artefacts (rebuilt inside the image)
+**/node_modules
+**/dist
+**/.turbo
+**/tsconfig.tsbuildinfo
+**/*.tsbuildinfo
+
+# Tests / coverage / native build outputs
+**/coverage
+**/.vitest-cache
+apps/mobile/ios
+apps/mobile/android
+apps/mobile/.expo
+apps/mobile/.expo-shared
+
+# Astro / Next build caches
+apps/marketing/.astro
+apps/marketing/.wrangler
+apps/docs/.next
+
+# Editor / OS / VCS
+.git
+.github
+.vscode
+.idea
+.DS_Store
+
+# Env files (Fly uses real secrets via `fly secrets set`)
+.env
+.env.*
+!.env.example
+!.env.deploy.example
+
+# Misc
+README.md

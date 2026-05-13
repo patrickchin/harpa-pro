@@ -1,0 +1,53 @@
+---
+import { readFileSync } from "node:fs";
+import { createRequire } from "node:module";
+
+// Vite's module runner (used by Astro's dev SSR) doesn't implement
+// `import.meta.resolve`. `createRequire().resolve` works in both Node
+// and the Vite runtime, and returns an absolute filesystem path
+// directly — no fileURLToPath round-trip needed.
+const requireFromHere = createRequire(import.meta.url);
+
+interface Props {
+  name: string;
+  class?: string;
+  /**
+   * Optional explicit aria-label. When omitted the icon is treated as
+   * decorative (`aria-hidden="true"`).
+   */
+  label?: string;
+  /**
+   * Override stroke-width (default lucide is 2). The Lovable header
+   * badge uses 2.25.
+   */
+  strokeWidth?: number;
+}
+
+const { name, class: className = "h-4 w-4", label, strokeWidth } = Astro.props;
+
+// Resolve from the workspace's hoisted lucide-static at build time.
+const iconPath = requireFromHere.resolve(`lucide-static/icons/${name}.svg`);
+const raw = readFileSync(iconPath, "utf8");
+
+let svg = raw
+  // strip lucide's own width/height so Tailwind h-/w- classes win
+  .replace(/\swidth="[^"]*"/, "")
+  .replace(/\sheight="[^"]*"/, "")
+  // strip lucide's default class so it doesn't override ours
+  .replace(/\sclass="[^"]*"/, "");
+
+if (strokeWidth !== undefined) {
+  svg = svg.replace(/stroke-width="[^"]*"/, `stroke-width="${strokeWidth}"`);
+}
+
+const a11y = label
+  ? `role="img" aria-label="${label}"`
+  : 'aria-hidden="true" focusable="false"';
+
+svg = svg.replace(
+  /<svg(?!.*\baria-)/,
+  `<svg class="${className}" ${a11y}`,
+);
+---
+
+<Fragment set:html={svg} />

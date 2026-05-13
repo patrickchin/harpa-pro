@@ -1,0 +1,53 @@
+---
+import Icon from "../Icon.astro";
+
+const steps = [
+  {
+    title: "Capture the day",
+    body: "Add text notes, photos, and voice updates from the field, in the moment, with one tap.",
+    icon: "mic",
+  },
+  {
+    title: "Organize by project",
+    body: "Every update is tied to the right job, so nothing gets mixed up across sites.",
+    icon: "folder-kanban",
+  },
+  {
+    title: "Generate the report",
+    body: "Turn the day's captures into a clean report ready to review, edit, and share.",
+    icon: "file-text",
+  },
+];
+---
+
+<section id="how" class="mx-auto max-w-6xl px-4 py-16 sm:px-6 md:py-24">
+  <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+    <div class="max-w-2xl">
+      <span class="text-xs font-semibold uppercase tracking-wider text-accent">
+        How it works
+      </span>
+      <h2 class="mt-2 text-3xl font-semibold tracking-tight text-ink sm:text-4xl">
+        Three steps from boots to report.
+      </h2>
+    </div>
+  </div>
+
+  <ol
+    class="mt-10 grid gap-px overflow-hidden rounded-xl border border-hairline bg-border sm:grid-cols-3"
+  >
+    {
+      steps.map((s, i) => (
+        <li class="bg-card p-6">
+          <div class="flex items-center justify-between">
+            <span class="grid h-9 w-9 place-items-center rounded-md bg-primary text-primary-foreground">
+              <Icon name={s.icon} class="h-4 w-4" />
+            </span>
+            <span class="font-mono text-xs text-ink-soft">0{i + 1}</span>
+          </div>
+          <h3 class="mt-5 text-lg font-semibold text-ink">{s.title}</h3>
+          <p class="mt-2 text-sm leading-relaxed text-ink-soft">{s.body}</p>
+        </li>
+      ))
+    }
+  </ol>
+</section>

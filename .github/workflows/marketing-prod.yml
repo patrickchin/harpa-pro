@@ -1,0 +1,57 @@
+name: marketing-prod
+
+# Build + deploy production marketing site to Cloudflare Pages on
+# every push to `main` (the default branch — see AGENTS.md hard
+# rule #7). M3.1 maps harpapro.com to this project; until then the
+# prod URL is harpa-marketing.pages.dev.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "apps/marketing/**"
+      - ".github/workflows/marketing-prod.yml"
+      - "pnpm-lock.yaml"
+  # Allow manual re-deploys (e.g. content-only republish without a
+  # code change).
+  workflow_dispatch: {}
+
+concurrency:
+  group: marketing-prod
+  cancel-in-progress: false # never cancel a prod deploy
+
+jobs:
+  prod:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      deployments: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with: { version: 9.12.3 }
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "pnpm"
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Build marketing site
+        run: pnpm --filter @harpa/marketing build
+
+      - name: Deploy to Cloudflare Pages (production)
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          # Cloudflare Pages: deploys whose --branch matches the
+          # project's "production branch" become production. Our
+          # production branch is `main` (set in the CF dashboard).
+          command: >-
+            pages deploy apps/marketing/dist
+            --project-name=harpa-pro
+            --branch=main
+            --commit-dirty=true

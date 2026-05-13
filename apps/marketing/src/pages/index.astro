@@ -1,0 +1,27 @@
+---
+import Layout from "../layouts/Layout.astro";
+import Header from "../components/landing/Header.astro";
+import Hero from "../components/landing/Hero.astro";
+import HowItWorks from "../components/landing/HowItWorks.astro";
+import Features from "../components/landing/Features.astro";
+import FAQ from "../components/landing/FAQ.astro";
+import WaitlistForm from "../components/landing/WaitlistForm.astro";
+import Footer from "../components/landing/Footer.astro";
+---
+
+<Layout
+  title="Harpa Pro — Daily construction reports before you leave the jobsite"
+  description="Harpa Pro turns field notes, photos, and voice updates into clean daily construction reports. Built for foremen and site supervisors. Join the waitlist."
+>
+  <div class="min-h-screen bg-background text-ink">
+    <Header />
+    <main>
+      <Hero />
+      <HowItWorks />
+      <Features />
+      <FAQ />
+      <WaitlistForm />
+    </main>
+    <Footer />
+  </div>
+</Layout>

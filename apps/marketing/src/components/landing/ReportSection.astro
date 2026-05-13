@@ -1,0 +1,23 @@
+---
+import Icon from "../Icon.astro";
+
+interface Props {
+  icon: string;
+  title: string;
+  accent?: boolean;
+}
+
+const { icon, title, accent = false } = Astro.props;
+---
+
+<div class="rounded-md border border-hairline bg-background/60 p-3">
+  <div
+    class="flex items-center gap-1.5 text-[0.7rem] font-semibold uppercase tracking-wider text-ink-soft"
+  >
+    <span class={accent ? "text-accent" : ""}>
+      <Icon name={icon} class="h-3.5 w-3.5" />
+    </span>
+    {title}
+  </div>
+  <p class="mt-1 text-[0.83rem] leading-snug text-ink"><slot /></p>
+</div>

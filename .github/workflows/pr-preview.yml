@@ -20,7 +20,9 @@ jobs:
           NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
           NEON_PROJECT_ID: ${{ secrets.NEON_PROJECT_ID }}
         run: |
-          URI=$(pnpm db:branch:create ${{ github.event.pull_request.number }})
+          # --silent suppresses pnpm's "> harpa-pro@0.0.0 ..." banner so
+          # only the connection URI ends up on stdout / in GITHUB_ENV.
+          URI=$(pnpm --silent db:branch:create ${{ github.event.pull_request.number }})
           echo "::add-mask::$URI"
           echo "DATABASE_URL=$URI" >> "$GITHUB_ENV"
       - name: Run migrations

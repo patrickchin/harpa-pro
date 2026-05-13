@@ -101,12 +101,22 @@ for the why.
    rule `no-restricted-syntax` for `process.env.EXPO_PUBLIC_*!`.
 7. **Conventional Commits.** `feat(scope): …`, `fix(scope): …`,
    `chore(scope): …`, `test(scope): …`, `docs(scope): …`,
-   `refactor(scope): …`. Default branch is `dev`. Never push to `main`.
+   `refactor(scope): …`. Default branch is `main`. Pushes to `main` deploy to production.
 8. **Docs in the same PR.** Behaviour, schema, deployment, or workflow
    change → corresponding doc update in the same commit. The
    `doc-updater` agent handles this.
 9. **No `Alert.alert` for in-app dialogs.** Use `AppDialogSheet` or
    another themed primitive so styling matches the app.
+10. **Test the default wiring.** For every collaborator factory
+    (`createTurnstileClient`, `createResendClient`, `createR2Client`,
+    `createTwilioClient`, …) at least one integration test must call
+    the route WITHOUT injecting a stub for that collaborator and
+    assert the real side-effect (DB row, queued email, recorded
+    fixture call). DI stubs are for negative-path branches only —
+    when 100% of a route's tests inject the same happy stub, the
+    stub becomes the spec and the production-fake wiring rots
+    silently. See [Pitfall 13](docs/v4/pitfalls.md#pitfall-13--di-stubs-become-the-spec-default-wiring-silently-broken)
+    / [Pattern R5](docs/bugs/README.md#r5--di-stubs-become-the-spec-default-wiring-silently-broken).
 
 ## Recurring bugs log
 

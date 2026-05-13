@@ -1,0 +1,45 @@
+---
+import { getCollection, render } from "astro:content";
+import Icon from "../Icon.astro";
+import Section from "../primitives/Section.astro";
+import Container from "../primitives/Container.astro";
+
+const entries = (await getCollection("features")).sort(
+  (a, b) => a.data.order - b.data.order,
+);
+
+const feats = await Promise.all(
+  entries.map(async (entry) => {
+    const { Content } = await render(entry);
+    return { title: entry.data.title, icon: entry.data.icon, Content };
+  }),
+);
+---
+
+<Section tone="paper-2" bordered="top">
+  <Container padding="lg">
+    <div class="max-w-2xl">
+      <span class="text-xs font-semibold uppercase tracking-wider text-accent">
+        What you get
+      </span>
+      <h2 class="mt-2 text-3xl font-semibold tracking-tight text-ink sm:text-4xl">
+        Field-first features, not dashboard fluff.
+      </h2>
+    </div>
+    <div class="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {
+        feats.map(({ title, icon, Content }) => (
+          <div class="rounded-xl border border-hairline bg-card p-5">
+            <span class="grid h-9 w-9 place-items-center rounded-md border border-hairline bg-paper-2 text-ink">
+              <Icon name={icon} class="h-4 w-4" />
+            </span>
+            <h3 class="mt-4 text-base font-semibold text-ink">{title}</h3>
+            <div class="mt-1.5 text-sm leading-relaxed text-ink-soft prose-p:m-0">
+              <Content />
+            </div>
+          </div>
+        ))
+      }
+    </div>
+  </Container>
+</Section>

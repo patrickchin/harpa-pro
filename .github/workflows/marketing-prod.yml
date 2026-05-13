@@ -1,13 +1,13 @@
 name: marketing-prod
 
 # Build + deploy production marketing site to Cloudflare Pages on
-# every push to dev (the default branch — see AGENTS.md hard rule
-# #7, "never push to main"). M3.1 maps harpapro.com to this
-# project; until then the prod URL is harpa-marketing.pages.dev.
+# every push to `main` (the default branch — see AGENTS.md hard
+# rule #7). M3.1 maps harpapro.com to this project; until then the
+# prod URL is harpa-marketing.pages.dev.
 
 on:
   push:
-    branches: [dev]
+    branches: [main]
     paths:
       - "apps/marketing/**"
       - ".github/workflows/marketing-prod.yml"
@@ -49,9 +49,9 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           # Cloudflare Pages: deploys whose --branch matches the
           # project's "production branch" become production. Our
-          # production branch is `dev` (set in the CF dashboard).
+          # production branch is `main` (set in the CF dashboard).
           command: >-
             pages deploy apps/marketing/dist
             --project-name=harpa-pro
-            --branch=dev
+            --branch=main
             --commit-dirty=true

@@ -101,7 +101,7 @@ for the why.
    rule `no-restricted-syntax` for `process.env.EXPO_PUBLIC_*!`.
 7. **Conventional Commits.** `feat(scope): …`, `fix(scope): …`,
    `chore(scope): …`, `test(scope): …`, `docs(scope): …`,
-   `refactor(scope): …`. Default branch is `dev`. Never push to `main`.
+   `refactor(scope): …`. Default branch is `main`. Pushes to `main` deploy to production.
 8. **Docs in the same PR.** Behaviour, schema, deployment, or workflow
    change → corresponding doc update in the same commit. The
    `doc-updater` agent handles this.

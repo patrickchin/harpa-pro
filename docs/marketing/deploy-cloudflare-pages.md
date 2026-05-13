@@ -27,7 +27,7 @@ directly.
    - Upload an empty `dist/` once just to create the project, or
      skip and let the first CI / local deploy create it via
      `wrangler pages deploy --project-name=harpa-pro`.
-   - Production branch: **`dev`** (we never push to `main`; see
+   - Production branch: **`main`** (default branch; see
      AGENTS.md hard rule #7).
 
 3. Create an API token at

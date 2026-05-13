@@ -99,7 +99,7 @@ For each of the three screens, follow [`page-template.md`](page-template.md):
 3. **NativeWind only** — no Unistyles, ever.
 4. **No `Alert.alert`** — use `AppDialogSheet`.
 5. **Env via `lib/env.ts`** — never `process.env.EXPO_PUBLIC_*!`.
-6. **Conventional Commits**, default branch `dev`, never push `main`.
+6. **Conventional Commits**, default branch `main` (pushes deploy to prod).
 7. **No real LLM calls in tests** — fixtures only (P2.3 hooks are
    thin client wrappers; the API itself enforces this).
 8. **Docs in the same PR** — any architectural change updates the

@@ -31,12 +31,10 @@ export default function ProjectsIndex() {
       refreshing={result.isRefetching}
       onRefresh={() => result.refetch()}
       onPressProject={(id) => {
-        // @ts-expect-error — typed-routes lag until expo regenerates
-        router.push(`/projects/${id}`);
+        router.push(`/projects/${id}` as never);
       }}
       onPressNewProject={() => {
-        // @ts-expect-error — typed-routes lag until expo regenerates
-        router.push('/projects/new');
+        router.push('/projects/new' as never);
       }}
     />
   );

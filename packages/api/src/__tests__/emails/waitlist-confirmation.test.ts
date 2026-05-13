@@ -29,12 +29,16 @@ describe('renderWaitlistConfirmationEmail', () => {
     expect(html).not.toMatch(/onerror=/i);
   });
 
-  it('injects the confirmUrl exactly once in the href and once in the plain copy', () => {
+  it('injects the confirmUrl exactly three times: button href, fallback href, fallback visible copy', () => {
     const url = 'https://harpapro.com/confirm?token=ABC';
     const { html } = renderWaitlistConfirmationEmail({ confirmUrl: url });
-    // Two occurrences: the <a href> and the visible "copy this URL"
-    // fallback. Anything else means we accidentally double-rendered.
+    // Three occurrences:
+    //   1. Primary CTA button <a href>
+    //   2. The "copy this URL" fallback <a href> (so it's still
+    //      clickable for clients that strip the styled button)
+    //   3. The visible text of the fallback link
+    // Anything else means we accidentally double-rendered.
     const occurrences = html.split(url).length - 1;
-    expect(occurrences).toBe(2);
+    expect(occurrences).toBe(3);
   });
 });

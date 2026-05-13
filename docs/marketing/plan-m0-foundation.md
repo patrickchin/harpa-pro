@@ -137,10 +137,10 @@ a Cloudflare Pages preview URL with a green Lighthouse score.
       - Posts (or sticky-updates) a comment on the PR with the
         preview URL via `marocchino/sticky-pull-request-comment@v2`.
 - [x] GitHub Action `.github/workflows/marketing-prod.yml`:
-      - Triggers on push to `dev` (default branch — never `main`,
-        per AGENTS.md hard rule #7) + manual `workflow_dispatch`.
-      - Deploys with `--branch=dev`, which CF Pages routes to
-        production because the project's production branch is `dev`.
+      - Triggers on push to `main` (default branch, per AGENTS.md
+        hard rule #7) + manual `workflow_dispatch`.
+      - Deploys with `--branch=main`, which CF Pages routes to
+        production because the project's production branch is `main`.
       - `concurrency: cancel-in-progress: false` so prod deploys
         never get cancelled mid-flight.
 - [x] **Pending operator action**: add `CLOUDFLARE_API_TOKEN` and

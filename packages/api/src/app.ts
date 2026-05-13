@@ -3,6 +3,7 @@
  * Per-request scoped DB and auth are injected via middleware.
  */
 import { OpenAPIHono } from '@hono/zod-openapi';
+import { cors } from 'hono/cors';
 import { requestId } from './middleware/requestId.js';
 import { errorMapper } from './middleware/errorMapper.js';
 import { health } from './routes/health.js';
@@ -16,6 +17,7 @@ import { voiceRoutes } from './routes/voice.js';
 import { settingsRoutes } from './routes/settings.js';
 import { waitlistRoutes } from './routes/waitlist.js';
 import { adminRoutes } from './routes/admin.js';
+import { env } from './env.js';
 import type { ScopedDb } from './db/scope.js';
 
 /**
@@ -41,6 +43,35 @@ export function createApp(): OpenAPIHono<AppEnv> {
   const app = new OpenAPIHono<AppEnv>();
 
   app.use('*', requestId());
+
+  // CORS — limited to /waitlist/* so cross-origin signups from the
+  // marketing site (https://harpapro.com → https://api.harpapro.com)
+  // work. Every other route stays same-origin only.
+  // Allowlist comes from env (WAITLIST_CORS_ORIGINS, comma-separated).
+  const allowedOrigins = env.WAITLIST_CORS_ORIGINS.split(',')
+    .map((o) => o.trim())
+    .filter(Boolean);
+  app.use(
+    '/waitlist/*',
+    cors({
+      origin: (origin) => (allowedOrigins.includes(origin) ? origin : null),
+      allowMethods: ['POST', 'OPTIONS'],
+      allowHeaders: ['Content-Type'],
+      credentials: false,
+      maxAge: 86400,
+    }),
+  );
+  // Hono path patterns: '/waitlist/*' doesn't match '/waitlist' itself.
+  app.use(
+    '/waitlist',
+    cors({
+      origin: (origin) => (allowedOrigins.includes(origin) ? origin : null),
+      allowMethods: ['POST', 'OPTIONS'],
+      allowHeaders: ['Content-Type'],
+      credentials: false,
+      maxAge: 86400,
+    }),
+  );
   app.onError(errorMapper());
 
   // Register the Bearer security scheme that authed routes reference

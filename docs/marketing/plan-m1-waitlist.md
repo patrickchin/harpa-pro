@@ -201,16 +201,22 @@ export.
 - [ ] Commit: `feat(marketing): waitlist form island`.
 
 ### M1.8 CORS config in Hono
-- [ ] Add `@hono/cors` middleware to `packages/api/src/app.ts` for
-      `/waitlist` and `/waitlist/confirm` routes:
-      ```ts
-      app.use('/waitlist/*', cors({
-        origin: ['https://harpapro.com', 'http://localhost:3002'],
-        allowMethods: ['POST'],
-        credentials: false,
-      }));
-      ```
-- [ ] Commit: `feat(api): cors for waitlist routes`.
+- [x] Added `hono/cors` middleware in `packages/api/src/app.ts`,
+      scoped to both `/waitlist` and `/waitlist/*` (the pattern
+      `'/waitlist/*'` doesn't match `'/waitlist'` itself in Hono, so
+      both are registered explicitly).
+- [x] Allowlist driven by env var `WAITLIST_CORS_ORIGINS`
+      (comma-separated). Default:
+      `https://harpapro.com,https://www.harpapro.com,http://localhost:3002`.
+      Unknown origins receive no `Access-Control-Allow-Origin` header
+      (the response goes through but the browser rejects it).
+- [x] `allowMethods: ['POST', 'OPTIONS']`, `allowHeaders:
+      ['Content-Type']`, `credentials: false`, `maxAge: 86400`.
+- [x] Integration tests (6): preflight from prod origin allowed,
+      preflight from localhost:3002 allowed, preflight from unknown
+      origin blocked, actual POST includes ACAO, CORS applies to
+      `/waitlist/confirm`, CORS does NOT apply to `/healthz`.
+- [x] Commit: `feat(api): cors for waitlist routes`.
 
 ### M1.9 Resend domain setup
 - [ ] Verify `harpapro.com` sending domain in Resend dashboard.

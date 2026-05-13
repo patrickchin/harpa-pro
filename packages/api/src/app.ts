@@ -15,6 +15,7 @@ import { fileRoutes } from './routes/files.js';
 import { voiceRoutes } from './routes/voice.js';
 import { settingsRoutes } from './routes/settings.js';
 import { waitlistRoutes } from './routes/waitlist.js';
+import { adminRoutes } from './routes/admin.js';
 import type { ScopedDb } from './db/scope.js';
 
 /**
@@ -65,6 +66,7 @@ export function createApp(): OpenAPIHono<AppEnv> {
   app.route('/', fileRoutes);
   app.route('/', voiceRoutes);
   app.route('/', settingsRoutes);
+  app.route('/', adminRoutes);
 
   // OpenAPI spec
   app.doc('/openapi.json', {

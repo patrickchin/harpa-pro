@@ -6,12 +6,13 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import pg from 'pg';
+import { parseConnection } from './connection.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const MIGRATIONS_DIR = resolve(here, '../../migrations');
 
 export async function migrate(connectionString: string): Promise<{ applied: string[] }> {
-  const client = new pg.Client({ connectionString });
+  const client = new pg.Client(parseConnection(connectionString));
   await client.connect();
   try {
     await client.query(`CREATE SCHEMA IF NOT EXISTS app`);

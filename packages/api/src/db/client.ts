@@ -2,6 +2,7 @@ import pg from 'pg';
 import { drizzle, type NodePgDatabase } from 'drizzle-orm/node-postgres';
 import * as schema from './schema.js';
 import { env } from '../env.js';
+import { parseConnection } from './connection.js';
 
 const { Pool } = pg;
 
@@ -14,7 +15,7 @@ export function getPool(connectionString?: string): pg.Pool {
     if (!url) {
       throw new Error('[db] DATABASE_URL is not set; cannot create pool.');
     }
-    pool = new Pool({ connectionString: url, max: 10 });
+    pool = new Pool({ ...parseConnection(url), max: 10 });
   }
   return pool;
 }

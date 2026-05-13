@@ -2,6 +2,7 @@
 import { getCollection, render } from "astro:content";
 import Section from "../primitives/Section.astro";
 import Container from "../primitives/Container.astro";
+import Icon from "../Icon.astro";
 
 const entries = (await getCollection("faq")).sort(
   (a, b) => a.data.order - b.data.order,
@@ -43,7 +44,7 @@ const items = await Promise.all(
                 aria-hidden="true"
                 class="grid h-6 w-6 shrink-0 place-items-center rounded-full border border-hairline bg-paper-2 text-ink-soft transition-transform group-open:rotate-45"
               >
-                +
+                <Icon name="plus" class="h-3.5 w-3.5" />
               </span>
             </summary>
             <div class="mt-3 text-sm leading-relaxed text-ink-soft prose-p:m-0">

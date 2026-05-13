@@ -12,6 +12,7 @@ import {
   index,
   bigint,
   unique,
+  boolean,
 } from 'drizzle-orm/pg-core';
 
 /**
@@ -25,6 +26,7 @@ export const users = authSchema.table('users', {
   phone: varchar('phone', { length: 32 }).notNull().unique(),
   displayName: text('display_name'),
   companyName: text('company_name'),
+  isAdmin: boolean('is_admin').notNull().default(false),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 });

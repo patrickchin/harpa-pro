@@ -11,7 +11,7 @@ export.
       idempotent).
 - [x] `POST /waitlist/confirm` route (one-time token, idempotent,
       constant-time compare).
-- [ ] `GET /admin/waitlist.csv` (better-auth admin role gated).
+- [x] `GET /admin/waitlist.csv` (better-auth admin role gated).
 - [ ] Resend domain verified; confirmation email sends via React
       Email template.
 - [ ] Marketing-site React island: working form with success/error
@@ -160,13 +160,29 @@ export.
 - [x] Commit: `feat(api): waitlist confirmation email template + snapshot`.
 
 ### M1.6 `GET /admin/waitlist.csv`
-- [ ] Extend better-auth middleware to check for `role=admin` in JWT
-      claims (add `admin` boolean to `users` table if not already
-      there).
-- [ ] Stream CSV (don't buffer entire result set); columns: email,
-      company, role, source, confirmed_at, created_at.
-- [ ] Scope test: non-admin gets 403.
-- [ ] Commit: `feat(api): admin waitlist CSV export`.
+- [x] Added `is_admin boolean NOT NULL DEFAULT false` to `auth.users`
+      via migration `202605130003_admin_role.sql`. Drizzle schema
+      mirror in `packages/api/src/db/schema.ts`. (JWT claims stay
+      minimal — only `sub` + `sid` — and the middleware re-checks
+      `is_admin` against the DB on every admin request, so revoking
+      admin doesn't require the user to log out.)
+- [x] `withAdmin()` middleware in
+      `packages/api/src/middleware/admin.ts`: bearer JWT (via
+      `withAuth`) + `auth.users.is_admin = true`. 401 on missing
+      bearer; 403 on non-admin.
+- [x] Streamed CSV via `hono/streaming`: header row flushed first,
+      then row-by-row from a dedicated pool connection. Columns:
+      `id, email, company, role, source, confirmed_at, created_at`,
+      ordered by `created_at`. Proper RFC 4180 escaping for commas,
+      quotes, and newlines in optional fields.
+- [x] Response headers: `Content-Type: text/csv; charset=utf-8`,
+      `Content-Disposition: attachment; filename="waitlist.csv"`,
+      `Cache-Control: no-store`.
+- [x] Scope test: anonymous → 401, non-admin → 403, admin → 200 with
+      rows in created_at order; CSV-escaping test for hostile values;
+      empty-table returns header only. 5 cases in
+      `packages/api/src/__tests__/admin-waitlist.integration.test.ts`.
+- [x] Commit: `feat(api): admin waitlist CSV export`.
 
 ### M1.7 Marketing-site form (React island)
 - [ ] Install `react-hook-form`, `@hookform/resolvers`, `zod`,

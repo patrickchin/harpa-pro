@@ -14,9 +14,9 @@
  *    this client entirely — they go direct to R2.
  */
 import type { paths } from '@harpa/api-contract';
-import { env } from '../env.js';
-import { getAuthToken, notifyUnauthorized } from './auth.js';
-import { ApiError, apiErrorFromResponse } from './errors.js';
+import { env } from '../env';
+import { getAuthToken, notifyUnauthorized } from './auth';
+import { ApiError, apiErrorFromResponse } from './errors';
 
 export type HttpMethod = 'get' | 'post' | 'put' | 'patch' | 'delete';
 

@@ -17,7 +17,7 @@ import {
   INVALIDATIONS,
   INVALIDATIONS_NONE,
   invalidationsFor,
-} from './invalidation.js';
+} from './invalidation';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const hooksSource = readFileSync(resolve(here, 'hooks.ts'), 'utf8');

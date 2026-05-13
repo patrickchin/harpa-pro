@@ -4,14 +4,14 @@
  * is mapped into an `ApiError` envelope.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { request, substitutePath } from './client.js';
-import { ApiError } from './errors.js';
+import { request, substitutePath } from './client';
+import { ApiError } from './errors';
 import {
   setAuthTokenGetter,
   resetAuthTokenGetter,
   setOnUnauthorizedCallback,
   resetOnUnauthorizedCallback,
-} from './auth.js';
+} from './auth';
 
 interface FetchCall {
   url: string;

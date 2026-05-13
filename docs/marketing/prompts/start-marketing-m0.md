@@ -24,6 +24,10 @@ aggressively to keep this main thread's context small.
   [`plan-m2-voice-demo.md`](../plan-m2-voice-demo.md),
   [`plan-m3-launch.md`](../plan-m3-launch.md) — skim only; don't load
   in detail until you're working on them.
+- [`docs/marketing/plan-m4-voice-demo-live.md`](../plan-m4-voice-demo-live.md)
+  — **deferred until after launch.** Do not start, do not read in
+  detail. Exists so the launch demo (M2 — hardcoded fixtures, no
+  API) can later be swapped for the real pipeline.
 
 **Do NOT read** the v4 mobile architecture docs
 (`docs/v4/arch-*.md`, `docs/v4/plan-p*.md`). They describe the mobile
@@ -44,15 +48,18 @@ infrastructure you need to know about:
   `api.harpapro.com` (Fly API).
 - Stack: Astro 5, Tailwind v4, React 19 islands, MDX content
   collections, Cloudflare Pages, pnpm.
-- Voice-demo gating: anonymous + Cloudflare Turnstile + rate-limit.
-- Demo session token: short-lived JWT (15 min, `scope=demo`,
-  `sessionId`, `reportId`) that authorises only the demo R2 prefix
-  + the two AI routes for one report.
+- **Voice demo at launch (M2): static.** Browser records audio for
+  UX (waveform, countdown) but discards the blob; canned fixtures
+  in `apps/marketing/src/fixtures/demo/` play out on a scripted
+  timer. No API, no R2, no auth. Audio never leaves the device.
+- **Voice demo (live API) is deferred to M4** — post-launch. Don't
+  build any of the demo session JWT / R2 / CORS plumbing during
+  this session.
+- **Only backend work before launch is the waitlist (M1).**
 - Waitlist form posts directly to `api.harpapro.com` (CORS, no proxy).
 - Email: Resend.
 - Analytics: Cloudflare Web Analytics only at launch (cookieless,
   no consent banner). PostHog deferred.
-- Demo recordings: R2 prefix `demo/<sessionId>/` with 24h lifecycle.
 
 ## How to use subagents (mandatory, not optional)
 
@@ -67,13 +74,13 @@ without exhausting context. Default to delegation:
   doesn't answer (e.g. "should the demo session JWT live in
   `packages/api/src/auth/` or its own module?"). Don't call
   `architect` to re-design what's already in the plans.
-- **`tdd-guide`** — for the API tasks in M1/M2 (waitlist route,
-  demo session token). Mandatory on `packages/api/` changes.
+- **`tdd-guide`** — mandatory for the M1 waitlist API work
+  (`packages/api/` changes). Not needed for M2 (UI-only, no API).
 - **`database-reviewer`** — when adding the `waitlist_signups`
   table + migration in M1. Has to look at it.
-- **`security-reviewer`** — required for: demo session JWT design
-  (M2.1), Turnstile verification (M1.3 + M2 anti-abuse), CORS config
-  (M1.6), R2 demo prefix policy (M2.2). Run BEFORE shipping each.
+- **`security-reviewer`** — required for: Turnstile verification
+  (M1.3), CORS config (M1.6), the waitlist confirm-token flow.
+  Demo-session JWT review is deferred to M4.
 - **`code-reviewer`** — after EVERY commit. Returns P0/P1/P2 verdict;
   act on P0 immediately.
 - **`build-error-resolver`** — only if a build failure has been
@@ -109,6 +116,8 @@ a subagent can summarise.
 ## Out of scope for this session
 
 - Anything in `apps/mobile/` or `docs/v4/`.
+- M4 (live voice-demo API wiring). Hard stop — deferred until after
+  launch.
 - New architectural decisions not already in `docs/marketing/`.
 - Touching `packages/api/` (M1 territory; only after M0 ships).
 - Domain DNS changes (M3.1 territory).

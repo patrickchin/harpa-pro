@@ -38,6 +38,10 @@ async function neonFetch(path: string, init?: RequestInit): Promise<Response> {
 
 async function createBranch(prNumber: string): Promise<void> {
   const name = `pr-${prNumber}`;
+  // Idempotent: if a branch with this name already exists (PR was
+  // pushed to again), delete it first so the new branch is created
+  // from the latest `main` data.
+  await deleteBranchIfExists(name);
   const res = await neonFetch('/branches', {
     method: 'POST',
     body: JSON.stringify({
@@ -53,6 +57,21 @@ async function createBranch(prNumber: string): Promise<void> {
   if (!uri) throw new Error('neon response did not include a connection_uri');
   // Emit a single line for CI consumption (set as DATABASE_URL secret).
   console.log(uri);
+}
+
+async function deleteBranchIfExists(name: string): Promise<void> {
+  const listRes = await neonFetch('/branches');
+  if (!listRes.ok) {
+    throw new Error(`neon branch list failed (${listRes.status}): ${await listRes.text()}`);
+  }
+  const list = (await listRes.json()) as { branches: Array<{ id: string; name: string }> };
+  const target = list.branches.find((b) => b.name === name);
+  if (!target) return;
+  const delRes = await neonFetch(`/branches/${target.id}`, { method: 'DELETE' });
+  if (!delRes.ok) {
+    throw new Error(`neon branch delete failed (${delRes.status}): ${await delRes.text()}`);
+  }
+  console.error(`[neon] deleted stale branch ${name} before recreate`);
 }
 
 async function deleteBranch(prNumber: string): Promise<void> {

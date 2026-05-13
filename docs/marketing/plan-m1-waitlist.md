@@ -14,7 +14,7 @@ export.
 - [x] `GET /admin/waitlist.csv` (better-auth admin role gated).
 - [ ] Resend domain verified; confirmation email sends via React
       Email template.
-- [ ] Marketing-site React island: working form with success/error
+- [x] Marketing-site React island: working form with success/error
       states, Turnstile widget, optimistic UX, posts directly to
       `api.harpapro.com` with CORS.
 - [x] Integration tests against Testcontainers Postgres (insert,
@@ -185,20 +185,41 @@ export.
 - [x] Commit: `feat(api): admin waitlist CSV export`.
 
 ### M1.7 Marketing-site form (React island)
-- [ ] Install `react-hook-form`, `@hookform/resolvers`, `zod`,
-      `@marsidev/react-turnstile` in `apps/marketing`.
-- [ ] Create `apps/marketing/src/components/WaitlistForm.tsx` —
-      React 19, `client:visible` directive in Astro.
-- [ ] Import `waitlistSignupRequestSchema` from
-      `@harpa/api-contract`.
-- [ ] Cloudflare Turnstile widget (site key in
-      `import.meta.env.PUBLIC_TURNSTILE_SITE_KEY`).
-- [ ] States: idle / submitting / success / error. Success message:
-      "Check your inbox for a confirmation link." Error message:
-      "Something went wrong. Please try again."
-- [ ] Post to `https://api.harpapro.com/waitlist` (no proxy; direct
-      CORS call).
-- [ ] Commit: `feat(marketing): waitlist form island`.
+- [x] Installed `@marsidev/react-turnstile` (~3 KB, well-maintained
+      wrapper around the Cloudflare widget). Skipped
+      `react-hook-form` / `@hookform/resolvers` — the form has 4
+      fields, all server-validated; a controlled `useState` form is
+      ~30 lines less code and one less dep. Server-side Zod (in
+      `@harpa/api-contract`) is the source of truth for validation.
+- [x] Created `apps/marketing/src/components/landing/WaitlistFormIsland.tsx`
+      — React 19, mounted via `client:only="react"` (the Turnstile
+      widget touches browser globals on module init, so SSR is
+      impossible). An Astro fallback slot covers the pre-hydration
+      flash.
+- [x] Centralised env access in `apps/marketing/src/lib/env.ts`
+      (`PUBLIC_API_BASE_URL`, `PUBLIC_TURNSTILE_SITE_KEY`). Defaults
+      to `https://api.harpapro.com` + Cloudflare's always-passes test
+      key (`1x00000000000000000000AA`) so `pnpm dev` works with no
+      `.env` file.
+- [x] Cloudflare Turnstile widget reads the site key from env.
+      Tokens are single-use — we reset the widget after any failure
+      so a retry gets a fresh token.
+- [x] States: idle / submitting / success / error. Success replaces
+      the form with "Check your inbox" copy and a 7-day hint. Error
+      surfaces as an `role="alert"` paragraph; 429 gets a specific
+      "Too many requests from your network" message so users on
+      shared networks understand the back-off.
+- [x] Posts to `${apiBaseUrl}/waitlist` (no proxy; CORS direct).
+- [x] Build verified: `pnpm --filter @harpa/marketing build` ships
+      a ~58 KB gzipped client bundle (React + Turnstile + island).
+      Above-the-fold pages remain zero-JS — the form chunk is
+      lazy-loaded.
+- [x] Added `apps/marketing/.env.example` documenting the two
+      `PUBLIC_*` vars + the always-passes Turnstile test key.
+- [x] Unit test on `getPublicEnv()` defaults; the heavier
+      behavioural assertions live on the API side
+      (`waitlist.integration.test.ts`) where they belong.
+- [x] Commit: `feat(marketing): waitlist form island`.
 
 ### M1.8 CORS config in Hono
 - [x] Added `hono/cors` middleware in `packages/api/src/app.ts`,

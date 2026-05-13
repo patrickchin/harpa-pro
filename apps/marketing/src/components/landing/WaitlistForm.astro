@@ -1,18 +1,18 @@
 ---
 import Icon from "../Icon.astro";
+import WaitlistFormIsland from "./WaitlistFormIsland";
 
 /*
- * M0 placeholder: form fields render statically with `disabled` so the
- * page is fully no-JS. M1 replaces the inner `<form>` with a React
- * island (`WaitlistFormIsland.tsx`) that posts to
- * `POST https://api.harpapro.com/waitlist` and shows the success state.
+ * M1: the form is now a real React island (`WaitlistFormIsland.tsx`)
+ * that posts directly to `POST {PUBLIC_API_BASE_URL}/waitlist`.
  *
- * DO NOT wire submission here — the API route does not exist yet
- * (see docs/marketing/plan-m1-waitlist.md).
+ * The placeholder copy + grid layout stay in this Astro file; only
+ * the inner `<form>` is hydrated. We use `client:only="react"`
+ * (not `client:visible`) because `@marsidev/react-turnstile` touches
+ * browser globals during module init — SSR is impossible. The
+ * fallback below is what users see for the few-hundred-ms before
+ * hydration.
  */
-
-const inputCls =
-  "w-full rounded-md border border-hairline bg-card px-3 py-2 text-sm text-ink placeholder:text-ink-soft/70 outline-none focus:border-accent focus:ring-2 focus:ring-accent/30 transition disabled:cursor-not-allowed disabled:opacity-70";
 ---
 
 <section id="waitlist" class="mx-auto max-w-6xl px-4 py-16 sm:px-6 md:py-24">
@@ -51,95 +51,14 @@ const inputCls =
       </ul>
     </div>
 
-    <form
-      class="rounded-xl border border-hairline bg-paper-2/70 p-5 sm:p-6"
-      data-marketing-waitlist-placeholder
-      aria-label="Waitlist signup (coming soon)"
-      onsubmit="return false;"
-    >
-      <div class="grid gap-3.5">
-        <label class="block">
-          <span
-            class="mb-1.5 flex items-center gap-1.5 text-[0.7rem] font-semibold uppercase tracking-wider text-ink-soft"
-          >
-            Name
-          </span>
-          <input
-            type="text"
-            placeholder="Jamie Alvarez"
-            class={inputCls}
-            disabled
-          />
-        </label>
-        <label class="block">
-          <span
-            class="mb-1.5 flex items-center gap-1.5 text-[0.7rem] font-semibold uppercase tracking-wider text-ink-soft"
-          >
-            Work email
-          </span>
-          <input
-            type="email"
-            placeholder="jamie@buildco.com"
-            class={inputCls}
-            disabled
-          />
-        </label>
-        <label class="block">
-          <span
-            class="mb-1.5 flex items-center gap-1.5 text-[0.7rem] font-semibold uppercase tracking-wider text-ink-soft"
-          >
-            Company
-          </span>
-          <input
-            type="text"
-            placeholder="BuildCo Construction"
-            class={inputCls}
-            disabled
-          />
-        </label>
-        <label class="block">
-          <span
-            class="mb-1.5 flex items-center gap-1.5 text-[0.7rem] font-semibold uppercase tracking-wider text-ink-soft"
-          >
-            Role
-          </span>
-          <select class={inputCls} disabled>
-            <option>Foreman / Site Supervisor</option>
-            <option>Superintendent</option>
-            <option>Project Manager</option>
-            <option>Owner / Operator</option>
-            <option>Other</option>
-          </select>
-        </label>
-        <label class="block">
-          <span
-            class="mb-1.5 flex items-center gap-1.5 text-[0.7rem] font-semibold uppercase tracking-wider text-ink-soft"
-          >
-            What kind of projects do you run?
-            <span
-              class="rounded-sm bg-secondary px-1 py-px text-[0.6rem] normal-case text-ink-soft"
-            >
-              Optional
-            </span>
-          </span>
-          <textarea
-            rows="3"
-            placeholder="e.g. Multifamily wood-frame, light commercial, civil…"
-            class={inputCls}
-            disabled></textarea>
-        </label>
-
-        <button
-          type="submit"
-          disabled
-          class="mt-2 inline-flex h-11 items-center justify-center gap-2 rounded-md bg-accent px-5 text-sm font-medium text-accent-foreground shadow-sm hover:brightness-95 ring-focus disabled:cursor-not-allowed disabled:opacity-70"
-        >
-          Request early access <Icon name="arrow-right" class="h-4 w-4" />
-        </button>
-        <p class="text-xs text-ink-soft">
-          We'll only use your info to coordinate early access. No spam, ever.
-        </p>
+    <WaitlistFormIsland client:only="react">
+      <div
+        slot="fallback"
+        class="rounded-xl border border-hairline bg-paper-2/70 p-5 sm:p-6 text-sm text-ink-soft"
+        aria-busy="true"
+      >
+        Loading signup form…
       </div>
-    </form>
+    </WaitlistFormIsland>
   </div>
 </section>

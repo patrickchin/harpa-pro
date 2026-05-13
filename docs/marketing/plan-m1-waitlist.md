@@ -134,16 +134,30 @@ export.
       since they share the route module, table, and tests).
 
 ### M1.5 Confirmation email template
-- [ ] Create `packages/api/src/emails/waitlist-confirmation.tsx` (or
-      separate `packages/email` workspace if we anticipate many
-      templates).
-- [ ] Use `@react-email/components` → rendered to HTML + text at
-      send time via `render(WaitlistConfirmation({ token }))`.
-- [ ] Plain, on-brand, < 50 lines. Subject: "Confirm your spot on
-      the harpapro.com waitlist". CTA button:
-      `https://harpapro.com/confirm?token=${token}`.
-- [ ] Snapshot test of rendered HTML (`packages/api/src/__tests__/emails/waitlist.test.ts`).
-- [ ] Commit: `feat(api): waitlist confirmation email template`.
+- [x] Created `packages/api/src/emails/waitlist-confirmation.ts`
+      (plain TS — see deferral note below). Exports
+      `renderWaitlistConfirmationEmail({ confirmUrl })` returning
+      `{ html, text }`. Route handler imports it directly.
+- [x] **Deferred React Email migration.** The plan originally
+      specified `@react-email/components`; for one ~40-line
+      transactional template we'd be adding ~5MB of React-email
+      dependencies and a TSX target to a previously pure-TS API
+      package. The current plain-HTML template is reviewable in
+      one screen, on-brand (uses the same `#0f5f3f` accent green
+      as the marketing site), snapshot-tested, and renders
+      cross-client-clean. Revisit if we add a second template
+      (e.g. M3 launch announcement) — at that point the React
+      Email composition story pays off.
+- [x] Plain, on-brand, < 50 lines. Subject (sent from the route
+      handler in `routes/waitlist.ts`): "Confirm your spot on the
+      harpapro.com waitlist". CTA button:
+      `${WAITLIST_CONFIRM_BASE_URL}?token=${token}`
+      (defaults to `https://harpapro.com/confirm`).
+- [x] Snapshot test of rendered HTML + text in
+      `packages/api/src/__tests__/emails/waitlist-confirmation.test.ts`
+      (also asserts no `<script>` / `onerror=` injection paths and
+      that the confirmUrl appears in exactly the two expected slots).
+- [x] Commit: `feat(api): waitlist confirmation email template + snapshot`.
 
 ### M1.6 `GET /admin/waitlist.csv`
 - [ ] Extend better-auth middleware to check for `role=admin` in JWT

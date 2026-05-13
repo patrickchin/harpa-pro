@@ -20,16 +20,20 @@ a Cloudflare Pages preview URL with a green Lighthouse score.
 ## Tasks
 
 ### M0.1 Scaffold Astro app
-- [ ] Run `pnpm create astro@latest apps/marketing` with Tailwind v4
-      template.
-- [ ] Install additional deps: `@astrojs/react`, `@astrojs/cloudflare`,
-      `@astrojs/mdx`, `react@19`, `react-dom@19`, `tailwindcss@4`,
-      `@tailwindcss/vite`.
-- [ ] `package.json` name: `@harpa/marketing`. Scripts: `dev` (port
+- [x] Scaffold `apps/marketing` manually (Astro 5 + Tailwind v4
+      template equivalent — avoided the interactive `create-astro`
+      wizard inside the monorepo).
+- [x] Install deps: `@astrojs/react`, `@astrojs/mdx`, `react@19`,
+      `react-dom@19`, `tailwindcss@4`, `@tailwindcss/vite`,
+      `@fontsource-variable/inter`. Cloudflare SSR adapter is **not**
+      installed — output is `static`, so Pages serves `dist/`
+      directly. Adapter would only be needed for SSR routes.
+- [x] `package.json` name: `@harpa/marketing`. Scripts: `dev` (port
       3002), `build`, `preview`, `typecheck`, `lint`, `test`.
-- [ ] Register workspace in `pnpm-workspace.yaml`, `turbo.json`
-      pipelines (`build`, `dev`, `typecheck`, `lint`, `test`).
-- [ ] Commit: `feat(marketing): scaffold astro app`.
+- [x] Workspace already matched by `apps/*` in `pnpm-workspace.yaml`;
+      `turbo.json` pipelines (`build`, `dev`, `typecheck`, `lint`,
+      `test`) are generic and pick up the new package automatically.
+- [x] Commit: `feat(marketing): scaffold astro app`.
 
 ### M0.2 Tailwind + design tokens
 - [ ] Clone `patrickchin/harpa-field-reports` into a tmp dir for

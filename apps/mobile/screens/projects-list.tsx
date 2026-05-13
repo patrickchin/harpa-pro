@@ -18,9 +18,8 @@ import { ProjectListSkeleton } from '@/components/skeletons/ProjectListSkeleton'
 import { formatDate } from '@/lib/date';
 import { colors } from '@/lib/design-tokens/colors';
 
-const ROLE_LABELS: Record<string, string> = {
+const ROLE_LABELS: Record<'owner' | 'editor' | 'viewer', string> = {
   owner: 'Owner',
-  admin: 'Admin',
   editor: 'Editor',
   viewer: 'Viewer',
 };
@@ -28,7 +27,7 @@ const ROLE_LABELS: Record<string, string> = {
 export type ProjectRow = {
   id: string;
   name: string;
-  role: string; // 'owner' | 'admin' | 'editor' | 'viewer'
+  role: 'owner' | 'editor' | 'viewer';
   address: string | null;
   updatedAt: string; // ISO-8601
 };

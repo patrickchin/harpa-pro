@@ -1,5 +1,179 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`ProjectsList > does not render ListHeaderComponent when empty 1`] = `
+<rn-View
+  className="flex-1 bg-background"
+  style={
+    [
+      {
+        "paddingBottom": 0,
+        "paddingLeft": 0,
+        "paddingRight": 0,
+        "paddingTop": 44,
+      },
+      undefined,
+    ]
+  }
+>
+  <rn-View
+    className="px-5 py-4"
+  >
+    <rn-View
+      className="gap-3"
+    >
+      <rn-View
+        className="min-h-touch flex-row items-center gap-3"
+      >
+        <rn-Text
+          className="min-w-0 flex-1 text-title-sm text-foreground"
+          ellipsizeMode="tail"
+          numberOfLines={1}
+          testID="screen-header-title"
+        >
+          Projects
+        </rn-Text>
+        <rn-View
+          className="shrink-0 flex-row items-center gap-2"
+        />
+      </rn-View>
+    </rn-View>
+  </rn-View>
+  <rn-FlatList
+    ListEmptyComponent={
+      <EmptyState
+        action={
+          <Button
+            accessibilityLabel="Add new project"
+            onPress={[MockFunction spy]}
+            size="lg"
+            testID="btn-new-project"
+            variant="hero"
+          >
+            Add your first project
+          </Button>
+        }
+        description="Create your first project so field notes and daily reports have a clear destination."
+        icon={
+          <lucide.HardHat
+            color="#5f5b66"
+            size={28}
+          />
+        }
+        title="No projects yet"
+      />
+    }
+    ListHeaderComponent={null}
+    contentContainerStyle={
+      {
+        "gap": 12,
+        "paddingBottom": 16,
+        "paddingHorizontal": 20,
+        "paddingTop": 16,
+      }
+    }
+    data={[]}
+    keyExtractor={[Function]}
+    maxToRenderPerBatch={10}
+    refreshControl={
+      <RN.RefreshControl
+        onRefresh={[MockFunction spy]}
+        refreshing={false}
+      />
+    }
+    removeClippedSubviews={true}
+    renderItem={[Function]}
+    updateCellsBatchingPeriod={50}
+  />
+</rn-View>
+`;
+
+exports[`ProjectsList > matches snapshot when empty 1`] = `
+<rn-View
+  className="flex-1 bg-background"
+  style={
+    [
+      {
+        "paddingBottom": 0,
+        "paddingLeft": 0,
+        "paddingRight": 0,
+        "paddingTop": 44,
+      },
+      undefined,
+    ]
+  }
+>
+  <rn-View
+    className="px-5 py-4"
+  >
+    <rn-View
+      className="gap-3"
+    >
+      <rn-View
+        className="min-h-touch flex-row items-center gap-3"
+      >
+        <rn-Text
+          className="min-w-0 flex-1 text-title-sm text-foreground"
+          ellipsizeMode="tail"
+          numberOfLines={1}
+          testID="screen-header-title"
+        >
+          Projects
+        </rn-Text>
+        <rn-View
+          className="shrink-0 flex-row items-center gap-2"
+        />
+      </rn-View>
+    </rn-View>
+  </rn-View>
+  <rn-FlatList
+    ListEmptyComponent={
+      <EmptyState
+        action={
+          <Button
+            accessibilityLabel="Add new project"
+            onPress={[MockFunction spy]}
+            size="lg"
+            testID="btn-new-project"
+            variant="hero"
+          >
+            Add your first project
+          </Button>
+        }
+        description="Create your first project so field notes and daily reports have a clear destination."
+        icon={
+          <lucide.HardHat
+            color="#5f5b66"
+            size={28}
+          />
+        }
+        title="No projects yet"
+      />
+    }
+    ListHeaderComponent={null}
+    contentContainerStyle={
+      {
+        "gap": 12,
+        "paddingBottom": 16,
+        "paddingHorizontal": 20,
+        "paddingTop": 16,
+      }
+    }
+    data={[]}
+    keyExtractor={[Function]}
+    maxToRenderPerBatch={10}
+    refreshControl={
+      <RN.RefreshControl
+        onRefresh={[MockFunction spy]}
+        refreshing={false}
+      />
+    }
+    removeClippedSubviews={true}
+    renderItem={[Function]}
+    updateCellsBatchingPeriod={50}
+  />
+</rn-View>
+`;
+
 exports[`ProjectsList > matches snapshot when loading 1`] = `
 <rn-View
   className="flex-1 bg-background"
@@ -441,5 +615,551 @@ exports[`ProjectsList > matches snapshot when loading 1`] = `
       </rn-View>
     </rn-View>
   </rn-View>
+</rn-View>
+`;
+
+exports[`ProjectsList > matches snapshot with projects 1`] = `
+<rn-View
+  className="flex-1 bg-background"
+  style={
+    [
+      {
+        "paddingBottom": 0,
+        "paddingLeft": 0,
+        "paddingRight": 0,
+        "paddingTop": 44,
+      },
+      undefined,
+    ]
+  }
+>
+  <rn-View
+    className="px-5 py-4"
+  >
+    <rn-View
+      className="gap-3"
+    >
+      <rn-View
+        className="min-h-touch flex-row items-center gap-3"
+      >
+        <rn-Text
+          className="min-w-0 flex-1 text-title-sm text-foreground"
+          ellipsizeMode="tail"
+          numberOfLines={1}
+          testID="screen-header-title"
+        >
+          Projects
+        </rn-Text>
+        <rn-View
+          className="shrink-0 flex-row items-center gap-2"
+        />
+      </rn-View>
+    </rn-View>
+  </rn-View>
+  <rn-FlatList
+    ListEmptyComponent={
+      <EmptyState
+        action={
+          <Button
+            accessibilityLabel="Add new project"
+            onPress={[MockFunction spy]}
+            size="lg"
+            testID="btn-new-project"
+            variant="hero"
+          >
+            Add your first project
+          </Button>
+        }
+        description="Create your first project so field notes and daily reports have a clear destination."
+        icon={
+          <lucide.HardHat
+            color="#5f5b66"
+            size={28}
+          />
+        }
+        title="No projects yet"
+      />
+    }
+    ListHeaderComponent={
+      <RN.View
+        style={
+          {
+            "marginBottom": 12,
+          }
+        }
+      >
+        <RN.Pressable
+          accessibilityLabel="Add new project"
+          accessibilityRole="button"
+          onPress={[MockFunction spy]}
+          testID="btn-new-project"
+        >
+          <RN.View
+            className="flex-row items-center gap-3 rounded-lg border border-dashed border-border bg-surface-muted p-4"
+          >
+            <RN.View
+              className="h-10 w-10 items-center justify-center rounded-md border border-border bg-card"
+            >
+              <lucide.Plus
+                color="#2d3a5a"
+                size={20}
+              />
+            </RN.View>
+            <RN.View
+              className="flex-1"
+            >
+              <RN.Text
+                className="text-title-sm text-foreground"
+              >
+                Add new project
+              </RN.Text>
+              <RN.Text
+                className="text-sm text-muted-foreground"
+              >
+                Create a destination for field notes and reports.
+              </RN.Text>
+            </RN.View>
+          </RN.View>
+        </RN.Pressable>
+      </RN.View>
+    }
+    contentContainerStyle={
+      {
+        "gap": 12,
+        "paddingBottom": 16,
+        "paddingHorizontal": 20,
+        "paddingTop": 16,
+      }
+    }
+    data={
+      [
+        {
+          "address": "123 Main St, San Francisco, CA",
+          "id": "123e4567-e89b-12d3-a456-426614174000",
+          "name": "Construction Site A",
+          "role": "owner",
+          "updatedAt": "2024-03-15T10:30:00.000Z",
+        },
+        {
+          "address": null,
+          "id": "223e4567-e89b-12d3-a456-426614174001",
+          "name": "Office Building Renovation",
+          "role": "editor",
+          "updatedAt": "2024-03-14T08:15:00.000Z",
+        },
+        {
+          "address": "789 Oak Ave, Palo Alto, CA",
+          "id": "323e4567-e89b-12d3-a456-426614174002",
+          "name": "Residential Complex",
+          "role": "viewer",
+          "updatedAt": "2024-03-10T14:45:00.000Z",
+        },
+      ]
+    }
+    keyExtractor={[Function]}
+    maxToRenderPerBatch={10}
+    refreshControl={
+      <RN.RefreshControl
+        onRefresh={[MockFunction spy]}
+        refreshing={false}
+      />
+    }
+    removeClippedSubviews={true}
+    renderItem={[Function]}
+    updateCellsBatchingPeriod={50}
+  />
+</rn-View>
+`;
+
+exports[`ProjectsList > renders EmptyState when no projects 1`] = `
+<rn-View
+  className="flex-1 bg-background"
+  style={
+    [
+      {
+        "paddingBottom": 0,
+        "paddingLeft": 0,
+        "paddingRight": 0,
+        "paddingTop": 44,
+      },
+      undefined,
+    ]
+  }
+>
+  <rn-View
+    className="px-5 py-4"
+  >
+    <rn-View
+      className="gap-3"
+    >
+      <rn-View
+        className="min-h-touch flex-row items-center gap-3"
+      >
+        <rn-Text
+          className="min-w-0 flex-1 text-title-sm text-foreground"
+          ellipsizeMode="tail"
+          numberOfLines={1}
+          testID="screen-header-title"
+        >
+          Projects
+        </rn-Text>
+        <rn-View
+          className="shrink-0 flex-row items-center gap-2"
+        />
+      </rn-View>
+    </rn-View>
+  </rn-View>
+  <rn-FlatList
+    ListEmptyComponent={
+      <EmptyState
+        action={
+          <Button
+            accessibilityLabel="Add new project"
+            onPress={[MockFunction spy]}
+            size="lg"
+            testID="btn-new-project"
+            variant="hero"
+          >
+            Add your first project
+          </Button>
+        }
+        description="Create your first project so field notes and daily reports have a clear destination."
+        icon={
+          <lucide.HardHat
+            color="#5f5b66"
+            size={28}
+          />
+        }
+        title="No projects yet"
+      />
+    }
+    ListHeaderComponent={null}
+    contentContainerStyle={
+      {
+        "gap": 12,
+        "paddingBottom": 16,
+        "paddingHorizontal": 20,
+        "paddingTop": 16,
+      }
+    }
+    data={[]}
+    keyExtractor={[Function]}
+    maxToRenderPerBatch={10}
+    refreshControl={
+      <RN.RefreshControl
+        onRefresh={[MockFunction spy]}
+        refreshing={false}
+      />
+    }
+    removeClippedSubviews={true}
+    renderItem={[Function]}
+    updateCellsBatchingPeriod={50}
+  />
+</rn-View>
+`;
+
+exports[`ProjectsList > renders address row only when address is non-null 1`] = `
+<rn-View
+  className="flex-1 bg-background"
+  style={
+    [
+      {
+        "paddingBottom": 0,
+        "paddingLeft": 0,
+        "paddingRight": 0,
+        "paddingTop": 44,
+      },
+      undefined,
+    ]
+  }
+>
+  <rn-View
+    className="px-5 py-4"
+  >
+    <rn-View
+      className="gap-3"
+    >
+      <rn-View
+        className="min-h-touch flex-row items-center gap-3"
+      >
+        <rn-Text
+          className="min-w-0 flex-1 text-title-sm text-foreground"
+          ellipsizeMode="tail"
+          numberOfLines={1}
+          testID="screen-header-title"
+        >
+          Projects
+        </rn-Text>
+        <rn-View
+          className="shrink-0 flex-row items-center gap-2"
+        />
+      </rn-View>
+    </rn-View>
+  </rn-View>
+  <rn-FlatList
+    ListEmptyComponent={
+      <EmptyState
+        action={
+          <Button
+            accessibilityLabel="Add new project"
+            onPress={[MockFunction spy]}
+            size="lg"
+            testID="btn-new-project"
+            variant="hero"
+          >
+            Add your first project
+          </Button>
+        }
+        description="Create your first project so field notes and daily reports have a clear destination."
+        icon={
+          <lucide.HardHat
+            color="#5f5b66"
+            size={28}
+          />
+        }
+        title="No projects yet"
+      />
+    }
+    ListHeaderComponent={
+      <RN.View
+        style={
+          {
+            "marginBottom": 12,
+          }
+        }
+      >
+        <RN.Pressable
+          accessibilityLabel="Add new project"
+          accessibilityRole="button"
+          onPress={[MockFunction spy]}
+          testID="btn-new-project"
+        >
+          <RN.View
+            className="flex-row items-center gap-3 rounded-lg border border-dashed border-border bg-surface-muted p-4"
+          >
+            <RN.View
+              className="h-10 w-10 items-center justify-center rounded-md border border-border bg-card"
+            >
+              <lucide.Plus
+                color="#2d3a5a"
+                size={20}
+              />
+            </RN.View>
+            <RN.View
+              className="flex-1"
+            >
+              <RN.Text
+                className="text-title-sm text-foreground"
+              >
+                Add new project
+              </RN.Text>
+              <RN.Text
+                className="text-sm text-muted-foreground"
+              >
+                Create a destination for field notes and reports.
+              </RN.Text>
+            </RN.View>
+          </RN.View>
+        </RN.Pressable>
+      </RN.View>
+    }
+    contentContainerStyle={
+      {
+        "gap": 12,
+        "paddingBottom": 16,
+        "paddingHorizontal": 20,
+        "paddingTop": 16,
+      }
+    }
+    data={
+      [
+        {
+          "address": "123 Main St, San Francisco, CA",
+          "id": "123e4567-e89b-12d3-a456-426614174000",
+          "name": "Construction Site A",
+          "role": "owner",
+          "updatedAt": "2024-03-15T10:30:00.000Z",
+        },
+        {
+          "address": null,
+          "id": "223e4567-e89b-12d3-a456-426614174001",
+          "name": "Office Building Renovation",
+          "role": "editor",
+          "updatedAt": "2024-03-14T08:15:00.000Z",
+        },
+        {
+          "address": "789 Oak Ave, Palo Alto, CA",
+          "id": "323e4567-e89b-12d3-a456-426614174002",
+          "name": "Residential Complex",
+          "role": "viewer",
+          "updatedAt": "2024-03-10T14:45:00.000Z",
+        },
+      ]
+    }
+    keyExtractor={[Function]}
+    maxToRenderPerBatch={10}
+    refreshControl={
+      <RN.RefreshControl
+        onRefresh={[MockFunction spy]}
+        refreshing={false}
+      />
+    }
+    removeClippedSubviews={true}
+    renderItem={[Function]}
+    updateCellsBatchingPeriod={50}
+  />
+</rn-View>
+`;
+
+exports[`ProjectsList > renders role labels correctly 1`] = `
+<rn-View
+  className="flex-1 bg-background"
+  style={
+    [
+      {
+        "paddingBottom": 0,
+        "paddingLeft": 0,
+        "paddingRight": 0,
+        "paddingTop": 44,
+      },
+      undefined,
+    ]
+  }
+>
+  <rn-View
+    className="px-5 py-4"
+  >
+    <rn-View
+      className="gap-3"
+    >
+      <rn-View
+        className="min-h-touch flex-row items-center gap-3"
+      >
+        <rn-Text
+          className="min-w-0 flex-1 text-title-sm text-foreground"
+          ellipsizeMode="tail"
+          numberOfLines={1}
+          testID="screen-header-title"
+        >
+          Projects
+        </rn-Text>
+        <rn-View
+          className="shrink-0 flex-row items-center gap-2"
+        />
+      </rn-View>
+    </rn-View>
+  </rn-View>
+  <rn-FlatList
+    ListEmptyComponent={
+      <EmptyState
+        action={
+          <Button
+            accessibilityLabel="Add new project"
+            onPress={[MockFunction spy]}
+            size="lg"
+            testID="btn-new-project"
+            variant="hero"
+          >
+            Add your first project
+          </Button>
+        }
+        description="Create your first project so field notes and daily reports have a clear destination."
+        icon={
+          <lucide.HardHat
+            color="#5f5b66"
+            size={28}
+          />
+        }
+        title="No projects yet"
+      />
+    }
+    ListHeaderComponent={
+      <RN.View
+        style={
+          {
+            "marginBottom": 12,
+          }
+        }
+      >
+        <RN.Pressable
+          accessibilityLabel="Add new project"
+          accessibilityRole="button"
+          onPress={[MockFunction spy]}
+          testID="btn-new-project"
+        >
+          <RN.View
+            className="flex-row items-center gap-3 rounded-lg border border-dashed border-border bg-surface-muted p-4"
+          >
+            <RN.View
+              className="h-10 w-10 items-center justify-center rounded-md border border-border bg-card"
+            >
+              <lucide.Plus
+                color="#2d3a5a"
+                size={20}
+              />
+            </RN.View>
+            <RN.View
+              className="flex-1"
+            >
+              <RN.Text
+                className="text-title-sm text-foreground"
+              >
+                Add new project
+              </RN.Text>
+              <RN.Text
+                className="text-sm text-muted-foreground"
+              >
+                Create a destination for field notes and reports.
+              </RN.Text>
+            </RN.View>
+          </RN.View>
+        </RN.Pressable>
+      </RN.View>
+    }
+    contentContainerStyle={
+      {
+        "gap": 12,
+        "paddingBottom": 16,
+        "paddingHorizontal": 20,
+        "paddingTop": 16,
+      }
+    }
+    data={
+      [
+        {
+          "address": "123 Main St, San Francisco, CA",
+          "id": "123e4567-e89b-12d3-a456-426614174000",
+          "name": "Construction Site A",
+          "role": "owner",
+          "updatedAt": "2024-03-15T10:30:00.000Z",
+        },
+        {
+          "address": null,
+          "id": "223e4567-e89b-12d3-a456-426614174001",
+          "name": "Office Building Renovation",
+          "role": "editor",
+          "updatedAt": "2024-03-14T08:15:00.000Z",
+        },
+        {
+          "address": "789 Oak Ave, Palo Alto, CA",
+          "id": "323e4567-e89b-12d3-a456-426614174002",
+          "name": "Residential Complex",
+          "role": "viewer",
+          "updatedAt": "2024-03-10T14:45:00.000Z",
+        },
+      ]
+    }
+    keyExtractor={[Function]}
+    maxToRenderPerBatch={10}
+    refreshControl={
+      <RN.RefreshControl
+        onRefresh={[MockFunction spy]}
+        refreshing={false}
+      />
+    }
+    removeClippedSubviews={true}
+    renderItem={[Function]}
+    updateCellsBatchingPeriod={50}
+  />
 </rn-View>
 `;

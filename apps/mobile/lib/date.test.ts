@@ -30,4 +30,24 @@ describe('formatDate', () => {
     const result = formatDate('2024-07-04T12:00:00.000Z');
     expect(result).toBe('Jul 4, 2024');
   });
+
+  it('returns em-dash for null input', () => {
+    const result = formatDate(null);
+    expect(result).toBe('—');
+  });
+
+  it('returns em-dash for undefined input', () => {
+    const result = formatDate(undefined);
+    expect(result).toBe('—');
+  });
+
+  it('returns em-dash for invalid date string', () => {
+    const result = formatDate('not-a-date');
+    expect(result).toBe('—');
+  });
+
+  it('returns em-dash for empty string', () => {
+    const result = formatDate('');
+    expect(result).toBe('—');
+  });
 });

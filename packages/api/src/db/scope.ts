@@ -55,3 +55,35 @@ function assertUuid(value: string, label: string): void {
     throw new Error(`[scope] ${label} is not a valid UUID: ${JSON.stringify(value)}`);
   }
 }
+
+/**
+ * Run `fn` against a per-request Postgres connection pinned to the
+ * `app_anonymous` role. Used by public, unauthenticated routes (e.g.
+ * marketing waitlist signup). The role has `INSERT`-only grants on
+ * `app.waitlist_signups`; SELECT/UPDATE/DELETE are denied by both
+ * column grants and RLS.
+ *
+ * Mirrors `withScopedConnection` but without `sub`/`sid` claims since
+ * the caller is unauthenticated.
+ */
+export async function withAnonConnection<T>(fn: (db: ScopedDb) => Promise<T>): Promise<T> {
+  const pool = getPool();
+  const conn = await pool.connect();
+  try {
+    await conn.query('BEGIN');
+    await conn.query(`SET LOCAL role app_anonymous`);
+    const db = drizzle(conn, { schema });
+    const result = await fn(db);
+    await conn.query('COMMIT');
+    return result;
+  } catch (err) {
+    try {
+      await conn.query('ROLLBACK');
+    } catch {
+      // ignore secondary failure
+    }
+    throw err;
+  } finally {
+    conn.release();
+  }
+}

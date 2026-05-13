@@ -94,18 +94,24 @@ Each AI-touching route has a test that:
 
 ## CI workflows
 
+Active today:
+
 | Workflow | Trigger | Gate |
 |---|---|---|
 | `lint-typecheck.yml` | every push | ESLint + tsc clean across the workspace |
-| `unit.yml` | every push | `pnpm test:unit` green |
+| `unit.yml` | every push | `pnpm test` green |
 | `api-integration.yml` | every push | Testcontainers suite green at ≥ 90% line coverage |
-| `contract.yml` | every push | OpenAPI regen + diff clean; contract tests green |
-| `mobile-build.yml` | every PR | Expo prebuild + Metro bundle clean |
-| `e2e-maestro.yml` | every PR | Maestro flows pass on iOS + Android |
-| `pr-preview.yml` | PR open / push | Neon branch + Fly preview deploy |
-| `p1-exit-gate.yml` | PRs labelled `phase/p1-exit` | All P1 acceptance criteria |
-| `p2-exit-gate.yml` | …`phase/p2-exit` | … |
-| `… per phase` | | |
+| `pr-preview.yml` | PR open / push | Neon branch lifecycle for previews |
+| `marketing-prod.yml` | push to `main` | Deploy marketing to Cloudflare Pages prod |
+| `marketing-preview.yml` | PR | Deploy per-PR marketing preview |
+
+Deferred (add when the phase actually starts, not before):
+
+- `contract.yml` — OpenAPI regen + diff. Add in P1 once `spec:emit` is wired.
+- `mobile-build.yml` — Expo prebuild + Metro bundle. Add in P2 when mobile is non-skeleton (today `unit.yml` already covers mobile typecheck + tests).
+- `e2e-maestro.yml` — Maestro flows on iOS + Android. Add in P3.
+- `visual-gate.yml` — screenshot diff. Add in P2 once shared primitives + first screens land.
+- Per-phase exit gates (`p1-exit-gate.yml`, etc.) — prefer GitHub branch-protection required checks over standalone workflows.
 
 ## Removal verification gates
 

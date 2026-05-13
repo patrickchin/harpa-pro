@@ -31,11 +31,17 @@ import Icon from "../Icon.astro";
       </a>
     </nav>
 
-    {/* No-JS mobile menu via <details>/<summary>. M1 may swap to a
-        React island if we need transitions or focus trapping. */}
+    {/* No-JS mobile menu via <details>/<summary>. The panel is
+        absolute-positioned so it overlays content below the sticky
+        header — the source's React version pushed content down by
+        re-rendering as a sibling of the row, which we cannot do
+        here without scripting (a `<summary>` must be a direct child
+        of its `<details>`, and we want the toggle inside the row).
+        Cosmetic delta is negligible (no layout shift on toggle);
+        documented as an intentional, scripted-equivalent change. */}
     <details class="md:hidden site-menu group">
       <summary
-        aria-label="Open menu"
+        aria-label="Toggle menu"
         class="grid h-9 w-9 cursor-pointer list-none place-items-center rounded-md border border-hairline text-ink [&::-webkit-details-marker]:hidden"
       >
         <Icon name="menu" class="h-4 w-4 group-open:hidden" />

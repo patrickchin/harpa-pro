@@ -10,48 +10,6 @@
   internal track for distribution.
 - **Docs site**: Vercel (or Cloudflare Pages — TBD in P0).
 
-## Public domain layout (`harpapro.com`)
-
-| Subdomain | Service | Host |
-|---|---|---|
-| `harpapro.com` / `www.harpapro.com` | Marketing site | Vercel / Cloudflare Pages (TBD in `docs/marketing/plan-m0`) |
-| `app.harpapro.com` | Web build of the mobile app (if/when shipped) | TBD; same host as marketing is fine |
-| `docs.harpapro.com` | `apps/docs` | Vercel |
-| `api.harpapro.com` | `packages/api` | **Fly.io** (this doc) |
-
-API path conventions on `api.harpapro.com`:
-
-- `/v1/...` — all versioned business routes. (Current code mounts
-  routes at `/`; the `/v1` rebase is planned for P4 — see task
-  below.)
-- `/healthz` — unversioned. Fly health checks hit this.
-- `/openapi.json` — unversioned. SDK generators consume this.
-
-### P4 task: cut over to `api.harpapro.com/v1/`
-
-1. In `packages/api/src/app.ts`, mount every business router under
-   a new `app.route('/v1', router)` parent and leave `/healthz` +
-   `/openapi.json` at the root.
-2. Update `packages/api-contract/openapi.ts` so every path is
-   prefixed `/v1`. Re-run `pnpm gen:types` and the spec-drift gate.
-3. Update every `request('/projects', …)` style call in
-   `apps/mobile/lib/api/client.ts` callers — or simpler, prefix
-   inside `request()` itself and keep call sites unchanged.
-4. Set `EXPO_PUBLIC_API_URL=https://api.harpapro.com` for prod EAS
-   builds (no trailing `/v1`; the client adds it).
-5. `fly certs add api.harpapro.com -a harpa-api`, add the `A` /
-   `AAAA` records Fly prints, wait for cert issuance.
-
-DNS notes:
-
-- `api.harpapro.com` is a subdomain — `CNAME api → harpa-api.fly.dev`
-  works, or use the `A`/`AAAA` records `fly ips list` returns.
-- If using Cloudflare DNS, set the `api` record to **DNS-only**
-  (grey cloud) so Fly can terminate TLS itself. Re-enable proxy
-  later only with CF Full (strict).
-- Apex `harpapro.com` cannot CNAME — use Cloudflare CNAME
-  flattening or the apex `A` records the marketing host provides.
-
 ## Secrets
 
 - `infra/fly/secrets.example` enumerates every secret the API

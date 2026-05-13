@@ -1,0 +1,10 @@
+@import "tailwindcss";
+
+/* Tailwind v4 inline theme — full design tokens land in M0.2. */
+@theme {
+  --font-sans: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+}
+
+html {
+  font-family: var(--font-sans);
+}

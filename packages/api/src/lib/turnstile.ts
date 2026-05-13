@@ -2,10 +2,15 @@
  * Cloudflare Turnstile verification.
  *
  * - `TURNSTILE_LIVE=1` → real siteverify call.
- * - `TURNSTILE_LIVE=0` (default) → fake mode: any non-empty token
- *   starting with `tt-` is accepted; anything else fails. Used by
- *   tests and `:mock` builds. Mirrors the Twilio fake pattern in
- *   src/auth/twilio.ts.
+ * - `TURNSTILE_LIVE=0` (default) → fake mode: any non-empty token is
+ *   accepted. This is what `docker compose up` and `:mock` builds run
+ *   with, so the marketing site's Cloudflare test-key widget (which
+ *   issues real-format tokens like `XXXX.DUMMY.TOKEN.XXXX`) can hit
+ *   the API end-to-end. Empty tokens are still rejected — an empty
+ *   token means the caller forgot to wire the widget, which is a
+ *   bug, not abuse. Integration tests that want to assert the
+ *   failure path inject `alwaysFailTurnstile()` via
+ *   `setWaitlistClients({ turnstile })`.
  *
  * See https://developers.cloudflare.com/turnstile/get-started/server-side-validation/
  */
@@ -26,16 +31,13 @@ export function createTurnstileClient(fetchImpl: typeof fetch = fetch): Turnstil
   return liveTurnstile(fetchImpl);
 }
 
-function fakeTurnstile(): TurnstileClient {
+export function fakeTurnstile(): TurnstileClient {
   return {
     async verify(token) {
-      // Accept any token starting with `tt-` in fake mode. Reject empty
-      // strings; an empty token in fake mode means the caller forgot
-      // to wire the widget (test failure, not abuse).
-      if (typeof token === 'string' && token.startsWith('tt-')) {
+      if (typeof token === 'string' && token.length > 0) {
         return { success: true };
       }
-      return { success: false, errorCodes: ['fake-rejected'] };
+      return { success: false, errorCodes: ['fake-empty-token'] };
     },
   };
 }

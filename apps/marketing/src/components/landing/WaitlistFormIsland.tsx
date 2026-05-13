@@ -135,7 +135,12 @@ export default function WaitlistFormIsland() {
         </label>
 
         <label className="block">
-          <span className={labelCls}>Company</span>
+          <span className={labelCls}>
+            Company
+            <span className="rounded-sm bg-secondary px-1 py-px text-[0.6rem] normal-case text-ink-soft">
+              Optional
+            </span>
+          </span>
           <input
             type="text"
             autoComplete="organization"

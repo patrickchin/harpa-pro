@@ -1,0 +1,89 @@
+{
+  "visitDate": "2026-05-12T15:03:00.000Z",
+  "weather": {
+    "condition": "Dry, light cloud",
+    "temperatureC": 15,
+    "windKph": 12,
+    "impact": "No weather-related delays. Conditions favourable for steel erection and exterior work."
+  },
+  "workers": [
+    {
+      "role": "Steel erectors (Murphy's)",
+      "count": 6,
+      "hours": 7,
+      "notes": "Completed eastern bay frame, ahead of schedule."
+    },
+    {
+      "role": "Site foreman",
+      "count": 1,
+      "hours": 8,
+      "notes": null
+    },
+    {
+      "role": "Apprentice",
+      "count": 1,
+      "hours": 7,
+      "notes": "Shadowing erectors; bolt torque checks."
+    }
+  ],
+  "materials": [
+    {
+      "name": "M16 anchor bolts",
+      "quantity": 3,
+      "unit": "pallets",
+      "status": "short",
+      "condition": null,
+      "notes": "Additional stock ordered for Wednesday AM delivery."
+    },
+    {
+      "name": "Ready-mix concrete (lift shaft)",
+      "quantity": null,
+      "unit": null,
+      "status": "delayed",
+      "condition": null,
+      "notes": "Supplier slot missed. Re-booked Thursday 08:00."
+    },
+    {
+      "name": "Structural steel — eastern bay",
+      "quantity": null,
+      "unit": null,
+      "status": "installed",
+      "condition": "good",
+      "notes": "All bolts verified to spec."
+    }
+  ],
+  "issues": [
+    {
+      "title": "Water ingress on southern wall",
+      "severity": "medium",
+      "description": "Damp patch observed near taped tarp seam from last week's temporary roofing. Appears non-structural but requires a survey before the wall is closed up.",
+      "action": "Book damp survey within 48 hours; hold wall close-up until results received."
+    },
+    {
+      "title": "Concrete pour delay (lift shaft)",
+      "severity": "low",
+      "description": "Ready-mix supplier missed the Tuesday slot.",
+      "action": "Pour now scheduled Thursday 08:00 — programme float absorbs the slip."
+    }
+  ],
+  "nextSteps": [
+    "Book damp survey for southern wall (target: Wednesday).",
+    "Confirm anchor-bolt delivery window with supplier.",
+    "Prepare formwork for Thursday lift-shaft pour.",
+    "Hand over eastern bay sign-off pack to QS by end of week."
+  ],
+  "summarySections": [
+    {
+      "title": "Programme",
+      "body": "Steel erection on the eastern bay completed a day ahead of plan. Concrete pour for the lift shaft slipped to Thursday but does not impact critical path; programme float of two days remains on this work package."
+    },
+    {
+      "title": "Quality",
+      "body": "Bolt torque verified to spec on all installed anchors. Damp survey required before closing the southern wall — this is the only open quality item."
+    },
+    {
+      "title": "Safety",
+      "body": "No reportable incidents. Working-at-height permits in place for the erection crew; toolbox talk on edge protection delivered at 07:30."
+    }
+  ]
+}

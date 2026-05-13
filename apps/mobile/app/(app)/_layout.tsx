@@ -21,13 +21,9 @@ export default function AppLayout() {
   const navigation = useNavigation();
   const lastBackPress = useRef(0);
 
-  // Auth gate: redirect unauthenticated / needs-onboarding users away (FIRST).
-  const target = decideAppRedirect(status);
-  if (target) {
-    return <Redirect href={target as any} />;
-  }
-
   // Android double-back-to-exit handler (ported from canonical).
+  // Declared BEFORE any conditional return so hook order stays stable
+  // across renders when the auth gate flips (Rules of Hooks).
   const handleBackPress = useCallback(() => {
     if (Platform.OS !== 'android') return false;
     if (navigation.canGoBack()) return false; // let default nav handle it
@@ -45,6 +41,13 @@ export default function AppLayout() {
     const sub = BackHandler.addEventListener('hardwareBackPress', handleBackPress);
     return () => sub.remove();
   }, [handleBackPress]);
+
+  // Auth gate: redirect unauthenticated / needs-onboarding users away.
+  // Must come AFTER all hook calls.
+  const target = decideAppRedirect(status);
+  if (target) {
+    return <Redirect href={target as any} />;
+  }
 
   // Render splash if still loading (suppresses flicker on cold start).
   if (status === 'loading') {

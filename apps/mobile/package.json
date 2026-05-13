@@ -13,6 +13,7 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint . --max-warnings 0 --ext .ts,.tsx",
     "build": "echo 'mobile build (EAS) — see infra/'",
+    "bundle:smoke": "bash scripts/bundle-smoke.sh",
     "gen:hooks": "tsx scripts/gen-hooks.ts"
   },
   "dependencies": {

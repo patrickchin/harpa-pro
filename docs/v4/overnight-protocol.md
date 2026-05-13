@@ -75,6 +75,7 @@ After EVERY task commit (including carve-out commits):
 pnpm --filter @harpa/mobile vitest run --reporter=dot \
   && pnpm --filter @harpa/mobile typecheck \
   && pnpm --filter @harpa/mobile lint \
+  && pnpm --filter @harpa/mobile bundle:smoke \
   && for s in scripts/check-no-*.sh \
               scripts/check-scope-tests.sh \
               scripts/check-spec-drift.sh; do bash "$s" || break; done
@@ -83,6 +84,27 @@ pnpm --filter @harpa/mobile vitest run --reporter=dot \
 For commits that touch the API: also `pnpm --filter @harpa/api test` and
 `pnpm --filter @harpa/api test:integration`. Never let a red bar persist
 across two commits.
+
+**`bundle:smoke` rationale.** Two whole classes of bugs only show up
+when Metro actually bundles the app — they are invisible to vitest,
+typecheck, and lint:
+
+- **Pattern R2** — `.js` extensions in relative TS imports. Vitest
+  resolves them via tsconfig paths; Metro does not. Iterations of this
+  bug ate two evenings in v3 and another sub-hour in v4.
+- **Pattern R4** — test files inside `app/**` get auto-discovered as
+  routes by `expo-router` and drag `vitest` into the runtime bundle,
+  blowing up on first navigation. Vitest itself still passes.
+
+The script runs a one-shot `expo export --platform ios` to a
+temporary directory (~25s on M-series), greps the bundler log for
+`Unable to resolve` / `Cannot find module`, and greps the bundle's
+`metadata.json` for any test-runtime module names. See
+`apps/mobile/scripts/bundle-smoke.sh` for the implementation and
+`docs/bugs/README.md` (patterns R2, R4) for the bug history.
+
+Any commit that adds a new screen, layout, native module, lib/
+subtree, or migrates an import path falls under this gate.
 
 ## 6. End-of-run report (last action)
 

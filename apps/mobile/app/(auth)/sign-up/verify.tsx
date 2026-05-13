@@ -110,7 +110,6 @@ export default function SignUpVerifyPage() {
 
   const handleChangeNumber = useCallback(() => {
     // expo-router typed-routes regenerates on next `expo start`; cast safe.
-    // @ts-expect-error — route exists but types not regenerated yet
     router.replace({ pathname: '/(auth)/sign-up/phone' });
   }, [router]);
 

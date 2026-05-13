@@ -72,6 +72,18 @@ vi.mock('react-native', () => {
     addListener: () => ({ remove: () => undefined }),
   };
 
+  const BackHandler = {
+    addEventListener: () => ({ remove: () => undefined }),
+    removeEventListener: () => undefined,
+    exitApp: () => undefined,
+  };
+
+  const ToastAndroid = {
+    SHORT: 0,
+    LONG: 1,
+    show: () => undefined,
+  };
+
   return {
     View,
     Text,
@@ -92,6 +104,8 @@ vi.mock('react-native', () => {
     StyleSheet,
     Dimensions,
     Keyboard,
+    BackHandler,
+    ToastAndroid,
   };
 });
 
@@ -170,6 +184,7 @@ vi.mock('expo-router', () => {
     Tabs,
     Link: (props: AnyProps) => React.createElement('rn-Link', props, props.children),
     useRouter: () => routerStub,
+    useNavigation: () => routerStub,
     usePathname: () => '/',
     useLocalSearchParams: () => ({}),
     useSegments: () => [] as string[],

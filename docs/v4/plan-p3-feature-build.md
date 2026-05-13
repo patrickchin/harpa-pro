@@ -149,3 +149,5 @@ immediately on the final scheme — no rewriting share links later.
 
 ## P3 exit
 - [ ] All boxes ticked. Tag `v0.3.0-features`.
+- [ ] `pnpm --filter @harpa/mobile bundle:smoke` green on the tag SHA
+  (see `overnight-protocol.md` §5 — also run per-commit through P3).

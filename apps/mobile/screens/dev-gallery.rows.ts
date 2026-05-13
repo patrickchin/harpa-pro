@@ -35,7 +35,7 @@ export type GalleryRow =
 
 const EMPTY_LABEL =
   'No screens registered yet. Add ports to apps/mobile/screens/ and ' +
-  'register their dev mirror in apps/mobile/app/(dev)/registry.ts.';
+  'register their dev mirror in apps/mobile/app/(dev)/_registry.ts.';
 
 export function buildGalleryRows(registry: readonly GalleryEntry[]): GalleryRow[] {
   if (registry.length === 0) {

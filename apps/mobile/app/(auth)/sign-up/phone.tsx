@@ -43,7 +43,6 @@ export default function SignUpPhonePage() {
       await startOtpMutation.mutateAsync({ body: { phone: normalizedPhone } });
       // expo-router typed-routes regenerates on next `expo start`; cast safe.
       router.push({
-        // @ts-expect-error — route exists but types not regenerated yet
         pathname: '/(auth)/sign-up/verify',
         params: { phone: normalizedPhone },
       });

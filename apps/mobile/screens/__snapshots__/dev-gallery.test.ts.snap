@@ -4,7 +4,7 @@ exports[`buildGalleryRows > emits a single empty-state row when no screens are r
 [
   {
     "kind": "empty",
-    "label": "No screens registered yet. Add ports to apps/mobile/screens/ and register their dev mirror in apps/mobile/app/(dev)/registry.ts.",
+    "label": "No screens registered yet. Add ports to apps/mobile/screens/ and register their dev mirror in apps/mobile/app/(dev)/_registry.ts.",
   },
 ]
 `;

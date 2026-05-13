@@ -1,6 +1,12 @@
 ---
 import { readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
+import { createRequire } from "node:module";
+
+// Vite's module runner (used by Astro's dev SSR) doesn't implement
+// `import.meta.resolve`. `createRequire().resolve` works in both Node
+// and the Vite runtime, and returns an absolute filesystem path
+// directly — no fileURLToPath round-trip needed.
+const requireFromHere = createRequire(import.meta.url);
 
 interface Props {
   name: string;
@@ -20,8 +26,8 @@ interface Props {
 const { name, class: className = "h-4 w-4", label, strokeWidth } = Astro.props;
 
 // Resolve from the workspace's hoisted lucide-static at build time.
-const iconUrl = import.meta.resolve(`lucide-static/icons/${name}.svg`);
-const raw = readFileSync(fileURLToPath(iconUrl), "utf8");
+const iconPath = requireFromHere.resolve(`lucide-static/icons/${name}.svg`);
+const raw = readFileSync(iconPath, "utf8");
 
 let svg = raw
   // strip lucide's own width/height so Tailwind h-/w- classes win

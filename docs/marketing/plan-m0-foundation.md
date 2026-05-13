@@ -36,15 +36,22 @@ a Cloudflare Pages preview URL with a green Lighthouse score.
 - [x] Commit: `feat(marketing): scaffold astro app`.
 
 ### M0.2 Tailwind + design tokens
-- [ ] Clone `patrickchin/harpa-field-reports` into a tmp dir for
+- [x] Cloned `patrickchin/harpa-field-reports` to `/tmp/` for
       reference.
-- [ ] Port `tailwind.config.ts` (colors, radius, font family) from
-      Lovable scaffold.
-- [ ] Create `src/styles/globals.css` with shadcn CSS vars (light +
-      dark themes).
-- [ ] Install `@fontsource-variable/inter`, import in
-      `src/layouts/Layout.astro` (no Google Fonts request).
-- [ ] Commit: `feat(marketing): tailwind config + design tokens`.
+- [x] Tailwind v4 uses CSS-only config (no `tailwind.config.ts`).
+      Ported the full `@theme inline` block — radii, semantic
+      colours, chart + sidebar tokens — verbatim from the Lovable
+      `src/styles.css` into `apps/marketing/src/styles/globals.css`.
+- [x] `globals.css` defines the shadcn CSS vars in `:root` (light)
+      and `.dark` (dark theme), all in `oklch`. Includes the
+      "warm paper + navy ink" palette.
+- [x] `@fontsource-variable/inter` self-hosted; imported in
+      `Layout.astro` (Astro emits the woff2 files into `dist/_astro/`
+      — verified no `fonts.googleapis.com` request in the built HTML
+      or CSS).
+- [x] Added `tw-animate-css` (matches Lovable scaffold; needed for
+      animation utilities in M0.3 components).
+- [x] Commit: `feat(marketing): tailwind config + design tokens`.
 
 ### M0.3 Port Lovable landing page to Astro
 - [ ] Translate Hero, Features, HowItWorks, SampleReport, FAQ, CTA,

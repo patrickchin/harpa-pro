@@ -109,22 +109,47 @@ a Cloudflare Pages preview URL with a green Lighthouse score.
 - [x] Commit: `feat(marketing): mdx content collections + primitives`.
 
 ### M0.5 Cloudflare Pages deploy
-- [ ] **No SSR adapter.** Output stays `static` and Pages serves
+- [x] **No SSR adapter.** Output stays `static` and Pages serves
       `dist/` directly. The `@astrojs/cloudflare` v11 adapter does
       not support Astro 5 and is unnecessary for a static site
       (decision recorded in M0.1).
-- [ ] Create `wrangler.jsonc` minimal config (name, compatibility
-      date, `pages_build_output_dir = "dist"`).
-- [ ] GitHub Action `.github/workflows/marketing-preview.yml`:
-      - Trigger on PR to `dev`, path filter `apps/marketing/**`.
-      - Install deps, `pnpm --filter @harpa/marketing build`.
-      - `wrangler pages deploy apps/marketing/dist --project-name=harpa-marketing
-        --branch=${{ github.head_ref }}`.
-      - Comment unique preview URL on PR.
-- [ ] GitHub Action `.github/workflows/marketing-prod.yml`:
-      - Trigger on push to `dev`, path filter `apps/marketing/**`.
-      - Deploy to production Cloudflare Pages project.
-- [ ] Commit: `chore(ci): marketing preview + prod deploys`.
+- [x] `apps/marketing/wrangler.jsonc`: `name=harpa-pro`,
+      compatibility-date 2026-05-01,
+      `pages_build_output_dir=./dist`.
+- [x] Cloudflare Pages project created via
+      `npx wrangler pages project create harpa-pro --production-branch=dev`
+      and first deploy uploaded via
+      `npx wrangler pages deploy ./dist --project-name=harpa-pro`.
+      Production alias live at
+      <https://harpa-pro.pages.dev> (verified — 33 inline SVGs,
+      all section headlines render).
+- [x] One-time operator setup documented in
+      [`docs/marketing/deploy-cloudflare-pages.md`](deploy-cloudflare-pages.md)
+      (project create, API token scopes, account ID, GH secrets).
+- [x] GitHub Action `.github/workflows/marketing-preview.yml`:
+      - Triggers on PR to `dev`, path filter `apps/marketing/**`
+        (+ `pnpm-lock.yaml` + the workflow itself).
+      - Cancels stale preview builds via `concurrency`.
+      - Installs deps, builds, deploys via `cloudflare/wrangler-action@v3`
+        with `--branch=${{ github.head_ref }}` (CF auto-creates a
+        per-branch preview URL).
+      - Posts (or sticky-updates) a comment on the PR with the
+        preview URL via `marocchino/sticky-pull-request-comment@v2`.
+- [x] GitHub Action `.github/workflows/marketing-prod.yml`:
+      - Triggers on push to `dev` (default branch — never `main`,
+        per AGENTS.md hard rule #7) + manual `workflow_dispatch`.
+      - Deploys with `--branch=dev`, which CF Pages routes to
+        production because the project's production branch is `dev`.
+      - `concurrency: cancel-in-progress: false` so prod deploys
+        never get cancelled mid-flight.
+- [x] **Pending operator action**: add `CLOUDFLARE_API_TOKEN` and
+      `CLOUDFLARE_ACCOUNT_ID` GitHub Actions secrets at
+      <https://github.com/patrickchin/harpa-pro/settings/secrets/actions>
+      (token must have `Account → Cloudflare Pages → Edit` and
+      `User → User Details → Read`). Workflows will sit yellow
+      until the secrets exist; local `wrangler login` continues to
+      work for laptop deploys.
+- [x] Commit: `chore(ci): marketing preview + prod deploys`.
 
 ### M0.6 Lighthouse gate
 - [ ] Add `@lhci/cli` to root `devDependencies`.

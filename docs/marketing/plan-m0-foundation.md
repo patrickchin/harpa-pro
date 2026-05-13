@@ -70,14 +70,16 @@ a Cloudflare Pages preview URL with a green Lighthouse score.
 - [ ] Commit: `feat(marketing): mdx content collections + primitives`.
 
 ### M0.5 Cloudflare Pages deploy
-- [ ] Add `@astrojs/cloudflare` adapter, `astro.config.mjs`:
-      `adapter: cloudflare({ mode: 'directory' })`.
+- [ ] **No SSR adapter.** Output stays `static` and Pages serves
+      `dist/` directly. The `@astrojs/cloudflare` v11 adapter does
+      not support Astro 5 and is unnecessary for a static site
+      (decision recorded in M0.1).
 - [ ] Create `wrangler.jsonc` minimal config (name, compatibility
-      date).
+      date, `pages_build_output_dir = "dist"`).
 - [ ] GitHub Action `.github/workflows/marketing-preview.yml`:
       - Trigger on PR to `dev`, path filter `apps/marketing/**`.
       - Install deps, `pnpm --filter @harpa/marketing build`.
-      - `wrangler pages deploy dist/ --project-name=harpa-marketing
+      - `wrangler pages deploy apps/marketing/dist --project-name=harpa-marketing
         --branch=${{ github.head_ref }}`.
       - Comment unique preview URL on PR.
 - [ ] GitHub Action `.github/workflows/marketing-prod.yml`:

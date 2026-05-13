@@ -68,7 +68,7 @@ export.
 - [x] Commit: `feat(api): waitlist_signups schema + migration + scope test`.
 
 ### M1.2 Contract schemas
-- [ ] `packages/api-contract/src/schemas/waitlist.ts`:
+- [x] `packages/api-contract/src/schemas/waitlist.ts`:
       ```ts
       export const waitlistSignupRequestSchema = z.object({
         email: z.string().email(),
@@ -85,10 +85,10 @@ export.
         token: z.string().length(64), // 32 bytes hex
       });
       ```
-- [ ] Server-side email validation: Zod `.email()` + custom
-      disposable-domain blocklist (small static array in
-      `packages/api/src/lib/email-validation.ts`).
-- [ ] Commit: `feat(contract): waitlist schemas`.
+- [x] Disposable-domain blocklist exported as
+      `DISPOSABLE_EMAIL_DOMAINS` from `@harpa/api-contract` (shared
+      between server validator and any future client preflight).
+- [x] Commit: `feat(contract): waitlist schemas`.
 
 ### M1.3 `POST /waitlist`
 - [ ] Verify Turnstile token server-side

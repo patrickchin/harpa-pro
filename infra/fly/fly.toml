@@ -2,7 +2,7 @@
 # Real deployment wired in P0.10 (CI) and finalised in P4.
 
 app = "harpa-pro-api"
-primary_region = "iad"
+primary_region = "fra"
 
 [build]
   dockerfile = "Dockerfile"

@@ -24,7 +24,8 @@ Resend dashboard shows the domain as Verified.
 1. Sign in at <https://resend.com/domains>.
 2. Click **Add Domain**.
 3. Enter `harpapro.com` (the apex). **Region**: pick the one closest
-   to the Fly app (`us-east-1` for `harpa-pro-api` deployed in `iad`).
+   to the Fly app (`eu-west-1` for `harpa-pro-api` deployed in `fra` —
+   Resend doesn't have Frankfurt; Ireland is the nearest).
 4. Resend now shows three records that must be added to Cloudflare
    DNS: an SPF `TXT`, a DKIM `TXT`, and a DMARC `TXT`. Keep this tab
    open — you'll come back to click **Verify**.

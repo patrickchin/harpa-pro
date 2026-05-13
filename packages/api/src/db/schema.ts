@@ -11,6 +11,7 @@ import {
   jsonb,
   index,
   bigint,
+  unique,
 } from 'drizzle-orm/pg-core';
 
 /**
@@ -54,10 +55,12 @@ export const projectRoleEnum = pgEnum('project_role', ['owner', 'editor', 'viewe
 
 export const projects = appSchema.table('projects', {
   id: uuid('id').defaultRandom().primaryKey(),
+  slug: text('slug').unique(),
   name: text('name').notNull(),
   clientName: text('client_name'),
   address: text('address'),
   ownerId: uuid('owner_id').notNull(),
+  nextReportNumber: integer('next_report_number').notNull().default(1),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 });
@@ -80,22 +83,30 @@ export const projectMembers = appSchema.table(
 
 export const reportStatusEnum = pgEnum('report_status', ['draft', 'finalized']);
 
-export const reports = appSchema.table('reports', {
-  id: uuid('id').defaultRandom().primaryKey(),
-  projectId: uuid('project_id')
-    .notNull()
-    .references(() => projects.id, { onDelete: 'cascade' }),
-  authorId: uuid('author_id').notNull(),
-  status: reportStatusEnum('status').notNull().default('draft'),
-  visitDate: timestamp('visit_date', { withTimezone: true }),
-  body: jsonb('body'),
-  notesSinceLastGeneration: integer('notes_since_last_generation').notNull().default(0),
-  generatedAt: timestamp('generated_at', { withTimezone: true }),
-  finalizedAt: timestamp('finalized_at', { withTimezone: true }),
-  pdfFileId: uuid('pdf_file_id'),
-  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
-});
+export const reports = appSchema.table(
+  'reports',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    slug: text('slug').unique(),
+    projectId: uuid('project_id')
+      .notNull()
+      .references(() => projects.id, { onDelete: 'cascade' }),
+    authorId: uuid('author_id').notNull(),
+    number: integer('number'),
+    status: reportStatusEnum('status').notNull().default('draft'),
+    visitDate: timestamp('visit_date', { withTimezone: true }),
+    body: jsonb('body'),
+    notesSinceLastGeneration: integer('notes_since_last_generation').notNull().default(0),
+    generatedAt: timestamp('generated_at', { withTimezone: true }),
+    finalizedAt: timestamp('finalized_at', { withTimezone: true }),
+    pdfFileId: uuid('pdf_file_id'),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => ({
+    numberUnique: unique('reports_number_unique').on(t.projectId, t.number),
+  }),
+);
 
 export const noteKindEnum = pgEnum('note_kind', ['text', 'voice', 'image', 'document']);
 

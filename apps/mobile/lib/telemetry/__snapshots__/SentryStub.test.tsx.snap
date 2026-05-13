@@ -1,0 +1,7 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`lib/telemetry/SentryStub > renders children without crashing 1`] = `
+<rn-Text>
+  Child
+</rn-Text>
+`;

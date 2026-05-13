@@ -31,6 +31,8 @@ export default defineConfig({
       'screens/**/*.test.tsx',
       'components/**/*.test.ts',
       'components/**/*.test.tsx',
+      'app/**/*.test.ts',
+      'app/**/*.test.tsx',
     ],
     exclude: ['node_modules', '.expo', 'dist'],
   },

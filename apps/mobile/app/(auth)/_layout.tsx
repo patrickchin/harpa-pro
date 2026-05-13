@@ -7,23 +7,19 @@
  * `/(auth)/onboarding`.
  * Otherwise, render the Stack (no redirect).
  */
-import { useEffect } from 'react';
-import { Stack, usePathname, useRouter } from 'expo-router';
+import { Stack, usePathname, Redirect } from 'expo-router';
 import { useAuthSession } from '@/lib/auth/session';
 import { decideAuthRedirect } from '@/lib/auth/auth-gate';
 
 export default function AuthLayout() {
   const { status } = useAuthSession();
   const pathname = usePathname();
-  const router = useRouter();
 
   // Auth gate: redirect authenticated / needs-onboarding users away.
-  useEffect(() => {
-    const target = decideAuthRedirect(status, pathname);
-    if (target) {
-      router.replace(target as any);
-    }
-  }, [status, pathname, router]);
+  const target = decideAuthRedirect(status, pathname);
+  if (target) {
+    return <Redirect href={target as any} />;
+  }
 
   return <Stack screenOptions={{ headerShown: false }} />;
 }

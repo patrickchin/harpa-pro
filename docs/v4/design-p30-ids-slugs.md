@@ -322,20 +322,25 @@ export async function createReport(
 ```ts
 import { z } from 'zod';
 
-const SLUG_ALPHABET = /^[0-9a-z]{6}$/i; // Crockford base32, case-insensitive on input
+// Crockford base32 — excludes i, l, o, u to avoid visual ambiguity.
+const SLUG_CHARSET = '[0-9a-hjkmnp-tv-z]';
 
 export const projectSlug = z
   .string()
-  .regex(/^prj_[0-9a-z]{6}$/i, 'invalid project slug')
+  .regex(new RegExp(`^prj_${SLUG_CHARSET}{6}$`, 'i'), 'invalid project slug')
   .transform(s => s.toLowerCase());
 
 export const reportSlug = z
   .string()
-  .regex(/^rpt_[0-9a-z]{6}$/i, 'invalid report slug')
+  .regex(new RegExp(`^rpt_${SLUG_CHARSET}{6}$`, 'i'), 'invalid report slug')
   .transform(s => s.toLowerCase());
 
 export const reportNumber = z.coerce.number().int().positive();
 ```
+
+> The implementation in `_shared.ts` inlines the Crockford-strict regex
+> (`/^prj_[0-9a-hjkmnp-tv-z]{6}$/i`). The earlier draft of this design
+> showed `[0-9a-z]` for brevity; the implementation is authoritative.
 
 ### Branded types (`packages/api-contract/src/index.ts`)
 
@@ -753,14 +758,14 @@ Updated hooks (param name changes):
   - [ ] Add unit tests for `slug.ts`  
   - [ ] Run `pnpm test:api:integration` → green  
 
-- [ ] **Commit 2:** API contract + service-layer slug generation  
-  - [ ] Add `projectSlug`, `reportSlug`, `reportNumber` Zod schemas  
-  - [ ] Add branded types  
-  - [ ] Update `services/projects.ts` (retry loop + helper call)  
-  - [ ] Update `services/reports.ts` (transaction + number increment)  
-  - [ ] Update SECURITY DEFINER helper (`create_project_with_owner`)  
-  - [ ] Write unit tests for service functions  
-  - [ ] Run `pnpm test:api` + `pnpm typecheck` → green  
+- [x] **Commit 2:** API contract + service-layer slug generation  
+  - [x] Add `projectSlug`, `reportSlug`, `reportNumber` Zod schemas  
+  - [x] Add branded types  
+  - [x] Update `services/projects.ts` (retry loop + helper call)  
+  - [x] Update `services/reports.ts` (transaction + number increment)  
+  - [x] Update SECURITY DEFINER helper (`create_project_with_owner`) — migration `202605130004_projects_helpers_v2_slugs_not_null.sql` drops 3-arg overload, adds 4-arg `(text, text, text, text)` with `p_slug`, plus `app.random_slug()` and `reports_autonumber()` trigger as belt-and-braces SQL defaults so direct admin test inserts still satisfy NOT NULL.  
+  - [x] Behaviour assertions added to integration suites (project responses carry `prj_…` slug; second report in a project gets `number = previous + 1`).  
+  - [x] Run `pnpm test:api` + `pnpm typecheck` → green (180 integration tests)  
 
 - [ ] **Commit 3:** API routes + scope tests  
   - [ ] Rename path params in `routes/projects.ts`  

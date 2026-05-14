@@ -9,6 +9,7 @@ import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import type { reports as reportSchemas } from '@harpa/api-contract';
 import type { z } from 'zod';
 import * as schema from '../db/schema.js';
+import { generateSlug } from '../lib/slug.js';
 
 type Db = NodePgDatabase<typeof schema>;
 type ReportBody = z.infer<typeof reportSchemas.reportBody>;
@@ -17,6 +18,8 @@ export type ReportStatus = 'draft' | 'finalized';
 
 export interface ReportRow {
   id: string;
+  slug: string;
+  number: number;
   projectId: string;
   status: ReportStatus;
   visitDate: string | null;
@@ -32,6 +35,8 @@ export interface ReportRow {
 interface RawReport {
   [key: string]: unknown;
   id: string;
+  slug: string;
+  number: number;
   project_id: string;
   status: ReportStatus;
   visit_date: Date | null;
@@ -47,6 +52,8 @@ interface RawReport {
 function mapReport(r: RawReport): ReportRow {
   return {
     id: r.id,
+    slug: r.slug,
+    number: Number(r.number),
     projectId: r.project_id,
     status: r.status,
     visitDate: r.visit_date ? new Date(r.visit_date).toISOString() : null,
@@ -86,7 +93,7 @@ export async function listReports(
     ? await (async () => {
         const { createdAt, id } = decodeCursor(cursor);
         return db.execute<RawReport>(sql`
-          SELECT id, project_id, status, visit_date, body,
+          SELECT id, slug, number, project_id, status, visit_date, body,
                  notes_since_last_generation, generated_at, finalized_at,
                  pdf_file_id, created_at, updated_at
           FROM app.reports
@@ -97,7 +104,7 @@ export async function listReports(
         `);
       })()
     : await db.execute<RawReport>(sql`
-        SELECT id, project_id, status, visit_date, body,
+        SELECT id, slug, number, project_id, status, visit_date, body,
                notes_since_last_generation, generated_at, finalized_at,
                pdf_file_id, created_at, updated_at
         FROM app.reports
@@ -119,7 +126,7 @@ export async function listReports(
 
 export async function getReport(db: Db, reportId: string): Promise<ReportRow | null> {
   const r = await db.execute<RawReport>(sql`
-    SELECT id, project_id, status, visit_date, body,
+    SELECT id, slug, number, project_id, status, visit_date, body,
            notes_since_last_generation, generated_at, finalized_at,
            pdf_file_id, created_at, updated_at
     FROM app.reports
@@ -130,21 +137,64 @@ export async function getReport(db: Db, reportId: string): Promise<ReportRow | n
   return row ? mapReport(row) : null;
 }
 
+/**
+ * Create a draft report under a project. Atomically increments
+ * `projects.next_report_number` and assigns a public slug
+ * (`rpt_xxxxxx`). Wraps the counter bump + insert in a single
+ * statement via a CTE so the assignment is race-free without explicit
+ * locking. Retries on `reports_slug_unique` collisions (probability is
+ * vanishing — 6-char Crockford base32 namespace is ~10⁹).
+ *
+ * Returns `null` if the project is not visible to the scoped role
+ * (RLS hides the parent row → `next_report_number` UPDATE finds no
+ * row to bump → `assigned` CTE empty → final INSERT inserts zero
+ * rows). Callers surface that as a 404.
+ */
 export async function createReport(
   db: Db,
   projectId: string,
   authorId: string,
   input: { visitDate?: string },
 ): Promise<ReportRow | null> {
-  const r = await db.execute<RawReport>(sql`
-    INSERT INTO app.reports(project_id, author_id, visit_date)
-    VALUES (${projectId}::uuid, ${authorId}::uuid, ${input.visitDate ?? null})
-    RETURNING id, project_id, status, visit_date, body,
-              notes_since_last_generation, generated_at, finalized_at,
-              pdf_file_id, created_at, updated_at
-  `);
-  const row = r.rows[0];
-  return row ? mapReport(row) : null;
+  const maxAttempts = 3;
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    const slug = generateSlug('rpt');
+    try {
+      const r = await db.execute<RawReport>(sql`
+        WITH assigned AS (
+          -- Atomically bump the per-project counter and capture the assigned
+          -- number (n = counter value BEFORE the increment). Row-level lock
+          -- on app.projects serialises concurrent createReport calls.
+          UPDATE app.projects
+             SET next_report_number = next_report_number + 1,
+                 updated_at = now()
+           WHERE id = ${projectId}::uuid
+          RETURNING next_report_number - 1 AS n
+        )
+        INSERT INTO app.reports(project_id, author_id, visit_date, slug, number)
+        SELECT ${projectId}::uuid, ${authorId}::uuid, ${input.visitDate ?? null}, ${slug}, a.n
+        FROM assigned a
+        RETURNING id, slug, number, project_id, status, visit_date, body,
+                  notes_since_last_generation, generated_at, finalized_at,
+                  pdf_file_id, created_at, updated_at
+      `);
+      const row = r.rows[0];
+      return row ? mapReport(row) : null;
+    } catch (err) {
+      if (isSlugCollisionReports(err) && attempt < maxAttempts - 1) {
+        continue;
+      }
+      throw err;
+    }
+  }
+  throw new Error('slug collision retry exhausted (reports)');
+}
+
+function isSlugCollisionReports(err: unknown): boolean {
+  const e = err as { code?: string; constraint?: string; cause?: unknown };
+  if (e.code === '23505' && e.constraint === 'reports_slug_unique') return true;
+  if (e.cause && isSlugCollisionReports(e.cause)) return true;
+  return false;
 }
 
 export async function updateReport(
@@ -159,7 +209,7 @@ export async function updateReport(
     SET visit_date = CASE WHEN ${setVisit} THEN ${patch.visitDate ?? null} ELSE visit_date END,
         updated_at = now()
     WHERE id = ${reportId}::uuid
-    RETURNING id, project_id, status, visit_date, body,
+    RETURNING id, slug, number, project_id, status, visit_date, body,
               notes_since_last_generation, generated_at, finalized_at,
               pdf_file_id, created_at, updated_at
   `);
@@ -219,7 +269,7 @@ export async function setReportBody(
         notes_since_last_generation = 0,
         updated_at = now()
     WHERE id = ${reportId}::uuid
-    RETURNING id, project_id, status, visit_date, body,
+    RETURNING id, slug, number, project_id, status, visit_date, body,
               notes_since_last_generation, generated_at, finalized_at,
               pdf_file_id, created_at, updated_at
   `);
@@ -238,7 +288,7 @@ export async function finalizeReport(db: Db, reportId: string): Promise<ReportRo
         finalized_at = COALESCE(finalized_at, now()),
         updated_at = now()
     WHERE id = ${reportId}::uuid
-    RETURNING id, project_id, status, visit_date, body,
+    RETURNING id, slug, number, project_id, status, visit_date, body,
               notes_since_last_generation, generated_at, finalized_at,
               pdf_file_id, created_at, updated_at
   `);
@@ -260,7 +310,7 @@ export async function setReportPdfFileId(
     SET pdf_file_id = ${fileId}::uuid,
         updated_at = now()
     WHERE id = ${reportId}::uuid
-    RETURNING id, project_id, status, visit_date, body,
+    RETURNING id, slug, number, project_id, status, visit_date, body,
               notes_since_last_generation, generated_at, finalized_at,
               pdf_file_id, created_at, updated_at
   `);

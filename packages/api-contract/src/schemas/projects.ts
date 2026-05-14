@@ -1,11 +1,12 @@
 import { z } from 'zod';
-import { isoDateTime, phone, uuid } from './_shared.js';
+import { isoDateTime, phone, projectSlug, uuid } from './_shared.js';
 
 export const projectRole = z.enum(['owner', 'editor', 'viewer']);
 export type ProjectRole = z.infer<typeof projectRole>;
 
 export const project = z.object({
   id: uuid,
+  slug: projectSlug,
   name: z.string().min(1).max(200),
   clientName: z.string().nullable(),
   address: z.string().nullable(),

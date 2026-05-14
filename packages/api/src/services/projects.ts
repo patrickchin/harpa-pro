@@ -7,6 +7,7 @@
 import { sql } from 'drizzle-orm';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import * as schema from '../db/schema.js';
+import { generateSlug } from '../lib/slug.js';
 
 type Db = NodePgDatabase<typeof schema>;
 
@@ -14,6 +15,7 @@ export type ProjectRole = 'owner' | 'editor' | 'viewer';
 
 export interface ProjectRow {
   id: string;
+  slug: string;
   name: string;
   clientName: string | null;
   address: string | null;
@@ -61,6 +63,7 @@ export async function listProjects(db: Db, userId: string, input: ListInput): Pr
         const { createdAt, id } = decodeCursor(cursor);
         return db.execute<{
           id: string;
+          slug: string;
           name: string;
           client_name: string | null;
           address: string | null;
@@ -69,7 +72,7 @@ export async function listProjects(db: Db, userId: string, input: ListInput): Pr
           created_at: Date;
           updated_at: Date;
         }>(sql`
-          SELECT p.id, p.name, p.client_name, p.address, p.owner_id, pm.role AS my_role,
+          SELECT p.id, p.slug, p.name, p.client_name, p.address, p.owner_id, pm.role AS my_role,
                  p.created_at, p.updated_at
           FROM app.projects p
           JOIN app.project_members pm
@@ -81,6 +84,7 @@ export async function listProjects(db: Db, userId: string, input: ListInput): Pr
       })()
     : await db.execute<{
         id: string;
+        slug: string;
         name: string;
         client_name: string | null;
         address: string | null;
@@ -89,7 +93,7 @@ export async function listProjects(db: Db, userId: string, input: ListInput): Pr
         created_at: Date;
         updated_at: Date;
       }>(sql`
-        SELECT p.id, p.name, p.client_name, p.address, p.owner_id, pm.role AS my_role,
+        SELECT p.id, p.slug, p.name, p.client_name, p.address, p.owner_id, pm.role AS my_role,
                p.created_at, p.updated_at
         FROM app.projects p
         JOIN app.project_members pm
@@ -105,6 +109,7 @@ export async function listProjects(db: Db, userId: string, input: ListInput): Pr
   return {
     items: slice.map((r) => ({
       id: r.id,
+      slug: r.slug,
       name: r.name,
       clientName: r.client_name,
       address: r.address,
@@ -117,18 +122,46 @@ export async function listProjects(db: Db, userId: string, input: ListInput): Pr
   };
 }
 
+/**
+ * Create a project with the caller as owner. Generates a public slug
+ * (`prj_xxxxxx`) and retries on the (vanishingly unlikely)
+ * `projects_slug_unique` collision. The SECURITY DEFINER helper
+ * (see migration 202605130004) writes the slug + bootstraps the
+ * owner membership in a single transaction.
+ */
 export async function createProject(
   db: Db,
   input: { name: string; clientName?: string; address?: string },
 ): Promise<string> {
-  const r = await db.execute<{ id: string }>(sql`
-    SELECT app.create_project_with_owner(
-      ${input.name}, ${input.clientName ?? null}, ${input.address ?? null}
-    ) AS id
-  `);
-  const row = r.rows[0];
-  if (!row) throw new Error('create_project_with_owner returned no row');
-  return row.id;
+  const maxAttempts = 3;
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    const slug = generateSlug('prj');
+    try {
+      const r = await db.execute<{ id: string }>(sql`
+        SELECT app.create_project_with_owner(
+          ${input.name}, ${input.clientName ?? null}, ${input.address ?? null}, ${slug}
+        ) AS id
+      `);
+      const row = r.rows[0];
+      if (!row) throw new Error('create_project_with_owner returned no row');
+      return row.id;
+    } catch (err) {
+      if (isSlugCollision(err, 'projects_slug_unique') && attempt < maxAttempts - 1) {
+        continue;
+      }
+      throw err;
+    }
+  }
+  // Unreachable — the loop either returns or throws.
+  throw new Error('slug collision retry exhausted (projects)');
+}
+
+function isSlugCollision(err: unknown, constraint: string): boolean {
+  const e = err as { code?: string; constraint?: string; cause?: unknown };
+  if (e.code === '23505' && e.constraint === constraint) return true;
+  // Drizzle/pg sometimes nests the error.
+  if (e.cause && isSlugCollision(e.cause, constraint)) return true;
+  return false;
 }
 
 export async function getProject(
@@ -139,6 +172,7 @@ export async function getProject(
 ): Promise<ProjectRow | null> {
   const r = await db.execute<{
     id: string;
+    slug: string;
     name: string;
     client_name: string | null;
     address: string | null;
@@ -147,7 +181,7 @@ export async function getProject(
     created_at: Date;
     updated_at: Date;
   }>(sql`
-    SELECT p.id, p.name, p.client_name, p.address, p.owner_id, pm.role AS my_role,
+    SELECT p.id, p.slug, p.name, p.client_name, p.address, p.owner_id, pm.role AS my_role,
            p.created_at, p.updated_at
     FROM app.projects p
     JOIN app.project_members pm
@@ -160,6 +194,7 @@ export async function getProject(
 
   const out: ProjectRow = {
     id: row.id,
+    slug: row.slug,
     name: row.name,
     clientName: row.client_name,
     address: row.address,

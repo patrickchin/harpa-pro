@@ -600,6 +600,7 @@ export interface paths {
                             items: {
                                 /** Format: uuid */
                                 id: string;
+                                slug: string;
                                 name: string;
                                 clientName: string | null;
                                 address: string | null;
@@ -664,6 +665,7 @@ export interface paths {
                         "application/json": {
                             /** Format: uuid */
                             id: string;
+                            slug: string;
                             name: string;
                             clientName: string | null;
                             address: string | null;
@@ -748,6 +750,7 @@ export interface paths {
                         "application/json": {
                             /** Format: uuid */
                             id: string;
+                            slug: string;
                             name: string;
                             clientName: string | null;
                             address: string | null;
@@ -883,6 +886,7 @@ export interface paths {
                         "application/json": {
                             /** Format: uuid */
                             id: string;
+                            slug: string;
                             name: string;
                             clientName: string | null;
                             address: string | null;
@@ -1250,6 +1254,8 @@ export interface paths {
                             items: {
                                 /** Format: uuid */
                                 id: string;
+                                slug: string;
+                                number: number;
                                 /** Format: uuid */
                                 projectId: string;
                                 /** @enum {string} */
@@ -1362,6 +1368,8 @@ export interface paths {
                         "application/json": {
                             /** Format: uuid */
                             id: string;
+                            slug: string;
+                            number: number;
                             /** Format: uuid */
                             projectId: string;
                             /** @enum {string} */
@@ -1494,6 +1502,8 @@ export interface paths {
                         "application/json": {
                             /** Format: uuid */
                             id: string;
+                            slug: string;
+                            number: number;
                             /** Format: uuid */
                             projectId: string;
                             /** @enum {string} */
@@ -1659,6 +1669,8 @@ export interface paths {
                         "application/json": {
                             /** Format: uuid */
                             id: string;
+                            slug: string;
+                            number: number;
                             /** Format: uuid */
                             projectId: string;
                             /** @enum {string} */
@@ -1796,6 +1808,8 @@ export interface paths {
                             report: {
                                 /** Format: uuid */
                                 id: string;
+                                slug: string;
+                                number: number;
                                 /** Format: uuid */
                                 projectId: string;
                                 /** @enum {string} */
@@ -1970,6 +1984,8 @@ export interface paths {
                             report: {
                                 /** Format: uuid */
                                 id: string;
+                                slug: string;
+                                number: number;
                                 /** Format: uuid */
                                 projectId: string;
                                 /** @enum {string} */
@@ -2138,6 +2154,8 @@ export interface paths {
                             report: {
                                 /** Format: uuid */
                                 id: string;
+                                slug: string;
+                                number: number;
                                 /** Format: uuid */
                                 projectId: string;
                                 /** @enum {string} */

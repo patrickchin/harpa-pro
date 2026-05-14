@@ -73,10 +73,40 @@ describe('reports CRUD', () => {
       body: JSON.stringify({ visitDate: '2026-05-12T08:00:00.000Z' }),
     });
     expect(res.status).toBe(201);
-    const body = (await res.json()) as { id: string; status: string; projectId: string };
+    const body = (await res.json()) as {
+      id: string;
+      slug: string;
+      number: number;
+      status: string;
+      projectId: string;
+    };
     expect(body.status).toBe('draft');
     expect(body.projectId).toBe(aliceProj);
+    // P3.0 Commit 2: response carries `rpt_` slug + per-project number.
+    expect(body.slug).toMatch(/^rpt_[0-9a-hjkmnp-tv-z]{6}$/);
+    expect(body.number).toBeGreaterThanOrEqual(1);
     aliceReport = body.id;
+  });
+
+  it('per-project numbering: a second report in the same project gets number = previous + 1', async () => {
+    const app = createApp();
+    const tok = await signTestToken(alice, aliceSid);
+    const first = await app.request(`/projects/${aliceProj}/reports`, {
+      method: 'POST',
+      headers: headers(tok),
+      body: JSON.stringify({}),
+    });
+    const firstBody = (await first.json()) as { number: number };
+    const second = await app.request(`/projects/${aliceProj}/reports`, {
+      method: 'POST',
+      headers: headers(tok),
+      body: JSON.stringify({}),
+    });
+    expect(second.status).toBe(201);
+    const secondBody = (await second.json()) as { number: number; slug: string };
+    expect(secondBody.number).toBe(firstBody.number + 1);
+    // Slugs are globally unique even within a single project.
+    expect(secondBody.slug).toMatch(/^rpt_[0-9a-hjkmnp-tv-z]{6}$/);
   });
 
   it('POST 404 when caller is not member of the project', async () => {

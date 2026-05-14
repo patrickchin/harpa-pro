@@ -57,7 +57,7 @@ export const projectRoleEnum = pgEnum('project_role', ['owner', 'editor', 'viewe
 
 export const projects = appSchema.table('projects', {
   id: uuid('id').defaultRandom().primaryKey(),
-  slug: text('slug').unique(),
+  slug: text('slug').notNull().unique(),
   name: text('name').notNull(),
   clientName: text('client_name'),
   address: text('address'),
@@ -89,12 +89,12 @@ export const reports = appSchema.table(
   'reports',
   {
     id: uuid('id').defaultRandom().primaryKey(),
-    slug: text('slug').unique(),
+    slug: text('slug').notNull().unique(),
     projectId: uuid('project_id')
       .notNull()
       .references(() => projects.id, { onDelete: 'cascade' }),
     authorId: uuid('author_id').notNull(),
-    number: integer('number'),
+    number: integer('number').notNull(),
     status: reportStatusEnum('status').notNull().default('draft'),
     visitDate: timestamp('visit_date', { withTimezone: true }),
     body: jsonb('body'),

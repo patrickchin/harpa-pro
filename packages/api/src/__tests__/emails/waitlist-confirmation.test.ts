@@ -12,14 +12,15 @@ describe('renderWaitlistConfirmationEmail', () => {
       confirmUrl: 'https://harpapro.com/confirm?token=DETERMINISTIC_FIXTURE_TOKEN',
     });
     expect(text).toMatchInlineSnapshot(`
-      "You're nearly on the harpapro.com waitlist.
+      "You're nearly on the Harpa Pro waitlist.
 
-      Click the link below to confirm your spot! (it expires in 7 days)
+      Confirm your spot (link expires in 7 days):
       https://harpapro.com/confirm?token=DETERMINISTIC_FIXTURE_TOKEN
 
-      If you didn't sign up, you can safely ignore this email.
+      If you didn't sign up, ignore this email.
 
-      — Patrick from the Harpa Pro team"
+      — Patrick from Harpa Pro
+      "
     `);
     expect(html).toContain('https://harpapro.com/confirm?token=DETERMINISTIC_FIXTURE_TOKEN');
     expect(html).toContain('Confirm my spot');

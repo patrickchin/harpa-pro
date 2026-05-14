@@ -374,23 +374,6 @@ function ChevronLeftIcon({ className }: IconProps) {
   );
 }
 
-function ChevronRightIcon({ className }: IconProps) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-      aria-hidden
-    >
-      <path d="m9 6 6 6-6 6" />
-    </svg>
-  );
-}
-
 function PlayIcon({ className }: IconProps) {
   return (
     <svg
@@ -400,24 +383,6 @@ function PlayIcon({ className }: IconProps) {
       aria-hidden
     >
       <path d="M8 5.14v13.72a1 1 0 0 0 1.55.83l10.4-6.86a1 1 0 0 0 0-1.66L9.55 4.31A1 1 0 0 0 8 5.14Z" />
-    </svg>
-  );
-}
-
-function FileIcon({ className }: IconProps) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-      aria-hidden
-    >
-      <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" />
-      <path d="M14 2v5h6" />
     </svg>
   );
 }

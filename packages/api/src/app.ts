@@ -102,7 +102,7 @@ export function createApp(): OpenAPIHono<AppEnv> {
   // OpenAPI spec
   app.doc('/openapi.json', {
     openapi: '3.1.0',
-    info: { title: 'harpa-pro API', version: '0.0.0' },
+    info: { title: 'Harpa Pro API', version: '0.0.0' },
   });
 
   return app;

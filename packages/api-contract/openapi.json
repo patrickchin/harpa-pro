@@ -1,7 +1,7 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "harpa-pro API",
+    "title": "Harpa Pro API",
     "version": "0.0.0"
   },
   "components": {

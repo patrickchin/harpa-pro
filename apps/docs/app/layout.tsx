@@ -1,5 +1,5 @@
 export const metadata = {
-  title: 'harpa-pro docs',
+  title: 'Harpa Pro docs',
   description: 'In-app guides and visual reference.',
 };
 

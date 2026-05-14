@@ -1,4 +1,4 @@
-# harpa-pro docs
+# Harpa Pro docs
 
 P0.7 placeholder. Next.js app router site that will host in-app guides
 and visual reference once features ship. Per-screen content mirrors

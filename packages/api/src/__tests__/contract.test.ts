@@ -24,7 +24,7 @@ const SPEC_PATH = resolve(__dirname, '../../../api-contract/openapi.json');
 
 const SPEC_DOC_CONFIG = {
   openapi: '3.1.0' as const,
-  info: { title: 'harpa-pro API', version: '0.0.0' },
+  info: { title: 'Harpa Pro API', version: '0.0.0' },
 };
 
 describe('OpenAPI contract', () => {

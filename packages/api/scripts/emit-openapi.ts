@@ -13,7 +13,7 @@ const out = resolve(here, '../../api-contract/openapi.json');
 const app = createApp();
 const doc = app.getOpenAPIDocument({
   openapi: '3.1.0',
-  info: { title: 'harpa-pro API', version: '0.0.0' },
+  info: { title: 'Harpa Pro API', version: '0.0.0' },
 });
 
 mkdirSync(dirname(out), { recursive: true });

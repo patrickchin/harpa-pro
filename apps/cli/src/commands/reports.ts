@@ -17,6 +17,12 @@ import { getEnv } from '../lib/env-runtime.js';
 import { createApiClient, requireToken, type ApiClient } from '../lib/client.js';
 import { executeRequest, runRequest } from '../lib/run.js';
 import { renderReport, renderReportList } from '../lib/render.js';
+import {
+  reportsGenerateCommand,
+  reportsRegenerateCommand,
+  reportsFinalizeCommand,
+  reportsPdfCommand,
+} from './reports-ai.js';
 import type { ExitCode } from '../lib/error.js';
 
 export interface ReportsHandlerOptions {
@@ -289,5 +295,9 @@ export const reportsCommand = defineCommand({
     get: reportsGetCommand,
     update: reportsUpdateCommand,
     delete: reportsDeleteCommand,
+    generate: reportsGenerateCommand,
+    regenerate: reportsRegenerateCommand,
+    finalize: reportsFinalizeCommand,
+    pdf: reportsPdfCommand,
   },
 });

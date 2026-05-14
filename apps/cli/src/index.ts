@@ -15,6 +15,7 @@ import { projectsCommand } from './commands/projects.js';
 import { reportsCommand } from './commands/reports.js';
 import { notesCommand } from './commands/notes.js';
 import { filesCommand } from './commands/files.js';
+import { voiceCommand } from './commands/voice.js';
 
 const main = defineCommand({
   meta: {
@@ -30,6 +31,7 @@ const main = defineCommand({
     reports: reportsCommand,
     notes: notesCommand,
     files: filesCommand,
+    voice: voiceCommand,
   },
 });
 

@@ -3,7 +3,7 @@ description: "Use IMMEDIATELY after every commit on the v4 plan. Reviews the dif
 name: "code-reviewer"
 tools: [read, search, execute]
 user-invocable: false
-model: ['Claude Sonnet 4.5 (copilot)', 'Claude Opus 4.7 (copilot)']
+model: ['Claude Opus 4.7 (copilot)']
 ---
 
 You are the v4 post-commit reviewer. You run after every task commit

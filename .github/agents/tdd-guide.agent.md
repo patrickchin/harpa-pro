@@ -3,7 +3,7 @@ description: "Use when adding a non-trivial new code path. Writes failing tests 
 name: "tdd-guide"
 tools: [read, search, edit, execute, todo]
 user-invocable: false
-model: ['Claude Sonnet 4.5 (copilot)', 'Claude Opus 4.7 (copilot)']
+model: ['Claude Opus 4.7 (copilot)']
 ---
 
 You are the v4 TDD subagent. You implement one task end-to-end with

@@ -1,0 +1,145 @@
+---
+import { getCollection, render } from "astro:content";
+import Layout from "../layouts/Layout.astro";
+import Header from "../components/landing/Header.astro";
+import Footer from "../components/landing/Footer.astro";
+import Section from "../components/primitives/Section.astro";
+import Container from "../components/primitives/Container.astro";
+import Icon from "../components/Icon.astro";
+
+const entries = (await getCollection("roadmap")).sort(
+  (a, b) => a.data.order - b.data.order,
+);
+
+const items = await Promise.all(
+  entries.map(async (entry) => {
+    const { Content } = await render(entry);
+    return {
+      title: entry.data.title,
+      icon: entry.data.icon,
+      status: entry.data.status,
+      Content,
+    };
+  }),
+);
+
+const groups: {
+  id: "pilot" | "later";
+  label: string;
+  heading: string;
+  blurb: string;
+}[] = [
+  {
+    id: "pilot",
+    label: "In the pilot",
+    heading: "What you get on day one.",
+    blurb:
+      "The pilot is focused on doing one thing well: AI-generated daily site reports.",
+  },
+  {
+    id: "later",
+    label: "Planned",
+    heading: "Where it's going.",
+    blurb:
+      "Built on the same field captures — so the office sees more without crews doing more work.",
+  },
+];
+---
+
+<Layout
+  title="Roadmap — Harpa Pro"
+  description="What's next for Harpa Pro: full offline mode, Android pilot, materials, inventory, equipment, people, money, and the insights dashboard."
+>
+  <div class="min-h-screen bg-background text-ink">
+    <Header />
+    <main>
+      <Section bordered="top">
+        <Container padding="lg">
+          <div class="max-w-2xl">
+            <span
+              class="text-xs font-semibold uppercase tracking-wider text-accent-ink"
+            >
+              Roadmap
+            </span>
+            <h1
+              class="mt-2 text-3xl font-semibold tracking-tight text-ink sm:text-4xl"
+            >
+              Where Harpa Pro is going.
+            </h1>
+            <p class="mt-4 text-base leading-relaxed text-ink-soft">
+              The pilot focuses on one thing: turning voice, photos,
+              and notes into clean AI-generated daily reports.
+              Everything below is built on top of those same
+              captures — so the office gets inventory, equipment,
+              people, money, and cross-project insights without
+              crews doing more work on site. Dates aren't promises;
+              order can shift based on what pilot teams need most.
+            </p>
+          </div>
+        </Container>
+      </Section>
+
+      {
+        groups.map((group) => {
+          const groupItems = items.filter((i) => i.status === group.id);
+          if (groupItems.length === 0) return null;
+          return (
+            <Section
+              tone={group.id === "pilot" ? "paper-2" : "default"}
+              bordered="top"
+            >
+              <Container padding="lg">
+                <div class="max-w-2xl">
+                  <span class="text-xs font-semibold uppercase tracking-wider text-accent-ink">
+                    {group.label}
+                  </span>
+                  <h2 class="mt-2 text-2xl font-semibold tracking-tight text-ink sm:text-3xl">
+                    {group.heading}
+                  </h2>
+                  <p class="mt-3 text-sm leading-relaxed text-ink-soft sm:text-base">
+                    {group.blurb}
+                  </p>
+                </div>
+                <div class="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {groupItems.map(({ title, icon, Content }) => (
+                    <div class="rounded-xl border border-hairline bg-card p-5">
+                      <span class="grid h-9 w-9 place-items-center rounded-md border border-hairline bg-paper-2 text-ink">
+                        <Icon name={icon} class="h-4 w-4" />
+                      </span>
+                      <h3 class="mt-4 text-base font-semibold text-ink">
+                        {title}
+                      </h3>
+                      <div class="mt-1.5 text-sm leading-relaxed text-ink-soft prose-p:m-0">
+                        <Content />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </Container>
+            </Section>
+          );
+        })
+      }
+
+      <Section bordered="top">
+        <Container padding="lg">
+          <div
+            class="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between"
+          >
+            <p class="text-sm text-ink-soft">
+              Want to shape what ships first? Pilot teams have a direct
+              line to the team building it.
+            </p>
+            <a
+              href="/#waitlist"
+              class="inline-flex h-10 items-center rounded-md border border-primary/30 bg-transparent px-4 text-sm font-medium text-primary transition-colors hover:bg-primary hover:text-primary-foreground ring-focus"
+            >
+              Join the waitlist
+            </a>
+          </div>
+        </Container>
+      </Section>
+    </main>
+    <Footer />
+  </div>
+</Layout>

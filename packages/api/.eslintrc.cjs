@@ -10,10 +10,23 @@ module.exports = {
       // Routes layer must go through the per-request scoped DB accessor
       // (`c.get('db')(fn)`), not the raw drizzle handle.
       // See docs/v4/arch-auth-and-rls.md and docs/v4/pitfalls.md (Pitfall 6).
-      // routes/auth.ts is the one exception: it runs *before* the user has a
-      // session and legitimately needs `rawDb` to upsert auth.users / sessions.
+      // Excluded routes that legitimately bypass the scoped accessor:
+      //   - auth.ts: runs before the user has a session; needs rawDb to
+      //     upsert auth.users / sessions.
+      //   - waitlist.ts: public, no JWT; rawDb matches the auth/* pattern.
+      //     app_anonymous scoped role is used for scope testing only
+      //     (see migrations/202605130002_waitlist.sql).
+      //   - admin.ts: reads ALL rows by design; rawDb is the intentional
+      //     choice (see migrations/202605130003_admin_role.sql). withAdmin()
+      //     middleware is the security boundary.
       files: ['src/routes/**/*.ts'],
-      excludedFiles: ['src/routes/auth.ts', 'src/routes/health.ts', 'src/routes/**/*.test.ts'],
+      excludedFiles: [
+        'src/routes/auth.ts',
+        'src/routes/health.ts',
+        'src/routes/waitlist.ts',
+        'src/routes/admin.ts',
+        'src/routes/**/*.test.ts',
+      ],
       rules: {
         'no-restricted-imports': [
           'error',

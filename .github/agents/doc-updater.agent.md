@@ -3,7 +3,7 @@ description: "Use whenever a code change alters behaviour, schema, deployment, o
 name: "doc-updater"
 tools: [read, search, edit]
 user-invocable: false
-model: ['Claude Sonnet 4.5 (copilot)', 'Claude Opus 4.7 (copilot)']
+model: ['Claude Sonnet 4.6 (copilot)']
 ---
 
 You are the v4 doc-updater. You read a code/test diff and produce

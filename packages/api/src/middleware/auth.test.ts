@@ -32,8 +32,16 @@ describe('withAuth', () => {
       '11111111-1111-1111-1111-111111111111',
       '22222222-2222-2222-2222-222222222222',
     );
-    const last = token.slice(-1);
-    const tampered = token.slice(0, -1) + (last === 'A' ? 'B' : 'A');
+    // Flip a bit in the payload segment so the signature no longer matches.
+    // (Tampering only the trailing base64url char of the signature is unsafe:
+    // for HS256 the last char encodes 4 significant bits + 2 padding bits, so
+    // some swaps decode to the same signature bytes and the token still
+    // verifies — see also docs/bugs/README.md.)
+    const [header, payload, signature] = token.split('.');
+    if (!header || !payload || !signature) throw new Error('expected 3-segment JWT');
+    const flipped = payload.charAt(0) === 'a' ? 'b' : 'a';
+    const tamperedPayload = flipped + payload.slice(1);
+    const tampered = `${header}.${tamperedPayload}.${signature}`;
     const res = await app.request('/x', { headers: { authorization: `Bearer ${tampered}` } });
     expect(res.status).toBe(401);
   });

@@ -1,0 +1,38 @@
+{
+  "name": "@harpa/report-ui",
+  "version": "0.0.1",
+  "private": true,
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./tokens": "./src/tokens/index.ts",
+    "./cn": "./src/primitives/cn.ts",
+    "./primitives": "./src/primitives/index.ts",
+    "./report": "./src/report/index.ts",
+    "./reports-list": "./src/reports-list/index.ts",
+    "./notes": "./src/notes/index.ts",
+    "./tailwind-preset": "./tailwind-preset.cjs"
+  },
+  "scripts": {
+    "test": "vitest run"
+  },
+  "peerDependencies": {
+    "@harpa/report-core": "workspace:*",
+    "clsx": ">=2",
+    "lucide-react-native": ">=0.5",
+    "nativewind": ">=4",
+    "react": ">=19",
+    "react-native": ">=0.79",
+    "react-native-svg": ">=15",
+    "tailwind-merge": ">=3"
+  },
+  "devDependencies": {
+    "@testing-library/react-native": "^13.3.3",
+    "@types/react": "~19.2.2",
+    "react": "19.2.0",
+    "react-native": "0.83.4",
+    "typescript": "~5.9.2",
+    "vitest": "^4.1.4"
+  }
+}

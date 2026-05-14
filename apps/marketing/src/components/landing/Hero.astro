@@ -8,20 +8,18 @@ import VoiceDemo from "../VoiceDemo.tsx";
     class="mx-auto grid max-w-6xl gap-12 px-4 py-14 sm:px-6 md:py-16 lg:grid-cols-2 lg:gap-12"
   >
     <div class="flex flex-col justify-center">
-      <span
-        class="inline-flex w-fit items-center gap-2 rounded-full border border-hairline bg-card px-3 py-1 text-xs text-ink-soft"
-      >
-        <span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
-        Early access · Built with field teams
-      </span>
       <h1
         class="mt-5 text-4xl font-semibold tracking-tight text-ink sm:text-5xl lg:text-[3.4rem] lg:leading-[1.05]"
       >
-        Foremen talk. Harpa Pro writes.
+      Site Reports &mdash;<br>you talk, we write.
       </h1>
       <p class="mt-5 max-w-xl text-base leading-relaxed text-ink-soft sm:text-lg">
-        Voice notes, site photos, and field updates become an organized daily
-        report — automatically, before you leave the site.
+        Hands-free report creation and organisation, made hassle-free.
+        Follow-up
+        <span class="font-bold">
+          AI report analysis
+        </span>
+        gives you invaluable insight.
       </p>
       <div class="mt-8 flex flex-wrap items-center gap-3">
         <a
@@ -44,12 +42,16 @@ import VoiceDemo from "../VoiceDemo.tsx";
         </span>
         <span class="inline-flex items-center gap-1.5">
           <Icon name="circle-check" class="h-3.5 w-3.5 text-ink" />
-          Report-ready by 4pm
+          AI report analysis
         </span>
       </div>
     </div>
 
-    <div class="relative lg:pl-6">
+    <!-- min-h matches the VoiceDemo card's fixed 640px height so the grid
+         column reserves space before the React island hydrates, preventing
+         the layout shift that caused CLS 0.125. client:only is required
+         because VoiceDemo depends on NativeWind/RN-Web which cannot SSR. -->
+    <div class="relative min-h-[640px] lg:pl-6">
       <VoiceDemo client:only="react" />
     </div>
   </div>

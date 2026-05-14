@@ -81,9 +81,9 @@ function ListScreen({ elapsedSec, generating, onGenerate }: ListScreenProps) {
   return (
     <>
       <div className="flex items-center justify-between border-b border-border/60 px-4 pb-3 pt-4">
-        <h3 className="truncate text-sm font-semibold tracking-tight text-foreground">
-          Site visit · today
-        </h3>
+        <div className="truncate text-sm font-semibold tracking-tight text-foreground">
+          New Report
+        </div>
         <button
           type="button"
           className="flex h-7 w-7 items-center justify-center rounded-full bg-muted text-muted-foreground"
@@ -95,7 +95,7 @@ function ListScreen({ elapsedSec, generating, onGenerate }: ListScreenProps) {
 
       <div className="flex-1 overflow-y-auto px-4 pb-3 pt-3">
         <PreviousNoteCard
-          title="Walk-through — north entrance"
+          title="Walk through — North Entrance"
           author="Haruna Bayoh"
           recordedAt="Today · 9:42 AM"
           summary="Rebar laid out for Block B footing. Crew noted standing water near gridline 4; pump scheduled for tomorrow."
@@ -142,9 +142,6 @@ function VoiceNoteCard({ elapsedSec }: VoiceNoteCardProps) {
           <MicIcon className="relative h-4 w-4 text-primary" />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold text-foreground">
-            Recording in progress
-          </p>
           <p className="truncate text-[11px] text-muted-foreground">
             Patrick Chin · Today · 11:08 AM
           </p>
@@ -203,6 +200,7 @@ function PreviousNoteCard({
         </div>
       </div>
       <p className="mt-3 line-clamp-2 text-xs leading-relaxed text-muted-foreground">
+        <span className="font-bold">Summary: </span>
         {summary}
       </p>
     </div>
@@ -376,23 +374,6 @@ function ChevronLeftIcon({ className }: IconProps) {
   );
 }
 
-function ChevronRightIcon({ className }: IconProps) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-      aria-hidden
-    >
-      <path d="m9 6 6 6-6 6" />
-    </svg>
-  );
-}
-
 function PlayIcon({ className }: IconProps) {
   return (
     <svg
@@ -402,24 +383,6 @@ function PlayIcon({ className }: IconProps) {
       aria-hidden
     >
       <path d="M8 5.14v13.72a1 1 0 0 0 1.55.83l10.4-6.86a1 1 0 0 0 0-1.66L9.55 4.31A1 1 0 0 0 8 5.14Z" />
-    </svg>
-  );
-}
-
-function FileIcon({ className }: IconProps) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-      aria-hidden
-    >
-      <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" />
-      <path d="M14 2v5h6" />
     </svg>
   );
 }

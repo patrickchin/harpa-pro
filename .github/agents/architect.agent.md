@@ -3,7 +3,7 @@ description: "Use when designing a non-trivial feature or refactor that touches 
 name: "architect"
 tools: [read, search, edit, todo]
 user-invocable: false
-model: ['Claude Sonnet 4.5 (copilot)', 'Claude Opus 4.7 (copilot)']
+model: ['Claude Opus 4.7 (copilot)']
 ---
 
 You are the v4 architecture subagent for the harpa-pro repo. Your job is

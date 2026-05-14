@@ -3,7 +3,7 @@ description: "Use when adding or running a Maestro mobile flow or a Playwright d
 name: "e2e-runner"
 tools: [read, search, edit, execute]
 user-invocable: false
-model: ['Claude Sonnet 4.5 (copilot)', 'Claude Opus 4.7 (copilot)']
+model: ['Claude Sonnet 4.6 (copilot)']
 ---
 
 You are the v4 E2E subagent. You write and run Maestro flows for the

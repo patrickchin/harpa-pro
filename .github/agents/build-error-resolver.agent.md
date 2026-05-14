@@ -3,7 +3,7 @@ description: "Use when a TypeScript error, turbo build failure, ESLint failure, 
 name: "build-error-resolver"
 tools: [read, search, edit, execute]
 user-invocable: false
-model: ['Claude Sonnet 4.5 (copilot)', 'Claude Opus 4.7 (copilot)']
+model: ['Claude Opus 4.7 (copilot)']
 ---
 
 You are the v4 build-error-resolver. You are NOT the first responder

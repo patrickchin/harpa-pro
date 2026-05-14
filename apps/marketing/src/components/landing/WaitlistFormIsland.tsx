@@ -24,14 +24,14 @@ const { waitlistSignupRequest } = waitlist;
 // Pull the field caps out of the shared schema so the inputs enforce
 // exactly what the server enforces. If the schema changes, the form
 // follows automatically.
+type ZodLike = { _def?: { checks?: { kind: string; value?: number }[] }; unwrap?: () => ZodLike };
 function maxOf(field: 'email' | 'company' | 'role' | 'source'): number {
   const shape = waitlistSignupRequest.shape;
-  // `optional()` wraps the inner schema; unwrap if needed.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const inner: any =
-    'unwrap' in shape[field] && typeof (shape[field] as any).unwrap === 'function'
-      ? (shape[field] as any).unwrap()
-      : shape[field];
+  const fieldSchema = shape[field] as ZodLike;
+  const inner: ZodLike =
+    'unwrap' in fieldSchema && typeof fieldSchema.unwrap === 'function'
+      ? fieldSchema.unwrap()
+      : fieldSchema;
   return inner._def?.checks?.find((c: { kind: string }) => c.kind === 'max')?.value ?? 254;
 }
 const MAX = {

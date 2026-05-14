@@ -1,0 +1,38 @@
+{
+  "name": "@harpa/cli",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "harpa": "./dist/index.js"
+  },
+  "main": "./src/index.ts",
+  "scripts": {
+    "dev": "tsx src/index.ts",
+    "build": "tsc -b",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:unit": "vitest run",
+    "test:integration": "TESTCONTAINERS_RYUK_DISABLED=true vitest run --config vitest.integration.config.ts",
+    "test:watch": "vitest",
+    "lint": "eslint . --max-warnings 0 --ext .ts"
+  },
+  "dependencies": {
+    "@harpa/api-contract": "workspace:*",
+    "chalk": "^5.3.0",
+    "citty": "^0.1.6",
+    "openapi-fetch": "^0.12.2",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@harpa/api": "workspace:*",
+    "@types/node": "^22.7.5",
+    "@typescript-eslint/eslint-plugin": "^8.12.2",
+    "@typescript-eslint/parser": "^8.12.2",
+    "eslint": "^8.57.1",
+    "tsx": "^4.19.1",
+    "typescript": "^5.6.2",
+    "vitest": "^2.1.2"
+  }
+}

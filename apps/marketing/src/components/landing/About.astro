@@ -1,0 +1,55 @@
+---
+import Section from "../primitives/Section.astro";
+import Container from "../primitives/Container.astro";
+import { Image } from "astro:assets";
+import harunaImg from "../../assets/team/haruna.jpg";
+import patrickImg from "../../assets/team/patrick.jpg";
+
+const team = [
+  {
+    name: "Haruna Bayoh",
+    avatar: harunaImg,
+    blurb:
+      "Researcher at Zhejiang University. BEng in Civil Engineering from Fourah Bay College, University of Sierra Leone, and an MEng in Structural Engineering from Chang'An University. Previously a building design engineer at Cheng Xian Prefabricated Building Company in Qingzhou, Shandong, working on optimisation and flexibility of fabricated structural components for modular buildings.",
+  },
+  {
+    name: "Patrick Chin",
+    avatar: patrickImg,
+    blurb:
+      "Senior software engineer with nearly a decade of experience building large-scale, real-time software systems. MSc in Physics from University College London. Works across front-end and back-end, with a focus on algorithms, platform development, and integrating machine learning models.",
+  },
+];
+---
+
+<Section id="about" bordered="top">
+  <Container padding="lg">
+    <span class="text-xs font-semibold uppercase tracking-wider text-accent">
+      Who we are
+    </span>
+
+    <div class="mt-6 grid gap-6 sm:grid-cols-2">
+      {
+        team.map((member) => (
+          <div class="flex flex-col items-start gap-5 rounded-xl border border-hairline bg-card p-6 sm:flex-row sm:gap-6">
+            <Image
+              src={member.avatar}
+              alt={member.name}
+              width={320}
+              height={320}
+              densities={[1, 2]}
+              class="h-32 w-32 flex-none rounded-full object-cover sm:h-36 sm:w-36"
+            />
+            <div class="flex flex-col gap-2">
+              <h3 class="text-base font-semibold text-ink">
+                {member.name}
+              </h3>
+              <p class="text-sm leading-relaxed text-ink-soft">
+                {member.blurb}
+              </p>
+            </div>
+          </div>
+        ))
+      }
+    </div>
+  </Container>
+</Section>

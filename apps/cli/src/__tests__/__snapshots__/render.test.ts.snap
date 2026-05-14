@@ -20,6 +20,33 @@ exports[`renderMemberList > renders a populated list 1`] = `
 
 exports[`renderMemberList > renders an empty member list 1`] = `"No members."`;
 
+exports[`renderNote > renders a text note 1`] = `
+"Note 00000000-0000-0000-0000-000000000070 (text)
+  Report:   00000000-0000-0000-0000-000000000050
+  Author:   00000000-0000-0000-0000-000000000001
+  Created:  2025-01-15T10:30:00.000Z
+  Body:     Hello world"
+`;
+
+exports[`renderNote > renders a voice note with transcript and fileId 1`] = `
+"Note 00000000-0000-0000-0000-000000000070 (voice)
+  Report:   00000000-0000-0000-0000-000000000050
+  Author:   00000000-0000-0000-0000-000000000001
+  Created:  2025-01-15T10:30:00.000Z
+  File:     00000000-0000-0000-0000-000000000080
+  Transcript: spoken words"
+`;
+
+exports[`renderNoteList > renders a populated list 1`] = `
+"Notes:
+  00000000-0000-0000-0000-000000000071  text      Short note
+  00000000-0000-0000-0000-000000000072  voice     (no text)
+
+Next page: --cursor cur-77"
+`;
+
+exports[`renderNoteList > renders an empty list 1`] = `"No notes."`;
+
 exports[`renderProject > renders a fully populated project with stats 1`] = `
 "Demo Project (owner)
   ID:         00000000-0000-0000-0000-000000000010

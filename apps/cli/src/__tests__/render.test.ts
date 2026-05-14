@@ -9,7 +9,7 @@
  */
 import { describe, it, expect, beforeAll } from 'vitest';
 import chalk from 'chalk';
-import { renderUser, renderUsage, renderProject, renderProjectList, renderMember, renderMemberList, renderReport, renderReportList } from '../lib/render.js';
+import { renderUser, renderUsage, renderProject, renderProjectList, renderMember, renderMemberList, renderReport, renderReportList, renderNote, renderNoteList } from '../lib/render.js';
 
 beforeAll(() => {
   chalk.level = 0;
@@ -244,5 +244,70 @@ describe('renderReportList', () => {
   });
   it('renders an empty list', () => {
     expect(renderReportList({ items: [], nextCursor: null })).toMatchSnapshot();
+  });
+});
+
+describe('renderNote', () => {
+  const base = {
+    id: '00000000-0000-0000-0000-000000000070',
+    reportId: '00000000-0000-0000-0000-000000000050',
+    authorId: '00000000-0000-0000-0000-000000000001',
+    kind: 'text' as const,
+    body: 'Hello world',
+    fileId: null,
+    transcript: null,
+    createdAt: '2025-01-15T10:30:00.000Z',
+    updatedAt: '2025-01-15T10:30:00.000Z',
+  };
+  it('renders a text note', () => {
+    expect(renderNote(base)).toMatchSnapshot();
+  });
+  it('renders a voice note with transcript and fileId', () => {
+    expect(
+      renderNote({
+        ...base,
+        kind: 'voice',
+        body: null,
+        fileId: '00000000-0000-0000-0000-000000000080',
+        transcript: 'spoken words',
+      }),
+    ).toMatchSnapshot();
+  });
+});
+
+describe('renderNoteList', () => {
+  it('renders a populated list', () => {
+    expect(
+      renderNoteList({
+        items: [
+          {
+            id: '00000000-0000-0000-0000-000000000071',
+            reportId: '00000000-0000-0000-0000-000000000050',
+            authorId: '00000000-0000-0000-0000-000000000001',
+            kind: 'text',
+            body: 'Short note',
+            fileId: null,
+            transcript: null,
+            createdAt: '2025-01-15T10:30:00.000Z',
+            updatedAt: '2025-01-15T10:30:00.000Z',
+          },
+          {
+            id: '00000000-0000-0000-0000-000000000072',
+            reportId: '00000000-0000-0000-0000-000000000050',
+            authorId: '00000000-0000-0000-0000-000000000001',
+            kind: 'voice',
+            body: null,
+            fileId: '00000000-0000-0000-0000-000000000080',
+            transcript: null,
+            createdAt: '2025-01-15T10:30:00.000Z',
+            updatedAt: '2025-01-15T10:30:00.000Z',
+          },
+        ],
+        nextCursor: 'cur-77',
+      }),
+    ).toMatchSnapshot();
+  });
+  it('renders an empty list', () => {
+    expect(renderNoteList({ items: [], nextCursor: null })).toMatchSnapshot();
   });
 });

@@ -13,6 +13,7 @@ import { authCommand } from './commands/auth.js';
 import { meCommand } from './commands/me.js';
 import { projectsCommand } from './commands/projects.js';
 import { reportsCommand } from './commands/reports.js';
+import { notesCommand } from './commands/notes.js';
 
 const main = defineCommand({
   meta: {
@@ -26,6 +27,7 @@ const main = defineCommand({
     me: meCommand,
     projects: projectsCommand,
     reports: reportsCommand,
+    notes: notesCommand,
   },
 });
 

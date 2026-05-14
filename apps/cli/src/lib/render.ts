@@ -148,6 +148,52 @@ export function renderReportList(
   return [chalk.bold('Reports:'), ...rows, footer].join('\n');
 }
 
+export interface NoteLike {
+  id: string;
+  reportId: string;
+  authorId: string;
+  kind: 'text' | 'voice' | 'image' | 'document';
+  body: string | null;
+  fileId: string | null;
+  transcript: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export function renderNote(n: NoteLike): string {
+  const lines = [
+    `${chalk.bold(`Note ${n.id}`)} ${chalk.dim(`(${n.kind})`)}`,
+    `  Report:   ${n.reportId}`,
+    `  Author:   ${n.authorId}`,
+    `  Created:  ${n.createdAt}`,
+  ];
+  if (n.body) lines.push(`  Body:     ${n.body}`);
+  if (n.fileId) lines.push(`  File:     ${n.fileId}`);
+  if (n.transcript) lines.push(`  Transcript: ${n.transcript}`);
+  return lines.join('\n');
+}
+
+export function renderNoteList(
+  page: { items: NoteLike[]; nextCursor?: string | null },
+): string {
+  if (page.items.length === 0) {
+    return chalk.dim('No notes.');
+  }
+  const rows = page.items.map((n) => {
+    const preview =
+      n.body && n.body.length > 0
+        ? n.body.length > 60
+          ? n.body.slice(0, 57) + '...'
+          : n.body
+        : chalk.dim('(no text)');
+    return `  ${chalk.bold(n.id)}  ${n.kind.padEnd(8)}  ${preview}`;
+  });
+  const footer = page.nextCursor
+    ? chalk.dim(`\nNext page: --cursor ${page.nextCursor}`)
+    : chalk.dim('\n(end of list)');
+  return [chalk.bold('Notes:'), ...rows, footer].join('\n');
+}
+
 export interface MemberLike {
   userId: string;
   displayName: string | null;

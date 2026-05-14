@@ -51,6 +51,57 @@ export function renderUsage(usage: UsageLike): string {
   return [header, ...rows, chalk.dim('—'.repeat(30)), totals].join('\n');
 }
 
+export interface ProjectLike {
+  id: string;
+  name: string;
+  clientName: string | null;
+  address: string | null;
+  ownerId: string;
+  myRole: 'owner' | 'editor' | 'viewer';
+  createdAt: string;
+  updatedAt: string;
+  stats?: {
+    totalReports: number;
+    drafts: number;
+    lastReportAt: string | null;
+  };
+}
+
+export function renderProject(p: ProjectLike): string {
+  const lines = [
+    `${chalk.bold(p.name)} ${chalk.dim(`(${p.myRole})`)}`,
+    `  ID:         ${p.id}`,
+    `  Client:     ${p.clientName ?? chalk.dim('(none)')}`,
+    `  Address:    ${p.address ?? chalk.dim('(none)')}`,
+    `  Owner:      ${p.ownerId}`,
+    `  Created:    ${p.createdAt}`,
+    `  Updated:    ${p.updatedAt}`,
+  ];
+  if (p.stats) {
+    lines.push(
+      `  Reports:    ${p.stats.totalReports} (${p.stats.drafts} drafts)`,
+      `  Last report: ${p.stats.lastReportAt ?? chalk.dim('(none)')}`,
+    );
+  }
+  return lines.join('\n');
+}
+
+export function renderProjectList(
+  page: { items: ProjectLike[]; nextCursor: string | null },
+): string {
+  if (page.items.length === 0) {
+    return chalk.dim('No projects.');
+  }
+  const rows = page.items.map((p) => {
+    const client = p.clientName ?? chalk.dim('—');
+    return `  ${chalk.bold(p.name).padEnd(40)}  ${p.myRole.padEnd(6)}  ${client}  ${chalk.dim(p.id)}`;
+  });
+  const footer = page.nextCursor
+    ? chalk.dim(`\nNext page: --cursor ${page.nextCursor}`)
+    : chalk.dim('\n(end of list)');
+  return [chalk.bold('Projects:'), ...rows, footer].join('\n');
+}
+
 function pad(n: number, width: number): string {
   return String(n).padStart(width, ' ');
 }

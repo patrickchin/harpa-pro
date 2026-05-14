@@ -11,6 +11,7 @@ import { defineCommand, runMain } from 'citty';
 import { healthCommand } from './commands/health.js';
 import { authCommand } from './commands/auth.js';
 import { meCommand } from './commands/me.js';
+import { projectsCommand } from './commands/projects.js';
 
 const main = defineCommand({
   meta: {
@@ -22,6 +23,7 @@ const main = defineCommand({
     health: healthCommand,
     auth: authCommand,
     me: meCommand,
+    projects: projectsCommand,
   },
 });
 

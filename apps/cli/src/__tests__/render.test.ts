@@ -9,7 +9,7 @@
  */
 import { describe, it, expect, beforeAll } from 'vitest';
 import chalk from 'chalk';
-import { renderUser, renderUsage } from '../lib/render.js';
+import { renderUser, renderUsage, renderProject, renderProjectList } from '../lib/render.js';
 
 beforeAll(() => {
   chalk.level = 0;
@@ -60,6 +60,76 @@ describe('renderUsage', () => {
         months: [],
         totals: { reports: 0, voiceNotes: 0 },
       }),
+    ).toMatchSnapshot();
+  });
+});
+
+describe('renderProject', () => {
+  const baseProject = {
+    id: '00000000-0000-0000-0000-000000000010',
+    name: 'Demo Project',
+    clientName: 'Acme Co',
+    address: '1 Main St',
+    ownerId: '00000000-0000-0000-0000-000000000001',
+    myRole: 'owner' as const,
+    createdAt: '2025-01-15T10:30:00.000Z',
+    updatedAt: '2025-01-16T11:00:00.000Z',
+  };
+
+  it('renders a fully populated project with stats', () => {
+    expect(
+      renderProject({
+        ...baseProject,
+        stats: { totalReports: 5, drafts: 2, lastReportAt: '2025-01-16T09:00:00.000Z' },
+      }),
+    ).toMatchSnapshot();
+  });
+
+  it('renders a project missing optional fields', () => {
+    expect(
+      renderProject({
+        ...baseProject,
+        clientName: null,
+        address: null,
+      }),
+    ).toMatchSnapshot();
+  });
+});
+
+describe('renderProjectList', () => {
+  it('renders a populated page with nextCursor', () => {
+    expect(
+      renderProjectList({
+        items: [
+          {
+            id: '00000000-0000-0000-0000-000000000020',
+            name: 'Project A',
+            clientName: 'Client A',
+            address: null,
+            ownerId: '00000000-0000-0000-0000-000000000001',
+            myRole: 'owner',
+            createdAt: '2025-01-15T10:30:00.000Z',
+            updatedAt: '2025-01-15T10:30:00.000Z',
+          },
+          {
+            id: '00000000-0000-0000-0000-000000000021',
+            name: 'Project B',
+            clientName: null,
+            address: null,
+            ownerId: '00000000-0000-0000-0000-000000000001',
+            myRole: 'editor',
+            createdAt: '2025-01-15T10:30:00.000Z',
+            updatedAt: '2025-01-15T10:30:00.000Z',
+          },
+        ],
+        nextCursor: 'cursor-xyz',
+      }),
+    ).toMatchSnapshot();
+  });
+
+  it('renders an empty list', () => {
+    expect(
+      renderProjectList({ items: [], nextCursor: null }),
     ).toMatchSnapshot();
   });
 });

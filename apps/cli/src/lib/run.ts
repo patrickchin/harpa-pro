@@ -64,12 +64,14 @@ export async function executeRequest<T>(opts: RunRequestOptions<T>): Promise<Exi
   const { data, error, response } = result;
   const status = response.status;
 
-  if (status >= 200 && status < 300 && data !== undefined) {
+  if (status >= 200 && status < 300) {
     if (opts.json) {
-      const json = opts.formatJson ? opts.formatJson(data) : JSON.stringify(data, null, 2);
+      const json = opts.formatJson
+        ? opts.formatJson(data as T)
+        : JSON.stringify(data ?? {}, null, 2);
       out.write(json + '\n');
     } else {
-      const formatted = opts.format(data);
+      const formatted = opts.format(data as T);
       if (formatted !== undefined && formatted !== '') out.write(formatted + '\n');
     }
     if (opts.verbose) writeVerbose(response, err);

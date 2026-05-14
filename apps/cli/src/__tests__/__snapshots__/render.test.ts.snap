@@ -1,5 +1,37 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`renderProject > renders a fully populated project with stats 1`] = `
+"Demo Project (owner)
+  ID:         00000000-0000-0000-0000-000000000010
+  Client:     Acme Co
+  Address:    1 Main St
+  Owner:      00000000-0000-0000-0000-000000000001
+  Created:    2025-01-15T10:30:00.000Z
+  Updated:    2025-01-16T11:00:00.000Z
+  Reports:    5 (2 drafts)
+  Last report: 2025-01-16T09:00:00.000Z"
+`;
+
+exports[`renderProject > renders a project missing optional fields 1`] = `
+"Demo Project (owner)
+  ID:         00000000-0000-0000-0000-000000000010
+  Client:     (none)
+  Address:    (none)
+  Owner:      00000000-0000-0000-0000-000000000001
+  Created:    2025-01-15T10:30:00.000Z
+  Updated:    2025-01-16T11:00:00.000Z"
+`;
+
+exports[`renderProjectList > renders a populated page with nextCursor 1`] = `
+"Projects:
+  Project A                                 owner   Client A  00000000-0000-0000-0000-000000000020
+  Project B                                 editor  —  00000000-0000-0000-0000-000000000021
+
+Next page: --cursor cursor-xyz"
+`;
+
+exports[`renderProjectList > renders an empty list 1`] = `"No projects."`;
+
 exports[`renderUsage > renders empty usage 1`] = `
 "Month     Reports  Voice notes
 ——————————————————————————————

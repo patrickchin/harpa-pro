@@ -47,7 +47,11 @@ import VoiceDemo from "../VoiceDemo.tsx";
       </div>
     </div>
 
-    <div class="relative lg:pl-6">
+    <!-- min-h matches the VoiceDemo card's fixed 640px height so the grid
+         column reserves space before the React island hydrates, preventing
+         the layout shift that caused CLS 0.125. client:only is required
+         because VoiceDemo depends on NativeWind/RN-Web which cannot SSR. -->
+    <div class="relative min-h-[640px] lg:pl-6">
       <VoiceDemo client:only="react" />
     </div>
   </div>

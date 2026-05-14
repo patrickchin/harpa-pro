@@ -81,9 +81,9 @@ function ListScreen({ elapsedSec, generating, onGenerate }: ListScreenProps) {
   return (
     <>
       <div className="flex items-center justify-between border-b border-border/60 px-4 pb-3 pt-4">
-        <h3 className="truncate text-sm font-semibold tracking-tight text-foreground">
+        <div className="truncate text-sm font-semibold tracking-tight text-foreground">
           New Report
-        </h3>
+        </div>
         <button
           type="button"
           className="flex h-7 w-7 items-center justify-center rounded-full bg-muted text-muted-foreground"

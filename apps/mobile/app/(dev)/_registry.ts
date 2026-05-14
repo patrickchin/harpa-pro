@@ -109,4 +109,10 @@ export const REGISTRY: readonly GalleryEntry[] = [
     group: 'app',
     description: 'Projects list — empty / loading / populated states with pull-to-refresh',
   },
+  {
+    name: 'New Project',
+    href: '/(dev)/project-new',
+    group: 'app',
+    description: 'New project form — idle / pending / error states',
+  },
 ];

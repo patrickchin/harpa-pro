@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { View, Text } from 'react-native';
+import { View, Text } from '../lib/primitives.js';
 import { cn } from '../lib/cn.js';
 import type { VoiceTranscriptPanelProps } from '../types.js';
 

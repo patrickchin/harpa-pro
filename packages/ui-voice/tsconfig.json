@@ -3,6 +3,7 @@
   "compilerOptions": {
     "jsx": "react-jsx",
     "jsxImportSource": "react",
+    "lib": ["ES2023", "DOM"],
     "moduleResolution": "Bundler",
     "outDir": "dist",
     "rootDir": "src",

@@ -1,4 +1,4 @@
-import { View } from 'react-native';
+import { View } from '../lib/primitives.js';
 import { cn } from '../lib/cn.js';
 
 export interface VoiceReportSkeletonProps {

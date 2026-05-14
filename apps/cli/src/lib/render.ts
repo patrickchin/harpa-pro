@@ -225,3 +225,24 @@ export function renderMemberList(page: { items: MemberLike[] }): string {
 function pad(n: number, width: number): string {
   return String(n).padStart(width, ' ');
 }
+
+export interface FileLike {
+  id: string;
+  ownerId: string;
+  kind: string;
+  fileKey: string;
+  sizeBytes: number;
+  contentType: string;
+  createdAt: string;
+}
+
+export function renderFile(f: FileLike): string {
+  return [
+    `${chalk.bold(f.id)} ${chalk.dim(`(${f.kind})`)}`,
+    `  Owner:    ${f.ownerId}`,
+    `  Key:      ${f.fileKey}`,
+    `  Size:     ${f.sizeBytes} bytes`,
+    `  Type:     ${f.contentType}`,
+    `  Created:  ${f.createdAt}`,
+  ].join('\n');
+}

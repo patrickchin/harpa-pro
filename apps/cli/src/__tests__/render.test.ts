@@ -9,7 +9,7 @@
  */
 import { describe, it, expect, beforeAll } from 'vitest';
 import chalk from 'chalk';
-import { renderUser, renderUsage, renderProject, renderProjectList, renderMember, renderMemberList, renderReport, renderReportList, renderNote, renderNoteList } from '../lib/render.js';
+import { renderUser, renderUsage, renderProject, renderProjectList, renderMember, renderMemberList, renderReport, renderReportList, renderNote, renderNoteList, renderFile } from '../lib/render.js';
 
 beforeAll(() => {
   chalk.level = 0;
@@ -309,5 +309,21 @@ describe('renderNoteList', () => {
   });
   it('renders an empty list', () => {
     expect(renderNoteList({ items: [], nextCursor: null })).toMatchSnapshot();
+  });
+});
+
+describe('renderFile', () => {
+  it('renders a file record', () => {
+    expect(
+      renderFile({
+        id: '00000000-0000-0000-0000-000000000090',
+        ownerId: '00000000-0000-0000-0000-000000000001',
+        kind: 'image',
+        fileKey: 'users/00000000-0000-0000-0000-000000000001/image/abc.jpg',
+        sizeBytes: 12345,
+        contentType: 'image/jpeg',
+        createdAt: '2025-01-15T10:30:00.000Z',
+      }),
+    ).toMatchSnapshot();
   });
 });

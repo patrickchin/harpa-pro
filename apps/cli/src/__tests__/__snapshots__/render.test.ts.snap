@@ -1,5 +1,14 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`renderFile > renders a file record 1`] = `
+"00000000-0000-0000-0000-000000000090 (image)
+  Owner:    00000000-0000-0000-0000-000000000001
+  Key:      users/00000000-0000-0000-0000-000000000001/image/abc.jpg
+  Size:     12345 bytes
+  Type:     image/jpeg
+  Created:  2025-01-15T10:30:00.000Z"
+`;
+
 exports[`renderMember > renders a fully populated member 1`] = `
 "Alice <+15550100300> (editor)
   User ID:  00000000-0000-0000-0000-000000000030

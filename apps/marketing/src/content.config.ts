@@ -18,4 +18,14 @@ const features = defineCollection({
   }),
 });
 
-export const collections = { faq, features };
+const roadmap = defineCollection({
+  loader: glob({ pattern: "**/*.{md,mdx}", base: "./src/content/roadmap" }),
+  schema: z.object({
+    title: z.string(),
+    icon: z.string(),
+    status: z.enum(["pilot", "later"]),
+    order: z.number().default(0),
+  }),
+});
+
+export const collections = { faq, features, roadmap };

@@ -1,385 +1,457 @@
 /**
- * Marketing M2 voice demo island, mounted via:
+ * Hero voice-demo island.
  *
- *     <VoiceDemo client:only="react" />
+ * Renders a fixed-height card containing two screens:
  *
- * Why `client:only`: the shared report components from
- * `@harpa/ui-voice` use react-native-web primitives whose styles are
- * applied at mount time. Server-rendering them would emit unstyled
- * markup that visibly flickers when hydrated. The whole island is
- * gated on `client:only` so it only ever runs in the browser.
+ *   1. "Reports" list — one in-progress voice note with an animated
+ *      waveform, a live-ticking duration, and a "Generate report"
+ *      CTA. A bottom composer (text + camera + mic buttons) sits at
+ *      the foot of the screen.
  *
- * What this component does:
+ *   2. "Site report" — scrolls the shared `VoiceReportView` from
+ *      `@harpa/ui-voice` *inside* the card, so the hero section
+ *      keeps its footprint regardless of report length.
  *
- *   1. Asks for mic permission and records up to 30s.
- *   2. Discards the recorded blob immediately on stop — nothing is
- *      uploaded, persisted, or even held in component state past
- *      `onstop`. The recording exists only to drive the UX timer.
- *   3. Plays a scripted "transcribing… → generating…" sequence
- *      against the hand-written fixtures in `@harpa/ui-voice`.
- *   4. Renders the result panels using the same `VoiceReportView`
- *      and `VoiceTranscriptPanel` the mobile app will use in P3.
- *
- * What it does NOT do (deferred to plan-m4-voice-demo-live.md):
- *   - Upload audio anywhere.
- *   - Hit the API.
- *   - Persist any state between sessions.
+ * No audio capture, no API calls, no persistence — everything is
+ * fixture-driven. Plan-m4 will replace the mocked recording with a
+ * live API hookup.
  */
-import { useCallback, useEffect, useRef, useState } from 'react';
-import {
-  VoiceReportView,
-  VoiceTranscriptPanel,
-} from '@harpa/ui-voice';
-import { demoReport, demoTranscript } from '@harpa/ui-voice/fixtures';
+import { useEffect, useState } from 'react';
+import type { ReactNode } from 'react';
+import { VoiceReportView } from '@harpa/ui-voice';
+import { demoReport } from '@harpa/ui-voice/fixtures';
 
-type DemoState =
-  | { kind: 'idle' }
-  | { kind: 'requesting-permission' }
-  | { kind: 'permission-denied'; message: string }
-  | { kind: 'recording'; elapsedSec: number }
-  | { kind: 'processing'; phase: 'transcribing' | 'generating' }
-  | { kind: 'done' }
-  | { kind: 'error'; message: string };
+type Screen = 'list' | 'generating' | 'report';
 
-const MAX_RECORD_SEC = 30;
-const TRANSCRIBING_MS = 1500;
-const GENERATING_MS = 2000;
+const GENERATING_MS = 500;
 
 export function VoiceDemo() {
-  const [state, setState] = useState<DemoState>({ kind: 'idle' });
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const streamRef = useRef<MediaStream | null>(null);
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [screen, setScreen] = useState<Screen>('list');
 
-  const cleanupStream = useCallback(() => {
-    if (timerRef.current) {
-      clearInterval(timerRef.current);
-      timerRef.current = null;
-    }
-    streamRef.current?.getTracks().forEach((t) => t.stop());
-    streamRef.current = null;
-    mediaRecorderRef.current = null;
-  }, []);
+  // Live duration ticker for the "currently recording" voice note.
+  const [elapsedSec, setElapsedSec] = useState(38);
+  useEffect(() => {
+    if (screen === 'report') return;
+    const id = setInterval(() => setElapsedSec((s) => s + 1), 1000);
+    return () => clearInterval(id);
+  }, [screen]);
 
-  useEffect(() => cleanupStream, [cleanupStream]);
-
-  const startScriptedReveal = useCallback(() => {
-    setState({ kind: 'processing', phase: 'transcribing' });
-    const t1 = setTimeout(() => {
-      setState({ kind: 'processing', phase: 'generating' });
-      const t2 = setTimeout(() => {
-        setState({ kind: 'done' });
-      }, GENERATING_MS);
-      // Store on ref so unmount cancels.
-      timerRef.current = t2 as unknown as ReturnType<typeof setInterval>;
-    }, TRANSCRIBING_MS);
-    timerRef.current = t1 as unknown as ReturnType<typeof setInterval>;
-  }, []);
-
-  const stopRecording = useCallback(() => {
-    const rec = mediaRecorderRef.current;
-    if (rec && rec.state === 'recording') {
-      rec.stop();
-    }
-    cleanupStream();
-    startScriptedReveal();
-  }, [cleanupStream, startScriptedReveal]);
-
-  const startRecording = useCallback(async () => {
-    if (
-      typeof navigator === 'undefined' ||
-      !navigator.mediaDevices?.getUserMedia
-    ) {
-      setState({
-        kind: 'permission-denied',
-        message:
-          'This browser does not support audio recording. Try the latest Chrome, Safari, or Firefox — or skip the recording below.',
-      });
-      return;
-    }
-
-    setState({ kind: 'requesting-permission' });
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: true,
-      });
-      streamRef.current = stream;
-      const rec = new MediaRecorder(stream);
-      mediaRecorderRef.current = rec;
-
-      // We do not collect chunks — the blob is intentionally discarded.
-      // The `ondataavailable` handler is a no-op for the same reason.
-      rec.addEventListener('dataavailable', () => {
-        /* discard */
-      });
-
-      let elapsed = 0;
-      setState({ kind: 'recording', elapsedSec: 0 });
-      timerRef.current = setInterval(() => {
-        elapsed += 1;
-        if (elapsed >= MAX_RECORD_SEC) {
-          stopRecording();
-        } else {
-          setState({ kind: 'recording', elapsedSec: elapsed });
-        }
-      }, 1000);
-
-      rec.start();
-    } catch (err) {
-      const message =
-        err instanceof Error
-          ? err.message
-          : 'Microphone access was denied.';
-      setState({ kind: 'permission-denied', message });
-    }
-  }, [stopRecording]);
-
-  const skipRecording = useCallback(() => {
-    cleanupStream();
-    startScriptedReveal();
-  }, [cleanupStream, startScriptedReveal]);
-
-  const reset = useCallback(() => {
-    cleanupStream();
-    setState({ kind: 'idle' });
-  }, [cleanupStream]);
+  // Auto-advance from generating → report.
+  useEffect(() => {
+    if (screen !== 'generating') return;
+    const t = setTimeout(() => setScreen('report'), GENERATING_MS);
+    return () => clearTimeout(t);
+  }, [screen]);
 
   return (
-    <section
-      aria-labelledby="voice-demo-heading"
-      className="mx-auto w-full max-w-5xl px-4 py-12 sm:py-16"
-    >
-      <header className="mb-8 max-w-2xl">
-        <h2
-          id="voice-demo-heading"
-          className="text-2xl font-bold text-foreground sm:text-3xl"
-        >
-          Try it now
-        </h2>
-        <p className="mt-2 text-base text-muted-foreground">
-          Tap record and talk through your day. We&rsquo;ll show you
-          what the daily report looks like &mdash; using a sample
-          transcript and a pre-generated example. Your audio never
-          leaves your browser.
-        </p>
-      </header>
-
-      <div className="rounded-2xl border border-border bg-card p-6 sm:p-8">
-        <DemoControls
-          state={state}
-          onStart={startRecording}
-          onStop={stopRecording}
-          onSkip={skipRecording}
-          onReset={reset}
+    <DemoCard>
+      {screen === 'report' ? (
+        <ReportScreen onBack={() => setScreen('list')} />
+      ) : (
+        <ListScreen
+          elapsedSec={elapsedSec}
+          generating={screen === 'generating'}
+          onGenerate={() => setScreen('generating')}
         />
-      </div>
-
-      {(state.kind === 'processing' || state.kind === 'done') && (
-        <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
-          <VoiceTranscriptPanel
-            transcript={demoTranscript}
-            loading={
-              state.kind === 'processing' && state.phase === 'transcribing'
-            }
-            typewriterMsPerChar={
-              state.kind === 'processing' && state.phase === 'generating'
-                ? 18
-                : undefined
-            }
-          />
-          {state.kind === 'done' ? (
-            <VoiceReportView report={demoReport} watermark="Demo report" />
-          ) : (
-            <ReportPlaceholder
-              label={
-                state.kind === 'processing' && state.phase === 'generating'
-                  ? 'Generating report…'
-                  : 'Report appears here'
-              }
-            />
-          )}
-        </div>
       )}
-
-      {state.kind === 'done' && (
-        <p className="mt-6 max-w-2xl text-sm text-muted-foreground">
-          This is a demo with a sample report.{' '}
-          <a
-            href="#waitlist"
-            className="font-semibold text-accent underline decoration-accent/50 underline-offset-2 hover:decoration-accent"
-          >
-            Join the waitlist
-          </a>{' '}
-          to generate your own from a real site visit.
-        </p>
-      )}
-    </section>
+    </DemoCard>
   );
 }
 
-interface DemoControlsProps {
-  state: DemoState;
-  onStart: () => void;
-  onStop: () => void;
-  onSkip: () => void;
-  onReset: () => void;
+function DemoCard({ children }: { children: ReactNode }) {
+  return (
+    <div className="mx-auto w-full max-w-[480px]">
+      <div
+        className="relative flex flex-col overflow-hidden rounded-2xl border border-hairline bg-card shadow-xl"
+        style={{ height: 640 }}
+      >
+        {children}
+      </div>
+    </div>
+  );
 }
 
-function DemoControls({
-  state,
-  onStart,
-  onStop,
-  onSkip,
-  onReset,
-}: DemoControlsProps) {
-  if (state.kind === 'idle') {
-    return (
-      <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <p className="text-base font-semibold text-foreground">
-            Ready when you are
-          </p>
-          <p className="text-sm text-muted-foreground">
-            Up to 30 seconds. Audio is discarded immediately.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-3">
-          <button
-            type="button"
-            onClick={onStart}
-            className="rounded-lg bg-accent px-5 py-3 text-sm font-semibold text-accent-foreground shadow-sm transition hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2"
-          >
-            Start recording
-          </button>
-          <button
-            type="button"
-            onClick={onSkip}
-            className="rounded-lg border border-border bg-background px-5 py-3 text-sm font-semibold text-foreground transition hover:bg-muted"
-          >
-            Skip — just show me the output
-          </button>
-        </div>
+interface ListScreenProps {
+  elapsedSec: number;
+  generating: boolean;
+  onGenerate: () => void;
+}
+
+function ListScreen({ elapsedSec, generating, onGenerate }: ListScreenProps) {
+  return (
+    <>
+      <div className="flex items-center justify-between border-b border-border/60 px-4 pb-3 pt-4">
+        <h3 className="truncate text-sm font-semibold tracking-tight text-foreground">
+          Site visit · today
+        </h3>
+        <button
+          type="button"
+          className="flex h-7 w-7 items-center justify-center rounded-full bg-muted text-muted-foreground"
+          aria-label="Settings"
+        >
+          <DotsIcon className="h-4 w-4" />
+        </button>
       </div>
-    );
-  }
 
-  if (state.kind === 'requesting-permission') {
-    return (
-      <p className="text-sm text-muted-foreground">
-        Waiting for microphone permission…
-      </p>
-    );
-  }
-
-  if (state.kind === 'permission-denied') {
-    return (
-      <div className="flex flex-col gap-3">
-        <div>
-          <p className="text-base font-semibold text-foreground">
-            Microphone unavailable
-          </p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {state.message}
-          </p>
+      <div className="flex-1 overflow-y-auto px-4 pb-3 pt-3">
+        <PreviousNoteCard
+          title="Walk-through — north entrance"
+          author="Haruna Bayoh"
+          recordedAt="Today · 9:42 AM"
+          summary="Rebar laid out for Block B footing. Crew noted standing water near gridline 4; pump scheduled for tomorrow."
+          duration="2:14"
+        />
+        <div className="mt-3">
+          <VoiceNoteCard elapsedSec={elapsedSec} />
         </div>
-        <div className="flex flex-wrap gap-3">
-          <button
-            type="button"
-            onClick={onSkip}
-            className="rounded-lg bg-accent px-5 py-3 text-sm font-semibold text-accent-foreground shadow-sm transition hover:opacity-90"
-          >
-            Skip — just show me the output
-          </button>
-          <button
-            type="button"
-            onClick={onReset}
-            className="rounded-lg border border-border bg-background px-5 py-3 text-sm font-semibold text-foreground transition hover:bg-muted"
-          >
-            Try again
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={onGenerate}
+          disabled={generating}
+          className="mt-3 inline-flex h-10 w-full items-center justify-center gap-1.5 rounded-lg bg-accent px-3 text-sm font-semibold text-accent-foreground transition hover:opacity-90 disabled:cursor-default disabled:opacity-80"
+        >
+          {generating ? (
+            <>
+              <Spinner className="h-4 w-4" />
+              Generating report…
+            </>
+          ) : (
+            <>
+              Generate report
+              <ArrowRightIcon className="h-4 w-4" />
+            </>
+          )}
+        </button>
       </div>
-    );
-  }
 
-  if (state.kind === 'recording') {
-    const remaining = MAX_RECORD_SEC - state.elapsedSec;
-    return (
-      <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-3">
-          <span className="relative flex h-3 w-3">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-destructive opacity-75" />
-            <span className="relative inline-flex h-3 w-3 rounded-full bg-destructive" />
-          </span>
-          <div>
-            <p className="text-base font-semibold text-foreground">
-              Recording…
-            </p>
-            <p className="text-sm tabular-nums text-muted-foreground">
-              {remaining}s remaining
-            </p>
+      <Composer />
+    </>
+  );
+}
+
+interface VoiceNoteCardProps {
+  elapsedSec: number;
+}
+
+function VoiceNoteCard({ elapsedSec }: VoiceNoteCardProps) {
+  return (
+    <div className="rounded-2xl border border-border bg-card p-3 shadow-sm">
+      <div className="flex items-center gap-3">
+        <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/15">
+          <span className="absolute inset-0 animate-ping rounded-full bg-primary/30" />
+          <MicIcon className="relative h-4 w-4 text-primary" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-semibold text-foreground">
+            Recording in progress
+          </p>
+          <p className="truncate text-[11px] text-muted-foreground">
+            Patrick Chin · Today · 11:08 AM
+          </p>
+          <div className="mt-2 flex items-center gap-2">
+            <div className="flex h-8 flex-1 items-center justify-between gap-[2px]">
+              <InlineWaveform />
+            </div>
+            <span className="text-[11px] tabular-nums text-muted-foreground">
+              {formatDuration(elapsedSec)}
+            </span>
           </div>
         </div>
-        <button
-          type="button"
-          onClick={onStop}
-          className="rounded-lg border border-border bg-background px-5 py-3 text-sm font-semibold text-foreground transition hover:bg-muted"
-        >
-          Stop
-        </button>
       </div>
-    );
-  }
-
-  if (state.kind === 'processing') {
-    return (
-      <p className="text-sm text-muted-foreground">
-        {state.phase === 'transcribing'
-          ? 'Transcribing your recording…'
-          : 'Generating the report…'}
-      </p>
-    );
-  }
-
-  if (state.kind === 'done') {
-    return (
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-sm text-muted-foreground">
-          That&rsquo;s what your foreman would see at the end of the day.
-        </p>
-        <button
-          type="button"
-          onClick={onReset}
-          className="self-start rounded-lg border border-border bg-background px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-muted sm:self-auto"
-        >
-          Try again
-        </button>
-      </div>
-    );
-  }
-
-  // state.kind === 'error'
-  return (
-    <div className="flex flex-col gap-3">
-      <p className="text-sm text-destructive">{state.message}</p>
-      <button
-        type="button"
-        onClick={onReset}
-        className="self-start rounded-lg border border-border bg-background px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-muted"
-      >
-        Try again
-      </button>
     </div>
   );
 }
 
-function ReportPlaceholder({ label }: { label: string }) {
+function PreviousNoteCard({
+  title,
+  author,
+  recordedAt,
+  summary,
+  duration,
+}: {
+  title: string;
+  author: string;
+  recordedAt: string;
+  summary: string;
+  duration: string;
+}) {
   return (
-    <div className="flex min-h-[400px] items-center justify-center rounded-xl border border-dashed border-border bg-muted/30 p-8">
-      <p className="text-sm font-medium uppercase tracking-widest text-muted-foreground">
-        {label}
+    <div className="rounded-2xl border border-border bg-card p-3 shadow-sm">
+      <div className="flex items-center gap-3">
+        <button
+          type="button"
+          aria-label="Play voice note"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm transition hover:opacity-90"
+        >
+          <PlayIcon className="h-4 w-4" />
+        </button>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-semibold text-foreground">
+            {title}
+          </p>
+          <p className="truncate text-[11px] text-muted-foreground">
+            {author} · {recordedAt}
+          </p>
+          <div className="mt-2 flex items-center gap-2">
+            <div className="h-2 flex-1 overflow-hidden rounded-full bg-muted">
+              <div className="h-full w-0 rounded-full bg-primary" />
+            </div>
+            <span className="text-[11px] tabular-nums text-muted-foreground">
+              {duration}
+            </span>
+          </div>
+        </div>
+      </div>
+      <p className="mt-3 line-clamp-2 text-xs leading-relaxed text-muted-foreground">
+        {summary}
       </p>
     </div>
+  );
+}
+
+function InlineWaveform() {
+  const bars = Array.from({ length: 36 }, (_, i) => {
+    const h = 30 + ((i * 37) % 60);
+    const delay = (i * 73) % 900;
+    return { i, h, delay };
+  });
+  return (
+    <>
+      {bars.map(({ i, h, delay }) => (
+        <span
+          key={i}
+          aria-hidden
+          className="wave-bar w-[2px] rounded-full bg-primary/70"
+          style={{ height: `${h}%`, animationDelay: `${delay}ms` }}
+        />
+      ))}
+    </>
+  );
+}
+
+function Composer() {
+  return (
+    <div className="border-t border-border bg-card/80 backdrop-blur-sm">
+      <div className="border-b border-border/60 bg-muted/60 px-3 py-1.5 text-center text-[11px] font-medium text-muted-foreground">
+        Real live demo coming soon!
+      </div>
+      <div className="px-3 pb-5 pt-4">
+        <div className="flex items-stretch gap-2" aria-disabled="true">
+          <div className="flex flex-1 cursor-not-allowed items-center truncate rounded-xl border border-border bg-background px-4 text-sm text-muted-foreground opacity-60">
+            Add a note…
+          </div>
+          <button
+            type="button"
+            disabled
+            aria-label="Take a photo"
+            className="flex h-14 w-14 shrink-0 cursor-not-allowed items-center justify-center rounded-xl border border-border bg-background text-foreground opacity-60"
+          >
+            <CameraIcon className="h-6 w-6" />
+          </button>
+          <button
+            type="button"
+            disabled
+            aria-label="Record voice note"
+            className="flex h-14 w-14 shrink-0 cursor-not-allowed items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm opacity-60"
+          >
+            <MicIcon className="h-6 w-6" />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ReportScreen({ onBack }: { onBack: () => void }) {
+  return (
+    <>
+      <div className="flex items-center justify-between border-b border-border/60 px-4 pb-3 pt-4">
+        <button
+          type="button"
+          onClick={onBack}
+          className="inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-xs font-semibold text-primary transition hover:bg-primary/10"
+        >
+          <ChevronLeftIcon className="h-3.5 w-3.5" />
+          Reports
+        </button>
+        <span className="text-[11px] text-muted-foreground">Just now</span>
+        <span className="w-8" aria-hidden />
+      </div>
+      <div className="flex-1 overflow-y-auto px-4 pb-4 pt-3">
+        <VoiceReportView report={demoReport} />
+      </div>
+    </>
+  );
+}
+
+// ────────────────────────────────────────────────────────────────────
+// Helpers
+// ────────────────────────────────────────────────────────────────────
+
+function formatDuration(s: number): string {
+  const m = Math.floor(s / 60);
+  const r = s % 60;
+  return `${m}:${String(r).padStart(2, '0')}`;
+}
+
+// ────────────────────────────────────────────────────────────────────
+// Inline icons (lucide paths). Inlined rather than imported so the
+// island stays a single small bundle and matches the existing
+// `apps/marketing/src/components/Icon.astro` style.
+// ────────────────────────────────────────────────────────────────────
+
+interface IconProps {
+  className?: string;
+}
+
+function MicIcon({ className }: IconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden
+    >
+      <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
+      <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+      <line x1="12" x2="12" y1="19" y2="22" />
+    </svg>
+  );
+}
+
+function CameraIcon({ className }: IconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden
+    >
+      <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3Z" />
+      <circle cx="12" cy="13" r="3" />
+    </svg>
+  );
+}
+
+function ArrowRightIcon({ className }: IconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden
+    >
+      <path d="M5 12h14" />
+      <path d="m12 5 7 7-7 7" />
+    </svg>
+  );
+}
+
+function ChevronLeftIcon({ className }: IconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden
+    >
+      <path d="m15 18-6-6 6-6" />
+    </svg>
+  );
+}
+
+function ChevronRightIcon({ className }: IconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden
+    >
+      <path d="m9 6 6 6-6 6" />
+    </svg>
+  );
+}
+
+function PlayIcon({ className }: IconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      className={className}
+      aria-hidden
+    >
+      <path d="M8 5.14v13.72a1 1 0 0 0 1.55.83l10.4-6.86a1 1 0 0 0 0-1.66L9.55 4.31A1 1 0 0 0 8 5.14Z" />
+    </svg>
+  );
+}
+
+function FileIcon({ className }: IconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden
+    >
+      <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" />
+      <path d="M14 2v5h6" />
+    </svg>
+  );
+}
+
+function DotsIcon({ className }: IconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      className={className}
+      aria-hidden
+    >
+      <circle cx="5" cy="12" r="1.5" />
+      <circle cx="12" cy="12" r="1.5" />
+      <circle cx="19" cy="12" r="1.5" />
+    </svg>
+  );
+}
+
+function Spinner({ className }: IconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      className={`animate-spin ${className ?? ''}`}
+      aria-hidden
+    >
+      <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+    </svg>
   );
 }
 

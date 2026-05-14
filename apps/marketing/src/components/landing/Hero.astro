@@ -1,11 +1,11 @@
 ---
 import Icon from "../Icon.astro";
-import ReportMockup from "./ReportMockup.astro";
+import VoiceDemo from "../VoiceDemo.tsx";
 ---
 
-<section id="top" class="relative">
+<section id="top" class="relative border-b border-hairline">
   <div
-    class="mx-auto grid max-w-6xl gap-12 px-4 py-14 sm:px-6 md:py-20 lg:grid-cols-[1.05fr_1fr] lg:gap-16 lg:py-28"
+    class="mx-auto grid max-w-6xl gap-12 px-4 py-14 sm:px-6 md:py-16 lg:grid-cols-2 lg:gap-12"
   >
     <div class="flex flex-col justify-center">
       <span
@@ -17,12 +17,11 @@ import ReportMockup from "./ReportMockup.astro";
       <h1
         class="mt-5 text-4xl font-semibold tracking-tight text-ink sm:text-5xl lg:text-[3.4rem] lg:leading-[1.05]"
       >
-        Don't write reports, let Harpa Pro write for you
+        Foremen talk. Harpa Pro writes.
       </h1>
       <p class="mt-5 max-w-xl text-base leading-relaxed text-ink-soft sm:text-lg">
-        Harpa Pro helps foremen capture field notes, photos, and voice updates
-        throughout the day, then turns them into organized construction
-        reports.
+        Voice notes, site photos, and field updates become an organized daily
+        report — automatically, before you leave the site.
       </p>
       <div class="mt-8 flex flex-wrap items-center gap-3">
         <a
@@ -30,12 +29,6 @@ import ReportMockup from "./ReportMockup.astro";
           class="inline-flex h-11 items-center gap-2 rounded-md bg-accent px-5 text-sm font-medium text-accent-foreground shadow-sm hover:brightness-95 ring-focus"
         >
           Join the waitlist <Icon name="arrow-right" class="h-4 w-4" />
-        </a>
-        <a
-          href="#how"
-          class="inline-flex h-11 items-center rounded-md border border-hairline bg-card px-5 text-sm font-medium text-ink hover:bg-secondary"
-        >
-          See how it works
         </a>
       </div>
       <div
@@ -57,7 +50,7 @@ import ReportMockup from "./ReportMockup.astro";
     </div>
 
     <div class="relative lg:pl-6">
-      <ReportMockup />
+      <VoiceDemo client:only="react" />
     </div>
   </div>
 </section>

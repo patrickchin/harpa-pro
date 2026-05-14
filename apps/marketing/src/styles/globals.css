@@ -179,3 +179,20 @@
     outline-offset: 2px;
   }
 }
+
+/*
+ * Animated "live recording" waveform used by the hero voice-demo
+ * island. Each bar gets a randomized animation delay via inline
+ * style; the keyframe scales it vertically.
+ */
+@keyframes wave-bar {
+  0%, 100% { transform: scaleY(0.25); }
+  50% { transform: scaleY(1); }
+}
+.wave-bar {
+  animation: wave-bar 1.1s ease-in-out infinite;
+  transform-origin: center;
+}
+@media (prefers-reduced-motion: reduce) {
+  .wave-bar { animation: none; transform: scaleY(0.6); }
+}

@@ -79,16 +79,16 @@
   --secondary-foreground: oklch(0.35 0.04 265);
   --muted: oklch(0.94 0.012 85);
   --muted-foreground: oklch(0.5 0.02 265);
-  /* Accent stays vivid (#e55d22) for visual identity. Two paired tokens
-     keep WCAG AA:
-     - --accent-foreground = dark ink, used as text on top of the vivid
-       --accent fill (5.9:1 contrast). NOT the cream we used before
-       (only 3.45:1 — the original Lighthouse failure).
+  /* Accent stays vivid (#e55d22) for visual identity. Two paired tokens:
+     - --accent-foreground = cream, used as text on top of the vivid
+       --accent fill. NOTE: only 3.45:1 contrast — fails WCAG AA 4.5:1
+       for body text but passes AA Large (3:1). Chosen for brand look
+       over a strict a11y pass. Lighthouse will flag this.
      - --accent-ink = darker orange, used wherever the brand colour is
        applied as text on light backgrounds via `.text-accent-ink`
-       (was `.text-accent`, which only hit 3.2:1 against paper). */
+       (5.2:1 on paper — passes AA). */
   --accent: oklch(0.646 0.182 41);
-  --accent-foreground: oklch(0.25 0.04 265);
+  --accent-foreground: oklch(0.99 0.008 90);
   --accent-ink: oklch(0.542 0.158 39);
   --destructive: oklch(0.577 0.245 27.325);
   --destructive-foreground: oklch(0.984 0.003 247.858);

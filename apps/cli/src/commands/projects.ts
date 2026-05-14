@@ -18,6 +18,7 @@ import { getEnv } from '../lib/env-runtime.js';
 import { createApiClient, requireToken, type ApiClient } from '../lib/client.js';
 import { executeRequest, runRequest } from '../lib/run.js';
 import { renderProject, renderProjectList } from '../lib/render.js';
+import { membersCommand } from './members.js';
 import type { ExitCode } from '../lib/error.js';
 
 export interface ProjectsHandlerOptions {
@@ -286,5 +287,6 @@ export const projectsCommand = defineCommand({
     get: projectsGetCommand,
     update: projectsUpdateCommand,
     delete: projectsDeleteCommand,
+    members: membersCommand,
   },
 });

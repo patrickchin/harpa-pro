@@ -9,7 +9,7 @@
  */
 import { describe, it, expect, beforeAll } from 'vitest';
 import chalk from 'chalk';
-import { renderUser, renderUsage, renderProject, renderProjectList } from '../lib/render.js';
+import { renderUser, renderUsage, renderProject, renderProjectList, renderMember, renderMemberList } from '../lib/render.js';
 
 beforeAll(() => {
   chalk.level = 0;
@@ -131,5 +131,60 @@ describe('renderProjectList', () => {
     expect(
       renderProjectList({ items: [], nextCursor: null }),
     ).toMatchSnapshot();
+  });
+});
+
+describe('renderMember', () => {
+  it('renders a fully populated member', () => {
+    expect(
+      renderMember({
+        userId: '00000000-0000-0000-0000-000000000030',
+        displayName: 'Alice',
+        phone: '+15550100300',
+        role: 'editor',
+        joinedAt: '2025-01-15T10:30:00.000Z',
+      }),
+    ).toMatchSnapshot();
+  });
+
+  it('renders a member without display name', () => {
+    expect(
+      renderMember({
+        userId: '00000000-0000-0000-0000-000000000031',
+        displayName: null,
+        phone: '+15550100301',
+        role: 'viewer',
+        joinedAt: '2025-01-15T10:30:00.000Z',
+      }),
+    ).toMatchSnapshot();
+  });
+});
+
+describe('renderMemberList', () => {
+  it('renders a populated list', () => {
+    expect(
+      renderMemberList({
+        items: [
+          {
+            userId: '00000000-0000-0000-0000-000000000040',
+            displayName: 'Owner Person',
+            phone: '+15550100400',
+            role: 'owner',
+            joinedAt: '2025-01-15T10:30:00.000Z',
+          },
+          {
+            userId: '00000000-0000-0000-0000-000000000041',
+            displayName: null,
+            phone: '+15550100401',
+            role: 'editor',
+            joinedAt: '2025-01-15T10:30:00.000Z',
+          },
+        ],
+      }),
+    ).toMatchSnapshot();
+  });
+
+  it('renders an empty member list', () => {
+    expect(renderMemberList({ items: [] })).toMatchSnapshot();
   });
 });

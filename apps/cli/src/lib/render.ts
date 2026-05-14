@@ -102,6 +102,34 @@ export function renderProjectList(
   return [chalk.bold('Projects:'), ...rows, footer].join('\n');
 }
 
+export interface MemberLike {
+  userId: string;
+  displayName: string | null;
+  phone: string;
+  role: 'owner' | 'editor' | 'viewer';
+  joinedAt: string;
+}
+
+export function renderMember(m: MemberLike): string {
+  const name = m.displayName ?? chalk.dim('(no display name)');
+  return [
+    `${chalk.bold(name)} ${chalk.dim(`<${m.phone}>`)} ${chalk.dim(`(${m.role})`)}`,
+    `  User ID:  ${m.userId}`,
+    `  Joined:   ${m.joinedAt}`,
+  ].join('\n');
+}
+
+export function renderMemberList(page: { items: MemberLike[] }): string {
+  if (page.items.length === 0) {
+    return chalk.dim('No members.');
+  }
+  const rows = page.items.map((m) => {
+    const name = m.displayName ?? chalk.dim('(no name)');
+    return `  ${chalk.bold(name).padEnd(30)}  ${m.role.padEnd(6)}  ${m.phone.padEnd(16)}  ${chalk.dim(m.userId)}`;
+  });
+  return [chalk.bold('Members:'), ...rows].join('\n');
+}
+
 function pad(n: number, width: number): string {
   return String(n).padStart(width, ' ');
 }

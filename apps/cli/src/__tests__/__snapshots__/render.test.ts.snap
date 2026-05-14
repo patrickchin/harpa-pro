@@ -1,5 +1,25 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`renderMember > renders a fully populated member 1`] = `
+"Alice <+15550100300> (editor)
+  User ID:  00000000-0000-0000-0000-000000000030
+  Joined:   2025-01-15T10:30:00.000Z"
+`;
+
+exports[`renderMember > renders a member without display name 1`] = `
+"(no display name) <+15550100301> (viewer)
+  User ID:  00000000-0000-0000-0000-000000000031
+  Joined:   2025-01-15T10:30:00.000Z"
+`;
+
+exports[`renderMemberList > renders a populated list 1`] = `
+"Members:
+  Owner Person                    owner   +15550100400      00000000-0000-0000-0000-000000000040
+  (no name)                       editor  +15550100401      00000000-0000-0000-0000-000000000041"
+`;
+
+exports[`renderMemberList > renders an empty member list 1`] = `"No members."`;
+
 exports[`renderProject > renders a fully populated project with stats 1`] = `
 "Demo Project (owner)
   ID:         00000000-0000-0000-0000-000000000010

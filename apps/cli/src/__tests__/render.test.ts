@@ -9,7 +9,7 @@
  */
 import { describe, it, expect, beforeAll } from 'vitest';
 import chalk from 'chalk';
-import { renderUser, renderUsage, renderProject, renderProjectList, renderMember, renderMemberList } from '../lib/render.js';
+import { renderUser, renderUsage, renderProject, renderProjectList, renderMember, renderMemberList, renderReport, renderReportList } from '../lib/render.js';
 
 beforeAll(() => {
   chalk.level = 0;
@@ -186,5 +186,63 @@ describe('renderMemberList', () => {
 
   it('renders an empty member list', () => {
     expect(renderMemberList({ items: [] })).toMatchSnapshot();
+  });
+});
+
+describe('renderReport', () => {
+  const base = {
+    id: '00000000-0000-0000-0000-000000000050',
+    projectId: '00000000-0000-0000-0000-000000000010',
+    status: 'draft' as const,
+    visitDate: '2025-01-15',
+    createdAt: '2025-01-15T10:30:00.000Z',
+    updatedAt: '2025-01-15T11:00:00.000Z',
+  };
+  it('renders a draft report', () => {
+    expect(renderReport(base)).toMatchSnapshot();
+  });
+  it('renders a finalized report', () => {
+    expect(
+      renderReport({
+        ...base,
+        status: 'finalized',
+        finalizedAt: '2025-01-15T12:00:00.000Z',
+        body: { weather: { condition: 'sunny' } },
+      }),
+    ).toMatchSnapshot();
+  });
+  it('renders a report missing optional fields', () => {
+    expect(renderReport({ ...base, visitDate: null })).toMatchSnapshot();
+  });
+});
+
+describe('renderReportList', () => {
+  it('renders a populated list', () => {
+    expect(
+      renderReportList({
+        items: [
+          {
+            id: '00000000-0000-0000-0000-000000000060',
+            projectId: '00000000-0000-0000-0000-000000000010',
+            status: 'draft',
+            visitDate: '2025-01-15',
+            createdAt: '2025-01-15T10:30:00.000Z',
+            updatedAt: '2025-01-15T10:30:00.000Z',
+          },
+          {
+            id: '00000000-0000-0000-0000-000000000061',
+            projectId: '00000000-0000-0000-0000-000000000010',
+            status: 'finalized',
+            visitDate: null,
+            createdAt: '2025-01-14T10:30:00.000Z',
+            updatedAt: '2025-01-14T10:30:00.000Z',
+          },
+        ],
+        nextCursor: null,
+      }),
+    ).toMatchSnapshot();
+  });
+  it('renders an empty list', () => {
+    expect(renderReportList({ items: [], nextCursor: null })).toMatchSnapshot();
   });
 });

@@ -102,6 +102,52 @@ export function renderProjectList(
   return [chalk.bold('Projects:'), ...rows, footer].join('\n');
 }
 
+export interface ReportLike {
+  id: string;
+  projectId: string;
+  status: 'draft' | 'finalized';
+  visitDate: string | null;
+  finalizedAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  body?: unknown;
+}
+
+export function renderReport(r: ReportLike): string {
+  const lines = [
+    `${chalk.bold(`Report ${r.id}`)} ${chalk.dim(`(${r.status})`)}`,
+    `  Project:    ${r.projectId}`,
+    `  Visit date: ${r.visitDate ?? chalk.dim('(none)')}`,
+    `  Created:    ${r.createdAt}`,
+    `  Updated:    ${r.updatedAt}`,
+  ];
+  if (r.finalizedAt) {
+    lines.push(`  Finalized:  ${r.finalizedAt}`);
+  }
+  if (r.body && typeof r.body === 'object') {
+    lines.push(chalk.dim('  Body:       (use --json to see full structured body)'));
+  } else {
+    lines.push(`  Body:       ${chalk.dim('(empty)')}`);
+  }
+  return lines.join('\n');
+}
+
+export function renderReportList(
+  page: { items: ReportLike[]; nextCursor: string | null },
+): string {
+  if (page.items.length === 0) {
+    return chalk.dim('No reports.');
+  }
+  const rows = page.items.map((r) => {
+    const visit = r.visitDate ?? chalk.dim('—');
+    return `  ${chalk.bold(r.id)}  ${r.status.padEnd(9)}  ${String(visit).padEnd(12)}  ${chalk.dim(r.createdAt)}`;
+  });
+  const footer = page.nextCursor
+    ? chalk.dim(`\nNext page: --cursor ${page.nextCursor}`)
+    : chalk.dim('\n(end of list)');
+  return [chalk.bold('Reports:'), ...rows, footer].join('\n');
+}
+
 export interface MemberLike {
   userId: string;
   displayName: string | null;

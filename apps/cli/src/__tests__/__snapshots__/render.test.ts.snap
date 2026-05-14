@@ -52,6 +52,44 @@ Next page: --cursor cursor-xyz"
 
 exports[`renderProjectList > renders an empty list 1`] = `"No projects."`;
 
+exports[`renderReport > renders a draft report 1`] = `
+"Report 00000000-0000-0000-0000-000000000050 (draft)
+  Project:    00000000-0000-0000-0000-000000000010
+  Visit date: 2025-01-15
+  Created:    2025-01-15T10:30:00.000Z
+  Updated:    2025-01-15T11:00:00.000Z
+  Body:       (empty)"
+`;
+
+exports[`renderReport > renders a finalized report 1`] = `
+"Report 00000000-0000-0000-0000-000000000050 (finalized)
+  Project:    00000000-0000-0000-0000-000000000010
+  Visit date: 2025-01-15
+  Created:    2025-01-15T10:30:00.000Z
+  Updated:    2025-01-15T11:00:00.000Z
+  Finalized:  2025-01-15T12:00:00.000Z
+  Body:       (use --json to see full structured body)"
+`;
+
+exports[`renderReport > renders a report missing optional fields 1`] = `
+"Report 00000000-0000-0000-0000-000000000050 (draft)
+  Project:    00000000-0000-0000-0000-000000000010
+  Visit date: (none)
+  Created:    2025-01-15T10:30:00.000Z
+  Updated:    2025-01-15T11:00:00.000Z
+  Body:       (empty)"
+`;
+
+exports[`renderReportList > renders a populated list 1`] = `
+"Reports:
+  00000000-0000-0000-0000-000000000060  draft      2025-01-15    2025-01-15T10:30:00.000Z
+  00000000-0000-0000-0000-000000000061  finalized  —             2025-01-14T10:30:00.000Z
+
+(end of list)"
+`;
+
+exports[`renderReportList > renders an empty list 1`] = `"No reports."`;
+
 exports[`renderUsage > renders empty usage 1`] = `
 "Month     Reports  Voice notes
 ——————————————————————————————

@@ -24,6 +24,7 @@
     "db:branch:create": "tsx infra/neon/branch.ts create",
     "db:branch:delete": "tsx infra/neon/branch.ts delete",
     "format": "prettier --write .",
+    "harpa": "pnpm --filter @harpa/cli dev --",
     "prepare": "husky"
   },
   "devDependencies": {

@@ -105,6 +105,7 @@ flowchart TB
 | 8a | **Shared UI (voice)** | [arch-ui-voice.md](arch-ui-voice.md) | **Cross-platform voice-notes + report components (RNW + NativeWind); used by mobile + marketing demo** |
 | 9 | Testing strategy | [arch-testing.md](arch-testing.md) | Test pyramid, Testcontainers, MSW, Maestro behaviour flows, fixture replay |
 | 10 | Observability + ops | [arch-ops.md](arch-ops.md) | Fly metrics, Sentry, log shipping, deploy flow |
+| 11 | **CLI** | [arch-cli.md](arch-cli.md) | **Debug / API testing / LLM-driven usage tool (`apps/cli`); stateless, env-only, covers all 37 routes** |
 
 ## Repo layout (target end of P0)
 

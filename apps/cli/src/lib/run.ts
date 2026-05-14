@@ -12,7 +12,14 @@
  * enforced in one place.
  */
 import chalk from 'chalk';
-import { EXIT, mapStatusToExitCode, printError, printTransportError, type ErrorEnvelope } from './error.js';
+import {
+  EXIT,
+  type ExitCode,
+  mapStatusToExitCode,
+  printError,
+  printTransportError,
+  type ErrorEnvelope,
+} from './error.js';
 import { MissingTokenError } from './client.js';
 
 export interface GlobalFlags {
@@ -27,24 +34,31 @@ export interface RunRequestOptions<T> extends GlobalFlags {
   formatJson?: (data: T) => string;
   /** Underlying request thunk; returns openapi-fetch shape. */
   request: () => Promise<{ data?: T; error?: unknown; response: Response }>;
-  /** Print verbose response metadata when `--verbose` is set. */
+  /** Output stream for success rendering; defaults to process.stdout. */
   stdout?: NodeJS.WritableStream;
+  /** Output stream for error rendering; defaults to process.stderr. */
+  stderr?: NodeJS.WritableStream;
 }
 
-export async function runRequest<T>(opts: RunRequestOptions<T>): Promise<never> {
+/**
+ * Pure core: runs the request, writes output, returns the exit code.
+ * Never calls `process.exit`, so it is safe to use from tests.
+ */
+export async function executeRequest<T>(opts: RunRequestOptions<T>): Promise<ExitCode> {
   const out = opts.stdout ?? process.stdout;
+  const err = opts.stderr ?? process.stderr;
   const debug = process.env.HARPA_DEBUG === '1';
 
   let result: { data?: T; error?: unknown; response: Response };
   try {
     result = await opts.request();
-  } catch (err) {
-    if (err instanceof MissingTokenError) {
-      process.stderr.write(chalk.red('Error: ' + err.message) + '\n');
-      process.exit(err.exitCode);
+  } catch (e) {
+    if (e instanceof MissingTokenError) {
+      err.write(chalk.red('Error: ' + e.message) + '\n');
+      return e.exitCode;
     }
-    printTransportError(err, { json: opts.json, debug });
-    process.exit(EXIT.TRANSPORT);
+    printTransportError(e, { json: opts.json, debug, stderr: err });
+    return EXIT.TRANSPORT;
   }
 
   const { data, error, response } = result;
@@ -58,15 +72,26 @@ export async function runRequest<T>(opts: RunRequestOptions<T>): Promise<never> 
       const formatted = opts.format(data);
       if (formatted !== undefined && formatted !== '') out.write(formatted + '\n');
     }
-    if (opts.verbose) writeVerbose(response, out);
-    process.exit(EXIT.OK);
+    if (opts.verbose) writeVerbose(response, err);
+    return EXIT.OK;
   }
 
   printError(status, error as ErrorEnvelope | undefined, response.headers, {
     json: opts.json,
     debug,
+    stderr: err,
   });
-  process.exit(mapStatusToExitCode(status));
+  return mapStatusToExitCode(status);
+}
+
+/**
+ * Thin wrapper used by every citty command handler: runs `executeRequest`
+ * and process.exits with the resulting code. Typed as `never` because the
+ * process is gone by the time control would return.
+ */
+export async function runRequest<T>(opts: RunRequestOptions<T>): Promise<never> {
+  const code = await executeRequest(opts);
+  process.exit(code);
 }
 
 function writeVerbose(response: Response, out: NodeJS.WritableStream): void {

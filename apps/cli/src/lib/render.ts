@@ -246,3 +246,16 @@ export function renderFile(f: FileLike): string {
     `  Created:  ${f.createdAt}`,
   ].join('\n');
 }
+
+export interface AiSettingsLike {
+  vendor: string;
+  model: string;
+}
+
+export function renderAiSettings(s: AiSettingsLike): string {
+  return [
+    `${chalk.bold('AI settings')}`,
+    `  Vendor:  ${s.vendor}`,
+    `  Model:   ${s.model}`,
+  ].join('\n');
+}

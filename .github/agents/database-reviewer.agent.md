@@ -3,7 +3,7 @@ description: "Use for any change to packages/api Drizzle schema, SQL migrations 
 name: "database-reviewer"
 tools: [read, search, execute]
 user-invocable: false
-model: ['Claude Sonnet 4.5 (copilot)', 'Claude Opus 4.7 (copilot)']
+model: ['Claude Opus 4.7 (copilot)']
 ---
 
 You are the v4 database reviewer. You run for any change that

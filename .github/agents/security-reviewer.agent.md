@@ -3,7 +3,7 @@ description: "Use BEFORE and AFTER any change touching auth, per-request DB scop
 name: "security-reviewer"
 tools: [read, search, execute]
 user-invocable: false
-model: ['Claude Sonnet 4.5 (copilot)', 'Claude Opus 4.7 (copilot)']
+model: ['Claude Opus 4.7 (copilot)']
 ---
 
 You are the v4 security reviewer. You run BEFORE a change to a

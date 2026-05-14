@@ -42,6 +42,7 @@
   --color-muted-foreground: var(--muted-foreground);
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
+  --color-accent-ink: var(--accent-ink);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
   --color-border: var(--border);
@@ -78,16 +79,22 @@
   --secondary-foreground: oklch(0.35 0.04 265);
   --muted: oklch(0.94 0.012 85);
   --muted-foreground: oklch(0.5 0.02 265);
-  /* Accent darkened from oklch(0.646 0.182 41) (#e55d22) to meet WCAG AA
-     4.5:1 contrast against both --background (paper) and --accent-foreground
-     (cream) — see Lighthouse run 2026-05-13. */
-  --accent: oklch(0.542 0.158 39);
-  --accent-foreground: oklch(0.99 0.008 90);
+  /* Accent stays vivid (#e55d22) for visual identity. Two paired tokens
+     keep WCAG AA:
+     - --accent-foreground = dark ink, used as text on top of the vivid
+       --accent fill (5.9:1 contrast). NOT the cream we used before
+       (only 3.45:1 — the original Lighthouse failure).
+     - --accent-ink = darker orange, used wherever the brand colour is
+       applied as text on light backgrounds via `.text-accent-ink`
+       (was `.text-accent`, which only hit 3.2:1 against paper). */
+  --accent: oklch(0.646 0.182 41);
+  --accent-foreground: oklch(0.25 0.04 265);
+  --accent-ink: oklch(0.542 0.158 39);
   --destructive: oklch(0.577 0.245 27.325);
   --destructive-foreground: oklch(0.984 0.003 247.858);
   --border: oklch(0.74 0.012 85);
   --input: oklch(0.74 0.012 85);
-  --ring: oklch(0.542 0.158 39);
+  --ring: oklch(0.646 0.182 41);
   --chart-1: oklch(0.646 0.222 41.116);
   --chart-2: oklch(0.6 0.118 184.704);
   --chart-3: oklch(0.398 0.07 227.392);

@@ -31,15 +31,15 @@ const items = await Promise.all(
     </div>
 
     <div
-      class="mt-10 grid gap-3 overflow-hidden rounded-xl border border-hairline bg-card divide-y divide-[color:var(--color-border)]"
+      class="mt-10 grid overflow-hidden rounded-xl border border-hairline bg-card divide-y divide-[color:var(--color-border)]"
     >
       {
         items.map(({ question, Content }) => (
           <details class="group p-5">
             <summary
-              class="flex cursor-pointer list-none items-center justify-between gap-6 text-base font-semibold text-ink [&::-webkit-details-marker]:hidden"
+              class="flex cursor-pointer list-none items-center justify-between gap-6 text-base font-semibold leading-snug text-ink [&::-webkit-details-marker]:hidden"
             >
-              <span>{question}</span>
+              <span class="leading-snug">{question}</span>
               <span
                 aria-hidden="true"
                 class="grid h-6 w-6 shrink-0 place-items-center rounded-full border border-hairline bg-paper-2 text-ink-soft transition-transform group-open:rotate-45"

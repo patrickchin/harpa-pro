@@ -82,7 +82,7 @@ function ListScreen({ elapsedSec, generating, onGenerate }: ListScreenProps) {
     <>
       <div className="flex items-center justify-between border-b border-border/60 px-4 pb-3 pt-4">
         <h3 className="truncate text-sm font-semibold tracking-tight text-foreground">
-          Site visit · today
+          New Report
         </h3>
         <button
           type="button"
@@ -95,7 +95,7 @@ function ListScreen({ elapsedSec, generating, onGenerate }: ListScreenProps) {
 
       <div className="flex-1 overflow-y-auto px-4 pb-3 pt-3">
         <PreviousNoteCard
-          title="Walk-through — north entrance"
+          title="Walk through — North Entrance"
           author="Haruna Bayoh"
           recordedAt="Today · 9:42 AM"
           summary="Rebar laid out for Block B footing. Crew noted standing water near gridline 4; pump scheduled for tomorrow."
@@ -142,9 +142,6 @@ function VoiceNoteCard({ elapsedSec }: VoiceNoteCardProps) {
           <MicIcon className="relative h-4 w-4 text-primary" />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold text-foreground">
-            Recording in progress
-          </p>
           <p className="truncate text-[11px] text-muted-foreground">
             Patrick Chin · Today · 11:08 AM
           </p>
@@ -203,6 +200,7 @@ function PreviousNoteCard({
         </div>
       </div>
       <p className="mt-3 line-clamp-2 text-xs leading-relaxed text-muted-foreground">
+        <span className="font-bold">Summary: </span>
         {summary}
       </p>
     </div>

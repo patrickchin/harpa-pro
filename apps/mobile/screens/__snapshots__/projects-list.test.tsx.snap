@@ -738,6 +738,7 @@ exports[`ProjectsList > matches snapshot with projects 1`] = `
           "id": "123e4567-e89b-12d3-a456-426614174000",
           "name": "Construction Site A",
           "role": "owner",
+          "slug": "prj_abc123",
           "updatedAt": "2024-03-15T10:30:00.000Z",
         },
         {
@@ -745,6 +746,7 @@ exports[`ProjectsList > matches snapshot with projects 1`] = `
           "id": "223e4567-e89b-12d3-a456-426614174001",
           "name": "Office Building Renovation",
           "role": "editor",
+          "slug": "prj_def456",
           "updatedAt": "2024-03-14T08:15:00.000Z",
         },
         {
@@ -752,6 +754,7 @@ exports[`ProjectsList > matches snapshot with projects 1`] = `
           "id": "323e4567-e89b-12d3-a456-426614174002",
           "name": "Residential Complex",
           "role": "viewer",
+          "slug": "prj_ghj789",
           "updatedAt": "2024-03-10T14:45:00.000Z",
         },
       ]
@@ -978,6 +981,7 @@ exports[`ProjectsList > renders address row only when address is non-null 1`] = 
           "id": "123e4567-e89b-12d3-a456-426614174000",
           "name": "Construction Site A",
           "role": "owner",
+          "slug": "prj_abc123",
           "updatedAt": "2024-03-15T10:30:00.000Z",
         },
         {
@@ -985,6 +989,7 @@ exports[`ProjectsList > renders address row only when address is non-null 1`] = 
           "id": "223e4567-e89b-12d3-a456-426614174001",
           "name": "Office Building Renovation",
           "role": "editor",
+          "slug": "prj_def456",
           "updatedAt": "2024-03-14T08:15:00.000Z",
         },
         {
@@ -992,6 +997,7 @@ exports[`ProjectsList > renders address row only when address is non-null 1`] = 
           "id": "323e4567-e89b-12d3-a456-426614174002",
           "name": "Residential Complex",
           "role": "viewer",
+          "slug": "prj_ghj789",
           "updatedAt": "2024-03-10T14:45:00.000Z",
         },
       ]
@@ -1131,6 +1137,7 @@ exports[`ProjectsList > renders role labels correctly 1`] = `
           "id": "123e4567-e89b-12d3-a456-426614174000",
           "name": "Construction Site A",
           "role": "owner",
+          "slug": "prj_abc123",
           "updatedAt": "2024-03-15T10:30:00.000Z",
         },
         {
@@ -1138,6 +1145,7 @@ exports[`ProjectsList > renders role labels correctly 1`] = `
           "id": "223e4567-e89b-12d3-a456-426614174001",
           "name": "Office Building Renovation",
           "role": "editor",
+          "slug": "prj_def456",
           "updatedAt": "2024-03-14T08:15:00.000Z",
         },
         {
@@ -1145,6 +1153,7 @@ exports[`ProjectsList > renders role labels correctly 1`] = `
           "id": "323e4567-e89b-12d3-a456-426614174002",
           "name": "Residential Complex",
           "role": "viewer",
+          "slug": "prj_ghj789",
           "updatedAt": "2024-03-10T14:45:00.000Z",
         },
       ]

@@ -775,7 +775,7 @@ Updated hooks (param name changes):
   - [ ] Regenerate OpenAPI spec (`pnpm spec:emit`)  
   - [ ] Run `pnpm test:api:integration` + `pnpm check-spec-drift` → green  
 
-- [ ] **Commit 4:** Mobile routing + codegen + resolver screens  
+- [x] **Commit 4:** Mobile routing + codegen + resolver screens  
   - [ ] Rename `[id]` → `[projectSlug]` in mobile file structure  
   - [ ] Update `projects/index.tsx` (use `slug` in `router.push`)  
   - [ ] Add `app/(app)/p/[projectSlug].tsx`  

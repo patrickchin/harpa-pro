@@ -11,6 +11,7 @@ import type { ProjectRow } from './projects-list';
 const MOCK_PROJECTS: readonly ProjectRow[] = [
   {
     id: '123e4567-e89b-12d3-a456-426614174000',
+    slug: 'prj_abc123',
     name: 'Construction Site A',
     role: 'owner',
     address: '123 Main St, San Francisco, CA',
@@ -18,6 +19,7 @@ const MOCK_PROJECTS: readonly ProjectRow[] = [
   },
   {
     id: '223e4567-e89b-12d3-a456-426614174001',
+    slug: 'prj_def456',
     name: 'Office Building Renovation',
     role: 'editor',
     address: null,
@@ -25,6 +27,7 @@ const MOCK_PROJECTS: readonly ProjectRow[] = [
   },
   {
     id: '323e4567-e89b-12d3-a456-426614174002',
+    slug: 'prj_ghj789',
     name: 'Residential Complex',
     role: 'viewer',
     address: '789 Oak Ave, Palo Alto, CA',

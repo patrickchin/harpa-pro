@@ -1,0 +1,8 @@
+You're nearly on the Harpa Pro waitlist.
+
+Confirm your spot (link expires in 7 days):
+{{confirmUrl}}
+
+If you didn't sign up, ignore this email.
+
+— Patrick from Harpa Pro

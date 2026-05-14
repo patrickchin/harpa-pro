@@ -59,23 +59,27 @@ const ENDPOINTS: Endpoint[] = [
   // projects
   { method: 'get',    path: '/projects',                              hook: 'useListProjectsQuery',         query: true,  hasPathParams: false, hasBody: false, queryKeyHead: 'projects' },
   { method: 'post',   path: '/projects',                              hook: 'useCreateProjectMutation',     query: false, hasPathParams: false, hasBody: true },
-  { method: 'get',    path: '/projects/{id}',                         hook: 'useProjectQuery',              query: true,  hasPathParams: true,  hasBody: false, queryKeyHead: 'project' },
-  { method: 'patch',  path: '/projects/{id}',                         hook: 'useUpdateProjectMutation',     query: false, hasPathParams: true,  hasBody: true },
-  { method: 'delete', path: '/projects/{id}',                         hook: 'useDeleteProjectMutation',     query: false, hasPathParams: true,  hasBody: false },
-  { method: 'get',    path: '/projects/{id}/members',                 hook: 'useProjectMembersQuery',       query: true,  hasPathParams: true,  hasBody: false, queryKeyHead: 'projectMembers' },
-  { method: 'post',   path: '/projects/{id}/members',                 hook: 'useAddProjectMemberMutation',  query: false, hasPathParams: true,  hasBody: true },
-  { method: 'delete', path: '/projects/{id}/members/{userId}',        hook: 'useRemoveProjectMemberMutation', query: false, hasPathParams: true,  hasBody: false },
+  { method: 'get',    path: '/projects/{projectSlug}',                hook: 'useProjectQuery',              query: true,  hasPathParams: true,  hasBody: false, queryKeyHead: 'project' },
+  { method: 'patch',  path: '/projects/{projectSlug}',                hook: 'useUpdateProjectMutation',     query: false, hasPathParams: true,  hasBody: true },
+  { method: 'delete', path: '/projects/{projectSlug}',                hook: 'useDeleteProjectMutation',     query: false, hasPathParams: true,  hasBody: false },
+  { method: 'get',    path: '/projects/{projectSlug}/members',        hook: 'useProjectMembersQuery',       query: true,  hasPathParams: true,  hasBody: false, queryKeyHead: 'projectMembers' },
+  { method: 'post',   path: '/projects/{projectSlug}/members',        hook: 'useAddProjectMemberMutation',  query: false, hasPathParams: true,  hasBody: true },
+  { method: 'delete', path: '/projects/{projectSlug}/members/{userId}', hook: 'useRemoveProjectMemberMutation', query: false, hasPathParams: true,  hasBody: false },
 
   // reports
-  { method: 'get',    path: '/projects/{id}/reports',                 hook: 'useProjectReportsQuery',       query: true,  hasPathParams: true,  hasBody: false, queryKeyHead: 'projectReports' },
-  { method: 'post',   path: '/projects/{id}/reports',                 hook: 'useCreateReportMutation',      query: false, hasPathParams: true,  hasBody: true },
-  { method: 'get',    path: '/reports/{reportId}',                    hook: 'useReportQuery',               query: true,  hasPathParams: true,  hasBody: false, queryKeyHead: 'report' },
-  { method: 'patch',  path: '/reports/{reportId}',                    hook: 'useUpdateReportMutation',      query: false, hasPathParams: true,  hasBody: true },
-  { method: 'delete', path: '/reports/{reportId}',                    hook: 'useDeleteReportMutation',      query: false, hasPathParams: true,  hasBody: false },
-  { method: 'post',   path: '/reports/{reportId}/generate',           hook: 'useGenerateReportMutation',    query: false, hasPathParams: true,  hasBody: true },
-  { method: 'post',   path: '/reports/{reportId}/regenerate',         hook: 'useRegenerateReportMutation',  query: false, hasPathParams: true,  hasBody: true },
-  { method: 'post',   path: '/reports/{reportId}/finalize',           hook: 'useFinalizeReportMutation',    query: false, hasPathParams: true,  hasBody: false },
-  { method: 'post',   path: '/reports/{reportId}/pdf',                hook: 'useReportPdfMutation',         query: false, hasPathParams: true,  hasBody: false },
+  { method: 'get',    path: '/projects/{projectSlug}/reports',                          hook: 'useProjectReportsQuery',       query: true,  hasPathParams: true,  hasBody: false, queryKeyHead: 'projectReports' },
+  { method: 'post',   path: '/projects/{projectSlug}/reports',                          hook: 'useCreateReportMutation',      query: false, hasPathParams: true,  hasBody: true },
+  { method: 'get',    path: '/projects/{projectSlug}/reports/{number}',                 hook: 'useReportQuery',               query: true,  hasPathParams: true,  hasBody: false, queryKeyHead: 'report' },
+  { method: 'patch',  path: '/projects/{projectSlug}/reports/{number}',                 hook: 'useUpdateReportMutation',      query: false, hasPathParams: true,  hasBody: true },
+  { method: 'delete', path: '/projects/{projectSlug}/reports/{number}',                 hook: 'useDeleteReportMutation',      query: false, hasPathParams: true,  hasBody: false },
+  { method: 'post',   path: '/projects/{projectSlug}/reports/{number}/generate',        hook: 'useGenerateReportMutation',    query: false, hasPathParams: true,  hasBody: true },
+  { method: 'post',   path: '/projects/{projectSlug}/reports/{number}/regenerate',      hook: 'useRegenerateReportMutation',  query: false, hasPathParams: true,  hasBody: true },
+  { method: 'post',   path: '/projects/{projectSlug}/reports/{number}/finalize',        hook: 'useFinalizeReportMutation',    query: false, hasPathParams: true,  hasBody: false },
+  { method: 'post',   path: '/projects/{projectSlug}/reports/{number}/pdf',             hook: 'useReportPdfMutation',         query: false, hasPathParams: true,  hasBody: false },
+
+  // short-URL resolvers (P3.0 Commit 3)
+  { method: 'get',    path: '/p/{projectSlug}',                       hook: 'useResolveProjectSlugQuery',   query: true,  hasPathParams: true,  hasBody: false, queryKeyHead: 'resolveProjectSlug' },
+  { method: 'get',    path: '/r/{reportSlug}',                        hook: 'useResolveReportSlugQuery',    query: true,  hasPathParams: true,  hasBody: false, queryKeyHead: 'resolveReportSlug' },
 
   // notes
   { method: 'get',    path: '/reports/{reportId}/notes',              hook: 'useReportNotesQuery',          query: true,  hasPathParams: true,  hasBody: false, queryKeyHead: 'reportNotes' },

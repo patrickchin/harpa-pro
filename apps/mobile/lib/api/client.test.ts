@@ -87,12 +87,12 @@ describe('lib/api/client', () => {
 
     it('substitutes path params + serialises query params', async () => {
       const fetchFn = stubFetch(() => jsonResponse(200, { items: [], nextCursor: null }));
-      await request('/projects/{id}/reports', 'get', {
-        params: { id: 'proj-42' },
+      await request('/projects/{projectSlug}/reports', 'get', {
+        params: { projectSlug: 'prj_abcdef' },
         query: { cursor: 'abc', limit: 10 } as never,
       });
       expect(fetchFn.mock.calls[0]![0]).toBe(
-        'http://localhost:8787/projects/proj-42/reports?cursor=abc&limit=10',
+        'http://localhost:8787/projects/prj_abcdef/reports?cursor=abc&limit=10',
       );
     });
 

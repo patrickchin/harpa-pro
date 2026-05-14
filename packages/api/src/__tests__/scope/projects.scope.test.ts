@@ -20,6 +20,8 @@ let aliceSid: string;
 let bobSid: string;
 let aliceProj: string;
 let bobProj: string;
+let aliceProjSlug: string;
+let bobProjSlug: string;
 
 beforeAll(async () => {
   fx = await startPg();
@@ -42,16 +44,18 @@ beforeAll(async () => {
   aliceSid = s.rows[0]!.id;
   bobSid = s.rows[1]!.id;
 
-  const ap = await admin.query<{ id: string }>(
-    `INSERT INTO app.projects(name, owner_id) VALUES ('alice-proj', $1) RETURNING id`,
+  const ap = await admin.query<{ id: string; slug: string }>(
+    `INSERT INTO app.projects(name, owner_id) VALUES ('alice-proj', $1) RETURNING id, slug`,
     [alice],
   );
   aliceProj = ap.rows[0]!.id;
-  const bp = await admin.query<{ id: string }>(
-    `INSERT INTO app.projects(name, owner_id) VALUES ('bob-proj', $1) RETURNING id`,
+  aliceProjSlug = ap.rows[0]!.slug;
+  const bp = await admin.query<{ id: string; slug: string }>(
+    `INSERT INTO app.projects(name, owner_id) VALUES ('bob-proj', $1) RETURNING id, slug`,
     [bob],
   );
   bobProj = bp.rows[0]!.id;
+  bobProjSlug = bp.rows[0]!.slug;
   await admin.query(
     `INSERT INTO app.project_members(project_id, user_id, role) VALUES ($1, $2, 'owner'), ($3, $4, 'owner')`,
     [aliceProj, alice, bobProj, bob],
@@ -67,7 +71,7 @@ describe('scope: /projects', () => {
   it('alice GET /projects/:id returns her own project', async () => {
     const app = createApp();
     const token = await signTestToken(alice, aliceSid);
-    const res = await app.request(`/projects/${aliceProj}`, { headers: { authorization: `Bearer ${token}` } });
+    const res = await app.request(`/projects/${aliceProjSlug}`, { headers: { authorization: `Bearer ${token}` } });
     expect(res.status).toBe(200);
     const body = (await res.json()) as { id: string; ownerId: string };
     expect(body.id).toBe(aliceProj);
@@ -77,14 +81,14 @@ describe('scope: /projects', () => {
   it('paired — alice GET /projects/:id of bob returns 404', async () => {
     const app = createApp();
     const token = await signTestToken(alice, aliceSid);
-    const res = await app.request(`/projects/${bobProj}`, { headers: { authorization: `Bearer ${token}` } });
+    const res = await app.request(`/projects/${bobProjSlug}`, { headers: { authorization: `Bearer ${token}` } });
     expect(res.status).toBe(404);
   });
 
   it('paired write — alice cannot DELETE bob project (RLS denies)', async () => {
     const app = createApp();
     const token = await signTestToken(alice, aliceSid);
-    const res = await app.request(`/projects/${bobProj}`, {
+    const res = await app.request(`/projects/${bobProjSlug}`, {
       method: 'DELETE',
       headers: { authorization: `Bearer ${token}` },
     });

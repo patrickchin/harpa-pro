@@ -170,6 +170,30 @@ export async function getProject(
   projectId: string,
   withStats = true,
 ): Promise<ProjectRow | null> {
+  return getProjectByPredicate(db, userId, sql`p.id = ${projectId}::uuid`, withStats);
+}
+
+/**
+ * Look up a project by its public slug. Returns null if the slug
+ * doesn't exist OR the caller is not a member (RLS on project_members
+ * + the JOIN below hides the row either way → indistinguishable 404,
+ * Pitfall 6).
+ */
+export async function getProjectBySlug(
+  db: Db,
+  userId: string,
+  projectSlugValue: string,
+  withStats = true,
+): Promise<ProjectRow | null> {
+  return getProjectByPredicate(db, userId, sql`p.slug = ${projectSlugValue}`, withStats);
+}
+
+async function getProjectByPredicate(
+  db: Db,
+  userId: string,
+  predicate: ReturnType<typeof sql>,
+  withStats: boolean,
+): Promise<ProjectRow | null> {
   const r = await db.execute<{
     id: string;
     slug: string;
@@ -186,7 +210,7 @@ export async function getProject(
     FROM app.projects p
     JOIN app.project_members pm
       ON pm.project_id = p.id AND pm.user_id = ${userId}::uuid
-    WHERE p.id = ${projectId}::uuid
+    WHERE ${predicate}
     LIMIT 1
   `);
   const row = r.rows[0];
@@ -209,7 +233,7 @@ export async function getProject(
       total_reports: string;
       drafts: string;
       last_report_at: Date | null;
-    }>(sql`SELECT * FROM app.project_stats(${projectId}::uuid)`);
+    }>(sql`SELECT * FROM app.project_stats(${row.id}::uuid)`);
     const s = stats.rows[0];
     if (s) {
       out.stats = {
@@ -220,6 +244,23 @@ export async function getProject(
     }
   }
   return out;
+}
+
+/**
+ * Resolve a `prj_xxxxxx` slug to `{ projectSlug }` (just confirming
+ * existence + scope). Used by `GET /p/:projectSlug` to back the
+ * short-URL flow. Returns null if the slug doesn't exist or RLS hides
+ * it.
+ */
+export async function resolveProjectSlug(
+  db: Db,
+  projectSlugValue: string,
+): Promise<{ projectSlug: string } | null> {
+  const r = await db.execute<{ slug: string }>(sql`
+    SELECT slug FROM app.projects WHERE slug = ${projectSlugValue} LIMIT 1
+  `);
+  const row = r.rows[0];
+  return row ? { projectSlug: row.slug } : null;
 }
 
 export async function updateProject(

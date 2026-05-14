@@ -99,7 +99,7 @@ describe('POST /projects', () => {
 });
 
 describe('GET /projects + GET /projects/:id', () => {
-  let projectId: string;
+  let projectSlug: string;
 
   beforeAll(async () => {
     const app = createApp();
@@ -109,8 +109,8 @@ describe('GET /projects + GET /projects/:id', () => {
       headers: await authed(token),
       body: JSON.stringify({ name: 'Bob site' }),
     });
-    const body = (await res.json()) as { id: string };
-    projectId = body.id;
+    const body = (await res.json()) as { slug: string };
+    projectSlug = body.slug;
   });
 
   it('lists projects for the caller (paginated)', async () => {
@@ -118,9 +118,9 @@ describe('GET /projects + GET /projects/:id', () => {
     const token = await signTestToken(bob, bobSid);
     const res = await app.request('/projects?limit=5', { headers: { authorization: `Bearer ${token}` } });
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { items: Array<{ id: string }>; nextCursor: string | null };
+    const body = (await res.json()) as { items: Array<{ slug: string }>; nextCursor: string | null };
     expect(body.items.length).toBeGreaterThan(0);
-    expect(body.items.find((p) => p.id === projectId)).toBeTruthy();
+    expect(body.items.find((p) => p.slug === projectSlug)).toBeTruthy();
   });
 
   it('cursor pagination round-trips', async () => {
@@ -149,7 +149,7 @@ describe('GET /projects + GET /projects/:id', () => {
   it('GET /projects/:id returns stats', async () => {
     const app = createApp();
     const token = await signTestToken(bob, bobSid);
-    const res = await app.request(`/projects/${projectId}`, { headers: { authorization: `Bearer ${token}` } });
+    const res = await app.request(`/projects/${projectSlug}`, { headers: { authorization: `Bearer ${token}` } });
     expect(res.status).toBe(200);
     const body = (await res.json()) as { stats?: { totalReports: number } };
     expect(body.stats?.totalReports).toBe(0);
@@ -158,19 +158,19 @@ describe('GET /projects + GET /projects/:id', () => {
   it('GET /projects/:id 404 when not a member', async () => {
     const app = createApp();
     const token = await signTestToken(carol, carolSid);
-    const res = await app.request(`/projects/${projectId}`, { headers: { authorization: `Bearer ${token}` } });
+    const res = await app.request(`/projects/${projectSlug}`, { headers: { authorization: `Bearer ${token}` } });
     expect(res.status).toBe(404);
   });
 
   it('GET /projects/:id 401 without auth', async () => {
     const app = createApp();
-    const res = await app.request(`/projects/${projectId}`);
+    const res = await app.request(`/projects/${projectSlug}`);
     expect(res.status).toBe(401);
   });
 });
 
 describe('PATCH + DELETE /projects/:id', () => {
-  let projectId: string;
+  let projectSlug: string;
   beforeAll(async () => {
     const app = createApp();
     const token = await signTestToken(alice, aliceSid);
@@ -179,13 +179,13 @@ describe('PATCH + DELETE /projects/:id', () => {
       headers: await authed(token),
       body: JSON.stringify({ name: 'Patchable' }),
     });
-    projectId = ((await res.json()) as { id: string }).id;
+    projectSlug = ((await res.json()) as { slug: string }).slug;
   });
 
   it('PATCH updates fields the caller can see', async () => {
     const app = createApp();
     const token = await signTestToken(alice, aliceSid);
-    const res = await app.request(`/projects/${projectId}`, {
+    const res = await app.request(`/projects/${projectSlug}`, {
       method: 'PATCH',
       headers: await authed(token),
       body: JSON.stringify({ name: 'Patched' }),
@@ -197,7 +197,7 @@ describe('PATCH + DELETE /projects/:id', () => {
   it('DELETE returns 204 for owner', async () => {
     const app = createApp();
     const token = await signTestToken(alice, aliceSid);
-    const res = await app.request(`/projects/${projectId}`, {
+    const res = await app.request(`/projects/${projectSlug}`, {
       method: 'DELETE',
       headers: { authorization: `Bearer ${token}` },
     });
@@ -214,13 +214,13 @@ describe('PATCH + DELETE /projects/:id', () => {
       headers: await authed(aliceTok),
       body: JSON.stringify({ name: 'NotYours' }),
     });
-    const id = ((await created.json()) as { id: string }).id;
-    await app.request(`/projects/${id}/members`, {
+    const slug = ((await created.json()) as { slug: string }).slug;
+    await app.request(`/projects/${slug}/members`, {
       method: 'POST',
       headers: await authed(aliceTok),
       body: JSON.stringify({ phone: '+15550400002', role: 'editor' }),
     });
-    const res = await app.request(`/projects/${id}`, {
+    const res = await app.request(`/projects/${slug}`, {
       method: 'DELETE',
       headers: { authorization: `Bearer ${bobTok}` },
     });
@@ -229,7 +229,7 @@ describe('PATCH + DELETE /projects/:id', () => {
 });
 
 describe('Members', () => {
-  let projectId: string;
+  let projectSlug: string;
   beforeAll(async () => {
     const app = createApp();
     const token = await signTestToken(alice, aliceSid);
@@ -238,13 +238,13 @@ describe('Members', () => {
       headers: await authed(token),
       body: JSON.stringify({ name: 'MemberTest' }),
     });
-    projectId = ((await res.json()) as { id: string }).id;
+    projectSlug = ((await res.json()) as { slug: string }).slug;
   });
 
   it('owner invites a member by phone', async () => {
     const app = createApp();
     const token = await signTestToken(alice, aliceSid);
-    const res = await app.request(`/projects/${projectId}/members`, {
+    const res = await app.request(`/projects/${projectSlug}/members`, {
       method: 'POST',
       headers: await authed(token),
       body: JSON.stringify({ phone: '+15550400002', role: 'editor' }),
@@ -258,7 +258,7 @@ describe('Members', () => {
   it('list members visible to a member', async () => {
     const app = createApp();
     const token = await signTestToken(bob, bobSid);
-    const res = await app.request(`/projects/${projectId}/members`, { headers: { authorization: `Bearer ${token}` } });
+    const res = await app.request(`/projects/${projectSlug}/members`, { headers: { authorization: `Bearer ${token}` } });
     expect(res.status).toBe(200);
     const body = (await res.json()) as { items: Array<{ userId: string }> };
     expect(body.items.length).toBe(2);
@@ -267,14 +267,14 @@ describe('Members', () => {
   it('list members 404 for non-member', async () => {
     const app = createApp();
     const token = await signTestToken(carol, carolSid);
-    const res = await app.request(`/projects/${projectId}/members`, { headers: { authorization: `Bearer ${token}` } });
+    const res = await app.request(`/projects/${projectSlug}/members`, { headers: { authorization: `Bearer ${token}` } });
     expect(res.status).toBe(404);
   });
 
   it('non-owner invite returns 403', async () => {
     const app = createApp();
     const token = await signTestToken(bob, bobSid);
-    const res = await app.request(`/projects/${projectId}/members`, {
+    const res = await app.request(`/projects/${projectSlug}/members`, {
       method: 'POST',
       headers: await authed(token),
       body: JSON.stringify({ phone: '+15550400003', role: 'editor' }),
@@ -285,7 +285,7 @@ describe('Members', () => {
   it('invite unknown phone returns 404', async () => {
     const app = createApp();
     const token = await signTestToken(alice, aliceSid);
-    const res = await app.request(`/projects/${projectId}/members`, {
+    const res = await app.request(`/projects/${projectSlug}/members`, {
       method: 'POST',
       headers: await authed(token),
       body: JSON.stringify({ phone: '+15559999999', role: 'editor' }),
@@ -296,7 +296,7 @@ describe('Members', () => {
   it('owner removes a member', async () => {
     const app = createApp();
     const token = await signTestToken(alice, aliceSid);
-    const res = await app.request(`/projects/${projectId}/members/${bob}`, {
+    const res = await app.request(`/projects/${projectSlug}/members/${bob}`, {
       method: 'DELETE',
       headers: { authorization: `Bearer ${token}` },
     });
@@ -306,7 +306,7 @@ describe('Members', () => {
   it('cannot remove the last owner', async () => {
     const app = createApp();
     const token = await signTestToken(alice, aliceSid);
-    const res = await app.request(`/projects/${projectId}/members/${alice}`, {
+    const res = await app.request(`/projects/${projectSlug}/members/${alice}`, {
       method: 'DELETE',
       headers: { authorization: `Bearer ${token}` },
     });

@@ -19,6 +19,10 @@ let aliceSid: string;
 let bobSid: string;
 let aliceReport: string;
 let bobReport: string;
+let aliceProjSlug: string;
+let bobProjSlug: string;
+let aliceReportNumber: number;
+let bobReportNumber: number;
 
 beforeAll(async () => {
   fx = await startPg();
@@ -41,30 +45,34 @@ beforeAll(async () => {
   );
   aliceSid = s.rows[0]!.id;
   bobSid = s.rows[1]!.id;
-  const ap = await admin.query<{ id: string }>(
-    `INSERT INTO app.projects(name, owner_id) VALUES ('A', $1) RETURNING id`,
+  const ap = await admin.query<{ id: string; slug: string }>(
+    `INSERT INTO app.projects(name, owner_id) VALUES ('A', $1) RETURNING id, slug`,
     [alice],
   );
   const aliceProj = ap.rows[0]!.id;
-  const bp = await admin.query<{ id: string }>(
-    `INSERT INTO app.projects(name, owner_id) VALUES ('B', $1) RETURNING id`,
+  aliceProjSlug = ap.rows[0]!.slug;
+  const bp = await admin.query<{ id: string; slug: string }>(
+    `INSERT INTO app.projects(name, owner_id) VALUES ('B', $1) RETURNING id, slug`,
     [bob],
   );
   const bobProj = bp.rows[0]!.id;
+  bobProjSlug = bp.rows[0]!.slug;
   await admin.query(
     `INSERT INTO app.project_members(project_id, user_id, role) VALUES ($1, $2, 'owner'), ($3, $4, 'owner')`,
     [aliceProj, alice, bobProj, bob],
   );
-  const ar = await admin.query<{ id: string }>(
-    `INSERT INTO app.reports(project_id, author_id) VALUES ($1, $2) RETURNING id`,
+  const ar = await admin.query<{ id: string; number: number }>(
+    `INSERT INTO app.reports(project_id, author_id) VALUES ($1, $2) RETURNING id, number`,
     [aliceProj, alice],
   );
   aliceReport = ar.rows[0]!.id;
-  const br = await admin.query<{ id: string }>(
-    `INSERT INTO app.reports(project_id, author_id) VALUES ($1, $2) RETURNING id`,
+  aliceReportNumber = ar.rows[0]!.number;
+  const br = await admin.query<{ id: string; number: number }>(
+    `INSERT INTO app.reports(project_id, author_id) VALUES ($1, $2) RETURNING id, number`,
     [bobProj, bob],
   );
   bobReport = br.rows[0]!.id;
+  bobReportNumber = br.rows[0]!.number;
   await admin.end();
 }, 120_000);
 
@@ -76,21 +84,21 @@ describe('scope: reports', () => {
   it('own — alice GET /reports/:id of her own report → 200', async () => {
     const app = createApp();
     const tok = await signTestToken(alice, aliceSid);
-    const res = await app.request(`/reports/${aliceReport}`, { headers: { authorization: `Bearer ${tok}` } });
+    const res = await app.request(`/projects/${aliceProjSlug}/reports/${aliceReportNumber}`, { headers: { authorization: `Bearer ${tok}` } });
     expect(res.status).toBe(200);
   });
 
   it('cross — alice GET /reports/:id of bob → 404', async () => {
     const app = createApp();
     const tok = await signTestToken(alice, aliceSid);
-    const res = await app.request(`/reports/${bobReport}`, { headers: { authorization: `Bearer ${tok}` } });
+    const res = await app.request(`/projects/${bobProjSlug}/reports/${bobReportNumber}`, { headers: { authorization: `Bearer ${tok}` } });
     expect(res.status).toBe(404);
   });
 
   it('cross write — alice DELETE bob report → 404 (RLS denies); row remains', async () => {
     const app = createApp();
     const tok = await signTestToken(alice, aliceSid);
-    const res = await app.request(`/reports/${bobReport}`, {
+    const res = await app.request(`/projects/${bobProjSlug}/reports/${bobReportNumber}`, {
       method: 'DELETE',
       headers: { authorization: `Bearer ${tok}` },
     });
@@ -140,7 +148,7 @@ describe('scope: reports AI/PDF', () => {
   it('generate — alice own → 200', async () => {
     const app = createApp();
     const tok = await signTestToken(alice, aliceSid);
-    const res = await app.request(`/reports/${aliceReport}/generate`, {
+    const res = await app.request(`/projects/${aliceProjSlug}/reports/${aliceReportNumber}/generate`, {
       method: 'POST',
       headers: { authorization: `Bearer ${tok}`, 'content-type': 'application/json' },
       body: '{}',
@@ -151,7 +159,7 @@ describe('scope: reports AI/PDF', () => {
   it('generate — alice → bob report → 404 (cross-owner)', async () => {
     const app = createApp();
     const tok = await signTestToken(alice, aliceSid);
-    const res = await app.request(`/reports/${bobReport}/generate`, {
+    const res = await app.request(`/projects/${bobProjSlug}/reports/${bobReportNumber}/generate`, {
       method: 'POST',
       headers: { authorization: `Bearer ${tok}`, 'content-type': 'application/json' },
       body: '{}',
@@ -162,7 +170,7 @@ describe('scope: reports AI/PDF', () => {
   it('generate — bob → alice report → 404 (cross-owner, other direction)', async () => {
     const app = createApp();
     const tok = await signTestToken(bob, bobSid);
-    const res = await app.request(`/reports/${aliceReport}/generate`, {
+    const res = await app.request(`/projects/${aliceProjSlug}/reports/${aliceReportNumber}/generate`, {
       method: 'POST',
       headers: { authorization: `Bearer ${tok}`, 'content-type': 'application/json' },
       body: '{}',
@@ -177,7 +185,7 @@ describe('scope: reports AI/PDF', () => {
   it('regenerate — alice own → 200', async () => {
     const app = createApp();
     const tok = await signTestToken(alice, aliceSid);
-    const res = await app.request(`/reports/${aliceReport}/regenerate`, {
+    const res = await app.request(`/projects/${aliceProjSlug}/reports/${aliceReportNumber}/regenerate`, {
       method: 'POST',
       headers: { authorization: `Bearer ${tok}`, 'content-type': 'application/json' },
       body: '{}',
@@ -188,7 +196,7 @@ describe('scope: reports AI/PDF', () => {
   it('regenerate — bob → alice report → 404', async () => {
     const app = createApp();
     const tok = await signTestToken(bob, bobSid);
-    const res = await app.request(`/reports/${aliceReport}/regenerate`, {
+    const res = await app.request(`/projects/${aliceProjSlug}/reports/${aliceReportNumber}/regenerate`, {
       method: 'POST',
       headers: { authorization: `Bearer ${tok}`, 'content-type': 'application/json' },
       body: '{}',
@@ -199,7 +207,7 @@ describe('scope: reports AI/PDF', () => {
   it('pdf — alice own → 200 with signed URL keyed under alice', async () => {
     const app = createApp();
     const tok = await signTestToken(alice, aliceSid);
-    const res = await app.request(`/reports/${aliceReport}/pdf`, {
+    const res = await app.request(`/projects/${aliceProjSlug}/reports/${aliceReportNumber}/pdf`, {
       method: 'POST',
       headers: { authorization: `Bearer ${tok}`, 'content-type': 'application/json' },
     });
@@ -214,7 +222,7 @@ describe('scope: reports AI/PDF', () => {
   it('pdf — bob → alice report → 404', async () => {
     const app = createApp();
     const tok = await signTestToken(bob, bobSid);
-    const res = await app.request(`/reports/${aliceReport}/pdf`, {
+    const res = await app.request(`/projects/${aliceProjSlug}/reports/${aliceReportNumber}/pdf`, {
       method: 'POST',
       headers: { authorization: `Bearer ${tok}`, 'content-type': 'application/json' },
     });
@@ -224,7 +232,7 @@ describe('scope: reports AI/PDF', () => {
   it('finalize — alice own → 200', async () => {
     const app = createApp();
     const tok = await signTestToken(alice, aliceSid);
-    const res = await app.request(`/reports/${aliceReport}/finalize`, {
+    const res = await app.request(`/projects/${aliceProjSlug}/reports/${aliceReportNumber}/finalize`, {
       method: 'POST',
       headers: { authorization: `Bearer ${tok}`, 'content-type': 'application/json' },
     });
@@ -236,7 +244,7 @@ describe('scope: reports AI/PDF', () => {
   it('finalize — bob → alice report → 404 (and alice row remains draft-shape under bob scope)', async () => {
     const app = createApp();
     const tok = await signTestToken(bob, bobSid);
-    const res = await app.request(`/reports/${aliceReport}/finalize`, {
+    const res = await app.request(`/projects/${aliceProjSlug}/reports/${aliceReportNumber}/finalize`, {
       method: 'POST',
       headers: { authorization: `Bearer ${tok}`, 'content-type': 'application/json' },
     });
@@ -244,7 +252,7 @@ describe('scope: reports AI/PDF', () => {
     // Bob still can't see alice's row to confirm side-effect-free either way:
     // a direct GET under bob also 404s, which is itself the proof that
     // RLS — not just a permissive UPDATE — is what kept bob out.
-    const get = await app.request(`/reports/${aliceReport}`, {
+    const get = await app.request(`/projects/${aliceProjSlug}/reports/${aliceReportNumber}`, {
       headers: { authorization: `Bearer ${tok}` },
     });
     expect(get.status).toBe(404);

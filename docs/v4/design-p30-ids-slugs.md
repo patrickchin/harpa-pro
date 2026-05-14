@@ -767,7 +767,7 @@ Updated hooks (param name changes):
   - [x] Behaviour assertions added to integration suites (project responses carry `prj_…` slug; second report in a project gets `number = previous + 1`).  
   - [x] Run `pnpm test:api` + `pnpm typecheck` → green (180 integration tests)  
 
-- [ ] **Commit 3:** API routes + scope tests  
+- [x] **Commit 3:** API routes + scope tests  
   - [ ] Rename path params in `routes/projects.ts`  
   - [ ] Update `routes/reports.ts` (nested under `:projectSlug/reports/:number`)  
   - [ ] Add resolver routes (`/p/:projectSlug`, `/r/:reportSlug`)  

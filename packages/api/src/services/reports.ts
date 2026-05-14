@@ -138,6 +138,60 @@ export async function getReport(db: Db, reportId: string): Promise<ReportRow | n
 }
 
 /**
+ * Look up a report by its parent project slug and per-project number.
+ * Used by the canonical long-URL routes (`/projects/:projectSlug/
+ * reports/:number`). Returns null when the parent project is hidden by
+ * RLS, when the number doesn't exist within the project, or both — the
+ * caller surfaces this as a 404 (Pitfall 6: never distinguish).
+ */
+export async function getReportByProjectSlugAndNumber(
+  db: Db,
+  projectSlugValue: string,
+  reportNumber: number,
+): Promise<ReportRow | null> {
+  const r = await db.execute<RawReport>(sql`
+    SELECT r.id, r.slug, r.number, r.project_id, r.status, r.visit_date, r.body,
+           r.notes_since_last_generation, r.generated_at, r.finalized_at,
+           r.pdf_file_id, r.created_at, r.updated_at
+    FROM app.reports r
+    JOIN app.projects p ON p.id = r.project_id
+    WHERE p.slug = ${projectSlugValue}
+      AND r.number = ${reportNumber}
+    LIMIT 1
+  `);
+  const row = r.rows[0];
+  return row ? mapReport(row) : null;
+}
+
+/**
+ * Resolve a `rpt_xxxxxx` slug to its canonical (`projectSlug`,
+ * `reportNumber`) pair so the mobile client can `router.replace` to the
+ * long URL without exposing the internal UUID. Returns null when the
+ * slug doesn't exist or RLS hides the report.
+ */
+export async function resolveReportSlug(
+  db: Db,
+  reportSlugValue: string,
+): Promise<{ projectSlug: string; reportSlug: string; reportNumber: number } | null> {
+  const r = await db.execute<{ project_slug: string; report_slug: string; number: number }>(sql`
+    SELECT p.slug AS project_slug,
+           r.slug AS report_slug,
+           r.number AS number
+    FROM app.reports r
+    JOIN app.projects p ON p.id = r.project_id
+    WHERE r.slug = ${reportSlugValue}
+    LIMIT 1
+  `);
+  const row = r.rows[0];
+  if (!row) return null;
+  return {
+    projectSlug: row.project_slug,
+    reportSlug: row.report_slug,
+    reportNumber: Number(row.number),
+  };
+}
+
+/**
  * Create a draft report under a project. Atomically increments
  * `projects.next_report_number` and assigns a public slug
  * (`rpt_xxxxxx`). Wraps the counter bump + insert in a single

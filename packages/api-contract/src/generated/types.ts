@@ -723,7 +723,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/projects/{id}": {
+    "/projects/{projectSlug}": {
         parameters: {
             query?: never;
             header?: never;
@@ -735,7 +735,7 @@ export interface paths {
                 query?: never;
                 header?: never;
                 path: {
-                    id: string;
+                    projectSlug: string;
                 };
                 cookie?: never;
             };
@@ -809,7 +809,7 @@ export interface paths {
                 query?: never;
                 header?: never;
                 path: {
-                    id: string;
+                    projectSlug: string;
                 };
                 cookie?: never;
             };
@@ -863,7 +863,7 @@ export interface paths {
                 query?: never;
                 header?: never;
                 path: {
-                    id: string;
+                    projectSlug: string;
                 };
                 cookie?: never;
             };
@@ -940,7 +940,7 @@ export interface paths {
         };
         trace?: never;
     };
-    "/projects/{id}/members": {
+    "/projects/{projectSlug}/members": {
         parameters: {
             query?: never;
             header?: never;
@@ -952,7 +952,7 @@ export interface paths {
                 query?: never;
                 header?: never;
                 path: {
-                    id: string;
+                    projectSlug: string;
                 };
                 cookie?: never;
             };
@@ -1017,7 +1017,7 @@ export interface paths {
                 query?: never;
                 header?: never;
                 path: {
-                    id: string;
+                    projectSlug: string;
                 };
                 cookie?: never;
             };
@@ -1123,7 +1123,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/projects/{id}/members/{userId}": {
+    "/projects/{projectSlug}/members/{userId}": {
         parameters: {
             query?: never;
             header?: never;
@@ -1138,7 +1138,7 @@ export interface paths {
                 query?: never;
                 header?: never;
                 path: {
-                    id: string;
+                    projectSlug: string;
                     userId: string;
                 };
                 cookie?: never;
@@ -1223,7 +1223,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/projects/{id}/reports": {
+    "/projects/{projectSlug}/reports": {
         parameters: {
             query?: never;
             header?: never;
@@ -1238,7 +1238,7 @@ export interface paths {
                 };
                 header?: never;
                 path: {
-                    id: string;
+                    projectSlug: string;
                 };
                 cookie?: never;
             };
@@ -1347,7 +1347,7 @@ export interface paths {
                 query?: never;
                 header?: never;
                 path: {
-                    id: string;
+                    projectSlug: string;
                 };
                 cookie?: never;
             };
@@ -1475,7 +1475,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/reports/{reportId}": {
+    "/projects/{projectSlug}/reports/{number}": {
         parameters: {
             query?: never;
             header?: never;
@@ -1487,7 +1487,8 @@ export interface paths {
                 query?: never;
                 header?: never;
                 path: {
-                    reportId: string;
+                    projectSlug: string;
+                    number: number;
                 };
                 cookie?: never;
             };
@@ -1594,7 +1595,8 @@ export interface paths {
                 query?: never;
                 header?: never;
                 path: {
-                    reportId: string;
+                    projectSlug: string;
+                    number: number;
                 };
                 cookie?: never;
             };
@@ -1648,7 +1650,8 @@ export interface paths {
                 query?: never;
                 header?: never;
                 path: {
-                    reportId: string;
+                    projectSlug: string;
+                    number: number;
                 };
                 cookie?: never;
             };
@@ -1772,7 +1775,7 @@ export interface paths {
         };
         trace?: never;
     };
-    "/reports/{reportId}/generate": {
+    "/projects/{projectSlug}/reports/{number}/generate": {
         parameters: {
             query?: never;
             header?: never;
@@ -1786,7 +1789,8 @@ export interface paths {
                 query?: never;
                 header?: never;
                 path: {
-                    reportId: string;
+                    projectSlug: string;
+                    number: number;
                 };
                 cookie?: never;
             };
@@ -1948,7 +1952,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/reports/{reportId}/regenerate": {
+    "/projects/{projectSlug}/reports/{number}/regenerate": {
         parameters: {
             query?: never;
             header?: never;
@@ -1962,7 +1966,8 @@ export interface paths {
                 query?: never;
                 header?: never;
                 path: {
-                    reportId: string;
+                    projectSlug: string;
+                    number: number;
                 };
                 cookie?: never;
             };
@@ -2124,7 +2129,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/reports/{reportId}/finalize": {
+    "/projects/{projectSlug}/reports/{number}/finalize": {
         parameters: {
             query?: never;
             header?: never;
@@ -2138,7 +2143,8 @@ export interface paths {
                 query?: never;
                 header?: never;
                 path: {
-                    reportId: string;
+                    projectSlug: string;
+                    number: number;
                 };
                 cookie?: never;
             };
@@ -2262,7 +2268,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/reports/{reportId}/pdf": {
+    "/projects/{projectSlug}/reports/{number}/pdf": {
         parameters: {
             query?: never;
             header?: never;
@@ -2276,7 +2282,8 @@ export interface paths {
                 query?: never;
                 header?: never;
                 path: {
-                    reportId: string;
+                    projectSlug: string;
+                    number: number;
                 };
                 cookie?: never;
             };
@@ -2345,6 +2352,154 @@ export interface paths {
                 };
             };
         };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/p/{projectSlug}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    projectSlug: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Resolved. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {string} */
+                            type: "project";
+                            projectSlug: string;
+                        };
+                    };
+                };
+                /** @description Unauthorized. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                                requestId?: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Not found. */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                                requestId?: string;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/r/{reportSlug}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    reportSlug: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Resolved. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {string} */
+                            type: "report";
+                            projectSlug: string;
+                            reportSlug: string;
+                            reportNumber: number;
+                        };
+                    };
+                };
+                /** @description Unauthorized. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                                requestId?: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Not found. */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                                requestId?: string;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;

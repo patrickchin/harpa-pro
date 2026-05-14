@@ -1,0 +1,17 @@
+---
+/**
+ * Marketing M2 voice-demo section. Mounts the React island that
+ * captures audio (immediately discarded), plays a scripted reveal
+ * sequence, and renders the canned transcript + report using shared
+ * components from `@harpa/ui-voice`.
+ *
+ * `client:only="react"` so SSR never tries to render the RN-Web
+ * primitives — they only behave correctly after mount in the
+ * browser.
+ */
+import VoiceDemoIsland from "../VoiceDemo.tsx";
+---
+
+<section id="voice-demo" class="bg-paper-2/40 border-y border-hairline">
+  <VoiceDemoIsland client:only="react" />
+</section>

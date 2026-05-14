@@ -1,5 +1,8 @@
+@layer rnw, theme, base, components, utilities;
+
 @import "tailwindcss" source(none);
 @source "../";
+@source "../../../../packages/ui-voice/src";
 @import "tw-animate-css";
 
 @custom-variant dark (&:is(.dark *));

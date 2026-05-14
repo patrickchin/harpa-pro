@@ -115,4 +115,16 @@ export const REGISTRY: readonly GalleryEntry[] = [
     group: 'app',
     description: 'New project form — idle / pending / error states',
   },
+  {
+    name: 'Project Home',
+    href: '/(dev)/project-home',
+    group: 'app',
+    description: 'Project overview — loaded / loading / empty states',
+  },
+  {
+    name: 'Edit Project',
+    href: '/(dev)/project-edit',
+    group: 'app',
+    description: 'Edit project form — loaded / loading / updating / deleting / error',
+  },
 ];

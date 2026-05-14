@@ -1,0 +1,511 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`ProjectHome > matches snapshot at default props 1`] = `
+<rn-View
+  className="flex-1 bg-background"
+  style={
+    [
+      {
+        "paddingBottom": 0,
+        "paddingLeft": 0,
+        "paddingRight": 0,
+        "paddingTop": 44,
+      },
+      undefined,
+    ]
+  }
+>
+  <rn-View
+    className="px-5 pt-4 pb-3"
+  >
+    <rn-View
+      className="gap-3"
+    >
+      <rn-View
+        className="min-h-touch flex-row items-center gap-3"
+      >
+        <rn-Pressable
+          accessibilityLabel="Back to Projects"
+          accessibilityRole="button"
+          className="flex-row items-center justify-center rounded-md border border-border bg-card active:opacity-90 min-h-touch py-3 px-4"
+          disabled={false}
+          onPress={[MockFunction spy]}
+          style={
+            [
+              {
+                "elevation": 2,
+                "shadowColor": "#1a1a2e",
+                "shadowOffset": {
+                  "height": 2,
+                  "width": 0,
+                },
+                "shadowOpacity": 0.08,
+                "shadowRadius": 8,
+              },
+              undefined,
+            ]
+          }
+          testID="btn-back"
+        >
+          <lucide-ArrowLeft
+            color="#2d3a5a"
+            size={16}
+          />
+        </rn-Pressable>
+        <rn-Text
+          className="min-w-0 flex-1 text-title-sm text-foreground"
+          ellipsizeMode="tail"
+          numberOfLines={1}
+          testID="screen-header-title"
+        >
+          Highland Tower
+        </rn-Text>
+        <rn-View
+          className="shrink-0 flex-row items-center gap-2"
+        />
+      </rn-View>
+    </rn-View>
+  </rn-View>
+  <rn-ScrollView
+    contentContainerStyle={
+      {
+        "gap": 16,
+        "paddingBottom": 24,
+        "paddingHorizontal": 20,
+        "paddingTop": 8,
+      }
+    }
+    refreshControl={
+      <RN.RefreshControl
+        onRefresh={[MockFunction spy]}
+        refreshing={false}
+      />
+    }
+    showsVerticalScrollIndicator={false}
+  >
+    <rn-View
+      className="flex-row items-center justify-between gap-3"
+    >
+      <rn-View
+        className="min-w-0 flex-1 gap-1"
+      >
+        <rn-Pressable
+          accessibilityLabel="Copy client: Acme Co."
+          accessibilityRole="button"
+          className="flex-row items-center gap-2 active:opacity-60"
+          hitSlop={8}
+          onPress={[Function]}
+          testID="btn-copy-client"
+        >
+          <rn-Text
+            className="flex-1 text-body font-medium text-foreground"
+          >
+            Acme Co.
+          </rn-Text>
+          <lucide-Copy
+            color="#5f5b66"
+            size={14}
+          />
+        </rn-Pressable>
+        <rn-Pressable
+          accessibilityLabel="Copy address: 2400 Highland Ave"
+          accessibilityRole="button"
+          className="flex-row items-center gap-2 active:opacity-60"
+          hitSlop={8}
+          onPress={[Function]}
+          testID="btn-copy-address"
+        >
+          <lucide-MapPin
+            color="#5f5b66"
+            size={14}
+          />
+          <rn-Text
+            className="flex-1 text-body text-muted-foreground"
+          >
+            2400 Highland Ave
+          </rn-Text>
+          <lucide-Copy
+            color="#5f5b66"
+            size={14}
+          />
+        </rn-Pressable>
+      </rn-View>
+      <rn-Pressable
+        accessibilityLabel="Edit project details"
+        className="justify-center rounded-md border border-border bg-card active:opacity-90 min-h-10 px-3 py-2.5 shrink-0 flex-row items-center gap-1.5"
+        disabled={false}
+        onPress={[MockFunction spy]}
+        style={
+          [
+            {
+              "elevation": 2,
+              "shadowColor": "#1a1a2e",
+              "shadowOffset": {
+                "height": 2,
+                "width": 0,
+              },
+              "shadowOpacity": 0.08,
+              "shadowRadius": 8,
+            },
+            undefined,
+          ]
+        }
+        testID="btn-edit-project"
+      >
+        <lucide-Pencil
+          color="#2d3a5a"
+          size={14}
+        />
+        <rn-Text
+          className="text-sm font-semibold text-foreground"
+        >
+          Edit
+        </rn-Text>
+      </rn-Pressable>
+    </rn-View>
+    <rn-View
+      className="flex-row gap-3"
+    >
+      <rn-View
+        className="min-h-[92px] flex-1 items-center justify-center rounded-lg border px-3 py-3 border-border bg-card"
+        style={
+          {
+            "elevation": 2,
+            "shadowColor": "#1a1a2e",
+            "shadowOffset": {
+              "height": 2,
+              "width": 0,
+            },
+            "shadowOpacity": 0.08,
+            "shadowRadius": 8,
+          }
+        }
+      >
+        <rn-Text
+          className="text-metric text-foreground"
+        >
+          5
+        </rn-Text>
+        <rn-Text
+          className="mt-1 text-label text-muted-foreground"
+        >
+          Total reports
+        </rn-Text>
+      </rn-View>
+      <rn-View
+        className="min-h-[92px] flex-1 items-center justify-center rounded-lg border px-3 py-3 border-warning-border bg-warning-soft"
+        style={
+          {
+            "elevation": 2,
+            "shadowColor": "#1a1a2e",
+            "shadowOffset": {
+              "height": 2,
+              "width": 0,
+            },
+            "shadowOpacity": 0.08,
+            "shadowRadius": 8,
+          }
+        }
+      >
+        <rn-Text
+          className="text-metric text-foreground"
+        >
+          1
+        </rn-Text>
+        <rn-Text
+          className="mt-1 text-label text-muted-foreground"
+        >
+          Drafts
+        </rn-Text>
+      </rn-View>
+    </rn-View>
+    <rn-View
+      className="rounded-lg border border-border bg-surface-muted p-4 gap-1"
+      style={
+        [
+          {
+            "elevation": 2,
+            "shadowColor": "#1a1a2e",
+            "shadowOffset": {
+              "height": 2,
+              "width": 0,
+            },
+            "shadowOpacity": 0.08,
+            "shadowRadius": 8,
+          },
+          undefined,
+        ]
+      }
+    >
+      <rn-Text
+        className="text-label text-muted-foreground"
+      >
+        Last report
+      </rn-Text>
+      <rn-Text
+        className="text-title-sm text-foreground"
+      >
+        No reports yet
+      </rn-Text>
+    </rn-View>
+    <rn-View
+      className="gap-3"
+    >
+      <rn-Pressable
+        accessibilityLabel="Reports"
+        accessibilityRole="button"
+        accessibilityState={
+          {
+            "disabled": false,
+          }
+        }
+        disabled={false}
+        onPress={[MockFunction spy]}
+        testID="btn-open-reports"
+      >
+        <rn-View
+          className="rounded-lg border border-border bg-card p-4 flex-row items-center gap-3"
+          style={
+            [
+              {
+                "elevation": 2,
+                "shadowColor": "#1a1a2e",
+                "shadowOffset": {
+                  "height": 2,
+                  "width": 0,
+                },
+                "shadowOpacity": 0.08,
+                "shadowRadius": 8,
+              },
+              undefined,
+            ]
+          }
+        >
+          <rn-View
+            className="h-10 w-10 items-center justify-center rounded-md border border-border bg-card"
+          >
+            <lucide-ClipboardList
+              color="#5f5b66"
+              size={20}
+            />
+          </rn-View>
+          <rn-View
+            className="min-w-0 flex-1 gap-1"
+          >
+            <rn-View
+              className="flex-row items-center gap-2"
+            >
+              <rn-Text
+                className="text-lg font-semibold text-foreground"
+              >
+                Reports
+              </rn-Text>
+            </rn-View>
+            <rn-Text
+              className="text-sm text-muted-foreground"
+            >
+              5 reports · Last no reports yet
+            </rn-Text>
+          </rn-View>
+          <lucide-ChevronRight
+            color="#5f5b66"
+            size={18}
+          />
+        </rn-View>
+      </rn-Pressable>
+      <rn-Pressable
+        accessibilityLabel="Documents"
+        accessibilityRole="button"
+        accessibilityState={
+          {
+            "disabled": true,
+          }
+        }
+        disabled={true}
+      >
+        <rn-View
+          className="rounded-lg border border-border bg-surface-muted p-4 flex-row items-center gap-3"
+          style={
+            [
+              {
+                "elevation": 2,
+                "shadowColor": "#1a1a2e",
+                "shadowOffset": {
+                  "height": 2,
+                  "width": 0,
+                },
+                "shadowOpacity": 0.08,
+                "shadowRadius": 8,
+              },
+              undefined,
+            ]
+          }
+        >
+          <rn-View
+            className="h-10 w-10 items-center justify-center rounded-md border border-border bg-card"
+          >
+            <lucide-FolderOpen
+              color="#5f5b66"
+              size={20}
+            />
+          </rn-View>
+          <rn-View
+            className="min-w-0 flex-1 gap-1"
+          >
+            <rn-View
+              className="flex-row items-center gap-2"
+            >
+              <rn-Text
+                className="text-lg font-semibold text-foreground"
+              >
+                Documents
+              </rn-Text>
+              <rn-View
+                className="rounded-md border border-border bg-card px-2 py-0.5"
+              >
+                <rn-Text
+                  className="text-xs font-semibold uppercase text-muted-foreground"
+                >
+                  Soon
+                </rn-Text>
+              </rn-View>
+            </rn-View>
+            <rn-Text
+              className="text-sm text-muted-foreground"
+            >
+              Drawings, permits, contracts
+            </rn-Text>
+          </rn-View>
+        </rn-View>
+      </rn-Pressable>
+      <rn-Pressable
+        accessibilityLabel="Materials & Equipment"
+        accessibilityRole="button"
+        accessibilityState={
+          {
+            "disabled": true,
+          }
+        }
+        disabled={true}
+      >
+        <rn-View
+          className="rounded-lg border border-border bg-surface-muted p-4 flex-row items-center gap-3"
+          style={
+            [
+              {
+                "elevation": 2,
+                "shadowColor": "#1a1a2e",
+                "shadowOffset": {
+                  "height": 2,
+                  "width": 0,
+                },
+                "shadowOpacity": 0.08,
+                "shadowRadius": 8,
+              },
+              undefined,
+            ]
+          }
+        >
+          <rn-View
+            className="h-10 w-10 items-center justify-center rounded-md border border-border bg-card"
+          >
+            <lucide-HardHat
+              color="#5f5b66"
+              size={20}
+            />
+          </rn-View>
+          <rn-View
+            className="min-w-0 flex-1 gap-1"
+          >
+            <rn-View
+              className="flex-row items-center gap-2"
+            >
+              <rn-Text
+                className="text-lg font-semibold text-foreground"
+              >
+                Materials & Equipment
+              </rn-Text>
+              <rn-View
+                className="rounded-md border border-border bg-card px-2 py-0.5"
+              >
+                <rn-Text
+                  className="text-xs font-semibold uppercase text-muted-foreground"
+                >
+                  Soon
+                </rn-Text>
+              </rn-View>
+            </rn-View>
+            <rn-Text
+              className="text-sm text-muted-foreground"
+            >
+              Track materials, tools, and machinery
+            </rn-Text>
+          </rn-View>
+        </rn-View>
+      </rn-Pressable>
+      <rn-Pressable
+        accessibilityLabel="Members"
+        accessibilityRole="button"
+        accessibilityState={
+          {
+            "disabled": false,
+          }
+        }
+        disabled={false}
+        onPress={[MockFunction spy]}
+        testID="btn-open-members"
+      >
+        <rn-View
+          className="rounded-lg border border-border bg-card p-4 flex-row items-center gap-3"
+          style={
+            [
+              {
+                "elevation": 2,
+                "shadowColor": "#1a1a2e",
+                "shadowOffset": {
+                  "height": 2,
+                  "width": 0,
+                },
+                "shadowOpacity": 0.08,
+                "shadowRadius": 8,
+              },
+              undefined,
+            ]
+          }
+        >
+          <rn-View
+            className="h-10 w-10 items-center justify-center rounded-md border border-border bg-card"
+          >
+            <lucide-Users
+              color="#5f5b66"
+              size={20}
+            />
+          </rn-View>
+          <rn-View
+            className="min-w-0 flex-1 gap-1"
+          >
+            <rn-View
+              className="flex-row items-center gap-2"
+            >
+              <rn-Text
+                className="text-lg font-semibold text-foreground"
+              >
+                Members
+              </rn-Text>
+            </rn-View>
+            <rn-Text
+              className="text-sm text-muted-foreground"
+            >
+              Invite teammates to this project
+            </rn-Text>
+          </rn-View>
+          <lucide-ChevronRight
+            color="#5f5b66"
+            size={18}
+          />
+        </rn-View>
+      </rn-Pressable>
+    </rn-View>
+  </rn-ScrollView>
+</rn-View>
+`;

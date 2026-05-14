@@ -133,4 +133,10 @@ export const REGISTRY: readonly GalleryEntry[] = [
     group: 'app',
     description: 'Members — owner / editor / viewer / empty / loading views',
   },
+  {
+    name: 'Reports List',
+    href: '/(dev)/reports-list',
+    group: 'app',
+    description: 'Reports list — populated / empty / loading / creating-draft states',
+  },
 ];

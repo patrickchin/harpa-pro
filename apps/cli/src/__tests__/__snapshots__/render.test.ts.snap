@@ -1,0 +1,29 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`renderUsage > renders empty usage 1`] = `
+"Month     Reports  Voice notes
+——————————————————————————————
+Total           0            0"
+`;
+
+exports[`renderUsage > renders months + totals 1`] = `
+"Month     Reports  Voice notes
+2025-01        12           47
+2024-12         8           31
+——————————————————————————————
+Total          20           78"
+`;
+
+exports[`renderUser > renders a fully populated user 1`] = `
+"Patrick Chin <+15550100100>
+  ID:        00000000-0000-0000-0000-000000000001
+  Company:   Harpa Pro Ltd
+  Joined:    2025-01-15T10:30:00.000Z"
+`;
+
+exports[`renderUser > renders a user missing optional fields 1`] = `
+"(no display name) <+15550100200>
+  ID:        00000000-0000-0000-0000-000000000002
+  Company:   (no company)
+  Joined:    2025-01-15T10:30:00.000Z"
+`;

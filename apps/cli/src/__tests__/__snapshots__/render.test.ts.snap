@@ -1,0 +1,155 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`renderFile > renders a file record 1`] = `
+"00000000-0000-0000-0000-000000000090 (image)
+  Owner:    00000000-0000-0000-0000-000000000001
+  Key:      users/00000000-0000-0000-0000-000000000001/image/abc.jpg
+  Size:     12345 bytes
+  Type:     image/jpeg
+  Created:  2025-01-15T10:30:00.000Z"
+`;
+
+exports[`renderMember > renders a fully populated member 1`] = `
+"Alice <+15550100300> (editor)
+  User ID:  00000000-0000-0000-0000-000000000030
+  Joined:   2025-01-15T10:30:00.000Z"
+`;
+
+exports[`renderMember > renders a member without display name 1`] = `
+"(no display name) <+15550100301> (viewer)
+  User ID:  00000000-0000-0000-0000-000000000031
+  Joined:   2025-01-15T10:30:00.000Z"
+`;
+
+exports[`renderMemberList > renders a populated list 1`] = `
+"Members:
+  Owner Person                    owner   +15550100400      00000000-0000-0000-0000-000000000040
+  (no name)                       editor  +15550100401      00000000-0000-0000-0000-000000000041"
+`;
+
+exports[`renderMemberList > renders an empty member list 1`] = `"No members."`;
+
+exports[`renderNote > renders a text note 1`] = `
+"Note 00000000-0000-0000-0000-000000000070 (text)
+  Report:   00000000-0000-0000-0000-000000000050
+  Author:   00000000-0000-0000-0000-000000000001
+  Created:  2025-01-15T10:30:00.000Z
+  Body:     Hello world"
+`;
+
+exports[`renderNote > renders a voice note with transcript and fileId 1`] = `
+"Note 00000000-0000-0000-0000-000000000070 (voice)
+  Report:   00000000-0000-0000-0000-000000000050
+  Author:   00000000-0000-0000-0000-000000000001
+  Created:  2025-01-15T10:30:00.000Z
+  File:     00000000-0000-0000-0000-000000000080
+  Transcript: spoken words"
+`;
+
+exports[`renderNoteList > renders a populated list 1`] = `
+"Notes:
+  00000000-0000-0000-0000-000000000071  text      Short note
+  00000000-0000-0000-0000-000000000072  voice     (no text)
+
+Next page: --cursor cur-77"
+`;
+
+exports[`renderNoteList > renders an empty list 1`] = `"No notes."`;
+
+exports[`renderProject > renders a fully populated project with stats 1`] = `
+"Demo Project (owner)
+  ID:         00000000-0000-0000-0000-000000000010
+  Client:     Acme Co
+  Address:    1 Main St
+  Owner:      00000000-0000-0000-0000-000000000001
+  Created:    2025-01-15T10:30:00.000Z
+  Updated:    2025-01-16T11:00:00.000Z
+  Reports:    5 (2 drafts)
+  Last report: 2025-01-16T09:00:00.000Z"
+`;
+
+exports[`renderProject > renders a project missing optional fields 1`] = `
+"Demo Project (owner)
+  ID:         00000000-0000-0000-0000-000000000010
+  Client:     (none)
+  Address:    (none)
+  Owner:      00000000-0000-0000-0000-000000000001
+  Created:    2025-01-15T10:30:00.000Z
+  Updated:    2025-01-16T11:00:00.000Z"
+`;
+
+exports[`renderProjectList > renders a populated page with nextCursor 1`] = `
+"Projects:
+  Project A                                 owner   Client A  00000000-0000-0000-0000-000000000020
+  Project B                                 editor  —  00000000-0000-0000-0000-000000000021
+
+Next page: --cursor cursor-xyz"
+`;
+
+exports[`renderProjectList > renders an empty list 1`] = `"No projects."`;
+
+exports[`renderReport > renders a draft report 1`] = `
+"Report 00000000-0000-0000-0000-000000000050 (draft)
+  Project:    00000000-0000-0000-0000-000000000010
+  Visit date: 2025-01-15
+  Created:    2025-01-15T10:30:00.000Z
+  Updated:    2025-01-15T11:00:00.000Z
+  Body:       (empty)"
+`;
+
+exports[`renderReport > renders a finalized report 1`] = `
+"Report 00000000-0000-0000-0000-000000000050 (finalized)
+  Project:    00000000-0000-0000-0000-000000000010
+  Visit date: 2025-01-15
+  Created:    2025-01-15T10:30:00.000Z
+  Updated:    2025-01-15T11:00:00.000Z
+  Finalized:  2025-01-15T12:00:00.000Z
+  Body:       (use --json to see full structured body)"
+`;
+
+exports[`renderReport > renders a report missing optional fields 1`] = `
+"Report 00000000-0000-0000-0000-000000000050 (draft)
+  Project:    00000000-0000-0000-0000-000000000010
+  Visit date: (none)
+  Created:    2025-01-15T10:30:00.000Z
+  Updated:    2025-01-15T11:00:00.000Z
+  Body:       (empty)"
+`;
+
+exports[`renderReportList > renders a populated list 1`] = `
+"Reports:
+  00000000-0000-0000-0000-000000000060  draft      2025-01-15    2025-01-15T10:30:00.000Z
+  00000000-0000-0000-0000-000000000061  finalized  —             2025-01-14T10:30:00.000Z
+
+(end of list)"
+`;
+
+exports[`renderReportList > renders an empty list 1`] = `"No reports."`;
+
+exports[`renderUsage > renders empty usage 1`] = `
+"Month     Reports  Voice notes
+——————————————————————————————
+Total           0            0"
+`;
+
+exports[`renderUsage > renders months + totals 1`] = `
+"Month     Reports  Voice notes
+2025-01        12           47
+2024-12         8           31
+——————————————————————————————
+Total          20           78"
+`;
+
+exports[`renderUser > renders a fully populated user 1`] = `
+"Patrick Chin <+15550100100>
+  ID:        00000000-0000-0000-0000-000000000001
+  Company:   Harpa Pro Ltd
+  Joined:    2025-01-15T10:30:00.000Z"
+`;
+
+exports[`renderUser > renders a user missing optional fields 1`] = `
+"(no display name) <+15550100200>
+  ID:        00000000-0000-0000-0000-000000000002
+  Company:   (no company)
+  Joined:    2025-01-15T10:30:00.000Z"
+`;

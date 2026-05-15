@@ -1,0 +1,923 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`command tree (help drift gate) > matches the recorded snapshot 1`] = `
+{
+  "args": {},
+  "description": "Debug / API testing / LLM-driven CLI for the harpa-pro API.",
+  "name": "harpa",
+  "subCommands": {
+    "auth": {
+      "args": {},
+      "description": "Authentication (OTP login, logout).",
+      "name": "auth",
+      "subCommands": {
+        "logout": {
+          "args": {
+            "json": {
+              "description": "Print raw JSON to stdout.",
+              "type": "boolean",
+            },
+            "verbose": {
+              "description": "Print response metadata to stderr.",
+              "type": "boolean",
+            },
+          },
+          "description": "Revoke the current session token (requires HARPA_TOKEN).",
+          "name": "logout",
+          "subCommands": {},
+        },
+        "otp": {
+          "args": {},
+          "description": "OTP login (start, verify).",
+          "name": "otp",
+          "subCommands": {
+            "start": {
+              "args": {
+                "json": {
+                  "description": "Print raw JSON to stdout.",
+                  "type": "boolean",
+                },
+                "phone": {
+                  "description": "E.164 phone number (e.g. +15551234567).",
+                  "required": true,
+                  "type": "positional",
+                },
+                "verbose": {
+                  "description": "Print response metadata to stderr.",
+                  "type": "boolean",
+                },
+              },
+              "description": "Send an OTP to a phone number.",
+              "name": "start",
+              "subCommands": {},
+            },
+            "verify": {
+              "args": {
+                "code": {
+                  "description": "OTP code (4–8 digits).",
+                  "required": true,
+                  "type": "positional",
+                },
+                "json": {
+                  "description": "Print raw JSON to stdout.",
+                  "type": "boolean",
+                },
+                "phone": {
+                  "description": "E.164 phone number that received the OTP.",
+                  "required": true,
+                  "type": "positional",
+                },
+                "raw": {
+                  "description": "Print only the bearer token to stdout (no formatting).",
+                  "type": "boolean",
+                },
+                "verbose": {
+                  "description": "Print response metadata to stderr.",
+                  "type": "boolean",
+                },
+              },
+              "description": "Verify an OTP code and mint a bearer token.",
+              "name": "verify",
+              "subCommands": {},
+            },
+          },
+        },
+      },
+    },
+    "files": {
+      "args": {},
+      "description": "File presign / register / signed-URL / upload.",
+      "name": "files",
+      "subCommands": {
+        "presign": {
+          "args": {
+            "content-type": {
+              "description": "MIME type.",
+              "required": true,
+              "type": "string",
+            },
+            "json": {
+              "type": "boolean",
+            },
+            "kind": {
+              "description": "voice | image | document | pdf",
+              "required": true,
+              "type": "string",
+            },
+            "size": {
+              "description": "Size in bytes.",
+              "required": true,
+              "type": "string",
+            },
+            "verbose": {
+              "type": "boolean",
+            },
+          },
+          "description": "Mint a presigned upload URL for R2.",
+          "name": "presign",
+          "subCommands": {},
+        },
+        "register": {
+          "args": {
+            "content-type": {
+              "description": "MIME type.",
+              "required": true,
+              "type": "string",
+            },
+            "file-key": {
+              "description": "Server-built file key from presign.",
+              "required": true,
+              "type": "string",
+            },
+            "json": {
+              "type": "boolean",
+            },
+            "kind": {
+              "description": "voice | image | document | pdf",
+              "required": true,
+              "type": "string",
+            },
+            "size": {
+              "description": "Size in bytes.",
+              "required": true,
+              "type": "string",
+            },
+            "verbose": {
+              "type": "boolean",
+            },
+          },
+          "description": "Register an uploaded file in the database.",
+          "name": "register",
+          "subCommands": {},
+        },
+        "upload": {
+          "args": {
+            "content-type": {
+              "description": "Override the auto-detected MIME type.",
+              "type": "string",
+            },
+            "file": {
+              "description": "Path to the local file.",
+              "required": true,
+              "type": "string",
+            },
+            "json": {
+              "type": "boolean",
+            },
+            "kind": {
+              "description": "voice | image | document | pdf",
+              "required": true,
+              "type": "string",
+            },
+            "verbose": {
+              "type": "boolean",
+            },
+          },
+          "description": "Presign → PUT → register a local file in one step.",
+          "name": "upload",
+          "subCommands": {},
+        },
+        "url": {
+          "args": {
+            "fileId": {
+              "description": "File ID (UUID).",
+              "required": true,
+              "type": "positional",
+            },
+            "json": {
+              "type": "boolean",
+            },
+            "verbose": {
+              "type": "boolean",
+            },
+          },
+          "description": "Mint a signed GET URL for a file.",
+          "name": "url",
+          "subCommands": {},
+        },
+      },
+    },
+    "health": {
+      "args": {
+        "json": {
+          "description": "Print raw JSON to stdout.",
+          "type": "boolean",
+        },
+        "verbose": {
+          "description": "Print response metadata to stderr.",
+          "type": "boolean",
+        },
+      },
+      "description": "Check API health (GET /healthz).",
+      "name": "health",
+      "subCommands": {},
+    },
+    "me": {
+      "args": {},
+      "description": "Current user (profile + usage).",
+      "name": "me",
+      "subCommands": {
+        "get": {
+          "args": {
+            "json": {
+              "description": "Print raw JSON to stdout.",
+              "type": "boolean",
+            },
+            "verbose": {
+              "description": "Print response metadata to stderr.",
+              "type": "boolean",
+            },
+          },
+          "description": "Show the current user profile.",
+          "name": "get",
+          "subCommands": {},
+        },
+        "update": {
+          "args": {
+            "company-name": {
+              "description": "New company name (1–120 chars).",
+              "type": "string",
+            },
+            "display-name": {
+              "description": "New display name (1–120 chars).",
+              "type": "string",
+            },
+            "json": {
+              "description": "Print raw JSON to stdout.",
+              "type": "boolean",
+            },
+            "verbose": {
+              "description": "Print response metadata to stderr.",
+              "type": "boolean",
+            },
+          },
+          "description": "Update display name / company name.",
+          "name": "update",
+          "subCommands": {},
+        },
+        "usage": {
+          "args": {
+            "json": {
+              "description": "Print raw JSON to stdout.",
+              "type": "boolean",
+            },
+            "verbose": {
+              "description": "Print response metadata to stderr.",
+              "type": "boolean",
+            },
+          },
+          "description": "Show monthly + total usage counts.",
+          "name": "usage",
+          "subCommands": {},
+        },
+      },
+    },
+    "notes": {
+      "args": {},
+      "description": "Note CRUD on reports.",
+      "name": "notes",
+      "subCommands": {
+        "create": {
+          "args": {
+            "body": {
+              "description": "Note text body.",
+              "type": "string",
+            },
+            "file-id": {
+              "description": "Attached file ID (for voice/image/document).",
+              "type": "string",
+            },
+            "json": {
+              "type": "boolean",
+            },
+            "kind": {
+              "description": "text | voice | image | document.",
+              "required": true,
+              "type": "string",
+            },
+            "reportId": {
+              "description": "Report ID (UUID).",
+              "required": true,
+              "type": "positional",
+            },
+            "transcript": {
+              "description": "Transcript (voice notes).",
+              "type": "string",
+            },
+            "verbose": {
+              "type": "boolean",
+            },
+          },
+          "description": "Create a note on a report.",
+          "name": "create",
+          "subCommands": {},
+        },
+        "delete": {
+          "args": {
+            "json": {
+              "type": "boolean",
+            },
+            "noteId": {
+              "description": "Note ID (UUID).",
+              "required": true,
+              "type": "positional",
+            },
+            "verbose": {
+              "type": "boolean",
+            },
+          },
+          "description": "Delete a note.",
+          "name": "delete",
+          "subCommands": {},
+        },
+        "list": {
+          "args": {
+            "cursor": {
+              "description": "Pagination cursor.",
+              "type": "string",
+            },
+            "json": {
+              "type": "boolean",
+            },
+            "limit": {
+              "description": "Page size (1–100).",
+              "type": "string",
+            },
+            "reportId": {
+              "description": "Report ID (UUID).",
+              "required": true,
+              "type": "positional",
+            },
+            "verbose": {
+              "type": "boolean",
+            },
+          },
+          "description": "List notes on a report.",
+          "name": "list",
+          "subCommands": {},
+        },
+        "update": {
+          "args": {
+            "body": {
+              "description": "New body text (pass empty string to clear).",
+              "required": true,
+              "type": "string",
+            },
+            "json": {
+              "type": "boolean",
+            },
+            "noteId": {
+              "description": "Note ID (UUID).",
+              "required": true,
+              "type": "positional",
+            },
+            "verbose": {
+              "type": "boolean",
+            },
+          },
+          "description": "Update a note body.",
+          "name": "update",
+          "subCommands": {},
+        },
+      },
+    },
+    "projects": {
+      "args": {},
+      "description": "Project CRUD + members.",
+      "name": "projects",
+      "subCommands": {
+        "create": {
+          "args": {
+            "address": {
+              "description": "Site address (≤500 chars).",
+              "type": "string",
+            },
+            "client-name": {
+              "description": "Client / customer name (≤200 chars).",
+              "type": "string",
+            },
+            "json": {
+              "description": "Print raw JSON to stdout.",
+              "type": "boolean",
+            },
+            "name": {
+              "description": "Project name (1–200 chars).",
+              "required": true,
+              "type": "string",
+            },
+            "verbose": {
+              "description": "Print response metadata to stderr.",
+              "type": "boolean",
+            },
+          },
+          "description": "Create a new project.",
+          "name": "create",
+          "subCommands": {},
+        },
+        "delete": {
+          "args": {
+            "id": {
+              "description": "Project ID (UUID).",
+              "required": true,
+              "type": "positional",
+            },
+            "json": {
+              "description": "Print raw JSON to stdout.",
+              "type": "boolean",
+            },
+            "verbose": {
+              "description": "Print response metadata to stderr.",
+              "type": "boolean",
+            },
+          },
+          "description": "Delete a project (owner only).",
+          "name": "delete",
+          "subCommands": {},
+        },
+        "get": {
+          "args": {
+            "id": {
+              "description": "Project ID (UUID).",
+              "required": true,
+              "type": "positional",
+            },
+            "json": {
+              "description": "Print raw JSON to stdout.",
+              "type": "boolean",
+            },
+            "verbose": {
+              "description": "Print response metadata to stderr.",
+              "type": "boolean",
+            },
+          },
+          "description": "Show project details.",
+          "name": "get",
+          "subCommands": {},
+        },
+        "list": {
+          "args": {
+            "cursor": {
+              "description": "Pagination cursor from a previous page.",
+              "type": "string",
+            },
+            "json": {
+              "description": "Print raw JSON to stdout.",
+              "type": "boolean",
+            },
+            "limit": {
+              "description": "Page size (1–100, default 20).",
+              "type": "string",
+            },
+            "verbose": {
+              "description": "Print response metadata to stderr.",
+              "type": "boolean",
+            },
+          },
+          "description": "List projects you have access to.",
+          "name": "list",
+          "subCommands": {},
+        },
+        "members": {
+          "args": {},
+          "description": "Manage project members.",
+          "name": "members",
+          "subCommands": {
+            "add": {
+              "args": {
+                "json": {
+                  "description": "Print raw JSON to stdout.",
+                  "type": "boolean",
+                },
+                "phone": {
+                  "description": "E.164 phone number to invite.",
+                  "required": true,
+                  "type": "string",
+                },
+                "projectId": {
+                  "description": "Project ID (UUID).",
+                  "required": true,
+                  "type": "positional",
+                },
+                "role": {
+                  "description": "Role: owner | editor | viewer (default editor).",
+                  "type": "string",
+                },
+                "verbose": {
+                  "description": "Print response metadata to stderr.",
+                  "type": "boolean",
+                },
+              },
+              "description": "Add a member to a project (owner only).",
+              "name": "add",
+              "subCommands": {},
+            },
+            "list": {
+              "args": {
+                "json": {
+                  "description": "Print raw JSON to stdout.",
+                  "type": "boolean",
+                },
+                "projectId": {
+                  "description": "Project ID (UUID).",
+                  "required": true,
+                  "type": "positional",
+                },
+                "verbose": {
+                  "description": "Print response metadata to stderr.",
+                  "type": "boolean",
+                },
+              },
+              "description": "List members of a project.",
+              "name": "list",
+              "subCommands": {},
+            },
+            "remove": {
+              "args": {
+                "json": {
+                  "description": "Print raw JSON to stdout.",
+                  "type": "boolean",
+                },
+                "projectId": {
+                  "description": "Project ID (UUID).",
+                  "required": true,
+                  "type": "positional",
+                },
+                "userId": {
+                  "description": "User ID to remove (UUID).",
+                  "required": true,
+                  "type": "positional",
+                },
+                "verbose": {
+                  "description": "Print response metadata to stderr.",
+                  "type": "boolean",
+                },
+              },
+              "description": "Remove a member from a project (owner only).",
+              "name": "remove",
+              "subCommands": {},
+            },
+          },
+        },
+        "update": {
+          "args": {
+            "address": {
+              "description": "New address (≤500 chars).",
+              "type": "string",
+            },
+            "client-name": {
+              "description": "New client name (≤200 chars).",
+              "type": "string",
+            },
+            "id": {
+              "description": "Project ID (UUID).",
+              "required": true,
+              "type": "positional",
+            },
+            "json": {
+              "description": "Print raw JSON to stdout.",
+              "type": "boolean",
+            },
+            "name": {
+              "description": "New name (1–200 chars).",
+              "type": "string",
+            },
+            "verbose": {
+              "description": "Print response metadata to stderr.",
+              "type": "boolean",
+            },
+          },
+          "description": "Update project fields.",
+          "name": "update",
+          "subCommands": {},
+        },
+      },
+    },
+    "reports": {
+      "args": {},
+      "description": "Report CRUD + AI generation.",
+      "name": "reports",
+      "subCommands": {
+        "create": {
+          "args": {
+            "json": {
+              "description": "Print raw JSON to stdout.",
+              "type": "boolean",
+            },
+            "projectId": {
+              "description": "Project ID (UUID).",
+              "required": true,
+              "type": "positional",
+            },
+            "verbose": {
+              "description": "Print response metadata to stderr.",
+              "type": "boolean",
+            },
+            "visit-date": {
+              "description": "Visit date (ISO yyyy-mm-dd).",
+              "type": "string",
+            },
+          },
+          "description": "Create a new draft report.",
+          "name": "create",
+          "subCommands": {},
+        },
+        "delete": {
+          "args": {
+            "json": {
+              "description": "Print raw JSON to stdout.",
+              "type": "boolean",
+            },
+            "reportId": {
+              "description": "Report ID (UUID).",
+              "required": true,
+              "type": "positional",
+            },
+            "verbose": {
+              "description": "Print response metadata to stderr.",
+              "type": "boolean",
+            },
+          },
+          "description": "Delete a draft report.",
+          "name": "delete",
+          "subCommands": {},
+        },
+        "finalize": {
+          "args": {
+            "json": {
+              "description": "Print raw JSON to stdout.",
+              "type": "boolean",
+            },
+            "reportId": {
+              "description": "Report ID (UUID).",
+              "required": true,
+              "type": "positional",
+            },
+            "verbose": {
+              "description": "Print response metadata to stderr.",
+              "type": "boolean",
+            },
+          },
+          "description": "Freeze a draft report (status → finalized).",
+          "name": "finalize",
+          "subCommands": {},
+        },
+        "generate": {
+          "args": {
+            "fixture": {
+              "description": "Fixture name (replay mode).",
+              "type": "string",
+            },
+            "idempotency-key": {
+              "description": "Override idempotency key for this call.",
+              "type": "string",
+            },
+            "json": {
+              "description": "Print raw JSON to stdout.",
+              "type": "boolean",
+            },
+            "reportId": {
+              "description": "Report ID (UUID).",
+              "required": true,
+              "type": "positional",
+            },
+            "verbose": {
+              "description": "Print response metadata to stderr.",
+              "type": "boolean",
+            },
+          },
+          "description": "Generate a draft body for a report from notes (AI).",
+          "name": "generate",
+          "subCommands": {},
+        },
+        "get": {
+          "args": {
+            "json": {
+              "description": "Print raw JSON to stdout.",
+              "type": "boolean",
+            },
+            "reportId": {
+              "description": "Report ID (UUID).",
+              "required": true,
+              "type": "positional",
+            },
+            "verbose": {
+              "description": "Print response metadata to stderr.",
+              "type": "boolean",
+            },
+          },
+          "description": "Show report details.",
+          "name": "get",
+          "subCommands": {},
+        },
+        "list": {
+          "args": {
+            "cursor": {
+              "description": "Pagination cursor.",
+              "type": "string",
+            },
+            "json": {
+              "description": "Print raw JSON to stdout.",
+              "type": "boolean",
+            },
+            "limit": {
+              "description": "Page size (1–100, default 20).",
+              "type": "string",
+            },
+            "projectId": {
+              "description": "Project ID (UUID).",
+              "required": true,
+              "type": "positional",
+            },
+            "verbose": {
+              "description": "Print response metadata to stderr.",
+              "type": "boolean",
+            },
+          },
+          "description": "List reports for a project.",
+          "name": "list",
+          "subCommands": {},
+        },
+        "pdf": {
+          "args": {
+            "json": {
+              "description": "Print raw JSON to stdout.",
+              "type": "boolean",
+            },
+            "reportId": {
+              "description": "Report ID (UUID).",
+              "required": true,
+              "type": "positional",
+            },
+            "verbose": {
+              "description": "Print response metadata to stderr.",
+              "type": "boolean",
+            },
+          },
+          "description": "Render the report to PDF and return a signed URL.",
+          "name": "pdf",
+          "subCommands": {},
+        },
+        "regenerate": {
+          "args": {
+            "fixture": {
+              "description": "Fixture name (replay mode).",
+              "type": "string",
+            },
+            "idempotency-key": {
+              "description": "Override idempotency key for this call.",
+              "type": "string",
+            },
+            "json": {
+              "description": "Print raw JSON to stdout.",
+              "type": "boolean",
+            },
+            "reportId": {
+              "description": "Report ID (UUID).",
+              "required": true,
+              "type": "positional",
+            },
+            "verbose": {
+              "description": "Print response metadata to stderr.",
+              "type": "boolean",
+            },
+          },
+          "description": "Replace report body with a freshly generated one (AI).",
+          "name": "regenerate",
+          "subCommands": {},
+        },
+        "update": {
+          "args": {
+            "json": {
+              "description": "Print raw JSON to stdout.",
+              "type": "boolean",
+            },
+            "reportId": {
+              "description": "Report ID (UUID).",
+              "required": true,
+              "type": "positional",
+            },
+            "verbose": {
+              "description": "Print response metadata to stderr.",
+              "type": "boolean",
+            },
+            "visit-date": {
+              "description": "Visit date (ISO yyyy-mm-dd).",
+              "type": "string",
+            },
+          },
+          "description": "Update report fields (draft only).",
+          "name": "update",
+          "subCommands": {},
+        },
+      },
+    },
+    "settings": {
+      "args": {},
+      "description": "User settings.",
+      "name": "settings",
+      "subCommands": {
+        "ai": {
+          "args": {},
+          "description": "AI provider settings.",
+          "name": "ai",
+          "subCommands": {
+            "get": {
+              "args": {
+                "json": {
+                  "type": "boolean",
+                },
+                "verbose": {
+                  "type": "boolean",
+                },
+              },
+              "description": "Read AI provider settings.",
+              "name": "get",
+              "subCommands": {},
+            },
+            "set": {
+              "args": {
+                "json": {
+                  "type": "boolean",
+                },
+                "model": {
+                  "description": "Model identifier.",
+                  "type": "string",
+                },
+                "vendor": {
+                  "description": "One of kimi|openai|anthropic|google|zai|deepseek.",
+                  "type": "string",
+                },
+                "verbose": {
+                  "type": "boolean",
+                },
+              },
+              "description": "Update AI provider settings.",
+              "name": "set",
+              "subCommands": {},
+            },
+          },
+        },
+      },
+    },
+    "voice": {
+      "args": {},
+      "description": "Voice transcription + summarization.",
+      "name": "voice",
+      "subCommands": {
+        "summarize": {
+          "args": {
+            "fixture": {
+              "description": "Pin a fixture name (replay mode).",
+              "type": "string",
+            },
+            "idempotency-key": {
+              "description": "Idempotency-Key header value.",
+              "type": "string",
+            },
+            "json": {
+              "type": "boolean",
+            },
+            "transcript": {
+              "description": "Transcript text to summarize.",
+              "required": true,
+              "type": "string",
+            },
+            "verbose": {
+              "type": "boolean",
+            },
+          },
+          "description": "Summarize a transcript via AI.",
+          "name": "summarize",
+          "subCommands": {},
+        },
+        "transcribe": {
+          "args": {
+            "file-id": {
+              "description": "Voice file UUID.",
+              "required": true,
+              "type": "string",
+            },
+            "fixture": {
+              "description": "Pin a fixture name (replay mode).",
+              "type": "string",
+            },
+            "idempotency-key": {
+              "description": "Idempotency-Key header value.",
+              "type": "string",
+            },
+            "json": {
+              "type": "boolean",
+            },
+            "verbose": {
+              "type": "boolean",
+            },
+          },
+          "description": "Transcribe a recorded voice file.",
+          "name": "transcribe",
+          "subCommands": {},
+        },
+      },
+    },
+  },
+}
+`;

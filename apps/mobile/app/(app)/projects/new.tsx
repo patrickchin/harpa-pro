@@ -2,8 +2,9 @@
  * New project — real route wiring useCreateProjectMutation.
  *
  * Body component at `screens/project-new.tsx`, dev mirror at
- * `(dev)/project-new.tsx`. On success the user is replaced into the
- * canonical project detail URL using the slug from the API response.
+ * `(dev)/project-new.tsx`. On success the user is taken to the canonical
+ * project detail URL via router.dismissTo, which pops the creation form
+ * from the stack so back never returns to it.
  */
 import { useRouter } from 'expo-router';
 import { useCreateProjectMutation } from '@/lib/api/hooks';
@@ -32,7 +33,9 @@ export default function NewProjectRoute() {
           },
           {
             onSuccess: (created) => {
-              router.replace(`/projects/${created.slug}` as never);
+              // dismissTo pops /projects/new from the stack before navigating
+              // to the new project, so back never returns to the creation form.
+              router.dismissTo(`/projects/${created.slug}` as never);
             },
           },
         );

@@ -151,4 +151,10 @@ export const REGISTRY: readonly GalleryEntry[] = [
     group: 'app',
     description: 'Generate report — Report tab: no-report / generating / live / generation-error / finalize-error',
   },
+  {
+    name: 'Generate Edit',
+    href: '/(dev)/generate-edit',
+    group: 'app',
+    description: 'Generate report — Edit tab: no-report / live-report / autosaving / saved',
+  },
 ];

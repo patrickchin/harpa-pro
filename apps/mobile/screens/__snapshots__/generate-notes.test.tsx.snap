@@ -432,7 +432,55 @@ exports[`GenerateNotes > matches the empty-state snapshot 1`] = `
           }
         }
         testID="edit-tab-pane"
-      />
+      >
+        <rn-ScrollView
+          className="flex-1 px-5"
+          contentContainerStyle={
+            {
+              "paddingBottom": 100,
+            }
+          }
+          testID="edit-tab-empty"
+        >
+          <rn-View
+            className="rounded-lg border border-border bg-surface-muted p-4 items-center py-8"
+            style={
+              [
+                {
+                  "elevation": 2,
+                  "shadowColor": "#1a1a2e",
+                  "shadowOffset": {
+                    "height": 2,
+                    "width": 0,
+                  },
+                  "shadowOpacity": 0.08,
+                  "shadowRadius": 8,
+                },
+                undefined,
+              ]
+            }
+          >
+            <rn-View
+              className="mb-4 h-16 w-16 items-center justify-center rounded-lg border border-border bg-card"
+            >
+              <lucide-FileText
+                color="#5f5b66"
+                size={28}
+              />
+            </rn-View>
+            <rn-Text
+              className="text-title-sm text-foreground"
+            >
+              Generate a report first to edit
+            </rn-Text>
+            <rn-Text
+              className="mt-2 text-center text-body text-muted-foreground"
+            >
+              Once your report is generated from the notes, you can edit any field here.
+            </rn-Text>
+          </rn-View>
+        </rn-ScrollView>
+      </rn-View>
     </rn-ScrollView>
     <rn-View
       className="border-t border-border bg-background px-5 py-3"

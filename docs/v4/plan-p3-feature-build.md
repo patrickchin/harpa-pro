@@ -207,6 +207,48 @@ mirror + tests pass canned values. Real `useReportGeneration` hook
       works under test.
 - [x] Commit: `feat(mobile,report-core): P3.7 — Generate Report tab + read-only ReportView`.
 
+### P3.8 — Generate – Edit tab
+
+Third of the three Generate-screen commits. Brings the Edit tab from
+a placeholder `<View />` to a fully-controlled inline editor that
+mutates a `GeneratedSiteReport` through immutable slice helpers. The
+real autosave hook (`useReportAutoSave` / `useReportDraftPersistence`)
+remains deferred; the provider just forwards `isAutoSaving` +
+`lastSavedAt` props so the status row renders the right copy.
+
+- [x] `lib/report-edit-helpers.ts` extended from the P3.7
+      `createEmptyReport()`-only stub: `updateMeta`, `updateWeather`,
+      `updateWorkers` slice patches (with empty-shape seeding when
+      the slice is `null`), `setRoles` / `setMaterials` / `setIssues`
+      / `setNextSteps` / `setSections` whole-array setters, and
+      `blankRole` / `blankMaterial` / `blankIssue` / `blankSection`
+      factories. All immutable; every helper returns a new wrapper +
+      a new inner `report` object so React shallow-equality fires.
+- [x] `lib/report-edit-helpers.test.ts` ports the canonical helper
+      tests (23 cases): shape, identity, schema round-trip,
+      null-seed paths, and "two calls produce independent refs".
+- [x] `components/reports/ReportEditForm.tsx` ported verbatim from
+      canonical: 7 section cards (Meta / Weather / Workers + Roles /
+      Materials / Issues / Next Steps / Summary Sections) with
+      shared `Field` / `AddRowButton` / `RemoveRowButton` helpers
+      and an `AppDialogSheet` confirm before destructive removes
+      (Pitfall: no `Alert.alert`).
+- [x] `EditTabPane` body fully ported: empty state when
+      `generation.report === null`, inline form once a report
+      exists, and an autosave status row (`Saving…` / `Saved` / ``).
+- [x] `GenerateReportProvider` extended: new `onSetReport`,
+      `isAutoSaving`, `lastSavedAt` props; `generation.setReport`
+      surface (no-op fallback when route doesn't wire persistence);
+      `draft.isAutoSaving` + `draft.lastSavedAt`; lazy-seed via
+      `createEmptyReport()` from both `tabs.openEdit()` and
+      `tabs.editManually()` when no report is present yet.
+- [x] Dev mirror `(dev)/generate-edit.tsx` with state toggles
+      (no-report / live-report / autosaving / saved) + registry entry.
+- [x] Vitest unit tests for the Edit tab covering each state +
+      onSetReport propagation (new top-level + inner refs) + the
+      "Edit manually" lazy-seed path from the empty Report tab.
+- [x] Commit: `feat(mobile): P3.8 — Generate Edit tab + inline ReportEditForm`.
+
 ## Pipelines exercised
 
 - **Upload**: presign → R2 PUT → registerFile → createNote

@@ -27,6 +27,7 @@ import {
 } from 'react';
 
 import type { TabKey } from './tabs';
+import { createEmptyReport } from '@/lib/report-edit-helpers';
 import type { NoteEntry } from '@/lib/note-entry';
 import type { GeneratedSiteReport } from '@harpa/report-core';
 
@@ -71,6 +72,17 @@ export interface GenerateReportProviderProps {
    * tab. Defaults to switching the active tab to `edit`.
    */
   onEditManually?: () => void;
+  /**
+   * Called when the Edit-tab form mutates the report. The provider
+   * has no opinion on persistence — the route wrapper wires this to
+   * a local React state (and eventually `useReportDraftPersistence`).
+   * When omitted, `generation.setReport` is a no-op (read-only).
+   */
+  onSetReport?: (next: GeneratedSiteReport) => void;
+  /** True while autosave is in flight. Surfaces in the Edit tab header. */
+  isAutoSaving?: boolean;
+  /** Epoch ms of the last successful autosave, or `null` if none. */
+  lastSavedAt?: number | null;
   /** True while finalize is in flight. */
   isFinalizing?: boolean;
   /** Latest finalize error, or `null`. */
@@ -149,6 +161,12 @@ interface TimelineSurface {
 interface GenerationSurface {
   /** Generated report payload. `null` until a report exists. */
   report: GeneratedSiteReport | null;
+  /**
+   * Mutator for the report. Calls the parent-provided `onSetReport`
+   * if any; otherwise a no-op (read-only). Always defined so consumers
+   * can reference it without a guard.
+   */
+  setReport: (next: GeneratedSiteReport) => void;
   /** True while the AI generation request is in flight. */
   isUpdating: boolean;
   /** Latest generation error, or `null`. */
@@ -167,6 +185,10 @@ interface DraftSurface {
   isFinalizeConfirmVisible: boolean;
   /** Latest finalize error, or `null`. */
   finalizeError: Error | string | null;
+  /** True while autosave is in flight (Edit-tab header). */
+  isAutoSaving: boolean;
+  /** Epoch ms of last successful autosave, or `null`. */
+  lastSavedAt: number | null;
 }
 
 interface PreviewSurface {
@@ -223,6 +245,9 @@ export function GenerateReportProvider({
   notesSinceLastGeneration = 0,
   onRegenerate,
   onEditManually,
+  onSetReport,
+  isAutoSaving = false,
+  lastSavedAt = null,
   isFinalizing = false,
   finalizeError = null,
   onOpenFile,
@@ -251,16 +276,32 @@ export function GenerateReportProvider({
   }, []);
 
   const openEdit = useCallback(() => {
+    // Lazy-seed an empty report when the user opens Edit without one,
+    // matching canonical's manual-entry path. If no `onSetReport` is
+    // wired, we still switch tabs — the empty-state will render.
+    if (!report && onSetReport) {
+      onSetReport(createEmptyReport());
+    }
     setActiveTab('edit');
-  }, []);
+  }, [onSetReport, report]);
 
   const editManually = useCallback(() => {
     if (onEditManually) {
       onEditManually();
-    } else {
-      setActiveTab('edit');
+      return;
     }
-  }, [onEditManually]);
+    if (!report && onSetReport) {
+      onSetReport(createEmptyReport());
+    }
+    setActiveTab('edit');
+  }, [onEditManually, onSetReport, report]);
+
+  const setReport = useCallback(
+    (next: GeneratedSiteReport) => {
+      onSetReport?.(next);
+    },
+    [onSetReport],
+  );
 
   const handlePickAttachment = useCallback(
     (_category: 'image' | 'document') => {
@@ -312,6 +353,7 @@ export function GenerateReportProvider({
       },
       generation: {
         report,
+        setReport,
         isUpdating: isGeneratingReport,
         error: generationError,
         notesSinceLastGeneration,
@@ -322,6 +364,8 @@ export function GenerateReportProvider({
         isFinalizeConfirmVisible,
         setIsFinalizeConfirmVisible,
         finalizeError,
+        isAutoSaving,
+        lastSavedAt,
       },
       // TODO(P3.8): replace with real `useVoiceNotePipeline` surface.
       voice: {
@@ -364,12 +408,15 @@ export function GenerateReportProvider({
       openEdit,
       editManually,
       report,
+      setReport,
       isGeneratingReport,
       generationError,
       notesSinceLastGeneration,
       isFinalizing,
       isFinalizeConfirmVisible,
       finalizeError,
+      isAutoSaving,
+      lastSavedAt,
       attachmentSheetVisible,
       fileUploadError,
       memberNames,

@@ -47,7 +47,7 @@ vi.mock('@/lib/api/hooks', () => ({
 }));
 
 // Import AFTER mocks are wired.
-import NewProjectRoute from '../../app/(app)/projects/new';
+import NewProjectRoute from '@/app/(app)/projects/new';
 
 // ---------------------------------------------------------------------------
 // Helpers

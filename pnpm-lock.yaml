@@ -196,6 +196,9 @@ importers:
       '@harpa/api-contract':
         specifier: workspace:*
         version: link:../../packages/api-contract
+      '@harpa/report-core':
+        specifier: workspace:*
+        version: link:../../packages/report-core
       '@react-native-async-storage/async-storage':
         specifier: ^1.23.1
         version: 1.23.1(react-native@0.76.3(@babel/core@7.29.0)(@babel/preset-env@7.29.5(@babel/core@7.29.0))(@types/react@18.3.28)(react@18.3.1))
@@ -327,6 +330,9 @@ importers:
       '@harpa/api-contract':
         specifier: workspace:*
         version: link:../api-contract
+      '@harpa/report-core':
+        specifier: workspace:*
+        version: link:../report-core
       '@hono/node-server':
         specifier: ^1.13.2
         version: 1.19.14(hono@4.12.18)
@@ -407,6 +413,19 @@ importers:
       typescript:
         specifier: ^5.6.2
         version: 5.9.3
+      vitest:
+        specifier: ^2.1.2
+        version: 2.1.9(@types/node@22.19.18)(jsdom@25.0.1)(lightningcss@1.32.0)(terser@5.47.1)
+
+  packages/report-core:
+    dependencies:
+      zod:
+        specifier: ^3.23.8
+        version: 3.25.76
+    devDependencies:
+      typescript:
+        specifier: ^5.6.2
+        version: 5.6.3
       vitest:
         specifier: ^2.1.2
         version: 2.1.9(@types/node@22.19.18)(jsdom@25.0.1)(lightningcss@1.32.0)(terser@5.47.1)

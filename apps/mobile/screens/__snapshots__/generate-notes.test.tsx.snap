@@ -255,7 +255,175 @@ exports[`GenerateNotes > matches the empty-state snapshot 1`] = `
           }
         }
         testID="report-tab-pane"
-      />
+      >
+        <rn-ScrollView
+          className="flex-1 px-5"
+          contentContainerStyle={
+            {
+              "paddingBottom": 100,
+            }
+          }
+          keyboardShouldPersistTaps="handled"
+        >
+          <rn-View
+            className="gap-3"
+          >
+            <rn-View
+              className="rounded-lg border border-border bg-surface-emphasis p-4"
+              style={
+                [
+                  {
+                    "elevation": 4,
+                    "shadowColor": "#1a1a2e",
+                    "shadowOffset": {
+                      "height": 4,
+                      "width": 0,
+                    },
+                    "shadowOpacity": 0.12,
+                    "shadowRadius": 14,
+                  },
+                  undefined,
+                ]
+              }
+            >
+              <rn-View
+                className="flex-row items-start justify-between gap-3"
+              >
+                <rn-View
+                  className="flex-1 flex-row items-start gap-3"
+                >
+                  <rn-View
+                    className="mt-0.5 h-9 w-9 items-center justify-center rounded-sm border border-border bg-card"
+                  >
+                    <lucide-AlertTriangle
+                      color="#8e510e"
+                      size={16}
+                    />
+                  </rn-View>
+                  <rn-View
+                    className="flex-1 gap-1"
+                  >
+                    <rn-Text
+                      className="text-label text-foreground"
+                    >
+                      Still missing (5)
+                    </rn-Text>
+                    <rn-Text
+                      className="text-sm text-muted-foreground"
+                    >
+                      Add a note about the topics below to complete the report.
+                    </rn-Text>
+                  </rn-View>
+                </rn-View>
+              </rn-View>
+              <rn-View
+                className="mt-3 flex-row flex-wrap gap-2"
+              >
+                <rn-View
+                  className="flex-row items-center gap-1.5 rounded-md border border-warning-border bg-warning-soft px-3 py-2"
+                >
+                  <lucide-Cloud
+                    color="#8e510e"
+                    size={12}
+                  />
+                  <rn-Text
+                    className="text-sm font-semibold uppercase tracking-wider text-warning-text"
+                  >
+                    Weather conditions
+                  </rn-Text>
+                </rn-View>
+                <rn-View
+                  className="flex-row items-center gap-1.5 rounded-md border border-warning-border bg-warning-soft px-3 py-2"
+                >
+                  <lucide-Users
+                    color="#8e510e"
+                    size={12}
+                  />
+                  <rn-Text
+                    className="text-sm font-semibold uppercase tracking-wider text-warning-text"
+                  >
+                    Workers / crew info
+                  </rn-Text>
+                </rn-View>
+                <rn-View
+                  className="flex-row items-center gap-1.5 rounded-md border border-warning-border bg-warning-soft px-3 py-2"
+                >
+                  <lucide-Package
+                    color="#8e510e"
+                    size={12}
+                  />
+                  <rn-Text
+                    className="text-sm font-semibold uppercase tracking-wider text-warning-text"
+                  >
+                    Materials
+                  </rn-Text>
+                </rn-View>
+                <rn-View
+                  className="flex-row items-center gap-1.5 rounded-md border border-warning-border bg-warning-soft px-3 py-2"
+                >
+                  <lucide-AlertTriangle
+                    color="#8e510e"
+                    size={12}
+                  />
+                  <rn-Text
+                    className="text-sm font-semibold uppercase tracking-wider text-warning-text"
+                  >
+                    Issues / risks
+                  </rn-Text>
+                </rn-View>
+                <rn-View
+                  className="flex-row items-center gap-1.5 rounded-md border border-warning-border bg-warning-soft px-3 py-2"
+                >
+                  <lucide-ClipboardList
+                    color="#8e510e"
+                    size={12}
+                  />
+                  <rn-Text
+                    className="text-sm font-semibold uppercase tracking-wider text-warning-text"
+                  >
+                    Next steps
+                  </rn-Text>
+                </rn-View>
+              </rn-View>
+            </rn-View>
+            <rn-Pressable
+              className="flex-row items-center justify-center rounded-md border border-border bg-secondary active:opacity-90 min-h-touch px-4 py-3 w-full"
+              disabled={false}
+              onPress={[Function]}
+              style={
+                [
+                  {
+                    "elevation": 2,
+                    "shadowColor": "#1a1a2e",
+                    "shadowOffset": {
+                      "height": 2,
+                      "width": 0,
+                    },
+                    "shadowOpacity": 0.08,
+                    "shadowRadius": 8,
+                  },
+                  undefined,
+                ]
+              }
+              testID="btn-edit-manually"
+            >
+              <rn-View
+                className="flex-row items-center gap-1.5"
+              >
+                <lucide-Pencil
+                  color="#2d3a5a"
+                  size={14}
+                />
+                <rn-Text
+                  className="text-base font-semibold text-foreground"
+                >
+                  Edit manually
+                </rn-Text>
+              </rn-View>
+            </rn-Pressable>
+          </rn-View>
+        </rn-ScrollView>
+      </rn-View>
       <rn-View
         className="flex-1"
         style={

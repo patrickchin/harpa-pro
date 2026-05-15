@@ -21,6 +21,7 @@
   "dependencies": {
     "@harpa/ai-fixtures": "workspace:*",
     "@harpa/api-contract": "workspace:*",
+    "@harpa/report-core": "workspace:*",
     "@hono/node-server": "^1.13.2",
     "@hono/zod-openapi": "^0.18.3",
     "drizzle-orm": "^0.36.4",

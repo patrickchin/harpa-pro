@@ -28,6 +28,7 @@ import {
 
 import type { TabKey } from './tabs';
 import type { NoteEntry } from '@/lib/note-entry';
+import type { GeneratedSiteReport } from '@harpa/report-core';
 
 /**
  * Props passed to `GenerateReportProvider`. Route wrappers wire real
@@ -43,7 +44,7 @@ export interface GenerateReportProviderProps {
   notesLoading?: boolean;
   /**
    * Called when the user taps "Add" on a non-empty text input. The
-   * route wrapper is responsible for the actual mutation (P3.7+); the
+   * route wrapper is responsible for the actual mutation (P3.8+); the
    * provider just hands the trimmed body up.
    */
   onAddTextNote?: (body: string) => void;
@@ -51,6 +52,33 @@ export interface GenerateReportProviderProps {
   memberNames?: ReadonlyMap<string, string>;
   /** Report title for the header. `null` falls back to "New Report". */
   reportTitle?: string | null;
+  // ── P3.7: Report-tab fields ────────────────────────────────────
+  /**
+   * Generated report payload. `null` until the first generation lands
+   * (or while the user hasn't touched manual entry yet).
+   */
+  report?: GeneratedSiteReport | null;
+  /** True while a generation request is in flight. */
+  isGeneratingReport?: boolean;
+  /** Latest generation error message, or `null`. */
+  generationError?: string | null;
+  /** Count of notes added since the last successful generation. */
+  notesSinceLastGeneration?: number;
+  /** Called when the user taps Retry / Regenerate. */
+  onRegenerate?: () => void;
+  /**
+   * Called when the user taps "Edit manually" on the empty Report
+   * tab. Defaults to switching the active tab to `edit`.
+   */
+  onEditManually?: () => void;
+  /** True while finalize is in flight. */
+  isFinalizing?: boolean;
+  /** Latest finalize error, or `null`. */
+  finalizeError?: Error | string | null;
+  /** Called when the user taps a file/image in the timeline or report. */
+  onOpenFile?: (fileId: string) => void;
+  /** Initial tab the screen opens on. Defaults to `notes`. */
+  initialTab?: TabKey;
   children: ReactNode;
 }
 
@@ -81,6 +109,12 @@ interface NotesSurface {
   list: readonly NoteEntry[];
   /** Mirrors canonical: total source-note count for the tab badge. */
   totalCount: number;
+  /**
+   * Raw note rows. Consumed by surfaces that need the file_id ↔ note
+   * linkage (timeline metadata, ReportPhotos). P3.7 keeps this as
+   * `null` until the canonical `useLocalReportNotes` hook lands.
+   */
+  rows: null;
   input: string;
   setInput: (next: string) => void;
   add: () => void;
@@ -94,10 +128,16 @@ interface TabsSurface {
   set: (next: TabKey) => void;
   /**
    * Edit tab opener — separate from `set('edit')` because canonical
-   * lazily seeds an empty report when the user opens Edit. P3.6 no-ops
-   * (no report state yet) and just switches the active tab.
+   * lazily seeds an empty report when the user opens Edit. Currently
+   * just switches the tab; lazy-seed lands with P3.8.
    */
   openEdit: () => void;
+  /**
+   * Called by the Report tab "Edit manually" CTA. Defaults to
+   * `set('edit')` but routes can override (e.g. to seed an empty
+   * report at the same time, matching canonical).
+   */
+  editManually: () => void;
 }
 
 interface TimelineSurface {
@@ -107,20 +147,31 @@ interface TimelineSurface {
 }
 
 interface GenerationSurface {
-  /** True while the AI generation request is in flight. P3.7. */
+  /** Generated report payload. `null` until a report exists. */
+  report: GeneratedSiteReport | null;
+  /** True while the AI generation request is in flight. */
   isUpdating: boolean;
-  /** Count of notes added since the last successful generation. P3.7. */
+  /** Latest generation error, or `null`. */
+  error: string | null;
+  /** Count of notes added since the last successful generation. */
   notesSinceLastGeneration: number;
-  /** True once a report has been generated at least once. P3.7. */
+  /** True once a report has been generated at least once. */
   hasReport: boolean;
 }
 
 interface DraftSurface {
-  /** True while finalize is in flight. P3.7. */
+  /** True while finalize is in flight. */
   isFinalizing: boolean;
-  /** Opens the finalize-confirm dialog. P3.7. */
+  /** Opens the finalize-confirm dialog. */
   setIsFinalizeConfirmVisible: (visible: boolean) => void;
   isFinalizeConfirmVisible: boolean;
+  /** Latest finalize error, or `null`. */
+  finalizeError: Error | string | null;
+}
+
+interface PreviewSurface {
+  /** Open a file from the timeline / report. No-op default. */
+  openFile: (fileId: string) => void;
 }
 
 export interface GenerateReportContextValue {
@@ -134,10 +185,13 @@ export interface GenerateReportContextValue {
   draft: DraftSurface;
   voice: VoiceSurface;
   photo: PhotoSurface;
+  preview: PreviewSurface;
   ui: UISurface;
   members: ReadonlyMap<string, string>;
-  /** Bubbled up by the Notes input + attachment sheet. P3.7+ wires uploads. */
+  /** Bubbled up by the Notes input + attachment sheet. P3.8+ wires uploads. */
   handlePickAttachment: (category: 'image' | 'document') => void;
+  /** Triggers report regeneration. No-op when no `onRegenerate` is provided. */
+  handleRegenerate: () => void;
 }
 
 const GenerateReportContext =
@@ -163,9 +217,19 @@ export function GenerateReportProvider({
   onAddTextNote,
   memberNames,
   reportTitle,
+  report = null,
+  isGeneratingReport = false,
+  generationError = null,
+  notesSinceLastGeneration = 0,
+  onRegenerate,
+  onEditManually,
+  isFinalizing = false,
+  finalizeError = null,
+  onOpenFile,
+  initialTab = 'notes',
   children,
 }: GenerateReportProviderProps) {
-  const [activeTab, setActiveTab] = useState<TabKey>('notes');
+  const [activeTab, setActiveTab] = useState<TabKey>(initialTab);
   const [input, setInput] = useState('');
   const [deleteIndex, setDeleteIndex] = useState<number | null>(null);
   const [attachmentSheetVisible, setAttachmentSheetVisible] = useState(false);
@@ -181,7 +245,7 @@ export function GenerateReportProvider({
   }, [input, onAddTextNote]);
 
   const confirmDelete = useCallback(() => {
-    // TODO(P3.7): wire useReportNotesMutations().remove once the
+    // TODO(P3.8): wire useReportNotesMutations().remove once the
     // persistence hooks land. For now the dialog just closes.
     setDeleteIndex(null);
   }, []);
@@ -190,11 +254,31 @@ export function GenerateReportProvider({
     setActiveTab('edit');
   }, []);
 
+  const editManually = useCallback(() => {
+    if (onEditManually) {
+      onEditManually();
+    } else {
+      setActiveTab('edit');
+    }
+  }, [onEditManually]);
+
   const handlePickAttachment = useCallback(
     (_category: 'image' | 'document') => {
-      // TODO(P3.7): route to usePhotoUploadPipeline().handleMenuPick.
+      // TODO(P3.8): route to usePhotoUploadPipeline().handleMenuPick.
     },
     [],
+  );
+
+  const handleRegenerate = useCallback(() => {
+    setActiveTab('report');
+    onRegenerate?.();
+  }, [onRegenerate]);
+
+  const handleOpenFile = useCallback(
+    (fileId: string) => {
+      onOpenFile?.(fileId);
+    },
+    [onOpenFile],
   );
 
   const value = useMemo<GenerateReportContextValue>(
@@ -205,6 +289,10 @@ export function GenerateReportProvider({
       notes: {
         list: notes,
         totalCount: notes.length,
+        // TODO(P3.8): expose real note rows once `useLocalReportNotes`
+        // lands. ReportPhotos consumes this; passing `null` keeps the
+        // surface stable.
+        rows: null,
         input,
         setInput,
         add: addNote,
@@ -216,24 +304,26 @@ export function GenerateReportProvider({
         active: activeTab,
         set: setActiveTab,
         openEdit,
+        editManually,
       },
       timeline: {
         items: notes,
         isLoading: notesLoading,
       },
-      // TODO(P3.7): replace with real `useReportGeneration` surface.
       generation: {
-        isUpdating: false,
-        notesSinceLastGeneration: 0,
-        hasReport: false,
+        report,
+        isUpdating: isGeneratingReport,
+        error: generationError,
+        notesSinceLastGeneration,
+        hasReport: report !== null,
       },
-      // TODO(P3.7): replace with real `useReportDraftPersistence` surface.
       draft: {
-        isFinalizing: false,
+        isFinalizing,
         isFinalizeConfirmVisible,
         setIsFinalizeConfirmVisible,
+        finalizeError,
       },
-      // TODO(P3.7): replace with real `useVoiceNotePipeline` surface.
+      // TODO(P3.8): replace with real `useVoiceNotePipeline` surface.
       voice: {
         isRecording: false,
         amplitude: 0,
@@ -242,10 +332,13 @@ export function GenerateReportProvider({
         toggleRecording: () => undefined,
         cancelRecording: () => undefined,
       },
-      // TODO(P3.7): replace with real `usePhotoUploadPipeline` surface.
+      // TODO(P3.8): replace with real `usePhotoUploadPipeline` surface.
       photo: {
         handleCameraCapture: () => undefined,
         handleMenuPick: () => undefined,
+      },
+      preview: {
+        openFile: handleOpenFile,
       },
       ui: {
         attachmentSheetVisible,
@@ -255,6 +348,7 @@ export function GenerateReportProvider({
       },
       members: memberNames ?? EMPTY_MEMBERS,
       handlePickAttachment,
+      handleRegenerate,
     }),
     [
       projectSlug,
@@ -268,11 +362,20 @@ export function GenerateReportProvider({
       confirmDelete,
       activeTab,
       openEdit,
+      editManually,
+      report,
+      isGeneratingReport,
+      generationError,
+      notesSinceLastGeneration,
+      isFinalizing,
       isFinalizeConfirmVisible,
+      finalizeError,
       attachmentSheetVisible,
       fileUploadError,
       memberNames,
       handlePickAttachment,
+      handleRegenerate,
+      handleOpenFile,
     ],
   );
 

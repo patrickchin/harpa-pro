@@ -161,6 +161,52 @@ P3.6 ships the Notes pane as a *visually complete* surface; Report
       one snapshot.
 - [x] Commit: `feat(mobile): P3.6 — Generate Notes tab + provider scaffold`.
 
+### P3.7 — Generate – Report tab
+
+Second of the three Generate-screen commits. Brings the Report tab
+from a placeholder `<View />` to a visually complete, read-only
+surface that renders a `GeneratedSiteReport` with empty / generating
+/ live / generation-error / finalize-error states. Same pattern as
+P3.6: provider takes orchestration state as props; route + dev
+mirror + tests pass canned values. Real `useReportGeneration` hook
++ ReportPhotos rendering remain deferred (see TODO markers).
+
+- [x] New shared package `packages/report-core` — Zod schemas +
+      `normalizeGeneratedReportPayload` + helpers (`getReportCompleteness`,
+      `getWorkersLines`, `getWeatherLines`, …). Mobile + api both
+      depend on it via `@harpa/report-core`.
+- [x] Nine rendering primitives ported verbatim from canonical
+      under `apps/mobile/components/reports/`: `StatBar`,
+      `WeatherStrip`, `SummarySectionCard`, `IssuesCard`,
+      `WorkersCard`, `MaterialsCard`, `NextStepsCard`,
+      `CompletenessCard`, `ReportView`. Plus `SectionHeader`
+      primitive and `mobile-ui` / `section-icons` helpers.
+- [x] `GenerateReportProvider` extended: real `generation`
+      (`report`, `isUpdating`, `error`, `notesSinceLastGeneration`,
+      `hasReport`), `draft` (`isFinalizing`, `finalizeError`,
+      finalize-confirm visibility), `tabs.editManually`,
+      `preview.openFile`, `handleRegenerate` — all driven by new
+      provider props. `initialTab` prop added for dev mirror.
+- [x] `ReportTabPane` body fully ported: error banner + Retry,
+      empty state (CompletenessCard skeleton + Edit manually CTA),
+      generating shimmer, live ReportView + finalize-error banner.
+      ReportPhotos slot reserved with a TODO marker (lands once
+      upload pipeline + `useLocalReportNotes` port).
+- [x] Real route forwards report state via new
+      `report`/`isGeneratingReport`/`generationError`/`onRegenerate`
+      props; fixture-mode seeds `SAMPLE_GENERATED_REPORT` so the
+      tab renders without the API generate endpoint. TODO marker
+      for the real `useReportGeneration` hook (lands with the API
+      endpoint).
+- [x] Dev mirror `(dev)/generate-report.tsx` with state toggles
+      (no-report / generating / live-report / generation-error /
+      finalize-error) + registry entry.
+- [x] Vitest unit tests for the Report tab covering each state +
+      smoke render of populated layout. Reanimated mock extended
+      with chainable entering-preset proxy so `FadeIn.duration(…)`
+      works under test.
+- [x] Commit: `feat(mobile,report-core): P3.7 — Generate Report tab + read-only ReportView`.
+
 ## Pipelines exercised
 
 - **Upload**: presign → R2 PUT → registerFile → createNote

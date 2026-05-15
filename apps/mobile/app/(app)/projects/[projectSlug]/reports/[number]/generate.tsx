@@ -5,19 +5,23 @@
  * draft via `useReportQuery`, and renders the props-driven
  * `GenerateNotes` screen body.
  *
- * P3.6 ships local-only note state — `useReportNotesQuery` /
- * `useReportNotesMutations` aren't ported yet. Notes added in this
- * session live in route-local React state with a TODO marker so the
- * Notes tab is functional end-to-end (smoke testable). Persistence
- * lands in P3.7.
+ * Notes still live in route-local state — `useReportNotesQuery` /
+ * `useReportNotesMutations` aren't ported yet (lands with the notes
+ * mutation hooks). Generated report is wired from a fixture sample
+ * in fixture-mode so the Report tab renders; the real
+ * `useReportGeneration` hook lands once the API generate endpoint is
+ * ported.
  */
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
 import { GenerateNotes } from '@/screens/generate-notes';
 import { useProjectQuery, useReportQuery } from '@/lib/api/hooks';
 import type { NoteEntry } from '@/lib/note-entry';
 import { uuid } from '@/lib/uuid';
+import { env } from '@/lib/env';
+import type { GeneratedSiteReport } from '@harpa/report-core';
+import { SAMPLE_GENERATED_REPORT } from '@/lib/dev-fixtures/sample-report';
 
 export default function GenerateReportRoute() {
   const router = useRouter();
@@ -43,9 +47,9 @@ export default function GenerateReportRoute() {
     { enabled: slug.length > 0 && reportNumber !== null },
   );
 
-  // TODO(P3.7): replace with `useReportNotesQuery` + the mutation
-  // pipeline once `useLocalReportNotes` is ported. P3.6 keeps notes
-  // in route-local state so the screen is functional end-to-end.
+  // TODO(P3.x): replace with `useReportNotesQuery` + the mutation
+  // pipeline once `useLocalReportNotes` is ported. Notes live in
+  // route-local state so the screen stays functional end-to-end.
   const [localNotes, setLocalNotes] = useState<NoteEntry[]>([]);
   const handleAddTextNote = useCallback((body: string) => {
     setLocalNotes((prev) => [
@@ -59,6 +63,33 @@ export default function GenerateReportRoute() {
       },
     ]);
   }, []);
+
+  // TODO(P3.x): replace with `useReportGeneration` mutation once the
+  // API `/projects/:slug/reports/:n/generate` endpoint is ported. In
+  // fixture mode we seed a sample report so the Report tab is
+  // visually exercised; otherwise the tab shows the empty state.
+  const [generatedReport, setGeneratedReport] =
+    useState<GeneratedSiteReport | null>(
+      env.EXPO_PUBLIC_USE_FIXTURES ? SAMPLE_GENERATED_REPORT : null,
+    );
+  const [isGeneratingReport, setIsGeneratingReport] = useState(false);
+  const [generationError, setGenerationError] = useState<string | null>(null);
+
+  // Honest UX path: flip the spinner, then re-seat the fixture so the
+  // user sees the Report tab refresh. Real network call lands later.
+  const handleRegenerate = useCallback(() => {
+    setGenerationError(null);
+    setIsGeneratingReport(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isGeneratingReport) return;
+    const id = setTimeout(() => {
+      setGeneratedReport(SAMPLE_GENERATED_REPORT);
+      setIsGeneratingReport(false);
+    }, 600);
+    return () => clearTimeout(id);
+  }, [isGeneratingReport]);
 
   const canWrite =
     project.data?.myRole === 'owner' || project.data?.myRole === 'editor';
@@ -77,6 +108,10 @@ export default function GenerateReportRoute() {
       reportTitle={reportTitleField ?? null}
       canWrite={canWrite}
       onBack={() => router.back()}
+      report={generatedReport}
+      isGeneratingReport={isGeneratingReport}
+      generationError={generationError}
+      onRegenerate={handleRegenerate}
     />
   );
 }

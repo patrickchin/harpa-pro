@@ -1,10 +1,10 @@
 /**
  * Date formatting utilities.
  *
- * Ported formatDate from canonical source at
- * `../haru3-reports/apps/mobile/lib/report-helpers.ts` (re-exported
- * from @harpa/report-core). v4 doesn't have report-core yet, so the
- * helper lives here directly.
+ * Mirrors the canonical `formatDate` from
+ * `@harpa/report-core/src/report-helpers.ts`. Re-exported here so
+ * non-report screens can import dates without depending on the
+ * report-core package boundary.
  */
 
 /**

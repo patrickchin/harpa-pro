@@ -227,8 +227,27 @@ vi.mock('react-native-reanimated', async () => {
         get: () => () => 0,
       },
     ),
+    // Entering / exiting presets — components chain methods like
+    // `FadeIn.duration(250).delay(100)`. Return a self-referential
+    // Proxy so any method call returns the same object.
+    FadeIn: createAnimationPresetMock(),
+    FadeOut: createAnimationPresetMock(),
+    FadeInDown: createAnimationPresetMock(),
+    FadeInUp: createAnimationPresetMock(),
+    SlideInRight: createAnimationPresetMock(),
+    SlideOutRight: createAnimationPresetMock(),
   };
 });
+
+function createAnimationPresetMock(): unknown {
+  const handler: ProxyHandler<object> = {
+    get(_target, _prop) {
+      return () => proxy;
+    },
+  };
+  const proxy: object = new Proxy({}, handler);
+  return proxy;
+}
 
 // `react-native-safe-area-context` reads native insets. Stub
 // `useSafeAreaInsets` with typical iPhone insets for snapshot

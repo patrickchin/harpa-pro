@@ -5,13 +5,13 @@
  * `../haru3-reports/apps/mobile/app/projects/[projectId]/reports/generate.tsx`
  * on branch `dev`. v4 uses `projectSlug` + per-project `number` route
  * params instead of `projectId` / `reportId`. P3.6 ships the Notes
- * pane as the only interactive surface; Report/Edit are mounted as
- * empty placeholders (filled in by P3.7/P3.8).
+ * pane; P3.7 ports the Report tab (read-only `ReportView` + completeness
+ * skeleton + generating/error states); Edit lands in P3.8.
  *
  * Header / tab bar / pager / dialogs all read from
  * `GenerateReportProvider` via context. Routes inject data (notes,
- * loading, callbacks) through provider props; dev mirrors + tests do
- * the same with canned values.
+ * loading, generated report, callbacks) through provider props; dev
+ * mirrors + tests do the same with canned values.
  */
 import {
   KeyboardAvoidingView,
@@ -39,7 +39,7 @@ export type GenerateNotesProps = Omit<GenerateReportProviderProps, 'children'> &
   /**
    * Whether the current user has write access. When false the action
    * row + input bar are hidden (matches canonical `projectCan.writeReport`).
-   * P3.6 default = true; P3.7 routes will wire useProjectRole.
+   * Default = true; routes wire `useProjectQuery().myRole`.
    */
   canWrite?: boolean;
   onBack?: () => void;
@@ -79,9 +79,9 @@ function GenerateNotesLayout({ canWrite, onBack }: LayoutProps) {
   const { reportTitle, tabs } = useGenerateReport();
   const { width: windowWidth } = useWindowDimensions();
 
-  // Pager is purely visual in P3.6 — tab switching uses the tab bar.
-  // Horizontal drag-to-switch lands in P3.7 along with the wider
-  // pipeline state needed to keep tab transitions in sync.
+  // Pager is purely visual for now — tab switching uses the tab bar.
+  // Horizontal drag-to-switch lands with the full provider hook port
+  // (Pitfall 3 — translation, not rewrite).
   const activeIndex =
     tabs.active === 'notes' ? 0 : tabs.active === 'report' ? 1 : 2;
 

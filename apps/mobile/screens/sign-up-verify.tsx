@@ -1,9 +1,10 @@
 import { View, Text, KeyboardAvoidingView, ScrollView, Pressable } from 'react-native';
-import { HardHat, ArrowLeft } from 'lucide-react-native';
+import { ArrowLeft } from 'lucide-react-native';
 import { SafeAreaView } from '../components/primitives/SafeAreaView';
 import { Button } from '../components/primitives/Button';
 import { Input } from '../components/primitives/Input';
 import { InlineNotice } from '../components/primitives/InlineNotice';
+import { Logo } from '../components/primitives/Logo';
 import { colors } from '../lib/design-tokens/colors';
 import { cn } from '../lib/utils';
 
@@ -58,9 +59,7 @@ export default function SignUpVerify({
         >
           <View className="w-full max-w-sm self-center">
             <View className="flex-row items-center gap-3">
-              <View className="h-12 w-12 items-center justify-center rounded-lg bg-primary">
-                <HardHat size={24} color={colors.primary.foreground} />
-              </View>
+              <Logo />
               <View className="flex-1">
                 <Text className="text-display text-foreground">Create Account</Text>
               </View>

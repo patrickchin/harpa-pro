@@ -13,27 +13,28 @@ import type { AuthStatus } from './session';
 describe('lib/auth/auth-gate', () => {
   describe('decideAuthRedirect — (auth) route group gate', () => {
     it('redirects authenticated users to (app)/projects', () => {
-      expect(decideAuthRedirect('authenticated', '/(auth)/sign-in/phone')).toBe('/(app)/projects');
-      expect(decideAuthRedirect('authenticated', '/(auth)/sign-up/phone')).toBe('/(app)/projects');
-      expect(decideAuthRedirect('authenticated', '/(auth)/onboarding')).toBe('/(app)/projects');
+      expect(decideAuthRedirect('authenticated', '/sign-in/phone')).toBe('/(app)/projects');
+      expect(decideAuthRedirect('authenticated', '/sign-up/phone')).toBe('/(app)/projects');
+      expect(decideAuthRedirect('authenticated', '/onboarding')).toBe('/(app)/projects');
     });
 
     it('redirects needs-onboarding users to onboarding, unless already there', () => {
-      expect(decideAuthRedirect('needs-onboarding', '/(auth)/sign-in/phone')).toBe('/(auth)/onboarding');
-      expect(decideAuthRedirect('needs-onboarding', '/(auth)/sign-up/phone')).toBe('/(auth)/onboarding');
-      // Already on onboarding — no redirect
-      expect(decideAuthRedirect('needs-onboarding', '/(auth)/onboarding')).toBeNull();
+      expect(decideAuthRedirect('needs-onboarding', '/sign-in/phone')).toBe('/(auth)/onboarding');
+      expect(decideAuthRedirect('needs-onboarding', '/sign-up/phone')).toBe('/(auth)/onboarding');
+      // Already on onboarding — no redirect. expo-router strips group
+      // segments, so the runtime pathname is `/onboarding`.
+      expect(decideAuthRedirect('needs-onboarding', '/onboarding')).toBeNull();
     });
 
     it('allows unauthenticated users to mount any auth screen', () => {
-      expect(decideAuthRedirect('unauthenticated', '/(auth)/sign-in/phone')).toBeNull();
-      expect(decideAuthRedirect('unauthenticated', '/(auth)/sign-up/phone')).toBeNull();
-      expect(decideAuthRedirect('unauthenticated', '/(auth)/onboarding')).toBeNull();
+      expect(decideAuthRedirect('unauthenticated', '/sign-in/phone')).toBeNull();
+      expect(decideAuthRedirect('unauthenticated', '/sign-up/phone')).toBeNull();
+      expect(decideAuthRedirect('unauthenticated', '/onboarding')).toBeNull();
     });
 
     it('allows loading status to mount (suppresses flicker)', () => {
-      expect(decideAuthRedirect('loading', '/(auth)/sign-in/phone')).toBeNull();
-      expect(decideAuthRedirect('loading', '/(auth)/onboarding')).toBeNull();
+      expect(decideAuthRedirect('loading', '/sign-in/phone')).toBeNull();
+      expect(decideAuthRedirect('loading', '/onboarding')).toBeNull();
     });
   });
 

@@ -168,6 +168,7 @@ const routerStub = {
   setParams: vi.fn(),
   dismiss: vi.fn(),
   dismissAll: vi.fn(),
+  dismissTo: vi.fn(),
 };
 
 vi.mock('expo-router', () => {

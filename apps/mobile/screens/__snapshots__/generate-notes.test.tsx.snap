@@ -1,0 +1,820 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`GenerateNotes > matches the empty-state snapshot 1`] = `
+<rn-View
+  className="flex-1 bg-background"
+  style={
+    [
+      {
+        "paddingBottom": 0,
+        "paddingLeft": 0,
+        "paddingRight": 0,
+        "paddingTop": 44,
+      },
+      undefined,
+    ]
+  }
+>
+  <rn-KeyboardAvoidingView
+    behavior="padding"
+    className="flex-1"
+    keyboardVerticalOffset={0}
+  >
+    <rn-View
+      className="px-5 pt-4 pb-2"
+    >
+      <rn-View
+        className="gap-3"
+      >
+        <rn-View
+          className="min-h-touch flex-row items-center gap-3"
+        >
+          <rn-Pressable
+            accessibilityLabel="Back to Reports"
+            accessibilityRole="button"
+            className="flex-row items-center justify-center rounded-md border border-border bg-card active:opacity-90 min-h-touch py-3 px-4"
+            disabled={false}
+            onPress={[MockFunction spy]}
+            style={
+              [
+                {
+                  "elevation": 2,
+                  "shadowColor": "#1a1a2e",
+                  "shadowOffset": {
+                    "height": 2,
+                    "width": 0,
+                  },
+                  "shadowOpacity": 0.08,
+                  "shadowRadius": 8,
+                },
+                undefined,
+              ]
+            }
+            testID="btn-back"
+          >
+            <lucide-ArrowLeft
+              color="#2d3a5a"
+              size={16}
+            />
+          </rn-Pressable>
+          <rn-Text
+            className="min-w-0 flex-1 text-title-sm text-foreground"
+            ellipsizeMode="tail"
+            numberOfLines={1}
+            testID="screen-header-title"
+          >
+            Highland Tower
+          </rn-Text>
+          <rn-View
+            className="shrink-0 flex-row items-center gap-2"
+          />
+        </rn-View>
+      </rn-View>
+    </rn-View>
+    <rn-View
+      className="mx-5 mt-3"
+    >
+      <rn-Pressable
+        className="flex-row items-center justify-center rounded-md border border-border bg-secondary active:opacity-90 min-h-touch px-4 py-3 opacity-50 w-full"
+        disabled={true}
+        onPress={[Function]}
+        style={
+          [
+            {
+              "elevation": 2,
+              "shadowColor": "#1a1a2e",
+              "shadowOffset": {
+                "height": 2,
+                "width": 0,
+              },
+              "shadowOpacity": 0.08,
+              "shadowRadius": 8,
+            },
+            undefined,
+          ]
+        }
+        testID="btn-generate-update-report"
+      >
+        <rn-View
+          className="flex-row items-center gap-1.5"
+        >
+          <lucide-Sparkles
+            color="#2d3a5a"
+            size={16}
+          />
+          <rn-Text
+            className="text-base font-semibold text-foreground"
+            numberOfLines={1}
+          >
+            Generate report
+          </rn-Text>
+        </rn-View>
+      </rn-Pressable>
+    </rn-View>
+    <rn-View
+      className="mx-5 mt-3 mb-2 flex-row rounded-lg border border-border bg-card p-1"
+    >
+      <rn-Pressable
+        className="flex-1 flex-row items-center justify-center gap-2 rounded-md py-3 bg-secondary border-b-2 border-accent"
+        onPress={[Function]}
+        testID="btn-tab-notes"
+      >
+        <lucide-MessageSquare
+          color="#2d3a5a"
+          size={16}
+          style={
+            {
+              "marginTop": 1,
+            }
+          }
+        />
+        <rn-Text
+          className="text-sm font-semibold text-foreground"
+        >
+          Notes (0)
+        </rn-Text>
+      </rn-Pressable>
+      <rn-Pressable
+        className="flex-1 flex-row items-center justify-center gap-2 rounded-md py-3 "
+        onPress={[Function]}
+        testID="btn-tab-report"
+      >
+        <lucide-FileText
+          color="#5f5b66"
+          size={16}
+          style={
+            {
+              "marginTop": 1,
+            }
+          }
+        />
+        <rn-Text
+          className="text-sm font-semibold text-muted-foreground"
+        >
+          Report
+        </rn-Text>
+      </rn-Pressable>
+      <rn-Pressable
+        className="flex-1 flex-row items-center justify-center gap-2 rounded-md py-3 "
+        onPress={[Function]}
+        testID="btn-tab-edit"
+      >
+        <lucide-Pencil
+          color="#5f5b66"
+          size={16}
+          style={
+            {
+              "marginTop": 1,
+            }
+          }
+        />
+        <rn-Text
+          className="text-sm font-semibold text-muted-foreground"
+        >
+          Edit
+        </rn-Text>
+      </rn-Pressable>
+    </rn-View>
+    <rn-ScrollView
+      className="flex-1"
+      contentOffset={
+        {
+          "x": 0,
+          "y": 0,
+        }
+      }
+      horizontal={true}
+      keyboardShouldPersistTaps="handled"
+      nestedScrollEnabled={true}
+      pagingEnabled={true}
+      scrollEnabled={false}
+      showsHorizontalScrollIndicator={false}
+      testID="generate-pager"
+    >
+      <rn-View
+        className="flex-1"
+        style={
+          {
+            "width": 390,
+          }
+        }
+      >
+        <rn-ScrollView
+          className="flex-1 px-5"
+          contentContainerStyle={
+            {
+              "paddingBottom": 100,
+            }
+          }
+          keyboardShouldPersistTaps="handled"
+        >
+          <rn-View
+            className="rounded-lg border border-border bg-surface-muted p-4 items-center py-8"
+            style={
+              [
+                {
+                  "elevation": 2,
+                  "shadowColor": "#1a1a2e",
+                  "shadowOffset": {
+                    "height": 2,
+                    "width": 0,
+                  },
+                  "shadowOpacity": 0.08,
+                  "shadowRadius": 8,
+                },
+                undefined,
+              ]
+            }
+          >
+            <rn-View
+              className="mb-4 h-16 w-16 items-center justify-center rounded-lg border border-border bg-card"
+            >
+              <lucide-Mic
+                color="#5f5b66"
+                size={28}
+              />
+            </rn-View>
+            <rn-Text
+              className="text-title-sm text-foreground"
+            >
+              Start capturing site notes
+            </rn-Text>
+            <rn-Text
+              className="mt-2 text-center text-body text-muted-foreground"
+            >
+              Record short voice updates or type notes below. The report will build itself as you go.
+            </rn-Text>
+          </rn-View>
+        </rn-ScrollView>
+      </rn-View>
+      <rn-View
+        className="flex-1"
+        style={
+          {
+            "width": 390,
+          }
+        }
+        testID="report-tab-pane"
+      />
+      <rn-View
+        className="flex-1"
+        style={
+          {
+            "width": 390,
+          }
+        }
+        testID="edit-tab-pane"
+      />
+    </rn-ScrollView>
+    <rn-View
+      className="border-t border-border bg-background px-5 py-3"
+    >
+      <rn-View
+        className="flex-row items-stretch gap-3"
+      >
+        <rn-View
+          className="min-h-[68px] flex-1 rounded-xl border border-border bg-card px-4 py-3"
+          testID="input-note-container"
+        >
+          <rn-View
+            className="flex-row items-start gap-2"
+          >
+            <rn-Pressable
+              accessibilityLabel="Add attachment"
+              accessibilityRole="button"
+              className="min-h-[44px] items-center justify-center"
+              hitSlop={8}
+              onPress={[Function]}
+              testID="btn-attachment"
+            >
+              <lucide-Paperclip
+                color="#5f5b66"
+                size={20}
+              />
+            </rn-Pressable>
+            <rn-TextInput
+              blurOnSubmit={false}
+              className="min-h-[44px] flex-1 text-base text-foreground"
+              multiline={true}
+              onChangeText={[Function]}
+              placeholder="Type a site note..."
+              placeholderTextColor="#5f5b66"
+              returnKeyType="default"
+              testID="input-note"
+              textAlignVertical="top"
+              value=""
+            />
+          </rn-View>
+        </rn-View>
+        <rn-Pressable
+          accessibilityLabel="Take photo"
+          accessibilityRole="button"
+          onPress={[Function]}
+          testID="btn-camera-capture"
+        >
+          <rn-View
+            className="min-h-[68px] min-w-[68px] items-center justify-center rounded-xl border border-border bg-card px-3"
+          >
+            <rn-View
+              className="items-center gap-1"
+            >
+              <lucide-Camera
+                color="#2d3a5a"
+                size={24}
+              />
+              <rn-Text
+                className="text-xs font-semibold text-foreground"
+              >
+                Photo
+              </rn-Text>
+            </rn-View>
+          </rn-View>
+        </rn-Pressable>
+        <rn-Pressable
+          accessibilityLabel="Start voice recording"
+          accessibilityRole="button"
+          onPress={[Function]}
+          testID="btn-record-start"
+        >
+          <rn-View
+            className="min-h-[68px] min-w-[68px] items-center justify-center rounded-xl border border-border bg-card px-3"
+          >
+            <rn-View
+              className="items-center gap-1"
+            >
+              <lucide-Mic
+                color="#2d3a5a"
+                size={24}
+              />
+              <rn-Text
+                className="text-xs font-semibold text-foreground"
+              >
+                Voice
+              </rn-Text>
+            </rn-View>
+          </rn-View>
+        </rn-Pressable>
+      </rn-View>
+    </rn-View>
+    <rn-Modal
+      animationType="slide"
+      onRequestClose={[Function]}
+      transparent={true}
+      visible={false}
+    >
+      <rn-Pressable
+        className="flex-1 justify-end bg-black/40"
+        onPress={[Function]}
+      >
+        <rn-Pressable
+          className="bg-background pb-10"
+          onPress={[Function]}
+          testID="dialog-sheet"
+        >
+          <rn-View
+            className="flex-row items-center justify-between border-b border-border px-5 py-4"
+          >
+            <rn-Text
+              className="text-xl font-bold text-foreground"
+            >
+              Finalize Report
+            </rn-Text>
+            <rn-Pressable
+              disabled={false}
+              hitSlop={12}
+              onPress={[Function]}
+            >
+              <lucide-X
+                color="#5f5b66"
+                size={20}
+              />
+            </rn-Pressable>
+          </rn-View>
+          <rn-View
+            className="gap-4 px-5 pt-4"
+          >
+            <rn-View
+              className="rounded-md border px-4 py-3 border-warning-border bg-warning-soft"
+              style={
+                {
+                  "elevation": 2,
+                  "shadowColor": "#1a1a2e",
+                  "shadowOffset": {
+                    "height": 2,
+                    "width": 0,
+                  },
+                  "shadowOpacity": 0.08,
+                  "shadowRadius": 8,
+                }
+              }
+            >
+              <rn-Text
+                className="mb-1 text-sm font-semibold text-warning-text"
+                selectable={true}
+              >
+                Confirm finalization
+              </rn-Text>
+              <rn-Text
+                className="text-sm text-warning-text"
+                selectable={true}
+              >
+                Once finalized, this report will be marked as final and locked from further AI regeneration. You can still export and share it.
+              </rn-Text>
+            </rn-View>
+            <rn-View
+              className="gap-3"
+            >
+              <rn-Pressable
+                accessibilityLabel="Confirm finalize report"
+                className="flex-row items-center rounded-md border border-primary bg-primary active:opacity-85 min-h-touch px-5 py-3.5 opacity-50 justify-center"
+                disabled={true}
+                onPress={[Function]}
+                style={
+                  [
+                    {
+                      "elevation": 2,
+                      "shadowColor": "#1a1a2e",
+                      "shadowOffset": {
+                        "height": 2,
+                        "width": 0,
+                      },
+                      "shadowOpacity": 0.08,
+                      "shadowRadius": 8,
+                    },
+                    undefined,
+                  ]
+                }
+                testID="dialog-action-0"
+              >
+                <rn-Text
+                  className="text-primary-foreground font-semibold text-base"
+                >
+                  Finalize Report
+                </rn-Text>
+              </rn-Pressable>
+              <rn-Pressable
+                accessibilityLabel="Cancel finalize report"
+                className="flex-row items-center rounded-md bg-transparent active:bg-secondary min-h-touch px-5 py-3.5 justify-center"
+                disabled={false}
+                onPress={[Function]}
+                style={
+                  [
+                    {
+                      "elevation": 0,
+                      "shadowColor": "#1a1a2e",
+                      "shadowOffset": {
+                        "height": 0,
+                        "width": 0,
+                      },
+                      "shadowOpacity": 0,
+                      "shadowRadius": 0,
+                    },
+                    undefined,
+                  ]
+                }
+                testID="dialog-action-1"
+              >
+                <rn-Text
+                  className="text-muted-foreground font-semibold text-base"
+                >
+                  Cancel
+                </rn-Text>
+              </rn-Pressable>
+            </rn-View>
+          </rn-View>
+        </rn-Pressable>
+      </rn-Pressable>
+    </rn-Modal>
+    <rn-Modal
+      animationType="slide"
+      onRequestClose={[Function]}
+      transparent={true}
+      visible={false}
+    >
+      <rn-Pressable
+        className="flex-1 justify-end bg-black/40"
+        onPress={[Function]}
+      >
+        <rn-Pressable
+          className="bg-background pb-10"
+          onPress={[Function]}
+          testID="dialog-sheet"
+        >
+          <rn-View
+            className="flex-row items-center justify-between border-b border-border px-5 py-4"
+          >
+            <rn-Text
+              className="text-xl font-bold text-foreground"
+            >
+              Delete Note
+            </rn-Text>
+            <rn-Pressable
+              disabled={false}
+              hitSlop={12}
+              onPress={[Function]}
+            >
+              <lucide-X
+                color="#5f5b66"
+                size={20}
+              />
+            </rn-Pressable>
+          </rn-View>
+          <rn-View
+            className="gap-4 px-5 pt-4"
+          >
+            <rn-View
+              className="rounded-md border px-4 py-3 border-danger-border bg-danger-soft"
+              style={
+                {
+                  "elevation": 2,
+                  "shadowColor": "#1a1a2e",
+                  "shadowOffset": {
+                    "height": 2,
+                    "width": 0,
+                  },
+                  "shadowOpacity": 0.08,
+                  "shadowRadius": 8,
+                }
+              }
+            >
+              <rn-Text
+                className="mb-1 text-sm font-semibold text-danger-text"
+                selectable={true}
+              >
+                Permanent action
+              </rn-Text>
+              <rn-Text
+                className="text-sm text-danger-text"
+                selectable={true}
+              >
+                Are you sure you want to delete this note? This cannot be undone.
+              </rn-Text>
+            </rn-View>
+            <rn-View
+              className="gap-3"
+            >
+              <rn-Pressable
+                accessibilityLabel="Confirm delete note"
+                className="flex-row items-center rounded-md border border-danger-border bg-danger-soft active:opacity-85 min-h-touch px-5 py-3.5 justify-start"
+                disabled={false}
+                onPress={[Function]}
+                style={
+                  [
+                    {
+                      "elevation": 2,
+                      "shadowColor": "#1a1a2e",
+                      "shadowOffset": {
+                        "height": 2,
+                        "width": 0,
+                      },
+                      "shadowOpacity": 0.08,
+                      "shadowRadius": 8,
+                    },
+                    undefined,
+                  ]
+                }
+                testID="dialog-action-0"
+              >
+                <rn-Text
+                  className="text-danger-text font-semibold text-base"
+                >
+                  Delete
+                </rn-Text>
+              </rn-Pressable>
+              <rn-Pressable
+                accessibilityLabel="Cancel deleting note"
+                className="flex-row items-center rounded-md bg-transparent active:bg-secondary min-h-touch px-5 py-3.5 justify-center"
+                disabled={false}
+                onPress={[Function]}
+                style={
+                  [
+                    {
+                      "elevation": 0,
+                      "shadowColor": "#1a1a2e",
+                      "shadowOffset": {
+                        "height": 0,
+                        "width": 0,
+                      },
+                      "shadowOpacity": 0,
+                      "shadowRadius": 0,
+                    },
+                    undefined,
+                  ]
+                }
+                testID="dialog-action-1"
+              >
+                <rn-Text
+                  className="text-muted-foreground font-semibold text-base"
+                >
+                  Cancel
+                </rn-Text>
+              </rn-Pressable>
+            </rn-View>
+          </rn-View>
+        </rn-Pressable>
+      </rn-Pressable>
+    </rn-Modal>
+    <rn-Modal
+      animationType="slide"
+      onRequestClose={[Function]}
+      transparent={true}
+      visible={false}
+    >
+      <rn-Pressable
+        className="flex-1 justify-end bg-black/40"
+        onPress={[Function]}
+      >
+        <rn-Pressable
+          className="bg-background pb-10"
+          onPress={[Function]}
+          testID="dialog-sheet"
+        >
+          <rn-View
+            className="flex-row items-center justify-between border-b border-border px-5 py-4"
+          >
+            <rn-Text
+              className="text-xl font-bold text-foreground"
+            >
+              Upload Failed
+            </rn-Text>
+            <rn-Pressable
+              disabled={false}
+              hitSlop={12}
+              onPress={[Function]}
+            >
+              <lucide-X
+                color="#5f5b66"
+                size={20}
+              />
+            </rn-Pressable>
+          </rn-View>
+          <rn-View
+            className="gap-4 px-5 pt-4"
+          >
+            <rn-View
+              className="gap-3"
+            />
+          </rn-View>
+        </rn-Pressable>
+      </rn-Pressable>
+    </rn-Modal>
+    <rn-Modal
+      animationType="slide"
+      onRequestClose={[Function]}
+      transparent={true}
+      visible={false}
+    >
+      <rn-Pressable
+        className="flex-1 justify-end bg-black/40"
+        onPress={[Function]}
+      >
+        <rn-Pressable
+          className="bg-background pb-10"
+          onPress={[Function]}
+          testID="dialog-sheet"
+        >
+          <rn-View
+            className="flex-row items-center justify-between border-b border-border px-5 py-4"
+          >
+            <rn-Text
+              className="text-xl font-bold text-foreground"
+            >
+              Add attachment
+            </rn-Text>
+            <rn-Pressable
+              disabled={false}
+              hitSlop={12}
+              onPress={[Function]}
+            >
+              <lucide-X
+                color="#5f5b66"
+                size={20}
+              />
+            </rn-Pressable>
+          </rn-View>
+          <rn-View
+            className="gap-4 px-5 pt-4"
+          >
+            <rn-View
+              className="gap-3"
+            >
+              <rn-Pressable
+                accessibilityLabel="Pick a document"
+                className="flex-row items-center rounded-md border border-border bg-secondary active:opacity-90 min-h-touch px-5 py-3.5 justify-center"
+                disabled={false}
+                onPress={[Function]}
+                style={
+                  [
+                    {
+                      "elevation": 2,
+                      "shadowColor": "#1a1a2e",
+                      "shadowOffset": {
+                        "height": 2,
+                        "width": 0,
+                      },
+                      "shadowOpacity": 0.08,
+                      "shadowRadius": 8,
+                    },
+                    undefined,
+                  ]
+                }
+                testID="dialog-action-0"
+              >
+                <rn-Text
+                  className="text-foreground font-semibold text-base"
+                >
+                  Document
+                </rn-Text>
+              </rn-Pressable>
+              <rn-Pressable
+                accessibilityLabel="Pick a photo from library"
+                className="flex-row items-center rounded-md border border-border bg-secondary active:opacity-90 min-h-touch px-5 py-3.5 justify-center"
+                disabled={false}
+                onPress={[Function]}
+                style={
+                  [
+                    {
+                      "elevation": 2,
+                      "shadowColor": "#1a1a2e",
+                      "shadowOffset": {
+                        "height": 2,
+                        "width": 0,
+                      },
+                      "shadowOpacity": 0.08,
+                      "shadowRadius": 8,
+                    },
+                    undefined,
+                  ]
+                }
+                testID="dialog-action-1"
+              >
+                <rn-Text
+                  className="text-foreground font-semibold text-base"
+                >
+                  Photo Library
+                </rn-Text>
+              </rn-Pressable>
+              <rn-Pressable
+                accessibilityLabel="Take a photo with the camera"
+                className="flex-row items-center rounded-md border border-border bg-secondary active:opacity-90 min-h-touch px-5 py-3.5 justify-center"
+                disabled={false}
+                onPress={[Function]}
+                style={
+                  [
+                    {
+                      "elevation": 2,
+                      "shadowColor": "#1a1a2e",
+                      "shadowOffset": {
+                        "height": 2,
+                        "width": 0,
+                      },
+                      "shadowOpacity": 0.08,
+                      "shadowRadius": 8,
+                    },
+                    undefined,
+                  ]
+                }
+                testID="dialog-action-2"
+              >
+                <rn-Text
+                  className="text-foreground font-semibold text-base"
+                >
+                  Camera
+                </rn-Text>
+              </rn-Pressable>
+              <rn-Pressable
+                accessibilityLabel="Cancel attachment picker"
+                className="flex-row items-center rounded-md bg-transparent active:bg-secondary min-h-touch px-5 py-3.5 justify-center"
+                disabled={false}
+                onPress={[Function]}
+                style={
+                  [
+                    {
+                      "elevation": 0,
+                      "shadowColor": "#1a1a2e",
+                      "shadowOffset": {
+                        "height": 0,
+                        "width": 0,
+                      },
+                      "shadowOpacity": 0,
+                      "shadowRadius": 0,
+                    },
+                    undefined,
+                  ]
+                }
+                testID="dialog-action-3"
+              >
+                <rn-Text
+                  className="text-muted-foreground font-semibold text-base"
+                >
+                  Cancel
+                </rn-Text>
+              </rn-Pressable>
+            </rn-View>
+          </rn-View>
+        </rn-Pressable>
+      </rn-Pressable>
+    </rn-Modal>
+  </rn-KeyboardAvoidingView>
+</rn-View>
+`;

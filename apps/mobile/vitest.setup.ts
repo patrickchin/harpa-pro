@@ -67,6 +67,13 @@ vi.mock('react-native', () => {
     addEventListener: () => ({ remove: () => undefined }),
   };
 
+  const useWindowDimensions = () => ({
+    width: 390,
+    height: 844,
+    scale: 3,
+    fontScale: 1,
+  });
+
   const Keyboard = {
     dismiss: () => undefined,
     addListener: () => ({ remove: () => undefined }),
@@ -103,6 +110,7 @@ vi.mock('react-native', () => {
     Platform,
     StyleSheet,
     Dimensions,
+    useWindowDimensions,
     Keyboard,
     BackHandler,
     ToastAndroid,

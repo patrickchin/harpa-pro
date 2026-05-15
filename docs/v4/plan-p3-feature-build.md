@@ -133,6 +133,34 @@ immediately on the final scheme — no rewriting share links later.
 - [ ] Commit: `feat(api,mobile): P3.0 IDs/slugs migration —
       prefixed slugs + per-project report numbers`.
 
+### P3.6 — Generate – Notes tab
+
+First of three commits that together port the Generate Report screen.
+P3.6 ships the Notes pane as a *visually complete* surface; Report
+(P3.7) and Edit (P3.8) mount as empty placeholders.
+
+- [x] `GenerateReportProvider` scaffold — owns tab state, text-note
+      input, dialog visibility, attachment sheet. Report-tab / Edit-tab
+      fields (`generation`, `draft`, `voice`, `photo`) present as
+      structurally-stable no-op defaults with `TODO(P3.7/P3.8)` markers.
+- [x] `NoteTimeline` (text-only) + `EmptyState` wired into
+      `NotesTabPane`. Voice / photo / pending-upload rows deferred.
+- [x] Shared shell: `GenerateReportTabBar`, `GenerateReportActionRow`,
+      `GenerateReportInputBar` (text input + voice + photo + attach
+      buttons, voice/photo wired to provider no-ops),
+      `GenerateReportDialogs` (delete-note, finalize-confirm,
+      attachment sheet, upload error).
+- [x] Real route at
+      `apps/mobile/app/(app)/projects/[projectSlug]/reports/[number]/generate.tsx`
+      using `useProjectQuery` + `useReportQuery`. Notes live in
+      route-local React state for P3.6 (TODO marker for the
+      `useReportNotesQuery` swap in P3.7).
+- [x] Dev mirror `(dev)/generate-notes.tsx` with empty / populated /
+      loading toggles + registry entry.
+- [x] Vitest unit tests for the screen body covering each state +
+      one snapshot.
+- [x] Commit: `feat(mobile): P3.6 — Generate Notes tab + provider scaffold`.
+
 ## Pipelines exercised
 
 - **Upload**: presign → R2 PUT → registerFile → createNote

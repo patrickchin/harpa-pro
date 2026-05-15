@@ -139,4 +139,10 @@ export const REGISTRY: readonly GalleryEntry[] = [
     group: 'app',
     description: 'Reports list — populated / empty / loading / creating-draft states',
   },
+  {
+    name: 'Generate Notes',
+    href: '/(dev)/generate-notes',
+    group: 'app',
+    description: 'Generate report — Notes tab with empty / populated / loading states',
+  },
 ];

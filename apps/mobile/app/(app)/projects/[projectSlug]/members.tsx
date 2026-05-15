@@ -11,6 +11,7 @@ import {
   useMeQuery,
 } from '@/lib/api/hooks';
 import { useRefresh } from '@/lib/use-refresh';
+import { safeBack } from '@/lib/nav/safe-back';
 
 export default function ProjectMembersRoute() {
   const router = useRouter();
@@ -45,7 +46,7 @@ export default function ProjectMembersRoute() {
       isLoading={project.isLoading || members.isLoading}
       refreshing={refreshing}
       onRefresh={onRefresh}
-      onBack={() => router.back()}
+      onBack={() => safeBack(router, `/projects/${slug}`)}
       onAddMember={(input) =>
         add.mutate({
           params: { projectSlug: slug },

@@ -9,6 +9,7 @@ import {
   useUpdateProjectMutation,
   useDeleteProjectMutation,
 } from '@/lib/api/hooks';
+import { safeBack } from '@/lib/nav/safe-back';
 
 export default function ProjectEditRoute() {
   const router = useRouter();
@@ -41,7 +42,7 @@ export default function ProjectEditRoute() {
       isDeleting={remove.isPending}
       updateError={updateError}
       deleteError={deleteError}
-      onBack={() => router.back()}
+      onBack={() => safeBack(router, `/projects/${slug}`)}
       onSubmit={(values) => {
         update.mutate(
           {
@@ -55,7 +56,7 @@ export default function ProjectEditRoute() {
             },
           },
           {
-            onSuccess: () => router.back(),
+            onSuccess: () => safeBack(router, `/projects/${slug}`),
           },
         );
       }}
@@ -64,7 +65,6 @@ export default function ProjectEditRoute() {
           { params: { projectSlug: slug } },
           {
             onSuccess: () => {
-              router.dismissAll();
               router.replace('/projects' as never);
             },
           },

@@ -22,6 +22,7 @@ import { uuid } from '@/lib/uuid';
 import { env } from '@/lib/env';
 import type { GeneratedSiteReport } from '@harpa/report-core';
 import { SAMPLE_GENERATED_REPORT } from '@/lib/dev-fixtures/sample-report';
+import { safeBack } from '@/lib/nav/safe-back';
 
 export default function GenerateReportRoute() {
   const router = useRouter();
@@ -107,7 +108,7 @@ export default function GenerateReportRoute() {
       onAddTextNote={handleAddTextNote}
       reportTitle={reportTitleField ?? null}
       canWrite={canWrite}
-      onBack={() => router.back()}
+      onBack={() => safeBack(router, `/projects/${slug}/reports`)}
       report={generatedReport}
       isGeneratingReport={isGeneratingReport}
       generationError={generationError}

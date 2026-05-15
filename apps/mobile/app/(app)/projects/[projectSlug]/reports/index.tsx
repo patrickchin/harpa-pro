@@ -11,6 +11,7 @@ import {
   useCreateReportMutation,
 } from '@/lib/api/hooks';
 import { useRefresh } from '@/lib/use-refresh';
+import { safeBack } from '@/lib/nav/safe-back';
 
 export default function ReportsListRoute() {
   const router = useRouter();
@@ -40,7 +41,7 @@ export default function ReportsListRoute() {
       refreshing={refreshing}
       isCreating={create.isPending}
       onRefresh={onRefresh}
-      onBack={() => router.back()}
+      onBack={() => safeBack(router, `/projects/${slug}`)}
       onCreate={() => {
         create.mutate(
           { params: { projectSlug: slug }, body: {} },

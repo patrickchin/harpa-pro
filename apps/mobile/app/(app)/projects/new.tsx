@@ -8,6 +8,7 @@
 import { useRouter } from 'expo-router';
 import { useCreateProjectMutation } from '@/lib/api/hooks';
 import { ProjectNew } from '@/screens/project-new';
+import { safeBack } from '@/lib/nav/safe-back';
 
 export default function NewProjectRoute() {
   const router = useRouter();
@@ -19,7 +20,7 @@ export default function NewProjectRoute() {
       errorMessage={
         mutation.error ? mutation.error.message || 'Failed to create project.' : null
       }
-      onBack={() => router.back()}
+      onBack={() => safeBack(router, '/projects')}
       onSubmit={(values) => {
         mutation.mutate(
           {

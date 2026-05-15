@@ -7,6 +7,7 @@ import { ProjectHome } from '@/screens/project-home';
 import { useProjectQuery } from '@/lib/api/hooks';
 import { useRefresh } from '@/lib/use-refresh';
 import { useCopyToClipboard } from '@/lib/use-clipboard';
+import { safeBack } from '@/lib/nav/safe-back';
 
 export default function ProjectHomeRoute() {
   const router = useRouter();
@@ -40,7 +41,7 @@ export default function ProjectHomeRoute() {
       isLoading={result.isLoading}
       refreshing={refreshing}
       onRefresh={onRefresh}
-      onBack={() => router.back()}
+      onBack={() => safeBack(router, '/projects')}
       onPressEdit={() => router.push(`/projects/${slug}/edit` as never)}
       onPressReports={() => router.push(`/projects/${slug}/reports` as never)}
       onPressMembers={() => router.push(`/projects/${slug}/members` as never)}

@@ -8,8 +8,8 @@
  * no-ops in production — leaving the user stuck.
  *
  * Usage:
- *   safeBack(router, '/projects');
- *   safeBack(router, `/projects/${slug}`);
+ *   safeBack(router, '/(app)/projects');
+ *   safeBack(router, `/(app)/projects/${slug}`);
  */
 import type { Router } from 'expo-router';
 import type { Href } from 'expo-router';

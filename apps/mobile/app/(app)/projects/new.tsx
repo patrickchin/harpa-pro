@@ -21,7 +21,7 @@ export default function NewProjectRoute() {
       errorMessage={
         mutation.error ? mutation.error.message || 'Failed to create project.' : null
       }
-      onBack={() => safeBack(router, '/projects')}
+      onBack={() => safeBack(router, '/(app)/projects')}
       onSubmit={(values) => {
         mutation.mutate(
           {

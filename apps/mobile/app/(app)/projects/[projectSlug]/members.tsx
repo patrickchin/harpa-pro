@@ -46,7 +46,7 @@ export default function ProjectMembersRoute() {
       isLoading={project.isLoading || members.isLoading}
       refreshing={refreshing}
       onRefresh={onRefresh}
-      onBack={() => safeBack(router, `/projects/${slug}`)}
+      onBack={() => safeBack(router, `/(app)/projects/${slug}`)}
       onAddMember={(input) =>
         add.mutate({
           params: { projectSlug: slug },

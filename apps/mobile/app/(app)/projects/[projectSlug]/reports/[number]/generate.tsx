@@ -108,7 +108,7 @@ export default function GenerateReportRoute() {
       onAddTextNote={handleAddTextNote}
       reportTitle={reportTitleField ?? null}
       canWrite={canWrite}
-      onBack={() => safeBack(router, `/projects/${slug}/reports`)}
+      onBack={() => safeBack(router, `/(app)/projects/${slug}/reports`)}
       report={generatedReport}
       isGeneratingReport={isGeneratingReport}
       generationError={generationError}

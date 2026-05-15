@@ -34,7 +34,7 @@ export default function ResolveReportSlugScreen() {
           action={
             <Button
               variant="default"
-              onPress={() => router.replace('/projects' as never)}
+              onPress={() => router.replace('/(app)/projects' as never)}
             >
               Go to projects
             </Button>

@@ -82,11 +82,11 @@ describe('NewProjectRoute — navigation wiring', () => {
   });
 
   describe('back button (safeBack)', () => {
-    it('calls router.replace("/projects") when there is no back history', () => {
+    it('calls router.replace("/(app)/projects") when there is no back history', () => {
       routerSpy.canGoBack.mockReturnValue(false);
       const tree = render();
       act(() => getBackButton(tree).props.onPress());
-      expect(routerSpy.replace).toHaveBeenCalledWith('/projects');
+      expect(routerSpy.replace).toHaveBeenCalledWith('/(app)/projects');
       expect(routerSpy.back).not.toHaveBeenCalled();
     });
 

@@ -41,7 +41,7 @@ export default function ProjectHomeRoute() {
       isLoading={result.isLoading}
       refreshing={refreshing}
       onRefresh={onRefresh}
-      onBack={() => safeBack(router, '/projects')}
+      onBack={() => safeBack(router, '/(app)/projects')}
       onPressEdit={() => router.push(`/projects/${slug}/edit` as never)}
       onPressReports={() => router.push(`/projects/${slug}/reports` as never)}
       onPressMembers={() => router.push(`/projects/${slug}/members` as never)}

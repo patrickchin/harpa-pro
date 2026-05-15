@@ -41,7 +41,7 @@ export default function ReportsListRoute() {
       refreshing={refreshing}
       isCreating={create.isPending}
       onRefresh={onRefresh}
-      onBack={() => safeBack(router, `/projects/${slug}`)}
+      onBack={() => safeBack(router, `/(app)/projects/${slug}`)}
       onCreate={() => {
         create.mutate(
           { params: { projectSlug: slug }, body: {} },

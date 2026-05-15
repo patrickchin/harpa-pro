@@ -42,7 +42,7 @@ export default function ProjectEditRoute() {
       isDeleting={remove.isPending}
       updateError={updateError}
       deleteError={deleteError}
-      onBack={() => safeBack(router, `/projects/${slug}`)}
+      onBack={() => safeBack(router, `/(app)/projects/${slug}`)}
       onSubmit={(values) => {
         update.mutate(
           {
@@ -56,7 +56,7 @@ export default function ProjectEditRoute() {
             },
           },
           {
-            onSuccess: () => safeBack(router, `/projects/${slug}`),
+            onSuccess: () => safeBack(router, `/(app)/projects/${slug}`),
           },
         );
       }}
@@ -65,7 +65,7 @@ export default function ProjectEditRoute() {
           { params: { projectSlug: slug } },
           {
             onSuccess: () => {
-              router.replace('/projects' as never);
+              router.replace('/(app)/projects' as never);
             },
           },
         );

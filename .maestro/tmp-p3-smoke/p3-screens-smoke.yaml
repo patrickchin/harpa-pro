@@ -1,0 +1,82 @@
+appId: com.harpa.pro
+name: P3 ported screens smoke
+tags:
+  - tmp
+  - p3
+---
+# Smoke flow: launch the mock build, walk every ported screen via
+# the dev gallery, screenshot each one. Visual review is manual.
+#
+# Assumes `EXPO_PUBLIC_USE_FIXTURES=true` build (the (dev) layout
+# guard requires this) — so use `pnpm --filter @harpa/mobile ios:mock`.
+
+- launchApp:
+    clearState: true
+    stopApp: true
+
+# Cold start lands on /(auth)/sign-in/phone in mock mode because the
+# auth gate flips to `unauthenticated` once the session check
+# resolves. We deep-link straight into each (dev) mirror — the
+# (dev) layout permits this when EXPO_PUBLIC_USE_FIXTURES=true.
+
+# --- Auth screens ----------------------------------------------------
+- openLink: harpa:///sign-in-phone
+- assertVisible:
+    text: "Sign in"
+- takeScreenshot: p3-sign-in-phone
+
+- openLink: harpa:///sign-in-verify
+- assertVisible:
+    id: "input-otp"
+- takeScreenshot: p3-sign-in-verify
+
+- openLink: harpa:///sign-up-phone
+- assertVisible:
+    id: "input-signup-phone"
+- takeScreenshot: p3-sign-up-phone
+
+- openLink: harpa:///sign-up-verify
+- assertVisible:
+    id: "input-signup-otp"
+- takeScreenshot: p3-sign-up-verify
+
+- openLink: harpa:///onboarding
+- assertVisible:
+    id: "screen-onboarding"
+- takeScreenshot: p3-onboarding
+
+# --- App screens (P3.1 – P3.5) --------------------------------------
+- openLink: harpa:///projects-list
+- assertVisible:
+    id: "btn-new-project"
+- takeScreenshot: p3-projects-list
+
+- openLink: harpa:///project-new
+- assertVisible:
+    id: "input-project-name"
+- takeScreenshot: p3-project-new
+
+- openLink: harpa:///project-home
+- assertVisible:
+    id: "btn-edit-project"
+- takeScreenshot: p3-project-home
+
+- openLink: harpa:///project-edit
+- assertVisible:
+    id: "input-edit-project-name"
+- takeScreenshot: p3-project-edit
+
+- openLink: harpa:///project-members
+- assertVisible:
+    id: "btn-add-member"
+- takeScreenshot: p3-project-members
+
+- openLink: harpa:///reports-list
+- assertVisible:
+    id: "btn-new-report"
+- takeScreenshot: p3-reports-list
+
+# --- Gallery itself --------------------------------------------------
+- openLink: harpa:///
+- back
+- takeScreenshot: p3-gallery-or-home

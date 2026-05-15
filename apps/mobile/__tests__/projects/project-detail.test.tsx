@@ -4,15 +4,20 @@
  * Focuses on the navigation wiring — in particular the "create-then-land"
  * path:
  *
- *   projects/new  →  router.dismissTo('/projects/<slug>')
- *                       ↳  stack now has NO prior history
+ *   projects/new  →  router.replace('/(app)/projects/<slug>')
+ *                       ↳  replaces 'new' in the stack; tab root remains
+ *                       ↳  canGoBack() is TRUE (tab root is beneath)
  *   projects/<slug>  →  back button
+ *                       ↳  safeBack: router.back() → goes to tab root (list)
+ *
+ * The deep-link / no-history case (canGoBack: false) is also covered:
+ *   projects/<slug>  →  back button with no history
  *                       ↳  safeBack: router.replace('/(app)/projects')
  *
- * The fact that dismissTo removes the creation form from the back stack
- * is tested in `__tests__/projects/new.test.tsx`. This file tests the
- * other half: that the project detail page routes the user to the list
- * when there is nothing to go back to.
+ * Why canGoBack is TRUE after the create flow:
+ *   router.replace swaps /projects/new with /projects/<slug> in the stack,
+ *   leaving the tab root (projects/index) beneath. So there IS history to
+ *   go back to, and back() correctly lands on the list.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import TestRenderer, { act } from 'react-test-renderer';
@@ -77,21 +82,12 @@ function getBackButton(tree: TestRenderer.ReactTestRenderer) {
 describe('ProjectHomeRoute — back navigation', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    routerSpy.canGoBack.mockReturnValue(false);
   });
 
-  it('calls router.replace("/(app)/projects") when there is no back history', () => {
-    // Simulates arriving via router.dismissTo (from create-new-project flow)
-    // or a deep link — both result in canGoBack() === false.
-    routerSpy.canGoBack.mockReturnValue(false);
-    const tree = render();
-    act(() => getBackButton(tree).props.onPress());
-    expect(routerSpy.replace).toHaveBeenCalledWith('/(app)/projects');
-    expect(routerSpy.back).not.toHaveBeenCalled();
-  });
-
-  it('calls router.back() when navigated to normally (history exists)', () => {
-    // Simulates arriving via router.push from the projects list.
+  it('calls router.back() after arriving from the create-new-project flow (canGoBack is true)', () => {
+    // After router.replace('/(app)/projects/<slug>') in new.tsx, the tab root
+    // (projects/index) is still beneath in the stack. canGoBack() is true,
+    // so back() correctly goes to the projects list — NOT the creation form.
     routerSpy.canGoBack.mockReturnValue(true);
     const tree = render();
     act(() => getBackButton(tree).props.onPress());
@@ -99,10 +95,16 @@ describe('ProjectHomeRoute — back navigation', () => {
     expect(routerSpy.replace).not.toHaveBeenCalled();
   });
 
+  it('calls router.replace("/(app)/projects") when there is no back history (deep-link / cold start)', () => {
+    routerSpy.canGoBack.mockReturnValue(false);
+    const tree = render();
+    act(() => getBackButton(tree).props.onPress());
+    expect(routerSpy.replace).toHaveBeenCalledWith('/(app)/projects');
+    expect(routerSpy.back).not.toHaveBeenCalled();
+  });
+
   it('does NOT navigate to the new-project form on back (regression)', () => {
-    // The new-project form must not appear in the back stack after dismissTo.
-    // From the route's perspective: on back, the target is /(app)/projects,
-    // never /projects/new.
+    // Whether going back or replacing, the target must never be the create form.
     routerSpy.canGoBack.mockReturnValue(false);
     const tree = render();
     act(() => getBackButton(tree).props.onPress());

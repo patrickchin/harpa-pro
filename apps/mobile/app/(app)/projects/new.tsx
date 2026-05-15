@@ -3,8 +3,13 @@
  *
  * Body component at `screens/project-new.tsx`, dev mirror at
  * `(dev)/project-new.tsx`. On success the user is taken to the canonical
- * project detail URL via router.dismissTo, which pops the creation form
- * from the stack so back never returns to it.
+ * project detail URL via router.replace, which replaces the creation form
+ * in the stack so back never returns to it.
+ *
+ * Note: router.dismissTo was tried but only works for modal presentations.
+ * In a Tabs+Stack setup, pushes are regular stack screens, so dismissTo
+ * pushes on top (leaving new in the stack) instead of replacing it.
+ * router.replace correctly swaps the screen in place.
  */
 import { useRouter } from 'expo-router';
 import { useCreateProjectMutation } from '@/lib/api/hooks';
@@ -33,9 +38,10 @@ export default function NewProjectRoute() {
           },
           {
             onSuccess: (created) => {
-              // dismissTo pops /projects/new from the stack before navigating
-              // to the new project, so back never returns to the creation form.
-              router.dismissTo(`/projects/${created.slug}` as never);
+              // replace swaps /projects/new with the new project screen in the
+              // stack. Back then goes to the tab root (projects list), not the form.
+              // Use the (app)-group-qualified path so the nested navigator resolves it.
+              router.replace(`/(app)/projects/${created.slug}` as never);
             },
           },
         );

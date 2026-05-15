@@ -4,11 +4,22 @@
  * These tests target the **navigation wiring**, not the form's visual
  * behaviour (those live in `screens/project-new.test.tsx`). Specifically:
  *
- *   1. onBack → safeBack: replace('/projects') when there is no history.
+ *   1. onBack → safeBack: replace('/(app)/projects') when there is no history.
  *   2. onBack → safeBack: back() when history exists.
- *   3. onSubmit success → dismissTo('/projects/<slug>'), NOT replace.
- *      Ensures the create-form is never reachable via the back button
- *      after a successful project creation.
+ *   3. onSubmit success → router.replace('/(app)/projects/<slug>'), which
+ *      replaces the /projects/new screen in the Tabs+Stack so back goes to
+ *      the project list, not the creation form.
+ *
+ * Why router.replace (not router.dismissTo):
+ *   dismissTo only works for modal presentations. In our Tabs+Stack setup,
+ *   /projects/new is a regular stack push. dismissTo pushes the project
+ *   detail on TOP (leaving new in the stack), so back still returns to the
+ *   form. router.replace correctly swaps /projects/new in place.
+ *
+ * Why /(app)/projects/<slug>:
+ *   Within the (app) Tabs navigator, bare /projects/<slug> is not resolvable
+ *   by the nested navigator's route registry. The group-qualified path
+ *   /(app)/projects/<slug> bypasses relative lookup.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import TestRenderer, { act } from 'react-test-renderer';
@@ -100,26 +111,25 @@ describe('NewProjectRoute — navigation wiring', () => {
   });
 
   describe('successful project creation', () => {
-    it('calls router.dismissTo with the new project slug URL', () => {
+    it('calls router.replace with the group-qualified project slug URL', () => {
       const tree = render();
       pressSubmit(tree);
 
-      // mutate was called — extract the onSuccess callback and invoke it.
       expect(mutateSpy).toHaveBeenCalledTimes(1);
       const [, callbacks] = mutateSpy.mock.calls[0]!;
       act(() => callbacks.onSuccess?.({ slug: 'my-cool-project' }));
 
-      expect(routerSpy.dismissTo).toHaveBeenCalledWith('/projects/my-cool-project');
+      expect(routerSpy.replace).toHaveBeenCalledWith('/(app)/projects/my-cool-project');
     });
 
-    it('does NOT call router.replace on success (creation form must leave back stack)', () => {
+    it('does NOT call router.dismissTo on success (dismissTo does not work for stack screens)', () => {
       const tree = render();
       pressSubmit(tree);
 
       const [, callbacks] = mutateSpy.mock.calls[0]!;
       act(() => callbacks.onSuccess?.({ slug: 'any-project' }));
 
-      expect(routerSpy.replace).not.toHaveBeenCalled();
+      expect(routerSpy.dismissTo).not.toHaveBeenCalled();
     });
 
     it('does NOT call router.back on success', () => {

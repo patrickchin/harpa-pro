@@ -1,8 +1,15 @@
 {
   "expo": {
     "name": "Harpa Pro",
-    "slug": "harpa-pro",
+    "slug": "harpa-pro-v4",
+    "owner": "harpa-pro",
     "version": "0.0.0",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/3b2f920d-b7ae-4c84-b9e9-b077b49f1602"
+    },
     "orientation": "portrait",
     "scheme": "harpa",
     "userInterfaceStyle": "light",
@@ -31,6 +38,11 @@
     "plugins": ["expo-router"],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "3b2f920d-b7ae-4c84-b9e9-b077b49f1602"
+      }
     }
   }
 }

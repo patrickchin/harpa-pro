@@ -1,0 +1,21 @@
+{
+  "vendor": "google",
+  "model": "gemini-1.5-flash",
+  "fixtureName": "summarize.basic.google",
+  "recordedAt": "2026-05-12T00:00:00.000Z",
+  "requestHash": "sha256:1171e11f89242bb17ed5e5bdb1cb93025d72349585c59a7be5888b1932ae5d03",
+  "request": {
+    "kind": "chat",
+    "vendor": "google",
+    "model": "gemini-1.5-flash",
+    "systemPrompt": "Summarise the following transcript into a concise site-note body.",
+    "userPrompt": "Site arrival 8:15. Crew of three on rebar..."
+  },
+  "response": {
+    "text": "Crew arrived 8:15; rebar progress steady; concrete pour delayed 30 min by delivery; no incidents. Plan: close east footing tomorrow.",
+    "usage": {
+      "input": 64,
+      "output": 32
+    }
+  }
+}

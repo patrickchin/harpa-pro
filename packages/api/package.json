@@ -19,6 +19,8 @@
     "spec:emit": "tsx scripts/emit-openapi.ts"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.665.0",
+    "@aws-sdk/s3-request-presigner": "^3.665.0",
     "@harpa/ai-fixtures": "workspace:*",
     "@harpa/api-contract": "workspace:*",
     "@harpa/report-core": "workspace:*",

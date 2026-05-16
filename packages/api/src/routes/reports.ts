@@ -46,6 +46,7 @@ import {
 } from '../services/reports.js';
 import { getProjectBySlug } from '../services/projects.js';
 import { generateReport as aiGenerateReport } from '../services/ai.js';
+import { getAiSettings } from '../services/settings.js';
 import { pickStorage } from '../services/storage.js';
 import { registerFile } from '../services/files.js';
 import { renderReportPdf } from '../services/report-pdf.js';
@@ -257,12 +258,13 @@ async function runGenerate(
   db: NonNullable<AppEnv['Variables']['db']>,
   report: ReportRow,
   fixtureName: string | undefined,
+  vendor: Parameters<typeof aiGenerateReport>[0]['vendor'] | undefined,
 ) {
   if (report.status === 'finalized') {
     throw new HTTPException(409, { message: 'Report is finalized.' });
   }
   const notes = await db((d) => collectNotesForGeneration(d, report.id));
-  const out = await aiGenerateReport({ notes, fixtureName });
+  const out = await aiGenerateReport({ notes, fixtureName, vendor });
   const updated = await db((d) => setReportBody(d, report.id, out.body));
   if (!updated) throw new HTTPException(404, { message: 'Report not found.' });
   return updated;
@@ -283,11 +285,13 @@ reportRoutes.openapi(
   }),
   async (c) => {
     const db = c.get('db');
-    if (!db) throw new HTTPException(401);
+    const userId = c.get('userId');
+    if (!db || !userId) throw new HTTPException(401);
     const { projectSlug: slug, number } = c.req.valid('param');
     const body = c.req.valid('json');
     const report = await loadReport(db, slug, number);
-    const updated = await runGenerate(db, report, body.fixtureName);
+    const settings = await db((d) => getAiSettings(d, userId));
+    const updated = await runGenerate(db, report, body.fixtureName, settings.vendor);
     return c.json({ report: updated }, 200);
   },
 );
@@ -307,11 +311,13 @@ reportRoutes.openapi(
   }),
   async (c) => {
     const db = c.get('db');
-    if (!db) throw new HTTPException(401);
+    const userId = c.get('userId');
+    if (!db || !userId) throw new HTTPException(401);
     const { projectSlug: slug, number } = c.req.valid('param');
     const body = c.req.valid('json');
     const report = await loadReport(db, slug, number);
-    const updated = await runGenerate(db, report, body.fixtureName);
+    const settings = await db((d) => getAiSettings(d, userId));
+    const updated = await runGenerate(db, report, body.fixtureName, settings.vendor);
     return c.json({ report: updated }, 200);
   },
 );

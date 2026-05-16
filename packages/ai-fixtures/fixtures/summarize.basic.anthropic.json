@@ -1,0 +1,21 @@
+{
+  "vendor": "anthropic",
+  "model": "claude-3-5-haiku",
+  "fixtureName": "summarize.basic.anthropic",
+  "recordedAt": "2026-05-12T00:00:00.000Z",
+  "requestHash": "sha256:e7edd5116b39059b5b447c2c4b584e706fa5a4519b2a90f7a7ca991f4cbcafb4",
+  "request": {
+    "kind": "chat",
+    "vendor": "anthropic",
+    "model": "claude-3-5-haiku",
+    "systemPrompt": "Summarise the following transcript into a concise site-note body.",
+    "userPrompt": "Site arrival 8:15. Crew of three on rebar..."
+  },
+  "response": {
+    "text": "Crew arrived 8:15; rebar progress steady; concrete pour delayed 30 min by delivery; no incidents. Plan: close east footing tomorrow.",
+    "usage": {
+      "input": 64,
+      "output": 32
+    }
+  }
+}

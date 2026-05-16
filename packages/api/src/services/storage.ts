@@ -14,6 +14,13 @@
  * — the client never specifies it (Pitfall 8 / arch-storage.md §Security).
  */
 import { randomUUID } from 'node:crypto';
+import {
+  S3Client,
+  PutObjectCommand,
+  GetObjectCommand,
+} from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import { env } from '../env.js';
 
 export type FileKind = 'voice' | 'image' | 'document' | 'pdf';
 
@@ -101,20 +108,96 @@ export class FixtureStorage implements Storage {
 }
 
 /**
- * R2Storage stub. Will be wired with @aws-sdk/client-s3 + S3RequestPresigner
- * in P1 follow-up; not on the critical path for P1 since CI runs in
- * fixture mode (arch-storage.md §Fixture mode → "no R2 calls in CI").
+ * R2Storage — production storage backed by Cloudflare R2 via the
+ * S3-compatible API.
+ *
+ * R2 enforces presigned PUT constraints loosely: we still embed the
+ * server-built object key, content-type, and content-length in the
+ * signed URL (Pitfall 8 / arch-storage.md §Security) so a stolen URL
+ * can't be repurposed for arbitrary uploads.
+ *
+ * Selected at runtime by `pickStorage()` when `R2_FIXTURE_MODE !==
+ * 'replay'`. CI always runs in fixture mode (arch-storage.md
+ * §"Fixture mode" → "no R2 calls in CI").
  */
 export class R2Storage implements Storage {
-  async presign(_input: PresignInput): Promise<PresignResult> {
-    throw new Error('R2Storage.presign not yet implemented — use R2_FIXTURE_MODE=replay in this env');
+  private readonly client: S3Client;
+  private readonly bucket: string;
+  private readonly ttlSec: number;
+
+  constructor(opts?: {
+    client?: S3Client;
+    bucket?: string;
+    ttlSec?: number;
+  }) {
+    this.bucket = opts?.bucket ?? env.R2_BUCKET;
+    this.ttlSec = opts?.ttlSec ?? env.R2_PRESIGN_TTL_SEC;
+    this.client = opts?.client ?? buildR2Client();
   }
-  async signGet(_fileKey: string): Promise<SignedUrl> {
-    throw new Error('R2Storage.signGet not yet implemented — use R2_FIXTURE_MODE=replay in this env');
+
+  async presign(input: PresignInput): Promise<PresignResult> {
+    const fileKey = buildKey(input.userId, input.kind, input.contentType);
+    const command = new PutObjectCommand({
+      Bucket: this.bucket,
+      Key: fileKey,
+      ContentType: input.contentType,
+      ContentLength: input.sizeBytes,
+    });
+    const uploadUrl = await getSignedUrl(this.client, command, {
+      expiresIn: this.ttlSec,
+      // Sign Content-Type / Content-Length so the client can't swap
+      // payload types after the URL is minted.
+      signableHeaders: new Set(['content-type', 'content-length']),
+    });
+    return {
+      uploadUrl,
+      fileKey,
+      expiresAt: new Date(Date.now() + this.ttlSec * 1000).toISOString(),
+    };
   }
-  async putObject(_input: PutObjectInput): Promise<PutObjectResult> {
-    throw new Error('R2Storage.putObject not yet implemented — use R2_FIXTURE_MODE=replay in this env');
+
+  async signGet(fileKey: string): Promise<SignedUrl> {
+    const command = new GetObjectCommand({ Bucket: this.bucket, Key: fileKey });
+    const url = await getSignedUrl(this.client, command, { expiresIn: this.ttlSec });
+    return {
+      url,
+      expiresAt: new Date(Date.now() + this.ttlSec * 1000).toISOString(),
+    };
   }
+
+  async putObject(input: PutObjectInput): Promise<PutObjectResult> {
+    const fileKey = buildKey(input.userId, input.kind, input.contentType);
+    await this.client.send(
+      new PutObjectCommand({
+        Bucket: this.bucket,
+        Key: fileKey,
+        Body: input.bytes,
+        ContentType: input.contentType,
+        ContentLength: input.bytes.length,
+      }),
+    );
+    return { fileKey, sizeBytes: input.bytes.length };
+  }
+}
+
+function buildR2Client(): S3Client {
+  const accountId = env.R2_ACCOUNT_ID;
+  const accessKeyId = env.R2_ACCESS_KEY_ID;
+  const secretAccessKey = env.R2_SECRET_ACCESS_KEY;
+  if (!accessKeyId || !secretAccessKey || (!accountId && !env.R2_ENDPOINT)) {
+    throw new Error(
+      'R2_FIXTURE_MODE=live but R2_ACCESS_KEY_ID / R2_SECRET_ACCESS_KEY / (R2_ACCOUNT_ID or R2_ENDPOINT) missing',
+    );
+  }
+  const endpoint = env.R2_ENDPOINT ?? `https://${accountId}.r2.cloudflarestorage.com`;
+  return new S3Client({
+    // R2 ignores region but the SDK requires one.
+    region: 'auto',
+    endpoint,
+    credentials: { accessKeyId, secretAccessKey },
+    // R2 requires path-style addressing.
+    forcePathStyle: true,
+  });
 }
 
 export function pickStorage(): Storage {

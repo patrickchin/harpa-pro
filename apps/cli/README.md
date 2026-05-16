@@ -81,14 +81,15 @@ harpa projects members remove <projectId> <userId>
 
 ### Reports
 ```bash
-harpa reports create <projectId> --title "Site Inspection 001"
-harpa reports list <projectId>
-harpa reports get <reportId>
-harpa reports update <reportId> --title "Updated Title"
-harpa reports generate <reportId>    # AI-generate report body from notes
-harpa reports finalize <reportId>    # lock report (status → finalized)
-harpa reports pdf <reportId>         # get signed PDF download URL
-harpa reports delete <reportId>
+harpa reports create <projectSlug> --title "Site Inspection 001"
+harpa reports list <projectSlug>
+harpa reports get <projectSlug> <number>
+harpa reports update <projectSlug> <number> --visit-date 2026-05-12
+harpa reports generate <projectSlug> <number>    # AI-generate report body from notes
+harpa reports regenerate <projectSlug> <number>  # replace body with fresh generation
+harpa reports finalize <projectSlug> <number>    # lock report (status → finalized)
+harpa reports pdf <projectSlug> <number>         # get signed PDF download URL
+harpa reports delete <projectSlug> <number>
 ```
 
 ### Notes

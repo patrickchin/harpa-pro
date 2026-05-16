@@ -148,7 +148,7 @@ export function projectsGet(args: ProjectsGetArgs): Promise<ExitCode> {
     stdout: args.stdout,
     stderr: args.stderr,
     request: () =>
-      args.client.GET('/projects/{id}', { params: { path: { id: args.id } } }),
+      args.client.GET('/projects/{projectSlug}', { params: { path: { projectSlug: args.id } } }),
     format: (data) => renderProject(data),
   });
 }
@@ -168,7 +168,7 @@ export const projectsGetCommand = defineCommand({
       json: args.json,
       verbose: args.verbose,
       request: () =>
-        client.GET('/projects/{id}', { params: { path: { id: String(args.id) } } }),
+        client.GET('/projects/{projectSlug}', { params: { path: { projectSlug: String(args.id) } } }),
       format: (data) => renderProject(data),
     });
   },
@@ -195,8 +195,8 @@ export function projectsUpdate(args: ProjectsUpdateArgs): Promise<ExitCode> {
     stdout: args.stdout,
     stderr: args.stderr,
     request: () =>
-      args.client.PATCH('/projects/{id}', {
-        params: { path: { id: args.id } },
+      args.client.PATCH('/projects/{projectSlug}', {
+        params: { path: { projectSlug: args.id } },
         body,
       }),
     format: (data) => `${chalk.green('✓')} Updated project ${chalk.bold(data.name)} (${data.id})`,
@@ -227,8 +227,8 @@ export const projectsUpdateCommand = defineCommand({
       json: args.json,
       verbose: args.verbose,
       request: () =>
-        client.PATCH('/projects/{id}', {
-          params: { path: { id: String(args.id) } },
+        client.PATCH('/projects/{projectSlug}', {
+          params: { path: { projectSlug: String(args.id) } },
           body,
         }),
       format: (data) => `${chalk.green('✓')} Updated project ${chalk.bold(data.name)} (${data.id})`,
@@ -249,7 +249,7 @@ export function projectsDelete(args: ProjectsDeleteArgs): Promise<ExitCode> {
     stdout: args.stdout,
     stderr: args.stderr,
     request: () =>
-      args.client.DELETE('/projects/{id}', { params: { path: { id: args.id } } }),
+      args.client.DELETE('/projects/{projectSlug}', { params: { path: { projectSlug: args.id } } }),
     format: () => `${chalk.green('✓')} Deleted project ${args.id}`,
     formatJson: () => JSON.stringify({ ok: true }, null, 2),
   });
@@ -270,7 +270,7 @@ export const projectsDeleteCommand = defineCommand({
       json: args.json,
       verbose: args.verbose,
       request: () =>
-        client.DELETE('/projects/{id}', { params: { path: { id: String(args.id) } } }),
+        client.DELETE('/projects/{projectSlug}', { params: { path: { projectSlug: String(args.id) } } }),
       format: () => `${chalk.green('✓')} Deleted project ${args.id}`,
       formatJson: () => JSON.stringify({ ok: true }, null, 2),
     });

@@ -34,8 +34,8 @@ export function membersList(args: MembersListArgs): Promise<ExitCode> {
     stdout: args.stdout,
     stderr: args.stderr,
     request: () =>
-      args.client.GET('/projects/{id}/members', {
-        params: { path: { id: args.projectId } },
+      args.client.GET('/projects/{projectSlug}/members', {
+        params: { path: { projectSlug: args.projectId } },
       }),
     format: (data) => renderMemberList(data),
   });
@@ -56,8 +56,8 @@ export const membersListCommand = defineCommand({
       json: args.json,
       verbose: args.verbose,
       request: () =>
-        client.GET('/projects/{id}/members', {
-          params: { path: { id: String(args.projectId) } },
+        client.GET('/projects/{projectSlug}/members', {
+          params: { path: { projectSlug: String(args.projectId) } },
         }),
       format: (data) => renderMemberList(data),
     });
@@ -81,8 +81,8 @@ export function membersAdd(args: MembersAddArgs): Promise<ExitCode> {
     stdout: args.stdout,
     stderr: args.stderr,
     request: () =>
-      args.client.POST('/projects/{id}/members', {
-        params: { path: { id: args.projectId } },
+      args.client.POST('/projects/{projectSlug}/members', {
+        params: { path: { projectSlug: args.projectId } },
         body,
       }),
     format: (data) =>
@@ -119,8 +119,8 @@ export const membersAddCommand = defineCommand({
       json: args.json,
       verbose: args.verbose,
       request: () =>
-        client.POST('/projects/{id}/members', {
-          params: { path: { id: String(args.projectId) } },
+        client.POST('/projects/{projectSlug}/members', {
+          params: { path: { projectSlug: String(args.projectId) } },
           body,
         }),
       format: (data) =>
@@ -143,8 +143,8 @@ export function membersRemove(args: MembersRemoveArgs): Promise<ExitCode> {
     stdout: args.stdout,
     stderr: args.stderr,
     request: () =>
-      args.client.DELETE('/projects/{id}/members/{userId}', {
-        params: { path: { id: args.projectId, userId: args.userId } },
+      args.client.DELETE('/projects/{projectSlug}/members/{userId}', {
+        params: { path: { projectSlug: args.projectId, userId: args.userId } },
       }),
     format: () => `${chalk.green('✓')} Removed member ${args.userId} from project ${args.projectId}`,
     formatJson: () => JSON.stringify({ ok: true }, null, 2),
@@ -167,9 +167,9 @@ export const membersRemoveCommand = defineCommand({
       json: args.json,
       verbose: args.verbose,
       request: () =>
-        client.DELETE('/projects/{id}/members/{userId}', {
+        client.DELETE('/projects/{projectSlug}/members/{userId}', {
           params: {
-            path: { id: String(args.projectId), userId: String(args.userId) },
+            path: { projectSlug: String(args.projectId), userId: String(args.userId) },
           },
         }),
       format: () =>

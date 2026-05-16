@@ -73,10 +73,11 @@ Each task = one route file + its tests + its api-contract schemas
 - [x] `POST /reports/:id/pdf` (renders HTML→PDF, stores to R2, returns signed URL).
       _PDF rendering runs through a deterministic stub renderer
       (`services/report-pdf.ts`) and `Storage.putObject` — wired end-to-end
-      via `FixtureStorage` for CI. Real R2 upload + headless renderer
-      remain stubs (`R2Storage.putObject`/`signGet`/`presign` throw); they
-      land alongside live-mode infra in P1 follow-up. arch-storage.md
-      §"Fixture mode" still holds: no R2 calls in CI._
+      via `FixtureStorage` for CI. `R2Storage` is now wired against
+      `@aws-sdk/client-s3` + `s3-request-presigner` for production
+      (presign PUT, signed GET, server-side putObject); the headless HTML
+      renderer remains a stub for P4. arch-storage.md §"Fixture mode"
+      still holds: no R2 calls in CI._
 - [x] Recorded fixtures: `generate-report.full`, `generate-report.incomplete`.
 - [x] Commit: `feat(api): report generation + finalize + PDF rendering`.
 

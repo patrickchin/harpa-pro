@@ -51,8 +51,8 @@ export function reportsList(args: ReportsListArgs): Promise<ExitCode> {
     stdout: args.stdout,
     stderr: args.stderr,
     request: () =>
-      args.client.GET('/projects/{id}/reports', {
-        params: { path: { id: args.projectId }, query },
+      args.client.GET('/projects/{projectSlug}/reports', {
+        params: { path: { projectSlug: args.projectId }, query },
       }),
     format: (data) => renderReportList(data),
   });
@@ -85,8 +85,8 @@ export const reportsListCommand = defineCommand({
       json: args.json,
       verbose: args.verbose,
       request: () =>
-        client.GET('/projects/{id}/reports', {
-          params: { path: { id: String(args.projectId) }, query },
+        client.GET('/projects/{projectSlug}/reports', {
+          params: { path: { projectSlug: String(args.projectId) }, query },
         }),
       format: (data) => renderReportList(data),
     });
@@ -109,8 +109,8 @@ export function reportsCreate(args: ReportsCreateArgs): Promise<ExitCode> {
     stdout: args.stdout,
     stderr: args.stderr,
     request: () =>
-      args.client.POST('/projects/{id}/reports', {
-        params: { path: { id: args.projectId } },
+      args.client.POST('/projects/{projectSlug}/reports', {
+        params: { path: { projectSlug: args.projectId } },
         body,
       }),
     format: (data) => `${chalk.green('✓')} Created report ${chalk.bold(data.id)} (${data.status})`,
@@ -136,8 +136,8 @@ export const reportsCreateCommand = defineCommand({
       json: args.json,
       verbose: args.verbose,
       request: () =>
-        client.POST('/projects/{id}/reports', {
-          params: { path: { id: String(args.projectId) } },
+        client.POST('/projects/{projectSlug}/reports', {
+          params: { path: { projectSlug: String(args.projectId) } },
           body,
         }),
       format: (data) => `${chalk.green('✓')} Created report ${chalk.bold(data.id)} (${data.status})`,
@@ -148,7 +148,8 @@ export const reportsCreateCommand = defineCommand({
 // --- get --------------------------------------------------------------
 
 export interface ReportsGetArgs extends ReportsHandlerOptions {
-  reportId: string;
+  projectSlug: string;
+  number: number;
 }
 
 export function reportsGet(args: ReportsGetArgs): Promise<ExitCode> {
@@ -158,8 +159,8 @@ export function reportsGet(args: ReportsGetArgs): Promise<ExitCode> {
     stdout: args.stdout,
     stderr: args.stderr,
     request: () =>
-      args.client.GET('/reports/{reportId}', {
-        params: { path: { reportId: args.reportId } },
+      args.client.GET('/projects/{projectSlug}/reports/{number}', {
+        params: { path: { projectSlug: args.projectSlug, number: args.number } },
       }),
     format: (data) => renderReport(data),
   });
@@ -168,7 +169,8 @@ export function reportsGet(args: ReportsGetArgs): Promise<ExitCode> {
 export const reportsGetCommand = defineCommand({
   meta: { name: 'get', description: 'Show report details.' },
   args: {
-    reportId: { type: 'positional', required: true, description: 'Report ID (UUID).' },
+    projectSlug: { type: 'positional', required: true, description: 'Project slug (e.g. prj_xxxxxx).' },
+    number: { type: 'positional', required: true, description: 'Report number within the project.' },
     json: { type: 'boolean', description: 'Print raw JSON to stdout.' },
     verbose: { type: 'boolean', description: 'Print response metadata to stderr.' },
   },
@@ -180,8 +182,8 @@ export const reportsGetCommand = defineCommand({
       json: args.json,
       verbose: args.verbose,
       request: () =>
-        client.GET('/reports/{reportId}', {
-          params: { path: { reportId: String(args.reportId) } },
+        client.GET('/projects/{projectSlug}/reports/{number}', {
+          params: { path: { projectSlug: String(args.projectSlug), number: Number(args.number) } },
         }),
       format: (data) => renderReport(data),
     });
@@ -191,7 +193,8 @@ export const reportsGetCommand = defineCommand({
 // --- update -----------------------------------------------------------
 
 export interface ReportsUpdateArgs extends ReportsHandlerOptions {
-  reportId: string;
+  projectSlug: string;
+  number: number;
   visitDate?: string | null;
 }
 
@@ -204,18 +207,19 @@ export function reportsUpdate(args: ReportsUpdateArgs): Promise<ExitCode> {
     stdout: args.stdout,
     stderr: args.stderr,
     request: () =>
-      args.client.PATCH('/reports/{reportId}', {
-        params: { path: { reportId: args.reportId } },
+      args.client.PATCH('/projects/{projectSlug}/reports/{number}', {
+        params: { path: { projectSlug: args.projectSlug, number: args.number } },
         body,
       }),
-    format: (data) => `${chalk.green('✓')} Updated report ${chalk.bold(data.id)}`,
+    format: (data) => `${chalk.green('✓')} Updated report ${chalk.bold(String(data.id))}`,
   });
 }
 
 export const reportsUpdateCommand = defineCommand({
   meta: { name: 'update', description: 'Update report fields (draft only).' },
   args: {
-    reportId: { type: 'positional', required: true, description: 'Report ID (UUID).' },
+    projectSlug: { type: 'positional', required: true, description: 'Project slug (e.g. prj_xxxxxx).' },
+    number: { type: 'positional', required: true, description: 'Report number within the project.' },
     'visit-date': { type: 'string', description: 'Visit date (ISO yyyy-mm-dd).' },
     json: { type: 'boolean', description: 'Print raw JSON to stdout.' },
     verbose: { type: 'boolean', description: 'Print response metadata to stderr.' },
@@ -231,11 +235,11 @@ export const reportsUpdateCommand = defineCommand({
       json: args.json,
       verbose: args.verbose,
       request: () =>
-        client.PATCH('/reports/{reportId}', {
-          params: { path: { reportId: String(args.reportId) } },
+        client.PATCH('/projects/{projectSlug}/reports/{number}', {
+          params: { path: { projectSlug: String(args.projectSlug), number: Number(args.number) } },
           body,
         }),
-      format: (data) => `${chalk.green('✓')} Updated report ${chalk.bold(data.id)}`,
+      format: (data) => `${chalk.green('✓')} Updated report ${chalk.bold(String(data.id))}`,
     });
   },
 });
@@ -243,7 +247,8 @@ export const reportsUpdateCommand = defineCommand({
 // --- delete -----------------------------------------------------------
 
 export interface ReportsDeleteArgs extends ReportsHandlerOptions {
-  reportId: string;
+  projectSlug: string;
+  number: number;
 }
 
 export function reportsDelete(args: ReportsDeleteArgs): Promise<ExitCode> {
@@ -253,10 +258,10 @@ export function reportsDelete(args: ReportsDeleteArgs): Promise<ExitCode> {
     stdout: args.stdout,
     stderr: args.stderr,
     request: () =>
-      args.client.DELETE('/reports/{reportId}', {
-        params: { path: { reportId: args.reportId } },
+      args.client.DELETE('/projects/{projectSlug}/reports/{number}', {
+        params: { path: { projectSlug: args.projectSlug, number: args.number } },
       }),
-    format: () => `${chalk.green('✓')} Deleted report ${args.reportId}`,
+    format: () => `${chalk.green('✓')} Deleted report ${args.projectSlug}#${args.number}`,
     formatJson: () => JSON.stringify({ ok: true }, null, 2),
   });
 }
@@ -264,7 +269,8 @@ export function reportsDelete(args: ReportsDeleteArgs): Promise<ExitCode> {
 export const reportsDeleteCommand = defineCommand({
   meta: { name: 'delete', description: 'Delete a draft report.' },
   args: {
-    reportId: { type: 'positional', required: true, description: 'Report ID (UUID).' },
+    projectSlug: { type: 'positional', required: true, description: 'Project slug (e.g. prj_xxxxxx).' },
+    number: { type: 'positional', required: true, description: 'Report number within the project.' },
     json: { type: 'boolean', description: 'Print raw JSON to stdout.' },
     verbose: { type: 'boolean', description: 'Print response metadata to stderr.' },
   },
@@ -276,10 +282,10 @@ export const reportsDeleteCommand = defineCommand({
       json: args.json,
       verbose: args.verbose,
       request: () =>
-        client.DELETE('/reports/{reportId}', {
-          params: { path: { reportId: String(args.reportId) } },
+        client.DELETE('/projects/{projectSlug}/reports/{number}', {
+          params: { path: { projectSlug: String(args.projectSlug), number: Number(args.number) } },
         }),
-      format: () => `${chalk.green('✓')} Deleted report ${args.reportId}`,
+      format: () => `${chalk.green('✓')} Deleted report ${args.projectSlug}#${args.number}`,
       formatJson: () => JSON.stringify({ ok: true }, null, 2),
     });
   },

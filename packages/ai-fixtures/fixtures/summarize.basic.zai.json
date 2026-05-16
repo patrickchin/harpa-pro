@@ -1,0 +1,21 @@
+{
+  "vendor": "zai",
+  "model": "glm-4-flash",
+  "fixtureName": "summarize.basic.zai",
+  "recordedAt": "2026-05-12T00:00:00.000Z",
+  "requestHash": "sha256:3b12f6387fe670f918238a899e89732dc88dbf2b004dc39d08f7100afc67d565",
+  "request": {
+    "kind": "chat",
+    "vendor": "zai",
+    "model": "glm-4-flash",
+    "systemPrompt": "Summarise the following transcript into a concise site-note body.",
+    "userPrompt": "Site arrival 8:15. Crew of three on rebar..."
+  },
+  "response": {
+    "text": "Crew arrived 8:15; rebar progress steady; concrete pour delayed 30 min by delivery; no incidents. Plan: close east footing tomorrow.",
+    "usage": {
+      "input": 64,
+      "output": 32
+    }
+  }
+}

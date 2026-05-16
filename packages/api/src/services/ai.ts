@@ -44,6 +44,13 @@ export class AiProviderError extends Error {
  * re-recorded with different canonicals.
  *
  * Source of truth: packages/ai-fixtures/fixtures/{transcribe,summarize}.basic.json
+ *
+ * Per-vendor fixture variants are stored as
+ * `<base>.<vendor>.json` (e.g. `summarize.basic.anthropic`,
+ * `generate-report.full.kimi`). Each vendor has its own canonical
+ * model — these are the model ids `getAiSettings()` may persist for
+ * a user. The OpenAI fixture keeps the un-suffixed name for
+ * backwards compatibility with existing callers + tests.
  */
 export const FIXTURE_CANONICALS = {
   transcribe: {
@@ -76,6 +83,30 @@ export const FIXTURE_CANONICALS = {
     },
   },
 } as const;
+
+/**
+ * Canonical models per vendor — what `chat()` / `generateReport()`
+ * use in replay mode when routing to a per-vendor fixture. Mirrors
+ * the user-settings UI options. Source of truth for the per-vendor
+ * fixture files in `packages/ai-fixtures/fixtures/`.
+ */
+const VENDOR_MODELS: Record<Vendor, { summarize: string; report: string }> = {
+  openai:    { summarize: 'gpt-4o-mini',         report: 'gpt-4o' },
+  kimi:      { summarize: 'moonshot-v1-8k',      report: 'moonshot-v1-32k' },
+  anthropic: { summarize: 'claude-3-5-haiku',    report: 'claude-3-5-sonnet' },
+  google:    { summarize: 'gemini-1.5-flash',    report: 'gemini-1.5-pro' },
+  zai:       { summarize: 'glm-4-flash',         report: 'glm-4-plus' },
+  deepseek:  { summarize: 'deepseek-chat',       report: 'deepseek-reasoner' },
+};
+
+/**
+ * Build the on-disk fixture name for a (base, vendor) pair. OpenAI
+ * keeps the un-suffixed name so existing callers + recorded fixtures
+ * continue to work without modification.
+ */
+function fixtureNameFor(base: string, vendor: Vendor): string {
+  return vendor === 'openai' ? base : `${base}.${vendor}`;
+}
 
 function pickMode(): FixtureMode {
   if (process.env.AI_LIVE === '1') return 'live';
@@ -132,6 +163,12 @@ export interface ChatInput {
   fixtureName?: string;
   temperature?: number;
   maxTokens?: number;
+  /**
+   * Optional vendor override. In replay mode, selects a per-vendor
+   * fixture (e.g. `summarize.basic.anthropic`). Defaults to `openai`
+   * for backwards compatibility with existing fixture-less callers.
+   */
+  vendor?: Vendor;
 }
 
 export interface ChatOutput {
@@ -140,22 +177,25 @@ export interface ChatOutput {
 
 export async function chat(input: ChatInput): Promise<ChatOutput> {
   const mode = pickMode();
-  const fixtureName = input.fixtureName ?? FIXTURE_CANONICALS.summarize.name;
+  const vendor: Vendor = input.vendor ?? FIXTURE_CANONICALS.summarize.vendor;
+  const canonicalModel = VENDOR_MODELS[vendor].summarize;
+  const fixtureName =
+    input.fixtureName ?? fixtureNameFor(FIXTURE_CANONICALS.summarize.name, vendor);
   const req =
     mode === 'replay'
       ? {
-          model: FIXTURE_CANONICALS.summarize.model,
+          model: canonicalModel,
           systemPrompt: FIXTURE_CANONICALS.summarize.systemPrompt,
           userPrompt: FIXTURE_CANONICALS.summarize.userPrompt,
         }
       : {
-          model: input.model ?? FIXTURE_CANONICALS.summarize.model,
+          model: input.model ?? canonicalModel,
           systemPrompt: input.systemPrompt,
           userPrompt: input.userPrompt,
           temperature: input.temperature,
           maxTokens: input.maxTokens,
         };
-  const provider = buildProvider(FIXTURE_CANONICALS.summarize.vendor, fixtureName);
+  const provider = buildProvider(vendor, fixtureName);
   const out = await withErrorWrap('chat', () => provider.chat(req));
   return { text: out.text };
 }
@@ -174,6 +214,12 @@ export interface GenerateReportInput {
    */
   notes: string;
   fixtureName?: string;
+  /**
+   * Optional vendor override. In replay mode, selects a per-vendor
+   * fixture (e.g. `generate-report.full.anthropic`). Defaults to
+   * `openai`.
+   */
+  vendor?: Vendor;
 }
 
 export interface GenerateReportOutput {
@@ -194,30 +240,42 @@ export interface GenerateReportOutput {
 export async function generateReport(input: GenerateReportInput): Promise<GenerateReportOutput> {
   const mode = pickMode();
   const canonicals = FIXTURE_CANONICALS.report;
-  const defaultName = canonicals.fixtures.full.name;
-  const fixtureName = input.fixtureName ?? defaultName;
+  const vendor: Vendor = input.vendor ?? canonicals.vendor;
+  const canonicalModel = VENDOR_MODELS[vendor].report;
+  const defaultName = fixtureNameFor(canonicals.fixtures.full.name, vendor);
+  const incompleteName = fixtureNameFor(canonicals.fixtures.incomplete.name, vendor);
+  // Callers may pass an OpenAI-style fixture name (e.g. "generate-report.incomplete")
+  // OR a fully-qualified per-vendor name. Normalise: if the caller gave a base
+  // name and the vendor is non-default, suffix it.
+  const fixtureName = (() => {
+    if (!input.fixtureName) return defaultName;
+    if (vendor === 'openai') return input.fixtureName;
+    // Already vendor-suffixed?
+    if (input.fixtureName.endsWith(`.${vendor}`)) return input.fixtureName;
+    return `${input.fixtureName}.${vendor}`;
+  })();
 
   const req =
     mode === 'replay'
       ? {
-          model: canonicals.model,
+          model: canonicalModel,
           systemPrompt: canonicals.systemPrompt,
           // Map the requested fixture name to its recorded canonical user
           // prompt. Unknown names fall through to the `full` prompt — they
           // will FixtureMiss against the on-disk store and surface as a
           // generic 502, matching the voice route's behaviour.
           userPrompt:
-            fixtureName === canonicals.fixtures.incomplete.name
+            fixtureName === incompleteName
               ? canonicals.fixtures.incomplete.userPrompt
               : canonicals.fixtures.full.userPrompt,
         }
       : {
-          model: canonicals.model,
+          model: canonicalModel,
           systemPrompt: canonicals.systemPrompt,
           userPrompt: input.notes,
         };
 
-  const provider = buildProvider(canonicals.vendor, fixtureName);
+  const provider = buildProvider(vendor, fixtureName);
   const out = await withErrorWrap('generateReport', () => provider.chat(req));
 
   let parsed: unknown;

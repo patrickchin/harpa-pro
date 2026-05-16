@@ -63,6 +63,33 @@ React Query with `staleTime: 4 minutes`.
 - Lifecycle: `harpa-voice` and `harpa-images` files referenced from
   no live note are GC'd after 7 days by an R2 lifecycle rule.
 
+## Live mode (production)
+
+`R2_FIXTURE_MODE=live` selects `R2Storage` in `packages/api/src/services/storage.ts`.
+It is backed by `@aws-sdk/client-s3` + `@aws-sdk/s3-request-presigner`
+against the R2 S3-compatible endpoint:
+
+```
+endpoint  = R2_ENDPOINT ?? https://<R2_ACCOUNT_ID>.r2.cloudflarestorage.com
+region    = 'auto'           # R2 ignores region but the SDK requires one
+forcePathStyle = true        # R2 requires path-style addressing
+```
+
+Required env (asserted at first use, not at boot — fixture mode stays
+free of R2 creds):
+
+| Env | Notes |
+|---|---|
+| `R2_ACCOUNT_ID` | Cloudflare account id (skip if `R2_ENDPOINT` is set) |
+| `R2_ACCESS_KEY_ID` | R2 API token access key |
+| `R2_SECRET_ACCESS_KEY` | R2 API token secret |
+| `R2_BUCKET` | Defaults to `harpa-pro` |
+| `R2_ENDPOINT` | Optional override for local S3-compatible mocks |
+| `R2_PRESIGN_TTL_SEC` | Defaults to 300 (5 minutes per §Download flow) |
+
+`R2Storage` signs `content-type` and `content-length` into every PUT
+URL so a stolen link can't be reused for arbitrary uploads (Pitfall 8).
+
 ## Fixture mode
 
 When `EXPO_PUBLIC_USE_FIXTURES=true` (mobile) or `R2_FIXTURE_MODE=replay`

@@ -1,0 +1,21 @@
+{
+  "vendor": "kimi",
+  "model": "moonshot-v1-8k",
+  "fixtureName": "summarize.basic.kimi",
+  "recordedAt": "2026-05-12T00:00:00.000Z",
+  "requestHash": "sha256:0c91597faf45d86cf02b215e13370785ac2a5a83110efea7dfcd262ec50f4d41",
+  "request": {
+    "kind": "chat",
+    "vendor": "kimi",
+    "model": "moonshot-v1-8k",
+    "systemPrompt": "Summarise the following transcript into a concise site-note body.",
+    "userPrompt": "Site arrival 8:15. Crew of three on rebar..."
+  },
+  "response": {
+    "text": "Crew arrived 8:15; rebar progress steady; concrete pour delayed 30 min by delivery; no incidents. Plan: close east footing tomorrow.",
+    "usage": {
+      "input": 64,
+      "output": 32
+    }
+  }
+}

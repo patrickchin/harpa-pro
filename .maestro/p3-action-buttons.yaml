@@ -1,0 +1,177 @@
+appId: com.harpa.pro
+name: P3 action-button coverage (real routes)
+tags:
+  - p3
+  - actions
+---
+- launchApp:
+    clearState: true
+    clearKeychain: true
+    stopApp: true
+- waitForAnimationToEnd
+- openLink: harpa://sign-in/phone
+- assertVisible:
+    id: "input-phone"
+- tapOn:
+    id: "input-phone"
+- inputText: "+15550100100"
+- tapOn:
+    point: "50%,15%"
+- tapOn:
+    id: "btn-login-send-code"
+- assertVisible:
+    id: "input-otp"
+- tapOn:
+    id: "input-otp"
+- inputText: "000000"
+- tapOn:
+    point: "50%,15%"
+- tapOn:
+    id: "btn-verify-code"
+- runFlow:
+    when:
+      visible:
+        id: "screen-onboarding"
+    commands:
+      - tapOn:
+          id: "input-onboarding-name"
+      - inputText: "Maestro Tester"
+      - tapOn:
+          id: "input-onboarding-company"
+      - inputText: "QA Industries"
+      - tapOn:
+          id: "btn-onboarding-submit"
+- assertVisible:
+    text: "Projects"
+- assertVisible:
+    id: "btn-new-project"
+- tapOn:
+    id: "btn-new-project"
+- assertVisible:
+    id: "input-project-name"
+- tapOn:
+    id: "input-project-name"
+- inputText: "Maestro Test Project"
+- tapOn:
+    id: "input-client-name"
+- inputText: "QA Client Co"
+- tapOn:
+    id: "input-project-address"
+- inputText: "1 Test Way"
+- tapOn:
+    point: "50%,15%"
+- tapOn:
+    id: "btn-submit-project"
+- assertVisible:
+    id: "btn-edit-project"
+- tapOn:
+    id: "btn-copy-client"
+- tapOn:
+    id: "btn-copy-address"
+- tapOn:
+    id: "btn-open-reports"
+- assertVisible:
+    id: "btn-new-report"
+- tapOn:
+    id: "btn-back"
+- assertVisible:
+    id: "btn-edit-project"
+- tapOn:
+    id: "btn-open-members"
+- assertVisible:
+    id: "btn-add-member"
+- tapOn:
+    id: "btn-add-member"
+- assertVisible:
+    id: "input-invite-phone"
+- tapOn:
+    id: "input-invite-phone"
+- inputText: "+15550100200"
+- tapOn:
+    point: "50%,15%"
+- tapOn:
+    id: "btn-invite-submit"
+- tapOn:
+    id: "btn-back"
+- assertVisible:
+    id: "btn-edit-project"
+- tapOn:
+    id: "btn-edit-project"
+- assertVisible:
+    id: "input-edit-project-name"
+- tapOn:
+    id: "input-edit-project-name"
+- eraseText: 50
+- inputText: "Edited Project"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: "btn-save-project"
+    direction: DOWN
+- tapOn:
+    id: "btn-save-project"
+- assertVisible:
+    id: "btn-edit-project"
+- tapOn:
+    id: "btn-open-reports"
+- assertVisible:
+    id: "btn-new-report"
+- tapOn:
+    id: "btn-new-report"
+- runFlow:
+    when:
+      visible:
+        id: "report-row-draft-0"
+    commands:
+      - tapOn:
+          id: "report-row-draft-0"
+- extendedWaitUntil:
+    visible:
+      id: "input-note-container"
+    timeout: 15000
+- tapOn:
+    id: "btn-tab-report"
+- assertVisible:
+    id: "report-tab-pane"
+- tapOn:
+    id: "btn-tab-edit"
+- assertVisible:
+    id: "edit-tab-pane"
+- tapOn:
+    id: "btn-tab-notes"
+- assertVisible:
+    id: "input-note-container"
+- tapOn:
+    id: "btn-attachment"
+- runFlow:
+    when:
+      visible: "Cancel"
+    commands:
+      - tapOn: "Cancel"
+- takeScreenshot: p3-actions-generate
+- tapOn:
+    id: "btn-back"
+- tapOn:
+    id: "btn-back"
+- assertVisible:
+    id: "btn-edit-project"
+- tapOn:
+    id: "btn-edit-project"
+- assertVisible:
+    id: "btn-delete-project"
+- scrollUntilVisible:
+    element:
+      id: "btn-delete-project"
+    direction: DOWN
+- tapOn:
+    id: "btn-delete-project"
+- assertVisible:
+    id: "dialog-sheet"
+- waitForAnimationToEnd
+- tapOn:
+    id: "dialog-action-0"
+- extendedWaitUntil:
+    visible:
+      id: "btn-new-project"
+    timeout: 10000
+- takeScreenshot: p3-actions-final

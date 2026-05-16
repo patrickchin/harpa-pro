@@ -6,12 +6,12 @@
 import { customAlphabet } from 'nanoid';
 
 const ALPHABET = '0123456789abcdefghjkmnpqrstvwxyz';
-const nano = customAlphabet(ALPHABET, 6);
+const nano = customAlphabet(ALPHABET, 8);
 
 export type SlugPrefix = 'prj' | 'rpt' | 'fil' | 'not';
 
 /**
- * Generate a prefixed slug: `<prefix>_<6-char nanoid>`.
+ * Generate a prefixed slug: `<prefix>_<8-char nanoid>`.
  * Alphabet: Crockford base32 (no I/L/O/U). Output is lowercase.
  */
 export function generateSlug(prefix: SlugPrefix): string {

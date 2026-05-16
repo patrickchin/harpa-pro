@@ -67,6 +67,7 @@ describe('renderUsage', () => {
 describe('renderProject', () => {
   const baseProject = {
     id: '00000000-0000-0000-0000-000000000010',
+    slug: 'prj_a3k9wzm4',
     name: 'Demo Project',
     clientName: 'Acme Co',
     address: '1 Main St',
@@ -103,6 +104,7 @@ describe('renderProjectList', () => {
         items: [
           {
             id: '00000000-0000-0000-0000-000000000020',
+            slug: 'prj_a3k9wzm4',
             name: 'Project A',
             clientName: 'Client A',
             address: null,
@@ -113,6 +115,7 @@ describe('renderProjectList', () => {
           },
           {
             id: '00000000-0000-0000-0000-000000000021',
+            slug: 'prj_h7m2qxnb',
             name: 'Project B',
             clientName: null,
             address: null,
@@ -192,6 +195,8 @@ describe('renderMemberList', () => {
 describe('renderReport', () => {
   const base = {
     id: '00000000-0000-0000-0000-000000000050',
+    slug: 'rpt_4nbcp8sk',
+    number: 1,
     projectId: '00000000-0000-0000-0000-000000000010',
     status: 'draft' as const,
     visitDate: '2025-01-15',
@@ -223,6 +228,8 @@ describe('renderReportList', () => {
         items: [
           {
             id: '00000000-0000-0000-0000-000000000060',
+            slug: 'rpt_xy7k2vpm',
+            number: 1,
             projectId: '00000000-0000-0000-0000-000000000010',
             status: 'draft',
             visitDate: '2025-01-15',
@@ -231,6 +238,8 @@ describe('renderReportList', () => {
           },
           {
             id: '00000000-0000-0000-0000-000000000061',
+            slug: 'rpt_b8njq3wt',
+            number: 2,
             projectId: '00000000-0000-0000-0000-000000000010',
             status: 'finalized',
             visitDate: null,

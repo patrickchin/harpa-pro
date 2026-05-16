@@ -26,20 +26,20 @@ describe('journey: auth → project → report → cleanup', () => {
       body: JSON.stringify({ name: 'Journey site' }),
     });
     expect(projRes.status).toBe(201);
-    const project = (await projRes.json()) as { id: string; ownerId: string; myRole: string };
+    const project = (await projRes.json()) as { id: string; slug: string; ownerId: string; myRole: string };
     expect(project.ownerId).toBe(me.userId);
     expect(project.myRole).toBe('owner');
 
-    const repRes = await app.request(`/projects/${project.id}/reports`, {
+    const repRes = await app.request(`/projects/${project.slug}/reports`, {
       method: 'POST', headers: me.headers,
       body: JSON.stringify({ visitDate: '2026-05-15T08:00:00.000Z' }),
     });
     expect(repRes.status).toBe(201);
-    const report = (await repRes.json()) as { id: string; status: string };
+    const report = (await repRes.json()) as { id: string; number: number; status: string };
     expect(report.status).toBe('draft');
 
-    expect((await app.request(`/reports/${report.id}`, { method: 'DELETE', headers: me.headers })).status).toBe(204);
-    expect((await app.request(`/projects/${project.id}`, { method: 'DELETE', headers: me.headers })).status).toBe(204);
+    expect((await app.request(`/projects/${project.slug}/reports/${report.number}`, { method: 'DELETE', headers: me.headers })).status).toBe(204);
+    expect((await app.request(`/projects/${project.slug}`, { method: 'DELETE', headers: me.headers })).status).toBe(204);
 
     expect((await app.request('/auth/logout', { method: 'POST', headers: me.headers })).status).toBe(200);
 

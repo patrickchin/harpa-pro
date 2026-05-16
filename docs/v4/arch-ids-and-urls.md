@@ -17,8 +17,8 @@ Every user-addressable entity has **three** identifiers:
    only. Sortable, index-friendly inserts. Never appears in URLs
    or API contracts after this change lands.
 2. **Public slug** — short, prefixed, URL-safe string.
-   Format: `<type>_<6-char nanoid>`. Example: `prj_8f3kq2`,
-   `rpt_h7n2x9`. **This is what URLs and API path params use.**
+   Format: `<type>_<8-char nanoid>`. Example: `prj_8f3kq2nb`,
+   `rpt_h7n2x9mp`. **This is what URLs and API path params use.**
 3. **Per-parent number** (reports only) — incrementing `int`,
    unique within `(project_id, number)`. Surfaced in the long
    URL for human readability.
@@ -26,21 +26,20 @@ Every user-addressable entity has **three** identifiers:
 ## ID format
 
 ```
-prj_<6 chars>     # project
-rpt_<6 chars>     # report
-fil_<6 chars>     # file (added in P3 with the file routes)
-not_<6 chars>     # note (added in P3 with the notes routes)
+prj_<8 chars>     # project
+rpt_<8 chars>     # report
+fil_<8 chars>     # file (added in P3 with the file routes)
+not_<8 chars>     # note (added in P3 with the notes routes)
 ```
 
 - **Separator:** underscore. Underscore is a single token under
   double-click selection on the web; hyphen is not. Major APIs
   (Stripe, Slack, Discord, OpenAI) all use `_`.
 - **Alphabet:** Crockford base32 — `0123456789ABCDEFGHJKMNPQRSTVWXYZ`
-  (no I/L/O/U; case-insensitive on input). 6 chars × 32 = ~10⁹
-  values per type. Birthday collisions become observable around
-  ~30k IDs per type → handle with a unique-constraint retry loop
-  (≤ 2 attempts in practice). Bump to 8 chars if any single type
-  exceeds ~100k rows.
+  (no I/L/O/U; case-insensitive on input). 8 chars × 32 = ~1.1×10¹²
+  values per type. Collisions are negligible (~50% birthday at
+  ~1.1M IDs) → handle with a unique-constraint retry loop
+  (≤ 2 attempts in practice).
 - **Generation:** `nanoid` `customAlphabet`, server-side only at
   insert time. Stored in a `slug text NOT NULL UNIQUE` column.
 - **Case:** lowercase in URLs. Accept any case on input
@@ -142,9 +141,9 @@ link entry points never blip a redirect screen.
 Zod regex shared in `packages/api-contract`:
 
 ```ts
-export const projectSlug = z.string().regex(/^prj_[0-9a-z]{6}$/i)
+export const projectSlug = z.string().regex(/^prj_[0-9a-z]{8}$/i)
   .transform(s => s.toLowerCase());
-export const reportSlug  = z.string().regex(/^rpt_[0-9a-z]{6}$/i)
+export const reportSlug  = z.string().regex(/^rpt_[0-9a-z]{8}$/i)
   .transform(s => s.toLowerCase());
 export const reportNumber = z.coerce.number().int().positive();
 ```

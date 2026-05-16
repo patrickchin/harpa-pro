@@ -16,18 +16,18 @@ export const phone = z.string().regex(/^\+\d{8,15}$/, 'E.164 phone required');
 
 /**
  * Public slugs — Crockford base32 (no I/L/O/U) prefixed identifiers.
- * Format: `<type>_<6 chars>` (`prj_8f3kq2`, `rpt_h7n2x9`).
+ * Format: `<type>_<8 chars>` (`prj_8f3kq2nb`, `rpt_h7n2x9mp`).
  * Case-insensitive on input, normalised to lowercase.
  * See docs/v4/arch-ids-and-urls.md.
  */
 const SLUG_CHARSET = '0-9a-hjkmnp-tv-z'; // Crockford base32, lowercase
 export const projectSlug = z
   .string()
-  .regex(new RegExp(`^prj_[${SLUG_CHARSET}]{6}$`, 'i'), 'invalid project slug')
+  .regex(new RegExp(`^prj_[${SLUG_CHARSET}]{8}$`, 'i'), 'invalid project slug')
   .transform((s) => s.toLowerCase());
 export const reportSlug = z
   .string()
-  .regex(new RegExp(`^rpt_[${SLUG_CHARSET}]{6}$`, 'i'), 'invalid report slug')
+  .regex(new RegExp(`^rpt_[${SLUG_CHARSET}]{8}$`, 'i'), 'invalid report slug')
   .transform((s) => s.toLowerCase());
 export const reportNumber = z.coerce.number().int().positive();
 

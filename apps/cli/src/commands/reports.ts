@@ -61,7 +61,7 @@ export function reportsList(args: ReportsListArgs): Promise<ExitCode> {
 export const reportsListCommand = defineCommand({
   meta: { name: 'list', description: 'List reports for a project.' },
   args: {
-    projectId: { type: 'positional', required: true, description: 'Project ID (UUID).' },
+    projectId: { type: 'positional', required: true, description: 'Project slug (e.g. prj_xxxxxxxx).' },
     cursor: { type: 'string', description: 'Pagination cursor.' },
     limit: { type: 'string', description: 'Page size (1–100, default 20).' },
     json: { type: 'boolean', description: 'Print raw JSON to stdout.' },
@@ -113,14 +113,14 @@ export function reportsCreate(args: ReportsCreateArgs): Promise<ExitCode> {
         params: { path: { projectSlug: args.projectId } },
         body,
       }),
-    format: (data) => `${chalk.green('✓')} Created report ${chalk.bold(data.id)} (${data.status})`,
+    format: (data) => `${chalk.green('✓')} Created report #${data.number} ${chalk.dim(data.slug)} (${data.status})`,
   });
 }
 
 export const reportsCreateCommand = defineCommand({
   meta: { name: 'create', description: 'Create a new draft report.' },
   args: {
-    projectId: { type: 'positional', required: true, description: 'Project ID (UUID).' },
+    projectId: { type: 'positional', required: true, description: 'Project slug (e.g. prj_xxxxxxxx).' },
     'visit-date': { type: 'string', description: 'Visit date (ISO yyyy-mm-dd).' },
     json: { type: 'boolean', description: 'Print raw JSON to stdout.' },
     verbose: { type: 'boolean', description: 'Print response metadata to stderr.' },
@@ -140,7 +140,7 @@ export const reportsCreateCommand = defineCommand({
           params: { path: { projectSlug: String(args.projectId) } },
           body,
         }),
-      format: (data) => `${chalk.green('✓')} Created report ${chalk.bold(data.id)} (${data.status})`,
+      format: (data) => `${chalk.green('✓')} Created report #${data.number} ${chalk.dim(data.slug)} (${data.status})`,
     });
   },
 });
@@ -169,7 +169,7 @@ export function reportsGet(args: ReportsGetArgs): Promise<ExitCode> {
 export const reportsGetCommand = defineCommand({
   meta: { name: 'get', description: 'Show report details.' },
   args: {
-    projectSlug: { type: 'positional', required: true, description: 'Project slug (e.g. prj_xxxxxx).' },
+    projectSlug: { type: 'positional', required: true, description: 'Project slug (e.g. prj_xxxxxxxx).' },
     number: { type: 'positional', required: true, description: 'Report number within the project.' },
     json: { type: 'boolean', description: 'Print raw JSON to stdout.' },
     verbose: { type: 'boolean', description: 'Print response metadata to stderr.' },
@@ -211,14 +211,14 @@ export function reportsUpdate(args: ReportsUpdateArgs): Promise<ExitCode> {
         params: { path: { projectSlug: args.projectSlug, number: args.number } },
         body,
       }),
-    format: (data) => `${chalk.green('✓')} Updated report ${chalk.bold(String(data.id))}`,
+    format: (data) => `${chalk.green('✓')} Updated report #${data.number} ${chalk.dim(data.slug)}`,
   });
 }
 
 export const reportsUpdateCommand = defineCommand({
   meta: { name: 'update', description: 'Update report fields (draft only).' },
   args: {
-    projectSlug: { type: 'positional', required: true, description: 'Project slug (e.g. prj_xxxxxx).' },
+    projectSlug: { type: 'positional', required: true, description: 'Project slug (e.g. prj_xxxxxxxx).' },
     number: { type: 'positional', required: true, description: 'Report number within the project.' },
     'visit-date': { type: 'string', description: 'Visit date (ISO yyyy-mm-dd).' },
     json: { type: 'boolean', description: 'Print raw JSON to stdout.' },
@@ -239,7 +239,7 @@ export const reportsUpdateCommand = defineCommand({
           params: { path: { projectSlug: String(args.projectSlug), number: Number(args.number) } },
           body,
         }),
-      format: (data) => `${chalk.green('✓')} Updated report ${chalk.bold(String(data.id))}`,
+      format: (data) => `${chalk.green('✓')} Updated report #${data.number} ${chalk.dim(data.slug)}`,
     });
   },
 });
@@ -269,7 +269,7 @@ export function reportsDelete(args: ReportsDeleteArgs): Promise<ExitCode> {
 export const reportsDeleteCommand = defineCommand({
   meta: { name: 'delete', description: 'Delete a draft report.' },
   args: {
-    projectSlug: { type: 'positional', required: true, description: 'Project slug (e.g. prj_xxxxxx).' },
+    projectSlug: { type: 'positional', required: true, description: 'Project slug (e.g. prj_xxxxxxxx).' },
     number: { type: 'positional', required: true, description: 'Report number within the project.' },
     json: { type: 'boolean', description: 'Print raw JSON to stdout.' },
     verbose: { type: 'boolean', description: 'Print response metadata to stderr.' },

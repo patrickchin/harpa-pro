@@ -1,10 +1,12 @@
 /**
  * `harpa notes` — note CRUD.
  *
- *   harpa notes list   <reportId>                                → GET    /reports/{reportId}/notes
- *   harpa notes create <reportId> --kind --body --file-id        → POST   /reports/{reportId}/notes
- *   harpa notes update <noteId> --body                           → PATCH  /notes/{noteId}
- *   harpa notes delete <noteId>                                  → DELETE /notes/{noteId}
+ *   harpa notes list   <projectSlug> <reportNumber>               → GET    /reports/{reportId}/notes
+ *   harpa notes create <projectSlug> <reportNumber> --kind --body → POST   /reports/{reportId}/notes
+ *   harpa notes update <noteId> --body                            → PATCH  /notes/{noteId}
+ *   harpa notes delete <noteId>                                   → DELETE /notes/{noteId}
+ *
+ * list/create resolve the report UUID internally via GET /projects/{slug}/reports/{number}.
  */
 import { defineCommand } from 'citty';
 import chalk from 'chalk';
@@ -27,12 +29,33 @@ export interface NotesHandlerOptions {
 // --- list -------------------------------------------------------------
 
 export interface NotesListArgs extends NotesHandlerOptions {
-  reportId: string;
+  projectSlug: string;
+  reportNumber: number;
   cursor?: string;
   limit?: number;
 }
 
-export function notesList(args: NotesListArgs): Promise<ExitCode> {
+async function resolveReportId(
+  client: ApiClient,
+  projectSlug: string,
+  reportNumber: number,
+  stderr: NodeJS.WritableStream = process.stderr,
+): Promise<string | null> {
+  const res = await client.GET('/projects/{projectSlug}/reports/{number}', {
+    params: { path: { projectSlug, number: reportNumber } },
+  });
+  if (res.error || !res.data) {
+    stderr.write(chalk.red(`Error: report #${reportNumber} not found in project ${projectSlug}\n`));
+    return null;
+  }
+  return res.data.id;
+}
+
+export async function notesList(args: NotesListArgs): Promise<ExitCode> {
+  const reportId = await resolveReportId(
+    args.client, args.projectSlug, args.reportNumber, args.stderr,
+  );
+  if (!reportId) return 4 as ExitCode;
   const query: Record<string, string | number> = {};
   if (args.cursor) query.cursor = args.cursor;
   if (args.limit !== undefined) query.limit = args.limit;
@@ -43,7 +66,7 @@ export function notesList(args: NotesListArgs): Promise<ExitCode> {
     stderr: args.stderr,
     request: () =>
       args.client.GET('/reports/{reportId}/notes', {
-        params: { path: { reportId: args.reportId }, query },
+        params: { path: { reportId }, query },
       }),
     format: (data) => renderNoteList(data),
   });
@@ -52,7 +75,8 @@ export function notesList(args: NotesListArgs): Promise<ExitCode> {
 export const notesListCommand = defineCommand({
   meta: { name: 'list', description: 'List notes on a report.' },
   args: {
-    reportId: { type: 'positional', required: true, description: 'Report ID (UUID).' },
+    projectSlug: { type: 'positional', required: true, description: 'Project slug (e.g. prj_xxxxxxxx).' },
+    reportNumber: { type: 'positional', required: true, description: 'Report number within the project.' },
     cursor: { type: 'string', description: 'Pagination cursor.' },
     limit: { type: 'string', description: 'Page size (1–100).' },
     json: { type: 'boolean' },
@@ -72,12 +96,16 @@ export const notesListCommand = defineCommand({
       }
       query.limit = n;
     }
+    const reportId = await resolveReportId(
+      client, String(args.projectSlug), Number(args.reportNumber),
+    );
+    if (!reportId) process.exit(4);
     await runRequest({
       json: args.json,
       verbose: args.verbose,
       request: () =>
         client.GET('/reports/{reportId}/notes', {
-          params: { path: { reportId: String(args.reportId) }, query },
+          params: { path: { reportId }, query },
         }),
       format: (data) => renderNoteList(data),
     });
@@ -87,14 +115,19 @@ export const notesListCommand = defineCommand({
 // --- create -----------------------------------------------------------
 
 export interface NotesCreateArgs extends NotesHandlerOptions {
-  reportId: string;
+  projectSlug: string;
+  reportNumber: number;
   kind: NoteKind;
   body?: string;
   fileId?: string;
   transcript?: string;
 }
 
-export function notesCreate(args: NotesCreateArgs): Promise<ExitCode> {
+export async function notesCreate(args: NotesCreateArgs): Promise<ExitCode> {
+  const reportId = await resolveReportId(
+    args.client, args.projectSlug, args.reportNumber, args.stderr,
+  );
+  if (!reportId) return 4 as ExitCode;
   const body: { kind: NoteKind; body?: string; fileId?: string; transcript?: string } = {
     kind: args.kind,
   };
@@ -108,7 +141,7 @@ export function notesCreate(args: NotesCreateArgs): Promise<ExitCode> {
     stderr: args.stderr,
     request: () =>
       args.client.POST('/reports/{reportId}/notes', {
-        params: { path: { reportId: args.reportId } },
+        params: { path: { reportId } },
         body,
       }),
     format: (data) => `${chalk.green('✓')} Created note ${chalk.bold(data.id)}`,
@@ -118,7 +151,8 @@ export function notesCreate(args: NotesCreateArgs): Promise<ExitCode> {
 export const notesCreateCommand = defineCommand({
   meta: { name: 'create', description: 'Create a note on a report.' },
   args: {
-    reportId: { type: 'positional', required: true, description: 'Report ID (UUID).' },
+    projectSlug: { type: 'positional', required: true, description: 'Project slug (e.g. prj_xxxxxxxx).' },
+    reportNumber: { type: 'positional', required: true, description: 'Report number within the project.' },
     kind: { type: 'string', required: true, description: 'text | voice | image | document.' },
     body: { type: 'string', description: 'Note text body.' },
     'file-id': { type: 'string', description: 'Attached file ID (for voice/image/document).' },
@@ -137,22 +171,26 @@ export const notesCreateCommand = defineCommand({
       );
       process.exit(2);
     }
-    const body: { kind: NoteKind; body?: string; fileId?: string; transcript?: string } = {
+    const reportId = await resolveReportId(
+      client, String(args.projectSlug), Number(args.reportNumber),
+    );
+    if (!reportId) process.exit(4);
+    const noteBody: { kind: NoteKind; body?: string; fileId?: string; transcript?: string } = {
       kind: kind as NoteKind,
     };
-    if (typeof args.body === 'string' && args.body.length > 0) body.body = args.body;
+    if (typeof args.body === 'string' && args.body.length > 0) noteBody.body = args.body;
     const fileId = args['file-id'];
-    if (typeof fileId === 'string' && fileId.length > 0) body.fileId = fileId;
+    if (typeof fileId === 'string' && fileId.length > 0) noteBody.fileId = fileId;
     if (typeof args.transcript === 'string' && args.transcript.length > 0) {
-      body.transcript = args.transcript;
+      noteBody.transcript = args.transcript;
     }
     await runRequest({
       json: args.json,
       verbose: args.verbose,
       request: () =>
         client.POST('/reports/{reportId}/notes', {
-          params: { path: { reportId: String(args.reportId) } },
-          body,
+          params: { path: { reportId } },
+          body: noteBody,
         }),
       format: (data) => `${chalk.green('✓')} Created note ${chalk.bold(data.id)}`,
     });

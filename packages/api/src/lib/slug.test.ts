@@ -1,6 +1,6 @@
 /**
  * Tests for slug generator.
- * Per design-p30-ids-slugs.md: Crockford base32 (no I/L/O/U), 6 chars, prefixed.
+ * Per design-p30-ids-slugs.md: Crockford base32 (no I/L/O/U), 8 chars, prefixed.
  */
 import { describe, it, expect } from 'vitest';
 import { generateSlug, type SlugPrefix } from './slug.js';
@@ -8,22 +8,22 @@ import { generateSlug, type SlugPrefix } from './slug.js';
 describe('generateSlug', () => {
   it('generates prj_ prefixed slugs matching regex', () => {
     const slug = generateSlug('prj');
-    expect(slug).toMatch(/^prj_[0-9a-z]{6}$/);
+    expect(slug).toMatch(/^prj_[0-9a-z]{8}$/);
   });
 
   it('generates rpt_ prefixed slugs matching regex', () => {
     const slug = generateSlug('rpt');
-    expect(slug).toMatch(/^rpt_[0-9a-z]{6}$/);
+    expect(slug).toMatch(/^rpt_[0-9a-z]{8}$/);
   });
 
   it('generates fil_ prefixed slugs matching regex', () => {
     const slug = generateSlug('fil');
-    expect(slug).toMatch(/^fil_[0-9a-z]{6}$/);
+    expect(slug).toMatch(/^fil_[0-9a-z]{8}$/);
   });
 
   it('generates not_ prefixed slugs matching regex', () => {
     const slug = generateSlug('not');
-    expect(slug).toMatch(/^not_[0-9a-z]{6}$/);
+    expect(slug).toMatch(/^not_[0-9a-z]{8}$/);
   });
 
   it('uses Crockford base32 alphabet (no I/L/O/U)', () => {
@@ -50,7 +50,7 @@ describe('generateSlug', () => {
     const prefixes: SlugPrefix[] = ['prj', 'rpt', 'fil', 'not'];
     prefixes.forEach((prefix) => {
       const slug = generateSlug(prefix);
-      expect(slug).toMatch(new RegExp(`^${prefix}_[0-9a-z]{6}$`));
+      expect(slug).toMatch(new RegExp(`^${prefix}_[0-9a-z]{8}$`));
     });
   });
 });

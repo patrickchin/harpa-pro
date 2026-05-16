@@ -295,8 +295,13 @@ exports[`command tree (help drift gate) > matches the recorded snapshot 1`] = `
               "required": true,
               "type": "string",
             },
-            "reportId": {
-              "description": "Report ID (UUID).",
+            "projectSlug": {
+              "description": "Project slug (e.g. prj_xxxxxxxx).",
+              "required": true,
+              "type": "positional",
+            },
+            "reportNumber": {
+              "description": "Report number within the project.",
               "required": true,
               "type": "positional",
             },
@@ -343,8 +348,13 @@ exports[`command tree (help drift gate) > matches the recorded snapshot 1`] = `
               "description": "Page size (1–100).",
               "type": "string",
             },
-            "reportId": {
-              "description": "Report ID (UUID).",
+            "projectSlug": {
+              "description": "Project slug (e.g. prj_xxxxxxxx).",
+              "required": true,
+              "type": "positional",
+            },
+            "reportNumber": {
+              "description": "Report number within the project.",
               "required": true,
               "type": "positional",
             },
@@ -417,7 +427,7 @@ exports[`command tree (help drift gate) > matches the recorded snapshot 1`] = `
         "delete": {
           "args": {
             "id": {
-              "description": "Project ID (UUID).",
+              "description": "Project slug (e.g. prj_xxxxxxxx).",
               "required": true,
               "type": "positional",
             },
@@ -437,7 +447,7 @@ exports[`command tree (help drift gate) > matches the recorded snapshot 1`] = `
         "get": {
           "args": {
             "id": {
-              "description": "Project ID (UUID).",
+              "description": "Project slug (e.g. prj_xxxxxxxx).",
               "required": true,
               "type": "positional",
             },
@@ -494,7 +504,7 @@ exports[`command tree (help drift gate) > matches the recorded snapshot 1`] = `
                   "type": "string",
                 },
                 "projectId": {
-                  "description": "Project ID (UUID).",
+                  "description": "Project slug (e.g. prj_xxxxxxxx).",
                   "required": true,
                   "type": "positional",
                 },
@@ -518,7 +528,7 @@ exports[`command tree (help drift gate) > matches the recorded snapshot 1`] = `
                   "type": "boolean",
                 },
                 "projectId": {
-                  "description": "Project ID (UUID).",
+                  "description": "Project slug (e.g. prj_xxxxxxxx).",
                   "required": true,
                   "type": "positional",
                 },
@@ -537,13 +547,13 @@ exports[`command tree (help drift gate) > matches the recorded snapshot 1`] = `
                   "description": "Print raw JSON to stdout.",
                   "type": "boolean",
                 },
-                "projectId": {
-                  "description": "Project ID (UUID).",
+                "phone": {
+                  "description": "E.164 phone number of the member to remove.",
                   "required": true,
                   "type": "positional",
                 },
-                "userId": {
-                  "description": "User ID to remove (UUID).",
+                "projectId": {
+                  "description": "Project slug (e.g. prj_xxxxxxxx).",
                   "required": true,
                   "type": "positional",
                 },
@@ -569,7 +579,7 @@ exports[`command tree (help drift gate) > matches the recorded snapshot 1`] = `
               "type": "string",
             },
             "id": {
-              "description": "Project ID (UUID).",
+              "description": "Project slug (e.g. prj_xxxxxxxx).",
               "required": true,
               "type": "positional",
             },
@@ -604,7 +614,7 @@ exports[`command tree (help drift gate) > matches the recorded snapshot 1`] = `
               "type": "boolean",
             },
             "projectId": {
-              "description": "Project ID (UUID).",
+              "description": "Project slug (e.g. prj_xxxxxxxx).",
               "required": true,
               "type": "positional",
             },
@@ -627,8 +637,13 @@ exports[`command tree (help drift gate) > matches the recorded snapshot 1`] = `
               "description": "Print raw JSON to stdout.",
               "type": "boolean",
             },
-            "reportId": {
-              "description": "Report ID (UUID).",
+            "number": {
+              "description": "Report number within the project.",
+              "required": true,
+              "type": "positional",
+            },
+            "projectSlug": {
+              "description": "Project slug (e.g. prj_xxxxxxxx).",
               "required": true,
               "type": "positional",
             },
@@ -647,8 +662,13 @@ exports[`command tree (help drift gate) > matches the recorded snapshot 1`] = `
               "description": "Print raw JSON to stdout.",
               "type": "boolean",
             },
-            "reportId": {
-              "description": "Report ID (UUID).",
+            "number": {
+              "description": "Report number within the project.",
+              "required": true,
+              "type": "positional",
+            },
+            "projectSlug": {
+              "description": "Project slug (e.g. prj_xxxxxxxx).",
               "required": true,
               "type": "positional",
             },
@@ -675,8 +695,13 @@ exports[`command tree (help drift gate) > matches the recorded snapshot 1`] = `
               "description": "Print raw JSON to stdout.",
               "type": "boolean",
             },
-            "reportId": {
-              "description": "Report ID (UUID).",
+            "number": {
+              "description": "Report number within the project.",
+              "required": true,
+              "type": "positional",
+            },
+            "projectSlug": {
+              "description": "Project slug (e.g. prj_xxxxxxxx).",
               "required": true,
               "type": "positional",
             },
@@ -695,8 +720,13 @@ exports[`command tree (help drift gate) > matches the recorded snapshot 1`] = `
               "description": "Print raw JSON to stdout.",
               "type": "boolean",
             },
-            "reportId": {
-              "description": "Report ID (UUID).",
+            "number": {
+              "description": "Report number within the project.",
+              "required": true,
+              "type": "positional",
+            },
+            "projectSlug": {
+              "description": "Project slug (e.g. prj_xxxxxxxx).",
               "required": true,
               "type": "positional",
             },
@@ -724,7 +754,7 @@ exports[`command tree (help drift gate) > matches the recorded snapshot 1`] = `
               "type": "string",
             },
             "projectId": {
-              "description": "Project ID (UUID).",
+              "description": "Project slug (e.g. prj_xxxxxxxx).",
               "required": true,
               "type": "positional",
             },
@@ -743,8 +773,13 @@ exports[`command tree (help drift gate) > matches the recorded snapshot 1`] = `
               "description": "Print raw JSON to stdout.",
               "type": "boolean",
             },
-            "reportId": {
-              "description": "Report ID (UUID).",
+            "number": {
+              "description": "Report number within the project.",
+              "required": true,
+              "type": "positional",
+            },
+            "projectSlug": {
+              "description": "Project slug (e.g. prj_xxxxxxxx).",
               "required": true,
               "type": "positional",
             },
@@ -771,8 +806,13 @@ exports[`command tree (help drift gate) > matches the recorded snapshot 1`] = `
               "description": "Print raw JSON to stdout.",
               "type": "boolean",
             },
-            "reportId": {
-              "description": "Report ID (UUID).",
+            "number": {
+              "description": "Report number within the project.",
+              "required": true,
+              "type": "positional",
+            },
+            "projectSlug": {
+              "description": "Project slug (e.g. prj_xxxxxxxx).",
               "required": true,
               "type": "positional",
             },
@@ -791,8 +831,13 @@ exports[`command tree (help drift gate) > matches the recorded snapshot 1`] = `
               "description": "Print raw JSON to stdout.",
               "type": "boolean",
             },
-            "reportId": {
-              "description": "Report ID (UUID).",
+            "number": {
+              "description": "Report number within the project.",
+              "required": true,
+              "type": "positional",
+            },
+            "projectSlug": {
+              "description": "Project slug (e.g. prj_xxxxxxxx).",
               "required": true,
               "type": "positional",
             },

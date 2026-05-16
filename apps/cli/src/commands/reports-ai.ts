@@ -59,14 +59,14 @@ export function reportsGenerate(args: ReportsGenerateArgs): Promise<ExitCode> {
         ...(headers ? { headers } : {}),
       }),
     format: (data) =>
-      `${chalk.green('✓')} Generated report ${chalk.bold(data.report.id)}\n${renderReport(data.report)}`,
+      `${chalk.green('✓')} Generated report #${data.report.number} ${chalk.dim(data.report.slug)}\n${renderReport(data.report)}`,
   });
 }
 
 export const reportsGenerateCommand = defineCommand({
   meta: { name: 'generate', description: 'Generate a draft body for a report from notes (AI).' },
   args: {
-    projectSlug: { type: 'positional', required: true, description: 'Project slug (e.g. prj_xxxxxx).' }, number: { type: 'positional', required: true, description: 'Report number within the project.' },
+    projectSlug: { type: 'positional', required: true, description: 'Project slug (e.g. prj_xxxxxxxx).' }, number: { type: 'positional', required: true, description: 'Report number within the project.' },
     fixture: { type: 'string', description: 'Fixture name (replay mode).' },
     'idempotency-key': { type: 'string', description: 'Override idempotency key for this call.' },
     json: { type: 'boolean', description: 'Print raw JSON to stdout.' },
@@ -93,7 +93,7 @@ export const reportsGenerateCommand = defineCommand({
           ...(headers ? { headers } : {}),
         }),
       format: (data) =>
-        `${chalk.green('✓')} Generated report ${chalk.bold(data.report.id)}\n${renderReport(data.report)}`,
+        `${chalk.green('✓')} Generated report #${data.report.number} ${chalk.dim(data.report.slug)}\n${renderReport(data.report)}`,
     });
   },
 });
@@ -121,14 +121,14 @@ export function reportsRegenerate(args: ReportsRegenerateArgs): Promise<ExitCode
         ...(headers ? { headers } : {}),
       }),
     format: (data) =>
-      `${chalk.green('✓')} Regenerated report ${chalk.bold(data.report.id)}\n${renderReport(data.report)}`,
+      `${chalk.green('✓')} Regenerated report #${data.report.number} ${chalk.dim(data.report.slug)}\n${renderReport(data.report)}`,
   });
 }
 
 export const reportsRegenerateCommand = defineCommand({
   meta: { name: 'regenerate', description: 'Replace report body with a freshly generated one (AI).' },
   args: {
-    projectSlug: { type: 'positional', required: true, description: 'Project slug (e.g. prj_xxxxxx).' }, number: { type: 'positional', required: true, description: 'Report number within the project.' },
+    projectSlug: { type: 'positional', required: true, description: 'Project slug (e.g. prj_xxxxxxxx).' }, number: { type: 'positional', required: true, description: 'Report number within the project.' },
     fixture: { type: 'string', description: 'Fixture name (replay mode).' },
     'idempotency-key': { type: 'string', description: 'Override idempotency key for this call.' },
     json: { type: 'boolean', description: 'Print raw JSON to stdout.' },
@@ -155,7 +155,7 @@ export const reportsRegenerateCommand = defineCommand({
           ...(headers ? { headers } : {}),
         }),
       format: (data) =>
-        `${chalk.green('✓')} Regenerated report ${chalk.bold(data.report.id)}\n${renderReport(data.report)}`,
+        `${chalk.green('✓')} Regenerated report #${data.report.number} ${chalk.dim(data.report.slug)}\n${renderReport(data.report)}`,
     });
   },
 });
@@ -177,14 +177,14 @@ export function reportsFinalize(args: ReportsFinalizeArgs): Promise<ExitCode> {
         params: { path: { projectSlug: args.projectSlug, number: args.number } },
       }),
     format: (data) =>
-      `${chalk.green('✓')} Finalized report ${chalk.bold(data.report.id)}\n${renderReport(data.report)}`,
+      `${chalk.green('✓')} Finalized report #${data.report.number} ${chalk.dim(data.report.slug)}\n${renderReport(data.report)}`,
   });
 }
 
 export const reportsFinalizeCommand = defineCommand({
   meta: { name: 'finalize', description: 'Freeze a draft report (status → finalized).' },
   args: {
-    projectSlug: { type: 'positional', required: true, description: 'Project slug (e.g. prj_xxxxxx).' }, number: { type: 'positional', required: true, description: 'Report number within the project.' },
+    projectSlug: { type: 'positional', required: true, description: 'Project slug (e.g. prj_xxxxxxxx).' }, number: { type: 'positional', required: true, description: 'Report number within the project.' },
     json: { type: 'boolean', description: 'Print raw JSON to stdout.' },
     verbose: { type: 'boolean', description: 'Print response metadata to stderr.' },
   },
@@ -200,7 +200,7 @@ export const reportsFinalizeCommand = defineCommand({
           params: { path: { projectSlug: String(args.projectSlug), number: Number(args.number) } },
         }),
       format: (data) =>
-        `${chalk.green('✓')} Finalized report ${chalk.bold(data.report.id)}\n${renderReport(data.report)}`,
+        `${chalk.green('✓')} Finalized report #${data.report.number} ${chalk.dim(data.report.slug)}\n${renderReport(data.report)}`,
     });
   },
 });
@@ -229,7 +229,7 @@ export function reportsPdf(args: ReportsPdfArgs): Promise<ExitCode> {
 export const reportsPdfCommand = defineCommand({
   meta: { name: 'pdf', description: 'Render the report to PDF and return a signed URL.' },
   args: {
-    projectSlug: { type: 'positional', required: true, description: 'Project slug (e.g. prj_xxxxxx).' }, number: { type: 'positional', required: true, description: 'Report number within the project.' },
+    projectSlug: { type: 'positional', required: true, description: 'Project slug (e.g. prj_xxxxxxxx).' }, number: { type: 'positional', required: true, description: 'Report number within the project.' },
     json: { type: 'boolean', description: 'Print raw JSON to stdout.' },
     verbose: { type: 'boolean', description: 'Print response metadata to stderr.' },
   },

@@ -1001,7 +1001,7 @@
                           },
                           "slug": {
                             "type": "string",
-                            "pattern": "^prj_[0-9a-hjkmnp-tv-z]{6}$"
+                            "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8}$"
                           },
                           "name": {
                             "type": "string",
@@ -1173,7 +1173,7 @@
                     },
                     "slug": {
                       "type": "string",
-                      "pattern": "^prj_[0-9a-hjkmnp-tv-z]{6}$"
+                      "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8}$"
                     },
                     "name": {
                       "type": "string",
@@ -1333,7 +1333,7 @@
           {
             "schema": {
               "type": "string",
-              "pattern": "^prj_[0-9a-hjkmnp-tv-z]{6}$"
+              "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8}$"
             },
             "required": true,
             "name": "projectSlug",
@@ -1354,7 +1354,7 @@
                     },
                     "slug": {
                       "type": "string",
-                      "pattern": "^prj_[0-9a-hjkmnp-tv-z]{6}$"
+                      "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8}$"
                     },
                     "name": {
                       "type": "string",
@@ -1512,7 +1512,7 @@
           {
             "schema": {
               "type": "string",
-              "pattern": "^prj_[0-9a-hjkmnp-tv-z]{6}$"
+              "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8}$"
             },
             "required": true,
             "name": "projectSlug",
@@ -1557,7 +1557,7 @@
                     },
                     "slug": {
                       "type": "string",
-                      "pattern": "^prj_[0-9a-hjkmnp-tv-z]{6}$"
+                      "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8}$"
                     },
                     "name": {
                       "type": "string",
@@ -1715,7 +1715,7 @@
           {
             "schema": {
               "type": "string",
-              "pattern": "^prj_[0-9a-hjkmnp-tv-z]{6}$"
+              "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8}$"
             },
             "required": true,
             "name": "projectSlug",
@@ -1815,7 +1815,7 @@
           {
             "schema": {
               "type": "string",
-              "pattern": "^prj_[0-9a-hjkmnp-tv-z]{6}$"
+              "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8}$"
             },
             "required": true,
             "name": "projectSlug",
@@ -1963,7 +1963,7 @@
           {
             "schema": {
               "type": "string",
-              "pattern": "^prj_[0-9a-hjkmnp-tv-z]{6}$"
+              "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8}$"
             },
             "required": true,
             "name": "projectSlug",
@@ -2201,7 +2201,7 @@
           {
             "schema": {
               "type": "string",
-              "pattern": "^prj_[0-9a-hjkmnp-tv-z]{6}$"
+              "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8}$"
             },
             "required": true,
             "name": "projectSlug",
@@ -2382,7 +2382,7 @@
           {
             "schema": {
               "type": "string",
-              "pattern": "^prj_[0-9a-hjkmnp-tv-z]{6}$"
+              "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8}$"
             },
             "required": true,
             "name": "projectSlug",
@@ -2429,7 +2429,7 @@
                           },
                           "slug": {
                             "type": "string",
-                            "pattern": "^rpt_[0-9a-hjkmnp-tv-z]{6}$"
+                            "pattern": "^rpt_[0-9a-hjkmnp-tv-z]{8}$"
                           },
                           "number": {
                             "type": "integer",
@@ -2766,7 +2766,7 @@
           {
             "schema": {
               "type": "string",
-              "pattern": "^prj_[0-9a-hjkmnp-tv-z]{6}$"
+              "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8}$"
             },
             "required": true,
             "name": "projectSlug",
@@ -2801,7 +2801,7 @@
                     },
                     "slug": {
                       "type": "string",
-                      "pattern": "^rpt_[0-9a-hjkmnp-tv-z]{6}$"
+                      "pattern": "^rpt_[0-9a-hjkmnp-tv-z]{8}$"
                     },
                     "number": {
                       "type": "integer",
@@ -3163,7 +3163,7 @@
           {
             "schema": {
               "type": "string",
-              "pattern": "^prj_[0-9a-hjkmnp-tv-z]{6}$"
+              "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8}$"
             },
             "required": true,
             "name": "projectSlug",
@@ -3194,7 +3194,7 @@
                     },
                     "slug": {
                       "type": "string",
-                      "pattern": "^rpt_[0-9a-hjkmnp-tv-z]{6}$"
+                      "pattern": "^rpt_[0-9a-hjkmnp-tv-z]{8}$"
                     },
                     "number": {
                       "type": "integer",
@@ -3518,7 +3518,7 @@
           {
             "schema": {
               "type": "string",
-              "pattern": "^prj_[0-9a-hjkmnp-tv-z]{6}$"
+              "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8}$"
             },
             "required": true,
             "name": "projectSlug",
@@ -3564,7 +3564,7 @@
                     },
                     "slug": {
                       "type": "string",
-                      "pattern": "^rpt_[0-9a-hjkmnp-tv-z]{6}$"
+                      "pattern": "^rpt_[0-9a-hjkmnp-tv-z]{8}$"
                     },
                     "number": {
                       "type": "integer",
@@ -3924,7 +3924,7 @@
           {
             "schema": {
               "type": "string",
-              "pattern": "^prj_[0-9a-hjkmnp-tv-z]{6}$"
+              "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8}$"
             },
             "required": true,
             "name": "projectSlug",
@@ -4034,7 +4034,7 @@
           {
             "schema": {
               "type": "string",
-              "pattern": "^prj_[0-9a-hjkmnp-tv-z]{6}$"
+              "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8}$"
             },
             "required": true,
             "name": "projectSlug",
@@ -4085,7 +4085,7 @@
                         },
                         "slug": {
                           "type": "string",
-                          "pattern": "^rpt_[0-9a-hjkmnp-tv-z]{6}$"
+                          "pattern": "^rpt_[0-9a-hjkmnp-tv-z]{8}$"
                         },
                         "number": {
                           "type": "integer",
@@ -4524,7 +4524,7 @@
           {
             "schema": {
               "type": "string",
-              "pattern": "^prj_[0-9a-hjkmnp-tv-z]{6}$"
+              "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8}$"
             },
             "required": true,
             "name": "projectSlug",
@@ -4575,7 +4575,7 @@
                         },
                         "slug": {
                           "type": "string",
-                          "pattern": "^rpt_[0-9a-hjkmnp-tv-z]{6}$"
+                          "pattern": "^rpt_[0-9a-hjkmnp-tv-z]{8}$"
                         },
                         "number": {
                           "type": "integer",
@@ -5014,7 +5014,7 @@
           {
             "schema": {
               "type": "string",
-              "pattern": "^prj_[0-9a-hjkmnp-tv-z]{6}$"
+              "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8}$"
             },
             "required": true,
             "name": "projectSlug",
@@ -5048,7 +5048,7 @@
                         },
                         "slug": {
                           "type": "string",
-                          "pattern": "^rpt_[0-9a-hjkmnp-tv-z]{6}$"
+                          "pattern": "^rpt_[0-9a-hjkmnp-tv-z]{8}$"
                         },
                         "number": {
                           "type": "integer",
@@ -5415,7 +5415,7 @@
           {
             "schema": {
               "type": "string",
-              "pattern": "^prj_[0-9a-hjkmnp-tv-z]{6}$"
+              "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8}$"
             },
             "required": true,
             "name": "projectSlug",
@@ -5581,7 +5581,7 @@
           {
             "schema": {
               "type": "string",
-              "pattern": "^prj_[0-9a-hjkmnp-tv-z]{6}$"
+              "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8}$"
             },
             "required": true,
             "name": "projectSlug",
@@ -5604,7 +5604,7 @@
                     },
                     "projectSlug": {
                       "type": "string",
-                      "pattern": "^prj_[0-9a-hjkmnp-tv-z]{6}$"
+                      "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8}$"
                     }
                   },
                   "required": [
@@ -5704,7 +5704,7 @@
           {
             "schema": {
               "type": "string",
-              "pattern": "^rpt_[0-9a-hjkmnp-tv-z]{6}$"
+              "pattern": "^rpt_[0-9a-hjkmnp-tv-z]{8}$"
             },
             "required": true,
             "name": "reportSlug",
@@ -5727,11 +5727,11 @@
                     },
                     "projectSlug": {
                       "type": "string",
-                      "pattern": "^prj_[0-9a-hjkmnp-tv-z]{6}$"
+                      "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8}$"
                     },
                     "reportSlug": {
                       "type": "string",
-                      "pattern": "^rpt_[0-9a-hjkmnp-tv-z]{6}$"
+                      "pattern": "^rpt_[0-9a-hjkmnp-tv-z]{8}$"
                     },
                     "reportNumber": {
                       "type": "integer",

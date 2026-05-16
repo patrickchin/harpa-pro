@@ -104,7 +104,7 @@ export function projectsCreate(args: ProjectsCreateArgs): Promise<ExitCode> {
     stdout: args.stdout,
     stderr: args.stderr,
     request: () => args.client.POST('/projects', { body }),
-    format: (data) => `${chalk.green('✓')} Created project ${chalk.bold(data.name)} (${data.id})`,
+    format: (data) => `${chalk.green('✓')} Created project ${chalk.bold(data.name)} (${data.slug})`,
   });
 }
 
@@ -130,7 +130,7 @@ export const projectsCreateCommand = defineCommand({
       json: args.json,
       verbose: args.verbose,
       request: () => client.POST('/projects', { body }),
-      format: (data) => `${chalk.green('✓')} Created project ${chalk.bold(data.name)} (${data.id})`,
+      format: (data) => `${chalk.green('✓')} Created project ${chalk.bold(data.name)} (${data.slug})`,
     });
   },
 });
@@ -156,7 +156,7 @@ export function projectsGet(args: ProjectsGetArgs): Promise<ExitCode> {
 export const projectsGetCommand = defineCommand({
   meta: { name: 'get', description: 'Show project details.' },
   args: {
-    id: { type: 'positional', required: true, description: 'Project ID (UUID).' },
+    id: { type: 'positional', required: true, description: 'Project slug (e.g. prj_xxxxxxxx).' },
     json: { type: 'boolean', description: 'Print raw JSON to stdout.' },
     verbose: { type: 'boolean', description: 'Print response metadata to stderr.' },
   },
@@ -199,14 +199,14 @@ export function projectsUpdate(args: ProjectsUpdateArgs): Promise<ExitCode> {
         params: { path: { projectSlug: args.id } },
         body,
       }),
-    format: (data) => `${chalk.green('✓')} Updated project ${chalk.bold(data.name)} (${data.id})`,
+    format: (data) => `${chalk.green('✓')} Updated project ${chalk.bold(data.name)} (${data.slug})`,
   });
 }
 
 export const projectsUpdateCommand = defineCommand({
   meta: { name: 'update', description: 'Update project fields.' },
   args: {
-    id: { type: 'positional', required: true, description: 'Project ID (UUID).' },
+    id: { type: 'positional', required: true, description: 'Project slug (e.g. prj_xxxxxxxx).' },
     name: { type: 'string', description: 'New name (1–200 chars).' },
     'client-name': { type: 'string', description: 'New client name (≤200 chars).' },
     address: { type: 'string', description: 'New address (≤500 chars).' },
@@ -231,7 +231,7 @@ export const projectsUpdateCommand = defineCommand({
           params: { path: { projectSlug: String(args.id) } },
           body,
         }),
-      format: (data) => `${chalk.green('✓')} Updated project ${chalk.bold(data.name)} (${data.id})`,
+      format: (data) => `${chalk.green('✓')} Updated project ${chalk.bold(data.name)} (${data.slug})`,
     });
   },
 });
@@ -258,7 +258,7 @@ export function projectsDelete(args: ProjectsDeleteArgs): Promise<ExitCode> {
 export const projectsDeleteCommand = defineCommand({
   meta: { name: 'delete', description: 'Delete a project (owner only).' },
   args: {
-    id: { type: 'positional', required: true, description: 'Project ID (UUID).' },
+    id: { type: 'positional', required: true, description: 'Project slug (e.g. prj_xxxxxxxx).' },
     json: { type: 'boolean', description: 'Print raw JSON to stdout.' },
     verbose: { type: 'boolean', description: 'Print response metadata to stderr.' },
   },

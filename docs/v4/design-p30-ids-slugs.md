@@ -178,7 +178,7 @@ CREATE INDEX reports_slug_idx ON app.reports(slug);
 
 ```ts
 /**
- * Generate a prefixed slug: `<prefix>_<6-char nanoid>`.
+ * Generate a prefixed slug: `<prefix>_<8-char nanoid>`.
  * Alphabet: Crockford base32 (no I/L/O/U). Output is lowercase.
  */
 export function generateSlug(prefix: 'prj' | 'rpt' | 'fil' | 'not'): string;
@@ -190,7 +190,7 @@ export function generateSlug(prefix: 'prj' | 'rpt' | 'fil' | 'not'): string;
 import { customAlphabet } from 'nanoid';
 
 const ALPHABET = '0123456789abcdefghjkmnpqrstvwxyz'; // Crockford base32, lowercase
-const nanoid = customAlphabet(ALPHABET, 6);
+const nanoid = customAlphabet(ALPHABET, 8);
 
 export function generateSlug(prefix: 'prj' | 'rpt' | 'fil' | 'not'): string {
   return `${prefix}_${nanoid()}`;
@@ -327,19 +327,19 @@ const SLUG_CHARSET = '[0-9a-hjkmnp-tv-z]';
 
 export const projectSlug = z
   .string()
-  .regex(new RegExp(`^prj_${SLUG_CHARSET}{6}$`, 'i'), 'invalid project slug')
+  .regex(new RegExp(`^prj_${SLUG_CHARSET}{8}$`, 'i'), 'invalid project slug')
   .transform(s => s.toLowerCase());
 
 export const reportSlug = z
   .string()
-  .regex(new RegExp(`^rpt_${SLUG_CHARSET}{6}$`, 'i'), 'invalid report slug')
+  .regex(new RegExp(`^rpt_${SLUG_CHARSET}{8}$`, 'i'), 'invalid report slug')
   .transform(s => s.toLowerCase());
 
 export const reportNumber = z.coerce.number().int().positive();
 ```
 
 > The implementation in `_shared.ts` inlines the Crockford-strict regex
-> (`/^prj_[0-9a-hjkmnp-tv-z]{6}$/i`). The earlier draft of this design
+> (`/^prj_[0-9a-hjkmnp-tv-z]{8}$/i`). The earlier draft of this design
 > showed `[0-9a-z]` for brevity; the implementation is authoritative.
 
 ### Branded types (`packages/api-contract/src/index.ts`)
@@ -633,7 +633,7 @@ Updated hooks (param name changes):
 
 **Verification:**
 - `pnpm test:api:integration` green.
-- Manual: `psql` into test DB, `SELECT slug FROM app.projects LIMIT 5;` — all match `prj_[0-9a-z]{6}`.
+- Manual: `psql` into test DB, `SELECT slug FROM app.projects LIMIT 5;` — all match `prj_[0-9a-z]{8}`.
 
 ---
 
@@ -708,7 +708,7 @@ Updated hooks (param name changes):
 
 | Risk | Mitigation | Pitfall reference |
 |---|---|---|---|
-| **Slug collision in production** | Retry loop (2 attempts); 6 chars × 32 = ~10⁹ namespace → collision observable at ~30k rows. Monitor; bump to 8 chars if needed. | N/A (design-level) |
+| **Slug collision in production** | Retry loop (2 attempts); 8 chars × 32 = ~1.1×10¹² namespace → collisions negligible (~50% birthday at ~1.1M rows). | N/A (design-level) |
 | **Integration tests fail after migration** | `beforeAll` re-runs setup; new rows get slugs. Old UUID-based assertions may break → update to use `slug` field. | Pitfall #1 (tests-first) |
 | **Per-request scope bypass** | Every new route MUST pass scope tests proving RLS enforcement. CI blocks merge if `check-scope-tests.sh` fails. | Pitfall #6 |
 | **Mobile typed-routes lag** | `@ts-expect-error` annotations are temporary; commit 4 removes them. CI warns if they persist beyond P3.0. | Pitfall #3 (drift) |
@@ -729,7 +729,7 @@ Updated hooks (param name changes):
 
 1. **UUIDv7 (native PG 17)** for new rows; existing UUIDv4 IDs stay. Testcontainers upgrade to `postgres:17-alpine`.
 2. **Single migration file** (`202605130001_slugs_and_report_numbers.sql`) adds `slug` columns + `number`/`next_report_number`, backfills, adds constraints, switches defaults to `uuid_generate_v7()`.
-3. **Slug generator** (`lib/slug.ts`) uses `nanoid` + Crockford base32 (6 chars). Retry-on-collision at service layer (max 2 attempts). Per-project report numbers via transactional counter.
+3. **Slug generator** (`lib/slug.ts`) uses `nanoid` + Crockford base32 (8 chars). Retry-on-collision at service layer (max 2 attempts). Per-project report numbers via transactional counter.
 4. **API contract** renames path params to `:projectSlug`, `:number`; adds two resolver routes (`/p/:projectSlug`, `/r/:reportSlug`). Scope tests cover slug-based lookups.
 5. **Mobile routing** renames `[id]` → `[projectSlug]`, adds resolver screens (`p/[projectSlug].tsx`, `r/[reportSlug].tsx`). Typed routes + API hooks regenerated post-commit.
 

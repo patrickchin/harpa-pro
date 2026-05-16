@@ -23,8 +23,8 @@ describe('journey: cross-user scope is 404 everywhere', () => {
 
     const project = (await (await app.request('/projects', {
       method: 'POST', headers: a.headers, body: JSON.stringify({ name: 'Private' }),
-    })).json()) as { id: string };
-    const report = (await (await app.request(`/projects/${project.id}/reports`, {
+    })).json()) as { id: string; slug: string };
+    const report = (await (await app.request(`/projects/${project.slug}/reports`, {
       method: 'POST', headers: a.headers,
       body: JSON.stringify({ visitDate: '2026-05-15T08:00:00.000Z' }),
     })).json()) as { id: string };
@@ -32,8 +32,8 @@ describe('journey: cross-user scope is 404 everywhere', () => {
       method: 'POST', headers: a.headers, body: JSON.stringify({ kind: 'text', body: 'secret' }),
     })).json()) as { id: string };
 
-    expect((await app.request(`/projects/${project.id}`, { headers: b.headers })).status).toBe(404);
-    expect((await app.request(`/projects/${project.id}/reports`, { headers: b.headers })).status).toBe(404);
+    expect((await app.request(`/projects/${project.slug}`, { headers: b.headers })).status).toBe(404);
+    expect((await app.request(`/projects/${project.slug}/reports`, { headers: b.headers })).status).toBe(404);
     expect((await app.request(`/reports/${report.id}`, { headers: b.headers })).status).toBe(404);
     expect((await app.request(`/reports/${report.id}/notes`, { headers: b.headers })).status).toBe(404);
 
@@ -42,7 +42,7 @@ describe('journey: cross-user scope is 404 everywhere', () => {
     const items = ((await list.json()) as { items: Array<{ id: string }> }).items;
     expect(items.find((p) => p.id === project.id)).toBeUndefined();
 
-    expect((await app.request(`/projects/${project.id}`, {
+    expect((await app.request(`/projects/${project.slug}`, {
       method: 'PATCH', headers: b.headers, body: JSON.stringify({ name: 'pwn' }),
     })).status).toBe(404);
     expect((await app.request(`/reports/${report.id}`, { method: 'DELETE', headers: b.headers })).status).toBe(404);

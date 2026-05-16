@@ -17,8 +17,8 @@ describe('journey: notes timeline', () => {
 
     const project = (await (await app.request('/projects', {
       method: 'POST', headers: me.headers, body: JSON.stringify({ name: 'Notes' }),
-    })).json()) as { id: string };
-    const report = (await (await app.request(`/projects/${project.id}/reports`, {
+    })).json()) as { id: string; slug: string };
+    const report = (await (await app.request(`/projects/${project.slug}/reports`, {
       method: 'POST', headers: me.headers,
       body: JSON.stringify({ visitDate: '2026-05-15T08:00:00.000Z' }),
     })).json()) as { id: string };

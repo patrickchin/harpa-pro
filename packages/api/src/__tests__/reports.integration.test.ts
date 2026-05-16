@@ -88,7 +88,7 @@ describe('reports CRUD', () => {
     expect(body.status).toBe('draft');
     expect(body.projectId).toBe(aliceProj);
     // P3.0 Commit 2: response carries `rpt_` slug + per-project number.
-    expect(body.slug).toMatch(/^rpt_[0-9a-hjkmnp-tv-z]{6}$/);
+    expect(body.slug).toMatch(/^rpt_[0-9a-hjkmnp-tv-z]{8}$/);
     expect(body.number).toBeGreaterThanOrEqual(1);
     aliceReport = body.id;
     aliceReportNumber = body.number;
@@ -112,7 +112,7 @@ describe('reports CRUD', () => {
     const secondBody = (await second.json()) as { number: number; slug: string };
     expect(secondBody.number).toBe(firstBody.number + 1);
     // Slugs are globally unique even within a single project.
-    expect(secondBody.slug).toMatch(/^rpt_[0-9a-hjkmnp-tv-z]{6}$/);
+    expect(secondBody.slug).toMatch(/^rpt_[0-9a-hjkmnp-tv-z]{8}$/);
   });
 
   it('POST 404 when caller is not member of the project', async () => {

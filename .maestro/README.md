@@ -24,6 +24,26 @@ pnpm --filter @harpa/mobile start --dev-client
 maestro test .maestro/p3-action-buttons.yaml
 ```
 
+For long batched runs, wrap with `gtimeout` to recover from
+occasional XCUITest driver hangs (see "Known infra quirks"):
+
+```bash
+# coreutils provides gtimeout (brew install coreutils)
+for i in $(seq 1 N); do
+  gtimeout 240 maestro test .maestro/p3-action-buttons.yaml || {
+    # kill any leftover xcodebuild test-without-building drivers
+    for PID in $(ps aux | grep maestro-driver-ios | grep -v grep | awk '{print $2}'); do
+      kill "$PID" 2>/dev/null
+    done
+    sleep 5
+  }
+done
+```
+
+Stability seen locally: ~8/10 runs PASS, 0/10 logic failures,
+~2/10 infra hangs (recovered by killing the leftover xcodebuild
+driver process).
+
 The flow uses fake OTP `000000` (via `TWILIO_VERIFY_FAKE_CODE` in
 fixture mode) and creates a fresh project per run that it deletes at
 the end via the real `dialog-action-0` confirm button.
@@ -64,6 +84,14 @@ the end via the real `dialog-action-0` confirm button.
 - Software keyboard occludes bottom buttons; use `hideKeyboard` +
   `scrollUntilVisible` before tapping `btn-save-project` /
   `btn-delete-project`.
+
+**Known infra quirks:**
+
+- XCUITest driver occasionally returns
+  `kAXErrorInvalidUIElement` and Maestro hangs retrying. Mitigation:
+  wrap `maestro test` in `gtimeout 240s` and `kill` the leftover
+  `maestro-driver-ios` xcodebuild process between attempts.
+  Roughly 1-in-5 frequency on iPhone 17 Pro / iOS 26.5 sim.
 
 ## `tmp-p3-smoke/`
 

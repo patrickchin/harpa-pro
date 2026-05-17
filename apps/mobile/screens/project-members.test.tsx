@@ -52,6 +52,7 @@ const defaults = {
   onAddMember: vi.fn(),
   isAddPending: false,
   addError: null,
+  addSuccessNonce: 0,
   onRemoveMember: vi.fn(),
   isRemovePending: false,
 };
@@ -129,5 +130,40 @@ describe('ProjectMembers', () => {
       />,
     );
     expect(collectText(tree.toJSON())).toContain('No team members yet');
+  });
+
+  it('keeps invite form open when the mutation fails (error stays visible)', () => {
+    const tree = render(
+      <ProjectMembers {...defaults} addError="User not found." />,
+    );
+    act(() => tree.root.findByProps({ testID: 'btn-add-member' }).props.onPress());
+    act(() =>
+      tree.root
+        .findByProps({ testID: 'input-invite-phone' })
+        .props.onChangeText('+15550000999'),
+    );
+    act(() => tree.root.findByProps({ testID: 'btn-invite-submit' }).props.onPress());
+    // Form still mounted and error notice still rendered.
+    expect(() =>
+      tree.root.findByProps({ testID: 'btn-invite-submit' }),
+    ).not.toThrow();
+    expect(collectText(tree.toJSON())).toContain('User not found.');
+  });
+
+  it('closes invite form when addSuccessNonce increments (success)', () => {
+    const tree = render(<ProjectMembers {...defaults} />);
+    act(() => tree.root.findByProps({ testID: 'btn-add-member' }).props.onPress());
+    expect(() =>
+      tree.root.findByProps({ testID: 'btn-invite-submit' }),
+    ).not.toThrow();
+    act(() => {
+      tree.update(<ProjectMembers {...defaults} addSuccessNonce={1} />);
+    });
+    expect(
+      tree.root.findAllByProps({ testID: 'btn-invite-submit' }),
+    ).toHaveLength(0);
+    expect(() =>
+      tree.root.findByProps({ testID: 'btn-add-member' }),
+    ).not.toThrow();
   });
 });

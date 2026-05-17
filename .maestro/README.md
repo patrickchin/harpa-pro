@@ -2,10 +2,52 @@
 
 End-to-end mobile flows run via [Maestro](https://maestro.mobile.dev/).
 
-## `p3-action-buttons.yaml`
+## `core-end-to-end.yaml` (canonical full journey)
 
-Covers every action button shipped through P3.8 against the **real**
-`(auth)` + `(app)` routes (not the `(dev)` gallery).
+The P3-exit-gate full-journey flow. Walks every currently-shipped
+user-visible feature on the real `(auth)` + `(app)` routes:
+
+- sign-up → onboarding (fresh account each run, via `scripts/maestro/reset-db.sh`)
+- projects list, new project, copy buttons
+- members: invite (editor role), filter buttons, back
+- project edit + save
+- reports list + new report
+- generate report tabs: notes (voice record), report (edit-manually),
+  edit (7 section cards), finalize confirm dialog
+- attachment picker dialog (open + cancel)
+- project delete (cleanup)
+
+**Setup (one-time per box):**
+
+```bash
+docker compose up -d
+pnpm --filter @harpa/mobile start --dev-client     # real API mode
+xcrun simctl privacy booted grant microphone com.harpa.pro
+xcrun simctl privacy booted grant camera     com.harpa.pro
+```
+
+**Run:**
+
+```bash
+./scripts/maestro/reset-db.sh                      # wipe + seed user B
+maestro test .maestro/core-end-to-end.yaml
+```
+
+Stability seen locally (after fixing the deep-link race and the
+filter-button hang): **5/5 PASS** in a row. Wrap with `gtimeout 240`
+for longer batches; on a hung XCTest driver, `kill` the leftover
+`maestro-driver-ios` PID and retry.
+
+The flow uses fake OTP `000000` (via `TWILIO_VERIFY_FAKE_CODE` in
+fixture mode). The seeded invite target (`+15550100200`, Bob Editor)
+is reseeded by `reset-db.sh` so the invite step always finds a real
+user. The flow deletes the project at the end.
+
+## `p3-action-buttons.yaml` (legacy, kept for diff context)
+
+Predecessor to `core-end-to-end.yaml`. Covers fewer features
+(sign-in only, no invite role filter, no edit-manually). Kept around
+until `core-end-to-end.yaml` is wired into CI; safe to delete after.
 
 **Setup (one-time):**
 

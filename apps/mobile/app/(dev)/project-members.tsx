@@ -69,6 +69,7 @@ export default function DevProjectMembers() {
         onAddMember={() => undefined}
         isAddPending={false}
         addError={null}
+        addSuccessNonce={0}
         onRemoveMember={() => undefined}
         isRemovePending={false}
       />

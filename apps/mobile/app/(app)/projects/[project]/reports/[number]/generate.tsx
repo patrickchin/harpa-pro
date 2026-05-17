@@ -110,6 +110,7 @@ export default function GenerateReportRoute() {
       canWrite={canWrite}
       onBack={() => safeBack(router, `/(app)/projects/${slug}/reports`)}
       report={generatedReport}
+      onSetReport={setGeneratedReport}
       isGeneratingReport={isGeneratingReport}
       generationError={generationError}
       onRegenerate={handleRegenerate}

@@ -10,7 +10,7 @@
  * Inline AddMemberForm + remove-confirm dialog keep this one body file
  * self-contained (no separate components/members/ tree to port).
  */
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -53,6 +53,14 @@ export type ProjectMembersProps = {
   onAddMember: (input: { phone: string; role: 'editor' | 'viewer' }) => void;
   isAddPending: boolean;
   addError: string | null;
+  /**
+   * Monotonically increasing counter incremented by the route on each
+   * successful invite. The form watches this and closes itself only
+   * when a real success is observed — fixes the original bug where
+   * `if (!addError) setShowAdd(false)` ran synchronously against
+   * stale state and hid the error notice from failed invites.
+   */
+  addSuccessNonce: number;
   onRemoveMember: (userId: string) => void;
   isRemovePending: boolean;
 };
@@ -208,10 +216,15 @@ export function ProjectMembers({
   onAddMember,
   isAddPending,
   addError,
+  addSuccessNonce,
   onRemoveMember,
   isRemovePending,
 }: ProjectMembersProps) {
   const [showAdd, setShowAdd] = useState(false);
+
+  useEffect(() => {
+    if (addSuccessNonce > 0) setShowAdd(false);
+  }, [addSuccessNonce]);
   const [roleFilter, setRoleFilter] = useState<MemberRole | null>(null);
   const [memberToRemove, setMemberToRemove] = useState<MemberRow | null>(null);
 
@@ -283,10 +296,7 @@ export function ProjectMembers({
           {canManage ? (
             showAdd ? (
               <AddMemberForm
-                onAdd={(input) => {
-                  onAddMember(input);
-                  if (!addError) setShowAdd(false);
-                }}
+                onAdd={onAddMember}
                 isPending={isAddPending}
                 errorMessage={addError}
               />

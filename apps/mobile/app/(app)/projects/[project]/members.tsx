@@ -1,6 +1,7 @@
 /**
  * Project members — real route wiring members + invite/remove mutations.
  */
+import { useState } from 'react';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { ProjectMembers } from '@/screens/project-members';
 import {
@@ -27,7 +28,10 @@ export default function ProjectMembersRoute() {
     { params: { project: slug } },
     { enabled: slug.length > 0 },
   );
-  const add = useAddProjectMemberMutation();
+  const [addSuccessNonce, setAddSuccessNonce] = useState(0);
+  const add = useAddProjectMemberMutation({
+    onSuccess: () => setAddSuccessNonce((n) => n + 1),
+  });
   const remove = useRemoveProjectMemberMutation();
 
   const { refreshing, onRefresh } = useRefresh([
@@ -55,6 +59,7 @@ export default function ProjectMembersRoute() {
       }
       isAddPending={add.isPending}
       addError={addError}
+      addSuccessNonce={addSuccessNonce}
       onRemoveMember={(userId) =>
         remove.mutate({ params: { project: slug, user: userId } })
       }

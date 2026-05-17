@@ -24,10 +24,9 @@ coverage/
 # Env
 .env
 .env.local
-.env.*.local
-.env.deploy
+.env.prod
+.env.dev
 !.env.example
-!.env.deploy.example
 
 # Expo / RN
 .expo/

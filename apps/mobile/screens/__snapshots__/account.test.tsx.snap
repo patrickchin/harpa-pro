@@ -1,0 +1,234 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Account > matches snapshot at default props 1`] = `
+<rn-View
+  className="flex-1 bg-background"
+  style={
+    [
+      {
+        "paddingBottom": 34,
+        "paddingLeft": 0,
+        "paddingRight": 0,
+        "paddingTop": 44,
+      },
+      undefined,
+    ]
+  }
+  testID="screen-account"
+>
+  <rn-View
+    className="flex-1"
+  >
+    <rn-View
+      className="px-5 py-4"
+    >
+      <rn-View
+        className="gap-3"
+      >
+        <rn-View
+          className="min-h-touch flex-row items-center gap-3"
+        >
+          <rn-Pressable
+            accessibilityLabel="Back to Profile"
+            accessibilityRole="button"
+            className="flex-row items-center justify-center rounded-md border border-border bg-card active:opacity-90 min-h-touch py-3 px-4"
+            disabled={false}
+            onPress={[MockFunction spy]}
+            style={
+              [
+                {
+                  "elevation": 2,
+                  "shadowColor": "#1a1a2e",
+                  "shadowOffset": {
+                    "height": 2,
+                    "width": 0,
+                  },
+                  "shadowOpacity": 0.08,
+                  "shadowRadius": 8,
+                },
+                undefined,
+              ]
+            }
+            testID="btn-back"
+          >
+            <lucide-ArrowLeft
+              color="#2d3a5a"
+              size={16}
+            />
+          </rn-Pressable>
+          <rn-Text
+            className="min-w-0 flex-1 text-title-sm text-foreground"
+            ellipsizeMode="tail"
+            numberOfLines={1}
+            testID="screen-header-title"
+          >
+            Account Details
+          </rn-Text>
+          <rn-View
+            className="shrink-0 flex-row items-center gap-2"
+          />
+        </rn-View>
+      </rn-View>
+    </rn-View>
+    <rn-View
+      className="flex-1"
+    >
+      <rn-ScrollView
+        className="flex-1 px-5"
+        contentContainerStyle={
+          {
+            "gap": 20,
+          }
+        }
+        refreshControl={
+          <RN.RefreshControl
+            onRefresh={[MockFunction spy]}
+            refreshing={false}
+          />
+        }
+      >
+        <rn-View
+          className="items-center pt-2"
+        >
+          <rn-View
+            className="h-24 w-24 items-center justify-center rounded-full border border-border bg-card"
+            testID="account-avatar-placeholder"
+          >
+            <lucide-User
+              color="#5f5b66"
+              size={40}
+            />
+          </rn-View>
+        </rn-View>
+        <rn-View
+          className="rounded-md border px-4 py-3 border-info-border bg-info-soft"
+          style={
+            {
+              "elevation": 2,
+              "shadowColor": "#1a1a2e",
+              "shadowOffset": {
+                "height": 2,
+                "width": 0,
+              },
+              "shadowOpacity": 0.08,
+              "shadowRadius": 8,
+            }
+          }
+        >
+          <rn-Text
+            className="text-sm text-info-text"
+            selectable={true}
+          >
+            Phone numbers are managed through sign-in. Contact support if you need to recover access to a different number.
+          </rn-Text>
+        </rn-View>
+        <rn-View
+          className="gap-2"
+        >
+          <rn-Text
+            className="text-label text-muted-foreground"
+          >
+            Phone
+          </rn-Text>
+          <rn-TextInput
+            className="min-h-touch rounded-md border px-4 py-3 text-base border-border bg-surface-muted text-muted-foreground"
+            editable={false}
+            placeholderTextColor="#5f5b66"
+            style={
+              [
+                {
+                  "elevation": 0,
+                  "shadowColor": "#1a1a2e",
+                  "shadowOffset": {
+                    "height": 0,
+                    "width": 0,
+                  },
+                  "shadowOpacity": 0,
+                  "shadowRadius": 0,
+                },
+                {
+                  "paddingBottom": 0,
+                  "paddingTop": 0,
+                  "textAlignVertical": "center",
+                },
+                undefined,
+              ]
+            }
+            value="+15551234567"
+          />
+        </rn-View>
+        <rn-View
+          className="gap-2"
+        >
+          <rn-Text
+            className="text-label text-muted-foreground"
+          >
+            Full Name
+          </rn-Text>
+          <rn-TextInput
+            className="min-h-touch rounded-md border px-4 py-3 text-base border-border bg-surface-muted text-muted-foreground"
+            editable={false}
+            placeholderTextColor="#5f5b66"
+            style={
+              [
+                {
+                  "elevation": 0,
+                  "shadowColor": "#1a1a2e",
+                  "shadowOffset": {
+                    "height": 0,
+                    "width": 0,
+                  },
+                  "shadowOpacity": 0,
+                  "shadowRadius": 0,
+                },
+                {
+                  "paddingBottom": 0,
+                  "paddingTop": 0,
+                  "textAlignVertical": "center",
+                },
+                undefined,
+              ]
+            }
+            value="Jordan Sims"
+          />
+        </rn-View>
+        <rn-View
+          className="gap-2"
+        >
+          <rn-Text
+            className="text-label text-muted-foreground"
+          >
+            Company Name
+          </rn-Text>
+          <rn-TextInput
+            className="min-h-touch rounded-md border px-4 py-3 text-base border-border bg-surface-muted text-muted-foreground"
+            editable={false}
+            placeholderTextColor="#5f5b66"
+            style={
+              [
+                {
+                  "elevation": 0,
+                  "shadowColor": "#1a1a2e",
+                  "shadowOffset": {
+                    "height": 0,
+                    "width": 0,
+                  },
+                  "shadowOpacity": 0,
+                  "shadowRadius": 0,
+                },
+                {
+                  "paddingBottom": 0,
+                  "paddingTop": 0,
+                  "textAlignVertical": "center",
+                },
+                undefined,
+              ]
+            }
+            value="Sims Construction"
+          />
+        </rn-View>
+      </rn-ScrollView>
+    </rn-View>
+  </rn-View>
+</rn-View>
+`;

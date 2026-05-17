@@ -1,0 +1,917 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Usage > matches snapshot at default props 1`] = `
+<rn-View
+  className="flex-1 bg-background"
+  style={
+    [
+      {
+        "paddingBottom": 0,
+        "paddingLeft": 0,
+        "paddingRight": 0,
+        "paddingTop": 44,
+      },
+      undefined,
+    ]
+  }
+  testID="screen-usage"
+>
+  <rn-View
+    className="flex-1"
+  >
+    <rn-View
+      className="px-5 py-4"
+    >
+      <rn-View
+        className="gap-3"
+      >
+        <rn-View
+          className="min-h-touch flex-row items-center gap-3"
+        >
+          <rn-Pressable
+            accessibilityLabel="Back to Profile"
+            accessibilityRole="button"
+            className="flex-row items-center justify-center rounded-md border border-border bg-card active:opacity-90 min-h-touch py-3 px-4"
+            disabled={false}
+            onPress={[MockFunction spy]}
+            style={
+              [
+                {
+                  "elevation": 2,
+                  "shadowColor": "#1a1a2e",
+                  "shadowOffset": {
+                    "height": 2,
+                    "width": 0,
+                  },
+                  "shadowOpacity": 0.08,
+                  "shadowRadius": 8,
+                },
+                undefined,
+              ]
+            }
+            testID="btn-back"
+          >
+            <lucide-ArrowLeft
+              color="#2d3a5a"
+              size={16}
+            />
+          </rn-Pressable>
+          <rn-Text
+            className="min-w-0 flex-1 text-title-sm text-foreground"
+            ellipsizeMode="tail"
+            numberOfLines={1}
+            testID="screen-header-title"
+          >
+            Usage History
+          </rn-Text>
+          <rn-View
+            className="shrink-0 flex-row items-center gap-2"
+          />
+        </rn-View>
+      </rn-View>
+    </rn-View>
+    <rn-View
+      className="flex-1"
+    >
+      <rn-ScrollView
+        className="flex-1"
+        contentContainerStyle={
+          {
+            "gap": 16,
+            "paddingBottom": 40,
+            "paddingHorizontal": 20,
+          }
+        }
+        refreshControl={
+          <RN.RefreshControl
+            onRefresh={[MockFunction spy]}
+            refreshing={false}
+          />
+        }
+      >
+        <rn-View
+          className="flex-row items-start justify-between gap-3"
+        >
+          <rn-View
+            className="flex-1 flex-row items-start gap-3"
+          >
+            <rn-View
+              className="mt-0.5 h-9 w-9 items-center justify-center rounded-sm border border-border bg-card"
+            >
+              <lucide-Zap
+                color="#2d3a5a"
+                size={18}
+              />
+            </rn-View>
+            <rn-View
+              className="flex-1 gap-1"
+            >
+              <rn-Text
+                className="text-label text-foreground"
+              >
+                All-Time Summary
+              </rn-Text>
+            </rn-View>
+          </rn-View>
+        </rn-View>
+        <rn-View
+          className="flex-row flex-wrap gap-3"
+        >
+          <rn-View
+            className="flex-1 items-center justify-center rounded-lg border px-3 py-3 border-border bg-card min-h-[82px] min-w-[46%]"
+            style={
+              {
+                "elevation": 2,
+                "shadowColor": "#1a1a2e",
+                "shadowOffset": {
+                  "height": 2,
+                  "width": 0,
+                },
+                "shadowOpacity": 0.08,
+                "shadowRadius": 8,
+              }
+            }
+          >
+            <rn-Text
+              className="text-metric text-foreground"
+            >
+              35
+            </rn-Text>
+            <rn-Text
+              className="mt-1 text-label text-muted-foreground"
+            >
+              Reports
+            </rn-Text>
+          </rn-View>
+          <rn-View
+            className="flex-1 items-center justify-center rounded-lg border px-3 py-3 border-border bg-card min-h-[82px] min-w-[46%]"
+            style={
+              {
+                "elevation": 2,
+                "shadowColor": "#1a1a2e",
+                "shadowOffset": {
+                  "height": 2,
+                  "width": 0,
+                },
+                "shadowOpacity": 0.08,
+                "shadowRadius": 8,
+              }
+            }
+          >
+            <rn-Text
+              className="text-metric text-foreground"
+            >
+              95
+            </rn-Text>
+            <rn-Text
+              className="mt-1 text-label text-muted-foreground"
+            >
+              Voice Notes
+            </rn-Text>
+          </rn-View>
+        </rn-View>
+        <rn-View
+          className="flex-row items-start justify-between gap-3"
+        >
+          <rn-View
+            className="flex-1 flex-row items-start gap-3"
+          >
+            <rn-View
+              className="flex-1 gap-1"
+            >
+              <rn-Text
+                className="text-label text-foreground"
+              >
+                Monthly Breakdown
+              </rn-Text>
+              <rn-Text
+                className="text-sm text-muted-foreground"
+              >
+                Tap a month to see details
+              </rn-Text>
+            </rn-View>
+          </rn-View>
+        </rn-View>
+        <rn-View>
+          <rn-View
+            className="rounded-lg border border-border bg-card p-4 gap-3"
+            style={
+              [
+                {
+                  "elevation": 2,
+                  "shadowColor": "#1a1a2e",
+                  "shadowOffset": {
+                    "height": 2,
+                    "width": 0,
+                  },
+                  "shadowOpacity": 0.08,
+                  "shadowRadius": 8,
+                },
+                undefined,
+              ]
+            }
+          >
+            <rn-Pressable
+              accessibilityLabel="November 2024, expand"
+              accessibilityRole="button"
+              className="flex-row items-center justify-between"
+              onPress={[Function]}
+              testID="usage-month-2024-11"
+            >
+              <rn-View
+                className="flex-1"
+              >
+                <rn-Text
+                  className="text-title-sm text-foreground"
+                >
+                  November 2024
+                </rn-Text>
+                <rn-Text
+                  className="mt-0.5 text-sm text-muted-foreground"
+                >
+                  12 reports
+                   · 
+                  34 voice notes
+                </rn-Text>
+              </rn-View>
+              <lucide-ChevronDown
+                color="#5f5b66"
+                size={18}
+              />
+            </rn-Pressable>
+          </rn-View>
+        </rn-View>
+        <rn-View>
+          <rn-View
+            className="rounded-lg border border-border bg-card p-4 gap-3"
+            style={
+              [
+                {
+                  "elevation": 2,
+                  "shadowColor": "#1a1a2e",
+                  "shadowOffset": {
+                    "height": 2,
+                    "width": 0,
+                  },
+                  "shadowOpacity": 0.08,
+                  "shadowRadius": 8,
+                },
+                undefined,
+              ]
+            }
+          >
+            <rn-Pressable
+              accessibilityLabel="October 2024, expand"
+              accessibilityRole="button"
+              className="flex-row items-center justify-between"
+              onPress={[Function]}
+              testID="usage-month-2024-10"
+            >
+              <rn-View
+                className="flex-1"
+              >
+                <rn-Text
+                  className="text-title-sm text-foreground"
+                >
+                  October 2024
+                </rn-Text>
+                <rn-Text
+                  className="mt-0.5 text-sm text-muted-foreground"
+                >
+                  8 reports
+                   · 
+                  21 voice notes
+                </rn-Text>
+              </rn-View>
+              <lucide-ChevronDown
+                color="#5f5b66"
+                size={18}
+              />
+            </rn-Pressable>
+          </rn-View>
+        </rn-View>
+        <rn-View>
+          <rn-View
+            className="rounded-lg border border-border bg-card p-4 gap-3"
+            style={
+              [
+                {
+                  "elevation": 2,
+                  "shadowColor": "#1a1a2e",
+                  "shadowOffset": {
+                    "height": 2,
+                    "width": 0,
+                  },
+                  "shadowOpacity": 0.08,
+                  "shadowRadius": 8,
+                },
+                undefined,
+              ]
+            }
+          >
+            <rn-Pressable
+              accessibilityLabel="September 2024, expand"
+              accessibilityRole="button"
+              className="flex-row items-center justify-between"
+              onPress={[Function]}
+              testID="usage-month-2024-09"
+            >
+              <rn-View
+                className="flex-1"
+              >
+                <rn-Text
+                  className="text-title-sm text-foreground"
+                >
+                  September 2024
+                </rn-Text>
+                <rn-Text
+                  className="mt-0.5 text-sm text-muted-foreground"
+                >
+                  15 reports
+                   · 
+                  40 voice notes
+                </rn-Text>
+              </rn-View>
+              <lucide-ChevronDown
+                color="#5f5b66"
+                size={18}
+              />
+            </rn-Pressable>
+          </rn-View>
+        </rn-View>
+        <rn-View
+          className="flex-row items-start justify-between gap-3"
+        >
+          <rn-View
+            className="flex-1 flex-row items-start gap-3"
+          >
+            <rn-View
+              className="mt-0.5 h-9 w-9 items-center justify-center rounded-sm border border-border bg-card"
+            >
+              <lucide-DollarSign
+                color="#2d3a5a"
+                size={18}
+              />
+            </rn-View>
+            <rn-View
+              className="flex-1 gap-1"
+            >
+              <rn-Text
+                className="text-label text-foreground"
+              >
+                Token Pricing Reference
+              </rn-Text>
+              <rn-Text
+                className="text-sm text-muted-foreground"
+              >
+                Cost per 1M tokens (USD)
+              </rn-Text>
+            </rn-View>
+          </rn-View>
+        </rn-View>
+        <rn-View
+          className="rounded-lg border border-border bg-card p-4 gap-3"
+          style={
+            [
+              {
+                "elevation": 2,
+                "shadowColor": "#1a1a2e",
+                "shadowOffset": {
+                  "height": 2,
+                  "width": 0,
+                },
+                "shadowOpacity": 0.08,
+                "shadowRadius": 8,
+              },
+              undefined,
+            ]
+          }
+        >
+          <rn-View
+            className="flex-row items-center justify-between"
+          >
+            <rn-View
+              className="flex-1 gap-0.5"
+            >
+              <rn-Text
+                className="text-sm font-medium text-foreground"
+              >
+                GPT-4o Mini
+              </rn-Text>
+              <rn-Text
+                className="text-xs text-muted-foreground"
+              >
+                OpenAI
+              </rn-Text>
+            </rn-View>
+            <rn-View
+              className="flex-row gap-4"
+            >
+              <rn-View
+                className="items-end"
+              >
+                <rn-Text
+                  className="text-sm text-foreground"
+                >
+                  $0.15
+                </rn-Text>
+                <rn-Text
+                  className="text-xs text-muted-foreground"
+                >
+                  in
+                </rn-Text>
+              </rn-View>
+              <rn-View
+                className="items-end"
+              >
+                <rn-Text
+                  className="text-sm text-foreground"
+                >
+                  $0.60
+                </rn-Text>
+                <rn-Text
+                  className="text-xs text-muted-foreground"
+                >
+                  out
+                </rn-Text>
+              </rn-View>
+            </rn-View>
+          </rn-View>
+          <rn-View
+            className="flex-row items-center justify-between"
+          >
+            <rn-View
+              className="flex-1 gap-0.5"
+            >
+              <rn-Text
+                className="text-sm font-medium text-foreground"
+              >
+                GPT-4o
+              </rn-Text>
+              <rn-Text
+                className="text-xs text-muted-foreground"
+              >
+                OpenAI
+              </rn-Text>
+            </rn-View>
+            <rn-View
+              className="flex-row gap-4"
+            >
+              <rn-View
+                className="items-end"
+              >
+                <rn-Text
+                  className="text-sm text-foreground"
+                >
+                  $2.50
+                </rn-Text>
+                <rn-Text
+                  className="text-xs text-muted-foreground"
+                >
+                  in
+                </rn-Text>
+              </rn-View>
+              <rn-View
+                className="items-end"
+              >
+                <rn-Text
+                  className="text-sm text-foreground"
+                >
+                  $10.00
+                </rn-Text>
+                <rn-Text
+                  className="text-xs text-muted-foreground"
+                >
+                  out
+                </rn-Text>
+              </rn-View>
+            </rn-View>
+          </rn-View>
+          <rn-View
+            className="flex-row items-center justify-between"
+          >
+            <rn-View
+              className="flex-1 gap-0.5"
+            >
+              <rn-Text
+                className="text-sm font-medium text-foreground"
+              >
+                Claude Sonnet
+              </rn-Text>
+              <rn-Text
+                className="text-xs text-muted-foreground"
+              >
+                Anthropic
+              </rn-Text>
+            </rn-View>
+            <rn-View
+              className="flex-row gap-4"
+            >
+              <rn-View
+                className="items-end"
+              >
+                <rn-Text
+                  className="text-sm text-foreground"
+                >
+                  $3.00
+                </rn-Text>
+                <rn-Text
+                  className="text-xs text-muted-foreground"
+                >
+                  in
+                </rn-Text>
+              </rn-View>
+              <rn-View
+                className="items-end"
+              >
+                <rn-Text
+                  className="text-sm text-foreground"
+                >
+                  $15.00
+                </rn-Text>
+                <rn-Text
+                  className="text-xs text-muted-foreground"
+                >
+                  out
+                </rn-Text>
+              </rn-View>
+            </rn-View>
+          </rn-View>
+          <rn-View
+            className="flex-row items-center justify-between"
+          >
+            <rn-View
+              className="flex-1 gap-0.5"
+            >
+              <rn-Text
+                className="text-sm font-medium text-foreground"
+              >
+                Claude Haiku
+              </rn-Text>
+              <rn-Text
+                className="text-xs text-muted-foreground"
+              >
+                Anthropic
+              </rn-Text>
+            </rn-View>
+            <rn-View
+              className="flex-row gap-4"
+            >
+              <rn-View
+                className="items-end"
+              >
+                <rn-Text
+                  className="text-sm text-foreground"
+                >
+                  $0.25
+                </rn-Text>
+                <rn-Text
+                  className="text-xs text-muted-foreground"
+                >
+                  in
+                </rn-Text>
+              </rn-View>
+              <rn-View
+                className="items-end"
+              >
+                <rn-Text
+                  className="text-sm text-foreground"
+                >
+                  $1.25
+                </rn-Text>
+                <rn-Text
+                  className="text-xs text-muted-foreground"
+                >
+                  out
+                </rn-Text>
+              </rn-View>
+            </rn-View>
+          </rn-View>
+          <rn-View
+            className="flex-row items-center justify-between"
+          >
+            <rn-View
+              className="flex-1 gap-0.5"
+            >
+              <rn-Text
+                className="text-sm font-medium text-foreground"
+              >
+                Gemini 2.0 Flash
+              </rn-Text>
+              <rn-Text
+                className="text-xs text-muted-foreground"
+              >
+                Google
+              </rn-Text>
+            </rn-View>
+            <rn-View
+              className="flex-row gap-4"
+            >
+              <rn-View
+                className="items-end"
+              >
+                <rn-Text
+                  className="text-sm text-foreground"
+                >
+                  $0.10
+                </rn-Text>
+                <rn-Text
+                  className="text-xs text-muted-foreground"
+                >
+                  in
+                </rn-Text>
+              </rn-View>
+              <rn-View
+                className="items-end"
+              >
+                <rn-Text
+                  className="text-sm text-foreground"
+                >
+                  $0.40
+                </rn-Text>
+                <rn-Text
+                  className="text-xs text-muted-foreground"
+                >
+                  out
+                </rn-Text>
+              </rn-View>
+            </rn-View>
+          </rn-View>
+          <rn-View
+            className="flex-row items-center justify-between"
+          >
+            <rn-View
+              className="flex-1 gap-0.5"
+            >
+              <rn-Text
+                className="text-sm font-medium text-foreground"
+              >
+                Moonshot
+              </rn-Text>
+              <rn-Text
+                className="text-xs text-muted-foreground"
+              >
+                Kimi
+              </rn-Text>
+            </rn-View>
+            <rn-View
+              className="flex-row gap-4"
+            >
+              <rn-View
+                className="items-end"
+              >
+                <rn-Text
+                  className="text-sm text-foreground"
+                >
+                  $0.14
+                </rn-Text>
+                <rn-Text
+                  className="text-xs text-muted-foreground"
+                >
+                  in
+                </rn-Text>
+              </rn-View>
+              <rn-View
+                className="items-end"
+              >
+                <rn-Text
+                  className="text-sm text-foreground"
+                >
+                  $0.28
+                </rn-Text>
+                <rn-Text
+                  className="text-xs text-muted-foreground"
+                >
+                  out
+                </rn-Text>
+              </rn-View>
+            </rn-View>
+          </rn-View>
+          <rn-View
+            className="flex-row items-center justify-between"
+          >
+            <rn-View
+              className="flex-1 gap-0.5"
+            >
+              <rn-Text
+                className="text-sm font-medium text-foreground"
+              >
+                K2
+              </rn-Text>
+              <rn-Text
+                className="text-xs text-muted-foreground"
+              >
+                Kimi
+              </rn-Text>
+            </rn-View>
+            <rn-View
+              className="flex-row gap-4"
+            >
+              <rn-View
+                className="items-end"
+              >
+                <rn-Text
+                  className="text-sm text-foreground"
+                >
+                  $0.55
+                </rn-Text>
+                <rn-Text
+                  className="text-xs text-muted-foreground"
+                >
+                  in
+                </rn-Text>
+              </rn-View>
+              <rn-View
+                className="items-end"
+              >
+                <rn-Text
+                  className="text-sm text-foreground"
+                >
+                  $2.19
+                </rn-Text>
+                <rn-Text
+                  className="text-xs text-muted-foreground"
+                >
+                  out
+                </rn-Text>
+              </rn-View>
+            </rn-View>
+          </rn-View>
+          <rn-View
+            className="flex-row items-center justify-between"
+          >
+            <rn-View
+              className="flex-1 gap-0.5"
+            >
+              <rn-Text
+                className="text-sm font-medium text-foreground"
+              >
+                DeepSeek-V3
+              </rn-Text>
+              <rn-Text
+                className="text-xs text-muted-foreground"
+              >
+                DeepSeek
+              </rn-Text>
+            </rn-View>
+            <rn-View
+              className="flex-row gap-4"
+            >
+              <rn-View
+                className="items-end"
+              >
+                <rn-Text
+                  className="text-sm text-foreground"
+                >
+                  $0.27
+                </rn-Text>
+                <rn-Text
+                  className="text-xs text-muted-foreground"
+                >
+                  in
+                </rn-Text>
+              </rn-View>
+              <rn-View
+                className="items-end"
+              >
+                <rn-Text
+                  className="text-sm text-foreground"
+                >
+                  $1.10
+                </rn-Text>
+                <rn-Text
+                  className="text-xs text-muted-foreground"
+                >
+                  out
+                </rn-Text>
+              </rn-View>
+            </rn-View>
+          </rn-View>
+          <rn-View
+            className="flex-row items-center justify-between"
+          >
+            <rn-View
+              className="flex-1 gap-0.5"
+            >
+              <rn-Text
+                className="text-sm font-medium text-foreground"
+              >
+                DeepSeek-R1
+              </rn-Text>
+              <rn-Text
+                className="text-xs text-muted-foreground"
+              >
+                DeepSeek
+              </rn-Text>
+            </rn-View>
+            <rn-View
+              className="flex-row gap-4"
+            >
+              <rn-View
+                className="items-end"
+              >
+                <rn-Text
+                  className="text-sm text-foreground"
+                >
+                  $0.55
+                </rn-Text>
+                <rn-Text
+                  className="text-xs text-muted-foreground"
+                >
+                  in
+                </rn-Text>
+              </rn-View>
+              <rn-View
+                className="items-end"
+              >
+                <rn-Text
+                  className="text-sm text-foreground"
+                >
+                  $2.19
+                </rn-Text>
+                <rn-Text
+                  className="text-xs text-muted-foreground"
+                >
+                  out
+                </rn-Text>
+              </rn-View>
+            </rn-View>
+          </rn-View>
+          <rn-View
+            className="flex-row items-center justify-between"
+          >
+            <rn-View
+              className="flex-1 gap-0.5"
+            >
+              <rn-Text
+                className="text-sm font-medium text-foreground"
+              >
+                GLM-4.6
+              </rn-Text>
+              <rn-Text
+                className="text-xs text-muted-foreground"
+              >
+                Z.AI
+              </rn-Text>
+            </rn-View>
+            <rn-View
+              className="flex-row gap-4"
+            >
+              <rn-View
+                className="items-end"
+              >
+                <rn-Text
+                  className="text-sm text-foreground"
+                >
+                  $1.40
+                </rn-Text>
+                <rn-Text
+                  className="text-xs text-muted-foreground"
+                >
+                  in
+                </rn-Text>
+              </rn-View>
+              <rn-View
+                className="items-end"
+              >
+                <rn-Text
+                  className="text-sm text-foreground"
+                >
+                  $1.40
+                </rn-Text>
+                <rn-Text
+                  className="text-xs text-muted-foreground"
+                >
+                  out
+                </rn-Text>
+              </rn-View>
+            </rn-View>
+          </rn-View>
+        </rn-View>
+        <rn-View
+          className="rounded-md border px-4 py-3 border-info-border bg-info-soft"
+          style={
+            {
+              "elevation": 2,
+              "shadowColor": "#1a1a2e",
+              "shadowOffset": {
+                "height": 2,
+                "width": 0,
+              },
+              "shadowOpacity": 0.08,
+              "shadowRadius": 8,
+            }
+          }
+        >
+          <rn-Text
+            className="text-sm text-info-text"
+            selectable={true}
+          >
+            Prices are approximate and may change. Check each provider's site for current rates.
+          </rn-Text>
+        </rn-View>
+      </rn-ScrollView>
+    </rn-View>
+  </rn-View>
+</rn-View>
+`;

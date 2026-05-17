@@ -1,0 +1,91 @@
+/**
+ * Profile route — wires the better-auth session, /me/usage query,
+ * sign-out, and query-cache clearing into the props-only
+ * `Profile` body.
+ *
+ * AI provider state + provider availability are deferred to P4 — the
+ * route passes empty lists and `showDeveloperSection={false}` so the
+ * Developer card is hidden on real builds (the dev mirror flips it
+ * on with the canonical catalogue for visual review).
+ */
+import { useRouter } from 'expo-router';
+import { useQueryClient } from '@tanstack/react-query';
+
+import { Profile, type ProfileMonthlyUsage } from '@/screens/profile';
+import { useAuthSession } from '@/lib/auth/session';
+import { useMeUsageQuery } from '@/lib/api/hooks';
+import { useRefresh } from '@/lib/use-refresh';
+import { useCopyToClipboard } from '@/lib/use-clipboard';
+import { safeBack } from '@/lib/nav/safe-back';
+import { buildInfo } from '@/lib/build-info';
+
+export default function ProfileRoute() {
+  const router = useRouter();
+  const { status, user, signOut } = useAuthSession();
+  const queryClient = useQueryClient();
+  const { copy } = useCopyToClipboard();
+
+  const usageQuery = useMeUsageQuery();
+  const { refreshing, onRefresh } = useRefresh([usageQuery.refetch]);
+
+  // Find the current month's row from the v4 usage history; fall back
+  // to null. v4 returns one row per month — match by the YYYY-MM prefix
+  // of "now" rather than relying on row order.
+  const now = new Date();
+  const yyyyMm = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}`;
+  const currentMonthRow = usageQuery.data?.months.find((m) => m.month === yyyyMm) ?? null;
+  const monthlyUsage: ProfileMonthlyUsage | null =
+    currentMonthRow
+      ? {
+          reportsCount: currentMonthRow.reports,
+          voiceNotesCount: currentMonthRow.voiceNotes,
+          // TODO(P4): wire token-level counts once the v4 API exposes them.
+        }
+      : null;
+
+  return (
+    <Profile
+      user={
+        user
+          ? {
+              displayName: user.displayName,
+              companyName: user.companyName,
+              phone: user.phone,
+            }
+          : null
+      }
+      isLoading={status === 'loading'}
+      monthlyUsage={monthlyUsage}
+      usageLoading={usageQuery.isLoading}
+      refreshing={refreshing}
+      onRefresh={onRefresh}
+      onBack={() => safeBack(router, '/(app)/projects')}
+      onPressAccount={() => router.push('/(app)/account' as never)}
+      onPressUsage={() => router.push('/(app)/usage' as never)}
+      onCopy={(value, options) => {
+        void copy(value, { toast: options.toast });
+      }}
+      onSignOut={async () => {
+        await signOut();
+        router.dismissAll();
+        router.replace('/');
+      }}
+      onClearCache={async () => {
+        queryClient.clear();
+        await queryClient.refetchQueries({ type: 'active' });
+      }}
+      // TODO(P4): expose the AI provider picker once we have a
+      // provider-availability endpoint + persistence layer.
+      showDeveloperSection={false}
+      aiProviders={[]}
+      aiProvider=""
+      onSelectProvider={() => undefined}
+      aiModels={[]}
+      aiModel=""
+      onSelectModel={() => undefined}
+      availableProviderKeys={null}
+      buildVersion={buildInfo.displayVersion}
+      serverLabel={buildInfo.serverLabel}
+    />
+  );
+}

@@ -1,0 +1,622 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Profile > matches snapshot at default props 1`] = `
+<rn-View
+  className="flex-1 bg-background"
+  style={
+    [
+      {
+        "paddingBottom": 0,
+        "paddingLeft": 0,
+        "paddingRight": 0,
+        "paddingTop": 44,
+      },
+      undefined,
+    ]
+  }
+  testID="screen-profile"
+>
+  <rn-ScrollView
+    className="flex-1"
+    contentContainerStyle={
+      {
+        "paddingBottom": 32,
+      }
+    }
+    refreshControl={
+      <RN.RefreshControl
+        onRefresh={[MockFunction spy]}
+        refreshing={false}
+      />
+    }
+  >
+    <rn-View
+      className="px-5 pt-4 pb-6 gap-5"
+    >
+      <rn-View
+        className="gap-3"
+      >
+        <rn-View
+          className="min-h-touch flex-row items-center gap-3"
+        >
+          <rn-Pressable
+            accessibilityLabel="Back"
+            accessibilityRole="button"
+            className="flex-row items-center justify-center rounded-md border border-border bg-card active:opacity-90 min-h-touch py-3 px-4"
+            disabled={false}
+            onPress={[MockFunction spy]}
+            style={
+              [
+                {
+                  "elevation": 2,
+                  "shadowColor": "#1a1a2e",
+                  "shadowOffset": {
+                    "height": 2,
+                    "width": 0,
+                  },
+                  "shadowOpacity": 0.08,
+                  "shadowRadius": 8,
+                },
+                undefined,
+              ]
+            }
+            testID="btn-back"
+          >
+            <lucide-ArrowLeft
+              color="#2d3a5a"
+              size={16}
+            />
+          </rn-Pressable>
+          <rn-Text
+            className="min-w-0 flex-1 text-title-sm text-foreground"
+            ellipsizeMode="tail"
+            numberOfLines={1}
+            testID="screen-header-title"
+          >
+            Profile
+          </rn-Text>
+          <rn-View
+            className="shrink-0 flex-row items-center gap-2"
+          />
+        </rn-View>
+      </rn-View>
+      <rn-View
+        className="rounded-lg border border-border bg-surface-emphasis p-4 flex-row items-center gap-4"
+        style={
+          [
+            {
+              "elevation": 4,
+              "shadowColor": "#1a1a2e",
+              "shadowOffset": {
+                "height": 4,
+                "width": 0,
+              },
+              "shadowOpacity": 0.12,
+              "shadowRadius": 14,
+            },
+            undefined,
+          ]
+        }
+      >
+        <rn-View
+          className="h-14 w-14 items-center justify-center rounded-xl border border-border bg-card"
+        >
+          <lucide-User
+            color="#2d3a5a"
+            size={24}
+          />
+        </rn-View>
+        <rn-View
+          className="flex-1 gap-0.5"
+        >
+          <rn-Pressable
+            accessibilityLabel="Copy name: Jordan Sims"
+            accessibilityRole="button"
+            disabled={false}
+            hitSlop={4}
+            onPress={[Function]}
+          >
+            <rn-Text
+              className="text-title text-foreground"
+              testID="profile-display-name"
+            >
+              Jordan Sims
+            </rn-Text>
+          </rn-Pressable>
+          <rn-Pressable
+            accessibilityLabel="Copy phone: +15551234567"
+            accessibilityRole="button"
+            disabled={false}
+            hitSlop={4}
+            onPress={[Function]}
+          >
+            <rn-Text
+              className="text-body text-muted-foreground"
+              testID="profile-phone"
+            >
+              +15551234567
+            </rn-Text>
+          </rn-Pressable>
+          <rn-Pressable
+            accessibilityLabel="Copy company: Sims Construction"
+            accessibilityRole="button"
+            disabled={false}
+            hitSlop={4}
+            onPress={[Function]}
+          >
+            <rn-Text
+              className="text-sm text-muted-foreground"
+              testID="profile-company-name"
+            >
+              Sims Construction
+            </rn-Text>
+          </rn-Pressable>
+        </rn-View>
+      </rn-View>
+    </rn-View>
+    <rn-View
+      className="gap-2 px-5"
+    >
+      <rn-View>
+        <rn-Pressable
+          onPress={[MockFunction spy]}
+          testID="btn-open-usage"
+        >
+          <rn-View
+            className="rounded-lg border border-border bg-card p-4 gap-3"
+            style={
+              [
+                {
+                  "elevation": 2,
+                  "shadowColor": "#1a1a2e",
+                  "shadowOffset": {
+                    "height": 2,
+                    "width": 0,
+                  },
+                  "shadowOpacity": 0.08,
+                  "shadowRadius": 8,
+                },
+                undefined,
+              ]
+            }
+          >
+            <rn-View
+              className="flex-row items-center justify-between"
+            >
+              <rn-View
+                className="flex-row items-center gap-2"
+              >
+                <lucide-Zap
+                  color="#2d3a5a"
+                  size={18}
+                />
+                <rn-Text
+                  className="text-title-sm text-foreground"
+                >
+                  Usage This Month
+                </rn-Text>
+              </rn-View>
+              <lucide-ChevronRight
+                color="#5f5b66"
+                size={16}
+              />
+            </rn-View>
+            <rn-View
+              className="flex-row flex-wrap gap-3"
+            >
+              <rn-View
+                className="items-center justify-center rounded-lg border px-3 py-3 border-border bg-card min-h-[82px] min-w-[29%] flex-1"
+                style={
+                  {
+                    "elevation": 2,
+                    "shadowColor": "#1a1a2e",
+                    "shadowOffset": {
+                      "height": 2,
+                      "width": 0,
+                    },
+                    "shadowOpacity": 0.08,
+                    "shadowRadius": 8,
+                  }
+                }
+              >
+                <rn-Text
+                  className="text-metric text-foreground"
+                >
+                  12
+                </rn-Text>
+                <rn-Text
+                  className="mt-1 text-label text-muted-foreground"
+                >
+                  Reports
+                </rn-Text>
+              </rn-View>
+              <rn-View
+                className="items-center justify-center rounded-lg border px-3 py-3 border-border bg-card min-h-[82px] min-w-[29%] flex-1"
+                style={
+                  {
+                    "elevation": 2,
+                    "shadowColor": "#1a1a2e",
+                    "shadowOffset": {
+                      "height": 2,
+                      "width": 0,
+                    },
+                    "shadowOpacity": 0.08,
+                    "shadowRadius": 8,
+                  }
+                }
+              >
+                <rn-Text
+                  className="text-metric text-foreground"
+                >
+                  34
+                </rn-Text>
+                <rn-Text
+                  className="mt-1 text-label text-muted-foreground"
+                >
+                  Voice Notes
+                </rn-Text>
+              </rn-View>
+            </rn-View>
+          </rn-View>
+        </rn-Pressable>
+      </rn-View>
+      <rn-View>
+        <rn-Pressable
+          disabled={false}
+          onPress={[MockFunction spy]}
+          testID="btn-open-account"
+        >
+          <rn-View
+            className="rounded-lg border border-border bg-card p-4 flex-row items-center gap-4"
+            style={
+              [
+                {
+                  "elevation": 2,
+                  "shadowColor": "#1a1a2e",
+                  "shadowOffset": {
+                    "height": 2,
+                    "width": 0,
+                  },
+                  "shadowOpacity": 0.08,
+                  "shadowRadius": 8,
+                },
+                undefined,
+              ]
+            }
+          >
+            <rn-View
+              className="h-10 w-10 items-center justify-center rounded-md border border-border bg-card"
+            >
+              <lucide-User
+                color="#5f5b66"
+                size={20}
+              />
+            </rn-View>
+            <rn-View
+              className="flex-1"
+            >
+              <rn-Text
+                className="text-title-sm text-foreground"
+              >
+                Account Details
+              </rn-Text>
+            </rn-View>
+            <lucide-ChevronRight
+              color="#5f5b66"
+              size={16}
+            />
+          </rn-View>
+        </rn-Pressable>
+      </rn-View>
+      <rn-View>
+        <rn-Pressable
+          disabled={true}
+        >
+          <rn-View
+            className="rounded-lg border border-border bg-card p-4 flex-row items-center gap-4"
+            style={
+              [
+                {
+                  "elevation": 2,
+                  "shadowColor": "#1a1a2e",
+                  "shadowOffset": {
+                    "height": 2,
+                    "width": 0,
+                  },
+                  "shadowOpacity": 0.08,
+                  "shadowRadius": 8,
+                },
+                undefined,
+              ]
+            }
+          >
+            <rn-View
+              className="h-10 w-10 items-center justify-center rounded-md border border-border bg-card"
+            >
+              <lucide-Bell
+                color="#8a8693"
+                size={20}
+              />
+            </rn-View>
+            <rn-View
+              className="flex-1"
+            >
+              <rn-Text
+                className="text-title-sm text-muted-foreground"
+              >
+                Notifications
+              </rn-Text>
+            </rn-View>
+            <lucide-ChevronRight
+              color="#8a8693"
+              size={16}
+            />
+          </rn-View>
+        </rn-Pressable>
+      </rn-View>
+    </rn-View>
+    <rn-Modal
+      animationType="slide"
+      onRequestClose={[Function]}
+      transparent={true}
+      visible={false}
+    >
+      <rn-Pressable
+        className="flex-1 justify-end bg-black/40"
+        onPress={[Function]}
+      >
+        <rn-Pressable
+          className="bg-background pb-10"
+          onPress={[Function]}
+        >
+          <rn-View
+            className="flex-row items-center justify-between border-b border-border px-5 py-4"
+          >
+            <rn-View
+              className="flex-row items-center gap-2 flex-1"
+            >
+              <rn-Text
+                className="text-xl font-bold text-foreground"
+              >
+                Select AI Provider
+              </rn-Text>
+            </rn-View>
+            <rn-Pressable
+              hitSlop={12}
+              onPress={[Function]}
+              testID="btn-ai-modal-close"
+            >
+              <lucide-X
+                color="#5f5b66"
+                size={20}
+              />
+            </rn-Pressable>
+          </rn-View>
+          <rn-View
+            className="px-5 pt-3 gap-2"
+          />
+        </rn-Pressable>
+      </rn-Pressable>
+    </rn-Modal>
+    <rn-View
+      className="mt-8 px-5"
+    >
+      <rn-Pressable
+        className="flex-row items-center justify-center rounded-md border border-border bg-secondary active:opacity-90 min-h-touch px-5 py-3.5 w-full"
+        disabled={false}
+        onPress={[Function]}
+        style={
+          [
+            {
+              "elevation": 2,
+              "shadowColor": "#1a1a2e",
+              "shadowOffset": {
+                "height": 2,
+                "width": 0,
+              },
+              "shadowOpacity": 0.08,
+              "shadowRadius": 8,
+            },
+            undefined,
+          ]
+        }
+        testID="btn-clear-cache"
+      >
+        <rn-View
+          className="flex-row items-center justify-center gap-2"
+        >
+          <lucide-Trash2
+            color="#2d3a5a"
+            size={16}
+          />
+          <rn-Text
+            className="text-base font-semibold text-foreground"
+          >
+            Clear cached data
+          </rn-Text>
+        </rn-View>
+      </rn-Pressable>
+    </rn-View>
+    <rn-View
+      className="mt-4 px-5"
+    >
+      <rn-Pressable
+        className="flex-row items-center justify-center rounded-md border border-danger-border bg-danger-soft active:opacity-85 min-h-touch px-5 py-3.5 w-full"
+        disabled={false}
+        onPress={[Function]}
+        style={
+          [
+            {
+              "elevation": 2,
+              "shadowColor": "#1a1a2e",
+              "shadowOffset": {
+                "height": 2,
+                "width": 0,
+              },
+              "shadowOpacity": 0.08,
+              "shadowRadius": 8,
+            },
+            undefined,
+          ]
+        }
+        testID="btn-sign-out"
+      >
+        <rn-View
+          className="flex-row items-center justify-center gap-2"
+        >
+          <lucide-LogOut
+            color="#8f1d18"
+            size={16}
+          />
+          <rn-Text
+            className="text-base font-semibold text-danger-text"
+          >
+            Sign Out
+          </rn-Text>
+        </rn-View>
+      </rn-Pressable>
+    </rn-View>
+    <rn-Modal
+      animationType="slide"
+      onRequestClose={[Function]}
+      transparent={true}
+      visible={false}
+    >
+      <rn-Pressable
+        className="flex-1 justify-end bg-black/40"
+        onPress={[Function]}
+      >
+        <rn-Pressable
+          className="bg-background pb-10"
+          onPress={[Function]}
+          testID="dialog-sheet"
+        >
+          <rn-View
+            className="flex-row items-center justify-between border-b border-border px-5 py-4"
+          >
+            <rn-Text
+              className="text-xl font-bold text-foreground"
+            >
+              Clear cached data?
+            </rn-Text>
+            <rn-Pressable
+              disabled={false}
+              hitSlop={12}
+              onPress={[Function]}
+            >
+              <lucide-X
+                color="#5f5b66"
+                size={20}
+              />
+            </rn-Pressable>
+          </rn-View>
+          <rn-View
+            className="gap-4 px-5 pt-4"
+          >
+            <rn-View
+              className="rounded-md border px-4 py-3 border-danger-border bg-danger-soft"
+              style={
+                {
+                  "elevation": 2,
+                  "shadowColor": "#1a1a2e",
+                  "shadowOffset": {
+                    "height": 2,
+                    "width": 0,
+                  },
+                  "shadowOpacity": 0.08,
+                  "shadowRadius": 8,
+                }
+              }
+            >
+              <rn-Text
+                className="text-sm text-danger-text"
+                selectable={true}
+              >
+                This empties the in-memory query cache and refetches the screens you have open. Use this if reports or voice notes look stale or out of place.
+              </rn-Text>
+            </rn-View>
+            <rn-View
+              className="gap-3"
+            >
+              <rn-Pressable
+                className="flex-row items-center rounded-md border border-danger-border bg-danger-soft active:opacity-85 min-h-touch px-5 py-3.5 justify-center"
+                disabled={false}
+                onPress={[Function]}
+                style={
+                  [
+                    {
+                      "elevation": 2,
+                      "shadowColor": "#1a1a2e",
+                      "shadowOffset": {
+                        "height": 2,
+                        "width": 0,
+                      },
+                      "shadowOpacity": 0.08,
+                      "shadowRadius": 8,
+                    },
+                    undefined,
+                  ]
+                }
+                testID="btn-confirm-clear-cache"
+              >
+                <rn-Text
+                  className="text-danger-text font-semibold text-base"
+                >
+                  Clear cache
+                </rn-Text>
+              </rn-Pressable>
+              <rn-Pressable
+                className="flex-row items-center rounded-md border border-border bg-secondary active:opacity-90 min-h-touch px-5 py-3.5 justify-center"
+                disabled={false}
+                onPress={[Function]}
+                style={
+                  [
+                    {
+                      "elevation": 2,
+                      "shadowColor": "#1a1a2e",
+                      "shadowOffset": {
+                        "height": 2,
+                        "width": 0,
+                      },
+                      "shadowOpacity": 0.08,
+                      "shadowRadius": 8,
+                    },
+                    undefined,
+                  ]
+                }
+                testID="dialog-action-1"
+              >
+                <rn-Text
+                  className="text-foreground font-semibold text-base"
+                >
+                  Cancel
+                </rn-Text>
+              </rn-Pressable>
+            </rn-View>
+          </rn-View>
+        </rn-Pressable>
+      </rn-Pressable>
+    </rn-Modal>
+    <rn-View
+      className="mt-6 px-5 items-center gap-1"
+    >
+      <rn-Text
+        className="text-xs text-muted-foreground"
+        selectable={true}
+        testID="build-info"
+      >
+        v
+        1.2.3+abc1234
+      </rn-Text>
+      <rn-Text
+        className="text-xs text-muted-foreground"
+        selectable={true}
+        testID="server-info"
+      >
+        Server: 
+        Fly (harpa-pro-api)
+      </rn-Text>
+    </rn-View>
+  </rn-ScrollView>
+</rn-View>
+`;

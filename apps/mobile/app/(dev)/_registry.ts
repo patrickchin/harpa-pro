@@ -175,4 +175,22 @@ export const REGISTRY: readonly GalleryEntry[] = [
     group: 'app',
     description: 'Full-screen camera — requesting / denied / blocked / granted / populated states (preview stubbed)',
   },
+  {
+    name: 'Profile',
+    href: '/(dev)/profile',
+    group: 'app',
+    description: 'Profile — loaded / loading-account / usage-loading / empty-usage / new-user + AI provider modal',
+  },
+  {
+    name: 'Account',
+    href: '/(dev)/account',
+    group: 'app',
+    description: 'Account details — loaded / loading / no-name / no-company states (read-only)',
+  },
+  {
+    name: 'Usage',
+    href: '/(dev)/usage',
+    group: 'app',
+    description: 'Usage history — populated / loading / empty / single-month states',
+  },
 ];

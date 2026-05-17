@@ -38,7 +38,7 @@ mirror). Suggested grouping (one screen per commit):
 - saved report + actions menu + PDF preview
 - files
 - camera
-- profile / account / usage
+- profile / account / usage  ✅ shipped (P3.13)
 
 ## Section card port
 
@@ -102,7 +102,7 @@ P3.9  Generate – Edit tab           ┘
 P3.10 Saved report + actions + PDF   ✅ shipped
 P3.11 Files screen
 P3.12 Camera                        ✅ shipped
-P3.13 Profile / Account / Usage
+P3.13 Profile / Account / Usage      ✅ shipped
 P3.14 Maestro full-journey
 ```
 
@@ -380,6 +380,87 @@ so the dev mirror + Vitest run without native modules.
 - iOS prebuild: running `expo prebuild` to regenerate `ios/`
   Podfile entries for `expo-camera`. Deferred until the next EAS
   cut (the JS shipped here typechecks + tests in isolation).
+
+### P3.13 — Profile / Account / Usage
+
+Ports the three account-area screens from canonical
+`../haru3-reports/apps/mobile/app/{profile,account,usage}.tsx` into
+v4 routes at `apps/mobile/app/(app)/{profile,account,usage}.tsx`.
+All three bodies are props-only (no API / auth / secure-store
+coupling) so the dev mirrors exercise every visible state without
+spinning a real backend. The v3 token-usage rollups, AvatarUploader,
+and AI provider availability check don't have v4 equivalents yet
+(no `token_usage` table, no R2 upload pipeline, no
+provider-availability endpoint) — those land in P4 behind clearly
+marked stubs.
+
+- [x] Body `screens/profile.tsx` owns the AI provider / model picker
+      modal + the clear-cache confirm dialog (`AppDialogSheet` —
+      Pitfall: no `Alert.alert`). Auth user, monthly usage, sign-out,
+      cache clear, copy-to-clipboard, and the AI catalogue all flow
+      in as typed props. Developer section gated on a
+      `showDeveloperSection` prop so dev mirrors flip it on without
+      env-var gymnastics.
+- [x] Body `screens/account.tsx` renders the read-only details form
+      (phone + display name + company name) with an optional
+      `avatarSlot` ReactNode so the route can inject a real
+      `AvatarUploader` once it lands (P4 — placeholder until then).
+- [x] Body `screens/usage.tsx` owns the per-month expand state +
+      pricing-reference card. Accepts an optional `chart` ReactNode
+      slot so the route can mount a real `UsageBarChart` once we
+      have token-level history (P4).
+- [x] Real routes wire `useAuthSession`, `useMeUsageQuery`,
+      better-auth `signOut`, and the TanStack `queryClient.clear()`
+      cache-clear into the body props. `safeBack` falls back to
+      `/(app)/profile` (account/usage) or `/(app)/projects`
+      (profile).
+- [x] Dev mirrors `app/(dev)/{profile,account,usage}.tsx` with
+      hand-crafted mock states (Profile: loaded / loading-account /
+      usage-loading / empty-usage / new-user. Account: loaded /
+      loading / no-name / no-company. Usage: populated / loading /
+      empty / single-month). Registry entries added under
+      `group: 'app'`. The Profile dev mirror passes the canonical
+      AI provider catalogue (Kimi, OpenAI, Anthropic, Google, Z.AI,
+      DeepSeek) so the modal is visually reviewable.
+- [x] Supporting helpers ported under appropriate dirs:
+      `components/skeletons/AccountDetailsSkeleton.tsx` (verbatim);
+      `lib/build-info.ts` adapted to read the Fly API base URL from
+      `lib/env.ts` instead of v3's Supabase URL (preserves the
+      `displayVersion` / `serverLabel` shape the Profile footer
+      consumes).
+- [x] Vitest unit tests (32 across the three files) cover every
+      visible state + interaction the canonical exercises: profile
+      copy callbacks, usage spinner / populated / empty, account
+      open, sign-out, clear-cache dialog confirm, developer-section
+      gating, AI provider modal advancing to model step + selecting
+      a model, account skeleton, custom avatar slot, usage month
+      expand/collapse/switch, chart slot gating on ≥ 2 months,
+      pricing reference rendered, back button. Plus one snapshot per
+      screen of the populated layout.
+- [x] Commit: `feat(mobile): P3.13 — Profile / Account / Usage screens ported`.
+
+**Deferred to P4** (each behind a `TODO(P4)` marker in code):
+
+- `AvatarUploader` — Supabase storage in v3; v4 needs the R2 upload
+  pipeline + signed-URL flow before the avatar picker can land.
+  Route passes no `avatarSlot`, body renders the default
+  non-interactive User-icon placeholder.
+- Editing the account fields (display name + company name). The v4
+  `PATCH /me` hook exists (`useUpdateMeMutation`), but wiring an
+  inline editor + optimistic update is out of scope for P3.13.
+- Token-level usage detail: input / output / cached tokens, per-event
+  timeline, per-model breakdown, `UsageBarChart`. v4 `/me/usage`
+  returns `{ reports, voiceNotes }` only; the canonical
+  per-generation rollups live behind a future analytics endpoint.
+- AI provider catalogue persistence (`useAiProvider` AsyncStorage
+  round-trip) + the `/generate-report` availability probe
+  (`useAvailableProviders`). Real Profile route passes empty
+  catalogues and `showDeveloperSection={false}`; dev mirror exercises
+  the modal with the canonical catalogue inline.
+- Notifications row (top of Profile sections) — disabled in canonical
+  too, ported with the same `disabled` styling.
+- Language toggle / locale switching — not in canonical's profile;
+  out of scope for P3.13.
 
 ## Pipelines exercised
 

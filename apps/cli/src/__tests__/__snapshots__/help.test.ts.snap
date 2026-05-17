@@ -295,7 +295,7 @@ exports[`command tree (help drift gate) > matches the recorded snapshot 1`] = `
               "required": true,
               "type": "string",
             },
-            "projectSlug": {
+            "project": {
               "description": "Project slug (e.g. prj_xxxxxxxx).",
               "required": true,
               "type": "positional",
@@ -348,7 +348,7 @@ exports[`command tree (help drift gate) > matches the recorded snapshot 1`] = `
               "description": "Page size (1–100).",
               "type": "string",
             },
-            "projectSlug": {
+            "project": {
               "description": "Project slug (e.g. prj_xxxxxxxx).",
               "required": true,
               "type": "positional",
@@ -642,7 +642,7 @@ exports[`command tree (help drift gate) > matches the recorded snapshot 1`] = `
               "required": true,
               "type": "positional",
             },
-            "projectSlug": {
+            "project": {
               "description": "Project slug (e.g. prj_xxxxxxxx).",
               "required": true,
               "type": "positional",
@@ -667,7 +667,7 @@ exports[`command tree (help drift gate) > matches the recorded snapshot 1`] = `
               "required": true,
               "type": "positional",
             },
-            "projectSlug": {
+            "project": {
               "description": "Project slug (e.g. prj_xxxxxxxx).",
               "required": true,
               "type": "positional",
@@ -700,7 +700,7 @@ exports[`command tree (help drift gate) > matches the recorded snapshot 1`] = `
               "required": true,
               "type": "positional",
             },
-            "projectSlug": {
+            "project": {
               "description": "Project slug (e.g. prj_xxxxxxxx).",
               "required": true,
               "type": "positional",
@@ -725,7 +725,7 @@ exports[`command tree (help drift gate) > matches the recorded snapshot 1`] = `
               "required": true,
               "type": "positional",
             },
-            "projectSlug": {
+            "project": {
               "description": "Project slug (e.g. prj_xxxxxxxx).",
               "required": true,
               "type": "positional",
@@ -778,7 +778,7 @@ exports[`command tree (help drift gate) > matches the recorded snapshot 1`] = `
               "required": true,
               "type": "positional",
             },
-            "projectSlug": {
+            "project": {
               "description": "Project slug (e.g. prj_xxxxxxxx).",
               "required": true,
               "type": "positional",
@@ -811,7 +811,7 @@ exports[`command tree (help drift gate) > matches the recorded snapshot 1`] = `
               "required": true,
               "type": "positional",
             },
-            "projectSlug": {
+            "project": {
               "description": "Project slug (e.g. prj_xxxxxxxx).",
               "required": true,
               "type": "positional",
@@ -836,7 +836,7 @@ exports[`command tree (help drift gate) > matches the recorded snapshot 1`] = `
               "required": true,
               "type": "positional",
             },
-            "projectSlug": {
+            "project": {
               "description": "Project slug (e.g. prj_xxxxxxxx).",
               "required": true,
               "type": "positional",

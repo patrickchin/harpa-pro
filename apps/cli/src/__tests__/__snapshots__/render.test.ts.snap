@@ -56,7 +56,7 @@ exports[`renderNoteList > renders an empty list 1`] = `"No notes."`;
 
 exports[`renderProject > renders a fully populated project with stats 1`] = `
 "Demo Project (owner)
-  Slug:       prj_a3k9wzm4
+  ID:         00000000-0000-0000-0000-000000000010
   Client:     Acme Co
   Address:    1 Main St
   Created:    2025-01-15T10:30:00.000Z
@@ -67,7 +67,7 @@ exports[`renderProject > renders a fully populated project with stats 1`] = `
 
 exports[`renderProject > renders a project missing optional fields 1`] = `
 "Demo Project (owner)
-  Slug:       prj_a3k9wzm4
+  ID:         00000000-0000-0000-0000-000000000010
   Client:     (none)
   Address:    (none)
   Created:    2025-01-15T10:30:00.000Z
@@ -76,8 +76,8 @@ exports[`renderProject > renders a project missing optional fields 1`] = `
 
 exports[`renderProjectList > renders a populated page with nextCursor 1`] = `
 "Projects:
-  Project A                                 owner   Client A  prj_a3k9wzm4
-  Project B                                 editor  —  prj_h7m2qxnb
+  Project A                                 owner   Client A  00000000-0000-0000-0000-000000000020
+  Project B                                 editor  —  00000000-0000-0000-0000-000000000021
 
 Next page: --cursor cursor-xyz"
 `;
@@ -85,7 +85,7 @@ Next page: --cursor cursor-xyz"
 exports[`renderProjectList > renders an empty list 1`] = `"No projects."`;
 
 exports[`renderReport > renders a draft report 1`] = `
-"Report #1 rpt_4nbcp8sk (draft)
+"Report #1 00000000-0000-0000-0000-000000000050 (draft)
   Visit date: 2025-01-15
   Created:    2025-01-15T10:30:00.000Z
   Updated:    2025-01-15T11:00:00.000Z
@@ -93,7 +93,7 @@ exports[`renderReport > renders a draft report 1`] = `
 `;
 
 exports[`renderReport > renders a finalized report 1`] = `
-"Report #1 rpt_4nbcp8sk (finalized)
+"Report #1 00000000-0000-0000-0000-000000000050 (finalized)
   Visit date: 2025-01-15
   Created:    2025-01-15T10:30:00.000Z
   Updated:    2025-01-15T11:00:00.000Z
@@ -102,7 +102,7 @@ exports[`renderReport > renders a finalized report 1`] = `
 `;
 
 exports[`renderReport > renders a report missing optional fields 1`] = `
-"Report #1 rpt_4nbcp8sk (draft)
+"Report #1 00000000-0000-0000-0000-000000000050 (draft)
   Visit date: (none)
   Created:    2025-01-15T10:30:00.000Z
   Updated:    2025-01-15T11:00:00.000Z
@@ -111,8 +111,8 @@ exports[`renderReport > renders a report missing optional fields 1`] = `
 
 exports[`renderReportList > renders a populated list 1`] = `
 "Reports:
-  #1    rpt_xy7k2vpm  draft      2025-01-15    2025-01-15T10:30:00.000Z
-  #2    rpt_b8njq3wt  finalized  —             2025-01-14T10:30:00.000Z
+  #1    00000000-0000-0000-0000-000000000060  draft      2025-01-15    2025-01-15T10:30:00.000Z
+  #2    00000000-0000-0000-0000-000000000061  finalized  —             2025-01-14T10:30:00.000Z
 
 (end of list)"
 `;

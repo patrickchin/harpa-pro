@@ -34,8 +34,8 @@ export function membersList(args: MembersListArgs): Promise<ExitCode> {
     stdout: args.stdout,
     stderr: args.stderr,
     request: () =>
-      args.client.GET('/projects/{projectSlug}/members', {
-        params: { path: { projectSlug: args.projectId } },
+      args.client.GET('/projects/{project}/members', {
+        params: { path: { project: args.projectId } },
       }),
     format: (data) => renderMemberList(data),
   });
@@ -56,8 +56,8 @@ export const membersListCommand = defineCommand({
       json: args.json,
       verbose: args.verbose,
       request: () =>
-        client.GET('/projects/{projectSlug}/members', {
-          params: { path: { projectSlug: String(args.projectId) } },
+        client.GET('/projects/{project}/members', {
+          params: { path: { project: String(args.projectId) } },
         }),
       format: (data) => renderMemberList(data),
     });
@@ -81,8 +81,8 @@ export function membersAdd(args: MembersAddArgs): Promise<ExitCode> {
     stdout: args.stdout,
     stderr: args.stderr,
     request: () =>
-      args.client.POST('/projects/{projectSlug}/members', {
-        params: { path: { projectSlug: args.projectId } },
+      args.client.POST('/projects/{project}/members', {
+        params: { path: { project: args.projectId } },
         body,
       }),
     format: (data) =>
@@ -119,8 +119,8 @@ export const membersAddCommand = defineCommand({
       json: args.json,
       verbose: args.verbose,
       request: () =>
-        client.POST('/projects/{projectSlug}/members', {
-          params: { path: { projectSlug: String(args.projectId) } },
+        client.POST('/projects/{project}/members', {
+          params: { path: { project: String(args.projectId) } },
           body,
         }),
       format: (data) =>
@@ -138,8 +138,8 @@ export interface MembersRemoveArgs extends MembersHandlerOptions {
 
 export async function membersRemove(args: MembersRemoveArgs): Promise<ExitCode> {
   // Resolve phone → userId by fetching the member list
-  const listRes = await args.client.GET('/projects/{projectSlug}/members', {
-    params: { path: { projectSlug: args.projectId } },
+  const listRes = await args.client.GET('/projects/{project}/members', {
+    params: { path: { project: args.projectId } },
   });
   if (listRes.error || !listRes.data) {
     const out = args.stderr ?? process.stderr;
@@ -158,8 +158,8 @@ export async function membersRemove(args: MembersRemoveArgs): Promise<ExitCode> 
     stdout: args.stdout,
     stderr: args.stderr,
     request: () =>
-      args.client.DELETE('/projects/{projectSlug}/members/{userId}', {
-        params: { path: { projectSlug: args.projectId, userId: member.userId } },
+      args.client.DELETE('/projects/{project}/members/{user}', {
+        params: { path: { project: args.projectId, user: member.userId } },
       }),
     format: () =>
       `${chalk.green('✓')} Removed ${chalk.bold(member.displayName ?? args.phone)} ${chalk.dim(`<${args.phone}>`)} from project ${args.projectId}`,
@@ -180,8 +180,8 @@ export const membersRemoveCommand = defineCommand({
     requireToken(env);
     const client = createApiClient(env);
     // Resolve phone → userId
-    const listRes = await client.GET('/projects/{projectSlug}/members', {
-      params: { path: { projectSlug: String(args.projectId) } },
+    const listRes = await client.GET('/projects/{project}/members', {
+      params: { path: { project: String(args.projectId) } },
     });
     if (listRes.error || !listRes.data) {
       process.stderr.write(chalk.red(`Error: could not fetch members for project ${args.projectId}\n`));
@@ -197,9 +197,9 @@ export const membersRemoveCommand = defineCommand({
       json: args.json,
       verbose: args.verbose,
       request: () =>
-        client.DELETE('/projects/{projectSlug}/members/{userId}', {
+        client.DELETE('/projects/{project}/members/{user}', {
           params: {
-            path: { projectSlug: String(args.projectId), userId: member.userId },
+            path: { project: String(args.projectId), user: member.userId },
           },
         }),
       format: () =>

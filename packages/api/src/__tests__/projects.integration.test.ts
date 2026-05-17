@@ -122,7 +122,7 @@ describe('GET /projects + GET /projects/:id', () => {
     expect(res.status).toBe(200);
     const body = (await res.json()) as { items: Array<{ slug: string }>; nextCursor: string | null };
     expect(body.items.length).toBeGreaterThan(0);
-    expect(body.items.find((p) => p.id === projectSlug)).toBeTruthy();
+    expect(body.items.find((p) => p.slug === projectSlug)).toBeTruthy();
   });
 
   it('cursor pagination round-trips', async () => {

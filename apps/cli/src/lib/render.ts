@@ -52,7 +52,6 @@ export function renderUsage(usage: UsageLike): string {
 
 export interface ProjectLike {
   id: string;
-  slug: string;
   name: string;
   clientName: string | null;
   address: string | null;
@@ -70,7 +69,7 @@ export interface ProjectLike {
 export function renderProject(p: ProjectLike): string {
   const lines = [
     `${chalk.bold(p.name)} ${chalk.dim(`(${p.myRole})`)}`,
-    `  Slug:       ${p.slug}`,
+    `  ID:         ${p.id}`,
     `  Client:     ${p.clientName ?? chalk.dim('(none)')}`,
     `  Address:    ${p.address ?? chalk.dim('(none)')}`,
     `  Created:    ${p.createdAt}`,
@@ -93,7 +92,7 @@ export function renderProjectList(
   }
   const rows = page.items.map((p) => {
     const client = p.clientName ?? chalk.dim('—');
-    return `  ${chalk.bold(p.name).padEnd(40)}  ${p.myRole.padEnd(6)}  ${client}  ${chalk.dim(p.slug)}`;
+    return `  ${chalk.bold(p.name).padEnd(40)}  ${p.myRole.padEnd(6)}  ${client}  ${chalk.dim(p.id)}`;
   });
   const footer = page.nextCursor
     ? chalk.dim(`\nNext page: --cursor ${page.nextCursor}`)
@@ -103,7 +102,6 @@ export function renderProjectList(
 
 export interface ReportLike {
   id: string;
-  slug: string;
   number: number;
   projectId: string;
   status: 'draft' | 'finalized';
@@ -116,7 +114,7 @@ export interface ReportLike {
 
 export function renderReport(r: ReportLike): string {
   const lines = [
-    `${chalk.bold(`Report #${r.number}`)} ${chalk.dim(r.slug)} ${chalk.dim(`(${r.status})`)}`,
+    `${chalk.bold(`Report #${r.number}`)} ${chalk.dim(r.id)} ${chalk.dim(`(${r.status})`)}`,
     `  Visit date: ${r.visitDate ?? chalk.dim('(none)')}`,
     `  Created:    ${r.createdAt}`,
     `  Updated:    ${r.updatedAt}`,
@@ -140,7 +138,7 @@ export function renderReportList(
   }
   const rows = page.items.map((r) => {
     const visit = r.visitDate ?? chalk.dim('—');
-    const head = `#${String(r.number).padEnd(4)} ${chalk.dim(r.slug)}`;
+    const head = `#${String(r.number).padEnd(4)} ${chalk.dim(r.id)}`;
     return `  ${chalk.bold(head)}  ${r.status.padEnd(9)}  ${String(visit).padEnd(12)}  ${chalk.dim(r.createdAt)}`;
   });
   const footer = page.nextCursor

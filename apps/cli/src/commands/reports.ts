@@ -113,7 +113,7 @@ export function reportsCreate(args: ReportsCreateArgs): Promise<ExitCode> {
         params: { path: { projectSlug: args.projectId } },
         body,
       }),
-    format: (data) => `${chalk.green('✓')} Created report #${data.number} ${chalk.dim(data.slug)} (${data.status})`,
+    format: (data) => `${chalk.green('✓')} Created report #${data.number} ${chalk.dim(data.id)} (${data.status})`,
   });
 }
 
@@ -140,7 +140,7 @@ export const reportsCreateCommand = defineCommand({
           params: { path: { projectSlug: String(args.projectId) } },
           body,
         }),
-      format: (data) => `${chalk.green('✓')} Created report #${data.number} ${chalk.dim(data.slug)} (${data.status})`,
+      format: (data) => `${chalk.green('✓')} Created report #${data.number} ${chalk.dim(data.id)} (${data.status})`,
     });
   },
 });
@@ -211,7 +211,7 @@ export function reportsUpdate(args: ReportsUpdateArgs): Promise<ExitCode> {
         params: { path: { projectSlug: args.projectSlug, number: args.number } },
         body,
       }),
-    format: (data) => `${chalk.green('✓')} Updated report #${data.number} ${chalk.dim(data.slug)}`,
+    format: (data) => `${chalk.green('✓')} Updated report #${data.number} ${chalk.dim(data.id)}`,
   });
 }
 
@@ -239,7 +239,7 @@ export const reportsUpdateCommand = defineCommand({
           params: { path: { projectSlug: String(args.projectSlug), number: Number(args.number) } },
           body,
         }),
-      format: (data) => `${chalk.green('✓')} Updated report #${data.number} ${chalk.dim(data.slug)}`,
+      format: (data) => `${chalk.green('✓')} Updated report #${data.number} ${chalk.dim(data.id)}`,
     });
   },
 });

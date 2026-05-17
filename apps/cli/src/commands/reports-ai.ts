@@ -59,7 +59,7 @@ export function reportsGenerate(args: ReportsGenerateArgs): Promise<ExitCode> {
         ...(headers ? { headers } : {}),
       }),
     format: (data) =>
-      `${chalk.green('✓')} Generated report #${data.report.number} ${chalk.dim(data.report.slug)}\n${renderReport(data.report)}`,
+      `${chalk.green('✓')} Generated report #${data.report.number} ${chalk.dim(data.report.id)}\n${renderReport(data.report)}`,
   });
 }
 
@@ -93,7 +93,7 @@ export const reportsGenerateCommand = defineCommand({
           ...(headers ? { headers } : {}),
         }),
       format: (data) =>
-        `${chalk.green('✓')} Generated report #${data.report.number} ${chalk.dim(data.report.slug)}\n${renderReport(data.report)}`,
+        `${chalk.green('✓')} Generated report #${data.report.number} ${chalk.dim(data.report.id)}\n${renderReport(data.report)}`,
     });
   },
 });
@@ -121,7 +121,7 @@ export function reportsRegenerate(args: ReportsRegenerateArgs): Promise<ExitCode
         ...(headers ? { headers } : {}),
       }),
     format: (data) =>
-      `${chalk.green('✓')} Regenerated report #${data.report.number} ${chalk.dim(data.report.slug)}\n${renderReport(data.report)}`,
+      `${chalk.green('✓')} Regenerated report #${data.report.number} ${chalk.dim(data.report.id)}\n${renderReport(data.report)}`,
   });
 }
 
@@ -155,7 +155,7 @@ export const reportsRegenerateCommand = defineCommand({
           ...(headers ? { headers } : {}),
         }),
       format: (data) =>
-        `${chalk.green('✓')} Regenerated report #${data.report.number} ${chalk.dim(data.report.slug)}\n${renderReport(data.report)}`,
+        `${chalk.green('✓')} Regenerated report #${data.report.number} ${chalk.dim(data.report.id)}\n${renderReport(data.report)}`,
     });
   },
 });
@@ -177,7 +177,7 @@ export function reportsFinalize(args: ReportsFinalizeArgs): Promise<ExitCode> {
         params: { path: { projectSlug: args.projectSlug, number: args.number } },
       }),
     format: (data) =>
-      `${chalk.green('✓')} Finalized report #${data.report.number} ${chalk.dim(data.report.slug)}\n${renderReport(data.report)}`,
+      `${chalk.green('✓')} Finalized report #${data.report.number} ${chalk.dim(data.report.id)}\n${renderReport(data.report)}`,
   });
 }
 
@@ -200,7 +200,7 @@ export const reportsFinalizeCommand = defineCommand({
           params: { path: { projectSlug: String(args.projectSlug), number: Number(args.number) } },
         }),
       format: (data) =>
-        `${chalk.green('✓')} Finalized report #${data.report.number} ${chalk.dim(data.report.slug)}\n${renderReport(data.report)}`,
+        `${chalk.green('✓')} Finalized report #${data.report.number} ${chalk.dim(data.report.id)}\n${renderReport(data.report)}`,
     });
   },
 });

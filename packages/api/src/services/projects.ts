@@ -1,13 +1,13 @@
 /**
  * Projects + members service. All DB calls take a scoped drizzle handle
  * (`db`) so the per-request scope wrapper is what enforces RLS;
- * SECURITY DEFINER helpers (see migrations/202605120003_projects_helpers.sql)
- * own the cross-table reads that would otherwise be blocked.
+ * SECURITY DEFINER helpers (see migrations/init_slug_native.sql) own the
+ * cross-table reads that would otherwise be blocked.
  */
 import { sql } from 'drizzle-orm';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import * as schema from '../db/schema.js';
-import { generateSlug } from '../lib/slug.js';
+import { newId } from '../lib/ids.js';
 
 type Db = NodePgDatabase<typeof schema>;
 
@@ -15,7 +15,6 @@ export type ProjectRole = 'owner' | 'editor' | 'viewer';
 
 export interface ProjectRow {
   id: string;
-  slug: string;
   name: string;
   clientName: string | null;
   address: string | null;
@@ -44,7 +43,7 @@ export interface ListOutput {
   nextCursor: string | null;
 }
 
-/** Cursor is base64(`<iso created_at>|<uuid>`). Stable + opaque. */
+/** Cursor is base64(`<iso created_at>|<id>`). Stable + opaque. */
 function encodeCursor(createdAt: string, id: string): string {
   return Buffer.from(`${createdAt}|${id}`, 'utf8').toString('base64url');
 }
@@ -63,7 +62,6 @@ export async function listProjects(db: Db, userId: string, input: ListInput): Pr
         const { createdAt, id } = decodeCursor(cursor);
         return db.execute<{
           id: string;
-          slug: string;
           name: string;
           client_name: string | null;
           address: string | null;
@@ -72,19 +70,18 @@ export async function listProjects(db: Db, userId: string, input: ListInput): Pr
           created_at: Date;
           updated_at: Date;
         }>(sql`
-          SELECT p.id, p.slug, p.name, p.client_name, p.address, p.owner_id, pm.role AS my_role,
+          SELECT p.id, p.name, p.client_name, p.address, p.owner_id, pm.role AS my_role,
                  p.created_at, p.updated_at
           FROM app.projects p
           JOIN app.project_members pm
-            ON pm.project_id = p.id AND pm.user_id = ${userId}::uuid
-          WHERE (p.created_at, p.id) < (${createdAt}::timestamptz, ${id}::uuid)
+            ON pm.project_id = p.id AND pm.user_id = ${userId}
+          WHERE (p.created_at, p.id) < (${createdAt}::timestamptz, ${id})
           ORDER BY p.created_at DESC, p.id DESC
           LIMIT ${overFetch}
         `);
       })()
     : await db.execute<{
         id: string;
-        slug: string;
         name: string;
         client_name: string | null;
         address: string | null;
@@ -93,11 +90,11 @@ export async function listProjects(db: Db, userId: string, input: ListInput): Pr
         created_at: Date;
         updated_at: Date;
       }>(sql`
-        SELECT p.id, p.slug, p.name, p.client_name, p.address, p.owner_id, pm.role AS my_role,
+        SELECT p.id, p.name, p.client_name, p.address, p.owner_id, pm.role AS my_role,
                p.created_at, p.updated_at
         FROM app.projects p
         JOIN app.project_members pm
-          ON pm.project_id = p.id AND pm.user_id = ${userId}::uuid
+          ON pm.project_id = p.id AND pm.user_id = ${userId}
         ORDER BY p.created_at DESC, p.id DESC
         LIMIT ${overFetch}
       `);
@@ -109,7 +106,6 @@ export async function listProjects(db: Db, userId: string, input: ListInput): Pr
   return {
     items: slice.map((r) => ({
       id: r.id,
-      slug: r.slug,
       name: r.name,
       clientName: r.client_name,
       address: r.address,
@@ -123,11 +119,10 @@ export async function listProjects(db: Db, userId: string, input: ListInput): Pr
 }
 
 /**
- * Create a project with the caller as owner. Generates a public slug
- * (`prj_xxxxxx`) and retries on the (vanishingly unlikely)
- * `projects_slug_unique` collision. The SECURITY DEFINER helper
- * (see migration 202605130004) writes the slug + bootstraps the
- * owner membership in a single transaction.
+ * Create a project with the caller as owner. The app mints the public
+ * ID (`prj_xxxxxxxx`) via `newId('prj')` and retries on the (vanishingly
+ * unlikely) PK unique-violation. The SECURITY DEFINER helper writes the
+ * row + bootstraps the owner membership in a single transaction.
  */
 export async function createProject(
   db: Db,
@@ -135,32 +130,30 @@ export async function createProject(
 ): Promise<string> {
   const maxAttempts = 3;
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
-    const slug = generateSlug('prj');
+    const id = newId('prj');
     try {
       const r = await db.execute<{ id: string }>(sql`
         SELECT app.create_project_with_owner(
-          ${input.name}, ${input.clientName ?? null}, ${input.address ?? null}, ${slug}
+          ${id}, ${input.name}, ${input.clientName ?? null}, ${input.address ?? null}
         ) AS id
       `);
       const row = r.rows[0];
       if (!row) throw new Error('create_project_with_owner returned no row');
       return row.id;
     } catch (err) {
-      if (isSlugCollision(err, 'projects_slug_unique') && attempt < maxAttempts - 1) {
+      if (isPkCollision(err) && attempt < maxAttempts - 1) {
         continue;
       }
       throw err;
     }
   }
-  // Unreachable — the loop either returns or throws.
-  throw new Error('slug collision retry exhausted (projects)');
+  throw new Error('id collision retry exhausted (projects)');
 }
 
-function isSlugCollision(err: unknown, constraint: string): boolean {
-  const e = err as { code?: string; constraint?: string; cause?: unknown };
-  if (e.code === '23505' && e.constraint === constraint) return true;
-  // Drizzle/pg sometimes nests the error.
-  if (e.cause && isSlugCollision(e.cause, constraint)) return true;
+function isPkCollision(err: unknown): boolean {
+  const e = err as { code?: string; cause?: unknown };
+  if (e.code === '23505') return true;
+  if (e.cause && isPkCollision(e.cause)) return true;
   return false;
 }
 
@@ -170,23 +163,14 @@ export async function getProject(
   projectId: string,
   withStats = true,
 ): Promise<ProjectRow | null> {
-  return getProjectByPredicate(db, userId, sql`p.id = ${projectId}::uuid`, withStats);
+  return getProjectByPredicate(db, userId, sql`p.id = ${projectId}`, withStats);
 }
 
 /**
- * Look up a project by its public slug. Returns null if the slug
- * doesn't exist OR the caller is not a member (RLS on project_members
- * + the JOIN below hides the row either way → indistinguishable 404,
- * Pitfall 6).
+ * Alias kept for source compatibility while route call sites migrate to
+ * `getProject(... id ...)`. Identical semantics — the `id` IS the slug.
  */
-export async function getProjectBySlug(
-  db: Db,
-  userId: string,
-  projectSlugValue: string,
-  withStats = true,
-): Promise<ProjectRow | null> {
-  return getProjectByPredicate(db, userId, sql`p.slug = ${projectSlugValue}`, withStats);
-}
+export const getProjectBySlug = getProject;
 
 async function getProjectByPredicate(
   db: Db,
@@ -196,7 +180,6 @@ async function getProjectByPredicate(
 ): Promise<ProjectRow | null> {
   const r = await db.execute<{
     id: string;
-    slug: string;
     name: string;
     client_name: string | null;
     address: string | null;
@@ -205,11 +188,11 @@ async function getProjectByPredicate(
     created_at: Date;
     updated_at: Date;
   }>(sql`
-    SELECT p.id, p.slug, p.name, p.client_name, p.address, p.owner_id, pm.role AS my_role,
+    SELECT p.id, p.name, p.client_name, p.address, p.owner_id, pm.role AS my_role,
            p.created_at, p.updated_at
     FROM app.projects p
     JOIN app.project_members pm
-      ON pm.project_id = p.id AND pm.user_id = ${userId}::uuid
+      ON pm.project_id = p.id AND pm.user_id = ${userId}
     WHERE ${predicate}
     LIMIT 1
   `);
@@ -218,7 +201,6 @@ async function getProjectByPredicate(
 
   const out: ProjectRow = {
     id: row.id,
-    slug: row.slug,
     name: row.name,
     clientName: row.client_name,
     address: row.address,
@@ -233,7 +215,7 @@ async function getProjectByPredicate(
       total_reports: string;
       drafts: string;
       last_report_at: Date | null;
-    }>(sql`SELECT * FROM app.project_stats(${row.id}::uuid)`);
+    }>(sql`SELECT * FROM app.project_stats(${row.id})`);
     const s = stats.rows[0];
     if (s) {
       out.stats = {
@@ -247,20 +229,19 @@ async function getProjectByPredicate(
 }
 
 /**
- * Resolve a `prj_xxxxxx` slug to `{ projectSlug }` (just confirming
- * existence + scope). Used by `GET /p/:projectSlug` to back the
- * short-URL flow. Returns null if the slug doesn't exist or RLS hides
- * it.
+ * Resolve a `prj_xxxxxxxx` ID — used by `GET /p/:project` for the
+ * short-URL flow. Returns null when the id doesn't exist or RLS hides
+ * it (indistinguishable, Pitfall 6).
  */
 export async function resolveProjectSlug(
   db: Db,
-  projectSlugValue: string,
+  projectIdValue: string,
 ): Promise<{ projectSlug: string } | null> {
-  const r = await db.execute<{ slug: string }>(sql`
-    SELECT slug FROM app.projects WHERE slug = ${projectSlugValue} LIMIT 1
+  const r = await db.execute<{ id: string }>(sql`
+    SELECT id FROM app.projects WHERE id = ${projectIdValue} LIMIT 1
   `);
   const row = r.rows[0];
-  return row ? { projectSlug: row.slug } : null;
+  return row ? { projectSlug: row.id } : null;
 }
 
 export async function updateProject(
@@ -274,7 +255,7 @@ export async function updateProject(
       client_name = COALESCE(${patch.clientName ?? null}, client_name),
       address = COALESCE(${patch.address ?? null}, address),
       updated_at = now()
-    WHERE id = ${projectId}::uuid
+    WHERE id = ${projectId}
     RETURNING id
   `);
   return r.rows.length > 0;
@@ -282,7 +263,7 @@ export async function updateProject(
 
 export async function deleteProject(db: Db, projectId: string): Promise<boolean> {
   const r = await db.execute<{ id: string }>(sql`
-    DELETE FROM app.projects WHERE id = ${projectId}::uuid RETURNING id
+    DELETE FROM app.projects WHERE id = ${projectId} RETURNING id
   `);
   return r.rows.length > 0;
 }
@@ -294,7 +275,7 @@ export async function listMembers(db: Db, projectId: string): Promise<ProjectMem
     phone: string;
     role: ProjectRole;
     joined_at: Date;
-  }>(sql`SELECT * FROM app.list_project_members(${projectId}::uuid)`);
+  }>(sql`SELECT * FROM app.list_project_members(${projectId})`);
   return r.rows.map((row) => ({
     userId: row.user_id,
     displayName: row.display_name,
@@ -316,7 +297,7 @@ export async function addMemberByPhone(
     phone: string;
     role: ProjectRole;
     joined_at: Date;
-  }>(sql`SELECT * FROM app.add_project_member_by_phone(${projectId}::uuid, ${phone}, ${role}::app.project_role)`);
+  }>(sql`SELECT * FROM app.add_project_member_by_phone(${projectId}, ${phone}, ${role}::app.project_role)`);
   const row = r.rows[0];
   if (!row) throw new Error('add_project_member_by_phone returned no row');
   return {
@@ -330,15 +311,14 @@ export async function addMemberByPhone(
 
 export async function removeMember(db: Db, projectId: string, userId: string): Promise<boolean> {
   const r = await db.execute<{ remove_project_member: boolean }>(sql`
-    SELECT app.remove_project_member(${projectId}::uuid, ${userId}::uuid) AS remove_project_member
+    SELECT app.remove_project_member(${projectId}, ${userId}) AS remove_project_member
   `);
   return Boolean(r.rows[0]?.remove_project_member);
 }
 
 /**
  * Map a Postgres SQLSTATE thrown from a SECURITY DEFINER helper into
- * an HTTP-friendly category. Lets routes do
- *   try { ... } catch (e) { if (mapPgError(e) === 'forbidden') ... }
+ * an HTTP-friendly category.
  */
 export function mapPgError(err: unknown): 'forbidden' | 'not_found' | 'conflict' | 'unknown' {
   const e = err as { code?: string; message?: string };

@@ -132,7 +132,6 @@ export interface paths {
                         "application/json": {
                             token: string;
                             user: {
-                                /** Format: uuid */
                                 id: string;
                                 phone: string;
                                 displayName: string | null;
@@ -381,7 +380,6 @@ export interface paths {
                     content: {
                         "application/json": {
                             user: {
-                                /** Format: uuid */
                                 id: string;
                                 phone: string;
                                 displayName: string | null;
@@ -452,7 +450,6 @@ export interface paths {
                     content: {
                         "application/json": {
                             user: {
-                                /** Format: uuid */
                                 id: string;
                                 phone: string;
                                 displayName: string | null;
@@ -598,13 +595,10 @@ export interface paths {
                     content: {
                         "application/json": {
                             items: {
-                                /** Format: uuid */
                                 id: string;
-                                slug: string;
                                 name: string;
                                 clientName: string | null;
                                 address: string | null;
-                                /** Format: uuid */
                                 ownerId: string;
                                 /** @enum {string} */
                                 myRole: "owner" | "editor" | "viewer";
@@ -663,13 +657,10 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            /** Format: uuid */
                             id: string;
-                            slug: string;
                             name: string;
                             clientName: string | null;
                             address: string | null;
-                            /** Format: uuid */
                             ownerId: string;
                             /** @enum {string} */
                             myRole: "owner" | "editor" | "viewer";
@@ -748,13 +739,10 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            /** Format: uuid */
                             id: string;
-                            slug: string;
                             name: string;
                             clientName: string | null;
                             address: string | null;
-                            /** Format: uuid */
                             ownerId: string;
                             /** @enum {string} */
                             myRole: "owner" | "editor" | "viewer";
@@ -884,13 +872,10 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            /** Format: uuid */
                             id: string;
-                            slug: string;
                             name: string;
                             clientName: string | null;
                             address: string | null;
-                            /** Format: uuid */
                             ownerId: string;
                             /** @enum {string} */
                             myRole: "owner" | "editor" | "viewer";
@@ -966,7 +951,6 @@ export interface paths {
                     content: {
                         "application/json": {
                             items: {
-                                /** Format: uuid */
                                 userId: string;
                                 displayName: string | null;
                                 phone: string;
@@ -1041,7 +1025,6 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            /** Format: uuid */
                             userId: string;
                             displayName: string | null;
                             phone: string;
@@ -1252,11 +1235,8 @@ export interface paths {
                     content: {
                         "application/json": {
                             items: {
-                                /** Format: uuid */
                                 id: string;
-                                slug: string;
                                 number: number;
-                                /** Format: uuid */
                                 projectId: string;
                                 /** @enum {string} */
                                 status: "draft" | "finalized";
@@ -1366,11 +1346,8 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            /** Format: uuid */
                             id: string;
-                            slug: string;
                             number: number;
-                            /** Format: uuid */
                             projectId: string;
                             /** @enum {string} */
                             status: "draft" | "finalized";
@@ -1501,11 +1478,8 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            /** Format: uuid */
                             id: string;
-                            slug: string;
                             number: number;
-                            /** Format: uuid */
                             projectId: string;
                             /** @enum {string} */
                             status: "draft" | "finalized";
@@ -1670,11 +1644,8 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            /** Format: uuid */
                             id: string;
-                            slug: string;
                             number: number;
-                            /** Format: uuid */
                             projectId: string;
                             /** @enum {string} */
                             status: "draft" | "finalized";
@@ -1810,11 +1781,8 @@ export interface paths {
                     content: {
                         "application/json": {
                             report: {
-                                /** Format: uuid */
                                 id: string;
-                                slug: string;
                                 number: number;
-                                /** Format: uuid */
                                 projectId: string;
                                 /** @enum {string} */
                                 status: "draft" | "finalized";
@@ -1987,11 +1955,8 @@ export interface paths {
                     content: {
                         "application/json": {
                             report: {
-                                /** Format: uuid */
                                 id: string;
-                                slug: string;
                                 number: number;
-                                /** Format: uuid */
                                 projectId: string;
                                 /** @enum {string} */
                                 status: "draft" | "finalized";
@@ -2158,11 +2123,8 @@ export interface paths {
                     content: {
                         "application/json": {
                             report: {
-                                /** Format: uuid */
                                 id: string;
-                                slug: string;
                                 number: number;
-                                /** Format: uuid */
                                 projectId: string;
                                 /** @enum {string} */
                                 status: "draft" | "finalized";
@@ -2385,7 +2347,7 @@ export interface paths {
                         "application/json": {
                             /** @enum {string} */
                             type: "project";
-                            projectSlug: string;
+                            projectId: string;
                         };
                     };
                 };
@@ -2458,8 +2420,8 @@ export interface paths {
                         "application/json": {
                             /** @enum {string} */
                             type: "report";
-                            projectSlug: string;
-                            reportSlug: string;
+                            projectId: string;
+                            reportId: string;
                             reportNumber: number;
                         };
                     };
@@ -2535,16 +2497,12 @@ export interface paths {
                     content: {
                         "application/json": {
                             items: {
-                                /** Format: uuid */
                                 id: string;
-                                /** Format: uuid */
                                 reportId: string;
-                                /** Format: uuid */
                                 authorId: string;
                                 /** @enum {string} */
                                 kind: "text" | "voice" | "image" | "document";
                                 body: string | null;
-                                /** Format: uuid */
                                 fileId: string | null;
                                 transcript: string | null;
                                 createdAt: string;
@@ -2604,7 +2562,6 @@ export interface paths {
                         /** @enum {string} */
                         kind: "text" | "voice" | "image" | "document";
                         body?: string | null;
-                        /** Format: uuid */
                         fileId?: string | null;
                         transcript?: string | null;
                     };
@@ -2618,16 +2575,12 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            /** Format: uuid */
                             id: string;
-                            /** Format: uuid */
                             reportId: string;
-                            /** Format: uuid */
                             authorId: string;
                             /** @enum {string} */
                             kind: "text" | "voice" | "image" | "document";
                             body: string | null;
-                            /** Format: uuid */
                             fileId: string | null;
                             transcript: string | null;
                             createdAt: string;
@@ -2779,16 +2732,12 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            /** Format: uuid */
                             id: string;
-                            /** Format: uuid */
                             reportId: string;
-                            /** Format: uuid */
                             authorId: string;
                             /** @enum {string} */
                             kind: "text" | "voice" | "image" | "document";
                             body: string | null;
-                            /** Format: uuid */
                             fileId: string | null;
                             transcript: string | null;
                             createdAt: string;
@@ -2964,9 +2913,7 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            /** Format: uuid */
                             id: string;
-                            /** Format: uuid */
                             ownerId: string;
                             /** @enum {string} */
                             kind: "voice" | "image" | "document" | "pdf";
@@ -3125,7 +3072,6 @@ export interface paths {
             requestBody?: {
                 content: {
                     "application/json": {
-                        /** Format: uuid */
                         fileId: string;
                         fixtureName?: string;
                     };

@@ -9,6 +9,7 @@ import { eq } from 'drizzle-orm';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { sql } from 'drizzle-orm';
 import * as schema from '../db/schema.js';
+import { newId } from '../lib/ids.js';
 import type { TwilioClient } from './twilio.js';
 import { signJwt } from './jwt.js';
 
@@ -41,7 +42,7 @@ export async function startOtp(
   const { verificationId } = await twilio.start(phone);
   await db
     .insert(schema.verifications)
-    .values({ phone, twilioVerificationSid: verificationId });
+    .values({ id: newId('vrf'), phone, twilioVerificationSid: verificationId });
   return { verificationId };
 }
 
@@ -62,7 +63,7 @@ export async function verifyOtp(
     existing[0] ??
     (await db
       .insert(schema.users)
-      .values({ phone })
+      .values({ id: newId('usr'), phone })
       .returning()
       .then((r) => r[0]));
   if (!user) throw new Error('user upsert failed');
@@ -82,7 +83,7 @@ export async function verifyOtp(
   const expiresAt = new Date(Date.now() + SESSION_TTL_MS);
   const sessionRows = await db
     .insert(schema.sessions)
-    .values({ userId: user.id, expiresAt })
+    .values({ id: newId('ses'), userId: user.id, expiresAt })
     .returning({ id: schema.sessions.id });
   const session = sessionRows[0];
   if (!session) throw new Error('session insert failed');
@@ -127,7 +128,7 @@ export async function updateUser(
       display_name = COALESCE(${input.displayName ?? null}, display_name),
       company_name = COALESCE(${input.companyName ?? null}, company_name),
       updated_at = now()
-    WHERE id = ${userId}::uuid
+    WHERE id = ${userId}
   `);
   return fetchUser(db, userId);
 }
@@ -152,14 +153,14 @@ export async function fetchUsage(db: Db, userId: string): Promise<UsageSummary> 
   const reportsRes = await db.execute<{ month: string; count: string }>(sql`
     SELECT to_char(created_at, 'YYYY-MM') AS month, count(*)::text AS count
     FROM app.reports
-    WHERE author_id = ${userId}::uuid
+    WHERE author_id = ${userId}
     GROUP BY month
     ORDER BY month
   `);
   const notesRes = await db.execute<{ month: string; count: string }>(sql`
     SELECT to_char(created_at, 'YYYY-MM') AS month, count(*)::text AS count
     FROM app.notes
-    WHERE author_id = ${userId}::uuid AND kind = 'voice'
+    WHERE author_id = ${userId} AND kind = 'voice'
     GROUP BY month
     ORDER BY month
   `);

@@ -179,7 +179,7 @@
                       "properties": {
                         "id": {
                           "type": "string",
-                          "format": "uuid"
+                          "pattern": "^usr_[0-9a-hjkmnp-tv-z]{8,16}$"
                         },
                         "phone": {
                           "type": "string",
@@ -563,7 +563,7 @@
                       "properties": {
                         "id": {
                           "type": "string",
-                          "format": "uuid"
+                          "pattern": "^usr_[0-9a-hjkmnp-tv-z]{8,16}$"
                         },
                         "phone": {
                           "type": "string",
@@ -708,7 +708,7 @@
                       "properties": {
                         "id": {
                           "type": "string",
-                          "format": "uuid"
+                          "pattern": "^usr_[0-9a-hjkmnp-tv-z]{8,16}$"
                         },
                         "phone": {
                           "type": "string",
@@ -997,11 +997,7 @@
                         "properties": {
                           "id": {
                             "type": "string",
-                            "format": "uuid"
-                          },
-                          "slug": {
-                            "type": "string",
-                            "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8}$"
+                            "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8,16}$"
                           },
                           "name": {
                             "type": "string",
@@ -1018,7 +1014,7 @@
                           },
                           "ownerId": {
                             "type": "string",
-                            "format": "uuid"
+                            "pattern": "^usr_[0-9a-hjkmnp-tv-z]{8,16}$"
                           },
                           "myRole": {
                             "type": "string",
@@ -1059,7 +1055,6 @@
                         },
                         "required": [
                           "id",
-                          "slug",
                           "name",
                           "clientName",
                           "address",
@@ -1169,11 +1164,7 @@
                   "properties": {
                     "id": {
                       "type": "string",
-                      "format": "uuid"
-                    },
-                    "slug": {
-                      "type": "string",
-                      "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8}$"
+                      "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8,16}$"
                     },
                     "name": {
                       "type": "string",
@@ -1190,7 +1181,7 @@
                     },
                     "ownerId": {
                       "type": "string",
-                      "format": "uuid"
+                      "pattern": "^usr_[0-9a-hjkmnp-tv-z]{8,16}$"
                     },
                     "myRole": {
                       "type": "string",
@@ -1231,7 +1222,6 @@
                   },
                   "required": [
                     "id",
-                    "slug",
                     "name",
                     "clientName",
                     "address",
@@ -1333,7 +1323,7 @@
           {
             "schema": {
               "type": "string",
-              "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8}$"
+              "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8,16}$"
             },
             "required": true,
             "name": "projectSlug",
@@ -1350,11 +1340,7 @@
                   "properties": {
                     "id": {
                       "type": "string",
-                      "format": "uuid"
-                    },
-                    "slug": {
-                      "type": "string",
-                      "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8}$"
+                      "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8,16}$"
                     },
                     "name": {
                       "type": "string",
@@ -1371,7 +1357,7 @@
                     },
                     "ownerId": {
                       "type": "string",
-                      "format": "uuid"
+                      "pattern": "^usr_[0-9a-hjkmnp-tv-z]{8,16}$"
                     },
                     "myRole": {
                       "type": "string",
@@ -1412,7 +1398,6 @@
                   },
                   "required": [
                     "id",
-                    "slug",
                     "name",
                     "clientName",
                     "address",
@@ -1512,7 +1497,7 @@
           {
             "schema": {
               "type": "string",
-              "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8}$"
+              "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8,16}$"
             },
             "required": true,
             "name": "projectSlug",
@@ -1553,11 +1538,7 @@
                   "properties": {
                     "id": {
                       "type": "string",
-                      "format": "uuid"
-                    },
-                    "slug": {
-                      "type": "string",
-                      "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8}$"
+                      "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8,16}$"
                     },
                     "name": {
                       "type": "string",
@@ -1574,7 +1555,7 @@
                     },
                     "ownerId": {
                       "type": "string",
-                      "format": "uuid"
+                      "pattern": "^usr_[0-9a-hjkmnp-tv-z]{8,16}$"
                     },
                     "myRole": {
                       "type": "string",
@@ -1615,7 +1596,6 @@
                   },
                   "required": [
                     "id",
-                    "slug",
                     "name",
                     "clientName",
                     "address",
@@ -1715,7 +1695,7 @@
           {
             "schema": {
               "type": "string",
-              "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8}$"
+              "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8,16}$"
             },
             "required": true,
             "name": "projectSlug",
@@ -1815,7 +1795,7 @@
           {
             "schema": {
               "type": "string",
-              "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8}$"
+              "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8,16}$"
             },
             "required": true,
             "name": "projectSlug",
@@ -1837,7 +1817,7 @@
                         "properties": {
                           "userId": {
                             "type": "string",
-                            "format": "uuid"
+                            "pattern": "^usr_[0-9a-hjkmnp-tv-z]{8,16}$"
                           },
                           "displayName": {
                             "type": "string",
@@ -1963,7 +1943,7 @@
           {
             "schema": {
               "type": "string",
-              "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8}$"
+              "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8,16}$"
             },
             "required": true,
             "name": "projectSlug",
@@ -2007,7 +1987,7 @@
                   "properties": {
                     "userId": {
                       "type": "string",
-                      "format": "uuid"
+                      "pattern": "^usr_[0-9a-hjkmnp-tv-z]{8,16}$"
                     },
                     "displayName": {
                       "type": "string",
@@ -2201,7 +2181,7 @@
           {
             "schema": {
               "type": "string",
-              "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8}$"
+              "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8,16}$"
             },
             "required": true,
             "name": "projectSlug",
@@ -2382,7 +2362,7 @@
           {
             "schema": {
               "type": "string",
-              "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8}$"
+              "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8,16}$"
             },
             "required": true,
             "name": "projectSlug",
@@ -2425,11 +2405,7 @@
                         "properties": {
                           "id": {
                             "type": "string",
-                            "format": "uuid"
-                          },
-                          "slug": {
-                            "type": "string",
-                            "pattern": "^rpt_[0-9a-hjkmnp-tv-z]{8}$"
+                            "pattern": "^rpt_[0-9a-hjkmnp-tv-z]{8,16}$"
                           },
                           "number": {
                             "type": "integer",
@@ -2438,7 +2414,7 @@
                           },
                           "projectId": {
                             "type": "string",
-                            "format": "uuid"
+                            "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8,16}$"
                           },
                           "status": {
                             "type": "string",
@@ -2649,7 +2625,6 @@
                         },
                         "required": [
                           "id",
-                          "slug",
                           "number",
                           "projectId",
                           "status",
@@ -2766,7 +2741,7 @@
           {
             "schema": {
               "type": "string",
-              "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8}$"
+              "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8,16}$"
             },
             "required": true,
             "name": "projectSlug",
@@ -2797,11 +2772,7 @@
                   "properties": {
                     "id": {
                       "type": "string",
-                      "format": "uuid"
-                    },
-                    "slug": {
-                      "type": "string",
-                      "pattern": "^rpt_[0-9a-hjkmnp-tv-z]{8}$"
+                      "pattern": "^rpt_[0-9a-hjkmnp-tv-z]{8,16}$"
                     },
                     "number": {
                       "type": "integer",
@@ -2810,7 +2781,7 @@
                     },
                     "projectId": {
                       "type": "string",
-                      "format": "uuid"
+                      "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8,16}$"
                     },
                     "status": {
                       "type": "string",
@@ -3021,7 +2992,6 @@
                   },
                   "required": [
                     "id",
-                    "slug",
                     "number",
                     "projectId",
                     "status",
@@ -3163,7 +3133,7 @@
           {
             "schema": {
               "type": "string",
-              "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8}$"
+              "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8,16}$"
             },
             "required": true,
             "name": "projectSlug",
@@ -3190,11 +3160,7 @@
                   "properties": {
                     "id": {
                       "type": "string",
-                      "format": "uuid"
-                    },
-                    "slug": {
-                      "type": "string",
-                      "pattern": "^rpt_[0-9a-hjkmnp-tv-z]{8}$"
+                      "pattern": "^rpt_[0-9a-hjkmnp-tv-z]{8,16}$"
                     },
                     "number": {
                       "type": "integer",
@@ -3203,7 +3169,7 @@
                     },
                     "projectId": {
                       "type": "string",
-                      "format": "uuid"
+                      "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8,16}$"
                     },
                     "status": {
                       "type": "string",
@@ -3414,7 +3380,6 @@
                   },
                   "required": [
                     "id",
-                    "slug",
                     "number",
                     "projectId",
                     "status",
@@ -3518,7 +3483,7 @@
           {
             "schema": {
               "type": "string",
-              "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8}$"
+              "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8,16}$"
             },
             "required": true,
             "name": "projectSlug",
@@ -3560,11 +3525,7 @@
                   "properties": {
                     "id": {
                       "type": "string",
-                      "format": "uuid"
-                    },
-                    "slug": {
-                      "type": "string",
-                      "pattern": "^rpt_[0-9a-hjkmnp-tv-z]{8}$"
+                      "pattern": "^rpt_[0-9a-hjkmnp-tv-z]{8,16}$"
                     },
                     "number": {
                       "type": "integer",
@@ -3573,7 +3534,7 @@
                     },
                     "projectId": {
                       "type": "string",
-                      "format": "uuid"
+                      "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8,16}$"
                     },
                     "status": {
                       "type": "string",
@@ -3784,7 +3745,6 @@
                   },
                   "required": [
                     "id",
-                    "slug",
                     "number",
                     "projectId",
                     "status",
@@ -3924,7 +3884,7 @@
           {
             "schema": {
               "type": "string",
-              "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8}$"
+              "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8,16}$"
             },
             "required": true,
             "name": "projectSlug",
@@ -4034,7 +3994,7 @@
           {
             "schema": {
               "type": "string",
-              "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8}$"
+              "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8,16}$"
             },
             "required": true,
             "name": "projectSlug",
@@ -4081,11 +4041,7 @@
                       "properties": {
                         "id": {
                           "type": "string",
-                          "format": "uuid"
-                        },
-                        "slug": {
-                          "type": "string",
-                          "pattern": "^rpt_[0-9a-hjkmnp-tv-z]{8}$"
+                          "pattern": "^rpt_[0-9a-hjkmnp-tv-z]{8,16}$"
                         },
                         "number": {
                           "type": "integer",
@@ -4094,7 +4050,7 @@
                         },
                         "projectId": {
                           "type": "string",
-                          "format": "uuid"
+                          "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8,16}$"
                         },
                         "status": {
                           "type": "string",
@@ -4305,7 +4261,6 @@
                       },
                       "required": [
                         "id",
-                        "slug",
                         "number",
                         "projectId",
                         "status",
@@ -4524,7 +4479,7 @@
           {
             "schema": {
               "type": "string",
-              "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8}$"
+              "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8,16}$"
             },
             "required": true,
             "name": "projectSlug",
@@ -4571,11 +4526,7 @@
                       "properties": {
                         "id": {
                           "type": "string",
-                          "format": "uuid"
-                        },
-                        "slug": {
-                          "type": "string",
-                          "pattern": "^rpt_[0-9a-hjkmnp-tv-z]{8}$"
+                          "pattern": "^rpt_[0-9a-hjkmnp-tv-z]{8,16}$"
                         },
                         "number": {
                           "type": "integer",
@@ -4584,7 +4535,7 @@
                         },
                         "projectId": {
                           "type": "string",
-                          "format": "uuid"
+                          "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8,16}$"
                         },
                         "status": {
                           "type": "string",
@@ -4795,7 +4746,6 @@
                       },
                       "required": [
                         "id",
-                        "slug",
                         "number",
                         "projectId",
                         "status",
@@ -5014,7 +4964,7 @@
           {
             "schema": {
               "type": "string",
-              "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8}$"
+              "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8,16}$"
             },
             "required": true,
             "name": "projectSlug",
@@ -5044,11 +4994,7 @@
                       "properties": {
                         "id": {
                           "type": "string",
-                          "format": "uuid"
-                        },
-                        "slug": {
-                          "type": "string",
-                          "pattern": "^rpt_[0-9a-hjkmnp-tv-z]{8}$"
+                          "pattern": "^rpt_[0-9a-hjkmnp-tv-z]{8,16}$"
                         },
                         "number": {
                           "type": "integer",
@@ -5057,7 +5003,7 @@
                         },
                         "projectId": {
                           "type": "string",
-                          "format": "uuid"
+                          "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8,16}$"
                         },
                         "status": {
                           "type": "string",
@@ -5268,7 +5214,6 @@
                       },
                       "required": [
                         "id",
-                        "slug",
                         "number",
                         "projectId",
                         "status",
@@ -5415,7 +5360,7 @@
           {
             "schema": {
               "type": "string",
-              "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8}$"
+              "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8,16}$"
             },
             "required": true,
             "name": "projectSlug",
@@ -5581,7 +5526,7 @@
           {
             "schema": {
               "type": "string",
-              "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8}$"
+              "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8,16}$"
             },
             "required": true,
             "name": "projectSlug",
@@ -5602,14 +5547,14 @@
                         "project"
                       ]
                     },
-                    "projectSlug": {
+                    "projectId": {
                       "type": "string",
-                      "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8}$"
+                      "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8,16}$"
                     }
                   },
                   "required": [
                     "type",
-                    "projectSlug"
+                    "projectId"
                   ]
                 }
               }
@@ -5704,7 +5649,7 @@
           {
             "schema": {
               "type": "string",
-              "pattern": "^rpt_[0-9a-hjkmnp-tv-z]{8}$"
+              "pattern": "^rpt_[0-9a-hjkmnp-tv-z]{8,16}$"
             },
             "required": true,
             "name": "reportSlug",
@@ -5725,13 +5670,13 @@
                         "report"
                       ]
                     },
-                    "projectSlug": {
+                    "projectId": {
                       "type": "string",
-                      "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8}$"
+                      "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8,16}$"
                     },
-                    "reportSlug": {
+                    "reportId": {
                       "type": "string",
-                      "pattern": "^rpt_[0-9a-hjkmnp-tv-z]{8}$"
+                      "pattern": "^rpt_[0-9a-hjkmnp-tv-z]{8,16}$"
                     },
                     "reportNumber": {
                       "type": "integer",
@@ -5741,8 +5686,8 @@
                   },
                   "required": [
                     "type",
-                    "projectSlug",
-                    "reportSlug",
+                    "projectId",
+                    "reportId",
                     "reportNumber"
                   ]
                 }
@@ -5881,15 +5826,15 @@
                         "properties": {
                           "id": {
                             "type": "string",
-                            "format": "uuid"
+                            "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
                           },
                           "reportId": {
                             "type": "string",
-                            "format": "uuid"
+                            "pattern": "^rpt_[0-9a-hjkmnp-tv-z]{8,16}$"
                           },
                           "authorId": {
                             "type": "string",
-                            "format": "uuid"
+                            "pattern": "^usr_[0-9a-hjkmnp-tv-z]{8,16}$"
                           },
                           "kind": {
                             "type": "string",
@@ -5907,7 +5852,7 @@
                           "fileId": {
                             "type": "string",
                             "nullable": true,
-                            "format": "uuid"
+                            "pattern": "^fil_[0-9a-hjkmnp-tv-z]{8,16}$"
                           },
                           "transcript": {
                             "type": "string",
@@ -6064,7 +6009,7 @@
                   "fileId": {
                     "type": "string",
                     "nullable": true,
-                    "format": "uuid"
+                    "pattern": "^fil_[0-9a-hjkmnp-tv-z]{8,16}$"
                   },
                   "transcript": {
                     "type": "string",
@@ -6088,15 +6033,15 @@
                   "properties": {
                     "id": {
                       "type": "string",
-                      "format": "uuid"
+                      "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
                     },
                     "reportId": {
                       "type": "string",
-                      "format": "uuid"
+                      "pattern": "^rpt_[0-9a-hjkmnp-tv-z]{8,16}$"
                     },
                     "authorId": {
                       "type": "string",
-                      "format": "uuid"
+                      "pattern": "^usr_[0-9a-hjkmnp-tv-z]{8,16}$"
                     },
                     "kind": {
                       "type": "string",
@@ -6114,7 +6059,7 @@
                     "fileId": {
                       "type": "string",
                       "nullable": true,
-                      "format": "uuid"
+                      "pattern": "^fil_[0-9a-hjkmnp-tv-z]{8,16}$"
                     },
                     "transcript": {
                       "type": "string",
@@ -6302,15 +6247,15 @@
                   "properties": {
                     "id": {
                       "type": "string",
-                      "format": "uuid"
+                      "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
                     },
                     "reportId": {
                       "type": "string",
-                      "format": "uuid"
+                      "pattern": "^rpt_[0-9a-hjkmnp-tv-z]{8,16}$"
                     },
                     "authorId": {
                       "type": "string",
-                      "format": "uuid"
+                      "pattern": "^usr_[0-9a-hjkmnp-tv-z]{8,16}$"
                     },
                     "kind": {
                       "type": "string",
@@ -6328,7 +6273,7 @@
                     "fileId": {
                       "type": "string",
                       "nullable": true,
-                      "format": "uuid"
+                      "pattern": "^fil_[0-9a-hjkmnp-tv-z]{8,16}$"
                     },
                     "transcript": {
                       "type": "string",
@@ -6773,11 +6718,11 @@
                   "properties": {
                     "id": {
                       "type": "string",
-                      "format": "uuid"
+                      "pattern": "^fil_[0-9a-hjkmnp-tv-z]{8,16}$"
                     },
                     "ownerId": {
                       "type": "string",
-                      "format": "uuid"
+                      "pattern": "^usr_[0-9a-hjkmnp-tv-z]{8,16}$"
                     },
                     "kind": {
                       "type": "string",
@@ -7063,7 +7008,7 @@
                 "properties": {
                   "fileId": {
                     "type": "string",
-                    "format": "uuid"
+                    "pattern": "^fil_[0-9a-hjkmnp-tv-z]{8,16}$"
                   },
                   "fixtureName": {
                     "type": "string",

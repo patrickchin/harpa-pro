@@ -104,7 +104,7 @@ export function projectsCreate(args: ProjectsCreateArgs): Promise<ExitCode> {
     stdout: args.stdout,
     stderr: args.stderr,
     request: () => args.client.POST('/projects', { body }),
-    format: (data) => `${chalk.green('✓')} Created project ${chalk.bold(data.name)} (${data.slug})`,
+    format: (data) => `${chalk.green('✓')} Created project ${chalk.bold(data.name)} (${data.id})`,
   });
 }
 
@@ -130,7 +130,7 @@ export const projectsCreateCommand = defineCommand({
       json: args.json,
       verbose: args.verbose,
       request: () => client.POST('/projects', { body }),
-      format: (data) => `${chalk.green('✓')} Created project ${chalk.bold(data.name)} (${data.slug})`,
+      format: (data) => `${chalk.green('✓')} Created project ${chalk.bold(data.name)} (${data.id})`,
     });
   },
 });
@@ -199,7 +199,7 @@ export function projectsUpdate(args: ProjectsUpdateArgs): Promise<ExitCode> {
         params: { path: { projectSlug: args.id } },
         body,
       }),
-    format: (data) => `${chalk.green('✓')} Updated project ${chalk.bold(data.name)} (${data.slug})`,
+    format: (data) => `${chalk.green('✓')} Updated project ${chalk.bold(data.name)} (${data.id})`,
   });
 }
 
@@ -231,7 +231,7 @@ export const projectsUpdateCommand = defineCommand({
           params: { path: { projectSlug: String(args.id) } },
           body,
         }),
-      format: (data) => `${chalk.green('✓')} Updated project ${chalk.bold(data.name)} (${data.slug})`,
+      format: (data) => `${chalk.green('✓')} Updated project ${chalk.bold(data.name)} (${data.id})`,
     });
   },
 });

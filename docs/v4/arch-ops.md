@@ -37,9 +37,47 @@
 
 ## Secrets
 
-- `infra/fly/secrets.example` enumerates every secret the API
-  needs. CI fails if a deploy is missing one.
-- Local dev secrets via Doppler (config: `dev`).
+All non-public secrets live in [Doppler](https://dashboard.doppler.com/workplace/6ef00a4d1fa271746160/projects/harpa-pro)
+under project `harpa-pro`. Configs:
+
+| Doppler config | Used for                                  | Mirrors local file |
+| -------------- | ----------------------------------------- | ------------------ |
+| `dev`          | dev Fly app + dev CI deploys              | `.env.dev`         |
+| `prd`          | prod Fly app + prod CI deploys            | `.env.prod`        |
+| `dev_personal` | per-developer overrides on top of `dev`   | `.env.local`       |
+
+`.env.example` (committed) enumerates every var. The three live
+variants (`.env.local` / `.env.dev` / `.env.prod`) are gitignored and
+are the local mirror of what's in Doppler.
+
+### Day-to-day
+
+```sh
+# Run a command with Doppler-injected env (no .env file needed):
+doppler run -- pnpm --filter @harpa/api dev
+
+# Sync local files ⇄ Doppler:
+pnpm secrets:pull:dev    # Doppler dev   → .env.dev
+pnpm secrets:pull:prod   # Doppler prd   → .env.prod
+pnpm secrets:push:dev    # .env.dev      → Doppler dev   (after editing)
+pnpm secrets:push:prod   # .env.prod     → Doppler prd
+
+# Bootstrap Fly secrets from Doppler:
+pnpm secrets:fly:dev     # → harpa-pro-api-dev
+pnpm secrets:fly:prod    # → harpa-pro-api
+```
+
+The repo is linked with `doppler setup --project harpa-pro --config dev`
+(stored in `~/.doppler/.doppler.yaml`). New developers run this once
+after cloning + `doppler login`.
+
+### CI
+
+GitHub Actions still reads from individual `secrets.*`. Long-term we
+should switch CI to a Doppler service token (`DOPPLER_TOKEN`) +
+`doppler run -- …` so the GitHub secret list shrinks to a single
+entry per env. Tracked under p41.
+
 - `.env.example` at the repo root enumerates every
   `EXPO_PUBLIC_*` var. The `lib/env.ts` Zod parse runs in CI
   against a populated `.env.example` to catch missing entries

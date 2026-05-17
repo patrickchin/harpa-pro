@@ -1098,6 +1098,22 @@ export interface paths {
                         };
                     };
                 };
+                /** @description Already a member. */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                                requestId?: string;
+                            };
+                        };
+                    };
+                };
             };
         };
         delete?: never;

@@ -4,7 +4,7 @@
     "appVersionSource": "remote"
   },
   "build": {
-    "_comment": "Three runtime variants. `production` ships to App Store / Play; `preview` is a side-by-side TestFlight/internal build pointed at the dev backend (com.harpa.pro.dev); `development` is the Metro dev-client local build pointed at localhost. APP_VARIANT drives bundleId + display name (see app.config.ts).",
+
     "development": {
       "developmentClient": true,
       "distribution": "internal",

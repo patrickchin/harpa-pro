@@ -28,6 +28,13 @@ DO $$ BEGIN
   CREATE ROLE app_anonymous NOLOGIN;
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
+-- Grant role membership to the connecting user so SET LOCAL ROLE works.
+-- Uses CURRENT_USER so this works on any Postgres host (Neon, local, CI).
+DO $$ BEGIN
+  EXECUTE format('GRANT app_authenticated TO %I', current_user);
+  EXECUTE format('GRANT app_anonymous     TO %I', current_user);
+END $$;
+
 GRANT USAGE ON SCHEMA auth TO app_authenticated;
 GRANT USAGE ON SCHEMA app  TO app_authenticated;
 GRANT USAGE ON SCHEMA app  TO app_anonymous;

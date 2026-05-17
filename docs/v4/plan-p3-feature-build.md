@@ -89,49 +89,54 @@ For each screen in the scope list:
 Suggested order (parallelisable across agents once primitives lock):
 
 ```
-P3.0  IDs/slugs migration (BLOCKS every other P3 task)
-P3.1  Project list (visual confirm)
-P3.2  New / Edit project           ┐ Agent A
-P3.3  Project home                 ┘
-P3.4  Members
-P3.5  Reports list
-P3.6  Generate – Notes tab          ┐ Agent B (the big one)
-P3.7  Generate – Report tab         │
-P3.8  Generate – Edit tab           ┘
-P3.9  Saved report + actions + PDF  ┐ Agent C
-P3.10 Files screen                  │
-P3.11 Camera                        ┘
-P3.12 Profile / Account / Usage
-P3.13 Maestro full-journey
+P3.0  IDs/slugs migration  ── superseded by P3.1
+P3.1  Slug-native IDs (DOMAIN PKs, no parallel UUID)  ✅ shipped
+P3.2  Project list (visual confirm)
+P3.3  New / Edit project           ┐ Agent A
+P3.4  Project home                 ┘
+P3.5  Members
+P3.6  Reports list
+P3.7  Generate – Notes tab          ┐ Agent B (the big one)
+P3.8  Generate – Report tab         │
+P3.9  Generate – Edit tab           ┘
+P3.10 Saved report + actions + PDF
+P3.11 Files screen
+P3.12 Camera
+P3.13 Profile / Account / Usage
+P3.14 Maestro full-journey
 ```
 
-### P3.0 — IDs/slugs migration
+### P3.1 — Slug-native IDs (✅ shipped)
 
-Full design: [arch-ids-and-urls.md](arch-ids-and-urls.md). Lands
-**before** any screen-port commit so URLs the app constructs are
-immediately on the final scheme — no rewriting share links later.
+Full design: [design-p31-slug-only-ids.md](design-p31-slug-only-ids.md).
+Companion: [arch-ids-and-urls.md](arch-ids-and-urls.md). Supersedes
+the P3.0 dual-id plan ([design-p30-ids-slugs.md](design-p30-ids-slugs.md))
+— there is **no parallel UUID column**: each entity's prefixed slug
+is the primary key, enforced by a Postgres DOMAIN.
 
-- [ ] Drizzle schema: add `slug text` + (reports) `number int` +
-      `projects.next_report_number int`. Backfill nullable, then
-      flip `NOT NULL` + `UNIQUE` (4-step expand/contract).
-- [ ] UUIDv7 default on new rows (`uuidv7()` on PG ≥ 17 or
-      `pg_uuidv7` extension — verify on Neon at migration time).
-      Existing UUIDv4 rows untouched.
-- [ ] `packages/api/src/lib/slug.ts` — nanoid Crockford-base32
-      generator + retry-on-collision wrapper.
-- [ ] `packages/api-contract`: `projectSlug`, `reportSlug`,
-      `reportNumber` Zod schemas + branded TS types. Path params
-      switch from `:id`/`:reportId` to `:projectSlug` /
-      `:projectSlug/:number`. OpenAPI spec regenerated.
-- [ ] New routes: `GET /p/:projectSlug` + `GET /r/:reportSlug` →
-      `308` redirect to canonical long URL. Scope test for each.
-- [ ] Per-request scope tests cover slug-based lookups (Pitfall 6).
-- [ ] Mobile: `lib/api/hooks.ts` regenerated; `router.push` call
-      sites updated; `app/(app)/p/[projectSlug].tsx` +
-      `app/(app)/r/[reportSlug].tsx` resolver screens added
-      (each does `router.replace` after slug → canonical resolve).
-- [ ] Commit: `feat(api,mobile): P3.0 IDs/slugs migration —
-      prefixed slugs + per-project report numbers`.
+- [x] Drizzle schema: PKs/FKs as plain `text()`; init migration
+      collapses prior P0/P1 schema into one
+      `20261101000001_init_slug_native.sql` (8 DOMAINs, RLS
+      retyped, SECURITY DEFINER helpers).
+- [x] `packages/api/src/lib/ids.ts` — `newId(prefix)`,
+      `assertId(prefix, value)`, `insertWithGeneratedId` (retry
+      on `23505`).
+- [x] `packages/api-contract`: `idSchema(prefix)` factory +
+      branded `Id<P>` TS types. Route params switched to short
+      form (`:project`, `:report`, `:note`, `:user`). OpenAPI
+      regenerated.
+- [x] Resolver routes `GET /p/:project` + `GET /r/:report`
+      return JSON (not 308); mobile resolver screens
+      `router.replace` to canonical long URL.
+- [x] `withScopedConnection` / `verifyJwt` / `signTestToken`
+      call `assertId` at the trust boundary; RLS coerces
+      `current_setting('app.user_id')::app.usr_id`.
+- [x] CLI openapi-fetch path templates + snapshots updated.
+- [x] Mobile: expo-router segments renamed
+      (`[project]/`, `[report].tsx`, `[project].tsx`),
+      `lib/api/hooks.ts` regenerated.
+- [x] Commit train on `feat/v4`:
+      `feat(api-contract|api|cli|mobile): slug-native IDs`.
 
 ### P3.6 — Generate – Notes tab
 

@@ -1,6 +1,13 @@
 # P3.0 IDs/Slugs Migration — Implementation Design
 
-> **Status:** ready for implementation  
+> **Status:** ⚠️ **SUPERSEDED** by
+> [design-p31-slug-only-ids.md](design-p31-slug-only-ids.md).
+> The dual-id (uuid + slug) scheme proposed here was abandoned
+> before shipping. The implemented design has **no parallel UUID
+> column**: the prefixed slug is the primary key directly,
+> enforced by a Postgres DOMAIN per entity. Retained for
+> historical context only — do not implement against this doc.
+>
 > **Companion doc:** [arch-ids-and-urls.md](arch-ids-and-urls.md)  
 > **Addresses:** [plan-p3-feature-build.md P3.0 task](plan-p3-feature-build.md)  
 > **Pitfalls addressed:** #1 (API tests-first), #6 (per-request scope)

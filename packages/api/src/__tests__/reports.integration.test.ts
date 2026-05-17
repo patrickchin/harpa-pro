@@ -40,18 +40,18 @@ beforeAll(async () => {
   );
   aliceSid = s.rows[0]!.id;
   bobSid = s.rows[1]!.id;
-  const ap = await admin.query<{ id: string; slug: string }>(
-    `INSERT INTO app.projects(name, owner_id) VALUES ('A', $1) RETURNING id, slug`,
+  const ap = await admin.query<{ id: string }>(
+    `INSERT INTO app.projects(name, owner_id) VALUES ('A', $1) RETURNING id`,
     [alice],
   );
   aliceProj = ap.rows[0]!.id;
-  aliceProjSlug = ap.rows[0]!.slug;
-  const bp = await admin.query<{ id: string; slug: string }>(
-    `INSERT INTO app.projects(name, owner_id) VALUES ('B', $1) RETURNING id, slug`,
+  aliceProjSlug = ap.rows[0]!.id;
+  const bp = await admin.query<{ id: string }>(
+    `INSERT INTO app.projects(name, owner_id) VALUES ('B', $1) RETURNING id`,
     [bob],
   );
   bobProj = bp.rows[0]!.id;
-  bobProjSlug = bp.rows[0]!.slug;
+  bobProjSlug = bp.rows[0]!.id;
   await admin.query(
     `INSERT INTO app.project_members(project_id, user_id, role) VALUES ($1, $2, 'owner'), ($3, $4, 'owner')`,
     [aliceProj, alice, bobProj, bob],
@@ -80,7 +80,6 @@ describe('reports CRUD', () => {
     expect(res.status).toBe(201);
     const body = (await res.json()) as {
       id: string;
-      slug: string;
       number: number;
       status: string;
       projectId: string;
@@ -88,7 +87,7 @@ describe('reports CRUD', () => {
     expect(body.status).toBe('draft');
     expect(body.projectId).toBe(aliceProj);
     // P3.0 Commit 2: response carries `rpt_` slug + per-project number.
-    expect(body.slug).toMatch(/^rpt_[0-9a-hjkmnp-tv-z]{8}$/);
+    expect(body.id).toMatch(/^rpt_[0-9a-hjkmnp-tv-z]{8}$/);
     expect(body.number).toBeGreaterThanOrEqual(1);
     aliceReport = body.id;
     aliceReportNumber = body.number;
@@ -109,10 +108,10 @@ describe('reports CRUD', () => {
       body: JSON.stringify({}),
     });
     expect(second.status).toBe(201);
-    const secondBody = (await second.json()) as { number: number; slug: string };
+    const secondBody = (await second.json()) as { number: number; id: string };
     expect(secondBody.number).toBe(firstBody.number + 1);
     // Slugs are globally unique even within a single project.
-    expect(secondBody.slug).toMatch(/^rpt_[0-9a-hjkmnp-tv-z]{8}$/);
+    expect(secondBody.id).toMatch(/^rpt_[0-9a-hjkmnp-tv-z]{8}$/);
   });
 
   it('POST 404 when caller is not member of the project', async () => {

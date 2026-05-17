@@ -44,33 +44,33 @@ beforeAll(async () => {
   aliceSid = s.rows[0]!.id;
   bobSid = s.rows[1]!.id;
 
-  const ap = await admin.query<{ id: string; slug: string }>(
-    `INSERT INTO app.projects(name, owner_id) VALUES ('alice-proj', $1) RETURNING id, slug`,
+  const ap = await admin.query<{ id: string }>(
+    `INSERT INTO app.projects(name, owner_id) VALUES ('alice-proj', $1) RETURNING id`,
     [alice],
   );
   const aliceProj = ap.rows[0]!.id;
-  aliceProjSlug = ap.rows[0]!.slug;
-  const bp = await admin.query<{ id: string; slug: string }>(
-    `INSERT INTO app.projects(name, owner_id) VALUES ('bob-proj', $1) RETURNING id, slug`,
+  aliceProjSlug = ap.rows[0]!.id;
+  const bp = await admin.query<{ id: string }>(
+    `INSERT INTO app.projects(name, owner_id) VALUES ('bob-proj', $1) RETURNING id`,
     [bob],
   );
   const bobProj = bp.rows[0]!.id;
-  bobProjSlug = bp.rows[0]!.slug;
+  bobProjSlug = bp.rows[0]!.id;
   await admin.query(
     `INSERT INTO app.project_members(project_id, user_id, role) VALUES ($1, $2, 'owner'), ($3, $4, 'owner')`,
     [aliceProj, alice, bobProj, bob],
   );
 
-  const ar = await admin.query<{ slug: string }>(
-    `INSERT INTO app.reports(project_id, author_id) VALUES ($1, $2) RETURNING slug`,
+  const ar = await admin.query<{ id: string }>(
+    `INSERT INTO app.reports(project_id, author_id) VALUES ($1, $2) RETURNING id`,
     [aliceProj, alice],
   );
-  aliceReportSlug = ar.rows[0]!.slug;
-  const br = await admin.query<{ slug: string }>(
-    `INSERT INTO app.reports(project_id, author_id) VALUES ($1, $2) RETURNING slug`,
+  aliceReportSlug = ar.rows[0]!.id;
+  const br = await admin.query<{ id: string }>(
+    `INSERT INTO app.reports(project_id, author_id) VALUES ($1, $2) RETURNING id`,
     [bobProj, bob],
   );
-  bobReportSlug = br.rows[0]!.slug;
+  bobReportSlug = br.rows[0]!.id;
   await admin.end();
 }, 120_000);
 

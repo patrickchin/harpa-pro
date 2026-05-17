@@ -22,11 +22,11 @@ describe('journey: members sharing', () => {
 
     const project = (await (await app.request('/projects', {
       method: 'POST', headers: owner.headers, body: JSON.stringify({ name: 'Shared' }),
-    })).json()) as { id: string; slug: string };
+    })).json()) as { id: string };
 
-    expect((await app.request(`/projects/${project.slug}`, { headers: member.headers })).status).toBe(404);
+    expect((await app.request(`/projects/${project.id}`, { headers: member.headers })).status).toBe(404);
 
-    const inv = await app.request(`/projects/${project.slug}/members`, {
+    const inv = await app.request(`/projects/${project.id}/members`, {
       method: 'POST', headers: owner.headers,
       body: JSON.stringify({ phone: member.phone, role: 'editor' }),
     });
@@ -35,18 +35,18 @@ describe('journey: members sharing', () => {
     expect(memberRow.userId).toBe(member.userId);
     expect(memberRow.role).toBe('editor');
 
-    const get = await app.request(`/projects/${project.slug}`, { headers: member.headers });
+    const get = await app.request(`/projects/${project.id}`, { headers: member.headers });
     expect(get.status).toBe(200);
 
-    const tryRemove = await app.request(`/projects/${project.slug}/members/${owner.userId}`, {
+    const tryRemove = await app.request(`/projects/${project.id}/members/${owner.userId}`, {
       method: 'DELETE', headers: member.headers,
     });
     expect(tryRemove.status).toBe(403);
 
-    expect((await app.request(`/projects/${project.slug}/members/${member.userId}`, {
+    expect((await app.request(`/projects/${project.id}/members/${member.userId}`, {
       method: 'DELETE', headers: owner.headers,
     })).status).toBe(204);
 
-    expect((await app.request(`/projects/${project.slug}`, { headers: member.headers })).status).toBe(404);
+    expect((await app.request(`/projects/${project.id}`, { headers: member.headers })).status).toBe(404);
   });
 });

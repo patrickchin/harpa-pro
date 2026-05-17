@@ -11,6 +11,7 @@ import { withScopedConnection } from '../../db/scope.js';
 import { signTestToken } from '../../middleware/auth.js';
 import { resetPool, getPool } from '../../db/client.js';
 import * as schema from '../../db/schema.js';
+import { makeUserId, makeSessionId } from '../factories/index.js';
 
 let fx: PgFixture;
 let alice: string;
@@ -23,20 +24,22 @@ beforeAll(async () => {
   process.env.DATABASE_URL = fx.url;
   await resetPool();
   getPool(fx.url);
+
+  alice = makeUserId();
+  bob = makeUserId();
+  aliceSid = makeSessionId();
+  bobSid = makeSessionId();
+
   const admin = new pg.Client({ connectionString: fx.url });
   await admin.connect();
-  const u = await admin.query<{ id: string }>(
-    `INSERT INTO auth.users(phone) VALUES ($1), ($2) RETURNING id`,
-    ['+15551100001', '+15551100002'],
+  await admin.query(
+    `INSERT INTO auth.users(id, phone) VALUES ($1, $2), ($3, $4)`,
+    [alice, '+15551100001', bob, '+15551100002'],
   );
-  alice = u.rows[0]!.id;
-  bob = u.rows[1]!.id;
-  const s = await admin.query<{ id: string }>(
-    `INSERT INTO auth.sessions(user_id, expires_at) VALUES ($1, now() + interval '7 days'), ($2, now() + interval '7 days') RETURNING id`,
-    [alice, bob],
+  await admin.query(
+    `INSERT INTO auth.sessions(id, user_id, expires_at) VALUES ($1, $2, now() + interval '7 days'), ($3, $4, now() + interval '7 days')`,
+    [aliceSid, alice, bobSid, bob],
   );
-  aliceSid = s.rows[0]!.id;
-  bobSid = s.rows[1]!.id;
   // Seed bob with a row to differentiate from the absent-row default path.
   await admin.query(
     `INSERT INTO app.user_settings(user_id, ai_vendor, ai_model) VALUES ($1, 'anthropic', 'claude-bob')`,

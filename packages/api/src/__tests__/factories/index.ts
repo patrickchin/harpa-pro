@@ -10,6 +10,7 @@ import type {
   ReportId,
   NoteId,
   FileId,
+  WaitlistSignupId,
 } from '@harpa/api-contract';
 import { newId } from '../../lib/ids.js';
 
@@ -35,4 +36,8 @@ export function makeNoteId(): NoteId {
 
 export function makeFileId(): FileId {
   return newId('fil');
+}
+
+export function makeWaitlistId(): WaitlistSignupId {
+  return newId('wls');
 }

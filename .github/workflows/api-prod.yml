@@ -31,6 +31,19 @@ jobs:
 
       - uses: superfly/flyctl-actions/setup-flyctl@master
 
+      - uses: dopplerhq/cli-action@v3
+
+      - name: Sync Fly secrets from Doppler
+        # See api-dev.yml for rationale. `--stage` defers activation;
+        # the subsequent deploy is what flips them on.
+        env:
+          DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN_PRD }}
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: |
+          doppler secrets download --no-file --format env \
+            | grep -vE '^(DOPPLER_|NEON_|FLY_|CLOUDFLARE_|PUBLIC_|EXPO_PUBLIC_|PAGES_PROJECT|PORT|NODE_ENV|ADMIN_EMAIL)' \
+            | flyctl secrets import --stage --app harpa-pro-api
+
       - name: Deploy to Fly.io
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}

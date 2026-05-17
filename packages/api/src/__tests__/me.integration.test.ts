@@ -8,6 +8,7 @@ import { createApp } from '../app.js';
 import { startPg, type PgFixture } from './setup-pg.js';
 import { resetPool, getPool } from '../db/client.js';
 import { signTestToken } from '../middleware/auth.js';
+import { makeUserId, makeSessionId, makeProjectId, makeReportId, makeNoteId } from './factories/index.js';
 
 let fx: PgFixture;
 let alice: string;
@@ -21,68 +22,70 @@ beforeAll(async () => {
   await resetPool();
   getPool(fx.url);
 
+  alice = makeUserId();
+  bob = makeUserId();
+  aliceSid = makeSessionId();
+  bobSid = makeSessionId();
+
   const admin = new pg.Client({ connectionString: fx.url });
   await admin.connect();
-  const u = await admin.query<{ id: string }>(
-    `INSERT INTO auth.users(phone, display_name) VALUES ($1, 'Alice'), ($2, 'Bob') RETURNING id`,
-    ['+15550300001', '+15550300002'],
+  await admin.query(
+    `INSERT INTO auth.users(id, phone, display_name) VALUES ($1, $2, 'Alice'), ($3, $4, 'Bob')`,
+    [alice, '+15550300001', bob, '+15550300002'],
   );
-  alice = u.rows[0]!.id;
-  bob = u.rows[1]!.id;
-  const s = await admin.query<{ id: string }>(
-    `INSERT INTO auth.sessions(user_id, expires_at) VALUES ($1, now() + interval '7 days'), ($2, now() + interval '7 days') RETURNING id`,
-    [alice, bob],
+  await admin.query(
+    `INSERT INTO auth.sessions(id, user_id, expires_at) VALUES ($1, $2, now() + interval '7 days'), ($3, $4, now() + interval '7 days')`,
+    [aliceSid, alice, bobSid, bob],
   );
-  aliceSid = s.rows[0]!.id;
-  bobSid = s.rows[1]!.id;
 
   // Seed alice with one project, one report, one voice note in 2026-04
   // and another report in 2026-05; bob with a separate project so that
   // RLS can demonstrate isolation in /me/usage.
-  const aliceProj = (
-    await admin.query<{ id: string }>(
-      `INSERT INTO app.projects(name, owner_id) VALUES ('A-proj', $1) RETURNING id`,
-      [alice],
-    )
-  ).rows[0]!.id;
-  const bobProj = (
-    await admin.query<{ id: string }>(
-      `INSERT INTO app.projects(name, owner_id) VALUES ('B-proj', $1) RETURNING id`,
-      [bob],
-    )
-  ).rows[0]!.id;
+  const aliceProj = makeProjectId();
+  await admin.query(
+    `INSERT INTO app.projects(id, name, owner_id) VALUES ($1, 'A-proj', $2)`,
+    [aliceProj, alice],
+  );
+  const bobProj = makeProjectId();
+  await admin.query(
+    `INSERT INTO app.projects(id, name, owner_id) VALUES ($1, 'B-proj', $2)`,
+    [bobProj, bob],
+  );
   await admin.query(
     `INSERT INTO app.project_members(project_id, user_id, role) VALUES ($1, $2, 'owner'), ($3, $4, 'owner')`,
     [aliceProj, alice, bobProj, bob],
   );
 
-  const aliceReport1 = (
-    await admin.query<{ id: string }>(
-      `INSERT INTO app.reports(project_id, author_id, created_at) VALUES ($1, $2, '2026-04-15T10:00:00Z') RETURNING id`,
-      [aliceProj, alice],
-    )
-  ).rows[0]!.id;
+  const aliceReport1 = makeReportId();
   await admin.query(
-    `INSERT INTO app.reports(project_id, author_id, created_at) VALUES ($1, $2, '2026-05-02T10:00:00Z')`,
-    [aliceProj, alice],
+    `INSERT INTO app.reports(id, project_id, author_id, created_at) VALUES ($1, $2, $3, '2026-04-15T10:00:00Z')`,
+    [aliceReport1, aliceProj, alice],
   );
   await admin.query(
-    `INSERT INTO app.notes(report_id, author_id, kind, body, created_at) VALUES
-       ($1, $2, 'voice', 'v1', '2026-04-15T10:01:00Z'),
-       ($1, $2, 'voice', 'v2', '2026-04-15T10:02:00Z'),
-       ($1, $2, 'text',  't1', '2026-04-15T10:03:00Z')`,
-    [aliceReport1, alice],
+    `INSERT INTO app.reports(id, project_id, author_id, created_at) VALUES ($1, $2, $3, '2026-05-02T10:00:00Z')`,
+    [makeReportId(), aliceProj, alice],
+  );
+  await admin.query(
+    `INSERT INTO app.notes(id, report_id, author_id, kind, body, created_at) VALUES ($1, $2, $3, 'voice', 'v1', '2026-04-15T10:01:00Z')`,
+    [makeNoteId(), aliceReport1, alice],
+  );
+  await admin.query(
+    `INSERT INTO app.notes(id, report_id, author_id, kind, body, created_at) VALUES ($1, $2, $3, 'voice', 'v2', '2026-04-15T10:02:00Z')`,
+    [makeNoteId(), aliceReport1, alice],
+  );
+  await admin.query(
+    `INSERT INTO app.notes(id, report_id, author_id, kind, body, created_at) VALUES ($1, $2, $3, 'text', 't1', '2026-04-15T10:03:00Z')`,
+    [makeNoteId(), aliceReport1, alice],
   );
   // Bob's data — alice should never see it via /me/usage.
-  const bobReport = (
-    await admin.query<{ id: string }>(
-      `INSERT INTO app.reports(project_id, author_id, created_at) VALUES ($1, $2, '2026-04-15T10:00:00Z') RETURNING id`,
-      [bobProj, bob],
-    )
-  ).rows[0]!.id;
+  const bobReport = makeReportId();
   await admin.query(
-    `INSERT INTO app.notes(report_id, author_id, kind, body) VALUES ($1, $2, 'voice', 'b-voice')`,
-    [bobReport, bob],
+    `INSERT INTO app.reports(id, project_id, author_id, created_at) VALUES ($1, $2, $3, '2026-04-15T10:00:00Z')`,
+    [bobReport, bobProj, bob],
+  );
+  await admin.query(
+    `INSERT INTO app.notes(id, report_id, author_id, kind, body) VALUES ($1, $2, $3, 'voice', 'b-voice')`,
+    [makeNoteId(), bobReport, bob],
   );
 
   await admin.end();

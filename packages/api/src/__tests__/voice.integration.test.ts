@@ -12,6 +12,7 @@ import { createApp } from '../app.js';
 import { startPg, type PgFixture } from './setup-pg.js';
 import { resetPool, getPool } from '../db/client.js';
 import { signTestToken } from '../middleware/auth.js';
+import { makeUserId, makeSessionId, makeFileId } from './factories/index.js';
 
 let fx: PgFixture;
 let alice: string;
@@ -25,24 +26,24 @@ beforeAll(async () => {
   delete process.env.AI_LIVE;
   await resetPool();
   getPool(fx.url);
+  alice = makeUserId();
+  aliceSid = makeSessionId();
+  aliceFile = makeFileId();
   const admin = new pg.Client({ connectionString: fx.url });
   await admin.connect();
-  const u = await admin.query<{ id: string }>(
-    `INSERT INTO auth.users(phone) VALUES ($1) RETURNING id`,
-    ['+15551400001'],
+  await admin.query(
+    `INSERT INTO auth.users(id, phone) VALUES ($1, $2)`,
+    [alice, '+15551400001'],
   );
-  alice = u.rows[0]!.id;
-  const s = await admin.query<{ id: string }>(
-    `INSERT INTO auth.sessions(user_id, expires_at) VALUES ($1, now() + interval '7 days') RETURNING id`,
-    [alice],
+  await admin.query(
+    `INSERT INTO auth.sessions(id, user_id, expires_at) VALUES ($1, $2, now() + interval '7 days')`,
+    [aliceSid, alice],
   );
-  aliceSid = s.rows[0]!.id;
-  const af = await admin.query<{ id: string }>(
-    `INSERT INTO app.files(owner_id, kind, file_key, size_bytes, content_type)
-     VALUES ($1, 'voice', $2, 1024, 'audio/m4a') RETURNING id`,
-    [alice, `users/${alice}/voice/seed-voice.m4a`],
+  await admin.query(
+    `INSERT INTO app.files(id, owner_id, kind, file_key, size_bytes, content_type)
+     VALUES ($1, $2, 'voice', $3, 1024, 'audio/m4a')`,
+    [aliceFile, alice, `users/${alice}/voice/seed-voice.m4a`],
   );
-  aliceFile = af.rows[0]!.id;
   await admin.end();
 }, 120_000);
 
@@ -88,7 +89,7 @@ describe('/voice/*', () => {
     const res = await app.request('/voice/transcribe', {
       method: 'POST',
       headers: headers(tok),
-      body: JSON.stringify({ fileId: '00000000-0000-0000-0000-000000000000' }),
+      body: JSON.stringify({ fileId: 'fil_00000000' }),
     });
     expect(res.status).toBe(404);
     const body = (await res.json()) as { error: { code: string } };

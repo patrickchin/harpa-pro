@@ -7,6 +7,7 @@ import { createApp } from '../app.js';
 import { startPg, type PgFixture } from './setup-pg.js';
 import { resetPool, getPool } from '../db/client.js';
 import { signTestToken } from '../middleware/auth.js';
+import { makeUserId, makeSessionId, makeProjectId, makeReportId } from './factories/index.js';
 
 let fx: PgFixture;
 let alice: string;
@@ -20,33 +21,34 @@ beforeAll(async () => {
   process.env.DATABASE_URL = fx.url;
   await resetPool();
   getPool(fx.url);
+  alice = makeUserId();
+  bob = makeUserId();
+  aliceSid = makeSessionId();
+  bobSid = makeSessionId();
   const admin = new pg.Client({ connectionString: fx.url });
   await admin.connect();
-  const u = await admin.query<{ id: string }>(
-    `INSERT INTO auth.users(phone) VALUES ($1), ($2) RETURNING id`,
-    ['+15550800001', '+15550800002'],
+  await admin.query(
+    `INSERT INTO auth.users(id, phone) VALUES ($1, $2), ($3, $4)`,
+    [alice, '+15550800001', bob, '+15550800002'],
   );
-  alice = u.rows[0]!.id;
-  bob = u.rows[1]!.id;
-  const s = await admin.query<{ id: string }>(
-    `INSERT INTO auth.sessions(user_id, expires_at) VALUES ($1, now() + interval '7 days'), ($2, now() + interval '7 days') RETURNING id`,
-    [alice, bob],
+  await admin.query(
+    `INSERT INTO auth.sessions(id, user_id, expires_at) VALUES ($1, $2, now() + interval '7 days'), ($3, $4, now() + interval '7 days')`,
+    [aliceSid, alice, bobSid, bob],
   );
-  aliceSid = s.rows[0]!.id;
-  bobSid = s.rows[1]!.id;
-  const proj = await admin.query<{ id: string }>(
-    `INSERT INTO app.projects(name, owner_id) VALUES ('NotesProj', $1) RETURNING id`,
-    [alice],
+  const projId = makeProjectId();
+  await admin.query(
+    `INSERT INTO app.projects(id, name, owner_id) VALUES ($1, 'NotesProj', $2)`,
+    [projId, alice],
   );
   await admin.query(
     `INSERT INTO app.project_members(project_id, user_id, role) VALUES ($1, $2, 'owner')`,
-    [proj.rows[0]!.id, alice],
+    [projId, alice],
   );
-  const r = await admin.query<{ id: string }>(
-    `INSERT INTO app.reports(project_id, author_id) VALUES ($1, $2) RETURNING id`,
-    [proj.rows[0]!.id, alice],
+  report = makeReportId();
+  await admin.query(
+    `INSERT INTO app.reports(id, project_id, author_id) VALUES ($1, $2, $3)`,
+    [report, projId, alice],
   );
-  report = r.rows[0]!.id;
   await admin.end();
 }, 120_000);
 

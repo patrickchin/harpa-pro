@@ -12,6 +12,7 @@ import { startPg, type PgFixture } from '../setup-pg.js';
 import { createApp } from '../../app.js';
 import { signTestToken } from '../../middleware/auth.js';
 import { resetPool, getPool } from '../../db/client.js';
+import { makeUserId, makeSessionId, makeProjectId, makeReportId } from '../factories/index.js';
 
 let fx: PgFixture;
 let alice: string;

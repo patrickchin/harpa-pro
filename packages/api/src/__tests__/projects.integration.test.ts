@@ -9,6 +9,7 @@ import { createApp } from '../app.js';
 import { startPg, type PgFixture } from './setup-pg.js';
 import { resetPool, getPool } from '../db/client.js';
 import { signTestToken } from '../middleware/auth.js';
+import { makeUserId, makeSessionId } from './factories/index.js';
 
 let fx: PgFixture;
 let alice: string;
@@ -24,22 +25,23 @@ beforeAll(async () => {
   await resetPool();
   getPool(fx.url);
 
+  alice = makeUserId();
+  bob = makeUserId();
+  carol = makeUserId();
+  aliceSid = makeSessionId();
+  bobSid = makeSessionId();
+  carolSid = makeSessionId();
+
   const admin = new pg.Client({ connectionString: fx.url });
   await admin.connect();
-  const u = await admin.query<{ id: string }>(
-    `INSERT INTO auth.users(phone, display_name) VALUES ($1, 'Alice'), ($2, 'Bob'), ($3, 'Carol') RETURNING id`,
-    ['+15550400001', '+15550400002', '+15550400003'],
+  await admin.query(
+    `INSERT INTO auth.users(id, phone, display_name) VALUES ($1, $2, 'Alice'), ($3, $4, 'Bob'), ($5, $6, 'Carol')`,
+    [alice, '+15550400001', bob, '+15550400002', carol, '+15550400003'],
   );
-  alice = u.rows[0]!.id;
-  bob = u.rows[1]!.id;
-  carol = u.rows[2]!.id;
-  const s = await admin.query<{ id: string }>(
-    `INSERT INTO auth.sessions(user_id, expires_at) VALUES ($1, now() + interval '7 days'), ($2, now() + interval '7 days'), ($3, now() + interval '7 days') RETURNING id`,
-    [alice, bob, carol],
+  await admin.query(
+    `INSERT INTO auth.sessions(id, user_id, expires_at) VALUES ($1, $2, now() + interval '7 days'), ($3, $4, now() + interval '7 days'), ($5, $6, now() + interval '7 days')`,
+    [aliceSid, alice, bobSid, bob, carolSid, carol],
   );
-  aliceSid = s.rows[0]!.id;
-  bobSid = s.rows[1]!.id;
-  carolSid = s.rows[2]!.id;
   await admin.end();
 }, 120_000);
 

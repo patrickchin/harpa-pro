@@ -97,8 +97,8 @@ describe('scope: app.waitlist_signups (anonymous)', () => {
     await expect(
       withAnonConnection(async (db) => {
         await db.execute(sql`
-          INSERT INTO app.waitlist_signups(email)
-          VALUES ('existing@buildco.com')
+          INSERT INTO app.waitlist_signups(id, email)
+          VALUES (${makeWaitlistId()}, 'existing@buildco.com')
         `);
       }),
     ).rejects.toThrow(/duplicate key|unique/i);

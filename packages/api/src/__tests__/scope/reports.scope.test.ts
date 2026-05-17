@@ -64,17 +64,19 @@ beforeAll(async () => {
     `INSERT INTO app.project_members(project_id, user_id, role) VALUES ($1, $2, 'owner'), ($3, $4, 'owner')`,
     [aliceProj, alice, bobProj, bob],
   );
-  const ar = await admin.query<{ id: string; number: number }>(
-    `INSERT INTO app.reports(project_id, author_id) VALUES ($1, $2) RETURNING id, number`,
-    [aliceProj, alice],
+  const arId = makeReportId();
+  const ar = await admin.query<{ number: number }>(
+    `INSERT INTO app.reports(id, project_id, author_id) VALUES ($1, $2, $3) RETURNING number`,
+    [arId, aliceProj, alice],
   );
-  aliceReport = ar.rows[0]!.id;
+  aliceReport = arId;
   aliceReportNumber = ar.rows[0]!.number;
-  const br = await admin.query<{ id: string; number: number }>(
-    `INSERT INTO app.reports(project_id, author_id) VALUES ($1, $2) RETURNING id, number`,
-    [bobProj, bob],
+  const brId = makeReportId();
+  const br = await admin.query<{ number: number }>(
+    `INSERT INTO app.reports(id, project_id, author_id) VALUES ($1, $2, $3) RETURNING number`,
+    [brId, bobProj, bob],
   );
-  bobReport = br.rows[0]!.id;
+  bobReport = brId;
   bobReportNumber = br.rows[0]!.number;
   await admin.end();
 }, 120_000);

@@ -198,6 +198,10 @@ CREATE INDEX IF NOT EXISTS waitlist_signups_confirm_token_hash_idx
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA app TO app_authenticated;
 GRANT USAGE ON ALL SEQUENCES IN SCHEMA app TO app_authenticated;
 
+-- Waitlist signups are admin-only for reads/writes — app_authenticated
+-- cannot see them (the admin route uses rawDb() superuser connection).
+REVOKE SELECT, UPDATE, DELETE ON app.waitlist_signups FROM app_authenticated;
+
 -- app_anonymous: insert-only on waitlist_signups; no other access.
 GRANT INSERT ON app.waitlist_signups TO app_anonymous;
 

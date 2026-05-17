@@ -1,0 +1,53 @@
+name: mobile-ota-dev
+
+# Push an OTA update to the `preview` channel on every push to `dev`
+# that touches mobile code. Devices with a `preview` native build
+# will download the new JS bundle on next launch.
+#
+# Requires:
+#   - EXPO_TOKEN repo secret (EAS access token with publish scope)
+
+on:
+  push:
+    branches: [dev]
+    paths:
+      - "apps/mobile/**"
+      - "packages/api-contract/**"
+      - ".github/workflows/mobile-ota-dev.yml"
+      - "pnpm-lock.yaml"
+  workflow_dispatch: {}
+
+concurrency:
+  group: mobile-ota-dev
+  cancel-in-progress: true
+
+jobs:
+  ota:
+    name: EAS Update (preview)
+    runs-on: ubuntu-latest
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Push OTA update to preview channel
+        working-directory: apps/mobile
+        env:
+          EXPO_PUBLIC_API_URL: https://harpa-pro-api-dev.fly.dev
+          EXPO_PUBLIC_APP_VARIANT: preview
+          EXPO_PUBLIC_USE_FIXTURES: "false"
+        run: eas update --channel preview --message "dev deploy $(git rev-parse --short HEAD)" --non-interactive

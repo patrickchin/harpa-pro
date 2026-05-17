@@ -314,4 +314,61 @@ describe('Members', () => {
     });
     expect(res.status).toBe(409);
   });
+
+  it('re-inviting an existing member returns 409 instead of demoting their role', async () => {
+    // Fresh project so the test is independent of suite ordering.
+    const app = createApp();
+    const aliceTok = await signTestToken(alice, aliceSid);
+    const create = await app.request('/projects', {
+      method: 'POST',
+      headers: await authed(aliceTok),
+      body: JSON.stringify({ name: 'DemotionGuard' }),
+    });
+    const slug = ((await create.json()) as { id: string }).id;
+    // First invite succeeds, makes bob an editor.
+    const first = await app.request(`/projects/${slug}/members`, {
+      method: 'POST',
+      headers: await authed(aliceTok),
+      body: JSON.stringify({ phone: '+15550400002', role: 'editor' }),
+    });
+    expect(first.status).toBe(201);
+    // Re-invite must NOT silently overwrite role.
+    const second = await app.request(`/projects/${slug}/members`, {
+      method: 'POST',
+      headers: await authed(aliceTok),
+      body: JSON.stringify({ phone: '+15550400002', role: 'viewer' }),
+    });
+    expect(second.status).toBe(409);
+    // Confirm bob is still editor, not viewer.
+    const list = await app.request(`/projects/${slug}/members`, {
+      headers: { authorization: `Bearer ${aliceTok}` },
+    });
+    const body = (await list.json()) as { items: Array<{ userId: string; role: string }> };
+    const bobRow = body.items.find((m) => m.userId === bob);
+    expect(bobRow?.role).toBe('editor');
+  });
+
+  it('re-inviting the owner cannot demote them (last owner protection)', async () => {
+    const app = createApp();
+    const aliceTok = await signTestToken(alice, aliceSid);
+    const create = await app.request('/projects', {
+      method: 'POST',
+      headers: await authed(aliceTok),
+      body: JSON.stringify({ name: 'OwnerDemoteGuard' }),
+    });
+    const slug = ((await create.json()) as { id: string }).id;
+    // Alice tries to re-invite herself as editor — must fail.
+    const res = await app.request(`/projects/${slug}/members`, {
+      method: 'POST',
+      headers: await authed(aliceTok),
+      body: JSON.stringify({ phone: '+15550400001', role: 'editor' }),
+    });
+    expect(res.status).toBe(409);
+    // Alice should still be owner.
+    const list = await app.request(`/projects/${slug}/members`, {
+      headers: { authorization: `Bearer ${aliceTok}` },
+    });
+    const body = (await list.json()) as { items: Array<{ userId: string; role: string }> };
+    expect(body.items.find((m) => m.userId === alice)?.role).toBe('owner');
+  });
 });

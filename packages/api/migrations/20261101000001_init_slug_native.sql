@@ -399,9 +399,20 @@ BEGIN
     RAISE EXCEPTION 'user_not_found' USING ERRCODE = 'P0002';
   END IF;
 
+  -- Refuse to re-invite an existing member. The invite endpoint is
+  -- strictly "add new member" — silently overwriting role via ON
+  -- CONFLICT would let an owner be demoted (including the last owner,
+  -- locking the project out of any owner-only action). Role changes
+  -- must go through a dedicated path; see docs/bugs/README.md.
+  IF EXISTS (
+    SELECT 1 FROM app.project_members pm
+    WHERE pm.project_id = p_project_id AND pm.user_id = v_target
+  ) THEN
+    RAISE EXCEPTION 'already_member' USING ERRCODE = '23505';
+  END IF;
+
   INSERT INTO app.project_members(project_id, user_id, role)
-  VALUES (p_project_id, v_target, p_role)
-  ON CONFLICT (project_id, user_id) DO UPDATE SET role = EXCLUDED.role;
+  VALUES (p_project_id, v_target, p_role);
 
   RETURN QUERY
     SELECT pm.user_id, u.display_name, u.phone, pm.role, pm.joined_at

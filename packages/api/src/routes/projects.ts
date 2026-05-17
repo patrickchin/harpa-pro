@@ -241,6 +241,7 @@ projectRoutes.openapi(
       401: { description: 'Unauthorized.', content: { 'application/json': { schema: errorEnvelope } } },
       403: { description: 'Not an owner.', content: { 'application/json': { schema: errorEnvelope } } },
       404: { description: 'User not found.', content: { 'application/json': { schema: errorEnvelope } } },
+      409: { description: 'Already a member.', content: { 'application/json': { schema: errorEnvelope } } },
     },
   }),
   async (c) => {
@@ -258,6 +259,7 @@ projectRoutes.openapi(
       const cat = mapPgError(err);
       if (cat === 'forbidden') throw new HTTPException(403, { message: 'Owner only.' });
       if (cat === 'not_found') throw new HTTPException(404, { message: 'User not found.' });
+      if (cat === 'conflict') throw new HTTPException(409, { message: 'User is already a member of this project.' });
       throw err;
     }
   },

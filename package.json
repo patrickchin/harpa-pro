@@ -48,7 +48,8 @@
   },
   "pnpm": {
     "patchedDependencies": {
-      "react-native-css-interop@0.2.3": "patches/react-native-css-interop@0.2.3.patch"
+      "react-native-css-interop@0.2.3": "patches/react-native-css-interop@0.2.3.patch",
+      "expo-modules-core@2.2.3": "patches/expo-modules-core@2.2.3.patch"
     }
   }
 }

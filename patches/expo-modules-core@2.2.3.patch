@@ -1,0 +1,18 @@
+diff --git a/android/ExpoModulesCorePlugin.gradle b/android/ExpoModulesCorePlugin.gradle
+index 4ec4514446a1d1a5b04d08f162a5ac6933564d19..b25804b8ae064e3b8fe5bc6bf783b274fa381caa 100644
+--- a/android/ExpoModulesCorePlugin.gradle
++++ b/android/ExpoModulesCorePlugin.gradle
+@@ -91,8 +91,11 @@ ext.useExpoPublishing = {
+   project.afterEvaluate {
+     publishing {
+       publications {
+-        release(MavenPublication) {
+-          from components.release
++        // AGP 8.x: components.release may not exist at afterEvaluate time
++        if (project.components.findByName("release") != null) {
++          release(MavenPublication) {
++            from components.release
++          }
+         }
+       }
+       repositories {

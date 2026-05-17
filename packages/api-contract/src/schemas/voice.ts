@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { uuid } from './_shared.js';
+import { fileId } from './ids.js';
 
 /**
  * fixtureName is forwarded to @harpa/ai-fixtures FixtureStore which uses
@@ -13,7 +13,7 @@ const fixtureName = z
   .regex(/^[a-zA-Z0-9._-]+$/, 'fixtureName must match /^[a-zA-Z0-9._-]+$/');
 
 export const transcribeRequest = z.object({
-  fileId: uuid,
+  fileId: fileId,
   fixtureName: fixtureName.optional(),
 });
 export const transcribeResponse = z.object({

@@ -57,7 +57,7 @@ resolverRoutes.openapi(
     const { projectSlug: slug } = c.req.valid('param');
     const resolved = await db((d) => resolveProjectSlug(d, slug));
     if (!resolved) throw new HTTPException(404, { message: 'Project not found.' });
-    return c.json({ type: 'project' as const, projectSlug: resolved.projectSlug }, 200);
+    return c.json({ type: 'project' as const, projectId: resolved.projectSlug }, 200);
   },
 );
 
@@ -87,8 +87,8 @@ resolverRoutes.openapi(
     return c.json(
       {
         type: 'report' as const,
-        projectSlug: resolved.projectSlug,
-        reportSlug: resolved.reportSlug,
+        projectId: resolved.projectSlug,
+        reportId: resolved.reportSlug,
         reportNumber: resolved.reportNumber,
       },
       200,

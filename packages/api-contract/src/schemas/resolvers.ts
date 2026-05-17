@@ -1,22 +1,23 @@
 import { z } from 'zod';
-import { projectSlug, reportSlug, reportNumber } from './_shared.js';
+import { reportNumber } from './_shared.js';
+import { projectId, reportId } from './ids.js';
 
 /**
  * Response shapes for the short-URL resolver routes
- * (`GET /p/:projectSlug`, `GET /r/:reportSlug`).
+ * (`GET /p/:project`, `GET /r/:report`).
  *
  * The API returns JSON (not a 308 redirect) so the mobile client can
  * `router.replace` to the canonical long URL without a visible flash.
- * See docs/v4/arch-ids-and-urls.md and design-p30-ids-slugs.md §4.
+ * See docs/v4/arch-ids-and-urls.md.
  */
 export const projectResolverResponse = z.object({
   type: z.literal('project'),
-  projectSlug,
+  projectId,
 });
 
 export const reportResolverResponse = z.object({
   type: z.literal('report'),
-  projectSlug,
-  reportSlug,
+  projectId,
+  reportId,
   reportNumber,
 });

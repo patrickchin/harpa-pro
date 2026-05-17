@@ -11,25 +11,19 @@ export const isoDateTime = z
   })
   .transform((s) => new Date(s).toISOString());
 
-export const uuid = z.string().uuid();
 export const phone = z.string().regex(/^\+\d{8,15}$/, 'E.164 phone required');
 
-/**
- * Public slugs — Crockford base32 (no I/L/O/U) prefixed identifiers.
- * Format: `<type>_<8 chars>` (`prj_8f3kq2nb`, `rpt_h7n2x9mp`).
- * Case-insensitive on input, normalised to lowercase.
- * See docs/v4/arch-ids-and-urls.md.
- */
-const SLUG_CHARSET = '0-9a-hjkmnp-tv-z'; // Crockford base32, lowercase
-export const projectSlug = z
-  .string()
-  .regex(new RegExp(`^prj_[${SLUG_CHARSET}]{8}$`, 'i'), 'invalid project slug')
-  .transform((s) => s.toLowerCase());
-export const reportSlug = z
-  .string()
-  .regex(new RegExp(`^rpt_[${SLUG_CHARSET}]{8}$`, 'i'), 'invalid report slug')
-  .transform((s) => s.toLowerCase());
 export const reportNumber = z.coerce.number().int().positive();
+
+/**
+ * @deprecated Backward-compat shim for the P3.1 slug-only refactor.
+ * Use the per-prefix schemas from `./ids.js` (e.g. `projectId`, `reportId`,
+ * `userId`) instead. These exports will be removed once all consumers
+ * (api routes, services, scope wrapper) have migrated. See
+ * docs/v4/design-p31-slug-only-ids.md.
+ */
+export const uuid = z.string().uuid();
+export { projectId as projectSlug, reportId as reportSlug } from './ids.js';
 
 export const cursor = z.string().min(1).max(256);
 export const limit = z.coerce.number().int().min(1).max(100).default(20);

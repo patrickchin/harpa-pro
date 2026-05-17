@@ -1,16 +1,16 @@
 import { z } from 'zod';
-import { isoDateTime, phone, projectSlug, uuid } from './_shared.js';
+import { isoDateTime, phone } from './_shared.js';
+import { projectId, userId } from './ids.js';
 
 export const projectRole = z.enum(['owner', 'editor', 'viewer']);
 export type ProjectRole = z.infer<typeof projectRole>;
 
 export const project = z.object({
-  id: uuid,
-  slug: projectSlug,
+  id: projectId,
   name: z.string().min(1).max(200),
   clientName: z.string().nullable(),
   address: z.string().nullable(),
-  ownerId: uuid,
+  ownerId: userId,
   myRole: projectRole,
   createdAt: isoDateTime,
   updatedAt: isoDateTime,
@@ -33,7 +33,7 @@ export const createProjectRequest = z.object({
 export const updateProjectRequest = createProjectRequest.partial();
 
 export const projectMember = z.object({
-  userId: uuid,
+  userId: userId,
   displayName: z.string().nullable(),
   phone,
   role: projectRole,

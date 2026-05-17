@@ -18,7 +18,7 @@ type MutateArgs = [
   callbacks: { onSuccess?: (result: unknown) => void },
 ];
 
-const mutateSpy = vi.fn<MutateArgs, void>();
+const mutateSpy = vi.fn<(...args: MutateArgs) => void>();
 
 vi.mock('@/lib/api/hooks', () => ({
   useCreateProjectMutation: () => ({

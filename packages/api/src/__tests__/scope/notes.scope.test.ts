@@ -64,7 +64,7 @@ beforeAll(async () => {
     [sharedProj, alice, bob],
   );
   await admin.query(
-    `INSERT INTO app.reports(id, project_id, author_id) VALUES ($1, $2, $3)`,
+    `INSERT INTO app.reports(id, project_id, author_id, number) VALUES ($1, $2, $3, 1)`,
     [sharedReport, sharedProj, alice],
   );
   // Bob-only project + report so we have a cross-tenant note for the
@@ -78,7 +78,7 @@ beforeAll(async () => {
     [bobProj, bob],
   );
   await admin.query(
-    `INSERT INTO app.reports(id, project_id, author_id) VALUES ($1, $2, $3)`,
+    `INSERT INTO app.reports(id, project_id, author_id, number) VALUES ($1, $2, $3, 1)`,
     [bobReport, bobProj, bob],
   );
   // Seed notes.

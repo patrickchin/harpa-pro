@@ -66,14 +66,14 @@ beforeAll(async () => {
   );
   const arId = makeReportId();
   const ar = await admin.query<{ number: number }>(
-    `INSERT INTO app.reports(id, project_id, author_id) VALUES ($1, $2, $3) RETURNING number`,
+    `INSERT INTO app.reports(id, project_id, author_id, number) VALUES ($1, $2, $3, 1) RETURNING number`,
     [arId, aliceProj, alice],
   );
   aliceReport = arId;
   aliceReportNumber = ar.rows[0]!.number;
   const brId = makeReportId();
   const br = await admin.query<{ number: number }>(
-    `INSERT INTO app.reports(id, project_id, author_id) VALUES ($1, $2, $3) RETURNING number`,
+    `INSERT INTO app.reports(id, project_id, author_id, number) VALUES ($1, $2, $3, 1) RETURNING number`,
     [brId, bobProj, bob],
   );
   bobReport = brId;

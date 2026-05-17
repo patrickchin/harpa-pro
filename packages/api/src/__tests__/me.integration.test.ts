@@ -58,11 +58,11 @@ beforeAll(async () => {
 
   const aliceReport1 = makeReportId();
   await admin.query(
-    `INSERT INTO app.reports(id, project_id, author_id, created_at) VALUES ($1, $2, $3, '2026-04-15T10:00:00Z')`,
+    `INSERT INTO app.reports(id, project_id, author_id, number, created_at) VALUES ($1, $2, $3, 1, '2026-04-15T10:00:00Z')`,
     [aliceReport1, aliceProj, alice],
   );
   await admin.query(
-    `INSERT INTO app.reports(id, project_id, author_id, created_at) VALUES ($1, $2, $3, '2026-05-02T10:00:00Z')`,
+    `INSERT INTO app.reports(id, project_id, author_id, number, created_at) VALUES ($1, $2, $3, 2, '2026-05-02T10:00:00Z')`,
     [makeReportId(), aliceProj, alice],
   );
   await admin.query(
@@ -80,7 +80,7 @@ beforeAll(async () => {
   // Bob's data — alice should never see it via /me/usage.
   const bobReport = makeReportId();
   await admin.query(
-    `INSERT INTO app.reports(id, project_id, author_id, created_at) VALUES ($1, $2, $3, '2026-04-15T10:00:00Z')`,
+    `INSERT INTO app.reports(id, project_id, author_id, number, created_at) VALUES ($1, $2, $3, 1, '2026-04-15T10:00:00Z')`,
     [bobReport, bobProj, bob],
   );
   await admin.query(

@@ -46,7 +46,7 @@ beforeAll(async () => {
   );
   report = makeReportId();
   await admin.query(
-    `INSERT INTO app.reports(id, project_id, author_id) VALUES ($1, $2, $3)`,
+    `INSERT INTO app.reports(id, project_id, author_id, number) VALUES ($1, $2, $3, 1)`,
     [report, projId, alice],
   );
   await admin.end();

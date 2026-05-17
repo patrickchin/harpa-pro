@@ -66,11 +66,11 @@ beforeAll(async () => {
     [aliceProj, alice, bobProj, bob],
   );
   await admin.query(
-    `INSERT INTO app.reports(id, project_id, author_id) VALUES ($1, $2, $3)`,
+    `INSERT INTO app.reports(id, project_id, author_id, number) VALUES ($1, $2, $3, 1)`,
     [aliceReport, aliceProj, alice],
   );
   await admin.query(
-    `INSERT INTO app.reports(id, project_id, author_id) VALUES ($1, $2, $3)`,
+    `INSERT INTO app.reports(id, project_id, author_id, number) VALUES ($1, $2, $3, 1)`,
     [bobReport, bobProj, bob],
   );
   await admin.end();
@@ -86,9 +86,9 @@ describe('scope: /p/:projectSlug resolver', () => {
     const tok = await signTestToken(alice, aliceSid);
     const res = await app.request(`/p/${aliceProjSlug}`, { headers: { authorization: `Bearer ${tok}` } });
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { type: string; projectSlug: string };
+    const body = (await res.json()) as { type: string; projectId: string };
     expect(body.type).toBe('project');
-    expect(body.projectSlug).toBe(aliceProjSlug);
+    expect(body.projectId).toBe(aliceProjSlug);
   });
 
   it('cross — alice resolves bob project slug → 404', async () => {
@@ -120,13 +120,13 @@ describe('scope: /r/:reportSlug resolver', () => {
     expect(res.status).toBe(200);
     const body = (await res.json()) as {
       type: string;
-      projectSlug: string;
-      reportSlug: string;
+      projectId: string;
+      reportId: string;
       reportNumber: number;
     };
     expect(body.type).toBe('report');
-    expect(body.projectSlug).toBe(aliceProjSlug);
-    expect(body.reportSlug).toBe(aliceReportSlug);
+    expect(body.projectId).toBe(aliceProjSlug);
+    expect(body.reportId).toBe(aliceReportSlug);
     expect(body.reportNumber).toBeGreaterThanOrEqual(1);
   });
 

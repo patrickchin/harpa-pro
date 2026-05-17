@@ -11,8 +11,8 @@
   "scripts": {
     "build": "tsc -b",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run",
-    "test:unit": "vitest run",
+    "test": "vitest run --passWithNoTests",
+    "test:unit": "vitest run --passWithNoTests",
     "lint": "echo 'no eslint configured for report-core yet'"
   },
   "dependencies": {

@@ -33,7 +33,7 @@ const config: ExpoConfig = {
   orientation: 'portrait',
   scheme: 'harpa',
   userInterfaceStyle: 'light',
-  newArchEnabled: true,
+  newArchEnabled: false,
   icon: './assets/icon.png',
   splash: {
     image: './assets/splash-icon.png',

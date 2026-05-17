@@ -14,6 +14,12 @@ import type { GalleryEntry } from '../../screens/dev-gallery.rows';
 
 export const REGISTRY: readonly GalleryEntry[] = [
   {
+    name: 'API base URL',
+    href: '/(dev)/api-base-url',
+    group: 'dev tools',
+    description: 'Override API base URL at runtime (preview/dev builds only)',
+  },
+  {
     name: 'Button',
     href: '/(dev)/primitives/button',
     group: 'primitives',

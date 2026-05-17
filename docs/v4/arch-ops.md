@@ -20,7 +20,19 @@
     `harpa-pro.pages.dev`).
   - Dev branch `dev` → `https://dev.harpa-pro.pages.dev`.
 - **Mobile**: EAS Build + EAS Update for OTA. TestFlight + Play
-  internal track for distribution.
+  internal track for distribution. Three build profiles in
+  `apps/mobile/eas.json`:
+  - `production` — App Store / Play. `com.harpa.pro` →
+    `https://api.harpapro.com`.
+  - `preview` — internal / TestFlight. `com.harpa.pro.dev` →
+    `https://harpa-pro-api-dev.fly.dev`. Installable side-by-side
+    with prod so QA can carry both apps.
+  - `development` — Metro dev-client. `com.harpa.pro.dev` →
+    `http://localhost:8787`.
+  Non-prod variants expose a dev screen (`/(dev)/api-base-url`) that
+  overrides the API base URL at runtime — flip QA between dev / a
+  PR-preview Fly app without a rebuild. Override is hard-disabled in
+  production builds (see `lib/api/base-url.ts`).
 - **Docs site**: Vercel (or Cloudflare Pages — TBD in P0).
 
 ## Secrets

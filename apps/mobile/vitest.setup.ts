@@ -270,3 +270,24 @@ vi.mock('react-native-safe-area-context', () => {
     },
   };
 });
+
+// Default AsyncStorage mock — in-memory map. Tests that need to assert
+// on storage state can re-mock per-file with their own backing Map
+// (see lib/auth/storage.test.ts, lib/api/base-url.test.ts).
+vi.mock('@react-native-async-storage/async-storage', () => {
+  const mem = new Map<string, string>();
+  return {
+    default: {
+      getItem: vi.fn(async (key: string) => mem.get(key) ?? null),
+      setItem: vi.fn(async (key: string, value: string) => {
+        mem.set(key, value);
+      }),
+      removeItem: vi.fn(async (key: string) => {
+        mem.delete(key);
+      }),
+      clear: vi.fn(async () => {
+        mem.clear();
+      }),
+    },
+  };
+});

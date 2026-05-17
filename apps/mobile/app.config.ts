@@ -56,7 +56,17 @@ const config: ExpoConfig = {
     },
   },
   web: { favicon: './assets/favicon.png' },
-  plugins: ['expo-router'],
+  plugins: [
+    'expo-router',
+    [
+      'expo-camera',
+      {
+        cameraPermission:
+          'Allow Harpa Pro to access your camera to capture site photos for your reports.',
+        recordAudioAndroid: false,
+      },
+    ],
+  ],
   experiments: { typedRoutes: true },
   extra: {
     eas: { projectId: '3b2f920d-b7ae-4c84-b9e9-b077b49f1602' },

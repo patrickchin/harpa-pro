@@ -169,4 +169,10 @@ export const REGISTRY: readonly GalleryEntry[] = [
     group: 'app',
     description: 'Saved report detail — loading / error / draft / finalized states + actions menu + PDF preview',
   },
+  {
+    name: 'Camera Capture',
+    href: '/(dev)/camera-capture',
+    group: 'app',
+    description: 'Full-screen camera — requesting / denied / blocked / granted / populated states (preview stubbed)',
+  },
 ];

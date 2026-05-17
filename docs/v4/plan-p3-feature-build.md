@@ -101,7 +101,7 @@ P3.8  Generate – Report tab         │
 P3.9  Generate – Edit tab           ┘
 P3.10 Saved report + actions + PDF   ✅ shipped
 P3.11 Files screen
-P3.12 Camera
+P3.12 Camera                        ✅ shipped
 P3.13 Profile / Account / Usage
 P3.14 Maestro full-journey
 ```
@@ -316,6 +316,70 @@ P4 behind clearly-marked stubs.
   placeholder.
 - PDF export pipeline (Expo Print + Sharing) — stub lib throws.
 - Inline PDF rendering (`react-native-webview` / `react-native-pdf`).
+
+### P3.12 — Camera
+
+Ports the full-screen burst camera from canonical
+`../haru3-reports/apps/mobile/app/(camera)/capture.tsx` into the v4
+`(camera)` route group. Body is props-only (no router / no
+session-registry coupling — the route owns the handoff). The camera
+preview, shutter, and `useCameraPermissions` hook stay inside the
+body (matching canonical), with injection seams (`renderPreview`,
+`takePicture`, `permissionOverride`, `onOpenSettings`, `deleteFile`)
+so the dev mirror + Vitest run without native modules.
+
+- [x] Body `screens/camera-capture.tsx` owns the permission gate,
+      capture queue, flash + facing toggles, and the discard-confirm
+      dialog (via `AppDialogSheet` — Pitfall: no `Alert.alert`).
+      Permissions resolve via `useCameraPermissions` by default; a
+      `permissionOverride` prop short-circuits the hook for
+      tests / the dev gallery.
+- [x] Real route `app/(camera)/capture.tsx` + `_layout.tsx`
+      (`fullScreenModal`, portrait orientation, black contentStyle).
+      Reads `sessionId` from `useLocalSearchParams`, commits via
+      `commitCameraSession(id, uris)`, pops with `safeBack`.
+- [x] `lib/camera-session-registry.ts` ported verbatim
+      (`create` → `commit` → `consume` round-trip) so the camera
+      caller protocol matches canonical 1-for-1. Unit tests cover
+      cancellation, commit + unknown-id no-ops, and unique-id
+      generation.
+- [x] Dev mirror `app/(dev)/camera-capture.tsx` with 5 mode toggles
+      (requesting / denied / blocked / granted / populated). Live
+      `CameraView` is stubbed with a `<View />` placeholder; shutter
+      synthesises `cam-dev://shot-N` URIs so the populated-strip +
+      discard dialog states are exercisable without a real camera.
+      Registry entry added under `group: 'app'`.
+- [x] Native config: `expo-camera` added as a config plugin in
+      `app.config.ts` with a `cameraPermission` description string
+      (NSCameraUsageDescription on iOS, the audio recording perm is
+      opted-out on Android). `expo-camera@~16` and
+      `expo-file-system@~18` added via `pnpm --filter @harpa/mobile add`.
+- [x] Vitest unit tests (11) cover every visible state +
+      interaction: permission-requesting spinner, denied notice
+      (canAskAgain → "Allow camera"), blocked notice
+      (`onOpenSettings` invoked), cancel-from-permission-gate,
+      granted UI mounts, shutter appends a capture, flip + flash
+      toggles relabel, Done invokes `onCommit` with the URI list,
+      Cancel with no captures fires `onCancel`, Cancel with captures
+      opens the discard dialog → Discard fires `onCancel`, thumb
+      tap removes + invokes `deleteFile`. Plus one snapshot of the
+      granted-empty layout. `expo-camera` and `expo-file-system`
+      are mocked locally in the test file (no global setup change).
+- [x] Commit: `feat(mobile): P3.12 — Camera capture screen ported from canonical source`.
+
+**Deferred to P4** (each behind a `TODO(P4)` marker in code):
+
+- Upload pipeline kick on Done (R2 presign → PUT → registerFile →
+  createNote). Route currently commits URIs to the session registry
+  and pops; caller is responsible for draining + uploading in
+  `useFocusEffect` once the queue lands.
+- `expo-media-library` "save to camera roll" toggle.
+- Pinch-to-zoom + tap-to-focus on the preview (deferred until the
+  upload pipeline is stable — canonical doesn't have these yet
+  either).
+- iOS prebuild: running `expo prebuild` to regenerate `ios/`
+  Podfile entries for `expo-camera`. Deferred until the next EAS
+  cut (the JS shipped here typechecks + tests in isolation).
 
 ## Pipelines exercised
 

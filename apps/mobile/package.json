@@ -23,10 +23,12 @@
     "@tanstack/react-query": "^5.59.0",
     "clsx": "^2.1.1",
     "expo": "~52.0.0",
+    "expo-camera": "^16.0.18",
     "expo-clipboard": "^7.0.1",
     "expo-constants": "~17.0.3",
     "expo-crypto": "~14.0.1",
     "expo-dev-client": "^5.0.20",
+    "expo-file-system": "^18.0.12",
     "expo-linking": "~7.0.3",
     "expo-router": "~4.0.0",
     "expo-secure-store": "^14.0.1",
@@ -49,7 +51,9 @@
   "expo": {
     "doctor": {
       "reactNativeDirectoryCheck": {
-        "exclude": ["clsx"],
+        "exclude": [
+          "clsx"
+        ],
         "listUnknownPackages": false
       }
     }

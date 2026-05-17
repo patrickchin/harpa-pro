@@ -1,7 +1,7 @@
 /**
  * Projects + members service. All DB calls take a scoped drizzle handle
  * (`db`) so the per-request scope wrapper is what enforces RLS;
- * SECURITY DEFINER helpers (see migrations/init_slug_native.sql) own the
+ * SECURITY DEFINER helpers (see migrations/0001_init.sql) own the
  * cross-table reads that would otherwise be blocked.
  */
 import { sql } from 'drizzle-orm';

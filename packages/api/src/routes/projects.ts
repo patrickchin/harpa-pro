@@ -3,7 +3,7 @@
  * goes through `c.get('db')(fn)` (the per-request scoped accessor).
  * Cross-table reads and the create-with-owner bootstrap go through
  * SECURITY DEFINER helpers defined in
- * migrations/20261101000001_init_slug_native.sql.
+ * migrations/0001_init.sql.
  *
  * Path params are slug-native (P3.1): `:project` is a `prj_…` slug
  * (Crockford base32, see `Id<'prj'>`). The slug IS the primary key —

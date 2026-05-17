@@ -1,7 +1,7 @@
 /**
  * Test data factories. Mints slug-format IDs (e.g. `usr_abc12def`) so
  * the values are accepted by the per-prefix DOMAIN constraints in
- * `migrations/20261101000001_init_slug_native.sql`.
+ * `migrations/0001_init.sql`.
  */
 import type {
   UserId,

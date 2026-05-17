@@ -1,5 +1,5 @@
--- 20261101000001_init_slug_native.sql
--- P3.1 — Initial schema bootstrap, slug-native edition.
+-- 0001_init.sql
+-- Initial schema bootstrap, slug-native edition.
 --
 -- This single file replaces the eight prior migrations:
 --   202605120001_init.sql

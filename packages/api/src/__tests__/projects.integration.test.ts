@@ -120,9 +120,9 @@ describe('GET /projects + GET /projects/:id', () => {
     const token = await signTestToken(bob, bobSid);
     const res = await app.request('/projects?limit=5', { headers: { authorization: `Bearer ${token}` } });
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { items: Array<{ slug: string }>; nextCursor: string | null };
+    const body = (await res.json()) as { items: Array<{ id: string }>; nextCursor: string | null };
     expect(body.items.length).toBeGreaterThan(0);
-    expect(body.items.find((p) => p.slug === projectSlug)).toBeTruthy();
+    expect(body.items.find((p) => p.id === projectSlug)).toBeTruthy();
   });
 
   it('cursor pagination round-trips', async () => {

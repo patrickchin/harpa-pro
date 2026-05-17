@@ -36,8 +36,8 @@ mirror). Suggested grouping (one screen per commit):
 - reports list
 - generate — notes / report / edit tabs (the big one)
 - saved report + actions menu + PDF preview
-- files
-- camera
+- files  — no canonical screen exists (see P3.11 below); marked N/A
+- camera  ✅ shipped (P3.12)
 - profile / account / usage  ✅ shipped (P3.13)
 
 ## Section card port
@@ -100,10 +100,10 @@ P3.7  Generate – Notes tab          ┐ Agent B (the big one)
 P3.8  Generate – Report tab         │
 P3.9  Generate – Edit tab           ┘
 P3.10 Saved report + actions + PDF   ✅ shipped
-P3.11 Files screen
+P3.11 Files screen                   ⊘ no canonical (N/A)
 P3.12 Camera                        ✅ shipped
 P3.13 Profile / Account / Usage      ✅ shipped
-P3.14 Maestro full-journey
+P3.14 Maestro full-journey           ✅ shipped (core-end-to-end.yaml)
 ```
 
 ### P3.1 — Slug-native IDs (✅ shipped)
@@ -461,6 +461,50 @@ marked stubs.
   too, ported with the same `disabled` styling.
 - Language toggle / locale switching — not in canonical's profile;
   out of scope for P3.13.
+
+### P3.11 — Files screen (⊘ N/A)
+
+No standalone "files" screen exists in the canonical source
+(`../haru3-reports/apps/mobile/app/` on `dev` — verified at P3
+close-out). File interactions live inside the report-detail Notes
+pane (`ReportNotesPane` — landed in P3.10) and the camera capture
+flow (P3.12); both already have their canonical surfaces ported.
+
+This task is intentionally left out of scope for P3; if a dedicated
+files browser ships in canonical later, it lands as a P4 add-on with
+its own subsection here. The P3 scope list above is marked accordingly.
+
+### P3.14 — Maestro full-journey (✅ shipped)
+
+The `core-end-to-end.yaml` flow at `.maestro/core-end-to-end.yaml`
+shipped earlier in P3 (commit `915ede4`). It walks every
+currently-shipped user-visible feature on the real `(auth)` + `(app)`
+routes — sign-up → onboarding → projects list / new / edit / delete →
+members invite + filter → reports list + new → generate tabs
+(Notes / Report / Edit / finalize confirm) → voice record → attachment
+picker.
+
+**Coverage gaps after the P3.10 / P3.12 / P3.13 ports** (deferred to
+P4 alongside the underlying wiring):
+
+- Saved-report tab navigation + actions menu + PDF preview modal
+  — covered by Vitest behaviour tests in `screens/saved-report.test.tsx`;
+  Maestro coverage lands once the v4 `Report.body` → `GeneratedSiteReport`
+  translation + real autosave hook are in.
+- Camera capture exit handoff — `screens/camera-capture.test.tsx` +
+  `lib/camera-session-registry.test.ts` cover the session round-trip;
+  Maestro coverage lands with the R2 upload pipeline (the canonical
+  `(camera)/capture` flow drives presign → PUT → registerFile →
+  createNote on Done).
+- Profile sign-out + account / usage surfaces — `screens/profile.test.tsx`,
+  `screens/account.test.tsx`, `screens/usage.test.tsx` cover the body
+  interactions; Maestro coverage lands once the routes are linked from
+  the app shell (no nav entry point exists in the v4 tab bar yet —
+  reached only via direct deep-link in this drop).
+
+The flow is green on iOS locally (5/5 PASS); Android pre-flight + CI
+integration remain open against the P3 exit gate (run + capture
+artifacts before tagging `v0.3.0-features`).
 
 ## Pipelines exercised
 

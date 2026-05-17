@@ -1,10 +1,19 @@
 import { drizzle, type NodePgDatabase } from 'drizzle-orm/node-postgres';
 import * as schema from './schema.js';
 import { getPool } from './client.js';
+import { assertId } from '../lib/ids.js';
 
 export interface ScopeClaims {
-  sub: string; // user id (uuid)
-  sid: string; // session id (uuid)
+  /**
+   * User id slug (e.g. `usr_abcdef12`). The `assertId('usr', …)` call in
+   * `withScopedConnection` enforces the shape at runtime; the type
+   * stays plain `string` so tests and middleware don't need to brand
+   * every value at the boundary (the runtime check is the load-bearing
+   * one for the `SET LOCAL` interpolation below).
+   */
+  sub: string;
+  /** Session id slug (e.g. `ses_abcdef12abcd`). Same shape contract as `sub`. */
+  sid: string;
 }
 
 export type ScopedDb = NodePgDatabase<typeof schema>;
@@ -14,16 +23,19 @@ export type ScopedDb = NodePgDatabase<typeof schema>;
  * the actor via `SET LOCAL role` and `SET LOCAL app.user_id`. RLS policies in
  * the `app` schema use `current_setting('app.user_id')` to filter rows.
  *
+ * Claim shape is enforced at the prefix-and-charset level by `assertId`
+ * (slug regex `^<prefix>_[0-9a-hjkmnp-tv-z]{8,16}$`); this is defence-
+ * in-depth against accidental SQL via the `SET LOCAL` string
+ * interpolation below — a passing claim cannot contain a quote.
+ *
  * See docs/v4/arch-auth-and-rls.md.
  */
 export async function withScopedConnection<T>(
   claims: ScopeClaims,
   fn: (db: ScopedDb) => Promise<T>,
 ): Promise<T> {
-  // Reject anything that doesn't look like a UUID — defence in depth against
-  // accidental SQL via the SET LOCAL string interpolation below.
-  assertUuid(claims.sub, 'claims.sub');
-  assertUuid(claims.sid, 'claims.sid');
+  assertId('usr', claims.sub, 'claims.sub');
+  assertId('ses', claims.sid, 'claims.sid');
 
   const pool = getPool();
   const conn = await pool.connect();
@@ -45,14 +57,6 @@ export async function withScopedConnection<T>(
     throw err;
   } finally {
     conn.release();
-  }
-}
-
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-function assertUuid(value: string, label: string): void {
-  if (!UUID_RE.test(value)) {
-    throw new Error(`[scope] ${label} is not a valid UUID: ${JSON.stringify(value)}`);
   }
 }
 

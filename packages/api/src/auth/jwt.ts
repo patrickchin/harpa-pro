@@ -9,14 +9,17 @@
  */
 import { SignJWT, jwtVerify } from 'jose';
 import { env } from '../env.js';
+import { assertId } from '../lib/ids.js';
 
 const ISSUER = 'harpa-api';
 const ALG = 'HS256';
 const TTL_SECONDS = 7 * 24 * 60 * 60; // 7 days, per arch doc.
 
 export interface JwtClaims {
-  sub: string; // user uuid
-  sid: string; // session uuid
+  /** User id slug (e.g. `usr_abcdef12`). Shape enforced via `assertId` in `verifyJwt`. */
+  sub: string;
+  /** Session id slug (e.g. `ses_abcdef12abcd`). Shape enforced via `assertId` in `verifyJwt`. */
+  sid: string;
 }
 
 function secretBytes(): Uint8Array {
@@ -43,5 +46,7 @@ export async function verifyJwt(token: string): Promise<JwtClaims> {
   if (!sub || !sid) {
     throw new Error('jwt missing sub/sid');
   }
-  return { sub, sid };
+  // Brand at the trust boundary. Bad-shape tokens (legacy uuid, garbage)
+  // fail here rather than at the SET LOCAL site downstream.
+  return { sub: assertId('usr', sub, 'jwt.sub'), sid: assertId('ses', sid, 'jwt.sid') };
 }

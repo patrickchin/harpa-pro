@@ -31,13 +31,24 @@ packages/ai-fixtures/
     redact.ts          # PII redaction
     hash.ts            # canonical-json hash for fixture lookup
   fixtures/
-    transcribe.basic.json
-    summarize.basic.json
-    generate-report.full.json
-    generate-report.incomplete.json
+    transcribe.basic.json              # openai (Whisper) — only vendor with transcribe
+    summarize.basic.json               # openai default
+    summarize.basic.<vendor>.json      # one per non-default vendor
+    generate-report.full.json          # openai default
+    generate-report.full.<vendor>.json
+    generate-report.incomplete.json    # openai default
+    generate-report.incomplete.<vendor>.json
     …
   package.json
 ```
+
+`<vendor>` ∈ {`kimi`, `anthropic`, `google`, `zai`, `deepseek`}.
+OpenAI keeps the un-suffixed names for backwards compat.
+`services/ai.ts` picks the per-vendor fixture name based on the
+caller's `vendor` argument (which the route handler reads from
+`getAiSettings()` once that's wired). Each vendor has its own
+canonical model id (e.g. `claude-3-5-haiku` for anthropic
+summarize) — see `VENDOR_MODELS` in `packages/api/src/services/ai.ts`.
 
 ## Modes
 

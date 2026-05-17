@@ -18,6 +18,22 @@ const Env = z.object({
   AI_FIXTURE_MODE: z.enum(['replay', 'record', 'live']).default('replay'),
   AI_LIVE: z.enum(['0', '1']).default('0'),
   R2_FIXTURE_MODE: z.enum(['replay', 'live']).default('replay'),
+  // Cloudflare R2 (S3-compatible). Required when R2_FIXTURE_MODE=live.
+  R2_ACCOUNT_ID: z.string().optional(),
+  R2_ACCESS_KEY_ID: z.string().optional(),
+  R2_SECRET_ACCESS_KEY: z.string().optional(),
+  R2_BUCKET: z.string().default('harpa-pro'),
+  /**
+   * Optional explicit endpoint override. Defaults to
+   * `https://<R2_ACCOUNT_ID>.r2.cloudflarestorage.com` when absent.
+   * Set this to point at a local S3-compatible mock (e.g. MinIO) in dev.
+   */
+  R2_ENDPOINT: z.string().url().optional(),
+  /**
+   * TTL (seconds) for presigned PUT/GET URLs. 5 min matches
+   * arch-storage.md §Download flow.
+   */
+  R2_PRESIGN_TTL_SEC: z.coerce.number().int().positive().default(300),
   REQUEST_LOG: z.enum(['true', 'false']).default('false'),
   // Marketing waitlist (M1).
   TURNSTILE_LIVE: z.enum(['0', '1']).default('0'),

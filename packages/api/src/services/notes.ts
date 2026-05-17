@@ -6,6 +6,7 @@
 import { sql } from 'drizzle-orm';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import * as schema from '../db/schema.js';
+import { newId } from '../lib/ids.js';
 
 type Db = NodePgDatabase<typeof schema>;
 
@@ -76,8 +77,8 @@ export async function listNotes(
           SELECT id, report_id, author_id, kind, body, file_id, transcript,
                  created_at, updated_at
           FROM app.notes
-          WHERE report_id = ${reportId}::uuid
-            AND (created_at, id) > (${createdAt}::timestamptz, ${id}::uuid)
+          WHERE report_id = ${reportId}
+            AND (created_at, id) > (${createdAt}::timestamptz, ${id})
           ORDER BY created_at ASC, id ASC
           LIMIT ${overFetch}
         `);
@@ -86,7 +87,7 @@ export async function listNotes(
         SELECT id, report_id, author_id, kind, body, file_id, transcript,
                created_at, updated_at
         FROM app.notes
-        WHERE report_id = ${reportId}::uuid
+        WHERE report_id = ${reportId}
         ORDER BY created_at ASC, id ASC
         LIMIT ${overFetch}
       `);
@@ -108,11 +109,13 @@ export async function createNote(
   authorId: string,
   input: { kind: NoteKind; body?: string | null; fileId?: string | null; transcript?: string | null },
 ): Promise<NoteRow | null> {
+  const id = newId('not');
   const r = await db.execute<RawNote>(sql`
-    INSERT INTO app.notes(report_id, author_id, kind, body, file_id, transcript)
+    INSERT INTO app.notes(id, report_id, author_id, kind, body, file_id, transcript)
     VALUES (
-      ${reportId}::uuid,
-      ${authorId}::uuid,
+      ${id},
+      ${reportId},
+      ${authorId},
       ${input.kind}::app.note_kind,
       ${input.body ?? null},
       ${input.fileId ?? null},
@@ -123,14 +126,11 @@ export async function createNote(
   `);
   const row = r.rows[0];
   if (!row) return null;
-  // Bump notes_since_last_generation so the generate endpoint can
-  // decide whether to regenerate. RLS allows the author (a project
-  // member) to UPDATE app.reports.
   await db.execute(sql`
     UPDATE app.reports
     SET notes_since_last_generation = notes_since_last_generation + 1,
         updated_at = now()
-    WHERE id = ${reportId}::uuid
+    WHERE id = ${reportId}
   `);
   return mapNote(row);
 }
@@ -144,7 +144,7 @@ export async function updateNote(
     UPDATE app.notes
     SET body = ${body},
         updated_at = now()
-    WHERE id = ${noteId}::uuid
+    WHERE id = ${noteId}
     RETURNING id, report_id, author_id, kind, body, file_id, transcript,
               created_at, updated_at
   `);
@@ -154,7 +154,7 @@ export async function updateNote(
 
 export async function deleteNote(db: Db, noteId: string): Promise<boolean> {
   const r = await db.execute<{ id: string }>(sql`
-    DELETE FROM app.notes WHERE id = ${noteId}::uuid RETURNING id
+    DELETE FROM app.notes WHERE id = ${noteId} RETURNING id
   `);
   return r.rows.length > 0;
 }

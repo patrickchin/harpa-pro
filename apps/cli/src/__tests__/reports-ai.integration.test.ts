@@ -90,7 +90,7 @@ afterAll(async () => {
   await fx?.stop();
 }, 60_000);
 
-async function createDraft(): Promise<string> {
+async function createDraft(): Promise<{ id: string; number: number }> {
   const out = new MemoryStream();
   await reportsCreate({
     client: makeClient(token),
@@ -100,7 +100,8 @@ async function createDraft(): Promise<string> {
     stdout: out,
     stderr: new MemoryStream(),
   });
-  return JSON.parse(out.text).id;
+  const r = JSON.parse(out.text);
+  return { id: r.id, number: r.number };
 }
 
 let stdout: MemoryStream;
@@ -114,11 +115,11 @@ beforeEach(() => {
 describe('harpa reports AI commands', () => {
   it('generate → pdf → finalize lifecycle', async () => {
     const client = makeClient(token);
-    const reportId = await createDraft();
+    const { number } = await createDraft();
 
     // generate (default fixture).
     const genOut = new MemoryStream();
-    let exit = await reportsGenerate({ client, reportId, json: true, stdout: genOut, stderr });
+    let exit = await reportsGenerate({ client, project: projectId, number, json: true, stdout: genOut, stderr });
     expect(exit).toBe(EXIT.OK);
     const generated = JSON.parse(genOut.text);
     expect(generated.report.status).toBe('draft');
@@ -126,7 +127,7 @@ describe('harpa reports AI commands', () => {
 
     // pdf.
     const pdfOut = new MemoryStream();
-    exit = await reportsPdf({ client, reportId, json: true, stdout: pdfOut, stderr });
+    exit = await reportsPdf({ client, project: projectId, number, json: true, stdout: pdfOut, stderr });
     expect(exit).toBe(EXIT.OK);
     const pdf = JSON.parse(pdfOut.text);
     expect(pdf.url).toContain('.pdf');
@@ -134,23 +135,24 @@ describe('harpa reports AI commands', () => {
 
     // finalize.
     const finOut = new MemoryStream();
-    exit = await reportsFinalize({ client, reportId, json: true, stdout: finOut, stderr });
+    exit = await reportsFinalize({ client, project: projectId, number, json: true, stdout: finOut, stderr });
     expect(exit).toBe(EXIT.OK);
     expect(JSON.parse(finOut.text).report.status).toBe('finalized');
 
     // regenerate 409 after finalize.
-    exit = await reportsRegenerate({ client, reportId, stdout, stderr });
+    exit = await reportsRegenerate({ client, project: projectId, number, stdout, stderr });
     expect(exit).toBe(EXIT.GENERIC); // 409 maps to GENERIC (no specific code)
   });
 
   it('regenerate with --fixture replaces body', async () => {
     const client = makeClient(token);
-    const reportId = await createDraft();
+    const { number } = await createDraft();
 
     // generate first so a body exists.
     await reportsGenerate({
       client,
-      reportId,
+      project: projectId,
+      number,
       stdout: new MemoryStream(),
       stderr: new MemoryStream(),
     });
@@ -158,7 +160,8 @@ describe('harpa reports AI commands', () => {
     const out = new MemoryStream();
     const exit = await reportsRegenerate({
       client,
-      reportId,
+      project: projectId,
+      number,
       fixtureName: 'generate-report.incomplete',
       json: true,
       stdout: out,
@@ -171,21 +174,22 @@ describe('harpa reports AI commands', () => {
 
   it('finalize on empty draft returns 409 (conflict → GENERIC exit)', async () => {
     const client = makeClient(token);
-    const reportId = await createDraft();
+    const { number } = await createDraft();
 
-    const exit = await reportsFinalize({ client, reportId, stdout, stderr });
+    const exit = await reportsFinalize({ client, project: projectId, number, stdout, stderr });
     expect(exit).toBe(EXIT.GENERIC);
   });
 
   it('idempotency-key header is plumbed through generate', async () => {
     const client = makeClient(token);
-    const reportId = await createDraft();
+    const { number } = await createDraft();
     const key = '11111111-2222-3333-4444-555555555555';
 
     const firstOut = new MemoryStream();
     let exit = await reportsGenerate({
       client,
-      reportId,
+      project: projectId,
+      number,
       idempotencyKey: key,
       json: true,
       stdout: firstOut,
@@ -197,7 +201,8 @@ describe('harpa reports AI commands', () => {
     const secondOut = new MemoryStream();
     exit = await reportsGenerate({
       client,
-      reportId,
+      project: projectId,
+      number,
       idempotencyKey: key,
       json: true,
       stdout: secondOut,
@@ -210,7 +215,8 @@ describe('harpa reports AI commands', () => {
   it('rejects unauthenticated generate', async () => {
     const exit = await reportsGenerate({
       client: makeClient(),
-      reportId: '00000000-0000-0000-0000-000000000999',
+      project: 'prj_zzzzzzzz',
+      number: 999,
       stdout,
       stderr,
     });

@@ -1,15 +1,16 @@
 import { z } from 'zod';
-import { isoDateTime, uuid } from './_shared.js';
+import { isoDateTime } from './_shared.js';
+import { fileId, noteId, reportId, userId } from './ids.js';
 
 export const noteKind = z.enum(['text', 'voice', 'image', 'document']);
 
 export const note = z.object({
-  id: uuid,
-  reportId: uuid,
-  authorId: uuid,
+  id: noteId,
+  reportId: reportId,
+  authorId: userId,
   kind: noteKind,
   body: z.string().nullable(),
-  fileId: uuid.nullable(),
+  fileId: fileId.nullable(),
   transcript: z.string().nullable(),
   createdAt: isoDateTime,
   updatedAt: isoDateTime,
@@ -19,7 +20,7 @@ export type Note = z.infer<typeof note>;
 export const createNoteRequest = z.object({
   kind: noteKind,
   body: z.string().nullable().optional(),
-  fileId: uuid.nullable().optional(),
+  fileId: fileId.nullable().optional(),
   transcript: z.string().nullable().optional(),
 });
 

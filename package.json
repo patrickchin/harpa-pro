@@ -23,6 +23,13 @@
     "fixtures:replay": "AI_FIXTURE_MODE=replay pnpm test:api",
     "db:branch:create": "tsx infra/neon/branch.ts create",
     "db:branch:delete": "tsx infra/neon/branch.ts delete",
+    "db:branch:ensure": "tsx infra/neon/branch.ts ensure",
+    "secrets:pull:dev": "doppler secrets download --project harpa-pro --config dev --no-file --format env > .env.dev",
+    "secrets:pull:prod": "doppler secrets download --project harpa-pro --config prd --no-file --format env > .env.prod",
+    "secrets:push:dev": "doppler secrets upload --project harpa-pro --config dev .env.dev",
+    "secrets:push:prod": "doppler secrets upload --project harpa-pro --config prd .env.prod",
+    "secrets:fly:dev": "doppler secrets download --project harpa-pro --config dev --no-file --format docker | xargs flyctl secrets set --app harpa-pro-api-dev",
+    "secrets:fly:prod": "doppler secrets download --project harpa-pro --config prd --no-file --format docker | xargs flyctl secrets set --app harpa-pro-api",
     "format": "prettier --write .",
     "harpa": "pnpm --filter @harpa/cli dev --",
     "prepare": "husky"

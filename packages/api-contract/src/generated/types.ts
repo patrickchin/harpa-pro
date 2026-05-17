@@ -132,7 +132,6 @@ export interface paths {
                         "application/json": {
                             token: string;
                             user: {
-                                /** Format: uuid */
                                 id: string;
                                 phone: string;
                                 displayName: string | null;
@@ -381,7 +380,6 @@ export interface paths {
                     content: {
                         "application/json": {
                             user: {
-                                /** Format: uuid */
                                 id: string;
                                 phone: string;
                                 displayName: string | null;
@@ -452,7 +450,6 @@ export interface paths {
                     content: {
                         "application/json": {
                             user: {
-                                /** Format: uuid */
                                 id: string;
                                 phone: string;
                                 displayName: string | null;
@@ -598,12 +595,10 @@ export interface paths {
                     content: {
                         "application/json": {
                             items: {
-                                /** Format: uuid */
                                 id: string;
                                 name: string;
                                 clientName: string | null;
                                 address: string | null;
-                                /** Format: uuid */
                                 ownerId: string;
                                 /** @enum {string} */
                                 myRole: "owner" | "editor" | "viewer";
@@ -662,12 +657,10 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            /** Format: uuid */
                             id: string;
                             name: string;
                             clientName: string | null;
                             address: string | null;
-                            /** Format: uuid */
                             ownerId: string;
                             /** @enum {string} */
                             myRole: "owner" | "editor" | "viewer";
@@ -721,7 +714,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/projects/{id}": {
+    "/projects/{project}": {
         parameters: {
             query?: never;
             header?: never;
@@ -733,7 +726,7 @@ export interface paths {
                 query?: never;
                 header?: never;
                 path: {
-                    id: string;
+                    project: string;
                 };
                 cookie?: never;
             };
@@ -746,12 +739,10 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            /** Format: uuid */
                             id: string;
                             name: string;
                             clientName: string | null;
                             address: string | null;
-                            /** Format: uuid */
                             ownerId: string;
                             /** @enum {string} */
                             myRole: "owner" | "editor" | "viewer";
@@ -806,7 +797,7 @@ export interface paths {
                 query?: never;
                 header?: never;
                 path: {
-                    id: string;
+                    project: string;
                 };
                 cookie?: never;
             };
@@ -860,7 +851,7 @@ export interface paths {
                 query?: never;
                 header?: never;
                 path: {
-                    id: string;
+                    project: string;
                 };
                 cookie?: never;
             };
@@ -881,12 +872,10 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            /** Format: uuid */
                             id: string;
                             name: string;
                             clientName: string | null;
                             address: string | null;
-                            /** Format: uuid */
                             ownerId: string;
                             /** @enum {string} */
                             myRole: "owner" | "editor" | "viewer";
@@ -936,7 +925,7 @@ export interface paths {
         };
         trace?: never;
     };
-    "/projects/{id}/members": {
+    "/projects/{project}/members": {
         parameters: {
             query?: never;
             header?: never;
@@ -948,7 +937,7 @@ export interface paths {
                 query?: never;
                 header?: never;
                 path: {
-                    id: string;
+                    project: string;
                 };
                 cookie?: never;
             };
@@ -962,7 +951,6 @@ export interface paths {
                     content: {
                         "application/json": {
                             items: {
-                                /** Format: uuid */
                                 userId: string;
                                 displayName: string | null;
                                 phone: string;
@@ -1013,7 +1001,7 @@ export interface paths {
                 query?: never;
                 header?: never;
                 path: {
-                    id: string;
+                    project: string;
                 };
                 cookie?: never;
             };
@@ -1037,7 +1025,6 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            /** Format: uuid */
                             userId: string;
                             displayName: string | null;
                             phone: string;
@@ -1111,6 +1098,22 @@ export interface paths {
                         };
                     };
                 };
+                /** @description Already a member. */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                                requestId?: string;
+                            };
+                        };
+                    };
+                };
             };
         };
         delete?: never;
@@ -1119,7 +1122,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/projects/{id}/members/{userId}": {
+    "/projects/{project}/members/{user}": {
         parameters: {
             query?: never;
             header?: never;
@@ -1134,8 +1137,8 @@ export interface paths {
                 query?: never;
                 header?: never;
                 path: {
-                    id: string;
-                    userId: string;
+                    project: string;
+                    user: string;
                 };
                 cookie?: never;
             };
@@ -1219,7 +1222,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/projects/{id}/reports": {
+    "/projects/{project}/reports": {
         parameters: {
             query?: never;
             header?: never;
@@ -1234,7 +1237,7 @@ export interface paths {
                 };
                 header?: never;
                 path: {
-                    id: string;
+                    project: string;
                 };
                 cookie?: never;
             };
@@ -1248,9 +1251,8 @@ export interface paths {
                     content: {
                         "application/json": {
                             items: {
-                                /** Format: uuid */
                                 id: string;
-                                /** Format: uuid */
+                                number: number;
                                 projectId: string;
                                 /** @enum {string} */
                                 status: "draft" | "finalized";
@@ -1341,7 +1343,7 @@ export interface paths {
                 query?: never;
                 header?: never;
                 path: {
-                    id: string;
+                    project: string;
                 };
                 cookie?: never;
             };
@@ -1360,9 +1362,8 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            /** Format: uuid */
                             id: string;
-                            /** Format: uuid */
+                            number: number;
                             projectId: string;
                             /** @enum {string} */
                             status: "draft" | "finalized";
@@ -1467,7 +1468,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/reports/{reportId}": {
+    "/projects/{project}/reports/{number}": {
         parameters: {
             query?: never;
             header?: never;
@@ -1479,7 +1480,8 @@ export interface paths {
                 query?: never;
                 header?: never;
                 path: {
-                    reportId: string;
+                    project: string;
+                    number: number;
                 };
                 cookie?: never;
             };
@@ -1492,9 +1494,8 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            /** Format: uuid */
                             id: string;
-                            /** Format: uuid */
+                            number: number;
                             projectId: string;
                             /** @enum {string} */
                             status: "draft" | "finalized";
@@ -1584,7 +1585,8 @@ export interface paths {
                 query?: never;
                 header?: never;
                 path: {
-                    reportId: string;
+                    project: string;
+                    number: number;
                 };
                 cookie?: never;
             };
@@ -1638,7 +1640,8 @@ export interface paths {
                 query?: never;
                 header?: never;
                 path: {
-                    reportId: string;
+                    project: string;
+                    number: number;
                 };
                 cookie?: never;
             };
@@ -1657,9 +1660,8 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            /** Format: uuid */
                             id: string;
-                            /** Format: uuid */
+                            number: number;
                             projectId: string;
                             /** @enum {string} */
                             status: "draft" | "finalized";
@@ -1760,7 +1762,7 @@ export interface paths {
         };
         trace?: never;
     };
-    "/reports/{reportId}/generate": {
+    "/projects/{project}/reports/{number}/generate": {
         parameters: {
             query?: never;
             header?: never;
@@ -1774,7 +1776,8 @@ export interface paths {
                 query?: never;
                 header?: never;
                 path: {
-                    reportId: string;
+                    project: string;
+                    number: number;
                 };
                 cookie?: never;
             };
@@ -1794,9 +1797,8 @@ export interface paths {
                     content: {
                         "application/json": {
                             report: {
-                                /** Format: uuid */
                                 id: string;
-                                /** Format: uuid */
+                                number: number;
                                 projectId: string;
                                 /** @enum {string} */
                                 status: "draft" | "finalized";
@@ -1934,7 +1936,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/reports/{reportId}/regenerate": {
+    "/projects/{project}/reports/{number}/regenerate": {
         parameters: {
             query?: never;
             header?: never;
@@ -1948,7 +1950,8 @@ export interface paths {
                 query?: never;
                 header?: never;
                 path: {
-                    reportId: string;
+                    project: string;
+                    number: number;
                 };
                 cookie?: never;
             };
@@ -1968,9 +1971,8 @@ export interface paths {
                     content: {
                         "application/json": {
                             report: {
-                                /** Format: uuid */
                                 id: string;
-                                /** Format: uuid */
+                                number: number;
                                 projectId: string;
                                 /** @enum {string} */
                                 status: "draft" | "finalized";
@@ -2108,7 +2110,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/reports/{reportId}/finalize": {
+    "/projects/{project}/reports/{number}/finalize": {
         parameters: {
             query?: never;
             header?: never;
@@ -2122,7 +2124,8 @@ export interface paths {
                 query?: never;
                 header?: never;
                 path: {
-                    reportId: string;
+                    project: string;
+                    number: number;
                 };
                 cookie?: never;
             };
@@ -2136,9 +2139,8 @@ export interface paths {
                     content: {
                         "application/json": {
                             report: {
-                                /** Format: uuid */
                                 id: string;
-                                /** Format: uuid */
+                                number: number;
                                 projectId: string;
                                 /** @enum {string} */
                                 status: "draft" | "finalized";
@@ -2244,7 +2246,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/reports/{reportId}/pdf": {
+    "/projects/{project}/reports/{number}/pdf": {
         parameters: {
             query?: never;
             header?: never;
@@ -2258,7 +2260,8 @@ export interface paths {
                 query?: never;
                 header?: never;
                 path: {
-                    reportId: string;
+                    project: string;
+                    number: number;
                 };
                 cookie?: never;
             };
@@ -2333,7 +2336,155 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/reports/{reportId}/notes": {
+    "/p/{project}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    project: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Resolved. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {string} */
+                            type: "project";
+                            projectId: string;
+                        };
+                    };
+                };
+                /** @description Unauthorized. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                                requestId?: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Not found. */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                                requestId?: string;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/r/{report}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    report: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Resolved. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {string} */
+                            type: "report";
+                            projectId: string;
+                            reportId: string;
+                            reportNumber: number;
+                        };
+                    };
+                };
+                /** @description Unauthorized. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                                requestId?: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Not found. */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                                requestId?: string;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/reports/{report}/notes": {
         parameters: {
             query?: never;
             header?: never;
@@ -2348,7 +2499,7 @@ export interface paths {
                 };
                 header?: never;
                 path: {
-                    reportId: string;
+                    report: string;
                 };
                 cookie?: never;
             };
@@ -2362,16 +2513,12 @@ export interface paths {
                     content: {
                         "application/json": {
                             items: {
-                                /** Format: uuid */
                                 id: string;
-                                /** Format: uuid */
                                 reportId: string;
-                                /** Format: uuid */
                                 authorId: string;
                                 /** @enum {string} */
                                 kind: "text" | "voice" | "image" | "document";
                                 body: string | null;
-                                /** Format: uuid */
                                 fileId: string | null;
                                 transcript: string | null;
                                 createdAt: string;
@@ -2421,7 +2568,7 @@ export interface paths {
                 query?: never;
                 header?: never;
                 path: {
-                    reportId: string;
+                    report: string;
                 };
                 cookie?: never;
             };
@@ -2431,7 +2578,6 @@ export interface paths {
                         /** @enum {string} */
                         kind: "text" | "voice" | "image" | "document";
                         body?: string | null;
-                        /** Format: uuid */
                         fileId?: string | null;
                         transcript?: string | null;
                     };
@@ -2445,16 +2591,12 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            /** Format: uuid */
                             id: string;
-                            /** Format: uuid */
                             reportId: string;
-                            /** Format: uuid */
                             authorId: string;
                             /** @enum {string} */
                             kind: "text" | "voice" | "image" | "document";
                             body: string | null;
-                            /** Format: uuid */
                             fileId: string | null;
                             transcript: string | null;
                             createdAt: string;
@@ -2518,7 +2660,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/notes/{noteId}": {
+    "/notes/{note}": {
         parameters: {
             query?: never;
             header?: never;
@@ -2533,7 +2675,7 @@ export interface paths {
                 query?: never;
                 header?: never;
                 path: {
-                    noteId: string;
+                    note: string;
                 };
                 cookie?: never;
             };
@@ -2587,7 +2729,7 @@ export interface paths {
                 query?: never;
                 header?: never;
                 path: {
-                    noteId: string;
+                    note: string;
                 };
                 cookie?: never;
             };
@@ -2606,16 +2748,12 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            /** Format: uuid */
                             id: string;
-                            /** Format: uuid */
                             reportId: string;
-                            /** Format: uuid */
                             authorId: string;
                             /** @enum {string} */
                             kind: "text" | "voice" | "image" | "document";
                             body: string | null;
-                            /** Format: uuid */
                             fileId: string | null;
                             transcript: string | null;
                             createdAt: string;
@@ -2791,9 +2929,7 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            /** Format: uuid */
                             id: string;
-                            /** Format: uuid */
                             ownerId: string;
                             /** @enum {string} */
                             kind: "voice" | "image" | "document" | "pdf";
@@ -2952,7 +3088,6 @@ export interface paths {
             requestBody?: {
                 content: {
                     "application/json": {
-                        /** Format: uuid */
                         fileId: string;
                         fixtureName?: string;
                     };

@@ -26,6 +26,7 @@ const ROLE_LABELS: Record<'owner' | 'editor' | 'viewer', string> = {
 
 export type ProjectRow = {
   id: string;
+  slug: string;
   name: string;
   role: 'owner' | 'editor' | 'viewer';
   address: string | null;
@@ -37,7 +38,7 @@ export type ProjectsListProps = {
   isLoading: boolean;
   refreshing: boolean;
   onRefresh: () => void;
-  onPressProject: (id: string) => void;
+  onPressProject: (slug: string) => void;
   onPressNewProject: () => void;
 };
 
@@ -121,7 +122,7 @@ export function ProjectsList({
             <View>
               <Pressable
                 testID={`project-row-${index}`}
-                onPress={() => onPressProject(item.id)}
+                onPress={() => onPressProject(item.slug)}
               >
                 <Card variant="emphasis" className="gap-3">
                   <View className="flex-row items-center justify-between">

@@ -95,7 +95,7 @@ CREATE POLICY projects_member_read ON app.projects
   FOR SELECT TO app_authenticated
   USING (id IN (
     SELECT project_id FROM app.project_members
-    WHERE user_id = current_setting('app.user_id')::uuid
+    WHERE user_id = current_setting('app.user_id')::app.usr_id
   ));
 -- … and so on per table.
 ```
@@ -111,8 +111,8 @@ export async function withScopedConnection<T>(
   try {
     await conn.query('BEGIN');
     await conn.query(`SET LOCAL role = 'app_authenticated'`);
-    await conn.query(`SET LOCAL app.user_id = '${escapeUuid(claims.sub)}'`);
-    await conn.query(`SET LOCAL app.session_id = '${escapeUuid(claims.sid)}'`);
+    await conn.query(`SET LOCAL app.user_id = '${assertId('usr', claims.sub)}'`);
+    await conn.query(`SET LOCAL app.session_id = '${assertId('ses', claims.sid)}'`);
     const result = await fn(drizzle(conn, { schema }));
     await conn.query('COMMIT');
     return result;

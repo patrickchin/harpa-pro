@@ -39,7 +39,7 @@ function headersFor(opts: { idempotencyKey?: string }): Record<string, string> |
 // --- generate ---------------------------------------------------------
 
 export interface ReportsGenerateArgs extends ReportsAiHandlerOptions {
-  reportId: string;
+  project: string; number: number;
   fixtureName?: string;
 }
 
@@ -53,20 +53,20 @@ export function reportsGenerate(args: ReportsGenerateArgs): Promise<ExitCode> {
     stdout: args.stdout,
     stderr: args.stderr,
     request: () =>
-      args.client.POST('/reports/{reportId}/generate', {
-        params: { path: { reportId: args.reportId } },
+      args.client.POST('/projects/{project}/reports/{number}/generate', {
+        params: { path: { project: args.project, number: args.number } },
         body,
         ...(headers ? { headers } : {}),
       }),
     format: (data) =>
-      `${chalk.green('✓')} Generated report ${chalk.bold(data.report.id)}\n${renderReport(data.report)}`,
+      `${chalk.green('✓')} Generated report #${data.report.number} ${chalk.dim(data.report.id)}\n${renderReport(data.report)}`,
   });
 }
 
 export const reportsGenerateCommand = defineCommand({
   meta: { name: 'generate', description: 'Generate a draft body for a report from notes (AI).' },
   args: {
-    reportId: { type: 'positional', required: true, description: 'Report ID (UUID).' },
+    project: { type: 'positional', required: true, description: 'Project slug (e.g. prj_xxxxxxxx).' }, number: { type: 'positional', required: true, description: 'Report number within the project.' },
     fixture: { type: 'string', description: 'Fixture name (replay mode).' },
     'idempotency-key': { type: 'string', description: 'Override idempotency key for this call.' },
     json: { type: 'boolean', description: 'Print raw JSON to stdout.' },
@@ -87,13 +87,13 @@ export const reportsGenerateCommand = defineCommand({
       json: args.json,
       verbose: args.verbose,
       request: () =>
-        client.POST('/reports/{reportId}/generate', {
-          params: { path: { reportId: String(args.reportId) } },
+        client.POST('/projects/{project}/reports/{number}/generate', {
+          params: { path: { project: String(args.project), number: Number(args.number) } },
           body,
           ...(headers ? { headers } : {}),
         }),
       format: (data) =>
-        `${chalk.green('✓')} Generated report ${chalk.bold(data.report.id)}\n${renderReport(data.report)}`,
+        `${chalk.green('✓')} Generated report #${data.report.number} ${chalk.dim(data.report.id)}\n${renderReport(data.report)}`,
     });
   },
 });
@@ -101,7 +101,7 @@ export const reportsGenerateCommand = defineCommand({
 // --- regenerate -------------------------------------------------------
 
 export interface ReportsRegenerateArgs extends ReportsAiHandlerOptions {
-  reportId: string;
+  project: string; number: number;
   fixtureName?: string;
 }
 
@@ -115,20 +115,20 @@ export function reportsRegenerate(args: ReportsRegenerateArgs): Promise<ExitCode
     stdout: args.stdout,
     stderr: args.stderr,
     request: () =>
-      args.client.POST('/reports/{reportId}/regenerate', {
-        params: { path: { reportId: args.reportId } },
+      args.client.POST('/projects/{project}/reports/{number}/regenerate', {
+        params: { path: { project: args.project, number: args.number } },
         body,
         ...(headers ? { headers } : {}),
       }),
     format: (data) =>
-      `${chalk.green('✓')} Regenerated report ${chalk.bold(data.report.id)}\n${renderReport(data.report)}`,
+      `${chalk.green('✓')} Regenerated report #${data.report.number} ${chalk.dim(data.report.id)}\n${renderReport(data.report)}`,
   });
 }
 
 export const reportsRegenerateCommand = defineCommand({
   meta: { name: 'regenerate', description: 'Replace report body with a freshly generated one (AI).' },
   args: {
-    reportId: { type: 'positional', required: true, description: 'Report ID (UUID).' },
+    project: { type: 'positional', required: true, description: 'Project slug (e.g. prj_xxxxxxxx).' }, number: { type: 'positional', required: true, description: 'Report number within the project.' },
     fixture: { type: 'string', description: 'Fixture name (replay mode).' },
     'idempotency-key': { type: 'string', description: 'Override idempotency key for this call.' },
     json: { type: 'boolean', description: 'Print raw JSON to stdout.' },
@@ -149,13 +149,13 @@ export const reportsRegenerateCommand = defineCommand({
       json: args.json,
       verbose: args.verbose,
       request: () =>
-        client.POST('/reports/{reportId}/regenerate', {
-          params: { path: { reportId: String(args.reportId) } },
+        client.POST('/projects/{project}/reports/{number}/regenerate', {
+          params: { path: { project: String(args.project), number: Number(args.number) } },
           body,
           ...(headers ? { headers } : {}),
         }),
       format: (data) =>
-        `${chalk.green('✓')} Regenerated report ${chalk.bold(data.report.id)}\n${renderReport(data.report)}`,
+        `${chalk.green('✓')} Regenerated report #${data.report.number} ${chalk.dim(data.report.id)}\n${renderReport(data.report)}`,
     });
   },
 });
@@ -163,7 +163,7 @@ export const reportsRegenerateCommand = defineCommand({
 // --- finalize ---------------------------------------------------------
 
 export interface ReportsFinalizeArgs extends ReportsAiHandlerOptions {
-  reportId: string;
+  project: string; number: number;
 }
 
 export function reportsFinalize(args: ReportsFinalizeArgs): Promise<ExitCode> {
@@ -173,18 +173,18 @@ export function reportsFinalize(args: ReportsFinalizeArgs): Promise<ExitCode> {
     stdout: args.stdout,
     stderr: args.stderr,
     request: () =>
-      args.client.POST('/reports/{reportId}/finalize', {
-        params: { path: { reportId: args.reportId } },
+      args.client.POST('/projects/{project}/reports/{number}/finalize', {
+        params: { path: { project: args.project, number: args.number } },
       }),
     format: (data) =>
-      `${chalk.green('✓')} Finalized report ${chalk.bold(data.report.id)}\n${renderReport(data.report)}`,
+      `${chalk.green('✓')} Finalized report #${data.report.number} ${chalk.dim(data.report.id)}\n${renderReport(data.report)}`,
   });
 }
 
 export const reportsFinalizeCommand = defineCommand({
   meta: { name: 'finalize', description: 'Freeze a draft report (status → finalized).' },
   args: {
-    reportId: { type: 'positional', required: true, description: 'Report ID (UUID).' },
+    project: { type: 'positional', required: true, description: 'Project slug (e.g. prj_xxxxxxxx).' }, number: { type: 'positional', required: true, description: 'Report number within the project.' },
     json: { type: 'boolean', description: 'Print raw JSON to stdout.' },
     verbose: { type: 'boolean', description: 'Print response metadata to stderr.' },
   },
@@ -196,11 +196,11 @@ export const reportsFinalizeCommand = defineCommand({
       json: args.json,
       verbose: args.verbose,
       request: () =>
-        client.POST('/reports/{reportId}/finalize', {
-          params: { path: { reportId: String(args.reportId) } },
+        client.POST('/projects/{project}/reports/{number}/finalize', {
+          params: { path: { project: String(args.project), number: Number(args.number) } },
         }),
       format: (data) =>
-        `${chalk.green('✓')} Finalized report ${chalk.bold(data.report.id)}\n${renderReport(data.report)}`,
+        `${chalk.green('✓')} Finalized report #${data.report.number} ${chalk.dim(data.report.id)}\n${renderReport(data.report)}`,
     });
   },
 });
@@ -208,7 +208,7 @@ export const reportsFinalizeCommand = defineCommand({
 // --- pdf --------------------------------------------------------------
 
 export interface ReportsPdfArgs extends ReportsAiHandlerOptions {
-  reportId: string;
+  project: string; number: number;
 }
 
 export function reportsPdf(args: ReportsPdfArgs): Promise<ExitCode> {
@@ -218,8 +218,8 @@ export function reportsPdf(args: ReportsPdfArgs): Promise<ExitCode> {
     stdout: args.stdout,
     stderr: args.stderr,
     request: () =>
-      args.client.POST('/reports/{reportId}/pdf', {
-        params: { path: { reportId: args.reportId } },
+      args.client.POST('/projects/{project}/reports/{number}/pdf', {
+        params: { path: { project: args.project, number: args.number } },
       }),
     format: (data) =>
       `${chalk.green('✓')} PDF ready\n  URL:        ${data.url}\n  Expires at: ${data.expiresAt}`,
@@ -229,7 +229,7 @@ export function reportsPdf(args: ReportsPdfArgs): Promise<ExitCode> {
 export const reportsPdfCommand = defineCommand({
   meta: { name: 'pdf', description: 'Render the report to PDF and return a signed URL.' },
   args: {
-    reportId: { type: 'positional', required: true, description: 'Report ID (UUID).' },
+    project: { type: 'positional', required: true, description: 'Project slug (e.g. prj_xxxxxxxx).' }, number: { type: 'positional', required: true, description: 'Report number within the project.' },
     json: { type: 'boolean', description: 'Print raw JSON to stdout.' },
     verbose: { type: 'boolean', description: 'Print response metadata to stderr.' },
   },
@@ -241,8 +241,8 @@ export const reportsPdfCommand = defineCommand({
       json: args.json,
       verbose: args.verbose,
       request: () =>
-        client.POST('/reports/{reportId}/pdf', {
-          params: { path: { reportId: String(args.reportId) } },
+        client.POST('/projects/{project}/reports/{number}/pdf', {
+          params: { path: { project: String(args.project), number: Number(args.number) } },
         }),
       format: (data) =>
         `${chalk.green('✓')} PDF ready\n  URL:        ${data.url}\n  Expires at: ${data.expiresAt}`,

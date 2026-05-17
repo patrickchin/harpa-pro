@@ -1,10 +1,12 @@
 /**
  * `harpa notes` — note CRUD.
  *
- *   harpa notes list   <reportId>                                → GET    /reports/{reportId}/notes
- *   harpa notes create <reportId> --kind --body --file-id        → POST   /reports/{reportId}/notes
- *   harpa notes update <noteId> --body                           → PATCH  /notes/{noteId}
- *   harpa notes delete <noteId>                                  → DELETE /notes/{noteId}
+ *   harpa notes list   <projectSlug> <reportNumber>               → GET    /reports/{report}/notes
+ *   harpa notes create <projectSlug> <reportNumber> --kind --body → POST   /reports/{report}/notes
+ *   harpa notes update <noteId> --body                            → PATCH  /notes/{note}
+ *   harpa notes delete <noteId>                                   → DELETE /notes/{note}
+ *
+ * list/create resolve the report UUID internally via GET /projects/{slug}/reports/{number}.
  */
 import { defineCommand } from 'citty';
 import chalk from 'chalk';
@@ -27,12 +29,33 @@ export interface NotesHandlerOptions {
 // --- list -------------------------------------------------------------
 
 export interface NotesListArgs extends NotesHandlerOptions {
-  reportId: string;
+  project: string;
+  reportNumber: number;
   cursor?: string;
   limit?: number;
 }
 
-export function notesList(args: NotesListArgs): Promise<ExitCode> {
+async function resolveReportId(
+  client: ApiClient,
+  project: string,
+  reportNumber: number,
+  stderr: NodeJS.WritableStream = process.stderr,
+): Promise<string | null> {
+  const res = await client.GET('/projects/{project}/reports/{number}', {
+    params: { path: { project, number: reportNumber } },
+  });
+  if (res.error || !res.data) {
+    stderr.write(chalk.red(`Error: report #${reportNumber} not found in project ${project}\n`));
+    return null;
+  }
+  return res.data.id;
+}
+
+export async function notesList(args: NotesListArgs): Promise<ExitCode> {
+  const reportId = await resolveReportId(
+    args.client, args.project, args.reportNumber, args.stderr,
+  );
+  if (!reportId) return 4 as ExitCode;
   const query: Record<string, string | number> = {};
   if (args.cursor) query.cursor = args.cursor;
   if (args.limit !== undefined) query.limit = args.limit;
@@ -42,8 +65,8 @@ export function notesList(args: NotesListArgs): Promise<ExitCode> {
     stdout: args.stdout,
     stderr: args.stderr,
     request: () =>
-      args.client.GET('/reports/{reportId}/notes', {
-        params: { path: { reportId: args.reportId }, query },
+      args.client.GET('/reports/{report}/notes', {
+        params: { path: { report: reportId }, query },
       }),
     format: (data) => renderNoteList(data),
   });
@@ -52,7 +75,8 @@ export function notesList(args: NotesListArgs): Promise<ExitCode> {
 export const notesListCommand = defineCommand({
   meta: { name: 'list', description: 'List notes on a report.' },
   args: {
-    reportId: { type: 'positional', required: true, description: 'Report ID (UUID).' },
+    project: { type: 'positional', required: true, description: 'Project slug (e.g. prj_xxxxxxxx).' },
+    reportNumber: { type: 'positional', required: true, description: 'Report number within the project.' },
     cursor: { type: 'string', description: 'Pagination cursor.' },
     limit: { type: 'string', description: 'Page size (1–100).' },
     json: { type: 'boolean' },
@@ -72,12 +96,16 @@ export const notesListCommand = defineCommand({
       }
       query.limit = n;
     }
+    const reportId = await resolveReportId(
+      client, String(args.project), Number(args.reportNumber),
+    );
+    if (!reportId) process.exit(4);
     await runRequest({
       json: args.json,
       verbose: args.verbose,
       request: () =>
-        client.GET('/reports/{reportId}/notes', {
-          params: { path: { reportId: String(args.reportId) }, query },
+        client.GET('/reports/{report}/notes', {
+          params: { path: { report: reportId }, query },
         }),
       format: (data) => renderNoteList(data),
     });
@@ -87,14 +115,19 @@ export const notesListCommand = defineCommand({
 // --- create -----------------------------------------------------------
 
 export interface NotesCreateArgs extends NotesHandlerOptions {
-  reportId: string;
+  project: string;
+  reportNumber: number;
   kind: NoteKind;
   body?: string;
   fileId?: string;
   transcript?: string;
 }
 
-export function notesCreate(args: NotesCreateArgs): Promise<ExitCode> {
+export async function notesCreate(args: NotesCreateArgs): Promise<ExitCode> {
+  const reportId = await resolveReportId(
+    args.client, args.project, args.reportNumber, args.stderr,
+  );
+  if (!reportId) return 4 as ExitCode;
   const body: { kind: NoteKind; body?: string; fileId?: string; transcript?: string } = {
     kind: args.kind,
   };
@@ -107,8 +140,8 @@ export function notesCreate(args: NotesCreateArgs): Promise<ExitCode> {
     stdout: args.stdout,
     stderr: args.stderr,
     request: () =>
-      args.client.POST('/reports/{reportId}/notes', {
-        params: { path: { reportId: args.reportId } },
+      args.client.POST('/reports/{report}/notes', {
+        params: { path: { report: reportId } },
         body,
       }),
     format: (data) => `${chalk.green('✓')} Created note ${chalk.bold(data.id)}`,
@@ -118,7 +151,8 @@ export function notesCreate(args: NotesCreateArgs): Promise<ExitCode> {
 export const notesCreateCommand = defineCommand({
   meta: { name: 'create', description: 'Create a note on a report.' },
   args: {
-    reportId: { type: 'positional', required: true, description: 'Report ID (UUID).' },
+    project: { type: 'positional', required: true, description: 'Project slug (e.g. prj_xxxxxxxx).' },
+    reportNumber: { type: 'positional', required: true, description: 'Report number within the project.' },
     kind: { type: 'string', required: true, description: 'text | voice | image | document.' },
     body: { type: 'string', description: 'Note text body.' },
     'file-id': { type: 'string', description: 'Attached file ID (for voice/image/document).' },
@@ -137,22 +171,26 @@ export const notesCreateCommand = defineCommand({
       );
       process.exit(2);
     }
-    const body: { kind: NoteKind; body?: string; fileId?: string; transcript?: string } = {
+    const reportId = await resolveReportId(
+      client, String(args.project), Number(args.reportNumber),
+    );
+    if (!reportId) process.exit(4);
+    const noteBody: { kind: NoteKind; body?: string; fileId?: string; transcript?: string } = {
       kind: kind as NoteKind,
     };
-    if (typeof args.body === 'string' && args.body.length > 0) body.body = args.body;
+    if (typeof args.body === 'string' && args.body.length > 0) noteBody.body = args.body;
     const fileId = args['file-id'];
-    if (typeof fileId === 'string' && fileId.length > 0) body.fileId = fileId;
+    if (typeof fileId === 'string' && fileId.length > 0) noteBody.fileId = fileId;
     if (typeof args.transcript === 'string' && args.transcript.length > 0) {
-      body.transcript = args.transcript;
+      noteBody.transcript = args.transcript;
     }
     await runRequest({
       json: args.json,
       verbose: args.verbose,
       request: () =>
-        client.POST('/reports/{reportId}/notes', {
-          params: { path: { reportId: String(args.reportId) } },
-          body,
+        client.POST('/reports/{report}/notes', {
+          params: { path: { report: reportId } },
+          body: noteBody,
         }),
       format: (data) => `${chalk.green('✓')} Created note ${chalk.bold(data.id)}`,
     });
@@ -173,8 +211,8 @@ export function notesUpdate(args: NotesUpdateArgs): Promise<ExitCode> {
     stdout: args.stdout,
     stderr: args.stderr,
     request: () =>
-      args.client.PATCH('/notes/{noteId}', {
-        params: { path: { noteId: args.noteId } },
+      args.client.PATCH('/notes/{note}', {
+        params: { path: { note: args.noteId } },
         body: { body: args.body },
       }),
     format: (data) => `${chalk.green('✓')} Updated note ${chalk.bold(data.id)}\n${renderNote(data)}`,
@@ -198,8 +236,8 @@ export const notesUpdateCommand = defineCommand({
       json: args.json,
       verbose: args.verbose,
       request: () =>
-        client.PATCH('/notes/{noteId}', {
-          params: { path: { noteId: String(args.noteId) } },
+        client.PATCH('/notes/{note}', {
+          params: { path: { note: String(args.noteId) } },
           body: { body: newBody },
         }),
       format: (data) =>
@@ -221,8 +259,8 @@ export function notesDelete(args: NotesDeleteArgs): Promise<ExitCode> {
     stdout: args.stdout,
     stderr: args.stderr,
     request: () =>
-      args.client.DELETE('/notes/{noteId}', {
-        params: { path: { noteId: args.noteId } },
+      args.client.DELETE('/notes/{note}', {
+        params: { path: { note: args.noteId } },
       }),
     format: () => `${chalk.green('✓')} Deleted note ${args.noteId}`,
     formatJson: () => JSON.stringify({ ok: true }, null, 2),
@@ -244,8 +282,8 @@ export const notesDeleteCommand = defineCommand({
       json: args.json,
       verbose: args.verbose,
       request: () =>
-        client.DELETE('/notes/{noteId}', {
-          params: { path: { noteId: String(args.noteId) } },
+        client.DELETE('/notes/{note}', {
+          params: { path: { note: String(args.noteId) } },
         }),
       format: () => `${chalk.green('✓')} Deleted note ${args.noteId}`,
       formatJson: () => JSON.stringify({ ok: true }, null, 2),

@@ -92,7 +92,7 @@ export function authOtpVerify(args: AuthOtpVerifyArgs): Promise<ExitCode> {
       if (args.raw) return data.token;
       const name = data.user.displayName ?? data.user.phone;
       return [
-        `${chalk.green('✓')} Verified as ${chalk.bold(name)} (${data.user.id})`,
+        `${chalk.green('✓')} Verified as ${chalk.bold(name)} ${chalk.dim(`<${data.user.phone}>`)}`,
         '',
         chalk.dim('Export the token to use authenticated commands:'),
         `  export HARPA_TOKEN=${data.token}`,
@@ -135,7 +135,7 @@ export const otpVerifyCommand = defineCommand({
         if (args.raw) return data.token;
         const name = data.user.displayName ?? data.user.phone;
         return [
-          `${chalk.green('✓')} Verified as ${chalk.bold(name)} (${data.user.id})`,
+          `${chalk.green('✓')} Verified as ${chalk.bold(name)} ${chalk.dim(`<${data.user.phone}>`)}`,
           '',
           chalk.dim('Export the token to use authenticated commands:'),
           `  export HARPA_TOKEN=${data.token}`,

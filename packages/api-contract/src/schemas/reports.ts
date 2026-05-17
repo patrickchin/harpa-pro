@@ -1,5 +1,6 @@
 import { z } from 'zod';
-import { isoDateTime, uuid } from './_shared.js';
+import { isoDateTime, reportNumber } from './_shared.js';
+import { projectId, reportId } from './ids.js';
 
 export const reportStatus = z.enum(['draft', 'finalized']);
 export type ReportStatus = z.infer<typeof reportStatus>;
@@ -56,8 +57,9 @@ export const reportBody = z.object({
 export type ReportBody = z.infer<typeof reportBody>;
 
 export const report = z.object({
-  id: uuid,
-  projectId: uuid,
+  id: reportId,
+  number: reportNumber,
+  projectId: projectId,
   status: reportStatus,
   visitDate: isoDateTime.nullable(),
   body: reportBody.nullable(),

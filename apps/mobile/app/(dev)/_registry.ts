@@ -14,6 +14,12 @@ import type { GalleryEntry } from '../../screens/dev-gallery.rows';
 
 export const REGISTRY: readonly GalleryEntry[] = [
   {
+    name: 'API base URL',
+    href: '/(dev)/api-base-url',
+    group: 'dev tools',
+    description: 'Override API base URL at runtime (preview/dev builds only)',
+  },
+  {
     name: 'Button',
     href: '/(dev)/primitives/button',
     group: 'primitives',
@@ -108,5 +114,53 @@ export const REGISTRY: readonly GalleryEntry[] = [
     href: '/(dev)/projects-list',
     group: 'app',
     description: 'Projects list — empty / loading / populated states with pull-to-refresh',
+  },
+  {
+    name: 'New Project',
+    href: '/(dev)/project-new',
+    group: 'app',
+    description: 'New project form — idle / pending / error states',
+  },
+  {
+    name: 'Project Home',
+    href: '/(dev)/project-home',
+    group: 'app',
+    description: 'Project overview — loaded / loading / empty states',
+  },
+  {
+    name: 'Edit Project',
+    href: '/(dev)/project-edit',
+    group: 'app',
+    description: 'Edit project form — loaded / loading / updating / deleting / error',
+  },
+  {
+    name: 'Project Members',
+    href: '/(dev)/project-members',
+    group: 'app',
+    description: 'Members — owner / editor / viewer / empty / loading views',
+  },
+  {
+    name: 'Reports List',
+    href: '/(dev)/reports-list',
+    group: 'app',
+    description: 'Reports list — populated / empty / loading / creating-draft states',
+  },
+  {
+    name: 'Generate Notes',
+    href: '/(dev)/generate-notes',
+    group: 'app',
+    description: 'Generate report — Notes tab with empty / populated / loading states',
+  },
+  {
+    name: 'Generate Report',
+    href: '/(dev)/generate-report',
+    group: 'app',
+    description: 'Generate report — Report tab: no-report / generating / live / generation-error / finalize-error',
+  },
+  {
+    name: 'Generate Edit',
+    href: '/(dev)/generate-edit',
+    group: 'app',
+    description: 'Generate report — Edit tab: no-report / live-report / autosaving / saved',
   },
 ];

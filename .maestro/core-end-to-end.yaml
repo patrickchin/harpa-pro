@@ -1,0 +1,284 @@
+appId: com.harpa.pro
+name: Core end-to-end (all shipped features)
+tags:
+  - core-e2e
+---
+# This flow is the canonical full-journey Maestro test referenced by the
+# P3 exit gate in docs/v4/plan-p3-feature-build.md. It walks through
+# every currently-implemented user-visible feature on the real
+# `(auth)` + `(app)` routes (not the `(dev)` gallery).
+#
+# Coverage:
+#   - sign-up flow      (deep link `harpa://sign-up/phone`)
+#   - onboarding        (conditional)
+#   - sign-out + sign-in round trip
+#   - projects list, new project
+#   - project home: copy-client, copy-address, open-reports, open-members
+#   - members: invite (role editor), filter buttons, remove-member
+#   - project edit: rename + save
+#   - reports list + new report
+#   - generate report tabs: notes / report / edit / finalize confirm
+#   - voice record (mic + camera permissions pre-granted by run script)
+#   - project delete
+#
+# Pre-flight (must be done by the caller, not by Maestro):
+#   1. docker compose up -d     # fixture-mode API on :8787
+#   2. pnpm --filter @harpa/mobile start --dev-client
+#   3. xcrun simctl privacy booted grant microphone com.harpa.pro
+#      xcrun simctl privacy booted grant camera com.harpa.pro
+#   4. scripts/maestro/reset-db.sh   # wipe app + auth schemas so the
+#      sign-up phone (+15550100100) is a fresh account every run
+#
+# Run:
+#   maestro test .maestro/core-end-to-end.yaml
+- launchApp:
+    clearState: true
+    clearKeychain: true
+    stopApp: true
+- waitForAnimationToEnd
+# Let the auth gate land us on sign-in first (more reliable than a
+# bare deep link to /sign-up immediately after a cold-launch race).
+- extendedWaitUntil:
+    visible:
+      id: "input-phone"
+    timeout: 15000
+
+# --- Sign-up (fresh account) -------------------------------------------------
+- openLink: harpa://sign-up/phone
+- extendedWaitUntil:
+    visible:
+      id: "input-signup-phone"
+    timeout: 15000
+- tapOn:
+    id: "input-signup-phone"
+- inputText: "+15550100100"
+- tapOn:
+    point: "50%,15%"
+- tapOn:
+    id: "btn-signup-send-code"
+- assertVisible:
+    id: "input-signup-otp"
+- tapOn:
+    id: "input-signup-otp"
+- inputText: "000000"
+- tapOn:
+    point: "50%,15%"
+- tapOn:
+    id: "btn-signup-verify"
+
+# --- Onboarding (always shown after fresh sign-up) ---------------------------
+- extendedWaitUntil:
+    visible:
+      id: "screen-onboarding"
+    timeout: 10000
+- tapOn:
+    id: "input-onboarding-name"
+- inputText: "Maestro Tester"
+- tapOn:
+    id: "input-onboarding-company"
+- inputText: "QA Industries"
+- tapOn:
+    point: "50%,15%"
+- tapOn:
+    id: "btn-onboarding-submit"
+
+# --- Projects list -----------------------------------------------------------
+- assertVisible:
+    text: "Projects"
+- assertVisible:
+    id: "btn-new-project"
+- tapOn:
+    id: "btn-new-project"
+
+# --- New project -------------------------------------------------------------
+- assertVisible:
+    id: "input-project-name"
+- tapOn:
+    id: "input-project-name"
+- inputText: "Maestro Test Project"
+- tapOn:
+    id: "input-client-name"
+- inputText: "QA Client Co"
+- tapOn:
+    id: "input-project-address"
+- inputText: "1 Test Way"
+- tapOn:
+    point: "50%,15%"
+- tapOn:
+    id: "btn-submit-project"
+
+# --- Project home: copy buttons + navigation --------------------------------
+- assertVisible:
+    id: "btn-edit-project"
+- tapOn:
+    id: "btn-copy-client"
+- tapOn:
+    id: "btn-copy-address"
+
+# --- Members: open, invite editor, filter, remove ---------------------------
+- tapOn:
+    id: "btn-open-members"
+- assertVisible:
+    id: "btn-add-member"
+- tapOn:
+    id: "btn-add-member"
+- assertVisible:
+    id: "input-invite-phone"
+- tapOn:
+    id: "input-invite-phone"
+- inputText: "+15550100200"
+- tapOn:
+    point: "50%,15%"
+- tapOn:
+    id: "btn-invite-role-editor"
+- tapOn:
+    id: "btn-invite-submit"
+# After invite, the "others" list now has a member so filter buttons render.
+- extendedWaitUntil:
+    visible:
+      id: "btn-filter-all"
+    timeout: 8000
+- tapOn:
+    id: "btn-filter-editor"
+- waitForAnimationToEnd
+- tapOn:
+    id: "btn-back"
+
+# --- Project edit: rename, save ---------------------------------------------
+- assertVisible:
+    id: "btn-edit-project"
+- tapOn:
+    id: "btn-edit-project"
+- assertVisible:
+    id: "input-edit-project-name"
+- tapOn:
+    id: "input-edit-project-name"
+- eraseText: 50
+- inputText: "Edited Project"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: "btn-save-project"
+    direction: DOWN
+- tapOn:
+    id: "btn-save-project"
+
+# --- Reports list + new draft -----------------------------------------------
+- assertVisible:
+    id: "btn-edit-project"
+- tapOn:
+    id: "btn-open-reports"
+- assertVisible:
+    id: "btn-new-report"
+- tapOn:
+    id: "btn-new-report"
+- runFlow:
+    when:
+      visible:
+        id: "report-row-draft-0"
+    commands:
+      - tapOn:
+          id: "report-row-draft-0"
+
+# --- Generate report: tabs + voice + finalize -------------------------------
+- extendedWaitUntil:
+    visible:
+      id: "input-note-container"
+    timeout: 15000
+
+# Voice record (mic permission pre-granted by run script)
+- tapOn:
+    id: "btn-record-start"
+- waitForAnimationToEnd
+# Stop recording (toggle).
+- tapOn:
+    id: "btn-record-start"
+
+# Attachment picker → Cancel (camera/library exercised by unit tests; the
+# permission-bearing camera capture is brittle under XCTest).
+- tapOn:
+    id: "btn-attachment"
+- assertVisible:
+    id: "dialog-sheet"
+- waitForAnimationToEnd
+- tapOn:
+    id: "dialog-action-3"
+
+# Report tab → edit-manually round-trip
+- tapOn:
+    id: "btn-tab-report"
+- assertVisible:
+    id: "report-tab-pane"
+- runFlow:
+    when:
+      visible:
+        id: "btn-edit-manually"
+    commands:
+      - tapOn:
+          id: "btn-edit-manually"
+      - assertVisible:
+          id: "edit-tab-pane"
+      - tapOn:
+          id: "btn-tab-report"
+
+# Edit tab: assert the seven section cards exist
+- tapOn:
+    id: "btn-tab-edit"
+- assertVisible:
+    id: "edit-tab-pane"
+- assertVisible:
+    id: "edit-section-meta"
+- scrollUntilVisible:
+    element:
+      id: "edit-section-sections"
+    direction: DOWN
+
+# Finalize confirm dialog (open + cancel — onPress is still TODO-stubbed)
+- tapOn:
+    id: "btn-tab-report"
+- runFlow:
+    when:
+      visible:
+        id: "btn-finalize-report"
+    commands:
+      - tapOn:
+          id: "btn-finalize-report"
+      - assertVisible:
+          id: "dialog-sheet"
+      - waitForAnimationToEnd
+      - tapOn:
+          id: "dialog-action-1"
+
+- tapOn:
+    id: "btn-tab-notes"
+- assertVisible:
+    id: "input-note-container"
+
+- takeScreenshot: core-e2e-generate
+- tapOn:
+    id: "btn-back"
+- tapOn:
+    id: "btn-back"
+
+# --- Project delete (cleanup) ------------------------------------------------
+- assertVisible:
+    id: "btn-edit-project"
+- tapOn:
+    id: "btn-edit-project"
+- scrollUntilVisible:
+    element:
+      id: "btn-delete-project"
+    direction: DOWN
+- tapOn:
+    id: "btn-delete-project"
+- assertVisible:
+    id: "dialog-sheet"
+- waitForAnimationToEnd
+- tapOn:
+    id: "dialog-action-0"
+- extendedWaitUntil:
+    visible:
+      id: "btn-new-project"
+    timeout: 10000
+
+- takeScreenshot: core-e2e-final

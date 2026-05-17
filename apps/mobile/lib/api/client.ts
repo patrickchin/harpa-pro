@@ -14,7 +14,7 @@
  *    this client entirely — they go direct to R2.
  */
 import type { paths } from '@harpa/api-contract';
-import { env } from '../env';
+import { getApiBaseUrl } from './base-url';
 import { getAuthToken, notifyUnauthorized } from './auth';
 import { ApiError, apiErrorFromResponse } from './errors';
 
@@ -132,7 +132,7 @@ export async function request<
   method: M,
   init?: RequestInput<P, M>,
 ): Promise<ResponseBody<P, M>> {
-  const baseUrl = env.EXPO_PUBLIC_API_URL.replace(/\/+$/, '');
+  const baseUrl = await getApiBaseUrl();
   const filledPath = substitutePath(
     String(path),
     init?.params as Record<string, unknown> | undefined,

@@ -95,6 +95,7 @@ services:
       - ./packages/api/src:/app/packages/api/src
       - ./packages/api-contract/src:/app/packages/api-contract/src
       - ./packages/ai-fixtures/src:/app/packages/ai-fixtures/src
+      - ./packages/ai-fixtures/fixtures:/app/packages/ai-fixtures/fixtures
     ports:
       - "8787:8787"
 

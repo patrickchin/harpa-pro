@@ -164,12 +164,12 @@ describe('harpa projects members', () => {
     exit = await membersRemove({
       client: makeClient(ownerToken),
       projectId,
-      userId: memberUserId,
+      phone: '+15551000011',
       stdout: removeOut,
       stderr,
     });
     expect(exit).toBe(EXIT.OK);
-    expect(removeOut.text).toMatch(/Removed member/);
+    expect(removeOut.text).toMatch(/Removed/);
 
     // After removal the member can no longer list.
     exit = await membersList({

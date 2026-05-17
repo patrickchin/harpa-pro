@@ -16,8 +16,8 @@ describe('withAuth', () => {
     const app = new Hono<AppEnv>();
     app.use('*', withAuth());
     app.get('/me', (c) => c.json({ uid: c.get('userId'), sid: c.get('sessionId') }));
-    const sub = '11111111-1111-1111-1111-111111111111';
-    const sid = '22222222-2222-2222-2222-222222222222';
+    const sub = 'usr_aaaaaaaa';
+    const sid = 'ses_bbbbbbbbbbbb';
     const token = await signTestToken(sub, sid);
     const res = await app.request('/me', { headers: { authorization: `Bearer ${token}` } });
     expect(res.status).toBe(200);
@@ -28,10 +28,7 @@ describe('withAuth', () => {
     const app = new Hono<AppEnv>();
     app.use('*', withAuth());
     app.get('/x', (c) => c.text('ok'));
-    const token = await signTestToken(
-      '11111111-1111-1111-1111-111111111111',
-      '22222222-2222-2222-2222-222222222222',
-    );
+    const token = await signTestToken('usr_aaaaaaaa', 'ses_bbbbbbbbbbbb');
     // Flip a bit in the payload segment so the signature no longer matches.
     // (Tampering only the trailing base64url char of the signature is unsafe:
     // for HS256 the last char encodes 4 significant bits + 2 padding bits, so

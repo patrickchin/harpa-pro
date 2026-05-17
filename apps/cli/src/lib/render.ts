@@ -25,7 +25,6 @@ export function renderUser(user: UserLike): string {
   const company = user.companyName ?? chalk.dim('(no company)');
   return [
     `${chalk.bold(name)} ${chalk.dim(`<${user.phone}>`)}`,
-    `  ID:        ${user.id}`,
     `  Company:   ${company}`,
     `  Joined:    ${user.createdAt}`,
   ].join('\n');
@@ -73,7 +72,6 @@ export function renderProject(p: ProjectLike): string {
     `  ID:         ${p.id}`,
     `  Client:     ${p.clientName ?? chalk.dim('(none)')}`,
     `  Address:    ${p.address ?? chalk.dim('(none)')}`,
-    `  Owner:      ${p.ownerId}`,
     `  Created:    ${p.createdAt}`,
     `  Updated:    ${p.updatedAt}`,
   ];
@@ -104,6 +102,7 @@ export function renderProjectList(
 
 export interface ReportLike {
   id: string;
+  number: number;
   projectId: string;
   status: 'draft' | 'finalized';
   visitDate: string | null;
@@ -115,8 +114,7 @@ export interface ReportLike {
 
 export function renderReport(r: ReportLike): string {
   const lines = [
-    `${chalk.bold(`Report ${r.id}`)} ${chalk.dim(`(${r.status})`)}`,
-    `  Project:    ${r.projectId}`,
+    `${chalk.bold(`Report #${r.number}`)} ${chalk.dim(r.id)} ${chalk.dim(`(${r.status})`)}`,
     `  Visit date: ${r.visitDate ?? chalk.dim('(none)')}`,
     `  Created:    ${r.createdAt}`,
     `  Updated:    ${r.updatedAt}`,
@@ -140,7 +138,8 @@ export function renderReportList(
   }
   const rows = page.items.map((r) => {
     const visit = r.visitDate ?? chalk.dim('—');
-    return `  ${chalk.bold(r.id)}  ${r.status.padEnd(9)}  ${String(visit).padEnd(12)}  ${chalk.dim(r.createdAt)}`;
+    const head = `#${String(r.number).padEnd(4)} ${chalk.dim(r.id)}`;
+    return `  ${chalk.bold(head)}  ${r.status.padEnd(9)}  ${String(visit).padEnd(12)}  ${chalk.dim(r.createdAt)}`;
   });
   const footer = page.nextCursor
     ? chalk.dim(`\nNext page: --cursor ${page.nextCursor}`)
@@ -206,7 +205,6 @@ export function renderMember(m: MemberLike): string {
   const name = m.displayName ?? chalk.dim('(no display name)');
   return [
     `${chalk.bold(name)} ${chalk.dim(`<${m.phone}>`)} ${chalk.dim(`(${m.role})`)}`,
-    `  User ID:  ${m.userId}`,
     `  Joined:   ${m.joinedAt}`,
   ].join('\n');
 }
@@ -217,7 +215,7 @@ export function renderMemberList(page: { items: MemberLike[] }): string {
   }
   const rows = page.items.map((m) => {
     const name = m.displayName ?? chalk.dim('(no name)');
-    return `  ${chalk.bold(name).padEnd(30)}  ${m.role.padEnd(6)}  ${m.phone.padEnd(16)}  ${chalk.dim(m.userId)}`;
+    return `  ${chalk.bold(name).padEnd(30)}  ${m.role.padEnd(6)}  ${chalk.dim(m.phone)}`;
   });
   return [chalk.bold('Members:'), ...rows].join('\n');
 }

@@ -89,49 +89,170 @@ For each screen in the scope list:
 Suggested order (parallelisable across agents once primitives lock):
 
 ```
-P3.0  IDs/slugs migration (BLOCKS every other P3 task)
-P3.1  Project list (visual confirm)
-P3.2  New / Edit project           ┐ Agent A
-P3.3  Project home                 ┘
-P3.4  Members
-P3.5  Reports list
-P3.6  Generate – Notes tab          ┐ Agent B (the big one)
-P3.7  Generate – Report tab         │
-P3.8  Generate – Edit tab           ┘
-P3.9  Saved report + actions + PDF  ┐ Agent C
-P3.10 Files screen                  │
-P3.11 Camera                        ┘
-P3.12 Profile / Account / Usage
-P3.13 Maestro full-journey
+P3.0  IDs/slugs migration  ── superseded by P3.1
+P3.1  Slug-native IDs (DOMAIN PKs, no parallel UUID)  ✅ shipped
+P3.2  Project list (visual confirm)
+P3.3  New / Edit project           ┐ Agent A
+P3.4  Project home                 ┘
+P3.5  Members
+P3.6  Reports list
+P3.7  Generate – Notes tab          ┐ Agent B (the big one)
+P3.8  Generate – Report tab         │
+P3.9  Generate – Edit tab           ┘
+P3.10 Saved report + actions + PDF
+P3.11 Files screen
+P3.12 Camera
+P3.13 Profile / Account / Usage
+P3.14 Maestro full-journey
 ```
 
-### P3.0 — IDs/slugs migration
+### P3.1 — Slug-native IDs (✅ shipped)
 
-Full design: [arch-ids-and-urls.md](arch-ids-and-urls.md). Lands
-**before** any screen-port commit so URLs the app constructs are
-immediately on the final scheme — no rewriting share links later.
+Full design: [design-p31-slug-only-ids.md](design-p31-slug-only-ids.md).
+Companion: [arch-ids-and-urls.md](arch-ids-and-urls.md). Supersedes
+the P3.0 dual-id plan ([design-p30-ids-slugs.md](design-p30-ids-slugs.md))
+— there is **no parallel UUID column**: each entity's prefixed slug
+is the primary key, enforced by a Postgres DOMAIN.
 
-- [ ] Drizzle schema: add `slug text` + (reports) `number int` +
-      `projects.next_report_number int`. Backfill nullable, then
-      flip `NOT NULL` + `UNIQUE` (4-step expand/contract).
-- [ ] UUIDv7 default on new rows (`uuidv7()` on PG ≥ 17 or
-      `pg_uuidv7` extension — verify on Neon at migration time).
-      Existing UUIDv4 rows untouched.
-- [ ] `packages/api/src/lib/slug.ts` — nanoid Crockford-base32
-      generator + retry-on-collision wrapper.
-- [ ] `packages/api-contract`: `projectSlug`, `reportSlug`,
-      `reportNumber` Zod schemas + branded TS types. Path params
-      switch from `:id`/`:reportId` to `:projectSlug` /
-      `:projectSlug/:number`. OpenAPI spec regenerated.
-- [ ] New routes: `GET /p/:projectSlug` + `GET /r/:reportSlug` →
-      `308` redirect to canonical long URL. Scope test for each.
-- [ ] Per-request scope tests cover slug-based lookups (Pitfall 6).
-- [ ] Mobile: `lib/api/hooks.ts` regenerated; `router.push` call
-      sites updated; `app/(app)/p/[projectSlug].tsx` +
-      `app/(app)/r/[reportSlug].tsx` resolver screens added
-      (each does `router.replace` after slug → canonical resolve).
-- [ ] Commit: `feat(api,mobile): P3.0 IDs/slugs migration —
-      prefixed slugs + per-project report numbers`.
+- [x] Drizzle schema: PKs/FKs as plain `text()`; init migration
+      collapses prior P0/P1 schema into one
+      `20261101000001_init_slug_native.sql` (8 DOMAINs, RLS
+      retyped, SECURITY DEFINER helpers).
+- [x] `packages/api/src/lib/ids.ts` — `newId(prefix)`,
+      `assertId(prefix, value)`, `insertWithGeneratedId` (retry
+      on `23505`).
+- [x] `packages/api-contract`: `idSchema(prefix)` factory +
+      branded `Id<P>` TS types. Route params switched to short
+      form (`:project`, `:report`, `:note`, `:user`). OpenAPI
+      regenerated.
+- [x] Resolver routes `GET /p/:project` + `GET /r/:report`
+      return JSON (not 308); mobile resolver screens
+      `router.replace` to canonical long URL.
+- [x] `withScopedConnection` / `verifyJwt` / `signTestToken`
+      call `assertId` at the trust boundary; RLS coerces
+      `current_setting('app.user_id')::app.usr_id`.
+- [x] CLI openapi-fetch path templates + snapshots updated.
+- [x] Mobile: expo-router segments renamed
+      (`[project]/`, `[report].tsx`, `[project].tsx`),
+      `lib/api/hooks.ts` regenerated.
+- [x] Commit train on `feat/v4`:
+      `feat(api-contract|api|cli|mobile): slug-native IDs`.
+
+### P3.6 — Generate – Notes tab
+
+First of three commits that together port the Generate Report screen.
+P3.6 ships the Notes pane as a *visually complete* surface; Report
+(P3.7) and Edit (P3.8) mount as empty placeholders.
+
+- [x] `GenerateReportProvider` scaffold — owns tab state, text-note
+      input, dialog visibility, attachment sheet. Report-tab / Edit-tab
+      fields (`generation`, `draft`, `voice`, `photo`) present as
+      structurally-stable no-op defaults with `TODO(P3.7/P3.8)` markers.
+- [x] `NoteTimeline` (text-only) + `EmptyState` wired into
+      `NotesTabPane`. Voice / photo / pending-upload rows deferred.
+- [x] Shared shell: `GenerateReportTabBar`, `GenerateReportActionRow`,
+      `GenerateReportInputBar` (text input + voice + photo + attach
+      buttons, voice/photo wired to provider no-ops),
+      `GenerateReportDialogs` (delete-note, finalize-confirm,
+      attachment sheet, upload error).
+- [x] Real route at
+      `apps/mobile/app/(app)/projects/[projectSlug]/reports/[number]/generate.tsx`
+      using `useProjectQuery` + `useReportQuery`. Notes live in
+      route-local React state for P3.6 (TODO marker for the
+      `useReportNotesQuery` swap in P3.7).
+- [x] Dev mirror `(dev)/generate-notes.tsx` with empty / populated /
+      loading toggles + registry entry.
+- [x] Vitest unit tests for the screen body covering each state +
+      one snapshot.
+- [x] Commit: `feat(mobile): P3.6 — Generate Notes tab + provider scaffold`.
+
+### P3.7 — Generate – Report tab
+
+Second of the three Generate-screen commits. Brings the Report tab
+from a placeholder `<View />` to a visually complete, read-only
+surface that renders a `GeneratedSiteReport` with empty / generating
+/ live / generation-error / finalize-error states. Same pattern as
+P3.6: provider takes orchestration state as props; route + dev
+mirror + tests pass canned values. Real `useReportGeneration` hook
++ ReportPhotos rendering remain deferred (see TODO markers).
+
+- [x] New shared package `packages/report-core` — Zod schemas +
+      `normalizeGeneratedReportPayload` + helpers (`getReportCompleteness`,
+      `getWorkersLines`, `getWeatherLines`, …). Mobile + api both
+      depend on it via `@harpa/report-core`.
+- [x] Nine rendering primitives ported verbatim from canonical
+      under `apps/mobile/components/reports/`: `StatBar`,
+      `WeatherStrip`, `SummarySectionCard`, `IssuesCard`,
+      `WorkersCard`, `MaterialsCard`, `NextStepsCard`,
+      `CompletenessCard`, `ReportView`. Plus `SectionHeader`
+      primitive and `mobile-ui` / `section-icons` helpers.
+- [x] `GenerateReportProvider` extended: real `generation`
+      (`report`, `isUpdating`, `error`, `notesSinceLastGeneration`,
+      `hasReport`), `draft` (`isFinalizing`, `finalizeError`,
+      finalize-confirm visibility), `tabs.editManually`,
+      `preview.openFile`, `handleRegenerate` — all driven by new
+      provider props. `initialTab` prop added for dev mirror.
+- [x] `ReportTabPane` body fully ported: error banner + Retry,
+      empty state (CompletenessCard skeleton + Edit manually CTA),
+      generating shimmer, live ReportView + finalize-error banner.
+      ReportPhotos slot reserved with a TODO marker (lands once
+      upload pipeline + `useLocalReportNotes` port).
+- [x] Real route forwards report state via new
+      `report`/`isGeneratingReport`/`generationError`/`onRegenerate`
+      props; fixture-mode seeds `SAMPLE_GENERATED_REPORT` so the
+      tab renders without the API generate endpoint. TODO marker
+      for the real `useReportGeneration` hook (lands with the API
+      endpoint).
+- [x] Dev mirror `(dev)/generate-report.tsx` with state toggles
+      (no-report / generating / live-report / generation-error /
+      finalize-error) + registry entry.
+- [x] Vitest unit tests for the Report tab covering each state +
+      smoke render of populated layout. Reanimated mock extended
+      with chainable entering-preset proxy so `FadeIn.duration(…)`
+      works under test.
+- [x] Commit: `feat(mobile,report-core): P3.7 — Generate Report tab + read-only ReportView`.
+
+### P3.8 — Generate – Edit tab
+
+Third of the three Generate-screen commits. Brings the Edit tab from
+a placeholder `<View />` to a fully-controlled inline editor that
+mutates a `GeneratedSiteReport` through immutable slice helpers. The
+real autosave hook (`useReportAutoSave` / `useReportDraftPersistence`)
+remains deferred; the provider just forwards `isAutoSaving` +
+`lastSavedAt` props so the status row renders the right copy.
+
+- [x] `lib/report-edit-helpers.ts` extended from the P3.7
+      `createEmptyReport()`-only stub: `updateMeta`, `updateWeather`,
+      `updateWorkers` slice patches (with empty-shape seeding when
+      the slice is `null`), `setRoles` / `setMaterials` / `setIssues`
+      / `setNextSteps` / `setSections` whole-array setters, and
+      `blankRole` / `blankMaterial` / `blankIssue` / `blankSection`
+      factories. All immutable; every helper returns a new wrapper +
+      a new inner `report` object so React shallow-equality fires.
+- [x] `lib/report-edit-helpers.test.ts` ports the canonical helper
+      tests (23 cases): shape, identity, schema round-trip,
+      null-seed paths, and "two calls produce independent refs".
+- [x] `components/reports/ReportEditForm.tsx` ported verbatim from
+      canonical: 7 section cards (Meta / Weather / Workers + Roles /
+      Materials / Issues / Next Steps / Summary Sections) with
+      shared `Field` / `AddRowButton` / `RemoveRowButton` helpers
+      and an `AppDialogSheet` confirm before destructive removes
+      (Pitfall: no `Alert.alert`).
+- [x] `EditTabPane` body fully ported: empty state when
+      `generation.report === null`, inline form once a report
+      exists, and an autosave status row (`Saving…` / `Saved` / ``).
+- [x] `GenerateReportProvider` extended: new `onSetReport`,
+      `isAutoSaving`, `lastSavedAt` props; `generation.setReport`
+      surface (no-op fallback when route doesn't wire persistence);
+      `draft.isAutoSaving` + `draft.lastSavedAt`; lazy-seed via
+      `createEmptyReport()` from both `tabs.openEdit()` and
+      `tabs.editManually()` when no report is present yet.
+- [x] Dev mirror `(dev)/generate-edit.tsx` with state toggles
+      (no-report / live-report / autosaving / saved) + registry entry.
+- [x] Vitest unit tests for the Edit tab covering each state +
+      onSetReport propagation (new top-level + inner refs) + the
+      "Edit manually" lazy-seed path from the empty Report tab.
+- [x] Commit: `feat(mobile): P3.8 — Generate Edit tab + inline ReportEditForm`.
 
 ## Pipelines exercised
 

@@ -1,9 +1,9 @@
 /**
  * `harpa projects members` — project membership management.
  *
- *   harpa projects members list   <projectId>                     → GET    /projects/{id}/members
+ *   harpa projects members list   <projectId>                      → GET    /projects/{id}/members
  *   harpa projects members add    <projectId> --phone <p> [--role] → POST   /projects/{id}/members
- *   harpa projects members remove <projectId> <userId>            → DELETE /projects/{id}/members/{userId}
+ *   harpa projects members remove <projectId> <phone>              → GET members → DELETE /projects/{id}/members/{userId}
  */
 import { defineCommand } from 'citty';
 import chalk from 'chalk';
@@ -34,8 +34,8 @@ export function membersList(args: MembersListArgs): Promise<ExitCode> {
     stdout: args.stdout,
     stderr: args.stderr,
     request: () =>
-      args.client.GET('/projects/{id}/members', {
-        params: { path: { id: args.projectId } },
+      args.client.GET('/projects/{project}/members', {
+        params: { path: { project: args.projectId } },
       }),
     format: (data) => renderMemberList(data),
   });
@@ -44,7 +44,7 @@ export function membersList(args: MembersListArgs): Promise<ExitCode> {
 export const membersListCommand = defineCommand({
   meta: { name: 'list', description: 'List members of a project.' },
   args: {
-    projectId: { type: 'positional', required: true, description: 'Project ID (UUID).' },
+    projectId: { type: 'positional', required: true, description: 'Project slug (e.g. prj_xxxxxxxx).' },
     json: { type: 'boolean', description: 'Print raw JSON to stdout.' },
     verbose: { type: 'boolean', description: 'Print response metadata to stderr.' },
   },
@@ -56,8 +56,8 @@ export const membersListCommand = defineCommand({
       json: args.json,
       verbose: args.verbose,
       request: () =>
-        client.GET('/projects/{id}/members', {
-          params: { path: { id: String(args.projectId) } },
+        client.GET('/projects/{project}/members', {
+          params: { path: { project: String(args.projectId) } },
         }),
       format: (data) => renderMemberList(data),
     });
@@ -81,19 +81,19 @@ export function membersAdd(args: MembersAddArgs): Promise<ExitCode> {
     stdout: args.stdout,
     stderr: args.stderr,
     request: () =>
-      args.client.POST('/projects/{id}/members', {
-        params: { path: { id: args.projectId } },
+      args.client.POST('/projects/{project}/members', {
+        params: { path: { project: args.projectId } },
         body,
       }),
     format: (data) =>
-      `${chalk.green('✓')} Added member ${chalk.bold(data.displayName ?? data.phone)} (${data.userId}) as ${data.role}`,
+      `${chalk.green('✓')} Added member ${chalk.bold(data.displayName ?? data.phone)} ${chalk.dim(`<${data.phone}>`)} as ${data.role}`,
   });
 }
 
 export const membersAddCommand = defineCommand({
   meta: { name: 'add', description: 'Add a member to a project (owner only).' },
   args: {
-    projectId: { type: 'positional', required: true, description: 'Project ID (UUID).' },
+    projectId: { type: 'positional', required: true, description: 'Project slug (e.g. prj_xxxxxxxx).' },
     phone: { type: 'string', required: true, description: 'E.164 phone number to invite.' },
     role: { type: 'string', description: 'Role: owner | editor | viewer (default editor).' },
     json: { type: 'boolean', description: 'Print raw JSON to stdout.' },
@@ -119,12 +119,12 @@ export const membersAddCommand = defineCommand({
       json: args.json,
       verbose: args.verbose,
       request: () =>
-        client.POST('/projects/{id}/members', {
-          params: { path: { id: String(args.projectId) } },
+        client.POST('/projects/{project}/members', {
+          params: { path: { project: String(args.projectId) } },
           body,
         }),
       format: (data) =>
-        `${chalk.green('✓')} Added member ${chalk.bold(data.displayName ?? data.phone)} (${data.userId}) as ${data.role}`,
+        `${chalk.green('✓')} Added member ${chalk.bold(data.displayName ?? data.phone)} ${chalk.dim(`<${data.phone}>`)} as ${data.role}`,
     });
   },
 });
@@ -133,20 +133,36 @@ export const membersAddCommand = defineCommand({
 
 export interface MembersRemoveArgs extends MembersHandlerOptions {
   projectId: string;
-  userId: string;
+  phone: string;
 }
 
-export function membersRemove(args: MembersRemoveArgs): Promise<ExitCode> {
+export async function membersRemove(args: MembersRemoveArgs): Promise<ExitCode> {
+  // Resolve phone → userId by fetching the member list
+  const listRes = await args.client.GET('/projects/{project}/members', {
+    params: { path: { project: args.projectId } },
+  });
+  if (listRes.error || !listRes.data) {
+    const out = args.stderr ?? process.stderr;
+    out.write(chalk.red(`Error: could not fetch members for project ${args.projectId}\n`));
+    return 1 as ExitCode;
+  }
+  const member = listRes.data.items.find((m: { phone: string }) => m.phone === args.phone);
+  if (!member) {
+    const out = args.stderr ?? process.stderr;
+    out.write(chalk.red(`Error: no member with phone ${args.phone} in project ${args.projectId}\n`));
+    return 4 as ExitCode;
+  }
   return executeRequest({
     json: args.json,
     verbose: args.verbose,
     stdout: args.stdout,
     stderr: args.stderr,
     request: () =>
-      args.client.DELETE('/projects/{id}/members/{userId}', {
-        params: { path: { id: args.projectId, userId: args.userId } },
+      args.client.DELETE('/projects/{project}/members/{user}', {
+        params: { path: { project: args.projectId, user: member.userId } },
       }),
-    format: () => `${chalk.green('✓')} Removed member ${args.userId} from project ${args.projectId}`,
+    format: () =>
+      `${chalk.green('✓')} Removed ${chalk.bold(member.displayName ?? args.phone)} ${chalk.dim(`<${args.phone}>`)} from project ${args.projectId}`,
     formatJson: () => JSON.stringify({ ok: true }, null, 2),
   });
 }
@@ -154,8 +170,8 @@ export function membersRemove(args: MembersRemoveArgs): Promise<ExitCode> {
 export const membersRemoveCommand = defineCommand({
   meta: { name: 'remove', description: 'Remove a member from a project (owner only).' },
   args: {
-    projectId: { type: 'positional', required: true, description: 'Project ID (UUID).' },
-    userId: { type: 'positional', required: true, description: 'User ID to remove (UUID).' },
+    projectId: { type: 'positional', required: true, description: 'Project slug (e.g. prj_xxxxxxxx).' },
+    phone: { type: 'positional', required: true, description: 'E.164 phone number of the member to remove.' },
     json: { type: 'boolean', description: 'Print raw JSON to stdout.' },
     verbose: { type: 'boolean', description: 'Print response metadata to stderr.' },
   },
@@ -163,17 +179,31 @@ export const membersRemoveCommand = defineCommand({
     const env = getEnv();
     requireToken(env);
     const client = createApiClient(env);
+    // Resolve phone → userId
+    const listRes = await client.GET('/projects/{project}/members', {
+      params: { path: { project: String(args.projectId) } },
+    });
+    if (listRes.error || !listRes.data) {
+      process.stderr.write(chalk.red(`Error: could not fetch members for project ${args.projectId}\n`));
+      process.exit(1);
+    }
+    const phone = String(args.phone);
+    const member = listRes.data.items.find((m: { phone: string }) => m.phone === phone);
+    if (!member) {
+      process.stderr.write(chalk.red(`Error: no member with phone ${phone} in project ${args.projectId}\n`));
+      process.exit(4);
+    }
     await runRequest({
       json: args.json,
       verbose: args.verbose,
       request: () =>
-        client.DELETE('/projects/{id}/members/{userId}', {
+        client.DELETE('/projects/{project}/members/{user}', {
           params: {
-            path: { id: String(args.projectId), userId: String(args.userId) },
+            path: { project: String(args.projectId), user: member.userId },
           },
         }),
       format: () =>
-        `${chalk.green('✓')} Removed member ${args.userId} from project ${args.projectId}`,
+        `${chalk.green('✓')} Removed ${chalk.bold(member.displayName ?? phone)} ${chalk.dim(`<${phone}>`)} from project ${args.projectId}`,
       formatJson: () => JSON.stringify({ ok: true }, null, 2),
     });
   },

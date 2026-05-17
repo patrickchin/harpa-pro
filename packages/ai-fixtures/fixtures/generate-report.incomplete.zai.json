@@ -1,0 +1,21 @@
+{
+  "vendor": "zai",
+  "model": "glm-4-plus",
+  "fixtureName": "generate-report.incomplete.zai",
+  "recordedAt": "2026-05-12T00:00:00.000Z",
+  "requestHash": "sha256:22792fc7899029aa8c8f68aa2740e222607389dd53246889c4750db40ea31d46",
+  "request": {
+    "kind": "chat",
+    "vendor": "zai",
+    "model": "glm-4-plus",
+    "systemPrompt": "Generate a structured construction-site daily report from the provided notes.",
+    "userPrompt": "<sparse notes>"
+  },
+  "response": {
+    "text": "{\n  \"visitDate\": null,\n  \"weather\": null,\n  \"workers\": [],\n  \"materials\": [],\n  \"issues\": [],\n  \"nextSteps\": [],\n  \"summarySections\": [\n    {\n      \"title\": \"Notes captured\",\n      \"body\": \"Insufficient notes to produce a structured report.\"\n    }\n  ]\n}",
+    "usage": {
+      "input": 80,
+      "output": 56
+    }
+  }
+}

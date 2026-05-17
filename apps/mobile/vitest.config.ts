@@ -33,6 +33,8 @@ export default defineConfig({
       'components/**/*.test.tsx',
       'app/**/*.test.ts',
       'app/**/*.test.tsx',
+      '__tests__/**/*.test.ts',
+      '__tests__/**/*.test.tsx',
     ],
     exclude: ['node_modules', '.expo', 'dist'],
   },

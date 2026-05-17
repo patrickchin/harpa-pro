@@ -1,6 +1,13 @@
 # P3.0 IDs/Slugs Migration — Implementation Design
 
-> **Status:** ready for implementation  
+> **Status:** ⚠️ **SUPERSEDED** by
+> [design-p31-slug-only-ids.md](design-p31-slug-only-ids.md).
+> The dual-id (uuid + slug) scheme proposed here was abandoned
+> before shipping. The implemented design has **no parallel UUID
+> column**: the prefixed slug is the primary key directly,
+> enforced by a Postgres DOMAIN per entity. Retained for
+> historical context only — do not implement against this doc.
+>
 > **Companion doc:** [arch-ids-and-urls.md](arch-ids-and-urls.md)  
 > **Addresses:** [plan-p3-feature-build.md P3.0 task](plan-p3-feature-build.md)  
 > **Pitfalls addressed:** #1 (API tests-first), #6 (per-request scope)
@@ -178,7 +185,7 @@ CREATE INDEX reports_slug_idx ON app.reports(slug);
 
 ```ts
 /**
- * Generate a prefixed slug: `<prefix>_<6-char nanoid>`.
+ * Generate a prefixed slug: `<prefix>_<8-char nanoid>`.
  * Alphabet: Crockford base32 (no I/L/O/U). Output is lowercase.
  */
 export function generateSlug(prefix: 'prj' | 'rpt' | 'fil' | 'not'): string;
@@ -190,7 +197,7 @@ export function generateSlug(prefix: 'prj' | 'rpt' | 'fil' | 'not'): string;
 import { customAlphabet } from 'nanoid';
 
 const ALPHABET = '0123456789abcdefghjkmnpqrstvwxyz'; // Crockford base32, lowercase
-const nanoid = customAlphabet(ALPHABET, 6);
+const nanoid = customAlphabet(ALPHABET, 8);
 
 export function generateSlug(prefix: 'prj' | 'rpt' | 'fil' | 'not'): string {
   return `${prefix}_${nanoid()}`;
@@ -322,20 +329,25 @@ export async function createReport(
 ```ts
 import { z } from 'zod';
 
-const SLUG_ALPHABET = /^[0-9a-z]{6}$/i; // Crockford base32, case-insensitive on input
+// Crockford base32 — excludes i, l, o, u to avoid visual ambiguity.
+const SLUG_CHARSET = '[0-9a-hjkmnp-tv-z]';
 
 export const projectSlug = z
   .string()
-  .regex(/^prj_[0-9a-z]{6}$/i, 'invalid project slug')
+  .regex(new RegExp(`^prj_${SLUG_CHARSET}{8}$`, 'i'), 'invalid project slug')
   .transform(s => s.toLowerCase());
 
 export const reportSlug = z
   .string()
-  .regex(/^rpt_[0-9a-z]{6}$/i, 'invalid report slug')
+  .regex(new RegExp(`^rpt_${SLUG_CHARSET}{8}$`, 'i'), 'invalid report slug')
   .transform(s => s.toLowerCase());
 
 export const reportNumber = z.coerce.number().int().positive();
 ```
+
+> The implementation in `_shared.ts` inlines the Crockford-strict regex
+> (`/^prj_[0-9a-hjkmnp-tv-z]{8}$/i`). The earlier draft of this design
+> showed `[0-9a-z]` for brevity; the implementation is authoritative.
 
 ### Branded types (`packages/api-contract/src/index.ts`)
 
@@ -628,7 +640,7 @@ Updated hooks (param name changes):
 
 **Verification:**
 - `pnpm test:api:integration` green.
-- Manual: `psql` into test DB, `SELECT slug FROM app.projects LIMIT 5;` — all match `prj_[0-9a-z]{6}`.
+- Manual: `psql` into test DB, `SELECT slug FROM app.projects LIMIT 5;` — all match `prj_[0-9a-z]{8}`.
 
 ---
 
@@ -703,7 +715,7 @@ Updated hooks (param name changes):
 
 | Risk | Mitigation | Pitfall reference |
 |---|---|---|---|
-| **Slug collision in production** | Retry loop (2 attempts); 6 chars × 32 = ~10⁹ namespace → collision observable at ~30k rows. Monitor; bump to 8 chars if needed. | N/A (design-level) |
+| **Slug collision in production** | Retry loop (2 attempts); 8 chars × 32 = ~1.1×10¹² namespace → collisions negligible (~50% birthday at ~1.1M rows). | N/A (design-level) |
 | **Integration tests fail after migration** | `beforeAll` re-runs setup; new rows get slugs. Old UUID-based assertions may break → update to use `slug` field. | Pitfall #1 (tests-first) |
 | **Per-request scope bypass** | Every new route MUST pass scope tests proving RLS enforcement. CI blocks merge if `check-scope-tests.sh` fails. | Pitfall #6 |
 | **Mobile typed-routes lag** | `@ts-expect-error` annotations are temporary; commit 4 removes them. CI warns if they persist beyond P3.0. | Pitfall #3 (drift) |
@@ -724,7 +736,7 @@ Updated hooks (param name changes):
 
 1. **UUIDv7 (native PG 17)** for new rows; existing UUIDv4 IDs stay. Testcontainers upgrade to `postgres:17-alpine`.
 2. **Single migration file** (`202605130001_slugs_and_report_numbers.sql`) adds `slug` columns + `number`/`next_report_number`, backfills, adds constraints, switches defaults to `uuid_generate_v7()`.
-3. **Slug generator** (`lib/slug.ts`) uses `nanoid` + Crockford base32 (6 chars). Retry-on-collision at service layer (max 2 attempts). Per-project report numbers via transactional counter.
+3. **Slug generator** (`lib/slug.ts`) uses `nanoid` + Crockford base32 (8 chars). Retry-on-collision at service layer (max 2 attempts). Per-project report numbers via transactional counter.
 4. **API contract** renames path params to `:projectSlug`, `:number`; adds two resolver routes (`/p/:projectSlug`, `/r/:reportSlug`). Scope tests cover slug-based lookups.
 5. **Mobile routing** renames `[id]` → `[projectSlug]`, adds resolver screens (`p/[projectSlug].tsx`, `r/[reportSlug].tsx`). Typed routes + API hooks regenerated post-commit.
 
@@ -753,16 +765,16 @@ Updated hooks (param name changes):
   - [ ] Add unit tests for `slug.ts`  
   - [ ] Run `pnpm test:api:integration` → green  
 
-- [ ] **Commit 2:** API contract + service-layer slug generation  
-  - [ ] Add `projectSlug`, `reportSlug`, `reportNumber` Zod schemas  
-  - [ ] Add branded types  
-  - [ ] Update `services/projects.ts` (retry loop + helper call)  
-  - [ ] Update `services/reports.ts` (transaction + number increment)  
-  - [ ] Update SECURITY DEFINER helper (`create_project_with_owner`)  
-  - [ ] Write unit tests for service functions  
-  - [ ] Run `pnpm test:api` + `pnpm typecheck` → green  
+- [x] **Commit 2:** API contract + service-layer slug generation  
+  - [x] Add `projectSlug`, `reportSlug`, `reportNumber` Zod schemas  
+  - [x] Add branded types  
+  - [x] Update `services/projects.ts` (retry loop + helper call)  
+  - [x] Update `services/reports.ts` (transaction + number increment)  
+  - [x] Update SECURITY DEFINER helper (`create_project_with_owner`) — migration `202605130004_projects_helpers_v2_slugs_not_null.sql` drops 3-arg overload, adds 4-arg `(text, text, text, text)` with `p_slug`, plus `app.random_slug()` and `reports_autonumber()` trigger as belt-and-braces SQL defaults so direct admin test inserts still satisfy NOT NULL.  
+  - [x] Behaviour assertions added to integration suites (project responses carry `prj_…` slug; second report in a project gets `number = previous + 1`).  
+  - [x] Run `pnpm test:api` + `pnpm typecheck` → green (180 integration tests)  
 
-- [ ] **Commit 3:** API routes + scope tests  
+- [x] **Commit 3:** API routes + scope tests  
   - [ ] Rename path params in `routes/projects.ts`  
   - [ ] Update `routes/reports.ts` (nested under `:projectSlug/reports/:number`)  
   - [ ] Add resolver routes (`/p/:projectSlug`, `/r/:reportSlug`)  
@@ -770,7 +782,7 @@ Updated hooks (param name changes):
   - [ ] Regenerate OpenAPI spec (`pnpm spec:emit`)  
   - [ ] Run `pnpm test:api:integration` + `pnpm check-spec-drift` → green  
 
-- [ ] **Commit 4:** Mobile routing + codegen + resolver screens  
+- [x] **Commit 4:** Mobile routing + codegen + resolver screens  
   - [ ] Rename `[id]` → `[projectSlug]` in mobile file structure  
   - [ ] Update `projects/index.tsx` (use `slug` in `router.push`)  
   - [ ] Add `app/(app)/p/[projectSlug].tsx`  

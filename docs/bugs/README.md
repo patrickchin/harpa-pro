@@ -137,6 +137,110 @@ Mitigation:
 
 ## Entries
 
+### 2026-05-17 — invite-member form auto-closes on submit, hiding the API error (Pattern R5)
+
+**Symptom.** A failed `POST /projects/:slug/members` invite (e.g.
+the invited phone has no account → 404 "User not found.") looked
+identical to a successful one from the user's perspective: the
+invite form collapsed back to the "Add member" CTA with no error
+notice visible. The Members list stayed empty and the user had no
+clue why. First caught by `core-end-to-end.yaml` Maestro flow,
+which expected the invited user to show up under "Editor" filter.
+
+**Root cause.** `screens/project-members.tsx` had:
+
+```tsx
+onAdd={(input) => {
+  onAddMember(input);
+  if (!addError) setShowAdd(false);
+}}
+```
+
+`onAddMember` triggers a TanStack mutation (async). `addError` is
+read from the *current* render's props — which is `null` because
+the mutation hasn't completed yet. So the form unconditionally
+closes on submit, hiding the error notice that arrives on the
+next render. Classic stale-state-in-an-event-handler bug.
+
+**Fix.** Drive the close from the *route*, not from inside the
+form. The mutation hook's `onSuccess` increments an
+`addSuccessNonce` counter passed to the screen; an effect there
+closes the form when the nonce changes. On failure, `nonce` does
+not change, the form stays open, and the error notice renders
+normally. Same PR adds two regression tests in
+`screens/project-members.test.tsx`: one for the form-stays-open
+path on error, one for the form-closes path on success.
+
+**Test.** `screens/project-members.test.tsx` —
+"keeps invite form open when the mutation fails (error stays visible)"
+and "closes invite form when addSuccessNonce increments (success)".
+Plus the Maestro `core-end-to-end.yaml` flow that originally
+exposed the bug.
+
+**Pattern.** R5 (default wiring broken, only DI-stubbed tests
+pass). The existing screen-level test asserted the form's
+behaviour with `addError={null}` and never combined it with a
+post-submit close, so the synchronous stale read sailed through.
+
+### 2026-05-17 — `btn-edit-manually` switched tabs but didn't seed the empty report (Pattern R5)
+
+**Symptom.** Tapping "Edit manually" from the Report tab's
+empty-state navigated to the Edit tab but the Edit tab still
+showed *its* empty-state ("Generate a report first to edit"). The
+user could not enter section data manually — which is the whole
+point of the button. First caught by `core-end-to-end.yaml`
+asserting `edit-section-meta` after tapping `btn-edit-manually`.
+
+**Root cause.** `GenerateReportProvider.editManually` falls back
+to `onSetReport(createEmptyReport())` only when the route wired
+`onSetReport`. The real `generate.tsx` route owned a local
+`setGeneratedReport` setter but never passed it as
+`onSetReport={…}` to `<GenerateNotes>`. So the provider's
+fallback short-circuited to a no-op and only `setActiveTab('edit')`
+fired.
+
+**Fix.** Pass `onSetReport={setGeneratedReport}` from the route.
+Now "Edit manually" both creates the empty report skeleton *and*
+switches tabs, exactly as the provider docs claim.
+
+**Test.** Covered by the Maestro `core-end-to-end.yaml` flow
+asserting `edit-section-meta` is visible after the round-trip.
+
+**Pattern.** R5 — the provider unit tests stubbed `onSetReport`,
+so the bug only existed at the wiring layer (Pitfall 13 / Hard
+Rule #5: "test the default wiring").
+
+### 2026-05-15 — lucide icons silently fell back to brand placeholder; `react-native-svg` was never installed (Pattern R5)
+
+**Symptom.** Every ported screen rendered, but every lucide icon
+(MapPin, Calendar, FolderOpen, Pencil, Plus, …) showed as the
+Harpa Pro "U" brand placeholder. Vitest unit snapshots passed
+because they render the JSX tree and never resolve the SVG
+primitives. Coverage was green. Only a manual `simctl io
+screenshot` on the mock build caught it.
+
+**Root cause.** `lucide-react-native` lists `react-native-svg` as a
+peer dependency. We had been adding lucide imports across screens
+through P2 + P3 without ever running `npx expo install
+react-native-svg`. RNSVG was never linked into the iOS Pods, so
+at runtime the bridge fell back to a default Image — which, with
+no source, rendered the brand asset.
+
+**Fix.** [TBD commit] — `apps/mobile/package.json` adds
+`react-native-svg@15.8.0`. Pod reinstall via `expo run:ios` picks
+up `RNSVG` and the icons render.
+
+**Test.** No unit test would have caught this — RNSVG only matters
+on the device. The new tmp `.maestro/tmp-p3-smoke/` flow captures
+screenshots of every ported screen in the mock build so a missing
+native dep is visible immediately. P3.13's `core-end-to-end`
+Maestro flow inherits this guarantee and replaces the tmp folder.
+
+**Pattern.** R5 — the unit/integration suites injected stubs (the
+JSX tree) instead of exercising the real wiring (the native SVG
+runtime). The default wiring was silently broken; only an E2E
+against the live binary surfaced it.
+
 ### 2026-05-12 — Hono v4 onError ignores non-Error throws (Pattern R1)
 
 **Symptom.** A handler that does `throw 'oops'` (or any non-Error

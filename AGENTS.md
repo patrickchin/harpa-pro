@@ -58,6 +58,12 @@ when you fix a recurring bug.
 - `EXPO_PUBLIC_*` vars are inlined by Metro at bundle time — changing
   them requires a rebuild, not a JS reload.
 
+## Long-running command output
+
+Don't tail long-running or noisy commands (dev servers, builds, tests).
+Redirect to a tmp file, grep what you need, then kill the process and
+remove the file.
+
 ## Workspace dependencies
 
 Add packages with `pnpm --filter <workspace> add <pkg>`, not from the

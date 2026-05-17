@@ -7,7 +7,7 @@
     "ios": "expo run:ios",
     "ios:mock": "EXPO_PUBLIC_USE_FIXTURES=true expo run:ios",
     "android": "expo run:android",
-    "start": "expo start",
+    "start": "expo start --dev-client",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",

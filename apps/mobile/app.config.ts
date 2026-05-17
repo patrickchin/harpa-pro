@@ -44,6 +44,9 @@ const config: ExpoConfig = {
     bundleIdentifier: BUNDLE_ID,
     supportsTablet: true,
     icon: './assets/icon.png',
+    infoPlist: {
+      ITSAppUsesNonExemptEncryption: false,
+    },
   },
   android: {
     package: BUNDLE_ID,

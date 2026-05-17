@@ -20,6 +20,7 @@ import { sql } from 'drizzle-orm';
 import { startPg, type PgFixture } from '../setup-pg.js';
 import { withAnonConnection } from '../../db/scope.js';
 import { resetPool, getPool } from '../../db/client.js';
+import { makeWaitlistId } from '../factories/index.js';
 
 let fx: PgFixture;
 
@@ -33,8 +34,8 @@ beforeAll(async () => {
   const admin = new pg.Client({ connectionString: fx.url });
   await admin.connect();
   await admin.query(
-    `INSERT INTO app.waitlist_signups(email, confirmed_at) VALUES ($1, now())`,
-    ['existing@buildco.com'],
+    `INSERT INTO app.waitlist_signups(id, email, confirmed_at) VALUES ($1, $2, now())`,
+    [makeWaitlistId(), 'existing@buildco.com'],
   );
   await admin.end();
 }, 120_000);
@@ -45,10 +46,11 @@ afterAll(async () => {
 
 describe('scope: app.waitlist_signups (anonymous)', () => {
   it('anon CAN INSERT a new signup', async () => {
+    const wlsId = makeWaitlistId();
     await withAnonConnection(async (db) => {
       await db.execute(sql`
-        INSERT INTO app.waitlist_signups(email, confirm_token_hash, confirm_token_expires_at)
-        VALUES ('new@buildco.com', 'hash-placeholder', now() + interval '7 days')
+        INSERT INTO app.waitlist_signups(id, email, confirm_token_hash, confirm_token_expires_at)
+        VALUES (${wlsId}, 'new@buildco.com', 'hash-placeholder', now() + interval '7 days')
       `);
     });
     // Verify via privileged path that the row really exists.

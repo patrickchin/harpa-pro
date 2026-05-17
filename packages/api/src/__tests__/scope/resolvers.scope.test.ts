@@ -29,48 +29,49 @@ beforeAll(async () => {
   await resetPool();
   getPool(fx.url);
 
+  alice = makeUserId();
+  bob = makeUserId();
+  aliceSid = makeSessionId();
+  bobSid = makeSessionId();
+  const aliceProj = makeProjectId();
+  const bobProj = makeProjectId();
+  aliceProjSlug = aliceProj;
+  bobProjSlug = bobProj;
+  const aliceReport = makeReportId();
+  const bobReport = makeReportId();
+  aliceReportSlug = aliceReport;
+  bobReportSlug = bobReport;
+
   const admin = new pg.Client({ connectionString: fx.url });
   await admin.connect();
-  const u = await admin.query<{ id: string }>(
-    `INSERT INTO auth.users(phone) VALUES ($1), ($2) RETURNING id`,
-    ['+15551000001', '+15551000002'],
+  await admin.query(
+    `INSERT INTO auth.users(id, phone) VALUES ($1, $2), ($3, $4)`,
+    [alice, '+15551000001', bob, '+15551000002'],
   );
-  alice = u.rows[0]!.id;
-  bob = u.rows[1]!.id;
-  const s = await admin.query<{ id: string }>(
-    `INSERT INTO auth.sessions(user_id, expires_at) VALUES ($1, now() + interval '7 days'), ($2, now() + interval '7 days') RETURNING id`,
-    [alice, bob],
+  await admin.query(
+    `INSERT INTO auth.sessions(id, user_id, expires_at) VALUES ($1, $2, now() + interval '7 days'), ($3, $4, now() + interval '7 days')`,
+    [aliceSid, alice, bobSid, bob],
   );
-  aliceSid = s.rows[0]!.id;
-  bobSid = s.rows[1]!.id;
-
-  const ap = await admin.query<{ id: string }>(
-    `INSERT INTO app.projects(name, owner_id) VALUES ('alice-proj', $1) RETURNING id`,
-    [alice],
+  await admin.query(
+    `INSERT INTO app.projects(id, name, owner_id) VALUES ($1, 'alice-proj', $2)`,
+    [aliceProj, alice],
   );
-  const aliceProj = ap.rows[0]!.id;
-  aliceProjSlug = ap.rows[0]!.id;
-  const bp = await admin.query<{ id: string }>(
-    `INSERT INTO app.projects(name, owner_id) VALUES ('bob-proj', $1) RETURNING id`,
-    [bob],
+  await admin.query(
+    `INSERT INTO app.projects(id, name, owner_id) VALUES ($1, 'bob-proj', $2)`,
+    [bobProj, bob],
   );
-  const bobProj = bp.rows[0]!.id;
-  bobProjSlug = bp.rows[0]!.id;
   await admin.query(
     `INSERT INTO app.project_members(project_id, user_id, role) VALUES ($1, $2, 'owner'), ($3, $4, 'owner')`,
     [aliceProj, alice, bobProj, bob],
   );
-
-  const ar = await admin.query<{ id: string }>(
-    `INSERT INTO app.reports(project_id, author_id) VALUES ($1, $2) RETURNING id`,
-    [aliceProj, alice],
+  await admin.query(
+    `INSERT INTO app.reports(id, project_id, author_id) VALUES ($1, $2, $3)`,
+    [aliceReport, aliceProj, alice],
   );
-  aliceReportSlug = ar.rows[0]!.id;
-  const br = await admin.query<{ id: string }>(
-    `INSERT INTO app.reports(project_id, author_id) VALUES ($1, $2) RETURNING id`,
-    [bobProj, bob],
+  await admin.query(
+    `INSERT INTO app.reports(id, project_id, author_id) VALUES ($1, $2, $3)`,
+    [bobReport, bobProj, bob],
   );
-  bobReportSlug = br.rows[0]!.id;
   await admin.end();
 }, 120_000);
 

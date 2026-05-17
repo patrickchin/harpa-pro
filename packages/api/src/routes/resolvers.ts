@@ -1,12 +1,12 @@
 /**
- * Short-URL resolver routes — added in P3.0 Commit 3.
+ * Short-URL resolver routes — P3.1 slug-native shape.
  *
- * `GET /p/:projectSlug`  → resolves to `{ type: 'project', projectSlug }`
- * `GET /r/:reportSlug`   → resolves to `{ type: 'report', projectSlug, reportSlug, reportNumber }`
+ * `GET /p/:project`  → resolves to `{ type: 'project', projectId }`
+ * `GET /r/:report`   → resolves to `{ type: 'report', projectId, reportId, reportNumber }`
  *
  * The API returns JSON (not a 308 redirect) so the mobile client can
  * `router.replace` to the canonical long URL without a visible flash.
- * See docs/v4/arch-ids-and-urls.md and design-p30-ids-slugs.md §4.
+ * See docs/v4/arch-ids-and-urls.md and design-p31-slug-only-ids.md.
  *
  * Access control is enforced by RLS via the per-request scoped drizzle
  * handle — a slug owned by another user looks identical to a missing
@@ -16,8 +16,8 @@ import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi';
 import { HTTPException } from 'hono/http-exception';
 import {
   errorEnvelope,
-  projectSlug,
-  reportSlug,
+  projectId,
+  reportId,
   resolvers as resolverSchemas,
 } from '@harpa/api-contract';
 import type { AppEnv } from '../app.js';
@@ -25,11 +25,11 @@ import { withAuth } from '../middleware/auth.js';
 import { resolveProjectSlug } from '../services/projects.js';
 import { resolveReportSlug } from '../services/reports.js';
 
-const projectSlugParam = z.object({
-  projectSlug: projectSlug.openapi({ param: { name: 'projectSlug', in: 'path' } }),
+const projectParam = z.object({
+  project: projectId.openapi({ param: { name: 'project', in: 'path' } }),
 });
-const reportSlugParam = z.object({
-  reportSlug: reportSlug.openapi({ param: { name: 'reportSlug', in: 'path' } }),
+const reportParam = z.object({
+  report: reportId.openapi({ param: { name: 'report', in: 'path' } }),
 });
 
 export const resolverRoutes = new OpenAPIHono<AppEnv>();
@@ -37,11 +37,11 @@ export const resolverRoutes = new OpenAPIHono<AppEnv>();
 resolverRoutes.openapi(
   createRoute({
     method: 'get',
-    path: '/p/{projectSlug}',
+    path: '/p/{project}',
     tags: ['resolvers'],
     security: [{ bearerAuth: [] }],
     middleware: [withAuth()] as const,
-    request: { params: projectSlugParam },
+    request: { params: projectParam },
     responses: {
       200: {
         description: 'Resolved.',
@@ -54,21 +54,21 @@ resolverRoutes.openapi(
   async (c) => {
     const db = c.get('db');
     if (!db) throw new HTTPException(401);
-    const { projectSlug: slug } = c.req.valid('param');
-    const resolved = await db((d) => resolveProjectSlug(d, slug));
+    const { project } = c.req.valid('param');
+    const resolved = await db((d) => resolveProjectSlug(d, project));
     if (!resolved) throw new HTTPException(404, { message: 'Project not found.' });
-    return c.json({ type: 'project' as const, projectId: resolved.projectSlug }, 200);
+    return c.json({ type: 'project' as const, projectId: resolved.projectId }, 200);
   },
 );
 
 resolverRoutes.openapi(
   createRoute({
     method: 'get',
-    path: '/r/{reportSlug}',
+    path: '/r/{report}',
     tags: ['resolvers'],
     security: [{ bearerAuth: [] }],
     middleware: [withAuth()] as const,
-    request: { params: reportSlugParam },
+    request: { params: reportParam },
     responses: {
       200: {
         description: 'Resolved.',
@@ -81,14 +81,14 @@ resolverRoutes.openapi(
   async (c) => {
     const db = c.get('db');
     if (!db) throw new HTTPException(401);
-    const { reportSlug: slug } = c.req.valid('param');
-    const resolved = await db((d) => resolveReportSlug(d, slug));
+    const { report } = c.req.valid('param');
+    const resolved = await db((d) => resolveReportSlug(d, report));
     if (!resolved) throw new HTTPException(404, { message: 'Report not found.' });
     return c.json(
       {
         type: 'report' as const,
-        projectId: resolved.projectSlug,
-        reportId: resolved.reportSlug,
+        projectId: resolved.projectId,
+        reportId: resolved.reportId,
         reportNumber: resolved.reportNumber,
       },
       200,

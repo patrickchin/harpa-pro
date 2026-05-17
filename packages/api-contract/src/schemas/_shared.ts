@@ -15,16 +15,6 @@ export const phone = z.string().regex(/^\+\d{8,15}$/, 'E.164 phone required');
 
 export const reportNumber = z.coerce.number().int().positive();
 
-/**
- * @deprecated Backward-compat shim for the P3.1 slug-only refactor.
- * Use the per-prefix schemas from `./ids.js` (e.g. `projectId`, `reportId`,
- * `userId`) instead. These exports will be removed once all consumers
- * (api routes, services, scope wrapper) have migrated. See
- * docs/v4/design-p31-slug-only-ids.md.
- */
-export const uuid = z.string().uuid();
-export { projectId as projectSlug, reportId as reportSlug } from './ids.js';
-
 export const cursor = z.string().min(1).max(256);
 export const limit = z.coerce.number().int().min(1).max(100).default(20);
 

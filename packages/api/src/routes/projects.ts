@@ -1,15 +1,13 @@
 /**
- * /projects + /projects/:projectSlug/members routes. All DB access
+ * /projects + /projects/:project/members routes. All DB access
  * goes through `c.get('db')(fn)` (the per-request scoped accessor).
  * Cross-table reads and the create-with-owner bootstrap go through
  * SECURITY DEFINER helpers defined in
- * migrations/202605120003_projects_helpers.sql and
- * migrations/202605130004_projects_helpers_v2_slugs_not_null.sql.
+ * migrations/20261101000001_init_slug_native.sql.
  *
- * Path params switched from `:id` (uuid) to `:projectSlug` (Crockford
- * base32 short token) in P3.0 Commit 3 — see
- * docs/v4/design-p30-ids-slugs.md §4. The UUID is still the canonical
- * internal id; slug→id resolution happens inside the service layer.
+ * Path params are slug-native (P3.1): `:project` is a `prj_…` slug
+ * (Crockford base32, see `Id<'prj'>`). The slug IS the primary key —
+ * no parallel uuid column. See docs/v4/design-p31-slug-only-ids.md.
  */
 import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi';
 import { HTTPException } from 'hono/http-exception';
@@ -19,8 +17,8 @@ import {
   errorEnvelope,
   cursor,
   limit,
-  projectSlug,
-  uuid,
+  projectId,
+  userId,
 } from '@harpa/api-contract';
 import type { AppEnv } from '../app.js';
 import { withAuth } from '../middleware/auth.js';
@@ -37,12 +35,12 @@ import {
   updateProject,
 } from '../services/projects.js';
 
-const projectSlugParam = z.object({
-  projectSlug: projectSlug.openapi({ param: { name: 'projectSlug', in: 'path' } }),
+const projectParam = z.object({
+  project: projectId.openapi({ param: { name: 'project', in: 'path' } }),
 });
 const memberPathParams = z.object({
-  projectSlug: projectSlug.openapi({ param: { name: 'projectSlug', in: 'path' } }),
-  userId: uuid.openapi({ param: { name: 'userId', in: 'path' } }),
+  project: projectId.openapi({ param: { name: 'project', in: 'path' } }),
+  user: userId.openapi({ param: { name: 'user', in: 'path' } }),
 });
 
 export const projectRoutes = new OpenAPIHono<AppEnv>();
@@ -102,11 +100,11 @@ projectRoutes.openapi(
 projectRoutes.openapi(
   createRoute({
     method: 'get',
-    path: '/projects/{projectSlug}',
+    path: '/projects/{project}',
     tags: ['projects'],
     security: [{ bearerAuth: [] }],
     middleware: [withAuth()] as const,
-    request: { params: projectSlugParam },
+    request: { params: projectParam },
     responses: {
       200: { description: 'Project.', content: { 'application/json': { schema: projectSchemas.project } } },
       401: { description: 'Unauthorized.', content: { 'application/json': { schema: errorEnvelope } } },
@@ -117,7 +115,7 @@ projectRoutes.openapi(
     const userId = c.get('userId');
     const db = c.get('db');
     if (!userId || !db) throw new HTTPException(401);
-    const { projectSlug: slug } = c.req.valid('param');
+    const { project: slug } = c.req.valid('param');
     const project = await db((d) => getProjectBySlug(d, userId, slug));
     if (!project) throw new HTTPException(404, { message: 'Project not found.' });
     return c.json(project, 200);
@@ -128,12 +126,12 @@ projectRoutes.openapi(
 projectRoutes.openapi(
   createRoute({
     method: 'patch',
-    path: '/projects/{projectSlug}',
+    path: '/projects/{project}',
     tags: ['projects'],
     security: [{ bearerAuth: [] }],
     middleware: [withAuth()] as const,
     request: {
-      params: projectSlugParam,
+      params: projectParam,
       body: { content: { 'application/json': { schema: projectSchemas.updateProjectRequest } } },
     },
     responses: {
@@ -146,7 +144,7 @@ projectRoutes.openapi(
     const userId = c.get('userId');
     const db = c.get('db');
     if (!userId || !db) throw new HTTPException(401);
-    const { projectSlug: slug } = c.req.valid('param');
+    const { project: slug } = c.req.valid('param');
     const body = c.req.valid('json');
     // Resolve slug → row under the caller's scope first (so the UPDATE
     // never touches a row the caller can't see).
@@ -164,11 +162,11 @@ projectRoutes.openapi(
 projectRoutes.openapi(
   createRoute({
     method: 'delete',
-    path: '/projects/{projectSlug}',
+    path: '/projects/{project}',
     tags: ['projects'],
     security: [{ bearerAuth: [] }],
     middleware: [withAuth()] as const,
-    request: { params: projectSlugParam },
+    request: { params: projectParam },
     responses: {
       204: { description: 'Deleted.' },
       401: { description: 'Unauthorized.', content: { 'application/json': { schema: errorEnvelope } } },
@@ -179,7 +177,7 @@ projectRoutes.openapi(
     const userId = c.get('userId');
     const db = c.get('db');
     if (!userId || !db) throw new HTTPException(401);
-    const { projectSlug: slug } = c.req.valid('param');
+    const { project: slug } = c.req.valid('param');
     const existing = await db((d) => getProjectBySlug(d, userId, slug, false));
     if (!existing) throw new HTTPException(404, { message: 'Project not found or not owner.' });
     const ok = await db((d) => deleteProject(d, existing.id));
@@ -192,11 +190,11 @@ projectRoutes.openapi(
 projectRoutes.openapi(
   createRoute({
     method: 'get',
-    path: '/projects/{projectSlug}/members',
+    path: '/projects/{project}/members',
     tags: ['projects'],
     security: [{ bearerAuth: [] }],
     middleware: [withAuth()] as const,
-    request: { params: projectSlugParam },
+    request: { params: projectParam },
     responses: {
       200: {
         description: 'Members.',
@@ -210,7 +208,7 @@ projectRoutes.openapi(
     const userId = c.get('userId');
     const db = c.get('db');
     if (!userId || !db) throw new HTTPException(401);
-    const { projectSlug: slug } = c.req.valid('param');
+    const { project: slug } = c.req.valid('param');
     const existing = await db((d) => getProjectBySlug(d, userId, slug, false));
     if (!existing) throw new HTTPException(404, { message: 'Project not found.' });
     try {
@@ -229,12 +227,12 @@ projectRoutes.openapi(
 projectRoutes.openapi(
   createRoute({
     method: 'post',
-    path: '/projects/{projectSlug}/members',
+    path: '/projects/{project}/members',
     tags: ['projects'],
     security: [{ bearerAuth: [] }],
     middleware: [withAuth()] as const,
     request: {
-      params: projectSlugParam,
+      params: projectParam,
       body: { content: { 'application/json': { schema: projectSchemas.inviteMemberRequest } } },
     },
     responses: {
@@ -249,7 +247,7 @@ projectRoutes.openapi(
     const userId = c.get('userId');
     const db = c.get('db');
     if (!userId || !db) throw new HTTPException(401);
-    const { projectSlug: slug } = c.req.valid('param');
+    const { project: slug } = c.req.valid('param');
     const { phone, role } = c.req.valid('json');
     const existing = await db((d) => getProjectBySlug(d, userId, slug, false));
     if (!existing) throw new HTTPException(404, { message: 'Project not found.' });
@@ -269,7 +267,7 @@ projectRoutes.openapi(
 projectRoutes.openapi(
   createRoute({
     method: 'delete',
-    path: '/projects/{projectSlug}/members/{userId}',
+    path: '/projects/{project}/members/{user}',
     tags: ['projects'],
     security: [{ bearerAuth: [] }],
     middleware: [withAuth()] as const,
@@ -286,7 +284,7 @@ projectRoutes.openapi(
     const userId = c.get('userId');
     const db = c.get('db');
     if (!userId || !db) throw new HTTPException(401);
-    const { projectSlug: slug, userId: target } = c.req.valid('param');
+    const { project: slug, user: target } = c.req.valid('param');
     const existing = await db((d) => getProjectBySlug(d, userId, slug, false));
     if (!existing) throw new HTTPException(404, { message: 'Project not found.' });
     try {

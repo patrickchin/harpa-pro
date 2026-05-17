@@ -1309,7 +1309,7 @@
         }
       }
     },
-    "/projects/{projectSlug}": {
+    "/projects/{project}": {
       "get": {
         "tags": [
           "projects"
@@ -1326,7 +1326,7 @@
               "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8,16}$"
             },
             "required": true,
-            "name": "projectSlug",
+            "name": "project",
             "in": "path"
           }
         ],
@@ -1500,7 +1500,7 @@
               "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8,16}$"
             },
             "required": true,
-            "name": "projectSlug",
+            "name": "project",
             "in": "path"
           }
         ],
@@ -1698,7 +1698,7 @@
               "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8,16}$"
             },
             "required": true,
-            "name": "projectSlug",
+            "name": "project",
             "in": "path"
           }
         ],
@@ -1781,7 +1781,7 @@
         }
       }
     },
-    "/projects/{projectSlug}/members": {
+    "/projects/{project}/members": {
       "get": {
         "tags": [
           "projects"
@@ -1798,7 +1798,7 @@
               "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8,16}$"
             },
             "required": true,
-            "name": "projectSlug",
+            "name": "project",
             "in": "path"
           }
         ],
@@ -1946,7 +1946,7 @@
               "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8,16}$"
             },
             "required": true,
-            "name": "projectSlug",
+            "name": "project",
             "in": "path"
           }
         ],
@@ -2167,7 +2167,7 @@
         }
       }
     },
-    "/projects/{projectSlug}/members/{userId}": {
+    "/projects/{project}/members/{user}": {
       "delete": {
         "tags": [
           "projects"
@@ -2184,16 +2184,16 @@
               "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8,16}$"
             },
             "required": true,
-            "name": "projectSlug",
+            "name": "project",
             "in": "path"
           },
           {
             "schema": {
               "type": "string",
-              "format": "uuid"
+              "pattern": "^usr_[0-9a-hjkmnp-tv-z]{8,16}$"
             },
             "required": true,
-            "name": "userId",
+            "name": "user",
             "in": "path"
           }
         ],
@@ -2348,7 +2348,7 @@
         }
       }
     },
-    "/projects/{projectSlug}/reports": {
+    "/projects/{project}/reports": {
       "get": {
         "tags": [
           "reports"
@@ -2365,7 +2365,7 @@
               "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8,16}$"
             },
             "required": true,
-            "name": "projectSlug",
+            "name": "project",
             "in": "path"
           },
           {
@@ -2744,7 +2744,7 @@
               "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8,16}$"
             },
             "required": true,
-            "name": "projectSlug",
+            "name": "project",
             "in": "path"
           }
         ],
@@ -3119,7 +3119,7 @@
         }
       }
     },
-    "/projects/{projectSlug}/reports/{number}": {
+    "/projects/{project}/reports/{number}": {
       "get": {
         "tags": [
           "reports"
@@ -3136,7 +3136,7 @@
               "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8,16}$"
             },
             "required": true,
-            "name": "projectSlug",
+            "name": "project",
             "in": "path"
           },
           {
@@ -3486,7 +3486,7 @@
               "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8,16}$"
             },
             "required": true,
-            "name": "projectSlug",
+            "name": "project",
             "in": "path"
           },
           {
@@ -3887,7 +3887,7 @@
               "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8,16}$"
             },
             "required": true,
-            "name": "projectSlug",
+            "name": "project",
             "in": "path"
           },
           {
@@ -3980,7 +3980,7 @@
         }
       }
     },
-    "/projects/{projectSlug}/reports/{number}/generate": {
+    "/projects/{project}/reports/{number}/generate": {
       "post": {
         "tags": [
           "reports"
@@ -3997,7 +3997,7 @@
               "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8,16}$"
             },
             "required": true,
-            "name": "projectSlug",
+            "name": "project",
             "in": "path"
           },
           {
@@ -4465,7 +4465,7 @@
         }
       }
     },
-    "/projects/{projectSlug}/reports/{number}/regenerate": {
+    "/projects/{project}/reports/{number}/regenerate": {
       "post": {
         "tags": [
           "reports"
@@ -4482,7 +4482,7 @@
               "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8,16}$"
             },
             "required": true,
-            "name": "projectSlug",
+            "name": "project",
             "in": "path"
           },
           {
@@ -4950,7 +4950,7 @@
         }
       }
     },
-    "/projects/{projectSlug}/reports/{number}/finalize": {
+    "/projects/{project}/reports/{number}/finalize": {
       "post": {
         "tags": [
           "reports"
@@ -4967,7 +4967,7 @@
               "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8,16}$"
             },
             "required": true,
-            "name": "projectSlug",
+            "name": "project",
             "in": "path"
           },
           {
@@ -5346,7 +5346,7 @@
         }
       }
     },
-    "/projects/{projectSlug}/reports/{number}/pdf": {
+    "/projects/{project}/reports/{number}/pdf": {
       "post": {
         "tags": [
           "reports"
@@ -5363,7 +5363,7 @@
               "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8,16}$"
             },
             "required": true,
-            "name": "projectSlug",
+            "name": "project",
             "in": "path"
           },
           {
@@ -5512,7 +5512,7 @@
         }
       }
     },
-    "/p/{projectSlug}": {
+    "/p/{project}": {
       "get": {
         "tags": [
           "resolvers"
@@ -5529,7 +5529,7 @@
               "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8,16}$"
             },
             "required": true,
-            "name": "projectSlug",
+            "name": "project",
             "in": "path"
           }
         ],
@@ -5635,7 +5635,7 @@
         }
       }
     },
-    "/r/{reportSlug}": {
+    "/r/{report}": {
       "get": {
         "tags": [
           "resolvers"
@@ -5652,7 +5652,7 @@
               "pattern": "^rpt_[0-9a-hjkmnp-tv-z]{8,16}$"
             },
             "required": true,
-            "name": "reportSlug",
+            "name": "report",
             "in": "path"
           }
         ],
@@ -5769,7 +5769,7 @@
         }
       }
     },
-    "/reports/{reportId}/notes": {
+    "/reports/{report}/notes": {
       "get": {
         "tags": [
           "notes"
@@ -5783,10 +5783,10 @@
           {
             "schema": {
               "type": "string",
-              "format": "uuid"
+              "pattern": "^rpt_[0-9a-hjkmnp-tv-z]{8,16}$"
             },
             "required": true,
-            "name": "reportId",
+            "name": "report",
             "in": "path"
           },
           {
@@ -5980,10 +5980,10 @@
           {
             "schema": {
               "type": "string",
-              "format": "uuid"
+              "pattern": "^rpt_[0-9a-hjkmnp-tv-z]{8,16}$"
             },
             "required": true,
-            "name": "reportId",
+            "name": "report",
             "in": "path"
           }
         ],
@@ -6198,7 +6198,7 @@
         }
       }
     },
-    "/notes/{noteId}": {
+    "/notes/{note}": {
       "patch": {
         "tags": [
           "notes"
@@ -6212,10 +6212,10 @@
           {
             "schema": {
               "type": "string",
-              "format": "uuid"
+              "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
             },
             "required": true,
-            "name": "noteId",
+            "name": "note",
             "in": "path"
           }
         ],
@@ -6424,10 +6424,10 @@
           {
             "schema": {
               "type": "string",
-              "format": "uuid"
+              "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
             },
             "required": true,
-            "name": "noteId",
+            "name": "note",
             "in": "path"
           }
         ],
@@ -6884,7 +6884,7 @@
           {
             "schema": {
               "type": "string",
-              "format": "uuid"
+              "pattern": "^fil_[0-9a-hjkmnp-tv-z]{8,16}$"
             },
             "required": true,
             "name": "id",

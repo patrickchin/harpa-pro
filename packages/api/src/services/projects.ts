@@ -236,12 +236,12 @@ async function getProjectByPredicate(
 export async function resolveProjectSlug(
   db: Db,
   projectIdValue: string,
-): Promise<{ projectSlug: string } | null> {
+): Promise<{ projectId: string } | null> {
   const r = await db.execute<{ id: string }>(sql`
     SELECT id FROM app.projects WHERE id = ${projectIdValue} LIMIT 1
   `);
   const row = r.rows[0];
-  return row ? { projectSlug: row.id } : null;
+  return row ? { projectId: row.id } : null;
 }
 
 export async function updateProject(

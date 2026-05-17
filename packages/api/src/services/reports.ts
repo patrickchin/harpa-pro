@@ -168,7 +168,7 @@ export async function getReportByProjectSlugAndNumber(
 export async function resolveReportSlug(
   db: Db,
   reportIdValue: string,
-): Promise<{ projectSlug: string; reportSlug: string; reportNumber: number } | null> {
+): Promise<{ projectId: string; reportId: string; reportNumber: number } | null> {
   const r = await db.execute<{ project_id: string; report_id: string; number: number }>(sql`
     SELECT p.id AS project_id,
            r.id AS report_id,
@@ -181,8 +181,8 @@ export async function resolveReportSlug(
   const row = r.rows[0];
   if (!row) return null;
   return {
-    projectSlug: row.project_id,
-    reportSlug: row.report_id,
+    projectId: row.project_id,
+    reportId: row.report_id,
     reportNumber: Number(row.number),
   };
 }

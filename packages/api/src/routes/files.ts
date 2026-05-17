@@ -16,13 +16,13 @@
  */
 import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi';
 import { HTTPException } from 'hono/http-exception';
-import { files as fileSchemas, errorEnvelope, uuid } from '@harpa/api-contract';
+import { files as fileSchemas, errorEnvelope, fileId } from '@harpa/api-contract';
 import type { AppEnv } from '../app.js';
 import { withAuth } from '../middleware/auth.js';
 import { getFileById, registerFile } from '../services/files.js';
 import { pickStorage, type FileKind } from '../services/storage.js';
 
-const fileIdParam = z.object({ id: uuid.openapi({ param: { name: 'id', in: 'path' } }) });
+const fileIdParam = z.object({ id: fileId.openapi({ param: { name: 'id', in: 'path' } }) });
 
 export const fileRoutes = new OpenAPIHono<AppEnv>();
 

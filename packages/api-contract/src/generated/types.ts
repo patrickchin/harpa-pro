@@ -714,7 +714,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/projects/{projectSlug}": {
+    "/projects/{project}": {
         parameters: {
             query?: never;
             header?: never;
@@ -726,7 +726,7 @@ export interface paths {
                 query?: never;
                 header?: never;
                 path: {
-                    projectSlug: string;
+                    project: string;
                 };
                 cookie?: never;
             };
@@ -797,7 +797,7 @@ export interface paths {
                 query?: never;
                 header?: never;
                 path: {
-                    projectSlug: string;
+                    project: string;
                 };
                 cookie?: never;
             };
@@ -851,7 +851,7 @@ export interface paths {
                 query?: never;
                 header?: never;
                 path: {
-                    projectSlug: string;
+                    project: string;
                 };
                 cookie?: never;
             };
@@ -925,7 +925,7 @@ export interface paths {
         };
         trace?: never;
     };
-    "/projects/{projectSlug}/members": {
+    "/projects/{project}/members": {
         parameters: {
             query?: never;
             header?: never;
@@ -937,7 +937,7 @@ export interface paths {
                 query?: never;
                 header?: never;
                 path: {
-                    projectSlug: string;
+                    project: string;
                 };
                 cookie?: never;
             };
@@ -1001,7 +1001,7 @@ export interface paths {
                 query?: never;
                 header?: never;
                 path: {
-                    projectSlug: string;
+                    project: string;
                 };
                 cookie?: never;
             };
@@ -1106,7 +1106,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/projects/{projectSlug}/members/{userId}": {
+    "/projects/{project}/members/{user}": {
         parameters: {
             query?: never;
             header?: never;
@@ -1121,8 +1121,8 @@ export interface paths {
                 query?: never;
                 header?: never;
                 path: {
-                    projectSlug: string;
-                    userId: string;
+                    project: string;
+                    user: string;
                 };
                 cookie?: never;
             };
@@ -1206,7 +1206,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/projects/{projectSlug}/reports": {
+    "/projects/{project}/reports": {
         parameters: {
             query?: never;
             header?: never;
@@ -1221,7 +1221,7 @@ export interface paths {
                 };
                 header?: never;
                 path: {
-                    projectSlug: string;
+                    project: string;
                 };
                 cookie?: never;
             };
@@ -1327,7 +1327,7 @@ export interface paths {
                 query?: never;
                 header?: never;
                 path: {
-                    projectSlug: string;
+                    project: string;
                 };
                 cookie?: never;
             };
@@ -1452,7 +1452,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/projects/{projectSlug}/reports/{number}": {
+    "/projects/{project}/reports/{number}": {
         parameters: {
             query?: never;
             header?: never;
@@ -1464,7 +1464,7 @@ export interface paths {
                 query?: never;
                 header?: never;
                 path: {
-                    projectSlug: string;
+                    project: string;
                     number: number;
                 };
                 cookie?: never;
@@ -1569,7 +1569,7 @@ export interface paths {
                 query?: never;
                 header?: never;
                 path: {
-                    projectSlug: string;
+                    project: string;
                     number: number;
                 };
                 cookie?: never;
@@ -1624,7 +1624,7 @@ export interface paths {
                 query?: never;
                 header?: never;
                 path: {
-                    projectSlug: string;
+                    project: string;
                     number: number;
                 };
                 cookie?: never;
@@ -1746,7 +1746,7 @@ export interface paths {
         };
         trace?: never;
     };
-    "/projects/{projectSlug}/reports/{number}/generate": {
+    "/projects/{project}/reports/{number}/generate": {
         parameters: {
             query?: never;
             header?: never;
@@ -1760,7 +1760,7 @@ export interface paths {
                 query?: never;
                 header?: never;
                 path: {
-                    projectSlug: string;
+                    project: string;
                     number: number;
                 };
                 cookie?: never;
@@ -1920,7 +1920,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/projects/{projectSlug}/reports/{number}/regenerate": {
+    "/projects/{project}/reports/{number}/regenerate": {
         parameters: {
             query?: never;
             header?: never;
@@ -1934,7 +1934,7 @@ export interface paths {
                 query?: never;
                 header?: never;
                 path: {
-                    projectSlug: string;
+                    project: string;
                     number: number;
                 };
                 cookie?: never;
@@ -2094,7 +2094,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/projects/{projectSlug}/reports/{number}/finalize": {
+    "/projects/{project}/reports/{number}/finalize": {
         parameters: {
             query?: never;
             header?: never;
@@ -2108,7 +2108,7 @@ export interface paths {
                 query?: never;
                 header?: never;
                 path: {
-                    projectSlug: string;
+                    project: string;
                     number: number;
                 };
                 cookie?: never;
@@ -2230,7 +2230,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/projects/{projectSlug}/reports/{number}/pdf": {
+    "/projects/{project}/reports/{number}/pdf": {
         parameters: {
             query?: never;
             header?: never;
@@ -2244,7 +2244,7 @@ export interface paths {
                 query?: never;
                 header?: never;
                 path: {
-                    projectSlug: string;
+                    project: string;
                     number: number;
                 };
                 cookie?: never;
@@ -2320,7 +2320,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/p/{projectSlug}": {
+    "/p/{project}": {
         parameters: {
             query?: never;
             header?: never;
@@ -2332,7 +2332,7 @@ export interface paths {
                 query?: never;
                 header?: never;
                 path: {
-                    projectSlug: string;
+                    project: string;
                 };
                 cookie?: never;
             };
@@ -2393,7 +2393,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/r/{reportSlug}": {
+    "/r/{report}": {
         parameters: {
             query?: never;
             header?: never;
@@ -2405,7 +2405,7 @@ export interface paths {
                 query?: never;
                 header?: never;
                 path: {
-                    reportSlug: string;
+                    report: string;
                 };
                 cookie?: never;
             };
@@ -2468,7 +2468,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/reports/{reportId}/notes": {
+    "/reports/{report}/notes": {
         parameters: {
             query?: never;
             header?: never;
@@ -2483,7 +2483,7 @@ export interface paths {
                 };
                 header?: never;
                 path: {
-                    reportId: string;
+                    report: string;
                 };
                 cookie?: never;
             };
@@ -2552,7 +2552,7 @@ export interface paths {
                 query?: never;
                 header?: never;
                 path: {
-                    reportId: string;
+                    report: string;
                 };
                 cookie?: never;
             };
@@ -2644,7 +2644,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/notes/{noteId}": {
+    "/notes/{note}": {
         parameters: {
             query?: never;
             header?: never;
@@ -2659,7 +2659,7 @@ export interface paths {
                 query?: never;
                 header?: never;
                 path: {
-                    noteId: string;
+                    note: string;
                 };
                 cookie?: never;
             };
@@ -2713,7 +2713,7 @@ export interface paths {
                 query?: never;
                 header?: never;
                 path: {
-                    noteId: string;
+                    note: string;
                 };
                 cookie?: never;
             };

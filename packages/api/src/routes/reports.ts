@@ -1,9 +1,9 @@
 /**
  * Reports routes — restructured in P3.0 Commit 3.
  *
- * List/create are nested under `/projects/:projectSlug/reports`.
+ * List/create are nested under `/projects/:project/reports`.
  * Get/patch/delete/generate/regenerate/finalize/pdf are nested under
- * `/projects/:projectSlug/reports/:number`. The per-project number is
+ * `/projects/:project/reports/:number`. The per-project number is
  * the user-visible identifier; the report UUID is purely internal.
  *
  * RLS (`reports_member_*` policies on app.reports) does access
@@ -24,7 +24,7 @@ import {
   errorEnvelope,
   cursor,
   limit,
-  projectSlug,
+  projectId,
   reportNumber,
 } from '@harpa/api-contract';
 import type { AppEnv } from '../app.js';
@@ -51,12 +51,12 @@ import { pickStorage } from '../services/storage.js';
 import { registerFile } from '../services/files.js';
 import { renderReportPdf } from '../services/report-pdf.js';
 
-const projectSlugParam = z.object({
-  projectSlug: projectSlug.openapi({ param: { name: 'projectSlug', in: 'path' } }),
+const projectParam = z.object({
+  project: projectId.openapi({ param: { name: 'project', in: 'path' } }),
 });
 
 const reportPathParam = z.object({
-  projectSlug: projectSlug.openapi({ param: { name: 'projectSlug', in: 'path' } }),
+  project: projectId.openapi({ param: { name: 'project', in: 'path' } }),
   number: reportNumber.openapi({ param: { name: 'number', in: 'path' } }),
 });
 
@@ -87,12 +87,12 @@ async function loadReport(
 reportRoutes.openapi(
   createRoute({
     method: 'get',
-    path: '/projects/{projectSlug}/reports',
+    path: '/projects/{project}/reports',
     tags: ['reports'],
     security: [{ bearerAuth: [] }],
     middleware: [withAuth()] as const,
     request: {
-      params: projectSlugParam,
+      params: projectParam,
       query: z.object({ cursor: cursor.optional(), limit: limit.optional() }),
     },
     responses: {
@@ -105,7 +105,7 @@ reportRoutes.openapi(
     const userId = c.get('userId');
     const db = c.get('db');
     if (!userId || !db) throw new HTTPException(401);
-    const { projectSlug: slug } = c.req.valid('param');
+    const { project: slug } = c.req.valid('param');
     const q = c.req.valid('query');
     const project = await db((d) => getProjectBySlug(d, userId, slug, false));
     if (!project) throw new HTTPException(404, { message: 'Project not found.' });
@@ -118,12 +118,12 @@ reportRoutes.openapi(
 reportRoutes.openapi(
   createRoute({
     method: 'post',
-    path: '/projects/{projectSlug}/reports',
+    path: '/projects/{project}/reports',
     tags: ['reports'],
     security: [{ bearerAuth: [] }],
     middleware: [withAuth()] as const,
     request: {
-      params: projectSlugParam,
+      params: projectParam,
       body: { content: { 'application/json': { schema: reportSchemas.createReportRequest } } },
     },
     responses: {
@@ -137,7 +137,7 @@ reportRoutes.openapi(
     const userId = c.get('userId');
     const db = c.get('db');
     if (!userId || !db) throw new HTTPException(401);
-    const { projectSlug: slug } = c.req.valid('param');
+    const { project: slug } = c.req.valid('param');
     const body = c.req.valid('json');
     const project = await db((d) => getProjectBySlug(d, userId, slug, false));
     if (!project) throw new HTTPException(404, { message: 'Project not found.' });
@@ -151,7 +151,7 @@ reportRoutes.openapi(
 reportRoutes.openapi(
   createRoute({
     method: 'get',
-    path: '/projects/{projectSlug}/reports/{number}',
+    path: '/projects/{project}/reports/{number}',
     tags: ['reports'],
     security: [{ bearerAuth: [] }],
     middleware: [withAuth()] as const,
@@ -165,7 +165,7 @@ reportRoutes.openapi(
   async (c) => {
     const db = c.get('db');
     if (!db) throw new HTTPException(401);
-    const { projectSlug: slug, number } = c.req.valid('param');
+    const { project: slug, number } = c.req.valid('param');
     const report = await loadReport(db, slug, number);
     return c.json(report, 200);
   },
@@ -175,7 +175,7 @@ reportRoutes.openapi(
 reportRoutes.openapi(
   createRoute({
     method: 'patch',
-    path: '/projects/{projectSlug}/reports/{number}',
+    path: '/projects/{project}/reports/{number}',
     tags: ['reports'],
     security: [{ bearerAuth: [] }],
     middleware: [withAuth()] as const,
@@ -193,7 +193,7 @@ reportRoutes.openapi(
   async (c) => {
     const db = c.get('db');
     if (!db) throw new HTTPException(401);
-    const { projectSlug: slug, number } = c.req.valid('param');
+    const { project: slug, number } = c.req.valid('param');
     const body = c.req.valid('json');
     const existing = await loadReport(db, slug, number);
     const report = await db((d) => updateReport(d, existing.id, body));
@@ -206,7 +206,7 @@ reportRoutes.openapi(
 reportRoutes.openapi(
   createRoute({
     method: 'delete',
-    path: '/projects/{projectSlug}/reports/{number}',
+    path: '/projects/{project}/reports/{number}',
     tags: ['reports'],
     security: [{ bearerAuth: [] }],
     middleware: [withAuth()] as const,
@@ -220,7 +220,7 @@ reportRoutes.openapi(
   async (c) => {
     const db = c.get('db');
     if (!db) throw new HTTPException(401);
-    const { projectSlug: slug, number } = c.req.valid('param');
+    const { project: slug, number } = c.req.valid('param');
     const existing = await loadReport(db, slug, number);
     const ok = await db((d) => deleteReport(d, existing.id));
     if (!ok) throw new HTTPException(404, { message: 'Report not found.' });
@@ -273,7 +273,7 @@ async function runGenerate(
 reportRoutes.openapi(
   createRoute({
     method: 'post',
-    path: '/projects/{projectSlug}/reports/{number}/generate',
+    path: '/projects/{project}/reports/{number}/generate',
     tags: ['reports'],
     security: [{ bearerAuth: [] }],
     middleware: [withAuth(), generateRateLimit, generateIdempotency] as const,
@@ -287,7 +287,7 @@ reportRoutes.openapi(
     const db = c.get('db');
     const userId = c.get('userId');
     if (!db || !userId) throw new HTTPException(401);
-    const { projectSlug: slug, number } = c.req.valid('param');
+    const { project: slug, number } = c.req.valid('param');
     const body = c.req.valid('json');
     const report = await loadReport(db, slug, number);
     const settings = await db((d) => getAiSettings(d, userId));
@@ -299,7 +299,7 @@ reportRoutes.openapi(
 reportRoutes.openapi(
   createRoute({
     method: 'post',
-    path: '/projects/{projectSlug}/reports/{number}/regenerate',
+    path: '/projects/{project}/reports/{number}/regenerate',
     tags: ['reports'],
     security: [{ bearerAuth: [] }],
     middleware: [withAuth(), generateRateLimit, generateIdempotency] as const,
@@ -313,7 +313,7 @@ reportRoutes.openapi(
     const db = c.get('db');
     const userId = c.get('userId');
     if (!db || !userId) throw new HTTPException(401);
-    const { projectSlug: slug, number } = c.req.valid('param');
+    const { project: slug, number } = c.req.valid('param');
     const body = c.req.valid('json');
     const report = await loadReport(db, slug, number);
     const settings = await db((d) => getAiSettings(d, userId));
@@ -322,11 +322,11 @@ reportRoutes.openapi(
   },
 );
 
-// ---------- POST /projects/:projectSlug/reports/:number/finalize ----------
+// ---------- POST /projects/:project/reports/:number/finalize ----------
 reportRoutes.openapi(
   createRoute({
     method: 'post',
-    path: '/projects/{projectSlug}/reports/{number}/finalize',
+    path: '/projects/{project}/reports/{number}/finalize',
     tags: ['reports'],
     security: [{ bearerAuth: [] }],
     middleware: [withAuth()] as const,
@@ -341,7 +341,7 @@ reportRoutes.openapi(
   async (c) => {
     const db = c.get('db');
     if (!db) throw new HTTPException(401);
-    const { projectSlug: slug, number } = c.req.valid('param');
+    const { project: slug, number } = c.req.valid('param');
 
     const report = await loadReport(db, slug, number);
     if (!report.body) {
@@ -353,11 +353,11 @@ reportRoutes.openapi(
   },
 );
 
-// ---------- POST /projects/:projectSlug/reports/:number/pdf ----------
+// ---------- POST /projects/:project/reports/:number/pdf ----------
 reportRoutes.openapi(
   createRoute({
     method: 'post',
-    path: '/projects/{projectSlug}/reports/{number}/pdf',
+    path: '/projects/{project}/reports/{number}/pdf',
     tags: ['reports'],
     security: [{ bearerAuth: [] }],
     middleware: [withAuth()] as const,
@@ -373,7 +373,7 @@ reportRoutes.openapi(
     const userId = c.get('userId');
     const db = c.get('db');
     if (!userId || !db) throw new HTTPException(401);
-    const { projectSlug: slug, number } = c.req.valid('param');
+    const { project: slug, number } = c.req.valid('param');
 
     const report = await loadReport(db, slug, number);
     if (!report.body) {

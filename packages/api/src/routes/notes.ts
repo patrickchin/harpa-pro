@@ -11,15 +11,16 @@ import {
   errorEnvelope,
   cursor,
   limit,
-  uuid,
+  reportId,
+  noteId,
 } from '@harpa/api-contract';
 import type { AppEnv } from '../app.js';
 import { withAuth } from '../middleware/auth.js';
 import { createNote, deleteNote, listNotes, updateNote } from '../services/notes.js';
 import { getReport } from '../services/reports.js';
 
-const reportIdParam = z.object({ reportId: uuid.openapi({ param: { name: 'reportId', in: 'path' } }) });
-const noteIdParam = z.object({ noteId: uuid.openapi({ param: { name: 'noteId', in: 'path' } }) });
+const reportParam = z.object({ report: reportId.openapi({ param: { name: 'report', in: 'path' } }) });
+const noteParam = z.object({ note: noteId.openapi({ param: { name: 'note', in: 'path' } }) });
 
 export const noteRoutes = new OpenAPIHono<AppEnv>();
 
@@ -27,12 +28,12 @@ export const noteRoutes = new OpenAPIHono<AppEnv>();
 noteRoutes.openapi(
   createRoute({
     method: 'get',
-    path: '/reports/{reportId}/notes',
+    path: '/reports/{report}/notes',
     tags: ['notes'],
     security: [{ bearerAuth: [] }],
     middleware: [withAuth()] as const,
     request: {
-      params: reportIdParam,
+      params: reportParam,
       query: z.object({ cursor: cursor.optional(), limit: limit.optional() }),
     },
     responses: {
@@ -44,7 +45,7 @@ noteRoutes.openapi(
   async (c) => {
     const db = c.get('db');
     if (!db) throw new HTTPException(401);
-    const { reportId } = c.req.valid('param');
+    const { report: reportId } = c.req.valid('param');
     const q = c.req.valid('query');
     const report = await db((d) => getReport(d, reportId));
     if (!report) throw new HTTPException(404, { message: 'Report not found.' });
@@ -57,12 +58,12 @@ noteRoutes.openapi(
 noteRoutes.openapi(
   createRoute({
     method: 'post',
-    path: '/reports/{reportId}/notes',
+    path: '/reports/{report}/notes',
     tags: ['notes'],
     security: [{ bearerAuth: [] }],
     middleware: [withAuth()] as const,
     request: {
-      params: reportIdParam,
+      params: reportParam,
       body: { content: { 'application/json': { schema: noteSchemas.createNoteRequest } } },
     },
     responses: {
@@ -76,7 +77,7 @@ noteRoutes.openapi(
     const userId = c.get('userId');
     const db = c.get('db');
     if (!userId || !db) throw new HTTPException(401);
-    const { reportId } = c.req.valid('param');
+    const { report: reportId } = c.req.valid('param');
     const body = c.req.valid('json');
     const report = await db((d) => getReport(d, reportId));
     if (!report) throw new HTTPException(404, { message: 'Report not found.' });
@@ -90,12 +91,12 @@ noteRoutes.openapi(
 noteRoutes.openapi(
   createRoute({
     method: 'patch',
-    path: '/notes/{noteId}',
+    path: '/notes/{note}',
     tags: ['notes'],
     security: [{ bearerAuth: [] }],
     middleware: [withAuth()] as const,
     request: {
-      params: noteIdParam,
+      params: noteParam,
       body: { content: { 'application/json': { schema: noteSchemas.updateNoteRequest } } },
     },
     responses: {
@@ -108,7 +109,7 @@ noteRoutes.openapi(
   async (c) => {
     const db = c.get('db');
     if (!db) throw new HTTPException(401);
-    const { noteId } = c.req.valid('param');
+    const { note: noteId } = c.req.valid('param');
     const { body } = c.req.valid('json');
     const note = await db((d) => updateNote(d, noteId, body));
     if (!note) throw new HTTPException(404, { message: 'Note not found or not author.' });
@@ -120,11 +121,11 @@ noteRoutes.openapi(
 noteRoutes.openapi(
   createRoute({
     method: 'delete',
-    path: '/notes/{noteId}',
+    path: '/notes/{note}',
     tags: ['notes'],
     security: [{ bearerAuth: [] }],
     middleware: [withAuth()] as const,
-    request: { params: noteIdParam },
+    request: { params: noteParam },
     responses: {
       204: { description: 'Deleted.' },
       401: { description: 'Unauthorized.', content: { 'application/json': { schema: errorEnvelope } } },
@@ -134,7 +135,7 @@ noteRoutes.openapi(
   async (c) => {
     const db = c.get('db');
     if (!db) throw new HTTPException(401);
-    const { noteId } = c.req.valid('param');
+    const { note: noteId } = c.req.valid('param');
     const ok = await db((d) => deleteNote(d, noteId));
     if (!ok) throw new HTTPException(404, { message: 'Note not found or not author.' });
     return c.body(null, 204);

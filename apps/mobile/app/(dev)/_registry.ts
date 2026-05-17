@@ -163,4 +163,10 @@ export const REGISTRY: readonly GalleryEntry[] = [
     group: 'app',
     description: 'Generate report — Edit tab: no-report / live-report / autosaving / saved',
   },
+  {
+    name: 'Saved Report',
+    href: '/(dev)/saved-report',
+    group: 'app',
+    description: 'Saved report detail — loading / error / draft / finalized states + actions menu + PDF preview',
+  },
 ];

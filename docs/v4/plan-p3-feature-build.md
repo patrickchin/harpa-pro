@@ -99,7 +99,7 @@ P3.6  Reports list
 P3.7  Generate – Notes tab          ┐ Agent B (the big one)
 P3.8  Generate – Report tab         │
 P3.9  Generate – Edit tab           ┘
-P3.10 Saved report + actions + PDF
+P3.10 Saved report + actions + PDF   ✅ shipped
 P3.11 Files screen
 P3.12 Camera
 P3.13 Profile / Account / Usage
@@ -253,6 +253,69 @@ remains deferred; the provider just forwards `isAutoSaving` +
       onSetReport propagation (new top-level + inner refs) + the
       "Edit manually" lazy-seed path from the empty Report tab.
 - [x] Commit: `feat(mobile): P3.8 — Generate Edit tab + inline ReportEditForm`.
+
+### P3.10 — Saved report + actions + PDF
+
+Ports the saved-report detail screen from canonical
+`../haru3-reports/apps/mobile/app/projects/[projectId]/reports/[reportId].tsx`
+into the v4 slug-native route at
+`apps/mobile/app/(app)/projects/[project]/reports/[number]/index.tsx`.
+Body is props-only (no API / no auth / no secure-store) so the dev
+mirror exercises the same component without mocks. The PDF export
+pipeline, ReportPhotos block, and rich note timeline are deferred to
+P4 behind clearly-marked stubs.
+
+- [x] Body `screens/saved-report.tsx` owns the tab + menu + dialog
+      state. Tabs: Report (always), Notes (always), Edit (drafts
+      only — auto-bounces to Report when status flips to
+      `finalized`). Reconciliation pattern from canonical preserves
+      local edits across refetches unless the server JSON changed.
+- [x] Real route wires `useProjectQuery`, `useReportQuery`,
+      `useReportPdfActions`, and `useRefresh`. Slug-native params
+      (`project` + `number`) with the invalid-route fallback.
+- [x] Dev mirror `(dev)/saved-report.tsx` with 4 mode toggles
+      (loading / error / draft-populated / finalized) +
+      registry entry.
+- [x] Components ported verbatim where v4 has the matching
+      primitive: `ReportActionsMenu`, `ReportDetailHeader`,
+      `ReportDetailTabBar`, `ReportNotesPane` (text-only — full
+      timeline deferred), `SavedReportSheet`,
+      `ReportDetailSkeleton`. `ImagePreviewModal` simplified to
+      `react-native` `Image` (no `expo-image` / signed URLs yet).
+      `PdfPreviewModal` ships the modal chrome; inline rendering
+      is deferred and the stub `saveReportPdf` surfaces an error.
+- [x] `lib/use-report-pdf-actions.ts` ported verbatim from the
+      canonical hook; `lib/export-report-pdf.ts` ships as a stub
+      whose async functions throw the standard "Saving PDFs lands
+      in P4 …" message so any accidental invocation routes through
+      the existing action-error dialog.
+- [x] `lib/app-dialog-copy.ts` gains `getUnfinalizeReportDialogCopy()`
+      next to the existing `getDeleteReportDialogCopy()` /
+      `getActionErrorDialogCopy()` helpers. Confirm dialogs are
+      body-owned via `AppDialogSheet` (Pitfall: no `Alert.alert`).
+- [x] Vitest unit tests (14) cover every visible state +
+      interaction: skeleton, invalid-route fallback, error / retry,
+      tab switching, finalize bounce, hidden Edit tab on
+      finalized, actions menu open/close, confirm-delete +
+      confirm-unfinalize callbacks, PDF preview open, Save PDF
+      invocation, populated-draft layout assertion.
+- [x] Commit: `feat(mobile): P3.10 — Saved report screen + actions menu + PDF preview`.
+
+**Deferred to P4** (each behind a `TODO(P4)` marker in code):
+
+- v4 `Report.body` → `GeneratedSiteReport` translation (route
+  currently mounts the dev fixture for the body).
+- `useReportDelete`, `useReportUnfinalize`, `useReportAutoSave`
+  mutation hooks.
+- `useReportNotesQuery` + rich `useNoteTimeline` (voice / photo /
+  document rows). `ReportNotesPane` ships as a text-only stub
+  exporting `ReportNoteRow`.
+- `ReportPhotos` block on the Report tab — blocked on the upload
+  pipeline + signed-URL resolution.
+- `ImagePreviewModal` signed-URL fetch + `CachedImage` / BlurHash
+  placeholder.
+- PDF export pipeline (Expo Print + Sharing) — stub lib throws.
+- Inline PDF rendering (`react-native-webview` / `react-native-pdf`).
 
 ## Pipelines exercised
 

@@ -8,11 +8,11 @@ name: api-dev
 # One-time setup:
 #   flyctl apps create harpa-pro-api-dev
 #   pnpm db:branch:ensure dev                      # creates the Neon branch
-#   flyctl secrets set DATABASE_URL=<uri> \
-#     BETTER_AUTH_SECRET=... \
-#     WAITLIST_CORS_ORIGINS=https://dev.harpa-pro.pages.dev \
-#     ... --app harpa-pro-api-dev
-# The same FLY_API_TOKEN secret covers both apps.
+#   doppler configs tokens create ci-github --project harpa-pro --config dev
+#     → set as repo secret DOPPLER_TOKEN_DEV
+# Subsequent secret changes: edit in Doppler `dev` config, push to `dev`.
+# This workflow stages the synced secrets onto Fly and the `flyctl deploy`
+# step activates them — secrets and code ship together.
 
 on:
   push:
@@ -66,6 +66,22 @@ jobs:
         run: pnpm --filter @harpa/api db:migrate
 
       - uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - uses: dopplerhq/cli-action@v3
+
+      - name: Sync Fly secrets from Doppler
+        # Pulls the `dev` config and stages it onto the Fly app. Filters
+        # out vars that don't belong on Fly (Doppler/Neon/CF/build-time
+        # PUBLIC_* / EXPO_PUBLIC_*). `--stage` defers activation; the
+        # subsequent `flyctl deploy` is what flips them on, so secrets
+        # + code ship in a single transaction.
+        env:
+          DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN_DEV }}
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: |
+          doppler secrets download --no-file --format env \
+            | grep -vE '^(DOPPLER_|NEON_|FLY_|CLOUDFLARE_|PUBLIC_|EXPO_PUBLIC_|PAGES_PROJECT|PORT|NODE_ENV|ADMIN_EMAIL)' \
+            | flyctl secrets import --stage --app harpa-pro-api-dev
 
       - name: Deploy to Fly.io (dev)
         env:

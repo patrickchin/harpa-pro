@@ -62,7 +62,7 @@ pnpm secrets:pull:prod   # Doppler prd   → .env.prod
 pnpm secrets:push:dev    # .env.dev      → Doppler dev   (after editing)
 pnpm secrets:push:prod   # .env.prod     → Doppler prd
 
-# Bootstrap Fly secrets from Doppler:
+# Manual Fly sync (rarely needed — CI does it on every deploy):
 pnpm secrets:fly:dev     # → harpa-pro-api-dev
 pnpm secrets:fly:prod    # → harpa-pro-api
 ```
@@ -73,10 +73,37 @@ after cloning + `doppler login`.
 
 ### CI
 
-GitHub Actions still reads from individual `secrets.*`. Long-term we
-should switch CI to a Doppler service token (`DOPPLER_TOKEN`) +
-`doppler run -- …` so the GitHub secret list shrinks to a single
-entry per env. Tracked under p41.
+The `api-dev` and `api-prod` workflows sync Doppler → Fly secrets
+**inside the deploy job** before `flyctl deploy`. Pattern:
+
+```yaml
+- uses: dopplerhq/cli-action@v3
+- name: Sync Fly secrets from Doppler
+  env:
+    DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN_DEV }}  # or _PRD
+    FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+  run: |
+    doppler secrets download --no-file --format env \
+      | grep -vE '^(DOPPLER_|NEON_|FLY_|CLOUDFLARE_|PUBLIC_|EXPO_PUBLIC_|PAGES_PROJECT|PORT|NODE_ENV|ADMIN_EMAIL)' \
+      | flyctl secrets import --stage --app <app>
+- name: Deploy
+  run: flyctl deploy ...
+```
+
+`--stage` defers activation; the subsequent `flyctl deploy` flips the
+secrets on — so code + secrets ship in a single transaction. To rotate
+a secret: edit it in Doppler, push to `dev` or `main`, deploy fires
+and picks up the new value.
+
+The `DOPPLER_TOKEN_{DEV,PRD}` service tokens are created with
+`doppler configs tokens create ci-github --project harpa-pro --config <env>`
+and stored as GitHub Actions repo secrets.
+
+The filter pattern excludes vars that don't belong on Fly: Doppler
+metadata, Neon admin credentials (only `DATABASE_URL` is needed on
+the app), Cloudflare deploy tokens, build-time `PUBLIC_*` /
+`EXPO_PUBLIC_*` (consumed by the marketing site / mobile app at build,
+not by the API at runtime), and a handful of CI-only flags.
 
 - `.env.example` at the repo root enumerates every
   `EXPO_PUBLIC_*` var. The `lib/env.ts` Zod parse runs in CI

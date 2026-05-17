@@ -11,7 +11,7 @@
  * user out on save: their current JWT is scoped to the old API.
  */
 import { useEffect, useState } from 'react';
-import { Alert, ScrollView, Text, View } from 'react-native';
+import { ScrollView, Text, View } from 'react-native';
 
 import { Button } from '@/components/primitives/Button';
 import { Input } from '@/components/primitives/Input';
@@ -22,6 +22,7 @@ import {
   setApiBaseUrlOverride,
 } from '@/lib/api/base-url';
 import { useAuthSession } from '@/lib/auth/session';
+import { useAppDialogSheet } from '@/lib/dialogs/useAppDialogSheet';
 import { env } from '@/lib/env';
 
 const PRESETS: { label: string; url: string }[] = [
@@ -32,6 +33,7 @@ const PRESETS: { label: string; url: string }[] = [
 
 export default function DevApiBaseUrl() {
   const session = useAuthSession();
+  const dialog = useAppDialogSheet();
   const [override, setOverride] = useState<string>('');
   const [active, setActive] = useState<string>('');
   const [busy, setBusy] = useState(false);
@@ -58,12 +60,15 @@ export default function DevApiBaseUrl() {
       await setApiBaseUrlOverride(url);
       await session.signOut().catch(() => {});
       setActive(await getApiBaseUrl());
-      Alert.alert(
-        'API base URL updated',
-        `Now pointing at:\n${url ?? '(default) ' + env.EXPO_PUBLIC_API_URL}\n\nYou have been signed out.`,
-      );
+      await dialog.alert({
+        title: 'API base URL updated',
+        message: `Now pointing at:\n${url ?? '(default) ' + env.EXPO_PUBLIC_API_URL}\n\nYou have been signed out.`,
+      });
     } catch (err) {
-      Alert.alert('Failed', err instanceof Error ? err.message : 'Unknown error');
+      await dialog.alert({
+        title: 'Failed',
+        message: err instanceof Error ? err.message : 'Unknown error',
+      });
     } finally {
       setBusy(false);
     }

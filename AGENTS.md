@@ -38,7 +38,10 @@ when you fix a recurring bug.
    `process.env.EXPO_PUBLIC_*!` — enforced by lint.
 2. **Conventional Commits, kept concise.**
    `feat|fix|chore|test|docs|refactor(scope): subject`. Default branch
-   is `main`; pushes to `main` deploy production.
+   is `main`; pushes to `main` deploy production. Pushes to `dev`
+   deploy to the dev environment (`harpa-pro-api-dev` on Fly + the
+   `dev` Cloudflare Pages branch) — see
+   [`docs/v4/arch-ops.md`](docs/v4/arch-ops.md).
 3. **Docs in the same PR.** Behaviour, schema, deployment, or
    workflow change → matching doc update in the same commit.
 4. **No `Alert.alert` for in-app dialogs.** Use `AppDialogSheet` or

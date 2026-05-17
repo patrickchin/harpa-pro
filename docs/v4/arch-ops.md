@@ -2,10 +2,23 @@
 
 ## Hosting
 
-- **API**: Fly.io. Single app `harpa-api`, two environments
-  (`prod`, `staging`), per-PR ephemeral preview machines.
-- **Database**: Neon (managed). See [arch-database.md](arch-database.md).
-- **Storage**: Cloudflare R2. See [arch-storage.md](arch-storage.md).
+- **API**: Fly.io. Two apps:
+  - `harpa-pro-api` (prod) at `https://api.harpapro.com` — deployed on
+    push to `main` by `.github/workflows/api-prod.yml`.
+  - `harpa-pro-api-dev` (dev) at `https://harpa-pro-api-dev.fly.dev` —
+    deployed on push to `dev` by `.github/workflows/api-dev.yml`.
+    Sleeps when idle (`min_machines_running = 0`) to save cost.
+  Per-PR ephemeral preview machines (planned).
+- **Database**: Neon (managed). Long-lived branches: `main` (prod)
+  and `dev`. Per-PR `pr-<n>` branches created/destroyed by
+  `.github/workflows/pr-preview.yml`. See
+  [arch-database.md](arch-database.md).
+- **Storage**: Cloudflare R2. Separate buckets per env
+  (`harpa-pro` / `harpa-pro-dev`). See [arch-storage.md](arch-storage.md).
+- **Marketing**: Cloudflare Pages project `harpa-pro`.
+  - Production branch `main` → `https://harpapro.com` (and
+    `harpa-pro.pages.dev`).
+  - Dev branch `dev` → `https://dev.harpa-pro.pages.dev`.
 - **Mobile**: EAS Build + EAS Update for OTA. TestFlight + Play
   internal track for distribution.
 - **Docs site**: Vercel (or Cloudflare Pages — TBD in P0).
@@ -35,22 +48,49 @@
 
 ```
 PR open
-  ↳ Neon branch pr-<n>
-  ↳ Fly preview machine deploys api with NEON_BRANCH=pr-<n>
-  ↳ EAS preview build (manual trigger)
-  ↳ Maestro behaviour flows run against the preview API
+  ↳ Neon branch pr-<n> (pr-preview.yml)
+  ↳ migrations applied to pr-<n>
+  ↳ marketing preview deploy to CF Pages (marketing-preview.yml)
+  ↳ EAS preview build (manual trigger — planned)
 
-Merge to dev
-  ↳ Neon migrations applied to `dev` branch
-  ↳ Fly staging deploy
-  ↳ EAS staging build (TestFlight internal)
+Push to dev
+  ↳ Neon `dev` branch ensured (idempotent, long-lived)
+  ↳ migrations applied to `dev`
+  ↳ Fly deploy → harpa-pro-api-dev (api-dev.yml)
+  ↳ marketing deploy to CF Pages dev branch (marketing-dev.yml)
+  ↳ EAS staging build (TestFlight internal — planned)
 
-Merge to main (release)
-  ↳ Neon migrations applied to `prod`
-  ↳ Fly production deploy (rolling)
-  ↳ EAS production build (manual approve)
+Push to main (production)
+  ↳ migrations applied to Neon `main`
+  ↳ Fly deploy → harpa-pro-api (api-prod.yml)
+  ↳ marketing deploy to CF Pages production (marketing-prod.yml)
+  ↳ EAS production build (manual approve — planned)
   ↳ EAS Update for JS-only patches
 ```
+
+## Dev environment bootstrap (one-time)
+
+```bash
+# 1. Create the Fly app
+flyctl apps create harpa-pro-api-dev
+
+# 2. Create the Neon `dev` branch + capture its URI
+URI=$(pnpm db:branch:ensure dev)
+
+# 3. Set Fly secrets (mirror prod, with dev-specific values)
+flyctl secrets set --app harpa-pro-api-dev \
+  DATABASE_URL="$URI" \
+  BETTER_AUTH_SECRET=... \
+  WAITLIST_CORS_ORIGINS="https://dev.harpa-pro.pages.dev" \
+  TWILIO_ACCOUNT_SID=... TWILIO_AUTH_TOKEN=... TWILIO_VERIFY_SID=... \
+  R2_ACCOUNT_ID=... R2_ACCESS_KEY_ID=... R2_SECRET_ACCESS_KEY=... \
+  R2_BUCKET=harpa-pro-dev \
+  OPENAI_API_KEY=... ANTHROPIC_API_KEY=... # etc.
+```
+
+After bootstrap, every push to `dev` re-uses the same Neon branch
+and Fly app — the workflow only runs pending migrations and ships
+new code.
 
 ## Alerts
 

@@ -23,6 +23,7 @@
     "fixtures:replay": "AI_FIXTURE_MODE=replay pnpm test:api",
     "db:branch:create": "tsx infra/neon/branch.ts create",
     "db:branch:delete": "tsx infra/neon/branch.ts delete",
+    "db:branch:ensure": "tsx infra/neon/branch.ts ensure",
     "format": "prettier --write .",
     "harpa": "pnpm --filter @harpa/cli dev --",
     "prepare": "husky"

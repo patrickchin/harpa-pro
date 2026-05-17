@@ -86,7 +86,7 @@ describe('harpa me get', () => {
 
     expect(exitCode).toBe(EXIT.OK);
     expect(stdout.text).toMatch(/\+15550900001/);
-    expect(stdout.text).toMatch(/ID:/);
+    expect(stdout.text).toMatch(/Joined:/);
   });
 
   it('returns auth exit code without a token', async () => {

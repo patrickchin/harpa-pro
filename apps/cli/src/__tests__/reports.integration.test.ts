@@ -115,10 +115,18 @@ describe('harpa reports (CRUD)', () => {
     expect(created.projectId).toBe(projectId);
     expect(created.status).toBe('draft');
     const reportId: string = created.id;
+    const reportNumber: number = created.number;
 
     // 3. Get.
     const getOut = new MemoryStream();
-    exit = await reportsGet({ client, reportId, json: true, stdout: getOut, stderr });
+    exit = await reportsGet({
+      client,
+      project: projectId,
+      number: reportNumber,
+      json: true,
+      stdout: getOut,
+      stderr,
+    });
     expect(exit).toBe(EXIT.OK);
     expect(JSON.parse(getOut.text).id).toBe(reportId);
 
@@ -126,7 +134,8 @@ describe('harpa reports (CRUD)', () => {
     const updateOut = new MemoryStream();
     exit = await reportsUpdate({
       client,
-      reportId,
+      project: projectId,
+      number: reportNumber,
       visitDate: '2025-01-16',
       json: true,
       stdout: updateOut,
@@ -158,12 +167,24 @@ describe('harpa reports (CRUD)', () => {
 
     // 7. Delete (204).
     const deleteOut = new MemoryStream();
-    exit = await reportsDelete({ client, reportId, stdout: deleteOut, stderr });
+    exit = await reportsDelete({
+      client,
+      project: projectId,
+      number: reportNumber,
+      stdout: deleteOut,
+      stderr,
+    });
     expect(exit).toBe(EXIT.OK);
     expect(deleteOut.text).toMatch(/Deleted report/);
 
     // 8. 404 after delete.
-    exit = await reportsGet({ client, reportId, stdout, stderr });
+    exit = await reportsGet({
+      client,
+      project: projectId,
+      number: reportNumber,
+      stdout,
+      stderr,
+    });
     expect(exit).toBe(EXIT.NOT_FOUND);
   });
 
@@ -175,7 +196,8 @@ describe('harpa reports (CRUD)', () => {
   it('returns 404 for non-existent report id', async () => {
     const exit = await reportsGet({
       client: makeClient(token),
-      reportId: '00000000-0000-0000-0000-000000000999',
+      project: projectId,
+      number: 999999,
       stdout,
       stderr,
     });

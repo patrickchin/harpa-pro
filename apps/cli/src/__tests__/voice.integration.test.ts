@@ -130,7 +130,7 @@ describe('voice transcribe', () => {
     const stderr = new MemoryStream();
     const exit = await voiceTranscribe({
       client: makeClient(token),
-      fileId: '00000000-0000-0000-0000-000000000000',
+      fileId: 'fil_zzzzzzzz',
       stdout,
       stderr,
     });

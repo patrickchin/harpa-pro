@@ -100,7 +100,7 @@ describe('files presign + register + url', () => {
     });
     expect(exit).toBe(EXIT.OK);
     const body = JSON.parse(stdout.text);
-    expect(body.fileKey).toMatch(/^users\/[0-9a-f-]+\/image\/.+\.jpg$/);
+    expect(body.fileKey).toMatch(/^users\/usr_[0-9a-hjkmnp-tv-z]+\/image\/.+\.jpg$/);
     expect(typeof body.uploadUrl).toBe('string');
     expect(typeof body.expiresAt).toBe('string');
   });

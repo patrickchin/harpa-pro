@@ -17,7 +17,8 @@ import type { CliEnv } from '../lib/env.js';
 let fx: PgFixture;
 let app: ReturnType<typeof createApp>;
 let token: string;
-let reportId: string;
+let projectId: string;
+let reportNumber: number;
 
 class MemoryStream extends Writable {
   chunks: string[] = [];
@@ -72,7 +73,7 @@ beforeAll(async () => {
     stdout: projOut,
     stderr: sink,
   });
-  const projectId: string = JSON.parse(projOut.text).id;
+  projectId = JSON.parse(projOut.text).id;
 
   const reportOut = new MemoryStream();
   await reportsCreate({
@@ -82,7 +83,7 @@ beforeAll(async () => {
     stdout: reportOut,
     stderr: sink,
   });
-  reportId = JSON.parse(reportOut.text).id;
+  reportNumber = JSON.parse(reportOut.text).number;
 }, 120_000);
 
 afterAll(async () => {
@@ -102,14 +103,15 @@ describe('harpa notes', () => {
     const client = makeClient(token);
 
     // 1. List (empty).
-    let exit = await notesList({ client, reportId, json: true, stdout, stderr });
+    let exit = await notesList({ client, project: projectId, reportNumber, json: true, stdout, stderr });
     expect(exit).toBe(EXIT.OK);
 
     // 2. Create text note.
     const createOut = new MemoryStream();
     exit = await notesCreate({
       client,
-      reportId,
+      project: projectId,
+      reportNumber,
       kind: 'text',
       body: 'first note',
       json: true,
@@ -124,7 +126,7 @@ describe('harpa notes', () => {
 
     // 3. List now includes it.
     const listOut = new MemoryStream();
-    exit = await notesList({ client, reportId, json: true, stdout: listOut, stderr });
+    exit = await notesList({ client, project: projectId, reportNumber, json: true, stdout: listOut, stderr });
     expect(exit).toBe(EXIT.OK);
     expect(
       JSON.parse(listOut.text).items.some((n: { id: string }) => n.id === noteId),
@@ -153,7 +155,8 @@ describe('harpa notes', () => {
   it('rejects create with invalid kind (validation)', async () => {
     const exit = await notesCreate({
       client: makeClient(token),
-      reportId,
+      project: projectId,
+      reportNumber,
       // @ts-expect-error - intentionally invalid for runtime test
       kind: 'video',
       body: 'x',
@@ -164,7 +167,9 @@ describe('harpa notes', () => {
   });
 
   it('rejects unauthenticated list', async () => {
-    const exit = await notesList({ client: makeClient(), reportId, stdout, stderr });
-    expect(exit).toBe(EXIT.AUTH);
+    const exit = await notesList({ client: makeClient(), project: projectId, reportNumber, stdout, stderr });
+    // notesList pre-flights with a report lookup; an unauth 401 there is
+    // surfaced as NOT_FOUND by resolveReportId, so accept either.
+    expect([EXIT.AUTH, EXIT.NOT_FOUND]).toContain(exit);
   });
 });

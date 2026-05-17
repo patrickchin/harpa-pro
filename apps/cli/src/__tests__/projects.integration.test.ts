@@ -178,7 +178,7 @@ describe('harpa projects (CRUD via default-wired client)', () => {
   it('returns 404 for a non-existent project id', async () => {
     const exit = await projectsGet({
       client: makeClient(token),
-      id: '00000000-0000-0000-0000-000000000999',
+      id: 'prj_zzzzzzzz',
       stdout,
       stderr,
     });

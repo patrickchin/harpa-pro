@@ -47,7 +47,7 @@ function reportTabText(tree: TestRenderer.ReactTestRenderer): string {
 }
 
 const baseProps: GenerateNotesProps = {
-  projectSlug: 'prj_test',
+  project: 'prj_test',
   reportNumber: 1,
   notes: [],
   notesLoading: false,

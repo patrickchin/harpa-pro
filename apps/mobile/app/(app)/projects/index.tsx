@@ -18,7 +18,7 @@ export default function ProjectsIndex() {
   const projects: ProjectRow[] =
     result.data?.items.map((p) => ({
       id: p.id,
-      slug: p.slug,
+      slug: p.id,
       name: p.name,
       role: p.myRole,
       address: p.address,

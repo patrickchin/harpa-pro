@@ -9,7 +9,7 @@ const routerSpy = vi.hoisted(() => ({
   canGoBack: vi.fn(() => false),
 }));
 
-const searchParamsSpy = vi.hoisted(() => ({ projectSlug: 'my-cool-project' }));
+const searchParamsSpy = vi.hoisted(() => ({ project: 'my-cool-project' }));
 
 vi.mock('expo-router', () => ({
   useRouter: () => routerSpy,
@@ -28,7 +28,7 @@ vi.mock('@/lib/use-clipboard', () => ({
   useCopyToClipboard: () => ({ copiedKey: null, copy: vi.fn() }),
 }));
 
-import ProjectHomeRoute from '@/app/(app)/projects/[projectSlug]/index';
+import ProjectHomeRoute from '@/app/(app)/projects/[project]/index';
 
 function render() {
   let tree!: TestRenderer.ReactTestRenderer;

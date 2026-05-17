@@ -13,11 +13,11 @@ import { safeBack } from '@/lib/nav/safe-back';
 
 export default function ProjectEditRoute() {
   const router = useRouter();
-  const { projectSlug } = useLocalSearchParams<{ projectSlug: string }>();
-  const slug = projectSlug ?? '';
+  const { project } = useLocalSearchParams<{ project: string }>();
+  const slug = project ?? '';
 
   const projectQ = useProjectQuery(
-    { params: { projectSlug: slug } },
+    { params: { project: slug } },
     { enabled: slug.length > 0 },
   );
   const update = useUpdateProjectMutation();
@@ -46,7 +46,7 @@ export default function ProjectEditRoute() {
       onSubmit={(values) => {
         update.mutate(
           {
-            params: { projectSlug: slug },
+            params: { project: slug },
             body: {
               name: values.name,
               ...(values.address !== null ? { address: values.address } : {}),
@@ -62,7 +62,7 @@ export default function ProjectEditRoute() {
       }}
       onDelete={() => {
         remove.mutate(
-          { params: { projectSlug: slug } },
+          { params: { project: slug } },
           {
             onSuccess: () => {
               router.replace('/(app)/projects' as never);

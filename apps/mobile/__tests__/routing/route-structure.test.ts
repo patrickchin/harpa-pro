@@ -34,11 +34,11 @@ describe('Route structure — screen files', () => {
   const requiredRoutes = [
     '(app)/projects/index.tsx',
     '(app)/projects/new.tsx',
-    '(app)/projects/[projectSlug]/index.tsx',
-    '(app)/projects/[projectSlug]/edit.tsx',
-    '(app)/projects/[projectSlug]/members.tsx',
-    '(app)/projects/[projectSlug]/reports/index.tsx',
-    '(app)/projects/[projectSlug]/reports/[number]/generate.tsx',
+    '(app)/projects/[project]/index.tsx',
+    '(app)/projects/[project]/edit.tsx',
+    '(app)/projects/[project]/members.tsx',
+    '(app)/projects/[project]/reports/index.tsx',
+    '(app)/projects/[project]/reports/[number]/generate.tsx',
   ];
 
   for (const route of requiredRoutes) {

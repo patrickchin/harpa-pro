@@ -1,7 +1,7 @@
 /**
- * Generate Report route — slug + number scheme (P3.0 commit 3).
+ * Generate Report route — slug-native scheme (P3.1).
  *
- * Reads `projectSlug` + `number` from path params, fetches the report
+ * Reads `project` (prj_…) + `number` from path params, fetches the report
  * draft via `useReportQuery`, and renders the props-driven
  * `GenerateNotes` screen body.
  *
@@ -26,22 +26,22 @@ import { safeBack } from '@/lib/nav/safe-back';
 
 export default function GenerateReportRoute() {
   const router = useRouter();
-  const { projectSlug, number } = useLocalSearchParams<{
-    projectSlug: string;
+  const { project, number } = useLocalSearchParams<{
+    project: string;
     number: string;
   }>();
-  const slug = projectSlug ?? '';
+  const slug = project ?? '';
   const parsedNumber = Number.parseInt(number ?? '', 10);
   const reportNumber = Number.isFinite(parsedNumber) ? parsedNumber : null;
 
-  const project = useProjectQuery(
-    { params: { projectSlug: slug } },
+  const projectQuery = useProjectQuery(
+    { params: { project: slug } },
     { enabled: slug.length > 0 },
   );
   const report = useReportQuery(
     {
       params: {
-        projectSlug: slug,
+        project: slug,
         number: reportNumber ?? 0,
       },
     },
@@ -93,7 +93,7 @@ export default function GenerateReportRoute() {
   }, [isGeneratingReport]);
 
   const canWrite =
-    project.data?.myRole === 'owner' || project.data?.myRole === 'editor';
+    projectQuery.data?.myRole === 'owner' || projectQuery.data?.myRole === 'editor';
 
   const reportTitleField = (
     report.data as { report?: { meta?: { title?: string | null } } } | undefined
@@ -101,7 +101,7 @@ export default function GenerateReportRoute() {
 
   return (
     <GenerateNotes
-      projectSlug={slug}
+      project={slug}
       reportNumber={reportNumber}
       notes={localNotes}
       notesLoading={report.isLoading}

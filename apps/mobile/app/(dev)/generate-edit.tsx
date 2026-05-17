@@ -59,7 +59,7 @@ export default function DevGenerateEdit() {
         ))}
       </View>
       <GenerateNotes
-        projectSlug="prj_dev"
+        project="prj_dev"
         reportNumber={1}
         notes={[]}
         notesLoading={false}

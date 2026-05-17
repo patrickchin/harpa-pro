@@ -20,7 +20,6 @@ function collectText(n: any): string {
 
 const draft: ReportListItem = {
   id: 'r1',
-  slug: 'rpt_a',
   number: 3,
   status: 'draft',
   visitDate: '2024-03-15T10:00:00.000Z',
@@ -29,7 +28,6 @@ const draft: ReportListItem = {
 };
 const final: ReportListItem = {
   id: 'r2',
-  slug: 'rpt_b',
   number: 2,
   status: 'finalized',
   visitDate: '2024-03-10T10:00:00.000Z',

@@ -27,7 +27,7 @@ export default function NewProjectRoute() {
             // replace (not push/dismissTo) so /projects/new leaves the stack
             // and back goes to the project list, not the creation form.
             onSuccess: (created) => {
-              router.replace(`/(app)/projects/${created.slug}` as never);
+              router.replace(`/(app)/projects/${created.id}` as never);
             },
           },
         );

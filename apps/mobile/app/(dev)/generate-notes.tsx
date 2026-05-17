@@ -84,7 +84,7 @@ export default function DevGenerateNotes() {
         ))}
       </View>
       <GenerateNotes
-        projectSlug="prj_dev"
+        project="prj_dev"
         reportNumber={1}
         notes={notes}
         notesLoading={mode === 'loading'}

@@ -15,23 +15,23 @@ import { safeBack } from '@/lib/nav/safe-back';
 
 export default function ProjectMembersRoute() {
   const router = useRouter();
-  const { projectSlug } = useLocalSearchParams<{ projectSlug: string }>();
-  const slug = projectSlug ?? '';
+  const { project } = useLocalSearchParams<{ project: string }>();
+  const slug = project ?? '';
 
   const me = useMeQuery();
-  const project = useProjectQuery(
-    { params: { projectSlug: slug } },
+  const projectQuery = useProjectQuery(
+    { params: { project: slug } },
     { enabled: slug.length > 0 },
   );
   const members = useProjectMembersQuery(
-    { params: { projectSlug: slug } },
+    { params: { project: slug } },
     { enabled: slug.length > 0 },
   );
   const add = useAddProjectMemberMutation();
   const remove = useRemoveProjectMemberMutation();
 
   const { refreshing, onRefresh } = useRefresh([
-    project.refetch,
+    projectQuery.refetch,
     members.refetch,
   ]);
 
@@ -41,22 +41,22 @@ export default function ProjectMembersRoute() {
     <ProjectMembers
       members={members.data?.items ?? []}
       currentUserId={me.data?.user?.id ?? null}
-      myRole={project.data?.myRole ?? 'viewer'}
-      ownerId={project.data?.ownerId ?? ''}
-      isLoading={project.isLoading || members.isLoading}
+      myRole={projectQuery.data?.myRole ?? 'viewer'}
+      ownerId={projectQuery.data?.ownerId ?? ''}
+      isLoading={projectQuery.isLoading || members.isLoading}
       refreshing={refreshing}
       onRefresh={onRefresh}
       onBack={() => safeBack(router, `/(app)/projects/${slug}`)}
       onAddMember={(input) =>
         add.mutate({
-          params: { projectSlug: slug },
+          params: { project: slug },
           body: input,
         })
       }
       isAddPending={add.isPending}
       addError={addError}
       onRemoveMember={(userId) =>
-        remove.mutate({ params: { projectSlug: slug, userId } })
+        remove.mutate({ params: { project: slug, user: userId } })
       }
       isRemovePending={remove.isPending}
     />

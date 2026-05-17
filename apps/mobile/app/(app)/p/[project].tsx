@@ -1,27 +1,27 @@
 /**
- * Short-URL resolver landing — /r/:reportSlug.
+ * Short-URL resolver landing — /p/:project.
  *
- * Resolves the report slug to {projectSlug, reportNumber} then
- * `router.replace`s to the canonical long URL
- * `/projects/:projectSlug/reports/:number`. See
- * docs/v4/design-p30-ids-slugs.md §6.
+ * Resolves the slug via the API then `router.replace`s to the
+ * canonical long URL `/projects/:project`. Uses `replace` so the
+ * bounce doesn't pollute the back stack. Renders an error state
+ * (never a stuck spinner) when the link is invalid or denied.
+ * See docs/v4/design-p31-slug-only-ids.md.
  */
 import { useEffect } from 'react';
 import { View, ActivityIndicator, Text } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useResolveReportSlugQuery } from '@/lib/api/hooks';
+import { useResolveProjectSlugQuery } from '@/lib/api/hooks';
 import { Button } from '@/components/primitives/Button';
 import { EmptyState } from '@/components/primitives/EmptyState';
 
-export default function ResolveReportSlugScreen() {
+export default function ResolveProjectSlugScreen() {
   const router = useRouter();
-  const { reportSlug } = useLocalSearchParams<{ reportSlug: string }>();
-  const result = useResolveReportSlugQuery({ params: { reportSlug } });
+  const { project } = useLocalSearchParams<{ project: string }>();
+  const result = useResolveProjectSlugQuery({ params: { project } });
 
   useEffect(() => {
     if (result.data) {
-      const { projectSlug, reportNumber } = result.data;
-      router.replace(`/projects/${projectSlug}/reports/${reportNumber}` as never);
+      router.replace(`/projects/${result.data.projectId}` as never);
     }
   }, [result.data, router]);
 
@@ -30,7 +30,7 @@ export default function ResolveReportSlugScreen() {
       <View className="flex-1 items-center justify-center bg-background p-6">
         <EmptyState
           title="Link not found"
-          description="That report link is no longer valid, or you don't have access to it."
+          description="That project link is no longer valid, or you don't have access to it."
           action={
             <Button
               variant="default"
@@ -47,7 +47,7 @@ export default function ResolveReportSlugScreen() {
   return (
     <View className="flex-1 items-center justify-center bg-background">
       <ActivityIndicator />
-      <Text className="mt-3 text-base text-muted-foreground">Opening report…</Text>
+      <Text className="mt-3 text-base text-muted-foreground">Opening project…</Text>
     </View>
   );
 }

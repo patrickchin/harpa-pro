@@ -11,17 +11,17 @@ import { safeBack } from '@/lib/nav/safe-back';
 
 export default function ProjectHomeRoute() {
   const router = useRouter();
-  const { projectSlug } = useLocalSearchParams<{ projectSlug: string }>();
-  const slug = projectSlug ?? '';
+  const { project } = useLocalSearchParams<{ project: string }>();
+  const slug = project ?? '';
 
   const result = useProjectQuery(
-    { params: { projectSlug: slug } },
+    { params: { project: slug } },
     { enabled: slug.length > 0 },
   );
   const { refreshing, onRefresh } = useRefresh([result.refetch]);
   const { copiedKey, copy } = useCopyToClipboard();
 
-  const project = result.data
+  const projectInfo = result.data
     ? {
         name: result.data.name,
         clientName: result.data.clientName,
@@ -37,7 +37,7 @@ export default function ProjectHomeRoute() {
 
   return (
     <ProjectHome
-      project={project}
+      project={projectInfo}
       isLoading={result.isLoading}
       refreshing={refreshing}
       onRefresh={onRefresh}

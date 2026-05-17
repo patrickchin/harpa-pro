@@ -15,27 +15,27 @@ import { safeBack } from '@/lib/nav/safe-back';
 
 export default function ReportsListRoute() {
   const router = useRouter();
-  const { projectSlug } = useLocalSearchParams<{ projectSlug: string }>();
-  const slug = projectSlug ?? '';
+  const { project } = useLocalSearchParams<{ project: string }>();
+  const slug = project ?? '';
 
-  const project = useProjectQuery(
-    { params: { projectSlug: slug } },
+  const projectQuery = useProjectQuery(
+    { params: { project: slug } },
     { enabled: slug.length > 0 },
   );
   const list = useProjectReportsQuery(
-    { params: { projectSlug: slug } },
+    { params: { project: slug } },
     { enabled: slug.length > 0 },
   );
   const create = useCreateReportMutation();
   const { refreshing, onRefresh } = useRefresh([list.refetch]);
 
   const canCreate =
-    project.data?.myRole === 'owner' || project.data?.myRole === 'editor';
+    projectQuery.data?.myRole === 'owner' || projectQuery.data?.myRole === 'editor';
 
   return (
     <ReportsList
       reports={list.data?.items ?? []}
-      projectName={project.data?.name ?? null}
+      projectName={projectQuery.data?.name ?? null}
       canCreate={canCreate}
       isLoading={list.isLoading}
       refreshing={refreshing}
@@ -44,7 +44,7 @@ export default function ReportsListRoute() {
       onBack={() => safeBack(router, `/(app)/projects/${slug}`)}
       onCreate={() => {
         create.mutate(
-          { params: { projectSlug: slug }, body: {} },
+          { params: { project: slug }, body: {} },
           {
             onSuccess: (resp) => {
               const created = (resp as { report?: { number: number } }).report;

@@ -10,7 +10,6 @@ import { Button } from '@/components/primitives/Button';
 const SAMPLE: ReportListItem[] = [
   {
     id: 'r1',
-    slug: 'rpt_aaa1',
     number: 3,
     status: 'draft',
     visitDate: new Date().toISOString(),
@@ -19,7 +18,6 @@ const SAMPLE: ReportListItem[] = [
   },
   {
     id: 'r2',
-    slug: 'rpt_bbb2',
     number: 2,
     status: 'finalized',
     visitDate: new Date(Date.now() - 86_400_000).toISOString(),
@@ -28,7 +26,6 @@ const SAMPLE: ReportListItem[] = [
   },
   {
     id: 'r3',
-    slug: 'rpt_ccc3',
     number: 1,
     status: 'finalized',
     visitDate: new Date(Date.now() - 86_400_000 * 7).toISOString(),

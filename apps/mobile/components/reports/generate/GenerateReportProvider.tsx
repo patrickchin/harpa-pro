@@ -37,7 +37,7 @@ import type { GeneratedSiteReport } from '@harpa/report-core';
  * mirrors + tests pass canned values.
  */
 export interface GenerateReportProviderProps {
-  projectSlug: string;
+  project: string;
   reportNumber: number | null;
   /** Notes already saved on the report. Empty array on a fresh draft. */
   notes: readonly NoteEntry[];
@@ -197,7 +197,7 @@ interface PreviewSurface {
 }
 
 export interface GenerateReportContextValue {
-  projectSlug: string;
+  project: string;
   reportNumber: number | null;
   reportTitle: string;
   notes: NotesSurface;
@@ -232,7 +232,7 @@ export function useGenerateReport(): GenerateReportContextValue {
 const EMPTY_MEMBERS: ReadonlyMap<string, string> = new Map();
 
 export function GenerateReportProvider({
-  projectSlug,
+  project,
   reportNumber,
   notes,
   notesLoading = false,
@@ -324,7 +324,7 @@ export function GenerateReportProvider({
 
   const value = useMemo<GenerateReportContextValue>(
     () => ({
-      projectSlug,
+      project,
       reportNumber,
       reportTitle: reportTitle?.trim() || 'New Report',
       notes: {
@@ -395,7 +395,7 @@ export function GenerateReportProvider({
       handleRegenerate,
     }),
     [
-      projectSlug,
+      project,
       reportNumber,
       reportTitle,
       notes,

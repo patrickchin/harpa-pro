@@ -5,11 +5,11 @@ export default function ProjectsLayout() {
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="index" />
       <Stack.Screen name="new" />
-      <Stack.Screen name="[projectSlug]/index" />
-      <Stack.Screen name="[projectSlug]/edit" />
-      <Stack.Screen name="[projectSlug]/members" />
-      <Stack.Screen name="[projectSlug]/reports/index" />
-      <Stack.Screen name="[projectSlug]/reports/[number]/generate" />
+      <Stack.Screen name="[project]/index" />
+      <Stack.Screen name="[project]/edit" />
+      <Stack.Screen name="[project]/members" />
+      <Stack.Screen name="[project]/reports/index" />
+      <Stack.Screen name="[project]/reports/[number]/generate" />
     </Stack>
   );
 }

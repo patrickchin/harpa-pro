@@ -12,7 +12,6 @@ import { formatDate } from './date';
 
 export type ReportListItem = {
   id: string;
-  slug: string;
   number: number;
   status: 'draft' | 'finalized';
   visitDate: string | null;

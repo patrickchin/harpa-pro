@@ -73,15 +73,15 @@ describe('NewProjectRoute — navigation wiring', () => {
       const tree = render();
       pressSubmit(tree);
       const [, callbacks] = mutateSpy.mock.calls[0]!;
-      act(() => callbacks.onSuccess?.({ slug: 'my-cool-project' }));
-      expect(routerSpy.replace).toHaveBeenCalledWith('/(app)/projects/my-cool-project');
+      act(() => callbacks.onSuccess?.({ id: 'prj_mycool00' }));
+      expect(routerSpy.replace).toHaveBeenCalledWith('/(app)/projects/prj_mycool00');
     });
 
     it('does not call dismissTo (only works for modals, not stack screens)', () => {
       const tree = render();
       pressSubmit(tree);
       const [, callbacks] = mutateSpy.mock.calls[0]!;
-      act(() => callbacks.onSuccess?.({ slug: 'any-project' }));
+      act(() => callbacks.onSuccess?.({ id: 'prj_any00000' }));
       expect(routerSpy.dismissTo).not.toHaveBeenCalled();
     });
 
@@ -89,7 +89,7 @@ describe('NewProjectRoute — navigation wiring', () => {
       const tree = render();
       pressSubmit(tree);
       const [, callbacks] = mutateSpy.mock.calls[0]!;
-      act(() => callbacks.onSuccess?.({ slug: 'any-project' }));
+      act(() => callbacks.onSuccess?.({ id: 'prj_any00000' }));
       expect(routerSpy.back).not.toHaveBeenCalled();
     });
   });

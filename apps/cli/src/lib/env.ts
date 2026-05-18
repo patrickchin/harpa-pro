@@ -16,6 +16,11 @@ const CliEnv = z.object({
   HARPA_TOKEN: z.string().min(1).optional(),
   HARPA_DEBUG: z.enum(['0', '1']).default('0'),
   HARPA_IDEMPOTENCY_KEY: z.string().min(1).optional(),
+  // TUI-only: override the OS-default config directory used by the
+  // persisted-credentials store (`tui/credentials.ts`). The flag CLI
+  // never reads the file, so this var is irrelevant to it. Useful for
+  // tests and for users who want creds under XDG even on macOS.
+  HARPA_CONFIG_HOME: z.string().min(1).optional(),
 });
 
 export type CliEnv = z.infer<typeof CliEnv>;
@@ -57,6 +62,6 @@ export function formatEnvError(err: z.ZodError): string {
     ...lines,
     '',
     'Required: HARPA_API_URL (e.g. http://localhost:8787)',
-    'Optional: HARPA_TOKEN, HARPA_DEBUG=0|1, HARPA_IDEMPOTENCY_KEY',
+    'Optional: HARPA_TOKEN, HARPA_DEBUG=0|1, HARPA_IDEMPOTENCY_KEY, HARPA_CONFIG_HOME',
   ].join('\n');
 }

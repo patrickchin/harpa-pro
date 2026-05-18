@@ -18,6 +18,13 @@ import { useRefresh } from '@/lib/use-refresh';
 import { useCopyToClipboard } from '@/lib/use-clipboard';
 import { safeBack } from '@/lib/nav/safe-back';
 import { buildInfo } from '@/lib/build-info';
+import {
+  AI_PROVIDERS,
+  PROVIDER_MODELS,
+  useAiProvider,
+  useAvailableProviders,
+  type AiProviderKey,
+} from '@/lib/ai/useAiProvider';
 
 export default function ProfileRoute() {
   const router = useRouter();
@@ -27,6 +34,9 @@ export default function ProfileRoute() {
 
   const usageQuery = useMeUsageQuery();
   const { refreshing, onRefresh } = useRefresh([usageQuery.refetch]);
+
+  const ai = useAiProvider();
+  const availability = useAvailableProviders();
 
   // Find the current month's row from the v4 usage history; fall back
   // to null. v4 returns one row per month — match by the YYYY-MM prefix
@@ -74,16 +84,18 @@ export default function ProfileRoute() {
         queryClient.clear();
         await queryClient.refetchQueries({ type: 'active' });
       }}
-      // TODO(P4): expose the AI provider picker once we have a
-      // provider-availability endpoint + persistence layer.
-      showDeveloperSection={false}
-      aiProviders={[]}
-      aiProvider=""
-      onSelectProvider={() => undefined}
-      aiModels={[]}
-      aiModel=""
-      onSelectModel={() => undefined}
-      availableProviderKeys={null}
+      // P3.15.4 — AI provider picker is now real. Availability comes
+      // from `useAvailableProviders` (static `true` until the API
+      // exposes a probe — TODO(P3.15.4-contract)). Selection persists
+      // via AsyncStorage.
+      showDeveloperSection
+      aiProviders={AI_PROVIDERS}
+      aiProvider={ai.provider}
+      onSelectProvider={(key) => ai.setProvider(key as AiProviderKey)}
+      aiModels={PROVIDER_MODELS[ai.provider] ?? []}
+      aiModel={ai.model}
+      onSelectModel={(model) => ai.setModel(model)}
+      availableProviderKeys={availability.availableKeys}
       buildVersion={buildInfo.displayVersion}
       serverLabel={buildInfo.serverLabel}
     />

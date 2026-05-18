@@ -50,6 +50,7 @@ export default function DevAccount() {
           refreshing={false}
           onRefresh={() => undefined}
           onBack={() => undefined}
+          onSaveProfile={async () => undefined}
         />
       </View>
     </View>

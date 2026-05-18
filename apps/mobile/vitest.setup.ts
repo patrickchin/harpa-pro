@@ -354,6 +354,100 @@ vi.mock('react-native-gesture-handler', () => {
   };
 });
 
+// `react-native-svg` ships native bindings; render each export as a
+// stub host element so snapshots stay stable.
+vi.mock('react-native-svg', () => {
+  const NAMES = [
+    'Svg',
+    'Rect',
+    'Line',
+    'Circle',
+    'Path',
+    'G',
+    'Text',
+    'TSpan',
+    'Defs',
+    'LinearGradient',
+    'Stop',
+    'ClipPath',
+    'Polygon',
+    'Polyline',
+    'Ellipse',
+  ];
+  const out: Record<string, unknown> = { __esModule: true };
+  for (const name of NAMES) {
+    out[name] = makeRNComponent(`svg-${name}`);
+  }
+  out.default = out.Svg;
+  return out;
+});
+
+// `expo-image` — render as a stub host so component trees that consume
+// CachedImage are inspectable in tests.
+vi.mock('expo-image', () => ({
+  Image: makeRNComponent('expo-Image'),
+}));
+
+// `expo-image-picker` — default mock returns a single picked asset.
+// Tests that need cancel / permission-denied paths can re-mock per file.
+vi.mock('expo-image-picker', () => ({
+  requestMediaLibraryPermissionsAsync: vi.fn(async () => ({
+    granted: true,
+    canAskAgain: true,
+    status: 'granted',
+  })),
+  launchImageLibraryAsync: vi.fn(async () => ({
+    canceled: false,
+    assets: [
+      {
+        uri: 'file:///tmp/picked-avatar.jpg',
+        width: 1024,
+        height: 1024,
+        type: 'image',
+        mimeType: 'image/jpeg',
+        fileSize: 128_000,
+      },
+    ],
+  })),
+  PermissionStatus: {
+    UNDETERMINED: 'undetermined',
+    GRANTED: 'granted',
+    DENIED: 'denied',
+  },
+  MediaType: { Images: 'images' },
+  MediaTypeOptions: { Images: 'Images' },
+}));
+
+// `expo-image-manipulator` — pass through the input URI as the
+// "compressed" output so tests can assert downstream behaviour without
+// faking pixels.
+vi.mock('expo-image-manipulator', () => ({
+  manipulateAsync: vi.fn(async (uri: string) => ({
+    uri,
+    width: 512,
+    height: 512,
+  })),
+  SaveFormat: { JPEG: 'jpeg', PNG: 'png' },
+}));
+
+// `expo-file-system` ships native bindings via `expo-modules-core`.
+// We stub the few APIs the app uses for size lookup (avatar upload).
+vi.mock('expo-file-system', () => ({
+  getInfoAsync: vi.fn(async (_uri: string, _opts?: { size?: boolean }) => ({
+    exists: true,
+    size: 80_000,
+    uri: _uri,
+    isDirectory: false,
+  })),
+  documentDirectory: 'file:///mock-doc/',
+  cacheDirectory: 'file:///mock-cache/',
+  readAsStringAsync: vi.fn(async () => ''),
+  writeAsStringAsync: vi.fn(async () => undefined),
+  deleteAsync: vi.fn(async () => undefined),
+  makeDirectoryAsync: vi.fn(async () => undefined),
+  EncodingType: { Base64: 'base64', UTF8: 'utf8' },
+}));
+
 // `expo-media-library` ships native bindings. Default stub: granted +
 // no-op save. Tests can re-mock per-file to assert call counts.
 vi.mock('expo-media-library', () => ({

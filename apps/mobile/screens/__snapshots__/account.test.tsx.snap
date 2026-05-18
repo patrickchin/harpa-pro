@@ -78,6 +78,7 @@ exports[`Account > matches snapshot at default props 1`] = `
         contentContainerStyle={
           {
             "gap": 20,
+            "paddingBottom": 40,
           }
         }
         refreshControl={
@@ -166,8 +167,12 @@ exports[`Account > matches snapshot at default props 1`] = `
             Full Name
           </rn-Text>
           <rn-TextInput
+            autoCapitalize="words"
+            autoCorrect={false}
             className="min-h-touch rounded-md border px-4 py-3 text-base border-border bg-surface-muted text-muted-foreground"
             editable={false}
+            onChangeText={[Function]}
+            placeholder="Your full name"
             placeholderTextColor="#5f5b66"
             style={
               [
@@ -189,6 +194,7 @@ exports[`Account > matches snapshot at default props 1`] = `
                 undefined,
               ]
             }
+            testID="input-full-name"
             value="Jordan Sims"
           />
         </rn-View>
@@ -201,8 +207,12 @@ exports[`Account > matches snapshot at default props 1`] = `
             Company Name
           </rn-Text>
           <rn-TextInput
+            autoCapitalize="words"
+            autoCorrect={false}
             className="min-h-touch rounded-md border px-4 py-3 text-base border-border bg-surface-muted text-muted-foreground"
             editable={false}
+            onChangeText={[Function]}
+            placeholder="Your company"
             placeholderTextColor="#5f5b66"
             style={
               [
@@ -224,6 +234,7 @@ exports[`Account > matches snapshot at default props 1`] = `
                 undefined,
               ]
             }
+            testID="input-company-name"
             value="Sims Construction"
           />
         </rn-View>

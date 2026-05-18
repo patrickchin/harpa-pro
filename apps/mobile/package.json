@@ -30,6 +30,8 @@
     "expo-dev-client": "^5.0.20",
     "expo-file-system": "^18.0.12",
     "expo-image": "^55.0.10",
+    "expo-image-manipulator": "^55.0.16",
+    "expo-image-picker": "^55.0.20",
     "expo-linking": "~7.0.3",
     "expo-media-library": "^55.0.17",
     "expo-router": "~4.0.0",

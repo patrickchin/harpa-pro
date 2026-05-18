@@ -1,0 +1,61 @@
+appId: com.harpa.pro
+name: P3.13 / P3.15.4 — Profile / Account / Usage (dev mirrors)
+tags:
+  - p3
+  - profile
+  - account
+  - usage
+# Uses the (dev) mirrors because the real (app)/* routes require
+# sign-in and a live /me + /me/usage payload, neither of which Maestro
+# can drive deterministically in CI. The mirrors expose the loaded
+# state directly so the visible affordances (inline edit, AvatarUploader,
+# UsageBarChart, AI provider picker) can be eyeballed without backend.
+---
+- launchApp:
+    clearState: true
+    clearKeychain: true
+    stopApp: true
+- waitForAnimationToEnd
+
+# ── Profile mirror ──────────────────────────────────────────────
+- openLink: harpa://dev/profile
+- assertVisible: "Profile"
+- assertVisible: "Account Details"
+- assertVisible: "Usage History"
+- assertVisible: "Developer"
+- assertVisible: "Sign Out"
+
+# Toggle a different mode and confirm the body re-renders.
+- tapOn: "usage-loading"
+- assertVisible: "Profile"
+
+# ── Account mirror — inline editor ─────────────────────────────
+- openLink: harpa://dev/account
+- assertVisible: "Account Details"
+- assertVisible:
+    id: "account-avatar-placeholder"
+- assertVisible:
+    id: "btn-avatar-upload"
+- assertVisible:
+    id: "btn-edit-profile"
+- tapOn:
+    id: "btn-edit-profile"
+- assertVisible:
+    id: "btn-save-profile"
+- assertVisible:
+    id: "btn-cancel-edit"
+- tapOn:
+    id: "btn-cancel-edit"
+- assertVisible:
+    id: "btn-edit-profile"
+
+# ── Usage mirror — token chart hidden in default mode ──────────
+- openLink: harpa://dev/usage
+- assertVisible: "Usage History"
+- assertVisible: "All-Time Summary"
+- assertVisible: "Monthly Breakdown"
+- assertVisible: "Token Pricing Reference"
+- tapOn:
+    id: "usage-month-2024-11"
+- assertVisible: "Reports"
+- assertVisible: "Voice Notes"

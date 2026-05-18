@@ -15,7 +15,6 @@
 import React from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import TestRenderer, { act } from 'react-test-renderer';
-import { View } from 'react-native';
 
 import { Usage, type UsageMonthlyRow } from './usage';
 
@@ -128,30 +127,71 @@ describe('Usage', () => {
     ).toContain('collapse');
   });
 
-  it('renders the chart slot when chart is set and history has > 1 month', () => {
+  it('renders a token UsageBarChart when ≥2 months have token data', () => {
     const tree = render(
       <Usage
         {...defaults}
-        chart={<View testID="dev-chart" />}
+        history={[
+          { month: '2024-11', reportsCount: 12, voiceNotesCount: 34, inputTokens: 100_000, outputTokens: 40_000 },
+          { month: '2024-10', reportsCount: 8, voiceNotesCount: 21, inputTokens: 80_000, outputTokens: 30_000 },
+        ]}
       />,
     );
     expect(() =>
-      tree.root.findByProps({ testID: 'dev-chart' }),
+      tree.root.findByProps({ testID: 'usage-token-chart' }),
     ).not.toThrow();
     expect(collectText(tree.toJSON())).toContain('Usage Over Time');
   });
 
-  it('hides the chart slot when only one month is available', () => {
+  it('hides the token chart when token data is missing', () => {
+    const tree = render(<Usage {...defaults} />);
+    expect(
+      tree.root.findAllByProps({ testID: 'usage-token-chart' }),
+    ).toHaveLength(0);
+  });
+
+  it('hides the token chart when only one month is available', () => {
     const tree = render(
       <Usage
         {...defaults}
-        history={HISTORY.slice(0, 1)}
-        chart={<View testID="dev-chart" />}
+        history={[
+          { month: '2024-11', reportsCount: 12, voiceNotesCount: 34, inputTokens: 100_000, outputTokens: 40_000 },
+        ]}
       />,
     );
     expect(
-      tree.root.findAllByProps({ testID: 'dev-chart' }),
+      tree.root.findAllByProps({ testID: 'usage-token-chart' }),
     ).toHaveLength(0);
+  });
+
+  it('renders per-model breakdown inside the expanded row when present', () => {
+    const tree = render(
+      <Usage
+        {...defaults}
+        history={[
+          {
+            month: '2024-11',
+            reportsCount: 12,
+            voiceNotesCount: 34,
+            inputTokens: 100_000,
+            outputTokens: 40_000,
+            perModel: [
+              { model: 'gpt-4o', inputTokens: 60_000, outputTokens: 20_000 },
+              { model: 'claude-sonnet', inputTokens: 40_000, outputTokens: 20_000 },
+            ],
+          },
+        ]}
+      />,
+    );
+    act(() =>
+      tree.root.findByProps({ testID: 'usage-month-2024-11' }).props.onPress(),
+    );
+    expect(() =>
+      tree.root.findByProps({ testID: 'usage-month-2024-11-per-model' }),
+    ).not.toThrow();
+    const text = collectText(tree.toJSON());
+    expect(text).toContain('gpt-4o');
+    expect(text).toContain('claude-sonnet');
   });
 
   it('invokes onBack when the back button is pressed', () => {

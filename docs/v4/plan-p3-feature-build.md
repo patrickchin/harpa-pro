@@ -305,10 +305,12 @@ verbatim; `lib/build-info.ts` adapted to read Fly API base URL from
 `feat(mobile): P3.13 — Profile / Account / Usage screens ported`.
 
 **Follow-ups → [P3.15](#p315--feature-completion--upload-wiring):**
-`AvatarUploader` (blocked on R2 orchestration), inline name/company
-editing, token-level usage (API + `UsageBarChart`), AI provider
-persistence + availability probe. Notifications row + language toggle
-stay out of scope.
+`AvatarUploader`, inline name/company editing, AI provider
+persistence + availability probe, Profile tab bar entry, and the
+`UsageBarChart` + per-model breakdown all shipped in
+[P3.15.4](#p3154--account--profile--usage-wiring) — token-level
+`/me/usage` columns deferred to [P3.15.5](#p3155--llm-token-accounting).
+Notifications row + language toggle stay out of scope.
 
 ### P3.11 — Files screen (⊘ N/A)
 
@@ -444,22 +446,27 @@ token-level usage UI in P3.15.4 — land it before extending
 - [x] Commit: `feat(mobile): saved-report rich timeline + ReportPhotos + image preview`.
 
 #### P3.15.4 — Account / Profile / Usage wiring
-- [ ] Inline editor + optimistic update for display name + company
+- [x] Inline editor + optimistic update for display name + company
       name via `useUpdateMeMutation`.
-- [ ] `AvatarUploader` component (depends on P3.15.1).
+- [x] `AvatarUploader` component (depends on P3.15.1).
 - [ ] Extend `/me/usage` API response with `inputTokens`,
       `outputTokens`, `cachedTokens` per month + per-model breakdown.
       Sourced from the `llm_usage_events` table (P3.15.5).
-- [ ] `UsageBarChart` + per-event timeline rendered in
-      `screens/usage.tsx` (currently a chart-slot placeholder).
-- [ ] `useAiProvider` AsyncStorage round-trip + `useAvailableProviders`
-      (`/generate-report` availability probe). Profile route stops
-      passing empty catalogues.
-- [ ] Add a nav entry to the v4 tab bar for Profile (currently only
-      reached via deep-link).
-- [ ] Maestro flow: tab → profile → edit name → sign out; usage
-      month switch + chart.
-- [ ] Commit: `feat(mobile,api): account editing + token-level usage + AI provider persistence`.
+      _(API change deferred to P3.15.5; mobile types the new fields
+      locally with `TODO(P3.15.4-contract)` so the screen renders the
+      moment the regen lands.)_
+- [x] `UsageBarChart` + per-model breakdown rendered in
+      `screens/usage.tsx` (chart-slot placeholder removed; chart
+      renders inline when ≥2 months have token data).
+- [x] `useAiProvider` AsyncStorage round-trip + `useAvailableProviders`
+      (static "all available" until the API exposes a probe — marked
+      `TODO(P3.15.4-contract)`). Profile route now passes the canonical
+      catalogue + `showDeveloperSection`.
+- [x] Add a nav entry to the v4 tab bar for Profile (Projects +
+      Profile visible; Account / Usage hidden via `href: null`).
+- [x] Maestro flow: tab → profile → edit name → sign out; usage
+      month switch + chart (`.maestro/p3-13-profile-usage.yaml`).
+- [x] Commit: `feat(mobile): account editing + AvatarUploader + token-level usage + AI provider persistence`.
 
 #### P3.15.5 — LLM token accounting
 

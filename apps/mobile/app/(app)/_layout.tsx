@@ -11,7 +11,7 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { BackHandler, ToastAndroid, Platform, ActivityIndicator, View } from 'react-native';
 import { Tabs, useNavigation, Redirect } from 'expo-router';
-import { FolderOpen } from 'lucide-react-native';
+import { FolderOpen, User } from 'lucide-react-native';
 import { colors } from '@/lib/design-tokens/colors';
 import { useAuthSession } from '@/lib/auth/session';
 import { decideAppRedirect } from '@/lib/auth/auth-gate';
@@ -58,14 +58,15 @@ export default function AppLayout() {
     );
   }
 
-  // Render the tab shell. Tab bar is hidden per canonical (single tab).
+  // Render the tab shell. P3.15.4 — Projects + Profile tabs are
+  // visible; non-tab routes (account, usage) are registered but
+  // hidden from the tab bar (`href: null`).
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: colors.foreground,
         tabBarInactiveTintColor: colors.muted.foreground,
-        tabBarStyle: { display: 'none' },
         tabBarLabelStyle: { fontSize: 14, fontWeight: '600' },
       }}
     >
@@ -77,6 +78,16 @@ export default function AppLayout() {
           tabBarIcon: ({ color, size }) => <FolderOpen size={size} color={color} />,
         }}
       />
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: 'Profile',
+          tabBarButtonTestID: 'tab-profile',
+          tabBarIcon: ({ color, size }) => <User size={size} color={color} />,
+        }}
+      />
+      <Tabs.Screen name="account" options={{ href: null }} />
+      <Tabs.Screen name="usage" options={{ href: null }} />
     </Tabs>
   );
 }

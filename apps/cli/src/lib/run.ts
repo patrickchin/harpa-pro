@@ -8,8 +8,9 @@
  *   - thrown errors (network / parse) render via `printTransportError`
  *     and exit 7
  *
- * Every command goes through this helper so the output contract is
- * enforced in one place.
+ * `performRequest` is the pure core (no I/O, no exit). The TUI uses it
+ * directly to render outcomes through its prompter; `executeRequest`
+ * uses it to drive stdout/stderr writes and return an exit code.
  */
 import chalk from 'chalk';
 import {
@@ -27,6 +28,48 @@ export interface GlobalFlags {
   verbose?: boolean;
 }
 
+/**
+ * Outcome of a single API call, in a form both the CLI exit-adapter
+ * (`runRequest`) and the TUI execution loop can render. No
+ * `process.exit` and no I/O happens in `performRequest` — that's the
+ * caller's responsibility.
+ */
+export type RequestOutcome<T> =
+  | { kind: 'ok'; data: T; response: Response }
+  | { kind: 'apiError'; status: number; body: ErrorEnvelope | undefined; response: Response }
+  | { kind: 'transport'; error: unknown }
+  | { kind: 'missingToken'; error: MissingTokenError };
+
+/**
+ * Pure execution core. Invokes the openapi-fetch thunk, normalises
+ * thrown errors, and classifies the response.
+ */
+export async function performRequest<T>(
+  request: () => Promise<{ data?: T; error?: unknown; response: Response }>,
+): Promise<RequestOutcome<T>> {
+  let result: { data?: T; error?: unknown; response: Response };
+  try {
+    result = await request();
+  } catch (err) {
+    if (err instanceof MissingTokenError) {
+      return { kind: 'missingToken', error: err };
+    }
+    return { kind: 'transport', error: err };
+  }
+
+  const { data, error, response } = result;
+  const status = response.status;
+  if (status >= 200 && status < 300) {
+    return { kind: 'ok', data: data as T, response };
+  }
+  return {
+    kind: 'apiError',
+    status,
+    body: error as ErrorEnvelope | undefined,
+    response,
+  };
+}
+
 export interface RunRequestOptions<T> extends GlobalFlags {
   /** Called for 2xx; should return the string to write to stdout, or undefined to skip. */
   format: (data: T) => string | undefined;
@@ -41,49 +84,47 @@ export interface RunRequestOptions<T> extends GlobalFlags {
 }
 
 /**
- * Pure core: runs the request, writes output, returns the exit code.
- * Never calls `process.exit`, so it is safe to use from tests.
+ * Pure-ish adapter: runs the request, writes output to the supplied
+ * streams, and returns the exit code. Never calls `process.exit`, so
+ * it is safe to use from tests.
  */
 export async function executeRequest<T>(opts: RunRequestOptions<T>): Promise<ExitCode> {
   const out = opts.stdout ?? process.stdout;
   const err = opts.stderr ?? process.stderr;
   const debug = process.env.HARPA_DEBUG === '1';
 
-  let result: { data?: T; error?: unknown; response: Response };
-  try {
-    result = await opts.request();
-  } catch (e) {
-    if (e instanceof MissingTokenError) {
-      err.write(chalk.red('Error: ' + e.message) + '\n');
-      return e.exitCode;
-    }
-    printTransportError(e, { json: opts.json, debug, stderr: err });
+  const outcome = await performRequest(opts.request);
+
+  if (outcome.kind === 'missingToken') {
+    err.write(chalk.red('Error: ' + outcome.error.message) + '\n');
+    return outcome.error.exitCode;
+  }
+
+  if (outcome.kind === 'transport') {
+    printTransportError(outcome.error, { json: opts.json, debug, stderr: err });
     return EXIT.TRANSPORT;
   }
 
-  const { data, error, response } = result;
-  const status = response.status;
-
-  if (status >= 200 && status < 300) {
+  if (outcome.kind === 'ok') {
     if (opts.json) {
       const json = opts.formatJson
-        ? opts.formatJson(data as T)
-        : JSON.stringify(data ?? {}, null, 2);
+        ? opts.formatJson(outcome.data)
+        : JSON.stringify(outcome.data ?? {}, null, 2);
       out.write(json + '\n');
     } else {
-      const formatted = opts.format(data as T);
+      const formatted = opts.format(outcome.data);
       if (formatted !== undefined && formatted !== '') out.write(formatted + '\n');
     }
-    if (opts.verbose) writeVerbose(response, err);
+    if (opts.verbose) writeVerbose(outcome.response, err);
     return EXIT.OK;
   }
 
-  printError(status, error as ErrorEnvelope | undefined, response.headers, {
+  printError(outcome.status, outcome.body, outcome.response.headers, {
     json: opts.json,
     debug,
     stderr: err,
   });
-  return mapStatusToExitCode(status);
+  return mapStatusToExitCode(outcome.status);
 }
 
 /**

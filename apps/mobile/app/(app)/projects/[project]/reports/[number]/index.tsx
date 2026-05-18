@@ -14,15 +14,17 @@
  * yet (TODO(P4) markers). They surface as no-op confirm flows so the
  * dialog wiring is exercised end-to-end in tests + dev mirrors.
  */
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
 import { SavedReport } from '@/screens/saved-report';
 import {
   useProjectQuery,
   useReportQuery,
+  useReportNotesQuery,
   useDeleteReportMutation,
 } from '@/lib/api/hooks';
+import type { ReportNoteRow } from '@/components/reports/detail/ReportNotesPane';
 import { useRefresh } from '@/lib/use-refresh';
 import { useReportPdfActions } from '@/lib/use-report-pdf-actions';
 import { env } from '@/lib/env';
@@ -60,12 +62,14 @@ export default function SavedReportRoute() {
 
   const reportRow = reportQuery.data as
     | {
+        id?: string;
         status?: 'draft' | 'finalized';
         body?: reportSchemas.ReportBody | null;
         visitDate?: string | null;
       }
     | undefined;
   const reportStatus = reportRow?.status ?? null;
+  const reportId = reportRow?.id ?? null;
 
   // Translate the persisted flat `ReportBody` shape into the wrapped
   // `GeneratedSiteReport` that the saved-report UI consumes. Fixture
@@ -78,13 +82,38 @@ export default function SavedReportRoute() {
       ? reportBodyToGeneratedReport(reportRow.body)
       : null;
 
+  // Source-notes timeline for the saved report. Same query used by the
+  // generate route — the API returns text + voice + image + document
+  // rows; the detail pane currently renders text-bodied entries only.
+  const notesQuery = useReportNotesQuery(
+    { params: { report: reportId ?? '' } },
+    { enabled: reportId !== null },
+  );
+
   const { refreshing, onRefresh } = useRefresh([
     () => reportQuery.refetch(),
+    () => notesQuery.refetch(),
   ]);
-
-  // TODO(P4): swap for `useReportNotesQuery` once `useLocalReportNotes`
-  // ports. Empty array means the Notes tab renders the EmptyState.
-  const noteRows = [] as const;
+  const noteRows = useMemo<ReadonlyArray<ReportNoteRow>>(() => {
+    const items = (notesQuery.data as
+      | {
+          items?: ReadonlyArray<{
+            id: string;
+            kind: 'text' | 'voice' | 'image' | 'document';
+            body: string | null;
+            transcript: string | null;
+            createdAt: string;
+          }>;
+        }
+      | undefined)?.items;
+    if (!items) return [];
+    return items.map((n) => ({
+      id: n.id,
+      body: n.body ?? n.transcript ?? null,
+      kind: n.kind === 'image' ? 'photo' : n.kind,
+      createdAt: n.createdAt ?? null,
+    }));
+  }, [notesQuery.data]);
 
   // TODO(P4): wire to `useReportAutoSave` once the autosave hook
   // ports. For now the Edit tab updates local state only.

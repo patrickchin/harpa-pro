@@ -34,6 +34,11 @@ pnpm harpa files upload --file ./photo.jpg --kind image
 `--json` returns the raw API response; `--verbose` prints headers
 and the request ID to stderr. See [`docs/v4/arch-cli.md`](docs/v4/arch-cli.md).
 
+Prefer an interactive menu? Run `pnpm harpa tui` to drive the same
+commands through a `@clack/prompts` shell — useful for exploratory
+debugging without memorising every flag. See
+[`docs/v4/arch-tui.md`](docs/v4/arch-tui.md).
+
 (Wire-up happens in P0 — see [`docs/v4/plan-p0-foundation.md`](docs/v4/plan-p0-foundation.md).)
 
 ## Layout

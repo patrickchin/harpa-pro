@@ -449,6 +449,16 @@ real LLM / R2 / Twilio in CI.
 
 ## 7. Implementation checklist (one commit each)
 
+> **Status (TUI.0 – TUI.7 shipped on `feat/tui`).** All eight steps
+> below are landed. The follow-on commit
+> `feat(cli): register every CLI leaf in the TUI menu` adds
+> `tui/entries.ts` so every remaining citty leaf (`auth`, `me`,
+> `projects`, `reports`, `notes`, `files`, `voice`, `settings`) is
+> exposed in the TUI via `defineTuiEntry()` — a sidecar variant of
+> `defineHarpaCommand()` that attaches a `tuiSpec` to an existing
+> citty command without rewriting its `run` block. Only
+> `files upload` stays opted out (multi-step presign → PUT → register).
+
 1. **TUI.0 — Refactor `lib/run.ts` into `performRequest` + adapter.**
    Behaviour-preserving split. Existing `health` integration test
    stays green; add a `performRequest.test.ts` that asserts each

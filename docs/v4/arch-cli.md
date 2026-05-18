@@ -29,6 +29,25 @@ These may land post-v1 if demand surfaces, but the initial implementation is sta
 > the execution path with the flag CLI (`defineHarpaCommand()` →
 > `performRequest`), so behaviour is identical.
 
+### TUI quickstart
+
+```bash
+HARPA_API_URL=http://localhost:8787 pnpm harpa tui
+```
+
+The menu is grouped by area (`auth`, `me`, `projects`, `reports`,
+`notes`, `files`, `voice`, `settings`, `health`). Pick a group, pick
+a command, answer the prompts — the underlying API call is the same
+one the flag CLI would make, and successful responses render through
+the same formatters. Unauthenticated commands prompt you to sign in
+first; the menu also includes a "Set API URL" entry for switching
+environments mid-session without restarting the process.
+
+The only leaf intentionally omitted from the TUI is `harpa files
+upload`, which streams a local file through R2 — use the three
+primitives (`files presign`, `files register`, `files url`) or run
+the upload from the flag CLI instead.
+
 ## Stack
 
 - **Framework:** `citty` ([@unjs/citty](https://github.com/unjs/citty))

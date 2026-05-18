@@ -271,17 +271,52 @@ export async function deleteReport(db: Db, reportId: string): Promise<boolean> {
 // AI-generation surface (P1.7).
 // ---------------------------------------------------------------------------
 
+/**
+ * Build the user-prompt payload for `generateReport`.
+ *
+ * Returns a numbered, kind-aware notes block. Text + voice notes carry
+ * their body/transcript verbatim; image/document notes contribute a
+ * `[image N]` / `[document N]` placeholder so the LLM acknowledges the
+ * attachment without seeing its contents. The structure ("NOTES:\n[1]
+ * …") matches the canonical v3 `formatNotes` / `buildPrompt` shape the
+ * SYSTEM_PROMPT references — keep them in sync.
+ */
 export async function collectNotesForGeneration(db: Db, reportId: string): Promise<string> {
-  const r = await db.execute<{ body: string | null; transcript: string | null }>(sql`
-    SELECT body, transcript
+  const r = await db.execute<{
+    kind: 'text' | 'voice' | 'image' | 'document';
+    body: string | null;
+    transcript: string | null;
+  }>(sql`
+    SELECT kind, body, transcript
     FROM app.notes
     WHERE report_id = ${reportId}
     ORDER BY created_at ASC, id ASC
   `);
-  return r.rows
-    .map((n) => n.transcript ?? n.body ?? '')
-    .filter((s) => s.length > 0)
-    .join('\n\n');
+  const counters: Record<'image' | 'document', number> = { image: 0, document: 0 };
+  const lines: string[] = [];
+  for (const note of r.rows) {
+    let content: string;
+    switch (note.kind) {
+      case 'text':
+        content = (note.body ?? '').trim();
+        break;
+      case 'voice':
+        content = (note.transcript ?? note.body ?? '').trim();
+        break;
+      case 'image':
+        content = `[image ${++counters.image}]`;
+        break;
+      case 'document':
+        content = `[document ${++counters.document}]`;
+        break;
+      default:
+        content = (note.body ?? '').trim();
+    }
+    if (content.length === 0) continue;
+    lines.push(`[${lines.length + 1}] ${content}`);
+  }
+  if (lines.length === 0) return '';
+  return `NOTES:\n${lines.join('\n')}`;
 }
 
 export async function setReportBody(

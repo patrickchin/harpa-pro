@@ -348,5 +348,17 @@ export async function generateReport(input: GenerateReportInput): Promise<Genera
     // Don't leak the failing payload — keep the error surface generic.
     throw new AiProviderError('generateReport: provider response did not match report schema');
   }
-  return { body: result.data, text: out.text, systemPrompt: req.systemPrompt, userPrompt: req.userPrompt, model: req.model, vendor };
+  return {
+    body: result.data,
+    text: out.text,
+    systemPrompt: req.systemPrompt,
+    // Always surface the real (formatted) notes input to the caller so
+    // the mobile Debug tab shows what the operator actually fed in. The
+    // provider request itself uses `req.userPrompt`, which is the
+    // canonical placeholder in replay mode (so the recorded hash
+    // matches) — but that's not what we want operators to see.
+    userPrompt: input.notes.length > 0 ? input.notes : req.userPrompt,
+    model: req.model,
+    vendor,
+  };
 }

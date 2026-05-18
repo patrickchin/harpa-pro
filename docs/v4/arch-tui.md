@@ -1,5 +1,12 @@
 # TUI for `@harpa/cli` (`harpa tui`)
 
+> **Successor:** the user-facing behaviour described below — flat menu
+> of every citty leaf, in-memory-only token, no startup auth gating —
+> is superseded by [`arch-tui-app.md`](arch-tui-app.md) (state machine,
+> persisted credentials, flows over raw leaves). The `defineHarpaCommand`
+> / `defineTuiEntry` / `Prompter` / `performRequest` contracts in this
+> document remain authoritative for the leaf layer.
+
 > **Purpose:** Interactive, menu-driven shell that wraps the existing
 > `@harpa/cli` commands using [`@clack/prompts`][clack]. Pick a command
 > → answer prompts → see a rendered result → return to the menu.

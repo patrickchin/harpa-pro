@@ -106,7 +106,8 @@ flowchart TB
 | 9 | Testing strategy | [arch-testing.md](arch-testing.md) | Test pyramid, Testcontainers, MSW, Maestro behaviour flows, fixture replay |
 | 10 | Observability + ops | [arch-ops.md](arch-ops.md) | Fly metrics, Sentry, log shipping, deploy flow |
 | 11 | **CLI** | [arch-cli.md](arch-cli.md) | **Debug / API testing / LLM-driven usage tool (`apps/cli`); stateless, env-only, covers all 37 routes** |
-| 11a | **CLI TUI** | [arch-tui.md](arch-tui.md) | **Interactive menu-driven shell (`harpa tui`) wrapping the citty commands via `@clack/prompts`** |
+| 11a | **CLI TUI (v1, flat)** | [arch-tui.md](arch-tui.md) | **Interactive menu-driven shell (`harpa tui`) wrapping the citty commands via `@clack/prompts`** |
+| 11b | **CLI TUI v2 (stateful app)** | [arch-tui-app.md](arch-tui-app.md) | **State machine (config/auth/authed), persisted credentials, flows over raw leaves — successor to 11a** |
 
 ## Repo layout (target end of P0)
 

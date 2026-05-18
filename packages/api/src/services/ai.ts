@@ -108,13 +108,14 @@ function fixtureNameFor(base: string, vendor: Vendor): string {
   return vendor === 'openai' ? base : `${base}.${vendor}`;
 }
 
-function pickMode(): FixtureMode {
+function pickMode(fixtureName?: string): FixtureMode {
+  if (fixtureName) return 'replay';
   if (process.env.AI_LIVE === '1') return 'live';
   return 'replay';
 }
 
 function buildProvider(vendor: Vendor, fixtureName: string): AiProvider {
-  return createProvider({ vendor, fixtureMode: pickMode(), fixtureName });
+  return createProvider({ vendor, fixtureMode: pickMode(fixtureName), fixtureName });
 }
 
 async function withErrorWrap<T>(label: string, fn: () => Promise<T>): Promise<T> {

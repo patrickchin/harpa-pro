@@ -21,6 +21,8 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import http from 'node:http';
 import path from 'node:path';
+import os from 'node:os';
+import { promises as fs } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
 import type * as PtyType from 'node-pty';
@@ -54,10 +56,35 @@ async function startMockApi(): Promise<MockApi> {
   const hits: MockApi['hits'] = [];
   const server = http.createServer((req, res) => {
     hits.push({ method: req.method ?? '', path: req.url ?? '' });
+    const auth = req.headers.authorization;
     if (req.method === 'GET' && req.url === '/healthz') {
       res.setHeader('content-type', 'application/json');
       res.setHeader('x-request-id', 'pty-test-req-1');
       res.end(JSON.stringify({ ok: true, service: 'api', version: 'pty-test' }));
+      return;
+    }
+    if (req.method === 'POST' && req.url === '/auth/otp/start') {
+      res.setHeader('content-type', 'application/json');
+      res.end(JSON.stringify({ ok: true }));
+      return;
+    }
+    if (req.method === 'POST' && req.url === '/auth/otp/verify') {
+      res.setHeader('content-type', 'application/json');
+      res.end(
+        JSON.stringify({
+          token: 'pty-token',
+          user: { id: 'u-pty', phone: '+15551234567', displayName: 'PTY User' },
+        }),
+      );
+      return;
+    }
+    if (req.method === 'GET' && req.url === '/me' && auth === 'Bearer pty-token') {
+      res.setHeader('content-type', 'application/json');
+      res.end(
+        JSON.stringify({
+          user: { id: 'u-pty', phone: '+15551234567', displayName: 'PTY User' },
+        }),
+      );
       return;
     }
     res.statusCode = 404;
@@ -89,15 +116,15 @@ afterAll(async () => {
 const describeIf = pty ? describe : describe.skip;
 
 describeIf('TUI default-wiring (node-pty smoke)', () => {
-  it('renders the health response end-to-end through clackPrompter', async () => {
+  it('signs in and renders health response end-to-end through clackPrompter', async () => {
     const ptyMod = pty!;
+    const credHome = await fs.mkdtemp(path.join(os.tmpdir(), 'harpa-pty-'));
     const childEnv: Record<string, string> = {
       ...(process.env as Record<string, string>),
       HARPA_API_URL: api.url,
+      HARPA_CONFIG_HOME: credHome,
       FORCE_COLOR: '0',
     };
-    // Don't leak a stale token from the dev shell, but also don't set
-    // HARPA_TOKEN='' — env Zod rejects empty strings.
     delete childEnv.HARPA_TOKEN;
 
     const proc = ptyMod.spawn(process.execPath, [CLI_ENTRY, 'tui'], {
@@ -116,21 +143,34 @@ describeIf('TUI default-wiring (node-pty smoke)', () => {
       proc.onExit((e) => resolve(e.exitCode));
     });
 
-    // Wait for the first prompt, then walk through:
-    //   main → health → submit → back → ctrl-c (exit)
+    // Drive:
+    //   (auth menu) Sign in → phone → code → (authed menu) Developer ›
+    //   Raw API → health → API health check → submit → ← back × 2 →
+    //   ctrl-c to quit.
     await sleep(900);
-    proc.write('\r');     // select 'health' (first option)
-    await sleep(600);
-    proc.write('\r');     // select 'API health check'
-    await sleep(800);     // wait for HTTP round-trip + render
-    proc.write('\x1b[B'); // arrow-down to '← back'
-    proc.write('\r');
+    proc.write('\r');                  // select 'Sign in'
     await sleep(400);
-    proc.write('\x03');   // ctrl-c at the main menu exits the loop
+    proc.write('+15551234567\r');      // phone
+    await sleep(500);                  // POST /auth/otp/start
+    proc.write('123456\r');            // OTP code
+    await sleep(700);                  // POST /verify + GET /me + setAuth
+    // Now on authed menu; first item is Account. Arrow down to
+    // 'Developer › Raw API' (Account, Projects, Upload, Developer…).
+    proc.write('\x1b[B\x1b[B\x1b[B\r');
+    await sleep(300);
+    proc.write('\r');                  // select first group → 'health'
+    await sleep(300);
+    proc.write('\r');                  // select 'API health check'
+    await sleep(700);                  // wait for HTTP + render
+    proc.write('\x1b[B\r');            // ← back (group menu)
+    await sleep(300);
+    proc.write('\x03');                // ctrl-c → exits raw-api menu → returns to runApp
+    await sleep(300);
+    proc.write('\x03');                // ctrl-c at runApp top → quit
 
     const exitCode = await Promise.race([
       exited,
-      sleep(4000).then(() => {
+      sleep(8000).then(() => {
         proc.kill();
         return -1;
       }),
@@ -140,9 +180,19 @@ describeIf('TUI default-wiring (node-pty smoke)', () => {
     expect(stripped, `transcript:\n${stripped}`).toContain('API healthy');
     expect(stripped).toContain('pty-test');
     expect(stripped).toContain('Request ID: pty-test-req-1');
+    expect(stripped).toContain('Signed in as');
+    expect(api.hits.some((h) => h.method === 'POST' && h.path === '/auth/otp/start')).toBe(true);
+    expect(api.hits.some((h) => h.method === 'POST' && h.path === '/auth/otp/verify')).toBe(true);
+    expect(api.hits.some((h) => h.method === 'GET' && h.path === '/me')).toBe(true);
     expect(api.hits.some((h) => h.method === 'GET' && h.path === '/healthz')).toBe(true);
-    // Ctrl-C exits the clack loop; the only thing we care about is that the
-    // process actually exited rather than us having to force-kill it.
     expect(exitCode, 'tui did not exit after ctrl-c').not.toBe(-1);
-  }, 20_000);
+
+    // Pitfall-13 defence: credentials really hit disk with 0600.
+    const credFile = path.join(credHome, 'harpa-cli', 'credentials.json');
+    const stat = await fs.stat(credFile);
+    expect(stat.mode & 0o777).toBe(0o600);
+    const saved = JSON.parse(await fs.readFile(credFile, 'utf8'));
+    expect(saved.token).toBe('pty-token');
+    expect(saved.apiUrl).toBe(api.url);
+  }, 25_000);
 });

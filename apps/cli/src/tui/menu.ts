@@ -1,19 +1,22 @@
 /**
- * Menu loop.
+ * Raw-API menu loop (formerly `mainLoop`; renamed for v2).
  *
- * Two-level navigation: a top-level menu of groups (each one a
- * `tuiSpec.group`) → a per-group menu of commands → run command →
- * return to the group menu. "Back" returns to the previous level;
- * "Quit" from the top level exits the loop.
+ * Two-level navigation over `registry.ts`:
+ *   group menu → command menu → run command → back to group menu.
  *
- * Cancellation rules (docs/v4/arch-tui.md §3.4):
+ * In v2 this loop sits behind `Developer › Raw API` and only shows
+ * leaves with `tuiSpec.surface !== 'flow-only'`. The `__set_api_url__`
+ * entry is preserved for backwards-compatibility with the v1 unit
+ * tests and remains useful inside the raw menu too.
+ *
+ * Cancellation rules (arch-tui.md §3.4):
  *   - Ctrl-C inside a command's prompts → return to group menu.
  *   - Ctrl-C at the group menu → return to main menu.
  *   - Ctrl-C at the main menu → exit loop (graceful).
  *
  * No `setTimeout` / fire-and-forget anywhere in this module.
  */
-import { groupRegistry, type AnyHarpaCommand, type MenuGroup } from './registry.js';
+import { groupRegistry, registry, type AnyHarpaCommand, type MenuGroup } from './registry.js';
 import type { Prompter } from './prompter.js';
 import type { Session } from './session.js';
 import { runCommand } from './execute.js';
@@ -23,8 +26,12 @@ const BACK = '__back__' as const;
 const QUIT = '__quit__' as const;
 const SET_API_URL = '__set_api_url__' as const;
 
-export async function mainLoop(prompter: Prompter, session: Session): Promise<void> {
-  const groups = groupRegistry();
+function rawApiRegistry(): ReadonlyArray<AnyHarpaCommand> {
+  return registry.filter((c) => c.tuiSpec.surface !== 'flow-only');
+}
+
+export async function runRawApiMenu(prompter: Prompter, session: Session): Promise<void> {
+  const groups = groupRegistry(rawApiRegistry());
   for (;;) {
     const choice = await prompter.select<string>({
       label: `Select an action  (API: ${session.effectiveEnv().HARPA_API_URL})`,
@@ -51,6 +58,9 @@ export async function mainLoop(prompter: Prompter, session: Session): Promise<vo
   }
 }
 
+/** v1 alias preserved for the existing tests; same behaviour. */
+export const mainLoop = runRawApiMenu;
+
 async function promptApiUrl(prompter: Prompter, session: Session): Promise<void> {
   const current = session.effectiveEnv().HARPA_API_URL;
   const answer = await prompter.text({
@@ -60,7 +70,7 @@ async function promptApiUrl(prompter: Prompter, session: Session): Promise<void>
     validate: validateApiUrl,
   });
   if (prompter.isCancel(answer)) return;
-  session.setApiUrl(answer);
+  await session.setApiUrl(answer);
   prompter.log.success(`API URL set to ${answer}`);
 }
 

@@ -62,6 +62,13 @@ export interface TuiSpec<A extends ArgsDef> {
   args: { [K in keyof A]?: TuiArgSpec };
   /** When true the command needs HARPA_TOKEN; TUI offers the auth flow first. */
   requiresToken: boolean;
+  /**
+   * Where this leaf shows up in the v2 TUI app (arch-tui-app.md §3.6).
+   * Defaults to `'raw'` (visible in Developer › Raw API). `'flow-only'`
+   * means the leaf is reachable only as a step inside a Flow, so it's
+   * hidden from the Raw API submenu to avoid duplication.
+   */
+  surface?: 'raw' | 'flow-only';
 }
 
 /**

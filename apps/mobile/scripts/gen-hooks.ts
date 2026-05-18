@@ -65,6 +65,7 @@ const ENDPOINTS: Endpoint[] = [
   { method: 'get',    path: '/projects/{project}/members',        hook: 'useProjectMembersQuery',       query: true,  hasPathParams: true,  hasBody: false, queryKeyHead: 'projectMembers' },
   { method: 'post',   path: '/projects/{project}/members',        hook: 'useAddProjectMemberMutation',  query: false, hasPathParams: true,  hasBody: true },
   { method: 'delete', path: '/projects/{project}/members/{user}', hook: 'useRemoveProjectMemberMutation', query: false, hasPathParams: true,  hasBody: false },
+  { method: 'patch',  path: '/projects/{project}/members/{user}', hook: 'useUpdateProjectMemberMutation', query: false, hasPathParams: true,  hasBody: true  },
 
   // reports
   { method: 'get',    path: '/projects/{project}/reports',                          hook: 'useProjectReportsQuery',       query: true,  hasPathParams: true,  hasBody: false, queryKeyHead: 'projectReports' },

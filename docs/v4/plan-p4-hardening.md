@@ -1,77 +1,96 @@
 # P4 — Hardening
 
-> Goal: production-ready API + mobile. Sentry on. Fly + Neon prod
-> live. PDF byte-equivalent to mobile-old samples. Performance
-> targets met.
+> Goal: production-ready API + mobile. Sentry on. Neon prod
+> migration job + PITR drill. PDF export pipeline working
+> end-to-end. Performance targets met. Universal links live.
+>
+> **Scope discipline:** P4 is hardening only — Sentry, perf,
+> prod-infra finishing, byte-equivalent PDF, load test, universal
+> links, bugs sweep. Pure feature completion that runs locally
+> belongs in [P3.15](plan-p3-feature-build.md#p315--feature-completion--upload-wiring).
+
+## Already shipped (audited 2026-05-19)
+
+- [x] Fly prod config + deploy workflow — `infra/fly/fly.toml`,
+      `.github/workflows/api-prod.yml`.
+- [x] EAS production profile — `apps/mobile/eas.json`.
+- [x] iOS prebuild for `expo-camera` — `apps/mobile/ios/` checked in.
 
 ## Exit gate (`p4-exit-gate.yml`)
 
-- [ ] Fly prod deploy + Neon prod migrations applied successfully.
 - [ ] Sentry catches crashes in both API and mobile (test crash).
-- [ ] PDF byte-equivalence: rendered samples for the 3 reference
-      reports under `docs/legacy-v3/pdf-samples/` match within
-      tolerance (text identical, images byte-identical).
+- [ ] PDF export works end-to-end on mobile (`expo-print` +
+      `expo-sharing`) and renders inline in `PdfPreviewModal`.
+      Visual parity with mobile-old samples reviewed manually
+      (no byte-equivalence requirement).
 - [ ] Maestro cold-start timing < 2 s on iOS sim baseline device.
 - [ ] EAS production bundle size ≤ v3 baseline (commit baseline measurement).
 - [ ] All `// FIXME` and `// HACK` resolved or filed as bugs.
 - [ ] Load test: API holds < 200 ms p95 at 100 RPS for 5 min.
 - [ ] Backup/restore drill on Neon (PITR to a branch, verify).
+- [ ] Universal links: cold tap on `/p/:projectSlug` and
+      `/r/:reportSlug` resolves via the auth gate.
 
 ## Tasks
 
 ### P4.1 Sentry
 - [ ] Wire on API (Hono middleware) with request id + structured tags.
+      Replace `apps/mobile/lib/telemetry/SentryStub.tsx` no-op.
 - [ ] Wire on mobile (`@sentry/react-native`).
 - [ ] Test crashes in staging confirm capture.
 - [ ] Commit: `feat(api,mobile): Sentry integration with request id`.
 
 ### P4.2 Performance pass
-- [ ] Mobile: `FlashList` audit, `React.memo` audit, `useCallback`/`useMemo` on hot paths (per Pitfall 4 v3 commit `dbaa4c1`).
-- [ ] API: enable PG statement timeout (5s), connection pool sizing.
-- [ ] Cold-start measurement script in Maestro.
+- [ ] Mobile: `FlashList` audit (currently zero usage), `React.memo`
+      audit, `useCallback`/`useMemo` on hot paths (per Pitfall 4 v3
+      commit `dbaa4c1`).
+- [ ] API: PG `statement_timeout` (5s) on the pool in
+      `packages/api/src/db/client.ts` — currently only `max: 10`
+      is set.
+- [ ] Cold-start measurement Maestro flow (`.maestro/cold-start.yaml`).
 - [ ] Commit: `perf(mobile,api): cold-start + list virtualization + PG limits`.
 
-### P4.3 PDF byte-equivalence
-- [ ] Capture 3 reference PDFs from mobile-old (`docs/legacy-v3/pdf-samples/`).
-- [ ] Rendering pipeline produces matching text + same image bytes.
-- [ ] Test: `report-to-pdf.byte-equivalence.test.ts`.
-- [ ] Commit: `feat(api): PDF byte-equivalent to mobile-old samples`.
+### P4.3 PDF export pipeline
+- [ ] Mobile PDF export: replace the stub
+      `apps/mobile/lib/export-report-pdf.ts` (currently throws
+      "Saving PDFs lands in P4 …") with real `expo-print` +
+      `expo-sharing` wiring. `saveReportPdf`, `exportReportPdf`,
+      `shareSavedReportPdf`, `openSavedReportPdf` all work against
+      a real finalized report.
+- [ ] Inline PDF rendering on mobile (`react-native-webview` or
+      `react-native-pdf`) for `PdfPreviewModal` — currently ships
+      modal chrome only.
+- [ ] Visual review pass against mobile-old samples (manual diff —
+      headings, layout, image placement). No byte-equivalence test.
+- [ ] Vitest: export pipeline round-trips without throwing on a
+      populated finalized report fixture.
+- [ ] Commit: `feat(mobile): PDF export + inline preview wired`.
 
-### P4.4 Fly prod
-- [ ] `fly.toml` for `harpa-api` (prod region, machine sizing).
-- [ ] Secrets loaded.
-- [ ] Health checks + auto-restart.
-- [ ] Commit: `chore(infra): Fly prod config + secrets`.
+### P4.4 Neon prod migration + PITR
+- [ ] Add the `pnpm --filter @harpa/api db:migrate` step to
+      `.github/workflows/api-prod.yml` (currently only in dev
+      workflow at lines 63–66).
+- [ ] Document the PITR drill (branch from prod → verify → drop).
+- [ ] Commit: `chore(infra): Neon prod migration job + PITR drill`.
 
-### P4.5 Neon prod
-- [ ] Prod project created (separate from dev).
-- [ ] Migration job in deploy.
-- [ ] PITR drill documented.
-- [ ] Commit: `chore(infra): Neon prod + migration job`.
-
-### P4.6 EAS production builds
-- [ ] EAS project IDs finalised.
-- [ ] Production profile + secrets.
-- [ ] First production build green.
-- [ ] Commit: `chore(mobile): EAS production profile`.
-
-### P4.7 Load test
-- [ ] `infra/loadtest/k6/*.js` scripts.
+### P4.5 Load test
+- [ ] Create `infra/loadtest/k6/*.js` scripts (directory does not exist).
 - [ ] Run against staging Fly machine.
 - [ ] Commit: `test(api): k6 load test scenarios`.
 
-### P4.8 Bugs sweep
+### P4.6 Universal links
+- [ ] Serve `apple-app-site-association` from the API origin.
+- [ ] Serve `assetlinks.json` from the API origin.
+- [ ] `app.config.ts` `associatedDomains` + Android `intentFilters` wired
+      (currently only the `expo-camera` plugin is configured).
+- [ ] `/p/:projectSlug` and `/r/:reportSlug` resolve from a cold
+      tap on a share link — Maestro flow `share-link-cold-start.yaml`.
+- [ ] Push-notification → deep-link routing (notif payload carries
+      canonical URL; tap handler `router.push`es it through the
+      auth gate's deferred-intent stash from P2.6).
+- [ ] Commit: `feat(mobile,api): universal links + push deep-link routing`.
+
+### P4.7 Bugs sweep
 - [ ] Triage `docs/bugs/README.md`.
 - [ ] All `// FIXME` resolved or filed.
 - [ ] Commit: `chore: bugs sweep + FIXME triage`.
-
-### P4.9 Universal links
-- [ ] `apple-app-site-association` served from the API origin.
-- [ ] `assetlinks.json` served from the API origin.
-- [ ] `app.json` `associatedDomains` + Android `intentFilters` wired.
-- [ ] `/p/:projectSlug` and `/r/:reportSlug` resolve from a cold
-      tap on a share link \u2014 Maestro flow `share-link-cold-start`.
-- [ ] Push-notification \u2192 deep-link routing (notif payload carries
-      canonical URL; tap handler `router.push`es it through the
-      auth gate's deferred-intent stash from P2.6).
-- [ ] Commit: `feat(mobile): universal links + push deep-link routing`.

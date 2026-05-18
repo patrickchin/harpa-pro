@@ -107,6 +107,7 @@ flowchart TB
 | 9 | Testing strategy | [arch-testing.md](arch-testing.md) | Test pyramid, Testcontainers, MSW, Maestro behaviour flows, fixture replay |
 | 10 | Observability + ops | [arch-ops.md](arch-ops.md) | Fly metrics, Sentry, log shipping, deploy flow |
 | 11 | **CLI** | [arch-cli.md](arch-cli.md) | **Debug / API testing / LLM-driven usage tool (`apps/cli`); stateless, env-only, covers all 37 routes** |
+| 12 | **Project members** | [arch-project-members.md](arch-project-members.md) | **Roles, invite (POST), role-change (PATCH), removal (DELETE), owner-demotion guard, error codes, scope tests** |
 
 ## Repo layout (target end of P0)
 

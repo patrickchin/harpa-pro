@@ -39,6 +39,7 @@ mirror). Suggested grouping (one screen per commit):
 - files  — no canonical screen exists (see P3.11 below); marked N/A
 - camera  ✅ shipped (P3.12)
 - profile / account / usage  ✅ shipped (P3.13)
+- feature completion + upload wiring (P3.15)
 
 ## Section card port
 
@@ -254,6 +255,38 @@ remains deferred; the provider just forwards `isAutoSaving` +
       "Edit manually" lazy-seed path from the empty Report tab.
 - [x] Commit: `feat(mobile): P3.8 — Generate Edit tab + inline ReportEditForm`.
 
+### P3.x — Update / Finalize flow polish
+
+Follow-up on top of P3.7 + P3.8. Edit-tab manual edits previously
+never reached the server, and "Update report" regenerated from raw
+notes only — so any manual fix was clobbered on the next regenerate.
+This adds an autosave loop, makes `/regenerate` AI-aware of the
+existing body, and gates Finalize on autosave being clean. Full
+design: [design-p3x-generate-update-finalize.md](design-p3x-generate-update-finalize.md).
+
+- [x] `PATCH /reports/{n}` accepts an optional `body`; finalized
+      reports return 409 (consistent with `/generate`, `/regenerate`,
+      `/finalize`). Body PATCH does NOT reset
+      `notes_since_last_generation` — that counter belongs to the AI
+      loop, not manual edits.
+- [x] AI service: new `REPORT_UPDATE_SYSTEM_PROMPT` + fixture flavour
+      `generate-report.update.*`. `generateReport()` switches on
+      `existingBody`; replay mode normalises the user prompt to a
+      canonical placeholder so the request hash matches across runs.
+      (Live-vendor fixture recording is a deferred follow-up.)
+- [x] Mobile: `useReportBodyAutosave` debounces 800ms, baseline-ref
+      pattern keeps the dirty-diff stable across re-renders, and
+      `paused` suspends saves while a generate / regenerate /
+      finalize mutation is in flight.
+- [x] `GenerateReportActionRow` gates Finalize on `draft.isAutoSaving`
+      and shows a "Saving…" label so the user can't lock a stale
+      body. Regenerate is also disabled while autosave is in flight
+      to avoid the race.
+- [x] Inverse adapter `generatedReportToReportBody()` (lossy by
+      design — UI has fields the API doesn't store). `issues.severity`
+      collapses to the API enum `{ low, medium, high }` via
+      `normaliseSeverity()`.
+
 ### P3.10 — Saved report + actions + PDF
 
 Ports the saved-report detail screen from canonical
@@ -301,21 +334,12 @@ P4 behind clearly-marked stubs.
       invocation, populated-draft layout assertion.
 - [x] Commit: `feat(mobile): P3.10 — Saved report screen + actions menu + PDF preview`.
 
-**Deferred to P4** (each behind a `TODO(P4)` marker in code):
-
-- v4 `Report.body` → `GeneratedSiteReport` translation (route
-  currently mounts the dev fixture for the body).
-- `useReportDelete`, `useReportUnfinalize`, `useReportAutoSave`
-  mutation hooks.
-- `useReportNotesQuery` + rich `useNoteTimeline` (voice / photo /
-  document rows). `ReportNotesPane` ships as a text-only stub
-  exporting `ReportNoteRow`.
-- `ReportPhotos` block on the Report tab — blocked on the upload
-  pipeline + signed-URL resolution.
-- `ImagePreviewModal` signed-URL fetch + `CachedImage` / BlurHash
-  placeholder.
-- PDF export pipeline (Expo Print + Sharing) — stub lib throws.
-- Inline PDF rendering (`react-native-webview` / `react-native-pdf`).
+**Follow-ups tracked in [P3.15](#p315--feature-completion--upload-wiring):**
+`Report.body` adapter (✅ landed since), `useReportUnfinalize`,
+rich `useNoteTimeline`, `ReportPhotos`, `ImagePreviewModal`
+signed-URL + `CachedImage`. Mobile PDF export + inline PDF
+rendering land with P4.3 (byte-equivalence) — see
+[`plan-p4-hardening.md`](plan-p4-hardening.md).
 
 ### P3.12 — Camera
 
@@ -367,19 +391,10 @@ so the dev mirror + Vitest run without native modules.
       are mocked locally in the test file (no global setup change).
 - [x] Commit: `feat(mobile): P3.12 — Camera capture screen ported from canonical source`.
 
-**Deferred to P4** (each behind a `TODO(P4)` marker in code):
-
-- Upload pipeline kick on Done (R2 presign → PUT → registerFile →
-  createNote). Route currently commits URIs to the session registry
-  and pops; caller is responsible for draining + uploading in
-  `useFocusEffect` once the queue lands.
-- `expo-media-library` "save to camera roll" toggle.
-- Pinch-to-zoom + tap-to-focus on the preview (deferred until the
-  upload pipeline is stable — canonical doesn't have these yet
-  either).
-- iOS prebuild: running `expo prebuild` to regenerate `ios/`
-  Podfile entries for `expo-camera`. Deferred until the next EAS
-  cut (the JS shipped here typechecks + tests in isolation).
+**Follow-ups tracked in [P3.15](#p315--feature-completion--upload-wiring):**
+upload-on-Done handoff, `expo-media-library` save-to-roll,
+pinch-to-zoom + tap-to-focus. iOS prebuild ✅ landed since
+(`apps/mobile/ios/` checked in).
 
 ### P3.13 — Profile / Account / Usage
 
@@ -439,28 +454,12 @@ marked stubs.
       screen of the populated layout.
 - [x] Commit: `feat(mobile): P3.13 — Profile / Account / Usage screens ported`.
 
-**Deferred to P4** (each behind a `TODO(P4)` marker in code):
-
-- `AvatarUploader` — Supabase storage in v3; v4 needs the R2 upload
-  pipeline + signed-URL flow before the avatar picker can land.
-  Route passes no `avatarSlot`, body renders the default
-  non-interactive User-icon placeholder.
-- Editing the account fields (display name + company name). The v4
-  `PATCH /me` hook exists (`useUpdateMeMutation`), but wiring an
-  inline editor + optimistic update is out of scope for P3.13.
-- Token-level usage detail: input / output / cached tokens, per-event
-  timeline, per-model breakdown, `UsageBarChart`. v4 `/me/usage`
-  returns `{ reports, voiceNotes }` only; the canonical
-  per-generation rollups live behind a future analytics endpoint.
-- AI provider catalogue persistence (`useAiProvider` AsyncStorage
-  round-trip) + the `/generate-report` availability probe
-  (`useAvailableProviders`). Real Profile route passes empty
-  catalogues and `showDeveloperSection={false}`; dev mirror exercises
-  the modal with the canonical catalogue inline.
-- Notifications row (top of Profile sections) — disabled in canonical
-  too, ported with the same `disabled` styling.
-- Language toggle / locale switching — not in canonical's profile;
-  out of scope for P3.13.
+**Follow-ups tracked in [P3.15](#p315--feature-completion--upload-wiring):**
+`AvatarUploader` (blocked on R2 mobile orchestration), account
+field editing wiring, token-level usage (API extension +
+`UsageBarChart`), AI provider persistence + availability probe.
+The disabled Notifications row + language toggle stay out of
+scope until product asks for them.
 
 ### P3.11 — Files screen (⊘ N/A)
 
@@ -484,23 +483,20 @@ members invite + filter → reports list + new → generate tabs
 (Notes / Report / Edit / finalize confirm) → voice record → attachment
 picker.
 
-**Coverage gaps after the P3.10 / P3.12 / P3.13 ports** (deferred to
-P4 alongside the underlying wiring):
+**Coverage gaps after the P3.10 / P3.12 / P3.13 ports** (tracked
+in [P3.15](#p315--feature-completion--upload-wiring) alongside the
+underlying wiring):
 
 - Saved-report tab navigation + actions menu + PDF preview modal
   — covered by Vitest behaviour tests in `screens/saved-report.test.tsx`;
-  Maestro coverage lands once the v4 `Report.body` → `GeneratedSiteReport`
-  translation + real autosave hook are in.
+  Maestro coverage lands with the rich note timeline + `ReportPhotos`.
 - Camera capture exit handoff — `screens/camera-capture.test.tsx` +
   `lib/camera-session-registry.test.ts` cover the session round-trip;
-  Maestro coverage lands with the R2 upload pipeline (the canonical
-  `(camera)/capture` flow drives presign → PUT → registerFile →
-  createNote on Done).
+  Maestro coverage lands with the camera Done → upload handoff.
 - Profile sign-out + account / usage surfaces — `screens/profile.test.tsx`,
   `screens/account.test.tsx`, `screens/usage.test.tsx` cover the body
-  interactions; Maestro coverage lands once the routes are linked from
-  the app shell (no nav entry point exists in the v4 tab bar yet —
-  reached only via direct deep-link in this drop).
+  interactions; Maestro coverage lands once a nav entry point is added
+  to the v4 tab bar (currently reached only via direct deep-link).
 
 The flow is green on iOS locally (5/5 PASS); Android pre-flight + CI
 integration remain open against the P3 exit gate (run + capture
@@ -520,7 +516,127 @@ artifacts before tagging `v0.3.0-features`).
   → CompletenessCard → finalize → PDF (fixture). Maestro
   `core-end-to-end` exercises the whole arc.
 
+### P3.15 — Feature completion & upload wiring
+
+Items pulled out of the P3.10 / P3.12 / P3.13 / P3.14 "Deferred"
+footers. These are pure feature-completion work that runs locally
+(no prod accounts required), so they belong in P3 rather than the
+"Hardening" phase. Each item below maps 1:1 to a `TODO(P4)` marker
+currently in the code — flip those markers to `TODO(P3.15)` as
+they're picked up.
+
+The shared blocker is **mobile R2 upload orchestration** (P3.15.1).
+`AvatarUploader`, `ReportPhotos`, `ImagePreviewModal` signed-URL,
+and the Camera Done handoff all depend on it. Land the orchestration
+hook first.
+
+**LLM token accounting (P3.15.5)** is the prereq for the
+token-level usage UI in P3.15.4 — land it before extending
+`/me/usage`.
+
+#### P3.15.1 — Mobile R2 upload orchestration
+- [ ] `useFileUpload` hook: presign → R2 PUT → `registerFile` →
+      `createNote`, with retry + progress + an in-memory queue.
+      API routes (`POST /files/presign`, `POST /files`,
+      `GET /files/{id}/url`) already shipped in P2 — wire the mobile
+      side.
+- [ ] `useFileSignedUrl(fileId)` resolver (cached) for read-back.
+- [ ] `CachedImage` + `prefetchImages` ported from canonical
+      (FS cache + BlurHash placeholder).
+- [ ] Integration test: image / voice / document each round-trip
+      through the queue end-to-end (Pitfall 8).
+- [ ] Commit: `feat(mobile): R2 upload orchestration + signed-URL resolver + CachedImage`.
+
+#### P3.15.2 — Camera Done handoff
+- [ ] `(camera)/capture.tsx` Done drains the session registry into
+      the upload queue (`useFocusEffect` in the caller, per current
+      `TODO(P4)` in `capture.tsx`).
+- [ ] `expo-media-library` save-to-camera-roll toggle (off by default).
+- [ ] Pinch-to-zoom + tap-to-focus gesture handlers on the preview.
+- [ ] Maestro flow: capture → Done → file appears in report.
+- [ ] Commit: `feat(mobile): camera Done → upload handoff + roll toggle + gestures`.
+
+#### P3.15.3 — Saved-report wiring completion
+- [ ] `useReportUnfinalize` mutation (route + hook).
+- [ ] Rich `useNoteTimeline`: voice / photo / document rows in
+      `ReportNotesPane` (currently text-only stub).
+- [ ] `ReportPhotos` block on the Report tab (uses signed URLs from
+      P3.15.1).
+- [ ] `ImagePreviewModal` swaps the plain `<Image>` for `CachedImage`
+      with signed-URL fetch.
+- [ ] Maestro flow: open saved report → tabs → unfinalize → photo
+      preview.
+- [ ] Commit: `feat(mobile): saved-report rich timeline + ReportPhotos + image preview`.
+
+#### P3.15.4 — Account / Profile / Usage wiring
+- [ ] Inline editor + optimistic update for display name + company
+      name via `useUpdateMeMutation`.
+- [ ] `AvatarUploader` component (depends on P3.15.1).
+- [ ] Extend `/me/usage` API response with `inputTokens`,
+      `outputTokens`, `cachedTokens` per month + per-model breakdown.
+      Sourced from the `llm_usage_events` table (P3.15.5).
+- [ ] `UsageBarChart` + per-event timeline rendered in
+      `screens/usage.tsx` (currently a chart-slot placeholder).
+- [ ] `useAiProvider` AsyncStorage round-trip + `useAvailableProviders`
+      (`/generate-report` availability probe). Profile route stops
+      passing empty catalogues.
+- [ ] Add a nav entry to the v4 tab bar for Profile (currently only
+      reached via deep-link).
+- [ ] Maestro flow: tab → profile → edit name → sign out; usage
+      month switch + chart.
+- [ ] Commit: `feat(mobile,api): account editing + token-level usage + AI provider persistence`.
+
+#### P3.15.5 — LLM token accounting
+
+Per-user token counting on every LLM call so usage can be billed,
+rate-limited, and rendered in the Usage screen (P3.15.4). The single
+chokepoint is `packages/api/src/services/ai.ts` (`chat`,
+`transcribe`, `generateReport`) — instrument there, not at each
+route.
+
+- [ ] Drizzle migration: `llm_usage_events` table
+      (`id uuidv7`, `user_id`, `project_id?`, `report_id?`, `vendor`,
+      `model`, `operation` enum `{chat,transcribe,generate_report}`,
+      `input_tokens`, `output_tokens`, `cached_tokens`,
+      `total_tokens` generated, `latency_ms`, `fixture_mode` bool,
+      `created_at`). Index on `(user_id, created_at desc)` and
+      `(user_id, vendor, model)`.
+- [ ] RLS / scoped role: users can only `SELECT` their own rows;
+      `INSERT` is restricted to the API service role (see
+      `arch-auth-and-rls.md`). No mobile-side writes.
+- [ ] Each vendor adapter returns `{ output, usage }` where `usage`
+      is `{ inputTokens, outputTokens, cachedTokens? }`. Extract from
+      the SDK response per vendor:
+      - OpenAI: `response.usage.{prompt_tokens, completion_tokens, prompt_tokens_details.cached_tokens}`
+      - Anthropic: `response.usage.{input_tokens, output_tokens, cache_read_input_tokens}`
+      - Google / Kimi / Z.AI / DeepSeek: equivalent fields per their SDKs.
+      - Transcribe (Whisper-class): record audio duration → derive
+        `inputTokens` via a documented conversion (or store
+        `inputSeconds` in a separate column).
+- [ ] Fixture replays return canonical `usage` values stored
+      alongside the fixture payload (so replay-mode tests have
+      deterministic token counts). `packages/ai-fixtures` schema
+      extended; existing fixtures backfilled with the values
+      observed during recording.
+- [ ] `recordLlmUsage(db, { userId, projectId?, reportId?, vendor, model, operation, usage, latencyMs, fixtureMode })`
+      service in `packages/api/src/services/ai-usage.ts`. Called from
+      each of the three `services/ai.ts` entry points after the
+      vendor call returns (and on error too — log the failure with
+      zero tokens so we see traffic spikes from failed calls).
+- [ ] Pitfall 13: write an integration test that exercises a real
+      `chat` round-trip through fixtures and asserts a row landed
+      in `llm_usage_events` with the expected counts. Default-wiring
+      coverage, not a stub.
+- [ ] `GET /me/usage` (extended in P3.15.4) aggregates from this
+      table. `GET /me/usage/events` paginates raw events for the
+      per-event timeline.
+- [ ] Commit: `feat(api): per-user LLM token accounting on every call`.
+
+**Out of scope** (kept disabled or absent until product asks):
+notifications row (stays `disabled`-styled), language / locale
+switching.
+
 ## P3 exit
-- [ ] All boxes ticked. Tag `v0.3.0-features`.
+- [ ] All boxes ticked (P3.0 – P3.15). Tag `v0.3.0-features`.
 - [ ] `pnpm --filter @harpa/mobile bundle:smoke` green on the tag SHA
   (see `overnight-protocol.md` §5 — also run per-commit through P3).

@@ -188,6 +188,7 @@ reportRoutes.openapi(
       400: { description: 'Bad request.', content: { 'application/json': { schema: errorEnvelope } } },
       401: { description: 'Unauthorized.', content: { 'application/json': { schema: errorEnvelope } } },
       404: { description: 'Not found.', content: { 'application/json': { schema: errorEnvelope } } },
+      409: { description: 'Report is finalized.', content: { 'application/json': { schema: errorEnvelope } } },
     },
   }),
   async (c) => {
@@ -196,6 +197,12 @@ reportRoutes.openapi(
     const { project: slug, number } = c.req.valid('param');
     const body = c.req.valid('json');
     const existing = await loadReport(db, slug, number);
+    // Finalized reports are locked: PATCH would silently overwrite the
+    // body the user finalized, which is the opposite of what "finalize"
+    // means. Surface 409 — matches /generate, /regenerate, /finalize.
+    if (existing.status === 'finalized') {
+      throw new HTTPException(409, { message: 'Report is finalized.' });
+    }
     const report = await db((d) => updateReport(d, existing.id, body));
     if (!report) throw new HTTPException(404, { message: 'Report not found.' });
     return c.json(report, 200);
@@ -253,18 +260,29 @@ const generateResponses = {
  * — the difference is intent, not wire shape. Both reject when the
  * report is finalized; both replace `body` and reset
  * `notes_since_last_generation`.
+ *
+ * Regenerate ALSO forwards the current `report.body` as `existingBody`
+ * so the AI preserves any manual edits the user made in the Edit tab
+ * since the last generation. Generate (first time) always sends
+ * `existingBody: null` — there is nothing to preserve.
  */
 async function runGenerate(
   db: NonNullable<AppEnv['Variables']['db']>,
   report: ReportRow,
   fixtureName: string | undefined,
   vendor: Parameters<typeof aiGenerateReport>[0]['vendor'] | undefined,
+  options: { mode: 'generate' | 'regenerate' },
 ) {
   if (report.status === 'finalized') {
     throw new HTTPException(409, { message: 'Report is finalized.' });
   }
   const notes = await db((d) => collectNotesForGeneration(d, report.id));
-  const out = await aiGenerateReport({ notes, fixtureName, vendor });
+  // Update path: send current body so the model preserves manual
+  // edits. First-time generate ignores any stale body (there shouldn't
+  // be one) and runs the cold-start prompt.
+  const existingBody =
+    options.mode === 'regenerate' ? report.body : null;
+  const out = await aiGenerateReport({ notes, existingBody, fixtureName, vendor });
   const updated = await db((d) => setReportBody(d, report.id, out.body));
   if (!updated) throw new HTTPException(404, { message: 'Report not found.' });
   return {
@@ -300,7 +318,7 @@ reportRoutes.openapi(
     const body = c.req.valid('json');
     const report = await loadReport(db, slug, number);
     const settings = await db((d) => getAiSettings(d, userId));
-    const result = await runGenerate(db, report, body.fixtureName, settings.vendor);
+    const result = await runGenerate(db, report, body.fixtureName, settings.vendor, { mode: 'generate' });
     return c.json({ report: result.report, debug: result.debug }, 200);
   },
 );
@@ -326,7 +344,7 @@ reportRoutes.openapi(
     const body = c.req.valid('json');
     const report = await loadReport(db, slug, number);
     const settings = await db((d) => getAiSettings(d, userId));
-    const result = await runGenerate(db, report, body.fixtureName, settings.vendor);
+    const result = await runGenerate(db, report, body.fixtureName, settings.vendor, { mode: 'regenerate' });
     return c.json({ report: result.report, debug: result.debug }, 200);
   },
 );

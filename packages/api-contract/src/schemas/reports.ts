@@ -77,6 +77,12 @@ export const createReportRequest = z.object({
 });
 export const updateReportRequest = z.object({
   visitDate: isoDateTime.nullable().optional(),
+  // Manual edits from the Edit tab autosave. Persisted into the same
+  // `reports.body` column the AI writes — single source of truth. Patching
+  // body does NOT reset `notes_since_last_generation` (that counter
+  // belongs to the AI loop, not manual edits). See
+  // docs/v4/design-p3x-generate-update-finalize.md §3.4.
+  body: reportBody.nullable().optional(),
 });
 
 /**

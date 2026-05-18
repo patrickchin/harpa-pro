@@ -1219,7 +1219,107 @@ export interface paths {
         };
         options?: never;
         head?: never;
-        patch?: never;
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    project: string;
+                    user: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        role: "owner" | "editor" | "viewer";
+                    };
+                };
+            };
+            responses: {
+                /** @description Member role updated (or unchanged if already correct). */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            userId: string;
+                            displayName: string | null;
+                            phone: string;
+                            /** @enum {string} */
+                            role: "owner" | "editor" | "viewer";
+                            joinedAt: string;
+                        };
+                    };
+                };
+                /** @description Unauthorized. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                                requestId?: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Not an owner. */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                                requestId?: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Member not found. */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                                requestId?: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Last owner. */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                                requestId?: string;
+                            };
+                        };
+                    };
+                };
+            };
+        };
         trace?: never;
     };
     "/projects/{project}/reports": {
@@ -1649,6 +1749,41 @@ export interface paths {
                 content: {
                     "application/json": {
                         visitDate?: string | null;
+                        body?: {
+                            visitDate: string | null;
+                            weather: {
+                                condition: string | null;
+                                temperatureC: number | null;
+                                windKph: number | null;
+                                impact: string | null;
+                            } | null;
+                            workers: {
+                                role: string;
+                                count: number;
+                                hours: number | null;
+                                notes: string | null;
+                            }[];
+                            materials: {
+                                name: string;
+                                quantity: number | null;
+                                unit: string | null;
+                                status: string | null;
+                                condition: string | null;
+                                notes: string | null;
+                            }[];
+                            issues: {
+                                title: string;
+                                /** @enum {string} */
+                                severity: "low" | "medium" | "high";
+                                description: string | null;
+                                action: string | null;
+                            }[];
+                            nextSteps: string[];
+                            summarySections: {
+                                title: string;
+                                body: string;
+                            }[];
+                        } | null;
                     };
                 };
             };
@@ -1758,6 +1893,22 @@ export interface paths {
                         };
                     };
                 };
+                /** @description Report is finalized. */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                                requestId?: string;
+                            };
+                        };
+                    };
+                };
             };
         };
         trace?: never;
@@ -1844,6 +1995,13 @@ export interface paths {
                                 pdfUrl: string | null;
                                 createdAt: string;
                                 updatedAt: string;
+                            };
+                            debug?: {
+                                systemPrompt?: string;
+                                userPrompt?: string;
+                                rawText?: string;
+                                model?: string;
+                                vendor?: string;
                             };
                         };
                     };
@@ -2018,6 +2176,13 @@ export interface paths {
                                 pdfUrl: string | null;
                                 createdAt: string;
                                 updatedAt: string;
+                            };
+                            debug?: {
+                                systemPrompt?: string;
+                                userPrompt?: string;
+                                rawText?: string;
+                                model?: string;
+                                vendor?: string;
                             };
                         };
                     };

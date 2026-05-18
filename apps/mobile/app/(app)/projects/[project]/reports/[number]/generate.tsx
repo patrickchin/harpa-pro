@@ -35,6 +35,7 @@ import {
   useFinalizeReportMutation,
   useDeleteReportMutation,
 } from '@/lib/api/hooks';
+import { useReportBodyAutosave } from '@/lib/use-report-body-autosave';
 import type { NoteEntry } from '@/lib/note-entry';
 import { uuid } from '@/lib/uuid';
 import { env } from '@/lib/env';
@@ -243,7 +244,24 @@ export default function GenerateReportRoute() {
   const [localReport, setLocalReport] = useState<GeneratedSiteReport | null>(
     null,
   );
+  // `userDirty` flips true only when the user edits a field in the
+  // Edit tab — see `handleEditReport` below. Programmatic
+  // setLocalReport calls (e.g. seeding from a regenerate response) do
+  // NOT flip it true. The autosave hook listens to this flag instead
+  // of trying to JSON-diff the local report against the server body
+  // (the inverse adapter is lossy, so the diff was always non-zero
+  // and produced a stuck "Saving…" label + a PATCH-spam loop).
+  const [userDirty, setUserDirty] = useState(false);
   const currentReport = localReport ?? serverBody ?? fallbackReport;
+
+  const handleEditReport = useCallback((next: GeneratedSiteReport) => {
+    setLocalReport(next);
+    setUserDirty(true);
+  }, []);
+
+  const handleAutoSaved = useCallback(() => {
+    setUserDirty(false);
+  }, []);
 
   const [generationError, setGenerationError] = useState<string | null>(null);
   const [finalizeError, setFinalizeError] = useState<string | null>(null);
@@ -255,6 +273,30 @@ export default function GenerateReportRoute() {
   const generateMutation = useGenerateReportMutation();
   const regenerateMutation = useRegenerateReportMutation();
   const finalizeMutation = useFinalizeReportMutation();
+
+  // Stable JSON view of the server-side body was removed — the
+  // autosave hook is now driven by `userDirty`, set by
+  // `handleEditReport` only when the user types in the Edit tab. The
+  // hook no longer needs (and never had a way to reliably compute) a
+  // server-shape baseline; the inverse adapter is lossy.
+
+  // Pause autosave while a generate/regenerate is in flight. That
+  // endpoint writes `body` server-side; a concurrent PATCH would race
+  // and could either clobber the AI output or get clobbered itself
+  // depending on timing. React Query already queues mutations sharing
+  // a key, but generate/regenerate are different hooks so we gate
+  // explicitly.
+  const isGenerating =
+    generateMutation.isPending || regenerateMutation.isPending;
+
+  const autosave = useReportBodyAutosave({
+    slug,
+    number: reportNumber,
+    report: localReport,
+    dirty: userDirty,
+    onSaved: handleAutoSaved,
+    paused: isGenerating || finalizeMutation.isPending,
+  });
 
   const handleRegenerate = useCallback(() => {
     if (!slug || reportNumber === null) return;
@@ -377,13 +419,16 @@ export default function GenerateReportRoute() {
     }, [cameraSessionId]),
   );
 
-  const isGenerating =
-    generateMutation.isPending || regenerateMutation.isPending;
-
   const canWrite =
     projectQuery.data?.myRole === 'owner' || projectQuery.data?.myRole === 'editor';
 
   const reportTitleField = reportRow?.meta?.title;
+
+  // Combine autosave + generation errors into the existing surface so
+  // both bubble through `generationError`. Generation errors trump
+  // autosave (the user just tried to regenerate; show them that).
+  const combinedError =
+    generationError ?? autosave.error ?? uploadError;
 
   // Surface upload-pipeline errors via the existing dialog. Wired
   // through the screen's `fileUploadError` UI surface — we mirror it
@@ -404,12 +449,14 @@ export default function GenerateReportRoute() {
       canWrite={canWrite}
       onBack={() => safeBack(router, `/(app)/projects/${slug}/reports`)}
       report={currentReport}
-      onSetReport={setLocalReport}
+      onSetReport={handleEditReport}
       isGeneratingReport={isGenerating}
-      generationError={generationError ?? uploadError}
+      generationError={combinedError}
       lastGeneration={lastGeneration}
       onRegenerate={handleRegenerate}
       notesSinceLastGeneration={reportRow?.notesSinceLastGeneration ?? 0}
+      isAutoSaving={autosave.isAutoSaving || userDirty}
+      lastSavedAt={autosave.lastSavedAt}
       isFinalizing={finalizeMutation.isPending}
       finalizeError={finalizeError}
       onFinalize={handleFinalize}

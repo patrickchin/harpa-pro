@@ -30,6 +30,7 @@ export const INVALIDATIONS: Record<string, InvalidationRule> = {
   useDeleteProjectMutation: ['projects', 'project'],
   useAddProjectMemberMutation: ['projectMembers', 'project'],
   useRemoveProjectMemberMutation: ['projectMembers', 'project'],
+  useUpdateProjectMemberMutation: ['projectMembers', 'project'],
 
   // reports
   useCreateReportMutation: ['projectReports', 'project'],

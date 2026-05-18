@@ -114,7 +114,7 @@ export function CameraCapture(props: CameraCaptureProps) {
     initialCaptures,
   } = props;
 
-  const [hookPermission, requestPermission] = useCameraPermissions();
+  const [hookPermission, requestPermission] = useCameraPermissions({ request: true });
   const cameraRef = useRef<CameraViewType>(null);
 
   const [facing, setFacing] = useState<CameraType>('back');

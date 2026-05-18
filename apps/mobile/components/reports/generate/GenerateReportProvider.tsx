@@ -325,6 +325,15 @@ export function GenerateReportProvider({
   const [isFinalizeConfirmVisible, setIsFinalizeConfirmVisible] =
     useState(false);
 
+  // Locally-owned empty report seeded when the user opens Edit without
+  // a generated report ("Edit manually" path). Kept separate from
+  // `onSetReport` so the lazy-init never triggers the route's dirty
+  // flag — only typing in the form should count as a user edit.
+  const [localSeed, setLocalSeed] = useState<GeneratedSiteReport | null>(null);
+  // The report visible to the Edit tab: prefer the authoritative
+  // prop (server/AI) then the locally-seeded blank.
+  const effectiveReport = report ?? localSeed;
+
   const addNote = useCallback(() => {
     const trimmed = input.trim();
     if (!trimmed) return;
@@ -353,25 +362,19 @@ export function GenerateReportProvider({
   );
 
   const openEdit = useCallback(() => {
-    // Lazy-seed an empty report when the user opens Edit without one,
-    // matching canonical's manual-entry path. If no `onSetReport` is
-    // wired, we still switch tabs — the empty-state will render.
-    if (!report && onSetReport) {
-      onSetReport(createEmptyReport());
-    }
+    // Lazy-seed locally so the route's dirty flag stays clean.
+    if (!report) setLocalSeed(createEmptyReport());
     setActiveTab('edit');
-  }, [onSetReport, report]);
+  }, [report]);
 
   const editManually = useCallback(() => {
     if (onEditManually) {
       onEditManually();
       return;
     }
-    if (!report && onSetReport) {
-      onSetReport(createEmptyReport());
-    }
+    if (!report) setLocalSeed(createEmptyReport());
     setActiveTab('edit');
-  }, [onEditManually, onSetReport, report]);
+  }, [onEditManually, report]);
 
   const setReport = useCallback(
     (next: GeneratedSiteReport) => {
@@ -435,7 +438,7 @@ export function GenerateReportProvider({
         isLoading: notesLoading,
       },
       generation: {
-        report,
+        report: effectiveReport,
         setReport,
         isUpdating: isGeneratingReport,
         error: generationError,
@@ -498,6 +501,8 @@ export function GenerateReportProvider({
       openEdit,
       editManually,
       report,
+      effectiveReport,
+      localSeed,
       setReport,
       isGeneratingReport,
       generationError,

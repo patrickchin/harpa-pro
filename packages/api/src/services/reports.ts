@@ -244,12 +244,27 @@ function isPkCollision(err: unknown): boolean {
 export async function updateReport(
   db: Db,
   reportId: string,
-  patch: { visitDate?: string | null },
+  patch: { visitDate?: string | null; body?: ReportBody | null },
 ): Promise<ReportRow | null> {
   const setVisit = Object.prototype.hasOwnProperty.call(patch, 'visitDate');
+  const setBody = Object.prototype.hasOwnProperty.call(patch, 'body');
+  const bodyJson = setBody && patch.body !== null && patch.body !== undefined
+    ? JSON.stringify(patch.body)
+    : null;
+  // body patch flow: we deliberately do NOT touch
+  // `notes_since_last_generation` or `generated_at` here — those belong
+  // to the AI loop (setReportBody). Manual edits round-trip through the
+  // same column without resetting the AI counter, so the action row
+  // can keep showing "Update report (N)" if new notes arrived while
+  // the user was editing.
   const r = await db.execute<RawReport>(sql`
     UPDATE app.reports
     SET visit_date = CASE WHEN ${setVisit} THEN ${patch.visitDate ?? null} ELSE visit_date END,
+        body = CASE
+                 WHEN ${setBody} AND ${bodyJson}::text IS NOT NULL THEN ${bodyJson}::jsonb
+                 WHEN ${setBody} THEN NULL
+                 ELSE body
+               END,
         updated_at = now()
     WHERE id = ${reportId}
     RETURNING id, number, project_id, status, visit_date, body,

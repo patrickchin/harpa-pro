@@ -137,6 +137,26 @@ Mitigation:
 
 ## Entries
 
+### R6 — owner-demotion via re-invite (implicit upsert on POST /members)
+
+A `POST /projects/{project}/members` handler that uses `INSERT … ON CONFLICT DO
+UPDATE` (upsert) lets an owner call the endpoint with their own phone number
+and a lower role (`viewer`, `editor`), silently demoting themselves. If they
+are the sole owner this locks the project out of all owner-only operations
+(member management, project delete) with no recovery path short of a DB patch.
+
+**Protection.** `app.add_project_member_by_phone` uses an explicit `IF EXISTS`
+guard and raises `23505` ("already_member") mapped to 409 `MEMBER_EXISTS`.
+Role changes must go through `PATCH /projects/{project}/members/{user}` (a
+separate, explicitly guarded endpoint). Full design in
+[`docs/v4/arch-project-members.md`](../v4/arch-project-members.md).
+
+**Test that must exist.** S3 in the members integration suite: owner A calls
+`POST` with their own phone → asserts 409 `MEMBER_EXISTS`, then confirms
+`GET /members` still shows A as `owner`.
+
+---
+
 ### 2026-05-18 — saved-report route rendered "Failed to load report" because the API body wasn't adapted to the UI shape (Pattern R5)
 
 **Symptom.** After tapping Finalize on the generate route the app

@@ -675,7 +675,7 @@ to `screen.ts` + `screens/**`.
 
 ## 6. Implementation checklist (one commit each)
 
-> **Status:** TUI-nav.0–3 ✅ shipped. 4–9 remaining on `feat/tui`.
+> **Status:** TUI-nav.0–4 ✅ shipped. 5–9 remaining on `feat/tui`.
 
 Each step ships its own tests + amends this doc's status table. No
 "tests later" step. Conventional Commits with `Co-authored-by:
@@ -707,9 +707,10 @@ Copilot` trailer.
    cascade-clear, 404-pops.
    `feat(cli): project home screen replaces flat projects submenu`
 
-5. **TUI-nav.4 — Members screen.**
+5. **TUI-nav.4 — Members screen.** ✅
    `tui/screens/members.ts`. Reached from Project Home › Members.
-   Prefills `projectSlug` on `members add` / `members remove`. Tests.
+   Prefills `projectId` on `members add` / `members remove`. Per-
+   member remove rows with confirm. Tests.
    `feat(cli): tui members screen prefills current project`
 
 6. **TUI-nav.5 — Reports list screen + Report Home screen.**

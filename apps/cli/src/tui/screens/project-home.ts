@@ -20,6 +20,7 @@ import chalk from 'chalk';
 import type { Screen, ScreenAction } from '../screen.js';
 import { fetchVia } from './_fetch.js';
 import { findLeaf } from '../registry-find.js';
+import { membersScreen } from './members.js';
 import type { ProjectLike } from '../../lib/render.js';
 
 export function projectHomeScreen(): Screen {
@@ -69,8 +70,14 @@ export function projectHomeScreen(): Screen {
           prefill: () => ({ projectId: slug }),
         },
         {
+          kind: 'screen',
+          label: 'Members',
+          open: () => membersScreen(),
+          refreshHeader: true,
+        },
+        {
           kind: 'leaf',
-          label: 'List members',
+          label: 'List members (raw)',
           cittyPath: ['projects', 'members', 'list'],
           prefill: () => ({ projectId: slug }),
         },

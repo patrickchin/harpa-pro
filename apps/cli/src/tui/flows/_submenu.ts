@@ -14,7 +14,7 @@
 import type { Prompter } from '../prompter.js';
 import type { Session } from '../session.js';
 import { runCommand } from '../execute.js';
-import { registry, type AnyHarpaCommand } from '../registry.js';
+import { findLeaf } from '../registry-find.js';
 
 const BACK = '__back__' as const;
 
@@ -62,12 +62,4 @@ export async function runSubmenu(
     if (!match) continue;
     await runCommand(prompter, session, match.leaf);
   }
-}
-
-function findLeaf(cittyPath: ReadonlyArray<string>): AnyHarpaCommand | undefined {
-  return registry.find((c) => {
-    const meta = c.cittyCommand.meta as { name?: string } | undefined;
-    const p = c.tuiSpec.cittyPath ?? [c.tuiSpec.group, meta?.name ?? ''];
-    return p.length === cittyPath.length && p.every((seg, i) => seg === cittyPath[i]);
-  });
 }

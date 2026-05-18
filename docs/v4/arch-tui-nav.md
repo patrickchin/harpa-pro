@@ -675,7 +675,7 @@ to `screen.ts` + `screens/**`.
 
 ## 6. Implementation checklist (one commit each)
 
-> **Status:** TUI-nav.0–1 ✅ shipped. 2–9 remaining on `feat/tui`.
+> **Status:** TUI-nav.0–2 ✅ shipped. 3–9 remaining on `feat/tui`.
 
 Each step ships its own tests + amends this doc's status table. No
 "tests later" step. Conventional Commits with `Co-authored-by:
@@ -691,12 +691,12 @@ Copilot` trailer.
    Unit test `prompt-prefill.test.ts`. No screen changes yet.
    `feat(cli): support prefilled args in tui leaf execution`
 
-3. **TUI-nav.2 — `Screen` + `runScreen` driver.**
+3. **TUI-nav.2 — `Screen` + `runScreen` driver.** ✅
    New `tui/screen.ts` with `Screen`, `ScreenAction`, `runScreen`,
-   `refreshAction()`, `findLeaf` move from `_submenu.ts` to a
-   shared `tui/registry.ts` helper (or inline). Unit test
-   `screen-driver.test.ts` with scriptedPrompter + a synthetic
-   screen. No flows changed yet.
+   `refreshAction()`, plus `findLeaf` extracted to
+   `tui/registry-find.ts` (shared with `_submenu.ts`). Unit test
+   `screen-driver.test.ts` with scriptedPrompter + synthetic screens.
+   No flows changed yet.
    `feat(cli): screen driver with info header for tui flows`
 
 4. **TUI-nav.3 — Projects screen + Project Home screen.**

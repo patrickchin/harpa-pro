@@ -48,12 +48,15 @@ export function TextNoteCard({
   const handleEdit = () => {
     setOptionsOpen(false);
     setDraft(entry.text);
-    setEditOpen(true);
+    // iOS RN can't present a second native Modal until the first
+    // finishes dismissing — defer the edit dialog so the options
+    // sheet has time to drop (matches saved-report.tsx pattern).
+    setTimeout(() => setEditOpen(true), 350);
   };
 
   const handleDelete = () => {
     setOptionsOpen(false);
-    onRemove?.(sourceIndex);
+    setTimeout(() => onRemove?.(sourceIndex), 350);
   };
 
   const handleSubmitEdit = () => {

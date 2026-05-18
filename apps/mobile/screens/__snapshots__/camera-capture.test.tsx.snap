@@ -22,14 +22,32 @@ exports[`CameraCapture > matches snapshot — granted, empty 1`] = `
     }
   />
   <rn-SafeAreaView
-    className="absolute inset-0 justify-end"
     pointerEvents="box-none"
+    style={
+      {
+        "bottom": 0,
+        "justifyContent": "flex-end",
+        "left": 0,
+        "position": "absolute",
+        "right": 0,
+        "top": 0,
+      }
+    }
   >
     <rn-View
-      className="absolute top-0 left-0 right-0 h-14 px-4 flex-row items-center justify-between"
+      className="px-4 flex-row items-center justify-between"
       style={
         {
+          "alignItems": "center",
           "backgroundColor": "rgba(0,0,0,0.35)",
+          "flexDirection": "row",
+          "height": 56,
+          "justifyContent": "space-between",
+          "left": 0,
+          "paddingHorizontal": 16,
+          "position": "absolute",
+          "right": 0,
+          "top": 0,
         }
       }
     >

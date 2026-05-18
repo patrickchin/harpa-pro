@@ -296,10 +296,13 @@ export function CameraCapture(props: CameraCaptureProps) {
         />
       )}
 
-      <SafeAreaView className="absolute inset-0 justify-end" pointerEvents="box-none">
+      <SafeAreaView
+        style={styles.overlay}
+        pointerEvents="box-none"
+      >
         {/* Top bar */}
         <View
-          className="absolute top-0 left-0 right-0 h-14 px-4 flex-row items-center justify-between"
+          className="px-4 flex-row items-center justify-between"
           style={styles.topBar}
         >
           <Pressable
@@ -449,7 +452,26 @@ function resolvePermission(
 // in StyleSheet so the bare `bg-black/35` etc. don't depend on
 // NativeWind v4 colour-opacity quirks at runtime.
 const styles = StyleSheet.create({
-  topBar: { backgroundColor: 'rgba(0,0,0,0.35)' },
+  overlay: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    justifyContent: 'flex-end',
+  },
+  topBar: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 56,
+    paddingHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: 'rgba(0,0,0,0.35)',
+  },
   iconButton: { backgroundColor: 'rgba(0,0,0,0.35)' },
   stripContent: { gap: 6, alignItems: 'center' },
   shutter: {

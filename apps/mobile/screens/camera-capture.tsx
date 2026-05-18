@@ -44,7 +44,8 @@ import {
   type CameraCapturedPicture,
   type CameraType,
   type FlashMode,
-} from 'expo-camera';
+  type CameraViewType,
+} from '@/lib/native/expo-camera-shim';
 import * as FileSystem from 'expo-file-system';
 import {
   Camera as CameraIcon,
@@ -114,7 +115,7 @@ export function CameraCapture(props: CameraCaptureProps) {
   } = props;
 
   const [hookPermission, requestPermission] = useCameraPermissions();
-  const cameraRef = useRef<CameraView>(null);
+  const cameraRef = useRef<CameraViewType>(null);
 
   const [facing, setFacing] = useState<CameraType>('back');
   const [flash, setFlash] = useState<FlashMode>('off');

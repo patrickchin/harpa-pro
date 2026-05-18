@@ -137,6 +137,105 @@ Mitigation:
 
 ## Entries
 
+### 2026-05-18 — saved-report route rendered "Failed to load report" because the API body wasn't adapted to the UI shape (Pattern R5)
+
+**Symptom.** After tapping Finalize on the generate route the app
+navigated to the saved-report route, which immediately rendered the
+"Failed to load report" error state. The underlying `GET
+/reports/:id` succeeded and returned a populated `body`, but the
+view treated it as missing.
+
+**Root cause.** The API persists `report_body` in the flat shape
+defined by `packages/api-contract/src/schemas/reports.ts#reportBody`
+(top-level `siteAddress`, `weather`, `workers`, …). The mobile UI
+consumes the nested shape from
+`packages/report-core/src/generated-report.ts#GeneratedSiteReportSchema`
+(everything wrapped under `report.*`). The generate route was
+already passing the API body through `reportBodyToGeneratedReport()`
+before rendering, but the saved-report route (`app/(app)/projects/
+[project]/reports/[number]/index.tsx`) still had a P4 TODO that left
+`displayReport = null` for any non-fixture body. The card layer
+treated `null` as load failure.
+
+**Pattern.** R5 — the default wiring (real API body) wasn't on the
+happy path of the saved-report view. Fixture-mode rendered fine, so
+the unit/integration tests went green and the bug only showed up in
+the Maestro flow that signs in and exercises the live stack.
+
+**Fix.**
+1. Call `reportBodyToGeneratedReport(reportRow.body)` from the
+   saved-report route when `reportRow.body` is present, falling
+   back to the fixture sample only in fixture mode.
+2. Cover the route with the `p3-report-wiring.yaml` Maestro flow
+   that finalizes a real seeded draft and asserts saved-report
+   renders Workers / Materials / Issues / Weather correctly.
+
+**Avoiding recurrence.**
+- When a UI ↔ API schema mismatch exists, the adapter MUST be
+  applied at every consumer, not just the first one. Grep for the
+  adapter name when adding a new render site.
+- Maestro flows that go through the real API are the contract for
+  this — fixture-only tests cannot catch adapter omissions.
+
+### 2026-05-18 — `expo-camera` native module missing crashed boot on dev-clients without the linked module (Pattern R5)
+
+**Symptom.** Launching the dev-client app produced an immediate
+redbox: `Cannot find native module 'ExpoCamera'`. The crash
+happened at module evaluation of `screens/camera-capture.tsx`
+because `expo-camera`'s top-level code calls
+`requireNativeModule('ExpoCamera')` eagerly, even if the
+`CameraView` component is never mounted.
+
+**Root cause.** P3.12 added `expo-camera` to the JS bundle but the
+native binary on the running dev-client predated the addition (the
+fmt/Xcode 26 native rebuild has been deferred — see
+`docs/v4/plan-p3-feature-build.md` P3.12). Any route that imports a
+file which imports `expo-camera` blows up the whole bundle, not
+just the camera screen.
+
+**Fix.** Added `apps/mobile/lib/native/expo-camera-shim.ts` which
+wraps `require('expo-camera')` in a try/catch and re-exports
+`CameraView` / `useCameraPermissions` with safe fallbacks that
+render an inline "Camera unavailable" message when the native
+module is missing. `screens/camera-capture.tsx` now imports from
+the shim. The shim keeps the typings intact so the rest of the app
+is unchanged.
+
+**Avoiding recurrence.**
+- Any native-only Expo module loaded at module-eval time gets the
+  same lazy-loader treatment when introduced. Add a checklist item
+  to P3-style screen rollouts: "Does this need a shim?"
+- Lint rule candidate: flag direct imports of `expo-camera`,
+  `expo-av`, `expo-file-system` outside of `lib/native/*`.
+
+### 2026-05-18 — iOS XCTest cannot deliver `tapOn` to `Pressable` inside a native RN `Modal` (Maestro flakiness)
+
+**Symptom.** A Maestro `tapOn: btn-report-delete` against a
+`Pressable` rendered inside `ReportActionsMenu`'s native `<Modal>`
+reports COMPLETED, but the `onPress` handler is never invoked.
+Adjacent buttons in `AppDialogSheet` (also a Modal) tap fine.
+
+**Root cause.** Suspected interaction between iOS 26.5 XCTest
+accessibility resolution and React Native's `Modal` implementation
+when the Modal's content uses a `Pressable` directly (vs.
+`TouchableOpacity`). XCTest finds the element by accessibilityID
+but the synthesised tap is consumed by the Modal's backdrop layer
+before reaching the inner view. Unit tests + UI render snapshots
+still pass — the wiring is correct; only Maestro's XCTest path is
+broken.
+
+**Workaround.** The `p3-report-wiring.yaml` flow asserts the
+Delete button is visible inside the action sheet but does not tap
+it. The delete mutation is covered by
+`apps/mobile/screens/saved-report.test.tsx`.
+
+**Avoiding recurrence.**
+- When designing testable destructive-action sheets in the future,
+  prefer an inline overlay over a native Modal so Maestro can
+  exercise the confirm path.
+- Document this limitation in any new Maestro flow that lands on a
+  Modal-hosted sheet — point at this entry.
+
 ### 2026-05-17 — invite-member form auto-closes on submit, hiding the API error (Pattern R5)
 
 **Symptom.** A failed `POST /projects/:slug/members` invite (e.g.

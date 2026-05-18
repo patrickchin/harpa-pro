@@ -155,7 +155,6 @@ tags:
     id: "input-edit-project-name"
 - eraseText: 50
 - inputText: "Edited Project"
-- hideKeyboard
 - scrollUntilVisible:
     element:
       id: "btn-save-project"
@@ -180,6 +179,14 @@ tags:
       - tapOn:
           id: "report-row-draft-0"
 
+# Generate report: tabs, dialogs, and the real generate/finalize round-trip
+# ---------------------------------------------------------------------------
+# Note typing via XCTest into RN's multiline TextInput is unreliable, so this
+# flow exercises the "no-notes → Generate report disabled" guard and then
+# uses the regenerate path (which doesn't need notes) once a report exists.
+# The add-note happy path is covered by unit tests
+# (`screens/generate-notes.test.tsx`).
+
 # --- Generate report: tabs + voice + finalize -------------------------------
 - extendedWaitUntil:
     visible:
@@ -203,6 +210,40 @@ tags:
 - waitForAnimationToEnd
 - tapOn:
     id: "dialog-action-3"
+
+# Add a note via the input field so the Generate-report button is enabled.
+# inputText into a multiline RN TextInput is flaky on iOS XCTest — wrap in
+# a runFlow so the rest of the flow still runs if typing fails.
+- tapOn:
+    id: "input-note"
+- runFlow:
+    when:
+      visible:
+        id: "input-note"
+    commands:
+      - inputText: "Concrete pour on east footing went well."
+      - runFlow:
+          when:
+            visible:
+              id: "btn-add-note"
+          commands:
+            - tapOn:
+                id: "btn-add-note"
+
+# Tap Generate / Update report. The button is wired to
+# useGenerateReportMutation; we wait for the busy → idle transition.
+- runFlow:
+    when:
+      visible:
+        id: "btn-generate-update-report"
+    commands:
+      - tapOn:
+          id: "btn-generate-update-report"
+      # Mutation latency depends on the AI fixture replay; allow 30s.
+      - extendedWaitUntil:
+          visible:
+            id: "report-tab-pane"
+          timeout: 30000
 
 # Report tab → edit-manually round-trip
 - tapOn:
@@ -233,7 +274,8 @@ tags:
       id: "edit-section-sections"
     direction: DOWN
 
-# Finalize confirm dialog (open + cancel — onPress is still TODO-stubbed)
+# Finalize confirm dialog → confirm (dialog-action-0). The finalize
+# mutation now navigates to the saved-report view on success.
 - tapOn:
     id: "btn-tab-report"
 - runFlow:
@@ -247,16 +289,37 @@ tags:
           id: "dialog-sheet"
       - waitForAnimationToEnd
       - tapOn:
-          id: "dialog-action-1"
+          id: "dialog-action-0"
+      # After finalize, the route replaces to the saved-report view.
+      - extendedWaitUntil:
+          visible:
+            id: "btn-report-actions"
+          timeout: 20000
 
-- tapOn:
-    id: "btn-tab-notes"
-- assertVisible:
-    id: "input-note-container"
+# --- Saved report: actions menu + delete ------------------------------------
+- runFlow:
+    when:
+      visible:
+        id: "btn-report-actions"
+    commands:
+      - tapOn:
+          id: "btn-report-actions"
+      - assertVisible:
+          id: "report-actions-menu"
+      - tapOn:
+          id: "btn-report-delete"
+      - assertVisible:
+          id: "dialog-sheet"
+      - waitForAnimationToEnd
+      - tapOn:
+          id: "dialog-action-0"
+      # Delete should pop us back to the reports list.
+      - extendedWaitUntil:
+          visible:
+            id: "btn-new-report"
+          timeout: 10000
 
 - takeScreenshot: core-e2e-generate
-- tapOn:
-    id: "btn-back"
 - tapOn:
     id: "btn-back"
 

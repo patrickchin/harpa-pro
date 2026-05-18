@@ -28,6 +28,8 @@ import { useReportPdfActions } from '@/lib/use-report-pdf-actions';
 import { env } from '@/lib/env';
 import { safeBack } from '@/lib/nav/safe-back';
 import { SAMPLE_GENERATED_REPORT } from '@/lib/dev-fixtures/sample-report';
+import { reportBodyToGeneratedReport } from '@/lib/report-body-adapter';
+import { reports as reportSchemas } from '@harpa/api-contract';
 import type { GeneratedSiteReport } from '@harpa/report-core';
 import type { AppDialogCopy } from '@/lib/app-dialog-copy';
 
@@ -56,17 +58,25 @@ export default function SavedReportRoute() {
     { enabled: hasValidRouteParams },
   );
 
-  const reportData = reportQuery.data as
-    | { status?: 'draft' | 'finalized' }
+  const reportRow = reportQuery.data as
+    | {
+        status?: 'draft' | 'finalized';
+        body?: reportSchemas.ReportBody | null;
+        visitDate?: string | null;
+      }
     | undefined;
-  const reportStatus = reportData?.status ?? null;
+  const reportStatus = reportRow?.status ?? null;
 
-  // TODO(P4): translate v4 `Report.body` (ReportBody shape) into a
-  // `GeneratedSiteReport` for the saved-report screen. Fixture mode
-  // seeds the sample so the read path is exercised end-to-end.
+  // Translate the persisted flat `ReportBody` shape into the wrapped
+  // `GeneratedSiteReport` that the saved-report UI consumes. Fixture
+  // mode short-circuits to the sample. The adapter lives in
+  // `lib/report-body-adapter.ts` and is the same one used by the
+  // generate route.
   const displayReport: GeneratedSiteReport | null = env.EXPO_PUBLIC_USE_FIXTURES
     ? SAMPLE_GENERATED_REPORT
-    : null;
+    : reportRow?.body
+      ? reportBodyToGeneratedReport(reportRow.body)
+      : null;
 
   const { refreshing, onRefresh } = useRefresh([
     () => reportQuery.refetch(),

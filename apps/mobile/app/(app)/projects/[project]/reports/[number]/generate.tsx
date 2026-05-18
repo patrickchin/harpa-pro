@@ -35,7 +35,9 @@ import type { NoteEntry } from '@/lib/note-entry';
 import { uuid } from '@/lib/uuid';
 import { env } from '@/lib/env';
 import type { GeneratedSiteReport } from '@harpa/report-core';
+import { reports } from '@harpa/api-contract';
 import { SAMPLE_GENERATED_REPORT } from '@/lib/dev-fixtures/sample-report';
+import { reportBodyToGeneratedReport } from '@/lib/report-body-adapter';
 import { safeBack } from '@/lib/nav/safe-back';
 import {
   consumeCameraSession,
@@ -89,7 +91,7 @@ export default function GenerateReportRoute() {
   const reportRow = report.data as
     | {
         id?: string;
-        body?: GeneratedSiteReport | null;
+        body?: reports.ReportBody | null;
         status?: 'draft' | 'finalized';
         notesSinceLastGeneration?: number;
         meta?: { title?: string | null };
@@ -163,7 +165,9 @@ export default function GenerateReportRoute() {
     [reportId, createNote],
   );
 
-  const serverBody = (reportRow?.body ?? null) as GeneratedSiteReport | null;
+  const serverBody: GeneratedSiteReport | null = reportRow?.body
+    ? reportBodyToGeneratedReport(reportRow.body, reportRow.meta ?? undefined)
+    : null;
 
   const fallbackReport: GeneratedSiteReport | null = env.EXPO_PUBLIC_USE_FIXTURES
     ? SAMPLE_GENERATED_REPORT
@@ -190,9 +194,12 @@ export default function GenerateReportRoute() {
       { params: { project: slug, number: reportNumber }, body: {} },
       {
         onSuccess: (data) => {
-          const next = (data as { report?: { body?: GeneratedSiteReport | null } } | undefined)
-            ?.report?.body ?? null;
-          if (next) setLocalReport(next);
+          const nextBody = (
+            data as { report?: { body?: reports.ReportBody | null } } | undefined
+          )?.report?.body ?? null;
+          if (nextBody) {
+            setLocalReport(reportBodyToGeneratedReport(nextBody));
+          }
         },
         onError: (err) => {
           setGenerationError(err.message ?? 'Generation failed.');

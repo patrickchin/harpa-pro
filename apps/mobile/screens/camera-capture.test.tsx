@@ -20,7 +20,7 @@ import React from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import TestRenderer, { act } from 'react-test-renderer';
 
-vi.mock('expo-camera', () => {
+vi.mock('@/lib/native/expo-camera-shim', () => {
   return {
     CameraView: (props: Record<string, unknown> & { children?: React.ReactNode }) =>
       React.createElement('rn-CameraView', props, props.children ?? null),

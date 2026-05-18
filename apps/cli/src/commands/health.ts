@@ -9,7 +9,6 @@
  */
 import chalk from 'chalk';
 import { defineHarpaCommand } from '../lib/command.js';
-import { createApiClient } from '../lib/client.js';
 
 export const health = defineHarpaCommand({
   meta: {
@@ -24,11 +23,11 @@ export const health = defineHarpaCommand({
     group: 'health',
     label: 'API health check',
     hint: 'GET /healthz — verify the API is reachable',
+    cittyPath: ['health'],
     requiresToken: false,
     args: {},
   },
-  execute({ env }) {
-    const client = createApiClient(env);
+  execute({ client }) {
     return {
       request: () => client.GET('/healthz', {}),
       format: (data) => `${chalk.green('✓')} API healthy: ${JSON.stringify(data)}`,

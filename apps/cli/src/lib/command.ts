@@ -8,12 +8,17 @@
  * the TUI calls execute through `performRequest` (returns an outcome,
  * loop continues).
  *
+ * For commands that pre-date this helper, use `defineTuiEntry()` to
+ * attach a TUI sidecar to an existing citty command without rewriting
+ * its handler. Both helpers produce the same `HarpaCommand` shape.
+ *
  * See docs/v4/arch-tui.md §3.2.
  */
 import { defineCommand, type ArgsDef, type CommandDef, type ParsedArgs } from 'citty';
 import { type CliEnv } from './env.js';
 import { getEnv } from './env-runtime.js';
 import { runRequest } from './run.js';
+import { createApiClient, requireToken, type ApiClient } from './client.js';
 
 /**
  * Per-arg prompt metadata, keyed by the citty arg name. Kept separate
@@ -47,6 +52,12 @@ export interface TuiSpec<A extends ArgsDef> {
   label: string;
   /** Short description for the menu hint. */
   hint?: string;
+  /**
+   * Full citty path to this leaf, e.g. ['auth', 'otp', 'start']. Used
+   * by the registry-completeness gate to map TUI entries back to the
+   * citty tree. Defaults to `[group, <cittyCommand.meta.name>]`.
+   */
+  cittyPath?: ReadonlyArray<string>;
   /** Per-arg prompt config keyed by the citty arg name. */
   args: { [K in keyof A]?: TuiArgSpec };
   /** When true the command needs HARPA_TOKEN; TUI offers the auth flow first. */
@@ -57,34 +68,41 @@ export interface TuiSpec<A extends ArgsDef> {
  * Result of building a single API call: the openapi-fetch thunk + the
  * human formatter. Used by both `runRequest` (CLI) and the TUI execute
  * path so the wire payload and rendering are identical.
+ *
+ * Note: `format` / `formatJson` take `any` so each command's inline
+ * callback can dereference response fields without a redundant cast.
+ * The wire payload remains strongly typed via `request` (which carries
+ * the openapi-fetch return type), and the format function is only ever
+ * called from this codebase — it never crosses a public surface.
  */
 export interface CommandExecution<T> {
   request: () => Promise<{ data?: T; error?: unknown; response: Response }>;
   /** Render success in human mode. Return undefined to skip stdout. */
-  format: (data: T) => string | undefined;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  format: (data: any) => string | undefined;
   /** Render success in `--json` mode. Defaults to `JSON.stringify`. */
-  formatJson?: (data: T) => string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  formatJson?: (data: any) => string;
 }
 
 export interface HarpaCommandContext<A extends ArgsDef> {
+  client: ApiClient;
   env: CliEnv;
   args: ParsedArgs<A>;
 }
 
-export interface HarpaCommand<A extends ArgsDef> {
+export interface HarpaCommand<A extends ArgsDef, T = unknown> {
   cittyCommand: CommandDef<A>;
   tuiSpec: TuiSpec<A>;
-  /** Build the request + formatter for the given env/args. */
-  execute: (ctx: HarpaCommandContext<A>) => CommandExecution<unknown>;
-  /** Fully-qualified leaf path, e.g. ['auth', 'otp', 'verify']. Filled by registry mounts. */
-  readonly path?: ReadonlyArray<string>;
+  /** Build the request + formatter for the given client/args. */
+  execute: (ctx: HarpaCommandContext<A>) => CommandExecution<T>;
 }
 
-export interface DefineHarpaCommandInput<A extends ArgsDef> {
+export interface DefineHarpaCommandInput<A extends ArgsDef, T> {
   meta: { name: string; description: string };
   args?: A;
   tui: TuiSpec<A>;
-  execute: (ctx: HarpaCommandContext<A>) => CommandExecution<unknown>;
+  execute: (ctx: HarpaCommandContext<A>) => CommandExecution<T>;
 }
 
 /**
@@ -92,15 +110,17 @@ export interface DefineHarpaCommandInput<A extends ArgsDef> {
  * hands off to `runRequest` (print + exit); the TUI calls `execute`
  * directly through `performRequest`.
  */
-export function defineHarpaCommand<A extends ArgsDef>(
-  def: DefineHarpaCommandInput<A>,
-): HarpaCommand<A> {
+export function defineHarpaCommand<A extends ArgsDef, T>(
+  def: DefineHarpaCommandInput<A, T>,
+): HarpaCommand<A, T> {
   const cittyCommand = defineCommand<A>({
     meta: { name: def.meta.name, description: def.meta.description },
     args: def.args,
     async run({ args }) {
       const env = getEnv();
-      const exec = def.execute({ env, args });
+      if (def.tui.requiresToken) requireToken(env);
+      const client = createApiClient(env);
+      const exec = def.execute({ client, env, args });
       await runRequest({
         json: Boolean((args as Record<string, unknown>).json),
         verbose: Boolean((args as Record<string, unknown>).verbose),
@@ -113,6 +133,34 @@ export function defineHarpaCommand<A extends ArgsDef>(
 
   return {
     cittyCommand,
+    tuiSpec: def.tui,
+    execute: def.execute,
+  };
+}
+
+/* -------------------------------------------------------------------------- */
+/*  defineTuiEntry — attach a TUI sidecar to an existing citty command.       */
+/* -------------------------------------------------------------------------- */
+
+export interface DefineTuiEntryInput<A extends ArgsDef, T> {
+  cittyCommand: CommandDef<A>;
+  tui: TuiSpec<A>;
+  execute: (ctx: HarpaCommandContext<A>) => CommandExecution<T>;
+}
+
+/**
+ * For commands whose citty wrapper exists and whose handler is reused
+ * by integration tests: produce a `HarpaCommand` that points at the
+ * existing citty command, supplies a `tuiSpec`, and gives the TUI its
+ * own `execute` factory. The TUI call path stays decoupled from the
+ * citty `run` block, so we don't disturb existing behaviour while we
+ * fill in coverage incrementally.
+ */
+export function defineTuiEntry<A extends ArgsDef, T>(
+  def: DefineTuiEntryInput<A, T>,
+): HarpaCommand<A, T> {
+  return {
+    cittyCommand: def.cittyCommand,
     tuiSpec: def.tui,
     execute: def.execute,
   };

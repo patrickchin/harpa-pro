@@ -11,6 +11,7 @@
  */
 import { performRequest } from '../lib/run.js';
 import { formatErrorMessage, formatTransportMessage } from '../lib/error.js';
+import { createApiClient } from '../lib/client.js';
 import type { AnyHarpaCommand } from './registry.js';
 import type { Prompter } from './prompter.js';
 import type { Session } from './session.js';
@@ -39,7 +40,9 @@ export async function runCommand(
   // flags. For TUI, we only ever set the prompted keys; missing args
   // stay undefined, matching the citty default behaviour.
   const args = { _: [], ...answers } as unknown as ParsedArgs;
-  const exec = cmd.execute({ env: session.effectiveEnv(), args });
+  const env = session.effectiveEnv();
+  const client = createApiClient(env);
+  const exec = cmd.execute({ client, env, args });
 
   const outcome = await performRequest(exec.request);
 

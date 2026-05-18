@@ -5,9 +5,15 @@
 > end-to-end. Performance targets met. Universal links live.
 >
 > **Scope discipline:** P4 is hardening only — Sentry, perf,
-> prod-infra finishing, byte-equivalent PDF, load test, universal
+> prod-infra finishing, PDF export pipeline, load test, universal
 > links, bugs sweep. Pure feature completion that runs locally
 > belongs in [P3.15](plan-p3-feature-build.md#p315--feature-completion--upload-wiring).
+>
+> **Backend-first ordering:** the prod migration job (P4.4 below)
+> is being pulled forward and shipped together with P3.15's API
+> work — see the
+> [P3.15 Backend-first track](plan-p3-feature-build.md#p315--feature-completion--upload-wiring).
+> Other P4 items stay here.
 
 ## Already shipped (audited 2026-05-19)
 

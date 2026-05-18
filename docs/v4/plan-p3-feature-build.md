@@ -525,6 +525,35 @@ footers. These are pure feature-completion work that runs locally
 currently in the code — flip those markers to `TODO(P3.15)` as
 they're picked up.
 
+> **Backend-first track.** Land these four API items before
+> resuming the mobile track below. The rest of P4's API slices
+> (statement_timeout, k6, universal links, Sentry, `/me/usage/events`)
+> stay in P4.
+>
+> **Order:**
+>
+> 1. **`useReportUnfinalize` route** — `POST /reports/{id}/unfinalize`
+>    (or `PATCH` with `{ status: 'draft' }`). RLS-scoped; flips
+>    `finalized_at` to NULL; integration test covers
+>    member-can / non-member-can't. From P3.15.3.
+> 2. **LLM token accounting** — the whole of P3.15.5
+>    (`llm_usage_events` table + `recordLlmUsage` service +
+>    instrumentation of `services/ai.ts` chat / transcribe /
+>    generateReport + fixture usage values). Prereq for step 3.
+> 3. **`/me/usage` extension** — add `inputTokens`, `outputTokens`,
+>    `cachedTokens` per month + per-model breakdown, aggregated
+>    from `llm_usage_events`. From P3.15.4.
+> 4. **Neon prod migration job** — add the
+>    `pnpm --filter @harpa/api db:migrate` step to
+>    `.github/workflows/api-prod.yml` (currently only runs in
+>    `api-dev.yml`). Without this, step 2's `llm_usage_events`
+>    migration won't apply on prod deploy. From
+>    [P4.4](plan-p4-hardening.md#p44-neon-prod-migration--pitr).
+>
+> The paginated `GET /me/usage/events`, Sentry API middleware,
+> PG `statement_timeout`, universal-link manifests, and k6 load
+> tests stay in P4.
+
 The shared blocker is **mobile R2 upload orchestration** (P3.15.1).
 `AvatarUploader`, `ReportPhotos`, `ImagePreviewModal` signed-URL,
 and the Camera Done handoff all depend on it. Land the orchestration

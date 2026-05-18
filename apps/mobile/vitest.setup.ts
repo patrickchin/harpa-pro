@@ -299,3 +299,80 @@ vi.mock('@react-native-async-storage/async-storage', () => {
     },
   };
 });
+
+// `react-native-gesture-handler` ships native bindings. Provide a JS-only
+// stub that captures the configured handler callbacks on a `__cfg`
+// property so tests can simulate pinch / tap by calling
+// `(detector.props.gesture as any).__cfg.onUpdate({ scale: 1.4 })`.
+vi.mock('react-native-gesture-handler', () => {
+  type AnyFn = (...args: unknown[]) => unknown;
+  interface GestureCfg {
+    kind: string;
+    onStart?: AnyFn;
+    onUpdate?: AnyFn;
+    onEnd?: AnyFn;
+    children?: unknown[];
+  }
+  function builder(kind: string) {
+    const cfg: GestureCfg = { kind };
+    const chain = {
+      onStart(fn: AnyFn) {
+        cfg.onStart = fn;
+        return chain;
+      },
+      onUpdate(fn: AnyFn) {
+        cfg.onUpdate = fn;
+        return chain;
+      },
+      onEnd(fn: AnyFn) {
+        cfg.onEnd = fn;
+        return chain;
+      },
+      __cfg: cfg,
+    };
+    return chain;
+  }
+  const Gesture = {
+    Pinch: () => builder('pinch'),
+    Tap: () => builder('tap'),
+    Pan: () => builder('pan'),
+    Simultaneous: (...children: unknown[]) => ({
+      __cfg: { kind: 'simultaneous', children },
+    }),
+    Race: (...children: unknown[]) => ({
+      __cfg: { kind: 'race', children },
+    }),
+  };
+  const GestureDetector = (props: AnyProps) =>
+    React.createElement('rn-GestureDetector', props, props.children);
+  const GestureHandlerRootView = (props: AnyProps) =>
+    React.createElement('rn-GestureHandlerRootView', props, props.children);
+  return {
+    Gesture,
+    GestureDetector,
+    GestureHandlerRootView,
+  };
+});
+
+// `expo-media-library` ships native bindings. Default stub: granted +
+// no-op save. Tests can re-mock per-file to assert call counts.
+vi.mock('expo-media-library', () => ({
+  requestPermissionsAsync: vi.fn(async () => ({
+    granted: true,
+    canAskAgain: true,
+    status: 'granted',
+    accessPrivileges: 'all',
+  })),
+  getPermissionsAsync: vi.fn(async () => ({
+    granted: true,
+    canAskAgain: true,
+    status: 'granted',
+    accessPrivileges: 'all',
+  })),
+  saveToLibraryAsync: vi.fn(async () => undefined),
+  PermissionStatus: {
+    UNDETERMINED: 'undetermined',
+    GRANTED: 'granted',
+    DENIED: 'denied',
+  },
+}));

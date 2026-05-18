@@ -2,12 +2,15 @@
  * CameraCapture screen body — props-only, no session-registry /
  * router coupling. Ported from
  * `../haru3-reports/apps/mobile/app/(camera)/capture.tsx` on branch
- * `dev`.
+ * `dev`, extended in P3.15.2 with pinch-to-zoom, tap-to-focus, and a
+ * save-to-camera-roll toggle.
  *
  * The body owns:
  *  - permissions hook (`useCameraPermissions`, allowed by P3.12 spec)
  *  - `CameraView` ref + capture queue (uri[], width/height)
  *  - flash / facing toggles + shutter "isCapturing" lock
+ *  - zoom (0..1) driven by a pinch gesture
+ *  - tap-to-focus indicator + optional onFocusPoint callback
  *  - the "discard photos" confirmation dialog
  *
  * Parents flow in:
@@ -16,6 +19,10 @@
  *    upload-queue, avatar-uploader …).
  *  - `onCancel()` — invoked when the user backs out (with no photos
  *    or after confirming discard).
+ *  - `saveToCameraRoll` + `onToggleSaveToCameraRoll` — controlled
+ *    toggle. The body never persists; the route owns AsyncStorage.
+ *  - `saveCaptureToCameraRoll(uri)` — invoked after a successful shot
+ *    iff the toggle is on. Errors are swallowed (best-effort save).
  *
  * Test / dev injection (Pitfall 13 — defaults are tested, overrides
  * are for negative-path / preview):
@@ -38,6 +45,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import {
   CameraView,
   useCameraPermissions,
@@ -72,6 +80,13 @@ export interface CameraCapturePermissionOverride {
   canAskAgain: boolean;
 }
 
+export interface FocusPoint {
+  /** Normalised x in [0, 1] across the preview width. */
+  x: number;
+  /** Normalised y in [0, 1] across the preview height. */
+  y: number;
+}
+
 export interface CameraCaptureProps {
   /** Invoked with the committed URI list when the user taps Done. */
   onCommit: (uris: string[]) => void;
@@ -83,10 +98,14 @@ export interface CameraCaptureProps {
   permissionOverride?: CameraCapturePermissionOverride | 'requesting';
   /**
    * Replace the live `CameraView` with an arbitrary node (dev mirror
-   * placeholders, snapshot tests). Receives the current facing/flash
-   * so previews can reflect the toggles if useful.
+   * placeholders, snapshot tests). Receives the current facing/flash/
+   * zoom so previews can reflect the toggles if useful.
    */
-  renderPreview?: (opts: { facing: CameraType; flash: FlashMode }) => ReactNode;
+  renderPreview?: (opts: {
+    facing: CameraType;
+    flash: FlashMode;
+    zoom: number;
+  }) => ReactNode;
   /**
    * Replace the camera-ref `takePictureAsync` invocation. Useful in
    * the dev mirror (no real camera) and tests. Resolving with `null`
@@ -99,6 +118,28 @@ export interface CameraCaptureProps {
   deleteFile?: (uri: string) => void;
   /** Seed the strip for previewing populated state in dev / tests. */
   initialCaptures?: ReadonlyArray<CameraCaptureItem>;
+  /** Controlled toggle. Default false. */
+  saveToCameraRoll?: boolean;
+  /** Invoked when the user taps the save-to-roll toggle. */
+  onToggleSaveToCameraRoll?: () => void;
+  /**
+   * Invoked after each successful capture when `saveToCameraRoll` is
+   * on. Errors are swallowed; the shutter still appends the photo to
+   * the strip even if the library save fails.
+   */
+  saveCaptureToCameraRoll?: (uri: string) => Promise<void> | void;
+  /** Optional callback invoked with the normalised focus point. */
+  onFocusPoint?: (point: FocusPoint) => void;
+}
+
+const MIN_ZOOM = 0;
+const MAX_ZOOM = 1;
+
+function clampZoom(z: number): number {
+  if (Number.isNaN(z)) return MIN_ZOOM;
+  if (z < MIN_ZOOM) return MIN_ZOOM;
+  if (z > MAX_ZOOM) return MAX_ZOOM;
+  return z;
 }
 
 export function CameraCapture(props: CameraCaptureProps) {
@@ -112,6 +153,10 @@ export function CameraCapture(props: CameraCaptureProps) {
     onOpenSettings,
     deleteFile,
     initialCaptures,
+    saveToCameraRoll = false,
+    onToggleSaveToCameraRoll,
+    saveCaptureToCameraRoll,
+    onFocusPoint,
   } = props;
 
   const [hookPermission, requestPermission] = useCameraPermissions({ request: true });
@@ -124,6 +169,15 @@ export function CameraCapture(props: CameraCaptureProps) {
   );
   const [isCapturing, setIsCapturing] = useState(false);
   const [confirmDiscardOpen, setConfirmDiscardOpen] = useState(false);
+  const [zoom, setZoom] = useState(MIN_ZOOM);
+  const zoomStartRef = useRef(MIN_ZOOM);
+  const [focusIndicator, setFocusIndicator] = useState<{
+    x: number;
+    y: number;
+    key: number;
+  } | null>(null);
+  const focusKeyRef = useRef(0);
+  const previewSizeRef = useRef({ width: 1, height: 1 });
 
   const removeFile = useCallback(
     (uri: string) => {
@@ -167,6 +221,14 @@ export function CameraCapture(props: CameraCaptureProps) {
       }
       if (item) {
         setCaptures((prev) => [...prev, item!]);
+        if (saveToCameraRoll && saveCaptureToCameraRoll) {
+          try {
+            await saveCaptureToCameraRoll(item.uri);
+          } catch {
+            // Best-effort — saving to the camera roll shouldn't block
+            // the capture from joining the report.
+          }
+        }
       }
     } catch {
       // Swallow — a single bad shot shouldn't kill the screen. The
@@ -174,7 +236,14 @@ export function CameraCapture(props: CameraCaptureProps) {
     } finally {
       setIsCapturing(false);
     }
-  }, [captures.length, isCapturing, maxBurst, takePicture]);
+  }, [
+    captures.length,
+    isCapturing,
+    maxBurst,
+    takePicture,
+    saveToCameraRoll,
+    saveCaptureToCameraRoll,
+  ]);
 
   const handleRemove = useCallback(
     (uri: string) => {
@@ -203,6 +272,41 @@ export function CameraCapture(props: CameraCaptureProps) {
     }
     onCancel();
   }, [captures.length, onCancel]);
+
+  // ── Gestures ────────────────────────────────────────────────────────
+  //
+  // Pinch updates `zoom` in [0,1]; we anchor at the start of the pinch
+  // so the gesture feels stable rather than jumping on every update.
+  // Tap-to-focus shows a brief indicator at the touch point and
+  // forwards a normalised coordinate to `onFocusPoint` if provided —
+  // the actual focus call is platform-specific on expo-camera and not
+  // wired here, but the gesture surface is in place for that follow-up.
+
+  const pinchGesture = Gesture.Pinch()
+    .onStart(() => {
+      zoomStartRef.current = zoom;
+    })
+    .onUpdate((event: { scale: number }) => {
+      const scale = typeof event.scale === 'number' ? event.scale : 1;
+      const delta = (scale - 1) * 0.5;
+      setZoom(clampZoom(zoomStartRef.current + delta));
+    });
+
+  const tapGesture = Gesture.Tap().onEnd(
+    (event: { x: number; y: number }) => {
+      const { width, height } = previewSizeRef.current;
+      const x = typeof event.x === 'number' ? event.x : 0;
+      const y = typeof event.y === 'number' ? event.y : 0;
+      focusKeyRef.current += 1;
+      setFocusIndicator({ x, y, key: focusKeyRef.current });
+      onFocusPoint?.({
+        x: width > 0 ? x / width : 0,
+        y: height > 0 ? y / height : 0,
+      });
+    },
+  );
+
+  const composedGesture = Gesture.Simultaneous(pinchGesture, tapGesture);
 
   // ── Permission gates ────────────────────────────────────────────────
 
@@ -282,19 +386,46 @@ export function CameraCapture(props: CameraCaptureProps) {
 
   return (
     <View className="flex-1 bg-black" testID="camera-capture-root">
-      {renderPreview ? (
-        renderPreview({ facing, flash })
-      ) : (
-        <CameraView
-          ref={cameraRef}
+      <GestureDetector gesture={composedGesture}>
+        <View
           style={StyleSheet.absoluteFill}
-          facing={facing}
-          flash={flash}
-          mode="picture"
-          pictureSize="1920x1080"
-          responsiveOrientationWhenOrientationLocked={false}
-        />
-      )}
+          testID="camera-gesture-surface"
+          onLayout={(e: {
+            nativeEvent: { layout: { width: number; height: number } };
+          }) => {
+            const { width, height } = e.nativeEvent.layout;
+            previewSizeRef.current = { width, height };
+          }}
+        >
+          {renderPreview ? (
+            renderPreview({ facing, flash, zoom })
+          ) : (
+            <CameraView
+              ref={cameraRef}
+              style={StyleSheet.absoluteFill}
+              facing={facing}
+              flash={flash}
+              zoom={zoom}
+              mode="picture"
+              pictureSize="1920x1080"
+              responsiveOrientationWhenOrientationLocked={false}
+            />
+          )}
+          {focusIndicator ? (
+            <View
+              testID="camera-focus-indicator"
+              pointerEvents="none"
+              style={[
+                styles.focusIndicator,
+                {
+                  left: focusIndicator.x - 32,
+                  top: focusIndicator.y - 32,
+                },
+              ]}
+            />
+          ) : null}
+        </View>
+      </GestureDetector>
 
       <SafeAreaView
         style={styles.overlay}
@@ -315,19 +446,43 @@ export function CameraCapture(props: CameraCaptureProps) {
           >
             <X size={24} color="#ffffff" />
           </Pressable>
-          <Pressable
-            onPress={() => setFlash(nextFlash)}
-            accessibilityRole="button"
-            accessibilityLabel={`Flash ${flash}`}
-            testID="btn-camera-flash"
-            className="w-11 h-11 rounded-full items-center justify-center"
-            style={styles.iconButton}
-          >
-            {flashIcon}
-            <Text className="text-white text-[9px] mt-0.5 uppercase tracking-wider">
-              {flash}
-            </Text>
-          </Pressable>
+          <View className="flex-row items-center gap-2">
+            {onToggleSaveToCameraRoll ? (
+              <Pressable
+                onPress={onToggleSaveToCameraRoll}
+                accessibilityRole="switch"
+                accessibilityState={{ checked: saveToCameraRoll }}
+                accessibilityLabel={
+                  saveToCameraRoll
+                    ? 'Save to camera roll: on'
+                    : 'Save to camera roll: off'
+                }
+                testID="btn-camera-save-to-roll"
+                className="h-11 px-3 rounded-full flex-row items-center"
+                style={[
+                  styles.iconButton,
+                  saveToCameraRoll && styles.toggleOn,
+                ]}
+              >
+                <Text className="text-white text-xs font-semibold uppercase">
+                  Roll {saveToCameraRoll ? 'on' : 'off'}
+                </Text>
+              </Pressable>
+            ) : null}
+            <Pressable
+              onPress={() => setFlash(nextFlash)}
+              accessibilityRole="button"
+              accessibilityLabel={`Flash ${flash}`}
+              testID="btn-camera-flash"
+              className="w-11 h-11 rounded-full items-center justify-center"
+              style={styles.iconButton}
+            >
+              {flashIcon}
+              <Text className="text-white text-[9px] mt-0.5 uppercase tracking-wider">
+                {flash}
+              </Text>
+            </Pressable>
+          </View>
         </View>
 
         <View className="flex-1" />
@@ -473,6 +628,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.35)',
   },
   iconButton: { backgroundColor: 'rgba(0,0,0,0.35)' },
+  toggleOn: { backgroundColor: 'rgba(229, 93, 34, 0.85)' },
   stripContent: { gap: 6, alignItems: 'center' },
   shutter: {
     width: 78,
@@ -493,4 +649,12 @@ const styles = StyleSheet.create({
   shutterDisabled: { opacity: 0.4 },
   permissionInner: { gap: 16 },
   permissionBody: { color: '#d6d3cc', lineHeight: 21 },
+  focusIndicator: {
+    position: 'absolute',
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    borderWidth: 2,
+    borderColor: '#ffffff',
+  },
 });

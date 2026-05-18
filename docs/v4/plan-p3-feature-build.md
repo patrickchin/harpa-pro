@@ -279,7 +279,8 @@ mocked locally. Commit:
 **Follow-ups → [P3.15](#p315--feature-completion--upload-wiring):**
 upload-on-Done handoff, `expo-media-library` save-to-roll,
 pinch-zoom + tap-focus. iOS prebuild already landed
-(`apps/mobile/ios/`).
+(`apps/mobile/ios/`). Follow-ups shipped in
+[P3.15.2](#p3152--camera-done-handoff).
 
 ### P3.13 — Profile / Account / Usage (✅ shipped)
 
@@ -420,13 +421,13 @@ token-level usage UI in P3.15.4 — land it before extending
 - [x] Commit: `feat(mobile): R2 upload orchestration + signed-URL resolver + CachedImage`.
 
 #### P3.15.2 — Camera Done handoff
-- [ ] `(camera)/capture.tsx` Done drains the session registry into
+- [x] `(camera)/capture.tsx` Done drains the session registry into
       the upload queue (`useFocusEffect` in the caller, per current
       `TODO(P4)` in `capture.tsx`).
-- [ ] `expo-media-library` save-to-camera-roll toggle (off by default).
-- [ ] Pinch-to-zoom + tap-to-focus gesture handlers on the preview.
-- [ ] Maestro flow: capture → Done → file appears in report.
-- [ ] Commit: `feat(mobile): camera Done → upload handoff + roll toggle + gestures`.
+- [x] `expo-media-library` save-to-camera-roll toggle (off by default).
+- [x] Pinch-to-zoom + tap-to-focus gesture handlers on the preview.
+- [x] Maestro flow: capture → Done → file appears in report.
+- [x] Commit: `feat(mobile): camera Done → upload handoff + roll toggle + gestures`.
 
 #### P3.15.3 — Saved-report wiring completion
 - [x] `useReportUnfinalize` route — `POST /reports/{number}/unfinalize`

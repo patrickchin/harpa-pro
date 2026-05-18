@@ -46,6 +46,8 @@ const config: ExpoConfig = {
     icon: './assets/icon.png',
     infoPlist: {
       ITSAppUsesNonExemptEncryption: false,
+      NSPhotoLibraryAddUsageDescription:
+        'Allow Harpa Pro to save captured site photos to your camera roll.',
     },
   },
   android: {
@@ -64,6 +66,15 @@ const config: ExpoConfig = {
         cameraPermission:
           'Allow Harpa Pro to access your camera to capture site photos for your reports.',
         recordAudioAndroid: false,
+      },
+    ],
+    [
+      'expo-media-library',
+      {
+        photosPermission: false,
+        savePhotosPermission:
+          'Allow Harpa Pro to save captured site photos to your camera roll.',
+        isAccessMediaLocationEnabled: false,
       },
     ],
   ],

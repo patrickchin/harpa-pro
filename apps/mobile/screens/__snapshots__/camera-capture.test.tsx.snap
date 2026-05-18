@@ -5,22 +5,68 @@ exports[`CameraCapture > matches snapshot — granted, empty 1`] = `
   className="flex-1 bg-black"
   testID="camera-capture-root"
 >
-  <rn-CameraView
-    facing="back"
-    flash="off"
-    mode="picture"
-    pictureSize="1920x1080"
-    responsiveOrientationWhenOrientationLocked={false}
-    style={
+  <rn-GestureDetector
+    gesture={
       {
-        "bottom": 0,
-        "left": 0,
-        "position": "absolute",
-        "right": 0,
-        "top": 0,
+        "__cfg": {
+          "children": [
+            {
+              "__cfg": {
+                "kind": "pinch",
+                "onStart": [Function],
+                "onUpdate": [Function],
+              },
+              "onEnd": [Function],
+              "onStart": [Function],
+              "onUpdate": [Function],
+            },
+            {
+              "__cfg": {
+                "kind": "tap",
+                "onEnd": [Function],
+              },
+              "onEnd": [Function],
+              "onStart": [Function],
+              "onUpdate": [Function],
+            },
+          ],
+          "kind": "simultaneous",
+        },
       }
     }
-  />
+  >
+    <rn-View
+      onLayout={[Function]}
+      style={
+        {
+          "bottom": 0,
+          "left": 0,
+          "position": "absolute",
+          "right": 0,
+          "top": 0,
+        }
+      }
+      testID="camera-gesture-surface"
+    >
+      <rn-CameraView
+        facing="back"
+        flash="off"
+        mode="picture"
+        pictureSize="1920x1080"
+        responsiveOrientationWhenOrientationLocked={false}
+        style={
+          {
+            "bottom": 0,
+            "left": 0,
+            "position": "absolute",
+            "right": 0,
+            "top": 0,
+          }
+        }
+        zoom={0}
+      />
+    </rn-View>
+  </rn-GestureDetector>
   <rn-SafeAreaView
     pointerEvents="box-none"
     style={
@@ -68,28 +114,32 @@ exports[`CameraCapture > matches snapshot — granted, empty 1`] = `
           size={24}
         />
       </rn-Pressable>
-      <rn-Pressable
-        accessibilityLabel="Flash off"
-        accessibilityRole="button"
-        className="w-11 h-11 rounded-full items-center justify-center"
-        onPress={[Function]}
-        style={
-          {
-            "backgroundColor": "rgba(0,0,0,0.35)",
-          }
-        }
-        testID="btn-camera-flash"
+      <rn-View
+        className="flex-row items-center gap-2"
       >
-        <lucide-ZapOff
-          color="#ffffff"
-          size={22}
-        />
-        <rn-Text
-          className="text-white text-[9px] mt-0.5 uppercase tracking-wider"
+        <rn-Pressable
+          accessibilityLabel="Flash off"
+          accessibilityRole="button"
+          className="w-11 h-11 rounded-full items-center justify-center"
+          onPress={[Function]}
+          style={
+            {
+              "backgroundColor": "rgba(0,0,0,0.35)",
+            }
+          }
+          testID="btn-camera-flash"
         >
-          off
-        </rn-Text>
-      </rn-Pressable>
+          <lucide-ZapOff
+            color="#ffffff"
+            size={22}
+          />
+          <rn-Text
+            className="text-white text-[9px] mt-0.5 uppercase tracking-wider"
+          >
+            off
+          </rn-Text>
+        </rn-Pressable>
+      </rn-View>
     </rn-View>
     <rn-View
       className="flex-1"

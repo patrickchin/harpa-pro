@@ -49,6 +49,7 @@ import {
   consumeCameraSession,
   createCameraSession,
 } from '@/lib/camera-session-registry';
+import { useCameraUploads } from '@/lib/camera/use-camera-uploads';
 
 interface ApiNote {
   id: string;
@@ -382,6 +383,7 @@ export default function GenerateReportRoute() {
   // with the upload pipeline (P4) — until then we tell the user
   // honestly that the photos couldn't be attached yet (Pitfall 13).
   const [cameraSessionId, setCameraSessionId] = useState<string | null>(null);
+  const { enqueueCameraUris } = useCameraUploads();
   const handleCameraCapture = useCallback(() => {
     if (!slug || reportNumber === null) return;
     const sessionId = createCameraSession({
@@ -409,14 +411,25 @@ export default function GenerateReportRoute() {
       if (!cameraSessionId) return;
       const uris = consumeCameraSession(cameraSessionId);
       setCameraSessionId(null);
-      if (uris && uris.length > 0) {
+      if (!uris || uris.length === 0) return;
+      if (!reportId) {
+        // No report row yet — surface the captures so they aren't
+        // silently dropped (very unlikely path; the camera button is
+        // only enabled once the draft exists).
         setUploadError(
-          `Photo capture works, but uploading the ${uris.length} photo${
-            uris.length === 1 ? '' : 's'
-          } needs the storage pipeline (coming soon).`,
+          `Captured ${uris.length} photo${uris.length === 1 ? '' : 's'} but the draft isn't ready yet. Try again in a moment.`,
         );
+        return;
       }
-    }, [cameraSessionId]),
+      void enqueueCameraUris(uris, { reportId }).then((results) => {
+        const failed = results.filter((r) => r.status === 'rejected').length;
+        if (failed > 0) {
+          setUploadError(
+            `${failed} of ${uris.length} photo${uris.length === 1 ? '' : 's'} failed to upload. Open the report queue to retry.`,
+          );
+        }
+      });
+    }, [cameraSessionId, reportId, enqueueCameraUris]),
   );
 
   const canWrite =

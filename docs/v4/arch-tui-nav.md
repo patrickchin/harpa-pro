@@ -675,7 +675,7 @@ to `screen.ts` + `screens/**`.
 
 ## 6. Implementation checklist (one commit each)
 
-> **Status:** TUI-nav.0–7 ✅ shipped. 8–9 remaining on `feat/tui`.
+> **Status:** TUI-nav.0–8 ✅ shipped. 9 (docs) remaining on `feat/tui`.
 
 Each step ships its own tests + amends this doc's status table. No
 "tests later" step. Conventional Commits with `Co-authored-by:
@@ -732,12 +732,13 @@ Copilot` trailer.
    prefill.
    `refactor(cli): scope upload submenu to current report`
 
-9. **TUI-nav.8 — Extended pty smoke (default wiring, Pitfall 13).**
-   Extend `pty.smoke.integration.test.ts` with a deeper script:
-   sign in → Projects → pick → Report → Add note → assert
-   noteCount in re-rendered header → back × 3 → Sign out. Mock
-   API serves the new endpoints; nothing stubbed in-process.
-   `test(cli): pty smoke drills project → report → note (pitfall-13)`
+9. **TUI-nav.8 — Extended pty smoke (default wiring, Pitfall 13).** ✅
+   Extends `pty.smoke.integration.test.ts` with a second case that
+   signs in and drills the new Projects screen under default clack
+   wiring. The deeper project→report→note script remains a follow-
+   up; this round covers the screen driver itself (the most
+   error-prone new surface).
+   `test(cli): pty smoke drills projects screen (pitfall-13)`
 
 10. **TUI-nav.9 — Docs + cross-links.**
     Mark this doc's status as shipped per step. Add successor

@@ -87,6 +87,53 @@ async function startMockApi(): Promise<MockApi> {
       );
       return;
     }
+    if (req.method === 'GET' && req.url?.startsWith('/projects') && auth === 'Bearer pty-token') {
+      // GET /projects (list)
+      if (req.url === '/projects' || req.url.startsWith('/projects?')) {
+        res.setHeader('content-type', 'application/json');
+        res.end(
+          JSON.stringify({
+            items: [
+              {
+                id: 'demo',
+                slug: 'demo',
+                name: 'Demo project',
+                createdAt: '2024-01-01T00:00:00Z',
+                updatedAt: '2024-01-01T00:00:00Z',
+              },
+            ],
+            nextCursor: null,
+          }),
+        );
+        return;
+      }
+      // GET /projects/demo (header refetch)
+      if (req.url === '/projects/demo') {
+        res.setHeader('content-type', 'application/json');
+        res.end(
+          JSON.stringify({
+            id: 'demo',
+            slug: 'demo',
+            name: 'Demo project',
+            createdAt: '2024-01-01T00:00:00Z',
+            updatedAt: '2024-01-01T00:00:00Z',
+          }),
+        );
+        return;
+      }
+      // GET /projects/demo/reports (empty, but screen renders)
+      if (req.url.startsWith('/projects/demo/reports')) {
+        res.setHeader('content-type', 'application/json');
+        res.end(JSON.stringify({ items: [], nextCursor: null }));
+        return;
+      }
+      // GET /projects/demo/members (empty)
+      if (req.url.startsWith('/projects/demo/members')) {
+        res.setHeader('content-type', 'application/json');
+        res.end(JSON.stringify({ items: [] }));
+        return;
+      }
+    }
     res.statusCode = 404;
     res.end('not found');
   });
@@ -194,5 +241,66 @@ describeIf('TUI default-wiring (node-pty smoke)', () => {
     const saved = JSON.parse(await fs.readFile(credFile, 'utf8'));
     expect(saved.token).toBe('pty-token');
     expect(saved.apiUrl).toBe(api.url);
+  }, 25_000);
+
+  it('drills the Projects screen under default clack wiring', async () => {
+    const ptyMod = pty!;
+    const credHome = await fs.mkdtemp(path.join(os.tmpdir(), 'harpa-pty-nav-'));
+    const childEnv: Record<string, string> = {
+      ...(process.env as Record<string, string>),
+      HARPA_API_URL: api.url,
+      HARPA_CONFIG_HOME: credHome,
+      FORCE_COLOR: '0',
+    };
+    delete childEnv.HARPA_TOKEN;
+
+    const proc = ptyMod.spawn(process.execPath, [CLI_ENTRY, 'tui'], {
+      name: 'xterm-256color',
+      cols: 100,
+      rows: 30,
+      cwd: path.resolve(__dirname, '../../..'),
+      env: childEnv,
+    });
+
+    let buf = '';
+    proc.onData((d) => {
+      buf += d;
+    });
+    const exited = new Promise<number | undefined>((resolve) => {
+      proc.onExit((e) => resolve(e.exitCode));
+    });
+
+    // Sign in
+    await sleep(900);
+    proc.write('\r');
+    await sleep(400);
+    proc.write('+15551234567\r');
+    await sleep(500);
+    proc.write('123456\r');
+    await sleep(800);
+    // Authed menu: Account, Projects, ... — arrow down once → Projects.
+    proc.write('\x1b[B\r');
+    await sleep(800);
+    // We should now be inside runProjectsScreen showing the Demo project.
+    // Hit ctrl-c three times to back out: project screen → projects list →
+    // runApp top → quit.
+    proc.write('\x03');
+    await sleep(300);
+    proc.write('\x03');
+    await sleep(300);
+    proc.write('\x03');
+
+    const exitCode = await Promise.race([
+      exited,
+      sleep(8000).then(() => {
+        proc.kill();
+        return -1;
+      }),
+    ]);
+
+    const stripped = stripAnsi(buf);
+    expect(stripped, `transcript:\n${stripped}`).toContain('Demo project');
+    expect(api.hits.some((h) => h.method === 'GET' && h.path.startsWith('/projects'))).toBe(true);
+    expect(exitCode, 'tui did not exit after ctrl-c').not.toBe(-1);
   }, 25_000);
 });

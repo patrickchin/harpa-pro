@@ -19,6 +19,7 @@
     "lint": "eslint . --max-warnings 0 --ext .ts"
   },
   "dependencies": {
+    "@clack/prompts": "^1.4.0",
     "@harpa/api-contract": "workspace:*",
     "chalk": "^5.3.0",
     "citty": "^0.1.6",

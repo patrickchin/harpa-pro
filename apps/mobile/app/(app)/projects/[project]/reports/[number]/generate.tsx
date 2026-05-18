@@ -43,6 +43,7 @@ import { reports } from '@harpa/api-contract';
 import { SAMPLE_GENERATED_REPORT } from '@/lib/dev-fixtures/sample-report';
 import { reportBodyToGeneratedReport } from '@/lib/report-body-adapter';
 import { safeBack } from '@/lib/nav/safe-back';
+import { dismissOrReplaceTo } from '@/lib/nav/dismiss-or-replace';
 import {
   consumeCameraSession,
   createCameraSession,
@@ -325,7 +326,10 @@ export default function GenerateReportRoute() {
       { params: { project: slug, number: reportNumber } },
       {
         onSuccess: () => {
-          router.replace(`/(app)/projects/${slug}/reports` as never);
+          // Reports list is already on the stack — pop to it instead of
+          // replacing the top, which would leave two adjacent reports-list
+          // frames. See docs/v4/arch-mobile-navigation.md §4.
+          dismissOrReplaceTo(router, `/(app)/projects/${slug}/reports` as never);
         },
       },
     );

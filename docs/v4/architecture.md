@@ -96,6 +96,7 @@ flowchart TB
 | 2 | Auth + per-request scope | [arch-auth-and-rls.md](arch-auth-and-rls.md) | better-auth flow, JWT, Twilio Verify, scoped Postgres roles, RLS replacement, scope tests |
 | 3 | Data layer (mobile) | [arch-data-layer.md](arch-data-layer.md) | Generated client, React Query hooks, optimistic updates, error handling |
 | 4 | Mobile architecture | [arch-mobile.md](arch-mobile.md) | Directory structure, navigation, state, NativeWind tokens, primitives, upload queue, audio |
+| 4a | **Mobile navigation policy** | [arch-mobile-navigation.md](arch-mobile-navigation.md) | **push/replace/back/dismiss policy; per-call audit; back-stack pitfalls and `dismissOrReplaceTo` helper** |
 | 5 | Storage (R2) | [arch-storage.md](arch-storage.md) | R2 buckets, signed URL flow, lifecycle, security, fixture mode |
 | 6 | AI fixtures | [arch-ai-fixtures.md](arch-ai-fixtures.md) | record/replay/live modes, redaction, packaging |
 | 7 | Database (Neon) | [arch-database.md](arch-database.md) | Neon branching per PR, migrations, scoped roles, schema layout |

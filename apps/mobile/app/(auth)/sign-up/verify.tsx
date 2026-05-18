@@ -22,6 +22,7 @@ import { Redirect, useLocalSearchParams, useRouter, type Href } from 'expo-route
 import SignUpVerify from '@/screens/sign-up-verify';
 import { useAuthSession } from '@/lib/auth';
 import { useVerifyOtpMutation, useStartOtpMutation } from '@/lib/api/hooks';
+import { safeBack } from '@/lib/nav/safe-back';
 
 const RESEND_COOLDOWN_SECONDS = 30;
 
@@ -109,8 +110,10 @@ export default function SignUpVerifyPage() {
   }, [startOtpMutation, phone]);
 
   const handleChangeNumber = useCallback(() => {
-    // expo-router typed-routes regenerates on next `expo start`; cast safe.
-    router.replace({ pathname: '/(auth)/sign-up/phone' });
+    // Phone is the frame directly below verify; back() avoids the
+    // [phone, phone-new] shape that replace would produce. Falls back
+    // to replace on a cold deep-link stack.
+    safeBack(router, '/(auth)/sign-up/phone' as Href);
   }, [router]);
 
   const isSubmitting =

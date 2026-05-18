@@ -62,3 +62,4 @@ pnpm-debug.log*
 playwright-report/
 test-results/
 .lighthouseci/
+notes-delete-empty.png

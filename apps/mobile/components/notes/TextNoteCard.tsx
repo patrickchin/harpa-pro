@@ -51,12 +51,13 @@ export function TextNoteCard({
     // iOS RN can't present a second native Modal until the first
     // finishes dismissing — defer the edit dialog so the options
     // sheet has time to drop (matches saved-report.tsx pattern).
-    setTimeout(() => setEditOpen(true), 350);
+    // 600ms tuned for iOS sim where slide dismissal can run long.
+    setTimeout(() => setEditOpen(true), 600);
   };
 
   const handleDelete = () => {
     setOptionsOpen(false);
-    setTimeout(() => onRemove?.(sourceIndex), 350);
+    setTimeout(() => onRemove?.(sourceIndex), 600);
   };
 
   const handleSubmitEdit = () => {

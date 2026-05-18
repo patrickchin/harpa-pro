@@ -90,14 +90,13 @@ tags:
 - tapOn:
     id: "dialog-action-text-note-delete-0"
 # Provider-owned delete-confirm AppDialogSheet — use the destructive
-# confirm by accessibilityLabel because dialog-action-0 is ambiguous
-# across the multiple mounted sheets.
+# confirm by testID we set in GenerateReportDialogs.
 - extendedWaitUntil:
-    visible: "Delete"
-    timeout: 5000
+    visible:
+      id: "dialog-action-confirm-delete-note"
+    timeout: 8000
 - tapOn:
-    text: "Delete"
-    index: 0
+    id: "dialog-action-confirm-delete-note"
 
 # --- Empty state appears once the timeline has no rows ---------------------
 - extendedWaitUntil:

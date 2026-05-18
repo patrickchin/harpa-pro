@@ -957,7 +957,7 @@ exports[`GenerateNotes > matches the empty-state snapshot 1`] = `
                     undefined,
                   ]
                 }
-                testID="dialog-action-0"
+                testID="dialog-action-confirm-delete-note"
               >
                 <rn-Text
                   className="text-danger-text font-semibold text-base"

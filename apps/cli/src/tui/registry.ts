@@ -15,11 +15,14 @@
 import type { ArgsDef } from 'citty';
 import { health } from '../commands/health.js';
 import type { HarpaCommand } from '../lib/command.js';
+import { tuiEntries } from './entries.js';
 
-export type AnyHarpaCommand = HarpaCommand<ArgsDef>;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type AnyHarpaCommand = HarpaCommand<ArgsDef, any>;
 
 export const registry: ReadonlyArray<AnyHarpaCommand> = [
   health as unknown as AnyHarpaCommand,
+  ...(tuiEntries as ReadonlyArray<AnyHarpaCommand>),
 ];
 
 export interface MenuGroup {

@@ -38,42 +38,11 @@ const TUI_OPTED_OUT = new Set<string>([
   // Self — TUI can't open the TUI.
   'tui',
 
-  // Pending TUI migration (tracked in arch-tui.md §7 follow-ups):
-  'auth otp start',
-  'auth otp verify',
-  'auth logout',
-  'me get',
-  'me update',
-  'me usage',
-  'projects list',
-  'projects create',
-  'projects get',
-  'projects update',
-  'projects delete',
-  'projects members list',
-  'projects members add',
-  'projects members remove',
-  'reports list',
-  'reports create',
-  'reports get',
-  'reports update',
-  'reports delete',
-  'reports generate',
-  'reports regenerate',
-  'reports finalize',
-  'reports pdf',
-  'notes list',
-  'notes create',
-  'notes update',
-  'notes delete',
-  'files presign',
-  'files register',
-  'files url',
+  // Multi-step (presign → PUT → register) doesn't fit the single
+  // request-thunk shape the TUI execute path expects. Use the three
+  // primitives (`files presign`, `files register`, plus a local upload)
+  // from the TUI menu, or run `harpa files upload` from the flag CLI.
   'files upload',
-  'voice transcribe',
-  'voice summarize',
-  'settings ai get',
-  'settings ai set',
 ]);
 
 describe('TUI registry completeness', () => {
@@ -82,13 +51,11 @@ describe('TUI registry completeness', () => {
       (leaf) => !TUI_OPTED_OUT.has(leaf),
     );
     const tuiLeaves = registry.map((c) => {
-      const path = c.tuiSpec.group;
+      const path = c.tuiSpec.cittyPath;
+      if (path && path.length > 0) return path.join(' ');
       const meta = c.cittyCommand.meta as { name?: string } | undefined;
-      // Until commands carry a full path, we approximate with
-      // `<group> <leaf>`. `health` and other single-leaf groups
-      // serialise as just the leaf name (matching `main`).
       const leafName = meta?.name ?? '<unnamed>';
-      return path === leafName ? leafName : `${path} ${leafName}`;
+      return c.tuiSpec.group === leafName ? leafName : `${c.tuiSpec.group} ${leafName}`;
     });
     expect(new Set(tuiLeaves)).toEqual(new Set(cittyLeaves));
   });

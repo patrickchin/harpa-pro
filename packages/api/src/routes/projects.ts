@@ -32,6 +32,7 @@ import {
   listProjects,
   mapPgError,
   removeMember,
+  updateMemberRole,
   updateProject,
 } from '../services/projects.js';
 
@@ -260,6 +261,54 @@ projectRoutes.openapi(
       if (cat === 'forbidden') throw new HTTPException(403, { message: 'Owner only.' });
       if (cat === 'not_found') throw new HTTPException(404, { message: 'User not found.' });
       if (cat === 'conflict') throw new HTTPException(409, { message: 'User is already a member of this project.' });
+      throw err;
+    }
+  },
+);
+
+// --------- update member role ----------
+projectRoutes.openapi(
+  createRoute({
+    method: 'patch',
+    path: '/projects/{project}/members/{user}',
+    tags: ['projects'],
+    security: [{ bearerAuth: [] }],
+    middleware: [withAuth()] as const,
+    request: {
+      params: memberPathParams,
+      body: {
+        content: {
+          'application/json': { schema: projectSchemas.updateMemberRoleRequest },
+        },
+      },
+    },
+    responses: {
+      200: {
+        description: 'Member role updated (or unchanged if already correct).',
+        content: { 'application/json': { schema: projectSchemas.projectMember } },
+      },
+      401: { description: 'Unauthorized.', content: { 'application/json': { schema: errorEnvelope } } },
+      403: { description: 'Not an owner.', content: { 'application/json': { schema: errorEnvelope } } },
+      404: { description: 'Member not found.', content: { 'application/json': { schema: errorEnvelope } } },
+      409: { description: 'Last owner.', content: { 'application/json': { schema: errorEnvelope } } },
+    },
+  }),
+  async (c) => {
+    const userId = c.get('userId');
+    const db = c.get('db');
+    if (!userId || !db) throw new HTTPException(401);
+    const { project: slug, user: target } = c.req.valid('param');
+    const { role } = c.req.valid('json');
+    const existing = await db((d) => getProjectBySlug(d, userId, slug, false));
+    if (!existing) throw new HTTPException(404, { message: 'Project not found.' });
+    try {
+      const member = await db((d) => updateMemberRole(d, existing.id, target, role));
+      return c.json(member, 200);
+    } catch (err) {
+      const cat = mapPgError(err);
+      if (cat === 'forbidden') throw new HTTPException(403, { message: 'Owner only.' });
+      if (cat === 'not_found') throw new HTTPException(404, { message: 'Member not found.' });
+      if (cat === 'conflict') throw new HTTPException(409, { message: 'Cannot demote the last owner.' });
       throw err;
     }
   },

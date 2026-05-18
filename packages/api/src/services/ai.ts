@@ -38,6 +38,49 @@ export class AiProviderError extends Error {
 }
 
 /**
+ * System prompt for the `generateReport` chat call. Ported verbatim
+ * from canonical
+ * `../haru3-reports/supabase/functions/generate-report/index.ts`
+ * (`SYSTEM_PROMPT`). v4-specific schema diffs are intentionally NOT
+ * applied here — the canonical prompt produces a `report` envelope
+ * that we parse + validate against `reportBody` in `generateReport()`.
+ * If we ever diverge from the canonical contract, update this prompt
+ * AND re-record every generate-report.* fixture (see refresh-hashes
+ * script).
+ */
+export const REPORT_SYSTEM_PROMPT =
+  `You are a construction site report assistant. You convert numbered site notes from a construction site into a structured JSON report.
+
+INPUT
+- NOTES: numbered site notes captured on site. Each note is one input item — text, voice transcript, image, video, or document. Non-text items appear as numbered placeholders (e.g. "[image 1]", "[image 2]", "[video 1]", "[document 1]") at their position. You cannot see their contents, but you should acknowledge that the attachment exists.
+
+OUTPUT
+Return ONLY valid minified JSON in this exact shape:
+  { "report": { "meta": {...}, "weather": ..., "workers": ..., "materials": [...], "issues": [...], "nextSteps": [...], "sections": [...] } }
+
+- Always return the FULL report. Include every top-level field, even when empty.
+- Use null for missing "weather" / "workers", [] for empty arrays, "" for missing strings.
+- Do NOT wrap the JSON in markdown fences. Do NOT add prose before or after.
+
+SCHEMA
+"meta":          { "title": str, "reportType": "site_visit|daily|inspection|safety|incident|progress", "summary": str, "visitDate": "YYYY-MM-DD"|null }
+"weather":       { "conditions", "temperature", "wind", "impact" }              (object or null)
+"workers":       { "totalWorkers": num, "workerHours", "notes",
+                   "roles": [{ "role", "count": num, "notes" }] }                (object or null)
+"materials":     [{ "name", "quantity", "quantityUnit", "condition", "status", "notes" }]
+"issues":        [{ "title", "category", "severity", "status", "details", "actionRequired" }]
+"nextSteps":     [str]
+"sections":      [{ "title", "content": "markdown" }]
+
+RULES
+- Populate "meta.title" with a short, human-readable title (e.g. "Site Visit — Wet Weather") and "meta.summary" with a one-sentence overview.
+- Use sections to capture work progress, observations, and narrative detail. Materials list everything mentioned (concrete, steel, timber, pipes, etc.) — do NOT extract cost/price information; that's handled outside this flow.
+- NEVER invent data not in the notes. Keep strings concise. Deduplicate facts.
+
+EXAMPLE
+{ "report": { "meta": { "title": "Site Visit — Wet Weather", "reportType": "daily", "summary": "Wet conditions delayed concrete pour", "visitDate": null }, "weather": { "conditions": "wet", "temperature": "20C", "wind": null, "impact": "Pour delayed by 1 hour" }, "workers": null, "materials": [{ "name": "Concrete", "quantity": "50", "quantityUnit": "m³", "condition": null, "status": "delivered", "notes": null }], "issues": [], "nextSteps": ["Order rebar"], "sections": [{ "title": "Foundation Work", "content": "Concrete pour started in zone A despite wet weather." }] } }`;
+
+/**
  * Canonical inputs for the checked-in default fixtures. Replay-mode
  * normalisation rewrites caller-supplied values to these so that the
  * fixture request-hash always matches. Update if/when fixtures are
@@ -76,7 +119,14 @@ export const FIXTURE_CANONICALS = {
   report: {
     vendor: 'openai' as Vendor,
     model: 'gpt-4o',
-    systemPrompt: 'Generate a structured construction-site daily report from the provided notes.',
+    // Source: ../haru3-reports/supabase/functions/generate-report/index.ts
+    // (canonical `SYSTEM_PROMPT`). Kept verbatim so the Debug tab in
+    // mobile surfaces the same instructions the model actually gets.
+    // NOTE: changing this string changes the request hash — re-record
+    // every generate-report.* fixture via
+    // `pnpm --filter @harpa/ai-fixtures exec tsx scripts/refresh-hashes.ts`
+    // (or use the record script for fresh model responses).
+    systemPrompt: REPORT_SYSTEM_PROMPT,
     fixtures: {
       full: { name: 'generate-report.full', userPrompt: '<notes payload>' },
       incomplete: { name: 'generate-report.incomplete', userPrompt: '<sparse notes>' },

@@ -61,9 +61,14 @@ export async function askArg(
       return prompter.confirm(opts);
     }
     case 'number': {
+      const optional = !spec.required;
       const opts: { label: string; default?: string; validate: (s: string) => string | undefined } = {
         label,
         validate: (s) => {
+          // Empty input on an optional number = "skip" — no validation,
+          // no coercion (the bug was Number("") === 0 falling through
+          // min=1 checks despite "(optional)" in the label).
+          if (optional && s.trim() === '') return undefined;
           const n = Number(s);
           if (!Number.isFinite(n)) return `${name} must be a number`;
           if (prompt.min !== undefined && n < prompt.min) return `${name} must be >= ${prompt.min}`;
@@ -74,6 +79,7 @@ export async function askArg(
       if (prompt.default !== undefined) opts.default = String(prompt.default);
       const v = await prompter.text(opts);
       if (prompter.isCancel(v)) return v;
+      if (optional && typeof v === 'string' && v.trim() === '') return undefined;
       return Number(v);
     }
   }

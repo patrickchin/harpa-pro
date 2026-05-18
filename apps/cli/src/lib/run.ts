@@ -60,6 +60,13 @@ export async function performRequest<T>(
   const { data, error, response } = result;
   const status = response.status;
   if (status >= 200 && status < 300) {
+    // openapi-fetch returns `{ response }` (no data, no error) when the
+    // body couldn't be decoded into the expected schema. We surface
+    // that as an apiError so callers don't render `undefined` as a
+    // successful payload.
+    if (data === undefined && error === undefined) {
+      return { kind: 'apiError', status, body: undefined, response };
+    }
     return { kind: 'ok', data: data as T, response };
   }
   return {

@@ -17,31 +17,51 @@ import { groupRegistry, type AnyHarpaCommand, type MenuGroup } from './registry.
 import type { Prompter } from './prompter.js';
 import type { Session } from './session.js';
 import { runCommand } from './execute.js';
+import { validateApiUrl } from '../lib/env.js';
 
 const BACK = '__back__' as const;
 const QUIT = '__quit__' as const;
+const SET_API_URL = '__set_api_url__' as const;
 
 export async function mainLoop(prompter: Prompter, session: Session): Promise<void> {
   const groups = groupRegistry();
   for (;;) {
     const choice = await prompter.select<string>({
-      label: 'Select an action',
+      label: `Select an action  (API: ${session.effectiveEnv().HARPA_API_URL})`,
       options: [
         ...groups.map((g) => ({
           value: g.group,
           label: g.group,
           hint: groupHint(g),
         })),
+        { value: SET_API_URL, label: 'Set API URL', hint: 'Change the API base URL for this session' },
         { value: QUIT, label: 'quit' },
       ],
     });
 
     if (prompter.isCancel(choice) || choice === QUIT) return;
+    if (choice === SET_API_URL) {
+      await promptApiUrl(prompter, session);
+      continue;
+    }
 
     const group = groups.find((g) => g.group === choice);
     if (!group) continue;
     await groupLoop(prompter, session, group);
   }
+}
+
+async function promptApiUrl(prompter: Prompter, session: Session): Promise<void> {
+  const current = session.effectiveEnv().HARPA_API_URL;
+  const answer = await prompter.text({
+    label: 'API URL',
+    placeholder: 'http://localhost:8787',
+    default: current,
+    validate: validateApiUrl,
+  });
+  if (prompter.isCancel(answer)) return;
+  session.setApiUrl(answer);
+  prompter.log.success(`API URL set to ${answer}`);
 }
 
 async function groupLoop(

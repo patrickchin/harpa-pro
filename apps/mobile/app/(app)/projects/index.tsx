@@ -10,6 +10,7 @@
 import { useRouter } from 'expo-router';
 import { useListProjectsQuery } from '@/lib/api/hooks';
 import { ProjectsList, type ProjectRow } from '@/screens/projects-list';
+import { AppHeaderActions } from '@/components/ui/AppHeaderActions';
 
 export default function ProjectsIndex() {
   const router = useRouter();
@@ -37,6 +38,7 @@ export default function ProjectsIndex() {
       onPressNewProject={() => {
         router.push('/projects/new' as never);
       }}
+      actions={<AppHeaderActions />}
     />
   );
 }

@@ -12,7 +12,7 @@ describe('uploadFlow', () => {
       initialState: { kind: 'authed', user: { userId: 'u1' } },
       token: 't',
     });
-    const prompter = scriptedPrompter([{ kind: 'select', answer: '__back__' }]);
+    const prompter = scriptedPrompter([{ kind: 'select', answer: 'back' }]);
     const r = await uploadFlow.run({ prompter, session });
     expect(r).toEqual({ kind: 'stay' });
   });

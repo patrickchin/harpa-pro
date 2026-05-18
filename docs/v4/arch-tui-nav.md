@@ -675,7 +675,7 @@ to `screen.ts` + `screens/**`.
 
 ## 6. Implementation checklist (one commit each)
 
-> **Status:** TUI-nav.0–4 ✅ shipped. 5–9 remaining on `feat/tui`.
+> **Status:** TUI-nav.0–7 ✅ shipped. 8–9 remaining on `feat/tui`.
 
 Each step ships its own tests + amends this doc's status table. No
 "tests later" step. Conventional Commits with `Co-authored-by:
@@ -713,18 +713,18 @@ Copilot` trailer.
    member remove rows with confirm. Tests.
    `feat(cli): tui members screen prefills current project`
 
-6. **TUI-nav.5 — Reports list screen + Report Home screen.**
+6. **TUI-nav.5 — Reports list screen + Report Home screen.** ✅
    `tui/screens/reports.ts`, `tui/screens/report-home.ts`. Status-
    aware action filter. Header refresh on note add / generate /
    finalize. Behaviour tests cover each branch.
    `feat(cli): tui report home screen with status-aware actions`
 
-7. **TUI-nav.6 — Notes list + note action screen.**
+7. **TUI-nav.6 — Notes list + note action screen.** ✅
    `tui/screens/notes.ts`. Picker + per-note Edit/Delete with all
    three IDs prefilled. Tests.
    `feat(cli): tui notes screen prefills note ids from picker`
 
-8. **TUI-nav.7 — Upload screen scoped to current report.**
+8. **TUI-nav.7 — Upload screen scoped to current report.** ✅
    `tui/screens/upload.ts`. Replaces the top-level `uploadFlow`
    submenu body; the top-level flow now stubs to "Open a project →
    report first" (one-option select that opens Projects). Inside

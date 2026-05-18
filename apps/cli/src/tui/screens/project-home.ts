@@ -21,6 +21,7 @@ import type { Screen, ScreenAction } from '../screen.js';
 import { fetchVia } from './_fetch.js';
 import { findLeaf } from '../registry-find.js';
 import { membersScreen } from './members.js';
+import { reportsScreen } from './reports.js';
 import type { ProjectLike } from '../../lib/render.js';
 
 export function projectHomeScreen(): Screen {
@@ -57,6 +58,12 @@ export function projectHomeScreen(): Screen {
       const slug = project?.id ?? '';
       return [
         {
+          kind: 'screen',
+          label: 'Reports',
+          open: () => reportsScreen(),
+          refreshHeader: true,
+        },
+        {
           kind: 'leaf',
           label: 'New report',
           cittyPath: ['reports', 'create'],
@@ -65,7 +72,7 @@ export function projectHomeScreen(): Screen {
         },
         {
           kind: 'leaf',
-          label: 'List reports',
+          label: 'List reports (raw)',
           cittyPath: ['reports', 'list'],
           prefill: () => ({ projectId: slug }),
         },

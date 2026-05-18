@@ -68,6 +68,23 @@ is a copy, not a translation). Map per component, e.g.:
 (Confirm exact paths against the canonical source at port time —
 this table is illustrative.)
 
+## Maestro gate (all sections and subsections)
+
+> **Every section and subsection ships its own dedicated Maestro flow.**
+> Write a new `.maestro/p3-<section>.yaml` (e.g. `p3-7-generate-report.yaml`)
+> scoped to just that section's behaviour, and run it green on the iOS
+> simulator before committing:
+>
+> ```
+> maestro test .maestro/p3-<section>.yaml
+> ```
+>
+> These per-section flows are deliberately narrow — they are the
+> building blocks that will be collated later into the full
+> `core-end-to-end.yaml` journey (P3.14) and into broader regression
+> suites. Do not reuse an existing flow; do not run the whole suite as
+> the gate. One section → one flow → green before commit.
+
 ## Tasks (one screen per commit)
 
 For each screen in the scope list:
@@ -82,10 +99,13 @@ For each screen in the scope list:
 4. Add the `(dev)/<name>.tsx` mirror with mock props.
 5. Behaviour tests for every interaction the canonical source
    exercises.
-6. Maestro flow exercising it.
-7. Manual visual review side-by-side with the canonical source on
+6. Write a new `.maestro/p3-<section>.yaml` flow scoped to this
+   section only (see [Maestro gate](#maestro-gate-all-sections-and-subsections)
+   above). It will be collated later into the full E2E journey.
+7. **Run `maestro test .maestro/p3-<section>.yaml` — must be green.**
+8. Manual visual review side-by-side with the canonical source on
    the iOS sim.
-8. Commit: `feat(mobile): <screen> ported from canonical source with tests + flow`.
+9. Commit: `feat(mobile): <screen> ported from canonical source with tests + flow`.
 
 Suggested order (parallelisable across agents once primitives lock):
 
@@ -109,357 +129,185 @@ P3.14 Maestro full-journey           ✅ shipped (core-end-to-end.yaml)
 
 ### P3.1 — Slug-native IDs (✅ shipped)
 
-Full design: [design-p31-slug-only-ids.md](design-p31-slug-only-ids.md).
-Companion: [arch-ids-and-urls.md](arch-ids-and-urls.md). Supersedes
-the P3.0 dual-id plan ([design-p30-ids-slugs.md](design-p30-ids-slugs.md))
-— there is **no parallel UUID column**: each entity's prefixed slug
-is the primary key, enforced by a Postgres DOMAIN.
+Full design: [design-p31-slug-only-ids.md](design-p31-slug-only-ids.md);
+companion: [arch-ids-and-urls.md](arch-ids-and-urls.md). Supersedes the
+P3.0 dual-id plan ([design-p30-ids-slugs.md](design-p30-ids-slugs.md))
+— prefixed slug is the PK, no parallel UUID column, enforced by 8
+Postgres DOMAINs in `20261101000001_init_slug_native.sql`.
 
-- [x] Drizzle schema: PKs/FKs as plain `text()`; init migration
-      collapses prior P0/P1 schema into one
-      `20261101000001_init_slug_native.sql` (8 DOMAINs, RLS
-      retyped, SECURITY DEFINER helpers).
-- [x] `packages/api/src/lib/ids.ts` — `newId(prefix)`,
-      `assertId(prefix, value)`, `insertWithGeneratedId` (retry
-      on `23505`).
-- [x] `packages/api-contract`: `idSchema(prefix)` factory +
-      branded `Id<P>` TS types. Route params switched to short
-      form (`:project`, `:report`, `:note`, `:user`). OpenAPI
-      regenerated.
-- [x] Resolver routes `GET /p/:project` + `GET /r/:report`
-      return JSON (not 308); mobile resolver screens
-      `router.replace` to canonical long URL.
-- [x] `withScopedConnection` / `verifyJwt` / `signTestToken`
-      call `assertId` at the trust boundary; RLS coerces
-      `current_setting('app.user_id')::app.usr_id`.
-- [x] CLI openapi-fetch path templates + snapshots updated.
-- [x] Mobile: expo-router segments renamed
-      (`[project]/`, `[report].tsx`, `[project].tsx`),
-      `lib/api/hooks.ts` regenerated.
-- [x] Commit train on `feat/v4`:
-      `feat(api-contract|api|cli|mobile): slug-native IDs`.
+Shipped: `packages/api/src/lib/ids.ts` (`newId` / `assertId` /
+`insertWithGeneratedId`); `api-contract` `idSchema(prefix)` + branded
+`Id<P>` + short route params (`:project`, `:report`, `:note`, `:user`);
+resolver routes `GET /p/:project` + `GET /r/:report` (JSON, mobile
+`router.replace`s to canonical); `assertId` at the trust boundary;
+RLS coerces to `app.usr_id`; CLI openapi-fetch snapshots + mobile
+expo-router segments (`[project]/`, `[report].tsx`) regenerated.
+Commit train on `feat/v4`.
 
-### P3.6 — Generate – Notes tab
+### P3.6 — Generate – Notes tab (✅ shipped)
 
-First of three commits that together port the Generate Report screen.
-P3.6 ships the Notes pane as a *visually complete* surface; Report
-(P3.7) and Edit (P3.8) mount as empty placeholders.
+First of three Generate-screen commits. Ships the Notes pane as a
+visually complete surface (Report / Edit mount as empty placeholders).
 
-- [x] `GenerateReportProvider` scaffold — owns tab state, text-note
-      input, dialog visibility, attachment sheet. Report-tab / Edit-tab
-      fields (`generation`, `draft`, `voice`, `photo`) present as
-      structurally-stable no-op defaults with `TODO(P3.7/P3.8)` markers.
-- [x] `NoteTimeline` (text-only) + `EmptyState` wired into
-      `NotesTabPane`. Voice / photo / pending-upload rows deferred.
-- [x] Shared shell: `GenerateReportTabBar`, `GenerateReportActionRow`,
-      `GenerateReportInputBar` (text input + voice + photo + attach
-      buttons, voice/photo wired to provider no-ops),
-      `GenerateReportDialogs` (delete-note, finalize-confirm,
-      attachment sheet, upload error).
-- [x] Real route at
-      `apps/mobile/app/(app)/projects/[projectSlug]/reports/[number]/generate.tsx`
-      using `useProjectQuery` + `useReportQuery`. Notes live in
-      route-local React state for P3.6 (TODO marker for the
-      `useReportNotesQuery` swap in P3.7).
-- [x] Dev mirror `(dev)/generate-notes.tsx` with empty / populated /
-      loading toggles + registry entry.
-- [x] Vitest unit tests for the screen body covering each state +
-      one snapshot.
-- [x] Commit: `feat(mobile): P3.6 — Generate Notes tab + provider scaffold`.
+Shipped: `GenerateReportProvider` scaffold (tab state, text-note input,
+dialogs, attachment sheet, structurally-stable no-op defaults for
+Report/Edit fields); `NoteTimeline` (text-only) + `EmptyState` in
+`NotesTabPane`; shell components `GenerateReportTabBar` /
+`GenerateReportActionRow` / `GenerateReportInputBar` /
+`GenerateReportDialogs`; real route at
+`app/(app)/projects/[projectSlug]/reports/[number]/generate.tsx` with
+route-local notes state; dev mirror `(dev)/generate-notes.tsx` (empty
+/ populated / loading); Vitest coverage per state + one snapshot.
+Commit: `feat(mobile): P3.6 — Generate Notes tab + provider scaffold`.
 
-### P3.7 — Generate – Report tab
+### P3.7 — Generate – Report tab (✅ shipped)
 
-Second of the three Generate-screen commits. Brings the Report tab
-from a placeholder `<View />` to a visually complete, read-only
-surface that renders a `GeneratedSiteReport` with empty / generating
-/ live / generation-error / finalize-error states. Same pattern as
-P3.6: provider takes orchestration state as props; route + dev
-mirror + tests pass canned values. Real `useReportGeneration` hook
-+ ReportPhotos rendering remain deferred (see TODO markers).
+Second Generate-screen commit. Report tab from `<View />` placeholder
+to a visually complete read-only surface with empty / generating /
+live / generation-error / finalize-error states; `useReportGeneration`
+hook + `ReportPhotos` rendering remain deferred.
 
-- [x] New shared package `packages/report-core` — Zod schemas +
-      `normalizeGeneratedReportPayload` + helpers (`getReportCompleteness`,
-      `getWorkersLines`, `getWeatherLines`, …). Mobile + api both
-      depend on it via `@harpa/report-core`.
-- [x] Nine rendering primitives ported verbatim from canonical
-      under `apps/mobile/components/reports/`: `StatBar`,
-      `WeatherStrip`, `SummarySectionCard`, `IssuesCard`,
-      `WorkersCard`, `MaterialsCard`, `NextStepsCard`,
-      `CompletenessCard`, `ReportView`. Plus `SectionHeader`
-      primitive and `mobile-ui` / `section-icons` helpers.
-- [x] `GenerateReportProvider` extended: real `generation`
-      (`report`, `isUpdating`, `error`, `notesSinceLastGeneration`,
-      `hasReport`), `draft` (`isFinalizing`, `finalizeError`,
-      finalize-confirm visibility), `tabs.editManually`,
-      `preview.openFile`, `handleRegenerate` — all driven by new
-      provider props. `initialTab` prop added for dev mirror.
-- [x] `ReportTabPane` body fully ported: error banner + Retry,
-      empty state (CompletenessCard skeleton + Edit manually CTA),
-      generating shimmer, live ReportView + finalize-error banner.
-      ReportPhotos slot reserved with a TODO marker (lands once
-      upload pipeline + `useLocalReportNotes` port).
-- [x] Real route forwards report state via new
-      `report`/`isGeneratingReport`/`generationError`/`onRegenerate`
-      props; fixture-mode seeds `SAMPLE_GENERATED_REPORT` so the
-      tab renders without the API generate endpoint. TODO marker
-      for the real `useReportGeneration` hook (lands with the API
-      endpoint).
-- [x] Dev mirror `(dev)/generate-report.tsx` with state toggles
-      (no-report / generating / live-report / generation-error /
-      finalize-error) + registry entry.
-- [x] Vitest unit tests for the Report tab covering each state +
-      smoke render of populated layout. Reanimated mock extended
-      with chainable entering-preset proxy so `FadeIn.duration(…)`
-      works under test.
-- [x] Commit: `feat(mobile,report-core): P3.7 — Generate Report tab + read-only ReportView`.
+Shipped: new `packages/report-core` (Zod schemas +
+`normalizeGeneratedReportPayload` + helpers — shared by mobile + api);
+9 rendering primitives ported verbatim under `components/reports/`
+(`StatBar`, `WeatherStrip`, `SummarySectionCard`, `IssuesCard`,
+`WorkersCard`, `MaterialsCard`, `NextStepsCard`, `CompletenessCard`,
+`ReportView`) plus `SectionHeader` + `mobile-ui` / `section-icons`;
+provider extended with real `generation` / `draft` / `tabs.editManually`
+/ `preview.openFile` / `handleRegenerate` + `initialTab` prop;
+`ReportTabPane` fully ported (error banner + Retry, empty + Edit
+manually CTA, shimmer, live ReportView, finalize-error banner;
+ReportPhotos slot reserved); fixture mode seeds
+`SAMPLE_GENERATED_REPORT`; dev mirror `(dev)/generate-report.tsx`;
+Vitest coverage per state + smoke; Reanimated mock extended for
+chainable entering presets. Commit:
+`feat(mobile,report-core): P3.7 — Generate Report tab + read-only ReportView`.
 
-### P3.8 — Generate – Edit tab
+### P3.8 — Generate – Edit tab (✅ shipped)
 
-Third of the three Generate-screen commits. Brings the Edit tab from
-a placeholder `<View />` to a fully-controlled inline editor that
-mutates a `GeneratedSiteReport` through immutable slice helpers. The
-real autosave hook (`useReportAutoSave` / `useReportDraftPersistence`)
-remains deferred; the provider just forwards `isAutoSaving` +
-`lastSavedAt` props so the status row renders the right copy.
+Third Generate-screen commit. Fully-controlled inline editor that
+mutates `GeneratedSiteReport` via immutable slice helpers; real
+autosave hook deferred (provider forwards `isAutoSaving` /
+`lastSavedAt` props only — autosave loop landed in P3.x).
 
-- [x] `lib/report-edit-helpers.ts` extended from the P3.7
-      `createEmptyReport()`-only stub: `updateMeta`, `updateWeather`,
-      `updateWorkers` slice patches (with empty-shape seeding when
-      the slice is `null`), `setRoles` / `setMaterials` / `setIssues`
-      / `setNextSteps` / `setSections` whole-array setters, and
-      `blankRole` / `blankMaterial` / `blankIssue` / `blankSection`
-      factories. All immutable; every helper returns a new wrapper +
-      a new inner `report` object so React shallow-equality fires.
-- [x] `lib/report-edit-helpers.test.ts` ports the canonical helper
-      tests (23 cases): shape, identity, schema round-trip,
-      null-seed paths, and "two calls produce independent refs".
-- [x] `components/reports/ReportEditForm.tsx` ported verbatim from
-      canonical: 7 section cards (Meta / Weather / Workers + Roles /
-      Materials / Issues / Next Steps / Summary Sections) with
-      shared `Field` / `AddRowButton` / `RemoveRowButton` helpers
-      and an `AppDialogSheet` confirm before destructive removes
-      (Pitfall: no `Alert.alert`).
-- [x] `EditTabPane` body fully ported: empty state when
-      `generation.report === null`, inline form once a report
-      exists, and an autosave status row (`Saving…` / `Saved` / ``).
-- [x] `GenerateReportProvider` extended: new `onSetReport`,
-      `isAutoSaving`, `lastSavedAt` props; `generation.setReport`
-      surface (no-op fallback when route doesn't wire persistence);
-      `draft.isAutoSaving` + `draft.lastSavedAt`; lazy-seed via
-      `createEmptyReport()` from both `tabs.openEdit()` and
-      `tabs.editManually()` when no report is present yet.
-- [x] Dev mirror `(dev)/generate-edit.tsx` with state toggles
-      (no-report / live-report / autosaving / saved) + registry entry.
-- [x] Vitest unit tests for the Edit tab covering each state +
-      onSetReport propagation (new top-level + inner refs) + the
-      "Edit manually" lazy-seed path from the empty Report tab.
-- [x] Commit: `feat(mobile): P3.8 — Generate Edit tab + inline ReportEditForm`.
+Shipped: `lib/report-edit-helpers.ts` (slice patches + whole-array
+setters + blank-row factories, all immutable, new wrapper + inner refs
+per call) with 23 test cases; `ReportEditForm.tsx` ported verbatim
+(7 section cards + shared `Field` / `AddRowButton` / `RemoveRowButton`
++ `AppDialogSheet` destructive confirm — Pitfall: no `Alert.alert`);
+`EditTabPane` (empty state + inline form + autosave status row);
+provider extended with `onSetReport` / `setReport` no-op fallback /
+lazy-seed via `createEmptyReport()` from both `tabs.openEdit()` and
+`tabs.editManually()`; dev mirror `(dev)/generate-edit.tsx`; Vitest
+coverage per state + onSetReport propagation + lazy-seed path. Commit:
+`feat(mobile): P3.8 — Generate Edit tab + inline ReportEditForm`.
 
-### P3.x — Update / Finalize flow polish
+### P3.x — Update / Finalize flow polish (✅ shipped)
 
-Follow-up on top of P3.7 + P3.8. Edit-tab manual edits previously
-never reached the server, and "Update report" regenerated from raw
-notes only — so any manual fix was clobbered on the next regenerate.
-This adds an autosave loop, makes `/regenerate` AI-aware of the
-existing body, and gates Finalize on autosave being clean. Full
-design: [design-p3x-generate-update-finalize.md](design-p3x-generate-update-finalize.md).
+Follow-up on P3.7+P3.8: adds an autosave loop, makes `/regenerate`
+AI-aware of the existing body (so manual edits aren't clobbered), and
+gates Finalize on autosave being clean. Design:
+[design-p3x-generate-update-finalize.md](design-p3x-generate-update-finalize.md).
 
-- [x] `PATCH /reports/{n}` accepts an optional `body`; finalized
-      reports return 409 (consistent with `/generate`, `/regenerate`,
-      `/finalize`). Body PATCH does NOT reset
-      `notes_since_last_generation` — that counter belongs to the AI
-      loop, not manual edits.
-- [x] AI service: new `REPORT_UPDATE_SYSTEM_PROMPT` + fixture flavour
-      `generate-report.update.*`. `generateReport()` switches on
-      `existingBody`; replay mode normalises the user prompt to a
-      canonical placeholder so the request hash matches across runs.
-      (Live-vendor fixture recording is a deferred follow-up.)
-- [x] Mobile: `useReportBodyAutosave` debounces 800ms, baseline-ref
-      pattern keeps the dirty-diff stable across re-renders, and
-      `paused` suspends saves while a generate / regenerate /
-      finalize mutation is in flight.
-- [x] `GenerateReportActionRow` gates Finalize on `draft.isAutoSaving`
-      and shows a "Saving…" label so the user can't lock a stale
-      body. Regenerate is also disabled while autosave is in flight
-      to avoid the race.
-- [x] Inverse adapter `generatedReportToReportBody()` (lossy by
-      design — UI has fields the API doesn't store). `issues.severity`
-      collapses to the API enum `{ low, medium, high }` via
-      `normaliseSeverity()`.
+Shipped: `PATCH /reports/{n}` accepts optional `body`, 409 on
+finalized, does NOT reset `notes_since_last_generation` (counter
+belongs to the AI loop); AI service `REPORT_UPDATE_SYSTEM_PROMPT` +
+fixture flavour `generate-report.update.*` (`generateReport()`
+switches on `existingBody`; replay mode normalises the user prompt to
+a canonical placeholder for stable hashes — live-vendor recording
+deferred); `useReportBodyAutosave` (800ms debounce, baseline-ref
+pattern, paused during generate/regenerate/finalize mutations);
+`GenerateReportActionRow` gates Finalize + Regenerate on autosave
+flight; inverse adapter `generatedReportToReportBody()` (lossy by
+design; `issues.severity` collapses to API enum via
+`normaliseSeverity()`).
 
-### P3.10 — Saved report + actions + PDF
+### P3.10 — Saved report + actions + PDF (✅ shipped)
 
 Ports the saved-report detail screen from canonical
-`../haru3-reports/apps/mobile/app/projects/[projectId]/reports/[reportId].tsx`
-into the v4 slug-native route at
-`apps/mobile/app/(app)/projects/[project]/reports/[number]/index.tsx`.
-Body is props-only (no API / no auth / no secure-store) so the dev
-mirror exercises the same component without mocks. The PDF export
-pipeline, ReportPhotos block, and rich note timeline are deferred to
-P4 behind clearly-marked stubs.
+`app/projects/[projectId]/reports/[reportId].tsx` into v4 at
+`app/(app)/projects/[project]/reports/[number]/index.tsx`. Body is
+props-only; PDF export, `ReportPhotos`, and the rich note timeline
+deferred to P3.15 / P4 behind clearly-marked stubs.
 
-- [x] Body `screens/saved-report.tsx` owns the tab + menu + dialog
-      state. Tabs: Report (always), Notes (always), Edit (drafts
-      only — auto-bounces to Report when status flips to
-      `finalized`). Reconciliation pattern from canonical preserves
-      local edits across refetches unless the server JSON changed.
-- [x] Real route wires `useProjectQuery`, `useReportQuery`,
-      `useReportPdfActions`, and `useRefresh`. Slug-native params
-      (`project` + `number`) with the invalid-route fallback.
-- [x] Dev mirror `(dev)/saved-report.tsx` with 4 mode toggles
-      (loading / error / draft-populated / finalized) +
-      registry entry.
-- [x] Components ported verbatim where v4 has the matching
-      primitive: `ReportActionsMenu`, `ReportDetailHeader`,
-      `ReportDetailTabBar`, `ReportNotesPane` (text-only — full
-      timeline deferred), `SavedReportSheet`,
-      `ReportDetailSkeleton`. `ImagePreviewModal` simplified to
-      `react-native` `Image` (no `expo-image` / signed URLs yet).
-      `PdfPreviewModal` ships the modal chrome; inline rendering
-      is deferred and the stub `saveReportPdf` surfaces an error.
-- [x] `lib/use-report-pdf-actions.ts` ported verbatim from the
-      canonical hook; `lib/export-report-pdf.ts` ships as a stub
-      whose async functions throw the standard "Saving PDFs lands
-      in P4 …" message so any accidental invocation routes through
-      the existing action-error dialog.
-- [x] `lib/app-dialog-copy.ts` gains `getUnfinalizeReportDialogCopy()`
-      next to the existing `getDeleteReportDialogCopy()` /
-      `getActionErrorDialogCopy()` helpers. Confirm dialogs are
-      body-owned via `AppDialogSheet` (Pitfall: no `Alert.alert`).
-- [x] Vitest unit tests (14) cover every visible state +
-      interaction: skeleton, invalid-route fallback, error / retry,
-      tab switching, finalize bounce, hidden Edit tab on
-      finalized, actions menu open/close, confirm-delete +
-      confirm-unfinalize callbacks, PDF preview open, Save PDF
-      invocation, populated-draft layout assertion.
-- [x] Commit: `feat(mobile): P3.10 — Saved report screen + actions menu + PDF preview`.
+Shipped: `screens/saved-report.tsx` owns tab + menu + dialog state
+(Report always / Notes always / Edit drafts-only with auto-bounce to
+Report on finalize) + canonical reconciliation pattern preserving
+local edits across refetches; real route wires `useProjectQuery` /
+`useReportQuery` / `useReportPdfActions` / `useRefresh` with slug
+params + invalid-route fallback; dev mirror (loading / error /
+draft-populated / finalized); components ported verbatim
+(`ReportActionsMenu`, `ReportDetailHeader`, `ReportDetailTabBar`,
+text-only `ReportNotesPane`, `SavedReportSheet`, `ReportDetailSkeleton`);
+`ImagePreviewModal` simplified to RN `Image` (signed URLs deferred);
+`PdfPreviewModal` chrome + stub `saveReportPdf` routing through the
+action-error dialog; `lib/use-report-pdf-actions.ts` verbatim;
+`lib/export-report-pdf.ts` stubbed; `lib/app-dialog-copy.ts` gains
+`getUnfinalizeReportDialogCopy()`; 14 Vitest cases covering every
+visible state + interaction. Commit:
+`feat(mobile): P3.10 — Saved report screen + actions menu + PDF preview`.
 
-**Follow-ups tracked in [P3.15](#p315--feature-completion--upload-wiring):**
-`Report.body` adapter (✅ landed since), `useReportUnfinalize`,
-rich `useNoteTimeline`, `ReportPhotos`, `ImagePreviewModal`
-signed-URL + `CachedImage`. Mobile PDF export + inline PDF
-rendering land with P4.3 (byte-equivalence) — see
-[`plan-p4-hardening.md`](plan-p4-hardening.md).
+**Follow-ups → [P3.15](#p315--feature-completion--upload-wiring):**
+`useReportUnfinalize`, rich `useNoteTimeline`, `ReportPhotos`,
+`ImagePreviewModal` signed-URL + `CachedImage`. Mobile PDF export +
+inline rendering → P4.3
+([plan-p4-hardening.md](plan-p4-hardening.md)).
 
-### P3.12 — Camera
+### P3.12 — Camera (✅ shipped)
 
 Ports the full-screen burst camera from canonical
-`../haru3-reports/apps/mobile/app/(camera)/capture.tsx` into the v4
-`(camera)` route group. Body is props-only (no router / no
-session-registry coupling — the route owns the handoff). The camera
-preview, shutter, and `useCameraPermissions` hook stay inside the
-body (matching canonical), with injection seams (`renderPreview`,
-`takePicture`, `permissionOverride`, `onOpenSettings`, `deleteFile`)
-so the dev mirror + Vitest run without native modules.
+`app/(camera)/capture.tsx`. Body is props-only with injection seams
+(`renderPreview`, `takePicture`, `permissionOverride`, `onOpenSettings`,
+`deleteFile`) so dev mirror + Vitest run without native modules.
 
-- [x] Body `screens/camera-capture.tsx` owns the permission gate,
-      capture queue, flash + facing toggles, and the discard-confirm
-      dialog (via `AppDialogSheet` — Pitfall: no `Alert.alert`).
-      Permissions resolve via `useCameraPermissions` by default; a
-      `permissionOverride` prop short-circuits the hook for
-      tests / the dev gallery.
-- [x] Real route `app/(camera)/capture.tsx` + `_layout.tsx`
-      (`fullScreenModal`, portrait orientation, black contentStyle).
-      Reads `sessionId` from `useLocalSearchParams`, commits via
-      `commitCameraSession(id, uris)`, pops with `safeBack`.
-- [x] `lib/camera-session-registry.ts` ported verbatim
-      (`create` → `commit` → `consume` round-trip) so the camera
-      caller protocol matches canonical 1-for-1. Unit tests cover
-      cancellation, commit + unknown-id no-ops, and unique-id
-      generation.
-- [x] Dev mirror `app/(dev)/camera-capture.tsx` with 5 mode toggles
-      (requesting / denied / blocked / granted / populated). Live
-      `CameraView` is stubbed with a `<View />` placeholder; shutter
-      synthesises `cam-dev://shot-N` URIs so the populated-strip +
-      discard dialog states are exercisable without a real camera.
-      Registry entry added under `group: 'app'`.
-- [x] Native config: `expo-camera` added as a config plugin in
-      `app.config.ts` with a `cameraPermission` description string
-      (NSCameraUsageDescription on iOS, the audio recording perm is
-      opted-out on Android). `expo-camera@~16` and
-      `expo-file-system@~18` added via `pnpm --filter @harpa/mobile add`.
-- [x] Vitest unit tests (11) cover every visible state +
-      interaction: permission-requesting spinner, denied notice
-      (canAskAgain → "Allow camera"), blocked notice
-      (`onOpenSettings` invoked), cancel-from-permission-gate,
-      granted UI mounts, shutter appends a capture, flip + flash
-      toggles relabel, Done invokes `onCommit` with the URI list,
-      Cancel with no captures fires `onCancel`, Cancel with captures
-      opens the discard dialog → Discard fires `onCancel`, thumb
-      tap removes + invokes `deleteFile`. Plus one snapshot of the
-      granted-empty layout. `expo-camera` and `expo-file-system`
-      are mocked locally in the test file (no global setup change).
-- [x] Commit: `feat(mobile): P3.12 — Camera capture screen ported from canonical source`.
+Shipped: `screens/camera-capture.tsx` (permission gate, capture queue,
+flash + facing toggles, `AppDialogSheet` discard-confirm —
+Pitfall: no `Alert.alert`); real route + `_layout.tsx`
+(`fullScreenModal`, portrait, black contentStyle) with
+`sessionId` → `commitCameraSession(id, uris)` → `safeBack`;
+`lib/camera-session-registry.ts` verbatim (`create` → `commit` →
+`consume`) + unit tests (cancellation, unknown-id no-ops, unique IDs);
+dev mirror with 5 modes (requesting / denied / blocked / granted /
+populated) using a `<View />` preview stub + synthesised
+`cam-dev://shot-N` URIs; native config (`expo-camera` as config
+plugin in `app.config.ts`, NSCameraUsageDescription, Android audio
+opt-out, `expo-camera@~16` + `expo-file-system@~18` installed);
+11 Vitest cases + 1 snapshot, `expo-camera` / `expo-file-system`
+mocked locally. Commit:
+`feat(mobile): P3.12 — Camera capture screen ported from canonical source`.
 
-**Follow-ups tracked in [P3.15](#p315--feature-completion--upload-wiring):**
+**Follow-ups → [P3.15](#p315--feature-completion--upload-wiring):**
 upload-on-Done handoff, `expo-media-library` save-to-roll,
-pinch-to-zoom + tap-to-focus. iOS prebuild ✅ landed since
-(`apps/mobile/ios/` checked in).
+pinch-zoom + tap-focus. iOS prebuild already landed
+(`apps/mobile/ios/`).
 
-### P3.13 — Profile / Account / Usage
+### P3.13 — Profile / Account / Usage (✅ shipped)
 
-Ports the three account-area screens from canonical
-`../haru3-reports/apps/mobile/app/{profile,account,usage}.tsx` into
-v4 routes at `apps/mobile/app/(app)/{profile,account,usage}.tsx`.
-All three bodies are props-only (no API / auth / secure-store
-coupling) so the dev mirrors exercise every visible state without
-spinning a real backend. The v3 token-usage rollups, AvatarUploader,
-and AI provider availability check don't have v4 equivalents yet
-(no `token_usage` table, no R2 upload pipeline, no
-provider-availability endpoint) — those land in P4 behind clearly
-marked stubs.
+Ports the three account-area screens (`profile`, `account`, `usage`)
+from canonical to v4 routes under `(app)/`. Bodies are props-only;
+v3 token-usage rollups, `AvatarUploader`, and AI provider
+availability check deferred to P3.15 / P4 behind clearly-marked stubs.
 
-- [x] Body `screens/profile.tsx` owns the AI provider / model picker
-      modal + the clear-cache confirm dialog (`AppDialogSheet` —
-      Pitfall: no `Alert.alert`). Auth user, monthly usage, sign-out,
-      cache clear, copy-to-clipboard, and the AI catalogue all flow
-      in as typed props. Developer section gated on a
-      `showDeveloperSection` prop so dev mirrors flip it on without
-      env-var gymnastics.
-- [x] Body `screens/account.tsx` renders the read-only details form
-      (phone + display name + company name) with an optional
-      `avatarSlot` ReactNode so the route can inject a real
-      `AvatarUploader` once it lands (P4 — placeholder until then).
-- [x] Body `screens/usage.tsx` owns the per-month expand state +
-      pricing-reference card. Accepts an optional `chart` ReactNode
-      slot so the route can mount a real `UsageBarChart` once we
-      have token-level history (P4).
-- [x] Real routes wire `useAuthSession`, `useMeUsageQuery`,
-      better-auth `signOut`, and the TanStack `queryClient.clear()`
-      cache-clear into the body props. `safeBack` falls back to
-      `/(app)/profile` (account/usage) or `/(app)/projects`
-      (profile).
-- [x] Dev mirrors `app/(dev)/{profile,account,usage}.tsx` with
-      hand-crafted mock states (Profile: loaded / loading-account /
-      usage-loading / empty-usage / new-user. Account: loaded /
-      loading / no-name / no-company. Usage: populated / loading /
-      empty / single-month). Registry entries added under
-      `group: 'app'`. The Profile dev mirror passes the canonical
-      AI provider catalogue (Kimi, OpenAI, Anthropic, Google, Z.AI,
-      DeepSeek) so the modal is visually reviewable.
-- [x] Supporting helpers ported under appropriate dirs:
-      `components/skeletons/AccountDetailsSkeleton.tsx` (verbatim);
-      `lib/build-info.ts` adapted to read the Fly API base URL from
-      `lib/env.ts` instead of v3's Supabase URL (preserves the
-      `displayVersion` / `serverLabel` shape the Profile footer
-      consumes).
-- [x] Vitest unit tests (32 across the three files) cover every
-      visible state + interaction the canonical exercises: profile
-      copy callbacks, usage spinner / populated / empty, account
-      open, sign-out, clear-cache dialog confirm, developer-section
-      gating, AI provider modal advancing to model step + selecting
-      a model, account skeleton, custom avatar slot, usage month
-      expand/collapse/switch, chart slot gating on ≥ 2 months,
-      pricing reference rendered, back button. Plus one snapshot per
-      screen of the populated layout.
-- [x] Commit: `feat(mobile): P3.13 — Profile / Account / Usage screens ported`.
+Shipped: `screens/profile.tsx` owns AI provider/model picker modal +
+clear-cache confirm (`AppDialogSheet`) with `showDeveloperSection`
+prop; `screens/account.tsx` read-only details form with optional
+`avatarSlot` ReactNode injection point; `screens/usage.tsx` per-month
+expand state + pricing-reference card + optional `chart` slot; real
+routes wire `useAuthSession` / `useMeUsageQuery` / better-auth
+`signOut` / `queryClient.clear()` with `safeBack` fallbacks; dev
+mirrors with hand-crafted mock states for every visible state (Profile
+mirror passes the canonical AI provider catalogue: Kimi, OpenAI,
+Anthropic, Google, Z.AI, DeepSeek); `components/skeletons/AccountDetailsSkeleton.tsx`
+verbatim; `lib/build-info.ts` adapted to read Fly API base URL from
+`lib/env.ts` (preserves `displayVersion` / `serverLabel` shape);
+32 Vitest cases across the three screens + 1 snapshot each. Commit:
+`feat(mobile): P3.13 — Profile / Account / Usage screens ported`.
 
-**Follow-ups tracked in [P3.15](#p315--feature-completion--upload-wiring):**
-`AvatarUploader` (blocked on R2 mobile orchestration), account
-field editing wiring, token-level usage (API extension +
-`UsageBarChart`), AI provider persistence + availability probe.
-The disabled Notifications row + language toggle stay out of
-scope until product asks for them.
+**Follow-ups → [P3.15](#p315--feature-completion--upload-wiring):**
+`AvatarUploader` (blocked on R2 orchestration), inline name/company
+editing, token-level usage (API + `UsageBarChart`), AI provider
+persistence + availability probe. Notifications row + language toggle
+stay out of scope.
 
 ### P3.11 — Files screen (⊘ N/A)
 

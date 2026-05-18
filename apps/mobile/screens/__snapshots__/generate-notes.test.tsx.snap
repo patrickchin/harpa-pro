@@ -174,6 +174,26 @@ exports[`GenerateNotes > matches the empty-state snapshot 1`] = `
           Edit
         </rn-Text>
       </rn-Pressable>
+      <rn-Pressable
+        className="flex-1 flex-row items-center justify-center gap-2 rounded-md py-3 "
+        onPress={[Function]}
+        testID="btn-tab-debug"
+      >
+        <lucide-Bug
+          color="#5f5b66"
+          size={16}
+          style={
+            {
+              "marginTop": 1,
+            }
+          }
+        />
+        <rn-Text
+          className="text-sm font-semibold text-muted-foreground"
+        >
+          Debug
+        </rn-Text>
+      </rn-Pressable>
     </rn-View>
     <rn-ScrollView
       className="flex-1"
@@ -478,6 +498,154 @@ exports[`GenerateNotes > matches the empty-state snapshot 1`] = `
             >
               Once your report is generated from the notes, you can edit any field here.
             </rn-Text>
+          </rn-View>
+        </rn-ScrollView>
+      </rn-View>
+      <rn-View
+        className="flex-1"
+        style={
+          {
+            "width": 390,
+          }
+        }
+        testID="debug-tab-pane"
+      >
+        <rn-ScrollView
+          className="flex-1 px-5"
+          contentContainerStyle={
+            {
+              "paddingBottom": 100,
+            }
+          }
+        >
+          <rn-View
+            className="gap-4 py-3"
+          >
+            <rn-View
+              className="flex-row items-center gap-2 border border-border bg-card p-3"
+            >
+              <rn-Text
+                className="text-sm font-bold text-foreground"
+              >
+                Status:
+              </rn-Text>
+              <rn-Text
+                className="text-sm text-foreground"
+                style={
+                  {
+                    "fontFamily": "Menlo",
+                  }
+                }
+                testID="debug-status"
+              >
+                idle
+              </rn-Text>
+              <rn-Text
+                className="ml-3 text-sm font-bold text-foreground"
+              >
+                Notes:
+              </rn-Text>
+              <rn-Text
+                className="text-sm text-foreground"
+                style={
+                  {
+                    "fontFamily": "Menlo",
+                  }
+                }
+              >
+                0
+              </rn-Text>
+            </rn-View>
+            <rn-View>
+              <rn-View
+                className="mb-1 flex-row items-center justify-between"
+              >
+                <rn-Pressable
+                  accessibilityLabel="Toggle System Prompt"
+                  className="flex-row items-center gap-1"
+                  onPress={[Function]}
+                >
+                  <lucide-ChevronDown
+                    color="#2d3a5a"
+                    size={16}
+                  />
+                  <rn-Text
+                    className="text-base font-bold text-foreground"
+                  >
+                    System Prompt
+                  </rn-Text>
+                </rn-Pressable>
+              </rn-View>
+              <rn-View
+                className="border bg-card p-3 border-border"
+              >
+                <rn-Text
+                  className="text-xs text-muted-foreground"
+                >
+                  No prompt yet — tap Generate / Update report on the Notes tab.
+                </rn-Text>
+              </rn-View>
+            </rn-View>
+            <rn-View>
+              <rn-View
+                className="mb-1 flex-row items-center justify-between"
+              >
+                <rn-Pressable
+                  accessibilityLabel="Toggle Input (Notes Payload)"
+                  className="flex-row items-center gap-1"
+                  onPress={[Function]}
+                >
+                  <lucide-ChevronDown
+                    color="#2d3a5a"
+                    size={16}
+                  />
+                  <rn-Text
+                    className="text-base font-bold text-foreground"
+                  >
+                    Input (Notes Payload)
+                  </rn-Text>
+                </rn-Pressable>
+              </rn-View>
+              <rn-View
+                className="border bg-card p-3 border-border"
+              >
+                <rn-Text
+                  className="text-xs text-muted-foreground"
+                >
+                  No input captured yet.
+                </rn-Text>
+              </rn-View>
+            </rn-View>
+            <rn-View>
+              <rn-View
+                className="mb-1 flex-row items-center justify-between"
+              >
+                <rn-Pressable
+                  accessibilityLabel="Toggle LLM Response"
+                  className="flex-row items-center gap-1"
+                  onPress={[Function]}
+                >
+                  <lucide-ChevronDown
+                    color="#2d3a5a"
+                    size={16}
+                  />
+                  <rn-Text
+                    className="text-base font-bold text-foreground"
+                  >
+                    LLM Response
+                  </rn-Text>
+                </rn-Pressable>
+              </rn-View>
+              <rn-View
+                className="border bg-card p-3 border-border"
+              >
+                <rn-Text
+                  className="text-xs text-muted-foreground"
+                >
+                  No response yet.
+                </rn-Text>
+              </rn-View>
+            </rn-View>
           </rn-View>
         </rn-ScrollView>
       </rn-View>

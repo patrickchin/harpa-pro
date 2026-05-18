@@ -93,8 +93,18 @@ const fixtureNameSchema = z
 export const generateReportRequest = z.object({
   fixtureName: fixtureNameSchema.optional(), // test-only fixture pin
 });
+export const generateReportDebug = z
+  .object({
+    systemPrompt: z.string(),
+    userPrompt: z.string(),
+    rawText: z.string(),
+    model: z.string(),
+    vendor: z.string(),
+  })
+  .partial();
 export const generateReportResponse = z.object({
   report,
+  debug: generateReportDebug.optional(),
 });
 
 // regenerate is operationally identical to generate at the wire level;

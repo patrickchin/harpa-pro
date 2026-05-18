@@ -74,6 +74,8 @@ export interface GenerateReportProviderProps {
   isGeneratingReport?: boolean;
   /** Latest generation error message, or `null`. */
   generationError?: string | null;
+  /** Debug payload (prompts + raw response) from last (re)generate. */
+  lastGeneration?: GenerationDebug | null;
   /** Count of notes added since the last successful generation. */
   notesSinceLastGeneration?: number;
   /** Called when the user taps Retry / Regenerate. */
@@ -211,6 +213,19 @@ interface GenerationSurface {
   notesSinceLastGeneration: number;
   /** True once a report has been generated at least once. */
   hasReport: boolean;
+  /**
+   * Debug payload from the last (re)generate response. Surfaces in the
+   * Debug tab. `null` when no generation has happened in this session.
+   */
+  lastGeneration: GenerationDebug | null;
+}
+
+export interface GenerationDebug {
+  systemPrompt: string;
+  userPrompt: string;
+  rawText: string;
+  model: string;
+  vendor: string;
 }
 
 interface DraftSurface {
@@ -286,6 +301,7 @@ export function GenerateReportProvider({
   report = null,
   isGeneratingReport = false,
   generationError = null,
+  lastGeneration = null,
   notesSinceLastGeneration = 0,
   onRegenerate,
   onEditManually,
@@ -425,6 +441,7 @@ export function GenerateReportProvider({
         error: generationError,
         notesSinceLastGeneration,
         hasReport: report !== null,
+        lastGeneration,
       },
       draft: {
         isFinalizing,
@@ -484,6 +501,7 @@ export function GenerateReportProvider({
       setReport,
       isGeneratingReport,
       generationError,
+      lastGeneration,
       notesSinceLastGeneration,
       isFinalizing,
       isFinalizeConfirmVisible,

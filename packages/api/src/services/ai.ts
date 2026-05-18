@@ -228,6 +228,14 @@ export interface GenerateReportOutput {
   body: ReportBody;
   /** Raw model text (the JSON it returned, before parsing). */
   text: string;
+  /** System prompt used in the request. Surfaced for the mobile Debug tab. */
+  systemPrompt: string;
+  /** User prompt sent to the provider (notes payload or replay canonical). */
+  userPrompt: string;
+  /** Model identifier used. */
+  model: string;
+  /** Vendor used. */
+  vendor: Vendor;
 }
 
 /**
@@ -290,5 +298,5 @@ export async function generateReport(input: GenerateReportInput): Promise<Genera
     // Don't leak the failing payload — keep the error surface generic.
     throw new AiProviderError('generateReport: provider response did not match report schema');
   }
-  return { body: result.data, text: out.text };
+  return { body: result.data, text: out.text, systemPrompt: req.systemPrompt, userPrompt: req.userPrompt, model: req.model, vendor };
 }

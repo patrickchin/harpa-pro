@@ -267,7 +267,16 @@ async function runGenerate(
   const out = await aiGenerateReport({ notes, fixtureName, vendor });
   const updated = await db((d) => setReportBody(d, report.id, out.body));
   if (!updated) throw new HTTPException(404, { message: 'Report not found.' });
-  return updated;
+  return {
+    report: updated,
+    debug: {
+      systemPrompt: out.systemPrompt,
+      userPrompt: out.userPrompt,
+      rawText: out.text,
+      model: out.model,
+      vendor: out.vendor,
+    },
+  };
 }
 
 reportRoutes.openapi(
@@ -291,8 +300,8 @@ reportRoutes.openapi(
     const body = c.req.valid('json');
     const report = await loadReport(db, slug, number);
     const settings = await db((d) => getAiSettings(d, userId));
-    const updated = await runGenerate(db, report, body.fixtureName, settings.vendor);
-    return c.json({ report: updated }, 200);
+    const result = await runGenerate(db, report, body.fixtureName, settings.vendor);
+    return c.json({ report: result.report, debug: result.debug }, 200);
   },
 );
 
@@ -317,8 +326,8 @@ reportRoutes.openapi(
     const body = c.req.valid('json');
     const report = await loadReport(db, slug, number);
     const settings = await db((d) => getAiSettings(d, userId));
-    const updated = await runGenerate(db, report, body.fixtureName, settings.vendor);
-    return c.json({ report: updated }, 200);
+    const result = await runGenerate(db, report, body.fixtureName, settings.vendor);
+    return c.json({ report: result.report, debug: result.debug }, 200);
   },
 );
 

@@ -22,6 +22,7 @@ import {
 
 import { SafeAreaView } from '@/components/primitives/SafeAreaView';
 import { ScreenHeader } from '@/components/primitives/ScreenHeader';
+import { DebugTabPane } from '@/components/reports/generate/DebugTabPane';
 import { EditTabPane } from '@/components/reports/generate/EditTabPane';
 import { GenerateReportActionRow } from '@/components/reports/generate/GenerateReportActionRow';
 import { GenerateReportDialogs } from '@/components/reports/generate/GenerateReportDialogs';
@@ -83,7 +84,13 @@ function GenerateNotesLayout({ canWrite, onBack }: LayoutProps) {
   // Horizontal drag-to-switch lands with the full provider hook port
   // (Pitfall 3 — translation, not rewrite).
   const activeIndex =
-    tabs.active === 'notes' ? 0 : tabs.active === 'report' ? 1 : 2;
+    tabs.active === 'notes'
+      ? 0
+      : tabs.active === 'report'
+        ? 1
+        : tabs.active === 'edit'
+          ? 2
+          : 3;
 
   return (
     <>
@@ -113,6 +120,7 @@ function GenerateNotesLayout({ canWrite, onBack }: LayoutProps) {
         <NotesTabPane width={windowWidth} />
         <ReportTabPane width={windowWidth} />
         <EditTabPane width={windowWidth} />
+        <DebugTabPane width={windowWidth} />
       </ScrollView>
 
       {canWrite ? <GenerateReportInputBar /> : null}

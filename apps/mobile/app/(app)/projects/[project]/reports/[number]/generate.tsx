@@ -228,6 +228,9 @@ export default function GenerateReportRoute() {
   const [generationError, setGenerationError] = useState<string | null>(null);
   const [finalizeError, setFinalizeError] = useState<string | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [lastGeneration, setLastGeneration] = useState<
+    import('@/components/reports/generate/GenerateReportProvider').GenerationDebug | null
+  >(null);
 
   const generateMutation = useGenerateReportMutation();
   const regenerateMutation = useRegenerateReportMutation();
@@ -241,11 +244,30 @@ export default function GenerateReportRoute() {
       { params: { project: slug, number: reportNumber }, body: {} },
       {
         onSuccess: (data) => {
-          const nextBody = (
-            data as { report?: { body?: reports.ReportBody | null } } | undefined
-          )?.report?.body ?? null;
+          const payload = data as
+            | {
+                report?: { body?: reports.ReportBody | null };
+                debug?: {
+                  systemPrompt?: string;
+                  userPrompt?: string;
+                  rawText?: string;
+                  model?: string;
+                  vendor?: string;
+                };
+              }
+            | undefined;
+          const nextBody = payload?.report?.body ?? null;
           if (nextBody) {
             setLocalReport(reportBodyToGeneratedReport(nextBody));
+          }
+          if (payload?.debug) {
+            setLastGeneration({
+              systemPrompt: payload.debug.systemPrompt ?? '',
+              userPrompt: payload.debug.userPrompt ?? '',
+              rawText: payload.debug.rawText ?? '',
+              model: payload.debug.model ?? '',
+              vendor: payload.debug.vendor ?? '',
+            });
           }
         },
         onError: (err) => {
@@ -344,6 +366,7 @@ export default function GenerateReportRoute() {
       onSetReport={setLocalReport}
       isGeneratingReport={isGenerating}
       generationError={generationError ?? uploadError}
+      lastGeneration={lastGeneration}
       onRegenerate={handleRegenerate}
       notesSinceLastGeneration={reportRow?.notesSinceLastGeneration ?? 0}
       isFinalizing={finalizeMutation.isPending}

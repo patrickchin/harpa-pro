@@ -271,7 +271,15 @@ vi.mock('react-native-safe-area-context', () => {
   };
 });
 
+// `@react-native-async-storage/async-storage` — in-memory map mock above.
+vi.mock('expo-clipboard', () => ({
+  setStringAsync: vi.fn(async () => true),
+  getStringAsync: vi.fn(async () => ''),
+}));
+
 // Default AsyncStorage mock — in-memory map. Tests that need to assert
+// on storage state can re-mock per-file with their own backing Map
+// (see lib/auth/storage.test.ts, lib/api/base-url.test.ts).
 // on storage state can re-mock per-file with their own backing Map
 // (see lib/auth/storage.test.ts, lib/api/base-url.test.ts).
 vi.mock('@react-native-async-storage/async-storage', () => {

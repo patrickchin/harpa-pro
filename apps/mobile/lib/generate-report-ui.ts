@@ -9,10 +9,11 @@
  * only the three user-facing tabs.
  */
 export function getGenerateReportTabLabel(
-  tab: 'notes' | 'report' | 'edit',
+  tab: 'notes' | 'report' | 'edit' | 'debug',
   notesCount: number,
 ): string {
   if (tab === 'notes') return `Notes (${notesCount})`;
   if (tab === 'edit') return 'Edit';
+  if (tab === 'debug') return 'Debug';
   return 'Report';
 }

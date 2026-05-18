@@ -17,6 +17,7 @@ import { Button } from '@/components/primitives/Button';
 import { SavedReport, type SavedReportStatus } from '@/screens/saved-report';
 import { SAMPLE_GENERATED_REPORT } from '@/lib/dev-fixtures/sample-report';
 import type { UseReportPdfActionsReturn } from '@/lib/use-report-pdf-actions';
+import type { ReportNoteRow } from '@/components/reports/detail/ReportNotesPane';
 
 type Mode = 'loading' | 'error' | 'draft' | 'finalized';
 
@@ -34,6 +35,47 @@ const STUB_PDF_ACTIONS: UseReportPdfActionsReturn = {
   handleShareSavedPdf: async () => undefined,
   handleSharePdf: async () => undefined,
 };
+
+// Seeded note rows so the Notes tab + ReportPhotos block render every
+// row kind in the dev mirror (text + voice + photo + document). The
+// photo + voice + document rows depend on `useFileSignedUrl` which
+// makes a network call — in fixture mode the call returns `null` so
+// the rows render their empty-state placeholders, which is exactly
+// what we want for a static design eyeball.
+const SAMPLE_NOTE_ROWS: ReadonlyArray<ReportNoteRow> = [
+  {
+    id: 'note-text-1',
+    kind: 'text',
+    body: 'Crane operator reported a wind-stop alarm at 14:02 — pause and reassess.',
+    createdAt: new Date(Date.now() - 1_000 * 60 * 30).toISOString(),
+    authorName: 'Site Lead',
+    fileId: null,
+  },
+  {
+    id: 'note-voice-1',
+    kind: 'voice',
+    body: 'Concrete pour on slab B is on track. Two cubes taken for testing.',
+    createdAt: new Date(Date.now() - 1_000 * 60 * 50).toISOString(),
+    authorName: 'Foreman',
+    fileId: 'fil_voice_dev_1',
+  },
+  {
+    id: 'note-photo-1',
+    kind: 'photo',
+    body: 'East elevation rebar tied off.',
+    createdAt: new Date(Date.now() - 1_000 * 60 * 75).toISOString(),
+    authorName: 'Site Lead',
+    fileId: 'fil_photo_dev_1',
+  },
+  {
+    id: 'note-document-1',
+    kind: 'document',
+    body: 'Daily inspection sheet.pdf',
+    createdAt: new Date(Date.now() - 1_000 * 60 * 100).toISOString(),
+    authorName: 'PM',
+    fileId: 'fil_doc_dev_1',
+  },
+];
 
 export default function DevSavedReport() {
   const [mode, setMode] = useState<Mode>('draft');
@@ -63,7 +105,7 @@ export default function DevSavedReport() {
           report={mode === 'error' || mode === 'loading' ? null : SAMPLE_GENERATED_REPORT}
           reportStatus={reportStatus}
           projectName="Highland Tower"
-          noteRows={[]}
+          noteRows={SAMPLE_NOTE_ROWS}
           isLoading={isLoading}
           loadError={loadError}
           hasValidRouteParams

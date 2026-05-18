@@ -1,21 +1,25 @@
 /**
- * ImagePreviewModal — fullscreen modal for previewing an image.
+ * ImagePreviewModal — fullscreen modal for previewing a single image
+ * file from R2.
  *
  * Adapted from
  * `../haru3-reports/apps/mobile/components/files/ImagePreviewModal.tsx`
- * on branch `dev`. The canonical version uses `expo-image` +
- * `CachedImage` to support BlurHash placeholders, intrinsic sizing,
- * and adjacent-photo prefetch. v4 hasn't ported the image-cache
- * pipeline yet, so this port renders the plain RN `Image` and
- * surfaces an ActivityIndicator while the URI is null.
+ * (branch `dev`). Two ways to drive the URL:
+ *   - Pass a pre-resolved `uri` (the canonical path the canonical
+ *     gallery uses, where adjacent-photo prefetch fans out one signed
+ *     URL per tile up front), or
+ *   - Pass a `fileId` and let the modal resolve the signed URL itself
+ *     via `useFileSignedUrl(fileId)`. The hook caches the URL behind
+ *     the file id so reopening the same image inside the 4-minute
+ *     stale window is free.
  *
- * TODO(P4): port `CachedImage` + `prefetchImages` + the signed-URL
- * fetch hooks once `useFileSignedUrl` / image-cache land.
+ * The image renders through `CachedImage` (= `expo-image` +
+ * disk-cache + 200ms cross-fade). We pin the cache entry to the file
+ * id so rotating signed-URL tokens don't invalidate the cached pixels.
  */
 import {
   ActivityIndicator,
   Dimensions,
-  Image,
   Modal,
   Pressable,
   View,
@@ -27,13 +31,23 @@ import {
 } from 'react-native-safe-area-context';
 
 import { ScreenHeader } from '@/components/primitives/ScreenHeader';
+import { CachedImage } from '@/components/ui/CachedImage';
+import { useFileSignedUrl } from '@/lib/uploads/useFileSignedUrl';
 import { colors } from '@/lib/design-tokens/colors';
 
 interface ImagePreviewModalProps {
   visible: boolean;
-  uri: string | null;
+  /** Pre-resolved signed URL. Mutually exclusive with `fileId`. */
+  uri?: string | null;
+  /** R2 file id — the modal resolves the signed URL via `useFileSignedUrl`. */
+  fileId?: string | null;
   title?: string;
   onClose: () => void;
+  /**
+   * Stable cache key — defaults to `fileId` so disk cache survives
+   * signed-URL rotation. Explicit value wins when both are provided.
+   */
+  cacheKey?: string | null;
 }
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -41,8 +55,10 @@ const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 export function ImagePreviewModal({
   visible,
   uri,
+  fileId,
   title = 'Image',
   onClose,
+  cacheKey,
 }: ImagePreviewModalProps) {
   return (
     <Modal
@@ -65,24 +81,60 @@ export function ImagePreviewModal({
             </Pressable>
           </View>
           <View className="flex-1 items-center justify-center px-4">
-            {uri ? (
-              <Image
-                source={{ uri }}
-                style={{ width: SCREEN_WIDTH - 32, height: SCREEN_HEIGHT * 0.7 }}
-                resizeMode="contain"
-                testID="image-preview"
-                accessibilityLabel={title}
+            {visible ? (
+              <ImagePreviewBody
+                uri={uri ?? null}
+                fileId={fileId ?? null}
+                title={title}
+                cacheKey={cacheKey ?? null}
               />
-            ) : (
-              <ActivityIndicator
-                size="large"
-                color={colors.primary.foreground}
-                testID="image-preview-loading"
-              />
-            )}
+            ) : null}
           </View>
         </SafeAreaView>
       </SafeAreaProvider>
     </Modal>
+  );
+}
+
+// Resolution-bearing child. Mounted only when `visible` so the
+// `useFileSignedUrl` query never runs for a closed modal — that
+// matters for callers that don't wrap their screen tree in a
+// `QueryClientProvider` (e.g. `screens/saved-report.test.tsx`).
+function ImagePreviewBody({
+  uri,
+  fileId,
+  title,
+  cacheKey,
+}: {
+  uri: string | null;
+  fileId: string | null;
+  title: string;
+  cacheKey: string | null;
+}) {
+  const { data, isLoading } = useFileSignedUrl(fileId, {
+    enabled: !uri && Boolean(fileId),
+  });
+  const resolvedUri =
+    uri ?? (data as { url?: string } | undefined)?.url ?? null;
+  const effectiveCacheKey = cacheKey ?? fileId ?? undefined;
+
+  if (resolvedUri) {
+    return (
+      <CachedImage
+        source={{ uri: resolvedUri }}
+        cacheKey={effectiveCacheKey}
+        style={{ width: SCREEN_WIDTH - 32, height: SCREEN_HEIGHT * 0.7 }}
+        contentFit="contain"
+        testID="image-preview"
+        accessibilityLabel={title}
+      />
+    );
+  }
+  return (
+    <ActivityIndicator
+      size="large"
+      color={colors.primary.foreground}
+      testID={isLoading ? 'image-preview-loading' : 'image-preview-loading'}
+    />
   );
 }

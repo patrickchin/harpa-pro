@@ -247,7 +247,7 @@ action-error dialog; `lib/use-report-pdf-actions.ts` verbatim;
 visible state + interaction. Commit:
 `feat(mobile): P3.10 — Saved report screen + actions menu + PDF preview`.
 
-**Follow-ups → [P3.15](#p315--feature-completion--upload-wiring):**
+**Follow-ups shipped in [P3.15.3](#p3153--saved-report-wiring-completion):**
 `useReportUnfinalize`, rich `useNoteTimeline`, `ReportPhotos`,
 `ImagePreviewModal` signed-URL + `CachedImage`. Mobile PDF export +
 inline rendering → P4.3
@@ -432,16 +432,16 @@ token-level usage UI in P3.15.4 — land it before extending
 #### P3.15.3 — Saved-report wiring completion
 - [x] `useReportUnfinalize` route — `POST /reports/{number}/unfinalize`
       (RLS-scoped; 409 on non-finalized; 404 hides cross-project rows).
-- [ ] `useReportUnfinalize` mobile hook (consumes the route above).
-- [ ] Rich `useNoteTimeline`: voice / photo / document rows in
+- [x] `useReportUnfinalize` mobile hook (consumes the route above).
+- [x] Rich `useNoteTimeline`: voice / photo / document rows in
       `ReportNotesPane` (currently text-only stub).
-- [ ] `ReportPhotos` block on the Report tab (uses signed URLs from
+- [x] `ReportPhotos` block on the Report tab (uses signed URLs from
       P3.15.1).
-- [ ] `ImagePreviewModal` swaps the plain `<Image>` for `CachedImage`
+- [x] `ImagePreviewModal` swaps the plain `<Image>` for `CachedImage`
       with signed-URL fetch.
-- [ ] Maestro flow: open saved report → tabs → unfinalize → photo
+- [x] Maestro flow: open saved report → tabs → unfinalize → photo
       preview.
-- [ ] Commit: `feat(mobile): saved-report rich timeline + ReportPhotos + image preview`.
+- [x] Commit: `feat(mobile): saved-report rich timeline + ReportPhotos + image preview`.
 
 #### P3.15.4 — Account / Profile / Usage wiring
 - [ ] Inline editor + optimistic update for display name + company

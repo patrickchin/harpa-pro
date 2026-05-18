@@ -25,6 +25,7 @@ import {
   useReportNotesQuery,
   useDeleteReportMutation,
 } from '@/lib/api/hooks';
+import { useReportUnfinalize } from '@/lib/use-report-unfinalize';
 import type { ReportNoteRow } from '@/components/reports/detail/ReportNotesPane';
 import { useRefresh } from '@/lib/use-refresh';
 import { useReportPdfActions } from '@/lib/use-report-pdf-actions';
@@ -121,6 +122,7 @@ export default function SavedReportRoute() {
             kind: 'text' | 'voice' | 'image' | 'document';
             body: string | null;
             transcript: string | null;
+            fileId: string | null;
             createdAt: string;
           }>;
         }
@@ -132,6 +134,7 @@ export default function SavedReportRoute() {
       kind: n.kind === 'image' ? 'photo' : n.kind,
       createdAt: n.createdAt ?? null,
       authorName: n.authorId ? memberNames.get(n.authorId) ?? null : null,
+      fileId: n.fileId ?? null,
     }));
   }, [notesQuery.data, memberNames]);
 
@@ -173,10 +176,24 @@ export default function SavedReportRoute() {
     }
   }, [slug, reportNumber, deleteMutation, router]);
 
-  // Unfinalize is not implemented server-side (only finalize exists in
-  // packages/api/src/routes/reports.ts as of P3). The dialog confirm
-  // is a no-op until a `POST /unfinalize` endpoint lands in P4.
-  const handleConfirmUnfinalize = useCallback(() => undefined, []);
+  // Unfinalize is shipped on a parallel branch in P3.15.3. The hook
+  // (apps/mobile/lib/use-report-unfinalize.ts) carries a temporary
+  // local type for the route until `pnpm gen:api` regenerates the
+  // api-contract — see the TODO(P3.15.3-contract) in that file.
+  const unfinalizeMutation = useReportUnfinalize();
+
+  const handleConfirmUnfinalize = useCallback(async () => {
+    if (!slug || reportNumber === null) return;
+    try {
+      await unfinalizeMutation.mutateAsync({
+        params: { project: slug, number: reportNumber },
+      });
+    } catch {
+      // Error surface mirrors delete — the screen body keeps the
+      // confirm dialog open via `isUnfinalizing`. A dedicated error
+      // dialog lands alongside the action-error router (P4).
+    }
+  }, [slug, reportNumber, unfinalizeMutation]);
 
   const myRole = projectQuery.data?.myRole;
   const canUnfinalize = myRole === 'owner' || myRole === 'editor';
@@ -206,7 +223,7 @@ export default function SavedReportRoute() {
       onConfirmDelete={handleConfirmDelete}
       onConfirmUnfinalize={handleConfirmUnfinalize}
       isDeleting={deleteMutation.isPending}
-      isUnfinalizing={false}
+      isUnfinalizing={unfinalizeMutation.isPending}
       pdfActions={pdfActions}
     />
   );

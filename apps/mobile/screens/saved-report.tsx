@@ -38,6 +38,7 @@ import { ReportView } from '@/components/reports/ReportView';
 import { ReportEditForm } from '@/components/reports/ReportEditForm';
 import { PdfPreviewModal } from '@/components/reports/PdfPreviewModal';
 import { ImagePreviewModal } from '@/components/files/ImagePreviewModal';
+import { ReportPhotos } from '@/components/reports/detail/ReportPhotos';
 import { ReportDetailHeader } from '@/components/reports/detail/ReportDetailHeader';
 import {
   ReportDetailTabBar,
@@ -133,7 +134,7 @@ export function SavedReport(props: SavedReportProps) {
   const [menuVisible, setMenuVisible] = useState(false);
   const [pdfPreviewVisible, setPdfPreviewVisible] = useState(false);
   const [imagePreview, setImagePreview] = useState<{
-    uri: string | null;
+    fileId: string;
     title?: string;
   } | null>(null);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
@@ -312,8 +313,12 @@ export function SavedReport(props: SavedReportProps) {
             testID="saved-report-pane"
           >
             <ReportView report={displayReport} />
-            {/* TODO(P4): ReportPhotos — lands with the upload pipeline
-                and the photo file_id resolution hooks. */}
+            <View className="mt-4">
+              <ReportPhotos
+                noteRows={noteRows}
+                onOpenPhoto={setImagePreview}
+              />
+            </View>
           </Animated.View>
         ) : activeTab === 'edit' ? (
           <View className="px-5" testID="saved-report-edit-pane">
@@ -324,7 +329,10 @@ export function SavedReport(props: SavedReportProps) {
           </View>
         ) : (
           <Animated.View entering={FadeIn.duration(250)}>
-            <ReportNotesPane noteRows={noteRows} />
+            <ReportNotesPane
+              noteRows={noteRows}
+              onOpenPhoto={setImagePreview}
+            />
           </Animated.View>
         )}
       </ScrollView>
@@ -442,7 +450,7 @@ export function SavedReport(props: SavedReportProps) {
 
       <ImagePreviewModal
         visible={imagePreview !== null}
-        uri={imagePreview?.uri ?? null}
+        fileId={imagePreview?.fileId ?? null}
         title={imagePreview?.title}
         onClose={() => setImagePreview(null)}
       />

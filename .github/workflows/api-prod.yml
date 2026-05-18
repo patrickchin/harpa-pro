@@ -29,9 +29,39 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: superfly/flyctl-actions/setup-flyctl@master
+      - uses: pnpm/action-setup@v4
+        with: { version: 9.12.3 }
+
+      - uses: actions/setup-node@v4
+        with: { node-version: '22', cache: 'pnpm' }
+
+      - run: pnpm install --frozen-lockfile
 
       - uses: dopplerhq/cli-action@v3
+
+      - name: Resolve prod DATABASE_URL from Doppler
+        # Prod runs against a long-lived Neon branch (not a per-PR
+        # ensure flow — see api-dev.yml). The connection string is
+        # stored in Doppler `prd`; pull it here so the migrate step
+        # below targets prod instead of inheriting whatever local env
+        # the runner had.
+        env:
+          DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN_PRD }}
+        run: |
+          URI=$(doppler secrets get DATABASE_URL --plain)
+          echo "::add-mask::$URI"
+          echo "DATABASE_URL=$URI" >> "$GITHUB_ENV"
+
+      - name: Apply pending migrations to Neon prod
+        # Must run BEFORE the Fly deploy: a release that depends on a
+        # schema change shipped with the same PR (e.g. P3.15.5
+        # `llm_usage_events`) would 500 on startup if the migration
+        # hasn't landed. Pitfall 11.
+        env:
+          DATABASE_URL: ${{ env.DATABASE_URL }}
+        run: pnpm --filter @harpa/api db:migrate
+
+      - uses: superfly/flyctl-actions/setup-flyctl@master
 
       - name: Sync Fly secrets from Doppler
         # See api-dev.yml for rationale. `--stage` defers activation;

@@ -23,6 +23,12 @@
 
 These may land post-v1 if demand surfaces, but the initial implementation is stateless / env-only / 12-factor.
 
+> **Interactive shell:** for exploratory debugging where flag recall is
+> high-friction, run `harpa tui` — a `@clack/prompts`-driven menu that
+> wraps the same commands. See [`arch-tui.md`](arch-tui.md). It shares
+> the execution path with the flag CLI (`defineHarpaCommand()` →
+> `performRequest`), so behaviour is identical.
+
 ## Stack
 
 - **Framework:** `citty` ([@unjs/citty](https://github.com/unjs/citty))

@@ -7,14 +7,13 @@
  * "notesActionScreen" — no separate currentNote on the session).
  */
 import chalk from 'chalk';
-import type { Screen, ScreenAction } from '../screen.js';
-import { fetchVia } from './_fetch.js';
+import type { Screen, ScreenAction, ScreenContext } from '../screen.js';
+import { runScreen } from '../screen.js';
+import { fetchAllVia } from './_fetch.js';
 import { findLeaf } from '../registry-find.js';
 import type { NoteLike } from '../../lib/render.js';
 
-interface NoteList {
-  items: NoteLike[];
-}
+const INLINE_OPEN = 7;
 
 export function notesScreen(): Screen {
   let notes: NoteLike[] = [];
@@ -26,7 +25,7 @@ export function notesScreen(): Screen {
       if (!currentProject || !currentReport) return undefined;
       const leaf = findLeaf(['notes', 'list']);
       if (!leaf) return { title: 'Notes', lines: ['(unavailable)'] };
-      const data = await fetchVia<NoteList>(
+      const data = await fetchAllVia<NoteLike>(
         leaf,
         { project: currentProject.id, reportNumber: currentReport.number },
         ctx.session,
@@ -48,18 +47,43 @@ export function notesScreen(): Screen {
       const project = currentProject.id;
       const number = currentReport.number;
 
-      const picks: ScreenAction[] = notes.map((n) => {
-        const preview =
-          (n.body ?? n.transcript ?? n.kind).toString().slice(0, 40);
-        return {
-          kind: 'screen',
-          label: `${n.kind} · "${preview}"`,
-          open: () => noteActionScreen(n),
-        };
-      });
+      const labelFor = (n: NoteLike) =>
+        `${n.kind} · "${(n.body ?? n.transcript ?? n.kind).toString().slice(0, 40)}"`;
+      const openNote = (n: NoteLike) => () => noteActionScreen(n);
+
+      const acts: ScreenAction[] = [];
+      if (notes.length === 0) {
+        // nothing inline
+      } else if (notes.length <= INLINE_OPEN) {
+        for (const n of notes) {
+          acts.push({
+            kind: 'screen',
+            label: labelFor(n),
+            open: openNote(n),
+          });
+        }
+      } else {
+        acts.push({
+          kind: 'flow',
+          label: `Open note… (${notes.length})`,
+          run: async (innerCtx: ScreenContext) => {
+            const choice = await innerCtx.prompter.select<string>({
+              label: 'Pick a note to open',
+              options: [
+                ...notes.map((n) => ({ value: n.id, label: labelFor(n) })),
+                { value: '__cancel__', label: '← cancel' },
+              ],
+            });
+            if (innerCtx.prompter.isCancel(choice) || choice === '__cancel__') return;
+            const picked = notes.find((n) => n.id === choice);
+            if (!picked) return;
+            await runScreen(innerCtx.prompter, innerCtx.session, openNote(picked)());
+          },
+        });
+      }
 
       return [
-        ...picks,
+        ...acts,
         {
           kind: 'leaf',
           label: 'Add text note',

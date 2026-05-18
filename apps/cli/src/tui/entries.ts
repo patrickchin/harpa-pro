@@ -221,8 +221,6 @@ export const projectsListTui = defineTuiEntry({
     group: 'projects', label: 'List projects', hint: 'GET /projects',
     cittyPath: ['projects', 'list'], requiresToken: true,
     args: {
-      cursor: { label: 'Cursor', required: false, prompt: { kind: 'text', placeholder: 'leave blank for first page' } },
-      limit: { label: 'Page size', required: false, prompt: { kind: 'number', min: 1, max: 100, default: 20 } },
     },
   },
   execute: ({ client, args }) => {
@@ -420,8 +418,6 @@ export const reportsListTui = defineTuiEntry({
     cittyPath: ['reports', 'list'], requiresToken: true,
     args: {
       projectId: { label: 'Project slug', required: true, prompt: { kind: 'text', placeholder: PROJECT_PLACEHOLDER } },
-      cursor: { label: 'Cursor', required: false, prompt: { kind: 'text', placeholder: 'leave blank for first page' } },
-      limit: { label: 'Page size', required: false, prompt: { kind: 'number', min: 1, max: 100, default: 20 } },
     },
   },
   execute: ({ client, args }) => {
@@ -644,8 +640,6 @@ export const notesListTui = defineTuiEntry({
     args: {
       project: { label: 'Project slug', required: true, prompt: { kind: 'text', placeholder: PROJECT_PLACEHOLDER } },
       reportNumber: { label: 'Report number', required: true, prompt: { kind: 'number', min: 1 } },
-      cursor: { label: 'Cursor', required: false, prompt: { kind: 'text', placeholder: 'leave blank for first page' } },
-      limit: { label: 'Page size', required: false, prompt: { kind: 'number', min: 1, max: 100, default: 20 } },
     },
   },
   execute: ({ client, args }) => {

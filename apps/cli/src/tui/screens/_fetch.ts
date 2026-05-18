@@ -29,3 +29,31 @@ export async function fetchVia<T>(
   if (outcome.kind === 'ok') return outcome.data as T;
   return undefined;
 }
+
+/**
+ * Follow `nextCursor` until the API stops handing them out (or we hit
+ * `maxItems` as a runaway-safety cap). Returns a synthesised page
+ * shape with the accumulated items.
+ */
+export async function fetchAllVia<T>(
+  leaf: AnyHarpaCommand,
+  args: Record<string, unknown>,
+  session: Session,
+  maxItems = 500,
+): Promise<{ items: T[] } | undefined> {
+  const all: T[] = [];
+  let cursor: string | null | undefined;
+  for (let i = 0; i < 50; i += 1) {
+    const page = await fetchVia<{ items: T[]; nextCursor?: string | null }>(
+      leaf,
+      cursor ? { ...args, cursor, limit: 100 } : { ...args, limit: 100 },
+      session,
+    );
+    if (!page) return all.length === 0 ? undefined : { items: all };
+    all.push(...page.items);
+    if (all.length >= maxItems) break;
+    cursor = page.nextCursor ?? null;
+    if (!cursor) break;
+  }
+  return { items: all };
+}

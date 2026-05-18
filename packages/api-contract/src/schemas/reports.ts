@@ -120,6 +120,7 @@ export const regenerateReportRequest = generateReportRequest;
 export const regenerateReportResponse = generateReportResponse;
 
 export const finalizeReportResponse = z.object({ report });
+export const unfinalizeReportResponse = z.object({ report });
 
 export const renderPdfResponse = z.object({
   url: z.string().url(),

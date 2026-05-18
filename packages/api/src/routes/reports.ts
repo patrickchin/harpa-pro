@@ -41,6 +41,7 @@ import {
   collectNotesForGeneration,
   setReportBody,
   finalizeReport,
+  unfinalizeReport,
   setReportPdfFileId,
   type ReportRow,
 } from '../services/reports.js';
@@ -268,6 +269,7 @@ const generateResponses = {
  */
 async function runGenerate(
   db: NonNullable<AppEnv['Variables']['db']>,
+  userId: string,
   report: ReportRow,
   fixtureName: string | undefined,
   vendor: Parameters<typeof aiGenerateReport>[0]['vendor'] | undefined,
@@ -282,7 +284,18 @@ async function runGenerate(
   // be one) and runs the cold-start prompt.
   const existingBody =
     options.mode === 'regenerate' ? report.body : null;
-  const out = await aiGenerateReport({ notes, existingBody, fixtureName, vendor });
+  const out = await aiGenerateReport({
+    notes,
+    existingBody,
+    fixtureName,
+    vendor,
+    usageContext: {
+      db,
+      userId,
+      projectId: report.projectId,
+      reportId: report.id,
+    },
+  });
   const updated = await db((d) => setReportBody(d, report.id, out.body));
   if (!updated) throw new HTTPException(404, { message: 'Report not found.' });
   return {
@@ -318,7 +331,7 @@ reportRoutes.openapi(
     const body = c.req.valid('json');
     const report = await loadReport(db, slug, number);
     const settings = await db((d) => getAiSettings(d, userId));
-    const result = await runGenerate(db, report, body.fixtureName, settings.vendor, { mode: 'generate' });
+    const result = await runGenerate(db, userId, report, body.fixtureName, settings.vendor, { mode: 'generate' });
     return c.json({ report: result.report, debug: result.debug }, 200);
   },
 );
@@ -344,7 +357,7 @@ reportRoutes.openapi(
     const body = c.req.valid('json');
     const report = await loadReport(db, slug, number);
     const settings = await db((d) => getAiSettings(d, userId));
-    const result = await runGenerate(db, report, body.fixtureName, settings.vendor, { mode: 'regenerate' });
+    const result = await runGenerate(db, userId, report, body.fixtureName, settings.vendor, { mode: 'regenerate' });
     return c.json({ report: result.report, debug: result.debug }, 200);
   },
 );
@@ -375,6 +388,43 @@ reportRoutes.openapi(
       throw new HTTPException(409, { message: 'Report has no body to finalize.' });
     }
     const updated = await db((d) => finalizeReport(d, report.id));
+    if (!updated) throw new HTTPException(404, { message: 'Report not found.' });
+    return c.json({ report: updated }, 200);
+  },
+);
+
+// ---------- POST /projects/:project/reports/:number/unfinalize ----------
+//
+// Reverse of /finalize: flips `finalized_at` back to NULL so the user
+// can edit / regenerate the report. Matches the saved-report "Edit"
+// affordance (see P3.15.3). 409 if the report isn't currently
+// finalized — there's nothing to undo. RLS hides cross-project rows so
+// a non-owned report surfaces as 404, identical to /finalize.
+reportRoutes.openapi(
+  createRoute({
+    method: 'post',
+    path: '/projects/{project}/reports/{number}/unfinalize',
+    tags: ['reports'],
+    security: [{ bearerAuth: [] }],
+    middleware: [withAuth()] as const,
+    request: { params: reportPathParam },
+    responses: {
+      200: { description: 'Unfinalized.', content: { 'application/json': { schema: reportSchemas.unfinalizeReportResponse } } },
+      401: { description: 'Unauthorized.', content: { 'application/json': { schema: errorEnvelope } } },
+      404: { description: 'Not found.', content: { 'application/json': { schema: errorEnvelope } } },
+      409: { description: 'Conflict.', content: { 'application/json': { schema: errorEnvelope } } },
+    },
+  }),
+  async (c) => {
+    const db = c.get('db');
+    if (!db) throw new HTTPException(401);
+    const { project: slug, number } = c.req.valid('param');
+
+    const report = await loadReport(db, slug, number);
+    if (report.status !== 'finalized') {
+      throw new HTTPException(409, { message: 'Report is not finalized.' });
+    }
+    const updated = await db((d) => unfinalizeReport(d, report.id));
     if (!updated) throw new HTTPException(404, { message: 'Report not found.' });
     return c.json({ report: updated }, 200);
   },

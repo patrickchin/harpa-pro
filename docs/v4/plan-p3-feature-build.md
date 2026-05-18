@@ -380,23 +380,18 @@ they're picked up.
 >
 > **Order:**
 >
-> 1. **`useReportUnfinalize` route** — `POST /reports/{id}/unfinalize`
->    (or `PATCH` with `{ status: 'draft' }`). RLS-scoped; flips
->    `finalized_at` to NULL; integration test covers
->    member-can / non-member-can't. From P3.15.3.
-> 2. **LLM token accounting** — the whole of P3.15.5
+> 1. [x] **`useReportUnfinalize` route** — `POST /reports/{id}/unfinalize`
+>    RLS-scoped; flips `finalized_at` to NULL; integration test covers
+>    member-can / non-member-can't + 409 already-draft.
+> 2. [x] **LLM token accounting** — the whole of P3.15.5
 >    (`llm_usage_events` table + `recordLlmUsage` service +
 >    instrumentation of `services/ai.ts` chat / transcribe /
->    generateReport + fixture usage values). Prereq for step 3.
-> 3. **`/me/usage` extension** — add `inputTokens`, `outputTokens`,
->    `cachedTokens` per month + per-model breakdown, aggregated
->    from `llm_usage_events`. From P3.15.4.
-> 4. **Neon prod migration job** — add the
->    `pnpm --filter @harpa/api db:migrate` step to
->    `.github/workflows/api-prod.yml` (currently only runs in
->    `api-dev.yml`). Without this, step 2's `llm_usage_events`
->    migration won't apply on prod deploy. From
->    [P4.4](plan-p4-hardening.md#p44-neon-prod-migration--pitr).
+>    generateReport via `withUsageAccounting`).
+> 3. [x] **`/me/usage` extension** — `months[].tokens`, `byModel[]`,
+>    `totals.tokens` aggregated from `llm_usage_events`.
+> 4. [x] **Neon prod migration job** — `pnpm --filter @harpa/api db:migrate`
+>    runs against the Doppler `prd` `DATABASE_URL` before the Fly
+>    deploy in `.github/workflows/api-prod.yml`.
 >
 > The paginated `GET /me/usage/events`, Sentry API middleware,
 > PG `statement_timeout`, universal-link manifests, and k6 load
@@ -434,7 +429,9 @@ token-level usage UI in P3.15.4 — land it before extending
 - [ ] Commit: `feat(mobile): camera Done → upload handoff + roll toggle + gestures`.
 
 #### P3.15.3 — Saved-report wiring completion
-- [ ] `useReportUnfinalize` mutation (route + hook).
+- [x] `useReportUnfinalize` route — `POST /reports/{number}/unfinalize`
+      (RLS-scoped; 409 on non-finalized; 404 hides cross-project rows).
+- [ ] `useReportUnfinalize` mobile hook (consumes the route above).
 - [ ] Rich `useNoteTimeline`: voice / photo / document rows in
       `ReportNotesPane` (currently text-only stub).
 - [ ] `ReportPhotos` block on the Report tab (uses signed URLs from
@@ -471,16 +468,18 @@ chokepoint is `packages/api/src/services/ai.ts` (`chat`,
 `transcribe`, `generateReport`) — instrument there, not at each
 route.
 
-- [ ] Drizzle migration: `llm_usage_events` table
-      (`id uuidv7`, `user_id`, `project_id?`, `report_id?`, `vendor`,
+- [x] Drizzle migration: `llm_usage_events` table
+      (`id lue_id`, `user_id`, `project_id?`, `report_id?`, `vendor`,
       `model`, `operation` enum `{chat,transcribe,generate_report}`,
       `input_tokens`, `output_tokens`, `cached_tokens`,
-      `total_tokens` generated, `latency_ms`, `fixture_mode` bool,
-      `created_at`). Index on `(user_id, created_at desc)` and
+      `total_tokens` generated, `latency_ms`, `fixture_mode`,
+      `status`, `created_at`). Indexes on `(user_id, created_at desc)` and
       `(user_id, vendor, model)`.
-- [ ] RLS / scoped role: users can only `SELECT` their own rows;
-      `INSERT` is restricted to the API service role (see
-      `arch-auth-and-rls.md`). No mobile-side writes.
+      (`packages/api/migrations/0003_llm_usage_events.sql`.)
+- [x] RLS / scoped role: `llm_usage_events_self_read` +
+      `llm_usage_events_self_insert` enforce `user_id =
+      current_setting('app.user_id')`. INSERT goes through the
+      per-request scoped accessor; no mobile-side writes.
 - [ ] Each vendor adapter returns `{ output, usage }` where `usage`
       is `{ inputTokens, outputTokens, cachedTokens? }`. Extract from
       the SDK response per vendor:
@@ -490,23 +489,30 @@ route.
       - Transcribe (Whisper-class): record audio duration → derive
         `inputTokens` via a documented conversion (or store
         `inputSeconds` in a separate column).
-- [ ] Fixture replays return canonical `usage` values stored
+      (Live-mode mapping deferred — fixture replay already supplies
+      `{input,output}` via the shared `ChatResponse.usage`. Vendor
+      adapters land with the first non-fixture caller.)
+- [x] Fixture replays return canonical `usage` values stored
       alongside the fixture payload (so replay-mode tests have
-      deterministic token counts). `packages/ai-fixtures` schema
-      extended; existing fixtures backfilled with the values
-      observed during recording.
-- [ ] `recordLlmUsage(db, { userId, projectId?, reportId?, vendor, model, operation, usage, latencyMs, fixtureMode })`
+      deterministic token counts). `packages/ai-fixtures` already
+      ships `ChatResponse.usage` and existing fixtures carry the
+      recorded values; the chokepoint reads them through
+      `withUsageAccounting`.
+- [x] `recordLlmUsage(db, { userId, projectId?, reportId?, vendor, model, operation, usage, latencyMs, fixtureMode, status })`
       service in `packages/api/src/services/ai-usage.ts`. Called from
-      each of the three `services/ai.ts` entry points after the
-      vendor call returns (and on error too — log the failure with
-      zero tokens so we see traffic spikes from failed calls).
-- [ ] Pitfall 13: write an integration test that exercises a real
-      `chat` round-trip through fixtures and asserts a row landed
-      in `llm_usage_events` with the expected counts. Default-wiring
-      coverage, not a stub.
-- [ ] `GET /me/usage` (extended in P3.15.4) aggregates from this
-      table. `GET /me/usage/events` paginates raw events for the
-      per-event timeline.
+      each of the three `services/ai.ts` entry points via
+      `withUsageAccounting` after the vendor call returns (and on
+      error too — `status='error'` row with zero tokens so we see
+      traffic spikes from failed calls).
+- [x] Pitfall 13: `src/__tests__/ai-usage.integration.test.ts`
+      exercises real `chat` + `transcribe` round-trips through
+      fixtures and asserts a row landed in `llm_usage_events` with
+      the expected counts. Default-wiring coverage, not a stub.
+- [x] `GET /me/usage` aggregates from this table (months + byModel +
+      totals with token sums).
+- [ ] `GET /me/usage/events` paginates raw events for the
+      per-event timeline. (P4 — read path is enough for the in-app
+      Usage screen; per-event timeline ships with P3.15.4 UI.)
 - [ ] Commit: `feat(api): per-user LLM token accounting on every call`.
 
 **Out of scope** (kept disabled or absent until product asks):

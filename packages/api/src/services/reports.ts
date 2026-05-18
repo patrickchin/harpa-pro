@@ -369,6 +369,29 @@ export async function finalizeReport(db: Db, reportId: string): Promise<ReportRo
   return row ? mapReport(row) : null;
 }
 
+/**
+ * Reverse of `finalizeReport`: flips a finalized report back to draft so
+ * the user can edit / regenerate it. Only matches rows that are currently
+ * finalized — callers should 409 if this returns null AND the row exists
+ * (route checks status before calling). RLS still applies via the scoped
+ * Postgres role, so a row the caller can't see is just "not found".
+ */
+export async function unfinalizeReport(db: Db, reportId: string): Promise<ReportRow | null> {
+  const r = await db.execute<RawReport>(sql`
+    UPDATE app.reports
+    SET status = 'draft',
+        finalized_at = NULL,
+        updated_at = now()
+    WHERE id = ${reportId}
+      AND finalized_at IS NOT NULL
+    RETURNING id, number, project_id, status, visit_date, body,
+              notes_since_last_generation, generated_at, finalized_at,
+              pdf_file_id, created_at, updated_at
+  `);
+  const row = r.rows[0];
+  return row ? mapReport(row) : null;
+}
+
 export async function setReportPdfFileId(
   db: Db,
   reportId: string,

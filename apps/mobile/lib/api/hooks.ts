@@ -417,6 +417,25 @@ export function useFinalizeReportMutation(
   });
 }
 
+export function useUnfinalizeReportMutation(
+  options?: UseMutationOptions<ResponseBody<"/projects/{project}/reports/{number}/unfinalize", "post">, ApiError, { params: PathParams<"/projects/{project}/reports/{number}/unfinalize", "post"> }>,
+) {
+  const qc = useQueryClient();
+  return useMutation<ResponseBody<"/projects/{project}/reports/{number}/unfinalize", "post">, ApiError, { params: PathParams<"/projects/{project}/reports/{number}/unfinalize", "post"> }>({
+    mutationFn: (vars) => request("/projects/{project}/reports/{number}/unfinalize", "post", { params: (vars as any).params }),
+    ...options,
+    onSuccess: (...args) => {
+      const rule = INVALIDATIONS["useUnfinalizeReportMutation"];
+      if (rule && rule !== INVALIDATIONS_NONE) {
+        for (const head of rule) {
+          qc.invalidateQueries({ queryKey: [head] });
+        }
+      }
+      return options?.onSuccess?.(...args);
+    },
+  });
+}
+
 export function useReportPdfMutation(
   options?: UseMutationOptions<ResponseBody<"/projects/{project}/reports/{number}/pdf", "post">, ApiError, { params: PathParams<"/projects/{project}/reports/{number}/pdf", "post"> }>,
 ) {

@@ -32,6 +32,7 @@ import {
   useGenerateReportMutation,
   useRegenerateReportMutation,
   useFinalizeReportMutation,
+  useDeleteReportMutation,
 } from '@/lib/api/hooks';
 import type { NoteEntry } from '@/lib/note-entry';
 import { uuid } from '@/lib/uuid';
@@ -295,6 +296,23 @@ export default function GenerateReportRoute() {
     );
   }, [slug, reportNumber, finalizeMutation, router]);
 
+  // Delete-draft handler. Routes back to the reports list on success so
+  // the deleted draft isn't in nav history (would 404 on swipe-back).
+  // Error path keeps the dialog open via `isDeletingDraft` staying true
+  // until the mutation settles; a dedicated error dialog ports in P4.
+  const deleteReportMutation = useDeleteReportMutation();
+  const handleDeleteDraft = useCallback(() => {
+    if (!slug || reportNumber === null) return;
+    deleteReportMutation.mutate(
+      { params: { project: slug, number: reportNumber } },
+      {
+        onSuccess: () => {
+          router.replace(`/(app)/projects/${slug}/reports` as never);
+        },
+      },
+    );
+  }, [slug, reportNumber, deleteReportMutation, router]);
+
   // Camera handoff. Push the capture modal with a session id; on focus
   // return, drain the URIs. R2 upload + createNote-with-fileId land
   // with the upload pipeline (P4) — until then we tell the user
@@ -374,6 +392,10 @@ export default function GenerateReportRoute() {
       onFinalize={handleFinalize}
       onCameraCapture={handleCameraCapture}
       onPickAttachment={handlePickAttachment}
+      onDeleteDraft={
+        reportRow?.status === 'finalized' ? undefined : handleDeleteDraft
+      }
+      isDeletingDraft={deleteReportMutation.isPending}
     />
   );
 }

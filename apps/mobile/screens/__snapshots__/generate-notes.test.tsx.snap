@@ -651,7 +651,12 @@ exports[`GenerateNotes > matches the empty-state snapshot 1`] = `
       </rn-View>
     </rn-ScrollView>
     <rn-View
-      className="border-t border-border bg-background px-5 py-3"
+      className="border-t border-border bg-background px-5 pt-3"
+      style={
+        {
+          "paddingBottom": 34,
+        }
+      }
     >
       <rn-View
         className="flex-row items-stretch gap-3"
@@ -1187,6 +1192,135 @@ exports[`GenerateNotes > matches the empty-state snapshot 1`] = `
                   ]
                 }
                 testID="dialog-action-3"
+              >
+                <rn-Text
+                  className="text-muted-foreground font-semibold text-base"
+                >
+                  Cancel
+                </rn-Text>
+              </rn-Pressable>
+            </rn-View>
+          </rn-View>
+        </rn-Pressable>
+      </rn-Pressable>
+    </rn-Modal>
+    <rn-Modal
+      animationType="slide"
+      onRequestClose={[Function]}
+      transparent={true}
+      visible={false}
+    >
+      <rn-Pressable
+        className="flex-1 justify-end bg-black/40"
+        onPress={[Function]}
+      >
+        <rn-Pressable
+          className="bg-background pb-10"
+          onPress={[Function]}
+          testID="dialog-sheet"
+        >
+          <rn-View
+            className="flex-row items-center justify-between border-b border-border px-5 py-4"
+          >
+            <rn-Text
+              className="text-xl font-bold text-foreground"
+            >
+              Delete Draft
+            </rn-Text>
+            <rn-Pressable
+              disabled={false}
+              hitSlop={12}
+              onPress={[Function]}
+            >
+              <lucide-X
+                color="#5f5b66"
+                size={20}
+              />
+            </rn-Pressable>
+          </rn-View>
+          <rn-View
+            className="gap-4 px-5 pt-4"
+          >
+            <rn-View
+              className="rounded-md border px-4 py-3 border-danger-border bg-danger-soft"
+              style={
+                {
+                  "elevation": 2,
+                  "shadowColor": "#1a1a2e",
+                  "shadowOffset": {
+                    "height": 2,
+                    "width": 0,
+                  },
+                  "shadowOpacity": 0.08,
+                  "shadowRadius": 8,
+                }
+              }
+            >
+              <rn-Text
+                className="mb-1 text-sm font-semibold text-danger-text"
+                selectable={true}
+              >
+                Permanent action
+              </rn-Text>
+              <rn-Text
+                className="text-sm text-danger-text"
+                selectable={true}
+              >
+                This draft report will be removed. This cannot be undone.
+              </rn-Text>
+            </rn-View>
+            <rn-View
+              className="gap-3"
+            >
+              <rn-Pressable
+                accessibilityLabel="Confirm delete draft"
+                className="flex-row items-center rounded-md border border-danger-border bg-danger-soft active:opacity-85 min-h-touch px-5 py-3.5 justify-start"
+                disabled={false}
+                onPress={[Function]}
+                style={
+                  [
+                    {
+                      "elevation": 2,
+                      "shadowColor": "#1a1a2e",
+                      "shadowOffset": {
+                        "height": 2,
+                        "width": 0,
+                      },
+                      "shadowOpacity": 0.08,
+                      "shadowRadius": 8,
+                    },
+                    undefined,
+                  ]
+                }
+                testID="dialog-action-confirm-delete-draft"
+              >
+                <rn-Text
+                  className="text-danger-text font-semibold text-base"
+                >
+                  Delete
+                </rn-Text>
+              </rn-Pressable>
+              <rn-Pressable
+                accessibilityLabel="Cancel delete draft"
+                className="flex-row items-center rounded-md bg-transparent active:bg-secondary min-h-touch px-5 py-3.5 justify-center"
+                disabled={false}
+                onPress={[Function]}
+                style={
+                  [
+                    {
+                      "elevation": 0,
+                      "shadowColor": "#1a1a2e",
+                      "shadowOffset": {
+                        "height": 0,
+                        "width": 0,
+                      },
+                      "shadowOpacity": 0,
+                      "shadowRadius": 0,
+                    },
+                    undefined,
+                  ]
+                }
+                testID="dialog-action-1"
               >
                 <rn-Text
                   className="text-muted-foreground font-semibold text-base"

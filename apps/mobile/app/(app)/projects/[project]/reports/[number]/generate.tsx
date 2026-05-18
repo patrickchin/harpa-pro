@@ -24,6 +24,7 @@ import {
 import { GenerateNotes } from '@/screens/generate-notes';
 import {
   useProjectQuery,
+  useProjectMembersQuery,
   useReportQuery,
   useReportNotesQuery,
   useCreateNoteMutation,
@@ -101,6 +102,23 @@ export default function GenerateReportRoute() {
       }
     | undefined;
   const reportId = reportRow?.id ?? null;
+
+  const membersQuery = useProjectMembersQuery(
+    { params: { project: slug } },
+    { enabled: slug.length > 0 },
+  );
+  const memberNames = useMemo<ReadonlyMap<string, string>>(() => {
+    const items = (membersQuery.data as
+      | { items?: ReadonlyArray<{ userId: string; displayName: string | null; phone?: string }> }
+      | undefined)?.items;
+    const map = new Map<string, string>();
+    if (!items) return map;
+    for (const m of items) {
+      const name = m.displayName?.trim() || m.phone || 'Unknown';
+      map.set(m.userId, name);
+    }
+    return map;
+  }, [membersQuery.data]);
 
   // Server-backed notes timeline. Optimistic local additions are kept
   // alongside until the query refetches so the UI stays responsive
@@ -373,6 +391,7 @@ export default function GenerateReportRoute() {
       project={slug}
       reportNumber={reportNumber}
       notes={visibleNotes}
+      memberNames={memberNames}
       notesLoading={report.isLoading || notesQuery.isLoading}
       onAddTextNote={handleAddTextNote}
       onDeleteNote={handleDeleteNote}

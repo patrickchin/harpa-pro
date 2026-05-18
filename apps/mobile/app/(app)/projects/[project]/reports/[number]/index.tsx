@@ -20,6 +20,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SavedReport } from '@/screens/saved-report';
 import {
   useProjectQuery,
+  useProjectMembersQuery,
   useReportQuery,
   useReportNotesQuery,
   useDeleteReportMutation,
@@ -90,6 +91,22 @@ export default function SavedReportRoute() {
     { enabled: reportId !== null },
   );
 
+  const membersQuery = useProjectMembersQuery(
+    { params: { project: slug } },
+    { enabled: slug.length > 0 },
+  );
+  const memberNames = useMemo(() => {
+    const items = (membersQuery.data as
+      | { items?: ReadonlyArray<{ userId: string; displayName: string | null; phone?: string }> }
+      | undefined)?.items;
+    const map = new Map<string, string>();
+    if (!items) return map;
+    for (const m of items) {
+      map.set(m.userId, m.displayName?.trim() || m.phone || 'Unknown');
+    }
+    return map;
+  }, [membersQuery.data]);
+
   const { refreshing, onRefresh } = useRefresh([
     () => reportQuery.refetch(),
     () => notesQuery.refetch(),
@@ -99,6 +116,7 @@ export default function SavedReportRoute() {
       | {
           items?: ReadonlyArray<{
             id: string;
+            authorId?: string;
             kind: 'text' | 'voice' | 'image' | 'document';
             body: string | null;
             transcript: string | null;
@@ -112,8 +130,9 @@ export default function SavedReportRoute() {
       body: n.body ?? n.transcript ?? null,
       kind: n.kind === 'image' ? 'photo' : n.kind,
       createdAt: n.createdAt ?? null,
+      authorName: n.authorId ? memberNames.get(n.authorId) ?? null : null,
     }));
-  }, [notesQuery.data]);
+  }, [notesQuery.data, memberNames]);
 
   // TODO(P4): wire to `useReportAutoSave` once the autosave hook
   // ports. For now the Edit tab updates local state only.

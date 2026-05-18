@@ -59,7 +59,7 @@ export function NoteTimeline({
     <View className="gap-2" testID="note-timeline">
       {notes.map((entry, index) => {
         const authorName = entry.authorId
-          ? memberNames?.get(entry.authorId) ?? entry.authorId
+          ? memberNames?.get(entry.authorId)
           : undefined;
         return (
           <TextNoteCard

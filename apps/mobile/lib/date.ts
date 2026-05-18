@@ -81,3 +81,28 @@ export function formatRelativeOrDate(
   }
   return formatDate(date);
 }
+
+/**
+ * Formats an ISO/epoch timestamp for display in a note card's header.
+ * Uses the device locale so 12h/24h follows the user's settings.
+ * Returns "" for invalid / empty inputs so callers can do
+ * `{value ? <Text>{formatCapturedAt(value)}</Text> : null}`.
+ *
+ * Mirrors the canonical `apps/mobile/lib/format-date.ts` helper.
+ *
+ * @example formatCapturedAt(1715990400000) → 'May 18, 2024, 12:00 PM' (en-US)
+ */
+export function formatCapturedAt(
+  value: string | number | Date | null | undefined,
+): string {
+  if (value === null || value === undefined || value === '') return '';
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toLocaleString(undefined, {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+}

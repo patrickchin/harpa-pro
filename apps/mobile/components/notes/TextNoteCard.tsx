@@ -15,6 +15,7 @@ import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-nativ
 import { MoreVertical } from 'lucide-react-native';
 
 import { AppDialogSheet } from '@/components/primitives/AppDialogSheet';
+import { NoteCardHeader } from '@/components/notes/NoteCardHeader';
 import { colors } from '@/lib/design-tokens/colors';
 import type { NoteEntry } from '@/lib/note-entry';
 
@@ -73,9 +74,14 @@ export function TextNoteCard({
   return (
     <>
       <View
-        className="rounded-lg border border-border bg-card p-3"
+        className="rounded-lg border border-border bg-card p-3 gap-1.5"
         testID={`note-row-${sourceIndex}`}
       >
+        <NoteCardHeader
+          authorName={authorName}
+          capturedAt={entry.addedAt}
+          testIDSuffix={sourceIndex}
+        />
         <View className="flex-row items-start gap-2">
           <Text className="flex-1 text-base text-foreground" selectable>
             {entry.text}
@@ -100,9 +106,6 @@ export function TextNoteCard({
             </View>
           ) : null}
         </View>
-        {authorName ? (
-          <Text className="mt-1 text-xs text-muted-foreground">{authorName}</Text>
-        ) : null}
       </View>
 
       <AppDialogSheet

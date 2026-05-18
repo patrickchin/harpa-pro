@@ -675,7 +675,7 @@ to `screen.ts` + `screens/**`.
 
 ## 6. Implementation checklist (one commit each)
 
-> **Status:** TUI-nav.0–2 ✅ shipped. 3–9 remaining on `feat/tui`.
+> **Status:** TUI-nav.0–3 ✅ shipped. 4–9 remaining on `feat/tui`.
 
 Each step ships its own tests + amends this doc's status table. No
 "tests later" step. Conventional Commits with `Co-authored-by:
@@ -699,12 +699,12 @@ Copilot` trailer.
    No flows changed yet.
    `feat(cli): screen driver with info header for tui flows`
 
-4. **TUI-nav.3 — Projects screen + Project Home screen.**
-   New `tui/screens/projects.ts`, `tui/screens/project-home.ts`.
-   Replace `projectsFlow` body with `runScreen(projectsScreen())`.
-   Header helpers `buildProjectsHeader`, `buildProjectHomeHeader`
-   live next to their screens with pure-function unit tests.
-   Behaviour tests cover empty list, open-pick, delete-pops.
+4. **TUI-nav.3 — Projects screen + Project Home screen.** ✅
+   New `tui/screens/projects.ts`, `tui/screens/project-home.ts`,
+   shared `tui/screens/_fetch.ts` (re-uses leaves via cittyPath
+   per Pitfall 14). Replaces `projectsFlow` body with `runScreen`.
+   Behaviour tests cover header rendering, unreachable API, exit
+   cascade-clear, 404-pops.
    `feat(cli): project home screen replaces flat projects submenu`
 
 5. **TUI-nav.4 — Members screen.**

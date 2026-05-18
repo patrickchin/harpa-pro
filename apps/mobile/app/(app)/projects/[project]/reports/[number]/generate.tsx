@@ -27,6 +27,8 @@ import {
   useReportQuery,
   useReportNotesQuery,
   useCreateNoteMutation,
+  useDeleteNoteMutation,
+  useUpdateNoteMutation,
   useGenerateReportMutation,
   useRegenerateReportMutation,
   useFinalizeReportMutation,
@@ -107,6 +109,8 @@ export default function GenerateReportRoute() {
     { enabled: reportId !== null },
   );
   const createNote = useCreateNoteMutation();
+  const deleteNote = useDeleteNoteMutation();
+  const updateNote = useUpdateNoteMutation();
   const [pendingNotes, setPendingNotes] = useState<NoteEntry[]>([]);
 
   const serverNotes = useMemo<NoteEntry[]>(() => {
@@ -128,6 +132,49 @@ export default function GenerateReportRoute() {
       (a, b) => a.addedAt - b.addedAt,
     );
   }, [serverNotes, pendingNotes, serverIds]);
+
+  const handleDeleteNote = useCallback(
+    (note: NoteEntry, _sourceIndex: number) => {
+      const noteIdValue = note.id;
+      if (!noteIdValue) {
+        // optimistic-only entry — just drop it locally
+        setPendingNotes((prev) => prev.filter((n) => n !== note));
+        return;
+      }
+      // Optimistic local removal — the note row vanishes immediately,
+      // and refetch (invalidation) will reconcile.
+      setPendingNotes((prev) => prev.filter((n) => n.id !== noteIdValue));
+      deleteNote.mutate(
+        { params: { note: noteIdValue } },
+        {
+          onError: () => {
+            setUploadError('Could not delete the note. Please try again.');
+          },
+        },
+      );
+    },
+    [deleteNote],
+  );
+
+  const handleUpdateNote = useCallback(
+    (note: NoteEntry, _sourceIndex: number, nextBody: string) => {
+      const noteIdValue = note.id;
+      if (!noteIdValue) return;
+      // Optimistic local patch on any pending mirror.
+      setPendingNotes((prev) =>
+        prev.map((n) => (n.id === noteIdValue ? { ...n, text: nextBody } : n)),
+      );
+      updateNote.mutate(
+        { params: { note: noteIdValue }, body: { body: nextBody } },
+        {
+          onError: () => {
+            setUploadError('Could not update the note. Please try again.');
+          },
+        },
+      );
+    },
+    [updateNote],
+  );
 
   const handleAddTextNote = useCallback(
     (body: string) => {
@@ -288,6 +335,8 @@ export default function GenerateReportRoute() {
       notes={visibleNotes}
       notesLoading={report.isLoading || notesQuery.isLoading}
       onAddTextNote={handleAddTextNote}
+      onDeleteNote={handleDeleteNote}
+      onUpdateNote={handleUpdateNote}
       reportTitle={reportTitleField ?? null}
       canWrite={canWrite}
       onBack={() => safeBack(router, `/(app)/projects/${slug}/reports`)}

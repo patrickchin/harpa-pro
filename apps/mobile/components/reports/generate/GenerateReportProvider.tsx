@@ -49,6 +49,17 @@ export interface GenerateReportProviderProps {
    * provider just hands the trimmed body up.
    */
   onAddTextNote?: (body: string) => void;
+  /**
+   * Called when the user confirms deletion of a note in the timeline.
+   * The route wrapper owns the `useDeleteNoteMutation` call + optimistic
+   * cleanup. When omitted the dialog just closes (legacy P3.6 behaviour).
+   */
+  onDeleteNote?: (note: NoteEntry, sourceIndex: number) => void;
+  /**
+   * Called when the user edits a text note's body. Route wires
+   * `useUpdateNoteMutation`. When omitted edit is hidden.
+   */
+  onUpdateNote?: (note: NoteEntry, sourceIndex: number, nextBody: string) => void;
   /** user_id → display name lookup for note author bylines. */
   memberNames?: ReadonlyMap<string, string>;
   /** Report title for the header. `null` falls back to "New Report". */
@@ -154,6 +165,10 @@ interface NotesSurface {
   deleteIndex: number | null;
   setDeleteIndex: (i: number | null) => void;
   confirmDelete: () => void;
+  /** True iff a route-provided onUpdateNote is wired. */
+  canEdit: boolean;
+  /** Update body for a note at the given source index. */
+  update: (sourceIndex: number, nextBody: string) => void;
 }
 
 interface TabsSurface {
@@ -264,6 +279,8 @@ export function GenerateReportProvider({
   notes,
   notesLoading = false,
   onAddTextNote,
+  onDeleteNote,
+  onUpdateNote,
   memberNames,
   reportTitle,
   report = null,
@@ -300,10 +317,24 @@ export function GenerateReportProvider({
   }, [input, onAddTextNote]);
 
   const confirmDelete = useCallback(() => {
-    // TODO(P3.8): wire useReportNotesMutations().remove once the
-    // persistence hooks land. For now the dialog just closes.
+    if (deleteIndex === null) return;
+    const note = notes[deleteIndex];
     setDeleteIndex(null);
-  }, []);
+    if (note && onDeleteNote) {
+      onDeleteNote(note, deleteIndex);
+    }
+  }, [deleteIndex, notes, onDeleteNote]);
+
+  const updateNote = useCallback(
+    (sourceIndex: number, nextBody: string) => {
+      const note = notes[sourceIndex];
+      if (!note || !onUpdateNote) return;
+      const trimmed = nextBody.trim();
+      if (!trimmed || trimmed === note.text) return;
+      onUpdateNote(note, sourceIndex, trimmed);
+    },
+    [notes, onUpdateNote],
+  );
 
   const openEdit = useCallback(() => {
     // Lazy-seed an empty report when the user opens Edit without one,
@@ -374,6 +405,8 @@ export function GenerateReportProvider({
         deleteIndex,
         setDeleteIndex,
         confirmDelete,
+        canEdit: Boolean(onUpdateNote),
+        update: updateNote,
       },
       tabs: {
         active: activeTab,
@@ -442,6 +475,8 @@ export function GenerateReportProvider({
       addNote,
       deleteIndex,
       confirmDelete,
+      updateNote,
+      onUpdateNote,
       activeTab,
       openEdit,
       editManually,

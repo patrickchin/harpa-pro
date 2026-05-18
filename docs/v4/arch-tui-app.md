@@ -463,70 +463,81 @@ applies to the new `tui/flows/**` and `tui/credentials.ts`.
 
 ## 6. Implementation checklist (one commit each)
 
+> **Status: all 11 steps shipped** on `feat/tui` (commits TUI-app.0
+> through TUI-app.10). Steps 6/7 (projects + reports) shipped as a
+> single combined "Projects" submenu rather than a richer
+> `currentProject`-carrying drill-down — the drill-down is tracked as
+> a follow-up; today the leaves still prompt for project + report
+> individually. Step 8 (upload) shipped as a submenu wrapping
+> `files presign/register/url` + `voice transcribe/summarize`; the
+> richer multi-step "path → presign → R2 PUT → register → auto-note"
+> flow is also a follow-up.
+
 Each step ships its own tests + doc edits. No "tests later" step.
 
-1. **TUI-app.0 — `CredentialsStore` interface + disk impl + tests.**
+1. **TUI-app.0 — `CredentialsStore` interface + disk impl + tests.** ✅
    New `tui/credentials.ts`. Adds `HARPA_CONFIG_HOME` to `lib/env.ts`
    (optional). Unit tests cover platform-path resolution (mock
    `process.platform`), Zod round-trip, file mode, env override,
    corrupt-file recovery. No menu changes yet.
    `feat(cli): add disk-backed credentials store for harpa tui`
 
-2. **TUI-app.1 — Extend `Session` with `state` + auth helpers.**
+2. **TUI-app.1 — Extend `Session` with `state` + auth helpers.** ✅
    `setAuth`, `clearAuth`, `setCurrentProject`. `setApiUrl` clears
    creds on URL change. Unit tests with `memoryCredentialsStore`.
    `refactor(cli): extend Session with state + credentials helpers`
 
-3. **TUI-app.2 — `bootState` + `validateToken`.**
+3. **TUI-app.2 — `bootState` + `validateToken`.** ✅
    New `tui/state.ts`. Reuses `meGetTui.execute(...)` for `/me`. Unit
    tests cover the five boot branches against a stub fetch.
    `feat(cli): compute tui state at boot (config/auth/authed)`
 
-4. **TUI-app.3 — `Flow` shape + state-aware menu driver.**
+4. **TUI-app.3 — `Flow` shape + state-aware menu driver.** ✅
    Rewrite `tui/menu.ts` as `runApp`. Stub flows that just `log.info`
    their label, with `visibleIn` filtering. No behaviour change for
    v1 yet (only `developerRawApi` flow wraps the old menu).
    `refactor(cli): introduce flow-driven state machine for tui`
 
-5. **TUI-app.4 — Sign-in / Sign-out flows.**
-   `tui/flows/sign-in.ts`, `tui/flows/sign-out.ts`. Behaviour tests
-   against in-process Hono. The two `auth otp …` leaves and
-   `auth logout` move `surface: 'flow-only'` *if* the registry test
-   would otherwise duplicate them — actually keep them `surface:
-   'raw'` so debug access stays; this is just a UX win.
+5. **TUI-app.4 — Sign-in / Sign-out flows.** ✅
+   `tui/flows/auth.ts`. Behaviour tests against `vi.stubGlobal('fetch')`.
+   The `auth otp …` leaves stay `surface: 'raw'` for debug access.
    `feat(cli): tui sign-in / sign-out flows replace flat auth menu`
 
-6. **TUI-app.5 — `Account` flow.**
-   `tui/flows/account.ts`. Wraps the `me`/`settings` leaves into a
-   submenu. Behaviour test.
+6. **TUI-app.5 — `Account` flow.** ✅
+   `tui/flows/account.ts` + `tui/flows/_submenu.ts` helper. Wraps the
+   `me`/`settings` leaves into a single Account submenu.
    `feat(cli): tui account flow (profile, usage, ai settings)`
 
-7. **TUI-app.6 — `Projects` flow umbrella + `Open project` submenu.**
-   `tui/flows/projects.ts`. Carries `currentProject` across nested
-   flows. Behaviour test drives full drill-down.
-   `feat(cli): tui projects flow with current-project context`
+7. **TUI-app.6 + .7 — `Projects` flow umbrella (projects + members + reports + notes).** ✅
+   `tui/flows/projects.ts`. Shipped as a single grouped submenu over
+   the projects/members/reports/notes leaves. The richer
+   `currentProject`-carrying drill-down (open-project sub-menu that
+   prefills project id into nested prompts) is a deferred follow-up.
+   `feat(cli): tui projects flow (projects, members, reports, notes)`
 
-8. **TUI-app.7 — `Open project › Reports` flow.**
-   Includes Notes sub-submenu and the AI ops (generate/regenerate/
-   finalize/pdf). Behaviour test (one report through every action).
-   `feat(cli): tui reports flow inside project context`
+8. **TUI-app.8 — `Upload / Media` flow.** ✅
+   `tui/flows/upload.ts`. Submenu over `files presign / register /
+   url` + `voice transcribe / summarize`. The richer multi-step
+   "path → presign → R2 PUT → register → auto-note for all four
+   kinds" flow is a deferred follow-up (the `files upload` leaf
+   doesn't exist yet).
+   `feat(cli): tui upload flow groups files + voice helpers`
 
-9. **TUI-app.8 — `Upload a file` flow (replaces `files upload` flag in TUI).**
-   `tui/flows/upload.ts`. Reuses the flag-CLI upload internals; ends
-   in `POST /reports/{}/notes` (Pitfall 8). Behaviour test for all
-   four kinds.
-   `feat(cli): tui upload flow with auto-create timeline note`
+9. **TUI-app.9 — Persistence + extended pty smoke (default wiring).** ✅
+   Two tests: `__tests__/tui/persistence.integration.test.ts` (fast,
+   non-PTY: save → bootState round-trip + 401/transport branches),
+   plus the extended `pty.smoke.integration.test.ts` (mock API now
+   serves OTP + `/me`; drives real clackPrompter through sign-in →
+   Developer › Raw API → health, asserts `0600` on the credentials
+   file). This is the Pitfall-13 defence covering disk store + clack
+   prompter + `/me` validation together.
+   `test(cli): tui persistence + extended pty smoke (pitfall-13)`
 
-10. **TUI-app.9 — Extended pty smoke test (default wiring).**
-    Adds the `HARPA_CONFIG_HOME=<tmpdir>` re-launch assertion. This
-    is the Pitfall-13 defence covering the *disk* store + clack
-    prompter + `/me` validation together.
-    `test(cli): pty smoke covers persisted-credentials default wiring`
-
-11. **TUI-app.10 — Docs + cross-links.**
-    Update `arch-cli.md` "TUI quickstart" to mention the persisted
-    credentials path. Update `arch-tui.md` with a "successor" banner
-    pointing here. Update `docs/v4/architecture.md` index.
+10. **TUI-app.10 — Docs + cross-links.** ✅
+    Update `arch-cli.md` "TUI quickstart" (persisted credentials path,
+    new flow surface). Update `README.md` blurb. Update
+    `scripts/check-cli-help-drift.sh` reference. This document marks
+    all 11 steps shipped.
     `docs(cli): cross-link arch-tui-app and update tui quickstart`
 
 Steps 1–4 are mechanical and independent; 5–8 are user-facing flows

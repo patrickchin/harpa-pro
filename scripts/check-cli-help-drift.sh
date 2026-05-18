@@ -8,7 +8,7 @@
 # implementation and `docs/v4/arch-cli.md`.
 #
 # Also runs the TUI's help snapshot (TUI.5) so the `harpa tui` surface
-# stays in lockstep with `docs/v4/arch-tui.md`.
+# stays in lockstep with `docs/v4/arch-tui-app.md`.
 #
 # Regenerate after intentional changes:
 #   pnpm --filter @harpa/cli test -- -u help.test

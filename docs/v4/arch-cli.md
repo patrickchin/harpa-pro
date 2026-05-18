@@ -24,10 +24,11 @@
 These may land post-v1 if demand surfaces, but the initial implementation is stateless / env-only / 12-factor.
 
 > **Interactive shell:** for exploratory debugging where flag recall is
-> high-friction, run `harpa tui` — a `@clack/prompts`-driven menu that
-> wraps the same commands. See [`arch-tui.md`](arch-tui.md). It shares
-> the execution path with the flag CLI (`defineHarpaCommand()` →
-> `performRequest`), so behaviour is identical.
+> high-friction, run `harpa tui` — a `@clack/prompts`-driven app with
+> a guided sign-in flow and persisted credentials. See
+> [`arch-tui-app.md`](arch-tui-app.md) (v2; supersedes `arch-tui.md`).
+> Leaves still share `defineHarpaCommand()` + `performRequest`, so the
+> raw-API surface behaves identically to the flag CLI.
 
 ### TUI quickstart
 
@@ -35,18 +36,25 @@ These may land post-v1 if demand surfaces, but the initial implementation is sta
 HARPA_API_URL=http://localhost:8787 pnpm harpa tui
 ```
 
-The menu is grouped by area (`auth`, `me`, `projects`, `reports`,
-`notes`, `files`, `voice`, `settings`, `health`). Pick a group, pick
-a command, answer the prompts — the underlying API call is the same
-one the flag CLI would make, and successful responses render through
-the same formatters. Unauthenticated commands prompt you to sign in
-first; the menu also includes a "Set API URL" entry for switching
-environments mid-session without restarting the process.
+First launch shows a guided sign-in (`Sign in → phone → OTP`). After
+verification the token is written to a per-OS credentials file
+(`~/Library/Application Support/harpa-cli/credentials.json` on macOS,
+`$XDG_CONFIG_HOME/harpa-cli/credentials.json` on Linux, `%APPDATA%\
+harpa-cli\credentials.json` on Windows; file mode `0600`). Set
+`HARPA_CONFIG_HOME=<dir>` to override the parent directory (also used
+by tests). Re-launching the TUI validates the saved token via
+`GET /me`; on 401 the file is cleared and you're sent back to sign in.
 
-The only leaf intentionally omitted from the TUI is `harpa files
-upload`, which streams a local file through R2 — use the three
-primitives (`files presign`, `files register`, `files url`) or run
-the upload from the flag CLI instead.
+The authed top-level menu groups flows by intent — **Account**,
+**Projects** (projects + members + reports + notes), **Upload /
+Media** (presign/register/voice helpers), and **Developer › Raw API**
+(every `defineHarpaCommand` leaf grouped by area, kept for ops /
+debugging). The menu also has **Set API URL** (any state) and **Sign
+out**.
+
+The richer multi-step upload flow (path → presign → R2 PUT → register
+→ auto-note for all four media kinds) is a planned follow-up; today
+the Upload submenu wraps the existing files/voice leaves.
 
 ## Stack
 

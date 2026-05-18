@@ -17,6 +17,7 @@ import { notesCommand } from './commands/notes.js';
 import { filesCommand } from './commands/files.js';
 import { voiceCommand } from './commands/voice.js';
 import { settingsCommand } from './commands/settings.js';
+import { tuiCommand } from './tui/index.js';
 
 const main = defineCommand({
   meta: {
@@ -34,6 +35,7 @@ const main = defineCommand({
     files: filesCommand,
     voice: voiceCommand,
     settings: settingsCommand,
+    tui: tuiCommand,
   },
 });
 

@@ -75,18 +75,7 @@ export function printError(
     return;
   }
 
-  const code = body?.error?.code ?? 'UNKNOWN';
-  const message = body?.error?.message ?? `HTTP ${status}`;
-  out.write(chalk.red(`Error: ${status} ${code}`) + '\n');
-  out.write(message + '\n');
-  out.write(chalk.dim(`\nRequest ID: ${requestId}`) + '\n');
-
-  if (status === 429) {
-    const retryAfter = headers.get('retry-after');
-    if (retryAfter) {
-      out.write(chalk.yellow(`Retry after: ${retryAfter}s`) + '\n');
-    }
-  }
+  out.write(formatErrorMessage(status, body, headers) + '\n');
 
   if (opts.debug) {
     out.write(chalk.dim('\nResponse headers:') + '\n');
@@ -96,6 +85,26 @@ export function printError(
       out.write(JSON.stringify(body, null, 2) + '\n');
     }
   }
+}
+
+/**
+ * Build the human-readable error block as a string (no I/O). Used by
+ * both `printError` (CLI stderr) and the TUI (rendered into clack).
+ */
+export function formatErrorMessage(
+  status: number,
+  body: ErrorEnvelope | undefined,
+  headers: Headers,
+): string {
+  const requestId = headers.get('x-request-id') ?? body?.requestId ?? 'unknown';
+  const code = body?.error?.code ?? 'UNKNOWN';
+  const message = body?.error?.message ?? `HTTP ${status}`;
+  const lines = [chalk.red(`Error: ${status} ${code}`), message, chalk.dim(`Request ID: ${requestId}`)];
+  if (status === 429) {
+    const retryAfter = headers.get('retry-after');
+    if (retryAfter) lines.push(chalk.yellow(`Retry after: ${retryAfter}s`));
+  }
+  return lines.join('\n');
 }
 
 /**
@@ -117,10 +126,15 @@ export function printTransportError(err: unknown, opts: PrintErrorOptions = {}):
     return;
   }
 
-  out.write(chalk.red('Error: transport / network failure') + '\n');
-  out.write(message + '\n');
+  out.write(formatTransportMessage(err) + '\n');
 
   if (opts.debug && err instanceof Error && err.stack) {
     out.write(chalk.dim('\n' + err.stack) + '\n');
   }
+}
+
+/** Build the human-readable transport-error block as a string (no I/O). */
+export function formatTransportMessage(err: unknown): string {
+  const message = err instanceof Error ? err.message : String(err);
+  return chalk.red('Error: transport / network failure') + '\n' + message;
 }

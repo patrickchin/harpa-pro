@@ -7,16 +7,26 @@
  *
  * Notes still live in route-local state — `useReportNotesQuery` /
  * `useReportNotesMutations` aren't ported yet (lands with the notes
- * mutation hooks). Generated report is wired from a fixture sample
- * in fixture-mode so the Report tab renders; the real
- * `useReportGeneration` hook lands once the API generate endpoint is
- * ported.
+ * mutation hooks).
+ *
+ * Generate / Regenerate / Finalize are now wired to the real API
+ * mutations (`useGenerateReportMutation`, `useRegenerateReportMutation`,
+ * `useFinalizeReportMutation`); the report body is read straight off
+ * `useReportQuery().data.body`. Fixture mode still falls back to the
+ * sample report so dev mirrors stay populated when the API isn't
+ * reachable.
  */
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
 import { GenerateNotes } from '@/screens/generate-notes';
-import { useProjectQuery, useReportQuery } from '@/lib/api/hooks';
+import {
+  useProjectQuery,
+  useReportQuery,
+  useGenerateReportMutation,
+  useRegenerateReportMutation,
+  useFinalizeReportMutation,
+} from '@/lib/api/hooks';
 import type { NoteEntry } from '@/lib/note-entry';
 import { uuid } from '@/lib/uuid';
 import { env } from '@/lib/env';
@@ -48,7 +58,7 @@ export default function GenerateReportRoute() {
     { enabled: slug.length > 0 && reportNumber !== null },
   );
 
-  // TODO(P3.x): replace with `useReportNotesQuery` + the mutation
+  // TODO(P4): replace with `useReportNotesQuery` + the mutation
   // pipeline once `useLocalReportNotes` is ported. Notes live in
   // route-local state so the screen stays functional end-to-end.
   const [localNotes, setLocalNotes] = useState<NoteEntry[]>([]);
@@ -65,39 +75,86 @@ export default function GenerateReportRoute() {
     ]);
   }, []);
 
-  // TODO(P3.x): replace with `useReportGeneration` mutation once the
-  // API `/projects/:slug/reports/:n/generate` endpoint is ported. In
-  // fixture mode we seed a sample report so the Report tab is
-  // visually exercised; otherwise the tab shows the empty state.
-  const [generatedReport, setGeneratedReport] =
-    useState<GeneratedSiteReport | null>(
-      env.EXPO_PUBLIC_USE_FIXTURES ? SAMPLE_GENERATED_REPORT : null,
-    );
-  const [isGeneratingReport, setIsGeneratingReport] = useState(false);
+  const reportRow = report.data as
+    | {
+        body?: GeneratedSiteReport | null;
+        status?: 'draft' | 'finalized';
+        notesSinceLastGeneration?: number;
+        meta?: { title?: string | null };
+      }
+    | undefined;
+  const serverBody = (reportRow?.body ?? null) as GeneratedSiteReport | null;
+
+  // In fixture mode we fall back to the canonical sample so dev mirrors
+  // + Maestro flows have something to render when no real generation
+  // has happened yet. Real builds show whatever the API returned.
+  const fallbackReport: GeneratedSiteReport | null = env.EXPO_PUBLIC_USE_FIXTURES
+    ? SAMPLE_GENERATED_REPORT
+    : null;
+
+  const [localReport, setLocalReport] = useState<GeneratedSiteReport | null>(
+    null,
+  );
+  const currentReport = localReport ?? serverBody ?? fallbackReport;
+
   const [generationError, setGenerationError] = useState<string | null>(null);
+  const [finalizeError, setFinalizeError] = useState<string | null>(null);
 
-  // Honest UX path: flip the spinner, then re-seat the fixture so the
-  // user sees the Report tab refresh. Real network call lands later.
+  const generateMutation = useGenerateReportMutation();
+  const regenerateMutation = useRegenerateReportMutation();
+  const finalizeMutation = useFinalizeReportMutation();
+
   const handleRegenerate = useCallback(() => {
+    if (!slug || reportNumber === null) return;
     setGenerationError(null);
-    setIsGeneratingReport(true);
-  }, []);
+    // First-time generation hits POST /generate; subsequent runs hit
+    // /regenerate. The wire shape is identical (Pitfall 7 — empty body
+    // is valid; fixtureName is test-only).
+    const mutation = currentReport ? regenerateMutation : generateMutation;
+    mutation.mutate(
+      { params: { project: slug, number: reportNumber }, body: {} },
+      {
+        onSuccess: (data) => {
+          const next = (data as { report?: { body?: GeneratedSiteReport | null } } | undefined)
+            ?.report?.body ?? null;
+          if (next) setLocalReport(next);
+        },
+        onError: (err) => {
+          setGenerationError(err.message ?? 'Generation failed.');
+        },
+      },
+    );
+  }, [slug, reportNumber, currentReport, generateMutation, regenerateMutation]);
 
-  useEffect(() => {
-    if (!isGeneratingReport) return;
-    const id = setTimeout(() => {
-      setGeneratedReport(SAMPLE_GENERATED_REPORT);
-      setIsGeneratingReport(false);
-    }, 600);
-    return () => clearTimeout(id);
-  }, [isGeneratingReport]);
+  const handleFinalize = useCallback(() => {
+    if (!slug || reportNumber === null) return;
+    setFinalizeError(null);
+    finalizeMutation.mutate(
+      { params: { project: slug, number: reportNumber } },
+      {
+        onSuccess: () => {
+          // Navigate to the saved-report view once finalize succeeds —
+          // the draft route no longer makes sense for a finalized
+          // report. The query cache is already invalidated by the
+          // mutation hook's onSuccess (see `lib/api/invalidation.ts`).
+          router.replace(
+            `/(app)/projects/${slug}/reports/${reportNumber}` as never,
+          );
+        },
+        onError: (err) => {
+          setFinalizeError(err.message ?? 'Finalize failed.');
+        },
+      },
+    );
+  }, [slug, reportNumber, finalizeMutation, router]);
+
+  const isGenerating =
+    generateMutation.isPending || regenerateMutation.isPending;
 
   const canWrite =
     projectQuery.data?.myRole === 'owner' || projectQuery.data?.myRole === 'editor';
 
-  const reportTitleField = (
-    report.data as { report?: { meta?: { title?: string | null } } } | undefined
-  )?.report?.meta?.title;
+  const reportTitleField = reportRow?.meta?.title;
 
   return (
     <GenerateNotes
@@ -109,11 +166,15 @@ export default function GenerateReportRoute() {
       reportTitle={reportTitleField ?? null}
       canWrite={canWrite}
       onBack={() => safeBack(router, `/(app)/projects/${slug}/reports`)}
-      report={generatedReport}
-      onSetReport={setGeneratedReport}
-      isGeneratingReport={isGeneratingReport}
+      report={currentReport}
+      onSetReport={setLocalReport}
+      isGeneratingReport={isGenerating}
       generationError={generationError}
       onRegenerate={handleRegenerate}
+      notesSinceLastGeneration={reportRow?.notesSinceLastGeneration ?? 0}
+      isFinalizing={finalizeMutation.isPending}
+      finalizeError={finalizeError}
+      onFinalize={handleFinalize}
     />
   );
 }

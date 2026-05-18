@@ -87,6 +87,14 @@ export interface GenerateReportProviderProps {
   isFinalizing?: boolean;
   /** Latest finalize error, or `null`. */
   finalizeError?: Error | string | null;
+  /**
+   * Called when the user confirms finalize in the dialog. The route
+   * wrapper owns the actual `POST /finalize` mutation; the provider
+   * just bubbles the confirmation up. When omitted the dialog still
+   * mounts but the confirm button is a no-op (matches the canonical
+   * fallback before `useReportDraftPersistence` lands).
+   */
+  onFinalize?: () => void;
   /** Called when the user taps a file/image in the timeline or report. */
   onOpenFile?: (fileId: string) => void;
   /** Initial tab the screen opens on. Defaults to `notes`. */
@@ -185,6 +193,12 @@ interface DraftSurface {
   isFinalizeConfirmVisible: boolean;
   /** Latest finalize error, or `null`. */
   finalizeError: Error | string | null;
+  /**
+   * Confirm-finalize handler bubbled up by the dialog. Always
+   * defined — defaults to a no-op so callers can invoke it without
+   * a guard.
+   */
+  finalize: () => void;
   /** True while autosave is in flight (Edit-tab header). */
   isAutoSaving: boolean;
   /** Epoch ms of last successful autosave, or `null`. */
@@ -250,6 +264,7 @@ export function GenerateReportProvider({
   lastSavedAt = null,
   isFinalizing = false,
   finalizeError = null,
+  onFinalize,
   onOpenFile,
   initialTab = 'notes',
   children,
@@ -315,6 +330,10 @@ export function GenerateReportProvider({
     onRegenerate?.();
   }, [onRegenerate]);
 
+  const handleFinalize = useCallback(() => {
+    onFinalize?.();
+  }, [onFinalize]);
+
   const handleOpenFile = useCallback(
     (fileId: string) => {
       onOpenFile?.(fileId);
@@ -364,6 +383,7 @@ export function GenerateReportProvider({
         isFinalizeConfirmVisible,
         setIsFinalizeConfirmVisible,
         finalizeError,
+        finalize: handleFinalize,
         isAutoSaving,
         lastSavedAt,
       },
@@ -415,6 +435,7 @@ export function GenerateReportProvider({
       isFinalizing,
       isFinalizeConfirmVisible,
       finalizeError,
+      handleFinalize,
       isAutoSaving,
       lastSavedAt,
       attachmentSheetVisible,

@@ -18,7 +18,11 @@ import { useCallback, useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
 import { SavedReport } from '@/screens/saved-report';
-import { useProjectQuery, useReportQuery } from '@/lib/api/hooks';
+import {
+  useProjectQuery,
+  useReportQuery,
+  useDeleteReportMutation,
+} from '@/lib/api/hooks';
 import { useRefresh } from '@/lib/use-refresh';
 import { useReportPdfActions } from '@/lib/use-report-pdf-actions';
 import { env } from '@/lib/env';
@@ -90,15 +94,29 @@ export default function SavedReportRoute() {
     onExportError: handleExportError,
   });
 
-  // TODO(P4): replace with `useReportDelete` once that hook ports.
-  const handleConfirmDelete = useCallback(() => {
-    // No-op: deletion lands with the delete-report mutation in P4.
-  }, []);
+  const deleteMutation = useDeleteReportMutation();
 
-  // TODO(P4): replace with `useReportUnfinalize` once that hook ports.
-  const handleConfirmUnfinalize = useCallback(() => {
-    // No-op: unfinalize lands with the unfinalize mutation in P4.
-  }, []);
+  const handleConfirmDelete = useCallback(async () => {
+    if (!slug || reportNumber === null) return;
+    try {
+      await deleteMutation.mutateAsync({
+        params: { project: slug, number: reportNumber },
+      });
+      // After delete, fall back to the reports list. Use replace so the
+      // saved-report route is not in history (it would 404 on swipe-back).
+      router.replace(`/(app)/projects/${slug}/reports` as never);
+    } catch {
+      // Error surface: the mutation hook keeps the dialog open via the
+      // `isDeleting` flag; the AppDialogSheet stays mounted. A dedicated
+      // error dialog lands with P4 alongside `useReportNotesMutations`
+      // error routing — for now `deleteMutation.error` is unread.
+    }
+  }, [slug, reportNumber, deleteMutation, router]);
+
+  // Unfinalize is not implemented server-side (only finalize exists in
+  // packages/api/src/routes/reports.ts as of P3). The dialog confirm
+  // is a no-op until a `POST /unfinalize` endpoint lands in P4.
+  const handleConfirmUnfinalize = useCallback(() => undefined, []);
 
   const myRole = projectQuery.data?.myRole;
   const canUnfinalize = myRole === 'owner' || myRole === 'editor';
@@ -127,7 +145,7 @@ export default function SavedReportRoute() {
       canDelete={canDelete}
       onConfirmDelete={handleConfirmDelete}
       onConfirmUnfinalize={handleConfirmUnfinalize}
-      isDeleting={false}
+      isDeleting={deleteMutation.isPending}
       isUnfinalizing={false}
       pdfActions={pdfActions}
     />

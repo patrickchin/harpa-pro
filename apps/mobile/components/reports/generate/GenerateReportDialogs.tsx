@@ -59,8 +59,10 @@ export function GenerateReportDialogs() {
               ? 'Finalizing...'
               : finalizeConfirmCopy.confirmLabel,
             variant: finalizeConfirmCopy.confirmVariant,
-            // TODO(P3.7): wire useReportDraftPersistence().finalizeReport().
-            onPress: cancelFinalize,
+            onPress: () => {
+              if (draft.isFinalizing || !hasReport) return;
+              draft.finalize();
+            },
             disabled: draft.isFinalizing || !hasReport,
             accessibilityLabel: 'Confirm finalize report',
           },

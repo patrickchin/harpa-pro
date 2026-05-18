@@ -90,13 +90,28 @@ export async function askArg(
  * collected answers (keyed by arg name) or the CANCEL sentinel if the
  * user cancelled at any prompt.
  */
+/**
+ * Walk a tuiSpec's args, asking each in order. Returns either the
+ * collected answers (keyed by arg name) or the CANCEL sentinel if the
+ * user cancelled at any prompt.
+ *
+ * `prefill` provides pre-resolved values keyed by arg name. When a
+ * key is present in `prefill`, the prompt is skipped and the value
+ * is copied verbatim into `answers`. `skipWhen` still runs first
+ * (so prefill never overrides an explicit skip). See arch-tui-nav.md §3.3.
+ */
 export async function collectArgs(
   prompter: Prompter,
   args: Record<string, TuiArgSpec>,
+  prefill?: Record<string, unknown>,
 ): Promise<Record<string, unknown> | Cancel> {
   const answers: Record<string, unknown> = {};
   for (const [name, spec] of Object.entries(args)) {
     if (spec.skipWhen && spec.skipWhen(answers)) continue;
+    if (prefill && name in prefill) {
+      answers[name] = prefill[name];
+      continue;
+    }
     const v = await askArg(prompter, name, spec);
     if (prompter.isCancel(v)) return v;
     answers[name] = v;

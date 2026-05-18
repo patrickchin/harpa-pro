@@ -675,8 +675,7 @@ to `screen.ts` + `screens/**`.
 
 ## 6. Implementation checklist (one commit each)
 
-> **Status:** TUI-nav.0 ✅ shipped (currentReport in session). 1–9
-> remaining on `feat/tui`.
+> **Status:** TUI-nav.0–1 ✅ shipped. 2–9 remaining on `feat/tui`.
 
 Each step ships its own tests + amends this doc's status table. No
 "tests later" step. Conventional Commits with `Co-authored-by:
@@ -687,7 +686,7 @@ Copilot` trailer.
    Unit test `session-current-report.test.ts`.
    `refactor(cli): carry currentReport in tui session state`
 
-2. **TUI-nav.1 — Prefill in `runCommand` / `collectArgs`.**
+2. **TUI-nav.1 — Prefill in `runCommand` / `collectArgs`.** ✅
    Add `RunCommandOptions.prefill`, thread through `collectArgs`.
    Unit test `prompt-prefill.test.ts`. No screen changes yet.
    `feat(cli): support prefilled args in tui leaf execution`

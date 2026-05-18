@@ -22,6 +22,15 @@ export interface RunCommandResult {
   status: 'ok' | 'error' | 'cancelled';
 }
 
+export interface RunCommandOptions {
+  /**
+   * Pre-resolved arg values, keyed by `TuiArgSpec` arg name. Any key
+   * present here skips its prompt and is copied verbatim into the
+   * citty args bag. See arch-tui-nav.md §3.3.
+   */
+  prefill?: Record<string, unknown>;
+}
+
 /**
  * Drive prompts → API call → render → return. Never throws (errors
  * are rendered and surfaced via `RunCommandResult`).
@@ -30,10 +39,11 @@ export async function runCommand(
   prompter: Prompter,
   session: Session,
   cmd: AnyHarpaCommand,
+  opts: RunCommandOptions = {},
 ): Promise<RunCommandResult> {
   const tuiArgs = (cmd.tuiSpec.args ?? {}) as Record<string, import('../lib/command.js').TuiArgSpec>;
 
-  const answers = await collectArgs(prompter, tuiArgs);
+  const answers = await collectArgs(prompter, tuiArgs, opts.prefill);
   if (prompter.isCancel(answers)) return { status: 'cancelled' };
 
   // The citty parsed-args shape includes `_: []` plus any positionals /

@@ -26,9 +26,13 @@ These may land post-v1 if demand surfaces, but the initial implementation is sta
 > **Interactive shell:** for exploratory debugging where flag recall is
 > high-friction, run `harpa tui` — a `@clack/prompts`-driven app with
 > a guided sign-in flow and persisted credentials. See
-> [`arch-tui-app.md`](arch-tui-app.md) (v2; supersedes `arch-tui.md`).
-> Leaves still share `defineHarpaCommand()` + `performRequest`, so the
-> raw-API surface behaves identically to the flag CLI.
+> [`arch-tui-app.md`](arch-tui-app.md) (state machine + credentials)
+> and [`arch-tui-nav.md`](arch-tui-nav.md) (screen-based navigation:
+> Project Home → Report Home with prefilled context); both supersede
+> the original flat `arch-tui.md`. Leaves still share
+> `defineHarpaCommand()` + `performRequest`, so the raw-API surface
+> behaves identically to the flag CLI and remains reachable under
+> `Developer › Raw API` as the debug-only side-door.
 
 ### TUI quickstart
 

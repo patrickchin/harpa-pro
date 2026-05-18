@@ -107,7 +107,8 @@ flowchart TB
 | 10 | Observability + ops | [arch-ops.md](arch-ops.md) | Fly metrics, Sentry, log shipping, deploy flow |
 | 11 | **CLI** | [arch-cli.md](arch-cli.md) | **Debug / API testing / LLM-driven usage tool (`apps/cli`); stateless, env-only, covers all 37 routes** |
 | 11a | **CLI TUI (v1, flat)** | [arch-tui.md](arch-tui.md) | **Interactive menu-driven shell (`harpa tui`) wrapping the citty commands via `@clack/prompts`** |
-| 11b | **CLI TUI v2 (stateful app)** | [arch-tui-app.md](arch-tui-app.md) | **State machine (config/auth/authed), persisted credentials, flows over raw leaves — successor to 11a** |
+| 11b | **CLI TUI v2 (stateful app)** | [arch-tui-app.md](arch-tui-app.md) | **State machine (config/auth/authed), persisted credentials, flows over raw leaves — successor to 11a; state-machine half still authoritative** |
+| 11c | **CLI TUI v3 (screen navigation)** | [arch-tui-nav.md](arch-tui-nav.md) | **Screen hierarchy on top of v2: Project Home → Report Home, prefilled context, info headers — successor to 11b for navigation** |
 
 ## Repo layout (target end of P0)
 

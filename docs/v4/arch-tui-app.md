@@ -1,14 +1,22 @@
 # TUI v2 — `harpa tui` as a stateful app
 
-> **Status:** design, not yet implemented. Successor to
-> [`arch-tui.md`](arch-tui.md), which described the "flat wrapper around
-> CLI commands" v1 that's shipped. v1's plumbing (`defineHarpaCommand`,
-> `defineTuiEntry`, `Prompter`, `Session`, `performRequest`) stays — we
-> add a state machine, a persisted credentials store, and a small flow
-> layer on top of it.
+> **Status:** shipped (11/11 steps on `feat/tui`). Successor to
+> [`arch-tui.md`](arch-tui.md) for the state-machine, credentials
+> store, sign-in flow, `Prompter` / `Session` extensions, and the
+> `Developer › Raw API` surface — those parts of this doc remain
+> authoritative.
+>
+> **Navigation has moved on.** The flat "authed flows = Account /
+> Projects / Upload / Developer / Sign out" surface described in §3.2
+> and §3.5 is superseded by the screen-based hierarchy in
+> [`arch-tui-nav.md`](arch-tui-nav.md) (Project Home → Report Home,
+> prefilled context, info headers). Read this doc for the boot /
+> auth machinery and read `arch-tui-nav.md` for what happens after
+> sign-in.
 >
 > **Read first:** [`pitfalls.md`](pitfalls.md) (Pitfalls 5, 10, 13),
-> [`arch-tui.md`](arch-tui.md), [`arch-cli.md`](arch-cli.md).
+> [`arch-tui.md`](arch-tui.md), [`arch-cli.md`](arch-cli.md),
+> [`arch-tui-nav.md`](arch-tui-nav.md).
 
 [arch-tui]: arch-tui.md
 [arch-cli]: arch-cli.md

@@ -44,12 +44,29 @@ export interface ProjectRef {
   readonly name?: string;
 }
 
+/** Identifies the report the user has drilled into from a project. */
+export interface ReportRef {
+  /** Slug of the parent project — matches `currentProject.slug`. */
+  readonly projectSlug: string;
+  /** Per-project monotonic report number. */
+  readonly number: number;
+  readonly status?: 'draft' | 'final';
+  readonly title?: string;
+  readonly noteCount?: number;
+  readonly hasGenerated?: boolean;
+}
+
 export type AuthReason = 'never' | 'expired' | 'logged-out';
 
 export type AppState =
   | { kind: 'config' }
   | { kind: 'auth'; reason: AuthReason }
-  | { kind: 'authed'; user: SessionUser; currentProject?: ProjectRef };
+  | {
+      kind: 'authed';
+      user: SessionUser;
+      currentProject?: ProjectRef;
+      currentReport?: ReportRef;
+    };
 
 /* -------------------------------------------------------------------------- */
 /*  Session contract                                                           */
@@ -83,8 +100,17 @@ export interface Session {
    */
   clearAuth(reason: AuthReason): Promise<void>;
 
-  /** Update the "currently open" project (only valid while authed). */
+  /**
+   * Update the "currently open" project (only valid while authed).
+   * Setting to `undefined` also clears `currentReport` (cascading).
+   */
   setCurrentProject(p: ProjectRef | undefined): void;
+
+  /**
+   * Update the "currently open" report (only valid while authed AND
+   * `currentProject` is set — otherwise the call is a no-op).
+   */
+  setCurrentReport(r: ReportRef | undefined): void;
 
   /**
    * Read the env with the active API URL + token merged in. Existing
@@ -180,6 +206,18 @@ function createSessionInner(opts: CreateSessionOptions): Session {
         kind: 'authed',
         user: self.state.user,
         ...(p ? { currentProject: p } : {}),
+        // Setting/clearing project cascades to report.
+      };
+    },
+
+    setCurrentReport(r) {
+      if (self.state.kind !== 'authed') return;
+      if (!self.state.currentProject) return; // invariant: report needs a project
+      self.state = {
+        kind: 'authed',
+        user: self.state.user,
+        currentProject: self.state.currentProject,
+        ...(r ? { currentReport: r } : {}),
       };
     },
 

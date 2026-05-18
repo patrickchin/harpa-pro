@@ -4,10 +4,10 @@
  * `../haru3-reports/apps/mobile/components/reports/generate/GenerateReportActionRow.tsx`
  * on branch `dev`.
  *
- * P3.6 keeps the visual shell so the Notes tab matches the final
- * design. The handlers route to the same provider surface, but the
- * underlying generation/finalize pipelines are stubbed (`hasReport`
- * is always false, so the "Generate report" branch is what renders).
+ * Generate / Regenerate / Finalize are wired through the provider's
+ * `handleRegenerate` + `draft.finalize` — the route owner (real or
+ * dev mirror) supplies the actual mutations. The button branches on
+ * `hasReport` + `notesSinceLastGeneration` to switch label / layout.
  */
 import { Text, View } from 'react-native';
 import { RotateCcw, Sparkles } from 'lucide-react-native';
@@ -17,16 +17,12 @@ import { useGenerateReport } from './GenerateReportProvider';
 import { colors } from '@/lib/design-tokens/colors';
 
 export function GenerateReportActionRow() {
-  const { generation, draft, timeline } = useGenerateReport();
+  const { generation, draft, timeline, handleRegenerate } = useGenerateReport();
 
   const hasReport = generation.hasReport;
   const hasNotes = timeline.items.length > 0;
   const upToDate = hasReport && generation.notesSinceLastGeneration === 0;
   const busy = generation.isUpdating || draft.isFinalizing;
-
-  const handleRegenerate = () => {
-    // TODO(P3.7): route to useReportGeneration().regenerate via provider.
-  };
 
   if (!upToDate) {
     const label = generation.isUpdating

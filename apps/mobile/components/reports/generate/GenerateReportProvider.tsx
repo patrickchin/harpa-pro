@@ -97,6 +97,19 @@ export interface GenerateReportProviderProps {
   onFinalize?: () => void;
   /** Called when the user taps a file/image in the timeline or report. */
   onOpenFile?: (fileId: string) => void;
+  /**
+   * Called when the user taps the Photo (camera) button. The route
+   * wrapper owns navigation into the camera modal + draining the
+   * resulting URIs on focus return. When omitted the button is a
+   * no-op.
+   */
+  onCameraCapture?: () => void;
+  /**
+   * Called when the user picks an attachment category from the
+   * attachment sheet. The route wrapper owns the picker integration
+   * + upload pipeline. When omitted this is a no-op.
+   */
+  onPickAttachment?: (category: 'image' | 'document') => void;
   /** Initial tab the screen opens on. Defaults to `notes`. */
   initialTab?: TabKey;
   children: ReactNode;
@@ -266,6 +279,8 @@ export function GenerateReportProvider({
   finalizeError = null,
   onFinalize,
   onOpenFile,
+  onCameraCapture,
+  onPickAttachment,
   initialTab = 'notes',
   children,
 }: GenerateReportProviderProps) {
@@ -319,10 +334,10 @@ export function GenerateReportProvider({
   );
 
   const handlePickAttachment = useCallback(
-    (_category: 'image' | 'document') => {
-      // TODO(P3.8): route to usePhotoUploadPipeline().handleMenuPick.
+    (category: 'image' | 'document') => {
+      onPickAttachment?.(category);
     },
-    [],
+    [onPickAttachment],
   );
 
   const handleRegenerate = useCallback(() => {
@@ -396,10 +411,13 @@ export function GenerateReportProvider({
         toggleRecording: () => undefined,
         cancelRecording: () => undefined,
       },
-      // TODO(P3.8): replace with real `usePhotoUploadPipeline` surface.
+      // Photo button wires through to the route-supplied handler so the
+      // route can push the camera modal + drain results on return. The
+      // attachment-sheet pickers (image/document) still route through
+      // `handlePickAttachment` for menu callers.
       photo: {
-        handleCameraCapture: () => undefined,
-        handleMenuPick: () => undefined,
+        handleCameraCapture: () => onCameraCapture?.(),
+        handleMenuPick: (category) => onPickAttachment?.(category),
       },
       preview: {
         openFile: handleOpenFile,
@@ -444,6 +462,8 @@ export function GenerateReportProvider({
       handlePickAttachment,
       handleRegenerate,
       handleOpenFile,
+      onCameraCapture,
+      onPickAttachment,
     ],
   );
 

@@ -149,8 +149,8 @@ export interface TranscribeOutput {
 }
 
 export async function transcribe(input: TranscribeInput): Promise<TranscribeOutput> {
-  const mode = pickMode();
   const fixtureName = input.fixtureName ?? FIXTURE_CANONICALS.transcribe.name;
+  const mode = pickMode(fixtureName);
   const audioUrl =
     mode === 'replay' ? FIXTURE_CANONICALS.transcribe.audioUrl : input.audioUrl;
   const provider = buildProvider(FIXTURE_CANONICALS.transcribe.vendor, fixtureName);
@@ -177,11 +177,11 @@ export interface ChatOutput {
 }
 
 export async function chat(input: ChatInput): Promise<ChatOutput> {
-  const mode = pickMode();
   const vendor: Vendor = input.vendor ?? FIXTURE_CANONICALS.summarize.vendor;
   const canonicalModel = VENDOR_MODELS[vendor].summarize;
   const fixtureName =
     input.fixtureName ?? fixtureNameFor(FIXTURE_CANONICALS.summarize.name, vendor);
+  const mode = pickMode(fixtureName);
   const req =
     mode === 'replay'
       ? {
@@ -239,7 +239,6 @@ export interface GenerateReportOutput {
  * surfaces as a 502 (provider misbehaviour) rather than a 500.
  */
 export async function generateReport(input: GenerateReportInput): Promise<GenerateReportOutput> {
-  const mode = pickMode();
   const canonicals = FIXTURE_CANONICALS.report;
   const vendor: Vendor = input.vendor ?? canonicals.vendor;
   const canonicalModel = VENDOR_MODELS[vendor].report;
@@ -255,6 +254,7 @@ export async function generateReport(input: GenerateReportInput): Promise<Genera
     if (input.fixtureName.endsWith(`.${vendor}`)) return input.fixtureName;
     return `${input.fixtureName}.${vendor}`;
   })();
+  const mode = pickMode(fixtureName);
 
   const req =
     mode === 'replay'

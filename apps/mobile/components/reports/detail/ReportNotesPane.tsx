@@ -19,6 +19,7 @@ import { MessageSquare } from 'lucide-react-native';
 
 import { EmptyState } from '@/components/primitives/EmptyState';
 import { colors } from '@/lib/design-tokens/colors';
+import { formatRelativeOrDate } from '@/lib/date';
 
 export interface ReportNoteRow {
   id: string;
@@ -67,7 +68,7 @@ export function ReportNotesPane({ noteRows }: ReportNotesPaneProps) {
               </Text>
               {note.createdAt ? (
                 <Text className="text-xs text-muted-foreground">
-                  {note.createdAt}
+                  {formatRelativeOrDate(note.createdAt)}
                 </Text>
               ) : null}
             </View>

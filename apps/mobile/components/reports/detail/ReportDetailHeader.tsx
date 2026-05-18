@@ -10,6 +10,7 @@ import { Calendar, MoreHorizontal } from 'lucide-react-native';
 import { ScreenHeader } from '@/components/primitives/ScreenHeader';
 import { Button } from '@/components/primitives/Button';
 import { colors } from '@/lib/design-tokens/colors';
+import { formatDate } from '@/lib/date';
 import { toTitleCase } from '@harpa/report-core';
 import type { GeneratedSiteReport } from '@harpa/report-core';
 
@@ -41,7 +42,7 @@ export function ReportDetailHeader({
             <View className="flex-row items-center gap-1 rounded-md border border-border bg-card px-3 py-2">
               <Calendar size={14} color={colors.muted.foreground} />
               <Text className="text-sm font-semibold text-muted-foreground">
-                {report.report.meta.visitDate}
+                {formatDate(report.report.meta.visitDate)}
               </Text>
             </View>
           ) : null}

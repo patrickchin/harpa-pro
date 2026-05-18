@@ -28,7 +28,7 @@ export function notesScreen(): Screen {
       if (!leaf) return { title: 'Notes', lines: ['(unavailable)'] };
       const data = await fetchVia<NoteList>(
         leaf,
-        { projectSlug: currentProject.id, reportNumber: currentReport.number },
+        { project: currentProject.id, reportNumber: currentReport.number },
         ctx.session,
       );
       notes = data?.items ?? [];
@@ -64,7 +64,7 @@ export function notesScreen(): Screen {
           kind: 'leaf',
           label: 'Add text note',
           cittyPath: ['notes', 'create'],
-          prefill: () => ({ projectSlug: project, reportNumber: number }),
+          prefill: () => ({ project, reportNumber: number }),
           refreshHeader: true,
         },
         { kind: 'flow', label: 'Refresh', run: async () => {}, refreshHeader: true },

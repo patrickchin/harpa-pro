@@ -61,7 +61,7 @@ export function reportHomeScreen(): Screen {
           kind: 'leaf',
           label: 'Add text note',
           cittyPath: ['notes', 'create'],
-          prefill: () => ({ projectSlug: project, reportNumber: number }),
+          prefill: () => ({ project, reportNumber: number, kind: 'text' }),
           refreshHeader: true,
         },
         {

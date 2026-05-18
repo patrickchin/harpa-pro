@@ -674,9 +674,9 @@ export const notesCreateTui = defineTuiEntry({
       project: { label: 'Project slug', required: true, prompt: { kind: 'text', placeholder: PROJECT_PLACEHOLDER } },
       reportNumber: { label: 'Report number', required: true, prompt: { kind: 'number', min: 1 } },
       kind: { label: 'Note kind', required: true, prompt: { kind: 'select', options: NOTE_KIND_OPTIONS } },
-      body: { label: 'Body', required: false, prompt: { kind: 'multiline', placeholder: 'leave blank for non-text notes' } },
-      'file-id': { label: 'File ID', required: false, prompt: { kind: 'uuid', placeholder: 'voice/image/document only' } },
-      transcript: { label: 'Transcript', required: false, prompt: { kind: 'multiline', placeholder: 'voice notes only' } },
+      body: { label: 'Body', required: true, prompt: { kind: 'multiline', placeholder: 'note text' }, skipWhen: (a) => a.kind !== 'text' },
+      'file-id': { label: 'File ID', required: true, prompt: { kind: 'uuid' }, skipWhen: (a) => a.kind === 'text' },
+      transcript: { label: 'Transcript', required: false, prompt: { kind: 'multiline', placeholder: 'optional, voice only' }, skipWhen: (a) => a.kind !== 'voice' },
     },
   },
   execute: ({ client, args }) => {

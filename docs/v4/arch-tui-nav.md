@@ -675,7 +675,7 @@ to `screen.ts` + `screens/**`.
 
 ## 6. Implementation checklist (one commit each)
 
-> **Status:** TUI-nav.0–8 ✅ shipped. 9 (docs) remaining on `feat/tui`.
+> **Status:** TUI-nav.0–9 ✅ shipped on `feat/tui`.
 
 Each step ships its own tests + amends this doc's status table. No
 "tests later" step. Conventional Commits with `Co-authored-by:
@@ -740,13 +740,13 @@ Copilot` trailer.
    error-prone new surface).
    `test(cli): pty smoke drills projects screen (pitfall-13)`
 
-10. **TUI-nav.9 — Docs + cross-links.**
-    Mark this doc's status as shipped per step. Add successor
-    banner to `arch-tui-app.md` pointing here for navigation
-    behaviour. Update `arch-cli.md` TUI quickstart to describe the
-    Project / Report drill-down and call out Developer › Raw API
-    as the debug-only surface. Cross-link from
-    `architecture.md`'s section index (new row 11c).
+10. **TUI-nav.9 — Docs + cross-links.** ✅
+    Marks this doc's status as shipped per step. Successor banner
+    added to `arch-tui-app.md` pointing here for navigation
+    behaviour. `arch-cli.md` TUI quickstart describes the
+    Project / Report drill-down and calls out Developer › Raw API
+    as the debug-only surface. Cross-linked from
+    `architecture.md`'s section index as row 11c.
     `docs(cli): document tui screen hierarchy and prefill mechanism`
 
 Steps 1–3 are mechanical and independent and can land in any order

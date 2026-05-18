@@ -50,11 +50,29 @@ by tests). Re-launching the TUI validates the saved token via
 `GET /me`; on 401 the file is cleared and you're sent back to sign in.
 
 The authed top-level menu groups flows by intent — **Account**,
-**Projects** (projects + members + reports + notes), **Upload /
-Media** (presign/register/voice helpers), and **Developer › Raw API**
-(every `defineHarpaCommand` leaf grouped by area, kept for ops /
-debugging). The menu also has **Set API URL** (any state) and **Sign
-out**.
+**Projects** (drills into Project Home → Reports / Members; each
+Report Home in turn offers Notes / Upload media), **Upload /
+Media** (redirects to Projects since uploads belong to a report),
+and **Developer › Raw API** (every `defineHarpaCommand` leaf
+grouped by area, kept for ops / debugging — bypasses the
+screen-based context and prompts for every arg). The menu also
+has **Set API URL** (any state) and **Sign out**.
+
+Screen navigation example — adding a note:
+
+```
+Projects                                  ← list screen
+  Demo project (created 2024-05)          ← pick → Project Home
+    Reports (12)                          ← screen action → Reports
+      Report #12 · draft · 4 notes        ← pick → Report Home
+        Add note                          ← prefilled projectSlug + reportNumber
+```
+
+Each screen renders a header line (the resource you're inside,
+auto-refetched after mutating actions) above the action menu, so
+counts and statuses stay in sync. See
+[`arch-tui-nav.md`](arch-tui-nav.md) §3 for the full screen table
+and §5 for the prefill contract.
 
 The richer multi-step upload flow (path → presign → R2 PUT → register
 → auto-note for all four media kinds) is a planned follow-up; today

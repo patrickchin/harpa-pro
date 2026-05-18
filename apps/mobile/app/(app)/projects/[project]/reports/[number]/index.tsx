@@ -30,6 +30,7 @@ import { useRefresh } from '@/lib/use-refresh';
 import { useReportPdfActions } from '@/lib/use-report-pdf-actions';
 import { env } from '@/lib/env';
 import { safeBack } from '@/lib/nav/safe-back';
+import { dismissOrReplaceTo } from '@/lib/nav/dismiss-or-replace';
 import { SAMPLE_GENERATED_REPORT } from '@/lib/dev-fixtures/sample-report';
 import { reportBodyToGeneratedReport } from '@/lib/report-body-adapter';
 import { reports as reportSchemas } from '@harpa/api-contract';
@@ -160,9 +161,10 @@ export default function SavedReportRoute() {
       await deleteMutation.mutateAsync({
         params: { project: slug, number: reportNumber },
       });
-      // After delete, fall back to the reports list. Use replace so the
-      // saved-report route is not in history (it would 404 on swipe-back).
-      router.replace(`/(app)/projects/${slug}/reports` as never);
+      // After delete, fall back to the reports list. Pop to the existing
+      // frame instead of replacing the top so we don't leave two adjacent
+      // reports-list frames. See docs/v4/arch-mobile-navigation.md §4.
+      dismissOrReplaceTo(router, `/(app)/projects/${slug}/reports` as never);
     } catch {
       // Error surface: the mutation hook keeps the dialog open via the
       // `isDeleting` flag; the AppDialogSheet stays mounted. A dedicated
@@ -195,7 +197,7 @@ export default function SavedReportRoute() {
       onRetry={() => {
         void reportQuery.refetch();
       }}
-      onBackToProjects={() => router.replace('/(app)/projects')}
+      onBackToProjects={() => dismissOrReplaceTo(router, '/(app)/projects')}
       onChangeReport={setLocalReport}
       isAutoSaving={false}
       lastSavedAt={null}

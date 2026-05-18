@@ -407,17 +407,17 @@ token-level usage UI in P3.15.4 — land it before extending
 `/me/usage`.
 
 #### P3.15.1 — Mobile R2 upload orchestration
-- [ ] `useFileUpload` hook: presign → R2 PUT → `registerFile` →
+- [x] `useFileUpload` hook: presign → R2 PUT → `registerFile` →
       `createNote`, with retry + progress + an in-memory queue.
       API routes (`POST /files/presign`, `POST /files`,
       `GET /files/{id}/url`) already shipped in P2 — wire the mobile
       side.
-- [ ] `useFileSignedUrl(fileId)` resolver (cached) for read-back.
-- [ ] `CachedImage` + `prefetchImages` ported from canonical
+- [x] `useFileSignedUrl(fileId)` resolver (cached) for read-back.
+- [x] `CachedImage` + `prefetchImages` ported from canonical
       (FS cache + BlurHash placeholder).
-- [ ] Integration test: image / voice / document each round-trip
+- [x] Integration test: image / voice / document each round-trip
       through the queue end-to-end (Pitfall 8).
-- [ ] Commit: `feat(mobile): R2 upload orchestration + signed-URL resolver + CachedImage`.
+- [x] Commit: `feat(mobile): R2 upload orchestration + signed-URL resolver + CachedImage`.
 
 #### P3.15.2 — Camera Done handoff
 - [ ] `(camera)/capture.tsx` Done drains the session registry into

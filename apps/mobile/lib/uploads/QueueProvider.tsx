@@ -1,26 +1,43 @@
 /**
- * QueueProvider stub — upload queue lands in P3.
+ * QueueProvider — provides the singleton upload queue to descendants.
  *
- * Security review §2 mandates: all methods (not just enqueue) must
- * throw if the interface expands beyond enqueue in P3.
+ * The provider instantiates the queue with the **default-wired**
+ * collaborators from `run-upload.ts` (real `request()` calls; XHR PUT
+ * to R2). Per Pitfall 13 the integration test exercises this default
+ * by stubbing the global `fetch` — it does NOT swap deps. Tests that
+ * need a negative-path branch (e.g. retry-on-network-error) construct
+ * their own queue via `createUploadQueue()` and pass it as the
+ * `value` prop on a manual `<QueueContext.Provider>`.
  */
-import { createContext, useContext, type ReactNode } from 'react';
+import { createContext, useContext, useMemo, type ReactNode } from 'react';
 
-export interface QueueContextValue {
-  enqueue: (item: unknown) => void;
+import { createUploadQueue, type UploadQueue } from './queue';
+import { defaultUploadDeps } from './run-upload';
+
+const QueueContext = createContext<UploadQueue | null>(null);
+
+export interface QueueProviderProps {
+  children: ReactNode;
+  /** Test seam — override the queue (and therefore its deps). */
+  queue?: UploadQueue;
 }
 
-const QueueContext = createContext<QueueContextValue | null>(null);
-
-export function QueueProvider({ children }: { children: ReactNode }) {
-  const enqueue = () => {
-    throw new Error('QueueProvider is a stub — upload queue lands in P3');
-  };
-  return <QueueContext.Provider value={{ enqueue }}>{children}</QueueContext.Provider>;
+export function QueueProvider({ children, queue }: QueueProviderProps) {
+  const value = useMemo<UploadQueue>(
+    () => queue ?? createUploadQueue(defaultUploadDeps),
+    [queue],
+  );
+  return <QueueContext.Provider value={value}>{children}</QueueContext.Provider>;
 }
 
-export function useUploadQueue() {
+export function useUploadQueueContext(): UploadQueue {
   const ctx = useContext(QueueContext);
-  if (!ctx) throw new Error('useUploadQueue must be inside QueueProvider');
+  if (!ctx) {
+    throw new Error('useUploadQueueContext must be used inside <QueueProvider>');
+  }
   return ctx;
 }
+
+// Re-export for tests that want to construct an isolated queue.
+export { createUploadQueue } from './queue';
+export type { UploadQueue } from './queue';

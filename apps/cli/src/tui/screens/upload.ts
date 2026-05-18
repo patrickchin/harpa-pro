@@ -92,8 +92,7 @@ async function uploadAndAttachFlow(
 ): Promise<void> {
   const { prompter, session } = ctx;
   const file = await prompter.filePath({
-    label: 'Path to local file',
-    placeholder: '/Users/you/recordings/site-visit.m4a',
+    label: 'Path to local file (type to filter, ↑/↓ to navigate, ⏎ to select)',
     validate: (s) => (s.trim().length === 0 ? 'required' : undefined),
   });
   if (prompter.isCancel(file)) return;

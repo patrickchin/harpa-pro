@@ -80,14 +80,13 @@ export function clackPrompter(): Prompter {
           placeholder: o.placeholder,
         }),
       ),
-    filePath: async (o) =>
-      norm(
-        await p.path({
-          message: o.label,
-          initialValue: o.placeholder,
-          validate: o.validate ? (v: string | undefined) => o.validate!(v ?? '') : undefined,
-        }),
-      ),
+    filePath: async (o) => {
+      const opts: Parameters<typeof p.path>[0] = { message: o.label };
+      if (o.placeholder !== undefined) opts.initialValue = o.placeholder;
+      if (o.validate)
+        opts.validate = (v: string | undefined) => o.validate!(v ?? '');
+      return norm(await p.path(opts));
+    },
     select: async (o) => {
       const options = o.options.map((opt) => {
         const out: { value: string; label: string; hint?: string } = {

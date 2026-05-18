@@ -41,6 +41,7 @@ export interface ConfirmOpts {
 export interface Prompter {
   text(opts: TextOpts): Promise<string | Cancel>;
   multiline(opts: TextOpts): Promise<string | Cancel>;
+  filePath(opts: TextOpts): Promise<string | Cancel>;
   select<T extends string>(opts: SelectOpts<T>): Promise<T | Cancel>;
   confirm(opts: ConfirmOpts): Promise<boolean | Cancel>;
   note(message: string, title?: string): void;
@@ -77,6 +78,14 @@ export function clackPrompter(): Prompter {
         await p.text({
           message: o.label + ' (multiline; \\n for newline)',
           placeholder: o.placeholder,
+        }),
+      ),
+    filePath: async (o) =>
+      norm(
+        await p.path({
+          message: o.label,
+          initialValue: o.placeholder,
+          validate: o.validate ? (v: string | undefined) => o.validate!(v ?? '') : undefined,
         }),
       ),
     select: async (o) => {
@@ -117,6 +126,7 @@ export function clackPrompter(): Prompter {
 export type PromptStep =
   | { kind: 'text'; expectLabel?: string; answer: string | Cancel }
   | { kind: 'multiline'; expectLabel?: string; answer: string | Cancel }
+  | { kind: 'filePath'; expectLabel?: string; answer: string | Cancel }
   | { kind: 'select'; expectLabel?: string; answer: string | Cancel }
   | { kind: 'confirm'; expectLabel?: string; answer: boolean | Cancel };
 
@@ -163,6 +173,11 @@ export function scriptedPrompter(steps: ReadonlyArray<PromptStep>): ScriptedProm
     async multiline(o) {
       const step = next('multiline', o.label);
       transcript.push({ kind: 'multiline', payload: { label: o.label, answer: step.answer } });
+      return step.answer as string | Cancel;
+    },
+    async filePath(o) {
+      const step = next('filePath', o.label);
+      transcript.push({ kind: 'filePath', payload: { label: o.label, answer: step.answer } });
       return step.answer as string | Cancel;
     },
     async select(o) {

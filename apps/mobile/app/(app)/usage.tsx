@@ -1,12 +1,12 @@
 /**
  * Usage route — wires `/me/usage` into the props-only `Usage` body.
  *
- * P3.15.4 wiring:
- *  - The `/me/usage` response is locally augmented with token columns
- *    via `LegacyUsageMonth` / `LegacyUsageTotals`. TODO(P3.15.4-contract):
- *    drop the local type once the api-contract regen lands.
- *  - Per-model breakdown is forwarded straight through to the screen,
- *    which renders it inside the expanded month row.
+ * The `/me/usage` response shape is the contract `usageResponse`
+ * (months[], byModel[], totals) with token columns nested under
+ * `tokens.{input,output,cached}`. We flatten that into the screen's
+ * presentation type (`reportsCount` / `voiceNotesCount` / flat token
+ * fields). Per-model rollup is global, not per-month, so individual
+ * `UsageMonthlyRow`s don't carry a `perModel` breakdown.
  */
 import { useRouter } from 'expo-router';
 
@@ -15,59 +15,29 @@ import { useMeUsageQuery } from '@/lib/api/hooks';
 import { useRefresh } from '@/lib/use-refresh';
 import { safeBack } from '@/lib/nav/safe-back';
 
-// TODO(P3.15.4-contract): remove these local types once /me/usage
-// regenerates with token columns + per-model rollup.
-interface LegacyUsageMonth {
-  month: string;
-  reports: number;
-  voiceNotes: number;
-  inputTokens?: number;
-  outputTokens?: number;
-  cachedTokens?: number;
-  perModel?: ReadonlyArray<{
-    model: string;
-    inputTokens: number;
-    outputTokens: number;
-  }>;
-}
-
-interface LegacyUsageTotals {
-  reports: number;
-  voiceNotes: number;
-  inputTokens?: number;
-  outputTokens?: number;
-  cachedTokens?: number;
-}
-
 export default function UsageRoute() {
   const router = useRouter();
   const usageQuery = useMeUsageQuery();
   const { refreshing, onRefresh } = useRefresh([usageQuery.refetch]);
 
-  const months = (usageQuery.data?.months ?? []) as unknown as LegacyUsageMonth[];
-  const totalsRaw = (usageQuery.data?.totals ?? {
-    reports: 0,
-    voiceNotes: 0,
-  }) as unknown as LegacyUsageTotals;
-
   const history: ReadonlyArray<UsageMonthlyRow> | null = usageQuery.data
-    ? months.map((m) => ({
+    ? usageQuery.data.months.map((m) => ({
         month: m.month,
         reportsCount: m.reports,
         voiceNotesCount: m.voiceNotes,
-        inputTokens: m.inputTokens,
-        outputTokens: m.outputTokens,
-        cachedTokens: m.cachedTokens,
-        perModel: m.perModel,
+        inputTokens: m.tokens.input,
+        outputTokens: m.tokens.output,
+        cachedTokens: m.tokens.cached,
       }))
     : null;
 
+  const totalsRaw = usageQuery.data?.totals;
   const totals: UsageTotals = {
-    reports: totalsRaw.reports,
-    voiceNotes: totalsRaw.voiceNotes,
-    inputTokens: totalsRaw.inputTokens,
-    outputTokens: totalsRaw.outputTokens,
-    cachedTokens: totalsRaw.cachedTokens,
+    reports: totalsRaw?.reports ?? 0,
+    voiceNotes: totalsRaw?.voiceNotes ?? 0,
+    inputTokens: totalsRaw?.tokens.input,
+    outputTokens: totalsRaw?.tokens.output,
+    cachedTokens: totalsRaw?.tokens.cached,
   };
 
   return (

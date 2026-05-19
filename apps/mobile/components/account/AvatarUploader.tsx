@@ -13,12 +13,10 @@
  * restarts, and `useFileSignedUrl(fileId)` (cached, auto-refreshed at
  * 4 min) renders it.
  *
- * TODO(P3.15.4-contract): once the API ships a route to persist
- * `avatarFileId` on the user row (e.g. `PATCH /me` accepting an
- * `avatarFileId` field, or a dedicated `PUT /me/avatar`), call it
- * from here on successful upload and read the id from the session
- * user instead of AsyncStorage. The visible component contract
- * (display + tap-to-change + uploading state) stays the same.
+ * NOTE (P4): once the API ships a route to persist `avatarFileId` on
+ * the user row (e.g. `PATCH /me` accepting `avatarFileId`, or a
+ * dedicated `PUT /me/avatar`), call it from here on successful upload
+ * and read the id from the session user instead of AsyncStorage.
  */
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
@@ -38,11 +36,11 @@ export interface AvatarUploaderProps {
   /** Pixel size of the round avatar. Defaults to 96. */
   size?: number;
   /** Optional initial fileId — passed when the session user gains an
-   *  `avatarFileId` field (P3.15.4-contract). Until then, the
-   *  component round-trips through AsyncStorage. */
+   *  `avatarFileId` field (P4). Until then, the component
+   *  round-trips through AsyncStorage. */
   initialFileId?: string | null;
   /** Notifies the parent on a successful upload so the route can
-   *  PATCH /me once the contract lands. Receives the server file id. */
+   *  PATCH /me once the contract lands (P4). Receives the server file id. */
   onUploaded?: (fileId: string) => void;
 }
 

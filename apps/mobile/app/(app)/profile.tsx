@@ -84,10 +84,9 @@ export default function ProfileRoute() {
         queryClient.clear();
         await queryClient.refetchQueries({ type: 'active' });
       }}
-      // P3.15.4 — AI provider picker is now real. Availability comes
-      // from `useAvailableProviders` (static `true` until the API
-      // exposes a probe — TODO(P3.15.4-contract)). Selection persists
-      // via AsyncStorage.
+      // P3.15.4 — AI provider picker. Availability defaults to all
+      // providers until the API exposes a probe (NOTE: P4). Selection
+      // persists via AsyncStorage.
       showDeveloperSection
       aiProviders={AI_PROVIDERS}
       aiProvider={ai.provider}

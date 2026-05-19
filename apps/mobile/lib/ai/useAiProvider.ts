@@ -5,8 +5,9 @@
  * branch `dev`. The v3 backend exposed a `generate-report` GET that
  * returned the set of provider keys with API credentials configured.
  * The v4 API does NOT yet expose an equivalent endpoint — `useAvailableProviders`
- * defers to a static "all available" list with a `TODO(P3.15.4-contract)`
- * marker, so the UI stays useful while the backend ships its own probe.
+ * defers to a static "all available" list (NOTE: P4 — wire to a real
+ * probe once the API ships `GET /ai/providers`), so the UI stays
+ * useful while the backend ships its own probe.
  *
  * Persistence rules (match canonical):
  *   - Provider + model are stored in AsyncStorage under stable keys.
@@ -146,11 +147,9 @@ export interface UseAvailableProvidersApi {
  * expose an equivalent — until it lands, we default to ALL providers
  * available so the picker stays usable.
  *
- * TODO(P3.15.4-contract): swap the static list for a real
- * `useAvailableProvidersQuery` once the API ships
- * `GET /ai/providers` (or extends `/generate-report` with the v3
- * shape). Keep the return contract — caller code consumes
- * `availableKeys` as a `ReadonlyArray<AiProviderKey>`.
+ * NOTE (P4): swap the static list for a real `useAvailableProvidersQuery`
+ * once the API ships `GET /ai/providers`. Keep the return contract —
+ * caller code consumes `availableKeys` as a `ReadonlyArray<AiProviderKey>`.
  */
 export function useAvailableProviders(): UseAvailableProvidersApi {
   return {

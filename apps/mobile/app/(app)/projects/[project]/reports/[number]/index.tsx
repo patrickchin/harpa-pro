@@ -24,8 +24,8 @@ import {
   useReportQuery,
   useReportNotesQuery,
   useDeleteReportMutation,
+  useUnfinalizeReportMutation,
 } from '@/lib/api/hooks';
-import { useReportUnfinalize } from '@/lib/use-report-unfinalize';
 import type { ReportNoteRow } from '@/components/reports/detail/ReportNotesPane';
 import { useRefresh } from '@/lib/use-refresh';
 import { useReportPdfActions } from '@/lib/use-report-pdf-actions';
@@ -176,11 +176,7 @@ export default function SavedReportRoute() {
     }
   }, [slug, reportNumber, deleteMutation, router]);
 
-  // Unfinalize is shipped on a parallel branch in P3.15.3. The hook
-  // (apps/mobile/lib/use-report-unfinalize.ts) carries a temporary
-  // local type for the route until `pnpm gen:api` regenerates the
-  // api-contract — see the TODO(P3.15.3-contract) in that file.
-  const unfinalizeMutation = useReportUnfinalize();
+  const unfinalizeMutation = useUnfinalizeReportMutation();
 
   const handleConfirmUnfinalize = useCallback(async () => {
     if (!slug || reportNumber === null) return;

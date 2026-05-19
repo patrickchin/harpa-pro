@@ -51,8 +51,6 @@ export interface UsageMonthlyRow {
   month: string;
   reportsCount: number;
   voiceNotesCount: number;
-  // TODO(P3.15.4-contract): drop these local fields once `/me/usage`
-  // ships token columns and the generated api-contract types include them.
   inputTokens?: number;
   outputTokens?: number;
   cachedTokens?: number;
@@ -62,7 +60,6 @@ export interface UsageMonthlyRow {
 export interface UsageTotals {
   reports: number;
   voiceNotes: number;
-  // TODO(P3.15.4-contract): drop once /me/usage ships token columns.
   inputTokens?: number;
   outputTokens?: number;
   cachedTokens?: number;
@@ -290,8 +287,7 @@ export function Usage({
               </View>
 
               {/* Token usage over time. Renders when ≥2 months and
-                  token data is present. TODO(P3.15.4-contract): drive
-                  visibility off generated types once tokens land. */}
+                  token data is present. */}
               {showTokenChart && (
                 <>
                   <SectionHeader

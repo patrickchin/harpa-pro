@@ -7,7 +7,7 @@
  *    → session.refresh()).
  *  - `<AvatarUploader />` is injected as the avatar slot. The fileId
  *    is persisted to AsyncStorage from inside the uploader (no
- *    backend route yet — see TODO(P3.15.4-contract) there).
+ *    backend route yet — see NOTE in AvatarUploader; P4).
  */
 import { useCallback, useState } from 'react';
 import { useRouter } from 'expo-router';

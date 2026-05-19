@@ -133,7 +133,7 @@ export function ProjectsList({
                 testID={`project-row-${index}`}
                 onPress={() => onPressProject(item.slug)}
               >
-                <Card variant="emphasis" className="gap-3">
+                <Card className="gap-3">
                   <View className="flex-row items-center justify-between">
                     <Text
                       className="min-w-0 flex-1 text-title-sm text-foreground"

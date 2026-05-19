@@ -80,7 +80,7 @@ export function ReportsList({
             accessibilityLabel="Create new report"
           >
             <View
-              className="flex-row items-center gap-3 rounded-lg border border-dashed border-border bg-surface-muted p-3"
+              className="flex-row items-center gap-3 rounded-lg border border-dashed border-border bg-surface-muted p-4"
               style={{ opacity: isCreating ? 0.6 : 1 }}
             >
               <View className="h-10 w-10 items-center justify-center rounded-md border border-border bg-card">
@@ -91,7 +91,7 @@ export function ReportsList({
                 )}
               </View>
               <View className="flex-1">
-                <Text className="text-lg font-semibold text-foreground">
+                <Text className="text-title-sm text-foreground">
                   New report
                 </Text>
                 <Text className="text-sm text-muted-foreground">

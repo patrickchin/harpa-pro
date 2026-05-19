@@ -36,12 +36,14 @@ SUFFIX=$(printf "%04d" $(( $(date +%s) % 10000 )))
 PHONE="+1555123${SUFFIX}"
 OTP_CODE="000000"
 
-# Local sample files (generated below — no network, no licence issues).
+# Sample fixtures live in the repo (apps/cli/scripts/samples). They are
+# tiny, license-free, hand-crafted bytes — see samples/README.md.
+SAMPLES="$(cd "$(dirname "$0")/samples" && pwd)"
+IMG="$SAMPLES/sample.png"
+WAV="$SAMPLES/sample.wav"
+PDF="$SAMPLES/sample.pdf"
+TXT="$SAMPLES/sample.txt"
 WORK=$(mktemp -d -t harpa-journey-XXXX)
-IMG="$WORK/sample.png"
-WAV="$WORK/sample.wav"
-PDF="$WORK/sample.pdf"
-TXT="$WORK/sample.txt"
 ROUNDTRIP="$WORK/roundtrip"
 # fileKeys are recorded so cleanup can mc-rm them from the bucket.
 KEYS_FILE="$WORK/keys"
@@ -63,48 +65,11 @@ cleanup() {
 }
 trap cleanup EXIT
 
-# ─── generate tiny, licence-free sample files ──────────────────────
-# 1x1 transparent PNG — 67 bytes, hand-crafted, public domain.
-echo "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==" \
-  | base64 -d > "$IMG"
-# 44-byte RIFF/WAVE header + 100ms of silence at 8 kHz mono 8-bit unsigned.
-{
-  printf 'RIFF'
-  printf '\x4c\x03\x00\x00'        # file size - 8 = 0x34C (844 bytes)
-  printf 'WAVEfmt '
-  printf '\x10\x00\x00\x00'        # fmt chunk size = 16
-  printf '\x01\x00\x01\x00'        # PCM, mono
-  printf '\x40\x1f\x00\x00'        # 8000 Hz
-  printf '\x40\x1f\x00\x00'        # 8000 byte/s
-  printf '\x01\x00\x08\x00'        # block align, bits/sample
-  printf 'data'
-  printf '\x28\x03\x00\x00'        # data size = 808
-  head -c 808 /dev/zero | tr '\0' '\x80'  # silence at 8-bit unsigned = 0x80
-} > "$WAV"
-# Minimal valid PDF (~380 bytes), public domain.
-cat > "$PDF" <<'EOF'
-%PDF-1.1
-1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj
-2 0 obj<</Type/Pages/Count 1/Kids[3 0 R]>>endobj
-3 0 obj<</Type/Page/Parent 2 0 R/MediaBox[0 0 144 72]/Contents 4 0 R/Resources<<>>>>endobj
-4 0 obj<</Length 21>>stream
-BT /F1 12 Tf 10 40 Td ET
-endstream endobj
-xref
-0 5
-0000000000 65535 f 
-0000000009 00000 n 
-0000000053 00000 n 
-0000000098 00000 n 
-0000000178 00000 n 
-trailer<</Size 5/Root 1 0 R>>
-startxref
-242
-%%EOF
-EOF
-# Plain text document.
-echo "harpa journey sample document — site inspection notes." > "$TXT"
-echo "samples ready in $WORK:"
+# ─── sample fixtures (checked in under samples/) ───────────────────
+for f in "$IMG" "$WAV" "$PDF" "$TXT"; do
+  test -f "$f" || fail "missing sample fixture: $f"
+done
+echo "using samples from $SAMPLES:"
 ls -l "$IMG" "$WAV" "$PDF" "$TXT"
 
 # ─── auth ──────────────────────────────────────────────────────────

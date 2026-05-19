@@ -21,6 +21,7 @@ import {
   reportsGenerateCommand,
   reportsRegenerateCommand,
   reportsFinalizeCommand,
+  reportsUnfinalizeCommand,
   reportsPdfCommand,
 } from './reports-ai.js';
 import type { ExitCode } from '../lib/error.js';
@@ -304,6 +305,7 @@ export const reportsCommand = defineCommand({
     generate: reportsGenerateCommand,
     regenerate: reportsRegenerateCommand,
     finalize: reportsFinalizeCommand,
+    unfinalize: reportsUnfinalizeCommand,
     pdf: reportsPdfCommand,
   },
 });

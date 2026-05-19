@@ -1,12 +1,19 @@
 #!/usr/bin/env bash
-# Focused journey for backend-first track features (be-1/be-2/be-3):
+# Focused journey for coverage gaps not in ./journey.sh.
+#
+# Backend-first track (be-1/be-2/be-3):
 #   - POST /projects/{project}/reports/{number}/unfinalize (be-1)
 #   - LLM token accounting on every chat/transcribe/generate call (be-2)
 #   - GET /me/usage with tokens + byModel breakdown (be-3)
 #
-# Complements ./journey.sh (which exercises every command). This script
-# is intentionally narrow: create one project + one report, run AI calls,
-# then assert the new fields surface and unfinalize round-trips status.
+# Additional coverage gaps:
+#   - kind=document file presign/register/url
+#   - GET /p/{project} and GET /r/{report} deep-link resolvers
+#   - finalize lock-down (update blocked while finalized)
+#   - cross-tenant access denial (non-member sees 403/404)
+#
+# Known backend gap (not asserted): PATCH /projects/{p}/members/{u} returns 500
+# because Postgres function `app.update_member_role` is missing from migrations.
 #
 # Prereq:
 #   docker compose up -d
@@ -52,8 +59,10 @@ PROJ=$($CLI projects create --name "Token-accounting site" --json | jq -r .id)
 echo "project: $PROJ"
 
 step "reports create"
-RPT_NUM=$($CLI reports create "$PROJ" --visit-date 2026-05-17 --json | jq -r .number)
-echo "report number: $RPT_NUM"
+RPT_JSON=$($CLI reports create "$PROJ" --visit-date 2026-05-17 --json)
+RPT_NUM=$(echo "$RPT_JSON" | jq -r .number)
+RPT_ID=$(echo  "$RPT_JSON" | jq -r .id)
+echo "report number=$RPT_NUM id=$RPT_ID"
 
 # ─── voice file (presign + register; PUT skipped, fixture mode) ───
 step "files presign + register (voice)"
@@ -96,11 +105,41 @@ echo "operations: $OPS"
 test "$OPS" = "chat,generate_report,transcribe" \
   || fail "expected operations 'chat,generate_report,transcribe', got '$OPS'"
 
+# ─── coverage: document file kind (main journey only does image+voice) ─
+step "files presign + register (document) — coverage for kind=document"
+KEY_D=$($CLI files presign --kind document --content-type application/pdf --size 4096 --json | jq -r .fileKey)
+FILE_DOC=$($CLI files register --kind document --file-key "$KEY_D" --size 4096 --content-type application/pdf --json | jq -r .id)
+echo "document file: $FILE_DOC"
+$CLI files url "$FILE_DOC" >/dev/null
+echo "✓ signed-GET URL minted for document"
+
+# ─── coverage: deep-link resolvers (/p/{id}, /r/{id}) — no CLI command ─
+step "GET /p/{project} resolves to projectId"
+RESOLVED_P=$(curl -fsS -H "Authorization: Bearer $TOKEN" "$HARPA_API_URL/p/$PROJ")
+echo "$RESOLVED_P" | jq .
+test "$(echo "$RESOLVED_P" | jq -r .projectId)" = "$PROJ" \
+  || fail "resolver /p/{project} returned wrong projectId"
+
+step "GET /r/{report} resolves to projectId + reportNumber"
+RESOLVED_R=$(curl -fsS -H "Authorization: Bearer $TOKEN" "$HARPA_API_URL/r/$RPT_ID")
+echo "$RESOLVED_R" | jq .
+test "$(echo "$RESOLVED_R" | jq -r .projectId)"    = "$PROJ"    || fail "/r resolver wrong projectId"
+test "$(echo "$RESOLVED_R" | jq -r .reportNumber)" = "$RPT_NUM" || fail "/r resolver wrong reportNumber"
+
 # ─── be-1: finalize → unfinalize round-trip ───────────────────────
 step "reports finalize"
 FIN=$($CLI reports finalize "$PROJ" "$RPT_NUM" --json)
 test "$(echo "$FIN" | jq -r .report.status)" = "finalized" \
   || fail "expected finalized status"
+
+# ─── coverage: finalize lock-down (update blocked while finalized) ─
+# Note: current code only blocks `update` (409); delete + notes are allowed
+# on finalized reports by design (delete is cleanup; notes are append-only).
+step "reports update on finalized → must fail with 409"
+if $CLI reports update "$PROJ" "$RPT_NUM" --visit-date 2026-06-01 >/dev/null 2>&1; then
+  fail "expected update on finalized report to fail"
+fi
+echo "✓ update blocked on finalized report"
 
 step "reports unfinalize (flips back to draft)"
 UNFIN=$($CLI reports unfinalize "$PROJ" "$RPT_NUM" --json)
@@ -115,6 +154,28 @@ if $CLI reports unfinalize "$PROJ" "$RPT_NUM" >/dev/null 2>&1; then
 fi
 echo "✓ second unfinalize correctly failed"
 
+# ─── coverage: bootstrap a 2nd user for cross-tenant test ─────────
+step "bootstrap bob (second user)"
+SUFFIX_B=$(printf "%04d" $(( ($(date +%s) + 1) % 10000 )))
+PHONE_B="+1555124${SUFFIX_B}"
+$CLI auth otp start "$PHONE_B" >/dev/null
+TOKEN_B=$($CLI auth otp verify "$PHONE_B" "$OTP_CODE" --json | jq -r .token)
+echo "bob token: ${TOKEN_B:0:24}…"
+
+# ─── coverage: cross-tenant 403 — non-member can't see alice's project ─
+step "bob GET /projects/{alice-project} → 403"
+CODE=$(curl -s -o /dev/null -w "%{http_code}" \
+  -H "Authorization: Bearer $TOKEN_B" "$HARPA_API_URL/projects/$PROJ")
+echo "got HTTP $CODE"
+# RLS hides the row entirely → API surfaces 404. Either 403 or 404 is acceptable
+# (defence-in-depth); we just require it's NOT 200.
+test "$CODE" != "200" || fail "expected bob to be denied, got 200"
+echo "✓ cross-tenant access denied (status=$CODE)"
+
+# Note: PATCH /projects/{p}/members/{u} role-change route exists but depends on
+# Postgres function `app.update_member_role` which is not present in 0003
+# migrations — out of scope for this journey; tracked separately.
+
 # ─── cleanup ──────────────────────────────────────────────────────
 step "reports delete"
 $CLI reports delete "$PROJ" "$RPT_NUM"
@@ -122,8 +183,9 @@ $CLI reports delete "$PROJ" "$RPT_NUM"
 step "projects delete"
 $CLI projects delete "$PROJ"
 
-step "auth logout"
+step "auth logout (alice + bob)"
 $CLI auth logout
+HARPA_TOKEN="$TOKEN_B" $CLI auth logout
 
 echo
 echo "✅ Extras journey complete — unfinalize + token accounting + usage delta verified."

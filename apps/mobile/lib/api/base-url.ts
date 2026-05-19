@@ -8,13 +8,11 @@
  * Fly app without a new EAS build.
  *
  * Production (App Store) builds hard-pin the inlined URL — the override
- * setter throws and `isApiOverrideEnabled()` returns false, so the dev
- * screen route is unreachable.
+ * setter throws and `isApiOverrideEnabled()` returns false.
  *
- * Changing the base URL implies talking to a different database, so the
- * UI that flips it MUST also clear the auth session — see
- * `app/(dev)/api-base-url.tsx`. This module is pure storage; the
- * security/session concern lives at the call site.
+ * Changing the base URL implies talking to a different database, so any
+ * UI that flips it MUST also clear the auth session. This module is pure
+ * storage; the security/session concern lives at the call site.
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
 

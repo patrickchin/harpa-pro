@@ -19,7 +19,7 @@
       its `(dev)/<name>.tsx` mirror (consistent with P2.0b).
 - [ ] Maestro full-journey flow `core-end-to-end` green on iOS + Android.
 - [ ] Mobile coverage ≥ 80% lines.
-- [ ] Upload pipeline integration test green for `image`, `voice`, `document` (Pitfall 8).
+- [x] Upload pipeline integration test green for `image`, `voice`, `document` (Pitfall 8).
 - [ ] No `// TODO` / "Coming soon" / `Alert.alert` outside dialogs.
 
 ## Scope (canonical source: `../haru3-reports/apps/mobile/app/`)
@@ -449,12 +449,11 @@ token-level usage UI in P3.15.4 — land it before extending
 - [x] Inline editor + optimistic update for display name + company
       name via `useUpdateMeMutation`.
 - [x] `AvatarUploader` component (depends on P3.15.1).
-- [ ] Extend `/me/usage` API response with `inputTokens`,
+- [x] Extend `/me/usage` API response with `inputTokens`,
       `outputTokens`, `cachedTokens` per month + per-model breakdown.
       Sourced from the `llm_usage_events` table (P3.15.5).
-      _(API change deferred to P3.15.5; mobile types the new fields
-      locally with `TODO(P3.15.4-contract)` so the screen renders the
-      moment the regen lands.)_
+      _(Shipped by backend; mobile now consumes the generated
+      `usageResponse` schema from `@harpa/api-contract` directly.)_
 - [x] `UsageBarChart` + per-model breakdown rendered in
       `screens/usage.tsx` (chart-slot placeholder removed; chart
       renders inline when ≥2 months have token data).
@@ -521,7 +520,7 @@ route.
 - [ ] `GET /me/usage/events` paginates raw events for the
       per-event timeline. (P4 — read path is enough for the in-app
       Usage screen; per-event timeline ships with P3.15.4 UI.)
-- [ ] Commit: `feat(api): per-user LLM token accounting on every call`.
+- [x] Commit: `feat(api): per-user LLM token accounting on every call`.
 
 **Out of scope** (kept disabled or absent until product asks):
 notifications row (stays `disabled`-styled), language / locale

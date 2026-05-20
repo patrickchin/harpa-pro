@@ -159,10 +159,15 @@ function createExpoAudioHandle(): RecorderHandle {
       clearTimer();
       await recorder.stop();
       const uri = recorder.uri;
-      const durationSec = recorder.currentTime ?? 0;
+      const rawDurationSec = recorder.currentTime ?? 0;
+      // API contract requires int seconds ≥ 1 (createVoiceNoteRequest);
+      // recorder.currentTime is fractional, and iOS simulators sometimes
+      // report ~0 for very short taps. Clamp + round so the upload
+      // pipeline doesn't 400 on validation.
+      const durationSec = Math.max(1, Math.round(rawDurationSec));
       if (!uri) throw new Error('expoAudioRecorder: recorder produced no uri');
       const sizeBytes = await readFileSize(uri);
-      emit({ status: 'stopped', durationMs: Math.round(durationSec * 1000) });
+      emit({ status: 'stopped', durationMs: durationSec * 1000 });
       // Reset the global audio mode so playback in other parts of the
       // app doesn't get routed to the record-only profile.
       if (Platform.OS === 'ios') {

@@ -22,6 +22,11 @@
  */
 import { useEffect, useRef } from 'react';
 import { Animated, Pressable, Text, View } from 'react-native';
+import Reanimated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+} from 'react-native-reanimated';
 import { Send, Trash2 } from 'lucide-react-native';
 
 import { colors } from '@/lib/design-tokens/colors';
@@ -87,10 +92,48 @@ function RecordingDot() {
   );
 }
 
+const SPRING_CONFIG = {
+  damping: 18,
+  stiffness: 220,
+  mass: 0.5,
+  overshootClamping: true,
+} as const;
+
+/**
+ * Single animated bar. `useSharedValue` + `useAnimatedStyle` run on the
+ * UI thread via Reanimated, so height transitions are always 60 fps even
+ * when the JS thread is busy.
+ */
+function WaveformBar({ targetHeight, hasSignal }: { targetHeight: number; hasSignal: boolean }) {
+  const animHeight = useSharedValue(BAR_MIN_HEIGHT);
+
+  useEffect(() => {
+    animHeight.value = withSpring(targetHeight, SPRING_CONFIG);
+  }, [animHeight, targetHeight]);
+
+  const animStyle = useAnimatedStyle(() => ({
+    height: animHeight.value,
+  }));
+
+  return (
+    <Reanimated.View
+      style={[
+        {
+          width: BAR_WIDTH,
+          borderRadius: BAR_WIDTH / 2,
+          backgroundColor: hasSignal ? colors.primary.DEFAULT : colors.muted.DEFAULT,
+        },
+        animStyle,
+      ]}
+    />
+  );
+}
+
 /**
  * Right-anchored scrolling waveform. We render exactly HISTORY_SIZE
  * bars (padding empty slots on the left while the buffer fills) so
- * the layout doesn't reflow as samples arrive.
+ * the layout doesn't reflow as samples arrive. Each bar animates its
+ * height independently via Reanimated for smooth 60 fps transitions.
  */
 function Waveform({ bars }: { bars: readonly number[] }) {
   const padded: readonly number[] = bars.length >= HISTORY_SIZE
@@ -103,22 +146,12 @@ function Waveform({ bars }: { bars: readonly number[] }) {
       style={{ gap: BAR_GAP }}
     >
       {padded.map((amp, idx) => {
-        const h = Math.max(BAR_MIN_HEIGHT, Math.round(amp * BAR_MAX_HEIGHT));
+        const h = Math.max(BAR_MIN_HEIGHT, amp * BAR_MAX_HEIGHT);
         return (
-          <View
-            // Index is stable here (fixed-length array of bars), so
-            // using it as a key is the correct choice — switching to
-            // amp-as-key would thrash the renderer.
-            // eslint-disable-next-line react/no-array-index-key
-            key={idx}
-            style={{
-              width: BAR_WIDTH,
-              height: h,
-              borderRadius: BAR_WIDTH / 2,
-              backgroundColor:
-                amp > 0 ? colors.primary.DEFAULT : colors.muted.DEFAULT,
-            }}
-          />
+          // Index is stable (fixed-length padded array), so using it
+          // as key is correct — amplitude-as-key would thrash instances.
+          // eslint-disable-next-line react/no-array-index-key
+          <WaveformBar key={idx} targetHeight={h} hasSignal={amp > 0} />
         );
       })}
     </View>

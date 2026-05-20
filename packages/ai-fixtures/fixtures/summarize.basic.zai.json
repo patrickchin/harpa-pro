@@ -3,16 +3,16 @@
   "model": "glm-4-flash",
   "fixtureName": "summarize.basic.zai",
   "recordedAt": "2026-05-12T00:00:00.000Z",
-  "requestHash": "sha256:3b12f6387fe670f918238a899e89732dc88dbf2b004dc39d08f7100afc67d565",
+  "requestHash": "sha256:553dc463c38b59148d0c554fdc9f118b956fa8a1865d93ef791ae98d213fd158",
   "request": {
     "kind": "chat",
     "vendor": "zai",
     "model": "glm-4-flash",
-    "systemPrompt": "Summarise the following transcript into a concise site-note body.",
+    "systemPrompt": "You are a construction site assistant turning a single voice memo into a short headline and a concise note body.\n\nINPUT\n- A raw transcript of one voice memo recorded on site by a foreman, engineer, or worker. It may include filler words, false starts, side conversations, or background noise transcribed as gibberish.\n\nOUTPUT\n- Return a single JSON object on one line with exactly two string fields: \"title\" and \"summary\". No prose, no markdown, no code fences, no extra keys.\n- \"title\": about 5–6 words (not a hard limit, but stay close). A factual headline of the most operationally relevant fact. No trailing period. Plain English, no quotes, no labels like \"Title:\".\n- \"summary\": 1–2 sentences, third person, past tense, plain English. Lead with the most operationally relevant fact (what happened, what was decided, what was observed). Strip filler (\"um\", \"you know\", \"like\"), greetings, sign-offs, and meta-commentary about the recording.\n- If the transcript is unintelligible or empty, return {\"title\":\"Voice memo unintelligible\",\"summary\":\"Voice memo recorded but no intelligible content was captured.\"}\n- Do NOT invent facts the transcript does not contain.\n- Do NOT include the speaker's name.\n\nReturn only the JSON object. Nothing before or after it.",
     "userPrompt": "Site arrival 8:15. Crew of three on rebar..."
   },
   "response": {
-    "text": "Crew arrived 8:15; rebar progress steady; concrete pour delayed 30 min by delivery; no incidents. Plan: close east footing tomorrow.",
+    "text": "{\"title\": \"Concrete pour delayed thirty minutes\", \"summary\": \"Crew of three made steady rebar progress; the concrete pour was delayed 30 minutes by a late delivery. No incidents reported; the east footing is planned to close tomorrow.\"}",
     "usage": {
       "input": 64,
       "output": 32

@@ -28,7 +28,12 @@ describe('AI fixtures — per-vendor replay coverage', () => {
     describe(`vendor=${vendor}`, () => {
       it('chat() replays summarize.basic', async () => {
         const out = await chat({ vendor, userPrompt: 'ignored in replay' });
-        expect(out.text).toMatch(/Crew arrived 8:15/);
+        // The new voice-summary prompt asks the model to return a JSON
+        // envelope `{title, summary}`. Assert both fields parse out of
+        // the recorded response text.
+        const parsed = JSON.parse(out.text);
+        expect(parsed.title).toMatch(/concrete pour delayed/i);
+        expect(parsed.summary).toMatch(/concrete pour was delayed/i);
       });
 
       it('generateReport() replays generate-report.full', async () => {

@@ -28,6 +28,7 @@ import { reports as reportSchemas } from '@harpa/api-contract';
 import type { z } from 'zod';
 import type { ScopedDb } from '../db/scope.js';
 import { recordLlmUsage, type LlmOperation } from './ai-usage.js';
+import { VOICE_SUMMARY_SYSTEM_PROMPT } from '../prompts/voiceSummary.js';
 
 /**
  * Context the route passes when it wants the call recorded in
@@ -180,7 +181,11 @@ export const FIXTURE_CANONICALS = {
     name: 'summarize.basic',
     vendor: 'openai' as Vendor,
     model: 'gpt-4o-mini',
-    systemPrompt: 'Summarise the following transcript into a concise site-note body.',
+    // Must match `VOICE_SUMMARY_SYSTEM_PROMPT` (imported above) so
+    // replay-mode hashes line up with the fixture files. Sharing the
+    // string means changing the prompt in one place forces fixtures
+    // to be re-recorded (`refresh-hashes.ts`) in lock-step.
+    systemPrompt: VOICE_SUMMARY_SYSTEM_PROMPT,
     userPrompt: 'Site arrival 8:15. Crew of three on rebar...',
   },
   /**

@@ -1,0 +1,95 @@
+name: post-deploy-smoke
+
+# Runs scripts/journey.sh against the deployed API after every
+# successful Fly deploy (api-prod or api-dev). Catches regressions
+# that only surface in the real environment (Neon, R2, Twilio fake
+# mode, JWT secret wiring, etc.).
+#
+# Triggered via workflow_run so it only fires once the deploy has
+# actually finished — pushing the YAML on `push: branches: [main]`
+# would race the Fly deploy and smoke against the OLD revision.
+#
+# Failures open (or update) a tracking issue labeled `ci-smoke` so a
+# red default-branch run is visible without having to watch the
+# Actions tab. GitHub's per-user "failed workflow on default branch"
+# email also fires; the issue is the team-wide signal.
+
+on:
+  workflow_run:
+    workflows: [api-prod, api-dev]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Which deployment to smoke
+        required: true
+        type: choice
+        default: prod
+        options: [prod, dev]
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  smoke:
+    # Skip when the upstream deploy failed — no point smoking a broken
+    # rollout (and the deploy failure is already loud on its own).
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    env:
+      BASE: >-
+        ${{
+          (github.event_name == 'workflow_dispatch' && inputs.target == 'prod') && 'https://api.harpapro.com' ||
+          (github.event_name == 'workflow_dispatch' && inputs.target == 'dev')  && 'https://harpa-pro-api-dev.fly.dev' ||
+          (github.event.workflow_run.name == 'api-prod') && 'https://api.harpapro.com' ||
+          'https://harpa-pro-api-dev.fly.dev'
+        }}
+      TARGET: >-
+        ${{
+          (github.event_name == 'workflow_dispatch' && inputs.target) ||
+          (github.event.workflow_run.name == 'api-prod' && 'prod') ||
+          'dev'
+        }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run journey
+        run: bash scripts/journey.sh
+
+      - name: Open / update tracking issue on failure
+        if: failure()
+        uses: actions/github-script@v7
+        env:
+          TARGET: ${{ env.TARGET }}
+          BASE: ${{ env.BASE }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        with:
+          script: |
+            const title = `post-deploy smoke failing on ${process.env.TARGET}`;
+            const body = [
+              `\`scripts/journey.sh\` failed against **${process.env.BASE}**.`,
+              ``,
+              `- Run: ${process.env.RUN_URL}`,
+              `- Triggering workflow: \`${context.payload.workflow_run?.name ?? 'workflow_dispatch'}\``,
+              `- Head SHA: \`${context.payload.workflow_run?.head_sha ?? context.sha}\``,
+              ``,
+              `Reproduce locally:`,
+              `\`\`\`sh`,
+              `BASE=${process.env.BASE} bash scripts/journey.sh`,
+              `\`\`\``,
+            ].join('\n');
+            const { owner, repo } = context.repo;
+            const existing = await github.rest.search.issuesAndPullRequests({
+              q: `repo:${owner}/${repo} is:issue is:open label:ci-smoke in:title "${title}"`,
+            });
+            if (existing.data.total_count > 0) {
+              const num = existing.data.items[0].number;
+              await github.rest.issues.createComment({ owner, repo, issue_number: num, body });
+            } else {
+              await github.rest.issues.create({
+                owner, repo, title, body, labels: ['ci-smoke'],
+              });
+            }

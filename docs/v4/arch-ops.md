@@ -139,16 +139,27 @@ Push to dev
   ↳ Neon `dev` branch ensured (idempotent, long-lived)
   ↳ migrations applied to `dev`
   ↳ Fly deploy → harpa-pro-api-dev (api-dev.yml)
+  ↳ post-deploy smoke (post-deploy-smoke.yml; opens issue on failure)
   ↳ marketing deploy to CF Pages dev branch (marketing-dev.yml)
   ↳ EAS staging build (TestFlight internal — planned)
 
 Push to main (production)
   ↳ migrations applied to Neon `main`
   ↳ Fly deploy → harpa-pro-api (api-prod.yml)
+  ↳ post-deploy smoke (post-deploy-smoke.yml; opens issue on failure)
   ↳ marketing deploy to CF Pages production (marketing-prod.yml)
   ↳ EAS production build (manual approve — planned)
   ↳ EAS Update for JS-only patches
 ```
+
+The post-deploy smoke runs `scripts/journey.sh` against the freshly
+deployed API. It only exercises routes that exist on the currently
+shipped surface — no real R2 PUTs and no real AI calls (those are
+covered by `apps/cli/scripts/journey*.sh` against the local
+docker-compose stack). A failure (re-)opens an issue labeled
+`ci-smoke` so the team-wide signal isn't buried in the Actions tab.
+To probe on demand: Actions → `post-deploy-smoke` → Run workflow →
+pick `prod` or `dev`.
 
 ## Dev environment bootstrap (one-time)
 

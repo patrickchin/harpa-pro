@@ -91,11 +91,15 @@ export function GenerateReportInputBar() {
             </Pressable>
             <Pressable
               onPress={voice.openRecorder}
+              disabled={voice.pipeline === null}
               testID="btn-record-start"
               accessibilityRole="button"
               accessibilityLabel="Open voice recorder"
+              accessibilityState={{ disabled: voice.pipeline === null }}
             >
-              <View className="min-h-[68px] min-w-[68px] items-center justify-center rounded-xl border border-border bg-card px-3">
+              <View
+                className={`min-h-[68px] min-w-[68px] items-center justify-center rounded-xl border border-border bg-card px-3 ${voice.pipeline === null ? 'opacity-50' : ''}`}
+              >
                 <View className="items-center gap-1">
                   <Mic size={24} color={colors.foreground} />
                   <Text className="text-xs font-semibold text-foreground">

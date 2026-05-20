@@ -31,6 +31,7 @@ import { createEmptyReport } from '@/lib/report-edit-helpers';
 import type { NoteEntry } from '@/lib/note-entry';
 import type { GeneratedSiteReport } from '@harpa/report-core';
 import { VoiceRecorderModal } from '@/features/voice/VoiceRecorderModal';
+import { useVoiceNotePipeline } from '@/features/voice/useVoiceNotePipeline';
 
 /**
  * Props passed to `GenerateReportProvider`. Route wrappers wire real
@@ -40,6 +41,13 @@ import { VoiceRecorderModal } from '@/features/voice/VoiceRecorderModal';
 export interface GenerateReportProviderProps {
   project: string;
   reportNumber: number | null;
+  /**
+   * Server-side report uuid. Required for the voice pipeline
+   * (`useVoiceNotePipeline`) which posts to `/reports/{report}/notes/voice`.
+   * `null` before the report row has loaded — the mic button is rendered
+   * disabled in that case so the modal can't open without a target.
+   */
+  reportId?: string | null;
   /** Notes already saved on the report. Empty array on a fresh draft. */
   notes: readonly NoteEntry[];
   /** True while the initial note timeline is being fetched. */
@@ -144,6 +152,16 @@ interface VoiceSurface {
   openRecorder: () => void;
   recorderVisible: boolean;
   closeRecorder: () => void;
+  /**
+   * Phase D: pipeline state visible to surfaces that want to show a
+   * "Transcribing voice note…" toast after the modal closes. `null`
+   * when the provider was rendered without `reportId` (pipeline can't
+   * run without a target).
+   */
+  pipeline: {
+    step: 'idle' | 'uploading' | 'transcribing' | 'saved' | 'failed';
+    error: string | null;
+  } | null;
 }
 
 interface PhotoSurface {
@@ -300,6 +318,7 @@ const EMPTY_MEMBERS: ReadonlyMap<string, string> = new Map();
 export function GenerateReportProvider({
   project,
   reportNumber,
+  reportId = null,
   notes,
   notesLoading = false,
   onAddTextNote,
@@ -334,6 +353,24 @@ export function GenerateReportProvider({
   const [recorderVisible, setRecorderVisible] = useState(false);
   const [isFinalizeConfirmVisible, setIsFinalizeConfirmVisible] =
     useState(false);
+
+  // Phase D: voice pipeline. Always called (hooks are unconditional)
+  // even when reportId is null — `capture()` then short-circuits.
+  // Using a sentinel '' keeps the hook signature simple; the modal
+  // never opens without a real reportId because the mic button is
+  // disabled in that case (see GenerateReportInputBar).
+  const voicePipeline = useVoiceNotePipeline({ reportId: reportId ?? '' });
+  const handleVoiceCapture = useCallback(
+    async (result: import('@/features/voice/recorder-types').RecorderResult) => {
+      if (!reportId) {
+        throw new Error(
+          'Voice note saved before the report row was ready. Reopen the screen and try again.',
+        );
+      }
+      await voicePipeline.capture(result);
+    },
+    [reportId, voicePipeline],
+  );
 
   // Locally-owned empty report seeded when the user opens Edit without
   // a generated report ("Edit manually" path). Kept separate from
@@ -478,6 +515,9 @@ export function GenerateReportProvider({
         openRecorder: () => setRecorderVisible(true),
         recorderVisible,
         closeRecorder: () => setRecorderVisible(false),
+        pipeline: reportId
+          ? { step: voicePipeline.state.step, error: voicePipeline.state.error }
+          : null,
       },
       // Photo button wires through to the route-supplied handler so the
       // route can push the camera modal + drain results on return. The
@@ -532,6 +572,9 @@ export function GenerateReportProvider({
       attachmentSheetVisible,
       fileUploadError,
       recorderVisible,
+      reportId,
+      voicePipeline.state.step,
+      voicePipeline.state.error,
       memberNames,
       handlePickAttachment,
       handleRegenerate,
@@ -545,16 +588,15 @@ export function GenerateReportProvider({
     <GenerateReportContext.Provider value={value}>
       {children}
       {/*
-        Voice recorder modal — Phase C. Mounted here so any consumer of
-        the provider's voice surface can call `openRecorder()` and have
-        the modal appear, without each route having to wire the modal
-        separately. Phase D replaces this no-op `onCapture` with the
-        real `useVoiceNotePipeline` save action.
+        Voice recorder modal — Phase D. The modal's `onCapture` now
+        runs the real upload + aggregator pipeline. On failure the
+        modal stays open and surfaces the error (its existing `errored`
+        phase) so the user can retry without re-recording.
       */}
       <VoiceRecorderModal
         visible={recorderVisible}
         onClose={() => setRecorderVisible(false)}
-        onCapture={() => undefined}
+        onCapture={handleVoiceCapture}
       />
     </GenerateReportContext.Provider>
   );

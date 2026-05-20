@@ -460,6 +460,7 @@ export default function GenerateReportRoute() {
     <GenerateNotes
       project={slug}
       reportNumber={reportNumber}
+      reportId={reportId}
       notes={visibleNotes}
       memberNames={memberNames}
       notesLoading={report.isLoading || notesQuery.isLoading}

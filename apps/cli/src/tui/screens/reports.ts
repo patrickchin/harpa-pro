@@ -1,19 +1,14 @@
 /**
- * Reports list screen — shows reports in the current project, lets
- * the user pick one (drill into report-home) or create a new one.
- *
- * When ≤ INLINE_OPEN rows, each shows as its own action; otherwise
- * collapses to a single "Open report…" picker.
+ * Reports list screen — shows reports in the current project in the
+ * viewport, and inlines each report as an "Open #N" action in the
+ * interaction pane so the user can act on what they already see.
  */
 import chalk from 'chalk';
 import type { Screen, ScreenAction, ScreenContext } from '../screen.js';
-import { runScreen } from '../screen.js';
 import { fetchAllVia } from './_fetch.js';
 import { findLeaf } from '../registry-find.js';
 import { reportHomeScreen } from './report-home.js';
 import type { ReportLike } from '../../lib/render.js';
-
-const INLINE_OPEN = 7;
 
 export function reportsScreen(): Screen {
   let reports: ReportLike[] = [];
@@ -66,43 +61,13 @@ export function reportsScreen(): Screen {
         return reportHomeScreen();
       };
 
-      const acts: ScreenAction[] = [];
-      if (reports.length === 0) {
-        // nothing inline
-      } else if (reports.length <= INLINE_OPEN) {
-        for (const r of reports) {
-          acts.push({
-            kind: 'screen',
-            label: `#${r.number} (${r.status})`,
-            hint: r.visitDate ?? r.createdAt,
-            open: openReport(r),
-            refreshHeader: true,
-          });
-        }
-      } else {
-        acts.push({
-          kind: 'flow',
-          label: `Open report… (${reports.length})`,
-          refreshHeader: true,
-          run: async (innerCtx) => {
-            const choice = await innerCtx.prompter.select<string>({
-              label: 'Pick a report to open',
-              options: [
-                ...reports.map((r) => ({
-                  value: String(r.number),
-                  label: `#${r.number} (${r.status})`,
-                  hint: r.visitDate ?? r.createdAt,
-                })),
-                { value: '__cancel__', label: '← cancel' },
-              ],
-            });
-            if (innerCtx.prompter.isCancel(choice) || choice === '__cancel__') return;
-            const picked = reports.find((r) => String(r.number) === choice);
-            if (!picked) return;
-            await runScreen(innerCtx.prompter, innerCtx.session, openReport(picked)(innerCtx));
-          },
-        });
-      }
+      const acts: ScreenAction[] = reports.map((r) => ({
+        kind: 'screen',
+        label: `Open #${r.number} (${r.status})`,
+        hint: r.visitDate ?? r.createdAt,
+        open: openReport(r),
+        refreshHeader: true,
+      }));
 
       return [
         ...acts,

@@ -2,17 +2,17 @@
  * Projects screen — top-level entry into the project drill-down.
  *
  * Header: total count + (when available) recent project names.
- * Actions: a single "Open project…" picker (the submenu), plus
- * "New project", "List all projects (raw)", "Refresh", "← back".
- * The list of projects always renders in the viewport so the user
- * sees what's available without opening the picker.
+ * The viewport renders the full project list. The interaction pane
+ * inlines one "Open <project>" action per project so the user can
+ * act on what they're already looking at — no separate picker, no
+ * raw-list redundancy (see arch-tui-layout.md "context first").
  *
  * Picking a project sets `session.currentProject` and opens the
  * project home screen. On back-out the screen clears the current
  * project via its `onExit` so the cascade-clear invariant fires.
  */
 import chalk from 'chalk';
-import type { Screen, ScreenAction } from '../screen.js';
+import type { Screen, ScreenAction, ScreenContext } from '../screen.js';
 import { runScreen } from '../screen.js';
 import { fetchAllVia } from './_fetch.js';
 import { findLeaf } from '../registry-find.js';
@@ -61,38 +61,19 @@ export function projectsScreen(): Screen {
       };
     },
     actions(): ReadonlyArray<ScreenAction> {
-      const openProject = (p: ProjectLike) => (ctx: import('../screen.js').ScreenContext) => {
+      const openProject = (p: ProjectLike) => (ctx: ScreenContext) => {
         const ref: ProjectRef = { id: p.id, slug: p.id, name: p.name };
         ctx.session.setCurrentProject(ref);
         return projectHomeScreen();
       };
 
-      const acts: ScreenAction[] = [];
-      if (items.length > 0) {
-        acts.push({
-          kind: 'flow',
-          label: `Open project… (${items.length})`,
-          hint: 'pick from list',
-          refreshHeader: true,
-          run: async (ctx) => {
-            const choice = await ctx.prompter.select<string>({
-              label: 'Pick a project to open',
-              options: [
-                ...items.map((p) => ({
-                  value: p.id,
-                  label: p.name,
-                  hint: p.clientName ?? undefined,
-                })),
-                { value: '__cancel__', label: '← cancel' },
-              ],
-            });
-            if (ctx.prompter.isCancel(choice) || choice === '__cancel__') return;
-            const picked = items.find((p) => p.id === choice);
-            if (!picked) return;
-            await runScreen(ctx.prompter, ctx.session, openProject(picked)(ctx));
-          },
-        });
-      }
+      const acts: ScreenAction[] = items.map((p) => ({
+        kind: 'screen',
+        label: `Open ${p.name ?? p.id}`,
+        hint: p.clientName ?? undefined,
+        open: openProject(p),
+        refreshHeader: true,
+      }));
       return [
         ...acts,
         {
@@ -100,11 +81,6 @@ export function projectsScreen(): Screen {
           label: 'New project',
           cittyPath: ['projects', 'create'],
           refreshHeader: true,
-        },
-        {
-          kind: 'leaf',
-          label: 'List all projects (raw)',
-          cittyPath: ['projects', 'list'],
         },
         {
           kind: 'flow',

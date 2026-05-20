@@ -159,20 +159,16 @@ function stateViewportHeader(session: Session): [string, ReadonlyArray<string>] 
 }
 
 /**
- * Default body for the top-level menu so the viewport always shows
- * something contextual instead of "(no content)". Each state mirrors
- * the available actions as a list — flows themselves overwrite this
- * with richer content (e.g. project header lines) when they run.
+ * Default body for the top-level menu. The viewport is the *context*
+ * pane — it should describe where you are, not duplicate the list of
+ * actions already visible on the left. Each state shows a brief
+ * orientation paragraph; flows themselves overwrite this with richer
+ * content (project header lines, report bodies, …) when they run.
  */
 function stateViewportBody(
   session: Session,
-  visible: ReadonlyArray<Flow>,
+  _visible: ReadonlyArray<Flow>,
 ): ViewportBody {
-  const items = visible.map((f) => {
-    const item: { label: string; hint?: string } = { label: f.label };
-    if (f.hint) item.hint = f.hint;
-    return item;
-  });
   switch (session.state.kind) {
     case 'config':
       return {
@@ -192,29 +188,32 @@ function stateViewportBody(
         kind: 'detail',
         sections: [
           {
-            title: 'Available actions',
-            lines: items.map(
-              (it) => `• ${it.label}${it.hint ? `  — ${it.hint}` : ''}`,
-            ),
-          },
-          {
+            title: 'Not signed in',
             lines: [
               'Sign in with your phone number to receive an OTP code.',
+              'Once authenticated you can browse projects and reports.',
             ],
           },
         ],
       };
-    case 'authed':
+    case 'authed': {
+      const apiUrl = session.effectiveEnv().HARPA_API_URL ?? '(not set)';
+      const who = session.state.user.displayName ?? session.state.user.userId;
       return {
         kind: 'detail',
         sections: [
           {
-            title: 'Available actions',
-            lines: items.map(
-              (it) => `• ${it.label}${it.hint ? `  — ${it.hint}` : ''}`,
-            ),
+            title: 'Home',
+            lines: [
+              `Signed in as ${who}`,
+              `API: ${apiUrl}`,
+              '',
+              'Pick an action on the left to drill in. The path above',
+              'shows where you are; this pane shows what\u2019s there.',
+            ],
           },
         ],
       };
+    }
   }
 }

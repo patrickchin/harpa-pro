@@ -98,22 +98,10 @@ export function projectHomeScreen(): Screen {
           refreshHeader: true,
         },
         {
-          kind: 'leaf',
-          label: 'List reports (raw)',
-          cittyPath: ['reports', 'list'],
-          prefill: () => ({ projectId: slug }),
-        },
-        {
           kind: 'screen',
           label: 'Members',
           open: () => membersScreen(),
           refreshHeader: true,
-        },
-        {
-          kind: 'leaf',
-          label: 'List members (raw)',
-          cittyPath: ['projects', 'members', 'list'],
-          prefill: () => ({ projectId: slug }),
         },
         {
           kind: 'leaf',

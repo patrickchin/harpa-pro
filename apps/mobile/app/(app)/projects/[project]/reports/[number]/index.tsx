@@ -123,6 +123,8 @@ export default function SavedReportRoute() {
             kind: 'text' | 'voice' | 'image' | 'document';
             body: string | null;
             transcript: string | null;
+            summary?: string | null;
+            durationSec?: number | null;
             fileId: string | null;
             createdAt: string;
           }>;
@@ -136,6 +138,9 @@ export default function SavedReportRoute() {
       createdAt: n.createdAt ?? null,
       authorName: n.authorId ? memberNames.get(n.authorId) ?? null : null,
       fileId: n.fileId ?? null,
+      transcript: n.transcript ?? null,
+      summary: n.summary ?? null,
+      durationSec: n.durationSec ?? null,
     }));
   }, [notesQuery.data, memberNames]);
 

@@ -199,22 +199,15 @@ no aggregator mocks on the happy path.
 
 `VoiceNoteCard` (`features/voice/VoiceNoteCard.tsx`) — landed in Phase E:
 
-- Layout matches the marketing-page `PreviousNoteCard`
-  (`apps/marketing/src/components/VoiceDemo.tsx`) via the shared
-  `VoiceCardShell` primitive: round play button on the left, title +
-  `author · captured-at` meta line + progress bar + duration in the
-  right column, and a 1–2 line summary below with a bold
-  `Summary: ` prefix. Sizes (`text-sm` title, `text-[11px]` meta,
-  `text-xs leading-relaxed` summary) are aligned byte-for-byte with
-  the marketing card.
+- Header strip with state label derived in
+  `voiceNoteCardHeader.ts` (`deriveVoiceCardHeader`): one of
+  `Uploading… / Transcribing… / Voice note (ready) / Voice note failed`.
 - Play / pause + duration via `useAudioPlayback()` (real, single
   active note — see §D8).
 - Duration formatted as `m:ss` (`formatDuration`); waveform / scrubber
   visualisation deferred to Phase F polish.
-- Full transcript lives behind a `⋯` kebab in the card header
-  (`btn-voice-menu-{id}`). Tapping toggles an inline transcript
-  panel below the card; the card itself never expands. This keeps
-  the saved row compact and consistent with the marketing aesthetic.
+- Summary preview (one-line foreground text) above a transcript
+  toggle that expands the full STT output.
 - Inline `Retry` pill rendered on `failed`; calls
   `voice.retry()` on the `GenerateReport` provider surface, which
   hands off to `useVoiceNotePipeline.retry()`.
@@ -246,14 +239,6 @@ card never re-fetches the row. Wired into:
 - `play(uri)` — caller resolves the signed R2 URL via
   `useFileSignedUrl(fileId)` first. Resuming the currently-loaded uri
   while paused does NOT reconstruct the player (position is preserved).
-  When the previous playback finished naturally, `expo-audio` parks
-  the player at `currentTime === duration`; `play()` detects that and
-  calls `seekTo(0)` before resuming so the next tap replays from the
-  start instead of resuming-at-end and immediately re-finishing.
-- The 250 ms status poll keeps ticking as long as a player is
-  attached (not just while `playing` is true) so the UI observes the
-  natural end-of-playback transition. The provider short-circuits
-  identical status updates so the extra ticks don't cause renders.
 - `pause()`, `stop()` (pause + release), `seek(seconds)` operate on
   the active player.
 - Subscribers (`VoiceNoteCard`, `VoiceNoteRow`) read

@@ -162,6 +162,12 @@ interface VoiceSurface {
     step: 'idle' | 'uploading' | 'transcribing' | 'saved' | 'failed';
     error: string | null;
   } | null;
+  /**
+   * Phase E: retry from the last failed pipeline step. No-op when
+   * there is no retained capture (e.g. fresh provider mount). Called
+   * by `VoiceNoteCard`'s in-line Retry pill.
+   */
+  retry: () => void;
 }
 
 interface PhotoSurface {
@@ -372,6 +378,51 @@ export function GenerateReportProvider({
     [reportId, voicePipeline],
   );
 
+  // Phase E: surface the in-flight pipeline as a synthetic NoteEntry
+  // so `NoteTimeline` can render the spinner/failure pill the same way
+  // it renders saved voice notes. The synthetic entry vanishes the
+  // moment the aggregator returns (the real server row arrives via
+  // the invalidated `useReportNotesQuery`).
+  const timelineItems = useMemo<readonly NoteEntry[]>(() => {
+    const pipelineStep = voicePipeline.state.step;
+    if (
+      pipelineStep === 'idle' ||
+      pipelineStep === 'saved' ||
+      !reportId
+    ) {
+      return notes;
+    }
+    const synthetic: NoteEntry = {
+      id: '__voice-pipeline-pending',
+      text: '',
+      addedAt: Date.now(),
+      source: 'voice',
+      voiceStatus:
+        pipelineStep === 'failed'
+          ? 'failed'
+          : pipelineStep === 'transcribing'
+            ? 'transcribing'
+            : 'uploading',
+      voiceError: voicePipeline.state.error,
+      fileId: voicePipeline.state.fileId,
+      durationSec: voicePipeline.state.capture?.durationSec ?? null,
+      transcript: null,
+      summary: null,
+    };
+    return [...notes, synthetic];
+  }, [
+    notes,
+    reportId,
+    voicePipeline.state.step,
+    voicePipeline.state.error,
+    voicePipeline.state.fileId,
+    voicePipeline.state.capture,
+  ]);
+
+  const handleRetryVoice = useCallback(() => {
+    void voicePipeline.retry();
+  }, [voicePipeline]);
+
   // Locally-owned empty report seeded when the user opens Edit without
   // a generated report ("Edit manually" path). Kept separate from
   // `onSetReport` so the lazy-init never triggers the route's dirty
@@ -481,7 +532,7 @@ export function GenerateReportProvider({
         editManually,
       },
       timeline: {
-        items: notes,
+        items: timelineItems,
         isLoading: notesLoading,
       },
       generation: {
@@ -518,6 +569,7 @@ export function GenerateReportProvider({
         pipeline: reportId
           ? { step: voicePipeline.state.step, error: voicePipeline.state.error }
           : null,
+        retry: handleRetryVoice,
       },
       // Photo button wires through to the route-supplied handler so the
       // route can push the camera modal + drain results on return. The
@@ -575,6 +627,8 @@ export function GenerateReportProvider({
       reportId,
       voicePipeline.state.step,
       voicePipeline.state.error,
+      handleRetryVoice,
+      timelineItems,
       memberNames,
       handlePickAttachment,
       handleRegenerate,

@@ -4,19 +4,20 @@
 -- arch-voice-pipeline.md §D3).
 --
 -- Expand-only:
---   - `summary` is the canonical site-note body for voice notes
---     (the text the report generator should read).
---   - `title` is a very short headline (≤ 80 chars) derived from
---     `summary` by the aggregator so list views can show a one-line
---     label without truncating the body. Today it is heuristically
---     extracted (first sentence of `summary`, trimmed); the column is
---     in place so we can upgrade to a dedicated LLM call later
---     without a follow-up migration.
+--   - `title` is a generic short headline (≤ 200 chars at the DB
+--     layer, capped to ≤ 80 in the voice aggregator's heuristic).
+--     Today the voice aggregator is the only writer; text / image /
+--     document notes leave it null but may populate it in the future
+--     (e.g. user-supplied document title, photo caption).
+--   - `summary` is a generic long-form summary. For `kind='voice'`
+--     rows it is the canonical site-note body (what the report
+--     generator reads); the aggregator mirrors it into `body` so
+--     legacy readers stay sane.
 --   - `transcript` keeps its existing meaning (raw transcription audit
 --     trail).
 --   - `duration_sec`, `language`, `transcribe_provider`,
---     `transcribed_at` are diagnostics surfaced by the aggregator
---     route.
+--     `transcribed_at` are voice-only diagnostics surfaced by the
+--     aggregator route.
 --
 -- All columns are NULL-able so this migration is a no-op for existing
 -- rows. Backfill (`UPDATE notes SET summary = body WHERE kind='voice'

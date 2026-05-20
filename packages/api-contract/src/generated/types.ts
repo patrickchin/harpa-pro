@@ -2914,6 +2914,8 @@ export interface paths {
                         body?: string | null;
                         fileId?: string | null;
                         transcript?: string | null;
+                        title?: string | null;
+                        summary?: string | null;
                     };
                 };
             };
@@ -3076,7 +3078,9 @@ export interface paths {
             requestBody?: {
                 content: {
                     "application/json": {
-                        body: string | null;
+                        body?: string | null;
+                        title?: string | null;
+                        summary?: string | null;
                     };
                 };
             };

@@ -127,11 +127,20 @@ export async function createNote(
   db: Db,
   reportId: string,
   authorId: string,
-  input: { kind: NoteKind; body?: string | null; fileId?: string | null; transcript?: string | null },
+  input: {
+    kind: NoteKind;
+    body?: string | null;
+    fileId?: string | null;
+    transcript?: string | null;
+    title?: string | null;
+    summary?: string | null;
+  },
 ): Promise<NoteRow | null> {
   const id = newId('not');
   const r = await db.execute<RawNote>(sql`
-    INSERT INTO app.notes(id, report_id, author_id, kind, body, file_id, transcript)
+    INSERT INTO app.notes(
+      id, report_id, author_id, kind, body, file_id, transcript, title, summary
+    )
     VALUES (
       ${id},
       ${reportId},
@@ -139,7 +148,9 @@ export async function createNote(
       ${input.kind}::app.note_kind,
       ${input.body ?? null},
       ${input.fileId ?? null},
-      ${input.transcript ?? null}
+      ${input.transcript ?? null},
+      ${input.title ?? null},
+      ${input.summary ?? null}
     )
     RETURNING ${NOTE_COLUMNS}
   `);
@@ -209,15 +220,35 @@ export async function createVoiceNote(
   return mapNote(row);
 }
 
+/**
+ * Partial update. `undefined` leaves a column unchanged; `null`
+ * clears it; a string overwrites. Returns null if no fields to update
+ * (caller should reject this at the route boundary) or if the row
+ * isn't visible / writable under RLS.
+ */
 export async function updateNote(
   db: Db,
   noteId: string,
-  body: string | null,
+  patch: {
+    body?: string | null;
+    title?: string | null;
+    summary?: string | null;
+  },
 ): Promise<NoteRow | null> {
+  const sets = [];
+  if (patch.body !== undefined) sets.push(sql`body = ${patch.body}`);
+  if (patch.title !== undefined) sets.push(sql`title = ${patch.title}`);
+  if (patch.summary !== undefined) sets.push(sql`summary = ${patch.summary}`);
+  if (sets.length === 0) return null;
+  sets.push(sql`updated_at = now()`);
+  // Build "col1 = $1, col2 = $2, …" from the patch.
+  const setClause = sets.reduce<ReturnType<typeof sql>>(
+    (acc, frag, idx) => (idx === 0 ? frag : sql`${acc}, ${frag}`),
+    sql``,
+  );
   const r = await db.execute<RawNote>(sql`
     UPDATE app.notes
-    SET body = ${body},
-        updated_at = now()
+    SET ${setClause}
     WHERE id = ${noteId}
     RETURNING ${NOTE_COLUMNS}
   `);

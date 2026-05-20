@@ -19,7 +19,7 @@
     "test:unit": "bunx vitest run",
     "test:integration": "TESTCONTAINERS_RYUK_DISABLED=true bunx vitest run --config vitest.integration.config.ts",
     "test:watch": "bunx vitest",
-    "lint": "eslint . --max-warnings 0 --ext .ts"
+    "lint": "eslint . --max-warnings 0 --ext .ts,.tsx"
   },
   "dependencies": {
     "@clack/prompts": "^1.4.0",

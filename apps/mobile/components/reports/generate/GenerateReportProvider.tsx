@@ -30,6 +30,7 @@ import type { TabKey } from './tabs';
 import { createEmptyReport } from '@/lib/report-edit-helpers';
 import type { NoteEntry } from '@/lib/note-entry';
 import type { GeneratedSiteReport } from '@harpa/report-core';
+import { VoiceRecorderModal } from '@/features/voice/VoiceRecorderModal';
 
 /**
  * Props passed to `GenerateReportProvider`. Route wrappers wire real
@@ -135,6 +136,14 @@ interface VoiceSurface {
   speechError: string | null;
   toggleRecording: () => void;
   cancelRecording: () => void;
+  /**
+   * Phase C: opens the full-screen `VoiceRecorderModal`. Replaces the
+   * legacy `toggleRecording` no-op as the surface the mic button calls.
+   * Phase D wires the modal's `onCapture` to `useVoiceNotePipeline`.
+   */
+  openRecorder: () => void;
+  recorderVisible: boolean;
+  closeRecorder: () => void;
 }
 
 interface PhotoSurface {
@@ -322,6 +331,7 @@ export function GenerateReportProvider({
   const [deleteIndex, setDeleteIndex] = useState<number | null>(null);
   const [attachmentSheetVisible, setAttachmentSheetVisible] = useState(false);
   const [fileUploadError, setFileUploadError] = useState<string | null>(null);
+  const [recorderVisible, setRecorderVisible] = useState(false);
   const [isFinalizeConfirmVisible, setIsFinalizeConfirmVisible] =
     useState(false);
 
@@ -455,14 +465,19 @@ export function GenerateReportProvider({
         isAutoSaving,
         lastSavedAt,
       },
-      // TODO(P3.8): replace with real `useVoiceNotePipeline` surface.
+      // TODO(Phase D): replace legacy `isRecording/amplitude` with the
+      // `useVoiceNotePipeline` state machine. For now Phase C wires the
+      // modal open/close state; recording itself lives inside the modal.
       voice: {
         isRecording: false,
         amplitude: 0,
         interimTranscript: '',
         speechError: null,
-        toggleRecording: () => undefined,
-        cancelRecording: () => undefined,
+        toggleRecording: () => setRecorderVisible(true),
+        cancelRecording: () => setRecorderVisible(false),
+        openRecorder: () => setRecorderVisible(true),
+        recorderVisible,
+        closeRecorder: () => setRecorderVisible(false),
       },
       // Photo button wires through to the route-supplied handler so the
       // route can push the camera modal + drain results on return. The
@@ -516,6 +531,7 @@ export function GenerateReportProvider({
       lastSavedAt,
       attachmentSheetVisible,
       fileUploadError,
+      recorderVisible,
       memberNames,
       handlePickAttachment,
       handleRegenerate,
@@ -528,6 +544,18 @@ export function GenerateReportProvider({
   return (
     <GenerateReportContext.Provider value={value}>
       {children}
+      {/*
+        Voice recorder modal — Phase C. Mounted here so any consumer of
+        the provider's voice surface can call `openRecorder()` and have
+        the modal appear, without each route having to wire the modal
+        separately. Phase D replaces this no-op `onCapture` with the
+        real `useVoiceNotePipeline` save action.
+      */}
+      <VoiceRecorderModal
+        visible={recorderVisible}
+        onClose={() => setRecorderVisible(false)}
+        onCapture={() => undefined}
+      />
     </GenerateReportContext.Provider>
   );
 }

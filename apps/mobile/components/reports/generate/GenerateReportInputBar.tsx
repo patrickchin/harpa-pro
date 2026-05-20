@@ -5,13 +5,10 @@
  * on branch `dev`.
  *
  * P3.6 keeps the full icon/button set so the screen visually matches
- * canonical. The voice + photo buttons are wired to provider no-ops
- * (their pipelines land in P3.7); the text input + Add button are
- * fully functional and drive `notes.add()`.
- *
- * The canonical recording UI (pulse animation, LiveWaveform, interim
- * transcript) is deferred — `voice.isRecording` is always false in the
- * stub provider, so the "idle" branch is what renders.
+ * canonical. Phase C wires the mic button to open
+ * `VoiceRecorderModal` via `voice.openRecorder()`; the inline pulse
+ * animation / waveform inside the input bar is dropped (the modal
+ * owns the recording UI now).
  */
 import { Pressable, Text, TextInput, View } from 'react-native';
 import { Camera, Mic, Paperclip, Plus } from 'lucide-react-native';
@@ -93,10 +90,10 @@ export function GenerateReportInputBar() {
               </View>
             </Pressable>
             <Pressable
-              onPress={voice.toggleRecording}
+              onPress={voice.openRecorder}
               testID="btn-record-start"
               accessibilityRole="button"
-              accessibilityLabel="Start voice recording"
+              accessibilityLabel="Open voice recorder"
             >
               <View className="min-h-[68px] min-w-[68px] items-center justify-center rounded-xl border border-border bg-card px-3">
                 <View className="items-center gap-1">

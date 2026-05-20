@@ -12,7 +12,7 @@
       "env": {
         "APP_VARIANT": "development",
         "EXPO_PUBLIC_APP_VARIANT": "development",
-        "EXPO_PUBLIC_API_URL": "http://localhost:8787",
+        "EXPO_PUBLIC_API_URL": "https://harpa-pro-api-dev.fly.dev",
         "EXPO_PUBLIC_USE_FIXTURES": "false"
       }
     },

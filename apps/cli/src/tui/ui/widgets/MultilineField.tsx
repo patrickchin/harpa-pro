@@ -33,18 +33,18 @@ export function MultilineField(props: MultilineFieldProps) {
     <box flexDirection="column" flexGrow={1}>
       <text fg={theme.fgMuted}>{props.prompt.label}</text>
       <text fg={theme.fgDim}>alt-↵ submit · esc cancel</text>
-      <box flexGrow={1} marginTop={1}>
-        <textarea
-          focused
-          initialValue=""
-          placeholder={props.prompt.placeholder ?? ''}
-          onContentChange={
-            ((e: string | { content: string }) => {
-              setValue(typeof e === 'string' ? e : e.content);
-            }) as never
-          }
-        />
-      </box>
+      <textarea
+        flexGrow={1}
+        marginTop={1}
+        focused
+        initialValue=""
+        placeholder={props.prompt.placeholder ?? ''}
+        onContentChange={
+          ((e: string | { content: string }) => {
+            setValue(typeof e === 'string' ? e : e.content);
+          }) as never
+        }
+      />
     </box>
   );
 }

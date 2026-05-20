@@ -41,23 +41,23 @@ export function SelectList(props: SelectListProps) {
   return (
     <box flexDirection="column" flexGrow={1}>
       <text fg={theme.fgMuted}>{props.prompt.label}</text>
-      <box flexGrow={1} marginTop={1}>
-        <select
-          focused
-          options={options()}
-          selectedIndex={initialIndex()}
-          focusedBackgroundColor={theme.bg}
-          selectedBackgroundColor={theme.selectionBg}
-          selectedTextColor={theme.selectionFg}
-          showDescription
-          wrapSelection
-          onSelect={(_i, opt) => {
-            if (opt) {
-              props.ui.resolve({ kind: 'select', value: String(opt.value) });
-            }
-          }}
-        />
-      </box>
+      <select
+        flexGrow={1}
+        marginTop={1}
+        focused
+        options={options()}
+        selectedIndex={initialIndex()}
+        focusedBackgroundColor={theme.bg}
+        selectedBackgroundColor={theme.selectionBg}
+        selectedTextColor={theme.selectionFg}
+        showDescription
+        wrapSelection
+        onSelect={(_i, opt) => {
+          if (opt) {
+            props.ui.resolve({ kind: 'select', value: String(opt.value) });
+          }
+        }}
+      />
     </box>
   );
 }

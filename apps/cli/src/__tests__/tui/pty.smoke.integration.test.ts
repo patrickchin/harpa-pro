@@ -131,6 +131,25 @@ describeIf('TUI default-wiring (OpenTUI pty smoke)', () => {
     }
     expect(mounted, `TUI did not mount within 6s; transcript:\n${stripAnsi(buf)}`).toBe(true);
 
+    // The auth menu must actually render its options — proves the
+    // select widget paints, not just its surrounding chrome. This is
+    // the real Pitfall-13 gate: a broken SelectList that renders only
+    // the label would slip past the "did it mount" check.
+    const optionsDeadline = Date.now() + 4_000;
+    let optionsVisible = false;
+    while (Date.now() < optionsDeadline) {
+      const s = stripAnsi(buf);
+      if (s.includes('Set API URL') && s.includes('Quit')) {
+        optionsVisible = true;
+        break;
+      }
+      await sleep(100);
+    }
+    expect(
+      optionsVisible,
+      `Select widget did not render its options within 4s; transcript:\n${stripAnsi(buf)}`,
+    ).toBe(true);
+
     proc.kill('SIGINT');
 
     const exitCode = await Promise.race([
@@ -146,6 +165,10 @@ describeIf('TUI default-wiring (OpenTUI pty smoke)', () => {
     // Both pane titles appear — proves the split-pane laid out.
     expect(stripped).toMatch(/harpa/);
     expect(stripped).toMatch(/action/);
+    // Selectable menu options reach the screen.
+    expect(stripped).toContain('Sign in');
+    expect(stripped).toContain('Set API URL');
+    expect(stripped).toContain('Quit');
     // Status bar mentions the configured API URL.
     expect(stripped).toContain(api.url);
   }, 20_000);

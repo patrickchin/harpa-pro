@@ -110,6 +110,7 @@ export async function runOpenTuiApp(
 
 function viewportSinkFor(ui: UiStore): ViewportSink {
   const crumbs: string[] = [];
+  const parentStack: import('./ui/store.js').ParentFrame[] = [];
   return {
     setHeadline(headline, subline) {
       ui.setViewport({
@@ -127,6 +128,14 @@ function viewportSinkFor(ui: UiStore): ViewportSink {
     popBreadcrumb() {
       crumbs.pop();
       ui.setTopBar({ breadcrumb: [...crumbs] });
+    },
+    pushParentFrame(frame) {
+      parentStack.push(frame);
+      ui.setParent(frame);
+    },
+    popParentFrame() {
+      parentStack.pop();
+      ui.setParent(parentStack[parentStack.length - 1]);
     },
     setInFlight(label) {
       ui.setInFlight(label === undefined ? undefined : { label });

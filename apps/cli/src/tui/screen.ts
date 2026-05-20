@@ -126,6 +126,13 @@ export async function runScreen(
       const selectable: NonSep[] = actions.filter(
         (a): a is NonSep => a.kind !== 'separator',
       );
+      // Snapshot the action list for the ranger-style parent column —
+      // when we drill into any action, the child loop renders this in
+      // the left pane with the entry-point row highlighted.
+      const parentItems: string[] = [
+        ...selectable.map((a) => a.label),
+        screen.backLabel ?? '← back',
+      ];
       // Default headline/subline/body for "no action highlighted" — i.e. the
       // screen's own context. We re-push it as the user moves the highlight
       // back to non-previewing items (and on initial render above).
@@ -172,51 +179,59 @@ export async function runScreen(
       const action = selectable[Number(choice)];
       if (!action) continue;
 
+      const chosenIdx = Number(choice);
+      const parentFrame = { items: parentItems, highlightedIndex: chosenIdx };
+
       let didMutate = false;
-      switch (action.kind) {
-        case 'leaf': {
-          if (action.confirm) {
-            const ok = await prompter.confirm({ label: action.confirm.label });
-            if (prompter.isCancel(ok) || !ok) break;
-          }
-          const leaf = findLeafImpl(action.cittyPath);
-          if (!leaf) {
-            prompter.log.error(
-              `Screen ${screen.id}: no registry leaf for [${action.cittyPath.join(' ')}]`,
-            );
+      viewport.pushParentFrame(parentFrame);
+      try {
+        switch (action.kind) {
+          case 'leaf': {
+            if (action.confirm) {
+              const ok = await prompter.confirm({ label: action.confirm.label });
+              if (prompter.isCancel(ok) || !ok) break;
+            }
+            const leaf = findLeafImpl(action.cittyPath);
+            if (!leaf) {
+              prompter.log.error(
+                `Screen ${screen.id}: no registry leaf for [${action.cittyPath.join(' ')}]`,
+              );
+              break;
+            }
+            const prefill = action.prefill?.(session);
+            viewport.setInFlight(action.label);
+            try {
+              const r = await runCommand(
+                prompter,
+                session,
+                leaf,
+                prefill ? { prefill: { ...prefill } } : {},
+              );
+              didMutate = r.status === 'ok' && Boolean(action.refreshHeader);
+            } finally {
+              viewport.setInFlight(undefined);
+            }
             break;
           }
-          const prefill = action.prefill?.(session);
-          viewport.setInFlight(action.label);
-          try {
-            const r = await runCommand(
-              prompter,
-              session,
-              leaf,
-              prefill ? { prefill: { ...prefill } } : {},
-            );
-            didMutate = r.status === 'ok' && Boolean(action.refreshHeader);
-          } finally {
-            viewport.setInFlight(undefined);
+          case 'screen': {
+            const child = action.open(ctx);
+            await runScreen(prompter, session, child, viewport);
+            didMutate = Boolean(action.refreshHeader);
+            break;
           }
-          break;
-        }
-        case 'screen': {
-          const child = action.open(ctx);
-          await runScreen(prompter, session, child, viewport);
-          didMutate = Boolean(action.refreshHeader);
-          break;
-        }
-        case 'flow': {
-          viewport.setInFlight(action.label);
-          try {
-            await action.run(ctx);
-          } finally {
-            viewport.setInFlight(undefined);
+          case 'flow': {
+            viewport.setInFlight(action.label);
+            try {
+              await action.run(ctx);
+            } finally {
+              viewport.setInFlight(undefined);
+            }
+            didMutate = Boolean(action.refreshHeader);
+            break;
           }
-          didMutate = Boolean(action.refreshHeader);
-          break;
         }
+      } finally {
+        viewport.popParentFrame();
       }
       if (didMutate) header = await screen.header(ctx);
     }

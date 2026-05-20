@@ -1,15 +1,18 @@
 /**
- * Top-level layout for the OpenTUI TUI (arch-tui-layout-v2.md §2.1).
+ * Top-level layout for the OpenTUI TUI — ranger-style Miller columns
+ * (arch-tui-layout-v2.md §2).
  *
- *   ┌─ TopBar (breadcrumb · identity) ────────────────────────────┐
- *   │ Viewport (2fr)                ¦ Interaction (1fr)            │
- *   │ "what's here"                 ¦ "what you can do"            │
- *   ├──────────────────────────────────────────────────────────────┤
- *   │ LogStrip (one line · fixture mode right)                     │
- *   └──────────────────────────────────────────────────────────────┘
+ *   ┌─ TopBar (breadcrumb · identity) ──────────────────────────────────────┐
+ *   │ Parent (1fr) │ Interaction (2fr)        │ Preview / Viewport (3fr)    │
+ *   │ where we     │ what you can do here     │ context of the highlighted  │
+ *   │ came from    │ (select / input)         │ row (or this screen's body) │
+ *   ├───────────────────────────────────────────────────────────────────────┤
+ *   │ LogStrip (one line · fixture mode right)                              │
+ *   └───────────────────────────────────────────────────────────────────────┘
  */
 import type { UiStore } from './store.js';
 import { TopBar } from './TopBar.js';
+import { ParentPane } from './ParentPane.js';
 import { ViewportPane } from './ViewportPane.js';
 import { InteractionPane } from './InteractionPane.js';
 import { LogStrip } from './LogStrip.js';
@@ -26,11 +29,14 @@ export function AppRoot(props: AppRootProps) {
         <TopBar ui={props.ui} />
       </box>
       <box flexDirection="row" flexGrow={1}>
-        <box flexBasis={0} flexGrow={2} minWidth={32}>
-          <ViewportPane ui={props.ui} />
+        <box flexBasis={0} flexGrow={1} minWidth={16}>
+          <ParentPane ui={props.ui} />
         </box>
-        <box flexBasis={0} flexGrow={1} minWidth={24}>
+        <box flexBasis={0} flexGrow={2} minWidth={24}>
           <InteractionPane ui={props.ui} />
+        </box>
+        <box flexBasis={0} flexGrow={3} minWidth={32}>
+          <ViewportPane ui={props.ui} />
         </box>
       </box>
       <box height={1}>

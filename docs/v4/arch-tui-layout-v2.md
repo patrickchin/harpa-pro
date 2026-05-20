@@ -53,38 +53,37 @@ that respects two invariants:
 ## 2. Layout from scratch
 
 ```
-┌─ harpa ─────────────────────────────────────────────────────────────┐
-│ /projects/acme/reports/12                            Patrick · prod │   ← TopBar (row 0)
-├──────────────────────────────────── ────────────────────────────────┤
-│                                    ¦                                │
-│  Report #12 — Acme East Wing       ¦  ↑/↓ move  ↵ open  esc back    │   ← Viewport(left, 2fr)
-│                                    ¦                                │       Interaction(right, 1fr)
-│  status     draft                  ¦   ▸ Add text note              │
-│  visit      2025-03-04             ¦     Upload media               │
-│  generated  yes                    ¦     View all notes             │
-│  notes      7                      ¦     Regenerate                 │
-│                                    ¦     Finalize                   │
-│  ── Body (preview) ──              ¦     Edit metadata              │
-│  Site inspection found three       ¦     Delete report              │
-│  defects in the east wall …        ¦     ───                        │
-│                                    ¦     Refresh                    │
-│  ── Notes (7) ──                   ¦     ← back to reports          │
-│  • voice  "We checked the north…"  ¦                                │
-│  • image  IMG_4823.jpg             ¦                                │
-│  • text   "Owner approved …"       ¦                                │
-│  …                                 ¦                                │
-│                                    ¦                                │
-├─────────────────────────────────────────────────────────────────────┤
-│ ⓘ generated report (vendor: kimi)         · fixtures: replay        │   ← LogStrip (row N-1, 1 line)
-└─────────────────────────────────────────────────────────────────────┘
+┌─ harpa ───────────────────────────────────────────────────────────────────┐
+│ /projects/acme/reports/12                              Patrick · prod     │   ← TopBar
+├──────────────┬──────────────────────┬──────────────────────────────────────┤
+│ Parent (1fr) │ Interaction (2fr)    │ Preview / Viewport (3fr)             │
+│ ▸ Open #11   │ ▸ Add text note      │  Report #12 — Acme East Wing         │
+│   Open #12   │   Upload media       │                                      │
+│   Open #13   │   View all notes     │  status     draft                    │
+│   ← back     │   Regenerate         │  visit      2025-03-04               │
+│              │   Finalize           │  generated  yes                      │
+│              │   Edit metadata      │  notes      7                        │
+│              │   Delete report      │                                      │
+│              │   ← back to reports  │  ── Body (preview) ──                │
+│              │                      │  Site inspection found three         │
+│              │                      │  defects in the east wall …          │
+├───────────────────────────────────────────────────────────────────────────┤
+│ ⓘ generated report (vendor: kimi)               · fixtures: replay        │   ← LogStrip
+└───────────────────────────────────────────────────────────────────────────┘
 ```
 
-### 2.1 Three rows, two columns
+`j`/`k` move the highlight in the Interaction pane; the Viewport
+pane updates with the highlighted row's `preview()` (per-action
+ranger preview). `l` / `↵` drills in (recurses into the chosen
+screen, and the previously-current actions snap into the Parent
+pane). `h` / Esc backs out.
+
+### 2.1 Three rows, three columns (ranger-style Miller)
 
 | Row | Height | What | Why |
 |---|---|---|---|
 | `TopBar` | 1 line | **Breadcrumb (loud, left)** · **identity strip (muted, right)** | Identity + location are the global facts; they go at the top because they're persistent across screens. The breadcrumb is the *loudest* element on screen (Pitfall: don't let "Pick an action" win). |
-| `MainSplit` | flex | `Viewport` (2fr) ¦ `Interaction` (1fr) | Two panes only. Viewport is wider because it carries records, lists, bodies; the action list is short. |
+| `MainSplit` | flex | `Parent` (1fr) ¦ `Interaction` (2fr) ¦ `Viewport/Preview` (3fr) | Three panes, inspired by the `ranger` file manager. Parent shows where we came from; Interaction is the only focused pane (current actions); Preview is the largest because it carries records, lists, bodies, and per-action previews. |
 | `LogStrip` | 1 line | most recent log entry (`note` / `info` / `success` / `warn` / `error`) | One line. Multi-line transient messages should be promoted to a viewport section, not stuffed into the bottom. |
 
 This drops the v4.1 `StatusBar` (its content moves to `TopBar`) and
@@ -95,9 +94,15 @@ viewport body (it moves to `LogStrip`, cap = 1).
 
 - **TopBar.** Where you are (left, bright). Who/what you are
   connected as (right, muted). No verbs.
-- **Viewport.** The thing at the current breadcrumb. Read-only.
+- **Parent.** The action list of the screen one level up, with the
+  row we drilled in on highlighted. Read-only; `h` / Esc on the
+  Interaction pane is what actually navigates back.
 - **Interaction.** The verbs you can apply to the thing. The
-  *only* pane that takes keyboard focus.
+  *only* pane that takes keyboard focus. Vim keys: `j`/`k` move,
+  `l`/`↵` drill in, `h`/Esc back, `ctrl-c` quit.
+- **Viewport / Preview.** The thing at the current breadcrumb, OR
+  the context of whichever Interaction row is currently highlighted
+  (per-action `preview()`). Read-only. Largest pane on screen.
 - **LogStrip.** The last thing that happened (one line).
 
 ### 2.3 Where global state lives — exactly one place each

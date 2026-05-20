@@ -11,13 +11,19 @@
  * subline (rank 3), body. The breadcrumb stack is also owned here
  * because it's the source of truth for the TopBar.
  */
-import type { ViewportBody } from './ui/store.js';
+import type { ParentFrame, ViewportBody } from './ui/store.js';
 
 export interface ViewportSink {
   setHeadline(headline: string | undefined, subline?: string | undefined): void;
   setBody(body: ViewportBody | undefined): void;
   pushBreadcrumb(label: string): void;
   popBreadcrumb(): void;
+  /**
+   * Push a parent frame onto the ranger-style parent column stack.
+   * The top of stack is rendered in the left pane.
+   */
+  pushParentFrame(frame: ParentFrame): void;
+  popParentFrame(): void;
   setInFlight(label: string | undefined): void;
 }
 
@@ -28,6 +34,8 @@ export function nullViewportSink(): ViewportSink {
     setBody: () => {},
     pushBreadcrumb: () => {},
     popBreadcrumb: () => {},
+    pushParentFrame: () => {},
+    popParentFrame: () => {},
     setInFlight: () => {},
   };
 }

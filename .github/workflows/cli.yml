@@ -1,0 +1,25 @@
+name: cli
+on:
+  pull_request:
+  push:
+    branches: [dev, main]
+jobs:
+  cli:
+    runs-on: ubuntu-latest
+    env:
+      AI_FIXTURE_MODE: replay
+      R2_FIXTURE_MODE: replay
+      TESTCONTAINERS_RYUK_DISABLED: 'true'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 9.12.3 }
+      - uses: actions/setup-node@v4
+        with: { node-version: '22', cache: 'pnpm' }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @harpa/api-contract build
+      - run: pnpm --filter @harpa/cli typecheck
+      - run: pnpm --filter @harpa/cli lint
+      - run: pnpm --filter @harpa/cli test
+      - run: bash scripts/check-cli-help-drift.sh
+      - run: pnpm --filter @harpa/cli test:integration

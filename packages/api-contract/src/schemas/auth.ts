@@ -1,5 +1,6 @@
 import { z } from 'zod';
-import { isoDateTime, phone, uuid } from './_shared.js';
+import { isoDateTime, phone } from './_shared.js';
+import { userId } from './ids.js';
 
 export const otpStartRequest = z.object({ phone });
 export const otpStartResponse = z.object({ verificationId: z.string() });
@@ -10,7 +11,7 @@ export const otpVerifyRequest = z.object({
 });
 
 export const userPublic = z.object({
-  id: uuid,
+  id: userId,
   phone,
   displayName: z.string().nullable(),
   companyName: z.string().nullable(),

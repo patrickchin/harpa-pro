@@ -21,7 +21,7 @@ import { createApp } from '../../app.js';
 import { withScopedConnection } from '../../db/scope.js';
 import { signTestToken } from '../../middleware/auth.js';
 import { resetPool, getPool } from '../../db/client.js';
-import { makeSessionId } from '../factories/index.js';
+import { makeUserId, makeSessionId } from '../factories/index.js';
 import * as schema from '../../db/schema.js';
 
 let fx: PgFixture;
@@ -36,22 +36,23 @@ beforeAll(async () => {
   await resetPool();
   getPool(fx.url);
 
+  alice = makeUserId();
+  bob = makeUserId();
+  aliceSid = makeSessionId();
+  bobSid = makeSessionId();
+
   const admin = new pg.Client({ connectionString: fx.url });
   await admin.connect();
-  const rows = await admin.query<{ id: string }>(
-    `INSERT INTO auth.users(phone) VALUES ($1), ($2) RETURNING id`,
-    ['+15550200001', '+15550200002'],
+  await admin.query(
+    `INSERT INTO auth.users(id, phone) VALUES ($1, $2), ($3, $4)`,
+    [alice, '+15550200001', bob, '+15550200002'],
   );
-  alice = rows.rows[0]!.id;
-  bob = rows.rows[1]!.id;
   // Seed sessions for both so JWTs are valid in spirit (we don't enforce
   // session-row presence in withAuth yet — see middleware/auth.ts).
-  const sessRows = await admin.query<{ id: string }>(
-    `INSERT INTO auth.sessions(user_id, expires_at) VALUES ($1, now() + interval '7 days'), ($2, now() + interval '7 days') RETURNING id`,
-    [alice, bob],
+  await admin.query(
+    `INSERT INTO auth.sessions(id, user_id, expires_at) VALUES ($1, $2, now() + interval '7 days'), ($3, $4, now() + interval '7 days')`,
+    [aliceSid, alice, bobSid, bob],
   );
-  aliceSid = sessRows.rows[0]!.id;
-  bobSid = sessRows.rows[1]!.id;
   await admin.end();
 }, 120_000);
 
@@ -86,7 +87,7 @@ describe('scope: /me', () => {
     await expect(
       withScopedConnection({ sub: alice, sid: aliceSid }, async (db) => {
         await db.execute(
-          sql`INSERT INTO app.projects(name, owner_id) VALUES ('evil', ${bob}::uuid)`,
+          sql`INSERT INTO app.projects(name, owner_id) VALUES ('evil', ${bob})`,
         );
       }),
     ).rejects.toThrow();

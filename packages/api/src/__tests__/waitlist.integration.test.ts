@@ -13,6 +13,7 @@ import { startPg, type PgFixture } from './setup-pg.js';
 import { createApp } from '../app.js';
 import { rawDb, resetPool, getPool } from '../db/client.js';
 import { resetRateLimiter } from '../lib/rateLimiter.js';
+import { makeWaitlistId } from './factories/index.js';
 import {
   setWaitlistClients,
   resetWaitlistClients,
@@ -133,8 +134,8 @@ describe('POST /waitlist', () => {
   it('already-confirmed email: second submission does NOT rotate token or send email', async () => {
     // Seed a confirmed row directly.
     await rawDb().execute(sql`
-      INSERT INTO app.waitlist_signups(email, confirmed_at, confirm_token_hash, confirm_token_expires_at)
-      VALUES ('done@buildco.com', now(), ${'a'.repeat(64)}, now() + interval '7 days')
+      INSERT INTO app.waitlist_signups(id, email, confirmed_at, confirm_token_hash, confirm_token_expires_at)
+      VALUES (${makeWaitlistId()}, 'done@buildco.com', now(), ${'a'.repeat(64)}, now() + interval '7 days')
     `);
     const resend = recordingResend();
     setWaitlistClients({ turnstile: alwaysOkTurnstile(), resend });
@@ -292,9 +293,10 @@ describe('POST /waitlist/confirm', () => {
       ? sql`now() - interval '1 day'`
       : sql`now() + interval '7 days'`;
     const confirmed = opts.confirmed ? sql`now()` : sql`NULL`;
+    const id = makeWaitlistId();
     await rawDb().execute(sql`
-      INSERT INTO app.waitlist_signups(email, confirm_token_hash, confirm_token_expires_at, confirmed_at)
-      VALUES (${email}, ${tokenHash}, ${expiresAt}, ${confirmed})
+      INSERT INTO app.waitlist_signups(id, email, confirm_token_hash, confirm_token_expires_at, confirmed_at)
+      VALUES (${id}, ${email}, ${tokenHash}, ${expiresAt}, ${confirmed})
     `);
     return { rawToken: realToken, tokenHash };
   }

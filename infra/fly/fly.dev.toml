@@ -1,0 +1,53 @@
+# Fly.io app config for @harpa/api (dev environment).
+# Mirrors fly.toml but targets harpa-pro-api-dev.
+# Deployed automatically on push to `dev` by api-dev.yml.
+# Create the app once with: flyctl apps create harpa-pro-api-dev
+
+app = "harpa-pro-api-dev"
+primary_region = "fra"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[deploy]
+  # Apply pending migrations inside the release machine so a broken
+  # migration aborts the rollout cleanly. Matches prod (fly.toml).
+  # api-dev.yml ALSO runs db:migrate against the Neon dev branch from
+  # CI as a pre-flight — release_command is the belt to that braces.
+  # See docs/v4/arch-cicd-and-migrations.md.
+  release_command = "pnpm --filter @harpa/api db:migrate"
+
+[env]
+  NODE_ENV = "production"
+  PORT = "8787"
+
+[http_service]
+  internal_port = 8787
+  force_https = true
+  # Use `suspend` (not `stop`) so the dev API resumes in <500ms when
+  # the first request hits a sleeping machine — matters for the iOS
+  # simulator round-trip during development. Still allows full sleep
+  # (min_machines_running = 0) to keep dev cheap.
+  auto_stop_machines = "suspend"
+  auto_start_machines = true
+  min_machines_running = 0 # allow full auto-sleep to save cost on dev
+
+  # Mirror prod's burst-scale trigger so dev catches concurrency
+  # regressions early (e.g. a route that holds a DB connection too
+  # long would saturate one machine and force a scale-up here too).
+  [http_service.concurrency]
+    type = "requests"
+    soft_limit = 25
+    hard_limit = 50
+
+# Readiness probe (DB + schema head). Matches prod.
+[[http_service.checks]]
+  grace_period = "15s"
+  interval = "30s"
+  method = "GET"
+  timeout = "5s"
+  path = "/readyz"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"

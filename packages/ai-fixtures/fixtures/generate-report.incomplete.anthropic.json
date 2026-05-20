@@ -1,0 +1,21 @@
+{
+  "vendor": "anthropic",
+  "model": "claude-3-5-sonnet",
+  "fixtureName": "generate-report.incomplete.anthropic",
+  "recordedAt": "2026-05-12T00:00:00.000Z",
+  "requestHash": "sha256:a4644c49e302fd153b2c160d379bbc026984dcc5e37f7525699883a6a4b791ce",
+  "request": {
+    "kind": "chat",
+    "vendor": "anthropic",
+    "model": "claude-3-5-sonnet",
+    "systemPrompt": "Generate a structured construction-site daily report from the provided notes.",
+    "userPrompt": "<sparse notes>"
+  },
+  "response": {
+    "text": "{\n  \"visitDate\": null,\n  \"weather\": null,\n  \"workers\": [],\n  \"materials\": [],\n  \"issues\": [],\n  \"nextSteps\": [],\n  \"summarySections\": [\n    {\n      \"title\": \"Notes captured\",\n      \"body\": \"Insufficient notes to produce a structured report.\"\n    }\n  ]\n}",
+    "usage": {
+      "input": 80,
+      "output": 56
+    }
+  }
+}

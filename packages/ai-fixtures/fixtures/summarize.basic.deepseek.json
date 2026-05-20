@@ -1,0 +1,21 @@
+{
+  "vendor": "deepseek",
+  "model": "deepseek-chat",
+  "fixtureName": "summarize.basic.deepseek",
+  "recordedAt": "2026-05-12T00:00:00.000Z",
+  "requestHash": "sha256:266534d6fd8eccebee025056aa670090e8435171157ca081d8b106dd779f5fa9",
+  "request": {
+    "kind": "chat",
+    "vendor": "deepseek",
+    "model": "deepseek-chat",
+    "systemPrompt": "Summarise the following transcript into a concise site-note body.",
+    "userPrompt": "Site arrival 8:15. Crew of three on rebar..."
+  },
+  "response": {
+    "text": "Crew arrived 8:15; rebar progress steady; concrete pour delayed 30 min by delivery; no incidents. Plan: close east footing tomorrow.",
+    "usage": {
+      "input": 64,
+      "output": 32
+    }
+  }
+}

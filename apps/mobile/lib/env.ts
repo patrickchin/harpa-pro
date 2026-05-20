@@ -20,12 +20,22 @@ const Env = z.object({
     .enum(['true', 'false'])
     .default('false')
     .transform((v) => v === 'true'),
+  /**
+   * Build variant — drives bundle id + display name (app.config.ts) and
+   * gates dev-only UI such as the API base URL override
+   * (lib/api/base-url.ts). Set per-profile in eas.json. Falls back to
+   * 'development' for local Metro / tests.
+   */
+  EXPO_PUBLIC_APP_VARIANT: z
+    .enum(['production', 'preview', 'development'])
+    .default('development'),
 });
 
 /* eslint-disable no-restricted-syntax */
 const rawEnv = {
   EXPO_PUBLIC_API_URL: process.env.EXPO_PUBLIC_API_URL,
   EXPO_PUBLIC_USE_FIXTURES: process.env.EXPO_PUBLIC_USE_FIXTURES,
+  EXPO_PUBLIC_APP_VARIANT: process.env.EXPO_PUBLIC_APP_VARIANT,
 };
 /* eslint-enable no-restricted-syntax */
 

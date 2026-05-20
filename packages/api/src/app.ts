@@ -7,6 +7,7 @@ import { cors } from 'hono/cors';
 import { requestId } from './middleware/requestId.js';
 import { errorMapper } from './middleware/errorMapper.js';
 import { health } from './routes/health.js';
+import { readyz } from './routes/readyz.js';
 import { authRoutes } from './routes/auth.js';
 import { meRoutes } from './routes/me.js';
 import { projectRoutes } from './routes/projects.js';
@@ -17,6 +18,7 @@ import { voiceRoutes } from './routes/voice.js';
 import { settingsRoutes } from './routes/settings.js';
 import { waitlistRoutes } from './routes/waitlist.js';
 import { adminRoutes } from './routes/admin.js';
+import { resolverRoutes } from './routes/resolvers.js';
 import { env } from './env.js';
 import type { ScopedDb } from './db/scope.js';
 
@@ -86,6 +88,7 @@ export function createApp(): OpenAPIHono<AppEnv> {
 
   // Public routes
   app.route('/', health);
+  app.route('/', readyz);
   app.route('/', authRoutes);
   app.route('/', waitlistRoutes);
 
@@ -93,6 +96,7 @@ export function createApp(): OpenAPIHono<AppEnv> {
   app.route('/', meRoutes);
   app.route('/', projectRoutes);
   app.route('/', reportRoutes);
+  app.route('/', resolverRoutes);
   app.route('/', noteRoutes);
   app.route('/', fileRoutes);
   app.route('/', voiceRoutes);

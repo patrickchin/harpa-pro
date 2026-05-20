@@ -23,6 +23,15 @@
     "fixtures:replay": "AI_FIXTURE_MODE=replay pnpm test:api",
     "db:branch:create": "tsx infra/neon/branch.ts create",
     "db:branch:delete": "tsx infra/neon/branch.ts delete",
+    "db:branch:ensure": "tsx infra/neon/branch.ts ensure",
+    "db:branch:snapshot": "tsx infra/neon/branch.ts snapshot",
+    "db:branch:prune-snapshots": "tsx infra/neon/branch.ts prune-snapshots",
+    "secrets:pull:dev": "doppler secrets download --project harpa-pro --config dev --no-file --format env > .env.dev",
+    "secrets:pull:prod": "doppler secrets download --project harpa-pro --config prd --no-file --format env > .env.prod",
+    "secrets:push:dev": "doppler secrets upload --project harpa-pro --config dev .env.dev",
+    "secrets:push:prod": "doppler secrets upload --project harpa-pro --config prd .env.prod",
+    "secrets:fly:dev": "doppler secrets download --project harpa-pro --config dev --no-file --format docker | xargs flyctl secrets set --app harpa-pro-api-dev",
+    "secrets:fly:prod": "doppler secrets download --project harpa-pro --config prd --no-file --format docker | xargs flyctl secrets set --app harpa-pro-api",
     "format": "prettier --write .",
     "harpa": "pnpm --filter @harpa/cli dev --",
     "prepare": "husky"
@@ -41,7 +50,8 @@
   },
   "pnpm": {
     "patchedDependencies": {
-      "react-native-css-interop@0.2.3": "patches/react-native-css-interop@0.2.3.patch"
+      "react-native-css-interop@0.2.3": "patches/react-native-css-interop@0.2.3.patch",
+      "expo-modules-core@2.2.3": "patches/expo-modules-core@2.2.3.patch"
     }
   }
 }

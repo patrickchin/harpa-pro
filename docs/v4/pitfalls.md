@@ -358,6 +358,53 @@ Don't `// TODO redesign` in user-visible places.
 
 ---
 
+## Pitfall 14 — CLI / contract path drift
+
+**Symptom:** CLI builds fail with TS2345 "type X is not assignable to
+`PathsWithMethod<paths, ...>`" or runtime 404s on endpoints that the
+API clearly exposes. Cause: API routes were renamed (UUID → slug,
+flat → nested) but the CLI commands still reference the old paths.
+`openapi-typescript` regenerates `paths` from `openapi.json`, so the
+CLI compiler is the only place this surfaces — until you ship it.
+
+**Rule:**
+
+1. When you change a route shape in `packages/api/src/routes/*`, run
+   `pnpm --filter @harpa/api spec:emit && pnpm --filter @harpa/api-contract gen:types`
+   in the same commit.
+2. Build the CLI (`pnpm --filter @harpa/cli build`) in CI on every
+   API-route diff — it's the contract consumer that catches drift.
+3. Don't keep two ways to identify a resource. The API picked
+   `projectSlug` + `number` for reports; the CLI accepts the same
+   positionals (`<projectSlug> <number>`), not legacy `<reportId>`.
+
+**Diagnosis crib:** if `openapi-fetch` complains the path literal
+isn't in `PathsWithMethod`, grep the generated types
+(`packages/api-contract/src/generated/types.ts`) for the resource
+prefix — the spec is the source of truth.
+
+## Pitfall 15 — Route handlers that ignore user settings
+
+**Symptom:** Per-user setting (AI vendor, locale, …) appears to be
+saved (`GET /settings/ai` returns the new value) but observable
+behaviour doesn't change — every report still hits the openai
+fixture, every email still ships in English.
+
+**Cause:** The handler reads the request body but never calls
+`getXxxSettings(db, userId)`. The setting is dead weight in the DB.
+
+**Rule:** When a route's output depends on a per-user preference,
+load that preference in the same handler that does the work and
+pass it explicitly into the service. Don't rely on a default
+parameter — the default *is* the bug.
+
+`packages/api/src/routes/reports.ts::runGenerate` is the canonical
+shape (loads `getAiSettings(d, userId)`, forwards `vendor` to
+`aiGenerateReport`). Mirror it for any new "per-user-tunable"
+behaviour.
+
+---
+
 ## How we use this doc
 
 When you finish a task and notice the bug shape matches one of these

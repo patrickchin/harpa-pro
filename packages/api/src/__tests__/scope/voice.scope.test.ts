@@ -12,6 +12,7 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import pg from 'pg';
 import { sql } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/node-postgres';
+import { makeUserId, makeSessionId, makeFileId } from '../factories/index.js';
 import { startPg, type PgFixture } from '../setup-pg.js';
 import { createApp } from '../../app.js';
 import { withScopedConnection } from '../../db/scope.js';
@@ -37,31 +38,33 @@ beforeAll(async () => {
   getPool(fx.url);
   const admin = new pg.Client({ connectionString: fx.url });
   await admin.connect();
-  const u = await admin.query<{ id: string }>(
-    `INSERT INTO auth.users(phone) VALUES ($1), ($2) RETURNING id`,
-    ['+15551500001', '+15551500002'],
+  alice = makeUserId();
+  bob = makeUserId();
+  aliceSid = makeSessionId();
+  bobSid = makeSessionId();
+  await admin.query(
+    `INSERT INTO auth.users(id, phone) VALUES ($1, $2), ($3, $4)`,
+    [alice, '+15551500001', bob, '+15551500002'],
   );
-  alice = u.rows[0]!.id;
-  bob = u.rows[1]!.id;
-  const s = await admin.query<{ id: string }>(
-    `INSERT INTO auth.sessions(user_id, expires_at)
-     VALUES ($1, now() + interval '7 days'), ($2, now() + interval '7 days') RETURNING id`,
-    [alice, bob],
+  await admin.query(
+    `INSERT INTO auth.sessions(id, user_id, expires_at)
+     VALUES ($1, $2, now() + interval '7 days'), ($3, $4, now() + interval '7 days')`,
+    [aliceSid, alice, bobSid, bob],
   );
-  aliceSid = s.rows[0]!.id;
-  bobSid = s.rows[1]!.id;
-  const af = await admin.query<{ id: string }>(
-    `INSERT INTO app.files(owner_id, kind, file_key, size_bytes, content_type)
-     VALUES ($1, 'voice', $2, 100, 'audio/m4a') RETURNING id`,
-    [alice, `users/${alice}/voice/scope-alice.m4a`],
+  const afId = makeFileId();
+  await admin.query(
+    `INSERT INTO app.files(id, owner_id, kind, file_key, size_bytes, content_type)
+     VALUES ($1, $2, 'voice', $3, 100, 'audio/m4a')`,
+    [afId, alice, `users/${alice}/voice/scope-alice.m4a`],
   );
-  aliceFile = af.rows[0]!.id;
-  const bf = await admin.query<{ id: string }>(
-    `INSERT INTO app.files(owner_id, kind, file_key, size_bytes, content_type)
-     VALUES ($1, 'voice', $2, 100, 'audio/m4a') RETURNING id`,
-    [bob, `users/${bob}/voice/scope-bob.m4a`],
+  aliceFile = afId;
+  const bfId = makeFileId();
+  await admin.query(
+    `INSERT INTO app.files(id, owner_id, kind, file_key, size_bytes, content_type)
+     VALUES ($1, $2, 'voice', $3, 100, 'audio/m4a')`,
+    [bfId, bob, `users/${bob}/voice/scope-bob.m4a`],
   );
-  bobFile = bf.rows[0]!.id;
+  bobFile = bfId;
   await admin.end();
 }, 120_000);
 
@@ -118,7 +121,7 @@ describe('scope: /voice/*', () => {
     const conn = await getPool().connect();
     try {
       const r = await drizzle(conn, { schema }).execute<{ id: string; owner_id: string }>(
-        sql`SELECT id, owner_id FROM app.files WHERE id = ${bobFile}::uuid`,
+        sql`SELECT id, owner_id FROM app.files WHERE id = ${bobFile}`,
       );
       expect(r.rows).toHaveLength(1);
       expect(r.rows[0]!.owner_id).toBe(bob);

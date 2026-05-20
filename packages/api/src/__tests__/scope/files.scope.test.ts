@@ -13,6 +13,7 @@ import { withScopedConnection } from '../../db/scope.js';
 import { signTestToken } from '../../middleware/auth.js';
 import { resetPool, getPool } from '../../db/client.js';
 import * as schema from '../../db/schema.js';
+import { makeUserId, makeSessionId, makeFileId } from '../factories/index.js';
 
 let fx: PgFixture;
 let alice: string;
@@ -28,33 +29,35 @@ beforeAll(async () => {
   process.env.R2_FIXTURE_MODE = 'replay';
   await resetPool();
   getPool(fx.url);
+
+  alice = makeUserId();
+  bob = makeUserId();
+  aliceSid = makeSessionId();
+  bobSid = makeSessionId();
+  aliceFile = makeFileId();
+  bobFile = makeFileId();
+
   const admin = new pg.Client({ connectionString: fx.url });
   await admin.connect();
-  const u = await admin.query<{ id: string }>(
-    `INSERT INTO auth.users(phone) VALUES ($1), ($2) RETURNING id`,
-    ['+15551300001', '+15551300002'],
+  await admin.query(
+    `INSERT INTO auth.users(id, phone) VALUES ($1, $2), ($3, $4)`,
+    [alice, '+15551300001', bob, '+15551300002'],
   );
-  alice = u.rows[0]!.id;
-  bob = u.rows[1]!.id;
-  const s = await admin.query<{ id: string }>(
-    `INSERT INTO auth.sessions(user_id, expires_at) VALUES ($1, now() + interval '7 days'), ($2, now() + interval '7 days') RETURNING id`,
-    [alice, bob],
+  await admin.query(
+    `INSERT INTO auth.sessions(id, user_id, expires_at) VALUES ($1, $2, now() + interval '7 days'), ($3, $4, now() + interval '7 days')`,
+    [aliceSid, alice, bobSid, bob],
   );
-  aliceSid = s.rows[0]!.id;
-  bobSid = s.rows[1]!.id;
   // Seed a file for each user.
-  const af = await admin.query<{ id: string }>(
-    `INSERT INTO app.files(owner_id, kind, file_key, size_bytes, content_type)
-     VALUES ($1, 'voice', $2, 100, 'audio/m4a') RETURNING id`,
-    [alice, `users/${alice}/voice/seed-alice.m4a`],
+  await admin.query(
+    `INSERT INTO app.files(id, owner_id, kind, file_key, size_bytes, content_type)
+     VALUES ($1, $2, 'voice', $3, 100, 'audio/m4a')`,
+    [aliceFile, alice, `users/${alice}/voice/seed-alice.m4a`],
   );
-  aliceFile = af.rows[0]!.id;
-  const bf = await admin.query<{ id: string }>(
-    `INSERT INTO app.files(owner_id, kind, file_key, size_bytes, content_type)
-     VALUES ($1, 'voice', $2, 100, 'audio/m4a') RETURNING id`,
-    [bob, `users/${bob}/voice/seed-bob.m4a`],
+  await admin.query(
+    `INSERT INTO app.files(id, owner_id, kind, file_key, size_bytes, content_type)
+     VALUES ($1, $2, 'voice', $3, 100, 'audio/m4a')`,
+    [bobFile, bob, `users/${bob}/voice/seed-bob.m4a`],
   );
-  bobFile = bf.rows[0]!.id;
   await admin.end();
 }, 120_000);
 

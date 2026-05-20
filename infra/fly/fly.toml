@@ -7,6 +7,14 @@ primary_region = "fra"
 [build]
   dockerfile = "Dockerfile"
 
+[deploy]
+  # Run pending migrations inside a release machine using the existing
+  # DATABASE_URL secret. Fly promotes the new image to app machines ONLY
+  # if this exits 0 — so a broken migration aborts the rollout instead
+  # of leaving prod with code ahead of schema.
+  # See docs/v4/arch-cicd-and-migrations.md.
+  release_command = "pnpm --filter @harpa/api db:migrate"
+
 [env]
   NODE_ENV = "production"
   PORT = "8787"
@@ -14,16 +22,39 @@ primary_region = "fra"
 [http_service]
   internal_port = 8787
   force_https = true
-  auto_stop_machines = true
+  # `suspend` keeps the machine's memory snapshot resident so the
+  # next request resumes in <500ms (vs ~3-5s for a cold boot from
+  # `stop`). Combined with min_machines_running ≥ 2 below, this
+  # means we never serve a true cold-start to a real user.
+  auto_stop_machines = "suspend"
   auto_start_machines = true
-  min_machines_running = 1
+  # Keep two machines hot at all times:
+  #   - one absorbs the first request after a deploy / failover
+  #   - the other gives us N+1 redundancy when one is restarting
+  # Cost: ~$3.80/mo extra (one shared-cpu-1x 512mb machine).
+  # See docs/v4/arch-ops.md §Scaling.
+  min_machines_running = 2
 
+  # Per-machine concurrency triggers. When a machine's in-flight
+  # request count exceeds `soft_limit`, Fly wakes / starts another
+  # machine (up to `fly scale count <max>` — set out-of-band, see
+  # docs/v4/arch-ops.md §Scaling). At `hard_limit` Fly stops sending
+  # new requests to that machine until it drains. 25/50 is sized
+  # for the current node-postgres pool (max 10) plus headroom.
+  [http_service.concurrency]
+    type = "requests"
+    soft_limit = 25
+    hard_limit = 50
+
+# Readiness probe: opens a real DB connection and checks app._migrations
+# head matches MIGRATIONS_REQUIRED_HEAD (baked into the image). A new
+# machine must pass this before Fly routes traffic to it.
 [[http_service.checks]]
-  grace_period = "10s"
+  grace_period = "15s"
   interval = "30s"
   method = "GET"
   timeout = "5s"
-  path = "/healthz"
+  path = "/readyz"
 
 [[vm]]
   size = "shared-cpu-1x"

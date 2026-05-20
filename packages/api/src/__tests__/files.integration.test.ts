@@ -10,6 +10,7 @@ import { createApp } from '../app.js';
 import { startPg, type PgFixture } from './setup-pg.js';
 import { resetPool, getPool } from '../db/client.js';
 import { signTestToken } from '../middleware/auth.js';
+import { makeUserId, makeSessionId, makeFileId } from './factories/index.js';
 
 let fx: PgFixture;
 let alice: string;
@@ -21,18 +22,18 @@ beforeAll(async () => {
   process.env.R2_FIXTURE_MODE = 'replay';
   await resetPool();
   getPool(fx.url);
+  alice = makeUserId();
+  aliceSid = makeSessionId();
   const admin = new pg.Client({ connectionString: fx.url });
   await admin.connect();
-  const u = await admin.query<{ id: string }>(
-    `INSERT INTO auth.users(phone) VALUES ($1) RETURNING id`,
-    ['+15551200001'],
+  await admin.query(
+    `INSERT INTO auth.users(id, phone) VALUES ($1, $2)`,
+    [alice, '+15551200001'],
   );
-  alice = u.rows[0]!.id;
-  const s = await admin.query<{ id: string }>(
-    `INSERT INTO auth.sessions(user_id, expires_at) VALUES ($1, now() + interval '7 days') RETURNING id`,
-    [alice],
+  await admin.query(
+    `INSERT INTO auth.sessions(id, user_id, expires_at) VALUES ($1, $2, now() + interval '7 days')`,
+    [aliceSid, alice],
   );
-  aliceSid = s.rows[0]!.id;
   await admin.end();
 }, 120_000);
 
@@ -131,7 +132,7 @@ describe('/files/*', () => {
   it('GET /files/:id/url 404 on unknown id', async () => {
     const app = createApp();
     const tok = await signTestToken(alice, aliceSid);
-    const res = await app.request('/files/00000000-0000-0000-0000-000000000000/url', {
+    const res = await app.request('/files/fil_00000000/url', {
       headers: { authorization: `Bearer ${tok}` },
     });
     expect(res.status).toBe(404);

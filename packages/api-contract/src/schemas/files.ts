@@ -1,5 +1,6 @@
 import { z } from 'zod';
-import { isoDateTime, uuid } from './_shared.js';
+import { isoDateTime } from './_shared.js';
+import { fileId, userId } from './ids.js';
 
 export const fileKind = z.enum(['voice', 'image', 'document', 'pdf']);
 
@@ -22,8 +23,8 @@ export const registerFileRequest = z.object({
 });
 
 export const fileRecord = z.object({
-  id: uuid,
-  ownerId: uuid,
+  id: fileId,
+  ownerId: userId,
   kind: fileKind,
   fileKey: z.string(),
   sizeBytes: z.number().int(),

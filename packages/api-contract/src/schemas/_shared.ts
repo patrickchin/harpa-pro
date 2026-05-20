@@ -11,8 +11,9 @@ export const isoDateTime = z
   })
   .transform((s) => new Date(s).toISOString());
 
-export const uuid = z.string().uuid();
 export const phone = z.string().regex(/^\+\d{8,15}$/, 'E.164 phone required');
+
+export const reportNumber = z.coerce.number().int().positive();
 
 export const cursor = z.string().min(1).max(256);
 export const limit = z.coerce.number().int().min(1).max(100).default(20);

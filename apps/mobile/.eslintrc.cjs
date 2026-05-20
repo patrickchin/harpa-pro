@@ -24,9 +24,10 @@ module.exports = {
   overrides: [
     {
       // lib/env.ts is the one allowed place to read EXPO_PUBLIC_*.
-      // lib/env.test.ts must mutate process.env.EXPO_PUBLIC_* to exercise
-      // the validator's defaults / coercion / failure paths.
-      files: ['lib/env.ts', 'lib/env.test.ts'],
+      // *.test.ts files must mutate process.env.EXPO_PUBLIC_* to exercise
+      // the validator's defaults / coercion / failure paths, and to drive
+      // env-dependent modules like lib/api/base-url.
+      files: ['lib/env.ts', 'lib/env.test.ts', 'lib/api/base-url.test.ts'],
       rules: { 'no-restricted-syntax': 'off' },
     },
     {

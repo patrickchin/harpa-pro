@@ -87,19 +87,19 @@ describe('lib/api/client', () => {
 
     it('substitutes path params + serialises query params', async () => {
       const fetchFn = stubFetch(() => jsonResponse(200, { items: [], nextCursor: null }));
-      await request('/projects/{id}/reports', 'get', {
-        params: { id: 'proj-42' },
+      await request('/projects/{project}/reports', 'get', {
+        params: { project: 'prj_abcdef' },
         query: { cursor: 'abc', limit: 10 } as never,
       });
       expect(fetchFn.mock.calls[0]![0]).toBe(
-        'http://localhost:8787/projects/proj-42/reports?cursor=abc&limit=10',
+        'http://localhost:8787/projects/prj_abcdef/reports?cursor=abc&limit=10',
       );
     });
 
     it('returns undefined for 204 No Content', async () => {
       stubFetch(() => new Response(null, { status: 204 }));
-      const result = await request('/notes/{noteId}', 'delete', {
-        params: { noteId: '00000000-0000-0000-0000-000000000001' },
+      const result = await request('/notes/{note}', 'delete', {
+        params: { note: 'not_abcdef1234' },
       });
       expect(result).toBeUndefined();
     });

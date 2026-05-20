@@ -12,6 +12,7 @@ import { HTTPException } from 'hono/http-exception';
 import type { AppEnv } from '../app.js';
 import { signJwt, verifyJwt } from '../auth/jwt.js';
 import { withScopedConnection } from '../db/scope.js';
+import { assertId } from '../lib/ids.js';
 
 export function withAuth(): MiddlewareHandler<AppEnv> {
   return async (c, next) => {
@@ -37,7 +38,10 @@ export function withAuth(): MiddlewareHandler<AppEnv> {
  * Mint a real JWT for tests. Same shape as production tokens — kept
  * exported so integration tests (and the existing unit suite) can
  * construct an authenticated request without going through Twilio.
+ * `sub` / `sid` are branded at this trust boundary; pass real slugs
+ * (e.g. `usr_abcdef12`, `ses_abcdef12abcd`) — `assertId` rejects malformed
+ * values at runtime, matching what `verifyJwt` would do in production.
  */
 export async function signTestToken(sub: string, sid: string): Promise<string> {
-  return signJwt({ sub, sid });
+  return signJwt({ sub: assertId('usr', sub, 'signTestToken sub'), sid: assertId('ses', sid, 'signTestToken sid') });
 }

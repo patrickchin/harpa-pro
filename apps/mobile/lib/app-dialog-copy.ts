@@ -68,6 +68,19 @@ export function getFinalizeReportDialogCopy(): AppDialogCopy {
   };
 }
 
+export function getUnfinalizeReportDialogCopy(): AppDialogCopy {
+  return {
+    title: 'Unfinalize Report',
+    message:
+      'Move this report back to a draft so you can edit and regenerate it. The current contents are preserved — you can finalize again at any time.',
+    tone: 'warning',
+    noticeTitle: 'Move back to draft',
+    confirmLabel: 'Unfinalize',
+    cancelLabel: 'Cancel',
+    confirmVariant: 'default',
+  };
+}
+
 export function getRemoveMemberDialogCopy(name: string): AppDialogCopy {
   return {
     title: 'Remove Member',

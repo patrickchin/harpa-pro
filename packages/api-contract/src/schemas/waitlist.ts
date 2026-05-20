@@ -1,5 +1,6 @@
 import { z } from 'zod';
-import { isoDateTime, uuid } from './_shared.js';
+import { isoDateTime } from './_shared.js';
+import { waitlistSignupId } from './ids.js';
 
 /**
  * Marketing waitlist schemas (double opt-in).
@@ -65,7 +66,7 @@ export type WaitlistConfirmResponse = z.infer<typeof waitlistConfirmResponse>;
 
 /** Admin CSV row (one signup) — used for typing the export stream. */
 export const waitlistAdminRow = z.object({
-  id: uuid,
+  id: waitlistSignupId,
   email: z.string(),
   company: z.string().nullable(),
   role: z.string().nullable(),

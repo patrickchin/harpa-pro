@@ -9,7 +9,7 @@ import { sql } from 'drizzle-orm';
 import { startPg, type PgFixture } from './setup-pg.js';
 import { withScopedConnection } from '../db/scope.js';
 import { resetPool, getPool } from '../db/client.js';
-import { makeUserId, makeSessionId } from './factories/index.js';
+import { makeUserId, makeSessionId, makeProjectId } from './factories/index.js';
 
 let fx: PgFixture;
 let alice: string;
@@ -38,12 +38,12 @@ beforeAll(async () => {
   ]);
   // Insert with explicit ids and memberships (bypassing RLS as superuser).
   await admin.query(
-    `INSERT INTO app.projects(id, name, owner_id) VALUES (gen_random_uuid(), 'alice-proj', $1)`,
-    [alice],
+    `INSERT INTO app.projects(id, name, owner_id) VALUES ($1, 'alice-proj', $2)`,
+    [makeProjectId(), alice],
   );
   await admin.query(
-    `INSERT INTO app.projects(id, name, owner_id) VALUES (gen_random_uuid(), 'bob-proj', $1)`,
-    [bob],
+    `INSERT INTO app.projects(id, name, owner_id) VALUES ($1, 'bob-proj', $2)`,
+    [makeProjectId(), bob],
   );
   await admin.query(`
     INSERT INTO app.project_members(project_id, user_id, role)
@@ -77,7 +77,7 @@ describe('per-request scope (RLS)', () => {
     await expect(
       withScopedConnection({ sub: alice, sid: aliceSid }, async (db) => {
         await db.execute(
-          sql`INSERT INTO app.projects(name, owner_id) VALUES ('evil', ${bob}::uuid)`,
+          sql`INSERT INTO app.projects(name, owner_id) VALUES ('evil', ${bob})`,
         );
       }),
     ).rejects.toThrow();

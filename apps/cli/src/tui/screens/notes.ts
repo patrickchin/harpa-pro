@@ -7,7 +7,6 @@
  * factory rather than its own file (per arch-tui-nav.md §3.1's
  * "notesActionScreen" — no separate currentNote on the session).
  */
-import chalk from 'chalk';
 import type { Screen, ScreenAction } from '../screen.js';
 import { fetchAllVia } from './_fetch.js';
 import { findLeaf } from '../registry-find.js';
@@ -30,29 +29,39 @@ export function notesScreen(): Screen {
         ctx.session,
       );
       notes = data?.items ?? [];
+      const kinds = notes.reduce<Record<string, number>>((acc, n) => {
+        acc[n.kind] = (acc[n.kind] ?? 0) + 1;
+        return acc;
+      }, {});
+      const kindSummary = Object.entries(kinds)
+        .map(([k, v]) => `${v} ${k}`)
+        .join(' · ');
       return {
-        title: `Notes on report #${currentReport.number}`,
+        title: `Notes — report #${currentReport.number}`,
         lines: [
           notes.length === 0
-            ? chalk.dim('No notes yet')
-            : `${notes.length} note${notes.length === 1 ? '' : 's'}`,
+            ? 'No notes yet — pick "Add text note" to capture one'
+            : `${notes.length} note${notes.length === 1 ? '' : 's'}${kindSummary ? ` · ${kindSummary}` : ''}`,
         ],
       };
     },
     body() {
       if (notes.length === 0) {
-        return { kind: 'empty', hint: 'No notes yet' };
+        return {
+          kind: 'empty',
+          hint: 'No notes yet.\nPick "Add text note" on the right to capture one.',
+        };
       }
-      return {
-        kind: 'list',
-        items: notes.map((n) => {
-          const text = (n.body ?? n.transcript ?? '').toString();
-          return {
-            label: n.kind,
-            hint: text ? text.slice(0, 60) : undefined,
-          };
-        }),
-      };
+      const sections = notes.map((n, idx) => {
+        const text = (n.body ?? n.transcript ?? '').toString();
+        const created = n.createdAt ? String(n.createdAt).slice(0, 19) : '';
+        const head = created ? `${n.kind}  ·  ${created}` : n.kind;
+        const lines = text
+          ? text.split('\n').slice(0, 6).map((l) => `  ${l}`)
+          : ['  (empty)'];
+        return { title: `${idx + 1}. ${head}`, lines };
+      });
+      return { kind: 'detail', sections };
     },
     actions(ctx): ReadonlyArray<ScreenAction> {
       if (ctx.session.state.kind !== 'authed') return [];
@@ -89,7 +98,7 @@ function noteActionScreen(note: NoteLike): Screen {
   return {
     id: 'note-action',
     async header() {
-      const body = note.body ?? note.transcript ?? chalk.dim('(no body)');
+      const body = note.body ?? note.transcript ?? '(no body)';
       return {
         title: `Note · ${note.kind}`,
         lines: [String(body)],

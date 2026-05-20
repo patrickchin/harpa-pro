@@ -11,6 +11,7 @@ import type { ReportLike } from '../../lib/render.js';
 
 export function reportsScreen(): Screen {
   let reports: ReportLike[] = [];
+  let projectName = '';
   return {
     id: 'reports',
     breadcrumb: 'reports',
@@ -18,32 +19,47 @@ export function reportsScreen(): Screen {
       const project =
         ctx.session.state.kind === 'authed' ? ctx.session.state.currentProject : undefined;
       if (!project) return undefined;
+      projectName = project.name ?? project.id;
       const leaf = findLeaf(['reports', 'list']);
-      if (!leaf) return { title: 'Reports', lines: ['(unavailable)'] };
+      if (!leaf) return { title: `Reports — ${projectName}`, lines: ['(unavailable)'] };
       const data = await fetchAllVia<ReportLike>(
         leaf,
         { projectId: project.id },
         ctx.session,
       );
       reports = data?.items ?? [];
+      const drafts = reports.filter((r) => r.status !== 'finalized').length;
+      const finals = reports.length - drafts;
       return {
-        title: `Reports in ${project.name ?? project.id}`,
+        title: `Reports — ${projectName}`,
         lines: [
           reports.length === 0
-            ? 'No reports yet'
-            : `${reports.length} report${reports.length === 1 ? '' : 's'}`,
+            ? 'No reports yet — pick "New report" to create one'
+            : `${reports.length} report${reports.length === 1 ? '' : 's'} · ${drafts} draft${drafts === 1 ? '' : 's'} · ${finals} final`,
         ],
       };
     },
     body() {
       if (reports.length === 0) {
-        return { kind: 'empty', hint: 'No reports yet' };
+        return {
+          kind: 'empty',
+          hint: 'No reports in this project yet.\nPick "New report" on the right to create one.',
+        };
       }
+      // Newest first so the most-recent report shows at the top.
+      const sorted = [...reports].sort((a, b) =>
+        String(b.createdAt ?? '').localeCompare(String(a.createdAt ?? '')),
+      );
       return {
         kind: 'list',
-        items: reports.map((r) => ({
-          label: `#${r.number}`,
-          hint: `${r.status}${r.visitDate ? ` · ${r.visitDate}` : ''}`,
+        columnTitles: ['#', 'status', 'visit', 'created'],
+        items: sorted.map((r) => ({
+          label: `#${String(r.number).padEnd(3)}`,
+          columns: [
+            (r.status ?? '').padEnd(9),
+            (r.visitDate ?? '—').padEnd(11),
+            String(r.createdAt ?? '').slice(0, 19),
+          ],
         })),
       };
     },

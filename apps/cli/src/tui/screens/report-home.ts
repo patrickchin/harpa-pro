@@ -60,23 +60,21 @@ export function reportHomeScreen(): Screen {
       return {
         title: `Report #${report.number} — ${currentProject.name ?? currentProject.id}`,
         lines: [
-          `status: ${report.status}`,
-          `visit: ${report.visitDate ?? '(none)'}`,
-          `created: ${report.createdAt}`,
-          `generated: ${hasBody ? 'yes' : 'no'}  ·  finalized: ${finalized ? 'yes' : 'no'}`,
-          `notes: ${notes.length}`,
+          `status: ${report.status} · visit: ${report.visitDate ?? '(none)'} · created: ${String(report.createdAt).slice(0, 19)} · generated: ${hasBody ? 'yes' : 'no'} · finalized: ${finalized ? 'yes' : 'no'} · notes: ${notes.length}`,
         ],
       };
     },
     body() {
       if (!report) return { kind: 'empty', hint: 'Loading…' };
-      const preview = (report.body ?? '').toString().slice(0, 400);
+      const preview = (report.body ?? '').toString().slice(0, 2000);
       const noteLines = notes.length === 0
         ? ['(no notes yet)']
-        : notes.map((n) => {
+        : notes.flatMap((n, idx) => {
             const text = (n.body ?? n.transcript ?? '').toString();
-            const snippet = text ? ` · ${text.slice(0, 60)}` : '';
-            return `• ${n.kind}${snippet}`;
+            const head = `${idx + 1}. ${n.kind}${n.createdAt ? `  ${String(n.createdAt).slice(0, 19)}` : ''}`;
+            if (!text) return [head];
+            const lines = text.split('\n').slice(0, 4).map((l) => `   ${l}`);
+            return [head, ...lines];
           });
       return {
         kind: 'detail',

@@ -94,12 +94,20 @@ function ListBody(props: {
   columnTitles?: ReadonlyArray<string>;
 }) {
   const items = () => props.items;
+  // Header row: render each title in its own slot so it lines up with the
+  // label / column slots below (label is followed by 2-space gaps).
+  const headerCells = (): string[] => {
+    const t = props.columnTitles;
+    if (!t || t.length === 0) return [];
+    return t.map((s) => s);
+  };
   return (
     <box flexDirection="column">
-      <Show when={props.columnTitles && props.columnTitles.length > 0}>
+      <Show when={headerCells().length > 0}>
         <box flexDirection="row">
-          <text fg={theme.fgMuted}>{(props.columnTitles ?? []).join('  ')}</text>
+          <text fg={theme.fgMuted}>{headerCells().join('  ')}</text>
         </box>
+        <box height={0} />
       </Show>
       <For each={items()}>
         {(item) => (

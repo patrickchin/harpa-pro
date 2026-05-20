@@ -50,13 +50,21 @@ export function projectsScreen(): Screen {
     },
     body() {
       if (items.length === 0) {
-        return { kind: 'empty', hint: 'No projects yet — pick "New project" to create one.' };
+        return {
+          kind: 'empty',
+          hint: 'No projects yet.\nPick "New project" on the right to create one.',
+        };
       }
       return {
         kind: 'list',
+        columnTitles: ['name', 'role', 'client', 'reports'],
         items: items.map((p) => ({
-          label: p.name ?? p.id,
-          hint: p.myRole,
+          label: (p.name ?? p.id).padEnd(28).slice(0, 28),
+          columns: [
+            p.myRole.padEnd(7),
+            (p.clientName ?? '—').padEnd(20).slice(0, 20),
+            `${p.stats?.totalReports ?? 0} (${p.stats?.drafts ?? 0} draft)`,
+          ],
         })),
       };
     },

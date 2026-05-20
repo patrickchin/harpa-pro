@@ -1,0 +1,21 @@
+{
+  "vendor": "kimi",
+  "model": "moonshot-v1-32k",
+  "fixtureName": "generate-report.incomplete.kimi",
+  "recordedAt": "2026-05-12T00:00:00.000Z",
+  "requestHash": "sha256:d4a3ed52a2ffd866e090b86eaf18d3987c51a790cf2729fa5cc3baaca314a20e",
+  "request": {
+    "kind": "chat",
+    "vendor": "kimi",
+    "model": "moonshot-v1-32k",
+    "systemPrompt": "Generate a structured construction-site daily report from the provided notes.",
+    "userPrompt": "<sparse notes>"
+  },
+  "response": {
+    "text": "{\n  \"visitDate\": null,\n  \"weather\": null,\n  \"workers\": [],\n  \"materials\": [],\n  \"issues\": [],\n  \"nextSteps\": [],\n  \"summarySections\": [\n    {\n      \"title\": \"Notes captured\",\n      \"body\": \"Insufficient notes to produce a structured report.\"\n    }\n  ]\n}",
+    "usage": {
+      "input": 80,
+      "output": 56
+    }
+  }
+}

@@ -27,6 +27,7 @@ import { createTurnstileClient, type TurnstileClient } from '../lib/turnstile.js
 import { createResendClient, type ResendClient } from '../lib/resend.js';
 import { getRateLimiter } from '../lib/rateLimiter.js';
 import { renderWaitlistConfirmationEmail } from '../emails/waitlist-confirmation.js';
+import { newId } from '../lib/ids.js';
 
 const errorBody = z.object({
   error: z.object({ code: z.string(), message: z.string() }),
@@ -166,6 +167,7 @@ waitlistRoutes.openapi(
     const rawToken = randomBytes(32).toString('hex');
     const tokenHash = hashToken(rawToken);
     const expiresAt = new Date(Date.now() + CONFIRM_TTL_MS);
+    const wlsId = newId('wls');
 
     // Upsert by email. If the row exists and is confirmed already, we
     // do NOT rotate the token (no point — they're confirmed). If it
@@ -183,10 +185,10 @@ waitlistRoutes.openapi(
       token_was_rotated: boolean;
     }>(sql`
       INSERT INTO app.waitlist_signups (
-        email, company, role, source, ip_hash,
+        id, email, company, role, source, ip_hash,
         confirm_token_hash, confirm_token_expires_at
       ) VALUES (
-        ${body.email}, ${body.company ?? null}, ${body.role ?? null}, ${body.source ?? null},
+        ${wlsId}, ${body.email}, ${body.company ?? null}, ${body.role ?? null}, ${body.source ?? null},
         ${hashIp(ip)}, ${tokenHash}, ${expiresAt.toISOString()}::timestamptz
       )
       ON CONFLICT (email) DO UPDATE SET

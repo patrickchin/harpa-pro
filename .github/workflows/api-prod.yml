@@ -21,8 +21,42 @@ concurrency:
   group: api-prod
   cancel-in-progress: false # never cancel a prod deploy
 
+env:
+  # Public readiness endpoint hit post-deploy to prove the rollout served
+  # traffic against the migrated schema. Override via repo variable
+  # API_READY_URL if the prod hostname changes.
+  API_READY_URL: ${{ vars.API_READY_URL || 'https://harpa-pro-api.fly.dev/readyz' }}
+
 jobs:
+  # Filename lint for migrations. Cheap insurance against a typo that
+  # would silently desync the head check or break lexical ordering.
+  # See docs/v4/arch-cicd-and-migrations.md.
+  guard:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Lint migration filenames
+        run: |
+          set -euo pipefail
+          MIG_DIR=packages/api/migrations
+          bad=0
+          for f in $(ls "$MIG_DIR" | grep -E '\.sql$' || true); do
+            if ! echo "$f" | grep -qE '^[0-9]+_[a-z0-9_]+(\.notx)?\.sql$'; then
+              echo "::error file=$MIG_DIR/$f::filename must match <digits>_<slug>[.notx].sql"
+              bad=$((bad+1))
+            fi
+          done
+          if [[ "$bad" -gt 0 ]]; then
+            echo "migration filename lint failed ($bad bad file(s))" >&2
+            exit 1
+          fi
+          HEAD=$(ls "$MIG_DIR" | grep -E '\.sql$' | sort | tail -1)
+          echo "computed MIGRATIONS_REQUIRED_HEAD=$HEAD"
+
   prod:
+    needs: guard
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -31,7 +65,65 @@ jobs:
 
       - uses: superfly/flyctl-actions/setup-flyctl@master
 
+      - uses: dopplerhq/cli-action@v3
+
+      - name: Sync Fly secrets from Doppler
+        # See api-dev.yml for rationale. `--stage` defers activation;
+        # the subsequent deploy is what flips them on.
+        env:
+          DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN_PRD }}
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: |
+          doppler secrets download --no-file --format env \
+            | grep -vE '^(DOPPLER_|NEON_|FLY_|CLOUDFLARE_|PUBLIC_|EXPO_PUBLIC_|PAGES_PROJECT|PORT|NODE_ENV|ADMIN_EMAIL)' \
+            | flyctl secrets import --stage --app harpa-pro-api
+
+      # Pre-deploy Neon snapshot named after the commit SHA. Gives us
+      # a copy-on-write rollback target even if a deploy ships a
+      # destructive migration or corrupts data. Independent of Neon's
+      # default PITR window (still available as a fallback). Best-
+      # effort: a snapshot failure does NOT block the deploy, but is
+      # surfaced as a workflow warning so it gets noticed.
+      # See docs/v4/arch-cicd-and-migrations.md §Failure & rollback.
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Snapshot prod DB (pre-deploy)
+        continue-on-error: true
+        env:
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+          NEON_PROJECT_ID: ${{ secrets.NEON_PROJECT_ID }}
+        run: |
+          if [[ -z "${NEON_API_KEY:-}" || -z "${NEON_PROJECT_ID:-}" ]]; then
+            echo "::warning::NEON_API_KEY / NEON_PROJECT_ID not set; skipping pre-deploy snapshot"
+            exit 0
+          fi
+          pnpm db:branch:snapshot "${GITHUB_SHA}" main
+
       - name: Deploy to Fly.io
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
         run: ./infra/fly/deploy.sh --remote-only
+
+      # Closes the loop on the 2026-05-20 incident: a green workflow now
+      # means the new image is up AND able to serve real traffic against
+      # the migrated schema. Retries cover Fly's first-machine warmup.
+      - name: Verify /readyz
+        run: |
+          set -euo pipefail
+          for i in 1 2 3 4 5; do
+            if curl --fail --silent --show-error --max-time 5 "$API_READY_URL"; then
+              echo
+              echo "readyz ok"
+              exit 0
+            fi
+            echo "readyz attempt $i failed, retrying..."
+            sleep 5
+          done
+          echo "readyz never returned 200 — investigate Fly logs" >&2
+          exit 1

@@ -7,6 +7,7 @@
  * (useLocalProjects) replaced with props + generated hooks wiring in
  * the real route.
  */
+import { type ReactNode } from 'react';
 import { View, Text, FlatList, Pressable, RefreshControl } from 'react-native';
 import { Plus, MapPin, Clock, HardHat } from 'lucide-react-native';
 import { SafeAreaView } from '@/components/primitives/SafeAreaView';
@@ -26,6 +27,7 @@ const ROLE_LABELS: Record<'owner' | 'editor' | 'viewer', string> = {
 
 export type ProjectRow = {
   id: string;
+  slug: string;
   name: string;
   role: 'owner' | 'editor' | 'viewer';
   address: string | null;
@@ -37,8 +39,15 @@ export type ProjectsListProps = {
   isLoading: boolean;
   refreshing: boolean;
   onRefresh: () => void;
-  onPressProject: (id: string) => void;
+  onPressProject: (slug: string) => void;
   onPressNewProject: () => void;
+  /**
+   * Optional trailing-edge header slot. Real routes pass
+   * `<AppHeaderActions />` (the profile button); dev mirrors leave it
+   * unset so the gallery doesn't try to call expo-router hooks outside
+   * a stack context.
+   */
+  actions?: ReactNode;
 };
 
 export function ProjectsList({
@@ -48,11 +57,12 @@ export function ProjectsList({
   onRefresh,
   onPressProject,
   onPressNewProject,
+  actions,
 }: ProjectsListProps) {
   return (
     <SafeAreaView className="flex-1 bg-background" edges={['top']}>
       <View className="px-5 py-4">
-        <ScreenHeader title="Projects" />
+        <ScreenHeader title="Projects" actions={actions} />
       </View>
 
       {isLoading ? (
@@ -121,7 +131,7 @@ export function ProjectsList({
             <View>
               <Pressable
                 testID={`project-row-${index}`}
-                onPress={() => onPressProject(item.id)}
+                onPress={() => onPressProject(item.slug)}
               >
                 <Card variant="emphasis" className="gap-3">
                   <View className="flex-row items-center justify-between">

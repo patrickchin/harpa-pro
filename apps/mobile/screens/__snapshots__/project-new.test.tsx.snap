@@ -1,0 +1,233 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`ProjectNew > matches snapshot at default props 1`] = `
+<rn-View
+  className="flex-1 bg-background"
+  style={
+    [
+      {
+        "paddingBottom": 34,
+        "paddingLeft": 0,
+        "paddingRight": 0,
+        "paddingTop": 44,
+      },
+      undefined,
+    ]
+  }
+>
+  <rn-KeyboardAvoidingView
+    behavior="padding"
+    className="flex-1"
+  >
+    <rn-View
+      className="px-5 py-4"
+    >
+      <rn-View
+        className="gap-3"
+      >
+        <rn-View
+          className="min-h-touch flex-row items-center gap-3"
+        >
+          <rn-Pressable
+            accessibilityLabel="Back to Projects"
+            accessibilityRole="button"
+            className="flex-row items-center justify-center rounded-md border border-border bg-card active:opacity-90 min-h-touch py-3 px-4"
+            disabled={false}
+            onPress={[MockFunction spy]}
+            style={
+              [
+                {
+                  "elevation": 2,
+                  "shadowColor": "#1a1a2e",
+                  "shadowOffset": {
+                    "height": 2,
+                    "width": 0,
+                  },
+                  "shadowOpacity": 0.08,
+                  "shadowRadius": 8,
+                },
+                undefined,
+              ]
+            }
+            testID="btn-back"
+          >
+            <lucide-ArrowLeft
+              color="#2d3a5a"
+              size={16}
+            />
+          </rn-Pressable>
+          <rn-Text
+            className="min-w-0 flex-1 text-title-sm text-foreground"
+            ellipsizeMode="tail"
+            numberOfLines={1}
+            testID="screen-header-title"
+          >
+            New Project
+          </rn-Text>
+          <rn-View
+            className="shrink-0 flex-row items-center gap-2"
+          />
+        </rn-View>
+      </rn-View>
+    </rn-View>
+    <rn-View
+      className="flex-1"
+    >
+      <rn-ScrollView
+        automaticallyAdjustKeyboardInsets={true}
+        className="flex-1 px-5"
+        contentContainerStyle={
+          {
+            "gap": 20,
+            "paddingBottom": 28,
+          }
+        }
+        keyboardDismissMode="interactive"
+        keyboardShouldPersistTaps="handled"
+      >
+        <rn-View
+          className="gap-2"
+        >
+          <rn-Text
+            className="text-label text-muted-foreground"
+          >
+            Project Name
+          </rn-Text>
+          <rn-TextInput
+            className="min-h-touch rounded-md border px-4 py-3 text-base text-foreground border-border bg-card"
+            editable={true}
+            onChangeText={[Function]}
+            placeholder="e.g. Highland Tower Complex"
+            placeholderTextColor="#5f5b66"
+            style={
+              [
+                {
+                  "elevation": 2,
+                  "shadowColor": "#1a1a2e",
+                  "shadowOffset": {
+                    "height": 2,
+                    "width": 0,
+                  },
+                  "shadowOpacity": 0.08,
+                  "shadowRadius": 8,
+                },
+                {
+                  "paddingBottom": 0,
+                  "paddingTop": 0,
+                  "textAlignVertical": "center",
+                },
+                undefined,
+              ]
+            }
+            testID="input-project-name"
+            value=""
+          />
+        </rn-View>
+        <rn-View
+          className="gap-2"
+        >
+          <rn-Text
+            className="text-label text-muted-foreground"
+          >
+            Project Address
+          </rn-Text>
+          <rn-TextInput
+            className="min-h-touch rounded-md border px-4 py-3 text-base text-foreground border-border bg-card"
+            editable={true}
+            onChangeText={[Function]}
+            placeholder="e.g. 2400 Highland Ave, Austin TX"
+            placeholderTextColor="#5f5b66"
+            style={
+              [
+                {
+                  "elevation": 2,
+                  "shadowColor": "#1a1a2e",
+                  "shadowOffset": {
+                    "height": 2,
+                    "width": 0,
+                  },
+                  "shadowOpacity": 0.08,
+                  "shadowRadius": 8,
+                },
+                {
+                  "paddingBottom": 0,
+                  "paddingTop": 0,
+                  "textAlignVertical": "center",
+                },
+                undefined,
+              ]
+            }
+            testID="input-project-address"
+            value=""
+          />
+        </rn-View>
+        <rn-View
+          className="gap-2"
+        >
+          <rn-Text
+            className="text-label text-muted-foreground"
+          >
+            Client Name
+          </rn-Text>
+          <rn-TextInput
+            className="min-h-touch rounded-md border px-4 py-3 text-base text-foreground border-border bg-card"
+            editable={true}
+            onChangeText={[Function]}
+            placeholder="e.g. Acme Construction Co."
+            placeholderTextColor="#5f5b66"
+            style={
+              [
+                {
+                  "elevation": 2,
+                  "shadowColor": "#1a1a2e",
+                  "shadowOffset": {
+                    "height": 2,
+                    "width": 0,
+                  },
+                  "shadowOpacity": 0.08,
+                  "shadowRadius": 8,
+                },
+                {
+                  "paddingBottom": 0,
+                  "paddingTop": 0,
+                  "textAlignVertical": "center",
+                },
+                undefined,
+              ]
+            }
+            testID="input-client-name"
+            value=""
+          />
+        </rn-View>
+        <rn-Pressable
+          className="flex-row items-center justify-center rounded-md border border-accent bg-accent active:opacity-85 min-h-touch-lg px-6 py-4 w-full"
+          disabled={false}
+          onPress={[Function]}
+          style={
+            [
+              {
+                "elevation": 4,
+                "shadowColor": "#1a1a2e",
+                "shadowOffset": {
+                  "height": 4,
+                  "width": 0,
+                },
+                "shadowOpacity": 0.12,
+                "shadowRadius": 14,
+              },
+              undefined,
+            ]
+          }
+          testID="btn-submit-project"
+        >
+          <rn-Text
+            className="text-accent-foreground font-semibold text-lg"
+          >
+            Create Project
+          </rn-Text>
+        </rn-Pressable>
+      </rn-ScrollView>
+    </rn-View>
+  </rn-KeyboardAvoidingView>
+</rn-View>
+`;

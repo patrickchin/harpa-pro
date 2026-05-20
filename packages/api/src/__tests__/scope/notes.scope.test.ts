@@ -11,6 +11,7 @@ import { withScopedConnection } from '../../db/scope.js';
 import { signTestToken } from '../../middleware/auth.js';
 import { resetPool, getPool } from '../../db/client.js';
 import * as schema from '../../db/schema.js';
+import { makeUserId, makeSessionId, makeProjectId, makeReportId, makeNoteId } from '../factories/index.js';
 
 let fx: PgFixture;
 let alice: string;
@@ -28,61 +29,67 @@ beforeAll(async () => {
   process.env.DATABASE_URL = fx.url;
   await resetPool();
   getPool(fx.url);
+
+  alice = makeUserId();
+  bob = makeUserId();
+  carol = makeUserId();
+  aliceSid = makeSessionId();
+  bobSid = makeSessionId();
+  carolSid = makeSessionId();
+
+  const sharedProj = makeProjectId();
+  sharedReport = makeReportId();
+  const bobProj = makeProjectId();
+  const bobReport = makeReportId();
+  aliceNote = makeNoteId();
+  bobOnlyNote = makeNoteId();
+
   const admin = new pg.Client({ connectionString: fx.url });
   await admin.connect();
-  const u = await admin.query<{ id: string }>(
-    `INSERT INTO auth.users(phone) VALUES ($1), ($2), ($3) RETURNING id`,
-    ['+15550900001', '+15550900002', '+15550900003'],
+  await admin.query(
+    `INSERT INTO auth.users(id, phone) VALUES ($1, $2), ($3, $4), ($5, $6)`,
+    [alice, '+15550900001', bob, '+15550900002', carol, '+15550900003'],
   );
-  alice = u.rows[0]!.id;
-  bob = u.rows[1]!.id;
-  carol = u.rows[2]!.id;
-  const s = await admin.query<{ id: string }>(
-    `INSERT INTO auth.sessions(user_id, expires_at) VALUES ($1, now() + interval '7 days'), ($2, now() + interval '7 days'), ($3, now() + interval '7 days') RETURNING id`,
-    [alice, bob, carol],
+  await admin.query(
+    `INSERT INTO auth.sessions(id, user_id, expires_at) VALUES ($1, $2, now() + interval '7 days'), ($3, $4, now() + interval '7 days'), ($5, $6, now() + interval '7 days')`,
+    [aliceSid, alice, bobSid, bob, carolSid, carol],
   );
-  aliceSid = s.rows[0]!.id;
-  bobSid = s.rows[1]!.id;
-  carolSid = s.rows[2]!.id;
   // Shared project: alice owner, bob editor. Carol is outsider.
-  const proj = await admin.query<{ id: string }>(
-    `INSERT INTO app.projects(name, owner_id) VALUES ('Shared', $1) RETURNING id`,
-    [alice],
+  await admin.query(
+    `INSERT INTO app.projects(id, name, owner_id) VALUES ($1, 'Shared', $2)`,
+    [sharedProj, alice],
   );
   await admin.query(
     `INSERT INTO app.project_members(project_id, user_id, role) VALUES ($1, $2, 'owner'), ($1, $3, 'editor')`,
-    [proj.rows[0]!.id, alice, bob],
+    [sharedProj, alice, bob],
   );
-  const r = await admin.query<{ id: string }>(
-    `INSERT INTO app.reports(project_id, author_id) VALUES ($1, $2) RETURNING id`,
-    [proj.rows[0]!.id, alice],
+  await admin.query(
+    `INSERT INTO app.reports(id, project_id, author_id, number) VALUES ($1, $2, $3, 1)`,
+    [sharedReport, sharedProj, alice],
   );
-  sharedReport = r.rows[0]!.id;
   // Bob-only project + report so we have a cross-tenant note for the
   // negative-control check.
-  const bobProj = await admin.query<{ id: string }>(
-    `INSERT INTO app.projects(name, owner_id) VALUES ('BobOnly', $1) RETURNING id`,
-    [bob],
+  await admin.query(
+    `INSERT INTO app.projects(id, name, owner_id) VALUES ($1, 'BobOnly', $2)`,
+    [bobProj, bob],
   );
   await admin.query(
     `INSERT INTO app.project_members(project_id, user_id, role) VALUES ($1, $2, 'owner')`,
-    [bobProj.rows[0]!.id, bob],
+    [bobProj, bob],
   );
-  const bobReport = await admin.query<{ id: string }>(
-    `INSERT INTO app.reports(project_id, author_id) VALUES ($1, $2) RETURNING id`,
-    [bobProj.rows[0]!.id, bob],
+  await admin.query(
+    `INSERT INTO app.reports(id, project_id, author_id, number) VALUES ($1, $2, $3, 1)`,
+    [bobReport, bobProj, bob],
   );
   // Seed notes.
-  const an = await admin.query<{ id: string }>(
-    `INSERT INTO app.notes(report_id, author_id, kind, body) VALUES ($1, $2, 'text', 'alice-note') RETURNING id`,
-    [sharedReport, alice],
+  await admin.query(
+    `INSERT INTO app.notes(id, report_id, author_id, kind, body) VALUES ($1, $2, $3, 'text', 'alice-note')`,
+    [aliceNote, sharedReport, alice],
   );
-  aliceNote = an.rows[0]!.id;
-  const bn = await admin.query<{ id: string }>(
-    `INSERT INTO app.notes(report_id, author_id, kind, body) VALUES ($1, $2, 'text', 'bob-only') RETURNING id`,
-    [bobReport.rows[0]!.id, bob],
+  await admin.query(
+    `INSERT INTO app.notes(id, report_id, author_id, kind, body) VALUES ($1, $2, $3, 'text', 'bob-only')`,
+    [bobOnlyNote, bobReport, bob],
   );
-  bobOnlyNote = bn.rows[0]!.id;
   await admin.end();
 }, 120_000);
 

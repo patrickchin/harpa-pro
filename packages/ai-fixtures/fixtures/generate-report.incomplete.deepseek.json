@@ -1,0 +1,21 @@
+{
+  "vendor": "deepseek",
+  "model": "deepseek-reasoner",
+  "fixtureName": "generate-report.incomplete.deepseek",
+  "recordedAt": "2026-05-12T00:00:00.000Z",
+  "requestHash": "sha256:d7daed2d1e7be3ed5f3852e35958282cda70915dcf72a44938ac64695ac5b88b",
+  "request": {
+    "kind": "chat",
+    "vendor": "deepseek",
+    "model": "deepseek-reasoner",
+    "systemPrompt": "Generate a structured construction-site daily report from the provided notes.",
+    "userPrompt": "<sparse notes>"
+  },
+  "response": {
+    "text": "{\n  \"visitDate\": null,\n  \"weather\": null,\n  \"workers\": [],\n  \"materials\": [],\n  \"issues\": [],\n  \"nextSteps\": [],\n  \"summarySections\": [\n    {\n      \"title\": \"Notes captured\",\n      \"body\": \"Insufficient notes to produce a structured report.\"\n    }\n  ]\n}",
+    "usage": {
+      "input": 80,
+      "output": 56
+    }
+  }
+}

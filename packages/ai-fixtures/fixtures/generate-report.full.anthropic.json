@@ -1,0 +1,21 @@
+{
+  "vendor": "anthropic",
+  "model": "claude-3-5-sonnet",
+  "fixtureName": "generate-report.full.anthropic",
+  "recordedAt": "2026-05-12T00:00:00.000Z",
+  "requestHash": "sha256:35d12ebb66ddc3c0dddc5d68300cea9a7824e8aeb9a74df529ab69050b7335b4",
+  "request": {
+    "kind": "chat",
+    "vendor": "anthropic",
+    "model": "claude-3-5-sonnet",
+    "systemPrompt": "Generate a structured construction-site daily report from the provided notes.",
+    "userPrompt": "<notes payload>"
+  },
+  "response": {
+    "text": "{\n  \"visitDate\": \"2026-05-12T00:00:00.000Z\",\n  \"weather\": {\n    \"condition\": \"Cloudy\",\n    \"temperatureC\": 14,\n    \"windKph\": 12,\n    \"impact\": \"Minor \\u2014 light rain in afternoon\"\n  },\n  \"workers\": [\n    {\n      \"role\": \"Steel fixer\",\n      \"count\": 3,\n      \"hours\": 8,\n      \"notes\": \"East footing rebar\"\n    },\n    {\n      \"role\": \"Carpenter\",\n      \"count\": 2,\n      \"hours\": 7,\n      \"notes\": \"Formwork prep\"\n    }\n  ],\n  \"materials\": [\n    {\n      \"name\": \"Concrete C30\",\n      \"quantity\": 12,\n      \"unit\": \"m\\u00b3\",\n      \"status\": \"Delivered\",\n      \"condition\": \"OK\",\n      \"notes\": \"Delivery 30 min late\"\n    }\n  ],\n  \"issues\": [\n    {\n      \"title\": \"Concrete delivery delay\",\n      \"severity\": \"medium\",\n      \"description\": \"Delivery 30 min late, pour pushed back\",\n      \"action\": \"Confirm next delivery window with supplier\"\n    }\n  ],\n  \"nextSteps\": [\n    \"Close east footing\",\n    \"Begin column formwork\"\n  ],\n  \"summarySections\": [\n    {\n      \"title\": \"Site overview\",\n      \"body\": \"[anthropic] Steady progress on east footing despite minor delivery delay.\"\n    }\n  ]\n}",
+    "usage": {
+      "input": 280,
+      "output": 320
+    }
+  }
+}

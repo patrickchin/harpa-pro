@@ -18,7 +18,10 @@ declare const __DEV__: boolean;
 
 function isDevGalleryEnabled(): boolean {
   const isDevBuild = typeof __DEV__ !== 'undefined' && __DEV__;
-  return isDevBuild || env.EXPO_PUBLIC_USE_FIXTURES;
+  // Preview / TestFlight builds also need the dev tools (esp. the API
+  // base URL override) so QA can flip backends without a rebuild.
+  const isNonProdVariant = env.EXPO_PUBLIC_APP_VARIANT !== 'production';
+  return isDevBuild || env.EXPO_PUBLIC_USE_FIXTURES || isNonProdVariant;
 }
 
 export default function DevLayout() {

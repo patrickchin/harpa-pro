@@ -1,5 +1,5 @@
 /**
- * Integration tests for /projects/:id/reports + /reports/:reportId.
+ * Integration tests for /projects/:projectSlug/reports + .../reports/:number.
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import pg from 'pg';
@@ -7,6 +7,7 @@ import { createApp } from '../app.js';
 import { startPg, type PgFixture } from './setup-pg.js';
 import { resetPool, getPool } from '../db/client.js';
 import { signTestToken } from '../middleware/auth.js';
+import { makeUserId, makeSessionId, makeProjectId } from './factories/index.js';
 
 let fx: PgFixture;
 let alice: string;
@@ -15,6 +16,8 @@ let aliceSid: string;
 let bobSid: string;
 let aliceProj: string;
 let bobProj: string;
+let aliceProjSlug: string;
+let bobProjSlug: string;
 
 beforeAll(async () => {
   fx = await startPg();
@@ -24,30 +27,33 @@ beforeAll(async () => {
   await resetPool();
   getPool(fx.url);
 
+  alice = makeUserId();
+  bob = makeUserId();
+  aliceSid = makeSessionId();
+  bobSid = makeSessionId();
+  aliceProj = makeProjectId();
+  bobProj = makeProjectId();
+  aliceProjSlug = aliceProj;
+  bobProjSlug = bobProj;
+
   const admin = new pg.Client({ connectionString: fx.url });
   await admin.connect();
-  const u = await admin.query<{ id: string }>(
-    `INSERT INTO auth.users(phone) VALUES ($1), ($2) RETURNING id`,
-    ['+15550600001', '+15550600002'],
+  await admin.query(
+    `INSERT INTO auth.users(id, phone) VALUES ($1, $2), ($3, $4)`,
+    [alice, '+15550600001', bob, '+15550600002'],
   );
-  alice = u.rows[0]!.id;
-  bob = u.rows[1]!.id;
-  const s = await admin.query<{ id: string }>(
-    `INSERT INTO auth.sessions(user_id, expires_at) VALUES ($1, now() + interval '7 days'), ($2, now() + interval '7 days') RETURNING id`,
-    [alice, bob],
+  await admin.query(
+    `INSERT INTO auth.sessions(id, user_id, expires_at) VALUES ($1, $2, now() + interval '7 days'), ($3, $4, now() + interval '7 days')`,
+    [aliceSid, alice, bobSid, bob],
   );
-  aliceSid = s.rows[0]!.id;
-  bobSid = s.rows[1]!.id;
-  const ap = await admin.query<{ id: string }>(
-    `INSERT INTO app.projects(name, owner_id) VALUES ('A', $1) RETURNING id`,
-    [alice],
+  await admin.query(
+    `INSERT INTO app.projects(id, name, owner_id) VALUES ($1, 'A', $2)`,
+    [aliceProj, alice],
   );
-  aliceProj = ap.rows[0]!.id;
-  const bp = await admin.query<{ id: string }>(
-    `INSERT INTO app.projects(name, owner_id) VALUES ('B', $1) RETURNING id`,
-    [bob],
+  await admin.query(
+    `INSERT INTO app.projects(id, name, owner_id) VALUES ($1, 'B', $2)`,
+    [bobProj, bob],
   );
-  bobProj = bp.rows[0]!.id;
   await admin.query(
     `INSERT INTO app.project_members(project_id, user_id, role) VALUES ($1, $2, 'owner'), ($3, $4, 'owner')`,
     [aliceProj, alice, bobProj, bob],
@@ -63,26 +69,57 @@ const headers = (tok: string) => ({ authorization: `Bearer ${tok}`, 'content-typ
 
 describe('reports CRUD', () => {
   let aliceReport: string;
+  let aliceReportNumber: number;
 
   it('POST creates a draft report under alice project', async () => {
     const app = createApp();
     const tok = await signTestToken(alice, aliceSid);
-    const res = await app.request(`/projects/${aliceProj}/reports`, {
+    const res = await app.request(`/projects/${aliceProjSlug}/reports`, {
       method: 'POST',
       headers: headers(tok),
       body: JSON.stringify({ visitDate: '2026-05-12T08:00:00.000Z' }),
     });
     expect(res.status).toBe(201);
-    const body = (await res.json()) as { id: string; status: string; projectId: string };
+    const body = (await res.json()) as {
+      id: string;
+      number: number;
+      status: string;
+      projectId: string;
+    };
     expect(body.status).toBe('draft');
     expect(body.projectId).toBe(aliceProj);
+    // P3.0 Commit 2: response carries `rpt_` slug + per-project number.
+    expect(body.id).toMatch(/^rpt_[0-9a-hjkmnp-tv-z]{8}$/);
+    expect(body.number).toBeGreaterThanOrEqual(1);
     aliceReport = body.id;
+    aliceReportNumber = body.number;
+  });
+
+  it('per-project numbering: a second report in the same project gets number = previous + 1', async () => {
+    const app = createApp();
+    const tok = await signTestToken(alice, aliceSid);
+    const first = await app.request(`/projects/${aliceProjSlug}/reports`, {
+      method: 'POST',
+      headers: headers(tok),
+      body: JSON.stringify({}),
+    });
+    const firstBody = (await first.json()) as { number: number };
+    const second = await app.request(`/projects/${aliceProjSlug}/reports`, {
+      method: 'POST',
+      headers: headers(tok),
+      body: JSON.stringify({}),
+    });
+    expect(second.status).toBe(201);
+    const secondBody = (await second.json()) as { number: number; id: string };
+    expect(secondBody.number).toBe(firstBody.number + 1);
+    // Slugs are globally unique even within a single project.
+    expect(secondBody.id).toMatch(/^rpt_[0-9a-hjkmnp-tv-z]{8}$/);
   });
 
   it('POST 404 when caller is not member of the project', async () => {
     const app = createApp();
     const tok = await signTestToken(bob, bobSid);
-    const res = await app.request(`/projects/${aliceProj}/reports`, {
+    const res = await app.request(`/projects/${aliceProjSlug}/reports`, {
       method: 'POST',
       headers: headers(tok),
       body: JSON.stringify({}),
@@ -92,7 +129,7 @@ describe('reports CRUD', () => {
 
   it('POST 401 without auth', async () => {
     const app = createApp();
-    const res = await app.request(`/projects/${aliceProj}/reports`, {
+    const res = await app.request(`/projects/${aliceProjSlug}/reports`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({}),
@@ -103,7 +140,7 @@ describe('reports CRUD', () => {
   it('POST 400 on invalid visitDate', async () => {
     const app = createApp();
     const tok = await signTestToken(alice, aliceSid);
-    const res = await app.request(`/projects/${aliceProj}/reports`, {
+    const res = await app.request(`/projects/${aliceProjSlug}/reports`, {
       method: 'POST',
       headers: headers(tok),
       body: JSON.stringify({ visitDate: 'not-a-date' }),
@@ -114,7 +151,7 @@ describe('reports CRUD', () => {
   it('GET list under project', async () => {
     const app = createApp();
     const tok = await signTestToken(alice, aliceSid);
-    const res = await app.request(`/projects/${aliceProj}/reports?limit=10`, {
+    const res = await app.request(`/projects/${aliceProjSlug}/reports?limit=10`, {
       headers: { authorization: `Bearer ${tok}` },
     });
     expect(res.status).toBe(200);
@@ -125,7 +162,7 @@ describe('reports CRUD', () => {
   it('GET list 404 when not member', async () => {
     const app = createApp();
     const tok = await signTestToken(bob, bobSid);
-    const res = await app.request(`/projects/${aliceProj}/reports`, {
+    const res = await app.request(`/projects/${aliceProjSlug}/reports`, {
       headers: { authorization: `Bearer ${tok}` },
     });
     expect(res.status).toBe(404);
@@ -134,7 +171,7 @@ describe('reports CRUD', () => {
   it('GET /reports/:id returns the report', async () => {
     const app = createApp();
     const tok = await signTestToken(alice, aliceSid);
-    const res = await app.request(`/reports/${aliceReport}`, { headers: { authorization: `Bearer ${tok}` } });
+    const res = await app.request(`/projects/${aliceProjSlug}/reports/${aliceReportNumber}`, { headers: { authorization: `Bearer ${tok}` } });
     expect(res.status).toBe(200);
     const body = (await res.json()) as { id: string };
     expect(body.id).toBe(aliceReport);
@@ -143,14 +180,14 @@ describe('reports CRUD', () => {
   it('GET /reports/:id 404 for non-member', async () => {
     const app = createApp();
     const tok = await signTestToken(bob, bobSid);
-    const res = await app.request(`/reports/${aliceReport}`, { headers: { authorization: `Bearer ${tok}` } });
+    const res = await app.request(`/projects/${aliceProjSlug}/reports/${aliceReportNumber}`, { headers: { authorization: `Bearer ${tok}` } });
     expect(res.status).toBe(404);
   });
 
   it('PATCH updates visitDate', async () => {
     const app = createApp();
     const tok = await signTestToken(alice, aliceSid);
-    const res = await app.request(`/reports/${aliceReport}`, {
+    const res = await app.request(`/projects/${aliceProjSlug}/reports/${aliceReportNumber}`, {
       method: 'PATCH',
       headers: headers(tok),
       body: JSON.stringify({ visitDate: '2026-06-01T10:00:00.000Z' }),
@@ -163,7 +200,7 @@ describe('reports CRUD', () => {
   it('PATCH can clear visitDate (null)', async () => {
     const app = createApp();
     const tok = await signTestToken(alice, aliceSid);
-    const res = await app.request(`/reports/${aliceReport}`, {
+    const res = await app.request(`/projects/${aliceProjSlug}/reports/${aliceReportNumber}`, {
       method: 'PATCH',
       headers: headers(tok),
       body: JSON.stringify({ visitDate: null }),
@@ -176,12 +213,12 @@ describe('reports CRUD', () => {
   it('DELETE returns 204 then GET returns 404', async () => {
     const app = createApp();
     const tok = await signTestToken(alice, aliceSid);
-    const del = await app.request(`/reports/${aliceReport}`, {
+    const del = await app.request(`/projects/${aliceProjSlug}/reports/${aliceReportNumber}`, {
       method: 'DELETE',
       headers: { authorization: `Bearer ${tok}` },
     });
     expect(del.status).toBe(204);
-    const get = await app.request(`/reports/${aliceReport}`, { headers: { authorization: `Bearer ${tok}` } });
+    const get = await app.request(`/projects/${aliceProjSlug}/reports/${aliceReportNumber}`, { headers: { authorization: `Bearer ${tok}` } });
     expect(get.status).toBe(404);
   });
 });
@@ -200,23 +237,26 @@ describe('reports CRUD', () => {
 // ---------------------------------------------------------------------------
 describe('reports AI/PDF', () => {
   let reportId: string;
+  let reportNumber: number;
 
   beforeAll(async () => {
     const app = createApp();
     const tok = await signTestToken(alice, aliceSid);
-    const res = await app.request(`/projects/${aliceProj}/reports`, {
+    const res = await app.request(`/projects/${aliceProjSlug}/reports`, {
       method: 'POST',
       headers: headers(tok),
       body: JSON.stringify({ visitDate: '2026-05-12T08:00:00.000Z' }),
     });
     expect(res.status).toBe(201);
-    reportId = ((await res.json()) as { id: string }).id;
+    const created = (await res.json()) as { id: string; number: number };
+    reportId = created.id;
+    reportNumber = created.number;
   });
 
   it('POST /reports/:id/generate returns the recorded full body', async () => {
     const app = createApp();
     const tok = await signTestToken(alice, aliceSid);
-    const res = await app.request(`/reports/${reportId}/generate`, {
+    const res = await app.request(`/projects/${aliceProjSlug}/reports/${reportNumber}/generate`, {
       method: 'POST',
       headers: headers(tok),
       body: JSON.stringify({}),
@@ -235,7 +275,7 @@ describe('reports AI/PDF', () => {
   it('POST /reports/:id/regenerate replaces body with the named fixture', async () => {
     const app = createApp();
     const tok = await signTestToken(alice, aliceSid);
-    const res = await app.request(`/reports/${reportId}/regenerate`, {
+    const res = await app.request(`/projects/${aliceProjSlug}/reports/${reportNumber}/regenerate`, {
       method: 'POST',
       headers: headers(tok),
       body: JSON.stringify({ fixtureName: 'generate-report.incomplete' }),
@@ -251,7 +291,7 @@ describe('reports AI/PDF', () => {
   it('POST /reports/:id/pdf returns a signed URL pointing at the rendered key', async () => {
     const app = createApp();
     const tok = await signTestToken(alice, aliceSid);
-    const res = await app.request(`/reports/${reportId}/pdf`, {
+    const res = await app.request(`/projects/${aliceProjSlug}/reports/${reportNumber}/pdf`, {
       method: 'POST',
       headers: headers(tok),
     });
@@ -267,7 +307,7 @@ describe('reports AI/PDF', () => {
   it('POST /reports/:id/finalize freezes the report', async () => {
     const app = createApp();
     const tok = await signTestToken(alice, aliceSid);
-    const res = await app.request(`/reports/${reportId}/finalize`, {
+    const res = await app.request(`/projects/${aliceProjSlug}/reports/${reportNumber}/finalize`, {
       method: 'POST',
       headers: headers(tok),
     });
@@ -280,7 +320,7 @@ describe('reports AI/PDF', () => {
   it('POST /reports/:id/finalize is idempotent (200 on already-finalized)', async () => {
     const app = createApp();
     const tok = await signTestToken(alice, aliceSid);
-    const res = await app.request(`/reports/${reportId}/finalize`, {
+    const res = await app.request(`/projects/${aliceProjSlug}/reports/${reportNumber}/finalize`, {
       method: 'POST',
       headers: headers(tok),
     });
@@ -290,7 +330,7 @@ describe('reports AI/PDF', () => {
   it('POST /reports/:id/regenerate 409 once finalized', async () => {
     const app = createApp();
     const tok = await signTestToken(alice, aliceSid);
-    const res = await app.request(`/reports/${reportId}/regenerate`, {
+    const res = await app.request(`/projects/${aliceProjSlug}/reports/${reportNumber}/regenerate`, {
       method: 'POST',
       headers: headers(tok),
       body: JSON.stringify({}),
@@ -302,13 +342,13 @@ describe('reports AI/PDF', () => {
     const app = createApp();
     const tok = await signTestToken(alice, aliceSid);
     // Fresh draft, never generated.
-    const created = await app.request(`/projects/${aliceProj}/reports`, {
+    const created = await app.request(`/projects/${aliceProjSlug}/reports`, {
       method: 'POST',
       headers: headers(tok),
       body: JSON.stringify({}),
     });
-    const empty = ((await created.json()) as { id: string }).id;
-    const res = await app.request(`/reports/${empty}/finalize`, {
+    const empty = (await created.json()) as { id: string; number: number };
+    const res = await app.request(`/projects/${aliceProjSlug}/reports/${empty.number}/finalize`, {
       method: 'POST',
       headers: headers(tok),
     });
@@ -318,13 +358,13 @@ describe('reports AI/PDF', () => {
   it('POST /reports/:id/pdf 409 when report has no body', async () => {
     const app = createApp();
     const tok = await signTestToken(alice, aliceSid);
-    const created = await app.request(`/projects/${aliceProj}/reports`, {
+    const created = await app.request(`/projects/${aliceProjSlug}/reports`, {
       method: 'POST',
       headers: headers(tok),
       body: JSON.stringify({}),
     });
-    const empty = ((await created.json()) as { id: string }).id;
-    const res = await app.request(`/reports/${empty}/pdf`, {
+    const empty = (await created.json()) as { id: string; number: number };
+    const res = await app.request(`/projects/${aliceProjSlug}/reports/${empty.number}/pdf`, {
       method: 'POST',
       headers: headers(tok),
     });
@@ -334,7 +374,7 @@ describe('reports AI/PDF', () => {
   it('all four endpoints 401 without auth', async () => {
     const app = createApp();
     for (const path of ['generate', 'regenerate', 'finalize', 'pdf']) {
-      const res = await app.request(`/reports/${reportId}/${path}`, {
+      const res = await app.request(`/projects/${aliceProjSlug}/reports/${reportNumber}/${path}`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: '{}',
@@ -346,9 +386,9 @@ describe('reports AI/PDF', () => {
   it('all four endpoints 404 on unknown reportId', async () => {
     const app = createApp();
     const tok = await signTestToken(alice, aliceSid);
-    const missing = '00000000-0000-0000-0000-000000000000';
+    // valid-shaped slug that does not exist in DB
     for (const path of ['generate', 'regenerate', 'finalize', 'pdf']) {
-      const res = await app.request(`/reports/${missing}/${path}`, {
+      const res = await app.request(`/projects/${aliceProjSlug}/reports/9999/${path}`, {
         method: 'POST',
         headers: headers(tok),
         body: '{}',
@@ -360,7 +400,7 @@ describe('reports AI/PDF', () => {
   it('generate 400 rejects path-traversal-shaped fixtureName at the contract boundary', async () => {
     const app = createApp();
     const tok = await signTestToken(alice, aliceSid);
-    const res = await app.request(`/reports/${reportId}/generate`, {
+    const res = await app.request(`/projects/${aliceProjSlug}/reports/${reportNumber}/generate`, {
       method: 'POST',
       headers: headers(tok),
       body: JSON.stringify({ fixtureName: '../../../etc/passwd' }),
@@ -372,13 +412,13 @@ describe('reports AI/PDF', () => {
     const app = createApp();
     const tok = await signTestToken(alice, aliceSid);
     // Need a fresh draft (current `reportId` is finalized; would 409).
-    const created = await app.request(`/projects/${aliceProj}/reports`, {
+    const created = await app.request(`/projects/${aliceProjSlug}/reports`, {
       method: 'POST',
       headers: headers(tok),
       body: JSON.stringify({}),
     });
-    const fresh = ((await created.json()) as { id: string }).id;
-    const res = await app.request(`/reports/${fresh}/generate`, {
+    const fresh = (await created.json()) as { id: string; number: number };
+    const res = await app.request(`/projects/${aliceProjSlug}/reports/${fresh.number}/generate`, {
       method: 'POST',
       headers: headers(tok),
       body: JSON.stringify({ fixtureName: 'generate-report.does-not-exist' }),

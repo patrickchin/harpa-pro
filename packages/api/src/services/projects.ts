@@ -1,12 +1,13 @@
 /**
  * Projects + members service. All DB calls take a scoped drizzle handle
  * (`db`) so the per-request scope wrapper is what enforces RLS;
- * SECURITY DEFINER helpers (see migrations/202605120003_projects_helpers.sql)
- * own the cross-table reads that would otherwise be blocked.
+ * SECURITY DEFINER helpers (see migrations/0001_init.sql) own the
+ * cross-table reads that would otherwise be blocked.
  */
 import { sql } from 'drizzle-orm';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import * as schema from '../db/schema.js';
+import { newId } from '../lib/ids.js';
 
 type Db = NodePgDatabase<typeof schema>;
 
@@ -42,7 +43,7 @@ export interface ListOutput {
   nextCursor: string | null;
 }
 
-/** Cursor is base64(`<iso created_at>|<uuid>`). Stable + opaque. */
+/** Cursor is base64(`<iso created_at>|<id>`). Stable + opaque. */
 function encodeCursor(createdAt: string, id: string): string {
   return Buffer.from(`${createdAt}|${id}`, 'utf8').toString('base64url');
 }
@@ -73,8 +74,8 @@ export async function listProjects(db: Db, userId: string, input: ListInput): Pr
                  p.created_at, p.updated_at
           FROM app.projects p
           JOIN app.project_members pm
-            ON pm.project_id = p.id AND pm.user_id = ${userId}::uuid
-          WHERE (p.created_at, p.id) < (${createdAt}::timestamptz, ${id}::uuid)
+            ON pm.project_id = p.id AND pm.user_id = ${userId}
+          WHERE (p.created_at, p.id) < (${createdAt}::timestamptz, ${id})
           ORDER BY p.created_at DESC, p.id DESC
           LIMIT ${overFetch}
         `);
@@ -93,7 +94,7 @@ export async function listProjects(db: Db, userId: string, input: ListInput): Pr
                p.created_at, p.updated_at
         FROM app.projects p
         JOIN app.project_members pm
-          ON pm.project_id = p.id AND pm.user_id = ${userId}::uuid
+          ON pm.project_id = p.id AND pm.user_id = ${userId}
         ORDER BY p.created_at DESC, p.id DESC
         LIMIT ${overFetch}
       `);
@@ -117,18 +118,43 @@ export async function listProjects(db: Db, userId: string, input: ListInput): Pr
   };
 }
 
+/**
+ * Create a project with the caller as owner. The app mints the public
+ * ID (`prj_xxxxxxxx`) via `newId('prj')` and retries on the (vanishingly
+ * unlikely) PK unique-violation. The SECURITY DEFINER helper writes the
+ * row + bootstraps the owner membership in a single transaction.
+ */
 export async function createProject(
   db: Db,
   input: { name: string; clientName?: string; address?: string },
 ): Promise<string> {
-  const r = await db.execute<{ id: string }>(sql`
-    SELECT app.create_project_with_owner(
-      ${input.name}, ${input.clientName ?? null}, ${input.address ?? null}
-    ) AS id
-  `);
-  const row = r.rows[0];
-  if (!row) throw new Error('create_project_with_owner returned no row');
-  return row.id;
+  const maxAttempts = 3;
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    const id = newId('prj');
+    try {
+      const r = await db.execute<{ id: string }>(sql`
+        SELECT app.create_project_with_owner(
+          ${id}, ${input.name}, ${input.clientName ?? null}, ${input.address ?? null}
+        ) AS id
+      `);
+      const row = r.rows[0];
+      if (!row) throw new Error('create_project_with_owner returned no row');
+      return row.id;
+    } catch (err) {
+      if (isPkCollision(err) && attempt < maxAttempts - 1) {
+        continue;
+      }
+      throw err;
+    }
+  }
+  throw new Error('id collision retry exhausted (projects)');
+}
+
+function isPkCollision(err: unknown): boolean {
+  const e = err as { code?: string; cause?: unknown };
+  if (e.code === '23505') return true;
+  if (e.cause && isPkCollision(e.cause)) return true;
+  return false;
 }
 
 export async function getProject(
@@ -136,6 +162,21 @@ export async function getProject(
   userId: string,
   projectId: string,
   withStats = true,
+): Promise<ProjectRow | null> {
+  return getProjectByPredicate(db, userId, sql`p.id = ${projectId}`, withStats);
+}
+
+/**
+ * Alias kept for source compatibility while route call sites migrate to
+ * `getProject(... id ...)`. Identical semantics — the `id` IS the slug.
+ */
+export const getProjectBySlug = getProject;
+
+async function getProjectByPredicate(
+  db: Db,
+  userId: string,
+  predicate: ReturnType<typeof sql>,
+  withStats: boolean,
 ): Promise<ProjectRow | null> {
   const r = await db.execute<{
     id: string;
@@ -151,8 +192,8 @@ export async function getProject(
            p.created_at, p.updated_at
     FROM app.projects p
     JOIN app.project_members pm
-      ON pm.project_id = p.id AND pm.user_id = ${userId}::uuid
-    WHERE p.id = ${projectId}::uuid
+      ON pm.project_id = p.id AND pm.user_id = ${userId}
+    WHERE ${predicate}
     LIMIT 1
   `);
   const row = r.rows[0];
@@ -174,7 +215,7 @@ export async function getProject(
       total_reports: string;
       drafts: string;
       last_report_at: Date | null;
-    }>(sql`SELECT * FROM app.project_stats(${projectId}::uuid)`);
+    }>(sql`SELECT * FROM app.project_stats(${row.id})`);
     const s = stats.rows[0];
     if (s) {
       out.stats = {
@@ -185,6 +226,22 @@ export async function getProject(
     }
   }
   return out;
+}
+
+/**
+ * Resolve a `prj_xxxxxxxx` ID — used by `GET /p/:project` for the
+ * short-URL flow. Returns null when the id doesn't exist or RLS hides
+ * it (indistinguishable, Pitfall 6).
+ */
+export async function resolveProjectSlug(
+  db: Db,
+  projectIdValue: string,
+): Promise<{ projectId: string } | null> {
+  const r = await db.execute<{ id: string }>(sql`
+    SELECT id FROM app.projects WHERE id = ${projectIdValue} LIMIT 1
+  `);
+  const row = r.rows[0];
+  return row ? { projectId: row.id } : null;
 }
 
 export async function updateProject(
@@ -198,7 +255,7 @@ export async function updateProject(
       client_name = COALESCE(${patch.clientName ?? null}, client_name),
       address = COALESCE(${patch.address ?? null}, address),
       updated_at = now()
-    WHERE id = ${projectId}::uuid
+    WHERE id = ${projectId}
     RETURNING id
   `);
   return r.rows.length > 0;
@@ -206,7 +263,7 @@ export async function updateProject(
 
 export async function deleteProject(db: Db, projectId: string): Promise<boolean> {
   const r = await db.execute<{ id: string }>(sql`
-    DELETE FROM app.projects WHERE id = ${projectId}::uuid RETURNING id
+    DELETE FROM app.projects WHERE id = ${projectId} RETURNING id
   `);
   return r.rows.length > 0;
 }
@@ -218,7 +275,7 @@ export async function listMembers(db: Db, projectId: string): Promise<ProjectMem
     phone: string;
     role: ProjectRole;
     joined_at: Date;
-  }>(sql`SELECT * FROM app.list_project_members(${projectId}::uuid)`);
+  }>(sql`SELECT * FROM app.list_project_members(${projectId})`);
   return r.rows.map((row) => ({
     userId: row.user_id,
     displayName: row.display_name,
@@ -240,7 +297,7 @@ export async function addMemberByPhone(
     phone: string;
     role: ProjectRole;
     joined_at: Date;
-  }>(sql`SELECT * FROM app.add_project_member_by_phone(${projectId}::uuid, ${phone}, ${role}::app.project_role)`);
+  }>(sql`SELECT * FROM app.add_project_member_by_phone(${projectId}, ${phone}, ${role}::app.project_role)`);
   const row = r.rows[0];
   if (!row) throw new Error('add_project_member_by_phone returned no row');
   return {
@@ -254,15 +311,14 @@ export async function addMemberByPhone(
 
 export async function removeMember(db: Db, projectId: string, userId: string): Promise<boolean> {
   const r = await db.execute<{ remove_project_member: boolean }>(sql`
-    SELECT app.remove_project_member(${projectId}::uuid, ${userId}::uuid) AS remove_project_member
+    SELECT app.remove_project_member(${projectId}, ${userId}) AS remove_project_member
   `);
   return Boolean(r.rows[0]?.remove_project_member);
 }
 
 /**
  * Map a Postgres SQLSTATE thrown from a SECURITY DEFINER helper into
- * an HTTP-friendly category. Lets routes do
- *   try { ... } catch (e) { if (mapPgError(e) === 'forbidden') ... }
+ * an HTTP-friendly category.
  */
 export function mapPgError(err: unknown): 'forbidden' | 'not_found' | 'conflict' | 'unknown' {
   const e = err as { code?: string; message?: string };

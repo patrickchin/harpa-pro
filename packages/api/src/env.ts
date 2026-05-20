@@ -18,6 +18,22 @@ const Env = z.object({
   AI_FIXTURE_MODE: z.enum(['replay', 'record', 'live']).default('replay'),
   AI_LIVE: z.enum(['0', '1']).default('0'),
   R2_FIXTURE_MODE: z.enum(['replay', 'live']).default('replay'),
+  // Cloudflare R2 (S3-compatible). Required when R2_FIXTURE_MODE=live.
+  R2_ACCOUNT_ID: z.string().optional(),
+  R2_ACCESS_KEY_ID: z.string().optional(),
+  R2_SECRET_ACCESS_KEY: z.string().optional(),
+  R2_BUCKET: z.string().default('harpa-pro'),
+  /**
+   * Optional explicit endpoint override. Defaults to
+   * `https://<R2_ACCOUNT_ID>.r2.cloudflarestorage.com` when absent.
+   * Set this to point at a local S3-compatible mock (e.g. MinIO) in dev.
+   */
+  R2_ENDPOINT: z.string().url().optional(),
+  /**
+   * TTL (seconds) for presigned PUT/GET URLs. 5 min matches
+   * arch-storage.md §Download flow.
+   */
+  R2_PRESIGN_TTL_SEC: z.coerce.number().int().positive().default(300),
   REQUEST_LOG: z.enum(['true', 'false']).default('false'),
   // Marketing waitlist (M1).
   TURNSTILE_LIVE: z.enum(['0', '1']).default('0'),
@@ -34,7 +50,28 @@ const Env = z.object({
   WAITLIST_CORS_ORIGINS: z
     .string()
     .default('https://harpapro.com,https://www.harpapro.com,http://localhost:3002'),
-});
+  /**
+   * Filename of the last migration this image expects to find applied in
+   * `app._migrations`. Baked into the image at build time (see
+   * infra/fly/Dockerfile ARG MIGRATIONS_REQUIRED_HEAD). Used by /readyz
+   * to detect "code ahead of schema" — see docs/v4/arch-cicd-and-migrations.md.
+   *
+   * Format is intentionally permissive (`<digits>_<slug>.sql`) because the
+   * project has two historical filename conventions in flight (`NNNN_*.sql`
+   * on dev/v4 and `YYYYMMDDHHmm_*.sql` on the live main branch). The lexical
+   * sort still produces the right "newest" answer for either.
+   *
+   * Optional in dev/test (so a local API can boot without setting it).
+   * Required in production: enforced by the refinement below.
+   */
+  MIGRATIONS_REQUIRED_HEAD: z
+    .string()
+    .regex(/^[0-9]+_[a-z0-9_]+\.sql$/, 'must match <digits>_<slug>.sql')
+    .optional(),
+}).refine(
+  (e) => e.NODE_ENV !== 'production' || !!e.MIGRATIONS_REQUIRED_HEAD,
+  { path: ['MIGRATIONS_REQUIRED_HEAD'], message: 'required when NODE_ENV=production' },
+);
 
 export const env = Env.parse(process.env);
 export type Env = z.infer<typeof Env>;

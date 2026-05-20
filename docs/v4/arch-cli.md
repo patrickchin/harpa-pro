@@ -700,6 +700,12 @@ Wire into root `pnpm lint`:
 
 12 commits, each ≈ one PR-sized unit with route group + tests + docs together. Dependencies between tasks noted.
 
+> **Status (CLI.1 → CLI.12): all phases complete on `feat/cli`.**
+> Implementation lives at `apps/cli/`. Integration suite uses
+> Testcontainers Postgres + `R2_FIXTURE_MODE=replay`. CI wired via
+> `.github/workflows/cli.yml`; help/command-tree drift gated by
+> `scripts/check-cli-help-drift.sh`.
+
 ### CLI.1 — Scaffold + env + client
 
 **Scope:**

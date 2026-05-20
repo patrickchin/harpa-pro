@@ -25,6 +25,24 @@
 
 ## Patterns
 
+### R7 — Health check is a static literal, not a readiness probe
+
+A `/healthz` route that returns `{ok:true}` from a hard-coded
+literal (no DB query, no schema check) tells Fly / a load balancer
+that the **process is alive** — but says nothing about whether the
+process can actually serve real traffic. If migrations haven't run
+against the connected database, every DB-backed route 500s while
+the health check stays green and Fly happily routes users to the
+broken machine.
+
+Mitigation: split liveness from readiness. `/healthz` may stay
+cheap (process alive), but the endpoint Fly's HTTP check targets
+must open a real DB connection AND verify the schema matches what
+the running code expects (e.g. compare `app._migrations` head to a
+build-time `MIGRATIONS_REQUIRED_HEAD`). Return 503 on any mismatch
+so the LB takes the machine out of rotation and Fly's auto-rollback
+engages. See `docs/v4/arch-cicd-and-migrations.md`.
+
 ### R4 — Test files inside `app/` get bundled into the mobile app
 
 - `expo-router` globs `app/**/*.{ts,tsx}`, so a colocated `*.test.tsx` is treated as a route and pulled into the Metro graph.
@@ -62,6 +80,160 @@
 - Mitigation 3 — one browser/device E2E (Playwright for marketing, Maestro for mobile) per critical flow, hitting the live compose stack.
 
 ## Entries
+
+### 2026-05-20 — prod returned 200 on /healthz while every DB route 500'd (Pattern R7)
+
+**Symptom.** Fly machine `harpa-pro-api` v11 was `started`, 1/1
+health checks passing, image deployed cleanly. But every endpoint
+that touched the DB returned `500 { code: "internal_error" }`.
+Postgres logs showed `42P01 relation "app.waitlist_signups" does
+not exist` for `POST /waitlist`, `relation "auth.verifications"
+does not exist` for `POST /auth/otp/start`, etc.
+
+**Root cause.** Two independent failures:
+1. The Neon prod branch had never had a migration applied.
+   `api-prod.yml` only ran `flyctl deploy`; there was no
+   migration step on the prod path. (`pr-preview.yml` runs
+   `pnpm db:migrate` against the ephemeral PR Neon branch; that
+   workflow is the *only* place migrations had ever run before
+   this incident.)
+2. `/healthz` was a static literal — `c.json({ok:true,...})` with
+   no DB query — so Fly's HTTP check was green regardless of
+   whether the DB schema was usable.
+
+**Fix.** `docs/v4/arch-cicd-and-migrations.md` design + the
+follow-up implementation:
+- Fly `release_command` runs `pnpm --filter @harpa/api db:migrate`
+  in a release machine; Fly only promotes the new image to app
+  machines if it exits 0.
+- New `/readyz` opens a real DB connection AND compares
+  `app._migrations` head to a build-time
+  `MIGRATIONS_REQUIRED_HEAD`. Fly's HTTP check now targets
+  `/readyz`. `/healthz` stays as liveness.
+- Migrator hardened: `pg_advisory_lock` serialises concurrent
+  runs, per-file `BEGIN/COMMIT`, fail-loud logging.
+- New `guard` job in `api-prod.yml` lints migration filenames at
+  PR time; post-deploy step curls `/readyz` so a green workflow
+  proves real traffic was served.
+
+**Test.** Three Testcontainers integration tests under
+`packages/api/src/__tests__/`:
+- `readyz.integration.test.ts` — 503 schema-missing before
+  migrate; 200 after; 503 head-mismatch with a bad
+  `MIGRATIONS_REQUIRED_HEAD`; 503 db-down when pool is gone.
+- `migrate.advisory-lock.integration.test.ts` — two concurrent
+  `migrate()` calls produce exactly one set of `app._migrations`
+  rows with no duplicate-key error.
+- `migrate.failing-file.integration.test.ts` — a fixture dir with
+  a bad SQL in file #3 rolls back the file's tx, leaves files
+  #1+#2 committed, and stops the loop before file #4.
+
+**Pattern.** R7 — Health check is a static literal, not a
+readiness probe (added above).
+
+### 2026-05-17 — invite-member form auto-closes on submit, hiding the API error (Pattern R5)
+
+**Symptom.** A failed `POST /projects/:slug/members` invite (e.g.
+the invited phone has no account → 404 "User not found.") looked
+identical to a successful one from the user's perspective: the
+invite form collapsed back to the "Add member" CTA with no error
+notice visible. The Members list stayed empty and the user had no
+clue why. First caught by `core-end-to-end.yaml` Maestro flow,
+which expected the invited user to show up under "Editor" filter.
+
+**Root cause.** `screens/project-members.tsx` had:
+
+```tsx
+onAdd={(input) => {
+  onAddMember(input);
+  if (!addError) setShowAdd(false);
+}}
+```
+
+`onAddMember` triggers a TanStack mutation (async). `addError` is
+read from the *current* render's props — which is `null` because
+the mutation hasn't completed yet. So the form unconditionally
+closes on submit, hiding the error notice that arrives on the
+next render. Classic stale-state-in-an-event-handler bug.
+
+**Fix.** Drive the close from the *route*, not from inside the
+form. The mutation hook's `onSuccess` increments an
+`addSuccessNonce` counter passed to the screen; an effect there
+closes the form when the nonce changes. On failure, `nonce` does
+not change, the form stays open, and the error notice renders
+normally. Same PR adds two regression tests in
+`screens/project-members.test.tsx`: one for the form-stays-open
+path on error, one for the form-closes path on success.
+
+**Test.** `screens/project-members.test.tsx` —
+"keeps invite form open when the mutation fails (error stays visible)"
+and "closes invite form when addSuccessNonce increments (success)".
+Plus the Maestro `core-end-to-end.yaml` flow that originally
+exposed the bug.
+
+**Pattern.** R5 (default wiring broken, only DI-stubbed tests
+pass). The existing screen-level test asserted the form's
+behaviour with `addError={null}` and never combined it with a
+post-submit close, so the synchronous stale read sailed through.
+
+### 2026-05-17 — `btn-edit-manually` switched tabs but didn't seed the empty report (Pattern R5)
+
+**Symptom.** Tapping "Edit manually" from the Report tab's
+empty-state navigated to the Edit tab but the Edit tab still
+showed *its* empty-state ("Generate a report first to edit"). The
+user could not enter section data manually — which is the whole
+point of the button. First caught by `core-end-to-end.yaml`
+asserting `edit-section-meta` after tapping `btn-edit-manually`.
+
+**Root cause.** `GenerateReportProvider.editManually` falls back
+to `onSetReport(createEmptyReport())` only when the route wired
+`onSetReport`. The real `generate.tsx` route owned a local
+`setGeneratedReport` setter but never passed it as
+`onSetReport={…}` to `<GenerateNotes>`. So the provider's
+fallback short-circuited to a no-op and only `setActiveTab('edit')`
+fired.
+
+**Fix.** Pass `onSetReport={setGeneratedReport}` from the route.
+Now "Edit manually" both creates the empty report skeleton *and*
+switches tabs, exactly as the provider docs claim.
+
+**Test.** Covered by the Maestro `core-end-to-end.yaml` flow
+asserting `edit-section-meta` is visible after the round-trip.
+
+**Pattern.** R5 — the provider unit tests stubbed `onSetReport`,
+so the bug only existed at the wiring layer (Pitfall 13 / Hard
+Rule #5: "test the default wiring").
+
+### 2026-05-15 — lucide icons silently fell back to brand placeholder; `react-native-svg` was never installed (Pattern R5)
+
+**Symptom.** Every ported screen rendered, but every lucide icon
+(MapPin, Calendar, FolderOpen, Pencil, Plus, …) showed as the
+Harpa Pro "U" brand placeholder. Vitest unit snapshots passed
+because they render the JSX tree and never resolve the SVG
+primitives. Coverage was green. Only a manual `simctl io
+screenshot` on the mock build caught it.
+
+**Root cause.** `lucide-react-native` lists `react-native-svg` as a
+peer dependency. We had been adding lucide imports across screens
+through P2 + P3 without ever running `npx expo install
+react-native-svg`. RNSVG was never linked into the iOS Pods, so
+at runtime the bridge fell back to a default Image — which, with
+no source, rendered the brand asset.
+
+**Fix.** [TBD commit] — `apps/mobile/package.json` adds
+`react-native-svg@15.8.0`. Pod reinstall via `expo run:ios` picks
+up `RNSVG` and the icons render.
+
+**Test.** No unit test would have caught this — RNSVG only matters
+on the device. The new tmp `.maestro/tmp-p3-smoke/` flow captures
+screenshots of every ported screen in the mock build so a missing
+native dep is visible immediately. P3.13's `core-end-to-end`
+Maestro flow inherits this guarantee and replaces the tmp folder.
+
+**Pattern.** R5 — the unit/integration suites injected stubs (the
+JSX tree) instead of exercising the real wiring (the native SVG
+runtime). The default wiring was silently broken; only an E2E
+against the live binary surfaced it.
 
 ### 2026-05-12 — Hono v4 onError ignores non-Error throws (Pattern R1)
 
@@ -113,8 +285,93 @@
 
 ### 2026-05-15 — `auth.test.ts > rejects a tampered token` flakes ~6% (Pattern R6)
 
-- **Symptom.** PR #3 unit job failed with `expected 200 to be 401` on a CSS-only commit; the preceding commit on the same branch was green.
-- **Root cause.** Test tampered the JWT by flipping its last base64url char (`A`↔`B`). HS256 signatures are 32 bytes → 43 base64url chars; the last char has 2 padding bits decoders discard, so `A`, `B`, `C`, `D` decode identically — ~6% flake rate.
-- **Fix.** Tamper with the **payload** segment instead (flip first char `e`→`a`). Any payload byte change invalidates the HMAC deterministically.
-- **Test.** `packages/api/src/middleware/auth.test.ts > withAuth > rejects a tampered token` — verified 5/5 green locally post-fix.
-- **Pattern.** R6 — probabilistic test inputs from freshly-minted JWTs. Mutate bytes in the decoded representation or a fully-significant segment (header/payload for JWTs, not the signature tail).
+**Pattern.** R5 (new — added above).
+
+### 2026-05-15 — `/auth/logout` deletes the session row but the JWT keeps working (Pattern R5)
+
+**Symptom.** After `POST /auth/logout` (200 OK), the bearer token
+that was just "revoked" continues to authenticate every protected
+route — `GET /me`, `POST /projects`, etc — until its JWT `exp`
+naturally lapses (~7 days). Surfaced by the first journey
+integration test
+(`packages/api/src/__tests__/journeys/auth-crud.journey.integration.test.ts`),
+which logs in via the real `/auth/otp/verify` path and then
+expected `GET /me` to 401 post-logout.
+
+**Root cause.** `middleware/auth.ts → withAuth()` validates only the
+JWT signature + expiry. The per-request scope wrapper
+(`db/scope.ts → withScopedConnection`) does `SET LOCAL app.session_id`
+from the JWT's `sid` claim but never checks `auth.sessions` for an
+existing row — so revoked sessions remain authenticated as long as
+the JWT is signature-valid. The header comment in `middleware/auth.ts`
+("Session-row validation … is enforced by route handlers — see e.g.
+`routes/me.ts`") is stale; no route actually validates the session.
+
+The existing `auth.integration.test.ts > logout deletes the session
+row` test confirmed the DB row was gone but never made a
+post-logout authenticated request, so the gap was invisible.
+Classic R5 — the test asserted a side-effect, not the contract.
+
+**Fix.** Pending. Either:
+1. Have `withAuth()` look up `auth.sessions` by `sid` and 401 when
+   the row is missing/expired (one DB roundtrip per authed
+   request). Cache via short-lived in-memory revocation set if
+   needed.
+2. Use opaque session tokens (DB-backed) instead of stateless JWTs
+   for the bearer envelope, keeping the JWT only as an internal
+   signed claim payload.
+
+Pending the fix, `auth-crud.journey.integration.test.ts` asserts
+the DB-row deletion (current behaviour) and links to this entry.
+
+**Test.** The journey suite
+(`packages/api/src/__tests__/journeys/*.journey.integration.test.ts`)
+should add — once the fix lands — `expect(/me-post-logout).toBe(401)`.
+
+**Pattern.** R5 — DI stubs / test helpers (`signTestToken`) became
+the de-facto spec. Every CRUD integration test mints tokens via
+`signTestToken(userId, sessionId)`, so the full
+`/auth/otp/verify` → CRUD → `/auth/logout` chain was never
+exercised end-to-end and the revocation gap stayed invisible.
+
+### 2026-05-15 — `auth.test.ts > rejects a tampered token` flakes ~6% (Pattern R6)
+
+**Symptom.** PR #3 unit job failed with
+`expected 200 to be 401` in
+`packages/api/src/middleware/auth.test.ts:38` on commit `bbcbdfc`
+(a CSS-only change to `apps/marketing`), while the immediately
+preceding commit `b00ce5a` on the same branch was green. The "diff"
+that triggered the failure had no causal relationship to the
+failing test.
+
+**Root cause.** The test "tampered" with the JWT by flipping its
+last base64url character between `'A'` and `'B'`. HS256 signatures
+are 32 bytes → 43 base64url chars; the last char encodes only 4
+significant bits plus 2 padding bits that base64 decoders discard.
+Chars `A`, `B`, `C`, `D` all share top-4 bits `0000`, so swapping
+between them produces an **identical** decoded signature and the
+token still verifies. Whether the flip actually mutates the
+signature depends on the trailing char, which in turn depends on
+the `iat` / `exp` timestamps embedded in the freshly-signed JWT —
+roughly a 6% flake rate (4 of 64 base64url chars are equivalent
+under the A↔B swap).
+
+**Fix.** Tamper with the **payload** segment instead — flipping the
+first payload char (always `e` in jose-issued tokens, since the
+JSON starts with `{"`) to `a`. Any byte change in the
+base64url-encoded payload invalidates the HMAC over
+`header.payload`, so the verification deterministically fails.
+
+**Test.** `packages/api/src/middleware/auth.test.ts > withAuth >
+rejects a tampered token` — same test, deterministic tampering
+strategy. Verified by running it 5× locally post-fix (5/5 green)
+and by reasoning about the algebra of the swap.
+
+**Pattern.** R6 — Probabilistic test inputs derived from
+freshly-minted JWTs / random bytes / timestamps. The naive "flip a
+char" trick is safe for character-aligned encodings (hex) but lossy
+for base64/base64url when the encoding has padding bits. Mitigation:
+when constructing "obviously invalid" variants of signed/encoded
+blobs, mutate bytes in the **decoded** representation (or mutate a
+segment whose every bit is significant — for JWTs, the header or
+payload, not the tail of the signature).

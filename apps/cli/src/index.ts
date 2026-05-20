@@ -9,6 +9,14 @@
  */
 import { defineCommand, runMain } from 'citty';
 import { healthCommand } from './commands/health.js';
+import { authCommand } from './commands/auth.js';
+import { meCommand } from './commands/me.js';
+import { projectsCommand } from './commands/projects.js';
+import { reportsCommand } from './commands/reports.js';
+import { notesCommand } from './commands/notes.js';
+import { filesCommand } from './commands/files.js';
+import { voiceCommand } from './commands/voice.js';
+import { settingsCommand } from './commands/settings.js';
 
 const main = defineCommand({
   meta: {
@@ -18,6 +26,14 @@ const main = defineCommand({
   },
   subCommands: {
     health: healthCommand,
+    auth: authCommand,
+    me: meCommand,
+    projects: projectsCommand,
+    reports: reportsCommand,
+    notes: notesCommand,
+    files: filesCommand,
+    voice: voiceCommand,
+    settings: settingsCommand,
   },
 });
 

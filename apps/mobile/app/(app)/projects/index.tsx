@@ -10,6 +10,7 @@
 import { useRouter } from 'expo-router';
 import { useListProjectsQuery } from '@/lib/api/hooks';
 import { ProjectsList, type ProjectRow } from '@/screens/projects-list';
+import { AppHeaderActions } from '@/components/ui/AppHeaderActions';
 
 export default function ProjectsIndex() {
   const router = useRouter();
@@ -18,6 +19,7 @@ export default function ProjectsIndex() {
   const projects: ProjectRow[] =
     result.data?.items.map((p) => ({
       id: p.id,
+      slug: p.id,
       name: p.name,
       role: p.myRole,
       address: p.address,
@@ -30,12 +32,13 @@ export default function ProjectsIndex() {
       isLoading={result.isLoading}
       refreshing={result.isRefetching}
       onRefresh={() => result.refetch()}
-      onPressProject={(id) => {
-        router.push(`/projects/${id}` as never);
+      onPressProject={(slug) => {
+        router.push(`/projects/${slug}` as never);
       }}
       onPressNewProject={() => {
         router.push('/projects/new' as never);
       }}
+      actions={<AppHeaderActions />}
     />
   );
 }

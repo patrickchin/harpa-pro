@@ -20,7 +20,7 @@ export function withAdmin(): MiddlewareHandler<AppEnv> {
       throw new HTTPException(401, { message: 'Missing bearer token.' });
     }
     const result = await rawDb().execute<{ is_admin: boolean }>(
-      sql`SELECT is_admin FROM auth.users WHERE id = ${userId}::uuid LIMIT 1`,
+      sql`SELECT is_admin FROM auth.users WHERE id = ${userId} LIMIT 1`,
     );
     const row = result.rows[0];
     if (!row || row.is_admin !== true) {

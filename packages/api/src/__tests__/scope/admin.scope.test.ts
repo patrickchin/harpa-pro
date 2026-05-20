@@ -18,6 +18,7 @@ import { createApp } from '../../app.js';
 import { withAnonConnection, withScopedConnection } from '../../db/scope.js';
 import { signTestToken } from '../../middleware/auth.js';
 import { resetPool, getPool, rawDb } from '../../db/client.js';
+import { makeUserId, makeSessionId } from '../factories/index.js';
 
 let fx: PgFixture;
 let adminId: string;
@@ -31,27 +32,30 @@ beforeAll(async () => {
   await resetPool();
   getPool(fx.url);
 
+  adminId = makeUserId();
+  regularId = makeUserId();
+  const adminSessionId = makeSessionId();
+  const regularSessionId = makeSessionId();
+
   const admin = new pg.Client({ connectionString: fx.url });
   await admin.connect();
-  const u = await admin.query<{ id: string }>(
-    `INSERT INTO auth.users(phone, is_admin) VALUES ($1, true), ($2, false) RETURNING id`,
-    ['+15551500001', '+15551500002'],
+  await admin.query(
+    `INSERT INTO auth.users(id, phone, is_admin) VALUES ($1, $2, true), ($3, $4, false)`,
+    [adminId, '+15551500001', regularId, '+15551500002'],
   );
-  adminId = u.rows[0]!.id;
-  regularId = u.rows[1]!.id;
-  const s = await admin.query<{ id: string }>(
-    `INSERT INTO auth.sessions(user_id, expires_at)
-     VALUES ($1, now() + interval '7 days'), ($2, now() + interval '7 days') RETURNING id`,
-    [adminId, regularId],
+  await admin.query(
+    `INSERT INTO auth.sessions(id, user_id, expires_at)
+     VALUES ($1, $2, now() + interval '7 days'), ($3, $4, now() + interval '7 days')`,
+    [adminSessionId, adminId, regularSessionId, regularId],
   );
-  adminSid = s.rows[0]!.id;
-  regularSid = s.rows[1]!.id;
+  adminSid = adminSessionId;
+  regularSid = regularSessionId;
   await admin.end();
 
   // Seed a signup so the SELECT-denied tests have something to *not* see.
   await rawDb().execute(sql`
-    INSERT INTO app.waitlist_signups(email, confirmed_at)
-    VALUES ('seed@buildco.com', now())
+    INSERT INTO app.waitlist_signups(id, email, confirmed_at)
+    VALUES ('wls_test1234', 'seed@buildco.com', now())
   `);
 }, 120_000);
 

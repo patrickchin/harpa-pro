@@ -10,6 +10,7 @@ import { ProjectsList, type ProjectRow } from '@/screens/projects-list';
 const MOCK_PROJECTS: ProjectRow[] = [
   {
     id: '123e4567-e89b-12d3-a456-426614174000',
+    slug: 'prj_abc123',
     name: 'Downtown Office Complex',
     role: 'owner',
     address: '123 Main St, San Francisco, CA 94102',
@@ -17,6 +18,7 @@ const MOCK_PROJECTS: ProjectRow[] = [
   },
   {
     id: '223e4567-e89b-12d3-a456-426614174001',
+    slug: 'prj_def456',
     name: 'Residential Tower B',
     role: 'editor',
     address: null,
@@ -24,6 +26,7 @@ const MOCK_PROJECTS: ProjectRow[] = [
   },
   {
     id: '323e4567-e89b-12d3-a456-426614174002',
+    slug: 'prj_ghj789',
     name: 'Highway 101 Bridge Expansion',
     role: 'viewer',
     address: 'Hwy 101 @ Shoreline Blvd, Mountain View, CA',

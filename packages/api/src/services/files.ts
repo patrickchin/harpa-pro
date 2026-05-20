@@ -13,6 +13,7 @@
 import { sql } from 'drizzle-orm';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import * as schema from '../db/schema.js';
+import { newId } from '../lib/ids.js';
 import type { FileKind } from './storage.js';
 
 type Db = NodePgDatabase<typeof schema>;
@@ -60,10 +61,12 @@ export async function registerFile(
     contentType: string;
   },
 ): Promise<FileRow | null> {
+  const id = newId('fil');
   const r = await db.execute<RawFile>(sql`
-    INSERT INTO app.files(owner_id, kind, file_key, size_bytes, content_type)
+    INSERT INTO app.files(id, owner_id, kind, file_key, size_bytes, content_type)
     VALUES (
-      ${ownerId}::uuid,
+      ${id},
+      ${ownerId},
       ${input.kind}::app.file_kind,
       ${input.fileKey},
       ${input.sizeBytes}::bigint,
@@ -78,7 +81,7 @@ export async function registerFile(
 export async function getFileById(db: Db, fileId: string): Promise<FileRow | null> {
   const r = await db.execute<RawFile>(sql`
     SELECT id, owner_id, kind, file_key, size_bytes, content_type, created_at
-    FROM app.files WHERE id = ${fileId}::uuid LIMIT 1
+    FROM app.files WHERE id = ${fileId} LIMIT 1
   `);
   const row = r.rows[0];
   return row ? mapFile(row) : null;

@@ -67,6 +67,13 @@ vi.mock('react-native', () => {
     addEventListener: () => ({ remove: () => undefined }),
   };
 
+  const useWindowDimensions = () => ({
+    width: 390,
+    height: 844,
+    scale: 3,
+    fontScale: 1,
+  });
+
   const Keyboard = {
     dismiss: () => undefined,
     addListener: () => ({ remove: () => undefined }),
@@ -103,6 +110,7 @@ vi.mock('react-native', () => {
     Platform,
     StyleSheet,
     Dimensions,
+    useWindowDimensions,
     Keyboard,
     BackHandler,
     ToastAndroid,
@@ -160,6 +168,7 @@ const routerStub = {
   setParams: vi.fn(),
   dismiss: vi.fn(),
   dismissAll: vi.fn(),
+  dismissTo: vi.fn(),
 };
 
 vi.mock('expo-router', () => {
@@ -219,8 +228,27 @@ vi.mock('react-native-reanimated', async () => {
         get: () => () => 0,
       },
     ),
+    // Entering / exiting presets — components chain methods like
+    // `FadeIn.duration(250).delay(100)`. Return a self-referential
+    // Proxy so any method call returns the same object.
+    FadeIn: createAnimationPresetMock(),
+    FadeOut: createAnimationPresetMock(),
+    FadeInDown: createAnimationPresetMock(),
+    FadeInUp: createAnimationPresetMock(),
+    SlideInRight: createAnimationPresetMock(),
+    SlideOutRight: createAnimationPresetMock(),
   };
 });
+
+function createAnimationPresetMock(): unknown {
+  const handler: ProxyHandler<object> = {
+    get(_target, _prop) {
+      return () => proxy;
+    },
+  };
+  const proxy: object = new Proxy({}, handler);
+  return proxy;
+}
 
 // `react-native-safe-area-context` reads native insets. Stub
 // `useSafeAreaInsets` with typical iPhone insets for snapshot
@@ -239,6 +267,27 @@ vi.mock('react-native-safe-area-context', () => {
     SafeAreaInsetsContext: {
       Provider: (props: AnyProps) =>
         React.createElement('rn-SafeAreaInsetsContext.Provider', props, props.children),
+    },
+  };
+});
+
+// Default AsyncStorage mock — in-memory map. Tests that need to assert
+// on storage state can re-mock per-file with their own backing Map
+// (see lib/auth/storage.test.ts, lib/api/base-url.test.ts).
+vi.mock('@react-native-async-storage/async-storage', () => {
+  const mem = new Map<string, string>();
+  return {
+    default: {
+      getItem: vi.fn(async (key: string) => mem.get(key) ?? null),
+      setItem: vi.fn(async (key: string, value: string) => {
+        mem.set(key, value);
+      }),
+      removeItem: vi.fn(async (key: string) => {
+        mem.delete(key);
+      }),
+      clear: vi.fn(async () => {
+        mem.clear();
+      }),
     },
   };
 });

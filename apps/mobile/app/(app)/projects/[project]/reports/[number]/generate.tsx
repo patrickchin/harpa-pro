@@ -1,0 +1,300 @@
+/**
+ * Generate Report route — slug-native scheme (P3.1).
+ *
+ * Reads `project` (prj_…) + `number` from path params, fetches the
+ * report draft via `useReportQuery`, and renders the props-driven
+ * `GenerateNotes` screen body.
+ *
+ * Generate / Regenerate / Finalize are wired to the real API
+ * mutations. Text notes round-trip through `useCreateNoteMutation` +
+ * `useReportNotesQuery`; the local list is optimistic and gets
+ * replaced when the server responds. The camera button pushes the
+ * capture modal via the session-registry handoff; uploads themselves
+ * land in P4 (we surface a clear "upload pipeline pending" message
+ * when the user returns with photos rather than swallowing them
+ * silently — see Pitfall 13).
+ */
+import { useCallback, useMemo, useState } from 'react';
+import {
+  useFocusEffect,
+  useLocalSearchParams,
+  useRouter,
+} from 'expo-router';
+
+import { GenerateNotes } from '@/screens/generate-notes';
+import {
+  useProjectQuery,
+  useReportQuery,
+  useReportNotesQuery,
+  useCreateNoteMutation,
+  useGenerateReportMutation,
+  useRegenerateReportMutation,
+  useFinalizeReportMutation,
+} from '@/lib/api/hooks';
+import type { NoteEntry } from '@/lib/note-entry';
+import { uuid } from '@/lib/uuid';
+import { env } from '@/lib/env';
+import type { GeneratedSiteReport } from '@harpa/report-core';
+import { SAMPLE_GENERATED_REPORT } from '@/lib/dev-fixtures/sample-report';
+import { safeBack } from '@/lib/nav/safe-back';
+import {
+  consumeCameraSession,
+  createCameraSession,
+} from '@/lib/camera-session-registry';
+
+interface ApiNote {
+  id: string;
+  authorId: string;
+  kind: 'text' | 'voice' | 'image' | 'document';
+  body: string | null;
+  transcript: string | null;
+  createdAt: string;
+}
+
+function noteToEntry(n: ApiNote): NoteEntry {
+  const text = n.body ?? n.transcript ?? '';
+  return {
+    id: n.id,
+    authorId: n.authorId,
+    text,
+    addedAt: Date.parse(n.createdAt) || Date.now(),
+    source: n.kind === 'voice' ? 'voice' : 'text',
+  };
+}
+
+export default function GenerateReportRoute() {
+  const router = useRouter();
+  const { project, number } = useLocalSearchParams<{
+    project: string;
+    number: string;
+  }>();
+  const slug = project ?? '';
+  const parsedNumber = Number.parseInt(number ?? '', 10);
+  const reportNumber = Number.isFinite(parsedNumber) ? parsedNumber : null;
+
+  const projectQuery = useProjectQuery(
+    { params: { project: slug } },
+    { enabled: slug.length > 0 },
+  );
+  const report = useReportQuery(
+    {
+      params: {
+        project: slug,
+        number: reportNumber ?? 0,
+      },
+    },
+    { enabled: slug.length > 0 && reportNumber !== null },
+  );
+
+  const reportRow = report.data as
+    | {
+        id?: string;
+        body?: GeneratedSiteReport | null;
+        status?: 'draft' | 'finalized';
+        notesSinceLastGeneration?: number;
+        meta?: { title?: string | null };
+      }
+    | undefined;
+  const reportId = reportRow?.id ?? null;
+
+  // Server-backed notes timeline. Optimistic local additions are kept
+  // alongside until the query refetches so the UI stays responsive
+  // without waiting for the round-trip.
+  const notesQuery = useReportNotesQuery(
+    { params: { report: reportId ?? '' } },
+    { enabled: reportId !== null },
+  );
+  const createNote = useCreateNoteMutation();
+  const [pendingNotes, setPendingNotes] = useState<NoteEntry[]>([]);
+
+  const serverNotes = useMemo<NoteEntry[]>(() => {
+    const items = (notesQuery.data as { items?: ApiNote[] } | undefined)?.items;
+    if (!items) return [];
+    return items.map(noteToEntry);
+  }, [notesQuery.data]);
+
+  // Drop pending entries that the server has now confirmed (by id).
+  const serverIds = useMemo(
+    () => new Set(serverNotes.map((n) => n.id).filter(Boolean)),
+    [serverNotes],
+  );
+  const visibleNotes = useMemo<NoteEntry[]>(() => {
+    const liveOptimistic = pendingNotes.filter(
+      (n) => !n.id || !serverIds.has(n.id),
+    );
+    return [...serverNotes, ...liveOptimistic].sort(
+      (a, b) => a.addedAt - b.addedAt,
+    );
+  }, [serverNotes, pendingNotes, serverIds]);
+
+  const handleAddTextNote = useCallback(
+    (body: string) => {
+      if (!reportId) return;
+      const optimistic: NoteEntry = {
+        id: uuid(),
+        text: body,
+        addedAt: Date.now(),
+        isPending: true,
+        source: 'text',
+      };
+      setPendingNotes((prev) => [...prev, optimistic]);
+      createNote.mutate(
+        {
+          params: { report: reportId },
+          body: { kind: 'text', body },
+        },
+        {
+          onSuccess: (created) => {
+            const realId = (created as { id?: string } | undefined)?.id;
+            // Stamp the server id onto the optimistic entry so the
+            // dedup pass above evicts it once the query refetches.
+            setPendingNotes((prev) =>
+              prev.map((n) =>
+                n === optimistic ? { ...n, id: realId ?? n.id, isPending: false } : n,
+              ),
+            );
+          },
+          onError: () => {
+            setPendingNotes((prev) => prev.filter((n) => n !== optimistic));
+          },
+        },
+      );
+    },
+    [reportId, createNote],
+  );
+
+  const serverBody = (reportRow?.body ?? null) as GeneratedSiteReport | null;
+
+  const fallbackReport: GeneratedSiteReport | null = env.EXPO_PUBLIC_USE_FIXTURES
+    ? SAMPLE_GENERATED_REPORT
+    : null;
+
+  const [localReport, setLocalReport] = useState<GeneratedSiteReport | null>(
+    null,
+  );
+  const currentReport = localReport ?? serverBody ?? fallbackReport;
+
+  const [generationError, setGenerationError] = useState<string | null>(null);
+  const [finalizeError, setFinalizeError] = useState<string | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+
+  const generateMutation = useGenerateReportMutation();
+  const regenerateMutation = useRegenerateReportMutation();
+  const finalizeMutation = useFinalizeReportMutation();
+
+  const handleRegenerate = useCallback(() => {
+    if (!slug || reportNumber === null) return;
+    setGenerationError(null);
+    const mutation = currentReport ? regenerateMutation : generateMutation;
+    mutation.mutate(
+      { params: { project: slug, number: reportNumber }, body: {} },
+      {
+        onSuccess: (data) => {
+          const next = (data as { report?: { body?: GeneratedSiteReport | null } } | undefined)
+            ?.report?.body ?? null;
+          if (next) setLocalReport(next);
+        },
+        onError: (err) => {
+          setGenerationError(err.message ?? 'Generation failed.');
+        },
+      },
+    );
+  }, [slug, reportNumber, currentReport, generateMutation, regenerateMutation]);
+
+  const handleFinalize = useCallback(() => {
+    if (!slug || reportNumber === null) return;
+    setFinalizeError(null);
+    finalizeMutation.mutate(
+      { params: { project: slug, number: reportNumber } },
+      {
+        onSuccess: () => {
+          router.replace(
+            `/(app)/projects/${slug}/reports/${reportNumber}` as never,
+          );
+        },
+        onError: (err) => {
+          setFinalizeError(err.message ?? 'Finalize failed.');
+        },
+      },
+    );
+  }, [slug, reportNumber, finalizeMutation, router]);
+
+  // Camera handoff. Push the capture modal with a session id; on focus
+  // return, drain the URIs. R2 upload + createNote-with-fileId land
+  // with the upload pipeline (P4) — until then we tell the user
+  // honestly that the photos couldn't be attached yet (Pitfall 13).
+  const [cameraSessionId, setCameraSessionId] = useState<string | null>(null);
+  const handleCameraCapture = useCallback(() => {
+    if (!slug || reportNumber === null) return;
+    const sessionId = createCameraSession({
+      returnTo: `/(app)/projects/${slug}/reports/${reportNumber}/generate`,
+      context: { reportId, projectSlug: slug, reportNumber },
+    });
+    setCameraSessionId(sessionId);
+    router.push({
+      pathname: '/(camera)/capture',
+      params: { sessionId },
+    } as never);
+  }, [slug, reportNumber, reportId, router]);
+
+  const handlePickAttachment = useCallback(
+    (_category: 'image' | 'document') => {
+      setUploadError(
+        'File uploads are coming soon. Add a text note for now.',
+      );
+    },
+    [],
+  );
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!cameraSessionId) return;
+      const uris = consumeCameraSession(cameraSessionId);
+      setCameraSessionId(null);
+      if (uris && uris.length > 0) {
+        setUploadError(
+          `Photo capture works, but uploading the ${uris.length} photo${
+            uris.length === 1 ? '' : 's'
+          } needs the storage pipeline (coming soon).`,
+        );
+      }
+    }, [cameraSessionId]),
+  );
+
+  const isGenerating =
+    generateMutation.isPending || regenerateMutation.isPending;
+
+  const canWrite =
+    projectQuery.data?.myRole === 'owner' || projectQuery.data?.myRole === 'editor';
+
+  const reportTitleField = reportRow?.meta?.title;
+
+  // Surface upload-pipeline errors via the existing dialog. Wired
+  // through the screen's `fileUploadError` UI surface — we mirror it
+  // into the provider on render by passing the setter via the route's
+  // attachment handler above and clearing it from inside the dialog
+  // (AppDialogSheet handles dismissal).
+  return (
+    <GenerateNotes
+      project={slug}
+      reportNumber={reportNumber}
+      notes={visibleNotes}
+      notesLoading={report.isLoading || notesQuery.isLoading}
+      onAddTextNote={handleAddTextNote}
+      reportTitle={reportTitleField ?? null}
+      canWrite={canWrite}
+      onBack={() => safeBack(router, `/(app)/projects/${slug}/reports`)}
+      report={currentReport}
+      onSetReport={setLocalReport}
+      isGeneratingReport={isGenerating}
+      generationError={generationError ?? uploadError}
+      onRegenerate={handleRegenerate}
+      notesSinceLastGeneration={reportRow?.notesSinceLastGeneration ?? 0}
+      isFinalizing={finalizeMutation.isPending}
+      finalizeError={finalizeError}
+      onFinalize={handleFinalize}
+      onCameraCapture={handleCameraCapture}
+      onPickAttachment={handlePickAttachment}
+    />
+  );
+}

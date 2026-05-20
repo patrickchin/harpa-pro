@@ -26,9 +26,13 @@ export function decideAuthRedirect(status: AuthStatus, pathname: string): string
   if (status === 'authenticated') {
     return '/(app)/projects';
   }
-  // Security review §1 P1: exact match, not includes. The runtime path
-  // from usePathname() is /(auth)/onboarding (confirmed via canonical).
-  if (status === 'needs-onboarding' && pathname !== '/(auth)/onboarding') {
+  // Security review §1 P1: exact match, not includes. expo-router v4
+  // `usePathname()` STRIPS route group segments, so the runtime
+  // pathname for `app/(auth)/onboarding.tsx` is `/onboarding`, not
+  // `/(auth)/onboarding`. Comparing against the group-prefixed form
+  // caused an infinite redirect loop (Maximum update depth exceeded)
+  // because the gate kept firing after the redirect landed.
+  if (status === 'needs-onboarding' && pathname !== '/onboarding') {
     return '/(auth)/onboarding';
   }
   return null;

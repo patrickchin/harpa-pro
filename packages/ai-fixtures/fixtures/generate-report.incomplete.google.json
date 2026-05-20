@@ -1,0 +1,21 @@
+{
+  "vendor": "google",
+  "model": "gemini-1.5-pro",
+  "fixtureName": "generate-report.incomplete.google",
+  "recordedAt": "2026-05-12T00:00:00.000Z",
+  "requestHash": "sha256:63ba3f5e87070c2e5bc4f5a4f9c204cc4bd1cc2dc9ddaaa7ec5584886e217367",
+  "request": {
+    "kind": "chat",
+    "vendor": "google",
+    "model": "gemini-1.5-pro",
+    "systemPrompt": "Generate a structured construction-site daily report from the provided notes.",
+    "userPrompt": "<sparse notes>"
+  },
+  "response": {
+    "text": "{\n  \"visitDate\": null,\n  \"weather\": null,\n  \"workers\": [],\n  \"materials\": [],\n  \"issues\": [],\n  \"nextSteps\": [],\n  \"summarySections\": [\n    {\n      \"title\": \"Notes captured\",\n      \"body\": \"Insufficient notes to produce a structured report.\"\n    }\n  ]\n}",
+    "usage": {
+      "input": 80,
+      "output": 56
+    }
+  }
+}

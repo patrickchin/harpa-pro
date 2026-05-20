@@ -13,6 +13,12 @@ COPY packages packages
 COPY scripts scripts
 RUN pnpm install --frozen-lockfile
 
+# Baked into the image so the running container knows what schema head it
+# expects. /readyz fails with 503 head-mismatch if app._migrations doesn't
+# match. Computed + passed by infra/fly/deploy.sh from the migrations dir.
+ARG MIGRATIONS_REQUIRED_HEAD
+ENV MIGRATIONS_REQUIRED_HEAD=${MIGRATIONS_REQUIRED_HEAD}
+
 ENV NODE_ENV=production
 EXPOSE 8787
 CMD ["pnpm", "--filter", "@harpa/api", "exec", "tsx", "src/server.ts"]

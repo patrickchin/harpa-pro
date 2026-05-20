@@ -57,6 +57,88 @@
         }
       }
     },
+    "/readyz": {
+      "get": {
+        "tags": [
+          "health"
+        ],
+        "responses": {
+          "200": {
+            "description": "Service is ready to serve traffic.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "db": {
+                      "type": "string",
+                      "enum": [
+                        "up"
+                      ]
+                    },
+                    "head": {
+                      "type": "string",
+                      "nullable": true
+                    }
+                  },
+                  "required": [
+                    "ok",
+                    "db",
+                    "head"
+                  ]
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service is not ready (DB or schema check failed).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean",
+                      "enum": [
+                        false
+                      ]
+                    },
+                    "db": {
+                      "type": "string",
+                      "enum": [
+                        "down",
+                        "schema-missing",
+                        "head-mismatch"
+                      ]
+                    },
+                    "expected": {
+                      "type": "string"
+                    },
+                    "actual": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "ok",
+                    "db"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/auth/otp/start": {
       "post": {
         "tags": [
@@ -179,7 +261,7 @@
                       "properties": {
                         "id": {
                           "type": "string",
-                          "format": "uuid"
+                          "pattern": "^usr_[0-9a-hjkmnp-tv-z]{8,16}$"
                         },
                         "phone": {
                           "type": "string",
@@ -563,7 +645,7 @@
                       "properties": {
                         "id": {
                           "type": "string",
-                          "format": "uuid"
+                          "pattern": "^usr_[0-9a-hjkmnp-tv-z]{8,16}$"
                         },
                         "phone": {
                           "type": "string",
@@ -708,7 +790,7 @@
                       "properties": {
                         "id": {
                           "type": "string",
-                          "format": "uuid"
+                          "pattern": "^usr_[0-9a-hjkmnp-tv-z]{8,16}$"
                         },
                         "phone": {
                           "type": "string",
@@ -997,7 +1079,7 @@
                         "properties": {
                           "id": {
                             "type": "string",
-                            "format": "uuid"
+                            "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8,16}$"
                           },
                           "name": {
                             "type": "string",
@@ -1014,7 +1096,7 @@
                           },
                           "ownerId": {
                             "type": "string",
-                            "format": "uuid"
+                            "pattern": "^usr_[0-9a-hjkmnp-tv-z]{8,16}$"
                           },
                           "myRole": {
                             "type": "string",
@@ -1164,7 +1246,7 @@
                   "properties": {
                     "id": {
                       "type": "string",
-                      "format": "uuid"
+                      "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8,16}$"
                     },
                     "name": {
                       "type": "string",
@@ -1181,7 +1263,7 @@
                     },
                     "ownerId": {
                       "type": "string",
-                      "format": "uuid"
+                      "pattern": "^usr_[0-9a-hjkmnp-tv-z]{8,16}$"
                     },
                     "myRole": {
                       "type": "string",
@@ -1309,7 +1391,7 @@
         }
       }
     },
-    "/projects/{id}": {
+    "/projects/{project}": {
       "get": {
         "tags": [
           "projects"
@@ -1323,10 +1405,10 @@
           {
             "schema": {
               "type": "string",
-              "format": "uuid"
+              "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8,16}$"
             },
             "required": true,
-            "name": "id",
+            "name": "project",
             "in": "path"
           }
         ],
@@ -1340,7 +1422,7 @@
                   "properties": {
                     "id": {
                       "type": "string",
-                      "format": "uuid"
+                      "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8,16}$"
                     },
                     "name": {
                       "type": "string",
@@ -1357,7 +1439,7 @@
                     },
                     "ownerId": {
                       "type": "string",
-                      "format": "uuid"
+                      "pattern": "^usr_[0-9a-hjkmnp-tv-z]{8,16}$"
                     },
                     "myRole": {
                       "type": "string",
@@ -1497,10 +1579,10 @@
           {
             "schema": {
               "type": "string",
-              "format": "uuid"
+              "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8,16}$"
             },
             "required": true,
-            "name": "id",
+            "name": "project",
             "in": "path"
           }
         ],
@@ -1538,7 +1620,7 @@
                   "properties": {
                     "id": {
                       "type": "string",
-                      "format": "uuid"
+                      "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8,16}$"
                     },
                     "name": {
                       "type": "string",
@@ -1555,7 +1637,7 @@
                     },
                     "ownerId": {
                       "type": "string",
-                      "format": "uuid"
+                      "pattern": "^usr_[0-9a-hjkmnp-tv-z]{8,16}$"
                     },
                     "myRole": {
                       "type": "string",
@@ -1695,10 +1777,10 @@
           {
             "schema": {
               "type": "string",
-              "format": "uuid"
+              "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8,16}$"
             },
             "required": true,
-            "name": "id",
+            "name": "project",
             "in": "path"
           }
         ],
@@ -1781,7 +1863,7 @@
         }
       }
     },
-    "/projects/{id}/members": {
+    "/projects/{project}/members": {
       "get": {
         "tags": [
           "projects"
@@ -1795,10 +1877,10 @@
           {
             "schema": {
               "type": "string",
-              "format": "uuid"
+              "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8,16}$"
             },
             "required": true,
-            "name": "id",
+            "name": "project",
             "in": "path"
           }
         ],
@@ -1817,7 +1899,7 @@
                         "properties": {
                           "userId": {
                             "type": "string",
-                            "format": "uuid"
+                            "pattern": "^usr_[0-9a-hjkmnp-tv-z]{8,16}$"
                           },
                           "displayName": {
                             "type": "string",
@@ -1943,10 +2025,10 @@
           {
             "schema": {
               "type": "string",
-              "format": "uuid"
+              "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8,16}$"
             },
             "required": true,
-            "name": "id",
+            "name": "project",
             "in": "path"
           }
         ],
@@ -1987,7 +2069,7 @@
                   "properties": {
                     "userId": {
                       "type": "string",
-                      "format": "uuid"
+                      "pattern": "^usr_[0-9a-hjkmnp-tv-z]{8,16}$"
                     },
                     "displayName": {
                       "type": "string",
@@ -2163,11 +2245,47 @@
                 }
               }
             }
+          },
+          "409": {
+            "description": "Already a member.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "nullable": true
+                        },
+                        "requestId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
           }
         }
       }
     },
-    "/projects/{id}/members/{userId}": {
+    "/projects/{project}/members/{user}": {
       "delete": {
         "tags": [
           "projects"
@@ -2181,19 +2299,19 @@
           {
             "schema": {
               "type": "string",
-              "format": "uuid"
+              "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8,16}$"
             },
             "required": true,
-            "name": "id",
+            "name": "project",
             "in": "path"
           },
           {
             "schema": {
               "type": "string",
-              "format": "uuid"
+              "pattern": "^usr_[0-9a-hjkmnp-tv-z]{8,16}$"
             },
             "required": true,
-            "name": "userId",
+            "name": "user",
             "in": "path"
           }
         ],
@@ -2348,7 +2466,7 @@
         }
       }
     },
-    "/projects/{id}/reports": {
+    "/projects/{project}/reports": {
       "get": {
         "tags": [
           "reports"
@@ -2362,10 +2480,10 @@
           {
             "schema": {
               "type": "string",
-              "format": "uuid"
+              "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8,16}$"
             },
             "required": true,
-            "name": "id",
+            "name": "project",
             "in": "path"
           },
           {
@@ -2405,11 +2523,16 @@
                         "properties": {
                           "id": {
                             "type": "string",
-                            "format": "uuid"
+                            "pattern": "^rpt_[0-9a-hjkmnp-tv-z]{8,16}$"
+                          },
+                          "number": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "exclusiveMinimum": true
                           },
                           "projectId": {
                             "type": "string",
-                            "format": "uuid"
+                            "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8,16}$"
                           },
                           "status": {
                             "type": "string",
@@ -2620,6 +2743,7 @@
                         },
                         "required": [
                           "id",
+                          "number",
                           "projectId",
                           "status",
                           "visitDate",
@@ -2735,10 +2859,10 @@
           {
             "schema": {
               "type": "string",
-              "format": "uuid"
+              "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8,16}$"
             },
             "required": true,
-            "name": "id",
+            "name": "project",
             "in": "path"
           }
         ],
@@ -2766,11 +2890,16 @@
                   "properties": {
                     "id": {
                       "type": "string",
-                      "format": "uuid"
+                      "pattern": "^rpt_[0-9a-hjkmnp-tv-z]{8,16}$"
+                    },
+                    "number": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "exclusiveMinimum": true
                     },
                     "projectId": {
                       "type": "string",
-                      "format": "uuid"
+                      "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8,16}$"
                     },
                     "status": {
                       "type": "string",
@@ -2981,6 +3110,7 @@
                   },
                   "required": [
                     "id",
+                    "number",
                     "projectId",
                     "status",
                     "visitDate",
@@ -3107,7 +3237,7 @@
         }
       }
     },
-    "/reports/{reportId}": {
+    "/projects/{project}/reports/{number}": {
       "get": {
         "tags": [
           "reports"
@@ -3121,10 +3251,20 @@
           {
             "schema": {
               "type": "string",
-              "format": "uuid"
+              "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8,16}$"
             },
             "required": true,
-            "name": "reportId",
+            "name": "project",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "exclusiveMinimum": true
+            },
+            "required": true,
+            "name": "number",
             "in": "path"
           }
         ],
@@ -3138,11 +3278,16 @@
                   "properties": {
                     "id": {
                       "type": "string",
-                      "format": "uuid"
+                      "pattern": "^rpt_[0-9a-hjkmnp-tv-z]{8,16}$"
+                    },
+                    "number": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "exclusiveMinimum": true
                     },
                     "projectId": {
                       "type": "string",
-                      "format": "uuid"
+                      "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8,16}$"
                     },
                     "status": {
                       "type": "string",
@@ -3353,6 +3498,7 @@
                   },
                   "required": [
                     "id",
+                    "number",
                     "projectId",
                     "status",
                     "visitDate",
@@ -3455,10 +3601,20 @@
           {
             "schema": {
               "type": "string",
-              "format": "uuid"
+              "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8,16}$"
             },
             "required": true,
-            "name": "reportId",
+            "name": "project",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "exclusiveMinimum": true
+            },
+            "required": true,
+            "name": "number",
             "in": "path"
           }
         ],
@@ -3487,11 +3643,16 @@
                   "properties": {
                     "id": {
                       "type": "string",
-                      "format": "uuid"
+                      "pattern": "^rpt_[0-9a-hjkmnp-tv-z]{8,16}$"
+                    },
+                    "number": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "exclusiveMinimum": true
                     },
                     "projectId": {
                       "type": "string",
-                      "format": "uuid"
+                      "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8,16}$"
                     },
                     "status": {
                       "type": "string",
@@ -3702,6 +3863,7 @@
                   },
                   "required": [
                     "id",
+                    "number",
                     "projectId",
                     "status",
                     "visitDate",
@@ -3840,10 +4002,20 @@
           {
             "schema": {
               "type": "string",
-              "format": "uuid"
+              "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8,16}$"
             },
             "required": true,
-            "name": "reportId",
+            "name": "project",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "exclusiveMinimum": true
+            },
+            "required": true,
+            "name": "number",
             "in": "path"
           }
         ],
@@ -3926,7 +4098,7 @@
         }
       }
     },
-    "/reports/{reportId}/generate": {
+    "/projects/{project}/reports/{number}/generate": {
       "post": {
         "tags": [
           "reports"
@@ -3940,10 +4112,20 @@
           {
             "schema": {
               "type": "string",
-              "format": "uuid"
+              "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8,16}$"
             },
             "required": true,
-            "name": "reportId",
+            "name": "project",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "exclusiveMinimum": true
+            },
+            "required": true,
+            "name": "number",
             "in": "path"
           }
         ],
@@ -3977,11 +4159,16 @@
                       "properties": {
                         "id": {
                           "type": "string",
-                          "format": "uuid"
+                          "pattern": "^rpt_[0-9a-hjkmnp-tv-z]{8,16}$"
+                        },
+                        "number": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "exclusiveMinimum": true
                         },
                         "projectId": {
                           "type": "string",
-                          "format": "uuid"
+                          "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8,16}$"
                         },
                         "status": {
                           "type": "string",
@@ -4192,6 +4379,7 @@
                       },
                       "required": [
                         "id",
+                        "number",
                         "projectId",
                         "status",
                         "visitDate",
@@ -4395,7 +4583,7 @@
         }
       }
     },
-    "/reports/{reportId}/regenerate": {
+    "/projects/{project}/reports/{number}/regenerate": {
       "post": {
         "tags": [
           "reports"
@@ -4409,10 +4597,20 @@
           {
             "schema": {
               "type": "string",
-              "format": "uuid"
+              "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8,16}$"
             },
             "required": true,
-            "name": "reportId",
+            "name": "project",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "exclusiveMinimum": true
+            },
+            "required": true,
+            "name": "number",
             "in": "path"
           }
         ],
@@ -4446,11 +4644,16 @@
                       "properties": {
                         "id": {
                           "type": "string",
-                          "format": "uuid"
+                          "pattern": "^rpt_[0-9a-hjkmnp-tv-z]{8,16}$"
+                        },
+                        "number": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "exclusiveMinimum": true
                         },
                         "projectId": {
                           "type": "string",
-                          "format": "uuid"
+                          "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8,16}$"
                         },
                         "status": {
                           "type": "string",
@@ -4661,6 +4864,7 @@
                       },
                       "required": [
                         "id",
+                        "number",
                         "projectId",
                         "status",
                         "visitDate",
@@ -4864,7 +5068,7 @@
         }
       }
     },
-    "/reports/{reportId}/finalize": {
+    "/projects/{project}/reports/{number}/finalize": {
       "post": {
         "tags": [
           "reports"
@@ -4878,10 +5082,20 @@
           {
             "schema": {
               "type": "string",
-              "format": "uuid"
+              "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8,16}$"
             },
             "required": true,
-            "name": "reportId",
+            "name": "project",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "exclusiveMinimum": true
+            },
+            "required": true,
+            "name": "number",
             "in": "path"
           }
         ],
@@ -4898,11 +5112,16 @@
                       "properties": {
                         "id": {
                           "type": "string",
-                          "format": "uuid"
+                          "pattern": "^rpt_[0-9a-hjkmnp-tv-z]{8,16}$"
+                        },
+                        "number": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "exclusiveMinimum": true
                         },
                         "projectId": {
                           "type": "string",
-                          "format": "uuid"
+                          "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8,16}$"
                         },
                         "status": {
                           "type": "string",
@@ -5113,6 +5332,7 @@
                       },
                       "required": [
                         "id",
+                        "number",
                         "projectId",
                         "status",
                         "visitDate",
@@ -5244,7 +5464,7 @@
         }
       }
     },
-    "/reports/{reportId}/pdf": {
+    "/projects/{project}/reports/{number}/pdf": {
       "post": {
         "tags": [
           "reports"
@@ -5258,10 +5478,20 @@
           {
             "schema": {
               "type": "string",
-              "format": "uuid"
+              "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8,16}$"
             },
             "required": true,
-            "name": "reportId",
+            "name": "project",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "exclusiveMinimum": true
+            },
+            "required": true,
+            "name": "number",
             "in": "path"
           }
         ],
@@ -5400,7 +5630,264 @@
         }
       }
     },
-    "/reports/{reportId}/notes": {
+    "/p/{project}": {
+      "get": {
+        "tags": [
+          "resolvers"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8,16}$"
+            },
+            "required": true,
+            "name": "project",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Resolved.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "enum": [
+                        "project"
+                      ]
+                    },
+                    "projectId": {
+                      "type": "string",
+                      "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8,16}$"
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "projectId"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "nullable": true
+                        },
+                        "requestId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "nullable": true
+                        },
+                        "requestId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/r/{report}": {
+      "get": {
+        "tags": [
+          "resolvers"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^rpt_[0-9a-hjkmnp-tv-z]{8,16}$"
+            },
+            "required": true,
+            "name": "report",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Resolved.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "enum": [
+                        "report"
+                      ]
+                    },
+                    "projectId": {
+                      "type": "string",
+                      "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8,16}$"
+                    },
+                    "reportId": {
+                      "type": "string",
+                      "pattern": "^rpt_[0-9a-hjkmnp-tv-z]{8,16}$"
+                    },
+                    "reportNumber": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "exclusiveMinimum": true
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "projectId",
+                    "reportId",
+                    "reportNumber"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "nullable": true
+                        },
+                        "requestId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "nullable": true
+                        },
+                        "requestId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/reports/{report}/notes": {
       "get": {
         "tags": [
           "notes"
@@ -5414,10 +5901,10 @@
           {
             "schema": {
               "type": "string",
-              "format": "uuid"
+              "pattern": "^rpt_[0-9a-hjkmnp-tv-z]{8,16}$"
             },
             "required": true,
-            "name": "reportId",
+            "name": "report",
             "in": "path"
           },
           {
@@ -5457,15 +5944,15 @@
                         "properties": {
                           "id": {
                             "type": "string",
-                            "format": "uuid"
+                            "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
                           },
                           "reportId": {
                             "type": "string",
-                            "format": "uuid"
+                            "pattern": "^rpt_[0-9a-hjkmnp-tv-z]{8,16}$"
                           },
                           "authorId": {
                             "type": "string",
-                            "format": "uuid"
+                            "pattern": "^usr_[0-9a-hjkmnp-tv-z]{8,16}$"
                           },
                           "kind": {
                             "type": "string",
@@ -5483,7 +5970,7 @@
                           "fileId": {
                             "type": "string",
                             "nullable": true,
-                            "format": "uuid"
+                            "pattern": "^fil_[0-9a-hjkmnp-tv-z]{8,16}$"
                           },
                           "transcript": {
                             "type": "string",
@@ -5611,10 +6098,10 @@
           {
             "schema": {
               "type": "string",
-              "format": "uuid"
+              "pattern": "^rpt_[0-9a-hjkmnp-tv-z]{8,16}$"
             },
             "required": true,
-            "name": "reportId",
+            "name": "report",
             "in": "path"
           }
         ],
@@ -5640,7 +6127,7 @@
                   "fileId": {
                     "type": "string",
                     "nullable": true,
-                    "format": "uuid"
+                    "pattern": "^fil_[0-9a-hjkmnp-tv-z]{8,16}$"
                   },
                   "transcript": {
                     "type": "string",
@@ -5664,15 +6151,15 @@
                   "properties": {
                     "id": {
                       "type": "string",
-                      "format": "uuid"
+                      "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
                     },
                     "reportId": {
                       "type": "string",
-                      "format": "uuid"
+                      "pattern": "^rpt_[0-9a-hjkmnp-tv-z]{8,16}$"
                     },
                     "authorId": {
                       "type": "string",
-                      "format": "uuid"
+                      "pattern": "^usr_[0-9a-hjkmnp-tv-z]{8,16}$"
                     },
                     "kind": {
                       "type": "string",
@@ -5690,7 +6177,7 @@
                     "fileId": {
                       "type": "string",
                       "nullable": true,
-                      "format": "uuid"
+                      "pattern": "^fil_[0-9a-hjkmnp-tv-z]{8,16}$"
                     },
                     "transcript": {
                       "type": "string",
@@ -5829,7 +6316,7 @@
         }
       }
     },
-    "/notes/{noteId}": {
+    "/notes/{note}": {
       "patch": {
         "tags": [
           "notes"
@@ -5843,10 +6330,10 @@
           {
             "schema": {
               "type": "string",
-              "format": "uuid"
+              "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
             },
             "required": true,
-            "name": "noteId",
+            "name": "note",
             "in": "path"
           }
         ],
@@ -5878,15 +6365,15 @@
                   "properties": {
                     "id": {
                       "type": "string",
-                      "format": "uuid"
+                      "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
                     },
                     "reportId": {
                       "type": "string",
-                      "format": "uuid"
+                      "pattern": "^rpt_[0-9a-hjkmnp-tv-z]{8,16}$"
                     },
                     "authorId": {
                       "type": "string",
-                      "format": "uuid"
+                      "pattern": "^usr_[0-9a-hjkmnp-tv-z]{8,16}$"
                     },
                     "kind": {
                       "type": "string",
@@ -5904,7 +6391,7 @@
                     "fileId": {
                       "type": "string",
                       "nullable": true,
-                      "format": "uuid"
+                      "pattern": "^fil_[0-9a-hjkmnp-tv-z]{8,16}$"
                     },
                     "transcript": {
                       "type": "string",
@@ -6055,10 +6542,10 @@
           {
             "schema": {
               "type": "string",
-              "format": "uuid"
+              "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
             },
             "required": true,
-            "name": "noteId",
+            "name": "note",
             "in": "path"
           }
         ],
@@ -6349,11 +6836,11 @@
                   "properties": {
                     "id": {
                       "type": "string",
-                      "format": "uuid"
+                      "pattern": "^fil_[0-9a-hjkmnp-tv-z]{8,16}$"
                     },
                     "ownerId": {
                       "type": "string",
-                      "format": "uuid"
+                      "pattern": "^usr_[0-9a-hjkmnp-tv-z]{8,16}$"
                     },
                     "kind": {
                       "type": "string",
@@ -6515,7 +7002,7 @@
           {
             "schema": {
               "type": "string",
-              "format": "uuid"
+              "pattern": "^fil_[0-9a-hjkmnp-tv-z]{8,16}$"
             },
             "required": true,
             "name": "id",
@@ -6639,7 +7126,7 @@
                 "properties": {
                   "fileId": {
                     "type": "string",
-                    "format": "uuid"
+                    "pattern": "^fil_[0-9a-hjkmnp-tv-z]{8,16}$"
                   },
                   "fixtureName": {
                     "type": "string",

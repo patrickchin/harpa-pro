@@ -1,12 +1,12 @@
 /**
- * Interaction pane (arch-tui-layout.md §3.2, §3.5).
+ * Interaction pane (arch-tui-layout-v2.md §2.2, §7).
  *
  * Renders exactly one widget — whichever matches
- * `state.currentPrompt.kind` — or an idle/spinner block when there
- * is no outstanding prompt.
+ * `interaction.currentPrompt.kind` — or an idle/spinner block when
+ * there is no outstanding prompt.
  *
- * Each widget owns its own keystroke handling and calls
- * `ui.resolve(...)` to settle the awaiting `opentuiPrompter` call.
+ * No box title. The keymap hint (rank 5) is rendered as the pane's
+ * footer line — it replaces the v4.1 status-bar hint.
  */
 import { Match, Show, Switch } from 'solid-js';
 import type { PromptRequest, UiStore } from './store.js';
@@ -30,8 +30,9 @@ function promptOfKind<K extends PromptRequest['kind']>(
 }
 
 export function InteractionPane(props: InteractionPaneProps) {
-  const prompt = () => props.ui.state.currentPrompt;
-  const inFlight = () => props.ui.state.inFlight;
+  const prompt = () => props.ui.state.interaction.currentPrompt;
+  const inFlight = () => props.ui.state.interaction.inFlight;
+  const keymapHint = () => props.ui.state.interaction.keymapHint;
 
   return (
     <box
@@ -39,36 +40,39 @@ export function InteractionPane(props: InteractionPaneProps) {
       flexGrow={1}
       border
       borderColor={theme.borderActive}
-      title="action"
-      titleAlignment="left"
       padding={1}
     >
-      <Switch
-        fallback={
-          <Show
-            when={inFlight()}
-            fallback={<text fg={theme.fgDim}>idle — waiting for next step</text>}
-          >
-            {(busy: () => { readonly label: string }) => <Spinner label={busy().label} />}
-          </Show>
-        }
-      >
-        <Match when={promptOfKind(prompt(), 'select')}>
-          {(p: () => Extract<PromptRequest, { kind: 'select' }>) => <SelectList ui={props.ui} prompt={p()} />}
-        </Match>
-        <Match when={promptOfKind(prompt(), 'text')}>
-          {(p: () => Extract<PromptRequest, { kind: 'text' }>) => <TextField ui={props.ui} prompt={p()} />}
-        </Match>
-        <Match when={promptOfKind(prompt(), 'multiline')}>
-          {(p: () => Extract<PromptRequest, { kind: 'multiline' }>) => <MultilineField ui={props.ui} prompt={p()} />}
-        </Match>
-        <Match when={promptOfKind(prompt(), 'filePath')}>
-          {(p: () => Extract<PromptRequest, { kind: 'filePath' }>) => <FilePathField ui={props.ui} prompt={p()} />}
-        </Match>
-        <Match when={promptOfKind(prompt(), 'confirm')}>
-          {(p: () => Extract<PromptRequest, { kind: 'confirm' }>) => <ConfirmDialog ui={props.ui} prompt={p()} />}
-        </Match>
-      </Switch>
+      <box flexDirection="column" flexGrow={1}>
+        <Switch
+          fallback={
+            <Show
+              when={inFlight()}
+              fallback={<text fg={theme.fgDim}>idle</text>}
+            >
+              {(busy: () => { readonly label: string }) => <Spinner label={busy().label} />}
+            </Show>
+          }
+        >
+          <Match when={promptOfKind(prompt(), 'select')}>
+            {(p: () => Extract<PromptRequest, { kind: 'select' }>) => <SelectList ui={props.ui} prompt={p()} />}
+          </Match>
+          <Match when={promptOfKind(prompt(), 'text')}>
+            {(p: () => Extract<PromptRequest, { kind: 'text' }>) => <TextField ui={props.ui} prompt={p()} />}
+          </Match>
+          <Match when={promptOfKind(prompt(), 'multiline')}>
+            {(p: () => Extract<PromptRequest, { kind: 'multiline' }>) => <MultilineField ui={props.ui} prompt={p()} />}
+          </Match>
+          <Match when={promptOfKind(prompt(), 'filePath')}>
+            {(p: () => Extract<PromptRequest, { kind: 'filePath' }>) => <FilePathField ui={props.ui} prompt={p()} />}
+          </Match>
+          <Match when={promptOfKind(prompt(), 'confirm')}>
+            {(p: () => Extract<PromptRequest, { kind: 'confirm' }>) => <ConfirmDialog ui={props.ui} prompt={p()} />}
+          </Match>
+        </Switch>
+      </box>
+      <Show when={keymapHint()}>
+        <text fg={theme.fgDim}>{keymapHint()}</text>
+      </Show>
     </box>
   );
 }

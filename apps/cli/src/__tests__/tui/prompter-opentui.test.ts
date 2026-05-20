@@ -8,13 +8,13 @@ describe('opentuiPrompter', () => {
     const prompter = opentuiPrompter(ui);
 
     const pending = prompter.text({ label: 'Name', placeholder: 'alice' });
-    expect(ui.state.currentPrompt?.kind).toBe('text');
-    expect(ui.state.currentPrompt).toMatchObject({ label: 'Name', placeholder: 'alice' });
+    expect(ui.state.interaction.currentPrompt?.kind).toBe('text');
+    expect(ui.state.interaction.currentPrompt).toMatchObject({ label: 'Name', placeholder: 'alice' });
 
     ui.resolve({ kind: 'text', value: 'bob' });
     const got = await pending;
     expect(got).toBe('bob');
-    expect(ui.state.currentPrompt).toBeUndefined();
+    expect(ui.state.interaction.currentPrompt).toBeUndefined();
   });
 
   it('select(): forwards options + hints, returns typed value', async () => {
@@ -29,7 +29,7 @@ describe('opentuiPrompter', () => {
       ],
       initialValue: 'add-note',
     });
-    const req = ui.state.currentPrompt;
+    const req = ui.state.interaction.currentPrompt;
     expect(req?.kind).toBe('select');
     if (req?.kind === 'select') {
       expect(req.options).toEqual([
@@ -47,7 +47,7 @@ describe('opentuiPrompter', () => {
     const ui = createUiStore();
     const prompter = opentuiPrompter(ui);
     const pending = prompter.confirm({ label: 'Delete?', default: false });
-    expect(ui.state.currentPrompt).toMatchObject({ kind: 'confirm', label: 'Delete?', default: false });
+    expect(ui.state.interaction.currentPrompt).toMatchObject({ kind: 'confirm', label: 'Delete?', default: false });
     ui.resolve({ kind: 'confirm', value: true });
     expect(await pending).toBe(true);
   });
@@ -74,27 +74,29 @@ describe('opentuiPrompter', () => {
     const prompter = opentuiPrompter(ui);
 
     const m = prompter.multiline({ label: 'Note' });
-    expect(ui.state.currentPrompt?.kind).toBe('multiline');
+    expect(ui.state.interaction.currentPrompt?.kind).toBe('multiline');
     ui.resolve({ kind: 'text', value: 'line1\nline2' });
     expect(await m).toBe('line1\nline2');
 
     const f = prompter.filePath({ label: 'File' });
-    expect(ui.state.currentPrompt?.kind).toBe('filePath');
+    expect(ui.state.interaction.currentPrompt?.kind).toBe('filePath');
     ui.resolve({ kind: 'text', value: '/tmp/x.jpg' });
     expect(await f).toBe('/tmp/x.jpg');
   });
 
-  it('note + log.* push into the viewport log tail with the right kind', async () => {
-    const ui = createUiStore({ logCap: 10 });
+  it('note + log.* push the latest entry into the single log slot with the right kind', async () => {
+    const ui = createUiStore();
     const prompter = opentuiPrompter(ui);
     prompter.note('hello', 'Heads up');
+    expect(ui.state.log).toMatchObject({ kind: 'note', message: 'hello', title: 'Heads up' });
     prompter.log.info('i');
+    expect(ui.state.log).toMatchObject({ kind: 'info', message: 'i' });
     prompter.log.success('s');
+    expect(ui.state.log).toMatchObject({ kind: 'success', message: 's' });
     prompter.log.warn('w');
+    expect(ui.state.log).toMatchObject({ kind: 'warn', message: 'w' });
     prompter.log.error('e');
-    const tail = ui.state.viewport.logTail;
-    expect(tail.map((t) => t.kind)).toEqual(['note', 'info', 'success', 'warn', 'error']);
-    expect(tail[0]).toMatchObject({ kind: 'note', message: 'hello', title: 'Heads up' });
+    expect(ui.state.log).toMatchObject({ kind: 'error', message: 'e' });
   });
 
   it('intro/outro are no-ops (no log entries, no exceptions)', () => {
@@ -102,7 +104,7 @@ describe('opentuiPrompter', () => {
     const prompter = opentuiPrompter(ui);
     prompter.intro('start');
     prompter.outro('done');
-    expect(ui.state.viewport.logTail).toEqual([]);
+    expect(ui.state.log).toBeUndefined();
   });
 
   it('sequential prompts work: second prompt is independent of the first', async () => {
@@ -116,7 +118,7 @@ describe('opentuiPrompter', () => {
     const b = prompter.confirm({ label: 'B?' });
     ui.resolve({ kind: 'confirm', value: false });
     expect(await b).toBe(false);
-    expect(ui.state.currentPrompt).toBeUndefined();
+    expect(ui.state.interaction.currentPrompt).toBeUndefined();
   });
 
   it('isCancel only recognises the CANCEL sentinel', () => {

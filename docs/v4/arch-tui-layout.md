@@ -1,5 +1,13 @@
 # TUI v4 — split-pane rendering layer (OpenTUI + Solid, on Bun)
 
+> **⚠️ Layout / information-hierarchy superseded by
+> [`arch-tui-layout-v2.md`](arch-tui-layout-v2.md).** The OpenTUI +
+> Solid stack, `Prompter` contract, `UiStore`, and Bun entry-point
+> described below are still authoritative. The visual layout
+> (status bar, viewport title, "action" panel title, log tail) and
+> the per-screen viewport templates have been redesigned — read
+> v2 first for any new layout work.
+>
 > **Status:** design, not yet implemented. Successor to the *rendering
 > and prompt* half of [`arch-tui-app.md`](arch-tui-app.md) and
 > [`arch-tui-nav.md`](arch-tui-nav.md). Replaces every line-oriented

@@ -1,29 +1,27 @@
 /**
- * UI store for the OpenTUI-backed TUI (arch-tui-layout.md §3.3).
+ * UI store for the OpenTUI-backed TUI (arch-tui-layout-v2.md §8).
  *
- * Holds the data the Solid view renders: viewport snapshot, status
- * bar, current prompt request, in-flight indicator. Built on
- * `solid-js/store` so component reads register fine-grained
+ * Holds the data the Solid view renders, split into four slices that
+ * map 1:1 onto the v2 layout chrome:
+ *
+ *   topbar      — breadcrumb + identity strip (loud-left, muted-right)
+ *   viewport    — read-only "what's here": headline + subline + body
+ *   interaction — outstanding prompt, in-flight spinner, keymap hint
+ *   log         — newest log entry (single line, shown in LogStrip)
+ *
+ * Built on `solid-js/store` so component reads register fine-grained
  * dependencies, but exposes a plain `state` getter so non-Solid
- * consumers (tests, the imperative screen driver) can poll it
- * synchronously.
- *
- * The store is the bridge between two worlds:
- *   - The imperative screen driver (`runApp` / `runScreen`) calls
- *     `opentuiPrompter(ui).select(...)` and awaits a Promise.
- *   - The Solid view mounts the appropriate widget for
- *     `state.currentPrompt`, reads `state.viewport`, and calls
- *     `ui.resolve(...)` from its keystroke handler.
+ * consumers (tests, the imperative screen driver) can poll it.
  *
  * One prompt at a time. The driver only ever invokes the next prompt
- * after the previous one's Promise settles, so `currentPrompt` is
- * always either `undefined` or the unique outstanding request.
+ * after the previous one's Promise settles, so `interaction.currentPrompt`
+ * is always either `undefined` or the unique outstanding request.
  *
  * No `setTimeout` / no fire-and-forget (Pitfall 5): resolution is the
  * synchronous keystroke handler calling `ui.resolve(...)`. Cancel is
  * the same handler with `{ kind: 'cancel' }`.
  */
-import { createStore, produce, type SetStoreFunction } from 'solid-js/store';
+import { createStore, type SetStoreFunction } from 'solid-js/store';
 
 export type LogKind = 'info' | 'success' | 'warn' | 'error' | 'note';
 
@@ -34,17 +32,16 @@ export interface LogEntry {
 }
 
 export interface ViewportListItem {
+  /** Primary column (always rendered). */
   readonly label: string;
+  /** Subsequent columns; collapsed right-to-left when the pane is narrow. */
+  readonly columns?: ReadonlyArray<string>;
+  /** Fallback for narrow panes when columns are dropped entirely. */
   readonly hint?: string;
-  /**
-   * Informational mirror of an action label — purely a hint to the
-   * user. Selection itself happens in the interaction pane.
-   */
-  readonly mirrorsAction?: string;
 }
 
 export type ViewportBody =
-  | { readonly kind: 'list'; readonly items: ReadonlyArray<ViewportListItem> }
+  | { readonly kind: 'list'; readonly items: ReadonlyArray<ViewportListItem>; readonly columnTitles?: ReadonlyArray<string> }
   | {
       readonly kind: 'detail';
       readonly sections: ReadonlyArray<{
@@ -56,16 +53,29 @@ export type ViewportBody =
   | { readonly kind: 'empty'; readonly hint?: string };
 
 export interface ViewportState {
-  readonly title: string;
-  readonly headerLines: ReadonlyArray<string>;
+  /** Rank-2 row at the top of the viewport — what we're looking at. */
+  readonly headline?: string;
+  /** Rank-3 summary line under the headline (counts, status, etc). */
+  readonly subline?: string;
   readonly body?: ViewportBody;
-  readonly logTail: ReadonlyArray<LogEntry>;
 }
 
-export interface StatusState {
-  readonly apiUrl: string;
+export interface IdentityStrip {
   readonly user?: string;
+  /** Short label for HARPA_API_URL — `prod` / `dev` / `localhost` / hostname. */
+  readonly apiLabel: string;
+  /** AI fixtures mode; rendered in LogStrip when not `live`/undefined. */
+  readonly fixtureMode?: 'replay' | 'record' | 'live';
+}
+
+export interface TopBarState {
   readonly breadcrumb: ReadonlyArray<string>;
+  readonly identity: IdentityStrip;
+}
+
+export interface InteractionState {
+  readonly currentPrompt: PromptRequest | undefined;
+  readonly inFlight: { readonly label: string } | undefined;
   readonly keymapHint: string;
 }
 
@@ -113,69 +123,74 @@ export type PromptResolution =
   | { readonly kind: 'cancel' };
 
 export interface UiState {
+  topbar: TopBarState;
   viewport: ViewportState;
-  status: StatusState;
-  currentPrompt: PromptRequest | undefined;
-  inFlight: { readonly label: string } | undefined;
+  interaction: InteractionState;
+  /** Newest log entry; the LogStrip never shows more than one. */
+  log: LogEntry | undefined;
 }
 
 export type ResolveListener = (r: PromptResolution) => void;
 
 export interface UiStore {
-  /** Reactive snapshot for Solid components. */
   readonly state: UiState;
-  /**
-   * Resolve the outstanding prompt. No-op if no listener is registered
-   * (the prompter façade always registers before mutating
-   * `currentPrompt`).
-   */
   resolve(r: PromptResolution): void;
-  /** Subscribe to the *next* resolve call. Returns an unsubscribe fn. */
   onResolve(cb: ResolveListener): () => void;
+  /** Replace the LogStrip entry. */
   log(entry: LogEntry): void;
+  setTopBar(patch: Partial<TopBarState>): void;
+  setIdentity(patch: Partial<IdentityStrip>): void;
   setViewport(patch: Partial<ViewportState>): void;
-  setStatus(patch: Partial<StatusState>): void;
+  setInteraction(patch: Partial<InteractionState>): void;
   setInFlight(v: { label: string } | undefined): void;
   setPrompt(p: PromptRequest | undefined): void;
 }
 
 export interface CreateUiStoreOptions {
-  /** Cap on the in-viewport log tail (older entries are dropped). */
-  readonly logCap?: number;
-  readonly initialStatus?: Partial<StatusState>;
+  readonly initialTopBar?: Partial<TopBarState>;
+  readonly initialIdentity?: Partial<IdentityStrip>;
   readonly initialViewport?: Partial<ViewportState>;
+  readonly initialInteraction?: Partial<InteractionState>;
 }
 
-const EMPTY_VIEWPORT: ViewportState = {
-  title: '',
-  headerLines: [],
-  logTail: [],
+const EMPTY_IDENTITY: IdentityStrip = { apiLabel: '' };
+
+const EMPTY_TOPBAR: TopBarState = {
+  breadcrumb: [],
+  identity: EMPTY_IDENTITY,
 };
 
-const EMPTY_STATUS: StatusState = {
-  apiUrl: '',
-  breadcrumb: [],
+const EMPTY_VIEWPORT: ViewportState = {};
+
+const EMPTY_INTERACTION: InteractionState = {
+  currentPrompt: undefined,
+  inFlight: undefined,
   keymapHint: '',
 };
 
 export function createUiStore(opts: CreateUiStoreOptions = {}): UiStore {
-  const logCap = opts.logCap ?? 5;
+  const topbarInit = opts.initialTopBar ?? {};
   const [state, setState] = createStore<UiState>({
+    topbar: {
+      ...EMPTY_TOPBAR,
+      ...topbarInit,
+      identity: {
+        ...EMPTY_IDENTITY,
+        ...(topbarInit.identity ?? {}),
+        ...(opts.initialIdentity ?? {}),
+      },
+    },
     viewport: { ...EMPTY_VIEWPORT, ...opts.initialViewport },
-    status: { ...EMPTY_STATUS, ...opts.initialStatus },
-    currentPrompt: undefined,
-    inFlight: undefined,
+    interaction: { ...EMPTY_INTERACTION, ...opts.initialInteraction },
+    log: undefined,
   });
 
   const listeners = new Set<ResolveListener>();
-
   const set: SetStoreFunction<UiState> = setState;
 
   return {
     state,
     resolve(r) {
-      // Snapshot so a listener that re-registers during dispatch does
-      // not get called for the resolution that triggered it.
       const fired = Array.from(listeners);
       listeners.clear();
       for (const cb of fired) cb(r);
@@ -185,26 +200,28 @@ export function createUiStore(opts: CreateUiStoreOptions = {}): UiStore {
       return () => listeners.delete(cb);
     },
     log(entry) {
-      set(
-        'viewport',
-        produce<ViewportState>((v) => {
-          const next = [...v.logTail, entry];
-          (v as { logTail: ReadonlyArray<LogEntry> }).logTail =
-            next.length > logCap ? next.slice(next.length - logCap) : next;
-        }),
-      );
+      set('log', entry);
+    },
+    setTopBar(patch) {
+      set('topbar', (prev) => ({ ...prev, ...patch }));
+    },
+    setIdentity(patch) {
+      set('topbar', (prev) => ({
+        ...prev,
+        identity: { ...prev.identity, ...patch },
+      }));
     },
     setViewport(patch) {
       set('viewport', (prev) => ({ ...prev, ...patch }));
     },
-    setStatus(patch) {
-      set('status', (prev) => ({ ...prev, ...patch }));
+    setInteraction(patch) {
+      set('interaction', (prev) => ({ ...prev, ...patch }));
     },
     setInFlight(v) {
-      set('inFlight', v);
+      set('interaction', (prev) => ({ ...prev, inFlight: v }));
     },
     setPrompt(p) {
-      set('currentPrompt', p);
+      set('interaction', (prev) => ({ ...prev, currentPrompt: p }));
     },
   };
 }

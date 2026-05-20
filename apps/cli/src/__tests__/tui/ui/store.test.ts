@@ -1,67 +1,84 @@
+/**
+ * UiStore unit tests (arch-tui-layout-v2.md §8).
+ *
+ * Asserts the four-slice shape: topbar / viewport / interaction /
+ * log. Replaces the v1 `status` slice with `topbar` (breadcrumb +
+ * identity) and a separate `interaction` slice (prompt + in-flight +
+ * keymap hint). The log is now a single LogEntry replaced on each
+ * push, not a capped tail.
+ */
 import { describe, it, expect } from 'vitest';
 import { createUiStore } from '../../../tui/ui/store.js';
 
 describe('UiStore', () => {
-  it('initialises with empty viewport/status and no prompt', () => {
+  it('initialises with empty slices and no prompt', () => {
     const ui = createUiStore();
-    expect(ui.state.viewport.title).toBe('');
-    expect(ui.state.viewport.headerLines).toEqual([]);
+    expect(ui.state.viewport.headline).toBeUndefined();
+    expect(ui.state.viewport.subline).toBeUndefined();
     expect(ui.state.viewport.body).toBeUndefined();
-    expect(ui.state.viewport.logTail).toEqual([]);
-    expect(ui.state.status.apiUrl).toBe('');
-    expect(ui.state.status.breadcrumb).toEqual([]);
-    expect(ui.state.currentPrompt).toBeUndefined();
-    expect(ui.state.inFlight).toBeUndefined();
+    expect(ui.state.topbar.breadcrumb).toEqual([]);
+    expect(ui.state.topbar.identity.apiLabel).toBe('');
+    expect(ui.state.interaction.currentPrompt).toBeUndefined();
+    expect(ui.state.interaction.inFlight).toBeUndefined();
+    expect(ui.state.log).toBeUndefined();
   });
 
-  it('merges initial status/viewport from options', () => {
+  it('merges initial topbar/viewport/interaction from options', () => {
     const ui = createUiStore({
-      initialStatus: { apiUrl: 'https://api.local', user: 'alice' },
-      initialViewport: { title: 'Welcome' },
+      initialTopBar: {
+        breadcrumb: ['/'],
+        identity: { user: 'alice', apiLabel: 'prod', fixtureMode: 'live' },
+      },
+      initialViewport: { headline: 'Welcome' },
+      initialInteraction: { keymapHint: '↑/↓ select' },
     });
-    expect(ui.state.status.apiUrl).toBe('https://api.local');
-    expect(ui.state.status.user).toBe('alice');
-    expect(ui.state.viewport.title).toBe('Welcome');
+    expect(ui.state.topbar.breadcrumb).toEqual(['/']);
+    expect(ui.state.topbar.identity.user).toBe('alice');
+    expect(ui.state.topbar.identity.apiLabel).toBe('prod');
+    expect(ui.state.viewport.headline).toBe('Welcome');
+    expect(ui.state.interaction.keymapHint).toBe('↑/↓ select');
   });
 
   it('setViewport patches without dropping other fields', () => {
     const ui = createUiStore();
-    ui.setViewport({ title: 'Project Acme' });
-    ui.setViewport({ headerLines: ['member: 3', 'reports: 12'] });
-    expect(ui.state.viewport.title).toBe('Project Acme');
-    expect(ui.state.viewport.headerLines).toEqual(['member: 3', 'reports: 12']);
+    ui.setViewport({ headline: 'Project Acme' });
+    ui.setViewport({ subline: 'member: 3 · reports: 12' });
+    expect(ui.state.viewport.headline).toBe('Project Acme');
+    expect(ui.state.viewport.subline).toBe('member: 3 · reports: 12');
   });
 
-  it('setStatus patches breadcrumb and keymap hint', () => {
+  it('setTopBar patches breadcrumb and setIdentity patches identity', () => {
     const ui = createUiStore();
-    ui.setStatus({ breadcrumb: ['Projects', 'Acme'] });
-    ui.setStatus({ keymapHint: '↑/↓ select · ↵ open' });
-    expect(ui.state.status.breadcrumb).toEqual(['Projects', 'Acme']);
-    expect(ui.state.status.keymapHint).toBe('↑/↓ select · ↵ open');
+    ui.setTopBar({ breadcrumb: ['/', 'projects', 'acme'] });
+    ui.setIdentity({ user: 'alice', fixtureMode: 'replay' });
+    expect(ui.state.topbar.breadcrumb).toEqual(['/', 'projects', 'acme']);
+    expect(ui.state.topbar.identity.user).toBe('alice');
+    expect(ui.state.topbar.identity.fixtureMode).toBe('replay');
   });
 
   it('setPrompt and clears with undefined', () => {
     const ui = createUiStore();
     ui.setPrompt({ kind: 'confirm', label: 'Delete?' });
-    expect(ui.state.currentPrompt?.kind).toBe('confirm');
+    expect(ui.state.interaction.currentPrompt?.kind).toBe('confirm');
     ui.setPrompt(undefined);
-    expect(ui.state.currentPrompt).toBeUndefined();
+    expect(ui.state.interaction.currentPrompt).toBeUndefined();
   });
 
   it('setInFlight toggles the indicator', () => {
     const ui = createUiStore();
     ui.setInFlight({ label: 'fetching…' });
-    expect(ui.state.inFlight?.label).toBe('fetching…');
+    expect(ui.state.interaction.inFlight?.label).toBe('fetching…');
     ui.setInFlight(undefined);
-    expect(ui.state.inFlight).toBeUndefined();
+    expect(ui.state.interaction.inFlight).toBeUndefined();
   });
 
-  it('log appends entries and caps the tail at logCap', () => {
-    const ui = createUiStore({ logCap: 3 });
-    for (const m of ['a', 'b', 'c', 'd', 'e']) {
+  it('log replaces the single log entry on each push', () => {
+    const ui = createUiStore();
+    for (const m of ['a', 'b', 'c']) {
       ui.log({ kind: 'info', message: m });
     }
-    expect(ui.state.viewport.logTail.map((e) => e.message)).toEqual(['c', 'd', 'e']);
+    expect(ui.state.log?.message).toBe('c');
+    expect(ui.state.log?.kind).toBe('info');
   });
 
   it('onResolve fires the listener on resolve and unsubscribes after', () => {

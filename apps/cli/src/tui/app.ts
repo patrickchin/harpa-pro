@@ -1,219 +1,177 @@
 /**
- * State-machine driver for the v2 TUI.
+ * State-aware top-level menu driver (arch-tui-layout-v2.md §5, §6.6).
  *
- * `runApp` repeatedly renders a top-level `select` of the flows that
- * are `visibleIn` the current `session.state.kind`, runs the chosen
- * flow, applies its `FlowResult`, and loops until the user picks
- * "Quit" or cancels at the top level.
+ * Renders the root menu — Account, Projects, Developer, Sign in,
+ * Sign out, Set API URL, Quit — filtered by the current
+ * `AppState.kind`. The visible set is recomputed every iteration so
+ * a flow that transitions auth → authed (sign-in) re-renders the
+ * authed menu without restarting the loop.
  *
- * Per-state menus (per arch-tui-app.md §3.2):
+ * v4.2 layout: the read-only context for the current root state
+ * (who am I, which API, what to do next) is pushed into the
+ * viewport sink as a `headline + subline + body`. The interaction
+ * pane only carries the verb menu. Identity has moved to the TopBar
+ * and is owned by `opentui-runner.ts`.
  *
- *   config  → [Set API URL, Quit]
- *   auth    → [Sign in, Set API URL, Quit]
- *   authed  → [Account, Projects, Developer › Raw API,
- *              Sign out, Set API URL, Quit]
- *
- * Flows are registered in `FLOWS` below; the driver itself contains
- * no flow-specific logic. Adding a new flow = add to the array.
- *
- * Cancellation: Ctrl-C at the top-level select = "Quit". Ctrl-C inside
- * a flow returns to the flow's parent (the flow handles it; the driver
- * just sees a `stay` result).
+ * See docs/v4/arch-tui-layout-v2.md §6.6 for the per-state body
+ * template.
  */
-import chalk from 'chalk';
 import type { Prompter } from './prompter.js';
-import type { Session } from './session.js';
-import type { Flow } from './flow.js';
+import type { Flow, FlowResult } from './flow.js';
+import type { Session, AppState } from './session.js';
+import {
+  type ViewportSink,
+  nullViewportSink,
+} from './viewport-sink.js';
 import type { ViewportBody } from './ui/store.js';
-import { type ViewportSink, nullViewportSink } from './viewport-sink.js';
-import { setApiUrlFlow } from './flows/set-api-url.js';
-import { developerRawApiFlow } from './flows/developer-raw-api.js';
-import { signInFlow, signOutFlow } from './flows/auth.js';
-import { accountFlow } from './flows/account.js';
-import { projectsFlow } from './flows/projects.js';
 
-const QUIT = '__quit__' as const;
-
-/**
- * Default flow registry. Tests inject their own list to keep the
- * surface area small. Order matters — this is the order of the
- * top-level menu, per arch-tui-app.md §3.2.
- *
- * Upload is intentionally not in this list: media uploads only make
- * sense inside a report, so the entry lives on the report-home screen.
- */
-export const DEFAULT_FLOWS: ReadonlyArray<Flow> = [
-  signInFlow,
-  accountFlow,
-  projectsFlow,
-  developerRawApiFlow,
-  signOutFlow,
-  setApiUrlFlow,
-];
-
-export interface RunAppOptions {
+export interface RunAppOpts {
   flows?: ReadonlyArray<Flow>;
-  /**
-   * Optional viewport sink for the split-pane TUI. Default: no-op
-   * (used by the classic clack runner and the scripted-prompter
-   * tests).
-   */
+  /** Sink for the read-only viewport pane. Defaults to a no-op. */
   viewport?: ViewportSink;
+}
+
+const QUIT = '__quit__';
+
+interface RootHeader {
+  readonly headline: string;
+  readonly subline?: string;
+  readonly body: ViewportBody;
+}
+
+function rootHeader(state: AppState, session: Session): RootHeader {
+  const apiUrl = session.effectiveEnv().HARPA_API_URL ?? '(not set)';
+  switch (state.kind) {
+    case 'config':
+      return {
+        headline: 'Setup required',
+        subline: 'No API URL set',
+        body: {
+          kind: 'detail',
+          sections: [
+            {
+              title: 'setup',
+              lines: [
+                '  Pick "Set API URL" on the right to choose which',
+                '  Harpa API to talk to.',
+              ],
+            },
+          ],
+        },
+      };
+    case 'auth': {
+      const reason =
+        state.reason === 'expired'
+          ? 'session expired'
+          : state.reason === 'logged-out'
+            ? 'signed out'
+            : 'not signed in';
+      return {
+        headline: 'Not signed in',
+        subline: `Sign in to ${apiUrl} (${reason})`,
+        body: {
+          kind: 'detail',
+          sections: [
+            {
+              title: 'connection',
+              lines: [`  api url        ${apiUrl}`],
+            },
+            {
+              title: 'next',
+              lines: [
+                '  Pick "Sign in" on the right to authenticate with',
+                '  your phone number. After signing in you can browse',
+                '  projects and reports.',
+              ],
+            },
+          ],
+        },
+      };
+    }
+    case 'authed': {
+      const u = state.user;
+      const who = u.displayName ?? u.userId;
+      return {
+        headline: `Signed in as ${who}`,
+        subline: `Pick a verb on the right`,
+        body: {
+          kind: 'detail',
+          sections: [
+            {
+              title: 'who',
+              lines: [
+                `  display name   ${u.displayName ?? '(none)'}`,
+                `  phone          ${u.phone ?? '(none)'}`,
+              ],
+            },
+            {
+              title: 'connection',
+              lines: [`  api url        ${apiUrl}`],
+            },
+            {
+              title: 'next',
+              lines: [
+                '  Account — your profile, usage, AI settings',
+                '  Projects — projects, members, reports, notes',
+                '  Developer — every raw endpoint as a flat menu',
+              ],
+            },
+          ],
+        },
+      };
+    }
+  }
 }
 
 export async function runApp(
   prompter: Prompter,
   session: Session,
-  opts: RunAppOptions = {},
+  opts: RunAppOpts,
 ): Promise<void> {
-  const flows = opts.flows ?? DEFAULT_FLOWS;
   const viewport = opts.viewport ?? nullViewportSink();
   for (;;) {
-    const visible = flows.filter((f) => f.visibleIn.includes(session.state.kind));
-    viewport.setHeader(...stateViewportHeader(session));
-    viewport.setBody(stateViewportBody(session, visible));
-    const choice = await prompter.select<string>({
-      label: stateLabel(session),
-      options: [
-        ...visible.map((f) => ({ value: f.id, label: f.label, hint: f.hint })),
-        { value: QUIT, label: 'Quit' },
-      ],
+    const state = session.state;
+    const visible = (opts.flows ?? []).filter((f) => f.visibleIn.includes(state.kind));
+
+    const h = rootHeader(state, session);
+    viewport.setHeadline(h.headline, h.subline);
+    viewport.setBody(h.body);
+    // Mirror into the prompter transcript so scripted-prompter tests
+    // can still assert on the rendered context.
+    prompter.note(h.subline ?? '', h.headline);
+
+    const options: { value: string; label: string; hint?: string }[] = visible.map(
+      (f) => {
+        const o: { value: string; label: string; hint?: string } = {
+          value: f.id,
+          label: f.label,
+        };
+        if (f.hint !== undefined) o.hint = f.hint;
+        return o;
+      },
+    );
+    options.push({ value: QUIT, label: 'Quit' });
+
+    const answer = await prompter.select<string>({
+      label: '',
+      options,
     });
 
-    if (prompter.isCancel(choice) || choice === QUIT) return;
+    if (prompter.isCancel(answer) || answer === QUIT) return;
 
-    const flow = visible.find((f) => f.id === choice);
+    const flow = visible.find((f) => f.id === answer);
     if (!flow) continue;
 
     viewport.setInFlight(flow.label);
-    let result;
+    let result: FlowResult;
     try {
       result = await flow.run({ prompter, session, viewport });
     } finally {
       viewport.setInFlight(undefined);
     }
     if (result.kind === 'quit') return;
-    // 'transition' and 'stay' both fall through — the driver re-renders
-    // off `session.state` which the flow already mutated.
-  }
-}
-
-function stateLabel(session: Session): string {
-  const state = session.state;
-  const apiUrl = session.effectiveEnv().HARPA_API_URL ?? '(not set)';
-  switch (state.kind) {
-    case 'config':
-      return chalk.yellow('No API URL set — pick "Set API URL" to begin.');
-    case 'auth': {
-      const reasonText = state.reason === 'expired'
-        ? ' (session expired — please sign in again)'
-        : state.reason === 'logged-out'
-          ? ' (signed out)'
-          : '';
-      return `Sign in to ${apiUrl}${reasonText}`;
-    }
-    case 'authed': {
-      const who = state.user.displayName ?? state.user.userId;
-      const proj = state.currentProject
-        ? `  •  project: ${state.currentProject.slug ?? state.currentProject.id}`
-        : '';
-      return `Signed in as ${chalk.cyan(who)}  (API: ${apiUrl})${proj}`;
-    }
-  }
-}
-
-/**
- * Plain (un-ANSI'd) variant of stateLabel for the viewport pane.
- * OpenTUI buffers don't render ANSI escapes inside cells, so chalk-
- * coloured strings would print literally there.
- */
-function stateViewportHeader(session: Session): [string, ReadonlyArray<string>] {
-  const state = session.state;
-  const apiUrl = session.effectiveEnv().HARPA_API_URL ?? '(not set)';
-  switch (state.kind) {
-    case 'config':
-      return [
-        'harpa · setup',
-        ['No API URL set — pick "Set API URL" to begin.'],
-      ];
-    case 'auth':
-      return [
-        'harpa · sign in',
-        [
-          state.reason === 'expired'
-            ? `Sign in to ${apiUrl} (session expired)`
-            : `Sign in to ${apiUrl}`,
-        ],
-      ];
-    case 'authed': {
-      const who = state.user.displayName ?? state.user.userId;
-      const lines = [`Signed in as ${who}`, `API: ${apiUrl}`];
-      if (state.currentProject) {
-        lines.push(
-          `Project: ${state.currentProject.slug ?? state.currentProject.id}`,
-        );
-      }
-      return ['harpa', lines];
-    }
-  }
-}
-
-/**
- * Default body for the top-level menu. The viewport is the *context*
- * pane — it should describe where you are, not duplicate the list of
- * actions already visible on the left. Each state shows a brief
- * orientation paragraph; flows themselves overwrite this with richer
- * content (project header lines, report bodies, …) when they run.
- */
-function stateViewportBody(
-  session: Session,
-  _visible: ReadonlyArray<Flow>,
-): ViewportBody {
-  switch (session.state.kind) {
-    case 'config':
-      return {
-        kind: 'detail',
-        sections: [
-          {
-            title: 'Setup required',
-            lines: [
-              'Set the HARPA_API_URL environment variable, or pick',
-              '"Set API URL" from the menu to point harpa at an API.',
-            ],
-          },
-        ],
-      };
-    case 'auth':
-      return {
-        kind: 'detail',
-        sections: [
-          {
-            title: 'Not signed in',
-            lines: [
-              'Sign in with your phone number to receive an OTP code.',
-              'Once authenticated you can browse projects and reports.',
-            ],
-          },
-        ],
-      };
-    case 'authed': {
-      const apiUrl = session.effectiveEnv().HARPA_API_URL ?? '(not set)';
-      const who = session.state.user.displayName ?? session.state.user.userId;
-      return {
-        kind: 'detail',
-        sections: [
-          {
-            title: 'Home',
-            lines: [
-              `Signed in as ${who}`,
-              `API: ${apiUrl}`,
-              '',
-              'Pick an action on the left to drill in. The path above',
-              'shows where you are; this pane shows what\u2019s there.',
-            ],
-          },
-        ],
-      };
+    if (result.kind === 'transition') {
+      session.state = result.to;
     }
   }
 }

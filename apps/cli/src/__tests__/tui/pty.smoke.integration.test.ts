@@ -117,38 +117,21 @@ describeIf('TUI default-wiring (OpenTUI pty smoke)', () => {
     });
 
     // Give Bun + Solid + OpenTUI time to mount and render the first
-    // frame. The renderer paints both pane borders, so we wait for
-    // them to appear in the output before sending SIGINT.
-    const deadline = Date.now() + 6_000;
+    // frame. The auth menu must actually render its options — proves
+    // the select widget paints, not just its surrounding chrome. This
+    // is the real Pitfall-13 gate: a broken SelectList that renders
+    // only the label would slip past a "did it mount" check.
+    const deadline = Date.now() + 8_000;
     let mounted = false;
     while (Date.now() < deadline) {
       const s = stripAnsi(buf);
-      if (s.includes('harpa') && s.includes('action')) {
+      if (s.includes('Sign in') && s.includes('Set API URL') && s.includes('Quit')) {
         mounted = true;
         break;
       }
       await sleep(100);
     }
-    expect(mounted, `TUI did not mount within 6s; transcript:\n${stripAnsi(buf)}`).toBe(true);
-
-    // The auth menu must actually render its options — proves the
-    // select widget paints, not just its surrounding chrome. This is
-    // the real Pitfall-13 gate: a broken SelectList that renders only
-    // the label would slip past the "did it mount" check.
-    const optionsDeadline = Date.now() + 4_000;
-    let optionsVisible = false;
-    while (Date.now() < optionsDeadline) {
-      const s = stripAnsi(buf);
-      if (s.includes('Set API URL') && s.includes('Quit')) {
-        optionsVisible = true;
-        break;
-      }
-      await sleep(100);
-    }
-    expect(
-      optionsVisible,
-      `Select widget did not render its options within 4s; transcript:\n${stripAnsi(buf)}`,
-    ).toBe(true);
+    expect(mounted, `TUI did not mount within 8s; transcript:\n${stripAnsi(buf)}`).toBe(true);
 
     // Drive the menu: arrow-down past "Sign in" and "Set API URL" to
     // land on Quit, press enter, and check the process exits cleanly.
@@ -170,15 +153,14 @@ describeIf('TUI default-wiring (OpenTUI pty smoke)', () => {
     expect(exitCode, 'TUI did not exit after selecting Quit').not.toBe(-1);
 
     const stripped = stripAnsi(buf);
-    // Both pane titles appear — proves the split-pane laid out.
-    expect(stripped).toMatch(/harpa/);
-    expect(stripped).toMatch(/action/);
-    // Selectable menu options reach the screen.
+    // Selectable menu options reach the screen — proves split-pane
+    // laid out + select widget rendered.
     expect(stripped).toContain('Sign in');
     expect(stripped).toContain('Set API URL');
     expect(stripped).toContain('Quit');
-    // Status bar mentions the configured API URL.
-    expect(stripped).toContain(api.url);
+    // TopBar identity strip shows the API URL host (or a label
+    // derived from it via apiLabelFor).
+    expect(stripped).toMatch(/localhost|127\.0\.0\.1/);
   }, 20_000);
 
   it('mounts the phone TextField when Sign in is chosen', async () => {

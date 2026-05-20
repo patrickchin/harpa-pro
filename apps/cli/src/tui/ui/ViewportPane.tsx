@@ -1,69 +1,45 @@
 /**
- * Read-only viewport (arch-tui-layout.md §3.2).
+ * Read-only viewport (arch-tui-layout-v2.md §2.2, §6).
  *
- * The pane title is the **current navigation path** rendered URL-style
- * (`/projects/acme/reports/12`). That makes "where am I" the most
- * visible piece of state in the app — every screen pushes its segment
- * (with id/slug) onto the breadcrumb on entry and pops it on exit, so
- * the path follows the user without any per-screen plumbing.
+ * Renders the content for the current breadcrumb in priority order:
+ *   - headline (rank 2)  : single sentence identifying what's here
+ *   - subline  (rank 3)  : short summary line under the headline
+ *   - body              : record / table / form-progress / empty
  *
- * Below the title: optional header lines (project meta, etc), one of
- * the body variants (list / detail / result / empty), then the
- * rolling log tail. No keystroke handling — the user reads this pane
- * and acts in the interaction pane.
+ * No box title — the breadcrumb in `TopBar` is the title of this
+ * pane. No log tail — that moved to `LogStrip`.
  */
 import { For, Show } from 'solid-js';
-import type { UiStore, ViewportBody } from './store.js';
-import { theme, logColor } from './theme.js';
+import type { UiStore, ViewportBody, ViewportListItem } from './store.js';
+import { theme } from './theme.js';
 
 export interface ViewportPaneProps {
   readonly ui: UiStore;
 }
 
-function pathOf(crumbs: ReadonlyArray<string>): string {
-  if (crumbs.length === 0) return '/';
-  return '/' + crumbs.join('/');
-}
-
 export function ViewportPane(props: ViewportPaneProps) {
   const v = () => props.ui.state.viewport;
-  const path = () => pathOf(props.ui.state.status.breadcrumb);
   return (
     <box
       flexDirection="column"
       flexGrow={1}
       border={['top', 'right', 'bottom']}
       borderColor={theme.borderIdle}
-      title={path()}
-      titleAlignment="left"
       padding={1}
     >
-      <Show when={v().title}>
-        <text fg={theme.fg}>{v().title}</text>
+      <Show when={v().headline}>
+        <text fg={theme.fg}>{v().headline!}</text>
       </Show>
-      <Show when={v().headerLines.length > 0}>
-        <box flexDirection="column" marginTop={v().title ? 0 : 0} marginBottom={1}>
-          <For each={v().headerLines}>
-            {(line) => <text fg={theme.fgMuted}>{line}</text>}
-          </For>
-        </box>
+      <Show when={v().subline}>
+        <text fg={theme.fgMuted}>{v().subline!}</text>
+      </Show>
+      <Show when={v().headline || v().subline}>
+        <box height={1} />
       </Show>
 
       <box flexDirection="column" flexGrow={1}>
         <BodyView body={v().body} />
       </box>
-
-      <Show when={v().logTail.length > 0}>
-        <box flexDirection="column" marginTop={1}>
-          <For each={v().logTail}>
-            {(entry) => (
-              <text fg={logColor(entry.kind)}>
-                {(entry.title ? `${entry.title}: ` : '') + entry.message}
-              </text>
-            )}
-          </For>
-        </box>
-      </Show>
     </box>
   );
 }
@@ -82,23 +58,7 @@ function BodyView(props: { body: ViewportBody | undefined }) {
           case 'result':
             return <text fg={theme.fg}>{b.content}</text>;
           case 'list':
-            return (
-              <box flexDirection="column">
-                <For each={b.items}>
-                  {(item) => (
-                    <box flexDirection="row">
-                      <text fg={theme.fg}>{`• ${item.label}`}</text>
-                      <Show when={item.hint}>
-                        <text fg={theme.fgMuted}>{`  ${item.hint}`}</text>
-                      </Show>
-                      <Show when={item.mirrorsAction}>
-                        <text fg={theme.fgDim}>{`  → ${item.mirrorsAction}`}</text>
-                      </Show>
-                    </box>
-                  )}
-                </For>
-              </box>
-            );
+            return <ListBody items={b.items} columnTitles={b.columnTitles} />;
           case 'detail':
             return (
               <box flexDirection="column">
@@ -119,5 +79,41 @@ function BodyView(props: { body: ViewportBody | undefined }) {
         }
       }}
     </Show>
+  );
+}
+
+/**
+ * Renders a list with optional structured columns.
+ *
+ * Layout: label is always shown; subsequent columns are joined with
+ * two-space gaps. When the column data is sparse (most items have no
+ * extra columns) we fall back to the `hint` for narrow rendering.
+ */
+function ListBody(props: {
+  items: ReadonlyArray<ViewportListItem>;
+  columnTitles?: ReadonlyArray<string>;
+}) {
+  const items = () => props.items;
+  return (
+    <box flexDirection="column">
+      <Show when={props.columnTitles && props.columnTitles.length > 0}>
+        <box flexDirection="row">
+          <text fg={theme.fgMuted}>{(props.columnTitles ?? []).join('  ')}</text>
+        </box>
+      </Show>
+      <For each={items()}>
+        {(item) => (
+          <box flexDirection="row">
+            <text fg={theme.fg}>{item.label}</text>
+            <Show when={item.columns && item.columns.length > 0}>
+              <text fg={theme.fgMuted}>{`  ${(item.columns ?? []).join('  ')}`}</text>
+            </Show>
+            <Show when={(!item.columns || item.columns.length === 0) && item.hint}>
+              <text fg={theme.fgMuted}>{`  ${item.hint}`}</text>
+            </Show>
+          </box>
+        )}
+      </For>
+    </box>
   );
 }

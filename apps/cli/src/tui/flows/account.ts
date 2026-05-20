@@ -1,30 +1,27 @@
 /**
  * Flow: Account.
  *
- * One-stop submenu for the leaves that touch the signed-in user's
- * own data: profile, usage, AI settings. They're the same leaves
- * available under Developer › Raw API; this flow just groups them
- * under a friendlier label and skips the citty-shaped group menu.
+ * Thin shim that opens the navigational Account screen (v4.2 layout).
+ * The previous flat submenu (Show profile / Show usage / …) has been
+ * replaced by `screens/account.ts` which renders the full profile as
+ * a `detail` body in the viewport while keeping the verbs (Edit
+ * profile / Update AI settings) in the interaction pane.
  *
- * See arch-tui-app.md §3.5.
+ * See docs/v4/arch-tui-layout-v2.md §6.1.
  */
 import type { Flow, FlowResult } from '../flow.js';
 import { stay } from '../flow.js';
-import { runSubmenu } from './_submenu.js';
+import { runScreen } from '../screen.js';
+import { accountScreen } from '../screens/account.js';
+import { nullViewportSink } from '../viewport-sink.js';
 
 export const accountFlow: Flow = {
   id: 'account',
   label: 'Account',
   hint: 'Profile, usage, AI settings',
   visibleIn: ['authed'],
-  async run({ prompter, session }): Promise<FlowResult> {
-    await runSubmenu(prompter, session, 'Account', [
-      { cittyPath: ['me', 'get'], label: 'Show profile' },
-      { cittyPath: ['me', 'update'], label: 'Update profile' },
-      { cittyPath: ['me', 'usage'], label: 'Show usage' },
-      { cittyPath: ['settings', 'ai', 'get'], label: 'AI settings — show' },
-      { cittyPath: ['settings', 'ai', 'set'], label: 'AI settings — update' },
-    ]);
+  async run({ prompter, session, viewport }): Promise<FlowResult> {
+    await runScreen(prompter, session, accountScreen(), viewport ?? nullViewportSink());
     return stay;
   },
 };

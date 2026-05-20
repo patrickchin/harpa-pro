@@ -4,7 +4,7 @@
  * The TUI logic is built against a small `Prompter` interface so it
  * can be driven by a scripted fake in tests. Production wiring is
  * `opentuiPrompter()`, which bridges the imperative interface to the
- * reactive Solid/OpenTUI view layer (see arch-tui-layout.md §3.3).
+ * reactive Solid/OpenTUI view layer (see arch-tui-layout-v2.md §8).
  *
  * The default wiring is covered by a node-pty smoke test
  * (see `__tests__/tui/pty.smoke.integration.test.ts`) so we don't
@@ -56,42 +56,16 @@ export interface Prompter {
   isCancel(value: unknown): value is Cancel;
 }
 
-/**
- * Production wiring is `opentuiPrompter()` below. Tests use
- * `scriptedPrompter()`.
- */
-
 /* -------------------------------------------------------------------------- */
 /*  OpenTUI prompter — production wiring for the v4 split-pane TUI.           */
 /* -------------------------------------------------------------------------- */
 
-/**
- * Bridges the imperative `Prompter` interface to the reactive
- * `UiStore` consumed by the Solid view layer (arch-tui-layout.md §3.3).
- *
- * Each prompt method:
- *   1. Subscribes a resolver for the next `ui.resolve()` call.
- *   2. Pushes its `PromptRequest` into the store (the view mounts the
- *      matching widget).
- *   3. Awaits the resolver; clears the prompt on settle.
- *
- * Sequential by construction — the screen driver only calls the next
- * prompt method after the previous one's Promise settles, so
- * `state.currentPrompt` is always either `undefined` or the unique
- * outstanding request.
- *
- * No `setTimeout` / no fire-and-forget (Pitfall 5): resolution flows
- * synchronously from the widget's keystroke handler to `ui.resolve()`
- * to the awaiter.
- */
 export function opentuiPrompter(ui: UiStore): Prompter {
   const ask = <T>(
     req: Parameters<UiStore['setPrompt']>[0] & object,
     decode: (r: PromptResolution) => T | Cancel,
   ): Promise<T | Cancel> =>
     new Promise<T | Cancel>((resolve) => {
-      // Register resolver BEFORE mutating the store so an immediate
-      // ui.resolve() (e.g. from a synchronous test) is not lost.
       const off = ui.onResolve((r) => {
         ui.setPrompt(undefined);
         off();
@@ -164,8 +138,6 @@ export function opentuiPrompter(ui: UiStore): Prompter {
       error: (m) => ui.log({ kind: 'error', message: m }),
       warn: (m) => ui.log({ kind: 'warn', message: m }),
     },
-    // intro/outro are no-ops in the static-layout TUI: the StatusBar
-    // is always visible and never prints framing chrome inline.
     intro: () => {},
     outro: () => {},
     isCancel: (v): v is Cancel => v === CANCEL,
@@ -184,9 +156,7 @@ export type PromptStep =
   | { kind: 'confirm'; expectLabel?: string; answer: boolean | Cancel };
 
 export interface ScriptedPrompter extends Prompter {
-  /** All log/note/intro/outro calls captured, in order. */
   readonly transcript: ReadonlyArray<{ kind: string; payload: unknown }>;
-  /** True iff every scripted step was consumed. */
   exhausted(): boolean;
   remaining(): number;
 }
@@ -198,11 +168,6 @@ class ScriptMismatchError extends Error {
   }
 }
 
-/**
- * Drives the TUI flow from a pre-recorded list of prompt answers.
- * Order matters; the prompter throws if a prompt arrives that doesn't
- * match the next scripted step. Use this in unit/behaviour tests.
- */
 export function scriptedPrompter(steps: ReadonlyArray<PromptStep>): ScriptedPrompter {
   const queue = [...steps];
   const transcript: Array<{ kind: string; payload: unknown }> = [];

@@ -16,7 +16,6 @@
  * exist this screen exposes the underlying leaves with prefill, so
  * the drill-down works end-to-end even mid-rollout.
  */
-import chalk from 'chalk';
 import type { Screen, ScreenAction } from '../screen.js';
 import { fetchVia } from './_fetch.js';
 import { findLeaf } from '../registry-find.js';
@@ -42,7 +41,7 @@ export function projectHomeScreen(): Screen {
       if (!leaf) {
         return {
           title: `Project: ${project.name ?? project.id}`,
-          lines: [chalk.dim('(unavailable)')],
+          lines: ['(unavailable)'],
         };
       }
       const data = await fetchVia<ProjectLike>(leaf, { id: project.id }, ctx.session);
@@ -54,10 +53,10 @@ export function projectHomeScreen(): Screen {
       return {
         title: `Project: ${data.name} (${data.id})`,
         lines: [
-          `${chalk.dim('role')}: ${data.myRole}`,
-          `${chalk.dim('client')}: ${data.clientName ?? '(none)'}`,
-          `${chalk.dim('address')}: ${data.address ?? '(none)'}`,
-          `${chalk.dim('reports')}: ${reports} (${drafts} draft${drafts === 1 ? '' : 's'})`,
+          `role: ${data.myRole}`,
+          `client: ${data.clientName ?? '(none)'}`,
+          `address: ${data.address ?? '(none)'}`,
+          `reports: ${reports} (${drafts} draft${drafts === 1 ? '' : 's'})`,
         ],
       };
     },

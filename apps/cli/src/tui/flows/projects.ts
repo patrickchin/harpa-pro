@@ -17,8 +17,8 @@ export const projectsFlow: Flow = {
   label: 'Projects',
   hint: 'Projects, members, reports, notes',
   visibleIn: ['authed'],
-  async run({ prompter, session }): Promise<FlowResult> {
-    await runProjectsScreen(prompter, session);
+  async run({ prompter, session, viewport }): Promise<FlowResult> {
+    await runProjectsScreen(prompter, session, viewport);
     return stay;
   },
 };

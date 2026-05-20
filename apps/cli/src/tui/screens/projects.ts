@@ -11,7 +11,7 @@
  * project home screen. On back-out the screen clears the current
  * project via its `onExit` so the cascade-clear invariant fires.
  */
-import chalk from 'chalk';
+// chalk removed: OpenTUI viewport text is a buffer, not a tty stream.
 import type { Screen, ScreenAction, ScreenContext } from '../screen.js';
 import { runScreen } from '../screen.js';
 import { fetchAllVia } from './_fetch.js';
@@ -33,7 +33,7 @@ export function projectsScreen(): Screen {
         items = [];
         return {
           title: 'Projects',
-          lines: [chalk.dim('(unable to load — try Refresh or ← back)')],
+          lines: ['(unable to load — try Refresh or ← back)'],
         };
       }
       items = page.items;
@@ -43,8 +43,8 @@ export function projectsScreen(): Screen {
         title: 'Projects',
         lines: [
           total === 0
-            ? chalk.dim('No projects yet')
-            : `${total} project${total === 1 ? '' : 's'}${recent ? ` · ${chalk.dim(recent)}` : ''}`,
+            ? 'No projects yet'
+            : `${total} project${total === 1 ? '' : 's'}${recent ? ` · ${recent}` : ''}`,
         ],
       };
     },
@@ -100,6 +100,7 @@ export function projectsScreen(): Screen {
 export async function runProjectsScreen(
   prompter: import('../prompter.js').Prompter,
   session: import('../session.js').Session,
+  viewport?: import('../viewport-sink.js').ViewportSink,
 ): Promise<void> {
-  await runScreen(prompter, session, projectsScreen());
+  await runScreen(prompter, session, projectsScreen(), viewport);
 }

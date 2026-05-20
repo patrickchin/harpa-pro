@@ -22,7 +22,7 @@ export const uploadFlow: Flow = {
   label: 'Upload / Media',
   hint: 'Uploads belong to a report — opens Projects',
   visibleIn: ['authed'],
-  async run({ prompter, session }): Promise<FlowResult> {
+  async run({ prompter, session, viewport }): Promise<FlowResult> {
     const choice = await prompter.select<string>({
       label: 'Uploads belong to a report. Pick where to go:',
       options: [
@@ -31,7 +31,7 @@ export const uploadFlow: Flow = {
       ],
     });
     if (prompter.isCancel(choice) || choice === 'back') return stay;
-    await runProjectsScreen(prompter, session);
+    await runProjectsScreen(prompter, session, viewport);
     return stay;
   },
 };

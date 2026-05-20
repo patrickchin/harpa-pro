@@ -70,7 +70,7 @@ export async function runOpenTuiApp(
 
   const ui = createUiStore({
     initialTopBar: {
-      breadcrumb: ['/'],
+      breadcrumb: [],
       identity: {
         ...(userName ? { user: userName } : {}),
         apiLabel: apiLabelFor(apiUrl),
@@ -109,7 +109,7 @@ export async function runOpenTuiApp(
 }
 
 function viewportSinkFor(ui: UiStore): ViewportSink {
-  const crumbs: string[] = ['/'];
+  const crumbs: string[] = [];
   return {
     setHeadline(headline, subline) {
       ui.setViewport({

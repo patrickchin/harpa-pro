@@ -76,14 +76,6 @@ function rootHeader(state: AppState, session: Session): RootHeader {
               title: 'connection',
               lines: [`  api url        ${apiUrl}`],
             },
-            {
-              title: 'next',
-              lines: [
-                '  Pick "Sign in" on the right to authenticate with',
-                '  your phone number. After signing in you can browse',
-                '  projects and reports.',
-              ],
-            },
           ],
         },
       };
@@ -93,7 +85,6 @@ function rootHeader(state: AppState, session: Session): RootHeader {
       const who = u.displayName ?? u.userId;
       return {
         headline: `Signed in as ${who}`,
-        subline: `Pick a verb on the right`,
         body: {
           kind: 'detail',
           sections: [
@@ -107,14 +98,6 @@ function rootHeader(state: AppState, session: Session): RootHeader {
             {
               title: 'connection',
               lines: [`  api url        ${apiUrl}`],
-            },
-            {
-              title: 'next',
-              lines: [
-                '  Account — your profile, usage, AI settings',
-                '  Projects — projects, members, reports, notes',
-                '  Developer — every raw endpoint as a flat menu',
-              ],
             },
           ],
         },

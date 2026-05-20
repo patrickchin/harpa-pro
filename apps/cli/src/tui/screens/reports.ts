@@ -3,7 +3,6 @@
  * viewport, and inlines each report as an "Open #N" action in the
  * interaction pane so the user can act on what they already see.
  */
-import chalk from 'chalk';
 import type { Screen, ScreenAction, ScreenContext } from '../screen.js';
 import { fetchAllVia } from './_fetch.js';
 import { findLeaf } from '../registry-find.js';
@@ -31,7 +30,7 @@ export function reportsScreen(): Screen {
         title: `Reports in ${project.name ?? project.id}`,
         lines: [
           reports.length === 0
-            ? chalk.dim('No reports yet')
+            ? 'No reports yet'
             : `${reports.length} report${reports.length === 1 ? '' : 's'}`,
         ],
       };

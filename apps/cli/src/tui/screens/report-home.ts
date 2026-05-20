@@ -11,7 +11,6 @@
  * the API; this screen normalises to the `'draft' | 'final'`
  * UI vocabulary internally.
  */
-import chalk from 'chalk';
 import type { Screen, ScreenAction } from '../screen.js';
 import { fetchVia, fetchAllVia } from './_fetch.js';
 import { findLeaf } from '../registry-find.js';
@@ -61,11 +60,11 @@ export function reportHomeScreen(): Screen {
       return {
         title: `Report #${report.number} — ${currentProject.name ?? currentProject.id}`,
         lines: [
-          `${chalk.dim('status')}: ${report.status}`,
-          `${chalk.dim('visit')}: ${report.visitDate ?? '(none)'}`,
-          `${chalk.dim('created')}: ${report.createdAt}`,
-          `${chalk.dim('generated')}: ${hasBody ? 'yes' : 'no'}  ·  ${chalk.dim('finalized')}: ${finalized ? 'yes' : 'no'}`,
-          `${chalk.dim('notes')}: ${notes.length}`,
+          `status: ${report.status}`,
+          `visit: ${report.visitDate ?? '(none)'}`,
+          `created: ${report.createdAt}`,
+          `generated: ${hasBody ? 'yes' : 'no'}  ·  finalized: ${finalized ? 'yes' : 'no'}`,
+          `notes: ${notes.length}`,
         ],
       };
     },
@@ -73,7 +72,7 @@ export function reportHomeScreen(): Screen {
       if (!report) return { kind: 'empty', hint: 'Loading…' };
       const preview = (report.body ?? '').toString().slice(0, 400);
       const noteLines = notes.length === 0
-        ? [chalk.dim('(no notes yet)')]
+        ? ['(no notes yet)']
         : notes.map((n) => {
             const text = (n.body ?? n.transcript ?? '').toString();
             const snippet = text ? ` · ${text.slice(0, 60)}` : '';

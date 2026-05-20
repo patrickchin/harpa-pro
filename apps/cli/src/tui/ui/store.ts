@@ -60,16 +60,6 @@ export interface ViewportState {
   readonly body?: ViewportBody;
 }
 
-/**
- * Ranger-style "parent column" frame: the action list of the screen
- * one level up, with the entry-point row highlighted so the user can
- * see where they came from. `undefined` at the root.
- */
-export interface ParentFrame {
-  readonly items: ReadonlyArray<string>;
-  readonly highlightedIndex: number;
-}
-
 export interface IdentityStrip {
   readonly user?: string;
   /** Short label for HARPA_API_URL — `prod` / `dev` / `localhost` / hostname. */
@@ -141,8 +131,6 @@ export type PromptResolution =
 export interface UiState {
   topbar: TopBarState;
   viewport: ViewportState;
-  /** Parent column for ranger-style Miller layout. */
-  parent: ParentFrame | undefined;
   interaction: InteractionState;
   /** Newest log entry; the LogStrip never shows more than one. */
   log: LogEntry | undefined;
@@ -159,7 +147,6 @@ export interface UiStore {
   setTopBar(patch: Partial<TopBarState>): void;
   setIdentity(patch: Partial<IdentityStrip>): void;
   setViewport(patch: Partial<ViewportState>): void;
-  setParent(frame: ParentFrame | undefined): void;
   setInteraction(patch: Partial<InteractionState>): void;
   setInFlight(v: { label: string } | undefined): void;
   setPrompt(p: PromptRequest | undefined): void;
@@ -200,7 +187,6 @@ export function createUiStore(opts: CreateUiStoreOptions = {}): UiStore {
       },
     },
     viewport: { ...EMPTY_VIEWPORT, ...opts.initialViewport },
-    parent: undefined,
     interaction: { ...EMPTY_INTERACTION, ...opts.initialInteraction },
     log: undefined,
   });
@@ -233,9 +219,6 @@ export function createUiStore(opts: CreateUiStoreOptions = {}): UiStore {
     },
     setViewport(patch) {
       set('viewport', (prev) => ({ ...prev, ...patch }));
-    },
-    setParent(frame) {
-      set('parent', frame);
     },
     setInteraction(patch) {
       set('interaction', (prev) => ({ ...prev, ...patch }));

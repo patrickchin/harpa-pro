@@ -1,6 +1,11 @@
 # TUI v4.2 — split-pane layout, redesigned
 
-> **Status:** design, not yet implemented.
+> **Status:** SUPERSEDED by [`arch-tui-layout-v3.md`](arch-tui-layout-v3.md).
+> v4.3 reverts the ranger Miller-columns experiment and restores the
+> 2-pane split with a per-breadcrumb viewport spec. v4.2 is kept here
+> for historical context only.
+>
+> **Original status:** design, not yet implemented.
 > **Supersedes** [`arch-tui-layout.md`](arch-tui-layout.md) for the
 > *visual layout, information hierarchy, and per-screen viewport
 > templates*. The OpenTUI + Solid runtime stack, `Prompter` contract,

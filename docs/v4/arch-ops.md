@@ -123,6 +123,11 @@ not by the API at runtime), and a handful of CI-only flags.
 
 ## Deploy flow
 
+> Detailed pipeline, migration apply, and rollback playbook in
+> [arch-cicd-and-migrations.md](arch-cicd-and-migrations.md). The flow
+> below is the high-level summary.
+
+
 ```
 PR open
   ↳ Neon branch pr-<n> (pr-preview.yml)

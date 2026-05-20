@@ -32,6 +32,11 @@ deploy via Fly.io secrets.
 
 ## Migrations
 
+See [arch-cicd-and-migrations.md](arch-cicd-and-migrations.md) for the
+deploy-time apply mechanism (Fly `release_command`), the `/readyz` schema-
+head check, the advisory-lock-protected loader, and the expand-contract
+rules. Summary below.
+
 - Drizzle Kit generates SQL: `pnpm --filter @harpa/api db:generate`.
 - Files: `packages/api/migrations/<timestamp>_<slug>.sql`. Filename
   format `YYYYMMDDHHmm_description.sql` (matches our convention).

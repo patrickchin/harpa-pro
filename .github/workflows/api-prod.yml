@@ -87,7 +87,7 @@ jobs:
       # See docs/v4/arch-cicd-and-migrations.md §Failure & rollback.
       - uses: pnpm/action-setup@v4
         with:
-          version: 9
+          version: 9.12.3
       - uses: actions/setup-node@v4
         with:
           node-version: 22

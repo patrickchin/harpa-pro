@@ -1,6 +1,7 @@
 const { getDefaultConfig } = require('expo/metro-config');
 const { withNativeWind } = require('nativewind/metro');
-const exclusionList = require('metro-config/src/defaults/exclusionList');
+const exclusionList =
+  require('metro-config/private/defaults/exclusionList').default;
 
 const config = getDefaultConfig(__dirname);
 

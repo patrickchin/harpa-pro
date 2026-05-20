@@ -89,7 +89,7 @@ export function CachedImage({
       cachePolicy={cachePolicy}
       contentFit={contentFit}
       transition={transition}
-      style={composedStyle}
+      style={composedStyle as ImageProps['style']}
     />
   );
 }

@@ -2,9 +2,10 @@
  * Projects screen — top-level entry into the project drill-down.
  *
  * Header: total count + (when available) recent project names.
- * Actions: when ≤ INLINE_OPEN projects, one "Open <name>" per
- * project; otherwise a single "Open project…" picker. Plus
+ * Actions: a single "Open project…" picker (the submenu), plus
  * "New project", "List all projects (raw)", "Refresh", "← back".
+ * The list of projects always renders in the viewport so the user
+ * sees what's available without opening the picker.
  *
  * Picking a project sets `session.currentProject` and opens the
  * project home screen. On back-out the screen clears the current
@@ -18,8 +19,6 @@ import { findLeaf } from '../registry-find.js';
 import { projectHomeScreen } from './project-home.js';
 import type { ProjectLike } from '../../lib/render.js';
 import type { ProjectRef } from '../session.js';
-
-const INLINE_OPEN = 7;
 
 export function projectsScreen(): Screen {
   let items: ProjectLike[] = [];
@@ -51,14 +50,13 @@ export function projectsScreen(): Screen {
     },
     body() {
       if (items.length === 0) {
-        return { kind: 'empty', hint: 'No projects yet' };
+        return { kind: 'empty', hint: 'No projects yet — pick "New project" to create one.' };
       }
       return {
         kind: 'list',
         items: items.map((p) => ({
           label: p.name ?? p.id,
           hint: p.myRole,
-          mirrorsAction: items.length <= INLINE_OPEN ? `Open ${p.name}` : undefined,
         })),
       };
     },
@@ -70,22 +68,11 @@ export function projectsScreen(): Screen {
       };
 
       const acts: ScreenAction[] = [];
-      if (items.length === 0) {
-        // no inline rows; just the create + refresh below.
-      } else if (items.length <= INLINE_OPEN) {
-        for (const p of items) {
-          acts.push({
-            kind: 'screen',
-            label: `Open ${p.name}`,
-            hint: p.clientName ?? undefined,
-            open: openProject(p),
-            refreshHeader: true,
-          });
-        }
-      } else {
+      if (items.length > 0) {
         acts.push({
           kind: 'flow',
           label: `Open project… (${items.length})`,
+          hint: 'pick from list',
           refreshHeader: true,
           run: async (ctx) => {
             const choice = await ctx.prompter.select<string>({

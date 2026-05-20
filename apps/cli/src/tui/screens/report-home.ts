@@ -13,14 +13,15 @@
  */
 import chalk from 'chalk';
 import type { Screen, ScreenAction } from '../screen.js';
-import { fetchVia } from './_fetch.js';
+import { fetchVia, fetchAllVia } from './_fetch.js';
 import { findLeaf } from '../registry-find.js';
 import { notesScreen } from './notes.js';
 import { uploadScreen } from './upload.js';
-import type { ReportLike } from '../../lib/render.js';
+import type { ReportLike, NoteLike } from '../../lib/render.js';
 
 export function reportHomeScreen(): Screen {
   let report: ReportLike | undefined;
+  let notes: NoteLike[] = [];
   return {
     id: 'report-home',
     breadcrumb: 'report',
@@ -36,6 +37,19 @@ export function reportHomeScreen(): Screen {
         ctx.session,
       );
       if (!report) return undefined; // 404 — pop
+      // Fetch notes alongside the report so the viewport body can
+      // show "report + notes" without a second round-trip per render.
+      const notesLeaf = findLeaf(['notes', 'list']);
+      if (notesLeaf) {
+        const page = await fetchAllVia<NoteLike>(
+          notesLeaf,
+          { project: currentProject.id, reportNumber: currentReport.number },
+          ctx.session,
+        );
+        notes = page?.items ?? [];
+      } else {
+        notes = [];
+      }
       const hasBody = !!report.body;
       const finalized = report.status === 'finalized';
       return {
@@ -45,12 +59,20 @@ export function reportHomeScreen(): Screen {
           `${chalk.dim('visit')}: ${report.visitDate ?? '(none)'}`,
           `${chalk.dim('created')}: ${report.createdAt}`,
           `${chalk.dim('generated')}: ${hasBody ? 'yes' : 'no'}  ·  ${chalk.dim('finalized')}: ${finalized ? 'yes' : 'no'}`,
+          `${chalk.dim('notes')}: ${notes.length}`,
         ],
       };
     },
     body() {
       if (!report) return { kind: 'empty', hint: 'Loading…' };
       const preview = (report.body ?? '').toString().slice(0, 400);
+      const noteLines = notes.length === 0
+        ? [chalk.dim('(no notes yet)')]
+        : notes.map((n) => {
+            const text = (n.body ?? n.transcript ?? '').toString();
+            const snippet = text ? ` · ${text.slice(0, 60)}` : '';
+            return `• ${n.kind}${snippet}`;
+          });
       return {
         kind: 'detail',
         sections: [
@@ -64,6 +86,10 @@ export function reportHomeScreen(): Screen {
           {
             title: 'Body',
             lines: preview ? preview.split('\n') : ['(empty)'],
+          },
+          {
+            title: `Notes (${notes.length})`,
+            lines: noteLines,
           },
         ],
       };

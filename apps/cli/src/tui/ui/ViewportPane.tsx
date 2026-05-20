@@ -20,7 +20,7 @@ export function ViewportPane(props: ViewportPaneProps) {
     <box
       flexDirection="column"
       flexGrow={1}
-      border={['top', 'left', 'bottom']}
+      border={['top', 'right', 'bottom']}
       borderColor={theme.borderIdle}
       title={v().title || 'harpa'}
       titleAlignment="left"

@@ -10,7 +10,7 @@
  *
  *   config  → [Set API URL, Quit]
  *   auth    → [Sign in, Set API URL, Quit]
- *   authed  → [Account, Projects, Upload a file, Developer › Raw API,
+ *   authed  → [Account, Projects, Developer › Raw API,
  *              Sign out, Set API URL, Quit]
  *
  * Flows are registered in `FLOWS` below; the driver itself contains
@@ -31,7 +31,6 @@ import { developerRawApiFlow } from './flows/developer-raw-api.js';
 import { signInFlow, signOutFlow } from './flows/auth.js';
 import { accountFlow } from './flows/account.js';
 import { projectsFlow } from './flows/projects.js';
-import { uploadFlow } from './flows/upload.js';
 
 const QUIT = '__quit__' as const;
 
@@ -39,12 +38,14 @@ const QUIT = '__quit__' as const;
  * Default flow registry. Tests inject their own list to keep the
  * surface area small. Order matters — this is the order of the
  * top-level menu, per arch-tui-app.md §3.2.
+ *
+ * Upload is intentionally not in this list: media uploads only make
+ * sense inside a report, so the entry lives on the report-home screen.
  */
 export const DEFAULT_FLOWS: ReadonlyArray<Flow> = [
   signInFlow,
   accountFlow,
   projectsFlow,
-  uploadFlow,
   developerRawApiFlow,
   signOutFlow,
   setApiUrlFlow,

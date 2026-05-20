@@ -32,6 +32,10 @@ export interface ReportNoteRow {
   authorName?: string | null;
   /** R2 file id when the note is backed by an upload (voice / photo / document). */
   fileId?: string | null;
+  // ── Voice-only fields (Phase E). Optional so non-voice rows omit them. ──
+  transcript?: string | null;
+  summary?: string | null;
+  durationSec?: number | null;
 }
 
 interface ReportNotesPaneProps {
@@ -92,9 +96,11 @@ export function ReportNotesPane({
               noteId={note.id}
               fileId={note.fileId ?? null}
               body={note.body}
+              transcript={note.transcript ?? null}
+              summary={note.summary ?? null}
+              durationSec={note.durationSec ?? null}
               authorName={note.authorName ?? null}
               capturedAt={note.createdAt}
-              onOpen={onOpenFile}
             />
           );
         }

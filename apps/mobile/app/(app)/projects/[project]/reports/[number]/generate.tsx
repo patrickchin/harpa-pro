@@ -60,20 +60,36 @@ interface ApiNote {
   kind: 'text' | 'voice' | 'image' | 'document';
   body: string | null;
   transcript: string | null;
+  summary?: string | null;
+  fileId?: string | null;
+  durationSec?: number | null;
   createdAt: string;
 }
 
 function noteToEntry(n: ApiNote): NoteEntry {
   const isImage = n.kind === 'image';
+  const isVoice = n.kind === 'voice';
+  // For voice rows the `summary` is the canonical short-form body
+  // shown next to the play button; `transcript` is the longer raw
+  // STT output rendered in the expander. We split them onto NoteEntry
+  // so `VoiceNoteCard` doesn't have to re-fetch the row.
   const text = isImage
     ? (n.body ?? '📷 Photo')
-    : (n.body ?? n.transcript ?? '');
+    : isVoice
+      ? (n.summary ?? n.body ?? n.transcript ?? '')
+      : (n.body ?? n.transcript ?? '');
   return {
     id: n.id,
     authorId: n.authorId,
     text,
     addedAt: Date.parse(n.createdAt) || Date.now(),
-    source: n.kind === 'voice' ? 'voice' : n.kind === 'image' ? 'image' : 'text',
+    source: isVoice ? 'voice' : isImage ? 'image' : 'text',
+    ...(isVoice && {
+      fileId: n.fileId ?? null,
+      transcript: n.transcript,
+      summary: n.summary ?? null,
+      durationSec: n.durationSec ?? null,
+    }),
   };
 }
 

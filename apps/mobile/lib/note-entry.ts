@@ -18,4 +18,25 @@ export interface NoteEntry {
   addedAt: number;
   /** Discriminates the note kind for rendering. */
   source?: 'voice' | 'text' | 'image';
+
+  // ── Voice-note fields (Phase E) ────────────────────────────────
+  // Populated when `source === 'voice'`. `VoiceNoteCard` reads these
+  // to render the play affordance, transcript expander, summary
+  // preview, and in-flight/failed states. All optional so legacy text
+  // / image entries don't have to set them.
+  /** R2 file id for the recorded audio. Required for playback. */
+  fileId?: string | null;
+  /** Recording length in seconds (server-reported when saved). */
+  durationSec?: number | null;
+  /** Speech-to-text output. */
+  transcript?: string | null;
+  /** LLM-generated summary. Stored separately from `text` so the
+   *  card can show summary + transcript without one collapsing the
+   *  other. */
+  summary?: string | null;
+  /** Phase D pipeline view for in-flight / failed rows. `null` once
+   *  the note has been persisted server-side. */
+  voiceStatus?: 'uploading' | 'transcribing' | 'failed' | null;
+  /** Error message when `voiceStatus === 'failed'`. */
+  voiceError?: string | null;
 }

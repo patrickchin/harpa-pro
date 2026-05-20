@@ -1,21 +1,22 @@
 /**
  * NoteTimeline — chronological list of notes captured for a report.
  *
- * P3.6 scope: text notes only. Voice + photo + pending-upload rows are
- * deferred to P4 (the upload pipelines they depend on are not
- * yet ported). The canonical surface
- * (`../haru3-reports/apps/mobile/components/notes/NoteTimeline.tsx`)
- * also handles file rows, pending photos, and pending voice cards —
- * those branches will be re-added when the pipeline hooks land.
+ * P3.6 ported text-only rendering; Phase E (voice pipeline) adds
+ * `VoiceNoteCard` dispatch for `source === 'voice'` rows (covers
+ * in-flight, failed, and saved voice notes). Photo + pending-upload
+ * rows are still deferred to P4.
  *
  * Per-row delete + edit affordances live on `TextNoteCard`. Delete
  * triggers `onRemoveNote(sourceIndex)` which the provider routes
  * through its global delete-confirm dialog; edit calls `onEditNote`
  * synchronously with the trimmed new body once the user confirms.
+ * Voice rows surface a `Retry` button on the `failed` state which
+ * routes through `onRetryVoice(sourceIndex)`.
  */
 import { Text, View } from 'react-native';
 
 import { TextNoteCard } from '@/components/notes/TextNoteCard';
+import { VoiceNoteCard } from '@/features/voice/VoiceNoteCard';
 import type { NoteEntry } from '@/lib/note-entry';
 
 export interface NoteTimelineProps {
@@ -27,6 +28,8 @@ export interface NoteTimelineProps {
   onRemoveNote?: (sourceIndex: number) => void;
   /** Optional edit handler. Called with the trimmed new body. */
   onEditNote?: (sourceIndex: number, nextBody: string) => void;
+  /** Retry handler for failed voice notes. */
+  onRetryVoice?: (sourceIndex: number) => void;
 }
 
 export function NoteTimeline({
@@ -36,6 +39,7 @@ export function NoteTimeline({
   memberNames,
   onRemoveNote,
   onEditNote,
+  onRetryVoice,
 }: NoteTimelineProps) {
   if (isLoading) {
     return (
@@ -61,6 +65,17 @@ export function NoteTimeline({
         const authorName = entry.authorId
           ? memberNames?.get(entry.authorId)
           : undefined;
+        if (entry.source === 'voice') {
+          return (
+            <VoiceNoteCard
+              key={entry.id ?? `note-${index}`}
+              entry={entry}
+              sourceIndex={index}
+              authorName={authorName}
+              onRetry={onRetryVoice}
+            />
+          );
+        }
         const isImage = entry.source === 'image';
         return (
           <TextNoteCard
@@ -68,7 +83,6 @@ export function NoteTimeline({
             entry={entry}
             sourceIndex={index}
             authorName={authorName}
-            // Image notes are not editable text — suppress edit/delete affordances.
             onRemove={isImage ? undefined : onRemoveNote}
             onEdit={isImage ? undefined : onEditNote}
           />

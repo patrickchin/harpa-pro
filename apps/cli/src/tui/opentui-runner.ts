@@ -91,7 +91,7 @@ export async function runOpenTuiApp(
   }
 
   const renderer = await createCliRenderer({
-    exitOnCtrlC: false,
+    exitOnCtrlC: true,
     clearOnShutdown: true,
     targetFps: 30,
   });

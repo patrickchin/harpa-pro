@@ -23,7 +23,7 @@ export function ConfirmDialog(props: ConfirmDialogProps) {
   const [choice, setChoice] = createSignal<boolean>(props.prompt.default ?? true);
 
   useKeyboard((k) => {
-    if (k.name === 'escape' || (k.ctrl && k.name === 'c')) {
+    if (k.name === 'escape') {
       props.ui.resolve({ kind: 'cancel' });
       return;
     }

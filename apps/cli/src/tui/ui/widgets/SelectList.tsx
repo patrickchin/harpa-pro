@@ -43,7 +43,7 @@ export function SelectList(props: SelectListProps) {
   };
 
   useKeyboard((k) => {
-    if (k.name === 'escape' || (k.ctrl && k.name === 'c')) {
+    if (k.name === 'escape') {
       props.ui.resolve({ kind: 'cancel' });
     }
   });

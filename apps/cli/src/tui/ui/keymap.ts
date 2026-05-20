@@ -22,10 +22,10 @@ export const KEY_BINDINGS: ReadonlyArray<KeyBinding> = [
   { keys: 'pgup/pgdn', description: 'scroll viewport' },
   { keys: '?', description: 'help' },
   { keys: 'q', description: 'quit', context: 'top' },
-  { keys: 'ctrl-c', description: 'cancel/quit' },
+  { keys: 'ctrl-c', description: 'quit' },
 ];
 
-const DEFAULT_HINT = '↑/↓ select · ↵ open · esc back · ? help · q quit';
+const DEFAULT_HINT = '↑/↓ select · ↵ open · esc back · ctrl-c quit · ? help';
 
 export function keymapHintFor(
   ctx: KeyBinding['context'] | undefined,

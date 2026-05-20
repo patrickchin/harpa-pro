@@ -20,7 +20,7 @@ export function TextField(props: TextFieldProps) {
   const [error, setError] = createSignal<string | undefined>(undefined);
 
   useKeyboard((k) => {
-    if (k.name === 'escape' || (k.ctrl && k.name === 'c')) {
+    if (k.name === 'escape') {
       props.ui.resolve({ kind: 'cancel' });
     }
   });

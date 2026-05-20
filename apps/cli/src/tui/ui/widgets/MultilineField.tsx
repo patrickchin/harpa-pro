@@ -20,7 +20,7 @@ export function MultilineField(props: MultilineFieldProps) {
   const [value, setValue] = createSignal('');
 
   useKeyboard((k) => {
-    if (k.name === 'escape' || (k.ctrl && k.name === 'c')) {
+    if (k.name === 'escape') {
       props.ui.resolve({ kind: 'cancel' });
       return;
     }

@@ -97,6 +97,7 @@ const ENDPOINTS: Endpoint[] = [
   // voice
   { method: 'post',   path: '/voice/transcribe',                      hook: 'useTranscribeVoiceMutation',   query: false, hasPathParams: false, hasBody: true },
   { method: 'post',   path: '/voice/summarize',                       hook: 'useSummarizeVoiceMutation',    query: false, hasPathParams: false, hasBody: true },
+  { method: 'post',   path: '/reports/{report}/notes/voice',          hook: 'useCreateVoiceNoteMutation',   query: false, hasPathParams: true,  hasBody: true },
 
   // settings
   { method: 'get',    path: '/settings/ai',                           hook: 'useAiSettingsQuery',           query: true,  hasPathParams: false, hasBody: false, queryKeyHead: 'aiSettings' },

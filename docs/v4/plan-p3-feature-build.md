@@ -556,7 +556,7 @@ phase; checkboxes here mirror the phase boundaries.
       sub-surface for transcribing toasts; real `AudioPlaybackProvider`
       backed by one `expo-audio` player (single active note, auto-
       releases when a new URI plays).
-- [x] **Phase E** — `VoiceNoteCard` (state pill, play/pause, summary
+- [ ] **Phase E** — `VoiceNoteCard` (state pill, play/pause, summary
       preview, transcript expander, retry on `failed`); wired into
       `NoteTimeline` (draft) and `ReportNotesPane` (saved); `noteToEntry`
       surfaces `summary` + `transcript` separately.

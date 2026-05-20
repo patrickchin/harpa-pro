@@ -39,6 +39,14 @@ shell with phone+OTP sign-in and persisted credentials (per-OS config
 dir, file mode `0600`). See
 [`docs/v4/arch-tui-app.md`](docs/v4/arch-tui-app.md).
 
+> **Runtime note:** `apps/cli` runs on [Bun](https://bun.sh) (≥ 1.3) so it
+> can host the OpenTUI rendering layer (see
+> [`docs/v4/arch-tui-layout.md`](docs/v4/arch-tui-layout.md)). Install
+> Bun with `brew install oven-sh/bun/bun` or
+> `curl -fsSL https://bun.sh/install | bash`. The rest of the monorepo
+> (api, mobile, packages) stays on Node + pnpm; only the CLI workspace
+> requires Bun.
+
 (Wire-up happens in P0 — see [`docs/v4/plan-p0-foundation.md`](docs/v4/plan-p0-foundation.md).)
 
 ## Layout

@@ -204,7 +204,11 @@ pnpm typecheck
 pnpm lint
 ```
 
-Run without building (via tsx):
+Run without building (via Bun):
 ```bash
 pnpm harpa <command>   # from repo root
 ```
+
+> Requires [Bun](https://bun.sh) (≥ 1.3). The rest of the monorepo
+> stays on Node + pnpm; only this workspace needs Bun. See
+> [`../../docs/v4/arch-tui-layout.md`](../../docs/v4/arch-tui-layout.md).

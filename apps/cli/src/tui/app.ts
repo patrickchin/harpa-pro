@@ -24,6 +24,7 @@ import chalk from 'chalk';
 import type { Prompter } from './prompter.js';
 import type { Session } from './session.js';
 import type { Flow } from './flow.js';
+import type { ViewportBody } from './ui/store.js';
 import { type ViewportSink, nullViewportSink } from './viewport-sink.js';
 import { setApiUrlFlow } from './flows/set-api-url.js';
 import { developerRawApiFlow } from './flows/developer-raw-api.js';
@@ -69,6 +70,7 @@ export async function runApp(
   for (;;) {
     const visible = flows.filter((f) => f.visibleIn.includes(session.state.kind));
     viewport.setHeader(...stateViewportHeader(session));
+    viewport.setBody(stateViewportBody(session, visible));
     const choice = await prompter.select<string>({
       label: stateLabel(session),
       options: [
@@ -152,5 +154,66 @@ function stateViewportHeader(session: Session): [string, ReadonlyArray<string>] 
       }
       return ['harpa', lines];
     }
+  }
+}
+
+/**
+ * Default body for the top-level menu so the viewport always shows
+ * something contextual instead of "(no content)". Each state mirrors
+ * the available actions as a list — flows themselves overwrite this
+ * with richer content (e.g. project header lines) when they run.
+ */
+function stateViewportBody(
+  session: Session,
+  visible: ReadonlyArray<Flow>,
+): ViewportBody {
+  const items = visible.map((f) => {
+    const item: { label: string; hint?: string } = { label: f.label };
+    if (f.hint) item.hint = f.hint;
+    return item;
+  });
+  switch (session.state.kind) {
+    case 'config':
+      return {
+        kind: 'detail',
+        sections: [
+          {
+            title: 'Setup required',
+            lines: [
+              'Set the HARPA_API_URL environment variable, or pick',
+              '"Set API URL" from the menu to point harpa at an API.',
+            ],
+          },
+        ],
+      };
+    case 'auth':
+      return {
+        kind: 'detail',
+        sections: [
+          {
+            title: 'Available actions',
+            lines: items.map(
+              (it) => `• ${it.label}${it.hint ? `  — ${it.hint}` : ''}`,
+            ),
+          },
+          {
+            lines: [
+              'Sign in with your phone number to receive an OTP code.',
+            ],
+          },
+        ],
+      };
+    case 'authed':
+      return {
+        kind: 'detail',
+        sections: [
+          {
+            title: 'Available actions',
+            lines: items.map(
+              (it) => `• ${it.label}${it.hint ? `  — ${it.hint}` : ''}`,
+            ),
+          },
+        ],
+      };
   }
 }

@@ -57,7 +57,7 @@ function BodyView(props: { body: ViewportBody | undefined }) {
   return (
     <Show
       when={props.body}
-      fallback={<text fg={theme.fgDim}>(no content)</text>}
+      fallback={<text fg={theme.fgDim}>—</text>}
     >
       {(body: () => ViewportBody) => {
         const b = body();

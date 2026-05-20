@@ -8,3 +8,6 @@ declare module '*.jpeg';
 declare module '*.gif';
 declare module '*.webp';
 declare module '*.svg';
+declare module '*.m4a';
+declare module '*.mp3';
+declare module '*.wav';

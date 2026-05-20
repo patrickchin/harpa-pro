@@ -174,6 +174,89 @@ After bootstrap, every push to `dev` re-uses the same Neon branch
 and Fly app — the workflow only runs pending migrations and ships
 new code.
 
+## Scaling
+
+The API is sized to **avoid cold starts on the first user request**
+and **absorb spikes** without operator intervention. Tuning lives
+in [`infra/fly/fly.toml`](../../infra/fly/fly.toml).
+
+### Cold starts
+
+| Lever | Prod | Dev |
+|---|---|---|
+| `auto_stop_machines` | `"suspend"` | `"suspend"` |
+| `min_machines_running` | `2` | `0` |
+| Effect on first request | warm (~5ms) | cold-resume (~300-500ms) |
+
+`"suspend"` keeps the machine's memory snapshot on disk so resume is
+sub-second; `"stop"` would re-boot the container (~3-5s) and re-run
+the readiness probe (+1-2s extra latency until first request).
+
+Prod runs **two** machines at all times — one absorbs traffic if the
+other is restarting or being replaced by a deploy. Single-machine
+prod was the v3 mistake: any restart = a real user saw a connection
+error. Cost delta: ~$3.80/mo for the extra `shared-cpu-1x` machine.
+
+### Burst scaling
+
+[`[http_service.concurrency]`](../../infra/fly/fly.toml) tells Fly's
+proxy when to wake / start additional machines:
+
+- `soft_limit = 25` — once a machine has 25 in-flight requests, Fly
+  starts routing new connections to a second (or third…) machine.
+- `hard_limit = 50` — Fly stops sending to a machine entirely until
+  it drains below the soft limit.
+
+Sized for the current node-postgres pool (`max: 10` per machine)
+plus headroom for non-DB-bound work (auth, validation, idle).
+
+**Set the max machine count out-of-band** (not in fly.toml):
+
+```bash
+# Allow up to 6 machines in the primary region during a spike.
+fly scale count 6 --max-per-region 6 -a harpa-pro-api
+```
+
+Steady-state Fly will keep `min_machines_running` (2) hot and let
+the rest stop/suspend when traffic recedes.
+
+### Multi-region (future)
+
+`primary_region = "fra"` today. Adding read-replica regions is a
+single-step `fly regions add` once the user base demands it — Neon
+read replicas exist in multiple regions and the API has no
+sticky-session state. Not configured today; flag for P5+.
+
+### Neon connection pooling
+
+Spike traffic × `min_machines_running` × `pg.Pool.max` can quickly
+exceed Neon's per-compute connection limit. Two safety nets:
+
+1. **DATABASE_URL must point at Neon's pooler endpoint** — hostname
+   contains `-pooler` (e.g. `ep-foo-bar-pooler.eu-central-1.aws.neon.tech`).
+   The pooler multiplexes thousands of client connections onto the
+   compute's actual limit. Verify with:
+   ```bash
+   fly secrets list -a harpa-pro-api | grep DATABASE_URL  # shows digest only
+   doppler secrets get DATABASE_URL --plain | grep -o '[^@]*$'  # full host
+   ```
+2. **`pg.Pool.max = 10`** per machine. With 6 machines max that's 60
+   concurrent backend connections — well inside Neon's free-tier
+   limit (~100) and trivially inside paid plans.
+
+If the pooler hostname is missing, the API still works but Neon's
+compute will saturate well before Fly does and you'll see
+`too many connections for role` errors under load. The pooled
+hostname is a one-time secret swap, not a code change.
+
+### Verifying scale in prod
+
+```bash
+fly status -a harpa-pro-api               # current machine count + state
+fly logs -a harpa-pro-api | grep started  # see auto-starts under load
+fly autoscale show -a harpa-pro-api       # current limits
+```
+
 ## Alerts
 
 - Fly app down → PagerDuty.

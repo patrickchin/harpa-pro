@@ -36,24 +36,21 @@ export function TextField(props: TextFieldProps) {
   };
 
   return (
-    <box flexDirection="column">
+    <box flexDirection="column" flexGrow={1}>
       <text fg={theme.fgMuted}>{props.prompt.label}</text>
-      <box marginTop={1}>
-        <input
-          focused
-          value={props.prompt.default ?? ''}
-          placeholder={props.prompt.placeholder ?? ''}
-          onInput={() => {
-            if (error()) setError(undefined);
-          }}
-          onSubmit={((v: string | { value: string }) =>
-            submit(typeof v === 'string' ? v : v.value)) as never}
-        />
-      </box>
+      <input
+        marginTop={1}
+        focused
+        value={props.prompt.default ?? ''}
+        placeholder={props.prompt.placeholder ?? ''}
+        onInput={() => {
+          if (error()) setError(undefined);
+        }}
+        onSubmit={((v: string | { value: string }) =>
+          submit(typeof v === 'string' ? v : v.value)) as never}
+      />
       <Show when={error()}>
-        <box marginTop={1}>
-          <text fg={theme.error}>{error()}</text>
-        </box>
+        <text marginTop={1} fg={theme.error}>{error()}</text>
       </Show>
     </box>
   );

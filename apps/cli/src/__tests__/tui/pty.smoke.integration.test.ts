@@ -180,4 +180,64 @@ describeIf('TUI default-wiring (OpenTUI pty smoke)', () => {
     // Status bar mentions the configured API URL.
     expect(stripped).toContain(api.url);
   }, 20_000);
+
+  it('mounts the phone TextField when Sign in is chosen', async () => {
+    const ptyMod = pty!;
+    const credHome = await fs.mkdtemp(path.join(os.tmpdir(), 'harpa-pty-opentui-'));
+    const childEnv: Record<string, string> = {
+      ...(process.env as Record<string, string>),
+      HARPA_API_URL: api.url,
+      HARPA_CONFIG_HOME: credHome,
+      FORCE_COLOR: '1',
+    };
+    delete childEnv.HARPA_TOKEN;
+    delete childEnv.HARPA_TUI_CLASSIC;
+
+    const proc = ptyMod.spawn(bunPath!, [CLI_ENTRY, 'tui'], {
+      name: 'xterm-256color',
+      cols: 120,
+      rows: 40,
+      cwd: path.resolve(__dirname, '../../..'),
+      env: childEnv,
+    });
+
+    let buf = '';
+    proc.onData((d) => {
+      buf += d;
+    });
+    const exited = new Promise<number | undefined>((resolve) => {
+      proc.onExit((e) => resolve(e.exitCode));
+    });
+
+    // Wait for the menu options to appear before driving keystrokes.
+    const deadline = Date.now() + 8_000;
+    while (Date.now() < deadline) {
+      if (stripAnsi(buf).includes('Sign in') && stripAnsi(buf).includes('Quit')) break;
+      await sleep(100);
+    }
+
+    // Press enter on the default selection ("Sign in").
+    proc.write('\r');
+
+    // The phone prompt placeholder is emitted as a single chunk so it
+    // survives strip-ansi concatenation; the menu options must vanish.
+    const promptDeadline = Date.now() + 4_000;
+    let promptVisible = false;
+    while (Date.now() < promptDeadline) {
+      if (buf.includes('+15551234567')) {
+        promptVisible = true;
+        break;
+      }
+      await sleep(100);
+    }
+
+    // Clean shutdown before assertions so a failing test doesn't leak the pty.
+    proc.kill('SIGINT');
+    await Promise.race([exited, sleep(2_000)]);
+
+    expect(
+      promptVisible,
+      `phone prompt placeholder did not render within 4s; transcript:\n${stripAnsi(buf)}`,
+    ).toBe(true);
+  }, 20_000);
 });

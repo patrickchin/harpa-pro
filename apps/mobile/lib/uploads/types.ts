@@ -35,6 +35,14 @@ export function noteKindForUpload(kind: UploadKind): NoteKind {
 
 /** Caller-supplied input for a single enqueue. */
 export interface EnqueueInput {
+  /**
+   * Phase F: optional caller-supplied dedupe key. When the queue
+   * rehydrates from AsyncStorage on app boot, jobs whose `clientId`
+   * matches one already enqueued are dropped. Mobile callers (voice
+   * recorder, photo picker) derive this from `sourceUri + sizeBytes`
+   * so re-tapping "save" never enqueues the same file twice.
+   */
+  clientId?: string;
   /** Local source URI (file://, ph://, content://). */
   sourceUri: string;
   kind: UploadKind;

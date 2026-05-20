@@ -568,14 +568,11 @@ phase; checkboxes here mirror the phase boundaries.
       `useLiveTranscript` via `expo-speech-recognition`
       **deferred** (requires native module + permission flow). See
       `arch-voice-pipeline.md §D9` for deferral rationale.
-- [x] **Phase G** — `.maestro/p3-15-voice-record.yaml` records via
-      the fixture stub and asserts a `VoiceNoteCard` row with
-      transcript expander; `core-end-to-end.yaml` voice step now
-      drives the recorder modal Start → Save (replaces the prior
-      double-tap on `btn-record-start` that left the recorder stuck
-      open); `arch-mobile.md` drift fixed (legend-state → hand-rolled
-      `UploadQueue`; `features/voice/` directory matches what
-      shipped); AGENTS.md fixture-stub language already accurate.
+- [ ] **Phase G** — Maestro `.maestro/p3-15-voice-record.yaml` asserts a
+      `note.kind='voice'` row with non-empty transcript + summary;
+      `core-end-to-end.yaml` voice step replaces the current
+      false-green tap; final pass on `arch-mobile.md §State management`
+      (legend-state vs hand-rolled queue) + AGENTS.md.
 
 **Out of scope** (kept disabled or absent until product asks):
 notifications row (stays `disabled`-styled), language / locale

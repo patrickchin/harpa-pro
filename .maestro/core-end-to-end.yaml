@@ -193,29 +193,25 @@ tags:
       id: "input-note-container"
     timeout: 15000
 
-# Voice record (mic permission pre-granted by run script). Phase F:
-# `btn-record-start` opens `VoiceRecorderModal`; the inner Start /
-# Save buttons drive the recorder state machine. We tap Start, let
-# the meter run briefly, then Save — the recorder closes and the
-# `useVoiceNotePipeline` hook enqueues the upload + transcribe +
-# summarise round trip (fixture mode returns canned text). The
-# detailed assertions on the resulting voice card live in
-# `p3-15-voice-record.yaml`; here we only confirm the modal opens
+# Voice record (mic permission pre-granted by run script). Phase H:
+# `btn-record-start` arms the inline WhatsApp-style recorder strip;
+# `btn-record-send` finalises. `useVoiceNotePipeline` then enqueues the
+# upload + transcribe + summarise round trip (fixture mode returns canned
+# text). Detailed assertions on the resulting voice card live in
+# `p3-15-voice-record.yaml`; here we only confirm the strip opens
 # and closes without leaving the recorder stuck on screen.
 - tapOn:
     id: "btn-record-start"
 - extendedWaitUntil:
     visible:
-      id: "voice-recorder-modal"
+      id: "voice-record-strip"
     timeout: 5000
-- tapOn:
-    id: "voice-recorder-start"
 - waitForAnimationToEnd
 - tapOn:
-    id: "voice-recorder-save"
+    id: "btn-record-send"
 - extendedWaitUntil:
     notVisible:
-      id: "voice-recorder-modal"
+      id: "voice-record-strip"
     timeout: 10000
 
 # Attachment picker → Cancel (camera/library exercised by unit tests; the

@@ -7,7 +7,7 @@
  * environments). This is the runtime end of the AGENTS.md fixture-mode
  * promise; see `docs/v4/arch-voice-pipeline.md §D6`.
  *
- * Tests may pass a `recorderFactory` prop to `VoiceRecorderModal`
+ * Tests may pass a `factory` option to `useInlineRecorder`
  * directly, in which case this selector is bypassed.
  */
 import type { RecorderFactory } from './recorder-types';

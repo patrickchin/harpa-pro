@@ -448,6 +448,7 @@ export function GenerateReportProvider({
       durationSec: voicePipeline.state.capture?.durationSec ?? null,
       transcript: null,
       summary: null,
+      title: null,
     };
     return [...notes, synthetic];
   }, [

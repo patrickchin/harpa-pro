@@ -34,6 +34,9 @@ export interface NoteEntry {
    *  card can show summary + transcript without one collapsing the
    *  other. */
   summary?: string | null;
+  /** Very short headline derived from `summary` server-side
+   *  (≤ 80 chars). Rendered above the summary on voice cards. */
+  title?: string | null;
   /** Phase D pipeline view for in-flight / failed rows. `null` once
    *  the note has been persisted server-side. */
   voiceStatus?: 'uploading' | 'transcribing' | 'failed' | null;

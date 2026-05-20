@@ -6,6 +6,12 @@
 -- Expand-only:
 --   - `summary` is the canonical site-note body for voice notes
 --     (the text the report generator should read).
+--   - `title` is a very short headline (≤ 80 chars) derived from
+--     `summary` by the aggregator so list views can show a one-line
+--     label without truncating the body. Today it is heuristically
+--     extracted (first sentence of `summary`, trimmed); the column is
+--     in place so we can upgrade to a dedicated LLM call later
+--     without a follow-up migration.
 --   - `transcript` keeps its existing meaning (raw transcription audit
 --     trail).
 --   - `duration_sec`, `language`, `transcribe_provider`,
@@ -23,6 +29,8 @@
 -- human-readable.
 
 ALTER TABLE app.notes
+  ADD COLUMN IF NOT EXISTS title               text
+    CHECK (title IS NULL OR length(title) <= 200),
   ADD COLUMN IF NOT EXISTS summary             text,
   ADD COLUMN IF NOT EXISTS duration_sec        integer
     CHECK (duration_sec IS NULL OR duration_sec >= 0),

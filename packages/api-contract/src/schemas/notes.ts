@@ -15,7 +15,9 @@ export const note = z.object({
   // Voice-note pipeline fields (migration 0004 / arch-voice-pipeline.md §D3).
   // Nullable for all kinds; populated only on `kind='voice'` rows
   // produced by `POST /reports/{report}/notes/voice`. Legacy text /
-  // image / document notes leave them null.
+  // image / document notes leave them null. `title` is a very short
+  // headline (≤ 200 chars) derived from `summary` for list views.
+  title: z.string().max(200).nullable().optional(),
   summary: z.string().nullable().optional(),
   durationSec: z.number().int().min(0).nullable().optional(),
   language: z.string().min(2).max(16).nullable().optional(),

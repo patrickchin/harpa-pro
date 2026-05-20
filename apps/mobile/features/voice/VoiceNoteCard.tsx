@@ -79,6 +79,7 @@ export function VoiceNoteCard({
     onRetry?.(sourceIndex);
   }, [onRetry, sourceIndex]);
 
+  const title = entry.title?.trim() || null;
   const summary = entry.summary?.trim() || null;
   const transcript = entry.transcript?.trim() || null;
 
@@ -158,6 +159,16 @@ export function VoiceNoteCard({
           selectable
         >
           {header.errorMessage}
+        </Text>
+      ) : null}
+
+      {title ? (
+        <Text
+          className="text-sm font-semibold text-foreground"
+          testID={`voice-title-${sourceIndex}`}
+          numberOfLines={2}
+        >
+          {title}
         </Text>
       ) : null}
 

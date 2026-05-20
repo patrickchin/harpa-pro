@@ -182,6 +182,7 @@ describe('POST /reports/:report/notes/voice — aggregator (Pitfall 13)', () => 
       id: string;
       kind: string;
       body: string | null;
+      title: string | null;
       summary: string | null;
       transcript: string | null;
       transcribedAt: string | null;
@@ -195,6 +196,10 @@ describe('POST /reports/:report/notes/voice — aggregator (Pitfall 13)', () => 
     expect(note.fileId).toBe(aliceVoiceFile);
     expect(note.summary).toBeTruthy();
     expect(note.transcript).toBeTruthy();
+    // Title is derived from summary; non-null and <=80 chars per
+    // arch-voice-pipeline.md §D3.
+    expect(note.title).toBeTruthy();
+    expect(note.title!.length).toBeLessThanOrEqual(81);
     // Legacy `body` must mirror `summary` until P3.10 readers migrate.
     expect(note.body).toBe(note.summary);
     expect(note.transcribedAt).toBeTruthy();

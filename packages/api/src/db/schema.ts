@@ -134,9 +134,11 @@ export const notes = appSchema.table('notes', {
   fileId: text('file_id'),
   transcript: text('transcript'),
   // Voice-note pipeline columns (migration 0004). See
-  // docs/v4/arch-voice-pipeline.md §D3. Summary is the canonical
+  // docs/v4/arch-voice-pipeline.md §D3. `summary` is the canonical
   // site-note body for `kind='voice'` rows; the aggregator mirrors it
-  // into `body` so legacy readers stay sane.
+  // into `body` so legacy readers stay sane. `title` is a very short
+  // headline derived from `summary` for list views.
+  title: text('title'),
   summary: text('summary'),
   durationSec: integer('duration_sec'),
   language: text('language'),

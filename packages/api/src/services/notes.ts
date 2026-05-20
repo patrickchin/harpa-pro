@@ -20,6 +20,7 @@ export interface NoteRow {
   body: string | null;
   fileId: string | null;
   transcript: string | null;
+  title: string | null;
   summary: string | null;
   durationSec: number | null;
   language: string | null;
@@ -38,6 +39,7 @@ interface RawNote {
   body: string | null;
   file_id: string | null;
   transcript: string | null;
+  title: string | null;
   summary: string | null;
   duration_sec: number | null;
   language: string | null;
@@ -56,6 +58,7 @@ function mapNote(r: RawNote): NoteRow {
     body: r.body,
     fileId: r.file_id,
     transcript: r.transcript,
+    title: r.title,
     summary: r.summary,
     durationSec: r.duration_sec,
     language: r.language,
@@ -77,7 +80,7 @@ function decodeCursor(cursor: string): { createdAt: string; id: string } {
 }
 
 const NOTE_COLUMNS = sql`id, report_id, author_id, kind, body, file_id,
-       transcript, summary, duration_sec, language, transcribe_provider,
+       transcript, title, summary, duration_sec, language, transcribe_provider,
        transcribed_at, created_at, updated_at`;
 
 export async function listNotes(
@@ -164,6 +167,7 @@ export async function createVoiceNote(
   authorId: string,
   input: {
     fileId: string;
+    title: string | null;
     summary: string;
     transcript: string;
     durationSec?: number | null;
@@ -175,7 +179,7 @@ export async function createVoiceNote(
   const r = await db.execute<RawNote>(sql`
     INSERT INTO app.notes(
       id, report_id, author_id, kind, body, file_id, transcript,
-      summary, duration_sec, language, transcribe_provider, transcribed_at
+      title, summary, duration_sec, language, transcribe_provider, transcribed_at
     )
     VALUES (
       ${id},
@@ -185,6 +189,7 @@ export async function createVoiceNote(
       ${input.summary},
       ${input.fileId},
       ${input.transcript},
+      ${input.title ?? null},
       ${input.summary},
       ${input.durationSec ?? null},
       ${input.language ?? null},

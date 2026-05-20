@@ -60,6 +60,7 @@ interface ApiNote {
   kind: 'text' | 'voice' | 'image' | 'document';
   body: string | null;
   transcript: string | null;
+  title?: string | null;
   summary?: string | null;
   fileId?: string | null;
   durationSec?: number | null;
@@ -87,6 +88,7 @@ function noteToEntry(n: ApiNote): NoteEntry {
     ...(isVoice && {
       fileId: n.fileId ?? null,
       transcript: n.transcript,
+      title: n.title ?? null,
       summary: n.summary ?? null,
       durationSec: n.durationSec ?? null,
     }),

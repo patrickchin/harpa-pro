@@ -34,6 +34,7 @@ export interface ReportNoteRow {
   fileId?: string | null;
   // ── Voice-only fields (Phase E). Optional so non-voice rows omit them. ──
   transcript?: string | null;
+  title?: string | null;
   summary?: string | null;
   durationSec?: number | null;
 }
@@ -97,6 +98,7 @@ export function ReportNotesPane({
               fileId={note.fileId ?? null}
               body={note.body}
               transcript={note.transcript ?? null}
+              title={note.title ?? null}
               summary={note.summary ?? null}
               durationSec={note.durationSec ?? null}
               authorName={note.authorName ?? null}

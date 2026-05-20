@@ -23,7 +23,7 @@ import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
-import * as FileSystem from 'expo-file-system';
+import { File as FsFile } from 'expo-file-system';
 import { User } from 'lucide-react-native';
 
 import { CachedImage } from '@/components/ui/CachedImage';
@@ -44,11 +44,11 @@ export interface AvatarUploaderProps {
   onUploaded?: (fileId: string) => void;
 }
 
-async function statSize(uri: string): Promise<number> {
+function statSize(uri: string): number {
   try {
-    const info = await FileSystem.getInfoAsync(uri, { size: true });
-    if (info.exists && typeof info.size === 'number' && info.size > 0) {
-      return info.size;
+    const size = new FsFile(uri).size;
+    if (typeof size === 'number' && size > 0) {
+      return size;
     }
   } catch {
     // ignore
@@ -104,7 +104,7 @@ export function AvatarUploader({
         [{ resize: { width: 512, height: 512 } }],
         { compress: 0.85, format: ImageManipulator.SaveFormat.JPEG },
       );
-      const sizeBytes = await statSize(compressed.uri);
+      const sizeBytes = statSize(compressed.uri);
 
       const result = await enqueue({
         sourceUri: compressed.uri,

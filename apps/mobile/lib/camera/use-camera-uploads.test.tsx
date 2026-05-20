@@ -3,7 +3,7 @@
  *
  * Pitfall 13: exercises the real session-registry + real upload queue
  * wiring. We stub `fetch` (the boundary the queue actually hits) and
- * `expo-file-system.getInfoAsync` (the only other side effect this
+ * `expo-file-system` `File` class (the only other side effect this
  * hook introduces) — we do NOT swap `useFileUpload`'s deps.
  *
  * Covers:
@@ -31,8 +31,12 @@ import {
 import { useCameraUploads } from './use-camera-uploads';
 
 vi.mock('expo-file-system', () => ({
-  getInfoAsync: vi.fn(async () => ({ exists: true, size: 12_345 })),
-  deleteAsync: vi.fn(async () => undefined),
+  // v55 surface — `new File(uri).size` is what `statSize` actually uses.
+  File: class {
+    size = 12_345;
+    constructor(_uri: string) {}
+    delete() {}
+  },
 }));
 
 interface RecordedCall {

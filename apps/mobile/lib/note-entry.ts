@@ -16,6 +16,6 @@ export interface NoteEntry {
   text: string;
   /** `Date.now()` at the moment the note was added — drives sort order. */
   addedAt: number;
-  /** `'voice'` when the text came from voice-note transcription. */
-  source?: 'voice' | 'text';
+  /** Discriminates the note kind for rendering. */
+  source?: 'voice' | 'text' | 'image';
 }

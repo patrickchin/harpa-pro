@@ -431,22 +431,25 @@ vi.mock('expo-image-manipulator', () => ({
 }));
 
 // `expo-file-system` ships native bindings via `expo-modules-core`.
-// We stub the few APIs the app uses for size lookup (avatar upload).
-vi.mock('expo-file-system', () => ({
-  getInfoAsync: vi.fn(async (_uri: string, _opts?: { size?: boolean }) => ({
-    exists: true,
-    size: 80_000,
-    uri: _uri,
-    isDirectory: false,
-  })),
-  documentDirectory: 'file:///mock-doc/',
-  cacheDirectory: 'file:///mock-cache/',
-  readAsStringAsync: vi.fn(async () => ''),
-  writeAsStringAsync: vi.fn(async () => undefined),
-  deleteAsync: vi.fn(async () => undefined),
-  makeDirectoryAsync: vi.fn(async () => undefined),
-  EncodingType: { Base64: 'base64', UTF8: 'utf8' },
-}));
+// We stub the v55 modern `File` class API used by the app for size
+// lookup (avatar upload, camera upload) and cleanup (camera capture).
+vi.mock('expo-file-system', () => {
+  class File {
+    uri: string;
+    size = 80_000;
+    exists = true;
+    constructor(uri: string) {
+      this.uri = uri;
+    }
+    delete() {
+      // no-op
+    }
+  }
+  return {
+    File,
+    Directory: class {},
+  };
+});
 
 // `expo-media-library` ships native bindings. Default stub: granted +
 // no-op save. Tests can re-mock per-file to assert call counts.

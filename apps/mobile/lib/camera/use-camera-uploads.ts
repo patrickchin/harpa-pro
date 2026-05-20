@@ -11,12 +11,15 @@
  * also creates the timeline note (Pitfall 8).
  *
  * Empty URI lists are a no-op — Done with zero captures must not
- * enqueue anything. We never throw on a missing file stat; the queue
- * itself rejects the job and surfaces it via `failedJobs` so the UI
- * can offer a retry.
+ * enqueue anything. The size lookup uses the modern `new File(uri).size`
+ * API (expo-file-system v55 moved `getInfoAsync` to a `/legacy` import
+ * — calling the bare module's `.getInfoAsync` returns `undefined` at
+ * runtime and the upload signs against a sizeBytes of `1` while the
+ * actual PUT sends real bytes → S3 / MinIO rejects with
+ * SignatureDoesNotMatch / EntityTooSmall).
  */
 import { useCallback } from 'react';
-import * as FileSystem from 'expo-file-system';
+import { File as FsFile } from 'expo-file-system';
 
 import { useFileUpload } from '@/lib/uploads';
 import type { UploadResult } from '@/lib/uploads';
@@ -33,18 +36,17 @@ export interface UseCameraUploadsApi {
   ) => Promise<Array<PromiseSettledResult<UploadResult>>>;
 }
 
-/** Best-effort filesize lookup. Camera shots routinely live under the
- *  managed cache root, so `getInfoAsync` succeeds; if it doesn't, fall
- *  back to a non-zero estimate so the presign request still validates
- *  (the queue will fail loudly if the server rejects it, not silently). */
-async function statSize(uri: string): Promise<number> {
+/** Best-effort filesize lookup using the v55 `File` API. Returns a
+ *  positive number; falls back to a sentinel if the file is
+ *  inaccessible so the caller's Promise.allSettled doesn't reject. */
+function statSize(uri: string): number {
   try {
-    const info = await FileSystem.getInfoAsync(uri, { size: true });
-    if (info.exists && typeof info.size === 'number' && info.size > 0) {
-      return info.size;
+    const size = new FsFile(uri).size;
+    if (typeof size === 'number' && size > 0) {
+      return size;
     }
   } catch {
-    // ignore — fall through
+    // ignore — fall through to a sentinel
   }
   return 1;
 }
@@ -65,7 +67,7 @@ export function useCameraUploads(): UseCameraUploadsApi {
     ): Promise<Array<PromiseSettledResult<UploadResult>>> => {
       if (uris.length === 0) return [];
       const promises = uris.map(async (uri, idx) => {
-        const sizeBytes = await statSize(uri);
+        const sizeBytes = statSize(uri);
         return enqueue({
           sourceUri: uri,
           kind: 'image',

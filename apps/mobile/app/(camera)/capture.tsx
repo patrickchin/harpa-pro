@@ -20,7 +20,10 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as MediaLibrary from 'expo-media-library';
 
 import { CameraCapture } from '@/screens/camera-capture';
-import { commitCameraSession } from '@/lib/camera-session-registry';
+import {
+  commitCameraSession,
+  getCameraSession,
+} from '@/lib/camera-session-registry';
 import { safeBack } from '@/lib/nav/safe-back';
 import {
   readSaveToRollPref,
@@ -71,19 +74,33 @@ export default function CaptureRoute() {
     await MediaLibrary.saveToLibraryAsync(uri);
   }, []);
 
+  const returnToCaller = useCallback(() => {
+    // Root layout is `<Slot/>` (not `<Stack/>`), so navigating into the
+    // `(camera)` group unmounted the caller's Stack. `router.back()`
+    // can land the user on a default route inside `(app)` rather than
+    // the screen that pushed the camera. Prefer an explicit replace to
+    // the session's recorded `returnTo` so the caller is restored.
+    const session = sessionId ? getCameraSession(sessionId) : undefined;
+    if (session?.returnTo) {
+      router.replace(session.returnTo as never);
+      return;
+    }
+    safeBack(router, '/');
+  }, [router, sessionId]);
+
   const handleCommit = useCallback(
     (uris: string[]) => {
       if (sessionId) {
         commitCameraSession(sessionId, uris);
       }
-      safeBack(router, '/');
+      returnToCaller();
     },
-    [router, sessionId],
+    [returnToCaller, sessionId],
   );
 
   const handleCancel = useCallback(() => {
-    safeBack(router, '/');
-  }, [router]);
+    returnToCaller();
+  }, [returnToCaller]);
 
   return (
     <>

@@ -54,7 +54,7 @@ import {
   type FlashMode,
   type CameraViewType,
 } from '@/lib/native/expo-camera-shim';
-import * as FileSystem from 'expo-file-system';
+import { File as FsFile } from 'expo-file-system';
 import {
   Camera as CameraIcon,
   RefreshCw,
@@ -190,10 +190,12 @@ export function CameraCapture(props: CameraCaptureProps) {
         return;
       }
       try {
-        void FileSystem.deleteAsync(uri, { idempotent: true });
+        // expo-file-system v55 modern API: `new File(uri).delete()`.
+        // Best-effort cleanup — swallow errors (the file may already be
+        // gone, or live outside our managed cache root on some platforms).
+        new FsFile(uri).delete();
       } catch {
-        // ignore — file may already be gone, or live outside our
-        // managed cache root on some platforms.
+        // ignore
       }
     },
     [deleteFile],

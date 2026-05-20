@@ -13,7 +13,7 @@
  *  - Cancel (with captures) opens discard dialog → Discard → onCancel
  *  - one snapshot of the granted-empty layout
  *
- * `expo-camera` + `expo-file-system/next` are mocked so the body
+ * `expo-camera` + `expo-file-system` are mocked so the body
  * exercises every code path without touching native modules.
  */
 import React from 'react';
@@ -37,9 +37,20 @@ vi.mock('@/lib/native/expo-camera-shim', () => {
   };
 });
 
-vi.mock('expo-file-system', () => ({
-  deleteAsync: vi.fn(async () => undefined),
-}));
+vi.mock('expo-file-system', () => {
+  class File {
+    uri: string;
+    size = 1024;
+    exists = true;
+    constructor(uri: string) {
+      this.uri = uri;
+    }
+    delete() {
+      // no-op for tests
+    }
+  }
+  return { File };
+});
 
 import {
   CameraCapture,

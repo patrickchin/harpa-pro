@@ -221,6 +221,75 @@ Under `packages/api/src/__tests__/integration/`:
 
 ## Failure & rollback playbook
 
+### Code rollback (no data change)
+
+Most regressions are code-only — the schema is forward-compatible
+(expand-contract) and the previous image already tolerates the
+current schema. Roll back by re-deploying the previous SHA:
+
+```bash
+# Find the previous successful deploy
+fly releases -a harpa-pro-api | head -10
+# Roll back (Fly will re-pull and re-promote the prior image)
+fly deploy --image registry.fly.io/harpa-pro-api:deployment-<old> -a harpa-pro-api
+# OR redeploy a prior commit from CI:
+gh workflow run api-prod.yml --ref <old-sha>
+```
+
+The post-deploy `/readyz` curl proves the rollback served traffic.
+No DB touch required.
+
+### Data rollback (bad migration or corrupting code)
+
+If a deploy lands a destructive migration, or a regression writes
+bad data, **redeploying the previous image is not enough** — the DB
+state needs to come back too. We have two layered safety nets,
+both via Neon's copy-on-write branching:
+
+1. **Per-deploy snapshot** (preferred — bounded, named).
+   `api-prod.yml` calls `pnpm db:branch:snapshot $GITHUB_SHA`
+   before every deploy, creating `snapshot-<first-12-of-sha>` off
+   the prod parent. Pruned after 30 days by
+   `neon-snapshot-prune.yml`.
+2. **Point-in-time recovery** (fallback — any timestamp in retention).
+   Neon retains a continuous history (7 days on Free, 30 on
+   Launch/Scale). Use this when the bad state predates the most
+   recent snapshot or you need finer-grained timing.
+
+**Procedure** (~5 min wall time, assuming snapshot exists):
+
+```bash
+# 1. Identify the snapshot to restore from (Neon console → Branches,
+#    OR `curl https://console.neon.tech/api/v2/projects/$NEON_PROJECT_ID/branches`).
+SNAP=snapshot-abc123def456
+
+# 2. Promote it to a temporary endpoint and capture the URI
+#    (Neon console → snapshot branch → "Add compute" → copy URI).
+NEW_URL='postgres://...neon.tech/neondb'
+
+# 3. Point prod at the new URL. Use --stage so the activation is
+#    atomic when we flip in step 4. The new URL must use the
+#    -pooler hostname (see arch-ops.md §Scaling).
+fly secrets set DATABASE_URL="$NEW_URL" --stage -a harpa-pro-api
+doppler secrets set DATABASE_URL="$NEW_URL" --project harpa-pro --config prd
+
+# 4. Roll the previous (compatible) image with the new DATABASE_URL.
+#    Both env + image must change together.
+fly deploy --image registry.fly.io/harpa-pro-api:deployment-<good> -a harpa-pro-api
+
+# 5. Verify via /readyz + a known-good DB-backed route.
+curl -fsS https://harpa-pro-api.fly.dev/readyz
+
+# 6. Once stable, in Neon console: promote the temp branch to the
+#    new prod parent (or rename it), retire the corrupted parent.
+```
+
+**Why not just `pg_restore`?** Neon's branching is faster (seconds,
+not minutes) and avoids the temptation to run a long-running
+restore against a live compute. Branch-and-swap is the native idiom.
+
+### Scenario matrix
+
 | Scenario | What happens | Manual step |
 |---|---|---|
 | Migration syntax error in file N | Release machine exits non-zero, Fly aborts the rollout. App machines keep running the previous image (still compatible with schema up to file N-1, because all prior code must tolerate the prior schema). | Author opens a follow-up PR with the corrected SQL. No DB cleanup — failed file's transaction rolled back. |
@@ -228,7 +297,9 @@ Under `packages/api/src/__tests__/integration/`:
 | Migration succeeds, new code fails `/readyz` (e.g. unrelated runtime bug) | Fly's rolling deploy fails the new machine, auto-rollback to previous image. Previous image MUST be schema-compatible — that's the expand-contract guarantee. | Investigate the runtime bug. Schema is already forward — keep it; ship a fix-forward. |
 | `/readyz` reports `head-mismatch` on a running prod machine | Means schema was modified out-of-band (someone ran a migration manually) OR an older image is still running. Page on-call. | Re-deploy the current `main` SHA. If the head moved beyond `main`, audit who ran what against prod. |
 | Concurrent deploys race the migrator | `pg_advisory_lock` serialises them; the second waits, then no-ops (all files already applied). | None. |
-| Need to revert a feature | Deploy the previous image SHA. The previous image's code must already cope with the new schema (expand-contract; see below). No `down` migration is written or run. | None at the DB layer. |
+| Need to revert a feature (code only) | See "Code rollback" above. | None at the DB layer. |
+| Bad data shipped (corrupting migration, regression writing garbage) | Both code AND DB need to roll back. Use the per-deploy snapshot procedure above. | Pre-deploy snapshot is automatic; promotion is manual. |
+| Snapshot missing or older than needed | Fall back to Neon PITR — branch at the precise timestamp from the Neon console, then follow the same promote-and-swap procedure as steps 2-5 above. | None — built into Neon's retention window. |
 
 **No `down` migrations.** Confirmed by `arch-database.md` (forward-only,
 files in `migrations/` are append-only). This doc upgrades that from

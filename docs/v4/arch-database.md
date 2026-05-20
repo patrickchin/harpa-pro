@@ -106,5 +106,23 @@ in a separate "policies" migration after the fact.
 
 ## Backups
 
-Neon provides PITR + branch-from-timestamp out of the box. We do
-not run our own backup pipeline.
+Neon provides **PITR + branch-from-timestamp** out of the box on
+every plan tier. We do not run our own backup pipeline.
+
+- **Retention window**: defaults to 7 days on the Free plan, 30 days
+  on Launch/Scale. Within that window, any historical state is
+  recoverable by creating a Neon branch at a timestamp from the
+  console or API. Confirm/raise the window for the prod project in
+  the Neon dashboard → Project → Settings → History retention.
+- **Per-deploy snapshots**: `api-prod.yml` calls
+  `pnpm db:branch:snapshot $GITHUB_SHA` before each Fly deploy,
+  creating a copy-on-write Neon branch named
+  `snapshot-<first-12-of-sha>`. These survive any code-side incident
+  (bad migration, corrupting writes from a regression) for 30 days,
+  then `neon-snapshot-prune.yml` cron deletes them. The snapshots
+  are storage-only (no compute) so cost is negligible.
+- **Rollback procedure**: see
+  [arch-cicd-and-migrations.md §Failure & rollback playbook](arch-cicd-and-migrations.md#failure--rollback-playbook).
+- **Drill**: P4 hardening checklist requires a quarterly PITR drill
+  (branch from a 1h-old timestamp, point the dev API at it, verify a
+  known row). Tracked in `plan-p4-hardening.md`.

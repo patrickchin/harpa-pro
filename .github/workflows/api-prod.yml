@@ -78,6 +78,33 @@ jobs:
             | grep -vE '^(DOPPLER_|NEON_|FLY_|CLOUDFLARE_|PUBLIC_|EXPO_PUBLIC_|PAGES_PROJECT|PORT|NODE_ENV|ADMIN_EMAIL)' \
             | flyctl secrets import --stage --app harpa-pro-api
 
+      # Pre-deploy Neon snapshot named after the commit SHA. Gives us
+      # a copy-on-write rollback target even if a deploy ships a
+      # destructive migration or corrupts data. Independent of Neon's
+      # default PITR window (still available as a fallback). Best-
+      # effort: a snapshot failure does NOT block the deploy, but is
+      # surfaced as a workflow warning so it gets noticed.
+      # See docs/v4/arch-cicd-and-migrations.md §Failure & rollback.
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Snapshot prod DB (pre-deploy)
+        continue-on-error: true
+        env:
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+          NEON_PROJECT_ID: ${{ secrets.NEON_PROJECT_ID }}
+        run: |
+          if [[ -z "${NEON_API_KEY:-}" || -z "${NEON_PROJECT_ID:-}" ]]; then
+            echo "::warning::NEON_API_KEY / NEON_PROJECT_ID not set; skipping pre-deploy snapshot"
+            exit 0
+          fi
+          pnpm db:branch:snapshot "${GITHUB_SHA}" main
+
       - name: Deploy to Fly.io
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}

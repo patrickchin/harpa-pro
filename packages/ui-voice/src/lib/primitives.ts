@@ -22,6 +22,12 @@ import {
   Pressable as RNPressable,
   ScrollView as RNScrollView,
 } from 'react-native';
+import type {
+  ViewProps,
+  TextProps,
+  PressableProps,
+  ScrollViewProps,
+} from 'react-native';
 
 type WithClassName<P> = P & {
   className?: string;
@@ -79,16 +85,16 @@ function withClassName<P extends object>(
 
 export const View = withClassName(
   RNView as unknown as ComponentType<object>,
-) as unknown as typeof RNView;
+) as unknown as ComponentType<ViewProps & { className?: string }>;
 export const Text = withClassName(
   RNText as unknown as ComponentType<object>,
-) as unknown as typeof RNText;
+) as unknown as ComponentType<TextProps & { className?: string }>;
 export const Pressable = withClassName(
   RNPressable as unknown as ComponentType<object>,
-) as unknown as typeof RNPressable;
+) as unknown as ComponentType<PressableProps & { className?: string }>;
 export const ScrollView = withClassName(
   RNScrollView as unknown as ComponentType<object>,
-) as unknown as typeof RNScrollView;
+) as unknown as ComponentType<ScrollViewProps & { className?: string; contentContainerClassName?: string }>;
 
 // On web, react-native-web injects its base stylesheet (id
 // `react-native-stylesheet`) UNLAYERED via the CSSOM

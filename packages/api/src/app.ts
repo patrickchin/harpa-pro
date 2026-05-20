@@ -7,6 +7,7 @@ import { cors } from 'hono/cors';
 import { requestId } from './middleware/requestId.js';
 import { errorMapper } from './middleware/errorMapper.js';
 import { health } from './routes/health.js';
+import { readyz } from './routes/readyz.js';
 import { authRoutes } from './routes/auth.js';
 import { meRoutes } from './routes/me.js';
 import { projectRoutes } from './routes/projects.js';
@@ -87,6 +88,7 @@ export function createApp(): OpenAPIHono<AppEnv> {
 
   // Public routes
   app.route('/', health);
+  app.route('/', readyz);
   app.route('/', authRoutes);
   app.route('/', waitlistRoutes);
 

@@ -13,15 +13,22 @@
  * loading, generated report, callbacks) through provider props; dev
  * mirrors + tests do the same with canned values.
  */
+import { useState } from 'react';
 import {
   KeyboardAvoidingView,
+  Pressable,
   ScrollView,
   View,
   useWindowDimensions,
 } from 'react-native';
+import { MoreVertical } from 'lucide-react-native';
 
+import { AppDialogSheet } from '@/components/primitives/AppDialogSheet';
 import { SafeAreaView } from '@/components/primitives/SafeAreaView';
 import { ScreenHeader } from '@/components/primitives/ScreenHeader';
+import { colors } from '@/lib/design-tokens/colors';
+import { getDeleteDraftDialogCopy } from '@/lib/app-dialog-copy';
+import { DebugTabPane } from '@/components/reports/generate/DebugTabPane';
 import { EditTabPane } from '@/components/reports/generate/EditTabPane';
 import { GenerateReportActionRow } from '@/components/reports/generate/GenerateReportActionRow';
 import { GenerateReportDialogs } from '@/components/reports/generate/GenerateReportDialogs';
@@ -43,11 +50,22 @@ export type GenerateNotesProps = Omit<GenerateReportProviderProps, 'children'> &
    */
   canWrite?: boolean;
   onBack?: () => void;
+  /**
+   * Called when the user confirms deleting the draft report. When set
+   * and `canWrite` is true, the header shows a "more options" button
+   * that opens a confirm sheet. Routes wire this to
+   * `useDeleteReportMutation` and route back to the reports list.
+   */
+  onDeleteDraft?: () => void;
+  /** True while the delete mutation is in flight (disables the button). */
+  isDeletingDraft?: boolean;
 };
 
 export function GenerateNotes({
   canWrite = true,
   onBack,
+  onDeleteDraft,
+  isDeletingDraft = false,
   ...providerProps
 }: GenerateNotesProps) {
   return (
@@ -58,7 +76,12 @@ export function GenerateNotes({
         keyboardVerticalOffset={0}
       >
         <GenerateReportProvider {...providerProps}>
-          <GenerateNotesLayout canWrite={canWrite} onBack={onBack} />
+          <GenerateNotesLayout
+            canWrite={canWrite}
+            onBack={onBack}
+            onDeleteDraft={onDeleteDraft}
+            isDeletingDraft={isDeletingDraft}
+          />
         </GenerateReportProvider>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -68,6 +91,8 @@ export function GenerateNotes({
 interface LayoutProps {
   canWrite: boolean;
   onBack?: () => void;
+  onDeleteDraft?: () => void;
+  isDeletingDraft: boolean;
 }
 
 /**
@@ -75,15 +100,30 @@ interface LayoutProps {
  * inside the provider. Pure layout: header, action row, tab bar,
  * horizontal pager of panes, bottom input bar, dialog stack.
  */
-function GenerateNotesLayout({ canWrite, onBack }: LayoutProps) {
+function GenerateNotesLayout({
+  canWrite,
+  onBack,
+  onDeleteDraft,
+  isDeletingDraft,
+}: LayoutProps) {
   const { reportTitle, tabs } = useGenerateReport();
   const { width: windowWidth } = useWindowDimensions();
+  const [isDeleteConfirmVisible, setIsDeleteConfirmVisible] = useState(false);
+  const deleteDraftCopy = getDeleteDraftDialogCopy();
+
+  const showDeleteOption = canWrite && Boolean(onDeleteDraft);
 
   // Pager is purely visual for now — tab switching uses the tab bar.
   // Horizontal drag-to-switch lands with the full provider hook port
   // (Pitfall 3 — translation, not rewrite).
   const activeIndex =
-    tabs.active === 'notes' ? 0 : tabs.active === 'report' ? 1 : 2;
+    tabs.active === 'notes'
+      ? 0
+      : tabs.active === 'report'
+        ? 1
+        : tabs.active === 'edit'
+          ? 2
+          : 3;
 
   return (
     <>
@@ -92,6 +132,20 @@ function GenerateNotesLayout({ canWrite, onBack }: LayoutProps) {
           title={reportTitle}
           onBack={onBack}
           backLabel="Reports"
+          trailing={
+            showDeleteOption ? (
+              <Pressable
+                testID="btn-draft-options"
+                accessibilityRole="button"
+                accessibilityLabel="Draft options"
+                onPress={() => setIsDeleteConfirmVisible(true)}
+                disabled={isDeletingDraft}
+                className="min-h-touch min-w-touch items-center justify-center px-2"
+              >
+                <MoreVertical size={20} color={colors.foreground} />
+              </Pressable>
+            ) : null
+          }
         />
       </View>
 
@@ -113,11 +167,45 @@ function GenerateNotesLayout({ canWrite, onBack }: LayoutProps) {
         <NotesTabPane width={windowWidth} />
         <ReportTabPane width={windowWidth} />
         <EditTabPane width={windowWidth} />
+        <DebugTabPane width={windowWidth} />
       </ScrollView>
 
       {canWrite ? <GenerateReportInputBar /> : null}
 
       <GenerateReportDialogs />
+
+      <AppDialogSheet
+        visible={isDeleteConfirmVisible}
+        title={deleteDraftCopy.title}
+        message={deleteDraftCopy.message}
+        noticeTone={deleteDraftCopy.tone}
+        noticeTitle={deleteDraftCopy.noticeTitle}
+        canDismiss={!isDeletingDraft}
+        onClose={() => {
+          if (!isDeletingDraft) setIsDeleteConfirmVisible(false);
+        }}
+        actions={[
+          {
+            label: isDeletingDraft ? 'Deleting...' : deleteDraftCopy.confirmLabel,
+            variant: deleteDraftCopy.confirmVariant,
+            onPress: () => {
+              if (isDeletingDraft) return;
+              onDeleteDraft?.();
+            },
+            disabled: isDeletingDraft,
+            accessibilityLabel: 'Confirm delete draft',
+            testID: 'dialog-action-confirm-delete-draft',
+            align: 'start',
+          },
+          {
+            label: deleteDraftCopy.cancelLabel ?? 'Cancel',
+            variant: 'quiet',
+            onPress: () => setIsDeleteConfirmVisible(false),
+            disabled: isDeletingDraft,
+            accessibilityLabel: 'Cancel delete draft',
+          },
+        ]}
+      />
     </>
   );
 }

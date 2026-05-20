@@ -18,6 +18,7 @@ import { Text, View } from 'react-native';
 import { MessageSquare } from 'lucide-react-native';
 
 import { EmptyState } from '@/components/primitives/EmptyState';
+import { NoteCardHeader } from '@/components/notes/NoteCardHeader';
 import { colors } from '@/lib/design-tokens/colors';
 
 export interface ReportNoteRow {
@@ -54,22 +55,17 @@ export function ReportNotesPane({ noteRows }: ReportNotesPaneProps) {
           {textNotes.map((note) => (
             <View
               key={note.id}
-              className="rounded-lg border border-border bg-card p-3 gap-1"
+              className="rounded-lg border border-border bg-card p-3 gap-1.5"
               testID={`report-note-${note.id}`}
             >
-              {note.authorName ? (
-                <Text className="text-xs font-semibold text-muted-foreground">
-                  {note.authorName}
-                </Text>
-              ) : null}
+              <NoteCardHeader
+                authorName={note.authorName ?? null}
+                capturedAt={note.createdAt}
+                testIDSuffix={note.id}
+              />
               <Text className="text-sm leading-5 text-foreground">
                 {note.body}
               </Text>
-              {note.createdAt ? (
-                <Text className="text-xs text-muted-foreground">
-                  {note.createdAt}
-                </Text>
-              ) : null}
             </View>
           ))}
           <Text className="mt-4 text-xs text-muted-foreground">

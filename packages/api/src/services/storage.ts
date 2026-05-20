@@ -122,6 +122,7 @@ export class FixtureStorage implements Storage {
  */
 export class R2Storage implements Storage {
   private readonly client: S3Client;
+  private readonly signingClient: S3Client;
   private readonly bucket: string;
   private readonly ttlSec: number;
 
@@ -133,6 +134,14 @@ export class R2Storage implements Storage {
     this.bucket = opts?.bucket ?? env.R2_BUCKET;
     this.ttlSec = opts?.ttlSec ?? env.R2_PRESIGN_TTL_SEC;
     this.client = opts?.client ?? buildR2Client();
+    // Presigned URLs must be signed with the *public* endpoint so the
+    // Host header the client sends matches what was signed. Otherwise
+    // MinIO/R2 reject with SignatureDoesNotMatch. In production
+    // R2_PUBLIC_ENDPOINT is unset and we sign with R2_ENDPOINT (or
+    // the default R2 URL) — same as before.
+    this.signingClient = env.R2_PUBLIC_ENDPOINT
+      ? buildR2Client(env.R2_PUBLIC_ENDPOINT)
+      : this.client;
   }
 
   async presign(input: PresignInput): Promise<PresignResult> {
@@ -143,7 +152,7 @@ export class R2Storage implements Storage {
       ContentType: input.contentType,
       ContentLength: input.sizeBytes,
     });
-    const uploadUrl = await getSignedUrl(this.client, command, {
+    const uploadUrl = await getSignedUrl(this.signingClient, command, {
       expiresIn: this.ttlSec,
       // Sign Content-Type / Content-Length so the client can't swap
       // payload types after the URL is minted.
@@ -158,7 +167,7 @@ export class R2Storage implements Storage {
 
   async signGet(fileKey: string): Promise<SignedUrl> {
     const command = new GetObjectCommand({ Bucket: this.bucket, Key: fileKey });
-    const url = await getSignedUrl(this.client, command, { expiresIn: this.ttlSec });
+    const url = await getSignedUrl(this.signingClient, command, { expiresIn: this.ttlSec });
     return {
       url,
       expiresAt: new Date(Date.now() + this.ttlSec * 1000).toISOString(),
@@ -180,7 +189,7 @@ export class R2Storage implements Storage {
   }
 }
 
-function buildR2Client(): S3Client {
+function buildR2Client(endpointOverride?: string): S3Client {
   const accountId = env.R2_ACCOUNT_ID;
   const accessKeyId = env.R2_ACCESS_KEY_ID;
   const secretAccessKey = env.R2_SECRET_ACCESS_KEY;
@@ -189,7 +198,8 @@ function buildR2Client(): S3Client {
       'R2_FIXTURE_MODE=live but R2_ACCESS_KEY_ID / R2_SECRET_ACCESS_KEY / (R2_ACCOUNT_ID or R2_ENDPOINT) missing',
     );
   }
-  const endpoint = env.R2_ENDPOINT ?? `https://${accountId}.r2.cloudflarestorage.com`;
+  const endpoint =
+    endpointOverride ?? env.R2_ENDPOINT ?? `https://${accountId}.r2.cloudflarestorage.com`;
   return new S3Client({
     // R2 ignores region but the SDK requires one.
     region: 'auto',

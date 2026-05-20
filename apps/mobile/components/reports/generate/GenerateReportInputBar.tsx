@@ -15,6 +15,7 @@
  */
 import { Pressable, Text, TextInput, View } from 'react-native';
 import { Camera, Mic, Paperclip, Plus } from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/primitives/Button';
 import { useGenerateReport } from './GenerateReportProvider';
@@ -22,9 +23,13 @@ import { colors } from '@/lib/design-tokens/colors';
 
 export function GenerateReportInputBar() {
   const { notes, voice, photo, ui } = useGenerateReport();
+  const insets = useSafeAreaInsets();
 
   return (
-    <View className="border-t border-border bg-background px-5 py-3">
+    <View
+      className="border-t border-border bg-background px-5 pt-3"
+      style={{ paddingBottom: Math.max(insets.bottom, 12) }}
+    >
       <View className="flex-row items-stretch gap-3">
         <View
           testID="input-note-container"

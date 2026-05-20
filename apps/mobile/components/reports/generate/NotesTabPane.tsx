@@ -37,6 +37,7 @@ export const NotesTabPane = forwardRef<ScrollView, NotesTabPaneProps>(
             isLoading={timeline.isLoading}
             memberNames={members}
             onRemoveNote={notes.setDeleteIndex}
+            onEditNote={notes.canEdit ? notes.update : undefined}
           />
 
           {timeline.items.length === 0 && !timeline.isLoading ? (

@@ -89,6 +89,7 @@ export function GenerateReportDialogs() {
             variant: deleteNoteCopy.confirmVariant,
             onPress: notes.confirmDelete,
             accessibilityLabel: 'Confirm delete note',
+            testID: 'dialog-action-confirm-delete-note',
             align: 'start',
           },
           {

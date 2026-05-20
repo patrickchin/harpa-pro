@@ -46,6 +46,41 @@ services:
     ports:
       - "8080:8080"
 
+  # S3-compatible storage for local dev. Replaces FixtureStorage when
+  # R2_FIXTURE_MODE=live so `harpa files upload` can PUT real bytes and
+  # `signGet` URLs come back as real-fetchable HTTP. The bucket
+  # (harpa-pro) is created by the minio-init one-shot below.
+  minio:
+    image: minio/minio:latest
+    container_name: harpa-pro-minio
+    command: ["server", "/data", "--console-address", ":9001"]
+    environment:
+      MINIO_ROOT_USER: minio
+      MINIO_ROOT_PASSWORD: minio-dev-secret
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+    volumes:
+      - harpa-minio:/data
+
+  minio-init:
+    image: minio/mc:latest
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        mc alias set local http://minio:9000 minio minio-dev-secret &&
+        mc mb -p local/harpa-pro &&
+        echo "bucket harpa-pro ready"
+    restart: "no"
+
   migrate:
     build:
       context: .
@@ -65,10 +100,18 @@ services:
     depends_on:
       migrate:
         condition: service_completed_successfully
+      minio-init:
+        condition: service_completed_successfully
     environment:
       DATABASE_URL: postgres://postgres:pg@pg:5432/harpa
-      # Fixture mode: no real R2 / Twilio / AI provider calls.
-      R2_FIXTURE_MODE: replay
+      # Live storage backed by MinIO (in-network). R2_PUBLIC_ENDPOINT
+      # is what the host-side CLI/browser sees in presigned URLs.
+      R2_FIXTURE_MODE: live
+      R2_ENDPOINT: http://minio:9000
+      R2_PUBLIC_ENDPOINT: http://localhost:9000
+      R2_BUCKET: harpa-pro
+      R2_ACCESS_KEY_ID: minio
+      R2_SECRET_ACCESS_KEY: minio-dev-secret
       AI_FIXTURE_MODE: replay
       # TWILIO_LIVE unset -> fake OTP; accepted code is TWILIO_VERIFY_FAKE_CODE
       # (default 000000). See packages/api/src/auth/twilio.ts.
@@ -101,3 +144,4 @@ services:
 
 volumes:
   harpa-pg:
+  harpa-minio:

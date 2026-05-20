@@ -7,7 +7,8 @@
  *  - autosave status row → "Saving…" / "Saved" / blank
  *  - onChange propagates immutable patches via the helpers
  *  - "Edit manually" on the empty Report tab lazy-seeds an empty
- *    report via `onSetReport(createEmptyReport())` then switches to Edit
+ *    report in the provider's local state (NOT via onSetReport, so
+ *    the route's dirty flag is not triggered by tab navigation)
  *
  * Tests use `initialTab="edit"` so the Edit pane is mounted + visible
  * on first render. Pitfall R4: tests live in `screens/`, not under `app/`.
@@ -155,11 +156,12 @@ describe('GenerateNotes — Edit tab', () => {
     expect(next.report.workers).toBe(SAMPLE_GENERATED_REPORT.report.workers);
   });
 
-  it('"Edit manually" on the empty Report tab lazy-seeds a blank report via onSetReport', () => {
+  it('"Edit manually" on the empty Report tab lazy-seeds a blank report without calling onSetReport', () => {
     const onSetReport = vi.fn<(next: GeneratedSiteReport) => void>();
     const tree = render(
       <GenerateNotes
         {...baseProps}
+        report={null}
         initialTab="report"
         onSetReport={onSetReport}
       />,
@@ -168,10 +170,11 @@ describe('GenerateNotes — Edit tab', () => {
     act(() => {
       (editManually.props.onPress as () => void)();
     });
-    expect(onSetReport).toHaveBeenCalledTimes(1);
-    const seeded = onSetReport.mock.calls[0]![0];
-    expect(seeded.report.meta.title).toBe('');
-    expect(seeded.report.meta.reportType).toBe('site_visit');
-    expect(seeded.report.materials).toEqual([]);
+    // The provider now seeds the empty report in its own local state so the
+    // route's dirty flag is NOT triggered by tab navigation.
+    expect(onSetReport).not.toHaveBeenCalled();
+    // The Edit pane should now be visible with a seeded empty form.
+    const editPane = tree.root.findByProps({ testID: 'edit-tab-form' });
+    expect(editPane).toBeTruthy();
   });
 });

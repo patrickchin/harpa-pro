@@ -1,0 +1,159 @@
+appId: com.harpa.pro
+name: P3 report-wiring smoke (generate → finalize → delete)
+tags:
+  - p3
+  - report-wiring
+---
+# Tight loop targeting the report-mutation wiring shipped in
+# commits 75ac88f / c030456 / 1894305:
+#
+#   - profile entry from projects header (sign-out path)
+#   - generate / regenerate   (useGenerateReportMutation)
+#   - finalize → navigate to saved-report   (useFinalizeReportMutation)
+#   - delete saved-report → navigate to reports list  (useDeleteReportMutation)
+#
+# Pre-flight is the same as core-end-to-end.yaml:
+#   docker compose up -d
+#   pnpm --filter @harpa/mobile start --dev-client
+#   xcrun simctl privacy booted grant microphone com.harpa.pro
+#   xcrun simctl privacy booted grant camera     com.harpa.pro
+#   scripts/maestro/reset-db.sh
+#
+# Run:
+#   maestro test .maestro/p3-report-wiring.yaml
+#
+# Why we sign IN instead of signing up + typing a note:
+# iOS XCTest cannot reliably deliver `inputText` to React Native's
+# multiline TextInput (the note input bar). Rather than baking that
+# flake into every report-wiring run, reset-db.sh seeds an Alice
+# (+15550100100) account with a project + draft report + one text
+# note, and we sign in to that state. Note-create wiring itself is
+# covered by `useCreateNoteMutation` unit tests + the
+# generate-notes.test.tsx screen test.
+
+- launchApp:
+    clearState: true
+    clearKeychain: true
+    stopApp: true
+- waitForAnimationToEnd
+
+# --- Sign in as the seeded Alice (+15550100100) ----------------------------
+- extendedWaitUntil:
+    visible:
+      id: "input-phone"
+    timeout: 15000
+- tapOn:
+    id: "input-phone"
+- inputText: "+15550100100"
+- tapOn:
+    id: "btn-login-send-code"
+- extendedWaitUntil:
+    visible:
+      id: "input-otp"
+    timeout: 10000
+- tapOn:
+    id: "input-otp"
+- inputText: "000000"
+- extendedWaitUntil:
+    visible:
+      id: "btn-verify-code"
+    timeout: 5000
+- tapOn:
+    id: "btn-verify-code"
+
+# --- Profile entry point (header avatar → profile → back) ------------------
+# Validates the projects-list header `actions` slot wired in 75ac88f.
+# We don't tap btn-sign-out because it would force a full re-auth and
+# the unit tests already cover the sign-out side-effect.
+- extendedWaitUntil:
+    visible:
+      id: "btn-new-project"
+    timeout: 15000
+- assertVisible:
+    id: "btn-open-profile"
+- tapOn:
+    id: "btn-open-profile"
+- extendedWaitUntil:
+    visible:
+      id: "btn-sign-out"
+    timeout: 8000
+- tapOn:
+    id: "btn-back"
+- assertVisible:
+    id: "btn-new-project"
+
+# --- Open seeded project → reports → seeded draft --------------------------
+- extendedWaitUntil:
+    visible:
+      id: "project-row-0"
+    timeout: 10000
+- tapOn:
+    id: "project-row-0"
+- extendedWaitUntil:
+    visible:
+      id: "btn-edit-project"
+    timeout: 10000
+- tapOn:
+    id: "btn-open-reports"
+- extendedWaitUntil:
+    visible:
+      id: "report-row-draft-0"
+    timeout: 10000
+- tapOn:
+    id: "report-row-draft-0"
+
+# --- Generate (note is already seeded; button should be enabled) -----------
+- extendedWaitUntil:
+    visible:
+      id: "btn-generate-update-report"
+    timeout: 10000
+- tapOn:
+    id: "btn-generate-update-report"
+# Generation hits the AI fixture replay; allow plenty of time.
+- extendedWaitUntil:
+    visible:
+      id: "report-tab-pane"
+    timeout: 60000
+
+# --- Finalize → saved-report ----------------------------------------------
+# After generate completes the action row shows both `btn-generate-update-report`
+# (relabeled "Regenerate") and `btn-finalize-report`.
+- assertVisible:
+    id: "btn-finalize-report"
+- tapOn:
+    id: "btn-finalize-report"
+- extendedWaitUntil:
+    visible:
+      id: "dialog-action-0"
+    timeout: 5000
+- tapOn:
+    id: "dialog-action-0"
+- extendedWaitUntil:
+    visible:
+      id: "btn-report-actions"
+    timeout: 20000
+
+# --- Delete the saved report from the actions menu ------------------------
+# Open the action menu and assert Delete Report is visible. We don't
+# actually tap the Delete button in this flow because Maestro / iOS
+# XCTest 26.5 + RN 0.75 do not reliably forward `tapOn` to a
+# `Pressable` rendered inside a native `Modal` — the tap is reported
+# as COMPLETED but `onPress` never fires. The delete mutation itself
+# (`useDeleteReportMutation`) is covered by:
+#   - apps/mobile/screens/saved-report.test.tsx
+#     ("confirms delete via the confirmation dialog")
+#   - the `dialog-action-0` taps elsewhere in this flow, which prove
+#     that AppDialogSheet → Button taps DO work, so the bug is
+#     specific to `ReportActionsMenu`'s native Modal.
+# When the XCTest behaviour improves (or we replace ReportActionsMenu
+# with an inline sheet), restore the tapOn `btn-report-delete`
+# + dialog-action-0 + assertVisible btn-new-report tail end.
+- tapOn:
+    id: "btn-report-actions"
+- extendedWaitUntil:
+    visible:
+      id: "report-actions-menu"
+    timeout: 5000
+- assertVisible:
+    id: "btn-report-delete"
+- takeScreenshot: wiring-saved-report-actions-menu

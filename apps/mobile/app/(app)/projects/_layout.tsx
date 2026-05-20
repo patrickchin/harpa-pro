@@ -9,6 +9,7 @@ export default function ProjectsLayout() {
       <Stack.Screen name="[project]/edit" />
       <Stack.Screen name="[project]/members" />
       <Stack.Screen name="[project]/reports/index" />
+      <Stack.Screen name="[project]/reports/[number]/index" />
       <Stack.Screen name="[project]/reports/[number]/generate" />
     </Stack>
   );

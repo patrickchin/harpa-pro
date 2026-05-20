@@ -825,6 +825,31 @@ exports[`command tree (help drift gate) > matches the recorded snapshot 1`] = `
           "name": "regenerate",
           "subCommands": {},
         },
+        "unfinalize": {
+          "args": {
+            "json": {
+              "description": "Print raw JSON to stdout.",
+              "type": "boolean",
+            },
+            "number": {
+              "description": "Report number within the project.",
+              "required": true,
+              "type": "positional",
+            },
+            "project": {
+              "description": "Project slug (e.g. prj_xxxxxxxx).",
+              "required": true,
+              "type": "positional",
+            },
+            "verbose": {
+              "description": "Print response metadata to stderr.",
+              "type": "boolean",
+            },
+          },
+          "description": "Flip a finalized report back to draft.",
+          "name": "unfinalize",
+          "subCommands": {},
+        },
         "update": {
           "args": {
             "json": {

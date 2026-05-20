@@ -205,6 +205,51 @@ export const reportsFinalizeCommand = defineCommand({
   },
 });
 
+// --- unfinalize -------------------------------------------------------
+
+export interface ReportsUnfinalizeArgs extends ReportsAiHandlerOptions {
+  project: string; number: number;
+}
+
+export function reportsUnfinalize(args: ReportsUnfinalizeArgs): Promise<ExitCode> {
+  return executeRequest({
+    json: args.json,
+    verbose: args.verbose,
+    stdout: args.stdout,
+    stderr: args.stderr,
+    request: () =>
+      args.client.POST('/projects/{project}/reports/{number}/unfinalize', {
+        params: { path: { project: args.project, number: args.number } },
+      }),
+    format: (data) =>
+      `${chalk.green('✓')} Unfinalized report #${data.report.number} ${chalk.dim(data.report.id)}\n${renderReport(data.report)}`,
+  });
+}
+
+export const reportsUnfinalizeCommand = defineCommand({
+  meta: { name: 'unfinalize', description: 'Flip a finalized report back to draft.' },
+  args: {
+    project: { type: 'positional', required: true, description: 'Project slug (e.g. prj_xxxxxxxx).' }, number: { type: 'positional', required: true, description: 'Report number within the project.' },
+    json: { type: 'boolean', description: 'Print raw JSON to stdout.' },
+    verbose: { type: 'boolean', description: 'Print response metadata to stderr.' },
+  },
+  async run({ args }) {
+    const env = getEnv();
+    requireToken(env);
+    const client = createApiClient(env);
+    await runRequest({
+      json: args.json,
+      verbose: args.verbose,
+      request: () =>
+        client.POST('/projects/{project}/reports/{number}/unfinalize', {
+          params: { path: { project: String(args.project), number: Number(args.number) } },
+        }),
+      format: (data) =>
+        `${chalk.green('✓')} Unfinalized report #${data.report.number} ${chalk.dim(data.report.id)}\n${renderReport(data.report)}`,
+    });
+  },
+});
+
 // --- pdf --------------------------------------------------------------
 
 export interface ReportsPdfArgs extends ReportsAiHandlerOptions {

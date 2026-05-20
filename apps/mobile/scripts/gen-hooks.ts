@@ -65,6 +65,7 @@ const ENDPOINTS: Endpoint[] = [
   { method: 'get',    path: '/projects/{project}/members',        hook: 'useProjectMembersQuery',       query: true,  hasPathParams: true,  hasBody: false, queryKeyHead: 'projectMembers' },
   { method: 'post',   path: '/projects/{project}/members',        hook: 'useAddProjectMemberMutation',  query: false, hasPathParams: true,  hasBody: true },
   { method: 'delete', path: '/projects/{project}/members/{user}', hook: 'useRemoveProjectMemberMutation', query: false, hasPathParams: true,  hasBody: false },
+  { method: 'patch',  path: '/projects/{project}/members/{user}', hook: 'useUpdateProjectMemberMutation', query: false, hasPathParams: true,  hasBody: true  },
 
   // reports
   { method: 'get',    path: '/projects/{project}/reports',                          hook: 'useProjectReportsQuery',       query: true,  hasPathParams: true,  hasBody: false, queryKeyHead: 'projectReports' },
@@ -75,6 +76,7 @@ const ENDPOINTS: Endpoint[] = [
   { method: 'post',   path: '/projects/{project}/reports/{number}/generate',        hook: 'useGenerateReportMutation',    query: false, hasPathParams: true,  hasBody: true },
   { method: 'post',   path: '/projects/{project}/reports/{number}/regenerate',      hook: 'useRegenerateReportMutation',  query: false, hasPathParams: true,  hasBody: true },
   { method: 'post',   path: '/projects/{project}/reports/{number}/finalize',        hook: 'useFinalizeReportMutation',    query: false, hasPathParams: true,  hasBody: false },
+  { method: 'post',   path: '/projects/{project}/reports/{number}/unfinalize',      hook: 'useUnfinalizeReportMutation',  query: false, hasPathParams: true,  hasBody: false },
   { method: 'post',   path: '/projects/{project}/reports/{number}/pdf',             hook: 'useReportPdfMutation',         query: false, hasPathParams: true,  hasBody: false },
 
   // short-URL resolvers (P3.0 Commit 3)

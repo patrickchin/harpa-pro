@@ -244,12 +244,27 @@ function isPkCollision(err: unknown): boolean {
 export async function updateReport(
   db: Db,
   reportId: string,
-  patch: { visitDate?: string | null },
+  patch: { visitDate?: string | null; body?: ReportBody | null },
 ): Promise<ReportRow | null> {
   const setVisit = Object.prototype.hasOwnProperty.call(patch, 'visitDate');
+  const setBody = Object.prototype.hasOwnProperty.call(patch, 'body');
+  const bodyJson = setBody && patch.body !== null && patch.body !== undefined
+    ? JSON.stringify(patch.body)
+    : null;
+  // body patch flow: we deliberately do NOT touch
+  // `notes_since_last_generation` or `generated_at` here — those belong
+  // to the AI loop (setReportBody). Manual edits round-trip through the
+  // same column without resetting the AI counter, so the action row
+  // can keep showing "Update report (N)" if new notes arrived while
+  // the user was editing.
   const r = await db.execute<RawReport>(sql`
     UPDATE app.reports
     SET visit_date = CASE WHEN ${setVisit} THEN ${patch.visitDate ?? null} ELSE visit_date END,
+        body = CASE
+                 WHEN ${setBody} AND ${bodyJson}::text IS NOT NULL THEN ${bodyJson}::jsonb
+                 WHEN ${setBody} THEN NULL
+                 ELSE body
+               END,
         updated_at = now()
     WHERE id = ${reportId}
     RETURNING id, number, project_id, status, visit_date, body,
@@ -271,17 +286,52 @@ export async function deleteReport(db: Db, reportId: string): Promise<boolean> {
 // AI-generation surface (P1.7).
 // ---------------------------------------------------------------------------
 
+/**
+ * Build the user-prompt payload for `generateReport`.
+ *
+ * Returns a numbered, kind-aware notes block. Text + voice notes carry
+ * their body/transcript verbatim; image/document notes contribute a
+ * `[image N]` / `[document N]` placeholder so the LLM acknowledges the
+ * attachment without seeing its contents. The structure ("NOTES:\n[1]
+ * …") matches the canonical v3 `formatNotes` / `buildPrompt` shape the
+ * SYSTEM_PROMPT references — keep them in sync.
+ */
 export async function collectNotesForGeneration(db: Db, reportId: string): Promise<string> {
-  const r = await db.execute<{ body: string | null; transcript: string | null }>(sql`
-    SELECT body, transcript
+  const r = await db.execute<{
+    kind: 'text' | 'voice' | 'image' | 'document';
+    body: string | null;
+    transcript: string | null;
+  }>(sql`
+    SELECT kind, body, transcript
     FROM app.notes
     WHERE report_id = ${reportId}
     ORDER BY created_at ASC, id ASC
   `);
-  return r.rows
-    .map((n) => n.transcript ?? n.body ?? '')
-    .filter((s) => s.length > 0)
-    .join('\n\n');
+  const counters: Record<'image' | 'document', number> = { image: 0, document: 0 };
+  const lines: string[] = [];
+  for (const note of r.rows) {
+    let content: string;
+    switch (note.kind) {
+      case 'text':
+        content = (note.body ?? '').trim();
+        break;
+      case 'voice':
+        content = (note.transcript ?? note.body ?? '').trim();
+        break;
+      case 'image':
+        content = `[image ${++counters.image}]`;
+        break;
+      case 'document':
+        content = `[document ${++counters.document}]`;
+        break;
+      default:
+        content = (note.body ?? '').trim();
+    }
+    if (content.length === 0) continue;
+    lines.push(`[${lines.length + 1}] ${content}`);
+  }
+  if (lines.length === 0) return '';
+  return `NOTES:\n${lines.join('\n')}`;
 }
 
 export async function setReportBody(
@@ -311,6 +361,29 @@ export async function finalizeReport(db: Db, reportId: string): Promise<ReportRo
         finalized_at = COALESCE(finalized_at, now()),
         updated_at = now()
     WHERE id = ${reportId}
+    RETURNING id, number, project_id, status, visit_date, body,
+              notes_since_last_generation, generated_at, finalized_at,
+              pdf_file_id, created_at, updated_at
+  `);
+  const row = r.rows[0];
+  return row ? mapReport(row) : null;
+}
+
+/**
+ * Reverse of `finalizeReport`: flips a finalized report back to draft so
+ * the user can edit / regenerate it. Only matches rows that are currently
+ * finalized — callers should 409 if this returns null AND the row exists
+ * (route checks status before calling). RLS still applies via the scoped
+ * Postgres role, so a row the caller can't see is just "not found".
+ */
+export async function unfinalizeReport(db: Db, reportId: string): Promise<ReportRow | null> {
+  const r = await db.execute<RawReport>(sql`
+    UPDATE app.reports
+    SET status = 'draft',
+        finalized_at = NULL,
+        updated_at = now()
+    WHERE id = ${reportId}
+      AND finalized_at IS NOT NULL
     RETURNING id, number, project_id, status, visit_date, body,
               notes_since_last_generation, generated_at, finalized_at,
               pdf_file_id, created_at, updated_at

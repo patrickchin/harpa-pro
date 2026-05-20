@@ -372,3 +372,171 @@ describe('Members', () => {
     expect(body.items.find((m) => m.userId === alice)?.role).toBe('owner');
   });
 });
+
+describe('PATCH /projects/:id/members/:user', () => {
+  let projectSlug: string;
+
+  beforeAll(async () => {
+    const app = createApp();
+    const token = await signTestToken(alice, aliceSid);
+    const res = await app.request('/projects', {
+      method: 'POST',
+      headers: await authed(token),
+      body: JSON.stringify({ name: 'PatchMemberRole' }),
+    });
+    projectSlug = ((await res.json()) as { id: string }).id;
+    // Add bob as editor, carol as editor so we have subjects to patch.
+    await app.request(`/projects/${projectSlug}/members`, {
+      method: 'POST',
+      headers: await authed(token),
+      body: JSON.stringify({ phone: '+15550400002', role: 'editor' }),
+    });
+    await app.request(`/projects/${projectSlug}/members`, {
+      method: 'POST',
+      headers: await authed(token),
+      body: JSON.stringify({ phone: '+15550400003', role: 'editor' }),
+    });
+  });
+
+  // P1: owner promotes editor to owner
+  it('P1 owner promotes editor B to owner', async () => {
+    const app = createApp();
+    const token = await signTestToken(alice, aliceSid);
+    const res = await app.request(`/projects/${projectSlug}/members/${bob}`, {
+      method: 'PATCH',
+      headers: await authed(token),
+      body: JSON.stringify({ role: 'owner' }),
+    });
+    expect(res.status).toBe(200);
+    expect(((await res.json()) as { role: string }).role).toBe('owner');
+  });
+
+  // P2: owner demotes co-owner (two owners exist)
+  it('P2 owner demotes co-owner B when two owners exist', async () => {
+    const app = createApp();
+    const token = await signTestToken(alice, aliceSid);
+    // At this point alice + bob are both owners.
+    const res = await app.request(`/projects/${projectSlug}/members/${bob}`, {
+      method: 'PATCH',
+      headers: await authed(token),
+      body: JSON.stringify({ role: 'editor' }),
+    });
+    expect(res.status).toBe(200);
+    expect(((await res.json()) as { role: string }).role).toBe('editor');
+  });
+
+  // P3: sole owner tries to demote themselves
+  it('P3 sole owner cannot demote themselves', async () => {
+    const app = createApp();
+    const token = await signTestToken(alice, aliceSid);
+    const res = await app.request(`/projects/${projectSlug}/members/${alice}`, {
+      method: 'PATCH',
+      headers: await authed(token),
+      body: JSON.stringify({ role: 'editor' }),
+    });
+    expect(res.status).toBe(409);
+  });
+
+  // P4: owner tries to demote another member who is sole owner
+  it('P4 owner cannot demote sole owner even if target is different user', async () => {
+    // Make bob the owner again then demote alice, leaving bob as sole owner.
+    const app = createApp();
+    const aliceTok = await signTestToken(alice, aliceSid);
+    // Promote bob to owner.
+    await app.request(`/projects/${projectSlug}/members/${bob}`, {
+      method: 'PATCH',
+      headers: await authed(aliceTok),
+      body: JSON.stringify({ role: 'owner' }),
+    });
+    // Demote alice herself (now alice and bob are both owners).
+    await app.request(`/projects/${projectSlug}/members/${alice}`, {
+      method: 'PATCH',
+      headers: await authed(aliceTok),
+      body: JSON.stringify({ role: 'editor' }),
+    });
+    // Now bob is sole owner; log in as bob and try to demote himself.
+    const bobTok = await signTestToken(bob, bobSid);
+    const res = await app.request(`/projects/${projectSlug}/members/${bob}`, {
+      method: 'PATCH',
+      headers: await authed(bobTok),
+      body: JSON.stringify({ role: 'editor' }),
+    });
+    expect(res.status).toBe(409);
+    // Restore: re-promote alice so remaining tests have an owner.
+    await app.request(`/projects/${projectSlug}/members/${alice}`, {
+      method: 'PATCH',
+      headers: await authed(bobTok),
+      body: JSON.stringify({ role: 'owner' }),
+    });
+  });
+
+  // P5: idempotent same-role patch
+  it('P5 same-role PATCH returns 200 unchanged', async () => {
+    const app = createApp();
+    const token = await signTestToken(alice, aliceSid);
+    // Bob is editor after P2.
+    const res = await app.request(`/projects/${projectSlug}/members/${bob}`, {
+      method: 'PATCH',
+      headers: await authed(token),
+      body: JSON.stringify({ role: 'editor' }),
+    });
+    expect(res.status).toBe(200);
+    expect(((await res.json()) as { role: string }).role).toBe('editor');
+  });
+
+  // P6: non-owner cannot patch
+  it('P6 editor cannot patch any member role', async () => {
+    const app = createApp();
+    const token = await signTestToken(bob, bobSid); // bob is editor
+    const res = await app.request(`/projects/${projectSlug}/members/${carol}`, {
+      method: 'PATCH',
+      headers: await authed(token),
+      body: JSON.stringify({ role: 'owner' }),
+    });
+    expect(res.status).toBe(403);
+  });
+
+  // P7: patching a non-member returns 404
+  it('P7 patching a non-member returns 404', async () => {
+    const app = createApp();
+    const token = await signTestToken(alice, aliceSid);
+    const res = await app.request(`/projects/${projectSlug}/members/usr_aaaaaaaaaa`, {
+      method: 'PATCH',
+      headers: await authed(token),
+      body: JSON.stringify({ role: 'editor' }),
+    });
+    expect(res.status).toBe(404);
+  });
+
+  // P8: cross-project: owner A cannot patch members of a project they don't belong to
+  it('P8 cross-project patch is 404 (project invisible)', async () => {
+    const app = createApp();
+    // Bob creates his own project.
+    const bobTok = await signTestToken(bob, bobSid);
+    const created = await app.request('/projects', {
+      method: 'POST',
+      headers: await authed(bobTok),
+      body: JSON.stringify({ name: 'BobOnly' }),
+    });
+    const bobSlug = ((await created.json()) as { id: string }).id;
+    // Alice tries to patch bob's project members — she's not a member.
+    const aliceTok = await signTestToken(alice, aliceSid);
+    const res = await app.request(`/projects/${bobSlug}/members/${bob}`, {
+      method: 'PATCH',
+      headers: await authed(aliceTok),
+      body: JSON.stringify({ role: 'editor' }),
+    });
+    expect(res.status).toBe(404);
+  });
+
+  // 401 without auth
+  it('returns 401 without auth', async () => {
+    const app = createApp();
+    const res = await app.request(`/projects/${projectSlug}/members/${bob}`, {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ role: 'editor' }),
+    });
+    expect(res.status).toBe(401);
+  });
+});

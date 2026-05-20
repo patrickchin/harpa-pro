@@ -22,7 +22,12 @@ export function GenerateReportActionRow() {
   const hasReport = generation.hasReport;
   const hasNotes = timeline.items.length > 0;
   const upToDate = hasReport && generation.notesSinceLastGeneration === 0;
-  const busy = generation.isUpdating || draft.isFinalizing;
+  // Autosave gates finalize. While `isAutoSaving` is true the local
+  // edits haven't been persisted yet; finalizing in that window would
+  // lock whatever stale body is on the server. Disable both Finalize
+  // and Regenerate (regenerate races autosave on the body column).
+  const saving = draft.isAutoSaving;
+  const busy = generation.isUpdating || draft.isFinalizing || saving;
 
   if (!upToDate) {
     const label = generation.isUpdating
@@ -80,7 +85,11 @@ export function GenerateReportActionRow() {
             className="text-base font-semibold text-primary-foreground"
             numberOfLines={1}
           >
-            {draft.isFinalizing ? 'Finalizing…' : 'Finalize report'}
+            {draft.isFinalizing
+              ? 'Finalizing…'
+              : saving
+                ? 'Saving…'
+                : 'Finalize report'}
           </Text>
         </Button>
       </View>

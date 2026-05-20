@@ -83,18 +83,30 @@ function withClassName<P extends object>(
   return Wrapped as unknown as ComponentType<WithClassName<P>>;
 }
 
+import type {
+  ViewProps as RNViewProps,
+  TextProps as RNTextProps,
+  PressableProps as RNPressableProps,
+  ScrollViewProps as RNScrollViewProps,
+} from 'react-native';
+
+type ClassNameProps = { className?: string };
+type ContentContainerClassNameProps = { contentContainerClassName?: string };
+
 export const View = withClassName(
   RNView as unknown as ComponentType<object>,
-) as unknown as ComponentType<ViewProps & { className?: string }>;
+) as unknown as ComponentType<RNViewProps & ClassNameProps>;
 export const Text = withClassName(
   RNText as unknown as ComponentType<object>,
-) as unknown as ComponentType<TextProps & { className?: string }>;
+) as unknown as ComponentType<RNTextProps & ClassNameProps>;
 export const Pressable = withClassName(
   RNPressable as unknown as ComponentType<object>,
-) as unknown as ComponentType<PressableProps & { className?: string }>;
+) as unknown as ComponentType<RNPressableProps & ClassNameProps>;
 export const ScrollView = withClassName(
   RNScrollView as unknown as ComponentType<object>,
-) as unknown as ComponentType<ScrollViewProps & { className?: string; contentContainerClassName?: string }>;
+) as unknown as ComponentType<
+  RNScrollViewProps & ClassNameProps & ContentContainerClassNameProps
+>;
 
 // On web, react-native-web injects its base stylesheet (id
 // `react-native-stylesheet`) UNLAYERED via the CSSOM

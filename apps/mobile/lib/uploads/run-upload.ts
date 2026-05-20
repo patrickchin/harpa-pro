@@ -33,6 +33,10 @@ export interface UploadDeps {
    * `onProgress(fraction)` as bytes flush so the UI can render a
    * determinate bar. The default uses XMLHttpRequest when available
    * (RN runtime + JSDOM) and falls back to `fetch` (node test env).
+   *
+   * Phase F: an optional `signal` lets the caller (the queue's
+   * `remove(jobId)`) abort the in-flight transfer; the XHR path calls
+   * `xhr.abort()` and the fetch fallback forwards the signal.
    */
   putToR2: (
     args: {
@@ -40,6 +44,7 @@ export interface UploadDeps {
       sourceUri: string;
       contentType: string;
       sizeBytes: number;
+      signal?: AbortSignal;
     },
     onProgress?: (fraction: number) => void,
   ) => Promise<void>;
@@ -64,6 +69,8 @@ export interface RunHandlers {
       | 'completed',
   ) => void;
   onProgress: (fraction: number) => void;
+  /** Phase F: queue-supplied signal so `remove(jobId)` aborts the PUT. */
+  signal?: AbortSignal;
 }
 
 /**
@@ -75,9 +82,21 @@ export async function runUploadJob(
   deps: UploadDeps,
   handlers: RunHandlers,
 ): Promise<UploadResult> {
+  const throwIfAborted = () => {
+    if (handlers.signal?.aborted) {
+      const reason = (handlers.signal as AbortSignal & { reason?: unknown })
+        .reason;
+      throw reason instanceof Error
+        ? reason
+        : new Error('Upload aborted');
+    }
+  };
+
+  throwIfAborted();
   handlers.onStatus('presigning');
   const presigned = await deps.presign(input);
 
+  throwIfAborted();
   handlers.onStatus('uploading');
   handlers.onProgress(0);
   await deps.putToR2(
@@ -86,6 +105,7 @@ export async function runUploadJob(
       sourceUri: input.sourceUri,
       contentType: input.contentType,
       sizeBytes: input.sizeBytes,
+      signal: handlers.signal,
     },
     (fraction) => {
       // Clamp to [0, 1) so the UI can still distinguish "done with
@@ -94,12 +114,14 @@ export async function runUploadJob(
     },
   );
   handlers.onProgress(1);
+  throwIfAborted();
 
   handlers.onStatus('registering');
   const file = await deps.registerFile(presigned, input);
 
   let noteId: string | undefined;
   if (input.reportId) {
+    throwIfAborted();
     handlers.onStatus('creating_note');
     const note = await deps.createNote({
       reportId: input.reportId,
@@ -136,6 +158,7 @@ async function defaultPutToR2(
     sourceUri: string;
     contentType: string;
     sizeBytes: number;
+    signal?: AbortSignal;
   },
   onProgress?: (fraction: number) => void,
 ): Promise<void> {
@@ -150,6 +173,20 @@ async function defaultPutToR2(
   if (Xhr) {
     await new Promise<void>((resolve, reject) => {
       const xhr = new Xhr();
+      const onAbort = () => {
+        try {
+          xhr.abort();
+        } catch {
+          // Already finished.
+        }
+      };
+      if (args.signal) {
+        if (args.signal.aborted) {
+          reject(new Error('R2 PUT aborted before start'));
+          return;
+        }
+        args.signal.addEventListener('abort', onAbort);
+      }
       xhr.open('PUT', args.uploadUrl, true);
       xhr.setRequestHeader('Content-Type', args.contentType);
       if (xhr.upload && onProgress) {
@@ -159,7 +196,11 @@ async function defaultPutToR2(
           }
         };
       }
+      const cleanup = () => {
+        if (args.signal) args.signal.removeEventListener('abort', onAbort);
+      };
       xhr.onload = () => {
+        cleanup();
         if (xhr.status >= 200 && xhr.status < 300) {
           resolve();
         } else {
@@ -168,8 +209,14 @@ async function defaultPutToR2(
           );
         }
       };
-      xhr.onerror = () => reject(new Error('R2 PUT transport error'));
-      xhr.onabort = () => reject(new Error('R2 PUT aborted'));
+      xhr.onerror = () => {
+        cleanup();
+        reject(new Error('R2 PUT transport error'));
+      };
+      xhr.onabort = () => {
+        cleanup();
+        reject(new Error('R2 PUT aborted'));
+      };
       // `{ uri }` is the React Native fetch/XHR convention for streaming
       // a local file. On node/jsdom we never construct the body this
       // way because Xhr is undefined.
@@ -189,6 +236,7 @@ async function defaultPutToR2(
     method: 'PUT',
     headers: { 'Content-Type': args.contentType },
     body: body as BodyInit,
+    signal: args.signal,
   });
   if (!res.ok) {
     throw new Error(`R2 PUT failed: ${res.status} ${res.statusText}`);

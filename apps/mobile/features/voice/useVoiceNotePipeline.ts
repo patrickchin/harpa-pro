@@ -149,6 +149,8 @@ export interface RunPipelineDeps {
     filename: string;
     contentType: string;
     sizeBytes: number;
+    /** Phase F dedupe key (forwarded to the queue). */
+    clientId?: string;
   }) => Promise<{ file: { id: string } }>;
   callAggregator: (args: {
     reportId: string;
@@ -185,6 +187,11 @@ export async function runVoiceNotePipeline(
       filename: filenameForVoice(args.result.uri),
       contentType: args.result.mimeType || 'audio/m4a',
       sizeBytes,
+      // Phase F: dedupe key so double-tap Save (or boot-time rehydrate
+      // followed by a fresh enqueue with the same recording) never
+      // uploads the same file twice. Aggregator idempotency handles
+      // the server-side guard; this is the client-side guard.
+      clientId: `voice:${args.reportId}:${args.result.uri}:${sizeBytes}`,
     });
     fileId = upload.file.id;
     handlers.onFileId?.(fileId);

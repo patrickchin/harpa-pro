@@ -88,7 +88,7 @@ afterAll(async () => {
 const describeIf = pty && bunPath ? describe : describe.skip;
 
 describeIf('TUI default-wiring (OpenTUI pty smoke)', () => {
-  it('mounts the split-pane TUI under bun and exits cleanly on SIGINT', async () => {
+  it('mounts the split-pane TUI under bun and exits when Quit is chosen', async () => {
     const ptyMod = pty!;
     const credHome = await fs.mkdtemp(path.join(os.tmpdir(), 'harpa-pty-opentui-'));
     const childEnv: Record<string, string> = {
@@ -150,16 +150,24 @@ describeIf('TUI default-wiring (OpenTUI pty smoke)', () => {
       `Select widget did not render its options within 4s; transcript:\n${stripAnsi(buf)}`,
     ).toBe(true);
 
-    proc.kill('SIGINT');
+    // Drive the menu: arrow-down past "Sign in" and "Set API URL" to
+    // land on Quit, press enter, and check the process exits cleanly.
+    // This proves the keystroke pipe (pty → OpenTUI → Solid → store
+    // → resolve → flow) works end-to-end on the default wiring.
+    proc.write('\x1b[B'); // ↓
+    await sleep(150);
+    proc.write('\x1b[B'); // ↓
+    await sleep(150);
+    proc.write('\r');     // ↵ select "Quit"
 
     const exitCode = await Promise.race([
       exited,
       sleep(4_000).then(() => {
-        proc.kill();
-        return -1;
+        proc.kill('SIGINT');
+        return sleep(1_000).then(() => -1);
       }),
     ]);
-    expect(exitCode, 'TUI did not exit after SIGINT').not.toBe(-1);
+    expect(exitCode, 'TUI did not exit after selecting Quit').not.toBe(-1);
 
     const stripped = stripAnsi(buf);
     // Both pane titles appear — proves the split-pane laid out.

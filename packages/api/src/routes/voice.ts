@@ -33,7 +33,7 @@ import { transcribe as aiTranscribe, chat as aiChat } from '../services/ai.js';
 import { getReport } from '../services/reports.js';
 import { createVoiceNote } from '../services/notes.js';
 import { getAiSettings } from '../services/settings.js';
-import { voiceSummarySystemPrompt, deriveTitleFromSummary } from '../prompts/voiceSummary.js';
+import { voiceSummarySystemPrompt, parseVoiceSummaryResponse } from '../prompts/voiceSummary.js';
 
 // AI route budgets (per arch-api-design.md §Rate limiting / §Idempotency).
 const MIN = 60_000;
@@ -143,8 +143,7 @@ voiceRoutes.openapi(
       fixtureName: body.fixtureName,
       usageContext,
     });
-    const summary = summarised.text;
-    const title = deriveTitleFromSummary(summary);
+    const { title, summary } = parseVoiceSummaryResponse(summarised.text);
     const transcribeProvider = `${summarised.vendor}:${summarised.model}+${transcribed.vendor}:${transcribed.model}`;
 
     // Step 3 — insert. `body` mirrors `summary` so legacy readers

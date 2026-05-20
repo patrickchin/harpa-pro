@@ -196,10 +196,15 @@ describe('POST /reports/:report/notes/voice — aggregator (Pitfall 13)', () => 
     expect(note.fileId).toBe(aliceVoiceFile);
     expect(note.summary).toBeTruthy();
     expect(note.transcript).toBeTruthy();
-    // Title is derived from summary; non-null and <=80 chars per
-    // arch-voice-pipeline.md §D3.
+    // Title now comes from the LLM JSON envelope (or falls back to
+    // the heuristic when parsing fails). Either path must yield a
+    // non-empty string within the column's 200-char CHECK.
     expect(note.title).toBeTruthy();
-    expect(note.title!.length).toBeLessThanOrEqual(81);
+    expect(note.title!.length).toBeLessThanOrEqual(200);
+    // The replay fixture returns a JSON envelope with title +
+    // summary; once parsed, neither field should look like raw JSON.
+    expect(note.summary).not.toMatch(/^\s*\{/);
+    expect(note.title).not.toMatch(/^\s*\{/);
     // Legacy `body` must mirror `summary` until P3.10 readers migrate.
     expect(note.body).toBe(note.summary);
     expect(note.transcribedAt).toBeTruthy();

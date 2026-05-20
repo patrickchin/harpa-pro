@@ -86,7 +86,7 @@ Add to `app.notes`:
 
 | Column                 | Type            | Nullable | Purpose |
 |---                     |---              |---       |---      |
-| `title`                | `text` (≤ 200)  | yes      | **Generic** short headline. Today only the voice aggregator writes it (derived heuristically from `summary` — first sentence, ≤ 80 chars, word-cut + ellipsis); text / image / document notes leave it null but may populate it in the future (e.g. user-supplied document title, photo caption). The 200-char DB cap leaves headroom to swap the heuristic for a dedicated LLM call later without a follow-up migration. |
+| `title`                | `text` (≤ 200)  | yes      | **Generic** short headline. Today only the voice aggregator writes it. The summarise LLM call returns a JSON envelope `{title, summary}` — the title field (target ~5–6 words) goes straight into this column. A fallback heuristic (`deriveTitleFromSummary` — first sentence, ≤ 80 chars, word-cut + ellipsis) runs when the model didn't return parseable JSON so the route never 500s on a misbehaving response. Text / image / document notes leave it null but may populate it in the future (e.g. user-supplied document title, photo caption). |
 | `summary`              | `text`          | yes      | **Generic** long-form summary. For `kind='voice'` rows it is the canonical site-note body — what the report generator reads. Other kinds may populate it later. |
 | `duration_sec`         | `int`           | yes      | Voice-only. Recording length (client-reported). |
 | `language`             | `text`          | yes      | Voice-only. BCP-47 transcript language. |

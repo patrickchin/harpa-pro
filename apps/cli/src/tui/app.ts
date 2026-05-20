@@ -24,6 +24,7 @@ import chalk from 'chalk';
 import type { Prompter } from './prompter.js';
 import type { Session } from './session.js';
 import type { Flow } from './flow.js';
+import { type ViewportSink, nullViewportSink } from './viewport-sink.js';
 import { setApiUrlFlow } from './flows/set-api-url.js';
 import { developerRawApiFlow } from './flows/developer-raw-api.js';
 import { signInFlow, signOutFlow } from './flows/auth.js';
@@ -50,6 +51,12 @@ export const DEFAULT_FLOWS: ReadonlyArray<Flow> = [
 
 export interface RunAppOptions {
   flows?: ReadonlyArray<Flow>;
+  /**
+   * Optional viewport sink for the split-pane TUI. Default: no-op
+   * (used by the classic clack runner and the scripted-prompter
+   * tests).
+   */
+  viewport?: ViewportSink;
 }
 
 export async function runApp(
@@ -58,8 +65,10 @@ export async function runApp(
   opts: RunAppOptions = {},
 ): Promise<void> {
   const flows = opts.flows ?? DEFAULT_FLOWS;
+  const viewport = opts.viewport ?? nullViewportSink();
   for (;;) {
     const visible = flows.filter((f) => f.visibleIn.includes(session.state.kind));
+    viewport.setHeader(...stateViewportHeader(session));
     const choice = await prompter.select<string>({
       label: stateLabel(session),
       options: [
@@ -73,7 +82,13 @@ export async function runApp(
     const flow = visible.find((f) => f.id === choice);
     if (!flow) continue;
 
-    const result = await flow.run({ prompter, session });
+    viewport.setInFlight(flow.label);
+    let result;
+    try {
+      result = await flow.run({ prompter, session, viewport });
+    } finally {
+      viewport.setInFlight(undefined);
+    }
     if (result.kind === 'quit') return;
     // 'transition' and 'stay' both fall through — the driver re-renders
     // off `session.state` which the flow already mutated.
@@ -100,6 +115,42 @@ function stateLabel(session: Session): string {
         ? `  •  project: ${state.currentProject.slug ?? state.currentProject.id}`
         : '';
       return `Signed in as ${chalk.cyan(who)}  (API: ${apiUrl})${proj}`;
+    }
+  }
+}
+
+/**
+ * Plain (un-ANSI'd) variant of stateLabel for the viewport pane.
+ * OpenTUI buffers don't render ANSI escapes inside cells, so chalk-
+ * coloured strings would print literally there.
+ */
+function stateViewportHeader(session: Session): [string, ReadonlyArray<string>] {
+  const state = session.state;
+  const apiUrl = session.effectiveEnv().HARPA_API_URL ?? '(not set)';
+  switch (state.kind) {
+    case 'config':
+      return [
+        'harpa · setup',
+        ['No API URL set — pick "Set API URL" to begin.'],
+      ];
+    case 'auth':
+      return [
+        'harpa · sign in',
+        [
+          state.reason === 'expired'
+            ? `Sign in to ${apiUrl} (session expired)`
+            : `Sign in to ${apiUrl}`,
+        ],
+      ];
+    case 'authed': {
+      const who = state.user.displayName ?? state.user.userId;
+      const lines = [`Signed in as ${who}`, `API: ${apiUrl}`];
+      if (state.currentProject) {
+        lines.push(
+          `Project: ${state.currentProject.slug ?? state.currentProject.id}`,
+        );
+      }
+      return ['harpa', lines];
     }
   }
 }

@@ -16,6 +16,7 @@
  */
 import type { Prompter } from './prompter.js';
 import type { AppState, Session } from './session.js';
+import type { ViewportSink } from './viewport-sink.js';
 
 export type FlowResult =
   | { kind: 'stay' }                          // re-render same state's menu
@@ -25,6 +26,12 @@ export type FlowResult =
 export interface FlowContext {
   readonly prompter: Prompter;
   readonly session: Session;
+  /**
+   * Optional sink for pushing read-only content to the viewport pane
+   * (split-pane TUI). Flows that don't care can ignore it; the
+   * classic clack runner passes a no-op sink.
+   */
+  readonly viewport?: ViewportSink;
 }
 
 export interface Flow {

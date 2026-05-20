@@ -24,6 +24,7 @@ export function membersScreen(): Screen {
   let members: MemberListItem[] = [];
   return {
     id: 'members',
+    breadcrumb: 'members',
     async header(ctx) {
       const project =
         ctx.session.state.kind === 'authed' ? ctx.session.state.currentProject : undefined;
@@ -43,6 +44,18 @@ export function membersScreen(): Screen {
             ? chalk.dim('No members')
             : `${members.length} member${members.length === 1 ? '' : 's'}`,
         ],
+      };
+    },
+    body() {
+      if (members.length === 0) {
+        return { kind: 'empty', hint: 'No members' };
+      }
+      return {
+        kind: 'list',
+        items: members.map((m) => ({
+          label: m.displayName ?? m.phone,
+          hint: `${m.role}${m.displayName ? ` · ${m.phone}` : ''}`,
+        })),
       };
     },
     actions(ctx): ReadonlyArray<ScreenAction> {

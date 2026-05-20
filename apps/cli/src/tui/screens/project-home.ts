@@ -25,8 +25,10 @@ import { reportsScreen } from './reports.js';
 import type { ProjectLike } from '../../lib/render.js';
 
 export function projectHomeScreen(): Screen {
+  let detail: ProjectLike | undefined;
   return {
     id: 'project-home',
+    breadcrumb: 'project',
     async header(ctx) {
       const project = ctx.session.state.kind === 'authed' ? ctx.session.state.currentProject : undefined;
       if (!project) return undefined;
@@ -39,6 +41,7 @@ export function projectHomeScreen(): Screen {
       }
       const data = await fetchVia<ProjectLike>(leaf, { id: project.id }, ctx.session);
       if (!data) return undefined; // 404 → resource gone, pop back
+      detail = data;
 
       const reports = data.stats?.totalReports ?? 0;
       const drafts = data.stats?.drafts ?? 0;
@@ -49,6 +52,24 @@ export function projectHomeScreen(): Screen {
           `${chalk.dim('client')}: ${data.clientName ?? '(none)'}`,
           `${chalk.dim('address')}: ${data.address ?? '(none)'}`,
           `${chalk.dim('reports')}: ${reports} (${drafts} draft${drafts === 1 ? '' : 's'})`,
+        ],
+      };
+    },
+    body() {
+      if (!detail) return { kind: 'empty', hint: 'Loading…' };
+      const stats = detail.stats;
+      return {
+        kind: 'detail',
+        sections: [
+          {
+            lines: [
+              `role:     ${detail.myRole}`,
+              `client:   ${detail.clientName ?? '(none)'}`,
+              `address:  ${detail.address ?? '(none)'}`,
+              `reports:  ${stats?.totalReports ?? 0}`,
+              `drafts:   ${stats?.drafts ?? 0}`,
+            ],
+          },
         ],
       };
     },

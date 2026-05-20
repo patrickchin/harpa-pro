@@ -23,6 +23,7 @@ export function reportHomeScreen(): Screen {
   let report: ReportLike | undefined;
   return {
     id: 'report-home',
+    breadcrumb: 'report',
     async header(ctx) {
       if (ctx.session.state.kind !== 'authed') return undefined;
       const { currentProject, currentReport } = ctx.session.state;
@@ -44,6 +45,26 @@ export function reportHomeScreen(): Screen {
           `${chalk.dim('visit')}: ${report.visitDate ?? '(none)'}`,
           `${chalk.dim('created')}: ${report.createdAt}`,
           `${chalk.dim('generated')}: ${hasBody ? 'yes' : 'no'}  ·  ${chalk.dim('finalized')}: ${finalized ? 'yes' : 'no'}`,
+        ],
+      };
+    },
+    body() {
+      if (!report) return { kind: 'empty', hint: 'Loading…' };
+      const preview = (report.body ?? '').toString().slice(0, 400);
+      return {
+        kind: 'detail',
+        sections: [
+          {
+            lines: [
+              `status:   ${report.status}`,
+              `visit:    ${report.visitDate ?? '(none)'}`,
+              `created:  ${report.createdAt}`,
+            ],
+          },
+          {
+            title: 'Body',
+            lines: preview ? preview.split('\n') : ['(empty)'],
+          },
         ],
       };
     },

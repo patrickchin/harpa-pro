@@ -19,6 +19,7 @@ export function reportsScreen(): Screen {
   let reports: ReportLike[] = [];
   return {
     id: 'reports',
+    breadcrumb: 'reports',
     async header(ctx) {
       const project =
         ctx.session.state.kind === 'authed' ? ctx.session.state.currentProject : undefined;
@@ -38,6 +39,18 @@ export function reportsScreen(): Screen {
             ? chalk.dim('No reports yet')
             : `${reports.length} report${reports.length === 1 ? '' : 's'}`,
         ],
+      };
+    },
+    body() {
+      if (reports.length === 0) {
+        return { kind: 'empty', hint: 'No reports yet' };
+      }
+      return {
+        kind: 'list',
+        items: reports.map((r) => ({
+          label: `#${r.number}`,
+          hint: `${r.status}${r.visitDate ? ` · ${r.visitDate}` : ''}`,
+        })),
       };
     },
     actions(ctx): ReadonlyArray<ScreenAction> {

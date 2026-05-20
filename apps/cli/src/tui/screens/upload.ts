@@ -53,6 +53,7 @@ function noteKindFor(k: FileKind): 'voice' | 'image' | 'document' {
 export function uploadScreen(): Screen {
   return {
     id: 'upload',
+    breadcrumb: 'upload',
     async header(ctx) {
       if (ctx.session.state.kind !== 'authed') return undefined;
       const { currentReport } = ctx.session.state;

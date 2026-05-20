@@ -25,6 +25,7 @@ export function projectsScreen(): Screen {
   let items: ProjectLike[] = [];
   return {
     id: 'projects',
+    breadcrumb: 'projects',
     async header(ctx) {
       const leaf = findLeaf(['projects', 'list']);
       if (!leaf) return { title: 'Projects', lines: ['(unavailable)'] };
@@ -46,6 +47,19 @@ export function projectsScreen(): Screen {
             ? chalk.dim('No projects yet')
             : `${total} project${total === 1 ? '' : 's'}${recent ? ` · ${chalk.dim(recent)}` : ''}`,
         ],
+      };
+    },
+    body() {
+      if (items.length === 0) {
+        return { kind: 'empty', hint: 'No projects yet' };
+      }
+      return {
+        kind: 'list',
+        items: items.map((p) => ({
+          label: p.name ?? p.id,
+          hint: p.myRole,
+          mirrorsAction: items.length <= INLINE_OPEN ? `Open ${p.name}` : undefined,
+        })),
       };
     },
     actions(): ReadonlyArray<ScreenAction> {

@@ -19,6 +19,7 @@ export function notesScreen(): Screen {
   let notes: NoteLike[] = [];
   return {
     id: 'notes',
+    breadcrumb: 'notes',
     async header(ctx) {
       if (ctx.session.state.kind !== 'authed') return undefined;
       const { currentProject, currentReport } = ctx.session.state;
@@ -38,6 +39,21 @@ export function notesScreen(): Screen {
             ? chalk.dim('No notes yet')
             : `${notes.length} note${notes.length === 1 ? '' : 's'}`,
         ],
+      };
+    },
+    body() {
+      if (notes.length === 0) {
+        return { kind: 'empty', hint: 'No notes yet' };
+      }
+      return {
+        kind: 'list',
+        items: notes.map((n) => {
+          const text = (n.body ?? n.transcript ?? '').toString();
+          return {
+            label: n.kind,
+            hint: text ? text.slice(0, 60) : undefined,
+          };
+        }),
       };
     },
     actions(ctx): ReadonlyArray<ScreenAction> {

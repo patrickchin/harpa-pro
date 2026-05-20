@@ -34,7 +34,9 @@
     "secrets:fly:prod": "doppler secrets download --project harpa-pro --config prd --no-file --format docker | xargs flyctl secrets set --app harpa-pro-api",
     "format": "prettier --write .",
     "harpa": "pnpm --filter @harpa/cli dev --",
-    "prepare": "husky"
+    "prepare": "husky",
+    "android": "expo run:android",
+    "ios": "expo run:ios"
   },
   "devDependencies": {
     "@commitlint/cli": "^19.5.0",
@@ -51,7 +53,13 @@
   "pnpm": {
     "patchedDependencies": {
       "react-native-css-interop@0.2.3": "patches/react-native-css-interop@0.2.3.patch",
-      "expo-modules-core@2.2.3": "patches/expo-modules-core@2.2.3.patch"
+      "expo-modules-core@2.2.3": "patches/expo-modules-core@2.2.3.patch",
+      "react-native@0.76.9": "patches/react-native@0.76.9.patch"
     }
+  },
+  "dependencies": {
+    "expo": "~52.0.49",
+    "react": "18.3.1",
+    "react-native": "0.76.9"
   }
 }

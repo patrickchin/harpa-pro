@@ -49,6 +49,17 @@ export interface GenerateReportProviderProps {
    * provider just hands the trimmed body up.
    */
   onAddTextNote?: (body: string) => void;
+  /**
+   * Called when the user confirms deletion of a note in the timeline.
+   * The route wrapper owns the `useDeleteNoteMutation` call + optimistic
+   * cleanup. When omitted the dialog just closes (legacy P3.6 behaviour).
+   */
+  onDeleteNote?: (note: NoteEntry, sourceIndex: number) => void;
+  /**
+   * Called when the user edits a text note's body. Route wires
+   * `useUpdateNoteMutation`. When omitted edit is hidden.
+   */
+  onUpdateNote?: (note: NoteEntry, sourceIndex: number, nextBody: string) => void;
   /** user_id → display name lookup for note author bylines. */
   memberNames?: ReadonlyMap<string, string>;
   /** Report title for the header. `null` falls back to "New Report". */
@@ -63,6 +74,8 @@ export interface GenerateReportProviderProps {
   isGeneratingReport?: boolean;
   /** Latest generation error message, or `null`. */
   generationError?: string | null;
+  /** Debug payload (prompts + raw response) from last (re)generate. */
+  lastGeneration?: GenerationDebug | null;
   /** Count of notes added since the last successful generation. */
   notesSinceLastGeneration?: number;
   /** Called when the user taps Retry / Regenerate. */
@@ -154,6 +167,10 @@ interface NotesSurface {
   deleteIndex: number | null;
   setDeleteIndex: (i: number | null) => void;
   confirmDelete: () => void;
+  /** True iff a route-provided onUpdateNote is wired. */
+  canEdit: boolean;
+  /** Update body for a note at the given source index. */
+  update: (sourceIndex: number, nextBody: string) => void;
 }
 
 interface TabsSurface {
@@ -196,6 +213,19 @@ interface GenerationSurface {
   notesSinceLastGeneration: number;
   /** True once a report has been generated at least once. */
   hasReport: boolean;
+  /**
+   * Debug payload from the last (re)generate response. Surfaces in the
+   * Debug tab. `null` when no generation has happened in this session.
+   */
+  lastGeneration: GenerationDebug | null;
+}
+
+export interface GenerationDebug {
+  systemPrompt: string;
+  userPrompt: string;
+  rawText: string;
+  model: string;
+  vendor: string;
 }
 
 interface DraftSurface {
@@ -264,11 +294,14 @@ export function GenerateReportProvider({
   notes,
   notesLoading = false,
   onAddTextNote,
+  onDeleteNote,
+  onUpdateNote,
   memberNames,
   reportTitle,
   report = null,
   isGeneratingReport = false,
   generationError = null,
+  lastGeneration = null,
   notesSinceLastGeneration = 0,
   onRegenerate,
   onEditManually,
@@ -292,6 +325,15 @@ export function GenerateReportProvider({
   const [isFinalizeConfirmVisible, setIsFinalizeConfirmVisible] =
     useState(false);
 
+  // Locally-owned empty report seeded when the user opens Edit without
+  // a generated report ("Edit manually" path). Kept separate from
+  // `onSetReport` so the lazy-init never triggers the route's dirty
+  // flag — only typing in the form should count as a user edit.
+  const [localSeed, setLocalSeed] = useState<GeneratedSiteReport | null>(null);
+  // The report visible to the Edit tab: prefer the authoritative
+  // prop (server/AI) then the locally-seeded blank.
+  const effectiveReport = report ?? localSeed;
+
   const addNote = useCallback(() => {
     const trimmed = input.trim();
     if (!trimmed) return;
@@ -300,31 +342,39 @@ export function GenerateReportProvider({
   }, [input, onAddTextNote]);
 
   const confirmDelete = useCallback(() => {
-    // TODO(P3.8): wire useReportNotesMutations().remove once the
-    // persistence hooks land. For now the dialog just closes.
+    if (deleteIndex === null) return;
+    const note = notes[deleteIndex];
     setDeleteIndex(null);
-  }, []);
+    if (note && onDeleteNote) {
+      onDeleteNote(note, deleteIndex);
+    }
+  }, [deleteIndex, notes, onDeleteNote]);
+
+  const updateNote = useCallback(
+    (sourceIndex: number, nextBody: string) => {
+      const note = notes[sourceIndex];
+      if (!note || !onUpdateNote) return;
+      const trimmed = nextBody.trim();
+      if (!trimmed || trimmed === note.text) return;
+      onUpdateNote(note, sourceIndex, trimmed);
+    },
+    [notes, onUpdateNote],
+  );
 
   const openEdit = useCallback(() => {
-    // Lazy-seed an empty report when the user opens Edit without one,
-    // matching canonical's manual-entry path. If no `onSetReport` is
-    // wired, we still switch tabs — the empty-state will render.
-    if (!report && onSetReport) {
-      onSetReport(createEmptyReport());
-    }
+    // Lazy-seed locally so the route's dirty flag stays clean.
+    if (!report) setLocalSeed(createEmptyReport());
     setActiveTab('edit');
-  }, [onSetReport, report]);
+  }, [report]);
 
   const editManually = useCallback(() => {
     if (onEditManually) {
       onEditManually();
       return;
     }
-    if (!report && onSetReport) {
-      onSetReport(createEmptyReport());
-    }
+    if (!report) setLocalSeed(createEmptyReport());
     setActiveTab('edit');
-  }, [onEditManually, onSetReport, report]);
+  }, [onEditManually, report]);
 
   const setReport = useCallback(
     (next: GeneratedSiteReport) => {
@@ -374,6 +424,8 @@ export function GenerateReportProvider({
         deleteIndex,
         setDeleteIndex,
         confirmDelete,
+        canEdit: Boolean(onUpdateNote),
+        update: updateNote,
       },
       tabs: {
         active: activeTab,
@@ -386,12 +438,13 @@ export function GenerateReportProvider({
         isLoading: notesLoading,
       },
       generation: {
-        report,
+        report: effectiveReport,
         setReport,
         isUpdating: isGeneratingReport,
         error: generationError,
         notesSinceLastGeneration,
         hasReport: report !== null,
+        lastGeneration,
       },
       draft: {
         isFinalizing,
@@ -442,13 +495,18 @@ export function GenerateReportProvider({
       addNote,
       deleteIndex,
       confirmDelete,
+      updateNote,
+      onUpdateNote,
       activeTab,
       openEdit,
       editManually,
       report,
+      effectiveReport,
+      localSeed,
       setReport,
       isGeneratingReport,
       generationError,
+      lastGeneration,
       notesSinceLastGeneration,
       isFinalizing,
       isFinalizeConfirmVisible,

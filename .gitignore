@@ -57,8 +57,13 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
+# Expo prebuild output run from repo root by mistake — the real
+# native project lives at apps/mobile/ios/ (already ignored there).
+/ios/
+
 # Tests
 .nyc_output/
 playwright-report/
 test-results/
 .lighthouseci/
+notes-delete-empty.png

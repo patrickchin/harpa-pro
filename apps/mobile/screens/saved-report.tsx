@@ -348,11 +348,16 @@ export function SavedReport(props: SavedReportProps) {
         }}
         onUnfinalize={() => {
           setMenuVisible(false);
-          setConfirmUnfinalizeOpen(true);
+          // iOS RN `Modal` cannot present a second native modal until
+          // the first finishes dismissing. Defer the confirm dialog
+          // so the action sheet has time to drop. Without this the
+          // confirm dialog never appears (Maestro confirmed on iOS
+          // 26.5 / RN 0.75).
+          setTimeout(() => setConfirmUnfinalizeOpen(true), 350);
         }}
         onDelete={() => {
           setMenuVisible(false);
-          setConfirmDeleteOpen(true);
+          setTimeout(() => setConfirmDeleteOpen(true), 350);
         }}
         isSaving={isSaving}
         isExporting={isExporting}

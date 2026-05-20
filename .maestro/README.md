@@ -43,6 +43,20 @@ fixture mode). The seeded invite target (`+15550100200`, Bob Editor)
 is reseeded by `reset-db.sh` so the invite step always finds a real
 user. The flow deletes the project at the end.
 
+## `p3-report-wiring.yaml` (focused — report mutation wiring)
+
+Tight loop targeting the report-mutation wiring commits
+(`75ac88f`, `c030456`, `1894305`). Walks profile entry → new project →
+new draft → add note → generate → finalize → saved-report → delete →
+back to reports list → project cleanup. Faster to iterate on than
+`core-end-to-end.yaml` when debugging a specific mutation path.
+
+**Pre-flight + Run:** identical to `core-end-to-end.yaml` (see
+above), but invoke `.maestro/p3-report-wiring.yaml` instead.
+
+**Expected duration:** ~90s end-to-end on iPhone 17 Pro / iOS 26.5
+when the API + AI fixtures replay (no live model calls).
+
 ## `p3-action-buttons.yaml` (legacy, kept for diff context)
 
 Predecessor to `core-end-to-end.yaml`. Covers fewer features

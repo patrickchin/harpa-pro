@@ -10,7 +10,7 @@
  * Tailwind classes copied verbatim (NativeWind v4, Pitfall 3).
  */
 import { ActivityIndicator, Keyboard, Pressable, Text, View } from 'react-native';
-import { FileText, MessageSquare, Pencil } from 'lucide-react-native';
+import { Bug, FileText, MessageSquare, Pencil } from 'lucide-react-native';
 
 import { useGenerateReport } from './GenerateReportProvider';
 import type { TabKey } from './tabs';
@@ -89,6 +89,26 @@ export function GenerateReportTabBar() {
           }`}
         >
           {getGenerateReportTabLabel('edit', notesCount)}
+        </Text>
+      </Pressable>
+      <Pressable
+        testID="btn-tab-debug"
+        onPress={() => select('debug')}
+        className={`flex-1 flex-row items-center justify-center gap-2 rounded-md py-3 ${
+          tabs.active === 'debug' ? 'bg-secondary border-b-2 border-accent' : ''
+        }`}
+      >
+        <Bug
+          size={16}
+          color={tabs.active === 'debug' ? colors.foreground : colors.muted.foreground}
+          style={{ marginTop: 1 }}
+        />
+        <Text
+          className={`text-sm font-semibold ${
+            tabs.active === 'debug' ? 'text-foreground' : 'text-muted-foreground'
+          }`}
+        >
+          {getGenerateReportTabLabel('debug', notesCount)}
         </Text>
       </Pressable>
     </View>

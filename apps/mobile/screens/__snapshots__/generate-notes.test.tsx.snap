@@ -174,6 +174,26 @@ exports[`GenerateNotes > matches the empty-state snapshot 1`] = `
           Edit
         </rn-Text>
       </rn-Pressable>
+      <rn-Pressable
+        className="flex-1 flex-row items-center justify-center gap-2 rounded-md py-3 "
+        onPress={[Function]}
+        testID="btn-tab-debug"
+      >
+        <lucide-Bug
+          color="#5f5b66"
+          size={16}
+          style={
+            {
+              "marginTop": 1,
+            }
+          }
+        />
+        <rn-Text
+          className="text-sm font-semibold text-muted-foreground"
+        >
+          Debug
+        </rn-Text>
+      </rn-Pressable>
     </rn-View>
     <rn-ScrollView
       className="flex-1"
@@ -481,9 +501,162 @@ exports[`GenerateNotes > matches the empty-state snapshot 1`] = `
           </rn-View>
         </rn-ScrollView>
       </rn-View>
+      <rn-View
+        className="flex-1"
+        style={
+          {
+            "width": 390,
+          }
+        }
+        testID="debug-tab-pane"
+      >
+        <rn-ScrollView
+          className="flex-1 px-5"
+          contentContainerStyle={
+            {
+              "paddingBottom": 100,
+            }
+          }
+        >
+          <rn-View
+            className="gap-4 py-3"
+          >
+            <rn-View
+              className="flex-row items-center gap-2 border border-border bg-card p-3"
+            >
+              <rn-Text
+                className="text-sm font-bold text-foreground"
+              >
+                Status:
+              </rn-Text>
+              <rn-Text
+                className="text-sm text-foreground"
+                style={
+                  {
+                    "fontFamily": "Menlo",
+                  }
+                }
+                testID="debug-status"
+              >
+                idle
+              </rn-Text>
+              <rn-Text
+                className="ml-3 text-sm font-bold text-foreground"
+              >
+                Notes:
+              </rn-Text>
+              <rn-Text
+                className="text-sm text-foreground"
+                style={
+                  {
+                    "fontFamily": "Menlo",
+                  }
+                }
+              >
+                0
+              </rn-Text>
+            </rn-View>
+            <rn-View>
+              <rn-View
+                className="mb-1 flex-row items-center justify-between"
+              >
+                <rn-Pressable
+                  accessibilityLabel="Toggle System Prompt"
+                  className="flex-row items-center gap-1"
+                  onPress={[Function]}
+                >
+                  <lucide-ChevronDown
+                    color="#2d3a5a"
+                    size={16}
+                  />
+                  <rn-Text
+                    className="text-base font-bold text-foreground"
+                  >
+                    System Prompt
+                  </rn-Text>
+                </rn-Pressable>
+              </rn-View>
+              <rn-View
+                className="border bg-card p-3 border-border"
+              >
+                <rn-Text
+                  className="text-xs text-muted-foreground"
+                >
+                  No prompt yet — tap Generate / Update report on the Notes tab.
+                </rn-Text>
+              </rn-View>
+            </rn-View>
+            <rn-View>
+              <rn-View
+                className="mb-1 flex-row items-center justify-between"
+              >
+                <rn-Pressable
+                  accessibilityLabel="Toggle Input (Notes Payload)"
+                  className="flex-row items-center gap-1"
+                  onPress={[Function]}
+                >
+                  <lucide-ChevronDown
+                    color="#2d3a5a"
+                    size={16}
+                  />
+                  <rn-Text
+                    className="text-base font-bold text-foreground"
+                  >
+                    Input (Notes Payload)
+                  </rn-Text>
+                </rn-Pressable>
+              </rn-View>
+              <rn-View
+                className="border bg-card p-3 border-border"
+              >
+                <rn-Text
+                  className="text-xs text-muted-foreground"
+                >
+                  No input captured yet.
+                </rn-Text>
+              </rn-View>
+            </rn-View>
+            <rn-View>
+              <rn-View
+                className="mb-1 flex-row items-center justify-between"
+              >
+                <rn-Pressable
+                  accessibilityLabel="Toggle LLM Response"
+                  className="flex-row items-center gap-1"
+                  onPress={[Function]}
+                >
+                  <lucide-ChevronDown
+                    color="#2d3a5a"
+                    size={16}
+                  />
+                  <rn-Text
+                    className="text-base font-bold text-foreground"
+                  >
+                    LLM Response
+                  </rn-Text>
+                </rn-Pressable>
+              </rn-View>
+              <rn-View
+                className="border bg-card p-3 border-border"
+              >
+                <rn-Text
+                  className="text-xs text-muted-foreground"
+                >
+                  No response yet.
+                </rn-Text>
+              </rn-View>
+            </rn-View>
+          </rn-View>
+        </rn-ScrollView>
+      </rn-View>
     </rn-ScrollView>
     <rn-View
-      className="border-t border-border bg-background px-5 py-3"
+      className="border-t border-border bg-background px-5 pt-3"
+      style={
+        {
+          "paddingBottom": 34,
+        }
+      }
     >
       <rn-View
         className="flex-row items-stretch gap-3"
@@ -789,7 +962,7 @@ exports[`GenerateNotes > matches the empty-state snapshot 1`] = `
                     undefined,
                   ]
                 }
-                testID="dialog-action-0"
+                testID="dialog-action-confirm-delete-note"
               >
                 <rn-Text
                   className="text-danger-text font-semibold text-base"
@@ -1019,6 +1192,135 @@ exports[`GenerateNotes > matches the empty-state snapshot 1`] = `
                   ]
                 }
                 testID="dialog-action-3"
+              >
+                <rn-Text
+                  className="text-muted-foreground font-semibold text-base"
+                >
+                  Cancel
+                </rn-Text>
+              </rn-Pressable>
+            </rn-View>
+          </rn-View>
+        </rn-Pressable>
+      </rn-Pressable>
+    </rn-Modal>
+    <rn-Modal
+      animationType="slide"
+      onRequestClose={[Function]}
+      transparent={true}
+      visible={false}
+    >
+      <rn-Pressable
+        className="flex-1 justify-end bg-black/40"
+        onPress={[Function]}
+      >
+        <rn-Pressable
+          className="bg-background pb-10"
+          onPress={[Function]}
+          testID="dialog-sheet"
+        >
+          <rn-View
+            className="flex-row items-center justify-between border-b border-border px-5 py-4"
+          >
+            <rn-Text
+              className="text-xl font-bold text-foreground"
+            >
+              Delete Draft
+            </rn-Text>
+            <rn-Pressable
+              disabled={false}
+              hitSlop={12}
+              onPress={[Function]}
+            >
+              <lucide-X
+                color="#5f5b66"
+                size={20}
+              />
+            </rn-Pressable>
+          </rn-View>
+          <rn-View
+            className="gap-4 px-5 pt-4"
+          >
+            <rn-View
+              className="rounded-md border px-4 py-3 border-danger-border bg-danger-soft"
+              style={
+                {
+                  "elevation": 2,
+                  "shadowColor": "#1a1a2e",
+                  "shadowOffset": {
+                    "height": 2,
+                    "width": 0,
+                  },
+                  "shadowOpacity": 0.08,
+                  "shadowRadius": 8,
+                }
+              }
+            >
+              <rn-Text
+                className="mb-1 text-sm font-semibold text-danger-text"
+                selectable={true}
+              >
+                Permanent action
+              </rn-Text>
+              <rn-Text
+                className="text-sm text-danger-text"
+                selectable={true}
+              >
+                This draft report will be removed. This cannot be undone.
+              </rn-Text>
+            </rn-View>
+            <rn-View
+              className="gap-3"
+            >
+              <rn-Pressable
+                accessibilityLabel="Confirm delete draft"
+                className="flex-row items-center rounded-md border border-danger-border bg-danger-soft active:opacity-85 min-h-touch px-5 py-3.5 justify-start"
+                disabled={false}
+                onPress={[Function]}
+                style={
+                  [
+                    {
+                      "elevation": 2,
+                      "shadowColor": "#1a1a2e",
+                      "shadowOffset": {
+                        "height": 2,
+                        "width": 0,
+                      },
+                      "shadowOpacity": 0.08,
+                      "shadowRadius": 8,
+                    },
+                    undefined,
+                  ]
+                }
+                testID="dialog-action-confirm-delete-draft"
+              >
+                <rn-Text
+                  className="text-danger-text font-semibold text-base"
+                >
+                  Delete
+                </rn-Text>
+              </rn-Pressable>
+              <rn-Pressable
+                accessibilityLabel="Cancel delete draft"
+                className="flex-row items-center rounded-md bg-transparent active:bg-secondary min-h-touch px-5 py-3.5 justify-center"
+                disabled={false}
+                onPress={[Function]}
+                style={
+                  [
+                    {
+                      "elevation": 0,
+                      "shadowColor": "#1a1a2e",
+                      "shadowOffset": {
+                        "height": 0,
+                        "width": 0,
+                      },
+                      "shadowOpacity": 0,
+                      "shadowRadius": 0,
+                    },
+                    undefined,
+                  ]
+                }
+                testID="dialog-action-1"
               >
                 <rn-Text
                   className="text-muted-foreground font-semibold text-base"

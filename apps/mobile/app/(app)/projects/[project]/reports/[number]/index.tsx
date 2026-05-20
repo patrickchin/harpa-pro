@@ -14,20 +14,26 @@
  * yet (TODO(P4) markers). They surface as no-op confirm flows so the
  * dialog wiring is exercised end-to-end in tests + dev mirrors.
  */
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
 import { SavedReport } from '@/screens/saved-report';
 import {
   useProjectQuery,
+  useProjectMembersQuery,
   useReportQuery,
+  useReportNotesQuery,
   useDeleteReportMutation,
 } from '@/lib/api/hooks';
+import type { ReportNoteRow } from '@/components/reports/detail/ReportNotesPane';
 import { useRefresh } from '@/lib/use-refresh';
 import { useReportPdfActions } from '@/lib/use-report-pdf-actions';
 import { env } from '@/lib/env';
 import { safeBack } from '@/lib/nav/safe-back';
+import { dismissOrReplaceTo } from '@/lib/nav/dismiss-or-replace';
 import { SAMPLE_GENERATED_REPORT } from '@/lib/dev-fixtures/sample-report';
+import { reportBodyToGeneratedReport } from '@/lib/report-body-adapter';
+import { reports as reportSchemas } from '@harpa/api-contract';
 import type { GeneratedSiteReport } from '@harpa/report-core';
 import type { AppDialogCopy } from '@/lib/app-dialog-copy';
 
@@ -56,25 +62,78 @@ export default function SavedReportRoute() {
     { enabled: hasValidRouteParams },
   );
 
-  const reportData = reportQuery.data as
-    | { status?: 'draft' | 'finalized' }
+  const reportRow = reportQuery.data as
+    | {
+        id?: string;
+        status?: 'draft' | 'finalized';
+        body?: reportSchemas.ReportBody | null;
+        visitDate?: string | null;
+      }
     | undefined;
-  const reportStatus = reportData?.status ?? null;
+  const reportStatus = reportRow?.status ?? null;
+  const reportId = reportRow?.id ?? null;
 
-  // TODO(P4): translate v4 `Report.body` (ReportBody shape) into a
-  // `GeneratedSiteReport` for the saved-report screen. Fixture mode
-  // seeds the sample so the read path is exercised end-to-end.
+  // Translate the persisted flat `ReportBody` shape into the wrapped
+  // `GeneratedSiteReport` that the saved-report UI consumes. Fixture
+  // mode short-circuits to the sample. The adapter lives in
+  // `lib/report-body-adapter.ts` and is the same one used by the
+  // generate route.
   const displayReport: GeneratedSiteReport | null = env.EXPO_PUBLIC_USE_FIXTURES
     ? SAMPLE_GENERATED_REPORT
-    : null;
+    : reportRow?.body
+      ? reportBodyToGeneratedReport(reportRow.body)
+      : null;
+
+  // Source-notes timeline for the saved report. Same query used by the
+  // generate route — the API returns text + voice + image + document
+  // rows; the detail pane currently renders text-bodied entries only.
+  const notesQuery = useReportNotesQuery(
+    { params: { report: reportId ?? '' } },
+    { enabled: reportId !== null },
+  );
+
+  const membersQuery = useProjectMembersQuery(
+    { params: { project: slug } },
+    { enabled: slug.length > 0 },
+  );
+  const memberNames = useMemo(() => {
+    const items = (membersQuery.data as
+      | { items?: ReadonlyArray<{ userId: string; displayName: string | null; phone?: string }> }
+      | undefined)?.items;
+    const map = new Map<string, string>();
+    if (!items) return map;
+    for (const m of items) {
+      map.set(m.userId, m.displayName?.trim() || m.phone || 'Unknown');
+    }
+    return map;
+  }, [membersQuery.data]);
 
   const { refreshing, onRefresh } = useRefresh([
     () => reportQuery.refetch(),
+    () => notesQuery.refetch(),
   ]);
-
-  // TODO(P4): swap for `useReportNotesQuery` once `useLocalReportNotes`
-  // ports. Empty array means the Notes tab renders the EmptyState.
-  const noteRows = [] as const;
+  const noteRows = useMemo<ReadonlyArray<ReportNoteRow>>(() => {
+    const items = (notesQuery.data as
+      | {
+          items?: ReadonlyArray<{
+            id: string;
+            authorId?: string;
+            kind: 'text' | 'voice' | 'image' | 'document';
+            body: string | null;
+            transcript: string | null;
+            createdAt: string;
+          }>;
+        }
+      | undefined)?.items;
+    if (!items) return [];
+    return items.map((n) => ({
+      id: n.id,
+      body: n.body ?? n.transcript ?? null,
+      kind: n.kind === 'image' ? 'photo' : n.kind,
+      createdAt: n.createdAt ?? null,
+      authorName: n.authorId ? memberNames.get(n.authorId) ?? null : null,
+    }));
+  }, [notesQuery.data, memberNames]);
 
   // TODO(P4): wire to `useReportAutoSave` once the autosave hook
   // ports. For now the Edit tab updates local state only.
@@ -102,9 +161,10 @@ export default function SavedReportRoute() {
       await deleteMutation.mutateAsync({
         params: { project: slug, number: reportNumber },
       });
-      // After delete, fall back to the reports list. Use replace so the
-      // saved-report route is not in history (it would 404 on swipe-back).
-      router.replace(`/(app)/projects/${slug}/reports` as never);
+      // After delete, fall back to the reports list. Pop to the existing
+      // frame instead of replacing the top so we don't leave two adjacent
+      // reports-list frames. See docs/v4/arch-mobile-navigation.md §4.
+      dismissOrReplaceTo(router, `/(app)/projects/${slug}/reports` as never);
     } catch {
       // Error surface: the mutation hook keeps the dialog open via the
       // `isDeleting` flag; the AppDialogSheet stays mounted. A dedicated
@@ -137,7 +197,7 @@ export default function SavedReportRoute() {
       onRetry={() => {
         void reportQuery.refetch();
       }}
-      onBackToProjects={() => router.replace('/(app)/projects')}
+      onBackToProjects={() => dismissOrReplaceTo(router, '/(app)/projects')}
       onChangeReport={setLocalReport}
       isAutoSaving={false}
       lastSavedAt={null}

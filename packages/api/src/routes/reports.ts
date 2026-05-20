@@ -41,6 +41,7 @@ import {
   collectNotesForGeneration,
   setReportBody,
   finalizeReport,
+  unfinalizeReport,
   setReportPdfFileId,
   type ReportRow,
 } from '../services/reports.js';
@@ -188,6 +189,7 @@ reportRoutes.openapi(
       400: { description: 'Bad request.', content: { 'application/json': { schema: errorEnvelope } } },
       401: { description: 'Unauthorized.', content: { 'application/json': { schema: errorEnvelope } } },
       404: { description: 'Not found.', content: { 'application/json': { schema: errorEnvelope } } },
+      409: { description: 'Report is finalized.', content: { 'application/json': { schema: errorEnvelope } } },
     },
   }),
   async (c) => {
@@ -196,6 +198,12 @@ reportRoutes.openapi(
     const { project: slug, number } = c.req.valid('param');
     const body = c.req.valid('json');
     const existing = await loadReport(db, slug, number);
+    // Finalized reports are locked: PATCH would silently overwrite the
+    // body the user finalized, which is the opposite of what "finalize"
+    // means. Surface 409 — matches /generate, /regenerate, /finalize.
+    if (existing.status === 'finalized') {
+      throw new HTTPException(409, { message: 'Report is finalized.' });
+    }
     const report = await db((d) => updateReport(d, existing.id, body));
     if (!report) throw new HTTPException(404, { message: 'Report not found.' });
     return c.json(report, 200);
@@ -253,21 +261,53 @@ const generateResponses = {
  * — the difference is intent, not wire shape. Both reject when the
  * report is finalized; both replace `body` and reset
  * `notes_since_last_generation`.
+ *
+ * Regenerate ALSO forwards the current `report.body` as `existingBody`
+ * so the AI preserves any manual edits the user made in the Edit tab
+ * since the last generation. Generate (first time) always sends
+ * `existingBody: null` — there is nothing to preserve.
  */
 async function runGenerate(
   db: NonNullable<AppEnv['Variables']['db']>,
+  userId: string,
   report: ReportRow,
   fixtureName: string | undefined,
   vendor: Parameters<typeof aiGenerateReport>[0]['vendor'] | undefined,
+  options: { mode: 'generate' | 'regenerate' },
 ) {
   if (report.status === 'finalized') {
     throw new HTTPException(409, { message: 'Report is finalized.' });
   }
   const notes = await db((d) => collectNotesForGeneration(d, report.id));
-  const out = await aiGenerateReport({ notes, fixtureName, vendor });
+  // Update path: send current body so the model preserves manual
+  // edits. First-time generate ignores any stale body (there shouldn't
+  // be one) and runs the cold-start prompt.
+  const existingBody =
+    options.mode === 'regenerate' ? report.body : null;
+  const out = await aiGenerateReport({
+    notes,
+    existingBody,
+    fixtureName,
+    vendor,
+    usageContext: {
+      db,
+      userId,
+      projectId: report.projectId,
+      reportId: report.id,
+    },
+  });
   const updated = await db((d) => setReportBody(d, report.id, out.body));
   if (!updated) throw new HTTPException(404, { message: 'Report not found.' });
-  return updated;
+  return {
+    report: updated,
+    debug: {
+      systemPrompt: out.systemPrompt,
+      userPrompt: out.userPrompt,
+      rawText: out.text,
+      model: out.model,
+      vendor: out.vendor,
+    },
+  };
 }
 
 reportRoutes.openapi(
@@ -291,8 +331,8 @@ reportRoutes.openapi(
     const body = c.req.valid('json');
     const report = await loadReport(db, slug, number);
     const settings = await db((d) => getAiSettings(d, userId));
-    const updated = await runGenerate(db, report, body.fixtureName, settings.vendor);
-    return c.json({ report: updated }, 200);
+    const result = await runGenerate(db, userId, report, body.fixtureName, settings.vendor, { mode: 'generate' });
+    return c.json({ report: result.report, debug: result.debug }, 200);
   },
 );
 
@@ -317,8 +357,8 @@ reportRoutes.openapi(
     const body = c.req.valid('json');
     const report = await loadReport(db, slug, number);
     const settings = await db((d) => getAiSettings(d, userId));
-    const updated = await runGenerate(db, report, body.fixtureName, settings.vendor);
-    return c.json({ report: updated }, 200);
+    const result = await runGenerate(db, userId, report, body.fixtureName, settings.vendor, { mode: 'regenerate' });
+    return c.json({ report: result.report, debug: result.debug }, 200);
   },
 );
 
@@ -348,6 +388,43 @@ reportRoutes.openapi(
       throw new HTTPException(409, { message: 'Report has no body to finalize.' });
     }
     const updated = await db((d) => finalizeReport(d, report.id));
+    if (!updated) throw new HTTPException(404, { message: 'Report not found.' });
+    return c.json({ report: updated }, 200);
+  },
+);
+
+// ---------- POST /projects/:project/reports/:number/unfinalize ----------
+//
+// Reverse of /finalize: flips `finalized_at` back to NULL so the user
+// can edit / regenerate the report. Matches the saved-report "Edit"
+// affordance (see P3.15.3). 409 if the report isn't currently
+// finalized — there's nothing to undo. RLS hides cross-project rows so
+// a non-owned report surfaces as 404, identical to /finalize.
+reportRoutes.openapi(
+  createRoute({
+    method: 'post',
+    path: '/projects/{project}/reports/{number}/unfinalize',
+    tags: ['reports'],
+    security: [{ bearerAuth: [] }],
+    middleware: [withAuth()] as const,
+    request: { params: reportPathParam },
+    responses: {
+      200: { description: 'Unfinalized.', content: { 'application/json': { schema: reportSchemas.unfinalizeReportResponse } } },
+      401: { description: 'Unauthorized.', content: { 'application/json': { schema: errorEnvelope } } },
+      404: { description: 'Not found.', content: { 'application/json': { schema: errorEnvelope } } },
+      409: { description: 'Conflict.', content: { 'application/json': { schema: errorEnvelope } } },
+    },
+  }),
+  async (c) => {
+    const db = c.get('db');
+    if (!db) throw new HTTPException(401);
+    const { project: slug, number } = c.req.valid('param');
+
+    const report = await loadReport(db, slug, number);
+    if (report.status !== 'finalized') {
+      throw new HTTPException(409, { message: 'Report is not finalized.' });
+    }
+    const updated = await db((d) => unfinalizeReport(d, report.id));
     if (!updated) throw new HTTPException(404, { message: 'Report not found.' });
     return c.json({ report: updated }, 200);
   },

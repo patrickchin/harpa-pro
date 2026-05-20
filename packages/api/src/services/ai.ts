@@ -26,6 +26,28 @@ import {
 } from '@harpa/ai-fixtures';
 import { reports as reportSchemas } from '@harpa/api-contract';
 import type { z } from 'zod';
+import type { ScopedDb } from '../db/scope.js';
+import { recordLlmUsage, type LlmOperation } from './ai-usage.js';
+
+/**
+ * Context the route passes when it wants the call recorded in
+ * `app.llm_usage_events`. The `db` field is the same scoped accessor
+ * routes get from `c.get('db')` — passing the accessor (not a raw
+ * handle) keeps RLS per-request scoping intact: the INSERT runs under
+ * the caller's `app.user_id`, and `llm_usage_events_self_insert`
+ * enforces the user_id claim independently of the chokepoint.
+ *
+ * Optional everywhere — fixture-driven unit tests can still call
+ * chat/transcribe/generateReport without it. The Pitfall 13
+ * integration test is what keeps us honest: if a route stops passing
+ * the context, that test goes red because the expected row never lands.
+ */
+export interface LlmUsageContext {
+  db: <T>(fn: (db: ScopedDb) => Promise<T>) => Promise<T>;
+  userId: string;
+  projectId?: string | null;
+  reportId?: string | null;
+}
 
 export class AiProviderError extends Error {
   readonly code = 'ai_provider_error';
@@ -36,6 +58,102 @@ export class AiProviderError extends Error {
     this.inner = inner;
   }
 }
+
+/**
+ * System prompt for the `generateReport` chat call. Ported verbatim
+ * from canonical
+ * `../haru3-reports/supabase/functions/generate-report/index.ts`
+ * (`SYSTEM_PROMPT`). v4-specific schema diffs are intentionally NOT
+ * applied here — the canonical prompt produces a `report` envelope
+ * that we parse + validate against `reportBody` in `generateReport()`.
+ * If we ever diverge from the canonical contract, update this prompt
+ * AND re-record every generate-report.* fixture (see refresh-hashes
+ * script).
+ */
+export const REPORT_SYSTEM_PROMPT =
+  `You are a construction site report assistant. You convert numbered site notes from a construction site into a structured JSON report.
+
+INPUT
+- NOTES: numbered site notes captured on site. Each note is one input item — text, voice transcript, image, video, or document. Non-text items appear as numbered placeholders (e.g. "[image 1]", "[image 2]", "[video 1]", "[document 1]") at their position. You cannot see their contents, but you should acknowledge that the attachment exists.
+
+OUTPUT
+Return ONLY valid minified JSON in this exact shape:
+  { "report": { "meta": {...}, "weather": ..., "workers": ..., "materials": [...], "issues": [...], "nextSteps": [...], "sections": [...] } }
+
+- Always return the FULL report. Include every top-level field, even when empty.
+- Use null for missing "weather" / "workers", [] for empty arrays, "" for missing strings.
+- Do NOT wrap the JSON in markdown fences. Do NOT add prose before or after.
+
+SCHEMA
+"meta":          { "title": str, "reportType": "site_visit|daily|inspection|safety|incident|progress", "summary": str, "visitDate": "YYYY-MM-DD"|null }
+"weather":       { "conditions", "temperature", "wind", "impact" }              (object or null)
+"workers":       { "totalWorkers": num, "workerHours", "notes",
+                   "roles": [{ "role", "count": num, "notes" }] }                (object or null)
+"materials":     [{ "name", "quantity", "quantityUnit", "condition", "status", "notes" }]
+"issues":        [{ "title", "category", "severity", "status", "details", "actionRequired" }]
+"nextSteps":     [str]
+"sections":      [{ "title", "content": "markdown" }]
+
+RULES
+- Populate "meta.title" with a short, human-readable title (e.g. "Site Visit — Wet Weather") and "meta.summary" with a one-sentence overview.
+- Use sections to capture work progress, observations, and narrative detail. Materials list everything mentioned (concrete, steel, timber, pipes, etc.) — do NOT extract cost/price information; that's handled outside this flow.
+- NEVER invent data not in the notes. Keep strings concise. Deduplicate facts.
+
+EXAMPLE
+{ "report": { "meta": { "title": "Site Visit — Wet Weather", "reportType": "daily", "summary": "Wet conditions delayed concrete pour", "visitDate": null }, "weather": { "conditions": "wet", "temperature": "20C", "wind": null, "impact": "Pour delayed by 1 hour" }, "workers": null, "materials": [{ "name": "Concrete", "quantity": "50", "quantityUnit": "m³", "condition": null, "status": "delivered", "notes": null }], "issues": [], "nextSteps": ["Order rebar"], "sections": [{ "title": "Foundation Work", "content": "Concrete pour started in zone A despite wet weather." }] } }`;
+
+/**
+ * System prompt for the *update* path — when the caller supplies an
+ * existing report body alongside fresh notes. The model is told to
+ * MERGE: integrate information from the new notes into the existing
+ * report while preserving fields the user has hand-edited.
+ *
+ * Selected automatically by `generateReport()` when `existingBody`
+ * is non-null. Cold-start callers (no existing body) still get
+ * `REPORT_SYSTEM_PROMPT` so the recorded fixtures continue to match.
+ *
+ * NOTE: changing this string changes the request hash for any
+ * fixture recorded against the update path — re-record under
+ * `generate-report.update.*` after edits.
+ */
+export const REPORT_UPDATE_SYSTEM_PROMPT =
+  `You are a construction site report assistant. You are UPDATING an existing structured JSON report with new site notes. The existing report may include manual edits made by a human; preserve those.
+
+INPUT
+- EXISTING REPORT: the current JSON report (matches the OUTPUT schema). May contain hand-edited values.
+- NEW NOTES: numbered new site notes since the report was last generated. Each note is one input item — text, voice transcript, image, video, or document. Non-text items appear as numbered placeholders (e.g. "[image 1]"). You cannot see their contents, but you should acknowledge that the attachment exists.
+
+OUTPUT
+Return ONLY valid minified JSON in this exact shape:
+  { "report": { "meta": {...}, "weather": ..., "workers": ..., "materials": [...], "issues": [...], "nextSteps": [...], "sections": [...] } }
+
+- Always return the FULL report. Include every top-level field, even when empty.
+- Use null for missing "weather" / "workers", [] for empty arrays, "" for missing strings.
+- Do NOT wrap the JSON in markdown fences. Do NOT add prose before or after.
+
+SCHEMA
+"meta":          { "title": str, "reportType": "site_visit|daily|inspection|safety|incident|progress", "summary": str, "visitDate": "YYYY-MM-DD"|null }
+"weather":       { "conditions", "temperature", "wind", "impact" }              (object or null)
+"workers":       { "totalWorkers": num, "workerHours", "notes",
+                   "roles": [{ "role", "count": num, "notes" }] }                (object or null)
+"materials":     [{ "name", "quantity", "quantityUnit", "condition", "status", "notes" }]
+"issues":        [{ "title", "category", "severity", "status", "details", "actionRequired" }]
+"nextSteps":     [str]
+"sections":      [{ "title", "content": "markdown" }]
+
+UPDATE RULES — these override the generate-from-scratch behaviour
+- PRESERVE manual edits: if a field in the EXISTING REPORT contains a non-empty value, do not regress it to null/"" unless a new note explicitly contradicts it.
+- APPEND, do not replace, list-typed fields (materials, issues, nextSteps, sections, workers.roles) when new notes introduce new entries. Update existing entries in place when the same item is referenced again.
+- Merge "meta.summary" so it reflects both the existing summary and the new notes; keep "meta.title" unless the user has clearly retitled the report (only override if the new notes describe a different report type).
+- Re-evaluate "issues.status" and "issues.severity" only if the new notes provide an update for that specific issue; otherwise keep what's there.
+- NEVER invent data not in the existing report or the new notes. Keep strings concise. Deduplicate facts across the existing report and new notes.
+
+EXAMPLE INPUT
+EXISTING REPORT: {"meta":{"title":"East footing","reportType":"daily","summary":"Concrete pour started","visitDate":null},"weather":null,"workers":null,"materials":[{"name":"Concrete","quantity":"50","quantityUnit":"m³","condition":null,"status":"delivered","notes":null}],"issues":[],"nextSteps":["Cure for 24h"],"sections":[{"title":"Foundation Work","content":"Pour completed in zone A."}]}
+NEW NOTES:
+[1] Rebar delivery delayed to tomorrow morning.
+EXAMPLE OUTPUT
+{"report":{"meta":{"title":"East footing","reportType":"daily","summary":"Concrete pour completed; rebar delivery delayed","visitDate":null},"weather":null,"workers":null,"materials":[{"name":"Concrete","quantity":"50","quantityUnit":"m³","condition":null,"status":"delivered","notes":null}],"issues":[{"title":"Rebar delivery delayed","category":"other","severity":"medium","status":"open","details":"Rebar delivery delayed to tomorrow morning.","actionRequired":null}],"nextSteps":["Cure for 24h","Follow up on rebar delivery"],"sections":[{"title":"Foundation Work","content":"Pour completed in zone A."}]}}`;
 
 /**
  * Canonical inputs for the checked-in default fixtures. Replay-mode
@@ -76,10 +194,32 @@ export const FIXTURE_CANONICALS = {
   report: {
     vendor: 'openai' as Vendor,
     model: 'gpt-4o',
-    systemPrompt: 'Generate a structured construction-site daily report from the provided notes.',
+    // Source: ../haru3-reports/supabase/functions/generate-report/index.ts
+    // (canonical `SYSTEM_PROMPT`). Kept verbatim so the Debug tab in
+    // mobile surfaces the same instructions the model actually gets.
+    // NOTE: changing this string changes the request hash — re-record
+    // every generate-report.* fixture via
+    // `pnpm --filter @harpa/ai-fixtures exec tsx scripts/refresh-hashes.ts`
+    // (or use the record script for fresh model responses).
+    systemPrompt: REPORT_SYSTEM_PROMPT,
+    // Distinct system prompt for the *update* path. See
+    // REPORT_UPDATE_SYSTEM_PROMPT — instructs the model to preserve
+    // hand-edited fields while integrating new notes. Recorded
+    // separately under generate-report.update.*.
+    updateSystemPrompt: REPORT_UPDATE_SYSTEM_PROMPT,
     fixtures: {
       full: { name: 'generate-report.full', userPrompt: '<notes payload>' },
       incomplete: { name: 'generate-report.incomplete', userPrompt: '<sparse notes>' },
+      // Update flavour — canonical EXISTING REPORT + NEW NOTES the
+      // recorded fixture was hashed against. Replay-mode callers that
+      // supply an `existingBody` are normalised to these strings so
+      // the request hash matches the recorded payload. Cold-start
+      // callers (existingBody === null) never hit this prompt.
+      update: {
+        name: 'generate-report.update',
+        userPrompt:
+          'EXISTING REPORT:\n<existing report JSON>\n\nNEW NOTES:\n<new notes payload>',
+      },
     },
   },
 } as const;
@@ -133,6 +273,57 @@ async function withErrorWrap<T>(label: string, fn: () => Promise<T>): Promise<T>
   }
 }
 
+/**
+ * Run the provider call and (best-effort) record a usage row. The
+ * recorder never throws — accounting failures must not surface to the
+ * user-facing request. On provider failure we still record an `error`
+ * row so cost postmortems include attempted calls.
+ *
+ * Vendor SDK responses vary in usage shape. Today every code path
+ * exercises @harpa/ai-fixtures, which standardises on
+ * `{ input, output }`. Live mode will need adapters per vendor — see
+ * docs/v4/plan-p3-feature-build.md §P3.15.5 vendor table.
+ */
+async function withUsageAccounting<T extends { usage?: { input?: number; output?: number; cached?: number } }>(
+  ctx: LlmUsageContext | undefined,
+  meta: { vendor: Vendor; model: string; operation: LlmOperation; fixtureMode: FixtureMode },
+  label: string,
+  fn: () => Promise<T>,
+): Promise<T> {
+  const start = Date.now();
+  const record = (status: 'ok' | 'error', usage?: { input?: number; output?: number; cached?: number }) => {
+    if (!ctx) return;
+    const params = {
+      userId: ctx.userId,
+      projectId: ctx.projectId ?? null,
+      reportId: ctx.reportId ?? null,
+      vendor: meta.vendor,
+      model: meta.model,
+      operation: meta.operation,
+      inputTokens: usage?.input ?? 0,
+      outputTokens: usage?.output ?? 0,
+      cachedTokens: usage?.cached ?? 0,
+      latencyMs: Date.now() - start,
+      fixtureMode: meta.fixtureMode,
+      status,
+    };
+    // Wrap in the scoped accessor so the INSERT runs under the caller's
+    // RLS context (`llm_usage_events_self_insert` enforces this). We
+    // await so callers can rely on the row being visible before the
+    // response leaves the handler — important for the integration test
+    // and for /me/usage immediately after a write.
+    return ctx.db((d) => recordLlmUsage(d, params));
+  };
+  try {
+    const out = await withErrorWrap(label, fn);
+    await record('ok', out.usage);
+    return out;
+  } catch (err) {
+    await record('error');
+    throw err;
+  }
+}
+
 export interface TranscribeInput {
   /**
    * The real (signed) audio URL the provider would fetch. In replay
@@ -141,6 +332,14 @@ export interface TranscribeInput {
   audioUrl: string;
   fixtureName?: string;
   language?: string;
+  /**
+   * Optional accounting context. When provided, a row lands in
+   * `app.llm_usage_events` with operation='transcribe'. Whisper-class
+   * providers don't expose tokens, so the row carries zero tokens —
+   * downstream aggregations distinguish transcribe usage by operation,
+   * not token count.
+   */
+  usageContext?: LlmUsageContext;
 }
 
 export interface TranscribeOutput {
@@ -153,8 +352,15 @@ export async function transcribe(input: TranscribeInput): Promise<TranscribeOutp
   const mode = pickMode(fixtureName);
   const audioUrl =
     mode === 'replay' ? FIXTURE_CANONICALS.transcribe.audioUrl : input.audioUrl;
-  const provider = buildProvider(FIXTURE_CANONICALS.transcribe.vendor, fixtureName);
-  return withErrorWrap('transcribe', () => provider.transcribe({ audioUrl }));
+  const vendor = FIXTURE_CANONICALS.transcribe.vendor;
+  const provider = buildProvider(vendor, fixtureName);
+  const result = await withUsageAccounting(
+    input.usageContext,
+    { vendor, model: 'whisper-1', operation: 'transcribe', fixtureMode: mode },
+    'transcribe',
+    () => provider.transcribe({ audioUrl }) as Promise<TranscribeOutput & { usage?: undefined }>,
+  );
+  return result;
 }
 
 export interface ChatInput {
@@ -170,6 +376,8 @@ export interface ChatInput {
    * for backwards compatibility with existing fixture-less callers.
    */
   vendor?: Vendor;
+  /** Optional accounting context — see `transcribe` for semantics. */
+  usageContext?: LlmUsageContext;
 }
 
 export interface ChatOutput {
@@ -197,7 +405,12 @@ export async function chat(input: ChatInput): Promise<ChatOutput> {
           maxTokens: input.maxTokens,
         };
   const provider = buildProvider(vendor, fixtureName);
-  const out = await withErrorWrap('chat', () => provider.chat(req));
+  const out = await withUsageAccounting(
+    input.usageContext,
+    { vendor, model: req.model, operation: 'chat', fixtureMode: mode },
+    'chat',
+    () => provider.chat(req),
+  );
   return { text: out.text };
 }
 
@@ -214,6 +427,19 @@ export interface GenerateReportInput {
    * the recorded fixture).
    */
   notes: string;
+  /**
+   * Optional existing report body. When provided, switches to the
+   * UPDATE path: uses `REPORT_UPDATE_SYSTEM_PROMPT` and prepends an
+   * `EXISTING REPORT:` block to the user prompt so the model preserves
+   * manual edits rather than regenerating from scratch.
+   *
+   * In replay mode the contents of `existingBody` are replaced with
+   * the canonical update payload so the request hash matches the
+   * recorded fixture. A non-null value selects the update fixture
+   * (`generate-report.update.*`); pass `null` (or omit) for the
+   * cold-start path.
+   */
+  existingBody?: ReportBody | null;
   fixtureName?: string;
   /**
    * Optional vendor override. In replay mode, selects a per-vendor
@@ -221,6 +447,8 @@ export interface GenerateReportInput {
    * `openai`.
    */
   vendor?: Vendor;
+  /** Optional accounting context — see `transcribe` for semantics. */
+  usageContext?: LlmUsageContext;
 }
 
 export interface GenerateReportOutput {
@@ -228,6 +456,14 @@ export interface GenerateReportOutput {
   body: ReportBody;
   /** Raw model text (the JSON it returned, before parsing). */
   text: string;
+  /** System prompt used in the request. Surfaced for the mobile Debug tab. */
+  systemPrompt: string;
+  /** User prompt sent to the provider (notes payload or replay canonical). */
+  userPrompt: string;
+  /** Model identifier used. */
+  model: string;
+  /** Vendor used. */
+  vendor: Vendor;
 }
 
 /**
@@ -242,8 +478,13 @@ export async function generateReport(input: GenerateReportInput): Promise<Genera
   const canonicals = FIXTURE_CANONICALS.report;
   const vendor: Vendor = input.vendor ?? canonicals.vendor;
   const canonicalModel = VENDOR_MODELS[vendor].report;
-  const defaultName = fixtureNameFor(canonicals.fixtures.full.name, vendor);
+  const isUpdate = input.existingBody != null;
+  const defaultName = fixtureNameFor(
+    isUpdate ? canonicals.fixtures.update.name : canonicals.fixtures.full.name,
+    vendor,
+  );
   const incompleteName = fixtureNameFor(canonicals.fixtures.incomplete.name, vendor);
+  const updateName = fixtureNameFor(canonicals.fixtures.update.name, vendor);
   // Callers may pass an OpenAI-style fixture name (e.g. "generate-report.incomplete")
   // OR a fully-qualified per-vendor name. Normalise: if the caller gave a base
   // name and the vendor is non-default, suffix it.
@@ -256,28 +497,58 @@ export async function generateReport(input: GenerateReportInput): Promise<Genera
   })();
   const mode = pickMode(fixtureName);
 
+  // Build the LIVE user prompt — what we'd send the real provider.
+  // In replay mode this is overridden with the canonical string so the
+  // request hash matches the recorded fixture, but it's still surfaced
+  // back to the caller via the response so the Debug tab shows what
+  // the operator actually fed in.
+  const liveUserPrompt = isUpdate
+    ? `EXISTING REPORT:\n${JSON.stringify(input.existingBody)}\n\nNEW NOTES:\n${input.notes}`
+    : input.notes;
+
+  // Pick the right system prompt for the path. Update prompt preserves
+  // manual edits; cold-start prompt generates from scratch.
+  //
+  // In replay mode, system prompt selection follows the *fixture*, not just
+  // `isUpdate`: an explicit non-update fixtureName (e.g. "generate-report.incomplete")
+  // was recorded against the cold-start prompt even when called via /regenerate
+  // on a report that already has a body. Only the `update` fixture (or the
+  // default update path with no fixtureName override) uses the update prompt.
+  const isUpdatePrompt =
+    fixtureName === updateName || (input.fixtureName == null && isUpdate);
+  const systemPrompt = isUpdatePrompt
+    ? canonicals.updateSystemPrompt
+    : canonicals.systemPrompt;
+
   const req =
     mode === 'replay'
       ? {
           model: canonicalModel,
-          systemPrompt: canonicals.systemPrompt,
+          systemPrompt,
           // Map the requested fixture name to its recorded canonical user
           // prompt. Unknown names fall through to the `full` prompt — they
           // will FixtureMiss against the on-disk store and surface as a
           // generic 502, matching the voice route's behaviour.
           userPrompt:
-            fixtureName === incompleteName
-              ? canonicals.fixtures.incomplete.userPrompt
-              : canonicals.fixtures.full.userPrompt,
+            fixtureName === updateName
+              ? canonicals.fixtures.update.userPrompt
+              : fixtureName === incompleteName
+                ? canonicals.fixtures.incomplete.userPrompt
+                : canonicals.fixtures.full.userPrompt,
         }
       : {
           model: canonicalModel,
-          systemPrompt: canonicals.systemPrompt,
-          userPrompt: input.notes,
+          systemPrompt,
+          userPrompt: liveUserPrompt,
         };
 
   const provider = buildProvider(vendor, fixtureName);
-  const out = await withErrorWrap('generateReport', () => provider.chat(req));
+  const out = await withUsageAccounting(
+    input.usageContext,
+    { vendor, model: canonicalModel, operation: 'generate_report', fixtureMode: mode },
+    'generateReport',
+    () => provider.chat(req),
+  );
 
   let parsed: unknown;
   try {
@@ -290,5 +561,17 @@ export async function generateReport(input: GenerateReportInput): Promise<Genera
     // Don't leak the failing payload — keep the error surface generic.
     throw new AiProviderError('generateReport: provider response did not match report schema');
   }
-  return { body: result.data, text: out.text };
+  return {
+    body: result.data,
+    text: out.text,
+    systemPrompt: req.systemPrompt,
+    // Always surface the real (formatted) live prompt to the caller so
+    // the mobile Debug tab shows what the operator actually fed in. The
+    // provider request itself uses `req.userPrompt`, which is the
+    // canonical placeholder in replay mode (so the recorded hash
+    // matches) — but that's not what we want operators to see.
+    userPrompt: liveUserPrompt.length > 0 ? liveUserPrompt : req.userPrompt,
+    model: req.model,
+    vendor,
+  };
 }

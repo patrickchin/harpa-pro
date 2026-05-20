@@ -338,6 +338,49 @@ describe('reports AI/PDF', () => {
     expect(res.status).toBe(409);
   });
 
+  it('POST /reports/:id/unfinalize flips a finalized report back to draft', async () => {
+    const app = createApp();
+    const tok = await signTestToken(alice, aliceSid);
+    const res = await app.request(`/projects/${aliceProjSlug}/reports/${reportNumber}/unfinalize`, {
+      method: 'POST',
+      headers: headers(tok),
+    });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { report: { status: string; finalizedAt: string | null } };
+    expect(body.report.status).toBe('draft');
+    expect(body.report.finalizedAt).toBeNull();
+  });
+
+  it('POST /reports/:id/unfinalize 409 when the report is already a draft', async () => {
+    const app = createApp();
+    const tok = await signTestToken(alice, aliceSid);
+    // Previous test already unfinalized it; this hits a draft row.
+    const res = await app.request(`/projects/${aliceProjSlug}/reports/${reportNumber}/unfinalize`, {
+      method: 'POST',
+      headers: headers(tok),
+    });
+    expect(res.status).toBe(409);
+  });
+
+  it('POST /reports/:id/unfinalize 404 when caller is not a project member (RLS-hidden)', async () => {
+    const app = createApp();
+    // Re-finalize alice's report so the row exists & is in a finalize-able
+    // state, then attempt the unfinalize as bob.
+    const aliceTok = await signTestToken(alice, aliceSid);
+    const refinalize = await app.request(`/projects/${aliceProjSlug}/reports/${reportNumber}/finalize`, {
+      method: 'POST',
+      headers: headers(aliceTok),
+    });
+    expect(refinalize.status).toBe(200);
+
+    const bobTok = await signTestToken(bob, bobSid);
+    const res = await app.request(`/projects/${aliceProjSlug}/reports/${reportNumber}/unfinalize`, {
+      method: 'POST',
+      headers: headers(bobTok),
+    });
+    expect(res.status).toBe(404);
+  });
+
   it('POST /reports/:id/finalize 409 when report has no body', async () => {
     const app = createApp();
     const tok = await signTestToken(alice, aliceSid);

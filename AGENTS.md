@@ -78,3 +78,12 @@ compatibility — verify before changing.
 Use the `architect` subagent to design anything that touches more
 than one screen or route, and write the design as a doc under
 `docs/v4/` before coding.
+
+## Subagent prompts
+
+Keep subagent prompts concise — aim for under ~200 words. Include
+only the essential task, scope, and pointers to the files or docs
+the agent needs (paths, not pasted contents). Do not restate the
+contents of `AGENTS.md` or `docs/v4/*` — subagents read those
+themselves. This overrides the default "provide comprehensive
+context" guidance.

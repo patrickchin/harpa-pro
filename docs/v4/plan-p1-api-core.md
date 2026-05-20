@@ -37,23 +37,23 @@ Each task = one route file + its tests + its api-contract schemas
 + docs update, in a single commit.
 
 ### P1.1 Auth + me
-- [ ] `auth/otp/start`, `auth/otp/verify`, `auth/logout`.
-- [ ] `GET /me`, `PATCH /me`, `GET /me/usage`.
-- [ ] Auth middleware + scoped DB accessor.
-- [ ] Commit: `feat(api): auth routes + auth middleware with scope accessor`.
+- [x] `auth/otp/start`, `auth/otp/verify`, `auth/logout`.
+- [x] `GET /me`, `PATCH /me`, `GET /me/usage`.
+- [x] Auth middleware + scoped DB accessor.
+- [x] Commit: `feat(api): auth routes + auth middleware with scope accessor`.
 
 ### P1.2 Projects
-- [ ] CRUD + members.
-- [ ] Owner-only delete enforced server-side.
-- [ ] Commit: `feat(api): projects + members routes with scope tests`.
+- [x] CRUD + members.
+- [x] Owner-only delete enforced server-side.
+- [x] Commit: `feat(api): projects + members routes with scope tests`.
 
 ### P1.3 Reports CRUD
-- [ ] List, create, get, patch, delete.
-- [ ] Commit: `feat(api): reports CRUD with scope tests`.
+- [x] List, create, get, patch, delete.
+- [x] Commit: `feat(api): reports CRUD with scope tests`.
 
 ### P1.4 Notes
-- [ ] Timeline + create/edit/delete.
-- [ ] Commit: `feat(api): notes routes with scope tests`.
+- [x] Timeline + create/edit/delete.
+- [x] Commit: `feat(api): notes routes with scope tests`.
 
 ### P1.5 Files
 - [x] `presign`, `register`, `url`. R2 SDK wired with fixture mode.

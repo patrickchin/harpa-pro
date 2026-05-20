@@ -12,7 +12,7 @@
  * One snapshot covers the empty layout. Pitfall R4: tests live in
  * `screens/`, not under `app/`.
  */
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
 import TestRenderer, { act } from 'react-test-renderer';
 
 import { GenerateNotes, type GenerateNotesProps } from './generate-notes';
@@ -52,6 +52,12 @@ const sampleNotes: NoteEntry[] = [
 ];
 
 describe('GenerateNotes', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
   it('renders the empty state when there are no notes', () => {
     const tree = render(<GenerateNotes {...baseProps} />);
     const text = collectText(tree.toJSON());
@@ -146,6 +152,99 @@ describe('GenerateNotes', () => {
     const tree = render(<GenerateNotes {...baseProps} onBack={onBack} />);
     act(() => tree.root.findByProps({ testID: 'btn-back' }).props.onPress());
     expect(onBack).toHaveBeenCalledTimes(1);
+  });
+
+  it('opens delete confirm and forwards onDeleteNote on confirm', () => {
+    const onDeleteNote = vi.fn();
+    const tree = render(
+      <GenerateNotes
+        {...baseProps}
+        notes={sampleNotes}
+        onDeleteNote={onDeleteNote}
+      />,
+    );
+    // Tap the per-row options button on the first note (sourceIndex=0).
+    act(() => {
+      tree.root
+        .findByProps({ testID: 'btn-text-note-options-0' })
+        .props.onPress();
+    });
+    // Tap "Delete" in the options sheet.
+    act(() => {
+      tree.root
+        .findByProps({ testID: 'dialog-action-text-note-delete-0' })
+        .props.onPress();
+    });
+    // Delete handler defers the onRemove call by 350ms so the
+    // options Modal can dismiss before the confirm Modal mounts.
+    act(() => {
+      vi.runAllTimers();
+    });
+    // Provider-owned confirm dialog now visible: find the confirm
+    // action by accessibilityLabel (multiple AppDialogSheets are
+    // mounted so the auto `dialog-action-0` testID is ambiguous).
+    act(() => {
+      tree.root
+        .findByProps({ accessibilityLabel: 'Confirm delete note' })
+        .props.onPress();
+    });
+    expect(onDeleteNote).toHaveBeenCalledTimes(1);
+    expect(onDeleteNote).toHaveBeenCalledWith(sampleNotes[0], 0);
+  });
+
+  it('does not show the Edit action when onUpdateNote is not provided', () => {
+    const tree = render(
+      <GenerateNotes {...baseProps} notes={sampleNotes} onDeleteNote={vi.fn()} />,
+    );
+    act(() => {
+      tree.root
+        .findByProps({ testID: 'btn-text-note-options-0' })
+        .props.onPress();
+    });
+    expect(
+      tree.root.findAllByProps({ testID: 'dialog-action-text-note-edit-0' }),
+    ).toHaveLength(0);
+  });
+
+  it('forwards onUpdateNote with the trimmed body when Save is pressed', () => {
+    const onUpdateNote = vi.fn();
+    const tree = render(
+      <GenerateNotes
+        {...baseProps}
+        notes={sampleNotes}
+        onUpdateNote={onUpdateNote}
+      />,
+    );
+    act(() => {
+      tree.root
+        .findByProps({ testID: 'btn-text-note-options-0' })
+        .props.onPress();
+    });
+    act(() => {
+      tree.root
+        .findByProps({ testID: 'dialog-action-text-note-edit-0' })
+        .props.onPress();
+    });
+    // setTimeout-deferred Modal mount: flush timers.
+    act(() => {
+      vi.runAllTimers();
+    });
+    act(() => {
+      tree.root
+        .findByProps({ testID: 'input-text-note-edit-0' })
+        .props.onChangeText('  Updated crew note  ');
+    });
+    act(() => {
+      tree.root
+        .findByProps({ testID: 'dialog-action-text-note-save-0' })
+        .props.onPress();
+    });
+    expect(onUpdateNote).toHaveBeenCalledTimes(1);
+    expect(onUpdateNote).toHaveBeenCalledWith(
+      sampleNotes[0],
+      0,
+      'Updated crew note',
+    );
   });
 
   it('matches the empty-state snapshot', () => {

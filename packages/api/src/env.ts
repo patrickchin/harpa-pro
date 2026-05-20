@@ -30,6 +30,15 @@ const Env = z.object({
    */
   R2_ENDPOINT: z.string().url().optional(),
   /**
+   * Optional public URL override for presigned PUT/GET URLs. When set,
+   * the hostname/scheme prefix of `R2_ENDPOINT` is replaced with this
+   * value in URLs returned to clients. Used in local dev with MinIO
+   * where the API talks to `http://minio:9000` over the docker network
+   * but the host-side CLI/browser needs `http://localhost:9000`.
+   * Has no effect when unset or when running against real R2.
+   */
+  R2_PUBLIC_ENDPOINT: z.string().url().optional(),
+  /**
    * TTL (seconds) for presigned PUT/GET URLs. 5 min matches
    * arch-storage.md §Download flow.
    */

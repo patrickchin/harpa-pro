@@ -2,7 +2,7 @@
  * Unit tests for date formatting helpers.
  */
 import { describe, it, expect } from 'vitest';
-import { formatDate } from './date';
+import { formatDate, formatRelativeOrDate } from './date';
 
 describe('formatDate', () => {
   it('formats ISO-8601 date string to human-readable format', () => {
@@ -49,5 +49,64 @@ describe('formatDate', () => {
   it('returns em-dash for empty string', () => {
     const result = formatDate('');
     expect(result).toBe('—');
+  });
+});
+
+describe('formatRelativeOrDate', () => {
+  const now = new Date('2024-03-15T12:00:00.000Z');
+
+  it('returns "Just now" for sub-minute differences', () => {
+    expect(formatRelativeOrDate('2024-03-15T11:59:30.000Z', now)).toBe(
+      'Just now',
+    );
+  });
+
+  it('returns minutes-ago for sub-hour differences', () => {
+    expect(formatRelativeOrDate('2024-03-15T11:55:00.000Z', now)).toBe(
+      '5 minutes ago',
+    );
+    expect(formatRelativeOrDate('2024-03-15T11:59:00.000Z', now)).toBe(
+      '1 minute ago',
+    );
+  });
+
+  it('returns hours-ago for sub-day differences', () => {
+    expect(formatRelativeOrDate('2024-03-15T09:00:00.000Z', now)).toBe(
+      '3 hours ago',
+    );
+    expect(formatRelativeOrDate('2024-03-15T11:00:00.000Z', now)).toBe(
+      '1 hour ago',
+    );
+  });
+
+  it('returns days-ago for sub-week differences', () => {
+    expect(formatRelativeOrDate('2024-03-13T12:00:00.000Z', now)).toBe(
+      '2 days ago',
+    );
+    expect(formatRelativeOrDate('2024-03-14T12:00:00.000Z', now)).toBe(
+      '1 day ago',
+    );
+  });
+
+  it('falls back to absolute date for ≥1 week old', () => {
+    expect(formatRelativeOrDate('2024-03-01T12:00:00.000Z', now)).toBe(
+      'Mar 1, 2024',
+    );
+    expect(formatRelativeOrDate('2023-06-15T12:00:00.000Z', now)).toBe(
+      'Jun 15, 2023',
+    );
+  });
+
+  it('falls back to absolute date for future values', () => {
+    expect(formatRelativeOrDate('2024-03-20T12:00:00.000Z', now)).toBe(
+      'Mar 20, 2024',
+    );
+  });
+
+  it('returns em-dash for null / undefined / invalid', () => {
+    expect(formatRelativeOrDate(null, now)).toBe('—');
+    expect(formatRelativeOrDate(undefined, now)).toBe('—');
+    expect(formatRelativeOrDate('not-a-date', now)).toBe('—');
+    expect(formatRelativeOrDate('', now)).toBe('—');
   });
 });

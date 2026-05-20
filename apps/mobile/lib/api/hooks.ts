@@ -262,6 +262,25 @@ export function useRemoveProjectMemberMutation(
   });
 }
 
+export function useUpdateProjectMemberMutation(
+  options?: UseMutationOptions<ResponseBody<"/projects/{project}/members/{user}", "patch">, ApiError, { params: PathParams<"/projects/{project}/members/{user}", "patch">; body: RequestBody<"/projects/{project}/members/{user}", "patch"> }>,
+) {
+  const qc = useQueryClient();
+  return useMutation<ResponseBody<"/projects/{project}/members/{user}", "patch">, ApiError, { params: PathParams<"/projects/{project}/members/{user}", "patch">; body: RequestBody<"/projects/{project}/members/{user}", "patch"> }>({
+    mutationFn: (vars) => request("/projects/{project}/members/{user}", "patch", { params: (vars as any).params, body: (vars as any).body }),
+    ...options,
+    onSuccess: (...args) => {
+      const rule = INVALIDATIONS["useUpdateProjectMemberMutation"];
+      if (rule && rule !== INVALIDATIONS_NONE) {
+        for (const head of rule) {
+          qc.invalidateQueries({ queryKey: [head] });
+        }
+      }
+      return options?.onSuccess?.(...args);
+    },
+  });
+}
+
 export function useProjectReportsQuery(
   input: { params: PathParams<"/projects/{project}/reports", "get">; query?: QueryParams<"/projects/{project}/reports", "get"> },
   options?: Omit<UseQueryOptions<ResponseBody<"/projects/{project}/reports", "get">, ApiError>, 'queryKey' | 'queryFn'>,
@@ -388,6 +407,25 @@ export function useFinalizeReportMutation(
     ...options,
     onSuccess: (...args) => {
       const rule = INVALIDATIONS["useFinalizeReportMutation"];
+      if (rule && rule !== INVALIDATIONS_NONE) {
+        for (const head of rule) {
+          qc.invalidateQueries({ queryKey: [head] });
+        }
+      }
+      return options?.onSuccess?.(...args);
+    },
+  });
+}
+
+export function useUnfinalizeReportMutation(
+  options?: UseMutationOptions<ResponseBody<"/projects/{project}/reports/{number}/unfinalize", "post">, ApiError, { params: PathParams<"/projects/{project}/reports/{number}/unfinalize", "post"> }>,
+) {
+  const qc = useQueryClient();
+  return useMutation<ResponseBody<"/projects/{project}/reports/{number}/unfinalize", "post">, ApiError, { params: PathParams<"/projects/{project}/reports/{number}/unfinalize", "post"> }>({
+    mutationFn: (vars) => request("/projects/{project}/reports/{number}/unfinalize", "post", { params: (vars as any).params }),
+    ...options,
+    onSuccess: (...args) => {
+      const rule = INVALIDATIONS["useUnfinalizeReportMutation"];
       if (rule && rule !== INVALIDATIONS_NONE) {
         for (const head of rule) {
           qc.invalidateQueries({ queryKey: [head] });

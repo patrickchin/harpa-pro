@@ -10,6 +10,7 @@ import {
   useDeleteProjectMutation,
 } from '@/lib/api/hooks';
 import { safeBack } from '@/lib/nav/safe-back';
+import { dismissOrReplaceTo } from '@/lib/nav/dismiss-or-replace';
 
 export default function ProjectEditRoute() {
   const router = useRouter();
@@ -65,7 +66,10 @@ export default function ProjectEditRoute() {
           { params: { project: slug } },
           {
             onSuccess: () => {
-              router.replace('/(app)/projects' as never);
+              // Pop to the projects list already on the stack instead of
+              // replacing the top — otherwise back lands on the deleted
+              // project. See docs/v4/arch-mobile-navigation.md §4.
+              dismissOrReplaceTo(router, '/(app)/projects' as never);
             },
           },
         );

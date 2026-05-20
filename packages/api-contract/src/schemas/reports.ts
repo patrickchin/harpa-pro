@@ -77,6 +77,12 @@ export const createReportRequest = z.object({
 });
 export const updateReportRequest = z.object({
   visitDate: isoDateTime.nullable().optional(),
+  // Manual edits from the Edit tab autosave. Persisted into the same
+  // `reports.body` column the AI writes — single source of truth. Patching
+  // body does NOT reset `notes_since_last_generation` (that counter
+  // belongs to the AI loop, not manual edits). See
+  // docs/v4/design-p3x-generate-update-finalize.md §3.4.
+  body: reportBody.nullable().optional(),
 });
 
 /**
@@ -93,8 +99,18 @@ const fixtureNameSchema = z
 export const generateReportRequest = z.object({
   fixtureName: fixtureNameSchema.optional(), // test-only fixture pin
 });
+export const generateReportDebug = z
+  .object({
+    systemPrompt: z.string(),
+    userPrompt: z.string(),
+    rawText: z.string(),
+    model: z.string(),
+    vendor: z.string(),
+  })
+  .partial();
 export const generateReportResponse = z.object({
   report,
+  debug: generateReportDebug.optional(),
 });
 
 // regenerate is operationally identical to generate at the wire level;
@@ -104,6 +120,7 @@ export const regenerateReportRequest = generateReportRequest;
 export const regenerateReportResponse = generateReportResponse;
 
 export const finalizeReportResponse = z.object({ report });
+export const unfinalizeReportResponse = z.object({ report });
 
 export const renderPdfResponse = z.object({
   url: z.string().url(),

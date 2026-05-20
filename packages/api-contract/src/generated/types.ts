@@ -2849,6 +2849,11 @@ export interface paths {
                                 body: string | null;
                                 fileId: string | null;
                                 transcript: string | null;
+                                summary?: string | null;
+                                durationSec?: number | null;
+                                language?: string | null;
+                                transcribeProvider?: string | null;
+                                transcribedAt?: string | null;
                                 createdAt: string;
                                 updatedAt: string;
                             }[];
@@ -2927,6 +2932,11 @@ export interface paths {
                             body: string | null;
                             fileId: string | null;
                             transcript: string | null;
+                            summary?: string | null;
+                            durationSec?: number | null;
+                            language?: string | null;
+                            transcribeProvider?: string | null;
+                            transcribedAt?: string | null;
                             createdAt: string;
                             updatedAt: string;
                         };
@@ -3084,6 +3094,11 @@ export interface paths {
                             body: string | null;
                             fileId: string | null;
                             transcript: string | null;
+                            summary?: string | null;
+                            durationSec?: number | null;
+                            language?: string | null;
+                            transcribeProvider?: string | null;
+                            transcribedAt?: string | null;
                             createdAt: string;
                             updatedAt: string;
                         };
@@ -3391,6 +3406,148 @@ export interface paths {
         };
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/reports/{report}/notes/voice": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    report: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        fileId: string;
+                        language?: string;
+                        durationSec?: number;
+                        fixtureName?: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Voice note created. */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            id: string;
+                            reportId: string;
+                            authorId: string;
+                            /** @enum {string} */
+                            kind: "text" | "voice" | "image" | "document";
+                            body: string | null;
+                            fileId: string | null;
+                            transcript: string | null;
+                            summary?: string | null;
+                            durationSec?: number | null;
+                            language?: string | null;
+                            transcribeProvider?: string | null;
+                            transcribedAt?: string | null;
+                            createdAt: string;
+                            updatedAt: string;
+                        };
+                    };
+                };
+                /** @description Bad request. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                                requestId?: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Unauthorized. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                                requestId?: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Report or file not found / not owned. */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                                requestId?: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Recording too long. */
+                413: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                                requestId?: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Upstream AI provider error. */
+                502: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                                requestId?: string;
+                            };
+                        };
+                    };
+                };
+            };
+        };
         delete?: never;
         options?: never;
         head?: never;

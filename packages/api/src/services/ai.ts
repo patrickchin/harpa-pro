@@ -345,6 +345,8 @@ export interface TranscribeInput {
 export interface TranscribeOutput {
   text: string;
   durationSec?: number;
+  vendor: Vendor;
+  model: string;
 }
 
 export async function transcribe(input: TranscribeInput): Promise<TranscribeOutput> {
@@ -353,14 +355,15 @@ export async function transcribe(input: TranscribeInput): Promise<TranscribeOutp
   const audioUrl =
     mode === 'replay' ? FIXTURE_CANONICALS.transcribe.audioUrl : input.audioUrl;
   const vendor = FIXTURE_CANONICALS.transcribe.vendor;
+  const model = 'whisper-1';
   const provider = buildProvider(vendor, fixtureName);
   const result = await withUsageAccounting(
     input.usageContext,
-    { vendor, model: 'whisper-1', operation: 'transcribe', fixtureMode: mode },
+    { vendor, model, operation: 'transcribe', fixtureMode: mode },
     'transcribe',
-    () => provider.transcribe({ audioUrl }) as Promise<TranscribeOutput & { usage?: undefined }>,
+    () => provider.transcribe({ audioUrl }) as Promise<Omit<TranscribeOutput, 'vendor' | 'model'> & { usage?: undefined }>,
   );
-  return result;
+  return { ...result, vendor, model };
 }
 
 export interface ChatInput {
@@ -382,6 +385,8 @@ export interface ChatInput {
 
 export interface ChatOutput {
   text: string;
+  vendor: Vendor;
+  model: string;
 }
 
 export async function chat(input: ChatInput): Promise<ChatOutput> {
@@ -411,7 +416,7 @@ export async function chat(input: ChatInput): Promise<ChatOutput> {
     'chat',
     () => provider.chat(req),
   );
-  return { text: out.text };
+  return { text: out.text, vendor, model: req.model };
 }
 
 // ---------------------------------------------------------------------------

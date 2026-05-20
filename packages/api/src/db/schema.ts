@@ -130,6 +130,15 @@ export const notes = appSchema.table('notes', {
   body: text('body'),
   fileId: text('file_id'),
   transcript: text('transcript'),
+  // Voice-note pipeline columns (migration 0004). See
+  // docs/v4/arch-voice-pipeline.md §D3. Summary is the canonical
+  // site-note body for `kind='voice'` rows; the aggregator mirrors it
+  // into `body` so legacy readers stay sane.
+  summary: text('summary'),
+  durationSec: integer('duration_sec'),
+  language: text('language'),
+  transcribeProvider: text('transcribe_provider'),
+  transcribedAt: timestamp('transcribed_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 });

@@ -20,6 +20,11 @@ export interface NoteRow {
   body: string | null;
   fileId: string | null;
   transcript: string | null;
+  summary: string | null;
+  durationSec: number | null;
+  language: string | null;
+  transcribeProvider: string | null;
+  transcribedAt: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -33,6 +38,11 @@ interface RawNote {
   body: string | null;
   file_id: string | null;
   transcript: string | null;
+  summary: string | null;
+  duration_sec: number | null;
+  language: string | null;
+  transcribe_provider: string | null;
+  transcribed_at: Date | null;
   created_at: Date;
   updated_at: Date;
 }
@@ -46,6 +56,11 @@ function mapNote(r: RawNote): NoteRow {
     body: r.body,
     fileId: r.file_id,
     transcript: r.transcript,
+    summary: r.summary,
+    durationSec: r.duration_sec,
+    language: r.language,
+    transcribeProvider: r.transcribe_provider,
+    transcribedAt: r.transcribed_at ? new Date(r.transcribed_at).toISOString() : null,
     createdAt: new Date(r.created_at).toISOString(),
     updatedAt: new Date(r.updated_at).toISOString(),
   };
@@ -61,6 +76,10 @@ function decodeCursor(cursor: string): { createdAt: string; id: string } {
   return { createdAt, id };
 }
 
+const NOTE_COLUMNS = sql`id, report_id, author_id, kind, body, file_id,
+       transcript, summary, duration_sec, language, transcribe_provider,
+       transcribed_at, created_at, updated_at`;
+
 export async function listNotes(
   db: Db,
   reportId: string,
@@ -74,8 +93,7 @@ export async function listNotes(
     ? await (async () => {
         const { createdAt, id } = decodeCursor(cursor);
         return db.execute<RawNote>(sql`
-          SELECT id, report_id, author_id, kind, body, file_id, transcript,
-                 created_at, updated_at
+          SELECT ${NOTE_COLUMNS}
           FROM app.notes
           WHERE report_id = ${reportId}
             AND (created_at, id) > (${createdAt}::timestamptz, ${id})
@@ -84,8 +102,7 @@ export async function listNotes(
         `);
       })()
     : await db.execute<RawNote>(sql`
-        SELECT id, report_id, author_id, kind, body, file_id, transcript,
-               created_at, updated_at
+        SELECT ${NOTE_COLUMNS}
         FROM app.notes
         WHERE report_id = ${reportId}
         ORDER BY created_at ASC, id ASC
@@ -121,8 +138,60 @@ export async function createNote(
       ${input.fileId ?? null},
       ${input.transcript ?? null}
     )
-    RETURNING id, report_id, author_id, kind, body, file_id, transcript,
-              created_at, updated_at
+    RETURNING ${NOTE_COLUMNS}
+  `);
+  const row = r.rows[0];
+  if (!row) return null;
+  await db.execute(sql`
+    UPDATE app.reports
+    SET notes_since_last_generation = notes_since_last_generation + 1,
+        updated_at = now()
+    WHERE id = ${reportId}
+  `);
+  return mapNote(row);
+}
+
+/**
+ * Voice-note aggregator insert. Used by `POST /reports/:report/notes/voice`
+ * after transcribe + summarise complete. All voice-pipeline columns
+ * (`summary`, `duration_sec`, `language`, `transcribe_provider`,
+ * `transcribed_at`) populated; `body` mirrors `summary` for legacy
+ * readers (arch-voice-pipeline.md §D3).
+ */
+export async function createVoiceNote(
+  db: Db,
+  reportId: string,
+  authorId: string,
+  input: {
+    fileId: string;
+    summary: string;
+    transcript: string;
+    durationSec?: number | null;
+    language?: string | null;
+    transcribeProvider: string;
+  },
+): Promise<NoteRow | null> {
+  const id = newId('not');
+  const r = await db.execute<RawNote>(sql`
+    INSERT INTO app.notes(
+      id, report_id, author_id, kind, body, file_id, transcript,
+      summary, duration_sec, language, transcribe_provider, transcribed_at
+    )
+    VALUES (
+      ${id},
+      ${reportId},
+      ${authorId},
+      'voice'::app.note_kind,
+      ${input.summary},
+      ${input.fileId},
+      ${input.transcript},
+      ${input.summary},
+      ${input.durationSec ?? null},
+      ${input.language ?? null},
+      ${input.transcribeProvider},
+      now()
+    )
+    RETURNING ${NOTE_COLUMNS}
   `);
   const row = r.rows[0];
   if (!row) return null;
@@ -145,8 +214,7 @@ export async function updateNote(
     SET body = ${body},
         updated_at = now()
     WHERE id = ${noteId}
-    RETURNING id, report_id, author_id, kind, body, file_id, transcript,
-              created_at, updated_at
+    RETURNING ${NOTE_COLUMNS}
   `);
   const row = r.rows[0];
   return row ? mapNote(row) : null;

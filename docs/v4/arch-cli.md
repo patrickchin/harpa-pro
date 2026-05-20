@@ -24,12 +24,14 @@
 These may land post-v1 if demand surfaces, but the initial implementation is stateless / env-only / 12-factor.
 
 > **Interactive shell:** for exploratory debugging where flag recall is
-> high-friction, run `harpa tui` — a `@clack/prompts`-driven app with
-> a guided sign-in flow and persisted credentials. See
-> [`arch-tui-app.md`](arch-tui-app.md) (state machine + credentials)
+> high-friction, run `harpa tui` — a split-pane app
+> (viewport + interaction pane + status bar) built on
+> [OpenTUI](https://github.com/sst/opentui) + Solid.js, running under
+> Bun. See [`arch-tui-layout.md`](arch-tui-layout.md) for the renderer
+> design, [`arch-tui-app.md`](arch-tui-app.md) (state machine + credentials)
 > and [`arch-tui-nav.md`](arch-tui-nav.md) (screen-based navigation:
-> Project Home → Report Home with prefilled context); both supersede
-> the original flat `arch-tui.md`. Leaves still share
+> Project Home → Report Home with prefilled context); all three
+> supersede the original flat `arch-tui.md`. Leaves still share
 > `defineHarpaCommand()` + `performRequest`, so the raw-API surface
 > behaves identically to the flag CLI and remains reachable under
 > `Developer › Raw API` as the debug-only side-door.

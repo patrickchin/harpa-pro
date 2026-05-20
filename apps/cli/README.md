@@ -195,6 +195,38 @@ Exit codes:
 | 6 | API 5xx server error |
 | 7 | Network / transport error |
 
+### Interactive shell (`harpa tui`)
+
+```bash
+harpa tui
+```
+
+A split-pane TUI inspired by lazygit / k9s:
+
+```
+┌─ harpa · projects ──────────────────┬─ action ─────────────┐
+│ Projects                            │  ▸ Open Demo project │
+│ 3 projects · Demo, Acme HQ, Sandbox │    New project       │
+│                                     │    Refresh           │
+│  Demo project          owner        │    ← back            │
+│  Acme HQ Build         editor       │                      │
+│  Sandbox               viewer       │                      │
+└─────────────────────────────────────┴──────────────────────┘
+ http://localhost:8787 · alice         ↑/↓ select · ↵ open · esc back · q quit
+```
+
+The **viewport pane** shows the current screen state (project list,
+report detail, etc). The **interaction pane** is where you select
+actions and answer prompts. The **status bar** shows the API URL,
+the signed-in user, and the keymap.
+
+Keys: `↑`/`↓` to move, `↵` to choose, `esc` to go back, `q` to quit,
+`?` for help.
+
+Built on [OpenTUI](https://github.com/sst/opentui) + [Solid.js](https://www.solidjs.com/),
+running under [Bun](https://bun.sh). See
+[`../../docs/v4/arch-tui-layout.md`](../../docs/v4/arch-tui-layout.md).
+
 ## Development
 
 ```bash

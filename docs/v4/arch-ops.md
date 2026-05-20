@@ -161,6 +161,39 @@ docker-compose stack). A failure (re-)opens an issue labeled
 To probe on demand: Actions → `post-deploy-smoke` → Run workflow →
 pick `prod` or `dev`.
 
+### Smoke user provisioning
+
+`scripts/journey.sh` has two auth modes:
+
+- **TOKEN mode** (preferred, required once an env runs `TWILIO_LIVE=1`):
+  the journey reads a long-lived bearer from `$TOKEN` and skips OTP
+  entirely. The CI workflow injects `secrets.SMOKE_BEARER_TOKEN_PROD`
+  / `SMOKE_BEARER_TOKEN_DEV` per target.
+- **OTP mode** (fallback): if `$TOKEN` is empty the journey runs
+  `/auth/otp/{start,verify}` with the canned fake code `000000`.
+  Only works while the target still runs `TWILIO_LIVE=0`.
+
+To provision (or rotate) a smoke bearer for an env:
+
+1. Pick a phone number the workflow owns end-to-end — e.g. a
+   maintainer's real phone for the first provisioning, or a dedicated
+   VOIP/Twilio number. The user is real; we don't fake it.
+2. Run the OTP flow once against the target env using a real SMS:
+   ```sh
+   curl -fsS -X POST "$BASE/auth/otp/start"  -H 'content-type: application/json' -d '{"phone":"+1XXXXXXXXXX"}'
+   curl -fsS -X POST "$BASE/auth/otp/verify" -H 'content-type: application/json' \
+     -d '{"phone":"+1XXXXXXXXXX","code":"<sms-code>"}' | jq -r .token
+   ```
+3. Store the returned bearer as a GitHub repo secret:
+   `SMOKE_BEARER_TOKEN_PROD` (for prod) or `SMOKE_BEARER_TOKEN_DEV`
+   (for dev). Set both before flipping the env to `TWILIO_LIVE=1`.
+4. The journey deliberately **does not** call `/auth/logout` when
+   `$TOKEN` is provided — logging out would revoke the bearer for the
+   next run.
+
+Rotating the bearer = revoke the session row in Postgres + rerun
+step 2 + update the GH secret. No code change required.
+
 ## Dev environment bootstrap (one-time)
 
 ```bash

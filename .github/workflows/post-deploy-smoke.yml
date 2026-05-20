@@ -53,6 +53,17 @@ jobs:
           (github.event.workflow_run.name == 'api-prod' && 'prod') ||
           'dev'
         }}
+      # Long-lived bearer for a real pre-provisioned smoke user.
+      # Empty → journey.sh falls back to OTP mode (only works while
+      # the env still runs TWILIO_LIVE=0). Provision per
+      # docs/v4/arch-ops.md → "Smoke user provisioning".
+      TOKEN: >-
+        ${{
+          ((github.event_name == 'workflow_dispatch' && inputs.target == 'prod') ||
+           (github.event.workflow_run.name == 'api-prod'))
+          && secrets.SMOKE_BEARER_TOKEN_PROD
+          || secrets.SMOKE_BEARER_TOKEN_DEV
+        }}
     steps:
       - uses: actions/checkout@v4
 

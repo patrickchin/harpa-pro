@@ -2,7 +2,7 @@
 description: "Use when designing a non-trivial feature or refactor that touches more than one screen, route, package, or table. Trigger phrases: design, architect, plan, refactor, multi-screen, multi-package, slug migration, generate tabs, deferred-intent, deep link routing, IDs and URLs, big feature."
 name: "architect"
 tools: [read, search, edit, todo]
-user-invocable: false
+user-invocable: true
 model: ['Claude Opus 4.7 (copilot)']
 ---
 

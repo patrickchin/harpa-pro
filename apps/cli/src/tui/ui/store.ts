@@ -91,6 +91,12 @@ export type PromptRequest =
       readonly label: string;
       readonly options: ReadonlyArray<PromptOption>;
       readonly initialValue?: string;
+      /**
+       * Fired on every highlight change (ranger-style preview). The
+       * scripted prompter ignores it; the OpenTUI prompter wires it
+       * to the native `<select>`'s SELECTION_CHANGED event.
+       */
+      readonly onHighlight?: (value: string) => void;
     }
   | {
       readonly kind: 'text';

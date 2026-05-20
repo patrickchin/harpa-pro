@@ -76,11 +76,42 @@ export function reportsScreen(): Screen {
         return reportHomeScreen();
       };
 
+      const previewFor = (r: ReportLike) => () => {
+        const bodyText = (r.body ?? '').toString();
+        const sections: Array<{ title?: string; lines: string[] }> = [
+          {
+            title: `Report #${r.number}`,
+            lines: [
+              `  status    ${r.status ?? ''}`,
+              `  visit     ${r.visitDate ?? '(none)'}`,
+              `  created   ${String(r.createdAt ?? '').slice(0, 19)}`,
+              r.finalizedAt
+                ? `  finalized ${String(r.finalizedAt).slice(0, 19)}`
+                : `  finalized (no)`,
+            ],
+          },
+        ];
+        if (bodyText) {
+          sections.push({
+            title: 'Body preview',
+            lines: bodyText.slice(0, 800).split('\n').slice(0, 12).map((l) => `  ${l}`),
+          });
+        } else {
+          sections.push({ title: 'Body', lines: ['  (not generated)'] });
+        }
+        return {
+          headline: `Report #${r.number}`,
+          subline: `${r.status ?? ''} · visit ${r.visitDate ?? '(none)'}`,
+          body: { kind: 'detail' as const, sections },
+        };
+      };
+
       const acts: ScreenAction[] = reports.map((r) => ({
         kind: 'screen',
         label: `Open #${r.number} (${r.status})`,
         hint: r.visitDate ?? r.createdAt,
         open: openReport(r),
+        preview: previewFor(r),
         refreshHeader: true,
       }));
 

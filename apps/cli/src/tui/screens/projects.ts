@@ -92,11 +92,47 @@ export function projectsScreen(): Screen {
         return projectHomeScreen();
       };
 
+      const ROLE: Record<string, string> = {
+        owner: 'OWNER',
+        editor: 'EDITOR',
+        viewer: 'VIEWER',
+      };
+
+      const previewFor = (p: ProjectLike) => () => {
+        const name = p.name ?? p.id;
+        const role = ROLE[p.myRole] ?? p.myRole.toUpperCase();
+        const lines: string[] = [];
+        if (p.clientName) lines.push(`  client    ${p.clientName}`);
+        if (p.address) lines.push(`  address   ${p.address}`);
+        if (p.stats) {
+          const last = p.stats.lastReportAt
+            ? `, last ${String(p.stats.lastReportAt).slice(0, 10)}`
+            : '';
+          lines.push(
+            `  reports   ${p.stats.totalReports} (${p.stats.drafts} draft${p.stats.drafts === 1 ? '' : 's'}${last})`,
+          );
+        }
+        lines.push(`  created   ${String(p.createdAt ?? '').slice(0, 10)}`);
+        lines.push(`  updated   ${String(p.updatedAt ?? '').slice(0, 10)}`);
+        lines.push(`  slug      ${p.id}`);
+        const reports = p.stats?.totalReports ?? 0;
+        const drafts = p.stats?.drafts ?? 0;
+        return {
+          headline: `Project: ${name}`,
+          subline: `${role} · ${reports} report${reports === 1 ? '' : 's'} (${drafts} draft)`,
+          body: {
+            kind: 'detail' as const,
+            sections: [{ title: `${name}   [${role}]`, lines }],
+          },
+        };
+      };
+
       const acts: ScreenAction[] = items.map((p) => ({
         kind: 'screen',
         label: `Open ${p.name ?? p.id}`,
         hint: p.clientName ?? undefined,
         open: openProject(p),
+        preview: previewFor(p),
         refreshHeader: true,
       }));
       return [

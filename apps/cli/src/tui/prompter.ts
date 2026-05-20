@@ -31,6 +31,8 @@ export interface SelectOpts<T extends string> {
   label: string;
   options: ReadonlyArray<{ value: T; label: string; hint?: string }>;
   initialValue?: T;
+  /** Fired as the user moves the highlight (ranger-style preview). */
+  onHighlight?: (value: T) => void;
 }
 
 export interface ConfirmOpts {
@@ -115,6 +117,9 @@ export function opentuiPrompter(ui: UiStore): Prompter {
           ...(opt.hint !== undefined ? { hint: opt.hint } : {}),
         })),
         ...(o.initialValue !== undefined ? { initialValue: o.initialValue } : {}),
+        ...(o.onHighlight !== undefined
+          ? { onHighlight: (v: string) => o.onHighlight!(v as T) }
+          : {}),
       };
       return ask<T>(
         req,

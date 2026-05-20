@@ -15,6 +15,8 @@ export interface KeyBinding {
 }
 
 export const KEY_BINDINGS: ReadonlyArray<KeyBinding> = [
+  { keys: 'h/l', description: 'back / open' },
+  { keys: 'j/k', description: 'down / up', context: 'select' },
   { keys: '↑/↓', description: 'select', context: 'select' },
   { keys: '↵', description: 'submit' },
   { keys: 'esc', description: 'back' },
@@ -25,7 +27,8 @@ export const KEY_BINDINGS: ReadonlyArray<KeyBinding> = [
   { keys: 'ctrl-c', description: 'quit' },
 ];
 
-const DEFAULT_HINT = '↑/↓ select · ↵ open · esc back · ctrl-c quit · ? help';
+const DEFAULT_HINT =
+  'j/k ↑/↓ select · l/↵ open · h/esc back · ctrl-c quit · ? help · q quit';
 
 export function keymapHintFor(
   ctx: KeyBinding['context'] | undefined,

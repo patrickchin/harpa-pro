@@ -41,6 +41,12 @@ export interface ScreenContext {
   readonly viewport: ViewportSink;
 }
 
+export interface ActionPreview {
+  readonly headline?: string;
+  readonly subline?: string;
+  readonly body?: ViewportBody;
+}
+
 export type ScreenAction =
   | {
       kind: 'leaf';
@@ -50,6 +56,7 @@ export type ScreenAction =
       prefill?: (session: Session) => Readonly<Record<string, unknown>>;
       confirm?: { label: string };
       refreshHeader?: boolean;
+      preview?: (ctx: ScreenContext) => ActionPreview;
     }
   | {
       kind: 'screen';
@@ -57,6 +64,7 @@ export type ScreenAction =
       hint?: string;
       open: (ctx: ScreenContext) => Screen;
       refreshHeader?: boolean;
+      preview?: (ctx: ScreenContext) => ActionPreview;
     }
   | {
       kind: 'flow';
@@ -64,6 +72,7 @@ export type ScreenAction =
       hint?: string;
       run: (ctx: ScreenContext) => Promise<void>;
       refreshHeader?: boolean;
+      preview?: (ctx: ScreenContext) => ActionPreview;
     }
   | { kind: 'separator'; label?: string };
 
@@ -117,6 +126,12 @@ export async function runScreen(
       const selectable: NonSep[] = actions.filter(
         (a): a is NonSep => a.kind !== 'separator',
       );
+      // Default headline/subline/body for "no action highlighted" — i.e. the
+      // screen's own context. We re-push it as the user moves the highlight
+      // back to non-previewing items (and on initial render above).
+      const defaultHeadline = header.title;
+      const defaultSubline = header.lines[0];
+      const defaultBody = screen.body?.(ctx);
       const choice = await prompter.select<string>({
         label: '',
         options: [
@@ -130,6 +145,26 @@ export async function runScreen(
           }),
           { value: BACK, label: screen.backLabel ?? '← back' },
         ],
+        onHighlight: (value: string) => {
+          if (value === BACK) {
+            viewport.setHeadline(defaultHeadline, defaultSubline);
+            viewport.setBody(defaultBody);
+            return;
+          }
+          const idx = Number(value);
+          const a = selectable[idx];
+          const prev = a && 'preview' in a ? a.preview?.(ctx) : undefined;
+          if (!prev) {
+            viewport.setHeadline(defaultHeadline, defaultSubline);
+            viewport.setBody(defaultBody);
+            return;
+          }
+          viewport.setHeadline(
+            prev.headline ?? defaultHeadline,
+            prev.subline ?? defaultSubline,
+          );
+          viewport.setBody(prev.body ?? defaultBody);
+        },
       });
 
       if (prompter.isCancel(choice) || choice === BACK) break;

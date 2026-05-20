@@ -43,10 +43,16 @@ export function SelectList(props: SelectListProps) {
   };
 
   useKeyboard((k) => {
-    if (k.name === 'escape') {
+    if (k.name === 'escape' || (k.name === 'h' && !k.ctrl && !k.meta)) {
       props.ui.resolve({ kind: 'cancel' });
     }
   });
+
+  // Ranger-style vim bindings on top of OpenTUI's defaults
+  // (which already map j/k to down/up, return to select).
+  const keyBindings = [
+    { name: 'l', action: 'select-current' as const },
+  ];
 
   return (
     <box flexDirection="column" flexGrow={1}>
@@ -64,6 +70,11 @@ export function SelectList(props: SelectListProps) {
         selectedTextColor={theme.selectionFg}
         showDescription
         wrapSelection
+        keyBindings={keyBindings}
+        onChange={(_i: number, opt: { value?: unknown } | null) => {
+          const cb = props.prompt.onHighlight;
+          if (cb && opt && opt.value !== undefined) cb(String(opt.value));
+        }}
         onSelect={(_i, opt) => {
           if (opt) {
             props.ui.resolve({ kind: 'select', value: String(opt.value) });

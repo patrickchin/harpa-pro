@@ -30,8 +30,10 @@ import type { TabKey } from './tabs';
 import { createEmptyReport } from '@/lib/report-edit-helpers';
 import type { NoteEntry } from '@/lib/note-entry';
 import type { GeneratedSiteReport } from '@harpa/report-core';
-import { VoiceRecorderModal } from '@/features/voice/VoiceRecorderModal';
+import { useInlineRecorder } from '@/features/voice/useInlineRecorder';
 import { useVoiceNotePipeline } from '@/features/voice/useVoiceNotePipeline';
+import type { RecorderSnapshot } from '@/features/voice/recorder-types';
+import { AppDialogSheet } from '@/components/primitives/AppDialogSheet';
 
 /**
  * Props passed to `GenerateReportProvider`. Route wrappers wire real
@@ -138,25 +140,35 @@ export interface GenerateReportProviderProps {
 }
 
 interface VoiceSurface {
+  /**
+   * Phase H: true while the inline WhatsApp-style strip should render
+   * in place of the text-note input row.
+   */
   isRecording: boolean;
-  amplitude: number;
+  /** Latest recorder snapshot — duration drives the inline counter. */
+  snapshot: RecorderSnapshot;
+  /** Scrolling waveform samples (oldest → newest, capped). */
+  historyBars: readonly number[];
   interimTranscript: string;
   speechError: string | null;
-  toggleRecording: () => void;
-  cancelRecording: () => void;
   /**
-   * Phase C: opens the full-screen `VoiceRecorderModal`. Replaces the
-   * legacy `toggleRecording` no-op as the surface the mic button calls.
-   * Phase D wires the modal's `onCapture` to `useVoiceNotePipeline`.
+   * Begin recording inline. Idempotent. If mic permission was
+   * denied the provider opens its permission dialog instead of
+   * arming the recorder.
    */
-  openRecorder: () => void;
-  recorderVisible: boolean;
-  closeRecorder: () => void;
+  start: () => void;
+  /**
+   * Stop the recorder, hand the finalised audio to the pipeline,
+   * and reset the strip. No-op when not recording.
+   */
+  stopAndSend: () => void;
+  /** Discard the in-flight recording and return to the input row. */
+  cancel: () => void;
   /**
    * Phase D: pipeline state visible to surfaces that want to show a
-   * "Transcribing voice note…" toast after the modal closes. `null`
-   * when the provider was rendered without `reportId` (pipeline can't
-   * run without a target).
+   * "Transcribing voice note…" indicator after the strip closes.
+   * `null` when the provider was rendered without `reportId`
+   * (pipeline can't run without a target).
    */
   pipeline: {
     step: 'idle' | 'uploading' | 'transcribing' | 'saved' | 'failed';
@@ -356,15 +368,18 @@ export function GenerateReportProvider({
   const [deleteIndex, setDeleteIndex] = useState<number | null>(null);
   const [attachmentSheetVisible, setAttachmentSheetVisible] = useState(false);
   const [fileUploadError, setFileUploadError] = useState<string | null>(null);
-  const [recorderVisible, setRecorderVisible] = useState(false);
   const [isFinalizeConfirmVisible, setIsFinalizeConfirmVisible] =
     useState(false);
 
+  // Phase H: inline recorder state lives here so the input bar can
+  // morph between text/photo/mic and the recording strip without
+  // remounting the provider's children.
+  const inlineRecorder = useInlineRecorder();
+
   // Phase D: voice pipeline. Always called (hooks are unconditional)
-  // even when reportId is null — `capture()` then short-circuits.
-  // Using a sentinel '' keeps the hook signature simple; the modal
-  // never opens without a real reportId because the mic button is
-  // disabled in that case (see GenerateReportInputBar).
+  // even when reportId is null — `start()` then short-circuits.
+  // Using a sentinel '' keeps the hook signature simple; the mic
+  // button is disabled in that case (see GenerateReportInputBar).
   const voicePipeline = useVoiceNotePipeline({ reportId: reportId ?? '' });
   const handleVoiceCapture = useCallback(
     async (result: import('@/features/voice/recorder-types').RecorderResult) => {
@@ -377,6 +392,31 @@ export function GenerateReportProvider({
     },
     [reportId, voicePipeline],
   );
+
+  // Phase H: wire the inline strip's Send button to the pipeline.
+  // `stopAndCapture()` finalises the audio file; on a successful
+  // capture we hand it to the pipeline (fire-and-forget — the
+  // synthetic timeline entry below shows progress, errors surface
+  // via the existing VoiceNoteCard retry pill).
+  const handleVoiceStart = useCallback(() => {
+    if (!reportId) return;
+    void inlineRecorder.start();
+  }, [reportId, inlineRecorder]);
+  const handleVoiceStopAndSend = useCallback(() => {
+    void (async () => {
+      const result = await inlineRecorder.stopAndCapture();
+      if (!result) return;
+      try {
+        await handleVoiceCapture(result);
+      } catch {
+        // Pipeline already surfaces the error via voicePipeline.state;
+        // the VoiceNoteCard renders Retry. No Alert.alert (Pitfall 12).
+      }
+    })();
+  }, [inlineRecorder, handleVoiceCapture]);
+  const handleVoiceCancel = useCallback(() => {
+    void inlineRecorder.cancel();
+  }, [inlineRecorder]);
 
   // Phase E: surface the in-flight pipeline as a synthetic NoteEntry
   // so `NoteTimeline` can render the spinner/failure pill the same way
@@ -553,19 +593,19 @@ export function GenerateReportProvider({
         isAutoSaving,
         lastSavedAt,
       },
-      // TODO(Phase D): replace legacy `isRecording/amplitude` with the
-      // `useVoiceNotePipeline` state machine. For now Phase C wires the
-      // modal open/close state; recording itself lives inside the modal.
+      // Phase H: inline WhatsApp-style recorder lives in the input
+      // bar. `start()` arms the recorder (and surfaces the
+      // permission dialog if needed); `stopAndSend()` finalises and
+      // hands off to `useVoiceNotePipeline`; `cancel()` discards.
       voice: {
-        isRecording: false,
-        amplitude: 0,
+        isRecording: inlineRecorder.isRecording,
+        snapshot: inlineRecorder.snapshot,
+        historyBars: inlineRecorder.historyBars,
         interimTranscript: '',
         speechError: null,
-        toggleRecording: () => setRecorderVisible(true),
-        cancelRecording: () => setRecorderVisible(false),
-        openRecorder: () => setRecorderVisible(true),
-        recorderVisible,
-        closeRecorder: () => setRecorderVisible(false),
+        start: handleVoiceStart,
+        stopAndSend: handleVoiceStopAndSend,
+        cancel: handleVoiceCancel,
         pipeline: reportId
           ? { step: voicePipeline.state.step, error: voicePipeline.state.error }
           : null,
@@ -623,7 +663,14 @@ export function GenerateReportProvider({
       lastSavedAt,
       attachmentSheetVisible,
       fileUploadError,
-      recorderVisible,
+      inlineRecorder.isRecording,
+      inlineRecorder.snapshot,
+      inlineRecorder.historyBars,
+      inlineRecorder.permission,
+      inlineRecorder.error,
+      handleVoiceStart,
+      handleVoiceStopAndSend,
+      handleVoiceCancel,
       reportId,
       voicePipeline.state.step,
       voicePipeline.state.error,
@@ -642,15 +689,39 @@ export function GenerateReportProvider({
     <GenerateReportContext.Provider value={value}>
       {children}
       {/*
-        Voice recorder modal — Phase D. The modal's `onCapture` now
-        runs the real upload + aggregator pipeline. On failure the
-        modal stays open and surfaces the error (its existing `errored`
-        phase) so the user can retry without re-recording.
+        Phase H: permission-denied dialog. Replaces the modal's
+        embedded permission gate now that recording is inline.
+        Honours AGENTS.md hard rule #4 — no Alert.alert (Pitfall 12).
       */}
-      <VoiceRecorderModal
-        visible={recorderVisible}
-        onClose={() => setRecorderVisible(false)}
-        onCapture={handleVoiceCapture}
+      <AppDialogSheet
+        visible={inlineRecorder.permission === 'denied'}
+        title="Microphone access needed"
+        message="Enable microphone access in Settings to record voice notes."
+        noticeTone="warning"
+        onClose={inlineRecorder.dismissError}
+        actions={[
+          {
+            label: 'Close',
+            onPress: inlineRecorder.dismissError,
+            variant: 'secondary',
+            testID: 'voice-perm-close',
+          },
+        ]}
+      />
+      <AppDialogSheet
+        visible={inlineRecorder.error !== null}
+        title="Recording failed"
+        message={inlineRecorder.error ?? ''}
+        noticeTone="danger"
+        onClose={inlineRecorder.dismissError}
+        actions={[
+          {
+            label: 'Dismiss',
+            onPress: inlineRecorder.dismissError,
+            variant: 'secondary',
+            testID: 'voice-error-dismiss',
+          },
+        ]}
       />
     </GenerateReportContext.Provider>
   );

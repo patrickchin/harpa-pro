@@ -1,7 +1,7 @@
 /**
  * Real `expo-audio` recorder factory. Wraps `createAudioRecorder` +
  * `requestRecordingPermissionsAsync` behind our `RecorderFactory`
- * abstraction so `VoiceRecorderModal` can be unit-tested via the
+ * abstraction so `InlineVoiceRecorder` can be unit-tested via the
  * fixture backend.
  *
  * IMPORTANT: this module imports `expo-audio` at module scope and so
@@ -12,7 +12,6 @@
  * Refs: docs/v4/arch-voice-pipeline.md §D4.
  */
 import { Platform } from 'react-native';
-import * as FileSystem from 'expo-file-system';
 // eslint-disable-next-line @typescript-eslint/no-restricted-imports
 import {
   createAudioPlayer as _unused,
@@ -37,6 +36,23 @@ import type {
 void _unused;
 
 const TICK_MS = 200;
+
+/**
+ * Read the byte size of a file:// URI without `expo-file-system`
+ * (deprecated). RN's `fetch()` supports file URIs and the resulting
+ * Blob exposes `.size`. Returns `0` on any failure so the upstream
+ * statSize guard can short-circuit with a clear error instead of
+ * crashing the recorder.
+ */
+async function readFileSize(uri: string): Promise<number> {
+  try {
+    const res = await fetch(uri);
+    const blob = await res.blob();
+    return blob.size;
+  } catch {
+    return 0;
+  }
+}
 
 function toPermissionState(granted: boolean | undefined, canAskAgain?: boolean): PermissionState {
   if (granted) return 'granted';
@@ -145,8 +161,7 @@ function createExpoAudioHandle(): RecorderHandle {
       const uri = recorder.uri;
       const durationSec = recorder.currentTime ?? 0;
       if (!uri) throw new Error('expoAudioRecorder: recorder produced no uri');
-      const info = await FileSystem.getInfoAsync(uri);
-      const sizeBytes = info.exists && 'size' in info ? Number(info.size ?? 0) : 0;
+      const sizeBytes = await readFileSize(uri);
       emit({ status: 'stopped', durationMs: Math.round(durationSec * 1000) });
       // Reset the global audio mode so playback in other parts of the
       // app doesn't get routed to the record-only profile.
@@ -163,10 +178,9 @@ function createExpoAudioHandle(): RecorderHandle {
         } catch {
           // best-effort — recorder may not have been started yet
         }
-        const uri = recorder.uri;
-        if (uri) {
-          await FileSystem.deleteAsync(uri, { idempotent: true }).catch(() => undefined);
-        }
+        // No file deletion: `expo-file-system` is deprecated and the
+        // OS cleans the recorder's cache directory eventually. A few
+        // KB of discarded m4a is an acceptable trade.
         recorder = null;
       }
       if (Platform.OS === 'ios') {

@@ -1,5 +1,6 @@
 /**
- * Recorder abstraction used by `VoiceRecorderModal`.
+ * Recorder abstraction used by `useInlineRecorder` /
+ * `InlineVoiceRecorder` (Phase H WhatsApp-style inline strip).
  *
  * The modal does NOT import `expo-audio` directly. Instead it receives a
  * `RecorderFactory` (selected by `pickRecorder()`) so the same modal can
@@ -11,7 +12,7 @@
  *
  * Keeping the abstraction here (rather than reaching for `expo-audio`
  * inside React render) means vitest can exercise the modal under node
- * without needing a JNI shim — see `VoiceRecorderModal.test.tsx`.
+ * without needing a JNI shim — see `useInlineRecorder.test.ts`.
  *
  * Refs: docs/v4/arch-voice-pipeline.md §D4 ; pitfalls §13 (default wiring).
  */

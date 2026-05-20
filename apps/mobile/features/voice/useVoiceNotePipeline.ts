@@ -25,7 +25,6 @@
  * NOT the queue or mutation — so the default path is exercised end-to-end.
  */
 import { useCallback, useRef, useState } from 'react';
-import { File as FsFile } from 'expo-file-system';
 import { useQueryClient } from '@tanstack/react-query';
 
 import { useFileUpload } from '@/lib/uploads';
@@ -105,15 +104,8 @@ function filenameForVoice(uri: string): string {
   return `voice-${Date.now()}.m4a`;
 }
 
-function statSize(uri: string, fallback: number): number {
-  try {
-    const s = new FsFile(uri).size;
-    if (typeof s === 'number' && s > 0) return s;
-  } catch {
-    // expo-file-system may fail under jsdom/node tests; fall back to
-    // the recorder-reported size which is always present.
-  }
-  if (fallback > 0) return fallback;
+function resolveSize(recorderSize: number, uri: string): number {
+  if (recorderSize > 0) return recorderSize;
   throw new Error(
     `Voice upload: file at ${uri} reported size=0; refusing to presign.`,
   );
@@ -180,7 +172,7 @@ export async function runVoiceNotePipeline(
 
   let fileId = args.fileId ?? null;
   if (!fileId) {
-    const sizeBytes = statSize(args.result.uri, args.result.sizeBytes);
+    const sizeBytes = resolveSize(args.result.sizeBytes, args.result.uri);
     const upload = await deps.enqueue({
       sourceUri: args.result.uri,
       kind: 'voice',

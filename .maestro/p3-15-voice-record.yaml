@@ -6,14 +6,16 @@ tags:
 ---
 # End-to-end voice note flow exercising the full Phase A–F pipeline:
 #
-#   - Mic button on the input bar opens `VoiceRecorderModal`
-#   - Inner Start → Save runs the fixture stub recorder (`expoAudioRecorder`
-#     falls back to `fixtureRecorder` in fixture mode, producing a real
-#     local m4a payload referenced by the queue)
-#   - On Save, `useVoiceNotePipeline` enqueues the upload, calls the
+#   - Mic button on the input bar arms the inline WhatsApp/Telegram-style
+#     recorder strip (Phase H). No modal is opened.
+#   - The fixture stub recorder (`expoAudioRecorder` falls back to
+#     `fixtureRecorder` in fixture mode) produces a real local m4a
+#     payload referenced by the queue.
+#   - Tapping Send (`btn-record-send`) finalises the recording;
+#     `useVoiceNotePipeline` enqueues the upload, calls the
 #     aggregator `POST /reports/{report}/notes/voice`, and the
 #     timeline renders a `VoiceNoteCard` with status pill → summary
-#     + transcript once the canned fixture response lands
+#     + transcript once the canned fixture response lands.
 #
 # Fixture mode (`docker compose up -d`) returns deterministic
 # transcripts + summaries, so this flow can assert on visible
@@ -75,7 +77,7 @@ tags:
 - tapOn:
     id: "report-row-draft-0"
 
-# --- Confirm we landed on Generate, then open the voice recorder -----------
+# --- Confirm we landed on Generate, then arm the inline recorder ----------
 - extendedWaitUntil:
     visible:
       id: "input-note-container"
@@ -84,22 +86,20 @@ tags:
     id: "btn-record-start"
 - extendedWaitUntil:
     visible:
-      id: "voice-recorder-modal"
+      id: "voice-record-strip"
     timeout: 5000
-
-# --- Record + save via the modal's inner controls --------------------------
-- tapOn:
-    id: "voice-recorder-start"
-- waitForAnimationToEnd
 - extendedWaitUntil:
     visible:
-      id: "voice-recorder-duration"
+      id: "voice-record-duration"
     timeout: 5000
+
+# --- Let it record briefly then Send via the inline strip ------------------
+- waitForAnimationToEnd
 - tapOn:
-    id: "voice-recorder-save"
+    id: "btn-record-send"
 - extendedWaitUntil:
     notVisible:
-      id: "voice-recorder-modal"
+      id: "voice-record-strip"
     timeout: 10000
 
 # --- VoiceNoteCard appears on the timeline once the pipeline lands ---------

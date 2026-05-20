@@ -508,7 +508,15 @@ export async function generateReport(input: GenerateReportInput): Promise<Genera
 
   // Pick the right system prompt for the path. Update prompt preserves
   // manual edits; cold-start prompt generates from scratch.
-  const systemPrompt = isUpdate
+  //
+  // In replay mode, system prompt selection follows the *fixture*, not just
+  // `isUpdate`: an explicit non-update fixtureName (e.g. "generate-report.incomplete")
+  // was recorded against the cold-start prompt even when called via /regenerate
+  // on a report that already has a body. Only the `update` fixture (or the
+  // default update path with no fixtureName override) uses the update prompt.
+  const isUpdatePrompt =
+    fixtureName === updateName || (input.fixtureName == null && isUpdate);
+  const systemPrompt = isUpdatePrompt
     ? canonicals.updateSystemPrompt
     : canonicals.systemPrompt;
 

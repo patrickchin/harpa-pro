@@ -7,6 +7,14 @@ primary_region = "fra"
 [build]
   dockerfile = "Dockerfile"
 
+[deploy]
+  # Run pending migrations inside a release machine using the existing
+  # DATABASE_URL secret. Fly promotes the new image to app machines ONLY
+  # if this exits 0 — so a broken migration aborts the rollout instead
+  # of leaving prod with code ahead of schema.
+  # See docs/v4/arch-cicd-and-migrations.md.
+  release_command = "pnpm --filter @harpa/api db:migrate"
+
 [env]
   NODE_ENV = "production"
   PORT = "8787"
@@ -18,12 +26,15 @@ primary_region = "fra"
   auto_start_machines = true
   min_machines_running = 1
 
+# Readiness probe: opens a real DB connection and checks app._migrations
+# head matches MIGRATIONS_REQUIRED_HEAD (baked into the image). A new
+# machine must pass this before Fly routes traffic to it.
 [[http_service.checks]]
-  grace_period = "10s"
+  grace_period = "15s"
   interval = "30s"
   method = "GET"
   timeout = "5s"
-  path = "/healthz"
+  path = "/readyz"
 
 [[vm]]
   size = "shared-cpu-1x"

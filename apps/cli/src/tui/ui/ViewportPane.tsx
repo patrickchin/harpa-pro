@@ -1,10 +1,16 @@
 /**
  * Read-only viewport (arch-tui-layout.md §3.2).
  *
- * Shows `state.viewport`: a title bar, header lines (e.g. project
- * meta), one of the body variants (list / detail / result / empty),
- * and the rolling log tail. No keystroke handling — the user reads
- * this pane and acts in the interaction pane.
+ * The pane title is the **current navigation path** rendered URL-style
+ * (`/projects/acme/reports/12`). That makes "where am I" the most
+ * visible piece of state in the app — every screen pushes its segment
+ * (with id/slug) onto the breadcrumb on entry and pops it on exit, so
+ * the path follows the user without any per-screen plumbing.
+ *
+ * Below the title: optional header lines (project meta, etc), one of
+ * the body variants (list / detail / result / empty), then the
+ * rolling log tail. No keystroke handling — the user reads this pane
+ * and acts in the interaction pane.
  */
 import { For, Show } from 'solid-js';
 import type { UiStore, ViewportBody } from './store.js';
@@ -14,20 +20,29 @@ export interface ViewportPaneProps {
   readonly ui: UiStore;
 }
 
+function pathOf(crumbs: ReadonlyArray<string>): string {
+  if (crumbs.length === 0) return '/';
+  return '/' + crumbs.join('/');
+}
+
 export function ViewportPane(props: ViewportPaneProps) {
   const v = () => props.ui.state.viewport;
+  const path = () => pathOf(props.ui.state.status.breadcrumb);
   return (
     <box
       flexDirection="column"
       flexGrow={1}
       border={['top', 'right', 'bottom']}
       borderColor={theme.borderIdle}
-      title={v().title || 'harpa'}
+      title={path()}
       titleAlignment="left"
       padding={1}
     >
+      <Show when={v().title}>
+        <text fg={theme.fg}>{v().title}</text>
+      </Show>
       <Show when={v().headerLines.length > 0}>
-        <box flexDirection="column" marginBottom={1}>
+        <box flexDirection="column" marginTop={v().title ? 0 : 0} marginBottom={1}>
           <For each={v().headerLines}>
             {(line) => <text fg={theme.fgMuted}>{line}</text>}
           </For>

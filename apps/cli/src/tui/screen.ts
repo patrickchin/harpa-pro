@@ -62,8 +62,12 @@ export type ScreenAction =
 
 export interface Screen {
   readonly id: string;
-  /** Breadcrumb segment pushed onto the status bar on entry. */
-  readonly breadcrumb?: string;
+  /**
+   * Breadcrumb segment pushed onto the status bar on entry.
+   * Either a static string or a function that gets the current
+   * ScreenContext so it can include resource ids/slugs.
+   */
+  readonly breadcrumb?: string | ((ctx: ScreenContext) => string);
   header(ctx: ScreenContext): Promise<HeaderInfo | undefined>;
   /**
    * Optional read-only body shown in the viewport while this screen
@@ -98,7 +102,11 @@ export async function runScreen(
 ): Promise<void> {
   const ctx: ScreenContext = { prompter, session, viewport };
   let header = await screen.header(ctx);
-  if (screen.breadcrumb) viewport.pushBreadcrumb(screen.breadcrumb);
+  const crumb =
+    typeof screen.breadcrumb === 'function'
+      ? screen.breadcrumb(ctx)
+      : screen.breadcrumb;
+  if (crumb) viewport.pushBreadcrumb(crumb);
   try {
     for (;;) {
       if (header === undefined) break;
@@ -185,6 +193,6 @@ export async function runScreen(
     }
     screen.onExit?.(ctx);
   } finally {
-    if (screen.breadcrumb) viewport.popBreadcrumb();
+    if (crumb) viewport.popBreadcrumb();
   }
 }

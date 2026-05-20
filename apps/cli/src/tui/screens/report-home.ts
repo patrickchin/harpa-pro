@@ -24,7 +24,13 @@ export function reportHomeScreen(): Screen {
   let notes: NoteLike[] = [];
   return {
     id: 'report-home',
-    breadcrumb: 'report',
+    breadcrumb: (ctx) => {
+      const r =
+        ctx.session.state.kind === 'authed'
+          ? ctx.session.state.currentReport
+          : undefined;
+      return r ? String(r.number) : '?';
+    },
     async header(ctx) {
       if (ctx.session.state.kind !== 'authed') return undefined;
       const { currentProject, currentReport } = ctx.session.state;

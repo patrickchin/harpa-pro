@@ -28,7 +28,13 @@ export function projectHomeScreen(): Screen {
   let detail: ProjectLike | undefined;
   return {
     id: 'project-home',
-    breadcrumb: 'project',
+    breadcrumb: (ctx) => {
+      const p =
+        ctx.session.state.kind === 'authed'
+          ? ctx.session.state.currentProject
+          : undefined;
+      return p ? (p.slug ?? p.id) : '?';
+    },
     async header(ctx) {
       const project = ctx.session.state.kind === 'authed' ? ctx.session.state.currentProject : undefined;
       if (!project) return undefined;

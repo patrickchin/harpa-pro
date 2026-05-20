@@ -1,5 +1,15 @@
 # TUI v3 — `harpa tui` screen-based navigation
 
+> **Rendering layer superseded by [`arch-tui-layout.md`](arch-tui-layout.md).**
+> This document remains authoritative for the **screen hierarchy,
+> `currentProject` / `currentReport` context, prefill semantics, and
+> the `Screen` driver contract**. Everything visual (the line-oriented
+> `@clack/prompts` rendering, `intro`/`outro`, `note(...)` headers,
+> per-prompt scrolling) is replaced in v4 by a static two-pane OpenTUI
+> + Solid layout running under Bun. The `Prompter` interface keeps its
+> shape — read `arch-tui-layout.md` for the renderer swap, then this
+> doc for what screens actually render.
+
 > **Status:** design, not yet implemented. Successor to the navigation
 > half of [`arch-tui-app.md`](arch-tui-app.md). The state-machine,
 > credentials store, sign-in flow, `Flow` shape, `Prompter`,

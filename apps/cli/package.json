@@ -22,7 +22,6 @@
     "lint": "eslint . --max-warnings 0 --ext .ts,.tsx"
   },
   "dependencies": {
-    "@clack/prompts": "^1.4.0",
     "@harpa/api-contract": "workspace:*",
     "@opentui/core": "^0.2.15",
     "@opentui/solid": "^0.2.15",

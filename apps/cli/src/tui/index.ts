@@ -15,13 +15,11 @@
  * See docs/v4/arch-tui-app.md §3.4, §6.
  */
 import { defineCommand } from 'citty';
-import chalk from 'chalk';
 import { z } from 'zod';
 import { parseEnvLoose, formatEnvError } from '../lib/env.js';
-import { clackPrompter, type Prompter } from './prompter.js';
+import type { Prompter } from './prompter.js';
 import { createSession, type Session } from './session.js';
 import { mainLoop } from './menu.js';
-import { runApp } from './app.js';
 import { bootState } from './state.js';
 import { diskCredentialsStore } from './credentials.js';
 
@@ -31,39 +29,9 @@ export const tuiCommand = defineCommand({
     description: 'Interactive menu-driven shell for the harpa-pro API.',
   },
   async run() {
-    // HARPA_TUI_CLASSIC=1 opts back into the @clack/prompts UI while
-    // L4 is still in flight. Default is the new split-pane TUI.
-    const useClassic = process.env['HARPA_TUI_CLASSIC'] === '1';
-    if (useClassic) {
-      await runClassic();
-      return;
-    }
     await runSplitPane();
   },
 });
-
-async function runClassic(): Promise<void> {
-  const prompter = clackPrompter();
-  prompter.intro(chalk.cyan('harpa tui'));
-
-  const boot = await bootOrExit(prompter);
-  if (!boot) return;
-
-  if (boot.session.state.kind === 'authed') {
-    prompter.log.info(
-      `Restored session for ${boot.session.state.user.displayName ?? boot.session.state.user.userId} ` +
-        `(credentials file: ${boot.credentialsPath})`,
-    );
-  } else if (boot.session.state.kind === 'auth' && boot.session.state.reason === 'expired') {
-    prompter.log.warn('Your previous session expired — please sign in again.');
-  }
-
-  try {
-    await runApp(prompter, boot.session);
-  } finally {
-    prompter.outro('Goodbye.');
-  }
-}
 
 async function runSplitPane(): Promise<void> {
   // Use a temporary clack prompter for boot output so env errors and

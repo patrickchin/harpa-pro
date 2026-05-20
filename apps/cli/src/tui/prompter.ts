@@ -1,21 +1,20 @@
 /**
  * Prompter abstraction.
  *
- * `@clack/prompts` doesn't play nicely with unit testing (real TTY,
- * stdin event-driven). We wrap it behind a small interface so the TUI
- * logic can be driven by a scripted fake in tests, while production
- * uses the clack adapter.
+ * The TUI logic is built against a small `Prompter` interface so it
+ * can be driven by a scripted fake in tests. Production wiring is
+ * `opentuiPrompter()`, which bridges the imperative interface to the
+ * reactive Solid/OpenTUI view layer (see arch-tui-layout.md §3.3).
  *
- * The default wiring (`clackPrompter()`) is covered by a node-pty
- * smoke test (see docs/v4/arch-tui.md §6, TUI.6) so we don't fall
- * into Pitfall 13 (DI stub becoming the spec).
+ * The default wiring is covered by a node-pty smoke test
+ * (see `__tests__/tui/pty.smoke.integration.test.ts`) so we don't
+ * fall into Pitfall 13 (DI stub becoming the spec).
  *
  * Cancellation: every prompt may return the cancel symbol. Callers
  * MUST check via `prompter.isCancel(value)` after every await before
  * using the value. Cancellation in the TUI means "return to menu",
  * not "exit process".
  */
-import * as p from '@clack/prompts';
 import type { PromptResolution, UiStore } from './ui/store.js';
 
 export const CANCEL: unique symbol = Symbol.for('harpa-cli/tui/cancel');
@@ -58,66 +57,9 @@ export interface Prompter {
 }
 
 /**
- * Production wiring: delegates to `@clack/prompts` and normalises
- * clack's own cancel symbol into our local `CANCEL` token so callers
- * only need to check one thing.
+ * Production wiring is `opentuiPrompter()` below. Tests use
+ * `scriptedPrompter()`.
  */
-export function clackPrompter(): Prompter {
-  const norm = <T>(v: T | symbol): T | Cancel => (p.isCancel(v) ? CANCEL : (v as T));
-  return {
-    text: async (o) =>
-      norm(
-        await p.text({
-          message: o.label,
-          placeholder: o.placeholder,
-          defaultValue: o.default,
-          validate: o.validate ? (v: string | undefined) => o.validate!(v ?? '') : undefined,
-        }),
-      ),
-    multiline: async (o) =>
-      norm(
-        await p.text({
-          message: o.label + ' (multiline; \\n for newline)',
-          placeholder: o.placeholder,
-        }),
-      ),
-    filePath: async (o) => {
-      const opts: Parameters<typeof p.path>[0] = { message: o.label };
-      if (o.placeholder !== undefined) opts.initialValue = o.placeholder;
-      if (o.validate)
-        opts.validate = (v: string | undefined) => o.validate!(v ?? '');
-      return norm(await p.path(opts));
-    },
-    select: async (o) => {
-      const options = o.options.map((opt) => {
-        const out: { value: string; label: string; hint?: string } = {
-          value: opt.value,
-          label: opt.label,
-        };
-        if (opt.hint !== undefined) out.hint = opt.hint;
-        return out;
-      });
-      const v = await p.select({
-        message: o.label,
-        options,
-        initialValue: o.initialValue,
-      });
-      return norm(v) as never;
-    },
-    confirm: async (o) =>
-      norm(await p.confirm({ message: o.label, initialValue: o.default })),
-    note: (message, title) => p.note(message, title),
-    log: {
-      info: (m) => p.log.info(m),
-      success: (m) => p.log.success(m),
-      error: (m) => p.log.error(m),
-      warn: (m) => p.log.warn(m),
-    },
-    intro: (m) => p.intro(m),
-    outro: (m) => p.outro(m),
-    isCancel: (v): v is Cancel => v === CANCEL,
-  };
-}
 
 /* -------------------------------------------------------------------------- */
 /*  OpenTUI prompter — production wiring for the v4 split-pane TUI.           */

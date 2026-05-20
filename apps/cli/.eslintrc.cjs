@@ -14,5 +14,17 @@ module.exports = {
   rules: {
     '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
     '@typescript-eslint/no-explicit-any': 'warn',
+    'no-restricted-imports': [
+      'error',
+      {
+        paths: [
+          {
+            name: '@clack/prompts',
+            message:
+              '@clack/prompts was removed in TUI v4 — use opentuiPrompter (production) or scriptedPrompter (tests).',
+          },
+        ],
+      },
+    ],
   },
 };

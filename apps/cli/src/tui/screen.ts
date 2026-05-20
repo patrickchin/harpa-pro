@@ -104,11 +104,10 @@ export async function runScreen(
       if (header === undefined) break;
       viewport.setHeader(header.title, header.lines);
       viewport.setBody(screen.body?.(ctx));
-      // For backwards compat with the classic clack TUI: still emit
-      // the header inline. Under opentui the viewport pane shows it
-      // and `note()` writes to the rolling log tail — slightly
-      // redundant but not wrong. L4 cleanup removes the inline note
-      // once the clack path is gone.
+      // Mirror the header into the rolling log tail via prompter.note
+      // so it shows up in the InteractionPane log stream and so
+      // scriptedPrompter-based tests can assert on the header text
+      // via prompter.transcript.
       prompter.note(header.lines.join('\n'), header.title);
 
       const actions = screen.actions(ctx);

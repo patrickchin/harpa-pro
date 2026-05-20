@@ -25,6 +25,7 @@ export interface VoiceNoteRowProps {
   fileId: string | null;
   body: string | null;
   transcript?: string | null;
+  title?: string | null;
   summary?: string | null;
   durationSec?: number | null;
   authorName?: string | null;
@@ -36,6 +37,7 @@ export function VoiceNoteRow({
   fileId,
   body,
   transcript,
+  title,
   summary,
   durationSec,
   authorName,
@@ -63,6 +65,7 @@ export function VoiceNoteRow({
     else void playback.play(audioUri);
   }, [audioUri, isPlayingThis, playback]);
 
+  const titleText = title?.trim() || null;
   const summaryText = summary?.trim() || null;
   const transcriptText = transcript?.trim() || body?.trim() || null;
 
@@ -105,6 +108,16 @@ export function VoiceNoteRow({
             : formatDuration(totalSec)}
         </Text>
       </View>
+
+      {titleText ? (
+        <Text
+          className="text-sm font-semibold text-foreground"
+          testID={`voice-title-${noteId}`}
+          numberOfLines={2}
+        >
+          {titleText}
+        </Text>
+      ) : null}
 
       {summaryText ? (
         <Text

@@ -2849,6 +2849,7 @@ export interface paths {
                                 body: string | null;
                                 fileId: string | null;
                                 transcript: string | null;
+                                title?: string | null;
                                 summary?: string | null;
                                 durationSec?: number | null;
                                 language?: string | null;
@@ -2932,6 +2933,7 @@ export interface paths {
                             body: string | null;
                             fileId: string | null;
                             transcript: string | null;
+                            title?: string | null;
                             summary?: string | null;
                             durationSec?: number | null;
                             language?: string | null;
@@ -3094,6 +3096,7 @@ export interface paths {
                             body: string | null;
                             fileId: string | null;
                             transcript: string | null;
+                            title?: string | null;
                             summary?: string | null;
                             durationSec?: number | null;
                             language?: string | null;
@@ -3456,6 +3459,7 @@ export interface paths {
                             body: string | null;
                             fileId: string | null;
                             transcript: string | null;
+                            title?: string | null;
                             summary?: string | null;
                             durationSec?: number | null;
                             language?: string | null;

@@ -43,3 +43,36 @@ Return only the summary text. No JSON, no markdown, no bullets.`;
 export function voiceSummarySystemPrompt(_language?: string): string {
   return VOICE_SUMMARY_SYSTEM_PROMPT;
 }
+
+/**
+ * Derive a very short headline from a summary string.
+ *
+ * The aggregator stores this in `app.notes.title` so list views can
+ * show a one-line label without truncating the body. The column is in
+ * place so we can swap this heuristic for a dedicated LLM call later
+ * without a follow-up migration.
+ *
+ * Rules:
+ *   - Strip leading/trailing whitespace.
+ *   - Take the first sentence-ish chunk (up to `.`, `!`, `?`, or `\n`).
+ *   - Collapse internal whitespace.
+ *   - Cap at `MAX_TITLE_CHARS` (cuts on a word boundary when possible)
+ *     and append `…` if truncated.
+ *   - Return `null` for empty / whitespace-only input.
+ */
+export const MAX_TITLE_CHARS = 80;
+
+export function deriveTitleFromSummary(summary: string | null | undefined): string | null {
+  if (!summary) return null;
+  const trimmed = summary.trim();
+  if (!trimmed) return null;
+  const sentenceEnd = trimmed.search(/[.!?\n]/);
+  const head =
+    sentenceEnd > 0 ? trimmed.slice(0, sentenceEnd).trim() : trimmed;
+  const collapsed = head.replace(/\s+/g, ' ');
+  if (collapsed.length <= MAX_TITLE_CHARS) return collapsed || null;
+  const slice = collapsed.slice(0, MAX_TITLE_CHARS);
+  const lastSpace = slice.lastIndexOf(' ');
+  const cut = lastSpace > MAX_TITLE_CHARS * 0.6 ? slice.slice(0, lastSpace) : slice;
+  return `${cut.trimEnd()}…`;
+}

@@ -6906,6 +6906,11 @@
                             "type": "string",
                             "nullable": true
                           },
+                          "title": {
+                            "type": "string",
+                            "nullable": true,
+                            "maxLength": 200
+                          },
                           "summary": {
                             "type": "string",
                             "nullable": true
@@ -7135,6 +7140,11 @@
                     "transcript": {
                       "type": "string",
                       "nullable": true
+                    },
+                    "title": {
+                      "type": "string",
+                      "nullable": true,
+                      "maxLength": 200
                     },
                     "summary": {
                       "type": "string",
@@ -7372,6 +7382,11 @@
                     "transcript": {
                       "type": "string",
                       "nullable": true
+                    },
+                    "title": {
+                      "type": "string",
+                      "nullable": true,
+                      "maxLength": 200
                     },
                     "summary": {
                       "type": "string",
@@ -8204,6 +8219,11 @@
                     "transcript": {
                       "type": "string",
                       "nullable": true
+                    },
+                    "title": {
+                      "type": "string",
+                      "nullable": true,
+                      "maxLength": 200
                     },
                     "summary": {
                       "type": "string",

@@ -50,7 +50,28 @@ const Env = z.object({
   WAITLIST_CORS_ORIGINS: z
     .string()
     .default('https://harpapro.com,https://www.harpapro.com,http://localhost:3002'),
-});
+  /**
+   * Filename of the last migration this image expects to find applied in
+   * `app._migrations`. Baked into the image at build time (see
+   * infra/fly/Dockerfile ARG MIGRATIONS_REQUIRED_HEAD). Used by /readyz
+   * to detect "code ahead of schema" — see docs/v4/arch-cicd-and-migrations.md.
+   *
+   * Format is intentionally permissive (`<digits>_<slug>.sql`) because the
+   * project has two historical filename conventions in flight (`NNNN_*.sql`
+   * on dev/v4 and `YYYYMMDDHHmm_*.sql` on the live main branch). The lexical
+   * sort still produces the right "newest" answer for either.
+   *
+   * Optional in dev/test (so a local API can boot without setting it).
+   * Required in production: enforced by the refinement below.
+   */
+  MIGRATIONS_REQUIRED_HEAD: z
+    .string()
+    .regex(/^[0-9]+_[a-z0-9_]+\.sql$/, 'must match <digits>_<slug>.sql')
+    .optional(),
+}).refine(
+  (e) => e.NODE_ENV !== 'production' || !!e.MIGRATIONS_REQUIRED_HEAD,
+  { path: ['MIGRATIONS_REQUIRED_HEAD'], message: 'required when NODE_ENV=production' },
+);
 
 export const env = Env.parse(process.env);
 export type Env = z.infer<typeof Env>;

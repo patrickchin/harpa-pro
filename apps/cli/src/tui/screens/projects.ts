@@ -38,13 +38,14 @@ export function projectsScreen(): Screen {
       }
       items = page.items;
       const total = items.length;
-      const recent = items.slice(0, 3).map((p) => p.name).join(', ');
+      const totalReports = items.reduce((sum, p) => sum + (p.stats?.totalReports ?? 0), 0);
+      const totalDrafts = items.reduce((sum, p) => sum + (p.stats?.drafts ?? 0), 0);
       return {
         title: 'Projects',
         lines: [
           total === 0
             ? 'No projects yet'
-            : `${total} project${total === 1 ? '' : 's'}${recent ? ` · ${recent}` : ''}`,
+            : `${total} project${total === 1 ? '' : 's'} · ${totalReports} report${totalReports === 1 ? '' : 's'} (${totalDrafts} draft)`,
         ],
       };
     },
@@ -55,18 +56,34 @@ export function projectsScreen(): Screen {
           hint: 'No projects yet.\nPick "New project" on the right to create one.',
         };
       }
-      return {
-        kind: 'list',
-        columnTitles: ['name', 'role', 'client', 'reports'],
-        items: items.map((p) => ({
-          label: (p.name ?? p.id).padEnd(28).slice(0, 28),
-          columns: [
-            p.myRole.padEnd(7),
-            (p.clientName ?? '—').padEnd(20).slice(0, 20),
-            `${p.stats?.totalReports ?? 0} (${p.stats?.drafts ?? 0} draft)`,
-          ],
-        })),
+      const ROLE: Record<string, string> = {
+        owner: 'OWNER',
+        editor: 'EDITOR',
+        viewer: 'VIEWER',
       };
+      // Newest activity first.
+      const sorted = [...items].sort((a, b) =>
+        String(b.updatedAt ?? '').localeCompare(String(a.updatedAt ?? '')),
+      );
+      const sections = sorted.map((p) => {
+        const name = p.name ?? p.id;
+        const role = ROLE[p.myRole] ?? p.myRole.toUpperCase();
+        const lines: string[] = [];
+        if (p.clientName) lines.push(`  client    ${p.clientName}`);
+        if (p.address) lines.push(`  address   ${p.address}`);
+        if (p.stats) {
+          const last = p.stats.lastReportAt
+            ? `, last ${String(p.stats.lastReportAt).slice(0, 10)}`
+            : '';
+          lines.push(
+            `  reports   ${p.stats.totalReports} (${p.stats.drafts} draft${p.stats.drafts === 1 ? '' : 's'}${last})`,
+          );
+        }
+        lines.push(`  updated   ${String(p.updatedAt ?? '').slice(0, 10)}`);
+        lines.push(`  slug      ${p.id}`);
+        return { title: `${name}   [${role}]`, lines };
+      });
+      return { kind: 'detail', sections };
     },
     actions(): ReadonlyArray<ScreenAction> {
       const openProject = (p: ProjectLike) => (ctx: ScreenContext) => {

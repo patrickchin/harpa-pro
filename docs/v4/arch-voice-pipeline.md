@@ -86,12 +86,12 @@ Add to `app.notes`:
 
 | Column                 | Type            | Nullable | Purpose |
 |---                     |---              |---       |---      |
-| `title`                | `text` (≤ 200)  | yes      | Very short headline (≤ 80 chars) for list views — derived heuristically from `summary` by the aggregator (first sentence, word-cut + ellipsis). Column is in place so we can upgrade to a dedicated LLM call later without a follow-up migration. |
-| `summary`              | `text`          | yes      | Canonical summary — what the report generator reads. |
-| `duration_sec`         | `int`           | yes      | Recording length (client-reported). |
-| `language`             | `text`          | yes      | BCP-47 transcript language. |
-| `transcribe_provider`  | `text`          | yes      | Vendor + model that produced the transcript (diagnostics). |
-| `transcribed_at`       | `timestamptz`   | yes      | Server time of transcription. |
+| `title`                | `text` (≤ 200)  | yes      | **Generic** short headline. Today only the voice aggregator writes it (derived heuristically from `summary` — first sentence, ≤ 80 chars, word-cut + ellipsis); text / image / document notes leave it null but may populate it in the future (e.g. user-supplied document title, photo caption). The 200-char DB cap leaves headroom to swap the heuristic for a dedicated LLM call later without a follow-up migration. |
+| `summary`              | `text`          | yes      | **Generic** long-form summary. For `kind='voice'` rows it is the canonical site-note body — what the report generator reads. Other kinds may populate it later. |
+| `duration_sec`         | `int`           | yes      | Voice-only. Recording length (client-reported). |
+| `language`             | `text`          | yes      | Voice-only. BCP-47 transcript language. |
+| `transcribe_provider`  | `text`          | yes      | Voice-only. Vendor + model that produced the transcript (diagnostics). |
+| `transcribed_at`       | `timestamptz`   | yes      | Voice-only. Server time of transcription. |
 
 `transcript` stays as the raw transcript. `body` keeps its existing
 meaning for non-voice notes; for `voice` notes `body` mirrors

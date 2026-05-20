@@ -7292,6 +7292,15 @@
                   "transcript": {
                     "type": "string",
                     "nullable": true
+                  },
+                  "title": {
+                    "type": "string",
+                    "nullable": true,
+                    "maxLength": 200
+                  },
+                  "summary": {
+                    "type": "string",
+                    "nullable": true
                   }
                 },
                 "required": [
@@ -7534,11 +7543,17 @@
                   "body": {
                     "type": "string",
                     "nullable": true
+                  },
+                  "title": {
+                    "type": "string",
+                    "nullable": true,
+                    "maxLength": 200
+                  },
+                  "summary": {
+                    "type": "string",
+                    "nullable": true
                   }
-                },
-                "required": [
-                  "body"
-                ]
+                }
               }
             }
           }

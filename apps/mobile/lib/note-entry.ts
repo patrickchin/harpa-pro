@@ -19,6 +19,16 @@ export interface NoteEntry {
   /** Discriminates the note kind for rendering. */
   source?: 'voice' | 'text' | 'image';
 
+  // ── Generic note-level fields (migration 0004) ─────────────────
+  // Nullable on every kind. Today the voice aggregator is the only
+  // writer; text / image / document notes may populate them later.
+  /** Very short headline (≤ 200 chars). Rendered above `summary`. */
+  title?: string | null;
+  /** Long-form summary. For voice notes this is the canonical
+   *  site-note body (mirrored into `body` server-side for legacy
+   *  readers). */
+  summary?: string | null;
+
   // ── Voice-note fields (Phase E) ────────────────────────────────
   // Populated when `source === 'voice'`. `VoiceNoteCard` reads these
   // to render the play affordance, transcript expander, summary
@@ -30,13 +40,6 @@ export interface NoteEntry {
   durationSec?: number | null;
   /** Speech-to-text output. */
   transcript?: string | null;
-  /** LLM-generated summary. Stored separately from `text` so the
-   *  card can show summary + transcript without one collapsing the
-   *  other. */
-  summary?: string | null;
-  /** Very short headline derived from `summary` server-side
-   *  (≤ 80 chars). Rendered above the summary on voice cards. */
-  title?: string | null;
   /** Phase D pipeline view for in-flight / failed rows. `null` once
    *  the note has been persisted server-side. */
   voiceStatus?: 'uploading' | 'transcribing' | 'failed' | null;

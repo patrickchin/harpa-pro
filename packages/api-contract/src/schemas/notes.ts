@@ -12,13 +12,16 @@ export const note = z.object({
   body: z.string().nullable(),
   fileId: fileId.nullable(),
   transcript: z.string().nullable(),
-  // Voice-note pipeline fields (migration 0004 / arch-voice-pipeline.md §D3).
-  // Nullable for all kinds; populated only on `kind='voice'` rows
-  // produced by `POST /reports/{report}/notes/voice`. Legacy text /
-  // image / document notes leave them null. `title` is a very short
-  // headline (≤ 200 chars) derived from `summary` for list views.
+  // Generic note-level fields (migration 0004). Nullable on every
+  // kind. Today the voice aggregator (`POST /reports/{report}/notes/voice`)
+  // is the only writer — it stores the LLM summary in `summary` and a
+  // short headline (≤ 200 chars) in `title`. Text / image / document
+  // notes leave them null but may populate them in the future
+  // (e.g. user-supplied document title, photo caption).
   title: z.string().max(200).nullable().optional(),
   summary: z.string().nullable().optional(),
+  // Voice-only diagnostics (migration 0004 / arch-voice-pipeline.md §D3).
+  // Populated only on `kind='voice'` rows; nullable elsewhere.
   durationSec: z.number().int().min(0).nullable().optional(),
   language: z.string().min(2).max(16).nullable().optional(),
   transcribeProvider: z.string().nullable().optional(),
@@ -33,10 +36,22 @@ export const createNoteRequest = z.object({
   body: z.string().nullable().optional(),
   fileId: fileId.nullable().optional(),
   transcript: z.string().nullable().optional(),
+  /** Optional short headline. Capped at 200 chars (matches the DB
+   *  CHECK constraint on `app.notes.title`). */
+  title: z.string().max(200).nullable().optional(),
+  /** Optional long-form summary. */
+  summary: z.string().nullable().optional(),
 });
 
+/**
+ * PATCH semantics: `undefined` leaves a field unchanged, `null`
+ * clears it, a string overwrites. At least one field must be
+ * provided (enforced at the route boundary).
+ */
 export const updateNoteRequest = z.object({
-  body: z.string().nullable(),
+  body: z.string().nullable().optional(),
+  title: z.string().max(200).nullable().optional(),
+  summary: z.string().nullable().optional(),
 });
 
 /**

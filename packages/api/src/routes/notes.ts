@@ -110,8 +110,15 @@ noteRoutes.openapi(
     const db = c.get('db');
     if (!db) throw new HTTPException(401);
     const { note: noteId } = c.req.valid('param');
-    const { body } = c.req.valid('json');
-    const note = await db((d) => updateNote(d, noteId, body));
+    const patch = c.req.valid('json');
+    if (
+      patch.body === undefined &&
+      patch.title === undefined &&
+      patch.summary === undefined
+    ) {
+      throw new HTTPException(400, { message: 'Empty patch.' });
+    }
+    const note = await db((d) => updateNote(d, noteId, patch));
     if (!note) throw new HTTPException(404, { message: 'Note not found or not author.' });
     return c.json(note, 200);
   },

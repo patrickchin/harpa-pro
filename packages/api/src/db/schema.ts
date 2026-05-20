@@ -133,13 +133,12 @@ export const notes = appSchema.table('notes', {
   body: text('body'),
   fileId: text('file_id'),
   transcript: text('transcript'),
-  // Voice-note pipeline columns (migration 0004). See
-  // docs/v4/arch-voice-pipeline.md §D3. `summary` is the canonical
-  // site-note body for `kind='voice'` rows; the aggregator mirrors it
-  // into `body` so legacy readers stay sane. `title` is a very short
-  // headline derived from `summary` for list views.
+  // Generic note-level fields (migration 0004). Nullable on every
+  // kind. Today the voice aggregator is the only writer; text /
+  // image / document notes may populate them in the future.
   title: text('title'),
   summary: text('summary'),
+  // Voice-only diagnostics (migration 0004 / arch-voice-pipeline.md §D3).
   durationSec: integer('duration_sec'),
   language: text('language'),
   transcribeProvider: text('transcribe_provider'),

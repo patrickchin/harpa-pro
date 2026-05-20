@@ -11,6 +11,7 @@ import {
 } from '@/lib/api/hooks';
 import { safeBack } from '@/lib/nav/safe-back';
 import { dismissOrReplaceTo } from '@/lib/nav/dismiss-or-replace';
+import { AppHeaderActions } from '@/components/ui/AppHeaderActions';
 
 export default function ProjectEditRoute() {
   const router = useRouter();
@@ -74,6 +75,7 @@ export default function ProjectEditRoute() {
           },
         );
       }}
+      actions={<AppHeaderActions />}
     />
   );
 }

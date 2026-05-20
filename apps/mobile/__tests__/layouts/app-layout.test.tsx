@@ -91,13 +91,13 @@ describe('AppLayout — hook order across auth-gate transitions', () => {
     expect(json).toContain('rn-Redirect');
   });
 
-  it('renders the tab shell when authenticated', () => {
+  it('renders the stack shell when authenticated', () => {
     authState.status = 'authenticated';
     let tree!: TestRenderer.ReactTestRenderer;
     act(() => {
       tree = TestRenderer.create(<AppLayout />);
     });
     const json = JSON.stringify(tree.toJSON());
-    expect(json).toContain('rn-Tabs');
+    expect(json).toContain('rn-Stack');
   });
 });

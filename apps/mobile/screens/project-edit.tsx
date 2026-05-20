@@ -6,7 +6,7 @@
  * (camelCase) instead of `client_name`. AppDialogSheet handles the
  * destructive delete confirmation (hard rule — no Alert.alert).
  */
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type ReactNode } from 'react';
 import { View, Text, KeyboardAvoidingView, ScrollView } from 'react-native';
 import { Trash2 } from 'lucide-react-native';
 import { SafeAreaView } from '@/components/primitives/SafeAreaView';
@@ -39,6 +39,7 @@ export type ProjectEditProps = {
   onBack: () => void;
   onSubmit: (values: ProjectEditValues) => void;
   onDelete: () => void;
+  actions?: ReactNode;
 };
 
 interface DialogState extends AppDialogCopy {
@@ -55,6 +56,7 @@ export function ProjectEdit({
   onBack,
   onSubmit,
   onDelete,
+  actions,
 }: ProjectEditProps) {
   const [name, setName] = useState('');
   const [address, setAddress] = useState('');
@@ -116,7 +118,7 @@ export function ProjectEdit({
     return (
       <SafeAreaView className="flex-1 bg-background">
         <View className="px-5 py-4">
-          <ScreenHeader title="Edit Project" onBack={onBack} backLabel="Overview" />
+          <ScreenHeader title="Edit Project" onBack={onBack} backLabel="Overview" actions={actions} />
         </View>
         <EditProjectSkeleton />
       </SafeAreaView>
@@ -127,7 +129,7 @@ export function ProjectEdit({
     <SafeAreaView className="flex-1 bg-background">
       <KeyboardAvoidingView behavior="padding" className="flex-1">
         <View className="px-5 py-4">
-          <ScreenHeader title="Edit Project" onBack={onBack} backLabel="Overview" />
+          <ScreenHeader title="Edit Project" onBack={onBack} backLabel="Overview" actions={actions} />
         </View>
 
         <View className="flex-1">

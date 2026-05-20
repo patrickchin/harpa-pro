@@ -14,7 +14,7 @@
  * history; today the dev mirror passes a placeholder and the route
  * passes `null`.
  */
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -72,6 +72,7 @@ export interface UsageScreenProps {
   refreshing: boolean;
   onRefresh: () => void;
   onBack: () => void;
+  actions?: ReactNode;
 }
 
 function parseMonth(iso: string): Date {
@@ -222,6 +223,7 @@ export function Usage({
   refreshing,
   onRefresh,
   onBack,
+  actions,
 }: UsageScreenProps) {
   const [expandedMonth, setExpandedMonth] = useState<string | null>(null);
 
@@ -244,6 +246,7 @@ export function Usage({
             title="Usage History"
             onBack={onBack}
             backLabel="Profile"
+            actions={actions}
           />
         </View>
 

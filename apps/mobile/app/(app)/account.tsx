@@ -18,6 +18,7 @@ import { useAuthSession } from '@/lib/auth/session';
 import { useRefresh } from '@/lib/use-refresh';
 import { safeBack } from '@/lib/nav/safe-back';
 import { useUpdateMeMutation } from '@/lib/api/hooks';
+import { AppHeaderActions } from '@/components/ui/AppHeaderActions';
 
 export default function AccountRoute() {
   const router = useRouter();
@@ -62,6 +63,7 @@ export default function AccountRoute() {
       onSaveProfile={handleSaveProfile}
       isSaving={updateMe.isPending}
       saveError={saveError}
+      actions={<AppHeaderActions />}
     />
   );
 }

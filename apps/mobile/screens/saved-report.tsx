@@ -21,7 +21,7 @@
  * typed props so this screen can be rendered with canned values from
  * dev mirrors + tests.
  */
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import {
   RefreshControl,
   ScrollView,
@@ -102,6 +102,9 @@ export interface SavedReportProps {
 
   /** Optional initial tab for dev mirrors + tests. */
   initialTab?: ReportDetailTab;
+
+  /** Profile button slot — rendered in the report detail header. */
+  actions?: ReactNode;
 }
 
 export function SavedReport(props: SavedReportProps) {
@@ -129,6 +132,7 @@ export function SavedReport(props: SavedReportProps) {
     isUnfinalizing,
     pdfActions,
     initialTab,
+    actions,
   } = props;
 
   const [menuVisible, setMenuVisible] = useState(false);
@@ -207,6 +211,7 @@ export function SavedReport(props: SavedReportProps) {
             title="Report"
             onBack={onBack}
             backLabel="Reports"
+            actions={actions}
           />
         </View>
         <ReportDetailSkeleton />
@@ -283,6 +288,7 @@ export function SavedReport(props: SavedReportProps) {
           actionsDisabled={
             isSaving || isExporting || isDeleting || isUnfinalizing
           }
+          actions={actions}
         />
 
         <ReportDetailTabBar

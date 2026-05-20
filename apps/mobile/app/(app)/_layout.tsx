@@ -1,20 +1,20 @@
 /**
- * (app) group layout — authenticated screens. Auth gate + tab shell.
+ * (app) group layout — authenticated screens. Auth gate + stack shell.
  *
  * Auth gate: If status is loading, render splash. If unauthenticated or
  * needs-onboarding, redirect to the appropriate auth screen. If
- * authenticated, render the tab shell.
+ * authenticated, render the stack shell.
  *
- * Tab shell: Single "Projects" tab with tabBarStyle hidden, matching
- * canonical. Android double-back-to-exit handler.
+ * Stack shell: All (app) screens in a single Stack with no native
+ * headers (each screen renders its own ScreenHeader). Android
+ * double-back-to-exit handler.
  */
 import { useEffect, useRef, useCallback } from 'react';
 import { BackHandler, ToastAndroid, Platform, ActivityIndicator, View } from 'react-native';
-import { Tabs, useNavigation, Redirect } from 'expo-router';
-import { FolderOpen, User } from 'lucide-react-native';
-import { colors } from '@/lib/design-tokens/colors';
+import { Stack, useNavigation, Redirect } from 'expo-router';
 import { useAuthSession } from '@/lib/auth/session';
 import { decideAppRedirect } from '@/lib/auth/auth-gate';
+import { colors } from '@/lib/design-tokens/colors';
 
 export default function AppLayout() {
   const { status } = useAuthSession();
@@ -58,36 +58,12 @@ export default function AppLayout() {
     );
   }
 
-  // Render the tab shell. P3.15.4 — Projects + Profile tabs are
-  // visible; non-tab routes (account, usage) are registered but
-  // hidden from the tab bar (`href: null`).
   return (
-    <Tabs
-      screenOptions={{
-        headerShown: false,
-        tabBarActiveTintColor: colors.foreground,
-        tabBarInactiveTintColor: colors.muted.foreground,
-        tabBarLabelStyle: { fontSize: 14, fontWeight: '600' },
-      }}
-    >
-      <Tabs.Screen
-        name="projects"
-        options={{
-          title: 'Projects',
-          tabBarButtonTestID: 'tab-projects',
-          tabBarIcon: ({ color, size }) => <FolderOpen size={size} color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="profile"
-        options={{
-          title: 'Profile',
-          tabBarButtonTestID: 'tab-profile',
-          tabBarIcon: ({ color, size }) => <User size={size} color={color} />,
-        }}
-      />
-      <Tabs.Screen name="account" options={{ href: null }} />
-      <Tabs.Screen name="usage" options={{ href: null }} />
-    </Tabs>
+    <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="projects" />
+      <Stack.Screen name="profile" />
+      <Stack.Screen name="account" />
+      <Stack.Screen name="usage" />
+    </Stack>
   );
 }

@@ -16,6 +16,7 @@ import {
   ActivityIndicator,
   RefreshControl,
 } from 'react-native';
+import type { ReactNode } from 'react';
 import { Plus, FileText, ClipboardList } from 'lucide-react-native';
 import { SafeAreaView } from '@/components/primitives/SafeAreaView';
 import { Card } from '@/components/primitives/Card';
@@ -41,6 +42,7 @@ export type ReportsListProps = {
   onBack: () => void;
   onCreate: () => void;
   onOpenReport: (report: ReportListItem) => void;
+  actions?: ReactNode;
 };
 
 export function ReportsList({
@@ -54,6 +56,7 @@ export function ReportsList({
   onBack,
   onCreate,
   onOpenReport,
+  actions,
 }: ReportsListProps) {
   const sections = buildReportsSections(reports);
 
@@ -65,6 +68,7 @@ export function ReportsList({
           subtitle={projectName ?? undefined}
           onBack={onBack}
           backLabel="Overview"
+          actions={actions}
         />
       </View>
 

@@ -58,6 +58,7 @@ export interface AccountScreenProps {
   isSaving?: boolean;
   /** Surfaces a save error inside the form. */
   saveError?: string | null;
+  actions?: ReactNode;
 }
 
 function DefaultAvatarPlaceholder() {
@@ -80,6 +81,7 @@ export function Account({
   onSaveProfile,
   isSaving = false,
   saveError = null,
+  actions,
 }: AccountScreenProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState('');
@@ -102,6 +104,7 @@ export function Account({
             title="Account Details"
             onBack={onBack}
             backLabel="Profile"
+            actions={actions}
           />
         </View>
         <AccountDetailsSkeleton />
@@ -148,6 +151,7 @@ export function Account({
             title="Account Details"
             onBack={onBack}
             backLabel="Profile"
+            actions={actions}
           />
         </View>
 

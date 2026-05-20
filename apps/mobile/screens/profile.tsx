@@ -125,6 +125,7 @@ export interface ProfileScreenProps {
 
   buildVersion: string;
   serverLabel: string;
+  actions?: ReactNode;
 }
 
 interface SectionLink {
@@ -157,6 +158,7 @@ export function Profile({
   availableProviderKeys,
   buildVersion,
   serverLabel,
+  actions,
 }: ProfileScreenProps) {
   const [modalVisible, setModalVisible] = useState(false);
   const [modalStep, setModalStep] = useState<'provider' | 'model'>('provider');
@@ -250,7 +252,7 @@ export function Profile({
         }
       >
         <View className="px-5 pt-4 pb-6 gap-5">
-          <ScreenHeader title="Profile" onBack={onBack} />
+          <ScreenHeader title="Profile" onBack={onBack} actions={actions} />
 
           <Card variant="emphasis" className="flex-row items-center gap-4">
             <View className="h-14 w-14 items-center justify-center rounded-xl border border-border bg-card">

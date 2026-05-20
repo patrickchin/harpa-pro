@@ -14,6 +14,7 @@ import { Usage, type UsageMonthlyRow, type UsageTotals } from '@/screens/usage';
 import { useMeUsageQuery } from '@/lib/api/hooks';
 import { useRefresh } from '@/lib/use-refresh';
 import { safeBack } from '@/lib/nav/safe-back';
+import { AppHeaderActions } from '@/components/ui/AppHeaderActions';
 
 export default function UsageRoute() {
   const router = useRouter();
@@ -48,6 +49,7 @@ export default function UsageRoute() {
       refreshing={refreshing}
       onRefresh={onRefresh}
       onBack={() => safeBack(router, '/(app)/profile' as never)}
+      actions={<AppHeaderActions />}
     />
   );
 }

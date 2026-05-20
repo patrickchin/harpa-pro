@@ -12,6 +12,7 @@ import {
 } from '@/lib/api/hooks';
 import { useRefresh } from '@/lib/use-refresh';
 import { safeBack } from '@/lib/nav/safe-back';
+import { AppHeaderActions } from '@/components/ui/AppHeaderActions';
 
 export default function ReportsListRoute() {
   const router = useRouter();
@@ -63,6 +64,7 @@ export default function ReportsListRoute() {
           router.push(`/projects/${slug}/reports/${item.number}` as never);
         }
       }}
+      actions={<AppHeaderActions />}
     />
   );
 }

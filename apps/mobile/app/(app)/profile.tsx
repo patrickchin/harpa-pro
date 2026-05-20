@@ -25,6 +25,7 @@ import {
   useAvailableProviders,
   type AiProviderKey,
 } from '@/lib/ai/useAiProvider';
+import { AppHeaderActions } from '@/components/ui/AppHeaderActions';
 
 export default function ProfileRoute() {
   const router = useRouter();
@@ -97,6 +98,7 @@ export default function ProfileRoute() {
       availableProviderKeys={availability.availableKeys}
       buildVersion={buildInfo.displayVersion}
       serverLabel={buildInfo.serverLabel}
+      actions={<AppHeaderActions />}
     />
   );
 }

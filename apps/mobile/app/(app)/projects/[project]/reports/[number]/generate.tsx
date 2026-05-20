@@ -65,7 +65,9 @@ interface ApiNote {
 
 function noteToEntry(n: ApiNote): NoteEntry {
   const isImage = n.kind === 'image';
-  const text = isImage ? '📷 Photo' : (n.body ?? n.transcript ?? '');
+  const text = isImage
+    ? (n.body ?? '📷 Photo')
+    : (n.body ?? n.transcript ?? '');
   return {
     id: n.id,
     authorId: n.authorId,

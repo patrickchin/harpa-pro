@@ -32,9 +32,13 @@ import { useCameraUploads } from './use-camera-uploads';
 
 vi.mock('expo-file-system', () => ({
   // v55 surface — `new File(uri).size` is what `statSize` actually uses.
+  // We key off the URI so tests can simulate a zero-byte / inaccessible
+  // file by including `size-0` in the path.
   File: class {
-    size = 12_345;
-    constructor(_uri: string) {}
+    size: number;
+    constructor(uri: string) {
+      this.size = uri.includes('size-0') ? 0 : 12_345;
+    }
     delete() {}
   },
 }));
@@ -205,5 +209,28 @@ describe('useCameraUploads — session-registry → upload queue', () => {
     for (const note of noteCreates) {
       expect((note.body as { kind?: string }).kind).toBe('image');
     }
+  });
+
+  it('rejects (and skips fetch) when File.size reports 0 — guards against SigV4 sentinel bug', async () => {
+    const api = await mount();
+    const sessionId = createCameraSession({ returnTo: '/report' });
+    // `size-0` triggers the mock to report size=0; the other URI is fine.
+    const captured = ['file:///tmp/size-0-cap.jpg', 'file:///tmp/cap-ok.jpg'];
+    commitCameraSession(sessionId, captured);
+    const uris = consumeCameraSession(sessionId);
+
+    const results = await api.enqueueCameraUris(uris!, {
+      reportId: 'rpt_test',
+    });
+
+    expect(results).toHaveLength(2);
+    expect(results[0]?.status).toBe('rejected');
+    expect(results[1]?.status).toBe('fulfilled');
+
+    // The rejected URI must NOT have hit presign — otherwise we'd be
+    // signing Content-Length=1 against real bytes and S3/MinIO would
+    // bounce the PUT with SignatureDoesNotMatch.
+    const presigns = calls.filter((c) => c.url.includes('/files/presign'));
+    expect(presigns).toHaveLength(1);
   });
 });

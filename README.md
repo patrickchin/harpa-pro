@@ -41,11 +41,17 @@ dir, file mode `0600`). See
 
 > **Runtime note:** `apps/cli` runs on [Bun](https://bun.sh) (≥ 1.3) so it
 > can host the OpenTUI rendering layer (see
-> [`docs/v4/arch-tui-layout.md`](docs/v4/arch-tui-layout.md)). Install
-> Bun with `brew install oven-sh/bun/bun` or
+> [`docs/v4/arch-tui-layout.md`](docs/v4/arch-tui-layout.md)). For local
+> development install Bun with `brew install oven-sh/bun/bun` or
 > `curl -fsSL https://bun.sh/install | bash`. The rest of the monorepo
 > (api, mobile, packages) stays on Node + pnpm; only the CLI workspace
 > requires Bun.
+>
+> **End users** can download a single-file `harpa` binary (no Bun
+> install required) from the [Releases page](https://github.com/patrickchin/harpa-pro/releases)
+> — pick `harpa-{linux,darwin}-{x64,arm64}`, `chmod +x`, drop on
+> `$PATH`. Released by pushing a `cli-v*` tag (see
+> `.github/workflows/cli-release.yml`).
 
 (Wire-up happens in P0 — see [`docs/v4/plan-p0-foundation.md`](docs/v4/plan-p0-foundation.md).)
 

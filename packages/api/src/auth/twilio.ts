@@ -4,9 +4,48 @@
  * - `TWILIO_LIVE=1` → real Twilio Verify REST API call.
  * - `TWILIO_LIVE=0` (default) → fake mode: any code matching
  *   `TWILIO_VERIFY_FAKE_CODE` (default `000000`) is accepted. Used by
- *   tests and `:mock` builds. Resolves Pitfall 5.
+ *   tests and `:mock` builds. Refused at boot in production by env.ts.
+ *   Resolves Pitfall 5.
+ *
+ * In BOTH modes, if `SMOKE_TEST_PHONE` + `SMOKE_TEST_CODE` are set,
+ * that one (phone, code) pair short-circuits to "approved" without any
+ * Twilio API call. Lets the post-deploy smoke journey authenticate
+ * against a live prod API without sending real SMS.
  */
 import { env } from '../env.js';
+
+/**
+ * Returns true iff `phone` is the smoke-test phone. start() uses this
+ * to skip the Verify "send SMS" call so a smoke run doesn't burn
+ * Twilio quota on a number nobody owns.
+ */
+export function isSmokePhone(
+  phone: string,
+  smokePhone: string | undefined = env.SMOKE_TEST_PHONE,
+): boolean {
+  return !!smokePhone && phone === smokePhone;
+}
+
+/**
+ * Returns true iff (phone, code) is the configured smoke pair.
+ * Returns false (not null) when the phone matches the smoke phone but
+ * the code is wrong — i.e. the smoke phone has exactly one valid code
+ * and never falls back to the regular Twilio path. Otherwise returns
+ * null meaning "not a smoke request, handle normally".
+ *
+ * Exported with explicit args so tests can exercise it without
+ * mutating process.env (env.ts is parsed once at import time).
+ */
+export function checkSmokeBackdoor(
+  phone: string,
+  code: string,
+  smokePhone: string | undefined = env.SMOKE_TEST_PHONE,
+  smokeCode: string | undefined = env.SMOKE_TEST_CODE,
+): boolean | null {
+  if (!smokePhone || !smokeCode) return null;
+  if (phone !== smokePhone) return null;
+  return code === smokeCode;
+}
 
 export interface VerifyStartResult {
   verificationId: string; // sid in live mode, deterministic stub in fake mode
@@ -31,7 +70,9 @@ function fakeTwilio(): TwilioClient {
     async start(phone: string) {
       return { verificationId: `fake-${phone}` };
     },
-    async check(_phone, code) {
+    async check(phone, code) {
+      const smoke = checkSmokeBackdoor(phone, code);
+      if (smoke !== null) return { approved: smoke };
       return { approved: code === env.TWILIO_VERIFY_FAKE_CODE };
     },
   };
@@ -49,6 +90,9 @@ function liveTwilio(fetchImpl: typeof fetch): TwilioClient {
 
   return {
     async start(phone: string) {
+      // Skip the real Twilio "send SMS" for the smoke phone — there is
+      // no actual handset to receive it, and it would burn Verify quota.
+      if (isSmokePhone(phone)) return { verificationId: `smoke-${phone}` };
       const body = new URLSearchParams({ To: phone, Channel: 'sms' });
       const res = await fetchImpl(`${base}/Verifications`, {
         method: 'POST',
@@ -60,6 +104,8 @@ function liveTwilio(fetchImpl: typeof fetch): TwilioClient {
       return { verificationId: json.sid };
     },
     async check(phone, code) {
+      const smoke = checkSmokeBackdoor(phone, code);
+      if (smoke !== null) return { approved: smoke };
       const body = new URLSearchParams({ To: phone, Code: code });
       const res = await fetchImpl(`${base}/VerificationCheck`, {
         method: 'POST',

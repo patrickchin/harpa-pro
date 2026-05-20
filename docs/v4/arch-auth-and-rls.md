@@ -60,6 +60,46 @@ sequenceDiagram
 - Has a sandbox mode (`TWILIO_VERIFY_FAKE_CODE=000000`) that we
   use in tests + `:mock` builds. Real SMS is gated behind
   `TWILIO_LIVE=1`.
+- **Production must boot with `TWILIO_LIVE=1`.** Enforced at boot
+  by `env.ts` — refuses to start if `NODE_ENV=production` and
+  `TWILIO_LIVE !== '1'`. Without this guard, the fake-mode code
+  (`000000` by default) would mint a JWT for any phone number.
+
+### Smoke-test backdoor
+
+Production runs with real Twilio, but the post-deploy smoke journey
+(`scripts/journey.sh` run by `post-deploy-smoke.yml`) needs to
+authenticate without sending real SMS. The Twilio wrapper accepts
+**one** hard-coded `(SMOKE_TEST_PHONE, SMOKE_TEST_CODE)` pair that
+short-circuits Twilio in both fake and live modes:
+
+- `start()` for the smoke phone returns a stub `verificationId`
+  without hitting Twilio (no quota burn, no real SMS).
+- `check()` for the smoke phone approves iff `code ===
+  SMOKE_TEST_CODE`. **A wrong code never falls back to Twilio** —
+  the smoke phone has exactly one valid code, so an attacker who
+  guesses `SMOKE_TEST_PHONE` cannot brute-force via the real
+  Verify endpoint.
+- Any other phone follows the normal Twilio path.
+
+Both env vars are treated as secrets. They are set together —
+`env.ts` refuses to boot if only one is present. Provisioning:
+
+```sh
+# Doppler (per-env config)
+doppler secrets set --config prd SMOKE_TEST_PHONE=+1555... SMOKE_TEST_CODE=<32-byte random>
+doppler secrets set --config dev SMOKE_TEST_PHONE=+1555... SMOKE_TEST_CODE=<32-byte random>
+
+# GitHub Actions repo secrets (consumed by post-deploy-smoke.yml)
+gh secret set SMOKE_TEST_PHONE_PROD --body "+1555..."
+gh secret set SMOKE_TEST_CODE_PROD  --body "<same value>"
+gh secret set SMOKE_TEST_PHONE_DEV  --body "+1555..."
+gh secret set SMOKE_TEST_CODE_DEV   --body "<same value>"
+```
+
+Use a phone number that is **not** in any user's contact list and
+not a real Twilio-routable number (e.g. `+15550100xxx` reserved
+range). Rotate `SMOKE_TEST_CODE` if it's ever exposed.
 
 ## better-auth integration
 
@@ -174,8 +214,10 @@ CI fails if any new authed route lacks both tests
 | `TWILIO_ACCOUNT_SID` | API | Twilio API |
 | `TWILIO_AUTH_TOKEN` | API | Twilio API |
 | `TWILIO_VERIFY_SID` | API | Verify service |
-| `TWILIO_LIVE` | API | `1` to allow real SMS in this env |
-| `TWILIO_VERIFY_FAKE_CODE` | API tests / `:mock` | Bypass code |
+| `TWILIO_LIVE` | API | `1` to allow real SMS in this env; required in production |
+| `TWILIO_VERIFY_FAKE_CODE` | API tests / `:mock` | Bypass code (fake mode only; refused at boot in production) |
+| `SMOKE_TEST_PHONE` | API + CI | Secret phone that bypasses Twilio for the post-deploy smoke journey (E.164) |
+| `SMOKE_TEST_CODE` | API + CI | Secret code paired with `SMOKE_TEST_PHONE`; both must be set together |
 | `DATABASE_URL` | API | Neon connection (pooled) |
 | `EXPO_PUBLIC_API_URL` | Mobile | API base URL (validated by `lib/env.ts`) |
 

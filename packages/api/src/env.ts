@@ -15,6 +15,22 @@ const Env = z.object({
   TWILIO_VERIFY_SID: z.string().optional(),
   TWILIO_LIVE: z.enum(['0', '1']).default('0'),
   TWILIO_VERIFY_FAKE_CODE: z.string().default('000000'),
+  /**
+   * Smoke-test backdoor. When BOTH `SMOKE_TEST_PHONE` (E.164) and
+   * `SMOKE_TEST_CODE` are set, that single (phone, code) pair is
+   * approved without calling Twilio — regardless of TWILIO_LIVE.
+   * Lets the post-deploy smoke journey authenticate against a live
+   * (TWILIO_LIVE=1) production API without sending real SMS or paying
+   * Twilio per request. Both are treated as secrets.
+   *
+   * If either is unset, the backdoor is disabled and the request
+   * follows the normal Twilio path (fake or live).
+   */
+  SMOKE_TEST_PHONE: z
+    .string()
+    .regex(/^\+[1-9]\d{6,14}$/, 'must be E.164, e.g. +15551234567')
+    .optional(),
+  SMOKE_TEST_CODE: z.string().min(6).optional(),
   AI_FIXTURE_MODE: z.enum(['replay', 'record', 'live']).default('replay'),
   AI_LIVE: z.enum(['0', '1']).default('0'),
   R2_FIXTURE_MODE: z.enum(['replay', 'live']).default('replay'),
@@ -71,6 +87,21 @@ const Env = z.object({
 }).refine(
   (e) => e.NODE_ENV !== 'production' || !!e.MIGRATIONS_REQUIRED_HEAD,
   { path: ['MIGRATIONS_REQUIRED_HEAD'], message: 'required when NODE_ENV=production' },
+).refine(
+  // In production, refuse to boot with the Twilio fake-mode backdoor
+  // enabled. Without this guard, any (phone, "000000") pair would mint
+  // a JWT for any account — see PR notes on the prod-OTP-hole fix.
+  (e) => e.NODE_ENV !== 'production' || e.TWILIO_LIVE === '1',
+  { path: ['TWILIO_LIVE'], message: 'must be "1" when NODE_ENV=production' },
+).refine(
+  // Both halves of the smoke backdoor must be set together; a half-set
+  // pair is almost always a misconfiguration (e.g. forgot to add one
+  // of the two GH Actions secrets).
+  (e) => !!e.SMOKE_TEST_PHONE === !!e.SMOKE_TEST_CODE,
+  {
+    path: ['SMOKE_TEST_PHONE'],
+    message: 'SMOKE_TEST_PHONE and SMOKE_TEST_CODE must be set together',
+  },
 );
 
 export const env = Env.parse(process.env);

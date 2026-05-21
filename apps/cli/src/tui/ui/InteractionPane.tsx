@@ -11,6 +11,7 @@
 import { Match, Show, Switch } from 'solid-js';
 import type { PromptRequest, UiStore } from './store.js';
 import { theme } from './theme.js';
+import { keymapHintFor } from './keymap.js';
 import { SelectList } from './widgets/SelectList.js';
 import { TextField } from './widgets/TextField.js';
 import { MultilineField } from './widgets/MultilineField.js';
@@ -32,43 +33,61 @@ function promptOfKind<K extends PromptRequest['kind']>(
 export function InteractionPane(props: InteractionPaneProps) {
   const prompt = () => props.ui.state.interaction.currentPrompt;
   const inFlight = () => props.ui.state.interaction.inFlight;
-  const keymapHint = () => props.ui.state.interaction.keymapHint;
+  const isViewportSelect = () => prompt()?.kind === 'viewportSelect';
+  const keymapHint = () => {
+    const p = prompt();
+    if (p?.kind === 'viewportSelect') return keymapHintFor('viewportSelect');
+    if (p?.kind === 'select') return keymapHintFor('select');
+    if (p?.kind === 'text') return keymapHintFor('text');
+    if (p?.kind === 'multiline') return keymapHintFor('multiline');
+    if (p?.kind === 'confirm') return keymapHintFor('confirm');
+    return props.ui.state.interaction.keymapHint;
+  };
 
   return (
     <box
       flexDirection="column"
       flexGrow={1}
       border
-      borderColor={theme.borderActive}
+      borderColor={isViewportSelect() ? theme.borderIdle : theme.borderActive}
       padding={1}
     >
       <box flexDirection="column" flexGrow={1}>
-        <Switch
+        <Show
+          when={!isViewportSelect()}
           fallback={
-            <Show
-              when={inFlight()}
-              fallback={<text fg={theme.fgDim}>idle</text>}
-            >
-              {(busy: () => { readonly label: string }) => <Spinner label={busy().label} />}
-            </Show>
+            <text fg={theme.fgDim}>
+              ← pick from list · ↵ open · esc back
+            </text>
           }
         >
-          <Match when={promptOfKind(prompt(), 'select')}>
-            {(p: () => Extract<PromptRequest, { kind: 'select' }>) => <SelectList ui={props.ui} prompt={p()} />}
-          </Match>
-          <Match when={promptOfKind(prompt(), 'text')}>
-            {(p: () => Extract<PromptRequest, { kind: 'text' }>) => <TextField ui={props.ui} prompt={p()} />}
-          </Match>
-          <Match when={promptOfKind(prompt(), 'multiline')}>
-            {(p: () => Extract<PromptRequest, { kind: 'multiline' }>) => <MultilineField ui={props.ui} prompt={p()} />}
-          </Match>
-          <Match when={promptOfKind(prompt(), 'filePath')}>
-            {(p: () => Extract<PromptRequest, { kind: 'filePath' }>) => <FilePathField ui={props.ui} prompt={p()} />}
-          </Match>
-          <Match when={promptOfKind(prompt(), 'confirm')}>
-            {(p: () => Extract<PromptRequest, { kind: 'confirm' }>) => <ConfirmDialog ui={props.ui} prompt={p()} />}
-          </Match>
-        </Switch>
+          <Switch
+            fallback={
+              <Show
+                when={inFlight()}
+                fallback={<text fg={theme.fgDim}>idle</text>}
+              >
+                {(busy: () => { readonly label: string }) => <Spinner label={busy().label} />}
+              </Show>
+            }
+          >
+            <Match when={promptOfKind(prompt(), 'select')}>
+              {(p: () => Extract<PromptRequest, { kind: 'select' }>) => <SelectList ui={props.ui} prompt={p()} />}
+            </Match>
+            <Match when={promptOfKind(prompt(), 'text')}>
+              {(p: () => Extract<PromptRequest, { kind: 'text' }>) => <TextField ui={props.ui} prompt={p()} />}
+            </Match>
+            <Match when={promptOfKind(prompt(), 'multiline')}>
+              {(p: () => Extract<PromptRequest, { kind: 'multiline' }>) => <MultilineField ui={props.ui} prompt={p()} />}
+            </Match>
+            <Match when={promptOfKind(prompt(), 'filePath')}>
+              {(p: () => Extract<PromptRequest, { kind: 'filePath' }>) => <FilePathField ui={props.ui} prompt={p()} />}
+            </Match>
+            <Match when={promptOfKind(prompt(), 'confirm')}>
+              {(p: () => Extract<PromptRequest, { kind: 'confirm' }>) => <ConfirmDialog ui={props.ui} prompt={p()} />}
+            </Match>
+          </Switch>
+        </Show>
       </box>
       <Show when={keymapHint()}>
         <text fg={theme.fgDim}>{keymapHint()}</text>

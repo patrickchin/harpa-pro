@@ -103,6 +103,50 @@ describe('projectsScreen', () => {
     if (session.state.kind !== 'authed') throw new Error('unreachable');
     expect(session.state.currentProject).toBeUndefined();
   });
+  it('Open project flow picks a project from the viewport and opens project-home', async () => {
+    globalThis.fetch = makeFetch({
+      '/projects/demo': PROJECTS_PAGE.items[0],
+      '/projects': PROJECTS_PAGE,
+    });
+    const session = authedSession();
+    // Sequence:
+    //   1. select "Open project" from the action menu (index 0)
+    //   2. viewportSelect → pick 'demo'
+    //   3. project-home action menu → __back__
+    //   4. projects screen action menu → __back__
+    const prompter = scriptedPrompter([
+      { kind: 'select', answer: '0' },
+      { kind: 'viewportSelect', answer: 'demo' },
+      { kind: 'select', answer: '__back__' },
+      { kind: 'select', answer: '__back__' },
+    ]);
+
+    await runScreen(prompter, session, projectsScreen());
+
+    const vs = prompter.transcript.filter((t) => t.kind === 'viewportSelect');
+    expect(vs).toHaveLength(1);
+    expect(JSON.stringify(vs[0])).toContain('demo');
+    // After the screen exits, currentProject is cleared by onExit.
+    if (session.state.kind !== 'authed') throw new Error('unreachable');
+    expect(session.state.currentProject).toBeUndefined();
+  });
+
+  it('Open project flow warns when there are no projects', async () => {
+    globalThis.fetch = makeFetch({ '/projects': { items: [], nextCursor: null } });
+    const session = authedSession();
+    const prompter = scriptedPrompter([
+      { kind: 'select', answer: '0' },           // Open project
+      { kind: 'select', answer: '__back__' },    // back out
+    ]);
+
+    await runScreen(prompter, session, projectsScreen());
+
+    const warns = prompter.transcript.filter((t) => t.kind === 'log.warn');
+    expect(warns).toHaveLength(1);
+    expect(JSON.stringify(warns[0])).toContain('No projects to open');
+    // No viewportSelect prompt should have been issued.
+    expect(prompter.transcript.filter((t) => t.kind === 'viewportSelect')).toHaveLength(0);
+  });
 });
 
 describe('projectHomeScreen', () => {

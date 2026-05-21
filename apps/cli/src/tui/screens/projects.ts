@@ -1,17 +1,19 @@
 /**
  * Projects screen — top-level entry into the project drill-down.
  *
- * Header: total count + (when available) recent project names.
- * The viewport renders the full project list. The interaction pane
- * inlines one "Open <project>" action per project so the user can
- * act on what they're already looking at — no separate picker, no
- * raw-list redundancy (see arch-tui-layout.md "context first").
+ * The viewport (left pane) renders the full project list as the
+ * default preview. The interaction menu (right pane) carries only
+ * the verbs: `Open project` · `New project` · `Refresh`.
  *
- * Picking a project sets `session.currentProject` and opens the
- * project home screen. On back-out the screen clears the current
- * project via its `onExit` so the cascade-clear invariant fires.
+ * Picking `Open project` hands focus to the viewport via a
+ * `viewportSelect` prompt. The user moves the highlight over the
+ * same rows they were already looking at and presses `↵` to open;
+ * `esc`/`h` snaps focus back to the actions menu. See
+ * arch-tui-layout.md "two-pane focus model".
+ *
+ * On back-out the screen clears `currentProject` via `onExit` so the
+ * cascade-clear invariant fires.
  */
-// chalk removed: OpenTUI viewport text is a buffer, not a tty stream.
 import type { Screen, ScreenAction, ScreenContext } from '../screen.js';
 import { runScreen } from '../screen.js';
 import { fetchAllVia } from './_fetch.js';
@@ -19,6 +21,27 @@ import { findLeaf } from '../registry-find.js';
 import { projectHomeScreen } from './project-home.js';
 import type { ProjectLike } from '../../lib/render.js';
 import type { ProjectRef } from '../session.js';
+
+const ROLE: Record<string, string> = {
+  owner: 'OWNER',
+  editor: 'EDITOR',
+  viewer: 'VIEWER',
+};
+
+function projectRow(p: ProjectLike): { label: string; columns: string[] } {
+  const name = p.name ?? p.id;
+  const role = ROLE[p.myRole] ?? p.myRole.toUpperCase();
+  const client = p.clientName ?? '(no client)';
+  const address = p.address ?? '(no address)';
+  const created = `created ${String(p.createdAt ?? '').slice(0, 10) || '?'}`;
+  const last = p.stats?.lastReportAt
+    ? `last report ${String(p.stats.lastReportAt).slice(0, 10)}`
+    : 'no reports yet';
+  return {
+    label: name,
+    columns: [`[${role}]`, client, address, created, last],
+  };
+}
 
 export function projectsScreen(): Screen {
   let items: ProjectLike[] = [];
@@ -56,11 +79,6 @@ export function projectsScreen(): Screen {
           hint: 'No projects yet.\nPick "New project" on the right to create one.',
         };
       }
-      const ROLE: Record<string, string> = {
-        owner: 'OWNER',
-        editor: 'EDITOR',
-        viewer: 'VIEWER',
-      };
       // Newest activity first.
       const sorted = [...items].sort((a, b) =>
         String(b.updatedAt ?? '').localeCompare(String(a.updatedAt ?? '')),
@@ -69,74 +87,50 @@ export function projectsScreen(): Screen {
         const name = p.name ?? p.id;
         const role = ROLE[p.myRole] ?? p.myRole.toUpperCase();
         const lines: string[] = [];
-        if (p.clientName) lines.push(`  client    ${p.clientName}`);
         if (p.address) lines.push(`  address   ${p.address}`);
+        if (p.clientName) lines.push(`  client    ${p.clientName}`);
+        lines.push(`  created   ${String(p.createdAt ?? '').slice(0, 10) || '?'}`);
         if (p.stats) {
           const last = p.stats.lastReportAt
-            ? `, last ${String(p.stats.lastReportAt).slice(0, 10)}`
-            : '';
+            ? `last ${String(p.stats.lastReportAt).slice(0, 10)}`
+            : 'none yet';
           lines.push(
-            `  reports   ${p.stats.totalReports} (${p.stats.drafts} draft${p.stats.drafts === 1 ? '' : 's'}${last})`,
+            `  reports   ${p.stats.totalReports} (${p.stats.drafts} draft${p.stats.drafts === 1 ? '' : 's'}, ${last})`,
           );
         }
-        lines.push(`  updated   ${String(p.updatedAt ?? '').slice(0, 10)}`);
-        lines.push(`  slug      ${p.id}`);
         return { title: `${name}   [${role}]`, lines };
       });
-      return { kind: 'detail', sections };
+      return { kind: 'detail' as const, sections };
     },
     actions(): ReadonlyArray<ScreenAction> {
-      const openProject = (p: ProjectLike) => (ctx: ScreenContext) => {
-        const ref: ProjectRef = { id: p.id, slug: p.id, name: p.name };
-        ctx.session.setCurrentProject(ref);
-        return projectHomeScreen();
-      };
-
-      const ROLE: Record<string, string> = {
-        owner: 'OWNER',
-        editor: 'EDITOR',
-        viewer: 'VIEWER',
-      };
-
-      const previewFor = (p: ProjectLike) => () => {
-        const name = p.name ?? p.id;
-        const role = ROLE[p.myRole] ?? p.myRole.toUpperCase();
-        const lines: string[] = [];
-        if (p.clientName) lines.push(`  client    ${p.clientName}`);
-        if (p.address) lines.push(`  address   ${p.address}`);
-        if (p.stats) {
-          const last = p.stats.lastReportAt
-            ? `, last ${String(p.stats.lastReportAt).slice(0, 10)}`
-            : '';
-          lines.push(
-            `  reports   ${p.stats.totalReports} (${p.stats.drafts} draft${p.stats.drafts === 1 ? '' : 's'}${last})`,
-          );
-        }
-        lines.push(`  created   ${String(p.createdAt ?? '').slice(0, 10)}`);
-        lines.push(`  updated   ${String(p.updatedAt ?? '').slice(0, 10)}`);
-        lines.push(`  slug      ${p.id}`);
-        const reports = p.stats?.totalReports ?? 0;
-        const drafts = p.stats?.drafts ?? 0;
-        return {
-          headline: `Project: ${name}`,
-          subline: `${role} · ${reports} report${reports === 1 ? '' : 's'} (${drafts} draft)`,
-          body: {
-            kind: 'detail' as const,
-            sections: [{ title: `${name}   [${role}]`, lines }],
-          },
-        };
-      };
-
-      const acts: ScreenAction[] = items.map((p) => ({
-        kind: 'screen',
-        label: `Open ${p.name ?? p.id}`,
-        hint: p.clientName ?? undefined,
-        open: openProject(p),
-        preview: previewFor(p),
-        refreshHeader: true,
-      }));
       return [
-        ...acts,
+        {
+          kind: 'flow',
+          label: 'Open project',
+          run: async (ctx: ScreenContext) => {
+            if (items.length === 0) {
+              ctx.prompter.log.warn('No projects to open');
+              return;
+            }
+            const sorted = [...items].sort((a, b) =>
+              String(b.updatedAt ?? '').localeCompare(String(a.updatedAt ?? '')),
+            );
+            const choice = await ctx.prompter.selectFromViewport<string>({
+              label: 'Pick a project',
+              items: sorted.map((p) => {
+                const row = projectRow(p);
+                return { value: p.id, label: row.label, columns: row.columns };
+              }),
+            });
+            if (ctx.prompter.isCancel(choice)) return;
+            const picked = sorted.find((p) => p.id === choice);
+            if (!picked) return;
+            const ref: ProjectRef = { id: picked.id, slug: picked.id, name: picked.name };
+            ctx.session.setCurrentProject(ref);
+            await runScreen(ctx.prompter, ctx.session, projectHomeScreen(), ctx.viewport);
+          },
+          refreshHeader: true,
+        },
         {
           kind: 'leaf',
           label: 'New project',

@@ -35,6 +35,19 @@ export interface SelectOpts<T extends string> {
   onHighlight?: (value: T) => void;
 }
 
+export interface ViewportSelectOpts<T extends string> {
+  label?: string;
+  items: ReadonlyArray<{
+    value: T;
+    label: string;
+    hint?: string;
+    columns?: ReadonlyArray<string>;
+  }>;
+  initialValue?: T;
+  /** Fired as the user moves the highlight in the viewport list. */
+  onHighlight?: (value: T) => void;
+}
+
 export interface ConfirmOpts {
   label: string;
   default?: boolean;
@@ -45,6 +58,12 @@ export interface Prompter {
   multiline(opts: TextOpts): Promise<string | Cancel>;
   filePath(opts: TextOpts): Promise<string | Cancel>;
   select<T extends string>(opts: SelectOpts<T>): Promise<T | Cancel>;
+  /**
+   * Focus-transfer select: picker is rendered in the ViewportPane
+   * while the InteractionPane drops to a muted hint. See
+   * arch-tui-layout.md "two-pane focus model".
+   */
+  selectFromViewport<T extends string>(opts: ViewportSelectOpts<T>): Promise<T | Cancel>;
   confirm(opts: ConfirmOpts): Promise<boolean | Cancel>;
   note(message: string, title?: string): void;
   log: {
@@ -126,6 +145,26 @@ export function opentuiPrompter(ui: UiStore): Prompter {
         (r) => (r.kind === 'cancel' ? CANCEL : ((r as { value: string }).value as T)),
       );
     },
+    selectFromViewport: <T extends string>(o: ViewportSelectOpts<T>): Promise<T | Cancel> => {
+      const req: Parameters<UiStore['setPrompt']>[0] & { kind: 'viewportSelect' } = {
+        kind: 'viewportSelect',
+        label: o.label ?? '',
+        items: o.items.map((it) => ({
+          value: it.value,
+          label: it.label,
+          ...(it.hint !== undefined ? { hint: it.hint } : {}),
+          ...(it.columns !== undefined ? { columns: it.columns } : {}),
+        })),
+        ...(o.initialValue !== undefined ? { initialValue: o.initialValue } : {}),
+        ...(o.onHighlight !== undefined
+          ? { onHighlight: (v: string) => o.onHighlight!(v as T) }
+          : {}),
+      };
+      return ask<T>(
+        req,
+        (r) => (r.kind === 'cancel' ? CANCEL : ((r as { value: string }).value as T)),
+      );
+    },
     confirm: (o) =>
       ask<boolean>(
         {
@@ -158,6 +197,7 @@ export type PromptStep =
   | { kind: 'multiline'; expectLabel?: string; answer: string | Cancel }
   | { kind: 'filePath'; expectLabel?: string; answer: string | Cancel }
   | { kind: 'select'; expectLabel?: string; answer: string | Cancel }
+  | { kind: 'viewportSelect'; expectLabel?: string; answer: string | Cancel }
   | { kind: 'confirm'; expectLabel?: string; answer: boolean | Cancel };
 
 export interface ScriptedPrompter extends Prompter {
@@ -206,6 +246,15 @@ export function scriptedPrompter(steps: ReadonlyArray<PromptStep>): ScriptedProm
     async select(o) {
       const step = next('select', o.label);
       transcript.push({ kind: 'select', payload: { label: o.label, answer: step.answer } });
+      return step.answer as never;
+    },
+    async selectFromViewport(o) {
+      const label = o.label ?? '';
+      const step = next('viewportSelect', label);
+      transcript.push({
+        kind: 'viewportSelect',
+        payload: { label, answer: step.answer, items: o.items.map((i) => i.value) },
+      });
       return step.answer as never;
     },
     async confirm(o) {

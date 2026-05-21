@@ -11,13 +11,15 @@ export interface KeyBinding {
   readonly keys: string;
   readonly description: string;
   /** Optional widget filter — undefined means "global". */
-  readonly context?: 'select' | 'text' | 'multiline' | 'confirm' | 'top';
+  readonly context?: 'select' | 'text' | 'multiline' | 'confirm' | 'top' | 'viewportSelect';
 }
 
 export const KEY_BINDINGS: ReadonlyArray<KeyBinding> = [
   { keys: 'h/l', description: 'back / open' },
   { keys: 'j/k', description: 'down / up', context: 'select' },
   { keys: '↑/↓', description: 'select', context: 'select' },
+  { keys: 'j/k', description: 'down / up', context: 'viewportSelect' },
+  { keys: '↑/↓', description: 'select', context: 'viewportSelect' },
   { keys: '↵', description: 'submit' },
   { keys: 'esc', description: 'back' },
   { keys: 'alt-↵', description: 'newline', context: 'multiline' },
@@ -30,10 +32,14 @@ export const KEY_BINDINGS: ReadonlyArray<KeyBinding> = [
 const DEFAULT_HINT =
   'j/k ↑/↓ select · l/↵ open · h/esc back · ctrl-c quit · ? help · q quit';
 
+const VIEWPORT_SELECT_HINT =
+  '↵ open · esc back · j/k ↑/↓ move';
+
 export function keymapHintFor(
   ctx: KeyBinding['context'] | undefined,
 ): string {
   if (!ctx) return DEFAULT_HINT;
+  if (ctx === 'viewportSelect') return VIEWPORT_SELECT_HINT;
   const bindings = KEY_BINDINGS.filter(
     (b) => b.context === undefined || b.context === ctx,
   );

@@ -84,6 +84,41 @@ describe('opentuiPrompter', () => {
     expect(await f).toBe('/tmp/x.jpg');
   });
 
+  it('selectFromViewport(): pushes viewportSelect prompt with items, resolves with picked value', async () => {
+    const ui = createUiStore();
+    const prompter = opentuiPrompter(ui);
+
+    const pending = prompter.selectFromViewport<string>({
+      label: 'Pick a project',
+      items: [
+        { value: 'p1', label: 'Demo', columns: ['OWNER', 'Acme'] },
+        { value: 'p2', label: 'Other' },
+      ],
+    });
+    const req = ui.state.interaction.currentPrompt;
+    expect(req?.kind).toBe('viewportSelect');
+    if (req?.kind === 'viewportSelect') {
+      expect(req.label).toBe('Pick a project');
+      expect(req.items).toEqual([
+        { value: 'p1', label: 'Demo', columns: ['OWNER', 'Acme'] },
+        { value: 'p2', label: 'Other' },
+      ]);
+    }
+    ui.resolve({ kind: 'select', value: 'p2' });
+    expect(await pending).toBe('p2');
+    expect(ui.state.interaction.currentPrompt).toBeUndefined();
+  });
+
+  it('selectFromViewport(): cancel returns CANCEL', async () => {
+    const ui = createUiStore();
+    const prompter = opentuiPrompter(ui);
+    const pending = prompter.selectFromViewport({
+      items: [{ value: 'a', label: 'A' }],
+    });
+    ui.resolve({ kind: 'cancel' });
+    expect(prompter.isCancel(await pending)).toBe(true);
+  });
+
   it('note + log.* push the latest entry into the single log slot with the right kind', async () => {
     const ui = createUiStore();
     const prompter = opentuiPrompter(ui);

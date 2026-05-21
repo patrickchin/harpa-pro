@@ -543,6 +543,52 @@ behavioural change for the non-TUI subcommands.
 
 ---
 
+## 3.X Two-pane focus model (`viewportSelect` prompt)
+
+Most screens follow the **right-pane verbs + left-pane preview**
+pattern: the user moves the highlight in the action menu and the
+viewport renders a ranger-style preview of whichever action is
+focused. For "open one of the things you're already looking at"
+verbs we hand keyboard focus to the viewport rather than building a
+duplicate picker in the right pane.
+
+Mechanism:
+
+- A new `PromptRequest` kind, `viewportSelect`, carries a list of
+  items (each with `{ value, label, hint?, columns? }`).
+- While `currentPrompt.kind === 'viewportSelect'`:
+  - the **ViewportPane** renders an OpenTUI `<select>` over the
+    items, takes `theme.borderActive`, and owns the highlight;
+  - the **InteractionPane** drops to a muted hint
+    ("← pick from list · ↵ open · esc back") and its border
+    fades to `theme.borderIdle`.
+- `↵` resolves to the highlighted value; `esc`/`h` cancels and
+  focus snaps back to the action menu.
+
+Prompter API:
+
+```ts
+prompter.selectFromViewport<T extends string>({
+  label?: string;
+  items: ReadonlyArray<{ value: T; label: string; hint?: string; columns?: string[] }>;
+  initialValue?: T;
+  onHighlight?: (value: T) => void;
+}): Promise<T | Cancel>;
+```
+
+This is just another prompt — no changes to the screen driver. A
+flow-kind action calls `selectFromViewport(...)` and handles the
+resolved value (e.g. `setCurrentProject` + recurse into
+`projectHomeScreen`). The scripted prompter exposes the parallel
+`{ kind: 'viewportSelect', answer }` step so screen tests stay
+declarative.
+
+First user: the `projects` screen. Its action menu collapses to
+three verbs (`Open project` · `New project` · `Refresh`) and the
+viewport becomes the picker.
+
+---
+
 ## 4. Test plan
 
 | Layer | Test | Replaces / adds |

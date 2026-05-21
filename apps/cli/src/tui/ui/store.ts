@@ -120,6 +120,24 @@ export type PromptRequest =
       readonly kind: 'confirm';
       readonly label: string;
       readonly default?: boolean;
+    }
+  | {
+      /**
+       * Focus-transfer prompt. While active, the picker is rendered
+       * in the ViewportPane (left) and the InteractionPane (right)
+       * drops to a muted hint. Items mirror the rich preview rows so
+       * the visual jump from "browsing" to "picking" is minimal.
+       */
+      readonly kind: 'viewportSelect';
+      readonly label: string;
+      readonly items: ReadonlyArray<{
+        readonly value: string;
+        readonly label: string;
+        readonly hint?: string;
+        readonly columns?: ReadonlyArray<string>;
+      }>;
+      readonly initialValue?: string;
+      readonly onHighlight?: (value: string) => void;
     };
 
 export type PromptResolution =

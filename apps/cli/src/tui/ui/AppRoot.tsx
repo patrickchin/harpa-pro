@@ -2,8 +2,8 @@
  * Top-level layout for the OpenTUI TUI (arch-tui-layout-v3.md §1).
  *
  *   ┌─ TopBar (breadcrumb · identity) ────────────────────────────┐
- *   │ Viewport (2fr)                ¦ Interaction (1fr)            │
- *   │ "what's here"                 ¦ "what you can do"            │
+ *   │ Interaction (1fr)             ¦ Viewport (2fr)               │
+ *   │ "what you can do"             ¦ "what's here"                │
  *   ├──────────────────────────────────────────────────────────────┤
  *   │ LogStrip (one line · fixture mode right)                     │
  *   └──────────────────────────────────────────────────────────────┘
@@ -31,11 +31,11 @@ export function AppRoot(props: AppRootProps) {
         <TopBar ui={props.ui} />
       </box>
       <box flexDirection="row" flexGrow={1}>
-        <box flexBasis={0} flexGrow={2} minWidth={32}>
-          <ViewportPane ui={props.ui} />
-        </box>
         <box flexBasis={0} flexGrow={1} minWidth={24}>
           <InteractionPane ui={props.ui} />
+        </box>
+        <box flexBasis={0} flexGrow={2} minWidth={32}>
+          <ViewportPane ui={props.ui} />
         </box>
       </box>
       <box height={1}>

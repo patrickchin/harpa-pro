@@ -8,23 +8,37 @@
  *
  * No box title — the breadcrumb in `TopBar` is the title of this
  * pane. No log tail — that moved to `LogStrip`.
+ *
+ * Focus-transfer: when the active prompt is `viewportSelect`, the
+ * body is replaced with an interactive select widget rendered in
+ * this pane, the border colour becomes `borderActive`, and the
+ * InteractionPane drops to a muted hint.
  */
-import { For, Show } from 'solid-js';
-import type { UiStore, ViewportBody, ViewportListItem } from './store.js';
+import { createMemo, For, Show } from 'solid-js';
+import { useKeyboard } from '@opentui/solid';
+import type { PromptRequest, UiStore, ViewportBody, ViewportListItem } from './store.js';
 import { theme } from './theme.js';
 
 export interface ViewportPaneProps {
   readonly ui: UiStore;
 }
 
+type ViewportSelectPrompt = Extract<PromptRequest, { kind: 'viewportSelect' }>;
+
 export function ViewportPane(props: ViewportPaneProps) {
   const v = () => props.ui.state.viewport;
+  const prompt = () => props.ui.state.interaction.currentPrompt;
+  const vsPrompt = (): ViewportSelectPrompt | undefined => {
+    const p = prompt();
+    return p?.kind === 'viewportSelect' ? p : undefined;
+  };
+  const focused = () => vsPrompt() !== undefined;
   return (
     <box
       flexDirection="column"
       flexGrow={1}
-      border={['top', 'right', 'bottom']}
-      borderColor={theme.borderIdle}
+      border
+      borderColor={focused() ? theme.borderActive : theme.borderIdle}
       padding={1}
     >
       <Show when={v().headline}>
@@ -38,8 +52,74 @@ export function ViewportPane(props: ViewportPaneProps) {
       </Show>
 
       <box flexDirection="column" flexGrow={1}>
-        <BodyView body={v().body} />
+        <Show
+          when={vsPrompt()}
+          fallback={<BodyView body={v().body} />}
+        >
+          {(p: () => ViewportSelectPrompt) => (
+            <ViewportSelect ui={props.ui} prompt={p()} />
+          )}
+        </Show>
       </box>
+    </box>
+  );
+}
+
+function rowText(it: ViewportSelectPrompt['items'][number]): string {
+  const cols = it.columns && it.columns.length > 0 ? `   ${it.columns.join('  ')}` : '';
+  const hint = !it.columns && it.hint ? `   ${it.hint}` : '';
+  return `${it.label}${cols}${hint}`;
+}
+
+function ViewportSelect(props: { ui: UiStore; prompt: ViewportSelectPrompt }) {
+  const options = createMemo(() =>
+    props.prompt.items.map((it) => ({
+      name: rowText(it),
+      description: '',
+      value: it.value,
+    })),
+  );
+  const initialIndex = () => {
+    const v = props.prompt.initialValue;
+    if (!v) return 0;
+    const i = props.prompt.items.findIndex((it) => it.value === v);
+    return i < 0 ? 0 : i;
+  };
+
+  useKeyboard((k) => {
+    if (k.name === 'escape' || (k.name === 'h' && !k.ctrl && !k.meta)) {
+      props.ui.resolve({ kind: 'cancel' });
+    }
+  });
+
+  const keyBindings = [{ name: 'l', action: 'select-current' as const }];
+
+  return (
+    <box flexDirection="column" flexGrow={1}>
+      <Show when={props.prompt.label}>
+        <text fg={theme.fgMuted}>{props.prompt.label}</text>
+        <box height={1} />
+      </Show>
+      <select
+        flexGrow={1}
+        focused
+        options={options()}
+        selectedIndex={initialIndex()}
+        focusedBackgroundColor={theme.bg}
+        selectedBackgroundColor={theme.selectionBg}
+        selectedTextColor={theme.selectionFg}
+        wrapSelection
+        keyBindings={keyBindings}
+        onChange={(_i: number, opt: { value?: unknown } | null) => {
+          const cb = props.prompt.onHighlight;
+          if (cb && opt && opt.value !== undefined) cb(String(opt.value));
+        }}
+        onSelect={(_i, opt) => {
+          if (opt) {
+            props.ui.resolve({ kind: 'select', value: String(opt.value) });
+          }
+        }}
+      />
     </box>
   );
 }
@@ -49,20 +129,20 @@ function BodyView(props: { body: ViewportBody | undefined }) {
     <Show
       when={props.body}
       fallback={<text fg={theme.fgDim}>—</text>}
+      keyed
     >
-      {(body: () => ViewportBody) => {
-        const b = body();
-        switch (b.kind) {
+      {(body: ViewportBody) => {
+        switch (body.kind) {
           case 'empty':
-            return <text fg={theme.fgDim}>{b.hint ?? '(empty)'}</text>;
+            return <text fg={theme.fgDim}>{body.hint ?? '(empty)'}</text>;
           case 'result':
-            return <text fg={theme.fg}>{b.content}</text>;
+            return <text fg={theme.fg}>{body.content}</text>;
           case 'list':
-            return <ListBody items={b.items} columnTitles={b.columnTitles} />;
+            return <ListBody items={body.items} columnTitles={body.columnTitles} />;
           case 'detail':
             return (
               <box flexDirection="column">
-                <For each={b.sections}>
+                <For each={body.sections}>
                   {(section, i) => (
                     <box flexDirection="column" marginTop={i() === 0 ? 0 : 1}>
                       <Show when={section.title}>

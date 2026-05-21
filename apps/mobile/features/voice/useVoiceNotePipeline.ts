@@ -281,7 +281,6 @@ export function useVoiceNotePipeline(
     },
     // `callAggregator` and `qc` are stable for the test/QueryClient
     // lifetime; uploader.enqueue is stable per QueueProvider.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [options.reportId, uploader],
   );
 

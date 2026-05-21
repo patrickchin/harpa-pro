@@ -148,9 +148,6 @@ function Waveform({ bars }: { bars: readonly number[] }) {
       {padded.map((amp, idx) => {
         const h = Math.max(BAR_MIN_HEIGHT, amp * BAR_MAX_HEIGHT);
         return (
-          // Index is stable (fixed-length padded array), so using it
-          // as key is correct — amplitude-as-key would thrash instances.
-          // eslint-disable-next-line react/no-array-index-key
           <WaveformBar key={idx} targetHeight={h} hasSignal={amp > 0} />
         );
       })}

@@ -12,18 +12,16 @@
  */
 import type { RecorderFactory } from './recorder-types';
 import { fixtureRecorderFactory } from './fixtureRecorder';
+import { env } from '../../lib/env';
 
 let cached: RecorderFactory | null = null;
 
 export function pickRecorderFactory(): RecorderFactory {
   if (cached) return cached;
-  const useFixtures = process.env.EXPO_PUBLIC_USE_FIXTURES === 'true';
-  if (useFixtures) {
+  if (env.EXPO_PUBLIC_USE_FIXTURES) {
     cached = fixtureRecorderFactory;
     return cached;
   }
-  // Defer the expo-audio require to keep node test environments clean.
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const { expoAudioRecorderFactory } = require('./expoAudioRecorder') as typeof import('./expoAudioRecorder');
   cached = expoAudioRecorderFactory;
   return cached;

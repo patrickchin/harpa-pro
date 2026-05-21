@@ -44,7 +44,6 @@ let cachedModule: AudioModule | null = null;
 function loadModule(): AudioModule | null {
   if (cachedModule) return cachedModule;
   try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-var-requires
     cachedModule = require('expo-audio') as AudioModule;
     return cachedModule;
   } catch {

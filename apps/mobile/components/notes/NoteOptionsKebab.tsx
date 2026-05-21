@@ -25,7 +25,7 @@ export function NoteOptionsKebab({ noteId, onPress }: NoteOptionsKebabProps) {
         // Wrapping rows (e.g. DocumentNoteRow) are themselves
         // Pressable; stop propagation so opening the menu doesn't
         // also fire the card's open-file handler.
-        e.stopPropagation?.();
+        e?.stopPropagation?.();
         onPress();
       }}
       accessibilityRole="button"

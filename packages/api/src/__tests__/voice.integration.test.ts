@@ -67,7 +67,7 @@ describe('/voice/*', () => {
     });
     expect(res.status).toBe(200);
     const body = (await res.json()) as { transcript: string };
-    expect(body.transcript).toContain('Site arrival 8:15');
+    expect(body.transcript).toContain('construction site');
   });
 
   it('POST /voice/summarize returns the recorded summary', async () => {
@@ -80,7 +80,7 @@ describe('/voice/*', () => {
     });
     expect(res.status).toBe(200);
     const body = (await res.json()) as { summary: string };
-    expect(body.summary).toContain('Crew arrived 8:15');
+    expect(body.summary).toContain('second-floor concrete pour');
   });
 
   it('POST /voice/transcribe 404 on unknown fileId', async () => {

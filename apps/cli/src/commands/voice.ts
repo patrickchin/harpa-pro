@@ -8,7 +8,7 @@
  * `Idempotency-Key` header (server-side dedupe). Pass `--fixture` to
  * pin a recorded fixture name when running against an in-process /
  * fixture-mode API. With no `--fixture`, the API falls back to
- * `transcribe.basic` / `summarize.basic`.
+ * `transcribe.voice-1` / `summarize.voice-1`.
  */
 import { defineCommand } from 'citty';
 import chalk from 'chalk';

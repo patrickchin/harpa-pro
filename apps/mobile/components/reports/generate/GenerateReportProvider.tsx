@@ -430,47 +430,42 @@ export function GenerateReportProvider({
     void inlineRecorder.cancel();
   }, [inlineRecorder]);
 
-  // Phase E: surface the in-flight pipeline as a synthetic NoteEntry
-  // so `NoteTimeline` can render the spinner/failure pill the same way
-  // it renders saved voice notes. The synthetic entry vanishes the
-  // moment the aggregator returns (the real server row arrives via
-  // the invalidated `useReportNotesQuery`).
+  // Phase E: surface the in-flight pipeline as a synthetic NoteEntry so
+  // `NoteTimeline` can render the spinner / failure pill the same way it
+  // renders saved voice notes. On `step === 'saved'` we keep a synthetic
+  // built from the server response until the invalidated `reportNotes`
+  // refetch lands the real row — otherwise the card flashes out and
+  // back in during that gap.
   const timelineItems = useMemo<readonly NoteEntry[]>(() => {
-    const pipelineStep = voicePipeline.state.step;
-    if (
-      pipelineStep === 'idle' ||
-      pipelineStep === 'saved' ||
-      !reportId
-    ) {
-      return notes;
-    }
-    const synthetic: NoteEntry = {
-      id: '__voice-pipeline-pending',
-      text: '',
-      addedAt: Date.now(),
-      source: 'voice',
-      voiceStatus:
-        pipelineStep === 'failed'
-          ? 'failed'
-          : pipelineStep === 'transcribing'
-            ? 'transcribing'
-            : 'uploading',
-      voiceError: voicePipeline.state.error,
-      fileId: voicePipeline.state.fileId,
-      durationSec: voicePipeline.state.capture?.durationSec ?? null,
-      transcript: null,
-      summary: null,
-      title: null,
-    };
+    const { step, note: savedNote, error, fileId, capture } = voicePipeline.state;
+    if (step === 'idle' || !reportId) return notes;
+    if (savedNote && notes.some((n) => n.id === savedNote.id)) return notes;
+
+    const synthetic: NoteEntry = savedNote
+      ? {
+          id: savedNote.id,
+          authorId: savedNote.authorId,
+          text: savedNote.body ?? '',
+          addedAt: new Date(savedNote.createdAt).getTime(),
+          source: 'voice',
+          fileId: savedNote.fileId,
+          durationSec: savedNote.durationSec ?? null,
+          transcript: savedNote.transcript,
+          summary: savedNote.summary ?? null,
+          title: savedNote.title ?? null,
+        }
+      : {
+          id: '__voice-pipeline-pending',
+          text: '',
+          addedAt: Date.now(),
+          source: 'voice',
+          voiceStatus: step === 'saved' ? null : step,
+          voiceError: error,
+          fileId,
+          durationSec: capture?.durationSec ?? null,
+        };
     return [...notes, synthetic];
-  }, [
-    notes,
-    reportId,
-    voicePipeline.state.step,
-    voicePipeline.state.error,
-    voicePipeline.state.fileId,
-    voicePipeline.state.capture,
-  ]);
+  }, [notes, reportId, voicePipeline.state]);
 
   const handleRetryVoice = useCallback(() => {
     void voicePipeline.retry();

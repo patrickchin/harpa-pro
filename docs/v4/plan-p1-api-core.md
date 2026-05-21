@@ -63,7 +63,7 @@ Each task = one route file + its tests + its api-contract schemas
 ### P1.6 Voice (AI)
 - [x] `POST /voice/transcribe` (Whisper via ai-fixtures).
 - [x] `POST /voice/summarize` (LLM via ai-fixtures).
-- [x] Recorded fixtures: `transcribe.basic`, `summarize.basic`.
+- [x] Recorded fixtures: `transcribe.voice-1`, `summarize.voice-1` (plus voice-2..5 variants).
 - [x] Commit: `feat(api): voice transcribe + summarize via ai-fixtures`.
 
 ### P1.7 Reports (AI)
@@ -78,7 +78,7 @@ Each task = one route file + its tests + its api-contract schemas
       (presign PUT, signed GET, server-side putObject); the headless HTML
       renderer remains a stub for P4. arch-storage.md §"Fixture mode"
       still holds: no R2 calls in CI._
-- [x] Recorded fixtures: `generate-report.full`, `generate-report.incomplete`.
+- [x] Recorded fixtures: `generate-report.voice-1` (default rich body), `generate-report.voice-4` (sparse-notes case), plus voice-2/3/5 variants.
 - [x] Commit: `feat(api): report generation + finalize + PDF rendering`.
 
 ### P1.8 Settings

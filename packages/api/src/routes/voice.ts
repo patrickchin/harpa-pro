@@ -35,6 +35,7 @@ import { createVoiceNote } from '../services/notes.js';
 import { getAiSettings } from '../services/settings.js';
 import { voiceSummarySystemPrompt, parseVoiceSummaryResponse } from '../prompts/voiceSummary.js';
 
+
 // AI route budgets (per arch-api-design.md §Rate limiting / §Idempotency).
 const MIN = 60_000;
 const transcribeRateLimit = withRateLimit({ name: 'voice.transcribe', limit: 30, windowMs: MIN });
@@ -230,10 +231,11 @@ voiceRoutes.openapi(
     if (!userId) throw new HTTPException(401);
     const body = c.req.valid('json');
     const out = await aiChat({
-      systemPrompt: 'Summarise the following transcript into a concise site-note body.',
+      systemPrompt: voiceSummarySystemPrompt(),
       userPrompt: body.transcript,
       fixtureName: body.fixtureName,
     });
-    return c.json({ summary: out.text }, 200);
+    const { summary } = parseVoiceSummaryResponse(out.text);
+    return c.json({ summary }, 200);
   },
 );

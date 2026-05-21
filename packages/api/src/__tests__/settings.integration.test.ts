@@ -77,7 +77,7 @@ describe('/settings/ai', () => {
     expect(res.status).toBe(200);
     const body = (await res.json()) as { vendor: string; model: string };
     expect(body.vendor).toBe('kimi');
-    expect(body.model).toBe('claude-3-5-sonnet');
+    expect(body.model).toBe('kimi-k2-0905-preview');
   });
 
   it('PATCH 400 on unknown vendor', async () => {

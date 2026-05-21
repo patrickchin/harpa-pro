@@ -405,6 +405,39 @@ behaviour.
 
 ---
 
+## Pitfall 16 — Derived fallback fixture name silently disables AI_LIVE
+
+**Symptom:** `AI_LIVE=1` ships to prod, secrets are set, deploy is
+green — but no request ever reaches `api.openai.com`. The provider
+keeps replaying canned fixtures.
+
+**Cause:** `packages/api/src/services/ai.ts::pickMode()` took a single
+`fixtureName` argument and short-circuited to `'replay'` whenever any
+fixture name was set. The three callers (`transcribe`, `chat`,
+`generateReport`) each derived a sensible default (`summarize.basic`,
+`transcribe.basic.groq`, …) and passed it in *unconditionally* — so
+the function always saw a fixture name, and `AI_LIVE=1` was dead
+code. A unit-style test that called `chat({ userPrompt: 'x' })`
+without a fixtureName would have caught it; we only had tests that
+asserted *replay* behaviour and passed fixture names through.
+
+**Rule:** When a function takes "the caller's intent" as an argument,
+never mix it with values you derive internally. Either:
+
+- Split into two functions ("did the caller ask for X?" vs "what's the
+  default for X?"), or
+- Pass `undefined` through and only fill the default after the
+  routing decision is made.
+
+**Test rule (Pitfall 13 corollary):** every "AI_LIVE flips the wiring"
+flag needs a positive test that boots the service *without* a caller
+fixture name, stubs `globalThis.fetch`, and asserts the request URL
+hits the live vendor. We added
+`packages/api/src/services/ai.live.test.ts` for exactly this — it
+catches the next regression in this shape.
+
+---
+
 ## How we use this doc
 
 When you finish a task and notice the bug shape matches one of these

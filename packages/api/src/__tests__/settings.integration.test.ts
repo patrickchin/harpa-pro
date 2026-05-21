@@ -56,14 +56,14 @@ describe('/settings/ai', () => {
     const patch = await app.request('/settings/ai', {
       method: 'PATCH',
       headers: headers(tok),
-      body: JSON.stringify({ vendor: 'anthropic', model: 'claude-3-5-sonnet' }),
+      body: JSON.stringify({ vendor: 'kimi', model: 'kimi-k2-0905-preview' }),
     });
     expect(patch.status).toBe(200);
     const body = (await patch.json()) as { vendor: string; model: string };
-    expect(body).toEqual({ vendor: 'anthropic', model: 'claude-3-5-sonnet' });
+    expect(body).toEqual({ vendor: 'kimi', model: 'kimi-k2-0905-preview' });
 
     const get = await app.request('/settings/ai', { headers: { authorization: `Bearer ${tok}` } });
-    expect(((await get.json()) as { vendor: string }).vendor).toBe('anthropic');
+    expect(((await get.json()) as { vendor: string }).vendor).toBe('kimi');
   });
 
   it('PATCH partial — only vendor — keeps model', async () => {
@@ -77,7 +77,7 @@ describe('/settings/ai', () => {
     expect(res.status).toBe(200);
     const body = (await res.json()) as { vendor: string; model: string };
     expect(body.vendor).toBe('kimi');
-    expect(body.model).toBe('claude-3-5-sonnet');
+    expect(body.model).toBe('kimi-k2-0905-preview');
   });
 
   it('PATCH 400 on unknown vendor', async () => {

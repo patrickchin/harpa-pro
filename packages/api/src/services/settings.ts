@@ -9,7 +9,7 @@ import * as schema from '../db/schema.js';
 
 type Db = NodePgDatabase<typeof schema>;
 
-export type AiVendor = 'kimi' | 'openai' | 'anthropic' | 'google' | 'zai' | 'deepseek';
+export type AiVendor = 'kimi' | 'openai';
 export interface AiSettings {
   vendor: AiVendor;
   model: string;

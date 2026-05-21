@@ -1,13 +1,13 @@
 {
   "vendor": "kimi",
-  "model": "moonshot-v1-8k",
+  "model": "kimi-k2-0905-preview",
   "fixtureName": "summarize.basic.kimi",
   "recordedAt": "2026-05-12T00:00:00.000Z",
-  "requestHash": "sha256:0c91597faf45d86cf02b215e13370785ac2a5a83110efea7dfcd262ec50f4d41",
+  "requestHash": "sha256:a85c6ff5b10059ff32eab7ef073517b547e517ddbef140582e376a102b668bde",
   "request": {
     "kind": "chat",
     "vendor": "kimi",
-    "model": "moonshot-v1-8k",
+    "model": "kimi-k2-0905-preview",
     "systemPrompt": "Summarise the following transcript into a concise site-note body.",
     "userPrompt": "Site arrival 8:15. Crew of three on rebar..."
   },

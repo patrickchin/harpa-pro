@@ -17,6 +17,12 @@ const Env = z.object({
   TWILIO_VERIFY_FAKE_CODE: z.string().default('000000'),
   AI_FIXTURE_MODE: z.enum(['replay', 'record', 'live']).default('replay'),
   AI_LIVE: z.enum(['0', '1']).default('0'),
+  // OpenAI is used for chat + report generation. Required when AI_LIVE=1.
+  OPENAI_API_KEY: z.string().optional(),
+  OPENAI_BASE_URL: z.string().url().optional(),
+  // Groq hosts whisper-large-v3-turbo for transcription. Required when AI_LIVE=1.
+  GROQ_API_KEY: z.string().optional(),
+  GROQ_BASE_URL: z.string().url().optional(),
   R2_FIXTURE_MODE: z.enum(['replay', 'live']).default('replay'),
   // Cloudflare R2 (S3-compatible). Required when R2_FIXTURE_MODE=live.
   R2_ACCOUNT_ID: z.string().optional(),
@@ -80,6 +86,12 @@ const Env = z.object({
 }).refine(
   (e) => e.NODE_ENV !== 'production' || !!e.MIGRATIONS_REQUIRED_HEAD,
   { path: ['MIGRATIONS_REQUIRED_HEAD'], message: 'required when NODE_ENV=production' },
+).refine(
+  (e) => e.AI_LIVE !== '1' || !!e.OPENAI_API_KEY,
+  { path: ['OPENAI_API_KEY'], message: 'required when AI_LIVE=1 (chat + report generation)' },
+).refine(
+  (e) => e.AI_LIVE !== '1' || !!e.GROQ_API_KEY,
+  { path: ['GROQ_API_KEY'], message: 'required when AI_LIVE=1 (transcription via whisper-large-v3-turbo)' },
 );
 
 export const env = Env.parse(process.env);

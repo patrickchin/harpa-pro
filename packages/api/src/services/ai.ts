@@ -20,11 +20,13 @@
 import {
   createProvider,
   FixtureMissError,
+  realProviderFactoryFromEnv,
   type AiProvider,
   type FixtureMode,
   type Vendor,
 } from '@harpa/ai-fixtures';
 import { reports as reportSchemas } from '@harpa/api-contract';
+import { env } from '../env.js';
 import type { z } from 'zod';
 
 export class AiProviderError extends Error {
@@ -139,19 +141,22 @@ EXAMPLE OUTPUT
  * fixture request-hash always matches. Update if/when fixtures are
  * re-recorded with different canonicals.
  *
- * Source of truth: packages/ai-fixtures/fixtures/{transcribe,summarize}.basic.json
+ * Source of truth: packages/ai-fixtures/fixtures/{transcribe.basic.groq,summarize.basic}.json
  *
  * Per-vendor fixture variants are stored as
- * `<base>.<vendor>.json` (e.g. `summarize.basic.anthropic`,
+ * `<base>.<vendor>.json` (e.g. `summarize.basic.kimi`,
  * `generate-report.full.kimi`). Each vendor has its own canonical
  * model — these are the model ids `getAiSettings()` may persist for
- * a user. The OpenAI fixture keeps the un-suffixed name for
- * backwards compatibility with existing callers + tests.
+ * a user. OpenAI keeps the un-suffixed `summarize.basic` / `generate-report.*`
+ * names for backwards compatibility with existing callers + tests.
+ * Transcription is groq-only (`whisper-large-v3-turbo`), so its fixture
+ * always uses the suffixed name `transcribe.basic.groq`.
  */
 export const FIXTURE_CANONICALS = {
   transcribe: {
-    name: 'transcribe.basic',
-    vendor: 'openai' as Vendor,
+    name: 'transcribe.basic.groq',
+    vendor: 'groq' as Vendor,
+    model: 'whisper-large-v3-turbo',
     audioUrl: 'https://fixtures.harpa.example/voice.fixture.m4a',
   },
   summarize: {
@@ -210,11 +215,12 @@ export const FIXTURE_CANONICALS = {
  */
 const VENDOR_MODELS: Record<Vendor, { summarize: string; report: string }> = {
   openai:    { summarize: 'gpt-4o-mini',         report: 'gpt-4o' },
-  kimi:      { summarize: 'moonshot-v1-8k',      report: 'moonshot-v1-32k' },
-  anthropic: { summarize: 'claude-3-5-haiku',    report: 'claude-3-5-sonnet' },
-  google:    { summarize: 'gemini-1.5-flash',    report: 'gemini-1.5-pro' },
-  zai:       { summarize: 'glm-4-flash',         report: 'glm-4-plus' },
-  deepseek:  { summarize: 'deepseek-chat',       report: 'deepseek-reasoner' },
+  kimi:      { summarize: 'kimi-k2-0905-preview', report: 'kimi-k2-0905-preview' },
+  // groq is transcribe-only; chat/report models are unused but the
+  // Vendor union requires an entry. Keep these unreachable in chat()
+  // / generateReport() — those callers default to 'openai' and the
+  // user-facing aiVendor enum doesn't include 'groq'.
+  groq:      { summarize: 'unused',              report: 'unused' },
 };
 
 /**
@@ -226,14 +232,41 @@ function fixtureNameFor(base: string, vendor: Vendor): string {
   return vendor === 'openai' ? base : `${base}.${vendor}`;
 }
 
-function pickMode(fixtureName?: string): FixtureMode {
-  if (fixtureName) return 'replay';
+/**
+ * Pick fixture mode for an outbound provider call.
+ *
+ * Bug (fixed P4): an earlier version derived a fixtureName fallback in
+ * every caller and passed it here, which made `AI_LIVE=1` dead code —
+ * the function always saw a fixtureName and short-circuited to
+ * `'replay'`. The contract is now explicit: only force replay when the
+ * *external* caller (route handler, CLI, test) explicitly passed
+ * `fixtureName`. Internally-derived defaults must NOT be passed in.
+ *
+ * See docs/bugs/README.md and docs/v4/pitfalls.md.
+ */
+function pickMode(callerFixtureName?: string): FixtureMode {
+  if (callerFixtureName) return 'replay';
   if (process.env.AI_LIVE === '1') return 'live';
   return 'replay';
 }
 
-function buildProvider(vendor: Vendor, fixtureName: string): AiProvider {
-  return createProvider({ vendor, fixtureMode: pickMode(fixtureName), fixtureName });
+function buildProvider(vendor: Vendor, fixtureName: string, mode: FixtureMode): AiProvider {
+  // Real adapter factory is only used in 'live' / 'record' modes. We
+  // build it lazily through @harpa/ai-fixtures so route handlers don't
+  // need to plumb anything: the factory reads OPENAI_API_KEY /
+  // GROQ_API_KEY from env and returns the appropriate adapter per
+  // vendor. Replay mode never touches it. See Pitfall 13 — this is
+  // the default wiring callers depend on.
+  const realFactory =
+    mode === 'replay'
+      ? undefined
+      : realProviderFactoryFromEnv({
+          openaiApiKey: env.OPENAI_API_KEY,
+          openaiBaseUrl: env.OPENAI_BASE_URL,
+          groqApiKey: env.GROQ_API_KEY,
+          groqBaseUrl: env.GROQ_BASE_URL,
+        });
+  return createProvider({ vendor, fixtureMode: mode, fixtureName }, realFactory);
 }
 
 async function withErrorWrap<T>(label: string, fn: () => Promise<T>): Promise<T> {
@@ -267,12 +300,12 @@ export interface TranscribeOutput {
 }
 
 export async function transcribe(input: TranscribeInput): Promise<TranscribeOutput> {
+  const mode = pickMode(input.fixtureName);
   const fixtureName = input.fixtureName ?? FIXTURE_CANONICALS.transcribe.name;
-  const mode = pickMode(fixtureName);
   const audioUrl =
     mode === 'replay' ? FIXTURE_CANONICALS.transcribe.audioUrl : input.audioUrl;
   const vendor = FIXTURE_CANONICALS.transcribe.vendor;
-  const provider = buildProvider(vendor, fixtureName);
+  const provider = buildProvider(vendor, fixtureName, mode);
   return withErrorWrap('transcribe', () => provider.transcribe({ audioUrl }));
 }
 
@@ -298,9 +331,9 @@ export interface ChatOutput {
 export async function chat(input: ChatInput): Promise<ChatOutput> {
   const vendor: Vendor = input.vendor ?? FIXTURE_CANONICALS.summarize.vendor;
   const canonicalModel = VENDOR_MODELS[vendor].summarize;
+  const mode = pickMode(input.fixtureName);
   const fixtureName =
     input.fixtureName ?? fixtureNameFor(FIXTURE_CANONICALS.summarize.name, vendor);
-  const mode = pickMode(fixtureName);
   const req =
     mode === 'replay'
       ? {
@@ -315,7 +348,7 @@ export async function chat(input: ChatInput): Promise<ChatOutput> {
           temperature: input.temperature,
           maxTokens: input.maxTokens,
         };
-  const provider = buildProvider(vendor, fixtureName);
+  const provider = buildProvider(vendor, fixtureName, mode);
   const out = await withErrorWrap('chat', () => provider.chat(req));
   return { text: out.text };
 }
@@ -399,7 +432,7 @@ export async function generateReport(input: GenerateReportInput): Promise<Genera
     if (input.fixtureName.endsWith(`.${vendor}`)) return input.fixtureName;
     return `${input.fixtureName}.${vendor}`;
   })();
-  const mode = pickMode(fixtureName);
+  const mode = pickMode(input.fixtureName);
 
   // Build the LIVE user prompt — what we'd send the real provider.
   // In replay mode this is overridden with the canonical string so the
@@ -447,7 +480,7 @@ export async function generateReport(input: GenerateReportInput): Promise<Genera
           userPrompt: liveUserPrompt,
         };
 
-  const provider = buildProvider(vendor, fixtureName);
+  const provider = buildProvider(vendor, fixtureName, mode);
   const out = await withErrorWrap('generateReport', () => provider.chat(req));
 
   let parsed: unknown;

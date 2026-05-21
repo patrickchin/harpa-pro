@@ -4,7 +4,7 @@
  *   harpa settings ai get
  *   harpa settings ai set --vendor <v> --model <m>
  *
- * Vendor must be one of kimi|openai|anthropic|google|zai|deepseek.
+ * Vendor must be one of kimi|openai.
  */
 import { defineCommand } from 'citty';
 import chalk from 'chalk';
@@ -14,9 +14,9 @@ import { executeRequest, runRequest } from '../lib/run.js';
 import { renderAiSettings, type AiSettingsLike } from '../lib/render.js';
 import type { ExitCode } from '../lib/error.js';
 
-export type Vendor = 'kimi' | 'openai' | 'anthropic' | 'google' | 'zai' | 'deepseek';
+export type Vendor = 'kimi' | 'openai';
 
-const VENDORS: readonly Vendor[] = ['kimi', 'openai', 'anthropic', 'google', 'zai', 'deepseek'];
+const VENDORS: readonly Vendor[] = ['kimi', 'openai'];
 
 export interface SettingsHandlerOptions {
   client: ApiClient;

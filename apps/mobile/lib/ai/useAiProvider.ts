@@ -24,10 +24,6 @@ const MODEL_STORAGE_KEY = 'harpa.ai_model.v1';
 export const AI_PROVIDERS = [
   { key: 'kimi', label: 'Kimi', desc: 'Cheapest, good for dev' },
   { key: 'openai', label: 'OpenAI', desc: 'Balanced quality / price' },
-  { key: 'anthropic', label: 'Anthropic', desc: 'Strong instruction following' },
-  { key: 'google', label: 'Google', desc: 'Fast, large context' },
-  { key: 'zai', label: 'Z.AI', desc: 'Strong reasoning (GLM)' },
-  { key: 'deepseek', label: 'DeepSeek', desc: 'Cheap, capable' },
 ] as const;
 
 export type AiProviderKey = (typeof AI_PROVIDERS)[number]['key'];
@@ -47,24 +43,6 @@ export const PROVIDER_MODELS: Record<AiProviderKey, { id: string; label: string 
     { id: 'gpt-4o-mini', label: 'GPT-4o mini' },
     { id: 'gpt-4o', label: 'GPT-4o' },
     { id: 'gpt-4.1-mini', label: 'GPT-4.1 mini' },
-  ],
-  anthropic: [
-    { id: 'claude-sonnet-4-20250514', label: 'Claude Sonnet 4' },
-    { id: 'claude-haiku-4-5', label: 'Claude Haiku 4.5' },
-    { id: 'claude-opus-4-1', label: 'Claude Opus 4.1' },
-  ],
-  google: [
-    { id: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash' },
-    { id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash' },
-    { id: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro' },
-  ],
-  zai: [
-    { id: 'glm-4.6', label: 'GLM-4.6' },
-    { id: 'glm-4-air', label: 'GLM-4 Air' },
-  ],
-  deepseek: [
-    { id: 'deepseek-chat', label: 'DeepSeek V3 (chat)' },
-    { id: 'deepseek-reasoner', label: 'DeepSeek R1 (reasoner)' },
   ],
 };
 

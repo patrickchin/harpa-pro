@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-export const aiVendor = z.enum(['kimi', 'openai', 'anthropic', 'google', 'zai', 'deepseek']);
+export const aiVendor = z.enum(['kimi', 'openai']);
 export type AiVendor = z.infer<typeof aiVendor>;
 
 export const aiSettings = z.object({

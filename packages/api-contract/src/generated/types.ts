@@ -3652,7 +3652,7 @@ export interface paths {
                     content: {
                         "application/json": {
                             /** @enum {string} */
-                            vendor: "kimi" | "openai" | "anthropic" | "google" | "zai" | "deepseek";
+                            vendor: "kimi" | "openai";
                             model: string;
                         };
                     };
@@ -3691,7 +3691,7 @@ export interface paths {
                 content: {
                     "application/json": {
                         /** @enum {string} */
-                        vendor?: "kimi" | "openai" | "anthropic" | "google" | "zai" | "deepseek";
+                        vendor?: "kimi" | "openai";
                         model?: string;
                     };
                 };
@@ -3705,7 +3705,7 @@ export interface paths {
                     content: {
                         "application/json": {
                             /** @enum {string} */
-                            vendor: "kimi" | "openai" | "anthropic" | "google" | "zai" | "deepseek";
+                            vendor: "kimi" | "openai";
                             model: string;
                         };
                     };

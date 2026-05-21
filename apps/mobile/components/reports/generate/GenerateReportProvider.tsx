@@ -32,6 +32,7 @@ import type { NoteEntry } from '@/lib/note-entry';
 import type { GeneratedSiteReport } from '@harpa/report-core';
 import { useInlineRecorder } from '@/features/voice/useInlineRecorder';
 import { useVoiceNotePipeline } from '@/features/voice/useVoiceNotePipeline';
+import { useAudioPlayback } from '@/lib/audio/AudioPlaybackProvider';
 import type { RecorderSnapshot } from '@/features/voice/recorder-types';
 import { AppDialogSheet } from '@/components/primitives/AppDialogSheet';
 
@@ -398,10 +399,18 @@ export function GenerateReportProvider({
   // capture we hand it to the pipeline (fire-and-forget — the
   // synthetic timeline entry below shows progress, errors surface
   // via the existing VoiceNoteCard retry pill).
+  const playback = useAudioPlayback();
   const handleVoiceStart = useCallback(() => {
     if (!reportId) return;
+    // If a previous voice note is currently playing, stop it before
+    // we take over the audio session for the mic. Otherwise on iOS
+    // the playback player would be interrupted abruptly by the
+    // category switch and the UI would never see the pause.
+    if (playback.status.playing) {
+      playback.stop();
+    }
     void inlineRecorder.start();
-  }, [reportId, inlineRecorder]);
+  }, [reportId, inlineRecorder, playback]);
   const handleVoiceStopAndSend = useCallback(() => {
     void (async () => {
       const result = await inlineRecorder.stopAndCapture();

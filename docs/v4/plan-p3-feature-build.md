@@ -522,6 +522,61 @@ route.
       Usage screen; per-event timeline ships with P3.15.4 UI.)
 - [x] Commit: `feat(api): per-user LLM token accounting on every call`.
 
+#### P3.15.6 — Voice note pipeline completion
+
+Full design + sequencing live in
+[`arch-voice-pipeline.md`](arch-voice-pipeline.md) and
+[`plan-voice-pipeline.md`](plan-voice-pipeline.md). One commit per
+phase; checkboxes here mirror the phase boundaries.
+
+- [x] **Phase A** — `arch-voice-pipeline.md` design doc;
+      `arch-mobile.md §Voice note pipeline` drift fix; this §P3.15.6
+      block; AGENTS.md fixture-stub line updated.
+- [x] **Phase B** — Drizzle migration `0004_notes_voice_columns.sql`
+      (`summary`, `duration_sec`, `language`, `transcribe_provider`,
+      `transcribed_at` on `app.notes`, all nullable, expand-only);
+      `POST /reports/:reportId/notes/voice` aggregator with
+      `withAuth + withRateLimit + withIdempotency(keyBy fileId+reportId)`;
+      `packages/api/src/prompts/voiceSummary.ts`; contract additions in
+      `packages/api-contract/src/schemas/notes.ts`;
+      `voice-aggregator.integration.test.ts` + scope test (Pitfall 13:
+      real fixture providers, no aggregator collaborator stubs).
+- [x] **Phase C** — `pnpm --filter @harpa/mobile add expo-audio`;
+      `features/voice/` directory; `VoiceRecorderModal` mounted by
+      `GenerateReportProvider` (full-screen modal with permission gate
+      via `AppDialogSheet`, record/pause/resume/stop, amplitude meter,
+      elapsed counter, discard sheet, save action); mic button on
+      `GenerateReportInputBar` opens the modal; fixture-mode stub
+      bypasses the recorder and emits
+      `apps/mobile/assets/fixtures/voice-sample.m4a`.
+- [x] **Phase D** — `useVoiceNotePipeline({ reportId })` state machine
+      (`idle → uploading → transcribing → saved | failed(step)`);
+      `useCreateVoiceNoteMutation`; `GenerateReportProvider.voice` wires
+      the modal's `onCapture` to the pipeline and exposes a `pipeline`
+      sub-surface for transcribing toasts; real `AudioPlaybackProvider`
+      backed by one `expo-audio` player (single active note, auto-
+      releases when a new URI plays).
+- [x] **Phase E** — `VoiceNoteCard` (state pill, play/pause, summary
+      preview, transcript expander, retry on `failed`); wired into
+      `NoteTimeline` (draft) and `ReportNotesPane` (saved); `noteToEntry`
+      surfaces `summary` + `transcript` separately.
+- [~] **Phase F** — AsyncStorage queue persistence + rehydrate
+      (landed); `AbortSignal` plumbed through `putToR2` and the
+      voice pipeline forwards a `clientId` dedupe key (landed);
+      client-side 16 kHz mono m4a normalisation **deferred**
+      (requires `ffmpeg-kit` native module); optional
+      `useLiveTranscript` via `expo-speech-recognition`
+      **deferred** (requires native module + permission flow). See
+      `arch-voice-pipeline.md §D9` for deferral rationale.
+- [x] **Phase G** — `.maestro/p3-15-voice-record.yaml` records via
+      the fixture stub and asserts a `VoiceNoteCard` row with
+      transcript expander; `core-end-to-end.yaml` voice step now
+      drives the recorder modal Start → Save (replaces the prior
+      double-tap on `btn-record-start` that left the recorder stuck
+      open); `arch-mobile.md` drift fixed (legend-state → hand-rolled
+      `UploadQueue`; `features/voice/` directory matches what
+      shipped); AGENTS.md fixture-stub language already accurate.
+
 **Out of scope** (kept disabled or absent until product asks):
 notifications row (stays `disabled`-styled), language / locale
 switching.

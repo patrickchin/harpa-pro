@@ -9,16 +9,21 @@
  *
  * Tests may pass a `factory` option to `useInlineRecorder`
  * directly, in which case this selector is bypassed.
+ *
+ * NOTE: reads `process.env.EXPO_PUBLIC_USE_FIXTURES` directly (rather
+ * than the parsed `lib/env`) because `fixtureRecorder.test.ts` mutates
+ * the env var at runtime to exercise both backends from a single test
+ * file — `lib/env` is parsed once at module load.
  */
 import type { RecorderFactory } from './recorder-types';
 import { fixtureRecorderFactory } from './fixtureRecorder';
-import { env } from '../../lib/env';
 
 let cached: RecorderFactory | null = null;
 
 export function pickRecorderFactory(): RecorderFactory {
   if (cached) return cached;
-  if (env.EXPO_PUBLIC_USE_FIXTURES) {
+  const useFixtures = process.env.EXPO_PUBLIC_USE_FIXTURES === 'true';
+  if (useFixtures) {
     cached = fixtureRecorderFactory;
     return cached;
   }

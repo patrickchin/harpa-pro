@@ -17,7 +17,7 @@ import { Pressable, Text, View } from 'react-native';
 import { Mic, Pause, Play } from 'lucide-react-native';
 
 import { NoteCardHeader } from '@/components/notes/NoteCardHeader';
-import { NoteOptionsKebab } from '@/components/reports/detail/NoteOptionsKebab';
+import { NoteOptionsKebab } from '@/components/notes/NoteOptionsKebab';
 import { useAudioPlayback } from '@/lib/audio/AudioPlaybackProvider';
 import { useFileSignedUrl } from '@/lib/uploads/useFileSignedUrl';
 import { colors } from '@/lib/design-tokens/colors';

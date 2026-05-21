@@ -1,64 +1,98 @@
 /**
- * NoteOptionsSheet — kebab-driven options dialog for a single
- * saved-report note row (text / voice / photo / document).
+ * NoteOptionsSheet — shared kebab-driven options dialog for a single
+ * note row (text / voice / photo / document). Used by both the
+ * saved-report Notes pane (`ReportNotesPane`) and the draft-side
+ * `NoteTimeline` so both surfaces present the same options UX.
  *
- * Replaces the inline transcript expand panel + ad-hoc actions on note
- * cards with a single themed bottom-sheet (AGENTS.md hard rule #4: no
- * Alert.alert). Always shows note metadata; for voice rows with a
- * transcript adds a "View transcript" action that opens a secondary
- * sheet with the full scrollable transcript text. Delete is funneled
- * through a destructive confirmation sub-sheet so a stray tap can't
- * lose data.
+ * Replaces inline transcript-toggle panels and ad-hoc per-card option
+ * dialogs with a single themed bottom-sheet (AGENTS.md hard rule #4:
+ * no `Alert.alert`). Always shows note metadata. Conditionally
+ * surfaces:
+ *  - "View transcript" — when the row is a voice note with transcript
+ *    or body text to show.
+ *  - "Edit" — when an `onEdit` callback is supplied (typically only
+ *    the draft-side text notes).
+ *  - "Delete" — when an `onDelete` callback is supplied. Delete is
+ *    funneled through a destructive confirmation sub-stage so a stray
+ *    tap can't lose data.
  *
- * iOS quirk: RN `Modal` cannot present a second native modal until the
- * first is fully dismissed, so transitions between sheets defer the
- * follow-up open by 600ms (same pattern used in TextNoteCard /
- * ReportActionsMenu).
+ * Stages (`menu` / `confirm-delete` / `transcript` / `edit`) reuse a
+ * single `AppDialogSheet` instance to avoid the iOS RN Modal handoff
+ * quirk (can't show a second native modal until the first fully
+ * dismisses).
  */
 import { useEffect, useState } from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import { ScrollView, Text, TextInput, View } from 'react-native';
 
 import { AppDialogSheet } from '@/components/primitives/AppDialogSheet';
 import { formatCapturedAt } from '@/lib/date';
 import { formatDuration } from '@/features/voice/voiceNoteCardHeader';
 import { getDeleteNoteDialogCopy, getDeleteVoiceNoteDialogCopy } from '@/lib/app-dialog-copy';
 
-import type { ReportNoteRow } from './ReportNotesPane';
+export type NoteOptionsKind = 'text' | 'voice' | 'photo' | 'document';
 
-const MODAL_HANDOFF_MS = 600;
-
-const KIND_LABEL: Record<ReportNoteRow['kind'], string> = {
+const KIND_LABEL: Record<NoteOptionsKind, string> = {
   text: 'Text note',
   voice: 'Voice note',
   photo: 'Photo',
   document: 'Document',
 };
 
+/**
+ * Minimal generic note shape consumed by the sheet. Both the
+ * saved-report `ReportNoteRow` and the draft-side `NoteEntry` are
+ * adapted to this shape by their hosting components.
+ */
+export interface NoteOptionsSheetItem {
+  /** Stable identifier — used for metadata + delete callback. */
+  id: string;
+  kind: NoteOptionsKind;
+  /** Plain text body (text notes) or fallback transcript text. */
+  body?: string | null;
+  title?: string | null;
+  summary?: string | null;
+  transcript?: string | null;
+  authorName?: string | null;
+  /** ISO-8601, epoch ms, or Date. Formatted via `formatCapturedAt`. */
+  capturedAt?: string | number | Date | null;
+  durationSec?: number | null;
+  fileId?: string | null;
+}
+
 export interface NoteOptionsSheetProps {
   visible: boolean;
-  note: ReportNoteRow | null;
+  note: NoteOptionsSheetItem | null;
   onClose: () => void;
-  onDelete: (noteId: string) => void;
+  /** When supplied, surfaces a destructive Delete action. */
+  onDelete?: (note: NoteOptionsSheetItem) => void;
+  /** When supplied, surfaces an Edit action with an inline editor. */
+  onEdit?: (note: NoteOptionsSheetItem, nextBody: string) => void;
   /** Disables the delete action while a mutation is in-flight. */
   deleteInFlight?: boolean;
 }
 
-type Stage = 'menu' | 'confirm-delete' | 'transcript';
+type Stage = 'menu' | 'confirm-delete' | 'transcript' | 'edit';
 
 export function NoteOptionsSheet({
   visible,
   note,
   onClose,
   onDelete,
+  onEdit,
   deleteInFlight = false,
 }: NoteOptionsSheetProps) {
   const [stage, setStage] = useState<Stage>('menu');
+  const [editDraft, setEditDraft] = useState('');
 
-  // Reset to the menu stage whenever the sheet is (re-)opened for a
-  // different note, so reopening a row doesn't land on a stale screen.
+  // Reset to the menu stage + reseed edit draft whenever the sheet is
+  // (re-)opened for a different note, so reopening a row doesn't land
+  // on a stale screen or carry over a previous draft.
   useEffect(() => {
-    if (visible) setStage('menu');
-  }, [visible, note?.id]);
+    if (visible) {
+      setStage('menu');
+      setEditDraft(note?.body?.trim() ?? '');
+    }
+  }, [visible, note?.id, note?.body]);
 
   if (!note) return null;
 
@@ -69,14 +103,14 @@ export function NoteOptionsSheet({
   const summaryText = note.kind === 'voice' ? note.summary?.trim() || null : null;
   const titleText = note.kind === 'voice' ? note.title?.trim() || null : null;
   const bodyPreview = note.body?.trim() || null;
-  const capturedDisplay = formatCapturedAt(note.createdAt);
+  const capturedDisplay = formatCapturedAt(note.capturedAt ?? null);
   const deleteCopy =
     note.kind === 'voice'
       ? getDeleteVoiceNoteDialogCopy()
       : getDeleteNoteDialogCopy();
 
   // ── Stage: confirm delete ────────────────────────────────────────
-  if (stage === 'confirm-delete') {
+  if (stage === 'confirm-delete' && onDelete) {
     return (
       <AppDialogSheet
         visible={visible}
@@ -92,7 +126,7 @@ export function NoteOptionsSheet({
             variant: 'destructive',
             disabled: deleteInFlight,
             testID: 'btn-note-options-confirm-delete',
-            onPress: () => onDelete(note.id),
+            onPress: () => onDelete(note),
           },
           {
             label: deleteCopy.cancelLabel ?? 'Cancel',
@@ -138,26 +172,78 @@ export function NoteOptionsSheet({
     );
   }
 
+  // ── Stage: edit body (text-style notes with onEdit) ──────────────
+  if (stage === 'edit' && onEdit) {
+    const trimmed = editDraft.trim();
+    const original = note.body?.trim() ?? '';
+    const canSave = trimmed.length > 0 && trimmed !== original;
+    return (
+      <AppDialogSheet
+        visible={visible}
+        title="Edit note"
+        onClose={onClose}
+        actions={[
+          {
+            label: 'Save',
+            variant: 'default',
+            disabled: !canSave,
+            testID: 'btn-note-options-save-edit',
+            onPress: () => {
+              if (!canSave) return;
+              onEdit(note, trimmed);
+            },
+          },
+          {
+            label: 'Cancel',
+            variant: 'quiet',
+            testID: 'btn-note-options-cancel-edit',
+            onPress: () => setStage('menu'),
+          },
+        ]}
+      >
+        <TextInput
+          value={editDraft}
+          onChangeText={setEditDraft}
+          multiline
+          autoFocus
+          textAlignVertical="top"
+          className="min-h-[96px] rounded-md border border-border bg-background p-3 text-base text-foreground"
+          testID="input-note-options-edit"
+        />
+      </AppDialogSheet>
+    );
+  }
+
   // ── Stage: main options menu ─────────────────────────────────────
-  const actions = [];
+  const actions: Array<Parameters<typeof AppDialogSheet>[0]['actions'][number]> =
+    [];
   if (note.kind === 'voice' && transcriptText) {
     actions.push({
       label: 'View transcript',
       variant: 'secondary' as const,
       testID: 'btn-note-options-view-transcript',
+      onPress: () => setStage('transcript'),
+    });
+  }
+  if (onEdit && (note.kind === 'text' || note.kind === 'document')) {
+    actions.push({
+      label: 'Edit',
+      variant: 'secondary' as const,
+      testID: 'btn-note-options-edit',
       onPress: () => {
-        // Same-sheet stage swap — no native-modal handoff needed
-        // because we're reusing the same Modal instance.
-        setStage('transcript');
+        setEditDraft(note.body?.trim() ?? '');
+        setStage('edit');
       },
     });
   }
-  actions.push({
-    label: 'Delete',
-    variant: 'destructive' as const,
-    testID: 'btn-note-options-delete',
-    onPress: () => setStage('confirm-delete'),
-  });
+  if (onDelete) {
+    actions.push({
+      label: 'Delete',
+      variant: 'destructive' as const,
+      testID: 'btn-note-options-delete',
+      onPress: () => setStage('confirm-delete'),
+    });
+  }
   actions.push({
     label: 'Cancel',
     variant: 'quiet' as const,
@@ -237,5 +323,6 @@ function MetaRow({ label, value, mono }: MetaRowProps) {
 }
 
 // Exported for tests / future cross-modal handoffs that need the same
-// 600ms iOS defer used by TextNoteCard / ReportActionsMenu.
-export const NOTE_OPTIONS_MODAL_HANDOFF_MS = MODAL_HANDOFF_MS;
+// 600ms iOS defer used by TextNoteCard / ReportActionsMenu when
+// transitioning between distinct native Modals.
+export const NOTE_OPTIONS_MODAL_HANDOFF_MS = 600;

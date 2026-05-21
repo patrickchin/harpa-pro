@@ -27,8 +27,8 @@ import { NoteCardHeader } from '@/components/notes/NoteCardHeader';
 import { PhotoNoteRow } from '@/components/reports/detail/PhotoNoteRow';
 import { VoiceNoteRow } from '@/components/reports/detail/VoiceNoteRow';
 import { DocumentNoteRow } from '@/components/reports/detail/DocumentNoteRow';
-import { NoteOptionsKebab } from '@/components/reports/detail/NoteOptionsKebab';
-import { NoteOptionsSheet } from '@/components/reports/detail/NoteOptionsSheet';
+import { NoteOptionsKebab } from '@/components/notes/NoteOptionsKebab';
+import { NoteOptionsSheet } from '@/components/notes/NoteOptionsSheet';
 import { useDeleteNoteMutation } from '@/lib/api/hooks';
 import { colors } from '@/lib/design-tokens/colors';
 
@@ -76,13 +76,33 @@ export function ReportNotesPane({
     () => sorted.find((n) => n.id === activeNoteId) ?? null,
     [sorted, activeNoteId],
   );
+  // Adapt `ReportNoteRow` → generic `NoteOptionsSheetItem`. Most
+  // fields line up 1:1; only `createdAt` → `capturedAt` is renamed.
+  const activeSheetItem = useMemo(
+    () =>
+      activeNote
+        ? {
+            id: activeNote.id,
+            kind: activeNote.kind,
+            body: activeNote.body,
+            title: activeNote.title ?? null,
+            summary: activeNote.summary ?? null,
+            transcript: activeNote.transcript ?? null,
+            authorName: activeNote.authorName ?? null,
+            capturedAt: activeNote.createdAt,
+            durationSec: activeNote.durationSec ?? null,
+            fileId: activeNote.fileId ?? null,
+          }
+        : null,
+    [activeNote],
+  );
 
   const deleteNote = useDeleteNoteMutation();
   const handleOpenOptions = (id: string) => setActiveNoteId(id);
   const handleCloseOptions = () => setActiveNoteId(null);
-  const handleDelete = (noteId: string) => {
+  const handleDelete = (note: { id: string }) => {
     deleteNote.mutate(
-      { params: { note: noteId } as never },
+      { params: { note: note.id } as never },
       {
         onSettled: () => {
           // Close regardless of success/failure; failure surfaces via
@@ -183,8 +203,8 @@ export function ReportNotesPane({
       </Text>
 
       <NoteOptionsSheet
-        visible={activeNote !== null}
-        note={activeNote}
+        visible={activeSheetItem !== null}
+        note={activeSheetItem}
         onClose={handleCloseOptions}
         onDelete={handleDelete}
         deleteInFlight={deleteNote.isPending}

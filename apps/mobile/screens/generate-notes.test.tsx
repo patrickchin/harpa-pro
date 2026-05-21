@@ -103,22 +103,18 @@ describe('GenerateNotes', () => {
   it('hides the input bar + action row when canWrite=false', () => {
     const tree = render(<GenerateNotes {...baseProps} canWrite={false} />);
     expect(
-      tree.root.findAllByProps({ testID: 'input-text-note' }),
+      tree.root.findAllByProps({ testID: 'input-note' }),
     ).toHaveLength(0);
     expect(
       tree.root.findAllByProps({ testID: 'btn-generate-update-report' }),
-    ).toHaveLength(0);
-    expect(
-      tree.root.findAllByProps({ testID: 'btn-generate-report' }),
     ).toHaveLength(0);
   });
 
   it('shows input bar + action row when canWrite=true', () => {
     const tree = render(<GenerateNotes {...baseProps} />);
-    expect(() => tree.root.findByProps({ testID: 'input-text-note' })).not.toThrow();
-    // No report yet → first-generate button
+    expect(() => tree.root.findByProps({ testID: 'input-note' })).not.toThrow();
     expect(() =>
-      tree.root.findByProps({ testID: 'btn-generate-report' }),
+      tree.root.findByProps({ testID: 'btn-generate-update-report' }),
     ).not.toThrow();
   });
 
@@ -130,19 +126,19 @@ describe('GenerateNotes', () => {
     // Type into the input
     act(() => {
       tree.root
-        .findByProps({ testID: 'input-text-note' })
+        .findByProps({ testID: 'input-note' })
         .props.onChangeText('  Slab pour scheduled  ');
     });
     // Press Add (only rendered when input has non-whitespace content)
     act(() => {
-      tree.root.findByProps({ testID: "btn-send-text-note" }).props.onPress();
+      tree.root.findByProps({ testID: 'btn-add-note' }).props.onPress();
     });
     expect(onAddTextNote).toHaveBeenCalledWith('Slab pour scheduled');
   });
 
   it('does NOT render the Add button while input is empty', () => {
     const tree = render(<GenerateNotes {...baseProps} />);
-    expect(tree.root.findAllByProps({ testID: "btn-send-text-note" })).toHaveLength(0);
+    expect(tree.root.findAllByProps({ testID: 'btn-add-note' })).toHaveLength(0);
     expect(() =>
       tree.root.findByProps({ testID: 'btn-camera-capture' }),
     ).not.toThrow();
@@ -170,26 +166,20 @@ describe('GenerateNotes', () => {
     // Tap the per-row options button on the first note (sourceIndex=0).
     act(() => {
       tree.root
-        .findByProps({ testID: 'btn-text-note-options-0' })
+        .findByProps({ testID: 'btn-note-options-0' })
         .props.onPress();
     });
-    // Tap "Delete" in the options sheet.
+    // Tap "Delete" in the shared options sheet.
     act(() => {
       tree.root
-        .findByProps({ testID: 'btn-delete-note-n1' })
+        .findByProps({ testID: 'btn-note-options-delete' })
         .props.onPress();
     });
-    // Delete handler defers the onRemove call by 350ms so the
-    // options Modal can dismiss before the confirm Modal mounts.
-    act(() => {
-      vi.runAllTimers();
-    });
-    // Provider-owned confirm dialog now visible: find the confirm
-    // action by accessibilityLabel (multiple AppDialogSheets are
-    // mounted so the auto `dialog-action-0` testID is ambiguous).
+    // Same-Modal stage swap to the destructive confirm — no native
+    // handoff timer to flush.
     act(() => {
       tree.root
-        .findByProps({ accessibilityLabel: 'Confirm delete note' })
+        .findByProps({ testID: 'btn-note-options-confirm-delete' })
         .props.onPress();
     });
     expect(onDeleteNote).toHaveBeenCalledTimes(1);
@@ -202,11 +192,11 @@ describe('GenerateNotes', () => {
     );
     act(() => {
       tree.root
-        .findByProps({ testID: 'btn-text-note-options-0' })
+        .findByProps({ testID: 'btn-note-options-0' })
         .props.onPress();
     });
     expect(
-      tree.root.findAllByProps({ testID: 'dialog-action-text-note-edit-0' }),
+      tree.root.findAllByProps({ testID: 'btn-note-options-edit' }),
     ).toHaveLength(0);
   });
 
@@ -221,26 +211,22 @@ describe('GenerateNotes', () => {
     );
     act(() => {
       tree.root
-        .findByProps({ testID: 'btn-text-note-options-0' })
+        .findByProps({ testID: 'btn-note-options-0' })
         .props.onPress();
     });
     act(() => {
       tree.root
-        .findByProps({ testID: 'dialog-action-text-note-edit-0' })
+        .findByProps({ testID: 'btn-note-options-edit' })
         .props.onPress();
-    });
-    // setTimeout-deferred Modal mount: flush timers.
-    act(() => {
-      vi.runAllTimers();
     });
     act(() => {
       tree.root
-        .findByProps({ testID: 'input-text-note-edit-0' })
+        .findByProps({ testID: 'input-note-options-edit' })
         .props.onChangeText('  Updated crew note  ');
     });
     act(() => {
       tree.root
-        .findByProps({ testID: 'dialog-action-text-note-save-0' })
+        .findByProps({ testID: 'btn-note-options-save-edit' })
         .props.onPress();
     });
     expect(onUpdateNote).toHaveBeenCalledTimes(1);

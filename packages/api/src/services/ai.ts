@@ -506,11 +506,20 @@ export async function generateReport(input: GenerateReportInput): Promise<Genera
     ? `EXISTING REPORT:\n${JSON.stringify(input.existingBody)}\n\nNEW NOTES:\n${input.notes}`
     : input.notes;
 
-  // Pick the right system prompt for the path. Update prompt preserves
-  // manual edits; cold-start prompt generates from scratch.
-  const systemPrompt = isUpdate
-    ? canonicals.updateSystemPrompt
-    : canonicals.systemPrompt;
+  // Pick the right system prompt for the path. In replay mode the
+  // selection is keyed off the fixture being replayed so that callers
+  // who pass a cold-start fixture name (e.g. `generate-report.incomplete`)
+  // alongside an `existingBody` still hit the recorded canonical
+  // request — `incomplete` / `full` were recorded against the cold-start
+  // SYSTEM_PROMPT; only `update.*` was recorded against the update prompt.
+  const systemPrompt =
+    mode === 'replay'
+      ? fixtureName === updateName
+        ? canonicals.updateSystemPrompt
+        : canonicals.systemPrompt
+      : isUpdate
+        ? canonicals.updateSystemPrompt
+        : canonicals.systemPrompt;
 
   const req =
     mode === 'replay'

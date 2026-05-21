@@ -278,14 +278,14 @@ describe('reports AI/PDF', () => {
     const res = await app.request(`/projects/${aliceProjSlug}/reports/${reportNumber}/regenerate`, {
       method: 'POST',
       headers: headers(tok),
-      body: JSON.stringify({ fixtureName: 'generate-report.incomplete' }),
+      body: JSON.stringify({ fixtureName: 'generate-report.voice-4' }),
     });
     expect(res.status).toBe(200);
     const body = (await res.json()) as {
       report: { body: { workers: unknown[]; summarySections: { title: string }[] } };
     };
     expect(body.report.body.workers).toEqual([]);
-    expect(body.report.body.summarySections[0]?.title).toBe('Notes captured');
+    expect(body.report.body.summarySections[0]?.title).toBe('Site Status');
   });
 
   it('POST /reports/:id/pdf returns a signed URL pointing at the rendered key', async () => {

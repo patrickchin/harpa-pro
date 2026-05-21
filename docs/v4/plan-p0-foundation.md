@@ -11,7 +11,7 @@
 ## Exit gate
 
 - [x] `pnpm install && pnpm build && pnpm typecheck && pnpm lint && pnpm test` all green at the repo root.
-- [x] `packages/ai-fixtures` ships with at least one recorded fixture (`transcribe.basic`) and the replay test is green.
+- [x] `packages/ai-fixtures` ships with at least one recorded fixture (`transcribe.voice-1`) and the replay test is green.
 - [x] `packages/api` exposes `POST /auth/otp/start` + `POST /auth/otp/verify` + `GET /me` against a Twilio sandbox; integration test green.
 - [x] `withScopedConnection` works against Testcontainers Postgres; one paired scope test green.
 - [x] CI workflow `pr-preview.yml` creates a Neon branch, runs migrations, and tears it down on close.
@@ -54,7 +54,7 @@
 - [x] OpenAI adapter (transcription stub via Whisper).
 - [x] `record` mode (real call) + `replay` mode (fixture lookup).
 - [x] Redaction module (phone/email/uuid/keys).
-- [x] One recorded fixture committed: `transcribe.basic`.
+- [x] One recorded fixture committed: `transcribe.voice-1`.
 - [x] Vitest test for replay; CI asserts `AI_FIXTURE_MODE=replay`.
 - [x] Commit: `feat(ai-fixtures): record + replay layer with first fixture`.
 

@@ -31,24 +31,21 @@ packages/ai-fixtures/
     redact.ts          # PII redaction
     hash.ts            # canonical-json hash for fixture lookup
   fixtures/
-    transcribe.basic.json              # openai (Whisper) — only vendor with transcribe
-    summarize.basic.json               # openai default
-    summarize.basic.<vendor>.json      # one per non-default vendor
-    generate-report.full.json          # openai default
-    generate-report.full.<vendor>.json
-    generate-report.incomplete.json    # openai default
-    generate-report.incomplete.<vendor>.json
+    transcribe.voice-{1..5}.json        # five real site-walk transcripts
+    summarize.voice-{1..5}.json         # title + summary per transcript
+    generate-report.voice-{1..5}.json   # full report body per transcript
     …
   package.json
 ```
 
-`<vendor>` ∈ {`kimi`, `anthropic`, `google`, `zai`, `deepseek`}.
-OpenAI keeps the un-suffixed names for backwards compat.
-`services/ai.ts` picks the per-vendor fixture name based on the
-caller's `vendor` argument (which the route handler reads from
-`getAiSettings()` once that's wired). Each vendor has its own
-canonical model id (e.g. `claude-3-5-haiku` for anthropic
-summarize) — see `VENDOR_MODELS` in `packages/api/src/services/ai.ts`.
+Five scenarios — `voice-1` … `voice-5` — each backed by a single
+real construction-site voice memo. `voice-1` is the rich default; `voice-4`
+is the sparse case (empty `workers`/`materials`, one summary section)
+exercised by the regenerate test. Per-vendor fixture variants were
+removed: a single set of OpenAI fixtures covers every scenario in
+replay mode. The per-user `AiVendor` preference is still tracked for
+live-mode routing and accounting; it no longer steers fixture
+selection.
 
 ## Modes
 
@@ -98,12 +95,12 @@ A fixture file:
 {
   "vendor": "openai",
   "model": "gpt-4o-mini",
-  "fixtureName": "transcribe.basic",
+  "fixtureName": "transcribe.voice-1",
   "recordedAt": "2026-05-12T00:00:00Z",
   "requestHash": "sha256:a7c3…",
   "request": { "...redacted summary..." : true },
   "response": {
-    "text": "Site arrival 8:15. Crew of three…",
+    "text": "I just arrived at the site, so the construction site…",
     "usage": { "input": 12, "output": 88 }
   }
 }
@@ -119,7 +116,7 @@ export const transcribe = (audioUrl: string) =>
   createProvider({
     vendor: 'openai',
     fixtureMode: env.AI_FIXTURE_MODE,
-    fixtureName: 'transcribe.basic',
+    fixtureName: 'transcribe.voice-1',
   }).transcribe({ audioUrl });
 ```
 
@@ -132,11 +129,11 @@ header `X-Fixture-Name` accepted only when
 
 ```bash
 # 1. Set creds, set mode, run a single test that exercises the path.
-AI_FIXTURE_MODE=record OPENAI_API_KEY=… pnpm test:api -- transcribe.basic
+AI_FIXTURE_MODE=record OPENAI_API_KEY=… pnpm test:api -- transcribe.voice-1
 
 # 2. Inspect, commit.
-git add packages/ai-fixtures/fixtures/transcribe.basic.json
-git commit -m "test(ai-fixtures): record transcribe.basic"
+git add packages/ai-fixtures/fixtures/transcribe.voice-1.json
+git commit -m "test(ai-fixtures): record transcribe.voice-1"
 ```
 
 Pre-commit hook checks fixture files for un-redacted strings
@@ -149,4 +146,4 @@ The `:mock` build sets `EXPO_PUBLIC_USE_FIXTURES=true`, which makes
 the API client always send `X-Fixture-Mode: replay` and pick a
 predictable fixture name based on the screen flow being demoed
 (e.g. recording a voice note in `:mock` always replays
-`transcribe.basic` then `summarize.basic`).
+`transcribe.voice-1` then `summarize.voice-1`).

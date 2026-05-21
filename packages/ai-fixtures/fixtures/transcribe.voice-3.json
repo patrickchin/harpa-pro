@@ -1,0 +1,16 @@
+{
+  "vendor": "openai",
+  "model": "whisper-1",
+  "fixtureName": "transcribe.voice-3",
+  "recordedAt": "2026-05-12T00:00:00.000Z",
+  "requestHash": "sha256:019cc6e36a3099de5a36f388d8c05409386f32c3bc976d60e68f00a0bd08c2f6",
+  "request": {
+    "kind": "transcribe",
+    "vendor": "openai",
+    "audioUrl": "https://fixtures.harpa.example/voice-3.fixture.m4a"
+  },
+  "response": {
+    "text": "I just arrived at the site. The ground is very very terrible for work and I think it's been raining last night the whole night and then this morning also. It's currently 10 a.m. in the morning. It stops raining but the ground is waterlogged and it's very difficult to work. on the site so but I would get to like the construction site where the construction is happening and then try to talk to some of the workers and see if what what can be done today so I have spoken to like few of the workers like you're the electricians are not here yet yeah but like the second floor has been floated and the concrete has hardened and I think it has been floated like since a week ago so the next phase of like the next phase of the world like installing like the drywalls can be done but like we're waiting on the electricians and then see what like what's like the project scope is because i had like some of them have not been paid for the like the old work like the past work they've done so i guess like this bill of worker issues with that and then we'll see like if we can put those as an areas about a backlog of pay and then they can start like the new work with the drywall and pass like the electric cables in the wall and yeah",
+    "durationSec": 138.5
+  }
+}

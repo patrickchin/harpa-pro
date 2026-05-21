@@ -59,12 +59,12 @@ RID=$(curl -sX POST $B/projects/$PID/reports -H "$H" -H "$J" \
   -d '{}' | jq -r .id)
 
 # --- P1.7 reports AI/PDF -----------------------------------------------
-# generate (default fixture: generate-report.full)
+# generate (default fixture: generate-report.voice-1)
 curl -sX POST $B/reports/$RID/generate   -H "$H" -H "$J" -d '{}' | jq
 
-# regenerate with the alternate fixture
+# regenerate with the sparse-notes fixture
 curl -sX POST $B/reports/$RID/regenerate -H "$H" -H "$J" \
-  -d '{"fixtureName":"generate-report.incomplete"}' | jq
+  -d '{"fixtureName":"generate-report.voice-4"}' | jq
 
 # pdf — returns signed URL with server-built key users/<userId>/pdf/<uuid>.pdf
 curl -sX POST $B/reports/$RID/pdf        -H "$H" -H "$J" | jq
@@ -117,8 +117,9 @@ curl -sX POST $B/auth/logout -H "$H" | jq
   are normalised to these in replay mode so the request hash always
   matches the recorded fixtures under
   `packages/ai-fixtures/fixtures/`.
-- Available report fixtures: `generate-report.full` (default) and
-  `generate-report.incomplete`.
+- Available report fixtures: `generate-report.voice-1` (default, rich
+  body) through `generate-report.voice-5`. `voice-4` is the sparse
+  case (empty workers/materials, single summary section).
 - Server builds every storage key (`users/<userId>/<kind>/<uuid>.<ext>`).
   Client never specifies a key.
 - `R2Storage.{presign, signGet, putObject}` are stubs that throw —

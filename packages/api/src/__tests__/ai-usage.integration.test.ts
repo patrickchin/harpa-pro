@@ -114,7 +114,7 @@ describe('llm_usage_events default wiring (Pitfall 13)', () => {
     expect(row.operation).toBe('chat');
     expect(row.status).toBe('ok');
     expect(row.fixture_mode).toBe('replay');
-    // The summarize.basic fixture carries a recorded usage block — if
+    // The summarize.voice-1 fixture carries a recorded usage block — if
     // these are zero the chokepoint is no longer threading usage data
     // (likely a stubbed factory).
     expect(row.input_tokens).toBeGreaterThan(0);

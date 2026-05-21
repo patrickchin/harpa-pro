@@ -157,28 +157,53 @@ EXAMPLE OUTPUT
 {"report":{"meta":{"title":"East footing","reportType":"daily","summary":"Concrete pour completed; rebar delivery delayed","visitDate":null},"weather":null,"workers":null,"materials":[{"name":"Concrete","quantity":"50","quantityUnit":"m³","condition":null,"status":"delivered","notes":null}],"issues":[{"title":"Rebar delivery delayed","category":"other","severity":"medium","status":"open","details":"Rebar delivery delayed to tomorrow morning.","actionRequired":null}],"nextSteps":["Cure for 24h","Follow up on rebar delivery"],"sections":[{"title":"Foundation Work","content":"Pour completed in zone A."}]}}`;
 
 /**
- * Canonical inputs for the checked-in default fixtures. Replay-mode
+ * Canonical inputs for the checked-in voice-note fixtures. Replay-mode
  * normalisation rewrites caller-supplied values to these so that the
  * fixture request-hash always matches. Update if/when fixtures are
  * re-recorded with different canonicals.
  *
- * Source of truth: packages/ai-fixtures/fixtures/{transcribe,summarize}.basic.json
+ * Five scenarios — `voice-1` … `voice-5` — each backed by a real
+ * site-walk transcript. Source of truth:
+ *   packages/ai-fixtures/fixtures/{transcribe,summarize,generate-report}.voice-N.json
  *
- * Per-vendor fixture variants are stored as
- * `<base>.<vendor>.json` (e.g. `summarize.basic.anthropic`,
- * `generate-report.full.kimi`). Each vendor has its own canonical
- * model — these are the model ids `getAiSettings()` may persist for
- * a user. The OpenAI fixture keeps the un-suffixed name for
- * backwards compatibility with existing callers + tests.
+ * Per-vendor fixture variants have been removed: a single set of OpenAI
+ * fixtures covers every scenario. The per-user `AiVendor` preference is
+ * still tracked for live-mode routing and accounting, but replay always
+ * resolves through these canonicals.
  */
+type ScenarioKey = 'voice-1' | 'voice-2' | 'voice-3' | 'voice-4' | 'voice-5';
+
+export const DEFAULT_SCENARIO: ScenarioKey = 'voice-1';
+const SCENARIOS: readonly ScenarioKey[] = ['voice-1', 'voice-2', 'voice-3', 'voice-4', 'voice-5'];
+
+/**
+ * Canonical transcript text per scenario — what the recorded
+ * `summarize.voice-N.json` fixture was hashed against as `userPrompt`.
+ * Keep in sync with the `response.text` of `transcribe.voice-N.json`.
+ */
+const SUMMARIZE_USER_PROMPTS: Record<ScenarioKey, string> = {
+  'voice-1':
+    "I just arrived at the site, so the construction site, and I can see, I think, like the entrance gate. There's some problems with it. It cannot be opened clearly for like a bigger truck to be able to pass through. So, like, there's a bit of a problem with the door, the entrance door of the construction site. So it might be an issue if we have like delivery trucks coming in. So yeah, but yeah, I'm heading in now. And yeah, like the ground is a bit like waterlogged because like the rain of last night. So there seemed to be like a lot of potholes and a little bit difficult for people to walk through the site. but yeah but i would go check with like the workers and see if everybody has on like their ppe and then make sure like all the safety rules are followed before like a construction commence i think today like you're floating the second floor so i guess it will be more of like checking the curing state of the concrete. Sorry, like they're going to be pouring concrete for like the second floor and then also like checking the current state of like the floor beneath because that because that was poured I think seven days ago The concrete strength might have reached its seven strength I guess like 30 MPa of strength. So I'm on my way to the workers and I'll check the current progress of the work. yeah so i see like uh they are like the the uh the workers for like the uh the mixed truck uh for the cement and then also uh the foreman for like uh the uh concrete works they're also like there uh i think i can count like uh six for one for like the concrete works and then two for the concrete mix, the concrete mix machine. So I would say like, well, so far like everything is going on. Well, so to ask when like the, if like how far like the work would be done for today and see if there has to be like further concrete pour for tomorrow. And also I check like if there is enough mix enough concrete mix for like to do this work and yeah and then I get back to it on that so i guess i go in the in the structure and then look around and see the quality of work and see yeah and see how like progress has been you know um yeah so i found like there's like a lot of uh tools like the on the floor which might be a safety issues for the workers so I'll try to see if there can be because I told like some of the workers to like pick the tools and I put it on the side of like one of like the tool shed but try to see like if we can find a way to like make things more organized so that there is safety on site and yeah yeah so so I'll go like to storage room and see like the materials that it has been delivered yeah so yeah so like yeah so far like the cement bags are here and like the plaster also is here and they like there's some like wood like it was how do I say I just had wood for the foam work I guess like tomorrow some of the formwork workers would be here to do the other side of the building, to create formwork for the other side of the building. And then the concrete works for that side would also commence afterwards and yeah so i guess like all those hair wood has been delivered and i see like the rebuys here some but like there a bit of rust in some so i don't know it's probably because of like last night rain and i guess like the storage room is a bit of it's a bit damp and like there's a bit of rust on the rebars that are stored here so we'd see like if we could like put some oil and lubricate them and it's like keep it to like uh how do you say prevent water from like uh touching like the iron in it so like to prevent the rust yeah but yeah so far like everything is good so i guess like there would be there'll be two more concrete mix trucks that will be coming later today so I'll see if I can stay for a couple of hours and see if I can meet with the truck delivery guys and then try to talk with them about like the other side of the building because like that those foam works would be started like tomorrow and then hopefully by next week we can have like the concrete mix done for that side and yeah so like yeah so i've gone up and then to check like the curing of like the concrete everything is fine like the great the quality of work is good so far so yeah",
+  'voice-2':
+    "yeah so this is like the 12 of April 2026 and it's like 7 30 in the morning I'm at the side and we're building a an LGS like frame for the modular house that we're supposed to like a send to like a client from the Stonebridge company yeah so the water is good like the weather condition is good like no rain for the past few days now today also there's no rain it's sunny and so far like the workers are now coming in so like we have let's say three three electricians and then four LGS framers that like start that will start like framing the shell of the structure and And yeah, the LGS panels are already here. Like all the structural frames are already here. And it like the flat screws and then some other types of screws for like the framing are still yet to be delivered But I guess the flat-heart screws would be enough for the initial starting point of the frame. So I'll go talk to some of the crews and see what's their progress. So I guess they already started the framing and they're still waiting for the other screw types, but they already started work. So everything is going as planned so far. But they complained about the site's condition because things are not organized at the warehouse. So where things are placed, like the equipment and machineries, help them work. So some of them have to find where those tools were. So I guess we have to find a way to organize the place so that it easier to find tools and to reduce the delay starting work So I go to storage room and see like which materials we have at the store and see like because like there supposed to be some deliveries I don know like when that would happen but I have to like check with like the store manager and see when the deliveries have been brought yeah okay so like we have some OSB boards and some VCL membranes for like a damp preventing yeah so I guess like that would be for like the flooring the flooring is not yet like probably next week the flooring will happen so like you're just like the wall framing that's going on currently with the LGS that have been delivered so I guess like they will only need like the OSB boards and some plywoods and then and then like you're just like the interior finish I guess like plaster but yeah but like currently they just have to like frame just like the initial layers of the wall and then allow the electricians to pass their wires and then have like that done before the wall finishes would be added to it so yeah so i guess like yeah probably just wait for like the i think the the store manager said like the plaster the wall plaster would be delivered tomorrow so yeah that would yeah i guess like the work is is it's on schedule that that wouldn't like create any delays so that's good yeah so yeah so so so for like uh yeah there is no other risk or issues on site apart from like the tools organization part and then also like making sure everybody wear like their safety helmets and and suits yeah so yeah so for like i guess like next steps would be finishing like the wall prints and then starting the the floors of the the modular unit and then yeah so tomorrow I would come back to site and see what's been was like the current progress so far so far today everything looks good",
+  'voice-3':
+    "I just arrived at the site. The ground is very very terrible for work and I think it's been raining last night the whole night and then this morning also. It's currently 10 a.m. in the morning. It stops raining but the ground is waterlogged and it's very difficult to work. on the site so but I would get to like the construction site where the construction is happening and then try to talk to some of the workers and see if what what can be done today so I have spoken to like few of the workers like you're the electricians are not here yet yeah but like the second floor has been floated and the concrete has hardened and I think it has been floated like since a week ago so the next phase of like the next phase of the world like installing like the drywalls can be done but like we're waiting on the electricians and then see what like what's like the project scope is because i had like some of them have not been paid for the like the old work like the past work they've done so i guess like this bill of worker issues with that and then we'll see like if we can put those as an areas about a backlog of pay and then they can start like the new work with the drywall and pass like the electric cables in the wall and yeah",
+  'voice-4':
+    "So I just arrived at the site. I'm on site right now. It's 10 a.m. in the morning and it's been raining all night until like this morning also. So yeah so like the the site is quite waterlogged like there is a lot of water and a lot of damper things let's see let me go check on the workers and see if everybody's here because like they're supposed to do like the trench for the foundation and to place like the reinforcement still for the Padfoot Foundation, but based on the current situation on site, I don't know if that can be done today, but I'll go check. So, yes, so I've... Short notes, short notes.",
+  'voice-5':
+    "yeah so the electricians have agreed to like start work on the drywall today and but they are having issues with the truck coming in because like because of the waterlog situation at site so we'd see if the work can actually be done today or we'd have to like postpone it for a couple of until like the site is good for work so yeah",
+};
+
 export const FIXTURE_CANONICALS = {
   transcribe: {
-    name: 'transcribe.basic',
     vendor: 'openai' as Vendor,
-    audioUrl: 'https://fixtures.harpa.example/voice.fixture.m4a',
+    model: 'whisper-1',
+    defaultScenario: DEFAULT_SCENARIO,
+    audioUrl: (scenario: ScenarioKey) =>
+      `https://fixtures.harpa.example/${scenario}.fixture.m4a`,
+    name: (scenario: ScenarioKey) => `transcribe.${scenario}`,
   },
   summarize: {
-    name: 'summarize.basic',
     vendor: 'openai' as Vendor,
     model: 'gpt-4o-mini',
     // Must match `VOICE_SUMMARY_SYSTEM_PROMPT` (imported above) so
@@ -186,71 +211,49 @@ export const FIXTURE_CANONICALS = {
     // string means changing the prompt in one place forces fixtures
     // to be re-recorded (`refresh-hashes.ts`) in lock-step.
     systemPrompt: VOICE_SUMMARY_SYSTEM_PROMPT,
-    userPrompt: 'Site arrival 8:15. Crew of three on rebar...',
+    defaultScenario: DEFAULT_SCENARIO,
+    userPrompt: (scenario: ScenarioKey) => SUMMARIZE_USER_PROMPTS[scenario],
+    name: (scenario: ScenarioKey) => `summarize.${scenario}`,
   },
   /**
-   * Two report fixtures cover the success matrix:
-   *   - `full`: rich notes → fully populated structured body.
-   *   - `incomplete`: sparse notes → mostly-null body with a single
-   *     summary section explaining the gap.
-   * Source of truth:
-   *   packages/ai-fixtures/fixtures/generate-report.{full,incomplete}.json
+   * Report fixtures cover the five voice-note scenarios end-to-end.
+   * Each `generate-report.voice-N.json` is hashed against a placeholder
+   * `<notes payload voice-N>` user prompt — the actual concatenated
+   * notes flow through only in live mode.
+   *
+   * Source: ../haru3-reports/supabase/functions/generate-report/index.ts
+   * (canonical `SYSTEM_PROMPT`). NOTE: changing the system prompt
+   * changes the request hash — re-record every generate-report.* fixture
+   * via `pnpm --filter @harpa/ai-fixtures exec tsx scripts/refresh-hashes.ts`.
    */
   report: {
     vendor: 'openai' as Vendor,
     model: 'gpt-4o',
-    // Source: ../haru3-reports/supabase/functions/generate-report/index.ts
-    // (canonical `SYSTEM_PROMPT`). Kept verbatim so the Debug tab in
-    // mobile surfaces the same instructions the model actually gets.
-    // NOTE: changing this string changes the request hash — re-record
-    // every generate-report.* fixture via
-    // `pnpm --filter @harpa/ai-fixtures exec tsx scripts/refresh-hashes.ts`
-    // (or use the record script for fresh model responses).
     systemPrompt: REPORT_SYSTEM_PROMPT,
     // Distinct system prompt for the *update* path. See
     // REPORT_UPDATE_SYSTEM_PROMPT — instructs the model to preserve
-    // hand-edited fields while integrating new notes. Recorded
-    // separately under generate-report.update.*.
+    // hand-edited fields while integrating new notes. No update
+    // fixtures are checked in yet (would need a separate recording
+    // pass); the system prompt is wired through for completeness.
     updateSystemPrompt: REPORT_UPDATE_SYSTEM_PROMPT,
-    fixtures: {
-      full: { name: 'generate-report.full', userPrompt: '<notes payload>' },
-      incomplete: { name: 'generate-report.incomplete', userPrompt: '<sparse notes>' },
-      // Update flavour — canonical EXISTING REPORT + NEW NOTES the
-      // recorded fixture was hashed against. Replay-mode callers that
-      // supply an `existingBody` are normalised to these strings so
-      // the request hash matches the recorded payload. Cold-start
-      // callers (existingBody === null) never hit this prompt.
-      update: {
-        name: 'generate-report.update',
-        userPrompt:
-          'EXISTING REPORT:\n<existing report JSON>\n\nNEW NOTES:\n<new notes payload>',
-      },
-    },
+    defaultScenario: DEFAULT_SCENARIO,
+    userPrompt: (scenario: ScenarioKey) => `<notes payload ${scenario}>`,
+    name: (scenario: ScenarioKey) => `generate-report.${scenario}`,
   },
 } as const;
 
 /**
- * Canonical models per vendor — what `chat()` / `generateReport()`
- * use in replay mode when routing to a per-vendor fixture. Mirrors
- * the user-settings UI options. Source of truth for the per-vendor
- * fixture files in `packages/ai-fixtures/fixtures/`.
+ * Resolve a caller-supplied fixture name to a scenario key. Returns
+ * `null` if the name does not match a known scenario suffix — callers
+ * fall back to the default scenario for prompt normalisation, which
+ * causes the underlying FixtureStore lookup to surface a clear
+ * FixtureMissError if the requested file does not exist.
  */
-const VENDOR_MODELS: Record<Vendor, { summarize: string; report: string }> = {
-  openai:    { summarize: 'gpt-4o-mini',         report: 'gpt-4o' },
-  kimi:      { summarize: 'moonshot-v1-8k',      report: 'moonshot-v1-32k' },
-  anthropic: { summarize: 'claude-3-5-haiku',    report: 'claude-3-5-sonnet' },
-  google:    { summarize: 'gemini-1.5-flash',    report: 'gemini-1.5-pro' },
-  zai:       { summarize: 'glm-4-flash',         report: 'glm-4-plus' },
-  deepseek:  { summarize: 'deepseek-chat',       report: 'deepseek-reasoner' },
-};
-
-/**
- * Build the on-disk fixture name for a (base, vendor) pair. OpenAI
- * keeps the un-suffixed name so existing callers + recorded fixtures
- * continue to work without modification.
- */
-function fixtureNameFor(base: string, vendor: Vendor): string {
-  return vendor === 'openai' ? base : `${base}.${vendor}`;
+function scenarioFromName(name: string): ScenarioKey | null {
+  for (const s of SCENARIOS) {
+    if (name.endsWith(s)) return s;
+  }
+  return null;
 }
 
 function pickMode(fixtureName?: string): FixtureMode {
@@ -355,12 +358,18 @@ export interface TranscribeOutput {
 }
 
 export async function transcribe(input: TranscribeInput): Promise<TranscribeOutput> {
-  const fixtureName = input.fixtureName ?? FIXTURE_CANONICALS.transcribe.name;
+  const scenario =
+    (input.fixtureName ? scenarioFromName(input.fixtureName) : null) ??
+    FIXTURE_CANONICALS.transcribe.defaultScenario;
+  const fixtureName =
+    input.fixtureName ?? FIXTURE_CANONICALS.transcribe.name(scenario);
   const mode = pickMode(fixtureName);
   const audioUrl =
-    mode === 'replay' ? FIXTURE_CANONICALS.transcribe.audioUrl : input.audioUrl;
+    mode === 'replay'
+      ? FIXTURE_CANONICALS.transcribe.audioUrl(scenario)
+      : input.audioUrl;
   const vendor = FIXTURE_CANONICALS.transcribe.vendor;
-  const model = 'whisper-1';
+  const model = FIXTURE_CANONICALS.transcribe.model;
   const provider = buildProvider(vendor, fixtureName);
   const result = await withUsageAccounting(
     input.usageContext,
@@ -379,9 +388,9 @@ export interface ChatInput {
   temperature?: number;
   maxTokens?: number;
   /**
-   * Optional vendor override. In replay mode, selects a per-vendor
-   * fixture (e.g. `summarize.basic.anthropic`). Defaults to `openai`
-   * for backwards compatibility with existing fixture-less callers.
+   * Optional vendor override. Tracked for usage accounting only —
+   * fixture selection no longer depends on vendor (a single set of
+   * OpenAI fixtures covers every scenario in replay mode).
    */
   vendor?: Vendor;
   /** Optional accounting context — see `transcribe` for semantics. */
@@ -396,16 +405,19 @@ export interface ChatOutput {
 
 export async function chat(input: ChatInput): Promise<ChatOutput> {
   const vendor: Vendor = input.vendor ?? FIXTURE_CANONICALS.summarize.vendor;
-  const canonicalModel = VENDOR_MODELS[vendor].summarize;
+  const scenario =
+    (input.fixtureName ? scenarioFromName(input.fixtureName) : null) ??
+    FIXTURE_CANONICALS.summarize.defaultScenario;
   const fixtureName =
-    input.fixtureName ?? fixtureNameFor(FIXTURE_CANONICALS.summarize.name, vendor);
+    input.fixtureName ?? FIXTURE_CANONICALS.summarize.name(scenario);
+  const canonicalModel = FIXTURE_CANONICALS.summarize.model;
   const mode = pickMode(fixtureName);
   const req =
     mode === 'replay'
       ? {
           model: canonicalModel,
           systemPrompt: FIXTURE_CANONICALS.summarize.systemPrompt,
-          userPrompt: FIXTURE_CANONICALS.summarize.userPrompt,
+          userPrompt: FIXTURE_CANONICALS.summarize.userPrompt(scenario),
         }
       : {
           model: input.model ?? canonicalModel,
@@ -452,8 +464,8 @@ export interface GenerateReportInput {
   existingBody?: ReportBody | null;
   fixtureName?: string;
   /**
-   * Optional vendor override. In replay mode, selects a per-vendor
-   * fixture (e.g. `generate-report.full.anthropic`). Defaults to
+   * Optional vendor override. Tracked for usage accounting only —
+   * fixture selection no longer depends on vendor. Defaults to
    * `openai`.
    */
   vendor?: Vendor;
@@ -487,24 +499,12 @@ export interface GenerateReportOutput {
 export async function generateReport(input: GenerateReportInput): Promise<GenerateReportOutput> {
   const canonicals = FIXTURE_CANONICALS.report;
   const vendor: Vendor = input.vendor ?? canonicals.vendor;
-  const canonicalModel = VENDOR_MODELS[vendor].report;
+  const canonicalModel = canonicals.model;
   const isUpdate = input.existingBody != null;
-  const defaultName = fixtureNameFor(
-    isUpdate ? canonicals.fixtures.update.name : canonicals.fixtures.full.name,
-    vendor,
-  );
-  const incompleteName = fixtureNameFor(canonicals.fixtures.incomplete.name, vendor);
-  const updateName = fixtureNameFor(canonicals.fixtures.update.name, vendor);
-  // Callers may pass an OpenAI-style fixture name (e.g. "generate-report.incomplete")
-  // OR a fully-qualified per-vendor name. Normalise: if the caller gave a base
-  // name and the vendor is non-default, suffix it.
-  const fixtureName = (() => {
-    if (!input.fixtureName) return defaultName;
-    if (vendor === 'openai') return input.fixtureName;
-    // Already vendor-suffixed?
-    if (input.fixtureName.endsWith(`.${vendor}`)) return input.fixtureName;
-    return `${input.fixtureName}.${vendor}`;
-  })();
+  const scenario =
+    (input.fixtureName ? scenarioFromName(input.fixtureName) : null) ??
+    canonicals.defaultScenario;
+  const fixtureName = input.fixtureName ?? canonicals.name(scenario);
   const mode = pickMode(fixtureName);
 
   // Build the LIVE user prompt — what we'd send the real provider.
@@ -516,9 +516,12 @@ export async function generateReport(input: GenerateReportInput): Promise<Genera
     ? `EXISTING REPORT:\n${JSON.stringify(input.existingBody)}\n\nNEW NOTES:\n${input.notes}`
     : input.notes;
 
-  // Pick the right system prompt for the path. Update prompt preserves
-  // manual edits; cold-start prompt generates from scratch.
-  const systemPrompt = isUpdate
+  // Pick the right system prompt for the LIVE path. Update prompt
+  // preserves manual edits; cold-start prompt generates from scratch.
+  // Replay mode always uses REPORT_SYSTEM_PROMPT because that's the
+  // prompt the checked-in voice fixtures were recorded with (no
+  // update-flavour fixtures exist on disk).
+  const liveSystemPrompt = isUpdate
     ? canonicals.updateSystemPrompt
     : canonicals.systemPrompt;
 
@@ -526,21 +529,16 @@ export async function generateReport(input: GenerateReportInput): Promise<Genera
     mode === 'replay'
       ? {
           model: canonicalModel,
-          systemPrompt,
+          systemPrompt: canonicals.systemPrompt,
           // Map the requested fixture name to its recorded canonical user
-          // prompt. Unknown names fall through to the `full` prompt — they
-          // will FixtureMiss against the on-disk store and surface as a
-          // generic 502, matching the voice route's behaviour.
-          userPrompt:
-            fixtureName === updateName
-              ? canonicals.fixtures.update.userPrompt
-              : fixtureName === incompleteName
-                ? canonicals.fixtures.incomplete.userPrompt
-                : canonicals.fixtures.full.userPrompt,
+          // prompt. Unknown names fall through to the default scenario —
+          // they will FixtureMiss against the on-disk store and surface
+          // as a generic 502, matching the voice route's behaviour.
+          userPrompt: canonicals.userPrompt(scenario),
         }
       : {
           model: canonicalModel,
-          systemPrompt,
+          systemPrompt: liveSystemPrompt,
           userPrompt: liveUserPrompt,
         };
 

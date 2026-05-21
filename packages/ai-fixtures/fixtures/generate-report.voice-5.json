@@ -1,21 +1,21 @@
 {
-  "vendor": "deepseek",
-  "model": "deepseek-reasoner",
-  "fixtureName": "generate-report.incomplete.deepseek",
+  "vendor": "openai",
+  "model": "gpt-4o",
+  "fixtureName": "generate-report.voice-5",
   "recordedAt": "2026-05-12T00:00:00.000Z",
-  "requestHash": "sha256:aaa7029635cb1494ddf69cdf01968878d06ab586b7084826ea4ffe96bbe7deac",
+  "requestHash": "sha256:846df605bb77e809add32766cd8a19198652b59ec1f16ee350b7a13d45a858ad",
   "request": {
     "kind": "chat",
-    "vendor": "deepseek",
-    "model": "deepseek-reasoner",
+    "vendor": "openai",
+    "model": "gpt-4o",
     "systemPrompt": "You are a construction site report assistant. You convert numbered site notes from a construction site into a structured JSON report.\n\nINPUT\n- NOTES: numbered site notes captured on site. Each note is one input item — text, voice transcript, image, video, or document. Non-text items appear as numbered placeholders (e.g. \"[image 1]\", \"[image 2]\", \"[video 1]\", \"[document 1]\") at their position. You cannot see their contents, but you should acknowledge that the attachment exists.\n\nOUTPUT\nReturn ONLY valid minified JSON in this exact shape:\n  { \"report\": { \"meta\": {...}, \"weather\": ..., \"workers\": ..., \"materials\": [...], \"issues\": [...], \"nextSteps\": [...], \"sections\": [...] } }\n\n- Always return the FULL report. Include every top-level field, even when empty.\n- Use null for missing \"weather\" / \"workers\", [] for empty arrays, \"\" for missing strings.\n- Do NOT wrap the JSON in markdown fences. Do NOT add prose before or after.\n\nSCHEMA\n\"meta\":          { \"title\": str, \"reportType\": \"site_visit|daily|inspection|safety|incident|progress\", \"summary\": str, \"visitDate\": \"YYYY-MM-DD\"|null }\n\"weather\":       { \"conditions\", \"temperature\", \"wind\", \"impact\" }              (object or null)\n\"workers\":       { \"totalWorkers\": num, \"workerHours\", \"notes\",\n                   \"roles\": [{ \"role\", \"count\": num, \"notes\" }] }                (object or null)\n\"materials\":     [{ \"name\", \"quantity\", \"quantityUnit\", \"condition\", \"status\", \"notes\" }]\n\"issues\":        [{ \"title\", \"category\", \"severity\", \"status\", \"details\", \"actionRequired\" }]\n\"nextSteps\":     [str]\n\"sections\":      [{ \"title\", \"content\": \"markdown\" }]\n\nRULES\n- Populate \"meta.title\" with a short, human-readable title (e.g. \"Site Visit — Wet Weather\") and \"meta.summary\" with a one-sentence overview.\n- Use sections to capture work progress, observations, and narrative detail. Materials list everything mentioned (concrete, steel, timber, pipes, etc.) — do NOT extract cost/price information; that's handled outside this flow.\n- NEVER invent data not in the notes. Keep strings concise. Deduplicate facts.\n\nEXAMPLE\n{ \"report\": { \"meta\": { \"title\": \"Site Visit — Wet Weather\", \"reportType\": \"daily\", \"summary\": \"Wet conditions delayed concrete pour\", \"visitDate\": null }, \"weather\": { \"conditions\": \"wet\", \"temperature\": \"20C\", \"wind\": null, \"impact\": \"Pour delayed by 1 hour\" }, \"workers\": null, \"materials\": [{ \"name\": \"Concrete\", \"quantity\": \"50\", \"quantityUnit\": \"m³\", \"condition\": null, \"status\": \"delivered\", \"notes\": null }], \"issues\": [], \"nextSteps\": [\"Order rebar\"], \"sections\": [{ \"title\": \"Foundation Work\", \"content\": \"Concrete pour started in zone A despite wet weather.\" }] } }",
-    "userPrompt": "<sparse notes>"
+    "userPrompt": "<notes payload voice-5>"
   },
   "response": {
-    "text": "{\n  \"visitDate\": null,\n  \"weather\": null,\n  \"workers\": [],\n  \"materials\": [],\n  \"issues\": [],\n  \"nextSteps\": [],\n  \"summarySections\": [\n    {\n      \"title\": \"Notes captured\",\n      \"body\": \"Insufficient notes to produce a structured report.\"\n    }\n  ]\n}",
+    "text": "{\n  \"visitDate\": null,\n  \"weather\": {\n    \"condition\": \"Waterlogged site (carried over from earlier note)\",\n    \"temperatureC\": null,\n    \"windKph\": null,\n    \"impact\": \"Electrician truck unable to enter site; drywall work at risk\"\n  },\n  \"workers\": [\n    {\n      \"role\": \"Electrician\",\n      \"count\": 0,\n      \"hours\": null,\n      \"notes\": \"Agreed to start drywall today but truck access blocked by site conditions\"\n    }\n  ],\n  \"materials\": [],\n  \"issues\": [\n    {\n      \"title\": \"Electrician truck cannot access waterlogged site\",\n      \"severity\": \"high\",\n      \"description\": \"Electricians agreed to start drywall today, but their delivery truck cannot enter the site due to waterlogging.\",\n      \"action\": \"Decide whether to proceed on foot today or postpone work until site is workable\"\n    }\n  ],\n  \"nextSteps\": [\n    \"Determine if drywall work can proceed today without the truck\",\n    \"Otherwise postpone drywall start until site conditions allow truck access\"\n  ],\n  \"summarySections\": [\n    {\n      \"title\": \"Drywall Phase Start\",\n      \"body\": \"The electricians had agreed to begin drywall work today, but their truck could not get on site due to the waterlogged conditions. The team will decide whether to proceed today or postpone for a few days until the site is workable.\"\n    }\n  ]\n}",
     "usage": {
-      "input": 80,
-      "output": 56
+      "input": 280,
+      "output": 320
     }
   }
 }

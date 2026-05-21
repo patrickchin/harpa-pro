@@ -122,6 +122,7 @@ const spec = JSON.parse(readFileSync(specPath, 'utf8')) as {
 const MOBILE_SKIP_PATHS = new Set<string>([
   'post /waitlist',
   'post /waitlist/confirm',
+  'get /readyz',
 ]);
 
 // Validate that ENDPOINTS matches the spec exactly. Drift here means

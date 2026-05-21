@@ -57,6 +57,88 @@
         }
       }
     },
+    "/readyz": {
+      "get": {
+        "tags": [
+          "health"
+        ],
+        "responses": {
+          "200": {
+            "description": "Service is ready to serve traffic.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "db": {
+                      "type": "string",
+                      "enum": [
+                        "up"
+                      ]
+                    },
+                    "head": {
+                      "type": "string",
+                      "nullable": true
+                    }
+                  },
+                  "required": [
+                    "ok",
+                    "db",
+                    "head"
+                  ]
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service is not ready (DB or schema check failed).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean",
+                      "enum": [
+                        false
+                      ]
+                    },
+                    "db": {
+                      "type": "string",
+                      "enum": [
+                        "down",
+                        "schema-missing",
+                        "head-mismatch"
+                      ]
+                    },
+                    "expected": {
+                      "type": "string"
+                    },
+                    "actual": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "ok",
+                    "db"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/auth/otp/start": {
       "post": {
         "tags": [

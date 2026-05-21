@@ -19,12 +19,15 @@ module.exports = {
       //   - admin.ts: reads ALL rows by design; rawDb is the intentional
       //     choice (see migrations/202605130003_admin_role.sql). withAdmin()
       //     middleware is the security boundary.
+      //   - readyz.ts: system readiness probe; runs before any auth context,
+      //     needs raw pool to check schema head (docs/v4/arch-cicd-and-migrations.md).
       files: ['src/routes/**/*.ts'],
       excludedFiles: [
         'src/routes/auth.ts',
         'src/routes/health.ts',
         'src/routes/waitlist.ts',
         'src/routes/admin.ts',
+        'src/routes/readyz.ts',
         'src/routes/**/*.test.ts',
       ],
       rules: {

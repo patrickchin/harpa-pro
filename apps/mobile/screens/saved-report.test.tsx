@@ -15,6 +15,7 @@
  */
 import { describe, expect, it, vi } from 'vitest';
 import TestRenderer, { act } from 'react-test-renderer';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 vi.mock('expo-image', () => ({
   Image: (props: Record<string, unknown>) => null,
@@ -26,11 +27,40 @@ import {
 } from './saved-report';
 import { SAMPLE_GENERATED_REPORT } from '@/lib/dev-fixtures/sample-report';
 import type { UseReportPdfActionsReturn } from '@/lib/use-report-pdf-actions';
+import {
+  AudioPlaybackProvider,
+  type PlaybackPlayer,
+} from '@/lib/audio/AudioPlaybackProvider';
+
+// Switching to the Notes tab mounts `ReportNotesPane`, whose voice
+// rows call `useAudioPlayback()` and whose signed-URL chain pulls
+// from React Query. Wrap every render in the real providers
+// (Pitfall 13) with a node-safe `playerFactory` stub.
+function stubPlayerFactory(): PlaybackPlayer {
+  return {
+    play: () => {},
+    pause: () => {},
+    currentTime: 0,
+    duration: 0,
+    playing: false,
+    seekTo: async () => {},
+    remove: () => {},
+  };
+}
 
 function render(el: React.ReactElement): TestRenderer.ReactTestRenderer {
+  const qc = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
   let tree!: TestRenderer.ReactTestRenderer;
   act(() => {
-    tree = TestRenderer.create(el);
+    tree = TestRenderer.create(
+      <QueryClientProvider client={qc}>
+        <AudioPlaybackProvider playerFactory={stubPlayerFactory}>
+          {el}
+        </AudioPlaybackProvider>
+      </QueryClientProvider>,
+    );
   });
   return tree;
 }

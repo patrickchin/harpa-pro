@@ -86,9 +86,35 @@ jobs:
       - name: Deploy to Fly.io (dev)
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
-        run: >-
-          flyctl deploy
-          --config infra/fly/fly.dev.toml
-          --dockerfile infra/fly/Dockerfile
-          --remote-only
+        run: |
+          set -euo pipefail
+          HEAD=$(ls packages/api/migrations | grep -E '\.sql$' | sort | tail -1)
+          if [[ -z "$HEAD" ]]; then
+            echo "ERROR: no .sql files in packages/api/migrations" >&2
+            exit 1
+          fi
+          echo "deploy: MIGRATIONS_REQUIRED_HEAD=$HEAD"
+          flyctl deploy \
+            --config infra/fly/fly.dev.toml \
+            --dockerfile infra/fly/Dockerfile \
+            --build-arg "MIGRATIONS_REQUIRED_HEAD=$HEAD" \
+            --remote-only
+
+      - name: Verify /readyz (dev)
+        run: |
+          set -euo pipefail
+          URL="${API_READY_URL_DEV:-https://harpa-pro-api-dev.fly.dev/readyz}"
+          for i in 1 2 3 4 5; do
+            if curl --fail --silent --show-error --max-time 5 "$URL"; then
+              echo
+              echo "readyz ok"
+              exit 0
+            fi
+            echo "readyz attempt $i failed, retrying..."
+            sleep 5
+          done
+          echo "readyz never returned 200 — investigate Fly logs" >&2
+          exit 1
+        env:
+          API_READY_URL_DEV: ${{ vars.API_READY_URL_DEV }}
 

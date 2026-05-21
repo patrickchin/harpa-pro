@@ -22,6 +22,12 @@ import {
   Pressable as RNPressable,
   ScrollView as RNScrollView,
 } from 'react-native';
+import type {
+  ViewProps,
+  TextProps,
+  PressableProps,
+  ScrollViewProps,
+} from 'react-native';
 
 type WithClassName<P> = P & {
   className?: string;

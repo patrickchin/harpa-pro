@@ -14,6 +14,7 @@ const searchParamsSpy = vi.hoisted(() => ({ project: 'my-cool-project' }));
 vi.mock('expo-router', () => ({
   useRouter: () => routerSpy,
   useLocalSearchParams: () => searchParamsSpy,
+  usePathname: () => '/',
 }));
 
 vi.mock('@/lib/api/hooks', () => ({

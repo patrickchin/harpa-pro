@@ -11,6 +11,7 @@ const routerSpy = vi.hoisted(() => ({
 
 vi.mock('expo-router', () => ({
   useRouter: () => routerSpy,
+  usePathname: () => '/',
 }));
 
 type MutateArgs = [

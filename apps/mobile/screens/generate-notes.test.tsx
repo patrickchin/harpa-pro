@@ -15,6 +15,54 @@
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
 import TestRenderer, { act } from 'react-test-renderer';
 
+// `GenerateReportProvider` consumes the inline recorder + voice
+// pipeline + audio playback hooks. None of them are exercised by the
+// Notes-tab UI assertions below, so stub them out — exercising the
+// real implementations would require wrapping the test in
+// `<QueueProvider>` + `<AudioPlaybackProvider>` and is covered by the
+// dedicated integration tests for those modules.
+vi.mock('@/features/voice/useInlineRecorder', () => ({
+  useInlineRecorder: () => ({
+    isRecording: false,
+    snapshot: { status: 'idle', durationMs: 0, amplitude: 0 },
+    historyBars: [],
+    permission: 'unknown',
+    error: null,
+    start: vi.fn(async () => {}),
+    stopAndCapture: vi.fn(async () => null),
+    cancel: vi.fn(async () => {}),
+    dismissError: vi.fn(),
+  }),
+}));
+vi.mock('@/features/voice/useVoiceNotePipeline', () => ({
+  useVoiceNotePipeline: () => ({
+    state: {
+      step: 'idle',
+      failedStep: null,
+      error: null,
+      note: null,
+      fileId: null,
+      capture: null,
+    },
+    capture: vi.fn(async () => null),
+    retry: vi.fn(async () => null),
+    reset: vi.fn(),
+  }),
+}));
+vi.mock('@/lib/audio/AudioPlaybackProvider', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/audio/AudioPlaybackProvider')>();
+  return {
+    ...actual,
+    useAudioPlayback: () => ({
+      play: vi.fn(async () => {}),
+      pause: vi.fn(),
+      stop: vi.fn(),
+      seek: vi.fn(async () => {}),
+      status: { uri: null, playing: false, positionSec: 0, durationSec: 0 },
+    }),
+  };
+});
+
 import { GenerateNotes, type GenerateNotesProps } from './generate-notes';
 import type { NoteEntry } from '@/lib/note-entry';
 

@@ -227,6 +227,7 @@ exports[`GenerateNotes > matches the empty-state snapshot 1`] = `
             }
           }
           keyboardShouldPersistTaps="handled"
+          ref={null}
         >
           <rn-View
             className="rounded-lg border border-border bg-surface-muted p-4 items-center py-8"
@@ -722,11 +723,17 @@ exports[`GenerateNotes > matches the empty-state snapshot 1`] = `
         <rn-Pressable
           accessibilityLabel="Start voice recording"
           accessibilityRole="button"
+          accessibilityState={
+            {
+              "disabled": true,
+            }
+          }
+          disabled={true}
           onPress={[Function]}
           testID="btn-record-start"
         >
           <rn-View
-            className="min-h-[68px] min-w-[68px] items-center justify-center rounded-xl border border-border bg-card px-3"
+            className="min-h-[68px] min-w-[68px] items-center justify-center rounded-xl border border-border bg-card px-3 opacity-50"
           >
             <rn-View
               className="items-center gap-1"
@@ -1326,6 +1333,172 @@ exports[`GenerateNotes > matches the empty-state snapshot 1`] = `
                   className="text-muted-foreground font-semibold text-base"
                 >
                   Cancel
+                </rn-Text>
+              </rn-Pressable>
+            </rn-View>
+          </rn-View>
+        </rn-Pressable>
+      </rn-Pressable>
+    </rn-Modal>
+    <rn-Modal
+      animationType="slide"
+      onRequestClose={[Function]}
+      transparent={true}
+      visible={false}
+    >
+      <rn-Pressable
+        className="flex-1 justify-end bg-black/40"
+        onPress={[Function]}
+      >
+        <rn-Pressable
+          className="bg-background pb-10"
+          onPress={[Function]}
+          testID="dialog-sheet"
+        >
+          <rn-View
+            className="flex-row items-center justify-between border-b border-border px-5 py-4"
+          >
+            <rn-Text
+              className="text-xl font-bold text-foreground"
+            >
+              Microphone access needed
+            </rn-Text>
+            <rn-Pressable
+              disabled={false}
+              hitSlop={12}
+              onPress={[MockFunction spy]}
+            >
+              <lucide-X
+                color="#5f5b66"
+                size={20}
+              />
+            </rn-Pressable>
+          </rn-View>
+          <rn-View
+            className="gap-4 px-5 pt-4"
+          >
+            <rn-View
+              className="rounded-md border px-4 py-3 border-warning-border bg-warning-soft"
+              style={
+                {
+                  "elevation": 2,
+                  "shadowColor": "#1a1a2e",
+                  "shadowOffset": {
+                    "height": 2,
+                    "width": 0,
+                  },
+                  "shadowOpacity": 0.08,
+                  "shadowRadius": 8,
+                }
+              }
+            >
+              <rn-Text
+                className="text-sm text-warning-text"
+                selectable={true}
+              >
+                Enable microphone access in Settings to record voice notes.
+              </rn-Text>
+            </rn-View>
+            <rn-View
+              className="gap-3"
+            >
+              <rn-Pressable
+                className="flex-row items-center rounded-md border border-border bg-secondary active:opacity-90 min-h-touch px-5 py-3.5 justify-center"
+                disabled={false}
+                onPress={[MockFunction spy]}
+                style={
+                  [
+                    {
+                      "elevation": 2,
+                      "shadowColor": "#1a1a2e",
+                      "shadowOffset": {
+                        "height": 2,
+                        "width": 0,
+                      },
+                      "shadowOpacity": 0.08,
+                      "shadowRadius": 8,
+                    },
+                    undefined,
+                  ]
+                }
+                testID="voice-perm-close"
+              >
+                <rn-Text
+                  className="text-foreground font-semibold text-base"
+                >
+                  Close
+                </rn-Text>
+              </rn-Pressable>
+            </rn-View>
+          </rn-View>
+        </rn-Pressable>
+      </rn-Pressable>
+    </rn-Modal>
+    <rn-Modal
+      animationType="slide"
+      onRequestClose={[Function]}
+      transparent={true}
+      visible={false}
+    >
+      <rn-Pressable
+        className="flex-1 justify-end bg-black/40"
+        onPress={[Function]}
+      >
+        <rn-Pressable
+          className="bg-background pb-10"
+          onPress={[Function]}
+          testID="dialog-sheet"
+        >
+          <rn-View
+            className="flex-row items-center justify-between border-b border-border px-5 py-4"
+          >
+            <rn-Text
+              className="text-xl font-bold text-foreground"
+            >
+              Recording failed
+            </rn-Text>
+            <rn-Pressable
+              disabled={false}
+              hitSlop={12}
+              onPress={[MockFunction spy]}
+            >
+              <lucide-X
+                color="#5f5b66"
+                size={20}
+              />
+            </rn-Pressable>
+          </rn-View>
+          <rn-View
+            className="gap-4 px-5 pt-4"
+          >
+            <rn-View
+              className="gap-3"
+            >
+              <rn-Pressable
+                className="flex-row items-center rounded-md border border-border bg-secondary active:opacity-90 min-h-touch px-5 py-3.5 justify-center"
+                disabled={false}
+                onPress={[MockFunction spy]}
+                style={
+                  [
+                    {
+                      "elevation": 2,
+                      "shadowColor": "#1a1a2e",
+                      "shadowOffset": {
+                        "height": 2,
+                        "width": 0,
+                      },
+                      "shadowOpacity": 0.08,
+                      "shadowRadius": 8,
+                    },
+                    undefined,
+                  ]
+                }
+                testID="voice-error-dismiss"
+              >
+                <rn-Text
+                  className="text-foreground font-semibold text-base"
+                >
+                  Dismiss
                 </rn-Text>
               </rn-Pressable>
             </rn-View>

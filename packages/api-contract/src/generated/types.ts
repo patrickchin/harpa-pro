@@ -593,37 +593,10 @@ export interface paths {
                                 month: string;
                                 reports: number;
                                 voiceNotes: number;
-                                tokens: {
-                                    input: number;
-                                    output: number;
-                                    cached: number;
-                                    total: number;
-                                };
-                                calls: number;
-                            }[];
-                            byModel: {
-                                vendor: string;
-                                model: string;
-                                /** @enum {string} */
-                                operation: "chat" | "transcribe" | "generate_report";
-                                calls: number;
-                                tokens: {
-                                    input: number;
-                                    output: number;
-                                    cached: number;
-                                    total: number;
-                                };
                             }[];
                             totals: {
                                 reports: number;
                                 voiceNotes: number;
-                                tokens: {
-                                    input: number;
-                                    output: number;
-                                    cached: number;
-                                    total: number;
-                                };
-                                calls: number;
                             };
                         };
                     };

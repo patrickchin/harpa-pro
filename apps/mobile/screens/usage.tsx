@@ -37,32 +37,18 @@ import { ScreenHeader } from '@/components/primitives/ScreenHeader';
 import { SectionHeader } from '@/components/primitives/SectionHeader';
 import { StatTile } from '@/components/primitives/StatTile';
 import { InlineNotice } from '@/components/primitives/InlineNotice';
-import { UsageBarChart } from '@/components/ui/UsageBarChart';
 import { colors } from '@/lib/design-tokens/colors';
-
-export interface UsagePerModelRow {
-  model: string;
-  inputTokens: number;
-  outputTokens: number;
-}
 
 export interface UsageMonthlyRow {
   /** ISO month string (e.g. `2024-11` or `2024-11-01T00:00:00.000Z`). */
   month: string;
   reportsCount: number;
   voiceNotesCount: number;
-  inputTokens?: number;
-  outputTokens?: number;
-  cachedTokens?: number;
-  perModel?: ReadonlyArray<UsagePerModelRow>;
 }
 
 export interface UsageTotals {
   reports: number;
   voiceNotes: number;
-  inputTokens?: number;
-  outputTokens?: number;
-  cachedTokens?: number;
 }
 
 export interface UsageScreenProps {
@@ -72,7 +58,9 @@ export interface UsageScreenProps {
   refreshing: boolean;
   onRefresh: () => void;
   onBack: () => void;
-  actions?: ReactNode;
+  /** Optional chart slot (e.g. `<UsageBarChart … />`). Renders only
+   * when at least 2 months are present. Set null/undefined to hide. */
+  chart?: ReactNode;
 }
 
 function parseMonth(iso: string): Date {
@@ -83,12 +71,6 @@ function parseMonth(iso: string): Date {
 function formatMonth(iso: string) {
   const d = parseMonth(iso);
   return d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-}
-
-function formatTokens(n: number): string {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}k`;
-  return `${n}`;
 }
 
 function MonthCard({
@@ -103,7 +85,6 @@ function MonthCard({
   const Chevron = isExpanded ? ChevronUp : ChevronDown;
   const reportsLabel = `${row.reportsCount} report${row.reportsCount !== 1 ? 's' : ''}`;
   const voiceLabel = `${row.voiceNotesCount} voice note${row.voiceNotesCount !== 1 ? 's' : ''}`;
-  const hasTokens = (row.inputTokens ?? 0) + (row.outputTokens ?? 0) > 0;
 
   return (
     <Card className="gap-3">
@@ -124,7 +105,7 @@ function MonthCard({
       </Pressable>
 
       {isExpanded && (
-        <View className="gap-3">
+        <View>
           <View className="flex-row flex-wrap gap-3">
             <StatTile
               value={row.reportsCount}
@@ -138,47 +119,9 @@ function MonthCard({
               compact
               className="min-w-[46%]"
             />
-            {hasTokens ? (
-              <>
-                <StatTile
-                  value={formatTokens(row.inputTokens ?? 0)}
-                  label="Input Tokens"
-                  compact
-                  className="min-w-[46%]"
-                />
-                <StatTile
-                  value={formatTokens(row.outputTokens ?? 0)}
-                  label="Output Tokens"
-                  compact
-                  className="min-w-[46%]"
-                />
-              </>
-            ) : null}
           </View>
-
-          {row.perModel?.length ? (
-            <View
-              className="gap-2 rounded-md border border-border bg-background/40 p-3"
-              testID={`usage-month-${row.month}-per-model`}
-            >
-              <Text className="text-xs font-semibold uppercase text-muted-foreground">
-                Per model
-              </Text>
-              {row.perModel.map((m) => (
-                <View
-                  key={m.model}
-                  className="flex-row items-center justify-between"
-                >
-                  <Text className="flex-1 text-sm text-foreground">
-                    {m.model}
-                  </Text>
-                  <Text className="text-xs text-muted-foreground">
-                    {formatTokens(m.inputTokens)} in · {formatTokens(m.outputTokens)} out
-                  </Text>
-                </View>
-              ))}
-            </View>
-          ) : null}
+          {/* TODO(P4): per-generation event list + per-model breakdown
+              once the v4 API exposes token-level usage. */}
         </View>
       )}
     </Card>
@@ -223,20 +166,13 @@ export function Usage({
   refreshing,
   onRefresh,
   onBack,
-  actions,
+  chart,
 }: UsageScreenProps) {
   const [expandedMonth, setExpandedMonth] = useState<string | null>(null);
 
   const handleToggle = (month: string) => {
     setExpandedMonth((prev) => (prev === month ? null : month));
   };
-
-  const tokenChartData = (history ?? []).map((row) => ({
-    label: formatMonth(row.month).split(' ')[0]!.slice(0, 3),
-    value: (row.inputTokens ?? 0) + (row.outputTokens ?? 0),
-  }));
-  const showTokenChart =
-    (history?.length ?? 0) > 1 && tokenChartData.some((d) => d.value > 0);
 
   return (
     <SafeAreaView className="flex-1 bg-background" edges={['top']} testID="screen-usage">
@@ -246,7 +182,6 @@ export function Usage({
             title="Usage History"
             onBack={onBack}
             backLabel="Profile"
-            actions={actions}
           />
         </View>
 
@@ -289,21 +224,14 @@ export function Usage({
                 />
               </View>
 
-              {/* Token usage over time. Renders when ≥2 months and
-                  token data is present. */}
-              {showTokenChart && (
+              {/* Timeline chart (slot) */}
+              {chart && history.length > 1 && (
                 <>
                   <SectionHeader
                     title="Usage Over Time"
                     icon={<BarChart3 size={18} color={colors.foreground} />}
                   />
-                  <Card className="items-center py-5" testID="usage-token-chart">
-                    <UsageBarChart
-                      data={tokenChartData}
-                      unit="tokens"
-                      testID="usage-token-chart-svg"
-                    />
-                  </Card>
+                  <Card className="items-center py-5">{chart}</Card>
                 </>
               )}
 

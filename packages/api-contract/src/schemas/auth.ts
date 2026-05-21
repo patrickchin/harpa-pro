@@ -33,33 +33,15 @@ export const updateMeRequest = z.object({
   companyName: z.string().min(1).max(120).optional(),
 });
 
-export const usageTokens = z.object({
-  input: z.number().int().nonnegative(),
-  output: z.number().int().nonnegative(),
-  cached: z.number().int().nonnegative(),
-  total: z.number().int().nonnegative(),
-});
 export const usageMonth = z.object({
   month: z.string().regex(/^\d{4}-\d{2}$/),
   reports: z.number().int().nonnegative(),
   voiceNotes: z.number().int().nonnegative(),
-  tokens: usageTokens,
-  calls: z.number().int().nonnegative(),
-});
-export const usageByModel = z.object({
-  vendor: z.string(),
-  model: z.string(),
-  operation: z.enum(['chat', 'transcribe', 'generate_report']),
-  calls: z.number().int().nonnegative(),
-  tokens: usageTokens,
 });
 export const usageResponse = z.object({
   months: z.array(usageMonth),
-  byModel: z.array(usageByModel),
   totals: z.object({
     reports: z.number().int().nonnegative(),
     voiceNotes: z.number().int().nonnegative(),
-    tokens: usageTokens,
-    calls: z.number().int().nonnegative(),
   }),
 });

@@ -139,29 +139,14 @@ describe('GET /me/usage', () => {
     const res = await app.request('/me/usage', { headers: { authorization: `Bearer ${token}` } });
     expect(res.status).toBe(200);
     const body = (await res.json()) as {
-      months: Array<{ month: string; reports: number; voiceNotes: number; calls: number }>;
-      byModel: Array<{ vendor: string; model: string; operation: string; calls: number }>;
-      totals: {
-        reports: number;
-        voiceNotes: number;
-        calls: number;
-        tokens: { input: number; output: number; cached: number; total: number };
-      };
+      months: Array<{ month: string; reports: number; voiceNotes: number }>;
+      totals: { reports: number; voiceNotes: number };
     };
-    expect(body.totals.reports).toBe(2);
-    expect(body.totals.voiceNotes).toBe(2);
-    // No /voice or /reports calls were made in this test setup — token
-    // accounting rows only land on real chokepoint hits. The byModel
-    // breakdown is exercised in ai-usage.integration.test.ts.
-    expect(body.totals.calls).toBe(0);
-    expect(body.totals.tokens).toEqual({ input: 0, output: 0, cached: 0, total: 0 });
-    expect(body.byModel).toEqual([]);
+    expect(body.totals).toEqual({ reports: 2, voiceNotes: 2 });
     const m04 = body.months.find((m) => m.month === '2026-04')!;
     const m05 = body.months.find((m) => m.month === '2026-05')!;
-    expect(m04.reports).toBe(1);
-    expect(m04.voiceNotes).toBe(2);
-    expect(m05.reports).toBe(1);
-    expect(m05.voiceNotes).toBe(0);
+    expect(m04).toEqual({ month: '2026-04', reports: 1, voiceNotes: 2 });
+    expect(m05).toEqual({ month: '2026-05', reports: 1, voiceNotes: 0 });
   });
 
   it('bob sees only his own usage', async () => {
@@ -169,11 +154,8 @@ describe('GET /me/usage', () => {
     const token = await signTestToken(bob, bobSid);
     const res = await app.request('/me/usage', { headers: { authorization: `Bearer ${token}` } });
     expect(res.status).toBe(200);
-    const body = (await res.json()) as {
-      totals: { reports: number; voiceNotes: number };
-    };
-    expect(body.totals.reports).toBe(1);
-    expect(body.totals.voiceNotes).toBe(1);
+    const body = (await res.json()) as { totals: { reports: number; voiceNotes: number } };
+    expect(body.totals).toEqual({ reports: 1, voiceNotes: 1 });
   });
 
   it('rejects without a bearer token (401)', async () => {

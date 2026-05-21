@@ -101,20 +101,31 @@ export function AudioPlaybackProvider({
   const [status, setStatus] = useState<PlaybackStatus>(IDLE_STATUS);
 
   // Poll the active player so the UI can render position + duration.
+  // We keep polling while we have an attached player (not just while
+  // `status.playing` is true) so the UI can detect natural end-of-
+  // playback and flip the button back to Play without the caller
+  // having to wire up an event listener.
   useEffect(() => {
-    if (!status.playing) return;
+    if (!status.uri) return;
     const id = setInterval(() => {
       const p = playerRef.current;
       if (!p) return;
-      setStatus({
-        uri: uriRef.current,
-        playing: p.playing,
-        positionSec: p.currentTime,
-        durationSec: p.duration,
+      const playing = p.playing;
+      const pos = p.currentTime;
+      const dur = p.duration;
+      setStatus((prev) => {
+        if (
+          prev.playing === playing &&
+          prev.positionSec === pos &&
+          prev.durationSec === dur
+        ) {
+          return prev;
+        }
+        return { uri: uriRef.current, playing, positionSec: pos, durationSec: dur };
       });
     }, 250);
     return () => clearInterval(id);
-  }, [status.playing]);
+  }, [status.uri]);
 
   // Tear down on unmount so we never leak native players across app
   // backgrounding / hot reloads.
@@ -149,15 +160,30 @@ export function AudioPlaybackProvider({
       // Same URI + paused → resume on the same player. Same URI +
       // already playing → no-op so spurious taps don't restart from 0.
       if (uriRef.current === uri && playerRef.current) {
-        if (!playerRef.current.playing) {
-          playerRef.current.play();
-          setStatus({
-            uri,
-            playing: true,
-            positionSec: playerRef.current.currentTime,
-            durationSec: playerRef.current.duration,
-          });
+        const p = playerRef.current;
+        if (p.playing) return;
+        // expo-audio leaves `currentTime === duration` after a track
+        // finishes naturally. Calling `play()` in that state resumes
+        // at the end and immediately finishes again — visible as a
+        // "play button does nothing after the track ended" bug.
+        // Seek back to 0 first so a second tap is treated as replay.
+        const dur = p.duration;
+        const pos = p.currentTime;
+        if (dur > 0 && pos >= dur - 0.25) {
+          try {
+            await p.seekTo(0);
+          } catch {
+            // Some player implementations reject seekTo after end —
+            // fall through and let the platform handle it.
+          }
         }
+        p.play();
+        setStatus({
+          uri,
+          playing: true,
+          positionSec: p.currentTime,
+          durationSec: p.duration,
+        });
         return;
       }
 

@@ -26,8 +26,10 @@ function TestConsumer({ onMount }: { onMount: (api: ReturnType<typeof useAppDial
 }
 
 async function flush() {
-  await Promise.resolve();
-  await Promise.resolve();
+  await act(async () => {
+    await Promise.resolve();
+    await Promise.resolve();
+  });
 }
 
 describe('lib/dialogs/DialogSheetProvider', () => {

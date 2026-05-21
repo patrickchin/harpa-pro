@@ -88,7 +88,7 @@ describe('settings ai', () => {
     const exit = await settingsAiSet({
       client: makeClient(token),
       vendor: 'kimi',
-      model: 'moonshot-v1-32k',
+      model: 'kimi-k2-0905-preview',
       json: true,
       stdout,
       stderr,
@@ -96,7 +96,7 @@ describe('settings ai', () => {
     expect(exit).toBe(EXIT.OK);
     const body = JSON.parse(stdout.text);
     expect(body.vendor).toBe('kimi');
-    expect(body.model).toBe('moonshot-v1-32k');
+    expect(body.model).toBe('kimi-k2-0905-preview');
 
     // Verify it persists across the next GET.
     const verifyOut = new MemoryStream();
@@ -108,7 +108,7 @@ describe('settings ai', () => {
     });
     const persisted = JSON.parse(verifyOut.text);
     expect(persisted.vendor).toBe('kimi');
-    expect(persisted.model).toBe('moonshot-v1-32k');
+    expect(persisted.model).toBe('kimi-k2-0905-preview');
   });
 
   it('requires auth', async () => {

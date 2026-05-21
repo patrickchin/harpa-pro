@@ -56,11 +56,11 @@ describe('/settings/ai', () => {
     const patch = await app.request('/settings/ai', {
       method: 'PATCH',
       headers: headers(tok),
-      body: JSON.stringify({ vendor: 'kimi', model: 'moonshot-v1-32k' }),
+      body: JSON.stringify({ vendor: 'kimi', model: 'kimi-k2-0905-preview' }),
     });
     expect(patch.status).toBe(200);
     const body = (await patch.json()) as { vendor: string; model: string };
-    expect(body).toEqual({ vendor: 'kimi', model: 'moonshot-v1-32k' });
+    expect(body).toEqual({ vendor: 'kimi', model: 'kimi-k2-0905-preview' });
 
     const get = await app.request('/settings/ai', { headers: { authorization: `Bearer ${tok}` } });
     expect(((await get.json()) as { vendor: string }).vendor).toBe('kimi');

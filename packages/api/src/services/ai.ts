@@ -215,7 +215,7 @@ export const FIXTURE_CANONICALS = {
  */
 const VENDOR_MODELS: Record<Vendor, { summarize: string; report: string }> = {
   openai:    { summarize: 'gpt-4o-mini',         report: 'gpt-4o' },
-  kimi:      { summarize: 'moonshot-v1-8k',      report: 'moonshot-v1-32k' },
+  kimi:      { summarize: 'kimi-k2-0905-preview', report: 'kimi-k2-0905-preview' },
   // groq is transcribe-only; chat/report models are unused but the
   // Vendor union requires an entry. Keep these unreachable in chat()
   // / generateReport() — those callers default to 'openai' and the

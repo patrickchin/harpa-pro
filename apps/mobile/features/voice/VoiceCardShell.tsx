@@ -95,7 +95,7 @@ export function VoiceCardShell({
       className="rounded-2xl border border-border bg-card p-3 shadow-sm"
       testID={testID}
     >
-      <View className="flex-row items-start gap-3">
+      <View className="flex-row items-center gap-3">
         <View className="shrink-0">{leftButton}</View>
         <View className="min-w-0 flex-1">
           <View className="flex-row items-start gap-2">

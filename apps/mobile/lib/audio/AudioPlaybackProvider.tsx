@@ -23,6 +23,8 @@ import {
   type ReactNode,
 } from 'react';
 
+import { beginPlayback, endPlayback } from './audioSession';
+
 export interface PlaybackPlayer {
   play(): void;
   pause(): void;
@@ -98,13 +100,33 @@ export function AudioPlaybackProvider({
 }: AudioPlaybackProviderProps) {
   const playerRef = useRef<PlaybackPlayer | null>(null);
   const uriRef = useRef<string | null>(null);
+  // Tracks whether we currently hold the iOS playback audio session.
+  // `beginPlayback()` is called when playback transitions from
+  // not-playing → playing; `endPlayback()` when it goes the other
+  // way (user pause, stop, natural end, unmount). Refcounted in
+  // `audioSession.ts`, but we still must avoid double-begin/end
+  // from one logical player.
+  const sessionHeldRef = useRef<boolean>(false);
   const [status, setStatus] = useState<PlaybackStatus>(IDLE_STATUS);
+
+  const acquireSession = useCallback(() => {
+    if (sessionHeldRef.current) return;
+    sessionHeldRef.current = true;
+    void beginPlayback();
+  }, []);
+  const releaseSession = useCallback(() => {
+    if (!sessionHeldRef.current) return;
+    sessionHeldRef.current = false;
+    void endPlayback();
+  }, []);
 
   // Poll the active player so the UI can render position + duration.
   // We keep polling while we have an attached player (not just while
   // `status.playing` is true) so the UI can detect natural end-of-
   // playback and flip the button back to Play without the caller
-  // having to wire up an event listener.
+  // having to wire up an event listener. The same poll detects the
+  // natural-end transition and releases the audio session so any
+  // background music can resume.
   useEffect(() => {
     if (!status.uri) return;
     const id = setInterval(() => {
@@ -113,6 +135,11 @@ export function AudioPlaybackProvider({
       const playing = p.playing;
       const pos = p.currentTime;
       const dur = p.duration;
+      // Natural end: player no longer playing, parked at duration.
+      // Release the audio session (notifies music apps to resume).
+      if (!playing && dur > 0 && pos >= dur - 0.25 && sessionHeldRef.current) {
+        releaseSession();
+      }
       setStatus((prev) => {
         if (
           prev.playing === playing &&
@@ -125,7 +152,7 @@ export function AudioPlaybackProvider({
       });
     }, 250);
     return () => clearInterval(id);
-  }, [status.uri]);
+  }, [status.uri, releaseSession]);
 
   // Tear down on unmount so we never leak native players across app
   // backgrounding / hot reloads.
@@ -134,6 +161,10 @@ export function AudioPlaybackProvider({
       playerRef.current?.remove();
       playerRef.current = null;
       uriRef.current = null;
+      if (sessionHeldRef.current) {
+        sessionHeldRef.current = false;
+        void endPlayback();
+      }
     },
     [],
   );
@@ -153,7 +184,8 @@ export function AudioPlaybackProvider({
       playerRef.current = null;
     }
     uriRef.current = null;
-  }, []);
+    releaseSession();
+  }, [releaseSession]);
 
   const play = useCallback(
     async (uri: string) => {
@@ -177,6 +209,7 @@ export function AudioPlaybackProvider({
             // fall through and let the platform handle it.
           }
         }
+        acquireSession();
         p.play();
         setStatus({
           uri,
@@ -188,6 +221,7 @@ export function AudioPlaybackProvider({
       }
 
       releaseActive();
+      acquireSession();
       const next = playerFactory(uri);
       playerRef.current = next;
       uriRef.current = uri;
@@ -199,20 +233,21 @@ export function AudioPlaybackProvider({
         durationSec: next.duration,
       });
     },
-    [playerFactory, releaseActive],
+    [playerFactory, releaseActive, acquireSession],
   );
 
   const pause = useCallback(() => {
     const p = playerRef.current;
     if (!p) return;
     p.pause();
+    releaseSession();
     setStatus({
       uri: uriRef.current,
       playing: false,
       positionSec: p.currentTime,
       durationSec: p.duration,
     });
-  }, []);
+  }, [releaseSession]);
 
   const stop = useCallback(() => {
     releaseActive();

@@ -11,7 +11,6 @@
  *
  * Refs: docs/v4/arch-voice-pipeline.md §D4.
  */
-import { Platform } from 'react-native';
 // eslint-disable-next-line @typescript-eslint/no-restricted-imports
 import {
   createAudioPlayer as _unused,
@@ -22,7 +21,6 @@ import {
   RecordingPresets,
   requestRecordingPermissionsAsync,
   getRecordingPermissionsAsync,
-  setAudioModeAsync,
   AudioModule,
 } from 'expo-audio';
 import type {
@@ -32,6 +30,8 @@ import type {
   RecorderResult,
   RecorderSnapshot,
 } from './recorder-types';
+
+import { beginRecording, endRecording } from '@/lib/audio/audioSession';
 
 void _unused;
 
@@ -115,12 +115,11 @@ function createExpoAudioHandle(): RecorderHandle {
       if (snapshot.status === 'recording') return;
       try {
         if (!recorder) {
-          // iOS requires `allowsRecording: true` BEFORE prepare; Android
-          // ignores. Mode is global, so we set then immediately revert on
-          // stop().
-          if (Platform.OS === 'ios') {
-            await setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true });
-          }
+          // Acquire the recording audio session — pauses background
+          // music (Spotify et al.) and switches iOS into the
+          // playAndRecord category so the mic actually works. Must
+          // happen BEFORE constructing the recorder on iOS.
+          await beginRecording();
           recorder = new AudioModule.AudioRecorder({
             extension: '.m4a',
             sampleRate: 16000,
@@ -136,6 +135,9 @@ function createExpoAudioHandle(): RecorderHandle {
         emit({ status: 'recording', error: undefined });
         pollTimer = setInterval(poll, TICK_MS);
       } catch (err) {
+        // If session acquisition succeeded but recorder construction
+        // failed, release the session so background music can resume.
+        await endRecording().catch(() => undefined);
         emit({ status: 'errored', error: err instanceof Error ? err.message : String(err) });
         throw err;
       }
@@ -168,11 +170,11 @@ function createExpoAudioHandle(): RecorderHandle {
       if (!uri) throw new Error('expoAudioRecorder: recorder produced no uri');
       const sizeBytes = await readFileSize(uri);
       emit({ status: 'stopped', durationMs: durationSec * 1000 });
-      // Reset the global audio mode so playback in other parts of the
-      // app doesn't get routed to the record-only profile.
-      if (Platform.OS === 'ios') {
-        await setAudioModeAsync({ allowsRecording: false }).catch(() => undefined);
-      }
+      // Release the recording audio session — reverts allowsRecording
+      // so subsequent playback uses the right category, and (when no
+      // other audio client is active) deactivates the session with
+      // notifyOthersOnDeactivation so background music resumes.
+      await endRecording().catch(() => undefined);
       return { uri, mimeType: 'audio/m4a', sizeBytes, durationSec };
     },
     async cancel() {
@@ -188,9 +190,7 @@ function createExpoAudioHandle(): RecorderHandle {
         // KB of discarded m4a is an acceptable trade.
         recorder = null;
       }
-      if (Platform.OS === 'ios') {
-        await setAudioModeAsync({ allowsRecording: false }).catch(() => undefined);
-      }
+      await endRecording().catch(() => undefined);
       emit({ status: 'idle', durationMs: 0, amplitude: 0, error: undefined });
     },
     release() {

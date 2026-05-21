@@ -8,6 +8,7 @@ import { Pressable, Text, View } from 'react-native';
 import { FileText } from 'lucide-react-native';
 
 import { NoteCardHeader } from '@/components/notes/NoteCardHeader';
+import { NoteOptionsKebab } from '@/components/reports/detail/NoteOptionsKebab';
 import { useFileSignedUrl } from '@/lib/uploads/useFileSignedUrl';
 import { colors } from '@/lib/design-tokens/colors';
 
@@ -18,6 +19,8 @@ export interface DocumentNoteRowProps {
   authorName?: string | null;
   capturedAt: string | null;
   onOpen?: (input: { fileId: string; uri: string }) => void;
+  /** Opens the shared note-options sheet for this row. */
+  onOpenOptions?: (noteId: string) => void;
 }
 
 export function DocumentNoteRow({
@@ -27,6 +30,7 @@ export function DocumentNoteRow({
   authorName,
   capturedAt,
   onOpen,
+  onOpenOptions,
 }: DocumentNoteRowProps) {
   const { data } = useFileSignedUrl(fileId);
   const uri = (data as { url?: string } | undefined)?.url ?? null;
@@ -47,6 +51,14 @@ export function DocumentNoteRow({
         authorName={authorName ?? null}
         capturedAt={capturedAt}
         testIDSuffix={noteId}
+        trailing={
+          onOpenOptions ? (
+            <NoteOptionsKebab
+              noteId={noteId}
+              onPress={() => onOpenOptions(noteId)}
+            />
+          ) : null
+        }
       />
       <View className="flex-row items-center gap-2">
         <View className="h-9 w-9 items-center justify-center rounded-md bg-muted">

@@ -8,15 +8,16 @@
  * the R2 GET URL is fetched lazily via `useFileSignedUrl(fileId)` on
  * first play tap.
  *
- * Layout matches the draft-side `VoiceNoteCard`: shared
- * `NoteCardHeader` with a ⋯ kebab in the trailing slot that toggles
- * an inline transcript panel below the card.
+ * The ⋯ kebab in the header trailing slot delegates to the parent's
+ * `onOpenOptions(noteId)` callback so the shared `NoteOptionsSheet`
+ * owns all per-note actions (delete, view transcript, metadata).
  */
-import { useCallback, useState } from 'react';
+import { useCallback } from 'react';
 import { Pressable, Text, View } from 'react-native';
-import { Mic, MoreVertical, Pause, Play } from 'lucide-react-native';
+import { Mic, Pause, Play } from 'lucide-react-native';
 
 import { NoteCardHeader } from '@/components/notes/NoteCardHeader';
+import { NoteOptionsKebab } from '@/components/reports/detail/NoteOptionsKebab';
 import { useAudioPlayback } from '@/lib/audio/AudioPlaybackProvider';
 import { useFileSignedUrl } from '@/lib/uploads/useFileSignedUrl';
 import { colors } from '@/lib/design-tokens/colors';
@@ -33,6 +34,8 @@ export interface VoiceNoteRowProps {
   durationSec?: number | null;
   authorName?: string | null;
   capturedAt: string | null;
+  /** Opens the shared note-options sheet for this row. */
+  onOpenOptions?: (noteId: string) => void;
 }
 
 export function VoiceNoteRow({
@@ -45,8 +48,8 @@ export function VoiceNoteRow({
   durationSec,
   authorName,
   capturedAt,
+  onOpenOptions,
 }: VoiceNoteRowProps) {
-  const [transcriptOpen, setTranscriptOpen] = useState(false);
   const canPlay = Boolean(fileId);
   const signedUrlQuery = useFileSignedUrl(fileId, { enabled: canPlay });
   const audioUri =
@@ -72,19 +75,8 @@ export function VoiceNoteRow({
   const summaryText = summary?.trim() || null;
   const transcriptText = transcript?.trim() || body?.trim() || null;
 
-  const kebab = transcriptText ? (
-    <Pressable
-      onPress={() => setTranscriptOpen((v) => !v)}
-      accessibilityRole="button"
-      accessibilityLabel={
-        transcriptOpen ? 'Hide transcript' : 'Show transcript'
-      }
-      hitSlop={8}
-      testID={`btn-voice-menu-${noteId}`}
-      className="h-7 w-7 items-center justify-center rounded-full"
-    >
-      <MoreVertical size={16} color={colors.muted.foreground} />
-    </Pressable>
+  const kebab = onOpenOptions ? (
+    <NoteOptionsKebab noteId={noteId} onPress={() => onOpenOptions(noteId)} />
   ) : null;
 
   return (
@@ -146,26 +138,19 @@ export function VoiceNoteRow({
         >
           {summaryText}
         </Text>
-      ) : null}
-
-      {transcriptText && transcriptOpen ? (
-        <View
-          className="rounded-md border border-border bg-muted/40 p-2"
-          testID={`voice-transcript-block-${noteId}`}
+      ) : transcriptText ? (
+        <Text
+          className="text-xs leading-5 text-muted-foreground"
+          testID={`voice-transcript-preview-${noteId}`}
+          numberOfLines={2}
         >
-          <Text
-            className="text-xs leading-5 text-muted-foreground"
-            testID={`voice-transcript-${noteId}`}
-            selectable
-          >
-            {transcriptText}
-          </Text>
-        </View>
-      ) : !summaryText ? (
+          {transcriptText}
+        </Text>
+      ) : (
         <Text className="text-xs italic text-muted-foreground">
           No transcript available.
         </Text>
-      ) : null}
+      )}
     </View>
   );
 }

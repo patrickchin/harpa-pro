@@ -7,11 +7,10 @@
  * is derived in `voiceNoteCardHeader.ts` so the pure logic is testable
  * in node.
  *
- * Layout matches the marketing-page voice card (apps/marketing/src
- * /components/VoiceDemo.tsx :: PreviousNoteCard) — round play button,
- * title + meta in a column, progress fill + duration, then summary
- * and the transcript expander. See `VoiceCardShell` for the shared
- * primitive.
+ * Layout: shared `NoteCardHeader` (author + timestamp + kebab trailing
+ * slot) → status row (mic/play button + label + duration + retry) →
+ * optional summary → optional inline transcript panel revealed by the
+ * kebab.
  *
  * Playback uses the global `useAudioPlayback()` provider so only one
  * note plays at a time (arch-voice-pipeline.md §D7). The signed R2
@@ -25,13 +24,16 @@ import { useCallback, useState } from 'react';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 import { Mic, MoreVertical, Pause, Play, RotateCw } from 'lucide-react-native';
 
+import { NoteCardHeader } from '@/components/notes/NoteCardHeader';
 import { useAudioPlayback } from '@/lib/audio/AudioPlaybackProvider';
 import { useFileSignedUrl } from '@/lib/uploads/useFileSignedUrl';
 import { colors } from '@/lib/design-tokens/colors';
 import type { NoteEntry } from '@/lib/note-entry';
 
-import { deriveVoiceCardHeader } from './voiceNoteCardHeader';
-import { VoiceCardShell } from './VoiceCardShell';
+import {
+  deriveVoiceCardHeader,
+  formatDuration,
+} from './voiceNoteCardHeader';
 
 export interface VoiceNoteCardProps {
   entry: NoteEntry;
@@ -79,67 +81,8 @@ export function VoiceNoteCard({
     onRetry?.(sourceIndex);
   }, [onRetry, sourceIndex]);
 
-  const isWorking = header.phase === 'uploading' || header.phase === 'transcribing';
-
-  const leftButton = isWorking ? (
-    <View
-      className="h-10 w-10 items-center justify-center rounded-full bg-muted"
-      testID={`voice-status-spinner-${sourceIndex}`}
-    >
-      <ActivityIndicator size="small" color={colors.muted.foreground} />
-    </View>
-  ) : (
-    <Pressable
-      onPress={handlePlayPause}
-      disabled={!header.canPlay || !audioUri}
-      accessibilityRole="button"
-      accessibilityLabel={isPlayingThis ? 'Pause voice note' : 'Play voice note'}
-      testID={`btn-voice-play-${sourceIndex}`}
-      className={`h-10 w-10 items-center justify-center rounded-full ${
-        header.canPlay ? 'bg-primary' : 'bg-muted'
-      }`}
-    >
-      {isPlayingThis ? (
-        <Pause size={16} color={colors.primary.foreground} />
-      ) : header.canPlay && audioUri ? (
-        <Play size={16} color={colors.primary.foreground} />
-      ) : (
-        <Mic size={16} color={colors.muted.foreground} />
-      )}
-    </Pressable>
-  );
-
-  const retryPill = header.showRetry ? (
-    <Pressable
-      onPress={handleRetry}
-      accessibilityRole="button"
-      accessibilityLabel="Retry voice note"
-      testID={`btn-voice-retry-${sourceIndex}`}
-      className="h-7 flex-row items-center gap-1 rounded-md bg-muted px-2"
-    >
-      <RotateCw size={14} color={colors.muted.foreground} />
-      <Text className="text-[11px] font-medium text-muted-foreground">
-        Retry
-      </Text>
-    </Pressable>
-  ) : null;
-
-  const errorPill = header.errorMessage ? (
-    <Text
-      className="text-xs text-danger-text"
-      testID={`voice-error-${sourceIndex}`}
-      selectable
-    >
-      {header.errorMessage}
-    </Text>
-  ) : null;
-
-  // While the upload / transcribe is still running, the title slot
-  // shows the phase label (e.g. "Uploading…") instead of the
-  // not-yet-derived LLM title. Once `ready`, the real title takes over
-  // (falling back to "Voice note" if the model returned nothing).
   const title = entry.title?.trim() || null;
-  const titleSlot = isWorking || !title ? header.label : title;
+  const summary = entry.summary?.trim() || null;
   const transcript = entry.transcript?.trim() || null;
 
   const kebab = transcript ? (
@@ -157,30 +100,113 @@ export function VoiceNoteCard({
     </Pressable>
   ) : null;
 
-  // Wrap in an outer View so legacy `note-row-{idx}` testIDs / parent
-  // selectors keep working without duplicating layout.
   return (
-    <View testID={`note-row-${sourceIndex}`}>
-      <VoiceCardShell
-        leftButton={leftButton}
-        title={titleSlot}
+    <View
+      className="rounded-lg border border-border bg-card p-3 gap-2"
+      testID={`note-row-${sourceIndex}`}
+    >
+      <NoteCardHeader
         authorName={authorName}
         capturedAt={entry.addedAt}
-        positionSec={positionSec}
-        durationSec={durationSec}
-        isPlaying={isPlayingThis}
-        trailing={retryPill}
-        errorPill={errorPill}
-        summary={entry.summary}
-        menu={kebab}
+        testIDSuffix={sourceIndex}
+        trailing={kebab}
       />
+
+      <View className="flex-row items-center gap-2">
+        {header.phase === 'uploading' || header.phase === 'transcribing' ? (
+          <View
+            className="h-8 w-8 items-center justify-center rounded-full bg-muted"
+            testID={`voice-status-spinner-${sourceIndex}`}
+          >
+            <ActivityIndicator size="small" color={colors.muted.foreground} />
+          </View>
+        ) : (
+          <Pressable
+            onPress={handlePlayPause}
+            disabled={!header.canPlay || !audioUri}
+            accessibilityRole="button"
+            accessibilityLabel={isPlayingThis ? 'Pause voice note' : 'Play voice note'}
+            testID={`btn-voice-play-${sourceIndex}`}
+            className={`h-8 w-8 items-center justify-center rounded-full ${
+              header.canPlay ? 'bg-primary' : 'bg-muted'
+            }`}
+          >
+            {isPlayingThis ? (
+              <Pause size={16} color={colors.primary.foreground} />
+            ) : header.canPlay && audioUri ? (
+              <Play size={16} color={colors.primary.foreground} />
+            ) : (
+              <Mic size={16} color={colors.muted.foreground} />
+            )}
+          </Pressable>
+        )}
+
+        <Text
+          className="flex-1 text-xs font-medium uppercase text-muted-foreground"
+          testID={`voice-status-label-${sourceIndex}`}
+        >
+          {header.label}
+        </Text>
+
+        <Text className="text-xs tabular-nums text-muted-foreground">
+          {isPlayingThis
+            ? `${formatDuration(positionSec)} / ${formatDuration(durationSec)}`
+            : formatDuration(durationSec)}
+        </Text>
+
+        {header.showRetry ? (
+          <Pressable
+            onPress={handleRetry}
+            accessibilityRole="button"
+            accessibilityLabel="Retry voice note"
+            testID={`btn-voice-retry-${sourceIndex}`}
+            className="h-7 flex-row items-center gap-1 rounded-md bg-muted px-2"
+          >
+            <RotateCw size={14} color={colors.muted.foreground} />
+            <Text className="text-xs font-medium text-muted-foreground">
+              Retry
+            </Text>
+          </Pressable>
+        ) : null}
+      </View>
+
+      {header.errorMessage ? (
+        <Text
+          className="text-xs text-danger-text"
+          testID={`voice-error-${sourceIndex}`}
+          selectable
+        >
+          {header.errorMessage}
+        </Text>
+      ) : null}
+
+      {title ? (
+        <Text
+          className="text-sm font-semibold text-foreground"
+          testID={`voice-title-${sourceIndex}`}
+          numberOfLines={2}
+        >
+          {title}
+        </Text>
+      ) : null}
+
+      {summary ? (
+        <Text
+          className="text-sm leading-5 text-foreground"
+          testID={`voice-summary-${sourceIndex}`}
+          selectable
+        >
+          {summary}
+        </Text>
+      ) : null}
+
       {transcript && transcriptOpen ? (
         <View
-          className="mt-2 rounded-2xl border border-border bg-muted/40 p-3"
+          className="rounded-md border border-border bg-muted/40 p-2"
           testID={`voice-transcript-block-${sourceIndex}`}
         >
           <Text
-            className="text-xs leading-relaxed text-muted-foreground"
+            className="text-xs leading-5 text-muted-foreground"
             testID={`voice-transcript-${sourceIndex}`}
             selectable
           >

@@ -7,6 +7,7 @@
  * `../haru3-reports/apps/mobile/components/notes/TextNoteCard.tsx` so
  * voice / photo cards can reuse the same row when they port.
  */
+import type { ReactNode } from 'react';
 import { Text, View } from 'react-native';
 
 import { formatCapturedAt } from '@/lib/date';
@@ -18,16 +19,24 @@ export interface NoteCardHeaderProps {
   capturedAt?: string | number | Date | null;
   /** Suffix appended to testIDs so multiple cards stay distinguishable. */
   testIDSuffix?: string | number;
+  /**
+   * Optional element rendered to the right of the captured-at
+   * timestamp. Used by voice cards for the ⋯ transcript kebab so the
+   * trigger sits in a consistent top-right corner across all note
+   * surfaces without each card duplicating layout.
+   */
+  trailing?: ReactNode;
 }
 
 export function NoteCardHeader({
   authorName,
   capturedAt,
   testIDSuffix,
+  trailing,
 }: NoteCardHeaderProps) {
   const capturedDisplay = formatCapturedAt(capturedAt);
   const author = authorName?.trim() || 'Unknown';
-  if (!capturedDisplay && !authorName?.trim()) return null;
+  if (!capturedDisplay && !authorName?.trim() && !trailing) return null;
 
   return (
     <View className="flex-row items-center justify-between gap-2">
@@ -55,6 +64,7 @@ export function NoteCardHeader({
           {capturedDisplay}
         </Text>
       ) : null}
+      {trailing ?? null}
     </View>
   );
 }

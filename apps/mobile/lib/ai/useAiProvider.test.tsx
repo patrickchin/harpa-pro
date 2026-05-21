@@ -54,12 +54,12 @@ describe('useAiProvider', () => {
   });
 
   it('hydrates from AsyncStorage when valid values are stored', async () => {
-    await AsyncStorage.setItem('harpa.ai_provider.v1', 'anthropic');
-    await AsyncStorage.setItem('harpa.ai_model.v1', 'claude-haiku-4-5');
+    await AsyncStorage.setItem('harpa.ai_provider.v1', 'openai');
+    await AsyncStorage.setItem('harpa.ai_model.v1', 'gpt-4o');
     const { current } = renderHook(() => useAiProvider());
     await flush();
-    expect(current.value.provider).toBe('anthropic');
-    expect(current.value.model).toBe('claude-haiku-4-5');
+    expect(current.value.provider).toBe('openai');
+    expect(current.value.model).toBe('gpt-4o');
   });
 
   it('falls back to the provider default when the stored model is invalid', async () => {
@@ -82,13 +82,13 @@ describe('useAiProvider', () => {
     const { current } = renderHook(() => useAiProvider());
     await flush();
     await act(async () => {
-      (current.value as UseAiProviderApi).setProvider('google');
+      (current.value as UseAiProviderApi).setProvider('openai');
     });
-    expect(current.value.provider).toBe('google');
-    expect(current.value.model).toBe(PROVIDER_MODELS.google[0]!.id);
-    expect(await AsyncStorage.getItem('harpa.ai_provider.v1')).toBe('google');
+    expect(current.value.provider).toBe('openai');
+    expect(current.value.model).toBe(PROVIDER_MODELS.openai[0]!.id);
+    expect(await AsyncStorage.getItem('harpa.ai_provider.v1')).toBe('openai');
     expect(await AsyncStorage.getItem('harpa.ai_model.v1')).toBe(
-      PROVIDER_MODELS.google[0]!.id,
+      PROVIDER_MODELS.openai[0]!.id,
     );
   });
 

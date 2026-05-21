@@ -42,7 +42,7 @@ beforeAll(async () => {
   );
   // Seed bob with a row to differentiate from the absent-row default path.
   await admin.query(
-    `INSERT INTO app.user_settings(user_id, ai_vendor, ai_model) VALUES ($1, 'anthropic', 'claude-bob')`,
+    `INSERT INTO app.user_settings(user_id, ai_vendor, ai_model) VALUES ($1, 'kimi', 'kimi-bob-model')`,
     [bob],
   );
   await admin.end();
@@ -59,7 +59,7 @@ describe('scope: /settings/ai', () => {
     const res = await app.request('/settings/ai', { headers: { authorization: `Bearer ${tok}` } });
     const body = (await res.json()) as { vendor: string; model: string };
     expect(body.vendor).toBe('openai');
-    expect(body.model).not.toBe('claude-bob');
+    expect(body.model).not.toBe('kimi-bob-model');
   });
 
   it('bob GET sees his own row', async () => {
@@ -67,8 +67,8 @@ describe('scope: /settings/ai', () => {
     const tok = await signTestToken(bob, bobSid);
     const res = await app.request('/settings/ai', { headers: { authorization: `Bearer ${tok}` } });
     const body = (await res.json()) as { vendor: string; model: string };
-    expect(body.vendor).toBe('anthropic');
-    expect(body.model).toBe('claude-bob');
+    expect(body.vendor).toBe('kimi');
+    expect(body.model).toBe('kimi-bob-model');
   });
 
   it('paired — alice PATCH does not mutate bob row', async () => {
@@ -77,7 +77,7 @@ describe('scope: /settings/ai', () => {
     await app.request('/settings/ai', {
       method: 'PATCH',
       headers: { authorization: `Bearer ${tok}`, 'content-type': 'application/json' },
-      body: JSON.stringify({ vendor: 'google', model: 'gemini-pro' }),
+      body: JSON.stringify({ vendor: 'openai', model: 'gpt-4o' }),
     });
     const conn = await getPool().connect();
     try {
@@ -85,7 +85,7 @@ describe('scope: /settings/ai', () => {
         `SELECT ai_vendor FROM app.user_settings WHERE user_id = $1`,
         [bob],
       );
-      expect(r.rows[0]?.ai_vendor).toBe('anthropic');
+      expect(r.rows[0]?.ai_vendor).toBe('kimi');
     } finally {
       conn.release();
     }

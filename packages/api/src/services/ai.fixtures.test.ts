@@ -17,7 +17,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { chat, generateReport } from './ai.js';
 import type { AiVendor } from './settings.js';
 
-const VENDORS: AiVendor[] = ['openai', 'kimi', 'anthropic', 'google', 'zai', 'deepseek'];
+const VENDORS: AiVendor[] = ['openai', 'kimi'];
 
 describe('AI fixtures — per-vendor replay coverage', () => {
   beforeEach(() => {

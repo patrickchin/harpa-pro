@@ -21,34 +21,63 @@ packages/ai-fixtures/
   src/
     index.ts           # createProvider({ fixtureMode })
     providers/
-      openai.ts
-      anthropic.ts
-      kimi.ts
-      google.ts
-      zai.ts
-      deepseek.ts
+      openai.ts        # chat (api.openai.com/v1/chat/completions)
+      groq.ts          # transcribe (api.groq.com/openai/v1, whisper-large-v3-turbo)
+      factory-from-env.ts  # realProviderFactoryFromEnv — routes vendor → adapter
+      error.ts         # AdapterError
     fixture-store.ts   # read/write fixtures/<name>.json
     redact.ts          # PII redaction
     hash.ts            # canonical-json hash for fixture lookup
   fixtures/
-    transcribe.basic.json              # openai (Whisper) — only vendor with transcribe
+    transcribe.basic.groq.json         # groq (whisper-large-v3-turbo)
     summarize.basic.json               # openai default
-    summarize.basic.<vendor>.json      # one per non-default vendor
+    summarize.basic.kimi.json          # kimi (replay-only)
     generate-report.full.json          # openai default
-    generate-report.full.<vendor>.json
+    generate-report.full.kimi.json
     generate-report.incomplete.json    # openai default
-    generate-report.incomplete.<vendor>.json
+    generate-report.incomplete.kimi.json
+    generate-report.update.json        # openai default
+    generate-report.update.kimi.json
     …
   package.json
 ```
 
-`<vendor>` ∈ {`kimi`, `anthropic`, `google`, `zai`, `deepseek`}.
-OpenAI keeps the un-suffixed names for backwards compat.
-`services/ai.ts` picks the per-vendor fixture name based on the
-caller's `vendor` argument (which the route handler reads from
-`getAiSettings()` once that's wired). Each vendor has its own
-canonical model id (e.g. `claude-3-5-haiku` for anthropic
-summarize) — see `VENDOR_MODELS` in `packages/api/src/services/ai.ts`.
+User-facing vendors (`aiVendor` enum): `openai`, `kimi`. OpenAI is
+the default and the only one with a live adapter today; kimi is
+replay-only (chat fixtures kept; calling it under `AI_LIVE=1`
+throws `LiveAdapterMissingError` → 502). Anthropic / Google / Z.AI /
+DeepSeek were removed in `feat/ai-live-prod-dev` along with all
+their fixtures.
+
+Transcription is **not** user-selectable — every transcribe request
+routes to Groq (`whisper-large-v3-turbo`), which is ~10× cheaper than
+OpenAI Whisper-1 with comparable quality. `groq` is an internal-only
+member of the ai-fixtures `Vendor` union; it doesn't appear in the
+user-facing `aiVendor` enum. OpenAI keeps the un-suffixed fixture
+names for backwards compat. Each vendor has its own canonical model
+id — see `VENDOR_MODELS` in `packages/api/src/services/ai.ts`.
+
+### Live mode wiring (Pitfall 13)
+
+`@harpa/ai-fixtures` exports `realProviderFactoryFromEnv({ openaiApiKey,
+groqApiKey, … })` which `packages/api/src/services/ai.ts::buildProvider()`
+passes into `createProvider` whenever `mode !== 'replay'`. Replay mode
+*never* invokes the factory and never reads the API keys, so local
+dev / CI / `:mock` keep working with `OPENAI_API_KEY` unset.
+
+Route handlers don't plumb any AI config. They just call
+`services/ai.ts::{transcribe,chat,generateReport}` and the service
+decides:
+
+- If the caller passed `fixtureName` → replay (force).
+- Else if `AI_LIVE=1` → live (factory invoked).
+- Else → replay (canonical fixture name).
+
+The "default wiring" test
+(`packages/api/src/services/ai.live.test.ts`) stubs `globalThis.fetch`
+and asserts chat hits `api.openai.com`, transcribe hits
+`api.groq.com` — guarding against the regression that motivated this
+doc rewrite (bugs/README.md 2026-05-22).
 
 ## Modes
 

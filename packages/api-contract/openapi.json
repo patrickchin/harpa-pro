@@ -8379,11 +8379,7 @@
                       "type": "string",
                       "enum": [
                         "kimi",
-                        "openai",
-                        "anthropic",
-                        "google",
-                        "zai",
-                        "deepseek"
+                        "openai"
                       ]
                     },
                     "model": {
@@ -8455,11 +8451,7 @@
                     "type": "string",
                     "enum": [
                       "kimi",
-                      "openai",
-                      "anthropic",
-                      "google",
-                      "zai",
-                      "deepseek"
+                      "openai"
                     ]
                   },
                   "model": {
@@ -8482,11 +8474,7 @@
                       "type": "string",
                       "enum": [
                         "kimi",
-                        "openai",
-                        "anthropic",
-                        "google",
-                        "zai",
-                        "deepseek"
+                        "openai"
                       ]
                     },
                     "model": {

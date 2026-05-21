@@ -87,16 +87,16 @@ describe('settings ai', () => {
     const stderr = new MemoryStream();
     const exit = await settingsAiSet({
       client: makeClient(token),
-      vendor: 'anthropic',
-      model: 'claude-3-5-sonnet-latest',
+      vendor: 'kimi',
+      model: 'moonshot-v1-32k',
       json: true,
       stdout,
       stderr,
     });
     expect(exit).toBe(EXIT.OK);
     const body = JSON.parse(stdout.text);
-    expect(body.vendor).toBe('anthropic');
-    expect(body.model).toBe('claude-3-5-sonnet-latest');
+    expect(body.vendor).toBe('kimi');
+    expect(body.model).toBe('moonshot-v1-32k');
 
     // Verify it persists across the next GET.
     const verifyOut = new MemoryStream();
@@ -107,8 +107,8 @@ describe('settings ai', () => {
       stderr,
     });
     const persisted = JSON.parse(verifyOut.text);
-    expect(persisted.vendor).toBe('anthropic');
-    expect(persisted.model).toBe('claude-3-5-sonnet-latest');
+    expect(persisted.vendor).toBe('kimi');
+    expect(persisted.model).toBe('moonshot-v1-32k');
   });
 
   it('requires auth', async () => {

@@ -7,11 +7,11 @@ const here = dirname(fileURLToPath(import.meta.url));
 const fixturesDir = resolve(here, '../fixtures');
 
 describe('committed fixtures replay end-to-end', () => {
-  it('transcribe.basic replays the canonical site-arrival transcript', async () => {
+  it('transcribe.basic.groq replays the canonical site-arrival transcript', async () => {
     const p = createProvider({
-      vendor: 'openai',
+      vendor: 'groq',
       fixtureMode: 'replay',
-      fixtureName: 'transcribe.basic',
+      fixtureName: 'transcribe.basic.groq',
       fixturesDir,
     });
     const r = await p.transcribe({

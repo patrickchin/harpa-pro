@@ -914,7 +914,7 @@ exports[`command tree (help drift gate) > matches the recorded snapshot 1`] = `
                   "type": "string",
                 },
                 "vendor": {
-                  "description": "One of kimi|openai|anthropic|google|zai|deepseek.",
+                  "description": "One of kimi|openai.",
                   "type": "string",
                 },
                 "verbose": {

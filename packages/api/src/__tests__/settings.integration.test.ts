@@ -56,14 +56,14 @@ describe('/settings/ai', () => {
     const patch = await app.request('/settings/ai', {
       method: 'PATCH',
       headers: headers(tok),
-      body: JSON.stringify({ vendor: 'anthropic', model: 'claude-3-5-sonnet' }),
+      body: JSON.stringify({ vendor: 'kimi', model: 'moonshot-v1-32k' }),
     });
     expect(patch.status).toBe(200);
     const body = (await patch.json()) as { vendor: string; model: string };
-    expect(body).toEqual({ vendor: 'anthropic', model: 'claude-3-5-sonnet' });
+    expect(body).toEqual({ vendor: 'kimi', model: 'moonshot-v1-32k' });
 
     const get = await app.request('/settings/ai', { headers: { authorization: `Bearer ${tok}` } });
-    expect(((await get.json()) as { vendor: string }).vendor).toBe('anthropic');
+    expect(((await get.json()) as { vendor: string }).vendor).toBe('kimi');
   });
 
   it('PATCH partial — only vendor — keeps model', async () => {

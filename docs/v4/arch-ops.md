@@ -167,7 +167,7 @@ flyctl secrets set --app harpa-pro-api-dev \
   TWILIO_ACCOUNT_SID=... TWILIO_AUTH_TOKEN=... TWILIO_VERIFY_SID=... \
   R2_ACCOUNT_ID=... R2_ACCESS_KEY_ID=... R2_SECRET_ACCESS_KEY=... \
   R2_BUCKET=harpa-pro-dev \
-  OPENAI_API_KEY=... ANTHROPIC_API_KEY=... # etc.
+  AI_LIVE=1 OPENAI_API_KEY=sk-... GROQ_API_KEY=gsk-... # AI providers
 ```
 
 After bootstrap, every push to `dev` re-uses the same Neon branch

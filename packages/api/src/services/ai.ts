@@ -401,6 +401,8 @@ export interface GenerateReportOutput {
   model: string;
   /** Vendor used. */
   vendor: Vendor;
+  /** Fixture mode the call ran in — surfaced for the Report Debug screen. */
+  fixtureMode: FixtureMode;
 }
 
 /**
@@ -506,5 +508,6 @@ export async function generateReport(input: GenerateReportInput): Promise<Genera
     userPrompt: liveUserPrompt.length > 0 ? liveUserPrompt : req.userPrompt,
     model: req.model,
     vendor,
+    fixtureMode: mode,
   };
 }

@@ -16,6 +16,24 @@ type ReportBody = z.infer<typeof reportSchemas.reportBody>;
 
 export type ReportStatus = 'draft' | 'finalized';
 
+/**
+ * Persisted shape of the `last_generation` jsonb column (migration 0003).
+ * Mirror of the api-contract `reportLastGeneration` schema; kept here as a
+ * service-local type so the schema stays the single source of truth for
+ * the wire format and this type stays the truth for the DB column.
+ */
+export interface ReportLastGeneration {
+  requestedAt: string;
+  finishedAt: string | null;
+  vendor: string;
+  model: string;
+  fixtureMode: 'live' | 'replay' | 'record';
+  systemPrompt: string;
+  userPrompt: string;
+  response: string;
+  usage: { inputTokens: number; outputTokens: number; cachedTokens?: number } | null;
+}
+
 export interface ReportRow {
   id: string;
   number: number;
@@ -338,12 +356,18 @@ export async function setReportBody(
   db: Db,
   reportId: string,
   body: ReportBody,
+  lastGeneration?: ReportLastGeneration,
 ): Promise<ReportRow | null> {
+  const lastGenJson = lastGeneration ? JSON.stringify(lastGeneration) : null;
   const r = await db.execute<RawReport>(sql`
     UPDATE app.reports
     SET body = ${JSON.stringify(body)}::jsonb,
         generated_at = now(),
         notes_since_last_generation = 0,
+        last_generation = CASE
+          WHEN ${lastGenJson}::text IS NOT NULL THEN ${lastGenJson}::jsonb
+          ELSE last_generation
+        END,
         updated_at = now()
     WHERE id = ${reportId}
     RETURNING id, number, project_id, status, visit_date, body,
@@ -408,4 +432,89 @@ export async function setReportPdfFileId(
   `);
   const row = r.rows[0];
   return row ? mapReport(row) : null;
+}
+
+// ---------------------------------------------------------------------------
+// Report Debug surface (P4.8).
+// ---------------------------------------------------------------------------
+
+/**
+ * Shape returned by GET /reports/{number}/debug.
+ *
+ * `prompt.system` / `prompt.user` are surfaced from `last_generation` when
+ * the report has been generated; if it hasn't (draft, never generated),
+ * we still surface the user prompt the API *would* send (the same
+ * `NOTES:` block built by collectNotesForGeneration) so the operator can
+ * inspect the input. `prompt.system` is empty in that case — the
+ * SYSTEM_PROMPT canonical depends on the AI fixture path, which the
+ * service layer doesn't know without actually running the generator.
+ *
+ * RLS: the caller must have already loaded the report under the
+ * per-request scoped handle (route does this via `loadReport`). Notes
+ * inherit the same scope through `app.notes` policies.
+ */
+export interface ReportDebugRow {
+  prompt: { system: string; user: string };
+  notes: Array<{
+    id: string;
+    kind: 'text' | 'voice' | 'image' | 'document';
+    body: string | null;
+    transcript: string | null;
+    createdAt: string;
+  }>;
+  lastGeneration: ReportLastGeneration | null;
+}
+
+export async function getReportDebug(db: Db, reportId: string): Promise<ReportDebugRow | null> {
+  // last_generation column lookup. Existence check is via the same id
+  // — the route loaded the report under scope before calling us, so a
+  // missing row here means the report was deleted between the load and
+  // this query (treat as 404).
+  const r = await db.execute<{ last_generation: ReportLastGeneration | null }>(sql`
+    SELECT last_generation
+    FROM app.reports
+    WHERE id = ${reportId}
+    LIMIT 1
+  `);
+  const row = r.rows[0];
+  if (!row) return null;
+  const lastGeneration = row.last_generation ?? null;
+
+  // Notes — same shape used by NoteTimeline, ordered ascending so the
+  // operator sees them in the order they were composed into the prompt.
+  const notesResult = await db.execute<{
+    id: string;
+    kind: 'text' | 'voice' | 'image' | 'document';
+    body: string | null;
+    transcript: string | null;
+    created_at: Date;
+  }>(sql`
+    SELECT id, kind, body, transcript, created_at
+    FROM app.notes
+    WHERE report_id = ${reportId}
+    ORDER BY created_at ASC, id ASC
+  `);
+  const notes = notesResult.rows.map((n) => ({
+    id: n.id,
+    kind: n.kind,
+    body: n.body,
+    transcript: n.transcript,
+    createdAt: new Date(n.created_at).toISOString(),
+  }));
+
+  // Always rebuild the live `userPrompt` from the current notes so the
+  // operator sees the prompt the next generate call would send — even
+  // when a previous lastGeneration is stored. The persisted
+  // `lastGeneration.userPrompt` is still surfaced separately as a
+  // record of what was last sent.
+  const liveUserPrompt = await collectNotesForGeneration(db, reportId);
+
+  return {
+    prompt: {
+      system: lastGeneration?.systemPrompt ?? '',
+      user: liveUserPrompt,
+    },
+    notes,
+    lastGeneration,
+  };
 }

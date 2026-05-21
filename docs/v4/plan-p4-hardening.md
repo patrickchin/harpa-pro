@@ -100,3 +100,35 @@
 - [ ] Triage `docs/bugs/README.md`.
 - [ ] All `// FIXME` resolved or filed.
 - [ ] Commit: `chore: bugs sweep + FIXME triage`.
+
+### P4.8 Maestro full regression journey
+
+Two-actor (`alice` owner + `bob` editor→viewer→removed) end-to-end
+journey that exercises every feature currently live on `dev`:
+projects CRUD, members invite/role-change/remove + visibility checks,
+reports CRUD, text notes (add + delete), generate → finalize →
+unfinalize, and a new **Report Debug** surface exposing prompt +
+notes + LLM response. Runs in **local-fixture mode only** against a
+fresh `docker compose` stack (no API auth bypass, no test backdoors —
+uses the existing `TWILIO_LIVE=0` fake-OTP path that already accepts
+`000000` for any phone in dev). Dev-deployment regression coverage is
+descoped (see design doc §6.2). Full design + carve-outs + testID
+inventory + module breakdown:
+[`design-maestro-full-regression.md`](design-maestro-full-regression.md).
+
+Voice notes (on branch `feat/v4-voice`) and camera/photo
+attachments are explicitly **carved out** for now — module slots 09
+and 10a/10b are reserved with merge-triggered pickup pointers in
+the design doc §7. They re-enter the journey in the same PR as
+their feature merge.
+
+- [ ] `GET /reports/{number}/debug` route + scope tests + fixture-replay test (text notes only — voice fields added with `feat/v4-voice` merge).
+- [ ] `screens/report-debug.tsx` + route + dev-section actions-menu entry.
+- [ ] testID audit per the design doc §3.3 inventory.
+- [ ] Hidden `project-slug-chip` mounted only when `__DEV__` or `EXPO_PUBLIC_USE_FIXTURES`.
+- [ ] `.maestro/helpers/` + `.maestro/modules/01, 01b, 02..08, 11..13` flows. Alice and Bob are signed up via the normal sign-up UI inside the journey; no API seed CLI needed.
+- [ ] `.maestro/regression-journey.yaml` top-level runner.
+- [ ] `scripts/check-maestro-testids.sh` CI grep gate.
+- [ ] `.github/workflows/e2e-maestro-testid-gate.yml` runs the testID gate on every PR.
+- [ ] Future-pickup commits F1–F4 land with `feat/v4-voice` + camera/photo work — tracked in design doc §7.
+- [ ] Commit train per design doc §4.

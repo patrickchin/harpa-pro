@@ -109,6 +109,9 @@ export const reports = appSchema.table(
     generatedAt: timestamp('generated_at', { withTimezone: true }),
     finalizedAt: timestamp('finalized_at', { withTimezone: true }),
     pdfFileId: text('pdf_file_id'),
+    // Persisted by `runGenerate` — surfaced via GET /reports/{n}/debug.
+    // See migration 0003 for value shape.
+    lastGeneration: jsonb('last_generation'),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
   },

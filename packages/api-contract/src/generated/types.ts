@@ -1971,6 +1971,105 @@ export interface paths {
         };
         trace?: never;
     };
+    "/projects/{project}/reports/{number}/debug": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    project: string;
+                    number: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Report debug payload. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            prompt: {
+                                system: string;
+                                user: string;
+                            };
+                            notes: {
+                                id: string;
+                                /** @enum {string} */
+                                kind: "text" | "voice" | "image" | "document";
+                                body: string | null;
+                                transcript: string | null;
+                                createdAt: string;
+                            }[];
+                            lastGeneration: {
+                                requestedAt: string;
+                                finishedAt: string | null;
+                                vendor: string;
+                                model: string;
+                                /** @enum {string} */
+                                fixtureMode: "live" | "replay" | "record";
+                                systemPrompt: string;
+                                userPrompt: string;
+                                response: string;
+                                usage: {
+                                    inputTokens: number;
+                                    outputTokens: number;
+                                    cachedTokens?: number;
+                                } | null;
+                            } | null;
+                        };
+                    };
+                };
+                /** @description Unauthorized. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                                requestId?: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Not found. */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                                requestId?: string;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/projects/{project}/reports/{number}/generate": {
         parameters: {
             query?: never;

@@ -474,3 +474,147 @@ describe('reports AI/PDF', () => {
     expect(body.error.message).not.toContain('openai');
   });
 });
+
+// ---------------------------------------------------------------------------
+// P4.8 — GET /reports/{number}/debug
+// ---------------------------------------------------------------------------
+describe('GET /reports/:number/debug', () => {
+  let debugReportNumber: number;
+  let debugReportId: string;
+
+  beforeAll(async () => {
+    // Fresh draft owned by alice — keeps these tests independent of the
+    // generate/finalize chain above (which leaves its report finalized).
+    const app = createApp();
+    const tok = await signTestToken(alice, aliceSid);
+    const created = await app.request(`/projects/${aliceProjSlug}/reports`, {
+      method: 'POST',
+      headers: headers(tok),
+      body: JSON.stringify({}),
+    });
+    const body = (await created.json()) as { id: string; number: number };
+    debugReportNumber = body.number;
+    debugReportId = body.id;
+
+    // Add a text note so /debug surfaces non-empty data.
+    await app.request(`/reports/${debugReportId}/notes`, {
+      method: 'POST',
+      headers: headers(tok),
+      body: JSON.stringify({ kind: 'text', body: 'wall is cracked at the SE corner' }),
+    });
+  });
+
+  it('returns empty lastGeneration + live userPrompt for a never-generated draft', async () => {
+    const app = createApp();
+    const tok = await signTestToken(alice, aliceSid);
+    const res = await app.request(`/projects/${aliceProjSlug}/reports/${debugReportNumber}/debug`, {
+      headers: { authorization: `Bearer ${tok}` },
+    });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      prompt: { system: string; user: string };
+      notes: Array<{ kind: string; body: string | null }>;
+      lastGeneration: unknown;
+    };
+    expect(body.lastGeneration).toBeNull();
+    expect(body.prompt.system).toBe('');
+    expect(body.prompt.user).toContain('wall is cracked');
+    expect(body.notes.length).toBeGreaterThan(0);
+    expect(body.notes[0]!.kind).toBe('text');
+  });
+
+  it('persists + surfaces lastGeneration after a /generate call', async () => {
+    const app = createApp();
+    const tok = await signTestToken(alice, aliceSid);
+    const gen = await app.request(`/projects/${aliceProjSlug}/reports/${debugReportNumber}/generate`, {
+      method: 'POST',
+      headers: headers(tok),
+      body: JSON.stringify({}),
+    });
+    expect(gen.status).toBe(200);
+
+    const res = await app.request(`/projects/${aliceProjSlug}/reports/${debugReportNumber}/debug`, {
+      headers: { authorization: `Bearer ${tok}` },
+    });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      prompt: { system: string; user: string };
+      lastGeneration: {
+        requestedAt: string;
+        finishedAt: string | null;
+        vendor: string;
+        model: string;
+        fixtureMode: string;
+        systemPrompt: string;
+        userPrompt: string;
+        response: string;
+        usage: unknown;
+      } | null;
+    };
+    expect(body.lastGeneration).not.toBeNull();
+    const lg = body.lastGeneration!;
+    expect(lg.fixtureMode).toBe('replay');
+    expect(lg.vendor).toMatch(/openai|anthropic|google|groq|kimi|deepseek|zai/);
+    expect(lg.model.length).toBeGreaterThan(0);
+    expect(lg.systemPrompt.length).toBeGreaterThan(0);
+    expect(lg.userPrompt.length).toBeGreaterThan(0);
+    expect(lg.response.length).toBeGreaterThan(0);
+    expect(lg.usage).toBeNull(); // not wired yet — see design §3.4
+    // `prompt.system` is hydrated from lastGeneration after a generate.
+    expect(body.prompt.system).toBe(lg.systemPrompt);
+  });
+
+  it('404 for a non-member (Pitfall 6 scope test)', async () => {
+    const app = createApp();
+    const tok = await signTestToken(bob, bobSid);
+    const res = await app.request(`/projects/${aliceProjSlug}/reports/${debugReportNumber}/debug`, {
+      headers: { authorization: `Bearer ${tok}` },
+    });
+    expect(res.status).toBe(404);
+  });
+
+  it('viewer member of the project CAN read /debug (read-only, scope-test trio)', async () => {
+    // Add bob as a viewer of alice's project via direct DB write — the
+    // members route is the canonical add path, but we don't need its
+    // semantics here, only the row.
+    const admin = new pg.Client({ connectionString: fx.url });
+    await admin.connect();
+    await admin.query(
+      `INSERT INTO app.project_members(project_id, user_id, role) VALUES ($1, $2, 'viewer') ON CONFLICT (project_id, user_id) DO UPDATE SET role = 'viewer'`,
+      [aliceProj, bob],
+    );
+    await admin.end();
+
+    const app = createApp();
+    const tok = await signTestToken(bob, bobSid);
+    const res = await app.request(`/projects/${aliceProjSlug}/reports/${debugReportNumber}/debug`, {
+      headers: { authorization: `Bearer ${tok}` },
+    });
+    expect(res.status).toBe(200);
+
+    // Clean up so other tests that rely on bob being a non-member of
+    // alice's project keep working.
+    const admin2 = new pg.Client({ connectionString: fx.url });
+    await admin2.connect();
+    await admin2.query(
+      `DELETE FROM app.project_members WHERE project_id = $1 AND user_id = $2`,
+      [aliceProj, bob],
+    );
+    await admin2.end();
+  });
+
+  it('401 without auth', async () => {
+    const app = createApp();
+    const res = await app.request(`/projects/${aliceProjSlug}/reports/${debugReportNumber}/debug`);
+    expect(res.status).toBe(401);
+  });
+
+  it('404 for unknown report number under a project the caller owns', async () => {
+    const app = createApp();
+    const tok = await signTestToken(alice, aliceSid);
+    const res = await app.request(`/projects/${aliceProjSlug}/reports/99999/debug`, {
+      headers: { authorization: `Bearer ${tok}` },
+    });
+    expect(res.status).toBe(404);
+  });
+});

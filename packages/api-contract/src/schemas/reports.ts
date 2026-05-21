@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { isoDateTime, reportNumber } from './_shared.js';
-import { projectId, reportId } from './ids.js';
+import { noteId, projectId, reportId } from './ids.js';
+import { noteKind } from './notes.js';
 
 export const reportStatus = z.enum(['draft', 'finalized']);
 export type ReportStatus = z.infer<typeof reportStatus>;
@@ -125,4 +126,48 @@ export const unfinalizeReportResponse = z.object({ report });
 export const renderPdfResponse = z.object({
   url: z.string().url(),
   expiresAt: isoDateTime,
+});
+
+/**
+ * Report Debug surface (P4.8). Read-only view of the data behind the
+ * last AI generation: the prompt fed to the LLM, the notes that
+ * composed it, and the raw response. Surfaced in the mobile dev
+ * "Report Debug" screen and gated by the showDeveloperSection flag on
+ * the client. Server-side RLS is identical to GET /reports/{n}.
+ *
+ * See docs/v4/design-maestro-full-regression.md §3.4.
+ */
+export const reportDebugNote = z.object({
+  id: noteId,
+  kind: noteKind,
+  body: z.string().nullable(),
+  transcript: z.string().nullable(),
+  createdAt: isoDateTime,
+});
+
+export const reportLastGeneration = z.object({
+  requestedAt: isoDateTime,
+  finishedAt: isoDateTime.nullable(),
+  vendor: z.string(),
+  model: z.string(),
+  fixtureMode: z.enum(['live', 'replay', 'record']),
+  systemPrompt: z.string(),
+  userPrompt: z.string(),
+  response: z.string(),
+  // Token counts — currently unwired (the AI service does not surface
+  // these). Reserved for the follow-up commit that extends the
+  // provider interface.
+  usage: z
+    .object({
+      inputTokens: z.number().int().nonnegative(),
+      outputTokens: z.number().int().nonnegative(),
+      cachedTokens: z.number().int().nonnegative().optional(),
+    })
+    .nullable(),
+});
+
+export const reportDebugResponse = z.object({
+  prompt: z.object({ system: z.string(), user: z.string() }),
+  notes: z.array(reportDebugNote),
+  lastGeneration: reportLastGeneration.nullable(),
 });

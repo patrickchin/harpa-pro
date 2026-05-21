@@ -109,6 +109,7 @@ flowchart TB
 | 10a | **CI/CD + migrations** | [arch-cicd-and-migrations.md](arch-cicd-and-migrations.md) | **Release-command migration apply, `/readyz` schema-head check, expand-contract rules, rollback playbook** |
 | 11 | **CLI** | [arch-cli.md](arch-cli.md) | **Debug / API testing / LLM-driven usage tool (`apps/cli`); stateless, env-only, covers all 37 routes** |
 | 12 | **Project members** | [arch-project-members.md](arch-project-members.md) | **Roles, invite (POST), role-change (PATCH), removal (DELETE), owner-demotion guard, error codes, scope tests** |
+| 13 | **Maestro full regression** | [design-maestro-full-regression.md](design-maestro-full-regression.md) | **P4.8 two-actor nightly E2E journey: members permissions, voice/photo/text notes, generate/finalize, Report Debug surface** |
 
 ## Repo layout (target end of P0)
 

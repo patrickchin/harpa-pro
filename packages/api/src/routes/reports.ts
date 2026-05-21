@@ -36,6 +36,7 @@ import {
   deleteReport,
   getReport,
   getReportByProjectSlugAndNumber,
+  getReportDebug,
   listReports,
   updateReport,
   collectNotesForGeneration,
@@ -43,6 +44,7 @@ import {
   finalizeReport,
   unfinalizeReport,
   setReportPdfFileId,
+  type ReportLastGeneration,
   type ReportRow,
 } from '../services/reports.js';
 import { getProjectBySlug } from '../services/projects.js';
@@ -172,6 +174,40 @@ reportRoutes.openapi(
   },
 );
 
+// --------- debug (P4.8) ----------
+//
+// Read-only "what did the LLM see and say?" view. Gated on the same
+// RLS as GET /reports/{number} — `loadReport` resolves under scope so
+// a non-member surfaces as 404 (Pitfall 6). Mobile client gates the
+// route navigation behind `showDeveloperSection`; the API does not
+// restrict access by role beyond standard membership because the data
+// it returns is the user's own notes + the prompt/response that
+// generated their own report.
+reportRoutes.openapi(
+  createRoute({
+    method: 'get',
+    path: '/projects/{project}/reports/{number}/debug',
+    tags: ['reports'],
+    security: [{ bearerAuth: [] }],
+    middleware: [withAuth()] as const,
+    request: { params: reportPathParam },
+    responses: {
+      200: { description: 'Report debug payload.', content: { 'application/json': { schema: reportSchemas.reportDebugResponse } } },
+      401: { description: 'Unauthorized.', content: { 'application/json': { schema: errorEnvelope } } },
+      404: { description: 'Not found.', content: { 'application/json': { schema: errorEnvelope } } },
+    },
+  }),
+  async (c) => {
+    const db = c.get('db');
+    if (!db) throw new HTTPException(401);
+    const { project: slug, number } = c.req.valid('param');
+    const report = await loadReport(db, slug, number);
+    const debug = await db((d) => getReportDebug(d, report.id));
+    if (!debug) throw new HTTPException(404, { message: 'Report not found.' });
+    return c.json(debug, 200);
+  },
+);
+
 // --------- patch ----------
 reportRoutes.openapi(
   createRoute({
@@ -284,13 +320,30 @@ async function runGenerate(
   // be one) and runs the cold-start prompt.
   const existingBody =
     options.mode === 'regenerate' ? report.body : null;
+  const requestedAt = new Date().toISOString();
   const out = await aiGenerateReport({
     notes,
     existingBody,
     fixtureName,
     vendor,
   });
-  const updated = await db((d) => setReportBody(d, report.id, out.body));
+  const finishedAt = new Date().toISOString();
+  // Persist the prompt + raw response alongside the new body so the
+  // Report Debug screen (P4.8) can surface them. usage tokens are not
+  // wired yet — left as `null` until the provider interface exposes
+  // them. See docs/v4/design-maestro-full-regression.md §3.4.
+  const lastGeneration: ReportLastGeneration = {
+    requestedAt,
+    finishedAt,
+    vendor: out.vendor,
+    model: out.model,
+    fixtureMode: out.fixtureMode,
+    systemPrompt: out.systemPrompt,
+    userPrompt: out.userPrompt,
+    response: out.text,
+    usage: null,
+  };
+  const updated = await db((d) => setReportBody(d, report.id, out.body, lastGeneration));
   if (!updated) throw new HTTPException(404, { message: 'Report not found.' });
   return {
     report: updated,

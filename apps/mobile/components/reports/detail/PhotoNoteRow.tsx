@@ -14,7 +14,7 @@ import { Camera } from 'lucide-react-native';
 
 import { CachedImage } from '@/components/ui/CachedImage';
 import { NoteCardHeader } from '@/components/notes/NoteCardHeader';
-import { NoteOptionsKebab } from '@/components/reports/detail/NoteOptionsKebab';
+import { NoteOptionsKebab } from '@/components/notes/NoteOptionsKebab';
 import { useFileSignedUrl } from '@/lib/uploads/useFileSignedUrl';
 import { colors } from '@/lib/design-tokens/colors';
 

@@ -213,6 +213,9 @@ interface NotesSurface {
   deleteIndex: number | null;
   setDeleteIndex: (i: number | null) => void;
   confirmDelete: () => void;
+  /** Direct delete used by the shared NoteOptionsSheet, which has its
+   *  own confirmation stage. */
+  deleteAt: (sourceIndex: number) => void;
   /** True iff a route-provided onUpdateNote is wired. */
   canEdit: boolean;
   /** Update body for a note at the given source index. */
@@ -498,6 +501,18 @@ export function GenerateReportProvider({
     }
   }, [deleteIndex, notes, onDeleteNote]);
 
+  // Direct delete used by the shared NoteOptionsSheet, which already
+  // shows its own destructive confirmation stage and therefore
+  // bypasses the legacy `deleteIndex` two-step.
+  const deleteAt = useCallback(
+    (sourceIndex: number) => {
+      const note = notes[sourceIndex];
+      if (!note || !onDeleteNote) return;
+      onDeleteNote(note, sourceIndex);
+    },
+    [notes, onDeleteNote],
+  );
+
   const updateNote = useCallback(
     (sourceIndex: number, nextBody: string) => {
       const note = notes[sourceIndex];
@@ -572,6 +587,7 @@ export function GenerateReportProvider({
         deleteIndex,
         setDeleteIndex,
         confirmDelete,
+        deleteAt,
         canEdit: Boolean(onUpdateNote),
         update: updateNote,
       },
@@ -652,6 +668,7 @@ export function GenerateReportProvider({
       addNote,
       deleteIndex,
       confirmDelete,
+      deleteAt,
       updateNote,
       onUpdateNote,
       activeTab,

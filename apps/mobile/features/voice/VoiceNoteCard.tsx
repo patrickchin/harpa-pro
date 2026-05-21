@@ -9,8 +9,10 @@
  *
  * Layout: shared `NoteCardHeader` (author + timestamp + kebab trailing
  * slot) → status row (mic/play button + label + duration + retry) →
- * optional summary → optional inline transcript panel revealed by the
- * kebab.
+ * optional title → summary or a 2-line transcript preview. The ⋯
+ * kebab on saved rows delegates to the parent's `onOpenOptions`
+ * callback, which mounts the shared `NoteOptionsSheet` (Delete, View
+ * transcript, metadata) — same UX as the saved-report Notes pane.
  *
  * Playback uses the global `useAudioPlayback()` provider so only one
  * note plays at a time (arch-voice-pipeline.md §D7). The signed R2
@@ -20,11 +22,12 @@
  * Per AGENTS.md #4 / Pitfall 12: no `Alert.alert`. The failed-state
  * inline pill + retry button is the entire failure UX.
  */
-import { useCallback, useState } from 'react';
+import { useCallback } from 'react';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
-import { Mic, MoreVertical, Pause, Play, RotateCw } from 'lucide-react-native';
+import { Mic, Pause, Play, RotateCw } from 'lucide-react-native';
 
 import { NoteCardHeader } from '@/components/notes/NoteCardHeader';
+import { NoteOptionsKebab } from '@/components/notes/NoteOptionsKebab';
 import { useAudioPlayback } from '@/lib/audio/AudioPlaybackProvider';
 import { useFileSignedUrl } from '@/lib/uploads/useFileSignedUrl';
 import { colors } from '@/lib/design-tokens/colors';
@@ -41,6 +44,9 @@ export interface VoiceNoteCardProps {
   authorName?: string;
   /** Called when the user taps "Retry" on a failed row. */
   onRetry?: (sourceIndex: number) => void;
+  /** Opens the shared `NoteOptionsSheet` (delete, view transcript,
+   *  metadata) — surfaces only when the row has finished uploading. */
+  onOpenOptions?: (sourceIndex: number) => void;
 }
 
 export function VoiceNoteCard({
@@ -48,9 +54,9 @@ export function VoiceNoteCard({
   sourceIndex,
   authorName,
   onRetry,
+  onOpenOptions,
 }: VoiceNoteCardProps) {
   const header = deriveVoiceCardHeader(entry);
-  const [transcriptOpen, setTranscriptOpen] = useState(false);
 
   const fileId = entry.fileId ?? null;
   const signedUrlQuery = useFileSignedUrl(fileId, {
@@ -85,20 +91,16 @@ export function VoiceNoteCard({
   const summary = entry.summary?.trim() || null;
   const transcript = entry.transcript?.trim() || null;
 
-  const kebab = transcript ? (
-    <Pressable
-      onPress={() => setTranscriptOpen((v) => !v)}
-      accessibilityRole="button"
-      accessibilityLabel={
-        transcriptOpen ? 'Hide transcript' : 'Show transcript'
-      }
-      hitSlop={8}
-      testID={`btn-voice-menu-${sourceIndex}`}
-      className="h-7 w-7 items-center justify-center rounded-full"
-    >
-      <MoreVertical size={16} color={colors.muted.foreground} />
-    </Pressable>
-  ) : null;
+  // Kebab only when the row is saved and the parent provides the
+  // shared options sheet. In-flight rows hide it to keep the
+  // pipeline state machine in charge of UX (cancel/retry only).
+  const kebab =
+    onOpenOptions && header.phase === 'ready' ? (
+      <NoteOptionsKebab
+        noteId={sourceIndex}
+        onPress={() => onOpenOptions(sourceIndex)}
+      />
+    ) : null;
 
   return (
     <View
@@ -198,21 +200,14 @@ export function VoiceNoteCard({
         >
           {summary}
         </Text>
-      ) : null}
-
-      {transcript && transcriptOpen ? (
-        <View
-          className="rounded-md border border-border bg-muted/40 p-2"
-          testID={`voice-transcript-block-${sourceIndex}`}
+      ) : transcript ? (
+        <Text
+          className="text-xs leading-5 text-muted-foreground"
+          testID={`voice-transcript-preview-${sourceIndex}`}
+          numberOfLines={2}
         >
-          <Text
-            className="text-xs leading-5 text-muted-foreground"
-            testID={`voice-transcript-${sourceIndex}`}
-            selectable
-          >
-            {transcript}
-          </Text>
-        </View>
+          {transcript}
+        </Text>
       ) : null}
     </View>
   );

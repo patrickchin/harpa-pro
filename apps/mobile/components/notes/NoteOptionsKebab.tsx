@@ -1,10 +1,11 @@
 /**
  * NoteOptionsKebab — shared ⋯ trigger rendered in the trailing slot of
- * `NoteCardHeader` on every report-note card. Opens the
- * `NoteOptionsSheet` for that row when tapped.
+ * `NoteCardHeader` on every note card (text / voice / photo /
+ * document, on both the saved-report and draft surfaces). Opens the
+ * shared `NoteOptionsSheet` for that row when tapped.
  *
- * Centralised so all four note-row components (text / voice / photo /
- * document) have an identical accessible hit target and testID scheme.
+ * Centralised so every note row has an identical accessible hit target
+ * and a stable testID scheme.
  */
 import { Pressable } from 'react-native';
 import { MoreVertical } from 'lucide-react-native';
@@ -12,7 +13,8 @@ import { MoreVertical } from 'lucide-react-native';
 import { colors } from '@/lib/design-tokens/colors';
 
 export interface NoteOptionsKebabProps {
-  noteId: string;
+  /** Used as the testID suffix — works equally with note ids or indices. */
+  noteId: string | number;
   onPress: () => void;
 }
 

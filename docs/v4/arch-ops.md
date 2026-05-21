@@ -194,6 +194,58 @@ To provision (or rotate) a smoke bearer for an env:
 Rotating the bearer = revoke the session row in Postgres + rerun
 step 2 + update the GH secret. No code change required.
 
+### Why TOKEN mode on prod, OTP mode on dev
+
+The intended steady state once both envs run `TWILIO_LIVE=1`:
+
+|       | mode    | What gets exercised                              |
+|-------|---------|--------------------------------------------------|
+| dev   | OTP     | `/auth/otp/{start,verify}` end-to-end against the deployed dev API + real DB + session-creation path. The Twilio Verify call itself is stubbed via `TWILIO_LIVE=0` — see "Why we don't smoke real Twilio Verify" below. |
+| prod  | TOKEN   | Everything *after* login: `/me`, `/projects`, `/reports`, `/notes`, slug resolvers, R2 reads, JWT validation, RLS scope. No OTP routes hit. |
+
+Code path coverage map for any OTP-route regression:
+
+1. Unit + integration tests in `packages/api/src/__tests__/journeys/`
+   on every PR (mock Twilio).
+2. Dev OTP-mode smoke on every push to `dev` (real deployed API +
+   real DB; fake Twilio).
+3. The same code rolls to prod on the next `dev → main` merge — and
+   has just been exercised live on dev minutes earlier.
+
+What this does NOT catch: a regression that only manifests under
+real Twilio Verify (e.g. mis-shaped Verify request body, missing
+`TWILIO_VERIFY_SERVICE_SID` on prod). That class of bug surfaces on
+the first real signup after deploy. Mitigations considered and
+rejected: see "Why we don't smoke real Twilio Verify" below.
+
+### Why we don't smoke real Twilio Verify
+
+End-to-end real-OTP smoke requires CI to receive an SMS and read its
+body programmatically. We can't:
+
+- **Send Verify SMS to a Twilio-hosted number we own.** Twilio
+  redacts the OTP and marks the inbound message `failed` with
+  [error 30038](https://www.twilio.com/docs/api/errors/30038) — an
+  anti-abuse measure that fires regardless of account tier. Verified
+  experimentally against `+15072487070` on our paid account.
+- **Use Twilio test credentials + magic numbers.** Per
+  [Twilio's test-credentials docs](https://www.twilio.com/docs/iam/test-credentials#supported-resources),
+  Verify isn't a supported resource — magic numbers only work with
+  Messages, Calls, IncomingPhoneNumbers, and Lookups.
+- **Use better-auth's phone-number plugin's test-numbers feature.**
+  No such feature exists (the `verifyOTP` hook would let us
+  re-implement one, but that's a backdoor in code).
+
+Workable but unimplemented alternatives, in case this changes:
+
+- Buy a long code on a non-Twilio provider (Telnyx/Plivo) and poll
+  inbound via that provider's API. ~$1/mo plus a vendor.
+- Schedule a monthly canary against a maintainer's real phone with
+  manual code entry.
+
+Both are tracked as low-priority follow-ups; neither is worth the
+operational cost given coverage map #1–#3 above.
+
 ## Dev environment bootstrap (one-time)
 
 ```bash

@@ -16,10 +16,29 @@ import {
   ReportNotesPane,
   type ReportNoteRow,
 } from './ReportNotesPane';
+import {
+  AudioPlaybackProvider,
+  type PlaybackPlayer,
+} from '@/lib/audio/AudioPlaybackProvider';
 
 vi.mock('expo-image', () => ({
   Image: (props: Record<string, unknown>) => null,
 }));
+
+// Voice rows mount `VoiceNoteRow` which calls `useAudioPlayback()`.
+// We exercise the real `AudioPlaybackProvider` (Pitfall 13) with a
+// node-safe `playerFactory` stub instead of mocking the hook.
+function stubPlayerFactory(): PlaybackPlayer {
+  return {
+    play: () => {},
+    pause: () => {},
+    currentTime: 0,
+    duration: 0,
+    playing: false,
+    seekTo: async () => {},
+    remove: () => {},
+  };
+}
 
 function stubFetch() {
   vi.stubGlobal(
@@ -46,7 +65,11 @@ function wrap(el: React.ReactElement): ReactTestRenderer {
   let tree!: ReactTestRenderer;
   act(() => {
     tree = create(
-      <QueryClientProvider client={qc}>{el}</QueryClientProvider>,
+      <QueryClientProvider client={qc}>
+        <AudioPlaybackProvider playerFactory={stubPlayerFactory}>
+          {el}
+        </AudioPlaybackProvider>
+      </QueryClientProvider>,
     );
   });
   return tree;
@@ -131,7 +154,7 @@ describe('ReportNotesPane', () => {
   it('renders a voice row with the transcript', () => {
     const tree = wrap(<ReportNotesPane noteRows={[voiceRow]} />);
     expect(
-      tree.root.findAllByProps({ testID: `voice-transcript-${voiceRow.id}` })
+      tree.root.findAllByProps({ testID: `voice-transcript-preview-${voiceRow.id}` })
         .length,
     ).toBeGreaterThan(0);
   });

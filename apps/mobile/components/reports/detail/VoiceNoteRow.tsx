@@ -8,21 +8,20 @@
  * the R2 GET URL is fetched lazily via `useFileSignedUrl(fileId)` on
  * first play tap.
  *
- * Layout matches the marketing-page voice card (apps/marketing/src
- * /components/VoiceDemo.tsx :: PreviousNoteCard) so the in-app
- * experience reads identically. See `VoiceCardShell` for the shared
- * layout primitive. The full transcript lives behind the ⋯ kebab in
- * the card header so it doesn't dominate the row.
+ * Layout matches the draft-side `VoiceNoteCard`: shared
+ * `NoteCardHeader` with a ⋯ kebab in the trailing slot that toggles
+ * an inline transcript panel below the card.
  */
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, Pressable, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import { Mic, MoreVertical, Pause, Play } from 'lucide-react-native';
 
+import { NoteCardHeader } from '@/components/notes/NoteCardHeader';
 import { useAudioPlayback } from '@/lib/audio/AudioPlaybackProvider';
 import { useFileSignedUrl } from '@/lib/uploads/useFileSignedUrl';
 import { colors } from '@/lib/design-tokens/colors';
 
-import { VoiceCardShell } from '@/features/voice/VoiceCardShell';
+import { formatDuration } from '@/features/voice/voiceNoteCardHeader';
 
 export interface VoiceNoteRowProps {
   noteId: string;
@@ -69,30 +68,9 @@ export function VoiceNoteRow({
     else void playback.play(audioUri);
   }, [audioUri, isPlayingThis, playback]);
 
+  const titleText = title?.trim() || null;
+  const summaryText = summary?.trim() || null;
   const transcriptText = transcript?.trim() || body?.trim() || null;
-
-  const playButton = (
-    <Pressable
-      onPress={handlePlayPause}
-      disabled={!canPlay || !audioUri}
-      accessibilityRole="button"
-      accessibilityLabel={isPlayingThis ? 'Pause voice note' : 'Play voice note'}
-      testID={`btn-open-voice-${noteId}`}
-      className={`h-10 w-10 items-center justify-center rounded-full ${
-        canPlay && audioUri ? 'bg-primary' : 'bg-muted'
-      }`}
-    >
-      {canPlay && !audioUri ? (
-        <ActivityIndicator size="small" color={colors.muted.foreground} />
-      ) : isPlayingThis ? (
-        <Pause size={16} color={colors.primary.foreground} />
-      ) : canPlay && audioUri ? (
-        <Play size={16} color={colors.primary.foreground} />
-      ) : (
-        <Mic size={16} color={colors.muted.foreground} />
-      )}
-    </Pressable>
-  );
 
   const kebab = transcriptText ? (
     <Pressable
@@ -110,33 +88,83 @@ export function VoiceNoteRow({
   ) : null;
 
   return (
-    <View>
-      <VoiceCardShell
-        testID={`report-note-${noteId}`}
-        leftButton={playButton}
-        title={title}
-        titleFallback="Voice note"
+    <View
+      className="rounded-lg border border-border bg-card p-3 gap-2"
+      testID={`report-note-${noteId}`}
+    >
+      <NoteCardHeader
         authorName={authorName ?? null}
         capturedAt={capturedAt}
-        positionSec={positionSec}
-        durationSec={totalSec}
-        isPlaying={isPlayingThis}
-        summary={summary}
-        menu={kebab}
+        testIDSuffix={noteId}
+        trailing={kebab}
       />
+
+      <View className="flex-row items-center gap-2">
+        <Pressable
+          onPress={handlePlayPause}
+          disabled={!canPlay || !audioUri}
+          accessibilityRole="button"
+          accessibilityLabel={isPlayingThis ? 'Pause voice note' : 'Play voice note'}
+          testID={`btn-open-voice-${noteId}`}
+          className={`h-8 w-8 items-center justify-center rounded-full ${
+            canPlay && audioUri ? 'bg-primary' : 'bg-muted'
+          }`}
+        >
+          {isPlayingThis ? (
+            <Pause size={16} color={colors.primary.foreground} />
+          ) : canPlay && audioUri ? (
+            <Play size={16} color={colors.primary.foreground} />
+          ) : (
+            <Mic size={16} color={colors.muted.foreground} />
+          )}
+        </Pressable>
+        <Text className="flex-1 text-xs font-medium uppercase text-muted-foreground">
+          Voice note
+        </Text>
+        <Text className="text-xs tabular-nums text-muted-foreground">
+          {isPlayingThis
+            ? `${formatDuration(positionSec)} / ${formatDuration(totalSec)}`
+            : formatDuration(totalSec)}
+        </Text>
+      </View>
+
+      {titleText ? (
+        <Text
+          className="text-sm font-semibold text-foreground"
+          testID={`voice-title-${noteId}`}
+          numberOfLines={2}
+        >
+          {titleText}
+        </Text>
+      ) : null}
+
+      {summaryText ? (
+        <Text
+          className="text-sm leading-5 text-foreground"
+          testID={`voice-summary-${noteId}`}
+          selectable
+        >
+          {summaryText}
+        </Text>
+      ) : null}
+
       {transcriptText && transcriptOpen ? (
         <View
-          className="mt-2 rounded-2xl border border-border bg-muted/40 p-3"
+          className="rounded-md border border-border bg-muted/40 p-2"
           testID={`voice-transcript-block-${noteId}`}
         >
           <Text
-            className="text-xs leading-relaxed text-muted-foreground"
+            className="text-xs leading-5 text-muted-foreground"
             testID={`voice-transcript-${noteId}`}
             selectable
           >
             {transcriptText}
           </Text>
         </View>
+      ) : !summaryText ? (
+        <Text className="text-xs italic text-muted-foreground">
+          No transcript available.
+        </Text>
       ) : null}
     </View>
   );

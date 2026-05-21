@@ -11,8 +11,14 @@
  * Photo + voice + document rows resolve their R2 GET URL via
  * `useFileSignedUrl` (P3.15.1) and render through `CachedImage` for
  * the photo thumbnail.
+ *
+ * Every row's ⋯ kebab opens a shared `NoteOptionsSheet` rendered at
+ * the pane level. The sheet exposes metadata, Delete, and (for voice
+ * with a transcript) View transcript. Delete goes through
+ * `useDeleteNoteMutation`, which auto-invalidates the saved-report
+ * notes query so the row disappears once the API confirms.
  */
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Text, View } from 'react-native';
 import { MessageSquare } from 'lucide-react-native';
 
@@ -21,6 +27,9 @@ import { NoteCardHeader } from '@/components/notes/NoteCardHeader';
 import { PhotoNoteRow } from '@/components/reports/detail/PhotoNoteRow';
 import { VoiceNoteRow } from '@/components/reports/detail/VoiceNoteRow';
 import { DocumentNoteRow } from '@/components/reports/detail/DocumentNoteRow';
+import { NoteOptionsKebab } from '@/components/reports/detail/NoteOptionsKebab';
+import { NoteOptionsSheet } from '@/components/reports/detail/NoteOptionsSheet';
+import { useDeleteNoteMutation } from '@/lib/api/hooks';
 import { colors } from '@/lib/design-tokens/colors';
 
 export interface ReportNoteRow {
@@ -62,6 +71,28 @@ export function ReportNotesPane({
     return items;
   }, [noteRows]);
 
+  const [activeNoteId, setActiveNoteId] = useState<string | null>(null);
+  const activeNote = useMemo(
+    () => sorted.find((n) => n.id === activeNoteId) ?? null,
+    [sorted, activeNoteId],
+  );
+
+  const deleteNote = useDeleteNoteMutation();
+  const handleOpenOptions = (id: string) => setActiveNoteId(id);
+  const handleCloseOptions = () => setActiveNoteId(null);
+  const handleDelete = (noteId: string) => {
+    deleteNote.mutate(
+      { params: { note: noteId } as never },
+      {
+        onSettled: () => {
+          // Close regardless of success/failure; failure surfaces via
+          // the mutation error state if we want to render it later.
+          setActiveNoteId(null);
+        },
+      },
+    );
+  };
+
   if (sorted.length === 0) {
     return (
       <View className="px-5 pb-8 pt-2" testID="report-notes-pane">
@@ -87,6 +118,7 @@ export function ReportNotesPane({
               authorName={note.authorName ?? null}
               capturedAt={note.createdAt}
               onOpen={onOpenPhoto}
+              onOpenOptions={handleOpenOptions}
             />
           );
         }
@@ -103,6 +135,7 @@ export function ReportNotesPane({
               durationSec={note.durationSec ?? null}
               authorName={note.authorName ?? null}
               capturedAt={note.createdAt}
+              onOpenOptions={handleOpenOptions}
             />
           );
         }
@@ -116,6 +149,7 @@ export function ReportNotesPane({
               authorName={note.authorName ?? null}
               capturedAt={note.createdAt}
               onOpen={onOpenFile}
+              onOpenOptions={handleOpenOptions}
             />
           );
         }
@@ -133,6 +167,12 @@ export function ReportNotesPane({
               authorName={note.authorName ?? null}
               capturedAt={note.createdAt}
               testIDSuffix={note.id}
+              trailing={
+                <NoteOptionsKebab
+                  noteId={note.id}
+                  onPress={() => handleOpenOptions(note.id)}
+                />
+              }
             />
             <Text className="text-sm leading-5 text-foreground">{body}</Text>
           </View>
@@ -141,6 +181,14 @@ export function ReportNotesPane({
       <Text className="mt-2 text-xs text-muted-foreground">
         The original notes this report was generated from.
       </Text>
+
+      <NoteOptionsSheet
+        visible={activeNote !== null}
+        note={activeNote}
+        onClose={handleCloseOptions}
+        onDelete={handleDelete}
+        deleteInFlight={deleteNote.isPending}
+      />
     </View>
   );
 }

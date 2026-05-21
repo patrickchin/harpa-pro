@@ -21,7 +21,7 @@
  * typed props so this screen can be rendered with canned values from
  * dev mirrors + tests.
  */
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import {
   RefreshControl,
   ScrollView,
@@ -38,6 +38,7 @@ import { ReportView } from '@/components/reports/ReportView';
 import { ReportEditForm } from '@/components/reports/ReportEditForm';
 import { PdfPreviewModal } from '@/components/reports/PdfPreviewModal';
 import { ImagePreviewModal } from '@/components/files/ImagePreviewModal';
+import { ReportPhotos } from '@/components/reports/detail/ReportPhotos';
 import { ReportDetailHeader } from '@/components/reports/detail/ReportDetailHeader';
 import {
   ReportDetailTabBar,
@@ -101,6 +102,9 @@ export interface SavedReportProps {
 
   /** Optional initial tab for dev mirrors + tests. */
   initialTab?: ReportDetailTab;
+
+  /** Profile button slot — rendered in the report detail header. */
+  actions?: ReactNode;
 }
 
 export function SavedReport(props: SavedReportProps) {
@@ -128,12 +132,13 @@ export function SavedReport(props: SavedReportProps) {
     isUnfinalizing,
     pdfActions,
     initialTab,
+    actions,
   } = props;
 
   const [menuVisible, setMenuVisible] = useState(false);
   const [pdfPreviewVisible, setPdfPreviewVisible] = useState(false);
   const [imagePreview, setImagePreview] = useState<{
-    uri: string | null;
+    fileId: string;
     title?: string;
   } | null>(null);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
@@ -206,6 +211,7 @@ export function SavedReport(props: SavedReportProps) {
             title="Report"
             onBack={onBack}
             backLabel="Reports"
+            actions={actions}
           />
         </View>
         <ReportDetailSkeleton />
@@ -282,6 +288,7 @@ export function SavedReport(props: SavedReportProps) {
           actionsDisabled={
             isSaving || isExporting || isDeleting || isUnfinalizing
           }
+          actions={actions}
         />
 
         <ReportDetailTabBar
@@ -312,8 +319,12 @@ export function SavedReport(props: SavedReportProps) {
             testID="saved-report-pane"
           >
             <ReportView report={displayReport} />
-            {/* TODO(P4): ReportPhotos — lands with the upload pipeline
-                and the photo file_id resolution hooks. */}
+            <View className="mt-4">
+              <ReportPhotos
+                noteRows={noteRows}
+                onOpenPhoto={setImagePreview}
+              />
+            </View>
           </Animated.View>
         ) : activeTab === 'edit' ? (
           <View className="px-5" testID="saved-report-edit-pane">
@@ -324,7 +335,10 @@ export function SavedReport(props: SavedReportProps) {
           </View>
         ) : (
           <Animated.View entering={FadeIn.duration(250)}>
-            <ReportNotesPane noteRows={noteRows} />
+            <ReportNotesPane
+              noteRows={noteRows}
+              onOpenPhoto={setImagePreview}
+            />
           </Animated.View>
         )}
       </ScrollView>
@@ -442,7 +456,7 @@ export function SavedReport(props: SavedReportProps) {
 
       <ImagePreviewModal
         visible={imagePreview !== null}
-        uri={imagePreview?.uri ?? null}
+        fileId={imagePreview?.fileId ?? null}
         title={imagePreview?.title}
         onClose={() => setImagePreview(null)}
       />

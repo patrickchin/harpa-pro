@@ -13,7 +13,7 @@
  * loading, generated report, callbacks) through provider props; dev
  * mirrors + tests do the same with canned values.
  */
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import {
   KeyboardAvoidingView,
   Pressable,
@@ -59,6 +59,8 @@ export type GenerateNotesProps = Omit<GenerateReportProviderProps, 'children'> &
   onDeleteDraft?: () => void;
   /** True while the delete mutation is in flight (disables the button). */
   isDeletingDraft?: boolean;
+  /** Profile button slot — rendered in the screen header. */
+  actions?: ReactNode;
 };
 
 export function GenerateNotes({
@@ -66,6 +68,7 @@ export function GenerateNotes({
   onBack,
   onDeleteDraft,
   isDeletingDraft = false,
+  actions,
   ...providerProps
 }: GenerateNotesProps) {
   return (
@@ -81,6 +84,7 @@ export function GenerateNotes({
             onBack={onBack}
             onDeleteDraft={onDeleteDraft}
             isDeletingDraft={isDeletingDraft}
+            actions={actions}
           />
         </GenerateReportProvider>
       </KeyboardAvoidingView>
@@ -93,6 +97,7 @@ interface LayoutProps {
   onBack?: () => void;
   onDeleteDraft?: () => void;
   isDeletingDraft: boolean;
+  actions?: ReactNode;
 }
 
 /**
@@ -105,6 +110,7 @@ function GenerateNotesLayout({
   onBack,
   onDeleteDraft,
   isDeletingDraft,
+  actions,
 }: LayoutProps) {
   const { reportTitle, tabs } = useGenerateReport();
   const { width: windowWidth } = useWindowDimensions();
@@ -132,6 +138,7 @@ function GenerateNotesLayout({
           title={reportTitle}
           onBack={onBack}
           backLabel="Reports"
+          actions={actions}
           trailing={
             showDeleteOption ? (
               <Pressable

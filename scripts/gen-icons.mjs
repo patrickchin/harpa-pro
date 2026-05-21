@@ -27,9 +27,25 @@ const fullIconSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 10
 </svg>`;
 
 // Android adaptive foreground: blocks only, transparent bg.
-// Block cluster bbox: x 28.5–71.5, y 24.5–75.5 (43w x 51h). Already centered.
-// Fits within the launcher safe zone (inner 66% of canvas) with margin.
+//
+// Android adaptive icons are 108dp but launchers only display the centre
+// ~66% safe zone (72dp), and Samsung's One UI launcher zooms the
+// foreground further. Without compensation the logo renders ~1.55x larger
+// than on iOS and crops into the icon edges. We pre-shrink the artwork by
+// 0.65x and centre it in the 1024x1024 canvas so the rendered size
+// matches iOS visually. Keep this in sync with adaptive-icon.svg.
 const adaptiveFgSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <g transform="translate(50 50) scale(0.65) translate(-50 -50)">
+    <rect x="28.5" y="60.5" width="25" height="15" fill="${WHITE}" rx="2" />
+    <rect x="28.5" y="42.5" width="25" height="15" fill="${WHITE}" rx="2" />
+    <rect x="56.5" y="60.5" width="15" height="15" fill="${WHITE}" rx="2" />
+    <rect x="28.5" y="24.5" width="15" height="15" fill="${WHITE}" rx="2" />
+  </g>
+</svg>`;
+
+// Splash foreground: same blocks at original size (no adaptive-icon
+// shrink) — Expo's splash uses resizeMode 'contain', not Android masking.
+const splashFgSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
   <rect x="28.5" y="60.5" width="25" height="15" fill="${WHITE}" rx="2" />
   <rect x="28.5" y="42.5" width="25" height="15" fill="${WHITE}" rx="2" />
   <rect x="56.5" y="60.5" width="15" height="15" fill="${WHITE}" rx="2" />
@@ -50,5 +66,5 @@ async function render(svg, path, size, opts = {}) {
 
 await render(fullIconSvg, 'icon.png', 1024, { flatten: ACCENT });
 await render(adaptiveFgSvg, 'adaptive-icon.png', 1024);
-await render(adaptiveFgSvg, 'splash-icon.png', 1024);
+await render(splashFgSvg, 'splash-icon.png', 1024);
 await render(fullIconSvg, 'favicon.png', 48, { flatten: ACCENT });

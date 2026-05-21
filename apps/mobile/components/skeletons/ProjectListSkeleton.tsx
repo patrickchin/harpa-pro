@@ -11,7 +11,7 @@ import { Skeleton, SkeletonRow } from '@/components/primitives/Skeleton';
 /** Matches the Card layout in the projects FlatList. */
 function ProjectCardSkeleton() {
   return (
-    <View className="rounded-lg border border-border bg-surface-emphasis p-4 gap-3">
+    <View className="rounded-lg border border-border bg-card p-4 gap-3">
       <SkeletonRow>
         <Skeleton width="60%" height={18} />
         <Skeleton width={48} height={12} />

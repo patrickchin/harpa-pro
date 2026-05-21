@@ -16,6 +16,10 @@
 import { describe, expect, it, vi } from 'vitest';
 import TestRenderer, { act } from 'react-test-renderer';
 
+vi.mock('expo-image', () => ({
+  Image: (props: Record<string, unknown>) => null,
+}));
+
 import {
   SavedReport,
   type SavedReportProps,

@@ -2,6 +2,7 @@ import { useRouter } from 'expo-router';
 import { useCreateProjectMutation } from '@/lib/api/hooks';
 import { ProjectNew } from '@/screens/project-new';
 import { safeBack } from '@/lib/nav/safe-back';
+import { AppHeaderActions } from '@/components/ui/AppHeaderActions';
 
 export default function NewProjectRoute() {
   const router = useRouter();
@@ -32,6 +33,7 @@ export default function NewProjectRoute() {
           },
         );
       }}
+      actions={<AppHeaderActions />}
     />
   );
 }

@@ -61,14 +61,16 @@ export function NoteTimeline({
         const authorName = entry.authorId
           ? memberNames?.get(entry.authorId)
           : undefined;
+        const isImage = entry.source === 'image';
         return (
           <TextNoteCard
             key={entry.id ?? `note-${index}`}
             entry={entry}
             sourceIndex={index}
             authorName={authorName}
-            onRemove={onRemoveNote}
-            onEdit={onEditNote}
+            // Image notes are not editable text — suppress edit/delete affordances.
+            onRemove={isImage ? undefined : onRemoveNote}
+            onEdit={isImage ? undefined : onEditNote}
           />
         );
       })}

@@ -68,11 +68,9 @@ voiceRoutes.openapi(
     // normalises it away before hashing in replay. In live mode the
     // provider will fetch this URL.
     const signed = await pickStorage().signGet(row.fileKey);
-    const userId = c.get('userId')!;
     const out = await aiTranscribe({
       audioUrl: signed.url,
       fixtureName: body.fixtureName,
-      usageContext: { db, userId },
     });
     return c.json({ transcript: out.text }, 200);
   },
@@ -99,14 +97,11 @@ voiceRoutes.openapi(
   async (c) => {
     const userId = c.get('userId');
     if (!userId) throw new HTTPException(401);
-    const db = c.get('db');
-    if (!db) throw new HTTPException(401);
     const body = c.req.valid('json');
     const out = await aiChat({
       systemPrompt: 'Summarise the following transcript into a concise site-note body.',
       userPrompt: body.transcript,
       fixtureName: body.fixtureName,
-      usageContext: { db, userId },
     });
     return c.json({ summary: out.text }, 200);
   },

@@ -13,7 +13,7 @@
  *  - Cancel (with captures) opens discard dialog → Discard → onCancel
  *  - one snapshot of the granted-empty layout
  *
- * `expo-camera` + `expo-file-system/next` are mocked so the body
+ * `expo-camera` + `expo-file-system` are mocked so the body
  * exercises every code path without touching native modules.
  */
 import React from 'react';
@@ -37,9 +37,20 @@ vi.mock('@/lib/native/expo-camera-shim', () => {
   };
 });
 
-vi.mock('expo-file-system', () => ({
-  deleteAsync: vi.fn(async () => undefined),
-}));
+vi.mock('expo-file-system', () => {
+  class File {
+    uri: string;
+    size = 1024;
+    exists = true;
+    constructor(uri: string) {
+      this.uri = uri;
+    }
+    delete() {
+      // no-op for tests
+    }
+  }
+  return { File };
+});
 
 import {
   CameraCapture,
@@ -294,7 +305,159 @@ describe('CameraCapture', () => {
     );
     expect(tree.toJSON()).toMatchSnapshot();
   });
+
+  // ── P3.15.2 additions ───────────────────────────────────────────────
+
+  it('save-to-camera-roll toggle is hidden when no handler is provided', () => {
+    const tree = render(
+      <CameraCapture
+        {...baseProps({
+          permissionOverride: { granted: true, canAskAgain: true },
+        })}
+      />,
+    );
+    expect(
+      tree.root.findAllByProps({ testID: 'btn-camera-save-to-roll' }),
+    ).toHaveLength(0);
+  });
+
+  it('save-to-camera-roll toggle renders the controlled state', () => {
+    const onToggle = vi.fn();
+    const tree = render(
+      <CameraCapture
+        {...baseProps({
+          permissionOverride: { granted: true, canAskAgain: true },
+          saveToCameraRoll: true,
+          onToggleSaveToCameraRoll: onToggle,
+        })}
+      />,
+    );
+    const btn = tree.root.findByProps({ testID: 'btn-camera-save-to-roll' });
+    expect(btn.props.accessibilityState).toEqual({ checked: true });
+    act(() => {
+      btn.props.onPress();
+    });
+    expect(onToggle).toHaveBeenCalledOnce();
+  });
+
+  it('shutter invokes saveCaptureToCameraRoll iff toggle is on', async () => {
+    const save = vi.fn(async () => undefined);
+    const take = vi.fn(async () => ({
+      uri: 'file:///shot.jpg',
+      width: 100,
+      height: 100,
+    }));
+
+    const tree = render(
+      <CameraCapture
+        {...baseProps({
+          permissionOverride: { granted: true, canAskAgain: true },
+          takePicture: take,
+          saveToCameraRoll: false,
+          onToggleSaveToCameraRoll: vi.fn(),
+          saveCaptureToCameraRoll: save,
+        })}
+      />,
+    );
+    await act(async () => {
+      await tree.root.findByProps({ testID: 'btn-camera-shutter' }).props.onPress();
+    });
+    expect(save).not.toHaveBeenCalled();
+
+    // Re-render with toggle ON and shoot again.
+    act(() => {
+      tree.update(
+        <CameraCapture
+          {...baseProps({
+            permissionOverride: { granted: true, canAskAgain: true },
+            takePicture: take,
+            saveToCameraRoll: true,
+            onToggleSaveToCameraRoll: vi.fn(),
+            saveCaptureToCameraRoll: save,
+          })}
+        />,
+      );
+    });
+    await act(async () => {
+      await tree.root.findByProps({ testID: 'btn-camera-shutter' }).props.onPress();
+    });
+    expect(save).toHaveBeenCalledWith('file:///shot.jpg');
+  });
+
+  it('pinch gesture drives the zoom prop on CameraView', () => {
+    const tree = render(
+      <CameraCapture
+        {...baseProps({
+          permissionOverride: { granted: true, canAskAgain: true },
+        })}
+      />,
+    );
+    // Initial zoom is 0.
+    expect(
+      tree.root.findByType('rn-CameraView' as unknown as React.ComponentType).props.zoom,
+    ).toBe(0);
+
+    const detector = tree.root.findByProps({ testID: 'camera-gesture-surface' });
+    // Walk up to the GestureDetector (parent host) and grab its
+    // composed gesture from the mock's __cfg.
+    const gestureDetector = detector.parent!;
+    const gesture = gestureDetector.props.gesture as {
+      __cfg: { kind: string; children: Array<{ __cfg: GestureCfg }> };
+    };
+    expect(gesture.__cfg.kind).toBe('simultaneous');
+    const pinch = gesture.__cfg.children.find((g) => g.__cfg.kind === 'pinch');
+    expect(pinch).toBeDefined();
+
+    act(() => {
+      pinch!.__cfg.onStart?.({});
+      pinch!.__cfg.onUpdate?.({ scale: 1.4 });
+    });
+    const camAfter = tree.root.findByType('rn-CameraView' as unknown as React.ComponentType);
+    // delta = (1.4 - 1) * 0.5 = 0.2, anchored at 0.
+    expect(camAfter.props.zoom).toBeCloseTo(0.2, 5);
+  });
+
+  it('tap gesture renders the focus indicator and forwards a normalised point', () => {
+    const onFocusPoint = vi.fn();
+    const tree = render(
+      <CameraCapture
+        {...baseProps({
+          permissionOverride: { granted: true, canAskAgain: true },
+          onFocusPoint,
+        })}
+      />,
+    );
+
+    const surface = tree.root.findByProps({ testID: 'camera-gesture-surface' });
+    act(() => {
+      surface.props.onLayout({
+        nativeEvent: { layout: { width: 400, height: 800 } },
+      });
+    });
+
+    const gestureDetector = surface.parent!;
+    const gesture = gestureDetector.props.gesture as {
+      __cfg: { children: Array<{ __cfg: GestureCfg }> };
+    };
+    const tap = gesture.__cfg.children.find((g) => g.__cfg.kind === 'tap');
+    expect(tap).toBeDefined();
+
+    act(() => {
+      tap!.__cfg.onEnd?.({ x: 100, y: 400 });
+    });
+    expect(onFocusPoint).toHaveBeenCalledWith({ x: 0.25, y: 0.5 });
+    expect(
+      tree.root.findAllByProps({ testID: 'camera-focus-indicator' }).length,
+    ).toBeGreaterThan(0);
+  });
 });
+
+interface GestureCfg {
+  kind: string;
+  onStart?: (e: unknown) => void;
+  onUpdate?: (e: unknown) => void;
+  onEnd?: (e: unknown) => void;
+}
 
 function collectText(n: unknown): string {
   if (n == null) return '';

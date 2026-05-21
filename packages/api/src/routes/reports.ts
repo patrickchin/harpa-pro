@@ -289,12 +289,6 @@ async function runGenerate(
     existingBody,
     fixtureName,
     vendor,
-    usageContext: {
-      db,
-      userId,
-      projectId: report.projectId,
-      reportId: report.id,
-    },
   });
   const updated = await db((d) => setReportBody(d, report.id, out.body));
   if (!updated) throw new HTTPException(404, { message: 'Report not found.' });

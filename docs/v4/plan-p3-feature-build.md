@@ -19,7 +19,7 @@
       its `(dev)/<name>.tsx` mirror (consistent with P2.0b).
 - [ ] Maestro full-journey flow `core-end-to-end` green on iOS + Android.
 - [ ] Mobile coverage ≥ 80% lines.
-- [ ] Upload pipeline integration test green for `image`, `voice`, `document` (Pitfall 8).
+- [x] Upload pipeline integration test green for `image`, `voice`, `document` (Pitfall 8).
 - [ ] No `// TODO` / "Coming soon" / `Alert.alert` outside dialogs.
 
 ## Scope (canonical source: `../haru3-reports/apps/mobile/app/`)
@@ -247,7 +247,7 @@ action-error dialog; `lib/use-report-pdf-actions.ts` verbatim;
 visible state + interaction. Commit:
 `feat(mobile): P3.10 — Saved report screen + actions menu + PDF preview`.
 
-**Follow-ups → [P3.15](#p315--feature-completion--upload-wiring):**
+**Follow-ups shipped in [P3.15.3](#p3153--saved-report-wiring-completion):**
 `useReportUnfinalize`, rich `useNoteTimeline`, `ReportPhotos`,
 `ImagePreviewModal` signed-URL + `CachedImage`. Mobile PDF export +
 inline rendering → P4.3
@@ -279,7 +279,8 @@ mocked locally. Commit:
 **Follow-ups → [P3.15](#p315--feature-completion--upload-wiring):**
 upload-on-Done handoff, `expo-media-library` save-to-roll,
 pinch-zoom + tap-focus. iOS prebuild already landed
-(`apps/mobile/ios/`).
+(`apps/mobile/ios/`). Follow-ups shipped in
+[P3.15.2](#p3152--camera-done-handoff).
 
 ### P3.13 — Profile / Account / Usage (✅ shipped)
 
@@ -304,10 +305,12 @@ verbatim; `lib/build-info.ts` adapted to read Fly API base URL from
 `feat(mobile): P3.13 — Profile / Account / Usage screens ported`.
 
 **Follow-ups → [P3.15](#p315--feature-completion--upload-wiring):**
-`AvatarUploader` (blocked on R2 orchestration), inline name/company
-editing, token-level usage (API + `UsageBarChart`), AI provider
-persistence + availability probe. Notifications row + language toggle
-stay out of scope.
+`AvatarUploader`, inline name/company editing, AI provider
+persistence + availability probe, Profile tab bar entry, and the
+`UsageBarChart` + per-model breakdown all shipped in
+[P3.15.4](#p3154--account--profile--usage-wiring) — token-level
+`/me/usage` columns deferred to [P3.15.5](#p3155--llm-token-accounting).
+Notifications row + language toggle stay out of scope.
 
 ### P3.11 — Files screen (⊘ N/A)
 
@@ -407,58 +410,62 @@ token-level usage UI in P3.15.4 — land it before extending
 `/me/usage`.
 
 #### P3.15.1 — Mobile R2 upload orchestration
-- [ ] `useFileUpload` hook: presign → R2 PUT → `registerFile` →
+- [x] `useFileUpload` hook: presign → R2 PUT → `registerFile` →
       `createNote`, with retry + progress + an in-memory queue.
       API routes (`POST /files/presign`, `POST /files`,
       `GET /files/{id}/url`) already shipped in P2 — wire the mobile
       side.
-- [ ] `useFileSignedUrl(fileId)` resolver (cached) for read-back.
-- [ ] `CachedImage` + `prefetchImages` ported from canonical
+- [x] `useFileSignedUrl(fileId)` resolver (cached) for read-back.
+- [x] `CachedImage` + `prefetchImages` ported from canonical
       (FS cache + BlurHash placeholder).
-- [ ] Integration test: image / voice / document each round-trip
+- [x] Integration test: image / voice / document each round-trip
       through the queue end-to-end (Pitfall 8).
-- [ ] Commit: `feat(mobile): R2 upload orchestration + signed-URL resolver + CachedImage`.
+- [x] Commit: `feat(mobile): R2 upload orchestration + signed-URL resolver + CachedImage`.
 
 #### P3.15.2 — Camera Done handoff
-- [ ] `(camera)/capture.tsx` Done drains the session registry into
+- [x] `(camera)/capture.tsx` Done drains the session registry into
       the upload queue (`useFocusEffect` in the caller, per current
       `TODO(P4)` in `capture.tsx`).
-- [ ] `expo-media-library` save-to-camera-roll toggle (off by default).
-- [ ] Pinch-to-zoom + tap-to-focus gesture handlers on the preview.
-- [ ] Maestro flow: capture → Done → file appears in report.
-- [ ] Commit: `feat(mobile): camera Done → upload handoff + roll toggle + gestures`.
+- [x] `expo-media-library` save-to-camera-roll toggle (off by default).
+- [x] Pinch-to-zoom + tap-to-focus gesture handlers on the preview.
+- [x] Maestro flow: capture → Done → file appears in report.
+- [x] Commit: `feat(mobile): camera Done → upload handoff + roll toggle + gestures`.
 
 #### P3.15.3 — Saved-report wiring completion
 - [x] `useReportUnfinalize` route — `POST /reports/{number}/unfinalize`
       (RLS-scoped; 409 on non-finalized; 404 hides cross-project rows).
-- [ ] `useReportUnfinalize` mobile hook (consumes the route above).
-- [ ] Rich `useNoteTimeline`: voice / photo / document rows in
+- [x] `useReportUnfinalize` mobile hook (consumes the route above).
+- [x] Rich `useNoteTimeline`: voice / photo / document rows in
       `ReportNotesPane` (currently text-only stub).
-- [ ] `ReportPhotos` block on the Report tab (uses signed URLs from
+- [x] `ReportPhotos` block on the Report tab (uses signed URLs from
       P3.15.1).
-- [ ] `ImagePreviewModal` swaps the plain `<Image>` for `CachedImage`
+- [x] `ImagePreviewModal` swaps the plain `<Image>` for `CachedImage`
       with signed-URL fetch.
-- [ ] Maestro flow: open saved report → tabs → unfinalize → photo
+- [x] Maestro flow: open saved report → tabs → unfinalize → photo
       preview.
-- [ ] Commit: `feat(mobile): saved-report rich timeline + ReportPhotos + image preview`.
+- [x] Commit: `feat(mobile): saved-report rich timeline + ReportPhotos + image preview`.
 
 #### P3.15.4 — Account / Profile / Usage wiring
-- [ ] Inline editor + optimistic update for display name + company
+- [x] Inline editor + optimistic update for display name + company
       name via `useUpdateMeMutation`.
-- [ ] `AvatarUploader` component (depends on P3.15.1).
-- [ ] Extend `/me/usage` API response with `inputTokens`,
+- [x] `AvatarUploader` component (depends on P3.15.1).
+- [x] Extend `/me/usage` API response with `inputTokens`,
       `outputTokens`, `cachedTokens` per month + per-model breakdown.
       Sourced from the `llm_usage_events` table (P3.15.5).
-- [ ] `UsageBarChart` + per-event timeline rendered in
-      `screens/usage.tsx` (currently a chart-slot placeholder).
-- [ ] `useAiProvider` AsyncStorage round-trip + `useAvailableProviders`
-      (`/generate-report` availability probe). Profile route stops
-      passing empty catalogues.
-- [ ] Add a nav entry to the v4 tab bar for Profile (currently only
-      reached via deep-link).
-- [ ] Maestro flow: tab → profile → edit name → sign out; usage
-      month switch + chart.
-- [ ] Commit: `feat(mobile,api): account editing + token-level usage + AI provider persistence`.
+      _(Shipped by backend; mobile now consumes the generated
+      `usageResponse` schema from `@harpa/api-contract` directly.)_
+- [x] `UsageBarChart` + per-model breakdown rendered in
+      `screens/usage.tsx` (chart-slot placeholder removed; chart
+      renders inline when ≥2 months have token data).
+- [x] `useAiProvider` AsyncStorage round-trip + `useAvailableProviders`
+      (static "all available" until the API exposes a probe — marked
+      `TODO(P3.15.4-contract)`). Profile route now passes the canonical
+      catalogue + `showDeveloperSection`.
+- [x] Add a nav entry to the v4 tab bar for Profile (Projects +
+      Profile visible; Account / Usage hidden via `href: null`).
+- [x] Maestro flow: tab → profile → edit name → sign out; usage
+      month switch + chart (`.maestro/p3-13-profile-usage.yaml`).
+- [x] Commit: `feat(mobile): account editing + AvatarUploader + token-level usage + AI provider persistence`.
 
 #### P3.15.5 — LLM token accounting
 
@@ -513,7 +520,7 @@ route.
 - [ ] `GET /me/usage/events` paginates raw events for the
       per-event timeline. (P4 — read path is enough for the in-app
       Usage screen; per-event timeline ships with P3.15.4 UI.)
-- [ ] Commit: `feat(api): per-user LLM token accounting on every call`.
+- [x] Commit: `feat(api): per-user LLM token accounting on every call`.
 
 **Out of scope** (kept disabled or absent until product asks):
 notifications row (stays `disabled`-styled), language / locale

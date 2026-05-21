@@ -10,7 +10,7 @@
  * Inline AddMemberForm + remove-confirm dialog keep this one body file
  * self-contained (no separate components/members/ tree to port).
  */
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import {
   View,
   Text,
@@ -63,6 +63,7 @@ export type ProjectMembersProps = {
   addSuccessNonce: number;
   onRemoveMember: (userId: string) => void;
   isRemovePending: boolean;
+  actions?: ReactNode;
 };
 
 const ROLE_LABELS: Record<MemberRole, string> = {
@@ -219,6 +220,7 @@ export function ProjectMembers({
   addSuccessNonce,
   onRemoveMember,
   isRemovePending,
+  actions,
 }: ProjectMembersProps) {
   const [showAdd, setShowAdd] = useState(false);
 
@@ -271,7 +273,7 @@ export function ProjectMembers({
   return (
     <SafeAreaView className="flex-1 bg-background" edges={['top']}>
       <View className="px-5 pt-4 pb-2">
-        <ScreenHeader title="Members" onBack={onBack} backLabel="Project" />
+        <ScreenHeader title="Members" onBack={onBack} backLabel="Project" actions={actions} />
       </View>
 
       {isLoading ? (

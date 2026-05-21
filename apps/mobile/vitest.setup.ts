@@ -20,7 +20,53 @@
  *   - Synchronous `act(() => { tree = create(...) })` only.
  */
 import React from 'react';
-import { vi } from 'vitest';
+import { expect, vi } from 'vitest';
+
+// Default voice tests to the fixture recorder backend so
+// `pickRecorderFactory()` never tries to `require('./expoAudioRecorder')`
+// at runtime (Vite SSR can't resolve relative requires from ESM).
+// `features/voice/fixtureRecorder.test.ts` overrides this per-case via
+// `__resetPickedRecorderForTests` and direct env mutation.
+// vitest.setup.ts is an allow-listed reader of EXPO_PUBLIC_* in
+// `.eslintrc.cjs` — it must mutate the env before the recorder
+// factory imports it, so it precedes `lib/env.ts`.
+process.env.EXPO_PUBLIC_USE_FIXTURES = 'true';
+
+// React 19 changed the element brand from `Symbol.for('react.element')`
+// to `Symbol.for('react.transitional.element')`. `@vitest/pretty-format`
+// ships a `ReactElement` plugin keyed on the OLD symbol, so React 19
+// elements that appear as props (e.g. `<ScrollView refreshControl={…}>`)
+// no longer match it and fall through to the generic object printer.
+// The DEV-only `_owner` field on each element points back into the
+// FiberNode, so generic printing recurses through the whole fiber tree
+// and explodes with `Invalid string length`.
+//
+// Workaround until @vitest/pretty-format learns the transitional brand:
+// register a snapshot serializer that re-brands a React 19 element as
+// the classic `react.element` shape and strips `_owner` / `_store`.
+// The downstream `ReactElement` plugin then prints it as
+// `<TypeName prop=…>children</TypeName>` like it always did.
+const REACT_19_ELEMENT = Symbol.for('react.transitional.element');
+const REACT_18_ELEMENT = Symbol.for('react.element');
+expect.addSnapshotSerializer({
+  test(val: unknown): val is { $$typeof: symbol; type: unknown; props: unknown; key: unknown } {
+    return (
+      typeof val === 'object' &&
+      val !== null &&
+      (val as { $$typeof?: symbol }).$$typeof === REACT_19_ELEMENT
+    );
+  },
+  serialize(val, config, indentation, depth, refs, printer) {
+    const shim = {
+      $$typeof: REACT_18_ELEMENT,
+      type: (val as { type: unknown }).type,
+      props: (val as { props: unknown }).props,
+      key: (val as { key: unknown }).key,
+      ref: null,
+    };
+    return printer(shim, config, indentation, depth, refs);
+  },
+});
 
 type AnyProps = Record<string, unknown> & { children?: React.ReactNode };
 
@@ -250,6 +296,26 @@ function createAnimationPresetMock(): unknown {
   return proxy;
 }
 
+// `expo-asset` ships native bindings (depends on `expo-modules-core`
+// which reads `globalThis.expo.EventEmitter` at module load — a value
+// only set inside the RN runtime). The fixture-mode recorder imports
+// `Asset.loadAsync` to fetch the canned voice-sample, so any test that
+// transitively imports `useInlineRecorder` would crash on load. Stub
+// it with a `loadAsync` that returns a single bundled-asset record.
+vi.mock('expo-asset', () => ({
+  Asset: {
+    loadAsync: vi.fn(async (mod: unknown) => [
+      { localUri: 'file:///fixtures/voice-sample.m4a', uri: 'file:///fixtures/voice-sample.m4a', mod },
+    ]),
+    fromModule: (mod: unknown) => ({
+      localUri: 'file:///fixtures/voice-sample.m4a',
+      uri: 'file:///fixtures/voice-sample.m4a',
+      mod,
+      downloadAsync: vi.fn(async () => undefined),
+    }),
+  },
+}));
+
 // `react-native-safe-area-context` reads native insets. Stub
 // `useSafeAreaInsets` with typical iPhone insets for snapshot
 // stability.
@@ -299,3 +365,177 @@ vi.mock('@react-native-async-storage/async-storage', () => {
     },
   };
 });
+
+// `react-native-gesture-handler` ships native bindings. Provide a JS-only
+// stub that captures the configured handler callbacks on a `__cfg`
+// property so tests can simulate pinch / tap by calling
+// `(detector.props.gesture as any).__cfg.onUpdate({ scale: 1.4 })`.
+vi.mock('react-native-gesture-handler', () => {
+  type AnyFn = (...args: unknown[]) => unknown;
+  interface GestureCfg {
+    kind: string;
+    onStart?: AnyFn;
+    onUpdate?: AnyFn;
+    onEnd?: AnyFn;
+    children?: unknown[];
+  }
+  function builder(kind: string) {
+    const cfg: GestureCfg = { kind };
+    const chain = {
+      onStart(fn: AnyFn) {
+        cfg.onStart = fn;
+        return chain;
+      },
+      onUpdate(fn: AnyFn) {
+        cfg.onUpdate = fn;
+        return chain;
+      },
+      onEnd(fn: AnyFn) {
+        cfg.onEnd = fn;
+        return chain;
+      },
+      __cfg: cfg,
+    };
+    return chain;
+  }
+  const Gesture = {
+    Pinch: () => builder('pinch'),
+    Tap: () => builder('tap'),
+    Pan: () => builder('pan'),
+    Simultaneous: (...children: unknown[]) => ({
+      __cfg: { kind: 'simultaneous', children },
+    }),
+    Race: (...children: unknown[]) => ({
+      __cfg: { kind: 'race', children },
+    }),
+  };
+  const GestureDetector = (props: AnyProps) =>
+    React.createElement('rn-GestureDetector', props, props.children);
+  const GestureHandlerRootView = (props: AnyProps) =>
+    React.createElement('rn-GestureHandlerRootView', props, props.children);
+  return {
+    Gesture,
+    GestureDetector,
+    GestureHandlerRootView,
+  };
+});
+
+// `react-native-svg` ships native bindings; render each export as a
+// stub host element so snapshots stay stable.
+vi.mock('react-native-svg', () => {
+  const NAMES = [
+    'Svg',
+    'Rect',
+    'Line',
+    'Circle',
+    'Path',
+    'G',
+    'Text',
+    'TSpan',
+    'Defs',
+    'LinearGradient',
+    'Stop',
+    'ClipPath',
+    'Polygon',
+    'Polyline',
+    'Ellipse',
+  ];
+  const out: Record<string, unknown> = { __esModule: true };
+  for (const name of NAMES) {
+    out[name] = makeRNComponent(`svg-${name}`);
+  }
+  out.default = out.Svg;
+  return out;
+});
+
+// `expo-image` — render as a stub host so component trees that consume
+// CachedImage are inspectable in tests.
+vi.mock('expo-image', () => ({
+  Image: makeRNComponent('expo-Image'),
+}));
+
+// `expo-image-picker` — default mock returns a single picked asset.
+// Tests that need cancel / permission-denied paths can re-mock per file.
+vi.mock('expo-image-picker', () => ({
+  requestMediaLibraryPermissionsAsync: vi.fn(async () => ({
+    granted: true,
+    canAskAgain: true,
+    status: 'granted',
+  })),
+  launchImageLibraryAsync: vi.fn(async () => ({
+    canceled: false,
+    assets: [
+      {
+        uri: 'file:///tmp/picked-avatar.jpg',
+        width: 1024,
+        height: 1024,
+        type: 'image',
+        mimeType: 'image/jpeg',
+        fileSize: 128_000,
+      },
+    ],
+  })),
+  PermissionStatus: {
+    UNDETERMINED: 'undetermined',
+    GRANTED: 'granted',
+    DENIED: 'denied',
+  },
+  MediaType: { Images: 'images' },
+  MediaTypeOptions: { Images: 'Images' },
+}));
+
+// `expo-image-manipulator` — pass through the input URI as the
+// "compressed" output so tests can assert downstream behaviour without
+// faking pixels.
+vi.mock('expo-image-manipulator', () => ({
+  manipulateAsync: vi.fn(async (uri: string) => ({
+    uri,
+    width: 512,
+    height: 512,
+  })),
+  SaveFormat: { JPEG: 'jpeg', PNG: 'png' },
+}));
+
+// `expo-file-system` ships native bindings via `expo-modules-core`.
+// We stub the v55 modern `File` class API used by the app for size
+// lookup (avatar upload, camera upload) and cleanup (camera capture).
+vi.mock('expo-file-system', () => {
+  class File {
+    uri: string;
+    size = 80_000;
+    exists = true;
+    constructor(uri: string) {
+      this.uri = uri;
+    }
+    delete() {
+      // no-op
+    }
+  }
+  return {
+    File,
+    Directory: class {},
+  };
+});
+
+// `expo-media-library` ships native bindings. Default stub: granted +
+// no-op save. Tests can re-mock per-file to assert call counts.
+vi.mock('expo-media-library', () => ({
+  requestPermissionsAsync: vi.fn(async () => ({
+    granted: true,
+    canAskAgain: true,
+    status: 'granted',
+    accessPrivileges: 'all',
+  })),
+  getPermissionsAsync: vi.fn(async () => ({
+    granted: true,
+    canAskAgain: true,
+    status: 'granted',
+    accessPrivileges: 'all',
+  })),
+  saveToLibraryAsync: vi.fn(async () => undefined),
+  PermissionStatus: {
+    UNDETERMINED: 'undetermined',
+    GRANTED: 'granted',
+    DENIED: 'denied',
+  },
+}));

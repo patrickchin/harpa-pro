@@ -225,6 +225,8 @@ separate, explicitly guarded endpoint). Full design in
 `POST` with their own phone → asserts 409 `MEMBER_EXISTS`, then confirms
 `GET /members` still shows A as `owner`.
 
+---
+
 ### 2026-05-18 — saved-report route rendered "Failed to load report" because the API body wasn't adapted to the UI shape (Pattern R5)
 
 **Symptom.** After tapping Finalize on the generate route the app

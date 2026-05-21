@@ -1,0 +1,21 @@
+<!--
+  Android adaptive-icon foreground.
+
+  Background is supplied by app.config.ts (backgroundColor: '#e55d22'),
+  so this SVG only carries the white logo on a transparent canvas.
+
+  The artwork is intentionally drawn smaller than the matching iOS
+  icon.svg: Samsung's One UI launcher (and stock Android adaptive
+  masking) only displays the centre ~66% safe zone of the foreground,
+  which would otherwise make the logo appear ~1.55x larger than on
+  iOS. We pre-shrink the shapes by ~0.65x and centre them inside the
+  1024x1024 canvas so the rendered logo size matches iOS visually.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <g transform="translate(50 50) scale(0.65) translate(-50 -50)">
+    <rect x="28.5" y="60.5" width="25" height="15" fill="#ffffff" rx="2" />
+    <rect x="28.5" y="42.5" width="25" height="15" fill="#ffffff" rx="2" />
+    <rect x="56.5" y="60.5" width="15" height="15" fill="#ffffff" rx="2" />
+    <rect x="28.5" y="24.5" width="15" height="15" fill="#ffffff" rx="2" />
+  </g>
+</svg>

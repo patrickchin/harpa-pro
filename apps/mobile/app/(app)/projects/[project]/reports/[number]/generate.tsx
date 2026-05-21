@@ -9,10 +9,10 @@
  * mutations. Text notes round-trip through `useCreateNoteMutation` +
  * `useReportNotesQuery`; the local list is optimistic and gets
  * replaced when the server responds. The camera button pushes the
- * capture modal via the session-registry handoff; uploads themselves
- * land in P4 (we surface a clear "upload pipeline pending" message
- * when the user returns with photos rather than swallowing them
- * silently — see Pitfall 13).
+ * capture modal via the session-registry handoff; on return, captured
+ * URIs are enqueued through the upload pipeline (presign → R2 PUT →
+ * registerFile → createNote) and the notes query is invalidated so
+ * image notes appear in the timeline immediately.
  */
 import { useCallback, useMemo, useState } from 'react';
 import {
@@ -20,6 +20,7 @@ import {
   useLocalSearchParams,
   useRouter,
 } from 'expo-router';
+import { useQueryClient } from '@tanstack/react-query';
 
 import { GenerateNotes } from '@/screens/generate-notes';
 import {
@@ -48,7 +49,10 @@ import { dismissOrReplaceTo } from '@/lib/nav/dismiss-or-replace';
 import {
   consumeCameraSession,
   createCameraSession,
+  findCommittedSessionsForReport,
 } from '@/lib/camera-session-registry';
+import { useCameraUploads } from '@/lib/camera/use-camera-uploads';
+import { AppHeaderActions } from '@/components/ui/AppHeaderActions';
 
 interface ApiNote {
   id: string;
@@ -60,13 +64,16 @@ interface ApiNote {
 }
 
 function noteToEntry(n: ApiNote): NoteEntry {
-  const text = n.body ?? n.transcript ?? '';
+  const isImage = n.kind === 'image';
+  const text = isImage
+    ? (n.body ?? '📷 Photo')
+    : (n.body ?? n.transcript ?? '');
   return {
     id: n.id,
     authorId: n.authorId,
     text,
     addedAt: Date.parse(n.createdAt) || Date.now(),
-    source: n.kind === 'voice' ? 'voice' : 'text',
+    source: n.kind === 'voice' ? 'voice' : n.kind === 'image' ? 'image' : 'text',
   };
 }
 
@@ -378,17 +385,21 @@ export default function GenerateReportRoute() {
   }, [slug, reportNumber, deleteReportMutation, router]);
 
   // Camera handoff. Push the capture modal with a session id; on focus
-  // return, drain the URIs. R2 upload + createNote-with-fileId land
-  // with the upload pipeline (P4) — until then we tell the user
-  // honestly that the photos couldn't be attached yet (Pitfall 13).
-  const [cameraSessionId, setCameraSessionId] = useState<string | null>(null);
+  // return, find any committed sessions for THIS report (the registry
+  // is module-level so it survives the (app) tree remounting — root
+  // uses <Slot/>, so navigating into (camera) unmounts the app tree
+  // and loses local React state). Then enqueue captured URIs through
+  // the upload pipeline (presign → R2 PUT → registerFile → createNote)
+  // and invalidate the notes query so image notes appear in the
+  // timeline immediately.
+  const { enqueueCameraUris } = useCameraUploads();
+  const qc = useQueryClient();
   const handleCameraCapture = useCallback(() => {
-    if (!slug || reportNumber === null) return;
+    if (!slug || reportNumber === null || !reportId) return;
     const sessionId = createCameraSession({
       returnTo: `/(app)/projects/${slug}/reports/${reportNumber}/generate`,
       context: { reportId, projectSlug: slug, reportNumber },
     });
-    setCameraSessionId(sessionId);
     router.push({
       pathname: '/(camera)/capture',
       params: { sessionId },
@@ -406,17 +417,27 @@ export default function GenerateReportRoute() {
 
   useFocusEffect(
     useCallback(() => {
-      if (!cameraSessionId) return;
-      const uris = consumeCameraSession(cameraSessionId);
-      setCameraSessionId(null);
-      if (uris && uris.length > 0) {
-        setUploadError(
-          `Photo capture works, but uploading the ${uris.length} photo${
-            uris.length === 1 ? '' : 's'
-          } needs the storage pipeline (coming soon).`,
-        );
+      if (!reportId) return;
+      const sessionIds = findCommittedSessionsForReport(reportId);
+      if (sessionIds.length === 0) return;
+      const allUris: string[] = [];
+      for (const sid of sessionIds) {
+        const uris = consumeCameraSession(sid);
+        if (uris && uris.length > 0) allUris.push(...uris);
       }
-    }, [cameraSessionId]),
+      if (allUris.length === 0) return;
+      void enqueueCameraUris(allUris, { reportId }).then((results) => {
+        const failed = results.filter((r) => r.status === 'rejected').length;
+        if (failed > 0) {
+          setUploadError(
+            `${failed} of ${allUris.length} photo${allUris.length === 1 ? '' : 's'} failed to upload. Open the report queue to retry.`,
+          );
+        }
+        // Invalidate the notes query so uploaded image notes appear in
+        // the timeline immediately after the pipeline completes.
+        void qc.invalidateQueries({ queryKey: ['reportNotes'] });
+      });
+    }, [reportId, enqueueCameraUris, qc]),
   );
 
   const canWrite =
@@ -466,6 +487,7 @@ export default function GenerateReportRoute() {
         reportRow?.status === 'finalized' ? undefined : handleDeleteDraft
       }
       isDeletingDraft={deleteReportMutation.isPending}
+      actions={<AppHeaderActions />}
     />
   );
 }

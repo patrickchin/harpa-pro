@@ -67,6 +67,30 @@ export function commitCameraSession(id: string, uris: string[]): void {
 }
 
 /**
+ * Find committed sessions whose `context.reportId` matches the given
+ * report id. Used by callers that may have been UNMOUNTED while the
+ * camera modal was presented (root uses `<Slot />` — pushing into the
+ * `(camera)` group swaps the slot and the `(app)` tree remounts on
+ * return, so local React state holding the session id is gone).
+ *
+ * Returns committed session ids only; uncommitted (user cancelled) and
+ * unrelated sessions are skipped. The caller drains each via
+ * `consumeCameraSession`.
+ */
+export function findCommittedSessionsForReport(reportId: string): string[] {
+  const out: string[] = [];
+  for (const session of sessions.values()) {
+    if (
+      session.result != null &&
+      (session.context as { reportId?: string } | undefined)?.reportId === reportId
+    ) {
+      out.push(session.id);
+    }
+  }
+  return out;
+}
+
+/**
  * Caller drains the result. Returns `undefined` if the session doesn't
  * exist OR has not been committed yet (i.e. user cancelled). Either
  * way the entry is cleaned up.

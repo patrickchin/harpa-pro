@@ -13,6 +13,7 @@ import {
 } from '@/lib/api/hooks';
 import { useRefresh } from '@/lib/use-refresh';
 import { safeBack } from '@/lib/nav/safe-back';
+import { AppHeaderActions } from '@/components/ui/AppHeaderActions';
 
 export default function ProjectMembersRoute() {
   const router = useRouter();
@@ -64,6 +65,7 @@ export default function ProjectMembersRoute() {
         remove.mutate({ params: { project: slug, user: userId } })
       }
       isRemovePending={remove.isPending}
+      actions={<AppHeaderActions />}
     />
   );
 }

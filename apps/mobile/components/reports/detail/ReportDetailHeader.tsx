@@ -5,6 +5,7 @@
  * on branch `dev`.
  */
 import { Text, View } from 'react-native';
+import type { ReactNode } from 'react';
 import { Calendar, MoreHorizontal } from 'lucide-react-native';
 
 import { ScreenHeader } from '@/components/primitives/ScreenHeader';
@@ -19,6 +20,7 @@ interface ReportDetailHeaderProps {
   onBack: () => void;
   onOpenActions: () => void;
   actionsDisabled: boolean;
+  actions?: ReactNode;
 }
 
 export function ReportDetailHeader({
@@ -26,6 +28,7 @@ export function ReportDetailHeader({
   onBack,
   onOpenActions,
   actionsDisabled,
+  actions,
 }: ReportDetailHeaderProps) {
   return (
     <View className="px-5 py-4">
@@ -34,6 +37,7 @@ export function ReportDetailHeader({
         eyebrow={toTitleCase(report.report.meta.reportType)}
         onBack={onBack}
         backLabel="Reports"
+        actions={actions}
       />
 
       <View className="mt-3 flex-row items-center justify-between">

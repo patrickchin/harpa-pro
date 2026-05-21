@@ -8,6 +8,7 @@ import { useProjectQuery } from '@/lib/api/hooks';
 import { useRefresh } from '@/lib/use-refresh';
 import { useCopyToClipboard } from '@/lib/use-clipboard';
 import { safeBack } from '@/lib/nav/safe-back';
+import { AppHeaderActions } from '@/components/ui/AppHeaderActions';
 
 export default function ProjectHomeRoute() {
   const router = useRouter();
@@ -52,6 +53,7 @@ export default function ProjectHomeRoute() {
           toast: key === 'client' ? 'Client copied' : 'Address copied',
         });
       }}
+      actions={<AppHeaderActions />}
     />
   );
 }

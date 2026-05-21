@@ -68,7 +68,7 @@ exports[`ProjectListSkeleton > matches snapshot 1`] = `
     }
   />
   <rn-View
-    className="rounded-lg border border-border bg-surface-emphasis p-4 gap-3"
+    className="rounded-lg border border-border bg-card p-4 gap-3"
   >
     <rn-View
       className="flex-row items-center gap-3"
@@ -180,7 +180,7 @@ exports[`ProjectListSkeleton > matches snapshot 1`] = `
     </rn-View>
   </rn-View>
   <rn-View
-    className="rounded-lg border border-border bg-surface-emphasis p-4 gap-3"
+    className="rounded-lg border border-border bg-card p-4 gap-3"
   >
     <rn-View
       className="flex-row items-center gap-3"
@@ -292,7 +292,7 @@ exports[`ProjectListSkeleton > matches snapshot 1`] = `
     </rn-View>
   </rn-View>
   <rn-View
-    className="rounded-lg border border-border bg-surface-emphasis p-4 gap-3"
+    className="rounded-lg border border-border bg-card p-4 gap-3"
   >
     <rn-View
       className="flex-row items-center gap-3"

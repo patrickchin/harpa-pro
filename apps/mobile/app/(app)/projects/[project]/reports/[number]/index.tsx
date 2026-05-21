@@ -24,6 +24,7 @@ import {
   useReportQuery,
   useReportNotesQuery,
   useDeleteReportMutation,
+  useUnfinalizeReportMutation,
 } from '@/lib/api/hooks';
 import type { ReportNoteRow } from '@/components/reports/detail/ReportNotesPane';
 import { useRefresh } from '@/lib/use-refresh';
@@ -36,6 +37,7 @@ import { reportBodyToGeneratedReport } from '@/lib/report-body-adapter';
 import { reports as reportSchemas } from '@harpa/api-contract';
 import type { GeneratedSiteReport } from '@harpa/report-core';
 import type { AppDialogCopy } from '@/lib/app-dialog-copy';
+import { AppHeaderActions } from '@/components/ui/AppHeaderActions';
 
 export default function SavedReportRoute() {
   const router = useRouter();
@@ -121,6 +123,7 @@ export default function SavedReportRoute() {
             kind: 'text' | 'voice' | 'image' | 'document';
             body: string | null;
             transcript: string | null;
+            fileId: string | null;
             createdAt: string;
           }>;
         }
@@ -132,6 +135,7 @@ export default function SavedReportRoute() {
       kind: n.kind === 'image' ? 'photo' : n.kind,
       createdAt: n.createdAt ?? null,
       authorName: n.authorId ? memberNames.get(n.authorId) ?? null : null,
+      fileId: n.fileId ?? null,
     }));
   }, [notesQuery.data, memberNames]);
 
@@ -173,10 +177,20 @@ export default function SavedReportRoute() {
     }
   }, [slug, reportNumber, deleteMutation, router]);
 
-  // Unfinalize is not implemented server-side (only finalize exists in
-  // packages/api/src/routes/reports.ts as of P3). The dialog confirm
-  // is a no-op until a `POST /unfinalize` endpoint lands in P4.
-  const handleConfirmUnfinalize = useCallback(() => undefined, []);
+  const unfinalizeMutation = useUnfinalizeReportMutation();
+
+  const handleConfirmUnfinalize = useCallback(async () => {
+    if (!slug || reportNumber === null) return;
+    try {
+      await unfinalizeMutation.mutateAsync({
+        params: { project: slug, number: reportNumber },
+      });
+    } catch {
+      // Error surface mirrors delete — the screen body keeps the
+      // confirm dialog open via `isUnfinalizing`. A dedicated error
+      // dialog lands alongside the action-error router (P4).
+    }
+  }, [slug, reportNumber, unfinalizeMutation]);
 
   const myRole = projectQuery.data?.myRole;
   const canUnfinalize = myRole === 'owner' || myRole === 'editor';
@@ -206,8 +220,9 @@ export default function SavedReportRoute() {
       onConfirmDelete={handleConfirmDelete}
       onConfirmUnfinalize={handleConfirmUnfinalize}
       isDeleting={deleteMutation.isPending}
-      isUnfinalizing={false}
+      isUnfinalizing={unfinalizeMutation.isPending}
       pdfActions={pdfActions}
+      actions={<AppHeaderActions />}
     />
   );
 }

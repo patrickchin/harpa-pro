@@ -33,7 +33,6 @@ const config: ExpoConfig = {
   orientation: 'portrait',
   scheme: 'harpa',
   userInterfaceStyle: 'light',
-  newArchEnabled: false,
   icon: './assets/icon.png',
   splash: {
     image: './assets/splash-icon.png',
@@ -46,6 +45,8 @@ const config: ExpoConfig = {
     icon: './assets/icon.png',
     infoPlist: {
       ITSAppUsesNonExemptEncryption: false,
+      NSPhotoLibraryAddUsageDescription:
+        'Allow Harpa Pro to save captured site photos to your camera roll.',
     },
   },
   android: {
@@ -66,6 +67,17 @@ const config: ExpoConfig = {
         recordAudioAndroid: false,
       },
     ],
+    [
+      'expo-media-library',
+      {
+        photosPermission: false,
+        savePhotosPermission:
+          'Allow Harpa Pro to save captured site photos to your camera roll.',
+        isAccessMediaLocationEnabled: false,
+      },
+    ],
+    'expo-image',
+    'expo-secure-store',
   ],
   experiments: { typedRoutes: true },
   extra: {

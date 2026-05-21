@@ -14,6 +14,7 @@ import {
   Pressable,
   RefreshControl,
 } from 'react-native';
+import type { ReactNode } from 'react';
 import {
   Check,
   ChevronRight,
@@ -58,6 +59,7 @@ export type ProjectHomeProps = {
   onPressMembers: () => void;
   copiedKey: string | null;
   onCopy: (value: string, key: string) => void;
+  actions?: ReactNode;
 };
 
 type OverviewAction = {
@@ -81,13 +83,14 @@ export function ProjectHome({
   onPressMembers,
   copiedKey,
   onCopy,
+  actions,
 }: ProjectHomeProps) {
   const siteName = project?.name?.trim() || 'Project';
   const stats = project?.stats ?? { totalReports: 0, drafts: 0, lastReportAt: null };
   const lastReportRelative = formatRelativeTime(stats.lastReportAt);
   const canEdit = project?.myRole === 'owner' || project?.myRole === 'editor';
 
-  const actions: OverviewAction[] = [
+  const overviewActions: OverviewAction[] = [
     {
       key: 'reports',
       title: 'Reports',
@@ -130,6 +133,7 @@ export function ProjectHome({
           title={siteName}
           onBack={onBack}
           backLabel="Projects"
+          actions={actions}
         />
       </View>
 
@@ -230,7 +234,7 @@ export function ProjectHome({
           </Card>
 
           <View className="gap-3">
-            {actions.map((action) => {
+            {overviewActions.map((action) => {
               const Icon = action.icon;
               const isDisabled = action.comingSoon || !action.onPress;
               return (

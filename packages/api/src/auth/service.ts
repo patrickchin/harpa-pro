@@ -133,48 +133,21 @@ export async function updateUser(
   return fetchUser(db, userId);
 }
 
-export interface UsageTokens {
-  input: number;
-  output: number;
-  cached: number;
-  total: number;
-}
-
 export interface UsageMonth {
   month: string; // YYYY-MM
   reports: number;
   voiceNotes: number;
-  tokens: UsageTokens;
-  calls: number;
-}
-
-export interface UsageByModel {
-  vendor: string;
-  model: string;
-  operation: 'chat' | 'transcribe' | 'generate_report';
-  calls: number;
-  tokens: UsageTokens;
 }
 
 export interface UsageSummary {
   months: UsageMonth[];
-  byModel: UsageByModel[];
-  totals: {
-    reports: number;
-    voiceNotes: number;
-    tokens: UsageTokens;
-    calls: number;
-  };
+  totals: { reports: number; voiceNotes: number };
 }
 
-const zeroTokens = (): UsageTokens => ({ input: 0, output: 0, cached: 0, total: 0 });
-
 /**
- * Per-month + per-(vendor,model,operation) rollup of the caller's
- * activity. Reports + voice notes counts come from the relevant
- * domain tables; token counts and call counts come from
- * `app.llm_usage_events` (be-2). All filters scope to the caller —
- * RLS on each table enforces this independently of the WHERE clause.
+ * Per-month counts of reports authored + voice notes recorded by the
+ * caller. All filters use `author_id = userId` so the RLS path on
+ * `app.reports` / `app.notes` is what excludes other actors.
  */
 export async function fetchUsage(db: Db, userId: string): Promise<UsageSummary> {
   const reportsRes = await db.execute<{ month: string; count: string }>(sql`
@@ -191,96 +164,21 @@ export async function fetchUsage(db: Db, userId: string): Promise<UsageSummary> 
     GROUP BY month
     ORDER BY month
   `);
-  const tokensRes = await db.execute<{
-    month: string;
-    input: string;
-    output: string;
-    cached: string;
-    total: string;
-    calls: string;
-  }>(sql`
-    SELECT to_char(created_at, 'YYYY-MM') AS month,
-           coalesce(sum(input_tokens), 0)::text AS input,
-           coalesce(sum(output_tokens), 0)::text AS output,
-           coalesce(sum(cached_tokens), 0)::text AS cached,
-           coalesce(sum(total_tokens), 0)::text AS total,
-           count(*)::text AS calls
-    FROM app.llm_usage_events
-    WHERE user_id = ${userId} AND status = 'ok'
-    GROUP BY month
-    ORDER BY month
-  `);
-  const byModelRes = await db.execute<{
-    vendor: string;
-    model: string;
-    operation: 'chat' | 'transcribe' | 'generate_report';
-    calls: string;
-    input: string;
-    output: string;
-    cached: string;
-    total: string;
-  }>(sql`
-    SELECT vendor, model, operation,
-           count(*)::text AS calls,
-           coalesce(sum(input_tokens), 0)::text AS input,
-           coalesce(sum(output_tokens), 0)::text AS output,
-           coalesce(sum(cached_tokens), 0)::text AS cached,
-           coalesce(sum(total_tokens), 0)::text AS total
-    FROM app.llm_usage_events
-    WHERE user_id = ${userId} AND status = 'ok'
-    GROUP BY vendor, model, operation
-    ORDER BY vendor, model, operation
-  `);
-
   const monthMap = new Map<string, UsageMonth>();
-  const ensureMonth = (m: string): UsageMonth => {
-    let cur = monthMap.get(m);
-    if (!cur) {
-      cur = { month: m, reports: 0, voiceNotes: 0, tokens: zeroTokens(), calls: 0 };
-      monthMap.set(m, cur);
-    }
-    return cur;
-  };
-  for (const r of reportsRes.rows) ensureMonth(r.month).reports = Number(r.count);
-  for (const r of notesRes.rows) ensureMonth(r.month).voiceNotes = Number(r.count);
-  for (const r of tokensRes.rows) {
-    const m = ensureMonth(r.month);
-    m.tokens = {
-      input: Number(r.input),
-      output: Number(r.output),
-      cached: Number(r.cached),
-      total: Number(r.total),
-    };
-    m.calls = Number(r.calls);
+  for (const r of reportsRes.rows) {
+    monthMap.set(r.month, { month: r.month, reports: Number(r.count), voiceNotes: 0 });
+  }
+  for (const r of notesRes.rows) {
+    const existing = monthMap.get(r.month) ?? { month: r.month, reports: 0, voiceNotes: 0 };
+    existing.voiceNotes = Number(r.count);
+    monthMap.set(r.month, existing);
   }
   const months = Array.from(monthMap.values()).sort((a, b) => a.month.localeCompare(b.month));
-  const byModel: UsageByModel[] = byModelRes.rows.map((r) => ({
-    vendor: r.vendor,
-    model: r.model,
-    operation: r.operation,
-    calls: Number(r.calls),
-    tokens: {
-      input: Number(r.input),
-      output: Number(r.output),
-      cached: Number(r.cached),
-      total: Number(r.total),
-    },
-  }));
   const totals = months.reduce(
-    (acc, m) => ({
-      reports: acc.reports + m.reports,
-      voiceNotes: acc.voiceNotes + m.voiceNotes,
-      tokens: {
-        input: acc.tokens.input + m.tokens.input,
-        output: acc.tokens.output + m.tokens.output,
-        cached: acc.tokens.cached + m.tokens.cached,
-        total: acc.tokens.total + m.tokens.total,
-      },
-      calls: acc.calls + m.calls,
-    }),
-    { reports: 0, voiceNotes: 0, tokens: zeroTokens(), calls: 0 },
+    (acc, m) => ({ reports: acc.reports + m.reports, voiceNotes: acc.voiceNotes + m.voiceNotes }),
+    { reports: 0, voiceNotes: 0 },
   );
-  return { months, byModel, totals };
+  return { months, totals };
 }
 
 export async function sessionIsValid(db: Db, sessionId: string): Promise<boolean> {

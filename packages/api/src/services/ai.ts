@@ -26,28 +26,6 @@ import {
 } from '@harpa/ai-fixtures';
 import { reports as reportSchemas } from '@harpa/api-contract';
 import type { z } from 'zod';
-import type { ScopedDb } from '../db/scope.js';
-import { recordLlmUsage, type LlmOperation } from './ai-usage.js';
-
-/**
- * Context the route passes when it wants the call recorded in
- * `app.llm_usage_events`. The `db` field is the same scoped accessor
- * routes get from `c.get('db')` — passing the accessor (not a raw
- * handle) keeps RLS per-request scoping intact: the INSERT runs under
- * the caller's `app.user_id`, and `llm_usage_events_self_insert`
- * enforces the user_id claim independently of the chokepoint.
- *
- * Optional everywhere — fixture-driven unit tests can still call
- * chat/transcribe/generateReport without it. The Pitfall 13
- * integration test is what keeps us honest: if a route stops passing
- * the context, that test goes red because the expected row never lands.
- */
-export interface LlmUsageContext {
-  db: <T>(fn: (db: ScopedDb) => Promise<T>) => Promise<T>;
-  userId: string;
-  projectId?: string | null;
-  reportId?: string | null;
-}
 
 export class AiProviderError extends Error {
   readonly code = 'ai_provider_error';
@@ -273,57 +251,6 @@ async function withErrorWrap<T>(label: string, fn: () => Promise<T>): Promise<T>
   }
 }
 
-/**
- * Run the provider call and (best-effort) record a usage row. The
- * recorder never throws — accounting failures must not surface to the
- * user-facing request. On provider failure we still record an `error`
- * row so cost postmortems include attempted calls.
- *
- * Vendor SDK responses vary in usage shape. Today every code path
- * exercises @harpa/ai-fixtures, which standardises on
- * `{ input, output }`. Live mode will need adapters per vendor — see
- * docs/v4/plan-p3-feature-build.md §P3.15.5 vendor table.
- */
-async function withUsageAccounting<T extends { usage?: { input?: number; output?: number; cached?: number } }>(
-  ctx: LlmUsageContext | undefined,
-  meta: { vendor: Vendor; model: string; operation: LlmOperation; fixtureMode: FixtureMode },
-  label: string,
-  fn: () => Promise<T>,
-): Promise<T> {
-  const start = Date.now();
-  const record = (status: 'ok' | 'error', usage?: { input?: number; output?: number; cached?: number }) => {
-    if (!ctx) return;
-    const params = {
-      userId: ctx.userId,
-      projectId: ctx.projectId ?? null,
-      reportId: ctx.reportId ?? null,
-      vendor: meta.vendor,
-      model: meta.model,
-      operation: meta.operation,
-      inputTokens: usage?.input ?? 0,
-      outputTokens: usage?.output ?? 0,
-      cachedTokens: usage?.cached ?? 0,
-      latencyMs: Date.now() - start,
-      fixtureMode: meta.fixtureMode,
-      status,
-    };
-    // Wrap in the scoped accessor so the INSERT runs under the caller's
-    // RLS context (`llm_usage_events_self_insert` enforces this). We
-    // await so callers can rely on the row being visible before the
-    // response leaves the handler — important for the integration test
-    // and for /me/usage immediately after a write.
-    return ctx.db((d) => recordLlmUsage(d, params));
-  };
-  try {
-    const out = await withErrorWrap(label, fn);
-    await record('ok', out.usage);
-    return out;
-  } catch (err) {
-    await record('error');
-    throw err;
-  }
-}
-
 export interface TranscribeInput {
   /**
    * The real (signed) audio URL the provider would fetch. In replay
@@ -332,14 +259,6 @@ export interface TranscribeInput {
   audioUrl: string;
   fixtureName?: string;
   language?: string;
-  /**
-   * Optional accounting context. When provided, a row lands in
-   * `app.llm_usage_events` with operation='transcribe'. Whisper-class
-   * providers don't expose tokens, so the row carries zero tokens —
-   * downstream aggregations distinguish transcribe usage by operation,
-   * not token count.
-   */
-  usageContext?: LlmUsageContext;
 }
 
 export interface TranscribeOutput {
@@ -354,13 +273,7 @@ export async function transcribe(input: TranscribeInput): Promise<TranscribeOutp
     mode === 'replay' ? FIXTURE_CANONICALS.transcribe.audioUrl : input.audioUrl;
   const vendor = FIXTURE_CANONICALS.transcribe.vendor;
   const provider = buildProvider(vendor, fixtureName);
-  const result = await withUsageAccounting(
-    input.usageContext,
-    { vendor, model: 'whisper-1', operation: 'transcribe', fixtureMode: mode },
-    'transcribe',
-    () => provider.transcribe({ audioUrl }) as Promise<TranscribeOutput & { usage?: undefined }>,
-  );
-  return result;
+  return withErrorWrap('transcribe', () => provider.transcribe({ audioUrl }));
 }
 
 export interface ChatInput {
@@ -376,8 +289,6 @@ export interface ChatInput {
    * for backwards compatibility with existing fixture-less callers.
    */
   vendor?: Vendor;
-  /** Optional accounting context — see `transcribe` for semantics. */
-  usageContext?: LlmUsageContext;
 }
 
 export interface ChatOutput {
@@ -405,12 +316,7 @@ export async function chat(input: ChatInput): Promise<ChatOutput> {
           maxTokens: input.maxTokens,
         };
   const provider = buildProvider(vendor, fixtureName);
-  const out = await withUsageAccounting(
-    input.usageContext,
-    { vendor, model: req.model, operation: 'chat', fixtureMode: mode },
-    'chat',
-    () => provider.chat(req),
-  );
+  const out = await withErrorWrap('chat', () => provider.chat(req));
   return { text: out.text };
 }
 
@@ -447,8 +353,6 @@ export interface GenerateReportInput {
    * `openai`.
    */
   vendor?: Vendor;
-  /** Optional accounting context — see `transcribe` for semantics. */
-  usageContext?: LlmUsageContext;
 }
 
 export interface GenerateReportOutput {
@@ -506,19 +410,20 @@ export async function generateReport(input: GenerateReportInput): Promise<Genera
     ? `EXISTING REPORT:\n${JSON.stringify(input.existingBody)}\n\nNEW NOTES:\n${input.notes}`
     : input.notes;
 
-  // Pick the right system prompt for the path. Update prompt preserves
-  // manual edits; cold-start prompt generates from scratch.
-  //
-  // In replay mode, system prompt selection follows the *fixture*, not just
-  // `isUpdate`: an explicit non-update fixtureName (e.g. "generate-report.incomplete")
-  // was recorded against the cold-start prompt even when called via /regenerate
-  // on a report that already has a body. Only the `update` fixture (or the
-  // default update path with no fixtureName override) uses the update prompt.
-  const isUpdatePrompt =
-    fixtureName === updateName || (input.fixtureName == null && isUpdate);
-  const systemPrompt = isUpdatePrompt
-    ? canonicals.updateSystemPrompt
-    : canonicals.systemPrompt;
+  // Pick the right system prompt for the path. In replay mode the
+  // selection is keyed off the fixture being replayed so that callers
+  // who pass a cold-start fixture name (e.g. `generate-report.incomplete`)
+  // alongside an `existingBody` still hit the recorded canonical
+  // request — `incomplete` / `full` were recorded against the cold-start
+  // SYSTEM_PROMPT; only `update.*` was recorded against the update prompt.
+  const systemPrompt =
+    mode === 'replay'
+      ? fixtureName === updateName
+        ? canonicals.updateSystemPrompt
+        : canonicals.systemPrompt
+      : isUpdate
+        ? canonicals.updateSystemPrompt
+        : canonicals.systemPrompt;
 
   const req =
     mode === 'replay'
@@ -543,12 +448,7 @@ export async function generateReport(input: GenerateReportInput): Promise<Genera
         };
 
   const provider = buildProvider(vendor, fixtureName);
-  const out = await withUsageAccounting(
-    input.usageContext,
-    { vendor, model: canonicalModel, operation: 'generate_report', fixtureMode: mode },
-    'generateReport',
-    () => provider.chat(req),
-  );
+  const out = await withErrorWrap('generateReport', () => provider.chat(req));
 
   let parsed: unknown;
   try {

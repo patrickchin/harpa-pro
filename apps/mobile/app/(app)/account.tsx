@@ -2,21 +2,31 @@
  * Account route — wires the auth session into the props-only
  * `Account` body.
  *
- * Editing fields + avatar upload are deferred to P4; this route shows
- * the read-only form pulling phone / displayName / companyName from
- * the session user.
+ * P3.15.4 wiring:
+ *  - `useUpdateMeMutation` powers the inline editor (Save → PATCH /me
+ *    → session.refresh()).
+ *  - `<AvatarUploader />` is injected as the avatar slot. The fileId
+ *    is persisted to AsyncStorage from inside the uploader (no
+ *    backend route yet — see NOTE in AvatarUploader; P4).
  */
+import { useCallback, useState } from 'react';
 import { useRouter } from 'expo-router';
 
-import { Account, type AccountProfile } from '@/screens/account';
+import { Account, type AccountProfile, type AccountSaveValues } from '@/screens/account';
+import { AvatarUploader } from '@/components/account/AvatarUploader';
 import { useAuthSession } from '@/lib/auth/session';
 import { useRefresh } from '@/lib/use-refresh';
 import { safeBack } from '@/lib/nav/safe-back';
+import { useUpdateMeMutation } from '@/lib/api/hooks';
+import { AppHeaderActions } from '@/components/ui/AppHeaderActions';
 
 export default function AccountRoute() {
   const router = useRouter();
-  const { user, refresh } = useAuthSession();
+  const session = useAuthSession();
+  const { user, refresh } = session;
   const { refreshing, onRefresh } = useRefresh([refresh]);
+  const updateMe = useUpdateMeMutation();
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const profile: AccountProfile | null = user
     ? {
@@ -26,14 +36,34 @@ export default function AccountRoute() {
       }
     : null;
 
+  const handleSaveProfile = useCallback(
+    async ({ displayName, companyName }: AccountSaveValues) => {
+      setSaveError(null);
+      try {
+        await updateMe.mutateAsync({
+          body: { displayName, companyName },
+        });
+        await session.refresh();
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Could not save profile.';
+        setSaveError(message);
+        throw err;
+      }
+    },
+    [updateMe, session],
+  );
+
   return (
     <Account
       profile={profile}
       refreshing={refreshing}
       onRefresh={onRefresh}
       onBack={() => safeBack(router, '/(app)/profile' as never)}
-      // TODO(P4): inject real <AvatarUploader /> once the R2 upload
-      // pipeline + signed-URL flow are stable.
+      avatarSlot={<AvatarUploader />}
+      onSaveProfile={handleSaveProfile}
+      isSaving={updateMe.isPending}
+      saveError={saveError}
+      actions={<AppHeaderActions />}
     />
   );
 }

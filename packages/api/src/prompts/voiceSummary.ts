@@ -101,7 +101,7 @@ export function parseVoiceSummaryResponse(raw: string): VoiceSummaryParsed {
 
   // Strip ```json fences if present.
   const fenced = raw.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
-  const candidate = (fenced ? fenced[1] : raw).trim();
+  const candidate = (fenced?.[1] ?? raw).trim();
 
   // Find the first balanced `{...}` block — tolerant of leading/trailing prose.
   const start = candidate.indexOf('{');

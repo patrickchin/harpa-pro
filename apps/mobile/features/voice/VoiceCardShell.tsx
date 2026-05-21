@@ -1,22 +1,24 @@
 /**
  * VoiceCardShell — shared layout primitive for voice-note cards.
  *
- * Aligns the in-app rendering with the marketing-page `PreviousNoteCard`
- * (see apps/marketing/src/components/VoiceDemo.tsx). The layout is:
+ * Layout, sizes and spacing match the marketing `PreviousNoteCard`
+ * (apps/marketing/src/components/VoiceDemo.tsx) byte-for-byte so the
+ * in-app and marketing surfaces stay aligned:
  *
  *   ┌──────────────────────────────────────────┐
- *   │ [▶]  Title (semibold, truncate)          │
- *   │      Author · captured-at                │
+ *   │ [▶]  Title (text-sm semibold, truncate) ⋯│
+ *   │      Author · captured-at (text-[11px])  │
  *   │      ▓▓▓▓░░░░░░  1:23 / 2:14   [retry?]  │
  *   │                                          │
- *   │  Summary: short paragraph…               │
- *   │  Show transcript ▾                       │
+ *   │  Summary: short paragraph… (text-xs)     │
  *   └──────────────────────────────────────────┘
  *
- * The left button is fully controlled by the caller (play / pause /
- * spinner / mic). The right column composes the title slot, meta
- * line, progress fill, and an optional trailing element (e.g. the
- * "Retry" pill on failed rows).
+ * The full transcript lives behind the ⋯ kebab in the top-right
+ * corner (the caller wires that up via the `menu` prop) so it doesn't
+ * dominate the card the way an always-visible expander did. The
+ * shell intentionally renders no transcript itself — that surface is
+ * owned by each caller because the trigger may be in a popover, a
+ * bottom sheet, or a separate row.
  *
  * Per AGENTS.md #4 / Pitfall 12: no `Alert.alert` anywhere in the
  * card surface — inline pills + the failed-state shell are the
@@ -30,7 +32,7 @@ import { formatCapturedAt } from '@/lib/date';
 import { formatDuration } from './voiceNoteCardHeader';
 
 export interface VoiceCardShellProps {
-  /** Left circular control — play / pause / spinner / mic. */
+  /** Left circular control — play / pause / spinner / mic (h-10 w-10). */
   leftButton: ReactNode;
   /** Bold one-line title at the top of the right column. */
   title?: string | null;
@@ -52,8 +54,8 @@ export interface VoiceCardShellProps {
   errorPill?: ReactNode;
   /** Summary paragraph rendered below the row (bold "Summary: " prefix). */
   summary?: string | null;
-  /** Transcript expander block (own pressable + collapsed text). */
-  transcript?: ReactNode;
+  /** Kebab menu rendered in the top-right corner of the card. */
+  menu?: ReactNode;
   /** testID forwarded to the outer card. */
   testID?: string;
 }
@@ -70,7 +72,7 @@ export function VoiceCardShell({
   trailing,
   errorPill,
   summary,
-  transcript,
+  menu,
   testID,
 }: VoiceCardShellProps) {
   const titleText = title?.trim() || titleFallback?.trim() || null;
@@ -90,26 +92,34 @@ export function VoiceCardShell({
 
   return (
     <View
-      className="rounded-2xl border border-border bg-card p-3 shadow-sm gap-3"
+      className="rounded-2xl border border-border bg-card p-3 shadow-sm"
       testID={testID}
     >
-      <View className="flex-row items-center gap-3">
+      <View className="flex-row items-start gap-3">
         <View className="shrink-0">{leftButton}</View>
-        <View className="min-w-0 flex-1 gap-1">
-          {titleText ? (
-            <Text
-              className="text-sm font-semibold text-foreground"
-              numberOfLines={1}
-            >
-              {titleText}
-            </Text>
-          ) : null}
-          {meta ? (
-            <Text className="text-[11px] text-muted-foreground" numberOfLines={1}>
-              {meta}
-            </Text>
-          ) : null}
-          <View className="mt-1 flex-row items-center gap-2">
+        <View className="min-w-0 flex-1">
+          <View className="flex-row items-start gap-2">
+            <View className="min-w-0 flex-1">
+              {titleText ? (
+                <Text
+                  className="text-sm font-semibold text-foreground"
+                  numberOfLines={1}
+                >
+                  {titleText}
+                </Text>
+              ) : null}
+              {meta ? (
+                <Text
+                  className="text-[11px] text-muted-foreground"
+                  numberOfLines={1}
+                >
+                  {meta}
+                </Text>
+              ) : null}
+            </View>
+            {menu ? <View className="-mr-1 -mt-1">{menu}</View> : null}
+          </View>
+          <View className="mt-2 flex-row items-center gap-2">
             <View className="h-2 flex-1 overflow-hidden rounded-full bg-muted">
               <View
                 className="h-full rounded-full bg-primary"
@@ -124,19 +134,19 @@ export function VoiceCardShell({
         </View>
       </View>
 
-      {errorPill}
+      {errorPill ? <View className="mt-2">{errorPill}</View> : null}
 
       {summaryText ? (
         <Text
-          className="text-xs leading-5 text-muted-foreground"
+          className="mt-3 text-xs leading-relaxed text-muted-foreground"
+          numberOfLines={2}
           selectable
         >
-          <Text className="font-semibold text-foreground">Summary: </Text>
+          <Text className="font-bold text-foreground">Summary: </Text>
           {summaryText}
         </Text>
       ) : null}
-
-      {transcript}
     </View>
   );
 }
+

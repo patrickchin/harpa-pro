@@ -23,7 +23,7 @@
  */
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
-import { Mic, Pause, Play, RotateCw } from 'lucide-react-native';
+import { Mic, MoreVertical, Pause, Play, RotateCw } from 'lucide-react-native';
 
 import { useAudioPlayback } from '@/lib/audio/AudioPlaybackProvider';
 import { useFileSignedUrl } from '@/lib/uploads/useFileSignedUrl';
@@ -142,28 +142,19 @@ export function VoiceNoteCard({
   const titleSlot = isWorking || !title ? header.label : title;
   const transcript = entry.transcript?.trim() || null;
 
-  const transcriptBlock = transcript ? (
-    <View className="gap-1" testID={`voice-transcript-block-${sourceIndex}`}>
-      <Pressable
-        onPress={() => setTranscriptOpen((v) => !v)}
-        accessibilityRole="button"
-        accessibilityLabel={transcriptOpen ? 'Hide transcript' : 'Show transcript'}
-        testID={`btn-voice-transcript-toggle-${sourceIndex}`}
-      >
-        <Text className="text-xs font-medium text-primary">
-          {transcriptOpen ? 'Hide transcript' : 'Show transcript'}
-        </Text>
-      </Pressable>
-      {transcriptOpen ? (
-        <Text
-          className="text-xs leading-5 text-muted-foreground"
-          testID={`voice-transcript-${sourceIndex}`}
-          selectable
-        >
-          {transcript}
-        </Text>
-      ) : null}
-    </View>
+  const kebab = transcript ? (
+    <Pressable
+      onPress={() => setTranscriptOpen((v) => !v)}
+      accessibilityRole="button"
+      accessibilityLabel={
+        transcriptOpen ? 'Hide transcript' : 'Show transcript'
+      }
+      hitSlop={8}
+      testID={`btn-voice-menu-${sourceIndex}`}
+      className="h-7 w-7 items-center justify-center rounded-full"
+    >
+      <MoreVertical size={16} color={colors.muted.foreground} />
+    </Pressable>
   ) : null;
 
   // Wrap in an outer View so legacy `note-row-{idx}` testIDs / parent
@@ -181,8 +172,22 @@ export function VoiceNoteCard({
         trailing={retryPill}
         errorPill={errorPill}
         summary={entry.summary}
-        transcript={transcriptBlock}
+        menu={kebab}
       />
+      {transcript && transcriptOpen ? (
+        <View
+          className="mt-2 rounded-2xl border border-border bg-muted/40 p-3"
+          testID={`voice-transcript-block-${sourceIndex}`}
+        >
+          <Text
+            className="text-xs leading-relaxed text-muted-foreground"
+            testID={`voice-transcript-${sourceIndex}`}
+            selectable
+          >
+            {transcript}
+          </Text>
+        </View>
+      ) : null}
     </View>
   );
 }

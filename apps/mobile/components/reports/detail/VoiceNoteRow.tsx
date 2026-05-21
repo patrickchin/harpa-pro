@@ -11,11 +11,12 @@
  * Layout matches the marketing-page voice card (apps/marketing/src
  * /components/VoiceDemo.tsx :: PreviousNoteCard) so the in-app
  * experience reads identically. See `VoiceCardShell` for the shared
- * layout primitive.
+ * layout primitive. The full transcript lives behind the ⋯ kebab in
+ * the card header so it doesn't dominate the row.
  */
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
-import { Mic, Pause, Play } from 'lucide-react-native';
+import { Mic, MoreVertical, Pause, Play } from 'lucide-react-native';
 
 import { useAudioPlayback } from '@/lib/audio/AudioPlaybackProvider';
 import { useFileSignedUrl } from '@/lib/uploads/useFileSignedUrl';
@@ -93,47 +94,50 @@ export function VoiceNoteRow({
     </Pressable>
   );
 
-  const transcriptBlock = transcriptText ? (
-    <View className="gap-1" testID={`voice-transcript-block-${noteId}`}>
-      <Pressable
-        onPress={() => setTranscriptOpen((v) => !v)}
-        accessibilityRole="button"
-        accessibilityLabel={transcriptOpen ? 'Hide transcript' : 'Show transcript'}
-        testID={`btn-voice-transcript-toggle-${noteId}`}
-      >
-        <Text className="text-xs font-medium text-primary">
-          {transcriptOpen ? 'Hide transcript' : 'Show transcript'}
-        </Text>
-      </Pressable>
-      {transcriptOpen ? (
-        <Text
-          className="text-xs leading-5 text-muted-foreground"
-          testID={`voice-transcript-${noteId}`}
-          selectable
-        >
-          {transcriptText}
-        </Text>
-      ) : null}
-    </View>
-  ) : !summary ? (
-    <Text className="text-xs italic text-muted-foreground">
-      No transcript available.
-    </Text>
+  const kebab = transcriptText ? (
+    <Pressable
+      onPress={() => setTranscriptOpen((v) => !v)}
+      accessibilityRole="button"
+      accessibilityLabel={
+        transcriptOpen ? 'Hide transcript' : 'Show transcript'
+      }
+      hitSlop={8}
+      testID={`btn-voice-menu-${noteId}`}
+      className="h-7 w-7 items-center justify-center rounded-full"
+    >
+      <MoreVertical size={16} color={colors.muted.foreground} />
+    </Pressable>
   ) : null;
 
   return (
-    <VoiceCardShell
-      testID={`report-note-${noteId}`}
-      leftButton={playButton}
-      title={title}
-      titleFallback="Voice note"
-      authorName={authorName ?? null}
-      capturedAt={capturedAt}
-      positionSec={positionSec}
-      durationSec={totalSec}
-      isPlaying={isPlayingThis}
-      summary={summary}
-      transcript={transcriptBlock}
-    />
+    <View>
+      <VoiceCardShell
+        testID={`report-note-${noteId}`}
+        leftButton={playButton}
+        title={title}
+        titleFallback="Voice note"
+        authorName={authorName ?? null}
+        capturedAt={capturedAt}
+        positionSec={positionSec}
+        durationSec={totalSec}
+        isPlaying={isPlayingThis}
+        summary={summary}
+        menu={kebab}
+      />
+      {transcriptText && transcriptOpen ? (
+        <View
+          className="mt-2 rounded-2xl border border-border bg-muted/40 p-3"
+          testID={`voice-transcript-block-${noteId}`}
+        >
+          <Text
+            className="text-xs leading-relaxed text-muted-foreground"
+            testID={`voice-transcript-${noteId}`}
+            selectable
+          >
+            {transcriptText}
+          </Text>
+        </View>
+      ) : null}
+    </View>
   );
 }

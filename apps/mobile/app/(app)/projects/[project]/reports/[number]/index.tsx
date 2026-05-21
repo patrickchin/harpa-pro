@@ -223,6 +223,15 @@ export default function SavedReportRoute() {
       isUnfinalizing={unfinalizeMutation.isPending}
       pdfActions={pdfActions}
       actions={<AppHeaderActions />}
+      showDeveloperSection={env.EXPO_PUBLIC_USE_FIXTURES || __DEV__}
+      onOpenDebug={
+        hasValidRouteParams
+          ? () =>
+              router.push(
+                `/(app)/projects/${slug}/reports/${reportNumber}/debug` as never,
+              )
+          : undefined
+      }
     />
   );
 }

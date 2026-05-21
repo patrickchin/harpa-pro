@@ -105,6 +105,15 @@ export interface SavedReportProps {
 
   /** Profile button slot — rendered in the report detail header. */
   actions?: ReactNode;
+
+  /**
+   * P4.8 — show the Report Debug entry in the actions menu. Gated by
+   * the same `showDeveloperSection` flag (env.EXPO_PUBLIC_USE_FIXTURES
+   * or __DEV__) that controls the Profile developer section.
+   */
+  showDeveloperSection?: boolean;
+  /** Invoked when the user taps the Report Debug entry. */
+  onOpenDebug?: () => void;
 }
 
 export function SavedReport(props: SavedReportProps) {
@@ -133,6 +142,8 @@ export function SavedReport(props: SavedReportProps) {
     pdfActions,
     initialTab,
     actions,
+    showDeveloperSection,
+    onOpenDebug,
   } = props;
 
   const [menuVisible, setMenuVisible] = useState(false);
@@ -377,6 +388,15 @@ export function SavedReport(props: SavedReportProps) {
         isExporting={isExporting}
         isUnfinalizing={isUnfinalizing}
         isDeleting={isDeleting}
+        showDeveloperSection={showDeveloperSection}
+        onOpenDebug={
+          onOpenDebug
+            ? () => {
+                setMenuVisible(false);
+                onOpenDebug();
+              }
+            : undefined
+        }
       />
 
       <AppDialogSheet

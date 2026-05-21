@@ -455,6 +455,17 @@ export function useReportPdfMutation(
   });
 }
 
+export function useReportDebugQuery(
+  input: { params: PathParams<"/projects/{project}/reports/{number}/debug", "get">; query?: QueryParams<"/projects/{project}/reports/{number}/debug", "get"> },
+  options?: Omit<UseQueryOptions<ResponseBody<"/projects/{project}/reports/{number}/debug", "get">, ApiError>, 'queryKey' | 'queryFn'>,
+) {
+  return useQuery<ResponseBody<"/projects/{project}/reports/{number}/debug", "get">, ApiError>({
+    queryKey: ["reportDebug", (input as any).params, (input as any).query] as const,
+    queryFn: ({ signal }) => request("/projects/{project}/reports/{number}/debug", "get", { params: (input as any).params, query: (input as any).query, signal }),
+    ...options,
+  });
+}
+
 // ─── p ───────────────────────────────────────────
 export function useResolveProjectSlugQuery(
   input: { params: PathParams<"/p/{project}", "get">; query?: QueryParams<"/p/{project}", "get"> },

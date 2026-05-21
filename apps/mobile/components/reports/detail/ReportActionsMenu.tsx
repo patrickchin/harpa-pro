@@ -6,6 +6,7 @@
  */
 import { Modal, Pressable, Text, View } from 'react-native';
 import {
+  Bug,
   Eye,
   FileDown,
   RotateCcw,
@@ -33,6 +34,15 @@ interface ReportActionsMenuProps {
   canUnfinalize?: boolean;
   /** Hide the Delete row when the current user can't delete (editor/viewer). */
   canDelete?: boolean;
+  /**
+   * P4.8 — show the "Report Debug" entry. Gated by the same
+   * `showDeveloperSection` flag (env.EXPO_PUBLIC_USE_FIXTURES or __DEV__)
+   * that controls the Profile developer section. Hidden in production
+   * builds.
+   */
+  showDeveloperSection?: boolean;
+  /** Invoked when the user taps "Report Debug". */
+  onOpenDebug?: () => void;
 }
 
 export function ReportActionsMenu({
@@ -49,6 +59,8 @@ export function ReportActionsMenu({
   isDeleting,
   canUnfinalize = true,
   canDelete = true,
+  showDeveloperSection = false,
+  onOpenDebug,
 }: ReportActionsMenuProps) {
   return (
     <Modal
@@ -165,6 +177,24 @@ export function ReportActionsMenu({
                   <Trash2 size={16} color={colors.danger.text} />
                   <Text className="text-base font-semibold text-danger-text">
                     {isDeleting ? 'Deleting...' : 'Delete Report'}
+                  </Text>
+                </View>
+              </Button>
+            ) : null}
+
+            {showDeveloperSection && onOpenDebug ? (
+              <Button
+                variant="secondary"
+                size="lg"
+                className="justify-start"
+                accessibilityLabel="Open Report Debug"
+                testID="btn-open-report-debug"
+                onPress={onOpenDebug}
+              >
+                <View className="flex-row items-center gap-3">
+                  <Bug size={16} color={colors.foreground} />
+                  <Text className="text-base font-semibold text-foreground">
+                    Report Debug
                   </Text>
                 </View>
               </Button>

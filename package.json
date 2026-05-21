@@ -53,7 +53,10 @@
       "react-native-css-interop@0.2.3": "patches/react-native-css-interop@0.2.3.patch"
     },
     "overrides": {
-      "@types/react": "^19.2.0"
+      "@types/react": "^19.2.0",
+      "react": "19.2.0",
+      "react-dom": "19.2.0",
+      "react-test-renderer": "19.2.0"
     }
   },
   "dependencies": {

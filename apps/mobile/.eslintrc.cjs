@@ -27,7 +27,7 @@ module.exports = {
       // *.test.ts files must mutate process.env.EXPO_PUBLIC_* to exercise
       // the validator's defaults / coercion / failure paths, and to drive
       // env-dependent modules like lib/api/base-url.
-      files: ['lib/env.ts', 'lib/env.test.ts', 'lib/api/base-url.test.ts', 'features/voice/fixtureRecorder.test.ts'],
+      files: ['lib/env.ts', 'lib/env.test.ts', 'lib/api/base-url.test.ts', 'features/voice/fixtureRecorder.test.ts', 'features/voice/pickRecorder.ts'],
       rules: { 'no-restricted-syntax': 'off' },
     },
     {

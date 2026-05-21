@@ -44,7 +44,6 @@ export type PlayerFactory = (uri: string) => PlaybackPlayer;
 function defaultPlayerFactory(uri: string): PlaybackPlayer {
   // Lazy require so node-only tests that don't exercise playback never
   // pay the cost of loading the native module.
-  // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-var-requires
   const { createAudioPlayer } = require('expo-audio') as typeof import('expo-audio');
   return createAudioPlayer(uri) as unknown as PlaybackPlayer;
 }

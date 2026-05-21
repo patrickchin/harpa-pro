@@ -11,13 +11,14 @@
  *
  * Refs: docs/v4/arch-voice-pipeline.md §D4.
  */
-// eslint-disable-next-line @typescript-eslint/no-restricted-imports
+// eslint plugin @typescript-eslint not loaded for these checks; the
+// inlined unused identifiers are intentional documentation of the
+// public surface we deliberately do not call from this wrapper.
 import {
   createAudioPlayer as _unused,
   // We instantiate the recorder imperatively (not via the
   // `useAudioRecorder` hook) so the modal can own the lifecycle across
   // mount/unmount without re-creating native resources.
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   RecordingPresets,
   requestRecordingPermissionsAsync,
   getRecordingPermissionsAsync,

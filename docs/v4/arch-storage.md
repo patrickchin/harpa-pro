@@ -140,6 +140,27 @@ relaunch, resume automatically" we wire an MMKV-backed
   factory in `vitest.setup.ts` — the queue + persistence code path
   runs unchanged.
 
+### Image processing (mobile)
+
+Before the camera or gallery flows enqueue a photo, the URI is run
+through `apps/mobile/lib/camera/process-image.ts` which:
+
+- Resizes the longest edge to ≤ 2048 px (downscale only; never
+  upscale).
+- Re-encodes as JPEG at quality 0.85 → 0.7 → 0.55 → 0.4 until the
+  output is ≤ 2 MB, then shrinks the width by ×0.85 per additional
+  pass (floor at 768 px) for up to 6 passes total.
+- Strips EXIF as a side effect of the `expo-image-manipulator`
+  re-encode pass (only orientation is preserved).
+- Throws when the smallest result still exceeds the 50 MB
+  server-enforced ceiling — we'd rather fail loud than burn the
+  queue's retry budget on a guaranteed `413`.
+
+The processor returns the post-encode `sizeBytes`; the queue uses
+that for both the presign body and the R2 PUT Content-Length so the
+SigV4 signature always matches the bytes flushed (the failure mode
+the camera-upload rewrite was originally fixing).
+
 ### Cancellation (`AbortController`)
 
 Each `InternalJob` owns an `AbortController` that is threaded through

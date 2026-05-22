@@ -62,6 +62,16 @@ export function useUploadQueueContext(): UploadQueue {
   return ctx;
 }
 
+/**
+ * Like `useUploadQueueContext`, but returns `null` when no
+ * `<QueueProvider>` is mounted. Use this in surfaces that may legally
+ * render outside the upload provider (e.g. the same shared screen
+ * rendered by snapshot tests that omit the provider tree).
+ */
+export function useOptionalUploadQueueContext(): UploadQueue | null {
+  return useContext(QueueContext);
+}
+
 // Re-export for tests that want to construct an isolated queue.
 export { createUploadQueue } from './queue';
 export type { UploadQueue } from './queue';

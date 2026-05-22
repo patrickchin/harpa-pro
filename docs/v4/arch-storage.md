@@ -80,6 +80,19 @@ the `reportNotes` invalidation produces the real `ImageNoteCard` row;
 `UploadQueueStrip` / the timeline parent drop the pending card on the
 same tick.
 
+### Upload queue strip (mobile)
+
+`apps/mobile/components/uploads/UploadQueueStrip.tsx` is a compact
+footer pinned to the bottom of the Notes tab. It consumes
+`useFileUpload()` from the same `QueueProvider` the rest of the app
+binds to and renders two lanes: an in-flight summary (count +
+aggregated progress bar) and a per-job failed-chip row (filename +
+retry + dismiss). Filtered by `reportId` so unrelated jobs from
+other reports don't bleed into the current screen. Renders nothing
+when both lanes are empty, and gracefully no-ops when no
+`<QueueProvider>` is mounted (via
+`useOptionalUploadQueueContext`).
+
 ## Security
 
 - Presign URLs are scoped to PUT, content-type, content-length, and

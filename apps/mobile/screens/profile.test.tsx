@@ -86,8 +86,6 @@ const defaults = {
   aiModel: '',
   onSelectModel: vi.fn(),
   availableProviderKeys: null,
-  buildVersion: '1.2.3+abc1234',
-  serverLabel: 'Fly (harpa-pro-api)',
 };
 
 describe('Profile', () => {
@@ -278,11 +276,10 @@ describe('Profile', () => {
     expect(onSelectModel).toHaveBeenCalledWith('kimi-thinking');
   });
 
-  it('renders build version and server label', () => {
+  it('renders build badge', () => {
     const tree = render(<Profile {...defaults} />);
-    const text = collectText(tree.toJSON());
-    expect(text).toContain('1.2.3+abc1234');
-    expect(text).toContain('Fly (harpa-pro-api)');
+    const badge = tree.root.findByProps({ testID: 'profile-build-badge' });
+    expect(badge).toBeTruthy();
   });
 
   it('matches snapshot at default props', () => {

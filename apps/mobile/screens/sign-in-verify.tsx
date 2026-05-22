@@ -51,9 +51,6 @@ export default function SignInVerify({
 
             <View className="mt-8 gap-4">
               <View>
-                <Text selectable className="text-base text-foreground mb-1">
-                  {phone}
-                </Text>
                 <Text className="text-sm text-muted-foreground">
                   Code sent to {phone}
                 </Text>
@@ -69,7 +66,6 @@ export default function SignInVerify({
                 autoComplete="one-time-code"
                 maxLength={6}
                 editable={!isSubmitting}
-                hint="Most phones can autofill the code from Messages."
               />
 
               {error && <InlineNotice tone="danger">{error}</InlineNotice>}

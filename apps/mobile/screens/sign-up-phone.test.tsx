@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import TestRenderer, { act } from 'react-test-renderer';
 import SignUpPhone from './sign-up-phone';
+import { getCountryByCode } from '../lib/countries';
 
 function render(element: React.ReactElement): TestRenderer.ReactTestRenderer {
   let tree!: TestRenderer.ReactTestRenderer;
@@ -12,8 +13,10 @@ function render(element: React.ReactElement): TestRenderer.ReactTestRenderer {
 
 describe('SignUpPhone', () => {
   const defaultProps = {
-    phone: '',
-    onChangePhone: vi.fn(),
+    country: getCountryByCode('US')!,
+    national: '',
+    onChangeCountry: vi.fn(),
+    onChangeNational: vi.fn(),
     onBack: vi.fn(),
     onGoToSignIn: vi.fn(),
     error: null,

@@ -7,45 +7,49 @@
  *   - getRememberedPhoneNumber / rememberPhoneNumber (AsyncStorage)
  *   - router.push to verify screen on success
  *
+ * Phone entry uses a country prefix picker (PhoneNumberInput +
+ * CountryPickerModal). The screen owns split country + national state
+ * and derives the canonical E.164 string via combineCountryAndNational
+ * on submit.
+ *
  * Single async flow per Pitfall 5: mutateAsync then router.push. No setTimeout.
  */
-import { useEffect, useState } from 'react';
-import { Redirect, useRouter, type Href } from 'expo-router';
+import { useEffect, useMemo, useState } from 'react';
+import { Redirect, useRouter } from 'expo-router';
 import SignInPhone from '@/screens/sign-in-phone';
 import { useAuthSession } from '@/lib/auth';
 import { useStartOtpMutation } from '@/lib/api/hooks';
 import {
+  combineCountryAndNational,
+  getInitialPhoneState,
   isValidPhoneNumber,
-  normalizePhoneNumber,
+  splitE164,
   INVALID_PHONE_NUMBER_MESSAGE,
 } from '@/lib/phone';
+import { type Country } from '@/lib/countries';
 import {
   getRememberedPhoneNumber,
   rememberPhoneNumber,
   clearRememberedPhoneNumber,
 } from '@/lib/remembered-login';
-import { getLoginPhoneHint } from '@/lib/login-phone-hint';
 
 export default function SignInPhonePage() {
   const router = useRouter();
   const session = useAuthSession();
   const startOtpMutation = useStartOtpMutation();
 
-  const [phone, setPhone] = useState('');
-  const [rememberedPhone, setRememberedPhone] = useState<string | null>(null);
+  const initial = useMemo(() => getInitialPhoneState(null), []);
+  const [country, setCountry] = useState<Country>(initial.country);
+  const [national, setNational] = useState<string>(initial.national);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
 
-  const normalizedPhone = normalizePhoneNumber(phone);
-  const phoneMatchesRemembered =
-    rememberedPhone !== null && normalizedPhone === rememberedPhone;
+  const normalizedPhone = combineCountryAndNational(country, national);
 
-  // Redirect if already authenticated
   if (session.status === 'authenticated') {
     return <Redirect href="/" />;
   }
 
-  // Load remembered phone on mount
   useEffect(() => {
     let isMounted = true;
 
@@ -55,10 +59,12 @@ export default function SignInPhonePage() {
           return;
         }
 
-        setRememberedPhone(storedPhoneNumber);
-        setPhone((currentPhone) =>
-          currentPhone.trim().length === 0 ? storedPhoneNumber : currentPhone
-        );
+        // Only prefill if the user hasn't started typing yet
+        const split = splitE164(storedPhoneNumber);
+        if (split) {
+          setCountry((current) => (national.length === 0 ? split.country : current));
+          setNational((current) => (current.length === 0 ? split.national : current));
+        }
       })
       .catch(() => {
         // Silently ignore errors loading remembered phone
@@ -83,7 +89,6 @@ export default function SignInPhonePage() {
       await rememberPhoneNumber(normalizedPhone).catch(() => {
         // Silently ignore storage errors
       });
-      // expo-router typed-routes regenerates on next `expo start`; cast safe.
       router.push({
         pathname: '/(auth)/sign-in/verify',
         params: { phone: normalizedPhone },
@@ -95,29 +100,26 @@ export default function SignInPhonePage() {
     }
   };
 
-  const handleUseDifferentNumber = async () => {
+  const handleClear = async () => {
+    setNational('');
+    setError(null);
+    setInfo(null);
     try {
       await clearRememberedPhoneNumber();
-      setRememberedPhone(null);
-      setPhone('');
-      setError(null);
-      setInfo(null);
     } catch {
-      setError('Unable to clear the saved phone number right now.');
+      // Silently ignore — clearing the in-memory value is what matters
+      // for the next OTP attempt; the remembered hint will be
+      // overwritten on the next successful submission anyway.
     }
   };
 
   return (
     <SignInPhone
-      phone={phone}
-      onChangePhone={setPhone}
-      rememberedPhone={rememberedPhone}
-      onUseDifferentNumber={handleUseDifferentNumber}
-      hint={getLoginPhoneHint({
-        codeSent: false,
-        rememberedPhone,
-        phoneMatchesRemembered,
-      })}
+      country={country}
+      national={national}
+      onChangeCountry={setCountry}
+      onChangeNational={setNational}
+      onClear={handleClear}
       error={error}
       info={info}
       isSubmitting={startOtpMutation.isPending}

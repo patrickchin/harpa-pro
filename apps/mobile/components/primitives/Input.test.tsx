@@ -54,8 +54,6 @@ describe('Input', () => {
     expect(centred).toBeTruthy();
     expect(centred).toMatchObject({
       textAlignVertical: 'center',
-      paddingTop: 0,
-      paddingBottom: 0,
     });
   });
 });

@@ -148,8 +148,7 @@ exports[`Account > matches snapshot at default props 1`] = `
                   "shadowRadius": 0,
                 },
                 {
-                  "paddingBottom": 0,
-                  "paddingTop": 0,
+                  "lineHeight": 16,
                   "textAlignVertical": "center",
                 },
                 undefined,
@@ -187,8 +186,7 @@ exports[`Account > matches snapshot at default props 1`] = `
                   "shadowRadius": 0,
                 },
                 {
-                  "paddingBottom": 0,
-                  "paddingTop": 0,
+                  "lineHeight": 16,
                   "textAlignVertical": "center",
                 },
                 undefined,
@@ -227,8 +225,7 @@ exports[`Account > matches snapshot at default props 1`] = `
                   "shadowRadius": 0,
                 },
                 {
-                  "paddingBottom": 0,
-                  "paddingTop": 0,
+                  "lineHeight": 16,
                   "textAlignVertical": "center",
                 },
                 undefined,

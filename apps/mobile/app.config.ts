@@ -11,6 +11,7 @@
  * via EXPO_PUBLIC_APP_VARIANT to gate dev-only UI (API URL override).
  */
 import type { ExpoConfig } from 'expo/config';
+import { execSync } from 'node:child_process';
 
 type Variant = 'production' | 'preview' | 'development';
 
@@ -22,6 +23,17 @@ const IS_PROD = VARIANT === 'production';
 
 const NAME = IS_PROD ? 'Harpa Pro' : 'Harpa Pro Dev';
 const BUNDLE_ID = IS_PROD ? 'com.harpa.pro' : 'com.harpa.pro.dev';
+
+const GIT_COMMIT = (() => {
+  try {
+    return execSync('git rev-parse --short HEAD', { stdio: ['ignore', 'pipe', 'ignore'] })
+      .toString()
+      .trim();
+  } catch {
+    return 'local';
+  }
+})();
+const BUILD_TIME = new Date().toISOString();
 
 const config: ExpoConfig = {
   name: NAME,
@@ -78,11 +90,14 @@ const config: ExpoConfig = {
     ],
     'expo-image',
     'expo-secure-store',
+    './plugins/with-fix-build-warnings',
   ],
   experiments: { typedRoutes: true },
   extra: {
     eas: { projectId: '3b2f920d-b7ae-4c84-b9e9-b077b49f1602' },
     appVariant: VARIANT,
+    gitCommit: GIT_COMMIT,
+    buildTime: BUILD_TIME,
   },
 };
 

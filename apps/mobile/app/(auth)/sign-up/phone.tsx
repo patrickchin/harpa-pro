@@ -5,6 +5,10 @@
  *   - useStartOtpMutation (POST /auth/otp/start)
  *   - router.push to verify screen on success
  *
+ * Phone entry uses a country prefix picker (PhoneNumberInput +
+ * CountryPickerModal). Country defaults to device locale via
+ * getInitialPhoneState. Canonical E.164 is computed on submit.
+ *
  * Single async flow per Pitfall 5: mutateAsync then router.push. No setTimeout.
  *
  * Deliberate v4 simplification: canonical signup.tsx has 3 steps
@@ -12,24 +16,28 @@
  * displayName + companyName via the onboarding screen post-OTP,
  * which is gated by the auth session's `needs-onboarding` status.
  */
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useRouter, type Href } from 'expo-router';
 import SignUpPhone from '@/screens/sign-up-phone';
 import { useStartOtpMutation } from '@/lib/api/hooks';
 import {
+  combineCountryAndNational,
+  getInitialPhoneState,
   isValidPhoneNumber,
-  normalizePhoneNumber,
   INVALID_PHONE_NUMBER_MESSAGE,
 } from '@/lib/phone';
+import { type Country } from '@/lib/countries';
 
 export default function SignUpPhonePage() {
   const router = useRouter();
   const startOtpMutation = useStartOtpMutation();
 
-  const [phone, setPhone] = useState('');
+  const initial = useMemo(() => getInitialPhoneState(null), []);
+  const [country, setCountry] = useState<Country>(initial.country);
+  const [national, setNational] = useState<string>(initial.national);
   const [error, setError] = useState<string | null>(null);
 
-  const normalizedPhone = normalizePhoneNumber(phone);
+  const normalizedPhone = combineCountryAndNational(country, national);
 
   const handleSubmit = async () => {
     if (!isValidPhoneNumber(normalizedPhone)) {
@@ -41,7 +49,6 @@ export default function SignUpPhonePage() {
 
     try {
       await startOtpMutation.mutateAsync({ body: { phone: normalizedPhone } });
-      // expo-router typed-routes regenerates on next `expo start`; cast safe.
       router.push({
         pathname: '/(auth)/sign-up/verify',
         params: { phone: normalizedPhone },
@@ -63,8 +70,10 @@ export default function SignUpPhonePage() {
 
   return (
     <SignUpPhone
-      phone={phone}
-      onChangePhone={setPhone}
+      country={country}
+      national={national}
+      onChangeCountry={setCountry}
+      onChangeNational={setNational}
       onBack={handleBack}
       onGoToSignIn={handleGoToSignIn}
       error={error}

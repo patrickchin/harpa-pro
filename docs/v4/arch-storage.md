@@ -140,6 +140,18 @@ relaunch, resume automatically" we wire an MMKV-backed
   factory in `vitest.setup.ts` — the queue + persistence code path
   runs unchanged.
 
+### Source-URI cleanup
+
+The default `defaultCleanupSource` in `run-upload.ts` runs after each
+job reaches `completed`: it deletes `input.sourceUri` via
+`new FsFile(uri).delete()` when the URI is `file://`-scoped (skips
+`content://`, `ph://`, remote URLs). This keeps the temp/cache
+directory bounded for users who shoot bursts. Errors are swallowed
+inside the queue's success path — the upload already succeeded, and
+disk hygiene must never surface as a queue failure. Cleanup does
+not run for `failed` or `cancelled` jobs so the UI's retry button
+still has a valid source URI to re-PUT.
+
 ### Image processing (mobile)
 
 Before the camera or gallery flows enqueue a photo, the URI is run

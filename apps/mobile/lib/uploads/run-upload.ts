@@ -9,6 +9,8 @@
  * integration test exercises that default by stubbing `fetch` instead
  * of injecting fakes.
  */
+import { File as FsFile } from 'expo-file-system';
+
 import { request } from '@/lib/api/client';
 import type {
   EnqueueInput,
@@ -63,6 +65,15 @@ export interface UploadDeps {
     file: FileRecord;
     signal?: AbortSignal;
   }) => Promise<NoteRecord>;
+  /**
+   * Best-effort source-URI cleanup after a job reaches `completed`.
+   * Called for camera/gallery uploads where the input file lives in a
+   * temp/cache directory and would otherwise leak disk space until
+   * the next OS sweep. Errors are swallowed — the upload succeeded
+   * either way and we don't want disk hygiene to surface as a queue
+   * failure. Optional so deps factories that don't care can omit it.
+   */
+  cleanupSource?: (uri: string) => Promise<void> | void;
 }
 
 export interface RunHandlers {
@@ -290,9 +301,21 @@ async function defaultCreateNote(args: {
   });
 }
 
+async function defaultCleanupSource(uri: string): Promise<void> {
+  // Best-effort: temp/cache files we wrote (camera capture, processed
+  // gallery copy) live under `${cacheDirectory}` and accumulate until
+  // the OS sweeps. Deleting eagerly after a successful upload keeps
+  // the cache bounded for users who shoot bursts. Any error
+  // (permission, already-gone, content://) is swallowed by the queue.
+  if (!uri.startsWith('file://')) return;
+  const handle = new FsFile(uri);
+  if (handle.exists) handle.delete();
+}
+
 export const defaultUploadDeps: UploadDeps = {
   presign: defaultPresign,
   putToR2: defaultPutToR2,
   registerFile: defaultRegisterFile,
   createNote: defaultCreateNote,
+  cleanupSource: defaultCleanupSource,
 };

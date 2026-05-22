@@ -142,6 +142,17 @@ export function createUploadQueue(
       job.status = 'completed';
       job.progress = 1;
       notify();
+      // Best-effort source cleanup. Errors are swallowed — the
+      // upload succeeded; disk hygiene should never surface as a
+      // queue failure (and `defaultCleanupSource` no-ops for
+      // non-`file://` URIs).
+      if (deps.cleanupSource) {
+        try {
+          await deps.cleanupSource(job.input.sourceUri);
+        } catch {
+          // ignore
+        }
+      }
       job.resolve(result);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);

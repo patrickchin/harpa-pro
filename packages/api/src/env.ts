@@ -101,6 +101,21 @@ const Env = z.object({
    * leak less catastrophic.
    */
   TEST_ACCOUNT_PASSWORD: z.string().min(16).optional(),
+  /**
+   * PostHog project API key (server-side). Optional — when unset the
+   * posthog-node client is replaced by a no-op stub and no events are
+   * captured. Required to evaluate feature flags (which back the
+   * *_LIVE / *_FIXTURE_MODE toggles — see docs/v4/arch-analytics.md).
+   */
+  POSTHOG_API_KEY: z.string().optional(),
+  POSTHOG_HOST: z.string().url().default('https://eu.i.posthog.com'),
+  /**
+   * Personal API key for local feature-flag evaluation. Higher-privilege
+   * than the project key — Fly secret only, never shipped to mobile or
+   * marketing. When absent, flag reads fall back to the disk cache,
+   * then to FLAG_FAILSAFE_DEFAULTS (see @harpa/analytics-events/flags).
+   */
+  POSTHOG_PERSONAL_API_KEY: z.string().optional(),
 }).refine(
   (e) => e.NODE_ENV !== 'production' || !!e.MIGRATIONS_REQUIRED_HEAD,
   { path: ['MIGRATIONS_REQUIRED_HEAD'], message: 'required when NODE_ENV=production' },

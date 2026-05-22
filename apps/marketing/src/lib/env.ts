@@ -27,9 +27,26 @@ function required(
   return v;
 }
 
-export function getPublicEnv(): { apiBaseUrl: string; turnstileSiteKey: string } {
+/**
+ * Optional getter — returns `undefined` rather than throwing.
+ * Used for PostHog, which is allowed to be absent (analytics silently
+ * disabled when the key is not configured).
+ */
+function optional(key: 'PUBLIC_POSTHOG_KEY' | 'PUBLIC_POSTHOG_HOST'): string | undefined {
+  return (import.meta as unknown as { env?: Record<string, string | undefined> })
+    .env?.[key];
+}
+
+export function getPublicEnv(): {
+  apiBaseUrl: string;
+  turnstileSiteKey: string;
+  posthogKey: string | undefined;
+  posthogHost: string;
+} {
   return {
     apiBaseUrl: required('PUBLIC_API_BASE_URL'),
     turnstileSiteKey: required('PUBLIC_TURNSTILE_SITE_KEY'),
+    posthogKey: optional('PUBLIC_POSTHOG_KEY'),
+    posthogHost: optional('PUBLIC_POSTHOG_HOST') ?? 'https://eu.i.posthog.com',
   };
 }

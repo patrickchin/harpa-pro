@@ -29,6 +29,19 @@ const Env = z.object({
   EXPO_PUBLIC_APP_VARIANT: z
     .enum(['production', 'preview', 'development'])
     .default('development'),
+  /**
+   * PostHog project API key. Optional in dev (PostHog disabled when unset);
+   * present in prod/preview EAS profiles. Different keys for dev vs prod —
+   * tagged via the `env` event property. EU host per docs/v4/arch-analytics.md.
+   *
+   * Bundle-time inlined — rotating the key requires an EAS rebuild, not a
+   * JS reload. See pitfalls.md for details.
+   */
+  EXPO_PUBLIC_POSTHOG_KEY: z.string().optional(),
+  EXPO_PUBLIC_POSTHOG_HOST: z
+    .string()
+    .url()
+    .default('https://eu.i.posthog.com'),
 });
 
 /* eslint-disable no-restricted-syntax */
@@ -36,6 +49,8 @@ const rawEnv = {
   EXPO_PUBLIC_API_URL: process.env.EXPO_PUBLIC_API_URL,
   EXPO_PUBLIC_USE_FIXTURES: process.env.EXPO_PUBLIC_USE_FIXTURES,
   EXPO_PUBLIC_APP_VARIANT: process.env.EXPO_PUBLIC_APP_VARIANT,
+  EXPO_PUBLIC_POSTHOG_KEY: process.env.EXPO_PUBLIC_POSTHOG_KEY,
+  EXPO_PUBLIC_POSTHOG_HOST: process.env.EXPO_PUBLIC_POSTHOG_HOST,
 };
 /* eslint-enable no-restricted-syntax */
 

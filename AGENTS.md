@@ -22,8 +22,10 @@ when you fix a recurring bug.
   RLS-equivalent enforced in the API via per-request scoped Postgres
   roles (`SET LOCAL` from JWT claims) — see
   [`docs/v4/arch-auth-and-rls.md`](docs/v4/arch-auth-and-rls.md).
-- **Auth:** **better-auth** (self-hosted in the Hono API). Phone OTP
-  via Twilio Verify.
+- **Auth:** Hand-rolled in the Hono API — JWTs via `jose`, phone
+  OTP via Twilio Verify, plus a test-account password bypass for
+  live-deploy testing. See [`docs/v4/arch-auth-and-rls.md`](docs/v4/arch-auth-and-rls.md).
+  We deliberately did not adopt `better-auth`.
 - **File storage:** Cloudflare R2 (S3-compatible). API mints signed
   URLs; mobile uploads direct to R2.
 - **AI providers:** Kimi, OpenAI, Anthropic, Google, Z.AI, DeepSeek.

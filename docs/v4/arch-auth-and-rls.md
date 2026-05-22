@@ -16,8 +16,11 @@ once:
 
 Replacements:
 
-1. **better-auth** in the Hono API issues JWTs and runs the OTP
-   flow (delegating SMS to Twilio Verify).
+1. **Hand-rolled auth in the Hono API** issues JWTs (via `jose`) and
+   runs the OTP flow (delegating SMS to Twilio Verify). We
+   deliberately did NOT adopt `better-auth` — its abstractions add
+   complexity we don't need. See `packages/api/src/auth/jwt.ts` for
+   the rationale recorded next to the code.
 2. **`withScopedConnection`** wraps every authenticated DB call,
    acquires a connection from a per-request pool, and runs
    `SET LOCAL role = '<scoped_role>'` and
@@ -30,9 +33,9 @@ Replacements:
 sequenceDiagram
   autonumber
   participant App as Mobile
-  participant API as Hono + better-auth
+  participant API as Hono API
   participant T as Twilio Verify
-  participant DB as Neon (better-auth schema)
+  participant DB as Neon (Drizzle schema)
 
   App->>API: POST /auth/otp/start { phone }
   API->>T: services.verifications.create({ to, channel: 'sms' })
@@ -46,7 +49,7 @@ sequenceDiagram
   API-->>App: 200 { token, user }
 
   App->>API: GET /me  (Authorization: Bearer <token>)
-  API->>API: better-auth.verifyToken → { sub, sessionId }
+  API->>API: verifyAuthToken (jose) → { sub, sessionId }
   API->>DB: withScopedConnection(claims, db => db.select(...))
   DB-->>API: row
   API-->>App: 200 { user }
@@ -61,18 +64,41 @@ sequenceDiagram
   use in tests + `:mock` builds. Real SMS is gated behind
   `TWILIO_LIVE=1`.
 
-## better-auth integration
+## Auth implementation
 
-- Mounted at `/auth/*` inside Hono via `betterAuth().handler`.
-- Schema lives in `packages/api/src/db/schema/auth.ts` (users,
-  sessions, accounts, verification tokens) — managed by Drizzle, NOT
-  by better-auth's CLI. We pin the schema and add migrations
-  manually so it's diffable.
-- Session model: opaque session IDs in the DB; the issued JWT
-  carries `sub` (user id) and `sid` (session id). Server validates
-  `sid` against the DB on each request via the auth middleware.
-- Token TTL: 7 days. Refresh on activity (last 24 h). Logout =
-  delete session row.
+- Routes are mounted directly at `/auth/*` in `packages/api/src/routes/auth.ts`.
+- JWT issue/verify lives in `packages/api/src/auth/jwt.ts` (HS256 via
+  `jose`).
+- Twilio Verify wrapper lives in `packages/api/src/auth/twilio.ts`;
+  the sandbox path returns `TWILIO_VERIFY_FAKE_CODE` so tests + `:mock`
+  builds never hit real SMS.
+- Session lifecycle lives in `packages/api/src/auth/service.ts` —
+  `startOtp` / `verifyOtp` / `issueSessionForPhone`.
+- Schema lives in `packages/api/src/db/schema.ts` (users, sessions),
+  managed by Drizzle migrations.
+- Session model: opaque session IDs in the DB; the issued JWT carries
+  `sub` (user id) and `sid` (session id). The `withAuth` middleware
+  validates the JWT and re-checks `sid` against the DB on each
+  request.
+- Token TTL: 7 days. Logout = delete session row.
+
+### Test-account password bypass
+
+A second route — `POST /auth/password/verify` — exists for test
+accounts so live deployments (`TWILIO_LIVE=1`) can be exercised
+without hitting Twilio. It is **404 unless both `TEST_ACCOUNT_PHONES`
+and `TEST_ACCOUNT_PASSWORD` are set** (Doppler `dev` only — production
+must leave them unset).
+
+- Per-process random salt; password hashed with `scryptSync` and
+  compared with `timingSafeEqual` (no hand-rolled crypto). See
+  `packages/api/src/auth/password.ts`.
+- Phone must appear in the comma-separated `TEST_ACCOUNT_PHONES` list.
+- Rate-limited 10/minute per phone via the same `getRateLimiter()`
+  used by the OTP routes.
+- Successful and failed attempts are audit-logged (`audit_login`).
+- On success the route reuses `issueSessionForPhone(...)` — identical
+  session row + JWT shape as the OTP path.
 
 ## Per-request DB scope (RLS replacement)
 
@@ -131,7 +157,7 @@ export async function withScopedConnection<T>(
 export const authMiddleware = createMiddleware(async (c, next) => {
   const token = c.req.header('authorization')?.replace('Bearer ', '');
   if (!token) throw new HTTPException(401);
-  const claims = await betterAuth.verifyToken(token); // throws on invalid
+  const claims = await verifyAuthToken(token); // throws on invalid
   c.set('claims', claims);
   c.set('db', (fn) => withScopedConnection(claims, fn));
   await next();

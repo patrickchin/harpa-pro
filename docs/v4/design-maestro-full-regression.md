@@ -129,7 +129,7 @@ signing out and signing back in.
 | `bob` | `+15550000002` | `000000` | invitee (editor → viewer → removed) |
 
 **Fixture-mode OTP.** `EXPO_PUBLIC_USE_FIXTURES=true` (`:mock` build)
-must wire the better-auth Twilio Verify client to accept `000000` for
+must wire the Twilio Verify client to accept `000000` for
 the two fixture phone numbers. This is the same record/replay
 fixture surface used by `packages/api/src/services/otp`; document
 the accepted shape next to its definition per Pitfall 13.

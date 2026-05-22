@@ -52,6 +52,7 @@ import {
   findCommittedSessionsForReport,
 } from '@/lib/camera-session-registry';
 import { useCameraUploads } from '@/lib/camera/use-camera-uploads';
+import { pickAndEnqueueGalleryImages } from '@/lib/camera/pick-and-enqueue-gallery-images';
 import { AppHeaderActions } from '@/components/ui/AppHeaderActions';
 
 interface ApiNote {
@@ -425,12 +426,54 @@ export default function GenerateReportRoute() {
   }, [slug, reportNumber, reportId, router]);
 
   const handlePickAttachment = useCallback(
-    (_category: 'image' | 'document') => {
-      setUploadError(
-        'File uploads are coming soon. Add a text note for now.',
-      );
+    async (category: 'image' | 'document') => {
+      // Document UI is deferred (plan-camera-upload-pipeline.md).
+      if (category === 'document') {
+        setUploadError(
+          'Document uploads are coming soon. Add a photo or text note for now.',
+        );
+        return;
+      }
+      if (!reportId) {
+        setUploadError('Open a saved report before adding photos.');
+        return;
+      }
+      try {
+        const outcome = await pickAndEnqueueGalleryImages({
+          reportId,
+          enqueueCameraUris,
+        });
+        switch (outcome.kind) {
+          case 'permission-denied':
+            setUploadError(
+              'Photo library access was denied. Enable it in Settings to attach images.',
+            );
+            return;
+          case 'cancelled':
+          case 'empty':
+            return;
+          case 'enqueued': {
+            const failed = outcome.results.filter(
+              (r) => r.status === 'rejected',
+            ).length;
+            if (failed > 0) {
+              setUploadError(
+                `${failed} of ${outcome.total} photo${outcome.total === 1 ? '' : 's'} failed to upload. Open the report queue to retry.`,
+              );
+            }
+            void qc.invalidateQueries({ queryKey: ['reportNotes'] });
+            return;
+          }
+        }
+      } catch (err) {
+        setUploadError(
+          err instanceof Error
+            ? `Could not pick photos: ${err.message}`
+            : 'Could not pick photos.',
+        );
+      }
     },
-    [],
+    [reportId, enqueueCameraUris, qc],
   );
 
   useFocusEffect(

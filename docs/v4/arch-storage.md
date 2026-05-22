@@ -93,6 +93,23 @@ when both lanes are empty, and gracefully no-ops when no
 `<QueueProvider>` is mounted (via
 `useOptionalUploadQueueContext`).
 
+### Gallery attachment sheet (mobile)
+
+The attachment sheet on the report Notes tab offers two categories:
+
+- **Photo** → routed to `pickAndEnqueueGalleryImages` in
+  `apps/mobile/lib/camera/pick-and-enqueue-gallery-images.ts`. It
+  requests `MediaLibraryPermissions`, launches
+  `ImagePicker.launchImageLibraryAsync({ allowsMultipleSelection })`,
+  and pipes the chosen URIs through the same `enqueueCameraUris`
+  entry point the camera flow uses. The helper returns a discriminated
+  union (`permission-denied` / `cancelled` / `empty` / `enqueued`)
+  so the route can surface the upload-error banner without duplicating
+  copy.
+- **Document** → currently surfaces a "Coming soon" banner. The note
+  kind enum + server-side pipeline already accept `document`/`pdf`,
+  but the UI is deferred (see `plan-camera-upload-pipeline.md`).
+
 ## Security
 
 - Presign URLs are scoped to PUT, content-type, content-length, and

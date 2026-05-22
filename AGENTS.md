@@ -42,6 +42,14 @@ when you fix a recurring bug.
    deploy to the dev environment (`harpa-pro-api-dev` on Fly + the
    `dev` Cloudflare Pages branch) — see
    [`docs/v4/arch-ops.md`](docs/v4/arch-ops.md).
+   **PR base defaults to `dev`.** Always open pull requests against
+   `dev` unless the user explicitly asks for `main`. Never merge a PR
+   into `main` without explicit instruction — `main` is production.
+   Never bypass branch protection (no `gh pr merge --admin`, no
+   `git push --no-verify` to `main` or `dev`) unless the user
+   explicitly authorises it for a specific emergency. If a PR has
+   failing required checks or a stale base, stop and ask — do not
+   force the merge through.
 3. **Docs in the same PR.** Behaviour, schema, deployment, or
    workflow change → matching doc update in the same commit.
 4. **No `Alert.alert` for in-app dialogs.** Use `AppDialogSheet` or

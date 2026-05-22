@@ -1,4 +1,4 @@
-appId: com.harpa.pro
+appId: ${MAESTRO_APP_ID}
 name: P3.15.6 voice note pipeline (fixture mode)
 tags:
   - p3
@@ -24,7 +24,7 @@ tags:
 # Pre-flight (same as core-end-to-end.yaml):
 #   1. docker compose up -d
 #   2. pnpm --filter @harpa/mobile start --dev-client
-#   3. xcrun simctl privacy booted grant microphone com.harpa.pro
+#   3. xcrun simctl privacy booted grant microphone ${MAESTRO_APP_ID}
 #   4. scripts/maestro/reset-db.sh
 
 - launchApp:

@@ -1,4 +1,4 @@
-appId: com.harpa.pro.dev
+appId: ${MAESTRO_APP_ID}
 name: "08 — Text notes: add and delete"
 tags:
   - regression

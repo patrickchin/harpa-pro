@@ -1,4 +1,4 @@
-appId: com.harpa.pro.dev
+appId: ${MAESTRO_APP_ID}
 name: "02 — Projects CRUD: create, edit, verify"
 tags:
   - regression

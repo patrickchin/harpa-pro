@@ -1,4 +1,4 @@
-appId: com.harpa.pro.dev
+appId: ${MAESTRO_APP_ID}
 name: "Regression journey — full end-to-end"
 tags:
   - regression

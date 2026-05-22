@@ -1,4 +1,4 @@
-appId: com.harpa.pro.dev
+appId: ${MAESTRO_APP_ID}
 name: "07 — Reports: create and delete a draft report"
 tags:
   - regression

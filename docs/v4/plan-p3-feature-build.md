@@ -581,6 +581,30 @@ phase; checkboxes here mirror the phase boundaries.
 notifications row (stays `disabled`-styled), language / locale
 switching.
 
+#### P3.15.6 — Camera upload pipeline close-out
+
+Tracked end-to-end in
+[`plan-camera-upload-pipeline.md`](plan-camera-upload-pipeline.md)
+(15 todos across phases A–C). All shipped.
+
+- [x] Phase A — pitfall regressions (`maestro-appid`, scope test for
+      `/files/presign`, `pickStorage` reads parsed env) + MinIO
+      default-wiring integration test for live R2.
+- [x] Phase B — user-visible completion: `ImageNoteCard`,
+      `PendingPhotoCard`, `UploadQueueStrip`, gallery attachment
+      sheet (`expo-image-picker`), MMKV-backed queue persistence +
+      rehydrate-on-mount, `AbortController` cancel through
+      `runUploadJob`.
+- [x] Phase C — hardening: `expo-image-manipulator` downscale + 50 MB
+      guard, post-success source URI cleanup,
+      `.maestro/p3-15-upload.yaml` live round-trip, widened
+      `process.env.R2_*` lint guard, doc roundup
+      (`arch-storage.md`, `pitfalls.md` Pitfall 13 sub-bullet,
+      `docs/bugs/README.md` `pickStorage` trapdoor entry).
+- Document / PDF note UI remains **deferred** by design — the queue
+  + server-side pipeline accept the kind; only the mobile UI is
+  out of scope for this slice.
+
 ## P3 exit
 - [ ] All boxes ticked (P3.0 – P3.15). Tag `v0.3.0-features`.
 - [ ] `pnpm --filter @harpa/mobile bundle:smoke` green on the tag SHA

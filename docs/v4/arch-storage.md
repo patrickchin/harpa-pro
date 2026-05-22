@@ -140,6 +140,45 @@ relaunch, resume automatically" we wire an MMKV-backed
   factory in `vitest.setup.ts` — the queue + persistence code path
   runs unchanged.
 
+### Pipeline summary (camera + gallery)
+
+End-to-end, a photo travels through these stages — every step has a
+unit/integration test, and the live round-trip is `.maestro/p3-15-upload.yaml`:
+
+1. **Capture / pick.** Camera (`(camera)/capture.tsx`) or gallery
+   (`pickAndEnqueueGalleryImages`) produces one or more local file
+   URIs.
+2. **Process.** `processImageForUpload` re-encodes to ≤ 2 MB / ≤ 2048 px
+   JPEG via `expo-image-manipulator`. The post-encode `sizeBytes` is
+   what flows downstream — presign body, R2 `Content-Length`, and the
+   `app.files` row all match the bytes that actually flush. Throws on
+   the 50 MB server cap.
+3. **Enqueue.** `enqueueCameraUris` pushes a `pending` `UploadJob` onto
+   the `UploadQueue` (shared across screens via `QueueProvider`).
+   `PendingPhotoCard` rows render against the local URI immediately;
+   `UploadQueueStrip` summarises in-flight + failed work in a Notes-tab
+   footer.
+4. **Run.** `runUploadJob` calls `presign → PUT → registerFile →
+   createNote`. Cancellation is wired via `AbortController` (see below)
+   and progress flows back to the cards in real time.
+5. **Reconcile.** `createNote` returns; React Query invalidates
+   `reportNotes`; the `ImageNoteCard` replaces the pending row. The
+   default `cleanupSource` deletes the processed cache file so disk
+   stays bounded.
+6. **Persist.** MMKV-backed `QueuePersistence` serialises the queue
+   snapshot on every transition; relaunch rehydrates and the driver
+   resumes pending jobs automatically.
+
+### Document / PDF UI — deferred
+
+The note-kind enum (`image | voice | document | pdf`) and the
+server-side pipeline (`POST /files/presign`, `POST /files`,
+`POST /reports/:id/notes`) accept document kinds end-to-end, and the
+upload queue is kind-agnostic. **Only the mobile UI is deferred.**
+The attachment sheet's "Document" option surfaces a "Coming soon"
+banner; there is no `DocumentNoteCard`. When document UI lands, it
+reuses every pipeline component from steps 2 – 6 above unchanged.
+
 ### Source-URI cleanup
 
 The default `defaultCleanupSource` in `run-upload.ts` runs after each

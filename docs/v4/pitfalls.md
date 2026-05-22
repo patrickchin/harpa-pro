@@ -328,6 +328,22 @@ The recurring-bugs log entry is the search hit for "I'm about to
 add another stub" — see [docs/bugs/README.md → R5](../bugs/README.md#r5--di-stubs-become-the-spec-default-wiring-silently-broken)
 before you write `setXClients({ … })`.
 
+**Sub-pattern — `pickStorage()` (and other env-derived factory
+selectors) must read the parsed `env` const, not `process.env`
+directly.** During the camera-upload audit we found
+`pickStorage()` was branching on `process.env.R2_FIXTURE_MODE` while
+every other line in the same module read `env.R2_*`. The default
+factory therefore made the live R2 selection on the *raw* env value,
+which silently disagreed with the Zod-parsed view used by
+`R2Storage`'s constructor — a textbook layer-1 trapdoor that no
+unit test would catch. Two defences shipped together:
+`scripts/check-no-process-env-r2.sh` (lint-time grep guard, scoped
+to all of `packages/` + `apps/`) and a MinIO-via-Testcontainers
+integration test (`files.r2-live.integration.test.ts`) that
+exercises the real default wiring against a live S3-compatible
+endpoint — no DI stubs, no fake clients, just the route + its
+collaborators against MinIO.
+
 ---
 
 ## Process pitfalls

@@ -150,6 +150,12 @@ Lock the policy in.
 - `pnpm lint && pnpm typecheck && pnpm test && pnpm test:e2e` green.
 - All touched docs updated in the same commits as the code.
 
+## Status
+
+Shipped end-to-end. All 15 todos landed across 15 Conventional
+Commits with same-PR doc updates (Pitfall 8). See
+[`plan-p3-feature-build.md` → P3.15.6](plan-p3-feature-build.md#p3156--camera-upload-pipeline-close-out).
+
 ## Out of scope
 
 - Document / PDF note rendering (explicitly deferred).

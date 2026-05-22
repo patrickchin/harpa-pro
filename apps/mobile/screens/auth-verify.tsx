@@ -1,12 +1,27 @@
-import { View, Text, KeyboardAvoidingView, ScrollView, Pressable } from 'react-native';
+/**
+ * OTP verify screen — step 2 of the OTP flow. Mode-parameterised for
+ * the same reasons as auth-phone.tsx: sign-in and sign-up only differ
+ * in title, test IDs, the back button, and minor button props.
+ */
+import {
+  View,
+  Text,
+  KeyboardAvoidingView,
+  ScrollView,
+  Pressable,
+} from 'react-native';
+import { ArrowLeft } from 'lucide-react-native';
+
 import { SafeAreaView } from '../components/primitives/SafeAreaView';
 import { Button } from '../components/primitives/Button';
 import { Input } from '../components/primitives/Input';
 import { InlineNotice } from '../components/primitives/InlineNotice';
 import { Logo } from '../components/primitives/Logo';
+import { colors } from '../lib/design-tokens/colors';
 import { cn } from '../lib/utils';
 
 type Props = {
+  mode: 'signin' | 'signup';
   phone: string;
   otp: string;
   onChangeOtp: (v: string) => void;
@@ -20,7 +35,23 @@ type Props = {
   onSubmit: () => void;
 };
 
-export default function SignInVerify({
+const SIGNIN_IDS = {
+  input: 'input-otp',
+  submit: 'btn-verify-code',
+  changeNumber: 'btn-change-number',
+  resend: 'link-resend-code',
+} as const;
+
+const SIGNUP_IDS = {
+  input: 'input-signup-otp',
+  submit: 'btn-signup-verify',
+  changeNumber: 'btn-signup-change-number',
+  resend: 'link-signup-resend-code',
+  back: 'btn-signup-verify-back',
+} as const;
+
+export default function AuthVerify({
+  mode,
   phone,
   otp,
   onChangeOtp,
@@ -33,9 +64,29 @@ export default function SignInVerify({
   isSubmitting,
   onSubmit,
 }: Props) {
+  const isSignup = mode === 'signup';
+  const title = isSignup ? 'Create Account' : 'Harpa Pro';
+  const ids = isSignup ? SIGNUP_IDS : SIGNIN_IDS;
+
   return (
     <SafeAreaView className="flex-1 bg-background">
       <KeyboardAvoidingView behavior="padding" className="flex-1">
+        {isSignup && (
+          <View className="px-5 pt-3">
+            <Pressable
+              onPress={onChangeNumber}
+              testID={SIGNUP_IDS.back}
+              accessibilityLabel="Back"
+              className="flex-row items-center gap-2 py-2"
+            >
+              <ArrowLeft size={20} color={colors.foreground} />
+              <Text className="text-base font-semibold text-foreground">
+                Back
+              </Text>
+            </Pressable>
+          </View>
+        )}
+
         <ScrollView
           className="flex-1"
           contentContainerClassName="grow px-6 py-10"
@@ -45,7 +96,7 @@ export default function SignInVerify({
             <View className="flex-row items-center gap-3">
               <Logo />
               <View className="flex-1">
-                <Text className="text-display text-foreground">Harpa Pro</Text>
+                <Text className="text-display text-foreground">{title}</Text>
               </View>
             </View>
 
@@ -57,7 +108,7 @@ export default function SignInVerify({
               </View>
 
               <Input
-                testID="input-otp"
+                testID={ids.input}
                 label="Verification Code"
                 placeholder="123456"
                 value={otp}
@@ -66,6 +117,7 @@ export default function SignInVerify({
                 autoComplete="one-time-code"
                 maxLength={6}
                 editable={!isSubmitting}
+                autoFocus={isSignup}
               />
 
               {error && <InlineNotice tone="danger">{error}</InlineNotice>}
@@ -73,18 +125,19 @@ export default function SignInVerify({
 
               <View className="gap-3">
                 <Button
-                  testID="btn-verify-code"
+                  testID={ids.submit}
                   variant="hero"
                   size="xl"
                   className="w-full"
                   disabled={isSubmitting || otp.trim().length < 6}
+                  loading={isSignup ? isSubmitting : undefined}
                   onPress={onSubmit}
                 >
-                  {isSubmitting ? 'Verifying...' : 'Verify Code'}
+                  {isSubmitting ? 'Verifying…' : isSignup ? 'Verify' : 'Verify Code'}
                 </Button>
 
                 <Button
-                  testID="btn-change-number"
+                  testID={ids.changeNumber}
                   variant="outline"
                   size="xl"
                   className="w-full"
@@ -96,7 +149,7 @@ export default function SignInVerify({
               </View>
 
               <Pressable
-                testID="link-resend-code"
+                testID={ids.resend}
                 accessibilityRole="button"
                 className="items-center py-2"
                 disabled={resendDisabled}

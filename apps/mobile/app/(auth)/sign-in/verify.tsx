@@ -1,10 +1,11 @@
 /**
  * Sign-in OTP verification — step 2 of OTP flow.
  *
- * Wires data layer for the screens/sign-in-verify.tsx body component:
+ * Wires the data layer for the screens/auth-verify.tsx body component
+ * in 'signin' mode:
  *   - useLocalSearchParams to read the phone passed from sign-in/phone
  *   - useVerifyOtpMutation (POST /auth/otp/verify)
- *   - useStartOtpMutation for resend
+ *   - useOtpResend (cooldown timer + POST /auth/otp/start for resend)
  *   - useAuthSession — only its signIn(...) method to persist the result
  *   - router.replace('/') after successful verification
  *
@@ -12,14 +13,13 @@
  * router.replace. The (app) auth gate (P2.6) handles needs-onboarding vs
  * authenticated routing.
  */
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { Redirect, useLocalSearchParams, useRouter, type Href } from 'expo-router';
-import SignInVerify from '@/screens/sign-in-verify';
+import AuthVerify from '@/screens/auth-verify';
 import { useAuthSession } from '@/lib/auth';
-import { useVerifyOtpMutation, useStartOtpMutation } from '@/lib/api/hooks';
+import { useVerifyOtpMutation } from '@/lib/api/hooks';
 import { safeBack } from '@/lib/nav/safe-back';
-
-const RESEND_COOLDOWN_SECONDS = 30;
+import { useOtpResend } from '@/lib/use-otp-resend';
 
 export default function SignInVerifyPage() {
   const router = useRouter();
@@ -28,12 +28,14 @@ export default function SignInVerifyPage() {
   const phone = params.phone ?? '';
 
   const verifyOtpMutation = useVerifyOtpMutation();
-  const startOtpMutation = useStartOtpMutation();
 
   const [otp, setOtp] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [info, setInfo] = useState<string | null>(null);
-  const [cooldown, setCooldown] = useState<number | null>(null);
+
+  const isSubmitting =
+    verifyOtpMutation.isPending || session.status === 'loading';
+
+  const resend = useOtpResend({ phone, isSubmitting });
 
   // Redirect if already authenticated
   if (session.status === 'authenticated') {
@@ -43,32 +45,12 @@ export default function SignInVerifyPage() {
   // Fallback if phone is missing
   if (!phone) {
     // expo-router typed-routes regenerates on next `expo start`; cast safe.
-    return <Redirect href={"/(auth)/sign-in/phone"} />;
+    return <Redirect href={'/(auth)/sign-in/phone'} />;
   }
 
-  // Resend cooldown timer (UI-only, per Pitfall 5)
-  useEffect(() => {
-    if (cooldown === null || cooldown <= 0) {
-      return;
-    }
-
-    const timer = setInterval(() => {
-      setCooldown((prev) => {
-        if (prev === null || prev <= 1) {
-          return null;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    return () => {
-      clearInterval(timer);
-    };
-  }, [cooldown]);
-
-  const handleSubmit = useCallback(async () => {
+  const handleSubmit = async () => {
     setError(null);
-    setInfo(null);
+    resend.clearMessages();
 
     try {
       const result = await verifyOtpMutation.mutateAsync({
@@ -87,22 +69,7 @@ export default function SignInVerifyPage() {
         err instanceof Error ? err.message : 'Unable to verify your code.';
       setError(message);
     }
-  }, [verifyOtpMutation, session, phone, otp, router]);
-
-  const handleResend = useCallback(async () => {
-    setError(null);
-    setInfo(null);
-
-    try {
-      await startOtpMutation.mutateAsync({ body: { phone } });
-      setInfo('New code sent successfully.');
-      setCooldown(RESEND_COOLDOWN_SECONDS);
-    } catch (err) {
-      const message =
-        err instanceof Error ? err.message : 'Unable to resend code.';
-      setError(message);
-    }
-  }, [startOtpMutation, phone]);
+  };
 
   const handleChangeNumber = useCallback(() => {
     // Phone is the frame directly below verify; back() avoids the
@@ -111,21 +78,18 @@ export default function SignInVerifyPage() {
     safeBack(router, '/(auth)/sign-in/phone' as Href);
   }, [router]);
 
-  const isSubmitting =
-    verifyOtpMutation.isPending || session.status === 'loading';
-  const resendDisabled = startOtpMutation.isPending || isSubmitting || cooldown !== null;
-
   return (
-    <SignInVerify
+    <AuthVerify
+      mode="signin"
       phone={phone}
       otp={otp}
       onChangeOtp={setOtp}
       onChangeNumber={handleChangeNumber}
-      onResend={handleResend}
-      resendDisabled={resendDisabled}
-      resendCountdownSeconds={cooldown}
-      error={error}
-      info={info}
+      onResend={resend.resend}
+      resendDisabled={resend.resendDisabled}
+      resendCountdownSeconds={resend.resendCountdownSeconds}
+      error={error ?? resend.resendError}
+      info={resend.resendInfo}
       isSubmitting={isSubmitting}
       onSubmit={handleSubmit}
     />

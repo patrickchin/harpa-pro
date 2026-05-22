@@ -29,7 +29,7 @@ import { withRateLimit } from '../middleware/rateLimit.js';
 import { withIdempotency } from '../middleware/idempotency.js';
 import { getFileById } from '../services/files.js';
 import { pickStorage } from '../services/storage.js';
-import { transcribe as aiTranscribe, chat as aiChat } from '../services/ai.js';
+import { transcribe as aiTranscribe, summarize as aiSummarize } from '../services/ai.js';
 import { getReport } from '../services/reports.js';
 import { createVoiceNote } from '../services/notes.js';
 import { getAiSettings } from '../services/settings.js';
@@ -125,7 +125,7 @@ voiceRoutes.openapi(
 
     // Step 2 — summarise. Same usageContext so spend lands on the
     // same (projectId, reportId).
-    const summarised = await aiChat({
+    const summarised = await aiSummarize({
       systemPrompt: voiceSummarySystemPrompt(body.language),
       userPrompt: transcript,
       vendor,
@@ -221,7 +221,7 @@ voiceRoutes.openapi(
     const userId = c.get('userId');
     if (!userId) throw new HTTPException(401);
     const body = c.req.valid('json');
-    const out = await aiChat({
+    const out = await aiSummarize({
       systemPrompt: voiceSummarySystemPrompt(),
       userPrompt: body.transcript,
       fixtureName: body.fixtureName,

@@ -53,15 +53,15 @@ describe('AI live default wiring', () => {
     if (env.GROQ_API_KEY === undefined) delete process.env.GROQ_API_KEY;
   });
 
-  it('chat() with no caller fixtureName hits api.openai.com', async () => {
+  it('summarize() with no caller fixtureName hits api.openai.com', async () => {
     const fetchSpy = vi
       .spyOn(globalThis, 'fetch')
       .mockResolvedValue(
         okJson({ choices: [{ message: { content: 'hi' } }] }) as Response,
       );
 
-    const { chat } = await loadAi();
-    const out = await chat({ userPrompt: 'hello' });
+    const { summarize } = await loadAi();
+    const out = await summarize({ userPrompt: 'hello' });
 
     expect(out.text).toBe('hi');
     expect(fetchSpy).toHaveBeenCalledTimes(1);
@@ -94,8 +94,8 @@ describe('AI live default wiring', () => {
   it('caller-supplied fixtureName forces replay even with AI_LIVE=1', async () => {
     const fetchSpy = vi.spyOn(globalThis, 'fetch');
 
-    const { chat } = await loadAi();
-    const out = await chat({
+    const { summarize } = await loadAi();
+    const out = await summarize({
       userPrompt: 'whatever',
       fixtureName: 'summarize.voice-1',
     });

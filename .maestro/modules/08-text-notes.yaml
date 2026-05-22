@@ -8,9 +8,9 @@ tags:
 #
 # Covers:
 #   - open reports list → new report
-#   - add a text note via input-text-note + btn-send-text-note
+#   - add a text note via input-note + btn-add-note
 #   - note appears in note timeline (note-row-*)
-#   - delete the note via options menu → btn-delete-note-*
+#   - delete the note via options menu → btn-note-options-delete
 #   - note disappears from timeline
 #   - clean up: delete the report
 #
@@ -31,7 +31,7 @@ tags:
     id: "btn-new-report"
 - extendedWaitUntil:
     visible:
-      id: "input-text-note"
+      id: "input-note"
     timeout: 15000
 
 # Store the report number for later modules
@@ -46,17 +46,17 @@ tags:
     id: "report-row-.*"
 - extendedWaitUntil:
     visible:
-      id: "input-text-note"
+      id: "input-note"
     timeout: 15000
 
 # --- Add a text note -------------------------------------------------------
 - tapOn:
-    id: "input-text-note"
+    id: "input-note"
 - inputText: "Foundation inspection complete. No cracks observed."
 - tapOn:
     point: "50%,15%"
 - tapOn:
-    id: "btn-send-text-note"
+    id: "btn-add-note"
 
 # --- Confirm note appears ---------------------------------------------------
 - extendedWaitUntil:
@@ -66,13 +66,13 @@ tags:
 
 # --- Open note options menu and delete the note ----------------------------
 - tapOn:
-    id: "btn-text-note-options-0"
+    id: "btn-note-options-.*"
 - extendedWaitUntil:
     visible:
-      id: "btn-delete-note-.*"
+      id: "btn-note-options-delete"
     timeout: 8000
 - tapOn:
-    id: "btn-delete-note-.*"
+    id: "btn-note-options-delete"
 
 # --- Confirm note is gone from timeline ------------------------------------
 - extendedWaitUntil:

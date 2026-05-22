@@ -78,11 +78,11 @@ tags:
 - assertVisible:
     id: "note-row-0"
 - assertVisible:
-    id: "btn-text-note-options-0"
+    id: "btn-note-options-.*"
 
 # --- Open per-row options → tap Delete → confirm in the next sheet ---------
 - tapOn:
-    id: "btn-text-note-options-0"
+    id: "btn-note-options-.*"
 - extendedWaitUntil:
     visible:
       id: "dialog-action-text-note-delete-0"

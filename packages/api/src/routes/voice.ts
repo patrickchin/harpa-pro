@@ -33,6 +33,7 @@ import { transcribe as aiTranscribe, chat as aiChat } from '../services/ai.js';
 import { getReport } from '../services/reports.js';
 import { createVoiceNote } from '../services/notes.js';
 import { getAiSettings } from '../services/settings.js';
+import { recordUsage } from '../services/usage.js';
 import { voiceSummarySystemPrompt, parseVoiceSummaryResponse } from '../prompts/voiceSummary.js';
 
 
@@ -122,6 +123,16 @@ voiceRoutes.openapi(
       fixtureName: body.fixtureName,
     });
     const transcript = transcribed.text;
+    await db((d) =>
+      recordUsage(d, {
+        userId,
+        projectId: report.projectId,
+        reportId: report.id,
+        vendor: transcribed.vendor,
+        model: transcribed.model,
+        operation: 'transcribe',
+      }),
+    );
 
     // Step 2 — summarise. Same usageContext so spend lands on the
     // same (projectId, reportId).
@@ -137,6 +148,16 @@ voiceRoutes.openapi(
     });
     const { title, summary } = parseVoiceSummaryResponse(summarised.text);
     const transcribeProvider = `${summarised.vendor}:${summarised.model}+${transcribed.vendor}:${transcribed.model}`;
+    await db((d) =>
+      recordUsage(d, {
+        userId,
+        projectId: report.projectId,
+        reportId: report.id,
+        vendor: summarised.vendor,
+        model: summarised.model,
+        operation: 'chat',
+      }),
+    );
 
     // Step 3 — insert. `body` mirrors `summary` so legacy readers
     // (P3.10 `ReportNotesPane`, etc.) keep working until they migrate

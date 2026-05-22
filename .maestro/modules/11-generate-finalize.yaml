@@ -31,7 +31,7 @@ tags:
     id: "btn-new-report"
 - extendedWaitUntil:
     visible:
-      id: "input-text-note"
+      id: "input-note"
     timeout: 15000
 
 # Capture report number (first and only report = 1)
@@ -39,12 +39,12 @@ tags:
 
 # --- Add a text note (required to enable Generate button) -----------------
 - tapOn:
-    id: "input-text-note"
+    id: "input-note"
 - inputText: "Structural steel inspection complete. All welds within spec."
 - tapOn:
     point: "50%,15%"
 - tapOn:
-    id: "btn-send-text-note"
+    id: "btn-add-note"
 - extendedWaitUntil:
     visible:
       id: "note-row-.*"

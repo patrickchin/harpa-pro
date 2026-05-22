@@ -30,6 +30,11 @@ import type { TabKey } from './tabs';
 import { createEmptyReport } from '@/lib/report-edit-helpers';
 import type { NoteEntry } from '@/lib/note-entry';
 import type { GeneratedSiteReport } from '@harpa/report-core';
+import { useInlineRecorder } from '@/features/voice/useInlineRecorder';
+import { useVoiceNotePipeline } from '@/features/voice/useVoiceNotePipeline';
+import { useAudioPlayback } from '@/lib/audio/AudioPlaybackProvider';
+import type { RecorderSnapshot } from '@/features/voice/recorder-types';
+import { AppDialogSheet } from '@/components/primitives/AppDialogSheet';
 
 /**
  * Props passed to `GenerateReportProvider`. Route wrappers wire real
@@ -39,6 +44,13 @@ import type { GeneratedSiteReport } from '@harpa/report-core';
 export interface GenerateReportProviderProps {
   project: string;
   reportNumber: number | null;
+  /**
+   * Server-side report uuid. Required for the voice pipeline
+   * (`useVoiceNotePipeline`) which posts to `/reports/{report}/notes/voice`.
+   * `null` before the report row has loaded — the mic button is rendered
+   * disabled in that case so the modal can't open without a target.
+   */
+  reportId?: string | null;
   /** Notes already saved on the report. Empty array on a fresh draft. */
   notes: readonly NoteEntry[];
   /** True while the initial note timeline is being fetched. */
@@ -129,12 +141,46 @@ export interface GenerateReportProviderProps {
 }
 
 interface VoiceSurface {
+  /**
+   * Phase H: true while the inline WhatsApp-style strip should render
+   * in place of the text-note input row.
+   */
   isRecording: boolean;
-  amplitude: number;
+  /** Latest recorder snapshot — duration drives the inline counter. */
+  snapshot: RecorderSnapshot;
+  /** Scrolling waveform samples (oldest → newest, capped). */
+  historyBars: readonly number[];
   interimTranscript: string;
   speechError: string | null;
-  toggleRecording: () => void;
-  cancelRecording: () => void;
+  /**
+   * Begin recording inline. Idempotent. If mic permission was
+   * denied the provider opens its permission dialog instead of
+   * arming the recorder.
+   */
+  start: () => void;
+  /**
+   * Stop the recorder, hand the finalised audio to the pipeline,
+   * and reset the strip. No-op when not recording.
+   */
+  stopAndSend: () => void;
+  /** Discard the in-flight recording and return to the input row. */
+  cancel: () => void;
+  /**
+   * Phase D: pipeline state visible to surfaces that want to show a
+   * "Transcribing voice note…" indicator after the strip closes.
+   * `null` when the provider was rendered without `reportId`
+   * (pipeline can't run without a target).
+   */
+  pipeline: {
+    step: 'idle' | 'uploading' | 'transcribing' | 'saved' | 'failed';
+    error: string | null;
+  } | null;
+  /**
+   * Phase E: retry from the last failed pipeline step. No-op when
+   * there is no retained capture (e.g. fresh provider mount). Called
+   * by `VoiceNoteCard`'s in-line Retry pill.
+   */
+  retry: () => void;
 }
 
 interface PhotoSurface {
@@ -167,6 +213,9 @@ interface NotesSurface {
   deleteIndex: number | null;
   setDeleteIndex: (i: number | null) => void;
   confirmDelete: () => void;
+  /** Direct delete used by the shared NoteOptionsSheet, which has its
+   *  own confirmation stage. */
+  deleteAt: (sourceIndex: number) => void;
   /** True iff a route-provided onUpdateNote is wired. */
   canEdit: boolean;
   /** Update body for a note at the given source index. */
@@ -291,6 +340,7 @@ const EMPTY_MEMBERS: ReadonlyMap<string, string> = new Map();
 export function GenerateReportProvider({
   project,
   reportNumber,
+  reportId = null,
   notes,
   notesLoading = false,
   onAddTextNote,
@@ -325,6 +375,102 @@ export function GenerateReportProvider({
   const [isFinalizeConfirmVisible, setIsFinalizeConfirmVisible] =
     useState(false);
 
+  // Phase H: inline recorder state lives here so the input bar can
+  // morph between text/photo/mic and the recording strip without
+  // remounting the provider's children.
+  const inlineRecorder = useInlineRecorder();
+
+  // Phase D: voice pipeline. Always called (hooks are unconditional)
+  // even when reportId is null — `start()` then short-circuits.
+  // Using a sentinel '' keeps the hook signature simple; the mic
+  // button is disabled in that case (see GenerateReportInputBar).
+  const voicePipeline = useVoiceNotePipeline({ reportId: reportId ?? '' });
+  const handleVoiceCapture = useCallback(
+    async (result: import('@/features/voice/recorder-types').RecorderResult) => {
+      if (!reportId) {
+        throw new Error(
+          'Voice note saved before the report row was ready. Reopen the screen and try again.',
+        );
+      }
+      await voicePipeline.capture(result);
+    },
+    [reportId, voicePipeline],
+  );
+
+  // Phase H: wire the inline strip's Send button to the pipeline.
+  // `stopAndCapture()` finalises the audio file; on a successful
+  // capture we hand it to the pipeline (fire-and-forget — the
+  // synthetic timeline entry below shows progress, errors surface
+  // via the existing VoiceNoteCard retry pill).
+  const playback = useAudioPlayback();
+  const handleVoiceStart = useCallback(() => {
+    if (!reportId) return;
+    // If a previous voice note is currently playing, stop it before
+    // we take over the audio session for the mic. Otherwise on iOS
+    // the playback player would be interrupted abruptly by the
+    // category switch and the UI would never see the pause.
+    if (playback.status.playing) {
+      playback.stop();
+    }
+    void inlineRecorder.start();
+  }, [reportId, inlineRecorder, playback]);
+  const handleVoiceStopAndSend = useCallback(() => {
+    void (async () => {
+      const result = await inlineRecorder.stopAndCapture();
+      if (!result) return;
+      try {
+        await handleVoiceCapture(result);
+      } catch {
+        // Pipeline already surfaces the error via voicePipeline.state;
+        // the VoiceNoteCard renders Retry. No Alert.alert (Pitfall 12).
+      }
+    })();
+  }, [inlineRecorder, handleVoiceCapture]);
+  const handleVoiceCancel = useCallback(() => {
+    void inlineRecorder.cancel();
+  }, [inlineRecorder]);
+
+  // Phase E: surface the in-flight pipeline as a synthetic NoteEntry so
+  // `NoteTimeline` can render the spinner / failure pill the same way it
+  // renders saved voice notes. On `step === 'saved'` we keep a synthetic
+  // built from the server response until the invalidated `reportNotes`
+  // refetch lands the real row — otherwise the card flashes out and
+  // back in during that gap.
+  const timelineItems = useMemo<readonly NoteEntry[]>(() => {
+    const { step, note: savedNote, error, fileId, capture } = voicePipeline.state;
+    if (step === 'idle' || !reportId) return notes;
+    if (savedNote && notes.some((n) => n.id === savedNote.id)) return notes;
+
+    const synthetic: NoteEntry = savedNote
+      ? {
+          id: savedNote.id,
+          authorId: savedNote.authorId,
+          text: savedNote.body ?? '',
+          addedAt: new Date(savedNote.createdAt).getTime(),
+          source: 'voice',
+          fileId: savedNote.fileId,
+          durationSec: savedNote.durationSec ?? null,
+          transcript: savedNote.transcript,
+          summary: savedNote.summary ?? null,
+          title: savedNote.title ?? null,
+        }
+      : {
+          id: '__voice-pipeline-pending',
+          text: '',
+          addedAt: Date.now(),
+          source: 'voice',
+          voiceStatus: step === 'saved' ? null : step,
+          voiceError: error,
+          fileId,
+          durationSec: capture?.durationSec ?? null,
+        };
+    return [...notes, synthetic];
+  }, [notes, reportId, voicePipeline.state]);
+
+  const handleRetryVoice = useCallback(() => {
+    void voicePipeline.retry();
+  }, [voicePipeline]);
+
   // Locally-owned empty report seeded when the user opens Edit without
   // a generated report ("Edit manually" path). Kept separate from
   // `onSetReport` so the lazy-init never triggers the route's dirty
@@ -349,6 +495,18 @@ export function GenerateReportProvider({
       onDeleteNote(note, deleteIndex);
     }
   }, [deleteIndex, notes, onDeleteNote]);
+
+  // Direct delete used by the shared NoteOptionsSheet, which already
+  // shows its own destructive confirmation stage and therefore
+  // bypasses the legacy `deleteIndex` two-step.
+  const deleteAt = useCallback(
+    (sourceIndex: number) => {
+      const note = notes[sourceIndex];
+      if (!note || !onDeleteNote) return;
+      onDeleteNote(note, sourceIndex);
+    },
+    [notes, onDeleteNote],
+  );
 
   const updateNote = useCallback(
     (sourceIndex: number, nextBody: string) => {
@@ -424,6 +582,7 @@ export function GenerateReportProvider({
         deleteIndex,
         setDeleteIndex,
         confirmDelete,
+        deleteAt,
         canEdit: Boolean(onUpdateNote),
         update: updateNote,
       },
@@ -434,7 +593,7 @@ export function GenerateReportProvider({
         editManually,
       },
       timeline: {
-        items: notes,
+        items: timelineItems,
         isLoading: notesLoading,
       },
       generation: {
@@ -455,14 +614,23 @@ export function GenerateReportProvider({
         isAutoSaving,
         lastSavedAt,
       },
-      // TODO(P3.8): replace with real `useVoiceNotePipeline` surface.
+      // Phase H: inline WhatsApp-style recorder lives in the input
+      // bar. `start()` arms the recorder (and surfaces the
+      // permission dialog if needed); `stopAndSend()` finalises and
+      // hands off to `useVoiceNotePipeline`; `cancel()` discards.
       voice: {
-        isRecording: false,
-        amplitude: 0,
+        isRecording: inlineRecorder.isRecording,
+        snapshot: inlineRecorder.snapshot,
+        historyBars: inlineRecorder.historyBars,
         interimTranscript: '',
         speechError: null,
-        toggleRecording: () => undefined,
-        cancelRecording: () => undefined,
+        start: handleVoiceStart,
+        stopAndSend: handleVoiceStopAndSend,
+        cancel: handleVoiceCancel,
+        pipeline: reportId
+          ? { step: voicePipeline.state.step, error: voicePipeline.state.error }
+          : null,
+        retry: handleRetryVoice,
       },
       // Photo button wires through to the route-supplied handler so the
       // route can push the camera modal + drain results on return. The
@@ -495,6 +663,7 @@ export function GenerateReportProvider({
       addNote,
       deleteIndex,
       confirmDelete,
+      deleteAt,
       updateNote,
       onUpdateNote,
       activeTab,
@@ -516,6 +685,19 @@ export function GenerateReportProvider({
       lastSavedAt,
       attachmentSheetVisible,
       fileUploadError,
+      inlineRecorder.isRecording,
+      inlineRecorder.snapshot,
+      inlineRecorder.historyBars,
+      inlineRecorder.permission,
+      inlineRecorder.error,
+      handleVoiceStart,
+      handleVoiceStopAndSend,
+      handleVoiceCancel,
+      reportId,
+      voicePipeline.state.step,
+      voicePipeline.state.error,
+      handleRetryVoice,
+      timelineItems,
       memberNames,
       handlePickAttachment,
       handleRegenerate,
@@ -528,6 +710,41 @@ export function GenerateReportProvider({
   return (
     <GenerateReportContext.Provider value={value}>
       {children}
+      {/*
+        Phase H: permission-denied dialog. Replaces the modal's
+        embedded permission gate now that recording is inline.
+        Honours AGENTS.md hard rule #4 — no Alert.alert (Pitfall 12).
+      */}
+      <AppDialogSheet
+        visible={inlineRecorder.permission === 'denied'}
+        title="Microphone access needed"
+        message="Enable microphone access in Settings to record voice notes."
+        noticeTone="warning"
+        onClose={inlineRecorder.dismissError}
+        actions={[
+          {
+            label: 'Close',
+            onPress: inlineRecorder.dismissError,
+            variant: 'secondary',
+            testID: 'voice-perm-close',
+          },
+        ]}
+      />
+      <AppDialogSheet
+        visible={inlineRecorder.error !== null}
+        title="Recording failed"
+        message={inlineRecorder.error ?? ''}
+        noticeTone="danger"
+        onClose={inlineRecorder.dismissError}
+        actions={[
+          {
+            label: 'Dismiss',
+            onPress: inlineRecorder.dismissError,
+            variant: 'secondary',
+            testID: 'voice-error-dismiss',
+          },
+        ]}
+      />
     </GenerateReportContext.Provider>
   );
 }

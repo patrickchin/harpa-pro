@@ -11,8 +11,14 @@
  * Photo + voice + document rows resolve their R2 GET URL via
  * `useFileSignedUrl` (P3.15.1) and render through `CachedImage` for
  * the photo thumbnail.
+ *
+ * Every row's ⋯ kebab opens a shared `NoteOptionsSheet` rendered at
+ * the pane level. The sheet exposes metadata, Delete, and (for voice
+ * with a transcript) View transcript. Delete goes through
+ * `useDeleteNoteMutation`, which auto-invalidates the saved-report
+ * notes query so the row disappears once the API confirms.
  */
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Text, View } from 'react-native';
 import { MessageSquare } from 'lucide-react-native';
 
@@ -21,6 +27,9 @@ import { NoteCardHeader } from '@/components/notes/NoteCardHeader';
 import { PhotoNoteRow } from '@/components/reports/detail/PhotoNoteRow';
 import { VoiceNoteRow } from '@/components/reports/detail/VoiceNoteRow';
 import { DocumentNoteRow } from '@/components/reports/detail/DocumentNoteRow';
+import { NoteOptionsKebab } from '@/components/notes/NoteOptionsKebab';
+import { NoteOptionsSheet } from '@/components/notes/NoteOptionsSheet';
+import { useDeleteNoteMutation } from '@/lib/api/hooks';
 import { colors } from '@/lib/design-tokens/colors';
 
 export interface ReportNoteRow {
@@ -32,6 +41,11 @@ export interface ReportNoteRow {
   authorName?: string | null;
   /** R2 file id when the note is backed by an upload (voice / photo / document). */
   fileId?: string | null;
+  // ── Voice-only fields (Phase E). Optional so non-voice rows omit them. ──
+  transcript?: string | null;
+  title?: string | null;
+  summary?: string | null;
+  durationSec?: number | null;
 }
 
 interface ReportNotesPaneProps {
@@ -56,6 +70,48 @@ export function ReportNotesPane({
     });
     return items;
   }, [noteRows]);
+
+  const [activeNoteId, setActiveNoteId] = useState<string | null>(null);
+  const activeNote = useMemo(
+    () => sorted.find((n) => n.id === activeNoteId) ?? null,
+    [sorted, activeNoteId],
+  );
+  // Adapt `ReportNoteRow` → generic `NoteOptionsSheetItem`. Most
+  // fields line up 1:1; only `createdAt` → `capturedAt` is renamed.
+  const activeSheetItem = useMemo(
+    () =>
+      activeNote
+        ? {
+            id: activeNote.id,
+            kind: activeNote.kind,
+            body: activeNote.body,
+            title: activeNote.title ?? null,
+            summary: activeNote.summary ?? null,
+            transcript: activeNote.transcript ?? null,
+            authorName: activeNote.authorName ?? null,
+            capturedAt: activeNote.createdAt,
+            durationSec: activeNote.durationSec ?? null,
+            fileId: activeNote.fileId ?? null,
+          }
+        : null,
+    [activeNote],
+  );
+
+  const deleteNote = useDeleteNoteMutation();
+  const handleOpenOptions = (id: string) => setActiveNoteId(id);
+  const handleCloseOptions = () => setActiveNoteId(null);
+  const handleDelete = (note: { id: string }) => {
+    deleteNote.mutate(
+      { params: { note: note.id } as never },
+      {
+        onSettled: () => {
+          // Close regardless of success/failure; failure surfaces via
+          // the mutation error state if we want to render it later.
+          setActiveNoteId(null);
+        },
+      },
+    );
+  };
 
   if (sorted.length === 0) {
     return (
@@ -82,6 +138,7 @@ export function ReportNotesPane({
               authorName={note.authorName ?? null}
               capturedAt={note.createdAt}
               onOpen={onOpenPhoto}
+              onOpenOptions={handleOpenOptions}
             />
           );
         }
@@ -92,9 +149,13 @@ export function ReportNotesPane({
               noteId={note.id}
               fileId={note.fileId ?? null}
               body={note.body}
+              transcript={note.transcript ?? null}
+              title={note.title ?? null}
+              summary={note.summary ?? null}
+              durationSec={note.durationSec ?? null}
               authorName={note.authorName ?? null}
               capturedAt={note.createdAt}
-              onOpen={onOpenFile}
+              onOpenOptions={handleOpenOptions}
             />
           );
         }
@@ -108,6 +169,7 @@ export function ReportNotesPane({
               authorName={note.authorName ?? null}
               capturedAt={note.createdAt}
               onOpen={onOpenFile}
+              onOpenOptions={handleOpenOptions}
             />
           );
         }
@@ -125,6 +187,12 @@ export function ReportNotesPane({
               authorName={note.authorName ?? null}
               capturedAt={note.createdAt}
               testIDSuffix={note.id}
+              trailing={
+                <NoteOptionsKebab
+                  noteId={note.id}
+                  onPress={() => handleOpenOptions(note.id)}
+                />
+              }
             />
             <Text className="text-sm leading-5 text-foreground">{body}</Text>
           </View>
@@ -133,6 +201,14 @@ export function ReportNotesPane({
       <Text className="mt-2 text-xs text-muted-foreground">
         The original notes this report was generated from.
       </Text>
+
+      <NoteOptionsSheet
+        visible={activeSheetItem !== null}
+        note={activeSheetItem}
+        onClose={handleCloseOptions}
+        onDelete={handleDelete}
+        deleteInFlight={deleteNote.isPending}
+      />
     </View>
   );
 }

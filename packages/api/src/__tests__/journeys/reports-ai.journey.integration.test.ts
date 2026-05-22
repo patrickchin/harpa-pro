@@ -33,7 +33,7 @@ describe('journey: report AI lifecycle', () => {
 
     const gen = await app.request(`/projects/${project.id}/reports/${report.number}/generate`, {
       method: 'POST', headers: me.headers,
-      body: JSON.stringify({ fixtureName: 'generate-report.full' }),
+      body: JSON.stringify({ fixtureName: 'generate-report.voice-1' }),
     });
     expect(gen.status).toBe(200);
     const genBody = (await gen.json()) as { report: { status: string; body: unknown } };
@@ -46,7 +46,7 @@ describe('journey: report AI lifecycle', () => {
 
     const re = await app.request(`/projects/${project.id}/reports/${report.number}/regenerate`, {
       method: 'POST', headers: me.headers,
-      body: JSON.stringify({ fixtureName: 'generate-report.full' }),
+      body: JSON.stringify({ fixtureName: 'generate-report.voice-1' }),
     });
     expect(re.status).toBe(409);
 

@@ -57,7 +57,10 @@ when you fix a recurring bug.
 
 - `pnpm ios` / `pnpm ios:mock` (run from repo root). `:mock` inlines
   `EXPO_PUBLIC_USE_FIXTURES=true`, returning canned API responses and
-  stubbing the iOS-simulator audio recorder.
+  replacing the iOS-simulator audio recorder with a "Save fixture
+  voice note" stub that emits a canned `voice-sample.m4a` through
+  the real upload pipeline + aggregator. See
+  [`docs/v4/arch-voice-pipeline.md` §D6](docs/v4/arch-voice-pipeline.md#d6-fixture-mode-contract).
 - `EXPO_PUBLIC_*` vars are inlined by Metro at bundle time — changing
   them requires a rebuild, not a JS reload.
 

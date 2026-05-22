@@ -521,6 +521,25 @@ export function useCreateNoteMutation(
   });
 }
 
+export function useCreateVoiceNoteMutation(
+  options?: UseMutationOptions<ResponseBody<"/reports/{report}/notes/voice", "post">, ApiError, { params: PathParams<"/reports/{report}/notes/voice", "post">; body: RequestBody<"/reports/{report}/notes/voice", "post"> }>,
+) {
+  const qc = useQueryClient();
+  return useMutation<ResponseBody<"/reports/{report}/notes/voice", "post">, ApiError, { params: PathParams<"/reports/{report}/notes/voice", "post">; body: RequestBody<"/reports/{report}/notes/voice", "post"> }>({
+    mutationFn: (vars) => request("/reports/{report}/notes/voice", "post", { params: (vars as any).params, body: (vars as any).body }),
+    ...options,
+    onSuccess: (...args) => {
+      const rule = INVALIDATIONS["useCreateVoiceNoteMutation"];
+      if (rule && rule !== INVALIDATIONS_NONE) {
+        for (const head of rule) {
+          qc.invalidateQueries({ queryKey: [head] });
+        }
+      }
+      return options?.onSuccess?.(...args);
+    },
+  });
+}
+
 // ─── notes ───────────────────────────────────────────
 export function useUpdateNoteMutation(
   options?: UseMutationOptions<ResponseBody<"/notes/{note}", "patch">, ApiError, { params: PathParams<"/notes/{note}", "patch">; body: RequestBody<"/notes/{note}", "patch"> }>,

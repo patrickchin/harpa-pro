@@ -14,7 +14,14 @@
   source of truth for the design tokens.
 - Expo Router v3 (file-system routing).
 - React Query for server state.
-- legend-state for the upload queue + offline persistence.
+- Hand-rolled `UploadQueue` (`lib/uploads/queue.ts`) for offline-first
+  upload + persistence via AsyncStorage. Legend-state was the v3
+  plan but proved overkill for a queue with a single subscriber;
+  the current queue is ~370 lines, exposes a tiny surface
+  (`enqueue` / `retry` / `remove` / `subscribe` / `rehydrate`), and
+  is fully unit-tested in node. See
+  [`arch-voice-pipeline.md` §D9](arch-voice-pipeline.md#d9-robustness-phase-f)
+  for the persistence + AbortSignal contract.
 - expo-audio for recording + playback (already proven in v3).
 - expo-camera for capture.
 - react-native-pdf (Android) + WKWebView (iOS) for `PdfPreviewModal`.
@@ -106,18 +113,23 @@ apps/mobile/
     auth/
       useAuthSession.ts
       otpFlow.ts
-    upload/
-      queue.ts                         # legend-state observable queue
-      pipeline.ts                      # presign → PUT → createFile → createNote
-      __tests__/
     voice/
-      useVoiceNotePipeline.ts
-      useVoiceNotePlayer.ts            # coordinated single-playback
-      useLiveTranscript.ts             # on-device interim transcript
-      AudioPlaybackProvider.tsx
+      useVoiceNotePipeline.ts            # capture → upload → aggregator
+      VoiceRecorderModal.tsx
+      VoiceNoteCard.tsx                  # timeline + saved-report row
+      expoAudioRecorder.ts               # native recorder adapter
+      fixtureRecorder.ts                 # fixture-mode stub recorder
     reports/
       useReportPdfActions.ts
       useReportGeneration.ts
+
+  lib/
+    uploads/
+      queue.ts                           # hand-rolled UploadQueue
+      run-upload.ts                      # presign → PUT → register → note
+      QueueProvider.tsx                  # wires AsyncStorage adapter
+    audio/
+      AudioPlaybackProvider.tsx          # single-playback coordinator
       GenerateReportProvider.tsx
     util/
       useCopyToClipboard.ts
@@ -284,7 +296,7 @@ What we deliberately do **not** have:
 |---|---|
 | Server state (projects, reports, notes, files) | React Query |
 | Per-screen UI state | `useState` / `useReducer` |
-| Upload queue (offline-first, persisted) | legend-state observable |
+| Upload queue (offline-first, persisted) | Hand-rolled `UploadQueue` (`lib/uploads/queue.ts`) with AsyncStorage persistence + `AbortSignal` cancellation |
 | Audio playback coordination | `AudioPlaybackProvider` (single ref) |
 | Auth session | `useAuthSession` (React Query + secure-store) |
 | Dialogs | `useAppDialogSheet` portal |
@@ -358,18 +370,37 @@ to fix Android image uploads`).
 
 ## Voice note pipeline
 
-Behaviour mirrors the canonical source's notes tab in
-`../haru3-reports/apps/mobile/app/projects/[projectId]/reports/generate.tsx`
-and its imported components. Implementation:
+Full design lives in [`arch-voice-pipeline.md`](arch-voice-pipeline.md);
+delivery checklist in [`plan-voice-pipeline.md`](plan-voice-pipeline.md).
+At a glance:
 
-- `useLiveTranscript` reads on-device speech-to-text *during*
-  recording and streams interim text to the input bar (the
-  "LISTENING" panel).
-- `useVoiceNotePipeline` orchestrates the pending-note state
-  machine (`uploading → transcribing → saved/failed`, with
-  `failedStep` so retry resumes).
-- `AudioPlaybackProvider` ensures only one note plays at a time.
-- `VoiceNoteCard` renders the transcript inline.
+- The mic button on `GenerateReportInputBar` pushes a full-screen
+  modal at `app/(app)/projects/[project]/reports/[number]/record-voice.tsx`.
+  Permission denial and recording errors use `AppDialogSheet`
+  (Pitfall 12) — never `Alert.alert`.
+- `useVoiceNotePipeline({ reportId })` runs the state machine
+  `idle → recording → uploading → transcribing → saved | failed(step)`.
+  Upload uses the shared `useFileUpload` queue with `kind: 'voice'`
+  but **no** `reportId` — the queue stops after `registerFile`,
+  then the hook calls the server aggregator.
+- The server aggregator `POST /reports/:reportId/notes/voice`
+  (`{ fileId, language?, durationSec? }`) runs transcribe +
+  summarize + insert in one scoped transaction, idempotent on
+  `fileId+reportId`. Mobile never calls `/voice/transcribe` or
+  `/voice/summarize` directly.
+- `AudioPlaybackProvider` is a real single-instance `expo-audio`
+  player — starting note B pauses note A.
+- `VoiceNoteCard` renders three header states (`transcribing… /
+  ready / failed`), summary preview, transcript expander, and a
+  retry CTA on failure.
+- Fixture mode (`EXPO_PUBLIC_USE_FIXTURES=true`) replaces the
+  recorder with a "Save fixture voice note" stub that copies
+  `assets/fixtures/voice-sample.m4a` through the real upload
+  pipeline and aggregator (Pitfall 13 — default wiring exercised).
+- `useLiveTranscript` (Phase F, feature-flagged behind
+  `EXPO_PUBLIC_VOICE_LIVE_TRANSCRIPT`) wraps
+  `expo-speech-recognition` for on-device interim transcript;
+  falls back to a no-op when unavailable.
 
 ## Camera flow
 

@@ -7108,6 +7108,34 @@
                             "type": "string",
                             "nullable": true
                           },
+                          "title": {
+                            "type": "string",
+                            "nullable": true,
+                            "maxLength": 200
+                          },
+                          "summary": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "durationSec": {
+                            "type": "integer",
+                            "nullable": true,
+                            "minimum": 0
+                          },
+                          "language": {
+                            "type": "string",
+                            "nullable": true,
+                            "minLength": 2,
+                            "maxLength": 16
+                          },
+                          "transcribeProvider": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "transcribedAt": {
+                            "type": "string",
+                            "nullable": true
+                          },
                           "createdAt": {
                             "type": "string"
                           },
@@ -7264,6 +7292,15 @@
                   "transcript": {
                     "type": "string",
                     "nullable": true
+                  },
+                  "title": {
+                    "type": "string",
+                    "nullable": true,
+                    "maxLength": 200
+                  },
+                  "summary": {
+                    "type": "string",
+                    "nullable": true
                   }
                 },
                 "required": [
@@ -7312,6 +7349,34 @@
                       "pattern": "^fil_[0-9a-hjkmnp-tv-z]{8,16}$"
                     },
                     "transcript": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "title": {
+                      "type": "string",
+                      "nullable": true,
+                      "maxLength": 200
+                    },
+                    "summary": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "durationSec": {
+                      "type": "integer",
+                      "nullable": true,
+                      "minimum": 0
+                    },
+                    "language": {
+                      "type": "string",
+                      "nullable": true,
+                      "minLength": 2,
+                      "maxLength": 16
+                    },
+                    "transcribeProvider": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "transcribedAt": {
                       "type": "string",
                       "nullable": true
                     },
@@ -7478,11 +7543,17 @@
                   "body": {
                     "type": "string",
                     "nullable": true
+                  },
+                  "title": {
+                    "type": "string",
+                    "nullable": true,
+                    "maxLength": 200
+                  },
+                  "summary": {
+                    "type": "string",
+                    "nullable": true
                   }
-                },
-                "required": [
-                  "body"
-                ]
+                }
               }
             }
           }
@@ -7526,6 +7597,34 @@
                       "pattern": "^fil_[0-9a-hjkmnp-tv-z]{8,16}$"
                     },
                     "transcript": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "title": {
+                      "type": "string",
+                      "nullable": true,
+                      "maxLength": 200
+                    },
+                    "summary": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "durationSec": {
+                      "type": "integer",
+                      "nullable": true,
+                      "minimum": 0
+                    },
+                    "language": {
+                      "type": "string",
+                      "nullable": true,
+                      "minLength": 2,
+                      "maxLength": 16
+                    },
+                    "transcribeProvider": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "transcribedAt": {
                       "type": "string",
                       "nullable": true
                     },
@@ -8203,6 +8302,337 @@
           },
           "404": {
             "description": "Not found or not owned.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "nullable": true
+                        },
+                        "requestId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/reports/{report}/notes/voice": {
+      "post": {
+        "tags": [
+          "voice",
+          "notes"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^rpt_[0-9a-hjkmnp-tv-z]{8,16}$"
+            },
+            "required": true,
+            "name": "report",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "fileId": {
+                    "type": "string",
+                    "pattern": "^fil_[0-9a-hjkmnp-tv-z]{8,16}$"
+                  },
+                  "language": {
+                    "type": "string",
+                    "minLength": 2,
+                    "maxLength": 16
+                  },
+                  "durationSec": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 3600
+                  },
+                  "fixtureName": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128,
+                    "pattern": "^[a-zA-Z0-9._-]+$"
+                  }
+                },
+                "required": [
+                  "fileId"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Voice note created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
+                    },
+                    "reportId": {
+                      "type": "string",
+                      "pattern": "^rpt_[0-9a-hjkmnp-tv-z]{8,16}$"
+                    },
+                    "authorId": {
+                      "type": "string",
+                      "pattern": "^usr_[0-9a-hjkmnp-tv-z]{8,16}$"
+                    },
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "text",
+                        "voice",
+                        "image",
+                        "document"
+                      ]
+                    },
+                    "body": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "fileId": {
+                      "type": "string",
+                      "nullable": true,
+                      "pattern": "^fil_[0-9a-hjkmnp-tv-z]{8,16}$"
+                    },
+                    "transcript": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "title": {
+                      "type": "string",
+                      "nullable": true,
+                      "maxLength": 200
+                    },
+                    "summary": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "durationSec": {
+                      "type": "integer",
+                      "nullable": true,
+                      "minimum": 0
+                    },
+                    "language": {
+                      "type": "string",
+                      "nullable": true,
+                      "minLength": 2,
+                      "maxLength": 16
+                    },
+                    "transcribeProvider": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "transcribedAt": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "createdAt": {
+                      "type": "string"
+                    },
+                    "updatedAt": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "reportId",
+                    "authorId",
+                    "kind",
+                    "body",
+                    "fileId",
+                    "transcript",
+                    "createdAt",
+                    "updatedAt"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "nullable": true
+                        },
+                        "requestId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "nullable": true
+                        },
+                        "requestId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Report or file not found / not owned.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "nullable": true
+                        },
+                        "requestId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Recording too long.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "nullable": true
+                        },
+                        "requestId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Upstream AI provider error.",
             "content": {
               "application/json": {
                 "schema": {

@@ -31,6 +31,8 @@ export default defineConfig({
       'screens/**/*.test.tsx',
       'components/**/*.test.ts',
       'components/**/*.test.tsx',
+      'features/**/*.test.ts',
+      'features/**/*.test.tsx',
       'app/**/*.test.ts',
       'app/**/*.test.tsx',
       '__tests__/**/*.test.ts',

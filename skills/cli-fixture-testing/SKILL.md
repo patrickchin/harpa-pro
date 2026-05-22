@@ -13,7 +13,7 @@ CLI binary against the local docker-compose stack.
 ## When to use
 
 - After adding/changing an AI fixture in `packages/ai-fixtures/fixtures/`.
-- After adding a new vendor to `VENDOR_MODELS` in `services/ai.ts`.
+- After touching `FIXTURE_CANONICALS` in `services/ai.ts`.
 - After touching `services/storage.ts` (R2Storage) or `auth/twilio.ts`.
 - Before submitting a PR that touches the report-generation pipeline.
 
@@ -50,42 +50,33 @@ REPORT_ID=$(harpa reports get $SLUG 1 --json \
   | python3 -c "import sys,json;print(json.load(sys.stdin)['id'])")
 harpa notes create $REPORT_ID --kind text --body "Crew of three on rebar."
 
-# 5. Generate a report body using the openai fixture
-harpa reports generate $SLUG 1 --fixture generate-report.full --json
+# 5. Generate a report body using the default voice-1 fixture
+harpa reports generate $SLUG 1 --fixture generate-report.voice-1 --json
 
-# 6. Cycle through vendors — route reads getAiSettings() and routes
-#    fixture lookup to <name>.<vendor>.json (openai keeps un-suffixed).
-for V in openai anthropic kimi google zai deepseek; do
-  M=$(case $V in
-    openai)    echo gpt-4o;;
-    anthropic) echo claude-3-5-sonnet;;
-    kimi)      echo moonshot-v1-32k;;
-    google)    echo gemini-1.5-pro;;
-    zai)       echo glm-4-plus;;
-    deepseek)  echo deepseek-reasoner;;
-  esac)
-  harpa settings ai set --vendor $V --model $M --json > /dev/null
-  harpa reports regenerate $SLUG 1 --fixture generate-report.full --json \
-    | python3 -c "import sys,json;d=json.load(sys.stdin);print('$V ->', d['report']['body']['summarySections'][0]['body'])"
+# 6. Cycle through the five voice scenarios — each fixture is a
+#    different site-walk transcript (voice-1 rich → voice-5 short).
+#    Vendor selection no longer routes fixtures; one OpenAI set covers
+#    every scenario.
+for N in 1 2 3 4 5; do
+  harpa reports regenerate $SLUG 1 --fixture generate-report.voice-$N --json \
+    | python3 -c "import sys,json;d=json.load(sys.stdin);print('voice-$N ->', d['report']['body']['summarySections'][0]['title'])"
 done
 ```
 
-Expected output of the per-vendor loop (each line proves the right
-fixture file was loaded — the `[vendor]` prefix is baked into the
-fixture's `summarySections[0].body`):
+Expected output (each line proves the right fixture file was loaded —
+the `summarySections[0].title` is baked into each fixture):
 
 ```
-openai     -> [openai] Steady progress on east footing despite minor delivery delay.
-anthropic  -> [anthropic] Steady progress on east footing despite minor delivery delay.
-kimi       -> [kimi] Steady progress on east footing despite minor delivery delay.
-google     -> [google] Steady progress on east footing despite minor delivery delay.
-zai        -> [zai] Steady progress on east footing despite minor delivery delay.
-deepseek   -> [deepseek] Steady progress on east footing despite minor delivery delay.
+voice-1 -> Concrete Pour Progress
+voice-2 -> Project Context
+voice-3 -> Site Conditions
+voice-4 -> Site Status
+voice-5 -> Drywall Phase Start
 ```
 
-If two vendors return the same string, the API isn't reading
-`getAiSettings()` (or the fixture file is missing — check
-`packages/ai-fixtures/fixtures/generate-report.full.<vendor>.json`).
+If two scenarios return the same title, the fixture name normalisation
+in `services/ai.ts` is broken — check `FIXTURE_CANONICALS.report` and
+re-run `pnpm --filter @harpa/ai-fixtures exec tsx scripts/refresh-hashes.ts`.
 
 ## Path conventions in the CLI
 

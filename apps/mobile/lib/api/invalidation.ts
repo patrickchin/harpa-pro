@@ -54,6 +54,8 @@ export const INVALIDATIONS: Record<string, InvalidationRule> = {
   // voice (read-only style mutations against AI; no caches to bust)
   useTranscribeVoiceMutation: INVALIDATIONS_NONE,
   useSummarizeVoiceMutation: INVALIDATIONS_NONE,
+  // voice aggregator: creates a note row, so bust note caches.
+  useCreateVoiceNoteMutation: ['reportNotes', 'report'],
 
   // settings
   useUpdateAiSettingsMutation: ['aiSettings'],

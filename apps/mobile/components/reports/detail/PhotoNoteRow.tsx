@@ -14,6 +14,7 @@ import { Camera } from 'lucide-react-native';
 
 import { CachedImage } from '@/components/ui/CachedImage';
 import { NoteCardHeader } from '@/components/notes/NoteCardHeader';
+import { NoteOptionsKebab } from '@/components/notes/NoteOptionsKebab';
 import { useFileSignedUrl } from '@/lib/uploads/useFileSignedUrl';
 import { colors } from '@/lib/design-tokens/colors';
 
@@ -25,6 +26,8 @@ export interface PhotoNoteRowProps {
   capturedAt: string | null;
   /** Opens the fullscreen preview modal. */
   onOpen?: (input: { fileId: string; title?: string }) => void;
+  /** Opens the shared note-options sheet for this row. */
+  onOpenOptions?: (noteId: string) => void;
 }
 
 export function PhotoNoteRow({
@@ -34,6 +37,7 @@ export function PhotoNoteRow({
   authorName,
   capturedAt,
   onOpen,
+  onOpenOptions,
 }: PhotoNoteRowProps) {
   const { data, isLoading } = useFileSignedUrl(fileId);
   const uri = (data as { url?: string } | undefined)?.url ?? null;
@@ -48,6 +52,14 @@ export function PhotoNoteRow({
         authorName={authorName ?? null}
         capturedAt={capturedAt}
         testIDSuffix={noteId}
+        trailing={
+          onOpenOptions ? (
+            <NoteOptionsKebab
+              noteId={noteId}
+              onPress={() => onOpenOptions(noteId)}
+            />
+          ) : null
+        }
       />
 
       <Pressable

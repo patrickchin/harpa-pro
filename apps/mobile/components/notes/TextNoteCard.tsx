@@ -2,20 +2,17 @@
  * TextNoteCard — one text note row in the timeline. Ported in
  * simplified form from
  * `../haru3-reports/apps/mobile/components/notes/TextNoteCard.tsx`
- * (branch `dev`). Shows a three-dot button that opens an options
- * dialog with Edit + Delete actions. Edit pops an inline textarea
- * dialog; Delete defers to the provider-owned delete-confirm
- * dialog via `onRemove(sourceIndex)`.
+ * (branch `dev`). Shows a three-dot button that opens the shared
+ * `NoteOptionsSheet` (Edit / Delete / metadata) via the parent's
+ * `onOpenOptions(sourceIndex)` callback.
  *
  * Pending (optimistic) notes show a spinner instead of the options
  * button, matching canonical behaviour.
  */
-import { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-native';
-import { MoreVertical } from 'lucide-react-native';
+import { ActivityIndicator, Text, View } from 'react-native';
 
-import { AppDialogSheet } from '@/components/primitives/AppDialogSheet';
 import { NoteCardHeader } from '@/components/notes/NoteCardHeader';
+import { NoteOptionsKebab } from '@/components/notes/NoteOptionsKebab';
 import { colors } from '@/lib/design-tokens/colors';
 import type { NoteEntry } from '@/lib/note-entry';
 
@@ -24,8 +21,9 @@ export interface TextNoteCardProps {
   sourceIndex: number;
   authorName?: string;
   readOnly?: boolean;
-  onRemove?: (sourceIndex: number) => void;
-  onEdit?: (sourceIndex: number, nextBody: string) => void;
+  /** Parent-supplied: opens the shared NoteOptionsSheet. When omitted
+   *  (or the entry is pending / readOnly) the kebab is hidden. */
+  onOpenOptions?: (sourceIndex: number) => void;
 }
 
 export function TextNoteCard({
@@ -33,148 +31,38 @@ export function TextNoteCard({
   sourceIndex,
   authorName,
   readOnly,
-  onRemove,
-  onEdit,
+  onOpenOptions,
 }: TextNoteCardProps) {
-  const [optionsOpen, setOptionsOpen] = useState(false);
-  const [editOpen, setEditOpen] = useState(false);
-  const [draft, setDraft] = useState(entry.text);
-
-  useEffect(() => {
-    setDraft(entry.text);
-  }, [entry.text]);
-
-  const canManage = !entry.isPending && !readOnly && Boolean(onRemove || onEdit);
-
-  const handleEdit = () => {
-    setOptionsOpen(false);
-    setDraft(entry.text);
-    // iOS RN can't present a second native Modal until the first
-    // finishes dismissing — defer the edit dialog so the options
-    // sheet has time to drop (matches saved-report.tsx pattern).
-    // 600ms tuned for iOS sim where slide dismissal can run long.
-    setTimeout(() => setEditOpen(true), 600);
-  };
-
-  const handleDelete = () => {
-    setOptionsOpen(false);
-    setTimeout(() => onRemove?.(sourceIndex), 600);
-  };
-
-  const handleSubmitEdit = () => {
-    const trimmed = draft.trim();
-    if (!trimmed || trimmed === entry.text) {
-      setEditOpen(false);
-      return;
-    }
-    onEdit?.(sourceIndex, trimmed);
-    setEditOpen(false);
-  };
+  const canManage = !entry.isPending && !readOnly && Boolean(onOpenOptions);
 
   return (
-    <>
-      <View
-        className="rounded-lg border border-border bg-card p-3 gap-1.5"
-        testID={`note-row-${entry.id ?? sourceIndex}`}
-      >
-        <NoteCardHeader
-          authorName={authorName}
-          capturedAt={entry.addedAt}
-          testIDSuffix={sourceIndex}
-        />
-        <View className="flex-row items-start gap-2">
-          <Text className="flex-1 text-base text-foreground" selectable>
-            {entry.text}
-          </Text>
-          {canManage ? (
-            <Pressable
-              onPress={() => setOptionsOpen(true)}
-              hitSlop={8}
-              accessibilityRole="button"
-              accessibilityLabel="Note options"
-              testID={`btn-text-note-options-${sourceIndex}`}
-              className="h-7 w-7 items-center justify-center rounded-md"
-            >
-              <MoreVertical size={16} color={colors.muted.foreground} />
-            </Pressable>
-          ) : entry.isPending ? (
-            <View
-              className="h-7 w-7 items-center justify-center"
-              testID={`text-note-pending-${sourceIndex}`}
-            >
-              <ActivityIndicator size="small" color={colors.muted.foreground} />
-            </View>
-          ) : null}
-        </View>
-      </View>
-
-      <AppDialogSheet
-        visible={optionsOpen}
-        title="Note options"
-        onClose={() => setOptionsOpen(false)}
-        actions={[
-          ...(onEdit
-            ? [
-                {
-                  label: 'Edit',
-                  variant: 'secondary' as const,
-                  onPress: handleEdit,
-                  accessibilityLabel: 'Edit note',
-                  testID: `dialog-action-text-note-edit-${sourceIndex}`,
-                },
-              ]
-            : []),
-          ...(onRemove
-            ? [
-                {
-                  label: 'Delete',
-                  variant: 'destructive' as const,
-                  onPress: handleDelete,
-                  accessibilityLabel: 'Delete note',
-                  testID: `btn-delete-note-${entry.id ?? sourceIndex}`,
-                },
-              ]
-            : []),
-          {
-            label: 'Cancel',
-            variant: 'quiet' as const,
-            onPress: () => setOptionsOpen(false),
-            accessibilityLabel: 'Cancel note options',
-          },
-        ]}
+    <View
+      className="rounded-lg border border-border bg-card p-3 gap-1.5"
+      testID={`note-row-${sourceIndex}`}
+    >
+      <NoteCardHeader
+        authorName={authorName}
+        capturedAt={entry.addedAt}
+        testIDSuffix={sourceIndex}
       />
-
-      <AppDialogSheet
-        visible={editOpen}
-        title="Edit note"
-        onClose={() => setEditOpen(false)}
-        actions={[
-          {
-            label: 'Save',
-            variant: 'default' as const,
-            onPress: handleSubmitEdit,
-            disabled: !draft.trim() || draft.trim() === entry.text,
-            accessibilityLabel: 'Save note edits',
-            testID: `dialog-action-text-note-save-${sourceIndex}`,
-          },
-          {
-            label: 'Cancel',
-            variant: 'quiet' as const,
-            onPress: () => setEditOpen(false),
-            accessibilityLabel: 'Cancel note edits',
-          },
-        ]}
-      >
-        <TextInput
-          value={draft}
-          onChangeText={setDraft}
-          multiline
-          autoFocus
-          textAlignVertical="top"
-          className="min-h-[96px] rounded-md border border-border bg-background p-3 text-base text-foreground"
-          testID={`input-text-note-edit-${sourceIndex}`}
-        />
-      </AppDialogSheet>
-    </>
+      <View className="flex-row items-start gap-2">
+        <Text className="flex-1 text-base text-foreground" selectable>
+          {entry.text}
+        </Text>
+        {canManage ? (
+          <NoteOptionsKebab
+            noteId={sourceIndex}
+            onPress={() => onOpenOptions?.(sourceIndex)}
+          />
+        ) : entry.isPending ? (
+          <View
+            className="h-7 w-7 items-center justify-center"
+            testID={`text-note-pending-${sourceIndex}`}
+          >
+            <ActivityIndicator size="small" color={colors.muted.foreground} />
+          </View>
+        ) : null}
+      </View>
+    </View>
   );
 }

@@ -22,7 +22,7 @@ interface NotesTabPaneProps {
 
 export const NotesTabPane = forwardRef<ScrollView, NotesTabPaneProps>(
   function NotesTabPane({ width }, ref) {
-    const { timeline, notes, members } = useGenerateReport();
+    const { timeline, notes, members, voice } = useGenerateReport();
 
     return (
       <View style={{ width }} className="flex-1">
@@ -36,8 +36,9 @@ export const NotesTabPane = forwardRef<ScrollView, NotesTabPaneProps>(
             notes={timeline.items}
             isLoading={timeline.isLoading}
             memberNames={members}
-            onRemoveNote={notes.setDeleteIndex}
+            onDeleteNote={notes.deleteAt}
             onEditNote={notes.canEdit ? notes.update : undefined}
+            onRetryVoice={voice.retry}
           />
 
           {timeline.items.length === 0 && !timeline.isLoading ? (

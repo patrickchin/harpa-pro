@@ -1,0 +1,16 @@
+{
+  "vendor": "openai",
+  "model": "whisper-1",
+  "fixtureName": "transcribe.voice-5",
+  "recordedAt": "2026-05-12T00:00:00.000Z",
+  "requestHash": "sha256:9e4636ad7e2518e3ee358cabc77267a2c277a6331bd19bbfe00128cf6009ae1d",
+  "request": {
+    "kind": "transcribe",
+    "vendor": "openai",
+    "audioUrl": "https://fixtures.harpa.example/voice-5.fixture.m4a"
+  },
+  "response": {
+    "text": "yeah so the electricians have agreed to like start work on the drywall today and but they are having issues with the truck coming in because like because of the waterlog situation at site so we'd see if the work can actually be done today or we'd have to like postpone it for a couple of until like the site is good for work so yeah",
+    "durationSec": 42.8
+  }
+}

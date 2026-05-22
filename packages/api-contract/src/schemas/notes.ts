@@ -12,6 +12,20 @@ export const note = z.object({
   body: z.string().nullable(),
   fileId: fileId.nullable(),
   transcript: z.string().nullable(),
+  // Generic note-level fields (migration 0004). Nullable on every
+  // kind. Today the voice aggregator (`POST /reports/{report}/notes/voice`)
+  // is the only writer — it stores the LLM summary in `summary` and a
+  // short headline (≤ 200 chars) in `title`. Text / image / document
+  // notes leave them null but may populate them in the future
+  // (e.g. user-supplied document title, photo caption).
+  title: z.string().max(200).nullable().optional(),
+  summary: z.string().nullable().optional(),
+  // Voice-only diagnostics (migration 0004 / arch-voice-pipeline.md §D3).
+  // Populated only on `kind='voice'` rows; nullable elsewhere.
+  durationSec: z.number().int().min(0).nullable().optional(),
+  language: z.string().min(2).max(16).nullable().optional(),
+  transcribeProvider: z.string().nullable().optional(),
+  transcribedAt: isoDateTime.nullable().optional(),
   createdAt: isoDateTime,
   updatedAt: isoDateTime,
 });
@@ -22,8 +36,49 @@ export const createNoteRequest = z.object({
   body: z.string().nullable().optional(),
   fileId: fileId.nullable().optional(),
   transcript: z.string().nullable().optional(),
+  /** Optional short headline. Capped at 200 chars (matches the DB
+   *  CHECK constraint on `app.notes.title`). */
+  title: z.string().max(200).nullable().optional(),
+  /** Optional long-form summary. */
+  summary: z.string().nullable().optional(),
 });
 
+/**
+ * PATCH semantics: `undefined` leaves a field unchanged, `null`
+ * clears it, a string overwrites. At least one field must be
+ * provided (enforced at the route boundary).
+ */
 export const updateNoteRequest = z.object({
-  body: z.string().nullable(),
+  body: z.string().nullable().optional(),
+  title: z.string().max(200).nullable().optional(),
+  summary: z.string().nullable().optional(),
 });
+
+/**
+ * Voice-note aggregator request body
+ * (`POST /reports/{report}/notes/voice`).
+ *
+ * The aggregator transcribes + summarises `fileId` and inserts one
+ * `app.notes` row in one scoped transaction. Idempotent on the
+ * caller-supplied `Idempotency-Key` header (mobile sends
+ * `voice:<fileId>:<reportId>` so retries dedupe to one note row and
+ * one pair of `llm_usage_events` rows). See
+ * docs/v4/arch-voice-pipeline.md §D2.
+ *
+ * `fixtureName` mirrors the existing `/voice/transcribe` body — used
+ * only by the test harness when it wants to pin a specific
+ * @harpa/ai-fixtures replay payload.
+ */
+const fixtureName = z
+  .string()
+  .min(1)
+  .max(128)
+  .regex(/^[a-zA-Z0-9._-]+$/, 'fixtureName must match /^[a-zA-Z0-9._-]+$/');
+
+export const createVoiceNoteRequest = z.object({
+  fileId,
+  language: z.string().min(2).max(16).optional(),
+  durationSec: z.number().int().min(1).max(60 * 60).optional(),
+  fixtureName: fixtureName.optional(),
+});
+export type CreateVoiceNoteRequest = z.infer<typeof createVoiceNoteRequest>;

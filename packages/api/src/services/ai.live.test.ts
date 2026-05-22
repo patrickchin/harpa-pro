@@ -73,14 +73,22 @@ describe('AI live default wiring', () => {
     ).toBe('Bearer sk-test-openai');
   });
 
-  it('transcribe() with no caller fixtureName throws LiveAdapterMissingError (openai whisper adapter pending)', async () => {
-    const fetchSpy = vi.spyOn(globalThis, 'fetch');
+  it('transcribe() with no caller fixtureName hits api.groq.com', async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(okBytes())   // fetch audio from R2
+      .mockResolvedValueOnce(
+        okJson({ task: 'transcribe', language: 'English', duration: 10, text: 'hello groq', segments: [] }),
+      ); // Groq transcription API
 
     const { transcribe } = await loadAi();
-    await expect(
-      transcribe({ audioUrl: 'https://r2.example/voice.m4a?sig=abc' }),
-    ).rejects.toThrow(/transcribe/i);
-    expect(fetchSpy).not.toHaveBeenCalled();
+    const out = await transcribe({ audioUrl: 'https://r2.example/voice.m4a?sig=abc' });
+
+    expect(out.text).toBe('hello groq');
+    expect(out.vendor).toBe('groq');
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+    const [url] = fetchSpy.mock.calls[1] as FetchArgs;
+    expect(String(url)).toBe('https://api.groq.com/openai/v1/audio/transcriptions');
   });
 
   it('caller-supplied fixtureName forces replay even with AI_LIVE=1', async () => {

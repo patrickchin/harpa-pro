@@ -191,6 +191,38 @@ export function createUploadQueue(
 
   function enqueue(input: EnqueueInput): Promise<UploadResult> {
     return new Promise<UploadResult>((resolve, reject) => {
+      // Dedupe by clientId so accidental double-tap on Save doesn't
+      // enqueue the same upload twice. Match against any non-completed,
+      // non-failed job — completed jobs already created their file row
+      // server-side; failed jobs are retried explicitly via retry().
+      if (input.clientId) {
+        const dup = jobs.find(
+          (j) =>
+            j.input.clientId === input.clientId &&
+            j.status !== 'failed',
+        );
+        if (dup) {
+          if (dup.status === 'completed') {
+            resolve({
+              file: { id: dup.fileId ?? '' } as UploadResult['file'],
+            });
+            return;
+          }
+          // Hijack the dup's resolvers so this caller's promise follows
+          // the existing job's outcome.
+          const prevResolve = dup.resolve;
+          const prevReject = dup.reject;
+          dup.resolve = (r) => {
+            prevResolve(r);
+            resolve(r);
+          };
+          dup.reject = (e) => {
+            prevReject(e);
+            reject(e);
+          };
+          return;
+        }
+      }
       const job: InternalJob = {
         id: nextJobId(),
         input,

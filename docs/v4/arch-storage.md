@@ -110,6 +110,36 @@ The attachment sheet on the report Notes tab offers two categories:
   kind enum + server-side pipeline already accept `document`/`pdf`,
   but the UI is deferred (see `plan-camera-upload-pipeline.md`).
 
+### Upload queue persistence (mobile)
+
+The in-memory `UploadQueue` survives screen navigation but, by
+itself, not app restarts. To honour "kill the app mid-upload,
+relaunch, resume automatically" we wire an MMKV-backed
+`QueuePersistence` (`apps/mobile/lib/uploads/persistence.ts`) into
+`QueueProvider`:
+
+- **On every state transition** the queue serialises a `PersistedJob`
+  for each row (`id`, `input`, `status`, `attempt`, `progress`,
+  `error`, `fileId`) into the `upload-queue` MMKV instance under
+  key `v1`. MMKV is synchronous so this stays out of the hot path's
+  await graph.
+- **At provider mount** we load the blob, drop jobs whose
+  `input.sourceUri` no longer resolves via
+  `new File(uri).exists` (the OS sweeps temp capture dirs
+  aggressively), coerce in-flight statuses
+  (`presigning|uploading|registering|creating_note`) to `pending`
+  (presign + R2 PUT are idempotent for our usage — each retry mints
+  a fresh key), and hand the survivors to `createUploadQueue` as
+  `initialJobs`. The driver kicks immediately.
+- **Promise handles are not persisted.** Rehydrated jobs run
+  fire-and-forget; the UI just re-subscribes via `useFileUpload()`
+  and observes the new state transitions.
+- **Test seam.** `createInMemoryPersistence()` satisfies the same
+  contract for Vitest. The default wiring (Pitfall 13) is exercised
+  by the test that stubs `react-native-mmkv` with a `Map`-backed
+  factory in `vitest.setup.ts` — the queue + persistence code path
+  runs unchanged.
+
 ## Security
 
 - Presign URLs are scoped to PUT, content-type, content-length, and

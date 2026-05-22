@@ -582,6 +582,36 @@ vi.mock('expo-file-system', () => {
   };
 });
 
+// `react-native-mmkv` ships a native module. Stub with an in-memory
+// `Map` so the upload-queue persistence layer round-trips in Vitest.
+vi.mock('react-native-mmkv', () => {
+  const stores = new Map<string, Map<string, string>>();
+  function createMMKV(opts?: { id?: string }) {
+    const id = opts?.id ?? 'default';
+    let store = stores.get(id);
+    if (!store) {
+      store = new Map();
+      stores.set(id, store);
+    }
+    return {
+      id,
+      getString(key: string): string | undefined {
+        return store!.get(key);
+      },
+      set(key: string, value: string | number | boolean): void {
+        store!.set(key, String(value));
+      },
+      remove(key: string): boolean {
+        return store!.delete(key);
+      },
+      clearAll(): void {
+        store!.clear();
+      },
+    };
+  }
+  return { createMMKV };
+});
+
 // `expo-media-library` ships native bindings. Default stub: granted +
 // no-op save. Tests can re-mock per-file to assert call counts.
 vi.mock('expo-media-library', () => ({

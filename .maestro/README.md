@@ -164,6 +164,21 @@ the end via the real `dialog-action-0` confirm button.
   `maestro-driver-ios` xcodebuild process between attempts.
   Roughly 1-in-5 frequency on iPhone 17 Pro / iOS 26.5 sim.
 
+## `p3-12-camera.yaml` (camera capture mirror)
+
+Drives the `(dev)/camera-capture` mirror — shutter, count, Done
+handoff. Pre-flight identical to `core-end-to-end.yaml`; runs against
+docker compose.
+
+## `p3-15-upload.yaml` (camera → upload → image-note round-trip)
+
+Full P3.15 pipeline: sign in → open report → Notes → attachment →
+camera → shutter → Done → verify `note-row-0` rendered by
+`NoteTimeline` after `runUploadJob` completes against the docker
+compose stack. No `pnpm test:e2e` script exists in `apps/mobile` —
+invoke via `maestro test .maestro/p3-15-upload.yaml` (wrap with
+`gtimeout 240` for batched runs, see infra-quirks above).
+
 ## `tmp-p3-smoke/`
 
 Throwaway visual smoke flow targeting the `(dev)` gallery from

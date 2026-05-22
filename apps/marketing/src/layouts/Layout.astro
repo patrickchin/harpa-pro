@@ -5,12 +5,17 @@ import "../styles/globals.css";
 interface Props {
   title?: string;
   description?: string;
+  image?: string;
 }
 
 const {
   title = "Harpa Pro — voice-driven field reports",
   description = "Speak. Get a structured report.",
+  image = "/og-image.png",
 } = Astro.props;
+
+const canonicalUrl = new URL(Astro.url.pathname, Astro.site);
+const ogImageUrl = new URL(image, Astro.site);
 ---
 
 <!doctype html>
@@ -20,7 +25,23 @@ const {
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content={description} />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="canonical" href={canonicalUrl} />
     <title>{title}</title>
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Harpa Pro" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonicalUrl} />
+    <meta property="og:image" content={ogImageUrl} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Harpa Pro — voice-driven field reports" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={ogImageUrl} />
   </head>
   <body class="min-h-screen bg-background text-foreground antialiased">
     <slot />

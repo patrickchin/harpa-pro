@@ -75,7 +75,7 @@ export function TextNoteCard({
     <>
       <View
         className="rounded-lg border border-border bg-card p-3 gap-1.5"
-        testID={`note-row-${sourceIndex}`}
+        testID={`note-row-${entry.id ?? sourceIndex}`}
       >
         <NoteCardHeader
           authorName={authorName}
@@ -131,7 +131,7 @@ export function TextNoteCard({
                   variant: 'destructive' as const,
                   onPress: handleDelete,
                   accessibilityLabel: 'Delete note',
-                  testID: `dialog-action-text-note-delete-${sourceIndex}`,
+                  testID: `btn-delete-note-${entry.id ?? sourceIndex}`,
                 },
               ]
             : []),

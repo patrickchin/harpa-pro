@@ -222,6 +222,7 @@ export function ProjectEdit({
                     disabled: isDeleting,
                     accessibilityLabel: 'Confirm delete project',
                     align: 'start',
+                    testID: 'confirm-delete-project',
                   },
                   {
                     label: dialog.cancelLabel ?? 'Cancel',

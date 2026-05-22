@@ -47,7 +47,7 @@ export function GenerateReportInputBar() {
               <Paperclip size={20} color={colors.muted.foreground} />
             </Pressable>
             <TextInput
-              testID="input-note"
+              testID="input-text-note"
               value={notes.input}
               onChangeText={notes.setInput}
               placeholder="Type a site note..."
@@ -63,7 +63,7 @@ export function GenerateReportInputBar() {
 
         {notes.input.trim() ? (
           <Button
-            testID="btn-add-note"
+            testID="btn-send-text-note"
             size="lg"
             className="min-h-[68px] min-w-[84px] rounded-xl px-4"
             onPress={notes.add}

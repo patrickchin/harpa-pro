@@ -65,6 +65,7 @@ export function GenerateReportDialogs() {
             },
             disabled: draft.isFinalizing || !hasReport,
             accessibilityLabel: 'Confirm finalize report',
+            testID: 'confirm-finalize',
           },
           {
             label: finalizeConfirmCopy.cancelLabel ?? 'Cancel',

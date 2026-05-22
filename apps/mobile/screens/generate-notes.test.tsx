@@ -103,18 +103,22 @@ describe('GenerateNotes', () => {
   it('hides the input bar + action row when canWrite=false', () => {
     const tree = render(<GenerateNotes {...baseProps} canWrite={false} />);
     expect(
-      tree.root.findAllByProps({ testID: 'input-note' }),
+      tree.root.findAllByProps({ testID: 'input-text-note' }),
     ).toHaveLength(0);
     expect(
       tree.root.findAllByProps({ testID: 'btn-generate-update-report' }),
+    ).toHaveLength(0);
+    expect(
+      tree.root.findAllByProps({ testID: 'btn-generate-report' }),
     ).toHaveLength(0);
   });
 
   it('shows input bar + action row when canWrite=true', () => {
     const tree = render(<GenerateNotes {...baseProps} />);
-    expect(() => tree.root.findByProps({ testID: 'input-note' })).not.toThrow();
+    expect(() => tree.root.findByProps({ testID: 'input-text-note' })).not.toThrow();
+    // No report yet → first-generate button
     expect(() =>
-      tree.root.findByProps({ testID: 'btn-generate-update-report' }),
+      tree.root.findByProps({ testID: 'btn-generate-report' }),
     ).not.toThrow();
   });
 
@@ -126,19 +130,19 @@ describe('GenerateNotes', () => {
     // Type into the input
     act(() => {
       tree.root
-        .findByProps({ testID: 'input-note' })
+        .findByProps({ testID: 'input-text-note' })
         .props.onChangeText('  Slab pour scheduled  ');
     });
     // Press Add (only rendered when input has non-whitespace content)
     act(() => {
-      tree.root.findByProps({ testID: 'btn-add-note' }).props.onPress();
+      tree.root.findByProps({ testID: "btn-send-text-note" }).props.onPress();
     });
     expect(onAddTextNote).toHaveBeenCalledWith('Slab pour scheduled');
   });
 
   it('does NOT render the Add button while input is empty', () => {
     const tree = render(<GenerateNotes {...baseProps} />);
-    expect(tree.root.findAllByProps({ testID: 'btn-add-note' })).toHaveLength(0);
+    expect(tree.root.findAllByProps({ testID: "btn-send-text-note" })).toHaveLength(0);
     expect(() =>
       tree.root.findByProps({ testID: 'btn-camera-capture' }),
     ).not.toThrow();
@@ -172,7 +176,7 @@ describe('GenerateNotes', () => {
     // Tap "Delete" in the options sheet.
     act(() => {
       tree.root
-        .findByProps({ testID: 'dialog-action-text-note-delete-0' })
+        .findByProps({ testID: 'btn-delete-note-n1' })
         .props.onPress();
     });
     // Delete handler defers the onRemove call by 350ms so the

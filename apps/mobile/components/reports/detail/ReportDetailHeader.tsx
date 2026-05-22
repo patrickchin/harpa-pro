@@ -21,6 +21,8 @@ interface ReportDetailHeaderProps {
   onOpenActions: () => void;
   actionsDisabled: boolean;
   actions?: ReactNode;
+  /** Per-project report number — used to build `report-title-N` testID. */
+  reportNumber?: number | null;
 }
 
 export function ReportDetailHeader({
@@ -29,7 +31,9 @@ export function ReportDetailHeader({
   onOpenActions,
   actionsDisabled,
   actions,
+  reportNumber,
 }: ReportDetailHeaderProps) {
+  const numStr = reportNumber ?? 'x';
   return (
     <View className="px-5 py-4">
       <ScreenHeader
@@ -38,6 +42,7 @@ export function ReportDetailHeader({
         onBack={onBack}
         backLabel="Reports"
         actions={actions}
+        titleTestID={`report-title-${numStr}`}
       />
 
       <View className="mt-3 flex-row items-center justify-between">

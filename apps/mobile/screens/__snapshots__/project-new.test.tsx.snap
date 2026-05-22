@@ -218,7 +218,7 @@ exports[`ProjectNew > matches snapshot at default props 1`] = `
               undefined,
             ]
           }
-          testID="btn-submit-project"
+          testID="btn-save-project"
         >
           <rn-Text
             className="text-accent-foreground font-semibold text-lg"

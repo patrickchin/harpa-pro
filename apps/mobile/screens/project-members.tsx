@@ -78,10 +78,13 @@ const ROLE_ICONS: Record<MemberRole, typeof Crown> = {
   viewer: Eye,
 };
 
-function RoleBadge({ role }: { role: MemberRole }) {
+function RoleBadge({ role, userId }: { role: MemberRole; userId?: string }) {
   const Icon = ROLE_ICONS[role];
   return (
-    <View className="flex-row items-center gap-1 rounded-md border border-border bg-surface-muted px-2 py-0.5">
+    <View
+      className="flex-row items-center gap-1 rounded-md border border-border bg-surface-muted px-2 py-0.5"
+      testID={userId ? `member-role-badge-${userId}` : undefined}
+    >
       <Icon size={12} color={colors.muted.foreground} />
       <Text className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
         {ROLE_LABELS[role]}
@@ -101,7 +104,12 @@ function MemberItem({
 }) {
   const displayName = member.displayName ?? 'Unknown';
   return (
-    <Card variant="default" padding="md" className="flex-row items-center gap-3">
+    <Card
+      variant="default"
+      padding="md"
+      className="flex-row items-center gap-3"
+      testID={`member-row-${member.userId}`}
+    >
       <View className="h-10 w-10 items-center justify-center rounded-full border border-border bg-surface-muted">
         <Text className="text-sm font-bold text-muted-foreground">
           {displayName.charAt(0).toUpperCase()}
@@ -115,7 +123,7 @@ function MemberItem({
           >
             {displayName}
           </Text>
-          <RoleBadge role={member.role} />
+          <RoleBadge role={member.role} userId={member.userId} />
         </View>
         <Text className="text-sm text-muted-foreground" numberOfLines={1}>
           {member.phone}
@@ -171,9 +179,9 @@ function AddMemberForm({
         }}
         editable={!isPending}
         keyboardType="phone-pad"
-        testID="input-invite-phone"
+        testID="input-member-phone"
       />
-      <View className="flex-row gap-2">
+      <View className="flex-row gap-2" testID="picker-member-role">
         {(['editor', 'viewer'] as const).map((r) => (
           <Button
             key={r}
@@ -181,7 +189,7 @@ function AddMemberForm({
             size="sm"
             onPress={() => setRole(r)}
             disabled={isPending}
-            testID={`btn-invite-role-${r}`}
+            testID={`picker-member-role-${r}`}
           >
             {ROLE_LABELS[r]}
           </Button>
@@ -197,7 +205,7 @@ function AddMemberForm({
         size="default"
         onPress={submit}
         loading={isPending}
-        testID="btn-invite-submit"
+        testID="btn-add-member"
       >
         {isPending ? 'Inviting…' : 'Send invite'}
       </Button>
@@ -307,7 +315,7 @@ export function ProjectMembers({
                 onPress={() => setShowAdd(true)}
                 accessibilityRole="button"
                 accessibilityLabel="Add member"
-                testID="btn-add-member"
+                testID="btn-show-add-member"
               >
                 <View className="flex-row items-center gap-3 rounded-lg border border-dashed border-border bg-surface-muted p-3">
                   <View className="h-10 w-10 items-center justify-center rounded-md border border-border bg-card">
@@ -400,6 +408,7 @@ export function ProjectMembers({
               label: isRemovePending ? 'Removing…' : removeCopy.confirmLabel,
               variant: removeCopy.confirmVariant,
               disabled: isRemovePending,
+              testID: 'confirm-remove-member',
               onPress: () => {
                 onRemoveMember(memberToRemove.userId);
                 setMemberToRemove(null);

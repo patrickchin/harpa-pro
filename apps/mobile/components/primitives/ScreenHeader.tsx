@@ -38,6 +38,8 @@ export interface ScreenHeaderProps {
    * dev mirrors and detail screens that opt out leave it unset.
    */
   actions?: ReactNode;
+  /** Override the default `screen-header-title` testID on the title Text. */
+  titleTestID?: string;
 }
 
 export function ScreenHeader({
@@ -50,6 +52,7 @@ export function ScreenHeader({
   titleAccessory,
   className,
   actions,
+  titleTestID,
 }: ScreenHeaderProps) {
   const hasSupportingRow = Boolean(eyebrow || subtitle || titleAccessory);
 
@@ -72,7 +75,7 @@ export function ScreenHeader({
         ) : null}
 
         <Text
-          testID="screen-header-title"
+          testID={titleTestID ?? 'screen-header-title'}
           className="min-w-0 flex-1 text-title-sm text-foreground"
           numberOfLines={1}
           ellipsizeMode="tail"

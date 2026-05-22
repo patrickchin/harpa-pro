@@ -29,7 +29,7 @@ interface ReportTabPaneProps {
 }
 
 export function ReportTabPane({ width }: ReportTabPaneProps) {
-  const { generation, draft, tabs, handleRegenerate } = useGenerateReport();
+  const { generation, draft, tabs, handleRegenerate, reportNumber } = useGenerateReport();
 
   // Skeleton shown on the "no report yet" empty state. Built via
   // `createEmptyReport()` so the same defaults (e.g. `visitDate` =
@@ -117,7 +117,7 @@ export function ReportTabPane({ width }: ReportTabPaneProps) {
 
             <CompletenessCard report={generation.report} />
 
-            <ReportView report={generation.report} />
+            <ReportView report={generation.report} reportNumber={reportNumber ?? undefined} />
 
             {/* TODO(P3.8/P3.9): mount ReportPhotos here once the upload
                 pipeline + `useLocalReportNotes` are ported. ReportPhotos

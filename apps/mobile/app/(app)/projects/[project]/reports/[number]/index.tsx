@@ -200,6 +200,7 @@ export default function SavedReportRoute() {
     <SavedReport
       report={displayReport}
       reportStatus={reportStatus}
+      reportNumber={reportNumber}
       projectName={projectQuery.data?.name ?? null}
       noteRows={noteRows}
       isLoading={reportQuery.isLoading}

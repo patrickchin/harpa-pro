@@ -150,7 +150,7 @@ export function ReportActionsMenu({
                 size="lg"
                 className="justify-start"
                 accessibilityLabel="Move report back to draft"
-                testID="btn-report-unfinalize"
+                testID="btn-unfinalize-report"
                 onPress={onUnfinalize}
                 disabled={isUnfinalizing}
               >

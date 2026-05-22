@@ -141,7 +141,7 @@ export function ReportsList({
           renderItem={({ item, index }) => (
             <View className="px-5 pt-3">
               <Pressable
-                testID={`report-row-${item.status}-${index}`}
+                testID={`report-row-${item.number}`}
                 onPress={() => onOpenReport(item)}
                 accessibilityRole="button"
               >

@@ -23,13 +23,16 @@ import { colors } from '@/lib/design-tokens/colors';
 
 interface ReportViewProps {
   report: GeneratedSiteReport;
+  /** Per-project report number — used to build testIDs for Maestro selectors. */
+  reportNumber?: number;
 }
 
-export function ReportView({ report }: ReportViewProps) {
+export function ReportView({ report, reportNumber }: ReportViewProps) {
   const { sections } = report.report;
+  const numStr = reportNumber ?? 'x';
 
   return (
-    <View className="gap-3">
+    <View className="gap-3" testID={`report-view-${numStr}`}>
       <StatBar report={report} />
 
       <WeatherStrip report={report} />
@@ -40,7 +43,10 @@ export function ReportView({ report }: ReportViewProps) {
             title="Summary"
             icon={<FileText size={16} color={colors.foreground} />}
           />
-          <Text className="mt-4 text-base leading-relaxed text-muted-foreground">
+          <Text
+            className="mt-4 text-base leading-relaxed text-muted-foreground"
+            testID={`report-summary-${numStr}`}
+          >
             {report.report.meta.summary}
           </Text>
         </Card>
@@ -60,7 +66,12 @@ export function ReportView({ report }: ReportViewProps) {
             Summary Sections
           </Text>
           {sections.map((section, i) => (
-            <SummarySectionCard key={`${section.title}-${i}`} section={section} />
+            <SummarySectionCard
+              key={`${section.title}-${i}`}
+              section={section}
+              reportNumber={reportNumber}
+              sectionIndex={i}
+            />
           ))}
         </View>
       )}

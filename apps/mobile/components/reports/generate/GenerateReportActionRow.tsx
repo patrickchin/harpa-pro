@@ -39,7 +39,7 @@ export function GenerateReportActionRow() {
     return (
       <View className="mx-5 mt-3">
         <Button
-          testID="btn-generate-update-report"
+          testID={!hasReport ? 'btn-generate-report' : 'btn-generate-update-report'}
           variant="secondary"
           size="default"
           className="w-full"

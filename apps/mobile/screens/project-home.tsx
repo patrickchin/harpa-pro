@@ -122,7 +122,7 @@ export function ProjectHome({
       description: 'Invite teammates to this project',
       icon: Users,
       onPress: onPressMembers,
-      testID: 'btn-open-members',
+      testID: 'link-project-members',
     },
   ];
 
@@ -205,7 +205,7 @@ export function ProjectHome({
                 onPress={onPressEdit}
                 className="shrink-0 flex-row items-center gap-1.5"
                 accessibilityLabel="Edit project details"
-                testID="btn-edit-project"
+                testID="btn-project-edit"
               >
                 <Pencil size={14} color={colors.foreground} />
                 <Text className="text-sm font-semibold text-foreground">

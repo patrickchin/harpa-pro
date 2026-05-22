@@ -96,7 +96,7 @@ export function ProjectNew({ isPending, errorMessage, onBack, onSubmit, actions 
               <InlineNotice tone="danger">{noticeMessage}</InlineNotice>
             ) : null}
             <Button
-              testID="btn-submit-project"
+              testID="btn-save-project"
               variant="hero"
               size="xl"
               className="w-full"

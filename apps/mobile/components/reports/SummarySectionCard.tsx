@@ -15,10 +15,14 @@ import { colors } from '@/lib/design-tokens/colors';
 
 interface SummarySectionCardProps {
   section: GeneratedReportSection;
+  reportNumber?: number;
+  sectionIndex?: number;
 }
 
-export function SummarySectionCard({ section }: SummarySectionCardProps) {
+export function SummarySectionCard({ section, reportNumber, sectionIndex }: SummarySectionCardProps) {
   const Icon = SECTION_ICONS[section.title] || ClipboardList;
+  const numStr = reportNumber ?? 'x';
+  const idx = sectionIndex ?? 0;
 
   return (
     <Card variant="default" padding="lg">
@@ -26,7 +30,10 @@ export function SummarySectionCard({ section }: SummarySectionCardProps) {
         title={section.title}
         icon={<Icon size={16} color={colors.foreground} />}
       />
-      <Text className="mt-4 text-base leading-relaxed text-muted-foreground">
+      <Text
+        className="mt-4 text-base leading-relaxed text-muted-foreground"
+        testID={`report-summary-${numStr}-section-${idx}`}
+      >
         {section.content}
       </Text>
     </Card>

@@ -65,6 +65,11 @@ export interface SavedReportProps {
   report: GeneratedSiteReport | null;
   /** Saved-report status — controls Edit tab visibility + read-only chrome. */
   reportStatus: SavedReportStatus | null;
+  /**
+   * Per-project report number — used to build stable testIDs for Maestro.
+   * Optional for backward-compat with dev mirrors / tests.
+   */
+  reportNumber?: number | null;
   /** Project display name (used as the PDF site name). */
   projectName: string | null;
   /** Source-note rows (text/voice/photo/document) backing the Notes tab. */
@@ -120,6 +125,7 @@ export function SavedReport(props: SavedReportProps) {
   const {
     report,
     reportStatus,
+    reportNumber,
     projectName,
     noteRows,
     isLoading,
@@ -300,6 +306,7 @@ export function SavedReport(props: SavedReportProps) {
             isSaving || isExporting || isDeleting || isUnfinalizing
           }
           actions={actions}
+          reportNumber={reportNumber}
         />
 
         <ReportDetailTabBar
@@ -329,7 +336,7 @@ export function SavedReport(props: SavedReportProps) {
             className="px-5"
             testID="saved-report-pane"
           >
-            <ReportView report={displayReport} />
+            <ReportView report={displayReport} reportNumber={reportNumber ?? undefined} />
             <View className="mt-4">
               <ReportPhotos
                 noteRows={noteRows}

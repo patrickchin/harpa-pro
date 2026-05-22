@@ -231,7 +231,7 @@ describe('SavedReport', () => {
     });
     act(() => {
       tree.root
-        .findByProps({ testID: 'btn-report-unfinalize' })
+        .findByProps({ testID: 'btn-unfinalize-report' })
         .props.onPress();
     });
     await act(async () => {

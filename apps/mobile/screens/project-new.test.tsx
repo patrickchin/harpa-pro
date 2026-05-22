@@ -37,14 +37,14 @@ describe('ProjectNew', () => {
 
   it('puts the submit button in loading state when isPending', () => {
     const tree = render(<ProjectNew {...defaults} isPending />);
-    const button = tree.root.findByProps({ testID: 'btn-submit-project' });
+    const button = tree.root.findByProps({ testID: "btn-save-project" });
     expect(button.props.loading).toBe(true);
   });
 
   it('does NOT call onSubmit when the name field is empty (shows validation notice instead)', () => {
     const onSubmit = vi.fn();
     const tree = render(<ProjectNew {...defaults} onSubmit={onSubmit} />);
-    const button = tree.root.findByProps({ testID: 'btn-submit-project' });
+    const button = tree.root.findByProps({ testID: "btn-save-project" });
     act(() => button.props.onPress());
     expect(onSubmit).not.toHaveBeenCalled();
     expect(JSON.stringify(tree.toJSON())).toContain('Project name is required.');
@@ -61,7 +61,7 @@ describe('ProjectNew', () => {
       addrInput.props.onChangeText('  2400 Highland Ave  ');
       clientInput.props.onChangeText('  Acme Co.  ');
     });
-    const button = tree.root.findByProps({ testID: 'btn-submit-project' });
+    const button = tree.root.findByProps({ testID: "btn-save-project" });
     act(() => button.props.onPress());
     expect(onSubmit).toHaveBeenCalledTimes(1);
     expect(onSubmit).toHaveBeenCalledWith({
@@ -77,7 +77,7 @@ describe('ProjectNew', () => {
     act(() => {
       tree.root.findByProps({ testID: 'input-project-name' }).props.onChangeText('Solo');
     });
-    act(() => tree.root.findByProps({ testID: 'btn-submit-project' }).props.onPress());
+    act(() => tree.root.findByProps({ testID: "btn-save-project" }).props.onPress());
     expect(onSubmit).toHaveBeenCalledWith({
       name: 'Solo',
       address: null,

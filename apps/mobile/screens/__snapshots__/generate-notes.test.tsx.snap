@@ -93,7 +93,7 @@ exports[`GenerateNotes > matches the empty-state snapshot 1`] = `
             undefined,
           ]
         }
-        testID="btn-generate-update-report"
+        testID="btn-generate-report"
       >
         <rn-View
           className="flex-row items-center gap-1.5"
@@ -690,7 +690,7 @@ exports[`GenerateNotes > matches the empty-state snapshot 1`] = `
               placeholder="Type a site note..."
               placeholderTextColor="#5f5b66"
               returnKeyType="default"
-              testID="input-note"
+              testID="input-text-note"
               textAlignVertical="top"
               value=""
             />
@@ -834,7 +834,7 @@ exports[`GenerateNotes > matches the empty-state snapshot 1`] = `
                     undefined,
                   ]
                 }
-                testID="dialog-action-0"
+                testID="confirm-finalize"
               >
                 <rn-Text
                   className="text-primary-foreground font-semibold text-base"

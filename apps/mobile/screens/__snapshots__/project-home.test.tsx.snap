@@ -150,7 +150,7 @@ exports[`ProjectHome > matches snapshot at default props 1`] = `
             undefined,
           ]
         }
-        testID="btn-edit-project"
+        testID="btn-project-edit"
       >
         <lucide-Pencil
           color="#2d3a5a"
@@ -453,7 +453,7 @@ exports[`ProjectHome > matches snapshot at default props 1`] = `
         }
         disabled={false}
         onPress={[MockFunction spy]}
-        testID="btn-open-members"
+        testID="link-project-members"
       >
         <rn-View
           className="rounded-lg border border-border bg-card p-4 flex-row items-center gap-3"

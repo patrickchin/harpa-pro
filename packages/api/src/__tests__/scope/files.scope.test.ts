@@ -103,6 +103,20 @@ describe('scope: /files/*', () => {
     expect(res.status).toBe(400);
   });
 
+  it('paired — alice presign mints a key under users/<alice>/ (never bob)', async () => {
+    const app = createApp();
+    const tok = await signTestToken(alice, aliceSid);
+    const res = await app.request('/files/presign', {
+      method: 'POST',
+      headers: { authorization: `Bearer ${tok}`, 'content-type': 'application/json' },
+      body: JSON.stringify({ kind: 'image', contentType: 'image/jpeg', sizeBytes: 4096 }),
+    });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { fileKey: string };
+    expect(body.fileKey.startsWith(`users/${alice}/`)).toBe(true);
+    expect(body.fileKey.startsWith(`users/${bob}/`)).toBe(false);
+  });
+
   it('scope wrapper — direct SELECT under alice scope sees only her file', async () => {
     const ids = await withScopedConnection({ sub: alice, sid: aliceSid }, async (db) => {
       const r = await db.execute<{ id: string }>(sql`SELECT id FROM app.files`);

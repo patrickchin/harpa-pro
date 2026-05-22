@@ -20,7 +20,7 @@ describe('committed fixtures replay end-to-end', () => {
   it('transcribe.voice-1 replays the canonical site-walk transcript', async () => {
     const f = fixture('transcribe.voice-1');
     const p = createProvider({
-      vendor: 'openai',
+      vendor: 'groq',
       fixtureMode: 'replay',
       fixtureName: 'transcribe.voice-1',
       fixturesDir,

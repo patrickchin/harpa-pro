@@ -1,0 +1,22 @@
+# sign-out.yaml — helper: sign the current user out
+#
+# Navigates to Profile tab → Developer section sign-out button,
+# then waits for the sign-in screen.
+#
+# Pre-condition: app is logged in (Projects list or any (app) tab visible).
+# Post-condition: sign-in screen (input-phone visible).
+#
+# Usage:
+#   - runFlow: .maestro/helpers/sign-out.yaml
+- tapOn:
+    id: "btn-open-profile"
+- extendedWaitUntil:
+    visible:
+      id: "btn-sign-out"
+    timeout: 10000
+- tapOn:
+    id: "btn-sign-out"
+- extendedWaitUntil:
+    visible:
+      id: "input-phone"
+    timeout: 10000

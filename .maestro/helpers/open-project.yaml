@@ -1,0 +1,18 @@
+# open-project.yaml — helper: navigate to a project home by slug chip
+#
+# Assumes the project-slug-chip has already been stored in PROJECT_SLUG.
+# Scrolls the project list and taps the matching project card.
+#
+# Pre-condition: projects list screen is visible, PROJECT_SLUG is set.
+# Post-condition: project home screen is visible (btn-project-edit visible).
+#
+# Usage:
+#   - runFlow: .maestro/helpers/open-project.yaml
+- assertVisible:
+    id: "btn-new-project"
+- tapOn:
+    id: "project-row-${PROJECT_SLUG}"
+- extendedWaitUntil:
+    visible:
+      id: "btn-project-edit"
+    timeout: 10000

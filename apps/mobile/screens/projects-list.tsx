@@ -127,10 +127,10 @@ export function ProjectsList({
               }
             />
           }
-          renderItem={({ item, index }) => (
+          renderItem={({ item }) => (
             <View>
               <Pressable
-                testID={`project-row-${index}`}
+                testID={`project-row-${item.slug}`}
                 onPress={() => onPressProject(item.slug)}
               >
                 <Card className="gap-3">

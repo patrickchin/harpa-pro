@@ -48,6 +48,8 @@ function statusLabel(status: UploadJob['status']): string {
       return 'Done';
     case 'failed':
       return 'Upload failed';
+    case 'cancelled':
+      return 'Cancelled';
   }
 }
 

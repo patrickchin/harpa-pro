@@ -140,6 +140,38 @@ relaunch, resume automatically" we wire an MMKV-backed
   factory in `vitest.setup.ts` — the queue + persistence code path
   runs unchanged.
 
+### Cancellation (`AbortController`)
+
+Each `InternalJob` owns an `AbortController` that is threaded through
+`runUploadJob → deps.{presign,putToR2,registerFile,createNote}` via
+the new `signal?: AbortSignal` slot on `UploadDeps` and the typed
+`request()` client. The pipeline calls `checkAborted(signal)` at
+every step boundary so cancellation between network calls short-
+circuits cleanly. The default XHR-based `putToR2` wires
+`signal.addEventListener('abort', () => xhr.abort())` so a long-
+running mobile upload is interrupted immediately; the fetch fallback
+passes `{ signal }` straight through.
+
+`queue.remove(jobId)` is now cancellation-aware:
+
+- **Terminal status** (`completed` / `failed` / `cancelled`) — splice
+  the row out of the snapshot.
+- **In-flight status** — call `controller.abort()` and splice. The
+  pipeline rejects with an `AbortError` (recognised via the
+  exported `isAbortError(err)` helper). `processJob` maps that to
+  the `cancelled` lane — but since `remove()` already spliced the
+  job, the cancelled status writes are inert and observers see the
+  job disappear in a single notification. Critically, neither
+  `registerFile` nor `createNote` runs after the abort, so a
+  cancelled upload never produces an orphan `app.files` row or a
+  ghost note on the report timeline.
+
+Retries are unaffected: cancellation does **not** consume the
+retry budget, and `retry(jobId)` mints a fresh `AbortController`
+so a previous abort does not poison the new attempt. The
+`'cancelled'` `JobStatus` is also retryable via the same
+`retry(jobId)` entry point.
+
 ## Security
 
 - Presign URLs are scoped to PUT, content-type, content-length, and

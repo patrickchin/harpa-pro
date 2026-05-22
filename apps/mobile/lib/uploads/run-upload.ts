@@ -27,16 +27,20 @@ export interface PresignedUpload {
 }
 
 export interface UploadDeps {
-  presign: (input: EnqueueInput) => Promise<PresignedUpload>;
+  presign: (
+    input: EnqueueInput,
+    signal?: AbortSignal,
+  ) => Promise<PresignedUpload>;
   /**
    * PUT bytes to the signed R2 URL. Implementations should call
    * `onProgress(fraction)` as bytes flush so the UI can render a
    * determinate bar. The default uses XMLHttpRequest when available
    * (RN runtime + JSDOM) and falls back to `fetch` (node test env).
    *
-   * Phase F: an optional `signal` lets the caller (the queue's
-   * `remove(jobId)`) abort the in-flight transfer; the XHR path calls
-   * `xhr.abort()` and the fetch fallback forwards the signal.
+   * When `signal` is aborted the implementation must stop the PUT
+   * (XHR: `.abort()`; fetch: `{ signal }`) and reject with a value
+   * whose `name === 'AbortError'` so `runUploadJob` can map it to the
+   * `cancelled` lane.
    */
   putToR2: (
     args: {
@@ -51,11 +55,13 @@ export interface UploadDeps {
   registerFile: (
     presigned: PresignedUpload,
     input: EnqueueInput,
+    signal?: AbortSignal,
   ) => Promise<FileRecord>;
   createNote: (args: {
     reportId: string;
     input: EnqueueInput;
     file: FileRecord;
+    signal?: AbortSignal;
   }) => Promise<NoteRecord>;
 }
 
@@ -69,8 +75,31 @@ export interface RunHandlers {
       | 'completed',
   ) => void;
   onProgress: (fraction: number) => void;
-  /** Phase F: queue-supplied signal so `remove(jobId)` aborts the PUT. */
+  /**
+   * Signal observed at every pipeline boundary. When aborted,
+   * `runUploadJob` throws an `AbortError` rather than advancing.
+   */
   signal?: AbortSignal;
+}
+
+/** Sentinel used when cancellation is observed between pipeline steps. */
+export class AbortError extends Error {
+  override name = 'AbortError';
+  constructor(message = 'upload aborted') {
+    super(message);
+  }
+}
+
+/** Returns true when `err` represents an in-flight cancellation. */
+export function isAbortError(err: unknown): boolean {
+  return (
+    err instanceof Error &&
+    (err.name === 'AbortError' || err.message === 'R2 PUT aborted')
+  );
+}
+
+function checkAborted(signal: AbortSignal | undefined): void {
+  if (signal?.aborted) throw new AbortError();
 }
 
 /**
@@ -82,21 +111,12 @@ export async function runUploadJob(
   deps: UploadDeps,
   handlers: RunHandlers,
 ): Promise<UploadResult> {
-  const throwIfAborted = () => {
-    if (handlers.signal?.aborted) {
-      const reason = (handlers.signal as AbortSignal & { reason?: unknown })
-        .reason;
-      throw reason instanceof Error
-        ? reason
-        : new Error('Upload aborted');
-    }
-  };
-
-  throwIfAborted();
+  const { signal } = handlers;
+  checkAborted(signal);
   handlers.onStatus('presigning');
-  const presigned = await deps.presign(input);
+  const presigned = await deps.presign(input, signal);
 
-  throwIfAborted();
+  checkAborted(signal);
   handlers.onStatus('uploading');
   handlers.onProgress(0);
   await deps.putToR2(
@@ -105,7 +125,7 @@ export async function runUploadJob(
       sourceUri: input.sourceUri,
       contentType: input.contentType,
       sizeBytes: input.sizeBytes,
-      signal: handlers.signal,
+      signal,
     },
     (fraction) => {
       // Clamp to [0, 1) so the UI can still distinguish "done with
@@ -113,20 +133,21 @@ export async function runUploadJob(
       handlers.onProgress(Math.max(0, Math.min(0.999, fraction)));
     },
   );
+  checkAborted(signal);
   handlers.onProgress(1);
-  throwIfAborted();
 
   handlers.onStatus('registering');
-  const file = await deps.registerFile(presigned, input);
+  const file = await deps.registerFile(presigned, input, signal);
 
   let noteId: string | undefined;
   if (input.reportId) {
-    throwIfAborted();
+    checkAborted(signal);
     handlers.onStatus('creating_note');
     const note = await deps.createNote({
       reportId: input.reportId,
       input,
       file,
+      signal,
     });
     noteId = note.id;
   }
@@ -141,13 +162,17 @@ export async function runUploadJob(
 // stubbing the global `fetch` rather than calling `setUploadDeps()` —
 // closing the Pitfall 13 trapdoor.
 
-async function defaultPresign(input: EnqueueInput): Promise<PresignedUpload> {
+async function defaultPresign(
+  input: EnqueueInput,
+  signal?: AbortSignal,
+): Promise<PresignedUpload> {
   const out = await request('/files/presign', 'post', {
     body: {
       kind: input.kind === 'pdf' ? 'pdf' : input.kind,
       contentType: input.contentType,
       sizeBytes: input.sizeBytes,
     },
+    signal,
   });
   return out;
 }
@@ -173,20 +198,6 @@ async function defaultPutToR2(
   if (Xhr) {
     await new Promise<void>((resolve, reject) => {
       const xhr = new Xhr();
-      const onAbort = () => {
-        try {
-          xhr.abort();
-        } catch {
-          // Already finished.
-        }
-      };
-      if (args.signal) {
-        if (args.signal.aborted) {
-          reject(new Error('R2 PUT aborted before start'));
-          return;
-        }
-        args.signal.addEventListener('abort', onAbort);
-      }
       xhr.open('PUT', args.uploadUrl, true);
       xhr.setRequestHeader('Content-Type', args.contentType);
       if (xhr.upload && onProgress) {
@@ -196,11 +207,7 @@ async function defaultPutToR2(
           }
         };
       }
-      const cleanup = () => {
-        if (args.signal) args.signal.removeEventListener('abort', onAbort);
-      };
       xhr.onload = () => {
-        cleanup();
         if (xhr.status >= 200 && xhr.status < 300) {
           resolve();
         } else {
@@ -209,14 +216,21 @@ async function defaultPutToR2(
           );
         }
       };
-      xhr.onerror = () => {
-        cleanup();
-        reject(new Error('R2 PUT transport error'));
-      };
+      xhr.onerror = () => reject(new Error('R2 PUT transport error'));
       xhr.onabort = () => {
-        cleanup();
-        reject(new Error('R2 PUT aborted'));
+        const err = new Error('R2 PUT aborted');
+        err.name = 'AbortError';
+        reject(err);
       };
+      if (args.signal) {
+        if (args.signal.aborted) {
+          xhr.abort();
+        } else {
+          args.signal.addEventListener('abort', () => xhr.abort(), {
+            once: true,
+          });
+        }
+      }
       // `{ uri }` is the React Native fetch/XHR convention for streaming
       // a local file. On node/jsdom we never construct the body this
       // way because Xhr is undefined.
@@ -230,7 +244,7 @@ async function defaultPutToR2(
   const body =
     args.sourceUri.startsWith('http://') ||
     args.sourceUri.startsWith('https://')
-      ? await (await fetch(args.sourceUri)).arrayBuffer()
+      ? await (await fetch(args.sourceUri, { signal: args.signal })).arrayBuffer()
       : args.sourceUri;
   const res = await fetch(args.uploadUrl, {
     method: 'PUT',
@@ -246,6 +260,7 @@ async function defaultPutToR2(
 async function defaultRegisterFile(
   presigned: PresignedUpload,
   input: EnqueueInput,
+  signal?: AbortSignal,
 ): Promise<FileRecord> {
   return request('/files', 'post', {
     body: {
@@ -254,6 +269,7 @@ async function defaultRegisterFile(
       sizeBytes: input.sizeBytes,
       contentType: input.contentType,
     },
+    signal,
   });
 }
 
@@ -261,6 +277,7 @@ async function defaultCreateNote(args: {
   reportId: string;
   input: EnqueueInput;
   file: FileRecord;
+  signal?: AbortSignal;
 }): Promise<NoteRecord> {
   return request('/reports/{report}/notes', 'post', {
     params: { report: args.reportId },
@@ -269,6 +286,7 @@ async function defaultCreateNote(args: {
       fileId: args.file.id,
       transcript: args.input.transcript ?? null,
     },
+    signal: args.signal,
   });
 }
 

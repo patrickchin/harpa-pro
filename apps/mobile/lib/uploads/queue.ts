@@ -15,7 +15,7 @@
  */
 import type { EnqueueInput, UploadJob, UploadResult } from './types';
 import { MAX_ATTEMPTS, backoffMs } from './types';
-import { runUploadJob, type UploadDeps } from './run-upload';
+import { runUploadJob, isAbortError, type UploadDeps } from './run-upload';
 import type { PersistedJob, QueuePersistence } from './persistence';
 
 let _jobCounter = 0;
@@ -57,6 +57,8 @@ export interface UploadQueue {
 interface InternalJob extends UploadJob {
   resolve: (result: UploadResult) => void;
   reject: (err: Error) => void;
+  /** Per-job abort controller. Recreated when retrying a failed job. */
+  controller: AbortController;
 }
 
 export function createUploadQueue(
@@ -126,6 +128,7 @@ export function createUploadQueue(
   async function processJob(job: InternalJob): Promise<void> {
     try {
       const result = await runUploadJob(job.input, deps, {
+        signal: job.controller.signal,
         onStatus: (status) => {
           job.status = status;
           notify();
@@ -142,14 +145,28 @@ export function createUploadQueue(
       job.resolve(result);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
+      // Cancellation short-circuits the retry budget. The job is left
+      // in `cancelled` so the UI can render a transient indicator;
+      // most callers immediately splice it via `remove(jobId)`.
+      if (isAbortError(err) || job.controller.signal.aborted) {
+        job.status = 'cancelled';
+        job.error = message;
+        notify();
+        const abortErr = err instanceof Error ? err : new Error(message);
+        if (abortErr.name !== 'AbortError') abortErr.name = 'AbortError';
+        job.reject(abortErr);
+        return;
+      }
       if (job.attempt < MAX_ATTEMPTS) {
         // Schedule retry — keep job in `pending` so the driver picks
-        // it up again after the backoff window.
+        // it up again after the backoff window. Mint a fresh controller
+        // so a previous abort doesn't poison the new attempt.
         const waitMs = delay(job.attempt);
         job.attempt += 1;
         job.status = 'pending';
         job.error = message;
         job.progress = 0;
+        job.controller = new AbortController();
         notify();
         await sleep(waitMs);
       } else {
@@ -171,6 +188,7 @@ export function createUploadQueue(
         attempt: 1,
         resolve,
         reject,
+        controller: new AbortController(),
       };
       jobs.push(job);
       notify();
@@ -183,7 +201,7 @@ export function createUploadQueue(
     if (!job) {
       return Promise.reject(new Error(`upload job ${jobId} not found`));
     }
-    if (job.status !== 'failed') {
+    if (job.status !== 'failed' && job.status !== 'cancelled') {
       return Promise.reject(
         new Error(`upload job ${jobId} is not retryable (status=${job.status})`),
       );
@@ -195,6 +213,7 @@ export function createUploadQueue(
       job.error = undefined;
       job.resolve = resolve;
       job.reject = reject;
+      job.controller = new AbortController();
       notify();
       void drive();
     });
@@ -204,11 +223,17 @@ export function createUploadQueue(
     const idx = jobs.findIndex((j) => j.id === jobId);
     if (idx < 0) return;
     const [job] = jobs.splice(idx, 1);
-    if (job && job.status !== 'completed' && job.status !== 'failed') {
-      // In-flight job: we don't actually abort the network call (the
-      // run-upload pipeline doesn't accept an AbortSignal in this
-      // commit) but we drop the reference so subscribers stop seeing
-      // it. The promise still resolves/rejects to whoever held it.
+    if (
+      job &&
+      job.status !== 'completed' &&
+      job.status !== 'failed' &&
+      job.status !== 'cancelled'
+    ) {
+      // In-flight job: abort the network call so we don't fire any
+      // downstream pipeline step (notably POST /files). `processJob`
+      // will catch the `AbortError`, but by then the job is no longer
+      // in `jobs` so the catch path's state writes are inert.
+      job.controller.abort();
     }
     notify();
   }
@@ -231,6 +256,7 @@ export function createUploadQueue(
         error: persisted.error,
         resolve: noop,
         reject: noop,
+        controller: new AbortController(),
       };
       jobs.push(job);
     }

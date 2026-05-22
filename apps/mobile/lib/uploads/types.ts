@@ -69,7 +69,8 @@ export type JobStatus =
   | 'registering'
   | 'creating_note'
   | 'completed'
-  | 'failed';
+  | 'failed'
+  | 'cancelled';
 
 export interface UploadJob {
   /** Local correlation id (NOT the server `fil_…` id; that is `fileId` below). */

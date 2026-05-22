@@ -21,6 +21,7 @@ export const INVALIDATIONS: Record<string, InvalidationRule> = {
   // auth
   useStartOtpMutation: INVALIDATIONS_NONE,
   useVerifyOtpMutation: ['me'],
+  useVerifyPasswordMutation: ['me'],
   useLogoutMutation: INVALIDATIONS_NONE,
   useUpdateMeMutation: ['me'],
 

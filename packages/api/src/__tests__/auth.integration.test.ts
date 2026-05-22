@@ -11,6 +11,8 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { createApp } from '../app.js';
 import { startPg, type PgFixture } from './setup-pg.js';
 import { resetPool, getPool } from '../db/client.js';
+import { _resetPasswordBypassForTest } from '../auth/password.js';
+import { resetRateLimiter } from '../lib/rateLimiter.js';
 
 let fx: PgFixture;
 
@@ -123,5 +125,103 @@ describe('OTP auth flow', () => {
     } finally {
       conn.release();
     }
+  });
+});
+
+describe('Test-account password bypass', () => {
+  const TEST_PHONE = '+15550199001';
+  const OTHER_PHONE = '+15550199002';
+  const PASSWORD = 'correct-horse-battery-staple';
+
+  beforeAll(() => {
+    process.env.TEST_ACCOUNT_PHONES = `${TEST_PHONE},+15550199009`;
+    process.env.TEST_ACCOUNT_PASSWORD = PASSWORD;
+    _resetPasswordBypassForTest();
+    resetRateLimiter();
+  });
+
+  afterAll(() => {
+    delete process.env.TEST_ACCOUNT_PHONES;
+    delete process.env.TEST_ACCOUNT_PASSWORD;
+    _resetPasswordBypassForTest();
+    resetRateLimiter();
+  });
+
+  it('happy path: allow-listed phone + correct password mints a token and upserts the user', async () => {
+    const app = createApp();
+    const res = await app.request('/auth/password/verify', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ phone: TEST_PHONE, password: PASSWORD }),
+    });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      token: string;
+      user: { id: string; phone: string };
+    };
+    expect(body.token).toMatch(/^[\w-]+\.[\w-]+\.[\w-]+$/);
+    expect(body.user.phone).toBe(TEST_PHONE);
+
+    // User + session rows persisted, just like the OTP path.
+    const pool = getPool();
+    const conn = await pool.connect();
+    try {
+      const userRows = await conn.query<{ id: string }>(
+        `SELECT id FROM auth.users WHERE phone = $1`,
+        [TEST_PHONE],
+      );
+      expect(userRows.rows[0]?.id).toBe(body.user.id);
+      const sessRows = await conn.query<{ count: string }>(
+        `SELECT count(*)::text AS count FROM auth.sessions WHERE user_id = $1`,
+        [body.user.id],
+      );
+      expect(Number(sessRows.rows[0]?.count)).toBeGreaterThanOrEqual(1);
+    } finally {
+      conn.release();
+    }
+
+    // Bearer works on /me — proves the issued JWT is valid end-to-end.
+    const meRes = await app.request('/me', {
+      headers: { authorization: `Bearer ${body.token}` },
+    });
+    expect(meRes.status).toBe(200);
+  });
+
+  it('rejects wrong password with 401', async () => {
+    const app = createApp();
+    const res = await app.request('/auth/password/verify', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ phone: TEST_PHONE, password: 'wrong-password-zzzzzz' }),
+    });
+    expect(res.status).toBe(401);
+  });
+
+  it('rejects non-allow-listed phone with 401 (same shape as wrong password — no enumeration)', async () => {
+    const app = createApp();
+    const res = await app.request('/auth/password/verify', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ phone: OTHER_PHONE, password: PASSWORD }),
+    });
+    expect(res.status).toBe(401);
+  });
+});
+
+describe('Test-account password bypass — disabled', () => {
+  beforeAll(() => {
+    delete process.env.TEST_ACCOUNT_PHONES;
+    delete process.env.TEST_ACCOUNT_PASSWORD;
+    _resetPasswordBypassForTest();
+  });
+
+  it('returns 404 when feature env vars are unset', async () => {
+    const app = createApp();
+    const res = await app.request('/auth/password/verify', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ phone: '+15550100400', password: 'anything-long-enough' }),
+    });
+    expect(res.status).toBe(404);
   });
 });

@@ -24,6 +24,18 @@ export const otpVerifyResponse = z.object({
   user: userPublic,
 });
 
+/**
+ * Password verification — test-account bypass for live deployments.
+ * See docs/v4/arch-auth-and-rls.md §Test-account password bypass.
+ * Response shape mirrors otpVerifyResponse so client wiring is
+ * identical once the token is in hand.
+ */
+export const passwordVerifyRequest = z.object({
+  phone,
+  password: z.string().min(1).max(256),
+});
+export const passwordVerifyResponse = otpVerifyResponse;
+
 export const logoutResponse = z.object({ ok: z.literal(true) });
 
 export const meResponse = z.object({ user: userPublic });

@@ -72,6 +72,25 @@ export function useVerifyOtpMutation(
   });
 }
 
+export function useVerifyPasswordMutation(
+  options?: UseMutationOptions<ResponseBody<"/auth/password/verify", "post">, ApiError, { body: RequestBody<"/auth/password/verify", "post"> }>,
+) {
+  const qc = useQueryClient();
+  return useMutation<ResponseBody<"/auth/password/verify", "post">, ApiError, { body: RequestBody<"/auth/password/verify", "post"> }>({
+    mutationFn: (vars) => request("/auth/password/verify", "post", { body: (vars as any).body }),
+    ...options,
+    onSuccess: (...args) => {
+      const rule = INVALIDATIONS["useVerifyPasswordMutation"];
+      if (rule && rule !== INVALIDATIONS_NONE) {
+        for (const head of rule) {
+          qc.invalidateQueries({ queryKey: [head] });
+        }
+      }
+      return options?.onSuccess?.(...args);
+    },
+  });
+}
+
 export function useLogoutMutation(
   options?: UseMutationOptions<ResponseBody<"/auth/logout", "post">, ApiError, void>,
 ) {

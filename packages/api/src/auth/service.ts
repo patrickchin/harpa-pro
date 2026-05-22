@@ -46,6 +46,38 @@ export async function startOtp(
   return { verificationId };
 }
 
+/**
+ * Upsert the user for `phone`, create a session row, and mint a JWT.
+ * Shared by the OTP flow and the test-account password bypass — both
+ * are equivalent once the caller has been authenticated by some other
+ * means (Twilio OTP / shared password / future SSO).
+ */
+export async function issueSessionForPhone(
+  db: Db,
+  phone: string,
+): Promise<VerifyOtpResult> {
+  const existing = await db.select().from(schema.users).where(eq(schema.users.phone, phone)).limit(1);
+  const user =
+    existing[0] ??
+    (await db
+      .insert(schema.users)
+      .values({ id: newId('usr'), phone })
+      .returning()
+      .then((r) => r[0]));
+  if (!user) throw new Error('user upsert failed');
+
+  const expiresAt = new Date(Date.now() + SESSION_TTL_MS);
+  const sessionRows = await db
+    .insert(schema.sessions)
+    .values({ id: newId('ses'), userId: user.id, expiresAt })
+    .returning({ id: schema.sessions.id });
+  const session = sessionRows[0];
+  if (!session) throw new Error('session insert failed');
+
+  const token = await signJwt({ sub: user.id, sid: session.id });
+  return { token, user: toPublicUser(user) };
+}
+
 export async function verifyOtp(
   twilio: TwilioClient,
   db: Db,
@@ -56,17 +88,6 @@ export async function verifyOtp(
   if (!approved) {
     throw new OtpVerificationError('otp_invalid', 'Invalid verification code.');
   }
-
-  // Upsert user by phone.
-  const existing = await db.select().from(schema.users).where(eq(schema.users.phone, phone)).limit(1);
-  const user =
-    existing[0] ??
-    (await db
-      .insert(schema.users)
-      .values({ id: newId('usr'), phone })
-      .returning()
-      .then((r) => r[0]));
-  if (!user) throw new Error('user upsert failed');
 
   // Mark verification consumed (most recent unconsumed row for this phone).
   await db.execute(sql`
@@ -79,20 +100,7 @@ export async function verifyOtp(
     )
   `);
 
-  // Create session row.
-  const expiresAt = new Date(Date.now() + SESSION_TTL_MS);
-  const sessionRows = await db
-    .insert(schema.sessions)
-    .values({ id: newId('ses'), userId: user.id, expiresAt })
-    .returning({ id: schema.sessions.id });
-  const session = sessionRows[0];
-  if (!session) throw new Error('session insert failed');
-
-  const token = await signJwt({ sub: user.id, sid: session.id });
-  return {
-    token,
-    user: toPublicUser(user),
-  };
+  return issueSessionForPhone(db, phone);
 }
 
 export async function logout(db: Db, sessionId: string): Promise<void> {

@@ -67,3 +67,4 @@ playwright-report/
 test-results/
 .lighthouseci/
 notes-delete-empty.png
+sample-voice-note.m4a

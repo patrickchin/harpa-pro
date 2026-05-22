@@ -113,13 +113,6 @@ voiceRoutes.openapi(
     const settings = await db((d) => getAiSettings(d, userId));
     const vendor = settings.vendor;
 
-    const usageContext = {
-      db,
-      userId,
-      projectId: report.projectId,
-      reportId: report.id,
-    };
-
     // Step 1 — transcribe. Real signed URL in live mode; services/ai.ts
     // normalises it away before hashing in replay.
     const signed = await pickStorage().signGet(file.fileKey);
@@ -127,7 +120,6 @@ voiceRoutes.openapi(
       audioUrl: signed.url,
       language: body.language,
       fixtureName: body.fixtureName,
-      usageContext,
     });
     const transcript = transcribed.text;
 
@@ -142,7 +134,6 @@ voiceRoutes.openapi(
       // transcribe fixture above. Most tests pass nothing and rely on
       // the canonical default.
       fixtureName: body.fixtureName,
-      usageContext,
     });
     const { title, summary } = parseVoiceSummaryResponse(summarised.text);
     const transcribeProvider = `${summarised.vendor}:${summarised.model}+${transcribed.vendor}:${transcribed.model}`;

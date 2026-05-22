@@ -690,7 +690,7 @@ exports[`GenerateNotes > matches the empty-state snapshot 1`] = `
               placeholder="Type a site note..."
               placeholderTextColor="#5f5b66"
               returnKeyType="default"
-              testID="input-text-note"
+              testID="input-note"
               textAlignVertical="top"
               value=""
             />

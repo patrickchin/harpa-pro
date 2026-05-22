@@ -20,35 +20,15 @@
 import {
   createProvider,
   FixtureMissError,
+  realProviderFactoryFromEnv,
   type AiProvider,
   type FixtureMode,
   type Vendor,
 } from '@harpa/ai-fixtures';
 import { reports as reportSchemas } from '@harpa/api-contract';
 import type { z } from 'zod';
-import type { ScopedDb } from '../db/scope.js';
-import { recordLlmUsage, type LlmOperation } from './ai-usage.js';
+import { env } from '../env.js';
 import { VOICE_SUMMARY_SYSTEM_PROMPT } from '../prompts/voiceSummary.js';
-
-/**
- * Context the route passes when it wants the call recorded in
- * `app.llm_usage_events`. The `db` field is the same scoped accessor
- * routes get from `c.get('db')` — passing the accessor (not a raw
- * handle) keeps RLS per-request scoping intact: the INSERT runs under
- * the caller's `app.user_id`, and `llm_usage_events_self_insert`
- * enforces the user_id claim independently of the chokepoint.
- *
- * Optional everywhere — fixture-driven unit tests can still call
- * chat/transcribe/generateReport without it. The Pitfall 13
- * integration test is what keeps us honest: if a route stops passing
- * the context, that test goes red because the expected row never lands.
- */
-export interface LlmUsageContext {
-  db: <T>(fn: (db: ScopedDb) => Promise<T>) => Promise<T>;
-  userId: string;
-  projectId?: string | null;
-  reportId?: string | null;
-}
 
 export class AiProviderError extends Error {
   readonly code = 'ai_provider_error';
@@ -263,7 +243,22 @@ function pickMode(fixtureName?: string): FixtureMode {
 }
 
 function buildProvider(vendor: Vendor, fixtureName: string): AiProvider {
-  return createProvider({ vendor, fixtureMode: pickMode(fixtureName), fixtureName });
+  return buildProviderWithMode(vendor, fixtureName, pickMode(fixtureName));
+}
+
+function buildProviderWithMode(
+  vendor: Vendor,
+  fixtureName: string,
+  mode: FixtureMode,
+): AiProvider {
+  const realFactory =
+    mode === 'replay'
+      ? undefined
+      : realProviderFactoryFromEnv({
+          openaiApiKey: env.OPENAI_API_KEY,
+          groqApiKey: env.GROQ_API_KEY,
+        });
+  return createProvider({ vendor, fixtureMode: mode, fixtureName }, realFactory);
 }
 
 async function withErrorWrap<T>(label: string, fn: () => Promise<T>): Promise<T> {
@@ -281,57 +276,6 @@ async function withErrorWrap<T>(label: string, fn: () => Promise<T>): Promise<T>
   }
 }
 
-/**
- * Run the provider call and (best-effort) record a usage row. The
- * recorder never throws — accounting failures must not surface to the
- * user-facing request. On provider failure we still record an `error`
- * row so cost postmortems include attempted calls.
- *
- * Vendor SDK responses vary in usage shape. Today every code path
- * exercises @harpa/ai-fixtures, which standardises on
- * `{ input, output }`. Live mode will need adapters per vendor — see
- * docs/v4/plan-p3-feature-build.md §P3.15.5 vendor table.
- */
-async function withUsageAccounting<T extends { usage?: { input?: number; output?: number; cached?: number } }>(
-  ctx: LlmUsageContext | undefined,
-  meta: { vendor: Vendor; model: string; operation: LlmOperation; fixtureMode: FixtureMode },
-  label: string,
-  fn: () => Promise<T>,
-): Promise<T> {
-  const start = Date.now();
-  const record = (status: 'ok' | 'error', usage?: { input?: number; output?: number; cached?: number }) => {
-    if (!ctx) return;
-    const params = {
-      userId: ctx.userId,
-      projectId: ctx.projectId ?? null,
-      reportId: ctx.reportId ?? null,
-      vendor: meta.vendor,
-      model: meta.model,
-      operation: meta.operation,
-      inputTokens: usage?.input ?? 0,
-      outputTokens: usage?.output ?? 0,
-      cachedTokens: usage?.cached ?? 0,
-      latencyMs: Date.now() - start,
-      fixtureMode: meta.fixtureMode,
-      status,
-    };
-    // Wrap in the scoped accessor so the INSERT runs under the caller's
-    // RLS context (`llm_usage_events_self_insert` enforces this). We
-    // await so callers can rely on the row being visible before the
-    // response leaves the handler — important for the integration test
-    // and for /me/usage immediately after a write.
-    return ctx.db((d) => recordLlmUsage(d, params));
-  };
-  try {
-    const out = await withErrorWrap(label, fn);
-    await record('ok', out.usage);
-    return out;
-  } catch (err) {
-    await record('error');
-    throw err;
-  }
-}
-
 export interface TranscribeInput {
   /**
    * The real (signed) audio URL the provider would fetch. In replay
@@ -340,14 +284,6 @@ export interface TranscribeInput {
   audioUrl: string;
   fixtureName?: string;
   language?: string;
-  /**
-   * Optional accounting context. When provided, a row lands in
-   * `app.llm_usage_events` with operation='transcribe'. Whisper-class
-   * providers don't expose tokens, so the row carries zero tokens —
-   * downstream aggregations distinguish transcribe usage by operation,
-   * not token count.
-   */
-  usageContext?: LlmUsageContext;
 }
 
 export interface TranscribeOutput {
@@ -358,24 +294,21 @@ export interface TranscribeOutput {
 }
 
 export async function transcribe(input: TranscribeInput): Promise<TranscribeOutput> {
+  const mode = pickMode(input.fixtureName);
   const scenario =
     (input.fixtureName ? scenarioFromName(input.fixtureName) : null) ??
     FIXTURE_CANONICALS.transcribe.defaultScenario;
   const fixtureName =
     input.fixtureName ?? FIXTURE_CANONICALS.transcribe.name(scenario);
-  const mode = pickMode(fixtureName);
   const audioUrl =
     mode === 'replay'
       ? FIXTURE_CANONICALS.transcribe.audioUrl(scenario)
       : input.audioUrl;
   const vendor = FIXTURE_CANONICALS.transcribe.vendor;
   const model = FIXTURE_CANONICALS.transcribe.model;
-  const provider = buildProvider(vendor, fixtureName);
-  const result = await withUsageAccounting(
-    input.usageContext,
-    { vendor, model, operation: 'transcribe', fixtureMode: mode },
-    'transcribe',
-    () => provider.transcribe({ audioUrl }) as Promise<Omit<TranscribeOutput, 'vendor' | 'model'> & { usage?: undefined }>,
+  const provider = buildProviderWithMode(vendor, fixtureName, mode);
+  const result = await withErrorWrap('transcribe', () =>
+    provider.transcribe({ audioUrl }) as Promise<Omit<TranscribeOutput, 'vendor' | 'model'>>,
   );
   return { ...result, vendor, model };
 }
@@ -393,8 +326,6 @@ export interface ChatInput {
    * OpenAI fixtures covers every scenario in replay mode).
    */
   vendor?: Vendor;
-  /** Optional accounting context — see `transcribe` for semantics. */
-  usageContext?: LlmUsageContext;
 }
 
 export interface ChatOutput {
@@ -405,13 +336,13 @@ export interface ChatOutput {
 
 export async function chat(input: ChatInput): Promise<ChatOutput> {
   const vendor: Vendor = input.vendor ?? FIXTURE_CANONICALS.summarize.vendor;
+  const mode = pickMode(input.fixtureName);
   const scenario =
     (input.fixtureName ? scenarioFromName(input.fixtureName) : null) ??
     FIXTURE_CANONICALS.summarize.defaultScenario;
   const fixtureName =
     input.fixtureName ?? FIXTURE_CANONICALS.summarize.name(scenario);
   const canonicalModel = FIXTURE_CANONICALS.summarize.model;
-  const mode = pickMode(fixtureName);
   const req =
     mode === 'replay'
       ? {
@@ -426,13 +357,8 @@ export async function chat(input: ChatInput): Promise<ChatOutput> {
           temperature: input.temperature,
           maxTokens: input.maxTokens,
         };
-  const provider = buildProvider(vendor, fixtureName);
-  const out = await withUsageAccounting(
-    input.usageContext,
-    { vendor, model: req.model, operation: 'chat', fixtureMode: mode },
-    'chat',
-    () => provider.chat(req),
-  );
+  const provider = buildProviderWithMode(vendor, fixtureName, mode);
+  const out = await withErrorWrap('chat', () => provider.chat(req));
   return { text: out.text, vendor, model: req.model };
 }
 
@@ -469,8 +395,6 @@ export interface GenerateReportInput {
    * `openai`.
    */
   vendor?: Vendor;
-  /** Optional accounting context — see `transcribe` for semantics. */
-  usageContext?: LlmUsageContext;
 }
 
 export interface GenerateReportOutput {
@@ -486,6 +410,8 @@ export interface GenerateReportOutput {
   model: string;
   /** Vendor used. */
   vendor: Vendor;
+  /** Whether this response came from live providers, recorded fixtures, or a record-mode mix. */
+  fixtureMode: 'live' | 'replay' | 'record';
 }
 
 /**
@@ -501,11 +427,11 @@ export async function generateReport(input: GenerateReportInput): Promise<Genera
   const vendor: Vendor = input.vendor ?? canonicals.vendor;
   const canonicalModel = canonicals.model;
   const isUpdate = input.existingBody != null;
+  const mode = pickMode(input.fixtureName);
   const scenario =
     (input.fixtureName ? scenarioFromName(input.fixtureName) : null) ??
     canonicals.defaultScenario;
   const fixtureName = input.fixtureName ?? canonicals.name(scenario);
-  const mode = pickMode(fixtureName);
 
   // Build the LIVE user prompt — what we'd send the real provider.
   // In replay mode this is overridden with the canonical string so the
@@ -542,13 +468,8 @@ export async function generateReport(input: GenerateReportInput): Promise<Genera
           userPrompt: liveUserPrompt,
         };
 
-  const provider = buildProvider(vendor, fixtureName);
-  const out = await withUsageAccounting(
-    input.usageContext,
-    { vendor, model: canonicalModel, operation: 'generate_report', fixtureMode: mode },
-    'generateReport',
-    () => provider.chat(req),
-  );
+  const provider = buildProviderWithMode(vendor, fixtureName, mode);
+  const out = await withErrorWrap('generateReport', () => provider.chat(req));
 
   let parsed: unknown;
   try {
@@ -573,5 +494,6 @@ export async function generateReport(input: GenerateReportInput): Promise<Genera
     userPrompt: liveUserPrompt.length > 0 ? liveUserPrompt : req.userPrompt,
     model: req.model,
     vendor,
+    fixtureMode: mode,
   };
 }

@@ -73,37 +73,14 @@ describe('AI live default wiring', () => {
     ).toBe('Bearer sk-test-openai');
   });
 
-  it('transcribe() with no caller fixtureName hits api.groq.com (after fetching audio)', async () => {
+  it('transcribe() with no caller fixtureName throws LiveAdapterMissingError (openai whisper adapter pending)', async () => {
     const fetchSpy = vi.spyOn(globalThis, 'fetch');
-    // 1st call: adapter fetches audio bytes from the (signed) R2 URL.
-    fetchSpy.mockResolvedValueOnce(okBytes() as Response);
-    // 2nd call: adapter posts multipart to Groq.
-    fetchSpy.mockResolvedValueOnce(
-      okJson({ text: 'hello world', duration: 1.5 }) as Response,
-    );
 
     const { transcribe } = await loadAi();
-    const out = await transcribe({
-      audioUrl: 'https://r2.example/voice.m4a?sig=abc',
-    });
-
-    expect(out.text).toBe('hello world');
-    expect(fetchSpy).toHaveBeenCalledTimes(2);
-
-    const [audioUrl] = fetchSpy.mock.calls[0] as FetchArgs;
-    expect(String(audioUrl)).toBe('https://r2.example/voice.m4a?sig=abc');
-
-    const [groqUrl, groqInit] = fetchSpy.mock.calls[1] as FetchArgs;
-    expect(String(groqUrl)).toBe(
-      'https://api.groq.com/openai/v1/audio/transcriptions',
-    );
-    expect(groqInit?.method).toBe('POST');
-    expect(
-      (groqInit?.headers as Record<string, string> | undefined)?.[
-        'authorization'
-      ],
-    ).toBe('Bearer gsk-test-groq');
-    expect(groqInit?.body).toBeInstanceOf(FormData);
+    await expect(
+      transcribe({ audioUrl: 'https://r2.example/voice.m4a?sig=abc' }),
+    ).rejects.toThrow(/transcribe/i);
+    expect(fetchSpy).not.toHaveBeenCalled();
   });
 
   it('caller-supplied fixtureName forces replay even with AI_LIVE=1', async () => {
@@ -112,7 +89,7 @@ describe('AI live default wiring', () => {
     const { chat } = await loadAi();
     const out = await chat({
       userPrompt: 'whatever',
-      fixtureName: 'summarize.basic',
+      fixtureName: 'summarize.voice-1',
     });
 
     expect(typeof out.text).toBe('string');

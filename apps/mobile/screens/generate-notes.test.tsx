@@ -162,7 +162,7 @@ describe('GenerateNotes', () => {
     const tree = render(<GenerateNotes {...baseProps} />);
     expect(() => tree.root.findByProps({ testID: 'input-note' })).not.toThrow();
     expect(() =>
-      tree.root.findByProps({ testID: 'btn-generate-update-report' }),
+      tree.root.findByProps({ testID: 'btn-generate-report' }),
     ).not.toThrow();
   });
 

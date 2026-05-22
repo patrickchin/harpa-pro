@@ -1,22 +1,18 @@
 /**
  * Sign-in phone entry — step 1 of OTP flow.
  *
- * Wires data layer for the screens/sign-in-phone.tsx body component:
+ * Wires the data layer for the screens/auth-phone.tsx body component
+ * in 'signin' mode:
  *   - useAuthSession (redirect if already authed)
  *   - useStartOtpMutation (POST /auth/otp/start)
  *   - getRememberedPhoneNumber / rememberPhoneNumber (AsyncStorage)
  *   - router.push to verify screen on success
  *
- * Phone entry uses a country prefix picker (PhoneNumberInput +
- * CountryPickerModal). The screen owns split country + national state
- * and derives the canonical E.164 string via combineCountryAndNational
- * on submit.
- *
  * Single async flow per Pitfall 5: mutateAsync then router.push. No setTimeout.
  */
 import { useEffect, useMemo, useState } from 'react';
 import { Redirect, useRouter } from 'expo-router';
-import SignInPhone from '@/screens/sign-in-phone';
+import AuthPhone from '@/screens/auth-phone';
 import { useAuthSession } from '@/lib/auth';
 import { useStartOtpMutation } from '@/lib/api/hooks';
 import {
@@ -114,7 +110,8 @@ export default function SignInPhonePage() {
   };
 
   return (
-    <SignInPhone
+    <AuthPhone
+      mode="signin"
       country={country}
       national={national}
       onChangeCountry={setCountry}

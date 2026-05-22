@@ -294,7 +294,7 @@ clear-cache confirm (`AppDialogSheet`) with `showDeveloperSection`
 prop; `screens/account.tsx` read-only details form with optional
 `avatarSlot` ReactNode injection point; `screens/usage.tsx` per-month
 expand state + pricing-reference card + optional `chart` slot; real
-routes wire `useAuthSession` / `useMeUsageQuery` / better-auth
+routes wire `useAuthSession` / `useMeUsageQuery` / API
 `signOut` / `queryClient.clear()` with `safeBack` fallbacks; dev
 mirrors with hand-crafted mock states for every visible state (Profile
 mirror passes the canonical AI provider catalogue: Kimi, OpenAI,

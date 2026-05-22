@@ -153,9 +153,9 @@ canonical source at `../haru3-reports/apps/mobile@dev`.
 
 **v4 rule.**
 
-1. better-auth integration ships in P0.6 with a working OTP flow
-   against a Twilio sandbox **before** any other API route. P1's
-   first task is "auth middleware + integration tests".
+1. Auth ships in P0.6 with a working OTP flow against a Twilio
+   sandbox **before** any other API route. P1's first task is "auth
+   middleware + integration tests".
 2. `apps/mobile/lib/env.ts` is a Zod-parsed object loaded at app
    boot. ESLint forbids `process.env.EXPO_PUBLIC_*` outside that
    file. CI runs the parse against a populated `.env.example` to

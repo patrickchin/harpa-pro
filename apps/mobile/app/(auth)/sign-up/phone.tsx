@@ -1,7 +1,8 @@
 /**
  * Sign-up phone entry — step 1 of sign-up OTP flow.
  *
- * Wires data layer for the screens/sign-up-phone.tsx body component:
+ * Wires the data layer for the screens/auth-phone.tsx body component
+ * in 'signup' mode:
  *   - useStartOtpMutation (POST /auth/otp/start)
  *   - router.push to verify screen on success
  *
@@ -18,7 +19,7 @@
  */
 import { useMemo, useState } from 'react';
 import { useRouter, type Href } from 'expo-router';
-import SignUpPhone from '@/screens/sign-up-phone';
+import AuthPhone from '@/screens/auth-phone';
 import { useStartOtpMutation } from '@/lib/api/hooks';
 import {
   combineCountryAndNational,
@@ -64,18 +65,15 @@ export default function SignUpPhonePage() {
     router.replace('/(auth)/sign-in/phone' as Href);
   };
 
-  const handleGoToSignIn = () => {
-    router.replace('/(auth)/sign-in/phone' as Href);
-  };
-
   return (
-    <SignUpPhone
+    <AuthPhone
+      mode="signup"
       country={country}
       national={national}
       onChangeCountry={setCountry}
       onChangeNational={setNational}
       onBack={handleBack}
-      onGoToSignIn={handleGoToSignIn}
+      onGoToSignIn={handleBack}
       error={error}
       isSubmitting={startOtpMutation.isPending}
       onSubmit={handleSubmit}

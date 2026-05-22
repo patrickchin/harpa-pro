@@ -52,6 +52,19 @@ flow — even for documents. The mobile upload queue calls
 a 5-minute TTL and are scoped to GET. Mobile caches signed URLs in
 React Query with `staleTime: 4 minutes`.
 
+### Timeline thumbnails (mobile)
+
+Image notes (`kind: 'image'`) carry only a `fileId` — never an inline
+URL or base64 payload. `apps/mobile/components/notes/ImageNoteCard.tsx`
+resolves the signed GET URL via `useFileSignedUrl(fileId)` (which calls
+`GET /files/:id/url`) and renders the thumbnail through `CachedImage`
+(expo-image + disk cache, keyed by `fileId`). The card composes
+`ImagePreviewModal` for the tap-to-zoom full-screen view, so the same
+signed-URL hook backs both surfaces. While the URL is resolving the
+card shows a skeleton; on failure it renders an inline retry that
+re-runs the query. `NoteTimeline` dispatches `source === 'image'` rows
+to `ImageNoteCard` and everything else to `TextNoteCard`.
+
 ## Security
 
 - Presign URLs are scoped to PUT, content-type, content-length, and

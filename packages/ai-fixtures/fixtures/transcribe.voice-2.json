@@ -1,12 +1,12 @@
 {
-  "vendor": "openai",
-  "model": "whisper-1",
+  "vendor": "groq",
+  "model": "whisper-large-v3-turbo",
   "fixtureName": "transcribe.voice-2",
-  "recordedAt": "2026-05-12T00:00:00.000Z",
-  "requestHash": "sha256:8cac0d6531751566e7d5622abb9d176f3c748a542ca45441969516584894bd2d",
+  "recordedAt": "2026-05-23T00:00:00.000Z",
+  "requestHash": "sha256:35c03fc2a00acbfc08c51de6873c9f4c0af2cbc70c8b27760f96d582eccc79b4",
   "request": {
     "kind": "transcribe",
-    "vendor": "openai",
+    "vendor": "groq",
     "audioUrl": "https://fixtures.harpa.example/voice-2.fixture.m4a"
   },
   "response": {

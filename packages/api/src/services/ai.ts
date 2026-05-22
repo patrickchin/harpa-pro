@@ -176,8 +176,8 @@ const SUMMARIZE_USER_PROMPTS: Record<ScenarioKey, string> = {
 
 export const FIXTURE_CANONICALS = {
   transcribe: {
-    vendor: 'openai' as Vendor,
-    model: 'whisper-1',
+    vendor: 'groq' as Vendor,
+    model: 'whisper-large-v3-turbo',
     defaultScenario: DEFAULT_SCENARIO,
     audioUrl: (scenario: ScenarioKey) =>
       `https://fixtures.harpa.example/${scenario}.fixture.m4a`,

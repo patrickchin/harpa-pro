@@ -65,6 +65,21 @@ card shows a skeleton; on failure it renders an inline retry that
 re-runs the query. `NoteTimeline` dispatches `source === 'image'` rows
 to `ImageNoteCard` and everything else to `TextNoteCard`.
 
+### Optimistic photo rows (mobile)
+
+Before R2 PUT completes there is no `fileId`, so the optimistic row is
+driven by the upload job itself.
+`apps/mobile/components/notes/PendingPhotoCard.tsx` reads `UploadJob`
+(`sourceUri`, `status`, `progress`, `error`) and renders the local URI
+as the thumbnail — bytes never leave the device until R2 PUT. The card
+overlays a progress bar driven by `job.progress` and a status label
+derived from `job.status` (`Preparing…` / `Uploading…` / `Saving…` /
+`Adding to timeline…`). Failed jobs surface a retry + dismiss pair;
+in-flight jobs surface cancel only. Once the queue completes the job
+the `reportNotes` invalidation produces the real `ImageNoteCard` row;
+`UploadQueueStrip` / the timeline parent drop the pending card on the
+same tick.
+
 ## Security
 
 - Presign URLs are scoped to PUT, content-type, content-length, and

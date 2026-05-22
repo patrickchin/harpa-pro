@@ -11,7 +11,7 @@
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
-import { FixtureStorage, R2Storage, pickStorage } from './storage.js';
+import { FixtureStorage, R2Storage } from './storage.js';
 
 describe('FixtureStorage', () => {
   const fx = new FixtureStorage();
@@ -104,8 +104,13 @@ describe('R2Storage (with injected S3 client)', () => {
 });
 
 describe('pickStorage()', () => {
+  // pickStorage now reads `env.R2_FIXTURE_MODE` (Zod-parsed at boot,
+  // per Pitfall 13) instead of poking raw process.env. To toggle the
+  // mode in unit tests we have to reset the module graph so env.ts
+  // reparses against the temporary `process.env` shape.
   const original = { ...process.env };
   beforeEach(() => {
+    vi.resetModules();
     delete process.env.NODE_ENV;
     delete process.env.R2_FIXTURE_MODE;
     delete process.env.R2_ACCOUNT_ID;
@@ -114,15 +119,26 @@ describe('pickStorage()', () => {
   });
   afterEach(() => {
     process.env = { ...original };
+    vi.resetModules();
   });
 
-  it('returns FixtureStorage when R2_FIXTURE_MODE=replay', () => {
+  it('returns FixtureStorage when R2_FIXTURE_MODE=replay (env default)', async () => {
     process.env.R2_FIXTURE_MODE = 'replay';
-    expect(pickStorage()).toBeInstanceOf(FixtureStorage);
+    const { pickStorage: fresh, FixtureStorage: FS } = await import('./storage.js');
+    expect(fresh()).toBeInstanceOf(FS);
   });
 
-  it('returns FixtureStorage when NODE_ENV=test (regardless of R2_FIXTURE_MODE)', () => {
-    process.env.NODE_ENV = 'test';
-    expect(pickStorage()).toBeInstanceOf(FixtureStorage);
+  it('returns FixtureStorage when R2_FIXTURE_MODE is unset (default replay)', async () => {
+    const { pickStorage: fresh, FixtureStorage: FS } = await import('./storage.js');
+    expect(fresh()).toBeInstanceOf(FS);
+  });
+
+  it('returns R2Storage when R2_FIXTURE_MODE=live + R2 creds present', async () => {
+    process.env.R2_FIXTURE_MODE = 'live';
+    process.env.R2_ACCOUNT_ID = 'acct';
+    process.env.R2_ACCESS_KEY_ID = 'AKIA_TEST';
+    process.env.R2_SECRET_ACCESS_KEY = 'secret';
+    const { pickStorage: fresh, R2Storage: R2 } = await import('./storage.js');
+    expect(fresh()).toBeInstanceOf(R2);
   });
 });

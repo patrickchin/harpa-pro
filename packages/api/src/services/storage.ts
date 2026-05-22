@@ -211,7 +211,15 @@ function buildR2Client(endpointOverride?: string): S3Client {
 }
 
 export function pickStorage(): Storage {
-  if (process.env.R2_FIXTURE_MODE === 'replay' || process.env.NODE_ENV === 'test') {
+  // Read from the parsed `env` (Zod-validated at boot) instead of
+  // poking raw `process.env`. The previous `process.env.NODE_ENV ===
+  // 'test'` short-circuit was a Pitfall 13 trapdoor: it silently
+  // forced fixture mode in every integration test, so the real
+  // R2Storage default-wiring was never exercised by *any* test in
+  // CI. Now the only way to enter fixture mode in tests is to set
+  // `R2_FIXTURE_MODE=replay` (which the integration-test bootstrap
+  // does explicitly — see setup-pg.ts + scope tests).
+  if (env.R2_FIXTURE_MODE === 'replay') {
     return new FixtureStorage();
   }
   return new R2Storage();

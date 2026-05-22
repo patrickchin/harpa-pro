@@ -78,7 +78,7 @@ echo "→ GET /me/usage";      req GET /me/usage '' >/dev/null
 
 echo "→ GET /settings/ai";   req GET /settings/ai '' >/dev/null
 echo "→ PATCH /settings/ai"
-req PATCH /settings/ai '{"vendor":"kimi"}' >/dev/null
+req PATCH /settings/ai '{"vendor":"openai"}' >/dev/null
 
 echo "→ GET /projects";      req GET /projects '' >/dev/null
 echo "→ POST /projects"
@@ -154,9 +154,10 @@ echo "  nid=$VOICE_NID"
 # requires a live AI provider and may fail if AI is unavailable or the
 # sample is too short for the provider. Non-fatal: we log a warning so
 # CI surfaces the issue without blocking the rest of the journey.
+echo "→ POST /reports/$RID/notes/voice (aggregator — transcribe + summarise)"
 set +e
 VOICE_AGG=$(req POST "/reports/$RID/notes/voice" \
-  "{\"fileId\":\"$VOICE_FID\",\"durationSec\":1}" 2>&1)
+  "{\"fileId\":\"$VOICE_FID\",\"durationSec\":53}" 2>&1)
 AGG_STATUS=$?
 set -e
 if [[ $AGG_STATUS -eq 0 ]]; then

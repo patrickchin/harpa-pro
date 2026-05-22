@@ -106,6 +106,10 @@ services:
       # Override Dockerfile's NODE_ENV=production so env.ts doesn't
       # require MIGRATIONS_REQUIRED_HEAD inside the local compose stack.
       NODE_ENV: development
+      # Dockerfile sets MIGRATIONS_REQUIRED_HEAD="" via empty ARG, which
+      # fails env.ts's regex on boot. Pin to the current head so the API
+      # starts cleanly in the compose stack. Bump when adding migrations.
+      MIGRATIONS_REQUIRED_HEAD: 0004_notes_voice_columns.sql
       DATABASE_URL: postgres://postgres:pg@pg:5432/harpa
       # Live storage backed by MinIO (in-network). R2_PUBLIC_ENDPOINT
       # is what the host-side CLI/browser sees in presigned URLs.

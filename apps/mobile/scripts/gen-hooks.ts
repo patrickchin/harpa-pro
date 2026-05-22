@@ -50,6 +50,7 @@ const ENDPOINTS: Endpoint[] = [
   // auth
   { method: 'post', path: '/auth/otp/start',  hook: 'useStartOtpMutation',  query: false, hasPathParams: false, hasBody: true },
   { method: 'post', path: '/auth/otp/verify', hook: 'useVerifyOtpMutation', query: false, hasPathParams: false, hasBody: true },
+  { method: 'post', path: '/auth/password/verify', hook: 'useVerifyPasswordMutation', query: false, hasPathParams: false, hasBody: true },
   { method: 'post', path: '/auth/logout',     hook: 'useLogoutMutation',    query: false, hasPathParams: false, hasBody: false },
 
   { method: 'get',   path: '/me',       hook: 'useMeQuery',          query: true,  hasPathParams: false, hasBody: false, queryKeyHead: 'me' },

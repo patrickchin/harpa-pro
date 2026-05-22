@@ -88,12 +88,12 @@ tags:
 # finalize → delete. Simplified: just finalize quickly.
 # Add a note first (required for generate button to be enabled).
 - tapOn:
-    id: "input-text-note"
+    id: "input-note"
 - inputText: "Test site visit completed."
 - tapOn:
     point: "50%,15%"
 - tapOn:
-    id: "btn-send-text-note"
+    id: "btn-add-note"
 - extendedWaitUntil:
     visible:
       id: "note-row-.*"

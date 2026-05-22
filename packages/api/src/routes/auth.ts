@@ -12,9 +12,11 @@ import { HTTPException } from 'hono/http-exception';
 import { auth as authSchemas } from '@harpa/api-contract';
 import type { AppEnv } from '../app.js';
 import { rawDb } from '../db/client.js';
-import { startOtp, verifyOtp, logout, OtpVerificationError } from '../auth/service.js';
+import { startOtp, verifyOtp, logout, issueSessionForPhone, OtpVerificationError } from '../auth/service.js';
 import { createTwilioClient } from '../auth/twilio.js';
 import { withAuth } from '../middleware/auth.js';
+import { isPasswordBypassEnabled, verifyTestPassword } from '../auth/password.js';
+import { getRateLimiter } from '../lib/rateLimiter.js';
 
 const errorBody = z.object({
   error: z.object({ code: z.string(), message: z.string() }),
@@ -69,6 +71,65 @@ authRoutes.openapi(
       }
       throw err;
     }
+  },
+);
+
+authRoutes.openapi(
+  createRoute({
+    method: 'post',
+    path: '/auth/password/verify',
+    tags: ['auth'],
+    description:
+      'Test-account password bypass. Disabled (returns 404) unless TEST_ACCOUNT_PHONES + TEST_ACCOUNT_PASSWORD are configured on the server. See docs/v4/arch-auth-and-rls.md.',
+    request: {
+      body: { content: { 'application/json': { schema: authSchemas.passwordVerifyRequest } } },
+    },
+    responses: {
+      200: { description: 'Verified.', content: { 'application/json': { schema: authSchemas.passwordVerifyResponse } } },
+      401: { description: 'Invalid phone or password.', content: { 'application/json': { schema: errorBody } } },
+      404: { description: 'Feature disabled.', content: { 'application/json': { schema: errorBody } } },
+      429: { description: 'Rate limited.', content: { 'application/json': { schema: errorBody } } },
+    },
+  }),
+  async (c) => {
+    if (!isPasswordBypassEnabled()) {
+      throw new HTTPException(404, { message: 'Not found.' });
+    }
+
+    const { phone, password } = c.req.valid('json');
+
+    // Per-phone rate limit (10 attempts / minute). Keyed by phone so a
+    // misbehaving client can't lock other test phones out of logging
+    // in. This is a test-only path; the limit is generous for manual
+    // testing while still bounding password-guess throughput.
+    const rl = await getRateLimiter().consume(
+      `auth-password-verify:${phone}`,
+      10,
+      60_000,
+    );
+    if (!rl.success) {
+      const retryAfter = Math.max(1, Math.ceil((rl.reset - Date.now()) / 1000));
+      c.header('Retry-After', String(retryAfter));
+      throw new HTTPException(429, { message: 'Rate limit exceeded.' });
+    }
+
+    if (!verifyTestPassword(phone, password)) {
+      // Generic 401 — do not reveal whether the phone is allow-listed.
+      throw new HTTPException(401, { message: 'Invalid phone or password.' });
+    }
+
+    const result = await issueSessionForPhone(rawDb(), phone);
+    // eslint-disable-next-line no-console -- intentional audit log
+    console.info(
+      JSON.stringify({
+        level: 'info',
+        msg: 'test_account_password_login',
+        phone,
+        userId: result.user.id,
+        requestId: c.get('requestId'),
+      }),
+    );
+    return c.json(result, 200);
   },
 );
 

@@ -179,5 +179,57 @@ CI fails if any new authed route lacks both tests
 | `DATABASE_URL` | API | Neon connection (pooled) |
 | `EXPO_PUBLIC_API_URL` | Mobile | API base URL (validated by `lib/env.ts`) |
 
+## Test-account password bypass (live deployments)
+
+SMS OTP via Twilio Verify is the only auth path for real users. For
+**live-deployment smoke tests** (`harpa-pro-api-dev`, prod) we need a
+way to log in without paying for / waiting on SMS, without weakening
+auth for real users.
+
+Solution: a narrow alternate endpoint **`POST /auth/password/verify`**
+that accepts `{ phone, password }` and, on success, returns the same
+`{ token, user }` payload as `/auth/otp/verify`. Two env vars gate
+it:
+
+| Var | Where | Purpose |
+|---|---|---|
+| `TEST_ACCOUNT_PHONES` | API | Comma-separated E.164 allowlist |
+| `TEST_ACCOUNT_PASSWORD` | API | Shared password, min 16 chars |
+
+Both vars are stored in **Doppler under the `dev` config only** —
+they must never be set on `prd`. Because the CI workflow pipes every
+Doppler secret through `flyctl secrets import` on each deploy (see
+[`docs/v4/arch-ops.md` §CI](arch-ops.md#ci)), adding the two keys in
+Doppler is the only step required to enable the bypass on
+`harpa-pro-api-dev`; removing them disables it on the next deploy.
+
+Rules:
+
+- **Off-by-default**: if either var is missing, the route returns
+  `404 Not Found`. Production must not set them unless intentional.
+  Env-Zod refines "both-or-neither" to prevent half-configured states.
+- **No enumeration**: a non-allow-listed phone gets the same `401`
+  as a wrong password. The scrypt comparison runs unconditionally so
+  timing does not leak allow-list membership either.
+- **Per-boot salt**: the password is hashed once with `scrypt` + a
+  random salt at first use, kept in memory only. A restart re-derives
+  the hash — that's fine because the password itself is the secret.
+- **Rate limit**: 10 attempts per minute per phone (memory-backed,
+  per-process). Generous enough for manual testing; bounds password-
+  guess throughput.
+- **Audit log**: every successful login emits a structured
+  `test_account_password_login` log line with the phone, user id and
+  request id, so Fly logs show exactly who used the bypass and when.
+- **Reuses `issueSessionForPhone`**: the OTP and password paths share
+  the user-upsert + session-insert + JWT-mint helper in
+  `auth/service.ts`. The resulting JWT is indistinguishable from one
+  issued by OTP and goes through the same `withAuth` middleware on
+  subsequent requests.
+
+Pitfall 13 compliance: the integration test for this route exercises
+the **real** scrypt comparator and **real** DB upsert — no DI stubs
+on the hot path. DI stubs would be inappropriate here; the password
+check is the entire reason the route exists.
+
 `apps/mobile/lib/env.ts` is the only place that reads
 `EXPO_PUBLIC_*` — see [Pitfall 5](pitfalls.md#pitfall-5--auth-glue-done-late-env-handling-brittle).

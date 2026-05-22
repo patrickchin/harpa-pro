@@ -83,6 +83,24 @@ const Env = z.object({
     .string()
     .regex(/^[0-9]+_[a-z0-9_]+\.sql$/, 'must match <digits>_<slug>.sql')
     .optional(),
+  /**
+   * Test-account password bypass for live deployments — see
+   * docs/v4/arch-auth-and-rls.md §Test-account password bypass.
+   *
+   * Comma-separated E.164 phone numbers permitted to authenticate via
+   * `POST /auth/password/verify` instead of an SMS OTP. Real users are
+   * unaffected; non-listed phones get a generic 401 (no enumeration).
+   *
+   * Off-by-default: both vars must be set together, or the route
+   * returns 404. Production must not set these unless intentional.
+   */
+  TEST_ACCOUNT_PHONES: z.string().optional(),
+  /**
+   * Shared password for all phones in TEST_ACCOUNT_PHONES. Hashed once
+   * at boot (scrypt + per-boot random salt). Min 16 chars to make a
+   * leak less catastrophic.
+   */
+  TEST_ACCOUNT_PASSWORD: z.string().min(16).optional(),
 }).refine(
   (e) => e.NODE_ENV !== 'production' || !!e.MIGRATIONS_REQUIRED_HEAD,
   { path: ['MIGRATIONS_REQUIRED_HEAD'], message: 'required when NODE_ENV=production' },
@@ -92,6 +110,12 @@ const Env = z.object({
 ).refine(
   (e) => e.AI_LIVE !== '1' || !!e.GROQ_API_KEY,
   { path: ['GROQ_API_KEY'], message: 'required when AI_LIVE=1 (transcription via whisper-large-v3-turbo)' },
+).refine(
+  (e) => !!e.TEST_ACCOUNT_PHONES === !!e.TEST_ACCOUNT_PASSWORD,
+  {
+    path: ['TEST_ACCOUNT_PASSWORD'],
+    message: 'TEST_ACCOUNT_PHONES and TEST_ACCOUNT_PASSWORD must be set together',
+  },
 );
 
 export const env = Env.parse(process.env);

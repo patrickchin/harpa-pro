@@ -108,8 +108,7 @@ exports[`SignUpVerify > matches snapshot at default props 1`] = `
                     "shadowRadius": 8,
                   },
                   {
-                    "paddingBottom": 0,
-                    "paddingTop": 0,
+                    "lineHeight": 16,
                     "textAlignVertical": "center",
                   },
                   undefined,

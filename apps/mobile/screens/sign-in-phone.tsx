@@ -1,16 +1,18 @@
-import { View, Text, KeyboardAvoidingView, Pressable, ScrollView } from 'react-native';
+import { View, Text, KeyboardAvoidingView, ScrollView } from 'react-native';
 import { SafeAreaView } from '../components/primitives/SafeAreaView';
 import { Button } from '../components/primitives/Button';
-import { Input } from '../components/primitives/Input';
+import { BuildBadge } from '../components/primitives/BuildBadge';
 import { InlineNotice } from '../components/primitives/InlineNotice';
 import { Logo } from '../components/primitives/Logo';
+import { PhoneNumberInput } from '../components/primitives/PhoneNumberInput';
+import { type Country } from '../lib/countries';
 
 type Props = {
-  phone: string;
-  onChangePhone: (v: string) => void;
-  rememberedPhone: string | null;
-  onUseDifferentNumber: () => void;
-  hint: string;
+  country: Country;
+  national: string;
+  onChangeCountry: (country: Country) => void;
+  onChangeNational: (national: string) => void;
+  onClear: () => void;
   error: string | null;
   info: string | null;
   isSubmitting: boolean;
@@ -18,11 +20,11 @@ type Props = {
 };
 
 export default function SignInPhone({
-  phone,
-  onChangePhone,
-  rememberedPhone,
-  onUseDifferentNumber,
-  hint,
+  country,
+  national,
+  onChangeCountry,
+  onChangeNational,
+  onClear,
   error,
   info,
   isSubmitting,
@@ -45,34 +47,16 @@ export default function SignInPhone({
             </View>
 
             <View className="mt-8 gap-4">
-              <Input
+              <PhoneNumberInput
                 testID="input-phone"
-                label="Phone Number"
-                placeholder="+15550000000"
-                value={phone}
-                onChangeText={onChangePhone}
-                keyboardType="phone-pad"
-                autoComplete="tel"
+                countryButtonTestID="btn-country-picker"
+                country={country}
+                national={national}
+                onChangeCountry={onChangeCountry}
+                onChangeNational={onChangeNational}
+                onClear={onClear}
                 editable={!isSubmitting}
-                hint={hint}
               />
-
-              {rememberedPhone && (
-                <Pressable
-                  testID="use-different-number"
-                  accessibilityRole="button"
-                  className="py-1"
-                  disabled={isSubmitting}
-                  onPress={onUseDifferentNumber}
-                >
-                  <Text className="text-sm text-muted-foreground">
-                    Not you?{' '}
-                    <Text className="font-semibold text-foreground underline">
-                      Use a different number
-                    </Text>
-                  </Text>
-                </Pressable>
-              )}
 
               {error && <InlineNotice tone="danger">{error}</InlineNotice>}
               {info && <InlineNotice tone="info">{info}</InlineNotice>}
@@ -88,6 +72,8 @@ export default function SignInPhone({
                 {isSubmitting ? 'Sending Code...' : 'Send Code'}
               </Button>
             </View>
+
+            <BuildBadge testID="sign-in-build-badge" />
           </View>
         </ScrollView>
       </KeyboardAvoidingView>

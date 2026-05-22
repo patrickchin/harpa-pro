@@ -2,14 +2,18 @@ import { View, Text, KeyboardAvoidingView, Pressable, ScrollView } from 'react-n
 import { ArrowLeft } from 'lucide-react-native';
 import { SafeAreaView } from '../components/primitives/SafeAreaView';
 import { Button } from '../components/primitives/Button';
-import { Input } from '../components/primitives/Input';
+import { BuildBadge } from '../components/primitives/BuildBadge';
 import { InlineNotice } from '../components/primitives/InlineNotice';
 import { Logo } from '../components/primitives/Logo';
+import { PhoneNumberInput } from '../components/primitives/PhoneNumberInput';
 import { colors } from '../lib/design-tokens/colors';
+import { type Country } from '../lib/countries';
 
 type Props = {
-  phone: string;
-  onChangePhone: (v: string) => void;
+  country: Country;
+  national: string;
+  onChangeCountry: (country: Country) => void;
+  onChangeNational: (national: string) => void;
   onBack: () => void;
   onGoToSignIn: () => void;
   error: string | null;
@@ -18,8 +22,10 @@ type Props = {
 };
 
 export default function SignUpPhone({
-  phone,
-  onChangePhone,
+  country,
+  national,
+  onChangeCountry,
+  onChangeNational,
   onBack,
   onGoToSignIn,
   error,
@@ -57,14 +63,13 @@ export default function SignUpPhone({
             </View>
 
             <View className="mt-8 gap-4">
-              <Input
+              <PhoneNumberInput
                 testID="input-signup-phone"
-                label="Phone Number"
-                placeholder="+15550000000"
-                value={phone}
-                onChangeText={onChangePhone}
-                keyboardType="phone-pad"
-                autoComplete="tel"
+                countryButtonTestID="btn-signup-country-picker"
+                country={country}
+                national={national}
+                onChangeCountry={onChangeCountry}
+                onChangeNational={onChangeNational}
                 editable={!isSubmitting}
                 autoFocus
               />
@@ -96,6 +101,8 @@ export default function SignUpPhone({
                 </Text>
               </Pressable>
             </View>
+
+            <BuildBadge testID="sign-up-build-badge" />
           </View>
         </ScrollView>
       </KeyboardAvoidingView>

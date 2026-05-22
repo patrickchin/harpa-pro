@@ -316,6 +316,71 @@ vi.mock('expo-asset', () => ({
   },
 }));
 
+// `expo-constants` reaches into `expo-modules-core` at import time,
+// which crashes in vitest (no `globalThis.expo`). `lib/build-info.ts`
+// reads `Constants.expoConfig.extra` for git SHA / build time; stub
+// it with the same shape `app.config.ts` produces so the BuildBadge
+// renders deterministically in screen snapshot tests.
+vi.mock('expo-constants', () => ({
+  default: {
+    expoConfig: {
+      version: '0.0.0',
+      extra: {
+        appVariant: 'development',
+        gitCommit: 'testsha',
+        buildTime: '2026-01-01T00:00:00.000Z',
+      },
+    },
+  },
+}));
+
+// `lib/build-info.ts` captures `new Date()` at module load to surface
+// the JS reload time on the BuildBadge. Freeze it in tests so screen
+// snapshots stay deterministic across runs.
+vi.mock('@/lib/build-info', async () => {
+  const actual = await vi.importActual<typeof import('./lib/build-info')>(
+    '@/lib/build-info',
+  );
+  return {
+    ...actual,
+    buildInfo: {
+      ...actual.buildInfo,
+      reloadTime: new Date('2026-01-01T00:00:00.000Z'),
+    },
+  };
+});
+
+// `expo-localization` reads native device region. Stub for tests so
+// `getDefaultCountry()` resolves deterministically without native bindings.
+vi.mock('expo-localization', () => ({
+  getLocales: () => [
+    {
+      languageCode: 'en',
+      regionCode: 'US',
+      languageTag: 'en-US',
+      textDirection: 'ltr',
+      digitGroupingSeparator: ',',
+      decimalSeparator: '.',
+      measurementSystem: 'us',
+      currencyCode: 'USD',
+      currencySymbol: '$',
+      languageRegionCode: 'US',
+      languageScriptCode: null,
+      languageCurrencyCode: 'USD',
+      languageCurrencySymbol: '$',
+      temperatureUnit: 'fahrenheit',
+    },
+  ],
+  getCalendars: () => [
+    {
+      calendar: 'gregorian',
+      timeZone: 'America/Los_Angeles',
+      uses24hourClock: false,
+      firstWeekday: 1,
+    },
+  ],
+}));
+
 // `react-native-safe-area-context` reads native insets. Stub
 // `useSafeAreaInsets` with typical iPhone insets for snapshot
 // stability.

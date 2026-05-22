@@ -598,24 +598,24 @@ exports[`Profile > matches snapshot at default props 1`] = `
       </rn-Pressable>
     </rn-Modal>
     <rn-View
-      className="mt-6 px-5 items-center gap-1"
+      accessibilityLabel="Build info"
+      className="mt-6 items-center"
+      testID="profile-build-badge"
     >
-      <rn-Text
-        className="text-xs text-muted-foreground"
-        selectable={true}
-        testID="build-info"
+      <rn-Pressable
+        accessibilityLabel="Build v0.0.0+testsha. Long press to copy commit testsha."
+        accessibilityRole="button"
+        delayLongPress={400}
+        onLongPress={[Function]}
+        testID="profile-build-badge-version"
       >
-        v
-        1.2.3+abc1234
-      </rn-Text>
-      <rn-Text
-        className="text-xs text-muted-foreground"
-        selectable={true}
-        testID="server-info"
-      >
-        Server: 
-        Fly (harpa-pro-api)
-      </rn-Text>
+        <rn-Text
+          className="text-[10px] text-muted-foreground"
+          numberOfLines={1}
+        >
+          v0.0.0+testsha …
+        </rn-Text>
+      </rn-Pressable>
     </rn-View>
   </rn-ScrollView>
 </rn-View>

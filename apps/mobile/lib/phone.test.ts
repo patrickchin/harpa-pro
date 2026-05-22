@@ -4,8 +4,12 @@ import {
   isValidPhoneNumber,
   getCanonicalPhoneNumber,
   requireCanonicalPhoneNumber,
+  combineCountryAndNational,
+  splitE164,
+  getInitialPhoneState,
   INVALID_PHONE_NUMBER_MESSAGE,
 } from './phone';
+import { getCountryByCode } from './countries';
 
 describe('phone utilities', () => {
   describe('normalizePhoneNumber', () => {
@@ -80,6 +84,63 @@ describe('phone utilities', () => {
       expect(() => requireCanonicalPhoneNumber('invalid')).toThrow(
         INVALID_PHONE_NUMBER_MESSAGE
       );
+    });
+  });
+
+  describe('combineCountryAndNational', () => {
+    const us = getCountryByCode('US')!;
+    const gb = getCountryByCode('GB')!;
+
+    it('joins dial code with stripped national digits', () => {
+      expect(combineCountryAndNational(us, '555 123 4567')).toBe('+15551234567');
+      expect(combineCountryAndNational(gb, '(020) 7946 0958')).toBe('+442079460958');
+    });
+
+    it('drops a leading 0 trunk prefix', () => {
+      expect(combineCountryAndNational(gb, '020 7946 0958')).toBe('+442079460958');
+    });
+
+    it('returns empty string when national has no digits', () => {
+      expect(combineCountryAndNational(us, '')).toBe('');
+      expect(combineCountryAndNational(us, '   ')).toBe('');
+    });
+  });
+
+  describe('splitE164', () => {
+    it('parses a US number back into country + national', () => {
+      const result = splitE164('+12025550173');
+      expect(result?.country.code).toBe('US');
+      expect(result?.national).toBe('2025550173');
+    });
+
+    it('parses a UK number back into country + national', () => {
+      const result = splitE164('+442079460958');
+      expect(result?.country.code).toBe('GB');
+      expect(result?.national).toBe('2079460958');
+    });
+
+    it('returns null for invalid input', () => {
+      expect(splitE164('')).toBeNull();
+      expect(splitE164('not-a-number')).toBeNull();
+    });
+  });
+
+  describe('getInitialPhoneState', () => {
+    it('splits a remembered E.164 phone when valid', () => {
+      const state = getInitialPhoneState('+442079460958');
+      expect(state.country.code).toBe('GB');
+      expect(state.national).toBe('2079460958');
+    });
+
+    it('falls back to default country with empty national when no remembered phone', () => {
+      const state = getInitialPhoneState(null);
+      expect(state.national).toBe('');
+      expect(state.country.code.length).toBe(2);
+    });
+
+    it('falls back when remembered phone is unparseable', () => {
+      const state = getInitialPhoneState('garbage');
+      expect(state.national).toBe('');
     });
   });
 });

@@ -17,7 +17,6 @@ import { useMeUsageQuery } from '@/lib/api/hooks';
 import { useRefresh } from '@/lib/use-refresh';
 import { useCopyToClipboard } from '@/lib/use-clipboard';
 import { safeBack } from '@/lib/nav/safe-back';
-import { buildInfo } from '@/lib/build-info';
 import {
   AI_PROVIDERS,
   PROVIDER_MODELS,
@@ -78,8 +77,10 @@ export default function ProfileRoute() {
       }}
       onSignOut={async () => {
         await signOut();
-        router.dismissAll();
-        router.replace('/');
+        // Auth gate in (app)/_layout.tsx redirects automatically when
+        // status becomes 'unauthenticated'. Explicit navigation here
+        // causes a POP_TO_TOP error because the (app) stack is already
+        // unmounting.
       }}
       onClearCache={async () => {
         queryClient.clear();
@@ -96,8 +97,6 @@ export default function ProfileRoute() {
       aiModel={ai.model}
       onSelectModel={(model) => ai.setModel(model)}
       availableProviderKeys={availability.availableKeys}
-      buildVersion={buildInfo.displayVersion}
-      serverLabel={buildInfo.serverLabel}
       actions={<AppHeaderActions />}
     />
   );

@@ -36,7 +36,8 @@ function matches(country: Country, query: string): boolean {
   return (
     country.name.toLowerCase().includes(normalized) ||
     country.code.toLowerCase().includes(normalized) ||
-    country.dialCode.replace(/^\+/, '').startsWith(normalized)
+    country.dialCode.replace(/^\+/, '').startsWith(normalized) ||
+    country.aliases.some((alias) => alias.toLowerCase().includes(normalized))
   );
 }
 
@@ -107,12 +108,8 @@ export function CountryPickerModal({
                 placeholderTextColor={colors.muted.foreground}
                 autoCorrect={false}
                 autoCapitalize="none"
-                className="flex-1 text-base text-foreground"
-                style={{
-                  textAlignVertical: 'center',
-                  paddingTop: 0,
-                  paddingBottom: 0,
-                }}
+                className="flex-1 py-3 text-base text-foreground"
+                style={{ textAlignVertical: 'center', lineHeight: 16 }}
                 testID="country-picker-search"
               />
             </View>

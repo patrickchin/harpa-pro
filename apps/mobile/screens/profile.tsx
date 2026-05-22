@@ -48,6 +48,7 @@ import { Card } from '@/components/primitives/Card';
 import { ScreenHeader } from '@/components/primitives/ScreenHeader';
 import { StatTile } from '@/components/primitives/StatTile';
 import { AppDialogSheet } from '@/components/primitives/AppDialogSheet';
+import { BuildBadge } from '@/components/primitives/BuildBadge';
 import { colors } from '@/lib/design-tokens/colors';
 
 export interface ProfileUser {
@@ -123,8 +124,6 @@ export interface ProfileScreenProps {
    * not yet known (treat everything as available, matches canonical). */
   availableProviderKeys: ReadonlyArray<string> | null;
 
-  buildVersion: string;
-  serverLabel: string;
   actions?: ReactNode;
 }
 
@@ -156,8 +155,6 @@ export function Profile({
   aiModel,
   onSelectModel,
   availableProviderKeys,
-  buildVersion,
-  serverLabel,
   actions,
 }: ProfileScreenProps) {
   const [modalVisible, setModalVisible] = useState(false);
@@ -601,14 +598,7 @@ export function Profile({
           ]}
         />
 
-        <View className="mt-6 px-5 items-center gap-1">
-          <Text testID="build-info" className="text-xs text-muted-foreground" selectable>
-            v{buildVersion}
-          </Text>
-          <Text testID="server-info" className="text-xs text-muted-foreground" selectable>
-            Server: {serverLabel}
-          </Text>
-        </View>
+        <BuildBadge testID="profile-build-badge" />
       </ScrollView>
     </SafeAreaView>
   );

@@ -51,12 +51,6 @@ exports[`SignInVerify > matches snapshot at default props 1`] = `
         >
           <rn-View>
             <rn-Text
-              className="text-base text-foreground mb-1"
-              selectable={true}
-            >
-              +15551234567
-            </rn-Text>
-            <rn-Text
               className="text-sm text-muted-foreground"
             >
               Code sent to 
@@ -93,8 +87,7 @@ exports[`SignInVerify > matches snapshot at default props 1`] = `
                     "shadowRadius": 8,
                   },
                   {
-                    "paddingBottom": 0,
-                    "paddingTop": 0,
+                    "lineHeight": 16,
                     "textAlignVertical": "center",
                   },
                   undefined,
@@ -103,11 +96,6 @@ exports[`SignInVerify > matches snapshot at default props 1`] = `
               testID="input-otp"
               value=""
             />
-            <rn-Text
-              className="text-sm text-muted-foreground"
-            >
-              Most phones can autofill the code from Messages.
-            </rn-Text>
           </rn-View>
           <rn-View
             className="gap-3"

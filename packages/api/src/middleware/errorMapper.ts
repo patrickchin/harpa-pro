@@ -28,9 +28,14 @@ export function errorMapper(): ErrorHandler<AppEnv> {
 
     if (err instanceof AiProviderError) {
       // Never leak provider-side detail (fixture name, hash, vendor key) to
-      // the wire OR to the operator log — `err.inner` may contain a
-      // FixtureMissError carrying the fixture name + request hash; drop it.
-      console.error(`[api] ai_provider_error (rid=${requestId}) ${err.name}: ${err.message}`);
+      // the wire — but DO log inner adapter detail (HTTP status, network
+      // error) to the operator log so 502s are debuggable. Adapter messages
+      // never contain secrets; FixtureMissError detail is already inlined
+      // into `err.message` by services/ai.ts withErrorWrap.
+      const inner = err.inner instanceof Error
+        ? `: ${err.inner.name}: ${err.inner.message}`
+        : '';
+      console.error(`[api] ai_provider_error (rid=${requestId}) ${err.name}: ${err.message}${inner}`);
       return c.json(
         {
           error: { code: 'ai_provider_error', message: 'AI provider request failed.' },

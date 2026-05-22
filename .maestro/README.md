@@ -2,6 +2,21 @@
 
 End-to-end mobile flows run via [Maestro](https://maestro.mobile.dev/).
 
+## App id (`MAESTRO_APP_ID`)
+
+Every flow declares `appId: ${MAESTRO_APP_ID}` instead of a literal
+bundle id. Export the right value before running Maestro:
+
+```bash
+export MAESTRO_APP_ID=com.harpa.pro          # prod / EAS production
+# export MAESTRO_APP_ID=com.harpa.pro.dev    # dev variant (when bumped)
+```
+
+The CI lint job (`scripts/check-maestro-appid.sh`) fails if any
+`.maestro/**/*.yaml` reintroduces a literal `com.harpa.pro`. See
+`docs/bugs/README.md` (R-Maestro1) for the regression that motivated
+the env-var rule.
+
 ## `core-end-to-end.yaml` (canonical full journey)
 
 The P3-exit-gate full-journey flow. Walks every currently-shipped
@@ -22,8 +37,8 @@ user-visible feature on the real `(auth)` + `(app)` routes:
 ```bash
 docker compose up -d
 pnpm --filter @harpa/mobile start --dev-client     # real API mode
-xcrun simctl privacy booted grant microphone com.harpa.pro
-xcrun simctl privacy booted grant camera     com.harpa.pro
+xcrun simctl privacy booted grant microphone "$MAESTRO_APP_ID"
+xcrun simctl privacy booted grant camera     "$MAESTRO_APP_ID"
 ```
 
 **Run:**

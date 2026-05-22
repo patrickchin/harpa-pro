@@ -1,4 +1,4 @@
-appId: com.harpa.pro
+appId: ${MAESTRO_APP_ID}
 name: P3.12 / P3.15.2 — Camera capture + Done handoff (dev mirror)
 tags:
   - p3

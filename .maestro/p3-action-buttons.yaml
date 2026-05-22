@@ -1,4 +1,4 @@
-appId: com.harpa.pro
+appId: ${MAESTRO_APP_ID}
 name: P3 action-button coverage (real routes)
 tags:
   - p3

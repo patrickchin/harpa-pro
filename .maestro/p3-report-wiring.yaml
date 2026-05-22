@@ -1,4 +1,4 @@
-appId: com.harpa.pro
+appId: ${MAESTRO_APP_ID}
 name: P3 report-wiring smoke (generate → finalize → delete)
 tags:
   - p3
@@ -15,8 +15,8 @@ tags:
 # Pre-flight is the same as core-end-to-end.yaml:
 #   docker compose up -d
 #   pnpm --filter @harpa/mobile start --dev-client
-#   xcrun simctl privacy booted grant microphone com.harpa.pro
-#   xcrun simctl privacy booted grant camera     com.harpa.pro
+#   xcrun simctl privacy booted grant microphone ${MAESTRO_APP_ID}
+#   xcrun simctl privacy booted grant camera     ${MAESTRO_APP_ID}
 #   scripts/maestro/reset-db.sh
 #
 # Run:

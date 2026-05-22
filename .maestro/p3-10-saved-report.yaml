@@ -1,4 +1,4 @@
-appId: com.harpa.pro
+appId: ${MAESTRO_APP_ID}
 name: P3.10 / P3.15.3 — Saved report timeline + photos + unfinalize (dev mirror)
 tags:
   - p3

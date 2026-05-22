@@ -1,0 +1,13 @@
+name: e2e-maestro-testid-gate
+on:
+  pull_request:
+  push:
+    branches: [dev, main]
+jobs:
+  testid-gate:
+    name: Maestro testID gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check Maestro testIDs exist in mobile source
+        run: bash scripts/check-maestro-testids.sh

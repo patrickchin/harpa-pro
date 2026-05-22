@@ -1,0 +1,154 @@
+appId: com.harpa.pro.dev
+name: "07 — Reports: create and delete a draft report"
+tags:
+  - regression
+  - reports
+---
+# Module 07 — Reports CRUD
+#
+# Covers:
+#   - open reports list from project home
+#   - create a new draft report
+#   - report appears in list (report-row-* visible)
+#   - capture REPORT_NUMBER via the report row
+#   - open the report
+#   - delete the report (actions menu → delete → confirm)
+#   - report no longer in list
+#   - back to project home
+#
+# Pre-condition: alice on project home; PROJECT_SLUG set.
+# Post-condition: alice on project home; REPORT_NUMBER unset (report deleted).
+
+# --- Open reports list -----------------------------------------------------
+- tapOn:
+    id: "btn-open-reports"
+- extendedWaitUntil:
+    visible:
+      id: "btn-new-report"
+    timeout: 10000
+
+# --- Create a new draft report ---------------------------------------------
+- tapOn:
+    id: "btn-new-report"
+
+# --- Wait for the new report to appear and auto-navigate to it -------------
+- extendedWaitUntil:
+    visible:
+      id: "input-note-container"
+    timeout: 15000
+
+# --- Capture REPORT_NUMBER from the URL / screen (use evalScript) ----------
+# The report number is embedded in report-row-{number} testIDs on list,
+# but we're now on the report detail screen. Go back and read from the row.
+- tapOn:
+    id: "btn-back"
+- extendedWaitUntil:
+    visible:
+      id: "report-row-.*"
+    timeout: 10000
+# report-number-chip testID is not yet implemented in the reports list.
+# Since this is the first (and only) report, REPORT_NUMBER = 1.
+- evalScript: output.REPORT_NUMBER = '1'
+
+# --- Open the report to confirm it loads -----------------------------------
+- tapOn:
+    id: "report-row-.*"
+- extendedWaitUntil:
+    visible:
+      id: "input-note-container"
+    timeout: 15000
+
+# --- Delete the report via the actions menu --------------------------------
+# The generate-report screen doesn't have an actions menu — we need to
+# finalize first to get saved-report, or just go back to the list and
+# delete from there. Actually the generate screen has no delete button;
+# the app navigates you to generate view. We navigate back to list.
+- tapOn:
+    id: "btn-back"
+- extendedWaitUntil:
+    visible:
+      id: "report-row-.*"
+    timeout: 10000
+
+# Long-press the report row to get the delete option (if available),
+# or open the report and use the actions menu on the saved-report screen.
+# Since this is a draft (not finalized), open it and check for delete option.
+- tapOn:
+    id: "report-row-.*"
+- extendedWaitUntil:
+    visible:
+      id: "input-note-container"
+    timeout: 15000
+
+# Draft reports: we need to finalize first OR the report screen might
+# have a delete option in the notes view. Let's check btn-report-actions.
+# Actually, draft reports have no actions menu in the generate view —
+# delete is on the saved-report screen after finalization.
+# For this module, we test the full lifecycle: add a note → generate →
+# finalize → delete. Simplified: just finalize quickly.
+# Add a note first (required for generate button to be enabled).
+- tapOn:
+    id: "input-text-note"
+- inputText: "Test site visit completed."
+- tapOn:
+    point: "50%,15%"
+- tapOn:
+    id: "btn-send-text-note"
+- extendedWaitUntil:
+    visible:
+      id: "note-row-.*"
+    timeout: 8000
+
+# Generate the report
+- tapOn:
+    id: "btn-generate-report"
+- extendedWaitUntil:
+    visible:
+      id: "report-tab-pane"
+    timeout: 60000
+
+# Finalize the report to reach saved-report screen
+- tapOn:
+    id: "btn-finalize-report"
+- extendedWaitUntil:
+    visible:
+      id: "confirm-finalize"
+    timeout: 8000
+- tapOn:
+    id: "confirm-finalize"
+- extendedWaitUntil:
+    visible:
+      id: "btn-report-actions"
+    timeout: 20000
+
+# Open actions menu and delete
+- tapOn:
+    id: "btn-report-actions"
+- extendedWaitUntil:
+    visible:
+      id: "btn-report-delete"
+    timeout: 8000
+- tapOn:
+    id: "btn-report-delete"
+- extendedWaitUntil:
+    visible:
+      id: "dialog-sheet"
+    timeout: 8000
+- tapOn:
+    id: "btn-confirm-delete-report"
+
+# --- Confirm report is gone ------------------------------------------------
+- extendedWaitUntil:
+    visible:
+      id: "btn-new-report"
+    timeout: 10000
+- assertNotVisible:
+    id: "report-row-.*"
+
+# --- Back to project home ---------------------------------------------------
+- tapOn:
+    id: "btn-back"
+- extendedWaitUntil:
+    visible:
+      id: "btn-project-edit"
+    timeout: 10000

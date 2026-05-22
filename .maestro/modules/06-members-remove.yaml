@@ -1,0 +1,63 @@
+appId: com.harpa.pro.dev
+name: "06 — Members: alice removes bob; bob no longer sees project"
+tags:
+  - regression
+  - members
+---
+# Module 06 — Member removal
+#
+# Covers:
+#   - alice opens members screen
+#   - taps remove button on bob's row
+#   - confirms removal via confirm-remove-member dialog
+#   - bob's row disappears
+#   - sign in as bob: bob's project list does NOT include the project
+#   - restore alice
+#
+# Pre-condition: alice on project home; bob is a viewer member.
+# Post-condition: alice on project home; bob is removed.
+
+# --- Alice opens members ---------------------------------------------------
+- tapOn:
+    id: "link-project-members"
+- extendedWaitUntil:
+    visible:
+      id: "member-row-.*"
+    timeout: 10000
+
+# --- Remove bob's row -------------------------------------------------------
+- tapOn:
+    id: "btn-remove-member-.*"
+- extendedWaitUntil:
+    visible:
+      id: "confirm-remove-member"
+    timeout: 8000
+- tapOn:
+    id: "confirm-remove-member"
+
+# --- Confirm bob's row is gone ---------------------------------------------
+- extendedWaitUntil:
+    notVisible:
+      id: "member-row-.*"
+    timeout: 8000
+
+# --- Go back to project home -----------------------------------------------
+- tapOn:
+    id: "btn-back"
+- extendedWaitUntil:
+    visible:
+      id: "btn-project-edit"
+    timeout: 10000
+
+# --- Switch to bob — bob no longer sees the project -----------------------
+- runFlow: .maestro/helpers/sign-out.yaml
+- runFlow: .maestro/helpers/sign-in-bob.yaml
+
+# Bob's project list should be empty (no project row for alice's project)
+- assertNotVisible:
+    id: "project-row-${PROJECT_SLUG}"
+
+# --- Switch back to alice ---------------------------------------------------
+- runFlow: .maestro/helpers/sign-out.yaml
+- runFlow: .maestro/helpers/sign-in-alice.yaml
+- runFlow: .maestro/helpers/open-project.yaml

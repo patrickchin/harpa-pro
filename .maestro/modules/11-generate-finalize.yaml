@@ -1,0 +1,123 @@
+appId: com.harpa.pro.dev
+name: "11 — Generate, finalize, and unfinalize a report"
+tags:
+  - regression
+  - reports
+  - ai
+---
+# Module 11 — Generate + Finalize + Unfinalize
+#
+# Covers:
+#   - open reports list → create new report
+#   - add a text note
+#   - tap Generate report → wait for completion
+#   - report-tab-pane is visible (report content rendered)
+#   - report-summary-N and report-title-N are accessible
+#   - finalize the report → saved-report screen
+#   - unfinalize the report → back on generate screen
+#   - re-finalize (leave finalized for module 12)
+#
+# Pre-condition: alice on project home; PROJECT_SLUG set.
+# Post-condition: alice on finalized saved-report screen; REPORT_NUMBER set.
+
+# --- Open reports list and create a new report ----------------------------
+- tapOn:
+    id: "btn-open-reports"
+- extendedWaitUntil:
+    visible:
+      id: "btn-new-report"
+    timeout: 10000
+- tapOn:
+    id: "btn-new-report"
+- extendedWaitUntil:
+    visible:
+      id: "input-text-note"
+    timeout: 15000
+
+# Capture report number (first and only report = 1)
+- evalScript: output.REPORT_NUMBER = '1'
+
+# --- Add a text note (required to enable Generate button) -----------------
+- tapOn:
+    id: "input-text-note"
+- inputText: "Structural steel inspection complete. All welds within spec."
+- tapOn:
+    point: "50%,15%"
+- tapOn:
+    id: "btn-send-text-note"
+- extendedWaitUntil:
+    visible:
+      id: "note-row-.*"
+    timeout: 8000
+
+# --- Generate the report ---------------------------------------------------
+- tapOn:
+    id: "btn-generate-report"
+- extendedWaitUntil:
+    visible:
+      id: "report-tab-pane"
+    timeout: 60000
+
+# --- Verify report content visible ----------------------------------------
+- tapOn:
+    id: "btn-tab-report"
+- assertVisible:
+    id: "report-tab-pane"
+- assertVisible:
+    id: "report-view-${REPORT_NUMBER}"
+- assertVisible:
+    id: "report-summary-${REPORT_NUMBER}"
+
+# --- Verify title in the screen header ------------------------------------
+- assertVisible:
+    id: "report-title-${REPORT_NUMBER}"
+
+# --- Finalize the report ---------------------------------------------------
+- tapOn:
+    id: "btn-finalize-report"
+- extendedWaitUntil:
+    visible:
+      id: "confirm-finalize"
+    timeout: 8000
+- tapOn:
+    id: "confirm-finalize"
+- extendedWaitUntil:
+    visible:
+      id: "btn-report-actions"
+    timeout: 20000
+
+# --- Unfinalize to confirm the round-trip ---------------------------------
+- tapOn:
+    id: "btn-report-actions"
+- extendedWaitUntil:
+    visible:
+      id: "btn-unfinalize-report"
+    timeout: 8000
+- tapOn:
+    id: "btn-unfinalize-report"
+- extendedWaitUntil:
+    visible:
+      id: "btn-confirm-unfinalize-report"
+    timeout: 8000
+- tapOn:
+    id: "btn-confirm-unfinalize-report"
+
+# Back on generate screen
+- extendedWaitUntil:
+    visible:
+      id: "btn-finalize-report"
+    timeout: 15000
+
+# --- Re-finalize (leave finalized for module 12) ---------------------------
+- tapOn:
+    id: "btn-finalize-report"
+- extendedWaitUntil:
+    visible:
+      id: "confirm-finalize"
+    timeout: 8000
+- tapOn:
+    id: "confirm-finalize"
+- extendedWaitUntil:
+    visible:
+      id: "btn-report-actions"
+    timeout: 20000

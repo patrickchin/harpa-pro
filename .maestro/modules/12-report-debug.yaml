@@ -1,0 +1,73 @@
+appId: com.harpa.pro.dev
+name: "12 — Report Debug screen: prompt + notes + LLM response"
+tags:
+  - regression
+  - debug
+---
+# Module 12 — Report Debug screen
+#
+# Covers:
+#   - open the Report Debug screen from the actions menu
+#   - debug-prompt section is visible (user prompt text)
+#   - debug-report-notes section is visible (notes timeline entries)
+#   - debug-llm-response section is visible (LLM output text)
+#   - no debug-empty-state (because the report has been generated)
+#   - navigate back to saved-report screen
+#
+# Pre-condition: alice is on the finalized saved-report screen
+#   (btn-report-actions visible); REPORT_NUMBER set.
+# Post-condition: alice is back on the saved-report screen.
+#
+# Note: showDeveloperSection is true only in fixture/dev builds
+# (EXPO_PUBLIC_USE_FIXTURES=true || __DEV__). The debug button is
+# hidden in production builds.
+
+# --- Open actions menu -----------------------------------------------------
+- tapOn:
+    id: "btn-report-actions"
+- extendedWaitUntil:
+    visible:
+      id: "btn-open-report-debug"
+    timeout: 8000
+
+# --- Open debug screen -----------------------------------------------------
+- tapOn:
+    id: "btn-open-report-debug"
+- extendedWaitUntil:
+    visible:
+      id: "report-debug-scroll"
+    timeout: 10000
+
+# --- Verify prompt section has content ------------------------------------
+- assertVisible:
+    id: "debug-prompt"
+- assertVisible:
+    id: "debug-prompt-text"
+
+# --- Verify report notes section has content --------------------------------
+- assertVisible:
+    id: "debug-report-notes"
+- assertNotVisible:
+    id: "debug-report-notes-empty"
+
+# --- Scroll down to LLM response section -----------------------------------
+- scrollUntilVisible:
+    element:
+      id: "debug-llm-response"
+    direction: DOWN
+- assertVisible:
+    id: "debug-llm-response"
+- assertVisible:
+    id: "debug-llm-response-text"
+
+# --- No empty state (report was generated) ---------------------------------
+- assertNotVisible:
+    id: "debug-empty-state"
+
+# --- Navigate back to saved-report ----------------------------------------
+- tapOn:
+    id: "btn-back"
+- extendedWaitUntil:
+    visible:
+      id: "btn-report-actions"
+    timeout: 10000

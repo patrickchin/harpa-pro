@@ -1,0 +1,95 @@
+appId: com.harpa.pro.dev
+name: "08 — Text notes: add and delete"
+tags:
+  - regression
+  - notes
+---
+# Module 08 — Text notes lifecycle
+#
+# Covers:
+#   - open reports list → new report
+#   - add a text note via input-text-note + btn-send-text-note
+#   - note appears in note timeline (note-row-*)
+#   - delete the note via options menu → btn-delete-note-*
+#   - note disappears from timeline
+#   - clean up: delete the report
+#
+# Pre-condition: alice on project home.
+# Post-condition: alice on project home; no reports remaining.
+#
+# Note: The generate screen auto-opens after new report creation.
+# We're already on generate screen; this module sets REPORT_NUMBER.
+
+# --- Open reports list and create a new report ----------------------------
+- tapOn:
+    id: "btn-open-reports"
+- extendedWaitUntil:
+    visible:
+      id: "btn-new-report"
+    timeout: 10000
+- tapOn:
+    id: "btn-new-report"
+- extendedWaitUntil:
+    visible:
+      id: "input-text-note"
+    timeout: 15000
+
+# Store the report number for later modules
+- tapOn:
+    id: "btn-back"
+- extendedWaitUntil:
+    visible:
+      id: "report-row-.*"
+    timeout: 10000
+- evalScript: output.REPORT_NUMBER = '1'
+- tapOn:
+    id: "report-row-.*"
+- extendedWaitUntil:
+    visible:
+      id: "input-text-note"
+    timeout: 15000
+
+# --- Add a text note -------------------------------------------------------
+- tapOn:
+    id: "input-text-note"
+- inputText: "Foundation inspection complete. No cracks observed."
+- tapOn:
+    point: "50%,15%"
+- tapOn:
+    id: "btn-send-text-note"
+
+# --- Confirm note appears ---------------------------------------------------
+- extendedWaitUntil:
+    visible:
+      id: "note-row-.*"
+    timeout: 10000
+
+# --- Open note options menu and delete the note ----------------------------
+- tapOn:
+    id: "btn-text-note-options-0"
+- extendedWaitUntil:
+    visible:
+      id: "btn-delete-note-.*"
+    timeout: 8000
+- tapOn:
+    id: "btn-delete-note-.*"
+
+# --- Confirm note is gone from timeline ------------------------------------
+- extendedWaitUntil:
+    notVisible:
+      id: "note-row-.*"
+    timeout: 8000
+
+# --- Clean up: back to project home ----------------------------------------
+- tapOn:
+    id: "btn-back"
+- extendedWaitUntil:
+    visible:
+      id: "btn-new-report"
+    timeout: 10000
+- tapOn:
+    id: "btn-back"
+- extendedWaitUntil:
+    visible:
+      id: "btn-project-edit"
+    timeout: 10000

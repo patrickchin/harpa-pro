@@ -1,0 +1,70 @@
+appId: com.harpa.pro.dev
+name: "02 — Projects CRUD: create, edit, verify"
+tags:
+  - regression
+  - projects
+---
+# Module 02 — Projects CRUD
+#
+# Covers:
+#   - create a new project (name, client, address)
+#   - capture PROJECT_SLUG via the hidden chip
+#   - edit project name
+#   - project home is accessible (btn-project-edit visible)
+#
+# Pre-condition: alice is signed in (btn-new-project visible).
+# Post-condition: alice is on project home; PROJECT_SLUG is stored.
+
+# --- Create project ---------------------------------------------------------
+- tapOn:
+    id: "btn-new-project"
+- extendedWaitUntil:
+    visible:
+      id: "input-project-name"
+    timeout: 10000
+- tapOn:
+    id: "input-project-name"
+- inputText: "Regression Test Project"
+- tapOn:
+    id: "input-client-name"
+- inputText: "Regression Client"
+- tapOn:
+    id: "input-project-address"
+- inputText: "1 Regression Way"
+- tapOn:
+    point: "50%,15%"
+- tapOn:
+    id: "btn-save-project"
+
+# --- Project home visible ---------------------------------------------------
+- extendedWaitUntil:
+    visible:
+      id: "btn-project-edit"
+    timeout: 10000
+
+# --- Capture PROJECT_SLUG from hidden chip ----------------------------------
+- copyTextFrom:
+    id: "project-slug-chip"
+- evalScript: output.PROJECT_SLUG = maestro.copiedText
+
+# --- Edit project name ------------------------------------------------------
+- tapOn:
+    id: "btn-project-edit"
+- extendedWaitUntil:
+    visible:
+      id: "input-edit-project-name"
+    timeout: 10000
+- tapOn:
+    id: "input-edit-project-name"
+- eraseText: 50
+- inputText: "Regression Test Project (Edited)"
+- tapOn:
+    point: "50%,15%"
+- tapOn:
+    id: "btn-save-project"
+
+# --- Back on project home with new name ------------------------------------
+- extendedWaitUntil:
+    visible:
+      id: "btn-project-edit"
+    timeout: 10000

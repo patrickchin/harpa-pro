@@ -1,0 +1,77 @@
+appId: com.harpa.pro.dev
+name: "01b — Auth: sign-up bob"
+tags:
+  - regression
+  - auth
+---
+# Module 01b — Sign-up bob
+#
+# Covers:
+#   - sign-out from alice
+#   - sign-up bob via deep link (harpa://sign-up/phone)
+#   - onboarding form
+#   - sign-out
+#   - sign back in as alice (ready for module 02)
+#
+# Rationale: bob must exist in the database BEFORE alice can invite him.
+# The add_project_member_by_phone SQL function fails with `user_not_found`
+# if the phone has never signed in. So we sign bob up here, sign him out,
+# then resume the journey as alice.
+#
+# Pre-condition: alice is signed in on the projects list.
+# Post-condition: alice is signed in on the projects list (state unchanged
+# from caller's view; bob now exists in DB).
+
+# --- Sign-out from alice ---------------------------------------------------
+- runFlow: .maestro/helpers/sign-out.yaml
+
+# --- Sign-up bob via deep link ---------------------------------------------
+- openLink: harpa://sign-up/phone
+- extendedWaitUntil:
+    visible:
+      id: "input-signup-phone"
+    timeout: 15000
+- tapOn:
+    id: "input-signup-phone"
+- inputText: "+15550000002"
+- tapOn:
+    point: "50%,15%"
+- tapOn:
+    id: "btn-signup-send-code"
+- extendedWaitUntil:
+    visible:
+      id: "input-signup-otp"
+    timeout: 10000
+- tapOn:
+    id: "input-signup-otp"
+- inputText: "000000"
+- tapOn:
+    point: "50%,15%"
+- tapOn:
+    id: "btn-signup-verify"
+
+# --- Onboarding for bob -----------------------------------------------------
+- extendedWaitUntil:
+    visible:
+      id: "screen-onboarding"
+    timeout: 15000
+- tapOn:
+    id: "input-onboarding-name"
+- inputText: "Bob E2E"
+- tapOn:
+    id: "input-onboarding-company"
+- inputText: "E2E Corp"
+- tapOn:
+    point: "50%,15%"
+- tapOn:
+    id: "btn-onboarding-submit"
+- extendedWaitUntil:
+    visible:
+      id: "btn-new-project"
+    timeout: 15000
+
+# --- Sign-out bob ----------------------------------------------------------
+- runFlow: .maestro/helpers/sign-out.yaml
+
+# --- Sign back in as alice (ready for module 02) ---------------------------
+- runFlow: .maestro/helpers/sign-in-alice.yaml

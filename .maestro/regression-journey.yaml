@@ -1,0 +1,73 @@
+appId: com.harpa.pro.dev
+name: "Regression journey — full end-to-end"
+tags:
+  - regression
+---
+# Full regression journey
+#
+# Sequence:
+#   1. Auth — sign up alice, sign out, sign in
+#   2. Projects CRUD — create, edit
+#   3. Members invite — alice invites bob as Editor (signs bob up too)
+#   4. Members permissions — bob verifies editor access
+#   5. Members viewer — alice downgrades bob; bob loses edit buttons
+#   6. Members remove — alice removes bob; bob can't see project
+#   7. Reports CRUD — create, navigate, delete report
+#   8. Text notes — add and delete a text note
+#   9. Generate + finalize — add note, generate, view report, finalize, unfinalize, re-finalize
+#  10. Report debug — verify debug screen sections
+#  11. Projects delete — delete the project, verify gone
+#
+# Pre-condition: clean database. Run `docker compose down -v && docker
+# compose up` locally to reset between runs. Alice (+15550000001) and
+# Bob (+15550000002) are created via the normal sign-up flow as part of
+# the journey; no API backdoors needed.
+#
+# OTP code: `000000` (TWILIO_VERIFY_FAKE_CODE default, accepted when
+# TWILIO_LIVE=0 — the default for local dev).
+
+# ── 1. Auth (sign-up alice + sign-out + sign-in) ─────────────────────────
+- runFlow: modules/01-auth.yaml
+
+# ── 1b. Sign-up bob (must exist before alice can invite him) ──────────────
+- runFlow: modules/01b-signup-bob.yaml
+
+# ── 2. Projects CRUD ──────────────────────────────────────────────────────
+- runFlow: modules/02-projects-crud.yaml
+
+# ── 3. Members invite ─────────────────────────────────────────────────────
+- runFlow: modules/03-members-invite.yaml
+
+# ── 4. Members permissions (editor) ───────────────────────────────────────
+- runFlow: modules/04-members-permissions.yaml
+
+# ── 5. Members viewer downgrade ────────────────────────────────────────────
+- runFlow: modules/05-members-viewer.yaml
+
+# ── 6. Members remove ─────────────────────────────────────────────────────
+- runFlow: modules/06-members-remove.yaml
+
+# ── 7. Reports CRUD ───────────────────────────────────────────────────────
+# We need to re-sign in as alice and open the project again
+- runFlow: helpers/sign-in-alice.yaml
+- runFlow: helpers/open-project.yaml
+- runFlow: modules/07-reports-crud.yaml
+
+# ── 8. Text notes ─────────────────────────────────────────────────────────
+# Pre-condition: alice on project home
+- runFlow: modules/08-text-notes.yaml
+
+# ── 9. Generate + finalize ─────────────────────────────────────────────────
+# Pre-condition: alice on project home
+- runFlow: modules/11-generate-finalize.yaml
+
+# ── 10. Report debug ──────────────────────────────────────────────────────
+# Pre-condition: alice on finalized saved-report screen
+- runFlow: modules/12-report-debug.yaml
+
+# ── 11. Projects delete ────────────────────────────────────────────────────
+# Pre-condition: alice on saved-report screen
+- runFlow: modules/13-projects-delete.yaml
+
+# ── 12. Sign out cleanly ───────────────────────────────────────────────────
+- runFlow: helpers/sign-out.yaml

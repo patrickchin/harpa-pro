@@ -1,0 +1,84 @@
+appId: com.harpa.pro.dev
+name: "01 — Auth: sign-up alice + sign-in alice"
+tags:
+  - regression
+  - auth
+---
+# Module 01 — Auth
+#
+# Covers:
+#   - fresh sign-up via deep link (harpa://sign-up/phone)
+#   - onboarding form (name + company)
+#   - sign-out
+#   - sign-in (sign-in screen, not sign-up)
+#
+# Pre-condition: app just cold-launched with clearState + clearKeychain.
+# Post-condition: alice is signed in, projects list visible.
+
+# Cold launch with clean state
+- launchApp:
+    clearState: true
+    clearKeychain: true
+    stopApp: true
+- waitForAnimationToEnd
+
+# Land on sign-in first (auth gate) then deep-link to sign-up
+- extendedWaitUntil:
+    visible:
+      id: "input-phone"
+    timeout: 15000
+
+# --- Sign-up alice (fresh account via seed) --------------------------------
+- openLink: harpa://sign-up/phone
+- extendedWaitUntil:
+    visible:
+      id: "input-signup-phone"
+    timeout: 15000
+- tapOn:
+    id: "input-signup-phone"
+- inputText: "+15550000001"
+- tapOn:
+    point: "50%,15%"
+- tapOn:
+    id: "btn-signup-send-code"
+- extendedWaitUntil:
+    visible:
+      id: "input-signup-otp"
+    timeout: 10000
+- tapOn:
+    id: "input-signup-otp"
+- inputText: "000000"
+- tapOn:
+    point: "50%,15%"
+- tapOn:
+    id: "btn-signup-verify"
+
+# --- Onboarding (always shown after fresh sign-up) -------------------------
+- extendedWaitUntil:
+    visible:
+      id: "screen-onboarding"
+    timeout: 15000
+- tapOn:
+    id: "input-onboarding-name"
+- inputText: "Alice E2E"
+- tapOn:
+    id: "input-onboarding-company"
+- inputText: "E2E Corp"
+- tapOn:
+    point: "50%,15%"
+- tapOn:
+    id: "btn-onboarding-submit"
+
+# --- Verify projects list ---------------------------------------------------
+- extendedWaitUntil:
+    visible:
+      id: "btn-new-project"
+    timeout: 15000
+
+# --- Sign-out ---------------------------------------------------------------
+- runFlow: .maestro/helpers/sign-out.yaml
+
+# --- Sign-in (round-trip) --------------------------------------------------
+- runFlow: .maestro/helpers/sign-in-alice.yaml
+- assertVisible:
+    id: "btn-new-project"

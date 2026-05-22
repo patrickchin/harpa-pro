@@ -1,0 +1,84 @@
+appId: com.harpa.pro.dev
+name: "05 — Members: alice downgrades bob to viewer; bob has no edit access"
+tags:
+  - regression
+  - members
+---
+# Module 05 — Member permissions (viewer)
+#
+# Covers:
+#   - alice changes bob's role from editor → viewer
+#   - bob's role badge updates to "Viewer"
+#   - sign in as bob; bob sees project but has no edit buttons
+#   - restore alice
+#
+# Pre-condition: alice is on project home; bob is editor member.
+# Post-condition: alice is on project home; bob is viewer.
+
+# --- Alice opens members and changes bob to viewer -------------------------
+- tapOn:
+    id: "link-project-members"
+- extendedWaitUntil:
+    visible:
+      id: "member-row-.*"
+    timeout: 10000
+
+# Tap the member-role-badge for the non-owner member (bob's row).
+# The picker opens inline on the badge tap in editor mode.
+- tapOn:
+    id: "member-role-badge-.*"
+- extendedWaitUntil:
+    visible:
+      id: "picker-member-role"
+    timeout: 8000
+- tapOn:
+    id: "picker-member-role-viewer"
+- extendedWaitUntil:
+    visible:
+      text: "Viewer"
+    timeout: 8000
+
+# --- Go back to project home -----------------------------------------------
+- tapOn:
+    id: "btn-back"
+- extendedWaitUntil:
+    visible:
+      id: "btn-project-edit"
+    timeout: 10000
+
+# --- Switch to bob — verify no edit access ---------------------------------
+- runFlow: .maestro/helpers/sign-out.yaml
+- runFlow: .maestro/helpers/sign-in-bob.yaml
+
+- tapOn:
+    id: "project-row-${PROJECT_SLUG}"
+- extendedWaitUntil:
+    visible:
+      id: "btn-project-edit"
+    timeout: 10000
+
+# Bob's role badge shows "Viewer"
+- assertVisible:
+    text: "Viewer"
+
+# Bob cannot create a report (btn-new-report is not visible to viewers
+# who have read-only access; assert it is NOT visible)
+- tapOn:
+    id: "btn-open-reports"
+- extendedWaitUntil:
+    visible:
+      id: "btn-back"
+    timeout: 5000
+# Viewer still sees the reports list, but the "New report" button
+# should not be shown to them
+- assertNotVisible:
+    id: "btn-new-report"
+- tapOn:
+    id: "btn-back"
+
+# --- Switch back to alice ---------------------------------------------------
+- tapOn:
+    id: "btn-back"
+- runFlow: .maestro/helpers/sign-out.yaml
+- runFlow: .maestro/helpers/sign-in-alice.yaml
+- runFlow: .maestro/helpers/open-project.yaml

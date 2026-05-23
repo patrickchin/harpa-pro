@@ -144,14 +144,17 @@ later ones:
 
 | Variable | Set by | Read by |
 |---|---|---|
-| `PROJECT_SLUG` | `02-projects-crud` (`copyTextFrom` on the project header) | 03–13 |
 | `REPORT_NUMBER` | `07-reports-crud` | 08–12 |
 | `BOB_USER_ID` | `03-members-invite` (from members row testID) | 05, 06 |
 
-Use `copyTextFrom: id: "project-slug-chip"` followed by
-`evalScript: output.PROJECT_SLUG = maestro.copiedText`. Requires the
-header to expose a hidden `<Text testID="project-slug-chip">…</Text>`
-in dev/fixture builds only.
+The single project created by `02-projects-crud` is referenced from
+modules 04–13 by its **post-edit name** (`text: "Regression Test
+Project \(Edited\)"`) rather than its dynamic slug. Earlier iterations
+captured the slug via a hidden `project-slug-chip` element, but
+Android's accessibility framework filters out invisible elements
+(opacity 0, height 0, off-screen), so the chip was unreachable from
+Maestro's hierarchy snapshot. Tapping by visible name avoids the
+testID-injection workaround entirely.
 
 ### 3.3 testID inventory (required additions)
 
@@ -260,9 +263,9 @@ that is the Pitfall 13 contract.
 # 04-members-permissions.yaml — bob (editor) sees project + can edit
 - runFlow: helpers/sign-in-bob.yaml
 - assertVisible:
-    id: "project-row-${PROJECT_SLUG}"
+    text: "Regression Test Project \\(Edited\\)"
 - tapOn:
-    id: "project-row-${PROJECT_SLUG}"
+    text: "Regression Test Project \\(Edited\\)"
 - assertVisible:
     id: "btn-project-edit"                # editor can edit
 - assertNotVisible:
@@ -281,7 +284,7 @@ that is the Pitfall 13 contract.
 - runFlow: helpers/sign-out.yaml
 - runFlow: helpers/sign-in-bob.yaml
 - tapOn:
-    id: "project-row-${PROJECT_SLUG}"
+    text: "Regression Test Project \\(Edited\\)"
 - assertNotVisible:
     id: "btn-project-edit"
 - assertNotVisible:

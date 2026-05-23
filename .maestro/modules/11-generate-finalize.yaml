@@ -17,7 +17,7 @@ tags:
 #   - unfinalize the report → back on generate screen
 #   - re-finalize (leave finalized for module 12)
 #
-# Pre-condition: alice on project home; PROJECT_SLUG set.
+# Pre-condition: alice on project home.
 # Post-condition: alice on finalized saved-report screen; REPORT_NUMBER set.
 
 # --- Open reports list and create a new report ----------------------------

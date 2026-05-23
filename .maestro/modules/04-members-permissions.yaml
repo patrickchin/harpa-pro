@@ -14,7 +14,7 @@ tags:
 #   - bob can access the reports screen (editor has reports access)
 #   - sign out bob → sign in alice (restore for next module)
 #
-# Pre-condition: alice is signed in, PROJECT_SLUG is set.
+# Pre-condition: alice is signed in.
 # Post-condition: alice is signed in on project home.
 
 # --- Switch to bob ---------------------------------------------------------
@@ -23,9 +23,9 @@ tags:
 
 # --- Bob sees the project ---------------------------------------------------
 - assertVisible:
-    id: "project-row-${PROJECT_SLUG}"
+    text: "Regression Test Project \\(Edited\\)"
 - tapOn:
-    id: "project-row-${PROJECT_SLUG}"
+    text: "Regression Test Project \\(Edited\\)"
 
 # --- Bob's role badge shows Editor -----------------------------------------
 - extendedWaitUntil:

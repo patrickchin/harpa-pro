@@ -125,7 +125,7 @@ their feature merge.
 - [ ] `GET /reports/{number}/debug` route + scope tests + fixture-replay test (text notes only — voice fields added with `feat/v4-voice` merge).
 - [ ] `screens/report-debug.tsx` + route + dev-section actions-menu entry.
 - [ ] testID audit per the design doc §3.3 inventory.
-- [ ] Hidden `project-slug-chip` mounted only when `__DEV__` or `EXPO_PUBLIC_USE_FIXTURES`.
+- [ ] Project row selectors in modules 04–06, 13 use the post-edit name (`text: "Regression Test Project \(Edited\)"`); an earlier `project-slug-chip` approach was dropped because Android a11y filters hidden elements.
 - [ ] `.maestro/helpers/` + `.maestro/modules/01, 01b, 02..08, 11..13` flows. Alice and Bob are signed up via the normal sign-up UI inside the journey; no API seed CLI needed.
 - [ ] `.maestro/regression-journey.yaml` top-level runner.
 - [ ] `scripts/check-maestro-testids.sh` CI grep gate.

@@ -51,7 +51,7 @@ tags:
 - runFlow: ../helpers/sign-in-bob.yaml
 
 - tapOn:
-    id: "project-row-${PROJECT_SLUG}"
+    text: "Regression Test Project \\(Edited\\)"
 - extendedWaitUntil:
     visible:
       id: "btn-project-edit"

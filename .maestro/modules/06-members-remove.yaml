@@ -55,7 +55,7 @@ tags:
 
 # Bob's project list should be empty (no project row for alice's project)
 - assertNotVisible:
-    id: "project-row-${PROJECT_SLUG}"
+    text: "Regression Test Project \\(Edited\\)"
 
 # --- Switch back to alice ---------------------------------------------------
 - runFlow: ../helpers/sign-out.yaml

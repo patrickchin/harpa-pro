@@ -16,7 +16,7 @@ tags:
 #   - report no longer in list
 #   - back to project home
 #
-# Pre-condition: alice on project home; PROJECT_SLUG set.
+# Pre-condition: alice on project home.
 # Post-condition: alice on project home; REPORT_NUMBER unset (report deleted).
 
 # --- Open reports list -----------------------------------------------------

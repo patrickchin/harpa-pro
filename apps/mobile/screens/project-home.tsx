@@ -62,13 +62,11 @@ export type ProjectHomeProps = {
   onCopy: (value: string, key: string) => void;
   actions?: ReactNode;
   /**
-   * P4.8 — dev/fixture chip. When true, renders a hidden
-   * `<Text testID="project-slug-chip">` so Maestro can copy the slug
-   * without text-matching the header.
+   * Gates dev/fixture-only affordances (e.g. saved-report debug menu
+   * threaded down from this screen). When false, those affordances
+   * stay hidden in production builds.
    */
   showDeveloperSection?: boolean;
-  /** The project slug (e.g. "prj_abc123") for the hidden chip. */
-  projectSlug?: string | null;
 };
 
 type OverviewAction = {
@@ -94,7 +92,6 @@ export function ProjectHome({
   onCopy,
   actions,
   showDeveloperSection,
-  projectSlug,
 }: ProjectHomeProps) {
   const siteName = project?.name?.trim() || 'Project';
   const stats = project?.stats ?? { totalReports: 0, drafts: 0, lastReportAt: null };
@@ -150,14 +147,6 @@ export function ProjectHome({
           backLabel="Projects"
           actions={actions}
         />
-        {showDeveloperSection && projectSlug ? (
-          <Text
-            testID="project-slug-chip"
-            style={{ position: 'absolute', opacity: 0, height: 0 }}
-          >
-            {projectSlug}
-          </Text>
-        ) : null}
       </View>
 
       {isLoading ? (

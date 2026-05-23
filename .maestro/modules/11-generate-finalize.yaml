@@ -61,26 +61,39 @@ tags:
     timeout: 8000
 
 # --- Generate the report ---------------------------------------------------
+# Note: `report-tab-pane` is rendered unconditionally by ReportTabPane —
+# it appears the instant the pager mounts and tells us nothing about
+# generation progress. The real "report rendered" signal is the inner
+# `ReportView` (testID `report-view-N`), which is only mounted once
+# `generation.report` becomes truthy (see ReportTabPane.tsx:108–120 and
+# ReportView.tsx:35). Poll for that with a generous timeout — fixture
+# AI replay is fast but the tab-pager horizontal scroll + reanimated
+# FadeIn on `report-tab-live` can still push first-paint past Maestro's
+# default ~18s implicit wait.
 - tapOn:
     id: "btn-generate-report"
+- tapOn:
+    id: "btn-tab-report"
 - extendedWaitUntil:
     visible:
       id: "report-tab-pane"
-    timeout: 60000
+    timeout: 10000
 
 # --- Verify report content visible ----------------------------------------
-- tapOn:
-    id: "btn-tab-report"
-- assertVisible:
-    id: "report-tab-pane"
-- assertVisible:
-    id: "report-view-${output.REPORT_NUMBER}"
+# 60s covers worst-case fixture cold-start (model replay + draft
+# autosave + tab transition). Module-level fail is acceptable if this
+# is exceeded — that indicates a real generation regression.
+- extendedWaitUntil:
+    visible:
+      id: "report-view-${output.REPORT_NUMBER}"
+    timeout: 60000
 - assertVisible:
     id: "report-summary-${output.REPORT_NUMBER}"
 
-# --- Verify title in the screen header ------------------------------------
-- assertVisible:
-    id: "report-title-${output.REPORT_NUMBER}"
+# Title testID `report-title-N` is only emitted by ReportDetailHeader
+# (see ReportDetailHeader.tsx:45), which renders on the *saved-report*
+# screen after finalize — not on the generate screen. Defer this
+# assertion until after the finalize tap below.
 
 # --- Finalize the report ---------------------------------------------------
 - tapOn:
@@ -95,6 +108,10 @@ tags:
     visible:
       id: "btn-report-actions"
     timeout: 20000
+
+# Now on saved-report screen — ReportDetailHeader emits the title testID.
+- assertVisible:
+    id: "report-title-${output.REPORT_NUMBER}"
 
 # --- Unfinalize to confirm the round-trip ---------------------------------
 - tapOn:

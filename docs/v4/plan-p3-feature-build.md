@@ -482,7 +482,7 @@ route.
       `total_tokens` generated, `latency_ms`, `fixture_mode`,
       `status`, `created_at`). Indexes on `(user_id, created_at desc)` and
       `(user_id, vendor, model)`.
-      (`packages/api/migrations/0003_llm_usage_events.sql`.)
+      (`packages/api/migrations/0005_llm_usage_events.sql`.)
 - [x] RLS / scoped role: `llm_usage_events_self_read` +
       `llm_usage_events_self_insert` enforce `user_id =
       current_setting('app.user_id')`. INSERT goes through the

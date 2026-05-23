@@ -147,15 +147,47 @@ export interface UsageMonth {
   voiceNotes: number;
 }
 
+export interface UsageTokenMonth {
+  month: string;
+  inputTokens: number;
+  outputTokens: number;
+  cachedTokens: number;
+  calls: number;
+}
+
+export interface UsageByModelRow {
+  vendor: string;
+  model: string;
+  operation: 'chat' | 'transcribe' | 'generate_report';
+  calls: number;
+  inputTokens: number;
+  outputTokens: number;
+  cachedTokens: number;
+}
+
 export interface UsageSummary {
   months: UsageMonth[];
-  totals: { reports: number; voiceNotes: number };
+  totals: {
+    reports: number;
+    voiceNotes: number;
+    inputTokens: number;
+    outputTokens: number;
+    cachedTokens: number;
+    calls: number;
+  };
+  usageTokens: UsageTokenMonth[];
+  usageByModel: UsageByModelRow[];
 }
 
 /**
- * Per-month counts of reports authored + voice notes recorded by the
- * caller. All filters use `author_id = userId` so the RLS path on
- * `app.reports` / `app.notes` is what excludes other actors.
+ * Per-month counts (reports + voice notes) AND per-month LLM token
+ * totals + a per-(vendor,model,operation) breakdown across the full
+ * window. All queries pin on `author_id = userId` / `user_id = userId`;
+ * the RLS path on each table (`app.reports`, `app.notes`,
+ * `app.llm_usage_events`) excludes other actors as defence-in-depth.
+ *
+ * Only `status='ok'` usage events count toward token totals — error
+ * rows are recorded for postmortem visibility but shouldn't bill.
  */
 export async function fetchUsage(db: Db, userId: string): Promise<UsageSummary> {
   const reportsRes = await db.execute<{ month: string; count: string }>(sql`
@@ -172,6 +204,47 @@ export async function fetchUsage(db: Db, userId: string): Promise<UsageSummary> 
     GROUP BY month
     ORDER BY month
   `);
+  const tokensRes = await db.execute<{
+    month: string;
+    input_tokens: string;
+    output_tokens: string;
+    cached_tokens: string;
+    calls: string;
+  }>(sql`
+    SELECT
+      to_char(created_at, 'YYYY-MM') AS month,
+      coalesce(sum(input_tokens), 0)::text  AS input_tokens,
+      coalesce(sum(output_tokens), 0)::text AS output_tokens,
+      coalesce(sum(cached_tokens), 0)::text AS cached_tokens,
+      count(*)::text                        AS calls
+    FROM app.llm_usage_events
+    WHERE user_id = ${userId} AND status = 'ok'
+    GROUP BY month
+    ORDER BY month
+  `);
+  const byModelRes = await db.execute<{
+    vendor: string;
+    model: string;
+    operation: 'chat' | 'transcribe' | 'generate_report';
+    calls: string;
+    input_tokens: string;
+    output_tokens: string;
+    cached_tokens: string;
+  }>(sql`
+    SELECT
+      vendor,
+      model,
+      operation,
+      count(*)::text                        AS calls,
+      coalesce(sum(input_tokens), 0)::text  AS input_tokens,
+      coalesce(sum(output_tokens), 0)::text AS output_tokens,
+      coalesce(sum(cached_tokens), 0)::text AS cached_tokens
+    FROM app.llm_usage_events
+    WHERE user_id = ${userId} AND status = 'ok'
+    GROUP BY vendor, model, operation
+    ORDER BY vendor, model, operation
+  `);
+
   const monthMap = new Map<string, UsageMonth>();
   for (const r of reportsRes.rows) {
     monthMap.set(r.month, { month: r.month, reports: Number(r.count), voiceNotes: 0 });
@@ -182,11 +255,33 @@ export async function fetchUsage(db: Db, userId: string): Promise<UsageSummary> 
     monthMap.set(r.month, existing);
   }
   const months = Array.from(monthMap.values()).sort((a, b) => a.month.localeCompare(b.month));
-  const totals = months.reduce(
-    (acc, m) => ({ reports: acc.reports + m.reports, voiceNotes: acc.voiceNotes + m.voiceNotes }),
-    { reports: 0, voiceNotes: 0 },
-  );
-  return { months, totals };
+
+  const usageTokens: UsageTokenMonth[] = tokensRes.rows.map((r) => ({
+    month: r.month,
+    inputTokens: Number(r.input_tokens),
+    outputTokens: Number(r.output_tokens),
+    cachedTokens: Number(r.cached_tokens),
+    calls: Number(r.calls),
+  }));
+  const usageByModel: UsageByModelRow[] = byModelRes.rows.map((r) => ({
+    vendor: r.vendor,
+    model: r.model,
+    operation: r.operation,
+    calls: Number(r.calls),
+    inputTokens: Number(r.input_tokens),
+    outputTokens: Number(r.output_tokens),
+    cachedTokens: Number(r.cached_tokens),
+  }));
+
+  const totals = {
+    reports: months.reduce((a, m) => a + m.reports, 0),
+    voiceNotes: months.reduce((a, m) => a + m.voiceNotes, 0),
+    inputTokens: usageTokens.reduce((a, m) => a + m.inputTokens, 0),
+    outputTokens: usageTokens.reduce((a, m) => a + m.outputTokens, 0),
+    cachedTokens: usageTokens.reduce((a, m) => a + m.cachedTokens, 0),
+    calls: usageTokens.reduce((a, m) => a + m.calls, 0),
+  };
+  return { months, totals, usageTokens, usageByModel };
 }
 
 export async function sessionIsValid(db: Db, sessionId: string): Promise<boolean> {

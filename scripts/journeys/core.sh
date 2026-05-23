@@ -153,6 +153,8 @@ else
   echo "  file_id=$VOICE_FID"
 
   echo "→ POST /reports/$RID/notes/voice (transcribe + summarise)"
+  USAGE_BEFORE_VOICE=$(req GET /me/usage '')
+  CALLS_BEFORE_VOICE=$(echo "$USAGE_BEFORE_VOICE" | jq -r '.totals.calls // 0')
   set +e
   VOICE_AGG=$(req POST "/reports/$RID/notes/voice" \
     "{\"fileId\":\"$VOICE_FID\",\"durationSec\":$VOICE_DURATION_SEC}" 2>&1)
@@ -163,6 +165,14 @@ else
     VOICE_TRANSCRIPT=$(echo "$VOICE_AGG" | j '.body // empty' | head -c 80)
     echo "  ✓ transcribed: \"${VOICE_TRANSCRIPT}...\""
     echo "  nid=$VOICE_AGG_NID"
+    USAGE_AFTER_VOICE=$(req GET /me/usage '')
+    CALLS_AFTER_VOICE=$(echo "$USAGE_AFTER_VOICE" | jq -r '.totals.calls // 0')
+    TOKENS_AFTER_VOICE=$(echo "$USAGE_AFTER_VOICE" | jq -r '(.totals.inputTokens // 0) + (.totals.outputTokens // 0)')
+    echo "  /me/usage: calls $CALLS_BEFORE_VOICE→$CALLS_AFTER_VOICE tokens=$TOKENS_AFTER_VOICE"
+    if [[ "$CALLS_AFTER_VOICE" -le "$CALLS_BEFORE_VOICE" ]]; then
+      echo "  ✗ /me/usage totals.calls did not increase after voice aggregator" >&2
+      exit 1
+    fi
   else
     echo "  ⚠️  voice aggregator failed (AI unavailable or sample too short)"
     VOICE_AGG_NID=""
@@ -172,15 +182,28 @@ fi
 # ── 10. Generate report from notes (AI) ──────────────────────────────
 
 echo "→ POST /projects/$PID/reports/$RNUM/generate"
+USAGE_BEFORE_GEN=$(req GET /me/usage '')
+CALLS_BEFORE_GEN=$(echo "$USAGE_BEFORE_GEN" | jq -r '.totals.calls // 0')
 set +e
 GEN_RESULT=$(req POST "/projects/$PID/reports/$RNUM/generate" '{}' 2>&1)
 GEN_STATUS=$?
 set -e
 if [[ $GEN_STATUS -eq 0 ]]; then
   echo "  ✓ report generated"
-  # Verify report body was populated
   BODY=$(req GET "/projects/$PID/reports/$RNUM" '' | j '.body.summarySections | length')
   echo "  sections in generated report: $BODY"
+  USAGE_AFTER_GEN=$(req GET /me/usage '')
+  CALLS_AFTER_GEN=$(echo "$USAGE_AFTER_GEN" | jq -r '.totals.calls // 0')
+  BYMODEL_HAS_GEN=$(echo "$USAGE_AFTER_GEN" | jq -r '[.usageByModel[] | select(.operation == "generate_report")] | length')
+  echo "  /me/usage: calls $CALLS_BEFORE_GEN→$CALLS_AFTER_GEN generate_report rows=$BYMODEL_HAS_GEN"
+  if [[ "$CALLS_AFTER_GEN" -le "$CALLS_BEFORE_GEN" ]]; then
+    echo "  ✗ /me/usage totals.calls did not increase after /generate" >&2
+    exit 1
+  fi
+  if [[ "$BYMODEL_HAS_GEN" -lt 1 ]]; then
+    echo "  ✗ /me/usage.usageByModel missing operation=generate_report" >&2
+    exit 1
+  fi
 else
   echo "  ⚠️  generate failed (AI unavailable — expected if no notes transcribed)"
 fi

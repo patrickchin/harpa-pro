@@ -50,10 +50,37 @@ export const usageMonth = z.object({
   reports: z.number().int().nonnegative(),
   voiceNotes: z.number().int().nonnegative(),
 });
+
+/** Per-month LLM token totals (sum across all vendor/model/operation). */
+export const usageTokenMonth = z.object({
+  month: z.string().regex(/^\d{4}-\d{2}$/),
+  inputTokens: z.number().int().nonnegative(),
+  outputTokens: z.number().int().nonnegative(),
+  cachedTokens: z.number().int().nonnegative(),
+  calls: z.number().int().nonnegative(),
+});
+
+/** Per-(vendor,model,operation) usage breakdown across the full window. */
+export const usageByModelRow = z.object({
+  vendor: z.string(),
+  model: z.string(),
+  operation: z.enum(['chat', 'transcribe', 'generate_report']),
+  calls: z.number().int().nonnegative(),
+  inputTokens: z.number().int().nonnegative(),
+  outputTokens: z.number().int().nonnegative(),
+  cachedTokens: z.number().int().nonnegative(),
+});
+
 export const usageResponse = z.object({
   months: z.array(usageMonth),
   totals: z.object({
     reports: z.number().int().nonnegative(),
     voiceNotes: z.number().int().nonnegative(),
+    inputTokens: z.number().int().nonnegative(),
+    outputTokens: z.number().int().nonnegative(),
+    cachedTokens: z.number().int().nonnegative(),
+    calls: z.number().int().nonnegative(),
   }),
+  usageTokens: z.array(usageTokenMonth),
+  usageByModel: z.array(usageByModelRow),
 });

@@ -140,9 +140,38 @@ describe('GET /me/usage', () => {
     expect(res.status).toBe(200);
     const body = (await res.json()) as {
       months: Array<{ month: string; reports: number; voiceNotes: number }>;
-      totals: { reports: number; voiceNotes: number };
+      totals: {
+        reports: number;
+        voiceNotes: number;
+        inputTokens: number;
+        outputTokens: number;
+        cachedTokens: number;
+        calls: number;
+      };
+      usageTokens: Array<{
+        month: string;
+        inputTokens: number;
+        outputTokens: number;
+        cachedTokens: number;
+        calls: number;
+      }>;
+      usageByModel: Array<{
+        vendor: string;
+        model: string;
+        operation: string;
+        calls: number;
+        inputTokens: number;
+        outputTokens: number;
+        cachedTokens: number;
+      }>;
     };
-    expect(body.totals).toEqual({ reports: 2, voiceNotes: 2 });
+    expect(body.totals.reports).toBe(2);
+    expect(body.totals.voiceNotes).toBe(2);
+    expect(body.totals.inputTokens).toBe(0);
+    expect(body.totals.outputTokens).toBe(0);
+    expect(body.totals.calls).toBe(0);
+    expect(Array.isArray(body.usageTokens)).toBe(true);
+    expect(Array.isArray(body.usageByModel)).toBe(true);
     const m04 = body.months.find((m) => m.month === '2026-04')!;
     const m05 = body.months.find((m) => m.month === '2026-05')!;
     expect(m04).toEqual({ month: '2026-04', reports: 1, voiceNotes: 2 });
@@ -154,8 +183,10 @@ describe('GET /me/usage', () => {
     const token = await signTestToken(bob, bobSid);
     const res = await app.request('/me/usage', { headers: { authorization: `Bearer ${token}` } });
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { totals: { reports: number; voiceNotes: number } };
-    expect(body.totals).toEqual({ reports: 1, voiceNotes: 1 });
+    const body = (await res.json()) as { totals: { reports: number; voiceNotes: number; inputTokens: number; outputTokens: number; calls: number } };
+    expect(body.totals.reports).toBe(1);
+    expect(body.totals.voiceNotes).toBe(1);
+    expect(body.totals.calls).toBe(0);
   });
 
   it('rejects without a bearer token (401)', async () => {

@@ -326,6 +326,7 @@ async function runGenerate(
     existingBody,
     fixtureName,
     vendor,
+    usageContext: { db, userId, projectId: report.projectId, reportId: report.id },
   });
   const finishedAt = new Date().toISOString();
   // Persist the prompt + raw response alongside the new body so the

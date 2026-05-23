@@ -216,6 +216,8 @@ echo "  notes created: 5"
 if [[ -f "$VOICE_LONG" ]]; then
   echo "→ upload + POST voice note (m4a, real aggregator transcription)"
   VOICE_LONG_FID=$(upload_file voice audio/mp4 "$VOICE_LONG")
+  USAGE_BEFORE_LONG=$(req GET /me/usage '')
+  CALLS_BEFORE_LONG=$(echo "$USAGE_BEFORE_LONG" | jq -r '.totals.calls // 0')
   set +e
   VOICE_AGG=$(req POST "/reports/$RID/notes/voice" \
     "{\"fileId\":\"$VOICE_LONG_FID\",\"durationSec\":$VOICE_LONG_DURATION_SEC}" 2>&1)
@@ -224,6 +226,18 @@ if [[ -f "$VOICE_LONG" ]]; then
   if [[ $AGG_STATUS -eq 0 ]]; then
     VOICE_TITLE=$(echo "$VOICE_AGG" | j '.title // empty')
     echo "  ✓ aggregator title: \"$VOICE_TITLE\""
+    USAGE_AFTER_LONG=$(req GET /me/usage '')
+    CALLS_AFTER_LONG=$(echo "$USAGE_AFTER_LONG" | jq -r '.totals.calls // 0')
+    TOKENS_AFTER_LONG=$(echo "$USAGE_AFTER_LONG" | jq -r '(.totals.inputTokens // 0) + (.totals.outputTokens // 0)')
+    echo "  /me/usage: calls $CALLS_BEFORE_LONG→$CALLS_AFTER_LONG tokens=$TOKENS_AFTER_LONG"
+    if [[ "$CALLS_AFTER_LONG" -le "$CALLS_BEFORE_LONG" ]]; then
+      echo "  ✗ /me/usage totals.calls did not increase after long voice aggregator" >&2
+      exit 1
+    fi
+    if [[ "$TOKENS_AFTER_LONG" -le 0 ]]; then
+      echo "  ✗ /me/usage tokens still 0 after long aggregator (summarise should yield tokens)" >&2
+      exit 1
+    fi
   else
     echo "  ⚠️  aggregator failed (non-fatal)"
   fi

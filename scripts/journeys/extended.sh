@@ -30,7 +30,7 @@ TXT_FILE="$SAMPLES/sample.txt"
 WAV_FILE="$SAMPLES/sample.wav"
 # Longer real voice sample for the aggregator step (~4:34, 4.2 MB).
 # Different domain from journey-core's default so AI output stays diverse.
-VOICE_LONG=${VOICE_LONG:-"$REAL_SAMPLES/framing-modular-house.m4a"}
+VOICE_LONG=${VOICE_LONG:-"$REAL_SAMPLES/framing.m4a"}
 VOICE_LONG_DURATION_SEC=${VOICE_LONG_DURATION_SEC:-274}
 
 # ── Helpers ────────────────────────────────────────────────────────────

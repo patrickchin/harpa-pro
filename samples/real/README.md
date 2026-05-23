@@ -10,9 +10,9 @@ cloning the repo, ensure LFS is installed (`git lfs install`) and then
 
 | File                          | Size  | Duration | Used by | Description |
 | ----------------------------- | ----: | -------: | ------- | ----------- |
-| `site-rain-10s.m4a`           | 125K  |    0:10  | `scripts/journeys/core.sh` (default `VOICE_M4A`) + `journey.sh` | Short status clip — cheap on tokens, fast CI, still exercises full transcribe + summarise + title pipeline. |
-| `framing-modular-house.m4a`   | 4.2M  |    4:34  | `scripts/journeys/extended.sh` (default `VOICE_LONG`) | Multi-topic LGS framing walkthrough — produces rich transcript for the aggregator step. |
-| `site-walkthrough.m4a`        | 5.0M  |    6:13  | manual / heavyweight runs (override `VOICE_M4A=…`) | ~6min construction-site walkthrough. Token-expensive; not a default. |
+| `rain.m4a`           | 125K  |    0:10  | `scripts/journeys/core.sh` (default `VOICE_M4A`) + `journey.sh` | Short status clip — cheap on tokens, fast CI, still exercises full transcribe + summarise + title pipeline. |
+| `framing.m4a`   | 4.2M  |    4:34  | `scripts/journeys/extended.sh` (default `VOICE_LONG`) | Multi-topic LGS framing walkthrough — produces rich transcript for the aggregator step. |
+| `walkthrough.m4a`        | 5.0M  |    6:13  | manual / heavyweight runs (override `VOICE_M4A=…`) | ~6min construction-site walkthrough. Token-expensive; not a default. |
 
 ## Adding new samples
 
@@ -32,7 +32,7 @@ listed above. Override per-run, e.g. to use the heavyweight walkthrough
 in core:
 
 ```bash
-VOICE_M4A=samples/real/site-walkthrough.m4a \
+VOICE_M4A=samples/real/walkthrough.m4a \
 VOICE_DURATION_SEC=373 \
   PASSWORD=... bash scripts/journeys/all.sh dev
 ```

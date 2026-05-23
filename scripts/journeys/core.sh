@@ -27,8 +27,8 @@ IMG="$SAMPLES/sample.png"
 # Default to the short LFS-tracked sample (~10s, 125 KB) — cheap on tokens
 # and fast on CI, but still exercises the real upload → transcribe →
 # summarise → title pipeline. Override via VOICE_M4A=... for longer clips
-# (e.g. samples/real/site-walkthrough.m4a, ~6min).
-VOICE_M4A=${VOICE_M4A:-"$REAL_SAMPLES/site-rain-10s.m4a"}
+# (e.g. samples/real/walkthrough.m4a, ~6min).
+VOICE_M4A=${VOICE_M4A:-"$REAL_SAMPLES/rain.m4a"}
 VOICE_DURATION_SEC=${VOICE_DURATION_SEC:-10}
 
 # ── Helpers ────────────────────────────────────────────────────────────

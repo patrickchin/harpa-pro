@@ -46,9 +46,9 @@ bash scripts/journeys/all.sh prod
 | `PASSWORD`              | —                                    | **Required.** Test-account password.                               |
 | `PHONE`                 | `+15550199001`                       | Primary test account (in dev's `TEST_ACCOUNT_PHONES`).             |
 | `PHONE2`                | `+15550199002`                       | Secondary test account for cross-user / member tests.              |
-| `VOICE_M4A`             | `samples/real/site-rain-10s.m4a`     | Voice sample for `core.sh` / `journey.sh`.                         |
+| `VOICE_M4A`             | `samples/real/rain.m4a`     | Voice sample for `core.sh` / `journey.sh`.                         |
 | `VOICE_DURATION_SEC`    | `10`                                 | Reported duration for the voice aggregator call.                   |
-| `VOICE_LONG`            | `samples/real/framing-modular-house.m4a` | Longer aggregator sample used by `extended.sh`.                |
+| `VOICE_LONG`            | `samples/real/framing.m4a` | Longer aggregator sample used by `extended.sh`.                |
 | `VOICE_LONG_DURATION_SEC` | `274`                              | Reported duration for the long sample.                             |
 | `ONLY`                  | unset                                | `core` / `extended` / `stress` — runs only the named journey.      |
 | `SKIP_STRESS`           | unset                                | Set `1` to skip the stress journey when running everything.        |

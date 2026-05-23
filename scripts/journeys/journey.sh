@@ -33,8 +33,8 @@ PHONE=${PHONE:-+15550199001}
 SAMPLES="$(cd "$(dirname "$0")/../../apps/cli/scripts/samples" && pwd)"
 IMG="$SAMPLES/sample.png"
 # Real voice sample for live transcription. Default to the LFS short clip;
-# override VOICE_M4A to use a longer one (e.g. samples/real/site-walkthrough.m4a).
-VOICE_M4A=${VOICE_M4A:-"$(cd "$(dirname "$0")/../../samples/real" && pwd)/site-rain-10s.m4a"}
+# override VOICE_M4A to use a longer one (e.g. samples/real/walkthrough.m4a).
+VOICE_M4A=${VOICE_M4A:-"$(cd "$(dirname "$0")/../../samples/real" && pwd)/rain.m4a"}
 
 j() { jq -r "$1"; }
 H=(-H 'content-type: application/json')

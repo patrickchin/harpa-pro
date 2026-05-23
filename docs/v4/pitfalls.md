@@ -482,6 +482,12 @@ The eight v4 skeletons (`apps/mobile/components/skeletons/*`) and
 their screens follow this pattern; mirror it for any new screen with
 a loading state. See [`arch-mobile-skeletons.md`](./arch-mobile-skeletons.md).
 
+## Testing
+
+- Maestro on Windows / PowerShell 7 against real Android has its own
+  set of host- and CLI-specific pitfalls — see
+  [`pitfalls-maestro-windows.md`](pitfalls-maestro-windows.md).
+
 ---
 
 ## How we use this doc

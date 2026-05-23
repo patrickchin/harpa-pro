@@ -43,8 +43,9 @@ tags:
       id: "input-note"
     timeout: 15000
 
-# Capture report number (first and only report = 1)
-- evalScript: output.REPORT_NUMBER = '1'
+# Capture report number (first and only report = 1).
+# Maestro exposes evalScript bindings as ${output.X}.
+- evalScript: ${output.REPORT_NUMBER = '1'}
 
 # --- Add a text note (required to enable Generate button) -----------------
 - tapOn:
@@ -73,13 +74,13 @@ tags:
 - assertVisible:
     id: "report-tab-pane"
 - assertVisible:
-    id: "report-view-${REPORT_NUMBER}"
+    id: "report-view-${output.REPORT_NUMBER}"
 - assertVisible:
-    id: "report-summary-${REPORT_NUMBER}"
+    id: "report-summary-${output.REPORT_NUMBER}"
 
 # --- Verify title in the screen header ------------------------------------
 - assertVisible:
-    id: "report-title-${REPORT_NUMBER}"
+    id: "report-title-${output.REPORT_NUMBER}"
 
 # --- Finalize the report ---------------------------------------------------
 - tapOn:

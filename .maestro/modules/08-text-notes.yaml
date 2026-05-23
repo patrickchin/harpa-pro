@@ -64,6 +64,14 @@ tags:
     timeout: 8000
 - tapOn:
     id: "btn-note-options-delete"
+# Tapping delete advances the NoteOptionsSheet to its confirm-delete
+# stage. Confirm to actually remove the note from the timeline.
+- extendedWaitUntil:
+    visible:
+      id: "btn-note-options-confirm-delete"
+    timeout: 8000
+- tapOn:
+    id: "btn-note-options-confirm-delete"
 
 # --- Confirm note is gone from timeline ------------------------------------
 - extendedWaitUntil:

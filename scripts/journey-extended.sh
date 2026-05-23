@@ -23,10 +23,15 @@ PHONE2=${PHONE2:-+15550199002}
 : "${PASSWORD:?PASSWORD env var is required}"
 
 SAMPLES="$(cd "$(dirname "$0")/../apps/cli/scripts/samples" && pwd)"
+REAL_SAMPLES="$(cd "$(dirname "$0")/samples/real" && pwd)"
 IMG="$SAMPLES/sample.png"
 PDF_FILE="$SAMPLES/sample.pdf"
 TXT_FILE="$SAMPLES/sample.txt"
 WAV_FILE="$SAMPLES/sample.wav"
+# Longer real voice sample for the aggregator step (~4:34, 4.2 MB).
+# Different domain from journey-core's default so AI output stays diverse.
+VOICE_LONG=${VOICE_LONG:-"$REAL_SAMPLES/framing-modular-house.m4a"}
+VOICE_LONG_DURATION_SEC=${VOICE_LONG_DURATION_SEC:-274}
 
 # ── Helpers ────────────────────────────────────────────────────────────
 
@@ -205,6 +210,26 @@ NID5=$(req POST "/reports/$RID/notes" \
   "{\"kind\":\"voice\",\"fileId\":\"$WAV_FID\"}" | j .id)
 
 echo "  notes created: 5"
+
+# ── 6b. Live voice aggregator (longer real sample) ───────────────────
+
+if [[ -f "$VOICE_LONG" ]]; then
+  echo "→ upload + POST voice note (m4a, real aggregator transcription)"
+  VOICE_LONG_FID=$(upload_file voice audio/mp4 "$VOICE_LONG")
+  set +e
+  VOICE_AGG=$(req POST "/reports/$RID/notes/voice" \
+    "{\"fileId\":\"$VOICE_LONG_FID\",\"durationSec\":$VOICE_LONG_DURATION_SEC}" 2>&1)
+  AGG_STATUS=$?
+  set -e
+  if [[ $AGG_STATUS -eq 0 ]]; then
+    VOICE_TITLE=$(echo "$VOICE_AGG" | j '.title // empty')
+    echo "  ✓ aggregator title: \"$VOICE_TITLE\""
+  else
+    echo "  ⚠️  aggregator failed (non-fatal)"
+  fi
+else
+  echo "  ⚠️  $VOICE_LONG missing — skipping aggregator step"
+fi
 
 # ── 7. Note editing ──────────────────────────────────────────────────
 

@@ -24,8 +24,12 @@ PHONE=${PHONE:-+15550199001}
 SAMPLES="$(cd "$(dirname "$0")/../apps/cli/scripts/samples" && pwd)"
 REAL_SAMPLES="$(cd "$(dirname "$0")/samples/real" && pwd)"
 IMG="$SAMPLES/sample.png"
-# Default to the LFS-tracked real voice sample. Override via VOICE_M4A.
-VOICE_M4A=${VOICE_M4A:-"$REAL_SAMPLES/site-walkthrough.m4a"}
+# Default to the short LFS-tracked sample (~10s, 125 KB) — cheap on tokens
+# and fast on CI, but still exercises the real upload → transcribe →
+# summarise → title pipeline. Override via VOICE_M4A=... for longer clips
+# (e.g. scripts/samples/real/site-walkthrough.m4a, ~6min).
+VOICE_M4A=${VOICE_M4A:-"$REAL_SAMPLES/site-rain-10s.m4a"}
+VOICE_DURATION_SEC=${VOICE_DURATION_SEC:-10}
 
 # ── Helpers ────────────────────────────────────────────────────────────
 
@@ -151,7 +155,7 @@ else
   echo "→ POST /reports/$RID/notes/voice (transcribe + summarise)"
   set +e
   VOICE_AGG=$(req POST "/reports/$RID/notes/voice" \
-    "{\"fileId\":\"$VOICE_FID\",\"durationSec\":53}" 2>&1)
+    "{\"fileId\":\"$VOICE_FID\",\"durationSec\":$VOICE_DURATION_SEC}" 2>&1)
   AGG_STATUS=$?
   set -e
   if [[ $AGG_STATUS -eq 0 ]]; then

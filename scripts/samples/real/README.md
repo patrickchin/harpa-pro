@@ -8,9 +8,11 @@ Tracked with **Git LFS** via `.gitattributes` at the repo root. After
 cloning the repo, ensure LFS is installed (`git lfs install`) and then
 `git lfs pull` to fetch the actual binaries.
 
-| File                   | Size | Description                                     |
-| ---------------------- | ---: | ----------------------------------------------- |
-| `site-walkthrough.m4a` | 5.0M | ~5min construction-site walkthrough recording, used by `journey-core.sh` for live transcription + summarisation. |
+| File                          | Size  | Duration | Used by | Description |
+| ----------------------------- | ----: | -------: | ------- | ----------- |
+| `site-rain-10s.m4a`           | 125K  |    0:10  | `journey-core.sh` (default `VOICE_M4A`) | Short status clip — cheap on tokens, fast CI, still exercises full transcribe + summarise + title pipeline. |
+| `framing-modular-house.m4a`   | 4.2M  |    4:34  | `journey-extended.sh` (default `VOICE_LONG`) | Multi-topic LGS framing walkthrough — produces rich transcript for the aggregator step. |
+| `site-walkthrough.m4a`        | 5.0M  |    6:13  | manual / heavyweight runs (override `VOICE_M4A=…`) | ~6min construction-site walkthrough. Token-expensive; not a default. |
 
 ## Adding new samples
 
@@ -25,11 +27,12 @@ For other binary types, extend `.gitattributes` with
 
 ## Usage from journey scripts
 
-`journey-core.sh` defaults `VOICE_M4A` to
-`./sample-voice-note.m4a` (legacy path). Set it explicitly to use the
-LFS sample:
+`journey-core.sh` and `journey-extended.sh` default to the samples
+listed above. Override per-run, e.g. to use the heavyweight walkthrough
+in core:
 
 ```bash
 VOICE_M4A=scripts/samples/real/site-walkthrough.m4a \
+VOICE_DURATION_SEC=373 \
   PASSWORD=... bash scripts/journey-all.sh dev
 ```

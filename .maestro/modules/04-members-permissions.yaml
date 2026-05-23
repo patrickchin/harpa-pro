@@ -28,12 +28,21 @@ tags:
     text: "Regression Test Project \\(Edited\\)"
 
 # --- Bob's role badge shows Editor -----------------------------------------
+# The role badge lives on the project members screen (one badge per
+# member row, testID `member-role-badge-<userId>`), not on the project
+# home. Navigate there from the "Members" card.
 - extendedWaitUntil:
     visible:
       id: "btn-project-edit"
     timeout: 10000
-- assertVisible:
-    text: "Editor"
+- tapOn:
+    id: "link-project-members"
+- extendedWaitUntil:
+    visible:
+      text: "Editor"
+    timeout: 10000
+- tapOn:
+    id: "btn-back"
 
 # --- Bob can open reports ---------------------------------------------------
 - tapOn:

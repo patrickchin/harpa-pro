@@ -1,0 +1,44 @@
+appId: ${MAESTRO_APP_ID}
+---
+# pick-country-us.yaml — helper: switch the phone-input country picker to US
+#
+# Phones used by the regression journey (+1555000000X) are US (NANP)
+# numbers. The phone input's default country is determined by the
+# device's region (expo-localization), which on developer hardware is
+# often GB, so we explicitly switch the picker to US before typing.
+#
+# Pre-condition: a country-picker button (matches "btn-.*country-picker")
+#                is visible. The helper opens it, searches for "United
+#                States", and taps the US option.
+# Post-condition: the picker is closed and the dial code reads "+1".
+#
+# Usage:
+#   - runFlow:
+#       file: ../helpers/pick-country-us.yaml
+#       env:
+#         COUNTRY_BUTTON_ID: "btn-signup-country-picker"   # or btn-country-picker, etc.
+- tapOn:
+    id: "${COUNTRY_BUTTON_ID}"
+- extendedWaitUntil:
+    visible:
+      id: "country-picker-sheet"
+    timeout: 8000
+# Focus the search field and filter by ISO code "us". The picker
+# matches on country.code case-insensitively, narrowing the list to
+# Australia, Austria, and United States of America. The keyboard
+# pushes the US row below the visible area, so dismiss the keyboard
+# before tapping it.
+- tapOn:
+    id: "country-picker-search"
+- inputText: "us"
+- hideKeyboard
+- extendedWaitUntil:
+    visible:
+      id: "country-option-US"
+    timeout: 8000
+- tapOn:
+    id: "country-option-US"
+- extendedWaitUntil:
+    notVisible:
+      id: "country-picker-sheet"
+    timeout: 8000

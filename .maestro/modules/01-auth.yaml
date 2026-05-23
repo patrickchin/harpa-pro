@@ -76,9 +76,15 @@ tags:
     visible:
       id: "input-signup-phone"
     timeout: 15000
+# Force the country picker to US so a typed national number is stored
+# as +1, not the device-locale default (often +44 on dev hardware).
+- runFlow:
+    file: ../helpers/pick-country-us.yaml
+    env:
+      COUNTRY_BUTTON_ID: "btn-signup-country-picker"
 - tapOn:
     id: "input-signup-phone"
-- inputText: "+15550000001"
+- inputText: "5550000001"
 - tapOn:
     point: "50%,15%"
 - tapOn:

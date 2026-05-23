@@ -11,10 +11,14 @@ appId: ${MAESTRO_APP_ID}
 #
 # Usage:
 #   - runFlow: .maestro/helpers/sign-in-bob.yaml
+- runFlow:
+    file: pick-country-us.yaml
+    env:
+      COUNTRY_BUTTON_ID: "btn-country-picker"
 - tapOn:
     id: "input-phone"
 - eraseText: 50
-- inputText: "+15550000002"
+- inputText: "5550000002"
 - tapOn:
     point: "50%,15%"
 - tapOn:

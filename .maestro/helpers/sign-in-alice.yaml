@@ -12,10 +12,14 @@ appId: ${MAESTRO_APP_ID}
 #
 # Usage (from a module):
 #   - runFlow: .maestro/helpers/sign-in-alice.yaml
+- runFlow:
+    file: pick-country-us.yaml
+    env:
+      COUNTRY_BUTTON_ID: "btn-country-picker"
 - tapOn:
     id: "input-phone"
 - eraseText: 50
-- inputText: "+15550000001"
+- inputText: "5550000001"
 - tapOn:
     point: "50%,15%"
 - tapOn:

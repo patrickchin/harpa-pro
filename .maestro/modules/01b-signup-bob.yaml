@@ -31,9 +31,13 @@ tags:
     visible:
       id: "input-signup-phone"
     timeout: 15000
+- runFlow:
+    file: ../helpers/pick-country-us.yaml
+    env:
+      COUNTRY_BUTTON_ID: "btn-signup-country-picker"
 - tapOn:
     id: "input-signup-phone"
-- inputText: "+15550000002"
+- inputText: "5550000002"
 - tapOn:
     point: "50%,15%"
 - tapOn:

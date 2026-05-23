@@ -50,14 +50,14 @@ tags:
     timeout: 10000
 
 # --- Switch to bob — bob no longer sees the project -----------------------
-- runFlow: .maestro/helpers/sign-out.yaml
-- runFlow: .maestro/helpers/sign-in-bob.yaml
+- runFlow: ../helpers/sign-out.yaml
+- runFlow: ../helpers/sign-in-bob.yaml
 
 # Bob's project list should be empty (no project row for alice's project)
 - assertNotVisible:
     id: "project-row-${PROJECT_SLUG}"
 
 # --- Switch back to alice ---------------------------------------------------
-- runFlow: .maestro/helpers/sign-out.yaml
-- runFlow: .maestro/helpers/sign-in-alice.yaml
-- runFlow: .maestro/helpers/open-project.yaml
+- runFlow: ../helpers/sign-out.yaml
+- runFlow: ../helpers/sign-in-alice.yaml
+- runFlow: ../helpers/open-project.yaml

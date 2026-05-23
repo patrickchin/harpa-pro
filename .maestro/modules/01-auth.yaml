@@ -22,6 +22,21 @@ tags:
     stopApp: true
 - waitForAnimationToEnd
 
+# Android dev-client unstuck prelude: after `clearState: true`, Android
+# lands on the dev-launcher picker, not the JS app. Deep-link the
+# dev-launcher's own scheme with an explicit Metro URL. See
+# `core-end-to-end.yaml` for the full explanation.
+- openLink: "exp+harpa-pro-v4://expo-development-client/?url=http%3A%2F%2Flocalhost%3A8081"
+- waitForAnimationToEnd:
+    timeout: 20000
+- runFlow:
+    when:
+      visible: "Close"
+    commands:
+      - tapOn:
+          text: "Close"
+      - waitForAnimationToEnd
+
 # Land on sign-in first (auth gate) then deep-link to sign-up
 - extendedWaitUntil:
     visible:
@@ -76,9 +91,9 @@ tags:
     timeout: 15000
 
 # --- Sign-out ---------------------------------------------------------------
-- runFlow: .maestro/helpers/sign-out.yaml
+- runFlow: ../helpers/sign-out.yaml
 
 # --- Sign-in (round-trip) --------------------------------------------------
-- runFlow: .maestro/helpers/sign-in-alice.yaml
+- runFlow: ../helpers/sign-in-alice.yaml
 - assertVisible:
     id: "btn-new-project"

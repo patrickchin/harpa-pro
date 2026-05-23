@@ -18,8 +18,8 @@ tags:
 # Post-condition: alice is signed in on project home.
 
 # --- Switch to bob ---------------------------------------------------------
-- runFlow: .maestro/helpers/sign-out.yaml
-- runFlow: .maestro/helpers/sign-in-bob.yaml
+- runFlow: ../helpers/sign-out.yaml
+- runFlow: ../helpers/sign-in-bob.yaml
 
 # --- Bob sees the project ---------------------------------------------------
 - assertVisible:
@@ -48,8 +48,8 @@ tags:
 # --- Switch back to alice ---------------------------------------------------
 - tapOn:
     id: "btn-back"
-- runFlow: .maestro/helpers/sign-out.yaml
-- runFlow: .maestro/helpers/sign-in-alice.yaml
+- runFlow: ../helpers/sign-out.yaml
+- runFlow: ../helpers/sign-in-alice.yaml
 
 # --- Alice navigates back to project home ----------------------------------
-- runFlow: .maestro/helpers/open-project.yaml
+- runFlow: ../helpers/open-project.yaml

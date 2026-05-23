@@ -23,7 +23,7 @@ tags:
 # from caller's view; bob now exists in DB).
 
 # --- Sign-out from alice ---------------------------------------------------
-- runFlow: .maestro/helpers/sign-out.yaml
+- runFlow: ../helpers/sign-out.yaml
 
 # --- Sign-up bob via deep link ---------------------------------------------
 - openLink: harpa://sign-up/phone
@@ -71,7 +71,7 @@ tags:
     timeout: 15000
 
 # --- Sign-out bob ----------------------------------------------------------
-- runFlow: .maestro/helpers/sign-out.yaml
+- runFlow: ../helpers/sign-out.yaml
 
 # --- Sign back in as alice (ready for module 02) ---------------------------
-- runFlow: .maestro/helpers/sign-in-alice.yaml
+- runFlow: ../helpers/sign-in-alice.yaml

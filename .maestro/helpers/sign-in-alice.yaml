@@ -1,3 +1,5 @@
+appId: ${MAESTRO_APP_ID}
+---
 # sign-in-alice.yaml — helper: sign in as Alice E2E (+15550000001)
 #
 # Accepts OTP `000000` in fake-Twilio mode (TWILIO_LIVE=0, the default in
@@ -12,7 +14,7 @@
 #   - runFlow: .maestro/helpers/sign-in-alice.yaml
 - tapOn:
     id: "input-phone"
-- clearText
+- eraseText: 50
 - inputText: "+15550000001"
 - tapOn:
     point: "50%,15%"

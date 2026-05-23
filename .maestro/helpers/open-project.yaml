@@ -1,3 +1,5 @@
+appId: ${MAESTRO_APP_ID}
+---
 # open-project.yaml — helper: navigate to a project home by slug chip
 #
 # Assumes the project-slug-chip has already been stored in PROJECT_SLUG.

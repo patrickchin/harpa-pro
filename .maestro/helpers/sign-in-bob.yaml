@@ -1,3 +1,5 @@
+appId: ${MAESTRO_APP_ID}
+---
 # sign-in-bob.yaml — helper: sign in as Bob E2E (+15550000002)
 #
 # Accepts OTP `000000` in fake-Twilio mode (TWILIO_LIVE=0, the default
@@ -11,7 +13,7 @@
 #   - runFlow: .maestro/helpers/sign-in-bob.yaml
 - tapOn:
     id: "input-phone"
-- clearText
+- eraseText: 50
 - inputText: "+15550000002"
 - tapOn:
     point: "50%,15%"

@@ -22,8 +22,8 @@ PHONE=${PHONE:-+15550199001}
 PHONE2=${PHONE2:-+15550199002}
 : "${PASSWORD:?PASSWORD env var is required}"
 
-SAMPLES="$(cd "$(dirname "$0")/../apps/cli/scripts/samples" && pwd)"
-REAL_SAMPLES="$(cd "$(dirname "$0")/samples/real" && pwd)"
+SAMPLES="$(cd "$(dirname "$0")/../../apps/cli/scripts/samples" && pwd)"
+REAL_SAMPLES="$(cd "$(dirname "$0")/../../samples/real" && pwd)"
 IMG="$SAMPLES/sample.png"
 PDF_FILE="$SAMPLES/sample.pdf"
 TXT_FILE="$SAMPLES/sample.txt"

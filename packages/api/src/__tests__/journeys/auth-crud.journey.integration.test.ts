@@ -3,7 +3,7 @@
  * logout → token rejected.
  *
  * This is the test that closes the "signTestToken is the de-facto spec"
- * gap identified in the P1 audit. Mirrors scripts/journey.sh.
+ * gap identified in the P1 audit. Mirrors scripts/journeys/journey.sh.
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { createApp } from '../../app.js';

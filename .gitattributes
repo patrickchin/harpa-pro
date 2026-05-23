@@ -1,6 +1,6 @@
-scripts/samples/real/*.jpeg filter=lfs diff=lfs merge=lfs -text
-scripts/samples/real/*.png filter=lfs diff=lfs merge=lfs -text
-scripts/samples/real/*.m4a filter=lfs diff=lfs merge=lfs -text
-scripts/samples/real/*.mp4 filter=lfs diff=lfs merge=lfs -text
-scripts/samples/real/*.wav filter=lfs diff=lfs merge=lfs -text
-scripts/samples/real/*.jpg filter=lfs diff=lfs merge=lfs -text
+samples/real/*.jpeg filter=lfs diff=lfs merge=lfs -text
+samples/real/*.png filter=lfs diff=lfs merge=lfs -text
+samples/real/*.m4a filter=lfs diff=lfs merge=lfs -text
+samples/real/*.mp4 filter=lfs diff=lfs merge=lfs -text
+samples/real/*.wav filter=lfs diff=lfs merge=lfs -text
+samples/real/*.jpg filter=lfs diff=lfs merge=lfs -text

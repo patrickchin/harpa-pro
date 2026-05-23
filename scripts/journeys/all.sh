@@ -2,10 +2,10 @@
 # Run all journey tests against a target environment.
 #
 # Usage:
-#   scripts/journey-all.sh              # defaults to dev
-#   scripts/journey-all.sh local        # http://localhost:3000
-#   scripts/journey-all.sh dev          # harpa-pro-api-dev.fly.dev
-#   scripts/journey-all.sh prod         # harpa-pro-api.fly.dev (⚠️ uses real tokens)
+#   scripts/journeys/all.sh              # defaults to dev
+#   scripts/journeys/all.sh local        # http://localhost:3000
+#   scripts/journeys/all.sh dev          # harpa-pro-api-dev.fly.dev
+#   scripts/journeys/all.sh prod         # harpa-pro-api.fly.dev (⚠️ uses real tokens)
 #
 # Env vars:
 #   PASSWORD   — required (test account password, e.g. from Doppler)
@@ -57,15 +57,15 @@ run() {
 FAILURES=0
 
 if [[ "${ONLY:-}" == "core" || -z "${ONLY:-}" ]]; then
-  run "journey-core" "$DIR/journey-core.sh"
+  run "journey-core" "$DIR/core.sh"
 fi
 
 if [[ "${ONLY:-}" == "extended" || -z "${ONLY:-}" ]]; then
-  run "journey-extended" "$DIR/journey-extended.sh"
+  run "journey-extended" "$DIR/extended.sh"
 fi
 
 if [[ "${ONLY:-}" == "stress" || (-z "${ONLY:-}" && "${SKIP_STRESS:-}" != "1") ]]; then
-  run "journey-stress" "$DIR/journey-stress.sh"
+  run "journey-stress" "$DIR/stress.sh"
 fi
 
 echo ""

@@ -12,6 +12,7 @@
     "test": "vitest run",
     "test:unit": "vitest run",
     "test:integration": "TESTCONTAINERS_RYUK_DISABLED=true vitest run --config vitest.integration.config.ts",
+    "test:live": "vitest run --config vitest.live.config.ts",
     "test:watch": "vitest",
     "lint": "eslint . --max-warnings 0 --ext .ts",
     "db:generate": "drizzle-kit generate",

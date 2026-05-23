@@ -1,0 +1,92 @@
+/**
+ * Live-LLM smoke for `generateReport()` — runs against real OpenAI.
+ *
+ * This test bypasses fixtures (no `fixtureName` → `pickMode` picks
+ * `live`) and exercises the path that broke in dev when the prompt
+ * and `reportBody` schema drifted (the v3→v4 mismatch — see
+ * docs/bugs/README.md). Replay-mode tests can't catch that because
+ * fixture responses are hand-massaged to the current schema, so
+ * this lane is the safety net.
+ *
+ * Triggered only by:
+ *   - `.github/workflows/ai-live.yml` (schedule + dispatch + changes
+ *      to prompts/services/contract/providers)
+ *   - manual: `AI_LIVE=1 OPENAI_API_KEY=… pnpm --filter @harpa/api test:live`
+ *
+ * Expected cost: ~3 short gpt-4o calls per run.
+ *
+ * Skips (rather than fails) when AI_LIVE !== '1' so accidental
+ * inclusion in another lane is harmless.
+ */
+import { describe, it, expect, beforeAll } from 'vitest';
+import { reports as reportSchemas } from '@harpa/api-contract';
+import { generateReport } from '../../services/ai.js';
+
+const LIVE = process.env.AI_LIVE === '1';
+
+// One realistic notes payload per scenario. Kept short to keep
+// token cost predictable; the schema check is what we care about,
+// not narrative quality.
+const SCENARIOS: Array<{ name: string; notes: string }> = [
+  {
+    name: 'voice-1 — wet weather, concrete pour',
+    notes:
+      'Site visit 12 April. Overnight rain left the ground waterlogged with potholes. ' +
+      'Second floor concrete pour in progress with 6 concrete workers and 2 mix operators. ' +
+      'First floor slab ~7 days old, est. 30 MPa. Entrance gate too narrow for delivery trucks. ' +
+      'Rebar in storage has surface rust from damp conditions; recommend oil treatment.',
+  },
+  {
+    name: 'voice-2 — formwork prep',
+    notes:
+      'East footing rebar laid by 3 steel fixers. 2 carpenters on formwork prep. ' +
+      'Weather cloudy, ~14°C, light wind. Delivered 12 m³ of C30 concrete, condition OK. ' +
+      'Issue: missing torque wrench, may delay tomorrow morning. Action: order replacement today.',
+  },
+  {
+    name: 'voice-3 — minimal notes',
+    notes:
+      'Quick walk-through. No workers on site (weekend). All materials secure. No issues.',
+  },
+];
+
+describe.skipIf(!LIVE)('generateReport — live OpenAI', () => {
+  beforeAll(() => {
+    if (!process.env.OPENAI_API_KEY) {
+      throw new Error(
+        'OPENAI_API_KEY is required when AI_LIVE=1. Set the env var or unset AI_LIVE.',
+      );
+    }
+  });
+
+  it.each(SCENARIOS)(
+    'returns a schema-valid reportBody for: $name',
+    async ({ notes }) => {
+      const result = await generateReport({ notes });
+
+      // The service itself runs safeParse and throws AiProviderError on
+      // miss — getting here means the body matched. Re-assert anyway so
+      // the failure message is clear if generateReport's validation is
+      // ever relaxed.
+      expect(result.fixtureMode).toBe('live');
+      expect(result.vendor).toBe('openai');
+      const parsed = reportSchemas.reportBody.safeParse(result.body);
+      if (!parsed.success) {
+        const issues = parsed.error.issues
+          .map((i) => `${i.path.join('.') || '<root>'}:${i.code}`)
+          .join(', ');
+        throw new Error(`reportBody validation failed: ${issues}`);
+      }
+      // Quick spot-checks on the contract — these are the fields that
+      // drifted in the v3→v4 migration, so we want them explicitly
+      // present on every successful run.
+      expect(parsed.data).toHaveProperty('summarySections');
+      expect(Array.isArray(parsed.data.workers)).toBe(true);
+      expect(Array.isArray(parsed.data.materials)).toBe(true);
+      for (const issue of parsed.data.issues) {
+        expect(['low', 'medium', 'high']).toContain(issue.severity);
+      }
+    },
+    60_000,
+  );
+});

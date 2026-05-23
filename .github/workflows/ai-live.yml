@@ -1,0 +1,77 @@
+name: ai-live
+# Live-LLM regression lane. Hits real OpenAI (and any other provider
+# wired into the report path) to catch prompt/schema drift that
+# fixtures cannot detect — see docs/v4/pitfalls.md Pitfall 13 and
+# the entry in docs/bugs/README.md.
+#
+# Triggers:
+#   - workflow_dispatch  → manual button (zero cost when idle).
+#   - schedule           → weekly canary so model drift surfaces.
+#   - push to dev/main   → only when files that affect the live
+#                          path change (prompts, services/ai.ts,
+#                          contract schemas, provider adapters,
+#                          recorded fixtures).
+#   - PR                 → only when the same path-filter matches.
+#                          Fork PRs are skipped because they cannot
+#                          access secrets.
+#
+# Cost: ~3 short gpt-4o calls per run.
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Mondays 06:00 UTC — early enough that on-call sees results.
+    - cron: '0 6 * * 1'
+  push:
+    branches: [dev, main]
+    paths:
+      - 'packages/api/src/prompts/**'
+      - 'packages/api/src/services/ai.ts'
+      - 'packages/api-contract/src/schemas/reports.ts'
+      - 'packages/ai-fixtures/src/providers/**'
+      - 'packages/ai-fixtures/fixtures/generate-report.*.json'
+      - '.github/workflows/ai-live.yml'
+  pull_request:
+    paths:
+      - 'packages/api/src/prompts/**'
+      - 'packages/api/src/services/ai.ts'
+      - 'packages/api-contract/src/schemas/reports.ts'
+      - 'packages/ai-fixtures/src/providers/**'
+      - 'packages/ai-fixtures/fixtures/generate-report.*.json'
+      - '.github/workflows/ai-live.yml'
+
+concurrency:
+  group: ai-live-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  live:
+    # Fork PRs cannot access secrets; skip rather than fail loudly.
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      AI_LIVE: '1'
+      AI_FIXTURE_MODE: live
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 9.12.3 }
+      - uses: actions/setup-node@v4
+        with: { node-version: '22', cache: 'pnpm' }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @harpa/api-contract build
+
+      # Hard-fail early if the secret isn't wired — the run is
+      # useless without it and the test would mis-report "skipped".
+      - name: Verify OPENAI_API_KEY is present
+        run: |
+          if [ -z "${OPENAI_API_KEY:-}" ]; then
+            echo "::error::OPENAI_API_KEY secret is not set on this repo. Add it under Settings → Secrets → Actions."
+            exit 1
+          fi
+
+      - name: Run live-LLM tests against real OpenAI
+        run: pnpm --filter @harpa/api test:live

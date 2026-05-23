@@ -48,6 +48,9 @@ export function createOpenAiProvider(cfg: OpenAiAdapterConfig): AiProvider {
         messages,
         ...(req.temperature !== undefined ? { temperature: req.temperature } : {}),
         ...(req.maxTokens !== undefined ? { max_tokens: req.maxTokens } : {}),
+        ...(req.responseFormat === 'json_object'
+          ? { response_format: { type: 'json_object' as const } }
+          : {}),
       };
 
       let res: Response;

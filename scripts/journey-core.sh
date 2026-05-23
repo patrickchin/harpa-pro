@@ -22,8 +22,10 @@ PHONE=${PHONE:-+15550199001}
 : "${PASSWORD:?PASSWORD env var is required}"
 
 SAMPLES="$(cd "$(dirname "$0")/../apps/cli/scripts/samples" && pwd)"
+REAL_SAMPLES="$(cd "$(dirname "$0")/samples/real" && pwd)"
 IMG="$SAMPLES/sample.png"
-VOICE_M4A=${VOICE_M4A:-"$(cd "$(dirname "$0")/.." && pwd)/sample-voice-note.m4a"}
+# Default to the LFS-tracked real voice sample. Override via VOICE_M4A.
+VOICE_M4A=${VOICE_M4A:-"$REAL_SAMPLES/site-walkthrough.m4a"}
 
 # ── Helpers ────────────────────────────────────────────────────────────
 
@@ -167,7 +169,7 @@ fi
 
 echo "→ POST /projects/$PID/reports/$RNUM/generate"
 set +e
-GEN_RESULT=$(req POST "/projects/$PID/reports/$RNUM/generate" '' 2>&1)
+GEN_RESULT=$(req POST "/projects/$PID/reports/$RNUM/generate" '{}' 2>&1)
 GEN_STATUS=$?
 set -e
 if [[ $GEN_STATUS -eq 0 ]]; then

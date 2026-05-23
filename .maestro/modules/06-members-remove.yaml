@@ -36,9 +36,11 @@ tags:
     id: "confirm-remove-member"
 
 # --- Confirm bob's row is gone ---------------------------------------------
+# `member-row-.*` still matches alice's owner row, so we assert the
+# "Viewer" badge (only bob had it) is gone instead.
 - extendedWaitUntil:
     notVisible:
-      id: "member-row-.*"
+      text: "Viewer"
     timeout: 8000
 
 # --- Go back to project home -----------------------------------------------

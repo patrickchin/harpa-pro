@@ -29,10 +29,37 @@ tags:
 - openLink: "exp+harpa-pro-v4://expo-development-client/?url=http%3A%2F%2Flocalhost%3A8081"
 - waitForAnimationToEnd:
     timeout: 20000
+
+# The Android dev-launcher first-run sheet ("This is the developer menu")
+# overlays the sign-in screen and obscures `input-phone`. The sheet
+# appears asynchronously after the bundle loads, so we explicitly wait
+# for its primary "Continue" button before dismissing it. On iOS (and on
+# subsequent Android runs after the sheet has been dismissed once) the
+# sheet never appears and the optional block skips.
+- runFlow:
+    when:
+      visible: "Continue"
+    commands:
+      - tapOn:
+          text: "Continue"
+      - waitForAnimationToEnd
 - runFlow:
     when:
       visible: "Close"
     commands:
+      # The dev menu sheet's "Tools button" toggle controls a floating
+      # gear-icon overlay that sits in the top-right of every screen and
+      # intercepts taps meant for `btn-open-profile` in the screen header.
+      # Toggle it OFF here so subsequent profile-tab navigation works.
+      # The toggle's Switch sits at the right edge of the "Tools button"
+      # row.
+      - runFlow:
+          when:
+            visible: "Tools button"
+          commands:
+            - tapOn:
+                text: "Tools button"
+            - waitForAnimationToEnd
       - tapOn:
           text: "Close"
       - waitForAnimationToEnd
@@ -41,7 +68,7 @@ tags:
 - extendedWaitUntil:
     visible:
       id: "input-phone"
-    timeout: 15000
+    timeout: 30000
 
 # --- Sign-up alice (fresh account via seed) --------------------------------
 - openLink: harpa://sign-up/phone

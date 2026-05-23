@@ -12,6 +12,21 @@ appId: ${MAESTRO_APP_ID}
 #   - runFlow: .maestro/helpers/sign-out.yaml
 - tapOn:
     id: "btn-open-profile"
+# On Android dev builds the floating "Tools" overlay button sits at the
+# same top-right corner as `btn-open-profile`. Tapping `btn-open-profile`
+# sometimes lands on the Tools button instead and pops the Expo
+# dev-menu bottom sheet (which obscures the profile screen). Dismiss it
+# if it's there and re-tap. On iOS or when the overlay isn't visible the
+# runFlow skips and the canonical path continues.
+- runFlow:
+    when:
+      visible: "Tools button"
+    commands:
+      - tapOn:
+          text: "Close"
+      - waitForAnimationToEnd
+      - tapOn:
+          id: "btn-open-profile"
 - extendedWaitUntil:
     visible:
       id: "btn-sign-out"

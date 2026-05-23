@@ -16,7 +16,9 @@
 import { useRef, useState } from 'react';
 import { Turnstile, type TurnstileInstance } from '@marsidev/react-turnstile';
 import { waitlist } from '@harpa/api-contract';
+import { MARKETING_EVENTS } from '@harpa/analytics-events';
 import { getPublicEnv } from '../../lib/env';
+import { aliasKeyForEmail, getPosthogClient } from '../../lib/posthog';
 
 // Single source of truth for request shape + caps. Mirrors the server.
 const { waitlistSignupRequest } = waitlist;
@@ -114,6 +116,23 @@ export default function WaitlistFormIsland() {
       });
       if (res.status === 202) {
         setState({ kind: 'success' });
+        // Fire-and-forget waitlist_submitted + alias. Both are no-ops
+        // when consent is not granted or PostHog is not configured —
+        // see src/lib/posthog.ts. Awaited only to swallow rejections.
+        void (async () => {
+          try {
+            const ph = getPosthogClient();
+            ph.capture(MARKETING_EVENTS.WAITLIST_SUBMITTED, {
+              source: 'landing_page',
+              has_referrer: Boolean(typeof document !== 'undefined' && document.referrer),
+            });
+            if (parsed.data.email) {
+              ph.alias(await aliasKeyForEmail(parsed.data.email));
+            }
+          } catch {
+            // never let analytics break the success state
+          }
+        })();
         return;
       }
       if (res.status === 429) {

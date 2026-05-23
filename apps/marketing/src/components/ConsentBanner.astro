@@ -1,0 +1,67 @@
+---
+/**
+ * Cookie consent banner — minimal accept / decline.
+ *
+ * Shown when getConsent() === 'unknown'. Persists choice to localStorage
+ * and (on accept) lazy-loads the PostHog client island. Keeps the site's
+ * "cookieless by default" promise intact: until the user clicks accept,
+ * zero first-party cookies are set beyond what Astro/CF Pages need.
+ *
+ * Renders inert HTML for SSR; the small inline script reads localStorage
+ * post-hydration and hides the banner if a decision exists.
+ */
+---
+
+<div
+  id="consent-banner"
+  hidden
+  role="dialog"
+  aria-live="polite"
+  aria-label="Analytics consent"
+  class="fixed bottom-0 inset-x-0 z-50 border-t border-border bg-background/95 backdrop-blur px-4 py-3 md:px-6"
+>
+  <div class="max-w-5xl mx-auto flex flex-col md:flex-row md:items-center gap-3 md:gap-6">
+    <p class="text-sm text-foreground/80 flex-1">
+      We use a small set of first-party cookies to understand how the site
+      is used (product analytics via PostHog, EU-hosted). Cloudflare's
+      cookieless analytics stays on either way.
+    </p>
+    <div class="flex gap-2">
+      <button
+        type="button"
+        id="consent-decline"
+        class="px-3 py-1.5 text-sm border border-border rounded"
+      >
+        Decline
+      </button>
+      <button
+        type="button"
+        id="consent-accept"
+        class="px-3 py-1.5 text-sm bg-foreground text-background rounded"
+      >
+        Accept
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Inline so it runs before the consent-dependent islands hydrate.
+  // Duplicates the storage contract in src/lib/consent.ts; keep in sync.
+  const KEY = 'harpa.analytics.consent.v1';
+  const banner = document.getElementById('consent-banner');
+  if (banner) {
+    const raw = window.localStorage.getItem(KEY);
+    if (raw === null) banner.hidden = false;
+    document.getElementById('consent-accept')?.addEventListener('click', () => {
+      window.localStorage.setItem(KEY, '1');
+      banner.hidden = true;
+      window.dispatchEvent(new CustomEvent('harpa:consent', { detail: 'granted' }));
+    });
+    document.getElementById('consent-decline')?.addEventListener('click', () => {
+      window.localStorage.setItem(KEY, '0');
+      banner.hidden = true;
+      window.dispatchEvent(new CustomEvent('harpa:consent', { detail: 'declined' }));
+    });
+  }
+</script>

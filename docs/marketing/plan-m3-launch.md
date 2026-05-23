@@ -108,9 +108,10 @@ indexable, and ready to drive traffic to.
       ```
 - [ ] Cookieless, no consent banner needed under GDPR/CCPA.
 - [ ] Dashboard linked from `docs/marketing/ops.md`.
-- [ ] **Defer PostHog** — do not add it at launch. Wait until we
-      have a specific funnel question Cloudflare Web Analytics can't
-      answer.
+- [ ] **PostHog** — added alongside Cloudflare Web Analytics in PR
+      "PostHog integration" (consent banner, opt-in cookies, EU
+      host). See [`../v4/arch-analytics.md`](../v4/arch-analytics.md)
+      for the full cross-surface design.
 - [ ] Commit: `feat(marketing): cloudflare web analytics`.
 
 ### M3.7 Performance pass
@@ -165,4 +166,3 @@ indexable, and ready to drive traffic to.
 - Live chat (Crisp, Intercom).
 - Localisation.
 - Pricing page (no paid product yet).
-- PostHog (defer until we have a funnel question).

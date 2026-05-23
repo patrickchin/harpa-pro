@@ -23,6 +23,8 @@ import { DialogSheetProvider } from '@/lib/dialogs/DialogSheetProvider';
 import { QueueProvider } from '@/lib/uploads/QueueProvider';
 import { AudioPlaybackProvider } from '@/lib/audio/AudioPlaybackProvider';
 import { SentryProvider, initSentry } from '@/lib/telemetry/SentryStub';
+import { AnalyticsProvider } from '@/lib/analytics/AnalyticsStub';
+import { AnalyticsIdentityBridge } from '@/lib/analytics/AnalyticsIdentityBridge';
 
 // Initialize Sentry (no-op stub for P2.6).
 initSentry();
@@ -129,16 +131,19 @@ export default function RootLayout() {
         <SafeAreaProvider>
           <QueryClientProvider client={queryClient}>
             <AuthSessionProvider>
-              <StatusBar style="dark" />
-              <DialogSheetProvider>
-                <QueueProvider>
-                  <AudioPlaybackProvider>
-                    <SentryProvider>
-                      <Slot />
-                    </SentryProvider>
-                  </AudioPlaybackProvider>
-                </QueueProvider>
-              </DialogSheetProvider>
+              <AnalyticsProvider>
+                <AnalyticsIdentityBridge />
+                <StatusBar style="dark" />
+                <DialogSheetProvider>
+                  <QueueProvider>
+                    <AudioPlaybackProvider>
+                      <SentryProvider>
+                        <Slot />
+                      </SentryProvider>
+                    </AudioPlaybackProvider>
+                  </QueueProvider>
+                </DialogSheetProvider>
+              </AnalyticsProvider>
             </AuthSessionProvider>
           </QueryClientProvider>
         </SafeAreaProvider>

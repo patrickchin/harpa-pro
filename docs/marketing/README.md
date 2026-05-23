@@ -71,9 +71,13 @@ outputs HTML + minimal hydration — faster, smaller, simpler.
 ### Strongly recommended (free)
 - **Sentry** — error tracking (free 5k/mo).
 - **Cloudflare Web Analytics** — pageviews + Web Vitals, cookieless, no banner.
+- **PostHog** — product analytics + feature flags, EU-hosted, opt-in
+  via a small consent banner. See
+  [`../v4/arch-analytics.md`](../v4/arch-analytics.md) for the
+  cross-surface design (mobile + API + marketing share one project).
 
 ### Defer
-- PostHog / Plausible — only when funnels become useful.
+- Plausible — Cloudflare Web Analytics covers cookieless basics, PostHog covers funnels.
 - Loops / Customer.io — only when drip campaigns are useful.
 - Crisp / Intercom — only when live chat is useful.
 - BetterStack / Statuspage — only when uptime page is useful.
@@ -95,9 +99,10 @@ outputs HTML + minimal hydration — faster, smaller, simpler.
    the API boundary.
 4. **Email provider**: Resend. Generous free tier, React Email
    support, good deliverability.
-5. **Analytics**: Cloudflare Web Analytics only at launch
-   (cookieless, no consent banner). Defer PostHog until we have a
-   funnel question Web Analytics can't answer.
+5. **Analytics**: Cloudflare Web Analytics (cookieless, always on) +
+   PostHog (EU-hosted, opt-in via consent banner). PostHog covers
+   funnels and stitches to the mobile/API timelines via shared
+   `distinctId`. See [`../v4/arch-analytics.md`](../v4/arch-analytics.md).
 6. **Demo recordings (M4 only)**: R2 prefix `demo/<sessionId>/`
    with 24h lifecycle. Negligible cost; useful for debugging and
    abuse investigation. Not relevant at launch (no audio uploaded).
@@ -123,8 +128,11 @@ These add to the existing hard rules in [`../../AGENTS.md`](../../AGENTS.md):
    it MUST reuse the existing voice + reports routes through fixtures.
    M2 ships only committed JSON fixtures — never call an LLM at
    build or runtime.
-3. **No analytics with cookies before the consent gate ships.**
-   Cloudflare Web Analytics only until PostHog lands (if ever).
+3. **Analytics with cookies require consent.** Cloudflare Web
+   Analytics is cookieless and always on. PostHog is opt-in via the
+   consent banner (`src/components/ConsentBanner.astro`) and the
+   stub client in `src/lib/posthog.ts` returns a no-op until consent
+   is granted.
 4. **Lighthouse gate.** CI runs Lighthouse on each PR. Performance,
    Accessibility, Best Practices, SEO must all be ≥ 95.
 5. **Waitlist storage stays in Neon.** No third-party form services

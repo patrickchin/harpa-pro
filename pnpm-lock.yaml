@@ -139,6 +139,9 @@ importers:
       '@fontsource-variable/inter':
         specifier: ^5.1.0
         version: 5.2.8
+      '@harpa/analytics-events':
+        specifier: workspace:^
+        version: link:../../packages/analytics-events
       '@harpa/api-contract':
         specifier: workspace:*
         version: link:../../packages/api-contract
@@ -212,6 +215,9 @@ importers:
       '@expo/metro-runtime':
         specifier: ~55.0
         version: 55.0.11(@expo/dom-webview@55.0.6)(expo@55.0.25)(react-dom@19.2.0(react@19.2.0))(react-native@0.83.6(@babel/core@7.29.0)(@react-native/metro-config@0.85.3(@babel/core@7.29.0))(@types/react@19.2.14)(react@19.2.0))(react@19.2.0)
+      '@harpa/analytics-events':
+        specifier: workspace:^
+        version: link:../../packages/analytics-events
       '@harpa/api-contract':
         specifier: workspace:*
         version: link:../../packages/api-contract

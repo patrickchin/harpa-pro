@@ -9,20 +9,19 @@
  * this lane is the safety net.
  *
  * Triggered only by:
- *   - `.github/workflows/ai-live.yml` (schedule + dispatch + changes
- *      to prompts/services/contract/providers)
+ *   - `.github/workflows/ai-live.yml` (dispatch + push/PR touching
+ *      prompts/services/contract/providers/fixtures)
  *   - manual: `AI_LIVE=1 OPENAI_API_KEY=… pnpm --filter @harpa/api test:live`
  *
  * Expected cost: ~3 short gpt-4o calls per run.
  *
- * Skips (rather than fails) when AI_LIVE !== '1' so accidental
- * inclusion in another lane is harmless.
+ * No skip-guard: this file is only loaded by `vitest.live.config.ts`
+ * (the `test:live` script). If you run it, you mean it. Missing
+ * `OPENAI_API_KEY` is a hard failure, not a silent pass.
  */
 import { describe, it, expect, beforeAll } from 'vitest';
 import { reports as reportSchemas } from '@harpa/api-contract';
 import { generateReport } from '../../services/ai.js';
-
-const LIVE = process.env.AI_LIVE === '1';
 
 // One realistic notes payload per scenario. Kept short to keep
 // token cost predictable; the schema check is what we care about,
@@ -50,11 +49,18 @@ const SCENARIOS: Array<{ name: string; notes: string }> = [
   },
 ];
 
-describe.skipIf(!LIVE)('generateReport — live OpenAI', () => {
+describe('generateReport — live OpenAI', () => {
   beforeAll(() => {
+    if (process.env.AI_LIVE !== '1') {
+      throw new Error(
+        'test:live invoked without AI_LIVE=1. This lane MUST hit the real provider; ' +
+          'set AI_LIVE=1 OPENAI_API_KEY=… or run via the ai-live CI workflow.',
+      );
+    }
     if (!process.env.OPENAI_API_KEY) {
       throw new Error(
-        'OPENAI_API_KEY is required when AI_LIVE=1. Set the env var or unset AI_LIVE.',
+        'OPENAI_API_KEY is required for test:live. Pull it from Doppler (config `dev`) ' +
+          'or rely on the ai-live workflow which fetches it automatically.',
       );
     }
   });

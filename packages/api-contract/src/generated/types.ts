@@ -694,7 +694,28 @@ export interface paths {
                             totals: {
                                 reports: number;
                                 voiceNotes: number;
+                                inputTokens: number;
+                                outputTokens: number;
+                                cachedTokens: number;
+                                calls: number;
                             };
+                            usageTokens: {
+                                month: string;
+                                inputTokens: number;
+                                outputTokens: number;
+                                cachedTokens: number;
+                                calls: number;
+                            }[];
+                            usageByModel: {
+                                vendor: string;
+                                model: string;
+                                /** @enum {string} */
+                                operation: "chat" | "transcribe" | "generate_report";
+                                calls: number;
+                                inputTokens: number;
+                                outputTokens: number;
+                                cachedTokens: number;
+                            }[];
                         };
                     };
                 };

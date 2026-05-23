@@ -28,12 +28,35 @@ import {
 } from '@harpa/ai-fixtures';
 import { reports as reportSchemas } from '@harpa/api-contract';
 import type { z } from 'zod';
+import type { ScopedDb } from '../db/scope.js';
 import { env } from '../env.js';
 import {
   REPORT_SYSTEM_PROMPT,
   REPORT_UPDATE_SYSTEM_PROMPT,
 } from '../prompts/reportGeneration.js';
 import { VOICE_SUMMARY_SYSTEM_PROMPT } from '../prompts/voiceSummary.js';
+import { recordLlmUsage, type LlmOperation } from './ai-usage.js';
+
+/**
+ * Context the route passes when it wants the call recorded in
+ * `app.llm_usage_events`. The `db` field is the same scoped accessor
+ * routes get from `c.get('db')` — passing the accessor (not a raw
+ * handle) keeps RLS per-request scoping intact: the INSERT runs under
+ * the caller's `app.user_id`, and `llm_usage_events_self_insert`
+ * enforces the user_id claim independently of the chokepoint.
+ *
+ * Optional everywhere — fixture-driven unit tests can still call
+ * chat/transcribe/generateReport without it. The default-wiring
+ * integration test (Pitfall 13) is what keeps us honest: if a route
+ * stops passing the context, that test goes red because the expected
+ * row never lands.
+ */
+export interface LlmUsageContext {
+  db: <T>(fn: (db: ScopedDb) => Promise<T>) => Promise<T>;
+  userId: string;
+  projectId?: string | null;
+  reportId?: string | null;
+}
 
 export class AiProviderError extends Error {
   readonly code = 'ai_provider_error';
@@ -182,6 +205,64 @@ async function withErrorWrap<T>(label: string, fn: () => Promise<T>): Promise<T>
   }
 }
 
+/**
+ * Run the provider call and (best-effort) record a usage row. The
+ * recorder swallows its own failures so accounting bugs never surface
+ * to the user-facing request. On provider failure we still record an
+ * `error` row so cost postmortems include attempted calls.
+ *
+ * Vendor SDK response shapes vary. Today fixtures + the OpenAI live
+ * adapter return `{ input, output }` for `chat`; `transcribe` carries
+ * no token shape (Groq Whisper bills by audio seconds). The recorder
+ * defaults missing fields to 0 — see docs/v4/arch-ai-fixtures.md for
+ * the per-vendor adapter plan.
+ */
+async function withUsageAccounting<T>(
+  ctx: LlmUsageContext | undefined,
+  meta: { vendor: Vendor; model: string; operation: LlmOperation; fixtureMode: FixtureMode },
+  label: string,
+  fn: () => Promise<T & { usage?: { input?: number; output?: number; cached?: number } }>,
+): Promise<T & { usage?: { input?: number; output?: number; cached?: number } }> {
+  const start = Date.now();
+  const record = async (
+    status: 'ok' | 'error',
+    usage?: { input?: number; output?: number; cached?: number },
+  ) => {
+    if (!ctx) return;
+    try {
+      await ctx.db((d) =>
+        recordLlmUsage(d, {
+          userId: ctx.userId,
+          projectId: ctx.projectId ?? null,
+          reportId: ctx.reportId ?? null,
+          vendor: meta.vendor,
+          model: meta.model,
+          operation: meta.operation,
+          inputTokens: usage?.input ?? 0,
+          outputTokens: usage?.output ?? 0,
+          cachedTokens: usage?.cached ?? 0,
+          latencyMs: Date.now() - start,
+          fixtureMode: meta.fixtureMode,
+          status,
+        }),
+      );
+    } catch (err) {
+      // Accounting failures must never bubble to the caller. Log so
+      // CI surfaces a regression without breaking the request.
+      console.error('[ai-usage] recordLlmUsage failed', err);
+    }
+  };
+  let out: T & { usage?: { input?: number; output?: number; cached?: number } };
+  try {
+    out = await withErrorWrap(label, fn);
+  } catch (err) {
+    await record('error');
+    throw err;
+  }
+  await record('ok', out.usage);
+  return out;
+}
+
 export interface TranscribeInput {
   /**
    * The real (signed) audio URL the provider would fetch. In replay
@@ -190,6 +271,7 @@ export interface TranscribeInput {
   audioUrl: string;
   fixtureName?: string;
   language?: string;
+  usageContext?: LlmUsageContext;
 }
 
 export interface TranscribeOutput {
@@ -213,8 +295,16 @@ export async function transcribe(input: TranscribeInput): Promise<TranscribeOutp
   const vendor = FIXTURE_CANONICALS.transcribe.vendor;
   const model = FIXTURE_CANONICALS.transcribe.model;
   const provider = buildProviderWithMode(vendor, fixtureName, mode);
-  const result = await withErrorWrap('transcribe', () =>
-    provider.transcribe({ audioUrl }) as Promise<Omit<TranscribeOutput, 'vendor' | 'model'>>,
+  const result = await withUsageAccounting(
+    input.usageContext,
+    { vendor, model, operation: 'transcribe', fixtureMode: mode },
+    'transcribe',
+    () =>
+      provider.transcribe({ audioUrl }) as Promise<
+        Omit<TranscribeOutput, 'vendor' | 'model'> & {
+          usage?: { input?: number; output?: number; cached?: number };
+        }
+      >,
   );
   return { ...result, vendor, model };
 }
@@ -232,6 +322,7 @@ export interface SummarizeInput {
    * OpenAI fixtures covers every scenario in replay mode).
    */
   vendor?: Vendor;
+  usageContext?: LlmUsageContext;
 }
 
 export interface SummarizeOutput {
@@ -264,7 +355,12 @@ export async function summarize(input: SummarizeInput): Promise<SummarizeOutput>
           maxTokens: input.maxTokens,
         };
   const provider = buildProviderWithMode(vendor, fixtureName, mode);
-  const out = await withErrorWrap('summarize', () => provider.chat(req));
+  const out = await withUsageAccounting(
+    input.usageContext,
+    { vendor, model: req.model, operation: 'chat', fixtureMode: mode },
+    'summarize',
+    () => provider.chat(req),
+  );
   return { text: out.text, vendor, model: req.model };
 }
 
@@ -301,6 +397,7 @@ export interface GenerateReportInput {
    * `openai`.
    */
   vendor?: Vendor;
+  usageContext?: LlmUsageContext;
 }
 
 export interface GenerateReportOutput {
@@ -375,7 +472,12 @@ export async function generateReport(input: GenerateReportInput): Promise<Genera
         };
 
   const provider = buildProviderWithMode(vendor, fixtureName, mode);
-  const out = await withErrorWrap('generateReport', () => provider.chat(req));
+  const out = await withUsageAccounting(
+    input.usageContext,
+    { vendor, model: req.model, operation: 'generate_report', fixtureMode: mode },
+    'generateReport',
+    () => provider.chat(req),
+  );
 
   let parsed: unknown;
   try {

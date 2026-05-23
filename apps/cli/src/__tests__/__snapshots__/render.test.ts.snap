@@ -120,17 +120,17 @@ exports[`renderReportList > renders a populated list 1`] = `
 exports[`renderReportList > renders an empty list 1`] = `"No reports."`;
 
 exports[`renderUsage > renders empty usage 1`] = `
-"Month     Reports  Voice notes
-——————————————————————————————
-Total           0            0"
+"Month     Reports  Voice notes  Calls   In tok   Out tok
+————————————————————————————————————————————————————————
+Total           0            0      0        0        0"
 `;
 
 exports[`renderUsage > renders months + totals 1`] = `
-"Month     Reports  Voice notes
-2025-01        12           47
-2024-12         8           31
-——————————————————————————————
-Total          20           78"
+"Month     Reports  Voice notes  Calls   In tok   Out tok
+2025-01        12           47      0        0        0
+2024-12         8           31      0        0        0
+————————————————————————————————————————————————————————
+Total          20           78      0        0        0"
 `;
 
 exports[`renderUser > renders a fully populated user 1`] = `

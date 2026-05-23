@@ -155,6 +155,9 @@ echo "  nid=$VOICE_NID"
 # sample is too short for the provider. Non-fatal: we log a warning so
 # CI surfaces the issue without blocking the rest of the journey.
 echo "→ POST /reports/$RID/notes/voice (aggregator — transcribe + summarise)"
+USAGE_BEFORE=$(req GET /me/usage '')
+TOKENS_BEFORE=$(echo "$USAGE_BEFORE" | jq -r '(.totals.inputTokens // 0) + (.totals.outputTokens // 0)')
+CALLS_BEFORE=$(echo "$USAGE_BEFORE" | jq -r '.totals.calls // 0')
 set +e
 VOICE_AGG=$(req POST "/reports/$RID/notes/voice" \
   "{\"fileId\":\"$VOICE_FID\",\"durationSec\":53}" 2>&1)
@@ -163,6 +166,24 @@ set -e
 if [[ $AGG_STATUS -eq 0 ]]; then
   VOICE_AGG_NID=$(echo "$VOICE_AGG" | j .id)
   echo "  ✓ aggregator nid=$VOICE_AGG_NID"
+  USAGE_AFTER=$(req GET /me/usage '')
+  TOKENS_AFTER=$(echo "$USAGE_AFTER" | jq -r '(.totals.inputTokens // 0) + (.totals.outputTokens // 0)')
+  CALLS_AFTER=$(echo "$USAGE_AFTER" | jq -r '.totals.calls // 0')
+  echo "  usage: calls $CALLS_BEFORE→$CALLS_AFTER, tokens $TOKENS_BEFORE→$TOKENS_AFTER"
+  if [[ "$CALLS_AFTER" -le "$CALLS_BEFORE" ]]; then
+    echo "  ✗ /me/usage totals.calls did not increase after voice aggregator" >&2
+    exit 1
+  fi
+  if [[ "$TOKENS_AFTER" -le "$TOKENS_BEFORE" ]]; then
+    echo "  ✗ /me/usage input+output tokens did not increase after voice aggregator" >&2
+    exit 1
+  fi
+  BYMODEL_COUNT=$(echo "$USAGE_AFTER" | jq -r '.usageByModel | length')
+  if [[ "$BYMODEL_COUNT" -lt 1 ]]; then
+    echo "  ✗ /me/usage.usageByModel is empty after voice aggregator" >&2
+    exit 1
+  fi
+  echo "  ✓ usageByModel rows=$BYMODEL_COUNT"
 else
   echo "  ⚠️  voice aggregator failed (AI unavailable or sample too short — expected on dev with live AI)"
   VOICE_AGG_NID=""

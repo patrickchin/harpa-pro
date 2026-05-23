@@ -113,6 +113,11 @@ voiceRoutes.openapi(
     const settings = await db((d) => getAiSettings(d, userId));
     const vendor = settings.vendor;
 
+    // Usage accounting context — chokepoint records one row per AI
+    // call against (userId, projectId, reportId). Same `db` accessor
+    // the route owns so RLS user_id scoping is preserved.
+    const usageContext = { db, userId, projectId: report.projectId, reportId: report.id };
+
     // Step 1 — transcribe. Real signed URL in live mode; services/ai.ts
     // normalises it away before hashing in replay.
     const signed = await pickStorage().signGet(file.fileKey);
@@ -120,6 +125,7 @@ voiceRoutes.openapi(
       audioUrl: signed.url,
       language: body.language,
       fixtureName: body.fixtureName,
+      usageContext,
     });
     const transcript = transcribed.text;
 
@@ -134,6 +140,7 @@ voiceRoutes.openapi(
       // transcribe fixture above. Most tests pass nothing and rely on
       // the canonical default.
       fixtureName: body.fixtureName,
+      usageContext,
     });
     const { title, summary } = parseVoiceSummaryResponse(summarised.text);
     const transcribeProvider = `${summarised.vendor}:${summarised.model}+${transcribed.vendor}:${transcribed.model}`;
@@ -182,8 +189,9 @@ voiceRoutes.openapi(
     },
   }),
   async (c) => {
+    const userId = c.get('userId');
     const db = c.get('db');
-    if (!db) throw new HTTPException(401);
+    if (!userId || !db) throw new HTTPException(401);
     const body = c.req.valid('json');
     const row = await db((d) => getFileById(d, body.fileId));
     if (!row) throw new HTTPException(404, { message: 'File not found.' });
@@ -194,6 +202,7 @@ voiceRoutes.openapi(
     const out = await aiTranscribe({
       audioUrl: signed.url,
       fixtureName: body.fixtureName,
+      usageContext: { db, userId, projectId: null, reportId: null },
     });
     return c.json({ transcript: out.text }, 200);
   },
@@ -219,12 +228,14 @@ voiceRoutes.openapi(
   }),
   async (c) => {
     const userId = c.get('userId');
-    if (!userId) throw new HTTPException(401);
+    const db = c.get('db');
+    if (!userId || !db) throw new HTTPException(401);
     const body = c.req.valid('json');
     const out = await aiSummarize({
       systemPrompt: voiceSummarySystemPrompt(),
       userPrompt: body.transcript,
       fixtureName: body.fixtureName,
+      usageContext: { db, userId, projectId: null, reportId: null },
     });
     const { summary } = parseVoiceSummaryResponse(out.text);
     return c.json({ summary }, 200);

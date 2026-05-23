@@ -185,5 +185,41 @@ export const waitlistSignups = appSchema.table('waitlist_signups', {
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 });
 
+/**
+ * LLM usage observability sink — one row per call routed through the
+ * `services/ai.ts` chokepoint. RLS pins read + insert on `app.user_id`
+ * (see migration `0005_llm_usage_events.sql`).
+ */
+export const llmOperationEnum = pgEnum('llm_operation', [
+  'chat',
+  'transcribe',
+  'generate_report',
+]);
+
+export const llmFixtureModeEnum = pgEnum('llm_fixture_mode', [
+  'live',
+  'replay',
+  'record',
+]);
+
+export const llmUsageStatusEnum = pgEnum('llm_usage_status', ['ok', 'error']);
+
+export const llmUsageEvents = appSchema.table('llm_usage_events', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull(),
+  projectId: text('project_id'),
+  reportId: text('report_id'),
+  vendor: varchar('vendor', { length: 32 }).notNull(),
+  model: varchar('model', { length: 128 }).notNull(),
+  operation: llmOperationEnum('operation').notNull(),
+  inputTokens: integer('input_tokens').notNull().default(0),
+  outputTokens: integer('output_tokens').notNull().default(0),
+  cachedTokens: integer('cached_tokens').notNull().default(0),
+  latencyMs: integer('latency_ms').notNull().default(0),
+  fixtureMode: llmFixtureModeEnum('fixture_mode').notNull(),
+  status: llmUsageStatusEnum('status').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
 /** Re-export the SQL helper for use in raw policies / migrations. */
 export { sql };

@@ -44,16 +44,37 @@ export interface UsageMonthlyRow {
   month: string;
   reportsCount: number;
   voiceNotesCount: number;
+  /** Optional per-month token totals (set when API returns them). */
+  inputTokens?: number;
+  outputTokens?: number;
+  cachedTokens?: number;
+  calls?: number;
 }
 
 export interface UsageTotals {
   reports: number;
   voiceNotes: number;
+  inputTokens?: number;
+  outputTokens?: number;
+  cachedTokens?: number;
+  calls?: number;
+}
+
+export interface UsageByModelRow {
+  vendor: string;
+  model: string;
+  operation: 'chat' | 'transcribe' | 'generate_report';
+  calls: number;
+  inputTokens: number;
+  outputTokens: number;
+  cachedTokens: number;
 }
 
 export interface UsageScreenProps {
   history: ReadonlyArray<UsageMonthlyRow> | null;
   totals: UsageTotals;
+  /** Optional per-(vendor,model,operation) breakdown card. */
+  byModel?: ReadonlyArray<UsageByModelRow>;
   isLoading: boolean;
   refreshing: boolean;
   onRefresh: () => void;
@@ -162,6 +183,7 @@ function PricingRow({
 export function Usage({
   history,
   totals,
+  byModel,
   isLoading,
   refreshing,
   onRefresh,
@@ -222,7 +244,57 @@ export function Usage({
                   compact
                   className="min-w-[46%]"
                 />
+                {(totals.calls ?? 0) > 0 && (
+                  <>
+                    <StatTile
+                      value={totals.calls ?? 0}
+                      label="AI Calls"
+                      compact
+                      className="min-w-[46%]"
+                    />
+                    <StatTile
+                      value={(totals.inputTokens ?? 0) + (totals.outputTokens ?? 0)}
+                      label="Tokens"
+                      compact
+                      className="min-w-[46%]"
+                    />
+                  </>
+                )}
               </View>
+
+              {byModel && byModel.length > 0 && (
+                <>
+                  <SectionHeader title="Per-model Usage" />
+                  <Card className="gap-3" testID="usage-by-model">
+                    {byModel.map((row) => (
+                      <View
+                        key={`${row.vendor}-${row.model}-${row.operation}`}
+                        className="flex-row items-center justify-between"
+                        testID={`usage-by-model-${row.vendor}-${row.model}-${row.operation}`}
+                      >
+                        <View className="flex-1 gap-0.5">
+                          <Text className="text-sm font-medium text-foreground">{row.model}</Text>
+                          <Text className="text-xs text-muted-foreground">
+                            {row.vendor} · {row.operation}
+                          </Text>
+                        </View>
+                        <View className="flex-row gap-4">
+                          <View className="items-end">
+                            <Text className="text-sm text-foreground">{row.calls}</Text>
+                            <Text className="text-xs text-muted-foreground">calls</Text>
+                          </View>
+                          <View className="items-end">
+                            <Text className="text-sm text-foreground">
+                              {row.inputTokens + row.outputTokens}
+                            </Text>
+                            <Text className="text-xs text-muted-foreground">tokens</Text>
+                          </View>
+                        </View>
+                      </View>
+                    ))}
+                  </Card>
+                </>
+              )}
 
               {/* Timeline chart (slot) */}
               {chart && history.length > 1 && (

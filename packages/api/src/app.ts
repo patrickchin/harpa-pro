@@ -5,6 +5,7 @@
 import { OpenAPIHono } from '@hono/zod-openapi';
 import { cors } from 'hono/cors';
 import { requestId } from './middleware/requestId.js';
+import { withAnalytics } from './middleware/analytics.js';
 import { errorMapper } from './middleware/errorMapper.js';
 import { health } from './routes/health.js';
 import { readyz } from './routes/readyz.js';
@@ -38,6 +39,10 @@ export type AppEnv = {
     sessionId?: string;
     // Per-request scoped DB accessor; populated by withAuth.
     db?: ScopedDbAccessor;
+    // Analytics + flags, populated by withAnalytics middleware.
+    analytics?: import('./lib/posthog.js').AnalyticsClient;
+    flags?: import('./lib/flags.js').FlagSource;
+    distinctId?: string;
   };
 };
 
@@ -45,6 +50,7 @@ export function createApp(): OpenAPIHono<AppEnv> {
   const app = new OpenAPIHono<AppEnv>();
 
   app.use('*', requestId());
+  app.use('*', withAnalytics());
 
   // CORS — limited to /waitlist/* so cross-origin signups from the
   // marketing site (https://harpapro.com → https://api.harpapro.com)

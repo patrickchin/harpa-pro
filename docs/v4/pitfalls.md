@@ -454,6 +454,82 @@ catches the next regression in this shape.
 
 ---
 
+## Pitfall 17 — PostHog outage takes down the API
+
+**Symptom:** PostHog has a regional incident. The Hono API starts
+returning 500s on every authed route because flag evaluation in a
+middleware throws.
+
+**Cause:** A naive PostHog integration reads `posthog.isFeatureEnabled()`
+synchronously (or awaits the network) inside the request path. When
+PostHog is unreachable, the call throws or hangs; the middleware has
+no fallback and the request dies.
+
+**Rule:** PostHog is a non-critical dependency. Never let it block a
+request:
+
+- Use `posthog-node` **local evaluation** with a Personal API key —
+  evaluations happen against a polled flag-definition cache, never
+  per-request network calls.
+- Every flag read goes through `FlagSource.getBooleanFlag(key, defaultValue)`
+  /  `getVariantFlag(key, defaultVariant)` which **must** return a value
+  synchronously and never throw. Internal errors are swallowed +
+  logged, the default returned.
+- On cold boot before the first flag poll, hydrate from a disk cache
+  on the Fly machine ephemeral volume. If no cache exists, return
+  the fail-safe defaults from `@harpa/analytics-events/flags`
+  (`*-live` → `false`, `*-fixture-mode` → `replay`).
+- A failing `getBooleanFlag('twilio-live', false)` MUST resolve to
+  `false`, not `true`, on outage. The defaults are chosen so an
+  outage never accidentally bills a paid provider.
+
+---
+
+## Pitfall 18 — Fixture mode pollutes production analytics
+
+**Symptom:** Production PostHog dashboards show events fired from
+`EXPO_PUBLIC_USE_FIXTURES=true` mock builds or `AI_FIXTURE_MODE=replay`
+CI runs, corrupting funnel data.
+
+**Cause:** PostHog SDKs initialise unconditionally as soon as the key
+is present. The mock-mobile build still ships with the production
+PostHog key inlined, so every `:mock` session reports events.
+
+**Rule:** The analytics client factory must check fixture mode
+**before** the key, not after:
+
+- Mobile: when `env.EXPO_PUBLIC_USE_FIXTURES === true`, return the
+  no-op client even if `EXPO_PUBLIC_POSTHOG_KEY` is set.
+- API: when `NODE_ENV === 'test'`, return the no-op stub even if
+  `POSTHOG_API_KEY` is set. Integration tests that need to exercise
+  the real client pass `apiKey` explicitly via the factory's `opts`.
+- Marketing: PostHog init is gated on the consent banner — Playwright
+  CI runs never click "accept", so no events fire. Do not auto-accept
+  in test fixtures.
+
+The Pitfall-13 default-wiring integration test must NOT use the
+production project key — it points at a local capture HTTP server.
+
+---
+
+## Pitfall 19 — `EXPO_PUBLIC_POSTHOG_KEY` rotation pretends to work
+
+**Symptom:** PostHog project key compromised. We rotate it in the EAS
+profile. Existing TestFlight/production binaries keep sending events
+with the old key.
+
+**Cause:** `EXPO_PUBLIC_*` vars are inlined by Metro at bundle time
+(documented in `apps/mobile/lib/env.ts`). Rotating the env var only
+takes effect on the **next** EAS build + store release — not on
+already-shipped binaries, not on a JS-only OTA.
+
+**Rule:** Key rotation requires an EAS rebuild AND store submission.
+Document this on the runbook in `docs/v4/arch-ops.md`. For "kill an
+old key immediately" use PostHog's project-side controls (revoke the
+key in PostHog, not just in EAS).
+
+---
+
 ## How we use this doc
 
 When you finish a task and notice the bug shape matches one of these

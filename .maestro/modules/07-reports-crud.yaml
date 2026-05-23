@@ -20,8 +20,11 @@ tags:
 # stays focused on the draft lifecycle.
 #
 # Pre-condition: alice on project home; no existing reports.
-# Post-condition: alice on project home; no reports (module 11 will
-# create the canonical REPORT_NUMBER=1 used by 12).
+# Post-condition: alice on project home; no reports. Note:
+# `app.projects.next_report_number` is a monotonic counter that does
+# NOT decrement on delete, so module 11's report will be number 3
+# (one bumped here, one in module 08), not 1. Downstream Maestro
+# steps must not hard-code the ordinal.
 
 # --- Open reports list -----------------------------------------------------
 - tapOn:

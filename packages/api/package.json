@@ -12,11 +12,13 @@
     "test": "vitest run",
     "test:unit": "vitest run",
     "test:integration": "TESTCONTAINERS_RYUK_DISABLED=true vitest run --config vitest.integration.config.ts",
+    "test:live": "vitest run --config vitest.live.config.ts",
     "test:watch": "vitest",
     "lint": "eslint . --max-warnings 0 --ext .ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx src/db/migrate.ts",
-    "spec:emit": "tsx scripts/emit-openapi.ts"
+    "spec:emit": "tsx scripts/emit-openapi.ts",
+    "db:check": "drizzle-kit check"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.665.0",

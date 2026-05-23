@@ -140,6 +140,60 @@ Pre-commit hook checks fixture files for un-redacted strings
 matching API key patterns or +1[0-9]{10} phone numbers other than
 `+10000000000`.
 
+### `generate-report.*` — dedicated recorder
+
+The report fixtures have a custom recorder
+(`packages/ai-fixtures/scripts/record.ts`, exposed as
+`pnpm --filter @harpa/ai-fixtures record`) because their request
+hash depends on the API's `REPORT_SYSTEM_PROMPT`. Every time that
+prompt changes the fixtures go stale; the recorder regenerates them
+in one pass, using the recorded `transcribe.voice-N.json`
+transcripts as the realistic notes payload and writing back the
+canonical placeholder user prompt (`<notes payload voice-N>`) so
+replay-mode lookup still hits the file.
+
+```bash
+AI_LIVE=1 OPENAI_API_KEY=sk-… pnpm --filter @harpa/ai-fixtures record
+# optionally restrict to one scenario:
+AI_LIVE=1 OPENAI_API_KEY=sk-… pnpm --filter @harpa/ai-fixtures record -- --scenario voice-3
+```
+
+The recorder refuses to run without `AI_LIVE=1` so it cannot
+silently clobber fixtures from an unrelated test or script import.
+
+## Live-CI lane
+
+Replay fixtures cannot catch prompt/schema drift on their own —
+the fixture `response.text` is hand-massaged to match whatever
+shape the contract currently expects, so a broken prompt
+("emit v3 wrapped JSON") looks healthy in CI while the live
+production path 502s ("AI provider request failed."). That's
+Pitfall 13 in `pitfalls.md`, and it is exactly the bug recorded
+in `docs/bugs/README.md` as **"Prompt/schema drift in
+generateReport"**.
+
+Three guards run at three layers:
+
+| Lane | When | What it catches |
+| --- | --- | --- |
+| **Offline drift guard** (`packages/api/src/__tests__/reportPrompt.drift.test.ts`) | Every PR, in the unit lane | Prompt text no longer mentions every required `reportBody` field, or has re-acquired v3 vocabulary (`"report":` wrapper, `quantityUnit`, `actionRequired`, `totalWorkers`, `"category"`). |
+| **Replay integration** (`reports.integration.test.ts`) | Every PR | The fixture-driven happy path still produces a schema-valid `reportBody` end-to-end. |
+| **Live-LLM** (`.github/workflows/ai-live.yml` → `pnpm --filter @harpa/api test:live`) | Weekly schedule, manual dispatch, push/PR touching prompts / `services/ai.ts` / `schemas/reports.ts` / providers / `generate-report.*.json` | The real model, with the real prompt, still returns a payload that parses against `reportBody`. |
+
+The live lane is opt-in by file path so we don't burn OpenAI
+budget on every PR. It needs the `OPENAI_API_KEY` repo secret
+(and `GROQ_API_KEY` once the transcribe path is added). Fork PRs
+are skipped automatically because they can't read secrets.
+
+When the live lane fails, the next step is almost always:
+
+1. Look at the failure — Zod issue paths are in the test output
+   AND (in production) in the Fly log line
+   `ai_provider_error … issues=<path>:<code>, …`.
+2. Update `packages/api/src/prompts/reportGeneration.ts` to match
+   the schema (or update the schema if the contract is changing).
+3. Re-record fixtures: `pnpm --filter @harpa/ai-fixtures record`.
+
 ## Mobile `:mock` build
 
 The `:mock` build sets `EXPO_PUBLIC_USE_FIXTURES=true`, which makes

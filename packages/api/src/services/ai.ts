@@ -464,11 +464,13 @@ export async function generateReport(input: GenerateReportInput): Promise<Genera
           // they will FixtureMiss against the on-disk store and surface
           // as a generic 502, matching the voice route's behaviour.
           userPrompt: canonicals.userPrompt(scenario),
+          responseFormat: 'json_object' as const,
         }
       : {
           model: canonicalModel,
           systemPrompt: liveSystemPrompt,
           userPrompt: liveUserPrompt,
+          responseFormat: 'json_object' as const,
         };
 
   const provider = buildProviderWithMode(vendor, fixtureName, mode);
@@ -488,7 +490,17 @@ export async function generateReport(input: GenerateReportInput): Promise<Genera
   const result = reportSchemas.reportBody.safeParse(parsed);
   if (!result.success) {
     // Don't leak the failing payload — keep the error surface generic.
-    throw new AiProviderError('generateReport: provider response did not match report schema');
+    // BUT do attach Zod issue paths (not values) to the inner cause so
+    // Fly logs can pinpoint which field drifted from the schema. This
+    // is what unblocked the v3→v4 prompt-drift bug; see
+    // docs/bugs/README.md "Prompt/schema drift in generateReport".
+    const issues = result.error.issues
+      .slice(0, 8) // cap to keep the log line bounded
+      .map((i) => `${i.path.join('.') || '<root>'}:${i.code}`)
+      .join(', ');
+    throw new AiProviderError(
+      `generateReport: provider response did not match report schema (issues=${issues})`,
+    );
   }
   return {
     body: result.data,

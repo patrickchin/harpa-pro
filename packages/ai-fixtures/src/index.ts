@@ -26,6 +26,17 @@ export interface ChatRequest {
   userPrompt: string;
   temperature?: number;
   maxTokens?: number;
+  /**
+   * When set, instructs the provider to constrain its response to a
+   * specific format. Currently only `'json_object'` is supported,
+   * mapping to OpenAI's `response_format: { type: 'json_object' }`.
+   * Adapters that do not support this MAY ignore it; the caller
+   * remains responsible for validating the response body.
+   *
+   * Included in the canonical request hash so fixtures recorded
+   * without this flag do not collide with calls that pass it.
+   */
+  responseFormat?: 'json_object';
 }
 
 export interface ChatResponse {

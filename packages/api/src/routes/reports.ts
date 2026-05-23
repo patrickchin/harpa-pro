@@ -49,6 +49,7 @@ import {
 } from '../services/reports.js';
 import { getProjectBySlug } from '../services/projects.js';
 import { generateReport as aiGenerateReport } from '../services/ai.js';
+import { enforceUsageLimit } from '../services/usage-limits.js';
 import { getAiSettings } from '../services/settings.js';
 import { pickStorage } from '../services/storage.js';
 import { registerFile } from '../services/files.js';
@@ -314,6 +315,11 @@ async function runGenerate(
   if (report.status === 'finalized') {
     throw new HTTPException(409, { message: 'Report is finalized.' });
   }
+  // Enforce per-account monthly cap BEFORE the costly AI call. The
+  // service throws UsageLimitExceededError which the errorMapper
+  // renders as 403 + structured details. See
+  // docs/v4/arch-usage-limits.md §4.
+  await db((d) => enforceUsageLimit(d, userId, { kind: 'report_generate' }));
   const notes = await db((d) => collectNotesForGeneration(d, report.id));
   // Update path: send current body so the model preserves manual
   // edits. First-time generate ignores any stale body (there shouldn't

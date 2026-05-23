@@ -56,6 +56,7 @@ const ENDPOINTS: Endpoint[] = [
   { method: 'get',   path: '/me',       hook: 'useMeQuery',          query: true,  hasPathParams: false, hasBody: false, queryKeyHead: 'me' },
   { method: 'patch', path: '/me',       hook: 'useUpdateMeMutation', query: false, hasPathParams: false, hasBody: true },
   { method: 'get',   path: '/me/usage', hook: 'useMeUsageQuery',     query: true,  hasPathParams: false, hasBody: false, queryKeyHead: 'meUsage' },
+  { method: 'get',   path: '/me/limits', hook: 'useMeLimitsQuery',   query: true,  hasPathParams: false, hasBody: false, queryKeyHead: 'meLimits' },
 
   // projects
   { method: 'get',    path: '/projects',                              hook: 'useListProjectsQuery',         query: true,  hasPathParams: false, hasBody: false, queryKeyHead: 'projects' },

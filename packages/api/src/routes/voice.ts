@@ -30,6 +30,7 @@ import { withIdempotency } from '../middleware/idempotency.js';
 import { getFileById } from '../services/files.js';
 import { pickStorage } from '../services/storage.js';
 import { transcribe as aiTranscribe, summarize as aiSummarize } from '../services/ai.js';
+import { enforceUsageLimit } from '../services/usage-limits.js';
 import { getReport } from '../services/reports.js';
 import { createVoiceNote } from '../services/notes.js';
 import { getAiSettings } from '../services/settings.js';
@@ -108,6 +109,13 @@ voiceRoutes.openapi(
     if (file.kind !== 'voice') {
       throw new HTTPException(400, { message: 'File is not a voice recording.' });
     }
+
+    // Aggregator counts toward BOTH voice buckets — it makes one
+    // transcribe call AND one summarize call. Pre-hoc enforcement
+    // before any signed-URL mint / provider call. See
+    // docs/v4/arch-usage-limits.md §4.
+    await db((d) => enforceUsageLimit(d, userId, { kind: 'voice_transcribe' }));
+    await db((d) => enforceUsageLimit(d, userId, { kind: 'voice_summarize' }));
 
     // Per-user vendor pref (Pitfall 15).
     const settings = await db((d) => getAiSettings(d, userId));
@@ -193,6 +201,7 @@ voiceRoutes.openapi(
     const db = c.get('db');
     if (!userId || !db) throw new HTTPException(401);
     const body = c.req.valid('json');
+    await db((d) => enforceUsageLimit(d, userId, { kind: 'voice_transcribe' }));
     const row = await db((d) => getFileById(d, body.fileId));
     if (!row) throw new HTTPException(404, { message: 'File not found.' });
     // Mint a real signed URL even in fixture mode — services/ai.ts
@@ -231,6 +240,7 @@ voiceRoutes.openapi(
     const db = c.get('db');
     if (!userId || !db) throw new HTTPException(401);
     const body = c.req.valid('json');
+    await db((d) => enforceUsageLimit(d, userId, { kind: 'voice_summarize' }));
     const out = await aiSummarize({
       systemPrompt: voiceSummarySystemPrompt(),
       userPrompt: body.transcript,

@@ -11,11 +11,18 @@
  * See docs/marketing/plan-m1-waitlist.md §M1.6.
  */
 import { Hono } from 'hono';
+import { HTTPException } from 'hono/http-exception';
 import { stream } from 'hono/streaming';
 import type { AppEnv } from '../app.js';
 import { getPool } from '../db/client.js';
 import { withAuth } from '../middleware/auth.js';
 import { withAdmin } from '../middleware/admin.js';
+import { usageLimits as usageLimitsSchemas } from '@harpa/api-contract';
+import {
+  deleteUserLimitOverride,
+  updateUserPlan,
+  upsertUserLimitOverride,
+} from '../services/usage-limits.js';
 
 export const adminRoutes = new Hono<AppEnv>();
 
@@ -62,11 +69,6 @@ adminRoutes.get('/admin/waitlist.csv', withAuth(), withAdmin(), (c) => {
 
     const client = await getPool().connect();
     try {
-      // Single query + row-by-row flush. Memory bound is the size of
-      // the result set; fine at launch volumes (we're a waitlist, not
-      // a billing system). When the waitlist grows past ~50k rows we
-      // can swap to `pg-query-stream` for a true server-side cursor —
-      // the response shape is unchanged.
       const r = await client.query<{
         id: string;
         email: string;
@@ -88,3 +90,85 @@ adminRoutes.get('/admin/waitlist.csv', withAuth(), withAdmin(), (c) => {
     }
   });
 });
+
+// ---------------------------------------------------------------------------
+// Per-account usage limit admin endpoints. See
+// docs/v4/arch-usage-limits.md §5.5–5.7.
+//
+// All three routes run against the unscoped pool because the admin
+// acts on someone else's row — the scoped role can't UPDATE other
+// users. `withAdmin` re-verifies the admin flag on every request
+// (no caching).
+// ---------------------------------------------------------------------------
+
+adminRoutes.patch(
+  '/admin/users/:id/plan',
+  withAuth(),
+  withAdmin(),
+  async (c) => {
+    const adminId = c.get('userId');
+    if (!adminId) throw new HTTPException(401);
+    const targetUserId = c.req.param('id');
+    if (!targetUserId) throw new HTTPException(400, { message: 'Missing user id.' });
+    const json = await c.req.json().catch(() => null);
+    const parsed = usageLimitsSchemas.planUpdateRequest.safeParse(json);
+    if (!parsed.success) {
+      throw new HTTPException(400, { message: 'Invalid plan update.' });
+    }
+    await updateUserPlan(targetUserId, parsed.data.plan);
+    // Audit log line — operator-grep target. Pitfall 11: never log
+    // free-form admin input on the same line as the action, so the
+    // `reason` field is intentionally minimal.
+    console.log(
+      `[admin] plan_change admin=${adminId} target=${targetUserId} plan=${parsed.data.plan}`,
+    );
+    return c.json({ ok: true }, 200);
+  },
+);
+
+adminRoutes.put(
+  '/admin/users/:id/limit-overrides',
+  withAuth(),
+  withAdmin(),
+  async (c) => {
+    const adminId = c.get('userId');
+    if (!adminId) throw new HTTPException(401);
+    const targetUserId = c.req.param('id');
+    if (!targetUserId) throw new HTTPException(400, { message: 'Missing user id.' });
+    const json = await c.req.json().catch(() => null);
+    const parsed = usageLimitsSchemas.limitOverrideRequest.safeParse(json);
+    if (!parsed.success) {
+      throw new HTTPException(400, { message: 'Invalid override request.' });
+    }
+    await upsertUserLimitOverride(targetUserId, adminId, {
+      report_generate: parsed.data.report_generate,
+      voice_transcribe: parsed.data.voice_transcribe,
+      voice_summarize: parsed.data.voice_summarize,
+      ai_input_tokens: parsed.data.ai_input_tokens,
+      ai_output_tokens: parsed.data.ai_output_tokens,
+      reason: parsed.data.reason,
+      expiresAt: parsed.data.expiresAt ? new Date(parsed.data.expiresAt) : null,
+    });
+    console.log(
+      `[admin] limit_override_upsert admin=${adminId} target=${targetUserId}`,
+    );
+    return c.json({ ok: true }, 200);
+  },
+);
+
+adminRoutes.delete(
+  '/admin/users/:id/limit-overrides',
+  withAuth(),
+  withAdmin(),
+  async (c) => {
+    const adminId = c.get('userId');
+    if (!adminId) throw new HTTPException(401);
+    const targetUserId = c.req.param('id');
+    if (!targetUserId) throw new HTTPException(400, { message: 'Missing user id.' });
+    await deleteUserLimitOverride(targetUserId);
+    console.log(
+      `[admin] limit_override_delete admin=${adminId} target=${targetUserId}`,
+    );
+    return c.json({ ok: true }, 200);
+  },
+);

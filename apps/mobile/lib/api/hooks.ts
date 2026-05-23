@@ -152,6 +152,17 @@ export function useMeUsageQuery(
   });
 }
 
+export function useMeLimitsQuery(
+  input?: { query?: QueryParams<"/me/limits", "get"> } | void,
+  options?: Omit<UseQueryOptions<ResponseBody<"/me/limits", "get">, ApiError>, 'queryKey' | 'queryFn'>,
+) {
+  return useQuery<ResponseBody<"/me/limits", "get">, ApiError>({
+    queryKey: ["meLimits", (input as any)?.query] as const,
+    queryFn: ({ signal }) => request("/me/limits", "get", { query: (input as any)?.query, signal }),
+    ...options,
+  });
+}
+
 // ─── projects ───────────────────────────────────────────
 export function useListProjectsQuery(
   input?: { query?: QueryParams<"/projects", "get"> } | void,

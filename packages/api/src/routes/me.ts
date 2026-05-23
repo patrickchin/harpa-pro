@@ -5,10 +5,11 @@
  */
 import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi';
 import { HTTPException } from 'hono/http-exception';
-import { auth as authSchemas } from '@harpa/api-contract';
+import { auth as authSchemas, usageLimits as usageLimitsSchemas } from '@harpa/api-contract';
 import type { AppEnv } from '../app.js';
 import { withAuth } from '../middleware/auth.js';
 import { fetchUser, updateUser, fetchUsage } from '../auth/service.js';
+import { getEffectiveLimits } from '../services/usage-limits.js';
 
 const errorBody = z.object({
   error: z.object({ code: z.string(), message: z.string() }),
@@ -84,7 +85,31 @@ meRoutes.openapi(
     const userId = c.get('userId');
     const db = c.get('db');
     if (!userId || !db) throw new HTTPException(401);
-    const usage = await db((d) => fetchUsage(d, userId));
-    return c.json(usage, 200);
+    const [usage, effective] = await Promise.all([
+      db((d) => fetchUsage(d, userId)),
+      db((d) => getEffectiveLimits(d, userId)),
+    ]);
+    return c.json({ ...usage, plan: effective.plan, limits: effective.buckets }, 200);
+  },
+);
+
+meRoutes.openapi(
+  createRoute({
+    method: 'get',
+    path: '/me/limits',
+    tags: ['auth'],
+    security: [{ bearerAuth: [] }],
+    middleware: [withAuth()] as const,
+    responses: {
+      200: { description: 'Effective limits.', content: { 'application/json': { schema: usageLimitsSchemas.limitsResponse } } },
+      401: { description: 'Unauthorized.', content: { 'application/json': { schema: errorBody } } },
+    },
+  }),
+  async (c) => {
+    const userId = c.get('userId');
+    const db = c.get('db');
+    if (!userId || !db) throw new HTTPException(401);
+    const out = await db((d) => getEffectiveLimits(d, userId));
+    return c.json({ plan: out.plan, buckets: out.buckets }, 200);
   },
 );

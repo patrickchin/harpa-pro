@@ -12,4 +12,6 @@ pnpm --filter @harpa/api db:check
 [ "${SKIP_SECRET_CHECK:-}" = "1" ] || bash scripts/check-secrets.sh
 
 # Optional: live-LLM smoke (only when touching prompts/schema/providers)
-[ "${PREPUSH_LIVE:-}" = "1" ] && pnpm --filter @harpa/api test:live
+if [ "${PREPUSH_LIVE:-}" = "1" ]; then
+  pnpm --filter @harpa/api test:live
+fi

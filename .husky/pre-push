@@ -1,3 +1,15 @@
 pnpm lint
 pnpm typecheck
 pnpm test
+
+# Fixture hash integrity — catches edited fixtures without refreshed hashes
+pnpm --filter @harpa/ai-fixtures exec tsx scripts/refresh-hashes.ts --check
+
+# Migration file consistency — catches conflicting migration names/hashes
+pnpm --filter @harpa/api db:check
+
+# Secret scan — patterns: OpenAI sk-*, AWS AKIA*, GitHub PAT, Fly token, PEM keys
+[ "${SKIP_SECRET_CHECK:-}" = "1" ] || bash scripts/check-secrets.sh
+
+# Optional: live-LLM smoke (only when touching prompts/schema/providers)
+[ "${PREPUSH_LIVE:-}" = "1" ] && pnpm --filter @harpa/api test:live

@@ -50,6 +50,12 @@ const Env = z.object({
    */
   R2_PRESIGN_TTL_SEC: z.coerce.number().int().positive().default(300),
   REQUEST_LOG: z.enum(['true', 'false']).default('false'),
+  /**
+   * Rate-limit backend selector. `memory` = per-process (dev/test default),
+   * `postgres` = cross-machine via `app.rate_limit_buckets` (prod).
+   * See docs/v4/arch-rate-limiting.md §3.5.
+   */
+  RATE_LIMIT_BACKEND: z.enum(['memory', 'postgres']).default('memory'),
   // Marketing waitlist (M1).
   TURNSTILE_LIVE: z.enum(['0', '1']).default('0'),
   TURNSTILE_SECRET_KEY: z.string().optional(),

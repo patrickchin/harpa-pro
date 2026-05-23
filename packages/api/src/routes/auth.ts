@@ -16,7 +16,7 @@ import { startOtp, verifyOtp, logout, issueSessionForPhone, OtpVerificationError
 import { createTwilioClient } from '../auth/twilio.js';
 import { withAuth } from '../middleware/auth.js';
 import { isPasswordBypassEnabled, verifyTestPassword } from '../auth/password.js';
-import { getRateLimiter } from '../lib/rateLimiter.js';
+import { withRateLimit } from '../middleware/rateLimit.js';
 
 const errorBody = z.object({
   error: z.object({ code: z.string(), message: z.string() }),
@@ -25,17 +25,58 @@ const errorBody = z.object({
 
 export const authRoutes = new OpenAPIHono<AppEnv>();
 
+// SMS-pumping protection on /auth/otp/* (docs/v4/arch-rate-limiting.md §3.3).
+// Twilio Verify charges per SMS — leaving these routes unlimited is a
+// money-burn DoS vector. Both layers (per-phone + per-IP) MUST trip
+// before any provider call is made.
+const MIN = 60_000;
+const HOUR = 60 * MIN;
+const QUARTER_HOUR = 15 * MIN;
+
+const otpStartPerPhone = withRateLimit({
+  name: 'auth.otp.start',
+  keyBy: 'phone',
+  limit: 3,
+  windowMs: QUARTER_HOUR,
+});
+const otpStartPerIp = withRateLimit({
+  name: 'auth.otp.start',
+  keyBy: 'ip',
+  limit: 10,
+  windowMs: HOUR,
+});
+const otpVerifyPerPhone = withRateLimit({
+  name: 'auth.otp.verify',
+  keyBy: 'phone',
+  limit: 10,
+  windowMs: QUARTER_HOUR,
+});
+const otpVerifyPerIp = withRateLimit({
+  name: 'auth.otp.verify',
+  keyBy: 'ip',
+  limit: 30,
+  windowMs: HOUR,
+});
+const passwordVerifyPerPhone = withRateLimit({
+  name: 'auth.password.verify',
+  keyBy: 'phone',
+  limit: 10,
+  windowMs: MIN,
+});
+
 authRoutes.openapi(
   createRoute({
     method: 'post',
     path: '/auth/otp/start',
     tags: ['auth'],
+    middleware: [otpStartPerIp, otpStartPerPhone] as const,
     request: {
       body: { content: { 'application/json': { schema: authSchemas.otpStartRequest } } },
     },
     responses: {
       200: { description: 'OTP sent.', content: { 'application/json': { schema: authSchemas.otpStartResponse } } },
       400: { description: 'Bad request.', content: { 'application/json': { schema: errorBody } } },
+      429: { description: 'Rate limited.', content: { 'application/json': { schema: errorBody } } },
     },
   }),
   async (c) => {
@@ -51,12 +92,14 @@ authRoutes.openapi(
     method: 'post',
     path: '/auth/otp/verify',
     tags: ['auth'],
+    middleware: [otpVerifyPerIp, otpVerifyPerPhone] as const,
     request: {
       body: { content: { 'application/json': { schema: authSchemas.otpVerifyRequest } } },
     },
     responses: {
       200: { description: 'Verified.', content: { 'application/json': { schema: authSchemas.otpVerifyResponse } } },
       401: { description: 'Invalid code.', content: { 'application/json': { schema: errorBody } } },
+      429: { description: 'Rate limited.', content: { 'application/json': { schema: errorBody } } },
     },
   }),
   async (c) => {
@@ -79,6 +122,7 @@ authRoutes.openapi(
     method: 'post',
     path: '/auth/password/verify',
     tags: ['auth'],
+    middleware: [passwordVerifyPerPhone] as const,
     description:
       'Test-account password bypass. Disabled (returns 404) unless TEST_ACCOUNT_PHONES + TEST_ACCOUNT_PASSWORD are configured on the server. See docs/v4/arch-auth-and-rls.md.',
     request: {
@@ -97,21 +141,6 @@ authRoutes.openapi(
     }
 
     const { phone, password } = c.req.valid('json');
-
-    // Per-phone rate limit (10 attempts / minute). Keyed by phone so a
-    // misbehaving client can't lock other test phones out of logging
-    // in. This is a test-only path; the limit is generous for manual
-    // testing while still bounding password-guess throughput.
-    const rl = await getRateLimiter().consume(
-      `auth-password-verify:${phone}`,
-      10,
-      60_000,
-    );
-    if (!rl.success) {
-      const retryAfter = Math.max(1, Math.ceil((rl.reset - Date.now()) / 1000));
-      c.header('Retry-After', String(retryAfter));
-      throw new HTTPException(429, { message: 'Rate limit exceeded.' });
-    }
 
     if (!verifyTestPassword(phone, password)) {
       // Generic 401 — do not reveal whether the phone is allow-listed.

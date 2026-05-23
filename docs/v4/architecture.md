@@ -93,6 +93,7 @@ flowchart TB
 | # | Section | File | Description |
 |---|---|---|---|
 | 1 | API design | [arch-api-design.md](arch-api-design.md) | Endpoints, auth model, error format, pagination, rate limiting, OpenAPI strategy |
+| 1a | **Rate limiting** | [arch-rate-limiting.md](arch-rate-limiting.md) | **Per-route + shared AI + catch-all budgets; PostgresRateLimiter; SMS-pump protection on /auth/otp/*; multi-machine correctness** |
 | 2 | Auth + per-request scope | [arch-auth-and-rls.md](arch-auth-and-rls.md) | Hand-rolled JWT + OTP flow, Twilio Verify, scoped Postgres roles, RLS replacement, scope tests |
 | 3 | Data layer (mobile) | [arch-data-layer.md](arch-data-layer.md) | Generated client, React Query hooks, optimistic updates, error handling |
 | 4 | Mobile architecture | [arch-mobile.md](arch-mobile.md) | Directory structure, navigation, state, NativeWind tokens, primitives, upload queue, audio |

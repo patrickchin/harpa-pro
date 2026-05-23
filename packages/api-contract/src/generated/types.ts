@@ -148,6 +148,21 @@ export interface paths {
                         };
                     };
                 };
+                /** @description Rate limited. */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                            requestId?: string;
+                        };
+                    };
+                };
             };
         };
         delete?: never;
@@ -201,6 +216,21 @@ export interface paths {
                 };
                 /** @description Invalid code. */
                 401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                            requestId?: string;
+                        };
+                    };
+                };
+                /** @description Rate limited. */
+                429: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -490,6 +520,21 @@ export interface paths {
                 };
                 /** @description Bad token. */
                 400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                            requestId?: string;
+                        };
+                    };
+                };
+                /** @description Rate limited. */
+                429: {
                     headers: {
                         [name: string]: unknown;
                     };

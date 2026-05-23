@@ -45,6 +45,11 @@ const aggregatorRateLimit = withRateLimit({ name: 'voice.note', limit: 30, windo
 const transcribeIdempotency = withIdempotency({ name: 'voice.transcribe' });
 const aggregatorIdempotency = withIdempotency({ name: 'voice.note' });
 
+// Shared per-user AI budget — 60 RPM across voice.* + reports.generate
+// (arch-rate-limiting.md §3.3). Mounted alongside the per-route bucket
+// above so a single voice-only abuser still hits the per-route ceiling.
+const aiUserSharedRateLimit = withRateLimit({ name: 'ai.user', limit: 60, windowMs: MIN });
+
 export const voiceRoutes = new OpenAPIHono<AppEnv>();
 
 // ---------- POST /reports/:report/notes/voice (aggregator) ----------
@@ -74,7 +79,7 @@ voiceRoutes.openapi(
     path: '/reports/{report}/notes/voice',
     tags: ['voice', 'notes'],
     security: [{ bearerAuth: [] }],
-    middleware: [withAuth(), aggregatorRateLimit, aggregatorIdempotency] as const,
+    middleware: [withAuth(), aiUserSharedRateLimit, aggregatorRateLimit, aggregatorIdempotency] as const,
     request: {
       params: aggregatorReportParam,
       body: { content: { 'application/json': { schema: noteSchemas.createVoiceNoteRequest } } },
@@ -184,7 +189,7 @@ voiceRoutes.openapi(
     path: '/voice/transcribe',
     tags: ['voice'],
     security: [{ bearerAuth: [] }],
-    middleware: [withAuth(), transcribeRateLimit, transcribeIdempotency] as const,
+    middleware: [withAuth(), aiUserSharedRateLimit, transcribeRateLimit, transcribeIdempotency] as const,
     request: {
       body: { content: { 'application/json': { schema: voiceSchemas.transcribeRequest } } },
     },
@@ -224,7 +229,7 @@ voiceRoutes.openapi(
     path: '/voice/summarize',
     tags: ['voice'],
     security: [{ bearerAuth: [] }],
-    middleware: [withAuth(), summarizeRateLimit] as const,
+    middleware: [withAuth(), aiUserSharedRateLimit, summarizeRateLimit] as const,
     request: {
       body: { content: { 'application/json': { schema: voiceSchemas.summarizeRequest } } },
     },

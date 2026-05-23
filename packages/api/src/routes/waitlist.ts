@@ -25,9 +25,10 @@ import { env } from '../env.js';
 import { validateEmail } from '../lib/email-validation.js';
 import { createTurnstileClient, type TurnstileClient } from '../lib/turnstile.js';
 import { createResendClient, type ResendClient } from '../lib/resend.js';
-import { getRateLimiter } from '../lib/rateLimiter.js';
+import { clientIp } from '../lib/clientIp.js';
 import { renderWaitlistConfirmationEmail } from '../emails/waitlist-confirmation.js';
 import { newId } from '../lib/ids.js';
+import { withRateLimit } from '../middleware/rateLimit.js';
 
 const errorBody = z.object({
   error: z.object({ code: z.string(), message: z.string() }),
@@ -75,17 +76,24 @@ const HOUR_MS = 60 * 60 * 1000;
 const DAY_MS = 24 * HOUR_MS;
 const CONFIRM_TTL_MS = 7 * DAY_MS;
 
-function clientIp(c: { req: { header: (k: string) => string | undefined } }): string {
-  // Fly.io passes the real client IP in `Fly-Client-IP`. Cloudflare in
-  // `CF-Connecting-IP`. Fall back to `x-forwarded-for` for local/proxy
-  // setups. Never trust the socket address in serverless.
-  return (
-    c.req.header('cf-connecting-ip') ??
-    c.req.header('fly-client-ip') ??
-    (c.req.header('x-forwarded-for') ?? '').split(',')[0]?.trim() ??
-    'unknown'
-  );
-}
+const signupPerHour = withRateLimit({
+  name: 'waitlist.signup.hour',
+  keyBy: 'ip',
+  limit: SIGNUP_PER_HOUR,
+  windowMs: HOUR_MS,
+});
+const signupPerDay = withRateLimit({
+  name: 'waitlist.signup.day',
+  keyBy: 'ip',
+  limit: SIGNUP_PER_DAY,
+  windowMs: DAY_MS,
+});
+const confirmPerHour = withRateLimit({
+  name: 'waitlist.confirm.hour',
+  keyBy: 'ip',
+  limit: 30,
+  windowMs: HOUR_MS,
+});
 
 function hashIp(ip: string): string {
   return createHash('sha256').update(`${ip}|${env.WAITLIST_IP_HASH_SALT}`).digest('hex');
@@ -102,6 +110,7 @@ waitlistRoutes.openapi(
     method: 'post',
     path: '/waitlist',
     tags: ['waitlist'],
+    middleware: [signupPerHour, signupPerDay] as const,
     request: {
       body: {
         content: {
@@ -126,26 +135,6 @@ waitlistRoutes.openapi(
   }),
   async (c) => {
     const ip = clientIp(c);
-    const limiter = getRateLimiter();
-
-    const hourly = await limiter.consume(`waitlist_signup_hour:${ip}`, SIGNUP_PER_HOUR, HOUR_MS);
-    const daily = await limiter.consume(`waitlist_signup_day:${ip}`, SIGNUP_PER_DAY, DAY_MS);
-    if (!hourly.success || !daily.success) {
-      const retryAfter = Math.max(
-        1,
-        Math.ceil(((hourly.success ? daily.reset : hourly.reset) - Date.now()) / 1000),
-      );
-      const requestId = c.get('requestId');
-      return c.json(
-        {
-          error: { code: 'rate_limited', message: 'Too many requests. Please try again later.' },
-          requestId,
-        },
-        429,
-        { 'Retry-After': String(retryAfter) },
-      );
-    }
-
     const body = c.req.valid('json');
 
     // Turnstile first — cheapest abuse signal. Failure returns neutral 202
@@ -237,6 +226,7 @@ waitlistRoutes.openapi(
     method: 'post',
     path: '/waitlist/confirm',
     tags: ['waitlist'],
+    middleware: [confirmPerHour] as const,
     request: {
       body: {
         content: {
@@ -251,6 +241,10 @@ waitlistRoutes.openapi(
       },
       400: {
         description: 'Bad token.',
+        content: { 'application/json': { schema: errorBody } },
+      },
+      429: {
+        description: 'Rate limited.',
         content: { 'application/json': { schema: errorBody } },
       },
     },

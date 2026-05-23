@@ -241,5 +241,19 @@ export const userLimitOverrides = appSchema.table('user_limit_overrides', {
   expiresAt: timestamp('expires_at', { withTimezone: true }),
 });
 
+/**
+ * Rate-limit buckets (cross-machine counter store). See migration
+ * 0007_rate_limit_buckets.sql and docs/v4/arch-rate-limiting.md §3.4.
+ *
+ * Drizzle declaration is included so the schema-introspection tooling
+ * sees the table; the actual `consume()` query is hand-written SQL in
+ * `lib/rateLimiter.ts` (one-round-trip upsert).
+ */
+export const rateLimitBuckets = appSchema.table('rate_limit_buckets', {
+  bucketKey: text('bucket_key').primaryKey(),
+  windowEnd: timestamp('window_end', { withTimezone: true }).notNull(),
+  count: integer('count').notNull().default(0),
+});
+
 /** Re-export the SQL helper for use in raw policies / migrations. */
 export { sql };

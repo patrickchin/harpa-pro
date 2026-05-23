@@ -99,6 +99,12 @@ Each task = one route file + its tests + its api-contract schemas
     `MemoryIdempotencyStore` default and the same Upstash carve-out.
 - [x] Tests covering both.
 - [x] Commit: `feat(api): rate limiting + idempotency middleware`.
+- **Follow-up (post-P1):** full design + multi-machine backend in
+  [`arch-rate-limiting.md`](arch-rate-limiting.md). Adds
+  `PostgresRateLimiter`, SMS-pump protection on `/auth/otp/*`,
+  shared per-user AI budget, and a global catch-all. The original
+  in-memory backend is the default for dev/CI; production sets
+  `RATE_LIMIT_BACKEND=postgres` via Doppler.
 
 ### P1.10 Error mapper + property tests
 - [x] Shared error mapper.

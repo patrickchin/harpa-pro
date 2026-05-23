@@ -45,9 +45,19 @@ tags:
     timeout: 10000
 
 # --- Alice re-invites bob as viewer ----------------------------------------
+# The add-member form is collapsed by default; tap btn-show-add-member
+# to reveal input-member-phone + role picker.
+- tapOn:
+    id: "btn-show-add-member"
+- extendedWaitUntil:
+    visible:
+      id: "input-member-phone"
+    timeout: 8000
 - tapOn:
     id: "input-member-phone"
 - inputText: "+15550000002"
+- tapOn:
+    point: "50%,15%"
 - tapOn:
     id: "picker-member-role-viewer"
 - tapOn:
@@ -71,10 +81,15 @@ tags:
 
 - tapOn:
     text: "Regression Test Project \\(Edited\\)"
+# Viewers do NOT see btn-project-edit. Wait for the Members card
+# (link-project-members is rendered for all roles) to confirm bob
+# is on the project home.
 - extendedWaitUntil:
     visible:
-      id: "btn-project-edit"
+      id: "link-project-members"
     timeout: 10000
+- assertNotVisible:
+    id: "btn-project-edit"
 
 # Bob's role badge (visible on members screen) shows "Viewer"
 - tapOn:

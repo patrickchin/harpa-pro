@@ -48,9 +48,8 @@ tags:
 - runFlow: modules/06-members-remove.yaml
 
 # ── 7. Reports CRUD ───────────────────────────────────────────────────────
-# We need to re-sign in as alice and open the project again
-- runFlow: helpers/sign-in-alice.yaml
-- runFlow: helpers/open-project.yaml
+# Module 06 ends with alice signed in on the project home, so we go
+# straight into 07 without re-running the sign-in helper.
 - runFlow: modules/07-reports-crud.yaml
 
 # ── 8. Text notes ─────────────────────────────────────────────────────────

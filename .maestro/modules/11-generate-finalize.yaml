@@ -29,6 +29,15 @@ tags:
     timeout: 10000
 - tapOn:
     id: "btn-new-report"
+# The mutation auto-navigates to /generate on success. If the push
+# races against the refetch we may stay on the list — tap into the
+# new draft row to land on the generate screen.
+- extendedWaitUntil:
+    visible:
+      id: "report-row-.*"
+    timeout: 15000
+- tapOn:
+    id: "report-row-.*"
 - extendedWaitUntil:
     visible:
       id: "input-note"

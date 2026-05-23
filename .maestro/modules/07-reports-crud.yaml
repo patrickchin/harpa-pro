@@ -1,23 +1,27 @@
 appId: ${MAESTRO_APP_ID}
-name: "07 — Reports: create and delete a draft report"
+name: "07 — Reports: create a draft, open it, delete it"
 tags:
   - regression
   - reports
 ---
-# Module 07 — Reports CRUD
+# Module 07 — Reports CRUD (draft lifecycle)
 #
 # Covers:
-#   - open reports list from project home
-#   - create a new draft report
-#   - report appears in list (report-row-* visible)
-#   - capture REPORT_NUMBER via the report row
-#   - open the report
-#   - delete the report (actions menu → delete → confirm)
-#   - report no longer in list
+#   - open the reports list from project home
+#   - create a new draft report (btn-new-report)
+#   - the draft row appears in the list (report-row-* visible)
+#   - open the draft → generate screen loads (input-note-container)
+#   - delete the draft via btn-draft-options →
+#     dialog-action-confirm-delete-draft
+#   - the report list is empty again
 #   - back to project home
 #
-# Pre-condition: alice on project home.
-# Post-condition: alice on project home; REPORT_NUMBER unset (report deleted).
+# Finalize + delete-finalized lives in modules 11/12, so this module
+# stays focused on the draft lifecycle.
+#
+# Pre-condition: alice on project home; no existing reports.
+# Post-condition: alice on project home; no reports (module 11 will
+# create the canonical REPORT_NUMBER=1 used by 12).
 
 # --- Open reports list -----------------------------------------------------
 - tapOn:
@@ -30,27 +34,16 @@ tags:
 # --- Create a new draft report ---------------------------------------------
 - tapOn:
     id: "btn-new-report"
-
-# --- Wait for the new report to appear and auto-navigate to it -------------
-- extendedWaitUntil:
-    visible:
-      id: "input-note-container"
-    timeout: 15000
-
-# --- Capture REPORT_NUMBER from the URL / screen (use evalScript) ----------
-# The report number is embedded in report-row-{number} testIDs on list,
-# but we're now on the report detail screen. Go back and read from the row.
-- tapOn:
-    id: "btn-back"
+# Tapping btn-new-report calls the create mutation and then router.push
+# onSuccess. The push may race against the list refetch, so we accept
+# either landing on the generate screen OR landing back on the list
+# with a new draft row visible.
 - extendedWaitUntil:
     visible:
       id: "report-row-.*"
-    timeout: 10000
-# report-number-chip testID is not yet implemented in the reports list.
-# Since this is the first (and only) report, REPORT_NUMBER = 1.
-- evalScript: output.REPORT_NUMBER = '1'
+    timeout: 15000
 
-# --- Open the report to confirm it loads -----------------------------------
+# --- Open the draft --------------------------------------------------------
 - tapOn:
     id: "report-row-.*"
 - extendedWaitUntil:
@@ -58,94 +51,25 @@ tags:
       id: "input-note-container"
     timeout: 15000
 
-# --- Delete the report via the actions menu --------------------------------
-# The generate-report screen doesn't have an actions menu — we need to
-# finalize first to get saved-report, or just go back to the list and
-# delete from there. Actually the generate screen has no delete button;
-# the app navigates you to generate view. We navigate back to list.
+# --- Delete the draft via btn-draft-options --------------------------------
 - tapOn:
-    id: "btn-back"
+    id: "btn-draft-options"
 - extendedWaitUntil:
     visible:
-      id: "report-row-.*"
-    timeout: 10000
-
-# Long-press the report row to get the delete option (if available),
-# or open the report and use the actions menu on the saved-report screen.
-# Since this is a draft (not finalized), open it and check for delete option.
-- tapOn:
-    id: "report-row-.*"
-- extendedWaitUntil:
-    visible:
-      id: "input-note-container"
-    timeout: 15000
-
-# Draft reports: we need to finalize first OR the report screen might
-# have a delete option in the notes view. Let's check btn-report-actions.
-# Actually, draft reports have no actions menu in the generate view —
-# delete is on the saved-report screen after finalization.
-# For this module, we test the full lifecycle: add a note → generate →
-# finalize → delete. Simplified: just finalize quickly.
-# Add a note first (required for generate button to be enabled).
-- tapOn:
-    id: "input-note"
-- inputText: "Test site visit completed."
-- tapOn:
-    point: "50%,15%"
-- tapOn:
-    id: "btn-add-note"
-- extendedWaitUntil:
-    visible:
-      id: "note-row-.*"
-    timeout: 8000
-
-# Generate the report
-- tapOn:
-    id: "btn-generate-report"
-- extendedWaitUntil:
-    visible:
-      id: "report-tab-pane"
-    timeout: 60000
-
-# Finalize the report to reach saved-report screen
-- tapOn:
-    id: "btn-finalize-report"
-- extendedWaitUntil:
-    visible:
-      id: "confirm-finalize"
+      id: "dialog-action-confirm-delete-draft"
     timeout: 8000
 - tapOn:
-    id: "confirm-finalize"
-- extendedWaitUntil:
-    visible:
-      id: "btn-report-actions"
-    timeout: 20000
+    id: "dialog-action-confirm-delete-draft"
 
-# Open actions menu and delete
-- tapOn:
-    id: "btn-report-actions"
-- extendedWaitUntil:
-    visible:
-      id: "btn-report-delete"
-    timeout: 8000
-- tapOn:
-    id: "btn-report-delete"
-- extendedWaitUntil:
-    visible:
-      id: "dialog-sheet"
-    timeout: 8000
-- tapOn:
-    id: "btn-confirm-delete-report"
-
-# --- Confirm report is gone ------------------------------------------------
+# --- Back on the reports list, drafts list should be empty -----------------
 - extendedWaitUntil:
     visible:
       id: "btn-new-report"
-    timeout: 10000
+    timeout: 15000
 - assertNotVisible:
     id: "report-row-.*"
 
-# --- Back to project home ---------------------------------------------------
+# --- Back to project home --------------------------------------------------
 - tapOn:
     id: "btn-back"
 - extendedWaitUntil:

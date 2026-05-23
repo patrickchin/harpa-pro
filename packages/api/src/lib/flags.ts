@@ -252,3 +252,34 @@ export function __setFlagSourceForTests(src: FlagSource): void {
 export function __resetFlagSourceForTests(): void {
   singleton = null;
 }
+
+// ---------- Migration helpers (Doppler env vars → PostHog flags) ----------
+
+/**
+ * Bridge helper for the `*_LIVE` env vars that are migrating to PostHog
+ * boolean flags. The flag wins when set; otherwise we fall back to the
+ * legacy env value so existing deployments + tests keep working until
+ * Doppler is cleared. See docs/v4/arch-analytics.md for the migration plan.
+ */
+export function liveToggle(
+  flagKey: BooleanFlagKey,
+  envValue: '0' | '1' | undefined,
+  src: FlagSource = getFlagSource(),
+): boolean {
+  const envEnabled = envValue === '1';
+  return src.getBooleanFlag(flagKey, envEnabled);
+}
+
+/**
+ * Bridge helper for the `*_FIXTURE_MODE` env vars. Same precedence: flag
+ * first, env fallback, then the supplied static default.
+ */
+export function fixtureModeVariant<V extends string>(
+  flagKey: VariantFlagKey,
+  envValue: V | undefined,
+  defaultVariant: V,
+  src: FlagSource = getFlagSource(),
+): V {
+  if (envValue) return src.getVariantFlag(flagKey, envValue);
+  return src.getVariantFlag(flagKey, defaultVariant);
+}

@@ -27,6 +27,8 @@ import {
   type Vendor,
 } from '@harpa/ai-fixtures';
 import { reports as reportSchemas } from '@harpa/api-contract';
+import { fixtureModeVariant } from '../lib/flags.js';
+import { VARIANT_FLAGS } from '@harpa/analytics-events';
 import type { z } from 'zod';
 import { env } from '../env.js';
 import {
@@ -147,9 +149,25 @@ function scenarioFromName(name: string): ScenarioKey | null {
   return null;
 }
 
-function pickMode(fixtureName?: string): FixtureMode {
-  if (process.env.AI_LIVE === '1' && !fixtureName) return 'live';
-  return 'replay';
+/**
+ * Pick fixture mode for an outbound provider call.
+ *
+ * Bug (fixed P4): an earlier version derived a fixtureName fallback in
+ * every caller and passed it here, which made `AI_LIVE=1` dead code —
+ * the function always saw a fixtureName and short-circuited to
+ * `'replay'`. The contract is now explicit: only force replay when the
+ * *external* caller (route handler, CLI, test) explicitly passed
+ * `fixtureName`. Internally-derived defaults must NOT be passed in.
+ *
+ * See docs/bugs/README.md and docs/v4/pitfalls.md.
+ */
+function pickMode(callerFixtureName?: string): FixtureMode {
+  if (callerFixtureName) return 'replay';
+  // Migration: prefer the `ai-fixture-mode` PostHog flag; legacy AI_LIVE=1
+  // maps to 'live'. Default 'replay' so test/CI never bills providers.
+  const envFallback: FixtureMode | undefined =
+    process.env.AI_LIVE === '1' ? 'live' : undefined;
+  return fixtureModeVariant<FixtureMode>(VARIANT_FLAGS.AI_FIXTURE_MODE, envFallback, 'replay');
 }
 
 function buildProviderWithMode(

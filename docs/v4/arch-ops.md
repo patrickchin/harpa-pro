@@ -170,6 +170,21 @@ flyctl secrets set --app harpa-pro-api-dev \
   AI_LIVE=1 OPENAI_API_KEY=sk-... GROQ_API_KEY=gsk-... # AI providers
 ```
 
+**Note:** the `*_LIVE` / `*_FIXTURE_MODE` env vars listed in the
+secrets command are **legacy fallbacks**. The runtime source of
+truth is the matching PostHog flag (`twilio-live`, `ai-live`,
+`turnstile-live`, `resend-live`, `api-request-log`,
+`ai-fixture-mode`, `r2-fixture-mode`). Flip a flag in PostHog →
+behaviour changes within the next local-eval poll (30s default),
+**no redeploy**. The env vars remain only so deployments created
+before PostHog flags were provisioned keep working; remove them
+from Doppler once the corresponding flag is set in both `dev` and
+`production` environments. See
+[`docs/v4/arch-analytics.md`](arch-analytics.md) for the
+classification (real secrets stay in Doppler; runtime toggles
+move to flags) and Pitfall 17 for the fail-safe defaults if
+PostHog itself is unreachable on cold boot.
+
 After bootstrap, every push to `dev` re-uses the same Neon branch
 and Fly app — the workflow only runs pending migrations and ships
 new code.

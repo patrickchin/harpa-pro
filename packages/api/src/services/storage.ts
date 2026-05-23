@@ -210,6 +210,11 @@ function buildR2Client(endpointOverride?: string): S3Client {
   });
 }
 
+import { fixtureModeVariant } from '../lib/flags.js';
+import { VARIANT_FLAGS } from '@harpa/analytics-events';
+
+type R2FixtureMode = 'replay' | 'live';
+
 export function pickStorage(): Storage {
   // Read from the parsed `env` (Zod-validated at boot) instead of
   // poking raw `process.env`. The previous `process.env.NODE_ENV ===
@@ -219,8 +224,14 @@ export function pickStorage(): Storage {
   // CI. Now the only way to enter fixture mode in tests is to set
   // `R2_FIXTURE_MODE=replay` (which the integration-test bootstrap
   // does explicitly — see setup-pg.ts + scope tests).
-  if (env.R2_FIXTURE_MODE === 'replay') {
-    return new FixtureStorage();
-  }
-  return new R2Storage();
+  //
+  // Migration: `r2-fixture-mode` PostHog flag wins when set; the parsed
+  // env var is the fallback. Default 'replay' so a flag outage on cold
+  // boot doesn't accidentally upload to real R2.
+  const mode = fixtureModeVariant<R2FixtureMode>(
+    VARIANT_FLAGS.R2_FIXTURE_MODE,
+    env.R2_FIXTURE_MODE,
+    'replay',
+  );
+  return mode === 'live' ? new R2Storage() : new FixtureStorage();
 }

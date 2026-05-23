@@ -15,6 +15,8 @@
  * See https://developers.cloudflare.com/turnstile/get-started/server-side-validation/
  */
 import { env } from '../env.js';
+import { liveToggle } from './flags.js';
+import { BOOLEAN_FLAGS } from '@harpa/analytics-events';
 
 export interface TurnstileVerifyResult {
   success: boolean;
@@ -27,7 +29,14 @@ export interface TurnstileClient {
 }
 
 export function createTurnstileClient(fetchImpl: typeof fetch = fetch): TurnstileClient {
-  if (env.TURNSTILE_LIVE !== '1') return fakeTurnstile();
+  if (!liveToggle(BOOLEAN_FLAGS.TURNSTILE_LIVE, env.TURNSTILE_LIVE)) return fakeTurnstile();
+  if (!env.TURNSTILE_SECRET_KEY) {
+    // eslint-disable-next-line no-console
+    console.warn(
+      '[turnstile] live flag set but TURNSTILE_SECRET_KEY missing — falling back to fake mode',
+    );
+    return fakeTurnstile();
+  }
   return liveTurnstile(fetchImpl);
 }
 
@@ -43,10 +52,7 @@ export function fakeTurnstile(): TurnstileClient {
 }
 
 function liveTurnstile(fetchImpl: typeof fetch): TurnstileClient {
-  const secret = env.TURNSTILE_SECRET_KEY;
-  if (!secret) {
-    throw new Error('TURNSTILE_LIVE=1 but TURNSTILE_SECRET_KEY missing');
-  }
+  const secret = env.TURNSTILE_SECRET_KEY!;
   return {
     async verify(token: string, ip?: string) {
       const body = new URLSearchParams({ secret, response: token });

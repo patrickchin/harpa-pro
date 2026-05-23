@@ -10,6 +10,8 @@
  * src/emails/waitlist-confirmation.tsx in M1.5).
  */
 import { env } from '../env.js';
+import { liveToggle } from './flags.js';
+import { BOOLEAN_FLAGS } from '@harpa/analytics-events';
 
 export interface EmailSendParams {
   to: string;
@@ -40,7 +42,14 @@ export function resetFakeResendSends(): void {
 }
 
 export function createResendClient(fetchImpl: typeof fetch = fetch): ResendClient {
-  if (env.RESEND_LIVE !== '1') return fakeResend();
+  if (!liveToggle(BOOLEAN_FLAGS.RESEND_LIVE, env.RESEND_LIVE)) return fakeResend();
+  if (!env.RESEND_API_KEY) {
+    // eslint-disable-next-line no-console
+    console.warn(
+      '[resend] live flag set but RESEND_API_KEY missing — falling back to fake mode',
+    );
+    return fakeResend();
+  }
   return liveResend(fetchImpl);
 }
 
@@ -63,10 +72,7 @@ function fakeResend(): ResendClient {
 }
 
 function liveResend(fetchImpl: typeof fetch): ResendClient {
-  const apiKey = env.RESEND_API_KEY;
-  if (!apiKey) {
-    throw new Error('RESEND_LIVE=1 but RESEND_API_KEY missing');
-  }
+  const apiKey = env.RESEND_API_KEY!;
   return {
     async send(params) {
       const from = params.from ?? env.WAITLIST_FROM_EMAIL;

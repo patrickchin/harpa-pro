@@ -30,11 +30,11 @@ BASE=${BASE:-https://harpa-pro-api-dev.fly.dev}
 PHONE=${PHONE:-+15550199001}
 : "${PASSWORD:?PASSWORD env var is required (test-account password from Doppler)}"
 
-SAMPLES="$(cd "$(dirname "$0")/../apps/cli/scripts/samples" && pwd)"
+SAMPLES="$(cd "$(dirname "$0")/../../apps/cli/scripts/samples" && pwd)"
 IMG="$SAMPLES/sample.png"
-# Real ~800KB M4A voice sample (not the 1KB silence fixture) so the
-# live transcription provider on dev accepts it. Override via VOICE_M4A.
-VOICE_M4A=${VOICE_M4A:-"$(cd "$(dirname "$0")/.." && pwd)/sample-voice-note.m4a"}
+# Real voice sample for live transcription. Default to the LFS short clip;
+# override VOICE_M4A to use a longer one (e.g. samples/real/walkthrough.m4a).
+VOICE_M4A=${VOICE_M4A:-"$(cd "$(dirname "$0")/../../samples/real" && pwd)/rain.m4a"}
 
 j() { jq -r "$1"; }
 H=(-H 'content-type: application/json')

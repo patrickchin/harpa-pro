@@ -29,6 +29,16 @@ const Env = z.object({
   EXPO_PUBLIC_APP_VARIANT: z
     .enum(['production', 'preview', 'development'])
     .default('development'),
+  /**
+   * Dev-only flag that enables the layout-shift probe
+   * (`lib/layout-shift-probe.ts`). When `true`, probes log Δy/Δheight
+   * deltas to the Metro console. Ignored outside `__DEV__`. Off by
+   * default so normal dev sessions stay quiet.
+   */
+  EXPO_PUBLIC_LAYOUT_PROBE: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((v) => v === 'true'),
 });
 
 /* eslint-disable no-restricted-syntax */
@@ -36,6 +46,7 @@ const rawEnv = {
   EXPO_PUBLIC_API_URL: process.env.EXPO_PUBLIC_API_URL,
   EXPO_PUBLIC_USE_FIXTURES: process.env.EXPO_PUBLIC_USE_FIXTURES,
   EXPO_PUBLIC_APP_VARIANT: process.env.EXPO_PUBLIC_APP_VARIANT,
+  EXPO_PUBLIC_LAYOUT_PROBE: process.env.EXPO_PUBLIC_LAYOUT_PROBE,
 };
 /* eslint-enable no-restricted-syntax */
 

@@ -80,23 +80,23 @@ export function ReportsList({
         />
       </View>
 
-      {canCreate && !isLoading ? (
+      {canCreate ? (
         <View className="px-5 pt-3">
           <Pressable
             testID="btn-new-report"
             onPress={() => {
-              if (!isCreating) onCreate();
+              if (!isCreating && !isLoading) onCreate();
             }}
-            disabled={isCreating}
+            disabled={isCreating || isLoading}
             accessibilityRole="button"
             accessibilityLabel="Create new report"
           >
             <View
               className="flex-row items-center gap-3 rounded-lg border border-dashed border-border bg-surface-muted p-4"
-              style={{ opacity: isCreating ? 0.6 : 1 }}
+              style={{ opacity: isCreating || isLoading ? 0.6 : 1 }}
             >
               <View className="h-10 w-10 items-center justify-center rounded-md border border-border bg-card">
-                {isCreating ? (
+                {isCreating || isLoading ? (
                   <ActivityIndicator size={16} color={colors.foreground} />
                 ) : (
                   <Plus size={20} color={colors.foreground} />

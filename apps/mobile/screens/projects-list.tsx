@@ -18,6 +18,7 @@ import { ScreenHeader } from '@/components/primitives/ScreenHeader';
 import { ProjectListSkeleton } from '@/components/skeletons/ProjectListSkeleton';
 import { formatDate } from '@/lib/date';
 import { colors } from '@/lib/design-tokens/colors';
+import { useLayoutShiftProbe } from '@/lib/layout-shift-probe';
 
 const ROLE_LABELS: Record<'owner' | 'editor' | 'viewer', string> = {
   owner: 'Owner',
@@ -72,11 +73,43 @@ export function ProjectsList({
   onPressNewProject,
   actions,
 }: ProjectsListProps) {
+  const onHeaderLayout = useLayoutShiftProbe('projects-list:header');
+  const onFirstRowLayout = useLayoutShiftProbe('projects-list:first-row');
+  const showNewProjectCard = isLoading || projects.length > 0;
+
   return (
     <SafeAreaView className="flex-1 bg-background" edges={['top']}>
       <View className="px-5 py-4">
         <ScreenHeader title="Projects" actions={actions} />
       </View>
+
+      {showNewProjectCard ? (
+        <View
+          style={{ paddingHorizontal: 20, paddingTop: 16 }}
+          onLayout={onHeaderLayout}
+        >
+          <Pressable
+            testID="btn-new-project"
+            onPress={onPressNewProject}
+            accessibilityRole="button"
+            accessibilityLabel="Add new project"
+          >
+            <View className="flex-row items-center gap-3 rounded-lg border border-dashed border-border bg-surface-muted p-4">
+              <View className="h-10 w-10 items-center justify-center rounded-md border border-border bg-card">
+                <Plus size={20} color={colors.foreground} />
+              </View>
+              <View className="flex-1">
+                <Text className="text-title-sm text-foreground">
+                  Add new project
+                </Text>
+                <Text className="text-sm text-muted-foreground">
+                  Create a destination for field notes and reports.
+                </Text>
+              </View>
+            </View>
+          </Pressable>
+        </View>
+      ) : null}
 
       {isLoading ? (
         <ProjectListSkeleton />
@@ -96,32 +129,6 @@ export function ProjectsList({
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
           }
-          ListHeaderComponent={
-            projects.length === 0 ? null : (
-              <View style={{ marginBottom: 12 }}>
-                <Pressable
-                  testID="btn-new-project"
-                  onPress={onPressNewProject}
-                  accessibilityRole="button"
-                  accessibilityLabel="Add new project"
-                >
-                  <View className="flex-row items-center gap-3 rounded-lg border border-dashed border-border bg-surface-muted p-4">
-                    <View className="h-10 w-10 items-center justify-center rounded-md border border-border bg-card">
-                      <Plus size={20} color={colors.foreground} />
-                    </View>
-                    <View className="flex-1">
-                      <Text className="text-title-sm text-foreground">
-                        Add new project
-                      </Text>
-                      <Text className="text-sm text-muted-foreground">
-                        Create a destination for field notes and reports.
-                      </Text>
-                    </View>
-                  </View>
-                </Pressable>
-              </View>
-            )
-          }
           ListEmptyComponent={
             <EmptyState
               icon={<HardHat size={28} color={colors.muted.foreground} />}
@@ -140,8 +147,8 @@ export function ProjectsList({
               }
             />
           }
-          renderItem={({ item }) => (
-            <View>
+          renderItem={({ item, index }) => (
+            <View onLayout={index === 0 ? onFirstRowLayout : undefined}>
               <Pressable
                 testID={`project-row-${item.slug}`}
                 onPressIn={() => onPressInProject?.(item.slug)}

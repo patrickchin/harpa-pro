@@ -25,6 +25,7 @@ import { ScreenHeader } from '@/components/primitives/ScreenHeader';
 import { InlineNotice } from '@/components/primitives/InlineNotice';
 import { AccountDetailsSkeleton } from '@/components/skeletons/AccountDetailsSkeleton';
 import { colors } from '@/lib/design-tokens/colors';
+import { useLayoutShiftProbe } from '@/lib/layout-shift-probe';
 
 export interface AccountProfile {
   phone: string;
@@ -87,6 +88,14 @@ export function Account({
   const [editName, setEditName] = useState('');
   const [editCompany, setEditCompany] = useState('');
 
+  // Layout-shift probes — the same ids are attached in
+  // `AccountDetailsSkeleton` so we can measure how far each landmark
+  // moves between the skeleton frame and the loaded frame.
+  const onAvatarLayout = useLayoutShiftProbe('account:avatar');
+  const onInfoNoticeLayout = useLayoutShiftProbe('account:info-notice');
+  const onPhoneFieldLayout = useLayoutShiftProbe('account:phone-field');
+  const onCompanyFieldLayout = useLayoutShiftProbe('account:company-field');
+
   // Reset draft fields whenever the underlying profile changes (e.g.
   // refresh) and we aren't actively editing.
   useEffect(() => {
@@ -107,7 +116,7 @@ export function Account({
             actions={actions}
           />
         </View>
-        <AccountDetailsSkeleton />
+        <AccountDetailsSkeleton canEdit={typeof onSaveProfile === 'function'} />
       </SafeAreaView>
     );
   }
@@ -163,19 +172,26 @@ export function Account({
               <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
             }
           >
-            <View className="items-center pt-2">
+            <View
+              className="items-center pt-2"
+              onLayout={onAvatarLayout}
+            >
               {avatarSlot ?? <DefaultAvatarPlaceholder />}
             </View>
 
-            <InlineNotice tone="info">
-              Phone numbers are managed through sign-in. Contact support if you need to recover access to a different number.
-            </InlineNotice>
+            <View onLayout={onInfoNoticeLayout}>
+              <InlineNotice tone="info">
+                Phone numbers are managed through sign-in. Contact support if you need to recover access to a different number.
+              </InlineNotice>
+            </View>
 
-            <Input
-              label="Phone"
-              value={profile.phone}
-              editable={false}
-            />
+            <View onLayout={onPhoneFieldLayout}>
+              <Input
+                label="Phone"
+                value={profile.phone}
+                editable={false}
+              />
+            </View>
             <Input
               label="Full Name"
               testID="input-full-name"
@@ -186,16 +202,18 @@ export function Account({
               autoCorrect={false}
               placeholder="Your full name"
             />
-            <Input
-              label="Company Name"
-              testID="input-company-name"
-              value={companyValue}
-              editable={isEditing && !isSaving}
-              onChangeText={setEditCompany}
-              autoCapitalize="words"
-              autoCorrect={false}
-              placeholder="Your company"
-            />
+            <View onLayout={onCompanyFieldLayout}>
+              <Input
+                label="Company Name"
+                testID="input-company-name"
+                value={companyValue}
+                editable={isEditing && !isSaving}
+                onChangeText={setEditCompany}
+                autoCapitalize="words"
+                autoCorrect={false}
+                placeholder="Your company"
+              />
+            </View>
 
             {saveError ? (
               <View testID="account-save-error">

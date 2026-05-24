@@ -37,26 +37,31 @@ export interface PlanLimits {
 }
 
 /**
- * Per-plan caps. Placeholders — product input needed before GA. See
- * the "Open questions / carve-outs" note in the architect handoff.
+ * Per-plan caps. Still placeholders pending GA pricing input, but
+ * raised on 2026-05-24 from the original draft values — the original
+ * 200k input-token cap was burning out after one or two reports
+ * because a single generate easily uses 50-200k input tokens
+ * (system prompt + notes + few-shot examples). Token caps now scale
+ * roughly with the count caps so reaching the count cap is the
+ * binding constraint, not the token cap.
  *
  * `Number.POSITIVE_INFINITY` is the explicit unbounded marker; the
  * wire serialiser (`toWire`) maps it to `null`.
  */
 export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
   free: {
-    report_generate: 5,
-    voice_transcribe: 30,
-    voice_summarize: 30,
-    ai_input_tokens: 200_000,
-    ai_output_tokens: 50_000,
+    report_generate: 1_000,
+    voice_transcribe: 1_000,
+    voice_summarize: 1_000,
+    ai_input_tokens: 200_000_000,
+    ai_output_tokens: 50_000_000,
   },
   pro: {
-    report_generate: 100,
-    voice_transcribe: 500,
-    voice_summarize: 500,
-    ai_input_tokens: 5_000_000,
-    ai_output_tokens: 1_000_000,
+    report_generate: 10_000,
+    voice_transcribe: 10_000,
+    voice_summarize: 10_000,
+    ai_input_tokens: 2_000_000_000,
+    ai_output_tokens: 500_000_000,
   },
   enterprise: {
     report_generate: Number.POSITIVE_INFINITY,

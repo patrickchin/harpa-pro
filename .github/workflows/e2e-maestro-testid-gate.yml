@@ -1,10 +1,25 @@
 name: e2e-maestro-testid-gate
+
+# Mobile-only check. Skips when apps/mobile didn't change.
+
 on:
   pull_request:
   push:
     branches: [dev, main]
+
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      mobile: ${{ steps.paths.outputs.mobile }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: paths
+        uses: ./.github/actions/changed-paths
+
   testid-gate:
+    needs: changes
+    if: needs.changes.outputs.mobile == 'true' || github.event_name == 'push'
     name: Maestro testID gate
     runs-on: ubuntu-latest
     steps:

@@ -1,10 +1,27 @@
 name: api-integration
+
+# Skips when no API-relevant paths changed (mobile / marketing /
+# docs-only PRs). Required-check safe: a skipped job reports as
+# passing for branch protection.
+
 on:
   pull_request:
   push:
     branches: [dev, main]
+
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      api: ${{ steps.paths.outputs.api }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: paths
+        uses: ./.github/actions/changed-paths
+
   integration:
+    needs: changes
+    if: needs.changes.outputs.api == 'true' || github.event_name == 'push'
     runs-on: ubuntu-latest
     env:
       AI_FIXTURE_MODE: replay

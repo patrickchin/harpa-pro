@@ -1,10 +1,30 @@
 name: lint-typecheck
+
+# Two-job pattern: a tiny `changes` job computes path-filter outputs,
+# and `lint` (the required-check job) skips when no code paths
+# changed. A skipped required check is treated as passing by branch
+# protection — see
+# https://docs.github.com/en/actions/using-jobs/using-conditions-to-control-job-execution
+# Push events always run (we want full coverage on main / dev).
+
 on:
   pull_request:
   push:
     branches: [dev, main]
+
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      any-code: ${{ steps.paths.outputs.any-code }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: paths
+        uses: ./.github/actions/changed-paths
+
   lint:
+    needs: changes
+    if: needs.changes.outputs.any-code == 'true' || github.event_name == 'push'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

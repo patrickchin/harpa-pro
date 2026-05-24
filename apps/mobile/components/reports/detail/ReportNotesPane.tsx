@@ -41,6 +41,8 @@ export interface ReportNoteRow {
   authorName?: string | null;
   /** R2 file id when the note is backed by an upload (voice / photo / document). */
   fileId?: string | null;
+  /** Thumbnail file id for image notes (small client-generated variant). */
+  thumbnailFileId?: string | null;
   // ── Voice-only fields (Phase E). Optional so non-voice rows omit them. ──
   transcript?: string | null;
   title?: string | null;
@@ -145,6 +147,7 @@ export function ReportNotesPane({
               key={note.id}
               noteId={note.id}
               fileId={note.fileId}
+              thumbnailFileId={note.thumbnailFileId ?? null}
               body={note.body}
               authorName={note.authorName ?? null}
               capturedAt={note.createdAt}

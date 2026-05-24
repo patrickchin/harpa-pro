@@ -135,6 +135,7 @@ export function useOptimisticCreateNote() {
         kind: vars.body.kind,
         body: vars.body.kind === 'text' ? (vars.body.body ?? null) : null,
         fileId: null,
+        thumbnailFileId: null,
         transcript: null,
         // Generic + voice-only fields are nullable on the wire and the
         // server returns the keys with `null` for unset values. We

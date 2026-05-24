@@ -150,6 +150,7 @@ export default function SavedReportRoute() {
             summary?: string | null;
             durationSec?: number | null;
             fileId: string | null;
+            thumbnailFileId?: string | null;
             createdAt: string;
           }>;
         }
@@ -162,6 +163,7 @@ export default function SavedReportRoute() {
       createdAt: n.createdAt ?? null,
       authorName: n.authorId ? memberNames.get(n.authorId) ?? null : null,
       fileId: n.fileId ?? null,
+      thumbnailFileId: n.thumbnailFileId ?? null,
       transcript: n.transcript ?? null,
       title: n.title ?? null,
       summary: n.summary ?? null,

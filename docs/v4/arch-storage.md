@@ -54,16 +54,37 @@ React Query with `staleTime: 4 minutes`.
 
 ### Timeline thumbnails (mobile)
 
-Image notes (`kind: 'image'`) carry only a `fileId` — never an inline
-URL or base64 payload. `apps/mobile/components/notes/ImageNoteCard.tsx`
-resolves the signed GET URL via `useFileSignedUrl(fileId)` (which calls
-`GET /files/:id/url`) and renders the thumbnail through `CachedImage`
-(expo-image + disk cache, keyed by `fileId`). The card composes
-`ImagePreviewModal` for the tap-to-zoom full-screen view, so the same
-signed-URL hook backs both surfaces. While the URL is resolving the
-card shows a skeleton; on failure it renders an inline retry that
-re-runs the query. `NoteTimeline` dispatches `source === 'image'` rows
-to `ImageNoteCard` and everything else to `TextNoteCard`.
+Image notes (`kind: 'image'`) carry a `fileId` (full image) and an
+optional `thumbnailFileId` (small ~256 px square JPEG generated
+client-side at upload time) — never an inline URL or base64 payload.
+
+Everywhere a photo appears outside the fullscreen preview (the
+saved-report 3-column grid `ReportPhotos`, the Generate-screen
+timeline mini-tile in `PhotoNoteCard` / `ImageNoteCard`, and the
+saved-report Notes pane row `PhotoNoteRow`) we render the shared
+`apps/mobile/components/notes/PhotoGridTile.tsx`. The tile resolves
+`thumbnailFileId ?? fileId` via `useFileSignedUrl` and renders the
+bytes through `CachedImage` (`expo-image` + disk cache, keyed by the
+resolved id). When `thumbnailFileId` is null (legacy rows) we fall
+back to the full `fileId` — one-off cost per legacy photo, no
+backfill needed.
+
+Tap opens the existing `ImagePreviewModal`, which still uses the full
+`fileId` so the fullscreen view shows sharp bytes from the original
+upload. While the signed URL is pending the tile shows a small
+`ActivityIndicator`; on failure it shows the empty-state camera icon
+(callers can still retry by remounting; the tile itself has no retry
+affordance — the surrounding row provides one when relevant).
+
+Client-side thumbnail production (`processImageThumbnail` in
+`apps/mobile/lib/camera/process-image.ts`) center-crops to a square,
+resizes to 256 px, and re-encodes JPEG at q=0.7 — EXIF is stripped by
+the re-encode. The upload queue runs the main image and thumbnail
+pipelines in parallel (`presign → PUT → registerFile` ×2) before
+firing the single `createNote` with both ids. Thumbnail failures
+(non-abort) are swallowed: the note is still created with
+`thumbnailFileId: null` so a flaky thumb never loses the photo; the
+tile falls back to the full `fileId` until the user re-uploads.
 
 ### Optimistic photo rows (mobile)
 
@@ -71,9 +92,10 @@ Before R2 PUT completes there is no `fileId`, so the optimistic row is
 driven by the upload job itself.
 `apps/mobile/components/notes/PendingPhotoCard.tsx` reads `UploadJob`
 (`sourceUri`, `status`, `progress`, `error`) and renders the local URI
-as the thumbnail — bytes never leave the device until R2 PUT. The card
-overlays a progress bar driven by `job.progress` and a status label
-derived from `job.status` (`Preparing…` / `Uploading…` / `Saving…` /
+as a ~110 px square thumbnail — bytes never leave the device until R2
+PUT. The card overlays a progress bar driven by `job.progress` and a
+status label derived from `job.status` (`Preparing…` / `Uploading…` /
+`Saving…` /
 `Adding to timeline…`). Failed jobs surface a retry + dismiss pair;
 in-flight jobs surface cancel only. Once the queue completes the job
 the `reportNotes` invalidation produces the real `ImageNoteCard` row;

@@ -37,7 +37,7 @@ import type { UploadJob } from './types';
 /** Subset of `UploadJob` that we serialise. Promise handles are dropped. */
 export type PersistedJob = Pick<
   UploadJob,
-  'id' | 'input' | 'status' | 'attempt' | 'progress' | 'error' | 'fileId'
+  'id' | 'input' | 'status' | 'attempt' | 'progress' | 'error' | 'fileId' | 'thumbnailFileId'
 >;
 
 export interface QueuePersistence {

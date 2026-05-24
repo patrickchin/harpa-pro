@@ -3312,6 +3312,7 @@ export interface paths {
                                 kind: "text" | "voice" | "image" | "document";
                                 body: string | null;
                                 fileId: string | null;
+                                thumbnailFileId: string | null;
                                 transcript: string | null;
                                 title: string | null;
                                 summary: string | null;
@@ -3377,6 +3378,7 @@ export interface paths {
                         kind: "text" | "voice" | "image" | "document";
                         body?: string | null;
                         fileId?: string | null;
+                        thumbnailFileId?: string | null;
                         transcript?: string | null;
                         title?: string | null;
                         summary?: string | null;
@@ -3398,6 +3400,7 @@ export interface paths {
                             kind: "text" | "voice" | "image" | "document";
                             body: string | null;
                             fileId: string | null;
+                            thumbnailFileId: string | null;
                             transcript: string | null;
                             title: string | null;
                             summary: string | null;
@@ -3563,6 +3566,7 @@ export interface paths {
                             kind: "text" | "voice" | "image" | "document";
                             body: string | null;
                             fileId: string | null;
+                            thumbnailFileId: string | null;
                             transcript: string | null;
                             title: string | null;
                             summary: string | null;
@@ -3926,6 +3930,7 @@ export interface paths {
                             kind: "text" | "voice" | "image" | "document";
                             body: string | null;
                             fileId: string | null;
+                            thumbnailFileId: string | null;
                             transcript: string | null;
                             title: string | null;
                             summary: string | null;

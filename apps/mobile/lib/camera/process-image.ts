@@ -38,6 +38,23 @@ export const QUALITY_LADDER = [0.85, 0.7, 0.55, 0.4] as const;
 export const SHRINK_FACTOR = 0.85;
 export const MAX_PASSES = 6;
 
+/**
+ * Thumbnail-grid feature: render every photo as a small square tile
+ * outside the fullscreen preview. We re-encode the source image once
+ * at upload time into a tiny square JPEG so the grid surfaces fetch
+ * ~50 KB instead of the full ~2 MB image. The thumbnail is uploaded
+ * as a paired R2 object alongside the full image — see
+ * `apps/mobile/lib/uploads/run-upload.ts` for the dual-pipeline flow
+ * and `packages/api/migrations/0009_notes_thumbnail_file_id.sql` for
+ * the persistence column.
+ *
+ * Center-cropped to a square then resized so portrait + landscape
+ * originals both yield a uniform grid tile. EXIF is stripped by the
+ * `expo-image-manipulator` re-encode.
+ */
+export const THUMBNAIL_DIMENSION = 256;
+export const THUMBNAIL_QUALITY = 0.7;
+
 export interface ProcessedImage {
   uri: string;
   width: number;
@@ -126,4 +143,53 @@ export async function processImageForUpload(
     );
   }
   return best;
+}
+
+/**
+ * Generate a small square thumbnail for grid rendering.
+ *
+ * Single pass: ask `expo-image-manipulator` to read the source image,
+ * report its real dimensions (we cannot trust caller-supplied
+ * metadata — gallery picks may not have it), center-crop to a square,
+ * then resize to `THUMBNAIL_DIMENSION` and encode JPEG at
+ * `THUMBNAIL_QUALITY`. At 256 px / q=0.7 typical output is 15–40 KB,
+ * well under the size we'd ever push back into the queue.
+ *
+ * The deps interface matches `processImageForUpload` so tests can
+ * inject the same fake manipulator. Default wiring is exercised by
+ * the integration test alongside the main image processor (Pitfall 13).
+ */
+export async function processImageThumbnail(
+  inputUri: string,
+  deps: ProcessImageDeps = defaultProcessImageDeps,
+): Promise<ProcessedImage> {
+  // First read the image's real dimensions by running a no-op
+  // manipulate (the result includes width + height). Cheap because
+  // `expo-image-manipulator` decodes once even for an empty action list.
+  const probe = await deps.manipulate(inputUri, [], {
+    compress: 1,
+    format: ImageManipulator.SaveFormat.JPEG,
+  });
+  const side = Math.min(probe.width, probe.height);
+  const originX = Math.max(0, Math.round((probe.width - side) / 2));
+  const originY = Math.max(0, Math.round((probe.height - side) / 2));
+
+  const out = await deps.manipulate(
+    inputUri,
+    [
+      { crop: { originX, originY, width: side, height: side } },
+      { resize: { width: THUMBNAIL_DIMENSION, height: THUMBNAIL_DIMENSION } },
+    ],
+    {
+      compress: THUMBNAIL_QUALITY,
+      format: ImageManipulator.SaveFormat.JPEG,
+    },
+  );
+  const sizeBytes = deps.statSize(out.uri);
+  return {
+    uri: out.uri,
+    width: out.width,
+    height: out.height,
+    sizeBytes,
+  };
 }

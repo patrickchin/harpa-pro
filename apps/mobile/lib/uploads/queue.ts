@@ -86,6 +86,7 @@ export function createUploadQueue(
           progress: j.progress,
           attempt: j.attempt,
           fileId: j.fileId,
+          thumbnailFileId: j.thumbnailFileId,
           error: j.error,
         })),
       );
@@ -102,6 +103,7 @@ export function createUploadQueue(
       progress: j.progress,
       attempt: j.attempt,
       fileId: j.fileId,
+      thumbnailFileId: j.thumbnailFileId,
       error: j.error,
     }));
     snapshotDirty = false;
@@ -137,8 +139,15 @@ export function createUploadQueue(
           job.progress = fraction;
           notify();
         },
+        onThumbnailFileId: (fileId) => {
+          job.thumbnailFileId = fileId;
+          notify();
+        },
       });
       job.fileId = result.file.id;
+      if (result.thumbnailFile) {
+        job.thumbnailFileId = result.thumbnailFile.id;
+      }
       job.status = 'completed';
       job.progress = 1;
       notify();
@@ -149,6 +158,9 @@ export function createUploadQueue(
       if (deps.cleanupSource) {
         try {
           await deps.cleanupSource(job.input.sourceUri);
+          if (job.input.thumbnail?.sourceUri) {
+            await deps.cleanupSource(job.input.thumbnail.sourceUri);
+          }
         } catch {
           // ignore
         }
@@ -296,6 +308,7 @@ export function createUploadQueue(
         progress: persisted.progress,
         attempt: persisted.attempt,
         fileId: persisted.fileId,
+        thumbnailFileId: persisted.thumbnailFileId,
         error: persisted.error,
         resolve: noop,
         reject: noop,
@@ -315,6 +328,7 @@ export function createUploadQueue(
           progress: j.progress,
           attempt: j.attempt,
           fileId: j.fileId,
+          thumbnailFileId: j.thumbnailFileId,
           error: j.error,
         })),
       );

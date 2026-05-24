@@ -3,22 +3,18 @@
  * Report tab on a saved report. Image-only counterpart to the Notes
  * timeline; voice + documents stay in the Notes tab.
  *
- * Ported from
- * `../haru3-reports/apps/mobile/components/reports/ReportPhotos.tsx`
- * (branch `dev`). v4 data model: filters `noteRows` to `kind === 'photo'`
- * (the API returns `image` kind from R2 — already remapped to `photo`
- * inside the route mapping in `[number]/index.tsx`). Each photo renders
- * through `useFileSignedUrl` + `CachedImage` and opens the
- * fullscreen preview on tap.
+ * Renders a 3-column Instagram-style grid of square thumbnails. Each
+ * tile pulls the small client-generated thumbnail (`thumbnailFileId`)
+ * when present, falling back to the full image for legacy notes. Tap
+ * a tile to open the fullscreen swipeable gallery.
  */
 import { useMemo } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { useWindowDimensions, View } from 'react-native';
 import { Camera } from 'lucide-react-native';
 
 import { Card } from '@/components/primitives/Card';
 import { SectionHeader } from '@/components/primitives/SectionHeader';
-import { CachedImage } from '@/components/ui/CachedImage';
-import { useFileSignedUrl } from '@/lib/uploads/useFileSignedUrl';
+import { PhotoGridTile } from '@/components/notes/PhotoGridTile';
 import { colors } from '@/lib/design-tokens/colors';
 import type { ReportNoteRow } from '@/components/reports/detail/ReportNotesPane';
 
@@ -26,6 +22,10 @@ export interface ReportPhotosProps {
   noteRows: ReadonlyArray<ReportNoteRow> | undefined;
   onOpenPhoto?: (input: { fileId: string; title?: string }) => void;
 }
+
+const COLUMNS = 3;
+const GAP = 6;
+const CARD_PADDING = 16; // matches `Card` padding="lg" lateral inset
 
 export function ReportPhotos({ noteRows, onOpenPhoto }: ReportPhotosProps) {
   const photos = useMemo(
@@ -37,6 +37,11 @@ export function ReportPhotos({ noteRows, onOpenPhoto }: ReportPhotosProps) {
     [noteRows],
   );
 
+  const { width: screenWidth } = useWindowDimensions();
+  // Card padding * 2 (left + right) + (COLUMNS - 1) gaps between tiles.
+  const usableWidth = Math.max(0, screenWidth - CARD_PADDING * 2);
+  const tileSize = Math.floor((usableWidth - GAP * (COLUMNS - 1)) / COLUMNS);
+
   if (photos.length === 0) return null;
 
   return (
@@ -45,59 +50,26 @@ export function ReportPhotos({ noteRows, onOpenPhoto }: ReportPhotosProps) {
         title="Photos"
         icon={<Camera size={16} color={colors.foreground} />}
       />
-      <View className="mt-3 gap-2">
-        {photos.map((p) => (
-          <ReportPhotoItem
-            key={p.id}
-            photo={p}
-            onOpen={onOpenPhoto}
-          />
-        ))}
+      <View
+        className="mt-3 flex-row flex-wrap"
+        style={{ gap: GAP }}
+        testID="report-photos-grid"
+      >
+        {photos.map((p) => {
+          const title = p.body?.trim() || 'Photo';
+          return (
+            <PhotoGridTile
+              key={p.id}
+              fileId={p.fileId}
+              thumbnailFileId={p.thumbnailFileId ?? null}
+              size={tileSize}
+              onPress={() => onOpenPhoto?.({ fileId: p.fileId, title })}
+              accessibilityLabel={`Open photo ${title}`}
+              testID={`btn-report-photo-${p.id}`}
+            />
+          );
+        })}
       </View>
     </Card>
-  );
-}
-
-function ReportPhotoItem({
-  photo,
-  onOpen,
-}: {
-  photo: ReportNoteRow & { fileId: string };
-  onOpen?: (input: { fileId: string; title?: string }) => void;
-}) {
-  const { data } = useFileSignedUrl(photo.fileId);
-  const uri = (data as { url?: string } | undefined)?.url ?? null;
-  const title = photo.body?.trim() || 'Photo';
-  return (
-    <Pressable
-      onPress={() => onOpen?.({ fileId: photo.fileId, title })}
-      accessibilityLabel={`Open photo ${title}`}
-      testID={`btn-report-photo-${photo.id}`}
-      className="rounded-md overflow-hidden bg-muted"
-    >
-      {uri ? (
-        <CachedImage
-          source={{ uri }}
-          cacheKey={photo.fileId}
-          style={{ width: '100%', aspectRatio: 4 / 3 }}
-          contentFit="cover"
-          accessibilityLabel={title}
-          testID={`img-report-photo-${photo.id}`}
-        />
-      ) : (
-        <View
-          className="w-full items-center justify-center bg-muted"
-          style={{ aspectRatio: 4 / 3 }}
-          testID={`img-report-photo-${photo.id}-empty`}
-        >
-          <Camera size={24} color={colors.muted.foreground} />
-        </View>
-      )}
-      {photo.body ? (
-        <Text className="p-2 text-xs text-muted-foreground" numberOfLines={2}>
-          {photo.body}
-        </Text>
-      ) : null}
-    </Pressable>
   );
 }

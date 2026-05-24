@@ -63,6 +63,7 @@ export interface UploadDeps {
     reportId: string;
     input: EnqueueInput;
     file: FileRecord;
+    thumbnailFile?: FileRecord;
     signal?: AbortSignal;
   }) => Promise<NoteRecord>;
   /**
@@ -86,6 +87,10 @@ export interface RunHandlers {
       | 'completed',
   ) => void;
   onProgress: (fraction: number) => void;
+  /** Called once the paired thumbnail register completes so the queue
+   *  can persist `thumbnailFileId` mid-job. Optional — fires only when
+   *  `input.thumbnail` is set and its pipeline succeeded. */
+  onThumbnailFileId?: (fileId: string) => void;
   /**
    * Signal observed at every pipeline boundary. When aborted,
    * `runUploadJob` throws an `AbortError` rather than advancing.
@@ -116,6 +121,15 @@ function checkAborted(signal: AbortSignal | undefined): void {
 /**
  * Run one job end-to-end. Throws on failure; the queue decides whether
  * to schedule a retry based on attempt count + `backoffMs`.
+ *
+ * When `input.thumbnail` is set (image uploads) we run a second
+ * presign → PUT → registerFile pipeline in parallel with the main
+ * image. Progress is reported on the main image PUT only — the thumb
+ * is ~50 KB and finishes effectively instantly. If the thumbnail
+ * pipeline throws we swallow the error and proceed with `createNote`
+ * carrying `thumbnailFileId: null` so a transient thumb-upload
+ * failure never loses the user's photo (the grid falls back to the
+ * full file id for that note).
  */
 export async function runUploadJob(
   input: EnqueueInput,
@@ -125,6 +139,56 @@ export async function runUploadJob(
   const { signal } = handlers;
   checkAborted(signal);
   handlers.onStatus('presigning');
+
+  // Kick off both pipelines as soon as we enter the upload phase. The
+  // main image drives `onProgress`; the thumbnail runs silently.
+  const mainPromise = runMainPipeline(input, deps, handlers);
+  const thumbPromise = input.thumbnail
+    ? runThumbnailPipeline(input, input.thumbnail, deps, signal).catch(
+        (err) => {
+          // Re-throw cancellation so the main pipeline path also
+          // aborts; swallow other errors so a flaky thumbnail does
+          // not lose the photo.
+          if (isAbortError(err)) throw err;
+          return null;
+        },
+      )
+    : Promise.resolve(null);
+
+  const file = await mainPromise;
+  const thumbnailFile = await thumbPromise;
+  if (thumbnailFile && handlers.onThumbnailFileId) {
+    handlers.onThumbnailFileId(thumbnailFile.id);
+  }
+
+  let noteId: string | undefined;
+  if (input.reportId) {
+    checkAborted(signal);
+    handlers.onStatus('creating_note');
+    const note = await deps.createNote({
+      reportId: input.reportId,
+      input,
+      file,
+      thumbnailFile: thumbnailFile ?? undefined,
+      signal,
+    });
+    noteId = note.id;
+  }
+
+  handlers.onStatus('completed');
+  return {
+    file,
+    ...(thumbnailFile ? { thumbnailFile } : {}),
+    noteId,
+  };
+}
+
+async function runMainPipeline(
+  input: EnqueueInput,
+  deps: UploadDeps,
+  handlers: RunHandlers,
+): Promise<FileRecord> {
+  const { signal } = handlers;
   const presigned = await deps.presign(input, signal);
 
   checkAborted(signal);
@@ -148,23 +212,40 @@ export async function runUploadJob(
   handlers.onProgress(1);
 
   handlers.onStatus('registering');
-  const file = await deps.registerFile(presigned, input, signal);
+  return deps.registerFile(presigned, input, signal);
+}
 
-  let noteId: string | undefined;
-  if (input.reportId) {
-    checkAborted(signal);
-    handlers.onStatus('creating_note');
-    const note = await deps.createNote({
-      reportId: input.reportId,
-      input,
-      file,
-      signal,
-    });
-    noteId = note.id;
-  }
-
-  handlers.onStatus('completed');
-  return { file, noteId };
+async function runThumbnailPipeline(
+  input: EnqueueInput,
+  thumb: NonNullable<EnqueueInput['thumbnail']>,
+  deps: UploadDeps,
+  signal: AbortSignal | undefined,
+): Promise<FileRecord> {
+  // Thumbnail rides on the same UploadKind/contract as the main image
+  // — it is registered as a `kind: 'image'` file so the API surfaces
+  // it via the same presign + signed-URL paths and RLS is identical.
+  const thumbInput: EnqueueInput = {
+    ...input,
+    sourceUri: thumb.sourceUri,
+    contentType: thumb.contentType,
+    sizeBytes: thumb.sizeBytes,
+    // Strip the nested thumbnail so we never recurse.
+    thumbnail: undefined,
+    // Don't carry reportId — only the main pipeline creates the note.
+    reportId: undefined,
+  };
+  checkAborted(signal);
+  const presigned = await deps.presign(thumbInput, signal);
+  checkAborted(signal);
+  await deps.putToR2({
+    uploadUrl: presigned.uploadUrl,
+    sourceUri: thumbInput.sourceUri,
+    contentType: thumbInput.contentType,
+    sizeBytes: thumbInput.sizeBytes,
+    signal,
+  });
+  checkAborted(signal);
+  return deps.registerFile(presigned, thumbInput, signal);
 }
 
 // ─── Default-wiring deps ───────────────────────────────────────
@@ -288,6 +369,7 @@ async function defaultCreateNote(args: {
   reportId: string;
   input: EnqueueInput;
   file: FileRecord;
+  thumbnailFile?: FileRecord;
   signal?: AbortSignal;
 }): Promise<NoteRecord> {
   return request('/reports/{report}/notes', 'post', {
@@ -295,6 +377,7 @@ async function defaultCreateNote(args: {
     body: {
       kind: noteKindForUpload(args.input.kind),
       fileId: args.file.id,
+      thumbnailFileId: args.thumbnailFile?.id ?? null,
       transcript: args.input.transcript ?? null,
     },
     signal: args.signal,

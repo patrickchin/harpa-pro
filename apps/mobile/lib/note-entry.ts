@@ -36,6 +36,11 @@ export interface NoteEntry {
   // / image entries don't have to set them.
   /** R2 file id for the recorded audio. Required for playback. */
   fileId?: string | null;
+  /** R2 file id for the small thumbnail variant of an image note.
+   *  Null for non-image kinds and for legacy image notes uploaded
+   *  before client-side thumbnailing shipped — grid tiles fall back
+   *  to `fileId` in that case. */
+  thumbnailFileId?: string | null;
   /** Recording length in seconds (server-reported when saved). */
   durationSec?: number | null;
   /** Speech-to-text output. */

@@ -11,6 +11,10 @@ export const note = z.object({
   kind: noteKind,
   body: z.string().nullable(),
   fileId: fileId.nullable(),
+  /** Thumbnail variant for image notes. Null for non-image kinds and
+   *  for legacy image notes uploaded before client-side thumbnailing
+   *  shipped — those fall back to `fileId` for grid rendering. */
+  thumbnailFileId: fileId.nullable(),
   transcript: z.string().nullable(),
   // Generic note-level fields (migration 0004). Nullable on every
   // kind. Today the voice aggregator (`POST /reports/{report}/notes/voice`)
@@ -43,6 +47,8 @@ export const createNoteRequest = z.object({
   kind: noteKind,
   body: z.string().nullable().optional(),
   fileId: fileId.nullable().optional(),
+  /** Optional thumbnail file id for image notes. Ignored for other kinds. */
+  thumbnailFileId: fileId.nullable().optional(),
   transcript: z.string().nullable().optional(),
   /** Optional short headline. Capped at 200 chars (matches the DB
    *  CHECK constraint on `app.notes.title`). */

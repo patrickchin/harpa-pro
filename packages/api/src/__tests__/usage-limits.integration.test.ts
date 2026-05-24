@@ -95,9 +95,9 @@ describe('GET /me/limits', () => {
     expect(body.plan).toBe('free');
     const reportBucket = body.buckets.find((b) => b.kind === 'report_generate');
     expect(reportBucket).toBeTruthy();
-    expect(reportBucket!.limit).toBe(5);
+    expect(reportBucket!.limit).toBe(1_000);
     expect(reportBucket!.used).toBe(0);
-    expect(reportBucket!.remaining).toBe(5);
+    expect(reportBucket!.remaining).toBe(1_000);
     expect(reportBucket!.overridden).toBe(false);
   });
 
@@ -113,7 +113,7 @@ describe('GET /me/limits', () => {
     const body = (await res.json()) as { buckets: Array<{ kind: string; used: number; remaining: number | null }> };
     const bucket = body.buckets.find((b) => b.kind === 'report_generate')!;
     expect(bucket.used).toBe(3);
-    expect(bucket.remaining).toBe(2);
+    expect(bucket.remaining).toBe(997);
   });
 
   it('cross-actor isolation: bob still sees zero usage even after alice racks up rows', async () => {
@@ -166,7 +166,7 @@ describe('admin overrides', () => {
     const res = await app.request('/me/limits', { headers: { authorization: `Bearer ${aliceToken}` } });
     const body = (await res.json()) as { buckets: Array<{ kind: string; limit: number | null; overridden: boolean }> };
     const bucket = body.buckets.find((b) => b.kind === 'report_generate')!;
-    expect(bucket.limit).toBe(5);
+    expect(bucket.limit).toBe(1_000);
     expect(bucket.overridden).toBe(false);
   });
 
@@ -221,10 +221,11 @@ describe('Phase 2 — token bucket post-hoc enforcement', () => {
   });
 
   it('enforceTokenLimits throws once seeded usage pushes input tokens at/past the free cap', async () => {
-    // Free plan: ai_input_tokens = 200_000. Seed 2 rows × 150_000 = 300_000.
+    // Free plan: ai_input_tokens = 200_000_000. Seed 2 rows ×
+    // 110_000_000 = 220_000_000.
     const admin = new pg.Client({ connectionString: fx.url });
     await admin.connect();
-    await seedUsageEvents(admin, charlie, 2, 'chat', { input: 150_000, output: 1_000 });
+    await seedUsageEvents(admin, charlie, 2, 'chat', { input: 110_000_000, output: 1_000 });
     await admin.end();
 
     await expect(
@@ -258,8 +259,11 @@ describe('Phase 2 — token bucket post-hoc enforcement', () => {
   });
 
   it('attachUsageWarning sets the X-Usage-Warning header when a bucket is ≥80% used', async () => {
-    // Seed a fresh user to 4/5 report_generate (80%) — same flow as the
-    // mobile near-limit toast in design-maestro-full-regression.md.
+    // Seed a fresh user with a low admin override (report_generate=5)
+    // to 4/5 (80%) — same flow as the mobile near-limit toast in
+    // design-maestro-full-regression.md. Using an override keeps the
+    // test cheap; the production free-plan cap is 1_000 reports so
+    // hitting 80% with real seed rows would mean inserting 800+ rows.
     const u = makeUserId();
     const sid = makeSessionId();
     const admin = new pg.Client({ connectionString: fx.url });
@@ -271,6 +275,12 @@ describe('Phase 2 — token bucket post-hoc enforcement', () => {
     await admin.query(
       `INSERT INTO auth.sessions(id, user_id, expires_at) VALUES ($1, $2, now() + interval '7 days')`,
       [sid, u],
+    );
+    await admin.query(
+      `INSERT INTO app.user_limit_overrides
+         (user_id, report_generate, reason, granted_by)
+       VALUES ($1, 5, 'near-limit test', $1)`,
+      [u],
     );
     await seedUsageEvents(admin, u, 4, 'generate_report');
     await admin.end();

@@ -119,8 +119,8 @@ export interface PlanLimits {
 }
 
 export const PLAN_LIMITS: Record<'free' | 'pro' | 'enterprise', PlanLimits> = {
-  free:       { report_generate:  5, voice_transcribe:  30, voice_summarize:  30, ai_input_tokens:   200_000, ai_output_tokens:   50_000 },
-  pro:        { report_generate: 100, voice_transcribe: 500, voice_summarize: 500, ai_input_tokens: 5_000_000, ai_output_tokens: 1_000_000 },
+  free:       { report_generate:  1_000, voice_transcribe:  1_000, voice_summarize:  1_000, ai_input_tokens:   200_000_000, ai_output_tokens:   50_000_000 },
+  pro:        { report_generate: 10_000, voice_transcribe: 10_000, voice_summarize: 10_000, ai_input_tokens: 2_000_000_000, ai_output_tokens: 500_000_000 },
   enterprise: { report_generate: Number.POSITIVE_INFINITY, voice_transcribe: Number.POSITIVE_INFINITY, voice_summarize: Number.POSITIVE_INFINITY, ai_input_tokens: Number.POSITIVE_INFINITY, ai_output_tokens: Number.POSITIVE_INFINITY },
 };
 ```

@@ -30,6 +30,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useFileUpload } from '@/lib/uploads';
 import type { ResponseBody } from '@/lib/api/client';
 import { request } from '@/lib/api/client';
+import { runInvalidations } from '@/lib/api/invalidation';
 
 import type { RecorderResult } from './recorder-types';
 
@@ -250,8 +251,10 @@ export function useVoiceNotePipeline(
             },
           },
         );
-        qc.invalidateQueries({ queryKey: ['reportNotes'] });
-        qc.invalidateQueries({ queryKey: ['report'] });
+        // Cache-bust mirrors `INVALIDATIONS["useCreateVoiceNoteMutation"]`.
+        // Routed via `runInvalidations` so the rule has one source of
+        // truth — `invalidation.ts`. Pitfall: hardcoded lists drift.
+        runInvalidations(qc, 'useCreateVoiceNoteMutation');
         setState({
           step: 'saved',
           failedStep: null,

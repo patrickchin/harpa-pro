@@ -22,24 +22,26 @@ import { ApiError } from './errors';
 import { INVALIDATIONS, INVALIDATIONS_NONE } from './invalidation';
 
 // ─── healthz ───────────────────────────────────────────
+export type HealthQueryInput = { query?: QueryParams<"/healthz", "get"> } | void;
 export function useHealthQuery(
-  input?: { query?: QueryParams<"/healthz", "get"> } | void,
+  input?: HealthQueryInput,
   options?: Omit<UseQueryOptions<ResponseBody<"/healthz", "get">, ApiError>, 'queryKey' | 'queryFn'>,
 ) {
   return useQuery<ResponseBody<"/healthz", "get">, ApiError>({
-    queryKey: ["health", (input as any)?.query] as const,
-    queryFn: ({ signal }) => request("/healthz", "get", { query: (input as any)?.query, signal }),
+    queryKey: ["health", input?.query] as const,
+    queryFn: ({ signal }) => request("/healthz", "get", { query: input?.query, signal }),
     ...options,
   });
 }
 
 // ─── auth ───────────────────────────────────────────
+export type StartOtpMutationVars = { body: RequestBody<"/auth/otp/start", "post"> };
 export function useStartOtpMutation(
-  options?: UseMutationOptions<ResponseBody<"/auth/otp/start", "post">, ApiError, { body: RequestBody<"/auth/otp/start", "post"> }>,
+  options?: UseMutationOptions<ResponseBody<"/auth/otp/start", "post">, ApiError, StartOtpMutationVars>,
 ) {
   const qc = useQueryClient();
-  return useMutation<ResponseBody<"/auth/otp/start", "post">, ApiError, { body: RequestBody<"/auth/otp/start", "post"> }>({
-    mutationFn: (vars) => request("/auth/otp/start", "post", { body: (vars as any).body }),
+  return useMutation<ResponseBody<"/auth/otp/start", "post">, ApiError, StartOtpMutationVars>({
+    mutationFn: (vars) => request("/auth/otp/start", "post", { body: vars.body }),
     ...options,
     onSuccess: (...args) => {
       const rule = INVALIDATIONS["useStartOtpMutation"];
@@ -53,12 +55,13 @@ export function useStartOtpMutation(
   });
 }
 
+export type VerifyOtpMutationVars = { body: RequestBody<"/auth/otp/verify", "post"> };
 export function useVerifyOtpMutation(
-  options?: UseMutationOptions<ResponseBody<"/auth/otp/verify", "post">, ApiError, { body: RequestBody<"/auth/otp/verify", "post"> }>,
+  options?: UseMutationOptions<ResponseBody<"/auth/otp/verify", "post">, ApiError, VerifyOtpMutationVars>,
 ) {
   const qc = useQueryClient();
-  return useMutation<ResponseBody<"/auth/otp/verify", "post">, ApiError, { body: RequestBody<"/auth/otp/verify", "post"> }>({
-    mutationFn: (vars) => request("/auth/otp/verify", "post", { body: (vars as any).body }),
+  return useMutation<ResponseBody<"/auth/otp/verify", "post">, ApiError, VerifyOtpMutationVars>({
+    mutationFn: (vars) => request("/auth/otp/verify", "post", { body: vars.body }),
     ...options,
     onSuccess: (...args) => {
       const rule = INVALIDATIONS["useVerifyOtpMutation"];
@@ -72,12 +75,13 @@ export function useVerifyOtpMutation(
   });
 }
 
+export type VerifyPasswordMutationVars = { body: RequestBody<"/auth/password/verify", "post"> };
 export function useVerifyPasswordMutation(
-  options?: UseMutationOptions<ResponseBody<"/auth/password/verify", "post">, ApiError, { body: RequestBody<"/auth/password/verify", "post"> }>,
+  options?: UseMutationOptions<ResponseBody<"/auth/password/verify", "post">, ApiError, VerifyPasswordMutationVars>,
 ) {
   const qc = useQueryClient();
-  return useMutation<ResponseBody<"/auth/password/verify", "post">, ApiError, { body: RequestBody<"/auth/password/verify", "post"> }>({
-    mutationFn: (vars) => request("/auth/password/verify", "post", { body: (vars as any).body }),
+  return useMutation<ResponseBody<"/auth/password/verify", "post">, ApiError, VerifyPasswordMutationVars>({
+    mutationFn: (vars) => request("/auth/password/verify", "post", { body: vars.body }),
     ...options,
     onSuccess: (...args) => {
       const rule = INVALIDATIONS["useVerifyPasswordMutation"];
@@ -91,12 +95,13 @@ export function useVerifyPasswordMutation(
   });
 }
 
+export type LogoutMutationVars = void;
 export function useLogoutMutation(
-  options?: UseMutationOptions<ResponseBody<"/auth/logout", "post">, ApiError, void>,
+  options?: UseMutationOptions<ResponseBody<"/auth/logout", "post">, ApiError, LogoutMutationVars>,
 ) {
   const qc = useQueryClient();
-  return useMutation<ResponseBody<"/auth/logout", "post">, ApiError, void>({
-    mutationFn: (vars) => request("/auth/logout", "post"),
+  return useMutation<ResponseBody<"/auth/logout", "post">, ApiError, LogoutMutationVars>({
+    mutationFn: (_vars) => request("/auth/logout", "post"),
     ...options,
     onSuccess: (...args) => {
       const rule = INVALIDATIONS["useLogoutMutation"];
@@ -111,23 +116,25 @@ export function useLogoutMutation(
 }
 
 // ─── me ───────────────────────────────────────────
+export type MeQueryInput = { query?: QueryParams<"/me", "get"> } | void;
 export function useMeQuery(
-  input?: { query?: QueryParams<"/me", "get"> } | void,
+  input?: MeQueryInput,
   options?: Omit<UseQueryOptions<ResponseBody<"/me", "get">, ApiError>, 'queryKey' | 'queryFn'>,
 ) {
   return useQuery<ResponseBody<"/me", "get">, ApiError>({
-    queryKey: ["me", (input as any)?.query] as const,
-    queryFn: ({ signal }) => request("/me", "get", { query: (input as any)?.query, signal }),
+    queryKey: ["me", input?.query] as const,
+    queryFn: ({ signal }) => request("/me", "get", { query: input?.query, signal }),
     ...options,
   });
 }
 
+export type UpdateMeMutationVars = { body: RequestBody<"/me", "patch"> };
 export function useUpdateMeMutation(
-  options?: UseMutationOptions<ResponseBody<"/me", "patch">, ApiError, { body: RequestBody<"/me", "patch"> }>,
+  options?: UseMutationOptions<ResponseBody<"/me", "patch">, ApiError, UpdateMeMutationVars>,
 ) {
   const qc = useQueryClient();
-  return useMutation<ResponseBody<"/me", "patch">, ApiError, { body: RequestBody<"/me", "patch"> }>({
-    mutationFn: (vars) => request("/me", "patch", { body: (vars as any).body }),
+  return useMutation<ResponseBody<"/me", "patch">, ApiError, UpdateMeMutationVars>({
+    mutationFn: (vars) => request("/me", "patch", { body: vars.body }),
     ...options,
     onSuccess: (...args) => {
       const rule = INVALIDATIONS["useUpdateMeMutation"];
@@ -141,46 +148,50 @@ export function useUpdateMeMutation(
   });
 }
 
+export type MeUsageQueryInput = { query?: QueryParams<"/me/usage", "get"> } | void;
 export function useMeUsageQuery(
-  input?: { query?: QueryParams<"/me/usage", "get"> } | void,
+  input?: MeUsageQueryInput,
   options?: Omit<UseQueryOptions<ResponseBody<"/me/usage", "get">, ApiError>, 'queryKey' | 'queryFn'>,
 ) {
   return useQuery<ResponseBody<"/me/usage", "get">, ApiError>({
-    queryKey: ["meUsage", (input as any)?.query] as const,
-    queryFn: ({ signal }) => request("/me/usage", "get", { query: (input as any)?.query, signal }),
+    queryKey: ["meUsage", input?.query] as const,
+    queryFn: ({ signal }) => request("/me/usage", "get", { query: input?.query, signal }),
     ...options,
   });
 }
 
+export type MeLimitsQueryInput = { query?: QueryParams<"/me/limits", "get"> } | void;
 export function useMeLimitsQuery(
-  input?: { query?: QueryParams<"/me/limits", "get"> } | void,
+  input?: MeLimitsQueryInput,
   options?: Omit<UseQueryOptions<ResponseBody<"/me/limits", "get">, ApiError>, 'queryKey' | 'queryFn'>,
 ) {
   return useQuery<ResponseBody<"/me/limits", "get">, ApiError>({
-    queryKey: ["meLimits", (input as any)?.query] as const,
-    queryFn: ({ signal }) => request("/me/limits", "get", { query: (input as any)?.query, signal }),
+    queryKey: ["meLimits", input?.query] as const,
+    queryFn: ({ signal }) => request("/me/limits", "get", { query: input?.query, signal }),
     ...options,
   });
 }
 
 // ─── projects ───────────────────────────────────────────
+export type ListProjectsQueryInput = { query?: QueryParams<"/projects", "get"> } | void;
 export function useListProjectsQuery(
-  input?: { query?: QueryParams<"/projects", "get"> } | void,
+  input?: ListProjectsQueryInput,
   options?: Omit<UseQueryOptions<ResponseBody<"/projects", "get">, ApiError>, 'queryKey' | 'queryFn'>,
 ) {
   return useQuery<ResponseBody<"/projects", "get">, ApiError>({
-    queryKey: ["projects", (input as any)?.query] as const,
-    queryFn: ({ signal }) => request("/projects", "get", { query: (input as any)?.query, signal }),
+    queryKey: ["projects", input?.query] as const,
+    queryFn: ({ signal }) => request("/projects", "get", { query: input?.query, signal }),
     ...options,
   });
 }
 
+export type CreateProjectMutationVars = { body: RequestBody<"/projects", "post"> };
 export function useCreateProjectMutation(
-  options?: UseMutationOptions<ResponseBody<"/projects", "post">, ApiError, { body: RequestBody<"/projects", "post"> }>,
+  options?: UseMutationOptions<ResponseBody<"/projects", "post">, ApiError, CreateProjectMutationVars>,
 ) {
   const qc = useQueryClient();
-  return useMutation<ResponseBody<"/projects", "post">, ApiError, { body: RequestBody<"/projects", "post"> }>({
-    mutationFn: (vars) => request("/projects", "post", { body: (vars as any).body }),
+  return useMutation<ResponseBody<"/projects", "post">, ApiError, CreateProjectMutationVars>({
+    mutationFn: (vars) => request("/projects", "post", { body: vars.body }),
     ...options,
     onSuccess: (...args) => {
       const rule = INVALIDATIONS["useCreateProjectMutation"];
@@ -194,23 +205,25 @@ export function useCreateProjectMutation(
   });
 }
 
+export type ProjectQueryInput = { params: PathParams<"/projects/{project}", "get">; query?: QueryParams<"/projects/{project}", "get"> };
 export function useProjectQuery(
-  input: { params: PathParams<"/projects/{project}", "get">; query?: QueryParams<"/projects/{project}", "get"> },
+  input: ProjectQueryInput,
   options?: Omit<UseQueryOptions<ResponseBody<"/projects/{project}", "get">, ApiError>, 'queryKey' | 'queryFn'>,
 ) {
   return useQuery<ResponseBody<"/projects/{project}", "get">, ApiError>({
-    queryKey: ["project", (input as any).params, (input as any).query] as const,
-    queryFn: ({ signal }) => request("/projects/{project}", "get", { params: (input as any).params, query: (input as any).query, signal }),
+    queryKey: ["project", input.params, input.query] as const,
+    queryFn: ({ signal }) => request("/projects/{project}", "get", { params: input.params, query: input.query, signal }),
     ...options,
   });
 }
 
+export type UpdateProjectMutationVars = { params: PathParams<"/projects/{project}", "patch">; body: RequestBody<"/projects/{project}", "patch"> };
 export function useUpdateProjectMutation(
-  options?: UseMutationOptions<ResponseBody<"/projects/{project}", "patch">, ApiError, { params: PathParams<"/projects/{project}", "patch">; body: RequestBody<"/projects/{project}", "patch"> }>,
+  options?: UseMutationOptions<ResponseBody<"/projects/{project}", "patch">, ApiError, UpdateProjectMutationVars>,
 ) {
   const qc = useQueryClient();
-  return useMutation<ResponseBody<"/projects/{project}", "patch">, ApiError, { params: PathParams<"/projects/{project}", "patch">; body: RequestBody<"/projects/{project}", "patch"> }>({
-    mutationFn: (vars) => request("/projects/{project}", "patch", { params: (vars as any).params, body: (vars as any).body }),
+  return useMutation<ResponseBody<"/projects/{project}", "patch">, ApiError, UpdateProjectMutationVars>({
+    mutationFn: (vars) => request("/projects/{project}", "patch", { params: vars.params, body: vars.body }),
     ...options,
     onSuccess: (...args) => {
       const rule = INVALIDATIONS["useUpdateProjectMutation"];
@@ -224,12 +237,13 @@ export function useUpdateProjectMutation(
   });
 }
 
+export type DeleteProjectMutationVars = { params: PathParams<"/projects/{project}", "delete"> };
 export function useDeleteProjectMutation(
-  options?: UseMutationOptions<ResponseBody<"/projects/{project}", "delete">, ApiError, { params: PathParams<"/projects/{project}", "delete"> }>,
+  options?: UseMutationOptions<ResponseBody<"/projects/{project}", "delete">, ApiError, DeleteProjectMutationVars>,
 ) {
   const qc = useQueryClient();
-  return useMutation<ResponseBody<"/projects/{project}", "delete">, ApiError, { params: PathParams<"/projects/{project}", "delete"> }>({
-    mutationFn: (vars) => request("/projects/{project}", "delete", { params: (vars as any).params }),
+  return useMutation<ResponseBody<"/projects/{project}", "delete">, ApiError, DeleteProjectMutationVars>({
+    mutationFn: (vars) => request("/projects/{project}", "delete", { params: vars.params }),
     ...options,
     onSuccess: (...args) => {
       const rule = INVALIDATIONS["useDeleteProjectMutation"];
@@ -243,23 +257,25 @@ export function useDeleteProjectMutation(
   });
 }
 
+export type ProjectMembersQueryInput = { params: PathParams<"/projects/{project}/members", "get">; query?: QueryParams<"/projects/{project}/members", "get"> };
 export function useProjectMembersQuery(
-  input: { params: PathParams<"/projects/{project}/members", "get">; query?: QueryParams<"/projects/{project}/members", "get"> },
+  input: ProjectMembersQueryInput,
   options?: Omit<UseQueryOptions<ResponseBody<"/projects/{project}/members", "get">, ApiError>, 'queryKey' | 'queryFn'>,
 ) {
   return useQuery<ResponseBody<"/projects/{project}/members", "get">, ApiError>({
-    queryKey: ["projectMembers", (input as any).params, (input as any).query] as const,
-    queryFn: ({ signal }) => request("/projects/{project}/members", "get", { params: (input as any).params, query: (input as any).query, signal }),
+    queryKey: ["projectMembers", input.params, input.query] as const,
+    queryFn: ({ signal }) => request("/projects/{project}/members", "get", { params: input.params, query: input.query, signal }),
     ...options,
   });
 }
 
+export type AddProjectMemberMutationVars = { params: PathParams<"/projects/{project}/members", "post">; body: RequestBody<"/projects/{project}/members", "post"> };
 export function useAddProjectMemberMutation(
-  options?: UseMutationOptions<ResponseBody<"/projects/{project}/members", "post">, ApiError, { params: PathParams<"/projects/{project}/members", "post">; body: RequestBody<"/projects/{project}/members", "post"> }>,
+  options?: UseMutationOptions<ResponseBody<"/projects/{project}/members", "post">, ApiError, AddProjectMemberMutationVars>,
 ) {
   const qc = useQueryClient();
-  return useMutation<ResponseBody<"/projects/{project}/members", "post">, ApiError, { params: PathParams<"/projects/{project}/members", "post">; body: RequestBody<"/projects/{project}/members", "post"> }>({
-    mutationFn: (vars) => request("/projects/{project}/members", "post", { params: (vars as any).params, body: (vars as any).body }),
+  return useMutation<ResponseBody<"/projects/{project}/members", "post">, ApiError, AddProjectMemberMutationVars>({
+    mutationFn: (vars) => request("/projects/{project}/members", "post", { params: vars.params, body: vars.body }),
     ...options,
     onSuccess: (...args) => {
       const rule = INVALIDATIONS["useAddProjectMemberMutation"];
@@ -273,12 +289,13 @@ export function useAddProjectMemberMutation(
   });
 }
 
+export type RemoveProjectMemberMutationVars = { params: PathParams<"/projects/{project}/members/{user}", "delete"> };
 export function useRemoveProjectMemberMutation(
-  options?: UseMutationOptions<ResponseBody<"/projects/{project}/members/{user}", "delete">, ApiError, { params: PathParams<"/projects/{project}/members/{user}", "delete"> }>,
+  options?: UseMutationOptions<ResponseBody<"/projects/{project}/members/{user}", "delete">, ApiError, RemoveProjectMemberMutationVars>,
 ) {
   const qc = useQueryClient();
-  return useMutation<ResponseBody<"/projects/{project}/members/{user}", "delete">, ApiError, { params: PathParams<"/projects/{project}/members/{user}", "delete"> }>({
-    mutationFn: (vars) => request("/projects/{project}/members/{user}", "delete", { params: (vars as any).params }),
+  return useMutation<ResponseBody<"/projects/{project}/members/{user}", "delete">, ApiError, RemoveProjectMemberMutationVars>({
+    mutationFn: (vars) => request("/projects/{project}/members/{user}", "delete", { params: vars.params }),
     ...options,
     onSuccess: (...args) => {
       const rule = INVALIDATIONS["useRemoveProjectMemberMutation"];
@@ -292,12 +309,13 @@ export function useRemoveProjectMemberMutation(
   });
 }
 
+export type UpdateProjectMemberMutationVars = { params: PathParams<"/projects/{project}/members/{user}", "patch">; body: RequestBody<"/projects/{project}/members/{user}", "patch"> };
 export function useUpdateProjectMemberMutation(
-  options?: UseMutationOptions<ResponseBody<"/projects/{project}/members/{user}", "patch">, ApiError, { params: PathParams<"/projects/{project}/members/{user}", "patch">; body: RequestBody<"/projects/{project}/members/{user}", "patch"> }>,
+  options?: UseMutationOptions<ResponseBody<"/projects/{project}/members/{user}", "patch">, ApiError, UpdateProjectMemberMutationVars>,
 ) {
   const qc = useQueryClient();
-  return useMutation<ResponseBody<"/projects/{project}/members/{user}", "patch">, ApiError, { params: PathParams<"/projects/{project}/members/{user}", "patch">; body: RequestBody<"/projects/{project}/members/{user}", "patch"> }>({
-    mutationFn: (vars) => request("/projects/{project}/members/{user}", "patch", { params: (vars as any).params, body: (vars as any).body }),
+  return useMutation<ResponseBody<"/projects/{project}/members/{user}", "patch">, ApiError, UpdateProjectMemberMutationVars>({
+    mutationFn: (vars) => request("/projects/{project}/members/{user}", "patch", { params: vars.params, body: vars.body }),
     ...options,
     onSuccess: (...args) => {
       const rule = INVALIDATIONS["useUpdateProjectMemberMutation"];
@@ -311,23 +329,25 @@ export function useUpdateProjectMemberMutation(
   });
 }
 
+export type ProjectReportsQueryInput = { params: PathParams<"/projects/{project}/reports", "get">; query?: QueryParams<"/projects/{project}/reports", "get"> };
 export function useProjectReportsQuery(
-  input: { params: PathParams<"/projects/{project}/reports", "get">; query?: QueryParams<"/projects/{project}/reports", "get"> },
+  input: ProjectReportsQueryInput,
   options?: Omit<UseQueryOptions<ResponseBody<"/projects/{project}/reports", "get">, ApiError>, 'queryKey' | 'queryFn'>,
 ) {
   return useQuery<ResponseBody<"/projects/{project}/reports", "get">, ApiError>({
-    queryKey: ["projectReports", (input as any).params, (input as any).query] as const,
-    queryFn: ({ signal }) => request("/projects/{project}/reports", "get", { params: (input as any).params, query: (input as any).query, signal }),
+    queryKey: ["projectReports", input.params, input.query] as const,
+    queryFn: ({ signal }) => request("/projects/{project}/reports", "get", { params: input.params, query: input.query, signal }),
     ...options,
   });
 }
 
+export type CreateReportMutationVars = { params: PathParams<"/projects/{project}/reports", "post">; body: RequestBody<"/projects/{project}/reports", "post"> };
 export function useCreateReportMutation(
-  options?: UseMutationOptions<ResponseBody<"/projects/{project}/reports", "post">, ApiError, { params: PathParams<"/projects/{project}/reports", "post">; body: RequestBody<"/projects/{project}/reports", "post"> }>,
+  options?: UseMutationOptions<ResponseBody<"/projects/{project}/reports", "post">, ApiError, CreateReportMutationVars>,
 ) {
   const qc = useQueryClient();
-  return useMutation<ResponseBody<"/projects/{project}/reports", "post">, ApiError, { params: PathParams<"/projects/{project}/reports", "post">; body: RequestBody<"/projects/{project}/reports", "post"> }>({
-    mutationFn: (vars) => request("/projects/{project}/reports", "post", { params: (vars as any).params, body: (vars as any).body }),
+  return useMutation<ResponseBody<"/projects/{project}/reports", "post">, ApiError, CreateReportMutationVars>({
+    mutationFn: (vars) => request("/projects/{project}/reports", "post", { params: vars.params, body: vars.body }),
     ...options,
     onSuccess: (...args) => {
       const rule = INVALIDATIONS["useCreateReportMutation"];
@@ -341,23 +361,25 @@ export function useCreateReportMutation(
   });
 }
 
+export type ReportQueryInput = { params: PathParams<"/projects/{project}/reports/{number}", "get">; query?: QueryParams<"/projects/{project}/reports/{number}", "get"> };
 export function useReportQuery(
-  input: { params: PathParams<"/projects/{project}/reports/{number}", "get">; query?: QueryParams<"/projects/{project}/reports/{number}", "get"> },
+  input: ReportQueryInput,
   options?: Omit<UseQueryOptions<ResponseBody<"/projects/{project}/reports/{number}", "get">, ApiError>, 'queryKey' | 'queryFn'>,
 ) {
   return useQuery<ResponseBody<"/projects/{project}/reports/{number}", "get">, ApiError>({
-    queryKey: ["report", (input as any).params, (input as any).query] as const,
-    queryFn: ({ signal }) => request("/projects/{project}/reports/{number}", "get", { params: (input as any).params, query: (input as any).query, signal }),
+    queryKey: ["report", input.params, input.query] as const,
+    queryFn: ({ signal }) => request("/projects/{project}/reports/{number}", "get", { params: input.params, query: input.query, signal }),
     ...options,
   });
 }
 
+export type UpdateReportMutationVars = { params: PathParams<"/projects/{project}/reports/{number}", "patch">; body: RequestBody<"/projects/{project}/reports/{number}", "patch"> };
 export function useUpdateReportMutation(
-  options?: UseMutationOptions<ResponseBody<"/projects/{project}/reports/{number}", "patch">, ApiError, { params: PathParams<"/projects/{project}/reports/{number}", "patch">; body: RequestBody<"/projects/{project}/reports/{number}", "patch"> }>,
+  options?: UseMutationOptions<ResponseBody<"/projects/{project}/reports/{number}", "patch">, ApiError, UpdateReportMutationVars>,
 ) {
   const qc = useQueryClient();
-  return useMutation<ResponseBody<"/projects/{project}/reports/{number}", "patch">, ApiError, { params: PathParams<"/projects/{project}/reports/{number}", "patch">; body: RequestBody<"/projects/{project}/reports/{number}", "patch"> }>({
-    mutationFn: (vars) => request("/projects/{project}/reports/{number}", "patch", { params: (vars as any).params, body: (vars as any).body }),
+  return useMutation<ResponseBody<"/projects/{project}/reports/{number}", "patch">, ApiError, UpdateReportMutationVars>({
+    mutationFn: (vars) => request("/projects/{project}/reports/{number}", "patch", { params: vars.params, body: vars.body }),
     ...options,
     onSuccess: (...args) => {
       const rule = INVALIDATIONS["useUpdateReportMutation"];
@@ -371,12 +393,13 @@ export function useUpdateReportMutation(
   });
 }
 
+export type DeleteReportMutationVars = { params: PathParams<"/projects/{project}/reports/{number}", "delete"> };
 export function useDeleteReportMutation(
-  options?: UseMutationOptions<ResponseBody<"/projects/{project}/reports/{number}", "delete">, ApiError, { params: PathParams<"/projects/{project}/reports/{number}", "delete"> }>,
+  options?: UseMutationOptions<ResponseBody<"/projects/{project}/reports/{number}", "delete">, ApiError, DeleteReportMutationVars>,
 ) {
   const qc = useQueryClient();
-  return useMutation<ResponseBody<"/projects/{project}/reports/{number}", "delete">, ApiError, { params: PathParams<"/projects/{project}/reports/{number}", "delete"> }>({
-    mutationFn: (vars) => request("/projects/{project}/reports/{number}", "delete", { params: (vars as any).params }),
+  return useMutation<ResponseBody<"/projects/{project}/reports/{number}", "delete">, ApiError, DeleteReportMutationVars>({
+    mutationFn: (vars) => request("/projects/{project}/reports/{number}", "delete", { params: vars.params }),
     ...options,
     onSuccess: (...args) => {
       const rule = INVALIDATIONS["useDeleteReportMutation"];
@@ -390,12 +413,13 @@ export function useDeleteReportMutation(
   });
 }
 
+export type GenerateReportMutationVars = { params: PathParams<"/projects/{project}/reports/{number}/generate", "post">; body: RequestBody<"/projects/{project}/reports/{number}/generate", "post"> };
 export function useGenerateReportMutation(
-  options?: UseMutationOptions<ResponseBody<"/projects/{project}/reports/{number}/generate", "post">, ApiError, { params: PathParams<"/projects/{project}/reports/{number}/generate", "post">; body: RequestBody<"/projects/{project}/reports/{number}/generate", "post"> }>,
+  options?: UseMutationOptions<ResponseBody<"/projects/{project}/reports/{number}/generate", "post">, ApiError, GenerateReportMutationVars>,
 ) {
   const qc = useQueryClient();
-  return useMutation<ResponseBody<"/projects/{project}/reports/{number}/generate", "post">, ApiError, { params: PathParams<"/projects/{project}/reports/{number}/generate", "post">; body: RequestBody<"/projects/{project}/reports/{number}/generate", "post"> }>({
-    mutationFn: (vars) => request("/projects/{project}/reports/{number}/generate", "post", { params: (vars as any).params, body: (vars as any).body }),
+  return useMutation<ResponseBody<"/projects/{project}/reports/{number}/generate", "post">, ApiError, GenerateReportMutationVars>({
+    mutationFn: (vars) => request("/projects/{project}/reports/{number}/generate", "post", { params: vars.params, body: vars.body }),
     ...options,
     onSuccess: (...args) => {
       const rule = INVALIDATIONS["useGenerateReportMutation"];
@@ -409,12 +433,13 @@ export function useGenerateReportMutation(
   });
 }
 
+export type RegenerateReportMutationVars = { params: PathParams<"/projects/{project}/reports/{number}/regenerate", "post">; body: RequestBody<"/projects/{project}/reports/{number}/regenerate", "post"> };
 export function useRegenerateReportMutation(
-  options?: UseMutationOptions<ResponseBody<"/projects/{project}/reports/{number}/regenerate", "post">, ApiError, { params: PathParams<"/projects/{project}/reports/{number}/regenerate", "post">; body: RequestBody<"/projects/{project}/reports/{number}/regenerate", "post"> }>,
+  options?: UseMutationOptions<ResponseBody<"/projects/{project}/reports/{number}/regenerate", "post">, ApiError, RegenerateReportMutationVars>,
 ) {
   const qc = useQueryClient();
-  return useMutation<ResponseBody<"/projects/{project}/reports/{number}/regenerate", "post">, ApiError, { params: PathParams<"/projects/{project}/reports/{number}/regenerate", "post">; body: RequestBody<"/projects/{project}/reports/{number}/regenerate", "post"> }>({
-    mutationFn: (vars) => request("/projects/{project}/reports/{number}/regenerate", "post", { params: (vars as any).params, body: (vars as any).body }),
+  return useMutation<ResponseBody<"/projects/{project}/reports/{number}/regenerate", "post">, ApiError, RegenerateReportMutationVars>({
+    mutationFn: (vars) => request("/projects/{project}/reports/{number}/regenerate", "post", { params: vars.params, body: vars.body }),
     ...options,
     onSuccess: (...args) => {
       const rule = INVALIDATIONS["useRegenerateReportMutation"];
@@ -428,12 +453,13 @@ export function useRegenerateReportMutation(
   });
 }
 
+export type FinalizeReportMutationVars = { params: PathParams<"/projects/{project}/reports/{number}/finalize", "post"> };
 export function useFinalizeReportMutation(
-  options?: UseMutationOptions<ResponseBody<"/projects/{project}/reports/{number}/finalize", "post">, ApiError, { params: PathParams<"/projects/{project}/reports/{number}/finalize", "post"> }>,
+  options?: UseMutationOptions<ResponseBody<"/projects/{project}/reports/{number}/finalize", "post">, ApiError, FinalizeReportMutationVars>,
 ) {
   const qc = useQueryClient();
-  return useMutation<ResponseBody<"/projects/{project}/reports/{number}/finalize", "post">, ApiError, { params: PathParams<"/projects/{project}/reports/{number}/finalize", "post"> }>({
-    mutationFn: (vars) => request("/projects/{project}/reports/{number}/finalize", "post", { params: (vars as any).params }),
+  return useMutation<ResponseBody<"/projects/{project}/reports/{number}/finalize", "post">, ApiError, FinalizeReportMutationVars>({
+    mutationFn: (vars) => request("/projects/{project}/reports/{number}/finalize", "post", { params: vars.params }),
     ...options,
     onSuccess: (...args) => {
       const rule = INVALIDATIONS["useFinalizeReportMutation"];
@@ -447,12 +473,13 @@ export function useFinalizeReportMutation(
   });
 }
 
+export type UnfinalizeReportMutationVars = { params: PathParams<"/projects/{project}/reports/{number}/unfinalize", "post"> };
 export function useUnfinalizeReportMutation(
-  options?: UseMutationOptions<ResponseBody<"/projects/{project}/reports/{number}/unfinalize", "post">, ApiError, { params: PathParams<"/projects/{project}/reports/{number}/unfinalize", "post"> }>,
+  options?: UseMutationOptions<ResponseBody<"/projects/{project}/reports/{number}/unfinalize", "post">, ApiError, UnfinalizeReportMutationVars>,
 ) {
   const qc = useQueryClient();
-  return useMutation<ResponseBody<"/projects/{project}/reports/{number}/unfinalize", "post">, ApiError, { params: PathParams<"/projects/{project}/reports/{number}/unfinalize", "post"> }>({
-    mutationFn: (vars) => request("/projects/{project}/reports/{number}/unfinalize", "post", { params: (vars as any).params }),
+  return useMutation<ResponseBody<"/projects/{project}/reports/{number}/unfinalize", "post">, ApiError, UnfinalizeReportMutationVars>({
+    mutationFn: (vars) => request("/projects/{project}/reports/{number}/unfinalize", "post", { params: vars.params }),
     ...options,
     onSuccess: (...args) => {
       const rule = INVALIDATIONS["useUnfinalizeReportMutation"];
@@ -466,12 +493,13 @@ export function useUnfinalizeReportMutation(
   });
 }
 
+export type ReportPdfMutationVars = { params: PathParams<"/projects/{project}/reports/{number}/pdf", "post"> };
 export function useReportPdfMutation(
-  options?: UseMutationOptions<ResponseBody<"/projects/{project}/reports/{number}/pdf", "post">, ApiError, { params: PathParams<"/projects/{project}/reports/{number}/pdf", "post"> }>,
+  options?: UseMutationOptions<ResponseBody<"/projects/{project}/reports/{number}/pdf", "post">, ApiError, ReportPdfMutationVars>,
 ) {
   const qc = useQueryClient();
-  return useMutation<ResponseBody<"/projects/{project}/reports/{number}/pdf", "post">, ApiError, { params: PathParams<"/projects/{project}/reports/{number}/pdf", "post"> }>({
-    mutationFn: (vars) => request("/projects/{project}/reports/{number}/pdf", "post", { params: (vars as any).params }),
+  return useMutation<ResponseBody<"/projects/{project}/reports/{number}/pdf", "post">, ApiError, ReportPdfMutationVars>({
+    mutationFn: (vars) => request("/projects/{project}/reports/{number}/pdf", "post", { params: vars.params }),
     ...options,
     onSuccess: (...args) => {
       const rule = INVALIDATIONS["useReportPdfMutation"];
@@ -485,59 +513,64 @@ export function useReportPdfMutation(
   });
 }
 
+export type ReportDebugQueryInput = { params: PathParams<"/projects/{project}/reports/{number}/debug", "get">; query?: QueryParams<"/projects/{project}/reports/{number}/debug", "get"> };
 export function useReportDebugQuery(
-  input: { params: PathParams<"/projects/{project}/reports/{number}/debug", "get">; query?: QueryParams<"/projects/{project}/reports/{number}/debug", "get"> },
+  input: ReportDebugQueryInput,
   options?: Omit<UseQueryOptions<ResponseBody<"/projects/{project}/reports/{number}/debug", "get">, ApiError>, 'queryKey' | 'queryFn'>,
 ) {
   return useQuery<ResponseBody<"/projects/{project}/reports/{number}/debug", "get">, ApiError>({
-    queryKey: ["reportDebug", (input as any).params, (input as any).query] as const,
-    queryFn: ({ signal }) => request("/projects/{project}/reports/{number}/debug", "get", { params: (input as any).params, query: (input as any).query, signal }),
+    queryKey: ["reportDebug", input.params, input.query] as const,
+    queryFn: ({ signal }) => request("/projects/{project}/reports/{number}/debug", "get", { params: input.params, query: input.query, signal }),
     ...options,
   });
 }
 
 // ─── p ───────────────────────────────────────────
+export type ResolveProjectSlugQueryInput = { params: PathParams<"/p/{project}", "get">; query?: QueryParams<"/p/{project}", "get"> };
 export function useResolveProjectSlugQuery(
-  input: { params: PathParams<"/p/{project}", "get">; query?: QueryParams<"/p/{project}", "get"> },
+  input: ResolveProjectSlugQueryInput,
   options?: Omit<UseQueryOptions<ResponseBody<"/p/{project}", "get">, ApiError>, 'queryKey' | 'queryFn'>,
 ) {
   return useQuery<ResponseBody<"/p/{project}", "get">, ApiError>({
-    queryKey: ["resolveProjectSlug", (input as any).params, (input as any).query] as const,
-    queryFn: ({ signal }) => request("/p/{project}", "get", { params: (input as any).params, query: (input as any).query, signal }),
+    queryKey: ["resolveProjectSlug", input.params, input.query] as const,
+    queryFn: ({ signal }) => request("/p/{project}", "get", { params: input.params, query: input.query, signal }),
     ...options,
   });
 }
 
 // ─── r ───────────────────────────────────────────
+export type ResolveReportSlugQueryInput = { params: PathParams<"/r/{report}", "get">; query?: QueryParams<"/r/{report}", "get"> };
 export function useResolveReportSlugQuery(
-  input: { params: PathParams<"/r/{report}", "get">; query?: QueryParams<"/r/{report}", "get"> },
+  input: ResolveReportSlugQueryInput,
   options?: Omit<UseQueryOptions<ResponseBody<"/r/{report}", "get">, ApiError>, 'queryKey' | 'queryFn'>,
 ) {
   return useQuery<ResponseBody<"/r/{report}", "get">, ApiError>({
-    queryKey: ["resolveReportSlug", (input as any).params, (input as any).query] as const,
-    queryFn: ({ signal }) => request("/r/{report}", "get", { params: (input as any).params, query: (input as any).query, signal }),
+    queryKey: ["resolveReportSlug", input.params, input.query] as const,
+    queryFn: ({ signal }) => request("/r/{report}", "get", { params: input.params, query: input.query, signal }),
     ...options,
   });
 }
 
 // ─── reports ───────────────────────────────────────────
+export type ReportNotesQueryInput = { params: PathParams<"/reports/{report}/notes", "get">; query?: QueryParams<"/reports/{report}/notes", "get"> };
 export function useReportNotesQuery(
-  input: { params: PathParams<"/reports/{report}/notes", "get">; query?: QueryParams<"/reports/{report}/notes", "get"> },
+  input: ReportNotesQueryInput,
   options?: Omit<UseQueryOptions<ResponseBody<"/reports/{report}/notes", "get">, ApiError>, 'queryKey' | 'queryFn'>,
 ) {
   return useQuery<ResponseBody<"/reports/{report}/notes", "get">, ApiError>({
-    queryKey: ["reportNotes", (input as any).params, (input as any).query] as const,
-    queryFn: ({ signal }) => request("/reports/{report}/notes", "get", { params: (input as any).params, query: (input as any).query, signal }),
+    queryKey: ["reportNotes", input.params, input.query] as const,
+    queryFn: ({ signal }) => request("/reports/{report}/notes", "get", { params: input.params, query: input.query, signal }),
     ...options,
   });
 }
 
+export type CreateNoteMutationVars = { params: PathParams<"/reports/{report}/notes", "post">; body: RequestBody<"/reports/{report}/notes", "post"> };
 export function useCreateNoteMutation(
-  options?: UseMutationOptions<ResponseBody<"/reports/{report}/notes", "post">, ApiError, { params: PathParams<"/reports/{report}/notes", "post">; body: RequestBody<"/reports/{report}/notes", "post"> }>,
+  options?: UseMutationOptions<ResponseBody<"/reports/{report}/notes", "post">, ApiError, CreateNoteMutationVars>,
 ) {
   const qc = useQueryClient();
-  return useMutation<ResponseBody<"/reports/{report}/notes", "post">, ApiError, { params: PathParams<"/reports/{report}/notes", "post">; body: RequestBody<"/reports/{report}/notes", "post"> }>({
-    mutationFn: (vars) => request("/reports/{report}/notes", "post", { params: (vars as any).params, body: (vars as any).body }),
+  return useMutation<ResponseBody<"/reports/{report}/notes", "post">, ApiError, CreateNoteMutationVars>({
+    mutationFn: (vars) => request("/reports/{report}/notes", "post", { params: vars.params, body: vars.body }),
     ...options,
     onSuccess: (...args) => {
       const rule = INVALIDATIONS["useCreateNoteMutation"];
@@ -551,12 +584,13 @@ export function useCreateNoteMutation(
   });
 }
 
+export type CreateVoiceNoteMutationVars = { params: PathParams<"/reports/{report}/notes/voice", "post">; body: RequestBody<"/reports/{report}/notes/voice", "post"> };
 export function useCreateVoiceNoteMutation(
-  options?: UseMutationOptions<ResponseBody<"/reports/{report}/notes/voice", "post">, ApiError, { params: PathParams<"/reports/{report}/notes/voice", "post">; body: RequestBody<"/reports/{report}/notes/voice", "post"> }>,
+  options?: UseMutationOptions<ResponseBody<"/reports/{report}/notes/voice", "post">, ApiError, CreateVoiceNoteMutationVars>,
 ) {
   const qc = useQueryClient();
-  return useMutation<ResponseBody<"/reports/{report}/notes/voice", "post">, ApiError, { params: PathParams<"/reports/{report}/notes/voice", "post">; body: RequestBody<"/reports/{report}/notes/voice", "post"> }>({
-    mutationFn: (vars) => request("/reports/{report}/notes/voice", "post", { params: (vars as any).params, body: (vars as any).body }),
+  return useMutation<ResponseBody<"/reports/{report}/notes/voice", "post">, ApiError, CreateVoiceNoteMutationVars>({
+    mutationFn: (vars) => request("/reports/{report}/notes/voice", "post", { params: vars.params, body: vars.body }),
     ...options,
     onSuccess: (...args) => {
       const rule = INVALIDATIONS["useCreateVoiceNoteMutation"];
@@ -571,12 +605,13 @@ export function useCreateVoiceNoteMutation(
 }
 
 // ─── notes ───────────────────────────────────────────
+export type UpdateNoteMutationVars = { params: PathParams<"/notes/{note}", "patch">; body: RequestBody<"/notes/{note}", "patch"> };
 export function useUpdateNoteMutation(
-  options?: UseMutationOptions<ResponseBody<"/notes/{note}", "patch">, ApiError, { params: PathParams<"/notes/{note}", "patch">; body: RequestBody<"/notes/{note}", "patch"> }>,
+  options?: UseMutationOptions<ResponseBody<"/notes/{note}", "patch">, ApiError, UpdateNoteMutationVars>,
 ) {
   const qc = useQueryClient();
-  return useMutation<ResponseBody<"/notes/{note}", "patch">, ApiError, { params: PathParams<"/notes/{note}", "patch">; body: RequestBody<"/notes/{note}", "patch"> }>({
-    mutationFn: (vars) => request("/notes/{note}", "patch", { params: (vars as any).params, body: (vars as any).body }),
+  return useMutation<ResponseBody<"/notes/{note}", "patch">, ApiError, UpdateNoteMutationVars>({
+    mutationFn: (vars) => request("/notes/{note}", "patch", { params: vars.params, body: vars.body }),
     ...options,
     onSuccess: (...args) => {
       const rule = INVALIDATIONS["useUpdateNoteMutation"];
@@ -590,12 +625,13 @@ export function useUpdateNoteMutation(
   });
 }
 
+export type DeleteNoteMutationVars = { params: PathParams<"/notes/{note}", "delete"> };
 export function useDeleteNoteMutation(
-  options?: UseMutationOptions<ResponseBody<"/notes/{note}", "delete">, ApiError, { params: PathParams<"/notes/{note}", "delete"> }>,
+  options?: UseMutationOptions<ResponseBody<"/notes/{note}", "delete">, ApiError, DeleteNoteMutationVars>,
 ) {
   const qc = useQueryClient();
-  return useMutation<ResponseBody<"/notes/{note}", "delete">, ApiError, { params: PathParams<"/notes/{note}", "delete"> }>({
-    mutationFn: (vars) => request("/notes/{note}", "delete", { params: (vars as any).params }),
+  return useMutation<ResponseBody<"/notes/{note}", "delete">, ApiError, DeleteNoteMutationVars>({
+    mutationFn: (vars) => request("/notes/{note}", "delete", { params: vars.params }),
     ...options,
     onSuccess: (...args) => {
       const rule = INVALIDATIONS["useDeleteNoteMutation"];
@@ -610,12 +646,13 @@ export function useDeleteNoteMutation(
 }
 
 // ─── files ───────────────────────────────────────────
+export type PresignFileMutationVars = { body: RequestBody<"/files/presign", "post"> };
 export function usePresignFileMutation(
-  options?: UseMutationOptions<ResponseBody<"/files/presign", "post">, ApiError, { body: RequestBody<"/files/presign", "post"> }>,
+  options?: UseMutationOptions<ResponseBody<"/files/presign", "post">, ApiError, PresignFileMutationVars>,
 ) {
   const qc = useQueryClient();
-  return useMutation<ResponseBody<"/files/presign", "post">, ApiError, { body: RequestBody<"/files/presign", "post"> }>({
-    mutationFn: (vars) => request("/files/presign", "post", { body: (vars as any).body }),
+  return useMutation<ResponseBody<"/files/presign", "post">, ApiError, PresignFileMutationVars>({
+    mutationFn: (vars) => request("/files/presign", "post", { body: vars.body }),
     ...options,
     onSuccess: (...args) => {
       const rule = INVALIDATIONS["usePresignFileMutation"];
@@ -629,12 +666,13 @@ export function usePresignFileMutation(
   });
 }
 
+export type CreateFileMutationVars = { body: RequestBody<"/files", "post"> };
 export function useCreateFileMutation(
-  options?: UseMutationOptions<ResponseBody<"/files", "post">, ApiError, { body: RequestBody<"/files", "post"> }>,
+  options?: UseMutationOptions<ResponseBody<"/files", "post">, ApiError, CreateFileMutationVars>,
 ) {
   const qc = useQueryClient();
-  return useMutation<ResponseBody<"/files", "post">, ApiError, { body: RequestBody<"/files", "post"> }>({
-    mutationFn: (vars) => request("/files", "post", { body: (vars as any).body }),
+  return useMutation<ResponseBody<"/files", "post">, ApiError, CreateFileMutationVars>({
+    mutationFn: (vars) => request("/files", "post", { body: vars.body }),
     ...options,
     onSuccess: (...args) => {
       const rule = INVALIDATIONS["useCreateFileMutation"];
@@ -648,24 +686,26 @@ export function useCreateFileMutation(
   });
 }
 
+export type FileUrlQueryInput = { params: PathParams<"/files/{id}/url", "get">; query?: QueryParams<"/files/{id}/url", "get"> };
 export function useFileUrlQuery(
-  input: { params: PathParams<"/files/{id}/url", "get">; query?: QueryParams<"/files/{id}/url", "get"> },
+  input: FileUrlQueryInput,
   options?: Omit<UseQueryOptions<ResponseBody<"/files/{id}/url", "get">, ApiError>, 'queryKey' | 'queryFn'>,
 ) {
   return useQuery<ResponseBody<"/files/{id}/url", "get">, ApiError>({
-    queryKey: ["fileUrl", (input as any).params, (input as any).query] as const,
-    queryFn: ({ signal }) => request("/files/{id}/url", "get", { params: (input as any).params, query: (input as any).query, signal }),
+    queryKey: ["fileUrl", input.params, input.query] as const,
+    queryFn: ({ signal }) => request("/files/{id}/url", "get", { params: input.params, query: input.query, signal }),
     ...options,
   });
 }
 
 // ─── voice ───────────────────────────────────────────
+export type TranscribeVoiceMutationVars = { body: RequestBody<"/voice/transcribe", "post"> };
 export function useTranscribeVoiceMutation(
-  options?: UseMutationOptions<ResponseBody<"/voice/transcribe", "post">, ApiError, { body: RequestBody<"/voice/transcribe", "post"> }>,
+  options?: UseMutationOptions<ResponseBody<"/voice/transcribe", "post">, ApiError, TranscribeVoiceMutationVars>,
 ) {
   const qc = useQueryClient();
-  return useMutation<ResponseBody<"/voice/transcribe", "post">, ApiError, { body: RequestBody<"/voice/transcribe", "post"> }>({
-    mutationFn: (vars) => request("/voice/transcribe", "post", { body: (vars as any).body }),
+  return useMutation<ResponseBody<"/voice/transcribe", "post">, ApiError, TranscribeVoiceMutationVars>({
+    mutationFn: (vars) => request("/voice/transcribe", "post", { body: vars.body }),
     ...options,
     onSuccess: (...args) => {
       const rule = INVALIDATIONS["useTranscribeVoiceMutation"];
@@ -679,12 +719,13 @@ export function useTranscribeVoiceMutation(
   });
 }
 
+export type SummarizeVoiceMutationVars = { body: RequestBody<"/voice/summarize", "post"> };
 export function useSummarizeVoiceMutation(
-  options?: UseMutationOptions<ResponseBody<"/voice/summarize", "post">, ApiError, { body: RequestBody<"/voice/summarize", "post"> }>,
+  options?: UseMutationOptions<ResponseBody<"/voice/summarize", "post">, ApiError, SummarizeVoiceMutationVars>,
 ) {
   const qc = useQueryClient();
-  return useMutation<ResponseBody<"/voice/summarize", "post">, ApiError, { body: RequestBody<"/voice/summarize", "post"> }>({
-    mutationFn: (vars) => request("/voice/summarize", "post", { body: (vars as any).body }),
+  return useMutation<ResponseBody<"/voice/summarize", "post">, ApiError, SummarizeVoiceMutationVars>({
+    mutationFn: (vars) => request("/voice/summarize", "post", { body: vars.body }),
     ...options,
     onSuccess: (...args) => {
       const rule = INVALIDATIONS["useSummarizeVoiceMutation"];
@@ -699,23 +740,25 @@ export function useSummarizeVoiceMutation(
 }
 
 // ─── settings ───────────────────────────────────────────
+export type AiSettingsQueryInput = { query?: QueryParams<"/settings/ai", "get"> } | void;
 export function useAiSettingsQuery(
-  input?: { query?: QueryParams<"/settings/ai", "get"> } | void,
+  input?: AiSettingsQueryInput,
   options?: Omit<UseQueryOptions<ResponseBody<"/settings/ai", "get">, ApiError>, 'queryKey' | 'queryFn'>,
 ) {
   return useQuery<ResponseBody<"/settings/ai", "get">, ApiError>({
-    queryKey: ["aiSettings", (input as any)?.query] as const,
-    queryFn: ({ signal }) => request("/settings/ai", "get", { query: (input as any)?.query, signal }),
+    queryKey: ["aiSettings", input?.query] as const,
+    queryFn: ({ signal }) => request("/settings/ai", "get", { query: input?.query, signal }),
     ...options,
   });
 }
 
+export type UpdateAiSettingsMutationVars = { body: RequestBody<"/settings/ai", "patch"> };
 export function useUpdateAiSettingsMutation(
-  options?: UseMutationOptions<ResponseBody<"/settings/ai", "patch">, ApiError, { body: RequestBody<"/settings/ai", "patch"> }>,
+  options?: UseMutationOptions<ResponseBody<"/settings/ai", "patch">, ApiError, UpdateAiSettingsMutationVars>,
 ) {
   const qc = useQueryClient();
-  return useMutation<ResponseBody<"/settings/ai", "patch">, ApiError, { body: RequestBody<"/settings/ai", "patch"> }>({
-    mutationFn: (vars) => request("/settings/ai", "patch", { body: (vars as any).body }),
+  return useMutation<ResponseBody<"/settings/ai", "patch">, ApiError, UpdateAiSettingsMutationVars>({
+    mutationFn: (vars) => request("/settings/ai", "patch", { body: vars.body }),
     ...options,
     onSuccess: (...args) => {
       const rule = INVALIDATIONS["useUpdateAiSettingsMutation"];

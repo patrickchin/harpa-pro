@@ -22,7 +22,7 @@ interface NotesTabPaneProps {
 
 export const NotesTabPane = forwardRef<ScrollView, NotesTabPaneProps>(
   function NotesTabPane({ width }, ref) {
-    const { timeline, notes, members, voice, preview } = useGenerateReport();
+    const { timeline, notes, members, voice, photo, preview } = useGenerateReport();
 
     return (
       <View style={{ width }} className="flex-1">
@@ -40,6 +40,8 @@ export const NotesTabPane = forwardRef<ScrollView, NotesTabPaneProps>(
             onEditNote={notes.canEdit ? notes.update : undefined}
             onRetryVoice={voice.retry}
             onOpenPhoto={(fileId) => preview.openPhoto(fileId)}
+            onRetryPhotoUpload={photo.retryUpload}
+            onCancelPhotoUpload={photo.cancelUpload}
           />
 
           {timeline.items.length === 0 && !timeline.isLoading ? (

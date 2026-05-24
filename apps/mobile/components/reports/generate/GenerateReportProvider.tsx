@@ -33,6 +33,7 @@ import type { GeneratedSiteReport } from '@harpa/report-core';
 import { useInlineRecorder } from '@/features/voice/useInlineRecorder';
 import { useVoiceNotePipeline } from '@/features/voice/useVoiceNotePipeline';
 import { useAudioPlayback } from '@/lib/audio/AudioPlaybackProvider';
+import { usePhotoUploadEntries } from '@/lib/uploads/usePhotoUploadEntries';
 import type { RecorderSnapshot } from '@/features/voice/recorder-types';
 import { AppDialogSheet } from '@/components/primitives/AppDialogSheet';
 import { UsageLimitDialog } from '@/components/account/UsageLimitDialog';
@@ -189,6 +190,10 @@ interface PhotoSurface {
   handleMenuPick: (
     category: 'image' | 'document',
   ) => Promise<void> | void;
+  /** Retry a failed image upload job. */
+  retryUpload: (jobId: string) => void;
+  /** Cancel / dismiss an in-flight or failed image upload job. */
+  cancelUpload: (jobId: string) => void;
 }
 
 interface UISurface {
@@ -452,10 +457,21 @@ export function GenerateReportProvider({
   // built from the server response until the invalidated `reportNotes`
   // refetch lands the real row — otherwise the card flashes out and
   // back in during that gap.
+  // Photo equivalent: image rows in flight via `useFileUpload()` jobs
+  // are surfaced through `usePhotoUploadEntries` so a `PendingPhotoCard`
+  // appears the instant the user picks/snaps a photo (Pitfall 12 — no
+  // Alert.alert, no "did it work?" anxiety). Failed jobs stay visible
+  // until the user retries or dismisses.
+  const photoUploads = usePhotoUploadEntries(reportId);
   const timelineItems = useMemo<readonly NoteEntry[]>(() => {
     const { step, note: savedNote, error, fileId, capture } = voicePipeline.state;
-    if (step === 'idle' || !reportId) return notes;
-    if (savedNote && notes.some((n) => n.id === savedNote.id)) return notes;
+    const photoEntries = photoUploads.entries;
+    const baseWithPhotos =
+      photoEntries.length > 0 ? [...notes, ...photoEntries] : notes;
+    if (step === 'idle' || !reportId) return baseWithPhotos;
+    if (savedNote && notes.some((n) => n.id === savedNote.id)) {
+      return baseWithPhotos;
+    }
 
     const synthetic: NoteEntry = savedNote
       ? {
@@ -480,8 +496,8 @@ export function GenerateReportProvider({
           fileId,
           durationSec: capture?.durationSec ?? null,
         };
-    return [...notes, synthetic];
-  }, [notes, reportId, voicePipeline.state]);
+    return [...baseWithPhotos, synthetic];
+  }, [notes, reportId, voicePipeline.state, photoUploads.entries]);
 
   const handleRetryVoice = useCallback(() => {
     void voicePipeline.retry();
@@ -686,6 +702,8 @@ export function GenerateReportProvider({
       photo: {
         handleCameraCapture: () => onCameraCapture?.(),
         handleMenuPick: (category) => onPickAttachment?.(category),
+        retryUpload: photoUploads.retry,
+        cancelUpload: photoUploads.cancel,
       },
       preview: {
         openFile: handleOpenFile,
@@ -759,6 +777,8 @@ export function GenerateReportProvider({
       closePhoto,
       onCameraCapture,
       onPickAttachment,
+      photoUploads.retry,
+      photoUploads.cancel,
     ],
   );
 

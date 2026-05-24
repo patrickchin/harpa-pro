@@ -25,6 +25,23 @@ vi.mock('expo-image', () => ({
   Image: (props: Record<string, unknown>) => null,
 }));
 
+// `ReportNotesPane` now drives delete through `useOptimisticDeleteNote`,
+// which transitively imports `@/lib/auth` and `@/lib/uuid`. Those touch
+// native modules at init (`expo-secure-store`, `expo-crypto`) that
+// aren't safe under the node vitest env. Same shape as
+// `apps/mobile/lib/api/optimistic.test.tsx`.
+vi.mock('expo-secure-store', () => ({
+  getItemAsync: vi.fn(async () => null),
+  setItemAsync: vi.fn(async () => undefined),
+  deleteItemAsync: vi.fn(async () => undefined),
+}));
+vi.mock('expo-crypto', () => ({
+  randomUUID: () => '00000000-0000-4000-8000-000000000000',
+}));
+vi.mock('@/lib/auth', () => ({
+  useAuthSession: () => ({ user: { id: 'usr_test12345' } }),
+}));
+
 // Voice rows mount `VoiceNoteRow` which calls `useAudioPlayback()`.
 // We exercise the real `AudioPlaybackProvider` (Pitfall 13) with a
 // node-safe `playerFactory` stub instead of mocking the hook.

@@ -4,21 +4,24 @@ Props-driven body components — one per shipped screen.
 
 ## Why this directory exists
 
-Every screen the v4 app ships lives here as a presentational component
+Each screen the v4 app ships lives here as a presentational component
 that takes typed props and has **no** API / auth / persistence
-dependencies of its own. Two thin route files mount each body:
+dependencies of its own. A thin route file mounts each body:
 
 - `app/(auth|app)/<path>.tsx` — the real route. Wires real hooks
   (auth session, generated React Query hooks, navigation params)
   and passes them as props.
-- `app/(dev)/<name>.tsx` — the dev mirror. Imports the same body
-  with hand-crafted mock props. Listed in the dev gallery
-  (`app/(dev)/index.tsx`) for fast manual visual review against
-  `../haru3-reports/apps/mobile@dev`.
 
-This is the canonical workflow for catching cosmetic drift
-([Pitfall 3](../../../docs/v4/pitfalls.md#pitfall-3--mobile-shell-drifted-from-the-visual-design))
-— there is no automated screenshot-diff gate.
+The body/route split keeps screens testable in isolation (snapshot
++ behaviour tests run against the body with mock props, no Hono /
+network / native modules required) and makes per-screen wiring
+errors land in the thin route file where they're easy to spot.
+
+> Note: the `app/(dev)/<name>.tsx` dev-gallery mirrors that used to
+> live alongside each route were removed once UI parity stopped
+> being a goal (see `docs/v4/plan-p3-feature-build.md`). The
+> body/route split itself remains useful and is still required for
+> new screens.
 
 ## Body component rules
 

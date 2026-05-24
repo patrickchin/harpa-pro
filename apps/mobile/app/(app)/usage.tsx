@@ -1,14 +1,20 @@
 /**
- * Usage route — wires `/me/usage` into the props-only `Usage` body.
- *
- * The v4 API returns `{ months: [{ month, reports, voiceNotes }],
- * totals }`; per-event timeline + per-model breakdown + the
- * `UsageBarChart` are deferred to P4 (route passes `chart={null}`).
+ * Usage route — wires `/me/usage` (aggregates) + `/me/usage/events`
+ * (per-call timeline) into the props-only `Usage` body.
  */
 import { useRouter, type Href } from 'expo-router';
 
-import { Usage, type UsageMonthlyRow, type UsageByModelRow } from '@/screens/usage';
-import { useMeUsageQuery, useMeLimitsQuery } from '@/lib/api/hooks';
+import {
+  Usage,
+  type UsageMonthlyRow,
+  type UsageByModelRow,
+  type RecentUsageEvent,
+} from '@/screens/usage';
+import {
+  useMeUsageQuery,
+  useMeLimitsQuery,
+  useMeUsageEventsQuery,
+} from '@/lib/api/hooks';
 import { useRefresh } from '@/lib/use-refresh';
 import { safeBack } from '@/lib/nav/safe-back';
 
@@ -16,7 +22,14 @@ export default function UsageRoute() {
   const router = useRouter();
   const usageQuery = useMeUsageQuery();
   const limitsQuery = useMeLimitsQuery();
-  const { refreshing, onRefresh } = useRefresh([usageQuery.refetch, limitsQuery.refetch]);
+  // Show the most recent 20 LLM calls. Single page is enough for the
+  // overview screen; a paginated drilldown can land later if needed.
+  const eventsQuery = useMeUsageEventsQuery({ query: { limit: 20 } });
+  const { refreshing, onRefresh } = useRefresh([
+    usageQuery.refetch,
+    limitsQuery.refetch,
+    eventsQuery.refetch,
+  ]);
 
   const tokensByMonth = new Map<string, { input: number; output: number; cached: number; seconds: number; calls: number }>();
   for (const t of usageQuery.data?.usageTokens ?? []) {
@@ -57,11 +70,27 @@ export default function UsageRoute() {
 
   const byModel: ReadonlyArray<UsageByModelRow> = usageQuery.data?.usageByModel ?? [];
 
+  const recentEvents: ReadonlyArray<RecentUsageEvent> = (eventsQuery.data?.items ?? []).map(
+    (e) => ({
+      id: e.id,
+      createdAt: e.createdAt,
+      vendor: e.vendor,
+      model: e.model,
+      operation: e.operation,
+      inputTokens: e.inputTokens,
+      outputTokens: e.outputTokens,
+      cachedTokens: e.cachedTokens,
+      inputSeconds: e.inputSeconds,
+      status: e.status,
+    }),
+  );
+
   return (
     <Usage
       history={history}
       totals={totals}
       byModel={byModel}
+      recentEvents={recentEvents}
       isLoading={usageQuery.isLoading}
       refreshing={refreshing}
       onRefresh={onRefresh}

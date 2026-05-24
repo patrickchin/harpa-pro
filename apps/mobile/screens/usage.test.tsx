@@ -17,7 +17,7 @@ import { describe, expect, it, vi } from 'vitest';
 import TestRenderer, { act } from 'react-test-renderer';
 import { View } from 'react-native';
 
-import { Usage, type UsageMonthlyRow } from './usage';
+import { Usage, type UsageMonthlyRow, type RecentUsageEvent } from './usage';
 
 function render(el: React.ReactElement): TestRenderer.ReactTestRenderer {
   let tree!: TestRenderer.ReactTestRenderer;
@@ -161,6 +161,70 @@ describe('Usage', () => {
       tree.root.findByProps({ testID: 'btn-back' }).props.onPress(),
     );
     expect(onBack).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders Recent Activity card when recentEvents is non-empty', () => {
+    const events: ReadonlyArray<RecentUsageEvent> = [
+      {
+        id: 'lue_chat',
+        createdAt: '2024-11-15T10:00:00.000Z',
+        vendor: 'openai',
+        model: 'gpt-4o-mini',
+        operation: 'chat',
+        inputTokens: 200,
+        outputTokens: 50,
+        cachedTokens: 10,
+        inputSeconds: null,
+        status: 'ok',
+      },
+      {
+        id: 'lue_transcribe',
+        createdAt: '2024-11-15T09:00:00.000Z',
+        vendor: 'openai',
+        model: 'whisper-1',
+        operation: 'transcribe',
+        inputTokens: 0,
+        outputTokens: 0,
+        cachedTokens: 0,
+        inputSeconds: 42,
+        status: 'ok',
+      },
+      {
+        id: 'lue_error',
+        createdAt: '2024-11-15T08:00:00.000Z',
+        vendor: 'kimi',
+        model: 'moonshot-v1-8k',
+        operation: 'chat',
+        inputTokens: 0,
+        outputTokens: 0,
+        cachedTokens: 0,
+        inputSeconds: null,
+        status: 'error',
+      },
+    ];
+    const tree = render(<Usage {...defaults} recentEvents={events} />);
+    expect(() =>
+      tree.root.findByProps({ testID: 'usage-recent-events' }),
+    ).not.toThrow();
+    const text = collectText(tree.toJSON());
+    expect(text).toContain('Recent Activity');
+    expect(text).toContain('gpt-4o-mini');
+    expect(text).toContain('whisper-1');
+    expect(text).toContain('moonshot-v1-8k');
+    // Chat row totals input+output tokens (200 + 50 = 250).
+    expect(text).toContain('250');
+    // Transcribe row shows formatted seconds, not tokens.
+    expect(text).toContain('42s');
+    // Error row flagged in subtitle.
+    expect(text).toContain('failed');
+  });
+
+  it('hides Recent Activity card when recentEvents is empty', () => {
+    const tree = render(<Usage {...defaults} recentEvents={[]} />);
+    expect(
+      tree.root.findAllByProps({ testID: 'usage-recent-events' }),
+    ).toHaveLength(0);
+    expect(collectText(tree.toJSON())).not.toContain('Recent Activity');
   });
 
   it('matches snapshot at default props', () => {

@@ -7722,6 +7722,12 @@
                           "body",
                           "fileId",
                           "transcript",
+                          "title",
+                          "summary",
+                          "durationSec",
+                          "language",
+                          "transcribeProvider",
+                          "transcribedAt",
                           "createdAt",
                           "updatedAt"
                         ]
@@ -7966,6 +7972,12 @@
                     "body",
                     "fileId",
                     "transcript",
+                    "title",
+                    "summary",
+                    "durationSec",
+                    "language",
+                    "transcribeProvider",
+                    "transcribedAt",
                     "createdAt",
                     "updatedAt"
                   ]
@@ -8214,6 +8226,12 @@
                     "body",
                     "fileId",
                     "transcript",
+                    "title",
+                    "summary",
+                    "durationSec",
+                    "language",
+                    "transcribeProvider",
+                    "transcribedAt",
                     "createdAt",
                     "updatedAt"
                   ]
@@ -9051,6 +9069,12 @@
                     "body",
                     "fileId",
                     "transcript",
+                    "title",
+                    "summary",
+                    "durationSec",
+                    "language",
+                    "transcribeProvider",
+                    "transcribedAt",
                     "createdAt",
                     "updatedAt"
                   ]

@@ -136,6 +136,16 @@ export function useOptimisticCreateNote() {
         body: vars.body.kind === 'text' ? (vars.body.body ?? null) : null,
         fileId: null,
         transcript: null,
+        // Generic + voice-only fields are nullable on the wire and the
+        // server returns the keys with `null` for unset values. We
+        // mirror that so the local optimistic row is shape-identical
+        // to what the server will return on success.
+        title: null,
+        summary: null,
+        durationSec: null,
+        language: null,
+        transcribeProvider: null,
+        transcribedAt: null,
         createdAt: now,
         updatedAt: now,
       };

@@ -59,24 +59,12 @@ jobs:
       - run: pnpm --filter @harpa/api-contract build
 
       # Provider keys live in Doppler (config `dev`), not GH secrets.
-      # Same pattern as api-dev.yml.
-      - uses: dopplerhq/cli-action@v3
-      - name: Resolve provider keys from Doppler
-        env:
-          DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN_DEV }}
-        run: |
-          set -euo pipefail
-          OPENAI_API_KEY=$(doppler secrets get OPENAI_API_KEY --plain)
-          GROQ_API_KEY=$(doppler secrets get GROQ_API_KEY --plain 2>/dev/null || echo "")
-          if [ -z "$OPENAI_API_KEY" ] || [ "$OPENAI_API_KEY" = "null" ]; then
-            echo "::error::OPENAI_API_KEY not found in Doppler 'dev' config."
-            exit 1
-          fi
-          # Mask before exporting so the value can't leak into later logs.
-          echo "::add-mask::$OPENAI_API_KEY"
-          [ -n "$GROQ_API_KEY" ] && echo "::add-mask::$GROQ_API_KEY"
-          echo "OPENAI_API_KEY=$OPENAI_API_KEY" >> "$GITHUB_ENV"
-          echo "GROQ_API_KEY=$GROQ_API_KEY" >> "$GITHUB_ENV"
+      # `secrets-fetch-action` injects them as env vars with automatic
+      # masking — cleaner than shelling out to the Doppler CLI.
+      - uses: dopplerhq/secrets-fetch-action@v2.0.0
+        with:
+          doppler-token: ${{ secrets.DOPPLER_TOKEN_DEV }}
+          inject-env-vars: true
 
       - name: Run live-LLM tests against real OpenAI
         run: pnpm --filter @harpa/api test:live

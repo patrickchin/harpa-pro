@@ -501,9 +501,14 @@ The following are explicit non-goals here and tracked in
    upgrades (Phase 4).
 6. ~~**Mobile + Maestro work is deferred** to a follow-up commit
    (per-screen UI, banners, "limit hit" sheet).~~ Done for the mobile
-   primitives in Phase 3. Maestro flows `14a-limit-hit-dialog` +
-   `14b-near-limit-toast` and the inbound `X-Usage-Warning` toast
-   consumer are still deferred to keep this commit focused.
+   primitives in Phase 3. Maestro flows landed as placeholders in
+   `.maestro/p3-14a-usage-limits-card.yaml` (runnable today),
+   `.maestro/p3-14b-usage-limit-dialog.yaml` (needs `reset-db.sh
+   --seed-at-limit`), and `.maestro/p3-14c-near-limit-toast.yaml`
+   (needs a toast consumer of `X-Usage-Warning` — not yet wired).
+   None are currently in the regression journey; the inbound
+   `X-Usage-Warning` toast consumer itself is still deferred to
+   keep this commit focused.
 
 ## 12. Implementation checklist
 

@@ -36,7 +36,6 @@
 import { useCallback, useRef, useState, type ReactNode } from 'react';
 import {
   ActivityIndicator,
-  Image,
   Linking,
   Pressable,
   ScrollView,
@@ -44,6 +43,7 @@ import {
   Text,
   View,
 } from 'react-native';
+import { CachedImage } from '@/components/ui/CachedImage';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import {
@@ -212,8 +212,8 @@ export function CameraCapture(props: CameraCaptureProps) {
       } else if (cameraRef.current) {
         const photo: CameraCapturedPicture | undefined =
           await cameraRef.current.takePictureAsync({
-            quality: 0.9,
-            skipProcessing: false,
+            quality: 0.8,
+            skipProcessing: true,
             exif: false,
             imageType: 'jpg',
           });
@@ -224,12 +224,12 @@ export function CameraCapture(props: CameraCaptureProps) {
       if (item) {
         setCaptures((prev) => [...prev, item!]);
         if (saveToCameraRoll && saveCaptureToCameraRoll) {
-          try {
-            await saveCaptureToCameraRoll(item.uri);
-          } catch {
-            // Best-effort — saving to the camera roll shouldn't block
-            // the capture from joining the report.
-          }
+          // Fire-and-forget — the MediaLibrary write shouldn't block
+          // the shutter from releasing for the next shot. Errors are
+          // swallowed (best-effort save).
+          void Promise.resolve(saveCaptureToCameraRoll(item.uri)).catch(
+            () => {},
+          );
         }
       }
     } catch {
@@ -506,7 +506,15 @@ export function CameraCapture(props: CameraCaptureProps) {
                 testID={`btn-camera-thumb-${idx}`}
                 className="w-14 h-14 rounded-lg overflow-hidden border-2 border-white"
               >
-                <Image source={{ uri: c.uri }} className="w-full h-full" />
+                <CachedImage
+                  source={{ uri: c.uri }}
+                  intrinsicWidth={c.width}
+                  intrinsicHeight={c.height}
+                  contentFit="cover"
+                  transition={0}
+                  cachePolicy="memory"
+                  style={styles.thumbImage}
+                />
               </Pressable>
             ))}
           </ScrollView>
@@ -632,6 +640,7 @@ const styles = StyleSheet.create({
   iconButton: { backgroundColor: 'rgba(0,0,0,0.35)' },
   toggleOn: { backgroundColor: 'rgba(229, 93, 34, 0.85)' },
   stripContent: { gap: 6, alignItems: 'center' },
+  thumbImage: { width: '100%', height: '100%' },
   shutter: {
     width: 78,
     height: 78,

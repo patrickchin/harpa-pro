@@ -140,14 +140,15 @@ Push to dev
   ↳ migrations applied to `dev`
   ↳ Fly deploy → harpa-pro-api-dev (api-dev.yml)
   ↳ marketing deploy to CF Pages dev branch (marketing-dev.yml)
+  ↳ EAS Update → `preview` channel (mobile-ota-dev.yml)
   ↳ EAS staging build (TestFlight internal — planned)
 
 Push to main (production)
   ↳ migrations applied to Neon `main`
   ↳ Fly deploy → harpa-pro-api (api-prod.yml)
   ↳ marketing deploy to CF Pages production (marketing-prod.yml)
+  ↳ EAS Update → `production` channel (mobile-ota-prod.yml)
   ↳ EAS production build (manual approve — planned)
-  ↳ EAS Update for JS-only patches
 ```
 
 ## Dev environment bootstrap (one-time)

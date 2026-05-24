@@ -73,49 +73,27 @@ exports[`CameraCapture > matches snapshot — granted, empty 1`] = `
     </rn-View>
   </rn-GestureDetector>
   <rn-SafeAreaView
+    className="absolute inset-0 justify-end"
     pointerEvents="box-none"
-    style={
-      {
-        "bottom": 0,
-        "justifyContent": "flex-end",
-        "left": 0,
-        "position": "absolute",
-        "right": 0,
-        "top": 0,
-      }
-    }
   >
     <rn-View
-      className="px-4 flex-row items-center justify-between"
+      className="absolute top-0 left-0 right-0 px-4 flex-row items-center justify-between bg-black/35"
       style={
         {
-          "alignItems": "center",
-          "backgroundColor": "rgba(0,0,0,0.35)",
-          "flexDirection": "row",
-          "height": 56,
-          "justifyContent": "space-between",
-          "left": 0,
-          "paddingHorizontal": 16,
-          "position": "absolute",
-          "right": 0,
-          "top": 0,
+          "height": 100,
+          "paddingTop": 44,
         }
       }
     >
       <rn-Pressable
         accessibilityLabel="Cancel"
         accessibilityRole="button"
-        className="w-11 h-11 rounded-full items-center justify-center"
+        className="w-11 h-11 rounded-full items-center justify-center bg-black/35"
         onPress={[Function]}
-        style={
-          {
-            "backgroundColor": "rgba(0,0,0,0.35)",
-          }
-        }
         testID="btn-camera-cancel"
       >
         <lucide-X
-          color="#ffffff"
+          color="#f8f6f1"
           size={24}
         />
       </rn-Pressable>
@@ -125,17 +103,12 @@ exports[`CameraCapture > matches snapshot — granted, empty 1`] = `
         <rn-Pressable
           accessibilityLabel="Flash off"
           accessibilityRole="button"
-          className="w-11 h-11 rounded-full items-center justify-center"
+          className="w-11 h-11 rounded-full items-center justify-center bg-black/35"
           onPress={[Function]}
-          style={
-            {
-              "backgroundColor": "rgba(0,0,0,0.35)",
-            }
-          }
           testID="btn-camera-flash"
         >
           <lucide-ZapOff
-            color="#ffffff"
+            color="#f8f6f1"
             size={22}
           />
           <rn-Text
@@ -154,29 +127,19 @@ exports[`CameraCapture > matches snapshot — granted, empty 1`] = `
     >
       <rn-ScrollView
         className="flex-grow-0 flex-shrink"
-        contentContainerStyle={
-          {
-            "alignItems": "center",
-            "gap": 6,
-          }
-        }
+        contentContainerClassName="gap-1.5 items-center"
         horizontal={true}
         showsHorizontalScrollIndicator={false}
       />
       <rn-Pressable
         accessibilityLabel="Flip camera"
         accessibilityRole="button"
-        className="w-11 h-11 rounded-full items-center justify-center ml-auto"
+        className="w-11 h-11 rounded-full items-center justify-center ml-auto bg-black/35"
         onPress={[Function]}
-        style={
-          {
-            "backgroundColor": "rgba(0,0,0,0.35)",
-          }
-        }
         testID="btn-camera-flip"
       >
         <lucide-RefreshCw
-          color="#ffffff"
+          color="#f8f6f1"
           size={22}
         />
       </rn-Pressable>
@@ -187,20 +150,14 @@ exports[`CameraCapture > matches snapshot — granted, empty 1`] = `
       <rn-Pressable
         accessibilityLabel="Take photo"
         accessibilityRole="button"
+        className="w-[78px] h-[78px] rounded-full border-4 border-white items-center justify-center "
         disabled={false}
         onPress={[Function]}
         style={[Function]}
         testID="btn-camera-shutter"
       >
         <rn-View
-          style={
-            {
-              "backgroundColor": "#ffffff",
-              "borderRadius": 30,
-              "height": 60,
-              "width": 60,
-            }
-          }
+          className="w-[60px] h-[60px] rounded-full bg-white"
         />
       </rn-Pressable>
     </rn-View>

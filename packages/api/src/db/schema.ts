@@ -33,6 +33,7 @@ export const users = authSchema.table('users', {
   displayName: text('display_name'),
   companyName: text('company_name'),
   isAdmin: boolean('is_admin').notNull().default(false),
+  plan: text('plan').notNull().default('free'),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 });
@@ -219,6 +220,25 @@ export const llmUsageEvents = appSchema.table('llm_usage_events', {
   fixtureMode: llmFixtureModeEnum('fixture_mode').notNull(),
   status: llmUsageStatusEnum('status').notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
+/**
+ * Per-user admin-granted limit override. NULL columns fall through to
+ * the user's plan in `PLAN_LIMITS`; `-1` is the explicit "unbounded"
+ * sentinel (serialised on the wire as `null`). See
+ * docs/v4/arch-usage-limits.md §3.3.
+ */
+export const userLimitOverrides = appSchema.table('user_limit_overrides', {
+  userId: text('user_id').primaryKey(),
+  reportGenerate: integer('report_generate'),
+  voiceTranscribe: integer('voice_transcribe'),
+  voiceSummarize: integer('voice_summarize'),
+  aiInputTokens: bigint('ai_input_tokens', { mode: 'number' }),
+  aiOutputTokens: bigint('ai_output_tokens', { mode: 'number' }),
+  reason: text('reason').notNull(),
+  grantedBy: text('granted_by').notNull(),
+  grantedAt: timestamp('granted_at', { withTimezone: true }).defaultNow().notNull(),
+  expiresAt: timestamp('expires_at', { withTimezone: true }),
 });
 
 /** Re-export the SQL helper for use in raw policies / migrations. */

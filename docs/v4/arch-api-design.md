@@ -33,7 +33,8 @@ update.
 | POST | `/auth/logout` | Delete session |
 | GET | `/me` | Current user profile |
 | PATCH | `/me` | Update profile (name, company) |
-| GET | `/me/usage` | Per-month report counts (for usage screen) |
+| GET | `/me/usage` | Per-month report counts (for usage screen). Includes effective `plan` + `limits` array — see [arch-usage-limits.md](arch-usage-limits.md). |
+| GET | `/me/limits` | Effective per-bucket caps + current usage. See [arch-usage-limits.md §5.4](arch-usage-limits.md). |
 
 ### Projects (`/projects`, authed)
 
@@ -92,6 +93,15 @@ update.
 |---|---|---|
 | GET | `/settings/ai` | Per-user AI provider preference |
 | PATCH | `/settings/ai` | Update |
+
+### Admin (`/admin`, authed + `auth.users.is_admin = true`)
+
+| Method | Path | Purpose |
+|---|---|---|
+| GET | `/admin/waitlist.csv` | Export waitlist (marketing P1). |
+| PATCH | `/admin/users/:id/plan` | Change a user's plan tier. See [arch-usage-limits.md](arch-usage-limits.md). |
+| PUT | `/admin/users/:id/limit-overrides` | Upsert per-bucket override. See [arch-usage-limits.md](arch-usage-limits.md). |
+| DELETE | `/admin/users/:id/limit-overrides` | Drop the override row. |
 
 ## Conventions
 

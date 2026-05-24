@@ -716,6 +716,83 @@ export interface paths {
                                 outputTokens: number;
                                 cachedTokens: number;
                             }[];
+                            /** @enum {string} */
+                            plan?: "free" | "pro" | "enterprise";
+                            limits?: {
+                                /** @enum {string} */
+                                kind: "report_generate" | "voice_transcribe" | "voice_summarize" | "ai_input_tokens" | "ai_output_tokens";
+                                limit: number | null;
+                                used: number;
+                                remaining: number | null;
+                                resetAt: string;
+                                /** @enum {string} */
+                                plan: "free" | "pro" | "enterprise";
+                                overridden: boolean;
+                            }[];
+                        };
+                    };
+                };
+                /** @description Unauthorized. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                            requestId?: string;
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/limits": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Effective limits. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {string} */
+                            plan: "free" | "pro" | "enterprise";
+                            buckets: {
+                                /** @enum {string} */
+                                kind: "report_generate" | "voice_transcribe" | "voice_summarize" | "ai_input_tokens" | "ai_output_tokens";
+                                limit: number | null;
+                                used: number;
+                                remaining: number | null;
+                                resetAt: string;
+                                /** @enum {string} */
+                                plan: "free" | "pro" | "enterprise";
+                                overridden: boolean;
+                            }[];
                         };
                     };
                 };

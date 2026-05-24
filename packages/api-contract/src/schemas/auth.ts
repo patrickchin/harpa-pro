@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { isoDateTime, phone } from './_shared.js';
 import { userId } from './ids.js';
+import { limitState, plan } from './usage-limits.js';
 
 export const otpStartRequest = z.object({ phone });
 export const otpStartResponse = z.object({ verificationId: z.string() });
@@ -83,4 +84,11 @@ export const usageResponse = z.object({
   }),
   usageTokens: z.array(usageTokenMonth),
   usageByModel: z.array(usageByModelRow),
+  /**
+   * Effective per-bucket caps + current usage. Optional for
+   * backwards-compatibility with pre-v0.2 mobile clients; new
+   * clients always render it. See docs/v4/arch-usage-limits.md §5.4.
+   */
+  plan: plan.optional(),
+  limits: z.array(limitState).optional(),
 });

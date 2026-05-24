@@ -3,6 +3,7 @@ import { HTTPException } from 'hono/http-exception';
 import { ZodError } from 'zod';
 import type { AppEnv } from '../app.js';
 import { AiProviderError } from '../services/ai.js';
+import { UsageLimitExceededError } from '../services/usage-limits.js';
 
 /**
  * Maps thrown errors to the standard error envelope:
@@ -23,6 +24,24 @@ export function errorMapper(): ErrorHandler<AppEnv> {
           requestId,
         },
         400,
+      );
+    }
+
+    if (err instanceof UsageLimitExceededError) {
+      // 403 — NOT 429. Monthly reset, not retry-after. The `details`
+      // payload mirrors the limit state so the mobile client can
+      // render "X of Y used, resets <resetAt>" without a follow-up
+      // GET /me/limits round trip. See docs/v4/arch-usage-limits.md §5.
+      return c.json(
+        {
+          error: {
+            code: 'usage_limit_exceeded',
+            message: `Monthly limit reached for ${err.state.kind}.`,
+            details: err.state,
+          },
+          requestId,
+        },
+        403,
       );
     }
 

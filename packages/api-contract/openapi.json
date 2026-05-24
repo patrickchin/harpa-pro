@@ -1270,6 +1270,67 @@
                           "cachedTokens"
                         ]
                       }
+                    },
+                    "plan": {
+                      "type": "string",
+                      "enum": [
+                        "free",
+                        "pro",
+                        "enterprise"
+                      ]
+                    },
+                    "limits": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "report_generate",
+                              "voice_transcribe",
+                              "voice_summarize",
+                              "ai_input_tokens",
+                              "ai_output_tokens"
+                            ]
+                          },
+                          "limit": {
+                            "type": "integer",
+                            "nullable": true
+                          },
+                          "used": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "remaining": {
+                            "type": "integer",
+                            "nullable": true
+                          },
+                          "resetAt": {
+                            "type": "string"
+                          },
+                          "plan": {
+                            "type": "string",
+                            "enum": [
+                              "free",
+                              "pro",
+                              "enterprise"
+                            ]
+                          },
+                          "overridden": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "limit",
+                          "used",
+                          "remaining",
+                          "resetAt",
+                          "plan",
+                          "overridden"
+                        ]
+                      }
                     }
                   },
                   "required": [
@@ -1277,6 +1338,130 @@
                     "totals",
                     "usageTokens",
                     "usageByModel"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    },
+                    "requestId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/me/limits": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Effective limits.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "plan": {
+                      "type": "string",
+                      "enum": [
+                        "free",
+                        "pro",
+                        "enterprise"
+                      ]
+                    },
+                    "buckets": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "report_generate",
+                              "voice_transcribe",
+                              "voice_summarize",
+                              "ai_input_tokens",
+                              "ai_output_tokens"
+                            ]
+                          },
+                          "limit": {
+                            "type": "integer",
+                            "nullable": true
+                          },
+                          "used": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "remaining": {
+                            "type": "integer",
+                            "nullable": true
+                          },
+                          "resetAt": {
+                            "type": "string"
+                          },
+                          "plan": {
+                            "type": "string",
+                            "enum": [
+                              "free",
+                              "pro",
+                              "enterprise"
+                            ]
+                          },
+                          "overridden": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "limit",
+                          "used",
+                          "remaining",
+                          "resetAt",
+                          "plan",
+                          "overridden"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "plan",
+                    "buckets"
                   ]
                 }
               }

@@ -1493,6 +1493,243 @@
         }
       }
     },
+    "/me/usage/events": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "required": false,
+            "name": "cursor",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "chat",
+                "transcribe",
+                "generate_report"
+              ]
+            },
+            "required": false,
+            "name": "operation",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "required": false,
+            "name": "vendor",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated raw LLM usage events, newest first.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "createdAt": {
+                            "type": "string"
+                          },
+                          "vendor": {
+                            "type": "string"
+                          },
+                          "model": {
+                            "type": "string"
+                          },
+                          "operation": {
+                            "type": "string",
+                            "enum": [
+                              "chat",
+                              "transcribe",
+                              "generate_report"
+                            ]
+                          },
+                          "inputTokens": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "outputTokens": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "cachedTokens": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "inputSeconds": {
+                            "type": "number",
+                            "nullable": true,
+                            "minimum": 0
+                          },
+                          "latencyMs": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "fixtureMode": {
+                            "type": "string",
+                            "enum": [
+                              "live",
+                              "replay",
+                              "record"
+                            ]
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "ok",
+                              "error"
+                            ]
+                          },
+                          "projectId": {
+                            "type": "string",
+                            "nullable": true,
+                            "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8,16}$"
+                          },
+                          "reportId": {
+                            "type": "string",
+                            "nullable": true,
+                            "pattern": "^rpt_[0-9a-hjkmnp-tv-z]{8,16}$"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "createdAt",
+                          "vendor",
+                          "model",
+                          "operation",
+                          "inputTokens",
+                          "outputTokens",
+                          "cachedTokens",
+                          "inputSeconds",
+                          "latencyMs",
+                          "fixtureMode",
+                          "status",
+                          "projectId",
+                          "reportId"
+                        ]
+                      }
+                    },
+                    "nextCursor": {
+                      "type": "string",
+                      "nullable": true,
+                      "minLength": 1,
+                      "maxLength": 256
+                    }
+                  },
+                  "required": [
+                    "items",
+                    "nextCursor"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    },
+                    "requestId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    },
+                    "requestId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/me/limits": {
       "get": {
         "tags": [

@@ -160,6 +160,18 @@ export function useMeUsageQuery(
   });
 }
 
+export type MeUsageEventsQueryInput = { query?: QueryParams<"/me/usage/events", "get"> } | void;
+export function useMeUsageEventsQuery(
+  input?: MeUsageEventsQueryInput,
+  options?: Omit<UseQueryOptions<ResponseBody<"/me/usage/events", "get">, ApiError>, 'queryKey' | 'queryFn'>,
+) {
+  return useQuery<ResponseBody<"/me/usage/events", "get">, ApiError>({
+    queryKey: ["meUsageEvents", input?.query] as const,
+    queryFn: ({ signal }) => request("/me/usage/events", "get", { query: input?.query, signal }),
+    ...options,
+  });
+}
+
 export type MeLimitsQueryInput = { query?: QueryParams<"/me/limits", "get"> } | void;
 export function useMeLimitsQuery(
   input?: MeLimitsQueryInput,

@@ -518,9 +518,13 @@ route.
       the expected counts. Default-wiring coverage, not a stub.
 - [x] `GET /me/usage` aggregates from this table (months + byModel +
       totals with token sums).
-- [ ] `GET /me/usage/events` paginates raw events for the
-      per-event timeline. (P4 — read path is enough for the in-app
-      Usage screen; per-event timeline ships with P3.15.4 UI.)
+- [x] `GET /me/usage/events` paginates raw events for the
+      per-event timeline (`packages/api/src/routes/me.ts` →
+      `auth/service.ts::listUsageEvents`). Keyset cursor on
+      `(created_at DESC, id DESC)`; optional `operation` + `vendor`
+      filters; includes `status='error'` rows so failed calls are
+      visible in the timeline. RLS on `app.llm_usage_events` is the
+      access gate.
 - [x] Commit: `feat(api): per-user LLM token accounting on every call`.
 
 #### P3.15.6 — Voice note pipeline completion

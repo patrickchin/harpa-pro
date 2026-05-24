@@ -324,7 +324,7 @@ export function CameraCapture(props: CameraCaptureProps) {
         className="flex-1 items-center justify-center bg-black"
         testID="camera-permission-requesting"
       >
-        <ActivityIndicator color="#ffffff" />
+        <ActivityIndicator color={colors.primary.foreground} />
       </View>
     );
   }
@@ -336,14 +336,13 @@ export function CameraCapture(props: CameraCaptureProps) {
         className="flex-1 items-center justify-center bg-black"
         testID="camera-permission-denied"
       >
-        <View className="px-8 items-center" style={styles.permissionInner}>
-          <CameraIcon size={48} color="#ffffff" />
+        <View className="px-8 items-center gap-4">
+          <CameraIcon size={48} color={colors.primary.foreground} />
           <Text className="text-white text-xl font-bold mt-2 text-center">
             Camera access is off
           </Text>
           <Text
-            className="text-base text-center"
-            style={styles.permissionBody}
+            className="text-stone-300 text-base text-center leading-[21px]"
           >
             Allow camera access to capture site photos for your reports.
           </Text>
@@ -380,11 +379,11 @@ export function CameraCapture(props: CameraCaptureProps) {
 
   const flashIcon =
     flash === 'off' ? (
-      <ZapOff size={22} color="#ffffff" />
+      <ZapOff size={22} color={colors.primary.foreground} />
     ) : (
       <Zap
         size={22}
-        color={flash === 'on' ? colors.accent.DEFAULT : '#ffffff'}
+        color={flash === 'on' ? colors.accent.DEFAULT : colors.primary.foreground}
       />
     );
   const nextFlash: FlashMode =
@@ -421,25 +420,23 @@ export function CameraCapture(props: CameraCaptureProps) {
             <View
               testID="camera-focus-indicator"
               pointerEvents="none"
-              style={[
-                styles.focusIndicator,
-                {
-                  left: focusIndicator.x - 32,
-                  top: focusIndicator.y - 32,
-                },
-              ]}
+              className="absolute w-16 h-16 rounded-full border-2 border-white"
+              style={{
+                left: focusIndicator.x - 32,
+                top: focusIndicator.y - 32,
+              }}
             />
           ) : null}
         </View>
       </GestureDetector>
 
       <SafeAreaView
-        style={styles.overlay}
+        className="absolute inset-0 justify-end"
         pointerEvents="box-none"
       >
         {/* Top bar */}
         <View
-          className="absolute top-0 left-0 right-0 h-14 px-4 flex-row items-center justify-between bg-black/35"
+          className="absolute top-0 left-0 right-0 px-4 flex-row items-center justify-between bg-black/35"
           style={{ paddingTop: insets.top, height: 56 + insets.top }}
         >
           <Pressable
@@ -447,10 +444,9 @@ export function CameraCapture(props: CameraCaptureProps) {
             accessibilityRole="button"
             accessibilityLabel="Cancel"
             testID="btn-camera-cancel"
-            className="w-11 h-11 rounded-full items-center justify-center"
-            style={styles.iconButton}
+            className="w-11 h-11 rounded-full items-center justify-center bg-black/35"
           >
-            <X size={24} color="#ffffff" />
+            <X size={24} color={colors.primary.foreground} />
           </Pressable>
           <View className="flex-row items-center gap-2">
             {onToggleSaveToCameraRoll ? (
@@ -464,11 +460,9 @@ export function CameraCapture(props: CameraCaptureProps) {
                     : 'Save to camera roll: off'
                 }
                 testID="btn-camera-save-to-roll"
-                className="h-11 px-3 rounded-full flex-row items-center"
-                style={[
-                  styles.iconButton,
-                  saveToCameraRoll && styles.toggleOn,
-                ]}
+                className={`h-11 px-3 rounded-full flex-row items-center ${
+                  saveToCameraRoll ? 'bg-accent/85' : 'bg-black/35'
+                }`}
               >
                 <Text className="text-white text-xs font-semibold uppercase">
                   Roll {saveToCameraRoll ? 'on' : 'off'}
@@ -480,8 +474,7 @@ export function CameraCapture(props: CameraCaptureProps) {
               accessibilityRole="button"
               accessibilityLabel={`Flash ${flash}`}
               testID="btn-camera-flash"
-              className="w-11 h-11 rounded-full items-center justify-center"
-              style={styles.iconButton}
+              className="w-11 h-11 rounded-full items-center justify-center bg-black/35"
             >
               {flashIcon}
               <Text className="text-white text-[9px] mt-0.5 uppercase tracking-wider">
@@ -498,7 +491,7 @@ export function CameraCapture(props: CameraCaptureProps) {
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.stripContent}
+            contentContainerClassName="gap-1.5 items-center"
             className="flex-grow-0 flex-shrink"
           >
             {captures.map((c, idx) => (
@@ -517,7 +510,7 @@ export function CameraCapture(props: CameraCaptureProps) {
                   contentFit="cover"
                   transition={0}
                   cachePolicy="memory"
-                  style={styles.thumbImage}
+                  style={{ width: '100%', height: '100%' }}
                 />
               </Pressable>
             ))}
@@ -527,10 +520,9 @@ export function CameraCapture(props: CameraCaptureProps) {
             accessibilityRole="button"
             accessibilityLabel="Flip camera"
             testID="btn-camera-flip"
-            className="w-11 h-11 rounded-full items-center justify-center ml-auto"
-            style={styles.iconButton}
+            className="w-11 h-11 rounded-full items-center justify-center ml-auto bg-black/35"
           >
-            <RefreshCw size={22} color="#ffffff" />
+            <RefreshCw size={22} color={colors.primary.foreground} />
           </Pressable>
         </View>
 
@@ -542,13 +534,14 @@ export function CameraCapture(props: CameraCaptureProps) {
             accessibilityRole="button"
             accessibilityLabel="Take photo"
             testID="btn-camera-shutter"
-            style={({ pressed }) => [
-              styles.shutter,
-              (pressed || isCapturing) && styles.shutterPressed,
-              captures.length >= maxBurst && styles.shutterDisabled,
-            ]}
+            className={`w-[78px] h-[78px] rounded-full border-4 border-white items-center justify-center ${
+              captures.length >= maxBurst ? 'opacity-40' : ''
+            }`}
+            style={({ pressed }) =>
+              (pressed || isCapturing) && { opacity: 0.7 }
+            }
           >
-            <View style={styles.shutterInner} />
+            <View className="w-[60px] h-[60px] rounded-full bg-white" />
           </Pressable>
         </View>
 
@@ -616,48 +609,3 @@ function resolvePermission(
   return { state: 'denied', canAskAgain: hook.canAskAgain };
 }
 
-// Visual styles that don't translate cleanly to Tailwind utilities
-// (semi-transparent overlays, exact pixel-perfect shutter, etc.) live
-// in StyleSheet so the bare `bg-black/35` etc. don't depend on
-// NativeWind v4 colour-opacity quirks at runtime.
-const styles = StyleSheet.create({
-  overlay: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
-    bottom: 0,
-    left: 0,
-    justifyContent: 'flex-end',
-  },
-  iconButton: { backgroundColor: 'rgba(0,0,0,0.35)' },
-  toggleOn: { backgroundColor: 'rgba(229, 93, 34, 0.85)' },
-  stripContent: { gap: 6, alignItems: 'center' },
-  thumbImage: { width: '100%', height: '100%' },
-  shutter: {
-    width: 78,
-    height: 78,
-    borderRadius: 39,
-    borderWidth: 4,
-    borderColor: '#ffffff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  shutterInner: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: '#ffffff',
-  },
-  shutterPressed: { opacity: 0.7 },
-  shutterDisabled: { opacity: 0.4 },
-  permissionInner: { gap: 16 },
-  permissionBody: { color: '#d6d3cc', lineHeight: 21 },
-  focusIndicator: {
-    position: 'absolute',
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    borderWidth: 2,
-    borderColor: '#ffffff',
-  },
-});

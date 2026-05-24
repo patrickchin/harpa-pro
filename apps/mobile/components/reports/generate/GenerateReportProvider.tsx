@@ -301,6 +301,18 @@ interface DraftSurface {
 interface PreviewSurface {
   /** Open a file from the timeline / report. No-op default. */
   openFile: (fileId: string) => void;
+  /** Gallery of all photo notes — passed to ImagePreviewModal. */
+  photoGallery: ReadonlyArray<{
+    fileId: string;
+    title: string;
+    cacheKey: string;
+  }>;
+  /** Current photo index when the gallery is open; null when closed. */
+  photoIndex: number | null;
+  /** Open the gallery focussed on the photo backed by `fileId`. */
+  openPhoto: (fileId: string) => void;
+  /** Dismiss the gallery. */
+  closePhoto: () => void;
 }
 
 export interface GenerateReportContextValue {
@@ -375,6 +387,9 @@ export function GenerateReportProvider({
   const [fileUploadError, setFileUploadError] = useState<string | null>(null);
   const [isFinalizeConfirmVisible, setIsFinalizeConfirmVisible] =
     useState(false);
+  const [photoPreviewIndex, setPhotoPreviewIndex] = useState<number | null>(
+    null,
+  );
 
   // Phase H: inline recorder state lives here so the input bar can
   // morph between text/photo/mic and the recording strip without
@@ -471,6 +486,37 @@ export function GenerateReportProvider({
   const handleRetryVoice = useCallback(() => {
     void voicePipeline.retry();
   }, [voicePipeline]);
+
+  // Gallery of every image-note in the timeline — drives the
+  // fullscreen swipeable preview wired in `GenerateReportDialogs`.
+  // Order matches `timelineItems`; tapping any thumbnail in the Notes
+  // tab or Report tab resolves into this list by `fileId`.
+  const photoGallery = useMemo(
+    () =>
+      timelineItems
+        .filter(
+          (e): e is NoteEntry & { fileId: string } =>
+            e.source === 'image' &&
+            typeof e.fileId === 'string' &&
+            !!e.fileId,
+        )
+        .map((e) => ({
+          fileId: e.fileId,
+          title: e.text?.trim() || 'Photo',
+          cacheKey: e.fileId,
+        })),
+    [timelineItems],
+  );
+
+  const openPhoto = useCallback(
+    (fileId: string) => {
+      const idx = photoGallery.findIndex((p) => p.fileId === fileId);
+      setPhotoPreviewIndex(idx >= 0 ? idx : 0);
+    },
+    [photoGallery],
+  );
+
+  const closePhoto = useCallback(() => setPhotoPreviewIndex(null), []);
 
   // Locally-owned empty report seeded when the user opens Edit without
   // a generated report ("Edit manually" path). Kept separate from
@@ -643,6 +689,10 @@ export function GenerateReportProvider({
       },
       preview: {
         openFile: handleOpenFile,
+        photoGallery,
+        photoIndex: photoPreviewIndex,
+        openPhoto,
+        closePhoto,
       },
       ui: {
         attachmentSheetVisible,
@@ -703,6 +753,10 @@ export function GenerateReportProvider({
       handlePickAttachment,
       handleRegenerate,
       handleOpenFile,
+      photoGallery,
+      photoPreviewIndex,
+      openPhoto,
+      closePhoto,
       onCameraCapture,
       onPickAttachment,
     ],

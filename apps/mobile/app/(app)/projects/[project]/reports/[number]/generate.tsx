@@ -102,6 +102,9 @@ function noteToEntry(n: ApiNote): NoteEntry {
       summary: n.summary ?? null,
       durationSec: n.durationSec ?? null,
     }),
+    ...(isImage && {
+      fileId: n.fileId ?? null,
+    }),
   };
 }
 

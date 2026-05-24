@@ -20,6 +20,7 @@ import { useMemo, useState } from 'react';
 import { Text, View } from 'react-native';
 
 import { TextNoteCard } from '@/components/notes/TextNoteCard';
+import { PhotoNoteCard } from '@/components/notes/PhotoNoteCard';
 import { NoteOptionsSheet } from '@/components/notes/NoteOptionsSheet';
 import type { NoteOptionsSheetItem } from '@/components/notes/NoteOptionsSheet';
 import { VoiceNoteCard } from '@/features/voice/VoiceNoteCard';
@@ -37,6 +38,8 @@ export interface NoteTimelineProps {
   onEditNote?: (sourceIndex: number, nextBody: string) => void;
   /** Retry handler for failed voice notes. */
   onRetryVoice?: (sourceIndex: number) => void;
+  /** Open the fullscreen photo gallery focussed on this entry's file. */
+  onOpenPhoto?: (fileId: string, sourceIndex: number) => void;
 }
 
 export function NoteTimeline({
@@ -47,6 +50,7 @@ export function NoteTimeline({
   onDeleteNote,
   onEditNote,
   onRetryVoice,
+  onOpenPhoto,
 }: NoteTimelineProps) {
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
 
@@ -136,13 +140,24 @@ export function NoteTimeline({
           );
         }
         const isImage = entry.source === 'image';
+        if (isImage) {
+          return (
+            <PhotoNoteCard
+              key={entry.id ?? `note-${index}`}
+              entry={entry}
+              sourceIndex={index}
+              authorName={authorName}
+              onOpen={onOpenPhoto}
+            />
+          );
+        }
         return (
           <TextNoteCard
             key={entry.id ?? `note-${index}`}
             entry={entry}
             sourceIndex={index}
             authorName={authorName}
-            onOpenOptions={isImage ? undefined : handleOpenOptions}
+            onOpenOptions={handleOpenOptions}
           />
         );
       })}

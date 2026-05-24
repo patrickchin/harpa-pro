@@ -6,10 +6,9 @@
  *
  * Ported from
  * `../haru3-reports/apps/mobile/components/reports/generate/ReportTabPane.tsx`
- * on branch `dev`. ReportPhotos is deferred — the v4 upload pipeline +
- * `useLocalReportNotes` haven't landed yet, so there are no file rows
- * to feed it. The pane reserves the slot with a TODO marker so the
- * later port is a drop-in.
+ * on branch `dev`. Photos render through `ReportPhotosFromGallery`,
+ * which reads the same `preview.photoGallery` that backs the
+ * fullscreen `ImagePreviewModal` mounted in `GenerateReportDialogs`.
  */
 import { useMemo } from 'react';
 import { ScrollView, Text, View } from 'react-native';
@@ -20,6 +19,7 @@ import { Button } from '@/components/primitives/Button';
 import { InlineNotice } from '@/components/primitives/InlineNotice';
 import { CompletenessCard } from '@/components/reports/CompletenessCard';
 import { ReportView } from '@/components/reports/ReportView';
+import { ReportPhotosFromGallery } from '@/components/reports/generate/ReportPhotosFromGallery';
 import { useGenerateReport } from '@/components/reports/generate/GenerateReportProvider';
 import { colors } from '@/lib/design-tokens/colors';
 import { createEmptyReport } from '@/lib/report-edit-helpers';
@@ -29,7 +29,8 @@ interface ReportTabPaneProps {
 }
 
 export function ReportTabPane({ width }: ReportTabPaneProps) {
-  const { generation, draft, tabs, handleRegenerate, reportNumber } = useGenerateReport();
+  const { generation, draft, tabs, handleRegenerate, reportNumber, preview } =
+    useGenerateReport();
 
   // Skeleton shown on the "no report yet" empty state. Built via
   // `createEmptyReport()` so the same defaults (e.g. `visitDate` =
@@ -119,10 +120,10 @@ export function ReportTabPane({ width }: ReportTabPaneProps) {
 
             <ReportView report={generation.report} reportNumber={reportNumber ?? undefined} />
 
-            {/* TODO(P3.8/P3.9): mount ReportPhotos here once the upload
-                pipeline + `useLocalReportNotes` are ported. ReportPhotos
-                needs note rows + signed URLs (Pitfall 8); the slot
-                stays in place so the later port is a drop-in. */}
+            <ReportPhotosFromGallery
+              photos={preview.photoGallery}
+              onOpen={preview.openPhoto}
+            />
 
             {draft.finalizeError ? (
               <Animated.View entering={FadeIn}>

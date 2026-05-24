@@ -1212,6 +1212,24 @@ exports[`GenerateNotes > matches the empty-state snapshot 1`] = `
       </rn-Pressable>
     </rn-Modal>
     <rn-Modal
+      animationType="fade"
+      onRequestClose={[Function]}
+      presentationStyle="fullScreen"
+      visible={false}
+    >
+      <rn-SafeAreaProvider>
+        <rn-SafeAreaView
+          className="flex-1 bg-black"
+          edges={
+            [
+              "top",
+              "bottom",
+            ]
+          }
+        />
+      </rn-SafeAreaProvider>
+    </rn-Modal>
+    <rn-Modal
       animationType="slide"
       onRequestClose={[Function]}
       transparent={true}

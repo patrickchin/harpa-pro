@@ -237,6 +237,7 @@ export default function SavedReportRoute() {
       projectName={projectQuery.data?.name ?? null}
       noteRows={noteRows}
       isLoading={reportQuery.isLoading}
+      notesLoading={notesQuery.isLoading}
       loadError={reportQuery.error ?? null}
       hasValidRouteParams={hasValidRouteParams}
       refreshing={refreshing}

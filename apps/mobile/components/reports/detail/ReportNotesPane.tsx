@@ -23,6 +23,7 @@ import { Text, View } from 'react-native';
 import { MessageSquare } from 'lucide-react-native';
 
 import { EmptyState } from '@/components/primitives/EmptyState';
+import { Skeleton, SkeletonRow } from '@/components/primitives/Skeleton';
 import { NoteCardHeader } from '@/components/notes/NoteCardHeader';
 import { PhotoNoteRow } from '@/components/reports/detail/PhotoNoteRow';
 import { VoiceNoteRow } from '@/components/reports/detail/VoiceNoteRow';
@@ -63,6 +64,13 @@ interface ReportNotesPaneProps {
   onOpenPhoto?: (input: { fileId: string; title?: string }) => void;
   /** Opens a voice / document file via the system handler. */
   onOpenFile?: (input: { fileId: string; uri: string }) => void;
+  /**
+   * Notes query is still loading. When true and no rows are available
+   * yet, the pane renders a skeleton timeline instead of the empty
+   * state so users don't briefly see "No source notes" before the
+   * notes hydrate.
+   */
+  isLoading?: boolean;
 }
 
 export function ReportNotesPane({
@@ -70,6 +78,7 @@ export function ReportNotesPane({
   reportId,
   onOpenPhoto,
   onOpenFile,
+  isLoading = false,
 }: ReportNotesPaneProps) {
   const sorted = useMemo(() => {
     const items = (noteRows ?? []).slice();
@@ -127,6 +136,20 @@ export function ReportNotesPane({
     : undefined;
 
   if (sorted.length === 0) {
+    if (isLoading) {
+      return (
+        <View
+          className="px-5 pb-8 pt-2 gap-3"
+          testID="report-notes-pane-loading"
+          accessibilityRole="progressbar"
+          accessibilityLabel="Loading notes"
+        >
+          <ReportNoteRowSkeleton lines={2} />
+          <ReportNoteRowSkeleton withThumbnail lines={1} />
+          <ReportNoteRowSkeleton lines={3} />
+        </View>
+      );
+    }
     return (
       <View className="px-5 pb-8 pt-2" testID="report-notes-pane">
         <EmptyState
@@ -223,6 +246,46 @@ export function ReportNotesPane({
         onDelete={handleDelete}
         deleteInFlight={deleteNote.isPending}
       />
+    </View>
+  );
+}
+
+/**
+ * Skeleton placeholder for a single note row. Mirrors the rough
+ * silhouette of the real cards (header avatar + name + timestamp,
+ * then 1–3 body lines, optional thumbnail) so the layout doesn't
+ * jump when notes hydrate.
+ */
+function ReportNoteRowSkeleton({
+  lines = 2,
+  withThumbnail = false,
+}: {
+  lines?: number;
+  withThumbnail?: boolean;
+}) {
+  const lineWidths = ['92%', '78%', '60%'] as const;
+  return (
+    <View className="rounded-lg border border-border bg-card p-3 gap-2">
+      <SkeletonRow>
+        <Skeleton circle height={24} />
+        <View className="flex-1 gap-1.5">
+          <Skeleton width="40%" height={12} />
+          <Skeleton width="25%" height={10} />
+        </View>
+      </SkeletonRow>
+      {withThumbnail ? (
+        <Skeleton width="100%" height={140} radius={8} />
+      ) : (
+        <View className="gap-1.5 pt-1">
+          {Array.from({ length: lines }).map((_, i) => (
+            <Skeleton
+              key={i}
+              width={lineWidths[Math.min(i, lineWidths.length - 1)]}
+              height={12}
+            />
+          ))}
+        </View>
+      )}
     </View>
   );
 }

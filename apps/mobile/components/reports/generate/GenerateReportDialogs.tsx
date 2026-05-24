@@ -15,6 +15,7 @@
  * `useReportDraftPersistence`, which land in P3.7.
  */
 import { AppDialogSheet } from '@/components/primitives/AppDialogSheet';
+import { ImagePreviewModal } from '@/components/files/ImagePreviewModal';
 import {
   getActionErrorDialogCopy,
   getDeleteNoteDialogCopy,
@@ -23,7 +24,7 @@ import {
 import { useGenerateReport } from './GenerateReportProvider';
 
 export function GenerateReportDialogs() {
-  const { generation, draft, notes, ui, handlePickAttachment, photo } =
+  const { generation, draft, notes, ui, handlePickAttachment, photo, preview } =
     useGenerateReport();
 
   const hasReport = generation.hasReport;
@@ -163,6 +164,13 @@ export function GenerateReportDialogs() {
             accessibilityLabel: 'Cancel attachment picker',
           },
         ]}
+      />
+
+      <ImagePreviewModal
+        visible={preview.photoIndex !== null}
+        photos={preview.photoGallery}
+        initialIndex={preview.photoIndex ?? 0}
+        onClose={preview.closePhoto}
       />
     </>
   );

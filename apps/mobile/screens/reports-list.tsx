@@ -6,16 +6,12 @@
  * `number` + `slug`, status enum is `draft|finalized` (not `final`),
  * and the list response is `{ items: Report[] }`.
  *
- * Layout: 2-column grid of compact thumbnail cards. Drafts first,
- * then finalized — sorted by recency. The draft pill renders inside
- * the card so we don't need section headers.
- *
  * Optimistic-create flow lives in the route wrapper.
  */
 import {
   View,
   Text,
-  FlatList,
+  SectionList,
   Pressable,
   ActivityIndicator,
   RefreshControl,
@@ -62,12 +58,7 @@ export function ReportsList({
   onOpenReport,
   actions,
 }: ReportsListProps) {
-  // Flatten the section structure into a single drafts-first ordering.
-  // The grid layout uses a single FlatList, so we drop the section
-  // headers and let the per-card draft pill carry the status hint.
-  const orderedReports = buildReportsSections(reports).flatMap(
-    (section) => section.data,
-  );
+  const sections = buildReportsSections(reports);
 
   return (
     <SafeAreaView className="flex-1 bg-background" edges={['top']}>
@@ -118,7 +109,7 @@ export function ReportsList({
 
       {isLoading ? (
         <ReportsListSkeleton />
-      ) : orderedReports.length === 0 ? (
+      ) : reports.length === 0 ? (
         <View className="px-5 pt-4">
           <EmptyState
             icon={<ClipboardList size={28} color={colors.muted.foreground} />}
@@ -127,25 +118,28 @@ export function ReportsList({
           />
         </View>
       ) : (
-        <FlatList
-          data={orderedReports}
+        <SectionList
+          sections={sections}
           keyExtractor={(item) => item.id}
-          numColumns={2}
-          contentContainerStyle={{
-            paddingTop: 12,
-            paddingBottom: 16,
-            paddingHorizontal: 12,
-          }}
-          columnWrapperStyle={{ gap: 12 }}
-          ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
+          stickySectionHeadersEnabled={false}
+          contentContainerStyle={{ paddingBottom: 16, paddingTop: 8 }}
           removeClippedSubviews
-          maxToRenderPerBatch={12}
+          maxToRenderPerBatch={10}
           updateCellsBatchingPeriod={50}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
           }
-          renderItem={({ item }) => (
-            <View style={{ flex: 1 }}>
+          renderSectionHeader={({ section }) =>
+            section.title ? (
+              <View className="px-5 pt-4">
+                <Text className="text-label uppercase tracking-wider text-muted-foreground">
+                  {section.title}
+                </Text>
+              </View>
+            ) : null
+          }
+          renderItem={({ item, index }) => (
+            <View className="px-5 pt-3">
               <Pressable
                 testID={`report-row-${item.number}`}
                 onPress={() => onOpenReport(item)}
@@ -154,32 +148,31 @@ export function ReportsList({
                 <Card
                   variant={item.status === 'draft' ? 'emphasis' : 'default'}
                   padding="sm"
-                  className="gap-2"
+                  className="flex-row items-center gap-3"
                 >
-                  <View className="flex-row items-start justify-between">
-                    <View className="h-9 w-9 items-center justify-center rounded-md border border-border bg-card">
-                      <FileText size={18} color={colors.muted.foreground} />
-                    </View>
-                    {item.status === 'draft' ? (
-                      <View className="rounded-md border border-warning-border bg-warning-soft px-1.5 py-0.5">
-                        <Text className="text-[10px] font-semibold uppercase text-warning-text">
-                          Draft
-                        </Text>
-                      </View>
-                    ) : null}
+                  <View className="h-10 w-10 items-center justify-center rounded-md border border-border bg-card">
+                    <FileText size={20} color={colors.muted.foreground} />
                   </View>
-                  <Text
-                    className="text-sm font-semibold text-foreground"
-                    numberOfLines={2}
-                  >
-                    {getReportTitle(item)}
-                  </Text>
-                  <Text
-                    className="text-xs text-muted-foreground"
-                    numberOfLines={1}
-                  >
-                    {getReportMeta(item)}
-                  </Text>
+                  <View className="min-w-0 flex-1 gap-1">
+                    <View className="min-w-0 flex-row items-start gap-2">
+                      <Text
+                        className="flex-1 text-lg font-semibold text-foreground"
+                        numberOfLines={2}
+                      >
+                        {getReportTitle(item)}
+                      </Text>
+                      {item.status === 'draft' ? (
+                        <View className="mt-0.5 shrink-0 rounded-md border border-warning-border bg-warning-soft px-2 py-1">
+                          <Text className="text-xs font-semibold uppercase text-warning-text">
+                            Draft
+                          </Text>
+                        </View>
+                      ) : null}
+                    </View>
+                    <Text className="text-sm text-muted-foreground">
+                      {getReportMeta(item)}
+                    </Text>
+                  </View>
                 </Card>
               </Pressable>
             </View>

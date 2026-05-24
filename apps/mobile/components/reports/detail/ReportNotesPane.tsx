@@ -29,7 +29,7 @@ import { VoiceNoteRow } from '@/components/reports/detail/VoiceNoteRow';
 import { DocumentNoteRow } from '@/components/reports/detail/DocumentNoteRow';
 import { NoteOptionsKebab } from '@/components/notes/NoteOptionsKebab';
 import { NoteOptionsSheet } from '@/components/notes/NoteOptionsSheet';
-import { useDeleteNoteMutation } from '@/lib/api/hooks';
+import { useOptimisticDeleteNote } from '@/lib/api/optimistic';
 import { colors } from '@/lib/design-tokens/colors';
 
 export interface ReportNoteRow {
@@ -50,6 +50,13 @@ export interface ReportNoteRow {
 
 interface ReportNotesPaneProps {
   noteRows: ReadonlyArray<ReportNoteRow> | undefined;
+  /**
+   * Saved-report id — required so optimistic delete can target the
+   * correct `reportNotes` cache page. Optional for backward-compat
+   * with snapshot tests rendering this pane outside a real screen;
+   * when omitted the kebab Delete affordance is hidden.
+   */
+  reportId?: string | null;
   /** Opens the fullscreen photo preview modal. */
   onOpenPhoto?: (input: { fileId: string; title?: string }) => void;
   /** Opens a voice / document file via the system handler. */
@@ -58,6 +65,7 @@ interface ReportNotesPaneProps {
 
 export function ReportNotesPane({
   noteRows,
+  reportId,
   onOpenPhoto,
   onOpenFile,
 }: ReportNotesPaneProps) {
@@ -97,21 +105,24 @@ export function ReportNotesPane({
     [activeNote],
   );
 
-  const deleteNote = useDeleteNoteMutation();
+  const deleteNote = useOptimisticDeleteNote();
   const handleOpenOptions = (id: string) => setActiveNoteId(id);
   const handleCloseOptions = () => setActiveNoteId(null);
-  const handleDelete = (note: { id: string }) => {
-    deleteNote.mutate(
-      { params: { note: note.id } as never },
-      {
-        onSettled: () => {
-          // Close regardless of success/failure; failure surfaces via
-          // the mutation error state if we want to render it later.
-          setActiveNoteId(null);
-        },
-      },
-    );
-  };
+  const handleDelete = reportId
+    ? (note: { id: string }) => {
+        deleteNote.mutate(
+          { params: { note: note.id }, reportId },
+          {
+            onSettled: () => {
+              // The row vanishes synchronously via the optimistic cache
+              // patch; close the sheet regardless of success/failure so
+              // the UI doesn't get stuck if the server rejects.
+              setActiveNoteId(null);
+            },
+          },
+        );
+      }
+    : undefined;
 
   if (sorted.length === 0) {
     return (

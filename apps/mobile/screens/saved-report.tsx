@@ -66,6 +66,13 @@ export interface SavedReportProps {
   /** Saved-report status — controls Edit tab visibility + read-only chrome. */
   reportStatus: SavedReportStatus | null;
   /**
+   * Server-side report uuid. Threaded into `ReportNotesPane` so the
+   * optimistic delete mutation can target the correct `reportNotes`
+   * cache page. Optional for backward-compat with dev mirrors that
+   * don't have a server id; when absent the kebab Delete is hidden.
+   */
+  reportId?: string | null;
+  /**
    * Per-project report number — used to build stable testIDs for Maestro.
    * Optional for backward-compat with dev mirrors / tests.
    */
@@ -125,6 +132,7 @@ export function SavedReport(props: SavedReportProps) {
   const {
     report,
     reportStatus,
+    reportId = null,
     reportNumber,
     projectName,
     noteRows,
@@ -379,6 +387,7 @@ export function SavedReport(props: SavedReportProps) {
           <Animated.View entering={FadeIn.duration(250)}>
             <ReportNotesPane
               noteRows={noteRows}
+              reportId={reportId ?? null}
               onOpenPhoto={handleOpenPhoto}
             />
           </Animated.View>

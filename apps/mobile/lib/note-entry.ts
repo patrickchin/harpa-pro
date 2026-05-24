@@ -45,4 +45,32 @@ export interface NoteEntry {
   voiceStatus?: 'uploading' | 'transcribing' | 'failed' | null;
   /** Error message when `voiceStatus === 'failed'`. */
   voiceError?: string | null;
+
+  // ── Photo-note in-flight fields ────────────────────────────────
+  // Populated for synthetic image entries the GenerateReportProvider
+  // stitches in from the upload queue so a `PendingPhotoCard` renders
+  // immediately on enqueue (camera / gallery picker). All optional;
+  // saved image rows have `fileId` set and `pendingUpload === undefined`.
+  /**
+   * Carrier for an in-flight or failed image upload. Mirrors the
+   * fields `PendingPhotoCard` reads off an `UploadJob` so we don't have
+   * to thread the full job type through `NoteEntry`.
+   */
+  pendingUpload?: {
+    jobId: string;
+    sourceUri: string;
+    status:
+      | 'pending'
+      | 'presigning'
+      | 'uploading'
+      | 'registering'
+      | 'creating_note'
+      | 'completed'
+      | 'failed'
+      | 'cancelled';
+    /** Bytes-uploaded progress in [0, 1]. */
+    progress: number;
+    /** Error message when status === 'failed'. */
+    error?: string;
+  } | null;
 }

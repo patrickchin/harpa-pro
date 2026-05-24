@@ -178,19 +178,27 @@ function emitQueryHook(e: Endpoint): string {
   const path = JSON.stringify(e.path);
   const m = JSON.stringify(e.method);
   const head = JSON.stringify(e.queryKeyHead ?? e.hook);
-  const inputType = e.hasPathParams
+  const baseName = e.hook.replace(/^use/, '').replace(/Query$/, '');
+  const inputTypeName = `${baseName}QueryInput`;
+  const inputTypeBody = e.hasPathParams
     ? `{ params: PathParams<${path}, ${m}>; query?: QueryParams<${path}, ${m}> }`
-    : `{ query?: QueryParams<${path}, ${m}> } | void`;
-  const inputArg = e.hasPathParams ? 'input' : 'input?';
+    : `{ query?: QueryParams<${path}, ${m}> }`;
+  const inputTypeDecl = e.hasPathParams
+    ? `export type ${inputTypeName} = ${inputTypeBody};`
+    : `export type ${inputTypeName} = ${inputTypeBody} | void;`;
+  const inputArg = e.hasPathParams
+    ? `input: ${inputTypeName}`
+    : `input?: ${inputTypeName}`;
   const queryKey = e.hasPathParams
-    ? `[${head}, (input as any).params, (input as any).query] as const`
-    : `[${head}, (input as any)?.query] as const`;
+    ? `[${head}, input.params, input.query] as const`
+    : `[${head}, input?.query] as const`;
   const requestArgs = e.hasPathParams
-    ? `request(${path}, ${m}, { params: (input as any).params, query: (input as any).query, signal })`
-    : `request(${path}, ${m}, { query: (input as any)?.query, signal })`;
+    ? `request(${path}, ${m}, { params: input.params, query: input.query, signal })`
+    : `request(${path}, ${m}, { query: input?.query, signal })`;
   return `
+${inputTypeDecl}
 export function ${e.hook}(
-  ${inputArg}: ${inputType},
+  ${inputArg},
   options?: Omit<UseQueryOptions<ResponseBody<${path}, ${m}>, ApiError>, 'queryKey' | 'queryFn'>,
 ) {
   return useQuery<ResponseBody<${path}, ${m}>, ApiError>({
@@ -205,24 +213,31 @@ export function ${e.hook}(
 function emitMutationHook(e: Endpoint): string {
   const path = JSON.stringify(e.path);
   const m = JSON.stringify(e.method);
-  // Variables shape: { params?, body? } depending on what the op needs.
+  const baseName = e.hook.replace(/^use/, '').replace(/Mutation$/, '');
+  const varsTypeName = `${baseName}MutationVars`;
   const parts: string[] = [];
   if (e.hasPathParams) parts.push(`params: PathParams<${path}, ${m}>`);
   if (e.hasBody) parts.push(`body: RequestBody<${path}, ${m}>`);
-  const varsType = parts.length ? `{ ${parts.join('; ')} }` : 'void';
+  const varsTypeBody = parts.length ? `{ ${parts.join('; ')} }` : 'void';
+  const varsTypeDecl = `export type ${varsTypeName} = ${varsTypeBody};`;
   const requestArgs: string[] = [];
-  if (e.hasPathParams) requestArgs.push(`params: (vars as any).params`);
-  if (e.hasBody) requestArgs.push(`body: (vars as any).body`);
+  if (e.hasPathParams) requestArgs.push(`params: vars.params`);
+  if (e.hasBody) requestArgs.push(`body: vars.body`);
   const reqCall = requestArgs.length
     ? `request(${path}, ${m}, { ${requestArgs.join(', ')} })`
     : `request(${path}, ${m})`;
+  // When `vars` is `void` the mutationFn still takes it as an argument
+  // (TanStack's signature), but we don't read it. Suppress the unused
+  // parameter with a leading underscore for the void case.
+  const fnArg = parts.length ? 'vars' : '_vars';
   return `
+${varsTypeDecl}
 export function ${e.hook}(
-  options?: UseMutationOptions<ResponseBody<${path}, ${m}>, ApiError, ${varsType}>,
+  options?: UseMutationOptions<ResponseBody<${path}, ${m}>, ApiError, ${varsTypeName}>,
 ) {
   const qc = useQueryClient();
-  return useMutation<ResponseBody<${path}, ${m}>, ApiError, ${varsType}>({
-    mutationFn: (vars) => ${reqCall},
+  return useMutation<ResponseBody<${path}, ${m}>, ApiError, ${varsTypeName}>({
+    mutationFn: (${fnArg}) => ${reqCall},
     ...options,
     onSuccess: (...args) => {
       const rule = INVALIDATIONS[${JSON.stringify(e.hook)}];

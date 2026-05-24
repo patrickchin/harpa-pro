@@ -6,3 +6,4 @@ export * from './errors';
 export * from './auth';
 export * from './invalidation';
 export * from './hooks';
+export * from './optimistic';

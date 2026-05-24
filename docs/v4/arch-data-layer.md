@@ -15,7 +15,8 @@ lib/api/
   client.ts        # fetch wrapper: base URL, auth, error mapping
   hooks.ts         # generated React Query hooks (one per endpoint)
   errors.ts        # ApiError + classify(error)
-  invalidation.ts  # cross-resource invalidation rules
+  invalidation.ts  # cross-resource invalidation rules + helpers
+  optimistic.ts    # case-by-case optimistic wrappers (notes CRUD today)
 ```
 
 ## Generated hooks
@@ -46,13 +47,28 @@ hooks stay in sync with the spec.
 ## Optimistic updates
 
 Default to **server-confirmed**, opt in to optimistic on a
-case-by-case basis:
+case-by-case basis. Optimistic wrappers live in
+`apps/mobile/lib/api/optimistic.ts` and compose on top of the
+generated mutation hooks:
 
-- `useCreateNote` is optimistic (note appears instantly with a
-  pending state, swaps to confirmed on response).
-- `useDeleteNote` is optimistic with rollback on error.
-- Mutations that change pricing / billing / counts are NOT
-  optimistic.
+- `useOptimisticCreateNote` — inserts a temp `not_opt…` row into every
+  cached `reportNotes` page in `onMutate`, swaps it for the server row
+  in `onSuccess`, rolls back the snapshot in `onError`, and re-runs
+  the central `useCreateNoteMutation` invalidation in `onSettled`.
+- `useOptimisticUpdateNote` — patches the cached row by id, rollback
+  on error.
+- `useOptimisticDeleteNote` — removes the cached row by id, rollback
+  on error.
+
+The plain `useCreateNoteMutation` / `useDeleteNoteMutation` /
+`useUpdateNoteMutation` from `hooks.ts` are still exported and used
+where optimism isn't needed (e.g. background pipelines). Mutations
+that change pricing / billing / counts are NOT optimistic.
+
+Optimistic rows carry an id with the `not_opt` prefix.
+`isOptimisticNoteId(id)` lets call sites recognise rows that don't
+exist server-side yet (e.g. to suppress edit / delete actions until
+the create resolves).
 
 ## Error handling
 
@@ -67,6 +83,20 @@ Centralised in `lib/api/invalidation.ts` — a single map of
 `mutationKey → queryKeys to invalidate`. Adding a new mutation
 without registering its invalidation rule fails a unit test
 (`invalidation.coverage.test.ts`).
+
+Two helpers expose the same rule list to non-React callers so the
+client never grows a parallel, drift-prone copy:
+
+- `runInvalidations(qc, hookName)` — runs the rule for a mutation
+  hook by name. Used by `useVoiceNotePipeline` (which calls
+  `request()` imperatively, not through the generated hook) so the
+  voice path and `useCreateVoiceNoteMutation` always agree on what
+  to invalidate.
+- `invalidateAfterFileUpload(qc, { reportId })` — fires the
+  `useCreateNoteMutation` invalidations after the upload queue
+  finishes a photo / document. The queue runs imperatively and
+  bypasses React Query mutations, but it ultimately calls
+  `POST /reports/{report}/notes`, so its cache effect must match.
 
 ## Offline / queue
 

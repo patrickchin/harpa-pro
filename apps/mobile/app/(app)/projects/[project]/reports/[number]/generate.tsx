@@ -28,17 +28,20 @@ import {
   useProjectMembersQuery,
   useReportQuery,
   useReportNotesQuery,
-  useCreateNoteMutation,
-  useDeleteNoteMutation,
-  useUpdateNoteMutation,
   useGenerateReportMutation,
   useRegenerateReportMutation,
   useFinalizeReportMutation,
   useDeleteReportMutation,
 } from '@/lib/api/hooks';
+import {
+  useOptimisticCreateNote,
+  useOptimisticDeleteNote,
+  useOptimisticUpdateNote,
+  isOptimisticNoteId,
+} from '@/lib/api/optimistic';
+import { invalidateAfterFileUpload } from '@/lib/api/invalidation';
 import { useReportBodyAutosave } from '@/lib/use-report-body-autosave';
 import type { NoteEntry } from '@/lib/note-entry';
-import { uuid } from '@/lib/uuid';
 import { env } from '@/lib/env';
 import type { GeneratedSiteReport } from '@harpa/report-core';
 import { reports } from '@harpa/api-contract';
@@ -86,6 +89,10 @@ function noteToEntry(n: ApiNote): NoteEntry {
     text,
     addedAt: Date.parse(n.createdAt) || Date.now(),
     source: isVoice ? 'voice' : isImage ? 'image' : 'text',
+    // Rows whose id was minted by `optimisticNoteId` haven't been
+    // confirmed by the server yet — surface the pending state so the
+    // timeline can show a spinner / disable destructive actions.
+    isPending: isOptimisticNoteId(n.id),
     ...(isVoice && {
       fileId: n.fileId ?? null,
       transcript: n.transcript,
@@ -148,51 +155,35 @@ export default function GenerateReportRoute() {
     return map;
   }, [membersQuery.data]);
 
-  // Server-backed notes timeline. Optimistic local additions are kept
-  // alongside until the query refetches so the UI stays responsive
-  // without waiting for the round-trip.
+  // Server-backed notes timeline. Optimistic create/update/delete go
+  // through the React Query cache (`lib/api/optimistic.ts`) — the
+  // timeline renders straight from `notesQuery.data`, no parallel
+  // local state needed.
   const notesQuery = useReportNotesQuery(
     { params: { report: reportId ?? '' } },
     { enabled: reportId !== null },
   );
-  const createNote = useCreateNoteMutation();
-  const deleteNote = useDeleteNoteMutation();
-  const updateNote = useUpdateNoteMutation();
-  const [pendingNotes, setPendingNotes] = useState<NoteEntry[]>([]);
+  const createNote = useOptimisticCreateNote();
+  const deleteNote = useOptimisticDeleteNote();
+  const updateNote = useOptimisticUpdateNote();
 
-  const serverNotes = useMemo<NoteEntry[]>(() => {
+  const visibleNotes = useMemo<NoteEntry[]>(() => {
     const items = (notesQuery.data as { items?: ApiNote[] } | undefined)?.items;
     if (!items) return [];
-    return items.map(noteToEntry);
+    return items.map(noteToEntry).sort((a, b) => a.addedAt - b.addedAt);
   }, [notesQuery.data]);
-
-  // Drop pending entries that the server has now confirmed (by id).
-  const serverIds = useMemo(
-    () => new Set(serverNotes.map((n) => n.id).filter(Boolean)),
-    [serverNotes],
-  );
-  const visibleNotes = useMemo<NoteEntry[]>(() => {
-    const liveOptimistic = pendingNotes.filter(
-      (n) => !n.id || !serverIds.has(n.id),
-    );
-    return [...serverNotes, ...liveOptimistic].sort(
-      (a, b) => a.addedAt - b.addedAt,
-    );
-  }, [serverNotes, pendingNotes, serverIds]);
 
   const handleDeleteNote = useCallback(
     (note: NoteEntry, _sourceIndex: number) => {
       const noteIdValue = note.id;
-      if (!noteIdValue) {
-        // optimistic-only entry — just drop it locally
-        setPendingNotes((prev) => prev.filter((n) => n !== note));
-        return;
-      }
-      // Optimistic local removal — the note row vanishes immediately,
-      // and refetch (invalidation) will reconcile.
-      setPendingNotes((prev) => prev.filter((n) => n.id !== noteIdValue));
+      if (!noteIdValue || !reportId) return;
+      // Optimistic-only rows (never persisted) are removed by the cache
+      // patch the moment we call `mutate`; the request will 404 and
+      // rollback would restore it. Filter those out by checking the
+      // optimistic-id prefix.
+      if (isOptimisticNoteId(noteIdValue)) return;
       deleteNote.mutate(
-        { params: { note: noteIdValue } },
+        { params: { note: noteIdValue }, reportId },
         {
           onError: () => {
             setUploadError('Could not delete the note. Please try again.');
@@ -200,19 +191,20 @@ export default function GenerateReportRoute() {
         },
       );
     },
-    [deleteNote],
+    [deleteNote, reportId],
   );
 
   const handleUpdateNote = useCallback(
     (note: NoteEntry, _sourceIndex: number, nextBody: string) => {
       const noteIdValue = note.id;
-      if (!noteIdValue) return;
-      // Optimistic local patch on any pending mirror.
-      setPendingNotes((prev) =>
-        prev.map((n) => (n.id === noteIdValue ? { ...n, text: nextBody } : n)),
-      );
+      if (!noteIdValue || !reportId) return;
+      if (isOptimisticNoteId(noteIdValue)) return;
       updateNote.mutate(
-        { params: { note: noteIdValue }, body: { body: nextBody } },
+        {
+          params: { note: noteIdValue },
+          body: { body: nextBody },
+          reportId,
+        },
         {
           onError: () => {
             setUploadError('Could not update the note. Please try again.');
@@ -220,38 +212,20 @@ export default function GenerateReportRoute() {
         },
       );
     },
-    [updateNote],
+    [updateNote, reportId],
   );
 
   const handleAddTextNote = useCallback(
     (body: string) => {
       if (!reportId) return;
-      const optimistic: NoteEntry = {
-        id: uuid(),
-        text: body,
-        addedAt: Date.now(),
-        isPending: true,
-        source: 'text',
-      };
-      setPendingNotes((prev) => [...prev, optimistic]);
       createNote.mutate(
         {
           params: { report: reportId },
           body: { kind: 'text', body },
         },
         {
-          onSuccess: (created) => {
-            const realId = (created as { id?: string } | undefined)?.id;
-            // Stamp the server id onto the optimistic entry so the
-            // dedup pass above evicts it once the query refetches.
-            setPendingNotes((prev) =>
-              prev.map((n) =>
-                n === optimistic ? { ...n, id: realId ?? n.id, isPending: false } : n,
-              ),
-            );
-          },
           onError: () => {
-            setPendingNotes((prev) => prev.filter((n) => n !== optimistic));
+            setUploadError('Could not save the note. Please try again.');
           },
         },
       );
@@ -461,7 +435,7 @@ export default function GenerateReportRoute() {
                 `${failed} of ${outcome.total} photo${outcome.total === 1 ? '' : 's'} failed to upload. Open the report queue to retry.`,
               );
             }
-            void qc.invalidateQueries({ queryKey: ['reportNotes'] });
+            void invalidateAfterFileUpload(qc, { reportId });
             return;
           }
         }
@@ -494,9 +468,9 @@ export default function GenerateReportRoute() {
             `${failed} of ${allUris.length} photo${allUris.length === 1 ? '' : 's'} failed to upload. Open the report queue to retry.`,
           );
         }
-        // Invalidate the notes query so uploaded image notes appear in
-        // the timeline immediately after the pipeline completes.
-        void qc.invalidateQueries({ queryKey: ['reportNotes'] });
+        // Invalidate the notes/report queries so uploaded image notes
+        // appear in the timeline immediately after the pipeline completes.
+        invalidateAfterFileUpload(qc, { reportId });
       });
     }, [reportId, enqueueCameraUris, qc]),
   );

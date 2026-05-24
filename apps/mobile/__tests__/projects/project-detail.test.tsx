@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import TestRenderer, { act } from 'react-test-renderer';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 const routerSpy = vi.hoisted(() => ({
   back: vi.fn(),
@@ -32,8 +33,15 @@ vi.mock('@/lib/use-clipboard', () => ({
 import ProjectHomeRoute from '@/app/(app)/projects/[project]/index';
 
 function render() {
+  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   let tree!: TestRenderer.ReactTestRenderer;
-  act(() => { tree = TestRenderer.create(<ProjectHomeRoute />); });
+  act(() => {
+    tree = TestRenderer.create(
+      <QueryClientProvider client={qc}>
+        <ProjectHomeRoute />
+      </QueryClientProvider>,
+    );
+  });
   return tree;
 }
 

@@ -42,6 +42,7 @@ import {
   setOnUnauthorizedCallback,
 } from '../api/auth';
 import { ApiError } from '../api/errors';
+import { resetQueryCache } from '../api/query-client';
 import {
   readSession,
   writeSession,
@@ -192,6 +193,11 @@ export function AuthSessionProvider({
       cachedToken = null;
       setUser(null);
       setStatus('unauthenticated');
+      // Best-effort wipe of cached + persisted query data so the next
+      // user (or re-login on this device) never sees the previous
+      // session's rows. Fire-and-forget; failures are swallowed in
+      // `resetQueryCache` itself.
+      void resetQueryCache();
     });
     return () => {
       setOnUnauthorizedCallback(null);
@@ -314,6 +320,12 @@ export function AuthSessionProvider({
     cachedToken = null;
     setUser(null);
     setStatus('unauthenticated');
+    // Wipe the query cache + persisted blob so the next signed-in
+    // user on this device never sees the previous user's data. We
+    // await it so callers observing `signOut()` resolution can rely
+    // on the cache being fully cleared (matters for tests + for the
+    // "switch account" flow).
+    await resetQueryCache();
   }, [api, storage]);
 
   const refresh = useCallback<AuthSessionValue['refresh']>(async () => {

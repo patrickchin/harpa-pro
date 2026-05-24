@@ -12,11 +12,15 @@ incompatible API change fails the mobile typecheck before it ships.
 
 ```
 lib/api/
-  client.ts        # fetch wrapper: base URL, auth, error mapping
-  hooks.ts         # generated React Query hooks (one per endpoint)
-  errors.ts        # ApiError + classify(error)
-  invalidation.ts  # cross-resource invalidation rules + helpers
-  optimistic.ts    # case-by-case optimistic wrappers (notes CRUD today)
+  client.ts            # fetch wrapper: base URL, auth, error mapping
+  hooks.ts             # generated React Query hooks (one per endpoint)
+  errors.ts            # ApiError + classify(error)
+  invalidation.ts      # cross-resource invalidation rules + helpers
+  optimistic.ts        # case-by-case optimistic wrappers (notes CRUD today)
+  query-client.ts      # singleton QueryClient + persister + resetQueryCache
+  query-persister.ts   # MMKV-backed persister + dehydrate allowlist
+  prefetch.ts          # onPressIn prefetch helpers (list → detail)
+  initial-data.ts      # seed detail screens from list-cache rows
 ```
 
 ## Generated hooks
@@ -113,7 +117,86 @@ Pipeline section.
 and attaches it to every request. On 401, it triggers `signOut()`
 and the `(app)` layout redirects to `(auth)/sign-in/phone`.
 
-## Drift gates (cross-layer)
+## Perceived-speed: persistence, prefetch, initialData
+
+Three orthogonal layers on top of the generated hooks make the app
+feel instant. They all use the same singleton `QueryClient` in
+`lib/api/query-client.ts`.
+
+### 1. Persistent cache (MMKV)
+
+`PersistQueryClientProvider` in `app/_layout.tsx` mirrors the cache
+to MMKV via `query-persister.ts`. So cold start renders the
+last-seen UI immediately, then revalidates in the background.
+
+- **Storage:** `react-native-mmkv` (id `rq-cache`, key `rq-cache-v1`).
+- **`maxAge`:** 24h. Older blobs are dropped on restore.
+- **`buster`:** `Constants.expoConfig?.version` — bump the app
+  version (`app.config.ts`) to invalidate all persisted caches on
+  the next release.
+- **Allowlist** (`shouldDehydrateQuery`): only `success` queries
+  whose first key segment is in `PERSISTED_KEY_HEADS` are written
+  (`projects`, `project`, `projectMembers`, `projectReports`,
+  `report`, `reportNotes`, `me`, `meLimits`). `meUsage` is
+  deliberately excluded (changes too often). Pages containing
+  optimistic `not_opt…` ids are also skipped so we don't restore
+  pending state across launches.
+- **Auth boundary:** `resetQueryCache()` is `await`-ed inside
+  `signOut` and fire-and-forget'd from the 401 handler. Both clear
+  the in-memory cache *and* the persisted blob — without this the
+  next signed-in user would see the previous user's data.
+
+### 2. Prefetch on press intent
+
+List rows call a `usePrefetchX` hook from `lib/api/prefetch.ts` on
+`Pressable.onPressIn` — the detail GET is in flight before the
+route mounts. Examples:
+
+- `projects-list` → `prefetchProject(slug)` +
+  `prefetchProjectReports(slug)`.
+- `reports-list` → `prefetchReport(slug, number)` (finalized rows
+  only; drafts navigate to `/generate`).
+
+**Key shape MUST match the generated hook exactly**
+(`[head, input.params, undefined]`). A mismatched key writes a
+separate cache entry and the destination hook still spins.
+`prefetch.test.tsx` asserts shape by seeding under the asserted
+key and confirming the real generated hook reads it.
+
+### 3. `initialData` from list cache
+
+Detail-screen call sites seed `useProjectQuery` / `useReportQuery`
+with helpers from `lib/api/initial-data.ts`:
+
+```ts
+const qc = useQueryClient();
+const result = useProjectQuery(
+  { params: { project: slug } },
+  {
+    initialData: projectInitialData(qc, slug),
+    initialDataUpdatedAt: projectInitialDataUpdatedAt(qc),
+  },
+);
+```
+
+`initialDataUpdatedAt` is **critical** — without it React Query
+treats the seed as freshly fetched and skips background refetch.
+Helpers walk every cached list variant (paginated `{items, nextCursor}`
+envelopes) and return the first match, or `undefined`.
+
+Wired on: project home / members / edit, reports list, saved
+report (`projectInitialData` + `reportInitialData`). Generated
+hooks are unchanged; this is call-site wiring only.
+
+### Out of scope (future)
+
+- AppState / NetInfo wiring for `focusManager` / `onlineManager`.
+- Per-resource `staleTime` tuning.
+- Aggregated `/reports/{n}/full` endpoint (would collapse four
+  detail GETs into one).
+- Broader optimistic coverage beyond notes.
+
+
 
 Three automated gates keep the data-layer contract honest. Each one
 catches a class of "silent escape" we don't want to discover in

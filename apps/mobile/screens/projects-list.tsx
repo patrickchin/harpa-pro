@@ -44,6 +44,14 @@ export type ProjectsListProps = {
   refreshing: boolean;
   onRefresh: () => void;
   onPressProject: (slug: string) => void;
+  /**
+   * Best-effort prefetch trigger fired on `onPressIn` (before
+   * navigation). Real routes wire `usePrefetchProject` +
+   * `usePrefetchProjectReports` here so the detail GETs are in
+   * flight before the destination screen mounts. Optional so dev
+   * gallery mirrors can skip it.
+   */
+  onPressInProject?: (slug: string) => void;
   onPressNewProject: () => void;
   /**
    * Optional trailing-edge header slot. Real routes pass
@@ -60,6 +68,7 @@ export function ProjectsList({
   refreshing,
   onRefresh,
   onPressProject,
+  onPressInProject,
   onPressNewProject,
   actions,
 }: ProjectsListProps) {
@@ -135,6 +144,7 @@ export function ProjectsList({
             <View>
               <Pressable
                 testID={`project-row-${item.slug}`}
+                onPressIn={() => onPressInProject?.(item.slug)}
                 onPress={() => onPressProject(item.slug)}
               >
                 <Card className="gap-3">

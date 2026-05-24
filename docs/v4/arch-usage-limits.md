@@ -492,13 +492,23 @@ The following are explicit non-goals here and tracked in
 5. ~~**Phase 1 ships count buckets only.**~~ Done — Phase 1 (count
    buckets) landed via `c0ec709`; Phase 2 wires post-hoc token-bucket
    enforcement inside `services/ai.ts::withUsageAccounting` plus the
-   `X-Usage-Warning: near-limit` header. Count + token buckets are
-   now both enforced; the only deferred work is mobile UI (Phase 3)
-   and self-serve plan upgrades (Phase 4).
-6. **Mobile + Maestro work is deferred** to a follow-up commit
-   (per-screen UI, banners, "limit hit" sheet). The error envelope
-   (`code: 'usage_limit_exceeded'` + structured `details`) is
-   stable and a client can be built against it now.
+   `X-Usage-Warning: near-limit` header (PR #38). Phase 3 (mobile UI
+   primitives) ships the `UsageLimitsCard` on the Usage screen and a
+   `UsageLimitDialog` wired into the report generate / regenerate
+   flow and the voice-note pipeline. Count + token buckets are now
+   enforced end-to-end (API + mobile); the only deferred work is the
+   Maestro flows (14a + 14b — separate PR) and self-serve plan
+   upgrades (Phase 4).
+6. ~~**Mobile + Maestro work is deferred** to a follow-up commit
+   (per-screen UI, banners, "limit hit" sheet).~~ Done for the mobile
+   primitives in Phase 3. Maestro flows landed as placeholders in
+   `.maestro/p3-14a-usage-limits-card.yaml` (runnable today),
+   `.maestro/p3-14b-usage-limit-dialog.yaml` (needs `reset-db.sh
+   --seed-at-limit`), and `.maestro/p3-14c-near-limit-toast.yaml`
+   (needs a toast consumer of `X-Usage-Warning` — not yet wired).
+   None are currently in the regression journey; the inbound
+   `X-Usage-Warning` toast consumer itself is still deferred to
+   keep this commit focused.
 
 ## 12. Implementation checklist
 

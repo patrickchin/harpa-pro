@@ -83,6 +83,8 @@ export interface SavedReportProps {
   noteRows: ReadonlyArray<ReportNoteRow> | undefined;
   /** Saved-report load state. */
   isLoading: boolean;
+  /** Notes timeline load state — drives the Notes tab skeleton. */
+  notesLoading?: boolean;
   /** Saved-report load error (renders error state when truthy). */
   loadError: Error | null;
   /** Whether we have enough route params to fetch. */
@@ -137,6 +139,7 @@ export function SavedReport(props: SavedReportProps) {
     projectName,
     noteRows,
     isLoading,
+    notesLoading = false,
     loadError,
     hasValidRouteParams,
     refreshing,
@@ -389,6 +392,7 @@ export function SavedReport(props: SavedReportProps) {
               noteRows={noteRows}
               reportId={reportId ?? null}
               onOpenPhoto={handleOpenPhoto}
+              isLoading={notesLoading}
             />
           </Animated.View>
         )}

@@ -65,23 +65,31 @@ apps/cli/
     commands/
       auth.ts           # auth otp start, auth otp verify, auth logout
       me.ts             # me get, me update, me usage
-      projects.ts       # projects list, projects create, projects get, projects update, projects delete, projects members list, projects members add, projects members remove
-      reports.ts        # reports list, reports create, reports get, reports update, reports delete, reports generate, reports finalize, reports regenerate, reports pdf
+      projects.ts       # projects list, projects create, projects get, projects update, projects delete
+      members.ts        # projects members list, projects members add, projects members remove
+      reports.ts        # reports list, reports create, reports get, reports update, reports delete
+      reports-ai.ts     # reports generate, reports finalize, reports regenerate, reports pdf
       notes.ts          # notes list, notes create, notes update, notes delete
       files.ts          # files presign, files register, files url, files upload (helper)
       voice.ts          # voice transcribe, voice summarize
       settings.ts       # settings ai get, settings ai update
+      health.ts         # health (smoke test against /readyz)
     __tests__/
       env.test.ts
       render.test.ts
       error.test.ts
+      client.test.ts
+      help.test.ts
       auth.integration.test.ts
       projects.integration.test.ts
+      members.integration.test.ts
       reports.integration.test.ts
+      reports-ai.integration.test.ts
       notes.integration.test.ts
       files.integration.test.ts
       voice.integration.test.ts
       settings.integration.test.ts
+      me.integration.test.ts
   dist/                 # tsc output (ESM, Node ≥20)
 ```
 

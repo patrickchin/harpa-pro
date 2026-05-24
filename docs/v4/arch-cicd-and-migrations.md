@@ -73,7 +73,7 @@ build-time manifest for the readiness check.**
 │                                                                        │
 │   1. CI guard job                                                      │
 │      • verifies every file in packages/api/migrations/ matches         │
-│        YYYYMMDDHHmm_*.sql                                              │
+│        ^[0-9]+_[a-z0-9_]+(\.notx)?\.sql$ (sequential numeric prefix)   │
 │      • verifies the set of files is a strict superset of the previous  │
 │        green main build (no rename, no delete) — uses                  │
 │        actions/cache keyed on "migrations-manifest-prod"               │
@@ -97,7 +97,8 @@ build-time manifest for the readiness check.**
 │               • 200 only if all checks pass                            │
 │           └─ Fly auto-rollback if /readyz fails grace period           │
 │                                                                        │
-│   3. Post-deploy smoke (CI): curl https://api.harpapro.com/readyz      │
+│   3. Post-deploy smoke (CI): curl $API_READY_URL (defaults to          │
+│      https://harpa-pro-api.fly.dev/readyz; override via repo var)      │
 │      from the runner, fail the workflow if it's not 200.               │
 └────────────────────────────────────────────────────────────────────────┘
 ```
@@ -140,13 +141,17 @@ see "Open questions").
 ### `.github/workflows/api-prod.yml`
 
 - Add a `guard` job that runs before `prod`:
-  - lints migration filenames (`^[0-9]{12}_[a-z0-9_]+\.sql$`),
+  - lints migration filenames
+    (`^[0-9]+_[a-z0-9_]+(\.notx)?\.sql$` — sequential numeric prefix,
+    optional `.notx` suffix for files that must run outside a tx),
   - compares the file set against a cached manifest from the last green
     `main` build; fails on rename/delete of an already-shipped file,
   - prints the computed head.
 - The `prod` job depends on `guard`. No `DATABASE_URL` secret added to CI.
-- Add a final step: `curl --fail https://api.harpapro.com/readyz` (URL via
-  workflow env), with retries, so a green workflow means a live healthy prod.
+- Add a final step: `curl --fail "$API_READY_URL"` (defaults to
+  `https://harpa-pro-api.fly.dev/readyz`; overridable via the
+  `API_READY_URL` repo variable when a custom hostname is set up),
+  with retries, so a green workflow means a live healthy prod.
 
 ### `.github/workflows/pr-preview.yml`
 

@@ -16,9 +16,9 @@ Add a bugs-log entry for a bug we just fixed.
      to README"). Include smell keywords inline so the next debugger
      can grep for them.
    - **Related pitfall** — if any from `docs/v4/pitfalls.md`.
-2. Add a one-block summary entry (Symptom + Fix paragraphs) to the
-   **Bugs** index in `docs/bugs/README.md`, linking to the new file.
-   The summary alone should usually be enough — readers shouldn't
+2. Add a one-line entry (date, pattern tag, smell, fix in a few
+   words, link to the detail file) to the **Bugs** index in
+   `docs/bugs/README.md`. Keep it grep-friendly — readers shouldn't
    need to open the detail file for the common case.
 3. If this is the second+ occurrence of the same root cause, also
    add or strengthen the rule in the relevant

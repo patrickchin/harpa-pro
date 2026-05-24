@@ -1,10 +1,26 @@
 name: unit
+
+# Skips when no code paths changed (docs-only PRs). Required-check
+# safe: a skipped job reports as passing for branch protection.
+
 on:
   pull_request:
   push:
     branches: [dev, main]
+
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      any-code: ${{ steps.paths.outputs.any-code }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: paths
+        uses: ./.github/actions/changed-paths
+
   unit:
+    needs: changes
+    if: needs.changes.outputs.any-code == 'true' || github.event_name == 'push'
     runs-on: ubuntu-latest
     env:
       AI_FIXTURE_MODE: replay

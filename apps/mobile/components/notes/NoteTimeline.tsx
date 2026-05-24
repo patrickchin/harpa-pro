@@ -186,6 +186,7 @@ export function NoteTimeline({
               sourceIndex={index}
               authorName={authorName}
               onOpen={onOpenPhoto}
+              onOpenOptions={handleOpenOptions}
             />
           );
         }

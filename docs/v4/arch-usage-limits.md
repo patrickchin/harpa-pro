@@ -489,14 +489,12 @@ The following are explicit non-goals here and tracked in
 4. **Live token-cost dollarization.** We meter input/output tokens,
    not USD. A future "$ this month" view depends on a per-vendor
    price table — out of scope.
-5. **Phase 1 ships count buckets only.** `report_generate`,
-   `voice_transcribe`, and `voice_summarize` are enforced pre-hoc
-   via `enforceUsageLimit` at the route boundary. The token buckets
-   (`ai_input_tokens`, `ai_output_tokens`) are surfaced via
-   `GET /me/limits` for observability but **not yet enforced** —
-   that lands in a follow-up commit that wires post-hoc enforcement
-   into `services/ai.ts::withUsageAccounting`. The wire shape is
-   stable; mobile can render the token row immediately.
+5. ~~**Phase 1 ships count buckets only.**~~ Done — Phase 1 (count
+   buckets) landed via `c0ec709`; Phase 2 wires post-hoc token-bucket
+   enforcement inside `services/ai.ts::withUsageAccounting` plus the
+   `X-Usage-Warning: near-limit` header. Count + token buckets are
+   now both enforced; the only deferred work is mobile UI (Phase 3)
+   and self-serve plan upgrades (Phase 4).
 6. **Mobile + Maestro work is deferred** to a follow-up commit
    (per-screen UI, banners, "limit hit" sheet). The error envelope
    (`code: 'usage_limit_exceeded'` + structured `details`) is

@@ -81,6 +81,17 @@ export const COUNT_BUCKETS: ReadonlySet<LimitKind> = new Set([
   'voice_summarize',
 ]);
 
+export const TOKEN_BUCKETS: ReadonlySet<LimitKind> = new Set([
+  'ai_input_tokens',
+  'ai_output_tokens',
+]);
+
+/**
+ * Threshold at which the `X-Usage-Warning: near-limit; …` header
+ * fires. Tracks docs/v4/arch-usage-limits.md §4.2 ("80% used").
+ */
+export const NEAR_LIMIT_THRESHOLD = 0.8;
+
 export interface LimitCheck {
   kind: LimitKind;
   /** Amount to be consumed by this call. Defaults to 1 for count buckets. */
@@ -345,6 +356,116 @@ export async function enforceUsageLimit(
     throw new UsageLimitExceededError(state);
   }
   return state;
+}
+
+/**
+ * Phase 2 — token bucket pre-hoc check.
+ *
+ * Token spend isn't knowable until the provider responds, so we can't
+ * gate the *cost* of a single call. What we CAN gate is: "this user
+ * is already over their monthly token cap, refuse further calls until
+ * the next reset". Called from inside `services/ai.ts::withUsageAccounting`
+ * BEFORE the provider call; the previous call's `recordLlmUsage`
+ * write has already moved `used` past `limit`, so this call trips.
+ *
+ * Design rationale: docs/v4/arch-usage-limits.md §4.1 "we already paid
+ * the provider — you can't refund a token. The current call already
+ * happened and is billed; the **next** call from this user is the one
+ * that fails." That's exactly what this function implements.
+ *
+ * Throws `UsageLimitExceededError` for the *first* exceeded bucket
+ * (input checked before output to keep behaviour deterministic).
+ * Returns the post-check state of both token buckets so the caller
+ * can render a near-limit header without a second round-trip.
+ */
+export async function enforceTokenLimits(
+  db: ScopedDb,
+  userId: string,
+  now: Date = new Date(),
+): Promise<{ inputState: LimitState; outputState: LimitState }> {
+  const { plan, overrideRow } = await loadPlanAndOverride(db, userId);
+  const { limits, overridden } = mergeLimits(plan, overrideRow, now);
+  const usage = await loadMonthUsage(db, userId, now);
+  const resetAt = nextMonthResetAt(now).toISOString();
+  const mk = (kind: 'ai_input_tokens' | 'ai_output_tokens'): LimitState => {
+    const limit = planLimitValue(limits, kind);
+    const used = usageValue(usage, kind);
+    return {
+      kind,
+      limit: toWireLimit(limit),
+      used,
+      remaining: toWireRemaining(limit, used),
+      resetAt,
+      plan,
+      overridden: overriddenValue(overridden, kind),
+    };
+  };
+  const inputState = mk('ai_input_tokens');
+  const outputState = mk('ai_output_tokens');
+  // Strictly `used >= limit`: any further call would record more
+  // tokens, so the post-condition `used > limit` is unavoidable.
+  // No `amount` parameter — see function-level comment.
+  const inputLimit = planLimitValue(limits, 'ai_input_tokens');
+  if (Number.isFinite(inputLimit) && inputState.used >= inputLimit) {
+    throw new UsageLimitExceededError(inputState);
+  }
+  const outputLimit = planLimitValue(limits, 'ai_output_tokens');
+  if (Number.isFinite(outputLimit) && outputState.used >= outputLimit) {
+    throw new UsageLimitExceededError(outputState);
+  }
+  return { inputState, outputState };
+}
+
+/**
+ * Render the `X-Usage-Warning` header value for a list of buckets, or
+ * return `null` if none are ≥ 80% utilised.
+ *
+ * Format: `near-limit; bucket=<kind>; pct=<int 0-100>` — chooses the
+ * single highest-utilisation bucket so mobile only needs to parse one
+ * tuple. Unbounded buckets (limit=null) are skipped.
+ *
+ * Wire shape pinned by docs/v4/arch-usage-limits.md §4.2.
+ */
+export function nearLimitWarning(states: readonly LimitState[]): string | null {
+  let best: { kind: LimitKind; pct: number } | null = null;
+  for (const s of states) {
+    if (s.limit === null || s.limit <= 0) continue;
+    const pct = s.used / s.limit;
+    if (pct < NEAR_LIMIT_THRESHOLD) continue;
+    if (!best || pct > best.pct) {
+      best = { kind: s.kind, pct };
+    }
+  }
+  if (!best) return null;
+  // Cap at 100 — over-usage (post-hoc token over-spend) shouldn't
+  // leak >100% into the header; the next call's enforceTokenLimits
+  // will 403 anyway.
+  const pctInt = Math.min(100, Math.round(best.pct * 100));
+  return `near-limit; bucket=${best.kind}; pct=${pctInt}`;
+}
+
+/**
+ * Helper for route handlers: after AI work succeeds, attach the
+ * near-limit header (if any). Best-effort — accounting failures must
+ * never bubble (Pitfall 13 style — usage telemetry never blocks the
+ * happy path), so we swallow errors and log instead. Returns the
+ * warning string for tests.
+ */
+export async function attachUsageWarning(
+  db: ScopedDb,
+  userId: string,
+  setHeader: (name: string, value: string) => void,
+  now: Date = new Date(),
+): Promise<string | null> {
+  try {
+    const { buckets } = await getEffectiveLimits(db, userId, now);
+    const warning = nearLimitWarning(buckets);
+    if (warning) setHeader('X-Usage-Warning', warning);
+    return warning;
+  } catch (err) {
+    console.error('[usage-limits] attachUsageWarning failed', err);
+    return null;
+  }
 }
 
 /**

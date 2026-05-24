@@ -16,6 +16,8 @@ import { resetPool, getPool } from '../db/client.js';
 import { signTestToken } from '../middleware/auth.js';
 import { newId } from '../lib/ids.js';
 import { makeUserId, makeSessionId } from './factories/index.js';
+import { withScopedConnection } from '../db/scope.js';
+import { enforceTokenLimits, UsageLimitExceededError, attachUsageWarning } from '../services/usage-limits.js';
 
 let fx: PgFixture;
 let alice: string;
@@ -30,13 +32,16 @@ async function seedUsageEvents(
   userId: string,
   count: number,
   operation: 'generate_report' | 'transcribe' | 'chat',
+  tokens?: { input: number; output: number },
 ) {
+  const input = tokens?.input ?? 100;
+  const output = tokens?.output ?? 50;
   for (let i = 0; i < count; i++) {
     await admin.query(
       `INSERT INTO app.llm_usage_events
          (id, user_id, vendor, model, operation, input_tokens, output_tokens, cached_tokens, latency_ms, fixture_mode, status)
-       VALUES ($1, $2, 'fixture', 'fixture-model', $3::app.llm_operation, 100, 50, 0, 10, 'replay', 'ok')`,
-      [newId('lue'), userId, operation],
+       VALUES ($1, $2, 'fixture', 'fixture-model', $3::app.llm_operation, $4, $5, 0, 10, 'replay', 'ok')`,
+      [newId('lue'), userId, operation, input, output],
     );
   }
 }
@@ -192,5 +197,113 @@ describe('admin overrides', () => {
     expect(body.plan).toBe('enterprise');
     // enterprise = unbounded = null on wire
     expect(body.buckets.find((b) => b.kind === 'report_generate')!.limit).toBe(null);
+  });
+});
+
+describe('Phase 2 — token bucket post-hoc enforcement', () => {
+  let charlie: string;
+  let charlieSid: string;
+
+  beforeAll(async () => {
+    charlie = makeUserId();
+    charlieSid = makeSessionId();
+    const admin = new pg.Client({ connectionString: fx.url });
+    await admin.connect();
+    await admin.query(
+      `INSERT INTO auth.users(id, phone, plan, is_admin) VALUES ($1, $2, 'free', false)`,
+      [charlie, '+15550700004'],
+    );
+    await admin.query(
+      `INSERT INTO auth.sessions(id, user_id, expires_at) VALUES ($1, $2, now() + interval '7 days')`,
+      [charlieSid, charlie],
+    );
+    await admin.end();
+  });
+
+  it('enforceTokenLimits throws once seeded usage pushes input tokens at/past the free cap', async () => {
+    // Free plan: ai_input_tokens = 200_000. Seed 2 rows × 150_000 = 300_000.
+    const admin = new pg.Client({ connectionString: fx.url });
+    await admin.connect();
+    await seedUsageEvents(admin, charlie, 2, 'chat', { input: 150_000, output: 1_000 });
+    await admin.end();
+
+    await expect(
+      withScopedConnection({ sub: charlie, sid: charlieSid }, (d) =>
+        enforceTokenLimits(d, charlie),
+      ),
+    ).rejects.toBeInstanceOf(UsageLimitExceededError);
+  });
+
+  it('enforceTokenLimits succeeds when usage is below the cap', async () => {
+    const fresh = makeUserId();
+    const freshSid = makeSessionId();
+    const admin = new pg.Client({ connectionString: fx.url });
+    await admin.connect();
+    await admin.query(
+      `INSERT INTO auth.users(id, phone, plan, is_admin) VALUES ($1, $2, 'free', false)`,
+      [fresh, '+15550700005'],
+    );
+    await admin.query(
+      `INSERT INTO auth.sessions(id, user_id, expires_at) VALUES ($1, $2, now() + interval '7 days')`,
+      [freshSid, fresh],
+    );
+    await seedUsageEvents(admin, fresh, 1, 'chat', { input: 1_000, output: 500 });
+    await admin.end();
+
+    const result = await withScopedConnection({ sub: fresh, sid: freshSid }, (d) =>
+      enforceTokenLimits(d, fresh),
+    );
+    expect(result.inputState.used).toBe(1_000);
+    expect(result.outputState.used).toBe(500);
+  });
+
+  it('attachUsageWarning sets the X-Usage-Warning header when a bucket is ≥80% used', async () => {
+    // Seed a fresh user to 4/5 report_generate (80%) — same flow as the
+    // mobile near-limit toast in design-maestro-full-regression.md.
+    const u = makeUserId();
+    const sid = makeSessionId();
+    const admin = new pg.Client({ connectionString: fx.url });
+    await admin.connect();
+    await admin.query(
+      `INSERT INTO auth.users(id, phone, plan, is_admin) VALUES ($1, $2, 'free', false)`,
+      [u, '+15550700006'],
+    );
+    await admin.query(
+      `INSERT INTO auth.sessions(id, user_id, expires_at) VALUES ($1, $2, now() + interval '7 days')`,
+      [sid, u],
+    );
+    await seedUsageEvents(admin, u, 4, 'generate_report');
+    await admin.end();
+
+    const captured: Record<string, string> = {};
+    await withScopedConnection({ sub: u, sid }, (d) =>
+      attachUsageWarning(d, u, (k, v) => {
+        captured[k] = v;
+      }),
+    );
+    expect(captured['X-Usage-Warning']).toBe('near-limit; bucket=report_generate; pct=80');
+  });
+
+  it('attachUsageWarning sets no header when no bucket is near-limit', async () => {
+    const u = makeUserId();
+    const sid = makeSessionId();
+    const admin = new pg.Client({ connectionString: fx.url });
+    await admin.connect();
+    await admin.query(
+      `INSERT INTO auth.users(id, phone, plan, is_admin) VALUES ($1, $2, 'free', false)`,
+      [u, '+15550700007'],
+    );
+    await admin.query(
+      `INSERT INTO auth.sessions(id, user_id, expires_at) VALUES ($1, $2, now() + interval '7 days')`,
+      [sid, u],
+    );
+    await admin.end();
+    const captured: Record<string, string> = {};
+    await withScopedConnection({ sub: u, sid }, (d) =>
+      attachUsageWarning(d, u, (k, v) => {
+        captured[k] = v;
+      }),
+    );
+    expect(captured['X-Usage-Warning']).toBeUndefined();
   });
 });

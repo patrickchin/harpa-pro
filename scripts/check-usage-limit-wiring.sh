@@ -20,6 +20,11 @@ ROUTES=(
   "packages/api/src/routes/voice.ts"
 )
 
+# Phase 2 — token-bucket post-hoc gating lives at the AI chokepoint.
+# Verify `services/ai.ts::withUsageAccounting` calls enforceTokenLimits
+# so every paid AI call (transcribe, chat, generate_report) is gated.
+TOKEN_GATE="packages/api/src/services/ai.ts"
+
 EXIT=0
 for f in "${ROUTES[@]}"; do
   if ! grep -q "enforceUsageLimit" "$ROOT/$f"; then
@@ -28,7 +33,12 @@ for f in "${ROUTES[@]}"; do
   fi
 done
 
+if ! grep -q "enforceTokenLimits" "$ROOT/$TOKEN_GATE"; then
+  echo "❌ $TOKEN_GATE does not call enforceTokenLimits — token bucket post-hoc gate missing per docs/v4/arch-usage-limits.md §4.1"
+  EXIT=1
+fi
+
 if [ $EXIT -eq 0 ]; then
-  echo "✅ enforceUsageLimit wired in all paid-AI routes"
+  echo "✅ enforceUsageLimit + enforceTokenLimits wired in all paid-AI sites"
 fi
 exit $EXIT

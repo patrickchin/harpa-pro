@@ -97,7 +97,8 @@ context only).
 Tactical sub-rules:
 - Tailwind tokens defined in `apps/mobile/tailwind.config.js` once,
   derived from the canonical source's `tailwind.config.js`. No hex
-  values in screen code (lint guard `check-no-hex-colors.sh`).
+  values in screen code (ESLint rule `no-restricted-syntax` scoped to
+  `components/**` in `apps/mobile/.eslintrc.cjs`).
 - Shared primitives (`Card`, `Input`, `Button`, `IconButton`,
   `ScreenHeader`, `EmptyState`, `Skeleton`, `AppDialogSheet`,
   `StatTile`) ship in P2.2 with snapshot tests. Adding a new

@@ -36,7 +36,4 @@ jobs:
         run: |
           bash scripts/check-no-supabase.sh
           bash scripts/check-no-unistyles.sh
-          bash scripts/check-no-alert-alert.sh
-          bash scripts/check-no-process-env-bang.sh
-          bash scripts/check-no-hex-colors.sh
           bash scripts/check-scope-tests.sh

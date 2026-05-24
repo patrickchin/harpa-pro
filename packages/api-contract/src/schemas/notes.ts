@@ -18,14 +18,22 @@ export const note = z.object({
   // short headline (≤ 200 chars) in `title`. Text / image / document
   // notes leave them null but may populate them in the future
   // (e.g. user-supplied document title, photo caption).
-  title: z.string().max(200).nullable().optional(),
-  summary: z.string().nullable().optional(),
+  //
+  // These are `.nullable()` (NOT `.optional()`) because the server
+  // always returns the key (drizzle reads the column and serialises
+  // `null` for unset values). Marking them `.optional()` here would
+  // tell clients to handle `undefined` as well as `null`, which is
+  // strictly wrong for the response shape — see Audit C in
+  // docs/v4/arch-data-layer.md.
+  title: z.string().max(200).nullable(),
+  summary: z.string().nullable(),
   // Voice-only diagnostics (migration 0004 / arch-voice-pipeline.md §D3).
-  // Populated only on `kind='voice'` rows; nullable elsewhere.
-  durationSec: z.number().int().min(0).nullable().optional(),
-  language: z.string().min(2).max(16).nullable().optional(),
-  transcribeProvider: z.string().nullable().optional(),
-  transcribedAt: isoDateTime.nullable().optional(),
+  // Populated only on `kind='voice'` rows; null elsewhere — but the
+  // key is always present.
+  durationSec: z.number().int().min(0).nullable(),
+  language: z.string().min(2).max(16).nullable(),
+  transcribeProvider: z.string().nullable(),
+  transcribedAt: isoDateTime.nullable(),
   createdAt: isoDateTime,
   updatedAt: isoDateTime,
 });

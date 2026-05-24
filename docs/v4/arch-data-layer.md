@@ -112,3 +112,31 @@ Pipeline section.
 `features/auth/useAuthSession` (which mirrors secure-store) and
 attaches it to every request. On 401, it triggers `signOut()` and
 the `(app)` layout redirects to `(auth)/login`.
+
+## Drift gates (cross-layer)
+
+Three automated gates keep the data-layer contract honest. Each one
+catches a class of "silent escape" we don't want to discover in
+production:
+
+- **`packages/api/src/__tests__/contract.test.ts`** — the runtime
+  OpenAPI doc must equal the frozen `packages/api-contract/openapi.json`,
+  and every documented path must resolve to a registered handler.
+- **`packages/api/src/__tests__/auth-coverage.test.ts`** — every
+  registered route is either on the explicit public allowlist OR
+  returns `401` for a request without an `Authorization` header.
+  Forgetting `withAuth()` on a new route fails this test (and would
+  otherwise leave `c.get('db')` undefined — see
+  [arch-auth-and-rls.md](arch-auth-and-rls.md)).
+- **`apps/mobile/lib/api/invalidation.coverage.test.ts`** — every
+  mutation hook registers a `INVALIDATIONS` entry. Adding a new
+  generated mutation without the matching cache-invalidation rule
+  fails this test.
+
+Zod / OpenAPI / Drizzle drift on *response* shapes is partially
+guarded by the contract test (Zod → OpenAPI → committed spec → mobile
+types) — but the Drizzle column → Zod schema link is hand-written.
+When you add a nullable column, the Zod field is `.nullable()` (not
+`.nullable().optional()`) unless the server can omit the key from a
+response. Mark a field `.optional()` only when the server may legally
+not send the key at all.

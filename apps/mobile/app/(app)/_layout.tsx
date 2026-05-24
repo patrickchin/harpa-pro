@@ -11,22 +11,28 @@
  */
 import { useEffect, useRef, useCallback } from 'react';
 import { BackHandler, ToastAndroid, Platform, ActivityIndicator, View } from 'react-native';
-import { Stack, useNavigation, Redirect } from 'expo-router';
+import { Stack, useRouter, Redirect } from 'expo-router';
 import { useAuthSession } from '@/lib/auth/session';
 import { decideAppRedirect } from '@/lib/auth/auth-gate';
 import { colors } from '@/lib/design-tokens/colors';
 
 export default function AppLayout() {
   const { status } = useAuthSession();
-  const navigation = useNavigation();
+  const router = useRouter();
   const lastBackPress = useRef(0);
 
   // Android double-back-to-exit handler (ported from canonical).
   // Declared BEFORE any conditional return so hook order stays stable
   // across renders when the auth gate flips (Rules of Hooks).
+  //
+  // IMPORTANT: use `router.canGoBack()` (expo-router) — NOT
+  // `useNavigation().canGoBack()`. `useNavigation` here returns the
+  // PARENT navigator (the root layout's), whose `canGoBack()` is
+  // always false even when nested screens have history, which would
+  // make the toast/double-press fire on every screen.
   const handleBackPress = useCallback(() => {
     if (Platform.OS !== 'android') return false;
-    if (navigation.canGoBack()) return false; // let default nav handle it
+    if (router.canGoBack()) return false; // let default nav handle it
     // At root — require double-press to exit
     const now = Date.now();
     if (now - lastBackPress.current < 2000) {
@@ -35,7 +41,7 @@ export default function AppLayout() {
     lastBackPress.current = now;
     ToastAndroid.show('Press back again to exit', ToastAndroid.SHORT);
     return true; // prevent default (closing the app)
-  }, [navigation]);
+  }, [router]);
 
   useEffect(() => {
     const sub = BackHandler.addEventListener('hardwareBackPress', handleBackPress);

@@ -44,7 +44,10 @@ import {
   View,
 } from 'react-native';
 import { CachedImage } from '@/components/ui/CachedImage';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from 'react-native-safe-area-context';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import {
   CameraView,
@@ -161,6 +164,7 @@ export function CameraCapture(props: CameraCaptureProps) {
 
   const [hookPermission, requestPermission] = useCameraPermissions({ request: true });
   const cameraRef = useRef<CameraViewType>(null);
+  const insets = useSafeAreaInsets();
 
   const [facing, setFacing] = useState<CameraType>('back');
   const [flash, setFlash] = useState<FlashMode>('off');
@@ -436,7 +440,7 @@ export function CameraCapture(props: CameraCaptureProps) {
         {/* Top bar */}
         <View
           className="px-4 flex-row items-center justify-between"
-          style={styles.topBar}
+          style={[styles.topBar, { paddingTop: insets.top, height: 56 + insets.top }]}
         >
           <Pressable
             onPress={handleCancel}

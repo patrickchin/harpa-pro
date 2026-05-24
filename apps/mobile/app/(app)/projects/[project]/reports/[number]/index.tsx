@@ -15,7 +15,7 @@
  * dialog wiring is exercised end-to-end in tests + dev mirrors.
  */
 import { useCallback, useMemo, useState } from 'react';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 
 import { SavedReport } from '@/screens/saved-report';
 import {
@@ -175,7 +175,7 @@ export default function SavedReportRoute() {
       // After delete, fall back to the reports list. Pop to the existing
       // frame instead of replacing the top so we don't leave two adjacent
       // reports-list frames. See docs/v4/arch-mobile-navigation.md §4.
-      dismissOrReplaceTo(router, `/(app)/projects/${slug}/reports` as never);
+      dismissOrReplaceTo(router, `/(app)/projects/${slug}/reports` as Href);
     } catch {
       // Error surface: the mutation hook keeps the dialog open via the
       // `isDeleting` flag; the AppDialogSheet stays mounted. A dedicated
@@ -236,7 +236,7 @@ export default function SavedReportRoute() {
         hasValidRouteParams
           ? () =>
               router.push(
-                `/(app)/projects/${slug}/reports/${reportNumber}/debug` as never,
+                `/(app)/projects/${slug}/reports/${reportNumber}/debug` as Href,
               )
           : undefined
       }

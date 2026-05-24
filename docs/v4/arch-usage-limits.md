@@ -546,7 +546,7 @@ service has a column to read; tests + docs land with each step
     — new dialog + toast + error-handler wiring + behaviour tests.
 11. `feat(mobile): plan + limits card on usage screen`
     — extends `screens/usage.tsx`; behaviour test on render with
-    mock `limits` payload; `(dev)/usage.tsx` mirror updated.
+    mock `limits` payload.
 12. `test(e2e): maestro flows 14a + 14b + add to regression journey`
     — both flows + edit `design-maestro-full-regression.md` to list
     them in the module slot inventory.

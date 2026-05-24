@@ -8,7 +8,7 @@
  */
 import { useEffect } from 'react';
 import { View, ActivityIndicator, Text } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { useResolveReportSlugQuery } from '@/lib/api/hooks';
 import { Button } from '@/components/primitives/Button';
 import { EmptyState } from '@/components/primitives/EmptyState';
@@ -21,7 +21,7 @@ export default function ResolveReportSlugScreen() {
   useEffect(() => {
     if (result.data) {
       const { projectId, reportNumber } = result.data;
-      router.replace(`/projects/${projectId}/reports/${reportNumber}` as never);
+      router.replace(`/projects/${projectId}/reports/${reportNumber}` as Href);
     }
   }, [result.data, router]);
 
@@ -34,7 +34,7 @@ export default function ResolveReportSlugScreen() {
           action={
             <Button
               variant="default"
-              onPress={() => router.replace('/(app)/projects' as never)}
+              onPress={() => router.replace('/(app)/projects' as Href)}
             >
               Go to projects
             </Button>

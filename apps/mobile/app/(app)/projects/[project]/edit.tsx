@@ -2,7 +2,7 @@
  * Project edit — real route wiring useProjectQuery /
  * useUpdateProjectMutation / useDeleteProjectMutation.
  */
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter, useLocalSearchParams, type Href } from 'expo-router';
 import { ProjectEdit } from '@/screens/project-edit';
 import {
   useProjectQuery,
@@ -70,7 +70,7 @@ export default function ProjectEditRoute() {
               // Pop to the projects list already on the stack instead of
               // replacing the top — otherwise back lands on the deleted
               // project. See docs/v4/arch-mobile-navigation.md §4.
-              dismissOrReplaceTo(router, '/(app)/projects' as never);
+              dismissOrReplaceTo(router, '/(app)/projects' as Href);
             },
           },
         );

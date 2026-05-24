@@ -20,8 +20,8 @@
 ```
 
 > **No automated screenshot diffs.** Visual review is manual against
-> the canonical port source at `../haru3-reports/apps/mobile@dev`,
-> aided by the in-app dev gallery (`app/(dev)/`).
+> the canonical port source at `../haru3-reports/apps/mobile@dev` on
+> the iOS simulator.
 
 ## Per-layer rules
 
@@ -73,8 +73,6 @@ Each AI-touching route has a test that:
 
 - Manual, in the iOS simulator, side-by-side with the canonical
   source at `../haru3-reports/apps/mobile@dev`.
-- The dev gallery (`app/(dev)/`) makes this a tap-through check:
-  no auth, no API, just the screen body with mock props.
 - There is no automated diff and no `pnpm visual:diff` script.
   Cosmetic drift is caught by reviewer eye; it is still a P0 bug.
 

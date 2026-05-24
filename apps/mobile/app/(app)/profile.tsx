@@ -8,7 +8,7 @@
  * Developer card is hidden on real builds (the dev mirror flips it
  * on with the canonical catalogue for visual review).
  */
-import { useRouter } from 'expo-router';
+import { useRouter, type Href } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
 
 import { Profile, type ProfileMonthlyUsage } from '@/screens/profile';
@@ -70,8 +70,8 @@ export default function ProfileRoute() {
       refreshing={refreshing}
       onRefresh={onRefresh}
       onBack={() => safeBack(router, '/(app)/projects')}
-      onPressAccount={() => router.push('/(app)/account' as never)}
-      onPressUsage={() => router.push('/(app)/usage' as never)}
+      onPressAccount={() => router.push('/(app)/account' as Href)}
+      onPressUsage={() => router.push('/(app)/usage' as Href)}
       onCopy={(value, options) => {
         void copy(value, { toast: options.toast });
       }}

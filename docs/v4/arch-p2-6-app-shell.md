@@ -15,7 +15,7 @@ inside. This includes:
    area, error boundary, React Query, auth session, dialogs, uploads,
    audio playback, telemetry) in an order that respects their
    dependencies and prevents re-mount races.
-2. **Auth gate redirect logic** — three route groups (`(dev)`, `(auth)`,
+2. **Auth gate redirect logic** — two route groups (`(auth)`,
    `(app)`) with distinct rules about who can mount what and where
    unauthenticated or needs-onboarding users get redirected.
 3. **Tab + stack navigation** — the shape of the `(app)` group's bottom
@@ -157,15 +157,7 @@ structure to v4.
 
 ## Auth gate decision table
 
-Three route groups:
-
-### `(dev)` — dev gallery
-
-- **Guard**: `__DEV__ || env.EXPO_PUBLIC_USE_FIXTURES`. If false,
-  redirect to `/`.
-- **Auth status**: ignored. Dev mirrors are pure UI with mock props; no
-  API calls.
-- Already implemented in P2.0b.
+Two route groups:
 
 ### `(auth)` — sign-in, sign-up, onboarding
 
@@ -736,7 +728,6 @@ users to `/(auth)/sign-in/phone`.
   - Unauthenticated start → sign-in screen.
   - After sign-in → onboarding if `displayName == null`, else projects.
   - Android back button at projects root requires double-press to exit.
-  - Dev gallery (`/(dev)`) still accessible via direct nav in dev mode.
 
 ## Pitfalls addressed
 

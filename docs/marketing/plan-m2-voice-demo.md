@@ -169,22 +169,10 @@ guarantees visual parity and eliminates duplicate maintenance.
       ```
 - [ ] Rebuild mobile (`pnpm ios`) to verify Metro + NativeWind pick up
       the new glob.
-- [ ] Create `apps/mobile/app/(dev)/voice-report.tsx` in the dev-gallery:
-      ```tsx
-      import { VoiceReportView } from '@harpa/ui-voice';
-      import { demoReport } from '@harpa/ui-voice/fixtures';
-
-      export default function VoiceReportDevScreen() {
-        return (
-          <ScrollView className="flex-1 bg-background p-4">
-            <VoiceReportView report={demoReport} watermark="Dev" />
-          </ScrollView>
-        );
-      }
-      ```
-- [ ] Add entry to `apps/mobile/screens/dev-gallery.rows.ts`.
-- [ ] Verify it renders correctly in iOS sim.
-- [ ] Commit: `feat(mobile): add VoiceReportView to dev-gallery`.
+- [ ] Wire `VoiceReportView` + `demoReport` from `@harpa/ui-voice`
+      into the relevant mobile voice-report route under
+      `app/(app)/`. Verify it renders correctly in iOS sim.
+- [ ] Commit: `feat(mobile): adopt shared VoiceReportView`.
 
 ### M2.8 Tests (shared package + integration)
 - [ ] **Unit tests (Vitest + jsdom + RNW):**
@@ -234,7 +222,7 @@ guarantees visual parity and eliminates duplicate maintenance.
 - [ ] Demo works end-to-end on preview deploy with no API hops.
 - [ ] Playwright E2E green in CI (both `voice-demo.spec.ts` and
       `voice-demo-shared-ui.spec.ts`).
-- [ ] Mobile dev-gallery entry for `VoiceReportView` renders correctly.
+- [ ] Mobile `VoiceReportView` route renders correctly.
 - [ ] Lighthouse still ≥ 95 on non-demo pages, ≥ 90 on demo page
       (RNW + shared package add ~120 KB gzipped, acceptable).
 - [ ] Tag `v0.3.0-marketing`.

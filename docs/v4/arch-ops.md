@@ -29,10 +29,10 @@
     with prod so QA can carry both apps.
   - `development` — Metro dev-client. `com.harpa.pro.dev` →
     `http://localhost:8787`.
-  Non-prod variants expose a dev screen (`/(dev)/api-base-url`) that
-  overrides the API base URL at runtime — flip QA between dev / a
-  PR-preview Fly app without a rebuild. Override is hard-disabled in
-  production builds (see `lib/api/base-url.ts`).
+  Non-prod variants expose a runtime API base-URL override
+  (`setApiBaseUrlOverride` in `lib/api/base-url.ts`) so QA can flip
+  between dev / a PR-preview Fly app without a rebuild. Override is
+  hard-disabled in production builds.
 - **Docs site**: Vercel (or Cloudflare Pages — TBD in P0).
 
 ## Secrets

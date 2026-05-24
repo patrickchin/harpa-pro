@@ -19,6 +19,7 @@ import {
   useFocusEffect,
   useLocalSearchParams,
   useRouter,
+  type Href,
 } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
 
@@ -355,7 +356,7 @@ export default function GenerateReportRoute() {
       {
         onSuccess: () => {
           router.replace(
-            `/(app)/projects/${slug}/reports/${reportNumber}` as never,
+            `/(app)/projects/${slug}/reports/${reportNumber}` as Href,
           );
         },
         onError: (err) => {
@@ -379,7 +380,7 @@ export default function GenerateReportRoute() {
           // Reports list is already on the stack — pop to it instead of
           // replacing the top, which would leave two adjacent reports-list
           // frames. See docs/v4/arch-mobile-navigation.md §4.
-          dismissOrReplaceTo(router, `/(app)/projects/${slug}/reports` as never);
+          dismissOrReplaceTo(router, `/(app)/projects/${slug}/reports` as Href);
         },
       },
     );
@@ -404,7 +405,7 @@ export default function GenerateReportRoute() {
     router.push({
       pathname: '/(camera)/capture',
       params: { sessionId },
-    } as never);
+    } as Href);
   }, [slug, reportNumber, reportId, router]);
 
   const handlePickAttachment = useCallback(

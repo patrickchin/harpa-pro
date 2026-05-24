@@ -2,7 +2,7 @@
  * Project home — real route wiring useProjectQuery against the
  * slug-based URL scheme introduced in P3.0.
  */
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter, useLocalSearchParams, type Href } from 'expo-router';
 import { ProjectHome } from '@/screens/project-home';
 import { useProjectQuery } from '@/lib/api/hooks';
 import { useRefresh } from '@/lib/use-refresh';
@@ -44,9 +44,9 @@ export default function ProjectHomeRoute() {
       refreshing={refreshing}
       onRefresh={onRefresh}
       onBack={() => safeBack(router, '/(app)/projects')}
-      onPressEdit={() => router.push(`/projects/${slug}/edit` as never)}
-      onPressReports={() => router.push(`/projects/${slug}/reports` as never)}
-      onPressMembers={() => router.push(`/projects/${slug}/members` as never)}
+      onPressEdit={() => router.push(`/projects/${slug}/edit` as Href)}
+      onPressReports={() => router.push(`/projects/${slug}/reports` as Href)}
+      onPressMembers={() => router.push(`/projects/${slug}/members` as Href)}
       copiedKey={copiedKey}
       onCopy={(value, key) => {
         void copy(value, {

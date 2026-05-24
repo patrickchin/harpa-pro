@@ -5,7 +5,7 @@
  * totals }`; per-event timeline + per-model breakdown + the
  * `UsageBarChart` are deferred to P4 (route passes `chart={null}`).
  */
-import { useRouter } from 'expo-router';
+import { useRouter, type Href } from 'expo-router';
 
 import { Usage, type UsageMonthlyRow, type UsageByModelRow } from '@/screens/usage';
 import { useMeUsageQuery, useMeLimitsQuery } from '@/lib/api/hooks';
@@ -62,7 +62,7 @@ export default function UsageRoute() {
       isLoading={usageQuery.isLoading}
       refreshing={refreshing}
       onRefresh={onRefresh}
-      onBack={() => safeBack(router, '/(app)/profile' as never)}
+      onBack={() => safeBack(router, '/(app)/profile' as Href)}
       chart={null}
       limits={limitsQuery.data ? { plan: limitsQuery.data.plan, buckets: limitsQuery.data.buckets } : undefined}
     />

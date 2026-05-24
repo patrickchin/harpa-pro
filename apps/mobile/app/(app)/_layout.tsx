@@ -52,7 +52,7 @@ export default function AppLayout() {
   // Must come AFTER all hook calls.
   const target = decideAppRedirect(status);
   if (target) {
-    return <Redirect href={target as any} />;
+    return <Redirect href={target} />;
   }
 
   // Render splash if still loading (suppresses flicker on cold start).

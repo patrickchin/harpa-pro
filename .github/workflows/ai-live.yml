@@ -59,13 +59,18 @@ jobs:
       - run: pnpm --filter @harpa/api-contract build
 
       # Provider keys live in Doppler (config `dev`), not GH secrets.
-      # `secrets-fetch-action` injects them as env vars with automatic
-      # masking — cleaner than shelling out to the Doppler CLI.
+      # `secrets-fetch-action` exposes them as masked step outputs;
+      # we deliberately do NOT use `inject-env-vars` because that
+      # would pull `NODE_ENV=production` and other Fly-only vars
+      # from the config and confuse the test runner's env parser.
       - uses: dopplerhq/secrets-fetch-action@v2.0.0
+        id: doppler
         with:
           doppler-token: ${{ secrets.DOPPLER_TOKEN_DEV }}
-          inject-env-vars: true
 
       - name: Run live-LLM tests against real OpenAI
+        env:
+          OPENAI_API_KEY: ${{ steps.doppler.outputs.OPENAI_API_KEY }}
+          GROQ_API_KEY: ${{ steps.doppler.outputs.GROQ_API_KEY }}
         run: pnpm --filter @harpa/api test:live
 

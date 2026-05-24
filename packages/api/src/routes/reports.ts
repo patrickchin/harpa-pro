@@ -68,6 +68,10 @@ const reportPathParam = z.object({
 const MIN = 60_000;
 const generateRateLimit = withRateLimit({ name: 'reports.generate', limit: 30, windowMs: MIN });
 const generateIdempotency = withIdempotency({ name: 'reports.generate' });
+// Shared per-user AI budget — same instance shape as voice.ts so the
+// 60/min cap applies across voice + reports.generate. See
+// arch-rate-limiting.md §3.3.
+const aiUserSharedRateLimit = withRateLimit({ name: 'ai.user', limit: 60, windowMs: MIN });
 
 export const reportRoutes = new OpenAPIHono<AppEnv>();
 
@@ -370,7 +374,7 @@ reportRoutes.openapi(
     path: '/projects/{project}/reports/{number}/generate',
     tags: ['reports'],
     security: [{ bearerAuth: [] }],
-    middleware: [withAuth(), generateRateLimit, generateIdempotency] as const,
+    middleware: [withAuth(), aiUserSharedRateLimit, generateRateLimit, generateIdempotency] as const,
     request: {
       params: reportPathParam,
       body: { content: { 'application/json': { schema: reportSchemas.generateReportRequest } } },
@@ -396,7 +400,7 @@ reportRoutes.openapi(
     path: '/projects/{project}/reports/{number}/regenerate',
     tags: ['reports'],
     security: [{ bearerAuth: [] }],
-    middleware: [withAuth(), generateRateLimit, generateIdempotency] as const,
+    middleware: [withAuth(), aiUserSharedRateLimit, generateRateLimit, generateIdempotency] as const,
     request: {
       params: reportPathParam,
       body: { content: { 'application/json': { schema: reportSchemas.regenerateReportRequest } } },

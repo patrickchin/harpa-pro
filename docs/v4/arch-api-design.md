@@ -134,9 +134,22 @@ pre-P3.0 shape and will be renamed by the P3.0 migration.
 
 ### Rate limiting
 
-`@upstash/ratelimit` with Redis (Upstash). Per-route budget
-declared in the route definition; shared per-user budget across
-voice + generate at 60 RPM.
+Full design in [arch-rate-limiting.md](arch-rate-limiting.md). In
+brief: `RateLimiter` abstraction with a `PostgresRateLimiter` backend
+in production (atomic counts across Fly machines) and a
+`MemoryRateLimiter` in dev/test. Three layers:
+
+- **Per-route budgets** declared on each route via `withRateLimit`
+  (keyed by user / ip / phone — see the table in arch-rate-limiting.md).
+- **Shared per-user AI budget** of 60 RPM across `voice.*` and
+  `reports.generate`.
+- **Catch-all defaults** mounted globally: 600/min per user on authed
+  traffic, 120/min per IP on unauthed traffic. `/healthz` and
+  `/readyz` opt out via a static skip-list.
+
+SMS-pumping protection on `POST /auth/otp/{start,verify}` (per-phone
++ per-IP) is enforced at the API; clients receive a 429 +
+`Retry-After` + `X-RateLimit-*` headers.
 
 ### Idempotency
 

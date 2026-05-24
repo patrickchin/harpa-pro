@@ -22,7 +22,7 @@ on:
 
 concurrency:
   group: mobile-ota-prod
-  cancel-in-progress: true
+  cancel-in-progress: false # never cancel a prod deploy
 
 jobs:
   ota:
@@ -33,14 +33,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: pnpm/action-setup@v4
-
-      - uses: actions/setup-node@v4
+      - uses: ./.github/actions/setup-monorepo
         with:
-          node-version: 20
-          cache: pnpm
-
-      - run: pnpm install --frozen-lockfile
+          node-version: '20'
 
       - uses: expo/expo-github-action@v8
         with:

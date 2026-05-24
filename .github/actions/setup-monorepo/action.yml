@@ -1,0 +1,31 @@
+name: Setup monorepo
+description: >
+  Checkout, pnpm, node, and `pnpm install --frozen-lockfile` —
+  the four steps every CI job in this repo does. Centralised here so
+  the pnpm/node versions can't drift between workflows.
+inputs:
+  node-version:
+    description: Node version (matches `engines.node` in package.json).
+    required: false
+    default: '22'
+  pnpm-version:
+    description: pnpm version (must match `packageManager` in package.json).
+    required: false
+    default: '9.12.3'
+  install:
+    description: Run `pnpm install --frozen-lockfile` after setup.
+    required: false
+    default: 'true'
+runs:
+  using: composite
+  steps:
+    - uses: pnpm/action-setup@v4
+      with:
+        version: ${{ inputs.pnpm-version }}
+    - uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.node-version }}
+        cache: pnpm
+    - if: ${{ inputs.install == 'true' }}
+      shell: bash
+      run: pnpm install --frozen-lockfile

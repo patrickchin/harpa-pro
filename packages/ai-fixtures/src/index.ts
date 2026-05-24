@@ -41,7 +41,7 @@ export interface ChatRequest {
 
 export interface ChatResponse {
   text: string;
-  usage?: { input: number; output: number };
+  usage?: { input: number; output: number; cached?: number };
 }
 
 export interface TranscribeRequest {
@@ -83,7 +83,7 @@ export class LiveModeForbiddenError extends Error {
  * pair that has no implementation. Today:
  *   - openai.transcribe — transcription is groq-only
  *   - groq.chat         — chat is openai-only
- *   - kimi.*            — live adapter pending (replay-only)
+ *   - kimi.transcribe   — transcription is groq-only
  */
 export class LiveAdapterMissingError extends Error {
   constructor(public vendor: string, public kind: 'chat' | 'transcribe') {
@@ -99,4 +99,5 @@ export { redact } from './redact.js';
 export { hashRequest } from './hash.js';
 export { createOpenAiProvider } from './providers/openai.js';
 export { createGroqProvider } from './providers/groq.js';
+export { createKimiProvider } from './providers/kimi.js';
 export { realProviderFactoryFromEnv } from './providers/factory-from-env.js';

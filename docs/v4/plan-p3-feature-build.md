@@ -296,8 +296,8 @@ expand state + pricing-reference card + optional `chart` slot; real
 routes wire `useAuthSession` / `useMeUsageQuery` / API
 `signOut` / `queryClient.clear()` with `safeBack` fallbacks; dev
 mirrors with hand-crafted mock states for every visible state (Profile
-mirror passes the canonical AI provider catalogue: Kimi, OpenAI,
-Anthropic, Google, Z.AI, DeepSeek); `components/skeletons/AccountDetailsSkeleton.tsx`
+mirror passes the canonical AI provider catalogue: Kimi, OpenAI);
+`components/skeletons/AccountDetailsSkeleton.tsx`
 verbatim; `lib/build-info.ts` adapted to read Fly API base URL from
 `lib/env.ts` (preserves `displayVersion` / `serverLabel` shape);
 32 Vitest cases across the three screens + 1 snapshot each. Commit:
@@ -486,18 +486,20 @@ route.
       `llm_usage_events_self_insert` enforce `user_id =
       current_setting('app.user_id')`. INSERT goes through the
       per-request scoped accessor; no mobile-side writes.
-- [ ] Each vendor adapter returns `{ output, usage }` where `usage`
+- [x] Each vendor adapter returns `{ output, usage }` where `usage`
       is `{ inputTokens, outputTokens, cachedTokens? }`. Extract from
       the SDK response per vendor:
       - OpenAI: `response.usage.{prompt_tokens, completion_tokens, prompt_tokens_details.cached_tokens}`
-      - Anthropic: `response.usage.{input_tokens, output_tokens, cache_read_input_tokens}`
-      - Google / Kimi / Z.AI / DeepSeek: equivalent fields per their SDKs.
-      - Transcribe (Whisper-class): record audio duration → derive
-        `inputTokens` via a documented conversion (or store
-        `inputSeconds` in a separate column).
-      (Live-mode mapping deferred — fixture replay already supplies
-      `{input,output}` via the shared `ChatResponse.usage`. Vendor
-      adapters land with the first non-fixture caller.)
+      - Kimi: equivalent fields per its SDK.
+      - Transcribe (Whisper-class): audio duration → `inputTokens =
+        ceil(durationSec)` (documented convention in
+        `services/ai-usage.ts` so the unified `input_tokens` column
+        carries non-zero observability for every call).
+      Shipped in P3.15.5 close-out: OpenAI adapter reads
+      `prompt_tokens_details.cached_tokens`; new Kimi live adapter
+      (`packages/ai-fixtures/src/providers/kimi.ts`, Moonshot REST,
+      OpenAI-compatible); `services/ai.ts::transcribe()` derives
+      input tokens from the provider-reported `durationSec`.
 - [x] Fixture replays return canonical `usage` values stored
       alongside the fixture payload (so replay-mode tests have
       deterministic token counts). `packages/ai-fixtures` already

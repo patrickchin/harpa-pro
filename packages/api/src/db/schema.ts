@@ -12,6 +12,7 @@ import {
   bigint,
   unique,
   boolean,
+  numeric,
 } from 'drizzle-orm/pg-core';
 
 /**
@@ -216,6 +217,10 @@ export const llmUsageEvents = appSchema.table('llm_usage_events', {
   inputTokens: integer('input_tokens').notNull().default(0),
   outputTokens: integer('output_tokens').notNull().default(0),
   cachedTokens: integer('cached_tokens').notNull().default(0),
+  // Audio duration (seconds) for `operation='transcribe'` rows. NULL
+  // for chat / generate_report. See migration
+  // `0008_llm_usage_input_seconds.sql`.
+  inputSeconds: numeric('input_seconds', { precision: 10, scale: 3 }),
   latencyMs: integer('latency_ms').notNull().default(0),
   fixtureMode: llmFixtureModeEnum('fixture_mode').notNull(),
   status: llmUsageStatusEnum('status').notNull(),

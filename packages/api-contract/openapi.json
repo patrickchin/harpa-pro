@@ -1274,6 +1274,10 @@
                           "type": "integer",
                           "minimum": 0
                         },
+                        "inputSeconds": {
+                          "type": "number",
+                          "minimum": 0
+                        },
                         "calls": {
                           "type": "integer",
                           "minimum": 0
@@ -1285,6 +1289,7 @@
                         "inputTokens",
                         "outputTokens",
                         "cachedTokens",
+                        "inputSeconds",
                         "calls"
                       ]
                     },
@@ -1309,6 +1314,10 @@
                             "type": "integer",
                             "minimum": 0
                           },
+                          "inputSeconds": {
+                            "type": "number",
+                            "minimum": 0
+                          },
                           "calls": {
                             "type": "integer",
                             "minimum": 0
@@ -1319,6 +1328,7 @@
                           "inputTokens",
                           "outputTokens",
                           "cachedTokens",
+                          "inputSeconds",
                           "calls"
                         ]
                       }
@@ -1357,6 +1367,10 @@
                           "cachedTokens": {
                             "type": "integer",
                             "minimum": 0
+                          },
+                          "inputSeconds": {
+                            "type": "number",
+                            "minimum": 0
                           }
                         },
                         "required": [
@@ -1366,7 +1380,8 @@
                           "calls",
                           "inputTokens",
                           "outputTokens",
-                          "cachedTokens"
+                          "cachedTokens",
+                          "inputSeconds"
                         ]
                       }
                     },

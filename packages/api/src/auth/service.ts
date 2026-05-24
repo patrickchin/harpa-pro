@@ -152,6 +152,8 @@ export interface UsageTokenMonth {
   inputTokens: number;
   outputTokens: number;
   cachedTokens: number;
+  /** Sum of transcribe audio seconds for the month. */
+  inputSeconds: number;
   calls: number;
 }
 
@@ -163,6 +165,8 @@ export interface UsageByModelRow {
   inputTokens: number;
   outputTokens: number;
   cachedTokens: number;
+  /** Sum of transcribe audio seconds. 0 for non-transcribe rows. */
+  inputSeconds: number;
 }
 
 export interface UsageSummary {
@@ -173,6 +177,7 @@ export interface UsageSummary {
     inputTokens: number;
     outputTokens: number;
     cachedTokens: number;
+    inputSeconds: number;
     calls: number;
   };
   usageTokens: UsageTokenMonth[];
@@ -209,14 +214,16 @@ export async function fetchUsage(db: Db, userId: string): Promise<UsageSummary> 
     input_tokens: string;
     output_tokens: string;
     cached_tokens: string;
+    input_seconds: string;
     calls: string;
   }>(sql`
     SELECT
       to_char(created_at, 'YYYY-MM') AS month,
-      coalesce(sum(input_tokens), 0)::text  AS input_tokens,
-      coalesce(sum(output_tokens), 0)::text AS output_tokens,
-      coalesce(sum(cached_tokens), 0)::text AS cached_tokens,
-      count(*)::text                        AS calls
+      coalesce(sum(input_tokens), 0)::text             AS input_tokens,
+      coalesce(sum(output_tokens), 0)::text            AS output_tokens,
+      coalesce(sum(cached_tokens), 0)::text            AS cached_tokens,
+      coalesce(sum(input_seconds), 0)::text            AS input_seconds,
+      count(*)::text                                   AS calls
     FROM app.llm_usage_events
     WHERE user_id = ${userId} AND status = 'ok'
     GROUP BY month
@@ -230,15 +237,17 @@ export async function fetchUsage(db: Db, userId: string): Promise<UsageSummary> 
     input_tokens: string;
     output_tokens: string;
     cached_tokens: string;
+    input_seconds: string;
   }>(sql`
     SELECT
       vendor,
       model,
       operation,
-      count(*)::text                        AS calls,
-      coalesce(sum(input_tokens), 0)::text  AS input_tokens,
-      coalesce(sum(output_tokens), 0)::text AS output_tokens,
-      coalesce(sum(cached_tokens), 0)::text AS cached_tokens
+      count(*)::text                                   AS calls,
+      coalesce(sum(input_tokens), 0)::text             AS input_tokens,
+      coalesce(sum(output_tokens), 0)::text            AS output_tokens,
+      coalesce(sum(cached_tokens), 0)::text            AS cached_tokens,
+      coalesce(sum(input_seconds), 0)::text            AS input_seconds
     FROM app.llm_usage_events
     WHERE user_id = ${userId} AND status = 'ok'
     GROUP BY vendor, model, operation
@@ -261,6 +270,7 @@ export async function fetchUsage(db: Db, userId: string): Promise<UsageSummary> 
     inputTokens: Number(r.input_tokens),
     outputTokens: Number(r.output_tokens),
     cachedTokens: Number(r.cached_tokens),
+    inputSeconds: roundSeconds(r.input_seconds),
     calls: Number(r.calls),
   }));
   const usageByModel: UsageByModelRow[] = byModelRes.rows.map((r) => ({
@@ -271,6 +281,7 @@ export async function fetchUsage(db: Db, userId: string): Promise<UsageSummary> 
     inputTokens: Number(r.input_tokens),
     outputTokens: Number(r.output_tokens),
     cachedTokens: Number(r.cached_tokens),
+    inputSeconds: roundSeconds(r.input_seconds),
   }));
 
   const totals = {
@@ -279,9 +290,17 @@ export async function fetchUsage(db: Db, userId: string): Promise<UsageSummary> 
     inputTokens: usageTokens.reduce((a, m) => a + m.inputTokens, 0),
     outputTokens: usageTokens.reduce((a, m) => a + m.outputTokens, 0),
     cachedTokens: usageTokens.reduce((a, m) => a + m.cachedTokens, 0),
+    inputSeconds: roundSeconds(usageTokens.reduce((a, m) => a + m.inputSeconds, 0)),
     calls: usageTokens.reduce((a, m) => a + m.calls, 0),
   };
   return { months, totals, usageTokens, usageByModel };
+}
+
+/** Round seconds to 3dp to match the column scale and avoid noisy floats. */
+function roundSeconds(v: number | string): number {
+  const n = typeof v === 'number' ? v : Number(v);
+  if (!Number.isFinite(n) || n <= 0) return 0;
+  return Math.round(n * 1000) / 1000;
 }
 
 export async function sessionIsValid(db: Db, sessionId: string): Promise<boolean> {

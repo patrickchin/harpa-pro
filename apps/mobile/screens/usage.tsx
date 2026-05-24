@@ -49,6 +49,8 @@ export interface UsageMonthlyRow {
   inputTokens?: number;
   outputTokens?: number;
   cachedTokens?: number;
+  /** Optional per-month transcribed audio seconds. */
+  inputSeconds?: number;
   calls?: number;
 }
 
@@ -58,6 +60,8 @@ export interface UsageTotals {
   inputTokens?: number;
   outputTokens?: number;
   cachedTokens?: number;
+  /** Total transcribed audio seconds across the window. */
+  inputSeconds?: number;
   calls?: number;
 }
 
@@ -69,6 +73,8 @@ export interface UsageByModelRow {
   inputTokens: number;
   outputTokens: number;
   cachedTokens: number;
+  /** Audio seconds for transcribe rows; 0 otherwise. */
+  inputSeconds?: number;
 }
 
 export interface UsageScreenProps {
@@ -100,6 +106,18 @@ function parseMonth(iso: string): Date {
 function formatMonth(iso: string) {
   const d = parseMonth(iso);
   return d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+}
+
+/** Render seconds as `Hh Mm`, `Mm Ss`, or `Ns` for short clips. */
+function formatSeconds(total: number): string {
+  if (!Number.isFinite(total) || total <= 0) return '0s';
+  const s = Math.round(total);
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
+  if (h > 0) return `${h}h ${m}m`;
+  if (m > 0) return `${m}m ${sec}s`;
+  return `${sec}s`;
 }
 
 function MonthCard({
@@ -275,6 +293,14 @@ export function Usage({
                       className="min-w-[46%]"
                     />
                   </>
+                )}
+                {(totals.inputSeconds ?? 0) > 0 && (
+                  <StatTile
+                    value={formatSeconds(totals.inputSeconds ?? 0)}
+                    label="Audio transcribed"
+                    compact
+                    className="min-w-[46%]"
+                  />
                 )}
               </View>
 

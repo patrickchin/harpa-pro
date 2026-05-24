@@ -132,6 +132,9 @@ interface UsageRow {
   project_id: string | null;
   report_id: string | null;
   user_id: string;
+  input_tokens: number;
+  output_tokens: number;
+  input_seconds: string | null;
 }
 
 async function selectUsageForReport(reportId: string): Promise<UsageRow[]> {
@@ -139,7 +142,8 @@ async function selectUsageForReport(reportId: string): Promise<UsageRow[]> {
   await admin.connect();
   try {
     const res = await admin.query<UsageRow>(
-      `SELECT vendor, model, operation, project_id, report_id, user_id
+      `SELECT vendor, model, operation, project_id, report_id, user_id,
+              input_tokens, output_tokens, input_seconds
        FROM app.llm_usage_events
        WHERE report_id = $1
        ORDER BY created_at ASC`,
@@ -222,6 +226,14 @@ describe('POST /reports/:report/notes/voice — aggregator (Pitfall 13)', () => 
       expect(r.project_id).toBe(aliceProject);
       expect(r.report_id).toBe(aliceReport);
     }
+    // P3.15.5 + token-unit fix: transcribe rows store the audio
+    // duration in `input_seconds` (numeric), NOT in `input_tokens`.
+    // voice-1 fixture is 315.2s → input_seconds ≈ 315.2.
+    const transcribeRow = rows.find((r) => r.operation === 'transcribe')!;
+    expect(transcribeRow.input_tokens).toBe(0);
+    expect(transcribeRow.output_tokens).toBe(0);
+    expect(transcribeRow.input_seconds).not.toBeNull();
+    expect(Number(transcribeRow.input_seconds)).toBeGreaterThan(0);
   });
 
   it('Idempotency-Key dedupes retries: same noteId, no new usage rows', async () => {

@@ -1,15 +1,22 @@
 /**
- * OpenAI provider adapter — chat completions only.
+ * Kimi (Moonshot) provider adapter — chat completions only.
  *
- * Transcription is routed via the Groq adapter (whisper-large-v3-turbo)
- * so this file intentionally throws `LiveAdapterMissingError` if
- * `transcribe()` is called. See docs/v4/arch-ai-fixtures.md §Live mode.
+ * Moonshot exposes an OpenAI-compatible REST surface at
+ * `https://api.moonshot.cn/v1` — the request/response shape mirrors
+ * OpenAI's `/v1/chat/completions`, including `usage.prompt_tokens` /
+ * `usage.completion_tokens` and (for cache-eligible accounts)
+ * `usage.prompt_tokens_details.cached_tokens`. We model the adapter
+ * on `openai.ts` rather than reusing it so that future Moonshot-only
+ * quirks (model id rewrites, vendor-specific error shapes, request
+ * pricing headers) can land here without touching OpenAI.
  *
- * Uses the global `fetch` — no SDK dependency. Keeping the package
- * SDK-free means we don't ship the OpenAI SDK on the Fly machine just
- * to make one HTTPS call (cold-start cost, install time, supply-chain
- * surface). The request shape is the documented `/v1/chat/completions`
- * REST contract; we don't need streaming.
+ * Transcription is not offered by Moonshot — `transcribe()` throws
+ * `LiveAdapterMissingError`. Audio still routes through the Groq
+ * adapter.
+ *
+ * Uses the global `fetch` — no SDK dependency, same rationale as
+ * the OpenAI adapter (cold-start cost, install time, supply-chain
+ * surface). See docs/v4/arch-ai-fixtures.md §Live mode.
  */
 import {
   type AiProvider,
@@ -19,9 +26,9 @@ import {
 } from '../index.js';
 import { AdapterError } from './error.js';
 
-export interface OpenAiAdapterConfig {
+export interface KimiAdapterConfig {
   apiKey: string;
-  /** Override base URL — defaults to `https://api.openai.com/v1`. */
+  /** Override base URL — defaults to `https://api.moonshot.cn/v1`. */
   baseUrl?: string;
   /** Override the global fetch (test-only). */
   fetchImpl?: typeof fetch;
@@ -36,12 +43,12 @@ interface ChatCompletionResponse {
   };
 }
 
-export function createOpenAiProvider(cfg: OpenAiAdapterConfig): AiProvider {
-  const baseUrl = (cfg.baseUrl ?? 'https://api.openai.com/v1').replace(/\/+$/, '');
+export function createKimiProvider(cfg: KimiAdapterConfig): AiProvider {
+  const baseUrl = (cfg.baseUrl ?? 'https://api.moonshot.cn/v1').replace(/\/+$/, '');
   const fetchFn = cfg.fetchImpl ?? fetch;
 
   return {
-    vendor: 'openai',
+    vendor: 'kimi',
     async chat(req: ChatRequest): Promise<ChatResponse> {
       const messages: Array<{ role: 'system' | 'user'; content: string }> = [];
       if (req.systemPrompt) messages.push({ role: 'system', content: req.systemPrompt });
@@ -68,24 +75,24 @@ export function createOpenAiProvider(cfg: OpenAiAdapterConfig): AiProvider {
           body: JSON.stringify(body),
         });
       } catch (err) {
-        throw new AdapterError('openai', 'network error', err);
+        throw new AdapterError('kimi', 'network error', err);
       }
 
       if (!res.ok) {
         const detail = await safeText(res);
-        throw new AdapterError('openai', `HTTP ${res.status}`, detail);
+        throw new AdapterError('kimi', `HTTP ${res.status}`, detail);
       }
 
       let json: ChatCompletionResponse;
       try {
         json = (await res.json()) as ChatCompletionResponse;
       } catch (err) {
-        throw new AdapterError('openai', 'malformed JSON response', err);
+        throw new AdapterError('kimi', 'malformed JSON response', err);
       }
 
       const text = json.choices?.[0]?.message?.content;
       if (typeof text !== 'string') {
-        throw new AdapterError('openai', 'missing choices[0].message.content');
+        throw new AdapterError('kimi', 'missing choices[0].message.content');
       }
 
       return {
@@ -103,7 +110,7 @@ export function createOpenAiProvider(cfg: OpenAiAdapterConfig): AiProvider {
       };
     },
     transcribe() {
-      throw new LiveAdapterMissingError('openai', 'transcribe');
+      throw new LiveAdapterMissingError('kimi', 'transcribe');
     },
   };
 }

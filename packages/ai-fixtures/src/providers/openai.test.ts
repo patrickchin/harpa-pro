@@ -52,6 +52,35 @@ describe('createOpenAiProvider — chat', () => {
     expect(body.max_tokens).toBe(32);
   });
 
+  it('parses cached_tokens from prompt_tokens_details', async () => {
+    const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(
+      jsonResponse(200, {
+        choices: [{ message: { content: 'cached!' } }],
+        usage: {
+          prompt_tokens: 100,
+          completion_tokens: 20,
+          prompt_tokens_details: { cached_tokens: 75 },
+        },
+      }),
+    );
+    const p = createOpenAiProvider({ apiKey: 'sk', fetchImpl });
+    const out = await p.chat({ model: 'gpt-4o', userPrompt: 'u' });
+    expect(out.usage).toEqual({ input: 100, output: 20, cached: 75 });
+  });
+
+  it('omits cached when prompt_tokens_details absent', async () => {
+    const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(
+      jsonResponse(200, {
+        choices: [{ message: { content: 'no-cache' } }],
+        usage: { prompt_tokens: 10, completion_tokens: 3 },
+      }),
+    );
+    const p = createOpenAiProvider({ apiKey: 'sk', fetchImpl });
+    const out = await p.chat({ model: 'm', userPrompt: 'u' });
+    expect(out.usage).toEqual({ input: 10, output: 3 });
+    expect(out.usage).not.toHaveProperty('cached');
+  });
+
   it('respects baseUrl override', async () => {
     const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(
       jsonResponse(200, { choices: [{ message: { content: 'x' } }] }),

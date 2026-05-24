@@ -18,12 +18,13 @@ export default function UsageRoute() {
   const limitsQuery = useMeLimitsQuery();
   const { refreshing, onRefresh } = useRefresh([usageQuery.refetch, limitsQuery.refetch]);
 
-  const tokensByMonth = new Map<string, { input: number; output: number; cached: number; calls: number }>();
+  const tokensByMonth = new Map<string, { input: number; output: number; cached: number; seconds: number; calls: number }>();
   for (const t of usageQuery.data?.usageTokens ?? []) {
     tokensByMonth.set(t.month, {
       input: t.inputTokens,
       output: t.outputTokens,
       cached: t.cachedTokens,
+      seconds: t.inputSeconds,
       calls: t.calls,
     });
   }
@@ -38,6 +39,7 @@ export default function UsageRoute() {
           inputTokens: tok?.input ?? 0,
           outputTokens: tok?.output ?? 0,
           cachedTokens: tok?.cached ?? 0,
+          inputSeconds: tok?.seconds ?? 0,
           calls: tok?.calls ?? 0,
         };
       })
@@ -49,6 +51,7 @@ export default function UsageRoute() {
     inputTokens: 0,
     outputTokens: 0,
     cachedTokens: 0,
+    inputSeconds: 0,
     calls: 0,
   };
 

@@ -742,6 +742,7 @@ export interface paths {
                                 inputTokens: number;
                                 outputTokens: number;
                                 cachedTokens: number;
+                                inputSeconds: number;
                                 calls: number;
                             };
                             usageTokens: {
@@ -749,6 +750,7 @@ export interface paths {
                                 inputTokens: number;
                                 outputTokens: number;
                                 cachedTokens: number;
+                                inputSeconds: number;
                                 calls: number;
                             }[];
                             usageByModel: {
@@ -760,6 +762,7 @@ export interface paths {
                                 inputTokens: number;
                                 outputTokens: number;
                                 cachedTokens: number;
+                                inputSeconds: number;
                             }[];
                             /** @enum {string} */
                             plan?: "free" | "pro" | "enterprise";

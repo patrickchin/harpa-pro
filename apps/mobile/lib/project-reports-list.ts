@@ -10,6 +10,11 @@
  */
 import { formatDate } from './date';
 
+/** True iff `id` was minted by `optimisticReportId` in `lib/api/optimistic.ts`. */
+export function isOptimisticReportId(id: string | undefined | null): boolean {
+  return typeof id === 'string' && id.startsWith('rep_opt');
+}
+
 export type ReportListItem = {
   id: string;
   number: number;

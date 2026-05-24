@@ -9,8 +9,8 @@ import { ReportsList } from '@/screens/reports-list';
 import {
   useProjectQuery,
   useProjectReportsQuery,
-  useCreateReportMutation,
 } from '@/lib/api/hooks';
+import { useOptimisticCreateReport, isOptimisticReportId } from '@/lib/api/optimistic';
 import { usePrefetchReport } from '@/lib/api/prefetch';
 import {
   projectInitialData,
@@ -38,7 +38,7 @@ export default function ReportsListRoute() {
     { params: { project: slug } },
     { enabled: slug.length > 0 },
   );
-  const create = useCreateReportMutation();
+  const create = useOptimisticCreateReport();
   const { refreshing, onRefresh } = useRefresh([list.refetch]);
   const prefetchReport = usePrefetchReport();
 
@@ -70,6 +70,10 @@ export default function ReportsListRoute() {
         );
       }}
       onOpenReport={(item) => {
+        // Optimistic rows have no server-assigned `number` yet —
+        // navigating would land on a 404. The row reverts to a real
+        // id once the create response arrives.
+        if (isOptimisticReportId(item.id)) return;
         if (item.status === 'draft') {
           router.push(`/projects/${slug}/reports/${item.number}/generate` as Href);
         } else {
@@ -77,6 +81,7 @@ export default function ReportsListRoute() {
         }
       }}
       onPressInReport={(item) => {
+        if (isOptimisticReportId(item.id)) return;
         // Pre-warm the report row in cache before the saved-report
         // screen mounts. Drafts route to a different (generate) UI
         // that builds its own state, so we only prefetch for

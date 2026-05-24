@@ -33,6 +33,7 @@ import { request, type RequestBody, type ResponseBody } from './client';
 import type { ApiError } from './errors';
 import { runInvalidations } from './invalidation';
 import { useAuthSession } from '@/lib/auth';
+import { isOptimisticReportId as isOptimisticReportIdPure } from '@/lib/project-reports-list';
 import { uuid } from '@/lib/uuid';
 
 type NotesPage = ResponseBody<'/reports/{report}/notes', 'get'>;
@@ -43,6 +44,11 @@ type UpdateNoteBody = RequestBody<'/notes/{note}', 'patch'>;
 type CreateNoteResponse = ResponseBody<'/reports/{report}/notes', 'post'>;
 type UpdateNoteResponse = ResponseBody<'/notes/{note}', 'patch'>;
 type DeleteNoteResponse = ResponseBody<'/notes/{note}', 'delete'>;
+
+type ReportsPage = ResponseBody<'/projects/{project}/reports', 'get'>;
+type Report = ReportsPage['items'][number];
+type CreateReportBody = RequestBody<'/projects/{project}/reports', 'post'>;
+type CreateReportResponse = ResponseBody<'/projects/{project}/reports', 'post'>;
 
 /** Snapshot of every `reportNotes` query page captured in `onMutate`. */
 type NotesSnapshot = ReadonlyArray<[QueryKey, NotesPage | undefined]>;
@@ -258,6 +264,128 @@ export function useOptimisticDeleteNote() {
     },
     onSettled: () => {
       runInvalidations(qc, 'useDeleteNoteMutation');
+    },
+  });
+}
+
+// ─── useOptimisticCreateReport ───────────────────────────────
+
+type ReportsSnapshot = ReadonlyArray<[QueryKey, ReportsPage | undefined]>;
+
+const PROJECT_REPORTS_KEY = ['projectReports'] as const;
+
+/**
+ * `rep_opt` prefix mirrors the server `rep_` id shape but stays
+ * easy to detect locally so the list can render an in-flight state
+ * (no nav, no swipe actions) until the real id arrives.
+ */
+export function optimisticReportId(): string {
+  return `rep_opt${uuid().replace(/-/g, '').slice(0, 12)}`;
+}
+
+export function isOptimisticReportId(id: string | undefined | null): boolean {
+  return isOptimisticReportIdPure(id);
+}
+
+function snapshotReportsQueries(qc: ReturnType<typeof useQueryClient>): ReportsSnapshot {
+  return qc.getQueriesData<ReportsPage>({ queryKey: PROJECT_REPORTS_KEY }) as ReportsSnapshot;
+}
+
+function restoreReportsQueries(
+  qc: ReturnType<typeof useQueryClient>,
+  snapshot: ReportsSnapshot,
+): void {
+  for (const [key, data] of snapshot) {
+    qc.setQueryData<ReportsPage>(key, data);
+  }
+}
+
+function updateProjectReportsQueries(
+  qc: ReturnType<typeof useQueryClient>,
+  project: string,
+  mutator: (page: ReportsPage) => ReportsPage,
+): void {
+  // RQ v5 `setQueriesData` updaters don't receive the query key, so we
+  // resolve matching queries first and then narrow by params.project
+  // before calling `setQueryData` per-key. This keeps optimistic
+  // writes scoped to the project the user is creating a report for —
+  // a different cached project list MUST not be touched.
+  const matches = qc.getQueriesData<ReportsPage>({ queryKey: PROJECT_REPORTS_KEY });
+  for (const [key, page] of matches) {
+    if (!page) continue;
+    const params = Array.isArray(key) ? (key[1] as { project?: string } | undefined) : undefined;
+    if (params?.project && params.project !== project) continue;
+    qc.setQueryData<ReportsPage>(key, mutator(page));
+  }
+}
+
+export interface OptimisticCreateReportVars {
+  params: { project: string };
+  body: CreateReportBody;
+}
+
+/**
+ * Optimistic `POST /projects/{project}/reports`. Inserts a temp draft
+ * row into every cached `projectReports` page immediately so the
+ * "New report" tap shows a draft card before the network round-trip
+ * completes. Rolls back on error; swaps the temp row for the server
+ * response on success; invalidates on settle to reconcile.
+ */
+export function useOptimisticCreateReport() {
+  const qc = useQueryClient();
+  return useMutation<
+    CreateReportResponse,
+    ApiError,
+    OptimisticCreateReportVars,
+    { snapshot: ReportsSnapshot; tempId: string }
+  >({
+    mutationFn: (vars) =>
+      request('/projects/{project}/reports', 'post', {
+        params: vars.params,
+        body: vars.body,
+      }),
+    onMutate: async (vars) => {
+      await qc.cancelQueries({ queryKey: PROJECT_REPORTS_KEY });
+      const snapshot = snapshotReportsQueries(qc);
+      const tempId = optimisticReportId();
+      const now = new Date().toISOString();
+      // `number` is server-assigned. We use a sentinel high value so
+      // the optimistic row sorts to the top of the drafts section
+      // (`buildReportsSections` sorts by `updatedAt` desc, so `now`
+      // already wins — `number` is only shown in the row title).
+      const optimisticReport: Report = {
+        id: tempId,
+        number: 0,
+        projectId: '',
+        status: 'draft',
+        visitDate: vars.body?.visitDate ?? null,
+        body: null,
+        notesSinceLastGeneration: 0,
+        generatedAt: null,
+        finalizedAt: null,
+        pdfUrl: null,
+        createdAt: now,
+        updatedAt: now,
+      };
+      updateProjectReportsQueries(qc, vars.params.project, (page) => ({
+        ...page,
+        items: [optimisticReport, ...page.items],
+      }));
+      return { snapshot, tempId };
+    },
+    onError: (_err, _vars, context) => {
+      if (context) restoreReportsQueries(qc, context.snapshot);
+    },
+    onSuccess: (created, vars, context) => {
+      updateProjectReportsQueries(qc, vars.params.project, (page) => ({
+        ...page,
+        items: page.items.map((r) =>
+          r.id === context?.tempId ? (created as Report) : r,
+        ),
+      }));
+    },
+    onSettled: () => {
+      runInvalidations(qc, 'useCreateReportMutation');
     },
   });
 }

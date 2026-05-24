@@ -28,6 +28,7 @@ import {
   buildReportsSections,
   getReportMeta,
   getReportTitle,
+  isOptimisticReportId,
   type ReportListItem,
 } from '@/lib/project-reports-list';
 
@@ -145,21 +146,29 @@ export function ReportsList({
               </View>
             ) : null
           }
-          renderItem={({ item, index }) => (
+          renderItem={({ item, index }) => {
+            const optimistic = isOptimisticReportId(item.id);
+            return (
             <View className="px-5 pt-3">
               <Pressable
-                testID={`report-row-${item.number}`}
+                testID={optimistic ? 'report-row-optimistic' : `report-row-${item.number}`}
                 onPressIn={() => onPressInReport?.(item)}
                 onPress={() => onOpenReport(item)}
+                disabled={optimistic}
                 accessibilityRole="button"
               >
                 <Card
                   variant={item.status === 'draft' ? 'emphasis' : 'default'}
                   padding="sm"
                   className="flex-row items-center gap-3"
+                  style={optimistic ? { opacity: 0.7 } : undefined}
                 >
                   <View className="h-10 w-10 items-center justify-center rounded-md border border-border bg-card">
-                    <FileText size={20} color={colors.muted.foreground} />
+                    {optimistic ? (
+                      <ActivityIndicator size={16} color={colors.foreground} />
+                    ) : (
+                      <FileText size={20} color={colors.muted.foreground} />
+                    )}
                   </View>
                   <View className="min-w-0 flex-1 gap-1">
                     <View className="min-w-0 flex-row items-start gap-2">
@@ -167,9 +176,9 @@ export function ReportsList({
                         className="flex-1 text-lg font-semibold text-foreground"
                         numberOfLines={2}
                       >
-                        {getReportTitle(item)}
+                        {optimistic ? 'New report' : getReportTitle(item)}
                       </Text>
-                      {item.status === 'draft' ? (
+                      {item.status === 'draft' && !optimistic ? (
                         <View className="mt-0.5 shrink-0 rounded-md border border-warning-border bg-warning-soft px-2 py-1">
                           <Text className="text-xs font-semibold uppercase text-warning-text">
                             Draft
@@ -178,13 +187,14 @@ export function ReportsList({
                       ) : null}
                     </View>
                     <Text className="text-sm text-muted-foreground">
-                      {getReportMeta(item)}
+                      {optimistic ? 'Creating…' : getReportMeta(item)}
                     </Text>
                   </View>
                 </Card>
               </Pressable>
             </View>
-          )}
+            );
+          }}
         />
       )}
     </SafeAreaView>

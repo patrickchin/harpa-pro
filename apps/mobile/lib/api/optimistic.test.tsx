@@ -21,8 +21,11 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 import {
   isOptimisticNoteId,
+  isOptimisticReportId,
   optimisticNoteId,
+  optimisticReportId,
   useOptimisticCreateNote,
+  useOptimisticCreateReport,
   useOptimisticDeleteNote,
   useOptimisticUpdateNote,
 } from './optimistic';
@@ -317,5 +320,172 @@ describe('useOptimisticDeleteNote', () => {
       'not_keep000001',
       'not_drop000001',
     ]);
+  });
+});
+
+// ─── reports ─────────────────────────────────────────────────
+
+type ReportRow = {
+  id: string;
+  number: number;
+  projectId: string;
+  status: 'draft' | 'finalized';
+  visitDate: string | null;
+  body: unknown;
+  notesSinceLastGeneration: number;
+  generatedAt: string | null;
+  finalizedAt: string | null;
+  pdfUrl: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+type ReportsPage = { items: ReportRow[]; nextCursor: string | null };
+
+const PROJECT = 'demo-tower';
+const REPORTS_KEY = ['projectReports', { project: PROJECT }, undefined] as const;
+
+function seedReport(id: string, number: number): ReportRow {
+  const t = new Date().toISOString();
+  return {
+    id,
+    number,
+    projectId: 'prj_demo00000001',
+    status: 'finalized',
+    visitDate: null,
+    body: null,
+    notesSinceLastGeneration: 0,
+    generatedAt: null,
+    finalizedAt: t,
+    pdfUrl: null,
+    createdAt: t,
+    updatedAt: t,
+  };
+}
+
+describe('optimisticReportId / isOptimisticReportId', () => {
+  it('mints an id with the rep_opt prefix', () => {
+    const id = optimisticReportId();
+    expect(id.startsWith('rep_opt')).toBe(true);
+    expect(isOptimisticReportId(id)).toBe(true);
+  });
+
+  it('rejects server ids', () => {
+    expect(isOptimisticReportId('rep_real00000001')).toBe(false);
+    expect(isOptimisticReportId(undefined)).toBe(false);
+    expect(isOptimisticReportId(null)).toBe(false);
+  });
+});
+
+describe('useOptimisticCreateReport', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('inserts a temp draft row immediately and swaps for the server response on success', async () => {
+    const qc = makeClient();
+    qc.setQueryData<ReportsPage>(REPORTS_KEY, {
+      items: [seedReport('rep_seed00000001', 1)],
+      nextCursor: null,
+    });
+
+    const serverRow: ReportRow = {
+      ...seedReport('rep_real00000001', 2),
+      status: 'draft',
+      finalizedAt: null,
+    };
+    const gate = defer<Response>();
+    vi.stubGlobal('fetch', vi.fn(async () => gate.promise));
+
+    const hookRef = renderHook(() => useOptimisticCreateReport(), qc);
+
+    let promise!: Promise<unknown>;
+    await act(async () => {
+      promise = hookRef.current.mutateAsync({
+        params: { project: PROJECT },
+        body: {},
+      });
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    const pendingPage = qc.getQueryData<ReportsPage>(REPORTS_KEY)!;
+    expect(pendingPage.items).toHaveLength(2);
+    const tempRow = pendingPage.items.find((r) => isOptimisticReportId(r.id));
+    expect(tempRow).toBeDefined();
+    expect(tempRow!.status).toBe('draft');
+    // Optimistic row is prepended so it sorts to the top of the list.
+    expect(pendingPage.items[0]!.id).toBe(tempRow!.id);
+
+    gate.resolve(jsonResponse(201, serverRow));
+    await act(async () => {
+      await promise;
+    });
+
+    const finalPage = qc.getQueryData<ReportsPage>(REPORTS_KEY)!;
+    const ids = finalPage.items.map((r) => r.id);
+    expect(ids).toContain('rep_real00000001');
+    expect(ids.some(isOptimisticReportId)).toBe(false);
+  });
+
+  it('rolls back the cache when the mutation rejects', async () => {
+    const qc = makeClient();
+    const initial: ReportsPage = {
+      items: [seedReport('rep_seed00000002', 1)],
+      nextCursor: null,
+    };
+    qc.setQueryData<ReportsPage>(REPORTS_KEY, initial);
+
+    const gate = defer<Response>();
+    vi.stubGlobal('fetch', vi.fn(async () => gate.promise));
+
+    const hookRef = renderHook(() => useOptimisticCreateReport(), qc);
+
+    let promise!: Promise<unknown>;
+    await act(async () => {
+      promise = hookRef.current.mutateAsync({
+        params: { project: PROJECT },
+        body: {},
+      });
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(qc.getQueryData<ReportsPage>(REPORTS_KEY)!.items).toHaveLength(2);
+
+    gate.resolve(jsonResponse(500, { error: { code: 'i', message: 'x' } }));
+    await act(async () => {
+      await expect(promise).rejects.toBeDefined();
+    });
+
+    const after = qc.getQueryData<ReportsPage>(REPORTS_KEY)!;
+    expect(after.items).toHaveLength(1);
+    expect(after.items[0]!.id).toBe('rep_seed00000002');
+  });
+
+  it('leaves other projects\' caches untouched', async () => {
+    const qc = makeClient();
+    const otherKey = ['projectReports', { project: 'other-proj' }, undefined] as const;
+    const otherInitial: ReportsPage = {
+      items: [seedReport('rep_other00000001', 5)],
+      nextCursor: null,
+    };
+    qc.setQueryData<ReportsPage>(REPORTS_KEY, { items: [], nextCursor: null });
+    qc.setQueryData<ReportsPage>(otherKey, otherInitial);
+
+    const gate = defer<Response>();
+    vi.stubGlobal('fetch', vi.fn(async () => gate.promise));
+
+    const hookRef = renderHook(() => useOptimisticCreateReport(), qc);
+
+    await act(async () => {
+      hookRef.current.mutate({ params: { project: PROJECT }, body: {} });
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(qc.getQueryData<ReportsPage>(REPORTS_KEY)!.items).toHaveLength(1);
+    expect(qc.getQueryData<ReportsPage>(otherKey)!.items).toEqual(
+      otherInitial.items,
+    );
+
+    gate.resolve(jsonResponse(201, seedReport('rep_real00000099', 6)));
   });
 });

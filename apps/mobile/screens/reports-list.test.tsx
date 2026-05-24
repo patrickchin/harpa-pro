@@ -92,4 +92,25 @@ describe('ReportsList', () => {
     const tree = render(<ReportsList {...defaults} />);
     expect(collectText(tree.toJSON())).toContain('Highland Tower');
   });
+
+  it('accepts an optimistic row in the reports list without throwing', () => {
+    // SectionList renderItem isn't exercised by react-test-renderer
+    // (see the "renders without errors" test above), so we can't
+    // assert on the optimistic row's "Creating…" copy here. The
+    // cache-level optimistic insert is covered in
+    // `lib/api/optimistic.test.tsx`; this test just guards that the
+    // screen tolerates the temp row shape we synthesise.
+    const optimistic: ReportListItem = {
+      id: 'rep_opt0123456789',
+      number: 0,
+      status: 'draft',
+      visitDate: null,
+      createdAt: '2024-03-20T09:00:00.000Z',
+      updatedAt: '2024-03-20T09:00:00.000Z',
+    };
+    const tree = render(
+      <ReportsList {...defaults} reports={[optimistic, final]} />,
+    );
+    expect(tree.toJSON()).toBeTruthy();
+  });
 });

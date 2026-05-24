@@ -12,7 +12,8 @@ tags:
 #   - add a text note
 #   - tap Generate report → wait for completion
 #   - report-tab-pane is visible (report content rendered)
-#   - report-summary-N and report-title-N are accessible
+#   - report-view-N is accessible (proves AI generation completed)
+#   - report-title-N is accessible after finalize (saved-report screen)
 #   - finalize the report → saved-report screen
 #   - unfinalize the report → back on generate screen
 #   - re-finalize (leave finalized for module 12)
@@ -91,19 +92,20 @@ tags:
     visible:
       id: "report-view-.*"
     timeout: 60000
-# `report-summary-N` lives inside ReportTabPane's ScrollView, after
-# CompletenessCard + StatBar + WeatherStrip — on a 1080×2400 device
-# it starts below the fold, and Android's a11y tree clips off-screen
-# children of a scrollable. Bare assertVisible fails (confirmed via
-# hierarchy dump: report-view-3 present, report-summary-3 absent).
-# Use scrollUntilVisible so Maestro scrolls the pane until the
-# summary Text enters the viewport (also tolerates a slow FadeIn).
-- scrollUntilVisible:
-    element:
-      id: "report-summary-.*"
-    direction: DOWN
-    timeout: 10000
-    speed: 40
+# Note: we deliberately do NOT assert on `report-summary-N` here.
+# The Summary `<Text testID="report-summary-N">` in ReportView.tsx
+# is gated on `report.report.meta.summary` being truthy
+# (ReportView.tsx:40). The wire `reportBody` schema
+# (packages/api-contract/src/schemas/reports.ts:14) has no `summary`
+# field and the body→GeneratedSiteReport adapter
+# (apps/mobile/lib/report-body-adapter.ts:80) hard-codes
+# `meta.summary = ''`. So the Summary card is never rendered in this
+# flow — confirmed by the failure-moment a11y dump (report-view-3
+# present, report-summary-3 absent; only IssuesCard/WorkersCard text
+# leaves visible). `report-view-.*` already proves the report
+# rendered; `btn-finalize-report` below lives in the persistent
+# GenerateReportActionRow above the tab bar (it never needs scrolling
+# into view).
 
 # Title testID `report-title-N` is only emitted by ReportDetailHeader
 # (see ReportDetailHeader.tsx:45), which renders on the *saved-report*

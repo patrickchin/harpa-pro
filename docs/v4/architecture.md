@@ -150,7 +150,6 @@ infra/
 scripts/
   check-no-supabase.sh
   check-no-unistyles.sh
-  check-no-alert-alert.sh
 
 docs/
   v4/                     # current

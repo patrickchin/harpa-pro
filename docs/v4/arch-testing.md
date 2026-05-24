@@ -157,16 +157,23 @@ When the v4 mobile / API replaces a legacy concept, a removal gate
 ensures the legacy path is gone:
 
 - `check-no-supabase.sh` — no `@supabase/*` import or `supabase.*`
-  URL in `apps/`, `packages/`, `infra/`.
+  URL in `apps/`, `packages/`, `infra/`. (Covers JSON / TOML / YAML
+  too, so kept as a grep gate rather than an ESLint rule.)
 - `check-no-unistyles.sh` — no `react-native-unistyles` outside
-  `docs/legacy-v3/`.
-- `check-no-alert-alert.sh` — no `Alert.alert(` outside
-  `apps/mobile/lib/dialogs/`.
+  `docs/legacy-v3/`. Same rationale as above (covers non-JS files).
 - `check-scope-tests.sh` — every authed route has scope tests.
-- `check-no-process-env-bang.sh` — no `process.env.EXPO_PUBLIC_*!`
-  outside `apps/mobile/lib/env.ts`.
-- `check-no-hex-colors.sh` — no `#xxxxxx` literals in
-  `apps/mobile/components/**`.
+
+The following gates were migrated to ESLint rules in
+[`apps/mobile/.eslintrc.cjs`](../../apps/mobile/.eslintrc.cjs) so
+they surface as editor squiggles, not just CI failures:
+
+- `Alert.alert` outside `lib/dialogs/` → `no-restricted-imports` on
+  `react-native#Alert` (Pitfall 12 / AGENTS.md hard rule #9).
+- `process.env.EXPO_PUBLIC_*` reads (and `!` non-null assertions)
+  outside `lib/env.ts` → `no-restricted-syntax` (Pitfall 5).
+- Hex color literals (`#abc` / `#abcdef`) under `components/**` →
+  `no-restricted-syntax` on `Literal` + `TemplateElement`
+  (Pitfall 3).
 
 These run in `lint-typecheck.yml`. Adding a new gate is encouraged
 when a new pitfall surfaces.

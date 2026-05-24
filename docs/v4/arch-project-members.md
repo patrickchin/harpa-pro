@@ -496,7 +496,7 @@ The mobile Members screen (`app/(app)/projects/[project]/members.tsx`) should:
 | **Pitfall 1** — no real API tests | PATCH route could ship without scope tests | P1-style gate: PATCH route commit includes scope tests S1–S8 + negative-control; CI check-scope-tests.sh grep enforced |
 | **Pitfall 4** — big features stubbed | PATCH route could be added as a stub with `throw new Error('not implemented')` | Zero-stub gate already in `p1-exit-gate.yml`; PATCH commit is one route + one migration + tests |
 | **Pitfall 6** — per-request scope missing | PATCH handler could call `updateMemberRole` outside `withScopedConnection` | ESLint `no-restricted-imports` bans raw `db` import; handler uses `c.get('db')(fn)` |
-| **Pitfall 12** — `Alert.alert` for dialogs | LAST_OWNER error surfaced via native alert | `check-no-alert-alert.sh` in CI; use `useAppDialogSheet()` |
+| **Pitfall 12** — `Alert.alert` for dialogs | LAST_OWNER error surfaced via native alert | ESLint `no-restricted-imports` on `react-native#Alert`; use `useAppDialogSheet()` |
 | **Pitfall 14** — CLI/contract drift | New route missing from OpenAPI spec | spec:emit + gen:types + CLI build in same commit; check-spec-drift.sh gates merge |
 
 ---

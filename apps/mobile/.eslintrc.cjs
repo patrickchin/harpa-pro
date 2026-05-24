@@ -49,5 +49,27 @@ module.exports = {
         ],
       },
     },
+    {
+      // Pitfall 3: no hex color literals in components/**. Use Tailwind
+      // tokens from tailwind.config.js. Scoped to components/** to mirror
+      // the previous scripts/check-no-hex-colors.sh gate exactly.
+      files: ['components/**/*.{ts,tsx}'],
+      rules: {
+        'no-restricted-syntax': [
+          'error',
+          {
+            selector: "Literal[value=/#[0-9a-fA-F]{3}([0-9a-fA-F]{3})?\\b/]",
+            message:
+              'Hex color literals are forbidden in components/** — use Tailwind tokens (Pitfall 3).',
+          },
+          {
+            selector:
+              "TemplateElement[value.raw=/#[0-9a-fA-F]{3}([0-9a-fA-F]{3})?\\b/]",
+            message:
+              'Hex color literals are forbidden in components/** — use Tailwind tokens (Pitfall 3).',
+          },
+        ],
+      },
+    },
   ],
 };

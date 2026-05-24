@@ -1,0 +1,97 @@
+appId: ${MAESTRO_APP_ID}
+name: "10a — Photo notes (draft): camera → upload → image note"
+tags:
+  - regression
+  - photo
+  - upload
+---
+# Module 10a — Photo note draft pipeline
+#
+# Covers:
+#   - open reports list → new report → Generate screen
+#   - tap `btn-attachment` → `btn-attachment-camera` → land on
+#     camera-capture route
+#   - tap shutter, then Done
+#   - back on Generate, timeline renders the image note (`note-row-*`)
+#   - clean up the draft so the next module starts fresh
+#
+# Pre-condition: EXPO_PUBLIC_USE_FIXTURES=true built in (so the camera
+# capture path commits a synthetic image). Camera permission must be
+# granted on the sim (`xcrun simctl privacy booted grant camera <id>`).
+#
+# Pre-condition: alice on project home; no reports.
+# Post-condition: alice on project home; no reports.
+
+# --- Open reports list and create a new draft ------------------------------
+- tapOn:
+    id: "btn-open-reports"
+- extendedWaitUntil:
+    visible:
+      id: "btn-new-report"
+    timeout: 10000
+- tapOn:
+    id: "btn-new-report"
+- extendedWaitUntil:
+    visible:
+      id: "report-row-.*"
+    timeout: 15000
+- tapOn:
+    id: "report-row-.*"
+- extendedWaitUntil:
+    visible:
+      id: "input-note"
+    timeout: 15000
+
+# --- Open attachment dialog → camera ---------------------------------------
+- tapOn:
+    id: "btn-attachment"
+- extendedWaitUntil:
+    visible:
+      id: "btn-attachment-camera"
+    timeout: 8000
+- tapOn:
+    id: "btn-attachment-camera"
+
+# --- Camera: shutter → done ------------------------------------------------
+- extendedWaitUntil:
+    visible:
+      id: "btn-camera-shutter"
+    timeout: 15000
+- tapOn:
+    id: "btn-camera-shutter"
+- extendedWaitUntil:
+    visible:
+      id: "lbl-camera-count"
+    timeout: 8000
+- tapOn:
+    id: "btn-camera-done"
+
+# --- Back on Generate; timeline mounts an image note -----------------------
+- extendedWaitUntil:
+    visible:
+      id: "note-timeline"
+    timeout: 15000
+- extendedWaitUntil:
+    visible:
+      id: "note-row-.*"
+    timeout: 30000
+
+# --- Clean up: delete the draft and return to project home -----------------
+- tapOn:
+    id: "btn-draft-options"
+- extendedWaitUntil:
+    visible:
+      id: "dialog-action-confirm-delete-draft"
+    timeout: 8000
+- tapOn:
+    id: "dialog-action-confirm-delete-draft"
+- extendedWaitUntil:
+    visible:
+      id: "btn-new-report"
+    timeout: 15000
+- tapOn:
+    id: "btn-back"
+- extendedWaitUntil:
+    visible:
+      id: "btn-project-edit"
+    timeout: 10000

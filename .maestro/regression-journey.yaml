@@ -14,9 +14,15 @@ tags:
 #   6. Members remove — alice removes bob; bob can't see project
 #   7. Reports CRUD — create, navigate, delete report
 #   8. Text notes — add and delete a text note
-#   9. Generate + finalize — add note, generate, view report, finalize, unfinalize, re-finalize
-#  10. Report debug — verify debug screen sections
-#  11. Projects delete — delete the project, verify gone
+#   9. Voice notes — record (fixture) + transcript card on timeline
+#  10a. Photo notes (draft) — camera capture → upload → image note
+#  11. Generate + finalize — add note, generate, view report, finalize, unfinalize, re-finalize
+#  12. Report debug — verify debug screen sections
+#  13. Projects delete — delete the project, verify gone
+#  14. Account — view profile, edit + cancel, edit + save
+#  15. Usage — open Usage from Profile, assert screen renders
+#  16. Profile — identity card + nav targets visible
+#  17. Sign out cleanly
 #
 # Pre-condition: clean database. Run `docker compose down -v && docker
 # compose up` locally to reset between runs. Alice (+15550000001) and
@@ -56,17 +62,41 @@ tags:
 # Pre-condition: alice on project home
 - runFlow: modules/08-text-notes.yaml
 
-# ── 9. Generate + finalize ─────────────────────────────────────────────────
+# ── 9. Voice notes (fixture recorder) ─────────────────────────────────────
+# Pre-condition: alice on project home
+# Requires: app built with EXPO_PUBLIC_USE_FIXTURES=true; microphone
+# privacy grant on the sim.
+- runFlow: modules/09-voice-notes.yaml
+
+# ── 10a. Photo notes (draft): camera → upload pipeline ────────────────────
+# Pre-condition: alice on project home
+# Requires: app built with EXPO_PUBLIC_USE_FIXTURES=true; camera
+# privacy grant on the sim.
+- runFlow: modules/10a-photo-notes-draft.yaml
+
+# ── 11. Generate + finalize ───────────────────────────────────────────────
 # Pre-condition: alice on project home
 - runFlow: modules/11-generate-finalize.yaml
 
-# ── 10. Report debug ──────────────────────────────────────────────────────
+# ── 12. Report debug ──────────────────────────────────────────────────────
 # Pre-condition: alice on finalized saved-report screen
 - runFlow: modules/12-report-debug.yaml
 
-# ── 11. Projects delete ────────────────────────────────────────────────────
+# ── 13. Projects delete ───────────────────────────────────────────────────
 # Pre-condition: alice on saved-report screen
 - runFlow: modules/13-projects-delete.yaml
 
-# ── 12. Sign out cleanly ───────────────────────────────────────────────────
+# ── 14. Account screen ────────────────────────────────────────────────────
+# Pre-condition: alice on empty projects index (post-13)
+- runFlow: modules/14-account.yaml
+
+# ── 15. Usage screen ──────────────────────────────────────────────────────
+# Pre-condition: alice on profile screen (post-14)
+- runFlow: modules/15-usage.yaml
+
+# ── 16. Profile identity + nav surface ────────────────────────────────────
+# Pre-condition: alice on profile screen (post-15)
+- runFlow: modules/16-profile.yaml
+
+# ── 17. Sign out cleanly ──────────────────────────────────────────────────
 - runFlow: helpers/sign-out.yaml

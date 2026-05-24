@@ -58,93 +58,64 @@ fixture mode). The seeded invite target (`+15550100200`, Bob Editor)
 is reseeded by `reset-db.sh` so the invite step always finds a real
 user. The flow deletes the project at the end.
 
-## `p3-report-wiring.yaml` (focused — report mutation wiring)
+## `regression-journey.yaml` (overnight full-coverage journey)
 
-Tight loop targeting the report-mutation wiring commits
-(`75ac88f`, `c030456`, `1894305`). Walks profile entry → new project →
-new draft → add note → generate → finalize → saved-report → delete →
-back to reports list → project cleanup. Faster to iterate on than
-`core-end-to-end.yaml` when debugging a specific mutation path.
+Orchestrator flow that runs every regression module in
+`.maestro/modules/` sequentially against a single signed-up alice
+(no `reset-db.sh` needed — it signs up alice + bob fresh, then
+deletes the project + signs out at the end). Covers:
 
-**Pre-flight + Run:** identical to `core-end-to-end.yaml` (see
-above), but invoke `.maestro/p3-report-wiring.yaml` instead.
+1. Auth (sign-up alice + sign-out + sign-in)
+2. Sign-up bob
+3. Projects CRUD
+4. Members invite / permissions / viewer / remove
+5. Reports CRUD
+6. Text notes (add/delete)
+7. Voice notes — fixture recorder, transcript card
+8. Photo notes (draft) — camera → upload → image note
+9. Generate + finalize
+10. Report debug
+11. Projects delete
+12. Account view + edit-cancel + edit-save
+13. Usage screen render
+14. Profile identity + nav
+15. Sign out
 
-**Expected duration:** ~90s end-to-end on iPhone 17 Pro / iOS 26.5
-when the API + AI fixtures replay (no live model calls).
-
-## `p3-action-buttons.yaml` (legacy, kept for diff context)
-
-Predecessor to `core-end-to-end.yaml`. Covers fewer features
-(sign-in only, no invite role filter, no edit-manually). Kept around
-until `core-end-to-end.yaml` is wired into CI; safe to delete after.
-
-**Setup (one-time):**
-
-```bash
-# 1. Bring up the local fixture backend (Postgres + Hono API, port 8787).
-docker compose up -d
-
-# 2. Start Metro for the dev-client iOS build (real API mode — no
-#    EXPO_PUBLIC_USE_FIXTURES so the app talks to docker compose).
-pnpm --filter @harpa/mobile start --dev-client
-```
+**Pre-condition:** docker compose stack up, Metro running, app built
+with `EXPO_PUBLIC_USE_FIXTURES=true` (so fixture recorder + fixture
+camera work), microphone + camera privacy grants on the sim.
 
 **Run:**
 
 ```bash
-maestro test .maestro/p3-action-buttons.yaml
+docker compose down -v && docker compose up -d   # fresh DB
+maestro test .maestro/regression-journey.yaml
 ```
 
-For long batched runs, wrap with `gtimeout` to recover from
-occasional XCUITest driver hangs (see "Known infra quirks"):
+Modules 09 (voice) and 10a (photo) depend on the fixture-mode build.
+Modules 14/15/16 navigate to Profile / Account / Usage screens.
 
-```bash
-# coreutils provides gtimeout (brew install coreutils)
-for i in $(seq 1 N); do
-  gtimeout 240 maestro test .maestro/p3-action-buttons.yaml || {
-    # kill any leftover xcodebuild test-without-building drivers
-    for PID in $(ps aux | grep maestro-driver-ios | grep -v grep | awk '{print $2}'); do
-      kill "$PID" 2>/dev/null
-    done
-    sleep 5
-  }
-done
-```
+## `p3-15-upload.yaml` (legacy — superseded by module 10a)
 
-Stability seen locally: ~8/10 runs PASS, 0/10 logic failures,
-~2/10 infra hangs (recovered by killing the leftover xcodebuild
-driver process).
+Same photo pipeline as `modules/10a-photo-notes-draft.yaml` but
+signs in as seeded `+15550100100` (requires `reset-db.sh`).
+Kept for one-off iteration on the camera path; safe to delete once
+module 10a is green on CI.
 
-The flow uses fake OTP `000000` (via `TWILIO_VERIFY_FAKE_CODE` in
-fixture mode) and creates a fresh project per run that it deletes at
-the end via the real `dialog-action-0` confirm button.
+## `p3-15-voice-record.yaml` (legacy — superseded by module 09)
 
-**Coverage:**
+Same voice pipeline as `modules/09-voice-notes.yaml` but signs in as
+seeded `+15550100100`. Kept for one-off iteration; safe to delete
+once module 09 is green on CI.
 
-- `(auth)`: `input-phone`, `btn-login-send-code`, `input-otp`, `btn-verify-code`
-- onboarding (conditional): `input-onboarding-name`, `input-onboarding-company`, `btn-onboarding-submit`
-- projects list: `btn-new-project`
-- project new: `input-project-name`, `input-client-name`, `input-project-address`, `btn-submit-project`
-- project home: `btn-copy-client`, `btn-copy-address`, `btn-open-reports`, `btn-open-members`, `btn-edit-project`, `btn-back`
-- members: `btn-add-member`, `input-invite-phone`, `btn-invite-submit`
-- project edit: `input-edit-project-name`, `btn-save-project`, `btn-delete-project`, `dialog-action-0` (confirm delete)
-- reports list: `btn-new-report`, `report-row-draft-0`
-- generate report: `btn-tab-report`, `btn-tab-edit`, `btn-tab-notes`, `btn-attachment`
+## `p3-14a-usage-limits-card.yaml`, `p3-14b-usage-limit-dialog.yaml`, `p3-14c-near-limit-toast.yaml`
 
-**Known gaps (intentionally skipped due to iOS XCTest/RN quirks):**
+Phase-3 usage-limits flows. 14a runs today against seeded alice;
+14b/14c are placeholders awaiting a `--seed-at-limit` reset script
+and a near-limit toast UI respectively. See each flow's header for
+status.
 
-- `input-note` typing: iOS XCTest cannot reliably enter text into RN
-  multiline `TextInput` even with hardware keyboard disabled. The
-  `btn-add-note` add-note path is therefore covered by unit tests
-  (`screens/generate-notes.test.tsx`) rather than Maestro.
-- `dialog-action-1` (Cancel) on `AppDialogSheet`: tap reports
-  COMPLETED but the action's `onPress` doesn't fire — likely an RN
-  `Modal` + XCTest interaction quirk. Covered by
-  `screens/project-edit.test.tsx` unit tests.
-- `btn-record-start` (voice): audio permission popup blocks
-  unattended runs.
-
-**iOS sim quirks discovered:**
+## iOS sim quirks
 
 - `clearState: true` does NOT clear iOS Keychain. Must also pass
   `clearKeychain: true` to force-logout (JWT lives in
@@ -155,31 +126,33 @@ the end via the real `dialog-action-0` confirm button.
 - Software keyboard occludes bottom buttons; use `hideKeyboard` +
   `scrollUntilVisible` before tapping `btn-save-project` /
   `btn-delete-project`.
+- `inputText` into RN multiline `TextInput` is unreliable on iOS
+  XCTest — modules 08 + 11 do this for `input-note` and pass, but if
+  this becomes a flake source, move the assertion into unit tests
+  (`screens/generate-notes.test.tsx`).
 
-**Known infra quirks:**
+## Known infra quirks
 
-- XCUITest driver occasionally returns
-  `kAXErrorInvalidUIElement` and Maestro hangs retrying. Mitigation:
-  wrap `maestro test` in `gtimeout 240s` and `kill` the leftover
-  `maestro-driver-ios` xcodebuild process between attempts.
-  Roughly 1-in-5 frequency on iPhone 17 Pro / iOS 26.5 sim.
+- XCUITest driver occasionally returns `kAXErrorInvalidUIElement`
+  and Maestro hangs retrying. Mitigation: wrap `maestro test` in
+  `gtimeout 240s` and `kill` the leftover `maestro-driver-ios`
+  xcodebuild process between attempts. Roughly 1-in-5 frequency on
+  iPhone 17 Pro / iOS 26.5 sim.
 
-## `p3-12-camera.yaml` (camera capture mirror)
-
-Drives the `(dev)/camera-capture` mirror — shutter, count, Done
-handoff. Pre-flight identical to `core-end-to-end.yaml`; runs against
-docker compose.
-
-## `p3-15-upload.yaml` (camera → upload → image-note round-trip)
-
-Full P3.15 pipeline: sign in → open report → Notes → attachment →
-camera → shutter → Done → verify `note-row-0` rendered by
-`NoteTimeline` after `runUploadJob` completes against the docker
-compose stack. No `pnpm test:e2e` script exists in `apps/mobile` —
-invoke via `maestro test .maestro/p3-15-upload.yaml` (wrap with
-`gtimeout 240` for batched runs, see infra-quirks above).
+```bash
+# coreutils provides gtimeout (brew install coreutils)
+for i in $(seq 1 N); do
+  gtimeout 600 maestro test .maestro/regression-journey.yaml || {
+    for PID in $(ps aux | grep maestro-driver-ios | grep -v grep | awk '{print $2}'); do
+      kill "$PID" 2>/dev/null
+    done
+    sleep 5
+  }
+done
+```
 
 ## `tmp-p3-smoke/`
 
 Throwaway visual smoke flow targeting the `(dev)` gallery from
-P3.1–P3.5. Will be deleted at P3.13.
+P3.1–P3.5. The `(dev)` routes were removed in PR #57 — this folder
+will be deleted at the next cleanup pass.

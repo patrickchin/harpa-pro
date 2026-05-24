@@ -63,16 +63,16 @@ when you fix a recurring bug.
    for negative-path branches only. See
    [Pitfall 13](docs/v4/pitfalls.md#pitfall-13--di-stubs-become-the-spec-default-wiring-silently-broken).
 
-## Mobile dev / fixture mode
+## Scoped instructions
 
-- `pnpm ios` / `pnpm ios:mock` (run from repo root). `:mock` inlines
-  `EXPO_PUBLIC_USE_FIXTURES=true`, returning canned API responses and
-  replacing the iOS-simulator audio recorder with a "Save fixture
-  voice note" stub that emits a canned `voice-sample.m4a` through
-  the real upload pipeline + aggregator. See
-  [`docs/v4/arch-voice-pipeline.md` §D6](docs/v4/arch-voice-pipeline.md#d6-fixture-mode-contract).
-- `EXPO_PUBLIC_*` vars are inlined by Metro at bundle time — changing
-  them requires a rebuild, not a JS reload.
+Area-specific rules live next to the code and load automatically:
+
+- `.github/instructions/mobile.instructions.md` — Expo / NativeWind
+  rules, fixture mode, EXPO_PUBLIC inlining.
+- `.github/instructions/api.instructions.md` — Hono / Drizzle /
+  per-request scope, default-wiring rule.
+- `.github/instructions/docs.instructions.md` — doc style + the
+  "docs in same PR" rule.
 
 ## Long-running command output
 

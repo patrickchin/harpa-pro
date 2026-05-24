@@ -11,6 +11,9 @@ for a normal TS error — the coordinator/worker should fix obvious
 ones inline. You are invoked when an error has been blocking for ~10
 minutes and warrants a deeper trace through the monorepo.
 
+Use the `systematic-debugging` superpowers skill — form a hypothesis,
+test it, narrow scope. Do not stab in the dark.
+
 ## Read first (every invocation)
 
 1. `AGENTS.md` — workspace layout + hard rules.

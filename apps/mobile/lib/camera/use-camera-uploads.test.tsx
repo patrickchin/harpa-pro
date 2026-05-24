@@ -192,11 +192,12 @@ describe('useCameraUploads — session-registry → upload queue', () => {
     for (const r of results) {
       expect(r.status).toBe('fulfilled');
     }
-    // Each URI hits the full four-step pipeline: presign + PUT +
-    // register + createNote = 4 fetch calls per URI.
-    expect(calls).toHaveLength(captured.length * 4);
+    // Each URI hits the dual pipeline: presign + PUT + register for
+    // both the main image and the thumbnail (×2), plus one createNote.
+    // → 7 fetch calls per URI.
+    expect(calls).toHaveLength(captured.length * 7);
     const presigns = calls.filter((c) => c.url.includes('/files/presign'));
-    expect(presigns).toHaveLength(captured.length);
+    expect(presigns).toHaveLength(captured.length * 2);
     for (const presign of presigns) {
       const body = presign.body as { kind?: string; contentType?: string };
       expect(body.kind).toBe('image');
@@ -230,7 +231,8 @@ describe('useCameraUploads — session-registry → upload queue', () => {
     // The rejected URI must NOT have hit presign — otherwise we'd be
     // signing Content-Length=1 against real bytes and S3/MinIO would
     // bounce the PUT with SignatureDoesNotMatch.
+    // The OK URI presigns twice (main + thumbnail).
     const presigns = calls.filter((c) => c.url.includes('/files/presign'));
-    expect(presigns).toHaveLength(1);
+    expect(presigns).toHaveLength(2);
   });
 });

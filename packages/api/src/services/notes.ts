@@ -19,6 +19,7 @@ export interface NoteRow {
   kind: NoteKind;
   body: string | null;
   fileId: string | null;
+  thumbnailFileId: string | null;
   transcript: string | null;
   title: string | null;
   summary: string | null;
@@ -38,6 +39,7 @@ interface RawNote {
   kind: NoteKind;
   body: string | null;
   file_id: string | null;
+  thumbnail_file_id: string | null;
   transcript: string | null;
   title: string | null;
   summary: string | null;
@@ -57,6 +59,7 @@ function mapNote(r: RawNote): NoteRow {
     kind: r.kind,
     body: r.body,
     fileId: r.file_id,
+    thumbnailFileId: r.thumbnail_file_id,
     transcript: r.transcript,
     title: r.title,
     summary: r.summary,
@@ -80,8 +83,8 @@ function decodeCursor(cursor: string): { createdAt: string; id: string } {
 }
 
 const NOTE_COLUMNS = sql`id, report_id, author_id, kind, body, file_id,
-       transcript, title, summary, duration_sec, language, transcribe_provider,
-       transcribed_at, created_at, updated_at`;
+       thumbnail_file_id, transcript, title, summary, duration_sec, language,
+       transcribe_provider, transcribed_at, created_at, updated_at`;
 
 export async function listNotes(
   db: Db,
@@ -131,6 +134,7 @@ export async function createNote(
     kind: NoteKind;
     body?: string | null;
     fileId?: string | null;
+    thumbnailFileId?: string | null;
     transcript?: string | null;
     title?: string | null;
     summary?: string | null;
@@ -139,7 +143,8 @@ export async function createNote(
   const id = newId('not');
   const r = await db.execute<RawNote>(sql`
     INSERT INTO app.notes(
-      id, report_id, author_id, kind, body, file_id, transcript, title, summary
+      id, report_id, author_id, kind, body, file_id, thumbnail_file_id,
+      transcript, title, summary
     )
     VALUES (
       ${id},
@@ -148,6 +153,7 @@ export async function createNote(
       ${input.kind}::app.note_kind,
       ${input.body ?? null},
       ${input.fileId ?? null},
+      ${input.thumbnailFileId ?? null},
       ${input.transcript ?? null},
       ${input.title ?? null},
       ${input.summary ?? null}

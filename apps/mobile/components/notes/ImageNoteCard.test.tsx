@@ -75,7 +75,8 @@ describe('ImageNoteCard', () => {
     expect(calls.some((c) => c.includes('/files/fil_xyz/url'))).toBe(true);
     const start = Date.now();
     while (
-      tree.root.findAllByProps({ testID: 'img-image-note-0' }).length === 0 &&
+      tree.root.findAllByProps({ testID: 'btn-image-note-open-0-img' })
+        .length === 0 &&
       Date.now() - start < 1000
     ) {
       // eslint-disable-next-line no-await-in-loop
@@ -83,27 +84,30 @@ describe('ImageNoteCard', () => {
         await new Promise((r) => setTimeout(r, 5));
       });
     }
-    const imgs = tree.root.findAllByProps({ testID: 'img-image-note-0' });
+    const imgs = tree.root.findAllByProps({
+      testID: 'btn-image-note-open-0-img',
+    });
     expect(imgs.length).toBeGreaterThan(0);
     expect((imgs[0]!.props.source as { uri: string }).uri).toBe(
       'https://r2.example.com/note.jpg?sig=abc',
     );
   });
 
-  it('shows the skeleton while the signed URL is pending', () => {
+  it('shows a loading state while the signed URL is pending', () => {
     vi.unstubAllGlobals();
     const pending = new Promise<Response>(() => undefined);
     vi.stubGlobal('fetch', vi.fn(() => pending));
     const tree = wrap(<ImageNoteCard entry={baseEntry} sourceIndex={3} />);
     expect(
-      tree.root.findAllByProps({ testID: 'image-note-skeleton-3' }).length,
+      tree.root.findAllByProps({ testID: 'btn-image-note-open-3-loading' })
+        .length,
     ).toBeGreaterThan(0);
     expect(
-      tree.root.findAllByProps({ testID: 'img-image-note-3' }),
+      tree.root.findAllByProps({ testID: 'btn-image-note-open-3-img' }),
     ).toHaveLength(0);
   });
 
-  it('renders a retry affordance on fetch error', async () => {
+  it('renders the empty fallback state on fetch error', async () => {
     vi.unstubAllGlobals();
     vi.stubGlobal(
       'fetch',
@@ -115,7 +119,8 @@ describe('ImageNoteCard', () => {
     });
     const start = Date.now();
     while (
-      tree.root.findAllByProps({ testID: 'image-note-error-2' }).length === 0 &&
+      tree.root.findAllByProps({ testID: 'btn-image-note-open-2-empty' })
+        .length === 0 &&
       Date.now() - start < 4000
     ) {
       // eslint-disable-next-line no-await-in-loop
@@ -124,7 +129,8 @@ describe('ImageNoteCard', () => {
       });
     }
     expect(
-      tree.root.findAllByProps({ testID: 'btn-image-note-retry-2' }).length,
+      tree.root.findAllByProps({ testID: 'btn-image-note-open-2-empty' })
+        .length,
     ).toBeGreaterThan(0);
   });
 });

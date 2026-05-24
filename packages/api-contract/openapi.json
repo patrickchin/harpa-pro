@@ -7927,6 +7927,11 @@
                             "nullable": true,
                             "pattern": "^fil_[0-9a-hjkmnp-tv-z]{8,16}$"
                           },
+                          "thumbnailFileId": {
+                            "type": "string",
+                            "nullable": true,
+                            "pattern": "^fil_[0-9a-hjkmnp-tv-z]{8,16}$"
+                          },
                           "transcript": {
                             "type": "string",
                             "nullable": true
@@ -7973,6 +7978,7 @@
                           "kind",
                           "body",
                           "fileId",
+                          "thumbnailFileId",
                           "transcript",
                           "title",
                           "summary",
@@ -8118,6 +8124,11 @@
                     "nullable": true,
                     "pattern": "^fil_[0-9a-hjkmnp-tv-z]{8,16}$"
                   },
+                  "thumbnailFileId": {
+                    "type": "string",
+                    "nullable": true,
+                    "pattern": "^fil_[0-9a-hjkmnp-tv-z]{8,16}$"
+                  },
                   "transcript": {
                     "type": "string",
                     "nullable": true
@@ -8177,6 +8188,11 @@
                       "nullable": true,
                       "pattern": "^fil_[0-9a-hjkmnp-tv-z]{8,16}$"
                     },
+                    "thumbnailFileId": {
+                      "type": "string",
+                      "nullable": true,
+                      "pattern": "^fil_[0-9a-hjkmnp-tv-z]{8,16}$"
+                    },
                     "transcript": {
                       "type": "string",
                       "nullable": true
@@ -8223,6 +8239,7 @@
                     "kind",
                     "body",
                     "fileId",
+                    "thumbnailFileId",
                     "transcript",
                     "title",
                     "summary",
@@ -8431,6 +8448,11 @@
                       "nullable": true,
                       "pattern": "^fil_[0-9a-hjkmnp-tv-z]{8,16}$"
                     },
+                    "thumbnailFileId": {
+                      "type": "string",
+                      "nullable": true,
+                      "pattern": "^fil_[0-9a-hjkmnp-tv-z]{8,16}$"
+                    },
                     "transcript": {
                       "type": "string",
                       "nullable": true
@@ -8477,6 +8499,7 @@
                     "kind",
                     "body",
                     "fileId",
+                    "thumbnailFileId",
                     "transcript",
                     "title",
                     "summary",
@@ -9274,6 +9297,11 @@
                       "nullable": true,
                       "pattern": "^fil_[0-9a-hjkmnp-tv-z]{8,16}$"
                     },
+                    "thumbnailFileId": {
+                      "type": "string",
+                      "nullable": true,
+                      "pattern": "^fil_[0-9a-hjkmnp-tv-z]{8,16}$"
+                    },
                     "transcript": {
                       "type": "string",
                       "nullable": true
@@ -9320,6 +9348,7 @@
                     "kind",
                     "body",
                     "fileId",
+                    "thumbnailFileId",
                     "transcript",
                     "title",
                     "summary",

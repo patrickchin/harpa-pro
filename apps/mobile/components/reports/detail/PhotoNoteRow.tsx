@@ -2,25 +2,20 @@
  * `PhotoNoteRow` — read-only photo card rendered in the saved-report
  * Notes tab (one per `report_notes.kind === 'photo'` row).
  *
- * Adapted from the canonical voice/photo cards in
- * `../haru3-reports/apps/mobile/components/notes/NoteTimeline.tsx` +
- * `components/files/FileCard.tsx` (branch `dev`). The v4 data model
- * is narrower (no `file_metadata.width`/`height`/`blurhash`) so the
- * card renders a fixed-aspect thumbnail via `CachedImage` backed by a
- * short-lived signed GET URL.
+ * Renders a compact card with a small left-aligned square thumbnail
+ * (via `PhotoGridTile`, sourced from `thumbnailFileId` when present)
+ * plus the optional caption. Tap → fullscreen preview.
  */
-import { Pressable, Text, View } from 'react-native';
-import { Camera } from 'lucide-react-native';
+import { Text, View } from 'react-native';
 
-import { CachedImage } from '@/components/ui/CachedImage';
 import { NoteCardHeader } from '@/components/notes/NoteCardHeader';
 import { NoteOptionsKebab } from '@/components/notes/NoteOptionsKebab';
-import { useFileSignedUrl } from '@/lib/uploads/useFileSignedUrl';
-import { colors } from '@/lib/design-tokens/colors';
+import { PhotoGridTile } from '@/components/notes/PhotoGridTile';
 
 export interface PhotoNoteRowProps {
   noteId: string;
   fileId: string;
+  thumbnailFileId?: string | null;
   body: string | null;
   authorName?: string | null;
   capturedAt: string | null;
@@ -33,14 +28,13 @@ export interface PhotoNoteRowProps {
 export function PhotoNoteRow({
   noteId,
   fileId,
+  thumbnailFileId,
   body,
   authorName,
   capturedAt,
   onOpen,
   onOpenOptions,
 }: PhotoNoteRowProps) {
-  const { data, isLoading } = useFileSignedUrl(fileId);
-  const uri = (data as { url?: string } | undefined)?.url ?? null;
   const title = body?.trim() || 'Photo';
 
   return (
@@ -62,39 +56,21 @@ export function PhotoNoteRow({
         }
       />
 
-      <Pressable
-        onPress={() => onOpen?.({ fileId, title })}
-        accessibilityLabel={`Open photo ${title}`}
-        testID={`btn-open-photo-${noteId}`}
-        className="rounded-md overflow-hidden bg-muted"
-      >
-        {uri ? (
-          <CachedImage
-            source={{ uri }}
-            cacheKey={fileId}
-            style={{ width: '100%', aspectRatio: 4 / 3 }}
-            contentFit="cover"
-            accessibilityLabel={title}
-            testID={`img-photo-${noteId}`}
-          />
-        ) : (
-          <View
-            className="w-full items-center justify-center bg-muted"
-            style={{ aspectRatio: 4 / 3 }}
-            testID={
-              isLoading
-                ? `img-photo-${noteId}-loading`
-                : `img-photo-${noteId}-empty`
-            }
-          >
-            <Camera size={24} color={colors.muted.foreground} />
-          </View>
-        )}
-      </Pressable>
-
-      {body ? (
-        <Text className="text-sm leading-5 text-foreground">{body}</Text>
-      ) : null}
+      <View className="flex-row items-start gap-3">
+        <PhotoGridTile
+          fileId={fileId}
+          thumbnailFileId={thumbnailFileId ?? null}
+          size={110}
+          onPress={() => onOpen?.({ fileId, title })}
+          accessibilityLabel={`Open photo ${title}`}
+          testID={`btn-open-photo-${noteId}`}
+        />
+        {body ? (
+          <Text className="flex-1 text-sm leading-5 text-foreground">
+            {body}
+          </Text>
+        ) : null}
+      </View>
     </View>
   );
 }

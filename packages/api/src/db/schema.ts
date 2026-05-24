@@ -13,6 +13,7 @@ import {
   unique,
   boolean,
   numeric,
+  type AnyPgColumn,
 } from 'drizzle-orm/pg-core';
 
 /**
@@ -134,6 +135,9 @@ export const notes = appSchema.table('notes', {
   kind: noteKindEnum('kind').notNull(),
   body: text('body'),
   fileId: text('file_id'),
+  // Thumbnail variant for image notes (migration 0009). Nullable;
+  // legacy image notes fall back to `fileId` for grid rendering.
+  thumbnailFileId: text('thumbnail_file_id').references((): AnyPgColumn => files.id, { onDelete: 'set null' }),
   transcript: text('transcript'),
   // Generic note-level fields (migration 0004). Nullable on every
   // kind. Today the voice aggregator is the only writer; text /

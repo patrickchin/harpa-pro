@@ -60,6 +60,21 @@ export interface EnqueueInput {
   reportId?: string;
   /** Optional transcript for voice notes; ignored for other kinds. */
   transcript?: string;
+  /**
+   * Paired thumbnail for image uploads. When present the queue runs a
+   * second presign + PUT + registerFile cycle in parallel with the
+   * main image and passes the resulting `fileId` as `thumbnailFileId`
+   * into createNote so grid surfaces fetch the small variant.
+   *
+   * On terminal thumb-pipeline failure the queue creates the note
+   * with `thumbnailFileId: null` — the photo is never lost; tiles
+   * fall back to the full file id.
+   */
+  thumbnail?: {
+    sourceUri: string;
+    contentType: string;
+    sizeBytes: number;
+  };
 }
 
 export type JobStatus =
@@ -83,6 +98,8 @@ export interface UploadJob {
   attempt: number;
   /** Set once the R2 PUT + register completes. */
   fileId?: string;
+  /** Set once the thumbnail R2 PUT + register completes (image jobs only). */
+  thumbnailFileId?: string;
   /** Set when status === 'failed'. */
   error?: string;
 }
@@ -99,5 +116,7 @@ export function backoffMs(attempt: number): number {
 /** Result returned to enqueue() callers via a promise. */
 export interface UploadResult {
   file: FileRecord;
+  /** Thumbnail file record (image jobs with `input.thumbnail` only). */
+  thumbnailFile?: FileRecord;
   noteId?: string;
 }

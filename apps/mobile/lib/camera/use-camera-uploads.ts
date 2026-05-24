@@ -22,6 +22,7 @@ import { useFileUpload } from '@/lib/uploads';
 import type { UploadResult } from '@/lib/uploads';
 import {
   processImageForUpload,
+  processImageThumbnail,
   SERVER_MAX_BYTES,
 } from './process-image';
 
@@ -57,7 +58,15 @@ export function useCameraUploads(): UseCameraUploadsApi {
         // ship a > 50 MB blob (server cap) and we strip EXIF along
         // the way. See `process-image.ts` for the size/quality
         // ladder. The processed URI is what we PUT to R2.
-        const processed = await processImageForUpload(uri);
+        //
+        // The thumbnail is generated in parallel so the upload queue
+        // can run both pipelines concurrently — at ~256 px / q=0.7
+        // it's negligible work and the grid tiles fetch ~30 KB
+        // instead of the full ~2 MB image.
+        const [processed, thumbnail] = await Promise.all([
+          processImageForUpload(uri),
+          processImageThumbnail(uri).catch(() => null),
+        ]);
         if (processed.sizeBytes > SERVER_MAX_BYTES) {
           throw new Error(
             `Camera upload: processed image at ${uri} is ` +
@@ -71,6 +80,15 @@ export function useCameraUploads(): UseCameraUploadsApi {
           contentType: 'image/jpeg',
           sizeBytes: processed.sizeBytes,
           reportId: opts.reportId,
+          ...(thumbnail
+            ? {
+                thumbnail: {
+                  sourceUri: thumbnail.uri,
+                  contentType: 'image/jpeg',
+                  sizeBytes: thumbnail.sizeBytes,
+                },
+              }
+            : {}),
         });
       });
       return Promise.allSettled(promises);

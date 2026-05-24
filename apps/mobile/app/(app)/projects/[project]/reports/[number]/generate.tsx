@@ -70,6 +70,7 @@ interface ApiNote {
   title?: string | null;
   summary?: string | null;
   fileId?: string | null;
+  thumbnailFileId?: string | null;
   durationSec?: number | null;
   createdAt: string;
 }
@@ -105,6 +106,7 @@ function noteToEntry(n: ApiNote): NoteEntry {
     }),
     ...(isImage && {
       fileId: n.fileId ?? null,
+      thumbnailFileId: n.thumbnailFileId ?? null,
     }),
   };
 }

@@ -1,22 +1,17 @@
 # P3 — Feature Build
 
-> Goal: every screen in `../haru3-reports/apps/mobile` on branch
-> `dev` ported into v4 with full behaviour and a Maestro flow.
-> The canonical source IS the **acceptance contract** — read JSX +
-> Tailwind classes from there and port them directly (both apps run
-> NativeWind v4). Visual review is manual against that source.
+> Goal: full feature build across mobile + API — generate, list,
+> view, edit, share reports with voice + photo capture, account /
+> usage / limits, LLM token accounting.
 >
 > Resolves [Pitfall 4](pitfalls.md#pitfall-4--big-features-stubbed-then-forgotten):
-> no screen is "stubbed" or "TODO redesign" — features are either in
-> scope or feature-flagged behind a fully exercised code path.
+> features are either in scope or feature-flagged behind a fully
+> exercised code path. UI parity against the v3 source is no longer
+> a goal — the visual design has reached its v4 shape and further
+> drift is expected and welcome.
 
 ## Exit gate (`p3-exit-gate.yml`)
 
-- [ ] Every screen in `../haru3-reports/apps/mobile/app/` (excluding
-      `e2e/` test scaffolds) has a v4 port with manual visual review
-      against the canonical source.
-- [ ] Every shipped screen has its `screens/<name>.tsx` body
-      (props-driven, no API/auth — consistent with P2.0b).
 - [ ] Maestro full-journey flow `core-end-to-end` green on iOS + Android.
 - [ ] Mobile coverage ≥ 80% lines.
 - [x] Upload pipeline integration test green for `image`, `voice`, `document` (Pitfall 8).

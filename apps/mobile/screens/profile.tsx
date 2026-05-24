@@ -60,10 +60,10 @@ export interface ProfileUser {
 export interface ProfileMonthlyUsage {
   reportsCount: number;
   /**
-   * v4 `/me/usage` includes voice-note counts; canonical v3 showed
-   * input/output token counts. We surface whichever the route passes:
-   * `voiceNotesCount` renders as a "Voice Notes" tile; the v3 token
-   * stats are deferred to P4 (mark TODO at the call site).
+   * v4 `/me/usage` exposes voice-note counts plus monthly LLM token
+   * totals; the route forwards both. `voiceNotesCount` renders as a
+   * "Voice Notes" tile and `inputTokens` + `outputTokens` feed the
+   * token tiles when present.
    */
   voiceNotesCount?: number;
   inputTokens?: number;

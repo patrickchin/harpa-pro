@@ -1,13 +1,9 @@
 /**
  * Usage screen body — props-only, no API coupling.
  *
- * Ported from `../haru3-reports/apps/mobile/app/usage.tsx` on branch
- * `dev`. v3 used Supabase token-usage rollups (input/output/cached
- * tokens, per-event breakdown, per-model aggregation); v4's
- * `/me/usage` returns `{ months: [{ month, reports, voiceNotes }],
- * totals: { reports, voiceNotes } }` — so the per-event timeline and
- * per-model breakdown are deferred to P4. The pricing reference card
- * is ported as static copy (unchanged from canonical).
+ * Wires the v4 `/me/usage` aggregates (monthly rows + per-(vendor,
+ * model,operation) breakdown + totals) and the `/me/usage/events`
+ * raw event feed into a single read-only screen.
  *
  * Monthly rows are expandable in-place. The optional `chart` slot
  * lets the route pass a real `UsageBarChart` once we have token-level
@@ -77,11 +73,35 @@ export interface UsageByModelRow {
   inputSeconds?: number;
 }
 
+/**
+ * Single LLM call event for the per-event timeline. Mirrors the
+ * `/me/usage/events` row shape, trimmed to the fields the UI shows.
+ * `inputSeconds` is non-null only for transcribe rows.
+ */
+export interface RecentUsageEvent {
+  id: string;
+  createdAt: string;
+  vendor: string;
+  model: string;
+  operation: 'chat' | 'transcribe' | 'generate_report';
+  inputTokens: number;
+  outputTokens: number;
+  cachedTokens: number;
+  inputSeconds: number | null;
+  status: 'ok' | 'error';
+}
+
 export interface UsageScreenProps {
   history: ReadonlyArray<UsageMonthlyRow> | null;
   totals: UsageTotals;
   /** Optional per-(vendor,model,operation) breakdown card. */
   byModel?: ReadonlyArray<UsageByModelRow>;
+  /**
+   * Optional newest-first feed of individual LLM calls
+   * (`/me/usage/events`). Renders as a "Recent Activity" card when
+   * non-empty. Includes `status='error'` rows so failed calls show up.
+   */
+  recentEvents?: ReadonlyArray<RecentUsageEvent>;
   isLoading: boolean;
   refreshing: boolean;
   onRefresh: () => void;
@@ -167,11 +187,53 @@ function MonthCard({
               className="min-w-[46%]"
             />
           </View>
-          {/* TODO(P4): per-generation event list + per-model breakdown
-              once the v4 API exposes token-level usage. */}
         </View>
       )}
     </Card>
+  );
+}
+
+function formatEventTime(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+function RecentEventRow({ event }: { event: RecentUsageEvent }) {
+  const isTranscribe = event.operation === 'transcribe';
+  const isError = event.status === 'error';
+  const right = isTranscribe
+    ? formatSeconds(event.inputSeconds ?? 0)
+    : `${event.inputTokens + event.outputTokens}`;
+  const rightLabel = isTranscribe ? 'audio' : 'tokens';
+  return (
+    <View
+      className="flex-row items-center justify-between"
+      testID={`usage-event-${event.id}`}
+    >
+      <View className="flex-1 gap-0.5 pr-3">
+        <Text className="text-sm font-medium text-foreground" numberOfLines={1}>
+          {event.model}
+        </Text>
+        <Text className="text-xs text-muted-foreground" numberOfLines={1}>
+          {event.vendor} · {event.operation} · {formatEventTime(event.createdAt)}
+          {isError ? ' · failed' : ''}
+        </Text>
+      </View>
+      <View className="items-end">
+        <Text
+          className={`text-sm ${isError ? 'text-destructive' : 'text-foreground'}`}
+        >
+          {right}
+        </Text>
+        <Text className="text-xs text-muted-foreground">{rightLabel}</Text>
+      </View>
+    </View>
   );
 }
 
@@ -210,6 +272,7 @@ export function Usage({
   history,
   totals,
   byModel,
+  recentEvents,
   isLoading,
   refreshing,
   onRefresh,
@@ -333,6 +396,20 @@ export function Usage({
                           </View>
                         </View>
                       </View>
+                    ))}
+                  </Card>
+                </>
+              )}
+
+              {recentEvents && recentEvents.length > 0 && (
+                <>
+                  <SectionHeader
+                    title="Recent Activity"
+                    subtitle="Latest LLM calls (newest first)"
+                  />
+                  <Card className="gap-3" testID="usage-recent-events">
+                    {recentEvents.map((e) => (
+                      <RecentEventRow key={e.id} event={e} />
                     ))}
                   </Card>
                 </>

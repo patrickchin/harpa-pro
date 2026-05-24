@@ -40,18 +40,21 @@ export default function ProfileRoute() {
 
   // Find the current month's row from the v4 usage history; fall back
   // to null. v4 returns one row per month — match by the YYYY-MM prefix
-  // of "now" rather than relying on row order.
+  // of "now" rather than relying on row order. Token counts come from
+  // the parallel `usageTokens` array (same keying).
   const now = new Date();
   const yyyyMm = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}`;
   const currentMonthRow = usageQuery.data?.months.find((m) => m.month === yyyyMm) ?? null;
-  const monthlyUsage: ProfileMonthlyUsage | null =
-    currentMonthRow
-      ? {
-          reportsCount: currentMonthRow.reports,
-          voiceNotesCount: currentMonthRow.voiceNotes,
-          // TODO(P4): wire token-level counts once the v4 API exposes them.
-        }
-      : null;
+  const currentMonthTokens =
+    usageQuery.data?.usageTokens.find((t) => t.month === yyyyMm) ?? null;
+  const monthlyUsage: ProfileMonthlyUsage | null = currentMonthRow
+    ? {
+        reportsCount: currentMonthRow.reports,
+        voiceNotesCount: currentMonthRow.voiceNotes,
+        inputTokens: currentMonthTokens?.inputTokens,
+        outputTokens: currentMonthTokens?.outputTokens,
+      }
+    : null;
 
   return (
     <Profile

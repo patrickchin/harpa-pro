@@ -22,7 +22,7 @@ jobs:
       - id: paths
         uses: ./.github/actions/changed-paths
 
-  lint:
+  lint-typecheck:
     needs: changes
     if: needs.changes.outputs.any-code == 'true' || github.event_name == 'push'
     runs-on: ubuntu-latest

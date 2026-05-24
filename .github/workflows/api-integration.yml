@@ -19,7 +19,7 @@ jobs:
       - id: paths
         uses: ./.github/actions/changed-paths
 
-  integration:
+  api-integration:
     needs: changes
     if: needs.changes.outputs.api == 'true' || github.event_name == 'push'
     runs-on: ubuntu-latest

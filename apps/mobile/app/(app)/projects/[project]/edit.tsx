@@ -3,12 +3,17 @@
  * useUpdateProjectMutation / useDeleteProjectMutation.
  */
 import { useRouter, useLocalSearchParams, type Href } from 'expo-router';
+import { useQueryClient } from '@tanstack/react-query';
 import { ProjectEdit } from '@/screens/project-edit';
 import {
   useProjectQuery,
   useUpdateProjectMutation,
   useDeleteProjectMutation,
 } from '@/lib/api/hooks';
+import {
+  projectInitialData,
+  projectInitialDataUpdatedAt,
+} from '@/lib/api/initial-data';
 import { safeBack } from '@/lib/nav/safe-back';
 import { dismissOrReplaceTo } from '@/lib/nav/dismiss-or-replace';
 import { AppHeaderActions } from '@/components/ui/AppHeaderActions';
@@ -17,10 +22,15 @@ export default function ProjectEditRoute() {
   const router = useRouter();
   const { project } = useLocalSearchParams<{ project: string }>();
   const slug = project ?? '';
+  const qc = useQueryClient();
 
   const projectQ = useProjectQuery(
     { params: { project: slug } },
-    { enabled: slug.length > 0 },
+    {
+      enabled: slug.length > 0,
+      initialData: projectInitialData(qc, slug),
+      initialDataUpdatedAt: projectInitialDataUpdatedAt(qc),
+    },
   );
   const update = useUpdateProjectMutation();
   const remove = useDeleteProjectMutation();

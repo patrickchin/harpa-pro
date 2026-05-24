@@ -42,6 +42,12 @@ export type ReportsListProps = {
   onBack: () => void;
   onCreate: () => void;
   onOpenReport: (report: ReportListItem) => void;
+  /**
+   * Best-effort prefetch fired on `onPressIn` for the row, before
+   * `onPress` triggers navigation. Routes pass `usePrefetchReport`.
+   * Optional — dev mirrors can leave it unset.
+   */
+  onPressInReport?: (report: ReportListItem) => void;
   actions?: ReactNode;
 };
 
@@ -56,6 +62,7 @@ export function ReportsList({
   onBack,
   onCreate,
   onOpenReport,
+  onPressInReport,
   actions,
 }: ReportsListProps) {
   const sections = buildReportsSections(reports);
@@ -142,6 +149,7 @@ export function ReportsList({
             <View className="px-5 pt-3">
               <Pressable
                 testID={`report-row-${item.number}`}
+                onPressIn={() => onPressInReport?.(item)}
                 onPress={() => onOpenReport(item)}
                 accessibilityRole="button"
               >

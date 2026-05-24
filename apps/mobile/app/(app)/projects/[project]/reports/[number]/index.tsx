@@ -16,6 +16,7 @@
  */
 import { useCallback, useMemo, useState } from 'react';
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
+import { useQueryClient } from '@tanstack/react-query';
 
 import { SavedReport } from '@/screens/saved-report';
 import {
@@ -26,6 +27,12 @@ import {
   useDeleteReportMutation,
   useUnfinalizeReportMutation,
 } from '@/lib/api/hooks';
+import {
+  projectInitialData,
+  projectInitialDataUpdatedAt,
+  reportInitialData,
+  reportInitialDataUpdatedAt,
+} from '@/lib/api/initial-data';
 import type { ReportNoteRow } from '@/components/reports/detail/ReportNotesPane';
 import { useRefresh } from '@/lib/use-refresh';
 import { useReportPdfActions } from '@/lib/use-report-pdf-actions';
@@ -49,10 +56,15 @@ export default function SavedReportRoute() {
   const parsedNumber = Number.parseInt(number ?? '', 10);
   const reportNumber = Number.isFinite(parsedNumber) ? parsedNumber : null;
   const hasValidRouteParams = slug.length > 0 && reportNumber !== null;
+  const qc = useQueryClient();
 
   const projectQuery = useProjectQuery(
     { params: { project: slug } },
-    { enabled: slug.length > 0 },
+    {
+      enabled: slug.length > 0,
+      initialData: projectInitialData(qc, slug),
+      initialDataUpdatedAt: projectInitialDataUpdatedAt(qc),
+    },
   );
   const reportQuery = useReportQuery(
     {
@@ -61,7 +73,18 @@ export default function SavedReportRoute() {
         number: reportNumber ?? 0,
       },
     },
-    { enabled: hasValidRouteParams },
+    {
+      enabled: hasValidRouteParams,
+      // Seed from the cached reports list so the screen renders the
+      // row immediately when navigated from `/projects/{slug}/reports`.
+      // Background refetch still fires because `initialDataUpdatedAt`
+      // reflects how stale the list snapshot is.
+      initialData:
+        reportNumber !== null
+          ? reportInitialData(qc, slug, reportNumber)
+          : undefined,
+      initialDataUpdatedAt: reportInitialDataUpdatedAt(qc, slug),
+    },
   );
 
   const reportRow = reportQuery.data as

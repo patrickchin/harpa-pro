@@ -3,18 +3,24 @@
  *
  * Provider order (top → bottom):
  *   AppErrorBoundary → GestureHandlerRootView → SafeAreaProvider →
- *   QueryClientProvider → AuthSessionProvider → StatusBar →
+ *   PersistQueryClientProvider → AuthSessionProvider → StatusBar →
  *   DialogSheetProvider → QueueProvider → AudioPlaybackProvider →
  *   SentryProvider → Slot
  *
  * See docs/v4/arch-p2-6-app-shell.md for rationale.
+ *
+ * `PersistQueryClientProvider` rehydrates the TanStack Query cache
+ * from MMKV before children mount, so cold-start screens render the
+ * last-seen data instantly while a background refetch revalidates.
+ * See `lib/api/query-persister.ts` for the storage adapter and
+ * allowlist.
  */
 import '../global.css';
 import { Component, type ReactNode } from 'react';
 import { Slot } from 'expo-router';
 import { ActivityIndicator, View, Text, Pressable } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { colors } from '@/lib/design-tokens/colors';
@@ -23,25 +29,18 @@ import { DialogSheetProvider } from '@/lib/dialogs/DialogSheetProvider';
 import { QueueProvider } from '@/lib/uploads/QueueProvider';
 import { AudioPlaybackProvider } from '@/lib/audio/AudioPlaybackProvider';
 import { SentryProvider, initSentry } from '@/lib/telemetry/SentryStub';
+import { queryClient, queryPersister } from '@/lib/api/query-client';
+import { shouldDehydrateQuery } from '@/lib/api/query-persister';
 
 // Initialize Sentry (no-op stub for P2.6).
 initSentry();
 
-// Sensible TanStack defaults so re-mounting a screen (e.g. tabbing back
-// into a report) renders the cached data instantly while a background
-// refetch revalidates. Matching canonical: staleTime 30s, gcTime 5min,
-// refetchOnWindowFocus false, refetchOnReconnect true, retry 1.
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 30_000,
-      gcTime: 5 * 60_000,
-      refetchOnWindowFocus: false,
-      refetchOnReconnect: true,
-      retry: 1,
-    },
-  },
-});
+const persistOptions = {
+  persister: queryPersister.persister,
+  maxAge: queryPersister.maxAge,
+  buster: queryPersister.buster,
+  dehydrateOptions: { shouldDehydrateQuery },
+};
 
 interface ErrorBoundaryState {
   hasError: boolean;
@@ -127,7 +126,10 @@ export default function RootLayout() {
     <AppErrorBoundary>
       <GestureHandlerRootView style={{ flex: 1 }}>
         <SafeAreaProvider>
-          <QueryClientProvider client={queryClient}>
+          <PersistQueryClientProvider
+            client={queryClient}
+            persistOptions={persistOptions}
+          >
             <AuthSessionProvider>
               <StatusBar style="dark" />
               <DialogSheetProvider>
@@ -140,7 +142,7 @@ export default function RootLayout() {
                 </QueueProvider>
               </DialogSheetProvider>
             </AuthSessionProvider>
-          </QueryClientProvider>
+          </PersistQueryClientProvider>
         </SafeAreaProvider>
       </GestureHandlerRootView>
     </AppErrorBoundary>

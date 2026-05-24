@@ -13,6 +13,10 @@
  */
 import { useRouter, type Href } from 'expo-router';
 import { useListProjectsQuery } from '@/lib/api/hooks';
+import {
+  usePrefetchProject,
+  usePrefetchProjectReports,
+} from '@/lib/api/prefetch';
 import { ProjectsList, type ProjectRow } from '@/screens/projects-list';
 import { AppHeaderActions } from '@/components/ui/AppHeaderActions';
 
@@ -21,6 +25,8 @@ const PROJECT_SLUG_RE = /^prj_[0-9a-hjkmnp-tv-z]{8,16}$/i;
 export default function ProjectsIndex() {
   const router = useRouter();
   const result = useListProjectsQuery();
+  const prefetchProject = usePrefetchProject();
+  const prefetchProjectReports = usePrefetchProjectReports();
 
   const projects: ProjectRow[] =
     result.data?.items
@@ -51,6 +57,13 @@ export default function ProjectsIndex() {
       onRefresh={() => result.refetch()}
       onPressProject={(slug) => {
         router.push(`/projects/${slug}` as Href);
+      }}
+      onPressInProject={(slug) => {
+        // Best-effort: pre-warm both the project detail and its
+        // reports list so the destination screen renders without a
+        // spinner. Helpers no-op on empty slug.
+        prefetchProject(slug);
+        prefetchProjectReports(slug);
       }}
       onPressNewProject={() => {
         router.push('/projects/new' as Href);

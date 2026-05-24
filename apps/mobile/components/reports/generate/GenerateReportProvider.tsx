@@ -35,6 +35,7 @@ import { useVoiceNotePipeline } from '@/features/voice/useVoiceNotePipeline';
 import { useAudioPlayback } from '@/lib/audio/AudioPlaybackProvider';
 import type { RecorderSnapshot } from '@/features/voice/recorder-types';
 import { AppDialogSheet } from '@/components/primitives/AppDialogSheet';
+import { UsageLimitDialog } from '@/components/account/UsageLimitDialog';
 
 /**
  * Props passed to `GenerateReportProvider`. Route wrappers wire real
@@ -744,6 +745,19 @@ export function GenerateReportProvider({
             testID: 'voice-error-dismiss',
           },
         ]}
+      />
+      {/*
+        Phase 3 (usage limits): when the voice aggregator returns 403
+        usage_limit_exceeded the pipeline state carries the structured
+        details. Surface it through the themed dialog (no Alert.alert,
+        hard rule #4). Calling `voicePipeline.reset()` clears both the
+        failed state and the usageLimit slot, so the user can dismiss
+        and retry once their quota resets.
+      */}
+      <UsageLimitDialog
+        visible={voicePipeline.state.usageLimit !== null}
+        details={voicePipeline.state.usageLimit}
+        onClose={voicePipeline.reset}
       />
     </GenerateReportContext.Provider>
   );

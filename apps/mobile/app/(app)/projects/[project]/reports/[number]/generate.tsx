@@ -48,6 +48,8 @@ import { reports } from '@harpa/api-contract';
 import { SAMPLE_GENERATED_REPORT } from '@/lib/dev-fixtures/sample-report';
 import { reportBodyToGeneratedReport } from '@/lib/report-body-adapter';
 import { safeBack } from '@/lib/nav/safe-back';
+import { UsageLimitDialog } from '@/components/account/UsageLimitDialog';
+import { usageLimitFromError, type UsageLimitDetails } from '@/lib/api/usage-limit-error';
 import { dismissOrReplaceTo } from '@/lib/nav/dismiss-or-replace';
 import {
   consumeCameraSession,
@@ -266,6 +268,7 @@ export default function GenerateReportRoute() {
   const [generationError, setGenerationError] = useState<string | null>(null);
   const [finalizeError, setFinalizeError] = useState<string | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [usageLimitHit, setUsageLimitHit] = useState<UsageLimitDetails | null>(null);
   const [lastGeneration, setLastGeneration] = useState<
     import('@/components/reports/generate/GenerateReportProvider').GenerationDebug | null
   >(null);
@@ -333,6 +336,11 @@ export default function GenerateReportRoute() {
           }
         },
         onError: (err) => {
+          const limit = usageLimitFromError(err);
+          if (limit) {
+            setUsageLimitHit(limit);
+            return;
+          }
           setGenerationError(err.message ?? 'Generation failed.');
         },
       },
@@ -492,38 +500,45 @@ export default function GenerateReportRoute() {
   // attachment handler above and clearing it from inside the dialog
   // (AppDialogSheet handles dismissal).
   return (
-    <GenerateNotes
-      project={slug}
-      reportNumber={reportNumber}
-      reportId={reportId}
-      notes={visibleNotes}
-      memberNames={memberNames}
-      notesLoading={report.isLoading || notesQuery.isLoading}
-      onAddTextNote={handleAddTextNote}
-      onDeleteNote={handleDeleteNote}
-      onUpdateNote={handleUpdateNote}
-      reportTitle={reportTitleField ?? null}
-      canWrite={canWrite}
-      onBack={() => safeBack(router, `/(app)/projects/${slug}/reports`)}
-      report={currentReport}
-      onSetReport={handleEditReport}
-      isGeneratingReport={isGenerating}
-      generationError={combinedError}
-      lastGeneration={lastGeneration}
-      onRegenerate={handleRegenerate}
-      notesSinceLastGeneration={reportRow?.notesSinceLastGeneration ?? 0}
-      isAutoSaving={autosave.isAutoSaving || userDirty}
-      lastSavedAt={autosave.lastSavedAt}
-      isFinalizing={finalizeMutation.isPending}
-      finalizeError={finalizeError}
-      onFinalize={handleFinalize}
-      onCameraCapture={handleCameraCapture}
-      onPickAttachment={handlePickAttachment}
-      onDeleteDraft={
-        reportRow?.status === 'finalized' ? undefined : handleDeleteDraft
-      }
-      isDeletingDraft={deleteReportMutation.isPending}
-      actions={<AppHeaderActions />}
-    />
+    <>
+      <GenerateNotes
+        project={slug}
+        reportNumber={reportNumber}
+        reportId={reportId}
+        notes={visibleNotes}
+        memberNames={memberNames}
+        notesLoading={report.isLoading || notesQuery.isLoading}
+        onAddTextNote={handleAddTextNote}
+        onDeleteNote={handleDeleteNote}
+        onUpdateNote={handleUpdateNote}
+        reportTitle={reportTitleField ?? null}
+        canWrite={canWrite}
+        onBack={() => safeBack(router, `/(app)/projects/${slug}/reports`)}
+        report={currentReport}
+        onSetReport={handleEditReport}
+        isGeneratingReport={isGenerating}
+        generationError={combinedError}
+        lastGeneration={lastGeneration}
+        onRegenerate={handleRegenerate}
+        notesSinceLastGeneration={reportRow?.notesSinceLastGeneration ?? 0}
+        isAutoSaving={autosave.isAutoSaving || userDirty}
+        lastSavedAt={autosave.lastSavedAt}
+        isFinalizing={finalizeMutation.isPending}
+        finalizeError={finalizeError}
+        onFinalize={handleFinalize}
+        onCameraCapture={handleCameraCapture}
+        onPickAttachment={handlePickAttachment}
+        onDeleteDraft={
+          reportRow?.status === 'finalized' ? undefined : handleDeleteDraft
+        }
+        isDeletingDraft={deleteReportMutation.isPending}
+        actions={<AppHeaderActions />}
+      />
+      <UsageLimitDialog
+        visible={usageLimitHit !== null}
+        details={usageLimitHit}
+        onClose={() => setUsageLimitHit(null)}
+      />
+    </>
   );
 }

@@ -37,6 +37,7 @@ import { ScreenHeader } from '@/components/primitives/ScreenHeader';
 import { SectionHeader } from '@/components/primitives/SectionHeader';
 import { StatTile } from '@/components/primitives/StatTile';
 import { InlineNotice } from '@/components/primitives/InlineNotice';
+import { UsageLimitsCard, type LimitBucket } from '@/components/account/UsageLimitsCard';
 import { colors } from '@/lib/design-tokens/colors';
 
 export interface UsageMonthlyRow {
@@ -82,6 +83,13 @@ export interface UsageScreenProps {
   /** Optional chart slot (e.g. `<UsageBarChart … />`). Renders only
    * when at least 2 months are present. Set null/undefined to hide. */
   chart?: ReactNode;
+  /** Optional plan + per-bucket monthly limits surfaced by the
+   * `/me/limits` endpoint. When provided, a UsageLimitsCard renders
+   * above the All-Time Summary. */
+  limits?: {
+    plan: 'free' | 'pro' | 'enterprise';
+    buckets: ReadonlyArray<LimitBucket>;
+  };
 }
 
 function parseMonth(iso: string): Date {
@@ -189,6 +197,7 @@ export function Usage({
   onRefresh,
   onBack,
   chart,
+  limits,
 }: UsageScreenProps) {
   const [expandedMonth, setExpandedMonth] = useState<string | null>(null);
 
@@ -226,6 +235,13 @@ export function Usage({
                 <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
               }
             >
+              {/* Plan & limits (per-account monthly caps). Renders
+                  before the All-Time Summary so users see what they
+                  have left at a glance. */}
+              {limits ? (
+                <UsageLimitsCard plan={limits.plan} buckets={limits.buckets} />
+              ) : null}
+
               {/* All-time summary */}
               <SectionHeader
                 title="All-Time Summary"

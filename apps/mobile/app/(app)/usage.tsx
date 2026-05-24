@@ -8,14 +8,15 @@
 import { useRouter } from 'expo-router';
 
 import { Usage, type UsageMonthlyRow, type UsageByModelRow } from '@/screens/usage';
-import { useMeUsageQuery } from '@/lib/api/hooks';
+import { useMeUsageQuery, useMeLimitsQuery } from '@/lib/api/hooks';
 import { useRefresh } from '@/lib/use-refresh';
 import { safeBack } from '@/lib/nav/safe-back';
 
 export default function UsageRoute() {
   const router = useRouter();
   const usageQuery = useMeUsageQuery();
-  const { refreshing, onRefresh } = useRefresh([usageQuery.refetch]);
+  const limitsQuery = useMeLimitsQuery();
+  const { refreshing, onRefresh } = useRefresh([usageQuery.refetch, limitsQuery.refetch]);
 
   const tokensByMonth = new Map<string, { input: number; output: number; cached: number; calls: number }>();
   for (const t of usageQuery.data?.usageTokens ?? []) {
@@ -63,6 +64,7 @@ export default function UsageRoute() {
       onRefresh={onRefresh}
       onBack={() => safeBack(router, '/(app)/profile' as never)}
       chart={null}
+      limits={limitsQuery.data ? { plan: limitsQuery.data.plan, buckets: limitsQuery.data.buckets } : undefined}
     />
   );
 }

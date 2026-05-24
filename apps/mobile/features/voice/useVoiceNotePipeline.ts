@@ -31,6 +31,7 @@ import { useFileUpload } from '@/lib/uploads';
 import type { ResponseBody } from '@/lib/api/client';
 import { request } from '@/lib/api/client';
 import { runInvalidations } from '@/lib/api/invalidation';
+import { usageLimitFromError, type UsageLimitDetails } from '@/lib/api/usage-limit-error';
 
 import type { RecorderResult } from './recorder-types';
 
@@ -57,6 +58,12 @@ export interface PipelineState {
   fileId: string | null;
   /** Original finalised recording, kept until success/discard for retry. */
   capture: RecorderResult | null;
+  /**
+   * Populated when the pipeline failed with a 403 `usage_limit_exceeded`.
+   * Consumers should render a UsageLimitDialog instead of (or in addition
+   * to) the generic failed-state UI. Null otherwise.
+   */
+  usageLimit: UsageLimitDetails | null;
 }
 
 export interface UseVoiceNotePipelineOptions {
@@ -97,6 +104,7 @@ const INITIAL: PipelineState = {
   note: null,
   fileId: null,
   capture: null,
+  usageLimit: null,
 };
 
 function filenameForVoice(uri: string): string {
@@ -226,6 +234,7 @@ export function useVoiceNotePipeline(
         note: null,
         fileId: fileIdRef.current,
         capture: result,
+        usageLimit: null,
       });
 
       try {
@@ -262,10 +271,12 @@ export function useVoiceNotePipeline(
           note: out.note,
           fileId: out.fileId,
           capture: result,
+          usageLimit: null,
         });
         return out.note;
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
+        const usageLimit = usageLimitFromError(err);
         // Determine which step failed by looking at whether the upload
         // captured a fileId before the throw.
         const failedStep: 'uploading' | 'transcribing' = fileIdRef.current
@@ -278,6 +289,7 @@ export function useVoiceNotePipeline(
           note: null,
           fileId: fileIdRef.current,
           capture: result,
+          usageLimit,
         });
         throw err instanceof Error ? err : new Error(message);
       }

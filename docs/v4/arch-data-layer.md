@@ -100,7 +100,7 @@ client never grows a parallel, drift-prone copy:
 
 ## Offline / queue
 
-The upload queue (`features/upload/queue.ts`) is the only client
+The upload queue (`lib/uploads/queue.ts`) is the only client
 mutation that runs while offline. It persists via legend-state to
 AsyncStorage; on app start the queue resumes from the last
 non-completed step. See [arch-mobile.md](arch-mobile.md) Upload
@@ -109,9 +109,9 @@ Pipeline section.
 ## Auth header
 
 `client.ts` reads the active session token from
-`features/auth/useAuthSession` (which mirrors secure-store) and
-attaches it to every request. On 401, it triggers `signOut()` and
-the `(app)` layout redirects to `(auth)/login`.
+`lib/auth/session` (`useAuthSession`, which mirrors secure-store)
+and attaches it to every request. On 401, it triggers `signOut()`
+and the `(app)` layout redirects to `(auth)/sign-in/phone`.
 
 ## Drift gates (cross-layer)
 

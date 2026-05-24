@@ -352,8 +352,9 @@ HTTP/1.1 403 Forbidden
 
 A near-limit (>80% used) request still succeeds but the response
 carries an `X-Usage-Warning: near-limit; bucket=report_generate;
-remaining=1` header, so mobile can surface a one-time toast without
-parsing a second endpoint.
+pct=80` header (where `pct` is the integer usage percentage 0–100),
+so mobile can surface a one-time toast without parsing a second
+endpoint.
 
 ### 5.4 `GET /me/usage` extension
 

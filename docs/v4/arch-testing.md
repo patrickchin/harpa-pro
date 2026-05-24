@@ -162,13 +162,29 @@ ensures the legacy path is gone:
 - `check-no-unistyles.sh` — no `react-native-unistyles` outside
   `docs/legacy-v3/`. Same rationale as above (covers non-JS files).
 - `check-scope-tests.sh` — every authed route has scope tests.
+- `check-spec-drift.sh` — regenerates the OpenAPI spec + types and
+  fails if anything would change, keeping `api-contract` in sync
+  with `packages/api/src/routes/`.
+- `check-maestro-appid.sh` — Maestro flows must reference
+  `${MAESTRO_APP_ID}` rather than a hardcoded bundle id.
+- `check-no-process-env-r2.sh` — R2 config is read through
+  `env.R2_*` only (Pitfall 13 — no `process.env.R2_*` escape
+  hatches that bypass DI).
+- `check-no-process-env-rate-limit.sh` — same rule for rate-limit
+  config (`env.RATE_LIMIT_*`).
+- `check-usage-limit-wiring.sh` — every usage-limit-gated route
+  has the limit middleware actually mounted (Pitfall 13 — DI stubs
+  must not become the spec).
+
+The full list runs from the root `lint` script in `package.json`
+and is enforced by `lint-typecheck.yml`.
 
 The following gates were migrated to ESLint rules in
 [`apps/mobile/.eslintrc.cjs`](../../apps/mobile/.eslintrc.cjs) so
 they surface as editor squiggles, not just CI failures:
 
 - `Alert.alert` outside `lib/dialogs/` → `no-restricted-imports` on
-  `react-native#Alert` (Pitfall 12 / AGENTS.md hard rule #9).
+  `react-native#Alert` (Pitfall 12 / AGENTS.md hard rule #4).
 - `process.env.EXPO_PUBLIC_*` reads (and `!` non-null assertions)
   outside `lib/env.ts` → `no-restricted-syntax` (Pitfall 5).
 - Hex color literals (`#abc` / `#abcdef`) under `components/**` →

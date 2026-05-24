@@ -9,8 +9,12 @@
    is added (`pnpm fixtures:record <name>`).
 3. **Deterministic replay** in tests + `:mock` builds — same input
    always produces the same fixture output.
-4. **Provider-agnostic** — same API for Kimi, OpenAI, Anthropic,
-   Google, Z.AI, DeepSeek.
+4. **Provider-agnostic API design.** Currently implemented for
+   OpenAI (chat / report generation) and Groq (transcription); Kimi
+   is wired but replay-only (no live adapter yet). Anthropic, Google,
+   Z.AI and DeepSeek are intentionally deferred — the per-user
+   `AiVendor` preference still exists for live-mode routing and
+   accounting, but only the implemented vendors are selectable.
 5. **Redacted by default** — no PII / no API keys in committed
    fixtures.
 
@@ -21,12 +25,11 @@ packages/ai-fixtures/
   src/
     index.ts           # createProvider({ fixtureMode })
     providers/
-      openai.ts
-      anthropic.ts
-      kimi.ts
-      google.ts
-      zai.ts
-      deepseek.ts
+      openai.ts          # chat / report generation (live + replay)
+      groq.ts            # transcription (live + replay)
+      kimi.ts            # replay-only stub; throws LiveAdapterMissingError in live mode
+      error.ts
+      factory-from-env.ts
     fixture-store.ts   # read/write fixtures/<name>.json
     redact.ts          # PII redaction
     hash.ts            # canonical-json hash for fixture lookup

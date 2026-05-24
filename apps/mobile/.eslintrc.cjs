@@ -31,7 +31,7 @@ module.exports = {
       rules: { 'no-restricted-syntax': 'off' },
     },
     {
-      // AGENTS.md hard rule #9: no Alert.alert outside the dialog primitive.
+      // AGENTS.md hard rule #4: no Alert.alert outside the dialog primitive.
       files: ['**/*.{ts,tsx}'],
       excludedFiles: ['lib/dialogs/**'],
       rules: {

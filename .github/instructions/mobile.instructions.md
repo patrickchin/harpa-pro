@@ -14,7 +14,8 @@ description: "Mobile-specific rules for the Expo / NativeWind app. Loads automat
 ## Dialogs / overlays
 
 - **No `Alert.alert`.** Use `AppDialogSheet` or another themed
-  primitive. Enforced by `scripts/check-no-alert.sh`.
+  primitive. Enforced by the `no-restricted-imports` rule in
+  [`apps/mobile/.eslintrc.cjs`](../../apps/mobile/.eslintrc.cjs).
 
 ## Env vars
 
@@ -25,7 +26,8 @@ description: "Mobile-specific rules for the Expo / NativeWind app. Loads automat
 
 ## Fixture / mock mode
 
-- `pnpm ios` / `pnpm ios:mock` (run from repo root). `:mock` inlines
+- `pnpm --filter @harpa/mobile ios` /
+  `pnpm --filter @harpa/mobile ios:mock` (run from repo root). `:mock` inlines
   `EXPO_PUBLIC_USE_FIXTURES=true`, returning canned API responses and
   replacing the iOS-simulator audio recorder with a "Save fixture
   voice note" stub that emits a canned `voice-sample.m4a` through

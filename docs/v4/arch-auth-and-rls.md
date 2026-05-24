@@ -42,14 +42,14 @@ sequenceDiagram
   T-->>API: 202 pending
   API-->>App: 200 { verificationId }
 
-  App->>API: POST /auth/otp/verify { verificationId, code }
+  App->>API: POST /auth/otp/verify { phone, code }
   API->>T: services.verificationChecks.create({ to, code })
   T-->>API: { status: approved }
   API->>DB: upsert user, create session
   API-->>App: 200 { token, user }
 
   App->>API: GET /me  (Authorization: Bearer <token>)
-  API->>API: verifyAuthToken (jose) → { sub, sessionId }
+  API->>API: verifyJwt (jose) → { sub, sid }
   API->>DB: withScopedConnection(claims, db => db.select(...))
   DB-->>API: row
   API-->>App: 200 { user }
@@ -94,9 +94,11 @@ must leave them unset).
   compared with `timingSafeEqual` (no hand-rolled crypto). See
   `packages/api/src/auth/password.ts`.
 - Phone must appear in the comma-separated `TEST_ACCOUNT_PHONES` list.
-- Rate-limited 10/minute per phone via the same `getRateLimiter()`
-  used by the OTP routes.
-- Successful and failed attempts are audit-logged (`audit_login`).
+- Rate-limited 10/minute per phone via the `withRateLimit()`
+  middleware (same `getRateLimiter()` backend as the OTP routes).
+- Successful attempts are audit-logged
+  (`msg: 'test_account_password_login'`); failed verifications
+  throw 401 without an audit row.
 - On success the route reuses `issueSessionForPhone(...)` — identical
   session row + JWT shape as the OTP path.
 
@@ -136,7 +138,7 @@ export async function withScopedConnection<T>(
   const conn = await pool.connect();
   try {
     await conn.query('BEGIN');
-    await conn.query(`SET LOCAL role = 'app_authenticated'`);
+    await conn.query(`SET LOCAL role app_authenticated`);
     await conn.query(`SET LOCAL app.user_id = '${assertId('usr', claims.sub)}'`);
     await conn.query(`SET LOCAL app.session_id = '${assertId('ses', claims.sid)}'`);
     const result = await fn(drizzle(conn, { schema }));
@@ -154,14 +156,27 @@ export async function withScopedConnection<T>(
 ### Auth middleware (in `packages/api/src/middleware/auth.ts`)
 
 ```ts
-export const authMiddleware = createMiddleware(async (c, next) => {
-  const token = c.req.header('authorization')?.replace('Bearer ', '');
-  if (!token) throw new HTTPException(401);
-  const claims = await verifyAuthToken(token); // throws on invalid
-  c.set('claims', claims);
-  c.set('db', (fn) => withScopedConnection(claims, fn));
-  await next();
-});
+export function withAuth(): MiddlewareHandler<AppEnv> {
+  return async (c, next) => {
+    const auth = c.req.header('authorization');
+    if (!auth?.startsWith('Bearer ')) {
+      throw new HTTPException(401, { message: 'Missing bearer token.' });
+    }
+    const token = auth.slice('Bearer '.length).trim();
+    let claims;
+    try {
+      claims = await verifyJwt(token);
+    } catch {
+      throw new HTTPException(401, { message: 'Invalid token.' });
+    }
+    c.set('userId', claims.sub);
+    c.set('sessionId', claims.sid);
+    c.set('db', (fn) =>
+      withScopedConnection({ sub: claims.sub, sid: claims.sid }, fn),
+    );
+    await next();
+  };
+}
 ```
 
 Route handlers use `c.get('db')(fn)` — the raw `db` import is
@@ -196,7 +211,6 @@ CI fails if any new authed route lacks both tests
 | Var | Where | Purpose |
 |---|---|---|
 | `BETTER_AUTH_SECRET` | API | JWT signing key |
-| `BETTER_AUTH_URL` | API | issuer / audience |
 | `TWILIO_ACCOUNT_SID` | API | Twilio API |
 | `TWILIO_AUTH_TOKEN` | API | Twilio API |
 | `TWILIO_VERIFY_SID` | API | Verify service |

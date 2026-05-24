@@ -34,15 +34,19 @@ apps/mobile/
   app/                                 # expo-router
     (auth)/
       _layout.tsx
-      login.tsx                        # thin wrapper around screens/login.tsx
-      verify.tsx
+      sign-in/
+        phone.tsx                      # thin wrapper around screens/auth-phone.tsx
+        verify.tsx                     # thin wrapper around screens/auth-verify.tsx
+      sign-up/
+        phone.tsx
+        verify.tsx
       onboarding.tsx
     (app)/
       _layout.tsx
       projects/
         index.tsx                      # thin wrapper around screens/projects-list.tsx
         new.tsx
-        [projectSlug]/                 # prj_xxxxxx — see arch-ids-and-urls.md
+        [project]/                     # prj_xxxxxx — see arch-ids-and-urls.md
           index.tsx
           edit.tsx
           members.tsx
@@ -51,9 +55,9 @@ apps/mobile/
             generate.tsx          # the big one — Notes/Report/Edit tabs
             [number].tsx          # saved report — per-project number
       p/
-        [projectSlug].tsx              # short link → router.replace canonical
+        [project].tsx                  # short link → router.replace canonical
       r/
-        [reportSlug].tsx               # short link → router.replace canonical
+        [report].tsx                   # short link → router.replace canonical
       camera/
         capture.tsx
       profile/
@@ -82,40 +86,49 @@ apps/mobile/
       Skeleton.tsx
       AppDialogSheet.tsx
       StatTile.tsx
-    reports/
-      sections/
-        StatBar.tsx
-        WeatherStrip.tsx
-        SummarySectionCard.tsx
-        IssuesCard.tsx
-        WorkersCard.tsx
-        MaterialsCard.tsx
-        NextStepsCard.tsx
-        CompletenessCard.tsx
+    reports/                           # section cards live at root
+      StatBar.tsx
+      WeatherStrip.tsx
+      SummarySectionCard.tsx
+      IssuesCard.tsx
+      WorkersCard.tsx
+      MaterialsCard.tsx
+      NextStepsCard.tsx
+      CompletenessCard.tsx
       ReportView.tsx
-      ReportDetailTabBar.tsx
-      ReportActionsMenu.tsx
+      ReportEditForm.tsx
       PdfPreviewModal.tsx
-      SavedReportSheet.tsx
-      GenerateReportInputBar.tsx
-      GenerateReportTabBar.tsx
-      GenerateReportActionRow.tsx
+      detail/                          # saved-report detail screen pieces
+        ReportDetailTabBar.tsx
+        ReportActionsMenu.tsx
+        SavedReportSheet.tsx
+        ReportNotesPane.tsx
+        ReportPhotos.tsx
+      generate/                        # generate-report tab pieces
+        GenerateReportInputBar.tsx
+        GenerateReportTabBar.tsx
+        GenerateReportActionRow.tsx
     notes/
       NoteTimeline.tsx
       VoiceNoteCard.tsx
       ImageNoteCard.tsx
       TextNoteCard.tsx
       ThreeDotMenu.tsx
-    profile/
-      UsageBarChart.tsx
+    account/                           # profile / usage / settings screens' pieces
+    files/                             # file preview + thumbnail helpers
+    skeletons/                         # loading skeletons
+    uploads/                           # upload-queue UI affordances
+    ui/                                # cross-cutting UI utilities
 
   features/
     auth/
       useAuthSession.ts
       otpFlow.ts
     voice/
-      useVoiceNotePipeline.ts            # capture → upload → aggregator
-      VoiceRecorderModal.tsx
+      useVoiceNotePipeline.ts            # upload → aggregator coordination
+      useInlineRecorder.ts               # idle → recording → uploading state machine
+      InlineVoiceRecorder.tsx            # inline recording UI (replaces modal)
+      VoiceCardShell.tsx                 # voice card wrapper
       VoiceNoteCard.tsx                  # timeline + saved-report row
       expoAudioRecorder.ts               # native recorder adapter
       fixtureRecorder.ts                 # fixture-mode stub recorder
@@ -274,7 +287,7 @@ Token getter wiring (security review §B / §I):
 - Any post-bootstrap 401 (query OR mutation) calls
   `notifyUnauthorized()`, which clears the in-memory token + sets
   status to `unauthenticated`. The route guard in `app/_layout.tsx`
-  redirects to `/(auth)/login`.
+  redirects to `/(auth)/sign-in/phone`.
 
 Sign-out:
 
@@ -374,10 +387,11 @@ Full design lives in [`arch-voice-pipeline.md`](arch-voice-pipeline.md);
 delivery checklist in [`plan-voice-pipeline.md`](plan-voice-pipeline.md).
 At a glance:
 
-- The mic button on `GenerateReportInputBar` pushes a full-screen
-  modal at `app/(app)/projects/[project]/reports/[number]/record-voice.tsx`.
-  Permission denial and recording errors use `AppDialogSheet`
-  (Pitfall 12) — never `Alert.alert`.
+- The mic button on `GenerateReportInputBar` mounts
+  `InlineVoiceRecorder` (`features/voice/InlineVoiceRecorder.tsx`)
+  inline — no route push. `useInlineRecorder` drives the recording
+  side of the state machine; permission denial and recording errors
+  surface through `AppDialogSheet` (Pitfall 12) — never `Alert.alert`.
 - `useVoiceNotePipeline({ reportId })` runs the state machine
   `idle → recording → uploading → transcribing → saved | failed(step)`.
   Upload uses the shared `useFileUpload` queue with `kind: 'voice'`

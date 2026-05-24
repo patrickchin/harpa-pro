@@ -36,6 +36,7 @@ import {
 } from '../prompts/reportGeneration.js';
 import { VOICE_SUMMARY_SYSTEM_PROMPT } from '../prompts/voiceSummary.js';
 import { recordLlmUsage, type LlmOperation } from './ai-usage.js';
+import { enforceTokenLimits } from './usage-limits.js';
 
 /**
  * Context the route passes when it wants the call recorded in
@@ -253,6 +254,18 @@ async function withUsageAccounting<T>(
     }
   };
   let out: T & { usage?: { input?: number; output?: number; cached?: number } };
+  // Phase 2 — token-bucket pre-hoc check. If the user is ALREADY over
+  // their monthly token cap from previous calls' recorded rows, refuse
+  // before talking to the provider. Errors propagate as
+  // UsageLimitExceededError → errorMapper renders 403 +
+  // code=usage_limit_exceeded. See docs/v4/arch-usage-limits.md §4.1.
+  //
+  // Skipped when ctx is absent: fixture-driven unit tests still call
+  // chat/transcribe/generateReport without a user context and must not
+  // pay the DB roundtrip.
+  if (ctx) {
+    await ctx.db((d) => enforceTokenLimits(d, ctx.userId));
+  }
   try {
     out = await withErrorWrap(label, fn);
   } catch (err) {

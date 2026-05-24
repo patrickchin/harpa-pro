@@ -11,7 +11,10 @@ import {
   nextMonthResetAt,
   currentMonthStart,
   UsageLimitExceededError,
+  nearLimitWarning,
+  NEAR_LIMIT_THRESHOLD,
 } from '../services/usage-limits.js';
+import type { LimitState } from '../services/usage-limits.js';
 
 describe('mergeLimits', () => {
   it('falls through to plan defaults when override row is null', () => {
@@ -129,5 +132,56 @@ describe('UsageLimitExceededError', () => {
     expect(err.code).toBe('usage_limit_exceeded');
     expect(err.state.kind).toBe('report_generate');
     expect(err.message).toContain('report_generate');
+  });
+});
+
+describe('nearLimitWarning (Phase 2)', () => {
+  const baseState = (over: Partial<LimitState>): LimitState => ({
+    kind: 'report_generate',
+    limit: 100,
+    used: 0,
+    remaining: 100,
+    resetAt: '2026-07-01T00:00:00.000Z',
+    plan: 'free',
+    overridden: false,
+    ...over,
+  });
+
+  it('returns null when no bucket exceeds the threshold', () => {
+    const states = [
+      baseState({ kind: 'report_generate', used: 50, limit: 100, remaining: 50 }),
+      baseState({ kind: 'ai_input_tokens', used: 100, limit: 1000, remaining: 900 }),
+    ];
+    expect(nearLimitWarning(states)).toBeNull();
+  });
+
+  it('fires at the configured 80% threshold', () => {
+    expect(NEAR_LIMIT_THRESHOLD).toBe(0.8);
+    const states = [
+      baseState({ kind: 'report_generate', used: 80, limit: 100, remaining: 20 }),
+    ];
+    expect(nearLimitWarning(states)).toBe('near-limit; bucket=report_generate; pct=80');
+  });
+
+  it('picks the bucket with the highest utilisation', () => {
+    const states = [
+      baseState({ kind: 'report_generate', used: 90, limit: 100, remaining: 10 }),
+      baseState({ kind: 'voice_transcribe', used: 85, limit: 100, remaining: 15 }),
+    ];
+    expect(nearLimitWarning(states)).toBe('near-limit; bucket=report_generate; pct=90');
+  });
+
+  it('skips unbounded (limit=null) buckets', () => {
+    const states = [
+      baseState({ kind: 'ai_input_tokens', used: 999_999, limit: null, remaining: null }),
+    ];
+    expect(nearLimitWarning(states)).toBeNull();
+  });
+
+  it('caps reported percent at 100 even if used > limit', () => {
+    const states = [
+      baseState({ kind: 'ai_output_tokens', used: 200, limit: 100, remaining: 0 }),
+    ];
+    expect(nearLimitWarning(states)).toBe('near-limit; bucket=ai_output_tokens; pct=100');
   });
 });

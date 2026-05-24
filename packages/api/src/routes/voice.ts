@@ -30,7 +30,7 @@ import { withIdempotency } from '../middleware/idempotency.js';
 import { getFileById } from '../services/files.js';
 import { pickStorage } from '../services/storage.js';
 import { transcribe as aiTranscribe, summarize as aiSummarize } from '../services/ai.js';
-import { enforceUsageLimit } from '../services/usage-limits.js';
+import { enforceUsageLimit, attachUsageWarning } from '../services/usage-limits.js';
 import { getReport } from '../services/reports.js';
 import { createVoiceNote } from '../services/notes.js';
 import { getAiSettings } from '../services/settings.js';
@@ -173,6 +173,7 @@ voiceRoutes.openapi(
       // client can fix this from.
       throw new HTTPException(500, { message: 'Failed to create voice note.' });
     }
+    await db((d) => attachUsageWarning(d, userId, (k, v) => c.header(k, v)));
     return c.json(note, 201);
   },
 );
@@ -213,6 +214,7 @@ voiceRoutes.openapi(
       fixtureName: body.fixtureName,
       usageContext: { db, userId, projectId: null, reportId: null },
     });
+    await db((d) => attachUsageWarning(d, userId, (k, v) => c.header(k, v)));
     return c.json({ transcript: out.text }, 200);
   },
 );
@@ -248,6 +250,7 @@ voiceRoutes.openapi(
       usageContext: { db, userId, projectId: null, reportId: null },
     });
     const { summary } = parseVoiceSummaryResponse(out.text);
+    await db((d) => attachUsageWarning(d, userId, (k, v) => c.header(k, v)));
     return c.json({ summary }, 200);
   },
 );

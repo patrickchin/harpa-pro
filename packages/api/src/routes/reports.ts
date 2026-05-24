@@ -49,7 +49,7 @@ import {
 } from '../services/reports.js';
 import { getProjectBySlug } from '../services/projects.js';
 import { generateReport as aiGenerateReport } from '../services/ai.js';
-import { enforceUsageLimit } from '../services/usage-limits.js';
+import { enforceUsageLimit, attachUsageWarning } from '../services/usage-limits.js';
 import { getAiSettings } from '../services/settings.js';
 import { pickStorage } from '../services/storage.js';
 import { registerFile } from '../services/files.js';
@@ -386,6 +386,7 @@ reportRoutes.openapi(
     const report = await loadReport(db, slug, number);
     const settings = await db((d) => getAiSettings(d, userId));
     const result = await runGenerate(db, userId, report, body.fixtureName, settings.vendor, { mode: 'generate' });
+    await db((d) => attachUsageWarning(d, userId, (k, v) => c.header(k, v)));
     return c.json({ report: result.report, debug: result.debug }, 200);
   },
 );
@@ -412,6 +413,7 @@ reportRoutes.openapi(
     const report = await loadReport(db, slug, number);
     const settings = await db((d) => getAiSettings(d, userId));
     const result = await runGenerate(db, userId, report, body.fixtureName, settings.vendor, { mode: 'regenerate' });
+    await db((d) => attachUsageWarning(d, userId, (k, v) => c.header(k, v)));
     return c.json({ report: result.report, debug: result.debug }, 200);
   },
 );

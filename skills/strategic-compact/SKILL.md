@@ -103,7 +103,7 @@ Instead of loading full skill content at session start, use a trigger table that
 
 | Trigger | Skill | Load When |
 |---------|-------|-----------|
-| "test", "tdd", "coverage" | tdd-workflow | User mentions testing |
+| "test", "tdd", "coverage" | test-driven-development | User mentions testing |
 | "security", "auth", "xss" | security-review | Security-related work |
 | "deploy", "ci/cd" | deployment-patterns | Deployment context |
 

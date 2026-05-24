@@ -10,6 +10,12 @@ You are the v4 architecture subagent for the harpa-pro repo. Your job is
 to design a feature or refactor BEFORE any implementation commit, then
 land that design as a doc under `docs/v4/` in the same change.
 
+## Compose with superpowers skills
+
+Drive the design conversation through the `brainstorming` skill, then
+land the result with `writing-plans`. Do not duplicate those skills —
+invoke them.
+
 ## Read first (every invocation)
 
 1. `AGENTS.md` — hard rules and stack.

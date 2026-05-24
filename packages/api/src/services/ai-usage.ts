@@ -27,15 +27,19 @@ export type LlmUsageStatus = 'ok' | 'error';
  *     - `cached_tokens` = subset of `input_tokens` that hit the
  *                         provider's prompt cache (0 if vendor does
  *                         not report it).
+ *     - `input_seconds` = NULL
  *   transcribe
- *     - `input_tokens`  = ceil(audio seconds)  ← Whisper-class
- *                         endpoints bill by audio duration, not
- *                         tokens; storing seconds here keeps the
- *                         column non-zero so dashboards/aggregations
- *                         pick the call up. Conversion is set by
- *                         `services/ai.ts::transcribe`.
+ *     - `input_tokens`  = 0   ← Whisper-class endpoints bill by audio
+ *                         duration, not tokens. Don't fake a token
+ *                         count here — downstream consumers
+ *                         (`/me/usage`, `usage-limits.loadMonthUsage`)
+ *                         sum `input_tokens` and would otherwise mix
+ *                         units.
  *     - `output_tokens` = 0
  *     - `cached_tokens` = 0
+ *     - `input_seconds` = audio duration in seconds (fractional ok;
+ *                         3dp precision). Set by
+ *                         `services/ai.ts::transcribe()`.
  */
 export interface RecordLlmUsageParams {
   userId: string;
@@ -47,6 +51,8 @@ export interface RecordLlmUsageParams {
   inputTokens: number;
   outputTokens: number;
   cachedTokens: number;
+  /** Audio duration in seconds — transcribe only, NULL otherwise. */
+  inputSeconds?: number | null;
   latencyMs: number;
   fixtureMode: LlmFixtureMode;
   status: LlmUsageStatus;
@@ -67,12 +73,13 @@ export async function recordLlmUsage(
     INSERT INTO app.llm_usage_events (
       id, user_id, project_id, report_id,
       vendor, model, operation,
-      input_tokens, output_tokens, cached_tokens,
+      input_tokens, output_tokens, cached_tokens, input_seconds,
       latency_ms, fixture_mode, status
     ) VALUES (
       ${id}, ${params.userId}, ${params.projectId ?? null}, ${params.reportId ?? null},
       ${params.vendor}, ${params.model}, ${params.operation}::app.llm_operation,
       ${params.inputTokens}, ${params.outputTokens}, ${params.cachedTokens},
+      ${params.inputSeconds ?? null},
       ${params.latencyMs}, ${params.fixtureMode}::app.llm_fixture_mode,
       ${params.status}::app.llm_usage_status
     )

@@ -216,22 +216,28 @@ async function withErrorWrap<T>(label: string, fn: () => Promise<T>): Promise<T>
  * to the user-facing request. On provider failure we still record an
  * `error` row so cost postmortems include attempted calls.
  *
- * Vendor SDK response shapes vary. Today fixtures + the OpenAI live
- * adapter return `{ input, output }` for `chat`; `transcribe` carries
- * no token shape (Groq Whisper bills by audio seconds). The recorder
- * defaults missing fields to 0 — see docs/v4/arch-ai-fixtures.md for
- * the per-vendor adapter plan.
+ * Vendors return `{ input, output, cached? }` for chat. Transcribe
+ * returns `{ inputSeconds }` instead — Whisper-class endpoints bill
+ * by audio duration, not tokens, and the `llm_usage_events` schema
+ * stores it in a dedicated `input_seconds` column. Both paths flow
+ * through this chokepoint so every call lands a row. See
+ * docs/v4/arch-ai-fixtures.md §Usage accounting for the full
+ * per-vendor / per-operation convention.
  */
 async function withUsageAccounting<T>(
   ctx: LlmUsageContext | undefined,
   meta: { vendor: Vendor; model: string; operation: LlmOperation; fixtureMode: FixtureMode },
   label: string,
-  fn: () => Promise<T & { usage?: { input?: number; output?: number; cached?: number } }>,
-): Promise<T & { usage?: { input?: number; output?: number; cached?: number } }> {
+  fn: () => Promise<
+    T & { usage?: { input?: number; output?: number; cached?: number; inputSeconds?: number } }
+  >,
+): Promise<
+  T & { usage?: { input?: number; output?: number; cached?: number; inputSeconds?: number } }
+> {
   const start = Date.now();
   const record = async (
     status: 'ok' | 'error',
-    usage?: { input?: number; output?: number; cached?: number },
+    usage?: { input?: number; output?: number; cached?: number; inputSeconds?: number },
   ) => {
     if (!ctx) return;
     try {
@@ -246,6 +252,7 @@ async function withUsageAccounting<T>(
           inputTokens: usage?.input ?? 0,
           outputTokens: usage?.output ?? 0,
           cachedTokens: usage?.cached ?? 0,
+          inputSeconds: usage?.inputSeconds ?? null,
           latencyMs: Date.now() - start,
           fixtureMode: meta.fixtureMode,
           status,
@@ -257,7 +264,9 @@ async function withUsageAccounting<T>(
       console.error('[ai-usage] recordLlmUsage failed', err);
     }
   };
-  let out: T & { usage?: { input?: number; output?: number; cached?: number } };
+  let out: T & {
+    usage?: { input?: number; output?: number; cached?: number; inputSeconds?: number };
+  };
   // Phase 2 — token-bucket pre-hoc check. If the user is ALREADY over
   // their monthly token cap from previous calls' recorded rows, refuse
   // before talking to the provider. Errors propagate as
@@ -319,18 +328,18 @@ export async function transcribe(input: TranscribeInput): Promise<TranscribeOutp
     async () => {
       const r = await provider.transcribe({ audioUrl });
       // Whisper-class transcription bills by audio seconds, not by
-      // token counts the way chat does. Map seconds → `input_tokens`
-      // (ceil, integer) so the unified `llm_usage_events.input_tokens`
-      // column still carries non-zero observability for every call.
-      // Convention is documented in services/ai-usage.ts; see also
-      // docs/v4/arch-ai-fixtures.md §Transcription billing.
-      const inputTokens =
-        typeof r.durationSec === 'number' && r.durationSec > 0
-          ? Math.ceil(r.durationSec)
-          : 0;
+      // token counts the way chat does. Persist seconds in the
+      // dedicated `input_seconds` column (see migration
+      // `0008_llm_usage_input_seconds.sql`); `input_tokens` stays 0
+      // so downstream `sum(input_tokens)` aggregates only ever mix
+      // like units. Convention is documented in
+      // `services/ai-usage.ts::RecordLlmUsageParams` and
+      // `docs/v4/arch-ai-fixtures.md §Usage accounting`.
+      const inputSeconds =
+        typeof r.durationSec === 'number' && r.durationSec > 0 ? r.durationSec : 0;
       return {
         ...r,
-        usage: { input: inputTokens, output: 0 },
+        usage: { input: 0, output: 0, inputSeconds },
       };
     },
   );

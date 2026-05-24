@@ -173,10 +173,18 @@ Every call routed through `services/ai.ts` lands one row in
 Token-count conventions per operation — full doc lives on
 `RecordLlmUsageParams` in `services/ai-usage.ts`:
 
-| `operation`        | `input_tokens`            | `output_tokens`     | `cached_tokens`              |
-|--------------------|---------------------------|---------------------|------------------------------|
-| `chat` / `generate_report` | prompt tokens     | completion tokens   | subset of input that hit the provider's prompt cache (0 if vendor does not report) |
-| `transcribe`       | `ceil(durationSec)`       | `0`                 | `0`                          |
+| `operation`        | `input_tokens`    | `output_tokens`   | `cached_tokens`           | `input_seconds`           |
+|--------------------|-------------------|-------------------|---------------------------|---------------------------|
+| `chat` / `generate_report` | prompt tokens | completion tokens | subset of input that hit the provider's prompt cache (0 if vendor does not report) | `NULL` |
+| `transcribe`       | `0`               | `0`               | `0`                       | audio duration in seconds (numeric(10,3)) |
+
+`input_seconds` lives in its own column (migration
+`0008_llm_usage_input_seconds.sql`) so the `sum(input_tokens)`
+aggregates in `auth/service.ts::fetchUsage` and
+`services/usage-limits.ts::loadMonthUsage` only ever mix like units.
+The token-bucket rate gate (`ai_input_tokens`, `ai_output_tokens`)
+filters on `operation IN ('chat', 'generate_report')` as
+defence-in-depth.
 
 Vendor extraction (live mode):
 
@@ -185,9 +193,8 @@ Vendor extraction (live mode):
 - **Kimi (Moonshot)** — same shape; Moonshot's REST API is
   OpenAI-compatible.
 - **Groq (Whisper-class transcription)** — bills by audio seconds, no
-  per-token field. `services/ai.ts::transcribe()` derives
-  `input_tokens = ceil(durationSec)` so the unified column stays
-  non-zero.
+  per-token field. `services/ai.ts::transcribe()` passes
+  `durationSec` straight into `input_seconds`.
 
 Replay mode reads `usage` straight from the recorded fixture file,
 so replay-mode tests have deterministic token counts that match the

@@ -547,8 +547,10 @@ async function loadMonthUsage(
       count(*) FILTER (WHERE operation = 'generate_report')::text AS report_generate,
       count(*) FILTER (WHERE operation = 'transcribe')::text       AS voice_transcribe,
       count(*) FILTER (WHERE operation = 'chat')::text             AS voice_summarize,
-      coalesce(sum(input_tokens), 0)::text                         AS ai_input_tokens,
-      coalesce(sum(output_tokens), 0)::text                        AS ai_output_tokens
+      coalesce(sum(input_tokens) FILTER (WHERE operation IN ('chat', 'generate_report')), 0)::text
+        AS ai_input_tokens,
+      coalesce(sum(output_tokens) FILTER (WHERE operation IN ('chat', 'generate_report')), 0)::text
+        AS ai_output_tokens
     FROM app.llm_usage_events
     WHERE user_id = ${userId}
       AND status = 'ok'

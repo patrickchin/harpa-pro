@@ -51,8 +51,8 @@ that already power `GET /me/usage`:
 | `report_generate` | `app.llm_usage_events`  | `user_id=? AND operation='generate_report' AND status='ok' AND created_at >= date_trunc('month', now())` |
 | `voice_transcribe`| `app.llm_usage_events`  | `user_id=? AND operation='transcribe'      AND status='ok' AND created_at >= …` |
 | `voice_summarize` | `app.llm_usage_events`  | `user_id=? AND operation='chat'            AND status='ok' AND created_at >= …` |
-| `ai_input_tokens` | `app.llm_usage_events`  | `sum(input_tokens)`  scoped same way               |
-| `ai_output_tokens`| `app.llm_usage_events`  | `sum(output_tokens)` scoped same way               |
+| `ai_input_tokens` | `app.llm_usage_events`  | `sum(input_tokens) FILTER (WHERE operation IN ('chat','generate_report'))` — transcribe rows store audio duration in `input_seconds`, not tokens. |
+| `ai_output_tokens`| `app.llm_usage_events`  | `sum(output_tokens) FILTER (WHERE operation IN ('chat','generate_report'))` — same |
 
 **Pros:** one source of truth — the same row that produces the usage
 screen is the row that gates the next call. Zero drift risk

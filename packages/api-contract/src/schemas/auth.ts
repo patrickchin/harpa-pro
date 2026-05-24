@@ -58,6 +58,8 @@ export const usageTokenMonth = z.object({
   inputTokens: z.number().int().nonnegative(),
   outputTokens: z.number().int().nonnegative(),
   cachedTokens: z.number().int().nonnegative(),
+  /** Audio duration (seconds) of transcribe calls in the month. */
+  inputSeconds: z.number().nonnegative(),
   calls: z.number().int().nonnegative(),
 });
 
@@ -70,6 +72,8 @@ export const usageByModelRow = z.object({
   inputTokens: z.number().int().nonnegative(),
   outputTokens: z.number().int().nonnegative(),
   cachedTokens: z.number().int().nonnegative(),
+  /** Audio seconds for transcribe rows. 0 for chat / generate_report. */
+  inputSeconds: z.number().nonnegative(),
 });
 
 export const usageResponse = z.object({
@@ -80,6 +84,7 @@ export const usageResponse = z.object({
     inputTokens: z.number().int().nonnegative(),
     outputTokens: z.number().int().nonnegative(),
     cachedTokens: z.number().int().nonnegative(),
+    inputSeconds: z.number().nonnegative(),
     calls: z.number().int().nonnegative(),
   }),
   usageTokens: z.array(usageTokenMonth),

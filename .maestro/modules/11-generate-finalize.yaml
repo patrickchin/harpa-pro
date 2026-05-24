@@ -146,7 +146,29 @@ tags:
 - tapOn:
     id: "btn-confirm-unfinalize-report"
 
-# Back on generate screen
+# Unfinalize flips status in place — it does NOT navigate. The user
+# stays on the saved-report screen (apps/mobile/screens/saved-report.tsx)
+# and `handleConfirmUnfinalize` in
+# apps/mobile/app/(app)/projects/[project]/reports/[number]/index.tsx:189
+# only fires the mutation. saved-report has no `btn-finalize-report`
+# (that lives in GenerateReportActionRow on the /generate route at
+# apps/mobile/components/reports/generate/GenerateReportActionRow.tsx:77).
+# And ReportActionsMenu has no finalize entry either. So to re-finalize
+# we have to walk back: tap header back (→ reports list), wait for the
+# now-draft report row, tap it (reports/index.tsx:60 routes drafts to
+# /generate), then wait for `btn-finalize-report`.
+- extendedWaitUntil:
+    visible:
+      id: "btn-back"
+    timeout: 8000
+- tapOn:
+    id: "btn-back"
+- extendedWaitUntil:
+    visible:
+      id: "report-row-.*"
+    timeout: 15000
+- tapOn:
+    id: "report-row-.*"
 - extendedWaitUntil:
     visible:
       id: "btn-finalize-report"

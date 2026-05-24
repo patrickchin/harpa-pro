@@ -1,6 +1,18 @@
 # Maestro full regression journey
 
-> **Status:** designed — implementation-ready.
+> **Status:** green. All listed modules currently pass end-to-end on
+> real Android device `R3CT7092S2H` (`com.harpa.pro.dev`) in
+> fixture-replay mode against the local docker-compose stack.
+> Last verified: 2026-05-24, HEAD `11632dc`, wallclock ~18m21s for
+> the full journey across 01-auth, 01b-signup-bob, 02-projects-crud,
+> 03-members-invite, 04-members-permissions, 05-members-viewer,
+> 06-members-remove, 07-reports-crud, 08-text-notes,
+> 11-generate-finalize, 12-report-debug, 13-projects-delete (plus
+> helpers and sign-out). Modules 09 and 10 are not yet implemented
+> — see [§7 Future modules](#7-future-modules-pickup-pointers) and
+> [§8 Open scope](#8-open-scope--uncovered-routes-and-flows).
+> Windows-host gotchas hit while getting here are cataloged in
+> [`pitfalls-maestro-windows.md`](pitfalls-maestro-windows.md).
 > **Phase:** P4 hardening (extends [P3.14](plan-p3-feature-build.md#p314--maestro-full-journey--shipped) `core-end-to-end.yaml`).
 >
 > Companions:
@@ -156,6 +168,50 @@ Android's accessibility framework filters out invisible elements
 Maestro's hierarchy snapshot. Tapping by visible name avoids the
 testID-injection workaround entirely.
 
+**Report numbers are not hard-coded.** `app.projects.next_report_number`
+is a monotonic per-project counter (it does **not** reset when reports
+are deleted), so the first report created inside a journey run may be
+report `1`, `2`, or higher depending on prior CRUD activity. Modules
+07–12 select report rows and their detail views with wildcard testIDs
+— `report-row-.*`, `report-view-.*`, `report-summary-.*`,
+`report-title-.*` — and capture the actual number via Maestro
+`evalScript` / `output.REPORT_NUMBER` rather than asserting on `'1'`.
+Any new module that touches a report must follow the same pattern; a
+hard-coded `report-row-1` will pass on a clean stack and break the
+moment 13-projects-delete or a prior run bumps the counter.
+
+### 3.2.1 Below-the-fold pattern — `scrollUntilVisible`, not `assertVisible`
+
+Android's accessibility export inside a `ScrollView` (or `FlatList`)
+only includes descendants that are currently laid out within the
+visible region. Elements below the fold are absent from the
+hierarchy snapshot Maestro sees, so `assertVisible: { id: "x" }`
+fails with "element not found" even though the element is mounted
+and would render if scrolled into view.
+
+The fix used throughout the journey is `scrollUntilVisible` with
+`direction: DOWN` and the same `id:` selector. See module 12's
+`debug-prompt` and `debug-report-notes` assertions, which mirror
+the pre-existing pattern used for `debug-llm-response` on the same
+screen. Apply this anywhere a list, debug panel, or detail screen
+extends past one screen height — the journey's flakiest assertions
+during bring-up were all bare `assertVisible` calls on content that
+happened to render below the device's visible area.
+
+### 3.2.2 Unfinalize round-trip — no auto-navigation
+
+`onConfirmUnfinalize` in
+`apps/mobile/app/(app)/projects/[project]/reports/[number]/index.tsx`
+(`handleConfirmUnfinalize`, ~line 189) calls the unfinalize mutation
+and updates query state, but **does not navigate**. The user (or
+Maestro) stays on the saved-report screen after the mutation
+resolves. To exercise the finalize → unfinalize → re-finalize
+round-trip, module 11 walks back manually: `btn-back` to the reports
+list, tap the same `report-row-.*` to re-open the draft on
+`/generate`, then assert `btn-finalize-report` re-renders. Adding an
+implicit `router.push` to that handler is a behaviour change, not a
+test-only fix — keep the walk-back in the module.
+
 ### 3.3 testID inventory (required additions)
 
 Maestro asserts by `testID` (Pitfall: text-based selectors break on
@@ -193,7 +249,7 @@ corresponding module flow:
 | `btn-unfinalize-report` | `saved-report.tsx` actions menu | 11 |
 | `report-view-${number}` | `ReportView` | 11, 12 |
 | `report-title-${number}` | `ReportView` heading | 11 |
-| `report-summary-${number}` | `SummarySectionCard` body | 11 |
+| `report-summary-${number}` | `SummarySectionCard` body | 11 — **currently dead, do not assert.** The testID is gated on `report.report.meta.summary` at `apps/mobile/components/reports/ReportView.tsx:40`, but the wire schema in `packages/api-contract/src/schemas/reports.ts` does not include a `meta.summary` field — the AI fixture returns `summarySections` instead. Until either the schema converges with `meta.summary` or `ReportView.tsx` is changed to always render the testID (e.g. against the joined `summarySections` text), this selector resolves to a non-existent element. |
 | `btn-open-report-debug` | `saved-report.tsx` actions menu (dev section only) | 12 |
 | `debug-prompt` | `report-debug.tsx` | 12 |
 | `debug-report-notes` | `report-debug.tsx` | 12 |
@@ -428,3 +484,52 @@ If a feature lands on `dev` but its module is **not** added in the
 same PR, the PR is blocked. The merge-checklist for any branch in
 the table above must include "added Maestro module from
 design-maestro-full-regression.md §7".
+
+---
+
+## 8. Open scope — uncovered routes and flows
+
+Routes and flows that currently render in the app but are **not**
+asserted by `regression-journey.yaml`. Each is a candidate for a
+follow-up module; flagged here so we don't lose track of the gap
+between "the journey is green" and "the app is covered".
+
+- `apps/mobile/app/(app)/account.tsx` — account screen (settings,
+  sign-out trigger, destructive actions). Sign-out is exercised
+  indirectly via `helpers/sign-out.yaml`, but the rest of the screen
+  is unasserted.
+- `apps/mobile/app/(app)/usage.tsx` — token-usage screen. No
+  module touches it; the `/me/usage/events` endpoint is also out of
+  scope (Q5).
+- `apps/mobile/app/(app)/profile.tsx` — profile screen, including
+  display-name edits, avatar (if/when `AvatarUploader` lands per
+  carve-out), and the dev-section toggles that gate the report-debug
+  entry asserted in module 12. The journey reaches the developer
+  section indirectly (the entry only renders behind
+  `EXPO_PUBLIC_USE_FIXTURES`) but does not assert profile edits.
+- Voice notes — module slot `09` is reserved. The iOS-simulator
+  fixture path (`:mock` build replaces the recorder with a canned
+  `voice-sample.m4a` emitter, see
+  [`arch-voice-pipeline.md` §D6](arch-voice-pipeline.md#d6-fixture-mode-contract))
+  is not exercised; the on-device journey runs Android, which has
+  **no equivalent fixture stub** for the recorder yet. Adding voice
+  coverage on Android requires either an Android-side recorder
+  fixture or a CI-only iOS-sim leg.
+- Image / photo uploads — module slots `10a` / `10b` are reserved.
+  Currently neither the camera Done-handoff nor `ReportPhotos`
+  signed-URL fetch is asserted end-to-end. Same trigger as §7.
+
+These do not block the P4.8 exit gate — they are tracked as future
+modules and will land alongside their feature work or as targeted
+hardening PRs.
+
+---
+
+## 9. Pitfalls catalogue
+
+Windows-host + real-device Maestro gotchas hit while bringing this
+journey to green (process management, `evalScript` outputs,
+`scrollUntilVisible`, ADB reverse-port, fixture-mode quirks) are
+documented in
+[`pitfalls-maestro-windows.md`](pitfalls-maestro-windows.md). Read
+it before debugging a fresh journey failure on this host.

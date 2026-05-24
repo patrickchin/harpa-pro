@@ -11,7 +11,7 @@
 import {
   View,
   Text,
-  SectionList,
+  ScrollView,
   Pressable,
   ActivityIndicator,
   RefreshControl,
@@ -114,66 +114,64 @@ export function ReportsList({
           />
         </View>
       ) : (
-        <SectionList
-          sections={sections}
-          keyExtractor={(item) => item.id}
-          stickySectionHeadersEnabled={false}
+        <ScrollView
           contentContainerStyle={{ paddingBottom: 16, paddingTop: 8 }}
-          removeClippedSubviews
-          maxToRenderPerBatch={10}
-          updateCellsBatchingPeriod={50}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
           }
-          renderSectionHeader={({ section }) =>
-            section.title ? (
+        >
+          {sections.map((section) => (
+            <View key={section.title}>
               <View className="px-5 pt-4">
                 <Text className="text-label uppercase tracking-wider text-muted-foreground">
                   {section.title}
                 </Text>
               </View>
-            ) : null
-          }
-          renderItem={({ item, index }) => (
-            <View className="px-5 pt-3">
-              <Pressable
-                testID={`report-row-${item.status}-${index}`}
-                onPress={() => onOpenReport(item)}
-                accessibilityRole="button"
-              >
-                <Card
-                  variant={item.status === 'draft' ? 'emphasis' : 'default'}
-                  padding="sm"
-                  className="flex-row items-center gap-3"
-                >
-                  <View className="h-10 w-10 items-center justify-center rounded-md border border-border bg-card">
-                    <FileText size={20} color={colors.muted.foreground} />
-                  </View>
-                  <View className="min-w-0 flex-1 gap-1">
-                    <View className="min-w-0 flex-row items-start gap-2">
-                      <Text
-                        className="flex-1 text-lg font-semibold text-foreground"
-                        numberOfLines={2}
+              <View className="flex-row flex-wrap px-3 pt-2">
+                {section.data.map((item, index) => (
+                  <View key={item.id} className="w-1/2 p-2">
+                    <Pressable
+                      testID={`report-row-${item.status}-${index}`}
+                      onPress={() => onOpenReport(item)}
+                      accessibilityRole="button"
+                    >
+                      <Card
+                        variant={item.status === 'draft' ? 'emphasis' : 'default'}
+                        padding="sm"
+                        className="gap-2"
                       >
-                        {getReportTitle(item)}
-                      </Text>
-                      {item.status === 'draft' ? (
-                        <View className="mt-0.5 shrink-0 rounded-md border border-warning-border bg-warning-soft px-2 py-1">
-                          <Text className="text-xs font-semibold uppercase text-warning-text">
-                            Draft
-                          </Text>
+                        <View className="flex-row items-center justify-between">
+                          <View className="h-9 w-9 items-center justify-center rounded-md border border-border bg-card">
+                            <FileText size={18} color={colors.muted.foreground} />
+                          </View>
+                          {item.status === 'draft' ? (
+                            <View className="shrink-0 rounded-md border border-warning-border bg-warning-soft px-1.5 py-0.5">
+                              <Text className="text-[10px] font-semibold uppercase text-warning-text">
+                                Draft
+                              </Text>
+                            </View>
+                          ) : null}
                         </View>
-                      ) : null}
-                    </View>
-                    <Text className="text-sm text-muted-foreground">
-                      {getReportMeta(item)}
-                    </Text>
+                        <Text
+                          className="text-sm font-semibold text-foreground"
+                          numberOfLines={2}
+                        >
+                          {getReportTitle(item)}
+                        </Text>
+                        <Text
+                          className="text-xs text-muted-foreground"
+                          numberOfLines={1}
+                        >
+                          {getReportMeta(item)}
+                        </Text>
+                      </Card>
+                    </Pressable>
                   </View>
-                </Card>
-              </Pressable>
+                ))}
+              </View>
             </View>
-          )}
-        />
+          ))}
+        </ScrollView>
       )}
     </SafeAreaView>
   );

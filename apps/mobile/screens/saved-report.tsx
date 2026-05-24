@@ -21,7 +21,7 @@
  * typed props so this screen can be rendered with canned values from
  * dev mirrors + tests.
  */
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import {
   RefreshControl,
   ScrollView,
@@ -155,8 +155,7 @@ export function SavedReport(props: SavedReportProps) {
   const [menuVisible, setMenuVisible] = useState(false);
   const [pdfPreviewVisible, setPdfPreviewVisible] = useState(false);
   const [imagePreview, setImagePreview] = useState<{
-    fileId: string;
-    title?: string;
+    index: number;
   } | null>(null);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [confirmUnfinalizeOpen, setConfirmUnfinalizeOpen] = useState(false);
@@ -199,6 +198,31 @@ export function SavedReport(props: SavedReportProps) {
 
   const displayReport = localReport ?? report ?? null;
   const notesCount = (noteRows ?? []).length;
+
+  // Gallery of all photo-notes — drives the swipeable preview modal.
+  // Order matches `noteRows`; both `ReportPhotos` and `ReportNotesPane`
+  // tap-handlers resolve into this same list by `fileId`.
+  const photoGallery = useMemo(
+    () =>
+      (noteRows ?? [])
+        .filter(
+          (n): n is ReportNoteRow & { fileId: string } =>
+            n.kind === 'photo' &&
+            typeof n.fileId === 'string' &&
+            !!n.fileId,
+        )
+        .map((n) => ({
+          fileId: n.fileId,
+          title: n.body?.trim() || 'Photo',
+          cacheKey: n.fileId,
+        })),
+    [noteRows],
+  );
+
+  const handleOpenPhoto = (input: { fileId: string; title?: string }) => {
+    const idx = photoGallery.findIndex((p) => p.fileId === input.fileId);
+    setImagePreview({ index: idx >= 0 ? idx : 0 });
+  };
 
   const {
     isExporting,
@@ -340,7 +364,7 @@ export function SavedReport(props: SavedReportProps) {
             <View className="mt-4">
               <ReportPhotos
                 noteRows={noteRows}
-                onOpenPhoto={setImagePreview}
+                onOpenPhoto={handleOpenPhoto}
               />
             </View>
           </Animated.View>
@@ -355,7 +379,7 @@ export function SavedReport(props: SavedReportProps) {
           <Animated.View entering={FadeIn.duration(250)}>
             <ReportNotesPane
               noteRows={noteRows}
-              onOpenPhoto={setImagePreview}
+              onOpenPhoto={handleOpenPhoto}
             />
           </Animated.View>
         )}
@@ -483,8 +507,8 @@ export function SavedReport(props: SavedReportProps) {
 
       <ImagePreviewModal
         visible={imagePreview !== null}
-        fileId={imagePreview?.fileId ?? null}
-        title={imagePreview?.title}
+        photos={photoGallery}
+        initialIndex={imagePreview?.index ?? 0}
         onClose={() => setImagePreview(null)}
       />
 

@@ -83,7 +83,7 @@ function noteToEntry(n: ApiNote): NoteEntry {
   // STT output rendered in the expander. We split them onto NoteEntry
   // so `VoiceNoteCard` doesn't have to re-fetch the row.
   const text = isImage
-    ? (n.body ?? '📷 Photo')
+    ? (n.body ?? '')
     : isVoice
       ? (n.summary ?? n.body ?? n.transcript ?? '')
       : (n.body ?? n.transcript ?? '');

@@ -26,7 +26,11 @@ const ROLE_LABELS: Record<'owner' | 'editor' | 'viewer', string> = {
 };
 
 export type ProjectRow = {
-  id: string;
+  /**
+   * Slug-only ID (`prj_…`) — the canonical identifier on the wire AND
+   * in URLs (P3.1, see docs/v4/design-p31-slug-only-ids.md). The
+   * route param `/projects/[project]` receives this exact value.
+   */
   slug: string;
   name: string;
   role: 'owner' | 'editor' | 'viewer';
@@ -70,7 +74,7 @@ export function ProjectsList({
       ) : (
         <FlatList
           data={projects}
-          keyExtractor={(item) => item.id}
+          keyExtractor={(item) => item.slug}
           contentContainerStyle={{
             paddingHorizontal: 20,
             paddingTop: 16,

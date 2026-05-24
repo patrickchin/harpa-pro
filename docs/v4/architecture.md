@@ -165,7 +165,7 @@ skills/                   # auto-loaded
 |---|---|---|
 | P0 | Foundation | All packages scaffold compiles. `ai-fixtures` works (replay + record). Hand-rolled OTP route hits Twilio sandbox + integration test green. Neon branch script tested in CI. |
 | P1 | API Core | All routes implemented (zero stubs). `pnpm test:api && pnpm test:api:integration` green at ≥90% line coverage. Per-request scope tests cover every authed route. Fixture replay covers every AI route. |
-| P2 | Mobile Shell | Auth + nav + every primitive built. Every auth screen + projects list ported from `../haru3-reports/apps/mobile@dev` and reviewed manually. NativeWind tokens locked in `tailwind.config.js`. Dev-gallery routes (`app/(dev)/`) render every screen with mock props. |
+| P2 | Mobile Shell | Auth + nav + every primitive built. Every auth screen + projects list ported from `../haru3-reports/apps/mobile@dev` and reviewed manually. NativeWind tokens locked in `tailwind.config.js`. Screen bodies in `screens/<name>.tsx` are props-driven and unit-testable in isolation. |
 | P3 | Feature Build | Every screen from `../haru3-reports/apps/mobile@dev` ported, with: behaviour test for each interaction, Maestro flow. No screen is "stubbed" or "TODO redesign". |
 | P4 | E2E + Hardening | Full Maestro journey green on iOS + Android. Sentry wired. Fly + Neon prod deploy green. PDF export bit-for-bit equivalent to mobile-old samples. |
 | P5 | Beta + GA | TestFlight + Play internal track distribution. Rollout monitor. Cutover. |

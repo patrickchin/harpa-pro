@@ -25,8 +25,6 @@
 | Canonical source — components | `../haru3-reports/apps/mobile/components/<paths>` |
 | v4 body component | `apps/mobile/screens/<name>.tsx` |
 | v4 real route | `apps/mobile/app/(auth\|app)/<route>.tsx` |
-| v4 dev mirror | `apps/mobile/app/(dev)/<name>.tsx` |
-| Mock props for `(dev)` | inline literal in the dev mirror |
 | Required primitives | `Card`, `Input`, `Button`, … (from `apps/mobile/components/primitives/`) |
 | Required hooks (real route) | `useAuthSession`, generated React Query hooks, … |
 
@@ -39,8 +37,8 @@
    class used resolves against tokens already present in
    `apps/mobile/tailwind.config.js`. Add any missing token to the
    v4 config in the same commit (no hex literals — `check-no-hex-colors.sh`).
-4. The v4 [arch-mobile.md](../arch-mobile.md) §"Dev gallery" so the
-   `screens/` + dual-route pattern is fresh.
+4. The v4 [arch-mobile.md](../arch-mobile.md) §"Screens as
+   props-driven bodies" so the `screens/` pattern is fresh.
 
 ## Build
 
@@ -51,8 +49,8 @@
      `expo-secure-store`, no `useRouter().push` for primary
      navigation (accept an `onNavigate` callback prop instead).
    - Modals, sheets, tabs, form-local state, and `goBack()` are
-     allowed and expected to work — that is the point of the dev
-     gallery.
+     allowed and expected to work in isolation — that is the point
+     of the props-driven body.
    - No `Alert.alert` (rule #9). Use `AppDialogSheet`.
    - No `process.env.EXPO_PUBLIC_*!` (rule #6). Read via
      `lib/env.ts` if env is genuinely needed in the body (rare —
@@ -64,13 +62,7 @@
      navigation params) and passes them as props.
    - This is the only file that touches the network or secure store.
 
-3. **Dev mirror** at `apps/mobile/app/(dev)/<name>.tsx`:
-   - Imports the same body component.
-   - Passes hand-crafted mock props inline (or imports a
-     `<name>.mocks.ts` next to the body if the prop tree is large).
-   - Adds a row to `app/(dev)/index.tsx` so the gallery lists it.
-
-4. **Tailwind tokens.** If the canonical source uses any class that
+3. **Tailwind tokens.** If the canonical source uses any class that
    doesn't resolve in v4, extend `apps/mobile/tailwind.config.js` in
    this commit (token name copied from the canonical config).
 
@@ -95,7 +87,7 @@
 ## Visual review
 
 - Run `pnpm ios:mock` on the iOS simulator.
-- Open the v4 dev gallery → tap the `<name>` row.
+- Navigate to the screen via the real route.
 - Side-by-side with the canonical source running from
   `../haru3-reports/apps/mobile` on the same simulator (or on a
   second simulator window).

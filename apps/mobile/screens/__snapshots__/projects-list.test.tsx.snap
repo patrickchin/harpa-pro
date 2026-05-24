@@ -735,7 +735,6 @@ exports[`ProjectsList > matches snapshot with projects 1`] = `
       [
         {
           "address": "123 Main St, San Francisco, CA",
-          "id": "123e4567-e89b-12d3-a456-426614174000",
           "name": "Construction Site A",
           "role": "owner",
           "slug": "prj_abc123",
@@ -743,7 +742,6 @@ exports[`ProjectsList > matches snapshot with projects 1`] = `
         },
         {
           "address": null,
-          "id": "223e4567-e89b-12d3-a456-426614174001",
           "name": "Office Building Renovation",
           "role": "editor",
           "slug": "prj_def456",
@@ -751,7 +749,6 @@ exports[`ProjectsList > matches snapshot with projects 1`] = `
         },
         {
           "address": "789 Oak Ave, Palo Alto, CA",
-          "id": "323e4567-e89b-12d3-a456-426614174002",
           "name": "Residential Complex",
           "role": "viewer",
           "slug": "prj_ghj789",
@@ -978,7 +975,6 @@ exports[`ProjectsList > renders address row only when address is non-null 1`] = 
       [
         {
           "address": "123 Main St, San Francisco, CA",
-          "id": "123e4567-e89b-12d3-a456-426614174000",
           "name": "Construction Site A",
           "role": "owner",
           "slug": "prj_abc123",
@@ -986,7 +982,6 @@ exports[`ProjectsList > renders address row only when address is non-null 1`] = 
         },
         {
           "address": null,
-          "id": "223e4567-e89b-12d3-a456-426614174001",
           "name": "Office Building Renovation",
           "role": "editor",
           "slug": "prj_def456",
@@ -994,7 +989,6 @@ exports[`ProjectsList > renders address row only when address is non-null 1`] = 
         },
         {
           "address": "789 Oak Ave, Palo Alto, CA",
-          "id": "323e4567-e89b-12d3-a456-426614174002",
           "name": "Residential Complex",
           "role": "viewer",
           "slug": "prj_ghj789",
@@ -1134,7 +1128,6 @@ exports[`ProjectsList > renders role labels correctly 1`] = `
       [
         {
           "address": "123 Main St, San Francisco, CA",
-          "id": "123e4567-e89b-12d3-a456-426614174000",
           "name": "Construction Site A",
           "role": "owner",
           "slug": "prj_abc123",
@@ -1142,7 +1135,6 @@ exports[`ProjectsList > renders role labels correctly 1`] = `
         },
         {
           "address": null,
-          "id": "223e4567-e89b-12d3-a456-426614174001",
           "name": "Office Building Renovation",
           "role": "editor",
           "slug": "prj_def456",
@@ -1150,7 +1142,6 @@ exports[`ProjectsList > renders role labels correctly 1`] = `
         },
         {
           "address": "789 Oak Ave, Palo Alto, CA",
-          "id": "323e4567-e89b-12d3-a456-426614174002",
           "name": "Residential Complex",
           "role": "viewer",
           "slug": "prj_ghj789",

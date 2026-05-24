@@ -1,4 +1,4 @@
-import { useRouter } from 'expo-router';
+import { useRouter, type Href } from 'expo-router';
 import { useCreateProjectMutation } from '@/lib/api/hooks';
 import { ProjectNew } from '@/screens/project-new';
 import { safeBack } from '@/lib/nav/safe-back';
@@ -28,7 +28,7 @@ export default function NewProjectRoute() {
             // replace (not push/dismissTo) so /projects/new leaves the stack
             // and back goes to the project list, not the creation form.
             onSuccess: (created) => {
-              router.replace(`/(app)/projects/${created.id}` as never);
+              router.replace(`/(app)/projects/${created.id}` as Href);
             },
           },
         );

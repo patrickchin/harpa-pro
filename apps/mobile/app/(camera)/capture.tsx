@@ -16,7 +16,7 @@
  * AppDialogSheet (no `Alert.alert`, hard rule).
  */
 import { useCallback, useEffect, useState } from 'react';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import * as MediaLibrary from 'expo-media-library';
 
 import { CameraCapture } from '@/screens/camera-capture';
@@ -82,7 +82,7 @@ export default function CaptureRoute() {
     // the session's recorded `returnTo` so the caller is restored.
     const session = sessionId ? getCameraSession(sessionId) : undefined;
     if (session?.returnTo) {
-      router.replace(session.returnTo as never);
+      router.replace(session.returnTo as Href);
       return;
     }
     safeBack(router, '/');

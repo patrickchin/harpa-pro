@@ -3,7 +3,7 @@
  * useCreateReportMutation. On successful create, navigate to the
  * draft's generate view.
  */
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter, useLocalSearchParams, type Href } from 'expo-router';
 import { ReportsList } from '@/screens/reports-list';
 import {
   useProjectQuery,
@@ -51,7 +51,7 @@ export default function ReportsListRoute() {
               const created = (resp as { report?: { number: number } }).report;
               const num = created?.number;
               if (typeof num === 'number') {
-                router.push(`/projects/${slug}/reports/${num}/generate` as never);
+                router.push(`/projects/${slug}/reports/${num}/generate` as Href);
               }
             },
           },
@@ -59,9 +59,9 @@ export default function ReportsListRoute() {
       }}
       onOpenReport={(item) => {
         if (item.status === 'draft') {
-          router.push(`/projects/${slug}/reports/${item.number}/generate` as never);
+          router.push(`/projects/${slug}/reports/${item.number}/generate` as Href);
         } else {
-          router.push(`/projects/${slug}/reports/${item.number}` as never);
+          router.push(`/projects/${slug}/reports/${item.number}` as Href);
         }
       }}
       actions={<AppHeaderActions />}

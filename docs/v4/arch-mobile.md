@@ -64,16 +64,12 @@ apps/mobile/
         index.tsx
         account.tsx
         usage.tsx
-    (dev)/                             # P2.0b — dev gallery; never in prod
-      _layout.tsx
-      index.tsx                        # screen-list with mock-prop tap-through
-      <one route per screen>.tsx       # mounts the body with canned mock props
     +not-found.tsx
     _layout.tsx                        # providers (env, query, queue, dialogs, sentry)
 
   screens/                             # P2.0b — props-driven screen bodies
                                        # (no API/auth inside; consumed by
-                                       # both real routes and (dev) mirrors)
+                                       # the real routes)
 
   components/
     primitives/                        # P2.1 — locked early, snapshot-tested
@@ -333,32 +329,25 @@ at `../haru3-reports/apps/mobile/tailwind.config.js`.
 **No hex values appear outside the config.** ESLint rule
 `no-restricted-syntax` flags hex literals in `apps/mobile/components/**`.
 
-## Dev gallery (P2.0b)
+## Screens as props-driven bodies (P2.0b)
 
 Every screen the app ships has its body extracted into
 `apps/mobile/screens/<name>.tsx` as a presentational component
 that takes typed props and has **no** API / auth / persistence
-dependencies of its own. Two route files mount it:
+dependencies of its own. The real route at
+`app/(auth|app)/<path>.tsx` wires hooks, auth session, and
+navigation params, then passes them as props.
 
-- `app/(auth|app)/<path>.tsx` — the real route. Wires hooks, auth
-  session, navigation params; passes them as props.
-- `app/(dev)/<name>.tsx` — the dev mirror. Imports the same body
-  with hand-crafted mock props. Modals, sheets, tabs, and
-  back/forward navigation work; nothing else does.
-
-The gallery index at `app/(dev)/index.tsx` lists every dev mirror
-for tap-through manual review. The `(dev)` group is guarded by
-`__DEV__ || env.EXPO_PUBLIC_USE_FIXTURES` so the routes never reach
-a production bundle. This is the canonical workflow for visual
-review against `../haru3-reports/apps/mobile@dev` — there is no
-automated screenshot-diff gate.
+Visual review is manual against `../haru3-reports/apps/mobile@dev`
+on the iOS simulator — there is no automated screenshot-diff gate
+and no in-app gallery. Coverage relies on per-screen behaviour tests
+plus Maestro flows for visual regressions.
 
 ## Primitives (locked in P2.2)
 
 Listed under "primitives" above. Each ships with:
 
 - a Vitest snapshot test,
-- a row in the dev gallery so it can be eyeballed in the simulator,
 - documented props in `// JSDoc` only (no `.md` per primitive).
 
 Adding a new primitive needs the `architect` subagent first. The
@@ -455,7 +444,7 @@ outside `lib/env.ts`.
 | features/* | Vitest + MSW for API | ≥ 90% |
 | Screens | Vitest behaviour test (per-page interactions) | ≥ 80% |
 | End-to-end | Maestro on iOS sim + Android emu | All flows green |
-| Visual | Manual review against `../haru3-reports/apps/mobile@dev` via the dev gallery | n/a (no automated gate) |
+| Visual | Manual review against `../haru3-reports/apps/mobile@dev` on iOS sim | n/a (no automated gate) |
 
 Per-page acceptance is the per-page doc's "Acceptance checklist"
 section.

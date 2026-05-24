@@ -71,5 +71,33 @@ module.exports = {
         ],
       },
     },
+    {
+      // Route files must use `as Href` (or the typed `{ pathname, params }`
+      // form) rather than `as any` / `as never` / `as unknown`. The latter
+      // silence typed-routes errors and let stale paths land in production.
+      // See docs/v4/pitfalls.md (route-cast follow-up to the P3.1 slug
+      // migration).
+      files: ['app/**/*.{ts,tsx}'],
+      rules: {
+        'no-restricted-syntax': [
+          'error',
+          {
+            selector: "TSAsExpression > TSAnyKeyword",
+            message:
+              "Don't escape route types with `as any` — import { type Href } from 'expo-router' and cast as Href, or use the { pathname, params } object form.",
+          },
+          {
+            selector: "TSAsExpression > TSNeverKeyword",
+            message:
+              "Don't escape route types with `as never` — import { type Href } from 'expo-router' and cast as Href, or use the { pathname, params } object form.",
+          },
+          {
+            selector: "TSAsExpression > TSUnknownKeyword",
+            message:
+              "Don't escape route types with `as unknown` — import { type Href } from 'expo-router' and cast as Href.",
+          },
+        ],
+      },
+    },
   ],
 };

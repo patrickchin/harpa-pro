@@ -18,7 +18,7 @@ export default function AuthLayout() {
   // Auth gate: redirect authenticated / needs-onboarding users away.
   const target = decideAuthRedirect(status, pathname);
   if (target) {
-    return <Redirect href={target as any} />;
+    return <Redirect href={target} />;
   }
 
   return <Stack screenOptions={{ headerShown: false }} />;

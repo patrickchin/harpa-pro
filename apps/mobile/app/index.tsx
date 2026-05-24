@@ -5,8 +5,8 @@
  * users to `/(auth)/sign-in/phone` and needs-onboarding users to
  * `/(auth)/onboarding`.
  */
-import { Redirect } from 'expo-router';
+import { Redirect, type Href } from 'expo-router';
 
 export default function Index() {
-  return <Redirect href={"/(app)/projects" as any} />;
+  return <Redirect href={'/(app)/projects' as Href} />;
 }

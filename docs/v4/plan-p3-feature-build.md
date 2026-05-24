@@ -15,8 +15,8 @@
 - [ ] Every screen in `../haru3-reports/apps/mobile/app/` (excluding
       `e2e/` test scaffolds) has a v4 port with manual visual review
       against the canonical source.
-- [ ] Every shipped screen has its `screens/<name>.tsx` body plus
-      its `(dev)/<name>.tsx` mirror (consistent with P2.0b).
+- [ ] Every shipped screen has its `screens/<name>.tsx` body
+      (props-driven, no API/auth — consistent with P2.0b).
 - [ ] Maestro full-journey flow `core-end-to-end` green on iOS + Android.
 - [ ] Mobile coverage ≥ 80% lines.
 - [x] Upload pipeline integration test green for `image`, `voice`, `document` (Pitfall 8).
@@ -27,8 +27,8 @@
 Enumerate the screens to port from the canonical source's `app/`
 tree at the start of P3 and check them off here. Each row maps a
 canonical-source path → v4 destination (`screens/<name>.tsx` body +
-`app/(app|auth)/<route>.tsx` real route + `app/(dev)/<name>.tsx`
-mirror). Suggested grouping (one screen per commit):
+`app/(app|auth)/<route>.tsx` real route). Suggested grouping (one
+screen per commit):
 
 - new project / edit project
 - project home
@@ -96,8 +96,7 @@ For each screen in the scope list:
    primitive matches).
 3. Wire the real route under `(auth)/` or `(app)/` with hooks +
    navigation params.
-4. Add the `(dev)/<name>.tsx` mirror with mock props.
-5. Behaviour tests for every interaction the canonical source
+4. Behaviour tests for every interaction the canonical source
    exercises.
 6. Write a new `.maestro/p3-<section>.yaml` flow scoped to this
    section only (see [Maestro gate](#maestro-gate-all-sections-and-subsections)

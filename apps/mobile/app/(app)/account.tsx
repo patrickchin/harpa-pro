@@ -10,7 +10,7 @@
  *    backend route yet — see NOTE in AvatarUploader; P4).
  */
 import { useCallback, useState } from 'react';
-import { useRouter } from 'expo-router';
+import { useRouter, type Href } from 'expo-router';
 
 import { Account, type AccountProfile, type AccountSaveValues } from '@/screens/account';
 import { AvatarUploader } from '@/components/account/AvatarUploader';
@@ -58,7 +58,7 @@ export default function AccountRoute() {
       profile={profile}
       refreshing={refreshing}
       onRefresh={onRefresh}
-      onBack={() => safeBack(router, '/(app)/profile' as never)}
+      onBack={() => safeBack(router, '/(app)/profile' as Href)}
       avatarSlot={<AvatarUploader />}
       onSaveProfile={handleSaveProfile}
       isSaving={updateMe.isPending}

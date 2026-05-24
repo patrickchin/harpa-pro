@@ -85,8 +85,8 @@ because of this drift.
 source** at `../haru3-reports/apps/mobile` on branch `dev`. Both
 sides run NativeWind v4 — JSX and Tailwind classes copy across with
 no translation. Visual review is manual (side-by-side with the
-canonical source on the iOS sim, aided by the in-app dev-gallery
-at `app/(dev)/`). Cosmetic drift in later phases is a P0 bug.
+canonical source on the iOS sim). Cosmetic drift in later phases is
+a P0 bug.
 
 There is no automated screenshot-diff gate — the v3 attempt's
 `docs/legacy-v3/screenshots/`, `docs/legacy-v3/realignment/`, and
@@ -103,10 +103,10 @@ Tactical sub-rules:
   `ScreenHeader`, `EmptyState`, `Skeleton`, `AppDialogSheet`,
   `StatTile`) ship in P2.2 with snapshot tests. Adding a new
   one-off primitive is a code-review block.
-- Every screen ships **two routes** wrapping a single body component
-  in `apps/mobile/screens/<name>.tsx`: the real route under
-  `(auth)/` or `(app)/` (wired in P3), and a `(dev)/<name>.tsx`
-  mirror with mock props for fast manual visual review.
+- Every screen wraps a single body component in
+  `apps/mobile/screens/<name>.tsx` mounted by its real route under
+  `(auth)/` or `(app)/` (wired in P3). Bodies are props-driven (no
+  API/auth inside) so they are unit-testable in isolation.
 
 ---
 
@@ -125,8 +125,7 @@ Maestro flow**. We do not move to the next screen until the current
 one passes:
 
 - Manual visual review against the matching screen in
-  `../haru3-reports/apps/mobile@dev` (the dev-gallery makes this a
-  side-by-side simulator check).
+  `../haru3-reports/apps/mobile@dev` (side-by-side simulator check).
 - Vitest behaviour test for every interaction the canonical source
   exercises.
 - Maestro flow exercising the screen end-to-end (record + replay

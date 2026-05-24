@@ -59,7 +59,7 @@ jobs:
           DATABASE_URL: ${{ env.DATABASE_URL }}
         run: pnpm --filter @harpa/api db:migrate
 
-      - uses: superfly/flyctl-actions/setup-flyctl@v1.5
+      - uses: superfly/flyctl-actions/setup-flyctl@1.5
 
       - uses: dopplerhq/cli-action@v3
 

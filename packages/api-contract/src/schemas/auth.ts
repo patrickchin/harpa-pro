@@ -1,6 +1,6 @@
 import { z } from 'zod';
-import { isoDateTime, phone } from './_shared.js';
-import { userId } from './ids.js';
+import { cursor, isoDateTime, phone } from './_shared.js';
+import { projectId, reportId, userId } from './ids.js';
 import { limitState, plan } from './usage-limits.js';
 
 export const otpStartRequest = z.object({ phone });
@@ -96,4 +96,40 @@ export const usageResponse = z.object({
    */
   plan: plan.optional(),
   limits: z.array(limitState).optional(),
+});
+
+/**
+ * Single LLM usage event row. Shape mirrors `app.llm_usage_events`
+ * minus internal-only columns. Token-count semantics by `operation`
+ * match `services/ai-usage.ts` JSDoc: transcribe rows have zero
+ * tokens and a non-null `inputSeconds`; chat / generate_report have
+ * non-zero token counts and `inputSeconds === null`.
+ */
+export const usageEventItem = z.object({
+  id: z.string(),
+  createdAt: isoDateTime,
+  vendor: z.string(),
+  model: z.string(),
+  operation: z.enum(['chat', 'transcribe', 'generate_report']),
+  inputTokens: z.number().int().nonnegative(),
+  outputTokens: z.number().int().nonnegative(),
+  cachedTokens: z.number().int().nonnegative(),
+  inputSeconds: z.number().nonnegative().nullable(),
+  latencyMs: z.number().int().nonnegative(),
+  fixtureMode: z.enum(['live', 'replay', 'record']),
+  status: z.enum(['ok', 'error']),
+  projectId: projectId.nullable(),
+  reportId: reportId.nullable(),
+});
+
+export const usageEventsQuery = z.object({
+  cursor: cursor.optional(),
+  limit: z.coerce.number().int().min(1).max(200).optional(),
+  operation: z.enum(['chat', 'transcribe', 'generate_report']).optional(),
+  vendor: z.string().min(1).max(64).optional(),
+});
+
+export const usageEventsResponse = z.object({
+  items: z.array(usageEventItem),
+  nextCursor: cursor.nullable(),
 });

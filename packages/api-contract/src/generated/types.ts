@@ -805,6 +805,97 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/me/usage/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    cursor?: string;
+                    limit?: number;
+                    operation?: "chat" | "transcribe" | "generate_report";
+                    vendor?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Paginated raw LLM usage events, newest first. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            items: {
+                                id: string;
+                                createdAt: string;
+                                vendor: string;
+                                model: string;
+                                /** @enum {string} */
+                                operation: "chat" | "transcribe" | "generate_report";
+                                inputTokens: number;
+                                outputTokens: number;
+                                cachedTokens: number;
+                                inputSeconds: number | null;
+                                latencyMs: number;
+                                /** @enum {string} */
+                                fixtureMode: "live" | "replay" | "record";
+                                /** @enum {string} */
+                                status: "ok" | "error";
+                                projectId: string | null;
+                                reportId: string | null;
+                            }[];
+                            nextCursor: string | null;
+                        };
+                    };
+                };
+                /** @description Bad request. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                            requestId?: string;
+                        };
+                    };
+                };
+                /** @description Unauthorized. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                            requestId?: string;
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/me/limits": {
         parameters: {
             query?: never;

@@ -303,6 +303,158 @@ function roundSeconds(v: number | string): number {
   return Math.round(n * 1000) / 1000;
 }
 
+export interface UsageEventRow {
+  id: string;
+  createdAt: string;
+  vendor: string;
+  model: string;
+  operation: 'chat' | 'transcribe' | 'generate_report';
+  inputTokens: number;
+  outputTokens: number;
+  cachedTokens: number;
+  inputSeconds: number | null;
+  latencyMs: number;
+  fixtureMode: 'live' | 'replay' | 'record';
+  status: 'ok' | 'error';
+  projectId: string | null;
+  reportId: string | null;
+}
+
+export interface ListUsageEventsInput {
+  cursor?: string;
+  limit: number;
+  operation?: 'chat' | 'transcribe' | 'generate_report';
+  vendor?: string;
+}
+
+function encodeUsageCursor(createdAt: string, id: string): string {
+  return Buffer.from(`${createdAt}|${id}`, 'utf8').toString('base64url');
+}
+
+function decodeUsageCursor(c: string): { createdAt: string; id: string } {
+  const raw = Buffer.from(c, 'base64url').toString('utf8');
+  const [createdAt, id] = raw.split('|');
+  if (!createdAt || !id) throw new Error('invalid cursor');
+  return { createdAt, id };
+}
+
+/**
+ * Raw events timeline for `/me/usage/events` — newest first.
+ *
+ * Pagination is keyset on `(created_at DESC, id DESC)`. RLS on
+ * `app.llm_usage_events` already restricts SELECT to the caller's own
+ * rows; the `user_id = ${userId}` predicate is defence-in-depth so a
+ * mis-scoped handle still returns nothing.
+ *
+ * `status` is not filtered here (unlike `fetchUsage` which sums
+ * `status='ok'` only) — the events feed surfaces failed calls too so
+ * users can see provider blow-ups in the timeline.
+ */
+export async function listUsageEvents(
+  db: Db,
+  userId: string,
+  input: ListUsageEventsInput,
+): Promise<{ items: UsageEventRow[]; nextCursor: string | null }> {
+  const { cursor, limit, operation, vendor } = input;
+  const overFetch = limit + 1;
+
+  const operationFilter = operation
+    ? sql`AND operation = ${operation}::app.llm_operation`
+    : sql``;
+  const vendorFilter = vendor ? sql`AND vendor = ${vendor}` : sql``;
+
+  let result;
+  if (cursor) {
+    const { createdAt, id } = decodeUsageCursor(cursor);
+    result = await db.execute<{
+      id: string;
+      created_at: string;
+      vendor: string;
+      model: string;
+      operation: 'chat' | 'transcribe' | 'generate_report';
+      input_tokens: string;
+      output_tokens: string;
+      cached_tokens: string;
+      input_seconds: string | null;
+      latency_ms: string;
+      fixture_mode: 'live' | 'replay' | 'record';
+      status: 'ok' | 'error';
+      project_id: string | null;
+      report_id: string | null;
+    }>(sql`
+      SELECT id, created_at, vendor, model, operation,
+             input_tokens::text, output_tokens::text, cached_tokens::text,
+             input_seconds::text AS input_seconds,
+             latency_ms::text, fixture_mode, status,
+             project_id, report_id
+      FROM app.llm_usage_events
+      WHERE user_id = ${userId}
+        AND (created_at, id) < (${createdAt}::timestamptz, ${id})
+        ${operationFilter}
+        ${vendorFilter}
+      ORDER BY created_at DESC, id DESC
+      LIMIT ${overFetch}
+    `);
+  } else {
+    result = await db.execute<{
+      id: string;
+      created_at: string;
+      vendor: string;
+      model: string;
+      operation: 'chat' | 'transcribe' | 'generate_report';
+      input_tokens: string;
+      output_tokens: string;
+      cached_tokens: string;
+      input_seconds: string | null;
+      latency_ms: string;
+      fixture_mode: 'live' | 'replay' | 'record';
+      status: 'ok' | 'error';
+      project_id: string | null;
+      report_id: string | null;
+    }>(sql`
+      SELECT id, created_at, vendor, model, operation,
+             input_tokens::text, output_tokens::text, cached_tokens::text,
+             input_seconds::text AS input_seconds,
+             latency_ms::text, fixture_mode, status,
+             project_id, report_id
+      FROM app.llm_usage_events
+      WHERE user_id = ${userId}
+        ${operationFilter}
+        ${vendorFilter}
+      ORDER BY created_at DESC, id DESC
+      LIMIT ${overFetch}
+    `);
+  }
+
+  const rows = result.rows;
+  const hasMore = rows.length > limit;
+  const slice = hasMore ? rows.slice(0, limit) : rows;
+  const last = slice[slice.length - 1];
+  const items: UsageEventRow[] = slice.map((r) => ({
+    id: r.id,
+    createdAt: new Date(r.created_at).toISOString(),
+    vendor: r.vendor,
+    model: r.model,
+    operation: r.operation,
+    inputTokens: Number(r.input_tokens),
+    outputTokens: Number(r.output_tokens),
+    cachedTokens: Number(r.cached_tokens),
+    inputSeconds: r.input_seconds == null ? null : roundSeconds(r.input_seconds),
+    latencyMs: Number(r.latency_ms),
+    fixtureMode: r.fixture_mode,
+    status: r.status,
+    projectId: r.project_id,
+    reportId: r.report_id,
+  }));
+  return {
+    items,
+    nextCursor:
+      hasMore && last
+        ? encodeUsageCursor(new Date(last.created_at).toISOString(), last.id)
+        : null,
+  };
+}
+
 export async function sessionIsValid(db: Db, sessionId: string): Promise<boolean> {
   const rows = await db
     .select({ id: schema.sessions.id, expiresAt: schema.sessions.expiresAt })

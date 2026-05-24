@@ -5,10 +5,10 @@
  */
 import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi';
 import { HTTPException } from 'hono/http-exception';
-import { auth as authSchemas, usageLimits as usageLimitsSchemas } from '@harpa/api-contract';
+import { auth as authSchemas, usageLimits as usageLimitsSchemas, cursor as cursorSchema } from '@harpa/api-contract';
 import type { AppEnv } from '../app.js';
 import { withAuth } from '../middleware/auth.js';
-import { fetchUser, updateUser, fetchUsage } from '../auth/service.js';
+import { fetchUser, updateUser, fetchUsage, listUsageEvents } from '../auth/service.js';
 import { getEffectiveLimits } from '../services/usage-limits.js';
 
 const errorBody = z.object({
@@ -90,6 +90,54 @@ meRoutes.openapi(
       db((d) => getEffectiveLimits(d, userId)),
     ]);
     return c.json({ ...usage, plan: effective.plan, limits: effective.buckets }, 200);
+  },
+);
+
+meRoutes.openapi(
+  createRoute({
+    method: 'get',
+    path: '/me/usage/events',
+    tags: ['auth'],
+    security: [{ bearerAuth: [] }],
+    middleware: [withAuth()] as const,
+    request: {
+      query: z.object({
+        cursor: cursorSchema.optional(),
+        limit: z.coerce.number().int().min(1).max(200).optional(),
+        operation: z.enum(['chat', 'transcribe', 'generate_report']).optional(),
+        vendor: z.string().min(1).max(64).optional(),
+      }),
+    },
+    responses: {
+      200: {
+        description: 'Paginated raw LLM usage events, newest first.',
+        content: { 'application/json': { schema: authSchemas.usageEventsResponse } },
+      },
+      400: { description: 'Bad request.', content: { 'application/json': { schema: errorBody } } },
+      401: { description: 'Unauthorized.', content: { 'application/json': { schema: errorBody } } },
+    },
+  }),
+  async (c) => {
+    const userId = c.get('userId');
+    const db = c.get('db');
+    if (!userId || !db) throw new HTTPException(401);
+    const q = c.req.valid('query');
+    try {
+      const out = await db((d) =>
+        listUsageEvents(d, userId, {
+          cursor: q.cursor,
+          limit: q.limit ?? 50,
+          operation: q.operation,
+          vendor: q.vendor,
+        }),
+      );
+      return c.json(out, 200);
+    } catch (err) {
+      if (err instanceof Error && err.message === 'invalid cursor') {
+        throw new HTTPException(400, { message: 'Invalid cursor.' });
+      }
+      throw err;
+    }
   },
 );
 

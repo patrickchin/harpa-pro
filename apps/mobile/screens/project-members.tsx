@@ -30,6 +30,8 @@ import { ScreenHeader } from '@/components/primitives/ScreenHeader';
 import { ProjectMembersSkeleton } from '@/components/skeletons/ProjectMembersSkeleton';
 import { getRemoveMemberDialogCopy } from '@/lib/app-dialog-copy';
 import { colors } from '@/lib/design-tokens/colors';
+import { useLayoutShiftProbe } from '@/lib/layout-shift-probe';
+import { PROJECT_MEMBERS_LAYOUT } from '@/lib/project-members-layout';
 
 export type MemberRole = 'owner' | 'editor' | 'viewer';
 
@@ -97,10 +99,12 @@ function MemberItem({
   member,
   canRemove,
   onRemove,
+  onLayout,
 }: {
   member: MemberRow;
   canRemove: boolean;
   onRemove?: () => void;
+  onLayout?: import('react-native').ViewProps['onLayout'];
 }) {
   const displayName = member.displayName ?? 'Unknown';
   return (
@@ -109,6 +113,8 @@ function MemberItem({
       padding="md"
       className="flex-row items-center gap-3"
       testID={`member-row-${member.userId}`}
+      onLayout={onLayout}
+      style={{ minHeight: PROJECT_MEMBERS_LAYOUT.memberRowHeight }}
     >
       <View className="h-10 w-10 items-center justify-center rounded-full border border-border bg-surface-muted">
         <Text className="text-sm font-bold text-muted-foreground">
@@ -239,6 +245,8 @@ export function ProjectMembers({
   const [memberToRemove, setMemberToRemove] = useState<MemberRow | null>(null);
 
   const canManage = myRole === 'owner';
+  const headerProbe = useLayoutShiftProbe('project-members:header');
+  const firstRowProbe = useLayoutShiftProbe('project-members:first-row');
 
   const enriched = useMemo(
     () =>
@@ -280,27 +288,31 @@ export function ProjectMembers({
 
   return (
     <SafeAreaView className="flex-1 bg-background" edges={['top']}>
-      <View className="px-5 pt-4 pb-2">
+      <View className="px-5 pt-4 pb-2" onLayout={headerProbe}>
         <ScreenHeader title="Members" onBack={onBack} backLabel="Project" actions={actions} />
       </View>
 
       {isLoading ? (
-        <ProjectMembersSkeleton />
+        <ProjectMembersSkeleton canManage={canManage} />
       ) : (
         <ScrollView
           className="flex-1"
           contentContainerStyle={{
-            paddingHorizontal: 20,
-            paddingTop: 8,
-            paddingBottom: 16,
-            gap: 12,
+            paddingHorizontal: PROJECT_MEMBERS_LAYOUT.paddingHorizontal,
+            paddingTop: PROJECT_MEMBERS_LAYOUT.paddingTop,
+            paddingBottom: PROJECT_MEMBERS_LAYOUT.paddingBottom,
+            gap: PROJECT_MEMBERS_LAYOUT.gap,
           }}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
           }
         >
           {me ? (
-            <MemberItem member={me} canRemove={false} />
+            <MemberItem
+              member={me}
+              canRemove={false}
+              onLayout={firstRowProbe}
+            />
           ) : null}
 
           {canManage ? (
@@ -381,12 +393,16 @@ export function ProjectMembers({
             ) : null
           ) : (
             <View className="gap-3">
-              {filtered.map((member) => (
+              {filtered.map((member, index) => (
                 <MemberItem
                   key={member.userId}
                   member={member}
                   canRemove={canManage && member.role !== 'owner'}
                   onRemove={() => setMemberToRemove(member)}
+                  // If the current user isn't in the list (no `me` row),
+                  // the first teammate is the first member row on screen
+                  // and owns the `project-members:first-row` probe.
+                  onLayout={!me && index === 0 ? firstRowProbe : undefined}
                 />
               ))}
             </View>

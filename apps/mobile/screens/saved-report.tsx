@@ -29,10 +29,12 @@ import {
   View,
 } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
+import { MoreHorizontal } from 'lucide-react-native';
 
 import { SafeAreaView } from '@/components/primitives/SafeAreaView';
 import { Button } from '@/components/primitives/Button';
 import { ScreenHeader } from '@/components/primitives/ScreenHeader';
+import { Skeleton } from '@/components/primitives/Skeleton';
 import { AppDialogSheet } from '@/components/primitives/AppDialogSheet';
 import { ReportView } from '@/components/reports/ReportView';
 import { ReportEditForm } from '@/components/reports/ReportEditForm';
@@ -51,6 +53,8 @@ import {
 import { ReportActionsMenu } from '@/components/reports/detail/ReportActionsMenu';
 import { SavedReportSheet } from '@/components/reports/detail/SavedReportSheet';
 import { ReportDetailSkeleton } from '@/components/skeletons/ReportDetailSkeleton';
+import { useLayoutShiftProbe } from '@/lib/layout-shift-probe';
+import { colors } from '@/lib/design-tokens/colors';
 import {
   getDeleteReportDialogCopy,
   getUnfinalizeReportDialogCopy,
@@ -177,6 +181,14 @@ export function SavedReport(props: SavedReportProps) {
     initialTab ?? 'report',
   );
 
+  // Layout-shift probes — landmarks that should land at the same Y
+  // when the loading branch swaps to the loaded `ReportDetailHeader`.
+  // Only the loading side records frames today (see
+  // `lib/layout-shift-probe.ts`); the ids match the equivalent
+  // landmarks rendered by `ReportDetailHeader` + `<ReportView />`.
+  const loadingHeaderProbe = useLayoutShiftProbe('report-detail:header');
+  const loadingTitleProbe = useLayoutShiftProbe('report-detail:title-block');
+
   const isFinal = reportStatus === 'finalized';
 
   // Finalized reports are read-only — bounce back to Report tab if the
@@ -256,15 +268,37 @@ export function SavedReport(props: SavedReportProps) {
   };
 
   if (isLoading) {
+    // Mirror `ReportDetailHeader`'s chrome (px-5 py-4 wrapper +
+    // ScreenHeader with eyebrow supporting row + visit-date pill /
+    // Actions row at mt-3) so the first card under the skeleton
+    // lands on the same Y as `<ReportView />`'s first child once
+    // the report loads. The Actions button is intentionally NOT
+    // mounted during load (the saved-report test guards against
+    // `btn-report-actions` appearing in the skeleton tree); the
+    // placeholder View below keeps the row height stable.
     return (
       <SafeAreaView className="flex-1 bg-background" edges={['top']}>
-        <View className="px-5 pt-4 pb-2">
-          <ScreenHeader
-            title="Report"
-            onBack={onBack}
-            backLabel="Reports"
-            actions={actions}
-          />
+        <View className="px-5 py-4" onLayout={loadingHeaderProbe}>
+          <View onLayout={loadingTitleProbe}>
+            <ScreenHeader
+              title="Report"
+              titleAccessory={<Skeleton width={120} height={12} />}
+              onBack={onBack}
+              backLabel="Reports"
+              actions={actions}
+            />
+          </View>
+
+          <View className="mt-3 flex-row items-center justify-between">
+            <View className="flex-row items-center gap-1 rounded-md border border-border bg-card px-3 py-2">
+              <Skeleton width={14} height={14} circle />
+              <Skeleton width={72} height={14} />
+            </View>
+            <View className="min-h-touch flex-row items-center gap-1.5 rounded-md border border-border bg-secondary px-4 py-3">
+              <MoreHorizontal size={16} color={colors.foreground} />
+              <Skeleton width={48} height={14} />
+            </View>
+          </View>
         </View>
         <ReportDetailSkeleton />
       </SafeAreaView>

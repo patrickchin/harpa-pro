@@ -454,6 +454,36 @@ catches the next regression in this shape.
 
 ---
 
+## Pitfall 17 — State-conditional wrappers cause skeleton → content layout shift
+
+**Symptom:** A screen renders a skeleton while `isLoading`, then on
+hydrate the page visibly jumps — the header is in the same place but
+the first row, a CTA, or a section title pops in/out and shoves
+everything down.
+
+**Cause:** The loaded JSX wraps some element in `!isLoading && (…)`
+(or only renders an action button when data is present), but the
+skeleton tree doesn't reserve that space. The classic offender in v4
+was `apps/mobile/screens/reports-list.tsx` rendering the "New report"
+Pressable as `canCreate && !isLoading ? (…)`, so the Pressable
+appeared after load and pushed the list down ~88 px.
+
+**Rule:** A screen's outer scaffold (SafeAreaView, header, list
+container, CTA, surrounding padding) must be **identical** in
+`isLoading` and loaded states. The only thing that swaps is the
+inner content region. If a control must be disabled during load,
+render it disabled — do not unmount it.
+
+**Test rule:** Use `useLayoutShiftProbe` (`apps/mobile/lib/layout-shift-probe.ts`)
+on landmark nodes in both the skeleton and the loaded tree with the
+same id. In dev, set `EXPO_PUBLIC_LAYOUT_PROBE=true` and call
+`dumpShiftReport()` — every landmark must have `maxDeltaY ≤ 2 px`.
+The eight v4 skeletons (`apps/mobile/components/skeletons/*`) and
+their screens follow this pattern; mirror it for any new screen with
+a loading state. See [`arch-mobile-skeletons.md`](./arch-mobile-skeletons.md).
+
+---
+
 ## How we use this doc
 
 When you finish a task and notice the bug shape matches one of these

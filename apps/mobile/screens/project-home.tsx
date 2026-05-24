@@ -34,7 +34,8 @@ import { ScreenHeader } from '@/components/primitives/ScreenHeader';
 import { StatTile } from '@/components/primitives/StatTile';
 import { ProjectOverviewSkeleton } from '@/components/skeletons/ProjectOverviewSkeleton';
 import { colors } from '@/lib/design-tokens/colors';
-import { formatRelativeTime } from '@/lib/project-overview';
+import { formatRelativeTime, PROJECT_OVERVIEW_LAYOUT } from '@/lib/project-overview';
+import { useLayoutShiftProbe } from '@/lib/layout-shift-probe';
 
 export type ProjectHomeProjectInfo = {
   name: string;
@@ -100,6 +101,10 @@ export function ProjectHome({
   const lastReportRelative = formatRelativeTime(stats.lastReportAt);
   const canEdit = project?.myRole === 'owner' || project?.myRole === 'editor';
 
+  const headerProbe = useLayoutShiftProbe('project-overview:header');
+  const firstCardProbe = useLayoutShiftProbe('project-overview:first-card');
+  const lastCardProbe = useLayoutShiftProbe('project-overview:last-card');
+
   const overviewActions: OverviewAction[] = [
     {
       key: 'reports',
@@ -160,17 +165,20 @@ export function ProjectHome({
       ) : (
         <ScrollView
           contentContainerStyle={{
-            paddingHorizontal: 20,
-            paddingTop: 8,
-            paddingBottom: 24,
-            gap: 16,
+            paddingHorizontal: PROJECT_OVERVIEW_LAYOUT.paddingHorizontal,
+            paddingTop: PROJECT_OVERVIEW_LAYOUT.paddingTop,
+            paddingBottom: PROJECT_OVERVIEW_LAYOUT.paddingBottom,
+            gap: PROJECT_OVERVIEW_LAYOUT.gap,
           }}
           showsVerticalScrollIndicator={false}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
           }
         >
-          <View className="flex-row items-center justify-between gap-3">
+          <View
+            onLayout={headerProbe}
+            className="flex-row items-center justify-between gap-3"
+          >
             {project?.clientName || project?.address ? (
               <View className="min-w-0 flex-1 gap-1">
                 {project.clientName ? (
@@ -233,7 +241,7 @@ export function ProjectHome({
             ) : null}
           </View>
 
-          <View className="flex-row gap-3">
+          <View onLayout={firstCardProbe} className="flex-row gap-3">
             <StatTile value={stats.totalReports} label="Total reports" />
             <StatTile
               value={stats.drafts}
@@ -252,15 +260,17 @@ export function ProjectHome({
           </Card>
 
           <View className="gap-3">
-            {overviewActions.map((action) => {
+            {overviewActions.map((action, index) => {
               const Icon = action.icon;
               const isDisabled = action.comingSoon || !action.onPress;
+              const isLast = index === overviewActions.length - 1;
               return (
                 <Pressable
                   key={action.key}
                   onPress={action.onPress}
                   disabled={isDisabled}
                   testID={action.testID}
+                  onLayout={isLast ? lastCardProbe : undefined}
                   accessibilityRole="button"
                   accessibilityLabel={action.title}
                   accessibilityState={{ disabled: isDisabled }}

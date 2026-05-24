@@ -49,9 +49,12 @@ const defaults = {
 };
 
 describe('ReportsList', () => {
-  it('renders skeleton when loading', () => {
+  it('renders skeleton when loading but keeps new-report affordance visible (disabled)', () => {
     const tree = render(<ReportsList {...defaults} isLoading />);
-    expect(tree.root.findAllByProps({ testID: 'btn-new-report' })).toHaveLength(0);
+    // The "New report" Pressable must stay mounted across the loading
+    // → loaded transition so the list doesn't shift down on hydrate.
+    const btn = tree.root.findByProps({ testID: 'btn-new-report' });
+    expect(btn.props.disabled).toBe(true);
   });
 
   it('renders new-report affordance when canCreate', () => {

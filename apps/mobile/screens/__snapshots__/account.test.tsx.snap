@@ -90,6 +90,7 @@ exports[`Account > matches snapshot at default props 1`] = `
       >
         <rn-View
           className="items-center pt-2"
+          onLayout={[Function]}
         >
           <rn-View
             className="h-24 w-24 items-center justify-center rounded-full border border-border bg-card"
@@ -102,60 +103,68 @@ exports[`Account > matches snapshot at default props 1`] = `
           </rn-View>
         </rn-View>
         <rn-View
-          className="rounded-md border px-4 py-3 border-info-border bg-info-soft"
-          style={
-            {
-              "elevation": 2,
-              "shadowColor": "#1a1a2e",
-              "shadowOffset": {
-                "height": 2,
-                "width": 0,
-              },
-              "shadowOpacity": 0.08,
-              "shadowRadius": 8,
-            }
-          }
+          onLayout={[Function]}
         >
-          <rn-Text
-            className="text-sm text-info-text"
-            selectable={true}
+          <rn-View
+            className="rounded-md border px-4 py-3 border-info-border bg-info-soft"
+            style={
+              {
+                "elevation": 2,
+                "shadowColor": "#1a1a2e",
+                "shadowOffset": {
+                  "height": 2,
+                  "width": 0,
+                },
+                "shadowOpacity": 0.08,
+                "shadowRadius": 8,
+              }
+            }
           >
-            Phone numbers are managed through sign-in. Contact support if you need to recover access to a different number.
-          </rn-Text>
+            <rn-Text
+              className="text-sm text-info-text"
+              selectable={true}
+            >
+              Phone numbers are managed through sign-in. Contact support if you need to recover access to a different number.
+            </rn-Text>
+          </rn-View>
         </rn-View>
         <rn-View
-          className="gap-2"
+          onLayout={[Function]}
         >
-          <rn-Text
-            className="text-label text-muted-foreground"
+          <rn-View
+            className="gap-2"
           >
-            Phone
-          </rn-Text>
-          <rn-TextInput
-            className="min-h-touch rounded-md border px-4 py-3 text-base border-border bg-surface-muted text-muted-foreground"
-            editable={false}
-            placeholderTextColor="#5f5b66"
-            style={
-              [
-                {
-                  "elevation": 0,
-                  "shadowColor": "#1a1a2e",
-                  "shadowOffset": {
-                    "height": 0,
-                    "width": 0,
+            <rn-Text
+              className="text-label text-muted-foreground"
+            >
+              Phone
+            </rn-Text>
+            <rn-TextInput
+              className="min-h-touch rounded-md border px-4 py-3 text-base border-border bg-surface-muted text-muted-foreground"
+              editable={false}
+              placeholderTextColor="#5f5b66"
+              style={
+                [
+                  {
+                    "elevation": 0,
+                    "shadowColor": "#1a1a2e",
+                    "shadowOffset": {
+                      "height": 0,
+                      "width": 0,
+                    },
+                    "shadowOpacity": 0,
+                    "shadowRadius": 0,
                   },
-                  "shadowOpacity": 0,
-                  "shadowRadius": 0,
-                },
-                {
-                  "lineHeight": 16,
-                  "textAlignVertical": "center",
-                },
-                undefined,
-              ]
-            }
-            value="+15551234567"
-          />
+                  {
+                    "lineHeight": 16,
+                    "textAlignVertical": "center",
+                  },
+                  undefined,
+                ]
+              }
+              value="+15551234567"
+            />
+          </rn-View>
         </rn-View>
         <rn-View
           className="gap-2"
@@ -197,43 +206,47 @@ exports[`Account > matches snapshot at default props 1`] = `
           />
         </rn-View>
         <rn-View
-          className="gap-2"
+          onLayout={[Function]}
         >
-          <rn-Text
-            className="text-label text-muted-foreground"
+          <rn-View
+            className="gap-2"
           >
-            Company Name
-          </rn-Text>
-          <rn-TextInput
-            autoCapitalize="words"
-            autoCorrect={false}
-            className="min-h-touch rounded-md border px-4 py-3 text-base border-border bg-surface-muted text-muted-foreground"
-            editable={false}
-            onChangeText={[Function]}
-            placeholder="Your company"
-            placeholderTextColor="#5f5b66"
-            style={
-              [
-                {
-                  "elevation": 0,
-                  "shadowColor": "#1a1a2e",
-                  "shadowOffset": {
-                    "height": 0,
-                    "width": 0,
+            <rn-Text
+              className="text-label text-muted-foreground"
+            >
+              Company Name
+            </rn-Text>
+            <rn-TextInput
+              autoCapitalize="words"
+              autoCorrect={false}
+              className="min-h-touch rounded-md border px-4 py-3 text-base border-border bg-surface-muted text-muted-foreground"
+              editable={false}
+              onChangeText={[Function]}
+              placeholder="Your company"
+              placeholderTextColor="#5f5b66"
+              style={
+                [
+                  {
+                    "elevation": 0,
+                    "shadowColor": "#1a1a2e",
+                    "shadowOffset": {
+                      "height": 0,
+                      "width": 0,
+                    },
+                    "shadowOpacity": 0,
+                    "shadowRadius": 0,
                   },
-                  "shadowOpacity": 0,
-                  "shadowRadius": 0,
-                },
-                {
-                  "lineHeight": 16,
-                  "textAlignVertical": "center",
-                },
-                undefined,
-              ]
-            }
-            testID="input-company-name"
-            value="Sims Construction"
-          />
+                  {
+                    "lineHeight": 16,
+                    "textAlignVertical": "center",
+                  },
+                  undefined,
+                ]
+              }
+              testID="input-company-name"
+              value="Sims Construction"
+            />
+          </rn-View>
         </rn-View>
       </rn-ScrollView>
     </rn-View>

@@ -439,8 +439,8 @@ export function CameraCapture(props: CameraCaptureProps) {
       >
         {/* Top bar */}
         <View
-          className="px-4 flex-row items-center justify-between"
-          style={[styles.topBar, { paddingTop: insets.top, height: 56 + insets.top }]}
+          className="absolute top-0 left-0 right-0 h-14 px-4 flex-row items-center justify-between bg-black/35"
+          style={{ paddingTop: insets.top, height: 56 + insets.top }}
         >
           <Pressable
             onPress={handleCancel}
@@ -628,18 +628,6 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     justifyContent: 'flex-end',
-  },
-  topBar: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 56,
-    paddingHorizontal: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: 'rgba(0,0,0,0.35)',
   },
   iconButton: { backgroundColor: 'rgba(0,0,0,0.35)' },
   toggleOn: { backgroundColor: 'rgba(229, 93, 34, 0.85)' },

@@ -132,6 +132,8 @@ interface UsageRow {
   project_id: string | null;
   report_id: string | null;
   user_id: string;
+  input_tokens: number;
+  output_tokens: number;
 }
 
 async function selectUsageForReport(reportId: string): Promise<UsageRow[]> {
@@ -139,7 +141,8 @@ async function selectUsageForReport(reportId: string): Promise<UsageRow[]> {
   await admin.connect();
   try {
     const res = await admin.query<UsageRow>(
-      `SELECT vendor, model, operation, project_id, report_id, user_id
+      `SELECT vendor, model, operation, project_id, report_id, user_id,
+              input_tokens, output_tokens
        FROM app.llm_usage_events
        WHERE report_id = $1
        ORDER BY created_at ASC`,
@@ -222,6 +225,11 @@ describe('POST /reports/:report/notes/voice — aggregator (Pitfall 13)', () => 
       expect(r.project_id).toBe(aliceProject);
       expect(r.report_id).toBe(aliceReport);
     }
+    // P3.15.5: transcribe rows derive `input_tokens` from audio
+    // duration (ceil seconds). voice-1 fixture is 315.2s → 316.
+    const transcribeRow = rows.find((r) => r.operation === 'transcribe')!;
+    expect(transcribeRow.input_tokens).toBeGreaterThan(0);
+    expect(transcribeRow.output_tokens).toBe(0);
   });
 
   it('Idempotency-Key dedupes retries: same noteId, no new usage rows', async () => {

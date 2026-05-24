@@ -10,11 +10,12 @@
 3. **Deterministic replay** in tests + `:mock` builds — same input
    always produces the same fixture output.
 4. **Provider-agnostic API design.** Currently implemented for
-   OpenAI (chat / report generation) and Groq (transcription); Kimi
-   is wired but replay-only (no live adapter yet). Anthropic, Google,
-   Z.AI and DeepSeek are intentionally deferred — the per-user
-   `AiVendor` preference still exists for live-mode routing and
-   accounting, but only the implemented vendors are selectable.
+   OpenAI (chat / report generation), Groq (transcription via
+   whisper-large-v3-turbo) and Kimi/Moonshot (chat, OpenAI-compatible
+   REST at `https://api.moonshot.cn/v1` — selected per-user via the
+   `AiVendor` preference). Anthropic, Google, Z.AI and DeepSeek are
+   intentionally deferred — the per-user `AiVendor` preference will
+   widen once those adapters land.
 5. **Redacted by default** — no PII / no API keys in committed
    fixtures.
 
@@ -27,7 +28,7 @@ packages/ai-fixtures/
     providers/
       openai.ts          # chat / report generation (live + replay)
       groq.ts            # transcription (live + replay)
-      kimi.ts            # replay-only stub; throws LiveAdapterMissingError in live mode
+      kimi.ts            # chat via Moonshot REST (live + replay)
       error.ts
       factory-from-env.ts
     fixture-store.ts   # read/write fixtures/<name>.json
@@ -163,6 +164,34 @@ AI_LIVE=1 OPENAI_API_KEY=sk-… pnpm --filter @harpa/ai-fixtures record -- --sce
 
 The recorder refuses to run without `AI_LIVE=1` so it cannot
 silently clobber fixtures from an unrelated test or script import.
+
+## Usage accounting (`app.llm_usage_events`)
+
+Every call routed through `services/ai.ts` lands one row in
+`app.llm_usage_events` via the `withUsageAccounting` chokepoint
+(see [P3.15.5](plan-p3-feature-build.md#p3155--llm-token-accounting)).
+Token-count conventions per operation — full doc lives on
+`RecordLlmUsageParams` in `services/ai-usage.ts`:
+
+| `operation`        | `input_tokens`            | `output_tokens`     | `cached_tokens`              |
+|--------------------|---------------------------|---------------------|------------------------------|
+| `chat` / `generate_report` | prompt tokens     | completion tokens   | subset of input that hit the provider's prompt cache (0 if vendor does not report) |
+| `transcribe`       | `ceil(durationSec)`       | `0`                 | `0`                          |
+
+Vendor extraction (live mode):
+
+- **OpenAI** — `response.usage.{prompt_tokens, completion_tokens,
+  prompt_tokens_details.cached_tokens}`.
+- **Kimi (Moonshot)** — same shape; Moonshot's REST API is
+  OpenAI-compatible.
+- **Groq (Whisper-class transcription)** — bills by audio seconds, no
+  per-token field. `services/ai.ts::transcribe()` derives
+  `input_tokens = ceil(durationSec)` so the unified column stays
+  non-zero.
+
+Replay mode reads `usage` straight from the recorded fixture file,
+so replay-mode tests have deterministic token counts that match the
+checked-in fixture without re-hitting the provider.
 
 ## Live-CI lane
 

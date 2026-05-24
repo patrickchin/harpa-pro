@@ -8,7 +8,7 @@
  * Routing:
  *   openai → createOpenAiProvider (chat + report generation)
  *   groq   → createGroqProvider   (transcription)
- *   kimi   → LiveAdapterMissingError (replay-only until adapter lands)
+ *   kimi   → createKimiProvider   (chat via Moonshot REST)
  *
  * See docs/v4/arch-ai-fixtures.md §Live mode and Pitfall 13.
  */
@@ -19,12 +19,15 @@ import {
 } from '../index.js';
 import { createOpenAiProvider } from './openai.js';
 import { createGroqProvider } from './groq.js';
+import { createKimiProvider } from './kimi.js';
 
 export interface RealProviderFactoryConfig {
   openaiApiKey?: string;
   openaiBaseUrl?: string;
   groqApiKey?: string;
   groqBaseUrl?: string;
+  kimiApiKey?: string;
+  kimiBaseUrl?: string;
   /** Override fetch (test-only — forwarded to whichever adapter is built). */
   fetchImpl?: typeof fetch;
 }
@@ -54,9 +57,16 @@ export function realProviderFactoryFromEnv(
           fetchImpl: cfg.fetchImpl,
         });
       }
-      case 'kimi':
-        // Live adapter pending — kimi is replay-only today.
-        throw new LiveAdapterMissingError('kimi', 'chat');
+      case 'kimi': {
+        if (!cfg.kimiApiKey) {
+          throw new LiveAdapterMissingError('kimi', 'chat');
+        }
+        return createKimiProvider({
+          apiKey: cfg.kimiApiKey,
+          baseUrl: cfg.kimiBaseUrl,
+          fetchImpl: cfg.fetchImpl,
+        });
+      }
       default: {
         const _exhaustive: never = vendor;
         throw new LiveAdapterMissingError(_exhaustive as string, 'chat');

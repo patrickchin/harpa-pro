@@ -186,7 +186,11 @@ function buildProviderWithMode(
       ? undefined
       : realProviderFactoryFromEnv({
           openaiApiKey: env.OPENAI_API_KEY,
+          openaiBaseUrl: env.OPENAI_BASE_URL,
           groqApiKey: env.GROQ_API_KEY,
+          groqBaseUrl: env.GROQ_BASE_URL,
+          kimiApiKey: env.KIMI_API_KEY,
+          kimiBaseUrl: env.KIMI_BASE_URL,
         });
   return createProvider({ vendor, fixtureMode: mode, fixtureName }, realFactory);
 }
@@ -312,12 +316,23 @@ export async function transcribe(input: TranscribeInput): Promise<TranscribeOutp
     input.usageContext,
     { vendor, model, operation: 'transcribe', fixtureMode: mode },
     'transcribe',
-    () =>
-      provider.transcribe({ audioUrl }) as Promise<
-        Omit<TranscribeOutput, 'vendor' | 'model'> & {
-          usage?: { input?: number; output?: number; cached?: number };
-        }
-      >,
+    async () => {
+      const r = await provider.transcribe({ audioUrl });
+      // Whisper-class transcription bills by audio seconds, not by
+      // token counts the way chat does. Map seconds → `input_tokens`
+      // (ceil, integer) so the unified `llm_usage_events.input_tokens`
+      // column still carries non-zero observability for every call.
+      // Convention is documented in services/ai-usage.ts; see also
+      // docs/v4/arch-ai-fixtures.md §Transcription billing.
+      const inputTokens =
+        typeof r.durationSec === 'number' && r.durationSec > 0
+          ? Math.ceil(r.durationSec)
+          : 0;
+      return {
+        ...r,
+        usage: { input: inputTokens, output: 0 },
+      };
+    },
   );
   return { ...result, vendor, model };
 }

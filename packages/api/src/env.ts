@@ -23,6 +23,13 @@ const Env = z.object({
   // Groq hosts whisper-large-v3-turbo for transcription. Required when AI_LIVE=1.
   GROQ_API_KEY: z.string().optional(),
   GROQ_BASE_URL: z.string().url().optional(),
+  // Kimi (Moonshot) chat. Optional — required only when a request is
+  // routed to vendor=kimi in live mode (per-user preference, see
+  // services/settings.ts AiVendor). Refinement below is intentionally
+  // lighter than OPENAI/GROQ: a missing key surfaces as a 502 from the
+  // affected request only, not a boot failure.
+  KIMI_API_KEY: z.string().optional(),
+  KIMI_BASE_URL: z.string().url().optional(),
   R2_FIXTURE_MODE: z.enum(['replay', 'live']).default('replay'),
   // Cloudflare R2 (S3-compatible). Required when R2_FIXTURE_MODE=live.
   R2_ACCOUNT_ID: z.string().optional(),

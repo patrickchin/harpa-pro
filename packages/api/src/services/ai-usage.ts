@@ -19,6 +19,24 @@ export type LlmOperation = 'chat' | 'transcribe' | 'generate_report';
 export type LlmFixtureMode = 'live' | 'replay' | 'record';
 export type LlmUsageStatus = 'ok' | 'error';
 
+/**
+ * Token-count convention by operation:
+ *   chat / generate_report
+ *     - `input_tokens`  = prompt tokens (incl. cached portion)
+ *     - `output_tokens` = completion tokens
+ *     - `cached_tokens` = subset of `input_tokens` that hit the
+ *                         provider's prompt cache (0 if vendor does
+ *                         not report it).
+ *   transcribe
+ *     - `input_tokens`  = ceil(audio seconds)  ← Whisper-class
+ *                         endpoints bill by audio duration, not
+ *                         tokens; storing seconds here keeps the
+ *                         column non-zero so dashboards/aggregations
+ *                         pick the call up. Conversion is set by
+ *                         `services/ai.ts::transcribe`.
+ *     - `output_tokens` = 0
+ *     - `cached_tokens` = 0
+ */
 export interface RecordLlmUsageParams {
   userId: string;
   projectId?: string | null;

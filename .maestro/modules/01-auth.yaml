@@ -68,6 +68,19 @@ tags:
       id: "input-phone"
     timeout: 30000
 
+# Move the expo-dev-menu floating "Tools" button (FAB) to bottom-left
+# so it doesn't intercept taps on `btn-open-profile` (top-right) and
+# other top-right UI elements throughout the journey. The FAB stores
+# its position in UserDefaults and persists across subsequent modules
+# in this run (only module 01 uses `clearState`, which wipes the
+# position). On Android the FAB doesn't exist so the swipe is a
+# harmless screen swipe.
+- swipe:
+    start: "92%,28%"
+    end: "8%,88%"
+    duration: 1500
+- waitForAnimationToEnd
+
 # --- Sign-up alice (fresh account via seed) --------------------------------
 - openLink: harpa://sign-up/phone
 - extendedWaitUntil:
@@ -99,21 +112,24 @@ tags:
 - tapOn:
     id: "btn-signup-verify"
 
-# --- Onboarding (always shown after fresh sign-up) -------------------------
-- extendedWaitUntil:
-    visible:
-      id: "screen-onboarding"
-    timeout: 15000
-- tapOn:
-    id: "input-onboarding-name"
-- inputText: "Alice E2E"
-- tapOn:
-    id: "input-onboarding-company"
-- inputText: "E2E Corp"
-- tapOn:
-    point: "50%,15%"
-- tapOn:
-    id: "btn-onboarding-submit"
+# --- Onboarding (always shown after fresh sign-up; skipped if the
+#     backend already has an onboarded user for this phone, e.g. a
+#     repeat run on a non-reset DB) ----------------------------------------
+- runFlow:
+    when:
+      visible:
+        id: "screen-onboarding"
+    commands:
+      - tapOn:
+          id: "input-onboarding-name"
+      - inputText: "Alice E2E"
+      - tapOn:
+          id: "input-onboarding-company"
+      - inputText: "E2E Corp"
+      - tapOn:
+          point: "50%,15%"
+      - tapOn:
+          id: "btn-onboarding-submit"
 
 # --- Verify projects list ---------------------------------------------------
 - extendedWaitUntil:

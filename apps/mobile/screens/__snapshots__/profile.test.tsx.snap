@@ -80,41 +80,38 @@ exports[`Profile > matches snapshot at default props 1`] = `
           />
         </rn-View>
       </rn-View>
-      <rn-View
-        className="rounded-lg border border-border bg-surface-emphasis p-4 flex-row items-center gap-4"
-        style={
-          [
-            {
-              "elevation": 4,
-              "shadowColor": "#1a1a2e",
-              "shadowOffset": {
-                "height": 4,
-                "width": 0,
-              },
-              "shadowOpacity": 0.12,
-              "shadowRadius": 14,
-            },
-            undefined,
-          ]
-        }
+      <rn-Pressable
+        onPress={[MockFunction spy]}
+        testID="btn-open-account"
       >
         <rn-View
-          className="h-14 w-14 items-center justify-center rounded-xl border border-border bg-card"
+          className="rounded-lg border border-border bg-surface-emphasis p-4 flex-row items-center gap-4"
+          style={
+            [
+              {
+                "elevation": 4,
+                "shadowColor": "#1a1a2e",
+                "shadowOffset": {
+                  "height": 4,
+                  "width": 0,
+                },
+                "shadowOpacity": 0.12,
+                "shadowRadius": 14,
+              },
+              undefined,
+            ]
+          }
         >
-          <lucide-User
-            color="#2d3a5a"
-            size={24}
-          />
-        </rn-View>
-        <rn-View
-          className="flex-1 gap-0.5"
-        >
-          <rn-Pressable
-            accessibilityLabel="Copy name: Jordan Sims"
-            accessibilityRole="button"
-            disabled={false}
-            hitSlop={4}
-            onPress={[Function]}
+          <rn-View
+            className="h-14 w-14 items-center justify-center rounded-xl border border-border bg-card"
+          >
+            <lucide-User
+              color="#2d3a5a"
+              size={24}
+            />
+          </rn-View>
+          <rn-View
+            className="flex-1 gap-0.5"
           >
             <rn-Text
               className="text-title text-foreground"
@@ -122,149 +119,34 @@ exports[`Profile > matches snapshot at default props 1`] = `
             >
               Jordan Sims
             </rn-Text>
-          </rn-Pressable>
-          <rn-Pressable
-            accessibilityLabel="Copy phone: +15551234567"
-            accessibilityRole="button"
-            disabled={false}
-            hitSlop={4}
-            onPress={[Function]}
-          >
             <rn-Text
               className="text-body text-muted-foreground"
               testID="profile-phone"
             >
               +15551234567
             </rn-Text>
-          </rn-Pressable>
-          <rn-Pressable
-            accessibilityLabel="Copy company: Sims Construction"
-            accessibilityRole="button"
-            disabled={false}
-            hitSlop={4}
-            onPress={[Function]}
-          >
             <rn-Text
               className="text-sm text-muted-foreground"
               testID="profile-company-name"
             >
               Sims Construction
             </rn-Text>
-          </rn-Pressable>
+          </rn-View>
+          <lucide-ChevronRight
+            color="#5f5b66"
+            size={16}
+          />
         </rn-View>
-      </rn-View>
+      </rn-Pressable>
     </rn-View>
     <rn-View
       className="gap-2 px-5"
     >
       <rn-View>
         <rn-Pressable
-          onPress={[MockFunction spy]}
-          testID="btn-open-usage"
-        >
-          <rn-View
-            className="rounded-lg border border-border bg-card p-4 gap-3"
-            style={
-              [
-                {
-                  "elevation": 2,
-                  "shadowColor": "#1a1a2e",
-                  "shadowOffset": {
-                    "height": 2,
-                    "width": 0,
-                  },
-                  "shadowOpacity": 0.08,
-                  "shadowRadius": 8,
-                },
-                undefined,
-              ]
-            }
-          >
-            <rn-View
-              className="flex-row items-center justify-between"
-            >
-              <rn-View
-                className="flex-row items-center gap-2"
-              >
-                <lucide-Zap
-                  color="#2d3a5a"
-                  size={18}
-                />
-                <rn-Text
-                  className="text-title-sm text-foreground"
-                >
-                  Usage This Month
-                </rn-Text>
-              </rn-View>
-              <lucide-ChevronRight
-                color="#5f5b66"
-                size={16}
-              />
-            </rn-View>
-            <rn-View
-              className="flex-row flex-wrap gap-3"
-            >
-              <rn-View
-                className="items-center justify-center rounded-lg border px-3 py-3 border-border bg-card min-h-[82px] min-w-[29%] flex-1"
-                style={
-                  {
-                    "elevation": 2,
-                    "shadowColor": "#1a1a2e",
-                    "shadowOffset": {
-                      "height": 2,
-                      "width": 0,
-                    },
-                    "shadowOpacity": 0.08,
-                    "shadowRadius": 8,
-                  }
-                }
-              >
-                <rn-Text
-                  className="text-metric text-foreground"
-                >
-                  12
-                </rn-Text>
-                <rn-Text
-                  className="mt-1 text-label text-muted-foreground"
-                >
-                  Reports
-                </rn-Text>
-              </rn-View>
-              <rn-View
-                className="items-center justify-center rounded-lg border px-3 py-3 border-border bg-card min-h-[82px] min-w-[29%] flex-1"
-                style={
-                  {
-                    "elevation": 2,
-                    "shadowColor": "#1a1a2e",
-                    "shadowOffset": {
-                      "height": 2,
-                      "width": 0,
-                    },
-                    "shadowOpacity": 0.08,
-                    "shadowRadius": 8,
-                  }
-                }
-              >
-                <rn-Text
-                  className="text-metric text-foreground"
-                >
-                  34
-                </rn-Text>
-                <rn-Text
-                  className="mt-1 text-label text-muted-foreground"
-                >
-                  Voice Notes
-                </rn-Text>
-              </rn-View>
-            </rn-View>
-          </rn-View>
-        </rn-Pressable>
-      </rn-View>
-      <rn-View>
-        <rn-Pressable
           disabled={false}
           onPress={[MockFunction spy]}
-          testID="btn-open-account"
+          testID="btn-open-usage"
         >
           <rn-View
             className="rounded-lg border border-border bg-card p-4 flex-row items-center gap-4"
@@ -287,7 +169,7 @@ exports[`Profile > matches snapshot at default props 1`] = `
             <rn-View
               className="h-10 w-10 items-center justify-center rounded-md border border-border bg-card"
             >
-              <lucide-User
+              <lucide-Zap
                 color="#5f5b66"
                 size={20}
               />
@@ -298,7 +180,7 @@ exports[`Profile > matches snapshot at default props 1`] = `
               <rn-Text
                 className="text-title-sm text-foreground"
               >
-                Account Details
+                Usage This Month
               </rn-Text>
             </rn-View>
             <lucide-ChevronRight
@@ -355,49 +237,6 @@ exports[`Profile > matches snapshot at default props 1`] = `
         </rn-Pressable>
       </rn-View>
     </rn-View>
-    <rn-Modal
-      animationType="slide"
-      onRequestClose={[Function]}
-      transparent={true}
-      visible={false}
-    >
-      <rn-Pressable
-        className="flex-1 justify-end bg-black/40"
-        onPress={[Function]}
-      >
-        <rn-Pressable
-          className="bg-background pb-10"
-          onPress={[Function]}
-        >
-          <rn-View
-            className="flex-row items-center justify-between border-b border-border px-5 py-4"
-          >
-            <rn-View
-              className="flex-row items-center gap-2 flex-1"
-            >
-              <rn-Text
-                className="text-xl font-bold text-foreground"
-              >
-                Select AI Provider
-              </rn-Text>
-            </rn-View>
-            <rn-Pressable
-              hitSlop={12}
-              onPress={[Function]}
-              testID="btn-ai-modal-close"
-            >
-              <lucide-X
-                color="#5f5b66"
-                size={20}
-              />
-            </rn-Pressable>
-          </rn-View>
-          <rn-View
-            className="px-5 pt-3 gap-2"
-          />
-        </rn-Pressable>
-      </rn-Pressable>
-    </rn-Modal>
     <rn-View
       className="mt-8 px-5"
     >

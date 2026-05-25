@@ -285,4 +285,41 @@ describe('batch photo notes', () => {
     expect(note).toBeDefined();
     expect(note!.files).toHaveLength(2);
   });
+
+  it('back-compat: image note with fileId only routes into note_files', async () => {
+    // Mobile client's first-photo path sends `kind: 'image', fileId, thumbnailFileId`
+    // without an explicit `files[]`. The service should funnel it into
+    // `note_files` so listNotes' join surfaces every photo of a batch
+    // (the first image was previously invisible to the join).
+    const app = createApp();
+    const tok = await signTestToken(alice, aliceSid);
+    const create = await app.request(`/reports/${report}/notes`, {
+      method: 'POST',
+      headers: headers(tok),
+      body: JSON.stringify({
+        kind: 'image',
+        fileId: fileIds[2],
+        thumbnailFileId: null,
+      }),
+    });
+    expect(create.status).toBe(201);
+    const created = (await create.json()) as {
+      id: string;
+      fileId: string | null;
+      files: Array<{ fileId: string; position: number }>;
+    };
+    expect(created.files).toHaveLength(1);
+    expect(created.files[0]!.fileId).toBe(fileIds[2]);
+    expect(created.files[0]!.position).toBe(0);
+    // Legacy column cleared: note_files is canonical for image rows.
+    expect(created.fileId).toBeNull();
+
+    const list = await app.request(`/reports/${report}/notes`, {
+      headers: { authorization: `Bearer ${tok}` },
+    });
+    const body = (await list.json()) as { items: Array<{ id: string; files: Array<{ fileId: string }> }> };
+    const note = body.items.find((n) => n.id === created.id);
+    expect(note!.files).toHaveLength(1);
+    expect(note!.files[0]!.fileId).toBe(fileIds[2]);
+  });
 });

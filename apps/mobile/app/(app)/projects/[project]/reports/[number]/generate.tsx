@@ -61,6 +61,14 @@ import { useCameraUploads } from '@/lib/camera/use-camera-uploads';
 import { pickAndEnqueueGalleryImages } from '@/lib/camera/pick-and-enqueue-gallery-images';
 import { AppHeaderActions } from '@/components/ui/AppHeaderActions';
 
+interface ApiNoteFile {
+  id: string;
+  fileId: string;
+  thumbnailFileId: string | null;
+  position: number;
+  caption: string | null;
+}
+
 interface ApiNote {
   id: string;
   authorId: string;
@@ -71,6 +79,7 @@ interface ApiNote {
   summary?: string | null;
   fileId?: string | null;
   thumbnailFileId?: string | null;
+  files?: ApiNoteFile[];
   durationSec?: number | null;
   createdAt: string;
 }
@@ -87,6 +96,11 @@ function noteToEntry(n: ApiNote): NoteEntry {
     : isVoice
       ? (n.summary ?? n.body ?? n.transcript ?? '')
       : (n.body ?? n.transcript ?? '');
+  // Image notes are canonical-via-`note_files`: the join array is the
+  // source of truth. Fall back to the legacy `file_id` only when the
+  // server returned no joined rows (e.g. an optimistic row mid-flight).
+  const imageFiles = isImage ? n.files ?? [] : [];
+  const primaryImage = imageFiles[0];
   return {
     id: n.id,
     authorId: n.authorId,
@@ -105,8 +119,13 @@ function noteToEntry(n: ApiNote): NoteEntry {
       durationSec: n.durationSec ?? null,
     }),
     ...(isImage && {
-      fileId: n.fileId ?? null,
-      thumbnailFileId: n.thumbnailFileId ?? null,
+      // `PhotoNoteCard` single-tile path reads `fileId`/`thumbnailFileId`
+      // directly; populate from the first joined file (preferred) or
+      // the legacy column (back-compat for unmigrated rows).
+      fileId: primaryImage?.fileId ?? n.fileId ?? null,
+      thumbnailFileId:
+        primaryImage?.thumbnailFileId ?? n.thumbnailFileId ?? null,
+      files: imageFiles,
     }),
   };
 }

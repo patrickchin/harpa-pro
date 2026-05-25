@@ -187,6 +187,21 @@ export async function createNote(
     files?: Array<{ fileId: string; thumbnailFileId?: string | null }>;
   },
 ): Promise<NoteRow | null> {
+  // For image notes, the join table `app.note_files` is the canonical
+  // source of truth (migration 0010 cleared the legacy columns on
+  // existing image rows). Back-compat: when callers pass only
+  // `fileId` (single-file image upload, first photo of a batch),
+  // funnel it into `files[]` and leave the legacy columns null so
+  // `listNotes` sees every photo via the join.
+  let fileList = input.files ?? [];
+  let legacyFileId: string | null = input.fileId ?? null;
+  let legacyThumbId: string | null = input.thumbnailFileId ?? null;
+  if (input.kind === 'image' && legacyFileId && fileList.length === 0) {
+    fileList = [{ fileId: legacyFileId, thumbnailFileId: legacyThumbId }];
+    legacyFileId = null;
+    legacyThumbId = null;
+  }
+
   const id = newId('not');
   const r = await db.execute<RawNote>(sql`
     INSERT INTO app.notes(
@@ -199,8 +214,8 @@ export async function createNote(
       ${authorId},
       ${input.kind}::app.note_kind,
       ${input.body ?? null},
-      ${input.fileId ?? null},
-      ${input.thumbnailFileId ?? null},
+      ${legacyFileId},
+      ${legacyThumbId},
       ${input.transcript ?? null},
       ${input.title ?? null},
       ${input.summary ?? null}
@@ -211,8 +226,8 @@ export async function createNote(
   if (!row) return null;
 
   let files: NoteFileRow[] = [];
-  if (input.files && input.files.length > 0) {
-    const values = input.files.map((f, idx) => {
+  if (fileList.length > 0) {
+    const values = fileList.map((f, idx) => {
       const nfId = newId('nfl');
       return sql`(${nfId}, ${id}, ${f.fileId}, ${f.thumbnailFileId ?? null}, ${idx})`;
     });

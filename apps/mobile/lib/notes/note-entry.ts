@@ -53,12 +53,13 @@ export interface NoteEntry {
 
   // ── Photo-note in-flight fields ────────────────────────────────
   // Populated for synthetic image entries the GenerateReportProvider
-  // stitches in from the upload queue so a `PendingPhotoCard` renders
-  // immediately on enqueue (camera / gallery picker). All optional;
-  // saved image rows have `fileId` set and `pendingUpload === undefined`.
+  // stitches in from the upload queue so the pending PhotoNoteCard
+  // renders immediately on enqueue (camera / gallery picker). All
+  // optional; saved image rows have `fileId` set and
+  // `pendingUpload === undefined`.
   /**
    * Carrier for an in-flight or failed image upload. Mirrors the
-   * fields `PendingPhotoCard` reads off an `UploadJob` so we don't have
+   * fields `PhotoNoteCard` reads off an `UploadJob` so we don't have
    * to thread the full job type through `NoteEntry`.
    */
   pendingUpload?: {
@@ -111,4 +112,23 @@ export interface NoteEntry {
 
   /** Batch key for grouping (set on synthetic entries from upload queue). */
   batchKey?: string;
+
+  /**
+   * Server-side note id the queue has resolved for this synthetic
+   * entry (set only on synthetic image entries from
+   * `usePhotoUploadEntries`). The `GenerateReportProvider` uses this
+   * to dedupe against the saved server row once it lands, ensuring
+   * the same React key spans the pending → saved transition and the
+   * card doesn't remount (= no flicker).
+   */
+  noteId?: string;
+
+  /**
+   * Optional React-key override. When set, `NoteTimeline` uses this
+   * instead of `id` so the timeline can keep a stable identity for a
+   * row across the pending → saved transition without rewriting
+   * `id` (which downstream mutations and the photo gallery still
+   * need to resolve the canonical server row).
+   */
+  reactKey?: string;
 }

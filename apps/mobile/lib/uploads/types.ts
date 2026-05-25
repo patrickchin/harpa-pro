@@ -104,6 +104,14 @@ export interface UploadJob {
   thumbnailFileId?: string;
   /** Batch key this job belongs to (for UI grouping). */
   batchKey?: string;
+  /**
+   * Server-side note id this job is bound to, once the queue resolves
+   * it during the `creating_note` phase. Surfaced on the snapshot so
+   * synthetic timeline entries can adopt the eventual `not_…` id the
+   * moment it's known — keeping the React key stable across the
+   * pending → saved transition and eliminating remount flicker.
+   */
+  noteId?: string;
   /** Set when status === 'failed'. */
   error?: string;
 }

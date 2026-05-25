@@ -111,6 +111,7 @@ export function createUploadQueue(
       fileId: j.fileId,
       thumbnailFileId: j.thumbnailFileId,
       batchKey: j.batchKey,
+      noteId: j.noteId,
       error: j.error,
     }));
     snapshotDirty = false;
@@ -174,6 +175,10 @@ export function createUploadQueue(
         },
         onThumbnailFileId: (fileId) => {
           job.thumbnailFileId = fileId;
+          notify();
+        },
+        onNoteId: (noteId) => {
+          job.noteId = noteId;
           notify();
         },
         resolveNote,

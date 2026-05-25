@@ -2,7 +2,7 @@
  * `usePhotoUploadEntries` — derives synthetic `NoteEntry` rows from
  * the upload queue's in-flight + failed image jobs for a single
  * report. The `GenerateReportProvider` stitches the result into the
- * timeline so a `PendingPhotoCard` renders the moment the user
+ * timeline so the pending state renders the moment the user
  * picks/snaps a photo — matching the optimistic UX voice notes
  * already get via `voicePipeline.state`.
  *
@@ -16,8 +16,15 @@
  * jobs are kept so the user can retry/dismiss inline. `cancelled`
  * jobs are also dropped (the queue snapshot keeps them only to
  * report the terminal state to subscribers).
+ *
+ * Anti-flicker: synthetic entries carry the eventual server `noteId`
+ * as soon as the queue resolves it (during `creating_note`) and the
+ * hook maintains a session-lived `noteIdToSyntheticId` map. The
+ * provider uses that map to assign the same React key to the saved
+ * server row when it lands, so the pending → saved transition
+ * reuses the same `PhotoNoteCard` instance instead of remounting.
  */
-import { useCallback, useMemo, useSyncExternalStore } from 'react';
+import { useCallback, useMemo, useRef, useSyncExternalStore } from 'react';
 
 import type { NoteEntry } from '@/lib/notes/note-entry';
 import { useOptionalUploadQueueContext } from './QueueProvider';
@@ -26,6 +33,15 @@ import type { UploadJob } from './types';
 export interface PhotoUploadEntriesApi {
   /** Synthetic NoteEntry rows (one per in-flight / failed image job). */
   entries: readonly NoteEntry[];
+  /**
+   * Maps a resolved server `noteId` (`not_…`) to the stable synthetic
+   * React key (`__batch-…` / `__upload-…`) we minted when the upload
+   * began. The provider applies this to saved server rows so they
+   * inherit the synthetic's React key, eliminating the remount
+   * flicker that used to happen when the queue dropped the synthetic
+   * and the server row arrived with a different id.
+   */
+  noteIdToSyntheticId: ReadonlyMap<string, string>;
   /** Retry a failed upload job. No-op when no queue mounted. */
   retry: (jobId: string) => void;
   /** Remove / cancel an upload job from the snapshot. No-op when no queue. */
@@ -51,14 +67,25 @@ function parseJobCreatedAt(jobId: string): number {
   return Number.isFinite(ts) && ts > 0 ? ts : Date.now();
 }
 
+function soloSyntheticId(jobId: string): string {
+  return `__upload-${jobId}`;
+}
+
+function batchSyntheticId(batchKey: string): string {
+  return `__batch-${batchKey}`;
+}
+
 function jobToSoloEntry(job: UploadJob, authorId: string | undefined): NoteEntry {
+  const id = soloSyntheticId(job.id);
   return {
-    id: `__upload-${job.id}`,
+    id,
+    reactKey: id,
     authorId,
     text: '',
     addedAt: parseJobCreatedAt(job.id),
     source: 'image',
     isPending: true,
+    noteId: job.noteId,
     pendingUpload: {
       jobId: job.id,
       sourceUri: job.input.sourceUri,
@@ -78,14 +105,18 @@ function jobToSoloEntry(job: UploadJob, authorId: string | undefined): NoteEntry
 
 function batchToEntry(batchKey: string, batchJobs: UploadJob[], authorId: string | undefined): NoteEntry {
   const addedAt = Math.min(...batchJobs.map(j => parseJobCreatedAt(j.id)));
+  const resolvedNoteId = batchJobs.find((j) => j.noteId)?.noteId;
+  const id = batchSyntheticId(batchKey);
   return {
-    id: `__batch-${batchKey}`,
+    id,
+    reactKey: id,
     authorId,
     text: '',
     addedAt,
     source: 'image',
     isPending: true,
     batchKey,
+    noteId: resolvedNoteId,
     pendingFiles: batchJobs.map(j => ({
       jobId: j.id,
       sourceUri: j.input.sourceUri,
@@ -124,6 +155,33 @@ export function usePhotoUploadEntries(
     [queue],
   );
   const jobs = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
+
+  // Session-lived noteId → syntheticId map. We keep entries even
+  // after the queue drops the completed job so saved server rows
+  // (which arrive on a later refetch) continue to inherit the
+  // synthetic React key. Persisting in a ref also means a single
+  // re-render where the queue snapshot lags the server doesn't lose
+  // the mapping.
+  const mapRef = useRef<Map<string, string>>(new Map());
+  const noteIdToSyntheticId = useMemo<ReadonlyMap<string, string>>(() => {
+    const map = mapRef.current;
+    if (!reportId) return map;
+    for (const job of jobs) {
+      if (job.input.kind !== 'image') continue;
+      if (job.input.reportId !== reportId) continue;
+      if (!job.noteId) continue;
+      const syntheticId = job.batchKey
+        ? batchSyntheticId(job.batchKey)
+        : soloSyntheticId(job.id);
+      if (map.get(job.noteId) !== syntheticId) {
+        map.set(job.noteId, syntheticId);
+      }
+    }
+    // Return a fresh wrapper each time the inputs change so memo
+    // consumers downstream can detect change-by-identity. The
+    // underlying map is the same — entries only ever grow.
+    return map;
+  }, [jobs, reportId]);
 
   const entries = useMemo<readonly NoteEntry[]>(() => {
     if (!reportId) return [];
@@ -174,5 +232,5 @@ export function usePhotoUploadEntries(
     [queue],
   );
 
-  return { entries, retry, cancel };
+  return { entries, noteIdToSyntheticId, retry, cancel };
 }

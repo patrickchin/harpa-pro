@@ -8,7 +8,7 @@
  * jobs render an inline summary ("Uploading 2 photos…" + aggregated
  * progress). Failed jobs render per-job retry / dismiss chips so the
  * user can clear them without scrolling to the corresponding
- * `PendingPhotoCard`.
+ * `PhotoNoteCard`.
  *
  * Test scope (Pitfall 13): unit tests pass a manually-constructed
  * queue via `<QueueProvider queue={…}>` so the strip exercises the

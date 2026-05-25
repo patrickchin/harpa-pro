@@ -11,6 +11,7 @@ import typer
 
 from . import __version__
 from .commands.doctor import run_doctor
+from .commands.reset import ResetOptions, run_reset
 from .config import load_config
 
 app = typer.Typer(
@@ -69,9 +70,42 @@ def doctor(
 
 
 @app.command()
-def reset() -> None:
+def reset(
+    device: str | None = typer.Option(
+        None, "--device", help="ADB serial or iOS simulator UDID to target."
+    ),
+    skip_db: bool = typer.Option(
+        False, "--skip-db", help="Skip the DB truncate step."
+    ),
+    skip_app: bool = typer.Option(
+        False, "--skip-app", help="Skip the app-data clear step."
+    ),
+    skip_reverse: bool = typer.Option(
+        False, "--skip-reverse", help="Skip re-establishing adb reverse forwards."
+    ),
+    seed: str | None = typer.Option(
+        None,
+        "--seed",
+        help="Seed payload (currently only 'legacy'; not yet implemented).",
+    ),
+    json_output: bool = typer.Option(
+        False, "--json", help="Emit machine-readable JSON instead of a table."
+    ),
+) -> None:
     """Single source of truth for between-runs DB + device reset."""
-    _stub("reset")
+    cfg = load_config(cli_overrides={"device": device} if device else None)
+    code = run_reset(
+        cfg,
+        ResetOptions(
+            device=device,
+            skip_db=skip_db,
+            skip_app=skip_app,
+            skip_reverse=skip_reverse,
+            seed=seed,
+            json_output=json_output,
+        ),
+    )
+    raise typer.Exit(code=code)
 
 
 @app.command()

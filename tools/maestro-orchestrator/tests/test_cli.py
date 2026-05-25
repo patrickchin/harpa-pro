@@ -14,8 +14,9 @@ from maestro_orchestrator import __version__
 from maestro_orchestrator.cli import app
 
 SUBCOMMANDS = ("doctor", "reset", "run", "journey", "kill", "logs")
-# `doctor` is the first real command — no longer a stub.
-STUB_SUBCOMMANDS = tuple(c for c in SUBCOMMANDS if c != "doctor")
+# `doctor` and `reset` are real commands — no longer stubs.
+_REAL_COMMANDS = {"doctor", "reset"}
+STUB_SUBCOMMANDS = tuple(c for c in SUBCOMMANDS if c not in _REAL_COMMANDS)
 
 
 def test_help_exits_zero_and_lists_all_subcommands(runner: CliRunner) -> None:

@@ -7,8 +7,9 @@
  * wraps `useFileUpload` with a single entrypoint that takes that URI
  * list, runs each through `processImageForUpload` (downscale ≤ 2048 px,
  * JPEG quality ladder targeting ≤ 2 MB, strip EXIF), and enqueues one
- * upload per processed URI tagged with the caller's `reportId` so the
- * upload pipeline also creates the timeline note (Pitfall 8).
+ * batch upload tagged with the caller's `reportId` so the upload
+ * pipeline creates a single timeline note for the whole camera session
+ * (Pitfall 8).
  *
  * Empty URI lists are a no-op. The processor returns the real
  * post-encode `sizeBytes`, so the presign request always carries an
@@ -45,7 +46,7 @@ function filenameFromUri(uri: string, index: number): string {
 }
 
 export function useCameraUploads(): UseCameraUploadsApi {
-  const { enqueue } = useFileUpload();
+  const { enqueueBatch } = useFileUpload();
 
   const enqueueCameraUris = useCallback(
     async (
@@ -53,47 +54,71 @@ export function useCameraUploads(): UseCameraUploadsApi {
       opts: { reportId: string },
     ): Promise<Array<PromiseSettledResult<UploadResult>>> => {
       if (uris.length === 0) return [];
-      const promises = uris.map(async (uri, idx) => {
-        // Downscale + re-encode BEFORE statSize/presign so we never
-        // ship a > 50 MB blob (server cap) and we strip EXIF along
-        // the way. See `process-image.ts` for the size/quality
-        // ladder. The processed URI is what we PUT to R2.
-        //
-        // The thumbnail is generated in parallel so the upload queue
-        // can run both pipelines concurrently — at ~256 px / q=0.7
-        // it's negligible work and the grid tiles fetch ~30 KB
-        // instead of the full ~2 MB image.
-        const [processed, thumbnail] = await Promise.all([
-          processImageForUpload(uri),
-          processImageThumbnail(uri).catch(() => null),
-        ]);
-        if (processed.sizeBytes > SERVER_MAX_BYTES) {
-          throw new Error(
-            `Camera upload: processed image at ${uri} is ` +
-              `${processed.sizeBytes} bytes, exceeds 50 MB server limit`,
-          );
+
+      // Process all images first (downscale + thumbnail generation).
+      // Use allSettled so one bad image doesn't kill the whole batch.
+      const settlements = await Promise.allSettled(
+        uris.map(async (uri, idx) => {
+          const [main, thumbnail] = await Promise.all([
+            processImageForUpload(uri),
+            processImageThumbnail(uri).catch(() => null),
+          ]);
+          if (main.sizeBytes > SERVER_MAX_BYTES) {
+            throw new Error(
+              `Camera upload: processed image at ${uri} is ` +
+                `${main.sizeBytes} bytes, exceeds 50 MB server limit`,
+            );
+          }
+          return {
+            sourceUri: main.uri,
+            kind: 'image' as const,
+            filename: filenameFromUri(uri, idx),
+            contentType: 'image/jpeg' as const,
+            sizeBytes: main.sizeBytes,
+            reportId: opts.reportId,
+            ...(thumbnail
+              ? {
+                  thumbnail: {
+                    sourceUri: thumbnail.uri,
+                    contentType: 'image/jpeg',
+                    sizeBytes: thumbnail.sizeBytes,
+                  },
+                }
+              : {}),
+          };
+        }),
+      );
+
+      // Collect successfully processed inputs for the batch
+      const validInputs: Array<(typeof settlements)[number] & { status: 'fulfilled' }> = [];
+      const results: Array<PromiseSettledResult<UploadResult>> = new Array(uris.length);
+
+      for (let i = 0; i < settlements.length; i++) {
+        const s = settlements[i]!;
+        if (s.status === 'rejected') {
+          results[i] = { status: 'rejected', reason: s.reason };
+        } else {
+          validInputs.push(s);
         }
-        return enqueue({
-          sourceUri: processed.uri,
-          kind: 'image',
-          filename: filenameFromUri(uri, idx),
-          contentType: 'image/jpeg',
-          sizeBytes: processed.sizeBytes,
-          reportId: opts.reportId,
-          ...(thumbnail
-            ? {
-                thumbnail: {
-                  sourceUri: thumbnail.uri,
-                  contentType: 'image/jpeg',
-                  sizeBytes: thumbnail.sizeBytes,
-                },
-              }
-            : {}),
-        });
-      });
-      return Promise.allSettled(promises);
+      }
+
+      if (validInputs.length === 0) return results;
+
+      // Enqueue as a single batch — one timeline note for the whole session
+      const { promises } = enqueueBatch(validInputs.map((s) => s.value));
+      const batchResults = await Promise.allSettled(promises);
+
+      // Merge batch results back into the original index order
+      let batchIdx = 0;
+      for (let i = 0; i < settlements.length; i++) {
+        if (settlements[i]!.status === 'fulfilled') {
+          results[i] = batchResults[batchIdx++]!;
+        }
+      }
+
+      return results;
     },
-    [enqueue],
+    [enqueueBatch],
   );
 
   return { enqueueCameraUris };

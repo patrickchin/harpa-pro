@@ -36,3 +36,30 @@ WHERE kind = 'image' AND file_id IS NOT NULL;
 UPDATE app.notes
 SET file_id = NULL, thumbnail_file_id = NULL
 WHERE kind = 'image' AND file_id IS NOT NULL;
+
+-- Grants + RLS: note_files inherits access from parent note.
+GRANT SELECT, INSERT, UPDATE, DELETE ON app.note_files TO app_authenticated;
+
+ALTER TABLE app.note_files ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY note_files_member_read ON app.note_files FOR SELECT TO app_authenticated
+  USING (EXISTS (
+    SELECT 1 FROM app.notes n
+    JOIN app.reports r ON r.id = n.report_id
+    WHERE n.id = note_id AND app.is_member(r.project_id)
+  ));
+
+CREATE POLICY note_files_member_insert ON app.note_files FOR INSERT TO app_authenticated
+  WITH CHECK (EXISTS (
+    SELECT 1 FROM app.notes n
+    JOIN app.reports r ON r.id = n.report_id
+    WHERE n.id = note_id
+      AND n.author_id = current_setting('app.user_id')::app.usr_id
+      AND app.is_member(r.project_id)
+  ));
+
+CREATE POLICY note_files_author_delete ON app.note_files FOR DELETE TO app_authenticated
+  USING (EXISTS (
+    SELECT 1 FROM app.notes n
+    WHERE n.id = note_id AND n.author_id = current_setting('app.user_id')::app.usr_id
+  ));

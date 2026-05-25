@@ -133,6 +133,11 @@ export async function listNotes(
   const imageNoteIds = slice.filter((r) => r.kind === 'image').map((r) => r.id);
   const filesByNoteId = new Map<string, NoteFileRow[]>();
   if (imageNoteIds.length > 0) {
+    const idFragments = imageNoteIds.map((id) => sql`${id}`);
+    const inList = idFragments.reduce<ReturnType<typeof sql>>(
+      (acc, frag, idx) => (idx === 0 ? frag : sql`${acc}, ${frag}`),
+      sql``,
+    );
     const nfResult = await db.execute<{
       id: string;
       note_id: string;
@@ -143,7 +148,7 @@ export async function listNotes(
     }>(sql`
       SELECT id, note_id, file_id, thumbnail_file_id, position, caption
       FROM app.note_files
-      WHERE note_id = ANY(${imageNoteIds})
+      WHERE note_id IN (${inList})
       ORDER BY note_id, position
     `);
     for (const nf of nfResult.rows) {

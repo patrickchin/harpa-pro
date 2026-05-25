@@ -7932,6 +7932,43 @@
                             "nullable": true,
                             "pattern": "^fil_[0-9a-hjkmnp-tv-z]{8,16}$"
                           },
+                          "files": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "pattern": "^nfl_[0-9a-hjkmnp-tv-z]{8,16}$"
+                                },
+                                "fileId": {
+                                  "type": "string",
+                                  "pattern": "^fil_[0-9a-hjkmnp-tv-z]{8,16}$"
+                                },
+                                "thumbnailFileId": {
+                                  "type": "string",
+                                  "nullable": true,
+                                  "pattern": "^fil_[0-9a-hjkmnp-tv-z]{8,16}$"
+                                },
+                                "position": {
+                                  "type": "integer",
+                                  "minimum": 0
+                                },
+                                "caption": {
+                                  "type": "string",
+                                  "nullable": true
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "fileId",
+                                "thumbnailFileId",
+                                "position",
+                                "caption"
+                              ]
+                            },
+                            "default": []
+                          },
                           "transcript": {
                             "type": "string",
                             "nullable": true
@@ -8129,6 +8166,26 @@
                     "nullable": true,
                     "pattern": "^fil_[0-9a-hjkmnp-tv-z]{8,16}$"
                   },
+                  "files": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "fileId": {
+                          "type": "string",
+                          "pattern": "^fil_[0-9a-hjkmnp-tv-z]{8,16}$"
+                        },
+                        "thumbnailFileId": {
+                          "type": "string",
+                          "nullable": true,
+                          "pattern": "^fil_[0-9a-hjkmnp-tv-z]{8,16}$"
+                        }
+                      },
+                      "required": [
+                        "fileId"
+                      ]
+                    }
+                  },
                   "transcript": {
                     "type": "string",
                     "nullable": true
@@ -8192,6 +8249,43 @@
                       "type": "string",
                       "nullable": true,
                       "pattern": "^fil_[0-9a-hjkmnp-tv-z]{8,16}$"
+                    },
+                    "files": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "pattern": "^nfl_[0-9a-hjkmnp-tv-z]{8,16}$"
+                          },
+                          "fileId": {
+                            "type": "string",
+                            "pattern": "^fil_[0-9a-hjkmnp-tv-z]{8,16}$"
+                          },
+                          "thumbnailFileId": {
+                            "type": "string",
+                            "nullable": true,
+                            "pattern": "^fil_[0-9a-hjkmnp-tv-z]{8,16}$"
+                          },
+                          "position": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "caption": {
+                            "type": "string",
+                            "nullable": true
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "fileId",
+                          "thumbnailFileId",
+                          "position",
+                          "caption"
+                        ]
+                      },
+                      "default": []
                     },
                     "transcript": {
                       "type": "string",
@@ -8365,6 +8459,189 @@
         }
       }
     },
+    "/notes/{note}/files": {
+      "post": {
+        "tags": [
+          "notes"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
+            },
+            "required": true,
+            "name": "note",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "files": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "fileId": {
+                          "type": "string",
+                          "pattern": "^fil_[0-9a-hjkmnp-tv-z]{8,16}$"
+                        },
+                        "thumbnailFileId": {
+                          "type": "string",
+                          "nullable": true,
+                          "pattern": "^fil_[0-9a-hjkmnp-tv-z]{8,16}$"
+                        }
+                      },
+                      "required": [
+                        "fileId"
+                      ]
+                    },
+                    "minItems": 1
+                  }
+                },
+                "required": [
+                  "files"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Files appended.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "files": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "pattern": "^nfl_[0-9a-hjkmnp-tv-z]{8,16}$"
+                          },
+                          "fileId": {
+                            "type": "string",
+                            "pattern": "^fil_[0-9a-hjkmnp-tv-z]{8,16}$"
+                          },
+                          "thumbnailFileId": {
+                            "type": "string",
+                            "nullable": true,
+                            "pattern": "^fil_[0-9a-hjkmnp-tv-z]{8,16}$"
+                          },
+                          "position": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "caption": {
+                            "type": "string",
+                            "nullable": true
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "fileId",
+                          "thumbnailFileId",
+                          "position",
+                          "caption"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "files"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "nullable": true
+                        },
+                        "requestId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Note not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "nullable": true
+                        },
+                        "requestId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/notes/{note}": {
       "patch": {
         "tags": [
@@ -8452,6 +8729,43 @@
                       "type": "string",
                       "nullable": true,
                       "pattern": "^fil_[0-9a-hjkmnp-tv-z]{8,16}$"
+                    },
+                    "files": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "pattern": "^nfl_[0-9a-hjkmnp-tv-z]{8,16}$"
+                          },
+                          "fileId": {
+                            "type": "string",
+                            "pattern": "^fil_[0-9a-hjkmnp-tv-z]{8,16}$"
+                          },
+                          "thumbnailFileId": {
+                            "type": "string",
+                            "nullable": true,
+                            "pattern": "^fil_[0-9a-hjkmnp-tv-z]{8,16}$"
+                          },
+                          "position": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "caption": {
+                            "type": "string",
+                            "nullable": true
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "fileId",
+                          "thumbnailFileId",
+                          "position",
+                          "caption"
+                        ]
+                      },
+                      "default": []
                     },
                     "transcript": {
                       "type": "string",
@@ -9301,6 +9615,43 @@
                       "type": "string",
                       "nullable": true,
                       "pattern": "^fil_[0-9a-hjkmnp-tv-z]{8,16}$"
+                    },
+                    "files": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "pattern": "^nfl_[0-9a-hjkmnp-tv-z]{8,16}$"
+                          },
+                          "fileId": {
+                            "type": "string",
+                            "pattern": "^fil_[0-9a-hjkmnp-tv-z]{8,16}$"
+                          },
+                          "thumbnailFileId": {
+                            "type": "string",
+                            "nullable": true,
+                            "pattern": "^fil_[0-9a-hjkmnp-tv-z]{8,16}$"
+                          },
+                          "position": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "caption": {
+                            "type": "string",
+                            "nullable": true
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "fileId",
+                          "thumbnailFileId",
+                          "position",
+                          "caption"
+                        ]
+                      },
+                      "default": []
                     },
                     "transcript": {
                       "type": "string",

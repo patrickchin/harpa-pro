@@ -298,3 +298,162 @@ completed when the assertion fires. Unconfirmed.
 `extendedWaitUntil visible: report-view-${output.REPORT_NUMBER}` and
 re-run a full journey. Until that's verified end-to-end, module 11
 remains "verified by inspection" only.
+
+---
+
+## Pitfall 17 — `e2e-maestro-testid-gate` trips on template-resolved testIDs
+
+**Symptom.** PR check `e2e-maestro-testid-gate` fails with
+`MISSING: country-option-US` even though the helper passes at runtime
+on device. The literal string `country-option-US` cannot be `grep`ed
+out of `apps/mobile/`.
+
+**Cause.** `scripts/check-maestro-testids.sh` greps mobile source for
+the literal text of every `id:` in `.maestro/modules/`,
+`.maestro/helpers/`, and `regression-journey.yaml`. When the source
+renders the testID from a template literal —
+``testID={`country-option-${item.code}`}`` in
+`apps/mobile/components/CountryPickerModal.tsx` — the resolved string
+`country-option-US` never appears verbatim. Two other template IDs
+(`picker-member-role-editor`, `picker-member-role-viewer`) are
+already in a `KNOWN_TEMPLATE_IDS` allowlist in the script for the
+same reason.
+
+**Workaround.** Add new template-resolved IDs to the allowlist:
+
+```bash
+# scripts/check-maestro-testids.sh
+KNOWN_TEMPLATE_IDS="picker-member-role-editor picker-member-role-viewer country-option-US"
+```
+
+Also append a line to the script's header comment block documenting
+the template source, so the allowlist stays self-explanatory:
+
+```bash
+#   country-option-US          →  testID={`country-option-${item.code}`}
+```
+
+Verify locally under WSL or Git Bash (not native pwsh — see
+Pitfall 18): `bash scripts/check-maestro-testids.sh`.
+
+---
+
+## Pitfall 18 — CRLF on `*.sh` breaks pre-push hooks on Windows
+
+**Symptom.** `git push` fails with `husky - pre-push script failed
+(code 1)`. The failing helper crashes early:
+
+```
+scripts/check-secrets.sh: line 17: $'\r': command not found
+scripts/check-secrets.sh: line 18: set: pipefail
+: invalid option name
+```
+
+Bash never gets to the actual logic; the hook reports a failure that
+looks like "secret detected" or "test failed" but is really a parser
+crash.
+
+**Cause.** Git is configured with `core.autocrlf=true` on this
+checkout, and `.gitattributes` doesn't pin `*.sh` files to LF. The
+on-disk copy of `scripts/check-secrets.sh` (and any other shell
+helper) has `\r\n` line endings; bash parses
+`set -euo pipefail\r` and fails on the invisible `\r` as part of the
+`pipefail` option name. `git ls-files --eol scripts/check-secrets.sh`
+confirms `i/lf  w/crlf` (LF in index, CRLF in working tree).
+
+**Workaround (immediate, per push).** The secret-scan hook honours an
+explicit bypass — set `SKIP_SECRET_CHECK=1` in the launching shell:
+
+```powershell
+$env:SKIP_SECRET_CHECK = "1"
+git push --force-with-lease origin <branch>
+```
+
+The hook code:
+
+```bash
+[ "${SKIP_SECRET_CHECK:-}" = "1" ] || bash scripts/check-secrets.sh
+```
+
+**Workaround (proper, permanent fix).** Add to `.gitattributes`:
+
+```
+*.sh text=lf eol=lf
+```
+
+Then `git add --renormalize . && git commit` to rewrite the index
+entries with LF. After the rebase/normalize, every Windows checkout
+will materialize `*.sh` files with LF endings regardless of
+`core.autocrlf`. Recommended as a standalone PR — don't mix it into
+unrelated feature branches.
+
+---
+
+## Pitfall 19 — Phantom "modified" files on Windows after rebase or normalize
+
+**Symptom.** `git status` shows a long list of modified tracked
+files — `apps/mobile/screens/__snapshots__/*.snap`,
+`apps/mobile/lib/api/hooks.ts`, `packages/api-contract/openapi.json`,
+`packages/api-contract/src/generated/types.ts`, etc. — typically
+right after a rebase, branch switch, or running a script that
+touches them. The list overlaps suspiciously with files that
+upstream `dev` changed, raising fears of imminent merge conflicts.
+
+**Cause.** Same CRLF mechanism as Pitfall 18, applied to non-shell
+files. `core.autocrlf=true` rewrites line endings on materialization,
+but the working-tree hash differs from the index hash, so git marks
+the files modified. `git diff <file>` returns **zero bytes** — there
+is no content change, only line-ending drift.
+
+**Workaround.**
+
+1. Confirm it's CRLF noise, not real edits:
+
+   ```powershell
+   git diff --stat            # expect warnings about "LF will be replaced by CRLF"
+   git diff <suspect-file>    # expect zero bytes of output, just warnings
+   ```
+
+2. Discard the phantom changes:
+
+   ```powershell
+   git checkout -- .          # safe: only touches tracked files with no real diff
+   ```
+
+3. If a rebase is pending and the list of phantom files overlaps
+   with files modified on `origin/dev`, **don't panic** — git will
+   fast-apply dev's diff once the phantom modifications are gone.
+   No real conflict will materialize.
+
+The same `.gitattributes` fix from Pitfall 18 prevents this for
+specific filetypes; pinning `*.snap`, `*.json`, `*.ts` etc. to LF
+would be invasive across the monorepo, so for now treat
+`git checkout -- .` as the standard "clean up before rebase" step on
+Windows.
+
+---
+
+## Pitfall 20 — `adb reverse` drops on device disconnect / reboot
+
+**Symptom.** App boots but every network call fails — Metro bundle
+404, API requests time out. `adb devices` still lists the device.
+Often follows a USB-cable wobble, a device reboot, or a reinstall.
+
+**Cause.** `adb reverse` mappings are per-adb-session and per-device
+connection. They survive `pm clear` (which only wipes app sandbox
+data) but not transport-level events: cable disconnect, device
+reboot, `adb kill-server`, or losing USB power-saving on the host.
+Once the reverse is gone, `localhost:8081` (Metro) and
+`localhost:8787` (API) on the device point at nothing.
+
+**Workaround.** After any disconnect/reboot, re-establish both
+reverses before launching the app:
+
+```powershell
+adb -s R3CT7092S2H reverse tcp:8081 tcp:8081   # Metro
+adb -s R3CT7092S2H reverse tcp:8787 tcp:8787   # API (docker-compose)
+```
+
+Verify with `adb -s R3CT7092S2H reverse --list`. A reset checklist
+between full journeys is: (1) `adb reverse` both ports, (2) DB
+truncate, (3) `pm clear` (see Pitfall 15), (4) relaunch app.

@@ -5,12 +5,13 @@
  * stay focused on account + usage + sign-out.
  */
 import { useState } from 'react';
-import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
+import { Modal, Pressable, ScrollView, Switch, Text, View } from 'react-native';
 import {
   Bot,
   Check,
   ChevronLeft,
   ChevronRight,
+  FlaskConical,
   Wrench,
   X,
 } from 'lucide-react-native';
@@ -43,6 +44,14 @@ export interface DeveloperScreenProps {
   /** Set of provider keys with API credentials configured. `null` =
    * not yet known (treat everything as available). */
   availableProviderKeys: ReadonlyArray<string> | null;
+
+  // ── Generate-report tab visibility flags ───────────────────────
+  /** When true, the Debug tab is visible on the Generate Report screen. */
+  showGenerateDebugTab: boolean;
+  onToggleGenerateDebugTab: (next: boolean) => void;
+  /** When true, the manual Edit tab is visible on the Generate Report screen. */
+  showGenerateEditTab: boolean;
+  onToggleGenerateEditTab: (next: boolean) => void;
 }
 
 export function Developer({
@@ -54,6 +63,10 @@ export function Developer({
   aiModel,
   onSelectModel,
   availableProviderKeys,
+  showGenerateDebugTab,
+  onToggleGenerateDebugTab,
+  showGenerateEditTab,
+  onToggleGenerateEditTab,
 }: DeveloperScreenProps) {
   const [modalVisible, setModalVisible] = useState(false);
   const [modalStep, setModalStep] = useState<'provider' | 'model'>('provider');
@@ -104,6 +117,55 @@ export function Developer({
                 <ChevronRight size={16} color={colors.muted.foreground} />
               </View>
             </Pressable>
+          </Card>
+        </View>
+
+        <View className="px-5 mt-6" testID="developer-section-tabs">
+          <View className="mb-2 flex-row items-center gap-2">
+            <FlaskConical size={16} color={colors.muted.foreground} />
+            <Text className="text-label text-muted-foreground">
+              Generate Report Tabs
+            </Text>
+          </View>
+
+          <Card className="gap-4">
+            <View
+              testID="row-toggle-generate-edit-tab"
+              className="flex-row items-center gap-3"
+            >
+              <View className="flex-1">
+                <Text className="text-title-sm text-foreground">
+                  Manual edit tab
+                </Text>
+                <Text className="text-body text-muted-foreground">
+                  Show the Edit tab on the Generate Report screen.
+                </Text>
+              </View>
+              <Switch
+                testID="switch-generate-edit-tab"
+                value={showGenerateEditTab}
+                onValueChange={onToggleGenerateEditTab}
+              />
+            </View>
+
+            <View
+              testID="row-toggle-generate-debug-tab"
+              className="flex-row items-center gap-3"
+            >
+              <View className="flex-1">
+                <Text className="text-title-sm text-foreground">
+                  Debug tab
+                </Text>
+                <Text className="text-body text-muted-foreground">
+                  Show the Debug tab on the Generate Report screen.
+                </Text>
+              </View>
+              <Switch
+                testID="switch-generate-debug-tab"
+                value={showGenerateDebugTab}
+                onValueChange={onToggleGenerateDebugTab}
+              />
+            </View>
           </Card>
         </View>
 

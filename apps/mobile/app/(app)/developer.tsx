@@ -13,12 +13,14 @@ import {
   useAvailableProviders,
   type AiProviderKey,
 } from '@/lib/ai/useAiProvider';
+import { useDeveloperFlags } from '@/lib/dev-flags';
 import { safeBack } from '@/lib/nav/safe-back';
 
 export default function DeveloperRoute() {
   const router = useRouter();
   const ai = useAiProvider();
   const availability = useAvailableProviders();
+  const devFlags = useDeveloperFlags();
 
   return (
     <Developer
@@ -30,6 +32,10 @@ export default function DeveloperRoute() {
       aiModel={ai.model}
       onSelectModel={(model) => ai.setModel(model)}
       availableProviderKeys={availability.availableKeys}
+      showGenerateDebugTab={devFlags.showGenerateDebugTab}
+      onToggleGenerateDebugTab={devFlags.setShowGenerateDebugTab}
+      showGenerateEditTab={devFlags.showGenerateEditTab}
+      onToggleGenerateEditTab={devFlags.setShowGenerateEditTab}
     />
   );
 }

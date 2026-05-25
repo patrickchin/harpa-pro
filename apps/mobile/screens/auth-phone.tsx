@@ -25,7 +25,7 @@ import { InlineNotice } from '../components/primitives/InlineNotice';
 import { Logo } from '../components/primitives/Logo';
 import { PhoneNumberInput } from '../components/primitives/PhoneNumberInput';
 import { colors } from '../lib/design-tokens/colors';
-import { type Country } from '../lib/countries';
+import { type Country } from '../lib/phone/countries';
 
 type SignInExtras = {
   mode: 'signin';

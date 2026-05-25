@@ -21,8 +21,8 @@ import {
   isValidPhoneNumber,
   splitE164,
   INVALID_PHONE_NUMBER_MESSAGE,
-} from '@/lib/phone';
-import { type Country } from '@/lib/countries';
+} from '@/lib/phone/phone';
+import { type Country } from '@/lib/phone/countries';
 import {
   getRememberedPhoneNumber,
   rememberPhoneNumber,

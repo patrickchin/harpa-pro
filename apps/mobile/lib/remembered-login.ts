@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { getCanonicalPhoneNumber } from './phone';
+import { getCanonicalPhoneNumber } from './phone/phone';
 
 export const REMEMBERED_PHONE_STORAGE_KEY = 'remembered_login_phone';
 

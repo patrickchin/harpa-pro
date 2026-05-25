@@ -109,6 +109,9 @@ def test_check_app_id_unresolvable(fake_project_root: Path) -> None:
 def test_check_maestro_ok(
     fake_project_root: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    from maestro_orchestrator import maestro_cli
+
+    monkeypatch.setattr(maestro_cli, "find_maestro_executable", lambda: "/usr/local/bin/maestro")
     monkeypatch.setattr(
         checks, "_run", lambda *a, **kw: _completed(0, "1.40.0\n")
     )
@@ -120,17 +123,21 @@ def test_check_maestro_ok(
 def test_check_maestro_not_on_path(
     fake_project_root: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    def _raise(*a: Any, **kw: Any):
-        raise FileNotFoundError("maestro")
+    from maestro_orchestrator import maestro_cli
 
-    monkeypatch.setattr(checks, "_run", _raise)
+    monkeypatch.setattr(maestro_cli, "find_maestro_executable", lambda: None)
     r = checks.check_maestro_on_path(_ctx(fake_project_root))
     assert r.status == "fail"
+    assert "not found" in r.detail
 
 
 def test_check_maestro_timeout(
     fake_project_root: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    from maestro_orchestrator import maestro_cli
+
+    monkeypatch.setattr(maestro_cli, "find_maestro_executable", lambda: "/usr/local/bin/maestro")
+
     def _raise(*a: Any, **kw: Any):
         raise subprocess.TimeoutExpired(cmd="maestro", timeout=4.0)
 
@@ -143,6 +150,9 @@ def test_check_maestro_timeout(
 def test_check_maestro_nonzero(
     fake_project_root: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    from maestro_orchestrator import maestro_cli
+
+    monkeypatch.setattr(maestro_cli, "find_maestro_executable", lambda: "/usr/local/bin/maestro")
     monkeypatch.setattr(
         checks, "_run", lambda *a, **kw: _completed(2, "", "oops")
     )

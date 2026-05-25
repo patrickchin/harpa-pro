@@ -128,18 +128,22 @@ def check_app_id(ctx: DoctorContext) -> CheckResult:
 
 
 def check_maestro_on_path(ctx: DoctorContext) -> CheckResult:
-    """`maestro --version` succeeds."""
-    try:
-        result = _run(["maestro", "--version"], timeout=4.0)
-    except FileNotFoundError:
-        # On Windows, the entry point is maestro.bat under ~/.maestro/bin.
+    """`maestro --version` succeeds (PATH or Windows ~/.maestro/bin fallback)."""
+    from .maestro_cli import find_maestro_executable
+
+    exe = find_maestro_executable()
+    if exe is None:
         hint = ""
         if host.is_windows():
             hint = (
                 " (try adding %USERPROFILE%\\.maestro\\bin to PATH; "
                 "look for maestro.bat)"
             )
-        return _fail("maestro_cli", f"`maestro` not on PATH{hint}")
+        return _fail("maestro_cli", f"`maestro` not found{hint}")
+    try:
+        result = _run([exe, "--version"], timeout=15.0)
+    except FileNotFoundError:
+        return _fail("maestro_cli", f"`{exe}` vanished between resolution and call")
     except subprocess.TimeoutExpired:
         return _fail("maestro_cli", "`maestro --version` timed out")
     if result.returncode != 0:

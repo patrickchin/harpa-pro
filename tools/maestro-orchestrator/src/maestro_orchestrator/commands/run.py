@@ -24,8 +24,6 @@ from __future__ import annotations
 import json
 import os
 import re
-import shutil
-import sys
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -54,29 +52,7 @@ class RunOptions:
 
 
 # --- maestro executable resolution --------------------------------------
-def _find_maestro_executable() -> str | None:
-    """Locate the `maestro` CLI. Returns absolute path or None.
-
-    On Windows, the Maestro installer drops `maestro.bat` under
-    `%USERPROFILE%\\.maestro\\bin\\` and that location is often not on
-    PATH. We check it explicitly before giving up.
-    """
-    # Try PATH first.
-    for name in ("maestro", "maestro.bat", "maestro.cmd"):
-        found = shutil.which(name)
-        if found:
-            return found
-    # Windows fallback.
-    if sys.platform.startswith("win"):
-        home = Path(os.path.expanduser("~"))
-        for candidate in (
-            home / ".maestro" / "bin" / "maestro.bat",
-            home / ".maestro" / "bin" / "maestro.cmd",
-            home / ".maestro" / "bin" / "maestro",
-        ):
-            if candidate.exists():
-                return str(candidate)
-    return None
+from ..maestro_cli import find_maestro_executable as _find_maestro_executable  # noqa: E402
 
 
 # --- flow resolution ----------------------------------------------------

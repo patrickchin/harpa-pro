@@ -11,6 +11,7 @@ import typer
 
 from . import __version__
 from .commands.doctor import run_doctor
+from .commands.journey import JourneyOptions, run_journey
 from .commands.kill import KillOptions, run_kill
 from .commands.logs import LogsOptions, run_logs
 from .commands.reset import ResetOptions, run_reset
@@ -144,9 +145,62 @@ def run(
 
 
 @app.command()
-def journey() -> None:
+def journey(
+    device: str | None = typer.Option(
+        None, "--device", help="ADB serial or iOS simulator UDID to target."
+    ),
+    flow: str = typer.Option(
+        "regression-journey.yaml",
+        "--flow",
+        help="Flow to run after doctor + reset (default: regression-journey.yaml).",
+    ),
+    skip_doctor: bool = typer.Option(
+        False, "--skip-doctor", help="Skip the doctor --fix step."
+    ),
+    skip_reset: bool = typer.Option(
+        False, "--skip-reset", help="Skip the reset step."
+    ),
+    watch: bool = typer.Option(
+        False,
+        "--watch",
+        help="Poll the spawned child until it exits or --watch-timeout fires.",
+    ),
+    watch_timeout: float = typer.Option(
+        1800.0,
+        "--watch-timeout",
+        help="Maximum seconds for --watch before returning (default 1800).",
+    ),
+    watch_poll: float = typer.Option(
+        5.0,
+        "--watch-poll",
+        help="Poll interval in seconds when --watch is set (default 5).",
+    ),
+    force: bool = typer.Option(
+        False,
+        "--force",
+        help="Override the in-flight-run guard on `mo run`.",
+    ),
+    json_output: bool = typer.Option(
+        False, "--json", help="Emit machine-readable JSON instead of text."
+    ),
+) -> None:
     """Composite: doctor --fix && reset && run regression-journey."""
-    _stub("journey")
+    cfg = load_config(cli_overrides={"device": device} if device else None)
+    code = run_journey(
+        cfg,
+        JourneyOptions(
+            device=device,
+            flow=flow,
+            skip_doctor=skip_doctor,
+            skip_reset=skip_reset,
+            watch=watch,
+            watch_timeout=watch_timeout,
+            watch_poll=watch_poll,
+            force=force,
+            json_output=json_output,
+        ),
+    )
+    raise typer.Exit(code=code)
 
 
 @app.command()

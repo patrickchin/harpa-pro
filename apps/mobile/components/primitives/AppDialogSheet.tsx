@@ -16,7 +16,7 @@ import { X } from 'lucide-react-native';
 
 import { Button } from './Button';
 import { InlineNotice, type InlineNoticeTone } from './InlineNotice';
-import type { AppDialogActionVariant } from '@/lib/app-dialog-copy';
+import type { AppDialogActionVariant } from '@/lib/dialogs/app-dialog-copy';
 import { colors } from '@/lib/design-tokens/colors';
 
 export interface AppDialogAction {

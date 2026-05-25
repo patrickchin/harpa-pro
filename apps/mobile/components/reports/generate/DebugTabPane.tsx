@@ -10,8 +10,8 @@ import { useMemo, useState } from 'react';
 import { Platform, Pressable, ScrollView, Text, View } from 'react-native';
 import { Check, ChevronDown, ChevronRight, Copy } from 'lucide-react-native';
 
-import { useCopyToClipboard } from '@/lib/use-clipboard';
-import { useGenerateReport } from '@/components/reports/generate/GenerateReportProvider';
+import { useCopyToClipboard } from '@/lib/util/use-clipboard';
+import { useGenerateReport } from '@/features/generate/GenerateReportProvider';
 import { colors } from '@/lib/design-tokens/colors';
 
 interface DebugTabPaneProps {

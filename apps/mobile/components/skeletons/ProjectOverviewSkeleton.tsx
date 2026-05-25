@@ -10,8 +10,8 @@
  */
 import { View } from 'react-native';
 import { Skeleton } from '@/components/primitives/Skeleton';
-import { useLayoutShiftProbe } from '@/lib/layout-shift-probe';
-import { PROJECT_OVERVIEW_LAYOUT } from '@/lib/project-overview';
+import { useLayoutShiftProbe } from '@/lib/util/layout-shift-probe';
+import { PROJECT_OVERVIEW_LAYOUT } from '@/lib/projects/project-overview';
 
 export function ProjectOverviewSkeleton() {
   const headerProbe = useLayoutShiftProbe('project-overview:header');

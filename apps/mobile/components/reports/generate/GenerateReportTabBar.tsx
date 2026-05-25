@@ -12,11 +12,11 @@
 import { ActivityIndicator, Keyboard, Pressable, Text, View } from 'react-native';
 import { Bug, FileText, MessageSquare, Pencil } from 'lucide-react-native';
 
-import { useGenerateReport } from './GenerateReportProvider';
+import { useGenerateReport } from '@/features/generate/GenerateReportProvider';
 import type { TabKey } from './tabs';
 import { colors } from '@/lib/design-tokens/colors';
-import { getGenerateReportTabLabel } from '@/lib/generate-report-ui';
-import { useDeveloperFlags } from '@/lib/dev-flags';
+import { getGenerateReportTabLabel } from '@/lib/reports/generate-report-ui';
+import { useDeveloperFlags } from '@/lib/config/dev-flags';
 
 export function GenerateReportTabBar() {
   const { tabs, notes, generation } = useGenerateReport();

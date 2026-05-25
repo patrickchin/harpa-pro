@@ -20,8 +20,8 @@ import {
   getActionErrorDialogCopy,
   getDeleteNoteDialogCopy,
   getFinalizeReportDialogCopy,
-} from '@/lib/app-dialog-copy';
-import { useGenerateReport } from './GenerateReportProvider';
+} from '@/lib/dialogs/app-dialog-copy';
+import { useGenerateReport } from '@/features/generate/GenerateReportProvider';
 
 export function GenerateReportDialogs() {
   const { generation, draft, notes, ui, handlePickAttachment, photo, preview } =

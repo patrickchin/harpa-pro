@@ -29,9 +29,9 @@ import { AppDialogSheet } from '@/components/primitives/AppDialogSheet';
 import { useAudioPlayback } from '@/lib/audio/AudioPlaybackProvider';
 import { useFileSignedUrl } from '@/lib/uploads/useFileSignedUrl';
 import { colors } from '@/lib/design-tokens/colors';
-import { formatCapturedAt } from '@/lib/date';
-import { formatDuration } from '@/features/voice/voiceNoteCardHeader';
-import { getDeleteNoteDialogCopy, getDeleteVoiceNoteDialogCopy } from '@/lib/app-dialog-copy';
+import { formatCapturedAt } from '@/lib/util/date';
+import { formatDuration } from '@/components/notes/voiceNoteCardHeader';
+import { getDeleteNoteDialogCopy, getDeleteVoiceNoteDialogCopy } from '@/lib/dialogs/app-dialog-copy';
 
 export type NoteOptionsKind = 'text' | 'voice' | 'photo' | 'document';
 

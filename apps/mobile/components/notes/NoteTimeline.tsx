@@ -24,8 +24,8 @@ import { PhotoNoteCard } from '@/components/notes/PhotoNoteCard';
 import { PendingPhotoCard } from '@/components/notes/PendingPhotoCard';
 import { NoteOptionsSheet } from '@/components/notes/NoteOptionsSheet';
 import type { NoteOptionsSheetItem } from '@/components/notes/NoteOptionsSheet';
-import { VoiceNoteCard } from '@/features/voice/VoiceNoteCard';
-import type { NoteEntry } from '@/lib/note-entry';
+import { VoiceNoteCard } from '@/components/notes/VoiceNoteCard';
+import type { NoteEntry } from '@/lib/notes/note-entry';
 import type { UploadJob } from '@/lib/uploads/types';
 
 export interface NoteTimelineProps {

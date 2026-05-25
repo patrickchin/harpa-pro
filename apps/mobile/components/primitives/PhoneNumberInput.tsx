@@ -17,10 +17,10 @@ import { Pressable, Text, TextInput, View } from 'react-native';
 import { ChevronDown, X } from 'lucide-react-native';
 
 import { CountryPickerModal } from '@/components/CountryPickerModal';
-import { type Country } from '@/lib/countries';
+import { type Country } from '@/lib/phone/countries';
 import { colors } from '@/lib/design-tokens/colors';
-import { getSurfaceDepthStyle } from '@/lib/surface-depth';
-import { cn } from '@/lib/utils';
+import { getSurfaceDepthStyle } from '@/lib/reports/surface-depth';
+import { cn } from '@/lib/util/utils';
 
 export interface PhoneNumberInputProps {
   country: Country;

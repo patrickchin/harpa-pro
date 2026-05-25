@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import TestRenderer, { act } from 'react-test-renderer';
 import AuthPhone from './auth-phone';
-import { getCountryByCode } from '../lib/countries';
+import { getCountryByCode } from '../lib/phone/countries';
 
 function render(element: React.ReactElement): TestRenderer.ReactTestRenderer {
   let tree!: TestRenderer.ReactTestRenderer;

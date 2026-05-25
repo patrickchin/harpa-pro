@@ -8,8 +8,8 @@
 import { type ReactNode } from 'react';
 import { Text, View } from 'react-native';
 
-import { cn } from '@/lib/utils';
-import { getSurfaceDepthStyle } from '@/lib/surface-depth';
+import { cn } from '@/lib/util/utils';
+import { getSurfaceDepthStyle } from '@/lib/reports/surface-depth';
 
 export type InlineNoticeTone = 'info' | 'success' | 'warning' | 'danger';
 

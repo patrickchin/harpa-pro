@@ -16,7 +16,7 @@ import { ScrollView, Text, View } from 'react-native';
 
 import { EmptyState } from '@/components/primitives/EmptyState';
 import { ReportEditForm } from '@/components/reports/ReportEditForm';
-import { useGenerateReport } from '@/components/reports/generate/GenerateReportProvider';
+import { useGenerateReport } from '@/features/generate/GenerateReportProvider';
 import { colors } from '@/lib/design-tokens/colors';
 
 interface EditTabPaneProps {

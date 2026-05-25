@@ -21,7 +21,7 @@
  */
 import { View, type DimensionValue } from 'react-native';
 import { Skeleton, SkeletonRow } from '@/components/primitives/Skeleton';
-import { useLayoutShiftProbe } from '@/lib/layout-shift-probe';
+import { useLayoutShiftProbe } from '@/lib/util/layout-shift-probe';
 
 function StatTileSkeleton() {
   return (

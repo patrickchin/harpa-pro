@@ -30,7 +30,7 @@ import {
   getReportTitle,
   isOptimisticReportId,
   type ReportListItem,
-} from '@/lib/project-reports-list';
+} from '@/lib/projects/project-reports-list';
 
 export type ReportsListProps = {
   reports: ReadonlyArray<ReportListItem>;

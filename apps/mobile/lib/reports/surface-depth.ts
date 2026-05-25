@@ -8,7 +8,7 @@
  * Tokens stay in one place to keep raised / floating surfaces
  * consistent across Button, Card, Input, StatTile, etc.
  */
-import { colors } from './design-tokens/colors';
+import { colors } from '../design-tokens/colors';
 
 export type SurfaceDepth = 'flat' | 'raised' | 'floating';
 

@@ -16,7 +16,7 @@
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import { env } from '../env';
+import { env } from '../config/env';
 
 const OVERRIDE_KEY = 'harpa.apiBaseUrl.override.v1';
 

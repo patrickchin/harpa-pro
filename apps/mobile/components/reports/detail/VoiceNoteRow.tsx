@@ -22,7 +22,7 @@ import { useAudioPlayback } from '@/lib/audio/AudioPlaybackProvider';
 import { useFileSignedUrl } from '@/lib/uploads/useFileSignedUrl';
 import { colors } from '@/lib/design-tokens/colors';
 
-import { formatDuration } from '@/features/voice/voiceNoteCardHeader';
+import { formatDuration } from '@/components/notes/voiceNoteCardHeader';
 
 export interface VoiceNoteRowProps {
   noteId: string;

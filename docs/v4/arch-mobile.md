@@ -27,148 +27,77 @@
 - react-native-pdf (Android) + WKWebView (iOS) for `PdfPreviewModal`.
 - Sentry for crash reporting.
 
+## Folder rule
+
+A file goes in `features/<domain>/` if and only if the domain owns a
+**state machine, a React Context provider with non-trivial reducer
+logic, or a native/external adapter** (recorder, camera session,
+OTP). Pure presentational UI — even when domain-named
+(`VoiceNoteCard`, `PhotoNoteCard`, `ReportView`) — goes in
+`components/<domain>/`. `lib/` holds cross-cutting utilities only
+(api client, env, date, dialogs, telemetry), grouped into subfolders
+by concern; no flat files at the `lib/` root (enforced in CI).
+`screens/` holds props-driven screen bodies; `app/` holds expo-router
+route files that wire data into screens.
+
 ## Directory structure
 
 ```
 apps/mobile/
   app/                                 # expo-router
-    (auth)/
-      _layout.tsx
-      sign-in/
-        phone.tsx                      # thin wrapper around screens/auth-phone.tsx
-        verify.tsx                     # thin wrapper around screens/auth-verify.tsx
-      sign-up/
-        phone.tsx
-        verify.tsx
-      onboarding.tsx
-    (app)/
-      _layout.tsx
-      projects/
-        index.tsx                      # thin wrapper around screens/projects-list.tsx
-        new.tsx
-        [project]/                     # prj_xxxxxx — see arch-ids-and-urls.md
-          index.tsx
-          edit.tsx
-          members.tsx
-          reports/
-            index.tsx
-            generate.tsx          # the big one — Notes/Report/Edit tabs
-            [number].tsx          # saved report — per-project number
-      p/
-        [project].tsx                  # short link → router.replace canonical
-      r/
-        [report].tsx                   # short link → router.replace canonical
-      camera/
-        capture.tsx
-      profile/
-        index.tsx
-        account.tsx
-        usage.tsx
-    +not-found.tsx
+    (auth)/  (app)/  (camera)/  ...    # routes do data fetching
     _layout.tsx                        # providers (env, query, queue, dialogs, sentry)
 
-  screens/                             # P2.0b — props-driven screen bodies
-                                       # (no API/auth inside; consumed by
-                                       # the real routes)
+  screens/                             # props-driven screen bodies
+                                       # (no API/auth inside; consumed
+                                       # by the routes in app/)
 
-  components/
-    primitives/                        # P2.1 — locked early, snapshot-tested
-      Card.tsx
-      Input.tsx
-      Button.tsx
-      IconButton.tsx
-      ScreenHeader.tsx
-      EmptyState.tsx
-      Skeleton.tsx
-      AppDialogSheet.tsx
-      StatTile.tsx
-    reports/                           # section cards live at root
-      StatBar.tsx
-      WeatherStrip.tsx
-      SummarySectionCard.tsx
-      IssuesCard.tsx
-      WorkersCard.tsx
-      MaterialsCard.tsx
-      NextStepsCard.tsx
-      CompletenessCard.tsx
-      ReportView.tsx
-      ReportEditForm.tsx
-      PdfPreviewModal.tsx
-      detail/                          # saved-report detail screen pieces
-        ReportDetailTabBar.tsx
-        ReportActionsMenu.tsx
-        SavedReportSheet.tsx
-        ReportNotesPane.tsx
-        ReportPhotos.tsx
-      generate/                        # generate-report tab pieces
-        GenerateReportInputBar.tsx
-        GenerateReportTabBar.tsx
-        GenerateReportActionRow.tsx
+  components/                          # PRESENTATIONAL ONLY
+    primitives/                        # Card, Button, Input, …
     notes/
       NoteTimeline.tsx
-      VoiceNoteCard.tsx
-      ImageNoteCard.tsx
       TextNoteCard.tsx
-      ThreeDotMenu.tsx
-    account/                           # profile / usage / settings screens' pieces
-    files/                             # file preview + thumbnail helpers
-    skeletons/                         # loading skeletons
-    uploads/                           # upload-queue UI affordances
-    ui/                                # cross-cutting UI utilities
-
-  features/
-    auth/
-      useAuthSession.ts
-      otpFlow.ts
-    voice/
-      useVoiceNotePipeline.ts            # upload → aggregator coordination
-      useInlineRecorder.ts               # idle → recording → uploading state machine
-      InlineVoiceRecorder.tsx            # inline recording UI (replaces modal)
-      VoiceCardShell.tsx                 # voice card wrapper
-      VoiceNoteCard.tsx                  # timeline + saved-report row
-      expoAudioRecorder.ts               # native recorder adapter
-      fixtureRecorder.ts                 # fixture-mode stub recorder
+      PhotoNoteCard.tsx
+      ImageNoteCard.tsx
+      PendingPhotoCard.tsx
+      PhotoBatchGrid.tsx
+      PhotoGridTile.tsx
+      VoiceNoteCard.tsx                # ← lives here, not in features/
+      VoiceCardShell.tsx
+      voiceNoteCardHeader.ts
+      NoteCardHeader.tsx
+      NoteOptionsSheet.tsx
+      NoteOptionsKebab.tsx
     reports/
-      useReportPdfActions.ts
-      useReportGeneration.ts
+      ReportView.tsx
+      ReportEditForm.tsx
+      StatBar.tsx WeatherStrip.tsx SummarySectionCard.tsx
+      IssuesCard.tsx WorkersCard.tsx MaterialsCard.tsx
+      NextStepsCard.tsx CompletenessCard.tsx PdfPreviewModal.tsx
+      detail/                          # saved-report UI pieces
+      generate/                        # generate-report UI pieces
+                                       #   (provider lives in features/generate/)
+    files/  uploads/  account/  skeletons/  ui/
 
-  lib/
-    uploads/
-      queue.ts                           # hand-rolled UploadQueue
-      run-upload.ts                      # presign → PUT → register → note
-      QueueProvider.tsx                  # wires AsyncStorage adapter
-    audio/
-      AudioPlaybackProvider.tsx          # single-playback coordinator
-      GenerateReportProvider.tsx
-    util/
-      useCopyToClipboard.ts
+  features/                            # STATE MACHINES + ADAPTERS
+    voice/
+      InlineVoiceRecorder.tsx
+      useInlineRecorder.ts
+      useVoiceNotePipeline.ts
+      expoAudioRecorder.ts
+      fixtureRecorder.ts
+      pickRecorder.ts
+      recorder-types.ts
+    generate/
+      GenerateReportProvider.tsx       # provider + reducer
 
-  lib/
-    env.ts                             # Zod-validated EXPO_PUBLIC_*
-    date.ts                            # ISO-8601 + PG textual fallback
-    uuid.ts                            # expo-crypto only
-    dialogs/
-      useAppDialogSheet.ts             # the only place Alert is allowed
-    api/
-      client.ts                        # api-contract typed client
-      auth.ts                          # token getter + onUnauthorized callback
-      errors.ts                        # ApiError envelope
-      hooks.ts                         # generated React Query hooks
-      invalidation.ts                  # mutation→queryKey invalidation map
-    auth/
-      session.tsx                      # AuthSessionProvider + useAuthSession
-      storage.ts                       # SecureStore (session) + AsyncStorage (lastPhone)
-    section-icons.ts
-    report-helpers.ts                  # toTitleCase, getItemMeta only
-    mobile-ui.ts                       # getReportStats, getIssueSeverityTone
+  lib/                                 # CROSS-CUTTING (subfolders only)
+    api/  auth/  audio/  camera/  config/  dialogs/  files/  nav/
+    native/  notes/  phone/  projects/  reports/  telemetry/  util/
+    ai/  design-tokens/  dev-fixtures/  uploads/
 
-  tailwind.config.js                   # design tokens
-  global.css
-  app.config.ts
-  babel.config.js
-  metro.config.js
-  .maestro/                            # E2E flows
-  __tests__/
+  tailwind.config.js  global.css  app.config.ts  babel.config.js  metro.config.js
+  .maestro/  __tests__/
 ```
 
 ## Navigation

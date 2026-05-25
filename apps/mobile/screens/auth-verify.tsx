@@ -18,7 +18,7 @@ import { Input } from '../components/primitives/Input';
 import { InlineNotice } from '../components/primitives/InlineNotice';
 import { Logo } from '../components/primitives/Logo';
 import { colors } from '../lib/design-tokens/colors';
-import { cn } from '../lib/utils';
+import { cn } from '../lib/util/utils';
 
 type Props = {
   mode: 'signin' | 'signup';

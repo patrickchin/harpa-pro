@@ -11,7 +11,7 @@ import { Calendar, MoreHorizontal } from 'lucide-react-native';
 import { ScreenHeader } from '@/components/primitives/ScreenHeader';
 import { Button } from '@/components/primitives/Button';
 import { colors } from '@/lib/design-tokens/colors';
-import { formatDate } from '@/lib/date';
+import { formatDate } from '@/lib/util/date';
 import { toTitleCase } from '@harpa/report-core';
 import type { GeneratedSiteReport } from '@harpa/report-core';
 

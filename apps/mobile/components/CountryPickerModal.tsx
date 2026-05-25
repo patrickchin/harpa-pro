@@ -24,9 +24,9 @@ import {
 import { X, Search, Check } from 'lucide-react-native';
 
 import { SafeAreaView } from '@/components/primitives/SafeAreaView';
-import { COUNTRIES, type Country } from '@/lib/countries';
+import { COUNTRIES, type Country } from '@/lib/phone/countries';
 import { colors } from '@/lib/design-tokens/colors';
-import { getSurfaceDepthStyle } from '@/lib/surface-depth';
+import { getSurfaceDepthStyle } from '@/lib/reports/surface-depth';
 
 export interface CountryPickerModalProps {
   visible: boolean;

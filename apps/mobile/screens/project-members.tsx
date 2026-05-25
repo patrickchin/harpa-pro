@@ -30,10 +30,10 @@ import { Input } from '@/components/primitives/Input';
 import { InlineNotice } from '@/components/primitives/InlineNotice';
 import { ScreenHeader } from '@/components/primitives/ScreenHeader';
 import { ProjectMembersSkeleton } from '@/components/skeletons/ProjectMembersSkeleton';
-import { getRemoveMemberDialogCopy } from '@/lib/app-dialog-copy';
+import { getRemoveMemberDialogCopy } from '@/lib/dialogs/app-dialog-copy';
 import { colors } from '@/lib/design-tokens/colors';
-import { useLayoutShiftProbe } from '@/lib/layout-shift-probe';
-import { PROJECT_MEMBERS_LAYOUT } from '@/lib/project-members-layout';
+import { useLayoutShiftProbe } from '@/lib/util/layout-shift-probe';
+import { PROJECT_MEMBERS_LAYOUT } from '@/lib/projects/project-members-layout';
 
 export type MemberRole = 'owner' | 'editor' | 'viewer';
 

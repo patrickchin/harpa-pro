@@ -29,7 +29,7 @@ import { ScreenHeader } from '@/components/primitives/ScreenHeader';
 import {
   saveReportPdf,
   type ExportedReport,
-} from '@/lib/export-report-pdf';
+} from '@/lib/reports/export-report-pdf';
 import { colors } from '@/lib/design-tokens/colors';
 import type { GeneratedSiteReport } from '@harpa/report-core';
 

@@ -27,7 +27,7 @@ import {
   commitCameraSession,
   consumeCameraSession,
   createCameraSession,
-} from '@/lib/camera-session-registry';
+} from '@/lib/camera/camera-session-registry';
 import { useCameraUploads } from './use-camera-uploads';
 
 vi.mock('expo-file-system', () => ({

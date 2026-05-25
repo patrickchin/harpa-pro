@@ -32,7 +32,7 @@ import { AppDialogSheet } from '@/components/primitives/AppDialogSheet';
 import { SafeAreaView } from '@/components/primitives/SafeAreaView';
 import { ScreenHeader } from '@/components/primitives/ScreenHeader';
 import { colors } from '@/lib/design-tokens/colors';
-import { getDeleteDraftDialogCopy } from '@/lib/app-dialog-copy';
+import { getDeleteDraftDialogCopy } from '@/lib/dialogs/app-dialog-copy';
 import { DebugTabPane } from '@/components/reports/generate/DebugTabPane';
 import { EditTabPane } from '@/components/reports/generate/EditTabPane';
 import { GenerateReportActionRow } from '@/components/reports/generate/GenerateReportActionRow';
@@ -42,7 +42,7 @@ import {
   GenerateReportProvider,
   useGenerateReport,
   type GenerateReportProviderProps,
-} from '@/components/reports/generate/GenerateReportProvider';
+} from '@/features/generate/GenerateReportProvider';
 import { GenerateReportTabBar } from '@/components/reports/generate/GenerateReportTabBar';
 import { NotesTabPane } from '@/components/reports/generate/NotesTabPane';
 import { ReportTabPane } from '@/components/reports/generate/ReportTabPane';

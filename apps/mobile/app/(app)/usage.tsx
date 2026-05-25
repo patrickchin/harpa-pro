@@ -15,7 +15,7 @@ import {
   useMeLimitsQuery,
   useMeUsageEventsQuery,
 } from '@/lib/api/hooks';
-import { useRefresh } from '@/lib/use-refresh';
+import { useRefresh } from '@/lib/util/use-refresh';
 import { safeBack } from '@/lib/nav/safe-back';
 
 export default function UsageRoute() {

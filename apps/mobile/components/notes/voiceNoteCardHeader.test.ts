@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { deriveVoiceCardHeader, formatDuration } from './voiceNoteCardHeader';
-import type { NoteEntry } from '@/lib/note-entry';
+import type { NoteEntry } from '@/lib/notes/note-entry';
 
 const base: NoteEntry = {
   id: 'n1',

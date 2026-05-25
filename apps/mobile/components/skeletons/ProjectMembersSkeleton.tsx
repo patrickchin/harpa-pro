@@ -14,8 +14,8 @@
  */
 import { View } from 'react-native';
 import { Skeleton, SkeletonRow } from '@/components/primitives/Skeleton';
-import { useLayoutShiftProbe } from '@/lib/layout-shift-probe';
-import { PROJECT_MEMBERS_LAYOUT } from '@/lib/project-members-layout';
+import { useLayoutShiftProbe } from '@/lib/util/layout-shift-probe';
+import { PROJECT_MEMBERS_LAYOUT } from '@/lib/projects/project-members-layout';
 
 function MemberRowSkeleton({ probeId }: { probeId?: string }) {
   const onLayout = useLayoutShiftProbe(probeId ?? 'project-members:row');

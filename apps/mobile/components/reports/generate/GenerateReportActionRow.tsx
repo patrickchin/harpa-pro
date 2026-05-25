@@ -13,7 +13,7 @@ import { Text, View } from 'react-native';
 import { RotateCcw, Sparkles } from 'lucide-react-native';
 
 import { Button } from '@/components/primitives/Button';
-import { useGenerateReport } from './GenerateReportProvider';
+import { useGenerateReport } from '@/features/generate/GenerateReportProvider';
 import { colors } from '@/lib/design-tokens/colors';
 
 export function GenerateReportActionRow() {

@@ -41,13 +41,13 @@ import {
   isOptimisticNoteId,
 } from '@/lib/api/optimistic';
 import { invalidateAfterFileUpload } from '@/lib/api/invalidation';
-import { useReportBodyAutosave } from '@/lib/use-report-body-autosave';
-import type { NoteEntry } from '@/lib/note-entry';
-import { env } from '@/lib/env';
+import { useReportBodyAutosave } from '@/lib/reports/use-report-body-autosave';
+import type { NoteEntry } from '@/lib/notes/note-entry';
+import { env } from '@/lib/config/env';
 import type { GeneratedSiteReport } from '@harpa/report-core';
 import { reports } from '@harpa/api-contract';
 import { SAMPLE_GENERATED_REPORT } from '@/lib/dev-fixtures/sample-report';
-import { reportBodyToGeneratedReport } from '@/lib/report-body-adapter';
+import { reportBodyToGeneratedReport } from '@/lib/reports/report-body-adapter';
 import { safeBack } from '@/lib/nav/safe-back';
 import { UsageLimitDialog } from '@/components/account/UsageLimitDialog';
 import { usageLimitFromError, type UsageLimitDetails } from '@/lib/api/usage-limit-error';
@@ -56,7 +56,7 @@ import {
   consumeCameraSession,
   createCameraSession,
   findCommittedSessionsForReport,
-} from '@/lib/camera-session-registry';
+} from '@/lib/camera/camera-session-registry';
 import { useCameraUploads } from '@/lib/camera/use-camera-uploads';
 import { pickAndEnqueueGalleryImages } from '@/lib/camera/pick-and-enqueue-gallery-images';
 import { AppHeaderActions } from '@/components/ui/AppHeaderActions';
@@ -276,7 +276,7 @@ export default function GenerateReportRoute() {
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [usageLimitHit, setUsageLimitHit] = useState<UsageLimitDetails | null>(null);
   const [lastGeneration, setLastGeneration] = useState<
-    import('@/components/reports/generate/GenerateReportProvider').GenerationDebug | null
+    import('@/features/generate/GenerateReportProvider').GenerationDebug | null
   >(null);
 
   const generateMutation = useGenerateReportMutation();

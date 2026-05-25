@@ -22,8 +22,8 @@ import {
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
-import { cn } from '@/lib/utils';
-import { getSurfaceDepthStyle, type SurfaceDepth } from '@/lib/surface-depth';
+import { cn } from '@/lib/util/utils';
+import { getSurfaceDepthStyle, type SurfaceDepth } from '@/lib/reports/surface-depth';
 import { colors } from '@/lib/design-tokens/colors';
 
 export type ButtonVariant =

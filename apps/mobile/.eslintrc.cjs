@@ -6,28 +6,28 @@ module.exports = {
   ignorePatterns: ['node_modules', '.expo', 'dist', 'build', 'babel.config.js', 'metro.config.js', 'tailwind.config.js'],
   rules: {
     // Pitfall 5: no non-null assertions on EXPO_PUBLIC_* vars.
-    // Funnel reads through lib/env.ts only.
+    // Funnel reads through lib/config/env.ts only.
     'no-restricted-syntax': [
       'error',
       {
         selector:
           "TSNonNullExpression > MemberExpression[object.object.name='process'][object.property.name='env'][property.name=/^EXPO_PUBLIC_/]",
-        message: 'Do not non-null-assert process.env.EXPO_PUBLIC_*; use lib/env.ts.',
+        message: 'Do not non-null-assert process.env.EXPO_PUBLIC_*; use lib/config/env.ts.',
       },
       {
         selector:
           "MemberExpression[object.object.name='process'][object.property.name='env'][property.name=/^EXPO_PUBLIC_/]",
-        message: 'Read EXPO_PUBLIC_* via lib/env.ts only (Pitfall 5).',
+        message: 'Read EXPO_PUBLIC_* via lib/config/env.ts only (Pitfall 5).',
       },
     ],
   },
   overrides: [
     {
-      // lib/env.ts is the one allowed place to read EXPO_PUBLIC_*.
+      // lib/config/env.ts is the one allowed place to read EXPO_PUBLIC_*.
       // *.test.ts files must mutate process.env.EXPO_PUBLIC_* to exercise
       // the validator's defaults / coercion / failure paths, and to drive
       // env-dependent modules like lib/api/base-url.
-      files: ['lib/env.ts', 'lib/env.test.ts', 'lib/api/base-url.test.ts', 'vitest.setup.ts', 'features/voice/fixtureRecorder.test.ts', 'features/voice/pickRecorder.ts'],
+      files: ['lib/config/env.ts', 'lib/config/env.test.ts', 'lib/api/base-url.test.ts', 'vitest.setup.ts', 'features/voice/fixtureRecorder.test.ts', 'features/voice/pickRecorder.ts'],
       rules: { 'no-restricted-syntax': 'off' },
     },
     {

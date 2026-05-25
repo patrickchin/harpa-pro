@@ -19,7 +19,7 @@
  */
 import { useCallback, useMemo, useSyncExternalStore } from 'react';
 
-import type { NoteEntry } from '@/lib/note-entry';
+import type { NoteEntry } from '@/lib/notes/note-entry';
 import { useOptionalUploadQueueContext } from './QueueProvider';
 import type { UploadJob } from './types';
 

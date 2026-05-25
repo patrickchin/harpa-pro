@@ -27,7 +27,7 @@
 import type { ReactNode } from 'react';
 import { Text, View } from 'react-native';
 
-import { formatCapturedAt } from '@/lib/date';
+import { formatCapturedAt } from '@/lib/util/date';
 
 import { formatDuration } from './voiceNoteCardHeader';
 

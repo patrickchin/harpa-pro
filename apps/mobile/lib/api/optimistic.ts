@@ -33,8 +33,8 @@ import { request, type RequestBody, type ResponseBody } from './client';
 import type { ApiError } from './errors';
 import { runInvalidations } from './invalidation';
 import { useAuthSession } from '@/lib/auth';
-import { isOptimisticReportId as isOptimisticReportIdPure } from '@/lib/project-reports-list';
-import { uuid } from '@/lib/uuid';
+import { isOptimisticReportId as isOptimisticReportIdPure } from '@/lib/projects/project-reports-list';
+import { uuid } from '@/lib/util/uuid';
 
 type NotesPage = ResponseBody<'/reports/{report}/notes', 'get'>;
 type Note = NotesPage['items'][number];

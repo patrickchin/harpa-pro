@@ -11,8 +11,8 @@
  * regression-testing across iOS / Android.
  */
 import { TextInput, View, Text, type TextInputProps } from 'react-native';
-import { cn } from '@/lib/utils';
-import { getSurfaceDepthStyle } from '@/lib/surface-depth';
+import { cn } from '@/lib/util/utils';
+import { getSurfaceDepthStyle } from '@/lib/reports/surface-depth';
 import { colors } from '@/lib/design-tokens/colors';
 
 export interface InputProps extends TextInputProps {

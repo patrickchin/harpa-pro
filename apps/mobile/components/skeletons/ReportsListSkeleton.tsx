@@ -9,7 +9,7 @@
  */
 import { View } from 'react-native';
 import { Skeleton, SkeletonRow } from '@/components/primitives/Skeleton';
-import { useLayoutShiftProbe } from '@/lib/layout-shift-probe';
+import { useLayoutShiftProbe } from '@/lib/util/layout-shift-probe';
 
 /**
  * Row wrapper height + card structure must match the real list:

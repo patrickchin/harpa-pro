@@ -8,7 +8,7 @@
  *   - status enum is { draft | finalized } (not { draft | final })
  *   - no `created_at` snake-case — use `createdAt`
  */
-import { formatDate } from './date';
+import { formatDate } from '../util/date';
 
 /** True iff `id` was minted by `optimisticReportId` in `lib/api/optimistic.ts`. */
 export function isOptimisticReportId(id: string | undefined | null): boolean {

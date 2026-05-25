@@ -10,11 +10,11 @@ import {
   projectInitialData,
   projectInitialDataUpdatedAt,
 } from '@/lib/api/initial-data';
-import { useRefresh } from '@/lib/use-refresh';
-import { useCopyToClipboard } from '@/lib/use-clipboard';
+import { useRefresh } from '@/lib/util/use-refresh';
+import { useCopyToClipboard } from '@/lib/util/use-clipboard';
 import { safeBack } from '@/lib/nav/safe-back';
 import { AppHeaderActions } from '@/components/ui/AppHeaderActions';
-import { env } from '@/lib/env';
+import { env } from '@/lib/config/env';
 
 export default function ProjectHomeRoute() {
   const router = useRouter();

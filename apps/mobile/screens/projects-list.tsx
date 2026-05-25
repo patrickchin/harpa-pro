@@ -16,9 +16,9 @@ import { Card } from '@/components/primitives/Card';
 import { EmptyState } from '@/components/primitives/EmptyState';
 import { ScreenHeader } from '@/components/primitives/ScreenHeader';
 import { ProjectListSkeleton } from '@/components/skeletons/ProjectListSkeleton';
-import { formatDate } from '@/lib/date';
+import { formatDate } from '@/lib/util/date';
 import { colors } from '@/lib/design-tokens/colors';
-import { useLayoutShiftProbe } from '@/lib/layout-shift-probe';
+import { useLayoutShiftProbe } from '@/lib/util/layout-shift-probe';
 
 const ROLE_LABELS: Record<'owner' | 'editor' | 'viewer', string> = {
   owner: 'Owner',

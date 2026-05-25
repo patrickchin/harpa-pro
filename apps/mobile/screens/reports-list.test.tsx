@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import TestRenderer, { act } from 'react-test-renderer';
 import { ReportsList } from './reports-list';
-import type { ReportListItem } from '@/lib/project-reports-list';
+import type { ReportListItem } from '@/lib/projects/project-reports-list';
 
 function render(el: React.ReactElement): TestRenderer.ReactTestRenderer {
   let tree!: TestRenderer.ReactTestRenderer;

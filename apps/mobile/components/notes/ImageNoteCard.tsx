@@ -18,7 +18,7 @@ import { Text, View } from 'react-native';
 import { ImagePreviewModal } from '@/components/files/ImagePreviewModal';
 import { NoteCardHeader } from '@/components/notes/NoteCardHeader';
 import { PhotoGridTile } from '@/components/notes/PhotoGridTile';
-import type { NoteEntry } from '@/lib/note-entry';
+import type { NoteEntry } from '@/lib/notes/note-entry';
 
 export interface ImageNoteCardProps {
   entry: NoteEntry;

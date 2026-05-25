@@ -55,14 +55,14 @@ import {
 import { ReportActionsMenu } from '@/components/reports/detail/ReportActionsMenu';
 import { SavedReportSheet } from '@/components/reports/detail/SavedReportSheet';
 import { ReportDetailSkeleton } from '@/components/skeletons/ReportDetailSkeleton';
-import { useLayoutShiftProbe } from '@/lib/layout-shift-probe';
+import { useLayoutShiftProbe } from '@/lib/util/layout-shift-probe';
 import { colors } from '@/lib/design-tokens/colors';
 import {
   getDeleteReportDialogCopy,
   getUnfinalizeReportDialogCopy,
-} from '@/lib/app-dialog-copy';
+} from '@/lib/dialogs/app-dialog-copy';
 import type { GeneratedSiteReport } from '@harpa/report-core';
-import type { UseReportPdfActionsReturn } from '@/lib/use-report-pdf-actions';
+import type { UseReportPdfActionsReturn } from '@/lib/reports/use-report-pdf-actions';
 
 export type SavedReportStatus = 'draft' | 'finalized';
 

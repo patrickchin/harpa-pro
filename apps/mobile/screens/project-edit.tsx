@@ -16,13 +16,13 @@ import { Input } from '@/components/primitives/Input';
 import { InlineNotice } from '@/components/primitives/InlineNotice';
 import { ScreenHeader } from '@/components/primitives/ScreenHeader';
 import { EditProjectSkeleton } from '@/components/skeletons/EditProjectSkeleton';
-import { useLayoutShiftProbe } from '@/lib/layout-shift-probe';
+import { useLayoutShiftProbe } from '@/lib/util/layout-shift-probe';
 import { colors } from '@/lib/design-tokens/colors';
 import {
   type AppDialogCopy,
   getActionErrorDialogCopy,
   getDeleteProjectDialogCopy,
-} from '@/lib/app-dialog-copy';
+} from '@/lib/dialogs/app-dialog-copy';
 
 export type ProjectEditValues = {
   name: string;

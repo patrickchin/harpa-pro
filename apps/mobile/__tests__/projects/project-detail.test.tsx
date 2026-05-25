@@ -22,11 +22,11 @@ vi.mock('@/lib/api/hooks', () => ({
   useProjectQuery: () => ({ data: null, isLoading: false, refetch: vi.fn() }),
 }));
 
-vi.mock('@/lib/use-refresh', () => ({
+vi.mock('@/lib/util/use-refresh', () => ({
   useRefresh: () => ({ refreshing: false, onRefresh: vi.fn() }),
 }));
 
-vi.mock('@/lib/use-clipboard', () => ({
+vi.mock('@/lib/util/use-clipboard', () => ({
   useCopyToClipboard: () => ({ copiedKey: null, copy: vi.fn() }),
 }));
 

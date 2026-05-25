@@ -24,7 +24,7 @@ import AuthVerify from '@/screens/auth-verify';
 import { useAuthSession } from '@/lib/auth';
 import { useVerifyOtpMutation } from '@/lib/api/hooks';
 import { safeBack } from '@/lib/nav/safe-back';
-import { useOtpResend } from '@/lib/use-otp-resend';
+import { useOtpResend } from '@/lib/auth/use-otp-resend';
 
 export default function SignUpVerifyPage() {
   const router = useRouter();

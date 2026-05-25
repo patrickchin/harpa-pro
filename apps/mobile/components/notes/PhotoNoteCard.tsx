@@ -19,7 +19,7 @@ import { NoteCardHeader } from '@/components/notes/NoteCardHeader';
 import { NoteOptionsKebab } from '@/components/notes/NoteOptionsKebab';
 import { PhotoBatchGrid } from '@/components/notes/PhotoBatchGrid';
 import { PhotoGridTile } from '@/components/notes/PhotoGridTile';
-import type { NoteEntry } from '@/lib/note-entry';
+import type { NoteEntry } from '@/lib/notes/note-entry';
 
 export interface PhotoNoteCardProps {
   entry: NoteEntry;

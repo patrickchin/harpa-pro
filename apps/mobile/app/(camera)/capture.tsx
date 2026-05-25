@@ -23,7 +23,7 @@ import { CameraCapture } from '@/screens/camera-capture';
 import {
   commitCameraSession,
   getCameraSession,
-} from '@/lib/camera-session-registry';
+} from '@/lib/camera/camera-session-registry';
 import { safeBack } from '@/lib/nav/safe-back';
 import {
   readSaveToRollPref,

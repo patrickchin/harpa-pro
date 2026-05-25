@@ -42,7 +42,10 @@ build-time manifest for the readiness check.**
   that the latest filename in `packages/api/migrations/` (captured into the
   image at build time as `MIGRATIONS_REQUIRED_HEAD`) is present in
   `app._migrations`. Fly's HTTP check is moved to `/readyz`. `/healthz`
-  stays as cheap liveness (no DB).
+  stays as cheap liveness (no DB) but now also returns `version` /
+  `gitCommit` / `buildTime` from `GIT_COMMIT` + `BUILD_TIME` build-args
+  so the mobile BuildBadge (and ops dashboards) can show which commit
+  is serving traffic.
 
 ### Alternatives rejected
 

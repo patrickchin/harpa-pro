@@ -160,7 +160,7 @@ exports[`AuthPhone (signin) > matches snapshot at default props 1`] = `
           testID="sign-in-build-badge"
         >
           <rn-Pressable
-            accessibilityLabel="Build v0.0.0+testsha. Long press to copy commit testsha."
+            accessibilityLabel="Build v0.0.0+testsha. api …. Long press to copy commits."
             accessibilityRole="button"
             delayLongPress={400}
             onLongPress={[Function]}
@@ -170,7 +170,7 @@ exports[`AuthPhone (signin) > matches snapshot at default props 1`] = `
               className="text-[10px] text-muted-foreground"
               numberOfLines={1}
             >
-              v0.0.0+testsha …
+              v0.0.0+testsha · api … · …
             </rn-Text>
           </rn-Pressable>
         </rn-View>
@@ -378,7 +378,7 @@ exports[`AuthPhone (signup) > matches snapshot at default props 1`] = `
           testID="sign-up-build-badge"
         >
           <rn-Pressable
-            accessibilityLabel="Build v0.0.0+testsha. Long press to copy commit testsha."
+            accessibilityLabel="Build v0.0.0+testsha. api …. Long press to copy commits."
             accessibilityRole="button"
             delayLongPress={400}
             onLongPress={[Function]}
@@ -388,7 +388,7 @@ exports[`AuthPhone (signup) > matches snapshot at default props 1`] = `
               className="text-[10px] text-muted-foreground"
               numberOfLines={1}
             >
-              v0.0.0+testsha …
+              v0.0.0+testsha · api … · …
             </rn-Text>
           </rn-Pressable>
         </rn-View>

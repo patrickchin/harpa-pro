@@ -95,16 +95,23 @@
 
 ### P4.6 Universal links
 - [x] Serve `apple-app-site-association` from the API origin
-      (`packages/api/src/routes/well-known.ts`, env-driven).
+      (`packages/api/src/routes/well-known.ts`, env-driven). Exempt
+      from the global rate limiter
+      (`middleware/globalRateLimit.ts` SKIP_PREFIXES) so Apple's
+      `swcd` daemon isn't 429'd during install storms.
 - [x] Serve `assetlinks.json` from the API origin
       (`packages/api/src/routes/well-known.ts`, env-driven).
-- [ ] `app.config.ts` `associatedDomains` + Android `intentFilters` wired
-      (currently only the `expo-camera` plugin is configured).
+- [x] `app.config.ts` `associatedDomains` (iOS) + Android
+      `intentFilters` wired for `/p/*` and `/r/*`, variant-aware
+      (`harpa-pro-api.fly.dev` for prod, `harpa-pro-api-dev.fly.dev`
+      for preview/dev). Requires an EAS native rebuild + the AASA /
+      assetlinks env vars set in Doppler.
 - [ ] `/p/:projectSlug` and `/r/:reportSlug` resolve from a cold
       tap on a share link — Maestro flow `share-link-cold-start.yaml`.
 - [ ] Push-notification → deep-link routing (notif payload carries
       canonical URL; tap handler `router.push`es it through the
-      auth gate's deferred-intent stash from P2.6).
+      auth gate's deferred-intent stash from P2.6). Deferred behind
+      `expo-notifications` adoption — separate slice.
 - [ ] Commit: `feat(mobile,api): universal links + push deep-link routing`.
 
 ### P4.7 Bugs sweep

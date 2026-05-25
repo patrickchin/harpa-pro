@@ -9,6 +9,11 @@ journey under test is
 — a ~20–25 min full-app sweep across auth, projects, reports, notes,
 members, and settings.
 
+For the macOS / iOS-Simulator counterpart see
+[`pitfalls-maestro-mac.md`](./pitfalls-maestro-mac.md). When working
+on either platform, read both — many "platform specific" issues turn
+out to have a cross-platform analog.
+
 Symptoms below are what the bash tool / Maestro CLI actually print on
 this host; workarounds are what we ended up shipping in the journey
 and its helpers.

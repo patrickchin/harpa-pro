@@ -12,7 +12,7 @@
 import { ActivityIndicator, Keyboard, Pressable, Text, View } from 'react-native';
 import { Bug, FileText, MessageSquare, Pencil } from 'lucide-react-native';
 
-import { useGenerateReport } from './GenerateReportProvider';
+import { useGenerateReport } from '@/features/generate/GenerateReportProvider';
 import type { TabKey } from './tabs';
 import { colors } from '@/lib/design-tokens/colors';
 import { getGenerateReportTabLabel } from '@/lib/reports/generate-report-ui';

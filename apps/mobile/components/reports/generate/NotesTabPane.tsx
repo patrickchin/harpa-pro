@@ -13,7 +13,7 @@ import { Mic } from 'lucide-react-native';
 
 import { EmptyState } from '@/components/primitives/EmptyState';
 import { NoteTimeline } from '@/components/notes/NoteTimeline';
-import { useGenerateReport } from './GenerateReportProvider';
+import { useGenerateReport } from '@/features/generate/GenerateReportProvider';
 import { colors } from '@/lib/design-tokens/colors';
 
 interface NotesTabPaneProps {

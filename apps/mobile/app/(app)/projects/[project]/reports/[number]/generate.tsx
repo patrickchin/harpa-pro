@@ -276,7 +276,7 @@ export default function GenerateReportRoute() {
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [usageLimitHit, setUsageLimitHit] = useState<UsageLimitDetails | null>(null);
   const [lastGeneration, setLastGeneration] = useState<
-    import('@/components/reports/generate/GenerateReportProvider').GenerationDebug | null
+    import('@/features/generate/GenerateReportProvider').GenerationDebug | null
   >(null);
 
   const generateMutation = useGenerateReportMutation();

@@ -26,7 +26,7 @@ import {
   type ReactNode,
 } from 'react';
 
-import type { TabKey } from './tabs';
+import type { TabKey } from '@/components/reports/generate/tabs';
 import { createEmptyReport } from '@/lib/reports/report-edit-helpers';
 import type { NoteEntry } from '@/lib/notes/note-entry';
 import type { GeneratedSiteReport } from '@harpa/report-core';

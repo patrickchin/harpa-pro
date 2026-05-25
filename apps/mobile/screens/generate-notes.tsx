@@ -42,7 +42,7 @@ import {
   GenerateReportProvider,
   useGenerateReport,
   type GenerateReportProviderProps,
-} from '@/components/reports/generate/GenerateReportProvider';
+} from '@/features/generate/GenerateReportProvider';
 import { GenerateReportTabBar } from '@/components/reports/generate/GenerateReportTabBar';
 import { NotesTabPane } from '@/components/reports/generate/NotesTabPane';
 import { ReportTabPane } from '@/components/reports/generate/ReportTabPane';

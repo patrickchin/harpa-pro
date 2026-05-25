@@ -21,7 +21,7 @@ import {
   getDeleteNoteDialogCopy,
   getFinalizeReportDialogCopy,
 } from '@/lib/dialogs/app-dialog-copy';
-import { useGenerateReport } from './GenerateReportProvider';
+import { useGenerateReport } from '@/features/generate/GenerateReportProvider';
 
 export function GenerateReportDialogs() {
   const { generation, draft, notes, ui, handlePickAttachment, photo, preview } =

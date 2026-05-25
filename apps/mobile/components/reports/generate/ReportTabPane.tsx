@@ -20,7 +20,7 @@ import { InlineNotice } from '@/components/primitives/InlineNotice';
 import { CompletenessCard } from '@/components/reports/CompletenessCard';
 import { ReportView } from '@/components/reports/ReportView';
 import { ReportPhotosFromGallery } from '@/components/reports/generate/ReportPhotosFromGallery';
-import { useGenerateReport } from '@/components/reports/generate/GenerateReportProvider';
+import { useGenerateReport } from '@/features/generate/GenerateReportProvider';
 import { colors } from '@/lib/design-tokens/colors';
 import { createEmptyReport } from '@/lib/reports/report-edit-helpers';
 

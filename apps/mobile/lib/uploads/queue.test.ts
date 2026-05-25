@@ -232,4 +232,27 @@ describe('UploadQueue — Phase F abort + dedupe', () => {
     expect(r1.file.id).toBe(r2.file.id);
     expect(rec.presignCalls).toHaveLength(1);
   });
+
+  it('exposes resolved noteId on the job snapshot (anti-flicker hook contract)', async () => {
+    // Block R2 PUT so we can observe the job snapshot while the
+    // upload is still mid-flight — proving onNoteId fires before
+    // the queue advances to `completed`.
+    const { deps } = makeDeps();
+    const q = createUploadQueue(deps, {});
+    const p = q.enqueue({
+      sourceUri: 'file:///tmp/img.jpg',
+      kind: 'image',
+      filename: 'img.jpg',
+      contentType: 'image/jpeg',
+      sizeBytes: 8,
+      reportId: 'rpt_1',
+    });
+    await p;
+    const snap = q.getJobs();
+    expect(snap).toHaveLength(1);
+    // `createNote` returned `nt_test` (see makeDeps); the snapshot
+    // surfaces it via the new `noteId` field so synthetic UI rows
+    // can adopt the React key needed for a flicker-free transition.
+    expect(snap[0]!.noteId).toBe('nt_test');
+  });
 });

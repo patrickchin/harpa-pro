@@ -97,6 +97,14 @@ export interface RunHandlers {
    *  can persist `thumbnailFileId` mid-job. Optional — fires only when
    *  `input.thumbnail` is set and its pipeline succeeded. */
   onThumbnailFileId?: (fileId: string) => void;
+  /**
+   * Called as soon as the server-side note id is resolved (batch:
+   * after coordinator returns; solo: after createNote returns). Fires
+   * BEFORE `onStatus('completed')` so the UI can adopt the real id
+   * while the synthetic row is still visible — preventing the
+   * pending → saved key churn that causes timeline flicker.
+   */
+  onNoteId?: (noteId: string) => void;
   /** Batch-aware note resolution. When provided, the queue uses this instead of direct createNote. */
   resolveNote?: (file: FileRecord, thumbnailFile?: FileRecord) => Promise<string>;
   /**
@@ -188,6 +196,7 @@ export async function runUploadJob(
       });
       noteId = note.id;
     }
+    if (noteId && handlers.onNoteId) handlers.onNoteId(noteId);
   }
 
   handlers.onStatus('completed');

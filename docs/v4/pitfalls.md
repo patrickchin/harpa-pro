@@ -484,6 +484,51 @@ a loading state. See [`arch-mobile-skeletons.md`](./arch-mobile-skeletons.md).
 
 ---
 
+## Pitfall 18 — Timeline rows flicker on pending → saved transition
+
+**What happened.** Photo notes flickered visibly on upload: the
+pending preview card disappeared and a fresh saved card appeared
+~1 frame later. Root cause was React keys changing across the
+transition. `NoteTimeline` keyed image rows by `entry.id`. While
+the upload was in flight, the synthetic `NoteEntry` had id
+`__batch-<key>` (or `__upload-<jobId>`). When the server confirmed
+the note, the saved row arrived with `not_<id>` — a different key,
+so React unmounted the pending card and mounted a new saved card.
+Solo uploads compounded it because the rendered component also
+changed (`PendingPhotoCard` → `PhotoNoteCard`).
+
+Voice notes did not flicker because their synthetic row adopts the
+real `savedNote.id` once known, and the pending row stays mounted
+until `notes` contains a row with the matching id.
+
+**Rule.** Synthetic timeline entries must adopt a stable React key
+that survives the pending → saved transition. Implementation:
+
+1. Plumb the resolved `noteId` through the upload queue as soon as
+   `createNote` / `resolveNote` returns (during `creating_note`,
+   BEFORE `completed`). Surface it on the job snapshot.
+2. The hook that synthesises `NoteEntry` rows owns a session-lived
+   `noteId → syntheticId` map so server rows that arrive on later
+   refetches still resolve to the original key.
+3. Server `NoteEntry` rows carry a separate `reactKey` field — DO
+   NOT overwrite `id`. Downstream mutations (delete, edit, photo
+   gallery indexing) all key on `entry.id`; only the timeline
+   renderer consumes `reactKey`.
+4. One component must handle the full lifecycle (pending →
+   uploading → failed → saved → mixed). Splitting pending and saved
+   into separate components reintroduces the unmount/remount even
+   when the key is stable, because React swaps component types.
+
+**Test rule.** Pin the contract with a key-stability test that
+renders the timeline with a pending row, swaps it for the saved row
+with the same `reactKey`, and asserts the host node identity is
+preserved (`expect(after).toBe(before)`). Include a negative
+control that changes `reactKey` and verifies a new instance is
+created — this catches a future regression in the timeline's key
+selection. See `apps/mobile/components/notes/NoteTimeline.test.tsx`.
+
+---
+
 ## How we use this doc
 
 When you finish a task and notice the bug shape matches one of these

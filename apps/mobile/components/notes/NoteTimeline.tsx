@@ -21,12 +21,10 @@ import { Text, View } from 'react-native';
 
 import { TextNoteCard } from '@/components/notes/TextNoteCard';
 import { PhotoNoteCard } from '@/components/notes/PhotoNoteCard';
-import { PendingPhotoCard } from '@/components/notes/PendingPhotoCard';
 import { NoteOptionsSheet } from '@/components/notes/NoteOptionsSheet';
 import type { NoteOptionsSheetItem } from '@/components/notes/NoteOptionsSheet';
 import { VoiceNoteCard } from '@/components/notes/VoiceNoteCard';
 import type { NoteEntry } from '@/lib/notes/note-entry';
-import type { UploadJob } from '@/lib/uploads/types';
 
 export interface NoteTimelineProps {
   notes: readonly NoteEntry[];
@@ -132,13 +130,14 @@ export function NoteTimeline({
   return (
     <View className="gap-2" testID="note-timeline">
       {notes.map((entry, index) => {
+        const reactKey = entry.reactKey ?? entry.id ?? `note-${index}`;
         const authorName = entry.authorId
           ? memberNames?.get(entry.authorId)
           : undefined;
         if (entry.source === 'voice') {
           return (
             <VoiceNoteCard
-              key={entry.id ?? `note-${index}`}
+              key={reactKey}
               entry={entry}
               sourceIndex={index}
               authorName={authorName}
@@ -147,56 +146,23 @@ export function NoteTimeline({
             />
           );
         }
-        const isImage = entry.source === 'image';
-        if (isImage) {
-          // Batch photo entry (multiple files or multiple pending)
-          const isBatch =
-            (entry.pendingFiles && entry.pendingFiles.length > 1) ||
-            (entry.files && entry.files.length > 1);
-
-          if (isBatch || !entry.pendingUpload) {
-            // Batch OR resolved single photo → PhotoNoteCard (handles both via PhotoBatchGrid)
-            return (
-              <PhotoNoteCard
-                key={entry.id ?? `note-${index}`}
-                entry={entry}
-                sourceIndex={index}
-                authorName={authorName}
-                onOpen={onOpenPhoto}
-                onOpenOptions={handleOpenOptions}
-              />
-            );
-          }
-
-          // Solo pending upload → legacy PendingPhotoCard
-          const job: UploadJob = {
-            id: entry.pendingUpload.jobId,
-            input: {
-              sourceUri: entry.pendingUpload.sourceUri,
-              kind: 'image',
-              filename: '',
-              contentType: 'image/jpeg',
-              sizeBytes: 0,
-            },
-            status: entry.pendingUpload.status,
-            progress: entry.pendingUpload.progress,
-            attempt: 1,
-            error: entry.pendingUpload.error,
-          };
+        if (entry.source === 'image') {
           return (
-            <PendingPhotoCard
-              key={entry.id ?? `note-${index}`}
-              job={job}
+            <PhotoNoteCard
+              key={reactKey}
+              entry={entry}
               sourceIndex={index}
               authorName={authorName}
-              onRetry={onRetryPhotoUpload}
-              onCancel={onCancelPhotoUpload}
+              onOpen={onOpenPhoto}
+              onOpenOptions={handleOpenOptions}
+              onRetryUpload={onRetryPhotoUpload}
+              onCancelUpload={onCancelPhotoUpload}
             />
           );
         }
         return (
           <TextNoteCard
-            key={entry.id ?? `note-${index}`}
+            key={reactKey}
             entry={entry}
             sourceIndex={index}
             authorName={authorName}

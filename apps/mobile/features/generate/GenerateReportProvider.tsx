@@ -459,8 +459,9 @@ export function GenerateReportProvider({
   // refetch lands the real row — otherwise the card flashes out and
   // back in during that gap.
   // Photo equivalent: image rows in flight via `useFileUpload()` jobs
-  // are surfaced through `usePhotoUploadEntries` so a `PendingPhotoCard`
-  // appears the instant the user picks/snaps a photo (Pitfall 12 — no
+  // are surfaced through `usePhotoUploadEntries` so a `PhotoNoteCard`
+  // appears in its pending state the instant the user picks/snaps a
+  // photo (Pitfall 12 — no
   // Alert.alert, no "did it work?" anxiety). Failed jobs stay visible
   // until the user retries or dismisses.
   // Current user id — wired into synthetic in-flight rows (voice +
@@ -474,8 +475,39 @@ export function GenerateReportProvider({
   const timelineItems = useMemo<readonly NoteEntry[]>(() => {
     const { step, note: savedNote, error, fileId, capture } = voicePipeline.state;
     const photoEntries = photoUploads.entries;
+    const noteIdMap = photoUploads.noteIdToSyntheticId;
+
+    // Rewrite saved server image rows to inherit the synthetic React
+    // key minted by the upload queue. When `noteIdMap.get(n.id)`
+    // returns a synthetic id, that means this server row was created
+    // by an upload we already rendered as a pending card — assigning
+    // its `reactKey` to the synthetic id lets React reuse the
+    // PhotoNoteCard instance instead of unmounting + remounting (no
+    // flicker, no content shift). We keep `n.id` intact so optimistic
+    // mutations, delete handlers, and the photo gallery still resolve
+    // against the canonical server row.
+    const remappedNotes: NoteEntry[] = noteIdMap.size === 0
+      ? (notes as NoteEntry[])
+      : notes.map((n) => {
+          const syntheticId = n.id ? noteIdMap.get(n.id) : undefined;
+          if (!syntheticId || syntheticId === n.id) return n;
+          return { ...n, reactKey: syntheticId };
+        });
+
+    // Drop synthetic photo entries whose resolved noteId is already
+    // present in the saved notes list — mirrors the voice pattern
+    // below. The remapped saved row now carries the synthetic's id
+    // so React picks up where the synthetic left off.
+    const savedNoteIds = new Set<string>();
+    for (const n of notes) if (n.id) savedNoteIds.add(n.id);
+    const filteredPhotoEntries = photoEntries.filter(
+      (e) => !e.noteId || !savedNoteIds.has(e.noteId),
+    );
+
     const baseWithPhotos =
-      photoEntries.length > 0 ? [...notes, ...photoEntries] : notes;
+      filteredPhotoEntries.length > 0
+        ? [...remappedNotes, ...filteredPhotoEntries]
+        : remappedNotes;
     if (step === 'idle' || !reportId) return baseWithPhotos;
     if (savedNote && notes.some((n) => n.id === savedNote.id)) {
       return baseWithPhotos;
@@ -506,7 +538,14 @@ export function GenerateReportProvider({
           durationSec: capture?.durationSec ?? null,
         };
     return [...baseWithPhotos, synthetic];
-  }, [notes, reportId, voicePipeline.state, photoUploads.entries, meId]);
+  }, [
+    notes,
+    reportId,
+    voicePipeline.state,
+    photoUploads.entries,
+    photoUploads.noteIdToSyntheticId,
+    meId,
+  ]);
 
   const handleRetryVoice = useCallback(() => {
     void voicePipeline.retry();

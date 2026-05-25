@@ -20,6 +20,7 @@ import { settingsRoutes } from './routes/settings.js';
 import { waitlistRoutes } from './routes/waitlist.js';
 import { adminRoutes } from './routes/admin.js';
 import { resolverRoutes } from './routes/resolvers.js';
+import { wellKnownRoutes } from './routes/well-known.js';
 import { env } from './env.js';
 import type { ScopedDb } from './db/scope.js';
 
@@ -97,6 +98,7 @@ export function createApp(): OpenAPIHono<AppEnv> {
   app.route('/', readyz);
   app.route('/', authRoutes);
   app.route('/', waitlistRoutes);
+  app.route('/', wellKnownRoutes);
 
   // Authenticated routes
   app.route('/', meRoutes);

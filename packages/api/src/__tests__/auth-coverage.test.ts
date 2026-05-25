@@ -39,6 +39,10 @@ const PUBLIC_ROUTES: ReadonlyArray<{ method: string; path: string }> = [
   // OpenAPI JSON spec — served by @hono/zod-openapi, no auth. Note:
   // `/openapi.json` is also on the global rate-limit SKIP_PREFIXES.
   { method: 'GET', path: '/openapi.json' },
+  // Universal-link manifests (P4.6). Apple/Google fetch these without
+  // auth; missing env collapses to a 404 (see routes/well-known.ts).
+  { method: 'GET', path: '/.well-known/apple-app-site-association' },
+  { method: 'GET', path: '/.well-known/assetlinks.json' },
 ];
 
 function isPublic(method: string, path: string): boolean {

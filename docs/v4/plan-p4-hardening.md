@@ -21,6 +21,16 @@
       `.github/workflows/api-prod.yml`.
 - [x] EAS production profile — `apps/mobile/eas.json`.
 - [x] iOS prebuild for `expo-camera` — `apps/mobile/ios/` checked in.
+- [x] PG pool `statement_timeout=5s` — `packages/api/src/db/client.ts`
+      (P4.2 API half; integration test in
+      `__tests__/db/statement-timeout.integration.test.ts`).
+- [x] Universal-link manifests served from the API origin
+      (`/.well-known/apple-app-site-association` +
+      `/.well-known/assetlinks.json`) — `packages/api/src/routes/well-known.ts`,
+      env-driven (`IOS_APP_ID_PREFIX`, `IOS_BUNDLE_IDS`,
+      `ANDROID_PACKAGE_NAMES`, `ANDROID_CERT_FINGERPRINTS_SHA256`),
+      404 when unconfigured. Mobile `associatedDomains` +
+      Android intent filters still pending in P4.6.
 
 ## Exit gate (`p4-exit-gate.yml`)
 
@@ -50,9 +60,8 @@
 - [ ] Mobile: `FlashList` audit (currently zero usage), `React.memo`
       audit, `useCallback`/`useMemo` on hot paths (per Pitfall 4 v3
       commit `dbaa4c1`).
-- [ ] API: PG `statement_timeout` (5s) on the pool in
-      `packages/api/src/db/client.ts` — currently only `max: 10`
-      is set.
+- [x] API: PG `statement_timeout` (5s) on the pool in
+      `packages/api/src/db/client.ts`.
 - [ ] Cold-start measurement Maestro flow (`.maestro/cold-start.yaml`).
 - [ ] Commit: `perf(mobile,api): cold-start + list virtualization + PG limits`.
 
@@ -85,8 +94,10 @@
 - [ ] Commit: `test(api): k6 load test scenarios`.
 
 ### P4.6 Universal links
-- [ ] Serve `apple-app-site-association` from the API origin.
-- [ ] Serve `assetlinks.json` from the API origin.
+- [x] Serve `apple-app-site-association` from the API origin
+      (`packages/api/src/routes/well-known.ts`, env-driven).
+- [x] Serve `assetlinks.json` from the API origin
+      (`packages/api/src/routes/well-known.ts`, env-driven).
 - [ ] `app.config.ts` `associatedDomains` + Android `intentFilters` wired
       (currently only the `expo-camera` plugin is configured).
 - [ ] `/p/:projectSlug` and `/r/:reportSlug` resolve from a cold

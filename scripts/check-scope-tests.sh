@@ -23,7 +23,7 @@ for f in "$ROUTES_DIR"/*.ts; do
   esac
   # Public/unauthenticated routes don't need scope tests.
   case "$name" in
-    auth|index|health|readyz|public) continue ;;
+    auth|index|health|readyz|public|well-known) continue ;;
   esac
   if ! grep -q "" "$SCOPE_DIR/${name}.scope.test.ts" 2>/dev/null; then
     MISSING+=("$name")

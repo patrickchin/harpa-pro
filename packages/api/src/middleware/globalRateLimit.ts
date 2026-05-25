@@ -24,6 +24,11 @@ const SKIP_PREFIXES: readonly string[] = [
   '/healthz',
   '/readyz',
   '/openapi.json',
+  // Apple swcd and Android PackageManager fetch universal-link manifests
+  // automatically (e.g. on every app install). They hit from many IPs and
+  // don't carry auth headers — exempt to avoid spurious 429s that would
+  // silently break deep-link verification.
+  '/.well-known/',
 ];
 
 function attachHeaders(c: Parameters<MiddlewareHandler<AppEnv>>[0], r: RateLimiterResult): void {

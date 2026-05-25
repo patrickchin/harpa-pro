@@ -69,7 +69,11 @@ tags:
 # iOS XCTest, so just append. Worst case alice's name grows by a few
 # chars across reruns, which doesn't affect any other assertion.
 - inputText: " Edit"
-- hideKeyboard
+# iOS sim: `hideKeyboard` is unreliable (returns error or hangs). Tap
+# above the input bar to dismiss instead — see helpers/sign-in-*.yaml.
+- tapOn:
+    point: "50%,15%"
+- waitForAnimationToEnd
 - tapOn:
     id: "btn-save-profile"
 - extendedWaitUntil:

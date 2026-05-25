@@ -17,28 +17,48 @@ appId: ${MAESTRO_APP_ID}
 #       file: ../helpers/pick-country-us.yaml
 #       env:
 #         COUNTRY_BUTTON_ID: "btn-signup-country-picker"   # or btn-country-picker, etc.
-- tapOn:
-    id: "${COUNTRY_BUTTON_ID}"
-- extendedWaitUntil:
-    visible:
-      id: "country-picker-sheet"
-    timeout: 8000
-# Focus the search field and filter by ISO code "us". The picker
-# matches on country.code case-insensitively, narrowing the list to
-# Australia, Austria, and United States of America. The keyboard
-# pushes the US row below the visible area, so dismiss the keyboard
-# before tapping it.
-- tapOn:
-    id: "country-picker-search"
-- inputText: "us"
-- hideKeyboard
-- extendedWaitUntil:
-    visible:
-      id: "country-option-US"
-    timeout: 8000
-- tapOn:
-    id: "country-option-US"
-- extendedWaitUntil:
-    notVisible:
-      id: "country-picker-sheet"
-    timeout: 8000
+- runFlow:
+    when:
+      notVisible: "+1"
+    commands:
+      - tapOn:
+          id: "${COUNTRY_BUTTON_ID}"
+      - extendedWaitUntil:
+          visible:
+            id: "country-picker-sheet"
+          timeout: 8000
+      # iOS: empty RN TextInputs don't expose their testID via XCTest,
+      # but the placeholder text "Search country or code" is rendered
+      # as a visible Text element we can tap to focus the input.
+      # Android: testID path also works; placeholder fallback is
+      # equally fine.
+      - runFlow:
+          when:
+            visible:
+              id: "country-picker-search"
+          commands:
+            - tapOn:
+                id: "country-picker-search"
+      - runFlow:
+          when:
+            notVisible:
+              id: "country-picker-search"
+          commands:
+            - tapOn:
+                text: "Search country or code"
+      - inputText: "United States"
+      # Dismiss the keyboard by tapping the modal header (stable text,
+      # always above the keyboard). `hideKeyboard` is unreliable on
+      # iOS while the picker is in flux.
+      - tapOn:
+          text: "Select country"
+      - extendedWaitUntil:
+          visible:
+            text: "United States of America"
+          timeout: 5000
+      - tapOn:
+          text: "United States of America"
+      - extendedWaitUntil:
+          notVisible:
+            id: "country-picker-sheet"
+          timeout: 8000

@@ -43,26 +43,24 @@ tags:
       - tapOn:
           text: "Continue"
       - waitForAnimationToEnd
+# The Android dev-launcher menu sheet has a "Tools button" toggle and
+# a "Close" button. On iOS neither appears — the outer `when:` should
+# match a string that is dev-launcher-specific so we don't accidentally
+# tap a stray "Close" element from elsewhere in the iOS hierarchy.
 - runFlow:
     when:
-      visible: "Close"
+      visible: "Tools button"
     commands:
-      # The dev menu sheet's "Tools button" toggle controls a floating
-      # gear-icon overlay that sits in the top-right of every screen and
-      # intercepts taps meant for `btn-open-profile` in the screen header.
-      # Toggle it OFF here so subsequent profile-tab navigation works.
-      # The toggle's Switch sits at the right edge of the "Tools button"
-      # row.
+      - tapOn:
+          text: "Tools button"
+      - waitForAnimationToEnd
       - runFlow:
           when:
-            visible: "Tools button"
+            visible: "Close"
           commands:
             - tapOn:
-                text: "Tools button"
+                text: "Close"
             - waitForAnimationToEnd
-      - tapOn:
-          text: "Close"
-      - waitForAnimationToEnd
 
 # Land on sign-in first (auth gate) then deep-link to sign-up
 - extendedWaitUntil:

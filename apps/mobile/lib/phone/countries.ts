@@ -26,6 +26,7 @@ import {
 import { getLocales } from 'expo-localization';
 import countries from 'i18n-iso-countries';
 import enLocale from 'i18n-iso-countries/langs/en.json';
+import { env } from '@/lib/config/env';
 
 countries.registerLocale(enLocale as Parameters<typeof countries.registerLocale>[0]);
 
@@ -120,6 +121,15 @@ export const DEFAULT_COUNTRY_CODE: CountryCode = 'US';
  * (e.g. "en-US" → "US"), and finally to {@link DEFAULT_COUNTRY_CODE}.
  */
 export function getDefaultCountry(): Country {
+  // In fixture/E2E mode, force US so Maestro flows can type +1 phone
+  // numbers without driving the country picker (the picker's empty
+  // TextInput is not exposed to iOS XCTest's accessibility tree,
+  // which makes filtering by text impossible from Maestro on iOS).
+  if (env.EXPO_PUBLIC_USE_FIXTURES) {
+    const us = COUNTRIES_BY_CODE.get(DEFAULT_COUNTRY_CODE);
+    if (us) return us;
+  }
+
   try {
     const locales = getLocales();
     const regionCode = locales[0]?.regionCode;

@@ -69,6 +69,7 @@ function makeDeps(opts: {
     registerFile: async (presigned) =>
       fakeFile(`fil_${presigned.fileKey.replace(/[^a-z0-9]/gi, '')}`),
     createNote: async () => fakeNote('nt_test'),
+    appendFiles: async () => {},
   };
   return { deps, rec };
 }

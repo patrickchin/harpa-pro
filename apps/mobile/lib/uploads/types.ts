@@ -60,6 +60,8 @@ export interface EnqueueInput {
   reportId?: string;
   /** Optional transcript for voice notes; ignored for other kinds. */
   transcript?: string;
+  /** When set, groups this upload into a batch. First-to-complete creates the note; others append. */
+  batchKey?: string;
   /**
    * Paired thumbnail for image uploads. When present the queue runs a
    * second presign + PUT + registerFile cycle in parallel with the
@@ -100,6 +102,8 @@ export interface UploadJob {
   fileId?: string;
   /** Set once the thumbnail R2 PUT + register completes (image jobs only). */
   thumbnailFileId?: string;
+  /** Batch key this job belongs to (for UI grouping). */
+  batchKey?: string;
   /** Set when status === 'failed'. */
   error?: string;
 }

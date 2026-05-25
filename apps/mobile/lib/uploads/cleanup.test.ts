@@ -30,6 +30,7 @@ function makeDeps() {
     putToR2: vi.fn(async () => undefined),
     registerFile: vi.fn(async () => fakeFile),
     createNote: vi.fn(async () => fakeNote),
+    appendFiles: vi.fn(async () => undefined),
     cleanupSource: vi.fn(),
   };
 }

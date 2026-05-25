@@ -16,7 +16,9 @@
 import type { EnqueueInput, UploadJob, UploadResult } from './types';
 import { MAX_ATTEMPTS, backoffMs } from './types';
 import { runUploadJob, isAbortError, type UploadDeps } from './run-upload';
+import type { FileRecord } from './types';
 import type { PersistedJob, QueuePersistence } from './persistence';
+import { createBatchCoordinator, nextBatchKey } from './batch-coordinator';
 
 let _jobCounter = 0;
 function nextJobId(): string {
@@ -47,6 +49,7 @@ export interface QueueInternals {
 
 export interface UploadQueue {
   enqueue: (input: EnqueueInput) => Promise<UploadResult>;
+  enqueueBatch: (inputs: EnqueueInput[]) => { batchKey: string; promises: Promise<UploadResult>[] };
   retry: (jobId: string) => Promise<UploadResult>;
   getJobs: () => UploadJob[];
   subscribe: (listener: () => void) => () => void;
@@ -59,6 +62,8 @@ interface InternalJob extends UploadJob {
   reject: (err: Error) => void;
   /** Per-job abort controller. Recreated when retrying a failed job. */
   controller: AbortController;
+  /** Batch key carried from input for coordinator lookup. */
+  batchKey?: string;
 }
 
 export function createUploadQueue(
@@ -67,6 +72,7 @@ export function createUploadQueue(
 ): UploadQueue {
   const jobs: InternalJob[] = [];
   const listeners = new Set<() => void>();
+  const batchCoord = createBatchCoordinator();
   let running = false;
   let cachedSnapshot: UploadJob[] = [];
   let snapshotDirty = true;
@@ -104,6 +110,7 @@ export function createUploadQueue(
       attempt: j.attempt,
       fileId: j.fileId,
       thumbnailFileId: j.thumbnailFileId,
+      batchKey: j.batchKey,
       error: j.error,
     }));
     snapshotDirty = false;
@@ -129,6 +136,32 @@ export function createUploadQueue(
 
   async function processJob(job: InternalJob): Promise<void> {
     try {
+      const resolveNote = job.batchKey
+        ? async (file: FileRecord, thumbnailFile?: FileRecord) => {
+            return batchCoord.resolveNoteForJob(
+              job.id,
+              async () => {
+                const note = await deps.createNote({
+                  reportId: job.input.reportId!,
+                  input: job.input,
+                  file,
+                  thumbnailFile,
+                  signal: job.controller.signal,
+                });
+                return note.id;
+              },
+              async (noteId: string) => {
+                await deps.appendFiles({
+                  noteId,
+                  file,
+                  thumbnailFile,
+                  signal: job.controller.signal,
+                });
+              },
+            );
+          }
+        : undefined;
+
       const result = await runUploadJob(job.input, deps, {
         signal: job.controller.signal,
         onStatus: (status) => {
@@ -143,6 +176,7 @@ export function createUploadQueue(
           job.thumbnailFileId = fileId;
           notify();
         },
+        resolveNote,
       });
       job.fileId = result.file.id;
       if (result.thumbnailFile) {
@@ -241,6 +275,7 @@ export function createUploadQueue(
         status: 'pending',
         progress: 0,
         attempt: 1,
+        batchKey: input.batchKey,
         resolve,
         reject,
         controller: new AbortController(),
@@ -249,6 +284,38 @@ export function createUploadQueue(
       notify();
       void drive();
     });
+  }
+
+  function enqueueBatch(inputs: EnqueueInput[]): { batchKey: string; promises: Promise<UploadResult>[] } {
+    if (inputs.length === 0) return { batchKey: '', promises: [] };
+    const batchKey = nextBatchKey();
+    const jobIds: string[] = [];
+    const promises: Promise<UploadResult>[] = [];
+
+    for (const input of inputs) {
+      const tagged = { ...input, batchKey };
+      const promise = new Promise<UploadResult>((resolve, reject) => {
+        const job: InternalJob = {
+          id: nextJobId(),
+          input: tagged,
+          status: 'pending',
+          progress: 0,
+          attempt: 1,
+          batchKey,
+          resolve,
+          reject,
+          controller: new AbortController(),
+        };
+        jobs.push(job);
+        jobIds.push(job.id);
+      });
+      promises.push(promise);
+    }
+
+    batchCoord.registerBatch(jobIds, inputs[0]!.reportId!);
+    notify();
+    void drive();
+    return { batchKey, promises };
   }
 
   function retry(jobId: string): Promise<UploadResult> {
@@ -340,6 +407,7 @@ export function createUploadQueue(
 
   return {
     enqueue,
+    enqueueBatch,
     retry,
     getJobs: snapshot,
     subscribe(listener: () => void): () => void {

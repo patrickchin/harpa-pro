@@ -66,6 +66,12 @@ export interface UploadDeps {
     thumbnailFile?: FileRecord;
     signal?: AbortSignal;
   }) => Promise<NoteRecord>;
+  appendFiles: (args: {
+    noteId: string;
+    file: FileRecord;
+    thumbnailFile?: FileRecord;
+    signal?: AbortSignal;
+  }) => Promise<void>;
   /**
    * Best-effort source-URI cleanup after a job reaches `completed`.
    * Called for camera/gallery uploads where the input file lives in a
@@ -91,6 +97,8 @@ export interface RunHandlers {
    *  can persist `thumbnailFileId` mid-job. Optional — fires only when
    *  `input.thumbnail` is set and its pipeline succeeded. */
   onThumbnailFileId?: (fileId: string) => void;
+  /** Batch-aware note resolution. When provided, the queue uses this instead of direct createNote. */
+  resolveNote?: (file: FileRecord, thumbnailFile?: FileRecord) => Promise<string>;
   /**
    * Signal observed at every pipeline boundary. When aborted,
    * `runUploadJob` throws an `AbortError` rather than advancing.
@@ -165,14 +173,21 @@ export async function runUploadJob(
   if (input.reportId) {
     checkAborted(signal);
     handlers.onStatus('creating_note');
-    const note = await deps.createNote({
-      reportId: input.reportId,
-      input,
-      file,
-      thumbnailFile: thumbnailFile ?? undefined,
-      signal,
-    });
-    noteId = note.id;
+
+    if (input.batchKey && handlers.resolveNote) {
+      // Batch mode: coordinator decides create vs append
+      noteId = await handlers.resolveNote(file, thumbnailFile ?? undefined);
+    } else {
+      // Solo mode: always create
+      const note = await deps.createNote({
+        reportId: input.reportId,
+        input,
+        file,
+        thumbnailFile: thumbnailFile ?? undefined,
+        signal,
+      });
+      noteId = note.id;
+    }
   }
 
   handlers.onStatus('completed');
@@ -384,6 +399,26 @@ async function defaultCreateNote(args: {
   });
 }
 
+async function defaultAppendFiles(args: {
+  noteId: string;
+  file: FileRecord;
+  thumbnailFile?: FileRecord;
+  signal?: AbortSignal;
+}): Promise<void> {
+  // Route added by the batch-notes API feature; cast needed until the
+  // contract is regenerated with the new endpoint.
+  await (request as Function)('/notes/{note}/files', 'post', {
+    params: { note: args.noteId },
+    body: {
+      files: [{
+        fileId: args.file.id,
+        thumbnailFileId: args.thumbnailFile?.id ?? null,
+      }],
+    },
+    signal: args.signal,
+  });
+}
+
 async function defaultCleanupSource(uri: string): Promise<void> {
   // Best-effort: temp/cache files we wrote (camera capture, processed
   // gallery copy) live under `${cacheDirectory}` and accumulate until
@@ -400,5 +435,6 @@ export const defaultUploadDeps: UploadDeps = {
   putToR2: defaultPutToR2,
   registerFile: defaultRegisterFile,
   createNote: defaultCreateNote,
+  appendFiles: defaultAppendFiles,
   cleanupSource: defaultCleanupSource,
 };

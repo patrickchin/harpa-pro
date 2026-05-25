@@ -27,6 +27,8 @@ tags:
 
 # --- Sign-up bob via deep link ---------------------------------------------
 - openLink: harpa://sign-up/phone
+- runFlow:
+    file: ../helpers/dismiss-open-dialog.yaml
 - extendedWaitUntil:
     visible:
       id: "input-signup-phone"

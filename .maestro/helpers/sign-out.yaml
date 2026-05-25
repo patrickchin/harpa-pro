@@ -10,17 +10,37 @@ appId: ${MAESTRO_APP_ID}
 #
 # Usage:
 #   - runFlow: .maestro/helpers/sign-out.yaml
+
+# Defensive: if the Expo dev-menu sheet is somehow already open
+# (iOS shake gesture quirks during the run), close it first.
+- runFlow:
+    when:
+      visible: "Reload"
+    commands:
+      - tapOn:
+          text: "Close"
+      - waitForAnimationToEnd:
+          timeout: 3000
 - tapOn:
     id: "btn-open-profile"
 # On Android dev builds the floating "Tools" overlay button sits at the
-# same top-right corner as `btn-open-profile`. Tapping `btn-open-profile`
-# sometimes lands on the Tools button instead and pops the Expo
-# dev-menu bottom sheet (which obscures the profile screen). Dismiss it
-# if it's there and re-tap. On iOS or when the overlay isn't visible the
-# runFlow skips and the canonical path continues.
+# same top-right corner as `btn-open-profile`, and on iOS the expo
+# dev-menu trigger sits there too. Tapping `btn-open-profile` sometimes
+# lands on the dev-menu instead (Android: "Tools button"; iOS:
+# Reload/Go home sheet with Close X). Dismiss it if it's there and
+# re-tap.
 - runFlow:
     when:
       visible: "Tools button"
+    commands:
+      - tapOn:
+          text: "Close"
+      - waitForAnimationToEnd
+      - tapOn:
+          id: "btn-open-profile"
+- runFlow:
+    when:
+      visible: "Reload"
     commands:
       - tapOn:
           text: "Close"

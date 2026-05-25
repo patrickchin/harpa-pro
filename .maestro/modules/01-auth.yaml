@@ -62,6 +62,65 @@ tags:
                 text: "Close"
             - waitForAnimationToEnd
 
+# iOS system dialog: after `clearState: true`, the first `openLink` of
+# the day to `exp+harpa-pro-v4://...` triggers an "Open in 'Harpa Pro
+# Dev'?" confirm sheet. Helper retries optional taps to ride out iOS
+# render delay. No-op on Android / iOS after first dismissal.
+- runFlow:
+    file: ../helpers/dismiss-open-dialog.yaml
+
+# After the Open dialog is dismissed, the iOS dev-launcher first-run
+# sheet ("This is the developer menu... Continue") appears
+# asynchronously and overlays the sign-in screen. Tapping Continue on
+# iOS leaves the actual dev menu (Reload / Go home / tool list) open,
+# which has its own "Close" X button at the top-right.  Stagger a few
+# optional Continue+Close gates to ride out the iOS render delay. On
+# subsequent runs every gate skips.
+- runFlow:
+    when:
+      visible: "Continue"
+    commands:
+      - tapOn:
+          text: "Continue"
+      - waitForAnimationToEnd:
+          timeout: 5000
+      - runFlow:
+          when:
+            visible: "Close"
+          commands:
+            - tapOn:
+                text: "Close"
+            - waitForAnimationToEnd:
+                timeout: 5000
+- waitForAnimationToEnd:
+    timeout: 3000
+- runFlow:
+    when:
+      visible: "Close"
+    commands:
+      - tapOn:
+          text: "Close"
+      - waitForAnimationToEnd:
+          timeout: 5000
+- waitForAnimationToEnd:
+    timeout: 3000
+- runFlow:
+    when:
+      visible: "Continue"
+    commands:
+      - tapOn:
+          text: "Continue"
+      - waitForAnimationToEnd:
+          timeout: 5000
+      - runFlow:
+          when:
+            visible: "Close"
+          commands:
+            - tapOn:
+                text: "Close"
+            - waitForAnimationToEnd:
+                timeout: 5000
+
 # Land on sign-in first (auth gate) then deep-link to sign-up
 - extendedWaitUntil:
     visible:
@@ -83,6 +142,8 @@ tags:
 
 # --- Sign-up alice (fresh account via seed) --------------------------------
 - openLink: harpa://sign-up/phone
+- runFlow:
+    file: ../helpers/dismiss-open-dialog.yaml
 - extendedWaitUntil:
     visible:
       id: "input-signup-phone"

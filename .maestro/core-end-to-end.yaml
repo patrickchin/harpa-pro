@@ -82,6 +82,60 @@ tags:
           text: "Close"
       - waitForAnimationToEnd
 
+# iOS system dialog: "Open in 'Harpa Pro Dev'?" — appears a beat after
+# openLink. Helper retries optional taps to ride out iOS render delay.
+- runFlow:
+    file: helpers/dismiss-open-dialog.yaml
+
+# Late dev-launcher sheet on iOS (appears after the Open dialog).
+# Tapping Continue on iOS leaves the actual dev menu (Reload / Go
+# home / tool list) open with a "Close" X — tap that too. Same
+# staggered pattern as above.
+- runFlow:
+    when:
+      visible: "Continue"
+    commands:
+      - tapOn:
+          text: "Continue"
+      - waitForAnimationToEnd:
+          timeout: 5000
+      - runFlow:
+          when:
+            visible: "Close"
+          commands:
+            - tapOn:
+                text: "Close"
+            - waitForAnimationToEnd:
+                timeout: 5000
+- waitForAnimationToEnd:
+    timeout: 3000
+- runFlow:
+    when:
+      visible: "Close"
+    commands:
+      - tapOn:
+          text: "Close"
+      - waitForAnimationToEnd:
+          timeout: 5000
+- waitForAnimationToEnd:
+    timeout: 3000
+- runFlow:
+    when:
+      visible: "Continue"
+    commands:
+      - tapOn:
+          text: "Continue"
+      - waitForAnimationToEnd:
+          timeout: 5000
+      - runFlow:
+          when:
+            visible: "Close"
+          commands:
+            - tapOn:
+                text: "Close"
+            - waitForAnimationToEnd:
+                timeout: 5000
+
 # Let the auth gate land us on sign-in first (more reliable than a
 # bare deep link to /sign-up immediately after a cold-launch race).
 - extendedWaitUntil:
@@ -91,6 +145,8 @@ tags:
 
 # --- Sign-up (fresh account) -------------------------------------------------
 - openLink: harpa://sign-up/phone
+- runFlow:
+    file: helpers/dismiss-open-dialog.yaml
 - extendedWaitUntil:
     visible:
       id: "input-signup-phone"

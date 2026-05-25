@@ -56,8 +56,7 @@ tags:
 - tapOn:
     id: "input-note"
 - inputText: "Structural steel inspection complete. All welds within spec."
-- tapOn:
-    point: "50%,15%"
+- hideKeyboard
 - tapOn:
     id: "btn-add-note"
 - extendedWaitUntil:
@@ -71,8 +70,7 @@ tags:
 # is more reliable than hideKeyboard, which races with sheet/keyboard
 # animations on iOS. Without this, btn-generate-report tap finds the
 # button but the tap lands on the obscuring keyboard.
-- tapOn:
-    point: "50%,15%"
+- hideKeyboard
 - waitForAnimationToEnd
 
 # --- Generate the report ---------------------------------------------------

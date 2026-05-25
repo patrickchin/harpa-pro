@@ -36,7 +36,10 @@ tags:
 - openLink: harpa://sign-in/phone
 - assertVisible:
     id: "input-phone"
-- runFlow: helpers/sign-in-alice.yaml
+- runFlow:
+    file: helpers/sign-in.yaml
+    env:
+      PHONE: "5550000001"
 
 # --- Create a project and a draft report ----------------------------------
 - tapOn:
@@ -48,8 +51,7 @@ tags:
 - tapOn:
     id: "input-project-name"
 - inputText: "Limit Hit Test"
-- tapOn:
-    point: "50%,15%"
+- hideKeyboard
 - tapOn:
     id: "btn-create-project"
 - extendedWaitUntil:
@@ -73,8 +75,7 @@ tags:
 - tapOn:
     id: "input-note"
 - inputText: "Usage-limit regression note."
-- tapOn:
-    point: "50%,15%"
+- hideKeyboard
 - tapOn:
     id: "btn-add-note"
 - extendedWaitUntil:

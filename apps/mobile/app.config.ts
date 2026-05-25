@@ -71,6 +71,10 @@ const config: ExpoConfig = {
   web: { favicon: './assets/favicon.png' },
   plugins: [
     'expo-router',
+    // Permanently hide the floating gear-icon dev-menu button on all builds.
+    // Requires a native rebuild to take effect. Resolves FAB-overlap issues in
+    // E2E tests and avoids Maestro workarounds. (expo-dev-launcher ≥55.0.30)
+    ['expo-dev-client', { toolsButton: false }],
     [
       'expo-camera',
       {

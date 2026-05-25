@@ -40,8 +40,7 @@ tags:
 - tapOn:
     id: "input-signup-phone"
 - inputText: "5550000002"
-- tapOn:
-    point: "50%,15%"
+- hideKeyboard
 - tapOn:
     id: "btn-signup-send-code"
 - extendedWaitUntil:
@@ -51,8 +50,7 @@ tags:
 - tapOn:
     id: "input-signup-otp"
 - inputText: "000000"
-- tapOn:
-    point: "50%,15%"
+- hideKeyboard
 - tapOn:
     id: "btn-signup-verify"
 
@@ -67,8 +65,7 @@ tags:
 - tapOn:
     id: "input-onboarding-company"
 - inputText: "E2E Corp"
-- tapOn:
-    point: "50%,15%"
+- hideKeyboard
 - tapOn:
     id: "btn-onboarding-submit"
 - extendedWaitUntil:
@@ -80,4 +77,7 @@ tags:
 - runFlow: ../helpers/sign-out.yaml
 
 # --- Sign back in as alice (ready for module 02) ---------------------------
-- runFlow: ../helpers/sign-in-alice.yaml
+- runFlow:
+    file: ../helpers/sign-in.yaml
+    env:
+      PHONE: "5550000001"

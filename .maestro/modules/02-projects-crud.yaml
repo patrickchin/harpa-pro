@@ -30,8 +30,7 @@ tags:
 - tapOn:
     id: "input-project-address"
 - inputText: "1 Regression Way"
-- tapOn:
-    point: "50%,15%"
+- hideKeyboard
 - tapOn:
     id: "btn-save-project"
 

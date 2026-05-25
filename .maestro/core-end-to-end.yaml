@@ -51,15 +51,8 @@ tags:
 # run) obscures it; Maestro treats obscured elements as not-visible.
 - waitForAnimationToEnd:
     timeout: 20000
-# The Android dev-launcher first-run sheet ("This is the developer menu")
-# overlays the sign-in screen and obscures `input-phone`. Wait for the
-# primary "Continue" button before dismissing it. The sheet also has a
-# "Tools button" toggle that controls a floating gear-icon overlay in
-# the top-right of every screen — that overlay intercepts taps meant
-# for `btn-open-profile` in the screen header, so we toggle it OFF
-# before closing the sheet. On iOS (and on subsequent Android runs
-# after the sheet has been dismissed once) the sheet never appears and
-# the optional blocks skip.
+# Dismiss the Android/iOS dev-launcher first-run sheet ("This is the
+# developer menu"). On subsequent runs, every gate skips.
 - runFlow:
     when:
       visible: "Continue"
@@ -71,70 +64,14 @@ tags:
     when:
       visible: "Close"
     commands:
-      - runFlow:
-          when:
-            visible: "Tools button"
-          commands:
-            - tapOn:
-                text: "Tools button"
-            - waitForAnimationToEnd
       - tapOn:
           text: "Close"
       - waitForAnimationToEnd
 
 # iOS system dialog: "Open in 'Harpa Pro Dev'?" — appears a beat after
-# openLink. Helper retries optional taps to ride out iOS render delay.
+# openLink. No-op on Android and on iOS after first dismissal.
 - runFlow:
     file: helpers/dismiss-open-dialog.yaml
-
-# Late dev-launcher sheet on iOS (appears after the Open dialog).
-# Tapping Continue on iOS leaves the actual dev menu (Reload / Go
-# home / tool list) open with a "Close" X — tap that too. Same
-# staggered pattern as above.
-- runFlow:
-    when:
-      visible: "Continue"
-    commands:
-      - tapOn:
-          text: "Continue"
-      - waitForAnimationToEnd:
-          timeout: 5000
-      - runFlow:
-          when:
-            visible: "Close"
-          commands:
-            - tapOn:
-                text: "Close"
-            - waitForAnimationToEnd:
-                timeout: 5000
-- waitForAnimationToEnd:
-    timeout: 3000
-- runFlow:
-    when:
-      visible: "Close"
-    commands:
-      - tapOn:
-          text: "Close"
-      - waitForAnimationToEnd:
-          timeout: 5000
-- waitForAnimationToEnd:
-    timeout: 3000
-- runFlow:
-    when:
-      visible: "Continue"
-    commands:
-      - tapOn:
-          text: "Continue"
-      - waitForAnimationToEnd:
-          timeout: 5000
-      - runFlow:
-          when:
-            visible: "Close"
-          commands:
-            - tapOn:
-                text: "Close"
-            - waitForAnimationToEnd:
-                timeout: 5000
 
 # Let the auth gate land us on sign-in first (more reliable than a
 # bare deep link to /sign-up immediately after a cold-launch race).

@@ -31,11 +31,9 @@ tags:
     timeout: 20000
 
 # The Android dev-launcher first-run sheet ("This is the developer menu")
-# overlays the sign-in screen and obscures `input-phone`. The sheet
-# appears asynchronously after the bundle loads, so we explicitly wait
-# for its primary "Continue" button before dismissing it. On iOS (and on
-# subsequent Android runs after the sheet has been dismissed once) the
-# sheet never appears and the optional block skips.
+# overlays the sign-in screen and obscures `input-phone`. Wait for its
+# "Continue" button before dismissing it; close any dev menu it opens.
+# On iOS and on subsequent Android runs, these gates are no-ops.
 - runFlow:
     when:
       visible: "Continue"
@@ -43,102 +41,25 @@ tags:
       - tapOn:
           text: "Continue"
       - waitForAnimationToEnd
-# The Android dev-launcher menu sheet has a "Tools button" toggle and
-# a "Close" button. On iOS neither appears — the outer `when:` should
-# match a string that is dev-launcher-specific so we don't accidentally
-# tap a stray "Close" element from elsewhere in the iOS hierarchy.
-- runFlow:
-    when:
-      visible: "Tools button"
-    commands:
-      - tapOn:
-          text: "Tools button"
-      - waitForAnimationToEnd
-      - runFlow:
-          when:
-            visible: "Close"
-          commands:
-            - tapOn:
-                text: "Close"
-            - waitForAnimationToEnd
-
-# iOS system dialog: after `clearState: true`, the first `openLink` of
-# the day to `exp+harpa-pro-v4://...` triggers an "Open in 'Harpa Pro
-# Dev'?" confirm sheet. Helper retries optional taps to ride out iOS
-# render delay. No-op on Android / iOS after first dismissal.
-- runFlow:
-    file: ../helpers/dismiss-open-dialog.yaml
-
-# After the Open dialog is dismissed, the iOS dev-launcher first-run
-# sheet ("This is the developer menu... Continue") appears
-# asynchronously and overlays the sign-in screen. Tapping Continue on
-# iOS leaves the actual dev menu (Reload / Go home / tool list) open,
-# which has its own "Close" X button at the top-right.  Stagger a few
-# optional Continue+Close gates to ride out the iOS render delay. On
-# subsequent runs every gate skips.
-- runFlow:
-    when:
-      visible: "Continue"
-    commands:
-      - tapOn:
-          text: "Continue"
-      - waitForAnimationToEnd:
-          timeout: 5000
-      - runFlow:
-          when:
-            visible: "Close"
-          commands:
-            - tapOn:
-                text: "Close"
-            - waitForAnimationToEnd:
-                timeout: 5000
-- waitForAnimationToEnd:
-    timeout: 3000
 - runFlow:
     when:
       visible: "Close"
     commands:
       - tapOn:
           text: "Close"
-      - waitForAnimationToEnd:
-          timeout: 5000
-- waitForAnimationToEnd:
-    timeout: 3000
+      - waitForAnimationToEnd
+
+# iOS system dialog: after `clearState: true`, the first `openLink` of
+# the day to `exp+harpa-pro-v4://...` triggers an "Open in 'Harpa Pro
+# Dev'?" confirm sheet. No-op on Android / iOS after first dismissal.
 - runFlow:
-    when:
-      visible: "Continue"
-    commands:
-      - tapOn:
-          text: "Continue"
-      - waitForAnimationToEnd:
-          timeout: 5000
-      - runFlow:
-          when:
-            visible: "Close"
-          commands:
-            - tapOn:
-                text: "Close"
-            - waitForAnimationToEnd:
-                timeout: 5000
+    file: ../helpers/dismiss-open-dialog.yaml
 
 # Land on sign-in first (auth gate) then deep-link to sign-up
 - extendedWaitUntil:
     visible:
       id: "input-phone"
     timeout: 30000
-
-# Move the expo-dev-menu floating "Tools" button (FAB) to bottom-left
-# so it doesn't intercept taps on `btn-open-profile` (top-right) and
-# other top-right UI elements throughout the journey. The FAB stores
-# its position in UserDefaults and persists across subsequent modules
-# in this run (only module 01 uses `clearState`, which wipes the
-# position). On Android the FAB doesn't exist so the swipe is a
-# harmless screen swipe.
-- swipe:
-    start: "92%,28%"
-    end: "8%,88%"
-    duration: 1500
-- waitForAnimationToEnd
 
 # --- Sign-up alice (fresh account via seed) --------------------------------
 - openLink: harpa://sign-up/phone
@@ -157,8 +78,7 @@ tags:
 - tapOn:
     id: "input-signup-phone"
 - inputText: "5550000001"
-- tapOn:
-    point: "50%,15%"
+- hideKeyboard
 - tapOn:
     id: "btn-signup-send-code"
 - extendedWaitUntil:
@@ -168,8 +88,7 @@ tags:
 - tapOn:
     id: "input-signup-otp"
 - inputText: "000000"
-- tapOn:
-    point: "50%,15%"
+- hideKeyboard
 - tapOn:
     id: "btn-signup-verify"
 
@@ -187,8 +106,7 @@ tags:
       - tapOn:
           id: "input-onboarding-company"
       - inputText: "E2E Corp"
-      - tapOn:
-          point: "50%,15%"
+      - hideKeyboard
       - tapOn:
           id: "btn-onboarding-submit"
 
@@ -202,6 +120,9 @@ tags:
 - runFlow: ../helpers/sign-out.yaml
 
 # --- Sign-in (round-trip) --------------------------------------------------
-- runFlow: ../helpers/sign-in-alice.yaml
+- runFlow:
+    file: ../helpers/sign-in.yaml
+    env:
+      PHONE: "5550000001"
 - assertVisible:
     id: "btn-new-project"

@@ -53,7 +53,10 @@ tags:
 
 # --- Switch to bob — bob no longer sees the project -----------------------
 - runFlow: ../helpers/sign-out.yaml
-- runFlow: ../helpers/sign-in-bob.yaml
+- runFlow:
+    file: ../helpers/sign-in.yaml
+    env:
+      PHONE: "5550000002"
 
 # Bob's project list should be empty (no project row for alice's project)
 - assertNotVisible:
@@ -61,5 +64,8 @@ tags:
 
 # --- Switch back to alice ---------------------------------------------------
 - runFlow: ../helpers/sign-out.yaml
-- runFlow: ../helpers/sign-in-alice.yaml
+- runFlow:
+    file: ../helpers/sign-in.yaml
+    env:
+      PHONE: "5550000001"
 - runFlow: ../helpers/open-project.yaml

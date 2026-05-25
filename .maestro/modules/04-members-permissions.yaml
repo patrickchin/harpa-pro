@@ -19,7 +19,10 @@ tags:
 
 # --- Switch to bob ---------------------------------------------------------
 - runFlow: ../helpers/sign-out.yaml
-- runFlow: ../helpers/sign-in-bob.yaml
+- runFlow:
+    file: ../helpers/sign-in.yaml
+    env:
+      PHONE: "5550000002"
 
 # --- Bob sees the project ---------------------------------------------------
 - assertVisible:
@@ -58,7 +61,10 @@ tags:
 - tapOn:
     id: "btn-back"
 - runFlow: ../helpers/sign-out.yaml
-- runFlow: ../helpers/sign-in-alice.yaml
+- runFlow:
+    file: ../helpers/sign-in.yaml
+    env:
+      PHONE: "5550000001"
 
 # --- Alice navigates back to project home ----------------------------------
 - runFlow: ../helpers/open-project.yaml

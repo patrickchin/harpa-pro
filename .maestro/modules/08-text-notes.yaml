@@ -44,8 +44,7 @@ tags:
 - tapOn:
     id: "input-note"
 - inputText: "Foundation inspection complete. No cracks observed."
-- tapOn:
-    point: "50%,15%"
+- hideKeyboard
 - tapOn:
     id: "btn-add-note"
 

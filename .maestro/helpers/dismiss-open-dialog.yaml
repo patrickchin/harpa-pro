@@ -1,38 +1,14 @@
 appId: ${MAESTRO_APP_ID}
 ---
 # Dismiss the iOS "Open in 'Harpa Pro Dev'?" system confirm sheet that
-# appears asynchronously after `openLink` calls to custom URL schemes.
-# Staggered taps ride out the iOS render delay. On Android, and on iOS
-# after the dialog has already been dismissed for this scheme, every
-# gate is a no-op.
-- runFlow:
-    when:
-      visible:
-        text: "Open"
-    commands:
-      - tapOn:
-          text: "Open"
-      - waitForAnimationToEnd:
-          timeout: 5000
+# appears asynchronously after `openLink` to a custom URL scheme (one-time
+# per scheme per device install). No-op on Android and on iOS after the
+# scheme has been approved once.
 - waitForAnimationToEnd:
     timeout: 3000
 - runFlow:
     when:
-      visible:
-        text: "Open"
+      visible: "Open"
     commands:
-      - tapOn:
-          text: "Open"
-      - waitForAnimationToEnd:
-          timeout: 5000
-- waitForAnimationToEnd:
-    timeout: 2000
-- runFlow:
-    when:
-      visible:
-        text: "Open"
-    commands:
-      - tapOn:
-          text: "Open"
-      - waitForAnimationToEnd:
-          timeout: 5000
+      - tapOn: "Open"
+      - waitForAnimationToEnd

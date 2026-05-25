@@ -40,8 +40,7 @@ tags:
 - tapOn:
     id: "input-member-phone"
 - inputText: "+15550000002"
-- tapOn:
-    point: "50%,15%"
+- hideKeyboard
 - tapOn:
     id: "picker-member-role-editor"
 - tapOn:

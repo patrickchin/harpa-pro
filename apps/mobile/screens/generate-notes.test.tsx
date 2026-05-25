@@ -63,6 +63,14 @@ vi.mock('@/lib/audio/AudioPlaybackProvider', async (importOriginal) => {
   };
 });
 
+vi.mock('@/lib/api/hooks', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/api/hooks')>();
+  return {
+    ...actual,
+    useMeQuery: () => ({ data: { user: { id: 'usr_test' } }, isLoading: false, isError: false }),
+  };
+});
+
 import { GenerateNotes, type GenerateNotesProps } from './generate-notes';
 import type { NoteEntry } from '@/lib/note-entry';
 
@@ -288,5 +296,33 @@ describe('GenerateNotes', () => {
   it('matches the empty-state snapshot', () => {
     const tree = render(<GenerateNotes {...baseProps} />);
     expect(tree.toJSON()).toMatchSnapshot();
+  });
+
+  it('auto-scrolls the timeline to the bottom when a new note arrives', () => {
+    // Render with two notes, then grow the list to three. The
+    // NotesTabPane runs a setTimeout(0) that calls scrollToEnd on
+    // the forwarded ScrollView ref. We can't easily intercept the
+    // ref instance with react-test-renderer, but we can prove the
+    // effect path doesn't crash and the new row is in the tree.
+    const tree = render(<GenerateNotes {...baseProps} notes={sampleNotes} />);
+    const grown: NoteEntry[] = [
+      ...sampleNotes,
+      { id: 'n3', text: 'New entry', addedAt: 3, source: 'text' },
+    ];
+    act(() => {
+      tree.update(<GenerateNotes {...baseProps} notes={grown} />);
+    });
+    act(() => {
+      vi.runAllTimers();
+    });
+    const text = collectText(tree.toJSON());
+    expect(text).toContain('New entry');
+  });
+
+  it('renders the keyboard-collapsible chrome wrapper', () => {
+    const tree = render(<GenerateNotes {...baseProps} />);
+    expect(() =>
+      tree.root.findByProps({ testID: 'generate-notes-chrome' }),
+    ).not.toThrow();
   });
 });

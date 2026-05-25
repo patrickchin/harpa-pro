@@ -22,9 +22,13 @@
  * dismisses).
  */
 import { useEffect, useState } from 'react';
-import { ScrollView, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { Pause, Play } from 'lucide-react-native';
 
 import { AppDialogSheet } from '@/components/primitives/AppDialogSheet';
+import { useAudioPlayback } from '@/lib/audio/AudioPlaybackProvider';
+import { useFileSignedUrl } from '@/lib/uploads/useFileSignedUrl';
+import { colors } from '@/lib/design-tokens/colors';
 import { formatCapturedAt } from '@/lib/date';
 import { formatDuration } from '@/features/voice/voiceNoteCardHeader';
 import { getDeleteNoteDialogCopy, getDeleteVoiceNoteDialogCopy } from '@/lib/app-dialog-copy';
@@ -296,6 +300,13 @@ export function NoteOptionsSheet({
           </View>
         ) : null}
       </View>
+      {note.kind === 'voice' && note.fileId ? (
+        <VoicePlayRow
+          fileId={note.fileId}
+          durationSec={note.durationSec ?? null}
+          sheetVisible={visible}
+        />
+      ) : null}
     </AppDialogSheet>
   );
 }
@@ -304,6 +315,97 @@ interface MetaRowProps {
   label: string;
   value: string;
   mono?: boolean;
+}
+
+/**
+ * Inline play / pause row rendered inside `NoteOptionsSheet` for
+ * voice notes. Kept as a separate component so that the
+ * `useFileSignedUrl` + `useAudioPlayback` hooks only mount when:
+ *  - the sheet is actually visible for a voice row with a `fileId`
+ *  - and therefore a QueryClient is in scope.
+ * Text/photo notes (and screens that don't wire signed URLs in tests)
+ * never instantiate this component, so they don't pay for it.
+ *
+ * Pauses playback when this row unmounts (i.e. when the sheet closes
+ * or the user navigates to another stage) — closing the options is
+ * the natural "I'm done with this row" signal.
+ */
+interface VoicePlayRowProps {
+  fileId: string;
+  durationSec: number | null;
+  sheetVisible: boolean;
+}
+
+function VoicePlayRow({ fileId, durationSec, sheetVisible }: VoicePlayRowProps) {
+  const signedUrlQuery = useFileSignedUrl(fileId, { enabled: sheetVisible });
+  const audioUri =
+    (signedUrlQuery.data as { url?: string } | undefined)?.url ?? null;
+  const playback = useAudioPlayback();
+  const isPlayingThis =
+    audioUri !== null &&
+    playback.status.uri === audioUri &&
+    playback.status.playing;
+  const positionSec =
+    playback.status.uri === audioUri ? playback.status.positionSec : 0;
+  const playbackDurationSec =
+    (playback.status.uri === audioUri ? playback.status.durationSec : 0) ||
+    durationSec ||
+    0;
+
+  useEffect(() => {
+    return () => {
+      // Pause when the sheet closes / row unmounts. We check the
+      // current playback status at unmount time via the latest
+      // closure values — safe because the global provider's
+      // `status` reference updates on every poll.
+      if (isPlayingThis) {
+        playback.pause();
+      }
+    };
+     
+  }, []);
+
+  const canPlay = Boolean(audioUri);
+  const label = isPlayingThis
+    ? `Pause • ${formatDuration(positionSec)} / ${formatDuration(playbackDurationSec)}`
+    : canPlay
+      ? `Play voice note${playbackDurationSec ? ` • ${formatDuration(playbackDurationSec)}` : ''}`
+      : 'Loading audio…';
+
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={isPlayingThis ? 'Pause voice note' : 'Play voice note'}
+      testID="btn-note-options-play"
+      disabled={!canPlay}
+      onPress={() => {
+        if (!audioUri) return;
+        if (isPlayingThis) playback.pause();
+        else void playback.play(audioUri);
+      }}
+      className={`flex-row items-center gap-3 rounded-md border border-border px-3 py-3 ${
+        canPlay ? 'bg-card' : 'bg-muted/40'
+      }`}
+    >
+      <View
+        className={`h-9 w-9 items-center justify-center rounded-full ${
+          canPlay ? 'bg-primary' : 'bg-muted'
+        }`}
+      >
+        {isPlayingThis ? (
+          <Pause size={18} color={colors.primary.foreground} />
+        ) : (
+          <Play
+            size={18}
+            color={canPlay ? colors.primary.foreground : colors.muted.foreground}
+          />
+        )}
+      </View>
+      <Text className="flex-1 text-sm font-medium text-foreground">
+        {label}
+      </Text>
+    </Pressable>
+  );
 }
 
 function MetaRow({ label, value, mono }: MetaRowProps) {

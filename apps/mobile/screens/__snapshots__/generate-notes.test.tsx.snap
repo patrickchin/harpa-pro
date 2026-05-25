@@ -20,141 +20,160 @@ exports[`GenerateNotes > matches the empty-state snapshot 1`] = `
     className="flex-1"
     keyboardVerticalOffset={0}
   >
-    <rn-View
-      className="px-5 pt-4 pb-2"
+    <rn-Animated.View
+      onLayout={[Function]}
+      pointerEvents="auto"
+      style={
+        [
+          {
+            "height": undefined,
+            "opacity": AnimatedValue {
+              "_value": 1,
+            },
+          },
+          {
+            "overflow": "hidden",
+          },
+        ]
+      }
+      testID="generate-notes-chrome"
     >
       <rn-View
-        className="gap-3"
+        className="px-5 pt-4 pb-2"
       >
         <rn-View
-          className="min-h-touch flex-row items-center gap-3"
+          className="gap-3"
         >
-          <rn-Pressable
-            accessibilityLabel="Back to Reports"
-            accessibilityRole="button"
-            className="flex-row items-center justify-center rounded-md border border-border bg-card active:opacity-90 min-h-touch py-3 px-4"
-            disabled={false}
-            onPress={[MockFunction spy]}
-            style={
-              [
-                {
-                  "elevation": 2,
-                  "shadowColor": "#1a1a2e",
-                  "shadowOffset": {
-                    "height": 2,
-                    "width": 0,
-                  },
-                  "shadowOpacity": 0.08,
-                  "shadowRadius": 8,
-                },
-                undefined,
-              ]
-            }
-            testID="btn-back"
+          <rn-View
+            className="min-h-touch flex-row items-center gap-3"
           >
-            <lucide-ArrowLeft
+            <rn-Pressable
+              accessibilityLabel="Back to Reports"
+              accessibilityRole="button"
+              className="flex-row items-center justify-center rounded-md border border-border bg-card active:opacity-90 min-h-touch py-3 px-4"
+              disabled={false}
+              onPress={[MockFunction spy]}
+              style={
+                [
+                  {
+                    "elevation": 2,
+                    "shadowColor": "#1a1a2e",
+                    "shadowOffset": {
+                      "height": 2,
+                      "width": 0,
+                    },
+                    "shadowOpacity": 0.08,
+                    "shadowRadius": 8,
+                  },
+                  undefined,
+                ]
+              }
+              testID="btn-back"
+            >
+              <lucide-ArrowLeft
+                color="#2d3a5a"
+                size={16}
+              />
+            </rn-Pressable>
+            <rn-Text
+              className="min-w-0 flex-1 text-title-sm text-foreground"
+              ellipsizeMode="tail"
+              numberOfLines={1}
+              testID="screen-header-title"
+            >
+              Highland Tower
+            </rn-Text>
+            <rn-View
+              className="shrink-0 flex-row items-center gap-2"
+            />
+          </rn-View>
+        </rn-View>
+      </rn-View>
+      <rn-View
+        className="mx-5 mt-3"
+      >
+        <rn-Pressable
+          className="flex-row items-center justify-center rounded-md border border-border bg-secondary active:opacity-90 min-h-touch px-4 py-3 opacity-50 w-full"
+          disabled={true}
+          onPress={[Function]}
+          style={
+            [
+              {
+                "elevation": 2,
+                "shadowColor": "#1a1a2e",
+                "shadowOffset": {
+                  "height": 2,
+                  "width": 0,
+                },
+                "shadowOpacity": 0.08,
+                "shadowRadius": 8,
+              },
+              undefined,
+            ]
+          }
+          testID="btn-generate-report"
+        >
+          <rn-View
+            className="flex-row items-center gap-1.5"
+          >
+            <lucide-Sparkles
               color="#2d3a5a"
               size={16}
             />
-          </rn-Pressable>
-          <rn-Text
-            className="min-w-0 flex-1 text-title-sm text-foreground"
-            ellipsizeMode="tail"
-            numberOfLines={1}
-            testID="screen-header-title"
-          >
-            Highland Tower
-          </rn-Text>
-          <rn-View
-            className="shrink-0 flex-row items-center gap-2"
-          />
-        </rn-View>
+            <rn-Text
+              className="text-base font-semibold text-foreground"
+              numberOfLines={1}
+            >
+              Generate report
+            </rn-Text>
+          </rn-View>
+        </rn-Pressable>
       </rn-View>
-    </rn-View>
-    <rn-View
-      className="mx-5 mt-3"
-    >
-      <rn-Pressable
-        className="flex-row items-center justify-center rounded-md border border-border bg-secondary active:opacity-90 min-h-touch px-4 py-3 opacity-50 w-full"
-        disabled={true}
-        onPress={[Function]}
-        style={
-          [
-            {
-              "elevation": 2,
-              "shadowColor": "#1a1a2e",
-              "shadowOffset": {
-                "height": 2,
-                "width": 0,
-              },
-              "shadowOpacity": 0.08,
-              "shadowRadius": 8,
-            },
-            undefined,
-          ]
-        }
-        testID="btn-generate-report"
+      <rn-View
+        className="mx-5 mt-3 mb-2 flex-row rounded-lg border border-border bg-card p-1"
       >
-        <rn-View
-          className="flex-row items-center gap-1.5"
+        <rn-Pressable
+          className="flex-1 flex-row items-center justify-center gap-2 rounded-md py-3 bg-secondary border-b-2 border-accent"
+          onPress={[Function]}
+          testID="btn-tab-notes"
         >
-          <lucide-Sparkles
+          <lucide-MessageSquare
             color="#2d3a5a"
             size={16}
+            style={
+              {
+                "marginTop": 1,
+              }
+            }
           />
           <rn-Text
-            className="text-base font-semibold text-foreground"
-            numberOfLines={1}
+            className="text-sm font-semibold text-foreground"
           >
-            Generate report
+            Notes (0)
           </rn-Text>
-        </rn-View>
-      </rn-Pressable>
-    </rn-View>
-    <rn-View
-      className="mx-5 mt-3 mb-2 flex-row rounded-lg border border-border bg-card p-1"
-    >
-      <rn-Pressable
-        className="flex-1 flex-row items-center justify-center gap-2 rounded-md py-3 bg-secondary border-b-2 border-accent"
-        onPress={[Function]}
-        testID="btn-tab-notes"
-      >
-        <lucide-MessageSquare
-          color="#2d3a5a"
-          size={16}
-          style={
-            {
-              "marginTop": 1,
-            }
-          }
-        />
-        <rn-Text
-          className="text-sm font-semibold text-foreground"
+        </rn-Pressable>
+        <rn-Pressable
+          className="flex-1 flex-row items-center justify-center gap-2 rounded-md py-3 "
+          onPress={[Function]}
+          testID="btn-tab-report"
         >
-          Notes (0)
-        </rn-Text>
-      </rn-Pressable>
-      <rn-Pressable
-        className="flex-1 flex-row items-center justify-center gap-2 rounded-md py-3 "
-        onPress={[Function]}
-        testID="btn-tab-report"
-      >
-        <lucide-FileText
-          color="#5f5b66"
-          size={16}
-          style={
-            {
-              "marginTop": 1,
+          <lucide-FileText
+            color="#5f5b66"
+            size={16}
+            style={
+              {
+                "marginTop": 1,
+              }
             }
-          }
-        />
-        <rn-Text
-          className="text-sm font-semibold text-muted-foreground"
-        >
-          Report
-        </rn-Text>
-      </rn-Pressable>
-    </rn-View>
+          />
+          <rn-Text
+            className="text-sm font-semibold text-muted-foreground"
+          >
+            Report
+          </rn-Text>
+        </rn-Pressable>
+      </rn-View>
+    </rn-Animated.View>
     <rn-ScrollView
       className="flex-1"
       contentOffset={
@@ -187,7 +206,7 @@ exports[`GenerateNotes > matches the empty-state snapshot 1`] = `
             }
           }
           keyboardShouldPersistTaps="handled"
-          ref={null}
+          ref={[Function]}
         >
           <rn-View
             className="rounded-lg border border-border bg-surface-muted p-4 items-center py-8"

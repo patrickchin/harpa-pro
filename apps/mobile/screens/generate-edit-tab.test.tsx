@@ -63,6 +63,14 @@ vi.mock('@/lib/audio/AudioPlaybackProvider', async (importOriginal) => {
   };
 });
 
+vi.mock('@/lib/api/hooks', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/api/hooks')>();
+  return {
+    ...actual,
+    useMeQuery: () => ({ data: { user: { id: 'usr_test' } }, isLoading: false, isError: false }),
+  };
+});
+
 import { GenerateNotes, type GenerateNotesProps } from './generate-notes';
 import { SAMPLE_GENERATED_REPORT } from '@/lib/dev-fixtures/sample-report';
 import type { GeneratedSiteReport } from '@harpa/report-core';

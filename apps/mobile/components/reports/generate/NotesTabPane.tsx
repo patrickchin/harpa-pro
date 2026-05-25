@@ -7,7 +7,7 @@
  * state. Voice / photo / pending-upload rendering will land in P3.7
  * alongside the corresponding pipeline hooks.
  */
-import { forwardRef } from 'react';
+import { forwardRef, useEffect, useRef } from 'react';
 import { ScrollView, View } from 'react-native';
 import { Mic } from 'lucide-react-native';
 
@@ -24,10 +24,37 @@ export const NotesTabPane = forwardRef<ScrollView, NotesTabPaneProps>(
   function NotesTabPane({ width }, ref) {
     const { timeline, notes, members, voice, photo, preview } = useGenerateReport();
 
+    // Auto-scroll to the newest note whenever the timeline grows
+    // (user added a text/voice/photo note). Skipped on initial load
+    // and on deletions so the user keeps their place.
+    const localRef = useRef<ScrollView | null>(null);
+    const prevCountRef = useRef<number>(timeline.items.length);
+    const itemCount = timeline.items.length;
+
+    useEffect(() => {
+      const prev = prevCountRef.current;
+      prevCountRef.current = itemCount;
+      if (itemCount > prev && prev !== 0) {
+        // Defer to next frame so the new row has measured before
+        // scrollToEnd computes the offset.
+        const id = setTimeout(() => {
+          localRef.current?.scrollToEnd({ animated: true });
+        }, 0);
+        return () => clearTimeout(id);
+      }
+      return undefined;
+    }, [itemCount]);
+
+    const setRef = (node: ScrollView | null) => {
+      localRef.current = node;
+      if (typeof ref === 'function') ref(node);
+      else if (ref) (ref as React.MutableRefObject<ScrollView | null>).current = node;
+    };
+
     return (
       <View style={{ width }} className="flex-1">
         <ScrollView
-          ref={ref}
+          ref={setRef}
           className="flex-1 px-5"
           contentContainerStyle={{ paddingBottom: 100 }}
           keyboardShouldPersistTaps="handled"

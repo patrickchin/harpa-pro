@@ -126,6 +126,48 @@ vi.mock('react-native', () => {
     addListener: () => ({ remove: () => undefined }),
   };
 
+  // Animated: minimal surface used by the Generate Notes keyboard
+  // collapse animation. `Value` + `timing` + `Easing` are no-op
+  // shims; `Animated.View` is just another host component so the
+  // tree renders without touching native drivers.
+  const AnimatedView = makeRNComponent('Animated.View');
+  class AnimatedValue {
+    _value: number;
+    constructor(v: number) {
+      this._value = v;
+    }
+    setValue(v: number) {
+      this._value = v;
+    }
+    interpolate(_: { inputRange: number[]; outputRange: number[] }) {
+      return this;
+    }
+  }
+  const Animated = {
+    View: AnimatedView,
+    Text: makeRNComponent('Animated.Text'),
+    ScrollView: makeRNComponent('Animated.ScrollView'),
+    Value: AnimatedValue,
+    timing: (_v: unknown, _cfg: unknown) => ({
+      start: (cb?: () => void) => cb?.(),
+    }),
+    spring: (_v: unknown, _cfg: unknown) => ({
+      start: (cb?: () => void) => cb?.(),
+    }),
+    sequence: (_anims: unknown[]) => ({ start: (cb?: () => void) => cb?.() }),
+    parallel: (_anims: unknown[]) => ({ start: (cb?: () => void) => cb?.() }),
+  };
+  const Easing = {
+    linear: (t: number) => t,
+    ease: (t: number) => t,
+    in: (fn: (t: number) => number) => fn,
+    out: (fn: (t: number) => number) => fn,
+    inOut: (fn: (t: number) => number) => fn,
+    cubic: (t: number) => t,
+    quad: (t: number) => t,
+    bezier: () => (t: number) => t,
+  };
+
   const BackHandler = {
     addEventListener: () => ({ remove: () => undefined }),
     removeEventListener: () => undefined,
@@ -162,6 +204,8 @@ vi.mock('react-native', () => {
     Keyboard,
     BackHandler,
     ToastAndroid,
+    Animated,
+    Easing,
   };
 });
 

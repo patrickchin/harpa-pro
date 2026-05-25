@@ -22,7 +22,7 @@ import {
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/util/utils';
 import { getSurfaceDepthStyle, type SurfaceDepth } from '@/lib/surface-depth';
 import { colors } from '@/lib/design-tokens/colors';
 

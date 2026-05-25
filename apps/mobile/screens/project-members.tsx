@@ -32,7 +32,7 @@ import { ScreenHeader } from '@/components/primitives/ScreenHeader';
 import { ProjectMembersSkeleton } from '@/components/skeletons/ProjectMembersSkeleton';
 import { getRemoveMemberDialogCopy } from '@/lib/app-dialog-copy';
 import { colors } from '@/lib/design-tokens/colors';
-import { useLayoutShiftProbe } from '@/lib/layout-shift-probe';
+import { useLayoutShiftProbe } from '@/lib/util/layout-shift-probe';
 import { PROJECT_MEMBERS_LAYOUT } from '@/lib/project-members-layout';
 
 export type MemberRole = 'owner' | 'editor' | 'viewer';

@@ -23,7 +23,7 @@
  * classes; the variant / size / shape API is preserved.
  */
 import { Pressable, View, type PressableProps } from 'react-native';
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/util/utils';
 import { getSurfaceDepthStyle, type SurfaceDepth } from '@/lib/surface-depth';
 
 export type IconButtonVariant = 'outline' | 'ghost' | 'muted' | 'primary' | 'destructive';

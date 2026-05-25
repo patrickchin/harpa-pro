@@ -10,7 +10,7 @@
 import type { ReactNode } from 'react';
 import { Text, View } from 'react-native';
 
-import { formatCapturedAt } from '@/lib/date';
+import { formatCapturedAt } from '@/lib/util/date';
 
 export interface NoteCardHeaderProps {
   /** Resolved display name (e.g. memberNames.get(authorId)). */

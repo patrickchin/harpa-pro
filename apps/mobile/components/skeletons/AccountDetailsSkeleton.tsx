@@ -12,7 +12,7 @@
 import { View } from 'react-native';
 
 import { Skeleton } from '@/components/primitives/Skeleton';
-import { useLayoutShiftProbe } from '@/lib/layout-shift-probe';
+import { useLayoutShiftProbe } from '@/lib/util/layout-shift-probe';
 
 export interface AccountDetailsSkeletonProps {
   /**

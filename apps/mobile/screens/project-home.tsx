@@ -35,7 +35,7 @@ import { StatTile } from '@/components/primitives/StatTile';
 import { ProjectOverviewSkeleton } from '@/components/skeletons/ProjectOverviewSkeleton';
 import { colors } from '@/lib/design-tokens/colors';
 import { formatRelativeTime, PROJECT_OVERVIEW_LAYOUT } from '@/lib/project-overview';
-import { useLayoutShiftProbe } from '@/lib/layout-shift-probe';
+import { useLayoutShiftProbe } from '@/lib/util/layout-shift-probe';
 
 export type ProjectHomeProjectInfo = {
   name: string;

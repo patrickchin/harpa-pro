@@ -16,7 +16,7 @@ import {
   projectInitialData,
   projectInitialDataUpdatedAt,
 } from '@/lib/api/initial-data';
-import { useRefresh } from '@/lib/use-refresh';
+import { useRefresh } from '@/lib/util/use-refresh';
 import { safeBack } from '@/lib/nav/safe-back';
 import { AppHeaderActions } from '@/components/ui/AppHeaderActions';
 

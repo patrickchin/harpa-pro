@@ -19,7 +19,7 @@ import { type ReactNode } from 'react';
 import { Text, View } from 'react-native';
 import { ArrowLeft } from 'lucide-react-native';
 
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/util/utils';
 import { Button } from './Button';
 import { colors } from '@/lib/design-tokens/colors';
 

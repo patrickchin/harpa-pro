@@ -34,7 +34,7 @@ import {
   reportInitialDataUpdatedAt,
 } from '@/lib/api/initial-data';
 import type { ReportNoteRow } from '@/components/reports/detail/ReportNotesPane';
-import { useRefresh } from '@/lib/use-refresh';
+import { useRefresh } from '@/lib/util/use-refresh';
 import { useReportPdfActions } from '@/lib/use-report-pdf-actions';
 import { env } from '@/lib/env';
 import { safeBack } from '@/lib/nav/safe-back';

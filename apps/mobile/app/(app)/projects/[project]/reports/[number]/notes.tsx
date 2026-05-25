@@ -22,7 +22,7 @@ import {
   reportInitialDataUpdatedAt,
 } from '@/lib/api/initial-data';
 import type { ReportNoteRow } from '@/components/reports/detail/ReportNotesPane';
-import { useRefresh } from '@/lib/use-refresh';
+import { useRefresh } from '@/lib/util/use-refresh';
 import { safeBack } from '@/lib/nav/safe-back';
 import { dismissOrReplaceTo } from '@/lib/nav/dismiss-or-replace';
 import { AppHeaderActions } from '@/components/ui/AppHeaderActions';

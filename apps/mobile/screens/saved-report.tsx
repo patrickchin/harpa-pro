@@ -55,7 +55,7 @@ import {
 import { ReportActionsMenu } from '@/components/reports/detail/ReportActionsMenu';
 import { SavedReportSheet } from '@/components/reports/detail/SavedReportSheet';
 import { ReportDetailSkeleton } from '@/components/skeletons/ReportDetailSkeleton';
-import { useLayoutShiftProbe } from '@/lib/layout-shift-probe';
+import { useLayoutShiftProbe } from '@/lib/util/layout-shift-probe';
 import { colors } from '@/lib/design-tokens/colors';
 import {
   getDeleteReportDialogCopy,

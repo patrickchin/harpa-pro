@@ -11,7 +11,7 @@ import { useQueryClient } from '@tanstack/react-query';
 
 import { Profile } from '@/screens/profile';
 import { useAuthSession } from '@/lib/auth/session';
-import { useRefresh } from '@/lib/use-refresh';
+import { useRefresh } from '@/lib/util/use-refresh';
 import { safeBack } from '@/lib/nav/safe-back';
 import { AppHeaderActions } from '@/components/ui/AppHeaderActions';
 

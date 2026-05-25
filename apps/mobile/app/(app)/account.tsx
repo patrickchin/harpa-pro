@@ -15,7 +15,7 @@ import { useRouter, type Href } from 'expo-router';
 import { Account, type AccountProfile, type AccountSaveValues } from '@/screens/account';
 import { AvatarUploader } from '@/components/account/AvatarUploader';
 import { useAuthSession } from '@/lib/auth/session';
-import { useRefresh } from '@/lib/use-refresh';
+import { useRefresh } from '@/lib/util/use-refresh';
 import { safeBack } from '@/lib/nav/safe-back';
 import { useUpdateMeMutation } from '@/lib/api/hooks';
 import { AppHeaderActions } from '@/components/ui/AppHeaderActions';

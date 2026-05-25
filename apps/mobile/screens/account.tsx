@@ -25,7 +25,7 @@ import { ScreenHeader } from '@/components/primitives/ScreenHeader';
 import { InlineNotice } from '@/components/primitives/InlineNotice';
 import { AccountDetailsSkeleton } from '@/components/skeletons/AccountDetailsSkeleton';
 import { colors } from '@/lib/design-tokens/colors';
-import { useLayoutShiftProbe } from '@/lib/layout-shift-probe';
+import { useLayoutShiftProbe } from '@/lib/util/layout-shift-probe';
 
 export interface AccountProfile {
   phone: string;

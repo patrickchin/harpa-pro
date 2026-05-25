@@ -20,7 +20,7 @@ import { CountryPickerModal } from '@/components/CountryPickerModal';
 import { type Country } from '@/lib/countries';
 import { colors } from '@/lib/design-tokens/colors';
 import { getSurfaceDepthStyle } from '@/lib/surface-depth';
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/util/utils';
 
 export interface PhoneNumberInputProps {
   country: Country;

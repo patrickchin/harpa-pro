@@ -1,5 +1,5 @@
 import { Image, type ImageProps } from 'react-native';
-import { cn } from '../../lib/utils';
+import { cn } from '../../lib/util/utils';
 import iconAsset from '../../assets/icon.png';
 
 type Props = Omit<ImageProps, 'source'> & {

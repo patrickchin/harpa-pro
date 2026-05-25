@@ -11,7 +11,10 @@ import typer
 
 from . import __version__
 from .commands.doctor import run_doctor
+from .commands.kill import KillOptions, run_kill
+from .commands.logs import LogsOptions, run_logs
 from .commands.reset import ResetOptions, run_reset
+from .commands.run import RunOptions, run_run
 from .config import load_config
 
 app = typer.Typer(
@@ -109,9 +112,35 @@ def reset(
 
 
 @app.command()
-def run() -> None:
+def run(
+    flow: str = typer.Argument(
+        ...,
+        help="Flow path or bare name (e.g. 'regression-journey.yaml').",
+    ),
+    device: str | None = typer.Option(
+        None, "--device", help="ADB serial or iOS simulator UDID to target."
+    ),
+    force: bool = typer.Option(
+        False,
+        "--force",
+        help="Override the in-flight-run guard. Use after manually verifying state.",
+    ),
+    json_output: bool = typer.Option(
+        False, "--json", help="Emit machine-readable JSON instead of a one-liner."
+    ),
+) -> None:
     """Spawn `maestro test` detached with PID + log tracking."""
-    _stub("run")
+    cfg = load_config(cli_overrides={"device": device} if device else None)
+    code = run_run(
+        cfg,
+        RunOptions(
+            flow=flow,
+            device=device,
+            force=force,
+            json_output=json_output,
+        ),
+    )
+    raise typer.Exit(code=code)
 
 
 @app.command()
@@ -121,15 +150,64 @@ def journey() -> None:
 
 
 @app.command()
-def kill() -> None:
+def kill(
+    json_output: bool = typer.Option(
+        False, "--json", help="Emit machine-readable JSON instead of a table."
+    ),
+    orphans_only: bool = typer.Option(
+        False,
+        "--orphans-only",
+        help="Skip the PID-file-tracked process; just sweep orphaned drivers.",
+    ),
+) -> None:
     """Terminate live runner + orphaned Maestro/driver processes."""
-    _stub("kill")
+    cfg = load_config()
+    code = run_kill(
+        cfg,
+        KillOptions(orphans_only=orphans_only, json_output=json_output),
+    )
+    raise typer.Exit(code=code)
 
 
 @app.command()
-def logs() -> None:
+def logs(
+    tail: int | None = typer.Option(
+        None, "--tail", help="Print only the last N lines."
+    ),
+    flow: str | None = typer.Option(
+        None,
+        "--flow",
+        help="Read the newest log for this flow instead of maestro-latest.log.",
+    ),
+    follow: bool = typer.Option(
+        False, "--follow", help="Tail-follow new bytes (bounded by --for)."
+    ),
+    for_seconds: float = typer.Option(
+        60.0,
+        "--for",
+        help="Maximum seconds to follow before returning (default 60).",
+    ),
+    list_runs: bool = typer.Option(
+        False, "--list", help="List every run under tmp/mo/runs/."
+    ),
+    json_output: bool = typer.Option(
+        False, "--json", help="Emit machine-readable JSON instead of plain text."
+    ),
+) -> None:
     """Tail the latest run log without remembering the timestamp."""
-    _stub("logs")
+    cfg = load_config()
+    code = run_logs(
+        cfg,
+        LogsOptions(
+            tail=tail,
+            flow=flow,
+            follow=follow,
+            for_seconds=for_seconds,
+            list_runs=list_runs,
+            json_output=json_output,
+        ),
+    )
+    raise typer.Exit(code=code)
 
 
 if __name__ == "__main__":  # pragma: no cover

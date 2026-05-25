@@ -213,6 +213,42 @@ describe('SavedReport', () => {
     ).toHaveLength(0);
   });
 
+  it('hides the Notes tab when the report is finalized', () => {
+    const tree = render(
+      <SavedReport {...baseProps({ reportStatus: 'finalized' })} />,
+    );
+    expect(
+      tree.root.findAllByProps({ testID: 'btn-tab-notes' }),
+    ).toHaveLength(0);
+  });
+
+  it('surfaces "View Notes" in the actions menu when onViewNotes is provided', () => {
+    const onViewNotes = vi.fn();
+    const tree = render(
+      <SavedReport
+        {...baseProps({ reportStatus: 'finalized', onViewNotes })}
+      />,
+    );
+    act(() => {
+      tree.root.findByProps({ testID: 'btn-report-actions' }).props.onPress();
+    });
+    const btn = tree.root.findByProps({ testID: 'btn-report-view-notes' });
+    act(() => {
+      btn.props.onPress();
+    });
+    expect(onViewNotes).toHaveBeenCalledOnce();
+  });
+
+  it('omits "View Notes" from the actions menu when onViewNotes is not provided', () => {
+    const tree = render(<SavedReport {...baseProps()} />);
+    act(() => {
+      tree.root.findByProps({ testID: 'btn-report-actions' }).props.onPress();
+    });
+    expect(
+      tree.root.findAllByProps({ testID: 'btn-report-view-notes' }),
+    ).toHaveLength(0);
+  });
+
   it('bounces from Edit back to Report when the report flips to finalized', () => {
     const props = baseProps({ initialTab: 'edit' });
     const tree = render(<SavedReport {...props} />);

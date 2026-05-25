@@ -258,6 +258,14 @@ export default function SavedReportRoute() {
       isUnfinalizing={unfinalizeMutation.isPending}
       pdfActions={pdfActions}
       actions={<AppHeaderActions />}
+      onViewNotes={
+        hasValidRouteParams && reportStatus === 'finalized'
+          ? () =>
+              router.push(
+                `/(app)/projects/${slug}/reports/${reportNumber}/notes` as Href,
+              )
+          : undefined
+      }
       showDeveloperSection={env.EXPO_PUBLIC_USE_FIXTURES || __DEV__}
       onOpenDebug={
         hasValidRouteParams

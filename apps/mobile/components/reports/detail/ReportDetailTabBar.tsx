@@ -16,6 +16,12 @@ interface ReportDetailTabBarProps {
   onChange: (tab: ReportDetailTab) => void;
   notesCount?: number;
   showEditTab?: boolean;
+  /**
+   * Whether the Notes tab is shown inline. Finalised reports hide the
+   * Notes tab and surface the notes screen via the Actions menu
+   * instead.
+   */
+  showNotesTab?: boolean;
 }
 
 export function ReportDetailTabBar({
@@ -23,6 +29,7 @@ export function ReportDetailTabBar({
   onChange,
   notesCount,
   showEditTab = true,
+  showNotesTab = true,
 }: ReportDetailTabBarProps) {
   const notesLabel =
     typeof notesCount === 'number' && notesCount > 0
@@ -57,32 +64,34 @@ export function ReportDetailTabBar({
           Report
         </Text>
       </Pressable>
-      <Pressable
-        testID="btn-tab-notes"
-        onPress={() => onChange('notes')}
-        className={`flex-1 flex-row items-center justify-center gap-2 rounded-md py-3 ${
-          activeTab === 'notes' ? 'bg-foreground' : ''
-        }`}
-      >
-        <MessageSquare
-          size={16}
-          color={
-            activeTab === 'notes'
-              ? colors.primary.foreground
-              : colors.muted.foreground
-          }
-          style={{ marginTop: 1 }}
-        />
-        <Text
-          className={`text-sm font-semibold ${
-            activeTab === 'notes'
-              ? 'text-primary-foreground'
-              : 'text-muted-foreground'
+      {showNotesTab ? (
+        <Pressable
+          testID="btn-tab-notes"
+          onPress={() => onChange('notes')}
+          className={`flex-1 flex-row items-center justify-center gap-2 rounded-md py-3 ${
+            activeTab === 'notes' ? 'bg-foreground' : ''
           }`}
         >
-          {notesLabel}
-        </Text>
-      </Pressable>
+          <MessageSquare
+            size={16}
+            color={
+              activeTab === 'notes'
+                ? colors.primary.foreground
+                : colors.muted.foreground
+            }
+            style={{ marginTop: 1 }}
+          />
+          <Text
+            className={`text-sm font-semibold ${
+              activeTab === 'notes'
+                ? 'text-primary-foreground'
+                : 'text-muted-foreground'
+            }`}
+          >
+            {notesLabel}
+          </Text>
+        </Pressable>
+      ) : null}
       {showEditTab ? (
         <Pressable
           testID="btn-tab-edit"

@@ -125,6 +125,15 @@ export interface SavedReportProps {
   actions?: ReactNode;
 
   /**
+   * Invoked from the Actions menu's "View Notes" entry on finalised
+   * reports. When provided, the menu surfaces a "View Notes" row;
+   * tapping it should navigate to the dedicated notes screen.
+   * Omitted (no entry rendered) for drafts — drafts show the Notes
+   * tab inline instead.
+   */
+  onViewNotes?: () => void;
+
+  /**
    * P4.8 — show the Report Debug entry in the actions menu. Gated by
    * the same `showDeveloperSection` flag (env.EXPO_PUBLIC_USE_FIXTURES
    * or __DEV__) that controls the Profile developer section.
@@ -163,6 +172,7 @@ export function SavedReport(props: SavedReportProps) {
     pdfActions,
     initialTab,
     actions,
+    onViewNotes,
     showDeveloperSection,
     onOpenDebug,
   } = props;
@@ -192,9 +202,11 @@ export function SavedReport(props: SavedReportProps) {
   const isFinal = reportStatus === 'finalized';
 
   // Finalized reports are read-only — bounce back to Report tab if the
-  // status flips to finalized while the user is on Edit.
+  // status flips to finalized while the user is on Edit or Notes (the
+  // Notes tab is hidden for finalised reports; access moves to the
+  // Actions menu).
   useEffect(() => {
-    if (isFinal && activeTab === 'edit') {
+    if (isFinal && (activeTab === 'edit' || activeTab === 'notes')) {
       setActiveTab('report');
     }
   }, [isFinal, activeTab]);
@@ -383,6 +395,7 @@ export function SavedReport(props: SavedReportProps) {
           onChange={setActiveTab}
           notesCount={notesCount}
           showEditTab={!isFinal}
+          showNotesTab={!isFinal}
         />
 
         {activeTab === 'edit' ? (
@@ -441,6 +454,14 @@ export function SavedReport(props: SavedReportProps) {
           setMenuVisible(false);
           setPdfPreviewVisible(true);
         }}
+        onViewNotes={
+          onViewNotes
+            ? () => {
+                setMenuVisible(false);
+                onViewNotes();
+              }
+            : undefined
+        }
         onSavePdf={async () => {
           setMenuVisible(false);
           await handleSavePdf();

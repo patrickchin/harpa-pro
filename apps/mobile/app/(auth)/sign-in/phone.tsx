@@ -27,7 +27,7 @@ import {
   getRememberedPhoneNumber,
   rememberPhoneNumber,
   clearRememberedPhoneNumber,
-} from '@/lib/remembered-login';
+} from '@/lib/auth/remembered-login';
 
 export default function SignInPhonePage() {
   const router = useRouter();

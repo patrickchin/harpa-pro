@@ -51,7 +51,7 @@ function parseJobCreatedAt(jobId: string): number {
   return Number.isFinite(ts) && ts > 0 ? ts : Date.now();
 }
 
-function jobToEntry(job: UploadJob, authorId: string | undefined): NoteEntry {
+function jobToSoloEntry(job: UploadJob, authorId: string | undefined): NoteEntry {
   return {
     id: `__upload-${job.id}`,
     authorId,
@@ -66,6 +66,40 @@ function jobToEntry(job: UploadJob, authorId: string | undefined): NoteEntry {
       progress: job.progress,
       error: job.error,
     },
+    pendingFiles: [{
+      jobId: job.id,
+      sourceUri: job.input.sourceUri,
+      status: job.status,
+      progress: job.progress,
+      error: job.error,
+    }],
+  };
+}
+
+function batchToEntry(batchKey: string, batchJobs: UploadJob[], authorId: string | undefined): NoteEntry {
+  const addedAt = Math.min(...batchJobs.map(j => parseJobCreatedAt(j.id)));
+  return {
+    id: `__batch-${batchKey}`,
+    authorId,
+    text: '',
+    addedAt,
+    source: 'image',
+    isPending: true,
+    batchKey,
+    pendingFiles: batchJobs.map(j => ({
+      jobId: j.id,
+      sourceUri: j.input.sourceUri,
+      status: j.status,
+      progress: j.progress,
+      error: j.error,
+    })),
+    pendingUpload: batchJobs.length === 1 ? {
+      jobId: batchJobs[0]!.id,
+      sourceUri: batchJobs[0]!.input.sourceUri,
+      status: batchJobs[0]!.status,
+      progress: batchJobs[0]!.progress,
+      error: batchJobs[0]!.error,
+    } : null,
   };
 }
 
@@ -93,9 +127,36 @@ export function usePhotoUploadEntries(
 
   const entries = useMemo<readonly NoteEntry[]>(() => {
     if (!reportId) return [];
-    return jobs
-      .filter((j) => isVisibleImageJob(j, reportId))
-      .map((j) => jobToEntry(j, authorId));
+    const visible = jobs.filter((j) => isVisibleImageJob(j, reportId));
+
+    // Group by batchKey
+    const batches = new Map<string, UploadJob[]>();
+    const solo: UploadJob[] = [];
+
+    for (const job of visible) {
+      const key = job.batchKey ?? job.input.batchKey;
+      if (key) {
+        const group = batches.get(key);
+        if (group) group.push(job);
+        else batches.set(key, [job]);
+      } else {
+        solo.push(job);
+      }
+    }
+
+    const result: NoteEntry[] = [];
+
+    for (const job of solo) {
+      result.push(jobToSoloEntry(job, authorId));
+    }
+
+    for (const [key, batchJobs] of batches) {
+      result.push(batchToEntry(key, batchJobs, authorId));
+    }
+
+    result.sort((a, b) => a.addedAt - b.addedAt);
+
+    return result;
   }, [jobs, reportId, authorId]);
 
   const retry = useCallback(

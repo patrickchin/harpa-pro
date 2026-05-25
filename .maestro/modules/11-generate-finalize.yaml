@@ -65,6 +65,16 @@ tags:
       id: "note-row-.*"
     timeout: 8000
 
+# --- Dismiss keyboard so the action row isn't obscured --------------------
+# After Maestro's inputText the iOS sim keyboard often stays up even
+# after btn-add-note. Tapping on a static area above the input bar
+# is more reliable than hideKeyboard, which races with sheet/keyboard
+# animations on iOS. Without this, btn-generate-report tap finds the
+# button but the tap lands on the obscuring keyboard.
+- tapOn:
+    point: "50%,15%"
+- waitForAnimationToEnd
+
 # --- Generate the report ---------------------------------------------------
 # Note: `report-tab-pane` is rendered unconditionally by ReportTabPane —
 # it appears the instant the pager mounts and tells us nothing about
@@ -75,6 +85,10 @@ tags:
 # AI replay is fast but the tab-pager horizontal scroll + reanimated
 # FadeIn on `report-tab-live` can still push first-paint past Maestro's
 # default ~18s implicit wait.
+- extendedWaitUntil:
+    visible:
+      id: "btn-generate-report"
+    timeout: 10000
 - tapOn:
     id: "btn-generate-report"
 - tapOn:

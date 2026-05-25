@@ -14,7 +14,7 @@ import { ActivityIndicator, Text, View } from 'react-native';
 import { NoteCardHeader } from '@/components/notes/NoteCardHeader';
 import { NoteOptionsKebab } from '@/components/notes/NoteOptionsKebab';
 import { colors } from '@/lib/design-tokens/colors';
-import type { NoteEntry } from '@/lib/note-entry';
+import type { NoteEntry } from '@/lib/notes/note-entry';
 
 export interface TextNoteCardProps {
   entry: NoteEntry;

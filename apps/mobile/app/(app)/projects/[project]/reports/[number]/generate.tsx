@@ -42,7 +42,7 @@ import {
 } from '@/lib/api/optimistic';
 import { invalidateAfterFileUpload } from '@/lib/api/invalidation';
 import { useReportBodyAutosave } from '@/lib/reports/use-report-body-autosave';
-import type { NoteEntry } from '@/lib/note-entry';
+import type { NoteEntry } from '@/lib/notes/note-entry';
 import { env } from '@/lib/config/env';
 import type { GeneratedSiteReport } from '@harpa/report-core';
 import { reports } from '@harpa/api-contract';
@@ -56,7 +56,7 @@ import {
   consumeCameraSession,
   createCameraSession,
   findCommittedSessionsForReport,
-} from '@/lib/camera-session-registry';
+} from '@/lib/camera/camera-session-registry';
 import { useCameraUploads } from '@/lib/camera/use-camera-uploads';
 import { pickAndEnqueueGalleryImages } from '@/lib/camera/pick-and-enqueue-gallery-images';
 import { AppHeaderActions } from '@/components/ui/AppHeaderActions';

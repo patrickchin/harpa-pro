@@ -28,7 +28,7 @@ import {
 
 import type { TabKey } from './tabs';
 import { createEmptyReport } from '@/lib/reports/report-edit-helpers';
-import type { NoteEntry } from '@/lib/note-entry';
+import type { NoteEntry } from '@/lib/notes/note-entry';
 import type { GeneratedSiteReport } from '@harpa/report-core';
 import { useInlineRecorder } from '@/features/voice/useInlineRecorder';
 import { useVoiceNotePipeline } from '@/features/voice/useVoiceNotePipeline';

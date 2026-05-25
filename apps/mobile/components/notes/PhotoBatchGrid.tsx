@@ -9,7 +9,7 @@ import { Text, View, useWindowDimensions } from 'react-native';
 
 import { CachedImage } from '@/components/ui/CachedImage';
 import { PhotoGridTile } from '@/components/notes/PhotoGridTile';
-import type { NoteEntry } from '@/lib/note-entry';
+import type { NoteEntry } from '@/lib/notes/note-entry';
 
 const COLUMNS = 3;
 const GAP = 6;

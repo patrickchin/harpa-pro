@@ -72,7 +72,7 @@ vi.mock('@/lib/api/hooks', async (importOriginal) => {
 });
 
 import { GenerateNotes, type GenerateNotesProps } from './generate-notes';
-import type { NoteEntry } from '@/lib/note-entry';
+import type { NoteEntry } from '@/lib/notes/note-entry';
 
 function render(el: React.ReactElement): TestRenderer.ReactTestRenderer {
   let tree!: TestRenderer.ReactTestRenderer;

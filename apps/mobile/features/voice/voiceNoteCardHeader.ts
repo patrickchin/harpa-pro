@@ -11,7 +11,7 @@
  *   2. `entry.transcript` / `entry.summary` — only present on saved
  *      voice rows.
  */
-import type { NoteEntry } from '@/lib/note-entry';
+import type { NoteEntry } from '@/lib/notes/note-entry';
 
 export type VoiceCardPhase = 'uploading' | 'transcribing' | 'ready' | 'failed';
 

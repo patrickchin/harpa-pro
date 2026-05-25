@@ -12,7 +12,7 @@ import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 import { ImageNoteCard } from './ImageNoteCard';
-import type { NoteEntry } from '@/lib/note-entry';
+import type { NoteEntry } from '@/lib/notes/note-entry';
 
 vi.mock('expo-image', () => ({
   Image: (props: Record<string, unknown>) =>

@@ -1,0 +1,61 @@
+name: mobile-ota-pr
+
+# Push an OTA update to the `development` EAS channel on every PR
+# push (open / new commits / reopen) so devices with a `development`
+# native build can pick up the PR's JS bundle on next launch.
+#
+# Only runs for PRs opened from branches in this repository — PRs
+# from forks are skipped because they cannot access EXPO_TOKEN and
+# we don't want to publish untrusted code to our `development`
+# channel.
+#
+# Requires:
+#   - EXPO_TOKEN repo secret (EAS access token with publish scope)
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - "apps/mobile/**"
+      - "packages/api-contract/**"
+      - ".github/workflows/mobile-ota-pr.yml"
+      - "pnpm-lock.yaml"
+
+concurrency:
+  group: mobile-ota-pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  ota:
+    name: EAS Update (development)
+    # Skip PRs from forked repositories — they can't access secrets
+    # and we don't auto-publish untrusted code.
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - uses: ./.github/actions/setup-monorepo
+        with:
+          node-version: '20'
+
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Push OTA update to development channel
+        working-directory: apps/mobile
+        env:
+          EXPO_PUBLIC_API_URL: https://harpa-pro-api-dev.fly.dev
+          EXPO_PUBLIC_APP_VARIANT: development
+          EXPO_PUBLIC_USE_FIXTURES: "false"
+        run: |
+          eas update \
+            --channel development \
+            --message "PR #${{ github.event.pull_request.number }} (${{ github.event.pull_request.head.ref }}) $(git rev-parse --short HEAD)" \
+            --non-interactive

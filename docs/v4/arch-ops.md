@@ -129,10 +129,11 @@ not by the API at runtime), and a handful of CI-only flags.
 
 
 ```
-PR open
+PR open / push (same-repo only, forks skipped)
   ↳ Neon branch pr-<n> (pr-preview.yml)
   ↳ migrations applied to pr-<n>
   ↳ marketing preview deploy to CF Pages (marketing-preview.yml)
+  ↳ EAS Update → `development` channel (mobile-ota-pr.yml)
   ↳ EAS preview build (manual trigger — planned)
 
 Push to dev

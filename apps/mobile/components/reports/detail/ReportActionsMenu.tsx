@@ -9,6 +9,7 @@ import {
   Bug,
   Eye,
   FileDown,
+  MessageSquare,
   RotateCcw,
   Share2,
   Trash2,
@@ -26,6 +27,12 @@ interface ReportActionsMenuProps {
   onSharePdf: () => void;
   onUnfinalize: () => void;
   onDelete: () => void;
+  /**
+   * Optional handler for "View Notes". When provided, the menu
+   * surfaces a "View Notes" row. Used by finalised reports — drafts
+   * keep the inline Notes tab and omit this entry.
+   */
+  onViewNotes?: () => void;
   isSaving: boolean;
   isExporting: boolean;
   isUnfinalizing: boolean;
@@ -53,6 +60,7 @@ export function ReportActionsMenu({
   onSharePdf,
   onUnfinalize,
   onDelete,
+  onViewNotes,
   isSaving,
   isExporting,
   isUnfinalizing,
@@ -143,6 +151,24 @@ export function ReportActionsMenu({
                 </Text>
               </View>
             </Button>
+
+            {onViewNotes ? (
+              <Button
+                variant="secondary"
+                size="lg"
+                className="justify-start"
+                accessibilityLabel="View source notes"
+                testID="btn-report-view-notes"
+                onPress={onViewNotes}
+              >
+                <View className="flex-row items-center gap-3">
+                  <MessageSquare size={16} color={colors.foreground} />
+                  <Text className="text-base font-semibold text-foreground">
+                    View Notes
+                  </Text>
+                </View>
+              </Button>
+            ) : null}
 
             {canUnfinalize ? (
               <Button

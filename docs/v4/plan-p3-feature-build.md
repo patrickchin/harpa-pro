@@ -225,14 +225,17 @@ props-only; PDF export, `ReportPhotos`, and the rich note timeline
 deferred to P3.15 / P4 behind clearly-marked stubs.
 
 Shipped: `screens/saved-report.tsx` owns tab + menu + dialog state
-(Report always / Notes always / Edit drafts-only with auto-bounce to
-Report on finalize) + canonical reconciliation pattern preserving
-local edits across refetches; real route wires `useProjectQuery` /
-`useReportQuery` / `useReportPdfActions` / `useRefresh` with slug
-params + invalid-route fallback; dev mirror (loading / error /
-draft-populated / finalized); components ported verbatim
-(`ReportActionsMenu`, `ReportDetailHeader`, `ReportDetailTabBar`,
-text-only `ReportNotesPane`, `SavedReportSheet`, `ReportDetailSkeleton`);
+(Report always / Notes drafts-only — finalised reports surface notes
+via the Actions menu's "View Notes" entry which routes to a
+dedicated `screens/report-notes.tsx` page / Edit drafts-only with
+auto-bounce to Report on finalize) + canonical reconciliation
+pattern preserving local edits across refetches; real route wires
+`useProjectQuery` / `useReportQuery` / `useReportPdfActions` /
+`useRefresh` with slug params + invalid-route fallback; dev mirror
+(loading / error / draft-populated / finalized); components ported
+verbatim (`ReportActionsMenu`, `ReportDetailHeader`,
+`ReportDetailTabBar`, text-only `ReportNotesPane`,
+`SavedReportSheet`, `ReportDetailSkeleton`);
 `ImagePreviewModal` simplified to RN `Image` (signed URLs deferred);
 `PdfPreviewModal` chrome + stub `saveReportPdf` routing through the
 action-error dialog; `lib/use-report-pdf-actions.ts` verbatim;

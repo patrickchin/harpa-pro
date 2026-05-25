@@ -14,13 +14,16 @@ name: mobile-ota-pr
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened]
+    types: [opened, synchronize, reopened, closed]
     paths:
       - "apps/mobile/**"
       - "packages/api-contract/**"
       - ".github/workflows/mobile-ota-pr.yml"
       - "pnpm-lock.yaml"
 
+# Keyed per-PR. New pushes cancel any in-flight OTA for that PR, and
+# the `closed` event below joins the same group so merging / closing
+# the PR also cancels the in-flight run.
 concurrency:
   group: mobile-ota-pr-${{ github.event.pull_request.number }}
   cancel-in-progress: true
@@ -30,7 +33,11 @@ jobs:
     name: EAS Update (development)
     # Skip PRs from forked repositories — they can't access secrets
     # and we don't auto-publish untrusted code.
-    if: github.event.pull_request.head.repo.full_name == github.repository
+    # Skip the `closed` event — that run exists only to join the
+    # concurrency group and cancel any in-flight publish.
+    if: >-
+      github.event.action != 'closed' &&
+      github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     env:
       EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}

@@ -11,7 +11,7 @@
  * don't collide across renders.
  */
 import { type ReactNode } from 'react';
-import { Modal, Pressable, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Modal, Platform, Pressable, Text, View } from 'react-native';
 import { X } from 'lucide-react-native';
 
 import { Button } from './Button';
@@ -71,11 +71,21 @@ export function AppDialogSheet({
           }
         }}
       >
-        <Pressable
-          onPress={(e) => e.stopPropagation()}
-          className="bg-background pb-10"
-          testID="dialog-sheet"
+        {/*
+          Bottom-anchored sheet: when a child TextInput is focused the
+          keyboard would otherwise overlap the sheet. KeyboardAvoidingView
+          lifts the sheet above the keyboard so the focused input and the
+          action buttons stay visible in the safe area. `behavior="padding"`
+          matches the screen-level convention used elsewhere in the app.
+        */}
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
+          <Pressable
+            onPress={(e) => e.stopPropagation()}
+            className="bg-background pb-10"
+            testID="dialog-sheet"
+          >
           <View className="flex-row items-center justify-between border-b border-border px-5 py-4">
             <Text className="text-xl font-bold text-foreground">{title}</Text>
             <Pressable onPress={onClose} hitSlop={12} disabled={!canDismiss}>
@@ -112,6 +122,7 @@ export function AppDialogSheet({
             </View>
           </View>
         </Pressable>
+        </KeyboardAvoidingView>
       </Pressable>
     </Modal>
   );

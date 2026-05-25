@@ -15,7 +15,7 @@
  *    success; "Cancel" reverts to the original values.
  */
 import { useEffect, useState, type ReactNode } from 'react';
-import { RefreshControl, ScrollView, Text, View } from 'react-native';
+import { RefreshControl, KeyboardAvoidingView, Platform, ScrollView, Text, View } from 'react-native';
 import { User } from 'lucide-react-native';
 
 import { SafeAreaView } from '@/components/primitives/SafeAreaView';
@@ -154,24 +154,30 @@ export function Account({
 
   return (
     <SafeAreaView className="flex-1 bg-background" testID="screen-account">
-      <View className="flex-1">
-        <View className="px-5 py-4">
-          <ScreenHeader
-            title="Account Details"
-            onBack={onBack}
-            backLabel="Profile"
-            actions={actions}
-          />
-        </View>
-
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        className="flex-1"
+      >
         <View className="flex-1">
-          <ScrollView
-            className="flex-1 px-5"
-            contentContainerStyle={{ gap: 20, paddingBottom: 40 }}
-            refreshControl={
-              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-            }
-          >
+          <View className="px-5 py-4">
+            <ScreenHeader
+              title="Account Details"
+              onBack={onBack}
+              backLabel="Profile"
+              actions={actions}
+            />
+          </View>
+
+          <View className="flex-1">
+            <ScrollView
+              className="flex-1 px-5"
+              contentContainerStyle={{ gap: 20, paddingBottom: 40 }}
+              automaticallyAdjustKeyboardInsets
+              keyboardShouldPersistTaps="handled"
+              refreshControl={
+                <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+              }
+            >
             <View
               className="items-center pt-2"
               onLayout={onAvatarLayout}
@@ -263,6 +269,7 @@ export function Account({
           </ScrollView>
         </View>
       </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

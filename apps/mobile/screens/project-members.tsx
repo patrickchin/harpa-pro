@@ -17,6 +17,8 @@ import {
   Pressable,
   ScrollView,
   RefreshControl,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { Crown, Pencil, Eye, Plus, Trash2, Users } from 'lucide-react-native';
 import { SafeAreaView } from '@/components/primitives/SafeAreaView';
@@ -288,6 +290,10 @@ export function ProjectMembers({
 
   return (
     <SafeAreaView className="flex-1 bg-background" edges={['top']}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        className="flex-1"
+      >
       <View className="px-5 pt-4 pb-2" onLayout={headerProbe}>
         <ScreenHeader title="Members" onBack={onBack} backLabel="Project" actions={actions} />
       </View>
@@ -303,6 +309,8 @@ export function ProjectMembers({
             paddingBottom: PROJECT_MEMBERS_LAYOUT.paddingBottom,
             gap: PROJECT_MEMBERS_LAYOUT.gap,
           }}
+          automaticallyAdjustKeyboardInsets
+          keyboardShouldPersistTaps="handled"
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
           }
@@ -409,6 +417,7 @@ export function ProjectMembers({
           )}
         </ScrollView>
       )}
+      </KeyboardAvoidingView>
 
       {removeCopy && memberToRemove ? (
         <AppDialogSheet

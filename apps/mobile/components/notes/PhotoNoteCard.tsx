@@ -17,6 +17,7 @@ import { Text, View } from 'react-native';
 
 import { NoteCardHeader } from '@/components/notes/NoteCardHeader';
 import { NoteOptionsKebab } from '@/components/notes/NoteOptionsKebab';
+import { PhotoBatchGrid } from '@/components/notes/PhotoBatchGrid';
 import { PhotoGridTile } from '@/components/notes/PhotoGridTile';
 import type { NoteEntry } from '@/lib/note-entry';
 
@@ -39,6 +40,9 @@ export function PhotoNoteCard({
 }: PhotoNoteCardProps) {
   const fileId = entry.fileId ?? null;
   const body = entry.text?.trim() ?? '';
+  const hasBatch =
+    (entry.files && entry.files.length > 1) ||
+    (entry.pendingFiles && entry.pendingFiles.length > 1);
 
   return (
     <View
@@ -59,24 +63,28 @@ export function PhotoNoteCard({
         }
       />
 
-      <View className="flex-row items-start gap-3">
-        <PhotoGridTile
-          fileId={fileId}
-          thumbnailFileId={entry.thumbnailFileId ?? null}
-          size={110}
-          onPress={fileId && onOpen ? () => onOpen(fileId, sourceIndex) : undefined}
-          accessibilityLabel="Open photo"
-          testID={`btn-open-photo-${sourceIndex}`}
+      {hasBatch ? (
+        <PhotoBatchGrid
+          entry={entry}
+          onOpenFile={onOpen ? (fileId, idx) => onOpen(fileId, sourceIndex) : undefined}
         />
-        {body ? (
-          <Text
-            className="flex-1 text-sm leading-5 text-foreground"
-            selectable
-          >
-            {body}
-          </Text>
-        ) : null}
-      </View>
+      ) : (
+        <View className="flex-row items-start gap-3">
+          <PhotoGridTile
+            fileId={fileId}
+            thumbnailFileId={entry.thumbnailFileId ?? null}
+            size={110}
+            onPress={fileId && onOpen ? () => onOpen(fileId, sourceIndex) : undefined}
+            accessibilityLabel="Open photo"
+            testID={`btn-open-photo-${sourceIndex}`}
+          />
+          {body ? (
+            <Text className="flex-1 text-sm leading-5 text-foreground" selectable>
+              {body}
+            </Text>
+          ) : null}
+        </View>
+      )}
     </View>
   );
 }

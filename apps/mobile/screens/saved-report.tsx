@@ -24,6 +24,8 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import {
   RefreshControl,
+  KeyboardAvoidingView,
+  Platform,
   ScrollView,
   Text,
   View,
@@ -372,9 +374,15 @@ export function SavedReport(props: SavedReportProps) {
 
   return (
     <SafeAreaView className="flex-1 bg-background" edges={['top']}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        className="flex-1"
+      >
       <ScrollView
         className="flex-1"
         contentContainerStyle={{ paddingBottom: 32 }}
+        automaticallyAdjustKeyboardInsets
+        keyboardShouldPersistTaps="handled"
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
@@ -444,6 +452,7 @@ export function SavedReport(props: SavedReportProps) {
           </Animated.View>
         )}
       </ScrollView>
+      </KeyboardAvoidingView>
 
       <ReportActionsMenu
         visible={menuVisible}

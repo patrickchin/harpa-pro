@@ -68,6 +68,12 @@ function fakeQueue(initial: UploadJob[]): UploadQueue & {
   });
   return {
     enqueue: async () => ({ file: { id: 'fil_1' } as never }),
+    enqueueBatch: (inputs: unknown[]) => ({
+      batchKey: 'batch_mock',
+      promises: (inputs as unknown[]).map(() =>
+        Promise.resolve({ file: { id: 'fil_1' } as never }),
+      ),
+    }),
     retry: retrySpy,
     remove: removeSpy,
     getJobs: () => jobs,

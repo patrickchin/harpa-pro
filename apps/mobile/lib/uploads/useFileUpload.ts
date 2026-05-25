@@ -17,6 +17,8 @@ import type { EnqueueInput, UploadJob, UploadResult } from './types';
 export interface UseFileUploadApi {
   /** Schedule a single file. Resolves with the server file row on success. */
   enqueue: (input: EnqueueInput) => Promise<UploadResult>;
+  /** Schedule multiple files as a batch. First-to-complete creates the note; others append. */
+  enqueueBatch: (inputs: EnqueueInput[]) => { batchKey: string; promises: Promise<UploadResult>[] };
   /** Push a previously-failed job back through the pipeline. */
   retry: (jobId: string) => Promise<UploadResult>;
   /** Remove a job from the snapshot. In-flight jobs continue but stop being visible. */
@@ -42,6 +44,10 @@ export function useFileUpload(): UseFileUploadApi {
     (input: EnqueueInput) => queue.enqueue(input),
     [queue],
   );
+  const enqueueBatch = useCallback(
+    (inputs: EnqueueInput[]) => queue.enqueueBatch(inputs),
+    [queue],
+  );
   const retry = useCallback((jobId: string) => queue.retry(jobId), [queue]);
   const remove = useCallback((jobId: string) => queue.remove(jobId), [queue]);
 
@@ -52,6 +58,7 @@ export function useFileUpload(): UseFileUploadApi {
 
   return {
     enqueue,
+    enqueueBatch,
     retry,
     remove,
     jobs,

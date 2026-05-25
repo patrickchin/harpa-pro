@@ -16,7 +16,7 @@ import {
 } from '@harpa/api-contract';
 import type { AppEnv } from '../app.js';
 import { withAuth } from '../middleware/auth.js';
-import { createNote, deleteNote, listNotes, updateNote } from '../services/notes.js';
+import { appendFiles, createNote, deleteNote, listNotes, updateNote } from '../services/notes.js';
 import { getReport } from '../services/reports.js';
 
 const reportParam = z.object({ report: reportId.openapi({ param: { name: 'report', in: 'path' } }) });
@@ -84,6 +84,35 @@ noteRoutes.openapi(
     const note = await db((d) => createNote(d, reportId, userId, body));
     if (!note) throw new HTTPException(500, { message: 'create failed' });
     return c.json(note, 201);
+  },
+);
+
+// --------- append files to note ----------
+noteRoutes.openapi(
+  createRoute({
+    method: 'post',
+    path: '/notes/{note}/files',
+    tags: ['notes'],
+    security: [{ bearerAuth: [] }],
+    middleware: [withAuth()] as const,
+    request: {
+      params: noteParam,
+      body: { content: { 'application/json': { schema: noteSchemas.appendFilesRequest } } },
+    },
+    responses: {
+      200: { description: 'Files appended.', content: { 'application/json': { schema: z.object({ files: z.array(noteSchemas.noteFile) }) } } },
+      401: { description: 'Unauthorized.', content: { 'application/json': { schema: errorEnvelope } } },
+      404: { description: 'Note not found.', content: { 'application/json': { schema: errorEnvelope } } },
+    },
+  }),
+  async (c) => {
+    const db = c.get('db');
+    if (!db) throw new HTTPException(401);
+    const { note: noteId } = c.req.valid('param');
+    const { files } = c.req.valid('json');
+    const result = await db((d) => appendFiles(d, noteId, files));
+    if (!result.length) throw new HTTPException(404, { message: 'Note not found or no files added.' });
+    return c.json({ files: result }, 200);
   },
 );
 

@@ -49,6 +49,7 @@ export const INVALIDATIONS: Record<string, InvalidationRule> = {
   useCreateNoteMutation: ['reportNotes', 'report'],
   useUpdateNoteMutation: ['reportNotes', 'report'],
   useDeleteNoteMutation: ['reportNotes', 'report'],
+  useAppendFilesMutation: ['reportNotes'],
 
   // files
   usePresignFileMutation: INVALIDATIONS_NONE,

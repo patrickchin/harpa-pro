@@ -12,6 +12,14 @@ type Db = NodePgDatabase<typeof schema>;
 
 export type NoteKind = 'text' | 'voice' | 'image' | 'document';
 
+export interface NoteFileRow {
+  id: string;
+  fileId: string;
+  thumbnailFileId: string | null;
+  position: number;
+  caption: string | null;
+}
+
 export interface NoteRow {
   id: string;
   reportId: string;
@@ -29,6 +37,7 @@ export interface NoteRow {
   transcribedAt: string | null;
   createdAt: string;
   updatedAt: string;
+  files: NoteFileRow[];
 }
 
 interface RawNote {
@@ -51,7 +60,7 @@ interface RawNote {
   updated_at: Date;
 }
 
-function mapNote(r: RawNote): NoteRow {
+function mapNote(r: RawNote, files: NoteFileRow[] = []): NoteRow {
   return {
     id: r.id,
     reportId: r.report_id,
@@ -69,6 +78,7 @@ function mapNote(r: RawNote): NoteRow {
     transcribedAt: r.transcribed_at ? new Date(r.transcribed_at).toISOString() : null,
     createdAt: new Date(r.created_at).toISOString(),
     updatedAt: new Date(r.updated_at).toISOString(),
+    files,
   };
 }
 
@@ -118,8 +128,44 @@ export async function listNotes(
   const hasMore = rows.length > limit;
   const slice = hasMore ? rows.slice(0, limit) : rows;
   const last = slice[slice.length - 1];
+
+  // Fetch associated note_files for image notes in a single query.
+  const imageNoteIds = slice.filter((r) => r.kind === 'image').map((r) => r.id);
+  const filesByNoteId = new Map<string, NoteFileRow[]>();
+  if (imageNoteIds.length > 0) {
+    const idFragments = imageNoteIds.map((id) => sql`${id}`);
+    const inList = idFragments.reduce<ReturnType<typeof sql>>(
+      (acc, frag, idx) => (idx === 0 ? frag : sql`${acc}, ${frag}`),
+      sql``,
+    );
+    const nfResult = await db.execute<{
+      id: string;
+      note_id: string;
+      file_id: string;
+      thumbnail_file_id: string | null;
+      position: number;
+      caption: string | null;
+    }>(sql`
+      SELECT id, note_id, file_id, thumbnail_file_id, position, caption
+      FROM app.note_files
+      WHERE note_id IN (${inList})
+      ORDER BY note_id, position
+    `);
+    for (const nf of nfResult.rows) {
+      const arr = filesByNoteId.get(nf.note_id) ?? [];
+      arr.push({
+        id: nf.id,
+        fileId: nf.file_id,
+        thumbnailFileId: nf.thumbnail_file_id,
+        position: nf.position,
+        caption: nf.caption,
+      });
+      filesByNoteId.set(nf.note_id, arr);
+    }
+  }
+
   return {
-    items: slice.map(mapNote),
+    items: slice.map((r) => mapNote(r, filesByNoteId.get(r.id) ?? [])),
     nextCursor: hasMore && last
       ? encodeCursor(new Date(last.created_at).toISOString(), last.id)
       : null,
@@ -138,6 +184,7 @@ export async function createNote(
     transcript?: string | null;
     title?: string | null;
     summary?: string | null;
+    files?: Array<{ fileId: string; thumbnailFileId?: string | null }>;
   },
 ): Promise<NoteRow | null> {
   const id = newId('not');
@@ -162,13 +209,44 @@ export async function createNote(
   `);
   const row = r.rows[0];
   if (!row) return null;
+
+  let files: NoteFileRow[] = [];
+  if (input.files && input.files.length > 0) {
+    const values = input.files.map((f, idx) => {
+      const nfId = newId('nfl');
+      return sql`(${nfId}, ${id}, ${f.fileId}, ${f.thumbnailFileId ?? null}, ${idx})`;
+    });
+    const valuesList = values.reduce<ReturnType<typeof sql>>(
+      (acc, frag, idx) => (idx === 0 ? frag : sql`${acc}, ${frag}`),
+      sql``,
+    );
+    const nfResult = await db.execute<{
+      id: string;
+      file_id: string;
+      thumbnail_file_id: string | null;
+      position: number;
+      caption: string | null;
+    }>(sql`
+      INSERT INTO app.note_files (id, note_id, file_id, thumbnail_file_id, position)
+      VALUES ${valuesList}
+      RETURNING id, file_id, thumbnail_file_id, position, caption
+    `);
+    files = nfResult.rows.map((nf) => ({
+      id: nf.id,
+      fileId: nf.file_id,
+      thumbnailFileId: nf.thumbnail_file_id,
+      position: nf.position,
+      caption: nf.caption,
+    }));
+  }
+
   await db.execute(sql`
     UPDATE app.reports
     SET notes_since_last_generation = notes_since_last_generation + 1,
         updated_at = now()
     WHERE id = ${reportId}
   `);
-  return mapNote(row);
+  return mapNote(row, files);
 }
 
 /**
@@ -267,4 +345,42 @@ export async function deleteNote(db: Db, noteId: string): Promise<boolean> {
     DELETE FROM app.notes WHERE id = ${noteId} RETURNING id
   `);
   return r.rows.length > 0;
+}
+
+export async function appendFiles(
+  db: Db,
+  noteId: string,
+  files: Array<{ fileId: string; thumbnailFileId?: string | null }>,
+): Promise<NoteFileRow[]> {
+  const maxPos = await db.execute<{ max_pos: number | null }>(sql`
+    SELECT MAX(position) as max_pos FROM app.note_files WHERE note_id = ${noteId}
+  `);
+  const startPos = (maxPos.rows[0]?.max_pos ?? -1) + 1;
+
+  const values = files.map((f, idx) => {
+    const nfId = newId('nfl');
+    return sql`(${nfId}, ${noteId}, ${f.fileId}, ${f.thumbnailFileId ?? null}, ${startPos + idx})`;
+  });
+  const valuesList = values.reduce<ReturnType<typeof sql>>(
+    (acc, frag, idx) => (idx === 0 ? frag : sql`${acc}, ${frag}`),
+    sql``,
+  );
+  const nfResult = await db.execute<{
+    id: string;
+    file_id: string;
+    thumbnail_file_id: string | null;
+    position: number;
+    caption: string | null;
+  }>(sql`
+    INSERT INTO app.note_files (id, note_id, file_id, thumbnail_file_id, position)
+    VALUES ${valuesList}
+    RETURNING id, file_id, thumbnail_file_id, position, caption
+  `);
+  return nfResult.rows.map((nf) => ({
+    id: nf.id,
+    fileId: nf.file_id,
+    thumbnailFileId: nf.thumbnail_file_id,
+    position: nf.position,
+    caption: nf.caption,
+  }));
 }

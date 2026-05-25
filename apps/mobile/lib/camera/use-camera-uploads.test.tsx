@@ -192,9 +192,9 @@ describe('useCameraUploads — session-registry → upload queue', () => {
     for (const r of results) {
       expect(r.status).toBe('fulfilled');
     }
-    // Each URI hits the dual pipeline: presign + PUT + register for
-    // both the main image and the thumbnail (×2), plus one createNote.
-    // → 7 fetch calls per URI.
+    // Each URI hits: presign + PUT + register for main and thumbnail
+    // (×2 = 6), plus one note-related call (create for the first,
+    // append for the rest). Total: 7 per URI.
     expect(calls).toHaveLength(captured.length * 7);
     const presigns = calls.filter((c) => c.url.includes('/files/presign'));
     expect(presigns).toHaveLength(captured.length * 2);
@@ -203,13 +203,12 @@ describe('useCameraUploads — session-registry → upload queue', () => {
       expect(body.kind).toBe('image');
       expect(body.contentType).toBe('image/jpeg');
     }
+    // Batch creates a single note; subsequent jobs append files
     const noteCreates = calls.filter((c) =>
       c.url.endsWith('/reports/rpt_test/notes'),
     );
-    expect(noteCreates).toHaveLength(captured.length);
-    for (const note of noteCreates) {
-      expect((note.body as { kind?: string }).kind).toBe('image');
-    }
+    expect(noteCreates).toHaveLength(1);
+    expect((noteCreates[0]!.body as { kind?: string }).kind).toBe('image');
   });
 
   it('rejects (and skips fetch) when File.size reports 0 — guards against SigV4 sentinel bug', async () => {

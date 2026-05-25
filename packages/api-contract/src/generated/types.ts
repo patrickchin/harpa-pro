@@ -3315,6 +3315,14 @@ export interface paths {
                                 body: string | null;
                                 fileId: string | null;
                                 thumbnailFileId: string | null;
+                                /** @default [] */
+                                files: {
+                                    id: string;
+                                    fileId: string;
+                                    thumbnailFileId: string | null;
+                                    position: number;
+                                    caption: string | null;
+                                }[];
                                 transcript: string | null;
                                 title: string | null;
                                 summary: string | null;
@@ -3381,6 +3389,10 @@ export interface paths {
                         body?: string | null;
                         fileId?: string | null;
                         thumbnailFileId?: string | null;
+                        files?: {
+                            fileId: string;
+                            thumbnailFileId?: string | null;
+                        }[];
                         transcript?: string | null;
                         title?: string | null;
                         summary?: string | null;
@@ -3403,6 +3415,14 @@ export interface paths {
                             body: string | null;
                             fileId: string | null;
                             thumbnailFileId: string | null;
+                            /** @default [] */
+                            files: {
+                                id: string;
+                                fileId: string;
+                                thumbnailFileId: string | null;
+                                position: number;
+                                caption: string | null;
+                            }[];
                             transcript: string | null;
                             title: string | null;
                             summary: string | null;
@@ -3448,6 +3468,92 @@ export interface paths {
                     };
                 };
                 /** @description Report not found. */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                                requestId?: string;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/notes/{note}/files": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    note: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        files: {
+                            fileId: string;
+                            thumbnailFileId?: string | null;
+                        }[];
+                    };
+                };
+            };
+            responses: {
+                /** @description Files appended. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            files: {
+                                id: string;
+                                fileId: string;
+                                thumbnailFileId: string | null;
+                                position: number;
+                                caption: string | null;
+                            }[];
+                        };
+                    };
+                };
+                /** @description Unauthorized. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                                requestId?: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Note not found. */
                 404: {
                     headers: {
                         [name: string]: unknown;
@@ -3569,6 +3675,14 @@ export interface paths {
                             body: string | null;
                             fileId: string | null;
                             thumbnailFileId: string | null;
+                            /** @default [] */
+                            files: {
+                                id: string;
+                                fileId: string;
+                                thumbnailFileId: string | null;
+                                position: number;
+                                caption: string | null;
+                            }[];
                             transcript: string | null;
                             title: string | null;
                             summary: string | null;
@@ -3933,6 +4047,14 @@ export interface paths {
                             body: string | null;
                             fileId: string | null;
                             thumbnailFileId: string | null;
+                            /** @default [] */
+                            files: {
+                                id: string;
+                                fileId: string;
+                                thumbnailFileId: string | null;
+                                position: number;
+                                caption: string | null;
+                            }[];
                             transcript: string | null;
                             title: string | null;
                             summary: string | null;

@@ -56,7 +56,7 @@ describe('upload queue — AbortController cancellation', () => {
     const registerFile = vi.fn();
     const createNote = vi.fn();
 
-    const queue = createUploadQueue({ presign, putToR2, registerFile, createNote });
+    const queue = createUploadQueue({ presign, putToR2, registerFile, createNote, appendFiles: vi.fn() });
     const promise = queue.enqueue(input());
 
     // Wait for the job to actually reach `uploading` before cancelling.
@@ -95,7 +95,7 @@ describe('upload queue — AbortController cancellation', () => {
     const registerFile = vi.fn(async () => fakeFile);
     const createNote = vi.fn(async () => fakeNote);
 
-    const queue = createUploadQueue({ presign, putToR2, registerFile, createNote });
+    const queue = createUploadQueue({ presign, putToR2, registerFile, createNote, appendFiles: vi.fn() });
     const promise = queue.enqueue(input());
     await promise;
     expect(queue.getJobs()[0]?.attempt).toBe(1);

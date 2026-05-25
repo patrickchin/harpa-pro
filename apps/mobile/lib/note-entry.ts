@@ -78,4 +78,37 @@ export interface NoteEntry {
     /** Error message when status === 'failed'. */
     error?: string;
   } | null;
+
+  // ── Batch photo fields ───────────────────────────────────────────
+  // When a note contains multiple files (batch photo upload), these
+  // hold the server-resolved file list and/or pending uploads.
+
+  /** Resolved files for this note (from server `note_files` join). */
+  files?: Array<{
+    id: string;
+    fileId: string;
+    thumbnailFileId: string | null;
+    position: number;
+    caption: string | null;
+  }>;
+
+  /** Pending uploads in this batch (one per in-flight/failed job). */
+  pendingFiles?: Array<{
+    jobId: string;
+    sourceUri: string;
+    status:
+      | 'pending'
+      | 'presigning'
+      | 'uploading'
+      | 'registering'
+      | 'creating_note'
+      | 'completed'
+      | 'failed'
+      | 'cancelled';
+    progress: number;
+    error?: string;
+  }>;
+
+  /** Batch key for grouping (set on synthetic entries from upload queue). */
+  batchKey?: string;
 }

@@ -516,22 +516,30 @@ export function GenerateReportProvider({
   // fullscreen swipeable preview wired in `GenerateReportDialogs`.
   // Order matches `timelineItems`; tapping any thumbnail in the Notes
   // tab or Report tab resolves into this list by `fileId`.
-  const photoGallery = useMemo(
-    () =>
-      timelineItems
-        .filter(
-          (e): e is NoteEntry & { fileId: string } =>
-            e.source === 'image' &&
-            typeof e.fileId === 'string' &&
-            !!e.fileId,
-        )
-        .map((e) => ({
+  const photoGallery = useMemo(() => {
+    const items: Array<{ fileId: string; title: string; cacheKey: string }> = [];
+    for (const e of timelineItems) {
+      if (e.source !== 'image') continue;
+      // Batch entry: expand files array
+      if (e.files && e.files.length > 0) {
+        for (const f of e.files) {
+          items.push({
+            fileId: f.fileId,
+            title: e.text?.trim() || 'Photo',
+            cacheKey: f.fileId,
+          });
+        }
+      } else if (typeof e.fileId === 'string' && e.fileId) {
+        // Legacy single-file entry
+        items.push({
           fileId: e.fileId,
           title: e.text?.trim() || 'Photo',
           cacheKey: e.fileId,
-        })),
-    [timelineItems],
-  );
+        });
+      }
+    }
+    return items;
+  }, [timelineItems]);
 
   const openPhoto = useCallback(
     (fileId: string) => {

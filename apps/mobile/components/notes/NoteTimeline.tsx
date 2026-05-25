@@ -149,44 +149,48 @@ export function NoteTimeline({
         }
         const isImage = entry.source === 'image';
         if (isImage) {
-          if (entry.pendingUpload) {
-            // Synthetic in-flight / failed image row. The provider
-            // builds these from `useFileUpload().jobs` so the card
-            // appears the moment the user picks/snaps a photo, well
-            // before the upload pipeline finishes.
-            const job: UploadJob = {
-              id: entry.pendingUpload.jobId,
-              input: {
-                sourceUri: entry.pendingUpload.sourceUri,
-                kind: 'image',
-                filename: '',
-                contentType: 'image/jpeg',
-                sizeBytes: 0,
-              },
-              status: entry.pendingUpload.status,
-              progress: entry.pendingUpload.progress,
-              attempt: 1,
-              error: entry.pendingUpload.error,
-            };
+          // Batch photo entry (multiple files or multiple pending)
+          const isBatch =
+            (entry.pendingFiles && entry.pendingFiles.length > 1) ||
+            (entry.files && entry.files.length > 1);
+
+          if (isBatch || !entry.pendingUpload) {
+            // Batch OR resolved single photo → PhotoNoteCard (handles both via PhotoBatchGrid)
             return (
-              <PendingPhotoCard
+              <PhotoNoteCard
                 key={entry.id ?? `note-${index}`}
-                job={job}
+                entry={entry}
                 sourceIndex={index}
                 authorName={authorName}
-                onRetry={onRetryPhotoUpload}
-                onCancel={onCancelPhotoUpload}
+                onOpen={onOpenPhoto}
+                onOpenOptions={handleOpenOptions}
               />
             );
           }
+
+          // Solo pending upload → legacy PendingPhotoCard
+          const job: UploadJob = {
+            id: entry.pendingUpload.jobId,
+            input: {
+              sourceUri: entry.pendingUpload.sourceUri,
+              kind: 'image',
+              filename: '',
+              contentType: 'image/jpeg',
+              sizeBytes: 0,
+            },
+            status: entry.pendingUpload.status,
+            progress: entry.pendingUpload.progress,
+            attempt: 1,
+            error: entry.pendingUpload.error,
+          };
           return (
-            <PhotoNoteCard
+            <PendingPhotoCard
               key={entry.id ?? `note-${index}`}
-              entry={entry}
+              job={job}
               sourceIndex={index}
               authorName={authorName}
-              onOpen={onOpenPhoto}
-              onOpenOptions={handleOpenOptions}
+              onRetry={onRetryPhotoUpload}
+              onCancel={onCancelPhotoUpload}
             />
           );
         }

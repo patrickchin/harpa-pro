@@ -27,6 +27,8 @@ export interface paths {
                             /** @enum {string} */
                             service: "api";
                             version: string;
+                            gitCommit: string;
+                            buildTime?: string;
                         };
                     };
                 };

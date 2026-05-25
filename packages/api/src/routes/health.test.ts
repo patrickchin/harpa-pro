@@ -7,7 +7,7 @@ describe('healthz', () => {
     const res = await app.request('/healthz');
     expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body).toEqual({ ok: true, service: 'api', version: '0.0.0' });
+    expect(body).toEqual({ ok: true, service: 'api', version: '0.0.0', gitCommit: 'local' });
     expect(res.headers.get('x-request-id')).toMatch(/^[\w-]{6,}$/);
   });
 

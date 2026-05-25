@@ -19,6 +19,14 @@ RUN pnpm install --frozen-lockfile
 ARG MIGRATIONS_REQUIRED_HEAD
 ENV MIGRATIONS_REQUIRED_HEAD=${MIGRATIONS_REQUIRED_HEAD}
 
+# Build-time version metadata surfaced via /healthz so clients (mobile
+# BuildBadge, ops dashboards) can see exactly which commit is serving
+# traffic. Both are passed by infra/fly/deploy.sh.
+ARG GIT_COMMIT=local
+ENV GIT_COMMIT=${GIT_COMMIT}
+ARG BUILD_TIME
+ENV BUILD_TIME=${BUILD_TIME}
+
 ENV NODE_ENV=production
 EXPOSE 8787
 CMD ["pnpm", "--filter", "@harpa/api", "exec", "tsx", "src/server.ts"]

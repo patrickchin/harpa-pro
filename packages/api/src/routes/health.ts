@@ -1,10 +1,13 @@
 import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi';
 import type { AppEnv } from '../app.js';
+import { buildInfo } from '../lib/build-info.js';
 
 const HealthResponse = z.object({
   ok: z.literal(true),
   service: z.literal('api'),
   version: z.string(),
+  gitCommit: z.string(),
+  buildTime: z.string().optional(),
 });
 
 export const health = new OpenAPIHono<AppEnv>().openapi(
@@ -19,5 +22,15 @@ export const health = new OpenAPIHono<AppEnv>().openapi(
       },
     },
   }),
-  (c) => c.json({ ok: true as const, service: 'api' as const, version: '0.0.0' }, 200),
+  (c) =>
+    c.json(
+      {
+        ok: true as const,
+        service: 'api' as const,
+        version: buildInfo.version,
+        gitCommit: buildInfo.gitCommit,
+        ...(buildInfo.buildTime ? { buildTime: buildInfo.buildTime } : {}),
+      },
+      200,
+    ),
 );

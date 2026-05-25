@@ -43,12 +43,19 @@
                     },
                     "version": {
                       "type": "string"
+                    },
+                    "gitCommit": {
+                      "type": "string"
+                    },
+                    "buildTime": {
+                      "type": "string"
                     }
                   },
                   "required": [
                     "ok",
                     "service",
-                    "version"
+                    "version",
+                    "gitCommit"
                   ]
                 }
               }

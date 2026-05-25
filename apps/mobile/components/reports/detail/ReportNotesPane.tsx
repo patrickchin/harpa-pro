@@ -44,6 +44,12 @@ export interface ReportNoteRow {
   fileId?: string | null;
   /** Thumbnail file id for image notes (small client-generated variant). */
   thumbnailFileId?: string | null;
+  /**
+   * Batch grouping key. When multiple photo rows belong to the same
+   * note (batch upload), they share the same `noteId`. Falls back to
+   * `id` for legacy single-file notes.
+   */
+  noteId?: string | null;
   // ── Voice-only fields (Phase E). Optional so non-voice rows omit them. ──
   transcript?: string | null;
   title?: string | null;

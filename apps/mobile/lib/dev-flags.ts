@@ -3,8 +3,9 @@
  * survives an app reload.
  *
  * Currently controls visibility of the Debug and Manual-Edit tabs on
- * the Generate Report screen. Both default to ON to preserve existing
- * behaviour for users who haven't opened the Developer screen.
+ * the Generate Report screen. Both default to OFF — the tabs are
+ * developer-facing surfaces that we don't want shipped to end users
+ * until they explicitly opt in via the Developer screen.
  */
 import { useCallback, useEffect, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -27,8 +28,8 @@ function parseBool(value: string | null, fallback: boolean): boolean {
 }
 
 export function useDeveloperFlags(): UseDeveloperFlagsApi {
-  const [showGenerateDebugTab, setDebug] = useState(true);
-  const [showGenerateEditTab, setEdit] = useState(true);
+  const [showGenerateDebugTab, setDebug] = useState(false);
+  const [showGenerateEditTab, setEdit] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
@@ -38,8 +39,8 @@ export function useDeveloperFlags(): UseDeveloperFlagsApi {
       AsyncStorage.getItem(EDIT_TAB_KEY),
     ]).then(([debugVal, editVal]) => {
       if (cancelled) return;
-      setDebug(parseBool(debugVal, true));
-      setEdit(parseBool(editVal, true));
+      setDebug(parseBool(debugVal, false));
+      setEdit(parseBool(editVal, false));
       setIsLoaded(true);
     });
     return () => {

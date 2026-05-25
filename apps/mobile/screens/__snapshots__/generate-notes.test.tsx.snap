@@ -154,46 +154,6 @@ exports[`GenerateNotes > matches the empty-state snapshot 1`] = `
           Report
         </rn-Text>
       </rn-Pressable>
-      <rn-Pressable
-        className="flex-1 flex-row items-center justify-center gap-2 rounded-md py-3 "
-        onPress={[Function]}
-        testID="btn-tab-edit"
-      >
-        <lucide-Pencil
-          color="#5f5b66"
-          size={16}
-          style={
-            {
-              "marginTop": 1,
-            }
-          }
-        />
-        <rn-Text
-          className="text-sm font-semibold text-muted-foreground"
-        >
-          Edit
-        </rn-Text>
-      </rn-Pressable>
-      <rn-Pressable
-        className="flex-1 flex-row items-center justify-center gap-2 rounded-md py-3 "
-        onPress={[Function]}
-        testID="btn-tab-debug"
-      >
-        <lucide-Bug
-          color="#5f5b66"
-          size={16}
-          style={
-            {
-              "marginTop": 1,
-            }
-          }
-        />
-        <rn-Text
-          className="text-sm font-semibold text-muted-foreground"
-        >
-          Debug
-        </rn-Text>
-      </rn-Pressable>
     </rn-View>
     <rn-ScrollView
       className="flex-1"

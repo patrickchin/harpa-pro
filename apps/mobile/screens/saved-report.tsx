@@ -60,7 +60,7 @@ import { colors } from '@/lib/design-tokens/colors';
 import {
   getDeleteReportDialogCopy,
   getUnfinalizeReportDialogCopy,
-} from '@/lib/app-dialog-copy';
+} from '@/lib/dialogs/app-dialog-copy';
 import type { GeneratedSiteReport } from '@harpa/report-core';
 import type { UseReportPdfActionsReturn } from '@/lib/reports/use-report-pdf-actions';
 

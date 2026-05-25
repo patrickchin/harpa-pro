@@ -20,7 +20,7 @@ import {
   getActionErrorDialogCopy,
   getDeleteNoteDialogCopy,
   getFinalizeReportDialogCopy,
-} from '@/lib/app-dialog-copy';
+} from '@/lib/dialogs/app-dialog-copy';
 import { useGenerateReport } from './GenerateReportProvider';
 
 export function GenerateReportDialogs() {

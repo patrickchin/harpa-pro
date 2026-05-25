@@ -43,7 +43,7 @@ import { SAMPLE_GENERATED_REPORT } from '@/lib/dev-fixtures/sample-report';
 import { reportBodyToGeneratedReport } from '@/lib/reports/report-body-adapter';
 import { reports as reportSchemas } from '@harpa/api-contract';
 import type { GeneratedSiteReport } from '@harpa/report-core';
-import type { AppDialogCopy } from '@/lib/app-dialog-copy';
+import type { AppDialogCopy } from '@/lib/dialogs/app-dialog-copy';
 import { AppHeaderActions } from '@/components/ui/AppHeaderActions';
 
 export default function SavedReportRoute() {

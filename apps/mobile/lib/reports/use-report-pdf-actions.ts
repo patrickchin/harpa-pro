@@ -21,7 +21,7 @@ import {
 import {
   getActionErrorDialogCopy,
   type AppDialogCopy,
-} from '@/lib/app-dialog-copy';
+} from '@/lib/dialogs/app-dialog-copy';
 import type { GeneratedSiteReport } from '@harpa/report-core';
 
 export interface SavedReportSheetState {

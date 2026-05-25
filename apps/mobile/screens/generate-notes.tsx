@@ -32,7 +32,7 @@ import { AppDialogSheet } from '@/components/primitives/AppDialogSheet';
 import { SafeAreaView } from '@/components/primitives/SafeAreaView';
 import { ScreenHeader } from '@/components/primitives/ScreenHeader';
 import { colors } from '@/lib/design-tokens/colors';
-import { getDeleteDraftDialogCopy } from '@/lib/app-dialog-copy';
+import { getDeleteDraftDialogCopy } from '@/lib/dialogs/app-dialog-copy';
 import { DebugTabPane } from '@/components/reports/generate/DebugTabPane';
 import { EditTabPane } from '@/components/reports/generate/EditTabPane';
 import { GenerateReportActionRow } from '@/components/reports/generate/GenerateReportActionRow';

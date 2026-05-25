@@ -22,7 +22,7 @@ import {
   type AppDialogCopy,
   getActionErrorDialogCopy,
   getDeleteProjectDialogCopy,
-} from '@/lib/app-dialog-copy';
+} from '@/lib/dialogs/app-dialog-copy';
 
 export type ProjectEditValues = {
   name: string;

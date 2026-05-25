@@ -88,6 +88,23 @@ tags:
     visible:
       id: "btn-new-report"
     timeout: 15000
+# After dismissOrReplaceTo from delete-draft, tapping btn-back on
+# reports-list can collapse the stack all the way to the projects
+# index instead of landing on project-home (router stack quirk —
+# observed in three overnight attempts). The robust recovery is to
+# tap the project row from the projects index, which always lands
+# on project-home with btn-project-edit visible.
+- tapOn:
+    id: "btn-back"
+- extendedWaitUntil:
+    visible: ".*Regression Test Project.*"
+    timeout: 10000
+- runFlow:
+    when:
+      visible:
+        id: "btn-new-project"
+    commands:
+      - tapOn: "Regression Test Project \\(Edited\\)"
 - extendedWaitUntil:
     visible:
       id: "btn-project-edit"

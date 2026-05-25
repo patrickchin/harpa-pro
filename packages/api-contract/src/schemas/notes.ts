@@ -1,8 +1,17 @@
 import { z } from 'zod';
 import { isoDateTime } from './_shared.js';
-import { fileId, noteId, reportId, userId } from './ids.js';
+import { fileId, noteFileId, noteId, reportId, userId } from './ids.js';
 
 export const noteKind = z.enum(['text', 'voice', 'image', 'document']);
+
+export const noteFile = z.object({
+  id: noteFileId,
+  fileId: fileId,
+  thumbnailFileId: fileId.nullable(),
+  position: z.number().int().min(0),
+  caption: z.string().nullable(),
+});
+export type NoteFile = z.infer<typeof noteFile>;
 
 export const note = z.object({
   id: noteId,
@@ -15,6 +24,8 @@ export const note = z.object({
    *  for legacy image notes uploaded before client-side thumbnailing
    *  shipped — those fall back to `fileId` for grid rendering. */
   thumbnailFileId: fileId.nullable(),
+  /** Present for image kind; empty array for non-image. */
+  files: z.array(noteFile).default([]),
   transcript: z.string().nullable(),
   // Generic note-level fields (migration 0004). Nullable on every
   // kind. Today the voice aggregator (`POST /reports/{report}/notes/voice`)
@@ -49,6 +60,11 @@ export const createNoteRequest = z.object({
   fileId: fileId.nullable().optional(),
   /** Optional thumbnail file id for image notes. Ignored for other kinds. */
   thumbnailFileId: fileId.nullable().optional(),
+  /** Required for image kind: at least one file entry. */
+  files: z.array(z.object({
+    fileId: fileId,
+    thumbnailFileId: fileId.nullable().optional(),
+  })).optional(),
   transcript: z.string().nullable().optional(),
   /** Optional short headline. Capped at 200 chars (matches the DB
    *  CHECK constraint on `app.notes.title`). */
@@ -88,6 +104,14 @@ const fixtureName = z
   .min(1)
   .max(128)
   .regex(/^[a-zA-Z0-9._-]+$/, 'fixtureName must match /^[a-zA-Z0-9._-]+$/');
+
+export const appendFilesRequest = z.object({
+  files: z.array(z.object({
+    fileId: fileId,
+    thumbnailFileId: fileId.nullable().optional(),
+  })).min(1),
+});
+export type AppendFilesRequest = z.infer<typeof appendFilesRequest>;
 
 export const createVoiceNoteRequest = z.object({
   fileId,

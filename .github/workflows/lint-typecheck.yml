@@ -37,3 +37,4 @@ jobs:
           bash scripts/check-no-supabase.sh
           bash scripts/check-no-unistyles.sh
           bash scripts/check-scope-tests.sh
+          bash scripts/check-mobile-lib-flat.sh

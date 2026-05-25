@@ -135,6 +135,11 @@ services:
       # native fs events don't propagate across the VM boundary.
       CHOKIDAR_USEPOLLING: "true"
       CHOKIDAR_INTERVAL: "300"
+      # E2E/Maestro: disable per-route rate limits so multi-module
+      # journeys can sign the same alice/bob in/out many times. The
+      # middleware is gated on this env var; it is OFF by default and
+      # is only set here in the local compose stack (NODE_ENV=development).
+      DISABLE_RATE_LIMIT: "1"
     # `tsx watch` restarts the server on edits to bind-mounted sources.
     # `pnpm dev` would also work but adds an extra process layer.
     command: ["pnpm", "--filter", "@harpa/api", "exec", "tsx", "watch", "src/server.ts"]

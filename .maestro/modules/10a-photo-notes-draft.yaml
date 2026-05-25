@@ -42,15 +42,15 @@ tags:
       id: "input-note"
     timeout: 15000
 
-# --- Open attachment dialog → camera ---------------------------------------
+# --- Open attachment dialog → Camera --------------------------------------
+# The attachment sheet is an AppDialogSheet with text-labelled actions
+# (no per-action testIDs). We tap the "Camera" text.
 - tapOn:
     id: "btn-attachment"
 - extendedWaitUntil:
-    visible:
-      id: "btn-attachment-camera"
+    visible: "Camera"
     timeout: 8000
-- tapOn:
-    id: "btn-attachment-camera"
+- tapOn: "Camera"
 
 # --- Camera: shutter → done ------------------------------------------------
 - extendedWaitUntil:

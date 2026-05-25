@@ -177,10 +177,12 @@ export function usePhotoUploadEntries(
         map.set(job.noteId, syntheticId);
       }
     }
-    // Return a fresh wrapper each time the inputs change so memo
-    // consumers downstream can detect change-by-identity. The
-    // underlying map is the same — entries only ever grow.
-    return map;
+    // Return a FRESH wrapper around the same entries so downstream
+    // memo consumers (`GenerateReportProvider.timelineItems`) detect
+    // change-by-identity. Returning `mapRef.current` directly would
+    // give every render the same reference, hiding growth from
+    // `Object.is` and breaking the anti-flicker remap.
+    return new Map(map);
   }, [jobs, reportId]);
 
   const entries = useMemo<readonly NoteEntry[]>(() => {

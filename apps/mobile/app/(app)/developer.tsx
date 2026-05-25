@@ -13,7 +13,7 @@ import {
   useAvailableProviders,
   type AiProviderKey,
 } from '@/lib/ai/useAiProvider';
-import { useDeveloperFlags } from '@/lib/dev-flags';
+import { useDeveloperFlags } from '@/lib/config/dev-flags';
 import { safeBack } from '@/lib/nav/safe-back';
 
 export default function DeveloperRoute() {

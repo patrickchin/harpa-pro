@@ -19,7 +19,7 @@ import { useEffect, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 
-import { buildInfo, classifyApiTarget } from '@/lib/build-info';
+import { buildInfo, classifyApiTarget } from '@/lib/config/build-info';
 import { getApiBaseUrl } from '@/lib/api/base-url';
 import { useBackendVersion } from '@/lib/api/backend-version';
 

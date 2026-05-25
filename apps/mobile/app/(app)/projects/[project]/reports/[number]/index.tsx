@@ -36,7 +36,7 @@ import {
 import type { ReportNoteRow } from '@/components/reports/detail/ReportNotesPane';
 import { useRefresh } from '@/lib/util/use-refresh';
 import { useReportPdfActions } from '@/lib/use-report-pdf-actions';
-import { env } from '@/lib/env';
+import { env } from '@/lib/config/env';
 import { safeBack } from '@/lib/nav/safe-back';
 import { dismissOrReplaceTo } from '@/lib/nav/dismiss-or-replace';
 import { SAMPLE_GENERATED_REPORT } from '@/lib/dev-fixtures/sample-report';

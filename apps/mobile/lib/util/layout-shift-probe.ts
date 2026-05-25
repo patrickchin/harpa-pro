@@ -25,7 +25,7 @@
 import { useCallback, useRef } from 'react';
 import type { LayoutChangeEvent } from 'react-native';
 
-import { env } from '@/lib/env';
+import { env } from '@/lib/config/env';
 
 export interface Measurement {
   x: number;

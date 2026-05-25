@@ -16,7 +16,7 @@ import { useGenerateReport } from './GenerateReportProvider';
 import type { TabKey } from './tabs';
 import { colors } from '@/lib/design-tokens/colors';
 import { getGenerateReportTabLabel } from '@/lib/generate-report-ui';
-import { useDeveloperFlags } from '@/lib/dev-flags';
+import { useDeveloperFlags } from '@/lib/config/dev-flags';
 
 export function GenerateReportTabBar() {
   const { tabs, notes, generation } = useGenerateReport();

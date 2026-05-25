@@ -383,9 +383,9 @@ vi.mock('expo-constants', () => ({
 // `lib/build-info.ts` captures `new Date()` at module load to surface
 // the JS reload time on the BuildBadge. Freeze it in tests so screen
 // snapshots stay deterministic across runs.
-vi.mock('@/lib/build-info', async () => {
-  const actual = await vi.importActual<typeof import('./lib/build-info')>(
-    '@/lib/build-info',
+vi.mock('@/lib/config/build-info', async () => {
+  const actual = await vi.importActual<typeof import('./lib/config/build-info')>(
+    '@/lib/config/build-info',
   );
   return {
     ...actual,

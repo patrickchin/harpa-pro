@@ -43,7 +43,7 @@ import {
 import { invalidateAfterFileUpload } from '@/lib/api/invalidation';
 import { useReportBodyAutosave } from '@/lib/use-report-body-autosave';
 import type { NoteEntry } from '@/lib/note-entry';
-import { env } from '@/lib/env';
+import { env } from '@/lib/config/env';
 import type { GeneratedSiteReport } from '@harpa/report-core';
 import { reports } from '@harpa/api-contract';
 import { SAMPLE_GENERATED_REPORT } from '@/lib/dev-fixtures/sample-report';

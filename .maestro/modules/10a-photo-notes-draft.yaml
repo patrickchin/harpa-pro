@@ -42,15 +42,14 @@ tags:
       id: "input-note"
     timeout: 15000
 
-# --- Open attachment dialog → Camera --------------------------------------
-# The attachment sheet is an AppDialogSheet with text-labelled actions
-# (no per-action testIDs). We tap the "Camera" text.
+# --- Go straight to camera-capture via the inline Photo button ------------
+# When the note input is empty, the input bar renders `btn-camera-capture`
+# alongside `btn-record-start`. That handler navigates directly to the
+# camera-capture screen, skipping the attachment sheet entirely (which is
+# only needed for Document / Photo Library paths). Far more reliable on
+# iOS sim than tapping a text label inside an animated AppDialogSheet.
 - tapOn:
-    id: "btn-attachment"
-- extendedWaitUntil:
-    visible: "Camera"
-    timeout: 8000
-- tapOn: "Camera"
+    id: "btn-camera-capture"
 
 # --- Camera: shutter → done ------------------------------------------------
 - extendedWaitUntil:
@@ -89,8 +88,6 @@ tags:
     visible:
       id: "btn-new-report"
     timeout: 15000
-- tapOn:
-    id: "btn-back"
 - extendedWaitUntil:
     visible:
       id: "btn-project-edit"

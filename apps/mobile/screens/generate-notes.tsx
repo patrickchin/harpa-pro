@@ -13,13 +13,18 @@
  * loading, generated report, callbacks) through provider props; dev
  * mirrors + tests do the same with canned values.
  */
-import { useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import {
+  Animated,
+  Easing,
+  Keyboard,
   KeyboardAvoidingView,
+  Platform,
   Pressable,
   ScrollView,
   View,
   useWindowDimensions,
+  type LayoutChangeEvent,
 } from 'react-native';
 import { MoreVertical } from 'lucide-react-native';
 
@@ -119,6 +124,67 @@ function GenerateNotesLayout({
 
   const showDeleteOption = canWrite && Boolean(onDeleteDraft);
 
+  // Slide-collapse the top chrome (header + action row + tab bar)
+  // when the keyboard opens so the user has room to see their
+  // existing notes while typing. We measure the natural height
+  // once via onLayout, then animate `height` + `opacity` between
+  // the measured value and 0. iOS uses the `Will*` events so the
+  // animation tracks the keyboard's own curve; Android only has
+  // `Did*`. Once collapsed the chrome is `pointerEvents="none"`
+  // so its disabled state can't swallow taps that fall through.
+  const chromeMeasuredHeight = useRef<number>(0);
+  const chromeAnim = useRef(new Animated.Value(1)).current;
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
+
+  const onChromeLayout = (event: LayoutChangeEvent) => {
+    const height = event.nativeEvent.layout.height;
+    if (height > 0 && chromeMeasuredHeight.current === 0) {
+      chromeMeasuredHeight.current = height;
+    }
+  };
+
+  useEffect(() => {
+    const showEvent =
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent =
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const showSub = Keyboard.addListener(showEvent, () => {
+      setKeyboardVisible(true);
+      Animated.timing(chromeAnim, {
+        toValue: 0,
+        duration: 220,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: false,
+      }).start();
+    });
+    const hideSub = Keyboard.addListener(hideEvent, () => {
+      setKeyboardVisible(false);
+      Animated.timing(chromeAnim, {
+        toValue: 1,
+        duration: 220,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: false,
+      }).start();
+    });
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, [chromeAnim]);
+
+  const animatedChromeStyle = {
+    opacity: chromeAnim,
+    // Interpolate height from 0 → measured. Until we've measured we
+    // fall back to `undefined` so the layout flows naturally on first
+    // paint (no flash-of-collapsed-chrome).
+    height: chromeMeasuredHeight.current
+      ? chromeAnim.interpolate({
+          inputRange: [0, 1],
+          outputRange: [0, chromeMeasuredHeight.current],
+        })
+      : undefined,
+  };
+
   // Pager is purely visual for now — tab switching uses the tab bar.
   // Horizontal drag-to-switch lands with the full provider hook port
   // (Pitfall 3 — translation, not rewrite).
@@ -133,32 +199,39 @@ function GenerateNotesLayout({
 
   return (
     <>
-      <View className="px-5 pt-4 pb-2">
-        <ScreenHeader
-          title={reportTitle}
-          onBack={onBack}
-          backLabel="Reports"
-          actions={actions}
-          trailing={
-            showDeleteOption ? (
-              <Pressable
-                testID="btn-draft-options"
-                accessibilityRole="button"
-                accessibilityLabel="Draft options"
-                onPress={() => setIsDeleteConfirmVisible(true)}
-                disabled={isDeletingDraft}
-                className="min-h-touch min-w-touch items-center justify-center px-2"
-              >
-                <MoreVertical size={20} color={colors.foreground} />
-              </Pressable>
-            ) : null
-          }
-        />
-      </View>
+      <Animated.View
+        style={[animatedChromeStyle, { overflow: 'hidden' }]}
+        pointerEvents={keyboardVisible ? 'none' : 'auto'}
+        onLayout={onChromeLayout}
+        testID="generate-notes-chrome"
+      >
+        <View className="px-5 pt-4 pb-2">
+          <ScreenHeader
+            title={reportTitle}
+            onBack={onBack}
+            backLabel="Reports"
+            actions={actions}
+            trailing={
+              showDeleteOption ? (
+                <Pressable
+                  testID="btn-draft-options"
+                  accessibilityRole="button"
+                  accessibilityLabel="Draft options"
+                  onPress={() => setIsDeleteConfirmVisible(true)}
+                  disabled={isDeletingDraft}
+                  className="min-h-touch min-w-touch items-center justify-center px-2"
+                >
+                  <MoreVertical size={20} color={colors.foreground} />
+                </Pressable>
+              ) : null
+            }
+          />
+        </View>
 
-      {canWrite ? <GenerateReportActionRow /> : null}
+        {canWrite ? <GenerateReportActionRow /> : null}
 
-      <GenerateReportTabBar />
+        <GenerateReportTabBar />
+      </Animated.View>
 
       <ScrollView
         horizontal

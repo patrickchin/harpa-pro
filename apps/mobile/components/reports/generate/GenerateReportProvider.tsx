@@ -33,6 +33,7 @@ import type { GeneratedSiteReport } from '@harpa/report-core';
 import { useInlineRecorder } from '@/features/voice/useInlineRecorder';
 import { useVoiceNotePipeline } from '@/features/voice/useVoiceNotePipeline';
 import { useAudioPlayback } from '@/lib/audio/AudioPlaybackProvider';
+import { useMeQuery } from '@/lib/api/hooks';
 import { usePhotoUploadEntries } from '@/lib/uploads/usePhotoUploadEntries';
 import type { RecorderSnapshot } from '@/features/voice/recorder-types';
 import { AppDialogSheet } from '@/components/primitives/AppDialogSheet';
@@ -462,7 +463,14 @@ export function GenerateReportProvider({
   // appears the instant the user picks/snaps a photo (Pitfall 12 — no
   // Alert.alert, no "did it work?" anxiety). Failed jobs stay visible
   // until the user retries or dismisses.
-  const photoUploads = usePhotoUploadEntries(reportId);
+  // Current user id — wired into synthetic in-flight rows (voice +
+  // photo) so the shared `NoteCardHeader` displays the real author
+  // instead of falling back to "Unknown" while uploads are running.
+  // The query is cheap (cached, single `/me` request) and degrades to
+  // `undefined` during the initial fetch — same as today's behaviour.
+  const meQuery = useMeQuery(undefined, { staleTime: 5 * 60 * 1000 });
+  const meId = meQuery.data?.user?.id;
+  const photoUploads = usePhotoUploadEntries(reportId, meId);
   const timelineItems = useMemo<readonly NoteEntry[]>(() => {
     const { step, note: savedNote, error, fileId, capture } = voicePipeline.state;
     const photoEntries = photoUploads.entries;
@@ -488,6 +496,7 @@ export function GenerateReportProvider({
         }
       : {
           id: '__voice-pipeline-pending',
+          authorId: meId,
           text: '',
           addedAt: Date.now(),
           source: 'voice',
@@ -497,7 +506,7 @@ export function GenerateReportProvider({
           durationSec: capture?.durationSec ?? null,
         };
     return [...baseWithPhotos, synthetic];
-  }, [notes, reportId, voicePipeline.state, photoUploads.entries]);
+  }, [notes, reportId, voicePipeline.state, photoUploads.entries, meId]);
 
   const handleRetryVoice = useCallback(() => {
     void voicePipeline.retry();

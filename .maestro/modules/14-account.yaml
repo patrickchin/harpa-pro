@@ -69,14 +69,7 @@ tags:
 # iOS XCTest, so just append. Worst case alice's name grows by a few
 # chars across reruns, which doesn't affect any other assertion.
 - inputText: " Edit"
-# iOS sim: `hideKeyboard` is unreliable. On this layout the `50%,15%`
-# tap lands on the avatar (Tap to change) and opens the image picker.
-# Tap on the static phone-number text farther down instead — it's a
-# read-only field so the tap dismisses the keyboard without side
-# effects.
-- tapOn:
-    text: "Phone numbers are managed through sign-in.*"
-- waitForAnimationToEnd
+- hideKeyboard
 - tapOn:
     id: "btn-save-profile"
 - extendedWaitUntil:

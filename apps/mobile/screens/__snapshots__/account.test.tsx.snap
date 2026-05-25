@@ -86,6 +86,7 @@ exports[`Account > matches snapshot at default props 1`] = `
               "paddingBottom": 40,
             }
           }
+          keyboardDismissMode="on-drag"
           keyboardShouldPersistTaps="handled"
           refreshControl={
             <RN.RefreshControl

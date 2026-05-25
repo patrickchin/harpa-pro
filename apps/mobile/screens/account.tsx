@@ -174,6 +174,7 @@ export function Account({
               contentContainerStyle={{ gap: 20, paddingBottom: 40 }}
               automaticallyAdjustKeyboardInsets
               keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="on-drag"
               refreshControl={
                 <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
               }

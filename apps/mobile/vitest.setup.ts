@@ -93,6 +93,7 @@ vi.mock('react-native', () => {
   const FlatList = makeRNComponent('FlatList');
   const SectionList = makeRNComponent('SectionList');
   const RefreshControl = makeRNComponent('RefreshControl');
+  const Switch = makeRNComponent('Switch');
 
   const Platform = {
     OS: 'ios',
@@ -153,6 +154,7 @@ vi.mock('react-native', () => {
     FlatList,
     SectionList,
     RefreshControl,
+    Switch,
     Platform,
     StyleSheet,
     Dimensions,

@@ -16,10 +16,12 @@ import { useGenerateReport } from './GenerateReportProvider';
 import type { TabKey } from './tabs';
 import { colors } from '@/lib/design-tokens/colors';
 import { getGenerateReportTabLabel } from '@/lib/generate-report-ui';
+import { useDeveloperFlags } from '@/lib/dev-flags';
 
 export function GenerateReportTabBar() {
   const { tabs, notes, generation } = useGenerateReport();
   const notesCount = notes.totalCount;
+  const { showGenerateDebugTab, showGenerateEditTab } = useDeveloperFlags();
 
   const select = (tab: TabKey) => {
     Keyboard.dismiss();
@@ -71,46 +73,50 @@ export function GenerateReportTabBar() {
           <ActivityIndicator size="small" color={colors.foreground} />
         ) : null}
       </Pressable>
-      <Pressable
-        testID="btn-tab-edit"
-        onPress={tabs.openEdit}
-        className={`flex-1 flex-row items-center justify-center gap-2 rounded-md py-3 ${
-          tabs.active === 'edit' ? 'bg-secondary border-b-2 border-accent' : ''
-        }`}
-      >
-        <Pencil
-          size={16}
-          color={tabs.active === 'edit' ? colors.foreground : colors.muted.foreground}
-          style={{ marginTop: 1 }}
-        />
-        <Text
-          className={`text-sm font-semibold ${
-            tabs.active === 'edit' ? 'text-foreground' : 'text-muted-foreground'
+      {showGenerateEditTab ? (
+        <Pressable
+          testID="btn-tab-edit"
+          onPress={tabs.openEdit}
+          className={`flex-1 flex-row items-center justify-center gap-2 rounded-md py-3 ${
+            tabs.active === 'edit' ? 'bg-secondary border-b-2 border-accent' : ''
           }`}
         >
-          {getGenerateReportTabLabel('edit', notesCount)}
-        </Text>
-      </Pressable>
-      <Pressable
-        testID="btn-tab-debug"
-        onPress={() => select('debug')}
-        className={`flex-1 flex-row items-center justify-center gap-2 rounded-md py-3 ${
-          tabs.active === 'debug' ? 'bg-secondary border-b-2 border-accent' : ''
-        }`}
-      >
-        <Bug
-          size={16}
-          color={tabs.active === 'debug' ? colors.foreground : colors.muted.foreground}
-          style={{ marginTop: 1 }}
-        />
-        <Text
-          className={`text-sm font-semibold ${
-            tabs.active === 'debug' ? 'text-foreground' : 'text-muted-foreground'
+          <Pencil
+            size={16}
+            color={tabs.active === 'edit' ? colors.foreground : colors.muted.foreground}
+            style={{ marginTop: 1 }}
+          />
+          <Text
+            className={`text-sm font-semibold ${
+              tabs.active === 'edit' ? 'text-foreground' : 'text-muted-foreground'
+            }`}
+          >
+            {getGenerateReportTabLabel('edit', notesCount)}
+          </Text>
+        </Pressable>
+      ) : null}
+      {showGenerateDebugTab ? (
+        <Pressable
+          testID="btn-tab-debug"
+          onPress={() => select('debug')}
+          className={`flex-1 flex-row items-center justify-center gap-2 rounded-md py-3 ${
+            tabs.active === 'debug' ? 'bg-secondary border-b-2 border-accent' : ''
           }`}
         >
-          {getGenerateReportTabLabel('debug', notesCount)}
-        </Text>
-      </Pressable>
+          <Bug
+            size={16}
+            color={tabs.active === 'debug' ? colors.foreground : colors.muted.foreground}
+            style={{ marginTop: 1 }}
+          />
+          <Text
+            className={`text-sm font-semibold ${
+              tabs.active === 'debug' ? 'text-foreground' : 'text-muted-foreground'
+            }`}
+          >
+            {getGenerateReportTabLabel('debug', notesCount)}
+          </Text>
+        </Pressable>
+      ) : null}
     </View>
   );
 }

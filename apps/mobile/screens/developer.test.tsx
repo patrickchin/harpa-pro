@@ -35,6 +35,10 @@ const defaults = {
   aiModel: 'kimi-k2',
   onSelectModel: vi.fn(),
   availableProviderKeys: null,
+  showGenerateDebugTab: true,
+  onToggleGenerateDebugTab: vi.fn(),
+  showGenerateEditTab: true,
+  onToggleGenerateEditTab: vi.fn(),
 };
 
 describe('Developer', () => {
@@ -69,6 +73,30 @@ describe('Developer', () => {
       tree.root.findByProps({ testID: 'ai-model-kimi-thinking' }).props.onPress(),
     );
     expect(onSelectModel).toHaveBeenCalledWith('kimi-thinking');
+  });
+
+  it('fires the toggle callbacks when the developer flags switches are flipped', () => {
+    const onToggleGenerateDebugTab = vi.fn();
+    const onToggleGenerateEditTab = vi.fn();
+    const tree = render(
+      <Developer
+        {...defaults}
+        onToggleGenerateDebugTab={onToggleGenerateDebugTab}
+        onToggleGenerateEditTab={onToggleGenerateEditTab}
+      />,
+    );
+    act(() =>
+      tree.root
+        .findByProps({ testID: 'switch-generate-debug-tab' })
+        .props.onValueChange(false),
+    );
+    expect(onToggleGenerateDebugTab).toHaveBeenCalledWith(false);
+    act(() =>
+      tree.root
+        .findByProps({ testID: 'switch-generate-edit-tab' })
+        .props.onValueChange(false),
+    );
+    expect(onToggleGenerateEditTab).toHaveBeenCalledWith(false);
   });
 
 });

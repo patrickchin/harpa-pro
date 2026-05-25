@@ -10,6 +10,8 @@ from __future__ import annotations
 import typer
 
 from . import __version__
+from .commands.doctor import run_doctor
+from .config import load_config
 
 app = typer.Typer(
     name="mo",
@@ -49,9 +51,21 @@ def _root(
 
 
 @app.command()
-def doctor() -> None:
+def doctor(
+    fix: bool = typer.Option(
+        False, "--fix", help="Auto-fix safe items (adb reverse, orphan procs)."
+    ),
+    json_output: bool = typer.Option(
+        False, "--json", help="Emit machine-readable JSON instead of a table."
+    ),
+    device: str | None = typer.Option(
+        None, "--device", help="ADB serial or iOS simulator UDID to target."
+    ),
+) -> None:
     """Preflight checklist; gates a journey."""
-    _stub("doctor")
+    cfg = load_config(cli_overrides={"device": device} if device else None)
+    code = run_doctor(cfg, fix=fix, json_output=json_output, device=device)
+    raise typer.Exit(code=code)
 
 
 @app.command()

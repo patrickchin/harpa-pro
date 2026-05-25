@@ -14,6 +14,8 @@ from maestro_orchestrator import __version__
 from maestro_orchestrator.cli import app
 
 SUBCOMMANDS = ("doctor", "reset", "run", "journey", "kill", "logs")
+# `doctor` is the first real command — no longer a stub.
+STUB_SUBCOMMANDS = tuple(c for c in SUBCOMMANDS if c != "doctor")
 
 
 def test_help_exits_zero_and_lists_all_subcommands(runner: CliRunner) -> None:
@@ -37,7 +39,7 @@ def test_subcommand_help_exits_zero(runner: CliRunner, name: str) -> None:
     assert result.exit_code == 0, result.stdout
 
 
-@pytest.mark.parametrize("name", SUBCOMMANDS)
+@pytest.mark.parametrize("name", STUB_SUBCOMMANDS)
 def test_subcommand_stub_exits_nonzero_with_not_implemented(
     runner: CliRunner, name: str
 ) -> None:

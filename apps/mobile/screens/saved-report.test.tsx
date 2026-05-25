@@ -43,7 +43,7 @@ import {
   type SavedReportProps,
 } from './saved-report';
 import { SAMPLE_GENERATED_REPORT } from '@/lib/dev-fixtures/sample-report';
-import type { UseReportPdfActionsReturn } from '@/lib/use-report-pdf-actions';
+import type { UseReportPdfActionsReturn } from '@/lib/reports/use-report-pdf-actions';
 import {
   AudioPlaybackProvider,
   type PlaybackPlayer,

@@ -8,7 +8,7 @@
  */
 import { View, type ViewProps } from 'react-native';
 import { cn } from '@/lib/util/utils';
-import { getSurfaceDepthStyle, type SurfaceDepth } from '@/lib/surface-depth';
+import { getSurfaceDepthStyle, type SurfaceDepth } from '@/lib/reports/surface-depth';
 
 export type CardVariant = 'default' | 'muted' | 'emphasis' | 'danger';
 export type CardPadding = 'sm' | 'md' | 'lg';

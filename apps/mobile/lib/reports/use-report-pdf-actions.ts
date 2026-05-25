@@ -7,7 +7,7 @@
  * error) and the `SavedReportSheet` controlled state. v4 lib stubs
  * for `saveReportPdf` / `shareSavedReportPdf` / `openSavedReportPdf`
  * throw `Error('Saving PDFs lands in P4 …')` until the Expo Print +
- * Sharing pipeline ports — see `lib/export-report-pdf.ts`.
+ * Sharing pipeline ports — see `lib/reports/export-report-pdf.ts`.
  */
 import { useState } from 'react';
 
@@ -17,7 +17,7 @@ import {
   openSavedReportPdf,
   saveReportPdf,
   shareSavedReportPdf,
-} from '@/lib/export-report-pdf';
+} from '@/lib/reports/export-report-pdf';
 import {
   getActionErrorDialogCopy,
   type AppDialogCopy,

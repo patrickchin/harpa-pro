@@ -35,12 +35,12 @@ import {
 } from '@/lib/api/initial-data';
 import type { ReportNoteRow } from '@/components/reports/detail/ReportNotesPane';
 import { useRefresh } from '@/lib/util/use-refresh';
-import { useReportPdfActions } from '@/lib/use-report-pdf-actions';
+import { useReportPdfActions } from '@/lib/reports/use-report-pdf-actions';
 import { env } from '@/lib/config/env';
 import { safeBack } from '@/lib/nav/safe-back';
 import { dismissOrReplaceTo } from '@/lib/nav/dismiss-or-replace';
 import { SAMPLE_GENERATED_REPORT } from '@/lib/dev-fixtures/sample-report';
-import { reportBodyToGeneratedReport } from '@/lib/report-body-adapter';
+import { reportBodyToGeneratedReport } from '@/lib/reports/report-body-adapter';
 import { reports as reportSchemas } from '@harpa/api-contract';
 import type { GeneratedSiteReport } from '@harpa/report-core';
 import type { AppDialogCopy } from '@/lib/app-dialog-copy';
@@ -101,7 +101,7 @@ export default function SavedReportRoute() {
   // Translate the persisted flat `ReportBody` shape into the wrapped
   // `GeneratedSiteReport` that the saved-report UI consumes. Fixture
   // mode short-circuits to the sample. The adapter lives in
-  // `lib/report-body-adapter.ts` and is the same one used by the
+  // `lib/reports/report-body-adapter.ts` and is the same one used by the
   // generate route.
   const displayReport: GeneratedSiteReport | null = env.EXPO_PUBLIC_USE_FIXTURES
     ? SAMPLE_GENERATED_REPORT

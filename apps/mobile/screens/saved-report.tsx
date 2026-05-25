@@ -62,7 +62,7 @@ import {
   getUnfinalizeReportDialogCopy,
 } from '@/lib/app-dialog-copy';
 import type { GeneratedSiteReport } from '@harpa/report-core';
-import type { UseReportPdfActionsReturn } from '@/lib/use-report-pdf-actions';
+import type { UseReportPdfActionsReturn } from '@/lib/reports/use-report-pdf-actions';
 
 export type SavedReportStatus = 'draft' | 'finalized';
 

@@ -11,7 +11,7 @@
  * The form is a pure controlled component: it never holds the report
  * in local state, only the destructive-confirm dialog. Every edit
  * flows through `onChange(next)` via the immutable helpers in
- * `lib/report-edit-helpers.ts`, so consumers can drive autosave,
+ * `lib/reports/report-edit-helpers.ts`, so consumers can drive autosave,
  * undo, or anything else off the resulting object identity.
  *
  * The dialog uses `AppDialogSheet` (hard rule: no `Alert.alert`).
@@ -37,7 +37,7 @@ import {
   updateMeta,
   updateWeather,
   updateWorkers,
-} from '@/lib/report-edit-helpers';
+} from '@/lib/reports/report-edit-helpers';
 import type { GeneratedSiteReport } from '@harpa/report-core';
 
 export interface ReportEditFormProps {

@@ -28,7 +28,7 @@
 import { useEffect, useState } from 'react';
 
 import { useUpdateReportMutation } from '@/lib/api/hooks';
-import { generatedReportToReportBody } from '@/lib/report-body-adapter';
+import { generatedReportToReportBody } from '@/lib/reports/report-body-adapter';
 import type { GeneratedSiteReport } from '@harpa/report-core';
 
 export interface UseReportBodyAutosaveInput {

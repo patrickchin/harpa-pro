@@ -10,7 +10,7 @@ import type { GeneratedReportSection } from '@harpa/report-core';
 
 import { Card } from '@/components/primitives/Card';
 import { SectionHeader } from '@/components/primitives/SectionHeader';
-import { SECTION_ICONS } from '@/lib/section-icons';
+import { SECTION_ICONS } from '@/lib/reports/section-icons';
 import { colors } from '@/lib/design-tokens/colors';
 
 interface SummarySectionCardProps {

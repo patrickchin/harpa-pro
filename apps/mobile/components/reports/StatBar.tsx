@@ -8,7 +8,7 @@ import Animated, { FadeIn } from 'react-native-reanimated';
 import type { GeneratedSiteReport } from '@harpa/report-core';
 
 import { StatTile } from '@/components/primitives/StatTile';
-import { getReportStats } from '@/lib/mobile-ui';
+import { getReportStats } from '@/lib/reports/report-ui';
 
 interface StatBarProps {
   report: GeneratedSiteReport;

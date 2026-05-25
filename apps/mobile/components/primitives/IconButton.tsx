@@ -24,7 +24,7 @@
  */
 import { Pressable, View, type PressableProps } from 'react-native';
 import { cn } from '@/lib/util/utils';
-import { getSurfaceDepthStyle, type SurfaceDepth } from '@/lib/surface-depth';
+import { getSurfaceDepthStyle, type SurfaceDepth } from '@/lib/reports/surface-depth';
 
 export type IconButtonVariant = 'outline' | 'ghost' | 'muted' | 'primary' | 'destructive';
 export type IconButtonSize = 'xs' | 'sm' | 'default';

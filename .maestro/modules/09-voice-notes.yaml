@@ -1,0 +1,102 @@
+appId: ${MAESTRO_APP_ID}
+name: "09 — Voice notes: record (fixture) + transcript"
+tags:
+  - regression
+  - voice
+---
+# Module 09 — Voice note record pipeline (fixture mode)
+#
+# Covers:
+#   - open reports list → new report → land on Generate screen
+#   - tap `btn-record-start` → inline `voice-record-strip` appears
+#   - briefly wait, tap `btn-record-send` → strip dismisses
+#   - timeline mounts a VoiceNoteCard with a play button
+#   - clean up the draft so the next module starts fresh
+#
+# Pre-condition: EXPO_PUBLIC_USE_FIXTURES=true built into the app
+# binary so `expoAudioRecorder` falls through to `fixtureRecorder`.
+# On iOS sim the microphone privacy grant must be in place
+# (`xcrun simctl privacy booted grant microphone <appId>`).
+#
+# Pre-condition: alice on project home; no reports.
+# Post-condition: alice on project home; no reports.
+
+# --- Open reports list and create a new draft ------------------------------
+- tapOn:
+    id: "btn-open-reports"
+- extendedWaitUntil:
+    visible:
+      id: "btn-new-report"
+    timeout: 10000
+- tapOn:
+    id: "btn-new-report"
+- extendedWaitUntil:
+    visible:
+      id: "report-row-.*"
+    timeout: 15000
+- tapOn:
+    id: "report-row-.*"
+- extendedWaitUntil:
+    visible:
+      id: "input-note"
+    timeout: 15000
+
+# --- Arm the inline recorder, give it a moment, then Send -------------------
+- tapOn:
+    id: "btn-record-start"
+- extendedWaitUntil:
+    visible:
+      id: "voice-record-strip"
+    timeout: 8000
+- extendedWaitUntil:
+    visible:
+      id: "voice-record-duration"
+    timeout: 5000
+- waitForAnimationToEnd
+- tapOn:
+    id: "btn-record-send"
+- extendedWaitUntil:
+    notVisible:
+      id: "voice-record-strip"
+    timeout: 15000
+
+# --- Timeline renders a VoiceNoteCard --------------------------------------
+# `useVoiceNotePipeline` injects an in-flight entry immediately;
+# fixture transcripts land within a few hundred ms. The "transcript
+# landed" signal is `voice-title-N` on the card (set once
+# `header.phase === 'ready'` and the title is computed from the
+# transcript — see VoiceNoteCard.tsx:140). Use the `.*` wildcard
+# because the card index can be 0 or 1 depending on seeded state,
+# and only one card is on the timeline at this point. There is no
+# `btn-voice-play-N` testID on the inline card — the play control
+# lives behind the kebab/options sheet (VoicePlayRow).
+- extendedWaitUntil:
+    visible:
+      id: "note-timeline"
+    timeout: 10000
+- extendedWaitUntil:
+    visible:
+      id: "voice-title-.*"
+    timeout: 15000
+- assertVisible:
+    id: "voice-title-.*"
+
+# --- Clean up: delete the draft and return to project home -----------------
+- tapOn:
+    id: "btn-draft-options"
+- extendedWaitUntil:
+    visible:
+      id: "dialog-action-confirm-delete-draft"
+    timeout: 8000
+- tapOn:
+    id: "dialog-action-confirm-delete-draft"
+- extendedWaitUntil:
+    visible:
+      id: "btn-new-report"
+    timeout: 15000
+- tapOn:
+    id: "btn-back"
+- extendedWaitUntil:
+    visible:
+      id: "btn-project-edit"
+    timeout: 10000

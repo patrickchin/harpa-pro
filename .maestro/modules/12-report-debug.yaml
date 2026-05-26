@@ -39,12 +39,26 @@ tags:
     timeout: 10000
 
 # --- Verify prompt section has content ------------------------------------
+# debug-prompt-system renders first and its MonoBlock is tall enough that
+# debug-prompt (user prompt) starts below the fold. Scroll it into view
+# before asserting. See artifact 2026-05-24_161246: debug-prompt-system-text
+# bounds clip to the scroll-view bottom (y=2301).
+- scrollUntilVisible:
+    element:
+      id: "debug-prompt"
+    direction: DOWN
+    timeout: 10000
 - assertVisible:
     id: "debug-prompt"
 - assertVisible:
     id: "debug-prompt-text"
 
 # --- Verify report notes section has content --------------------------------
+- scrollUntilVisible:
+    element:
+      id: "debug-report-notes"
+    direction: DOWN
+    timeout: 10000
 - assertVisible:
     id: "debug-report-notes"
 - assertNotVisible:

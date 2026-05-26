@@ -70,7 +70,6 @@ export default function ProjectHomeRoute() {
       }}
       actions={<AppHeaderActions />}
       showDeveloperSection={env.EXPO_PUBLIC_USE_FIXTURES || __DEV__}
-      projectSlug={slug}
     />
   );
 }

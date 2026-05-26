@@ -8,12 +8,11 @@ tags:
 #
 # Covers:
 #   - create a new project (name, client, address)
-#   - capture PROJECT_SLUG via the hidden chip
 #   - edit project name
 #   - project home is accessible (btn-project-edit visible)
 #
 # Pre-condition: alice is signed in (btn-new-project visible).
-# Post-condition: alice is on project home; PROJECT_SLUG is stored.
+# Post-condition: alice is on project home of the renamed project.
 
 # --- Create project ---------------------------------------------------------
 - tapOn:
@@ -31,8 +30,7 @@ tags:
 - tapOn:
     id: "input-project-address"
 - inputText: "1 Regression Way"
-- tapOn:
-    point: "50%,15%"
+- hideKeyboard
 - tapOn:
     id: "btn-save-project"
 
@@ -41,11 +39,6 @@ tags:
     visible:
       id: "btn-project-edit"
     timeout: 10000
-
-# --- Capture PROJECT_SLUG from hidden chip ----------------------------------
-- copyTextFrom:
-    id: "project-slug-chip"
-- evalScript: output.PROJECT_SLUG = maestro.copiedText
 
 # --- Edit project name ------------------------------------------------------
 - tapOn:
@@ -58,8 +51,14 @@ tags:
     id: "input-edit-project-name"
 - eraseText: 50
 - inputText: "Regression Test Project (Edited)"
-- tapOn:
-    point: "50%,15%"
+# Dismiss the soft keyboard and scroll the save button into view. On
+# the edit screen, the Save button sits below the Delete button at the
+# bottom of a ScrollView, so the keyboard often hides it.
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: "btn-save-project"
+    direction: DOWN
 - tapOn:
     id: "btn-save-project"
 

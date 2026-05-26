@@ -14,26 +14,38 @@ tags:
 #   - bob can access the reports screen (editor has reports access)
 #   - sign out bob → sign in alice (restore for next module)
 #
-# Pre-condition: alice is signed in, PROJECT_SLUG is set.
+# Pre-condition: alice is signed in.
 # Post-condition: alice is signed in on project home.
 
 # --- Switch to bob ---------------------------------------------------------
-- runFlow: .maestro/helpers/sign-out.yaml
-- runFlow: .maestro/helpers/sign-in-bob.yaml
+- runFlow: ../helpers/sign-out.yaml
+- runFlow:
+    file: ../helpers/sign-in.yaml
+    env:
+      PHONE: "5550000002"
 
 # --- Bob sees the project ---------------------------------------------------
 - assertVisible:
-    id: "project-row-${PROJECT_SLUG}"
+    text: "Regression Test Project \\(Edited\\)"
 - tapOn:
-    id: "project-row-${PROJECT_SLUG}"
+    text: "Regression Test Project \\(Edited\\)"
 
 # --- Bob's role badge shows Editor -----------------------------------------
+# The role badge lives on the project members screen (one badge per
+# member row, testID `member-role-badge-<userId>`), not on the project
+# home. Navigate there from the "Members" card.
 - extendedWaitUntil:
     visible:
       id: "btn-project-edit"
     timeout: 10000
-- assertVisible:
-    text: "Editor"
+- tapOn:
+    id: "link-project-members"
+- extendedWaitUntil:
+    visible:
+      text: "Editor"
+    timeout: 10000
+- tapOn:
+    id: "btn-back"
 
 # --- Bob can open reports ---------------------------------------------------
 - tapOn:
@@ -48,8 +60,11 @@ tags:
 # --- Switch back to alice ---------------------------------------------------
 - tapOn:
     id: "btn-back"
-- runFlow: .maestro/helpers/sign-out.yaml
-- runFlow: .maestro/helpers/sign-in-alice.yaml
+- runFlow: ../helpers/sign-out.yaml
+- runFlow:
+    file: ../helpers/sign-in.yaml
+    env:
+      PHONE: "5550000001"
 
 # --- Alice navigates back to project home ----------------------------------
-- runFlow: .maestro/helpers/open-project.yaml
+- runFlow: ../helpers/open-project.yaml

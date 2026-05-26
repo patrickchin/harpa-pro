@@ -97,6 +97,13 @@ function rejectJson(c: Context<AppEnv>, r: RateLimiterResult) {
 export function withRateLimit(opts: RateLimitOptions): MiddlewareHandler<AppEnv> {
   const keyBy: RateLimitKeyBy = opts.keyBy ?? 'user';
   return async (c, next) => {
+    // E2E/test seam: when DISABLE_RATE_LIMIT=1 the middleware is a no-op.
+    // This is gated by an env var (defaulted off) so it cannot accidentally
+    // ship in production builds — see packages/api/src/env.ts.
+    if (process.env.DISABLE_RATE_LIMIT === '1') {
+      await next();
+      return;
+    }
     const key = await resolveKey(c, opts.name, keyBy);
     const r = await getRateLimiter().consume(key, opts.limit, opts.windowMs);
     attachHeaders(c, r);

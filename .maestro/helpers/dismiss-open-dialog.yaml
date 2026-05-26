@@ -1,0 +1,14 @@
+appId: ${MAESTRO_APP_ID}
+---
+# Dismiss the iOS "Open in 'Harpa Pro Dev'?" system confirm sheet that
+# appears asynchronously after `openLink` to a custom URL scheme (one-time
+# per scheme per device install). No-op on Android and on iOS after the
+# scheme has been approved once.
+- waitForAnimationToEnd:
+    timeout: 3000
+- runFlow:
+    when:
+      visible: "Open"
+    commands:
+      - tapOn: "Open"
+      - waitForAnimationToEnd

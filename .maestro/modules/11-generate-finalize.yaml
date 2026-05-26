@@ -12,13 +12,14 @@ tags:
 #   - add a text note
 #   - tap Generate report → wait for completion
 #   - report-tab-pane is visible (report content rendered)
-#   - report-summary-N and report-title-N are accessible
+#   - report-view-N is accessible (proves AI generation completed)
+#   - report-title-N is accessible after finalize (saved-report screen)
 #   - finalize the report → saved-report screen
 #   - unfinalize the report → back on generate screen
 #   - re-finalize (leave finalized for module 12)
 #
-# Pre-condition: alice on project home; PROJECT_SLUG set.
-# Post-condition: alice on finalized saved-report screen; REPORT_NUMBER set.
+# Pre-condition: alice on project home.
+# Post-condition: alice on finalized saved-report screen.
 
 # --- Open reports list and create a new report ----------------------------
 - tapOn:
@@ -29,20 +30,33 @@ tags:
     timeout: 10000
 - tapOn:
     id: "btn-new-report"
+# The mutation auto-navigates to /generate on success. If the push
+# races against the refetch we may stay on the list — tap into the
+# new draft row to land on the generate screen.
+- extendedWaitUntil:
+    visible:
+      id: "report-row-.*"
+    timeout: 15000
+- tapOn:
+    id: "report-row-.*"
 - extendedWaitUntil:
     visible:
       id: "input-note"
     timeout: 15000
 
-# Capture report number (first and only report = 1)
-- evalScript: output.REPORT_NUMBER = '1'
+# Do NOT hard-code the report number here. `app.reports.number` is
+# assigned from `app.projects.next_report_number`, a monotonic
+# per-project counter that never decrements on delete — so after
+# modules 07 + 08 each create+delete a draft, this module's report
+# is number 3, not 1 (see packages/api/src/services/reports.ts:228).
+# All downstream selectors use the `.*` wildcard instead, because
+# only one report is on screen at any point in this flow.
 
 # --- Add a text note (required to enable Generate button) -----------------
 - tapOn:
     id: "input-note"
 - inputText: "Structural steel inspection complete. All welds within spec."
-- tapOn:
-    point: "50%,15%"
+- hideKeyboard
 - tapOn:
     id: "btn-add-note"
 - extendedWaitUntil:
@@ -50,27 +64,65 @@ tags:
       id: "note-row-.*"
     timeout: 8000
 
+# --- Dismiss keyboard so the action row isn't obscured --------------------
+# After Maestro's inputText the iOS sim keyboard often stays up even
+# after btn-add-note. Tapping on a static area above the input bar
+# is more reliable than hideKeyboard, which races with sheet/keyboard
+# animations on iOS. Without this, btn-generate-report tap finds the
+# button but the tap lands on the obscuring keyboard.
+- hideKeyboard
+- waitForAnimationToEnd
+
 # --- Generate the report ---------------------------------------------------
+# Note: `report-tab-pane` is rendered unconditionally by ReportTabPane —
+# it appears the instant the pager mounts and tells us nothing about
+# generation progress. The real "report rendered" signal is the inner
+# `ReportView` (testID `report-view-N`), which is only mounted once
+# `generation.report` becomes truthy (see ReportTabPane.tsx:108–120 and
+# ReportView.tsx:35). Poll for that with a generous timeout — fixture
+# AI replay is fast but the tab-pager horizontal scroll + reanimated
+# FadeIn on `report-tab-live` can still push first-paint past Maestro's
+# default ~18s implicit wait.
+- extendedWaitUntil:
+    visible:
+      id: "btn-generate-report"
+    timeout: 10000
 - tapOn:
     id: "btn-generate-report"
+- tapOn:
+    id: "btn-tab-report"
 - extendedWaitUntil:
     visible:
       id: "report-tab-pane"
-    timeout: 60000
+    timeout: 10000
 
 # --- Verify report content visible ----------------------------------------
-- tapOn:
-    id: "btn-tab-report"
-- assertVisible:
-    id: "report-tab-pane"
-- assertVisible:
-    id: "report-view-${REPORT_NUMBER}"
-- assertVisible:
-    id: "report-summary-${REPORT_NUMBER}"
+# 60s covers worst-case fixture cold-start (model replay + draft
+# autosave + tab transition). Module-level fail is acceptable if this
+# is exceeded — that indicates a real generation regression.
+- extendedWaitUntil:
+    visible:
+      id: "report-view-.*"
+    timeout: 60000
+# Note: we deliberately do NOT assert on `report-summary-N` here.
+# The Summary `<Text testID="report-summary-N">` in ReportView.tsx
+# is gated on `report.report.meta.summary` being truthy
+# (ReportView.tsx:40). The wire `reportBody` schema
+# (packages/api-contract/src/schemas/reports.ts:14) has no `summary`
+# field and the body→GeneratedSiteReport adapter
+# (apps/mobile/lib/report-body-adapter.ts:80) hard-codes
+# `meta.summary = ''`. So the Summary card is never rendered in this
+# flow — confirmed by the failure-moment a11y dump (report-view-3
+# present, report-summary-3 absent; only IssuesCard/WorkersCard text
+# leaves visible). `report-view-.*` already proves the report
+# rendered; `btn-finalize-report` below lives in the persistent
+# GenerateReportActionRow above the tab bar (it never needs scrolling
+# into view).
 
-# --- Verify title in the screen header ------------------------------------
-- assertVisible:
-    id: "report-title-${REPORT_NUMBER}"
+# Title testID `report-title-N` is only emitted by ReportDetailHeader
+# (see ReportDetailHeader.tsx:45), which renders on the *saved-report*
+# screen after finalize — not on the generate screen. Defer this
+# assertion until after the finalize tap below.
 
 # --- Finalize the report ---------------------------------------------------
 - tapOn:
@@ -85,6 +137,10 @@ tags:
     visible:
       id: "btn-report-actions"
     timeout: 20000
+
+# Now on saved-report screen — ReportDetailHeader emits the title testID.
+- assertVisible:
+    id: "report-title-.*"
 
 # --- Unfinalize to confirm the round-trip ---------------------------------
 - tapOn:
@@ -102,7 +158,29 @@ tags:
 - tapOn:
     id: "btn-confirm-unfinalize-report"
 
-# Back on generate screen
+# Unfinalize flips status in place — it does NOT navigate. The user
+# stays on the saved-report screen (apps/mobile/screens/saved-report.tsx)
+# and `handleConfirmUnfinalize` in
+# apps/mobile/app/(app)/projects/[project]/reports/[number]/index.tsx:189
+# only fires the mutation. saved-report has no `btn-finalize-report`
+# (that lives in GenerateReportActionRow on the /generate route at
+# apps/mobile/components/reports/generate/GenerateReportActionRow.tsx:77).
+# And ReportActionsMenu has no finalize entry either. So to re-finalize
+# we have to walk back: tap header back (→ reports list), wait for the
+# now-draft report row, tap it (reports/index.tsx:60 routes drafts to
+# /generate), then wait for `btn-finalize-report`.
+- extendedWaitUntil:
+    visible:
+      id: "btn-back"
+    timeout: 8000
+- tapOn:
+    id: "btn-back"
+- extendedWaitUntil:
+    visible:
+      id: "report-row-.*"
+    timeout: 15000
+- tapOn:
+    id: "report-row-.*"
 - extendedWaitUntil:
     visible:
       id: "btn-finalize-report"

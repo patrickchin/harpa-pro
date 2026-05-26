@@ -1,9 +1,13 @@
-# open-project.yaml — helper: navigate to a project home by slug chip
+appId: ${MAESTRO_APP_ID}
+---
+# open-project.yaml — helper: navigate to the regression journey's project
 #
-# Assumes the project-slug-chip has already been stored in PROJECT_SLUG.
-# Scrolls the project list and taps the matching project card.
+# Taps the project card by its post-edit name on the projects list.
+# The journey creates exactly one project (module 02), renames it to
+# "Regression Test Project (Edited)", and references it by that text
+# everywhere downstream.
 #
-# Pre-condition: projects list screen is visible, PROJECT_SLUG is set.
+# Pre-condition: projects list screen is visible (btn-new-project visible).
 # Post-condition: project home screen is visible (btn-project-edit visible).
 #
 # Usage:
@@ -11,7 +15,7 @@
 - assertVisible:
     id: "btn-new-project"
 - tapOn:
-    id: "project-row-${PROJECT_SLUG}"
+    text: "Regression Test Project \\(Edited\\)"
 - extendedWaitUntil:
     visible:
       id: "btn-project-edit"

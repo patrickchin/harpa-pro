@@ -23,19 +23,24 @@ tags:
 # from caller's view; bob now exists in DB).
 
 # --- Sign-out from alice ---------------------------------------------------
-- runFlow: .maestro/helpers/sign-out.yaml
+- runFlow: ../helpers/sign-out.yaml
 
 # --- Sign-up bob via deep link ---------------------------------------------
 - openLink: harpa://sign-up/phone
+- runFlow:
+    file: ../helpers/dismiss-open-dialog.yaml
 - extendedWaitUntil:
     visible:
       id: "input-signup-phone"
     timeout: 15000
+- runFlow:
+    file: ../helpers/pick-country-us.yaml
+    env:
+      COUNTRY_BUTTON_ID: "btn-signup-country-picker"
 - tapOn:
     id: "input-signup-phone"
-- inputText: "+15550000002"
-- tapOn:
-    point: "50%,15%"
+- inputText: "5550000002"
+- hideKeyboard
 - tapOn:
     id: "btn-signup-send-code"
 - extendedWaitUntil:
@@ -45,8 +50,7 @@ tags:
 - tapOn:
     id: "input-signup-otp"
 - inputText: "000000"
-- tapOn:
-    point: "50%,15%"
+- hideKeyboard
 - tapOn:
     id: "btn-signup-verify"
 
@@ -61,8 +65,7 @@ tags:
 - tapOn:
     id: "input-onboarding-company"
 - inputText: "E2E Corp"
-- tapOn:
-    point: "50%,15%"
+- hideKeyboard
 - tapOn:
     id: "btn-onboarding-submit"
 - extendedWaitUntil:
@@ -71,7 +74,10 @@ tags:
     timeout: 15000
 
 # --- Sign-out bob ----------------------------------------------------------
-- runFlow: .maestro/helpers/sign-out.yaml
+- runFlow: ../helpers/sign-out.yaml
 
 # --- Sign back in as alice (ready for module 02) ---------------------------
-- runFlow: .maestro/helpers/sign-in-alice.yaml
+- runFlow:
+    file: ../helpers/sign-in.yaml
+    env:
+      PHONE: "5550000001"

@@ -103,6 +103,16 @@
 
 ### P4.8 Maestro full regression journey
 
+**Status:** green on real Android device `R3CT7092S2H`
+(`com.harpa.pro.dev`, fixture-replay mode) as of HEAD `11632dc`
+(2026-05-24). Full journey wallclock ~18m21s across modules 01-auth,
+01b-signup-bob, 02-projects-crud, 03-members-invite,
+04-members-permissions, 05-members-viewer, 06-members-remove,
+07-reports-crud, 08-text-notes, 11-generate-finalize,
+12-report-debug, 13-projects-delete (plus helpers + sign-out).
+Windows-host gotchas catalogued in
+[`pitfalls-maestro-windows.md`](pitfalls-maestro-windows.md).
+
 Two-actor (`alice` owner + `bob` editor→viewer→removed) end-to-end
 journey that exercises every feature currently live on `dev`:
 projects CRUD, members invite/role-change/remove + visibility checks,
@@ -122,13 +132,22 @@ and 10a/10b are reserved with merge-triggered pickup pointers in
 the design doc §7. They re-enter the journey in the same PR as
 their feature merge.
 
-- [ ] `GET /reports/{number}/debug` route + scope tests + fixture-replay test (text notes only — voice fields added with `feat/v4-voice` merge).
-- [ ] `screens/report-debug.tsx` + route + dev-section actions-menu entry.
-- [ ] testID audit per the design doc §3.3 inventory.
-- [ ] Hidden `project-slug-chip` mounted only when `__DEV__` or `EXPO_PUBLIC_USE_FIXTURES`.
-- [ ] `.maestro/helpers/` + `.maestro/modules/01, 01b, 02..08, 11..13` flows. Alice and Bob are signed up via the normal sign-up UI inside the journey; no API seed CLI needed.
-- [ ] `.maestro/regression-journey.yaml` top-level runner.
+**Shipped:**
+
+- [x] `GET /reports/{number}/debug` route + scope tests + fixture-replay test (text notes only — voice fields added with `feat/v4-voice` merge).
+- [x] `screens/report-debug.tsx` + route + dev-section actions-menu entry.
+- [x] testID audit per the design doc §3.3 inventory.
+- [x] Project row selectors in modules 04–06, 13 use the post-edit name (`text: "Regression Test Project \(Edited\)"`); an earlier `project-slug-chip` approach was dropped because Android a11y filters hidden elements.
+- [x] `.maestro/helpers/` + `.maestro/modules/01, 01b, 02..08, 11..13` flows. Alice and Bob are signed up via the normal sign-up UI inside the journey; no API seed CLI needed.
+- [x] `.maestro/regression-journey.yaml` top-level runner (lives at repo root `.maestro/`, not under `apps/mobile/`).
+
+**Remaining:**
+
 - [ ] `scripts/check-maestro-testids.sh` CI grep gate.
 - [ ] `.github/workflows/e2e-maestro-testid-gate.yml` runs the testID gate on every PR.
+- [ ] CI workflow that actually runs the journey (currently developer-driven on the real device — no CI matrix yet for the Android emulator leg).
+- [ ] Module slot 09 (`09-voice-notes.yaml`) — blocked on `feat/v4-voice` merge to `dev`. Android has no fixture recorder stub yet; only iOS-sim does (see design doc §8).
+- [ ] Module slots 10a / 10b (photo notes draft + finalized) — blocked on camera Done-handoff + `ReportPhotos` signed-URL wiring landing on `dev`.
+- [ ] Uncovered routes still outside the journey (see design doc §8): `apps/mobile/app/(app)/account.tsx`, `apps/mobile/app/(app)/usage.tsx`, profile edits on `apps/mobile/app/(app)/profile.tsx`, voice-note flows, image uploads.
 - [ ] Future-pickup commits F1–F4 land with `feat/v4-voice` + camera/photo work — tracked in design doc §7.
-- [ ] Commit train per design doc §4.
+- [ ] Commit train per design doc §4 (initial bring-up commits landed; outstanding ones folded into the bullets above).

@@ -1,3 +1,5 @@
+appId: ${MAESTRO_APP_ID}
+---
 # sign-out.yaml — helper: sign the current user out
 #
 # Navigates to Profile tab → Developer section sign-out button,

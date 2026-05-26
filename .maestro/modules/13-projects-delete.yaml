@@ -73,4 +73,4 @@ tags:
       id: "btn-new-project"
     timeout: 10000
 - assertNotVisible:
-    id: "project-row-${PROJECT_SLUG}"
+    text: "Regression Test Project \\(Edited\\)"

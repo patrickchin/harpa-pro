@@ -307,6 +307,10 @@ vi.mock('react-native-reanimated', async () => {
     useSharedValue: (initial: unknown) => ({ value: initial }),
     useAnimatedStyle: (worklet: () => Record<string, unknown>) => worklet(),
     useDerivedValue: (worklet: () => unknown) => ({ value: worklet() }),
+    runOnJS:
+      <Fn extends (...args: unknown[]) => unknown>(fn: Fn) =>
+      (...args: Parameters<Fn>) =>
+        fn(...args),
     withTiming: (toValue: unknown) => toValue,
     withRepeat: (animation: unknown) => animation,
     withSpring: (toValue: unknown) => toValue,
@@ -503,6 +507,9 @@ vi.mock('react-native-gesture-handler', () => {
       },
       onEnd(fn: AnyFn) {
         cfg.onEnd = fn;
+        return chain;
+      },
+      runOnJS(_value: boolean) {
         return chain;
       },
       __cfg: cfg,

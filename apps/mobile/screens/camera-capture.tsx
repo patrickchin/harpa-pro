@@ -49,6 +49,7 @@ import {
   useSafeAreaInsets,
 } from 'react-native-safe-area-context';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import { runOnJS, useSharedValue } from 'react-native-reanimated';
 import {
   CameraView,
   useCameraPermissions,
@@ -139,6 +140,7 @@ const MIN_ZOOM = 0;
 const MAX_ZOOM = 1;
 
 function clampZoom(z: number): number {
+  'worklet';
   if (Number.isNaN(z)) return MIN_ZOOM;
   if (z < MIN_ZOOM) return MIN_ZOOM;
   if (z > MAX_ZOOM) return MAX_ZOOM;
@@ -174,7 +176,11 @@ export function CameraCapture(props: CameraCaptureProps) {
   const [isCapturing, setIsCapturing] = useState(false);
   const [confirmDiscardOpen, setConfirmDiscardOpen] = useState(false);
   const [zoom, setZoom] = useState(MIN_ZOOM);
-  const zoomStartRef = useRef(MIN_ZOOM);
+  // `zoomStart` lives on the UI thread so the pinch worklet can read
+  // and write it without crossing the JS bridge each frame. We bridge
+  // back to React state via `runOnJS(setZoom)` so `CameraView`'s
+  // `zoom` prop stays in sync.
+  const zoomStart = useSharedValue(MIN_ZOOM);
   const [focusIndicator, setFocusIndicator] = useState<{
     x: number;
     y: number;
@@ -290,16 +296,24 @@ export function CameraCapture(props: CameraCaptureProps) {
 
   const pinchGesture = Gesture.Pinch()
     .onStart(() => {
-      zoomStartRef.current = zoom;
+      'worklet';
+      zoomStart.value = zoom;
     })
     .onUpdate((event: { scale: number }) => {
+      'worklet';
       const scale = typeof event.scale === 'number' ? event.scale : 1;
       const delta = (scale - 1) * 0.5;
-      setZoom(clampZoom(zoomStartRef.current + delta));
+      const next = clampZoom(zoomStart.value + delta);
+      runOnJS(setZoom)(next);
     });
 
-  const tapGesture = Gesture.Tap().onEnd(
-    (event: { x: number; y: number }) => {
+  // Tap-to-focus needs JS-thread access (refs, setState, prop
+  // callbacks), so opt out of the default worklet behaviour with
+  // `.runOnJS(true)` — RNGH then invokes the callback on the JS
+  // thread directly.
+  const tapGesture = Gesture.Tap()
+    .runOnJS(true)
+    .onEnd((event: { x: number; y: number }) => {
       const { width, height } = previewSizeRef.current;
       const x = typeof event.x === 'number' ? event.x : 0;
       const y = typeof event.y === 'number' ? event.y : 0;
@@ -309,8 +323,7 @@ export function CameraCapture(props: CameraCaptureProps) {
         x: width > 0 ? x / width : 0,
         y: height > 0 ? y / height : 0,
       });
-    },
-  );
+    });
 
   const composedGesture = Gesture.Simultaneous(pinchGesture, tapGesture);
 

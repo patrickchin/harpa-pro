@@ -27,8 +27,9 @@ tags:
 # dev-launcher's own scheme with an explicit Metro URL. See
 # `core-end-to-end.yaml` for the full explanation.
 - openLink: "exp+harpa-pro-v4://expo-development-client/?url=http%3A%2F%2Flocalhost%3A8081"
-- waitForAnimationToEnd:
-    timeout: 20000
+- extendedWaitUntil:
+    visible: "Continue"
+    timeout: 60000
 
 # The Android dev-launcher first-run sheet ("This is the developer menu")
 # overlays the sign-in screen and obscures `input-phone`. Wait for its

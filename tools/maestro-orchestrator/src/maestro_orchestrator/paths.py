@@ -43,6 +43,26 @@ def latest_log_link(project_root: Path) -> Path:
     return mo_root(project_root) / "maestro-latest.log"
 
 
+def metro_pid_file(project_root: Path) -> Path:
+    """Return `<project_root>/tmp/mo/metro.pid` (managed by `mo up`)."""
+    return mo_root(project_root) / "metro.pid"
+
+
+def metro_log_file(project_root: Path) -> Path:
+    """Return `<project_root>/tmp/mo/metro.log` (managed by `mo up`)."""
+    return mo_root(project_root) / "metro.log"
+
+
+def build_android_pid_file(project_root: Path) -> Path:
+    """Return `<project_root>/tmp/mo/build-android.pid`."""
+    return mo_root(project_root) / "build-android.pid"
+
+
+def build_android_log_file(project_root: Path) -> Path:
+    """Return `<project_root>/tmp/mo/build-android.log`."""
+    return mo_root(project_root) / "build-android.log"
+
+
 def doctor_report(project_root: Path) -> Path:
     return mo_root(project_root) / "doctor-last.json"
 

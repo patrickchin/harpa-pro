@@ -102,8 +102,14 @@ def load_config(
             return environ[env_key]
         return toml_data.get(key)
 
+    app_id = _resolve("app_id", "MAESTRO_APP_ID")
+    if app_id is None:
+        from .checks import derive_app_id
+
+        app_id = derive_app_id(project_root, environ.get("APP_VARIANT"))
+
     return MoConfig(
         project_root=project_root,
-        app_id=_resolve("app_id", "MAESTRO_APP_ID"),
+        app_id=app_id,
         device=_resolve("device", "MAESTRO_DEVICE"),
     )

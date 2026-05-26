@@ -163,13 +163,22 @@ def _step_db(opts: ResetOptions, docker_ok: bool) -> StepReport:
 def _step_app(cfg: MoConfig, opts: ResetOptions) -> StepReport:
     if opts.skip_app:
         return StepReport(name="app", status="skip", detail="--skip-app")
-    if not cfg.app_id:
+    # Mirror doctor's resolution: prefer explicit MAESTRO_APP_ID, fall
+    # back to deriving from APP_VARIANT + apps/mobile/app.config.ts.
+    import os as _os
+
+    app_id = cfg.app_id or checks.derive_app_id(
+        cfg.project_root, _os.environ.get("APP_VARIANT")
+    )
+    if not app_id:
         return StepReport(
-            name="app", status="fail", detail="no app_id configured (set MAESTRO_APP_ID)"
+            name="app",
+            status="fail",
+            detail="no app_id configured (set MAESTRO_APP_ID)",
         )
     res = device.clear_app_data(
         host_name=host.detect_host(),
-        app_id=cfg.app_id,
+        app_id=app_id,
         device_id=opts.device or cfg.device,
     )
     return StepReport(

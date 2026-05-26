@@ -67,7 +67,11 @@ def _catalogue(ctx: checks.DoctorContext) -> list[CheckEntry]:
         ("adb_device", checks.check_adb_device),
         ("adb_reverse", checks.check_adb_reverse),
         ("android_app_installed", checks.check_android_app_installed),
+        ("android_app_fresh", checks.check_android_app_fresh),
     ]
+    # Advisory: prebuild freshness applies on every host (config check is
+    # cross-platform; the iOS branch only kicks in on macOS).
+    entries.append(("prebuild_synced", checks.check_prebuild_synced))
     return entries
 
 

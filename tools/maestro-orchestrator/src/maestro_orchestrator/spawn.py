@@ -57,9 +57,20 @@ def spawn_detached(
         if env is not None:
             popen_kwargs["env"] = dict(env)
         if sys.platform.startswith("win"):
-            # DETACHED_PROCESS = 0x00000008
+            # On Windows we MUST give the child a (hidden) console.
+            # `DETACHED_PROCESS` strips the console entirely, which
+            # breaks any child that is actually a `.bat` / `.cmd`
+            # wrapper (cmd.exe needs a console to interpret the
+            # script). `maestro.bat` and `gradlew.bat` both fall in
+            # this category. `CREATE_NO_WINDOW` hides the console
+            # but keeps it attached so the wrapper can run normally.
+            # `CREATE_NEW_PROCESS_GROUP` still detaches the child
+            # from the parent's Ctrl+C signal group so closing the
+            # orchestrator shell doesn't kill the long-running flow.
+            #
             # CREATE_NEW_PROCESS_GROUP = 0x00000200
-            popen_kwargs["creationflags"] = 0x00000008 | 0x00000200
+            # CREATE_NO_WINDOW         = 0x08000000
+            popen_kwargs["creationflags"] = 0x00000200 | 0x08000000
         else:
             popen_kwargs["start_new_session"] = True
 

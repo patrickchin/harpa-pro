@@ -13,9 +13,20 @@ from typer.testing import CliRunner
 from maestro_orchestrator import __version__
 from maestro_orchestrator.cli import app
 
-SUBCOMMANDS = ("doctor", "reset", "run", "journey", "kill", "logs")
-# `doctor`, `reset`, `run`, `kill`, `logs` are real commands — no longer stubs.
-_REAL_COMMANDS = {"doctor", "reset", "run", "journey", "kill", "logs"}
+SUBCOMMANDS = (
+    "doctor",
+    "reset",
+    "run",
+    "journey",
+    "kill",
+    "logs",
+    "up",
+    "down",
+    "build",
+    "install",
+)
+# All commands listed above are real — no stubs remain after phase 4.
+_REAL_COMMANDS = set(SUBCOMMANDS)
 STUB_SUBCOMMANDS = tuple(c for c in SUBCOMMANDS if c not in _REAL_COMMANDS)
 
 

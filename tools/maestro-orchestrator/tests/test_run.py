@@ -291,6 +291,41 @@ def test_run_passes_device_via_env(
     _wait_pid(record.pid, timeout=5.0)
 
 
+def test_run_forwards_app_id_via_maestro_env_flag(
+    project_root: Path,
+    stub_maestro: tuple[str, list[str]],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Maestro substitutes `${MAESTRO_APP_ID}` only from `--env`, not the
+    process env. Regression for `mo run` launching app id `undefined`."""
+    captured: dict[str, list[str]] = {}
+    real_spawn = run_cmd.spawn.spawn_detached
+
+    def capturing_spawn(argv: list[str], **kwargs: object) -> int:
+        captured["argv"] = list(argv)
+        return real_spawn(argv, **kwargs)
+
+    monkeypatch.setattr(run_cmd.spawn, "spawn_detached", capturing_spawn)
+
+    opts = run_cmd.RunOptions(flow="regression-journey.yaml")
+    code = run_cmd.run_run(_cfg(project_root, app_id="com.harpa.pro.dev"), opts)
+    assert code == run_cmd.EXIT_OK
+
+    argv = captured["argv"]
+    # Resolver replaces argv[0] with `python -c <script>`; the remainder
+    # is what `run_run` constructed.
+    assert "--env" in argv, f"expected --env in spawned argv, got {argv}"
+    idx = argv.index("--env")
+    assert argv[idx + 1] == "MAESTRO_APP_ID=com.harpa.pro.dev", argv
+    # The flow path must come after the --env pair, not before.
+    flow_idx = next(i for i, a in enumerate(argv) if a.endswith("regression-journey.yaml"))
+    assert flow_idx > idx + 1, argv
+
+    rec = pidfile.read(paths.pid_file(project_root))
+    if rec is not None:
+        _wait_pid(rec.pid, timeout=5.0)
+
+
 def test_run_spawn_oserror_is_reported(
     project_root: Path,
     monkeypatch: pytest.MonkeyPatch,

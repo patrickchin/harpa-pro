@@ -153,7 +153,19 @@ def run_run(cfg: MoConfig, opts: RunOptions) -> int:
         env.setdefault("MAESTRO_DEVICE", cfg.device)
 
     # 6. Spawn detached.
-    argv = [maestro_exe, "test", str(resolved)]
+    #
+    #    Maestro substitutes `${VAR}` placeholders in flow YAMLs only
+    #    from values passed via `--env KEY=VALUE`, NOT from the spawned
+    #    process environment. Every flow under `.maestro/` declares
+    #    `appId: ${MAESTRO_APP_ID}`, so we must forward `cfg.app_id`
+    #    through `--env` or Maestro tries to launch the literal app id
+    #    `undefined`. The env var on the child process is still set
+    #    above as a courtesy, but `--env` is what Maestro actually
+    #    reads.
+    argv = [maestro_exe, "test"]
+    if cfg.app_id:
+        argv += ["--env", f"MAESTRO_APP_ID={cfg.app_id}"]
+    argv += [str(resolved)]
     try:
         pid = spawn.spawn_detached(
             argv,

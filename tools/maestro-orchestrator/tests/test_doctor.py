@@ -503,7 +503,7 @@ def test_check_adb_device_nonzero(
 
 
 # --- adb reverse -------------------------------------------------------
-_REVERSE_OK = "R3CT7092S2H tcp:8081 tcp:8081\nR3CT7092S2H tcp:8787 tcp:8787\n"
+_REVERSE_OK = "R3CT7092S2H tcp:8081 tcp:8081\nR3CT7092S2H tcp:8787 tcp:8787\nR3CT7092S2H tcp:9000 tcp:9000\n"
 _REVERSE_PARTIAL = "R3CT7092S2H tcp:8081 tcp:8081\n"
 
 
@@ -830,6 +830,8 @@ _CHECK_NAME_MAP: dict[str, str] = {
     "check_adb_device": "adb_device",
     "check_adb_reverse": "adb_reverse",
     "check_android_app_installed": "android_app_installed",
+    "check_android_app_fresh": "android_app_fresh",
+    "check_prebuild_synced": "prebuild_synced",
     "check_ios_simulator_booted": "ios_simulator",
     "check_ios_app_installed": "ios_app_installed",
 }
@@ -1000,3 +1002,271 @@ def test_cli_doctor_json_runs(
     assert result.exit_code == 0, result.stdout
     payload = json.loads(result.stdout)
     assert payload["exit_code"] == 0
+
+
+# --- check_prebuild_synced ---------------------------------------------
+def _make_app_config(project_root: Path, *, age_seconds: float = 0.0) -> Path:
+    mobile = project_root / "apps" / "mobile"
+    mobile.mkdir(parents=True, exist_ok=True)
+    p = mobile / "app.config.ts"
+    p.write_text("// stub\n", encoding="utf-8")
+    if age_seconds:
+        import os as _os
+        import time as _time
+
+        t = _time.time() - age_seconds
+        _os.utime(p, (t, t))
+    return p
+
+
+def _make_android_manifest(project_root: Path, *, age_seconds: float = 0.0) -> Path:
+    base = (
+        project_root
+        / "apps"
+        / "mobile"
+        / "android"
+        / "app"
+        / "src"
+        / "main"
+    )
+    base.mkdir(parents=True, exist_ok=True)
+    p = base / "AndroidManifest.xml"
+    p.write_text("<manifest/>\n", encoding="utf-8")
+    if age_seconds:
+        import os as _os
+        import time as _time
+
+        t = _time.time() - age_seconds
+        _os.utime(p, (t, t))
+    return p
+
+
+def test_check_prebuild_synced_skip_when_config_missing(
+    fake_project_root: Path,
+) -> None:
+    ctx = _ctx(fake_project_root)
+    r = checks.check_prebuild_synced(ctx)
+    assert r.status == "skip"
+
+
+def test_check_prebuild_synced_warn_when_manifest_missing(
+    fake_project_root: Path,
+) -> None:
+    _make_app_config(fake_project_root)
+    ctx = _ctx(fake_project_root)
+    r = checks.check_prebuild_synced(ctx)
+    assert r.status == "warn"
+    assert "AndroidManifest" in r.detail
+
+
+def test_check_prebuild_synced_warn_when_config_newer(
+    fake_project_root: Path,
+) -> None:
+    # Manifest is older than config.
+    _make_android_manifest(fake_project_root, age_seconds=120)
+    _make_app_config(fake_project_root, age_seconds=0)
+    ctx = _ctx(fake_project_root)
+    r = checks.check_prebuild_synced(ctx)
+    assert r.status == "warn"
+    assert "newer" in r.detail
+
+
+def test_check_prebuild_synced_ok_when_manifest_newer(
+    fake_project_root: Path,
+) -> None:
+    _make_app_config(fake_project_root, age_seconds=120)
+    _make_android_manifest(fake_project_root, age_seconds=0)
+    ctx = _ctx(fake_project_root)
+    r = checks.check_prebuild_synced(ctx)
+    assert r.status == "ok"
+
+
+def test_check_prebuild_synced_macos_warns_on_missing_plist(
+    fake_project_root: Path,
+) -> None:
+    _make_app_config(fake_project_root, age_seconds=120)
+    _make_android_manifest(fake_project_root, age_seconds=0)
+    ctx = _ctx(fake_project_root, host_name="macos")
+    r = checks.check_prebuild_synced(ctx)
+    # No ios/<App>/Info.plist anywhere → warn.
+    assert r.status == "warn"
+
+
+def test_check_prebuild_synced_macos_ok_with_fresh_plist(
+    fake_project_root: Path,
+) -> None:
+    _make_app_config(fake_project_root, age_seconds=120)
+    _make_android_manifest(fake_project_root, age_seconds=0)
+    ios_dir = fake_project_root / "apps" / "mobile" / "ios" / "HarpaPro"
+    ios_dir.mkdir(parents=True)
+    (ios_dir / "Info.plist").write_text("<plist/>", encoding="utf-8")
+    ctx = _ctx(fake_project_root, host_name="macos")
+    r = checks.check_prebuild_synced(ctx)
+    assert r.status == "ok"
+
+
+# --- check_android_app_fresh -------------------------------------------
+def test_check_android_app_fresh_skip_on_macos(
+    fake_project_root: Path,
+) -> None:
+    ctx = _ctx(fake_project_root, host_name="macos")
+    r = checks.check_android_app_fresh(ctx)
+    assert r.status == "skip"
+
+
+def test_check_android_app_fresh_skip_without_device(
+    fake_project_root: Path,
+) -> None:
+    ctx = _ctx(fake_project_root, app_id="com.harpa.pro.dev")
+    r = checks.check_android_app_fresh(ctx)
+    assert r.status == "skip"
+
+
+def test_check_android_app_fresh_skip_without_app_id(
+    fake_project_root: Path,
+) -> None:
+    ctx = _ctx(fake_project_root)
+    ctx.resolved_device = "R3CT7092S2H"
+    r = checks.check_android_app_fresh(ctx)
+    assert r.status == "skip"
+
+
+def test_check_android_app_fresh_warn_on_adb_error(
+    fake_project_root: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def boom(*_a: Any, **_kw: Any) -> Any:
+        raise FileNotFoundError("adb")
+
+    monkeypatch.setattr(checks, "_run", boom)
+    ctx = _ctx(fake_project_root, app_id="com.harpa.pro.dev")
+    ctx.resolved_device = "R3CT7092S2H"
+    r = checks.check_android_app_fresh(ctx)
+    assert r.status == "warn"
+
+
+def test_check_android_app_fresh_warn_on_nonzero(
+    fake_project_root: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(checks, "_run", lambda *a, **kw: _completed(1))
+    ctx = _ctx(fake_project_root, app_id="com.harpa.pro.dev")
+    ctx.resolved_device = "R3CT7092S2H"
+    r = checks.check_android_app_fresh(ctx)
+    assert r.status == "warn"
+
+
+def test_check_android_app_fresh_warn_when_no_last_update_time(
+    fake_project_root: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(
+        checks, "_run", lambda *a, **kw: _completed(0, "Package [com.x]:\n")
+    )
+    ctx = _ctx(fake_project_root, app_id="com.harpa.pro.dev")
+    ctx.resolved_device = "R3CT7092S2H"
+    r = checks.check_android_app_fresh(ctx)
+    assert r.status == "warn"
+    assert "lastUpdateTime" in r.detail
+
+
+def test_check_android_app_fresh_warn_when_apk_predates_commit(
+    fake_project_root: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # APK installed at t=1000s; config committed at t=2000s → stale.
+    dumpsys_out = "Package [com.x]:\n  lastUpdateTime=1000000\n"
+    calls: list[list[str]] = []
+
+    def fake_run(argv: list[str], **kw: Any) -> subprocess.CompletedProcess[str]:
+        calls.append(argv)
+        if argv[0] == "adb":
+            return _completed(0, dumpsys_out)
+        # git log
+        return _completed(0, "2000\n")
+
+    monkeypatch.setattr(checks, "_run", fake_run)
+    ctx = _ctx(fake_project_root, app_id="com.harpa.pro.dev")
+    ctx.resolved_device = "R3CT7092S2H"
+    r = checks.check_android_app_fresh(ctx)
+    assert r.status == "warn"
+    assert "predates" in r.detail
+
+
+def test_check_android_app_fresh_ok_when_apk_current(
+    fake_project_root: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # APK installed at t=3,000,000s (=3000s); commit at t=2000s → ok.
+    dumpsys_out = "Package [com.x]:\n  lastUpdateTime=3000000\n"
+
+    def fake_run(argv: list[str], **_kw: Any) -> subprocess.CompletedProcess[str]:
+        if argv[0] == "adb":
+            return _completed(0, dumpsys_out)
+        return _completed(0, "2000\n")
+
+    monkeypatch.setattr(checks, "_run", fake_run)
+    ctx = _ctx(fake_project_root, app_id="com.harpa.pro.dev")
+    ctx.resolved_device = "R3CT7092S2H"
+    r = checks.check_android_app_fresh(ctx)
+    assert r.status == "ok"
+
+
+def test_check_android_app_fresh_skip_when_no_git_history(
+    fake_project_root: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    dumpsys_out = "Package [com.x]:\n  lastUpdateTime=3000000\n"
+
+    def fake_run(argv: list[str], **_kw: Any) -> subprocess.CompletedProcess[str]:
+        if argv[0] == "adb":
+            return _completed(0, dumpsys_out)
+        return _completed(0, "")  # empty git log
+
+    monkeypatch.setattr(checks, "_run", fake_run)
+    ctx = _ctx(fake_project_root, app_id="com.harpa.pro.dev")
+    ctx.resolved_device = "R3CT7092S2H"
+    r = checks.check_android_app_fresh(ctx)
+    assert r.status == "skip"
+
+
+def test_parse_dumpsys_last_update_time() -> None:
+    assert checks._parse_dumpsys_last_update_time("") is None
+    assert checks._parse_dumpsys_last_update_time("lastUpdateTime=abc") is None
+    assert (
+        checks._parse_dumpsys_last_update_time("foo lastUpdateTime=1500\nbar")
+        == 1.5
+    )
+
+
+def test_parse_dumpsys_last_update_time_human_readable() -> None:
+    """Modern Android (Samsung One UI 6+) emits a local-time string.
+
+    The parser must accept `YYYY-MM-DD HH:MM:SS` (no timezone) and
+    interpret it in the host's local zone. We verify by round-tripping
+    a known datetime through the parser and a local-tz constructor.
+    """
+    from datetime import datetime
+
+    out = "    lastUpdateTime=2026-05-26 22:08:02\n"
+    parsed = checks._parse_dumpsys_last_update_time(out)
+    assert parsed is not None
+    expected = datetime(2026, 5, 26, 22, 8, 2).timestamp()
+    assert parsed == expected
+
+
+def test_git_last_commit_mtime_missing_git(
+    fake_project_root: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def boom(*_a: Any, **_kw: Any) -> Any:
+        raise FileNotFoundError("git")
+
+    monkeypatch.setattr(checks, "_run", boom)
+    assert (
+        checks._git_last_commit_mtime(fake_project_root, "apps/mobile/app.config.ts")
+        is None
+    )
+
+
+def test_git_last_commit_mtime_returncode_nonzero(
+    fake_project_root: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(checks, "_run", lambda *a, **kw: _completed(1, ""))
+    assert (
+        checks._git_last_commit_mtime(fake_project_root, "apps/mobile/app.config.ts")
+        is None
+    )

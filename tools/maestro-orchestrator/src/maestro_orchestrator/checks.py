@@ -373,7 +373,7 @@ def _parse_reverse_list(output: str) -> set[str]:
     return specs
 
 
-_REVERSE_PORTS = ("tcp:8081", "tcp:8787")
+_REVERSE_PORTS = ("tcp:8081", "tcp:8787", "tcp:9000")
 
 
 def check_adb_reverse(ctx: DoctorContext) -> CheckResult:
@@ -396,7 +396,7 @@ def check_adb_reverse(ctx: DoctorContext) -> CheckResult:
     found = _parse_reverse_list(result.stdout)
     missing = [p for p in _REVERSE_PORTS if p not in found]
     if not missing:
-        return _ok("adb_reverse", "tcp:8081 + tcp:8787 forwarded")
+        return _ok("adb_reverse", "tcp:8081 + tcp:8787 + tcp:9000 forwarded")
     if not ctx.fix:
         return _fail(
             "adb_reverse",
@@ -512,3 +512,218 @@ def check_ios_app_installed(ctx: DoctorContext) -> CheckResult:
             f"{app_id} not installed on booted sim",
         )
     return _ok("ios_app_installed", f"{app_id} installed")
+
+
+# --- prebuild / app-freshness checks -----------------------------------
+def _mtime_or_none(path: Path) -> float | None:
+    """Return st_mtime or None if the path is missing / unreadable."""
+    try:
+        return path.stat().st_mtime
+    except OSError:
+        return None
+
+
+def check_prebuild_synced(ctx: DoctorContext) -> CheckResult:
+    """Native manifest newer than `app.config.ts`.
+
+    `expo prebuild` regenerates AndroidManifest.xml / Info.plist from
+    `app.config.ts`. If the config has been edited since the last
+    prebuild, the installed APK/IPA is stale (Pitfall 11 territory:
+    EXPO_PUBLIC_* values are baked into the binary, plugin changes
+    won't take effect until prebuild runs).
+
+    Advisory: warn (never fail) so `mo doctor` stays green when a
+    teammate hasn't touched native config recently.
+    """
+    project_root = ctx.cfg.project_root
+    config = project_root / "apps" / "mobile" / "app.config.ts"
+    config_mtime = _mtime_or_none(config)
+    if config_mtime is None:
+        return _skip("prebuild_synced", f"missing {config}")
+
+    android_manifest = (
+        project_root
+        / "apps"
+        / "mobile"
+        / "android"
+        / "app"
+        / "src"
+        / "main"
+        / "AndroidManifest.xml"
+    )
+    android_mtime = _mtime_or_none(android_manifest)
+    if android_mtime is None:
+        return _warn(
+            "prebuild_synced",
+            "AndroidManifest.xml missing; run `mo build` first",
+        )
+    if config_mtime > android_mtime:
+        return _warn(
+            "prebuild_synced",
+            "app.config.ts newer than AndroidManifest.xml; "
+            "prebuild stale; run `mo build` first",
+        )
+
+    # iOS-side check is mac-only.
+    if ctx.host_name == "macos":
+        ios_plist = (
+            project_root
+            / "apps"
+            / "mobile"
+            / "ios"
+            / "HarpaPro"
+            / "Info.plist"
+        )
+        ios_mtime = _mtime_or_none(ios_plist)
+        if ios_mtime is None:
+            # Try a glob: the iOS target dir name is project-dependent.
+            try:
+                candidates = list(
+                    (project_root / "apps" / "mobile" / "ios").glob(
+                        "*/Info.plist"
+                    )
+                )
+            except OSError:
+                candidates = []
+            if not candidates:
+                return _warn(
+                    "prebuild_synced",
+                    "Info.plist missing; run `mo build` first",
+                )
+            ios_mtime = max(
+                (m for m in (_mtime_or_none(c) for c in candidates) if m is not None),
+                default=None,
+            )
+        if ios_mtime is not None and config_mtime > ios_mtime:
+            return _warn(
+                "prebuild_synced",
+                "app.config.ts newer than Info.plist; "
+                "prebuild stale; run `mo build` first",
+            )
+
+    return _ok("prebuild_synced", "native manifests up to date")
+
+
+def _parse_dumpsys_last_update_time(output: str) -> float | None:
+    """Extract `lastUpdateTime=...` from `adb shell dumpsys package`.
+
+    Modern Android (incl. Samsung One UI 6+) emits a human-readable
+    local-time string: `lastUpdateTime=2026-05-26 22:08:02`. Older /
+    AOSP builds emit ms-since-epoch as a bare integer. Handle both.
+    Returns unix seconds, or None if we can't find / parse it.
+    """
+    import re
+    from datetime import datetime
+
+    m = re.search(r"lastUpdateTime=([^\r\n]+)", output)
+    if not m:
+        return None
+    value = m.group(1).strip()
+    # Numeric (ms since epoch) — older Android.
+    if value.isdigit():
+        try:
+            return int(value) / 1000.0
+        except ValueError:
+            return None
+    # Human-readable local-time form: "YYYY-MM-DD HH:MM:SS".
+    try:
+        dt = datetime.strptime(value, "%Y-%m-%d %H:%M:%S")
+    except ValueError:
+        return None
+    # Device emits local time without a tz offset; interpret it in the
+    # host's local timezone (almost always the same as the device's for
+    # a dev machine talking to a USB-attached phone).
+    return dt.timestamp()
+
+
+def _git_last_commit_mtime(project_root: Path, rel_path: str) -> float | None:
+    """`git log -1 --format=%ct -- <rel_path>` — commit time as unix seconds."""
+    try:
+        result = _run(
+            [
+                "git",
+                "-C",
+                str(project_root),
+                "log",
+                "-1",
+                "--format=%ct",
+                "--",
+                rel_path,
+            ],
+            timeout=4.0,
+        )
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        return None
+    if result.returncode != 0:
+        return None
+    out = result.stdout.strip()
+    if not out:
+        return None
+    try:
+        return float(out.splitlines()[0])
+    except ValueError:
+        return None
+
+
+def check_android_app_fresh(ctx: DoctorContext) -> CheckResult:
+    """Installed APK predates the latest `app.config.ts` commit.
+
+    Reads `adb shell dumpsys package <appId>` for `lastUpdateTime`,
+    compares to `git log -1 --format=%ct -- apps/mobile/app.config.ts`.
+    Advisory: warn (never fail).
+    """
+    if ctx.host_name == "macos":
+        return _skip("android_app_fresh", "macOS host; Android check N/A")
+    if not ctx.resolved_device:
+        return _skip("android_app_fresh", "no device resolved")
+    import os as _os
+
+    app_id = ctx.cfg.app_id or derive_app_id(
+        ctx.cfg.project_root, _os.environ.get("APP_VARIANT")
+    )
+    if not app_id:
+        return _skip("android_app_fresh", "no app id resolved")
+
+    try:
+        result = _run(
+            [
+                "adb",
+                "-s",
+                ctx.resolved_device,
+                "shell",
+                "dumpsys",
+                "package",
+                app_id,
+            ],
+            timeout=6.0,
+        )
+    except (FileNotFoundError, subprocess.TimeoutExpired) as exc:
+        return _warn("android_app_fresh", f"adb error: {exc}")
+    if result.returncode != 0:
+        return _warn(
+            "android_app_fresh",
+            f"dumpsys exited {result.returncode}",
+        )
+
+    install_time = _parse_dumpsys_last_update_time(result.stdout)
+    if install_time is None:
+        return _warn(
+            "android_app_fresh", "could not parse lastUpdateTime from dumpsys"
+        )
+
+    commit_time = _git_last_commit_mtime(
+        ctx.cfg.project_root, "apps/mobile/app.config.ts"
+    )
+    if commit_time is None:
+        return _skip(
+            "android_app_fresh",
+            "no git history for apps/mobile/app.config.ts",
+        )
+
+    if install_time < commit_time:
+        return _warn(
+            "android_app_fresh",
+            "device APK predates last config change; "
+            "run `mo build && mo install`",
+        )
+    return _ok("android_app_fresh", "device APK is current")

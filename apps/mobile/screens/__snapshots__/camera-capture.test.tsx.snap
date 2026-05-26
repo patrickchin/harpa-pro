@@ -19,6 +19,7 @@ exports[`CameraCapture > matches snapshot — granted, empty 1`] = `
               "onEnd": [Function],
               "onStart": [Function],
               "onUpdate": [Function],
+              "runOnJS": [Function],
             },
             {
               "__cfg": {
@@ -28,6 +29,7 @@ exports[`CameraCapture > matches snapshot — granted, empty 1`] = `
               "onEnd": [Function],
               "onStart": [Function],
               "onUpdate": [Function],
+              "runOnJS": [Function],
             },
           ],
           "kind": "simultaneous",

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildAttachments } from './attachments';
+import { buildAttachments, attachmentFromSavedFile } from './attachments';
 import type { NoteEntry } from './note-entry';
 
 describe('buildAttachments', () => {
@@ -92,5 +92,31 @@ describe('buildAttachments', () => {
   it('returns an empty array for entries with no photo data', () => {
     const entry: NoteEntry = { text: 'hi', addedAt: 0, source: 'text' };
     expect(buildAttachments(entry)).toEqual([]);
+  });
+});
+
+describe('attachmentFromSavedFile', () => {
+  it('maps a saved file input to a completed Attachment', () => {
+    const att = attachmentFromSavedFile({ id: 'fil_1', fileId: 'fil_1', thumbnailFileId: 'fil_thumb' });
+    expect(att).toMatchObject({
+      key: 'fil_1',
+      fileId: 'fil_1',
+      thumbnailFileId: 'fil_thumb',
+      sourceUri: null,
+      isPending: false,
+      status: 'completed',
+      progress: 1,
+      position: 0,
+    });
+  });
+
+  it('uses the supplied position argument', () => {
+    const att = attachmentFromSavedFile({ id: 'fil_2', fileId: 'fil_2', thumbnailFileId: null }, 3);
+    expect(att.position).toBe(3);
+  });
+
+  it('falls back to null when thumbnailFileId is omitted', () => {
+    const att = attachmentFromSavedFile({ id: 'fil_3', fileId: 'fil_3' });
+    expect(att.thumbnailFileId).toBeNull();
   });
 });

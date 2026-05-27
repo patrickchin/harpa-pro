@@ -1,13 +1,14 @@
 /**
- * ReportDetailHeader — title + small `#N · {visit date}` subtitle +
- * Actions button row for the saved-report screen.
+ * ReportDetailHeader — title + Actions button row for the saved-report
+ * screen.
  *
  * Title rule (see `docs/v4/design-report-title-consistency.md`):
  *   title = report.meta.title?.trim() || `Report #N`
  *
- * The previous standalone visit-date pill and report-type eyebrow
- * have been folded into the subtitle so the title always anchors the
- * header (no more empty whitespace when `meta.title` is blank).
+ * The finalized header is intentionally lean: no subtitle, no
+ * report-type eyebrow, no standalone visit-date pill. The visit date
+ * already appears in the StatBar within the report body just below,
+ * so a duplicate subtitle here would be noise.
  */
 import { Text, View } from 'react-native';
 import type { ReactNode } from 'react';
@@ -16,7 +17,6 @@ import { MoreHorizontal } from 'lucide-react-native';
 import { ScreenHeader } from '@/components/primitives/ScreenHeader';
 import { Button } from '@/components/primitives/Button';
 import { colors } from '@/lib/design-tokens/colors';
-import { formatDate } from '@/lib/util/date';
 import type { GeneratedSiteReport } from '@harpa/report-core';
 
 interface ReportDetailHeaderProps {
@@ -25,7 +25,7 @@ interface ReportDetailHeaderProps {
   onOpenActions: () => void;
   actionsDisabled: boolean;
   actions?: ReactNode;
-  /** Per-project report number — drives the `#N` subtitle + testID. */
+  /** Per-project report number — drives the title fallback + testID. */
   reportNumber?: number | null;
 }
 
@@ -46,22 +46,10 @@ export function ReportDetailHeader({
         ? `Report #${reportNumber}`
         : 'Report';
 
-  const visitDate = report.report.meta.visitDate;
-  const subtitleParts: string[] = [];
-  if (reportNumber !== null && reportNumber !== undefined) {
-    subtitleParts.push(`#${reportNumber}`);
-  }
-  if (visitDate) {
-    subtitleParts.push(formatDate(visitDate));
-  }
-  const subtitle =
-    subtitleParts.length > 0 ? subtitleParts.join(' · ') : undefined;
-
   return (
     <View className="px-5 py-4">
       <ScreenHeader
         title={title}
-        subtitle={subtitle}
         onBack={onBack}
         backLabel="Reports"
         actions={actions}

@@ -35,7 +35,7 @@ but the feature is **not user-complete**:
 - Attachment sheet: **gallery (expo-image-picker) only**, multi-select
   images, routed through the same `enqueueCameraUris` path.
 
-## Approach
+## Historical — original approach (executed; see [2026-05-27 UI redesign](#2026-05-27--ui-redesign) for subsequent changes)
 
 Work in three phases. Each phase merges independently; later phases
 depend on earlier ones only where the SQL `todo_deps` say so.
@@ -155,6 +155,18 @@ Lock the policy in.
 Shipped end-to-end. All 15 todos landed across 15 Conventional
 Commits with same-PR doc updates (Pitfall 8). See
 [`plan-p3-feature-build.md` → P3.15.6](plan-p3-feature-build.md#p3156--camera-upload-pipeline-close-out).
+
+## 2026-05-27 — UI redesign
+
+Unified `PhotoTile` + always-grid `PhotoBatchGrid` replace
+`UploadQueueStrip`, `PhotoGridTile`, `SoloPendingTile`, and the
+`pendingUpload` / `pendingFiles` legacy fields. Each tile renders its
+own progress ring or failure overlay; the timeline holds a stable
+React key across the pending → saved transition via two anti-flicker
+maps (`noteIdToSyntheticId` + `fileIdToAttachmentKey`).
+
+Plan: [docs/superpowers/plans/2026-05-27-photo-upload-pipeline-ui.md](../superpowers/plans/2026-05-27-photo-upload-pipeline-ui.md)
+Spec: [docs/superpowers/specs/2026-05-27-photo-upload-pipeline-ui-design.md](../superpowers/specs/2026-05-27-photo-upload-pipeline-ui-design.md)
 
 ## Out of scope
 

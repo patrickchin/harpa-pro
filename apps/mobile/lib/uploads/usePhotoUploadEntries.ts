@@ -23,15 +23,22 @@
  * provider uses that map to assign the same React key to the saved
  * server row when it lands, so the pending → saved transition
  * reuses the same `PhotoNoteCard` instance instead of remounting.
+ *
+ * Attachment-level anti-flicker: `fileIdToAttachmentKey` maps a
+ * server `fileId` to the stable synthetic attachment key (`job.id`)
+ * so the photo grid can remap saved tile keys to their pending
+ * counterparts, extending anti-flicker from the entry level to the
+ * individual photo tile level.
  */
 import { useCallback, useMemo, useRef, useSyncExternalStore } from 'react';
 
 import type { NoteEntry } from '@/lib/notes/note-entry';
+import type { Attachment } from '@/lib/notes/attachments';
 import { useOptionalUploadQueueContext } from './QueueProvider';
 import type { UploadJob } from './types';
 
 export interface PhotoUploadEntriesApi {
-  /** Synthetic NoteEntry rows (one per in-flight / failed image job). */
+  /** Synthetic NoteEntry rows, each carrying an `attachments[]` array. */
   entries: readonly NoteEntry[];
   /**
    * Maps a resolved server `noteId` (`not_…`) to the stable synthetic
@@ -42,6 +49,14 @@ export interface PhotoUploadEntriesApi {
    * and the server row arrived with a different id.
    */
   noteIdToSyntheticId: ReadonlyMap<string, string>;
+  /**
+   * Maps a resolved server `fileId` to the synthetic attachment key
+   * (`job.id`) used while the upload was pending. Lets the photo grid
+   * remap saved tile keys to their pending counterparts so in-flight
+   * tile state (progress, error) persists across the pending → saved
+   * transition without a remount.
+   */
+  fileIdToAttachmentKey: ReadonlyMap<string, string>;
   /** Retry a failed upload job. No-op when no queue mounted. */
   retry: (jobId: string) => void;
   /** Remove / cancel an upload job from the snapshot. No-op when no queue. */
@@ -75,62 +90,38 @@ function batchSyntheticId(batchKey: string): string {
   return `__batch-${batchKey}`;
 }
 
-function jobToSoloEntry(job: UploadJob, authorId: string | undefined): NoteEntry {
-  const id = soloSyntheticId(job.id);
+function jobToAttachment(job: UploadJob, position: number): Attachment {
   return {
-    id,
-    reactKey: id,
-    authorId,
-    text: '',
-    addedAt: parseJobCreatedAt(job.id),
-    source: 'image',
+    key: job.id,
+    fileId: job.fileId ?? null,
+    thumbnailFileId: job.thumbnailFileId ?? null,
+    sourceUri: job.input.sourceUri,
     isPending: true,
-    noteId: job.noteId,
-    pendingUpload: {
-      jobId: job.id,
-      sourceUri: job.input.sourceUri,
-      status: job.status,
-      progress: job.progress,
-      error: job.error,
-    },
-    pendingFiles: [{
-      jobId: job.id,
-      sourceUri: job.input.sourceUri,
-      status: job.status,
-      progress: job.progress,
-      error: job.error,
-    }],
+    jobId: job.id,
+    status: job.status,
+    progress: job.progress,
+    error: job.error,
+    position,
   };
 }
 
-function batchToEntry(batchKey: string, batchJobs: UploadJob[], authorId: string | undefined): NoteEntry {
-  const addedAt = Math.min(...batchJobs.map(j => parseJobCreatedAt(j.id)));
-  const resolvedNoteId = batchJobs.find((j) => j.noteId)?.noteId;
-  const id = batchSyntheticId(batchKey);
+function buildEntry(
+  syntheticId: string,
+  jobs: UploadJob[],
+  authorId: string | undefined,
+): NoteEntry {
+  const addedAt = Math.min(...jobs.map((j) => parseJobCreatedAt(j.id)));
+  const resolvedNoteId = jobs.find((j) => j.noteId)?.noteId;
   return {
-    id,
-    reactKey: id,
+    id: syntheticId,
+    reactKey: syntheticId,
     authorId,
     text: '',
     addedAt,
     source: 'image',
     isPending: true,
-    batchKey,
     noteId: resolvedNoteId,
-    pendingFiles: batchJobs.map(j => ({
-      jobId: j.id,
-      sourceUri: j.input.sourceUri,
-      status: j.status,
-      progress: j.progress,
-      error: j.error,
-    })),
-    pendingUpload: batchJobs.length === 1 ? {
-      jobId: batchJobs[0]!.id,
-      sourceUri: batchJobs[0]!.input.sourceUri,
-      status: batchJobs[0]!.status,
-      progress: batchJobs[0]!.progress,
-      error: batchJobs[0]!.error,
-    } : null,
+    attachments: jobs.map((j, idx) => jobToAttachment(j, idx)),
   };
 }
 
@@ -156,40 +147,47 @@ export function usePhotoUploadEntries(
   );
   const jobs = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 
-  // Session-lived noteId → syntheticId map. We keep entries even
-  // after the queue drops the completed job so saved server rows
-  // (which arrive on a later refetch) continue to inherit the
-  // synthetic React key. Persisting in a ref also means a single
-  // re-render where the queue snapshot lags the server doesn't lose
-  // the mapping.
-  const mapRef = useRef<Map<string, string>>(new Map());
-  const noteIdToSyntheticId = useMemo<ReadonlyMap<string, string>>(() => {
-    const map = mapRef.current;
-    if (!reportId) return map;
-    for (const job of jobs) {
-      if (job.input.kind !== 'image') continue;
-      if (job.input.reportId !== reportId) continue;
-      if (!job.noteId) continue;
-      const syntheticId = job.batchKey
-        ? batchSyntheticId(job.batchKey)
-        : soloSyntheticId(job.id);
-      if (map.get(job.noteId) !== syntheticId) {
-        map.set(job.noteId, syntheticId);
+  // Session-lived maps. Both are kept in refs so entries survive queue
+  // snapshot gaps (e.g. the completed job is gone but the saved server
+  // row hasn't arrived yet). Both return a FRESH Map wrapper per
+  // render that updates them so downstream memo consumers detect
+  // change-by-identity (same contract as noteIdToSyntheticId).
+  const noteIdMapRef = useRef<Map<string, string>>(new Map());
+  const fileIdMapRef = useRef<Map<string, string>>(new Map());
+
+  const { noteIdToSyntheticId, fileIdToAttachmentKey } = useMemo(() => {
+    const noteMap = noteIdMapRef.current;
+    const fileMap = fileIdMapRef.current;
+    if (reportId) {
+      for (const job of jobs) {
+        if (job.input.kind !== 'image' || job.input.reportId !== reportId) continue;
+        const syntheticId = job.batchKey
+          ? batchSyntheticId(job.batchKey)
+          : soloSyntheticId(job.id);
+        if (job.noteId && noteMap.get(job.noteId) !== syntheticId) {
+          noteMap.set(job.noteId, syntheticId);
+        }
+        if (job.fileId && fileMap.get(job.fileId) !== job.id) {
+          fileMap.set(job.fileId, job.id);
+        }
+        if (job.thumbnailFileId && !fileMap.has(job.thumbnailFileId)) {
+          fileMap.set(job.thumbnailFileId, job.id);
+        }
       }
     }
-    // Return a FRESH wrapper around the same entries so downstream
-    // memo consumers (`GenerateReportProvider.timelineItems`) detect
-    // change-by-identity. Returning `mapRef.current` directly would
-    // give every render the same reference, hiding growth from
-    // `Object.is` and breaking the anti-flicker remap.
-    return new Map(map);
+    // Return FRESH wrappers so downstream memo consumers
+    // (`GenerateReportProvider.timelineItems`) detect change-by-identity.
+    return {
+      noteIdToSyntheticId: new Map(noteMap),
+      fileIdToAttachmentKey: new Map(fileMap),
+    };
   }, [jobs, reportId]);
 
   const entries = useMemo<readonly NoteEntry[]>(() => {
     if (!reportId) return [];
     const visible = jobs.filter((j) => isVisibleImageJob(j, reportId));
 
-    // Group by batchKey
+    // Group by batchKey — a solo job becomes a one-element group.
     const batches = new Map<string, UploadJob[]>();
     const solo: UploadJob[] = [];
 
@@ -207,11 +205,11 @@ export function usePhotoUploadEntries(
     const result: NoteEntry[] = [];
 
     for (const job of solo) {
-      result.push(jobToSoloEntry(job, authorId));
+      result.push(buildEntry(soloSyntheticId(job.id), [job], authorId));
     }
 
-    for (const [key, batchJobs] of batches) {
-      result.push(batchToEntry(key, batchJobs, authorId));
+    for (const [batchKey, batchJobs] of batches) {
+      result.push(buildEntry(batchSyntheticId(batchKey), batchJobs, authorId));
     }
 
     result.sort((a, b) => a.addedAt - b.addedAt);
@@ -234,5 +232,5 @@ export function usePhotoUploadEntries(
     [queue],
   );
 
-  return { entries, noteIdToSyntheticId, retry, cancel };
+  return { entries, noteIdToSyntheticId, fileIdToAttachmentKey, retry, cancel };
 }

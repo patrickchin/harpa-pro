@@ -131,4 +131,10 @@ export interface NoteEntry {
    * need to resolve the canonical server row).
    */
   reactKey?: string;
+
+  // ── Unified photo attachments ──────────────────────────────────
+  // T1 adds this field as optional. PhotoTile + PhotoBatchGrid
+  // consume `buildAttachments(entry)` until T10 wires `attachments`
+  // as the sole source of truth and removes the legacy fields below.
+  attachments?: ReadonlyArray<import('./attachments').Attachment>;
 }

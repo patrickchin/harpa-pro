@@ -16,13 +16,19 @@ export function isOptimisticReportId(id: string | undefined | null): boolean {
 }
 
 /**
- * Minimal structural shape of the body field returned by the
- * `/projects/{project}/reports` list endpoint. We only read
- * `meta.title` — everything else is irrelevant to the list row.
+ * Structural superset of the body returned by the list endpoint. We
+ * only read `meta.title` — every other field is accessed via the
+ * detail query. The intersection with `Record<string, unknown>`
+ * lets the contract's `ReportBody` (which has visitDate, weather,
+ * workers, materials, issues, nextSteps, summarySections — and no
+ * `meta` today) assign cleanly. `meta.title` will start returning
+ * a value once the API contract grows that field.
  */
-type ListReportBody = {
-  meta?: { title?: string | null } | null;
-} | null;
+type ListReportBody =
+  | (Record<string, unknown> & {
+      meta?: { title?: string | null } | null;
+    })
+  | null;
 
 export type ReportListItem = {
   id: string;

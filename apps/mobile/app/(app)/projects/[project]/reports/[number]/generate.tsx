@@ -158,7 +158,6 @@ export default function GenerateReportRoute() {
         body?: reports.ReportBody | null;
         status?: 'draft' | 'finalized';
         notesSinceLastGeneration?: number;
-        meta?: { title?: string | null };
       }
     | undefined;
   const reportId = reportRow?.id ?? null;
@@ -259,7 +258,7 @@ export default function GenerateReportRoute() {
   );
 
   const serverBody: GeneratedSiteReport | null = reportRow?.body
-    ? reportBodyToGeneratedReport(reportRow.body, reportRow.meta ?? undefined)
+    ? reportBodyToGeneratedReport(reportRow.body)
     : null;
 
   const fallbackReport: GeneratedSiteReport | null = env.EXPO_PUBLIC_USE_FIXTURES
@@ -509,7 +508,7 @@ export default function GenerateReportRoute() {
   const canWrite =
     projectQuery.data?.myRole === 'owner' || projectQuery.data?.myRole === 'editor';
 
-  const reportTitleField = reportRow?.meta?.title;
+  const reportTitleField = reportRow?.body?.meta?.title;
 
   // Combine autosave + generation errors into the existing surface so
   // both bubble through `generationError`. Generation errors trump

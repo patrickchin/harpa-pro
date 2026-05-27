@@ -1752,7 +1752,20 @@ export interface paths {
                                 status: "draft" | "finalized";
                                 visitDate: string | null;
                                 body: {
-                                    visitDate: string | null;
+                                    meta: {
+                                        title: string | null;
+                                        summary: string | null;
+                                        /** @enum {string|null} */
+                                        reportType: "site_visit" | "daily" | "inspection" | "safety" | "incident" | "progress" | null;
+                                        visitDate: string | null;
+                                        location: string | null;
+                                        /** @enum {string|null} */
+                                        projectPhase: "planning" | "foundation" | "structure" | "envelope" | "services" | "interior" | "finishing" | "handover" | "other" | null;
+                                        /** @enum {string|null} */
+                                        riskLevel: "low" | "medium" | "high" | null;
+                                        /** @default [] */
+                                        tags: string[];
+                                    };
                                     weather: {
                                         condition: string | null;
                                         temperatureC: number | null;
@@ -1863,7 +1876,20 @@ export interface paths {
                             status: "draft" | "finalized";
                             visitDate: string | null;
                             body: {
-                                visitDate: string | null;
+                                meta: {
+                                    title: string | null;
+                                    summary: string | null;
+                                    /** @enum {string|null} */
+                                    reportType: "site_visit" | "daily" | "inspection" | "safety" | "incident" | "progress" | null;
+                                    visitDate: string | null;
+                                    location: string | null;
+                                    /** @enum {string|null} */
+                                    projectPhase: "planning" | "foundation" | "structure" | "envelope" | "services" | "interior" | "finishing" | "handover" | "other" | null;
+                                    /** @enum {string|null} */
+                                    riskLevel: "low" | "medium" | "high" | null;
+                                    /** @default [] */
+                                    tags: string[];
+                                };
                                 weather: {
                                     condition: string | null;
                                     temperatureC: number | null;
@@ -1995,7 +2021,20 @@ export interface paths {
                             status: "draft" | "finalized";
                             visitDate: string | null;
                             body: {
-                                visitDate: string | null;
+                                meta: {
+                                    title: string | null;
+                                    summary: string | null;
+                                    /** @enum {string|null} */
+                                    reportType: "site_visit" | "daily" | "inspection" | "safety" | "incident" | "progress" | null;
+                                    visitDate: string | null;
+                                    location: string | null;
+                                    /** @enum {string|null} */
+                                    projectPhase: "planning" | "foundation" | "structure" | "envelope" | "services" | "interior" | "finishing" | "handover" | "other" | null;
+                                    /** @enum {string|null} */
+                                    riskLevel: "low" | "medium" | "high" | null;
+                                    /** @default [] */
+                                    tags: string[];
+                                };
                                 weather: {
                                     condition: string | null;
                                     temperatureC: number | null;
@@ -2144,7 +2183,20 @@ export interface paths {
                     "application/json": {
                         visitDate?: string | null;
                         body?: {
-                            visitDate: string | null;
+                            meta: {
+                                title: string | null;
+                                summary: string | null;
+                                /** @enum {string|null} */
+                                reportType: "site_visit" | "daily" | "inspection" | "safety" | "incident" | "progress" | null;
+                                visitDate: string | null;
+                                location: string | null;
+                                /** @enum {string|null} */
+                                projectPhase: "planning" | "foundation" | "structure" | "envelope" | "services" | "interior" | "finishing" | "handover" | "other" | null;
+                                /** @enum {string|null} */
+                                riskLevel: "low" | "medium" | "high" | null;
+                                /** @default [] */
+                                tags?: string[];
+                            };
                             weather: {
                                 condition: string | null;
                                 temperatureC: number | null;
@@ -2196,7 +2248,20 @@ export interface paths {
                             status: "draft" | "finalized";
                             visitDate: string | null;
                             body: {
-                                visitDate: string | null;
+                                meta: {
+                                    title: string | null;
+                                    summary: string | null;
+                                    /** @enum {string|null} */
+                                    reportType: "site_visit" | "daily" | "inspection" | "safety" | "incident" | "progress" | null;
+                                    visitDate: string | null;
+                                    location: string | null;
+                                    /** @enum {string|null} */
+                                    projectPhase: "planning" | "foundation" | "structure" | "envelope" | "services" | "interior" | "finishing" | "handover" | "other" | null;
+                                    /** @enum {string|null} */
+                                    riskLevel: "low" | "medium" | "high" | null;
+                                    /** @default [] */
+                                    tags: string[];
+                                };
                                 weather: {
                                     condition: string | null;
                                     temperatureC: number | null;
@@ -2448,7 +2513,20 @@ export interface paths {
                                 status: "draft" | "finalized";
                                 visitDate: string | null;
                                 body: {
-                                    visitDate: string | null;
+                                    meta: {
+                                        title: string | null;
+                                        summary: string | null;
+                                        /** @enum {string|null} */
+                                        reportType: "site_visit" | "daily" | "inspection" | "safety" | "incident" | "progress" | null;
+                                        visitDate: string | null;
+                                        location: string | null;
+                                        /** @enum {string|null} */
+                                        projectPhase: "planning" | "foundation" | "structure" | "envelope" | "services" | "interior" | "finishing" | "handover" | "other" | null;
+                                        /** @enum {string|null} */
+                                        riskLevel: "low" | "medium" | "high" | null;
+                                        /** @default [] */
+                                        tags: string[];
+                                    };
                                     weather: {
                                         condition: string | null;
                                         temperatureC: number | null;
@@ -2629,7 +2707,20 @@ export interface paths {
                                 status: "draft" | "finalized";
                                 visitDate: string | null;
                                 body: {
-                                    visitDate: string | null;
+                                    meta: {
+                                        title: string | null;
+                                        summary: string | null;
+                                        /** @enum {string|null} */
+                                        reportType: "site_visit" | "daily" | "inspection" | "safety" | "incident" | "progress" | null;
+                                        visitDate: string | null;
+                                        location: string | null;
+                                        /** @enum {string|null} */
+                                        projectPhase: "planning" | "foundation" | "structure" | "envelope" | "services" | "interior" | "finishing" | "handover" | "other" | null;
+                                        /** @enum {string|null} */
+                                        riskLevel: "low" | "medium" | "high" | null;
+                                        /** @default [] */
+                                        tags: string[];
+                                    };
                                     weather: {
                                         condition: string | null;
                                         temperatureC: number | null;
@@ -2804,7 +2895,20 @@ export interface paths {
                                 status: "draft" | "finalized";
                                 visitDate: string | null;
                                 body: {
-                                    visitDate: string | null;
+                                    meta: {
+                                        title: string | null;
+                                        summary: string | null;
+                                        /** @enum {string|null} */
+                                        reportType: "site_visit" | "daily" | "inspection" | "safety" | "incident" | "progress" | null;
+                                        visitDate: string | null;
+                                        location: string | null;
+                                        /** @enum {string|null} */
+                                        projectPhase: "planning" | "foundation" | "structure" | "envelope" | "services" | "interior" | "finishing" | "handover" | "other" | null;
+                                        /** @enum {string|null} */
+                                        riskLevel: "low" | "medium" | "high" | null;
+                                        /** @default [] */
+                                        tags: string[];
+                                    };
                                     weather: {
                                         condition: string | null;
                                         temperatureC: number | null;
@@ -2940,7 +3044,20 @@ export interface paths {
                                 status: "draft" | "finalized";
                                 visitDate: string | null;
                                 body: {
-                                    visitDate: string | null;
+                                    meta: {
+                                        title: string | null;
+                                        summary: string | null;
+                                        /** @enum {string|null} */
+                                        reportType: "site_visit" | "daily" | "inspection" | "safety" | "incident" | "progress" | null;
+                                        visitDate: string | null;
+                                        location: string | null;
+                                        /** @enum {string|null} */
+                                        projectPhase: "planning" | "foundation" | "structure" | "envelope" | "services" | "interior" | "finishing" | "handover" | "other" | null;
+                                        /** @enum {string|null} */
+                                        riskLevel: "low" | "medium" | "high" | null;
+                                        /** @default [] */
+                                        tags: string[];
+                                    };
                                     weather: {
                                         condition: string | null;
                                         temperatureC: number | null;

@@ -3619,9 +3619,79 @@
                             "type": "object",
                             "nullable": true,
                             "properties": {
-                              "visitDate": {
-                                "type": "string",
-                                "nullable": true
+                              "meta": {
+                                "type": "object",
+                                "properties": {
+                                  "title": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "summary": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "reportType": {
+                                    "type": "string",
+                                    "nullable": true,
+                                    "enum": [
+                                      "site_visit",
+                                      "daily",
+                                      "inspection",
+                                      "safety",
+                                      "incident",
+                                      "progress"
+                                    ]
+                                  },
+                                  "visitDate": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "location": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "projectPhase": {
+                                    "type": "string",
+                                    "nullable": true,
+                                    "enum": [
+                                      "planning",
+                                      "foundation",
+                                      "structure",
+                                      "envelope",
+                                      "services",
+                                      "interior",
+                                      "finishing",
+                                      "handover",
+                                      "other"
+                                    ]
+                                  },
+                                  "riskLevel": {
+                                    "type": "string",
+                                    "nullable": true,
+                                    "enum": [
+                                      "low",
+                                      "medium",
+                                      "high"
+                                    ]
+                                  },
+                                  "tags": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "string"
+                                    },
+                                    "maxItems": 7,
+                                    "default": []
+                                  }
+                                },
+                                "required": [
+                                  "title",
+                                  "summary",
+                                  "reportType",
+                                  "visitDate",
+                                  "location",
+                                  "projectPhase",
+                                  "riskLevel"
+                                ]
                               },
                               "weather": {
                                 "type": "object",
@@ -3779,7 +3849,7 @@
                               }
                             },
                             "required": [
-                              "visitDate",
+                              "meta",
                               "weather",
                               "workers",
                               "materials",
@@ -3986,9 +4056,79 @@
                       "type": "object",
                       "nullable": true,
                       "properties": {
-                        "visitDate": {
-                          "type": "string",
-                          "nullable": true
+                        "meta": {
+                          "type": "object",
+                          "properties": {
+                            "title": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "summary": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "reportType": {
+                              "type": "string",
+                              "nullable": true,
+                              "enum": [
+                                "site_visit",
+                                "daily",
+                                "inspection",
+                                "safety",
+                                "incident",
+                                "progress"
+                              ]
+                            },
+                            "visitDate": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "location": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "projectPhase": {
+                              "type": "string",
+                              "nullable": true,
+                              "enum": [
+                                "planning",
+                                "foundation",
+                                "structure",
+                                "envelope",
+                                "services",
+                                "interior",
+                                "finishing",
+                                "handover",
+                                "other"
+                              ]
+                            },
+                            "riskLevel": {
+                              "type": "string",
+                              "nullable": true,
+                              "enum": [
+                                "low",
+                                "medium",
+                                "high"
+                              ]
+                            },
+                            "tags": {
+                              "type": "array",
+                              "items": {
+                                "type": "string"
+                              },
+                              "maxItems": 7,
+                              "default": []
+                            }
+                          },
+                          "required": [
+                            "title",
+                            "summary",
+                            "reportType",
+                            "visitDate",
+                            "location",
+                            "projectPhase",
+                            "riskLevel"
+                          ]
                         },
                         "weather": {
                           "type": "object",
@@ -4146,7 +4286,7 @@
                         }
                       },
                       "required": [
-                        "visitDate",
+                        "meta",
                         "weather",
                         "workers",
                         "materials",
@@ -4374,9 +4514,79 @@
                       "type": "object",
                       "nullable": true,
                       "properties": {
-                        "visitDate": {
-                          "type": "string",
-                          "nullable": true
+                        "meta": {
+                          "type": "object",
+                          "properties": {
+                            "title": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "summary": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "reportType": {
+                              "type": "string",
+                              "nullable": true,
+                              "enum": [
+                                "site_visit",
+                                "daily",
+                                "inspection",
+                                "safety",
+                                "incident",
+                                "progress"
+                              ]
+                            },
+                            "visitDate": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "location": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "projectPhase": {
+                              "type": "string",
+                              "nullable": true,
+                              "enum": [
+                                "planning",
+                                "foundation",
+                                "structure",
+                                "envelope",
+                                "services",
+                                "interior",
+                                "finishing",
+                                "handover",
+                                "other"
+                              ]
+                            },
+                            "riskLevel": {
+                              "type": "string",
+                              "nullable": true,
+                              "enum": [
+                                "low",
+                                "medium",
+                                "high"
+                              ]
+                            },
+                            "tags": {
+                              "type": "array",
+                              "items": {
+                                "type": "string"
+                              },
+                              "maxItems": 7,
+                              "default": []
+                            }
+                          },
+                          "required": [
+                            "title",
+                            "summary",
+                            "reportType",
+                            "visitDate",
+                            "location",
+                            "projectPhase",
+                            "riskLevel"
+                          ]
                         },
                         "weather": {
                           "type": "object",
@@ -4534,7 +4744,7 @@
                         }
                       },
                       "required": [
-                        "visitDate",
+                        "meta",
                         "weather",
                         "workers",
                         "materials",
@@ -4702,9 +4912,79 @@
                     "type": "object",
                     "nullable": true,
                     "properties": {
-                      "visitDate": {
-                        "type": "string",
-                        "nullable": true
+                      "meta": {
+                        "type": "object",
+                        "properties": {
+                          "title": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "summary": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "reportType": {
+                            "type": "string",
+                            "nullable": true,
+                            "enum": [
+                              "site_visit",
+                              "daily",
+                              "inspection",
+                              "safety",
+                              "incident",
+                              "progress"
+                            ]
+                          },
+                          "visitDate": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "location": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "projectPhase": {
+                            "type": "string",
+                            "nullable": true,
+                            "enum": [
+                              "planning",
+                              "foundation",
+                              "structure",
+                              "envelope",
+                              "services",
+                              "interior",
+                              "finishing",
+                              "handover",
+                              "other"
+                            ]
+                          },
+                          "riskLevel": {
+                            "type": "string",
+                            "nullable": true,
+                            "enum": [
+                              "low",
+                              "medium",
+                              "high"
+                            ]
+                          },
+                          "tags": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            },
+                            "maxItems": 7,
+                            "default": []
+                          }
+                        },
+                        "required": [
+                          "title",
+                          "summary",
+                          "reportType",
+                          "visitDate",
+                          "location",
+                          "projectPhase",
+                          "riskLevel"
+                        ]
                       },
                       "weather": {
                         "type": "object",
@@ -4862,7 +5142,7 @@
                       }
                     },
                     "required": [
-                      "visitDate",
+                      "meta",
                       "weather",
                       "workers",
                       "materials",
@@ -4912,9 +5192,79 @@
                       "type": "object",
                       "nullable": true,
                       "properties": {
-                        "visitDate": {
-                          "type": "string",
-                          "nullable": true
+                        "meta": {
+                          "type": "object",
+                          "properties": {
+                            "title": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "summary": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "reportType": {
+                              "type": "string",
+                              "nullable": true,
+                              "enum": [
+                                "site_visit",
+                                "daily",
+                                "inspection",
+                                "safety",
+                                "incident",
+                                "progress"
+                              ]
+                            },
+                            "visitDate": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "location": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "projectPhase": {
+                              "type": "string",
+                              "nullable": true,
+                              "enum": [
+                                "planning",
+                                "foundation",
+                                "structure",
+                                "envelope",
+                                "services",
+                                "interior",
+                                "finishing",
+                                "handover",
+                                "other"
+                              ]
+                            },
+                            "riskLevel": {
+                              "type": "string",
+                              "nullable": true,
+                              "enum": [
+                                "low",
+                                "medium",
+                                "high"
+                              ]
+                            },
+                            "tags": {
+                              "type": "array",
+                              "items": {
+                                "type": "string"
+                              },
+                              "maxItems": 7,
+                              "default": []
+                            }
+                          },
+                          "required": [
+                            "title",
+                            "summary",
+                            "reportType",
+                            "visitDate",
+                            "location",
+                            "projectPhase",
+                            "riskLevel"
+                          ]
                         },
                         "weather": {
                           "type": "object",
@@ -5072,7 +5422,7 @@
                         }
                       },
                       "required": [
-                        "visitDate",
+                        "meta",
                         "weather",
                         "workers",
                         "materials",
@@ -5711,9 +6061,79 @@
                           "type": "object",
                           "nullable": true,
                           "properties": {
-                            "visitDate": {
-                              "type": "string",
-                              "nullable": true
+                            "meta": {
+                              "type": "object",
+                              "properties": {
+                                "title": {
+                                  "type": "string",
+                                  "nullable": true
+                                },
+                                "summary": {
+                                  "type": "string",
+                                  "nullable": true
+                                },
+                                "reportType": {
+                                  "type": "string",
+                                  "nullable": true,
+                                  "enum": [
+                                    "site_visit",
+                                    "daily",
+                                    "inspection",
+                                    "safety",
+                                    "incident",
+                                    "progress"
+                                  ]
+                                },
+                                "visitDate": {
+                                  "type": "string",
+                                  "nullable": true
+                                },
+                                "location": {
+                                  "type": "string",
+                                  "nullable": true
+                                },
+                                "projectPhase": {
+                                  "type": "string",
+                                  "nullable": true,
+                                  "enum": [
+                                    "planning",
+                                    "foundation",
+                                    "structure",
+                                    "envelope",
+                                    "services",
+                                    "interior",
+                                    "finishing",
+                                    "handover",
+                                    "other"
+                                  ]
+                                },
+                                "riskLevel": {
+                                  "type": "string",
+                                  "nullable": true,
+                                  "enum": [
+                                    "low",
+                                    "medium",
+                                    "high"
+                                  ]
+                                },
+                                "tags": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string"
+                                  },
+                                  "maxItems": 7,
+                                  "default": []
+                                }
+                              },
+                              "required": [
+                                "title",
+                                "summary",
+                                "reportType",
+                                "visitDate",
+                                "location",
+                                "projectPhase",
+                                "riskLevel"
+                              ]
                             },
                             "weather": {
                               "type": "object",
@@ -5871,7 +6291,7 @@
                             }
                           },
                           "required": [
-                            "visitDate",
+                            "meta",
                             "weather",
                             "workers",
                             "materials",
@@ -6216,9 +6636,79 @@
                           "type": "object",
                           "nullable": true,
                           "properties": {
-                            "visitDate": {
-                              "type": "string",
-                              "nullable": true
+                            "meta": {
+                              "type": "object",
+                              "properties": {
+                                "title": {
+                                  "type": "string",
+                                  "nullable": true
+                                },
+                                "summary": {
+                                  "type": "string",
+                                  "nullable": true
+                                },
+                                "reportType": {
+                                  "type": "string",
+                                  "nullable": true,
+                                  "enum": [
+                                    "site_visit",
+                                    "daily",
+                                    "inspection",
+                                    "safety",
+                                    "incident",
+                                    "progress"
+                                  ]
+                                },
+                                "visitDate": {
+                                  "type": "string",
+                                  "nullable": true
+                                },
+                                "location": {
+                                  "type": "string",
+                                  "nullable": true
+                                },
+                                "projectPhase": {
+                                  "type": "string",
+                                  "nullable": true,
+                                  "enum": [
+                                    "planning",
+                                    "foundation",
+                                    "structure",
+                                    "envelope",
+                                    "services",
+                                    "interior",
+                                    "finishing",
+                                    "handover",
+                                    "other"
+                                  ]
+                                },
+                                "riskLevel": {
+                                  "type": "string",
+                                  "nullable": true,
+                                  "enum": [
+                                    "low",
+                                    "medium",
+                                    "high"
+                                  ]
+                                },
+                                "tags": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string"
+                                  },
+                                  "maxItems": 7,
+                                  "default": []
+                                }
+                              },
+                              "required": [
+                                "title",
+                                "summary",
+                                "reportType",
+                                "visitDate",
+                                "location",
+                                "projectPhase",
+                                "riskLevel"
+                              ]
                             },
                             "weather": {
                               "type": "object",
@@ -6376,7 +6866,7 @@
                             }
                           },
                           "required": [
-                            "visitDate",
+                            "meta",
                             "weather",
                             "workers",
                             "materials",
@@ -6704,9 +7194,79 @@
                           "type": "object",
                           "nullable": true,
                           "properties": {
-                            "visitDate": {
-                              "type": "string",
-                              "nullable": true
+                            "meta": {
+                              "type": "object",
+                              "properties": {
+                                "title": {
+                                  "type": "string",
+                                  "nullable": true
+                                },
+                                "summary": {
+                                  "type": "string",
+                                  "nullable": true
+                                },
+                                "reportType": {
+                                  "type": "string",
+                                  "nullable": true,
+                                  "enum": [
+                                    "site_visit",
+                                    "daily",
+                                    "inspection",
+                                    "safety",
+                                    "incident",
+                                    "progress"
+                                  ]
+                                },
+                                "visitDate": {
+                                  "type": "string",
+                                  "nullable": true
+                                },
+                                "location": {
+                                  "type": "string",
+                                  "nullable": true
+                                },
+                                "projectPhase": {
+                                  "type": "string",
+                                  "nullable": true,
+                                  "enum": [
+                                    "planning",
+                                    "foundation",
+                                    "structure",
+                                    "envelope",
+                                    "services",
+                                    "interior",
+                                    "finishing",
+                                    "handover",
+                                    "other"
+                                  ]
+                                },
+                                "riskLevel": {
+                                  "type": "string",
+                                  "nullable": true,
+                                  "enum": [
+                                    "low",
+                                    "medium",
+                                    "high"
+                                  ]
+                                },
+                                "tags": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string"
+                                  },
+                                  "maxItems": 7,
+                                  "default": []
+                                }
+                              },
+                              "required": [
+                                "title",
+                                "summary",
+                                "reportType",
+                                "visitDate",
+                                "location",
+                                "projectPhase",
+                                "riskLevel"
+                              ]
                             },
                             "weather": {
                               "type": "object",
@@ -6864,7 +7424,7 @@
                             }
                           },
                           "required": [
-                            "visitDate",
+                            "meta",
                             "weather",
                             "workers",
                             "materials",
@@ -7100,9 +7660,79 @@
                           "type": "object",
                           "nullable": true,
                           "properties": {
-                            "visitDate": {
-                              "type": "string",
-                              "nullable": true
+                            "meta": {
+                              "type": "object",
+                              "properties": {
+                                "title": {
+                                  "type": "string",
+                                  "nullable": true
+                                },
+                                "summary": {
+                                  "type": "string",
+                                  "nullable": true
+                                },
+                                "reportType": {
+                                  "type": "string",
+                                  "nullable": true,
+                                  "enum": [
+                                    "site_visit",
+                                    "daily",
+                                    "inspection",
+                                    "safety",
+                                    "incident",
+                                    "progress"
+                                  ]
+                                },
+                                "visitDate": {
+                                  "type": "string",
+                                  "nullable": true
+                                },
+                                "location": {
+                                  "type": "string",
+                                  "nullable": true
+                                },
+                                "projectPhase": {
+                                  "type": "string",
+                                  "nullable": true,
+                                  "enum": [
+                                    "planning",
+                                    "foundation",
+                                    "structure",
+                                    "envelope",
+                                    "services",
+                                    "interior",
+                                    "finishing",
+                                    "handover",
+                                    "other"
+                                  ]
+                                },
+                                "riskLevel": {
+                                  "type": "string",
+                                  "nullable": true,
+                                  "enum": [
+                                    "low",
+                                    "medium",
+                                    "high"
+                                  ]
+                                },
+                                "tags": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string"
+                                  },
+                                  "maxItems": 7,
+                                  "default": []
+                                }
+                              },
+                              "required": [
+                                "title",
+                                "summary",
+                                "reportType",
+                                "visitDate",
+                                "location",
+                                "projectPhase",
+                                "riskLevel"
+                              ]
                             },
                             "weather": {
                               "type": "object",
@@ -7260,7 +7890,7 @@
                             }
                           },
                           "required": [
-                            "visitDate",
+                            "meta",
                             "weather",
                             "workers",
                             "materials",

@@ -6,13 +6,39 @@ import { noteKind } from './notes.js';
 export const reportStatus = z.enum(['draft', 'finalized']);
 export type ReportStatus = z.infer<typeof reportStatus>;
 
+const reportType = z.enum([
+  'site_visit', 'daily', 'inspection', 'safety', 'incident', 'progress',
+]);
+export type ReportTypeValue = z.infer<typeof reportType>;
+
+const projectPhase = z.enum([
+  'planning', 'foundation', 'structure', 'envelope',
+  'services', 'interior', 'finishing', 'handover', 'other',
+]);
+export type ProjectPhaseValue = z.infer<typeof projectPhase>;
+
+const riskLevel = z.enum(['low', 'medium', 'high']);
+export type RiskLevelValue = z.infer<typeof riskLevel>;
+
+export const reportMeta = z.object({
+  title:        z.string().nullable(),
+  summary:      z.string().nullable(),
+  reportType:   reportType.nullable(),
+  visitDate:    isoDateTime.nullable(),
+  location:     z.string().nullable(),
+  projectPhase: projectPhase.nullable(),
+  riskLevel:    riskLevel.nullable(),
+  tags:         z.array(z.string()).max(7).default([]),
+});
+export type ReportMeta = z.infer<typeof reportMeta>;
+
 /**
- * Report body — matches mobile-old composition order:
+ * Report body — meta envelope first, then matches mobile-old composition order:
  * StatBar / WeatherStrip / Summary / Issues / Workers / Materials / NextSteps / SummarySections.
  * See docs/legacy-v3/realignment/01-investigation.md.
  */
 export const reportBody = z.object({
-  visitDate: isoDateTime.nullable(),
+  meta: reportMeta,
   weather: z
     .object({
       condition: z.string().nullable(),

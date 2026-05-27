@@ -43,6 +43,7 @@ import {
 import { invalidateAfterFileUpload } from '@/lib/api/invalidation';
 import { useReportBodyAutosave } from '@/lib/reports/use-report-body-autosave';
 import type { NoteEntry } from '@/lib/notes/note-entry';
+import { attachmentFromSavedFile } from '@/lib/notes/attachments';
 import { env } from '@/lib/config/env';
 import type { GeneratedSiteReport } from '@harpa/report-core';
 import { reports } from '@harpa/api-contract';
@@ -96,10 +97,7 @@ function noteToEntry(n: ApiNote): NoteEntry {
     : isVoice
       ? (n.summary ?? n.body ?? n.transcript ?? '')
       : (n.body ?? n.transcript ?? '');
-  // Image notes are canonical-via-`note_files`: the join array is the
-  // source of truth. Fall back to the legacy `file_id` only when the
-  // server returned no joined rows (e.g. an optimistic row mid-flight).
-  const imageFiles = isImage ? n.files ?? [] : [];
+  const imageFiles = isImage ? (n.files ?? []).slice().sort((a, b) => a.position - b.position) : [];
   const primaryImage = imageFiles[0];
   return {
     id: n.id,
@@ -125,7 +123,7 @@ function noteToEntry(n: ApiNote): NoteEntry {
       fileId: primaryImage?.fileId ?? n.fileId ?? null,
       thumbnailFileId:
         primaryImage?.thumbnailFileId ?? n.thumbnailFileId ?? null,
-      files: imageFiles,
+      attachments: imageFiles.map((f, idx) => attachmentFromSavedFile(f, idx)),
     }),
   };
 }

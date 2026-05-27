@@ -7,11 +7,9 @@
  * card's interior width is measured via onLayout and threaded into
  * the grid so the 3-wide layout never clips on the right edge.
  *
- * `entry.attachments` is the source of truth. While the legacy
- * `files` / `pendingFiles` / `pendingUpload` / `fileId` fields still
- * exist on `NoteEntry` (T1), the card falls back to
- * `buildAttachments(entry)` whenever `entry.attachments` is not
- * provided — kept until T10 removes the legacy fields.
+ * `entry.attachments` is the source of truth. Falls back to
+ * `buildAttachments(entry)` which handles single-file image rows
+ * (via the `fileId` path) for any entry without `attachments` set.
  */
 import { useCallback, useMemo, useState } from 'react';
 import { Text, View, type LayoutChangeEvent } from 'react-native';
@@ -30,7 +28,7 @@ export interface PhotoNoteCardProps {
   onOpen?: (fileId: string, sourceIndex: number) => void;
   /** Opens the shared `NoteOptionsSheet` (delete, metadata). */
   onOpenOptions?: (sourceIndex: number) => void;
-  /** Retry a failed upload job (matches `pendingFiles[].jobId`). */
+  /** Retry a failed upload job (matches `attachments[].jobId`). */
   onRetryUpload?: (jobId: string) => void;
   /** Cancel/dismiss an in-flight or failed upload job. */
   onCancelUpload?: (jobId: string) => void;

@@ -49,9 +49,9 @@ describe('NoteTimeline key stability', () => {
       isPending: true,
       batchKey: 'b1',
       noteId: 'not_X',
-      pendingFiles: [
-        { jobId: 'a', sourceUri: 'file:///a.jpg', status: 'uploading', progress: 0.5 },
-        { jobId: 'b', sourceUri: 'file:///b.jpg', status: 'uploading', progress: 0.5 },
+      attachments: [
+        { key: 'a', fileId: null, thumbnailFileId: null, sourceUri: 'file:///a.jpg', isPending: true, jobId: 'a', status: 'uploading' as const, progress: 0.5, position: 0 },
+        { key: 'b', fileId: null, thumbnailFileId: null, sourceUri: 'file:///b.jpg', isPending: true, jobId: 'b', status: 'uploading' as const, progress: 0.5, position: 1 },
       ],
     };
     const saved: NoteEntry = {
@@ -65,9 +65,9 @@ describe('NoteTimeline key stability', () => {
       source: 'image',
       fileId: 'fil_1',
       thumbnailFileId: 'fil_thumb_1',
-      files: [
-        { id: 'nf_1', fileId: 'fil_1', thumbnailFileId: 'fil_thumb_1', position: 0, caption: null },
-        { id: 'nf_2', fileId: 'fil_2', thumbnailFileId: 'fil_thumb_2', position: 1, caption: null },
+      attachments: [
+        { key: 'nf_1', fileId: 'fil_1', thumbnailFileId: 'fil_thumb_1', sourceUri: null, isPending: false, position: 0 },
+        { key: 'nf_2', fileId: 'fil_2', thumbnailFileId: 'fil_thumb_2', sourceUri: null, isPending: false, position: 1 },
       ],
     };
 
@@ -107,8 +107,8 @@ describe('NoteTimeline key stability', () => {
       text: '',
       addedAt: 1700000000000,
       source: 'image',
-      pendingFiles: [
-        { jobId: 'j', sourceUri: 'file:///a.jpg', status: 'uploading', progress: 0.5 },
+      attachments: [
+        { key: 'j', fileId: null, thumbnailFileId: null, sourceUri: 'file:///a.jpg', isPending: true, jobId: 'j', status: 'uploading' as const, progress: 0.5, position: 0 },
       ],
     };
     const b: NoteEntry = {

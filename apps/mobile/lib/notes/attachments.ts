@@ -1,11 +1,7 @@
 /**
  * Attachment — unified per-photo shape consumed by the photo UI
  * (PhotoTile, PhotoBatchGrid). One ordered array drives every state
- * (saved, pending, failed, overflow). This module is the
- * transitional adapter while NoteEntry still carries the legacy
- * `files` / `pendingFiles` / `pendingUpload` / `fileId` lanes. T10
- * removes the legacy fields and lets callers read `entry.attachments`
- * directly.
+ * (saved, pending, failed, overflow).
  */
 import type { NoteEntry } from './note-entry';
 
@@ -76,74 +72,29 @@ export interface Attachment {
 }
 
 /**
- * Derive the unified attachment list from a NoteEntry's legacy photo
- * fields. Saved files first (sorted by `position`), then pending
- * files in queue order. Falls back to the legacy single-file fields
- * (`pendingUpload`, `fileId`) when no batch info is present so this
- * adapter handles every shape the queue + server can currently emit.
+ * Derive the unified attachment list from a NoteEntry. Returns
+ * `entry.attachments` directly when set. Falls back to a single-tile
+ * attachment built from `entry.fileId` for legacy single-file image
+ * rows that pre-date the attachments field. Returns an empty array
+ * for voice and text entries.
  */
 export function buildAttachments(entry: NoteEntry): readonly Attachment[] {
   if (entry.source !== 'image') return [];
-  const out: Attachment[] = [];
 
-  if (entry.files?.length) {
-    const sorted = [...entry.files].sort((a, b) => a.position - b.position);
-    for (const f of sorted) {
-      out.push({
-        key: f.id,
-        fileId: f.fileId,
-        thumbnailFileId: f.thumbnailFileId,
+  if (entry.attachments?.length) return entry.attachments;
+
+  if (entry.fileId) {
+    return [
+      {
+        key: entry.id ?? entry.fileId,
+        fileId: entry.fileId,
+        thumbnailFileId: entry.thumbnailFileId ?? null,
         sourceUri: null,
         isPending: false,
-        position: f.position,
-      });
-    }
+        position: 0,
+      },
+    ];
   }
 
-  if (entry.pendingFiles?.length) {
-    const basePosition = out.length;
-    entry.pendingFiles.forEach((p, idx) => {
-      out.push({
-        key: p.jobId,
-        fileId: null,
-        thumbnailFileId: null,
-        sourceUri: p.sourceUri,
-        isPending: true,
-        jobId: p.jobId,
-        status: p.status,
-        progress: p.progress,
-        error: p.error,
-        position: basePosition + idx,
-      });
-    });
-  }
-
-  if (out.length === 0 && entry.pendingUpload) {
-    const p = entry.pendingUpload;
-    out.push({
-      key: p.jobId,
-      fileId: null,
-      thumbnailFileId: null,
-      sourceUri: p.sourceUri,
-      isPending: true,
-      jobId: p.jobId,
-      status: p.status,
-      progress: p.progress,
-      error: p.error,
-      position: 0,
-    });
-  }
-
-  if (out.length === 0 && entry.fileId) {
-    out.push({
-      key: entry.id ?? entry.fileId,
-      fileId: entry.fileId,
-      thumbnailFileId: entry.thumbnailFileId ?? null,
-      sourceUri: null,
-      isPending: false,
-      position: 0,
-    });
-  }
-
-  return out;
+  return [];
 }

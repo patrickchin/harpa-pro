@@ -1,6 +1,6 @@
 # Maestro full regression journey
 
-> **Status:** green. All listed modules currently pass end-to-end on
+> **Historical status:** green. The listed modules passed end-to-end on
 > real Android device `R3CT7092S2H` (`com.harpa.pro.dev`) in
 > fixture-replay mode against the local docker-compose stack.
 > Last verified: 2026-05-24, HEAD `11632dc`, wallclock ~18m21s for
@@ -8,9 +8,12 @@
 > 03-members-invite, 04-members-permissions, 05-members-viewer,
 > 06-members-remove, 07-reports-crud, 08-text-notes,
 > 11-generate-finalize, 12-report-debug, 13-projects-delete (plus
-> helpers and sign-out). Modules 09 and 10 are not yet implemented
-> — see [§7 Future modules](#7-future-modules-pickup-pointers) and
-> [§8 Open scope](#8-open-scope--uncovered-routes-and-flows).
+> helpers and sign-out).
+> **Current 2026-05-27 state:** `origin/dev` has module 09 implemented
+> but disabled on iOS, module 10a paused for the incoming photo upload
+> redesign, and modules 11/12/13 disabled on iOS. The active next goal
+> is full voice-note E2E coverage; see
+> [`design-voice-notes-e2e.md`](design-voice-notes-e2e.md).
 > Windows-host gotchas hit while getting here are cataloged in
 > [`pitfalls-maestro-windows.md`](pitfalls-maestro-windows.md).
 > **Phase:** P4 hardening (extends [P3.14](plan-p3-feature-build.md#p314--maestro-full-journey--shipped) `core-end-to-end.yaml`).
@@ -64,9 +67,9 @@ section is the queue.
 
 | Carved out | Why | Pickup pointer |
 |---|---|---|
-| Voice-note record/playback/transcript/summary | Lives on `feat/v4-voice`, not yet merged to `dev`. Implementation tracked in [plan-voice-pipeline.md](plan-voice-pipeline.md). | [§7 Future module 09](#7-future-modules-pickup-pointers) — added when `feat/v4-voice` merges. |
-| Camera capture + photo attachments (draft + finalized) | Per repo owner: the camera + photo-upload work has not actually shipped on `dev`. The canonical screen files exist as stubs / dev-mirror only — the user-facing wiring (`btn-attach-photo` → camera → Done → file in report) is not live. | [§7 Future modules 10a/10b](#7-future-modules-pickup-pointers) — added once camera Done-handoff + `ReportPhotos` are live on `dev`. |
-| Voice note debug fields (transcript, summary, playback) in Report Debug | Depends on voice-note table columns (`summary`, `transcript`) landing with voice pipeline. | Same as voice — [§7 module 09]. Debug screen ships text-only first. |
+| Full voice-note E2E | Module 09 exists but is disabled on iOS because the fixture recorder asset loader fails at runtime. Current module only proves the title appears; the goal is broader. | Active target: [design-voice-notes-e2e.md](design-voice-notes-e2e.md) and [§7 module 09](#7-future-modules-pickup-pointers). |
+| Camera capture + photo attachments (draft + finalized) | Paused while `agents/photo-upload-pipeline-ui-review` redesigns the photo upload UI/data shape around `attachments[]` and per-tile state. | [§7 Future modules 10a/10b](#7-future-modules-pickup-pointers) — resume after the redesign lands. |
+| Voice note debug fields (transcript, summary, playback) in Report Debug | Depends on module 09 being stable and module 11/12 being re-enabled on iOS. | Track after the core voice-note journey is green. |
 | Push notifications / universal links cold-tap | Tracked in [P4.6](plan-p4-hardening.md#p46-universal-links). Different harness. | [P4.6] — separate flow `share-link-cold-start.yaml`. |
 | Avatar upload (`AvatarUploader`) | Depends on R2 upload pipeline + camera roll — partly merged but no canonical Maestro coverage yet. | Add as `12a-avatar-upload.yaml` after photo modules unblock. |
 
@@ -385,12 +388,12 @@ that is the Pitfall 13 contract.
 One bullet ≈ one commit. Land in this order; each module is gated by
 the testIDs + product surfaces it depends on.
 
-1. `feat(api): GET /reports/{number}/debug + scope-test trio + fixture-replay test` — §3.4 route, Pitfall 6 + Pitfall 13. Returns text notes only in initial cut; voice transcript/summary fields added when voice pipeline merges.
+1. `feat(api): GET /reports/{number}/debug + scope-test trio + fixture-replay test` — §3.4 route, Pitfall 6 + Pitfall 13. Returns text notes only in initial cut; voice transcript/summary fields are tracked after the core voice-note E2E path is stable.
 2. `feat(mobile): Report Debug screen + actions-menu entry behind showDeveloperSection` — `screens/report-debug.tsx`, `app/(app)/projects/[project]/reports/[number]/debug.tsx`, Vitest cases.
 3. `chore(mobile): testID audit — add testIDs from §3.3 to screens + components` — touches the 20+ files in the inventory; pure additive, no behaviour change.
 4. `feat(mobile): hidden project-slug + bob-user-id chips in dev/fixture builds` — header `Text testID` only mounted when `EXPO_PUBLIC_USE_FIXTURES` or `__DEV__`.
-5. ~~`feat(api): test-account allowlist + magic-OTP backdoor`~~ — **dropped.** No API backdoor needed; the existing fake-Twilio path (`TWILIO_LIVE=0` → accepts `TWILIO_VERIFY_FAKE_CODE=000000` for any phone, already in `packages/api/src/auth/twilio.ts`) is enough for local-fixture mode. Dev-deployment E2E is descoped — see §6.2.
-6. ~~`chore(infra): seed cli command + Doppler dev wiring`~~ — **dropped.** Alice and Bob are signed up via the normal mobile sign-up UI inside the journey (modules `01-auth.yaml` and `01b-signup-bob.yaml`). State reset is `docker compose down -v` between runs locally.
+5. ~~`feat(api): test-account allowlist + magic-OTP backdoor`~~ — **dropped.** No magic OTP backdoor. Local mode uses the existing fake-Twilio path (`TWILIO_LIVE=0` → accepts `TWILIO_VERIFY_FAKE_CODE=000000`), while dev-deployment mode uses the narrower `POST /auth/password/verify` test-account bypass that is already gated by Doppler `dev` secrets.
+6. ~~`chore(infra): seed cli command + Doppler dev wiring`~~ — **replaced.** Local mode signs Alice and Bob up via the normal mobile sign-up UI (modules `01-auth.yaml` and `01b-signup-bob.yaml`) and resets with `docker compose down -v`. Dev mode must use allowlisted test accounts and per-run cleanup without truncating the shared dev DB.
 7. `test(mobile): .maestro/helpers/{sign-in-alice,sign-in-bob,sign-out,open-project}.yaml` — shared building blocks. No teardown helper: state reset is `docker compose down -v` locally.
 8. `test(mobile): .maestro/modules/01-auth.yaml + 02-projects-crud.yaml`.
 9. `test(mobile): .maestro/modules/03-members-invite.yaml + 04-members-permissions.yaml + 05-members-viewer.yaml + 06-members-remove.yaml`.
@@ -400,13 +403,12 @@ the testIDs + product surfaces it depends on.
 13. `chore(ci): e2e-maestro-regression.yml workflow (iOS sim + Android emu matrix, local-fixtures + dev-deployment modes, MAESTRO_APP_ID from env)` — Pitfall 9.
 14. `docs(v4): tick P4.8 checklist + cross-link from plan-p4-hardening.md`.
 
-Future commits (queued in [§7](#7-future-modules-pickup-pointers)),
-added when the underlying feature lands on `dev`:
+Future commits / goals (queued in [§7](#7-future-modules-pickup-pointers)):
 
-- F1. `test(mobile): .maestro/modules/09-voice-notes.yaml` — after `feat/v4-voice` merges.
-- F2. `test(mobile): .maestro/modules/10a-photo-notes-draft.yaml` — after camera Done-handoff lands.
-- F3. `test(mobile): .maestro/modules/10b-photo-notes-finalized.yaml` — after `ReportPhotos` signed-URL wiring lands.
-- F4. `feat(api): extend /reports/{n}/debug with voice transcript+summary columns` — bundled with F1.
+- F1. `test(mobile): fully harden .maestro/modules/09-voice-notes.yaml` — active goal in `design-voice-notes-e2e.md`.
+- F2. `test(mobile): .maestro/modules/10a-photo-notes-draft.yaml` — after the photo upload UI redesign lands.
+- F3. `test(mobile): .maestro/modules/10b-photo-notes-finalized.yaml` — after `ReportPhotos` signed-URL wiring lands on the redesigned photo surface.
+- F4. `feat(api): extend /reports/{n}/debug with voice transcript+summary columns` — after F1 is green and modules 11/12 are re-enabled.
 
 ---
 
@@ -416,7 +418,7 @@ added when the underlying feature lands on `dev`:
 |---|---|---|
 | Q1 | Where does this land in the plan tree? | New section **P4.8 — Maestro full regression** in [`plan-p4-hardening.md`](plan-p4-hardening.md). |
 | Q2 | Does the regression journey replace `core-end-to-end.yaml`? | No. `core-end-to-end.yaml` stays as the PR-time smoke flow (≈2 min). The regression journey is the nightly/release gate (≈10 min sans voice/photo, ≈15 min with). |
-| Q3 | How do test accounts get into the `dev` deployment? | **Descoped.** Dev-deployment E2E was originally going to use a magic-OTP allowlist — that's been ruled out as too risky (any test-only auth shortcut in production-shaped code is a footgun). The regression journey runs only in **local-fixture mode** against a fresh `docker compose` stack. Alice and Bob are signed up via the normal UI in `01-auth.yaml`/`01b-signup-bob.yaml`; reset between runs with `docker compose down -v`. Running this journey against `dev` would require real Twilio SMS to live phones — out of scope. |
+| Q3 | How do test accounts get into the `dev` deployment? | Use the existing `POST /auth/password/verify` test-account password bypass, gated by `TEST_ACCOUNT_PHONES` + `TEST_ACCOUNT_PASSWORD` in Doppler `dev`. This avoids magic OTP and real SMS while reusing the normal session/JWT path. Maestro still needs a non-production login helper or setup hook that can use this endpoint. |
 | Q4 | Universal-links cold-tap coverage | Stays in [P4.6](plan-p4-hardening.md#p46-universal-links). |
 | Q5 | Token-event timeline (`GET /me/usage/events`) | Out of scope — stays in [P3.15.5](plan-p3-feature-build.md#p3155--llm-token-accounting) follow-up. |
 | Q6 | Android emu LLM-fixture network surface (local mode) | Verify Android emu can reach the loopback fixture server (`10.0.2.2:<port>`). Surface in step 13. |
@@ -427,8 +429,10 @@ added when the underlying feature lands on `dev`:
 
 ## 6. Running modes — local vs dev deployment
 
-The journey is designed to run in two modes from the same flow files.
-Only the **environment setup** differs; the YAML steps are identical.
+The journey is designed to run in two modes with the same coverage
+target. The local mode runs first for deterministic debugging; the dev
+deployment mode runs second to prove deployed API, Neon, R2, auth, and
+AI wiring.
 
 ### 6.1 Mode A — Local fixtures (the default)
 
@@ -441,28 +445,38 @@ Only the **environment setup** differs; the YAML steps are identical.
 - No network egress; reproducible.
 - Used by every developer locally and by the PR-preview CI matrix.
 
-### 6.2 Mode B — Dev deployment (descoped)
+### 6.2 Mode B — Dev deployment
 
-Originally this section described a "magic-OTP backdoor" + `seed:e2e`
-CLI to let the Maestro journey run against the dev Fly deployment.
-**That approach has been dropped.** Any auth-bypass code in
-production-shaped paths — even hard-gated — is a footgun: env vars get
-copied between environments, gates get inverted by accident, and a
-test backdoor can become a real one.
+After the full local run passes, run the same E2E coverage against
+the development deployment:
 
-The regression journey now runs **only in Mode A (local fixtures)**.
-Running it against `dev` would require:
+- API: `https://harpa-pro-api-dev.fly.dev` (`harpa-pro-api-dev`).
+- DB/storage: Neon `dev` branch + `harpa-pro-dev` R2 bucket.
+- Mobile: preview/development app variant (`com.harpa.pro.dev`)
+  pointed at the dev API, either via compile-time
+  `EXPO_PUBLIC_API_URL` or the non-production API base URL override.
+- Auth: test-account password bypass (`POST /auth/password/verify`),
+  not fake OTP and not real SMS. Requires the dev Fly app to have
+  `TEST_ACCOUNT_PHONES` and `TEST_ACCOUNT_PASSWORD` configured from
+  Doppler `dev`.
+- Data: use allowlisted Alice/Bob test accounts and create unique
+  per-run project/report names, then clean them up in-flow. Do not
+  truncate the shared dev DB as part of a normal E2E run.
+- AI: dev deployment settings. If `AI_LIVE=1`, this is a live-provider
+  smoke; if dev is temporarily pointed at fixture replay, the run
+  still proves deployed API/auth/storage/DB wiring.
 
-- real Twilio SMS to live phones (slow, costly, and the OTP can't be
-  read by the test harness), OR
-- a separate signed-token mechanism that doesn't touch the OTP code
-  path at all (e.g. a CI-only debug-build sign-in screen guarded by a
-  build-time constant that's stripped from prod bundles).
+Open implementation work:
 
-Neither is implemented. If we need dev-deployment regression coverage
-later, the build-time-stripped debug sign-in is the safer of the two
-options — but for now PR-time smoke (`core-end-to-end.yaml`) plus the
-nightly local-fixture regression are considered sufficient.
+- Add a Maestro auth helper for password-login test accounts, or a
+  safe setup hook that logs in through `/auth/password/verify` and
+  installs the resulting session into the dev-client. This helper must
+  be unavailable in production builds.
+- Teach `mo journey` / `mo run` a `--target dev` mode that skips local
+  DB truncation, points the app at `harpa-pro-api-dev`, and uses the
+  password-login helper.
+- Keep the sequencing strict: local backend must pass before running
+  against dev.
 
 ---
 
@@ -474,8 +488,8 @@ clear merge-trigger so we don't drift back into Pitfall 4.
 
 | Slot | Module | Trigger to add | Tracking |
 |---|---|---|---|
-| 09 | `09-voice-notes.yaml` — record (fixture audio) + playback toggle + transcript expander + summary preview + delete | `feat/v4-voice` branch merges to `dev` and `record-voice.tsx` + `VoiceNoteCard` are live | [plan-voice-pipeline.md Phase G](plan-voice-pipeline.md#phase-g--e2e-doc-fixes-false-green-removal); when merging that branch, add the F1 commit from §4. |
-| 10a | `10a-photo-notes-draft.yaml` — `btn-attach-photo` → camera → Done → photo row appears on Notes timeline → delete | Camera Done-handoff lands on `dev` (currently dev-mirror only) | New entry to be added to `plan-p3-feature-build.md` when camera work resumes. |
+| 09 | `09-voice-notes.yaml` — fixture recording + upload + transcribe + summarize + title + transcript sheet + playback entry point + delete | Fix the iOS fixture-recorder asset loader, then re-enable and expand the existing module | Active goal: [design-voice-notes-e2e.md](design-voice-notes-e2e.md). |
+| 10a | `10a-photo-notes-draft.yaml` — `btn-attach-photo` → camera → Done → photo row appears on Notes timeline → delete | Photo upload UI redesign lands (`agents/photo-upload-pipeline-ui-review`, commit `8527984` is the current GitHub design branch) | Paused until the final `attachments[]` / per-tile surface lands; do not harden current-surface photo assertions. |
 | 10b | `10b-photo-notes-finalized.yaml` — open finalized report → ReportPhotos block renders → ImagePreviewModal opens via signed URL | `ReportPhotos` + `ImagePreviewModal` signed-URL fetch wired to live R2 in mobile (currently uses dev-mirror fixtures only on dev) | Same as 10a. |
 | 12a | `12-report-debug.yaml` voice fields | F1 also adds `voiceTranscripts` + `voiceSummaries` arrays to `GET /reports/{n}/debug` and to the debug screen | Bundled with F1/F4 in §4. |
 | 14 | `14-avatar-upload.yaml` | After 10a unblocks (shares upload pipeline) | Add to P4 list when 10a lands. |
@@ -507,17 +521,18 @@ between "the journey is green" and "the app is covered".
   entry asserted in module 12. The journey reaches the developer
   section indirectly (the entry only renders behind
   `EXPO_PUBLIC_USE_FIXTURES`) but does not assert profile edits.
-- Voice notes — module slot `09` is reserved. The iOS-simulator
-  fixture path (`:mock` build replaces the recorder with a canned
-  `voice-sample.m4a` emitter, see
-  [`arch-voice-pipeline.md` §D6](arch-voice-pipeline.md#d6-fixture-mode-contract))
-  is not exercised; the on-device journey runs Android, which has
-  **no equivalent fixture stub** for the recorder yet. Adding voice
-  coverage on Android requires either an Android-side recorder
-  fixture or a CI-only iOS-sim leg.
+- Voice notes — module slot `09` exists but is disabled in
+  `regression-journey.yaml` on iOS because the fixture recorder's
+  `voice-sample.m4a` dynamic import does not resolve at runtime.
+  This is now the active E2E goal: the module must cover recording,
+  upload, transcribe, summarize, title, transcript viewing, playback
+  entry point, and delete. See
+  [`design-voice-notes-e2e.md`](design-voice-notes-e2e.md).
 - Image / photo uploads — module slots `10a` / `10b` are reserved.
-  Currently neither the camera Done-handoff nor `ReportPhotos`
-  signed-URL fetch is asserted end-to-end. Same trigger as §7.
+  Currently paused because the GitHub branch
+  `agents/photo-upload-pipeline-ui-review` redesigns the photo upload
+  UI/data shape around `attachments[]` and per-tile state. Resume once
+  that surface lands.
 
 These do not block the P4.8 exit gate — they are tracked as future
 modules and will land alongside their feature work or as targeted

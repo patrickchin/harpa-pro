@@ -620,11 +620,18 @@ export function GenerateReportProvider({
   // bypasses the legacy `deleteIndex` two-step.
   const deleteAt = useCallback(
     (sourceIndex: number) => {
-      const note = notes[sourceIndex];
+      const note = timelineItems[sourceIndex];
       if (!note || !onDeleteNote) return;
       onDeleteNote(note, sourceIndex);
+      if (
+        note.source === 'voice' &&
+        note.id &&
+        voicePipeline.state.note?.id === note.id
+      ) {
+        voicePipeline.reset();
+      }
     },
-    [notes, onDeleteNote],
+    [timelineItems, onDeleteNote, voicePipeline],
   );
 
   const updateNote = useCallback(
@@ -689,8 +696,8 @@ export function GenerateReportProvider({
       reportNumber,
       reportTitle: reportTitle?.trim() || 'New Report',
       notes: {
-        list: notes,
-        totalCount: notes.length,
+        list: timelineItems,
+        totalCount: timelineItems.length,
         // TODO(P3.8): expose real note rows once `useLocalReportNotes`
         // lands. ReportPhotos consumes this; passing `null` keeps the
         // surface stable.

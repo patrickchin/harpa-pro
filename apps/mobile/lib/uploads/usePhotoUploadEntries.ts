@@ -11,11 +11,16 @@
  * That keeps the provider's host tests from having to wrap in the
  * full upload provider just to render the Notes tab.
  *
- * `completed` jobs are filtered out: once `createNote` lands, the
- * reportNotes invalidation refetch surfaces the real row. `failed`
- * jobs are kept so the user can retry/dismiss inline. `cancelled`
- * jobs are also dropped (the queue snapshot keeps them only to
- * report the terminal state to subscribers).
+ * `completed` jobs are kept visible in the synthetic so the tile (and
+ * the card) stay stable until the saved server row arrives via the
+ * `reportNotes` invalidation refetch. The provider drops the synthetic
+ * in the same React commit as the saved row appears (matched by
+ * `noteId`), and the saved row inherits the synthetic's `reactKey` so
+ * React reuses the PhotoNoteCard instance — no remount, no flicker, no
+ * "tiles vanish one by one then the card disappears" gap. `failed`
+ * jobs are kept so the user can retry/dismiss inline. `cancelled` jobs
+ * are dropped (the queue keeps them only to report the terminal state
+ * to subscribers).
  *
  * Anti-flicker: synthetic entries carry the eventual server `noteId`
  * as soon as the queue resolves it (during `creating_note`) and the
@@ -68,7 +73,16 @@ const EMPTY_JOBS: ReadonlyArray<UploadJob> = [];
 function isVisibleImageJob(job: UploadJob, reportId: string): boolean {
   if (job.input.kind !== 'image') return false;
   if (job.input.reportId !== reportId) return false;
-  return job.status !== 'completed' && job.status !== 'cancelled';
+  // Keep `completed` jobs visible: the synthetic entry must persist as
+  // a stable placeholder showing the final image(s) until the saved
+  // server row arrives in `notes` and `GenerateReportProvider` swaps
+  // it in atomically via the shared `reactKey`. Dropping completed
+  // jobs here causes tiles (and eventually the whole card) to vanish
+  // for one render gap before the saved row lands — the exact
+  // content-shift / disappearing-card bug we're fixing. Only
+  // `cancelled` jobs are filtered (the queue keeps them in its
+  // snapshot purely to report the terminal state to subscribers).
+  return job.status !== 'cancelled';
 }
 
 function parseJobCreatedAt(jobId: string): number {
@@ -91,15 +105,20 @@ function batchSyntheticId(batchKey: string): string {
 }
 
 function jobToAttachment(job: UploadJob, position: number): Attachment {
+  // Completed jobs render as a finished tile (no ring, no overlay,
+  // full opacity) but stay in the synthetic until the saved server
+  // row replaces it. Setting `isPending: false` is what flips
+  // PhotoTile out of the uploading visual state.
+  const isCompleted = job.status === 'completed';
   return {
     key: job.id,
     fileId: job.fileId ?? null,
     thumbnailFileId: job.thumbnailFileId ?? null,
     sourceUri: job.input.sourceUri,
-    isPending: true,
+    isPending: !isCompleted,
     jobId: job.id,
     status: job.status,
-    progress: job.progress,
+    progress: isCompleted ? 1 : job.progress,
     error: job.error,
     position,
   };

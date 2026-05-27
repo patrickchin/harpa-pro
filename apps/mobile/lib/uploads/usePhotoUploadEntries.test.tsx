@@ -23,11 +23,20 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
+import { createMMKV } from 'react-native-mmkv';
 
 import { QueueProvider, useFileUpload } from './index';
 import { usePhotoUploadEntries } from './usePhotoUploadEntries';
 import type { EnqueueInput, UploadResult } from './types';
 import type { NoteEntry } from '@/lib/notes/note-entry';
+
+// The mocked `react-native-mmkv` keeps stores in module scope, so the
+// queue persistence layer leaks completed jobs between tests in this
+// file. Drop the upload-queue store before each test so `QueueProvider`
+// starts with an empty `initialJobs` array.
+function clearQueuePersistence(): void {
+  createMMKV({ id: 'upload-queue' }).clearAll();
+}
 
 interface RecordedCall {
   url: string;
@@ -121,6 +130,7 @@ describe('usePhotoUploadEntries — noteIdToSyntheticId identity contract', () =
   let tree: ReactTestRenderer | null = null;
 
   beforeEach(() => {
+    clearQueuePersistence();
     calls = [];
     observed.length = 0;
     enqueueRef = null;
@@ -264,6 +274,7 @@ describe('usePhotoUploadEntries — batch grouping with attachments[] and fileId
   }
 
   beforeEach(() => {
+    clearQueuePersistence();
     observed2.length = 0;
     enqueueRef2 = null;
     resolveFirstNote = null;
@@ -346,5 +357,19 @@ describe('usePhotoUploadEntries — batch grouping with attachments[] and fileId
     const final = observed2[observed2.length - 1]!;
     expect(final.fileMap.get('fil_1')).toBeDefined();
     expect(final.fileMap.get('fil_2')).toBeDefined();
+
+    // Anti-disappearing-tile contract: completed jobs MUST stay in the
+    // synthetic entry's attachments[] until the saved server row
+    // replaces it. Dropping completed jobs here is what causes the
+    // "tiles vanish one by one, then the card disappears, then a new
+    // card appears" UX bug — the synthetic must keep all tiles
+    // visible (now `isPending: false`, progress 1) so the swap with
+    // the saved row in the same React commit is atomic.
+    expect(final.entries).toHaveLength(1);
+    expect(final.entries[0]!.attachments).toHaveLength(2);
+    expect(final.entries[0]!.attachments![0]!.isPending).toBe(false);
+    expect(final.entries[0]!.attachments![1]!.isPending).toBe(false);
+    expect(final.entries[0]!.attachments![0]!.progress).toBe(1);
+    expect(final.entries[0]!.attachments![1]!.progress).toBe(1);
   });
 });

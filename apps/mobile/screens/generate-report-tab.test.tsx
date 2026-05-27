@@ -207,3 +207,22 @@ describe('GenerateNotes — Report tab', () => {
     ).not.toThrow();
   });
 });
+
+describe('GenerateNotes — title fallback', () => {
+  it('falls back to "Report #N" when no title is set', () => {
+    const tree = render(
+      <GenerateNotes {...baseProps} reportTitle={null} reportNumber={7} />,
+    );
+    const json = JSON.stringify(tree.toJSON());
+    expect(json).toContain('Report #7');
+    expect(json).toContain('#7');
+  });
+
+  it('falls back to "New report" when reportNumber is null', () => {
+    const tree = render(
+      <GenerateNotes {...baseProps} reportTitle={null} reportNumber={null} />,
+    );
+    const json = JSON.stringify(tree.toJSON());
+    expect(json).toContain('New report');
+  });
+});

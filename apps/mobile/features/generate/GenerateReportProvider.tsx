@@ -30,6 +30,7 @@ import type { TabKey } from '@/components/reports/generate/tabs';
 import { createEmptyReport } from '@/lib/reports/report-edit-helpers';
 import type { NoteEntry } from '@/lib/notes/note-entry';
 import type { GeneratedSiteReport } from '@harpa/report-core';
+import { buildAttachments, type Attachment } from '@/lib/notes/attachments';
 import { useInlineRecorder } from '@/features/voice/useInlineRecorder';
 import { useVoiceNotePipeline } from '@/features/voice/useVoiceNotePipeline';
 import { useAudioPlayback } from '@/lib/audio/AudioPlaybackProvider';
@@ -356,6 +357,23 @@ export function useGenerateReport(): GenerateReportContextValue {
 
 const EMPTY_MEMBERS: ReadonlyMap<string, string> = new Map();
 
+/**
+ * Remap saved attachment keys to their pending synthetic job keys so
+ * photo tile identity persists across the pending → saved transition.
+ * @internal exported for unit testing
+ */
+export function remapAttachmentKeys(
+  attachments: readonly Attachment[],
+  fileIdToAttachmentKey: ReadonlyMap<string, string>,
+): readonly Attachment[] {
+  return attachments.map((att) => {
+    const synthetic = att.fileId
+      ? fileIdToAttachmentKey.get(att.fileId)
+      : undefined;
+    return synthetic ? { ...att, key: synthetic } : att;
+  });
+}
+
 export function GenerateReportProvider({
   project,
   reportNumber,
@@ -476,23 +494,25 @@ export function GenerateReportProvider({
     const { step, note: savedNote, error, fileId, capture } = voicePipeline.state;
     const photoEntries = photoUploads.entries;
     const noteIdMap = photoUploads.noteIdToSyntheticId;
+    const fileIdToKeyMap = photoUploads.fileIdToAttachmentKey;
 
-    // Rewrite saved server image rows to inherit the synthetic React
-    // key minted by the upload queue. When `noteIdMap.get(n.id)`
-    // returns a synthetic id, that means this server row was created
-    // by an upload we already rendered as a pending card — assigning
-    // its `reactKey` to the synthetic id lets React reuse the
-    // PhotoNoteCard instance instead of unmounting + remounting (no
-    // flicker, no content shift). We keep `n.id` intact so optimistic
-    // mutations, delete handlers, and the photo gallery still resolve
-    // against the canonical server row.
-    const remappedNotes: NoteEntry[] = noteIdMap.size === 0
-      ? (notes as NoteEntry[])
-      : notes.map((n) => {
-          const syntheticId = n.id ? noteIdMap.get(n.id) : undefined;
-          if (!syntheticId || syntheticId === n.id) return n;
-          return { ...n, reactKey: syntheticId };
-        });
+    // Rewrite saved server image rows to:
+    // 1. Carry `attachments[]` built from legacy fields, with keys
+    //    remapped to pending synthetic job ids so photo tile identity
+    //    persists across the pending → saved transition.
+    // 2. Inherit the synthetic React key minted by the upload queue so
+    //    React reuses the PhotoNoteCard instance instead of remounting.
+    const remappedNotes: NoteEntry[] = notes.map((n) => {
+      const builtAttachments = buildAttachments(n);
+      const attachments =
+        builtAttachments.length > 0
+          ? remapAttachmentKeys(builtAttachments, fileIdToKeyMap)
+          : undefined;
+      const syntheticId = n.id ? noteIdMap.get(n.id) : undefined;
+      const base: NoteEntry = attachments ? { ...n, attachments } : n;
+      if (!syntheticId || syntheticId === n.id) return base;
+      return { ...base, reactKey: syntheticId };
+    });
 
     // Drop synthetic photo entries whose resolved noteId is already
     // present in the saved notes list — mirrors the voice pattern
@@ -544,6 +564,7 @@ export function GenerateReportProvider({
     voicePipeline.state,
     photoUploads.entries,
     photoUploads.noteIdToSyntheticId,
+    photoUploads.fileIdToAttachmentKey,
     meId,
   ]);
 
@@ -557,23 +578,14 @@ export function GenerateReportProvider({
   // tab or Report tab resolves into this list by `fileId`.
   const photoGallery = useMemo(() => {
     const items: Array<{ fileId: string; title: string; cacheKey: string }> = [];
-    for (const e of timelineItems) {
-      if (e.source !== 'image') continue;
-      // Batch entry: expand files array
-      if (e.files && e.files.length > 0) {
-        for (const f of e.files) {
-          items.push({
-            fileId: f.fileId,
-            title: e.text?.trim() || 'Photo',
-            cacheKey: f.fileId,
-          });
-        }
-      } else if (typeof e.fileId === 'string' && e.fileId) {
-        // Legacy single-file entry
+    for (const entry of timelineItems) {
+      if (!entry.attachments) continue;
+      for (const att of entry.attachments) {
+        if (!att.fileId) continue;
         items.push({
-          fileId: e.fileId,
-          title: e.text?.trim() || 'Photo',
-          cacheKey: e.fileId,
+          fileId: att.fileId,
+          title: entry.text?.trim() || 'Photo',
+          cacheKey: att.fileId,
         });
       }
     }

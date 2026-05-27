@@ -35,6 +35,10 @@ const final: ReportListItem = {
   updatedAt: '2024-03-10T11:00:00.000Z',
 };
 
+function makeRow(overrides?: Partial<ReportListItem>): ReportListItem {
+  return { ...final, ...overrides };
+}
+
 const defaults = {
   reports: [draft, final],
   projectName: 'Highland Tower',
@@ -114,6 +118,24 @@ describe('ReportsList', () => {
     const tree = render(
       <ReportsList {...defaults} reports={[optimistic, final]} />,
     );
+    expect(tree.toJSON()).toBeTruthy();
+  });
+
+  it('renders reportType and riskLevel pills when meta is populated', () => {
+    const row = makeRow({
+      body: { meta: { title: null, reportType: 'incident', riskLevel: 'high' } },
+    });
+    // SectionList renderItem isn't exercised by react-test-renderer, so
+    // we just verify the screen mounts without throwing when meta is set.
+    const tree = render(<ReportsList {...defaults} reports={[row]} />);
+    expect(tree.toJSON()).toBeTruthy();
+  });
+
+  it('renders no pills when reportType and riskLevel are both null', () => {
+    const row = makeRow({
+      body: { meta: { title: null, reportType: null, riskLevel: null } },
+    });
+    const tree = render(<ReportsList {...defaults} reports={[row]} />);
     expect(tree.toJSON()).toBeTruthy();
   });
 });

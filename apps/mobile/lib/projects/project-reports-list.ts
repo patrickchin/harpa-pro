@@ -8,6 +8,7 @@
  *   - status enum is { draft | finalized } (not { draft | final })
  *   - no `created_at` snake-case — use `createdAt`
  */
+import { reports } from '@harpa/api-contract';
 import { formatDate } from '../util/date';
 
 /** True iff `id` was minted by `optimisticReportId` in `lib/api/optimistic.ts`. */
@@ -17,16 +18,20 @@ export function isOptimisticReportId(id: string | undefined | null): boolean {
 
 /**
  * Structural superset of the body returned by the list endpoint. We
- * only read `meta.title` — every other field is accessed via the
- * detail query. The intersection with `Record<string, unknown>`
- * lets the contract's `ReportBody` (which has visitDate, weather,
- * workers, materials, issues, nextSteps, summarySections — and no
- * `meta` today) assign cleanly. `meta.title` will start returning
- * a value once the API contract grows that field.
+ * only read `meta.title`, `meta.reportType`, and `meta.riskLevel` —
+ * every other field is accessed via the detail query. The intersection
+ * with `Record<string, unknown>` lets the contract's `ReportBody`
+ * assign cleanly.
  */
 type ListReportBody =
   | (Record<string, unknown> & {
-      meta?: { title?: string | null } | null;
+      meta?:
+        | {
+            title?: string | null;
+            reportType?: reports.ReportTypeValue | null;
+            riskLevel?: reports.RiskLevelValue | null;
+          }
+        | null;
     })
   | null;
 

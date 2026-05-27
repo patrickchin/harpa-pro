@@ -3,8 +3,9 @@
  *
  * Exercises the state machine (start → pause → resume → stop)
  * without touching expo-audio. The asset resolver is mocked because
- * `expo-asset` requires an Expo runtime to actually load `require()`d
- * assets; we only care that the contract returns a usable URI string.
+ * `expo-asset` requires an Expo runtime to actually load Metro asset
+ * references; we only care that the contract returns a usable URI
+ * string.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
@@ -16,7 +17,7 @@ vi.mock('expo-asset', () => ({
   },
 }));
 
-// Stub the binary asset require — vitest can't resolve `.m4a` modules.
+// Stub the binary asset import — vitest can't resolve `.m4a` modules.
 vi.mock('@/assets/fixtures/voice-sample.m4a', () => ({ default: 1 }));
 
 const { fixtureRecorderFactory } = await import('./fixtureRecorder');

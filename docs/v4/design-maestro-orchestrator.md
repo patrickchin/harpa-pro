@@ -329,7 +329,7 @@ Spawn + PID-write + return.
 **Signature**
 
 ```
-mo journey [--no-doctor] [--no-reset] [--skip-fix]
+mo journey [--target local|dev] [--no-doctor] [--no-reset] [--skip-fix]
 ```
 
 **Purpose.** The composite default workflow. Equivalent to:
@@ -337,6 +337,12 @@ mo journey [--no-doctor] [--no-reset] [--skip-fix]
 ```
 mo doctor --fix && mo reset && mo run regression-journey.yaml
 ```
+
+`--target local` is the current/default path. `--target dev` is a
+planned extension for the development deployment pass after local
+green: it must point the app at `https://harpa-pro-api-dev.fly.dev`,
+skip destructive local DB truncation, and use the test-account
+password-login helper instead of fake OTP.
 
 …but with one critical addition: on `mo run` failure (detected by
 polling `tmp/mo/maestro.pid` until exit, capped by an explicit

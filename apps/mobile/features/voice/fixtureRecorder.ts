@@ -8,8 +8,8 @@
  *
  * The canned file lives at `apps/mobile/assets/fixtures/voice-sample.m4a`
  * (a 2-second 16 kHz mono AAC clip). It is bundled into the Metro asset
- * tree via `require()` so it gets a real file:// URI at runtime via
- * `expo-asset`.
+ * tree via a static asset import so it gets a real file:// URI at
+ * runtime via `expo-asset`.
  *
  * Behaviour:
  *   • permission is always 'granted' (no native prompt)
@@ -21,6 +21,7 @@
  * Refs: docs/v4/arch-voice-pipeline.md §D6 (fixture contract).
  */
 import { Asset } from 'expo-asset';
+import fixtureVoiceSample from '@/assets/fixtures/voice-sample.m4a';
 import type {
   PermissionState,
   RecorderFactory,
@@ -34,15 +35,7 @@ const FIXTURE_SIZE_BYTES = 1089;
 const TICK_MS = 100;
 
 async function resolveFixtureUri(): Promise<string> {
-  // Defer the import of the binary asset module to call-time so that
-  // node-only test environments (vitest) which can't resolve the m4a
-  // via metro can stub the dynamic import without exploding at module
-  // load. In production Metro processes this import and the resulting
-  // module object hits `Asset.loadAsync` below.
-  const mod = (await import('@/assets/fixtures/voice-sample.m4a')) as {
-    default: number | string;
-  };
-  const [asset] = await Asset.loadAsync(mod.default ?? mod);
+  const [asset] = await Asset.loadAsync(fixtureVoiceSample);
   if (!asset?.localUri && !asset?.uri) {
     throw new Error('fixtureRecorder: failed to resolve voice-sample.m4a');
   }

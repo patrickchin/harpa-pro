@@ -71,19 +71,29 @@ deletes the project + signs out at the end). Covers:
 4. Members invite / permissions / viewer / remove
 5. Reports CRUD
 6. Text notes (add/delete)
-7. Voice notes — fixture recorder, transcript card
-8. Photo notes (draft) — camera → upload → image note
-9. Generate + finalize
-10. Report debug
-11. Projects delete
-12. Account view + edit-cancel + edit-save
-13. Usage screen render
-14. Profile identity + nav
-15. Sign out
+7. Account view + edit-cancel + edit-save
+8. Usage screen render
+9. Profile identity + nav
+10. Sign out
+
+Paused modules:
+
+- `09-voice-notes.yaml` is the active next goal. It should be
+  re-enabled once the fixture recorder asset loader works on iOS, then
+  expanded to cover upload, transcription, summarization, title,
+  transcript viewing, playback entry point, and delete. See
+  `docs/v4/design-voice-notes-e2e.md`.
+- `10a-photo-notes-draft.yaml` is intentionally paused while the
+  `agents/photo-upload-pipeline-ui-review` branch redesigns the photo
+  upload UI/data shape.
+- `11-generate-finalize.yaml`, `12-report-debug.yaml`, and
+  `13-projects-delete.yaml` remain disabled on iOS for the reasons
+  documented in `regression-journey.yaml`.
 
 **Pre-condition:** docker compose stack up, Metro running, app built
-with `EXPO_PUBLIC_USE_FIXTURES=true` (so fixture recorder + fixture
-camera work), microphone + camera privacy grants on the sim.
+with `EXPO_PUBLIC_USE_FIXTURES=true`. Microphone privacy grant is
+required when module 09 is enabled; camera privacy grant is only
+required when photo modules are re-enabled.
 
 **Run:**
 
@@ -92,7 +102,18 @@ docker compose down -v && docker compose up -d   # fresh DB
 maestro test .maestro/regression-journey.yaml
 ```
 
-Modules 09 (voice) and 10a (photo) depend on the fixture-mode build.
+Dev-deployment target:
+
+- After the local backend run passes, run the same coverage against
+  `https://harpa-pro-api-dev.fly.dev`.
+- Dev auth must use `POST /auth/password/verify` with allowlisted test
+  accounts (`TEST_ACCOUNT_PHONES` + `TEST_ACCOUNT_PASSWORD` in Doppler
+  `dev`), not fake OTP.
+- Dev runs must create unique per-run data and clean it up in-flow;
+  they must not truncate the shared dev database.
+- `mo journey --target dev` is the intended future entry point once
+  the orchestrator grows target support.
+
 Modules 14/15/16 navigate to Profile / Account / Usage screens.
 
 ## `p3-15-upload.yaml` (legacy — superseded by module 10a)

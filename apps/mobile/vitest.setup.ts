@@ -300,7 +300,7 @@ vi.mock('react-native-reanimated', async () => {
   const ReactNative = await import('react-native');
   const View = ReactNative.View;
   return {
-    default: { View, ScrollView: ReactNative.ScrollView, Text: ReactNative.Text },
+    default: { View, ScrollView: ReactNative.ScrollView, Text: ReactNative.Text, createAnimatedComponent: (C: unknown) => C },
     View,
     ScrollView: ReactNative.ScrollView,
     Text: ReactNative.Text,

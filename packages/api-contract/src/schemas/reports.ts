@@ -6,18 +6,18 @@ import { noteKind } from './notes.js';
 export const reportStatus = z.enum(['draft', 'finalized']);
 export type ReportStatus = z.infer<typeof reportStatus>;
 
-const reportType = z.enum([
+export const reportType = z.enum([
   'site_visit', 'daily', 'inspection', 'safety', 'incident', 'progress',
 ]);
 export type ReportTypeValue = z.infer<typeof reportType>;
 
-const projectPhase = z.enum([
+export const projectPhase = z.enum([
   'planning', 'foundation', 'structure', 'envelope',
   'services', 'interior', 'finishing', 'handover', 'other',
 ]);
 export type ProjectPhaseValue = z.infer<typeof projectPhase>;
 
-const riskLevel = z.enum(['low', 'medium', 'high']);
+export const riskLevel = z.enum(['low', 'medium', 'high']);
 export type RiskLevelValue = z.infer<typeof riskLevel>;
 
 export const reportMeta = z.object({

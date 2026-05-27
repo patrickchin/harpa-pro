@@ -93,21 +93,18 @@ describe('ImageNoteCard', () => {
     );
   });
 
-  it('shows a loading state while the signed URL is pending', () => {
+  it('shows no image while the signed URL is pending', () => {
     vi.unstubAllGlobals();
     const pending = new Promise<Response>(() => undefined);
     vi.stubGlobal('fetch', vi.fn(() => pending));
     const tree = wrap(<ImageNoteCard entry={baseEntry} sourceIndex={3} />);
-    expect(
-      tree.root.findAllByProps({ testID: 'btn-image-note-open-3-loading' })
-        .length,
-    ).toBeGreaterThan(0);
+    // PhotoTile renders no CachedImage until the signed URL resolves.
     expect(
       tree.root.findAllByProps({ testID: 'btn-image-note-open-3-img' }),
     ).toHaveLength(0);
   });
 
-  it('renders the empty fallback state on fetch error', async () => {
+  it('renders no image on fetch error', async () => {
     vi.unstubAllGlobals();
     vi.stubGlobal(
       'fetch',
@@ -118,9 +115,10 @@ describe('ImageNoteCard', () => {
       tree = wrap(<ImageNoteCard entry={baseEntry} sourceIndex={2} />);
     });
     const start = Date.now();
+    // Wait for the query to settle (error state means no URL is resolved).
     while (
-      tree.root.findAllByProps({ testID: 'btn-image-note-open-2-empty' })
-        .length === 0 &&
+      tree.root.findAllByProps({ testID: 'btn-image-note-open-2-img' })
+        .length > 0 &&
       Date.now() - start < 4000
     ) {
       // eslint-disable-next-line no-await-in-loop
@@ -129,8 +127,7 @@ describe('ImageNoteCard', () => {
       });
     }
     expect(
-      tree.root.findAllByProps({ testID: 'btn-image-note-open-2-empty' })
-        .length,
-    ).toBeGreaterThan(0);
+      tree.root.findAllByProps({ testID: 'btn-image-note-open-2-img' }),
+    ).toHaveLength(0);
   });
 });

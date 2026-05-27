@@ -18,7 +18,8 @@ import { Camera } from 'lucide-react-native';
 
 import { Card } from '@/components/primitives/Card';
 import { SectionHeader } from '@/components/primitives/SectionHeader';
-import { PhotoGridTile } from '@/components/notes/PhotoGridTile';
+import { PhotoTile } from '@/components/notes/PhotoTile';
+import { attachmentFromSavedFile } from '@/lib/notes/attachments';
 import { colors } from '@/lib/design-tokens/colors';
 import type { ReportNoteRow } from '@/components/reports/detail/ReportNotesPane';
 
@@ -84,12 +85,13 @@ export function ReportPhotos({ noteRows, onOpenPhoto }: ReportPhotosProps) {
             const isFirstOfBatch = idx === 0 && group.photos.length > 1;
             return (
               <View key={p.id} style={{ width: tileSize, height: tileSize }}>
-                <PhotoGridTile
-                  fileId={p.fileId}
-                  thumbnailFileId={p.thumbnailFileId ?? null}
+                <PhotoTile
+                  attachment={attachmentFromSavedFile(
+                    { id: p.id, fileId: p.fileId, thumbnailFileId: p.thumbnailFileId ?? null },
+                    idx,
+                  )}
                   size={tileSize}
-                  onPress={() => onOpenPhoto?.({ fileId: p.fileId, title })}
-                  accessibilityLabel={`Open photo ${title}`}
+                  onPress={(p.fileId && onOpenPhoto) ? () => onOpenPhoto({ fileId: p.fileId, title }) : undefined}
                   testID={`btn-report-photo-${p.id}`}
                 />
                 {isFirstOfBatch && (

@@ -1,166 +1,74 @@
 /**
- * PhotoBatchGrid — renders a batch of photos in a 3-column grid.
+ * PhotoBatchGrid — lays a flat `Attachment[]` into a 3-column grid.
  *
- * Shows up to 9 tiles. When >9 items exist, the 9th tile displays
- * a "+N" overlay badge. Single-item batches render as one tile
- * (identical to the old single-photo card layout).
+ * Sizing is driven entirely by the measured `containerWidth` the
+ * parent passes in (via `onLayout`) — no `useWindowDimensions`, no
+ * hard-coded padding constants. The 3-wide clipping bug in the
+ * timeline went away when the math stopped guessing the upstream
+ * card padding.
+ *
+ * Up to 9 tiles render; if more attachments exist the 9th carries a
+ * "+N" overflow badge (rendered by `<PhotoTile overflowCount=>`).
  */
-import { Text, View, useWindowDimensions } from 'react-native';
+import { View } from 'react-native';
 
-import { CachedImage } from '@/components/ui/CachedImage';
-import { PhotoGridTile } from '@/components/notes/PhotoGridTile';
-import type { NoteEntry } from '@/lib/notes/note-entry';
+import type { Attachment } from '@/lib/notes/attachments';
+
+import { PhotoTile } from './PhotoTile';
 
 const COLUMNS = 3;
 const GAP = 6;
 const MAX_VISIBLE = 9;
-// Card horizontal padding (p-3 = 12px each side)
-const CARD_H_PADDING = 24;
 
 export interface PhotoBatchGridProps {
-  entry: NoteEntry;
-  /** Called when a resolved file tile is tapped. */
-  onOpenFile?: (fileId: string, index: number) => void;
-  /** Card-interior width override (defaults to screen width - 32 - card padding). */
-  containerWidth?: number;
-}
-
-interface GridItem {
-  type: 'resolved' | 'pending';
-  key: string;
-  fileId?: string | null;
-  thumbnailFileId?: string | null;
-  sourceUri?: string;
-  progress?: number;
-  isOverflow?: boolean;
-  overflowCount?: number;
-}
-
-function buildGridItems(entry: NoteEntry): GridItem[] {
-  const items: GridItem[] = [];
-
-  // Resolved files first (sorted by position)
-  if (entry.files?.length) {
-    const sorted = [...entry.files].sort((a, b) => a.position - b.position);
-    for (const f of sorted) {
-      items.push({
-        type: 'resolved',
-        key: f.id,
-        fileId: f.fileId,
-        thumbnailFileId: f.thumbnailFileId,
-      });
-    }
-  }
-
-  // Then pending files
-  if (entry.pendingFiles?.length) {
-    for (const p of entry.pendingFiles) {
-      items.push({
-        type: 'pending',
-        key: p.jobId,
-        sourceUri: p.sourceUri,
-        progress: p.progress,
-      });
-    }
-  }
-
-  // Also check legacy single pendingUpload
-  if (!items.length && entry.pendingUpload) {
-    items.push({
-      type: 'pending',
-      key: entry.pendingUpload.jobId,
-      sourceUri: entry.pendingUpload.sourceUri,
-      progress: entry.pendingUpload.progress,
-    });
-  }
-
-  // Also check legacy single fileId
-  if (!items.length && entry.fileId) {
-    items.push({
-      type: 'resolved',
-      key: entry.id ?? entry.fileId,
-      fileId: entry.fileId,
-      thumbnailFileId: entry.thumbnailFileId,
-    });
-  }
-
-  const total = items.length;
-  if (total <= MAX_VISIBLE) return items;
-
-  // Truncate to 8 + overflow tile
-  const visible = items.slice(0, MAX_VISIBLE - 1);
-  const lastItem = items[MAX_VISIBLE - 1]!;
-  visible.push({
-    ...lastItem,
-    isOverflow: true,
-    overflowCount: total - (MAX_VISIBLE - 1),
-  });
-  return visible;
+  attachments: readonly Attachment[];
+  /** Card-interior width in pixels. Required so the grid never guesses. */
+  containerWidth: number;
+  onOpenFile?: (fileId: string) => void;
+  onRetryUpload?: (jobId: string) => void;
+  onCancelUpload?: (jobId: string) => void;
+  tileTestIDPrefix?: string;
 }
 
 export function PhotoBatchGrid({
-  entry,
-  onOpenFile,
+  attachments,
   containerWidth,
+  onOpenFile,
+  onRetryUpload,
+  onCancelUpload,
+  tileTestIDPrefix = 'batch-grid-tile',
 }: PhotoBatchGridProps) {
-  const { width: screenWidth } = useWindowDimensions();
-  const availableWidth = containerWidth ?? screenWidth - 32 - CARD_H_PADDING;
-  const items = buildGridItems(entry);
+  if (attachments.length === 0) return null;
 
-  if (items.length === 0) return null;
+  const total = attachments.length;
+  const visible = total <= MAX_VISIBLE
+    ? attachments
+    : attachments.slice(0, MAX_VISIBLE);
+  const overflowAtLast = total > MAX_VISIBLE
+    ? total - (MAX_VISIBLE - 1)
+    : 0;
 
-  // For 1-2 items, use actual count as columns
-  const cols = Math.min(items.length, COLUMNS);
-  const tileSize = Math.floor((availableWidth - GAP * (cols - 1)) / cols);
+  const cols = Math.min(visible.length, COLUMNS);
+  const tileSize = Math.max(0, Math.floor((containerWidth - GAP * (cols - 1)) / cols));
 
   return (
     <View className="flex-row flex-wrap" style={{ gap: GAP }}>
-      {items.map((item, idx) => (
-        <View key={item.key} style={{ width: tileSize, height: tileSize }}>
-          {item.type === 'resolved' ? (
-            <View className="relative">
-              <PhotoGridTile
-                fileId={item.fileId ?? null}
-                thumbnailFileId={item.thumbnailFileId}
-                size={tileSize}
-                onPress={
-                  item.fileId && onOpenFile
-                    ? () => onOpenFile(item.fileId!, idx)
-                    : undefined
-                }
-                accessibilityLabel={`Photo ${idx + 1}`}
-                testID={`batch-grid-tile-${idx}`}
-              />
-              {item.isOverflow && (
-                <View className="absolute inset-0 items-center justify-center rounded-md bg-black/50">
-                  <Text className="text-lg font-bold text-white">
-                    +{item.overflowCount}
-                  </Text>
-                </View>
-              )}
-            </View>
-          ) : (
-            <View className="relative overflow-hidden rounded-md bg-muted">
-              <CachedImage
-                source={{ uri: item.sourceUri }}
-                cacheKey={item.key}
-                style={{ width: tileSize, height: tileSize }}
-                contentFit="cover"
-                accessibilityLabel={`Pending photo ${idx + 1}`}
-                testID={`batch-grid-pending-${idx}`}
-              />
-              {item.progress !== undefined && item.progress < 1 && (
-                <View className="absolute inset-x-0 bottom-0 h-1 bg-black/30">
-                  <View
-                    className="h-1 bg-primary"
-                    style={{ width: `${Math.round(item.progress * 100)}%` }}
-                  />
-                </View>
-              )}
-            </View>
-          )}
-        </View>
-      ))}
+      {visible.map((a, idx) => {
+        const isOverflowTile = overflowAtLast > 0 && idx === MAX_VISIBLE - 1;
+        return (
+          <View key={a.key} style={{ width: tileSize, height: tileSize }}>
+            <PhotoTile
+              attachment={a}
+              size={tileSize}
+              onPress={onOpenFile}
+              onRetry={onRetryUpload}
+              onCancel={onCancelUpload}
+              overflowCount={isOverflowTile ? overflowAtLast : undefined}
+              testID={`${tileTestIDPrefix}-${idx}`}
+            />
+          </View>
+        );
+      })}
     </View>
   );
 }

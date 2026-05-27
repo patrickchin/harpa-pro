@@ -51,65 +51,6 @@ export interface NoteEntry {
   /** Error message when `voiceStatus === 'failed'`. */
   voiceError?: string | null;
 
-  // ── Photo-note in-flight fields ────────────────────────────────
-  // Populated for synthetic image entries the GenerateReportProvider
-  // stitches in from the upload queue so the pending PhotoNoteCard
-  // renders immediately on enqueue (camera / gallery picker). All
-  // optional; saved image rows have `fileId` set and
-  // `pendingUpload === undefined`.
-  /**
-   * Carrier for an in-flight or failed image upload. Mirrors the
-   * fields `PhotoNoteCard` reads off an `UploadJob` so we don't have
-   * to thread the full job type through `NoteEntry`.
-   */
-  pendingUpload?: {
-    jobId: string;
-    sourceUri: string;
-    status:
-      | 'pending'
-      | 'presigning'
-      | 'uploading'
-      | 'registering'
-      | 'creating_note'
-      | 'completed'
-      | 'failed'
-      | 'cancelled';
-    /** Bytes-uploaded progress in [0, 1]. */
-    progress: number;
-    /** Error message when status === 'failed'. */
-    error?: string;
-  } | null;
-
-  // ── Batch photo fields ───────────────────────────────────────────
-  // When a note contains multiple files (batch photo upload), these
-  // hold the server-resolved file list and/or pending uploads.
-
-  /** Resolved files for this note (from server `note_files` join). */
-  files?: Array<{
-    id: string;
-    fileId: string;
-    thumbnailFileId: string | null;
-    position: number;
-    caption: string | null;
-  }>;
-
-  /** Pending uploads in this batch (one per in-flight/failed job). */
-  pendingFiles?: Array<{
-    jobId: string;
-    sourceUri: string;
-    status:
-      | 'pending'
-      | 'presigning'
-      | 'uploading'
-      | 'registering'
-      | 'creating_note'
-      | 'completed'
-      | 'failed'
-      | 'cancelled';
-    progress: number;
-    error?: string;
-  }>;
-
   /** Batch key for grouping (set on synthetic entries from upload queue). */
   batchKey?: string;
 
@@ -131,4 +72,12 @@ export interface NoteEntry {
    * need to resolve the canonical server row).
    */
   reactKey?: string;
+
+  // ── Unified photo attachments ──────────────────────────────────
+  /**
+   * Unified ordered list of photo tiles for image-source entries.
+   * Solo and batch photos share this shape; voice and text entries
+   * leave it undefined.
+   */
+  attachments?: ReadonlyArray<import('./attachments').Attachment>;
 }

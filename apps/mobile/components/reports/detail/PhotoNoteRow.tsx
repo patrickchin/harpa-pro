@@ -3,14 +3,15 @@
  * Notes tab (one per `report_notes.kind === 'photo'` row).
  *
  * Renders a compact card with a small left-aligned square thumbnail
- * (via `PhotoGridTile`, sourced from `thumbnailFileId` when present)
+ * (via `PhotoTile`, sourced from `thumbnailFileId` when present)
  * plus the optional caption. Tap → fullscreen preview.
  */
 import { Text, View } from 'react-native';
 
 import { NoteCardHeader } from '@/components/notes/NoteCardHeader';
 import { NoteOptionsKebab } from '@/components/notes/NoteOptionsKebab';
-import { PhotoGridTile } from '@/components/notes/PhotoGridTile';
+import { PhotoTile } from '@/components/notes/PhotoTile';
+import { attachmentFromSavedFile } from '@/lib/notes/attachments';
 
 export interface PhotoNoteRowProps {
   noteId: string;
@@ -57,12 +58,14 @@ export function PhotoNoteRow({
       />
 
       <View className="flex-row items-start gap-3">
-        <PhotoGridTile
-          fileId={fileId}
-          thumbnailFileId={thumbnailFileId ?? null}
+        <PhotoTile
+          attachment={attachmentFromSavedFile({
+            id: fileId,
+            fileId,
+            thumbnailFileId: thumbnailFileId ?? null,
+          })}
           size={110}
           onPress={() => onOpen?.({ fileId, title })}
-          accessibilityLabel={`Open photo ${title}`}
           testID={`btn-open-photo-${noteId}`}
         />
         {body ? (

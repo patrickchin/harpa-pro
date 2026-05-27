@@ -2,7 +2,7 @@
  * `ImageNoteCard` — timeline row for `kind: 'image'` notes.
  *
  * Renders a compact card with a small ~110 px square thumbnail (via
- * `PhotoGridTile`, sourced from `thumbnailFileId` when present, else
+ * `PhotoTile`, sourced from `thumbnailFileId` when present, else
  * the full `fileId`). Tap opens the full-screen `ImagePreviewModal`,
  * which still fetches the full `fileId` for sharp viewing. While the
  * URL is loading we show a small skeleton inside the tile.
@@ -17,7 +17,8 @@ import { Text, View } from 'react-native';
 
 import { ImagePreviewModal } from '@/components/files/ImagePreviewModal';
 import { NoteCardHeader } from '@/components/notes/NoteCardHeader';
-import { PhotoGridTile } from '@/components/notes/PhotoGridTile';
+import { PhotoTile } from '@/components/notes/PhotoTile';
+import { attachmentFromSavedFile } from '@/lib/notes/attachments';
 import type { NoteEntry } from '@/lib/notes/note-entry';
 
 export interface ImageNoteCardProps {
@@ -47,12 +48,14 @@ export function ImageNoteCard({
           testIDSuffix={sourceIndex}
         />
         <View className="flex-row items-start gap-3">
-          <PhotoGridTile
-            fileId={fileId}
-            thumbnailFileId={entry.thumbnailFileId ?? null}
+          <PhotoTile
+            attachment={attachmentFromSavedFile({
+              id: entry.id ?? entry.fileId ?? '',
+              fileId: entry.fileId ?? null,
+              thumbnailFileId: entry.thumbnailFileId ?? null,
+            })}
             size={110}
             onPress={fileId ? () => setPreviewOpen(true) : undefined}
-            accessibilityLabel="Open photo"
             testID={`btn-image-note-open-${sourceIndex}`}
           />
           {body ? (

@@ -40,7 +40,7 @@ export interface NoteTimelineProps {
   onRetryVoice?: (sourceIndex: number) => void;
   /** Open the fullscreen photo gallery focussed on this entry's file. */
   onOpenPhoto?: (fileId: string, sourceIndex: number) => void;
-  /** Retry a failed image upload job (matches `pendingUpload.jobId`). */
+  /** Retry a failed image upload job (matches `attachments[].jobId`). */
   onRetryPhotoUpload?: (jobId: string) => void;
   /** Cancel/dismiss an in-flight or failed image upload job. */
   onCancelPhotoUpload?: (jobId: string) => void;

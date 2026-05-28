@@ -121,21 +121,4 @@ describe('ReportsList', () => {
     expect(tree.toJSON()).toBeTruthy();
   });
 
-  it('renders reportType and riskLevel pills when meta is populated', () => {
-    const row = makeRow({
-      body: { meta: { title: null, reportType: 'incident', riskLevel: 'high' } },
-    });
-    // SectionList renderItem isn't exercised by react-test-renderer, so
-    // we just verify the screen mounts without throwing when meta is set.
-    const tree = render(<ReportsList {...defaults} reports={[row]} />);
-    expect(tree.toJSON()).toBeTruthy();
-  });
-
-  it('renders no pills when reportType and riskLevel are both null', () => {
-    const row = makeRow({
-      body: { meta: { title: null, reportType: null, riskLevel: null } },
-    });
-    const tree = render(<ReportsList {...defaults} reports={[row]} />);
-    expect(tree.toJSON()).toBeTruthy();
-  });
 });

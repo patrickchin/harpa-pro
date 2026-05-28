@@ -140,8 +140,6 @@ When `reportStatus === 'finalized'`:
   there.
 - **No** new user-editable title field; if a user wants to change the
   title they edit it via the existing Edit tab → `meta.title` field.
-- **No** changes to `meta.reportType` — it stays in the data; only the
-  header eyebrow consumption is dropped.
 - **No** changes to the Notes route / Actions menu wiring on
   finalized — notes are still reachable via Actions → View notes
   (`saved-report.tsx:297-304`).
@@ -155,15 +153,19 @@ None blocking. Implementation can proceed.
 After this design shipped (PR #90), it surfaced that PR #36 had dropped
 the `meta` envelope from `reportBody` as collateral when realigning
 prompts to v4 (see `docs/bugs/README.md` 2026-05-28). The follow-up
-restores `meta.{title,summary,reportType,visitDate,location,projectPhase,riskLevel,tags}`
-and surfaces the new fields:
+restores a slim `meta.{title, summary, visitDate, tags}` envelope and
+surfaces those fields:
 
-- List rows now show `reportType` + `riskLevel` pills (in addition to
-  the title decided here).
-- The detail view adds a `SummaryLead` paragraph, a `TagChips` row, and
-  `location`/`projectPhase` rows on the StatBar.
+- The detail view adds a `SummaryLead` paragraph and a `TagChips` row.
 - Saved-report header behaviour from this design is unchanged
   (title-only, no eyebrow, no subtitle).
+
+Earlier scoping mentioned `reportType`, `location`, `projectPhase`, and
+`riskLevel` keys; those were dropped before merge — they were
+enum-shaped fields that the UI had no robust place for yet and the LLM
+couldn't reliably populate. We can re-add them (or replacements like
+`weatherSummary`, `crewSize`, `permitNumber`) when there's a concrete
+surface that needs them.
 
 Full design + decisions in
 [`../superpowers/specs/2026-05-28-report-meta-restoration-design.md`](../superpowers/specs/2026-05-28-report-meta-restoration-design.md).

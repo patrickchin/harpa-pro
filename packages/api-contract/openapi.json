@@ -3630,49 +3630,9 @@
                                     "type": "string",
                                     "nullable": true
                                   },
-                                  "reportType": {
-                                    "type": "string",
-                                    "nullable": true,
-                                    "enum": [
-                                      "site_visit",
-                                      "daily",
-                                      "inspection",
-                                      "safety",
-                                      "incident",
-                                      "progress"
-                                    ]
-                                  },
                                   "visitDate": {
                                     "type": "string",
                                     "nullable": true
-                                  },
-                                  "location": {
-                                    "type": "string",
-                                    "nullable": true
-                                  },
-                                  "projectPhase": {
-                                    "type": "string",
-                                    "nullable": true,
-                                    "enum": [
-                                      "planning",
-                                      "foundation",
-                                      "structure",
-                                      "envelope",
-                                      "services",
-                                      "interior",
-                                      "finishing",
-                                      "handover",
-                                      "other"
-                                    ]
-                                  },
-                                  "riskLevel": {
-                                    "type": "string",
-                                    "nullable": true,
-                                    "enum": [
-                                      "low",
-                                      "medium",
-                                      "high"
-                                    ]
                                   },
                                   "tags": {
                                     "type": "array",
@@ -3686,11 +3646,7 @@
                                 "required": [
                                   "title",
                                   "summary",
-                                  "reportType",
-                                  "visitDate",
-                                  "location",
-                                  "projectPhase",
-                                  "riskLevel"
+                                  "visitDate"
                                 ]
                               },
                               "weather": {
@@ -4067,49 +4023,9 @@
                               "type": "string",
                               "nullable": true
                             },
-                            "reportType": {
-                              "type": "string",
-                              "nullable": true,
-                              "enum": [
-                                "site_visit",
-                                "daily",
-                                "inspection",
-                                "safety",
-                                "incident",
-                                "progress"
-                              ]
-                            },
                             "visitDate": {
                               "type": "string",
                               "nullable": true
-                            },
-                            "location": {
-                              "type": "string",
-                              "nullable": true
-                            },
-                            "projectPhase": {
-                              "type": "string",
-                              "nullable": true,
-                              "enum": [
-                                "planning",
-                                "foundation",
-                                "structure",
-                                "envelope",
-                                "services",
-                                "interior",
-                                "finishing",
-                                "handover",
-                                "other"
-                              ]
-                            },
-                            "riskLevel": {
-                              "type": "string",
-                              "nullable": true,
-                              "enum": [
-                                "low",
-                                "medium",
-                                "high"
-                              ]
                             },
                             "tags": {
                               "type": "array",
@@ -4123,11 +4039,7 @@
                           "required": [
                             "title",
                             "summary",
-                            "reportType",
-                            "visitDate",
-                            "location",
-                            "projectPhase",
-                            "riskLevel"
+                            "visitDate"
                           ]
                         },
                         "weather": {
@@ -4525,49 +4437,9 @@
                               "type": "string",
                               "nullable": true
                             },
-                            "reportType": {
-                              "type": "string",
-                              "nullable": true,
-                              "enum": [
-                                "site_visit",
-                                "daily",
-                                "inspection",
-                                "safety",
-                                "incident",
-                                "progress"
-                              ]
-                            },
                             "visitDate": {
                               "type": "string",
                               "nullable": true
-                            },
-                            "location": {
-                              "type": "string",
-                              "nullable": true
-                            },
-                            "projectPhase": {
-                              "type": "string",
-                              "nullable": true,
-                              "enum": [
-                                "planning",
-                                "foundation",
-                                "structure",
-                                "envelope",
-                                "services",
-                                "interior",
-                                "finishing",
-                                "handover",
-                                "other"
-                              ]
-                            },
-                            "riskLevel": {
-                              "type": "string",
-                              "nullable": true,
-                              "enum": [
-                                "low",
-                                "medium",
-                                "high"
-                              ]
                             },
                             "tags": {
                               "type": "array",
@@ -4581,11 +4453,7 @@
                           "required": [
                             "title",
                             "summary",
-                            "reportType",
-                            "visitDate",
-                            "location",
-                            "projectPhase",
-                            "riskLevel"
+                            "visitDate"
                           ]
                         },
                         "weather": {
@@ -4923,49 +4791,9 @@
                             "type": "string",
                             "nullable": true
                           },
-                          "reportType": {
-                            "type": "string",
-                            "nullable": true,
-                            "enum": [
-                              "site_visit",
-                              "daily",
-                              "inspection",
-                              "safety",
-                              "incident",
-                              "progress"
-                            ]
-                          },
                           "visitDate": {
                             "type": "string",
                             "nullable": true
-                          },
-                          "location": {
-                            "type": "string",
-                            "nullable": true
-                          },
-                          "projectPhase": {
-                            "type": "string",
-                            "nullable": true,
-                            "enum": [
-                              "planning",
-                              "foundation",
-                              "structure",
-                              "envelope",
-                              "services",
-                              "interior",
-                              "finishing",
-                              "handover",
-                              "other"
-                            ]
-                          },
-                          "riskLevel": {
-                            "type": "string",
-                            "nullable": true,
-                            "enum": [
-                              "low",
-                              "medium",
-                              "high"
-                            ]
                           },
                           "tags": {
                             "type": "array",
@@ -4979,11 +4807,7 @@
                         "required": [
                           "title",
                           "summary",
-                          "reportType",
-                          "visitDate",
-                          "location",
-                          "projectPhase",
-                          "riskLevel"
+                          "visitDate"
                         ]
                       },
                       "weather": {
@@ -5203,49 +5027,9 @@
                               "type": "string",
                               "nullable": true
                             },
-                            "reportType": {
-                              "type": "string",
-                              "nullable": true,
-                              "enum": [
-                                "site_visit",
-                                "daily",
-                                "inspection",
-                                "safety",
-                                "incident",
-                                "progress"
-                              ]
-                            },
                             "visitDate": {
                               "type": "string",
                               "nullable": true
-                            },
-                            "location": {
-                              "type": "string",
-                              "nullable": true
-                            },
-                            "projectPhase": {
-                              "type": "string",
-                              "nullable": true,
-                              "enum": [
-                                "planning",
-                                "foundation",
-                                "structure",
-                                "envelope",
-                                "services",
-                                "interior",
-                                "finishing",
-                                "handover",
-                                "other"
-                              ]
-                            },
-                            "riskLevel": {
-                              "type": "string",
-                              "nullable": true,
-                              "enum": [
-                                "low",
-                                "medium",
-                                "high"
-                              ]
                             },
                             "tags": {
                               "type": "array",
@@ -5259,11 +5043,7 @@
                           "required": [
                             "title",
                             "summary",
-                            "reportType",
-                            "visitDate",
-                            "location",
-                            "projectPhase",
-                            "riskLevel"
+                            "visitDate"
                           ]
                         },
                         "weather": {
@@ -6072,49 +5852,9 @@
                                   "type": "string",
                                   "nullable": true
                                 },
-                                "reportType": {
-                                  "type": "string",
-                                  "nullable": true,
-                                  "enum": [
-                                    "site_visit",
-                                    "daily",
-                                    "inspection",
-                                    "safety",
-                                    "incident",
-                                    "progress"
-                                  ]
-                                },
                                 "visitDate": {
                                   "type": "string",
                                   "nullable": true
-                                },
-                                "location": {
-                                  "type": "string",
-                                  "nullable": true
-                                },
-                                "projectPhase": {
-                                  "type": "string",
-                                  "nullable": true,
-                                  "enum": [
-                                    "planning",
-                                    "foundation",
-                                    "structure",
-                                    "envelope",
-                                    "services",
-                                    "interior",
-                                    "finishing",
-                                    "handover",
-                                    "other"
-                                  ]
-                                },
-                                "riskLevel": {
-                                  "type": "string",
-                                  "nullable": true,
-                                  "enum": [
-                                    "low",
-                                    "medium",
-                                    "high"
-                                  ]
                                 },
                                 "tags": {
                                   "type": "array",
@@ -6128,11 +5868,7 @@
                               "required": [
                                 "title",
                                 "summary",
-                                "reportType",
-                                "visitDate",
-                                "location",
-                                "projectPhase",
-                                "riskLevel"
+                                "visitDate"
                               ]
                             },
                             "weather": {
@@ -6647,49 +6383,9 @@
                                   "type": "string",
                                   "nullable": true
                                 },
-                                "reportType": {
-                                  "type": "string",
-                                  "nullable": true,
-                                  "enum": [
-                                    "site_visit",
-                                    "daily",
-                                    "inspection",
-                                    "safety",
-                                    "incident",
-                                    "progress"
-                                  ]
-                                },
                                 "visitDate": {
                                   "type": "string",
                                   "nullable": true
-                                },
-                                "location": {
-                                  "type": "string",
-                                  "nullable": true
-                                },
-                                "projectPhase": {
-                                  "type": "string",
-                                  "nullable": true,
-                                  "enum": [
-                                    "planning",
-                                    "foundation",
-                                    "structure",
-                                    "envelope",
-                                    "services",
-                                    "interior",
-                                    "finishing",
-                                    "handover",
-                                    "other"
-                                  ]
-                                },
-                                "riskLevel": {
-                                  "type": "string",
-                                  "nullable": true,
-                                  "enum": [
-                                    "low",
-                                    "medium",
-                                    "high"
-                                  ]
                                 },
                                 "tags": {
                                   "type": "array",
@@ -6703,11 +6399,7 @@
                               "required": [
                                 "title",
                                 "summary",
-                                "reportType",
-                                "visitDate",
-                                "location",
-                                "projectPhase",
-                                "riskLevel"
+                                "visitDate"
                               ]
                             },
                             "weather": {
@@ -7205,49 +6897,9 @@
                                   "type": "string",
                                   "nullable": true
                                 },
-                                "reportType": {
-                                  "type": "string",
-                                  "nullable": true,
-                                  "enum": [
-                                    "site_visit",
-                                    "daily",
-                                    "inspection",
-                                    "safety",
-                                    "incident",
-                                    "progress"
-                                  ]
-                                },
                                 "visitDate": {
                                   "type": "string",
                                   "nullable": true
-                                },
-                                "location": {
-                                  "type": "string",
-                                  "nullable": true
-                                },
-                                "projectPhase": {
-                                  "type": "string",
-                                  "nullable": true,
-                                  "enum": [
-                                    "planning",
-                                    "foundation",
-                                    "structure",
-                                    "envelope",
-                                    "services",
-                                    "interior",
-                                    "finishing",
-                                    "handover",
-                                    "other"
-                                  ]
-                                },
-                                "riskLevel": {
-                                  "type": "string",
-                                  "nullable": true,
-                                  "enum": [
-                                    "low",
-                                    "medium",
-                                    "high"
-                                  ]
                                 },
                                 "tags": {
                                   "type": "array",
@@ -7261,11 +6913,7 @@
                               "required": [
                                 "title",
                                 "summary",
-                                "reportType",
-                                "visitDate",
-                                "location",
-                                "projectPhase",
-                                "riskLevel"
+                                "visitDate"
                               ]
                             },
                             "weather": {
@@ -7671,49 +7319,9 @@
                                   "type": "string",
                                   "nullable": true
                                 },
-                                "reportType": {
-                                  "type": "string",
-                                  "nullable": true,
-                                  "enum": [
-                                    "site_visit",
-                                    "daily",
-                                    "inspection",
-                                    "safety",
-                                    "incident",
-                                    "progress"
-                                  ]
-                                },
                                 "visitDate": {
                                   "type": "string",
                                   "nullable": true
-                                },
-                                "location": {
-                                  "type": "string",
-                                  "nullable": true
-                                },
-                                "projectPhase": {
-                                  "type": "string",
-                                  "nullable": true,
-                                  "enum": [
-                                    "planning",
-                                    "foundation",
-                                    "structure",
-                                    "envelope",
-                                    "services",
-                                    "interior",
-                                    "finishing",
-                                    "handover",
-                                    "other"
-                                  ]
-                                },
-                                "riskLevel": {
-                                  "type": "string",
-                                  "nullable": true,
-                                  "enum": [
-                                    "low",
-                                    "medium",
-                                    "high"
-                                  ]
                                 },
                                 "tags": {
                                   "type": "array",
@@ -7727,11 +7335,7 @@
                               "required": [
                                 "title",
                                 "summary",
-                                "reportType",
-                                "visitDate",
-                                "location",
-                                "projectPhase",
-                                "riskLevel"
+                                "visitDate"
                               ]
                             },
                             "weather": {

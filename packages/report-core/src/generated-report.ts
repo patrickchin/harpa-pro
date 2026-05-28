@@ -102,12 +102,8 @@ const GeneratedSiteReportSchema = z.object({
   report: z.object({
     meta: z.object({
       title: trimmedString,
-      reportType: trimmedString.transform((s) => s || 'site_visit'),
       summary: trimmedString,
       visitDate: nullableTrimmed,
-      location: nullableTrimmed,
-      projectPhase: z.string().nullable().optional().default(null).catch(null),
-      riskLevel: z.enum(['low', 'medium', 'high']).nullable().optional().default(null).catch(null),
       tags: z.array(z.string()).optional().default([]).catch([]),
     }),
     weather: WeatherSchema.nullable().optional().default(null).catch(null),

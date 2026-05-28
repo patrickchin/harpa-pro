@@ -39,11 +39,7 @@ function normaliseLegacy(body: ReportBody | LegacyBodyShim): ReportBody {
     meta: {
       title: null,
       summary: null,
-      reportType: null,
       visitDate: legacy.visitDate ?? null,
-      location: null,
-      projectPhase: null,
-      riskLevel: null,
       tags: [],
     },
   };
@@ -98,12 +94,8 @@ export function reportBodyToGeneratedReport(
     report: {
       meta: {
         title: m.title ?? '',
-        reportType: m.reportType ?? 'site_visit',
         summary: m.summary ?? '',
         visitDate: m.visitDate,
-        location: m.location,
-        projectPhase: m.projectPhase,
-        riskLevel: m.riskLevel,
         tags: m.tags ?? [],
       },
       weather: body.weather
@@ -172,11 +164,7 @@ export function generatedReportToReportBody(g: GeneratedSiteReport): ReportBody 
     meta: {
       title: r.meta.title || null,
       summary: r.meta.summary || null,
-      reportType: (r.meta.reportType || null) as ReportBody['meta']['reportType'],
       visitDate: r.meta.visitDate ?? null,
-      location: r.meta.location ?? null,
-      projectPhase: (r.meta.projectPhase ?? null) as ReportBody['meta']['projectPhase'],
-      riskLevel: (r.meta.riskLevel as 'low' | 'medium' | 'high' | null) ?? null,
       tags: r.meta.tags ?? [],
     },
     weather: r.weather

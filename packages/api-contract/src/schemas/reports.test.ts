@@ -7,11 +7,7 @@ describe('reportBody with meta envelope', () => {
       meta: {
         title: 'Site Visit — Wet Weather',
         summary: 'Wet conditions delayed concrete pour.',
-        reportType: 'site_visit',
         visitDate: '2026-05-28T00:00:00Z',
-        location: 'Block C basement',
-        projectPhase: 'foundation',
-        riskLevel: 'medium',
         tags: ['rebar', 'wet weather'],
       },
       weather: null, workers: [], materials: [], issues: [],
@@ -22,11 +18,7 @@ describe('reportBody with meta envelope', () => {
 
   it('accepts all-null meta fields and empty tags', () => {
     const result = reportBody.safeParse({
-      meta: {
-        title: null, summary: null, reportType: null,
-        visitDate: null, location: null, projectPhase: null,
-        riskLevel: null, tags: [],
-      },
+      meta: { title: null, summary: null, visitDate: null, tags: [] },
       weather: null, workers: [], materials: [], issues: [],
       nextSteps: [], summarySections: [],
     });
@@ -35,11 +27,7 @@ describe('reportBody with meta envelope', () => {
 
   it('defaults tags to [] when omitted', () => {
     const result = reportBody.safeParse({
-      meta: {
-        title: null, summary: null, reportType: null,
-        visitDate: null, location: null, projectPhase: null,
-        riskLevel: null,
-      },
+      meta: { title: null, summary: null, visitDate: null },
       weather: null, workers: [], materials: [], issues: [],
       nextSteps: [], summarySections: [],
     });
@@ -50,9 +38,7 @@ describe('reportBody with meta envelope', () => {
   it('rejects more than 7 tags', () => {
     const result = reportBody.safeParse({
       meta: {
-        title: null, summary: null, reportType: null,
-        visitDate: null, location: null, projectPhase: null,
-        riskLevel: null,
+        title: null, summary: null, visitDate: null,
         tags: ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'],
       },
       weather: null, workers: [], materials: [], issues: [],
@@ -64,11 +50,7 @@ describe('reportBody with meta envelope', () => {
   it('strips top-level visitDate (moved into meta)', () => {
     const result = reportBody.safeParse({
       visitDate: '2026-05-28T00:00:00Z',
-      meta: {
-        title: null, summary: null, reportType: null,
-        visitDate: null, location: null, projectPhase: null,
-        riskLevel: null, tags: [],
-      },
+      meta: { title: null, summary: null, visitDate: null, tags: [] },
       weather: null, workers: [], materials: [], issues: [],
       nextSteps: [], summarySections: [],
     });

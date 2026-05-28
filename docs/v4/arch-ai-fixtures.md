@@ -215,7 +215,7 @@ Three guards run at three layers:
 
 | Lane | When | What it catches |
 | --- | --- | --- |
-| **Offline drift guard** (`packages/api/src/__tests__/reportPrompt.drift.test.ts`) | Every PR, in the unit lane | Prompt text no longer mentions every required `reportBody` field (including the `meta` envelope and its `reportType`/`projectPhase` enum literals), or has re-acquired v3 vocabulary (`"report":` wrapper, `quantityUnit`, `actionRequired`, `totalWorkers`, `"category"`). |
+| **Offline drift guard** (`packages/api/src/__tests__/reportPrompt.drift.test.ts`) | Every PR, in the unit lane | Prompt text no longer mentions every required `reportBody` field (including the `meta` envelope keys), or has re-acquired v3 vocabulary (`"report":` wrapper, `quantityUnit`, `actionRequired`, `totalWorkers`, `"category"`). |
 | **Replay integration** (`reports.integration.test.ts`) | Every PR | The fixture-driven happy path still produces a schema-valid `reportBody` end-to-end. |
 | **Live-LLM** (`.github/workflows/ai-live.yml` → `pnpm --filter @harpa/api test:live`) | Weekly schedule, manual dispatch, push/PR touching prompts / `services/ai.ts` / `schemas/reports.ts` / providers / `generate-report.*.json` | The real model, with the real prompt, still returns a payload that parses against `reportBody`. |
 

@@ -58,14 +58,10 @@ Return ONLY valid minified JSON matching the SCHEMA below. The top-level value M
 SCHEMA (top-level keys are exhaustive; types in parens)
 {
   "meta": {
-    "title":        str | null,             // ≤60 chars, e.g. "Site Visit — Wet Weather"
-    "summary":      str | null,             // one sentence
-    "reportType":   "site_visit" | "daily" | "inspection" | "safety" | "incident" | "progress" | null,
-    "visitDate":    ISO-8601 datetime ("YYYY-MM-DDTHH:MM:SSZ") | null,
-    "location":     str | null,             // site or zone name from notes
-    "projectPhase": "planning" | "foundation" | "structure" | "envelope" | "services" | "interior" | "finishing" | "handover" | "other" | null,
-    "riskLevel":    "low" | "medium" | "high" | null,
-    "tags":         [ str ]                 // 0-7 short lowercase keywords
+    "title":     str | null,             // ≤60 chars, e.g. "Site Visit — Wet Weather"
+    "summary":   str | null,             // one sentence
+    "visitDate": ISO-8601 datetime ("YYYY-MM-DDTHH:MM:SSZ") | null,
+    "tags":      [ str ]                 // 0-7 short lowercase keywords
   },
   "weather":          { "condition": str|null, "temperatureC": num|null, "windKph": num|null, "impact": str|null } | null,
   "workers":          [ { "role": str, "count": int>=0, "hours": num>=0|null, "notes": str|null } ],
@@ -78,10 +74,6 @@ SCHEMA (top-level keys are exhaustive; types in parens)
 RULES
 - "meta.title" — short human title; null only if notes are completely unidentifiable.
 - "meta.summary" — single sentence summarising the visit.
-- "meta.reportType" — pick the closest enum value; null when uncertain. Default "site_visit" only when notes clearly describe a routine site walk.
-- "meta.location" — site name or zone as stated in notes ("Block C basement"). Null if not stated.
-- "meta.projectPhase" — only when clearly inferable. Use null over guessing; do NOT use "other" as a hedge.
-- "meta.riskLevel" — derive from issues: any "high" issue ⇒ "high"; else any "medium" ⇒ "medium"; else "low". Null if there are no issues AND no risk language in notes.
 - "meta.tags" — 3-7 short lowercase keywords drawn from notes. Never invent. Empty array allowed.
 - "meta.visitDate" — only set if the notes give an explicit date; otherwise null. Always emit a full ISO datetime (use T00:00:00Z if only a date is known).
 - "weather.temperatureC" / "weather.windKph" — numeric only (e.g. 18, 12.5). Use null if not stated.
@@ -92,7 +84,7 @@ RULES
 - NEVER invent data not in the notes. Keep strings concise. Deduplicate facts.
 
 EXAMPLE
-{"meta":{"title":"Site Visit — Wet Weather","summary":"Wet conditions delayed concrete pour.","reportType":"site_visit","visitDate":null,"location":"North site","projectPhase":"foundation","riskLevel":"medium","tags":["wet weather","rebar","delay"]},"weather":{"condition":"wet","temperatureC":20,"windKph":null,"impact":"Pour delayed by 1 hour"},"workers":[{"role":"Concrete worker","count":4,"hours":8,"notes":null}],"materials":[{"name":"Concrete","quantity":50,"unit":"m³","status":"delivered","condition":null,"notes":null}],"issues":[{"title":"Wet ground","severity":"medium","description":"Overnight rain left site waterlogged.","action":"Reassess drainage."}],"nextSteps":["Order rebar"],"summarySections":[{"title":"Foundation Work","body":"Concrete pour started in zone A despite wet weather."}]}`;
+{"meta":{"title":"Site Visit — Wet Weather","summary":"Wet conditions delayed concrete pour.","visitDate":null,"tags":["wet weather","rebar","delay"]},"weather":{"condition":"wet","temperatureC":20,"windKph":null,"impact":"Pour delayed by 1 hour"},"workers":[{"role":"Concrete worker","count":4,"hours":8,"notes":null}],"materials":[{"name":"Concrete","quantity":50,"unit":"m³","status":"delivered","condition":null,"notes":null}],"issues":[{"title":"Wet ground","severity":"medium","description":"Overnight rain left site waterlogged.","action":"Reassess drainage."}],"nextSteps":["Order rebar"],"summarySections":[{"title":"Foundation Work","body":"Concrete pour started in zone A despite wet weather."}]}`;
 
 /**
  * Update-path system prompt: merge new notes into an existing report body
@@ -121,14 +113,10 @@ Return ONLY valid minified JSON matching the SCHEMA below. The top-level value M
 SCHEMA (identical to the cold-start prompt; same field names + types)
 {
   "meta": {
-    "title":        str | null,             // ≤60 chars, e.g. "Site Visit — Wet Weather"
-    "summary":      str | null,             // one sentence
-    "reportType":   "site_visit" | "daily" | "inspection" | "safety" | "incident" | "progress" | null,
-    "visitDate":    ISO-8601 datetime ("YYYY-MM-DDTHH:MM:SSZ") | null,
-    "location":     str | null,             // site or zone name from notes
-    "projectPhase": "planning" | "foundation" | "structure" | "envelope" | "services" | "interior" | "finishing" | "handover" | "other" | null,
-    "riskLevel":    "low" | "medium" | "high" | null,
-    "tags":         [ str ]                 // 0-7 short lowercase keywords
+    "title":     str | null,             // ≤60 chars, e.g. "Site Visit — Wet Weather"
+    "summary":   str | null,             // one sentence
+    "visitDate": ISO-8601 datetime ("YYYY-MM-DDTHH:MM:SSZ") | null,
+    "tags":      [ str ]                 // 0-7 short lowercase keywords
   },
   "weather":          { "condition": str|null, "temperatureC": num|null, "windKph": num|null, "impact": str|null } | null,
   "workers":          [ { "role": str, "count": int>=0, "hours": num>=0|null, "notes": str|null } ],
@@ -141,10 +129,6 @@ SCHEMA (identical to the cold-start prompt; same field names + types)
 RULES
 - "meta.title" — short human title; null only if notes are completely unidentifiable.
 - "meta.summary" — single sentence summarising the visit.
-- "meta.reportType" — pick the closest enum value; null when uncertain. Default "site_visit" only when notes clearly describe a routine site walk.
-- "meta.location" — site name or zone as stated in notes ("Block C basement"). Null if not stated.
-- "meta.projectPhase" — only when clearly inferable. Use null over guessing; do NOT use "other" as a hedge.
-- "meta.riskLevel" — derive from issues: any "high" issue ⇒ "high"; else any "medium" ⇒ "medium"; else "low". Null if there are no issues AND no risk language in notes.
 - "meta.tags" — 3-7 short lowercase keywords drawn from notes. Never invent. Empty array allowed.
 - "meta.visitDate" — only set if the notes give an explicit date; otherwise null. Always emit a full ISO datetime (use T00:00:00Z if only a date is known).
 - Preserve existing meta values when new notes are silent. Only overwrite a meta field when new notes explicitly contradict it. Never blank a meta field just because new notes are silent.
@@ -162,8 +146,8 @@ UPDATE RULES — these override the generate-from-scratch behaviour
 - NEVER invent data not in the existing report or the new notes. Keep strings concise. Deduplicate facts across the existing report and new notes.
 
 EXAMPLE INPUT
-EXISTING REPORT: {"meta":{"title":"Foundation Pour","summary":"Concrete pour completed in zone A.","reportType":"site_visit","visitDate":null,"location":"Zone A","projectPhase":"foundation","riskLevel":null,"tags":["concrete","foundation"]},"weather":null,"workers":[],"materials":[{"name":"Concrete","quantity":50,"unit":"m³","status":"delivered","condition":null,"notes":null}],"issues":[],"nextSteps":["Cure for 24h"],"summarySections":[{"title":"Foundation Work","body":"Pour completed in zone A."}]}
+EXISTING REPORT: {"meta":{"title":"Foundation Pour","summary":"Concrete pour completed in zone A.","visitDate":null,"tags":["concrete","foundation"]},"weather":null,"workers":[],"materials":[{"name":"Concrete","quantity":50,"unit":"m³","status":"delivered","condition":null,"notes":null}],"issues":[],"nextSteps":["Cure for 24h"],"summarySections":[{"title":"Foundation Work","body":"Pour completed in zone A."}]}
 NEW NOTES:
 [1] Rebar delivery delayed to tomorrow morning.
 EXAMPLE OUTPUT
-{"meta":{"title":"Foundation Pour","summary":"Concrete pour completed in zone A.","reportType":"site_visit","visitDate":null,"location":"Zone A","projectPhase":"foundation","riskLevel":"medium","tags":["concrete","foundation","rebar","delay"]},"weather":null,"workers":[],"materials":[{"name":"Concrete","quantity":50,"unit":"m³","status":"delivered","condition":null,"notes":null}],"issues":[{"title":"Rebar delivery delayed","severity":"medium","description":"Rebar delivery delayed to tomorrow morning.","action":null}],"nextSteps":["Cure for 24h","Follow up on rebar delivery"],"summarySections":[{"title":"Foundation Work","body":"Pour completed in zone A."}]}`;
+{"meta":{"title":"Foundation Pour","summary":"Concrete pour completed in zone A.","visitDate":null,"tags":["concrete","foundation","rebar","delay"]},"weather":null,"workers":[],"materials":[{"name":"Concrete","quantity":50,"unit":"m³","status":"delivered","condition":null,"notes":null}],"issues":[{"title":"Rebar delivery delayed","severity":"medium","description":"Rebar delivery delayed to tomorrow morning.","action":null}],"nextSteps":["Cure for 24h","Follow up on rebar delivery"],"summarySections":[{"title":"Foundation Work","body":"Pour completed in zone A."}]}`;

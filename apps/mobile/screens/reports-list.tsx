@@ -23,7 +23,6 @@ import { Card } from '@/components/primitives/Card';
 import { EmptyState } from '@/components/primitives/EmptyState';
 import { ScreenHeader } from '@/components/primitives/ScreenHeader';
 import { ReportsListSkeleton } from '@/components/skeletons/ReportsListSkeleton';
-import { ReportTypePill, RiskLevelBadge } from '@/components/reports/list/ReportListPills';
 import { colors } from '@/lib/design-tokens/colors';
 import {
   buildReportsSections,
@@ -190,12 +189,6 @@ export function ReportsList({
                     <Text className="text-sm text-muted-foreground">
                       {optimistic ? 'Creating…' : getReportMeta(item)}
                     </Text>
-                    {!optimistic && (item.body?.meta?.reportType || item.body?.meta?.riskLevel) ? (
-                      <View className="flex-row flex-wrap gap-1.5 pt-0.5">
-                        <ReportTypePill value={item.body?.meta?.reportType} />
-                        <RiskLevelBadge value={item.body?.meta?.riskLevel} />
-                      </View>
-                    ) : null}
                   </View>
                 </Card>
               </Pressable>

@@ -50,11 +50,7 @@ describe('VoiceReportView', () => {
           meta: {
             title: null,
             summary: null,
-            reportType: null,
             visitDate: null,
-            location: null,
-            projectPhase: null,
-            riskLevel: null,
             tags: [],
           },
           weather: null,

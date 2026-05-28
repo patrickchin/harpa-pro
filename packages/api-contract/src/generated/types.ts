@@ -1755,14 +1755,7 @@ export interface paths {
                                     meta: {
                                         title: string | null;
                                         summary: string | null;
-                                        /** @enum {string|null} */
-                                        reportType: "site_visit" | "daily" | "inspection" | "safety" | "incident" | "progress" | null;
                                         visitDate: string | null;
-                                        location: string | null;
-                                        /** @enum {string|null} */
-                                        projectPhase: "planning" | "foundation" | "structure" | "envelope" | "services" | "interior" | "finishing" | "handover" | "other" | null;
-                                        /** @enum {string|null} */
-                                        riskLevel: "low" | "medium" | "high" | null;
                                         /** @default [] */
                                         tags: string[];
                                     };
@@ -1879,14 +1872,7 @@ export interface paths {
                                 meta: {
                                     title: string | null;
                                     summary: string | null;
-                                    /** @enum {string|null} */
-                                    reportType: "site_visit" | "daily" | "inspection" | "safety" | "incident" | "progress" | null;
                                     visitDate: string | null;
-                                    location: string | null;
-                                    /** @enum {string|null} */
-                                    projectPhase: "planning" | "foundation" | "structure" | "envelope" | "services" | "interior" | "finishing" | "handover" | "other" | null;
-                                    /** @enum {string|null} */
-                                    riskLevel: "low" | "medium" | "high" | null;
                                     /** @default [] */
                                     tags: string[];
                                 };
@@ -2024,14 +2010,7 @@ export interface paths {
                                 meta: {
                                     title: string | null;
                                     summary: string | null;
-                                    /** @enum {string|null} */
-                                    reportType: "site_visit" | "daily" | "inspection" | "safety" | "incident" | "progress" | null;
                                     visitDate: string | null;
-                                    location: string | null;
-                                    /** @enum {string|null} */
-                                    projectPhase: "planning" | "foundation" | "structure" | "envelope" | "services" | "interior" | "finishing" | "handover" | "other" | null;
-                                    /** @enum {string|null} */
-                                    riskLevel: "low" | "medium" | "high" | null;
                                     /** @default [] */
                                     tags: string[];
                                 };
@@ -2186,14 +2165,7 @@ export interface paths {
                             meta: {
                                 title: string | null;
                                 summary: string | null;
-                                /** @enum {string|null} */
-                                reportType: "site_visit" | "daily" | "inspection" | "safety" | "incident" | "progress" | null;
                                 visitDate: string | null;
-                                location: string | null;
-                                /** @enum {string|null} */
-                                projectPhase: "planning" | "foundation" | "structure" | "envelope" | "services" | "interior" | "finishing" | "handover" | "other" | null;
-                                /** @enum {string|null} */
-                                riskLevel: "low" | "medium" | "high" | null;
                                 /** @default [] */
                                 tags?: string[];
                             };
@@ -2251,14 +2223,7 @@ export interface paths {
                                 meta: {
                                     title: string | null;
                                     summary: string | null;
-                                    /** @enum {string|null} */
-                                    reportType: "site_visit" | "daily" | "inspection" | "safety" | "incident" | "progress" | null;
                                     visitDate: string | null;
-                                    location: string | null;
-                                    /** @enum {string|null} */
-                                    projectPhase: "planning" | "foundation" | "structure" | "envelope" | "services" | "interior" | "finishing" | "handover" | "other" | null;
-                                    /** @enum {string|null} */
-                                    riskLevel: "low" | "medium" | "high" | null;
                                     /** @default [] */
                                     tags: string[];
                                 };
@@ -2516,14 +2481,7 @@ export interface paths {
                                     meta: {
                                         title: string | null;
                                         summary: string | null;
-                                        /** @enum {string|null} */
-                                        reportType: "site_visit" | "daily" | "inspection" | "safety" | "incident" | "progress" | null;
                                         visitDate: string | null;
-                                        location: string | null;
-                                        /** @enum {string|null} */
-                                        projectPhase: "planning" | "foundation" | "structure" | "envelope" | "services" | "interior" | "finishing" | "handover" | "other" | null;
-                                        /** @enum {string|null} */
-                                        riskLevel: "low" | "medium" | "high" | null;
                                         /** @default [] */
                                         tags: string[];
                                     };
@@ -2710,14 +2668,7 @@ export interface paths {
                                     meta: {
                                         title: string | null;
                                         summary: string | null;
-                                        /** @enum {string|null} */
-                                        reportType: "site_visit" | "daily" | "inspection" | "safety" | "incident" | "progress" | null;
                                         visitDate: string | null;
-                                        location: string | null;
-                                        /** @enum {string|null} */
-                                        projectPhase: "planning" | "foundation" | "structure" | "envelope" | "services" | "interior" | "finishing" | "handover" | "other" | null;
-                                        /** @enum {string|null} */
-                                        riskLevel: "low" | "medium" | "high" | null;
                                         /** @default [] */
                                         tags: string[];
                                     };
@@ -2898,14 +2849,7 @@ export interface paths {
                                     meta: {
                                         title: string | null;
                                         summary: string | null;
-                                        /** @enum {string|null} */
-                                        reportType: "site_visit" | "daily" | "inspection" | "safety" | "incident" | "progress" | null;
                                         visitDate: string | null;
-                                        location: string | null;
-                                        /** @enum {string|null} */
-                                        projectPhase: "planning" | "foundation" | "structure" | "envelope" | "services" | "interior" | "finishing" | "handover" | "other" | null;
-                                        /** @enum {string|null} */
-                                        riskLevel: "low" | "medium" | "high" | null;
                                         /** @default [] */
                                         tags: string[];
                                     };
@@ -3047,14 +2991,7 @@ export interface paths {
                                     meta: {
                                         title: string | null;
                                         summary: string | null;
-                                        /** @enum {string|null} */
-                                        reportType: "site_visit" | "daily" | "inspection" | "safety" | "incident" | "progress" | null;
                                         visitDate: string | null;
-                                        location: string | null;
-                                        /** @enum {string|null} */
-                                        projectPhase: "planning" | "foundation" | "structure" | "envelope" | "services" | "interior" | "finishing" | "handover" | "other" | null;
-                                        /** @enum {string|null} */
-                                        riskLevel: "low" | "medium" | "high" | null;
                                         /** @default [] */
                                         tags: string[];
                                     };

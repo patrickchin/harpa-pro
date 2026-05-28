@@ -1,18 +1,14 @@
 import { describe, it, expect } from 'vitest';
 import { normalizeGeneratedReportPayload } from './generated-report';
 
-describe('GeneratedSiteReportSchema — meta extensions', () => {
-  it('accepts location/projectPhase/riskLevel/tags', () => {
+describe('GeneratedSiteReportSchema — meta envelope', () => {
+  it('accepts populated meta with tags', () => {
     const out = normalizeGeneratedReportPayload({
       report: {
         meta: {
           title: 'T',
           summary: 'S',
-          reportType: 'site_visit',
           visitDate: null,
-          location: 'Site A',
-          projectPhase: 'foundation',
-          riskLevel: 'medium',
           tags: ['a', 'b'],
         },
         weather: null,
@@ -24,21 +20,15 @@ describe('GeneratedSiteReportSchema — meta extensions', () => {
       },
     });
     expect(out).not.toBeNull();
-    expect(out!.report.meta.location).toBe('Site A');
-    expect(out!.report.meta.projectPhase).toBe('foundation');
-    expect(out!.report.meta.riskLevel).toBe('medium');
+    expect(out!.report.meta.title).toBe('T');
+    expect(out!.report.meta.summary).toBe('S');
     expect(out!.report.meta.tags).toEqual(['a', 'b']);
   });
 
-  it('defaults missing extended fields to null / empty array', () => {
+  it('defaults tags to empty array when omitted', () => {
     const out = normalizeGeneratedReportPayload({
       report: {
-        meta: {
-          title: 'T',
-          summary: '',
-          reportType: 'site_visit',
-          visitDate: null,
-        },
+        meta: { title: 'T', summary: '', visitDate: null },
         weather: null,
         workers: null,
         materials: [],
@@ -48,9 +38,6 @@ describe('GeneratedSiteReportSchema — meta extensions', () => {
       },
     });
     expect(out).not.toBeNull();
-    expect(out!.report.meta.location).toBeNull();
-    expect(out!.report.meta.projectPhase).toBeNull();
-    expect(out!.report.meta.riskLevel).toBeNull();
     expect(out!.report.meta.tags).toEqual([]);
   });
 });

@@ -35,12 +35,8 @@ function makeReport(siteTitle: string): GeneratedSiteReport {
     report: {
       meta: {
         title: siteTitle,
-        reportType: 'site_visit',
         summary: 'A summary.',
         visitDate: '2025-01-01',
-        location: null,
-        projectPhase: null,
-        riskLevel: null,
         tags: [],
       },
       weather: null,

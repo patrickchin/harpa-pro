@@ -43,10 +43,6 @@ const REQUIRED_FIELDS = [
   'summarySections',
   // meta subfields
   'summary',
-  'reportType',
-  'location',
-  'projectPhase',
-  'riskLevel',
   'tags',
   'visitDate',
   // weather subfields
@@ -74,26 +70,6 @@ const REQUIRED_FIELDS = [
 
 const SEVERITY_VALUES = ['"low"', '"medium"', '"high"'];
 
-const META_ENUM_VALUES = [
-  // reportType values
-  '"site_visit"',
-  '"daily"',
-  '"inspection"',
-  '"safety"',
-  '"incident"',
-  '"progress"',
-  // projectPhase values
-  '"planning"',
-  '"foundation"',
-  '"structure"',
-  '"envelope"',
-  '"services"',
-  '"interior"',
-  '"finishing"',
-  '"handover"',
-  '"other"',
-];
-
 const FORBIDDEN_V3_VOCAB = [
   // The v3 envelope that the live response.text used to be wrapped in.
   // `"report":` (with colon) catches the JSON wrapper; bare "report"
@@ -119,10 +95,6 @@ describe('report prompts vs. reportBody schema (offline drift guard)', () => {
     });
 
     it.each(SEVERITY_VALUES)('mentions allowed severity literal %s', (lit) => {
-      expect(prompt).toContain(lit);
-    });
-
-    it.each(META_ENUM_VALUES)('mentions meta enum literal %s', (lit) => {
       expect(prompt).toContain(lit);
     });
 

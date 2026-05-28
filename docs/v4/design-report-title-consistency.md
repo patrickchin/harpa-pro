@@ -149,3 +149,21 @@ When `reportStatus === 'finalized'`:
 ## Open questions
 
 None blocking. Implementation can proceed.
+
+## Follow-up: meta envelope restoration
+
+After this design shipped (PR #90), it surfaced that PR #36 had dropped
+the `meta` envelope from `reportBody` as collateral when realigning
+prompts to v4 (see `docs/bugs/README.md` 2026-05-28). The follow-up
+restores `meta.{title,summary,reportType,visitDate,location,projectPhase,riskLevel,tags}`
+and surfaces the new fields:
+
+- List rows now show `reportType` + `riskLevel` pills (in addition to
+  the title decided here).
+- The detail view adds a `SummaryLead` paragraph, a `TagChips` row, and
+  `location`/`projectPhase` rows on the StatBar.
+- Saved-report header behaviour from this design is unchanged
+  (title-only, no eyebrow, no subtitle).
+
+Full design + decisions in
+[`../superpowers/specs/2026-05-28-report-meta-restoration-design.md`](../superpowers/specs/2026-05-28-report-meta-restoration-design.md).

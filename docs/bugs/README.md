@@ -198,6 +198,7 @@ engages. See `docs/v4/arch-cicd-and-migrations.md`.
 
 Most recent first. One line per bug — open the linked file only for the full root-cause / test / commit write-up.
 
+- **2026-05-28** *(R5)* — Inverse of 2026-05-23: while realigning prompts to v4, the `meta` envelope (title, summary, reportType, visitDate, location, projectPhase, riskLevel, tags) was dropped from `reportBody`; mobile UI title/summary surfaces silently rendered empty. Fix: restore meta envelope in contract + prompts + drift guard + adapter + UI; expand drift guard to positively require meta keys and enum literals.
 - **2026-05-24** — Android back-to-exit fired on every nested screen because layout `useNavigation().canGoBack()` returns the parent navigator. Fix: use `router.canGoBack()`. [detail](2026-05-24-android-back-double-press.md)
 - **2026-05-23** *(R5)* — Generate Report 502'd in dev: prompt still asked for v3 JSON envelope while contract validated unwrapped v4 `reportBody`; replay fixtures masked it. Fix: rewrite both report prompts to v4 field names + add live-LLM CI lane. [detail](2026-05-23-report-prompt-v3-v4-drift.md)
 - **2026-05-22** *(R5)* — `pickStorage()` read raw `process.env.R2_FIXTURE_MODE` while the rest of the module read parsed `env.R2_*`; trapdoor for live-vs-replay drift. Fix: branch on `env.R2_FIXTURE_MODE` + MinIO Testcontainers default-wiring test. [detail](2026-05-22-pickstorage-process-env-trapdoor.md)

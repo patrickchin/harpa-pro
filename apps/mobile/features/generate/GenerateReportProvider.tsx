@@ -740,9 +740,10 @@ export function GenerateReportProvider({
       notes: {
         list: timelineItems,
         totalCount: timelineItems.length,
-        // TODO(P3.8): expose real note rows once `useLocalReportNotes`
-        // lands. ReportPhotos consumes this; passing `null` keeps the
-        // surface stable.
+        // `rows` is the legacy ReportPhotos input — the timeline above
+        // (`list`) is now the canonical photo source, so this stays
+        // null on the draft path. Saved reports populate `rows` via
+        // their own provider wrapper.
         rows: null,
         input,
         setInput,

@@ -477,13 +477,11 @@ export default function GenerateReportRoute() {
 
   const handlePickAttachment = useCallback(
     async (category: 'image' | 'document') => {
-      // Document UI is deferred (plan-camera-upload-pipeline.md).
-      if (category === 'document') {
-        setUploadError(
-          'Document uploads are coming soon. Add a photo or text note for now.',
-        );
-        return;
-      }
+      // Document UI is deferred (plan-camera-upload-pipeline.md). The
+      // attachment sheet only surfaces image + camera actions, so this
+      // branch is unreachable from real UI — kept as a defensive no-op
+      // to keep the prop signature aligned with the provider contract.
+      if (category !== 'image') return;
       if (!reportId) {
         setUploadError('Open a saved report before adding photos.');
         return;

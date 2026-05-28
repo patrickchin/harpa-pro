@@ -50,11 +50,11 @@
 ## Tasks
 
 ### P4.1 Sentry
-- [ ] Wire on API (Hono middleware) with request id + structured tags.
+- [x] Wire on API (Hono middleware) with request id + structured tags.
       Replace `apps/mobile/lib/telemetry/SentryStub.tsx` no-op.
-- [ ] Wire on mobile (`@sentry/react-native`).
+- [x] Wire on mobile (`@sentry/react-native`).
 - [ ] Test crashes in staging confirm capture.
-- [ ] Commit: `feat(api,mobile): Sentry integration with request id`.
+- [x] Commit: `feat(api,mobile): Sentry integration with request id`.
 
 Code wiring note (2026-05-28): API + mobile implementation is ready
 behind unset DSNs. The remaining P4.1 acceptance step is CLI secret

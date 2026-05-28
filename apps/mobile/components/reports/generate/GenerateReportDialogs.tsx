@@ -130,16 +130,11 @@ export function GenerateReportDialogs() {
         title="Add attachment"
         onClose={closeAttachmentSheet}
         actions={[
-          {
-            label: 'Document',
-            variant: 'secondary',
-            onPress: () => {
-              closeAttachmentSheet();
-              handlePickAttachment('document');
-            },
-            accessibilityLabel: 'Pick a document',
-            testID: 'btn-attachment-document',
-          },
+          // Document picker is intentionally not surfaced — the server
+          // pipeline supports `document` notes but the UI slice was
+          // deferred (docs/v4/plan-camera-upload-pipeline.md, "Document
+          // note kind: deferred entirely"). Keep `image`-only here so
+          // the sheet never advertises an unimplemented surface.
           {
             label: 'Photo Library',
             variant: 'secondary',

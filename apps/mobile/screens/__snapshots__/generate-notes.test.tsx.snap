@@ -1089,34 +1089,6 @@ exports[`GenerateNotes > matches the empty-state snapshot 1`] = `
                 className="gap-3"
               >
                 <rn-Pressable
-                  accessibilityLabel="Pick a document"
-                  className="flex-row items-center rounded-md border border-border bg-secondary active:opacity-90 min-h-touch px-5 py-3.5 justify-center"
-                  disabled={false}
-                  onPress={[Function]}
-                  style={
-                    [
-                      {
-                        "elevation": 2,
-                        "shadowColor": "#1a1a2e",
-                        "shadowOffset": {
-                          "height": 2,
-                          "width": 0,
-                        },
-                        "shadowOpacity": 0.08,
-                        "shadowRadius": 8,
-                      },
-                      undefined,
-                    ]
-                  }
-                  testID="btn-attachment-document"
-                >
-                  <rn-Text
-                    className="text-foreground font-semibold text-base"
-                  >
-                    Document
-                  </rn-Text>
-                </rn-Pressable>
-                <rn-Pressable
                   accessibilityLabel="Pick a photo from library"
                   className="flex-row items-center rounded-md border border-border bg-secondary active:opacity-90 min-h-touch px-5 py-3.5 justify-center"
                   disabled={false}

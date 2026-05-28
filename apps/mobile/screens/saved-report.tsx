@@ -398,15 +398,17 @@ export function SavedReport(props: SavedReportProps) {
           reportNumber={reportNumber}
         />
 
-        <ReportDetailTabBar
-          activeTab={activeTab}
-          onChange={setActiveTab}
-          notesCount={notesCount}
-          showEditTab={!isFinal}
-          showNotesTab={!isFinal}
-        />
+        {!isFinal ? (
+          <ReportDetailTabBar
+            activeTab={activeTab}
+            onChange={setActiveTab}
+            notesCount={notesCount}
+            showEditTab={!isFinal}
+            showNotesTab={!isFinal}
+          />
+        ) : null}
 
-        {activeTab === 'edit' ? (
+        {!isFinal && activeTab === 'edit' ? (
           <View className="flex-row items-center justify-between px-5 pt-1 pb-1">
             <Text className="text-sm font-medium text-muted-foreground">
               Edit report
@@ -420,7 +422,7 @@ export function SavedReport(props: SavedReportProps) {
           </View>
         ) : null}
 
-        {activeTab === 'report' ? (
+        {isFinal || activeTab === 'report' ? (
           <Animated.View
             entering={FadeIn.duration(250)}
             className="px-5"
@@ -434,7 +436,7 @@ export function SavedReport(props: SavedReportProps) {
               />
             </View>
           </Animated.View>
-        ) : activeTab === 'edit' ? (
+        ) : !isFinal && activeTab === 'edit' ? (
           <View className="px-5" testID="saved-report-edit-pane">
             <ReportEditForm
               report={displayReport}

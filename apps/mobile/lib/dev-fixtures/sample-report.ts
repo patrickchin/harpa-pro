@@ -17,10 +17,10 @@ export const SAMPLE_GENERATED_REPORT: GeneratedSiteReport = {
   report: {
     meta: {
       title: 'Highland Tower — Visit 1',
-      reportType: 'site_visit',
       summary:
         'Steady progress on east footing despite minor delivery delay. Crew on schedule for column formwork tomorrow.',
       visitDate: '2026-05-12',
+      tags: [],
     },
     weather: {
       conditions: 'Cloudy with afternoon showers',

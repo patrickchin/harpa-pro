@@ -35,6 +35,10 @@ const final: ReportListItem = {
   updatedAt: '2024-03-10T11:00:00.000Z',
 };
 
+function makeRow(overrides?: Partial<ReportListItem>): ReportListItem {
+  return { ...final, ...overrides };
+}
+
 const defaults = {
   reports: [draft, final],
   projectName: 'Highland Tower',
@@ -116,4 +120,5 @@ describe('ReportsList', () => {
     );
     expect(tree.toJSON()).toBeTruthy();
   });
+
 });

@@ -6,13 +6,21 @@ import { noteKind } from './notes.js';
 export const reportStatus = z.enum(['draft', 'finalized']);
 export type ReportStatus = z.infer<typeof reportStatus>;
 
+export const reportMeta = z.object({
+  title:     z.string().nullable(),
+  summary:   z.string().nullable(),
+  visitDate: isoDateTime.nullable(),
+  tags:      z.array(z.string()).max(7).default([]),
+});
+export type ReportMeta = z.infer<typeof reportMeta>;
+
 /**
- * Report body — matches mobile-old composition order:
+ * Report body — meta envelope first, then matches mobile-old composition order:
  * StatBar / WeatherStrip / Summary / Issues / Workers / Materials / NextSteps / SummarySections.
  * See docs/legacy-v3/realignment/01-investigation.md.
  */
 export const reportBody = z.object({
-  visitDate: isoDateTime.nullable(),
+  meta: reportMeta,
   weather: z
     .object({
       condition: z.string().nullable(),

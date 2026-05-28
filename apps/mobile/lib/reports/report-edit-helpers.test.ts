@@ -33,9 +33,9 @@ function makeReport(): GeneratedSiteReport {
     report: {
       meta: {
         title: 'Daily site visit',
-        reportType: 'site_visit',
         summary: 'All going well.',
         visitDate: '2026-04-30',
+        tags: [],
       },
       weather: {
         conditions: 'Sunny',
@@ -220,9 +220,9 @@ describe('createEmptyReport', () => {
       report: {
         meta: {
           title: '',
-          reportType: 'site_visit',
           summary: '',
           visitDate: today,
+          tags: [],
         },
         weather: null,
         workers: null,

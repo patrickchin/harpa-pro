@@ -1752,7 +1752,13 @@ export interface paths {
                                 status: "draft" | "finalized";
                                 visitDate: string | null;
                                 body: {
-                                    visitDate: string | null;
+                                    meta: {
+                                        title: string | null;
+                                        summary: string | null;
+                                        visitDate: string | null;
+                                        /** @default [] */
+                                        tags: string[];
+                                    };
                                     weather: {
                                         condition: string | null;
                                         temperatureC: number | null;
@@ -1863,7 +1869,13 @@ export interface paths {
                             status: "draft" | "finalized";
                             visitDate: string | null;
                             body: {
-                                visitDate: string | null;
+                                meta: {
+                                    title: string | null;
+                                    summary: string | null;
+                                    visitDate: string | null;
+                                    /** @default [] */
+                                    tags: string[];
+                                };
                                 weather: {
                                     condition: string | null;
                                     temperatureC: number | null;
@@ -1995,7 +2007,13 @@ export interface paths {
                             status: "draft" | "finalized";
                             visitDate: string | null;
                             body: {
-                                visitDate: string | null;
+                                meta: {
+                                    title: string | null;
+                                    summary: string | null;
+                                    visitDate: string | null;
+                                    /** @default [] */
+                                    tags: string[];
+                                };
                                 weather: {
                                     condition: string | null;
                                     temperatureC: number | null;
@@ -2144,7 +2162,13 @@ export interface paths {
                     "application/json": {
                         visitDate?: string | null;
                         body?: {
-                            visitDate: string | null;
+                            meta: {
+                                title: string | null;
+                                summary: string | null;
+                                visitDate: string | null;
+                                /** @default [] */
+                                tags?: string[];
+                            };
                             weather: {
                                 condition: string | null;
                                 temperatureC: number | null;
@@ -2196,7 +2220,13 @@ export interface paths {
                             status: "draft" | "finalized";
                             visitDate: string | null;
                             body: {
-                                visitDate: string | null;
+                                meta: {
+                                    title: string | null;
+                                    summary: string | null;
+                                    visitDate: string | null;
+                                    /** @default [] */
+                                    tags: string[];
+                                };
                                 weather: {
                                     condition: string | null;
                                     temperatureC: number | null;
@@ -2448,7 +2478,13 @@ export interface paths {
                                 status: "draft" | "finalized";
                                 visitDate: string | null;
                                 body: {
-                                    visitDate: string | null;
+                                    meta: {
+                                        title: string | null;
+                                        summary: string | null;
+                                        visitDate: string | null;
+                                        /** @default [] */
+                                        tags: string[];
+                                    };
                                     weather: {
                                         condition: string | null;
                                         temperatureC: number | null;
@@ -2629,7 +2665,13 @@ export interface paths {
                                 status: "draft" | "finalized";
                                 visitDate: string | null;
                                 body: {
-                                    visitDate: string | null;
+                                    meta: {
+                                        title: string | null;
+                                        summary: string | null;
+                                        visitDate: string | null;
+                                        /** @default [] */
+                                        tags: string[];
+                                    };
                                     weather: {
                                         condition: string | null;
                                         temperatureC: number | null;
@@ -2804,7 +2846,13 @@ export interface paths {
                                 status: "draft" | "finalized";
                                 visitDate: string | null;
                                 body: {
-                                    visitDate: string | null;
+                                    meta: {
+                                        title: string | null;
+                                        summary: string | null;
+                                        visitDate: string | null;
+                                        /** @default [] */
+                                        tags: string[];
+                                    };
                                     weather: {
                                         condition: string | null;
                                         temperatureC: number | null;
@@ -2940,7 +2988,13 @@ export interface paths {
                                 status: "draft" | "finalized";
                                 visitDate: string | null;
                                 body: {
-                                    visitDate: string | null;
+                                    meta: {
+                                        title: string | null;
+                                        summary: string | null;
+                                        visitDate: string | null;
+                                        /** @default [] */
+                                        tags: string[];
+                                    };
                                     weather: {
                                         condition: string | null;
                                         temperatureC: number | null;

@@ -706,7 +706,9 @@ export function GenerateReportProvider({
     () => ({
       project,
       reportNumber,
-      reportTitle: reportTitle?.trim() || 'New Report',
+      reportTitle:
+        reportTitle?.trim() ||
+        (reportNumber !== null ? `Report #${reportNumber}` : 'New report'),
       notes: {
         list: timelineItems,
         totalCount: timelineItems.length,

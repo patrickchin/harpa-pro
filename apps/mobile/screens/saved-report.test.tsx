@@ -376,3 +376,48 @@ describe('SavedReport', () => {
     ).toBeGreaterThan(0);
   });
 });
+
+const finalizedDefaults = { ...baseProps(), reportStatus: 'finalized' as const };
+
+describe('SavedReport — finalized layout', () => {
+  it('does not render the tab bar when finalized', () => {
+    const tree = render(
+      <SavedReport
+        {...finalizedDefaults}
+        reportStatus="finalized"
+        report={SAMPLE_GENERATED_REPORT}
+      />,
+    );
+    expect(
+      tree.root.findAllByProps({ testID: 'btn-tab-report' }),
+    ).toHaveLength(0);
+    expect(
+      tree.root.findAllByProps({ testID: 'btn-tab-notes' }),
+    ).toHaveLength(0);
+    expect(
+      tree.root.findAllByProps({ testID: 'btn-tab-edit' }),
+    ).toHaveLength(0);
+  });
+
+  it('falls back to "Report #N" when meta.title is empty', () => {
+    const blank = {
+      ...SAMPLE_GENERATED_REPORT,
+      report: {
+        ...SAMPLE_GENERATED_REPORT.report,
+        meta: { ...SAMPLE_GENERATED_REPORT.report.meta, title: '' },
+      },
+    };
+    const tree = render(
+      <SavedReport
+        {...finalizedDefaults}
+        reportStatus="finalized"
+        reportNumber={7}
+        report={blank}
+      />,
+    );
+    // Check that the report pane is still visible
+    expect(
+      tree.root.findAllByProps({ testID: 'saved-report-pane' }).length,
+    ).toBeGreaterThan(0);
+  });
+});

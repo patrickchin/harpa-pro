@@ -176,12 +176,12 @@ describe('GenerateNotes', () => {
     expect(text).toContain('Edit');
   });
 
-  it('falls back to "New Report" when reportTitle is empty', () => {
+  it('falls back to "Report #N" when reportTitle is empty', () => {
     const tree = render(
-      <GenerateNotes {...baseProps} reportTitle={null} />,
+      <GenerateNotes {...baseProps} reportTitle={null} reportNumber={1} />,
     );
     const titleNode = tree.root.findByProps({ testID: 'screen-header-title' });
-    expect(collectText(titleNode.props.children)).toContain('New Report');
+    expect(collectText(titleNode.props.children)).toContain('Report #1');
   });
 
   it('hides the input bar + action row when canWrite=false', () => {

@@ -108,16 +108,6 @@ export function ReportEditForm({ report, onChange }: ReportEditFormProps) {
               accessibilityLabel="Report title"
             />
           </Field>
-          <Field label="Report type">
-            <TextInput
-              className={INPUT_CLASS}
-              value={meta.reportType}
-              onChangeText={(v) =>
-                onChange(updateMeta(report, { reportType: v }))
-              }
-              accessibilityLabel="Report type"
-            />
-          </Field>
           <Field label="Visit date">
             <TextInput
               className={INPUT_CLASS}

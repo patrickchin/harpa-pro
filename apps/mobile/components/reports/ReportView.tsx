@@ -7,11 +7,8 @@
  * branch `dev`.
  */
 import { View, Text } from 'react-native';
-import { FileText } from 'lucide-react-native';
 import type { GeneratedSiteReport } from '@harpa/report-core';
 
-import { Card } from '@/components/primitives/Card';
-import { SectionHeader } from '@/components/primitives/SectionHeader';
 import { StatBar } from './StatBar';
 import { WeatherStrip } from './WeatherStrip';
 import { WorkersCard } from './WorkersCard';
@@ -19,7 +16,8 @@ import { MaterialsCard } from './MaterialsCard';
 import { IssuesCard } from './IssuesCard';
 import { NextStepsCard } from './NextStepsCard';
 import { SummarySectionCard } from './SummarySectionCard';
-import { colors } from '@/lib/design-tokens/colors';
+import { SummaryLead } from './detail/SummaryLead';
+import { TagChips } from './detail/TagChips';
 
 interface ReportViewProps {
   report: GeneratedSiteReport;
@@ -37,20 +35,7 @@ export function ReportView({ report, reportNumber }: ReportViewProps) {
 
       <WeatherStrip report={report} />
 
-      {report.report.meta.summary ? (
-        <Card variant="default" padding="lg">
-          <SectionHeader
-            title="Summary"
-            icon={<FileText size={16} color={colors.foreground} />}
-          />
-          <Text
-            className="mt-4 text-base leading-relaxed text-muted-foreground"
-            testID={`report-summary-${numStr}`}
-          >
-            {report.report.meta.summary}
-          </Text>
-        </Card>
-      ) : null}
+      <SummaryLead summary={report.report.meta.summary} />
 
       <IssuesCard issues={report.report.issues} />
 
@@ -75,6 +60,8 @@ export function ReportView({ report, reportNumber }: ReportViewProps) {
           ))}
         </View>
       )}
+
+      <TagChips tags={report.report.meta.tags} />
     </View>
   );
 }

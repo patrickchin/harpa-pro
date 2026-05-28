@@ -138,6 +138,9 @@ Dev-deployment target:
   Focused local Android passed 01/02/10b, the full local regression
   passed with 10b included, and a clean full dev-deployment Android
   run passed against `harpa-pro-api-dev` (`gitCommit=9db5b51`).
+- The CI Maestro testID gate is path-filtered on both `apps/mobile/**`
+  and `.maestro/**` so E2E-only flow changes still validate referenced
+  mobile testIDs.
 
 Modules 14/15/16 navigate to Profile / Account / Usage screens.
 

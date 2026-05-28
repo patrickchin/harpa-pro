@@ -1,6 +1,6 @@
 name: e2e-maestro-testid-gate
 
-# Mobile-only check. Skips when apps/mobile didn't change.
+# Mobile/E2E check. Skips when neither mobile code nor Maestro flows changed.
 
 on:
   pull_request:

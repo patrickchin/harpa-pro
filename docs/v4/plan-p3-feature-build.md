@@ -13,7 +13,12 @@
 ## Exit gate (`p3-exit-gate.yml`)
 
 - [ ] Maestro full-journey flow `core-end-to-end` green on iOS + Android.
-- [ ] Mobile coverage ≥ 80% lines.
+- [ ] Mobile coverage ≥ 80% lines. (Gate wired via `vitest run
+      --coverage` in `apps/mobile/vitest.config.ts`; baseline at this
+      commit: lines 77.77%, statements 77.77%, branches 79.48%,
+      functions 69.36%. Thresholds are set just below baseline so CI
+      catches regressions immediately — lift to 80/80/70/79 once the
+      remaining ~2.2% line gap is closed.)
 - [x] Upload pipeline integration test green for `image`, `voice`, `document` (Pitfall 8).
 - [x] No `// TODO` / "Coming soon" / `Alert.alert` outside dialogs.
 

@@ -24,6 +24,46 @@ export default defineConfig({
     globals: false,
     environment: 'node',
     setupFiles: ['./vitest.setup.ts'],
+    coverage: {
+      provider: 'v8',
+      reporter: ['text-summary', 'json-summary', 'html'],
+      reportsDirectory: './coverage',
+      // Cover the source tree the tests are aimed at; exclude
+      // generated, vendor, test, snapshot, fixture, and runtime-only
+      // (route layouts / Expo entrypoints) surfaces so coverage
+      // reflects logic we can actually unit-test in node + jsdom.
+      include: [
+        'lib/**/*.{ts,tsx}',
+        'features/**/*.{ts,tsx}',
+        'components/**/*.{ts,tsx}',
+        'screens/**/*.{ts,tsx}',
+      ],
+      exclude: [
+        '**/*.test.{ts,tsx}',
+        '**/__tests__/**',
+        '**/__snapshots__/**',
+        '**/__fixtures__/**',
+        '**/__mocks__/**',
+        '**/*.d.ts',
+        'lib/api/hooks.gen.ts',
+        'lib/dev-fixtures/**',
+      ],
+      // Ratchet thresholds — set just below current baseline so CI
+      // catches *regressions* immediately. Lift these numbers as
+      // coverage rises; never lower without a documented reason.
+      //
+      // P3 exit-gate target: lines ≥ 80%
+      // (docs/v4/plan-p3-feature-build.md). Current baseline:
+      //   lines 77.77% · statements 77.77% · branches 79.48% · functions 69.36%
+      // The remaining ~2.2% on lines lands in a focused follow-up
+      // (see plan-p3-feature-build.md exit gate).
+      thresholds: {
+        lines: 77,
+        statements: 77,
+        functions: 69,
+        branches: 79,
+      },
+    },
     include: [
       'lib/**/*.test.ts',
       'lib/**/*.test.tsx',

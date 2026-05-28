@@ -28,11 +28,15 @@ import { AuthSessionProvider } from '@/lib/auth/session';
 import { DialogSheetProvider } from '@/lib/dialogs/DialogSheetProvider';
 import { QueueProvider } from '@/lib/uploads/QueueProvider';
 import { AudioPlaybackProvider } from '@/lib/audio/AudioPlaybackProvider';
-import { SentryProvider, initSentry } from '@/lib/telemetry/SentryStub';
+import {
+  SentryProvider,
+  captureReactError,
+  initSentry,
+} from '@/lib/telemetry/Sentry';
 import { queryClient, queryPersister } from '@/lib/api/query-client';
 import { shouldDehydrateQuery } from '@/lib/api/query-persister';
 
-// Initialize Sentry (no-op stub for P2.6).
+// Initialize Sentry when EXPO_PUBLIC_SENTRY_DSN is present.
 initSentry();
 
 const persistOptions = {
@@ -66,6 +70,7 @@ class AppErrorBoundary extends Component<
   componentDidCatch(error: Error, info: React.ErrorInfo) {
     // eslint-disable-next-line no-console
     console.error('[error-boundary] Uncaught error', error, info.componentStack);
+    captureReactError(error, info);
   }
 
   render() {

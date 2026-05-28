@@ -113,7 +113,21 @@ not by the API at runtime), and a handful of CI-only flags.
 ## Observability
 
 - **Sentry** for crashes, both mobile and API. Same project,
-  different DSNs. Wired in P4.
+  different DSNs. Runtime vars:
+  - API: `SENTRY_DSN`, optional `SENTRY_ENVIRONMENT`, and
+    `SENTRY_TRACES_SAMPLE_RATE`.
+  - Mobile: `EXPO_PUBLIC_SENTRY_DSN` at Metro/EAS build or OTA-update
+    time.
+  - Source maps/native build integration: `SENTRY_ORG`,
+    `SENTRY_PROJECT`, optional `SENTRY_URL`, and `SENTRY_AUTH_TOKEN`
+    with `project:write`.
+  Mobile Sentry values live in EAS project environment variables:
+  `development`, `preview`, and `production`. `apps/mobile/eas.json`
+  pins each build profile to its matching EAS environment, and the
+  OTA workflows pass `eas update --environment <env>` so update
+  bundles receive the same values.
+  The Expo plugin disables auto-upload when `SENTRY_AUTH_TOKEN` is not
+  present so local prebuilds do not fail.
 - **Fly metrics** — built-in for API latency / 5xx rate.
 - **Logs** — Fly log shipping to Better Stack (free tier) for
   search.

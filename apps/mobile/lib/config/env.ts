@@ -11,6 +11,11 @@
  */
 import { z } from 'zod';
 
+const optionalUrl = z.preprocess(
+  (v) => (v === '' ? undefined : v),
+  z.string().url().optional(),
+);
+
 const Env = z.object({
   EXPO_PUBLIC_API_URL: z
     .string()
@@ -39,6 +44,7 @@ const Env = z.object({
     .enum(['true', 'false'])
     .default('false')
     .transform((v) => v === 'true'),
+  EXPO_PUBLIC_SENTRY_DSN: optionalUrl,
 });
 
 /* eslint-disable no-restricted-syntax */
@@ -47,6 +53,7 @@ const rawEnv = {
   EXPO_PUBLIC_USE_FIXTURES: process.env.EXPO_PUBLIC_USE_FIXTURES,
   EXPO_PUBLIC_APP_VARIANT: process.env.EXPO_PUBLIC_APP_VARIANT,
   EXPO_PUBLIC_LAYOUT_PROBE: process.env.EXPO_PUBLIC_LAYOUT_PROBE,
+  EXPO_PUBLIC_SENTRY_DSN: process.env.EXPO_PUBLIC_SENTRY_DSN,
 };
 /* eslint-enable no-restricted-syntax */
 

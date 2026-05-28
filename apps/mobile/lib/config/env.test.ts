@@ -13,6 +13,7 @@ describe('lib/env', () => {
     delete process.env.EXPO_PUBLIC_USE_FIXTURES;
     delete process.env.EXPO_PUBLIC_APP_VARIANT;
     delete process.env.EXPO_PUBLIC_LAYOUT_PROBE;
+    delete process.env.EXPO_PUBLIC_SENTRY_DSN;
   });
 
   afterEach(() => {
@@ -25,6 +26,7 @@ describe('lib/env', () => {
     expect(env.EXPO_PUBLIC_USE_FIXTURES).toBe(false);
     expect(env.EXPO_PUBLIC_APP_VARIANT).toBe('development');
     expect(env.EXPO_PUBLIC_LAYOUT_PROBE).toBe(false);
+    expect(env.EXPO_PUBLIC_SENTRY_DSN).toBeUndefined();
   });
 
   it('parses LAYOUT_PROBE as boolean', async () => {
@@ -53,5 +55,11 @@ describe('lib/env', () => {
   it('throws on invalid URL', async () => {
     process.env.EXPO_PUBLIC_API_URL = 'not-a-url';
     await expect(import('./env.js')).rejects.toThrow(/invalid environment/);
+  });
+
+  it('accepts a Sentry DSN when configured', async () => {
+    process.env.EXPO_PUBLIC_SENTRY_DSN = 'https://public@example.ingest.sentry.io/1';
+    const { env } = await import('./env.js');
+    expect(env.EXPO_PUBLIC_SENTRY_DSN).toBe('https://public@example.ingest.sentry.io/1');
   });
 });

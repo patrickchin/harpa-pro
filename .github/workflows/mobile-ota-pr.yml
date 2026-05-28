@@ -64,5 +64,6 @@ jobs:
         run: |
           eas update \
             --channel development \
+            --environment development \
             --message "PR #${{ github.event.pull_request.number }} (${{ github.event.pull_request.head.ref }}) $(git rev-parse --short HEAD)" \
             --non-interactive

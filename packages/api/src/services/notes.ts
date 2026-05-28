@@ -96,6 +96,24 @@ const NOTE_COLUMNS = sql`id, report_id, author_id, kind, body, file_id,
        thumbnail_file_id, transcript, title, summary, duration_sec, language,
        transcribe_provider, transcribed_at, created_at, updated_at`;
 
+/**
+ * Mark a draft report's notes as changed. Called from every note
+ * mutation (add / delete / edit). No-op on finalized reports
+ * because finalization is an immutable snapshot.
+ *
+ * TODO: when a caption-update route is added for `note_files`,
+ * call this helper from it too.
+ */
+async function bumpNotesChangedAt(db: Db, reportId: string): Promise<void> {
+  await db.execute(sql`
+    UPDATE app.reports
+       SET notes_changed_at = now(),
+           updated_at       = now()
+     WHERE id = ${reportId}
+       AND status = 'draft'
+  `);
+}
+
 export async function listNotes(
   db: Db,
   reportId: string,
@@ -261,6 +279,7 @@ export async function createNote(
         updated_at = now()
     WHERE id = ${reportId}
   `);
+  await bumpNotesChangedAt(db, reportId);
   return mapNote(row, files);
 }
 
@@ -316,6 +335,7 @@ export async function createVoiceNote(
         updated_at = now()
     WHERE id = ${reportId}
   `);
+  await bumpNotesChangedAt(db, reportId);
   return mapNote(row);
 }
 
@@ -352,14 +372,19 @@ export async function updateNote(
     RETURNING ${NOTE_COLUMNS}
   `);
   const row = r.rows[0];
-  return row ? mapNote(row) : null;
+  if (!row) return null;
+  await bumpNotesChangedAt(db, row.report_id);
+  return mapNote(row);
 }
 
 export async function deleteNote(db: Db, noteId: string): Promise<boolean> {
-  const r = await db.execute<{ id: string }>(sql`
-    DELETE FROM app.notes WHERE id = ${noteId} RETURNING id
+  const r = await db.execute<{ id: string; report_id: string }>(sql`
+    DELETE FROM app.notes WHERE id = ${noteId} RETURNING id, report_id
   `);
-  return r.rows.length > 0;
+  const row = r.rows[0];
+  if (!row) return false;
+  await bumpNotesChangedAt(db, row.report_id);
+  return true;
 }
 
 export async function appendFiles(

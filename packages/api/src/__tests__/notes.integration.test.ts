@@ -58,6 +58,19 @@ afterAll(async () => {
 
 const headers = (tok: string) => ({ authorization: `Bearer ${tok}`, 'content-type': 'application/json' });
 
+async function readDirty(reportId: string) {
+  const c = await getPool().connect();
+  try {
+    const r = await c.query<{ changed_at: Date | null; generated_at: Date | null }>(
+      `SELECT notes_changed_at AS changed_at, generated_at FROM app.reports WHERE id = $1`,
+      [reportId],
+    );
+    return r.rows[0] ?? { changed_at: null, generated_at: null };
+  } finally {
+    c.release();
+  }
+}
+
 describe('notes CRUD', () => {
   let noteId: string;
 
@@ -170,6 +183,80 @@ describe('notes CRUD', () => {
     const list = await app.request(`/reports/${report}/notes`, { headers: { authorization: `Bearer ${tok}` } });
     const body = (await list.json()) as { items: Array<{ id: string }> };
     expect(body.items.find((n) => n.id === noteId)).toBeFalsy();
+  });
+
+  it('POST creates a text note and bumps notes_changed_at', async () => {
+    const app = createApp();
+    const tok = await signTestToken(alice, aliceSid);
+    // Reset dirty state so assertion is meaningful.
+    const reset = await getPool().connect();
+    try {
+      await reset.query(
+        `UPDATE app.reports SET notes_changed_at = NULL WHERE id = $1`,
+        [report],
+      );
+    } finally {
+      reset.release();
+    }
+    const before = await readDirty(report);
+    expect(before.changed_at).toBeNull();
+    const res = await app.request(`/reports/${report}/notes`, {
+      method: 'POST',
+      headers: headers(tok),
+      body: JSON.stringify({ kind: 'text', body: 'changed_at observation' }),
+    });
+    expect(res.status).toBe(201);
+    noteId = ((await res.json()) as { id: string }).id;
+    const after = await readDirty(report);
+    expect(after.changed_at).not.toBeNull();
+  });
+
+  it('PATCH note body bumps notes_changed_at', async () => {
+    const app = createApp();
+    const tok = await signTestToken(alice, aliceSid);
+    // Reset dirty bit so the assertion is meaningful.
+    const reset = await getPool().connect();
+    try {
+      await reset.query(
+        `UPDATE app.reports SET notes_changed_at = NULL, generated_at = now() WHERE id = $1`,
+        [report],
+      );
+    } finally {
+      reset.release();
+    }
+    const res = await app.request(`/notes/${noteId}`, {
+      method: 'PATCH',
+      headers: headers(tok),
+      body: JSON.stringify({ body: 'edited observation' }),
+    });
+    expect(res.status).toBe(200);
+    const after = await readDirty(report);
+    expect(after.changed_at).not.toBeNull();
+    expect(new Date(after.changed_at!).getTime()).toBeGreaterThan(
+      new Date(after.generated_at!).getTime(),
+    );
+  });
+
+  it('DELETE note bumps notes_changed_at', async () => {
+    const app = createApp();
+    const tok = await signTestToken(alice, aliceSid);
+    // Reset first.
+    const reset = await getPool().connect();
+    try {
+      await reset.query(
+        `UPDATE app.reports SET notes_changed_at = NULL, generated_at = now() WHERE id = $1`,
+        [report],
+      );
+    } finally {
+      reset.release();
+    }
+    const res = await app.request(`/notes/${noteId}`, {
+      method: 'DELETE',
+      headers: { authorization: `Bearer ${tok}` },
+    });
+    expect(res.status).toBe(204);
+    const after = await readDirty(report);
+    expect(after.changed_at).not.toBeNull();
   });
 });
 

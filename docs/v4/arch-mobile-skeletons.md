@@ -67,9 +67,11 @@ and the loaded element share, and use `resizeMode="cover"` /
 `contentFit="cover"` so the loaded image fills the box without
 resizing it.
 
-`apps/mobile/components/notes/ImageNoteCard.tsx` is the reference:
+`apps/mobile/components/notes/PhotoNoteCard.tsx` (backed by `PhotoBatchGrid`) is the reference:
 all three states (skeleton / error / loaded) live inside a single
-`<View>` of fixed `height: IMAGE_SLOT_HEIGHT`.
+`<View>` measured via `onLayout`; `PhotoBatchGrid` tiles share the
+same square size so the layout is stable across the pending → saved
+transition.
 
 ### 4. Render enough placeholder rows
 

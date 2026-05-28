@@ -135,3 +135,52 @@ describe('NoteTimeline key stability', () => {
     expect(after).not.toBe(before);
   });
 });
+
+describe('NoteTimeline image routing — legacy single-file entry', () => {
+  it('routes a legacy fileId/thumbnailFileId entry through PhotoNoteCard and PhotoBatchGrid', () => {
+    // A saved image entry with only fileId + thumbnailFileId and no
+    // `attachments` array exercises the `buildAttachments` fallback path
+    // that existed before the batch-upload pipeline shipped.  NoteTimeline
+    // must continue to route `source === 'image'` to PhotoNoteCard regardless
+    // of whether the entry came from the new batch path or this legacy path.
+    const entry: NoteEntry = {
+      id: 'not_legacy_1',
+      text: '',
+      addedAt: 1700000000000,
+      source: 'image',
+      fileId: 'fil_full_1',
+      thumbnailFileId: 'fil_thumb_1',
+      // No `attachments` — exercises the buildAttachments fileId fallback
+    };
+
+    const opens: Array<{ fileId: string; sourceIndex: number }> = [];
+    const tree = wrap(
+      <NoteTimeline
+        notes={[entry]}
+        onOpenPhoto={(fileId, sourceIndex) => opens.push({ fileId, sourceIndex })}
+      />,
+    );
+
+    // Card wrapper is present before layout is fired.
+    expect(tree.root.findByProps({ testID: 'note-row-0' })).toBeDefined();
+
+    // Fire the layout event to expose containerWidth → grid renders.
+    const measure = tree.root.findByProps({ testID: 'note-row-0-measure' });
+    act(() => {
+      measure.props.onLayout({ nativeEvent: { layout: { width: 320 } } });
+    });
+
+    // A single tile should appear for the one legacy file.
+    const tile = tree.root
+      .findAllByProps({ testID: 'batch-grid-tile-0' })
+      .find((n) => typeof n.type !== 'function');
+    expect(tile).toBeDefined();
+
+    // Pressing fires onOpenPhoto with the original fileId and sourceIndex 0.
+    act(() => {
+      tile!.props.onPress();
+    });
+
+    expect(opens).toEqual([{ fileId: 'fil_full_1', sourceIndex: 0 }]);
+  });
+});

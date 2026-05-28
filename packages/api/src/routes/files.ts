@@ -8,23 +8,65 @@
  * `:mock`) vs R2Storage (prod) so no R2 calls happen in tests.
  *
  * Security:
- *  - Server constructs every fileKey; clients never supply one for presign.
- *  - Register requires the registered key to start with the caller's
- *    `users/<userId>/` prefix — stops a caller registering another user's
- *    object key under their own id.
- *  - Ownership on GET is enforced via app.files RLS (`files_owner_all`).
+ *  - Server constructs every fileKey (Pitfall 8) — clients never supply
+ *    one for presign. Presign mints a `fil_…` id and returns it; the
+ *    embedded key is `projects/<projectId>/reports/<reportId>/<fileId>.<ext>`
+ *    for project scope, `users/<userId>/<avatar|scratch>/<fileId>.<ext>`
+ *    for personal scopes.
+ *  - Register parses the key back via `parseKeyScope` and verifies the
+ *    embedded scope + ids match the claimed body + caller's userId /
+ *    project membership before INSERT.
+ *  - Read/write authorization is enforced by `app.files` RLS
+ *    (migration 0011): owners always, plus any project member for
+ *    files attached to that project.
  */
 import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi';
 import { HTTPException } from 'hono/http-exception';
 import { files as fileSchemas, errorEnvelope, fileId } from '@harpa/api-contract';
-import type { AppEnv } from '../app.js';
+import type { AppEnv, ScopedDbAccessor } from '../app.js';
 import { withAuth } from '../middleware/auth.js';
 import { getFileById, registerFile } from '../services/files.js';
-import { pickStorage, type FileKind } from '../services/storage.js';
+import { getProjectBySlug } from '../services/projects.js';
+import { getReport } from '../services/reports.js';
+import {
+  pickStorage,
+  parseKeyScope,
+  type FileKind,
+  type PresignScope,
+} from '../services/storage.js';
 
 const fileIdParam = z.object({ id: fileId.openapi({ param: { name: 'id', in: 'path' } }) });
 
 export const fileRoutes = new OpenAPIHono<AppEnv>();
+
+/**
+ * Assert the caller can see `projectId` under their per-request RLS
+ * scope. RLS hides cross-member projects, so non-members get the same
+ * 404 as truly missing rows (Pitfall 6).
+ */
+async function assertProjectMember(
+  db: ScopedDbAccessor,
+  userId: string,
+  projectId: string,
+): Promise<void> {
+  const project = await db((d) => getProjectBySlug(d, userId, projectId));
+  if (!project) throw new HTTPException(404, { message: 'Project not found.' });
+}
+
+/**
+ * Assert `reportId` exists and belongs to `projectId`. Same 404 on
+ * absent / cross-project as a non-member (Pitfall 6).
+ */
+async function assertReportInProject(
+  db: ScopedDbAccessor,
+  reportId: string,
+  projectId: string,
+): Promise<void> {
+  const report = await db((d) => getReport(d, reportId));
+  if (!report || report.projectId !== projectId) {
+    throw new HTTPException(404, { message: 'Report not found.' });
+  }
+}
 
 // ---------- POST /files/presign ----------
 fileRoutes.openapi(
@@ -41,16 +83,46 @@ fileRoutes.openapi(
       200: { description: 'Presigned upload URL.', content: { 'application/json': { schema: fileSchemas.presignResponse } } },
       400: { description: 'Bad request.', content: { 'application/json': { schema: errorEnvelope } } },
       401: { description: 'Unauthorized.', content: { 'application/json': { schema: errorEnvelope } } },
+      404: { description: 'Project / report not found or not a member.', content: { 'application/json': { schema: errorEnvelope } } },
     },
   }),
   async (c) => {
     const userId = c.get('userId');
-    if (!userId) throw new HTTPException(401);
+    const db = c.get('db');
+    if (!userId || !db) throw new HTTPException(401);
     const body = c.req.valid('json');
-    const storage = pickStorage();
-    const out = await storage.presign({
-      userId,
-      kind: body.kind as FileKind,
+
+    let scope: PresignScope;
+    switch (body.scope) {
+      case 'project': {
+        await assertProjectMember(db, userId, body.projectId);
+        await assertReportInProject(db, body.reportId, body.projectId);
+        scope = {
+          kind: 'project',
+          userId,
+          projectId: body.projectId,
+          reportId: body.reportId,
+          fileKind: body.kind as FileKind,
+        };
+        break;
+      }
+      case 'avatar': {
+        if (!body.contentType.startsWith('image/')) {
+          throw new HTTPException(400, {
+            message: 'Avatar content-type must be image/*.',
+          });
+        }
+        scope = { kind: 'avatar', userId };
+        break;
+      }
+      case 'scratch': {
+        scope = { kind: 'scratch', userId, fileKind: body.kind as FileKind };
+        break;
+      }
+    }
+
+    const out = await pickStorage().presign({
+      scope,
       contentType: body.contentType,
       sizeBytes: body.sizeBytes,
     });
@@ -71,8 +143,9 @@ fileRoutes.openapi(
     },
     responses: {
       201: { description: 'Created.', content: { 'application/json': { schema: fileSchemas.fileRecord } } },
-      400: { description: 'Bad request — fileKey must start with users/<callerId>/.', content: { 'application/json': { schema: errorEnvelope } } },
+      400: { description: 'Bad request — fileKey shape / scope mismatch.', content: { 'application/json': { schema: errorEnvelope } } },
       401: { description: 'Unauthorized.', content: { 'application/json': { schema: errorEnvelope } } },
+      404: { description: 'Project / report not found or not a member.', content: { 'application/json': { schema: errorEnvelope } } },
       409: { description: 'Conflict — fileKey already registered.', content: { 'application/json': { schema: errorEnvelope } } },
     },
   }),
@@ -81,19 +154,79 @@ fileRoutes.openapi(
     const db = c.get('db');
     if (!userId || !db) throw new HTTPException(401);
     const body = c.req.valid('json');
-    const expectedPrefix = `users/${userId}/`;
-    if (!body.fileKey.startsWith(expectedPrefix)) {
-      throw new HTTPException(400, {
-        message: 'fileKey must start with the caller\'s users/<id>/ prefix.',
-      });
+
+    const parsed = parseKeyScope(body.fileKey);
+    if (!parsed) {
+      throw new HTTPException(400, { message: 'Malformed fileKey.' });
     }
+    if (parsed.scope !== body.scope) {
+      throw new HTTPException(400, { message: 'fileKey scope does not match request.' });
+    }
+
+    let kind: FileKind;
+    let projectIdValue: string | null = null;
+    let reportIdValue: string | null = null;
+
+    switch (body.scope) {
+      case 'project': {
+        if (parsed.scope !== 'project') {
+          throw new HTTPException(400, { message: 'fileKey scope mismatch.' });
+        }
+        if (parsed.projectId !== body.projectId || parsed.reportId !== body.reportId) {
+          throw new HTTPException(400, {
+            message: 'fileKey ids do not match request projectId / reportId.',
+          });
+        }
+        await assertProjectMember(db, userId, body.projectId);
+        await assertReportInProject(db, body.reportId, body.projectId);
+        kind = body.kind as FileKind;
+        projectIdValue = body.projectId;
+        reportIdValue = body.reportId;
+        break;
+      }
+      case 'avatar': {
+        if (parsed.scope !== 'avatar') {
+          throw new HTTPException(400, { message: 'fileKey scope mismatch.' });
+        }
+        if (parsed.userId !== userId) {
+          throw new HTTPException(400, {
+            message: 'fileKey must be under the caller\'s users/<id>/ prefix.',
+          });
+        }
+        if (!body.contentType.startsWith('image/')) {
+          throw new HTTPException(400, {
+            message: 'Avatar content-type must be image/*.',
+          });
+        }
+        kind = 'image';
+        break;
+      }
+      case 'scratch': {
+        if (parsed.scope !== 'scratch') {
+          throw new HTTPException(400, { message: 'fileKey scope mismatch.' });
+        }
+        if (parsed.userId !== userId) {
+          throw new HTTPException(400, {
+            message: 'fileKey must be under the caller\'s users/<id>/ prefix.',
+          });
+        }
+        kind = body.kind as FileKind;
+        break;
+      }
+    }
+
     try {
-      const row = await db((d) => registerFile(d, userId, {
-        kind: body.kind as FileKind,
-        fileKey: body.fileKey,
-        sizeBytes: body.sizeBytes,
-        contentType: body.contentType,
-      }));
+      const row = await db((d) =>
+        registerFile(d, userId, {
+          id: parsed.fileId,
+          kind,
+          fileKey: body.fileKey,
+          sizeBytes: body.sizeBytes,
+          contentType: body.contentType,
+          projectId: projectIdValue,
+          reportId: reportIdValue,
+        }),
+      );
       if (!row) throw new HTTPException(500, { message: 'register failed' });
       return c.json(row, 201);
     } catch (err) {
@@ -118,7 +251,7 @@ fileRoutes.openapi(
     responses: {
       200: { description: 'Signed GET URL.', content: { 'application/json': { schema: fileSchemas.fileUrlResponse } } },
       401: { description: 'Unauthorized.', content: { 'application/json': { schema: errorEnvelope } } },
-      404: { description: 'Not found or not owned.', content: { 'application/json': { schema: errorEnvelope } } },
+      404: { description: 'Not found or not visible.', content: { 'application/json': { schema: errorEnvelope } } },
     },
   }),
   async (c) => {

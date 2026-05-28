@@ -9292,33 +9292,118 @@
           "content": {
             "application/json": {
               "schema": {
-                "type": "object",
-                "properties": {
-                  "kind": {
-                    "type": "string",
-                    "enum": [
-                      "voice",
-                      "image",
-                      "document",
-                      "pdf"
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "scope": {
+                        "type": "string",
+                        "enum": [
+                          "project"
+                        ]
+                      },
+                      "projectId": {
+                        "type": "string",
+                        "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8,16}$"
+                      },
+                      "reportId": {
+                        "type": "string",
+                        "pattern": "^rpt_[0-9a-hjkmnp-tv-z]{8,16}$"
+                      },
+                      "kind": {
+                        "type": "string",
+                        "enum": [
+                          "voice",
+                          "image",
+                          "document",
+                          "pdf"
+                        ]
+                      },
+                      "contentType": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 200
+                      },
+                      "sizeBytes": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "exclusiveMinimum": true,
+                        "maximum": 52428800
+                      }
+                    },
+                    "required": [
+                      "scope",
+                      "projectId",
+                      "reportId",
+                      "kind",
+                      "contentType",
+                      "sizeBytes"
                     ]
                   },
-                  "contentType": {
-                    "type": "string",
-                    "minLength": 1,
-                    "maxLength": 200
+                  {
+                    "type": "object",
+                    "properties": {
+                      "scope": {
+                        "type": "string",
+                        "enum": [
+                          "avatar"
+                        ]
+                      },
+                      "contentType": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 200
+                      },
+                      "sizeBytes": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "exclusiveMinimum": true,
+                        "maximum": 52428800
+                      }
+                    },
+                    "required": [
+                      "scope",
+                      "contentType",
+                      "sizeBytes"
+                    ]
                   },
-                  "sizeBytes": {
-                    "type": "integer",
-                    "minimum": 0,
-                    "exclusiveMinimum": true,
-                    "maximum": 52428800
+                  {
+                    "type": "object",
+                    "properties": {
+                      "scope": {
+                        "type": "string",
+                        "enum": [
+                          "scratch"
+                        ]
+                      },
+                      "kind": {
+                        "type": "string",
+                        "enum": [
+                          "voice",
+                          "image",
+                          "document",
+                          "pdf"
+                        ]
+                      },
+                      "contentType": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 200
+                      },
+                      "sizeBytes": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "exclusiveMinimum": true,
+                        "maximum": 52428800
+                      }
+                    },
+                    "required": [
+                      "scope",
+                      "kind",
+                      "contentType",
+                      "sizeBytes"
+                    ]
                   }
-                },
-                "required": [
-                  "kind",
-                  "contentType",
-                  "sizeBytes"
                 ]
               }
             }
@@ -9339,6 +9424,10 @@
                     "fileKey": {
                       "type": "string"
                     },
+                    "fileId": {
+                      "type": "string",
+                      "pattern": "^fil_[0-9a-hjkmnp-tv-z]{8,16}$"
+                    },
                     "expiresAt": {
                       "type": "string"
                     }
@@ -9346,6 +9435,7 @@
                   "required": [
                     "uploadUrl",
                     "fileKey",
+                    "fileId",
                     "expiresAt"
                   ]
                 }
@@ -9423,6 +9513,42 @@
                 }
               }
             }
+          },
+          "404": {
+            "description": "Project / report not found or not a member.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "nullable": true
+                        },
+                        "requestId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
           }
         }
       }
@@ -9441,36 +9567,127 @@
           "content": {
             "application/json": {
               "schema": {
-                "type": "object",
-                "properties": {
-                  "kind": {
-                    "type": "string",
-                    "enum": [
-                      "voice",
-                      "image",
-                      "document",
-                      "pdf"
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "scope": {
+                        "type": "string",
+                        "enum": [
+                          "project"
+                        ]
+                      },
+                      "projectId": {
+                        "type": "string",
+                        "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8,16}$"
+                      },
+                      "reportId": {
+                        "type": "string",
+                        "pattern": "^rpt_[0-9a-hjkmnp-tv-z]{8,16}$"
+                      },
+                      "kind": {
+                        "type": "string",
+                        "enum": [
+                          "voice",
+                          "image",
+                          "document",
+                          "pdf"
+                        ]
+                      },
+                      "fileKey": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "sizeBytes": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "exclusiveMinimum": true
+                      },
+                      "contentType": {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    },
+                    "required": [
+                      "scope",
+                      "projectId",
+                      "reportId",
+                      "kind",
+                      "fileKey",
+                      "sizeBytes",
+                      "contentType"
                     ]
                   },
-                  "fileKey": {
-                    "type": "string",
-                    "minLength": 1
+                  {
+                    "type": "object",
+                    "properties": {
+                      "scope": {
+                        "type": "string",
+                        "enum": [
+                          "avatar"
+                        ]
+                      },
+                      "fileKey": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "sizeBytes": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "exclusiveMinimum": true
+                      },
+                      "contentType": {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    },
+                    "required": [
+                      "scope",
+                      "fileKey",
+                      "sizeBytes",
+                      "contentType"
+                    ]
                   },
-                  "sizeBytes": {
-                    "type": "integer",
-                    "minimum": 0,
-                    "exclusiveMinimum": true
-                  },
-                  "contentType": {
-                    "type": "string",
-                    "minLength": 1
+                  {
+                    "type": "object",
+                    "properties": {
+                      "scope": {
+                        "type": "string",
+                        "enum": [
+                          "scratch"
+                        ]
+                      },
+                      "kind": {
+                        "type": "string",
+                        "enum": [
+                          "voice",
+                          "image",
+                          "document",
+                          "pdf"
+                        ]
+                      },
+                      "fileKey": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "sizeBytes": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "exclusiveMinimum": true
+                      },
+                      "contentType": {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    },
+                    "required": [
+                      "scope",
+                      "kind",
+                      "fileKey",
+                      "sizeBytes",
+                      "contentType"
+                    ]
                   }
-                },
-                "required": [
-                  "kind",
-                  "fileKey",
-                  "sizeBytes",
-                  "contentType"
                 ]
               }
             }
@@ -9510,6 +9727,16 @@
                     "contentType": {
                       "type": "string"
                     },
+                    "projectId": {
+                      "type": "string",
+                      "nullable": true,
+                      "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8,16}$"
+                    },
+                    "reportId": {
+                      "type": "string",
+                      "nullable": true,
+                      "pattern": "^rpt_[0-9a-hjkmnp-tv-z]{8,16}$"
+                    },
                     "createdAt": {
                       "type": "string"
                     }
@@ -9521,6 +9748,8 @@
                     "fileKey",
                     "sizeBytes",
                     "contentType",
+                    "projectId",
+                    "reportId",
                     "createdAt"
                   ]
                 }
@@ -9528,7 +9757,7 @@
             }
           },
           "400": {
-            "description": "Bad request — fileKey must start with users/<callerId>/.",
+            "description": "Bad request — fileKey shape / scope mismatch.",
             "content": {
               "application/json": {
                 "schema": {
@@ -9565,6 +9794,42 @@
           },
           "401": {
             "description": "Unauthorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "nullable": true
+                        },
+                        "requestId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Project / report not found or not a member.",
             "content": {
               "application/json": {
                 "schema": {
@@ -9720,7 +9985,7 @@
             }
           },
           "404": {
-            "description": "Not found or not owned.",
+            "description": "Not found or not visible.",
             "content": {
               "application/json": {
                 "schema": {

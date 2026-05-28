@@ -32,6 +32,7 @@ describe('upload queue — AbortController cancellation', () => {
     const presign = vi.fn(async () => ({
       uploadUrl: 'https://r2/sign',
       fileKey: 'k',
+      fileId: 'fil-test1234',
       expiresAt: new Date(Date.now() + 60_000).toISOString(),
     }));
     const putToR2 = vi.fn(
@@ -83,6 +84,7 @@ describe('upload queue — AbortController cancellation', () => {
     const presign = vi.fn(async () => ({
       uploadUrl: 'u',
       fileKey: 'k',
+      fileId: 'fil-test1234',
       expiresAt: new Date(Date.now() + 60_000).toISOString(),
     }));
     const putToR2 = vi.fn(async (args: { signal?: AbortSignal }) => {

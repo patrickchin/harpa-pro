@@ -44,30 +44,30 @@ afterAll(async () => {
 const headers = (tok: string) => ({ authorization: `Bearer ${tok}`, 'content-type': 'application/json' });
 
 describe('/files/*', () => {
-  it('POST /files/presign returns server-built key under users/<callerId>/', async () => {
+  it('POST /files/presign (scratch) returns server-built key under users/<callerId>/scratch/', async () => {
     const app = createApp();
     const tok = await signTestToken(alice, aliceSid);
     const res = await app.request('/files/presign', {
       method: 'POST',
       headers: headers(tok),
-      body: JSON.stringify({ kind: 'voice', contentType: 'audio/m4a', sizeBytes: 12345 }),
+      body: JSON.stringify({ scope: 'scratch', kind: 'voice', contentType: 'audio/m4a', sizeBytes: 12345 }),
     });
     expect(res.status).toBe(200);
     const body = (await res.json()) as { uploadUrl: string; fileKey: string; expiresAt: string };
-    expect(body.fileKey.startsWith(`users/${alice}/voice/`)).toBe(true);
+    expect(body.fileKey.startsWith(`users/${alice}/scratch/`)).toBe(true);
     expect(body.fileKey.endsWith('.m4a')).toBe(true);
     expect(body.uploadUrl).toContain(encodeURIComponent(body.fileKey));
     expect(Date.parse(body.expiresAt)).toBeGreaterThan(Date.now() - 1000);
   });
 
-  it('POST /files registers a file and round-trips via GET /files/:id/url', async () => {
+  it('POST /files (avatar) registers a file and round-trips via GET /files/:id/url', async () => {
     const app = createApp();
     const tok = await signTestToken(alice, aliceSid);
     // Presign first to get a server-built key.
     const presign = await app.request('/files/presign', {
       method: 'POST',
       headers: headers(tok),
-      body: JSON.stringify({ kind: 'image', contentType: 'image/jpeg', sizeBytes: 4096 }),
+      body: JSON.stringify({ scope: 'avatar', contentType: 'image/jpeg', sizeBytes: 4096 }),
     });
     const { fileKey } = (await presign.json()) as { fileKey: string };
 
@@ -75,7 +75,7 @@ describe('/files/*', () => {
       method: 'POST',
       headers: headers(tok),
       body: JSON.stringify({
-        kind: 'image',
+        scope: 'avatar',
         fileKey,
         sizeBytes: 4096,
         contentType: 'image/jpeg',
@@ -99,8 +99,9 @@ describe('/files/*', () => {
       method: 'POST',
       headers: headers(tok),
       body: JSON.stringify({
+        scope: 'scratch',
         kind: 'image',
-        fileKey: 'users/00000000-0000-0000-0000-000000000000/image/x.jpg',
+        fileKey: 'users/usr_00000000/scratch/fil_00000000.jpg',
         sizeBytes: 1,
         contentType: 'image/jpeg',
       }),
@@ -114,10 +115,11 @@ describe('/files/*', () => {
     const presign = await app.request('/files/presign', {
       method: 'POST',
       headers: headers(tok),
-      body: JSON.stringify({ kind: 'document', contentType: 'application/pdf', sizeBytes: 1024 }),
+      body: JSON.stringify({ scope: 'scratch', kind: 'document', contentType: 'application/pdf', sizeBytes: 1024 }),
     });
     const { fileKey } = (await presign.json()) as { fileKey: string };
     const body = JSON.stringify({
+      scope: 'scratch',
       kind: 'document',
       fileKey,
       sizeBytes: 1024,

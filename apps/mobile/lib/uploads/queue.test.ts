@@ -32,6 +32,7 @@ function fakeFile(id: string): FileRecord {
     ownerId: 'usr_test',
     kind: 'voice',
     fileKey: `voice/${id}.m4a`,
+    fileId: 'fil-test1234',
     sizeBytes: 1024,
     contentType: 'audio/m4a',
     state: 'ready',
@@ -58,6 +59,7 @@ function makeDeps(opts: {
       return {
         uploadUrl: `https://r2.test/upload/${rec.presignCalls.length}`,
         fileKey: `voice/k${rec.presignCalls.length}`,
+        fileId: 'fil-test1234',
         expiresAt: new Date(Date.now() + 60_000).toISOString(),
       };
     },

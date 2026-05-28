@@ -98,7 +98,7 @@ describe.skipIf(!ENABLED)('/files/* against real MinIO (R2_FIXTURE_MODE=live)', 
       method: 'POST',
       headers: headers(tok),
       body: JSON.stringify({
-        kind: 'image',
+        scope: 'avatar',
         contentType,
         sizeBytes: body.length,
       }),
@@ -109,7 +109,7 @@ describe.skipIf(!ENABLED)('/files/* against real MinIO (R2_FIXTURE_MODE=live)', 
       fileKey: string;
       expiresAt: string;
     };
-    expect(presign.fileKey.startsWith(`users/${alice}/image/`)).toBe(true);
+    expect(presign.fileKey.startsWith(`users/${alice}/avatar/`)).toBe(true);
     expect(presign.fileKey.endsWith('.jpg')).toBe(true);
 
     // Real signed PUT. Headers must match what the URL was signed
@@ -140,7 +140,7 @@ describe.skipIf(!ENABLED)('/files/* against real MinIO (R2_FIXTURE_MODE=live)', 
       method: 'POST',
       headers: headers(tok),
       body: JSON.stringify({
-        kind: 'image',
+        scope: 'avatar',
         contentType: 'image/jpeg',
         sizeBytes: 4,
       }),

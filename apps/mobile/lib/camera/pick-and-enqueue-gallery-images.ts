@@ -28,9 +28,10 @@ export type PickAndEnqueueOutcome =
 
 export interface PickAndEnqueueOptions {
   reportId: string;
+  projectId: string;
   enqueueCameraUris: (
     uris: ReadonlyArray<string>,
-    opts: { reportId: string },
+    opts: { reportId: string; projectId: string },
   ) => Promise<ReadonlyArray<PromiseSettledResult<UploadResult>>>;
 }
 
@@ -56,6 +57,7 @@ export async function pickAndEnqueueGalleryImages(
   if (uris.length === 0) return { kind: 'empty' };
   const results = await options.enqueueCameraUris(uris, {
     reportId: options.reportId,
+    projectId: options.projectId,
   });
   return { kind: 'enqueued', total: uris.length, results };
 }

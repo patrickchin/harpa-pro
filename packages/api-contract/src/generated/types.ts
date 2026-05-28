@@ -3821,6 +3821,22 @@ export interface paths {
                 content: {
                     "application/json": {
                         /** @enum {string} */
+                        scope: "project";
+                        projectId: string;
+                        reportId: string;
+                        /** @enum {string} */
+                        kind: "voice" | "image" | "document" | "pdf";
+                        contentType: string;
+                        sizeBytes: number;
+                    } | {
+                        /** @enum {string} */
+                        scope: "avatar";
+                        contentType: string;
+                        sizeBytes: number;
+                    } | {
+                        /** @enum {string} */
+                        scope: "scratch";
+                        /** @enum {string} */
                         kind: "voice" | "image" | "document" | "pdf";
                         contentType: string;
                         sizeBytes: number;
@@ -3838,6 +3854,7 @@ export interface paths {
                             /** Format: uri */
                             uploadUrl: string;
                             fileKey: string;
+                            fileId: string;
                             expiresAt: string;
                         };
                     };
@@ -3860,6 +3877,22 @@ export interface paths {
                 };
                 /** @description Unauthorized. */
                 401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                                requestId?: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Project / report not found or not a member. */
+                404: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -3902,6 +3935,24 @@ export interface paths {
                 content: {
                     "application/json": {
                         /** @enum {string} */
+                        scope: "project";
+                        projectId: string;
+                        reportId: string;
+                        /** @enum {string} */
+                        kind: "voice" | "image" | "document" | "pdf";
+                        fileKey: string;
+                        sizeBytes: number;
+                        contentType: string;
+                    } | {
+                        /** @enum {string} */
+                        scope: "avatar";
+                        fileKey: string;
+                        sizeBytes: number;
+                        contentType: string;
+                    } | {
+                        /** @enum {string} */
+                        scope: "scratch";
+                        /** @enum {string} */
                         kind: "voice" | "image" | "document" | "pdf";
                         fileKey: string;
                         sizeBytes: number;
@@ -3924,11 +3975,13 @@ export interface paths {
                             fileKey: string;
                             sizeBytes: number;
                             contentType: string;
+                            projectId: string | null;
+                            reportId: string | null;
                             createdAt: string;
                         };
                     };
                 };
-                /** @description Bad request — fileKey must start with users/<callerId>/. */
+                /** @description Bad request — fileKey shape / scope mismatch. */
                 400: {
                     headers: {
                         [name: string]: unknown;
@@ -3946,6 +3999,22 @@ export interface paths {
                 };
                 /** @description Unauthorized. */
                 401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                                requestId?: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Project / report not found or not a member. */
+                404: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -4031,7 +4100,7 @@ export interface paths {
                         };
                     };
                 };
-                /** @description Not found or not owned. */
+                /** @description Not found or not visible. */
                 404: {
                     headers: {
                         [name: string]: unknown;

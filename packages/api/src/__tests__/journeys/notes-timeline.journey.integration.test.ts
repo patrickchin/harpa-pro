@@ -70,16 +70,31 @@ describe('journey: notes timeline', () => {
       body: JSON.stringify({ visitDate: '2026-05-15T08:00:00.000Z' }),
     })).json()) as { id: string };
 
-    // Register 3 image files (presign → register).
+    // Register 3 image files (presign → register) as project-scoped.
     const fileIds: string[] = [];
     for (let i = 0; i < 3; i++) {
       const ps = (await (await app.request('/files/presign', {
         method: 'POST', headers: me.headers,
-        body: JSON.stringify({ kind: 'image', contentType: 'image/jpeg', sizeBytes: 4096 }),
+        body: JSON.stringify({
+          scope: 'project',
+          projectId: project.id,
+          reportId: report.id,
+          kind: 'image',
+          contentType: 'image/jpeg',
+          sizeBytes: 4096,
+        }),
       })).json()) as { fileKey: string };
       const reg = await app.request('/files', {
         method: 'POST', headers: me.headers,
-        body: JSON.stringify({ kind: 'image', fileKey: ps.fileKey, sizeBytes: 4096, contentType: 'image/jpeg' }),
+        body: JSON.stringify({
+          scope: 'project',
+          projectId: project.id,
+          reportId: report.id,
+          kind: 'image',
+          fileKey: ps.fileKey,
+          sizeBytes: 4096,
+          contentType: 'image/jpeg',
+        }),
       });
       expect(reg.status).toBe(201);
       fileIds.push(((await reg.json()) as { id: string }).id);

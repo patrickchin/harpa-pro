@@ -67,6 +67,7 @@ function stubFetch(): void {
         return jsonResponse(200, {
           uploadUrl: 'https://r2.test.invalid/upload/image/k1?sig=test',
           fileKey: 'users/usr_1/image/k1',
+          fileId: 'fil-test1234',
           expiresAt: new Date(Date.now() + 60_000).toISOString(),
         });
       }
@@ -79,6 +80,7 @@ function stubFetch(): void {
           ownerId: 'usr_1',
           kind: 'image',
           fileKey: 'users/usr_1/image/k1',
+          fileId: 'fil-test1234',
           sizeBytes: 1,
           contentType: 'image/jpeg',
           createdAt: new Date().toISOString(),
@@ -230,6 +232,7 @@ describe('usePhotoUploadEntries — batch grouping with attachments[] and fileId
           return jsonResponse(200, {
             uploadUrl: 'https://r2.test.invalid/upload/image/k1?sig=test',
             fileKey: 'users/usr_1/image/k1',
+            fileId: 'fil-test1234',
             expiresAt: new Date(Date.now() + 60_000).toISOString(),
           });
         }
@@ -243,6 +246,7 @@ describe('usePhotoUploadEntries — batch grouping with attachments[] and fileId
             ownerId: 'usr_1',
             kind: 'image',
             fileKey: 'users/usr_1/image/k1',
+            fileId: 'fil-test1234',
             sizeBytes: 1,
             contentType: 'image/jpeg',
             createdAt: new Date().toISOString(),

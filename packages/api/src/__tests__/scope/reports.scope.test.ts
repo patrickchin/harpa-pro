@@ -218,9 +218,11 @@ describe('scope: reports AI/PDF', () => {
     });
     expect(res.status).toBe(200);
     const body = (await res.json()) as { url: string };
-    // Server-built key prefix carries alice's userId — bob's id must NOT
-    // appear, even on alice's own success path.
-    expect(body.url).toContain(encodeURIComponent(`users/${alice}/pdf/`));
+    // PDFs are project-scoped now: key is
+    // projects/<projectSlug>/reports/<reportSlug>/fil_…pdf.
+    // No user id should appear in the path either way.
+    expect(body.url).toContain(encodeURIComponent(`projects/${aliceProjSlug}/reports/`));
+    expect(body.url).toContain('.pdf');
     expect(body.url).not.toContain(bob);
   });
 

@@ -63,6 +63,7 @@ describe('pickAndEnqueueGalleryImages', () => {
     const enqueue = vi.fn();
     const outcome = await pickAndEnqueueGalleryImages({
       reportId: 'rpt_1',
+      projectId: 'prj-test1234',
       enqueueCameraUris: enqueue,
     });
     expect(outcome.kind).toBe('permission-denied');
@@ -78,6 +79,7 @@ describe('pickAndEnqueueGalleryImages', () => {
     const enqueue = vi.fn();
     const outcome = await pickAndEnqueueGalleryImages({
       reportId: 'rpt_1',
+      projectId: 'prj-test1234',
       enqueueCameraUris: enqueue,
     });
     expect(outcome.kind).toBe('cancelled');
@@ -92,6 +94,7 @@ describe('pickAndEnqueueGalleryImages', () => {
     const enqueue = vi.fn();
     const outcome = await pickAndEnqueueGalleryImages({
       reportId: 'rpt_1',
+      projectId: 'prj-test1234',
       enqueueCameraUris: enqueue,
     });
     expect(outcome.kind).toBe('empty');
@@ -106,11 +109,12 @@ describe('pickAndEnqueueGalleryImages', () => {
     const enqueue = vi.fn(async () => settlement);
     const outcome = await pickAndEnqueueGalleryImages({
       reportId: 'rpt_1',
+      projectId: 'prj-test1234',
       enqueueCameraUris: enqueue,
     });
     expect(enqueue).toHaveBeenCalledWith(
       ['file:///tmp/a.jpg', 'file:///tmp/b.jpg'],
-      { reportId: 'rpt_1' },
+      { reportId: 'rpt_1', projectId: 'prj-test1234' },
     );
     expect(outcome).toEqual({
       kind: 'enqueued',

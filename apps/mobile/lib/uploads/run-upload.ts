@@ -11,7 +11,7 @@
  */
 import { File as FsFile } from 'expo-file-system';
 
-import { request } from '@/lib/api/client';
+import { request, type RequestBody } from '@/lib/api/client';
 import type {
   EnqueueInput,
   FileRecord,
@@ -25,6 +25,7 @@ export type { FileRecord, NoteRecord } from './types';
 export interface PresignedUpload {
   uploadUrl: string;
   fileKey: string;
+  fileId: string;
   expiresAt: string;
 }
 
@@ -255,8 +256,11 @@ async function runThumbnailPipeline(
     sizeBytes: thumb.sizeBytes,
     // Strip the nested thumbnail so we never recurse.
     thumbnail: undefined,
-    // Don't carry reportId — only the main pipeline creates the note.
-    reportId: undefined,
+    // Inherit projectId + reportId so the thumb lands under the SAME
+    // project-scope key prefix as its parent image — RLS membership +
+    // visibility match exactly. (Note creation is driven by the main
+    // pipeline's own input.reportId, not this one — the thumb pipeline
+    // only runs presign → PUT → registerFile.)
   };
   checkAborted(signal);
   const presigned = await deps.presign(thumbInput, signal);
@@ -282,12 +286,9 @@ async function defaultPresign(
   input: EnqueueInput,
   signal?: AbortSignal,
 ): Promise<PresignedUpload> {
+  const body = buildPresignBody(input);
   const out = await request('/files/presign', 'post', {
-    body: {
-      kind: input.kind === 'pdf' ? 'pdf' : input.kind,
-      contentType: input.contentType,
-      sizeBytes: input.sizeBytes,
-    },
+    body,
     signal,
   });
   return out;
@@ -378,15 +379,82 @@ async function defaultRegisterFile(
   input: EnqueueInput,
   signal?: AbortSignal,
 ): Promise<FileRecord> {
+  const body = buildRegisterBody(input, presigned.fileKey);
   return request('/files', 'post', {
-    body: {
-      kind: input.kind === 'pdf' ? 'pdf' : input.kind,
-      fileKey: presigned.fileKey,
-      sizeBytes: input.sizeBytes,
-      contentType: input.contentType,
-    },
+    body,
     signal,
   });
+}
+
+/**
+ * Scope inference (mirrors apps/mobile/lib/uploads — see docs/v4/arch-storage.md):
+ *
+ *   1. `projectId` + `reportId` set     → `scope: 'project'`
+ *   2. `uploadScope === 'avatar'`       → `scope: 'avatar'`
+ *   3. else (incl. `uploadScope === 'scratch'` or undefined for
+ *      out-of-report uploads)           → `scope: 'scratch'`
+ *
+ * The server enforces the same rules: avatar forces `kind: 'image'` and
+ * scratch can carry any `kind`. Reports require project membership.
+ */
+type PresignBody = RequestBody<'/files/presign', 'post'>;
+type RegisterBody = RequestBody<'/files', 'post'>;
+
+function buildPresignBody(input: EnqueueInput): PresignBody {
+  const kind = input.kind === 'pdf' ? 'pdf' : input.kind;
+  if (input.projectId && input.reportId) {
+    return {
+      scope: 'project',
+      projectId: input.projectId,
+      reportId: input.reportId,
+      kind,
+      contentType: input.contentType,
+      sizeBytes: input.sizeBytes,
+    } as PresignBody;
+  }
+  if (input.uploadScope === 'avatar') {
+    return {
+      scope: 'avatar',
+      contentType: input.contentType,
+      sizeBytes: input.sizeBytes,
+    } as PresignBody;
+  }
+  return {
+    scope: 'scratch',
+    kind,
+    contentType: input.contentType,
+    sizeBytes: input.sizeBytes,
+  } as PresignBody;
+}
+
+function buildRegisterBody(input: EnqueueInput, fileKey: string): RegisterBody {
+  const kind = input.kind === 'pdf' ? 'pdf' : input.kind;
+  if (input.projectId && input.reportId) {
+    return {
+      scope: 'project',
+      projectId: input.projectId,
+      reportId: input.reportId,
+      kind,
+      fileKey,
+      contentType: input.contentType,
+      sizeBytes: input.sizeBytes,
+    } as RegisterBody;
+  }
+  if (input.uploadScope === 'avatar') {
+    return {
+      scope: 'avatar',
+      fileKey,
+      contentType: input.contentType,
+      sizeBytes: input.sizeBytes,
+    } as RegisterBody;
+  }
+  return {
+    scope: 'scratch',
+    kind,
+    fileKey,
+    contentType: input.contentType,
+    sizeBytes: input.sizeBytes,
+  } as RegisterBody;
 }
 
 async function defaultCreateNote(args: {

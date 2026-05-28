@@ -15,6 +15,22 @@ export function isOptimisticReportId(id: string | undefined | null): boolean {
   return typeof id === 'string' && id.startsWith('rep_opt');
 }
 
+/**
+ * Structural superset of the body returned by the list endpoint. We
+ * only read `meta.title` — every other field is accessed via the
+ * detail query. The intersection with `Record<string, unknown>` lets
+ * the contract's `ReportBody` assign cleanly.
+ */
+type ListReportBody =
+  | (Record<string, unknown> & {
+      meta?:
+        | {
+            title?: string | null;
+          }
+        | null;
+    })
+  | null;
+
 export type ReportListItem = {
   id: string;
   number: number;
@@ -22,17 +38,36 @@ export type ReportListItem = {
   visitDate: string | null;
   createdAt: string;
   updatedAt: string;
+  /**
+   * Optional `body` from the list endpoint. We only need
+   * `body.meta.title` for the title heading — everything else is
+   * read via the detail query. Absent on optimistic-create rows.
+   */
+  body?: ListReportBody;
 };
 
+/**
+ * Title rule (see `docs/v4/design-report-title-consistency.md`):
+ *   title = meta.title?.trim() || `Report #N`
+ *
+ * Applied identically on the list row, the draft header, and the
+ * finalized header so all three surfaces agree.
+ */
 export function getReportTitle(r: ReportListItem): string {
-  const dateIso = r.visitDate ?? r.createdAt;
-  const datePart = formatDate(dateIso);
-  return `Report #${r.number} · ${datePart}`;
+  const metaTitle = r.body?.meta?.title?.trim();
+  return metaTitle && metaTitle.length > 0 ? metaTitle : `Report #${r.number}`;
 }
 
+/**
+ * Small-text meta line shown under the row title:
+ *   #N · {visit date or created date} · {Draft | Finalized {updatedAt}}
+ */
 export function getReportMeta(r: ReportListItem): string {
-  if (r.status === 'draft') return 'Draft · in progress';
-  return `Finalized · ${formatDate(r.updatedAt)}`;
+  const dateIso = r.visitDate ?? r.createdAt;
+  const visit = formatDate(dateIso);
+  const status =
+    r.status === 'draft' ? 'Draft' : `Finalized ${formatDate(r.updatedAt)}`;
+  return `#${r.number} · ${visit} · ${status}`;
 }
 
 export type ReportSection = {
@@ -40,7 +75,12 @@ export type ReportSection = {
   data: ReportListItem[];
 };
 
-/** Section list groups: drafts first, then finalized — both sorted by recency. */
+/**
+ * Section list groups: drafts first, then finalized — both sorted by
+ * creation date (newest first). Mirrors the API's
+ * `ORDER BY created_at DESC, id DESC` so the client doesn't reshuffle
+ * rows on edit. See `packages/api/src/services/reports.ts:listReports`.
+ */
 export function buildReportsSections(
   reports: ReadonlyArray<ReportListItem>,
 ): ReportSection[] {
@@ -49,10 +89,10 @@ export function buildReportsSections(
   for (const r of reports) {
     (r.status === 'draft' ? drafts : finalized).push(r);
   }
-  const byRecent = (a: ReportListItem, b: ReportListItem) =>
-    Date.parse(b.updatedAt) - Date.parse(a.updatedAt);
-  drafts.sort(byRecent);
-  finalized.sort(byRecent);
+  const byCreated = (a: ReportListItem, b: ReportListItem) =>
+    Date.parse(b.createdAt) - Date.parse(a.createdAt);
+  drafts.sort(byCreated);
+  finalized.sort(byCreated);
   const sections: ReportSection[] = [];
   if (drafts.length) sections.push({ title: 'Drafts', data: drafts });
   if (finalized.length) sections.push({ title: 'Finalized', data: finalized });

@@ -9,10 +9,14 @@
  * helper `remapAttachmentKeys` directly, and rely on the full mobile
  * test suite to cover the provider's integration behaviour.
  */
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 
-import { remapAttachmentKeys } from './GenerateReportProvider';
+import {
+  cancelImageAttachmentJobs,
+  remapAttachmentKeys,
+} from './GenerateReportProvider';
 import type { Attachment } from '@/lib/notes/attachments';
+import type { NoteEntry } from '@/lib/notes/note-entry';
 
 function makeAtt(overrides: Partial<Attachment> = {}): Attachment {
   return {
@@ -79,5 +83,70 @@ describe('remapAttachmentKeys', () => {
     expect(result[0]!.key).toBe('nf_a');
     expect(result[1]!.key).toBe('job_b');
     expect(result[2]!.key).toBe('nf_c');
+  });
+});
+
+describe('cancelImageAttachmentJobs', () => {
+  it('cancels every upload job attached to an image note', () => {
+    const cancel = vi.fn();
+    const note: NoteEntry = {
+      id: 'not_1',
+      text: '',
+      addedAt: 0,
+      source: 'image',
+      attachments: [
+        makeAtt({ jobId: 'upl_a' }),
+        makeAtt({ jobId: undefined }),
+        makeAtt({ jobId: 'upl_b' }),
+      ],
+    };
+
+    cancelImageAttachmentJobs(note, cancel);
+
+    expect(cancel).toHaveBeenCalledTimes(2);
+    expect(cancel).toHaveBeenNthCalledWith(1, 'upl_a');
+    expect(cancel).toHaveBeenNthCalledWith(2, 'upl_b');
+  });
+
+  it('ignores non-image notes', () => {
+    const cancel = vi.fn();
+    const note: NoteEntry = {
+      id: 'not_1',
+      text: 'hello',
+      addedAt: 0,
+      source: 'text',
+      attachments: [makeAtt({ jobId: 'upl_a' })],
+    };
+
+    cancelImageAttachmentJobs(note, cancel);
+
+    expect(cancel).not.toHaveBeenCalled();
+  });
+
+  it('uses the fileId map for saved photo attachments', () => {
+    const cancel = vi.fn();
+    const note: NoteEntry = {
+      id: 'not_1',
+      text: '',
+      addedAt: 0,
+      source: 'image',
+      attachments: [
+        makeAtt({ fileId: 'fil_a' }),
+        makeAtt({ thumbnailFileId: 'fil_thumb_b' }),
+      ],
+    };
+
+    cancelImageAttachmentJobs(
+      note,
+      cancel,
+      new Map([
+        ['fil_a', 'upl_a'],
+        ['fil_thumb_b', 'upl_b'],
+      ]),
+    );
+
+    expect(cancel).toHaveBeenCalledTimes(2);
+    expect(cancel).toHaveBeenNthCalledWith(1, 'upl_a');
+    expect(cancel).toHaveBeenNthCalledWith(2, 'upl_b');
   });
 });

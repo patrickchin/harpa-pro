@@ -46,6 +46,10 @@
 - [ ] Test crashes in staging confirm capture.
 - [ ] Commit: `feat(api,mobile): Sentry integration with request id`.
 
+Code wiring note (2026-05-28): API + mobile implementation is ready
+behind unset DSNs. The remaining P4.1 acceptance step is CLI secret
+provisioning plus staging test-crash confirmation.
+
 ### P4.2 Performance pass
 - [ ] Mobile: `FlashList` audit (currently zero usage), `React.memo`
       audit, `useCallback`/`useMemo` on hot paths (per Pitfall 4 v3
@@ -118,36 +122,71 @@ journey that exercises every feature currently live on `dev`:
 projects CRUD, members invite/role-change/remove + visibility checks,
 reports CRUD, text notes (add + delete), generate → finalize →
 unfinalize, and a new **Report Debug** surface exposing prompt +
-notes + LLM response. Runs in **local-fixture mode only** against a
-fresh `docker compose` stack (no API auth bypass, no test backdoors —
-uses the existing `TWILIO_LIVE=0` fake-OTP path that already accepts
-`000000` for any phone in dev). Dev-deployment regression coverage is
-descoped (see design doc §6.2). Full design + carve-outs + testID
-inventory + module breakdown:
+notes + LLM response. Runs first in **local-fixture mode** against a
+fresh `docker compose` stack using the existing `TWILIO_LIVE=0`
+fake-OTP path, then against the **dev deployment** using the gated
+test-account password bypass and non-destructive per-run cleanup.
+Full design + carve-outs + testID inventory + module breakdown:
 [`design-maestro-full-regression.md`](design-maestro-full-regression.md).
 
-Voice notes (on branch `feat/v4-voice`) and camera/photo
-attachments are explicitly **carved out** for now — module slots 09
-and 10a/10b are reserved with merge-triggered pickup pointers in
-the design doc §7. They re-enter the journey in the same PR as
-their feature merge.
+Voice notes and camera/photo attachments used to be future pickup
+slots. Module 09 now covers the voice lifecycle, and module 10a now
+covers the landed draft-side photo upload redesign.
+
+**2026-05-28 goal reset.** Photo upload is the active E2E target after
+the `5173049` redesign landed on `dev`. Module 10a covers attachment
+selection → camera capture → two-photo batch upload → per-tile UI →
+generated Report-tab photo strip → preview modal → photo-note delete
+→ draft cleanup.
+Module 10b now covers the remaining photo path: a photo-bearing report
+is finalized, the saved-report `ReportPhotos` block renders, the image
+preview opens by fileId, and the finalized report is deleted before
+the journey continues. Focused local Android passed 01/02/10b, the
+full local regression passed with 10b included, and the clean full
+dev-deployment regression passed against `harpa-pro-api-dev`
+(`gitCommit=9db5b51`, project `DevE2E-20260528T204311`, deleted
+in-flow).
+
+**2026-05-28 local result.** Focused Android run passed
+`01-auth.yaml`, `02-projects-crud.yaml`, and expanded
+`10a-photo-notes-draft.yaml` against the local docker-compose stack.
+The full local regression journey then passed with modules 01, 01b,
+02, 03, 04, 05, 06, 07, 08, 09, 10a, 11, 12, 13, 14, 15, 16, and
+final sign-out. A focused follow-up run also passed 01/02/11/12/13.
+Local Android setup needs `adb reverse tcp:9000 tcp:9000` as well as
+Metro/API reverses because photo signed upload URLs target local
+MinIO.
+
+**2026-05-28 dev result.** Dev deployment coverage now uses a local
+CLI auth broker plus API/R2 proxies so the device can exercise the
+real dev Fly/Neon/R2 stack without exposing the shared test-account
+password to Maestro logs. After replacing module 10a's final
+local-only project-name assertion with project-home recovery that also
+understands the dynamic dev project name, a clean full dev run of
+`regression-journey-dev.yaml` passed modules 01, 01b, 02, 03, 04, 05,
+06, 07, 08, 09, 10a, 11, 12, 13, 14, 15, 16, and final sign-out.
+R2 PUT/GET traffic for voice and photos was observed through
+`scripts/dev-e2e-r2-proxy.cjs`.
 
 **Shipped:**
 
-- [x] `GET /reports/{number}/debug` route + scope tests + fixture-replay test (text notes only — voice fields added with `feat/v4-voice` merge).
+- [x] `GET /reports/{number}/debug` route + scope tests + fixture-replay test (text notes only; voice fields are tracked after module 09 is stable).
 - [x] `screens/report-debug.tsx` + route + dev-section actions-menu entry.
 - [x] testID audit per the design doc §3.3 inventory.
 - [x] Project row selectors in modules 04–06, 13 use the post-edit name (`text: "Regression Test Project \(Edited\)"`); an earlier `project-slug-chip` approach was dropped because Android a11y filters hidden elements.
 - [x] `.maestro/helpers/` + `.maestro/modules/01, 01b, 02..08, 11..13` flows. Alice and Bob are signed up via the normal sign-up UI inside the journey; no API seed CLI needed.
 - [x] `.maestro/regression-journey.yaml` top-level runner (lives at repo root `.maestro/`, not under `apps/mobile/`).
+- [x] Module 09 (`09-voice-notes.yaml`) re-enabled and expanded for fixture recording, upload, transcript, summary, playback entry point, and delete.
+- [x] Module 10a (`10a-photo-notes-draft.yaml`) re-enabled and expanded for the photo upload redesign lifecycle.
+- [x] Module 10b (`10b-photo-notes-finalized.yaml`) added for finalized saved-report photo strip + preview coverage.
 
 **Remaining:**
 
 - [ ] `scripts/check-maestro-testids.sh` CI grep gate.
 - [ ] `.github/workflows/e2e-maestro-testid-gate.yml` runs the testID gate on every PR.
 - [ ] CI workflow that actually runs the journey (currently developer-driven on the real device — no CI matrix yet for the Android emulator leg).
-- [ ] Module slot 09 (`09-voice-notes.yaml`) — blocked on `feat/v4-voice` merge to `dev`. Android has no fixture recorder stub yet; only iOS-sim does (see design doc §8).
-- [ ] Module slots 10a / 10b (photo notes draft + finalized) — blocked on camera Done-handoff + `ReportPhotos` signed-URL wiring landing on `dev`.
-- [ ] Uncovered routes still outside the journey (see design doc §8): `apps/mobile/app/(app)/account.tsx`, `apps/mobile/app/(app)/usage.tsx`, profile edits on `apps/mobile/app/(app)/profile.tsx`, voice-note flows, image uploads.
-- [ ] Future-pickup commits F1–F4 land with `feat/v4-voice` + camera/photo work — tracked in design doc §7.
+- [x] Dev-deployment E2E pass after local green: same coverage against `harpa-pro-api-dev` using the `POST /auth/password/verify` test-account bypass, dev Neon/R2, and non-destructive per-run cleanup.
+- [ ] `mo journey` / Maestro target support for `local` vs `dev`, with strict ordering so dev runs only after local passes. This should provide the password-login helper/setup hook for dev.
+- [ ] Remaining uncovered surfaces outside the passing journey: voice-specific debug fields, avatar upload, and deep-link/push flows.
+- [ ] Remaining future-pickup modules (12a voice debug fields, avatar upload) land alongside their feature work — tracked in design doc §7.
 - [ ] Commit train per design doc §4 (initial bring-up commits landed; outstanding ones folded into the bullets above).

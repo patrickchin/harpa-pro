@@ -1,18 +1,17 @@
 /**
- * Adapter: API `reportBody` (flat, persisted) → UI `GeneratedSiteReport`
+ * Adapter: API `reportBody` (persisted) → UI `GeneratedSiteReport`
  * (wrapped, consumed by ReportView / CompletenessCard / EditTab).
  *
- * The API stores the AI-generated report in a flat shape defined by
+ * The API stores the AI-generated report in a shape defined by
  * `packages/api-contract/src/schemas/reports.ts#reportBody`; the
  * mobile UI was built against `@harpa/report-core`'s
- * `GeneratedSiteReport` which uses a different field set and nests
- * everything under `report.*`. Until the two schemas converge (P4),
- * the mobile layer adapts here.
+ * `GeneratedSiteReport` which nests everything under `report.*`.
+ * The mobile layer adapts here.
  *
  * Field map (unmapped fields fall back to safe defaults so the UI
  * renders an empty-state row rather than crashing):
  *
- *   - visitDate          → report.meta.visitDate
+ *   - meta.*             → report.meta.* (body.meta is the source of truth)
  *   - weather.*          → report.weather.* (renamed; numbers stringified)
  *   - workers[]          → report.workers.roles[] + aggregate totals
  *   - materials[]        → report.materials[]  (quantity stringified)
@@ -20,13 +19,31 @@
  *   - summarySections[]  → report.sections[]   ({title, body} → {title, content})
  *   - nextSteps          → report.nextSteps
  *
- * `meta.title`, `meta.summary`, `meta.reportType` have no API
- * counterpart and are seeded as `''` / `'site_visit'`.
+ * Legacy bodies that pre-date the meta envelope (missing `body.meta`)
+ * are shimmed: a synthetic meta is constructed with visitDate lifted
+ * from the old top-level `visitDate` field, and all other fields null.
  */
 import { reports } from '@harpa/api-contract';
 import type { GeneratedSiteReport } from '@harpa/report-core';
 
 type ReportBody = reports.ReportBody;
+
+// Legacy rows stored visitDate at the top level before the meta envelope landed.
+type LegacyBodyShim = ReportBody & { visitDate?: string | null };
+
+function normaliseLegacy(body: ReportBody | LegacyBodyShim): ReportBody {
+  if ((body as ReportBody).meta) return body as ReportBody;
+  const legacy = body as LegacyBodyShim;
+  return {
+    ...legacy,
+    meta: {
+      title: null,
+      summary: null,
+      visitDate: legacy.visitDate ?? null,
+      tags: [],
+    },
+  };
+}
 
 function num(n: number | null, suffix = ''): string | null {
   return n == null ? null : `${n}${suffix}`;
@@ -64,8 +81,9 @@ function normaliseSeverity(s: string): 'low' | 'medium' | 'high' {
 
 export function reportBodyToGeneratedReport(
   body: ReportBody,
-  meta?: { title?: string | null; summary?: string | null; reportType?: string | null },
 ): GeneratedSiteReport {
+  body = normaliseLegacy(body);
+  const m = body.meta;
   const totalWorkers = body.workers.reduce((sum, w) => sum + w.count, 0);
   const totalHours = body.workers.reduce(
     (sum, w) => sum + (w.hours ?? 0),
@@ -75,10 +93,10 @@ export function reportBodyToGeneratedReport(
   return {
     report: {
       meta: {
-        title: meta?.title ?? '',
-        reportType: meta?.reportType ?? 'site_visit',
-        summary: meta?.summary ?? '',
-        visitDate: body.visitDate,
+        title: m.title ?? '',
+        summary: m.summary ?? '',
+        visitDate: m.visitDate,
+        tags: m.tags ?? [],
       },
       weather: body.weather
         ? {
@@ -130,12 +148,11 @@ export function reportBodyToGeneratedReport(
  * Inverse adapter: UI `GeneratedSiteReport` → API `reportBody`.
  *
  * Used by the Edit-tab autosave to PATCH manual edits back to the
- * server. Lossy by design — the UI has fields the API doesn't store
- * (meta.title/summary/reportType, workers aggregate totals) and the
- * API has numeric fields the UI renders as display strings
- * (temperatureC, windKph, materials.quantity). We parse leading
- * numbers out of the display strings; if a user typed prose the
- * field round-trips as null.
+ * server. Lossy by design — the UI has aggregate-only fields the API
+ * doesn't store (workers totals) and the API has numeric fields the UI
+ * renders as display strings (temperatureC, windKph, materials.quantity).
+ * We parse leading numbers out of the display strings; if a user typed
+ * prose the field round-trips as null.
  *
  * `issues.category` and `issues.status` are dropped (no API field
  * today); category="other" + status="open" survive only on the
@@ -144,7 +161,12 @@ export function reportBodyToGeneratedReport(
 export function generatedReportToReportBody(g: GeneratedSiteReport): ReportBody {
   const r = g.report;
   return {
-    visitDate: r.meta.visitDate ?? null,
+    meta: {
+      title: r.meta.title || null,
+      summary: r.meta.summary || null,
+      visitDate: r.meta.visitDate ?? null,
+      tags: r.meta.tags ?? [],
+    },
     weather: r.weather
       ? {
           condition: r.weather.conditions ?? null,

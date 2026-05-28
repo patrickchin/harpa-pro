@@ -249,6 +249,14 @@ vi.mock('lucide-react-native', () => {
   });
 });
 
+vi.mock('@sentry/react-native', () => ({
+  init: vi.fn(),
+  addBreadcrumb: vi.fn(),
+  captureException: vi.fn(),
+  setTag: vi.fn(),
+  setUser: vi.fn(),
+}));
+
 // `expo-router` hooks (useRouter / usePathname / Redirect / Stack).
 // Tests that need different routing behaviour override per-test.
 const routerStub = {

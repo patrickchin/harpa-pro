@@ -35,7 +35,8 @@ appId: ${MAESTRO_APP_ID}
 - tapOn:
     id: "input-otp"
 - inputText: "000000"
-- hideKeyboard
+# Android numeric keyboards can ignore Maestro's `hideKeyboard`; the
+# verify button is visible above the IME, so tap it directly.
 - tapOn:
     id: "btn-verify-code"
 - extendedWaitUntil:

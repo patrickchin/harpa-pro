@@ -45,4 +45,4 @@ jobs:
           EXPO_PUBLIC_API_URL: https://harpa-pro-api-dev.fly.dev
           EXPO_PUBLIC_APP_VARIANT: preview
           EXPO_PUBLIC_USE_FIXTURES: "false"
-        run: eas update --channel preview --message "dev deploy $(git rev-parse --short HEAD)" --non-interactive
+        run: eas update --channel preview --environment preview --message "dev deploy $(git rev-parse --short HEAD)" --non-interactive

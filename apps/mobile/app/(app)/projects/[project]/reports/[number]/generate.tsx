@@ -33,7 +33,9 @@ import {
   useRegenerateReportMutation,
   useFinalizeReportMutation,
   useDeleteReportMutation,
+  useReportDebugQuery,
 } from '@/lib/api/hooks';
+import { useDeveloperFlags } from '@/lib/config/dev-flags';
 import {
   useOptimisticCreateNote,
   useOptimisticDeleteNote,
@@ -160,7 +162,6 @@ export default function GenerateReportRoute() {
         status?: 'draft' | 'finalized';
         notesSinceLastGeneration?: number;
         needsRegeneration?: boolean;
-        meta?: { title?: string | null };
       }
     | undefined;
   const reportId = reportRow?.id ?? null;
@@ -261,7 +262,7 @@ export default function GenerateReportRoute() {
   );
 
   const serverBody: GeneratedSiteReport | null = reportRow?.body
-    ? reportBodyToGeneratedReport(reportRow.body, reportRow.meta ?? undefined)
+    ? reportBodyToGeneratedReport(reportRow.body)
     : null;
 
   const fallbackReport: GeneratedSiteReport | null = env.EXPO_PUBLIC_USE_FIXTURES
@@ -297,6 +298,50 @@ export default function GenerateReportRoute() {
   const [lastGeneration, setLastGeneration] = useState<
     import('@/features/generate/GenerateReportProvider').GenerationDebug | null
   >(null);
+
+  // Hydrate `lastGeneration` from the persisted `last_generation` DB
+  // column when the Debug tab is enabled, so opening a previously
+  // generated report (cold load, no in-session generate) still shows
+  // the system prompt, user prompt, and raw response. The persisted
+  // payload is overridden by the in-memory state above as soon as the
+  // user (re)generates in this session.
+  const { showGenerateDebugTab } = useDeveloperFlags();
+  const debugQuery = useReportDebugQuery(
+    {
+      params: {
+        project: slug,
+        number: reportNumber ?? 0,
+      },
+    },
+    {
+      enabled:
+        showGenerateDebugTab && slug.length > 0 && reportNumber !== null,
+    },
+  );
+  const persistedLastGeneration = useMemo<
+    import('@/features/generate/GenerateReportProvider').GenerationDebug | null
+  >(() => {
+    const persisted = (debugQuery.data as
+      | {
+          lastGeneration?: {
+            systemPrompt?: string;
+            userPrompt?: string;
+            response?: string;
+            model?: string;
+            vendor?: string;
+          } | null;
+        }
+      | undefined)?.lastGeneration;
+    if (!persisted) return null;
+    return {
+      systemPrompt: persisted.systemPrompt ?? '',
+      userPrompt: persisted.userPrompt ?? '',
+      rawText: persisted.response ?? '',
+      model: persisted.model ?? '',
+      vendor: persisted.vendor ?? '',
+    };
+  }, [debugQuery.data]);
+  const effectiveLastGeneration = lastGeneration ?? persistedLastGeneration;
 
   const generateMutation = useGenerateReportMutation();
   const regenerateMutation = useRegenerateReportMutation();
@@ -522,7 +567,7 @@ export default function GenerateReportRoute() {
   const canWrite =
     projectQuery.data?.myRole === 'owner' || projectQuery.data?.myRole === 'editor';
 
-  const reportTitleField = reportRow?.meta?.title;
+  const reportTitleField = reportRow?.body?.meta?.title;
 
   // Combine autosave + generation errors into the existing surface so
   // both bubble through `generationError`. Generation errors trump
@@ -554,7 +599,7 @@ export default function GenerateReportRoute() {
         onSetReport={handleEditReport}
         isGeneratingReport={isGenerating}
         generationError={combinedError}
-        lastGeneration={lastGeneration}
+        lastGeneration={effectiveLastGeneration}
         onRegenerate={handleRegenerate}
         notesSinceLastGeneration={reportRow?.notesSinceLastGeneration ?? 0}
         needsRegeneration={reportRow?.needsRegeneration ?? false}

@@ -23,6 +23,7 @@ const IS_PROD = VARIANT === 'production';
 
 const NAME = IS_PROD ? 'Harpa Pro' : 'Harpa Pro Dev';
 const BUNDLE_ID = IS_PROD ? 'com.harpa.pro' : 'com.harpa.pro.dev';
+const SENTRY_AUTH_TOKEN = process.env.SENTRY_AUTH_TOKEN;
 
 const GIT_COMMIT = (() => {
   try {
@@ -94,6 +95,15 @@ const config: ExpoConfig = {
     ],
     'expo-image',
     'expo-secure-store',
+    [
+      '@sentry/react-native/expo',
+      {
+        organization: process.env.SENTRY_ORG,
+        project: process.env.SENTRY_PROJECT,
+        url: process.env.SENTRY_URL,
+        disableAutoUpload: !SENTRY_AUTH_TOKEN,
+      },
+    ],
     './plugins/with-fix-build-warnings',
   ],
   experiments: { typedRoutes: true },

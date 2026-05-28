@@ -27,7 +27,7 @@ outputs:
     description: True if packages/api migrations or schema changed.
     value: ${{ steps.filter.outputs.api-migrations }}
   mobile:
-    description: True if apps/mobile changed.
+    description: True if apps/mobile or Maestro E2E flows changed.
     value: ${{ steps.filter.outputs.mobile }}
   marketing:
     description: True if apps/marketing changed.
@@ -74,6 +74,7 @@ runs:
             - 'packages/api/migrations/**'
             - 'packages/api/src/db/**'
           mobile:
+            - '.maestro/**'
             - 'apps/mobile/**'
             - 'packages/api-contract/**'
             - 'packages/ui-voice/**'

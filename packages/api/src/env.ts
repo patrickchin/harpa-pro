@@ -4,6 +4,11 @@
  */
 import { z } from 'zod';
 
+const optionalUrl = z.preprocess(
+  (v) => (v === '' ? undefined : v),
+  z.string().url().optional(),
+);
+
 const Env = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PORT: z.coerce.number().int().positive().default(8787),
@@ -57,6 +62,13 @@ const Env = z.object({
    */
   R2_PRESIGN_TTL_SEC: z.coerce.number().int().positive().default(300),
   REQUEST_LOG: z.enum(['true', 'false']).default('false'),
+  /**
+   * Sentry crash reporting. DSN is optional so local/test boots stay
+   * telemetry-free; prod/dev deploys set it through Doppler/Fly.
+   */
+  SENTRY_DSN: optionalUrl,
+  SENTRY_ENVIRONMENT: z.string().min(1).optional(),
+  SENTRY_TRACES_SAMPLE_RATE: z.coerce.number().min(0).max(1).default(0.1),
   /**
    * Rate-limit backend selector. `memory` = per-process (dev/test default),
    * `postgres` = cross-machine via `app.rate_limit_buckets` (prod).

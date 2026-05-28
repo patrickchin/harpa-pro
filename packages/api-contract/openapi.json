@@ -3619,9 +3619,35 @@
                             "type": "object",
                             "nullable": true,
                             "properties": {
-                              "visitDate": {
-                                "type": "string",
-                                "nullable": true
+                              "meta": {
+                                "type": "object",
+                                "properties": {
+                                  "title": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "summary": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "visitDate": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "tags": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "string"
+                                    },
+                                    "maxItems": 7,
+                                    "default": []
+                                  }
+                                },
+                                "required": [
+                                  "title",
+                                  "summary",
+                                  "visitDate"
+                                ]
                               },
                               "weather": {
                                 "type": "object",
@@ -3779,7 +3805,7 @@
                               }
                             },
                             "required": [
-                              "visitDate",
+                              "meta",
                               "weather",
                               "workers",
                               "materials",
@@ -3995,9 +4021,35 @@
                       "type": "object",
                       "nullable": true,
                       "properties": {
-                        "visitDate": {
-                          "type": "string",
-                          "nullable": true
+                        "meta": {
+                          "type": "object",
+                          "properties": {
+                            "title": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "summary": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "visitDate": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "tags": {
+                              "type": "array",
+                              "items": {
+                                "type": "string"
+                              },
+                              "maxItems": 7,
+                              "default": []
+                            }
+                          },
+                          "required": [
+                            "title",
+                            "summary",
+                            "visitDate"
+                          ]
                         },
                         "weather": {
                           "type": "object",
@@ -4155,7 +4207,7 @@
                         }
                       },
                       "required": [
-                        "visitDate",
+                        "meta",
                         "weather",
                         "workers",
                         "materials",
@@ -4392,9 +4444,35 @@
                       "type": "object",
                       "nullable": true,
                       "properties": {
-                        "visitDate": {
-                          "type": "string",
-                          "nullable": true
+                        "meta": {
+                          "type": "object",
+                          "properties": {
+                            "title": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "summary": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "visitDate": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "tags": {
+                              "type": "array",
+                              "items": {
+                                "type": "string"
+                              },
+                              "maxItems": 7,
+                              "default": []
+                            }
+                          },
+                          "required": [
+                            "title",
+                            "summary",
+                            "visitDate"
+                          ]
                         },
                         "weather": {
                           "type": "object",
@@ -4552,7 +4630,7 @@
                         }
                       },
                       "required": [
-                        "visitDate",
+                        "meta",
                         "weather",
                         "workers",
                         "materials",
@@ -4729,9 +4807,35 @@
                     "type": "object",
                     "nullable": true,
                     "properties": {
-                      "visitDate": {
-                        "type": "string",
-                        "nullable": true
+                      "meta": {
+                        "type": "object",
+                        "properties": {
+                          "title": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "summary": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "visitDate": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "tags": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            },
+                            "maxItems": 7,
+                            "default": []
+                          }
+                        },
+                        "required": [
+                          "title",
+                          "summary",
+                          "visitDate"
+                        ]
                       },
                       "weather": {
                         "type": "object",
@@ -4889,7 +4993,7 @@
                       }
                     },
                     "required": [
-                      "visitDate",
+                      "meta",
                       "weather",
                       "workers",
                       "materials",
@@ -4939,9 +5043,35 @@
                       "type": "object",
                       "nullable": true,
                       "properties": {
-                        "visitDate": {
-                          "type": "string",
-                          "nullable": true
+                        "meta": {
+                          "type": "object",
+                          "properties": {
+                            "title": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "summary": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "visitDate": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "tags": {
+                              "type": "array",
+                              "items": {
+                                "type": "string"
+                              },
+                              "maxItems": 7,
+                              "default": []
+                            }
+                          },
+                          "required": [
+                            "title",
+                            "summary",
+                            "visitDate"
+                          ]
                         },
                         "weather": {
                           "type": "object",
@@ -5099,7 +5229,7 @@
                         }
                       },
                       "required": [
-                        "visitDate",
+                        "meta",
                         "weather",
                         "workers",
                         "materials",
@@ -5747,9 +5877,35 @@
                           "type": "object",
                           "nullable": true,
                           "properties": {
-                            "visitDate": {
-                              "type": "string",
-                              "nullable": true
+                            "meta": {
+                              "type": "object",
+                              "properties": {
+                                "title": {
+                                  "type": "string",
+                                  "nullable": true
+                                },
+                                "summary": {
+                                  "type": "string",
+                                  "nullable": true
+                                },
+                                "visitDate": {
+                                  "type": "string",
+                                  "nullable": true
+                                },
+                                "tags": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string"
+                                  },
+                                  "maxItems": 7,
+                                  "default": []
+                                }
+                              },
+                              "required": [
+                                "title",
+                                "summary",
+                                "visitDate"
+                              ]
                             },
                             "weather": {
                               "type": "object",
@@ -5907,7 +6063,7 @@
                             }
                           },
                           "required": [
-                            "visitDate",
+                            "meta",
                             "weather",
                             "workers",
                             "materials",
@@ -6261,9 +6417,35 @@
                           "type": "object",
                           "nullable": true,
                           "properties": {
-                            "visitDate": {
-                              "type": "string",
-                              "nullable": true
+                            "meta": {
+                              "type": "object",
+                              "properties": {
+                                "title": {
+                                  "type": "string",
+                                  "nullable": true
+                                },
+                                "summary": {
+                                  "type": "string",
+                                  "nullable": true
+                                },
+                                "visitDate": {
+                                  "type": "string",
+                                  "nullable": true
+                                },
+                                "tags": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string"
+                                  },
+                                  "maxItems": 7,
+                                  "default": []
+                                }
+                              },
+                              "required": [
+                                "title",
+                                "summary",
+                                "visitDate"
+                              ]
                             },
                             "weather": {
                               "type": "object",
@@ -6421,7 +6603,7 @@
                             }
                           },
                           "required": [
-                            "visitDate",
+                            "meta",
                             "weather",
                             "workers",
                             "materials",
@@ -6758,9 +6940,35 @@
                           "type": "object",
                           "nullable": true,
                           "properties": {
-                            "visitDate": {
-                              "type": "string",
-                              "nullable": true
+                            "meta": {
+                              "type": "object",
+                              "properties": {
+                                "title": {
+                                  "type": "string",
+                                  "nullable": true
+                                },
+                                "summary": {
+                                  "type": "string",
+                                  "nullable": true
+                                },
+                                "visitDate": {
+                                  "type": "string",
+                                  "nullable": true
+                                },
+                                "tags": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string"
+                                  },
+                                  "maxItems": 7,
+                                  "default": []
+                                }
+                              },
+                              "required": [
+                                "title",
+                                "summary",
+                                "visitDate"
+                              ]
                             },
                             "weather": {
                               "type": "object",
@@ -6918,7 +7126,7 @@
                             }
                           },
                           "required": [
-                            "visitDate",
+                            "meta",
                             "weather",
                             "workers",
                             "materials",
@@ -7163,9 +7371,35 @@
                           "type": "object",
                           "nullable": true,
                           "properties": {
-                            "visitDate": {
-                              "type": "string",
-                              "nullable": true
+                            "meta": {
+                              "type": "object",
+                              "properties": {
+                                "title": {
+                                  "type": "string",
+                                  "nullable": true
+                                },
+                                "summary": {
+                                  "type": "string",
+                                  "nullable": true
+                                },
+                                "visitDate": {
+                                  "type": "string",
+                                  "nullable": true
+                                },
+                                "tags": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string"
+                                  },
+                                  "maxItems": 7,
+                                  "default": []
+                                }
+                              },
+                              "required": [
+                                "title",
+                                "summary",
+                                "visitDate"
+                              ]
                             },
                             "weather": {
                               "type": "object",
@@ -7323,7 +7557,7 @@
                             }
                           },
                           "required": [
-                            "visitDate",
+                            "meta",
                             "weather",
                             "workers",
                             "materials",

@@ -1,6 +1,6 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`lib/telemetry/SentryStub > renders children without crashing 1`] = `
+exports[`lib/telemetry/Sentry > renders children without requiring a configured DSN 1`] = `
 <rn-Text>
   Child
 </rn-Text>

@@ -1,0 +1,40 @@
+appId: ${MAESTRO_APP_ID}
+name: "Regression journey - dev deployment"
+tags:
+  - regression
+  - dev
+---
+# Full regression journey against harpa-pro-api-dev.
+#
+# Pre-condition: Metro is running with:
+#   EXPO_PUBLIC_API_URL=http://127.0.0.1:8788
+#   EXPO_PUBLIC_USE_FIXTURES=true
+#   --host lan --port 8082
+# plus adb reverse for Metro (8082), the dev API proxy (8788), the auth
+# broker (8790), and the R2 proxy (8791).
+#
+# Dev auth uses the local CLI auth broker, which keeps the shared
+# password out of Maestro logs. This journey creates a unique project and
+# deletes it before profile/account checks so the shared dev DB is not
+# truncated.
+
+- runFlow: modules/01-dev-auth-password.yaml
+- runFlow: modules/01b-dev-password-bob.yaml
+- runFlow: modules/02-dev-projects-crud.yaml
+- runFlow: modules/03-dev-members-invite.yaml
+- runFlow: modules/04-dev-members-permissions.yaml
+- runFlow: modules/05-dev-members-viewer.yaml
+- runFlow: modules/06-dev-members-remove.yaml
+- runFlow: modules/07-reports-crud.yaml
+- runFlow: modules/08-text-notes.yaml
+- runFlow: modules/09-voice-notes.yaml
+- runFlow: modules/10a-photo-notes-draft.yaml
+- runFlow: modules/10b-photo-notes-finalized.yaml
+- runFlow: modules/11-generate-finalize.yaml
+- runFlow: modules/12-report-debug.yaml
+- runFlow: modules/13-projects-delete.yaml
+
+- runFlow: modules/14-account.yaml
+- runFlow: modules/15-usage.yaml
+- runFlow: modules/16-profile.yaml
+- runFlow: helpers/sign-out.yaml

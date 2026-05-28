@@ -1,0 +1,14 @@
+appId: ${MAESTRO_APP_ID}
+---
+# open-project-dev.yaml - open this dev run's project by unique name.
+#
+# Required env:
+#   PROJECT_NAME_EDITED
+- assertVisible:
+    id: "btn-new-project"
+- tapOn:
+    text: "${PROJECT_NAME_EDITED}"
+- extendedWaitUntil:
+    visible:
+      id: "btn-project-edit"
+    timeout: 10000

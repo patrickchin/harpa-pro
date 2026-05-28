@@ -35,9 +35,9 @@ function makeReport(siteTitle: string): GeneratedSiteReport {
     report: {
       meta: {
         title: siteTitle,
-        reportType: 'site_visit',
         summary: 'A summary.',
         visitDate: '2025-01-01',
+        tags: [],
       },
       weather: null,
       workers: null,
@@ -134,7 +134,7 @@ describe('useReportBodyAutosave', () => {
     expect(mutateSpy).toHaveBeenCalledTimes(1);
     const call = mutateSpy.mock.calls[0]![0]!;
     expect(call.params).toEqual({ project: 'proj', number: 1 });
-    expect(call.body.body.visitDate).toBe('2025-01-01');
+    expect(call.body.body.meta.visitDate).toBe('2025-01-01');
   });
 
   it('skips PATCH while paused, even when dirty', () => {

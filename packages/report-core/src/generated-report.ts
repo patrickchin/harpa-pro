@@ -102,9 +102,9 @@ const GeneratedSiteReportSchema = z.object({
   report: z.object({
     meta: z.object({
       title: trimmedString,
-      reportType: trimmedString.transform((s) => s || 'site_visit'),
       summary: trimmedString,
       visitDate: nullableTrimmed,
+      tags: z.array(z.string()).optional().default([]).catch([]),
     }),
     weather: WeatherSchema.nullable().optional().default(null).catch(null),
     workers: WorkersSchema.nullable().optional().default(null).catch(null),

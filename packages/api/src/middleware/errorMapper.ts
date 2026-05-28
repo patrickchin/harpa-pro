@@ -1,15 +1,29 @@
 import type { ErrorHandler } from 'hono';
 import { HTTPException } from 'hono/http-exception';
+import { routePath } from 'hono/route';
 import { ZodError } from 'zod';
 import type { AppEnv } from '../app.js';
 import { AiProviderError } from '../services/ai.js';
 import { UsageLimitExceededError } from '../services/usage-limits.js';
+import {
+  captureApiException,
+  type ApiExceptionContext,
+} from '../telemetry/sentry.js';
+
+export type CaptureApiException = (
+  err: unknown,
+  context: ApiExceptionContext,
+) => void;
 
 /**
  * Maps thrown errors to the standard error envelope:
  *   { error: { code, message, details? }, requestId }
  */
-export function errorMapper(): ErrorHandler<AppEnv> {
+export function errorMapper(
+  opts: { captureException?: CaptureApiException } = {},
+): ErrorHandler<AppEnv> {
+  const captureException = opts.captureException ?? captureApiException;
+
   return (err, c) => {
     const requestId = c.get('requestId');
 
@@ -55,6 +69,7 @@ export function errorMapper(): ErrorHandler<AppEnv> {
         ? `: ${err.inner.name}: ${err.inner.message}`
         : '';
       console.error(`[api] ai_provider_error (rid=${requestId}) ${err.name}: ${err.message}${inner}`);
+      captureException(err, exceptionContext(c, 502));
       return c.json(
         {
           error: { code: 'ai_provider_error', message: 'AI provider request failed.' },
@@ -66,6 +81,7 @@ export function errorMapper(): ErrorHandler<AppEnv> {
 
     if (err instanceof HTTPException) {
       const status = err.status;
+      if (status >= 500) captureException(err, exceptionContext(c, status));
       return c.json(
         {
           error: {
@@ -79,10 +95,24 @@ export function errorMapper(): ErrorHandler<AppEnv> {
     }
 
     console.error(`[api] unhandled error (rid=${requestId})`, err);
+    captureException(err, exceptionContext(c, 500));
     return c.json(
       { error: { code: 'internal_error', message: 'Internal server error.' }, requestId },
       500,
     );
+  };
+}
+
+function exceptionContext(
+  c: Parameters<ErrorHandler<AppEnv>>[1],
+  status: number,
+): ApiExceptionContext {
+  const requestId = c.get('requestId');
+  return {
+    requestId,
+    method: c.req.method,
+    route: routePath(c, -1),
+    status,
   };
 }
 

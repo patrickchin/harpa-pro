@@ -1,5 +1,5 @@
 appId: ${MAESTRO_APP_ID}
-name: "09 — Voice notes: record (fixture) + transcript"
+name: "09 — Voice notes: full lifecycle"
 tags:
   - regression
   - voice
@@ -10,7 +10,11 @@ tags:
 #   - open reports list → new report → land on Generate screen
 #   - tap `btn-record-start` → inline `voice-record-strip` appears
 #   - briefly wait, tap `btn-record-send` → strip dismisses
-#   - timeline mounts a VoiceNoteCard with a play button
+#   - fixture recording uploads and the API aggregator transcribes +
+#     summarizes it into a saved VoiceNoteCard
+#   - title and summary render on the timeline
+#   - options sheet exposes transcript + playback entry point
+#   - voice note deletes from the same options sheet
 #   - clean up the draft so the next module starts fresh
 #
 # Pre-condition: EXPO_PUBLIC_USE_FIXTURES=true built into the app
@@ -60,7 +64,7 @@ tags:
       id: "voice-record-strip"
     timeout: 15000
 
-# --- Timeline renders a VoiceNoteCard --------------------------------------
+# --- Timeline renders a saved VoiceNoteCard --------------------------------
 # `useVoiceNotePipeline` injects an in-flight entry immediately;
 # fixture transcripts land within a few hundred ms. The "transcript
 # landed" signal is `voice-title-N` on the card (set once
@@ -80,6 +84,56 @@ tags:
     timeout: 15000
 - assertVisible:
     id: "voice-title-.*"
+- extendedWaitUntil:
+    visible:
+      id: "voice-summary-.*"
+    timeout: 15000
+- assertVisible:
+    id: "voice-summary-.*"
+
+# --- Options sheet: transcript + playback entry point ----------------------
+- tapOn:
+    id: "btn-note-options-.*"
+- extendedWaitUntil:
+    visible:
+      id: "btn-note-options-view-transcript"
+    timeout: 8000
+- extendedWaitUntil:
+    visible:
+      id: "btn-note-options-play"
+    timeout: 10000
+- tapOn:
+    id: "btn-note-options-view-transcript"
+- extendedWaitUntil:
+    visible:
+      id: "note-options-transcript-text"
+    timeout: 8000
+- assertVisible:
+    id: "note-options-transcript-text"
+- tapOn:
+    id: "btn-note-options-transcript-back"
+- extendedWaitUntil:
+    visible:
+      id: "btn-note-options-delete"
+    timeout: 8000
+
+# --- Delete the voice note --------------------------------------------------
+- tapOn:
+    id: "btn-note-options-delete"
+- extendedWaitUntil:
+    visible:
+      id: "btn-note-options-confirm-delete"
+    timeout: 8000
+- tapOn:
+    id: "btn-note-options-confirm-delete"
+- extendedWaitUntil:
+    notVisible:
+      id: "voice-title-.*"
+    timeout: 10000
+- extendedWaitUntil:
+    notVisible:
+      id: "voice-summary-.*"
+    timeout: 10000
 
 # --- Clean up: delete the draft and return to project home -----------------
 - tapOn:

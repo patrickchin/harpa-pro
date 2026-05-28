@@ -34,13 +34,17 @@ import {
 
 const REQUIRED_FIELDS = [
   // top-level
-  'visitDate',
+  'meta',
   'weather',
   'workers',
   'materials',
   'issues',
   'nextSteps',
   'summarySections',
+  // meta subfields
+  'summary',
+  'tags',
+  'visitDate',
   // weather subfields
   'condition',
   'temperatureC',

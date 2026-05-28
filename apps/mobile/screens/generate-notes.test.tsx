@@ -15,6 +15,34 @@
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
 import TestRenderer, { act } from 'react-test-renderer';
 
+const voicePipelineMock = vi.hoisted((): {
+  state: {
+    step: string;
+    failedStep: string | null;
+    error: string | null;
+    note: unknown;
+    fileId: string | null;
+    capture: unknown;
+    usageLimit: unknown;
+  };
+  capture: ReturnType<typeof vi.fn>;
+  retry: ReturnType<typeof vi.fn>;
+  reset: ReturnType<typeof vi.fn>;
+} => ({
+  state: {
+    step: 'idle',
+    failedStep: null,
+    error: null,
+    note: null,
+    fileId: null,
+    capture: null,
+    usageLimit: null,
+  },
+  capture: vi.fn(async () => null),
+  retry: vi.fn(async () => null),
+  reset: vi.fn(),
+}));
+
 // `GenerateReportProvider` consumes the inline recorder + voice
 // pipeline + audio playback hooks. None of them are exercised by the
 // Notes-tab UI assertions below, so stub them out — exercising the
@@ -35,19 +63,7 @@ vi.mock('@/features/voice/useInlineRecorder', () => ({
   }),
 }));
 vi.mock('@/features/voice/useVoiceNotePipeline', () => ({
-  useVoiceNotePipeline: () => ({
-    state: {
-      step: 'idle',
-      failedStep: null,
-      error: null,
-      note: null,
-      fileId: null,
-      capture: null,
-    },
-    capture: vi.fn(async () => null),
-    retry: vi.fn(async () => null),
-    reset: vi.fn(),
-  }),
+  useVoiceNotePipeline: () => voicePipelineMock,
 }));
 vi.mock('@/lib/audio/AudioPlaybackProvider', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/audio/AudioPlaybackProvider')>();
@@ -110,6 +126,18 @@ const sampleNotes: NoteEntry[] = [
 describe('GenerateNotes', () => {
   beforeEach(() => {
     vi.useFakeTimers();
+    voicePipelineMock.state = {
+      step: 'idle',
+      failedStep: null,
+      error: null,
+      note: null,
+      fileId: null,
+      capture: null,
+      usageLimit: null,
+    };
+    voicePipelineMock.capture.mockClear();
+    voicePipelineMock.retry.mockClear();
+    voicePipelineMock.reset.mockClear();
   });
   afterEach(() => {
     vi.useRealTimers();
@@ -148,12 +176,12 @@ describe('GenerateNotes', () => {
     expect(text).toContain('Edit');
   });
 
-  it('falls back to "New Report" when reportTitle is empty', () => {
+  it('falls back to "Report #N" when reportTitle is empty', () => {
     const tree = render(
-      <GenerateNotes {...baseProps} reportTitle={null} />,
+      <GenerateNotes {...baseProps} reportTitle={null} reportNumber={1} />,
     );
     const titleNode = tree.root.findByProps({ testID: 'screen-header-title' });
-    expect(collectText(titleNode.props.children)).toContain('New Report');
+    expect(collectText(titleNode.props.children)).toContain('Report #1');
   });
 
   it('hides the input bar + action row when canWrite=false', () => {
@@ -203,6 +231,22 @@ describe('GenerateNotes', () => {
     ).not.toThrow();
   });
 
+  it('opens the attachment sheet with stable photo action testIDs', () => {
+    const tree = render(<GenerateNotes {...baseProps} />);
+    act(() => {
+      tree.root.findByProps({ testID: 'btn-attachment' }).props.onPress();
+    });
+    expect(() =>
+      tree.root.findByProps({ testID: 'btn-attachment-photo-library' }),
+    ).not.toThrow();
+    expect(() =>
+      tree.root.findByProps({ testID: 'btn-attachment-camera' }),
+    ).not.toThrow();
+    expect(() =>
+      tree.root.findByProps({ testID: 'btn-attachment-cancel' }),
+    ).not.toThrow();
+  });
+
   it('renders the back button when onBack is provided', () => {
     const onBack = vi.fn();
     const tree = render(<GenerateNotes {...baseProps} onBack={onBack} />);
@@ -240,6 +284,68 @@ describe('GenerateNotes', () => {
     });
     expect(onDeleteNote).toHaveBeenCalledTimes(1);
     expect(onDeleteNote).toHaveBeenCalledWith(sampleNotes[0], 0);
+  });
+
+  it('deletes a saved synthetic voice note from the rendered timeline', () => {
+    const savedVoiceNote = {
+      id: 'not_voice_saved',
+      authorId: 'usr_test',
+      body: 'Voice transcript body',
+      transcript: 'Voice transcript body',
+      title: 'Second floor concrete pour underway',
+      summary: 'Concrete pour is underway on the second floor.',
+      fileId: null,
+      durationSec: 2,
+      createdAt: new Date(1).toISOString(),
+    };
+    voicePipelineMock.state = {
+      step: 'saved',
+      failedStep: null,
+      error: null,
+      note: savedVoiceNote,
+      fileId: null,
+      capture: null,
+      usageLimit: null,
+    };
+    const onDeleteNote = vi.fn();
+    const tree = render(
+      <GenerateNotes
+        {...baseProps}
+        reportId="rep_1"
+        notes={[]}
+        onDeleteNote={onDeleteNote}
+      />,
+    );
+
+    const text = collectText(tree.toJSON());
+    expect(text).toContain('Notes (1)');
+    expect(text).toContain('Second floor concrete pour underway');
+
+    act(() => {
+      tree.root
+        .findByProps({ testID: 'btn-note-options-0' })
+        .props.onPress();
+    });
+    act(() => {
+      tree.root
+        .findByProps({ testID: 'btn-note-options-delete' })
+        .props.onPress();
+    });
+    act(() => {
+      tree.root
+        .findByProps({ testID: 'btn-note-options-confirm-delete' })
+        .props.onPress();
+    });
+
+    expect(onDeleteNote).toHaveBeenCalledTimes(1);
+    expect(onDeleteNote).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 'not_voice_saved',
+        source: 'voice',
+      }),
+      0,
+    );
+    expect(voicePipelineMock.reset).toHaveBeenCalledTimes(1);
   });
 
   it('does not show the Edit action when onUpdateNote is not provided', () => {

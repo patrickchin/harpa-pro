@@ -378,6 +378,29 @@ export function remapAttachmentKeys(
   });
 }
 
+/**
+ * Remove local upload-queue jobs backing a deleted photo note so
+ * completed synthetic cards do not reappear after the server row is
+ * optimistically removed.
+ * @internal exported for unit testing
+ */
+export function cancelImageAttachmentJobs(
+  note: NoteEntry,
+  cancel: (jobId: string) => void,
+  fileIdToAttachmentKey: ReadonlyMap<string, string> = new Map(),
+): void {
+  if (note.source !== 'image' || !note.attachments?.length) return;
+  for (const attachment of note.attachments) {
+    const jobId =
+      attachment.jobId ??
+      (attachment.fileId ? fileIdToAttachmentKey.get(attachment.fileId) : undefined) ??
+      (attachment.thumbnailFileId
+        ? fileIdToAttachmentKey.get(attachment.thumbnailFileId)
+        : undefined);
+    if (jobId) cancel(jobId);
+  }
+}
+
 export function GenerateReportProvider({
   project,
   reportNumber,
@@ -637,11 +660,23 @@ export function GenerateReportProvider({
   // bypasses the legacy `deleteIndex` two-step.
   const deleteAt = useCallback(
     (sourceIndex: number) => {
-      const note = notes[sourceIndex];
+      const note = timelineItems[sourceIndex];
       if (!note || !onDeleteNote) return;
       onDeleteNote(note, sourceIndex);
+      if (
+        note.source === 'voice' &&
+        note.id &&
+        voicePipeline.state.note?.id === note.id
+      ) {
+        voicePipeline.reset();
+      }
+      cancelImageAttachmentJobs(
+        note,
+        photoUploads.cancel,
+        photoUploads.fileIdToAttachmentKey,
+      );
     },
-    [notes, onDeleteNote],
+    [timelineItems, onDeleteNote, voicePipeline, photoUploads],
   );
 
   const updateNote = useCallback(
@@ -704,10 +739,12 @@ export function GenerateReportProvider({
     () => ({
       project,
       reportNumber,
-      reportTitle: reportTitle?.trim() || 'New Report',
+      reportTitle:
+        reportTitle?.trim() ||
+        (reportNumber !== null ? `Report #${reportNumber}` : 'New report'),
       notes: {
-        list: notes,
-        totalCount: notes.length,
+        list: timelineItems,
+        totalCount: timelineItems.length,
         // TODO(P3.8): expose real note rows once `useLocalReportNotes`
         // lands. ReportPhotos consumes this; passing `null` keeps the
         // surface stable.

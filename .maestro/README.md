@@ -71,19 +71,34 @@ deletes the project + signs out at the end). Covers:
 4. Members invite / permissions / viewer / remove
 5. Reports CRUD
 6. Text notes (add/delete)
-7. Voice notes — fixture recorder, transcript card
-8. Photo notes (draft) — camera → upload → image note
-9. Generate + finalize
-10. Report debug
-11. Projects delete
-12. Account view + edit-cancel + edit-save
-13. Usage screen render
-14. Profile identity + nav
-15. Sign out
+7. Voice notes: upload, transcript, summary, playback entry point,
+    delete
+8. Photo notes: attachment sheet, camera upload, generated report
+    photo strip, preview, delete
+9. Finalized photo report: saved-report photo strip and preview
+10. Generate + finalize: add note, generate/update report, finalize,
+   unfinalize, re-finalize
+11. Report Debug: prompt, report notes, LLM response, non-empty state
+12. Project delete teardown
+13. Account view + edit-cancel + edit-save
+14. Usage screen render
+15. Profile identity + nav
+16. Sign out
 
 **Pre-condition:** docker compose stack up, Metro running, app built
-with `EXPO_PUBLIC_USE_FIXTURES=true` (so fixture recorder + fixture
-camera work), microphone + camera privacy grants on the sim.
+with `EXPO_PUBLIC_USE_FIXTURES=true`. Microphone and camera privacy
+grants are required for modules 09 and 10a.
+
+On Android devices/emulators, reverse every local port used by the
+app and upload pipeline before running. Photo signed URLs point at
+the local MinIO endpoint, so `9000` is required in addition to Metro
+and the API:
+
+```bash
+adb reverse tcp:8081 tcp:8081
+adb reverse tcp:8787 tcp:8787
+adb reverse tcp:9000 tcp:9000
+```
 
 **Run:**
 
@@ -92,7 +107,41 @@ docker compose down -v && docker compose up -d   # fresh DB
 maestro test .maestro/regression-journey.yaml
 ```
 
-Modules 09 (voice) and 10a (photo) depend on the fixture-mode build.
+Dev-deployment target:
+
+- After the local backend run passes, run the same coverage against
+  `https://harpa-pro-api-dev.fly.dev`.
+- Dev auth uses the local CLI auth broker
+  (`scripts/dev-e2e-auth-broker.cjs`) with allowlisted test accounts
+  (`TEST_ACCOUNT_PHONES` + `TEST_ACCOUNT_PASSWORD` in `.env.local` or
+  Doppler `dev`), not fake OTP. Do not pass the password as a Maestro
+  env var or `inputText`: Maestro debug logs evaluated values.
+- On Android, run Metro with `--host lan --port 8082`, reverse
+  `8082`, and use the local API/R2 proxies:
+  `scripts/dev-e2e-api-proxy.cjs` on `8788`,
+  `scripts/dev-e2e-r2-proxy.cjs` on `8791`, plus the auth broker on
+  `8790`.
+- Dev runs must create unique per-run data and clean it up in-flow;
+  they must not truncate the shared dev database.
+- `mo journey --target dev` is the intended future entry point once
+  the orchestrator grows target support.
+- 2026-05-28 status: local Android regression is green with modules
+  09, 10a, 11, 12, and 13 enabled. A clean dev-deployment Android run
+  of `regression-journey-dev.yaml` also passed end to end after the
+  dynamic dev-project recovery fix: modules 01, 01b, 02, 03, 04, 05,
+  06, 07, 08, 09, 10a, 11, 12, 13, 14, 15, 16, and sign-out. R2
+  upload/download traffic went through the local R2 proxy.
+- 2026-05-28 follow-up: module 10b adds finalized saved-report photo
+  coverage. It creates a photo-bearing report, finalizes it, asserts
+  `report-photos`, opens the saved-report image preview by fileId,
+  then deletes the finalized report before the rest of the journey.
+  Focused local Android passed 01/02/10b, the full local regression
+  passed with 10b included, and a clean full dev-deployment Android
+  run passed against `harpa-pro-api-dev` (`gitCommit=9db5b51`).
+- The CI Maestro testID gate is path-filtered on both `apps/mobile/**`
+  and `.maestro/**` so E2E-only flow changes still validate referenced
+  mobile testIDs.
+
 Modules 14/15/16 navigate to Profile / Account / Usage screens.
 
 ## `p3-15-upload.yaml` (legacy — superseded by module 10a)
@@ -100,7 +149,7 @@ Modules 14/15/16 navigate to Profile / Account / Usage screens.
 Same photo pipeline as `modules/10a-photo-notes-draft.yaml` but
 signs in as seeded `+15550100100` (requires `reset-db.sh`).
 Kept for one-off iteration on the camera path; safe to delete once
-module 10a is green on CI.
+module 10a is green in CI.
 
 ## `p3-15-voice-record.yaml` (legacy — superseded by module 09)
 

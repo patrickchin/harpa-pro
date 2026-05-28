@@ -448,7 +448,7 @@ git commit -m "refactor(mobile): remove dead image note card" \
 - Create: `apps/mobile/components/ui/CachedImage.test.tsx`
 - Modify: `apps/mobile/components/ui/CachedImage.tsx`
 
-- [ ] **Step 1: Create failing `CachedImage` tests**
+- [x] **Step 1: Create failing `CachedImage` tests**
 
 Create `apps/mobile/components/ui/CachedImage.test.tsx`:
 
@@ -529,7 +529,7 @@ describe('CachedImage', () => {
 });
 ```
 
-- [ ] **Step 2: Run the new test and confirm it fails**
+- [x] **Step 2: Run the new test and confirm it fails**
 
 Run:
 
@@ -540,7 +540,7 @@ pnpm --filter @harpa/mobile test -- components/ui/CachedImage.test.tsx
 Expected: the placeholder cache-key test fails because
 `placeholderCacheKey` is not implemented.
 
-- [ ] **Step 3: Implement `placeholderCacheKey`**
+- [x] **Step 3: Implement `placeholderCacheKey`**
 
 In `CachedImage.tsx`, add this prop to `CachedImageProps` after `cacheKey`:
 
@@ -578,7 +578,7 @@ const composedPlaceholder =
     : composedPlaceholderBase;
 ```
 
-- [ ] **Step 4: Run the focused test**
+- [x] **Step 4: Run the focused test**
 
 Run:
 
@@ -588,7 +588,7 @@ pnpm --filter @harpa/mobile test -- components/ui/CachedImage.test.tsx
 
 Expected: all `CachedImage` tests pass.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add apps/mobile/components/ui/CachedImage.tsx \
@@ -608,7 +608,7 @@ git commit -m "feat(mobile): cache fullscreen thumbnail placeholders" \
 - Modify: `apps/mobile/screens/saved-report.tsx`
 - Modify: `apps/mobile/components/files/ImagePreviewModal.test.tsx`
 
-- [ ] **Step 1: Widen the modal photo type**
+- [x] **Step 1: Widen the modal photo type**
 
 In `ImagePreviewModal.tsx`, change `ImagePreviewPhoto` to:
 
@@ -628,7 +628,7 @@ In the `resolvedPhotos` fallback, include `thumbnailFileId: null`:
 return [{ uri, fileId, thumbnailFileId: null, title, cacheKey }];
 ```
 
-- [ ] **Step 2: Widen `GenerateReportProvider` gallery shape**
+- [x] **Step 2: Widen `GenerateReportProvider` gallery shape**
 
 In `GenerateReportProvider.tsx`, change `PreviewSurface.photoGallery` to:
 
@@ -652,7 +652,7 @@ items.push({
 });
 ```
 
-- [ ] **Step 3: Widen the report-notes gallery builder**
+- [x] **Step 3: Widen the report-notes gallery builder**
 
 In `apps/mobile/screens/report-notes.tsx`, change the `.map` result to:
 
@@ -665,7 +665,7 @@ In `apps/mobile/screens/report-notes.tsx`, change the `.map` result to:
 }));
 ```
 
-- [ ] **Step 4: Widen the saved-report gallery builder**
+- [x] **Step 4: Widen the saved-report gallery builder**
 
 In `apps/mobile/screens/saved-report.tsx`, change the `.map` result to:
 
@@ -678,7 +678,7 @@ In `apps/mobile/screens/saved-report.tsx`, change the `.map` result to:
 }));
 ```
 
-- [ ] **Step 5: Add modal regression test for accepted thumbnail prop**
+- [x] **Step 5: Add modal regression test for accepted thumbnail prop**
 
 In `ImagePreviewModal.test.tsx`, add this test after the `fileId` test:
 
@@ -710,7 +710,7 @@ it('accepts thumbnailFileId on gallery photos without widening onOpenPhoto callb
 This test only pins the widened type in this task. Placeholder behavior is
 added in Task 7 after `ZoomableImage` exists.
 
-- [ ] **Step 6: Run focused checks**
+- [x] **Step 6: Run focused checks**
 
 Run:
 
@@ -721,7 +721,7 @@ pnpm --filter @harpa/mobile typecheck
 
 Expected: tests and typecheck pass.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add apps/mobile/components/files/ImagePreviewModal.tsx \
@@ -741,7 +741,7 @@ git commit -m "feat(mobile): thread thumbnails into photo galleries" \
 - Create: `apps/mobile/components/files/ZoomableImage.tsx`
 - Create: `apps/mobile/components/files/ZoomableImage.test.tsx`
 
-- [ ] **Step 1: Write failing zoom math tests**
+- [x] **Step 1: Write failing zoom math tests**
 
 Create `apps/mobile/components/files/ZoomableImage.test.tsx`:
 
@@ -860,7 +860,7 @@ describe('ZoomableImage render', () => {
 });
 ```
 
-- [ ] **Step 2: Run the new test and confirm it fails**
+- [x] **Step 2: Run the new test and confirm it fails**
 
 Run:
 
@@ -870,7 +870,7 @@ pnpm --filter @harpa/mobile test -- components/files/ZoomableImage.test.tsx
 
 Expected: import failure because `ZoomableImage.tsx` does not exist.
 
-- [ ] **Step 3: Create `ZoomableImage.tsx`**
+- [x] **Step 3: Create `ZoomableImage.tsx`**
 
 Create `apps/mobile/components/files/ZoomableImage.tsx`:
 
@@ -1153,7 +1153,7 @@ export function ZoomableImage({
 }
 ```
 
-- [ ] **Step 4: Run the focused test**
+- [x] **Step 4: Run the focused test**
 
 Run:
 
@@ -1163,7 +1163,7 @@ pnpm --filter @harpa/mobile test -- components/files/ZoomableImage.test.tsx
 
 Expected: all `ZoomableImage` tests pass.
 
-- [ ] **Step 5: Run typecheck**
+- [x] **Step 5: Run typecheck**
 
 Run:
 
@@ -1173,7 +1173,7 @@ pnpm --filter @harpa/mobile typecheck
 
 Expected: typecheck passes.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add apps/mobile/components/files/ZoomableImage.tsx \
@@ -1190,7 +1190,7 @@ git commit -m "feat(mobile): add zoomable image viewer primitive" \
 - Modify: `apps/mobile/components/files/ImagePreviewModal.tsx`
 - Modify: `apps/mobile/components/files/ImagePreviewModal.test.tsx`
 
-- [ ] **Step 1: Update modal test mocks**
+- [x] **Step 1: Update modal test mocks**
 
 In `ImagePreviewModal.test.tsx`, add `Modal` to the existing React Native test
 imports:
@@ -1241,7 +1241,7 @@ vi.mock('./ZoomableImage', () => ({
 }));
 ```
 
-- [ ] **Step 2: Add failing modal behavior tests**
+- [x] **Step 2: Add failing modal behavior tests**
 
 Add these tests to `ImagePreviewModal.test.tsx`:
 
@@ -1336,7 +1336,7 @@ it('disables pager scrolling while a child image is zoomed', () => {
 });
 ```
 
-- [ ] **Step 3: Run modal tests and confirm failures**
+- [x] **Step 3: Run modal tests and confirm failures**
 
 Run:
 
@@ -1347,7 +1347,7 @@ pnpm --filter @harpa/mobile test -- components/files/ImagePreviewModal.test.tsx
 Expected: tests fail because the modal still uses `FlatList`, `ScreenHeader`,
 and no thumbnail placeholder.
 
-- [ ] **Step 4: Update imports in `ImagePreviewModal.tsx`**
+- [x] **Step 4: Update imports in `ImagePreviewModal.tsx`**
 
 Replace the current imports with this set:
 
@@ -1379,7 +1379,7 @@ import { useFileSignedUrl } from '@/lib/uploads/useFileSignedUrl';
 import { colors } from '@/lib/design-tokens/colors';
 ```
 
-- [ ] **Step 5: Update modal container**
+- [x] **Step 5: Update modal container**
 
 Replace the `<Modal>` return block in `ImagePreviewModal` with:
 
@@ -1409,7 +1409,7 @@ return (
 );
 ```
 
-- [ ] **Step 6: Replace `PreviewContent`**
+- [x] **Step 6: Replace `PreviewContent`**
 
 Replace the current `PreviewContent` function with:
 
@@ -1542,7 +1542,7 @@ function PreviewContent({
 }
 ```
 
-- [ ] **Step 7: Replace `ImagePreviewBody`**
+- [x] **Step 7: Replace `ImagePreviewBody`**
 
 Replace `ImagePreviewBody` with:
 
@@ -1615,7 +1615,7 @@ function ImagePreviewBody({
 }
 ```
 
-- [ ] **Step 8: Run focused modal tests**
+- [x] **Step 8: Run focused modal tests**
 
 Run:
 
@@ -1625,7 +1625,7 @@ pnpm --filter @harpa/mobile test -- components/files/ImagePreviewModal.test.tsx
 
 Expected: all modal tests pass.
 
-- [ ] **Step 9: Run typecheck**
+- [x] **Step 9: Run typecheck**
 
 Run:
 
@@ -1635,7 +1635,7 @@ pnpm --filter @harpa/mobile typecheck
 
 Expected: typecheck passes.
 
-- [ ] **Step 10: Commit**
+- [x] **Step 10: Commit**
 
 ```bash
 git add apps/mobile/components/files/ImagePreviewModal.tsx \
@@ -1652,7 +1652,7 @@ git commit -m "feat(mobile): redesign fullscreen photo viewer" \
 - Create:
   `apps/mobile/components/files/gallery-thumbnail-placeholder.integration.test.tsx`
 
-- [ ] **Step 1: Create the default-wiring integration test**
+- [x] **Step 1: Create the default-wiring integration test**
 
 Create
 `apps/mobile/components/files/gallery-thumbnail-placeholder.integration.test.tsx`:
@@ -1829,7 +1829,7 @@ describe('gallery thumbnail placeholder default wiring', () => {
 This test deliberately does not call `queryClient.setQueryData`. The grid must
 populate the thumbnail query by running the real `PhotoTile` hook.
 
-- [ ] **Step 2: Run the integration test**
+- [x] **Step 2: Run the integration test**
 
 Run:
 
@@ -1839,7 +1839,7 @@ pnpm --filter @harpa/mobile test -- components/files/gallery-thumbnail-placehold
 
 Expected: the test passes and records exactly one thumbnail signed-URL fetch.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add apps/mobile/components/files/gallery-thumbnail-placeholder.integration.test.tsx
@@ -1854,7 +1854,7 @@ git commit -m "test(mobile): cover thumbnail placeholder default wiring" \
 **Files:**
 - Modify: `docs/superpowers/plans/2026-05-29-photo-grid-and-fullscreen-redesign.md`
 
-- [ ] **Step 1: Run the mobile test suite**
+- [x] **Step 1: Run the mobile test suite**
 
 Run:
 
@@ -1864,7 +1864,7 @@ pnpm --filter @harpa/mobile test
 
 Expected: all mobile Vitest tests pass.
 
-- [ ] **Step 2: Run mobile typecheck and lint**
+- [x] **Step 2: Run mobile typecheck and lint**
 
 Run:
 
@@ -1875,7 +1875,7 @@ pnpm --filter @harpa/mobile lint
 
 Expected: both commands pass.
 
-- [ ] **Step 3: Run repository-level checks touched by this change**
+- [x] **Step 3: Run repository-level checks touched by this change**
 
 Run:
 
@@ -1887,7 +1887,7 @@ pnpm lint
 Expected: both commands pass. If unrelated pre-existing failures appear,
 capture the failing command and the first relevant error in the PR notes.
 
-- [ ] **Step 4: Run native smoke checks after dev-client rebuild**
+- [x] **Step 4: Run native smoke checks after dev-client rebuild**
 
 Because Task 1 adds a native module, make fresh dev-client builds before
 manual QA:
@@ -1913,13 +1913,13 @@ and Android:
 9. The thumbnail appears immediately before the full-resolution image finishes
    loading.
 
-- [ ] **Step 5: Mark plan checkboxes for completed tasks**
+- [x] **Step 5: Mark plan checkboxes for completed tasks**
 
 Before the final implementation commit, update this plan file so completed
 steps are checked. Keep unchecked only any native manual smoke item that was
 not possible in the current environment and document that in the PR body.
 
-- [ ] **Step 6: Final commit**
+- [x] **Step 6: Final commit**
 
 ```bash
 git add docs/superpowers/plans/2026-05-29-photo-grid-and-fullscreen-redesign.md

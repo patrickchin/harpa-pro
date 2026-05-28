@@ -38,8 +38,8 @@ beforeAll(async () => {
     [projectId, userId],
   );
   await pool.query(
-    `INSERT INTO app.reports(id, project_id, number, status) VALUES ($1, $2, 1, 'draft')`,
-    [reportId, projectId],
+    `INSERT INTO app.reports(id, project_id, author_id, number, status) VALUES ($1, $2, $3, 1, 'draft')`,
+    [reportId, projectId, userId],
   );
 }, 120_000);
 

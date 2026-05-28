@@ -272,11 +272,12 @@ describe('scope: notes_changed_at', () => {
   it('owner note mutation stamps notes_changed_at on their report', async () => {
     const app = createApp();
     const tok = await signTestToken(alice, aliceSid);
-    // Reset dirty state so the assertion is meaningful.
+    // Reset dirty state and ensure status=draft (the finalize test above
+    // may have changed it) so the assertion is meaningful.
     const conn = await getPool().connect();
     try {
       await conn.query(
-        `UPDATE app.reports SET notes_changed_at = NULL WHERE id = $1`,
+        `UPDATE app.reports SET notes_changed_at = NULL, status = 'draft' WHERE id = $1`,
         [aliceReport],
       );
     } finally {

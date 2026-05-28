@@ -15,7 +15,7 @@ tags:
 #   7. Reports CRUD — create, navigate, delete report
 #   8. Text notes — add and delete a text note
 #   9. Voice notes — record/upload/transcribe/summarize/title/transcript/delete
-#  10a. Photo notes (draft) — paused while upload UI redesign is in flight
+#  10a. Photo notes (draft) — attachment sheet/camera upload/generated photos/delete
 #  11. Generate + finalize — add note, generate, view report, finalize, unfinalize, re-finalize
 #  12. Report debug — verify debug screen sections
 #  13. Projects delete — delete the project, verify gone
@@ -78,44 +78,19 @@ tags:
 # Pre-condition: alice on project home
 # Requires: app built with EXPO_PUBLIC_USE_FIXTURES=true; camera
 # privacy grant on the sim.
-# PAUSED: the latest photo-upload branch on GitHub
-# (`agents/photo-upload-pipeline-ui-review`, 8527984) redesigns the
-# photo upload UI/data shape around attachments[] + per-tile state.
-# Avoid hardening E2E assertions against the current photo surface until
-# that branch lands.
-# - runFlow: modules/10a-photo-notes-draft.yaml
+- runFlow: modules/10a-photo-notes-draft.yaml
 
 # ── 11. Generate + finalize ───────────────────────────────────────────────
 # Pre-condition: alice on project home
-# DISABLED on iOS: btn-generate-report never becomes visible on the
-# generate screen after a fresh report is created. Likely related to
-# the `report-tab-pane` mounting eagerly (it's the second tab and the
-# pager renders both panes for swipe). The action row is conditional
-# on canWrite which is fine for alice-as-owner, so this is not a
-# permission issue — needs morning investigation with the simulator
-# attached. Three overnight attempts failed identically.
-# - runFlow: modules/11-generate-finalize.yaml
+- runFlow: modules/11-generate-finalize.yaml
 
 # ── 12. Report debug ──────────────────────────────────────────────────────
 # Pre-condition: alice on finalized saved-report screen (was 11's post)
-# Skipped because 11 is disabled — depends on 11's finalized state.
-# - runFlow: modules/12-report-debug.yaml
+- runFlow: modules/12-report-debug.yaml
 
 # ── 13. Projects delete ───────────────────────────────────────────────────
 # Pre-condition: alice on saved-report screen (was 12's post)
-# Skipped because 11/12 are disabled. Module 13 itself includes the
-# navigation to projects index that 14 needs, so we replace it with an
-# inline cleanup below.
-# - runFlow: modules/13-projects-delete.yaml
-
-# Bridge: with 10a/11/12/13 currently disabled, module 09 leaves us on
-# project home. 14 expects projects index, so one btn-back is enough.
-- tapOn:
-    id: "btn-back"
-- extendedWaitUntil:
-    visible:
-      id: "btn-new-project"
-    timeout: 10000
+- runFlow: modules/13-projects-delete.yaml
 
 # ── 14. Account screen ────────────────────────────────────────────────────
 # Pre-condition: alice on empty projects index (post-13)

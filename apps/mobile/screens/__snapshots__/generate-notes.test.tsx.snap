@@ -1108,7 +1108,7 @@ exports[`GenerateNotes > matches the empty-state snapshot 1`] = `
                       undefined,
                     ]
                   }
-                  testID="dialog-action-0"
+                  testID="btn-attachment-document"
                 >
                   <rn-Text
                     className="text-foreground font-semibold text-base"
@@ -1136,7 +1136,7 @@ exports[`GenerateNotes > matches the empty-state snapshot 1`] = `
                       undefined,
                     ]
                   }
-                  testID="dialog-action-1"
+                  testID="btn-attachment-photo-library"
                 >
                   <rn-Text
                     className="text-foreground font-semibold text-base"
@@ -1164,7 +1164,7 @@ exports[`GenerateNotes > matches the empty-state snapshot 1`] = `
                       undefined,
                     ]
                   }
-                  testID="dialog-action-2"
+                  testID="btn-attachment-camera"
                 >
                   <rn-Text
                     className="text-foreground font-semibold text-base"
@@ -1192,7 +1192,7 @@ exports[`GenerateNotes > matches the empty-state snapshot 1`] = `
                       undefined,
                     ]
                   }
-                  testID="dialog-action-3"
+                  testID="btn-attachment-cancel"
                 >
                   <rn-Text
                     className="text-muted-foreground font-semibold text-base"

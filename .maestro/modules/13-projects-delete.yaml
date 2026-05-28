@@ -74,3 +74,9 @@ tags:
     timeout: 10000
 - assertNotVisible:
     text: "Regression Test Project \\(Edited\\)"
+- runFlow:
+    when:
+      visible: "${PROJECT_NAME_EDITED}"
+    commands:
+      - assertNotVisible:
+          text: "${PROJECT_NAME_EDITED}"

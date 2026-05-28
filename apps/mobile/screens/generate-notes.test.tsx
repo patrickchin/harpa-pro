@@ -231,6 +231,22 @@ describe('GenerateNotes', () => {
     ).not.toThrow();
   });
 
+  it('opens the attachment sheet with stable photo action testIDs', () => {
+    const tree = render(<GenerateNotes {...baseProps} />);
+    act(() => {
+      tree.root.findByProps({ testID: 'btn-attachment' }).props.onPress();
+    });
+    expect(() =>
+      tree.root.findByProps({ testID: 'btn-attachment-photo-library' }),
+    ).not.toThrow();
+    expect(() =>
+      tree.root.findByProps({ testID: 'btn-attachment-camera' }),
+    ).not.toThrow();
+    expect(() =>
+      tree.root.findByProps({ testID: 'btn-attachment-cancel' }),
+    ).not.toThrow();
+  });
+
   it('renders the back button when onBack is provided', () => {
     const onBack = vi.fn();
     const tree = render(<GenerateNotes {...baseProps} onBack={onBack} />);

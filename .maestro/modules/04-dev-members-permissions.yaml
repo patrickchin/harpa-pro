@@ -1,0 +1,53 @@
+appId: ${MAESTRO_APP_ID}
+name: "04-dev - Members: bob sees project and can edit as editor"
+tags:
+  - regression
+  - members
+  - dev
+---
+
+- runFlow: ../helpers/sign-out.yaml
+- runFlow:
+    file: ../helpers/dev-password-login.yaml
+    env:
+      PHONE_ENCODED: "%2B15550199002"
+      NAME: "Bob Dev E2E"
+      COMPANY: "Dev E2E Corp"
+
+- assertVisible:
+    text: "${PROJECT_NAME_EDITED}"
+- tapOn:
+    text: "${PROJECT_NAME_EDITED}"
+
+- extendedWaitUntil:
+    visible:
+      id: "btn-project-edit"
+    timeout: 10000
+- tapOn:
+    id: "link-project-members"
+- extendedWaitUntil:
+    visible:
+      text: "Editor"
+    timeout: 10000
+- tapOn:
+    id: "btn-back"
+
+- tapOn:
+    id: "btn-open-reports"
+- extendedWaitUntil:
+    visible:
+      id: "btn-new-report"
+    timeout: 10000
+- tapOn:
+    id: "btn-back"
+
+- tapOn:
+    id: "btn-back"
+- runFlow: ../helpers/sign-out.yaml
+- runFlow:
+    file: ../helpers/dev-password-login.yaml
+    env:
+      PHONE_ENCODED: "%2B15550199001"
+      NAME: "Alice Dev E2E"
+      COMPANY: "Dev E2E Corp"
+- runFlow: ../helpers/open-project-dev.yaml

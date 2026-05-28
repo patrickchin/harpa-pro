@@ -1,0 +1,37 @@
+appId: ${MAESTRO_APP_ID}
+---
+# delete-current-project.yaml - delete the project currently open on project home.
+#
+# Required env:
+#   PROJECT_NAME_EDITED
+#
+# Pre-condition: project home is visible and current user can edit.
+# Post-condition: projects list is visible and this run's project is gone.
+- extendedWaitUntil:
+    visible:
+      id: "btn-project-edit"
+    timeout: 10000
+- tapOn:
+    id: "btn-project-edit"
+- extendedWaitUntil:
+    visible:
+      id: "btn-delete-project"
+    timeout: 10000
+- scrollUntilVisible:
+    element:
+      id: "btn-delete-project"
+    direction: DOWN
+- tapOn:
+    id: "btn-delete-project"
+- extendedWaitUntil:
+    visible:
+      id: "confirm-delete-project"
+    timeout: 8000
+- tapOn:
+    id: "confirm-delete-project"
+- extendedWaitUntil:
+    visible:
+      id: "btn-new-project"
+    timeout: 15000
+- assertNotVisible:
+    text: "${PROJECT_NAME_EDITED}"

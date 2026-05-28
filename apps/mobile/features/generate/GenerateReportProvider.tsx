@@ -374,6 +374,29 @@ export function remapAttachmentKeys(
   });
 }
 
+/**
+ * Remove local upload-queue jobs backing a deleted photo note so
+ * completed synthetic cards do not reappear after the server row is
+ * optimistically removed.
+ * @internal exported for unit testing
+ */
+export function cancelImageAttachmentJobs(
+  note: NoteEntry,
+  cancel: (jobId: string) => void,
+  fileIdToAttachmentKey: ReadonlyMap<string, string> = new Map(),
+): void {
+  if (note.source !== 'image' || !note.attachments?.length) return;
+  for (const attachment of note.attachments) {
+    const jobId =
+      attachment.jobId ??
+      (attachment.fileId ? fileIdToAttachmentKey.get(attachment.fileId) : undefined) ??
+      (attachment.thumbnailFileId
+        ? fileIdToAttachmentKey.get(attachment.thumbnailFileId)
+        : undefined);
+    if (jobId) cancel(jobId);
+  }
+}
+
 export function GenerateReportProvider({
   project,
   reportNumber,
@@ -642,8 +665,13 @@ export function GenerateReportProvider({
       ) {
         voicePipeline.reset();
       }
+      cancelImageAttachmentJobs(
+        note,
+        photoUploads.cancel,
+        photoUploads.fileIdToAttachmentKey,
+      );
     },
-    [timelineItems, onDeleteNote, voicePipeline],
+    [timelineItems, onDeleteNote, voicePipeline, photoUploads],
   );
 
   const updateNote = useCallback(

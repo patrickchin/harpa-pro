@@ -10,6 +10,11 @@
 # but exact value does not appear literally in source):
 #   picker-member-role-editor  →  testID={`picker-member-role-${r}`}
 #   picker-member-role-viewer  →  testID={`picker-member-role-${r}`}
+#   btn-camera-thumb-N         →  testID={`btn-camera-thumb-${idx}`}
+#   batch-grid-tile-N*         →  testID={`${tileTestIDPrefix}-${idx}`} plus
+#                                  PhotoTile suffixes (`-img`, `-ring`, `-cancel`)
+#   id-a|id-b                  →  Maestro regex alternation, literals checked
+#                                  elsewhere by this same script
 #
 # Usage:  bash scripts/check-maestro-testids.sh
 # Exits with code 1 if any unknown testID is not found.
@@ -29,7 +34,7 @@ TESTIDS=$(grep -rh '^[[:space:]]*id:[[:space:]]*"' \
 
 # Known false-negatives: exact literal not in source but rendered at runtime.
 # Format: space-separated list of testID values to skip.
-KNOWN_TEMPLATE_IDS="picker-member-role-editor picker-member-role-viewer"
+KNOWN_TEMPLATE_IDS="picker-member-role-editor picker-member-role-viewer btn-camera-thumb-0 btn-camera-thumb-1 batch-grid-tile-0 batch-grid-tile-1 batch-grid-tile-0-ring batch-grid-tile-0-cancel batch-grid-tile-0-img batch-grid-tile-1-img btn-project-edit|btn-new-project screen-onboarding|btn-new-project|e2e-password-login-error"
 
 is_known() {
   local id="$1"

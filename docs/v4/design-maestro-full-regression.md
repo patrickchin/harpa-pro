@@ -9,11 +9,12 @@
 > 06-members-remove, 07-reports-crud, 08-text-notes,
 > 11-generate-finalize, 12-report-debug, 13-projects-delete (plus
 > helpers and sign-out).
-> **Current 2026-05-27 state:** `origin/dev` has module 09 implemented
-> but disabled on iOS, module 10a paused for the incoming photo upload
-> redesign, and modules 11/12/13 disabled on iOS. The active next goal
-> is full voice-note E2E coverage; see
-> [`design-voice-notes-e2e.md`](design-voice-notes-e2e.md).
+> **Current 2026-05-28 state:** `origin/dev` has module 09 implemented
+> and re-enabled, module 10a expanded for the landed photo-upload
+> redesign, and modules 11/12/13 restored to both local and dev
+> journeys. On Android `R3CT7092S2H`, the focused 11/12/13 run, full
+> local regression journey, and clean full dev-deployment journey all
+> passed using the local CLI auth broker plus API/R2 proxy bridge.
 > Windows-host gotchas hit while getting here are cataloged in
 > [`pitfalls-maestro-windows.md`](pitfalls-maestro-windows.md).
 > **Phase:** P4 hardening (extends [P3.14](plan-p3-feature-build.md#p314--maestro-full-journey--shipped) `core-end-to-end.yaml`).
@@ -67,9 +68,8 @@ section is the queue.
 
 | Carved out | Why | Pickup pointer |
 |---|---|---|
-| Full voice-note E2E | Module 09 exists but is disabled on iOS because the fixture recorder asset loader fails at runtime. Current module only proves the title appears; the goal is broader. | Active target: [design-voice-notes-e2e.md](design-voice-notes-e2e.md) and [§7 module 09](#7-future-modules-pickup-pointers). |
-| Camera capture + photo attachments (draft + finalized) | Paused while `agents/photo-upload-pipeline-ui-review` redesigns the photo upload UI/data shape around `attachments[]` and per-tile state. | [§7 Future modules 10a/10b](#7-future-modules-pickup-pointers) — resume after the redesign lands. |
-| Voice note debug fields (transcript, summary, playback) in Report Debug | Depends on module 09 being stable and module 11/12 being re-enabled on iOS. | Track after the core voice-note journey is green. |
+| Finalized-report photo verification | Draft-side photo upload is now covered by module 10a. The active 11/12/13 chain finalizes a text-note report; a photo-bearing finalized report remains future coverage. | [§7 Future module 10b](#7-future-modules-pickup-pointers). |
+| Voice note debug fields (transcript, summary, playback) in Report Debug | Module 09 covers the draft-side voice lifecycle and module 12 covers the current debug surface. Voice-specific debug fields need API + UI support before Maestro can assert them. | Track after the debug payload expands. |
 | Push notifications / universal links cold-tap | Tracked in [P4.6](plan-p4-hardening.md#p46-universal-links). Different harness. | [P4.6] — separate flow `share-link-cold-start.yaml`. |
 | Avatar upload (`AvatarUploader`) | Depends on R2 upload pipeline + camera roll — partly merged but no canonical Maestro coverage yet. | Add as `12a-avatar-upload.yaml` after photo modules unblock. |
 
@@ -405,10 +405,10 @@ the testIDs + product surfaces it depends on.
 
 Future commits / goals (queued in [§7](#7-future-modules-pickup-pointers)):
 
-- F1. `test(mobile): fully harden .maestro/modules/09-voice-notes.yaml` — active goal in `design-voice-notes-e2e.md`.
-- F2. `test(mobile): .maestro/modules/10a-photo-notes-draft.yaml` — after the photo upload UI redesign lands.
+- F1. `test(mobile): fully harden .maestro/modules/09-voice-notes.yaml` — landed and re-enabled in the regression journey.
+- F2. `test(mobile): .maestro/modules/10a-photo-notes-draft.yaml` — landed for the photo upload redesign: attachment sheet → camera → two-tile batch → generated report photos → preview → delete.
 - F3. `test(mobile): .maestro/modules/10b-photo-notes-finalized.yaml` — after `ReportPhotos` signed-URL wiring lands on the redesigned photo surface.
-- F4. `feat(api): extend /reports/{n}/debug with voice transcript+summary columns` — after F1 is green and modules 11/12 are re-enabled.
+- F4. `feat(api): extend /reports/{n}/debug with voice transcript+summary columns` — after the debug payload and UI expose voice-specific fields.
 
 ---
 
@@ -458,20 +458,24 @@ the development deployment:
 - Auth: test-account password bypass (`POST /auth/password/verify`),
   not fake OTP and not real SMS. Requires the dev Fly app to have
   `TEST_ACCOUNT_PHONES` and `TEST_ACCOUNT_PASSWORD` configured from
-  Doppler `dev`.
+  Doppler `dev`. Local Maestro runs should keep that shared password
+  in a CLI broker process, not in Maestro env/input values, because
+  Maestro logs evaluated commands.
 - Data: use allowlisted Alice/Bob test accounts and create unique
   per-run project/report names, then clean them up in-flow. Do not
   truncate the shared dev DB as part of a normal E2E run.
 - AI: dev deployment settings. If `AI_LIVE=1`, this is a live-provider
   smoke; if dev is temporarily pointed at fixture replay, the run
   still proves deployed API/auth/storage/DB wiring.
+- Android device bridge: use a local API proxy and R2 proxy when the
+  device cannot reach public dev/R2 endpoints directly. The API proxy
+  forwards to `harpa-pro-api-dev` and rewrites signed R2 URLs to the
+  local R2 proxy, which forwards the original signed requests.
 
 Open implementation work:
 
-- Add a Maestro auth helper for password-login test accounts, or a
-  safe setup hook that logs in through `/auth/password/verify` and
-  installs the resulting session into the dev-client. This helper must
-  be unavailable in production builds.
+- Fold the local dev helpers/proxies into the future `mo journey`
+  target so users do not need to start them manually.
 - Teach `mo journey` / `mo run` a `--target dev` mode that skips local
   DB truncation, points the app at `harpa-pro-api-dev`, and uses the
   password-login helper.
@@ -488,11 +492,11 @@ clear merge-trigger so we don't drift back into Pitfall 4.
 
 | Slot | Module | Trigger to add | Tracking |
 |---|---|---|---|
-| 09 | `09-voice-notes.yaml` — fixture recording + upload + transcribe + summarize + title + transcript sheet + playback entry point + delete | Fix the iOS fixture-recorder asset loader, then re-enable and expand the existing module | Active goal: [design-voice-notes-e2e.md](design-voice-notes-e2e.md). |
-| 10a | `10a-photo-notes-draft.yaml` — `btn-attach-photo` → camera → Done → photo row appears on Notes timeline → delete | Photo upload UI redesign lands (`agents/photo-upload-pipeline-ui-review`, commit `8527984` is the current GitHub design branch) | Paused until the final `attachments[]` / per-tile surface lands; do not harden current-surface photo assertions. |
-| 10b | `10b-photo-notes-finalized.yaml` — open finalized report → ReportPhotos block renders → ImagePreviewModal opens via signed URL | `ReportPhotos` + `ImagePreviewModal` signed-URL fetch wired to live R2 in mobile (currently uses dev-mirror fixtures only on dev) | Same as 10a. |
-| 12a | `12-report-debug.yaml` voice fields | F1 also adds `voiceTranscripts` + `voiceSummaries` arrays to `GET /reports/{n}/debug` and to the debug screen | Bundled with F1/F4 in §4. |
-| 14 | `14-avatar-upload.yaml` | After 10a unblocks (shares upload pipeline) | Add to P4 list when 10a lands. |
+| 09 | `09-voice-notes.yaml` — fixture recording + upload + transcribe + summarize + title + transcript sheet + playback entry point + delete | Voice-note E2E hardening landed on `dev` | Re-enabled in `regression-journey.yaml`; passed local Android regression before module 10a work. |
+| 10a | `10a-photo-notes-draft.yaml` — `btn-attachment` → camera → Done → two-tile photo row appears on Notes timeline → generate → Report tab photo strip → preview → delete | Photo upload UI redesign landed on `dev` (`5173049`) | Re-enabled in `regression-journey.yaml`; passed focused local Android, full local regression, and clean full dev-deployment regression on 2026-05-28. |
+| 10b | `10b-photo-notes-finalized.yaml` — open finalized report → ReportPhotos block renders → ImagePreviewModal opens via signed URL | Add a photo-bearing finalized-report path after the draft-side upload lifecycle | Still future; module 10a covers the landed improvement and module 11 now supplies the finalize chain. |
+| 12a | `12-report-debug.yaml` voice fields | Add `voiceTranscripts` + `voiceSummaries` arrays to `GET /reports/{n}/debug` and to the debug screen | Bundled with F4 in §4 after the debug payload expands. |
+| 14 | `14-avatar-upload.yaml` | Avatar upload needs its own camera-roll/R2 assertions | Add to P4 list as a separate upload-pipeline follow-up. |
 
 If a feature lands on `dev` but its module is **not** added in the
 same PR, the PR is blocked. The merge-checklist for any branch in
@@ -521,18 +525,13 @@ between "the journey is green" and "the app is covered".
   entry asserted in module 12. The journey reaches the developer
   section indirectly (the entry only renders behind
   `EXPO_PUBLIC_USE_FIXTURES`) but does not assert profile edits.
-- Voice notes — module slot `09` exists but is disabled in
-  `regression-journey.yaml` on iOS because the fixture recorder's
-  `voice-sample.m4a` dynamic import does not resolve at runtime.
-  This is now the active E2E goal: the module must cover recording,
-  upload, transcribe, summarize, title, transcript viewing, playback
-  entry point, and delete. See
-  [`design-voice-notes-e2e.md`](design-voice-notes-e2e.md).
-- Image / photo uploads — module slots `10a` / `10b` are reserved.
-  Currently paused because the GitHub branch
-  `agents/photo-upload-pipeline-ui-review` redesigns the photo upload
-  UI/data shape around `attachments[]` and per-tile state. Resume once
-  that surface lands.
+- Voice notes — module `09` now covers recording, upload, transcribe,
+  summarize, title, transcript viewing, playback entry point, and
+  delete. Remaining voice coverage is the saved-report/debug surface
+  once the debug payload exposes voice transcript/summary fields.
+- Image / photo uploads — module `10a` now covers the landed draft-side
+  photo lifecycle around `attachments[]` and per-tile state. Module
+  `10b` remains reserved for finalized saved-report photo coverage.
 
 These do not block the P4.8 exit gate — they are tracked as future
 modules and will land alongside their feature work or as targeted

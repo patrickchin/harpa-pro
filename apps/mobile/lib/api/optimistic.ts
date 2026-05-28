@@ -352,7 +352,7 @@ export function useOptimisticCreateReport() {
       const now = new Date().toISOString();
       // `number` is server-assigned. We use a sentinel high value so
       // the optimistic row sorts to the top of the drafts section
-      // (`buildReportsSections` sorts by `updatedAt` desc, so `now`
+      // (`buildReportsSections` sorts by `createdAt` desc, so `now`
       // already wins — `number` is only shown in the row title).
       const optimisticReport: Report = {
         id: tempId,

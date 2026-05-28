@@ -75,7 +75,12 @@ export type ReportSection = {
   data: ReportListItem[];
 };
 
-/** Section list groups: drafts first, then finalized — both sorted by recency. */
+/**
+ * Section list groups: drafts first, then finalized — both sorted by
+ * creation date (newest first). Mirrors the API's
+ * `ORDER BY created_at DESC, id DESC` so the client doesn't reshuffle
+ * rows on edit. See `packages/api/src/services/reports.ts:listReports`.
+ */
 export function buildReportsSections(
   reports: ReadonlyArray<ReportListItem>,
 ): ReportSection[] {
@@ -84,10 +89,10 @@ export function buildReportsSections(
   for (const r of reports) {
     (r.status === 'draft' ? drafts : finalized).push(r);
   }
-  const byRecent = (a: ReportListItem, b: ReportListItem) =>
-    Date.parse(b.updatedAt) - Date.parse(a.updatedAt);
-  drafts.sort(byRecent);
-  finalized.sort(byRecent);
+  const byCreated = (a: ReportListItem, b: ReportListItem) =>
+    Date.parse(b.createdAt) - Date.parse(a.createdAt);
+  drafts.sort(byCreated);
+  finalized.sort(byCreated);
   const sections: ReportSection[] = [];
   if (drafts.length) sections.push({ title: 'Drafts', data: drafts });
   if (finalized.length) sections.push({ title: 'Finalized', data: finalized });

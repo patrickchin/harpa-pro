@@ -250,6 +250,7 @@ export function SavedReport(props: SavedReportProps) {
         )
         .map((n) => ({
           fileId: n.fileId,
+          thumbnailFileId: n.thumbnailFileId ?? null,
           title: n.body?.trim() || 'Photo',
           cacheKey: n.fileId,
         })),

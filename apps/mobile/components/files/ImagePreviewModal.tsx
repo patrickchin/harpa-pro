@@ -38,6 +38,7 @@ import { colors } from '@/lib/design-tokens/colors';
 
 export interface ImagePreviewPhoto {
   fileId?: string | null;
+  thumbnailFileId?: string | null;
   uri?: string | null;
   title?: string;
   cacheKey?: string | null;
@@ -74,7 +75,7 @@ export function ImagePreviewModal({
   // single-element array so the rendering path is uniform.
   const resolvedPhotos = useMemo<ReadonlyArray<ImagePreviewPhoto>>(() => {
     if (photos && photos.length > 0) return photos;
-    return [{ uri, fileId, title, cacheKey }];
+    return [{ uri, fileId, thumbnailFileId: null, title, cacheKey }];
   }, [photos, uri, fileId, title, cacheKey]);
 
   const startIndex = clampIndex(initialIndex, resolvedPhotos.length);

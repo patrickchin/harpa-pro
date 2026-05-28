@@ -89,6 +89,29 @@ describe('ImagePreviewModal', () => {
     expect(source.uri).toBe('https://r2.example.com/signed.jpg?sig=abc');
   });
 
+  it('accepts thumbnailFileId on gallery photos without widening onOpenPhoto callbacks', async () => {
+    let tree!: ReactTestRenderer;
+    await act(async () => {
+      tree = wrap(
+        <ImagePreviewModal
+          visible
+          photos={[
+            {
+              fileId: 'fil_full_1',
+              thumbnailFileId: 'fil_thumb_1',
+              title: 'Gallery photo',
+              cacheKey: 'fil_full_1',
+            },
+          ]}
+          initialIndex={0}
+          onClose={() => {}}
+        />,
+      );
+    });
+
+    expect(calls.some((c) => c.includes('/files/fil_full_1/url'))).toBe(true);
+  });
+
   it('renders the loading indicator before a signed URL resolves', () => {
     // Hold fetch pending so the query never resolves during the test tick.
     vi.unstubAllGlobals();

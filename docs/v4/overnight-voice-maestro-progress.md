@@ -56,6 +56,14 @@ suite first against the local backend, then against the dev deployment.
   and the clean full dev-deployment regression passed modules 01, 01b,
   02, 03, 04, 05, 06, 07, 08, 09, 10a, 11, 12, 13, 14, 15, 16, and
   sign-out.
+- Follow-up gap pass: module 10b fills the finalized-photo gap by
+  finalizing a report while the photo note is still attached, asserting
+  the saved-report `report-photos` block, opening the image preview by
+  fileId, and deleting that finalized report before continuing.
+  Focused local Android passed 01/02/10b, the full local regression
+  passed with 10b included, and the clean full dev-deployment
+  regression passed against `harpa-pro-api-dev` (`gitCommit=9db5b51`,
+  project `DevE2E-20260528T204311`, deleted in-flow).
 - Dev deployment should use `/auth/password/verify` test accounts, not
   fake OTP or real SMS. Keep the password in the CLI/broker; do not
   pass it to Maestro.

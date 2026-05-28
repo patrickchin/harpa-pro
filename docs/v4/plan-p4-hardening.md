@@ -134,6 +134,14 @@ the `5173049` redesign landed on `dev`. Module 10a covers attachment
 selection → camera capture → two-photo batch upload → per-tile UI →
 generated Report-tab photo strip → preview modal → photo-note delete
 → draft cleanup.
+Module 10b now covers the remaining photo path: a photo-bearing report
+is finalized, the saved-report `ReportPhotos` block renders, the image
+preview opens by fileId, and the finalized report is deleted before
+the journey continues. Focused local Android passed 01/02/10b, the
+full local regression passed with 10b included, and the clean full
+dev-deployment regression passed against `harpa-pro-api-dev`
+(`gitCommit=9db5b51`, project `DevE2E-20260528T204311`, deleted
+in-flow).
 
 **2026-05-28 local result.** Focused Android run passed
 `01-auth.yaml`, `02-projects-crud.yaml`, and expanded
@@ -166,6 +174,7 @@ R2 PUT/GET traffic for voice and photos was observed through
 - [x] `.maestro/regression-journey.yaml` top-level runner (lives at repo root `.maestro/`, not under `apps/mobile/`).
 - [x] Module 09 (`09-voice-notes.yaml`) re-enabled and expanded for fixture recording, upload, transcript, summary, playback entry point, and delete.
 - [x] Module 10a (`10a-photo-notes-draft.yaml`) re-enabled and expanded for the photo upload redesign lifecycle.
+- [x] Module 10b (`10b-photo-notes-finalized.yaml`) added for finalized saved-report photo strip + preview coverage.
 
 **Remaining:**
 
@@ -174,7 +183,6 @@ R2 PUT/GET traffic for voice and photos was observed through
 - [ ] CI workflow that actually runs the journey (currently developer-driven on the real device — no CI matrix yet for the Android emulator leg).
 - [x] Dev-deployment E2E pass after local green: same coverage against `harpa-pro-api-dev` using the `POST /auth/password/verify` test-account bypass, dev Neon/R2, and non-destructive per-run cleanup.
 - [ ] `mo journey` / Maestro target support for `local` vs `dev`, with strict ordering so dev runs only after local passes. This should provide the password-login helper/setup hook for dev.
-- [ ] Module slot 10b (finalized photo notes) — add a photo-bearing finalized-report path after the draft-side upload lifecycle.
-- [ ] Remaining uncovered surfaces outside the passing journey: finalized image uploads, voice-specific debug fields, avatar upload, and deep-link/push flows.
-- [ ] Remaining future-pickup modules (10b finalized photos, 12a voice debug fields, avatar upload) land alongside their feature work — tracked in design doc §7.
+- [ ] Remaining uncovered surfaces outside the passing journey: voice-specific debug fields, avatar upload, and deep-link/push flows.
+- [ ] Remaining future-pickup modules (12a voice debug fields, avatar upload) land alongside their feature work — tracked in design doc §7.
 - [ ] Commit train per design doc §4 (initial bring-up commits landed; outstanding ones folded into the bullets above).

@@ -29,6 +29,7 @@ tags:
 - runFlow: modules/08-text-notes.yaml
 - runFlow: modules/09-voice-notes.yaml
 - runFlow: modules/10a-photo-notes-draft.yaml
+- runFlow: modules/10b-photo-notes-finalized.yaml
 - runFlow: modules/11-generate-finalize.yaml
 - runFlow: modules/12-report-debug.yaml
 - runFlow: modules/13-projects-delete.yaml

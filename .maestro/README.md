@@ -75,14 +75,15 @@ deletes the project + signs out at the end). Covers:
     delete
 8. Photo notes: attachment sheet, camera upload, generated report
     photo strip, preview, delete
-9. Generate + finalize: add note, generate/update report, finalize,
+9. Finalized photo report: saved-report photo strip and preview
+10. Generate + finalize: add note, generate/update report, finalize,
    unfinalize, re-finalize
-10. Report Debug: prompt, report notes, LLM response, non-empty state
-11. Project delete teardown
-12. Account view + edit-cancel + edit-save
-13. Usage screen render
-14. Profile identity + nav
-15. Sign out
+11. Report Debug: prompt, report notes, LLM response, non-empty state
+12. Project delete teardown
+13. Account view + edit-cancel + edit-save
+14. Usage screen render
+15. Profile identity + nav
+16. Sign out
 
 **Pre-condition:** docker compose stack up, Metro running, app built
 with `EXPO_PUBLIC_USE_FIXTURES=true`. Microphone and camera privacy
@@ -130,6 +131,13 @@ Dev-deployment target:
   dynamic dev-project recovery fix: modules 01, 01b, 02, 03, 04, 05,
   06, 07, 08, 09, 10a, 11, 12, 13, 14, 15, 16, and sign-out. R2
   upload/download traffic went through the local R2 proxy.
+- 2026-05-28 follow-up: module 10b adds finalized saved-report photo
+  coverage. It creates a photo-bearing report, finalizes it, asserts
+  `report-photos`, opens the saved-report image preview by fileId,
+  then deletes the finalized report before the rest of the journey.
+  Focused local Android passed 01/02/10b, the full local regression
+  passed with 10b included, and a clean full dev-deployment Android
+  run passed against `harpa-pro-api-dev` (`gitCommit=9db5b51`).
 
 Modules 14/15/16 navigate to Profile / Account / Usage screens.
 

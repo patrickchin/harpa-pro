@@ -16,6 +16,7 @@ tags:
 #   8. Text notes — add and delete a text note
 #   9. Voice notes — record/upload/transcribe/summarize/title/transcript/delete
 #  10a. Photo notes (draft) — attachment sheet/camera upload/generated photos/delete
+#  10b. Photo notes (finalized) — saved-report photo strip and preview
 #  11. Generate + finalize — add note, generate, view report, finalize, unfinalize, re-finalize
 #  12. Report debug — verify debug screen sections
 #  13. Projects delete — delete the project, verify gone
@@ -79,6 +80,11 @@ tags:
 # Requires: app built with EXPO_PUBLIC_USE_FIXTURES=true; camera
 # privacy grant on the sim.
 - runFlow: modules/10a-photo-notes-draft.yaml
+
+# ── 10b. Photo notes (finalized): saved-report photo strip ────────────────
+# Pre-condition: alice on project home
+# Requires: same camera/upload fixture setup as 10a.
+- runFlow: modules/10b-photo-notes-finalized.yaml
 
 # ── 11. Generate + finalize ───────────────────────────────────────────────
 # Pre-condition: alice on project home

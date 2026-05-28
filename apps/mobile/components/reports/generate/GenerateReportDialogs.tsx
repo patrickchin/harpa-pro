@@ -138,6 +138,7 @@ export function GenerateReportDialogs() {
               handlePickAttachment('document');
             },
             accessibilityLabel: 'Pick a document',
+            testID: 'btn-attachment-document',
           },
           {
             label: 'Photo Library',
@@ -147,6 +148,7 @@ export function GenerateReportDialogs() {
               handlePickAttachment('image');
             },
             accessibilityLabel: 'Pick a photo from library',
+            testID: 'btn-attachment-photo-library',
           },
           {
             label: 'Camera',
@@ -156,12 +158,14 @@ export function GenerateReportDialogs() {
               void photo.handleCameraCapture();
             },
             accessibilityLabel: 'Take a photo with the camera',
+            testID: 'btn-attachment-camera',
           },
           {
             label: 'Cancel',
             variant: 'quiet',
             onPress: closeAttachmentSheet,
             accessibilityLabel: 'Cancel attachment picker',
+            testID: 'btn-attachment-cancel',
           },
         ]}
       />

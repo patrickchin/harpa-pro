@@ -74,26 +74,32 @@ deletes the project + signs out at the end). Covers:
 7. Account view + edit-cancel + edit-save
 8. Usage screen render
 9. Profile identity + nav
-10. Sign out
+10. Voice notes: upload, transcript, summary, playback entry point,
+    delete
+11. Photo notes: attachment sheet, camera upload, generated report
+    photo strip, preview, delete
+12. Sign out
 
 Paused modules:
 
-- `09-voice-notes.yaml` is the active next goal. It should be
-  re-enabled once the fixture recorder asset loader works on iOS, then
-  expanded to cover upload, transcription, summarization, title,
-  transcript viewing, playback entry point, and delete. See
-  `docs/v4/design-voice-notes-e2e.md`.
-- `10a-photo-notes-draft.yaml` is intentionally paused while the
-  `agents/photo-upload-pipeline-ui-review` branch redesigns the photo
-  upload UI/data shape.
 - `11-generate-finalize.yaml`, `12-report-debug.yaml`, and
   `13-projects-delete.yaml` remain disabled on iOS for the reasons
   documented in `regression-journey.yaml`.
 
 **Pre-condition:** docker compose stack up, Metro running, app built
-with `EXPO_PUBLIC_USE_FIXTURES=true`. Microphone privacy grant is
-required when module 09 is enabled; camera privacy grant is only
-required when photo modules are re-enabled.
+with `EXPO_PUBLIC_USE_FIXTURES=true`. Microphone and camera privacy
+grants are required for modules 09 and 10a.
+
+On Android devices/emulators, reverse every local port used by the
+app and upload pipeline before running. Photo signed URLs point at
+the local MinIO endpoint, so `9000` is required in addition to Metro
+and the API:
+
+```bash
+adb reverse tcp:8081 tcp:8081
+adb reverse tcp:8787 tcp:8787
+adb reverse tcp:9000 tcp:9000
+```
 
 **Run:**
 
@@ -106,13 +112,26 @@ Dev-deployment target:
 
 - After the local backend run passes, run the same coverage against
   `https://harpa-pro-api-dev.fly.dev`.
-- Dev auth must use `POST /auth/password/verify` with allowlisted test
-  accounts (`TEST_ACCOUNT_PHONES` + `TEST_ACCOUNT_PASSWORD` in Doppler
-  `dev`), not fake OTP.
+- Dev auth uses the local CLI auth broker
+  (`scripts/dev-e2e-auth-broker.cjs`) with allowlisted test accounts
+  (`TEST_ACCOUNT_PHONES` + `TEST_ACCOUNT_PASSWORD` in `.env.local` or
+  Doppler `dev`), not fake OTP. Do not pass the password as a Maestro
+  env var or `inputText`: Maestro debug logs evaluated values.
+- On Android, run Metro with `--host lan --port 8082`, reverse
+  `8082`, and use the local API/R2 proxies:
+  `scripts/dev-e2e-api-proxy.cjs` on `8788`,
+  `scripts/dev-e2e-r2-proxy.cjs` on `8791`, plus the auth broker on
+  `8790`.
 - Dev runs must create unique per-run data and clean it up in-flow;
   they must not truncate the shared dev database.
 - `mo journey --target dev` is the intended future entry point once
   the orchestrator grows target support.
+- 2026-05-28 status: local Android regression is green with module
+  10a enabled. A clean dev-deployment Android run of
+  `regression-journey-dev.yaml` passed end to end after the dynamic
+  dev-project recovery fix: modules 01, 01b, 02, 03, 04, 05, 06, 07,
+  08, 09, 10a, project cleanup, 14, 15, 16, and sign-out. R2
+  upload/download traffic went through the local R2 proxy.
 
 Modules 14/15/16 navigate to Profile / Account / Usage screens.
 
@@ -121,7 +140,7 @@ Modules 14/15/16 navigate to Profile / Account / Usage screens.
 Same photo pipeline as `modules/10a-photo-notes-draft.yaml` but
 signs in as seeded `+15550100100` (requires `reset-db.sh`).
 Kept for one-off iteration on the camera path; safe to delete once
-module 10a is green on CI.
+module 10a is green in CI.
 
 ## `p3-15-voice-record.yaml` (legacy — superseded by module 09)
 

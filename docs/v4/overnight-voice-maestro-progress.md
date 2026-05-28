@@ -25,25 +25,32 @@ suite first against the local backend, then against the dev deployment.
   Completed modules: 01, 01b, 02, 03, 04, 05, 06, 07, 08,
   09, 14, 15, 16, and final sign-out. Modules 10a/11/12/13
   remain intentionally disabled as documented in the journey.
-- [ ] Run dev-deployment E2E pass against `harpa-pro-api-dev`.
-  Blocked in this workspace:
-  - `https://harpa-pro-api-dev.fly.dev/healthz` is healthy
+- [x] Run dev-deployment E2E pass against `harpa-pro-api-dev`.
+  2026-05-28 Android result:
+  - `https://harpa-pro-api-dev.fly.dev/healthz` was healthy
     (`gitCommit=fefdb4f`, `buildTime=2026-05-26T18:53:11Z`).
-  - `/auth/password/verify` is enabled on dev: a wrong-password probe
-    returns `401` rather than `404`.
-  - No `TEST_ACCOUNT_PASSWORD`, `TEST_ACCOUNT_PHONES`,
-    `MAESTRO_DEV_TEST_ACCOUNT_PASSWORD`, or
-    `MAESTRO_DEV_TEST_ACCOUNT_PHONES` are present in the local env.
-  - `mo journey --target dev` is not implemented (`No such option
-    '--target'`), and current Maestro sign-up/OTP helpers are
-    local-only.
+  - Dev auth used `scripts/dev-e2e-auth-broker.cjs` so the shared
+    test-account password stayed in the CLI process and out of
+    Maestro logs.
+  - Device API traffic used `scripts/dev-e2e-api-proxy.cjs`; signed
+    R2 URLs were rewritten through `scripts/dev-e2e-r2-proxy.cjs`.
+  - After fixing the final local-only project-name assertion in module
+    10a, a clean full dev run of `regression-journey-dev.yaml` passed
+    modules 01, 01b, 02, 03, 04, 05, 06, 07, 08, 09, 10a, project
+    cleanup, 14, 15, 16, and sign-out.
 
 ## Notes
 
-- Photo module 10a remains paused because
-  `agents/photo-upload-pipeline-ui-review` redesigns that surface.
+- Follow-up on 2026-05-28: photo module 10a is no longer paused after
+  the upload UI redesign landed. It now covers attachment sheet →
+  camera → two-photo upload → generated photo strip → preview →
+  delete/cleanup, and passed focused local Android plus the full
+  local regression journey. It also passed inside the clean full dev
+  regression against real dev Fly/Neon/R2 via the local API/R2 proxy
+  bridge.
 - Dev deployment should use `/auth/password/verify` test accounts, not
-  fake OTP or real SMS.
+  fake OTP or real SMS. Keep the password in the CLI/broker; do not
+  pass it to Maestro.
 - Verification: focused voice/generate tests pass (`28` tests),
   mobile typecheck and lint are clean after the stale-row fix, and a
   direct Expo iOS export included

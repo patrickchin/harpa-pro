@@ -1,0 +1,53 @@
+appId: ${MAESTRO_APP_ID}
+name: "06-dev - Members: alice removes bob; bob no longer sees project"
+tags:
+  - regression
+  - members
+  - dev
+---
+
+- tapOn:
+    id: "link-project-members"
+- extendedWaitUntil:
+    visible:
+      id: "member-row-.*"
+    timeout: 10000
+- tapOn:
+    id: "btn-remove-member-.*"
+- extendedWaitUntil:
+    visible:
+      id: "confirm-remove-member"
+    timeout: 8000
+- tapOn:
+    id: "confirm-remove-member"
+- extendedWaitUntil:
+    notVisible:
+      text: "Viewer"
+    timeout: 8000
+
+- tapOn:
+    id: "btn-back"
+- extendedWaitUntil:
+    visible:
+      id: "btn-project-edit"
+    timeout: 10000
+
+- runFlow: ../helpers/sign-out.yaml
+- runFlow:
+    file: ../helpers/dev-password-login.yaml
+    env:
+      PHONE_ENCODED: "%2B15550199002"
+      NAME: "Bob Dev E2E"
+      COMPANY: "Dev E2E Corp"
+
+- assertNotVisible:
+    text: "${PROJECT_NAME_EDITED}"
+
+- runFlow: ../helpers/sign-out.yaml
+- runFlow:
+    file: ../helpers/dev-password-login.yaml
+    env:
+      PHONE_ENCODED: "%2B15550199001"
+      NAME: "Alice Dev E2E"
+      COMPANY: "Dev E2E Corp"
+- runFlow: ../helpers/open-project-dev.yaml

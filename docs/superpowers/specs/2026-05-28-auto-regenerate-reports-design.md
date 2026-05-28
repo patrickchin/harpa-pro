@@ -116,16 +116,34 @@ reports never auto-regenerate.
 
 ### Migration
 
-New migration under `packages/api/migrations/`:
+**Expand step only — contract/drop cleanup is deferred to a later release.**
 
-1. `ALTER TABLE app.reports ADD COLUMN notes_changed_at timestamptz`.
-2. Backfill:
-   `UPDATE app.reports SET notes_changed_at = updated_at WHERE notes_since_last_generation > 0`.
+Following the expand-contract rules in
+[`docs/v4/arch-cicd-and-migrations.md §Expand-contract rules`](../v4/arch-cicd-and-migrations.md):
+
+**PR A (this commit):**
+
+1. `ALTER TABLE app.reports ADD COLUMN notes_changed_at timestamptz` — nullable;
+   existing rows remain `NULL`.
+
+`notes_since_last_generation` is intentionally kept. Both columns coexist so
+any machine still running the previous image can read and write the counter
+without error during a rolling deploy. New code dual-writes both columns (see
+`packages/api/src/services/notes.ts`).
+
+**Later release — contract/drop migration:**
+
+Once every running machine has been replaced by code that dual-writes
+`notes_changed_at`, a follow-up migration will:
+
+2. Backfill rows where the counter was > 0 and `notes_changed_at` is still NULL:
+   ```sql
+   UPDATE app.reports
+      SET notes_changed_at = updated_at
+    WHERE notes_since_last_generation > 0
+      AND notes_changed_at IS NULL;
+   ```
 3. `ALTER TABLE app.reports DROP COLUMN notes_since_last_generation`.
-
-Done in a single migration. No expand-contract phase because the only
-consumer of the counter is the surface we are replacing in the same
-PR.
 
 ### `packages/api/src/services/notes.ts`
 
@@ -152,7 +170,12 @@ Call it from:
 - `updateNote` (body / title / summary / transcript edits)
 - `deleteNote`
 
-Remove the existing `notes_since_last_generation = … + 1` SQL.
+**Dual-write during the expand window.** Do NOT remove the existing
+`notes_since_last_generation = notes_since_last_generation + 1`
+updates. Both writes coexist until the contract PR drops the counter.
+Old machines reading only the counter still see a correct value; new
+machines compute `needsRegeneration` from `notes_changed_at` first
+and fall back to the counter for rows not yet migrated.
 
 Caption updates on `note_files` do not yet have a route. When/if one
 is added it must call this helper too — leave a TODO at the helper
@@ -160,10 +183,22 @@ definition so it is not forgotten.
 
 ### `packages/api/src/services/reports.ts`
 
-- `ReportSummary` gains `needsRegeneration: boolean`, computed from
-  the timestamp pair in every SELECT mapper.
-- Remove the `notes_since_last_generation` column from all SELECTs
-  and from the mapper.
+- `ReportSummary` gains `needsRegeneration: boolean`, computed via a
+  **dual-read** during the expand window: `notes_changed_at` is
+  authoritative when set; for rows not yet touched by new code (where
+  `notes_changed_at` is still `NULL`) fall back to
+  `notes_since_last_generation > 0`.
+
+  ```
+  needsRegeneration =
+    (notes_changed_at IS NOT NULL
+      AND (generated_at IS NULL OR notes_changed_at > generated_at))
+    OR (notes_changed_at IS NULL AND notes_since_last_generation > 0)
+  ```
+
+- Keep the `notes_since_last_generation` column in all SELECTs and in
+  the mapper for the duration of the expand window. The contract PR
+  removes it.
 - `runGenerate` / `setReportBody`:
   - Capture `snapshotTs = report.notes_changed_at` before the AI
     call.
@@ -173,6 +208,10 @@ definition so it is not forgotten.
     a concurrent bump we still want the dirty bit to stay true.)
   - Do **not** modify `notes_changed_at` on generate. The dirty
     check is purely the comparison.
+  - **Dual-write the clean state.** Also keep
+    `notes_since_last_generation = 0` in the `UPDATE` so machines
+    still reading the legacy counter see clean state during the
+    expand window.
 
 ### Contract
 

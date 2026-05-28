@@ -5,7 +5,7 @@
 **Goal:** Auto-regenerate the report whenever notes change, persist the dirty state across app restarts, and replace the racy counter with a `notes_changed_at` / `generated_at` timestamp pair surfaced as a `needsRegeneration: boolean`.
 
 **Architecture:**
-- Server: drop `reports.notes_since_last_generation`; add `reports.notes_changed_at timestamptz`. Bump it on every note add / delete / edit (draft reports only). `runGenerate` captures a snapshot and sets `generated_at = GREATEST(now(), snapshot_ts)` so concurrent bumps survive the in-flight call. Expose `needsRegeneration` (`notes_changed_at IS NOT NULL AND (generated_at IS NULL OR notes_changed_at > generated_at)`) in the API contract.
+- Server: **expand-contract** — PR A adds nullable `reports.notes_changed_at timestamptz` and keeps `reports.notes_since_last_generation`. Note mutations dual-write both columns. Reads derive `needsRegeneration` from `notes_changed_at` when set, falling back to the legacy counter (`notes_since_last_generation > 0`) for rows not yet touched by new code. `runGenerate` captures a pre-call snapshot, sets `generated_at = GREATEST(now(), snapshot_ts)`, and also resets the counter to `0` (dual-write clean state). Contract/drop cleanup (backfill + `DROP COLUMN`) ships in a later release. Expose `needsRegeneration` as a derived boolean in the API contract.
 - Mobile: new `useAutoRegenerate` hook on the generate screen — fires `handleRegenerate` when `needsRegeneration` is true, status is `draft`, no in-flight generation, and no error. Queue-of-one is implicit via React Query invalidation; error gate is the existing `generationError` setter.
 
 **Tech Stack:** Hono + Drizzle + Postgres (Testcontainers for integration tests), `@hono/zod-openapi` contract, `openapi-typescript` codegen, React Native + Expo Router + React Query on mobile, Vitest + `react-test-renderer` for mobile tests.
@@ -28,24 +28,20 @@ Migrations are plain SQL applied in lexical order by `packages/api/src/db/migrat
 ```sql
 -- 0011_notes_changed_at.sql
 --
--- Replace the racy `notes_since_last_generation` counter with a
--- `notes_changed_at` timestamp. Dirty state is then
--- `notes_changed_at IS NOT NULL AND
---   (generated_at IS NULL OR notes_changed_at > generated_at)`.
+-- Expand step: add notes_changed_at (nullable) alongside the existing
+-- notes_since_last_generation counter. Both columns coexist during the
+-- expand window so rolling deploys are safe — old machines still read
+-- and write the counter; new machines dual-write both columns and
+-- dual-read needsRegeneration from whichever is set.
 --
--- See docs/superpowers/specs/2026-05-28-auto-regenerate-reports-design.md.
+-- Contract/drop cleanup (backfill + DROP COLUMN) ships in a later
+-- migration once every running machine reads from notes_changed_at.
+--
+-- See docs/superpowers/specs/2026-05-28-auto-regenerate-reports-design.md
+-- and docs/v4/arch-cicd-and-migrations.md §"Expand-contract rules".
 
 ALTER TABLE app.reports
   ADD COLUMN notes_changed_at timestamptz;
-
--- Backfill: any report whose counter was non-zero is dirty. Use
--- updated_at as the best-effort "last changed" timestamp.
-UPDATE app.reports
-   SET notes_changed_at = updated_at
- WHERE notes_since_last_generation > 0;
-
-ALTER TABLE app.reports
-  DROP COLUMN notes_since_last_generation;
 ```
 
 - [ ] **Step 2: Verify locally**
@@ -60,7 +56,7 @@ Expected: existing `migrate.advisory-lock.integration.test.ts` and `migrate.fail
 
 ```bash
 git add packages/api/migrations/0011_notes_changed_at.sql
-git commit -m "feat(api): migration 0011 — notes_changed_at replaces counter"
+git commit -m "feat(api): migration 0011 — add notes_changed_at (expand step; counter kept)"
 ```
 
 ---
@@ -82,16 +78,15 @@ Expected: clean before edit, fails after the column rename below until the servi
 
 - [ ] **Step 2: Edit the schema**
 
-Replace lines 110–112 of `packages/api/src/db/schema.ts`:
+Add `notesChangedAt` alongside the existing `notesSinceLastGeneration` in
+`packages/api/src/db/schema.ts` (lines 110–112). Both columns coexist during
+the expand window; do **not** remove `notesSinceLastGeneration` until the
+contract PR:
 
 ```ts
-// before:
-//   body: jsonb('body'),
-//   notesSinceLastGeneration: integer('notes_since_last_generation').notNull().default(0),
-//   generatedAt: timestamp('generated_at', { withTimezone: true }),
-
-// after:
+// Add notesChangedAt; notesSinceLastGeneration stays until the contract PR.
     body: jsonb('body'),
+    notesSinceLastGeneration: integer('notes_since_last_generation').notNull().default(0),
     notesChangedAt: timestamp('notes_changed_at', { withTimezone: true }),
     generatedAt: timestamp('generated_at', { withTimezone: true }),
 ```
@@ -100,7 +95,7 @@ Replace lines 110–112 of `packages/api/src/db/schema.ts`:
 
 ```bash
 git add packages/api/src/db/schema.ts
-git commit -m "feat(api): drop notes_since_last_generation from reports schema"
+git commit -m "feat(api): add notesChangedAt to reports schema (expand step)"
 ```
 
 ---
@@ -115,7 +110,10 @@ git commit -m "feat(api): drop notes_since_last_generation from reports schema"
 
 - [ ] **Step 1: Write the failing integration tests**
 
-Open `packages/api/src/__tests__/notes.integration.test.ts`. Replace the existing "bumps `notes_since_last_generation`" test (lines 64–100) with a `notes_changed_at` version, then add delete + update cases. Keep the rest of the file unchanged.
+Open `packages/api/src/__tests__/notes.integration.test.ts`. Keep the
+existing "bumps `notes_since_last_generation`" test — the counter is still
+dual-written and must remain correct. Add the `notes_changed_at` cases
+below it to verify both writes land. Keep the rest of the file unchanged.
 
 ```ts
 async function readDirty(reportId: string) {
@@ -219,6 +217,7 @@ export interface ReportRow {
   status: ReportStatus;
   visitDate: string | null;
   body: ReportBody | null;
+  notesSinceLastGeneration: number;   // kept for dual-read during expand window
   notesChangedAt: string | null;
   generatedAt: string | null;
   finalizedAt: string | null;
@@ -239,6 +238,7 @@ interface RawReport {
   status: ReportStatus;
   visit_date: Date | null;
   body: ReportBody | null;
+  notes_since_last_generation: number;   // kept for dual-read during expand window
   notes_changed_at: Date | null;
   generated_at: Date | null;
   finalized_at: Date | null;
@@ -259,6 +259,7 @@ function mapReport(r: RawReport): ReportRow {
     status: r.status,
     visitDate: r.visit_date ? new Date(r.visit_date).toISOString() : null,
     body: r.body,
+    notesSinceLastGeneration: Number(r.notes_since_last_generation),   // expand window
     notesChangedAt: r.notes_changed_at ? new Date(r.notes_changed_at).toISOString() : null,
     generatedAt: r.generated_at ? new Date(r.generated_at).toISOString() : null,
     finalizedAt: r.finalized_at ? new Date(r.finalized_at).toISOString() : null,
@@ -269,22 +270,26 @@ function mapReport(r: RawReport): ReportRow {
 }
 ```
 
-- [ ] **Step 4: Replace every `notes_since_last_generation` SQL fragment**
+- [ ] **Step 4: Add `notes_changed_at` to every SELECT / RETURNING list**
 
-In the same file, every SELECT and `RETURNING` list currently includes `notes_since_last_generation`. Replace each occurrence with `notes_changed_at`. The affected blocks are at lines ~111-113, ~122-124, ~144-146, ~168-170, ~239-241, ~288-290, ~373-375, ~388-390, ~411-413, ~429-431.
+In the same file, every SELECT and `RETURNING` list currently includes
+`notes_since_last_generation`. **Keep it and add `notes_changed_at`
+alongside it** — do not remove the counter during the expand window.
+The affected blocks are at lines ~111-113, ~122-124, ~144-146, ~168-170,
+~239-241, ~288-290, ~373-375, ~388-390, ~411-413, ~429-431.
 
-Apply this single text edit for each one:
+Apply this text edit for each unqualified occurrence:
 
 ```
 - notes_since_last_generation, generated_at, finalized_at,
-+ notes_changed_at, generated_at, finalized_at,
++ notes_since_last_generation, notes_changed_at, generated_at, finalized_at,
 ```
 
 And the `r.` qualified variant in `getReportByProjectSlugAndNumber`:
 
 ```
 - r.notes_since_last_generation, r.generated_at, r.finalized_at,
-+ r.notes_changed_at, r.generated_at, r.finalized_at,
++ r.notes_since_last_generation, r.notes_changed_at, r.generated_at, r.finalized_at,
 ```
 
 - [ ] **Step 5: Update `setReportBody` — capture snapshot, race-safe update**
@@ -311,6 +316,7 @@ export async function setReportBody(
     UPDATE app.reports
     SET body = ${JSON.stringify(body)}::jsonb,
         generated_at = GREATEST(now(), ${snapshotTs ?? null}::timestamptz),
+        notes_since_last_generation = 0,
         last_generation = CASE
           WHEN ${lastGenJson}::text IS NOT NULL THEN ${lastGenJson}::jsonb
           ELSE last_generation
@@ -318,7 +324,7 @@ export async function setReportBody(
         updated_at = now()
     WHERE id = ${reportId}
     RETURNING id, number, project_id, status, visit_date, body,
-              notes_changed_at, generated_at, finalized_at,
+              notes_since_last_generation, notes_changed_at, generated_at, finalized_at,
               pdf_file_id, created_at, updated_at
   `);
   const row = r.rows[0];
@@ -326,7 +332,10 @@ export async function setReportBody(
 }
 ```
 
-Note: we intentionally remove `notes_since_last_generation = 0`. `notes_changed_at` is NOT cleared — the comparison handles dirty state.
+Note: we dual-write the clean state — both `notes_since_last_generation = 0`
+(legacy, for old machines reading the counter) and
+`generated_at = GREATEST(now(), snapshotTs)` (new path). `notes_changed_at`
+is NOT cleared — the comparison handles dirty state.
 
 - [ ] **Step 6: Add the `bumpNotesChangedAt` helper to `services/notes.ts`**
 
@@ -354,7 +363,9 @@ async function bumpNotesChangedAt(db: Db, reportId: string): Promise<void> {
 
 Then replace the existing counter updates in this file:
 
-- Lines 258–263 (inside `createNote`) — replace the block:
+- Lines 258–263 (inside `createNote`) — **add** `bumpNotesChangedAt` after the
+  existing counter increment; do **not** remove the counter update
+  (dual-write during the expand window):
 
 ```ts
   await db.execute(sql`
@@ -363,15 +374,10 @@ Then replace the existing counter updates in this file:
         updated_at = now()
     WHERE id = ${reportId}
   `);
-```
-
-with:
-
-```ts
   await bumpNotesChangedAt(db, reportId);
 ```
 
-- Lines 313–318 (inside `createVoiceNote`) — same replacement.
+- Lines 313–318 (inside `createVoiceNote`) — same dual-write pattern.
 
 - Inside `updateNote` (lines 328–356), after the `UPDATE ... RETURNING` returns a row, add the bump before `return`. Modify the end of the function:
 
@@ -572,23 +578,33 @@ Also remove the now-stale comment block on lines 81–86 referencing the counter
 pnpm --filter @harpa/api-contract gen:types
 ```
 
-Expected: `openapi.json` + `src/generated/types.ts` updated. Confirm `notesSinceLastGeneration` no longer appears:
+Expected: `openapi.json` + `src/generated/types.ts` updated. Confirm `notesSinceLastGeneration` no longer appears in the **generated contract types** (it was an internal counter never intended for clients):
 
 ```bash
 cd packages/api-contract && rg -n 'notesSinceLastGeneration|notesChangedAt|needsRegeneration' src/generated
 ```
 
-Only the latter two should appear.
+Only `notesChangedAt` and `needsRegeneration` should appear.
 
 - [ ] **Step 3: Compute `needsRegeneration` in the route response**
 
 The contract now expects every report response to include `needsRegeneration`. Add a tiny helper in `packages/api/src/services/reports.ts` (right after `mapReport`):
 
 ```ts
+/**
+ * Dual-read during the expand window: prefer notes_changed_at when set
+ * (new code path); fall back to the legacy counter for rows not yet
+ * touched by new code. The fallback is removed in the contract PR
+ * that drops notes_since_last_generation.
+ */
 export function needsRegenerationOf(report: ReportRow): boolean {
-  if (report.notesChangedAt === null) return false;
-  if (report.generatedAt === null) return true;
-  return report.notesChangedAt > report.generatedAt;
+  if (report.notesChangedAt !== null) {
+    // Authoritative new path: timestamp comparison.
+    if (report.generatedAt === null) return true;
+    return report.notesChangedAt > report.generatedAt;
+  }
+  // Legacy fallback for rows where notes_changed_at is still NULL.
+  return report.notesSinceLastGeneration > 0;
 }
 ```
 
@@ -1146,7 +1162,12 @@ See `docs/v4/arch-report-auto-regen.md`.
 rg -n 'notes_since_last_generation|notesSinceLastGeneration|Update report \(' docs apps packages
 ```
 
-Expected: matches only in the new migration SQL string and in `docs/legacy-v3/` (frozen). Anywhere else — fix it.
+Expected: `notes_since_last_generation` / `notesSinceLastGeneration` appears in
+the migration SQL, Drizzle schema, service layer (dual-write + dual-read), and
+integration tests — all correct for the expand window. It must NOT appear in
+`docs/legacy-v3/` without that path being identified as frozen. The old
+"Update report (N)" counter-suffix UI copy should be gone from `apps/mobile`.
+Anywhere else — fix it.
 
 - [ ] **Step 4: Commit**
 
@@ -1162,5 +1183,5 @@ git commit -m "docs(reports): arch + pitfall for auto-regenerate"
 - [ ] `cd packages/api && pnpm typecheck && pnpm test && pnpm test:integration` — green.
 - [ ] `cd apps/mobile && pnpm typecheck && pnpm test` — green.
 - [ ] `pnpm --filter @harpa/api-contract gen:types` — clean (no diff).
-- [ ] `rg -n 'notes_since_last_generation|notesSinceLastGeneration' apps packages` — only inside migration `0011_notes_changed_at.sql`.
+- [ ] `rg -n 'notes_since_last_generation|notesSinceLastGeneration' apps packages` — expected in: migration SQL, Drizzle schema, service types/mapper, route SQL fragments, and integration tests (dual-write + dual-read). **Not** expected: anywhere that treats the counter as the sole `needsRegeneration` signal (i.e. no bare `notesSinceLastGeneration > 0` check without a `notes_changed_at` guard).
 - [ ] Manual smoke (live env): create a draft report, add a note → Report tab regenerates within seconds. Add another → it regenerates again. Add note while generating → exactly one follow-up regen. Force an error (e.g. invalid AI vendor) → loop stops, manual Regenerate resumes it. Restart app with a pending change in flight → on re-open, regenerates once.

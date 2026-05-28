@@ -144,8 +144,8 @@ describe('NoteTimeline image routing — legacy single-file entry', () => {
     // must continue to route `source === 'image'` to PhotoNoteCard regardless
     // of whether the entry came from the new batch path or this legacy path.
     const entry: NoteEntry = {
-      id: 'not_legacy_1',
-      text: '',
+      id: 'not_img_1',
+      text: 'Site photo',
       addedAt: 1700000000000,
       source: 'image',
       fileId: 'fil_full_1',
@@ -171,14 +171,11 @@ describe('NoteTimeline image routing — legacy single-file entry', () => {
     });
 
     // A single tile should appear for the one legacy file.
-    const tile = tree.root
-      .findAllByProps({ testID: 'batch-grid-tile-0' })
-      .find((n) => typeof n.type !== 'function');
-    expect(tile).toBeDefined();
+    const tile = tree.root.findByProps({ testID: 'batch-grid-tile-0' });
 
     // Pressing fires onOpenPhoto with the original fileId and sourceIndex 0.
     act(() => {
-      tile!.props.onPress();
+      tile.props.onPress(tile.props.attachment.fileId);
     });
 
     expect(opens).toEqual([{ fileId: 'fil_full_1', sourceIndex: 0 }]);

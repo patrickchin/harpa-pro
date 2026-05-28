@@ -60,9 +60,9 @@ client-side at upload time) — never an inline URL or base64 payload.
 
 Everywhere a photo appears outside the fullscreen preview (the
 saved-report 3-column grid `ReportPhotos`, the Generate-screen
-timeline mini-tile rendered by `PhotoNoteCard` → `PhotoBatchGrid` → `PhotoTile`, and the
-saved-report Notes pane row `PhotoNoteRow`) we render the shared
-`apps/mobile/components/notes/PhotoGridTile.tsx`. The tile resolves
+timeline grid in `PhotoNoteCard`, and the saved-report Notes pane row)
+we render the shared `apps/mobile/components/notes/PhotoTile.tsx`
+through `PhotoBatchGrid` or `ReportPhotos`. The tile resolves
 `thumbnailFileId ?? fileId` via `useFileSignedUrl` and renders the
 bytes through `CachedImage` (`expo-image` + disk cache, keyed by the
 resolved id). When `thumbnailFileId` is null (legacy rows) we fall

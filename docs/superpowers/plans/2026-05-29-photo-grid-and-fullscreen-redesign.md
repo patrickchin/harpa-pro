@@ -83,7 +83,7 @@ exercise the real hook path rather than priming cache state.
 - Modify: `pnpm-lock.yaml`
 - Check: `app.json`
 
-- [ ] **Step 1: Confirm dependency is currently absent**
+- [x] **Step 1: Confirm dependency is currently absent**
 
 Run from the repository root:
 
@@ -93,7 +93,7 @@ node -e "const pkg=require('./apps/mobile/package.json'); console.log(pkg.depend
 
 Expected: `missing`.
 
-- [ ] **Step 2: Install the SDK-compatible native module**
+- [x] **Step 2: Install the SDK-compatible native module**
 
 Run from `apps/mobile` so Expo chooses the SDK 55 compatible version:
 
@@ -106,7 +106,7 @@ cd ../..
 Expected: `apps/mobile/package.json` gains `react-native-pager-view` and
 `pnpm-lock.yaml` changes.
 
-- [ ] **Step 3: Verify Expo New Architecture config**
+- [x] **Step 3: Verify Expo New Architecture config**
 
 Run:
 
@@ -124,7 +124,7 @@ Expected: `true` or `not-set`. If this prints `false`, stop and ask before
 continuing because PagerView v6.x must be verified against the app's explicit
 New Architecture setting.
 
-- [ ] **Step 4: Run dependency sanity checks**
+- [x] **Step 4: Run dependency sanity checks**
 
 Run:
 
@@ -135,7 +135,7 @@ pnpm --filter @harpa/mobile typecheck
 Expected: TypeScript passes. No mobile source has changed yet; failures here
 are dependency-resolution failures that must be fixed before UI work.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add apps/mobile/package.json pnpm-lock.yaml
@@ -151,7 +151,7 @@ git commit -m "chore(mobile): add pager view dependency" \
 - Modify: `apps/mobile/components/notes/PhotoBatchGrid.test.tsx`
 - Modify: `apps/mobile/components/notes/PhotoBatchGrid.tsx`
 
-- [ ] **Step 1: Add failing sizing tests**
+- [x] **Step 1: Add failing sizing tests**
 
 In `PhotoBatchGrid.test.tsx`, add this helper near the existing tests:
 
@@ -225,7 +225,7 @@ describe('PhotoBatchGrid sizing', () => {
 });
 ```
 
-- [ ] **Step 2: Run the test and confirm it fails**
+- [x] **Step 2: Run the test and confirm it fails**
 
 Run:
 
@@ -236,7 +236,7 @@ pnpm --filter @harpa/mobile test -- components/notes/PhotoBatchGrid.test.tsx
 Expected: the new one- and two-attachment tests fail because the current grid
 computes one or two columns.
 
-- [ ] **Step 3: Implement the grid fix**
+- [x] **Step 3: Implement the grid fix**
 
 In `PhotoBatchGrid.tsx`, replace:
 
@@ -254,7 +254,7 @@ const tileSize = Math.max(
 );
 ```
 
-- [ ] **Step 4: Run the focused test**
+- [x] **Step 4: Run the focused test**
 
 Run:
 
@@ -264,7 +264,7 @@ pnpm --filter @harpa/mobile test -- components/notes/PhotoBatchGrid.test.tsx
 
 Expected: all `PhotoBatchGrid` tests pass.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add apps/mobile/components/notes/PhotoBatchGrid.tsx \
@@ -287,7 +287,7 @@ git commit -m "fix(mobile): keep photo batches in a three-column grid" \
 - Modify: `docs/v4/arch-mobile-skeletons.md`
 - Modify: `docs/v4/arch-storage.md`
 
-- [ ] **Step 1: Add a regression test for legacy single-file image rows**
+- [x] **Step 1: Add a regression test for legacy single-file image rows**
 
 Append this test to `NoteTimeline.test.tsx`:
 
@@ -327,7 +327,7 @@ it('renders a legacy single-file image note through PhotoNoteCard', () => {
 });
 ```
 
-- [ ] **Step 2: Run the test before deletion**
+- [x] **Step 2: Run the test before deletion**
 
 Run:
 
@@ -338,7 +338,7 @@ pnpm --filter @harpa/mobile test -- components/notes/NoteTimeline.test.tsx
 Expected: the new test passes because `NoteTimeline` already routes
 `entry.source === 'image'` through `PhotoNoteCard`.
 
-- [ ] **Step 3: Remove dead component files**
+- [x] **Step 3: Remove dead component files**
 
 Run:
 
@@ -347,7 +347,7 @@ rm apps/mobile/components/notes/ImageNoteCard.tsx
 rm apps/mobile/components/notes/ImageNoteCard.test.tsx
 ```
 
-- [ ] **Step 4: Remove stale import if present**
+- [x] **Step 4: Remove stale import if present**
 
 Run:
 
@@ -358,7 +358,7 @@ grep -n "ImageNoteCard" apps/mobile/components/notes/NoteTimeline.tsx || true
 Expected: no output. If an import is present, delete that import only; keep the
 existing `PhotoNoteCard` branch intact.
 
-- [ ] **Step 5: Update code comments**
+- [x] **Step 5: Update code comments**
 
 In `apps/mobile/lib/notes/attachments.ts`, replace:
 
@@ -380,7 +380,7 @@ rg "ImageNoteCard" apps/mobile
 
 Expected: no output.
 
-- [ ] **Step 6: Update architecture docs in the same commit**
+- [x] **Step 6: Update architecture docs in the same commit**
 
 Make these exact documentation edits:
 
@@ -412,7 +412,7 @@ resolved id).
 Also replace the two later `ImageNoteCard` references in
 `docs/v4/arch-storage.md` with `PhotoNoteCard`.
 
-- [ ] **Step 7: Run tests and reference scan**
+- [x] **Step 7: Run tests and reference scan**
 
 Run:
 
@@ -425,7 +425,7 @@ Expected: the test passes. The `rg` command may still show old historical
 phase-plan references; no result may appear under active architecture docs or
 mobile source.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add apps/mobile/components/notes/NoteTimeline.tsx \

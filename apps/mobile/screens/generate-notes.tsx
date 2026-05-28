@@ -117,7 +117,7 @@ function GenerateNotesLayout({
   isDeletingDraft,
   actions,
 }: LayoutProps) {
-  const { reportTitle, reportNumber, tabs } = useGenerateReport();
+  const { reportTitle, tabs } = useGenerateReport();
   const { width: windowWidth } = useWindowDimensions();
   const [isDeleteConfirmVisible, setIsDeleteConfirmVisible] = useState(false);
   const deleteDraftCopy = getDeleteDraftDialogCopy();
@@ -208,7 +208,6 @@ function GenerateNotesLayout({
         <View className="px-5 pt-4 pb-2">
           <ScreenHeader
             title={reportTitle}
-            subtitle={reportNumber !== null ? `#${reportNumber}` : undefined}
             onBack={onBack}
             backLabel="Reports"
             actions={actions}

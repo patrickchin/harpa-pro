@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
+  buildReportsSections,
   getReportTitle,
   getReportMeta,
   type ReportListItem,
@@ -59,5 +60,58 @@ describe('getReportMeta', () => {
     expect(
       getReportMeta({ ...base, status: 'finalized' }),
     ).toBe('#7 · May 20, 2026 · Finalized May 21, 2026');
+  });
+});
+
+describe('buildReportsSections', () => {
+  const row = (overrides: Partial<ReportListItem>): ReportListItem => ({
+    ...base,
+    ...overrides,
+  });
+
+  it('sorts each section by createdAt desc, ignoring updatedAt', () => {
+    const reports: ReportListItem[] = [
+      // Older createdAt but newer updatedAt — must NOT jump to the top.
+      row({
+        id: 'd-old',
+        number: 1,
+        status: 'draft',
+        createdAt: '2026-05-01T00:00:00.000Z',
+        updatedAt: '2026-05-30T00:00:00.000Z',
+      }),
+      row({
+        id: 'd-new',
+        number: 2,
+        status: 'draft',
+        createdAt: '2026-05-20T00:00:00.000Z',
+        updatedAt: '2026-05-20T00:00:00.000Z',
+      }),
+      row({
+        id: 'f-old',
+        number: 3,
+        status: 'finalized',
+        createdAt: '2026-04-01T00:00:00.000Z',
+        updatedAt: '2026-06-01T00:00:00.000Z',
+      }),
+      row({
+        id: 'f-new',
+        number: 4,
+        status: 'finalized',
+        createdAt: '2026-04-15T00:00:00.000Z',
+        updatedAt: '2026-04-15T00:00:00.000Z',
+      }),
+    ];
+    const sections = buildReportsSections(reports);
+    expect(sections.map((s) => s.title)).toEqual(['Drafts', 'Finalized']);
+    expect(sections[0]?.data.map((r) => r.id)).toEqual(['d-new', 'd-old']);
+    expect(sections[1]?.data.map((r) => r.id)).toEqual(['f-new', 'f-old']);
+  });
+
+  it('omits empty sections', () => {
+    const sections = buildReportsSections([
+      row({ id: 'd1', status: 'draft' }),
+    ]);
+    expect(sections).toHaveLength(1);
+    expect(sections[0]?.title).toBe('Drafts');
   });
 });

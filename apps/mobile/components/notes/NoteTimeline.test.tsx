@@ -13,6 +13,7 @@
  * survive the pending → saved transition.
  */
 import React from 'react';
+import { Pressable } from 'react-native';
 import { describe, it, expect, vi } from 'vitest';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -174,8 +175,9 @@ describe('NoteTimeline image routing — legacy single-file entry', () => {
     const tile = tree.root.findByProps({ testID: 'batch-grid-tile-0' });
 
     // Pressing fires onOpenPhoto with the original fileId and sourceIndex 0.
+    const pressable = tile.findByType(Pressable);
     act(() => {
-      tile.props.onPress(tile.props.attachment.fileId);
+      pressable.props.onPress();
     });
 
     expect(opens).toEqual([{ fileId: 'fil_full_1', sourceIndex: 0 }]);

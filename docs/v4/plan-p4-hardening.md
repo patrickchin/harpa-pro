@@ -21,6 +21,16 @@
       `.github/workflows/api-prod.yml`.
 - [x] EAS production profile — `apps/mobile/eas.json`.
 - [x] iOS prebuild for `expo-camera` — `apps/mobile/ios/` checked in.
+- [x] PG pool `statement_timeout=5s` — `packages/api/src/db/client.ts`
+      (P4.2 API half; integration test in
+      `__tests__/db/statement-timeout.integration.test.ts`).
+- [x] Universal-link manifests served from the API origin
+      (`/.well-known/apple-app-site-association` +
+      `/.well-known/assetlinks.json`) — `packages/api/src/routes/well-known.ts`,
+      env-driven (`IOS_APP_ID_PREFIX`, `IOS_BUNDLE_IDS`,
+      `ANDROID_PACKAGE_NAMES`, `ANDROID_CERT_FINGERPRINTS_SHA256`),
+      404 when unconfigured. Mobile `associatedDomains` +
+      Android intent filters still pending in P4.6.
 
 ## Exit gate (`p4-exit-gate.yml`)
 
@@ -54,9 +64,8 @@ provisioning plus staging test-crash confirmation.
 - [ ] Mobile: `FlashList` audit (currently zero usage), `React.memo`
       audit, `useCallback`/`useMemo` on hot paths (per Pitfall 4 v3
       commit `dbaa4c1`).
-- [ ] API: PG `statement_timeout` (5s) on the pool in
-      `packages/api/src/db/client.ts` — currently only `max: 10`
-      is set.
+- [x] API: PG `statement_timeout` (5s) on the pool in
+      `packages/api/src/db/client.ts`.
 - [ ] Cold-start measurement Maestro flow (`.maestro/cold-start.yaml`).
 - [ ] Commit: `perf(mobile,api): cold-start + list virtualization + PG limits`.
 
@@ -89,15 +98,24 @@ provisioning plus staging test-crash confirmation.
 - [ ] Commit: `test(api): k6 load test scenarios`.
 
 ### P4.6 Universal links
-- [ ] Serve `apple-app-site-association` from the API origin.
-- [ ] Serve `assetlinks.json` from the API origin.
-- [ ] `app.config.ts` `associatedDomains` + Android `intentFilters` wired
-      (currently only the `expo-camera` plugin is configured).
+- [x] Serve `apple-app-site-association` from the API origin
+      (`packages/api/src/routes/well-known.ts`, env-driven). Exempt
+      from the global rate limiter
+      (`middleware/globalRateLimit.ts` SKIP_PREFIXES) so Apple's
+      `swcd` daemon isn't 429'd during install storms.
+- [x] Serve `assetlinks.json` from the API origin
+      (`packages/api/src/routes/well-known.ts`, env-driven).
+- [x] `app.config.ts` `associatedDomains` (iOS) + Android
+      `intentFilters` wired for `/p/*` and `/r/*`, variant-aware
+      (`harpa-pro-api.fly.dev` for prod, `harpa-pro-api-dev.fly.dev`
+      for preview/dev). Requires an EAS native rebuild + the AASA /
+      assetlinks env vars set in Doppler.
 - [ ] `/p/:projectSlug` and `/r/:reportSlug` resolve from a cold
       tap on a share link — Maestro flow `share-link-cold-start.yaml`.
 - [ ] Push-notification → deep-link routing (notif payload carries
       canonical URL; tap handler `router.push`es it through the
-      auth gate's deferred-intent stash from P2.6).
+      auth gate's deferred-intent stash from P2.6). Deferred behind
+      `expo-notifications` adoption — separate slice.
 - [ ] Commit: `feat(mobile,api): universal links + push deep-link routing`.
 
 ### P4.7 Bugs sweep

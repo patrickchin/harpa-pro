@@ -129,6 +129,10 @@ const MOBILE_SKIP_PATHS = new Set<string>([
   'post /waitlist',
   'post /waitlist/confirm',
   'get /readyz',
+  // Universal-link manifests are fetched by the OS (swcd / Android
+  // PackageManager), not by the mobile client. Skip from codegen.
+  'get /.well-known/apple-app-site-association',
+  'get /.well-known/assetlinks.json',
 ]);
 
 // Validate that ENDPOINTS matches the spec exactly. Drift here means

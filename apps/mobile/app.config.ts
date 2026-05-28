@@ -36,6 +36,23 @@ const GIT_COMMIT = (() => {
 })();
 const BUILD_TIME = new Date().toISOString();
 
+/**
+ * Universal-link host that serves AASA + assetlinks.json.
+ * The API origin is the canonical resolver host (see
+ * `docs/v4/plan-p4-hardening.md` §P4.6) so share links resolve
+ * the same way over universal links and over the in-app web view.
+ *
+ * Variant-aware so the dev app verifies against the dev API and
+ * the prod app against prod (otherwise iOS' SWC daemon would refuse
+ * the association on a cert mismatch during TestFlight rollout).
+ *
+ * Uses Fly's HTTPS-by-default `*.fly.dev` hostnames today. Switch to
+ * `api.harpapro.com` once the custom domain + ACME cert are wired on
+ * Fly — keep both entries in `associatedDomains` during the cutover
+ * so existing builds keep working.
+ */
+const UNIVERSAL_LINK_HOST = IS_PROD ? 'harpa-pro-api.fly.dev' : 'harpa-pro-api-dev.fly.dev';
+
 const config: ExpoConfig = {
   name: NAME,
   slug: 'harpa-pro-v4',
@@ -56,6 +73,10 @@ const config: ExpoConfig = {
     bundleIdentifier: BUNDLE_ID,
     supportsTablet: true,
     icon: './assets/icon.png',
+    // Universal Links — iOS verifies via AASA at
+    // https://<host>/.well-known/apple-app-site-association.
+    // See packages/api/src/routes/well-known.ts.
+    associatedDomains: [`applinks:${UNIVERSAL_LINK_HOST}`],
     infoPlist: {
       ITSAppUsesNonExemptEncryption: false,
       NSPhotoLibraryAddUsageDescription:
@@ -68,6 +89,23 @@ const config: ExpoConfig = {
       foregroundImage: './assets/adaptive-icon.png',
       backgroundColor: '#e55d22',
     },
+    // Android App Links — verified via
+    // https://<host>/.well-known/assetlinks.json.
+    // `autoVerify=true` makes the system check the manifest on install;
+    // unverified links still open the app but show a chooser. Both /p
+    // and /r path prefixes are covered so cold taps land on the slug
+    // resolver routes in app/(app)/p,r/[slug].tsx.
+    intentFilters: [
+      {
+        action: 'VIEW',
+        autoVerify: true,
+        data: [
+          { scheme: 'https', host: UNIVERSAL_LINK_HOST, pathPrefix: '/p/' },
+          { scheme: 'https', host: UNIVERSAL_LINK_HOST, pathPrefix: '/r/' },
+        ],
+        category: ['BROWSABLE', 'DEFAULT'],
+      },
+    ],
   },
   web: { favicon: './assets/favicon.png' },
   plugins: [

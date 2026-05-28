@@ -911,6 +911,191 @@
         }
       }
     },
+    "/.well-known/apple-app-site-association": {
+      "get": {
+        "tags": [
+          "well-known"
+        ],
+        "responses": {
+          "200": {
+            "description": "Apple App Site Association manifest.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "applinks": {
+                      "type": "object",
+                      "properties": {
+                        "apps": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "details": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "appID": {
+                                "type": "string"
+                              },
+                              "paths": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string"
+                                }
+                              }
+                            },
+                            "required": [
+                              "appID",
+                              "paths"
+                            ]
+                          }
+                        }
+                      },
+                      "required": [
+                        "apps",
+                        "details"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "applinks"
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "iOS universal links are not configured on this origin.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "not_configured"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/.well-known/assetlinks.json": {
+      "get": {
+        "tags": [
+          "well-known"
+        ],
+        "responses": {
+          "200": {
+            "description": "Android Asset Links manifest.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "relation": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "target": {
+                        "type": "object",
+                        "properties": {
+                          "namespace": {
+                            "type": "string",
+                            "enum": [
+                              "android_app"
+                            ]
+                          },
+                          "package_name": {
+                            "type": "string"
+                          },
+                          "sha256_cert_fingerprints": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          }
+                        },
+                        "required": [
+                          "namespace",
+                          "package_name",
+                          "sha256_cert_fingerprints"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "relation",
+                      "target"
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Android app links are not configured on this origin.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "not_configured"
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/me": {
       "get": {
         "tags": [

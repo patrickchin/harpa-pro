@@ -126,6 +126,37 @@ const Env = z.object({
    * leak less catastrophic.
    */
   TEST_ACCOUNT_PASSWORD: z.string().min(16).optional(),
+  /**
+   * Universal links — Apple App Site Association.
+   *
+   * Apple Team ID prefix used by the iOS apps (10-char alphanumeric,
+   * e.g. `ABCDE12345`). When unset, `GET /.well-known/apple-app-site-association`
+   * returns 404 so deep-link verification fails closed rather than
+   * advertising an empty manifest. See docs/v4/plan-p4-hardening.md §P4.6.
+   */
+  IOS_APP_ID_PREFIX: z
+    .string()
+    .regex(/^[A-Z0-9]{10}$/, 'must be a 10-char Apple Team ID')
+    .optional(),
+  /**
+   * Comma-separated iOS bundle identifiers permitted to handle
+   * universal links (e.g. `com.harpa.pro,com.harpa.pro.dev`).
+   */
+  IOS_BUNDLE_IDS: z.string().optional(),
+  /**
+   * Universal links — Android Asset Links.
+   *
+   * Comma-separated Android package names (e.g. `com.harpa.pro,com.harpa.pro.dev`).
+   * Empty disables `/.well-known/assetlinks.json` (404).
+   */
+  ANDROID_PACKAGE_NAMES: z.string().optional(),
+  /**
+   * Comma-separated SHA-256 cert fingerprints (uppercase, colon-separated
+   * hex pairs) for each entry in `ANDROID_PACKAGE_NAMES`. Index-aligned;
+   * length must match the package list or `/.well-known/assetlinks.json`
+   * 404s and logs a config error.
+   */
+  ANDROID_CERT_FINGERPRINTS_SHA256: z.string().optional(),
 }).refine(
   (e) => e.NODE_ENV !== 'production' || !!e.MIGRATIONS_REQUIRED_HEAD,
   { path: ['MIGRATIONS_REQUIRED_HEAD'], message: 'required when NODE_ENV=production' },

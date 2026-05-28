@@ -107,6 +107,8 @@ git commit -m "feat(api): add notesChangedAt to reports schema (expand step)"
 - Modify: `packages/api/src/services/reports.ts:101-394` (every SELECT/UPDATE list)
 - Modify: `packages/api/src/services/notes.ts:175-363` (calls bump helper)
 - Create test additions in: `packages/api/src/__tests__/notes.integration.test.ts` (update existing, add delete/update cases)
+- Create test additions in: `packages/api/src/__tests__/scope/reports.scope.test.ts`
+  (per-request scope pair for the new user-owned column)
 
 - [ ] **Step 1: Write the failing integration tests**
 
@@ -195,10 +197,36 @@ it('DELETE note bumps notes_changed_at', async () => {
 });
 ```
 
+- [ ] **Step 1b: Add the scope test pair**
+
+`notes_changed_at` lives on user-owned `app.reports`, so Pitfall 6 requires
+a per-request scope pair. In
+`packages/api/src/__tests__/scope/reports.scope.test.ts`, add cases that prove:
+
+```ts
+it('owner note mutation stamps notes_changed_at on their report', async () => {
+  // Seed or reuse an owner-visible draft report.
+  // Perform the note mutation through the API as the report owner.
+  // Read app.reports through the owner-scoped connection or owner API
+  // response and assert notes_changed_at is non-null.
+});
+
+it('non-member cannot stamp notes_changed_at on another project report', async () => {
+  // Capture notes_changed_at for Alice's report.
+  // Attempt to create/update/delete a note as Bob against Alice's report.
+  // Assert the route returns the existing not-found/forbidden shape and
+  // notes_changed_at remains unchanged.
+});
+```
+
+Use the concrete fixtures and helpers already present in
+`reports.scope.test.ts`; do not introduce a parallel scope harness.
+
 - [ ] **Step 2: Run them — expect failure**
 
 ```bash
 cd packages/api && pnpm test:integration -t 'notes CRUD'
+cd packages/api && pnpm test:integration -t 'notes_changed_at'
 ```
 
 Expected: compile errors (schema mismatch from Task 2) and/or test failures.

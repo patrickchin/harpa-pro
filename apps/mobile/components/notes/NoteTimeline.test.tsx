@@ -13,6 +13,7 @@
  * survive the pending → saved transition.
  */
 import React from 'react';
+import { Pressable } from 'react-native';
 import { describe, it, expect, vi } from 'vitest';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -133,5 +134,52 @@ describe('NoteTimeline key stability', () => {
 
     const after = tree.root.findByProps({ testID: 'note-row-0' });
     expect(after).not.toBe(before);
+  });
+});
+
+describe('NoteTimeline image routing — legacy single-file entry', () => {
+  it('routes a legacy fileId/thumbnailFileId entry through PhotoNoteCard and PhotoBatchGrid', () => {
+    // A saved image entry with only fileId + thumbnailFileId and no
+    // `attachments` array exercises the `buildAttachments` fallback path
+    // that existed before the batch-upload pipeline shipped.  NoteTimeline
+    // must continue to route `source === 'image'` to PhotoNoteCard regardless
+    // of whether the entry came from the new batch path or this legacy path.
+    const entry: NoteEntry = {
+      id: 'not_img_1',
+      text: 'Site photo',
+      addedAt: 1700000000000,
+      source: 'image',
+      fileId: 'fil_full_1',
+      thumbnailFileId: 'fil_thumb_1',
+      // No `attachments` — exercises the buildAttachments fileId fallback
+    };
+
+    const opens: Array<{ fileId: string; sourceIndex: number }> = [];
+    const tree = wrap(
+      <NoteTimeline
+        notes={[entry]}
+        onOpenPhoto={(fileId, sourceIndex) => opens.push({ fileId, sourceIndex })}
+      />,
+    );
+
+    // Card wrapper is present before layout is fired.
+    expect(tree.root.findByProps({ testID: 'note-row-0' })).toBeDefined();
+
+    // Fire the layout event to expose containerWidth → grid renders.
+    const measure = tree.root.findByProps({ testID: 'note-row-0-measure' });
+    act(() => {
+      measure.props.onLayout({ nativeEvent: { layout: { width: 320 } } });
+    });
+
+    // A single tile should appear for the one legacy file.
+    const tile = tree.root.findByProps({ testID: 'batch-grid-tile-0' });
+
+    // Pressing fires onOpenPhoto with the original fileId and sourceIndex 0.
+    const pressable = tile.findByType(Pressable);
+    act(() => {
+      pressable.props.onPress();
+    });
+
+    expect(opens).toEqual([{ fileId: 'fil_full_1', sourceIndex: 0 }]);
   });
 });

@@ -60,9 +60,9 @@ client-side at upload time) — never an inline URL or base64 payload.
 
 Everywhere a photo appears outside the fullscreen preview (the
 saved-report 3-column grid `ReportPhotos`, the Generate-screen
-timeline mini-tile in `PhotoNoteCard` / `ImageNoteCard`, and the
-saved-report Notes pane row `PhotoNoteRow`) we render the shared
-`apps/mobile/components/notes/PhotoGridTile.tsx`. The tile resolves
+timeline grid in `PhotoNoteCard`, and the saved-report Notes pane row)
+we render the shared `apps/mobile/components/notes/PhotoTile.tsx`
+through `PhotoBatchGrid` or `ReportPhotos`. The tile resolves
 `thumbnailFileId ?? fileId` via `useFileSignedUrl` and renders the
 bytes through `CachedImage` (`expo-image` + disk cache, keyed by the
 resolved id). When `thumbnailFileId` is null (legacy rows) we fall
@@ -98,7 +98,7 @@ status label derived from `job.status` (`Preparing…` / `Uploading…` /
 `Saving…` /
 `Adding to timeline…`). Failed jobs surface a retry + dismiss pair;
 in-flight jobs surface cancel only. Once the queue completes the job
-the `reportNotes` invalidation produces the real `ImageNoteCard` row;
+the `reportNotes` invalidation produces the real `PhotoNoteCard` row;
 `UploadQueueStrip` / the timeline parent drop the pending card on the
 same tick.
 
@@ -184,7 +184,7 @@ unit/integration test, and the live round-trip is `.maestro/p3-15-upload.yaml`:
    createNote`. Cancellation is wired via `AbortController` (see below)
    and progress flows back to the cards in real time.
 5. **Reconcile.** `createNote` returns; React Query invalidates
-   `reportNotes`; the `ImageNoteCard` replaces the pending row. The
+   `reportNotes`; the `PhotoNoteCard` replaces the pending row. The
    default `cleanupSource` deletes the processed cache file so disk
    stays bounded.
 6. **Persist.** MMKV-backed `QueuePersistence` serialises the queue

@@ -311,6 +311,7 @@ interface PreviewSurface {
   /** Gallery of all photo notes — passed to ImagePreviewModal. */
   photoGallery: ReadonlyArray<{
     fileId: string;
+    thumbnailFileId: string | null;
     title: string;
     cacheKey: string;
   }>;
@@ -600,13 +601,19 @@ export function GenerateReportProvider({
   // Order matches `timelineItems`; tapping any thumbnail in the Notes
   // tab or Report tab resolves into this list by `fileId`.
   const photoGallery = useMemo(() => {
-    const items: Array<{ fileId: string; title: string; cacheKey: string }> = [];
+    const items: Array<{
+      fileId: string;
+      thumbnailFileId: string | null;
+      title: string;
+      cacheKey: string;
+    }> = [];
     for (const entry of timelineItems) {
       if (!entry.attachments) continue;
       for (const att of entry.attachments) {
         if (!att.fileId) continue;
         items.push({
           fileId: att.fileId,
+          thumbnailFileId: att.thumbnailFileId ?? null,
           title: entry.text?.trim() || 'Photo',
           cacheKey: att.fileId,
         });

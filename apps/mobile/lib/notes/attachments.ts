@@ -18,7 +18,7 @@ export interface SavedFileInput {
 /**
  * Build a completed, non-pending Attachment from any saved-file record.
  * Use this in components that already hold individual file ids (e.g.
- * ImageNoteCard, PhotoNoteRow, ReportPhotos) so they can feed PhotoTile
+ * PhotoNoteCard, PhotoNoteRow, ReportPhotos) so they can feed PhotoTile
  * without going through the full buildAttachments() adapter.
  */
 export function attachmentFromSavedFile(

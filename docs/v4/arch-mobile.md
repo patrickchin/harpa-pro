@@ -58,7 +58,6 @@ apps/mobile/
       NoteTimeline.tsx
       TextNoteCard.tsx
       PhotoNoteCard.tsx
-      ImageNoteCard.tsx
       PendingPhotoCard.tsx
       PhotoBatchGrid.tsx
       PhotoGridTile.tsx

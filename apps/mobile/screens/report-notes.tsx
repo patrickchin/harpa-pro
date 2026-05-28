@@ -71,6 +71,7 @@ export function ReportNotes(props: ReportNotesProps) {
     )
     .map((n) => ({
       fileId: n.fileId,
+      thumbnailFileId: n.thumbnailFileId ?? null,
       title: n.body?.trim() || 'Photo',
       cacheKey: n.fileId,
     }));

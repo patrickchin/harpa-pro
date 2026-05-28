@@ -22,6 +22,7 @@ import { colors } from '@/lib/design-tokens/colors';
 
 interface GalleryPhoto {
   fileId: string;
+  thumbnailFileId: string | null;
   title: string;
   cacheKey: string;
 }

@@ -546,6 +546,14 @@ vi.mock('react-native-gesture-handler', () => {
   };
 });
 
+// `react-native-pager-view` ships native bindings. Render as a simple
+// wrapper that lays out children sequentially.
+vi.mock('react-native-pager-view', () => ({
+  __esModule: true,
+  default: (props: AnyProps) =>
+    React.createElement('rn-PagerView', props, props.children),
+}));
+
 // `react-native-svg` ships native bindings; render each export as a
 // stub host element so snapshots stay stable.
 vi.mock('react-native-svg', () => {

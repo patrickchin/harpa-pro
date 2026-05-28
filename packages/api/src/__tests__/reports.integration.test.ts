@@ -288,6 +288,70 @@ describe('reports AI/PDF', () => {
     expect(body.report.body.summarySections[0]?.title).toBe('Site Status');
   });
 
+  it('regenerate keeps notes_changed_at > generated_at when a note bump lands mid-flight', async () => {
+    // runGenerate captures snapshotTs BEFORE the AI call. Simulate a
+    // concurrent note add by bumping notes_changed_at to a future
+    // value AFTER the snapshot has been captured (the route already
+    // has the report in hand at that point). With COALESCE semantic
+    // in setReportBody, generated_at lands at the snapshot value and
+    // the future bump keeps the dirty bit true.
+    const app = createApp();
+    const tok = await signTestToken(alice, aliceSid);
+
+    // Pin notes_changed_at to a known past value so the snapshot
+    // captured by runGenerate is stable.
+    const past = new Date(Date.now() - 60_000).toISOString();
+    const c1 = await getPool().connect();
+    try {
+      await c1.query(
+        `UPDATE app.reports SET notes_changed_at = $1, generated_at = NULL WHERE id = $2`,
+        [past, reportId],
+      );
+    } finally {
+      c1.release();
+    }
+
+    // Kick off regenerate. The fixture returns synchronously so we
+    // can't actually interleave a bump during the AI call from this
+    // test; instead we simulate the race by bumping notes_changed_at
+    // to a future timestamp BEFORE the call — the route has already
+    // loaded `report` with the past snapshot, and setReportBody will
+    // set generated_at = past. After the call returns,
+    // notes_changed_at(future) > generated_at(past) must still hold.
+    const future = new Date(Date.now() + 60_000).toISOString();
+    const c2 = await getPool().connect();
+    try {
+      await c2.query(
+        `UPDATE app.reports SET notes_changed_at = $1 WHERE id = $2`,
+        [future, reportId],
+      );
+    } finally {
+      c2.release();
+    }
+
+    const res = await app.request(
+      `/projects/${aliceProjSlug}/reports/${reportNumber}/regenerate`,
+      {
+        method: 'POST',
+        headers: headers(tok),
+        body: JSON.stringify({ fixtureName: 'generate-report.voice-4' }),
+      },
+    );
+    expect(res.status).toBe(200);
+
+    const c3 = await getPool().connect();
+    try {
+      const r = await c3.query<{ changed_at: Date; generated_at: Date }>(
+        `SELECT notes_changed_at AS changed_at, generated_at FROM app.reports WHERE id = $1`,
+        [reportId],
+      );
+      const row = r.rows[0]!;
+      expect(row.changed_at.getTime()).toBeGreaterThan(row.generated_at.getTime());
+    } finally {
+      c3.release();
+    }
+  });
+
   it('POST /reports/:id/pdf returns a signed URL pointing at the rendered key', async () => {
     const app = createApp();
     const tok = await signTestToken(alice, aliceSid);

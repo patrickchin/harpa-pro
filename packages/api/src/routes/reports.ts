@@ -300,8 +300,14 @@ const generateResponses = {
 /**
  * POST /reports/.../generate and /regenerate share an implementation
  * — the difference is intent, not wire shape. Both reject when the
- * report is finalized; both replace `body` and reset
- * `notes_since_last_generation`.
+ * report is finalized; both replace `body` and capture
+ * `notes_changed_at` BEFORE the AI call so a concurrent note bump
+ * landing during the multi-second run remains visible afterwards
+ * (auto-regenerator sees `notes_changed_at > generated_at` and
+ * fires another round). During the expand window the legacy
+ * `notes_since_last_generation` counter is still reset to 0 inside
+ * `setReportBody` so old machines reading the counter see clean
+ * state — see docs/superpowers/specs/2026-05-28-auto-regenerate-reports-design.md.
  *
  * Regenerate ALSO forwards the current `report.body` as `existingBody`
  * so the AI preserves any manual edits the user made in the Edit tab
@@ -324,6 +330,11 @@ async function runGenerate(
   // renders as 403 + structured details. See
   // docs/v4/arch-usage-limits.md §4.
   await db((d) => enforceUsageLimit(d, userId, { kind: 'report_generate' }));
+  // Race-safety snapshot: captured BEFORE the AI call. setReportBody
+  // will set `generated_at = COALESCE(snapshotTs, now())` so any note
+  // bump that lands while AI is running keeps notes_changed_at >
+  // generated_at and the queue-of-one fires another regen.
+  const snapshotTs = report.notesChangedAt;
   const notes = await db((d) => collectNotesForGeneration(d, report.id));
   // Update path: send current body so the model preserves manual
   // edits. First-time generate ignores any stale body (there shouldn't
@@ -354,7 +365,9 @@ async function runGenerate(
     response: out.text,
     usage: null,
   };
-  const updated = await db((d) => setReportBody(d, report.id, out.body, lastGeneration));
+  const updated = await db((d) =>
+    setReportBody(d, report.id, out.body, lastGeneration, snapshotTs),
+  );
   if (!updated) throw new HTTPException(404, { message: 'Report not found.' });
   return {
     report: updated,

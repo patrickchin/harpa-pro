@@ -2,7 +2,7 @@
 
 **Date:** 2026-05-28
 **Branch:** `agents/client-side-thumbnail-upload`
-**Revision:** v2 (incorporates spec review of v1)
+**Revision:** v2.1 (incorporates spec reviews of v1 and v2)
 
 ---
 
@@ -43,7 +43,7 @@
 | `apps/mobile/components/notes/PhotoBatchGrid.tsx` | Always use 3 columns (`cols = COLUMNS` unconditionally). With 1 or 2 attachments, `flex-wrap` produces 1 row of 1/3-width tiles left-aligned, empty space on the right. |
 | `apps/mobile/components/notes/ImageNoteCard.tsx` | **Deleted.** |
 | `apps/mobile/components/notes/ImageNoteCard.test.tsx` | **Deleted.** |
-| `apps/mobile/components/notes/NoteTimeline.tsx` | Route `kind: 'image'` notes to `PhotoNoteCard` instead of `ImageNoteCard`. |
+| `apps/mobile/components/notes/NoteTimeline.tsx` | Remove `ImageNoteCard` import (routing for `entry.source === 'image'` → `PhotoNoteCard` is already in place). |
 | `apps/mobile/components/notes/PhotoNoteCard.tsx` | No structural change. Becomes the sole renderer for image notes. |
 | `apps/mobile/components/reports/detail/ReportPhotos.tsx` | No layout change (already 3-col). |
 | `apps/mobile/features/generate/GenerateReportProvider.tsx` | Widen `photoGallery` item type to include `thumbnailFileId`. Populate from `att.thumbnailFileId`. |
@@ -80,13 +80,19 @@ Update `PhotoBatchGrid.test.tsx` accordingly (the existing 3-attachment test sti
 
 ---
 
-## 2. Delete `ImageNoteCard`, route image notes through `PhotoNoteCard`
+## 2. Delete `ImageNoteCard` (routing already done in `NoteTimeline`)
 
-`PhotoNoteCard`'s prop interface is a strict superset of `ImageNoteCard`'s (`entry`, `sourceIndex`, `authorName` are identical; the rest of `PhotoNoteCard`'s props are optional). `buildAttachments(entry)` (`lib/notes/attachments.ts`) already returns a 1-element array for legacy single-`fileId` image notes. Header rendering (`NoteCardHeader`) is identical.
+`NoteTimeline.tsx` already routes `entry.source === 'image'` to `PhotoNoteCard`. The legacy `ImageNoteCard` is dead code that is no longer reached for new notes but still ships and still mounts its own `ImagePreviewModal` (which would not receive `thumbnailFileId`).
 
-**Change `NoteTimeline.tsx`:** the switch that picks `ImageNoteCard` for `kind === 'image'` now picks `PhotoNoteCard`. Delete the import. Run grep for any other consumers of `ImageNoteCard` (e.g. storybook, screenshot tests) and update.
+**Remaining work:**
+- Delete `apps/mobile/components/notes/ImageNoteCard.tsx`.
+- Delete `apps/mobile/components/notes/ImageNoteCard.test.tsx`.
+- Remove the import in `NoteTimeline.tsx`.
+- Scrub stale docstring references (e.g. `lib/notes/attachments.ts` doc comment, `components/notes/ImageNoteCard.tsx` reference inside `PhotoTile.tsx` comment, anywhere else `rg ImageNoteCard` finds).
 
-**Side benefit:** the locally-mounted `ImagePreviewModal` inside `ImageNoteCard` (which never received `thumbnailFileId`) goes away. All image-tile taps now flow through `NoteTimeline → onOpen(fileId, sourceIndex) → handleOpenPhoto` and into the gallery's shared modal — which does carry `thumbnailFileId`.
+`PhotoNoteCard`'s props are a strict superset of `ImageNoteCard`'s (`entry`, `sourceIndex`, `authorName` identical; rest optional). `buildAttachments(entry)` in `lib/notes/attachments.ts` already returns a 1-element array for legacy single-`fileId` image notes. Header rendering via `NoteCardHeader` is identical. There is no behaviour migration — only file removal.
+
+> **Vocabulary note.** `NoteEntry.source` (`'image' | 'voice' | 'text'`) is the runtime discriminant on the client; `ReportNoteRow.kind` (`'photo' | …`) is the API-layer projection. This spec uses `source === 'image'` for client-side filtering and `kind === 'photo'` only where the API row type appears (`ReportPhotos`).
 
 ---
 
@@ -153,9 +159,27 @@ The placeholder hook must run only when `!uri && Boolean(thumbnailFileId)` (mirr
 
 Today `CachedImage.tsx` merges `cacheKey` into the **main `source`** only. The `placeholder` source goes through unchanged, so `expo-image` won't reuse the disk-cache entry the grid populated for the thumbnail — it'll re-download the bytes from the signed URL.
 
-**Change:** accept an optional `placeholderCacheKey` prop; when `placeholder` is `{ uri: string }`, merge `cacheKey: placeholderCacheKey` into it. `ImagePreviewBody` passes `placeholderCacheKey={thumbnailFileId}`.
+**Change:** add an optional `placeholderCacheKey` prop. Merge it into the placeholder **only** when the placeholder is a URI-shaped object. All other shapes pass through untouched.
 
-This matters because the disk cache survives modal close/reopen. Without it the placeholder works on first open (signed URL is hot in RQ) but every reopen re-decodes from network.
+`expo-image`'s `placeholder` prop accepts: `number` (require'd asset), `string` (blurhash or URL), arrays, `{ uri }`, `{ blurhash }`, `{ thumbhash }`. The merge guard must preserve every non-`{uri}` shape verbatim — otherwise a careless implementation produces `{ blurhash: '…', cacheKey: '…' }`, which `expo-image` accepts but is meaningless.
+
+Implementation sketch:
+
+```ts
+const composedPlaceholderBase = placeholder ?? (blurhash ? { blurhash } : undefined);
+const composedPlaceholder =
+  placeholderCacheKey
+  && composedPlaceholderBase
+  && typeof composedPlaceholderBase === 'object'
+  && !Array.isArray(composedPlaceholderBase)
+  && 'uri' in composedPlaceholderBase
+    ? { ...composedPlaceholderBase, cacheKey: placeholderCacheKey }
+    : composedPlaceholderBase;
+```
+
+`ImagePreviewBody` passes `placeholderCacheKey={thumbnailFileId}`. `PhotoTile` and other blurhash/asset callers continue to work unchanged.
+
+The disk cache survives modal close/reopen. Without this change, the placeholder works on first open (signed URL is hot in React Query) but every reopen re-decodes from network.
 
 ---
 
@@ -163,19 +187,21 @@ This matters because the disk cache survives modal close/reopen. Without it the 
 
 ### Visual design
 
-- **Backdrop:** pure black `#000`. Modal `presentationStyle="fullScreen"`, `StatusBar style="light"`.
+- **Modal:** `<Modal animationType="fade" presentationStyle="fullScreen" statusBarTranslucent visible={...}>`. `statusBarTranslucent` is required on Android so toggling `<StatusBar hidden>` inside the modal doesn't shift the layout.
+- **Backdrop:** pure black `#000`.
+- **StatusBar:** declarative — render `<StatusBar style="light" hidden={!chromeVisible} />` from `expo-status-bar` inside `<PreviewContent>`. Reference-counted by `expo-status-bar`, so unmount automatically restores the caller's previous state. **Never call imperative `StatusBar.setHidden` here** — it leaks across modal close.
 - **Header (translucent, fade-able overlay):**
   - Absolute-positioned, top of screen, full width, `bg-black/60`.
   - Left: round close button, `bg-white/15`, `X` icon `colors.background`.
   - Center: caption (note body) — `text-white text-sm` 1 line ellipsized. Below it: author + relative time in `text-white/50 text-xs`. Title gets `accessibilityRole="header"`.
   - Right: `1 / N` counter only in gallery mode, `text-white/60 text-xs`. Hidden when `photos.length === 1`.
 - **No `ScreenHeader` reuse.** Custom overlay row; a11y labels preserved (close button keeps `accessibilityLabel="Close image preview"`).
-- **Chrome toggle:** single-tap on the image fades the header opacity 0 ↔ 1 with `withTiming(150)`. StatusBar `hidden` mirrors the same shared value.
-- **Single + double tap arbitration:** `singleTap.requireExternalGestureToFail(doubleTap)` so the single-tap chrome toggle doesn't fire on the way to a double-tap-zoom.
+- **Chrome toggle:** single-tap on the image fades the header opacity 0 ↔ 1 with `withTiming(150)`. `chromeVisible` is a React `useState<boolean>` (drives both the Reanimated header opacity via `useDerivedValue` and the declarative `<StatusBar hidden>`).
+- **Single + double tap arbitration:** see §7 gesture tree.
 
 ### Modal entrance
 
-Keep `animationType="fade"` (current). The Twitter-style slide-up does not behave consistently on Android RN; a Reanimated entering animation is more work than the polish justifies. **Cut from scope.**
+Keep `animationType="fade"`. The Twitter-style slide-up does not behave consistently on Android RN; a Reanimated entering animation is more work than the polish justifies. **Cut from scope.**
 
 ### Caption alignment with single-tile mode
 
@@ -215,6 +241,32 @@ interface ZoomableImageProps {
 
 Camera-capture's pinch drives a 1-D normalized `[0, 1]` camera zoom anchored on `zoomStart` — fundamentally different math from 2-D scale + bounded pan. Sharing is ~3 lines of `Gesture.Pinch().onUpdate`. Inline the logic in `ZoomableImage`. **No shared `usePinchZoom` hook.**
 
+### Gesture composition tree
+
+RNGH v2 requires explicit composition. The implementer should build the tree exactly as follows:
+
+```ts
+const singleTap = Gesture.Tap()
+  .numberOfTaps(1)
+  .requireExternalGestureToFail(doubleTap, pinch);
+const doubleTap = Gesture.Tap().numberOfTaps(2);
+const pinch = Gesture.Pinch();
+const pan = Gesture.Pan().enabled(scale > 1);
+
+const composed = Gesture.Race(
+  Gesture.Exclusive(doubleTap, singleTap),
+  Gesture.Simultaneous(pinch, pan),
+);
+```
+
+Reasoning:
+- `Exclusive(doubleTap, singleTap)` — double-tap wins if two taps land in time.
+- `Simultaneous(pinch, pan)` — two-finger pinch may also pan; one finger pan continues from the centroid when the second lifts.
+- `Race(taps, zoomGroup)` — a finger-down that escalates to pinch cancels the pending tap; a clean tap blocks the zoom group.
+- `singleTap.requireExternalGestureToFail(doubleTap, pinch)` — single-tap chrome toggle only fires when neither gesture is going to claim the touch.
+
+Reanimated callbacks: `pinch.onUpdate(({ scale: s, focalX, focalY }) => { … })` runs on the UI thread; communicate to the JS `chromeVisible` toggle and parent `onZoomChange` via `runOnJS`.
+
 ---
 
 ## 8. Horizontal paging that doesn't fight the zoom gesture
@@ -223,11 +275,57 @@ The current `FlatList horizontal pagingEnabled` is fragile when a child gesture 
 
 **Chosen approach: `react-native-pager-view`.**
 
-- Add the dependency (`pnpm --filter mobile add react-native-pager-view`). It is widely used (Expo SDK includes it) and has explicit zoom-aware semantics on both platforms (`scrollEnabled` toggling is reliable; `overdrag` and gesture arbitration are first-class).
-- Replace the `FlatList` with `<PagerView initialPage={startIndex} onPageSelected={...} scrollEnabled={!anyZoomed}>`.
-- A shared ref `const anyZoomedRef = useRef(false)` (or a Reanimated shared value if we want it animated) tracks "any visible item zoomed." `ZoomableImage.onZoomChange` flips it.
+### Install
 
-If `pnpm install` is undesirable, the fallback is `Gesture.Native(pagerRef)` composed with `pinch.simultaneousWithExternalGesture(nativeGesture)` — but this is a more delicate gesture-tree configuration and Android pager + pinch composition has open RNGH issues. PagerView is the safer call.
+`react-native-pager-view` is **not** currently in `apps/mobile/package.json` or `pnpm-lock.yaml`. It is **not** transitively pulled by Expo SDK 55. Install via the Expo-aware command so the SDK-pinned version is resolved correctly:
+
+```bash
+cd apps/mobile
+npx expo install react-native-pager-view
+```
+
+`npx expo install` reads SDK 55's bundled-modules manifest and picks a version compatible with RN 0.83.6 + Reanimated 4.2 + RNGH 2.30 + Fabric/New Arch. Raw `pnpm add` would skip that check.
+
+Because this is a new native module, the plan must:
+- Bump the EAS dev-client build (custom dev clients need the new native lib).
+- Confirm `apps/mobile/app.json` `newArchEnabled` matches PagerView v6.x's Fabric expectations.
+- Smoke-test on Android *and* iOS dev-client before merge.
+
+### Wiring
+
+Replace the `FlatList` in `PreviewContent` with:
+
+```tsx
+<PagerView
+  initialPage={startIndex}
+  scrollEnabled={!anyZoomed}
+  onPageSelected={(e) => setCurrentIndex(e.nativeEvent.position)}
+  style={{ flex: 1 }}
+>
+  {photos.map((p) => (
+    <View key={p.fileId ?? p.uri}>
+      <ZoomableImage ... onZoomChange={(z) => onChildZoomChange(p.fileId, z)} />
+    </View>
+  ))}
+</PagerView>
+```
+
+### "any zoomed" coordination — `useState`, not `useRef`
+
+A `useRef` mutation does not re-render the `PagerView`, so `scrollEnabled` would never flip. Use React state:
+
+```ts
+const [anyZoomed, setAnyZoomed] = useState(false);
+const zoomedSet = useRef<Set<string>>(new Set());
+
+const onChildZoomChange = useCallback((key: string, isZoomed: boolean) => {
+  if (isZoomed) zoomedSet.current.add(key);
+  else zoomedSet.current.delete(key);
+  setAnyZoomed(zoomedSet.current.size > 0);
+}, []);
+```
+
+`ZoomableImage.onZoomChange` calls through `runOnJS` so it flips the JS-side state from the Reanimated worklet. PagerView re-renders ~twice per zoom in/out — negligible. Do **not** use a `useRef<boolean>` flag; do **not** use a `SharedValue<boolean>` + animated `scrollEnabled` (added mechanism with no win since the gesture starts on JS thread anyway).
 
 ---
 
@@ -238,7 +336,7 @@ If `pnpm install` is undesirable, the fallback is `Gesture.Native(pagerRef)` com
 | Test file | What changes |
 |---|---|
 | `PhotoBatchGrid.test.tsx` | Add a 1-attachment case asserting `tileSize ≈ containerWidth/3` and not full-width. Update the 320-px-container expected size to match the new formula. |
-| `NoteTimeline.test.tsx` | Image notes now route through `PhotoNoteCard`. |
+| `NoteTimeline.test.tsx` | Verify the existing `entry.source === 'image'` → `PhotoNoteCard` route still holds after the `ImageNoteCard` import is removed (regression guard only — no behaviour change). |
 | `ImagePreviewModal.test.tsx` | Assert `thumbnailFileId` URL is passed as `placeholder` to `CachedImage` with `placeholderCacheKey={thumbnailFileId}`. Assert single-tap toggles header opacity. Assert pager `scrollEnabled` flips when zoom changes. |
 | `ReportPhotos.test.tsx` | No callback change (per step 3). |
 | `CachedImage.test.tsx` (if absent, add) | `placeholderCacheKey` is merged into the placeholder source. |
@@ -248,7 +346,7 @@ If `pnpm install` is undesirable, the fallback is `Gesture.Native(pagerRef)` com
 | Test file | What it covers |
 |---|---|
 | `ZoomableImage.test.tsx` | Scale clamps `[1, 4]`. Double-tap toggles 1 ↔ 2.5. Pan stays in bounds. `onZoomChange` fires at threshold. |
-| `gallery-thumbnail-placeholder.integration.test.tsx` | **Pitfall 13 / R5 — default-wiring test.** Mount a `PhotoBatchGrid` with a single attachment against a `QueryClient` + captured-fetch mock. Assert React Query cache contains the thumbnail URL. Mount `ImagePreviewModal` against the **same** `QueryClient` and assert `useFileSignedUrl(thumbnailFileId)` returns `data` synchronously and is forwarded to `CachedImage.placeholder`. **No fake hook.** The whole value of this feature depends on the cache being shared. |
+| `gallery-thumbnail-placeholder.integration.test.tsx` | **Pitfall 13 / R5 — default-wiring test.** Mount a `PhotoBatchGrid` with a single attachment against a real `QueryClient` and a captured-fetch mock. Assert the cache contains the thumbnail URL. Mount `ImagePreviewModal` against the **same** `QueryClient` and assert `useFileSignedUrl(thumbnailFileId)` returns `data` synchronously and is forwarded to `CachedImage.placeholder` with `placeholderCacheKey={thumbnailFileId}`. **No fake hook.** **No `queryClient.setQueryData` priming** — the cache must be populated by the real grid mount running the real hook. **Assert the captured fetch was called exactly once for the thumbnail URL during grid mount and zero additional times after modal mount.** That's the load-bearing assertion. |
 
 ### Deletions
 
@@ -275,7 +373,8 @@ If `pnpm install` is undesirable, the fallback is `Gesture.Native(pagerRef)` com
 
 ## 11. Risks
 
-1. **`react-native-pager-view` install.** New native dep. Already part of `@react-navigation` peer deps in Expo apps, so likely no native-build implications, but verify against `apps/mobile/package.json` and `expo-dev-client` config before plan generation.
-2. **Reanimated 3 + RNGH v2 pinch/pan/tap composition on Android.** `ZoomableImage` will need real device testing on Android before merge. Test plan covers logic, but gesture composition edge cases (e.g. two-finger pan that exits to single-finger pan after one finger lifts) require manual QA.
+1. **`react-native-pager-view` is a new native module.** Installed via `npx expo install` (§8). Requires a fresh EAS dev-client build before this branch can be smoke-tested. Verify `apps/mobile/app.json` `newArchEnabled` against PagerView v6.x's Fabric expectations.
+2. **Reanimated 3 + RNGH v2 pinch/pan/tap composition on Android.** `ZoomableImage` uses the explicit gesture tree from §7. Manual Android QA covering: two-finger pinch ending with one finger lifting (should transition to single-finger pan, not cancel), double-tap on the edge of the image (focal point clamping), single-tap during a slow swipe (should not toggle chrome), pager swipe interrupting a pinch.
 3. **React Query cache cold-start.** If the modal is opened without a prior grid mount (deep link, share-sheet), the thumbnail hook will incur a network fetch and the placeholder will be absent for that first open. Acceptable.
-4. **`CachedImage` placeholder cache-key change is a load-bearing edit.** Other call sites pass `placeholder` (e.g. blurhash) and must not break. The change keys off `typeof placeholder === 'object' && 'uri' in placeholder` so blurhash placeholders are untouched.
+4. **`CachedImage` placeholder cache-key change is a load-bearing edit.** Other call sites pass `placeholder` as a blurhash, asset, or array. The shape guard in §5 (`typeof === 'object' && !Array.isArray && 'uri' in placeholder`) preserves every non-`{uri}` shape verbatim. Covered by a new `CachedImage.test.tsx` blurhash-passthrough case.
+5. **Default-wiring test must run the real hook.** The integration test in §9 forbids `setQueryData` priming and fake hooks. If a future contributor relaxes this to "make the test faster", Pitfall 13 silently returns.

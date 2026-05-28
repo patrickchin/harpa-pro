@@ -85,6 +85,33 @@ function mapReport(r: RawReport): ReportRow {
   };
 }
 
+/**
+ * Dual-read during the expand window: prefer notes_changed_at when set
+ * (new code path); fall back to the legacy counter for rows not yet
+ * touched by new code. The fallback is removed in the contract PR
+ * that drops notes_since_last_generation.
+ *
+ * Compares ISO-8601 strings directly — lexicographic ordering matches
+ * chronological ordering when both timestamps are UTC ISO (which both
+ * sides of `mapReport` guarantee).
+ */
+export function needsRegenerationOf(report: ReportRow): boolean {
+  if (report.notesChangedAt !== null) {
+    if (report.generatedAt === null) return true;
+    return report.notesChangedAt > report.generatedAt;
+  }
+  return report.notesSinceLastGeneration > 0;
+}
+
+/**
+ * Wire-shape projection of a ReportRow. Adds the contract-derived
+ * `needsRegeneration` boolean so every route returns it consistently.
+ * Use this in routes instead of returning `ReportRow` directly.
+ */
+export function toReportResponse(r: ReportRow): ReportRow & { needsRegeneration: boolean } {
+  return { ...r, needsRegeneration: needsRegenerationOf(r) };
+}
+
 function encodeCursor(createdAt: string, id: string): string {
   return Buffer.from(`${createdAt}|${id}`, 'utf8').toString('base64url');
 }

@@ -1787,7 +1787,9 @@ export interface paths {
                                     }[];
                                 } | null;
                                 notesSinceLastGeneration: number;
+                                notesChangedAt: string | null;
                                 generatedAt: string | null;
+                                needsRegeneration: boolean;
                                 finalizedAt: string | null;
                                 pdfUrl: string | null;
                                 createdAt: string;
@@ -1898,7 +1900,9 @@ export interface paths {
                                 }[];
                             } | null;
                             notesSinceLastGeneration: number;
+                            notesChangedAt: string | null;
                             generatedAt: string | null;
+                            needsRegeneration: boolean;
                             finalizedAt: string | null;
                             pdfUrl: string | null;
                             createdAt: string;
@@ -2030,7 +2034,9 @@ export interface paths {
                                 }[];
                             } | null;
                             notesSinceLastGeneration: number;
+                            notesChangedAt: string | null;
                             generatedAt: string | null;
+                            needsRegeneration: boolean;
                             finalizedAt: string | null;
                             pdfUrl: string | null;
                             createdAt: string;
@@ -2231,7 +2237,9 @@ export interface paths {
                                 }[];
                             } | null;
                             notesSinceLastGeneration: number;
+                            notesChangedAt: string | null;
                             generatedAt: string | null;
+                            needsRegeneration: boolean;
                             finalizedAt: string | null;
                             pdfUrl: string | null;
                             createdAt: string;
@@ -2483,7 +2491,9 @@ export interface paths {
                                     }[];
                                 } | null;
                                 notesSinceLastGeneration: number;
+                                notesChangedAt: string | null;
                                 generatedAt: string | null;
+                                needsRegeneration: boolean;
                                 finalizedAt: string | null;
                                 pdfUrl: string | null;
                                 createdAt: string;
@@ -2664,7 +2674,9 @@ export interface paths {
                                     }[];
                                 } | null;
                                 notesSinceLastGeneration: number;
+                                notesChangedAt: string | null;
                                 generatedAt: string | null;
+                                needsRegeneration: boolean;
                                 finalizedAt: string | null;
                                 pdfUrl: string | null;
                                 createdAt: string;
@@ -2839,7 +2851,9 @@ export interface paths {
                                     }[];
                                 } | null;
                                 notesSinceLastGeneration: number;
+                                notesChangedAt: string | null;
                                 generatedAt: string | null;
+                                needsRegeneration: boolean;
                                 finalizedAt: string | null;
                                 pdfUrl: string | null;
                                 createdAt: string;
@@ -2975,7 +2989,9 @@ export interface paths {
                                     }[];
                                 } | null;
                                 notesSinceLastGeneration: number;
+                                notesChangedAt: string | null;
                                 generatedAt: string | null;
+                                needsRegeneration: boolean;
                                 finalizedAt: string | null;
                                 pdfUrl: string | null;
                                 createdAt: string;

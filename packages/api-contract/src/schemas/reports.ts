@@ -64,8 +64,31 @@ export const report = z.object({
   status: reportStatus,
   visitDate: isoDateTime.nullable(),
   body: reportBody.nullable(),
+  /**
+   * @deprecated Legacy counter kept on the wire during the
+   * expand-contract window so mobile clients on an older bundle
+   * keep rendering correctly while the API rolls out. New
+   * consumers MUST read `needsRegeneration` instead. Removed in
+   * the contract PR that drops `reports.notes_since_last_generation`.
+   */
   notesSinceLastGeneration: z.number().int().nonnegative(),
+  /**
+   * Raw timestamp set by the service on every note add/edit/delete
+   * (NULL until the first note mutation lands). Exposed for
+   * debugging and tests; clients should derive auto-regen state
+   * from `needsRegeneration`, not from comparing this themselves.
+   */
+  notesChangedAt: isoDateTime.nullable(),
   generatedAt: isoDateTime.nullable(),
+  /**
+   * True when the report needs to be regenerated because notes
+   * have changed since the last AI generation. Server-derived via
+   * `notes_changed_at > generated_at` (with legacy fallback to
+   * the counter for rows not yet touched by the new code path —
+   * see services/reports.ts#needsRegenerationOf). Manual edits
+   * from the Edit tab autosave do NOT flip this to true.
+   */
+  needsRegeneration: z.boolean(),
   finalizedAt: isoDateTime.nullable(),
   pdfUrl: z.string().nullable(),
   createdAt: isoDateTime,
@@ -79,10 +102,10 @@ export const createReportRequest = z.object({
 export const updateReportRequest = z.object({
   visitDate: isoDateTime.nullable().optional(),
   // Manual edits from the Edit tab autosave. Persisted into the same
-  // `reports.body` column the AI writes — single source of truth. Patching
-  // body does NOT reset `notes_since_last_generation` (that counter
-  // belongs to the AI loop, not manual edits). See
-  // docs/v4/design-p3x-generate-update-finalize.md §3.4.
+  // `reports.body` column the AI writes — single source of truth. The
+  // autosave path does NOT touch `notes_changed_at`, so manual edits
+  // never flip `needsRegeneration` to true. See
+  // docs/superpowers/specs/2026-05-28-auto-regenerate-reports-design.md.
   body: reportBody.nullable().optional(),
 });
 

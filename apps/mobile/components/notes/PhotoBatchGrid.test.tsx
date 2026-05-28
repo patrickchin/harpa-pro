@@ -53,7 +53,7 @@ describe('PhotoBatchGrid sizing', () => {
   }
 
   // GAP = 6, COLUMNS = 3 → tileSize = floor((320 - 12) / 3) = 102
-  it('gives 102px tiles for a single attachment in a 320px container', () => {
+  it('keeps a single attachment at one third of the container', () => {
     const items: Attachment[] = [saved(0)];
     const tree = render(
       <PhotoBatchGrid attachments={items} containerWidth={320} />,
@@ -61,7 +61,7 @@ describe('PhotoBatchGrid sizing', () => {
     expect(tileWidth(tree, 'batch-grid-tile-0')).toBe(102);
   });
 
-  it('gives 102px tiles for two attachments in a 320px container', () => {
+  it('keeps two attachments in the same three-column grid', () => {
     const items: Attachment[] = [saved(0), saved(1)];
     const tree = render(
       <PhotoBatchGrid attachments={items} containerWidth={320} />,
@@ -70,7 +70,7 @@ describe('PhotoBatchGrid sizing', () => {
     expect(tileWidth(tree, 'batch-grid-tile-1')).toBe(102);
   });
 
-  it('gives 102px tiles for three attachments in a 320px container', () => {
+  it('fits 3 tiles into a 320px container without clipping', () => {
     const items: Attachment[] = [saved(0), saved(1), saved(2)];
     const tree = render(
       <PhotoBatchGrid attachments={items} containerWidth={320} />,
@@ -80,7 +80,7 @@ describe('PhotoBatchGrid sizing', () => {
     expect(tileWidth(tree, 'batch-grid-tile-2')).toBe(102);
   });
 
-  it('renders +N overflow on the 9th tile when more than 9 attachments and keeps tile width', () => {
+  it('renders +N overflow on the 9th tile when more than 9 attachments', () => {
     const items = Array.from({ length: 11 }, (_, i) => saved(i));
     const tree = render(
       <PhotoBatchGrid attachments={items} containerWidth={320} />,
@@ -91,9 +91,9 @@ describe('PhotoBatchGrid sizing', () => {
     expect(
       tree.root.findAllByProps({ testID: 'batch-grid-tile-9' }),
     ).toHaveLength(0);
+    expect(tileWidth(tree, 'batch-grid-tile-8')).toBe(102);
     const overflow = tree.root.findByProps({ testID: 'batch-grid-tile-8-overflow' });
     // overflow shows +3 because 9th tile becomes the +N badge replacing what would be the 9th item; total - (visible-1) = 11 - 8 = 3
     expect(JSON.stringify(overflow.props.children)).toContain('3');
-    expect(tileWidth(tree, 'batch-grid-tile-8')).toBe(102);
   });
 });

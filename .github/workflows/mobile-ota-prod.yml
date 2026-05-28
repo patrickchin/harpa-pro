@@ -48,4 +48,4 @@ jobs:
           EXPO_PUBLIC_API_URL: https://api.harpapro.com
           EXPO_PUBLIC_APP_VARIANT: production
           EXPO_PUBLIC_USE_FIXTURES: "false"
-        run: eas update --channel production --message "main deploy $(git rev-parse --short HEAD)" --non-interactive
+        run: eas update --channel production --environment production --message "main deploy $(git rev-parse --short HEAD)" --non-interactive

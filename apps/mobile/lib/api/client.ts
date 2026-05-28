@@ -17,6 +17,7 @@ import type { paths } from '@harpa/api-contract';
 import { getApiBaseUrl } from './base-url';
 import { getAuthToken, notifyUnauthorized } from './auth';
 import { ApiError, apiErrorFromResponse } from './errors';
+import { captureApiErrorBreadcrumb } from '@/lib/telemetry/Sentry';
 
 export type HttpMethod = 'get' | 'post' | 'put' | 'patch' | 'delete';
 
@@ -190,7 +191,9 @@ export async function request<
     // React Query's global onError. The callback is sync + best-effort;
     // the ApiError still propagates so the call site sees the failure.
     if (res.status === 401) notifyUnauthorized();
-    throw await apiErrorFromResponse(res);
+    const apiError = await apiErrorFromResponse(res);
+    captureApiErrorBreadcrumb(apiError);
+    throw apiError;
   }
 
   // Success. If the server promised JSON, parse it; tolerate empty bodies

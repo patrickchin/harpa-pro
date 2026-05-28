@@ -21,6 +21,7 @@ import { waitlistRoutes } from './routes/waitlist.js';
 import { adminRoutes } from './routes/admin.js';
 import { resolverRoutes } from './routes/resolvers.js';
 import { env } from './env.js';
+import { createSentryMiddleware } from './telemetry/sentry.js';
 import type { ScopedDb } from './db/scope.js';
 
 /**
@@ -46,6 +47,8 @@ export function createApp(): OpenAPIHono<AppEnv> {
   const app = new OpenAPIHono<AppEnv>();
 
   app.use('*', requestId());
+  const sentryMiddleware = createSentryMiddleware(app);
+  if (sentryMiddleware) app.use('*', sentryMiddleware);
   // Global catch-all rate limiter (arch-rate-limiting.md §3.3). Runs
   // before any route-level middleware so it bounds total traffic per
   // user / IP — including misbehaving clients hammering unauthed

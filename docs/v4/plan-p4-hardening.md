@@ -46,6 +46,10 @@
 - [ ] Test crashes in staging confirm capture.
 - [ ] Commit: `feat(api,mobile): Sentry integration with request id`.
 
+Code wiring note (2026-05-28): API + mobile implementation is ready
+behind unset DSNs. The remaining P4.1 acceptance step is CLI secret
+provisioning plus staging test-crash confirmation.
+
 ### P4.2 Performance pass
 - [ ] Mobile: `FlashList` audit (currently zero usage), `React.memo`
       audit, `useCallback`/`useMemo` on hot paths (per Pitfall 4 v3

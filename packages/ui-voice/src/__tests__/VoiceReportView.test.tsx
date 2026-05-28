@@ -47,7 +47,16 @@ describe('VoiceReportView', () => {
     render(
       <VoiceReportView
         report={{
-          visitDate: null,
+          meta: {
+            title: null,
+            summary: null,
+            reportType: null,
+            visitDate: null,
+            location: null,
+            projectPhase: null,
+            riskLevel: null,
+            tags: [],
+          },
           weather: null,
           workers: [],
           materials: [],

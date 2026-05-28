@@ -207,14 +207,21 @@ export default function SavedReportRoute() {
     return rows;
   }, [notesQuery.data, memberNames]);
 
-  // TODO(P4): wire to `useReportAutoSave` once the autosave hook
-  // ports. For now the Edit tab updates local state only.
+  // Saved (finalized) reports are read-only here — the SavedReport
+  // body still wires an onChangeReport prop so the Edit tab renders,
+  // but persistence is intentionally a no-op. To actually mutate a
+  // finalized report the user unfinalizes first, which routes them
+  // back through the generate stack. Autosave wiring for *draft*
+  // reports lives in `generate.tsx`, not on this route.
   const [, setLocalReport] = useState<GeneratedSiteReport | null>(null);
 
   const handleExportError = useCallback(
     (_copy: AppDialogCopy & { kind: 'error' }) => {
-      // TODO(P4): route export errors to the AppDialogSheet stack
-      // alongside delete / unfinalize errors.
+      // Export errors currently no-op on the SavedReport route — the
+      // `useReportPdfActions` hook surfaces success/failure inline in
+      // the PDF action sheet. The shared AppDialogSheet error router
+      // (delete / unfinalize / export) lands with the action-error
+      // surface tracked in plan-p4-hardening.md P4.3.
     },
     [],
   );

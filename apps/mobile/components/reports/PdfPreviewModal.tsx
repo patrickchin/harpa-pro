@@ -130,8 +130,10 @@ export function PdfPreviewModal({
               className="flex-1 items-center justify-center px-5"
               testID="pdf-preview"
             >
-              {/* TODO(P4): replace with WebView / react-native-pdf
-                  once those packages port. */}
+              {/* Inline rendering stub — uses an InlineNotice instead
+                  of an embedded viewer until `react-native-webview` +
+                  `react-native-pdf` are wired (plan-p4-hardening.md
+                  P4.3). The PDF itself is already saved to disk. */}
               <InlineNotice tone="info" title="PDF preview pending P4">
                 PDF was generated at {pdfResult.pdfUri}. Inline rendering
                 lands once `react-native-webview` + `react-native-pdf`

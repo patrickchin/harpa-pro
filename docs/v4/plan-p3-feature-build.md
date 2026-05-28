@@ -15,7 +15,7 @@
 - [ ] Maestro full-journey flow `core-end-to-end` green on iOS + Android.
 - [ ] Mobile coverage ≥ 80% lines.
 - [x] Upload pipeline integration test green for `image`, `voice`, `document` (Pitfall 8).
-- [ ] No `// TODO` / "Coming soon" / `Alert.alert` outside dialogs.
+- [x] No `// TODO` / "Coming soon" / `Alert.alert` outside dialogs.
 
 ## Scope (canonical source: `../haru3-reports/apps/mobile/app/`)
 

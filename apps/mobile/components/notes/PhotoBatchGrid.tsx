@@ -48,8 +48,10 @@ export function PhotoBatchGrid({
     ? total - (MAX_VISIBLE - 1)
     : 0;
 
-  const cols = Math.min(visible.length, COLUMNS);
-  const tileSize = Math.max(0, Math.floor((containerWidth - GAP * (cols - 1)) / cols));
+  const tileSize = Math.max(
+    0,
+    Math.floor((containerWidth - GAP * (COLUMNS - 1)) / COLUMNS),
+  );
 
   return (
     <View className="flex-row flex-wrap" style={{ gap: GAP }}>

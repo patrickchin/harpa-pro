@@ -36,6 +36,11 @@ export interface CachedImageProps extends ImageProps {
    */
   cacheKey?: string;
   /**
+   * Stable cache key for URI-shaped placeholders. Used when a thumbnail
+   * signed URL has already been cached under its file id.
+   */
+  placeholderCacheKey?: string;
+  /**
    * Encoded BlurHash. When `placeholder` is not provided, the blurhash
    * is rendered as the placeholder so the user sees a colour
    * approximation of the image immediately.
@@ -51,6 +56,7 @@ export function CachedImage({
   transition = 200,
   style,
   cacheKey,
+  placeholderCacheKey,
   blurhash,
   placeholder,
   source,
@@ -79,7 +85,15 @@ export function CachedImage({
 
   // Prefer an explicit `placeholder` (e.g. a thumbnail signed URL);
   // fall back to the BlurHash so the user always sees something.
-  const composedPlaceholder = placeholder ?? (blurhash ? { blurhash } : undefined);
+  const composedPlaceholderBase = placeholder ?? (blurhash ? { blurhash } : undefined);
+  const composedPlaceholder =
+    placeholderCacheKey &&
+    composedPlaceholderBase &&
+    typeof composedPlaceholderBase === 'object' &&
+    !Array.isArray(composedPlaceholderBase) &&
+    'uri' in composedPlaceholderBase
+      ? { ...(composedPlaceholderBase as object), cacheKey: placeholderCacheKey }
+      : composedPlaceholderBase;
 
   return (
     <Image

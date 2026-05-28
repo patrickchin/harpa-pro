@@ -5,10 +5,8 @@
 -- `notes_since_last_generation` here — the legacy counter remains
 -- for a later contract (drop) release.
 --
--- Replace the racy `notes_since_last_generation` counter with a
--- `notes_changed_at` timestamp. Dirty state is then
--- `notes_changed_at IS NOT NULL AND
---   (generated_at IS NULL OR notes_changed_at > generated_at)`.
+-- During the expand window, application code dual-writes the legacy
+-- counter and this timestamp, and dual-reads both dirty signals.
 --
 -- See docs/superpowers/specs/2026-05-28-auto-regenerate-reports-design.md.
 

@@ -10,13 +10,11 @@
 > 11-generate-finalize, 12-report-debug, 13-projects-delete (plus
 > helpers and sign-out).
 > **Current 2026-05-28 state:** `origin/dev` has module 09 implemented
-> and re-enabled, and module 10a has been expanded for the landed
-> photo-upload redesign. Modules 11/12/13 remain disabled on iOS.
-> On Android `R3CT7092S2H`, the focused photo run and the full local
-> regression journey passed against the docker-compose stack with
-> module 10a enabled. A clean full dev-deployment Android run also
-> passed `regression-journey-dev.yaml` end to end using the local CLI
-> auth broker plus API/R2 proxy bridge.
+> and re-enabled, module 10a expanded for the landed photo-upload
+> redesign, and modules 11/12/13 restored to both local and dev
+> journeys. On Android `R3CT7092S2H`, the focused 11/12/13 run, full
+> local regression journey, and clean full dev-deployment journey all
+> passed using the local CLI auth broker plus API/R2 proxy bridge.
 > Windows-host gotchas hit while getting here are cataloged in
 > [`pitfalls-maestro-windows.md`](pitfalls-maestro-windows.md).
 > **Phase:** P4 hardening (extends [P3.14](plan-p3-feature-build.md#p314--maestro-full-journey--shipped) `core-end-to-end.yaml`).
@@ -70,8 +68,8 @@ section is the queue.
 
 | Carved out | Why | Pickup pointer |
 |---|---|---|
-| Finalized-report photo verification | Draft-side photo upload is now covered by module 10a. Finalized saved-report photo coverage still depends on re-enabling the generate/finalize chain on iOS. | [§7 Future module 10b](#7-future-modules-pickup-pointers). |
-| Voice note debug fields (transcript, summary, playback) in Report Debug | Module 09 now covers the draft-side voice lifecycle. Debug fields still depend on module 11/12 being re-enabled on iOS. | Track after the generate/finalize chain is restored. |
+| Finalized-report photo verification | Draft-side photo upload is now covered by module 10a. The active 11/12/13 chain finalizes a text-note report; a photo-bearing finalized report remains future coverage. | [§7 Future module 10b](#7-future-modules-pickup-pointers). |
+| Voice note debug fields (transcript, summary, playback) in Report Debug | Module 09 covers the draft-side voice lifecycle and module 12 covers the current debug surface. Voice-specific debug fields need API + UI support before Maestro can assert them. | Track after the debug payload expands. |
 | Push notifications / universal links cold-tap | Tracked in [P4.6](plan-p4-hardening.md#p46-universal-links). Different harness. | [P4.6] — separate flow `share-link-cold-start.yaml`. |
 | Avatar upload (`AvatarUploader`) | Depends on R2 upload pipeline + camera roll — partly merged but no canonical Maestro coverage yet. | Add as `12a-avatar-upload.yaml` after photo modules unblock. |
 
@@ -410,7 +408,7 @@ Future commits / goals (queued in [§7](#7-future-modules-pickup-pointers)):
 - F1. `test(mobile): fully harden .maestro/modules/09-voice-notes.yaml` — landed and re-enabled in the regression journey.
 - F2. `test(mobile): .maestro/modules/10a-photo-notes-draft.yaml` — landed for the photo upload redesign: attachment sheet → camera → two-tile batch → generated report photos → preview → delete.
 - F3. `test(mobile): .maestro/modules/10b-photo-notes-finalized.yaml` — after `ReportPhotos` signed-URL wiring lands on the redesigned photo surface.
-- F4. `feat(api): extend /reports/{n}/debug with voice transcript+summary columns` — after F1 is green and modules 11/12 are re-enabled.
+- F4. `feat(api): extend /reports/{n}/debug with voice transcript+summary columns` — after the debug payload and UI expose voice-specific fields.
 
 ---
 
@@ -496,8 +494,8 @@ clear merge-trigger so we don't drift back into Pitfall 4.
 |---|---|---|---|
 | 09 | `09-voice-notes.yaml` — fixture recording + upload + transcribe + summarize + title + transcript sheet + playback entry point + delete | Voice-note E2E hardening landed on `dev` | Re-enabled in `regression-journey.yaml`; passed local Android regression before module 10a work. |
 | 10a | `10a-photo-notes-draft.yaml` — `btn-attachment` → camera → Done → two-tile photo row appears on Notes timeline → generate → Report tab photo strip → preview → delete | Photo upload UI redesign landed on `dev` (`5173049`) | Re-enabled in `regression-journey.yaml`; passed focused local Android, full local regression, and clean full dev-deployment regression on 2026-05-28. |
-| 10b | `10b-photo-notes-finalized.yaml` — open finalized report → ReportPhotos block renders → ImagePreviewModal opens via signed URL | Re-enable module 11 generate/finalize chain on iOS, then assert finalized saved-report photos | Still future; depends on the iOS-disabled generate/finalize chain. |
-| 12a | `12-report-debug.yaml` voice fields | Add `voiceTranscripts` + `voiceSummaries` arrays to `GET /reports/{n}/debug` and to the debug screen | Bundled with F4 in §4 after modules 11/12 are re-enabled. |
+| 10b | `10b-photo-notes-finalized.yaml` — open finalized report → ReportPhotos block renders → ImagePreviewModal opens via signed URL | Add a photo-bearing finalized-report path after the draft-side upload lifecycle | Still future; module 10a covers the landed improvement and module 11 now supplies the finalize chain. |
+| 12a | `12-report-debug.yaml` voice fields | Add `voiceTranscripts` + `voiceSummaries` arrays to `GET /reports/{n}/debug` and to the debug screen | Bundled with F4 in §4 after the debug payload expands. |
 | 14 | `14-avatar-upload.yaml` | Avatar upload needs its own camera-roll/R2 assertions | Add to P4 list as a separate upload-pipeline follow-up. |
 
 If a feature lands on `dev` but its module is **not** added in the
@@ -530,11 +528,10 @@ between "the journey is green" and "the app is covered".
 - Voice notes — module `09` now covers recording, upload, transcribe,
   summarize, title, transcript viewing, playback entry point, and
   delete. Remaining voice coverage is the saved-report/debug surface
-  once modules 11/12 are re-enabled.
+  once the debug payload exposes voice transcript/summary fields.
 - Image / photo uploads — module `10a` now covers the landed draft-side
   photo lifecycle around `attachments[]` and per-tile state. Module
-  `10b` remains reserved for finalized saved-report photo coverage once
-  the iOS-disabled generate/finalize chain is restored.
+  `10b` remains reserved for finalized saved-report photo coverage.
 
 These do not block the P4.8 exit gate — they are tracked as future
 modules and will land alongside their feature work or as targeted

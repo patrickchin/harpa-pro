@@ -48,6 +48,14 @@ suite first against the local backend, then against the dev deployment.
   local regression journey. It also passed inside the clean full dev
   regression against real dev Fly/Neon/R2 via the local API/R2 proxy
   bridge.
+- Later on 2026-05-28, modules 11/12/13 were restored to both local
+  and dev journeys. The fix was Maestro-only: module 11 no longer sends
+  a second Android Back-producing `hideKeyboard` after adding the note,
+  and it accepts either Generate or Update report CTA IDs. Focused
+  local Android passed 01/02/11/12/13, the full local regression passed,
+  and the clean full dev-deployment regression passed modules 01, 01b,
+  02, 03, 04, 05, 06, 07, 08, 09, 10a, 11, 12, 13, 14, 15, 16, and
+  sign-out.
 - Dev deployment should use `/auth/password/verify` test accounts, not
   fake OTP or real SMS. Keep the password in the CLI/broker; do not
   pass it to Maestro.

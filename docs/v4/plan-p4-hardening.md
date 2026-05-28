@@ -139,7 +139,8 @@ generated Report-tab photo strip → preview modal → photo-note delete
 `01-auth.yaml`, `02-projects-crud.yaml`, and expanded
 `10a-photo-notes-draft.yaml` against the local docker-compose stack.
 The full local regression journey then passed with modules 01, 01b,
-02, 03, 04, 05, 06, 07, 08, 09, 10a, 14, 15, 16, and final sign-out.
+02, 03, 04, 05, 06, 07, 08, 09, 10a, 11, 12, 13, 14, 15, 16, and
+final sign-out. A focused follow-up run also passed 01/02/11/12/13.
 Local Android setup needs `adb reverse tcp:9000 tcp:9000` as well as
 Metro/API reverses because photo signed upload URLs target local
 MinIO.
@@ -151,7 +152,7 @@ password to Maestro logs. After replacing module 10a's final
 local-only project-name assertion with project-home recovery that also
 understands the dynamic dev project name, a clean full dev run of
 `regression-journey-dev.yaml` passed modules 01, 01b, 02, 03, 04, 05,
-06, 07, 08, 09, 10a, project cleanup, 14, 15, 16, and final sign-out.
+06, 07, 08, 09, 10a, 11, 12, 13, 14, 15, 16, and final sign-out.
 R2 PUT/GET traffic for voice and photos was observed through
 `scripts/dev-e2e-r2-proxy.cjs`.
 
@@ -173,7 +174,7 @@ R2 PUT/GET traffic for voice and photos was observed through
 - [ ] CI workflow that actually runs the journey (currently developer-driven on the real device — no CI matrix yet for the Android emulator leg).
 - [x] Dev-deployment E2E pass after local green: same coverage against `harpa-pro-api-dev` using the `POST /auth/password/verify` test-account bypass, dev Neon/R2, and non-destructive per-run cleanup.
 - [ ] `mo journey` / Maestro target support for `local` vs `dev`, with strict ordering so dev runs only after local passes. This should provide the password-login helper/setup hook for dev.
-- [ ] Module slot 10b (finalized photo notes) — waiting on the iOS-disabled generate/finalize → saved-report chain.
-- [ ] Uncovered / disabled surfaces still outside the passing journey: finalized image uploads and the iOS-disabled generate/finalize → report-debug → project-delete chain.
+- [ ] Module slot 10b (finalized photo notes) — add a photo-bearing finalized-report path after the draft-side upload lifecycle.
+- [ ] Remaining uncovered surfaces outside the passing journey: finalized image uploads, voice-specific debug fields, avatar upload, and deep-link/push flows.
 - [ ] Remaining future-pickup modules (10b finalized photos, 12a voice debug fields, avatar upload) land alongside their feature work — tracked in design doc §7.
 - [ ] Commit train per design doc §4 (initial bring-up commits landed; outstanding ones folded into the bullets above).

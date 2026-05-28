@@ -29,10 +29,9 @@ tags:
 - runFlow: modules/08-text-notes.yaml
 - runFlow: modules/09-voice-notes.yaml
 - runFlow: modules/10a-photo-notes-draft.yaml
-
-# Module 10a leaves alice on project home. Clean up this dev run's
-# project before moving to profile/account coverage.
-- runFlow: helpers/delete-current-project.yaml
+- runFlow: modules/11-generate-finalize.yaml
+- runFlow: modules/12-report-debug.yaml
+- runFlow: modules/13-projects-delete.yaml
 
 - runFlow: modules/14-account.yaml
 - runFlow: modules/15-usage.yaml

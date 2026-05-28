@@ -823,7 +823,7 @@ unistyles, supabase, CLI help drift, rate-limit env vars — orthogonal).
 
 | File | Purpose | Disposition |
 |---|---|---|
-| `regression-journey.yaml` | Orchestrator flow that `runFlow`s modules 01 → 17. Modules 09, 11, 12, 13 disabled (commented out — see file header for iOS-specific reasons). | **target of `mo journey full`** — input config unchanged |
+| `regression-journey.yaml` | Orchestrator flow that `runFlow`s modules 01 → 17, including voice, photo, generate/finalize, report-debug, project-delete, profile/account/usage, and sign-out. | **target of `mo journey full`** — input config unchanged |
 | `core-end-to-end.yaml` | Older P3-exit-gate single-file journey. Depends on `reset-db.sh` (uses seeded Bob for invite step). | **target of `mo journey legacy`** or `mo run core-end-to-end` |
 | `p3-14a-usage-limits-card.yaml` | Usage card render. Runs today against seeded Alice. | **target of `mo run`** |
 | `p3-14b-usage-limit-dialog.yaml` | Placeholder — requires non-existent `reset-db.sh --seed-at-limit`. | **needs `mo reset --seed at-limit`** before this becomes runnable |
@@ -931,7 +931,7 @@ subcommand that subsumes it.
 2. **`reset-db.sh --seed-at-limit` referenced but unsupported** — `p3-14b-usage-limit-dialog.yaml:23`. The script silently ignores all args. Module 14b is therefore not runnable as documented. `mo reset --seed at-limit` should be implemented alongside an actual at-limit seed SQL.
 3. **No CI runs Maestro today** — only the testID gate runs. Mobile E2E is purely a local affair on dev boxes. `mo` becoming the local entry point is a prerequisite for a future CI step on a Mac runner.
 4. **Two legacy single-purpose flows ready for deletion** — `p3-15-voice-record.yaml` and `p3-15-upload.yaml` are explicitly marked as superseded by `modules/09-voice-notes.yaml` and `modules/10a-photo-notes-draft.yaml` in `.maestro/README.md`. Block on re-enabling module 09 on iOS (currently disabled in `regression-journey.yaml`) before deletion.
-5. **Four regression modules disabled in `regression-journey.yaml`** — modules 09 (voice — iOS dynamic-import bug), 11 (generate-finalize — iOS render race), 12 (report-debug — depends on 11), 13 (projects-delete — depends on 11/12). Worth tracking as `mo`-orthogonal bugs; do not let `mo` design assume these will be re-enabled by Phase 3c.
+5. **Formerly disabled regression modules are now active** — modules 09, 10a, 11, 12, and 13 are part of the passing Android local/dev journeys as of 2026-05-28. `mo` design should treat these as normal coverage, not paused special cases.
 6. **`reset-db.sh` is bash-only** — Windows hosts run it via Git Bash / WSL. `mo reset` should be pure Python so the Windows agent can invoke `docker exec` directly without a shell shim.
 7. **Pre-push hook does not run Maestro** — confirms `mo` is a developer-driven, on-demand tool; we do not need to optimise for sub-second startup.
 8. **No `package.json` entry point for Maestro** anywhere in the monorepo. Every contributor hand-types `maestro test …`. `mo run` will be the first canonical entry.

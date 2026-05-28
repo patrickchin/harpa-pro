@@ -71,20 +71,18 @@ deletes the project + signs out at the end). Covers:
 4. Members invite / permissions / viewer / remove
 5. Reports CRUD
 6. Text notes (add/delete)
-7. Account view + edit-cancel + edit-save
-8. Usage screen render
-9. Profile identity + nav
-10. Voice notes: upload, transcript, summary, playback entry point,
+7. Voice notes: upload, transcript, summary, playback entry point,
     delete
-11. Photo notes: attachment sheet, camera upload, generated report
+8. Photo notes: attachment sheet, camera upload, generated report
     photo strip, preview, delete
-12. Sign out
-
-Paused modules:
-
-- `11-generate-finalize.yaml`, `12-report-debug.yaml`, and
-  `13-projects-delete.yaml` remain disabled on iOS for the reasons
-  documented in `regression-journey.yaml`.
+9. Generate + finalize: add note, generate/update report, finalize,
+   unfinalize, re-finalize
+10. Report Debug: prompt, report notes, LLM response, non-empty state
+11. Project delete teardown
+12. Account view + edit-cancel + edit-save
+13. Usage screen render
+14. Profile identity + nav
+15. Sign out
 
 **Pre-condition:** docker compose stack up, Metro running, app built
 with `EXPO_PUBLIC_USE_FIXTURES=true`. Microphone and camera privacy
@@ -126,11 +124,11 @@ Dev-deployment target:
   they must not truncate the shared dev database.
 - `mo journey --target dev` is the intended future entry point once
   the orchestrator grows target support.
-- 2026-05-28 status: local Android regression is green with module
-  10a enabled. A clean dev-deployment Android run of
-  `regression-journey-dev.yaml` passed end to end after the dynamic
-  dev-project recovery fix: modules 01, 01b, 02, 03, 04, 05, 06, 07,
-  08, 09, 10a, project cleanup, 14, 15, 16, and sign-out. R2
+- 2026-05-28 status: local Android regression is green with modules
+  09, 10a, 11, 12, and 13 enabled. A clean dev-deployment Android run
+  of `regression-journey-dev.yaml` also passed end to end after the
+  dynamic dev-project recovery fix: modules 01, 01b, 02, 03, 04, 05,
+  06, 07, 08, 09, 10a, 11, 12, 13, 14, 15, 16, and sign-out. R2
   upload/download traffic went through the local R2 proxy.
 
 Modules 14/15/16 navigate to Profile / Account / Usage screens.

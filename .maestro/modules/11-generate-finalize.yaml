@@ -64,13 +64,9 @@ tags:
       id: "note-row-.*"
     timeout: 8000
 
-# --- Dismiss keyboard so the action row isn't obscured --------------------
-# After Maestro's inputText the iOS sim keyboard often stays up even
-# after btn-add-note. Tapping on a static area above the input bar
-# is more reliable than hideKeyboard, which races with sheet/keyboard
-# animations on iOS. Without this, btn-generate-report tap finds the
-# button but the tap lands on the obscuring keyboard.
-- hideKeyboard
+# The keyboard was dismissed before tapping Add. A second hideKeyboard
+# after the note row appears can send Android's Back event to the router
+# and return to the reports list, so wait for the action row directly.
 - waitForAnimationToEnd
 
 # --- Generate the report ---------------------------------------------------
@@ -85,10 +81,10 @@ tags:
 # default ~18s implicit wait.
 - extendedWaitUntil:
     visible:
-      id: "btn-generate-report"
-    timeout: 10000
+      id: "btn-generate-.*report"
+    timeout: 15000
 - tapOn:
-    id: "btn-generate-report"
+    id: "btn-generate-.*report"
 - tapOn:
     id: "btn-tab-report"
 - extendedWaitUntil:

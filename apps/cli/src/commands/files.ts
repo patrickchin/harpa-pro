@@ -50,6 +50,7 @@ export function filesPresign(args: FilesPresignArgs): Promise<ExitCode> {
     request: () =>
       args.client.POST('/files/presign', {
         body: {
+          scope: 'scratch',
           kind: args.kind,
           contentType: args.contentType,
           sizeBytes: args.sizeBytes,
@@ -89,7 +90,7 @@ export const filesPresignCommand = defineCommand({
       json: args.json,
       verbose: args.verbose,
       request: () =>
-        client.POST('/files/presign', { body: { kind, contentType, sizeBytes } }),
+        client.POST('/files/presign', { body: { scope: 'scratch', kind, contentType, sizeBytes } }),
       format: (data) =>
         [
           `${chalk.green('✓')} Presigned upload URL`,
@@ -119,6 +120,7 @@ export function filesRegister(args: FilesRegisterArgs): Promise<ExitCode> {
     request: () =>
       args.client.POST('/files', {
         body: {
+          scope: 'scratch',
           kind: args.kind,
           fileKey: args.fileKey,
           sizeBytes: args.sizeBytes,
@@ -156,7 +158,7 @@ export const filesRegisterCommand = defineCommand({
       json: args.json,
       verbose: args.verbose,
       request: () =>
-        client.POST('/files', { body: { kind, fileKey, sizeBytes, contentType } }),
+        client.POST('/files', { body: { scope: 'scratch', kind, fileKey, sizeBytes, contentType } }),
       format: (data) =>
         `${chalk.green('✓')} Registered file ${chalk.bold(data.id)} (${data.kind}, ${data.sizeBytes} bytes)`,
     });
@@ -274,7 +276,7 @@ export async function uploadFile(
 
   // 1. Presign.
   const presignResp = await args.client.POST('/files/presign', {
-    body: { kind: args.kind, contentType, sizeBytes },
+    body: { scope: 'scratch', kind: args.kind, contentType, sizeBytes },
   });
   if (presignResp.error || !presignResp.data) {
     stderr.write(chalk.red(`Error: presign failed (HTTP ${presignResp.response.status})\n`));
@@ -305,7 +307,7 @@ export async function uploadFile(
 
   // 3. Register.
   const regResp = await args.client.POST('/files', {
-    body: { kind: args.kind, fileKey, sizeBytes, contentType },
+    body: { scope: 'scratch', kind: args.kind, fileKey, sizeBytes, contentType },
   });
   if (regResp.error || !regResp.data) {
     stderr.write(chalk.red(`Error: register failed (HTTP ${regResp.response.status})\n`));

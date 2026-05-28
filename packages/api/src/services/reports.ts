@@ -362,10 +362,12 @@ export async function setReportBody(
   lastGeneration?: ReportLastGeneration,
   /**
    * Snapshot of `report.notes_changed_at` taken BEFORE the AI call.
-   * `generated_at` is clamped to at least this value so concurrent
-   * bumps that landed during the call remain "dirty" (notes_changed_at
-   * stays > generated_at). When omitted, `now()` is used (first-time
-   * generate has nothing to race).
+   * `generated_at` is set to this value (NOT `now()`) so concurrent
+   * note bumps that landed during the multi-second AI call keep
+   * `notes_changed_at > generated_at` and the queue-of-one fires
+   * another regen. Falls back to `now()` when omitted — first-time
+   * generates have no prior snapshot, and manual edits round-trip
+   * through this helper too with no race to defend.
    */
   snapshotTs?: string | null,
 ): Promise<ReportRow | null> {
@@ -373,7 +375,7 @@ export async function setReportBody(
   const r = await db.execute<RawReport>(sql`
     UPDATE app.reports
     SET body = ${JSON.stringify(body)}::jsonb,
-        generated_at = GREATEST(now(), ${snapshotTs ?? null}::timestamptz),
+        generated_at = COALESCE(${snapshotTs ?? null}::timestamptz, now()),
         notes_since_last_generation = 0,
         last_generation = CASE
           WHEN ${lastGenJson}::text IS NOT NULL THEN ${lastGenJson}::jsonb

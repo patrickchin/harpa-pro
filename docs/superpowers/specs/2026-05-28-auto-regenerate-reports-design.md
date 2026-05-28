@@ -88,10 +88,17 @@ needsRegeneration =
 
 `runGenerate` captures `snapshotTs := report.notes_changed_at`
 *before* the AI call. On save, set
-`generated_at = greatest(now(), snapshotTs)`. If a note bump fired
-during the in-flight run, `notes_changed_at` will be `> snapshotTs`,
+`generated_at = COALESCE(snapshotTs, now())`. `generated_at` then
+records *the snapshot of notes we synthesized from* — not the
+wall-clock save time. If a note bump fires during the in-flight
+AI run, `notes_changed_at` becomes `> snapshotTs == generated_at`,
 the comparison stays dirty, and the queue-of-one fires another
 regen. No extra state machine needed.
+
+Using `now()` instead (or `GREATEST(now(), snapshotTs)`) would
+silently lose that signal: `now()` at save time is strictly later
+than any bump that landed during the multi-second AI call, so
+`notes_changed_at < generated_at` and the dirty bit evaporates.
 
 ### Manual edits
 
@@ -202,10 +209,13 @@ definition so it is not forgotten.
 - `runGenerate` / `setReportBody`:
   - Capture `snapshotTs = report.notes_changed_at` before the AI
     call.
-  - On save: `generated_at = GREATEST(now(), ${snapshotTs})`. (Using
-    `GREATEST` is defensive; in practice `now()` is later, but if
-    the AI call somehow returns within the same wall-clock tick as
-    a concurrent bump we still want the dirty bit to stay true.)
+  - On save: `generated_at = COALESCE(${snapshotTs}, now())`. The
+    timestamp records the snapshot we synthesized FROM, not the
+    save time, so a bump landing during the AI call keeps
+    `notes_changed_at > generated_at` and the dirty bit survives
+    (see "Race safety" above). Fallback to `now()` covers first-
+    time generates and the manual-edit code path, neither of which
+    has a snapshot to race against.
   - Do **not** modify `notes_changed_at` on generate. The dirty
     check is purely the comparison.
   - **Dual-write the clean state.** Also keep

@@ -318,7 +318,7 @@ describe('batch photo notes', () => {
     expect(body.files.map((f) => f.position)).toEqual([0, 1, 2]);
   });
 
-  it('append files to existing note', async () => {
+  it('append files to existing note bumps notes_changed_at', async () => {
     const app = createApp();
     const tok = await signTestToken(alice, aliceSid);
     // Create a note with 1 file first.
@@ -334,6 +334,17 @@ describe('batch photo notes', () => {
     const created = (await create.json()) as { id: string; files: Array<{ position: number }> };
     expect(created.files).toHaveLength(1);
 
+    // Reset dirty bit so the append's bump is observable.
+    const reset = await getPool().connect();
+    try {
+      await reset.query(
+        `UPDATE app.reports SET notes_changed_at = NULL, generated_at = now() WHERE id = $1`,
+        [report],
+      );
+    } finally {
+      reset.release();
+    }
+
     // Append a new file.
     const append = await app.request(`/notes/${created.id}/files`, {
       method: 'POST',
@@ -345,6 +356,14 @@ describe('batch photo notes', () => {
     expect(appended.files).toHaveLength(1);
     expect(appended.files[0]!.position).toBe(1);
     expect(appended.files[0]!.fileId).toBe(fileIds[3]);
+
+    // Adding photos is a note-content mutation and must flag the report
+    // dirty so the auto-regenerator picks it up.
+    const after = await readDirty(report);
+    expect(after.changed_at).not.toBeNull();
+    expect(new Date(after.changed_at!).getTime()).toBeGreaterThan(
+      new Date(after.generated_at!).getTime(),
+    );
   });
 
   it('list notes returns files array', async () => {

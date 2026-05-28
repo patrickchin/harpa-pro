@@ -6,6 +6,7 @@
  * when given a `fileId` and renders `CachedImage` with the resolved uri.
  */
 import React from 'react';
+import { Modal } from 'react-native';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -15,6 +16,43 @@ import { ImagePreviewModal } from './ImagePreviewModal';
 vi.mock('expo-image', () => ({
   Image: (props: Record<string, unknown>) =>
     React.createElement('rn-expo-image', props, null),
+}));
+
+vi.mock('react-native-pager-view', () => ({
+  default: ({
+    children,
+    scrollEnabled,
+    onPageSelected,
+    testID,
+  }: {
+    children: React.ReactNode;
+    scrollEnabled?: boolean;
+    onPageSelected?: (event: { nativeEvent: { position: number } }) => void;
+    testID?: string;
+  }) =>
+    React.createElement(
+      'rn-pager-view',
+      { scrollEnabled, onPageSelected, testID },
+      children,
+    ),
+}));
+
+vi.mock('expo-status-bar', () => ({
+  StatusBar: (props: Record<string, unknown>) =>
+    React.createElement('rn-status-bar', props, null),
+}));
+
+vi.mock('react-native-reanimated', () => ({
+  __esModule: true,
+  default: { View: 'rn-animated-view' },
+  useAnimatedStyle: (fn: () => unknown) => fn(),
+  useSharedValue: (value: unknown) => ({ value }),
+  withTiming: (value: unknown) => value,
+}));
+
+vi.mock('./ZoomableImage', () => ({
+  ZoomableImage: (props: Record<string, unknown>) =>
+    React.createElement('rn-zoomable-image', props, null),
 }));
 
 function jsonResponse(body: unknown, status = 200): Response {
@@ -72,10 +110,10 @@ describe('ImagePreviewModal', () => {
     // The signed-URL endpoint was hit at least once with the file id.
     expect(calls.some((c) => c.includes('/files/fil_xyz/url'))).toBe(true);
     // Flush fetch + React-Query state-transition microtasks until the
-    // CachedImage child renders with the resolved uri.
+    // ZoomableImage child renders with the resolved uri.
     const start = Date.now();
     while (
-      tree.root.findAllByProps({ testID: 'image-preview' }).length === 0 &&
+      tree.root.findAllByType('rn-zoomable-image' as any).length === 0 &&
       Date.now() - start < 1000
     ) {
       // eslint-disable-next-line no-await-in-loop
@@ -83,7 +121,7 @@ describe('ImagePreviewModal', () => {
         await new Promise((r) => setTimeout(r, 5));
       });
     }
-    const previews = tree.root.findAllByProps({ testID: 'image-preview' });
+    const previews = tree.root.findAllByType('rn-zoomable-image' as any);
     expect(previews.length).toBeGreaterThan(0);
     const source = previews[0]!.props.source as { uri?: string };
     expect(source.uri).toBe('https://r2.example.com/signed.jpg?sig=abc');
@@ -123,7 +161,7 @@ describe('ImagePreviewModal', () => {
     expect(
       tree.root.findAllByProps({ testID: 'image-preview-loading' }).length,
     ).toBeGreaterThan(0);
-    expect(tree.root.findAllByProps({ testID: 'image-preview' })).toHaveLength(
+    expect(tree.root.findAllByType('rn-zoomable-image' as any)).toHaveLength(
       0,
     );
   });
@@ -137,10 +175,99 @@ describe('ImagePreviewModal', () => {
       />,
     );
     expect(calls).toHaveLength(0);
-    const previews = tree.root.findAllByProps({ testID: 'image-preview' });
+    const previews = tree.root.findAllByType('rn-zoomable-image' as any);
     expect(previews.length).toBeGreaterThan(0);
     expect((previews[0]!.props.source as { uri: string }).uri).toBe(
       'https://r2.example.com/explicit.jpg',
     );
+  });
+
+  it('uses thumbnailFileId as the fullscreen placeholder cache key', async () => {
+    fetchSpy.mockImplementation(async (url: string) => {
+      calls.push(url);
+      const id = url.includes('/files/fil_thumb_1/url')
+        ? 'thumb'
+        : 'full';
+      return jsonResponse({
+        url: `https://r2.example.com/${id}.jpg?sig=abc`,
+        expiresAt: new Date(Date.now() + 60_000).toISOString(),
+      });
+    });
+
+    let tree!: ReactTestRenderer;
+    await act(async () => {
+      tree = wrap(
+        <ImagePreviewModal
+          visible
+          photos={[
+            {
+              fileId: 'fil_full_1',
+              thumbnailFileId: 'fil_thumb_1',
+              title: 'Gallery photo',
+              cacheKey: 'fil_full_1',
+            },
+          ]}
+          onClose={() => {}}
+        />,
+      );
+    });
+
+    const start = Date.now();
+    while (
+      tree.root.findAllByType('rn-zoomable-image' as any).length === 0 &&
+      Date.now() - start < 1000
+    ) {
+      await act(async () => {
+        await new Promise((r) => setTimeout(r, 5));
+      });
+    }
+
+    const zoomable = tree.root.findByType('rn-zoomable-image' as any);
+    expect(zoomable.props.placeholder).toEqual({
+      uri: 'https://r2.example.com/thumb.jpg?sig=abc',
+    });
+    expect(zoomable.props.placeholderCacheKey).toBe('fil_thumb_1');
+  });
+
+  it('renders a black fullscreen modal with declarative light status bar', () => {
+    const tree = wrap(
+      <ImagePreviewModal
+        visible
+        uri="https://r2.example.com/explicit.jpg"
+        title="Explicit"
+        onClose={() => {}}
+      />,
+    );
+
+    const statusBar = tree.root.findByType('rn-status-bar' as any);
+    expect(statusBar.props.style).toBe('light');
+    expect(statusBar.props.hidden).toBe(false);
+
+    const modal = tree.root.findByType(Modal);
+    expect(modal.props.presentationStyle).toBe('fullScreen');
+    expect(modal.props.statusBarTranslucent).toBe(true);
+  });
+
+  it('disables pager scrolling while a child image is zoomed', () => {
+    const tree = wrap(
+      <ImagePreviewModal
+        visible
+        photos={[
+          { fileId: 'fil_1', title: 'One', cacheKey: 'fil_1' },
+          { fileId: 'fil_2', title: 'Two', cacheKey: 'fil_2' },
+        ]}
+        onClose={() => {}}
+      />,
+    );
+
+    const pager = tree.root.findByType('rn-pager-view' as any);
+    expect(pager.props.scrollEnabled).toBe(true);
+
+    const zoomable = tree.root.findByProps({ testID: 'image-preview-0' });
+    act(() => {
+      zoomable.props.onZoomChange(true);
+    });
+
+    expect(tree.root.findByType('rn-pager-view' as any).props.scrollEnabled).toBe(false);
   });
 });

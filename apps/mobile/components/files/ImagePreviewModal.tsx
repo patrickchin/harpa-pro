@@ -1,38 +1,33 @@
 /**
  * ImagePreviewModal — fullscreen modal for previewing photos from R2.
  *
- * Two modes:
- *   - Single image (legacy): pass `uri` or `fileId` (+ optional
- *     `title` / `cacheKey`). The modal renders one centred image.
- *   - Multi-photo gallery: pass `photos[]` and `initialIndex`. The
- *     modal renders a horizontal paged FlatList — the user swipes
- *     between photos and the header subtitle shows `1 / N`.
- *
- * Either way each tile uses `ImagePreviewBody`, which resolves the
- * signed URL via `useFileSignedUrl(fileId)` (or accepts a pre-resolved
- * `uri`) and renders the image through `CachedImage` (= `expo-image`
- * + disk-cache). The cache entry is pinned to the file id so rotating
- * signed-URL tokens don't invalidate the cached pixels.
+ * Twitter/X-inspired: black backdrop, translucent overlay chrome that
+ * fades on tap, PagerView for swipe navigation, pinch-to-zoom via
+ * ZoomableImage, thumbnail placeholders for instant display.
  */
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  FlatList,
   Modal,
   Pressable,
+  Text,
   View,
   useWindowDimensions,
-  type NativeScrollEvent,
-  type NativeSyntheticEvent,
 } from 'react-native';
+import PagerView from 'react-native-pager-view';
 import { X } from 'lucide-react-native';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
 import {
   SafeAreaProvider,
   SafeAreaView,
 } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
 
-import { ScreenHeader } from '@/components/primitives/ScreenHeader';
-import { CachedImage } from '@/components/ui/CachedImage';
+import { ZoomableImage } from '@/components/files/ZoomableImage';
 import { useFileSignedUrl } from '@/lib/uploads/useFileSignedUrl';
 import { colors } from '@/lib/design-tokens/colors';
 
@@ -70,9 +65,6 @@ export function ImagePreviewModal({
   initialIndex = 0,
   onClose,
 }: ImagePreviewModalProps) {
-  // Normalize props → a non-empty photos array. Legacy callers pass
-  // `uri`/`fileId`/`title`/`cacheKey` directly; we wrap those into a
-  // single-element array so the rendering path is uniform.
   const resolvedPhotos = useMemo<ReadonlyArray<ImagePreviewPhoto>>(() => {
     if (photos && photos.length > 0) return photos;
     return [{ uri, fileId, thumbnailFileId: null, title, cacheKey }];
@@ -86,10 +78,11 @@ export function ImagePreviewModal({
       visible={visible}
       animationType="fade"
       presentationStyle="fullScreen"
+      statusBarTranslucent
       onRequestClose={onClose}
     >
       <SafeAreaProvider>
-        <SafeAreaView className="flex-1 bg-black" edges={['top', 'bottom']}>
+        <View className="flex-1 bg-black">
           {visible ? (
             <PreviewContent
               photos={resolvedPhotos}
@@ -99,7 +92,7 @@ export function ImagePreviewModal({
               onClose={onClose}
             />
           ) : null}
-        </SafeAreaView>
+        </View>
       </SafeAreaProvider>
     </Modal>
   );
@@ -113,8 +106,6 @@ function clampIndex(index: number, length: number): number {
   return Math.floor(index);
 }
 
-// Mounted only when `visible` so neither the `useFileSignedUrl` queries
-// nor `useWindowDimensions` work runs for a closed modal.
 function PreviewContent({
   photos,
   startIndex,
@@ -130,90 +121,114 @@ function PreviewContent({
 }) {
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
   const [currentIndex, setCurrentIndex] = useState(startIndex);
-  const listRef = useRef<FlatList<ImagePreviewPhoto> | null>(null);
+  const [chromeVisible, setChromeVisible] = useState(true);
+  const [anyZoomed, setAnyZoomed] = useState(false);
+  const zoomedSet = useRef<Set<string>>(new Set());
+  const chromeOpacity = useSharedValue(1);
 
-  // If the caller changes `initialIndex` while the modal is open, jump
-  // to it. (Common case: a gallery shared between two tabs.)
   useEffect(() => {
     setCurrentIndex(startIndex);
   }, [startIndex]);
+
+  useEffect(() => {
+    chromeOpacity.value = withTiming(chromeVisible ? 1 : 0, { duration: 150 });
+  }, [chromeOpacity, chromeVisible]);
+
+  const chromeStyle = useAnimatedStyle(() => ({
+    opacity: chromeOpacity.value,
+  }));
 
   const activePhoto = photos[currentIndex] ?? photos[0]!;
   const headerTitle = activePhoto.title ?? fallbackTitle;
   const headerSubtitle = isGallery
     ? `${currentIndex + 1} / ${photos.length}`
-    : undefined;
+    : null;
 
-  const handleMomentumScrollEnd = (
-    e: NativeSyntheticEvent<NativeScrollEvent>,
-  ) => {
-    if (screenWidth <= 0) return;
-    const next = Math.round(e.nativeEvent.contentOffset.x / screenWidth);
-    if (next !== currentIndex) setCurrentIndex(next);
-  };
+  const toggleChrome = useCallback(() => {
+    setChromeVisible((prev) => !prev);
+  }, []);
+
+  const onChildZoomChange = useCallback((key: string, isZoomed: boolean) => {
+    if (isZoomed) zoomedSet.current.add(key);
+    else zoomedSet.current.delete(key);
+    setAnyZoomed(zoomedSet.current.size > 0);
+  }, []);
 
   return (
     <>
-      <View className="flex-row items-center justify-between px-4 py-2">
-        <View className="flex-1 pr-2">
-          <ScreenHeader title={headerTitle} subtitle={headerSubtitle} />
-        </View>
-        <Pressable
-          onPress={onClose}
-          accessibilityLabel="Close image preview"
-          testID="btn-close-image-preview"
-          className="rounded-full bg-white/20 p-2"
-        >
-          <X size={22} color={colors.primary.foreground} />
-        </Pressable>
-      </View>
+      <StatusBar style="light" hidden={!chromeVisible} />
 
-      {isGallery ? (
-        <FlatList
-          ref={listRef}
-          data={photos as ImagePreviewPhoto[]}
-          horizontal
-          pagingEnabled
-          showsHorizontalScrollIndicator={false}
-          initialScrollIndex={startIndex}
-          getItemLayout={(_, index) => ({
-            length: screenWidth,
-            offset: screenWidth * index,
-            index,
-          })}
-          keyExtractor={(item, index) =>
-            item.fileId ?? item.uri ?? `photo-${index}`
-          }
-          onMomentumScrollEnd={handleMomentumScrollEnd}
-          testID="image-preview-gallery"
-          renderItem={({ item }) => (
+      <PagerView
+        initialPage={startIndex}
+        scrollEnabled={isGallery && !anyZoomed}
+        onPageSelected={(e) => setCurrentIndex(e.nativeEvent.position)}
+        style={{ flex: 1 }}
+        testID="image-preview-gallery"
+      >
+        {photos.map((item, index) => {
+          const key = item.fileId ?? item.uri ?? `photo-${index}`;
+          return (
             <View
-              style={{ width: screenWidth, height: screenHeight - 64 }}
-              className="items-center justify-center px-4"
+              key={key}
+              className="items-center justify-center"
+              style={{ width: screenWidth, height: screenHeight }}
             >
               <ImagePreviewBody
                 uri={item.uri ?? null}
                 fileId={item.fileId ?? null}
+                thumbnailFileId={item.thumbnailFileId ?? null}
                 title={item.title ?? fallbackTitle}
                 cacheKey={item.cacheKey ?? null}
-                width={screenWidth - 32}
-                height={(screenHeight - 64) * 0.9}
+                width={screenWidth}
+                height={screenHeight}
+                testID={`image-preview-${index}`}
+                onSingleTap={toggleChrome}
+                onZoomChange={(z) => onChildZoomChange(key, z)}
               />
             </View>
-          )}
-        />
-      ) : (
-        <View className="flex-1 items-center justify-center px-4">
-          <ImagePreviewBody
-            uri={activePhoto.uri ?? null}
-            fileId={activePhoto.fileId ?? null}
-            title={activePhoto.title ?? fallbackTitle}
-            cacheKey={activePhoto.cacheKey ?? null}
-            width={screenWidth - 32}
-            height={screenHeight * 0.7}
-          />
-        </View>
-      )}
+          );
+        })}
+      </PagerView>
+
+      <Animated.View
+        pointerEvents={chromeVisible ? 'auto' : 'none'}
+        style={chromeStyle}
+        className="absolute left-0 right-0 top-0 z-10 bg-black/60"
+      >
+        <SafeAreaView edges={['top']}>
+          <View className="flex-row items-center px-4 pb-3 pt-2">
+            <Pressable
+              onPress={onClose}
+              accessibilityLabel="Close image preview"
+              testID="btn-close-image-preview"
+              className="rounded-full bg-white/15 p-2"
+            >
+              <X size={22} color={colors.background} />
+            </Pressable>
+
+            <View className="min-w-0 flex-1 px-3">
+              <Text
+                accessibilityRole="header"
+                className="text-sm font-semibold text-white"
+                numberOfLines={1}
+              >
+                {headerTitle}
+              </Text>
+              {headerSubtitle ? (
+                <Text className="mt-0.5 text-xs text-white/50">
+                  {headerSubtitle}
+                </Text>
+              ) : null}
+            </View>
+
+            {isGallery ? (
+              <Text className="text-xs font-medium text-white/60">
+                {currentIndex + 1} / {photos.length}
+              </Text>
+            ) : null}
+          </View>
+        </SafeAreaView>
+      </Animated.View>
     </>
   );
 }
@@ -221,41 +236,65 @@ function PreviewContent({
 function ImagePreviewBody({
   uri,
   fileId,
+  thumbnailFileId,
   title,
   cacheKey,
   width,
   height,
+  testID,
+  onSingleTap,
+  onZoomChange,
 }: {
   uri: string | null;
   fileId: string | null;
+  thumbnailFileId: string | null;
   title: string;
   cacheKey: string | null;
   width: number;
   height: number;
+  testID: string;
+  onSingleTap: () => void;
+  onZoomChange: (isZoomed: boolean) => void;
 }) {
   const { data, isLoading } = useFileSignedUrl(fileId, {
     enabled: !uri && Boolean(fileId),
   });
+  const { data: thumbnailData } = useFileSignedUrl(thumbnailFileId, {
+    enabled: !uri && Boolean(thumbnailFileId),
+  });
   const resolvedUri =
     uri ?? (data as { url?: string } | undefined)?.url ?? null;
+  const thumbnailUri =
+    (thumbnailData as { url?: string } | undefined)?.url ?? null;
   const effectiveCacheKey = cacheKey ?? fileId ?? undefined;
+  const effectivePlaceholderCacheKey = thumbnailFileId ?? undefined;
+  const sourceUri = resolvedUri ?? thumbnailUri;
+  const sourceCacheKey = resolvedUri
+    ? effectiveCacheKey
+    : effectivePlaceholderCacheKey;
 
-  if (resolvedUri) {
+  if (sourceUri) {
     return (
-      <CachedImage
-        source={{ uri: resolvedUri }}
-        cacheKey={effectiveCacheKey}
-        style={{ width, height }}
+      <ZoomableImage
+        source={{ uri: sourceUri }}
+        placeholder={thumbnailUri ? { uri: thumbnailUri } : undefined}
+        cacheKey={sourceCacheKey}
+        placeholderCacheKey={effectivePlaceholderCacheKey}
+        width={width}
+        height={height}
         contentFit="contain"
-        testID="image-preview"
+        testID={testID}
         accessibilityLabel={title}
+        onSingleTap={onSingleTap}
+        onZoomChange={onZoomChange}
       />
     );
   }
+
   return (
     <ActivityIndicator
       size="large"
-      color={colors.primary.foreground}
+      color={colors.background}
       testID={isLoading ? 'image-preview-loading' : 'image-preview-loading'}
     />
   );

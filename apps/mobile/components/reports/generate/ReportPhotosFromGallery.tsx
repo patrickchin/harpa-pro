@@ -67,31 +67,35 @@ export function ReportPhotosFromGallery({
         title="Photos"
         icon={<Camera size={16} color={colors.foreground} />}
       />
-      <View className="mt-3 gap-3" onLayout={onLayout}>
+      <View className="mt-3" onLayout={onLayout}>
         {containerWidth > 0 &&
-          groups.map((batch) => {
+          groups.map((batch, batchIdx) => {
             const first = batch[0];
             if (!first) return null;
             return (
-              <View
-                key={first.noteId}
-                className="flex-row flex-wrap"
-                style={{ gap: GAP }}
-                testID={`generate-report-photos-batch-${first.noteId}`}
-              >
-                {batch.map((p, idx) => (
-                  <View key={p.fileId} style={{ width: tileSize, height: tileSize }}>
-                    <PhotoTile
-                      attachment={attachmentFromSavedFile(
-                        { id: p.fileId, fileId: p.fileId, thumbnailFileId: p.thumbnailFileId },
-                        idx,
-                      )}
-                      size={tileSize}
-                      onPress={() => onOpen(p.fileId)}
-                      testID={`btn-generate-report-photo-${p.fileId}`}
-                    />
-                  </View>
-                ))}
+              <View key={first.noteId}>
+                {batchIdx > 0 && (
+                  <View className="my-2 h-px bg-border" />
+                )}
+                <View
+                  className="flex-row flex-wrap"
+                  style={{ gap: GAP }}
+                  testID={`generate-report-photos-batch-${first.noteId}`}
+                >
+                  {batch.map((p, idx) => (
+                    <View key={p.fileId} style={{ width: tileSize, height: tileSize }}>
+                      <PhotoTile
+                        attachment={attachmentFromSavedFile(
+                          { id: p.fileId, fileId: p.fileId, thumbnailFileId: p.thumbnailFileId },
+                          idx,
+                        )}
+                        size={tileSize}
+                        onPress={() => onOpen(p.fileId)}
+                        testID={`btn-generate-report-photo-${p.fileId}`}
+                      />
+                    </View>
+                  ))}
+                </View>
               </View>
             );
           })}

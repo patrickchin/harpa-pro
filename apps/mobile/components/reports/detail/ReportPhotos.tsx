@@ -80,34 +80,40 @@ export function ReportPhotos({ noteRows, onOpenPhoto }: ReportPhotosProps) {
         icon={<Camera size={16} color={colors.foreground} />}
       />
       <View
-        className="mt-3 flex-row flex-wrap"
-        style={{ gap: GAP }}
+        className="mt-3"
         testID="report-photos-grid"
         onLayout={onLayout}
       >
         {containerWidth > 0 &&
-          groups.flatMap((group) =>
-            group.photos.map((p, idx) => {
-              const title = p.body?.trim() || 'Photo';
-              const isFirstOfBatch = idx === 0 && group.photos.length > 1;
-              return (
-                <View key={p.id} style={{ width: tileSize, height: tileSize }}>
-                  <PhotoTile
-                    attachment={attachmentFromSavedFile(
-                      { id: p.id, fileId: p.fileId, thumbnailFileId: p.thumbnailFileId ?? null },
-                      idx,
-                    )}
-                    size={tileSize}
-                    onPress={(p.fileId && onOpenPhoto) ? () => onOpenPhoto({ fileId: p.fileId, title }) : undefined}
-                    testID={`btn-report-photo-${p.id}`}
-                  />
-                  {isFirstOfBatch && (
-                    <StackBadge count={group.photos.length} testID={`stack-badge-${group.noteId}`} />
-                  )}
-                </View>
-              );
-            }),
-          )}
+          groups.map((group, groupIdx) => (
+            <View key={group.noteId}>
+              {groupIdx > 0 && (
+                <View className="my-2 h-px bg-border" />
+              )}
+              <View className="flex-row flex-wrap" style={{ gap: GAP }}>
+                {group.photos.map((p, idx) => {
+                  const title = p.body?.trim() || 'Photo';
+                  const isFirstOfBatch = idx === 0 && group.photos.length > 1;
+                  return (
+                    <View key={p.id} style={{ width: tileSize, height: tileSize }}>
+                      <PhotoTile
+                        attachment={attachmentFromSavedFile(
+                          { id: p.id, fileId: p.fileId, thumbnailFileId: p.thumbnailFileId ?? null },
+                          idx,
+                        )}
+                        size={tileSize}
+                        onPress={(p.fileId && onOpenPhoto) ? () => onOpenPhoto({ fileId: p.fileId, title }) : undefined}
+                        testID={`btn-report-photo-${p.id}`}
+                      />
+                      {isFirstOfBatch && (
+                        <StackBadge count={group.photos.length} testID={`stack-badge-${group.noteId}`} />
+                      )}
+                    </View>
+                  );
+                })}
+              </View>
+            </View>
+          ))}
       </View>
     </Card>
   );

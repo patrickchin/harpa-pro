@@ -16,9 +16,12 @@ import {
 } from 'react-native';
 import PagerView from 'react-native-pager-view';
 import { X } from 'lucide-react-native';
+import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import Animated, {
+  runOnJS,
   useAnimatedStyle,
   useSharedValue,
+  withSpring,
   withTiming,
 } from 'react-native-reanimated';
 import {
@@ -77,22 +80,25 @@ export function ImagePreviewModal({
     <Modal
       visible={visible}
       animationType="fade"
-      presentationStyle="fullScreen"
+      presentationStyle="overFullScreen"
+      transparent
       statusBarTranslucent
       onRequestClose={onClose}
     >
       <SafeAreaProvider>
-        <View className="flex-1 bg-black">
-          {visible ? (
-            <PreviewContent
-              photos={resolvedPhotos}
-              startIndex={startIndex}
-              isGallery={isGallery}
-              fallbackTitle={title}
-              onClose={onClose}
-            />
-          ) : null}
-        </View>
+        <GestureHandlerRootView style={{ flex: 1 }}>
+          <View className="flex-1">
+            {visible ? (
+              <PreviewContent
+                photos={resolvedPhotos}
+                startIndex={startIndex}
+                isGallery={isGallery}
+                fallbackTitle={title}
+                onClose={onClose}
+              />
+            ) : null}
+          </View>
+        </GestureHandlerRootView>
       </SafeAreaProvider>
     </Modal>
   );
@@ -125,6 +131,7 @@ function PreviewContent({
   const [anyZoomed, setAnyZoomed] = useState(false);
   const zoomedSet = useRef<Set<string>>(new Set());
   const chromeOpacity = useSharedValue(1);
+  const dismissY = useSharedValue(0);
 
   useEffect(() => {
     setCurrentIndex(startIndex);
@@ -134,9 +141,11 @@ function PreviewContent({
     chromeOpacity.value = withTiming(chromeVisible ? 1 : 0, { duration: 150 });
   }, [chromeOpacity, chromeVisible]);
 
-  const chromeStyle = useAnimatedStyle(() => ({
-    opacity: chromeOpacity.value,
-  }));
+  // Chrome fades with toggle AND during dismiss drag
+  const chromeStyle = useAnimatedStyle(() => {
+    const dismissFade = Math.min(Math.abs(dismissY.value) / 80, 1);
+    return { opacity: chromeOpacity.value * (1 - dismissFade) };
+  });
 
   const activePhoto = photos[currentIndex] ?? photos[0]!;
   const headerTitle = activePhoto.title ?? fallbackTitle;
@@ -154,82 +163,127 @@ function PreviewContent({
     setAnyZoomed(zoomedSet.current.size > 0);
   }, []);
 
+  // --- Drag-to-dismiss gesture (iOS Photos style) ---
+  const DISMISS_THRESHOLD = 100;
+
+  const dismissPan = useMemo(
+    () =>
+      Gesture.Pan()
+        .enabled(!anyZoomed)
+        .maxPointers(1)
+        .activeOffsetY([-15, 15])
+        .failOffsetX([-10, 10])
+        .onUpdate((e) => {
+          dismissY.value = e.translationY;
+        })
+        .onEnd(() => {
+          if (Math.abs(dismissY.value) > DISMISS_THRESHOLD) {
+            runOnJS(onClose)();
+          } else {
+            dismissY.value = withTiming(0, { duration: 150 });
+          }
+        }),
+    [anyZoomed, dismissY, onClose],
+  );
+
+  const dismissContentStyle = useAnimatedStyle(() => {
+    const progress = Math.min(Math.abs(dismissY.value) / 300, 1);
+    return {
+      transform: [
+        { translateY: dismissY.value },
+        { scale: 1 - progress * 0.15 },
+      ],
+    };
+  });
+
+  const dismissBackdropStyle = useAnimatedStyle(() => {
+    const progress = Math.min(Math.abs(dismissY.value) / 300, 1);
+    return {
+      backgroundColor: `rgba(0, 0, 0, ${1 - progress * 0.7})`,
+    };
+  });
+
   return (
-    <>
-      <StatusBar style="light" hidden={!chromeVisible} />
+    <GestureDetector gesture={dismissPan}>
+      <Animated.View style={[{ flex: 1 }, dismissBackdropStyle]}>
+        <StatusBar style="light" hidden={!chromeVisible} />
 
-      <PagerView
-        initialPage={startIndex}
-        scrollEnabled={isGallery && !anyZoomed}
-        onPageSelected={(e) => setCurrentIndex(e.nativeEvent.position)}
-        style={{ flex: 1 }}
-        testID="image-preview-gallery"
-      >
-        {photos.map((item, index) => {
-          const key = item.fileId ?? item.uri ?? `photo-${index}`;
-          return (
-            <View
-              key={key}
-              className="items-center justify-center"
-              style={{ width: screenWidth, height: screenHeight }}
-            >
-              <ImagePreviewBody
-                uri={item.uri ?? null}
-                fileId={item.fileId ?? null}
-                thumbnailFileId={item.thumbnailFileId ?? null}
-                title={item.title ?? fallbackTitle}
-                cacheKey={item.cacheKey ?? null}
-                width={screenWidth}
-                height={screenHeight}
-                testID={`image-preview-${index}`}
-                onSingleTap={toggleChrome}
-                onZoomChange={(z) => onChildZoomChange(key, z)}
-              />
-            </View>
-          );
-        })}
-      </PagerView>
-
-      <Animated.View
-        pointerEvents={chromeVisible ? 'auto' : 'none'}
-        style={chromeStyle}
-        className="absolute left-0 right-0 top-0 z-10 bg-black/60"
-      >
-        <SafeAreaView edges={['top']}>
-          <View className="flex-row items-center px-4 pb-3 pt-2">
-            <Pressable
-              onPress={onClose}
-              accessibilityLabel="Close image preview"
-              testID="btn-close-image-preview"
-              className="rounded-full bg-white/15 p-2"
-            >
-              <X size={22} color={colors.background} />
-            </Pressable>
-
-            <View className="min-w-0 flex-1 px-3">
-              <Text
-                accessibilityRole="header"
-                className="text-sm font-semibold text-white"
-                numberOfLines={1}
+        <SafeAreaView edges={['top', 'bottom']} style={{ flex: 1 }}>
+          {/* Header — in-flow, not overlapping the image */}
+          <Animated.View
+            pointerEvents={chromeVisible ? 'auto' : 'none'}
+            style={chromeStyle}
+            className="bg-black/60"
+          >
+            <View className="flex-row items-center px-4 pb-3 pt-2">
+              <Pressable
+                onPress={onClose}
+                accessibilityLabel="Close image preview"
+                testID="btn-close-image-preview"
+                className="rounded-full bg-white/15 p-2"
               >
-                {headerTitle}
-              </Text>
-              {headerSubtitle ? (
-                <Text className="mt-0.5 text-xs text-white/50">
-                  {headerSubtitle}
+                <X size={22} color={colors.background} />
+              </Pressable>
+
+              <View className="min-w-0 flex-1 px-3">
+                <Text
+                  accessibilityRole="header"
+                  className="text-sm font-semibold text-white"
+                  numberOfLines={1}
+                >
+                  {headerTitle}
+                </Text>
+                {headerSubtitle ? (
+                  <Text className="mt-0.5 text-xs text-white/50">
+                    {headerSubtitle}
+                  </Text>
+                ) : null}
+              </View>
+
+              {isGallery ? (
+                <Text className="text-xs font-medium text-white/60">
+                  {currentIndex + 1} / {photos.length}
                 </Text>
               ) : null}
             </View>
+          </Animated.View>
 
-            {isGallery ? (
-              <Text className="text-xs font-medium text-white/60">
-                {currentIndex + 1} / {photos.length}
-              </Text>
-            ) : null}
-          </View>
+          {/* Image pager — fills remaining space below the header */}
+          <Animated.View style={[{ flex: 1 }, dismissContentStyle]}>
+            <PagerView
+              initialPage={startIndex}
+              scrollEnabled={isGallery && !anyZoomed}
+              onPageSelected={(e) => setCurrentIndex(e.nativeEvent.position)}
+              style={{ flex: 1 }}
+              testID="image-preview-gallery"
+            >
+              {photos.map((item, index) => {
+                const key = item.fileId ?? item.uri ?? `photo-${index}`;
+                return (
+                  <View
+                    key={key}
+                    className="flex-1 items-center justify-center"
+                  >
+                    <ImagePreviewBody
+                      uri={item.uri ?? null}
+                      fileId={item.fileId ?? null}
+                      thumbnailFileId={item.thumbnailFileId ?? null}
+                      title={item.title ?? fallbackTitle}
+                      cacheKey={item.cacheKey ?? null}
+                      width={screenWidth}
+                      height={screenHeight}
+                      testID={`image-preview-${index}`}
+                      onSingleTap={toggleChrome}
+                      onZoomChange={(z) => onChildZoomChange(key, z)}
+                    />
+                  </View>
+                );
+              })}
+            </PagerView>
+          </Animated.View>
         </SafeAreaView>
       </Animated.View>
-    </>
+    </GestureDetector>
   );
 }
 

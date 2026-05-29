@@ -1,28 +1,28 @@
 /**
- * `ReportPhotosFromGallery` — inline photo strip rendered at the bottom
- * of the Report tab on the Generate-Report screen.
+ * `ReportPhotosFromGallery` — 3-column photo grid rendered at the
+ * bottom of the Report tab on the Generate-Report screen.
  *
- * Companion to the saved-report `ReportPhotos` component, but driven
- * by the gallery already computed by `GenerateReportProvider` (so
- * thumbnails and the fullscreen swipeable preview share the same
- * source of truth). Each thumbnail resolves through
- * `useFileSignedUrl` + `CachedImage` and taps open the gallery via
- * `preview.openPhoto(fileId)`.
+ * Photos are grouped by `noteId` so each batch-upload note appears as
+ * its own grid section, matching the notes-timeline layout. Each
+ * thumbnail resolves through `useFileSignedUrl` + `CachedImage` via
+ * `PhotoTile`, and taps open the fullscreen gallery.
  *
  * Renders nothing when there are no photo notes yet.
  */
-import { Pressable, Text, View } from 'react-native';
+import { useCallback, useMemo, useState } from 'react';
+import { View, type LayoutChangeEvent } from 'react-native';
 import { Camera } from 'lucide-react-native';
 
 import { Card } from '@/components/primitives/Card';
 import { SectionHeader } from '@/components/primitives/SectionHeader';
-import { CachedImage } from '@/components/ui/CachedImage';
-import { useFileSignedUrl } from '@/lib/uploads/useFileSignedUrl';
+import { PhotoTile } from '@/components/notes/PhotoTile';
+import { attachmentFromSavedFile } from '@/lib/notes/attachments';
 import { colors } from '@/lib/design-tokens/colors';
 
 interface GalleryPhoto {
   fileId: string;
   thumbnailFileId: string | null;
+  noteId: string;
   title: string;
   cacheKey: string;
 }
@@ -32,10 +32,34 @@ interface ReportPhotosFromGalleryProps {
   onOpen: (fileId: string) => void;
 }
 
+const COLUMNS = 3;
+const GAP = 6;
+
 export function ReportPhotosFromGallery({
   photos,
   onOpen,
 }: ReportPhotosFromGalleryProps) {
+  const groups = useMemo(() => {
+    const groupMap = new Map<string, GalleryPhoto[]>();
+    for (const p of photos) {
+      const group = groupMap.get(p.noteId);
+      if (group) group.push(p);
+      else groupMap.set(p.noteId, [p]);
+    }
+    return Array.from(groupMap.values());
+  }, [photos]);
+
+  const [containerWidth, setContainerWidth] = useState(0);
+  const onLayout = useCallback(
+    (e: LayoutChangeEvent) => setContainerWidth(e.nativeEvent.layout.width),
+    [],
+  );
+
+  const tileSize = Math.max(
+    0,
+    Math.floor((containerWidth - GAP * (COLUMNS - 1)) / COLUMNS),
+  );
+
   if (photos.length === 0) return null;
   return (
     <Card variant="default" padding="lg" testID="generate-report-photos">
@@ -43,54 +67,39 @@ export function ReportPhotosFromGallery({
         title="Photos"
         icon={<Camera size={16} color={colors.foreground} />}
       />
-      <View className="mt-3 gap-2">
-        {photos.map((p) => (
-          <GalleryPhotoRow key={p.fileId} photo={p} onOpen={onOpen} />
-        ))}
+      <View className="mt-3" onLayout={onLayout}>
+        {containerWidth > 0 &&
+          groups.map((batch, batchIdx) => {
+            const first = batch[0];
+            if (!first) return null;
+            return (
+              <View key={first.noteId}>
+                {batchIdx > 0 && (
+                  <View className="my-2 h-px bg-border" />
+                )}
+                <View
+                  className="flex-row flex-wrap"
+                  style={{ gap: GAP }}
+                  testID={`generate-report-photos-batch-${first.noteId}`}
+                >
+                  {batch.map((p, idx) => (
+                    <View key={p.fileId} style={{ width: tileSize, height: tileSize }}>
+                      <PhotoTile
+                        attachment={attachmentFromSavedFile(
+                          { id: p.fileId, fileId: p.fileId, thumbnailFileId: p.thumbnailFileId },
+                          idx,
+                        )}
+                        size={tileSize}
+                        onPress={() => onOpen(p.fileId)}
+                        testID={`btn-generate-report-photo-${p.fileId}`}
+                      />
+                    </View>
+                  ))}
+                </View>
+              </View>
+            );
+          })}
       </View>
     </Card>
-  );
-}
-
-function GalleryPhotoRow({
-  photo,
-  onOpen,
-}: {
-  photo: GalleryPhoto;
-  onOpen: (fileId: string) => void;
-}) {
-  const { data } = useFileSignedUrl(photo.fileId);
-  const uri = (data as { url?: string } | undefined)?.url ?? null;
-  return (
-    <Pressable
-      onPress={() => onOpen(photo.fileId)}
-      accessibilityLabel={`Open photo ${photo.title}`}
-      testID={`btn-generate-report-photo-${photo.fileId}`}
-      className="rounded-md overflow-hidden bg-muted"
-    >
-      {uri ? (
-        <CachedImage
-          source={{ uri }}
-          cacheKey={photo.cacheKey}
-          style={{ width: '100%', aspectRatio: 4 / 3 }}
-          contentFit="cover"
-          accessibilityLabel={photo.title}
-          testID={`img-generate-report-photo-${photo.fileId}`}
-        />
-      ) : (
-        <View
-          className="w-full items-center justify-center bg-muted"
-          style={{ aspectRatio: 4 / 3 }}
-          testID={`img-generate-report-photo-${photo.fileId}-empty`}
-        >
-          <Camera size={24} color={colors.muted.foreground} />
-        </View>
-      )}
-      {photo.title && photo.title !== 'Photo' ? (
-        <Text className="p-2 text-xs text-muted-foreground" numberOfLines={2}>
-          {photo.title}
-        </Text>
-      ) : null}
-    </Pressable>
   );
 }

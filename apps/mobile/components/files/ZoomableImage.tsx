@@ -118,9 +118,10 @@ export function ZoomableImage({
 
   const reset = useCallback(() => {
     'worklet';
-    scale.value = withSpring(MIN_SCALE);
-    translateX.value = withSpring(0);
-    translateY.value = withSpring(0);
+    const cfg = { damping: 20, stiffness: 300 };
+    scale.value = withSpring(MIN_SCALE, cfg);
+    translateX.value = withSpring(0, cfg);
+    translateY.value = withSpring(0, cfg);
     maybeReportZoomed(MIN_SCALE);
   }, [maybeReportZoomed, scale, translateX, translateY]);
 
@@ -135,13 +136,16 @@ export function ZoomableImage({
             reset();
             return;
           }
+          const timing = { duration: 200 };
           translateX.value = withTiming(
             anchoredTranslation(0, MIN_SCALE, nextScale, event.x, width),
+            timing,
           );
           translateY.value = withTiming(
             anchoredTranslation(0, MIN_SCALE, nextScale, event.y, height),
+            timing,
           );
-          scale.value = withTiming(nextScale);
+          scale.value = withTiming(nextScale, timing);
           maybeReportZoomed(nextScale);
         }),
     [height, maybeReportZoomed, reset, scale, translateX, translateY, width],

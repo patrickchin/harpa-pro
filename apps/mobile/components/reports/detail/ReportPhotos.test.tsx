@@ -43,6 +43,15 @@ function wrap(el: React.ReactElement): ReactTestRenderer {
       <QueryClientProvider client={qc}>{el}</QueryClientProvider>,
     );
   });
+  // Simulate layout so the onLayout-driven grid knows its width.
+  const grid = tree.root.findAllByProps({ testID: 'report-photos-grid' })[0];
+  if (grid) {
+    act(() => {
+      grid.props.onLayout({
+        nativeEvent: { layout: { width: 330, height: 0, x: 0, y: 0 } },
+      });
+    });
+  }
   return tree;
 }
 

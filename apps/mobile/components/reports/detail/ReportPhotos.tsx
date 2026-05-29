@@ -12,8 +12,8 @@
  * The first tile of a multi-photo batch shows a small "+N" stack
  * badge to signal additional images in the group.
  */
-import { useMemo } from 'react';
-import { Text, useWindowDimensions, View } from 'react-native';
+import { useCallback, useMemo, useState } from 'react';
+import { Text, View, type LayoutChangeEvent } from 'react-native';
 import { Camera } from 'lucide-react-native';
 
 import { Card } from '@/components/primitives/Card';
@@ -35,7 +35,6 @@ interface PhotoGroup {
 
 const COLUMNS = 3;
 const GAP = 6;
-const CARD_PADDING = 16; // matches `Card` padding="lg" lateral inset
 
 export function ReportPhotos({ noteRows, onOpenPhoto }: ReportPhotosProps) {
   const groups = useMemo((): PhotoGroup[] => {
@@ -60,10 +59,16 @@ export function ReportPhotos({ noteRows, onOpenPhoto }: ReportPhotosProps) {
     }));
   }, [noteRows]);
 
-  const { width: screenWidth } = useWindowDimensions();
-  // Card padding * 2 (left + right) + (COLUMNS - 1) gaps between tiles.
-  const usableWidth = Math.max(0, screenWidth - CARD_PADDING * 2);
-  const tileSize = Math.floor((usableWidth - GAP * (COLUMNS - 1)) / COLUMNS);
+  const [containerWidth, setContainerWidth] = useState(0);
+  const onLayout = useCallback(
+    (e: LayoutChangeEvent) => setContainerWidth(e.nativeEvent.layout.width),
+    [],
+  );
+
+  const tileSize = Math.max(
+    0,
+    Math.floor((containerWidth - GAP * (COLUMNS - 1)) / COLUMNS),
+  );
 
   const totalPhotos = groups.reduce((sum, g) => sum + g.photos.length, 0);
   if (totalPhotos === 0) return null;
@@ -75,32 +80,40 @@ export function ReportPhotos({ noteRows, onOpenPhoto }: ReportPhotosProps) {
         icon={<Camera size={16} color={colors.foreground} />}
       />
       <View
-        className="mt-3 flex-row flex-wrap"
-        style={{ gap: GAP }}
+        className="mt-3"
         testID="report-photos-grid"
+        onLayout={onLayout}
       >
-        {groups.flatMap((group) =>
-          group.photos.map((p, idx) => {
-            const title = p.body?.trim() || 'Photo';
-            const isFirstOfBatch = idx === 0 && group.photos.length > 1;
-            return (
-              <View key={p.id} style={{ width: tileSize, height: tileSize }}>
-                <PhotoTile
-                  attachment={attachmentFromSavedFile(
-                    { id: p.id, fileId: p.fileId, thumbnailFileId: p.thumbnailFileId ?? null },
-                    idx,
-                  )}
-                  size={tileSize}
-                  onPress={(p.fileId && onOpenPhoto) ? () => onOpenPhoto({ fileId: p.fileId, title }) : undefined}
-                  testID={`btn-report-photo-${p.id}`}
-                />
-                {isFirstOfBatch && (
-                  <StackBadge count={group.photos.length} testID={`stack-badge-${group.noteId}`} />
-                )}
+        {containerWidth > 0 &&
+          groups.map((group, groupIdx) => (
+            <View key={group.noteId}>
+              {groupIdx > 0 && (
+                <View className="my-2 h-px bg-border" />
+              )}
+              <View className="flex-row flex-wrap" style={{ gap: GAP }}>
+                {group.photos.map((p, idx) => {
+                  const title = p.body?.trim() || 'Photo';
+                  const isFirstOfBatch = idx === 0 && group.photos.length > 1;
+                  return (
+                    <View key={p.id} style={{ width: tileSize, height: tileSize }}>
+                      <PhotoTile
+                        attachment={attachmentFromSavedFile(
+                          { id: p.id, fileId: p.fileId, thumbnailFileId: p.thumbnailFileId ?? null },
+                          idx,
+                        )}
+                        size={tileSize}
+                        onPress={(p.fileId && onOpenPhoto) ? () => onOpenPhoto({ fileId: p.fileId, title }) : undefined}
+                        testID={`btn-report-photo-${p.id}`}
+                      />
+                      {isFirstOfBatch && (
+                        <StackBadge count={group.photos.length} testID={`stack-badge-${group.noteId}`} />
+                      )}
+                    </View>
+                  );
+                })}
               </View>
-            );
-          }),
-        )}
+            </View>
+          ))}
       </View>
     </Card>
   );

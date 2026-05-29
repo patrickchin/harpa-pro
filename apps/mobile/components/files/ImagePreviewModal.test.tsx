@@ -244,7 +244,8 @@ describe('ImagePreviewModal', () => {
     expect(statusBar.props.hidden).toBe(false);
 
     const modal = tree.root.findByType(Modal);
-    expect(modal.props.presentationStyle).toBe('fullScreen');
+    expect(modal.props.presentationStyle).toBe('overFullScreen');
+    expect(modal.props.transparent).toBe(true);
     expect(modal.props.statusBarTranslucent).toBe(true);
   });
 

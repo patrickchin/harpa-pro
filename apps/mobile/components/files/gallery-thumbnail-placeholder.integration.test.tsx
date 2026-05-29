@@ -24,15 +24,20 @@ vi.mock('expo-status-bar', () => ({
 
 vi.mock('react-native-gesture-handler', () => {
   const makeGesture = () => {
-    const gesture: Record<string, unknown> = {
-      numberOfTaps: () => gesture,
-      requireExternalGestureToFail: () => gesture,
-      onBegin: () => gesture,
-      onUpdate: () => gesture,
-      onEnd: () => gesture,
-      enabled: () => gesture,
+    const cfg: Record<string, unknown> = {};
+    const handler: ProxyHandler<typeof cfg> = {
+      get(_target, prop) {
+        if (prop === '__cfg') return cfg;
+        // Every method call returns the proxy for chaining
+        return (...args: unknown[]) => {
+          if (typeof prop === 'string' && /^on[A-Z]/.test(prop))
+            cfg[prop] = args[0];
+          return proxy;
+        };
+      },
     };
-    return gesture;
+    const proxy = new Proxy(cfg, handler);
+    return proxy;
   };
   return {
     Gesture: {
@@ -48,6 +53,8 @@ vi.mock('react-native-gesture-handler', () => {
     },
     GestureDetector: ({ children }: { children: React.ReactNode }) =>
       React.createElement('rn-gesture-detector', null, children),
+    GestureHandlerRootView: ({ children }: { children: React.ReactNode }) =>
+      React.createElement('rn-gesture-handler-root', null, children),
   };
 });
 

@@ -316,6 +316,7 @@ interface PreviewSurface {
   photoGallery: ReadonlyArray<{
     fileId: string;
     thumbnailFileId: string | null;
+    noteId: string;
     title: string;
     cacheKey: string;
   }>;
@@ -609,16 +610,19 @@ export function GenerateReportProvider({
     const items: Array<{
       fileId: string;
       thumbnailFileId: string | null;
+      noteId: string;
       title: string;
       cacheKey: string;
     }> = [];
     for (const entry of timelineItems) {
       if (!entry.attachments) continue;
+      const noteId = entry.id ?? entry.attachments[0]?.fileId ?? 'unknown';
       for (const att of entry.attachments) {
         if (!att.fileId) continue;
         items.push({
           fileId: att.fileId,
           thumbnailFileId: att.thumbnailFileId ?? null,
+          noteId,
           title: entry.text?.trim() || 'Photo',
           cacheKey: att.fileId,
         });

@@ -497,6 +497,7 @@ vi.mock('react-native-gesture-handler', () => {
   type AnyFn = (...args: unknown[]) => unknown;
   interface GestureCfg {
     kind: string;
+    onBegin?: AnyFn;
     onStart?: AnyFn;
     onUpdate?: AnyFn;
     onEnd?: AnyFn;
@@ -504,32 +505,41 @@ vi.mock('react-native-gesture-handler', () => {
   }
   function builder(kind: string) {
     const cfg: GestureCfg = { kind };
-    const chain = {
-      onStart(fn: AnyFn) {
-        cfg.onStart = fn;
-        return chain;
-      },
-      onUpdate(fn: AnyFn) {
-        cfg.onUpdate = fn;
-        return chain;
-      },
-      onEnd(fn: AnyFn) {
-        cfg.onEnd = fn;
-        return chain;
-      },
-      runOnJS(_value: boolean) {
-        return chain;
-      },
-      __cfg: cfg,
+    // Self-returning chain for any fluent method call.
+    // Uses a recursive approach so every method returns the same chain.
+    const chain: Record<string, unknown> = { __cfg: cfg };
+    const fluent = (...args: unknown[]) => {
+      // If the first arg looks like a callback name-matching onXxx, store it
+      return chain;
     };
+    // Populate known methods that store callbacks
+    chain.onBegin = (fn: AnyFn) => { cfg.onBegin = fn; return chain; };
+    chain.onStart = (fn: AnyFn) => { cfg.onStart = fn; return chain; };
+    chain.onUpdate = (fn: AnyFn) => { cfg.onUpdate = fn; return chain; };
+    chain.onEnd = (fn: AnyFn) => { cfg.onEnd = fn; return chain; };
+    // All other chainable config methods (enabled, activeOffsetY, failOffsetX,
+    // numberOfTaps, requireExternalGestureToFail, runOnJS, minPointers, etc.)
+    const noop = () => chain;
+    for (const m of [
+      'enabled', 'activeOffsetY', 'failOffsetX', 'activeOffsetX',
+      'numberOfTaps', 'requireExternalGestureToFail', 'runOnJS',
+      'minPointers', 'maxPointers', 'minDistance', 'shouldCancelWhenOutside',
+      'hitSlop', 'withTestId', 'cancelsTouchesInView',
+    ]) {
+      chain[m] = noop;
+    }
     return chain;
   }
   const Gesture = {
     Pinch: () => builder('pinch'),
     Tap: () => builder('tap'),
     Pan: () => builder('pan'),
+    Native: () => builder('native'),
     Simultaneous: (...children: unknown[]) => ({
       __cfg: { kind: 'simultaneous', children },
+    }),
+    Exclusive: (...children: unknown[]) => ({
+      __cfg: { kind: 'exclusive', children },
     }),
     Race: (...children: unknown[]) => ({
       __cfg: { kind: 'race', children },

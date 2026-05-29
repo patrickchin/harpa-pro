@@ -180,7 +180,7 @@ function PreviewContent({
           if (Math.abs(dismissY.value) > DISMISS_THRESHOLD) {
             runOnJS(onClose)();
           } else {
-            dismissY.value = withSpring(0, { damping: 28, stiffness: 400 });
+            dismissY.value = withTiming(0, { duration: 150 });
           }
         }),
     [anyZoomed, dismissY, onClose],

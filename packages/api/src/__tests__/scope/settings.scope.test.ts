@@ -40,10 +40,15 @@ beforeAll(async () => {
     `INSERT INTO auth.sessions(id, user_id, expires_at) VALUES ($1, $2, now() + interval '7 days'), ($3, $4, now() + interval '7 days')`,
     [aliceSid, alice, bobSid, bob],
   );
-  // Seed bob with a row to differentiate from the absent-row default path.
+  // Seed both alice and bob with rows so the scope tests can prove
+  // self-only visibility. Use whitelisted (vendor, model) pairs from
+  // `AI_MODELS` — the service layer maps any non-whitelisted legacy
+  // value to {null, null}, which would mask scope leaks.
   await admin.query(
-    `INSERT INTO app.user_settings(user_id, ai_vendor, ai_model) VALUES ($1, 'kimi', 'kimi-bob-model')`,
-    [bob],
+    `INSERT INTO app.user_settings(user_id, ai_vendor, ai_model) VALUES
+      ($1, 'openai', 'gpt-4.1-nano'),
+      ($2, 'openai', 'gpt-4.1-mini')`,
+    [alice, bob],
   );
   await admin.end();
 }, 120_000);
@@ -53,22 +58,22 @@ afterAll(async () => {
 }, 60_000);
 
 describe('scope: /settings/ai', () => {
-  it('alice GET sees defaults (her row absent), not bob row', async () => {
+  it('alice GET sees her own row, not bob row', async () => {
     const app = createApp();
     const tok = await signTestToken(alice, aliceSid);
     const res = await app.request('/settings/ai', { headers: { authorization: `Bearer ${tok}` } });
-    const body = (await res.json()) as { vendor: string; model: string };
+    const body = (await res.json()) as { vendor: string | null; model: string | null };
     expect(body.vendor).toBe('openai');
-    expect(body.model).not.toBe('kimi-bob-model');
+    expect(body.model).toBe('gpt-4.1-nano');
   });
 
   it('bob GET sees his own row', async () => {
     const app = createApp();
     const tok = await signTestToken(bob, bobSid);
     const res = await app.request('/settings/ai', { headers: { authorization: `Bearer ${tok}` } });
-    const body = (await res.json()) as { vendor: string; model: string };
-    expect(body.vendor).toBe('kimi');
-    expect(body.model).toBe('kimi-bob-model');
+    const body = (await res.json()) as { vendor: string | null; model: string | null };
+    expect(body.vendor).toBe('openai');
+    expect(body.model).toBe('gpt-4.1-mini');
   });
 
   it('paired — alice PATCH does not mutate bob row', async () => {
@@ -77,15 +82,16 @@ describe('scope: /settings/ai', () => {
     await app.request('/settings/ai', {
       method: 'PATCH',
       headers: { authorization: `Bearer ${tok}`, 'content-type': 'application/json' },
-      body: JSON.stringify({ vendor: 'openai', model: 'gpt-4o' }),
+      body: JSON.stringify({ vendor: 'openai', model: 'gpt-4.1' }),
     });
     const conn = await getPool().connect();
     try {
-      const r = await conn.query<{ ai_vendor: string }>(
-        `SELECT ai_vendor FROM app.user_settings WHERE user_id = $1`,
+      const r = await conn.query<{ ai_vendor: string; ai_model: string }>(
+        `SELECT ai_vendor, ai_model FROM app.user_settings WHERE user_id = $1`,
         [bob],
       );
-      expect(r.rows[0]?.ai_vendor).toBe('kimi');
+      expect(r.rows[0]?.ai_vendor).toBe('openai');
+      expect(r.rows[0]?.ai_model).toBe('gpt-4.1-mini');
     } finally {
       conn.release();
     }

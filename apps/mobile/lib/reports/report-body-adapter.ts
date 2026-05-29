@@ -40,7 +40,6 @@ function normaliseLegacy(body: ReportBody | LegacyBodyShim): ReportBody {
       title: null,
       summary: null,
       visitDate: legacy.visitDate ?? null,
-      tags: [],
     },
   };
 }
@@ -96,7 +95,6 @@ export function reportBodyToGeneratedReport(
         title: m.title ?? '',
         summary: m.summary ?? '',
         visitDate: m.visitDate,
-        tags: m.tags ?? [],
       },
       weather: body.weather
         ? {
@@ -165,7 +163,6 @@ export function generatedReportToReportBody(g: GeneratedSiteReport): ReportBody 
       title: r.meta.title || null,
       summary: r.meta.summary || null,
       visitDate: r.meta.visitDate ?? null,
-      tags: r.meta.tags ?? [],
     },
     weather: r.weather
       ? {

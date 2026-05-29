@@ -35,7 +35,6 @@ function makeReport(): GeneratedSiteReport {
         title: 'Daily site visit',
         summary: 'All going well.',
         visitDate: '2026-04-30',
-        tags: [],
       },
       weather: {
         conditions: 'Sunny',
@@ -222,7 +221,6 @@ describe('createEmptyReport', () => {
           title: '',
           summary: '',
           visitDate: today,
-          tags: [],
         },
         weather: null,
         workers: null,

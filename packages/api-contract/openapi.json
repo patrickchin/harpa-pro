@@ -3818,14 +3818,6 @@
                                   "visitDate": {
                                     "type": "string",
                                     "nullable": true
-                                  },
-                                  "tags": {
-                                    "type": "array",
-                                    "items": {
-                                      "type": "string"
-                                    },
-                                    "maxItems": 7,
-                                    "default": []
                                   }
                                 },
                                 "required": [
@@ -4220,14 +4212,6 @@
                             "visitDate": {
                               "type": "string",
                               "nullable": true
-                            },
-                            "tags": {
-                              "type": "array",
-                              "items": {
-                                "type": "string"
-                              },
-                              "maxItems": 7,
-                              "default": []
                             }
                           },
                           "required": [
@@ -4643,14 +4627,6 @@
                             "visitDate": {
                               "type": "string",
                               "nullable": true
-                            },
-                            "tags": {
-                              "type": "array",
-                              "items": {
-                                "type": "string"
-                              },
-                              "maxItems": 7,
-                              "default": []
                             }
                           },
                           "required": [
@@ -5006,14 +4982,6 @@
                           "visitDate": {
                             "type": "string",
                             "nullable": true
-                          },
-                          "tags": {
-                            "type": "array",
-                            "items": {
-                              "type": "string"
-                            },
-                            "maxItems": 7,
-                            "default": []
                           }
                         },
                         "required": [
@@ -5242,14 +5210,6 @@
                             "visitDate": {
                               "type": "string",
                               "nullable": true
-                            },
-                            "tags": {
-                              "type": "array",
-                              "items": {
-                                "type": "string"
-                              },
-                              "maxItems": 7,
-                              "default": []
                             }
                           },
                           "required": [
@@ -6076,14 +6036,6 @@
                                 "visitDate": {
                                   "type": "string",
                                   "nullable": true
-                                },
-                                "tags": {
-                                  "type": "array",
-                                  "items": {
-                                    "type": "string"
-                                  },
-                                  "maxItems": 7,
-                                  "default": []
                                 }
                               },
                               "required": [
@@ -6616,14 +6568,6 @@
                                 "visitDate": {
                                   "type": "string",
                                   "nullable": true
-                                },
-                                "tags": {
-                                  "type": "array",
-                                  "items": {
-                                    "type": "string"
-                                  },
-                                  "maxItems": 7,
-                                  "default": []
                                 }
                               },
                               "required": [
@@ -7139,14 +7083,6 @@
                                 "visitDate": {
                                   "type": "string",
                                   "nullable": true
-                                },
-                                "tags": {
-                                  "type": "array",
-                                  "items": {
-                                    "type": "string"
-                                  },
-                                  "maxItems": 7,
-                                  "default": []
                                 }
                               },
                               "required": [
@@ -7570,14 +7506,6 @@
                                 "visitDate": {
                                   "type": "string",
                                   "nullable": true
-                                },
-                                "tags": {
-                                  "type": "array",
-                                  "items": {
-                                    "type": "string"
-                                  },
-                                  "maxItems": 7,
-                                  "default": []
                                 }
                               },
                               "required": [

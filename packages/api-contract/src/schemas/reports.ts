@@ -10,7 +10,6 @@ export const reportMeta = z.object({
   title:     z.string().nullable(),
   summary:   z.string().nullable(),
   visitDate: isoDateTime.nullable(),
-  tags:      z.array(z.string()).max(7).default([]),
 });
 export type ReportMeta = z.infer<typeof reportMeta>;
 

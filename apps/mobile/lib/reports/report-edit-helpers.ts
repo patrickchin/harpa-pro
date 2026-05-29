@@ -64,7 +64,6 @@ export function createEmptyReport(): GeneratedSiteReport {
         // timezone — avoids the off-by-one-day surprise that
         // `toISOString().slice(0, 10)` causes near midnight.
         visitDate: new Date().toLocaleDateString('en-CA'),
-        tags: [],
       },
       weather: null,
       workers: null,

@@ -37,7 +37,6 @@ function makeReport(siteTitle: string): GeneratedSiteReport {
         title: siteTitle,
         summary: 'A summary.',
         visitDate: '2025-01-01',
-        tags: [],
       },
       weather: null,
       workers: null,

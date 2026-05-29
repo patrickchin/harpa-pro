@@ -82,7 +82,6 @@ exports[`CameraCapture > matches snapshot — granted, empty 1`] = `
         facing="back"
         flash="off"
         mode="picture"
-        pictureSize="1920x1080"
         ref={
           {
             "current": null,

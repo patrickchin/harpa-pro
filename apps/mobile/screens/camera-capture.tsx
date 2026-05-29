@@ -425,7 +425,6 @@ export function CameraCapture(props: CameraCaptureProps) {
               flash={flash}
               zoom={zoom}
               mode="picture"
-              pictureSize="1920x1080"
               responsiveOrientationWhenOrientationLocked={false}
             />
           )}

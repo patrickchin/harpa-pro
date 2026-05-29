@@ -16,7 +16,7 @@ import {
 } from 'react-native';
 import PagerView from 'react-native-pager-view';
 import { X } from 'lucide-react-native';
-import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import Animated, {
   runOnJS,
   useAnimatedStyle,
@@ -86,17 +86,19 @@ export function ImagePreviewModal({
       onRequestClose={onClose}
     >
       <SafeAreaProvider>
-        <View className="flex-1">
-          {visible ? (
-            <PreviewContent
-              photos={resolvedPhotos}
-              startIndex={startIndex}
-              isGallery={isGallery}
-              fallbackTitle={title}
-              onClose={onClose}
-            />
-          ) : null}
-        </View>
+        <GestureHandlerRootView style={{ flex: 1 }}>
+          <View className="flex-1">
+            {visible ? (
+              <PreviewContent
+                photos={resolvedPhotos}
+                startIndex={startIndex}
+                isGallery={isGallery}
+                fallbackTitle={title}
+                onClose={onClose}
+              />
+            ) : null}
+          </View>
+        </GestureHandlerRootView>
       </SafeAreaProvider>
     </Modal>
   );

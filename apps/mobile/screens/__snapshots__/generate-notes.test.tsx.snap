@@ -1187,9 +1187,17 @@ exports[`GenerateNotes > matches the empty-state snapshot 1`] = `
       visible={false}
     >
       <rn-SafeAreaProvider>
-        <rn-View
-          className="flex-1"
-        />
+        <rn-GestureHandlerRootView
+          style={
+            {
+              "flex": 1,
+            }
+          }
+        >
+          <rn-View
+            className="flex-1"
+          />
+        </rn-GestureHandlerRootView>
       </rn-SafeAreaProvider>
     </rn-Modal>
     <rn-Modal

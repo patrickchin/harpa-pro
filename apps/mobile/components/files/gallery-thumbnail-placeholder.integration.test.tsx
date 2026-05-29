@@ -53,6 +53,8 @@ vi.mock('react-native-gesture-handler', () => {
     },
     GestureDetector: ({ children }: { children: React.ReactNode }) =>
       React.createElement('rn-gesture-detector', null, children),
+    GestureHandlerRootView: ({ children }: { children: React.ReactNode }) =>
+      React.createElement('rn-gesture-handler-root', null, children),
   };
 });
 

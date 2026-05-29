@@ -23,6 +23,7 @@ on:
       - "packages/ai-fixtures/**"
       - "infra/fly/**"
       - "infra/neon/**"
+      - "scripts/journeys/**"
       - ".github/workflows/api-dev.yml"
       - "pnpm-lock.yaml"
   # Allow manual re-deploys (e.g. rotating secrets without a code change).
@@ -39,6 +40,8 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v4
+        with:
+          lfs: true
 
       - uses: ./.github/actions/setup-monorepo
 
@@ -116,4 +119,12 @@ jobs:
           exit 1
         env:
           API_READY_URL_DEV: ${{ vars.API_READY_URL_DEV }}
+
+      - name: Post-deploy journey tests
+        # Runs curl journey scripts against the just-deployed dev API.
+        # Order: stress (~10s, no AI) → core (~3min, live AI) → extended (~5min, live AI).
+        # On failure the workflow goes red but the deploy is NOT rolled back.
+        env:
+          PASSWORD: ${{ secrets.TEST_ACCOUNT_PASSWORD }}
+        run: bash scripts/journeys/all.sh dev
 

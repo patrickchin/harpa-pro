@@ -81,8 +81,18 @@ export function AppDialogSheet({
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
-          <Pressable
-            onPress={(e) => e.stopPropagation()}
+          {/*
+            Inner sheet must claim the touch responder so a tap on
+            empty space inside the sheet doesn't bubble to the backdrop
+            Pressable and dismiss the dialog. Using a plain View with
+            `onStartShouldSetResponder` (instead of a Pressable) is
+            critical: a parent Pressable wrapping a ScrollView captures
+            pan gestures during press tracking, which prevents the
+            ScrollView from scrolling (e.g. the transcript view).
+          */}
+          <View
+            onStartShouldSetResponder={() => true}
+            onResponderRelease={() => {}}
             className="bg-background pb-10"
             testID="dialog-sheet"
           >
@@ -121,7 +131,7 @@ export function AppDialogSheet({
               ))}
             </View>
           </View>
-        </Pressable>
+        </View>
         </KeyboardAvoidingView>
       </Pressable>
     </Modal>

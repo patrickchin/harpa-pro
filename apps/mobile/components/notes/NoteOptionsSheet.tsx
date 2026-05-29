@@ -162,6 +162,8 @@ export function NoteOptionsSheet({
       >
         <ScrollView
           className="max-h-72 rounded-md border border-border bg-muted/40 p-3"
+          nestedScrollEnabled
+          keyboardShouldPersistTaps="handled"
           testID="note-options-transcript-scroll"
         >
           <Text
@@ -262,7 +264,18 @@ export function NoteOptionsSheet({
       onClose={onClose}
       actions={actions}
     >
-      <View className="gap-2 rounded-md border border-border bg-muted/30 p-3">
+      {note.kind === 'voice' && note.fileId ? (
+        <VoicePlayRow
+          fileId={note.fileId}
+          durationSec={note.durationSec ?? null}
+          sheetVisible={visible}
+        />
+      ) : null}
+      <View
+        className={`gap-2 rounded-md border border-border bg-muted/30 p-3 ${
+          note.kind === 'voice' && note.fileId ? 'mt-3' : ''
+        }`}
+      >
         <MetaRow label="Kind" value={KIND_LABEL[note.kind]} />
         <MetaRow label="Author" value={note.authorName?.trim() || 'Unknown'} />
         {capturedDisplay ? (
@@ -300,13 +313,6 @@ export function NoteOptionsSheet({
           </View>
         ) : null}
       </View>
-      {note.kind === 'voice' && note.fileId ? (
-        <VoicePlayRow
-          fileId={note.fileId}
-          durationSec={note.durationSec ?? null}
-          sheetVisible={visible}
-        />
-      ) : null}
     </AppDialogSheet>
   );
 }

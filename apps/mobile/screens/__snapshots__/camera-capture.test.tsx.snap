@@ -241,9 +241,10 @@ exports[`CameraCapture > matches snapshot — granted, empty 1`] = `
       <rn-KeyboardAvoidingView
         behavior="padding"
       >
-        <rn-Pressable
+        <rn-View
           className="bg-background pb-10"
-          onPress={[Function]}
+          onResponderRelease={[Function]}
+          onStartShouldSetResponder={[Function]}
           testID="dialog-sheet"
         >
           <rn-View
@@ -349,7 +350,7 @@ exports[`CameraCapture > matches snapshot — granted, empty 1`] = `
               </rn-Pressable>
             </rn-View>
           </rn-View>
-        </rn-Pressable>
+        </rn-View>
       </rn-KeyboardAvoidingView>
     </rn-Pressable>
   </rn-Modal>

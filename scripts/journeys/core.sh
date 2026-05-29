@@ -55,17 +55,17 @@ expect_status() {
 }
 
 upload_file() {
-  local kind="$1" ct="$2" path="$3"
+  local kind="$1" ct="$2" path="$3" pid="$4" rid="$5"
   local size; size=$(wc -c < "$path" | tr -d ' ')
   local presign; presign=$(req POST /files/presign \
-    "{\"kind\":\"$kind\",\"contentType\":\"$ct\",\"sizeBytes\":$size}")
+    "{\"scope\":\"project\",\"projectId\":\"$pid\",\"reportId\":\"$rid\",\"kind\":\"$kind\",\"contentType\":\"$ct\",\"sizeBytes\":$size}")
   local upload_url; upload_url=$(echo "$presign" | j .uploadUrl)
   local file_key;   file_key=$(echo "$presign"   | j .fileKey)
   curl -fsS -X PUT "$upload_url" \
     -H "Content-Type: $ct" \
     --data-binary "@$path" >/dev/null
   req POST /files \
-    "{\"kind\":\"$kind\",\"fileKey\":\"$file_key\",\"sizeBytes\":$size,\"contentType\":\"$ct\"}" \
+    "{\"scope\":\"project\",\"projectId\":\"$pid\",\"reportId\":\"$rid\",\"kind\":\"$kind\",\"fileKey\":\"$file_key\",\"sizeBytes\":$size,\"contentType\":\"$ct\"}" \
     | j .id
 }
 
@@ -133,7 +133,7 @@ echo "  text_nid=$TEXT_NID"
 # ── 8. Upload and add image note ─────────────────────────────────────
 
 echo "→ upload image"
-IMG_FID=$(upload_file image image/png "$IMG")
+IMG_FID=$(upload_file image image/png "$IMG" "$PID" "$RID")
 echo "  file_id=$IMG_FID"
 
 echo "→ POST /reports/$RID/notes (image)"
@@ -149,7 +149,7 @@ if [[ ! -f "$VOICE_M4A" ]]; then
   echo "  (set VOICE_M4A env to a real ~30s+ voice sample for full test)"
   VOICE_AGG_NID=""
 else
-  VOICE_FID=$(upload_file voice audio/mp4 "$VOICE_M4A")
+  VOICE_FID=$(upload_file voice audio/mp4 "$VOICE_M4A" "$PID" "$RID")
   echo "  file_id=$VOICE_FID"
 
   echo "→ POST /reports/$RID/notes/voice (transcribe + summarise)"
@@ -168,7 +168,7 @@ else
     USAGE_AFTER_VOICE=$(req GET /me/usage '')
     CALLS_AFTER_VOICE=$(echo "$USAGE_AFTER_VOICE" | jq -r '.totals.calls // 0')
     TOKENS_AFTER_VOICE=$(echo "$USAGE_AFTER_VOICE" | jq -r '(.totals.inputTokens // 0) + (.totals.outputTokens // 0)')
-    echo "  /me/usage: calls $CALLS_BEFORE_VOICE→$CALLS_AFTER_VOICE tokens=$TOKENS_AFTER_VOICE"
+    echo "  /me/usage: calls ${CALLS_BEFORE_VOICE}→${CALLS_AFTER_VOICE} tokens=$TOKENS_AFTER_VOICE"
     if [[ "$CALLS_AFTER_VOICE" -le "$CALLS_BEFORE_VOICE" ]]; then
       echo "  ✗ /me/usage totals.calls did not increase after voice aggregator" >&2
       exit 1
@@ -195,7 +195,7 @@ if [[ $GEN_STATUS -eq 0 ]]; then
   USAGE_AFTER_GEN=$(req GET /me/usage '')
   CALLS_AFTER_GEN=$(echo "$USAGE_AFTER_GEN" | jq -r '.totals.calls // 0')
   BYMODEL_HAS_GEN=$(echo "$USAGE_AFTER_GEN" | jq -r '[.usageByModel[] | select(.operation == "generate_report")] | length')
-  echo "  /me/usage: calls $CALLS_BEFORE_GEN→$CALLS_AFTER_GEN generate_report rows=$BYMODEL_HAS_GEN"
+  echo "  /me/usage: calls ${CALLS_BEFORE_GEN}→${CALLS_AFTER_GEN} generate_report rows=$BYMODEL_HAS_GEN"
   if [[ "$CALLS_AFTER_GEN" -le "$CALLS_BEFORE_GEN" ]]; then
     echo "  ✗ /me/usage totals.calls did not increase after /generate" >&2
     exit 1
@@ -214,7 +214,7 @@ fi
 echo "→ PATCH report body (ensure finalization works)"
 req PATCH "/projects/$PID/reports/$RNUM" '{
   "body":{
-    "visitDate":"2026-05-20T09:00:00Z",
+    "meta":{"title":"Section A Foundation","summary":"Foundation pour completed.","visitDate":"2026-05-20T09:00:00Z","tags":["foundation","concrete"]},
     "weather":{"condition":"Clear","temperatureC":22,"windKph":5,"impact":null},
     "workers":[{"role":"Labourer","count":2,"hours":8,"notes":null}],
     "materials":[{"name":"Concrete","quantity":20,"unit":"m³","status":"delivered","condition":"good","notes":null}],

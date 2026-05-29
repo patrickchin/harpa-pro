@@ -2,21 +2,22 @@
 # Run all journey tests against a target environment.
 #
 # Usage:
-#   scripts/journeys/all.sh              # defaults to dev
-#   scripts/journeys/all.sh local        # http://localhost:3000
-#   scripts/journeys/all.sh dev          # harpa-pro-api-dev.fly.dev
-#   scripts/journeys/all.sh prod         # harpa-pro-api.fly.dev (⚠️ uses real tokens)
+#   scripts/journeys/all.sh              # defaults to dev, runs all
+#   scripts/journeys/all.sh dev          # explicit target
+#   scripts/journeys/all.sh dev stress   # only stress
+#   scripts/journeys/all.sh local core   # core against localhost
+#
+# Order: stress (fast, no AI) → core (live AI) → extended (live AI, longest)
 #
 # Env vars:
 #   PASSWORD   — required (test account password, e.g. from Doppler)
 #   PHONE      — primary test account (default: +15550199001)
 #   PHONE2     — secondary test account (default: +15550199002)
 #   VOICE_M4A  — path to real voice sample for core journey (optional)
-#   SKIP_STRESS — set to 1 to skip the stress test
-#   ONLY       — run only one: "core", "extended", or "stress"
 set -euo pipefail
 
 ENV="${1:-dev}"
+ONLY="${2:-}"
 
 case "$ENV" in
   local|localhost)
@@ -56,16 +57,17 @@ run() {
 
 FAILURES=0
 
-if [[ "${ONLY:-}" == "core" || -z "${ONLY:-}" ]]; then
+# Run shortest first: stress (~10s) → core (~3min) → extended (~5min)
+if [[ "$ONLY" == "stress" || -z "$ONLY" ]]; then
+  run "journey-stress" "$DIR/stress.sh"
+fi
+
+if [[ "$ONLY" == "core" || -z "$ONLY" ]]; then
   run "journey-core" "$DIR/core.sh"
 fi
 
-if [[ "${ONLY:-}" == "extended" || -z "${ONLY:-}" ]]; then
+if [[ "$ONLY" == "extended" || -z "$ONLY" ]]; then
   run "journey-extended" "$DIR/extended.sh"
-fi
-
-if [[ "${ONLY:-}" == "stress" || (-z "${ONLY:-}" && "${SKIP_STRESS:-}" != "1") ]]; then
-  run "journey-stress" "$DIR/stress.sh"
 fi
 
 echo ""

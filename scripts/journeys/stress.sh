@@ -72,17 +72,17 @@ check() {
 }
 
 upload_file() {
-  local kind="$1" ct="$2" path="$3"
+  local kind="$1" ct="$2" path="$3" pid="$4" rid="$5"
   local size; size=$(wc -c < "$path" | tr -d ' ')
   local presign; presign=$(req POST /files/presign \
-    "{\"kind\":\"$kind\",\"contentType\":\"$ct\",\"sizeBytes\":$size}")
+    "{\"scope\":\"project\",\"projectId\":\"$pid\",\"reportId\":\"$rid\",\"kind\":\"$kind\",\"contentType\":\"$ct\",\"sizeBytes\":$size}")
   local upload_url; upload_url=$(echo "$presign" | j .uploadUrl)
   local file_key;   file_key=$(echo "$presign"   | j .fileKey)
   curl -fsS -X PUT "$upload_url" \
     -H "Content-Type: $ct" \
     --data-binary "@$path" >/dev/null
   req POST /files \
-    "{\"kind\":\"$kind\",\"fileKey\":\"$file_key\",\"sizeBytes\":$size,\"contentType\":\"$ct\"}" \
+    "{\"scope\":\"project\",\"projectId\":\"$pid\",\"reportId\":\"$rid\",\"kind\":\"$kind\",\"fileKey\":\"$file_key\",\"sizeBytes\":$size,\"contentType\":\"$ct\"}" \
     | j .id
 }
 
@@ -128,7 +128,7 @@ check "GET /projects without token" 401 GET /projects ''
 check "POST /projects without token" 401 POST /projects '{"name":"x"}'
 check "GET /settings/ai without token" 401 GET /settings/ai ''
 check "POST /files/presign without token" 401 POST /files/presign \
-  '{"kind":"image","contentType":"image/png","sizeBytes":100}'
+  '{"scope":"scratch","kind":"image","contentType":"image/png","sizeBytes":100}'
 
 # ══════════════════════════════════════════════════════════════════════
 # SECTION C: Invalid token
@@ -260,11 +260,11 @@ check "PATCH /me: invalid field type" 400 PATCH /me \
   '{"displayName":12345}'
 
 check "POST presign: zero bytes" 400 POST /files/presign \
-  '{"kind":"image","contentType":"image/png","sizeBytes":0}'
+  '{"scope":"scratch","kind":"image","contentType":"image/png","sizeBytes":0}'
 check "POST presign: negative bytes" 400 POST /files/presign \
-  '{"kind":"image","contentType":"image/png","sizeBytes":-1}'
+  '{"scope":"scratch","kind":"image","contentType":"image/png","sizeBytes":-1}'
 check "POST presign: invalid kind" 400 POST /files/presign \
-  '{"kind":"malware","contentType":"image/png","sizeBytes":100}'
+  '{"scope":"scratch","kind":"malware","contentType":"image/png","sizeBytes":100}'
 
 # ══════════════════════════════════════════════════════════════════════
 # SECTION G: Double operations & state violations
@@ -275,14 +275,14 @@ echo "── G. Double operations & state violations ──"
 
 # Set a body and finalize
 req PATCH "/projects/$PID_A/reports/$RNUM_A" '{
-  "body":{"visitDate":"2026-05-20T09:00:00Z","weather":null,"workers":[],"materials":[],"issues":[],"nextSteps":[],"summarySections":[{"title":"X","body":"Y"}]}
+  "body":{"meta":{"title":"X","summary":null,"visitDate":"2026-05-20T09:00:00Z","tags":[]},"weather":null,"workers":[],"materials":[],"issues":[],"nextSteps":[],"summarySections":[{"title":"X","body":"Y"}]}
 }' >/dev/null
 echo "  body set"
 req POST "/projects/$PID_A/reports/$RNUM_A/finalize" '' >/dev/null
 echo "  report finalized"
 
 check "PATCH finalized report" 409 PATCH "/projects/$PID_A/reports/$RNUM_A" \
-  '{"body":{"visitDate":null,"weather":null,"workers":[],"materials":[],"issues":[],"nextSteps":[],"summarySections":[{"title":"hacked","body":"x"}]}}'
+  '{"body":{"meta":{"title":"X","summary":null,"visitDate":null,"tags":[]},"weather":null,"workers":[],"materials":[],"issues":[],"nextSteps":[],"summarySections":[{"title":"hacked","body":"x"}]}}'
 check "double finalize (idempotent)" 200 POST "/projects/$PID_A/reports/$RNUM_A/finalize" ''
 
 # Unfinalize, then test double unfinalize
@@ -336,11 +336,15 @@ check "GET /nonexistent" 404 GET /nonexistent ''
 if [[ "$BASE" != *"harpa-pro-api.fly.dev"* ]]; then
   echo ""
   echo "── J. Rate-limit probe (non-production only) ──"
+  # Use a dummy phone (not PHONE/PHONE2) so we don't burn the real test
+  # accounts' per-phone rate limit budget. The middleware runs before
+  # auth, so any phone trips the limiter.
+  PROBE_PHONE="+15550199099"
   TOKEN=""
   RATE_LIMITED=false
   for i in $(seq 1 25); do
     response=$(raw POST /auth/password/verify \
-      "{\"phone\":\"$PHONE\",\"password\":\"wrong$i\"}")
+      "{\"phone\":\"$PROBE_PHONE\",\"password\":\"wrong$i\"}")
     status=$(echo "$response" | tail -1)
     if [[ "$status" == "429" ]]; then
       echo "  ✓ rate limited after $i attempts (429)"

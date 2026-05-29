@@ -28,12 +28,12 @@ Real binary samples for the voice steps live in
 export PASSWORD="$(doppler secrets get TEST_ACCOUNT_PASSWORD --plain \
   --project harpa-pro --config dev)"
 
-# Whole suite against dev (default)
+# Whole suite against dev (default) — runs stress → core → extended
 bash scripts/journeys/all.sh
 
 # Single journey against local API
 bash scripts/journeys/all.sh local
-ONLY=core bash scripts/journeys/all.sh local
+bash scripts/journeys/all.sh local core
 
 # Against production — uses real AI tokens, gated by a 3s pause
 bash scripts/journeys/all.sh prod
@@ -50,8 +50,6 @@ bash scripts/journeys/all.sh prod
 | `VOICE_DURATION_SEC`    | `10`                                 | Reported duration for the voice aggregator call.                   |
 | `VOICE_LONG`            | `samples/real/framing.m4a` | Longer aggregator sample used by `extended.sh`.                |
 | `VOICE_LONG_DURATION_SEC` | `274`                              | Reported duration for the long sample.                             |
-| `ONLY`                  | unset                                | `core` / `extended` / `stress` — runs only the named journey.      |
-| `SKIP_STRESS`           | unset                                | Set `1` to skip the stress journey when running everything.        |
 
 ## Test accounts
 

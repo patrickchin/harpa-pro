@@ -12,6 +12,7 @@ on:
       - "packages/api-contract/**"
       - "packages/ai-fixtures/**"
       - "infra/fly/**"
+      - "scripts/journeys/**"
       - ".github/workflows/api-prod.yml"
       - "pnpm-lock.yaml"
   # Allow manual re-deploys (e.g. rotating secrets without a code change).
@@ -62,6 +63,8 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v4
+        with:
+          lfs: true
 
       - uses: ./.github/actions/setup-monorepo
 
@@ -144,3 +147,14 @@ jobs:
           done
           echo "readyz never returned 200 — investigate Fly logs" >&2
           exit 1
+
+      - name: Post-deploy journey tests
+        # Runs curl journey scripts against the just-deployed prod API.
+        # Order: stress (~10s, no AI) → core (~3min, live AI) → extended (~5min, live AI).
+        # On failure the workflow goes red but the deploy is NOT rolled back.
+        # Requires TEST_ACCOUNT_PHONES + TEST_ACCOUNT_PASSWORD in Doppler prd
+        # (so they're synced to the Fly app) and TEST_ACCOUNT_PASSWORD as a
+        # GitHub Actions secret (so this step can authenticate).
+        env:
+          PASSWORD: ${{ secrets.TEST_ACCOUNT_PASSWORD_PRD }}
+        run: bash scripts/journeys/all.sh prod

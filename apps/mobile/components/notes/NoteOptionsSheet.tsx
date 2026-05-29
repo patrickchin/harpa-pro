@@ -162,6 +162,8 @@ export function NoteOptionsSheet({
       >
         <ScrollView
           className="max-h-72 rounded-md border border-border bg-muted/40 p-3"
+          nestedScrollEnabled
+          keyboardShouldPersistTaps="handled"
           testID="note-options-transcript-scroll"
         >
           <Text

@@ -14,9 +14,10 @@ exports[`AppDialogSheet > hides modal content when visible is false 1`] = `
     <rn-KeyboardAvoidingView
       behavior="padding"
     >
-      <rn-Pressable
+      <rn-View
         className="bg-background pb-10"
-        onPress={[Function]}
+        onResponderRelease={[Function]}
+        onStartShouldSetResponder={[Function]}
         testID="dialog-sheet"
       >
         <rn-View
@@ -45,7 +46,7 @@ exports[`AppDialogSheet > hides modal content when visible is false 1`] = `
             className="gap-3"
           />
         </rn-View>
-      </rn-Pressable>
+      </rn-View>
     </rn-KeyboardAvoidingView>
   </rn-Pressable>
 </rn-Modal>
@@ -65,9 +66,10 @@ exports[`AppDialogSheet > renders the dialog when visible with message + actions
     <rn-KeyboardAvoidingView
       behavior="padding"
     >
-      <rn-Pressable
+      <rn-View
         className="bg-background pb-10"
-        onPress={[Function]}
+        onResponderRelease={[Function]}
+        onStartShouldSetResponder={[Function]}
         testID="dialog-sheet"
       >
         <rn-View
@@ -179,7 +181,7 @@ exports[`AppDialogSheet > renders the dialog when visible with message + actions
             </rn-Pressable>
           </rn-View>
         </rn-View>
-      </rn-Pressable>
+      </rn-View>
     </rn-KeyboardAvoidingView>
   </rn-Pressable>
 </rn-Modal>

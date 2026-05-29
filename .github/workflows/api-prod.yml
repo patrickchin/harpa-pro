@@ -156,5 +156,5 @@ jobs:
         # (so they're synced to the Fly app) and TEST_ACCOUNT_PASSWORD as a
         # GitHub Actions secret (so this step can authenticate).
         env:
-          PASSWORD: ${{ secrets.TEST_ACCOUNT_PASSWORD }}
+          PASSWORD: ${{ secrets.TEST_ACCOUNT_PASSWORD_PRD }}
         run: bash scripts/journeys/all.sh prod

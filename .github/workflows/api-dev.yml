@@ -125,6 +125,6 @@ jobs:
         # Order: stress (~10s, no AI) → core (~3min, live AI) → extended (~5min, live AI).
         # On failure the workflow goes red but the deploy is NOT rolled back.
         env:
-          PASSWORD: ${{ secrets.TEST_ACCOUNT_PASSWORD }}
+          PASSWORD: ${{ secrets.TEST_ACCOUNT_PASSWORD_DEV }}
         run: bash scripts/journeys/all.sh dev
 

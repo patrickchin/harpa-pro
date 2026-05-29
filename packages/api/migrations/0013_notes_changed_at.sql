@@ -10,5 +10,12 @@
 --
 -- See docs/superpowers/specs/2026-05-28-auto-regenerate-reports-design.md.
 
+-- `IF NOT EXISTS` is defensive: this file was previously named
+-- `0011_notes_changed_at.sql` and applied to the dev Neon branch
+-- under that name. After the renumber (commit c6a945f), the dev DB
+-- has the column already but the migrator sees `0013_*` as a new
+-- file. The guard makes the re-run a no-op rather than failing with
+-- `42701 column already exists`. See
+-- docs/v4/arch-cicd-and-migrations.md §Renumbering an applied migration.
 ALTER TABLE app.reports
-  ADD COLUMN notes_changed_at timestamptz;
+  ADD COLUMN IF NOT EXISTS notes_changed_at timestamptz;

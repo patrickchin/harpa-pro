@@ -51,7 +51,6 @@ describe('VoiceReportView', () => {
             title: null,
             summary: null,
             visitDate: null,
-            tags: [],
           },
           weather: null,
           workers: [],

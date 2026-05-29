@@ -43,7 +43,6 @@ const REQUIRED_FIELDS = [
   'summarySections',
   // meta subfields
   'summary',
-  'tags',
   'visitDate',
   // weather subfields
   'condition',

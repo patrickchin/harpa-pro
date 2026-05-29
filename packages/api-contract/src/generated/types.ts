@@ -1872,8 +1872,6 @@ export interface paths {
                                         title: string | null;
                                         summary: string | null;
                                         visitDate: string | null;
-                                        /** @default [] */
-                                        tags: string[];
                                     };
                                     weather: {
                                         condition: string | null;
@@ -1991,8 +1989,6 @@ export interface paths {
                                     title: string | null;
                                     summary: string | null;
                                     visitDate: string | null;
-                                    /** @default [] */
-                                    tags: string[];
                                 };
                                 weather: {
                                     condition: string | null;
@@ -2131,8 +2127,6 @@ export interface paths {
                                     title: string | null;
                                     summary: string | null;
                                     visitDate: string | null;
-                                    /** @default [] */
-                                    tags: string[];
                                 };
                                 weather: {
                                     condition: string | null;
@@ -2288,8 +2282,6 @@ export interface paths {
                                 title: string | null;
                                 summary: string | null;
                                 visitDate: string | null;
-                                /** @default [] */
-                                tags?: string[];
                             };
                             weather: {
                                 condition: string | null;
@@ -2346,8 +2338,6 @@ export interface paths {
                                     title: string | null;
                                     summary: string | null;
                                     visitDate: string | null;
-                                    /** @default [] */
-                                    tags: string[];
                                 };
                                 weather: {
                                     condition: string | null;
@@ -2606,8 +2596,6 @@ export interface paths {
                                         title: string | null;
                                         summary: string | null;
                                         visitDate: string | null;
-                                        /** @default [] */
-                                        tags: string[];
                                     };
                                     weather: {
                                         condition: string | null;
@@ -2795,8 +2783,6 @@ export interface paths {
                                         title: string | null;
                                         summary: string | null;
                                         visitDate: string | null;
-                                        /** @default [] */
-                                        tags: string[];
                                     };
                                     weather: {
                                         condition: string | null;
@@ -2978,8 +2964,6 @@ export interface paths {
                                         title: string | null;
                                         summary: string | null;
                                         visitDate: string | null;
-                                        /** @default [] */
-                                        tags: string[];
                                     };
                                     weather: {
                                         condition: string | null;
@@ -3122,8 +3106,6 @@ export interface paths {
                                         title: string | null;
                                         summary: string | null;
                                         visitDate: string | null;
-                                        /** @default [] */
-                                        tags: string[];
                                     };
                                     weather: {
                                         condition: string | null;

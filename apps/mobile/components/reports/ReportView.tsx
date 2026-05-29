@@ -17,7 +17,6 @@ import { IssuesCard } from './IssuesCard';
 import { NextStepsCard } from './NextStepsCard';
 import { SummarySectionCard } from './SummarySectionCard';
 import { SummaryLead } from './detail/SummaryLead';
-import { TagChips } from './detail/TagChips';
 
 interface ReportViewProps {
   report: GeneratedSiteReport;
@@ -60,8 +59,6 @@ export function ReportView({ report, reportNumber }: ReportViewProps) {
           ))}
         </View>
       )}
-
-      <TagChips tags={report.report.meta.tags} />
     </View>
   );
 }

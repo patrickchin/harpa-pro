@@ -1,5 +1,5 @@
 /**
- * Live-LLM smoke for `generateReport()` — runs against real Kimi.
+ * Live-LLM smoke for `generateReport()` — runs against real OpenAI.
  *
  * This test bypasses fixtures (no `fixtureName` → `pickMode` picks
  * `live`) and exercises the path that broke in dev when the prompt
@@ -11,21 +11,21 @@
  * Triggered only by:
  *   - `.github/workflows/ai-live.yml` (dispatch + push/PR touching
  *      prompts/services/contract/providers/fixtures)
- *   - manual: `AI_LIVE=1 KIMI_API_KEY=… pnpm --filter @harpa/api test:live`
+ *   - manual: `AI_LIVE=1 OPENAI_API_KEY=… pnpm --filter @harpa/api test:live`
  *
- * Expected cost: ~3 short kimi-k2.6 calls per run.
+ * Expected cost: ~3 short gpt-4o calls per run.
  *
  * No skip-guard: this file is only loaded by `vitest.live.config.ts`
  * (the `test:live` script). If you run it, you mean it. Missing
- * `KIMI_API_KEY` skips gracefully — add the key to Doppler `dev`
+ * `OPENAI_API_KEY` skips gracefully — add the key to Doppler `dev`
  * config to enable the test in CI.
  */
 import { describe, it, expect, beforeAll } from 'vitest';
 import { reports as reportSchemas } from '@harpa/api-contract';
 import { generateReport } from '../../services/ai.js';
 
-const HAS_KIMI_KEY = !!process.env.KIMI_API_KEY;
-const describeOrSkip = HAS_KIMI_KEY ? describe : describe.skip;
+const HAS_OPENAI_KEY = !!process.env.OPENAI_API_KEY;
+const describeOrSkip = HAS_OPENAI_KEY ? describe : describe.skip;
 
 // One realistic notes payload per scenario. Kept short to keep
 // token cost predictable; the schema check is what we care about,
@@ -53,17 +53,17 @@ const SCENARIOS: Array<{ name: string; notes: string }> = [
   },
 ];
 
-describeOrSkip('generateReport — live Kimi', () => {
+describeOrSkip('generateReport — live OpenAI', () => {
   beforeAll(() => {
     if (process.env.AI_LIVE !== '1') {
       throw new Error(
         'test:live invoked without AI_LIVE=1. This lane MUST hit the real provider; ' +
-          'set AI_LIVE=1 KIMI_API_KEY=… or run via the ai-live CI workflow.',
+          'set AI_LIVE=1 OPENAI_API_KEY=… or run via the ai-live CI workflow.',
       );
     }
-    if (!process.env.KIMI_API_KEY) {
+    if (!process.env.OPENAI_API_KEY) {
       throw new Error(
-        'KIMI_API_KEY is required for test:live. Pull it from Doppler (config `dev`) ' +
+        'OPENAI_API_KEY is required for test:live. Pull it from Doppler (config `dev`) ' +
           'or rely on the ai-live workflow which fetches it automatically.',
       );
     }
@@ -75,7 +75,7 @@ describeOrSkip('generateReport — live Kimi', () => {
       // Default-wiring assertion: do NOT pass `vendor` here. The route
       // path resolves vendor from per-user settings (which default to
       // `openai`); reports are then routed to canonicals.vendor inside
-      // `generateReport`. Stubbing `vendor: 'kimi'` here would mask the
+      // `generateReport`. Stubbing `vendor:` here would mask the
       // mismatch that caused docs/bugs/2026-05-29-report-vendor-canonical-mismatch.md.
       const result = await generateReport({ notes });
 
@@ -84,7 +84,7 @@ describeOrSkip('generateReport — live Kimi', () => {
       // the failure message is clear if generateReport's validation is
       // ever relaxed.
       expect(result.fixtureMode).toBe('live');
-      expect(result.vendor).toBe('kimi');
+      expect(result.vendor).toBe('openai');
       const parsed = reportSchemas.reportBody.safeParse(result.body);
       if (!parsed.success) {
         const issues = parsed.error.issues

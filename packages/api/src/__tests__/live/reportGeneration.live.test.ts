@@ -13,7 +13,7 @@
  *      prompts/services/contract/providers/fixtures)
  *   - manual: `AI_LIVE=1 KIMI_API_KEY=… pnpm --filter @harpa/api test:live`
  *
- * Expected cost: ~3 short kimi-k2-instruct calls per run.
+ * Expected cost: ~3 short kimi-k2.6 calls per run.
  *
  * No skip-guard: this file is only loaded by `vitest.live.config.ts`
  * (the `test:live` script). If you run it, you mean it. Missing

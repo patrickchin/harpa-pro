@@ -116,14 +116,17 @@ async function recordScenario(scenario: string): Promise<void> {
     );
   }
 
-  // Save fixture with the CANONICAL placeholder user prompt so the
-  // API's replay-mode hash lookup hits this file. Real notes content
-  // is discarded — only the model's response shape matters for replay.
+  // Save fixture with the CANONICAL placeholder user prompt + canonical
+  // vendor/model so the API's replay-mode hash lookup (which uses
+  // `FIXTURE_CANONICALS.report.{vendor,model}`) hits this file. Real
+  // notes content is discarded — only the model's response shape matters
+  // for replay. Keep these in sync with `FIXTURE_CANONICALS.report` in
+  // packages/api/src/services/ai.ts.
   const canonicalUserPrompt = `<notes payload ${scenario}>`;
   const canonicalRequest = {
     kind: 'chat' as const,
-    vendor: 'openai' as const,
-    model: 'gpt-4o',
+    vendor: 'kimi' as const,
+    model: 'kimi-k2.6',
     systemPrompt: REPORT_SYSTEM_PROMPT,
     userPrompt: canonicalUserPrompt,
     responseFormat: 'json_object' as const,

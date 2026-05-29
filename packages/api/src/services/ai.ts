@@ -143,7 +143,7 @@ export const FIXTURE_CANONICALS = {
    */
   report: {
     vendor: 'kimi' as Vendor,
-    model: 'kimi-k2-0520',
+    model: 'kimi-k2.6',
     systemPrompt: REPORT_SYSTEM_PROMPT,
     // Distinct system prompt for the *update* path. See
     // REPORT_UPDATE_SYSTEM_PROMPT — instructs the model to preserve
@@ -477,7 +477,7 @@ export async function generateReport(input: GenerateReportInput): Promise<Genera
   // live and replay modes:
   //   - replay: the fixture hash was recorded with canonicals.vendor,
   //     so the provider MUST match for the hash to land.
-  //   - live:   `canonicalModel` is vendor-specific (e.g. `kimi-k2-0520`);
+  //   - live:   `canonicalModel` is vendor-specific (e.g. `kimi-k2.6`);
   //     routing it to the caller's `settings.vendor` (which defaults to
   //     `openai`) sends a Kimi model name to OpenAI and 502s with
   //     `[ai-fixtures:openai] HTTP 404`. See docs/bugs/2026-05-29-report-vendor-canonical-mismatch.md.

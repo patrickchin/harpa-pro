@@ -18,15 +18,15 @@ describe('journey: files upload round-trip', () => {
 
     const presign = await app.request('/files/presign', {
       method: 'POST', headers: me.headers,
-      body: JSON.stringify({ kind: 'image', contentType: 'image/jpeg', sizeBytes: 4096 }),
+      body: JSON.stringify({ scope: 'avatar', contentType: 'image/jpeg', sizeBytes: 4096 }),
     });
     expect(presign.status).toBe(200);
     const ps = (await presign.json()) as { uploadUrl: string; fileKey: string };
-    expect(ps.fileKey.startsWith(`users/${me.userId}/image/`)).toBe(true);
+    expect(ps.fileKey.startsWith(`users/${me.userId}/avatar/`)).toBe(true);
 
     const reg = await app.request('/files', {
       method: 'POST', headers: me.headers,
-      body: JSON.stringify({ kind: 'image', fileKey: ps.fileKey, sizeBytes: 4096, contentType: 'image/jpeg' }),
+      body: JSON.stringify({ scope: 'avatar', fileKey: ps.fileKey, sizeBytes: 4096, contentType: 'image/jpeg' }),
     });
     expect(reg.status).toBe(201);
     const file = (await reg.json()) as { id: string; fileKey: string };
@@ -40,15 +40,15 @@ describe('journey: files upload round-trip', () => {
 
     const dup = await app.request('/files', {
       method: 'POST', headers: me.headers,
-      body: JSON.stringify({ kind: 'image', fileKey: ps.fileKey, sizeBytes: 4096, contentType: 'image/jpeg' }),
+      body: JSON.stringify({ scope: 'avatar', fileKey: ps.fileKey, sizeBytes: 4096, contentType: 'image/jpeg' }),
     });
     expect(dup.status).toBe(409);
 
     const bad = await app.request('/files', {
       method: 'POST', headers: me.headers,
       body: JSON.stringify({
-        kind: 'image',
-        fileKey: 'users/00000000-0000-0000-0000-000000000000/image/x.jpg',
+        scope: 'avatar',
+        fileKey: 'users/usr_00000000/avatar/fil_00000000.jpg',
         sizeBytes: 1, contentType: 'image/jpeg',
       }),
     });

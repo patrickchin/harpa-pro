@@ -489,6 +489,7 @@ export default function GenerateReportRoute() {
       try {
         const outcome = await pickAndEnqueueGalleryImages({
           reportId,
+          projectId: slug,
           enqueueCameraUris,
         });
         switch (outcome.kind) {
@@ -521,7 +522,7 @@ export default function GenerateReportRoute() {
         );
       }
     },
-    [reportId, enqueueCameraUris, qc],
+    [reportId, slug, enqueueCameraUris, qc],
   );
 
   useFocusEffect(
@@ -535,7 +536,7 @@ export default function GenerateReportRoute() {
         if (uris && uris.length > 0) allUris.push(...uris);
       }
       if (allUris.length === 0) return;
-      void enqueueCameraUris(allUris, { reportId }).then((results) => {
+      void enqueueCameraUris(allUris, { reportId, projectId: slug }).then((results) => {
         const failed = results.filter((r) => r.status === 'rejected').length;
         if (failed > 0) {
           setUploadError(
@@ -546,7 +547,7 @@ export default function GenerateReportRoute() {
         // appear in the timeline immediately after the pipeline completes.
         invalidateAfterFileUpload(qc, { reportId });
       });
-    }, [reportId, enqueueCameraUris, qc]),
+    }, [reportId, slug, enqueueCameraUris, qc]),
   );
 
   const canWrite =

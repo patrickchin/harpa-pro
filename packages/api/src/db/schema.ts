@@ -162,6 +162,10 @@ export const files = appSchema.table('files', {
   fileKey: text('file_key').notNull().unique(),
   sizeBytes: bigint('size_bytes', { mode: 'number' }).notNull(),
   contentType: text('content_type').notNull(),
+  // Project-scope linkage (migration 0011). Both nullable: avatar +
+  // scratch uploads carry NULL/NULL and stay owner-only via RLS.
+  projectId: text('project_id').references(() => projects.id, { onDelete: 'cascade' }),
+  reportId: text('report_id').references((): AnyPgColumn => reports.id, { onDelete: 'set null' }),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 });
 

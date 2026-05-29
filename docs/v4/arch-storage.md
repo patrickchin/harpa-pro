@@ -23,6 +23,30 @@
 
 Bucket setup lives in `infra/r2/bootstrap.ts` (idempotent).
 
+## Object key layout
+
+Migration `0011_files_project_scope.sql` switched from the legacy
+owner-keyed layout (`users/<ownerId>/<kind>/<uuid>.<ext>`) to a
+three-scope layout that mirrors the data hierarchy:
+
+| Scope | Key pattern |
+|---|---|
+| Project | `projects/<projectId>/reports/<reportId>/<fileId>.<ext>` |
+| Avatar | `users/<userId>/avatar/<fileId>.<ext>` |
+| Scratch | `users/<userId>/scratch/<fileId>.<ext>` |
+
+Scratch is the holding pen for personal-but-uncategorized uploads:
+the standalone `/voice/transcribe` source files, debug/orphan
+captures, and (eventually) any other personal-not-project asset.
+
+The `<fileId>` segment is the literal `fil_*` slug that the API
+mints up front and persists as the `app.files.id` row PK. The R2
+object key and the DB row share identity — there is no separate
+storage UUID. `parseKeyScope()` in
+`packages/api/src/services/storage.ts` is the inverse of
+`buildKey()` and the route layer uses it to verify the claimed
+scope against the embedded prefix before registering the row.
+
 ## Upload flow
 
 ```mermaid
@@ -32,15 +56,25 @@ sequenceDiagram
   participant API as Hono
   participant R2 as R2
 
-  App->>API: POST /files/presign { kind, contentType, sizeBytes }
-  API-->>App: { uploadUrl, fileKey, expiresAt }
+  App->>API: POST /files/presign { scope, …, contentType, sizeBytes }
+  API-->>App: { uploadUrl, fileKey, fileId, expiresAt }
   App->>R2: PUT uploadUrl (Uint8Array body)
   R2-->>App: 200
-  App->>API: POST /files { kind, fileKey, sizeBytes }
+  App->>API: POST /files { scope, …, fileKey, sizeBytes }
   API-->>App: { fileId }
   App->>API: POST /reports/:id/notes { kind:'image', fileId }
   API-->>App: { noteId }
 ```
+
+The presign + register bodies are discriminated on `scope`:
+
+- `{ scope: 'project', projectId, reportId, kind, contentType,
+  sizeBytes }` — server membership-checks the project before
+  minting.
+- `{ scope: 'avatar', contentType, sizeBytes }` — `kind` is
+  implicitly `image`.
+- `{ scope: 'scratch', kind, contentType, sizeBytes }` —
+  owner-only; no project linkage.
 
 Pitfall 8 rule: **always** create the timeline note in the same
 flow — even for documents. The mobile upload queue calls
@@ -269,11 +303,33 @@ so a previous abort does not poison the new attempt. The
 ## Security
 
 - Presign URLs are scoped to PUT, content-type, content-length, and
-  prefix-keyed by `users/<userId>/`. Server constructs the key —
-  client cannot specify it.
+  the server-built object key. Clients never specify the key — they
+  hand the API a `scope` (`project` | `avatar` | `scratch`) plus the
+  payload metadata and receive the key + matching presigned URL back.
 - Bucket policies deny all public access to non-fixture buckets.
-- File metadata (kind, owner, project, report) lives in
-  `app.files`, scoped per request like every other table.
+- `app.files` carries the upload metadata (`owner_id`, `kind`,
+  `file_key`, `size_bytes`, `content_type`) plus the nullable
+  project-scope linkage: `project_id` (FK → `app.projects.id` ON
+  DELETE CASCADE) and `report_id` (FK → `app.reports.id` ON DELETE
+  SET NULL). Both are populated for project files; both are NULL for
+  avatar and scratch.
+- Row-level authorisation lives in four policies on `app.files`
+  (migration 0011, see also
+  [`arch-auth-and-rls.md` §Files](arch-auth-and-rls.md#files-project-inherited-rls)):
+  - `files_member_read` — SELECT for the owner OR any member of
+    `project_id`.
+  - `files_owner_insert` — INSERT owner-only (the API always sets
+    `owner_id` from the JWT, so callers cannot upload "as" someone
+    else).
+  - `files_member_write` — UPDATE for the owner OR any project
+    member.
+  - `files_member_delete` — DELETE for the owner OR any project
+    member.
+
+  Avatar and scratch rows have `project_id IS NULL`, so the
+  membership leg of every policy short-circuits to false and the
+  effective rule collapses to owner-only — personal scopes stay
+  personal.
 - Lifecycle: `harpa-voice` and `harpa-images` files referenced from
   no live note are GC'd after 7 days by an R2 lifecycle rule.
 

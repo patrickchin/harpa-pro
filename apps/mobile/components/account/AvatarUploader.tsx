@@ -113,6 +113,10 @@ export function AvatarUploader({
         contentType: 'image/jpeg',
         sizeBytes,
         // No reportId — out-of-report upload (registerFile, no note).
+        // `uploadScope: 'avatar'` routes the key to
+        // `users/<userId>/avatar/<fileId>.jpg` and the API forces
+        // `kind: 'image'` server-side.
+        uploadScope: 'avatar',
       });
 
       const newId = result.file.id;

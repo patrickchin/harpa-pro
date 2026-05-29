@@ -10,9 +10,12 @@
  * supplied audio URL / fileId never reaches a real provider in replay.
  *
  * Security:
- *  - File ownership on /voice/transcribe is enforced via app.files RLS
- *    (`files_owner_all`) — `getFileById` returns null for non-owned ids
- *    so they surface as 404 (mirror of GET /files/:id/url).
+ *  - File visibility on /voice/transcribe is enforced via app.files RLS
+ *    (`files_member_read`) — `getFileById` returns null for files the
+ *    caller can't see (not owner and not a member of the file's project)
+ *    so they surface as 404 (mirror of GET /files/:id/url). Voice
+ *    uploads are typically `scope: 'project'` (note attachments) but
+ *    `scope: 'scratch'` is also accepted — RLS handles both.
  *  - Provider errors are wrapped as AiProviderError → errorMapper turns
  *    them into a generic 502 envelope (no fixture name, no provider
  *    detail, no internal URL leaks).

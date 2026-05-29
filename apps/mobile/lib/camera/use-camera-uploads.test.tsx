@@ -102,6 +102,7 @@ function stubFetch() {
         id: `not_${b.fileId ?? 'x'}`,
         authorId: 'u1',
         reportId: 'rpt_test',
+        projectId: 'prj-test1234',
         kind: 'image',
         body: null,
         fileId: b.fileId,
@@ -167,6 +168,7 @@ describe('useCameraUploads — session-registry → upload queue', () => {
 
     const results = await api.enqueueCameraUris(uris ?? [], {
       reportId: 'rpt_test',
+      projectId: 'prj-test1234',
     });
     expect(results).toEqual([]);
     expect(calls).toEqual([]);
@@ -186,6 +188,7 @@ describe('useCameraUploads — session-registry → upload queue', () => {
 
     const results = await api.enqueueCameraUris(uris!, {
       reportId: 'rpt_test',
+      projectId: 'prj-test1234',
     });
 
     expect(results).toHaveLength(3);
@@ -221,6 +224,7 @@ describe('useCameraUploads — session-registry → upload queue', () => {
 
     const results = await api.enqueueCameraUris(uris!, {
       reportId: 'rpt_test',
+      projectId: 'prj-test1234',
     });
 
     expect(results).toHaveLength(2);

@@ -10,10 +10,17 @@
  * The selection is made per-request via `pickStorage()` so tests can
  * force fixture mode regardless of the surrounding env.
  *
- * Server constructs the object key (`users/<userId>/<kind>/<uuid>.<ext>`)
- * — the client never specifies it (Pitfall 8 / arch-storage.md §Security).
+ * Server constructs the object key — clients never specify it
+ * (Pitfall 8 / arch-storage.md §Security). Layout (migration 0011):
+ *
+ *   project:  projects/<projectId>/reports/<reportId>/<fileId>.<ext>
+ *   avatar:   users/<userId>/avatar/<fileId>.<ext>
+ *   scratch:  users/<userId>/scratch/<fileId>.<ext>
+ *
+ * The `<fileId>` segment is the pre-minted `fil_…` slug that the
+ * route will persist as the row PK in `registerFile`, so key + DB id
+ * share identity.
  */
-import { randomUUID } from 'node:crypto';
 import {
   S3Client,
   PutObjectCommand,
@@ -21,12 +28,23 @@ import {
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { env } from '../env.js';
+import { newId } from '../lib/ids.js';
 
 export type FileKind = 'voice' | 'image' | 'document' | 'pdf';
 
+export type PresignScope =
+  | {
+      kind: 'project';
+      userId: string;
+      projectId: string;
+      reportId: string;
+      fileKind: FileKind;
+    }
+  | { kind: 'avatar'; userId: string }
+  | { kind: 'scratch'; userId: string; fileKind: FileKind };
+
 export interface PresignInput {
-  userId: string;
-  kind: FileKind;
+  scope: PresignScope;
   contentType: string;
   sizeBytes: number;
 }
@@ -34,6 +52,8 @@ export interface PresignInput {
 export interface PresignResult {
   uploadUrl: string;
   fileKey: string;
+  /** Pre-minted `fil_…` id embedded in the key — caller persists as the row PK. */
+  fileId: string;
   expiresAt: string;
 }
 
@@ -43,14 +63,14 @@ export interface SignedUrl {
 }
 
 export interface PutObjectInput {
-  userId: string;
-  kind: FileKind;
+  scope: PresignScope;
   contentType: string;
   bytes: Uint8Array;
 }
 
 export interface PutObjectResult {
   fileKey: string;
+  fileId: string;
   sizeBytes: number;
 }
 
@@ -75,18 +95,96 @@ function extFor(contentType: string, kind: FileKind): string {
   return 'bin';
 }
 
-function buildKey(userId: string, kind: FileKind, contentType: string): string {
-  return `users/${userId}/${kind}/${randomUUID()}.${extFor(contentType, kind)}`;
+function scopeFileKind(scope: PresignScope): FileKind {
+  return scope.kind === 'avatar' ? 'image' : scope.fileKind;
+}
+
+interface BuiltKey {
+  fileKey: string;
+  fileId: string;
+}
+
+function buildKey(scope: PresignScope, contentType: string): BuiltKey {
+  const fileId = newId('fil');
+  const fileKind = scopeFileKind(scope);
+  const ext = extFor(contentType, fileKind);
+  let fileKey: string;
+  switch (scope.kind) {
+    case 'project':
+      fileKey = `projects/${scope.projectId}/reports/${scope.reportId}/${fileId}.${ext}`;
+      break;
+    case 'avatar':
+      fileKey = `users/${scope.userId}/avatar/${fileId}.${ext}`;
+      break;
+    case 'scratch':
+      fileKey = `users/${scope.userId}/scratch/${fileId}.${ext}`;
+      break;
+  }
+  return { fileKey, fileId };
+}
+
+/**
+ * Inverse of `buildKey` — reads the scope back out of an R2 object
+ * key. Used by `POST /files` (register) to verify the claimed scope
+ * matches the embedded prefix + ids before persisting the row.
+ *
+ * Returns `null` for keys that don't match any known prefix layout.
+ */
+export type ParsedKeyScope =
+  | {
+      scope: 'project';
+      projectId: string;
+      reportId: string;
+      fileId: string;
+    }
+  | { scope: 'avatar'; userId: string; fileId: string }
+  | { scope: 'scratch'; userId: string; fileId: string };
+
+const PROJECT_KEY_RE =
+  /^projects\/(prj_[0-9a-hjkmnp-tv-z]{8,16})\/reports\/(rpt_[0-9a-hjkmnp-tv-z]{8,16})\/(fil_[0-9a-hjkmnp-tv-z]{8,16})\.[a-z0-9]+$/i;
+const AVATAR_KEY_RE =
+  /^users\/(usr_[0-9a-hjkmnp-tv-z]{8,16})\/avatar\/(fil_[0-9a-hjkmnp-tv-z]{8,16})\.[a-z0-9]+$/i;
+const SCRATCH_KEY_RE =
+  /^users\/(usr_[0-9a-hjkmnp-tv-z]{8,16})\/scratch\/(fil_[0-9a-hjkmnp-tv-z]{8,16})\.[a-z0-9]+$/i;
+
+export function parseKeyScope(key: string): ParsedKeyScope | null {
+  const proj = PROJECT_KEY_RE.exec(key);
+  if (proj) {
+    return {
+      scope: 'project',
+      projectId: proj[1]!.toLowerCase(),
+      reportId: proj[2]!.toLowerCase(),
+      fileId: proj[3]!.toLowerCase(),
+    };
+  }
+  const avatar = AVATAR_KEY_RE.exec(key);
+  if (avatar) {
+    return {
+      scope: 'avatar',
+      userId: avatar[1]!.toLowerCase(),
+      fileId: avatar[2]!.toLowerCase(),
+    };
+  }
+  const scratch = SCRATCH_KEY_RE.exec(key);
+  if (scratch) {
+    return {
+      scope: 'scratch',
+      userId: scratch[1]!.toLowerCase(),
+      fileId: scratch[2]!.toLowerCase(),
+    };
+  }
+  return null;
 }
 
 export class FixtureStorage implements Storage {
   constructor(private readonly base = 'https://fixtures.harpa.local') {}
 
   async presign(input: PresignInput): Promise<PresignResult> {
-    const fileKey = buildKey(input.userId, input.kind, input.contentType);
+    const { fileKey, fileId } = buildKey(input.scope, input.contentType);
     return {
       uploadUrl: `${this.base}/put/${encodeURIComponent(fileKey)}?expires=${Date.now() + DEFAULT_TTL_SEC * 1000}`,
       fileKey,
+      fileId,
       expiresAt: new Date(Date.now() + DEFAULT_TTL_SEC * 1000).toISOString(),
     };
   }
@@ -102,8 +200,8 @@ export class FixtureStorage implements Storage {
     // Fixture mode keeps PDF rendering deterministic + network-free in
     // CI: we mint a server-built key but don't touch any blob store.
     // Tests verify the resulting signed GET URL points at the same key.
-    const fileKey = buildKey(input.userId, input.kind, input.contentType);
-    return { fileKey, sizeBytes: input.bytes.length };
+    const { fileKey, fileId } = buildKey(input.scope, input.contentType);
+    return { fileKey, fileId, sizeBytes: input.bytes.length };
   }
 }
 
@@ -145,7 +243,7 @@ export class R2Storage implements Storage {
   }
 
   async presign(input: PresignInput): Promise<PresignResult> {
-    const fileKey = buildKey(input.userId, input.kind, input.contentType);
+    const { fileKey, fileId } = buildKey(input.scope, input.contentType);
     const command = new PutObjectCommand({
       Bucket: this.bucket,
       Key: fileKey,
@@ -161,6 +259,7 @@ export class R2Storage implements Storage {
     return {
       uploadUrl,
       fileKey,
+      fileId,
       expiresAt: new Date(Date.now() + this.ttlSec * 1000).toISOString(),
     };
   }
@@ -175,7 +274,7 @@ export class R2Storage implements Storage {
   }
 
   async putObject(input: PutObjectInput): Promise<PutObjectResult> {
-    const fileKey = buildKey(input.userId, input.kind, input.contentType);
+    const { fileKey, fileId } = buildKey(input.scope, input.contentType);
     await this.client.send(
       new PutObjectCommand({
         Bucket: this.bucket,
@@ -185,7 +284,7 @@ export class R2Storage implements Storage {
         ContentLength: input.bytes.length,
       }),
     );
-    return { fileKey, sizeBytes: input.bytes.length };
+    return { fileKey, fileId, sizeBytes: input.bytes.length };
   }
 }
 

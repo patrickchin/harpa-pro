@@ -54,10 +54,28 @@ export interface EnqueueInput {
   sizeBytes: number;
   /**
    * When set, the queue also creates a timeline note (Pitfall 8). For
-   * out-of-report uploads (e.g. avatar — not in this commit) leave it
-   * undefined and the queue stops after registerFile.
+   * out-of-report uploads (e.g. avatar) leave it undefined and the
+   * queue stops after registerFile.
    */
   reportId?: string;
+  /**
+   * Project the upload belongs to. Required for project-scope uploads
+   * (must be set whenever `reportId` is set — the new `app.files` RLS
+   * keys on project membership, not just owner). Leave undefined for
+   * personal-scope uploads (avatar, scratch).
+   */
+  projectId?: string;
+  /**
+   * Personal-scope discriminator for uploads that don't belong to a
+   * project. `'avatar'` mints an `users/<userId>/avatar/<fileId>` key
+   * and forces `image` kind server-side. Anything else (omitted or
+   * `'scratch'`) routes to the `users/<userId>/scratch/<fileId>`
+   * prefix and preserves the caller's `kind`.
+   *
+   * When `projectId` + `reportId` are set this is ignored — the queue
+   * always prefers project scope.
+   */
+  uploadScope?: 'avatar' | 'scratch';
   /** Optional transcript for voice notes; ignored for other kinds. */
   transcript?: string;
   /** When set, groups this upload into a batch. First-to-complete creates the note; others append. */

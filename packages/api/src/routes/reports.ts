@@ -520,18 +520,27 @@ reportRoutes.openapi(
     const bytes = renderReportPdf(report);
     const storage = pickStorage();
     // Server-built key (mirrors files.ts presign — never trust client input).
+    // PDFs render server-side so they always have project + report scope.
     const put = await storage.putObject({
-      userId,
-      kind: 'pdf',
+      scope: {
+        kind: 'project',
+        userId,
+        projectId: report.projectId,
+        reportId: report.id,
+        fileKind: 'pdf',
+      },
       contentType: 'application/pdf',
       bytes,
     });
     const file = await db((d) =>
       registerFile(d, userId, {
+        id: put.fileId,
         kind: 'pdf',
         fileKey: put.fileKey,
         sizeBytes: put.sizeBytes,
         contentType: 'application/pdf',
+        projectId: report.projectId,
+        reportId: report.id,
       }),
     );
     if (!file) throw new HTTPException(500, { message: 'pdf register failed' });

@@ -182,6 +182,37 @@ export function withAuth(): MiddlewareHandler<AppEnv> {
 Route handlers use `c.get('db')(fn)` — the raw `db` import is
 ESLint-banned in the routes layer.
 
+## Files: project-inherited RLS
+
+`app.files` is the one table where row ownership is not strictly
+owner-only — project members need to dereference each other's
+uploads, otherwise teammate B can SELECT the `note_files` row but
+404s on `GET /files/:id/url` for every attachment B didn't upload
+themselves. Migration `0011_files_project_scope.sql` replaces the
+old `files_owner_all` policy with four discriminated policies:
+
+| Policy | Action | Rule |
+|---|---|---|
+| `files_member_read` | SELECT | owner OR `app.is_member(project_id)` |
+| `files_owner_insert` | INSERT | `owner_id = current_setting('app.user_id')` |
+| `files_member_write` | UPDATE | owner OR `app.is_member(project_id)` |
+| `files_member_delete` | DELETE | owner OR `app.is_member(project_id)` |
+
+The membership leg is gated on `project_id IS NOT NULL`, so it can
+only match for project-scoped rows. Avatar and scratch rows (with
+`project_id IS NULL`) short-circuit the membership branch to false
+and collapse to owner-only — personal scopes inherit nothing from
+any project. INSERT stays owner-only deliberately: you may only
+upload as yourself, even into a project you're a member of (the
+route still checks project membership before minting a presign for
+`scope: 'project'`).
+
+See [`arch-storage.md` §Security](arch-storage.md#security) for the
+matching key-layout description and
+[`docs/bugs/README.md` R8](../bugs/README.md#bugs) for the recurrence
+note ("files RLS too tight — `files_owner_all` blocked cross-member
+dereference").
+
 ## Lint guards
 
 - `no-restricted-imports` for `@/db/client` outside

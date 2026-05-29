@@ -36,6 +36,7 @@ function makeDeps() {
     presign: vi.fn(async () => ({
       uploadUrl: 'https://r2.example/sign',
       fileKey: 'reports/rep_123/photo.jpg',
+      fileId: 'fil-test1234',
       expiresAt: new Date(Date.now() + 60_000).toISOString(),
     })),
     putToR2: vi.fn(async () => undefined),

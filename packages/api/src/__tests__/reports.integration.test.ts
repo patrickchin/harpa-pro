@@ -300,9 +300,9 @@ describe('reports AI/PDF', () => {
     });
     expect(res.status).toBe(200);
     const body = (await res.json()) as { url: string; expiresAt: string };
-    // FixtureStorage builds keys as users/<userId>/pdf/<uuid>.pdf — the
-    // signed GET URL must reflect that server-built prefix (no client input).
-    expect(body.url).toContain(encodeURIComponent(`users/${alice}/pdf/`));
+    // PDFs are project-scoped: server-built key is
+    // projects/<projectSlug>/reports/<reportSlug>/fil_…pdf.
+    expect(body.url).toContain(encodeURIComponent(`projects/${aliceProjSlug}/reports/`));
     expect(body.url).toContain('.pdf');
     expect(new Date(body.expiresAt).getTime()).toBeGreaterThan(Date.now());
   });

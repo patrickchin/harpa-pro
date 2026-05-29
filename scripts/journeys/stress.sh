@@ -336,11 +336,15 @@ check "GET /nonexistent" 404 GET /nonexistent ''
 if [[ "$BASE" != *"harpa-pro-api.fly.dev"* ]]; then
   echo ""
   echo "── J. Rate-limit probe (non-production only) ──"
+  # Use a dummy phone (not PHONE/PHONE2) so we don't burn the real test
+  # accounts' per-phone rate limit budget. The middleware runs before
+  # auth, so any phone trips the limiter.
+  PROBE_PHONE="+15550199099"
   TOKEN=""
   RATE_LIMITED=false
   for i in $(seq 1 25); do
     response=$(raw POST /auth/password/verify \
-      "{\"phone\":\"$PHONE\",\"password\":\"wrong$i\"}")
+      "{\"phone\":\"$PROBE_PHONE\",\"password\":\"wrong$i\"}")
     status=$(echo "$response" | tail -1)
     if [[ "$status" == "429" ]]; then
       echo "  ✓ rate limited after $i attempts (429)"

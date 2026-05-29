@@ -273,7 +273,7 @@ fi
 echo "→ PATCH report (set body)"
 req PATCH "/projects/$PID_A/reports/$RNUM" '{
   "body":{
-    "visitDate":"2026-05-18T10:00:00Z",
+    "meta":{"title":"Daily Report","summary":"Concrete pour completed successfully.","visitDate":"2026-05-18T10:00:00Z","tags":["concrete","section-b"]},
     "weather":{"condition":"Overcast","temperatureC":18,"windKph":10,"impact":null},
     "workers":[{"role":"Foreman","count":1,"hours":8,"notes":null},{"role":"Labourer","count":3,"hours":8,"notes":null}],
     "materials":[{"name":"Concrete","quantity":20,"unit":"m³","status":"poured","condition":"good","notes":null},{"name":"Rebar","quantity":null,"unit":null,"status":"installed","condition":"grade 60","notes":null}],
@@ -289,7 +289,7 @@ echo "  ✓ finalized"
 
 echo "→ PATCH finalized report (expect 4xx)"
 assert_status 409 PATCH "/projects/$PID_A/reports/$RNUM" '{
-  "body":{"visitDate":null,"weather":null,"workers":[],"materials":[],"issues":[],"nextSteps":[],"summarySections":[{"title":"hack","body":"should fail"}]}
+  "body":{"meta":{"title":null,"summary":null,"visitDate":null,"tags":[]},"weather":null,"workers":[],"materials":[],"issues":[],"nextSteps":[],"summarySections":[{"title":"hack","body":"should fail"}]}
 }'
 
 echo "→ pdf"

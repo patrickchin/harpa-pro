@@ -320,7 +320,8 @@ async function runGenerate(
   userId: string,
   report: ReportRow,
   fixtureName: string | undefined,
-  vendor: Parameters<typeof aiGenerateReport>[0]['vendor'] | undefined,
+  userVendor: Parameters<typeof aiGenerateReport>[0]['userVendor'],
+  userModel: Parameters<typeof aiGenerateReport>[0]['userModel'],
   options: { mode: 'generate' | 'regenerate' },
 ) {
   if (report.status === 'finalized') {
@@ -347,7 +348,8 @@ async function runGenerate(
     notes,
     existingBody,
     fixtureName,
-    vendor,
+    userVendor,
+    userModel,
     usageContext: { db, userId, projectId: report.projectId, reportId: report.id },
   });
   const finishedAt = new Date().toISOString();
@@ -403,7 +405,7 @@ reportRoutes.openapi(
     const body = c.req.valid('json');
     const report = await loadReport(db, slug, number);
     const settings = await db((d) => getAiSettings(d, userId));
-    const result = await runGenerate(db, userId, report, body.fixtureName, settings.vendor, { mode: 'generate' });
+    const result = await runGenerate(db, userId, report, body.fixtureName, settings.vendor, settings.model, { mode: 'generate' });
     await db((d) => attachUsageWarning(d, userId, (k, v) => c.header(k, v)));
     return c.json({ report: toReportResponse(result.report), debug: result.debug }, 200);
   },
@@ -430,7 +432,7 @@ reportRoutes.openapi(
     const body = c.req.valid('json');
     const report = await loadReport(db, slug, number);
     const settings = await db((d) => getAiSettings(d, userId));
-    const result = await runGenerate(db, userId, report, body.fixtureName, settings.vendor, { mode: 'regenerate' });
+    const result = await runGenerate(db, userId, report, body.fixtureName, settings.vendor, settings.model, { mode: 'regenerate' });
     await db((d) => attachUsageWarning(d, userId, (k, v) => c.header(k, v)));
     return c.json({ report: toReportResponse(result.report), debug: result.debug }, 200);
   },

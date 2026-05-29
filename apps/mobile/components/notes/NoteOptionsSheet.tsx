@@ -264,51 +264,53 @@ export function NoteOptionsSheet({
       onClose={onClose}
       actions={actions}
     >
-      <View className="gap-2 rounded-md border border-border bg-muted/30 p-3">
-        <MetaRow label="Kind" value={KIND_LABEL[note.kind]} />
-        <MetaRow label="Author" value={note.authorName?.trim() || 'Unknown'} />
-        {capturedDisplay ? (
-          <MetaRow label="Captured" value={capturedDisplay} />
+      <View className="gap-3">
+        {note.kind === 'voice' && note.fileId ? (
+          <VoicePlayRow
+            fileId={note.fileId}
+            durationSec={note.durationSec ?? null}
+            sheetVisible={visible}
+          />
         ) : null}
-        {titleText ? <MetaRow label="Title" value={titleText} /> : null}
-        {note.kind === 'voice' && note.durationSec ? (
-          <MetaRow label="Duration" value={formatDuration(note.durationSec)} />
-        ) : null}
-        {note.fileId ? (
-          <MetaRow label="File ID" value={note.fileId} mono />
-        ) : null}
-        <MetaRow label="Note ID" value={note.id} mono />
-        {summaryText ? (
-          <View className="gap-1 pt-1">
-            <Text className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-              Summary
-            </Text>
-            <Text className="text-sm leading-5 text-foreground" selectable>
-              {summaryText}
-            </Text>
-          </View>
-        ) : note.kind !== 'voice' && bodyPreview ? (
-          <View className="gap-1 pt-1">
-            <Text className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-              Preview
-            </Text>
-            <Text
-              className="text-sm leading-5 text-foreground"
-              selectable
-              numberOfLines={6}
-            >
-              {bodyPreview}
-            </Text>
-          </View>
-        ) : null}
+        <View className="gap-2 rounded-md border border-border bg-muted/30 p-3">
+          <MetaRow label="Kind" value={KIND_LABEL[note.kind]} />
+          <MetaRow label="Author" value={note.authorName?.trim() || 'Unknown'} />
+          {capturedDisplay ? (
+            <MetaRow label="Captured" value={capturedDisplay} />
+          ) : null}
+          {titleText ? <MetaRow label="Title" value={titleText} /> : null}
+          {note.kind === 'voice' && note.durationSec ? (
+            <MetaRow label="Duration" value={formatDuration(note.durationSec)} />
+          ) : null}
+          {note.fileId ? (
+            <MetaRow label="File ID" value={note.fileId} mono />
+          ) : null}
+          <MetaRow label="Note ID" value={note.id} mono />
+          {summaryText ? (
+            <View className="gap-1 pt-1">
+              <Text className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                Summary
+              </Text>
+              <Text className="text-sm leading-5 text-foreground" selectable>
+                {summaryText}
+              </Text>
+            </View>
+          ) : note.kind !== 'voice' && bodyPreview ? (
+            <View className="gap-1 pt-1">
+              <Text className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                Preview
+              </Text>
+              <Text
+                className="text-sm leading-5 text-foreground"
+                selectable
+                numberOfLines={6}
+              >
+                {bodyPreview}
+              </Text>
+            </View>
+          ) : null}
+        </View>
       </View>
-      {note.kind === 'voice' && note.fileId ? (
-        <VoicePlayRow
-          fileId={note.fileId}
-          durationSec={note.durationSec ?? null}
-          sheetVisible={visible}
-        />
-      ) : null}
     </AppDialogSheet>
   );
 }

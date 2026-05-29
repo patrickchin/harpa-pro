@@ -598,6 +598,37 @@ vi.mock('expo-image', () => ({
   Image: makeRNComponent('expo-Image'),
 }));
 
+// `react-native-webview` ships JSX inside a `.js` file (no `.jsx`
+// extension) that esbuild refuses to parse, and is only ever used at
+// runtime on the device. Render as a stub host so PdfPreviewModal +
+// any other consumer can be mounted in tests.
+vi.mock('react-native-webview', () => ({
+  __esModule: true,
+  WebView: makeRNComponent('rn-WebView'),
+  default: makeRNComponent('rn-WebView'),
+}));
+
+// `react-native-pdf` likewise ships JSX in `.js` and pulls in native
+// bindings. Stub the default export so PdfPreviewModal mounts in tests.
+vi.mock('react-native-pdf', () => ({
+  __esModule: true,
+  default: makeRNComponent('rn-Pdf'),
+}));
+
+// `expo-print` + `expo-sharing` pull in `expo-modules-core` which
+// requires native bindings at import time. Tests that touch the PDF
+// export pipeline mock these per-file with realistic fakes; provide
+// safe no-op defaults here so any tree that only transitively imports
+// them mounts cleanly.
+vi.mock('expo-print', () => ({
+  printToFileAsync: vi.fn(async () => ({ uri: 'file:///mock/print.pdf' })),
+}));
+
+vi.mock('expo-sharing', () => ({
+  isAvailableAsync: vi.fn(async () => false),
+  shareAsync: vi.fn(async () => undefined),
+}));
+
 // `expo-image-picker` — default mock returns a single picked asset.
 // Tests that need cancel / permission-denied paths can re-mock per file.
 vi.mock('expo-image-picker', () => ({
@@ -648,18 +679,55 @@ vi.mock('expo-file-system', () => {
     uri: string;
     size = 80_000;
     exists = true;
-    constructor(uri: string) {
-      this.uri = uri;
+    constructor(...parts: Array<string | { uri: string }>) {
+      this.uri = parts
+        .map((p) => (typeof p === 'string' ? p : p.uri))
+        .join('/');
     }
     delete() {
+      // no-op
+    }
+    create() {
+      // no-op
+    }
+    write() {
+      // no-op
+    }
+    move() {
+      // no-op
+    }
+  }
+  class Directory {
+    uri: string;
+    constructor(...parts: Array<string | { uri: string }>) {
+      this.uri = parts
+        .map((p) => (typeof p === 'string' ? p : p.uri))
+        .join('/');
+    }
+    create() {
       // no-op
     }
   }
   return {
     File,
-    Directory: class {},
+    Directory,
+    Paths: {
+      document: { uri: 'file:///mock/documents' },
+      cache: { uri: 'file:///mock/cache' },
+    },
   };
 });
+
+// `expo-linking` pulls in `expo-modules-core` at import time. We don't
+// exercise deep-link parsing in unit tests, so stub the surface used by
+// the PDF "Open" flow + the auth gate.
+vi.mock('expo-linking', () => ({
+  openURL: vi.fn(async () => undefined),
+  parse: vi.fn(() => ({ path: null, queryParams: {} })),
+  addEventListener: vi.fn(() => ({ remove: vi.fn() })),
+  getInitialURL: vi.fn(async () => null),
+  createURL: vi.fn((path: string) => `harpa://${path}`),
+}));
 
 // `react-native-mmkv` ships a native module. Stub with an in-memory
 // `Map` so the upload-queue persistence layer round-trips in Vitest.

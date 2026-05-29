@@ -4,10 +4,9 @@
  * branch `dev`.
  *
  * Owns the PDF action state machine (saving / sharing / opening /
- * error) and the `SavedReportSheet` controlled state. v4 lib stubs
- * for `saveReportPdf` / `shareSavedReportPdf` / `openSavedReportPdf`
- * throw `Error('Saving PDFs lands in P4 …')` until the Expo Print +
- * Sharing pipeline ports — see `lib/reports/export-report-pdf.ts`.
+ * error) and the `SavedReportSheet` controlled state. Delegates to
+ * `lib/reports/export-report-pdf.ts` for the actual pipeline
+ * (expo-print + expo-sharing + expo-file-system).
  */
 import { useState } from 'react';
 

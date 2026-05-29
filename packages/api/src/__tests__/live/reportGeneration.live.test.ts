@@ -1,5 +1,5 @@
 /**
- * Live-LLM smoke for `generateReport()` — runs against real OpenAI.
+ * Live-LLM smoke for `generateReport()` — runs against real Kimi.
  *
  * This test bypasses fixtures (no `fixtureName` → `pickMode` picks
  * `live`) and exercises the path that broke in dev when the prompt
@@ -11,13 +11,13 @@
  * Triggered only by:
  *   - `.github/workflows/ai-live.yml` (dispatch + push/PR touching
  *      prompts/services/contract/providers/fixtures)
- *   - manual: `AI_LIVE=1 OPENAI_API_KEY=… pnpm --filter @harpa/api test:live`
+ *   - manual: `AI_LIVE=1 KIMI_API_KEY=… pnpm --filter @harpa/api test:live`
  *
- * Expected cost: ~3 short gpt-4o calls per run.
+ * Expected cost: ~3 short kimi-k2-instruct calls per run.
  *
  * No skip-guard: this file is only loaded by `vitest.live.config.ts`
  * (the `test:live` script). If you run it, you mean it. Missing
- * `OPENAI_API_KEY` is a hard failure, not a silent pass.
+ * `KIMI_API_KEY` is a hard failure, not a silent pass.
  */
 import { describe, it, expect, beforeAll } from 'vitest';
 import { reports as reportSchemas } from '@harpa/api-contract';
@@ -49,17 +49,17 @@ const SCENARIOS: Array<{ name: string; notes: string }> = [
   },
 ];
 
-describe('generateReport — live OpenAI', () => {
+describe('generateReport — live Kimi', () => {
   beforeAll(() => {
     if (process.env.AI_LIVE !== '1') {
       throw new Error(
         'test:live invoked without AI_LIVE=1. This lane MUST hit the real provider; ' +
-          'set AI_LIVE=1 OPENAI_API_KEY=… or run via the ai-live CI workflow.',
+          'set AI_LIVE=1 KIMI_API_KEY=… or run via the ai-live CI workflow.',
       );
     }
-    if (!process.env.OPENAI_API_KEY) {
+    if (!process.env.KIMI_API_KEY) {
       throw new Error(
-        'OPENAI_API_KEY is required for test:live. Pull it from Doppler (config `dev`) ' +
+        'KIMI_API_KEY is required for test:live. Pull it from Doppler (config `dev`) ' +
           'or rely on the ai-live workflow which fetches it automatically.',
       );
     }
@@ -68,14 +68,14 @@ describe('generateReport — live OpenAI', () => {
   it.each(SCENARIOS)(
     'returns a schema-valid reportBody for: $name',
     async ({ notes }) => {
-      const result = await generateReport({ notes });
+      const result = await generateReport({ notes, vendor: 'kimi' });
 
       // The service itself runs safeParse and throws AiProviderError on
       // miss — getting here means the body matched. Re-assert anyway so
       // the failure message is clear if generateReport's validation is
       // ever relaxed.
       expect(result.fixtureMode).toBe('live');
-      expect(result.vendor).toBe('openai');
+      expect(result.vendor).toBe('kimi');
       const parsed = reportSchemas.reportBody.safeParse(result.body);
       if (!parsed.success) {
         const issues = parsed.error.issues

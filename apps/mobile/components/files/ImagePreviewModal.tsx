@@ -207,46 +207,13 @@ function PreviewContent({
       <Animated.View style={[{ flex: 1 }, dismissBackdropStyle]}>
         <StatusBar style="light" hidden={!chromeVisible} />
 
-        <Animated.View style={[{ flex: 1 }, dismissContentStyle]}>
-          <PagerView
-            initialPage={startIndex}
-            scrollEnabled={isGallery && !anyZoomed}
-            onPageSelected={(e) => setCurrentIndex(e.nativeEvent.position)}
-            style={{ flex: 1 }}
-            testID="image-preview-gallery"
+        <SafeAreaView edges={['top', 'bottom']} style={{ flex: 1 }}>
+          {/* Header — in-flow, not overlapping the image */}
+          <Animated.View
+            pointerEvents={chromeVisible ? 'auto' : 'none'}
+            style={chromeStyle}
+            className="bg-black/60"
           >
-            {photos.map((item, index) => {
-              const key = item.fileId ?? item.uri ?? `photo-${index}`;
-              return (
-                <View
-                  key={key}
-                  className="items-center justify-center"
-                  style={{ width: screenWidth, height: screenHeight }}
-                >
-                  <ImagePreviewBody
-                    uri={item.uri ?? null}
-                    fileId={item.fileId ?? null}
-                    thumbnailFileId={item.thumbnailFileId ?? null}
-                    title={item.title ?? fallbackTitle}
-                    cacheKey={item.cacheKey ?? null}
-                    width={screenWidth}
-                    height={screenHeight}
-                    testID={`image-preview-${index}`}
-                    onSingleTap={toggleChrome}
-                    onZoomChange={(z) => onChildZoomChange(key, z)}
-                  />
-                </View>
-              );
-            })}
-          </PagerView>
-        </Animated.View>
-
-        <Animated.View
-          pointerEvents={chromeVisible ? 'auto' : 'none'}
-          style={chromeStyle}
-          className="absolute left-0 right-0 top-0 z-10 bg-black/60"
-        >
-          <SafeAreaView edges={['top']}>
             <View className="flex-row items-center px-4 pb-3 pt-2">
               <Pressable
                 onPress={onClose}
@@ -278,8 +245,42 @@ function PreviewContent({
                 </Text>
               ) : null}
             </View>
-          </SafeAreaView>
-        </Animated.View>
+          </Animated.View>
+
+          {/* Image pager — fills remaining space below the header */}
+          <Animated.View style={[{ flex: 1 }, dismissContentStyle]}>
+            <PagerView
+              initialPage={startIndex}
+              scrollEnabled={isGallery && !anyZoomed}
+              onPageSelected={(e) => setCurrentIndex(e.nativeEvent.position)}
+              style={{ flex: 1 }}
+              testID="image-preview-gallery"
+            >
+              {photos.map((item, index) => {
+                const key = item.fileId ?? item.uri ?? `photo-${index}`;
+                return (
+                  <View
+                    key={key}
+                    className="flex-1 items-center justify-center"
+                  >
+                    <ImagePreviewBody
+                      uri={item.uri ?? null}
+                      fileId={item.fileId ?? null}
+                      thumbnailFileId={item.thumbnailFileId ?? null}
+                      title={item.title ?? fallbackTitle}
+                      cacheKey={item.cacheKey ?? null}
+                      width={screenWidth}
+                      height={screenHeight}
+                      testID={`image-preview-${index}`}
+                      onSingleTap={toggleChrome}
+                      onZoomChange={(z) => onChildZoomChange(key, z)}
+                    />
+                  </View>
+                );
+              })}
+            </PagerView>
+          </Animated.View>
+        </SafeAreaView>
       </Animated.View>
     </GestureDetector>
   );

@@ -72,7 +72,12 @@ describeOrSkip('generateReport — live Kimi', () => {
   it.each(SCENARIOS)(
     'returns a schema-valid reportBody for: $name',
     async ({ notes }) => {
-      const result = await generateReport({ notes, vendor: 'kimi' });
+      // Default-wiring assertion: do NOT pass `vendor` here. The route
+      // path resolves vendor from per-user settings (which default to
+      // `openai`); reports are then routed to canonicals.vendor inside
+      // `generateReport`. Stubbing `vendor: 'kimi'` here would mask the
+      // mismatch that caused docs/bugs/2026-05-29-report-vendor-canonical-mismatch.md.
+      const result = await generateReport({ notes });
 
       // The service itself runs safeParse and throws AiProviderError on
       // miss — getting here means the body matched. Re-assert anyway so

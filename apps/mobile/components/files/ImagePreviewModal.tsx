@@ -164,7 +164,7 @@ function PreviewContent({
   }, []);
 
   // --- Drag-to-dismiss gesture (iOS Photos style) ---
-  const DISMISS_THRESHOLD = 150;
+  const DISMISS_THRESHOLD = 100;
 
   const dismissPan = useMemo(
     () =>
@@ -180,7 +180,7 @@ function PreviewContent({
           if (Math.abs(dismissY.value) > DISMISS_THRESHOLD) {
             runOnJS(onClose)();
           } else {
-            dismissY.value = withSpring(0, { damping: 20, stiffness: 200 });
+            dismissY.value = withSpring(0, { damping: 28, stiffness: 400 });
           }
         }),
     [anyZoomed, dismissY, onClose],

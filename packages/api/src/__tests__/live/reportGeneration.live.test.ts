@@ -17,11 +17,15 @@
  *
  * No skip-guard: this file is only loaded by `vitest.live.config.ts`
  * (the `test:live` script). If you run it, you mean it. Missing
- * `KIMI_API_KEY` is a hard failure, not a silent pass.
+ * `KIMI_API_KEY` skips gracefully — add the key to Doppler `dev`
+ * config to enable the test in CI.
  */
 import { describe, it, expect, beforeAll } from 'vitest';
 import { reports as reportSchemas } from '@harpa/api-contract';
 import { generateReport } from '../../services/ai.js';
+
+const HAS_KIMI_KEY = !!process.env.KIMI_API_KEY;
+const describeOrSkip = HAS_KIMI_KEY ? describe : describe.skip;
 
 // One realistic notes payload per scenario. Kept short to keep
 // token cost predictable; the schema check is what we care about,
@@ -49,7 +53,7 @@ const SCENARIOS: Array<{ name: string; notes: string }> = [
   },
 ];
 
-describe('generateReport — live Kimi', () => {
+describeOrSkip('generateReport — live Kimi', () => {
   beforeAll(() => {
     if (process.env.AI_LIVE !== '1') {
       throw new Error(

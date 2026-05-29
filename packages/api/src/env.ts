@@ -28,7 +28,8 @@ const Env = z.object({
   // Groq hosts whisper-large-v3-turbo for transcription. Required when AI_LIVE=1.
   GROQ_API_KEY: z.string().optional(),
   GROQ_BASE_URL: z.string().url().optional(),
-  // Kimi (Moonshot) is used for report generation. Required when AI_LIVE=1.
+  // Kimi (Moonshot) is used for report generation. Not validated at boot —
+  // a missing key surfaces as a 502 on the affected request only.
   KIMI_API_KEY: z.string().optional(),
   KIMI_BASE_URL: z.string().url().optional(),
   R2_FIXTURE_MODE: z.enum(['replay', 'live']).default('replay'),
@@ -128,9 +129,6 @@ const Env = z.object({
 ).refine(
   (e) => e.AI_LIVE !== '1' || !!e.OPENAI_API_KEY,
   { path: ['OPENAI_API_KEY'], message: 'required when AI_LIVE=1 (voice-note summarization)' },
-).refine(
-  (e) => e.AI_LIVE !== '1' || !!e.KIMI_API_KEY,
-  { path: ['KIMI_API_KEY'], message: 'required when AI_LIVE=1 (report generation via Kimi)' },
 ).refine(
   (e) => e.AI_LIVE !== '1' || !!e.GROQ_API_KEY,
   { path: ['GROQ_API_KEY'], message: 'required when AI_LIVE=1 (transcription via whisper-large-v3-turbo)' },

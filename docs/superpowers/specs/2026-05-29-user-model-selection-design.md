@@ -8,6 +8,13 @@ their models. The picker writes to `AsyncStorage` and **nothing reads
 it**. The selected model is never sent to the API, so it has no effect
 on report generation or voice summarisation.
 
+Compounding the bug: the Kimi model IDs the picker offers
+(`kimi-k2-0905-preview`, `kimi-k2-0711-preview`, `kimi-k2-thinking`)
+don't exist on our Moonshot China account — the server we authenticate
+against (`api.moonshot.cn`) returns "model not found" for all of them.
+So even if the picker had been wired up, every Kimi selection would
+have 404'd.
+
 Worse: even if it did send the model, the API would ignore it.
 `generateReport()` and `summarize` pin `vendor` and `model` to
 server-side `FIXTURE_CANONICALS` constants. The picker is purely
@@ -23,8 +30,17 @@ We need to:
    routes into `ai.ts` so the live LLM call actually uses it.
 3. Keep fixture replay deterministic (replay always uses canonical,
    regardless of user choice).
-4. Remove `kimi-k2-thinking` from the picker (reasoning model, would
-   reproduce the 50–80s latency bug we just fixed).
+4. Drop Kimi from the picker entirely. The IDs we currently advertise
+   don't exist on our account, and the ones that do (`moonshot-v1-*`,
+   `kimi-k2.5`, `kimi-k2.6`) are slower than every OpenAI option from
+   Fly Frankfurt and add a CN-hosting trust concern. We standardise on
+   the GPT-4.1 family.
+5. Move the canonical from `gpt-4o` to `gpt-4.1-mini`. GPT-4.1
+   (released 2025-04) supersedes 4o for our use case: faster (4.7s vs
+   3.4s p50 from Fra), 1M-token context, better instruction following,
+   and 4o is being phased out by OpenAI. `gpt-4.1-mini` is the right
+   default — cheap enough to never worry about cost ($0.001/report),
+   plenty smart for project status reports.
 
 Transcription (whisper-large-v3-turbo) stays pinned to Groq — out of
 scope.
@@ -34,9 +50,11 @@ scope.
 **Server-backed settings, live-mode-only override, single picker
 applies to both `/generate` and `/voice/summarize`.**
 
-The default canonicals stay where they are (`gpt-4o` for report,
-`gpt-4o-mini` for summarize). If the user has not made a choice, the
-canonical is used — no change to current production behaviour.
+The canonicals move to `gpt-4.1-mini` for both report and summarize.
+If the user has not made a choice, the canonical is used. This is a
+behaviour change from current production (which uses `gpt-4o` for
+report, `gpt-4o-mini` for summarize) and requires re-recording fixtures
+for both ops as part of this work.
 
 If the user picks a model, the API uses it for **both** `generateReport`
 and `summarize` in live mode. The picker shows one provider+model
@@ -74,19 +92,49 @@ A new `AI_MODELS` constant in `packages/api-contract/src/schemas/settings.ts`:
 
 ```ts
 export const AI_MODELS = {
-  kimi: [
-    { id: 'kimi-k2-0905-preview', label: 'Kimi K2 (preview, 0905)' },
-    { id: 'kimi-k2-0711-preview', label: 'Kimi K2 (preview, 0711)' },
-  ],
   openai: [
-    { id: 'gpt-4o-mini', label: 'GPT-4o mini' },
-    { id: 'gpt-4o', label: 'GPT-4o' },
-    { id: 'gpt-4.1-mini', label: 'GPT-4.1 mini' },
+    {
+      id: 'gpt-4.1-nano',
+      label: 'GPT-4.1 nano',
+      tagline: 'Fastest and cheapest',
+      latencyMs: 2100,
+      costPerReport: 0.0003,
+    },
+    {
+      id: 'gpt-4.1-mini',
+      label: 'GPT-4.1 mini',
+      tagline: 'Default — balanced',
+      latencyMs: 4700,
+      costPerReport: 0.001,
+      isDefault: true,
+    },
+    {
+      id: 'gpt-4.1',
+      label: 'GPT-4.1',
+      tagline: 'Highest quality',
+      latencyMs: 2600,
+      costPerReport: 0.006,
+    },
   ],
 } as const;
+
+export type AiVendor = keyof typeof AI_MODELS;       // 'openai'
+export type AiModelId = typeof AI_MODELS[AiVendor][number]['id'];
 ```
 
-- `kimi-k2-thinking` removed (was the only reasoning model in the list).
+The metadata fields (`tagline`, `latencyMs`, `costPerReport`) are
+displayed in the picker per the user-confirmed "tagline + cost +
+latency" UI. `latencyMs` is the p50 from a Fly-Frankfurt bench
+(see `docs/v4/bench-2026-05-29.md` if/when added; numbers in this
+spec serve as the source for now).
+
+Single-vendor whitelist for now. The `AiVendor` type is preserved as
+a union so we can add a second vendor later without an API contract
+break.
+
+- Kimi removed entirely (server returns 404 for the IDs we list, and
+  the working CN models are slower than every OpenAI option).
+- `gpt-4o` and `gpt-4o-mini` removed; superseded by 4.1 family.
 - Mobile imports `AI_MODELS` from `@harpa/api-contract` and renders
   the picker from it. The duplicate `PROVIDER_MODELS` in
   `useAiProvider.ts` is deleted.
@@ -136,9 +184,9 @@ which is the obvious product expectation.
 ### Picker → server
 
 ```
-User taps "GPT-4o mini"
-  → ai.setModel('gpt-4o-mini')
-  → useUpdateAiSettingsMutation.mutate({ vendor: 'openai', model: 'gpt-4o-mini' })
+User taps "GPT-4.1 nano"
+  → ai.setModel('gpt-4.1-nano')
+  → useUpdateAiSettingsMutation.mutate({ vendor: 'openai', model: 'gpt-4.1-nano' })
   → PATCH /me/settings → 200 { vendor, model }
   → react-query cache updated, picker reflects server state
 ```
@@ -150,19 +198,19 @@ User taps "Default (recommended)"
   → ai.setProvider(null)
   → PATCH /me/settings { vendor: null, model: null }
   → row updated to nulls
-  → subsequent /generate calls use FIXTURE_CANONICALS.report (gpt-4o)
+  → subsequent /generate calls use FIXTURE_CANONICALS.report (gpt-4.1-mini)
 ```
 
 ### Generate uses user pick
 
 ```
 POST /generate
-  fetch user_settings → { vendor: 'openai', model: 'gpt-4o-mini' }
-  generateReport({ ..., userVendor: 'openai', userModel: 'gpt-4o-mini' })
+  fetch user_settings → { vendor: 'openai', model: 'gpt-4.1-nano' }
+  generateReport({ ..., userVendor: 'openai', userModel: 'gpt-4.1-nano' })
   ai.ts live branch:
     providerVendor = 'openai'
-    providerModel  = 'gpt-4o-mini'  (was: canonical 'gpt-4o')
-  OpenAI call goes to gpt-4o-mini
+    providerModel  = 'gpt-4.1-nano'  (overrides canonical 'gpt-4.1-mini')
+  OpenAI call goes to gpt-4.1-nano
 ```
 
 ### Replay ignores user pick
@@ -170,12 +218,12 @@ POST /generate
 ```
 AI_FIXTURE_MODE=replay
 POST /generate
-  fetch user_settings → { vendor: 'openai', model: 'gpt-4o-mini' }
-  generateReport({ ..., userVendor: 'openai', userModel: 'gpt-4o-mini' })
+  fetch user_settings → { vendor: 'openai', model: 'gpt-4.1-nano' }
+  generateReport({ ..., userVendor: 'openai', userModel: 'gpt-4.1-nano' })
   ai.ts replay branch:
     providerVendor = canonicals.vendor  ('openai')
-    providerModel  = canonicals.model   ('gpt-4o')
-  Hash matches existing voice-N fixture, replays canned response.
+    providerModel  = canonicals.model   ('gpt-4.1-mini')
+  Hash matches existing fixture, replays canned response.
 ```
 
 ## Error handling
@@ -197,14 +245,16 @@ POST /generate
 
 ### Contract (`packages/api-contract`)
 - `AI_MODELS` shape — every model has `id` and `label`; no duplicates
-- `aiSettings` accepts `{vendor:null, model:null}`, `{vendor:'openai', model:'gpt-4o'}`, etc.
-- `aiSettings` rejects `{vendor:'kimi', model:'gpt-4o'}` (cross-vendor)
+- `aiSettings` accepts `{vendor:null, model:null}`, `{vendor:'openai', model:'gpt-4.1-mini'}`, etc.
+- `aiSettings` rejects `{vendor:'openai', model:'gpt-4o'}` (no longer in whitelist)
+- `aiSettings` rejects `{vendor:'kimi', model:anything}` (vendor removed)
 
 ### API integration (`packages/api/src/__tests__/`)
 - `settings.integration.test.ts` — extend:
-  - `PATCH /me/settings { vendor: 'openai', model: 'gpt-4o-mini' }` → 200, persisted
+  - `PATCH /me/settings { vendor: 'openai', model: 'gpt-4.1-nano' }` → 200, persisted
   - `PATCH /me/settings { vendor: null, model: null }` → 200, row cleared
-  - `PATCH /me/settings { vendor: 'kimi', model: 'gpt-4o' }` → 400
+  - `PATCH /me/settings { vendor: 'openai', model: 'gpt-4o' }` → 400 (dropped)
+  - `PATCH /me/settings { vendor: 'kimi', model: 'kimi-k2.5' }` → 400 (vendor dropped)
   - `PATCH /me/settings { vendor: 'openai', model: 'bogus' }` → 400
 - `reports.integration.test.ts` — extend:
   - With user_settings set + stubbed AI provider, assert the stub
@@ -215,8 +265,8 @@ POST /generate
 
 ### API live (`packages/api/src/__tests__/live/`)
 - `reportGeneration.live.test.ts` — add a fourth scenario that sets
-  user_settings to `{openai, gpt-4o-mini}` and asserts response is
-  produced AND `result.model === 'gpt-4o-mini'`. This is the
+  user_settings to `{openai, gpt-4.1-nano}` and asserts response is
+  produced AND `result.model === 'gpt-4.1-nano'`. This is the
   default-wiring test per AGENTS.md pitfall #13.
 
 ### Mobile (`apps/mobile/lib/ai/`)
@@ -226,13 +276,30 @@ POST /generate
   - Selecting "Default" clears server-side value
   - Loading state visible while settings query is in-flight
 
+## Canonical change & fixture re-recording
+
+This spec changes the canonical from `gpt-4o`/`gpt-4o-mini` to
+`gpt-4.1-mini` for both ops. That invalidates every existing fixture
+in `packages/ai-fixtures/fixtures/generate-report.*.json` and
+`summarize-voice.*.json` (hash includes vendor+model).
+
+**Steps as part of this work:**
+1. Update `FIXTURE_CANONICALS` in `packages/api/src/services/ai.ts` to
+   `{vendor: 'openai', model: 'gpt-4.1-mini'}` for both `report` and
+   `summarize`.
+2. Re-record fixtures: `AI_FIXTURE_MODE=record pnpm --filter api test:live`
+   for the live tests that exercise these ops.
+3. Verify replay tests pass against the new fixtures.
+4. Add an entry in `docs/bugs/README.md` documenting the canonical swap.
+
 ## Out of scope
 
 - Per-operation model selection (one global pick covers both
   generate and summarize)
-- Adding Groq llama models to the picker (would require an
-  additional vendor adapter wiring + key; deferred)
-- Showing benchmark/cost info next to each option in the picker
+- Adding Groq llama models, Kimi, Anthropic, or any non-OpenAI vendor
+  to the picker (would require additional vendor adapter wiring + key;
+  the contract `AiVendor` type is left as a union so a second vendor
+  can be added later without breaking changes)
 - Token-counting hooks (the existing `usage` field in
   `reportLastGeneration` is already noted as unwired)
 - A migration to backfill or clean stale `user_settings` rows (we

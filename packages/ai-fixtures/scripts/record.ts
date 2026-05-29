@@ -125,8 +125,8 @@ async function recordScenario(scenario: string): Promise<void> {
   const canonicalUserPrompt = `<notes payload ${scenario}>`;
   const canonicalRequest = {
     kind: 'chat' as const,
-    vendor: 'kimi' as const,
-    model: 'kimi-k2.6',
+    vendor: 'openai' as const,
+    model: 'gpt-4o',
     systemPrompt: REPORT_SYSTEM_PROMPT,
     userPrompt: canonicalUserPrompt,
     responseFormat: 'json_object' as const,

@@ -142,8 +142,8 @@ export const FIXTURE_CANONICALS = {
    * via `pnpm --filter @harpa/ai-fixtures exec tsx scripts/refresh-hashes.ts`.
    */
   report: {
-    vendor: 'kimi' as Vendor,
-    model: 'kimi-k2.6',
+    vendor: 'openai' as Vendor,
+    model: 'gpt-4o',
     systemPrompt: REPORT_SYSTEM_PROMPT,
     // Distinct system prompt for the *update* path. See
     // REPORT_UPDATE_SYSTEM_PROMPT — instructs the model to preserve
@@ -477,10 +477,11 @@ export async function generateReport(input: GenerateReportInput): Promise<Genera
   // live and replay modes:
   //   - replay: the fixture hash was recorded with canonicals.vendor,
   //     so the provider MUST match for the hash to land.
-  //   - live:   `canonicalModel` is vendor-specific (e.g. `kimi-k2.6`);
-  //     routing it to the caller's `settings.vendor` (which defaults to
-  //     `openai`) sends a Kimi model name to OpenAI and 502s with
-  //     `[ai-fixtures:openai] HTTP 404`. See docs/bugs/2026-05-29-report-vendor-canonical-mismatch.md.
+  //   - live:   `canonicalModel` is vendor-specific (e.g. `gpt-4o`);
+  //     routing it to the caller's `settings.vendor` (which may differ
+  //     from `canonicals.vendor`) can send an OpenAI model name to Kimi
+  //     and 502 with `[ai-fixtures:kimi] HTTP 404`. See
+  //     docs/bugs/2026-05-29-report-vendor-canonical-mismatch.md.
   // The caller-supplied `input.vendor` is preserved on the response (so
   // the Debug tab still shows what the user picked) but is intentionally
   // not honoured for routing until per-vendor canonical models exist.

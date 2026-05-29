@@ -17,7 +17,7 @@ export default defineConfig({
     include: ['src/**/*.live.test.ts'],
     // Real network calls — give the provider plenty of room and
     // run files serially so we don't burn rate limit.
-    testTimeout: 180_000,
+    testTimeout: 60_000,
     hookTimeout: 30_000,
     fileParallelism: false,
   },

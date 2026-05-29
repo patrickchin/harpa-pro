@@ -473,10 +473,18 @@ export async function generateReport(input: GenerateReportInput): Promise<Genera
     canonicals.defaultScenario;
   const fixtureName = input.fixtureName ?? canonicals.name(scenario);
 
-  // In replay mode the fixture hash was recorded with canonicals.vendor,
-  // so the provider MUST use that vendor for the hash to match regardless
-  // of what the caller's user-settings resolve to.
-  const providerVendor: Vendor = mode === 'replay' ? canonicals.vendor : vendor;
+  // Reports are pinned to canonicals.vendor / canonicalModel in BOTH
+  // live and replay modes:
+  //   - replay: the fixture hash was recorded with canonicals.vendor,
+  //     so the provider MUST match for the hash to land.
+  //   - live:   `canonicalModel` is vendor-specific (e.g. `kimi-k2-0520`);
+  //     routing it to the caller's `settings.vendor` (which defaults to
+  //     `openai`) sends a Kimi model name to OpenAI and 502s with
+  //     `[ai-fixtures:openai] HTTP 404`. See docs/bugs/2026-05-29-report-vendor-canonical-mismatch.md.
+  // The caller-supplied `input.vendor` is preserved on the response (so
+  // the Debug tab still shows what the user picked) but is intentionally
+  // not honoured for routing until per-vendor canonical models exist.
+  const providerVendor: Vendor = canonicals.vendor;
 
   // Build the LIVE user prompt — what we'd send the real provider.
   // In replay mode this is overridden with the canonical string so the
@@ -518,7 +526,7 @@ export async function generateReport(input: GenerateReportInput): Promise<Genera
   const provider = buildProviderWithMode(providerVendor, fixtureName, mode);
   const out = await withUsageAccounting(
     input.usageContext,
-    { vendor, model: req.model, operation: 'generate_report', fixtureMode: mode },
+    { vendor: providerVendor, model: req.model, operation: 'generate_report', fixtureMode: mode },
     'generateReport',
     () => provider.chat(req),
   );
@@ -555,7 +563,10 @@ export async function generateReport(input: GenerateReportInput): Promise<Genera
     // matches) — but that's not what we want operators to see.
     userPrompt: liveUserPrompt.length > 0 ? liveUserPrompt : req.userPrompt,
     model: req.model,
-    vendor,
+    // Report the vendor we actually routed to, not the caller's
+    // preference — they may differ while reports are pinned to the
+    // canonical vendor (see providerVendor above).
+    vendor: providerVendor,
     fixtureMode: mode,
   };
 }

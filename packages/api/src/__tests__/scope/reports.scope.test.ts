@@ -265,3 +265,77 @@ describe('scope: reports AI/PDF', () => {
     expect(get.status).toBe(404);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Pitfall 6: notes_changed_at scope pair — per-request RLS must prevent
+// a non-member from stamping another user's report dirty.
+// ---------------------------------------------------------------------------
+describe('scope: notes_changed_at', () => {
+  it('owner note mutation stamps notes_changed_at on their report', async () => {
+    const app = createApp();
+    const tok = await signTestToken(alice, aliceSid);
+    // Reset dirty state and ensure status=draft (the finalize test above
+    // may have changed it) so the assertion is meaningful.
+    const conn = await getPool().connect();
+    try {
+      await conn.query(
+        `UPDATE app.reports SET notes_changed_at = NULL, status = 'draft' WHERE id = $1`,
+        [aliceReport],
+      );
+    } finally {
+      conn.release();
+    }
+    const res = await app.request(`/reports/${aliceReport}/notes`, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${tok}`, 'content-type': 'application/json' },
+      body: JSON.stringify({ kind: 'text', body: 'scope stamp test' }),
+    });
+    expect(res.status).toBe(201);
+    const verify = await getPool().connect();
+    try {
+      const r = await verify.query<{ notes_changed_at: Date | null }>(
+        `SELECT notes_changed_at FROM app.reports WHERE id = $1`,
+        [aliceReport],
+      );
+      expect(r.rows[0]?.notes_changed_at).not.toBeNull();
+    } finally {
+      verify.release();
+    }
+  });
+
+  it('non-member cannot stamp notes_changed_at on another project report', async () => {
+    const app = createApp();
+    const tok = await signTestToken(alice, aliceSid);
+    // Capture current notes_changed_at for bob's report.
+    const before = await getPool().connect();
+    let beforeTs: Date | null = null;
+    try {
+      const r = await before.query<{ notes_changed_at: Date | null }>(
+        `SELECT notes_changed_at FROM app.reports WHERE id = $1`,
+        [bobReport],
+      );
+      beforeTs = r.rows[0]?.notes_changed_at ?? null;
+    } finally {
+      before.release();
+    }
+    // Alice attempts to create a note against bob's report — RLS must reject.
+    const res = await app.request(`/reports/${bobReport}/notes`, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${tok}`, 'content-type': 'application/json' },
+      body: JSON.stringify({ kind: 'text', body: 'cross-scope attack' }),
+    });
+    expect(res.status).toBe(404);
+    // notes_changed_at on bob's report must remain unchanged.
+    const after = await getPool().connect();
+    try {
+      const r = await after.query<{ notes_changed_at: Date | null }>(
+        `SELECT notes_changed_at FROM app.reports WHERE id = $1`,
+        [bobReport],
+      );
+      const afterTs = r.rows[0]?.notes_changed_at ?? null;
+      expect(afterTs?.toISOString() ?? null).toBe(beforeTs?.toISOString() ?? null);
+    } finally {
+      after.release();
+    }
+  });
+});

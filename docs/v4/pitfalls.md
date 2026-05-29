@@ -535,6 +535,28 @@ selection. See `apps/mobile/components/notes/NoteTimeline.test.tsx`.
 
 ---
 
+## Pitfall 19 — Timer-based regen polls waste battery and drift from truth
+
+**What happened.** Early designs proposed a periodic timer that polls
+the server and regenerates if notes have changed. Timers fire
+regardless of actual state (waste), create UX jank if the AI call
+lands while the user is reading, and are hard to test (timing
+non-determinism).
+
+**Rule.** Use the DB-backed `needsRegeneration` flag exposed in the
+report contract. The flag is set server-side by note CRUD (not by a
+timer or a mobile counter); mobile reads it on every React Query
+refetch and fires the hook exactly once. Manual body edits do NOT
+touch `notes_changed_at` so they never trigger auto-regen.
+
+**Test rule.** The `useAutoRegenerate` hook has 6 unit tests (all
+gate conditions) plus a default-wiring screen test that renders the
+provider and asserts the action-row state without stubbing the hook.
+See `apps/mobile/features/generate/useAutoRegenerate.test.tsx` and
+`apps/mobile/screens/generate-report-tab.test.tsx`.
+
+---
+
 ## How we use this doc
 
 When you finish a task and notice the bug shape matches one of these

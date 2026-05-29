@@ -142,8 +142,8 @@ export const FIXTURE_CANONICALS = {
    * via `pnpm --filter @harpa/ai-fixtures exec tsx scripts/refresh-hashes.ts`.
    */
   report: {
-    vendor: 'openai' as Vendor,
-    model: 'gpt-4o',
+    vendor: 'kimi' as Vendor,
+    model: 'kimi-k2-0520',
     systemPrompt: REPORT_SYSTEM_PROMPT,
     // Distinct system prompt for the *update* path. See
     // REPORT_UPDATE_SYSTEM_PROMPT — instructs the model to preserve
@@ -473,6 +473,11 @@ export async function generateReport(input: GenerateReportInput): Promise<Genera
     canonicals.defaultScenario;
   const fixtureName = input.fixtureName ?? canonicals.name(scenario);
 
+  // In replay mode the fixture hash was recorded with canonicals.vendor,
+  // so the provider MUST use that vendor for the hash to match regardless
+  // of what the caller's user-settings resolve to.
+  const providerVendor: Vendor = mode === 'replay' ? canonicals.vendor : vendor;
+
   // Build the LIVE user prompt — what we'd send the real provider.
   // In replay mode this is overridden with the canonical string so the
   // request hash matches the recorded fixture, but it's still surfaced
@@ -510,7 +515,7 @@ export async function generateReport(input: GenerateReportInput): Promise<Genera
           responseFormat: 'json_object' as const,
         };
 
-  const provider = buildProviderWithMode(vendor, fixtureName, mode);
+  const provider = buildProviderWithMode(providerVendor, fixtureName, mode);
   const out = await withUsageAccounting(
     input.usageContext,
     { vendor, model: req.model, operation: 'generate_report', fixtureMode: mode },

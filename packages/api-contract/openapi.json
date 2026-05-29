@@ -4003,9 +4003,16 @@
                             "type": "integer",
                             "minimum": 0
                           },
+                          "notesChangedAt": {
+                            "type": "string",
+                            "nullable": true
+                          },
                           "generatedAt": {
                             "type": "string",
                             "nullable": true
+                          },
+                          "needsRegeneration": {
+                            "type": "boolean"
                           },
                           "finalizedAt": {
                             "type": "string",
@@ -4030,7 +4037,9 @@
                           "visitDate",
                           "body",
                           "notesSinceLastGeneration",
+                          "notesChangedAt",
                           "generatedAt",
+                          "needsRegeneration",
                           "finalizedAt",
                           "pdfUrl",
                           "createdAt",
@@ -4396,9 +4405,16 @@
                       "type": "integer",
                       "minimum": 0
                     },
+                    "notesChangedAt": {
+                      "type": "string",
+                      "nullable": true
+                    },
                     "generatedAt": {
                       "type": "string",
                       "nullable": true
+                    },
+                    "needsRegeneration": {
+                      "type": "boolean"
                     },
                     "finalizedAt": {
                       "type": "string",
@@ -4423,7 +4439,9 @@
                     "visitDate",
                     "body",
                     "notesSinceLastGeneration",
+                    "notesChangedAt",
                     "generatedAt",
+                    "needsRegeneration",
                     "finalizedAt",
                     "pdfUrl",
                     "createdAt",
@@ -4810,9 +4828,16 @@
                       "type": "integer",
                       "minimum": 0
                     },
+                    "notesChangedAt": {
+                      "type": "string",
+                      "nullable": true
+                    },
                     "generatedAt": {
                       "type": "string",
                       "nullable": true
+                    },
+                    "needsRegeneration": {
+                      "type": "boolean"
                     },
                     "finalizedAt": {
                       "type": "string",
@@ -4837,7 +4862,9 @@
                     "visitDate",
                     "body",
                     "notesSinceLastGeneration",
+                    "notesChangedAt",
                     "generatedAt",
+                    "needsRegeneration",
                     "finalizedAt",
                     "pdfUrl",
                     "createdAt",
@@ -5400,9 +5427,16 @@
                       "type": "integer",
                       "minimum": 0
                     },
+                    "notesChangedAt": {
+                      "type": "string",
+                      "nullable": true
+                    },
                     "generatedAt": {
                       "type": "string",
                       "nullable": true
+                    },
+                    "needsRegeneration": {
+                      "type": "boolean"
                     },
                     "finalizedAt": {
                       "type": "string",
@@ -5427,7 +5461,9 @@
                     "visitDate",
                     "body",
                     "notesSinceLastGeneration",
+                    "notesChangedAt",
                     "generatedAt",
+                    "needsRegeneration",
                     "finalizedAt",
                     "pdfUrl",
                     "createdAt",
@@ -6225,9 +6261,16 @@
                           "type": "integer",
                           "minimum": 0
                         },
+                        "notesChangedAt": {
+                          "type": "string",
+                          "nullable": true
+                        },
                         "generatedAt": {
                           "type": "string",
                           "nullable": true
+                        },
+                        "needsRegeneration": {
+                          "type": "boolean"
                         },
                         "finalizedAt": {
                           "type": "string",
@@ -6252,7 +6295,9 @@
                         "visitDate",
                         "body",
                         "notesSinceLastGeneration",
+                        "notesChangedAt",
                         "generatedAt",
+                        "needsRegeneration",
                         "finalizedAt",
                         "pdfUrl",
                         "createdAt",
@@ -6756,9 +6801,16 @@
                           "type": "integer",
                           "minimum": 0
                         },
+                        "notesChangedAt": {
+                          "type": "string",
+                          "nullable": true
+                        },
                         "generatedAt": {
                           "type": "string",
                           "nullable": true
+                        },
+                        "needsRegeneration": {
+                          "type": "boolean"
                         },
                         "finalizedAt": {
                           "type": "string",
@@ -6783,7 +6835,9 @@
                         "visitDate",
                         "body",
                         "notesSinceLastGeneration",
+                        "notesChangedAt",
                         "generatedAt",
+                        "needsRegeneration",
                         "finalizedAt",
                         "pdfUrl",
                         "createdAt",
@@ -7270,9 +7324,16 @@
                           "type": "integer",
                           "minimum": 0
                         },
+                        "notesChangedAt": {
+                          "type": "string",
+                          "nullable": true
+                        },
                         "generatedAt": {
                           "type": "string",
                           "nullable": true
+                        },
+                        "needsRegeneration": {
+                          "type": "boolean"
                         },
                         "finalizedAt": {
                           "type": "string",
@@ -7297,7 +7358,9 @@
                         "visitDate",
                         "body",
                         "notesSinceLastGeneration",
+                        "notesChangedAt",
                         "generatedAt",
+                        "needsRegeneration",
                         "finalizedAt",
                         "pdfUrl",
                         "createdAt",
@@ -7692,9 +7755,16 @@
                           "type": "integer",
                           "minimum": 0
                         },
+                        "notesChangedAt": {
+                          "type": "string",
+                          "nullable": true
+                        },
                         "generatedAt": {
                           "type": "string",
                           "nullable": true
+                        },
+                        "needsRegeneration": {
+                          "type": "boolean"
                         },
                         "finalizedAt": {
                           "type": "string",
@@ -7719,7 +7789,9 @@
                         "visitDate",
                         "body",
                         "notesSinceLastGeneration",
+                        "notesChangedAt",
                         "generatedAt",
+                        "needsRegeneration",
                         "finalizedAt",
                         "pdfUrl",
                         "createdAt",

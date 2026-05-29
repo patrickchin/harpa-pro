@@ -113,6 +113,7 @@ flowchart TB
 | 13 | **Maestro full regression** | [design-maestro-full-regression.md](design-maestro-full-regression.md) | **P4.8 two-actor nightly E2E journey: members permissions, voice/photo/text notes, generate/finalize, Report Debug surface** |
 | 14 | **Usage limits** | [arch-usage-limits.md](arch-usage-limits.md) | **Per-account monthly caps: plan model (free/pro/enterprise) + admin overrides, `enforceUsageLimit` chokepoint, 403 `usage_limit_exceeded` envelope, mobile dialog + near-limit toast** |
 | 15 | **Batch photo notes** | [arch-batch-photo-notes.md](arch-batch-photo-notes.md) | **One note → many photos; `note_files` join table, upload batch coordinator, `PhotoBatchGrid` UI** |
+| 16 | **Report auto-regen** | [arch-report-auto-regen.md](arch-report-auto-regen.md) | **DB-driven dirty flag (`notes_changed_at > generated_at`), race-safe snapshot semantic, mobile `useAutoRegenerate` hook** |
 
 ## Repo layout (target end of P0)
 

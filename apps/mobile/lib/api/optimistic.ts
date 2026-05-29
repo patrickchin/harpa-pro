@@ -362,6 +362,8 @@ export function useOptimisticCreateReport() {
         visitDate: vars.body?.visitDate ?? null,
         body: null,
         notesSinceLastGeneration: 0,
+        notesChangedAt: null,
+        needsRegeneration: false,
         generatedAt: null,
         finalizedAt: null,
         pdfUrl: null,

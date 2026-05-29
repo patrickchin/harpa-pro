@@ -51,6 +51,7 @@ import type { GeneratedSiteReport } from '@harpa/report-core';
 import { reports } from '@harpa/api-contract';
 import { SAMPLE_GENERATED_REPORT } from '@/lib/dev-fixtures/sample-report';
 import { reportBodyToGeneratedReport } from '@/lib/reports/report-body-adapter';
+import { useAutoRegenerate } from '@/features/generate/useAutoRegenerate';
 import { safeBack } from '@/lib/nav/safe-back';
 import { UsageLimitDialog } from '@/components/account/UsageLimitDialog';
 import { usageLimitFromError, type UsageLimitDetails } from '@/lib/api/usage-limit-error';
@@ -160,6 +161,7 @@ export default function GenerateReportRoute() {
         body?: reports.ReportBody | null;
         status?: 'draft' | 'finalized';
         notesSinceLastGeneration?: number;
+        needsRegeneration?: boolean;
       }
     | undefined;
   const reportId = reportRow?.id ?? null;
@@ -415,6 +417,17 @@ export default function GenerateReportRoute() {
     );
   }, [slug, reportNumber, currentReport, generateMutation, regenerateMutation]);
 
+  // Auto-regenerate when the server signals notes have changed since the
+  // last generation. The hook fires exactly once per dirty transition and
+  // naturally queues a follow-up if a note arrives mid-flight.
+  useAutoRegenerate({
+    needsRegeneration: reportRow?.needsRegeneration ?? false,
+    status: (reportRow?.status as 'draft' | 'finalized') ?? 'draft',
+    isGenerating,
+    generationError,
+    onRegenerate: handleRegenerate,
+  });
+
   const handleFinalize = useCallback(() => {
     if (!slug || reportNumber === null) return;
     setFinalizeError(null);
@@ -588,6 +601,7 @@ export default function GenerateReportRoute() {
         lastGeneration={effectiveLastGeneration}
         onRegenerate={handleRegenerate}
         notesSinceLastGeneration={reportRow?.notesSinceLastGeneration ?? 0}
+        needsRegeneration={reportRow?.needsRegeneration ?? false}
         isAutoSaving={autosave.isAutoSaving || userDirty}
         lastSavedAt={autosave.lastSavedAt}
         isFinalizing={finalizeMutation.isPending}

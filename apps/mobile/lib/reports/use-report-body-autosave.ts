@@ -20,10 +20,11 @@
  * debounced PATCH and, on success, calls `onSaved` so the caller can
  * clear its own dirty flag.
  *
- * `notesSinceLastGeneration` is INTENTIONALLY not reset by manual
- * edits (the API service makes the same guarantee — see
- * `services/reports.ts` updateReport). Manual edits and AI loops are
- * independent.
+ * `needsRegeneration` (and the legacy `notesSinceLastGeneration`) is
+ * INTENTIONALLY not reset by manual edits (the API service makes the
+ * same guarantee — see `services/reports.ts` updateReport). Manual
+ * edits and AI generation loops are independent; only note CRUD flips
+ * the dirty flag.
  */
 import { useEffect, useState } from 'react';
 

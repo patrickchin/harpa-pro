@@ -96,6 +96,24 @@ const NOTE_COLUMNS = sql`id, report_id, author_id, kind, body, file_id,
        thumbnail_file_id, transcript, title, summary, duration_sec, language,
        transcribe_provider, transcribed_at, created_at, updated_at`;
 
+/**
+ * Mark a draft report's notes as changed. Called from every note
+ * mutation (add / delete / edit). No-op on finalized reports
+ * because finalization is an immutable snapshot.
+ *
+ * TODO: when a caption-update route is added for `note_files`,
+ * call this helper from it too.
+ */
+async function bumpNotesChangedAt(db: Db, reportId: string): Promise<void> {
+  await db.execute(sql`
+    UPDATE app.reports
+       SET notes_changed_at = now(),
+           updated_at       = now()
+     WHERE id = ${reportId}
+       AND status = 'draft'
+  `);
+}
+
 export async function listNotes(
   db: Db,
   reportId: string,
@@ -261,6 +279,7 @@ export async function createNote(
         updated_at = now()
     WHERE id = ${reportId}
   `);
+  await bumpNotesChangedAt(db, reportId);
   return mapNote(row, files);
 }
 
@@ -316,6 +335,7 @@ export async function createVoiceNote(
         updated_at = now()
     WHERE id = ${reportId}
   `);
+  await bumpNotesChangedAt(db, reportId);
   return mapNote(row);
 }
 
@@ -352,14 +372,19 @@ export async function updateNote(
     RETURNING ${NOTE_COLUMNS}
   `);
   const row = r.rows[0];
-  return row ? mapNote(row) : null;
+  if (!row) return null;
+  await bumpNotesChangedAt(db, row.report_id);
+  return mapNote(row);
 }
 
 export async function deleteNote(db: Db, noteId: string): Promise<boolean> {
-  const r = await db.execute<{ id: string }>(sql`
-    DELETE FROM app.notes WHERE id = ${noteId} RETURNING id
+  const r = await db.execute<{ id: string; report_id: string }>(sql`
+    DELETE FROM app.notes WHERE id = ${noteId} RETURNING id, report_id
   `);
-  return r.rows.length > 0;
+  const row = r.rows[0];
+  if (!row) return false;
+  await bumpNotesChangedAt(db, row.report_id);
+  return true;
 }
 
 export async function appendFiles(
@@ -391,6 +416,26 @@ export async function appendFiles(
     VALUES ${valuesList}
     RETURNING id, file_id, thumbnail_file_id, position, caption
   `);
+  // Appending photos to a batch note is a note-content mutation and must
+  // flag the report dirty so the auto-regenerator picks it up. Look up
+  // the owning report from the note (single round-trip; appendFiles is
+  // called on the photo-upload-complete path which is already async).
+  const ownerRes = await db.execute<{ report_id: string }>(sql`
+    SELECT report_id FROM app.notes WHERE id = ${noteId}
+  `);
+  const reportId = ownerRes.rows[0]?.report_id;
+  if (reportId) {
+    // Dual-write: keep counter in lockstep with timestamp during the
+    // expand-contract window (see arch-cicd-and-migrations.md §318).
+    await db.execute(sql`
+      UPDATE app.reports
+         SET notes_since_last_generation = notes_since_last_generation + 1,
+             updated_at                  = now()
+       WHERE id = ${reportId}
+         AND status = 'draft'
+    `);
+    await bumpNotesChangedAt(db, reportId);
+  }
   return nfResult.rows.map((nf) => ({
     id: nf.id,
     fileId: nf.file_id,

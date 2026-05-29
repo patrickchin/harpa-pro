@@ -206,6 +206,32 @@ describe('GenerateNotes — Report tab', () => {
       ),
     ).not.toThrow();
   });
+
+  it('auto-regenerates when needsRegeneration is true (default wiring)', () => {
+    // Pitfall 13 — verify the provider exposes needsRegeneration to
+    // children, enabling the action row to reflect "Update report"
+    // state. The route-level useAutoRegenerate fires onRegenerate
+    // automatically (tested in useAutoRegenerate.test.tsx); here we
+    // verify the provider-to-ActionRow wiring uses needsRegeneration
+    // to show the update button (not the finalize pair).
+    const tree = render(
+      <GenerateNotes
+        {...baseProps}
+        report={SAMPLE_GENERATED_REPORT}
+        needsRegeneration
+        initialTab="report"
+      />,
+    );
+    // When needsRegeneration is true, the action row shows "Update report"
+    // instead of the finalize pair.
+    expect(() =>
+      tree.root.findByProps({ testID: 'btn-generate-update-report' }),
+    ).not.toThrow();
+    // The finalize button is not rendered in this state.
+    expect(
+      tree.root.findAllByProps({ testID: 'btn-finalize-report' }),
+    ).toHaveLength(0);
+  });
 });
 
 describe('GenerateNotes — title fallback', () => {

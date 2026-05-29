@@ -1,5 +1,5 @@
 name: ai-live
-# Live-LLM regression lane. Hits real OpenAI (and any other provider
+# Live-LLM regression lane. Hits real Kimi (and any other provider
 # wired into the report path) to catch prompt/schema drift that
 # fixtures cannot detect — see docs/v4/pitfalls.md Pitfall 13 and
 # the entry in docs/bugs/README.md.
@@ -14,7 +14,7 @@ name: ai-live
 #                          Fork PRs are skipped because they cannot
 #                          access secrets.
 #
-# Cost: ~3 short gpt-4o calls per run.
+# Cost: ~3 short kimi-k2-instruct calls per run.
 
 on:
   workflow_dispatch:
@@ -65,9 +65,10 @@ jobs:
         with:
           doppler-token: ${{ secrets.DOPPLER_TOKEN_DEV }}
 
-      - name: Run live-LLM tests against real OpenAI
+      - name: Run live-LLM tests against real Kimi
         env:
           OPENAI_API_KEY: ${{ steps.doppler.outputs.OPENAI_API_KEY }}
+          KIMI_API_KEY: ${{ steps.doppler.outputs.KIMI_API_KEY }}
           GROQ_API_KEY: ${{ steps.doppler.outputs.GROQ_API_KEY }}
         run: pnpm --filter @harpa/api test:live
 

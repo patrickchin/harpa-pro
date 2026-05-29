@@ -333,6 +333,8 @@ type ReportRow = {
   visitDate: string | null;
   body: unknown;
   notesSinceLastGeneration: number;
+  notesChangedAt: string | null;
+  needsRegeneration: boolean;
   generatedAt: string | null;
   finalizedAt: string | null;
   pdfUrl: string | null;
@@ -354,6 +356,8 @@ function seedReport(id: string, number: number): ReportRow {
     visitDate: null,
     body: null,
     notesSinceLastGeneration: 0,
+    notesChangedAt: null,
+    needsRegeneration: false,
     generatedAt: null,
     finalizedAt: t,
     pdfUrl: null,

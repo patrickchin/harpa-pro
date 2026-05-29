@@ -109,6 +109,7 @@ export const reports = appSchema.table(
     visitDate: timestamp('visit_date', { withTimezone: true }),
     body: jsonb('body'),
     notesSinceLastGeneration: integer('notes_since_last_generation').notNull().default(0),
+    notesChangedAt: timestamp('notes_changed_at', { withTimezone: true }),
     generatedAt: timestamp('generated_at', { withTimezone: true }),
     finalizedAt: timestamp('finalized_at', { withTimezone: true }),
     pdfFileId: text('pdf_file_id'),

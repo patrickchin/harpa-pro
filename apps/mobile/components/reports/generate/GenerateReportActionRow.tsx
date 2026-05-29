@@ -7,7 +7,7 @@
  * Generate / Regenerate / Finalize are wired through the provider's
  * `handleRegenerate` + `draft.finalize` — the route owner (real or
  * dev mirror) supplies the actual mutations. The button branches on
- * `hasReport` + `notesSinceLastGeneration` to switch label / layout.
+ * `hasReport` + `needsRegeneration` to switch label / layout.
  */
 import { Text, View } from 'react-native';
 import { RotateCcw, Sparkles } from 'lucide-react-native';
@@ -21,7 +21,7 @@ export function GenerateReportActionRow() {
 
   const hasReport = generation.hasReport;
   const hasNotes = timeline.items.length > 0;
-  const upToDate = hasReport && generation.notesSinceLastGeneration === 0;
+  const upToDate = hasReport && !generation.needsRegeneration;
   // Autosave gates finalize. While `isAutoSaving` is true the local
   // edits haven't been persisted yet; finalizing in that window would
   // lock whatever stale body is on the server. Disable both Finalize
@@ -34,7 +34,7 @@ export function GenerateReportActionRow() {
       ? 'Generating…'
       : !hasReport
         ? 'Generate report'
-        : `Update report (${generation.notesSinceLastGeneration})`;
+        : 'Update report';
 
     return (
       <View className="mx-5 mt-3">

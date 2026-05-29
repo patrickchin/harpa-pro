@@ -92,8 +92,10 @@ export interface GenerateReportProviderProps {
   generationError?: string | null;
   /** Debug payload (prompts + raw response) from last (re)generate. */
   lastGeneration?: GenerationDebug | null;
-  /** Count of notes added since the last successful generation. */
+  /** Count of notes added since the last successful generation. @deprecated Use needsRegeneration. */
   notesSinceLastGeneration?: number;
+  /** True when notes have changed since the last generation. */
+  needsRegeneration?: boolean;
   /** Called when the user taps Retry / Regenerate. */
   onRegenerate?: () => void;
   /**
@@ -266,8 +268,10 @@ interface GenerationSurface {
   isUpdating: boolean;
   /** Latest generation error, or `null`. */
   error: string | null;
-  /** Count of notes added since the last successful generation. */
+  /** Count of notes added since the last successful generation. @deprecated Use needsRegeneration. */
   notesSinceLastGeneration: number;
+  /** True when notes have changed since the last generation. */
+  needsRegeneration: boolean;
   /** True once a report has been generated at least once. */
   hasReport: boolean;
   /**
@@ -414,6 +418,7 @@ export function GenerateReportProvider({
   generationError = null,
   lastGeneration = null,
   notesSinceLastGeneration = 0,
+  needsRegeneration = notesSinceLastGeneration > 0,
   onRegenerate,
   onEditManually,
   onSetReport,
@@ -778,6 +783,7 @@ export function GenerateReportProvider({
         isUpdating: isGeneratingReport,
         error: generationError,
         notesSinceLastGeneration,
+        needsRegeneration,
         hasReport: report !== null,
         lastGeneration,
       },
@@ -859,6 +865,7 @@ export function GenerateReportProvider({
       generationError,
       lastGeneration,
       notesSinceLastGeneration,
+      needsRegeneration,
       isFinalizing,
       isFinalizeConfirmVisible,
       finalizeError,

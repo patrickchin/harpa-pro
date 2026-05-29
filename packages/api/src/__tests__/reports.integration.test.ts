@@ -291,6 +291,79 @@ describe('reports AI/PDF', () => {
     expect(body.report.body.summarySections[0]?.title).toBeTruthy();
   });
 
+  it('regenerate sets generated_at to snapshot value, so a subsequent note bump marks dirty', async () => {
+    // The COALESCE semantic in setReportBody pins generated_at to the
+    // notes_changed_at value captured before the AI call (the snapshot).
+    // If a note is added after generation, notes_changed_at > generated_at.
+    // The true mid-flight race is tested at the service layer in
+    // reports.snapshot.integration.test.ts.
+    const app = createApp();
+    const tok = await signTestToken(alice, aliceSid);
+
+    // Pin notes_changed_at to a known past value.
+    const past = new Date(Date.now() - 60_000).toISOString();
+    const c1 = await getPool().connect();
+    try {
+      await c1.query(
+        `UPDATE app.reports SET notes_changed_at = $1, generated_at = NULL WHERE id = $2`,
+        [past, reportId],
+      );
+    } finally {
+      c1.release();
+    }
+
+    // Regenerate — route captures snapshotTs = past, AI runs, then
+    // setReportBody sets generated_at = past (not now()).
+    const res = await app.request(
+      `/projects/${aliceProjSlug}/reports/${reportNumber}/regenerate`,
+      {
+        method: 'POST',
+        headers: headers(tok),
+        body: JSON.stringify({ fixtureName: 'generate-report.voice-4' }),
+      },
+    );
+    expect(res.status).toBe(200);
+
+    // Verify generated_at was pinned to the snapshot (past), not now().
+    const c2 = await getPool().connect();
+    try {
+      const r = await c2.query<{ generated_at: Date }>(
+        `SELECT generated_at FROM app.reports WHERE id = $1`,
+        [reportId],
+      );
+      const genAt = r.rows[0]!.generated_at.getTime();
+      const pastMs = new Date(past).getTime();
+      expect(genAt).toBe(pastMs);
+    } finally {
+      c2.release();
+    }
+
+    // Simulate a note add after generation — bump notes_changed_at.
+    const future = new Date(Date.now() + 60_000).toISOString();
+    const c3 = await getPool().connect();
+    try {
+      await c3.query(
+        `UPDATE app.reports SET notes_changed_at = $1 WHERE id = $2`,
+        [future, reportId],
+      );
+    } finally {
+      c3.release();
+    }
+
+    // Now notes_changed_at(future) > generated_at(past) → dirty.
+    const c4 = await getPool().connect();
+    try {
+      const r = await c4.query<{ changed_at: Date; generated_at: Date }>(
+        `SELECT notes_changed_at AS changed_at, generated_at FROM app.reports WHERE id = $1`,
+        [reportId],
+      );
+      const row = r.rows[0]!;
+      expect(row.changed_at.getTime()).toBeGreaterThan(row.generated_at.getTime());
+    } finally {
+      c4.release();
+    }
+  });
+
   it('POST /reports/:id/pdf returns a signed URL pointing at the rendered key', async () => {
     const app = createApp();
     const tok = await signTestToken(alice, aliceSid);

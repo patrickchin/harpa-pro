@@ -44,6 +44,7 @@ import {
   finalizeReport,
   unfinalizeReport,
   setReportPdfFileId,
+  toReportResponse,
   type ReportLastGeneration,
   type ReportRow,
 } from '../services/reports.js';
@@ -118,7 +119,7 @@ reportRoutes.openapi(
     const project = await db((d) => getProjectBySlug(d, userId, slug, false));
     if (!project) throw new HTTPException(404, { message: 'Project not found.' });
     const out = await db((d) => listReports(d, { projectId: project.id, cursor: q.cursor, limit: q.limit ?? 20 }));
-    return c.json(out, 200);
+    return c.json({ ...out, items: out.items.map(toReportResponse) }, 200);
   },
 );
 
@@ -151,7 +152,7 @@ reportRoutes.openapi(
     if (!project) throw new HTTPException(404, { message: 'Project not found.' });
     const report = await db((d) => createReport(d, project.id, userId, body));
     if (!report) throw new HTTPException(500, { message: 'create failed' });
-    return c.json(report, 201);
+    return c.json(toReportResponse(report), 201);
   },
 );
 
@@ -175,7 +176,7 @@ reportRoutes.openapi(
     if (!db) throw new HTTPException(401);
     const { project: slug, number } = c.req.valid('param');
     const report = await loadReport(db, slug, number);
-    return c.json(report, 200);
+    return c.json(toReportResponse(report), 200);
   },
 );
 
@@ -247,7 +248,7 @@ reportRoutes.openapi(
     }
     const report = await db((d) => updateReport(d, existing.id, body));
     if (!report) throw new HTTPException(404, { message: 'Report not found.' });
-    return c.json(report, 200);
+    return c.json(toReportResponse(report), 200);
   },
 );
 
@@ -300,8 +301,14 @@ const generateResponses = {
 /**
  * POST /reports/.../generate and /regenerate share an implementation
  * — the difference is intent, not wire shape. Both reject when the
- * report is finalized; both replace `body` and reset
- * `notes_since_last_generation`.
+ * report is finalized; both replace `body` and capture
+ * `notes_changed_at` BEFORE the AI call so a concurrent note bump
+ * landing during the multi-second run remains visible afterwards
+ * (auto-regenerator sees `notes_changed_at > generated_at` and
+ * fires another round). During the expand window the legacy
+ * `notes_since_last_generation` counter is still reset to 0 inside
+ * `setReportBody` so old machines reading the counter see clean
+ * state — see docs/superpowers/specs/2026-05-28-auto-regenerate-reports-design.md.
  *
  * Regenerate ALSO forwards the current `report.body` as `existingBody`
  * so the AI preserves any manual edits the user made in the Edit tab
@@ -324,6 +331,11 @@ async function runGenerate(
   // renders as 403 + structured details. See
   // docs/v4/arch-usage-limits.md §4.
   await db((d) => enforceUsageLimit(d, userId, { kind: 'report_generate' }));
+  // Race-safety snapshot: captured BEFORE the AI call. setReportBody
+  // will set `generated_at = COALESCE(snapshotTs, now())` so any note
+  // bump that lands while AI is running keeps notes_changed_at >
+  // generated_at and the queue-of-one fires another regen.
+  const snapshotTs = report.notesChangedAt;
   const notes = await db((d) => collectNotesForGeneration(d, report.id));
   // Update path: send current body so the model preserves manual
   // edits. First-time generate ignores any stale body (there shouldn't
@@ -354,7 +366,9 @@ async function runGenerate(
     response: out.text,
     usage: null,
   };
-  const updated = await db((d) => setReportBody(d, report.id, out.body, lastGeneration));
+  const updated = await db((d) =>
+    setReportBody(d, report.id, out.body, lastGeneration, snapshotTs),
+  );
   if (!updated) throw new HTTPException(404, { message: 'Report not found.' });
   return {
     report: updated,
@@ -391,7 +405,7 @@ reportRoutes.openapi(
     const settings = await db((d) => getAiSettings(d, userId));
     const result = await runGenerate(db, userId, report, body.fixtureName, settings.vendor, { mode: 'generate' });
     await db((d) => attachUsageWarning(d, userId, (k, v) => c.header(k, v)));
-    return c.json({ report: result.report, debug: result.debug }, 200);
+    return c.json({ report: toReportResponse(result.report), debug: result.debug }, 200);
   },
 );
 
@@ -418,7 +432,7 @@ reportRoutes.openapi(
     const settings = await db((d) => getAiSettings(d, userId));
     const result = await runGenerate(db, userId, report, body.fixtureName, settings.vendor, { mode: 'regenerate' });
     await db((d) => attachUsageWarning(d, userId, (k, v) => c.header(k, v)));
-    return c.json({ report: result.report, debug: result.debug }, 200);
+    return c.json({ report: toReportResponse(result.report), debug: result.debug }, 200);
   },
 );
 
@@ -449,7 +463,7 @@ reportRoutes.openapi(
     }
     const updated = await db((d) => finalizeReport(d, report.id));
     if (!updated) throw new HTTPException(404, { message: 'Report not found.' });
-    return c.json({ report: updated }, 200);
+    return c.json({ report: toReportResponse(updated) }, 200);
   },
 );
 
@@ -486,7 +500,7 @@ reportRoutes.openapi(
     }
     const updated = await db((d) => unfinalizeReport(d, report.id));
     if (!updated) throw new HTTPException(404, { message: 'Report not found.' });
-    return c.json({ report: updated }, 200);
+    return c.json({ report: toReportResponse(updated) }, 200);
   },
 );
 

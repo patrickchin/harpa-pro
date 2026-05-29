@@ -41,7 +41,8 @@ export interface ReportRow {
   status: ReportStatus;
   visitDate: string | null;
   body: ReportBody | null;
-  notesSinceLastGeneration: number;
+  notesSinceLastGeneration: number; // kept for dual-read during expand window
+  notesChangedAt: string | null;
   generatedAt: string | null;
   finalizedAt: string | null;
   pdfUrl: string | null;
@@ -57,7 +58,8 @@ interface RawReport {
   status: ReportStatus;
   visit_date: Date | null;
   body: ReportBody | null;
-  notes_since_last_generation: number;
+  notes_since_last_generation: number; // kept for dual-read during expand window
+  notes_changed_at: Date | null;
   generated_at: Date | null;
   finalized_at: Date | null;
   pdf_file_id: string | null;
@@ -73,13 +75,41 @@ function mapReport(r: RawReport): ReportRow {
     status: r.status,
     visitDate: r.visit_date ? new Date(r.visit_date).toISOString() : null,
     body: r.body,
-    notesSinceLastGeneration: Number(r.notes_since_last_generation),
+    notesSinceLastGeneration: Number(r.notes_since_last_generation), // expand window
+    notesChangedAt: r.notes_changed_at ? new Date(r.notes_changed_at).toISOString() : null,
     generatedAt: r.generated_at ? new Date(r.generated_at).toISOString() : null,
     finalizedAt: r.finalized_at ? new Date(r.finalized_at).toISOString() : null,
     pdfUrl: null, // populated by P1.7 (signed URL minted from pdf_file_id)
     createdAt: new Date(r.created_at).toISOString(),
     updatedAt: new Date(r.updated_at).toISOString(),
   };
+}
+
+/**
+ * Dual-read during the expand window: prefer notes_changed_at when set
+ * (new code path); fall back to the legacy counter for rows not yet
+ * touched by new code. The fallback is removed in the contract PR
+ * that drops notes_since_last_generation.
+ *
+ * Compares ISO-8601 strings directly — lexicographic ordering matches
+ * chronological ordering when both timestamps are UTC ISO (which both
+ * sides of `mapReport` guarantee).
+ */
+export function needsRegenerationOf(report: ReportRow): boolean {
+  if (report.notesChangedAt !== null) {
+    if (report.generatedAt === null) return true;
+    return report.notesChangedAt > report.generatedAt;
+  }
+  return report.notesSinceLastGeneration > 0;
+}
+
+/**
+ * Wire-shape projection of a ReportRow. Adds the contract-derived
+ * `needsRegeneration` boolean so every route returns it consistently.
+ * Use this in routes instead of returning `ReportRow` directly.
+ */
+export function toReportResponse(r: ReportRow): ReportRow & { needsRegeneration: boolean } {
+  return { ...r, needsRegeneration: needsRegenerationOf(r) };
 }
 
 function encodeCursor(createdAt: string, id: string): string {
@@ -109,7 +139,7 @@ export async function listReports(
         const { createdAt, id } = decodeCursor(cursor);
         return db.execute<RawReport>(sql`
           SELECT id, number, project_id, status, visit_date, body,
-                 notes_since_last_generation, generated_at, finalized_at,
+                 notes_since_last_generation, notes_changed_at, generated_at, finalized_at,
                  pdf_file_id, created_at, updated_at
           FROM app.reports
           WHERE project_id = ${projectId}
@@ -120,7 +150,7 @@ export async function listReports(
       })()
     : await db.execute<RawReport>(sql`
         SELECT id, number, project_id, status, visit_date, body,
-               notes_since_last_generation, generated_at, finalized_at,
+               notes_since_last_generation, notes_changed_at, generated_at, finalized_at,
                pdf_file_id, created_at, updated_at
         FROM app.reports
         WHERE project_id = ${projectId}
@@ -142,7 +172,7 @@ export async function listReports(
 export async function getReport(db: Db, reportId: string): Promise<ReportRow | null> {
   const r = await db.execute<RawReport>(sql`
     SELECT id, number, project_id, status, visit_date, body,
-           notes_since_last_generation, generated_at, finalized_at,
+           notes_since_last_generation, notes_changed_at, generated_at, finalized_at,
            pdf_file_id, created_at, updated_at
     FROM app.reports
     WHERE id = ${reportId}
@@ -166,7 +196,7 @@ export async function getReportByProjectSlugAndNumber(
 ): Promise<ReportRow | null> {
   const r = await db.execute<RawReport>(sql`
     SELECT r.id, r.number, r.project_id, r.status, r.visit_date, r.body,
-           r.notes_since_last_generation, r.generated_at, r.finalized_at,
+           r.notes_since_last_generation, r.notes_changed_at, r.generated_at, r.finalized_at,
            r.pdf_file_id, r.created_at, r.updated_at
     FROM app.reports r
     JOIN app.projects p ON p.id = r.project_id
@@ -237,7 +267,7 @@ export async function createReport(
         SELECT ${id}, ${projectId}, ${authorId}, ${input.visitDate ?? null}, a.n
         FROM assigned a
         RETURNING id, number, project_id, status, visit_date, body,
-                  notes_since_last_generation, generated_at, finalized_at,
+                  notes_since_last_generation, notes_changed_at, generated_at, finalized_at,
                   pdf_file_id, created_at, updated_at
       `);
       const row = r.rows[0];
@@ -286,7 +316,7 @@ export async function updateReport(
         updated_at = now()
     WHERE id = ${reportId}
     RETURNING id, number, project_id, status, visit_date, body,
-              notes_since_last_generation, generated_at, finalized_at,
+              notes_since_last_generation, notes_changed_at, generated_at, finalized_at,
               pdf_file_id, created_at, updated_at
   `);
   const row = r.rows[0];
@@ -357,12 +387,22 @@ export async function setReportBody(
   reportId: string,
   body: ReportBody,
   lastGeneration?: ReportLastGeneration,
+  /**
+   * Snapshot of `report.notes_changed_at` taken BEFORE the AI call.
+   * `generated_at` is set to this value (NOT `now()`) so concurrent
+   * note bumps that landed during the multi-second AI call keep
+   * `notes_changed_at > generated_at` and the queue-of-one fires
+   * another regen. Falls back to `now()` when omitted — first-time
+   * generates have no prior snapshot, and manual edits round-trip
+   * through this helper too with no race to defend.
+   */
+  snapshotTs?: string | null,
 ): Promise<ReportRow | null> {
   const lastGenJson = lastGeneration ? JSON.stringify(lastGeneration) : null;
   const r = await db.execute<RawReport>(sql`
     UPDATE app.reports
     SET body = ${JSON.stringify(body)}::jsonb,
-        generated_at = now(),
+        generated_at = COALESCE(${snapshotTs ?? null}::timestamptz, now()),
         notes_since_last_generation = 0,
         last_generation = CASE
           WHEN ${lastGenJson}::text IS NOT NULL THEN ${lastGenJson}::jsonb
@@ -371,7 +411,7 @@ export async function setReportBody(
         updated_at = now()
     WHERE id = ${reportId}
     RETURNING id, number, project_id, status, visit_date, body,
-              notes_since_last_generation, generated_at, finalized_at,
+              notes_since_last_generation, notes_changed_at, generated_at, finalized_at,
               pdf_file_id, created_at, updated_at
   `);
   const row = r.rows[0];
@@ -386,7 +426,7 @@ export async function finalizeReport(db: Db, reportId: string): Promise<ReportRo
         updated_at = now()
     WHERE id = ${reportId}
     RETURNING id, number, project_id, status, visit_date, body,
-              notes_since_last_generation, generated_at, finalized_at,
+              notes_since_last_generation, notes_changed_at, generated_at, finalized_at,
               pdf_file_id, created_at, updated_at
   `);
   const row = r.rows[0];
@@ -409,7 +449,7 @@ export async function unfinalizeReport(db: Db, reportId: string): Promise<Report
     WHERE id = ${reportId}
       AND finalized_at IS NOT NULL
     RETURNING id, number, project_id, status, visit_date, body,
-              notes_since_last_generation, generated_at, finalized_at,
+              notes_since_last_generation, notes_changed_at, generated_at, finalized_at,
               pdf_file_id, created_at, updated_at
   `);
   const row = r.rows[0];
@@ -427,7 +467,7 @@ export async function setReportPdfFileId(
         updated_at = now()
     WHERE id = ${reportId}
     RETURNING id, number, project_id, status, visit_date, body,
-              notes_since_last_generation, generated_at, finalized_at,
+              notes_since_last_generation, notes_changed_at, generated_at, finalized_at,
               pdf_file_id, created_at, updated_at
   `);
   const row = r.rows[0];

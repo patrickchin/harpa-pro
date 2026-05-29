@@ -67,6 +67,7 @@ jobs:
 
       - name: Run live-LLM tests against real Kimi
         env:
+          OPENAI_API_KEY: ${{ steps.doppler.outputs.OPENAI_API_KEY }}
           KIMI_API_KEY: ${{ steps.doppler.outputs.KIMI_API_KEY }}
           GROQ_API_KEY: ${{ steps.doppler.outputs.GROQ_API_KEY }}
         run: pnpm --filter @harpa/api test:live

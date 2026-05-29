@@ -102,7 +102,7 @@ req GET /me/usage '' >/dev/null
 # ── 4. AI settings ───────────────────────────────────────────────────
 
 echo "→ PATCH /settings/ai (set to openai for transcription)"
-req PATCH /settings/ai '{"vendor":"openai"}' >/dev/null
+req PATCH /settings/ai '{"vendor":"openai","model":"gpt-4.1-mini"}' >/dev/null
 
 # ── 5. Create project ────────────────────────────────────────────────
 

@@ -62,17 +62,17 @@ assert_status() {
 }
 
 upload_file() {
-  local kind="$1" ct="$2" path="$3"
+  local kind="$1" ct="$2" path="$3" pid="$4" rid="$5"
   local size; size=$(wc -c < "$path" | tr -d ' ')
   local presign; presign=$(req POST /files/presign \
-    "{\"kind\":\"$kind\",\"contentType\":\"$ct\",\"sizeBytes\":$size}")
+    "{\"scope\":\"project\",\"projectId\":\"$pid\",\"reportId\":\"$rid\",\"kind\":\"$kind\",\"contentType\":\"$ct\",\"sizeBytes\":$size}")
   local upload_url; upload_url=$(echo "$presign" | j .uploadUrl)
   local file_key;   file_key=$(echo "$presign"   | j .fileKey)
   curl -fsS -X PUT "$upload_url" \
     -H "Content-Type: $ct" \
     --data-binary "@$path" >/dev/null
   req POST /files \
-    "{\"kind\":\"$kind\",\"fileKey\":\"$file_key\",\"sizeBytes\":$size,\"contentType\":\"$ct\"}" \
+    "{\"scope\":\"project\",\"projectId\":\"$pid\",\"reportId\":\"$rid\",\"kind\":\"$kind\",\"fileKey\":\"$file_key\",\"sizeBytes\":$size,\"contentType\":\"$ct\"}" \
     | j .id
 }
 
@@ -195,17 +195,17 @@ NID2=$(req POST "/reports/$RID/notes" \
   '{"kind":"text","body":"Rebar inspection passed. Ready for second pour tomorrow."}' | j .id)
 
 echo "→ upload + POST image note"
-IMG_FID=$(upload_file image image/png "$IMG")
+IMG_FID=$(upload_file image image/png "$IMG" "$PID_A" "$RID")
 NID3=$(req POST "/reports/$RID/notes" \
   "{\"kind\":\"image\",\"fileId\":\"$IMG_FID\",\"body\":\"Section B after pour\"}" | j .id)
 
 echo "→ upload + POST document note (PDF)"
-PDF_FID=$(upload_file pdf application/pdf "$PDF_FILE")
+PDF_FID=$(upload_file pdf application/pdf "$PDF_FILE" "$PID_A" "$RID")
 NID4=$(req POST "/reports/$RID/notes" \
   "{\"kind\":\"document\",\"fileId\":\"$PDF_FID\",\"body\":\"Inspection certificate\"}" | j .id)
 
 echo "→ upload + POST voice note (WAV, no transcription)"
-WAV_FID=$(upload_file voice audio/wav "$WAV_FILE")
+WAV_FID=$(upload_file voice audio/wav "$WAV_FILE" "$PID_A" "$RID")
 NID5=$(req POST "/reports/$RID/notes" \
   "{\"kind\":\"voice\",\"fileId\":\"$WAV_FID\"}" | j .id)
 
@@ -215,7 +215,7 @@ echo "  notes created: 5"
 
 if [[ -f "$VOICE_LONG" ]]; then
   echo "→ upload + POST voice note (m4a, real aggregator transcription)"
-  VOICE_LONG_FID=$(upload_file voice audio/mp4 "$VOICE_LONG")
+  VOICE_LONG_FID=$(upload_file voice audio/mp4 "$VOICE_LONG" "$PID_A" "$RID")
   USAGE_BEFORE_LONG=$(req GET /me/usage '')
   CALLS_BEFORE_LONG=$(echo "$USAGE_BEFORE_LONG" | jq -r '.totals.calls // 0')
   set +e
@@ -229,7 +229,7 @@ if [[ -f "$VOICE_LONG" ]]; then
     USAGE_AFTER_LONG=$(req GET /me/usage '')
     CALLS_AFTER_LONG=$(echo "$USAGE_AFTER_LONG" | jq -r '.totals.calls // 0')
     TOKENS_AFTER_LONG=$(echo "$USAGE_AFTER_LONG" | jq -r '(.totals.inputTokens // 0) + (.totals.outputTokens // 0)')
-    echo "  /me/usage: calls $CALLS_BEFORE_LONG→$CALLS_AFTER_LONG tokens=$TOKENS_AFTER_LONG"
+    echo "  /me/usage: calls ${CALLS_BEFORE_LONG}→${CALLS_AFTER_LONG} tokens=$TOKENS_AFTER_LONG"
     if [[ "$CALLS_AFTER_LONG" -le "$CALLS_BEFORE_LONG" ]]; then
       echo "  ✗ /me/usage totals.calls did not increase after long voice aggregator" >&2
       exit 1

@@ -124,7 +124,7 @@ echo "→ PATCH /settings/ai (invalid vendor)"
 assert_status 400 PATCH /settings/ai '{"vendor":"nonexistent_vendor"}'
 
 echo "→ PATCH /settings/ai (valid)"
-req PATCH /settings/ai '{"vendor":"openai"}' >/dev/null
+req PATCH /settings/ai '{"vendor":"openai","model":"gpt-4.1-mini"}' >/dev/null
 echo "  ✓ updated"
 
 # ── 4. Projects + pagination ─────────────────────────────────────────

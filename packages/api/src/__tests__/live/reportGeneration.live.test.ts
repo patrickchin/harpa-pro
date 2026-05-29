@@ -85,6 +85,12 @@ describeOrSkip('generateReport — live OpenAI', () => {
       // ever relaxed.
       expect(result.fixtureMode).toBe('live');
       expect(result.vendor).toBe('openai');
+      // Default wiring: no userVendor/userModel passed → must hit
+      // LIVE_DEFAULT_MODELS.report.model (gpt-4.1-mini). If this
+      // assertion ever drifts to `gpt-4o*` or another model, the
+      // default has silently changed; update LIVE_DEFAULT_MODELS or
+      // the spec, not this assertion.
+      expect(result.model).toBe('gpt-4.1-mini');
       const parsed = reportSchemas.reportBody.safeParse(result.body);
       if (!parsed.success) {
         const issues = parsed.error.issues
@@ -101,6 +107,43 @@ describeOrSkip('generateReport — live OpenAI', () => {
       for (const issue of parsed.data.issues) {
         expect(['low', 'medium', 'high']).toContain(issue.severity);
       }
+    },
+    60_000,
+  );
+
+  it(
+    'honours userModel override (gpt-4.1-nano) when caller passes it',
+    async () => {
+      const result = await generateReport({
+        notes: SCENARIOS[2]!.notes,
+        userVendor: 'openai',
+        userModel: 'gpt-4.1-nano',
+      });
+      expect(result.fixtureMode).toBe('live');
+      expect(result.vendor).toBe('openai');
+      expect(result.model).toBe('gpt-4.1-nano');
+      const parsed = reportSchemas.reportBody.safeParse(result.body);
+      if (!parsed.success) {
+        const issues = parsed.error.issues
+          .map((i) => `${i.path.join('.') || '<root>'}:${i.code}`)
+          .join(', ');
+        throw new Error(`reportBody validation failed: ${issues}`);
+      }
+    },
+    60_000,
+  );
+
+  it(
+    'falls back to LIVE_DEFAULT_MODELS when userVendor/userModel are null',
+    async () => {
+      const result = await generateReport({
+        notes: SCENARIOS[2]!.notes,
+        userVendor: null,
+        userModel: null,
+      });
+      expect(result.fixtureMode).toBe('live');
+      expect(result.vendor).toBe('openai');
+      expect(result.model).toBe('gpt-4.1-mini');
     },
     60_000,
   );

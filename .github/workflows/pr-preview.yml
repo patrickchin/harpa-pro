@@ -46,6 +46,11 @@ jobs:
             fi
           done
           if [[ "$bad" -gt 0 ]]; then exit 1; fi
+          dups=$(ls "$MIG_DIR" | grep -E '\.sql$' | awk -F_ '{print $1}' | sort | uniq -d)
+          if [[ -n "$dups" ]]; then
+            echo "::error::duplicate migration prefix(es): $dups"
+            exit 1
+          fi
 
   branch:
     # Always run on close (delete the branch if it exists). On

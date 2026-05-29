@@ -53,6 +53,11 @@ jobs:
             echo "migration filename lint failed ($bad bad file(s))" >&2
             exit 1
           fi
+          dups=$(ls "$MIG_DIR" | grep -E '\.sql$' | awk -F_ '{print $1}' | sort | uniq -d)
+          if [[ -n "$dups" ]]; then
+            echo "::error::duplicate migration prefix(es): $dups"
+            exit 1
+          fi
           HEAD=$(ls "$MIG_DIR" | grep -E '\.sql$' | sort | tail -1)
           echo "computed MIGRATIONS_REQUIRED_HEAD=$HEAD"
 

@@ -331,6 +331,48 @@ For any schema change, in this order, across **separate PRs**:
 Renames are split into add-new + dual-write + switch-read + drop-old. Never
 a single `ALTER TABLE … RENAME`.
 
+### Renumbering an applied migration
+
+If a migration file was already applied to a long-lived Neon branch
+(e.g. dev) and then renamed in a later commit — typically to break a
+duplicate numeric prefix collision — the migrator on that branch will
+see the new filename as an unapplied file and re-run it. There is no
+built-in way to rename a row in `app._migrations`.
+
+Recovery procedure (run against the affected branch only — never prod
+unless prod also applied the file under its old name):
+
+1. Make the SQL idempotent. Add `IF NOT EXISTS` to the `ADD COLUMN` /
+   `CREATE INDEX` / `CREATE TABLE` so a re-run is a harmless no-op.
+   This is the safety net if step 2 is skipped — the migrator will
+   succeed and `INSERT` the new row, leaving a duplicate "applied"
+   entry but no schema damage.
+2. Patch `app._migrations` out-of-band via `psql`:
+
+   ```sql
+   BEGIN;
+   DO $$
+   BEGIN
+     IF NOT EXISTS (SELECT 1 FROM app._migrations WHERE name = '<old>.sql') THEN
+       RAISE EXCEPTION 'old row missing — wrong DB?';
+     END IF;
+     IF EXISTS (SELECT 1 FROM app._migrations WHERE name = '<new>.sql') THEN
+       RAISE EXCEPTION 'new row already present — already patched?';
+     END IF;
+   END$$;
+   UPDATE app._migrations
+      SET name = '<new>.sql'
+    WHERE name = '<old>.sql';
+   COMMIT;
+   ```
+
+3. Re-run the deploy. The migrator finds `<new>.sql` already recorded
+   and treats it as applied.
+
+The `Lint migration filenames` CI guard rejects duplicate numeric
+prefixes at PR time, so this should be rare. It exists for the case
+where the duplicate slipped through earlier.
+
 The CI guard's "manifest superset" check enforces that an already-shipped
 migration cannot be renamed or deleted — it can only be superseded by a
 later file.

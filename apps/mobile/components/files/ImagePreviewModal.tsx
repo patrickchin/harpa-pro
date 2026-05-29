@@ -170,6 +170,7 @@ function PreviewContent({
     () =>
       Gesture.Pan()
         .enabled(!anyZoomed)
+        .maxPointers(1)
         .activeOffsetY([-15, 15])
         .failOffsetX([-10, 10])
         .onUpdate((e) => {

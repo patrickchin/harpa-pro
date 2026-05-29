@@ -4,9 +4,9 @@
  * server-side override (`{vendor:null, model:null}`) so the API uses
  * its current default model. Other rows pin the user's choice.
  *
- * Pitfall 17 (mobile picker dead-wired): the previous version did
- * AsyncStorage-only and never told the API. Here, the parent's
- * `onSelectModel` is wired to the server via `useAiProvider`. See
+ * The previous version did AsyncStorage-only and never told the API.
+ * Here, the parent's `onSelectModel` is wired to the server via
+ * `useAiProvider`. See
  * docs/bugs/2026-05-29-mobile-model-picker-dead-wired.md.
  */
 import { useState } from 'react';

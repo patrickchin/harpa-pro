@@ -11,10 +11,10 @@
  * back to LIVE_DEFAULT_MODELS (currently gpt-4.1-mini for both
  * report generation and voice summarization).
  *
- * Pitfall 17 (mobile picker dead-wired): the previous version persisted
- * the picked vendor + model to AsyncStorage and never sent them to the
- * API, so /generate quietly ran the server default no matter what the
- * user picked. See docs/bugs/2026-05-29-mobile-model-picker-dead-wired.md.
+ * The previous version persisted the picked vendor + model to
+ * AsyncStorage and never sent them to the API, so /generate quietly
+ * ran the server default no matter what the user picked. See
+ * docs/bugs/2026-05-29-mobile-model-picker-dead-wired.md.
  */
 import { settings as settingsSchemas } from '@harpa/api-contract';
 import { useQueryClient } from '@tanstack/react-query';

@@ -1,4 +1,4 @@
--- 0011_notes_changed_at.sql
+-- 0013_notes_changed_at.sql
 --
 -- Expand-only migration: add `notes_changed_at` to app.reports.
 -- Do NOT backfill in this migration. Do NOT drop

@@ -290,14 +290,21 @@ export function renderFile(f: FileLike): string {
 }
 
 export interface AiSettingsLike {
-  vendor: string;
-  model: string;
+  vendor: string | null;
+  model: string | null;
 }
 
 export function renderAiSettings(s: AiSettingsLike): string {
+  if (s.vendor === null && s.model === null) {
+    return [
+      `${chalk.bold('AI settings')}`,
+      `  Vendor:  ${chalk.dim('(server default)')}`,
+      `  Model:   ${chalk.dim('(server default)')}`,
+    ].join('\n');
+  }
   return [
     `${chalk.bold('AI settings')}`,
-    `  Vendor:  ${s.vendor}`,
-    `  Model:   ${s.model}`,
+    `  Vendor:  ${s.vendor ?? '(server default)'}`,
+    `  Model:   ${s.model ?? '(server default)'}`,
   ].join('\n');
 }

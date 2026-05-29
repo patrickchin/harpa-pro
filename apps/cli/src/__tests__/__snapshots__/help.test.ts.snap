@@ -906,6 +906,10 @@ exports[`command tree (help drift gate) > matches the recorded snapshot 1`] = `
             },
             "set": {
               "args": {
+                "clear": {
+                  "description": "Clear the user override (use server default).",
+                  "type": "boolean",
+                },
                 "json": {
                   "type": "boolean",
                 },
@@ -914,7 +918,7 @@ exports[`command tree (help drift gate) > matches the recorded snapshot 1`] = `
                   "type": "string",
                 },
                 "vendor": {
-                  "description": "One of kimi|openai.",
+                  "description": "One of openai.",
                   "type": "string",
                 },
                 "verbose": {

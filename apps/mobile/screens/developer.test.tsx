@@ -1,12 +1,12 @@
 /**
- * Developer screen body tests — covers the AI provider/model modal
- * flow that previously lived on the Profile screen.
+ * Developer screen body tests — single-step model picker. Default row
+ * clears server overrides; model rows pin a {vendor, model} pair.
  */
 import React from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import TestRenderer, { act } from 'react-test-renderer';
 
-import { Developer, type AiProviderOption } from './developer';
+import { Developer, type AiModelOption } from './developer';
 
 function render(el: React.ReactElement): TestRenderer.ReactTestRenderer {
   let tree!: TestRenderer.ReactTestRenderer;
@@ -16,25 +16,37 @@ function render(el: React.ReactElement): TestRenderer.ReactTestRenderer {
   return tree;
 }
 
-const PROVIDERS: ReadonlyArray<AiProviderOption> = [
-  { key: 'kimi', label: 'Kimi', desc: 'Cheapest' },
-  { key: 'openai', label: 'OpenAI', desc: 'Balanced' },
-];
-
-const MODELS = [
-  { id: 'kimi-k2', label: 'Kimi K2' },
-  { id: 'kimi-thinking', label: 'Kimi Thinking' },
+const MODELS: ReadonlyArray<AiModelOption> = [
+  {
+    id: 'gpt-4.1-nano',
+    label: 'GPT-4.1 nano',
+    tagline: 'Fastest',
+    latencyMs: 2100,
+    costPerReport: 0.0003,
+  },
+  {
+    id: 'gpt-4.1-mini',
+    label: 'GPT-4.1 mini',
+    tagline: 'Default',
+    latencyMs: 4700,
+    costPerReport: 0.001,
+    isDefault: true,
+  },
+  {
+    id: 'gpt-4.1',
+    label: 'GPT-4.1',
+    tagline: 'Highest quality',
+    latencyMs: 2600,
+    costPerReport: 0.006,
+  },
 ];
 
 const defaults = {
   onBack: vi.fn(),
-  aiProviders: PROVIDERS,
-  aiProvider: 'kimi',
-  onSelectProvider: vi.fn(),
   aiModels: MODELS,
-  aiModel: 'kimi-k2',
+  aiSelection: null,
   onSelectModel: vi.fn(),
-  availableProviderKeys: null,
+  isLoadingSelection: false,
   showGenerateDebugTab: true,
   onToggleGenerateDebugTab: vi.fn(),
   showGenerateEditTab: true,
@@ -42,23 +54,25 @@ const defaults = {
 };
 
 describe('Developer', () => {
-  it('opens the AI provider modal when the picker row is pressed', () => {
+  it('opens the AI model modal when the picker row is pressed', () => {
     const tree = render(<Developer {...defaults} />);
     act(() =>
       tree.root.findByProps({ testID: 'btn-open-ai-model' }).props.onPress(),
     );
     expect(() =>
-      tree.root.findByProps({ testID: 'ai-provider-kimi' }),
+      tree.root.findByProps({ testID: 'ai-model-default' }),
+    ).not.toThrow();
+    expect(() =>
+      tree.root.findByProps({ testID: 'ai-model-gpt-4.1-mini' }),
     ).not.toThrow();
   });
 
-  it('advances to the model step on provider select and fires callbacks on model tap', () => {
-    const onSelectProvider = vi.fn();
+  it('selecting the Default row clears the server override (passes null)', () => {
     const onSelectModel = vi.fn();
     const tree = render(
       <Developer
         {...defaults}
-        onSelectProvider={onSelectProvider}
+        aiSelection={{ vendor: 'openai', model: 'gpt-4.1' }}
         onSelectModel={onSelectModel}
       />,
     );
@@ -66,13 +80,32 @@ describe('Developer', () => {
       tree.root.findByProps({ testID: 'btn-open-ai-model' }).props.onPress(),
     );
     act(() =>
-      tree.root.findByProps({ testID: 'ai-provider-openai' }).props.onPress(),
+      tree.root.findByProps({ testID: 'ai-model-default' }).props.onPress(),
     );
-    expect(onSelectProvider).toHaveBeenCalledWith('openai');
+    expect(onSelectModel).toHaveBeenCalledWith(null);
+  });
+
+  it('selecting a model fires onSelectModel with the {vendor, model} pair', () => {
+    const onSelectModel = vi.fn();
+    const tree = render(
+      <Developer {...defaults} onSelectModel={onSelectModel} />,
+    );
     act(() =>
-      tree.root.findByProps({ testID: 'ai-model-kimi-thinking' }).props.onPress(),
+      tree.root.findByProps({ testID: 'btn-open-ai-model' }).props.onPress(),
     );
-    expect(onSelectModel).toHaveBeenCalledWith('kimi-thinking');
+    act(() =>
+      tree.root.findByProps({ testID: 'ai-model-gpt-4.1' }).props.onPress(),
+    );
+    expect(onSelectModel).toHaveBeenCalledWith({
+      vendor: 'openai',
+      model: 'gpt-4.1',
+    });
+  });
+
+  it('renders the loading state when isLoadingSelection is true', () => {
+    const tree = render(<Developer {...defaults} isLoadingSelection />);
+    const summary = tree.root.findByProps({ testID: 'btn-open-ai-model' });
+    expect(summary.props.disabled).toBe(true);
   });
 
   it('fires the toggle callbacks when the developer flags switches are flipped', () => {
@@ -98,5 +131,4 @@ describe('Developer', () => {
     );
     expect(onToggleGenerateEditTab).toHaveBeenCalledWith(false);
   });
-
 });

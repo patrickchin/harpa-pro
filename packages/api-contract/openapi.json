@@ -10972,13 +10972,14 @@
                   "properties": {
                     "vendor": {
                       "type": "string",
+                      "nullable": true,
                       "enum": [
-                        "kimi",
                         "openai"
                       ]
                     },
                     "model": {
-                      "type": "string"
+                      "type": "string",
+                      "nullable": true
                     }
                   },
                   "required": [
@@ -11044,15 +11045,20 @@
                 "properties": {
                   "vendor": {
                     "type": "string",
+                    "nullable": true,
                     "enum": [
-                      "kimi",
                       "openai"
                     ]
                   },
                   "model": {
-                    "type": "string"
+                    "type": "string",
+                    "nullable": true
                   }
-                }
+                },
+                "required": [
+                  "vendor",
+                  "model"
+                ]
               }
             }
           }
@@ -11067,13 +11073,14 @@
                   "properties": {
                     "vendor": {
                       "type": "string",
+                      "nullable": true,
                       "enum": [
-                        "kimi",
                         "openai"
                       ]
                     },
                     "model": {
-                      "type": "string"
+                      "type": "string",
+                      "nullable": true
                     }
                   },
                   "required": [

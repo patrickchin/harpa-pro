@@ -158,6 +158,24 @@ export const FIXTURE_CANONICALS = {
 } as const;
 
 /**
+ * Live-mode model defaults — used when the caller has not picked a
+ * specific model. Distinct from `FIXTURE_CANONICALS` because:
+ *   - `FIXTURE_CANONICALS` pins replay-hash fields and MUST match the
+ *     vendor/model embedded in checked-in fixture JSON files.
+ *   - `LIVE_DEFAULT_MODELS` is what we'd actually like to send to the
+ *     real provider when nothing else is specified. Bumping it does
+ *     not require re-recording fixtures.
+ *
+ * Both default to the same model today (gpt-4.1-mini) — chosen for the
+ * 4o-class quality at ~10× lower cost. The indirection lets us roll
+ * one forward without a fixture refresh.
+ */
+export const LIVE_DEFAULT_MODELS = {
+  report: { vendor: 'openai' as Vendor, model: 'gpt-4.1-mini' },
+  summarize: { vendor: 'openai' as Vendor, model: 'gpt-4.1-mini' },
+} as const;
+
+/**
  * Resolve a caller-supplied fixture name to a scenario key. Returns
  * `null` if the name does not match a known scenario suffix — callers
  * fall back to the default scenario for prompt normalisation, which
@@ -359,6 +377,14 @@ export interface SummarizeInput {
    * OpenAI fixtures covers every scenario in replay mode).
    */
   vendor?: Vendor;
+  /**
+   * User-selected provider override (live mode only). When set, takes
+   * precedence over `LIVE_DEFAULT_MODELS.summarize` and `input.model`.
+   * Ignored in replay because fixture hashes are pinned to
+   * `FIXTURE_CANONICALS.summarize`.
+   */
+  userVendor?: Vendor | null;
+  userModel?: string | null;
   usageContext?: LlmUsageContext;
 }
 
@@ -369,13 +395,21 @@ export interface SummarizeOutput {
 }
 
 export async function summarize(input: SummarizeInput): Promise<SummarizeOutput> {
-  const vendor: Vendor = input.vendor ?? FIXTURE_CANONICALS.summarize.vendor;
   const mode = pickMode(input.fixtureName);
   const scenario =
     (input.fixtureName ? scenarioFromName(input.fixtureName) : null) ??
     FIXTURE_CANONICALS.summarize.defaultScenario;
   const fixtureName =
     input.fixtureName ?? FIXTURE_CANONICALS.summarize.name(scenario);
+
+  // Replay must use canonicals so the recorded hash matches.
+  // Live: user pick > caller default > LIVE_DEFAULT_MODELS.
+  const vendor: Vendor =
+    mode === 'replay'
+      ? FIXTURE_CANONICALS.summarize.vendor
+      : input.userVendor ?? input.vendor ?? LIVE_DEFAULT_MODELS.summarize.vendor;
+  const liveModel =
+    input.userModel ?? input.model ?? LIVE_DEFAULT_MODELS.summarize.model;
   const canonicalModel = FIXTURE_CANONICALS.summarize.model;
   const req =
     mode === 'replay'
@@ -385,7 +419,7 @@ export async function summarize(input: SummarizeInput): Promise<SummarizeOutput>
           userPrompt: FIXTURE_CANONICALS.summarize.userPrompt(scenario),
         }
       : {
-          model: input.model ?? canonicalModel,
+          model: liveModel,
           systemPrompt: input.systemPrompt,
           userPrompt: input.userPrompt,
           temperature: input.temperature,
@@ -434,6 +468,13 @@ export interface GenerateReportInput {
    * `openai`.
    */
   vendor?: Vendor;
+  /**
+   * User-selected provider override (live mode only). When set, takes
+   * precedence over `LIVE_DEFAULT_MODELS.report`. Ignored in replay
+   * because fixture hashes are pinned to `FIXTURE_CANONICALS.report`.
+   */
+  userVendor?: Vendor | null;
+  userModel?: string | null;
   usageContext?: LlmUsageContext;
 }
 
@@ -465,7 +506,6 @@ export interface GenerateReportOutput {
 export async function generateReport(input: GenerateReportInput): Promise<GenerateReportOutput> {
   const canonicals = FIXTURE_CANONICALS.report;
   const vendor: Vendor = input.vendor ?? canonicals.vendor;
-  const canonicalModel = canonicals.model;
   const isUpdate = input.existingBody != null;
   const mode = pickMode(input.fixtureName);
   const scenario =
@@ -473,19 +513,16 @@ export async function generateReport(input: GenerateReportInput): Promise<Genera
     canonicals.defaultScenario;
   const fixtureName = input.fixtureName ?? canonicals.name(scenario);
 
-  // Reports are pinned to canonicals.vendor / canonicalModel in BOTH
-  // live and replay modes:
-  //   - replay: the fixture hash was recorded with canonicals.vendor,
-  //     so the provider MUST match for the hash to land.
-  //   - live:   `canonicalModel` is vendor-specific (e.g. `gpt-4o`);
-  //     routing it to the caller's `settings.vendor` (which may differ
-  //     from `canonicals.vendor`) can send an OpenAI model name to Kimi
-  //     and 502 with `[ai-fixtures:kimi] HTTP 404`. See
-  //     docs/bugs/2026-05-29-report-vendor-canonical-mismatch.md.
-  // The caller-supplied `input.vendor` is preserved on the response (so
-  // the Debug tab still shows what the user picked) but is intentionally
-  // not honoured for routing until per-vendor canonical models exist.
-  const providerVendor: Vendor = canonicals.vendor;
+  // Replay pins canonicals (vendor + model) so the recorded hash
+  // matches. Live picks: user override > LIVE_DEFAULT_MODELS. We
+  // accept the user's vendor+model as a pair — never mix a vendor
+  // with a foreign model name (the v3→v4 bug recorded in
+  // docs/bugs/2026-05-29-report-vendor-canonical-mismatch.md).
+  const providerVendor: Vendor =
+    mode === 'replay'
+      ? canonicals.vendor
+      : input.userVendor ?? LIVE_DEFAULT_MODELS.report.vendor;
+  const liveModel = input.userModel ?? LIVE_DEFAULT_MODELS.report.model;
 
   // Build the LIVE user prompt — what we'd send the real provider.
   // In replay mode this is overridden with the canonical string so the
@@ -508,7 +545,7 @@ export async function generateReport(input: GenerateReportInput): Promise<Genera
   const req =
     mode === 'replay'
       ? {
-          model: canonicalModel,
+          model: canonicals.model,
           systemPrompt: canonicals.systemPrompt,
           // Map the requested fixture name to its recorded canonical user
           // prompt. Unknown names fall through to the default scenario —
@@ -518,7 +555,7 @@ export async function generateReport(input: GenerateReportInput): Promise<Genera
           responseFormat: 'json_object' as const,
         }
       : {
-          model: canonicalModel,
+          model: liveModel,
           systemPrompt: liveSystemPrompt,
           userPrompt: liveUserPrompt,
           responseFormat: 'json_object' as const,

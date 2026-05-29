@@ -1,37 +1,30 @@
 /**
- * Developer route — wires AI provider hooks into the props-only
- * `Developer` body. Lives on its own page so the Profile (settings)
- * screen stays focused on account / usage / sign-out.
+ * Developer route — wires the server-backed `useAiProvider` hook into
+ * the props-only `Developer` body. Picker is single-step (model only)
+ * since the catalogue currently only contains OpenAI; vendor selection
+ * is implicit. See docs/superpowers/plans/2026-05-29-user-model-selection.md.
  */
 import { useRouter } from 'expo-router';
 
 import { Developer } from '@/screens/developer';
-import {
-  AI_PROVIDERS,
-  PROVIDER_MODELS,
-  useAiProvider,
-  useAvailableProviders,
-  type AiProviderKey,
-} from '@/lib/ai/useAiProvider';
+import { AI_MODELS, useAiProvider } from '@/lib/ai/useAiProvider';
 import { useDeveloperFlags } from '@/lib/config/dev-flags';
 import { safeBack } from '@/lib/nav/safe-back';
 
 export default function DeveloperRoute() {
   const router = useRouter();
   const ai = useAiProvider();
-  const availability = useAvailableProviders();
   const devFlags = useDeveloperFlags();
 
   return (
     <Developer
       onBack={() => safeBack(router, '/(app)/profile')}
-      aiProviders={AI_PROVIDERS}
-      aiProvider={ai.provider}
-      onSelectProvider={(key) => ai.setProvider(key as AiProviderKey)}
-      aiModels={PROVIDER_MODELS[ai.provider] ?? []}
-      aiModel={ai.model}
-      onSelectModel={(model) => ai.setModel(model)}
-      availableProviderKeys={availability.availableKeys}
+      aiModels={AI_MODELS.openai}
+      aiSelection={ai.selection}
+      onSelectModel={(next) => {
+        void ai.setSelection(next);
+      }}
+      isLoadingSelection={ai.isLoading}
       showGenerateDebugTab={devFlags.showGenerateDebugTab}
       onToggleGenerateDebugTab={devFlags.setShowGenerateDebugTab}
       showGenerateEditTab={devFlags.showGenerateEditTab}

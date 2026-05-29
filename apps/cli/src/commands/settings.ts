@@ -2,9 +2,12 @@
  * `harpa settings` — user AI provider settings.
  *
  *   harpa settings ai get
- *   harpa settings ai set --vendor <v> --model <m>
+ *   harpa settings ai set --vendor openai --model gpt-4.1-mini
+ *   harpa settings ai set --clear      # clear any user override; use server default
  *
- * Vendor must be one of kimi|openai.
+ * Catalogue lives in `@harpa/api-contract`'s `AI_MODELS`. The
+ * settings row is paired-nullable: `{vendor, model}` are either
+ * both null (= use server default) or both set.
  */
 import { defineCommand } from 'citty';
 import chalk from 'chalk';
@@ -14,9 +17,11 @@ import { executeRequest, runRequest } from '../lib/run.js';
 import { renderAiSettings, type AiSettingsLike } from '../lib/render.js';
 import type { ExitCode } from '../lib/error.js';
 
-export type Vendor = 'kimi' | 'openai';
+export type Vendor = 'openai';
 
-const VENDORS: readonly Vendor[] = ['kimi', 'openai'];
+const VENDORS: readonly Vendor[] = ['openai'];
+
+type SettingsBody = { vendor: Vendor | null; model: string | null };
 
 export interface SettingsHandlerOptions {
   client: ApiClient;
@@ -54,14 +59,17 @@ export const settingsAiGetCommand = defineCommand({
 });
 
 export interface SettingsAiSetArgs extends SettingsHandlerOptions {
+  /** Either pass both `vendor` + `model` to pin a choice, or pass
+   *  `clear: true` to send `{null, null}` (= use server default). */
   vendor?: Vendor;
   model?: string;
+  clear?: boolean;
 }
 
 export function settingsAiSet(args: SettingsAiSetArgs): Promise<ExitCode> {
-  const body: { vendor?: Vendor; model?: string } = {};
-  if (args.vendor) body.vendor = args.vendor;
-  if (args.model) body.model = args.model;
+  const body: SettingsBody = args.clear
+    ? { vendor: null, model: null }
+    : { vendor: args.vendor ?? null, model: args.model ?? null };
   return executeRequest({
     json: args.json,
     verbose: args.verbose,
@@ -88,20 +96,34 @@ export const settingsAiSetCommand = defineCommand({
   args: {
     vendor: { type: 'string', description: `One of ${VENDORS.join('|')}.` },
     model: { type: 'string', description: 'Model identifier.' },
+    clear: {
+      type: 'boolean',
+      description: 'Clear the user override (use server default).',
+    },
     json: { type: 'boolean' },
     verbose: { type: 'boolean' },
   },
   async run({ args }) {
-    if (!args.vendor && !args.model) {
-      process.stderr.write(chalk.red('Error: pass at least one of --vendor / --model.\n'));
-      process.exit(2);
-    }
     const env = getEnv();
     requireToken(env);
     const client = createApiClient(env);
-    const body: { vendor?: Vendor; model?: string } = {};
-    if (args.vendor) body.vendor = parseVendor(String(args.vendor));
-    if (args.model) body.model = String(args.model);
+    let body: SettingsBody;
+    if (args.clear) {
+      body = { vendor: null, model: null };
+    } else {
+      if (!args.vendor || !args.model) {
+        process.stderr.write(
+          chalk.red(
+            'Error: pass both --vendor and --model, or pass --clear to use the server default.\n',
+          ),
+        );
+        process.exit(2);
+      }
+      body = {
+        vendor: parseVendor(String(args.vendor)),
+        model: String(args.model),
+      };
+    }
     await runRequest({
       json: args.json,
       verbose: args.verbose,

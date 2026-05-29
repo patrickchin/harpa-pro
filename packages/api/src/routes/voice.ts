@@ -125,9 +125,9 @@ voiceRoutes.openapi(
     await db((d) => enforceUsageLimit(d, userId, { kind: 'voice_transcribe' }));
     await db((d) => enforceUsageLimit(d, userId, { kind: 'voice_summarize' }));
 
-    // Per-user vendor pref (Pitfall 15).
+    // Per-user model pref (Pitfall 15). User chose vendor+model in
+    // Settings; both null means "use LIVE_DEFAULT_MODELS".
     const settings = await db((d) => getAiSettings(d, userId));
-    const vendor = settings.vendor;
 
     // Usage accounting context — chokepoint records one row per AI
     // call against (userId, projectId, reportId). Same `db` accessor
@@ -150,7 +150,8 @@ voiceRoutes.openapi(
     const summarised = await aiSummarize({
       systemPrompt: voiceSummarySystemPrompt(body.language),
       userPrompt: transcript,
-      vendor,
+      userVendor: settings.vendor,
+      userModel: settings.model,
       // Distinct fixtureName for the chat half so the test harness can
       // pin a per-vendor summarize fixture independently of the
       // transcribe fixture above. Most tests pass nothing and rely on
@@ -251,9 +252,12 @@ voiceRoutes.openapi(
     if (!userId || !db) throw new HTTPException(401);
     const body = c.req.valid('json');
     await db((d) => enforceUsageLimit(d, userId, { kind: 'voice_summarize' }));
+    const settings = await db((d) => getAiSettings(d, userId));
     const out = await aiSummarize({
       systemPrompt: voiceSummarySystemPrompt(),
       userPrompt: body.transcript,
+      userVendor: settings.vendor,
+      userModel: settings.model,
       fixtureName: body.fixtureName,
       usageContext: { db, userId, projectId: null, reportId: null },
     });

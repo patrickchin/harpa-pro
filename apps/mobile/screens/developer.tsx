@@ -1,15 +1,19 @@
 /**
- * Developer screen body — props-only, no API / auth coupling. Owns the
- * AI provider / model picker modal that used to live on the Profile
- * screen. Lives on its own route so the Profile (settings) page can
- * stay focused on account + usage + sign-out.
+ * Developer screen body — props-only, no API / auth coupling. Renders
+ * a single-step AI model picker. The leading "Default" row clears the
+ * server-side override (`{vendor:null, model:null}`) so the API uses
+ * its current default model. Other rows pin the user's choice.
+ *
+ * The previous version did AsyncStorage-only and never told the API.
+ * Here, the parent's `onSelectModel` is wired to the server via
+ * `useAiProvider`. See
+ * docs/bugs/2026-05-29-mobile-model-picker-dead-wired.md.
  */
 import { useState } from 'react';
 import { Modal, Pressable, ScrollView, Switch, Text, View } from 'react-native';
 import {
   Bot,
   Check,
-  ChevronLeft,
   ChevronRight,
   FlaskConical,
   Wrench,
@@ -20,59 +24,67 @@ import { SafeAreaView } from '@/components/primitives/SafeAreaView';
 import { Card } from '@/components/primitives/Card';
 import { ScreenHeader } from '@/components/primitives/ScreenHeader';
 import { colors } from '@/lib/design-tokens/colors';
-
-export interface AiProviderOption {
-  key: string;
-  label: string;
-  desc: string;
-}
+import type { AiSelection } from '@/lib/ai/useAiProvider';
 
 export interface AiModelOption {
-  id: string;
-  label: string;
+  readonly id: string;
+  readonly label: string;
+  readonly tagline?: string;
+  readonly latencyMs?: number;
+  readonly costPerReport?: number;
+  readonly isDefault?: boolean;
 }
 
 export interface DeveloperScreenProps {
   onBack: () => void;
 
-  aiProviders: ReadonlyArray<AiProviderOption>;
-  aiProvider: string;
-  onSelectProvider: (key: string) => void;
+  /** Vendor's model catalogue. The single-step picker iterates these. */
   aiModels: ReadonlyArray<AiModelOption>;
-  aiModel: string;
-  onSelectModel: (modelId: string) => void;
-  /** Set of provider keys with API credentials configured. `null` =
-   * not yet known (treat everything as available). */
-  availableProviderKeys: ReadonlyArray<string> | null;
+  /** `null` = use server default. */
+  aiSelection: AiSelection | null;
+  /** Pass `null` to clear the override back to the server default. */
+  onSelectModel: (next: AiSelection | null) => void;
+  /** True while the initial settings query is in flight. */
+  isLoadingSelection: boolean;
 
   // ── Generate-report tab visibility flags ───────────────────────
-  /** When true, the Debug tab is visible on the Generate Report screen. */
   showGenerateDebugTab: boolean;
   onToggleGenerateDebugTab: (next: boolean) => void;
-  /** When true, the manual Edit tab is visible on the Generate Report screen. */
   showGenerateEditTab: boolean;
   onToggleGenerateEditTab: (next: boolean) => void;
 }
 
+function formatCost(cost: number): string {
+  // costPerReport is USD; show fractional cents for sub-cent prices.
+  if (cost < 0.01) return `${(cost * 100).toFixed(2)}¢/report`;
+  return `$${cost.toFixed(3)}/report`;
+}
+
+function formatLatency(ms: number): string {
+  return `~${(ms / 1000).toFixed(1)}s`;
+}
+
 export function Developer({
   onBack,
-  aiProviders,
-  aiProvider,
-  onSelectProvider,
   aiModels,
-  aiModel,
+  aiSelection,
   onSelectModel,
-  availableProviderKeys,
+  isLoadingSelection,
   showGenerateDebugTab,
   onToggleGenerateDebugTab,
   showGenerateEditTab,
   onToggleGenerateEditTab,
 }: DeveloperScreenProps) {
   const [modalVisible, setModalVisible] = useState(false);
-  const [modalStep, setModalStep] = useState<'provider' | 'model'>('provider');
 
-  const selectedProvider = aiProviders.find((p) => p.key === aiProvider);
-  const selectedModel = aiModels.find((m) => m.id === aiModel) ?? aiModels[0];
+  const defaultEntry = aiModels.find((m) => m.isDefault);
+  const selectedEntry =
+    aiSelection !== null ? aiModels.find((m) => m.id === aiSelection.model) : null;
+
+  const summary =
+    aiSelection === null
+      ? `Default${defaultEntry ? ` · ${defaultEntry.label}` : ''}`
+      : selectedEntry?.label ?? aiSelection.model;
 
   return (
     <SafeAreaView className="flex-1 bg-background" edges={['top']} testID="screen-developer">
@@ -87,23 +99,20 @@ export function Developer({
         <View className="px-5" testID="developer-section">
           <View className="mb-2 flex-row items-center gap-2">
             <Wrench size={16} color={colors.muted.foreground} />
-            <Text className="text-label text-muted-foreground">AI Provider</Text>
+            <Text className="text-label text-muted-foreground">AI Model</Text>
           </View>
 
           <Card className="gap-3">
             <Pressable
               testID="btn-open-ai-model"
-              onPress={() => {
-                setModalStep('provider');
-                setModalVisible(true);
-              }}
+              onPress={() => setModalVisible(true)}
+              disabled={isLoadingSelection}
             >
               <View className="flex-row items-center gap-3">
                 <Bot size={18} color={colors.muted.foreground} />
                 <View className="flex-1">
                   <Text className="text-title-sm text-foreground" selectable>
-                    {selectedProvider?.label ?? 'Select provider'}
-                    {selectedModel ? ` \u00b7 ${selectedModel.label}` : ''}
+                    {isLoadingSelection ? 'Loading…' : summary}
                   </Text>
                   <Text
                     testID="ai-model-id"
@@ -111,7 +120,9 @@ export function Developer({
                     numberOfLines={1}
                     selectable
                   >
-                    {selectedModel?.id ?? selectedProvider?.desc ?? ''}
+                    {aiSelection === null
+                      ? 'Server-managed default'
+                      : aiSelection.model}
                   </Text>
                 </View>
                 <ChevronRight size={16} color={colors.muted.foreground} />
@@ -184,22 +195,9 @@ export function Developer({
               className="bg-background pb-10"
             >
               <View className="flex-row items-center justify-between border-b border-border px-5 py-4">
-                <View className="flex-row items-center gap-2 flex-1">
-                  {modalStep === 'model' && (
-                    <Pressable
-                      testID="btn-ai-modal-back"
-                      onPress={() => setModalStep('provider')}
-                      hitSlop={12}
-                    >
-                      <ChevronLeft size={22} color={colors.muted.foreground} />
-                    </Pressable>
-                  )}
-                  <Text className="text-xl font-bold text-foreground">
-                    {modalStep === 'provider'
-                      ? 'Select AI Provider'
-                      : `Select Model · ${selectedProvider?.label ?? aiProvider}`}
-                  </Text>
-                </View>
+                <Text className="text-xl font-bold text-foreground">
+                  Select AI Model
+                </Text>
                 <Pressable
                   testID="btn-ai-modal-close"
                   onPress={() => setModalVisible(false)}
@@ -208,77 +206,87 @@ export function Developer({
                   <X size={20} color={colors.muted.foreground} />
                 </Pressable>
               </View>
-              {modalStep === 'provider' ? (
-                <View className="px-5 pt-3 gap-2">
-                  {aiProviders.map((p) => {
-                    const isAvailable =
-                      !availableProviderKeys || availableProviderKeys.includes(p.key);
-                    const isSelected = aiProvider === p.key;
-                    return (
-                      <Pressable
-                        key={p.key}
-                        testID={`ai-provider-${p.key}`}
-                        onPress={() => {
-                          if (!isAvailable) return;
-                          onSelectProvider(p.key);
-                          setModalStep('model');
-                        }}
-                        disabled={!isAvailable}
+
+              <View className="px-5 pt-3 gap-2">
+                {/* Leading "Default" row clears any user override. */}
+                <Pressable
+                  testID="ai-model-default"
+                  onPress={() => {
+                    onSelectModel(null);
+                    setModalVisible(false);
+                  }}
+                >
+                  <Card
+                    className={`flex-row items-center gap-3 ${
+                      aiSelection === null ? 'border-primary' : ''
+                    }`}
+                  >
+                    <View className="flex-1">
+                      <Text className="text-lg font-semibold text-foreground">
+                        Default (recommended)
+                      </Text>
+                      <Text className="text-base text-muted-foreground">
+                        Server picks the best model for each request
+                        {defaultEntry ? ` · currently ${defaultEntry.label}` : ''}
+                      </Text>
+                    </View>
+                    {aiSelection === null && (
+                      <Check size={18} color={colors.foreground} />
+                    )}
+                  </Card>
+                </Pressable>
+
+                {aiModels.map((m) => {
+                  const isSelected =
+                    aiSelection !== null && aiSelection.model === m.id;
+                  const meta = [
+                    m.tagline,
+                    m.latencyMs !== undefined ? formatLatency(m.latencyMs) : null,
+                    m.costPerReport !== undefined ? formatCost(m.costPerReport) : null,
+                  ]
+                    .filter(Boolean)
+                    .join(' · ');
+                  return (
+                    <Pressable
+                      key={m.id}
+                      testID={`ai-model-${m.id}`}
+                      onPress={() => {
+                        onSelectModel({ vendor: 'openai', model: m.id });
+                        setModalVisible(false);
+                      }}
+                    >
+                      <Card
+                        className={`flex-row items-center gap-3 ${
+                          isSelected ? 'border-primary' : ''
+                        }`}
                       >
-                        <Card
-                          className={`flex-row items-center gap-3 ${
-                            isSelected ? 'border-primary' : ''
-                          }`}
-                          style={!isAvailable ? { opacity: 0.35 } : undefined}
-                        >
-                          <View className="flex-1">
-                            <Text className="text-lg font-semibold text-foreground">
-                              {p.label}
+                        <View className="flex-1">
+                          <Text
+                            className="text-lg font-semibold text-foreground"
+                            selectable
+                          >
+                            {m.label}
+                          </Text>
+                          <Text
+                            className="text-base text-muted-foreground"
+                            selectable
+                          >
+                            {m.id}
+                          </Text>
+                          {meta ? (
+                            <Text className="text-body text-muted-foreground">
+                              {meta}
                             </Text>
-                            <Text className="text-base text-muted-foreground">
-                              {isAvailable ? p.desc : 'No API key configured'}
-                            </Text>
-                          </View>
-                          {isSelected && <Check size={18} color={colors.foreground} />}
-                          <ChevronRight size={16} color={colors.muted.foreground} />
-                        </Card>
-                      </Pressable>
-                    );
-                  })}
-                </View>
-              ) : (
-                <View className="px-5 pt-3 gap-2">
-                  {aiModels.map((m) => {
-                    const isSelected = aiModel === m.id;
-                    return (
-                      <Pressable
-                        key={m.id}
-                        testID={`ai-model-${m.id}`}
-                        onPress={() => {
-                          onSelectModel(m.id);
-                          setModalVisible(false);
-                        }}
-                      >
-                        <Card
-                          className={`flex-row items-center gap-3 ${
-                            isSelected ? 'border-primary' : ''
-                          }`}
-                        >
-                          <View className="flex-1">
-                            <Text className="text-lg font-semibold text-foreground" selectable>
-                              {m.label}
-                            </Text>
-                            <Text className="text-base text-muted-foreground" selectable>
-                              {m.id}
-                            </Text>
-                          </View>
-                          {isSelected && <Check size={18} color={colors.foreground} />}
-                        </Card>
-                      </Pressable>
-                    );
-                  })}
-                </View>
-              )}
+                          ) : null}
+                        </View>
+                        {isSelected && (
+                          <Check size={18} color={colors.foreground} />
+                        )}
+                      </Card>
+                    </Pressable>
+                  );
+                })}
+              </View>
             </Pressable>
           </Pressable>
         </Modal>

@@ -1,137 +1,78 @@
 /**
- * AI provider + model selection — AsyncStorage round-trip + availability probe.
+ * Server-backed AI model selection.
  *
- * Ported from `../haru3-reports/apps/mobile/hooks/useAiProvider.ts` on
- * branch `dev`. The v3 backend exposed a `generate-report` GET that
- * returned the set of provider keys with API credentials configured.
- * The v4 API does NOT yet expose an equivalent endpoint — `useAvailableProviders`
- * defers to a static "all available" list (NOTE: P4 — wire to a real
- * probe once the API ships `GET /ai/providers`), so the UI stays
- * useful while the backend ships its own probe.
+ * Reads from AND writes to `/settings/ai`. The server is the single
+ * source of truth — AsyncStorage and the dead-wired
+ * `useAvailableProviders` static probe were removed in this rewrite.
+ * Catalogue lives in `@harpa/api-contract`'s `AI_MODELS` constant; this
+ * file only owns the I/O.
  *
- * Persistence rules (match canonical):
- *   - Provider + model are stored in AsyncStorage under stable keys.
- *   - First mount reads both keys; invalid combinations snap to the
- *     provider default. Switching providers also snaps the model if
- *     the current one isn't valid for the new provider.
+ * `selection === null` means the user has not picked — server falls
+ * back to LIVE_DEFAULT_MODELS (currently gpt-4.1-mini for both
+ * report generation and voice summarization).
+ *
+ * The previous version persisted the picked vendor + model to
+ * AsyncStorage and never sent them to the API, so /generate quietly
+ * ran the server default no matter what the user picked. See
+ * docs/bugs/2026-05-29-mobile-model-picker-dead-wired.md.
  */
-import { useCallback, useEffect, useState } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { settings as settingsSchemas } from '@harpa/api-contract';
+import { useQueryClient } from '@tanstack/react-query';
 
-const PROVIDER_STORAGE_KEY = 'harpa.ai_provider.v1';
-const MODEL_STORAGE_KEY = 'harpa.ai_model.v1';
+import {
+  useAiSettingsQuery,
+  useUpdateAiSettingsMutation,
+} from '@/lib/api/hooks';
 
-export const AI_PROVIDERS = [
-  { key: 'kimi', label: 'Kimi', desc: 'Cheapest, good for dev' },
-  { key: 'openai', label: 'OpenAI', desc: 'Balanced quality / price' },
-] as const;
+export const AI_MODELS = settingsSchemas.AI_MODELS;
+export type AiVendor = settingsSchemas.AiVendor;
 
-export type AiProviderKey = (typeof AI_PROVIDERS)[number]['key'];
-
-/**
- * Catalogue of selectable models per provider. First entry is the default.
- * Kept in sync with the canonical v3 catalogue
- * (`hooks/useAiProvider.ts:PROVIDER_MODELS` at `../haru3-reports@dev`).
- */
-export const PROVIDER_MODELS: Record<AiProviderKey, { id: string; label: string }[]> = {
-  kimi: [
-    { id: 'kimi-k2-0905-preview', label: 'Kimi K2 (preview, 0905)' },
-    { id: 'kimi-k2-0711-preview', label: 'Kimi K2 (preview, 0711)' },
-    { id: 'kimi-k2-thinking', label: 'Kimi K2 Thinking' },
-  ],
-  openai: [
-    { id: 'gpt-4o-mini', label: 'GPT-4o mini' },
-    { id: 'gpt-4o', label: 'GPT-4o' },
-    { id: 'gpt-4.1-mini', label: 'GPT-4.1 mini' },
-  ],
-};
-
-export const DEFAULT_PROVIDER: AiProviderKey = 'kimi';
-
-function defaultModelFor(provider: AiProviderKey): string {
-  return PROVIDER_MODELS[provider]?.[0]?.id ?? '';
-}
-
-function isValidModel(provider: AiProviderKey, model: string): boolean {
-  return PROVIDER_MODELS[provider]?.some((m) => m.id === model) ?? false;
-}
-
-function isValidProvider(value: string | null): value is AiProviderKey {
-  return !!value && AI_PROVIDERS.some((p) => p.key === value);
+export interface AiSelection {
+  vendor: AiVendor;
+  model: string;
 }
 
 export interface UseAiProviderApi {
-  provider: AiProviderKey;
-  setProvider: (key: AiProviderKey) => void;
-  model: string;
-  setModel: (modelId: string) => void;
-  /** True once the AsyncStorage round-trip completes. */
-  isLoaded: boolean;
-}
-
-export function useAiProvider(): UseAiProviderApi {
-  const [provider, setProviderState] = useState<AiProviderKey>(DEFAULT_PROVIDER);
-  const [model, setModelState] = useState<string>(() => defaultModelFor(DEFAULT_PROVIDER));
-  const [isLoaded, setIsLoaded] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-    void Promise.all([
-      AsyncStorage.getItem(PROVIDER_STORAGE_KEY),
-      AsyncStorage.getItem(MODEL_STORAGE_KEY),
-    ]).then(([providerVal, modelVal]) => {
-      if (cancelled) return;
-      const validProvider = isValidProvider(providerVal) ? providerVal : DEFAULT_PROVIDER;
-      const validModel =
-        modelVal && isValidModel(validProvider, modelVal)
-          ? modelVal
-          : defaultModelFor(validProvider);
-      setProviderState(validProvider);
-      setModelState(validModel);
-      setIsLoaded(true);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  const setProvider = useCallback((key: AiProviderKey) => {
-    setProviderState(key);
-    void AsyncStorage.setItem(PROVIDER_STORAGE_KEY, key);
-    setModelState((current) => {
-      const next = isValidModel(key, current) ? current : defaultModelFor(key);
-      void AsyncStorage.setItem(MODEL_STORAGE_KEY, next);
-      return next;
-    });
-  }, []);
-
-  const setModel = useCallback((modelId: string) => {
-    setModelState(modelId);
-    void AsyncStorage.setItem(MODEL_STORAGE_KEY, modelId);
-  }, []);
-
-  return { provider, setProvider, model, setModel, isLoaded };
-}
-
-export interface UseAvailableProvidersApi {
-  /** Provider keys with API credentials configured server-side. */
-  availableKeys: ReadonlyArray<AiProviderKey>;
+  /** `null` means "use server default". */
+  selection: AiSelection | null;
+  /** Pass `null` to clear back to default. */
+  setSelection: (next: AiSelection | null) => Promise<void>;
   isLoading: boolean;
+  isUpdating: boolean;
 }
 
 /**
- * Returns the providers the backend has credentials for. Canonical
- * v3 called `GET /generate-report` for this; v4's API does not yet
- * expose an equivalent — until it lands, we default to ALL providers
- * available so the picker stays usable.
- *
- * NOTE (P4): swap the static list for a real `useAvailableProvidersQuery`
- * once the API ships `GET /ai/providers`. Keep the return contract —
- * caller code consumes `availableKeys` as a `ReadonlyArray<AiProviderKey>`.
+ * Convert the server's nullable-pair shape to the client's
+ * `AiSelection | null`. The contract enforces both-null-or-both-set
+ * server side; on the client we treat any half-set row defensively as
+ * null (= use server default) rather than crash.
  */
-export function useAvailableProviders(): UseAvailableProvidersApi {
+function toSelection(
+  raw: { vendor: AiVendor | null; model: string | null } | undefined,
+): AiSelection | null {
+  if (!raw) return null;
+  if (raw.vendor === null || raw.model === null) return null;
+  return { vendor: raw.vendor, model: raw.model };
+}
+
+export function useAiProvider(): UseAiProviderApi {
+  const qc = useQueryClient();
+  const query = useAiSettingsQuery();
+  const mutation = useUpdateAiSettingsMutation({
+    onSuccess: (data) => {
+      // Write through to the cache so the picker reflects the new
+      // selection without a refetch round-trip.
+      qc.setQueryData(['aiSettings', undefined], data);
+    },
+  });
+
   return {
-    availableKeys: AI_PROVIDERS.map((p) => p.key),
-    isLoading: false,
+    selection: toSelection(query.data),
+    setSelection: async (next) => {
+      const body = next ?? { vendor: null, model: null };
+      await mutation.mutateAsync({ body });
+    },
+    isLoading: query.isLoading,
+    isUpdating: mutation.isPending,
   };
 }

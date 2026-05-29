@@ -1,113 +1,156 @@
 /**
- * `useAiProvider` + `useAvailableProviders` behaviour tests.
+ * `useAiProvider` server-backed behaviour tests.
  *
- * Pitfall 13 compliance: AsyncStorage is the integration boundary —
- * we stub the real module with an in-memory map (the project-wide
- * default mock from `vitest.setup.ts`) and exercise the hook through
- * its public API. We do NOT inject a fake storage.
+ * Pitfall 13 compliance: we drive the hook through real
+ * `useGetAiSettingsQuery` + `useUpdateAiSettingsMutation` lifecycles
+ * inside a `QueryClientProvider`. The integration boundary stubbed is
+ * `fetch` — i.e. the wire — so a regression in the request shape or
+ * response handling is caught here.
  */
 import React from 'react';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import TestRenderer, { act } from 'react-test-renderer';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
-import {
-  AI_PROVIDERS,
-  PROVIDER_MODELS,
-  useAiProvider,
-  useAvailableProviders,
-  type UseAiProviderApi,
-  type UseAvailableProvidersApi,
-} from './useAiProvider';
+import { useAiProvider, type UseAiProviderApi } from './useAiProvider';
 
-function flush() {
-  return act(async () => {
-    await Promise.resolve();
-    await Promise.resolve();
+vi.mock('expo-secure-store', () => ({
+  getItemAsync: vi.fn(async () => null),
+  setItemAsync: vi.fn(async () => undefined),
+  deleteItemAsync: vi.fn(async () => undefined),
+}));
+vi.mock('@/lib/api/base-url', () => ({
+  getApiBaseUrl: async () => 'https://api.test.invalid',
+}));
+vi.mock('@/lib/api/auth', () => ({
+  getAuthToken: async () => null,
+  notifyUnauthorized: () => undefined,
+  setAuthTokenGetter: () => undefined,
+  setOnUnauthorizedCallback: () => undefined,
+}));
+
+const mockFetch = vi.fn();
+
+function jsonResponse(status: number, body: unknown): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { 'Content-Type': 'application/json' },
   });
 }
 
-function renderHook<T>(useHook: () => T): { current: { value: T } } {
-  const ref: { value: T } = { value: undefined as unknown as T };
+function makeClient() {
+  return new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
+}
+
+function renderHook<T>(useHook: () => T, qc: QueryClient): { current: T } {
+  const ref: { current: T } = { current: undefined as unknown as T };
   function Probe() {
-    ref.value = useHook();
+    ref.current = useHook();
     return null;
   }
   act(() => {
-    TestRenderer.create(<Probe />);
+    TestRenderer.create(
+      <QueryClientProvider client={qc}>
+        <Probe />
+      </QueryClientProvider>,
+    );
   });
-  return { current: ref };
+  return ref;
 }
 
-beforeEach(async () => {
-  await AsyncStorage.clear();
-  vi.clearAllMocks();
+async function flush() {
+  await act(async () => {
+    await new Promise((r) => setTimeout(r, 50));
+  });
+}
+
+beforeEach(() => {
+  mockFetch.mockReset();
+  globalThis.fetch = mockFetch as unknown as typeof fetch;
 });
 
 describe('useAiProvider', () => {
-  it('defaults to kimi + its first model when AsyncStorage is empty', async () => {
-    const { current } = renderHook(() => useAiProvider());
-    await flush();
-    expect(current.value.provider).toBe('kimi');
-    expect(current.value.model).toBe(PROVIDER_MODELS.kimi[0]!.id);
-    expect(current.value.isLoaded).toBe(true);
-  });
-
-  it('hydrates from AsyncStorage when valid values are stored', async () => {
-    await AsyncStorage.setItem('harpa.ai_provider.v1', 'openai');
-    await AsyncStorage.setItem('harpa.ai_model.v1', 'gpt-4o');
-    const { current } = renderHook(() => useAiProvider());
-    await flush();
-    expect(current.value.provider).toBe('openai');
-    expect(current.value.model).toBe('gpt-4o');
-  });
-
-  it('falls back to the provider default when the stored model is invalid', async () => {
-    await AsyncStorage.setItem('harpa.ai_provider.v1', 'openai');
-    await AsyncStorage.setItem('harpa.ai_model.v1', 'not-a-real-model');
-    const { current } = renderHook(() => useAiProvider());
-    await flush();
-    expect(current.value.provider).toBe('openai');
-    expect(current.value.model).toBe(PROVIDER_MODELS.openai[0]!.id);
-  });
-
-  it('falls back to kimi when the stored provider is unknown', async () => {
-    await AsyncStorage.setItem('harpa.ai_provider.v1', 'totally-made-up');
-    const { current } = renderHook(() => useAiProvider());
-    await flush();
-    expect(current.value.provider).toBe('kimi');
-  });
-
-  it('persists provider + snaps model to default when switching providers', async () => {
-    const { current } = renderHook(() => useAiProvider());
-    await flush();
-    await act(async () => {
-      (current.value as UseAiProviderApi).setProvider('openai');
-    });
-    expect(current.value.provider).toBe('openai');
-    expect(current.value.model).toBe(PROVIDER_MODELS.openai[0]!.id);
-    expect(await AsyncStorage.getItem('harpa.ai_provider.v1')).toBe('openai');
-    expect(await AsyncStorage.getItem('harpa.ai_model.v1')).toBe(
-      PROVIDER_MODELS.openai[0]!.id,
+  it('resolves selection from /settings/ai', async () => {
+    mockFetch.mockResolvedValueOnce(
+      jsonResponse(200, { vendor: 'openai', model: 'gpt-4.1-nano' }),
     );
-  });
-
-  it('persists model selection without changing provider', async () => {
-    const { current } = renderHook(() => useAiProvider());
+    const qc = makeClient();
+    const ref = renderHook(() => useAiProvider(), qc);
+    expect(ref.current.isLoading).toBe(true);
     await flush();
-    await act(async () => {
-      (current.value as UseAiProviderApi).setModel('kimi-k2-thinking');
+    expect(ref.current.isLoading).toBe(false);
+    expect(ref.current.selection).toEqual({
+      vendor: 'openai',
+      model: 'gpt-4.1-nano',
     });
-    expect(current.value.model).toBe('kimi-k2-thinking');
-    expect(await AsyncStorage.getItem('harpa.ai_model.v1')).toBe('kimi-k2-thinking');
   });
-});
 
-describe('useAvailableProviders', () => {
-  it('returns the full provider catalogue as available (static default)', () => {
-    const { current } = renderHook(() => useAvailableProviders());
-    const api = current.value as UseAvailableProvidersApi;
-    expect(api.isLoading).toBe(false);
-    expect(api.availableKeys).toEqual(AI_PROVIDERS.map((p) => p.key));
+  it('selection is null when server returns nulls (the "Default" state)', async () => {
+    mockFetch.mockResolvedValueOnce(
+      jsonResponse(200, { vendor: null, model: null }),
+    );
+    const qc = makeClient();
+    const ref = renderHook(() => useAiProvider(), qc);
+    await flush();
+    expect(ref.current.selection).toBeNull();
+  });
+
+  it('setSelection PATCHes /settings/ai and updates cache', async () => {
+    mockFetch
+      .mockResolvedValueOnce(jsonResponse(200, { vendor: null, model: null }))
+      .mockResolvedValueOnce(
+        jsonResponse(200, { vendor: 'openai', model: 'gpt-4.1' }),
+      )
+      .mockResolvedValueOnce(
+        jsonResponse(200, { vendor: 'openai', model: 'gpt-4.1' }),
+      );
+    const qc = makeClient();
+    const ref = renderHook(() => useAiProvider(), qc);
+    await flush();
+
+    await act(async () => {
+      await (ref.current as UseAiProviderApi).setSelection({
+        vendor: 'openai',
+        model: 'gpt-4.1',
+      });
+    });
+
+    const patchCall = mockFetch.mock.calls.find(
+      (c) => c[1]?.method === 'PATCH',
+    );
+    expect(patchCall).toBeTruthy();
+    expect(JSON.parse(patchCall![1].body as string)).toEqual({
+      vendor: 'openai',
+      model: 'gpt-4.1',
+    });
+    expect(ref.current.selection).toEqual({ vendor: 'openai', model: 'gpt-4.1' });
+  });
+
+  it('setSelection(null) clears the row to {null, null}', async () => {
+    mockFetch
+      .mockResolvedValueOnce(
+        jsonResponse(200, { vendor: 'openai', model: 'gpt-4.1' }),
+      )
+      .mockResolvedValueOnce(jsonResponse(200, { vendor: null, model: null }))
+      .mockResolvedValueOnce(jsonResponse(200, { vendor: null, model: null }));
+    const qc = makeClient();
+    const ref = renderHook(() => useAiProvider(), qc);
+    await flush();
+
+    await act(async () => {
+      await (ref.current as UseAiProviderApi).setSelection(null);
+    });
+    await flush();
+
+    const patchCall = mockFetch.mock.calls.find(
+      (c) => c[1]?.method === 'PATCH',
+    );
+    expect(JSON.parse(patchCall![1].body as string)).toEqual({
+      vendor: null,
+      model: null,
+    });
+    expect(ref.current.selection).toBeNull();
   });
 });

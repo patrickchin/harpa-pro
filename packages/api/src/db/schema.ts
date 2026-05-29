@@ -172,8 +172,8 @@ export const files = appSchema.table('files', {
 
 export const userSettings = appSchema.table('user_settings', {
   userId: text('user_id').primaryKey(),
-  aiVendor: varchar('ai_vendor', { length: 32 }).notNull().default('openai'),
-  aiModel: varchar('ai_model', { length: 64 }).notNull().default('gpt-4o-mini'),
+  aiVendor: varchar('ai_vendor', { length: 32 }),
+  aiModel: varchar('ai_model', { length: 64 }),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 });
 

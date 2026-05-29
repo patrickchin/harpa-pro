@@ -4615,9 +4615,9 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            /** @enum {string} */
-                            vendor: "kimi" | "openai";
-                            model: string;
+                            /** @enum {string|null} */
+                            vendor: "openai" | null;
+                            model: string | null;
                         };
                     };
                 };
@@ -4654,9 +4654,9 @@ export interface paths {
             requestBody?: {
                 content: {
                     "application/json": {
-                        /** @enum {string} */
-                        vendor?: "kimi" | "openai";
-                        model?: string;
+                        /** @enum {string|null} */
+                        vendor: "openai" | null;
+                        model: string | null;
                     };
                 };
             };
@@ -4668,9 +4668,9 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            /** @enum {string} */
-                            vendor: "kimi" | "openai";
-                            model: string;
+                            /** @enum {string|null} */
+                            vendor: "openai" | null;
+                            model: string | null;
                         };
                     };
                 };

@@ -5,7 +5,6 @@ import Animated, {
   runOnJS,
   useAnimatedStyle,
   useSharedValue,
-  withSpring,
   withTiming,
 } from 'react-native-reanimated';
 
@@ -118,10 +117,10 @@ export function ZoomableImage({
 
   const reset = useCallback(() => {
     'worklet';
-    const cfg = { damping: 20, stiffness: 300 };
-    scale.value = withSpring(MIN_SCALE, cfg);
-    translateX.value = withSpring(0, cfg);
-    translateY.value = withSpring(0, cfg);
+    const timing = { duration: 200 };
+    scale.value = withTiming(MIN_SCALE, timing);
+    translateX.value = withTiming(0, timing);
+    translateY.value = withTiming(0, timing);
     maybeReportZoomed(MIN_SCALE);
   }, [maybeReportZoomed, scale, translateX, translateY]);
 

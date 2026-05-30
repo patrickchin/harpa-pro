@@ -48,6 +48,17 @@ description: "Mobile-specific rules for the Expo / NativeWind app. Loads automat
 - **No `setTimeout` in auth flows.** Use the OTP / state machine
   primitives — see Pitfall 12 in `docs/v4/pitfalls.md`.
 
+## Animations
+
+- **No bouncy springs.** Reset / release / dismiss animations must
+  settle without overshoot. Use `withTiming` (typically
+  `{ duration: 150–200 }`) for things like zoom-out, double-tap
+  zoom-out, drag-to-dismiss release, sheet snap-back. Don't use
+  `withSpring` for these — even a "lightly damped" spring reads as
+  excessive bounce on photos and overlays. If a spring is genuinely
+  the right curve (e.g. a deliberate tactile feel), justify it in the
+  PR.
+
 ## Coverage gate
 
 - 80%+ line coverage on `apps/mobile`. Run

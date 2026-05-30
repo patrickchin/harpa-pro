@@ -69,7 +69,9 @@ export function PhotoTile({
   const serverUri = (data as { url?: string } | undefined)?.url ?? null;
 
   const uri = sourceUri ?? serverUri ?? undefined;
-  const cacheKey = attachment.key;
+  // Use the file ID we actually fetched as the cache key so the thumbnail
+  // (thumbnailFileId) is never stored under the full-res key (fileId).
+  const cacheKey = thumbnailFileId ?? fileId ?? attachment.key;
 
   const overlayOpacity = useSharedValue(isPending || isFailed ? 1 : 0);
   useEffect(() => {

@@ -330,10 +330,19 @@ function ImagePreviewBody({
 
   // Track when expo-image has actually downloaded the full-res pixels.
   const [fullImageLoaded, setFullImageLoaded] = useState(!thumbnailFileId);
-  const handleLoad = useCallback(() => {
-    // Only mark loaded when the source is the full-res URL (not thumbnail).
-    if (resolvedUri) setFullImageLoaded(true);
-  }, [resolvedUri]);
+  // Track the loaded image dimensions from expo-image.
+  const [imageSize, setImageSize] = useState<{ w: number; h: number } | null>(null);
+  const handleLoad = useCallback(
+    (e: { source?: { width?: number; height?: number } }) => {
+      if (resolvedUri) {
+        setFullImageLoaded(true);
+        if (e.source?.width && e.source?.height) {
+          setImageSize({ w: e.source.width, h: e.source.height });
+        }
+      }
+    },
+    [resolvedUri],
+  );
 
   // Reset when fileId changes (e.g. swiping between photos in the gallery).
   useEffect(() => {
@@ -342,6 +351,15 @@ function ImagePreviewBody({
 
   // Show spinner while full-res image bytes are still downloading.
   const showLoadingOverlay = Boolean(thumbnailFileId) && !fullImageLoaded;
+
+  // Build the info line for the debug footer.
+  const currentlyShowingThumbnail = !resolvedUri && Boolean(thumbnailUri);
+  const displayedFileId = currentlyShowingThumbnail ? thumbnailFileId : fileId;
+  const resolutionLabel = imageSize
+    ? `${imageSize.w}×${imageSize.h}`
+    : currentlyShowingThumbnail
+      ? '256×256 (thumb)'
+      : null;
 
   if (sourceUri) {
     return (
@@ -377,6 +395,29 @@ function ImagePreviewBody({
             <ActivityIndicator size="large" color={colors.background} />
           </View>
         ) : null}
+        <View
+          style={{
+            position: 'absolute',
+            bottom: 48,
+            left: 0,
+            right: 0,
+            alignItems: 'center',
+          }}
+          pointerEvents="none"
+          testID="image-preview-info-footer"
+        >
+          <View style={{ backgroundColor: 'rgba(0,0,0,0.6)', borderRadius: 4, paddingHorizontal: 8, paddingVertical: 4 }}>
+            <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.7)' }} numberOfLines={1}>
+              {[
+                displayedFileId,
+                resolutionLabel,
+                currentlyShowingThumbnail ? '(thumb)' : null,
+              ]
+                .filter(Boolean)
+                .join(' · ')}
+            </Text>
+          </View>
+        </View>
       </View>
     );
   }

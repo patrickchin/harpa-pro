@@ -25,7 +25,7 @@ export interface ZoomableImageProps {
   contentFit?: 'contain' | 'cover';
   onZoomChange?: (isZoomed: boolean) => void;
   onSingleTap?: () => void;
-  onLoad?: () => void;
+  onLoad?: (event: { source?: { width?: number; height?: number } }) => void;
   accessibilityLabel?: string;
   testID?: string;
 }

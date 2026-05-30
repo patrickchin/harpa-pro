@@ -25,6 +25,7 @@ export interface ZoomableImageProps {
   contentFit?: 'contain' | 'cover';
   onZoomChange?: (isZoomed: boolean) => void;
   onSingleTap?: () => void;
+  onLoad?: (event: { source?: { width?: number; height?: number } }) => void;
   accessibilityLabel?: string;
   testID?: string;
 }
@@ -83,6 +84,7 @@ export function ZoomableImage({
   contentFit = 'contain',
   onZoomChange,
   onSingleTap,
+  onLoad,
   accessibilityLabel,
   testID = 'zoomable-image',
 }: ZoomableImageProps) {
@@ -270,6 +272,7 @@ export function ZoomableImage({
             style={{ width, height }}
             contentFit={contentFit}
             accessibilityLabel={accessibilityLabel}
+            onLoad={onLoad}
             testID={`${testID}-image`}
           />
         </Animated.View>

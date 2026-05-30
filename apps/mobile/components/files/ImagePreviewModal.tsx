@@ -41,6 +41,13 @@ export interface ImagePreviewPhoto {
   cacheKey?: string | null;
 }
 
+interface PhotoInfo {
+  displayedFileId: string | null;
+  resolutionLabel: string | null;
+  fileSizeLabel: string | null;
+  capturedLabel: string | null;
+}
+
 interface ImagePreviewModalProps {
   visible: boolean;
   /** Pre-resolved signed URL (single-image legacy API). */
@@ -162,6 +169,36 @@ function PreviewContent({
     setAnyZoomed(zoomedSet.current.size > 0);
   }, []);
 
+  // Per-page info that the body reports up via onInfo so the parent can
+  // render a single, in-flow footer for the current page.
+  const [infoByIndex, setInfoByIndex] = useState<Record<number, PhotoInfo>>({});
+  const handleInfo = useCallback((index: number, info: PhotoInfo) => {
+    setInfoByIndex((prev) => {
+      const existing = prev[index];
+      if (
+        existing &&
+        existing.displayedFileId === info.displayedFileId &&
+        existing.resolutionLabel === info.resolutionLabel &&
+        existing.fileSizeLabel === info.fileSizeLabel &&
+        existing.capturedLabel === info.capturedLabel
+      ) {
+        return prev;
+      }
+      return { ...prev, [index]: info };
+    });
+  }, []);
+  const currentInfo = infoByIndex[currentIndex];
+  const footerLine = currentInfo
+    ? [
+        currentInfo.displayedFileId,
+        currentInfo.resolutionLabel,
+        currentInfo.fileSizeLabel,
+        currentInfo.capturedLabel,
+      ]
+        .filter(Boolean)
+        .join(' · ')
+    : '';
+
   // --- Drag-to-dismiss gesture (iOS Photos style) ---
   const DISMISS_THRESHOLD = 100;
 
@@ -251,6 +288,7 @@ function PreviewContent({
           <Animated.View style={[{ flex: 1 }, dismissContentStyle]}>
             <PagerView
               initialPage={startIndex}
+              offscreenPageLimit={1}
               scrollEnabled={isGallery && !anyZoomed}
               onPageSelected={(e) => setCurrentIndex(e.nativeEvent.position)}
               style={{ flex: 1 }}
@@ -258,27 +296,53 @@ function PreviewContent({
             >
               {photos.map((item, index) => {
                 const key = item.fileId ?? item.uri ?? `photo-${index}`;
+                // Only render the image body for the current page and its
+                // immediate neighbours. Pages outside this window stay empty
+                // so the user never sees other photos' thumbnails flash by
+                // while PagerView lays out and jumps to `initialPage`.
+                const inWindow = Math.abs(index - currentIndex) <= 1;
                 return (
                   <View
                     key={key}
                     className="flex-1 items-center justify-center"
                   >
-                    <ImagePreviewBody
-                      uri={item.uri ?? null}
-                      fileId={item.fileId ?? null}
-                      thumbnailFileId={item.thumbnailFileId ?? null}
-                      title={item.title ?? fallbackTitle}
-                      cacheKey={item.cacheKey ?? null}
-                      width={screenWidth}
-                      height={screenHeight}
-                      testID={`image-preview-${index}`}
-                      onSingleTap={toggleChrome}
-                      onZoomChange={(z) => onChildZoomChange(key, z)}
-                    />
+                    {inWindow ? (
+                      <ImagePreviewBody
+                        index={index}
+                        uri={item.uri ?? null}
+                        fileId={item.fileId ?? null}
+                        thumbnailFileId={item.thumbnailFileId ?? null}
+                        title={item.title ?? fallbackTitle}
+                        cacheKey={item.cacheKey ?? null}
+                        width={screenWidth}
+                        height={screenHeight}
+                        testID={`image-preview-${index}`}
+                        onSingleTap={toggleChrome}
+                        onZoomChange={(z) => onChildZoomChange(key, z)}
+                        onInfo={handleInfo}
+                      />
+                    ) : null}
                   </View>
                 );
               })}
             </PagerView>
+          </Animated.View>
+
+          {/* Footer — in-flow, mirrors the header */}
+          <Animated.View
+            pointerEvents="none"
+            style={chromeStyle}
+            className="bg-black/60"
+            testID="image-preview-info-footer"
+          >
+            <View className="px-4 pb-2 pt-2">
+              <Text
+                className="text-center text-[10px] text-white/60"
+                numberOfLines={2}
+              >
+                {footerLine}
+              </Text>
+            </View>
           </Animated.View>
         </SafeAreaView>
       </Animated.View>
@@ -287,6 +351,7 @@ function PreviewContent({
 }
 
 function ImagePreviewBody({
+  index,
   uri,
   fileId,
   thumbnailFileId,
@@ -297,7 +362,9 @@ function ImagePreviewBody({
   testID,
   onSingleTap,
   onZoomChange,
+  onInfo,
 }: {
+  index: number;
   uri: string | null;
   fileId: string | null;
   thumbnailFileId: string | null;
@@ -308,39 +375,131 @@ function ImagePreviewBody({
   testID: string;
   onSingleTap: () => void;
   onZoomChange: (isZoomed: boolean) => void;
+  onInfo: (index: number, info: PhotoInfo) => void;
 }) {
-  const { data, isLoading } = useFileSignedUrl(fileId, {
+  const { data } = useFileSignedUrl(fileId, {
     enabled: !uri && Boolean(fileId),
   });
   const { data: thumbnailData } = useFileSignedUrl(thumbnailFileId, {
     enabled: !uri && Boolean(thumbnailFileId),
   });
-  const resolvedUri =
-    uri ?? (data as { url?: string } | undefined)?.url ?? null;
-  const thumbnailUri =
-    (thumbnailData as { url?: string } | undefined)?.url ?? null;
+  const fileData = data as { url?: string; sizeBytes?: number; contentType?: string; createdAt?: string } | undefined;
+  const thumbData = thumbnailData as { url?: string } | undefined;
+  const resolvedUri = uri ?? fileData?.url ?? null;
+  const thumbnailUri = thumbData?.url ?? null;
   const effectiveCacheKey = cacheKey ?? fileId ?? undefined;
   const effectivePlaceholderCacheKey = thumbnailFileId ?? undefined;
+
+  // Always prefer the full-res image; fall back to thumbnail while loading.
   const sourceUri = resolvedUri ?? thumbnailUri;
   const sourceCacheKey = resolvedUri
     ? effectiveCacheKey
     : effectivePlaceholderCacheKey;
 
+  // Track when expo-image has actually downloaded the full-res pixels.
+  const [fullImageLoaded, setFullImageLoaded] = useState(!thumbnailFileId);
+  // Track the loaded image dimensions from expo-image.
+  const [imageSize, setImageSize] = useState<{ w: number; h: number } | null>(null);
+  const handleLoad = useCallback(
+    (e: { source?: { width?: number; height?: number } }) => {
+      if (resolvedUri) {
+        setFullImageLoaded(true);
+        if (e.source?.width && e.source?.height) {
+          setImageSize({ w: e.source.width, h: e.source.height });
+        }
+      }
+    },
+    [resolvedUri],
+  );
+
+  // Reset when fileId changes (e.g. swiping between photos in the gallery).
+  useEffect(() => {
+    setFullImageLoaded(!thumbnailFileId);
+  }, [fileId, thumbnailFileId]);
+
+  // Show spinner while full-res image bytes are still downloading.
+  const showLoadingOverlay = Boolean(thumbnailFileId) && !fullImageLoaded;
+
+  // Build the info line for the debug footer.
+  const currentlyShowingThumbnail = !resolvedUri && Boolean(thumbnailUri);
+  const displayedFileId = currentlyShowingThumbnail ? thumbnailFileId : fileId;
+  const baseResolution = imageSize
+    ? `${imageSize.w}×${imageSize.h}`
+    : currentlyShowingThumbnail
+      ? '256×256'
+      : null;
+  const resolutionLabel = baseResolution
+    ? currentlyShowingThumbnail
+      ? `${baseResolution} (thumb)`
+      : baseResolution
+    : null;
+  const fileSizeLabel = fileData?.sizeBytes
+    ? fileData.sizeBytes >= 1024 * 1024
+      ? `${(fileData.sizeBytes / (1024 * 1024)).toFixed(1)} MB`
+      : `${Math.round(fileData.sizeBytes / 1024)} KB`
+    : null;
+  const capturedLabel = fileData?.createdAt
+    ? new Date(fileData.createdAt).toLocaleDateString(undefined, {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      })
+    : null;
+
+  // Report info up to the parent so it can render a single block footer.
+  useEffect(() => {
+    onInfo(index, {
+      displayedFileId,
+      resolutionLabel,
+      fileSizeLabel,
+      capturedLabel,
+    });
+  }, [
+    onInfo,
+    index,
+    displayedFileId,
+    resolutionLabel,
+    fileSizeLabel,
+    capturedLabel,
+  ]);
+
   if (sourceUri) {
     return (
-      <ZoomableImage
-        source={{ uri: sourceUri }}
-        placeholder={thumbnailUri ? { uri: thumbnailUri } : undefined}
-        cacheKey={sourceCacheKey}
-        placeholderCacheKey={effectivePlaceholderCacheKey}
-        width={width}
-        height={height}
-        contentFit="contain"
-        testID={testID}
-        accessibilityLabel={title}
-        onSingleTap={onSingleTap}
-        onZoomChange={onZoomChange}
-      />
+      <View style={{ width, height, alignItems: 'center', justifyContent: 'center' }}>
+        <ZoomableImage
+          source={{ uri: sourceUri }}
+          placeholder={thumbnailUri ? { uri: thumbnailUri } : undefined}
+          cacheKey={sourceCacheKey}
+          placeholderCacheKey={effectivePlaceholderCacheKey}
+          width={width}
+          height={height}
+          contentFit="contain"
+          testID={testID}
+          accessibilityLabel={title}
+          onSingleTap={onSingleTap}
+          onZoomChange={onZoomChange}
+          onLoad={handleLoad}
+        />
+        {showLoadingOverlay ? (
+          <View
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+            pointerEvents="none"
+            testID="image-preview-full-loading"
+          >
+            <ActivityIndicator size="large" color={colors.background} />
+          </View>
+        ) : null}
+      </View>
     );
   }
 
@@ -348,7 +507,7 @@ function ImagePreviewBody({
     <ActivityIndicator
       size="large"
       color={colors.background}
-      testID={isLoading ? 'image-preview-loading' : 'image-preview-loading'}
+      testID="image-preview-loading"
     />
   );
 }

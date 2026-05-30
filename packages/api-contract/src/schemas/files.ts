@@ -91,4 +91,7 @@ export type FileRecord = z.infer<typeof fileRecord>;
 export const fileUrlResponse = z.object({
   url: z.string().url(),
   expiresAt: isoDateTime,
+  sizeBytes: z.number().int().optional(),
+  contentType: z.string().optional(),
+  createdAt: isoDateTime.optional(),
 });

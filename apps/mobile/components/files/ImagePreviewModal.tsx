@@ -315,10 +315,10 @@ function ImagePreviewBody({
   const { data: thumbnailData } = useFileSignedUrl(thumbnailFileId, {
     enabled: !uri && Boolean(thumbnailFileId),
   });
-  const resolvedUri =
-    uri ?? (data as { url?: string } | undefined)?.url ?? null;
-  const thumbnailUri =
-    (thumbnailData as { url?: string } | undefined)?.url ?? null;
+  const fileData = data as { url?: string; sizeBytes?: number; contentType?: string; createdAt?: string } | undefined;
+  const thumbData = thumbnailData as { url?: string } | undefined;
+  const resolvedUri = uri ?? fileData?.url ?? null;
+  const thumbnailUri = thumbData?.url ?? null;
   const effectiveCacheKey = cacheKey ?? fileId ?? undefined;
   const effectivePlaceholderCacheKey = thumbnailFileId ?? undefined;
 
@@ -360,6 +360,20 @@ function ImagePreviewBody({
     : currentlyShowingThumbnail
       ? '256×256 (thumb)'
       : null;
+  const fileSizeLabel = fileData?.sizeBytes
+    ? fileData.sizeBytes >= 1024 * 1024
+      ? `${(fileData.sizeBytes / (1024 * 1024)).toFixed(1)} MB`
+      : `${Math.round(fileData.sizeBytes / 1024)} KB`
+    : null;
+  const capturedLabel = fileData?.createdAt
+    ? new Date(fileData.createdAt).toLocaleDateString(undefined, {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      })
+    : null;
 
   if (sourceUri) {
     return (
@@ -407,10 +421,12 @@ function ImagePreviewBody({
           testID="image-preview-info-footer"
         >
           <View style={{ backgroundColor: 'rgba(0,0,0,0.6)', borderRadius: 4, paddingHorizontal: 8, paddingVertical: 4 }}>
-            <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.7)' }} numberOfLines={1}>
+            <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.7)' }} numberOfLines={2}>
               {[
                 displayedFileId,
                 resolutionLabel,
+                fileSizeLabel,
+                capturedLabel,
                 currentlyShowingThumbnail ? '(thumb)' : null,
               ]
                 .filter(Boolean)

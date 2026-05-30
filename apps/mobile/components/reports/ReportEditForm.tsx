@@ -563,13 +563,13 @@ export function ReportEditForm({ report, onChange }: ReportEditFormProps) {
         </View>
       </Card>
 
-      {/* ── 7. Summary Sections ──────────────────────────────── */}
+      {/* ── 7. Detailed Sections ──────────────────────────────── */}
       <Card variant="default" padding="lg" testID="edit-section-sections">
-        <SectionHeader title="Summary Sections" />
+        <SectionHeader title="Detailed Sections" />
         <View className="mt-4 gap-3">
           {sections.length === 0 ? (
             <Text className="text-sm text-muted-foreground opacity-60">
-              No summary sections yet
+              No detailed sections yet
             </Text>
           ) : (
             sections.map((sec, idx) => (

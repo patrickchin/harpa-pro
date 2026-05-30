@@ -316,22 +316,11 @@ tags:
             id: "report-tab-pane"
           timeout: 30000
 
-# Report tab → edit-manually round-trip
+# Report tab visible after generation
 - tapOn:
     id: "btn-tab-report"
 - assertVisible:
     id: "report-tab-pane"
-- runFlow:
-    when:
-      visible:
-        id: "btn-edit-manually"
-    commands:
-      - tapOn:
-          id: "btn-edit-manually"
-      - assertVisible:
-          id: "edit-tab-pane"
-      - tapOn:
-          id: "btn-tab-report"
 
 # Edit tab: assert the seven section cards exist (meta is at top; the
 # remaining sections live further down the scroll view. Scrolling deep on

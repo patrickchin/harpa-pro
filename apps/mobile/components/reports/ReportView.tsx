@@ -47,7 +47,7 @@ export function ReportView({ report, reportNumber }: ReportViewProps) {
       {sections.length > 0 && (
         <View className="gap-3">
           <Text className="mt-1 text-sm font-semibold uppercase tracking-[1.2px] text-muted-foreground">
-            Summary Sections
+            Detailed Sections
           </Text>
           {sections.map((section, i) => (
             <SummarySectionCard

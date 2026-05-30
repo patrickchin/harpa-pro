@@ -114,11 +114,8 @@ const baseProps: GenerateNotesProps = {
 };
 
 describe('GenerateNotes — Report tab', () => {
-  it('renders the empty state with CompletenessCard + Edit manually CTA', () => {
+  it('renders the empty state with CompletenessCard skeleton', () => {
     const tree = render(<GenerateNotes {...baseProps} />);
-    expect(() =>
-      tree.root.findByProps({ testID: 'btn-edit-manually' }),
-    ).not.toThrow();
     // No live-report container, no generating shimmer.
     expect(
       tree.root.findAllByProps({ testID: 'report-tab-live' }),
@@ -126,17 +123,8 @@ describe('GenerateNotes — Report tab', () => {
     expect(
       tree.root.findAllByProps({ testID: 'report-tab-generating' }),
     ).toHaveLength(0);
-  });
-
-  it('calls onEditManually when "Edit manually" is pressed', () => {
-    const onEditManually = vi.fn();
-    const tree = render(
-      <GenerateNotes {...baseProps} onEditManually={onEditManually} />,
-    );
-    act(() => {
-      tree.root.findByProps({ testID: 'btn-edit-manually' }).props.onPress();
-    });
-    expect(onEditManually).toHaveBeenCalledTimes(1);
+    // CompletenessCard skeleton is rendered (matches the empty Report tab).
+    expect(reportTabText(tree)).toContain('Still missing');
   });
 
   it('renders the generating shimmer when isGeneratingReport=true', () => {

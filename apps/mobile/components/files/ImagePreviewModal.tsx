@@ -378,7 +378,7 @@ function ImagePreviewBody({
   onInfo: (index: number, info: PhotoInfo) => void;
 }) {
   const { data } = useFileSignedUrl(fileId, {
-    enabled: Boolean(fileId),
+    enabled: !uri && Boolean(fileId),
   });
   const { data: thumbnailData } = useFileSignedUrl(thumbnailFileId, {
     enabled: !uri && Boolean(thumbnailFileId),

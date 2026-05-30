@@ -309,7 +309,7 @@ function ImagePreviewBody({
   onSingleTap: () => void;
   onZoomChange: (isZoomed: boolean) => void;
 }) {
-  const { data, isLoading } = useFileSignedUrl(fileId, {
+  const { data } = useFileSignedUrl(fileId, {
     enabled: !uri && Boolean(fileId),
   });
   const { data: thumbnailData } = useFileSignedUrl(thumbnailFileId, {
@@ -321,26 +321,63 @@ function ImagePreviewBody({
     (thumbnailData as { url?: string } | undefined)?.url ?? null;
   const effectiveCacheKey = cacheKey ?? fileId ?? undefined;
   const effectivePlaceholderCacheKey = thumbnailFileId ?? undefined;
+
+  // Always prefer the full-res image; fall back to thumbnail while loading.
   const sourceUri = resolvedUri ?? thumbnailUri;
   const sourceCacheKey = resolvedUri
     ? effectiveCacheKey
     : effectivePlaceholderCacheKey;
 
+  // Track when expo-image has actually downloaded the full-res pixels.
+  const [fullImageLoaded, setFullImageLoaded] = useState(!thumbnailFileId);
+  const handleLoad = useCallback(() => {
+    // Only mark loaded when the source is the full-res URL (not thumbnail).
+    if (resolvedUri) setFullImageLoaded(true);
+  }, [resolvedUri]);
+
+  // Reset when fileId changes (e.g. swiping between photos in the gallery).
+  useEffect(() => {
+    setFullImageLoaded(!thumbnailFileId);
+  }, [fileId, thumbnailFileId]);
+
+  // Show spinner while full-res image bytes are still downloading.
+  const showLoadingOverlay = Boolean(thumbnailFileId) && !fullImageLoaded;
+
   if (sourceUri) {
     return (
-      <ZoomableImage
-        source={{ uri: sourceUri }}
-        placeholder={thumbnailUri ? { uri: thumbnailUri } : undefined}
-        cacheKey={sourceCacheKey}
-        placeholderCacheKey={effectivePlaceholderCacheKey}
-        width={width}
-        height={height}
-        contentFit="contain"
-        testID={testID}
-        accessibilityLabel={title}
-        onSingleTap={onSingleTap}
-        onZoomChange={onZoomChange}
-      />
+      <View style={{ width, height, alignItems: 'center', justifyContent: 'center' }}>
+        <ZoomableImage
+          source={{ uri: sourceUri }}
+          placeholder={thumbnailUri ? { uri: thumbnailUri } : undefined}
+          cacheKey={sourceCacheKey}
+          placeholderCacheKey={effectivePlaceholderCacheKey}
+          width={width}
+          height={height}
+          contentFit="contain"
+          testID={testID}
+          accessibilityLabel={title}
+          onSingleTap={onSingleTap}
+          onZoomChange={onZoomChange}
+          onLoad={handleLoad}
+        />
+        {showLoadingOverlay ? (
+          <View
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+            pointerEvents="none"
+            testID="image-preview-full-loading"
+          >
+            <ActivityIndicator size="large" color={colors.background} />
+          </View>
+        ) : null}
+      </View>
     );
   }
 
@@ -348,7 +385,7 @@ function ImagePreviewBody({
     <ActivityIndicator
       size="large"
       color={colors.background}
-      testID={isLoading ? 'image-preview-loading' : 'image-preview-loading'}
+      testID="image-preview-loading"
     />
   );
 }

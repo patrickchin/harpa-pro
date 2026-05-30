@@ -4195,6 +4195,9 @@ export interface paths {
                             /** Format: uri */
                             url: string;
                             expiresAt: string;
+                            sizeBytes?: number;
+                            contentType?: string;
+                            createdAt?: string;
                         };
                     };
                 };

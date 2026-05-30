@@ -363,11 +363,16 @@ function ImagePreviewBody({
   // Build the info line for the debug footer.
   const currentlyShowingThumbnail = !resolvedUri && Boolean(thumbnailUri);
   const displayedFileId = currentlyShowingThumbnail ? thumbnailFileId : fileId;
-  const resolutionLabel = imageSize
+  const baseResolution = imageSize
     ? `${imageSize.w}×${imageSize.h}`
     : currentlyShowingThumbnail
-      ? '256×256 (thumb)'
+      ? '256×256'
       : null;
+  const resolutionLabel = baseResolution
+    ? currentlyShowingThumbnail
+      ? `${baseResolution} (thumb)`
+      : baseResolution
+    : null;
   const fileSizeLabel = fileData?.sizeBytes
     ? fileData.sizeBytes >= 1024 * 1024
       ? `${(fileData.sizeBytes / (1024 * 1024)).toFixed(1)} MB`
@@ -435,7 +440,6 @@ function ImagePreviewBody({
                 resolutionLabel,
                 fileSizeLabel,
                 capturedLabel,
-                currentlyShowingThumbnail ? '(thumb)' : null,
               ]
                 .filter(Boolean)
                 .join(' · ')}

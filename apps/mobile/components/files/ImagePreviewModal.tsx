@@ -41,6 +41,13 @@ export interface ImagePreviewPhoto {
   cacheKey?: string | null;
 }
 
+interface PhotoInfo {
+  displayedFileId: string | null;
+  resolutionLabel: string | null;
+  fileSizeLabel: string | null;
+  capturedLabel: string | null;
+}
+
 interface ImagePreviewModalProps {
   visible: boolean;
   /** Pre-resolved signed URL (single-image legacy API). */
@@ -162,6 +169,36 @@ function PreviewContent({
     setAnyZoomed(zoomedSet.current.size > 0);
   }, []);
 
+  // Per-page info that the body reports up via onInfo so the parent can
+  // render a single, in-flow footer for the current page.
+  const [infoByIndex, setInfoByIndex] = useState<Record<number, PhotoInfo>>({});
+  const handleInfo = useCallback((index: number, info: PhotoInfo) => {
+    setInfoByIndex((prev) => {
+      const existing = prev[index];
+      if (
+        existing &&
+        existing.displayedFileId === info.displayedFileId &&
+        existing.resolutionLabel === info.resolutionLabel &&
+        existing.fileSizeLabel === info.fileSizeLabel &&
+        existing.capturedLabel === info.capturedLabel
+      ) {
+        return prev;
+      }
+      return { ...prev, [index]: info };
+    });
+  }, []);
+  const currentInfo = infoByIndex[currentIndex];
+  const footerLine = currentInfo
+    ? [
+        currentInfo.displayedFileId,
+        currentInfo.resolutionLabel,
+        currentInfo.fileSizeLabel,
+        currentInfo.capturedLabel,
+      ]
+        .filter(Boolean)
+        .join(' · ')
+    : '';
+
   // --- Drag-to-dismiss gesture (iOS Photos style) ---
   const DISMISS_THRESHOLD = 100;
 
@@ -271,6 +308,7 @@ function PreviewContent({
                   >
                     {inWindow ? (
                       <ImagePreviewBody
+                        index={index}
                         uri={item.uri ?? null}
                         fileId={item.fileId ?? null}
                         thumbnailFileId={item.thumbnailFileId ?? null}
@@ -281,12 +319,30 @@ function PreviewContent({
                         testID={`image-preview-${index}`}
                         onSingleTap={toggleChrome}
                         onZoomChange={(z) => onChildZoomChange(key, z)}
+                        onInfo={handleInfo}
                       />
                     ) : null}
                   </View>
                 );
               })}
             </PagerView>
+          </Animated.View>
+
+          {/* Footer — in-flow, mirrors the header */}
+          <Animated.View
+            pointerEvents="none"
+            style={chromeStyle}
+            className="bg-black/60"
+            testID="image-preview-info-footer"
+          >
+            <View className="px-4 pb-2 pt-2">
+              <Text
+                className="text-center text-[10px] text-white/60"
+                numberOfLines={2}
+              >
+                {footerLine}
+              </Text>
+            </View>
           </Animated.View>
         </SafeAreaView>
       </Animated.View>
@@ -295,6 +351,7 @@ function PreviewContent({
 }
 
 function ImagePreviewBody({
+  index,
   uri,
   fileId,
   thumbnailFileId,
@@ -305,7 +362,9 @@ function ImagePreviewBody({
   testID,
   onSingleTap,
   onZoomChange,
+  onInfo,
 }: {
+  index: number;
   uri: string | null;
   fileId: string | null;
   thumbnailFileId: string | null;
@@ -316,6 +375,7 @@ function ImagePreviewBody({
   testID: string;
   onSingleTap: () => void;
   onZoomChange: (isZoomed: boolean) => void;
+  onInfo: (index: number, info: PhotoInfo) => void;
 }) {
   const { data } = useFileSignedUrl(fileId, {
     enabled: !uri && Boolean(fileId),
@@ -388,6 +448,23 @@ function ImagePreviewBody({
       })
     : null;
 
+  // Report info up to the parent so it can render a single block footer.
+  useEffect(() => {
+    onInfo(index, {
+      displayedFileId,
+      resolutionLabel,
+      fileSizeLabel,
+      capturedLabel,
+    });
+  }, [
+    onInfo,
+    index,
+    displayedFileId,
+    resolutionLabel,
+    fileSizeLabel,
+    capturedLabel,
+  ]);
+
   if (sourceUri) {
     return (
       <View style={{ width, height, alignItems: 'center', justifyContent: 'center' }}>
@@ -422,30 +499,6 @@ function ImagePreviewBody({
             <ActivityIndicator size="large" color={colors.background} />
           </View>
         ) : null}
-        <View
-          style={{
-            position: 'absolute',
-            bottom: 48,
-            left: 0,
-            right: 0,
-            alignItems: 'center',
-          }}
-          pointerEvents="none"
-          testID="image-preview-info-footer"
-        >
-          <View style={{ backgroundColor: 'rgba(0,0,0,0.6)', borderRadius: 4, paddingHorizontal: 8, paddingVertical: 4 }}>
-            <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.7)' }} numberOfLines={2}>
-              {[
-                displayedFileId,
-                resolutionLabel,
-                fileSizeLabel,
-                capturedLabel,
-              ]
-                .filter(Boolean)
-                .join(' · ')}
-            </Text>
-          </View>
-        </View>
       </View>
     );
   }

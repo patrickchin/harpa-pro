@@ -251,6 +251,7 @@ function PreviewContent({
           <Animated.View style={[{ flex: 1 }, dismissContentStyle]}>
             <PagerView
               initialPage={startIndex}
+              offscreenPageLimit={1}
               scrollEnabled={isGallery && !anyZoomed}
               onPageSelected={(e) => setCurrentIndex(e.nativeEvent.position)}
               style={{ flex: 1 }}
@@ -258,23 +259,30 @@ function PreviewContent({
             >
               {photos.map((item, index) => {
                 const key = item.fileId ?? item.uri ?? `photo-${index}`;
+                // Only render the image body for the current page and its
+                // immediate neighbours. Pages outside this window stay empty
+                // so the user never sees other photos' thumbnails flash by
+                // while PagerView lays out and jumps to `initialPage`.
+                const inWindow = Math.abs(index - currentIndex) <= 1;
                 return (
                   <View
                     key={key}
                     className="flex-1 items-center justify-center"
                   >
-                    <ImagePreviewBody
-                      uri={item.uri ?? null}
-                      fileId={item.fileId ?? null}
-                      thumbnailFileId={item.thumbnailFileId ?? null}
-                      title={item.title ?? fallbackTitle}
-                      cacheKey={item.cacheKey ?? null}
-                      width={screenWidth}
-                      height={screenHeight}
-                      testID={`image-preview-${index}`}
-                      onSingleTap={toggleChrome}
-                      onZoomChange={(z) => onChildZoomChange(key, z)}
-                    />
+                    {inWindow ? (
+                      <ImagePreviewBody
+                        uri={item.uri ?? null}
+                        fileId={item.fileId ?? null}
+                        thumbnailFileId={item.thumbnailFileId ?? null}
+                        title={item.title ?? fallbackTitle}
+                        cacheKey={item.cacheKey ?? null}
+                        width={screenWidth}
+                        height={screenHeight}
+                        testID={`image-preview-${index}`}
+                        onSingleTap={toggleChrome}
+                        onZoomChange={(z) => onChildZoomChange(key, z)}
+                      />
+                    ) : null}
                   </View>
                 );
               })}

@@ -33,9 +33,16 @@
  *  - `deleteFile`          — replace `new File(uri).delete()`
  *  - `initialCaptures`     — seed the strip for previewing populated state
  */
-import { useCallback, useRef, useState, type ReactNode } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
 import {
   ActivityIndicator,
+  InteractionManager,
   Linking,
   Pressable,
   ScrollView,
@@ -72,6 +79,51 @@ import { Button } from '@/components/primitives/Button';
 import { colors } from '@/lib/design-tokens/colors';
 
 export const DEFAULT_MAX_BURST = 20;
+
+/**
+ * Cap on the picture size we'll accept from
+ * `getAvailablePictureSizesAsync()`. The native Camera app captures at
+ * the sensor's full resolution (often 12–48 MP), but for site-report
+ * photos we only need ~3 MP — and the smaller JPEG encodes + writes to
+ * disk much faster, which is what the user *feels* between shutter
+ * presses. 3 MP comfortably picks 1920×1440 on most modern Androids
+ * (4:3 sensors) — still sharp enough for fullscreen lightbox viewing
+ * and moderate crop, with a noticeably faster shutter than 5 MP.
+ */
+const MAX_PICTURE_PIXELS = 3_000_000;
+
+/**
+ * Choose the largest 4:3 picture size from the device list that stays
+ * under our pixel cap. Returns `undefined` if no `WxH` entries match —
+ * in which case we let `expo-camera` use its own default (full sensor
+ * resolution). On iOS the list is the same across devices; on Android
+ * it varies.
+ */
+export function pickPictureSize(
+  sizes: ReadonlyArray<string>,
+  maxPixels: number = MAX_PICTURE_PIXELS,
+): string | undefined {
+  const parsed = sizes
+    .map((s) => {
+      const m = /^(\d+)x(\d+)$/.exec(s);
+      if (!m) return null;
+      const w = Number(m[1]);
+      const h = Number(m[2]);
+      if (!w || !h) return null;
+      return { s, w, h, pixels: w * h, ratio: w / h };
+    })
+    .filter((x): x is { s: string; w: number; h: number; pixels: number; ratio: number } =>
+      x != null,
+    )
+    .filter((x) => x.pixels <= maxPixels)
+    .filter(
+      (x) =>
+        Math.abs(x.ratio - 4 / 3) < 0.02 ||
+        Math.abs(x.ratio - 3 / 4) < 0.02,
+    );
+  parsed.sort((a, b) => b.pixels - a.pixels);
+  return parsed[0]?.s;
+}
 
 export interface CameraCaptureItem {
   uri: string;
@@ -188,6 +240,33 @@ export function CameraCapture(props: CameraCaptureProps) {
   } | null>(null);
   const focusKeyRef = useRef(0);
   const previewSizeRef = useRef({ width: 1, height: 1 });
+  const [pictureSize, setPictureSize] = useState<string | undefined>(undefined);
+
+  // ── Picture-size discovery ──────────────────────────────────────────
+  //
+  // expo-camera defaults to the sensor's max resolution (often 12–48
+  // MP). For our use case (site-report photos) that's wasteful — the
+  // big JPEG encode + disk write is the dominant per-shot delay. On
+  // mount we ask the native camera which sizes it supports, pick the
+  // largest 4:3 size under `MAX_PICTURE_PIXELS`, and pin it via the
+  // `pictureSize` prop. Falls back silently if the API isn't available
+  // (test mocks, dev mirror, unlinked binary).
+  const onCameraReady = useCallback(async () => {
+    const ref = cameraRef.current;
+    const getSizes = (
+      ref as unknown as {
+        getAvailablePictureSizesAsync?: () => Promise<string[]>;
+      } | null
+    )?.getAvailablePictureSizesAsync;
+    if (!getSizes) return;
+    try {
+      const sizes = await getSizes.call(ref);
+      const best = pickPictureSize(sizes ?? []);
+      if (best) setPictureSize(best);
+    } catch {
+      // Best-effort — leave `pictureSize` undefined and use defaults.
+    }
+  }, []);
 
   const removeFile = useCallback(
     (uri: string) => {
@@ -215,37 +294,71 @@ export function CameraCapture(props: CameraCaptureProps) {
     if (isCapturing) return;
     if (captures.length >= maxBurst) return;
     setIsCapturing(true);
+
+    // ── Test / dev-mirror injection path ────────────────────────────
+    if (takePicture) {
+      try {
+        const item = await takePicture();
+        if (item) {
+          setCaptures((prev) => [...prev, item]);
+          if (saveToCameraRoll && saveCaptureToCameraRoll) {
+            void Promise.resolve(saveCaptureToCameraRoll(item.uri)).catch(
+              () => {},
+            );
+          }
+        }
+      } catch {
+        // ignore — bad shot
+      } finally {
+        setIsCapturing(false);
+      }
+      return;
+    }
+
+    // ── Default wiring (expo-camera) ────────────────────────────────
+    //
+    // `onPictureSaved` lets `takePictureAsync` resolve as soon as the
+    // sensor capture completes, *before* the JPEG is encoded and
+    // written to disk. That JPEG encode is the bulk of the delay the
+    // user feels between shutter presses, so releasing `isCapturing`
+    // on the awaited promise (rather than waiting for the URI) lets
+    // the next press fire ~immediately. The thumbnail / camera-roll
+    // side-effects then run in the callback once the file is ready.
+    const ref = cameraRef.current;
+    if (!ref) {
+      setIsCapturing(false);
+      return;
+    }
     try {
-      let item: CameraCaptureItem | null = null;
-      if (takePicture) {
-        item = await takePicture();
-      } else if (cameraRef.current) {
-        const photo: CameraCapturedPicture | undefined =
-          await cameraRef.current.takePictureAsync({
-            quality: 0.8,
-            skipProcessing: true,
-            exif: false,
-            imageType: 'jpg',
+      await ref.takePictureAsync({
+        skipProcessing: true,
+        exif: false,
+        imageType: 'jpg',
+        onPictureSaved: (photo: CameraCapturedPicture) => {
+          if (!photo?.uri) return;
+          const item: CameraCaptureItem = {
+            uri: photo.uri,
+            width: photo.width,
+            height: photo.height,
+          };
+          // Defer the re-render (which decodes the new thumbnail) so
+          // it doesn't compete with the next shutter press for the
+          // JS thread on slower devices.
+          InteractionManager.runAfterInteractions(() => {
+            setCaptures((prev) => [...prev, item]);
+            if (saveToCameraRoll && saveCaptureToCameraRoll) {
+              void Promise.resolve(saveCaptureToCameraRoll(item.uri)).catch(
+                () => {},
+              );
+            }
           });
-        if (photo?.uri) {
-          item = { uri: photo.uri, width: photo.width, height: photo.height };
-        }
-      }
-      if (item) {
-        setCaptures((prev) => [...prev, item!]);
-        if (saveToCameraRoll && saveCaptureToCameraRoll) {
-          // Fire-and-forget — the MediaLibrary write shouldn't block
-          // the shutter from releasing for the next shot. Errors are
-          // swallowed (best-effort save).
-          void Promise.resolve(saveCaptureToCameraRoll(item.uri)).catch(
-            () => {},
-          );
-        }
-      }
+        },
+      });
     } catch {
-      // Swallow — a single bad shot shouldn't kill the screen. The
-      // user can simply press the shutter again.
+      // Swallow — a single bad shot shouldn't kill the screen.
     } finally {
+      // Resolves ~immediately when `onPictureSaved` is set, so the
+      // next press can fire without waiting on the JPEG write.
       setIsCapturing(false);
     }
   }, [
@@ -404,43 +517,59 @@ export function CameraCapture(props: CameraCaptureProps) {
 
   return (
     <View className="flex-1 bg-black" testID="camera-capture-root">
-      <GestureDetector gesture={composedGesture}>
-        <View
-          style={StyleSheet.absoluteFill}
-          testID="camera-gesture-surface"
-          onLayout={(e: {
-            nativeEvent: { layout: { width: number; height: number } };
-          }) => {
-            const { width, height } = e.nativeEvent.layout;
-            previewSizeRef.current = { width, height };
-          }}
-        >
-          {renderPreview ? (
-            renderPreview({ facing, flash, zoom })
-          ) : (
-            <CameraView
-              ref={cameraRef}
-              style={StyleSheet.absoluteFill}
-              facing={facing}
-              flash={flash}
-              zoom={zoom}
-              mode="picture"
-              responsiveOrientationWhenOrientationLocked={false}
-            />
-          )}
-          {focusIndicator ? (
-            <View
-              testID="camera-focus-indicator"
-              pointerEvents="none"
-              className="absolute w-16 h-16 rounded-full border-2 border-white"
-              style={{
-                left: focusIndicator.x - 32,
-                top: focusIndicator.y - 32,
-              }}
-            />
-          ) : null}
-        </View>
-      </GestureDetector>
+      {/*
+       * The preview is constrained to the sensor's native 3:4 portrait
+       * aspect (4:3 landscape) and centered with letterbox top/bottom,
+       * so what the user sees on-screen matches the JPEG that
+       * `takePictureAsync` actually returns. expo-camera otherwise
+       * stretch-fills its container, hiding the crop the camera will
+       * apply at capture time.
+       */}
+      <View
+        className="flex-1 items-center justify-center"
+        pointerEvents="box-none"
+        testID="camera-preview-frame"
+      >
+        <GestureDetector gesture={composedGesture}>
+          <View
+            style={{ width: '100%', aspectRatio: 3 / 4, maxHeight: '100%' }}
+            testID="camera-gesture-surface"
+            onLayout={(e: {
+              nativeEvent: { layout: { width: number; height: number } };
+            }) => {
+              const { width, height } = e.nativeEvent.layout;
+              previewSizeRef.current = { width, height };
+            }}
+          >
+            {renderPreview ? (
+              renderPreview({ facing, flash, zoom })
+            ) : (
+              <CameraView
+                ref={cameraRef}
+                style={StyleSheet.absoluteFill}
+                facing={facing}
+                flash={flash}
+                zoom={zoom}
+                mode="picture"
+                pictureSize={pictureSize}
+                onCameraReady={onCameraReady}
+                responsiveOrientationWhenOrientationLocked={false}
+              />
+            )}
+            {focusIndicator ? (
+              <View
+                testID="camera-focus-indicator"
+                pointerEvents="none"
+                className="absolute w-16 h-16 rounded-full border-2 border-white"
+                style={{
+                  left: focusIndicator.x - 32,
+                  top: focusIndicator.y - 32,
+                }}
+              />
+            ) : null}
+          </View>
+        </GestureDetector>
+      </View>
 
       <SafeAreaView
         className="absolute inset-0 justify-end"
@@ -468,8 +597,8 @@ export function CameraCapture(props: CameraCaptureProps) {
                 accessibilityState={{ checked: saveToCameraRoll }}
                 accessibilityLabel={
                   saveToCameraRoll
-                    ? 'Save to camera roll: on'
-                    : 'Save to camera roll: off'
+                    ? 'Save to gallery: on'
+                    : 'Save to gallery: off'
                 }
                 testID="btn-camera-save-to-roll"
                 className={`h-11 px-3 rounded-full flex-row items-center ${
@@ -477,7 +606,7 @@ export function CameraCapture(props: CameraCaptureProps) {
                 }`}
               >
                 <Text className="text-white text-xs font-semibold uppercase">
-                  Roll {saveToCameraRoll ? 'on' : 'off'}
+                  Gallery {saveToCameraRoll ? 'on' : 'off'}
                 </Text>
               </Pressable>
             ) : null}

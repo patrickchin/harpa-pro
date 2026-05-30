@@ -5,102 +5,107 @@ exports[`CameraCapture > matches snapshot — granted, empty 1`] = `
   className="flex-1 bg-black"
   testID="camera-capture-root"
 >
-  <rn-GestureDetector
-    gesture={
-      {
-        "__cfg": {
-          "children": [
-            {
-              "__cfg": {
-                "kind": "pinch",
+  <rn-View
+    className="flex-1 items-center justify-center"
+    pointerEvents="box-none"
+    testID="camera-preview-frame"
+  >
+    <rn-GestureDetector
+      gesture={
+        {
+          "__cfg": {
+            "children": [
+              {
+                "__cfg": {
+                  "kind": "pinch",
+                  "onStart": [Function],
+                  "onUpdate": [Function],
+                },
+                "activeOffsetX": [Function],
+                "activeOffsetY": [Function],
+                "cancelsTouchesInView": [Function],
+                "enabled": [Function],
+                "failOffsetX": [Function],
+                "hitSlop": [Function],
+                "maxPointers": [Function],
+                "minDistance": [Function],
+                "minPointers": [Function],
+                "numberOfTaps": [Function],
+                "onBegin": [Function],
+                "onEnd": [Function],
                 "onStart": [Function],
                 "onUpdate": [Function],
+                "requireExternalGestureToFail": [Function],
+                "runOnJS": [Function],
+                "shouldCancelWhenOutside": [Function],
+                "withTestId": [Function],
               },
-              "activeOffsetX": [Function],
-              "activeOffsetY": [Function],
-              "cancelsTouchesInView": [Function],
-              "enabled": [Function],
-              "failOffsetX": [Function],
-              "hitSlop": [Function],
-              "maxPointers": [Function],
-              "minDistance": [Function],
-              "minPointers": [Function],
-              "numberOfTaps": [Function],
-              "onBegin": [Function],
-              "onEnd": [Function],
-              "onStart": [Function],
-              "onUpdate": [Function],
-              "requireExternalGestureToFail": [Function],
-              "runOnJS": [Function],
-              "shouldCancelWhenOutside": [Function],
-              "withTestId": [Function],
-            },
-            {
-              "__cfg": {
-                "kind": "tap",
+              {
+                "__cfg": {
+                  "kind": "tap",
+                  "onEnd": [Function],
+                },
+                "activeOffsetX": [Function],
+                "activeOffsetY": [Function],
+                "cancelsTouchesInView": [Function],
+                "enabled": [Function],
+                "failOffsetX": [Function],
+                "hitSlop": [Function],
+                "maxPointers": [Function],
+                "minDistance": [Function],
+                "minPointers": [Function],
+                "numberOfTaps": [Function],
+                "onBegin": [Function],
                 "onEnd": [Function],
+                "onStart": [Function],
+                "onUpdate": [Function],
+                "requireExternalGestureToFail": [Function],
+                "runOnJS": [Function],
+                "shouldCancelWhenOutside": [Function],
+                "withTestId": [Function],
               },
-              "activeOffsetX": [Function],
-              "activeOffsetY": [Function],
-              "cancelsTouchesInView": [Function],
-              "enabled": [Function],
-              "failOffsetX": [Function],
-              "hitSlop": [Function],
-              "maxPointers": [Function],
-              "minDistance": [Function],
-              "minPointers": [Function],
-              "numberOfTaps": [Function],
-              "onBegin": [Function],
-              "onEnd": [Function],
-              "onStart": [Function],
-              "onUpdate": [Function],
-              "requireExternalGestureToFail": [Function],
-              "runOnJS": [Function],
-              "shouldCancelWhenOutside": [Function],
-              "withTestId": [Function],
-            },
-          ],
-          "kind": "simultaneous",
-        },
-      }
-    }
-  >
-    <rn-View
-      onLayout={[Function]}
-      style={
-        {
-          "bottom": 0,
-          "left": 0,
-          "position": "absolute",
-          "right": 0,
-          "top": 0,
+            ],
+            "kind": "simultaneous",
+          },
         }
       }
-      testID="camera-gesture-surface"
     >
-      <rn-CameraView
-        facing="back"
-        flash="off"
-        mode="picture"
-        ref={
-          {
-            "current": null,
-          }
-        }
-        responsiveOrientationWhenOrientationLocked={false}
+      <rn-View
+        onLayout={[Function]}
         style={
           {
-            "bottom": 0,
-            "left": 0,
-            "position": "absolute",
-            "right": 0,
-            "top": 0,
+            "aspectRatio": 0.75,
+            "maxHeight": "100%",
+            "width": "100%",
           }
         }
-        zoom={0}
-      />
-    </rn-View>
-  </rn-GestureDetector>
+        testID="camera-gesture-surface"
+      >
+        <rn-CameraView
+          facing="back"
+          flash="off"
+          mode="picture"
+          onCameraReady={[Function]}
+          ref={
+            {
+              "current": null,
+            }
+          }
+          responsiveOrientationWhenOrientationLocked={false}
+          style={
+            {
+              "bottom": 0,
+              "left": 0,
+              "position": "absolute",
+              "right": 0,
+              "top": 0,
+            }
+          }
+          zoom={0}
+        />
+      </rn-View>
+    </rn-GestureDetector>
+  </rn-View>
   <rn-SafeAreaView
     className="absolute inset-0 justify-end"
     pointerEvents="box-none"

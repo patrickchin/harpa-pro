@@ -54,6 +54,7 @@ vi.mock('expo-file-system', () => {
 
 import {
   CameraCapture,
+  pickPictureSize,
   type CameraCaptureItem,
   type CameraCaptureProps,
 } from './camera-capture';
@@ -449,6 +450,34 @@ describe('CameraCapture', () => {
     expect(
       tree.root.findAllByProps({ testID: 'camera-focus-indicator' }).length,
     ).toBeGreaterThan(0);
+  });
+});
+
+describe('pickPictureSize', () => {
+  it('picks the largest 4:3 size under the pixel cap', () => {
+    const sizes = [
+      '640x480', // 4:3, 0.3 MP
+      '1280x720', // 16:9 — rejected
+      '1920x1440', // 4:3, 2.76 MP — winner under 3 MP cap
+      '2560x1920', // 4:3, 4.92 MP — over cap
+      '3072x2304', // 4:3, 7.08 MP — over cap
+      '4032x3024', // 4:3, 12.19 MP — over cap
+      'Photo', // iOS preset string — ignored
+      'High',
+    ];
+    expect(pickPictureSize(sizes)).toBe('1920x1440');
+  });
+
+  it('returns undefined when no 4:3 sizes match', () => {
+    expect(pickPictureSize(['1280x720', '1920x1080'])).toBeUndefined();
+    expect(pickPictureSize([])).toBeUndefined();
+    expect(pickPictureSize(['Photo', 'Medium', 'High'])).toBeUndefined();
+  });
+
+  it('respects a custom pixel cap', () => {
+    const sizes = ['640x480', '1920x1440', '2560x1920'];
+    // Cap at 1 MP — only 640x480 (0.3 MP) qualifies.
+    expect(pickPictureSize(sizes, 1_000_000)).toBe('640x480');
   });
 });
 

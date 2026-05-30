@@ -22,8 +22,10 @@ when you fix a recurring bug.
   RLS-equivalent enforced in the API via per-request scoped Postgres
   roles (`SET LOCAL` from JWT claims) — see
   [`docs/v4/arch-auth-and-rls.md`](docs/v4/arch-auth-and-rls.md).
-- **Auth:** **better-auth** (self-hosted in the Hono API). Phone OTP
-  via Twilio Verify.
+- **Auth:** Hand-rolled in the Hono API — JWTs via `jose`, phone
+  OTP via Twilio Verify, plus a test-account password bypass for
+  live-deploy testing. See [`docs/v4/arch-auth-and-rls.md`](docs/v4/arch-auth-and-rls.md).
+  We deliberately did not adopt `better-auth`.
 - **File storage:** Cloudflare R2 (S3-compatible). API mints signed
   URLs; mobile uploads direct to R2.
 - **AI providers:** Kimi, OpenAI, Anthropic, Google, Z.AI, DeepSeek.
@@ -42,6 +44,14 @@ when you fix a recurring bug.
    deploy to the dev environment (`harpa-pro-api-dev` on Fly + the
    `dev` Cloudflare Pages branch) — see
    [`docs/v4/arch-ops.md`](docs/v4/arch-ops.md).
+   **PR base defaults to `dev`.** Always open pull requests against
+   `dev` unless the user explicitly asks for `main`. Never merge a PR
+   into `main` without explicit instruction — `main` is production.
+   Never bypass branch protection (no `gh pr merge --admin`, no
+   `git push --no-verify` to `main` or `dev`) unless the user
+   explicitly authorises it for a specific emergency. If a PR has
+   failing required checks or a stale base, stop and ask — do not
+   force the merge through.
 3. **Docs in the same PR.** Behaviour, schema, deployment, or
    workflow change → matching doc update in the same commit.
 4. **No `Alert.alert` for in-app dialogs.** Use `AppDialogSheet` or
@@ -53,13 +63,16 @@ when you fix a recurring bug.
    for negative-path branches only. See
    [Pitfall 13](docs/v4/pitfalls.md#pitfall-13--di-stubs-become-the-spec-default-wiring-silently-broken).
 
-## Mobile dev / fixture mode
+## Scoped instructions
 
-- `pnpm ios` / `pnpm ios:mock` (run from repo root). `:mock` inlines
-  `EXPO_PUBLIC_USE_FIXTURES=true`, returning canned API responses and
-  stubbing the iOS-simulator audio recorder.
-- `EXPO_PUBLIC_*` vars are inlined by Metro at bundle time — changing
-  them requires a rebuild, not a JS reload.
+Area-specific rules live next to the code and load automatically:
+
+- `.github/instructions/mobile.instructions.md` — Expo / NativeWind
+  rules, fixture mode, EXPO_PUBLIC inlining.
+- `.github/instructions/api.instructions.md` — Hono / Drizzle /
+  per-request scope, default-wiring rule.
+- `.github/instructions/docs.instructions.md` — doc style + the
+  "docs in same PR" rule.
 
 ## Long-running command output
 
@@ -78,3 +91,12 @@ compatibility — verify before changing.
 Use the `architect` subagent to design anything that touches more
 than one screen or route, and write the design as a doc under
 `docs/v4/` before coding.
+
+## Subagent prompts
+
+Keep subagent prompts concise — aim for under ~200 words. Include
+only the essential task, scope, and pointers to the files or docs
+the agent needs (paths, not pasted contents). Do not restate the
+contents of `AGENTS.md` or `docs/v4/*` — subagents read those
+themselves. This overrides the default "provide comprehensive
+context" guidance.

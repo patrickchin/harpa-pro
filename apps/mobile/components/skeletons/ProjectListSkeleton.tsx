@@ -1,17 +1,24 @@
 /**
  * ProjectListSkeleton — loading state for the projects list screen.
  *
- * Ported from
- * `../haru3-reports/apps/mobile/components/skeletons/ProjectListSkeleton.tsx`
- * on branch `dev`.
+ * Layout-shift policy (see docs/v4/arch-mobile-skeletons.md): this
+ * skeleton mirrors the FlatList contentContainerStyle used by
+ * `projects-list.tsx` so the first row lands on the same Y when
+ * content arrives. The "Add new project" Pressable is rendered by
+ * the screen in both states and is not duplicated here.
  */
 import { View } from 'react-native';
 import { Skeleton, SkeletonRow } from '@/components/primitives/Skeleton';
+import { useLayoutShiftProbe } from '@/lib/util/layout-shift-probe';
 
 /** Matches the Card layout in the projects FlatList. */
-function ProjectCardSkeleton() {
+function ProjectCardSkeleton({ probeId }: { probeId?: string }) {
+  const onLayout = useLayoutShiftProbe(probeId ?? 'projects-list:row');
   return (
-    <View className="rounded-lg border border-border bg-surface-emphasis p-4 gap-3">
+    <View
+      className="rounded-lg border border-border bg-card p-4 gap-3"
+      onLayout={probeId ? onLayout : undefined}
+    >
       <SkeletonRow>
         <Skeleton width="60%" height={18} />
         <Skeleton width={48} height={12} />
@@ -28,26 +35,25 @@ function ProjectCardSkeleton() {
   );
 }
 
-/** Skeleton for the "Add new project" dashed card. */
-function NewProjectCardSkeleton() {
-  return (
-    <View className="flex-row items-center gap-3 rounded-lg border border-dashed border-border bg-surface-muted p-4">
-      <Skeleton width={40} height={40} radius={8} />
-      <View className="flex-1 gap-2">
-        <Skeleton width="45%" height={16} />
-        <Skeleton width="70%" height={12} />
-      </View>
-    </View>
-  );
-}
-
-/** Full-screen skeleton shown while the project list query hydrates. */
+/**
+ * Full-screen skeleton shown while the project list query hydrates.
+ *
+ * Outer container replicates the FlatList contentContainerStyle
+ * (paddingHorizontal:20, paddingTop:16, paddingBottom:16, gap:12)
+ * exactly so the first card lands on the same Y in both states.
+ */
 export function ProjectListSkeleton() {
   return (
-    <View className="flex-1 px-5 pt-4 gap-3">
-      <NewProjectCardSkeleton />
-      <View style={{ height: 12 }} />
-      <ProjectCardSkeleton />
+    <View
+      style={{
+        paddingHorizontal: 20,
+        paddingTop: 16,
+        paddingBottom: 16,
+        gap: 12,
+      }}
+      testID="projects-list-skeleton"
+    >
+      <ProjectCardSkeleton probeId="projects-list:first-row" />
       <ProjectCardSkeleton />
       <ProjectCardSkeleton />
     </View>

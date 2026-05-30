@@ -1,20 +1,33 @@
 name: api-integration
+
+# Skips when no API-relevant paths changed (mobile / marketing /
+# docs-only PRs). Required-check safe: a skipped job reports as
+# passing for branch protection.
+
 on:
   pull_request:
   push:
     branches: [dev, main]
+
 jobs:
-  integration:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      api: ${{ steps.paths.outputs.api }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: paths
+        uses: ./.github/actions/changed-paths
+
+  api-integration:
+    needs: changes
+    if: needs.changes.outputs.api == 'true' || github.event_name == 'push'
     runs-on: ubuntu-latest
     env:
       AI_FIXTURE_MODE: replay
       TESTCONTAINERS_RYUK_DISABLED: 'true'
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-        with: { version: 9.12.3 }
-      - uses: actions/setup-node@v4
-        with: { node-version: '22', cache: 'pnpm' }
-      - run: pnpm install --frozen-lockfile
+      - uses: ./.github/actions/setup-monorepo
       - run: pnpm --filter @harpa/api-contract build
       - run: pnpm --filter @harpa/api test:integration

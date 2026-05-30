@@ -1,5 +1,10 @@
 # P2 — Mobile Shell
 
+> **P2 complete (audited 2026-05-19).** Auth flow, navigation,
+> NativeWind tokens, primitives + snapshot tests, dev-gallery,
+> auto-generated React Query hooks for every endpoint, env.ts +
+> lint guards — all shipped. Verified by code audit.
+>
 > Goal: auth flow, navigation, NativeWind tokens locked, every shared
 > primitive built and snapshot-tested, **and the dev-gallery live so
 > every shipped screen can be viewed instantly without auth/API**.
@@ -22,7 +27,7 @@
       source's `tailwind.config.js`; no hex literals in
       `apps/mobile/components/**`.
 - [x] `lib/env.ts` Zod-parsed at boot; ESLint rule live.
-- [ ] Generated React Query hooks for every endpoint
+- [x] Generated React Query hooks for every endpoint
       (`pnpm gen:api && git diff --exit-code` clean).
 - [x] Every shipped screen has a body component in
       `apps/mobile/screens/<name>.tsx` plus two routes wrapping it:

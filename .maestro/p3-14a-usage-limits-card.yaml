@@ -1,0 +1,66 @@
+appId: ${MAESTRO_APP_ID}
+name: P3.14a — Usage limits card on Usage screen
+tags:
+  - p3
+  - usage-limits
+# Phase 3 of per-account usage limits (docs/v4/arch-usage-limits.md
+# §11). The UsageLimitsCard renders on /usage when GET /me/limits
+# resolves. This flow signs in as Alice (fake OTP `000000`, fake
+# Twilio mode), opens Profile, taps the Usage card, and asserts the
+# limits card + at least one per-bucket row.
+#
+# **Status: not yet wired into CI.** Listed here so the next person to
+# enable the usage-limits regression journey has a starting point. To
+# run today:
+#   ./scripts/maestro/reset-db.sh
+#   maestro test .maestro/p3-14a-usage-limits-card.yaml
+#
+# The card is keyed by testID `usage-limits-card`; per-bucket rows
+# are `usage-limit-${kind}` (kinds: report_generate, voice_transcribe,
+# voice_summarize, ai_input_tokens, ai_output_tokens). Plan badge is
+# `usage-limits-plan`.
+---
+- launchApp:
+    clearState: true
+    clearKeychain: true
+    stopApp: true
+- waitForAnimationToEnd
+- openLink: harpa://sign-in/phone
+- assertVisible:
+    id: "input-phone"
+- runFlow:
+    file: helpers/sign-in.yaml
+    env:
+      PHONE: "5550000001"
+
+# --- Navigate to Usage screen via Profile tab ------------------------------
+- tapOn:
+    id: "tab-profile"
+- extendedWaitUntil:
+    visible:
+      id: "screen-profile"
+    timeout: 10000
+- tapOn:
+    id: "btn-open-usage"
+- extendedWaitUntil:
+    visible:
+      id: "screen-usage"
+    timeout: 10000
+
+# --- Plan + limits card renders -------------------------------------------
+# Alice is on the `free` plan by default after reset-db.sh, so the
+# `report_generate` bucket is always present (free-plan default = 5).
+- extendedWaitUntil:
+    visible:
+      id: "usage-limits-card"
+    timeout: 10000
+- assertVisible:
+    id: "usage-limits-plan"
+- assertVisible:
+    id: "usage-limit-report_generate"
+- assertVisible:
+    id: "usage-limit-bar-report_generate"
+- assertVisible:
+    id: "usage-limit-voice_transcribe"
+- assertVisible:
+    id: "usage-limit-voice_summarize"

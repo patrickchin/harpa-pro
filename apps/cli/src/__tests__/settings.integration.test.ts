@@ -67,7 +67,7 @@ afterAll(async () => {
 }, 60_000);
 
 describe('settings ai', () => {
-  it('returns current settings', async () => {
+  it('returns current settings (paired-nullable shape)', async () => {
     const stdout = new MemoryStream();
     const stderr = new MemoryStream();
     const exit = await settingsAiGet({
@@ -78,25 +78,26 @@ describe('settings ai', () => {
     });
     expect(exit).toBe(EXIT.OK);
     const body = JSON.parse(stdout.text);
-    expect(typeof body.vendor).toBe('string');
-    expect(typeof body.model).toBe('string');
+    // Default state: both null (= use server default).
+    expect(body.vendor === null || typeof body.vendor === 'string').toBe(true);
+    expect(body.model === null || typeof body.model === 'string').toBe(true);
   });
 
-  it('updates vendor + model', async () => {
+  it('updates vendor + model and clears the override', async () => {
     const stdout = new MemoryStream();
     const stderr = new MemoryStream();
     const exit = await settingsAiSet({
       client: makeClient(token),
-      vendor: 'anthropic',
-      model: 'claude-3-5-sonnet-latest',
+      vendor: 'openai',
+      model: 'gpt-4.1-mini',
       json: true,
       stdout,
       stderr,
     });
     expect(exit).toBe(EXIT.OK);
     const body = JSON.parse(stdout.text);
-    expect(body.vendor).toBe('anthropic');
-    expect(body.model).toBe('claude-3-5-sonnet-latest');
+    expect(body.vendor).toBe('openai');
+    expect(body.model).toBe('gpt-4.1-mini');
 
     // Verify it persists across the next GET.
     const verifyOut = new MemoryStream();
@@ -107,8 +108,22 @@ describe('settings ai', () => {
       stderr,
     });
     const persisted = JSON.parse(verifyOut.text);
-    expect(persisted.vendor).toBe('anthropic');
-    expect(persisted.model).toBe('claude-3-5-sonnet-latest');
+    expect(persisted.vendor).toBe('openai');
+    expect(persisted.model).toBe('gpt-4.1-mini');
+
+    // Clear it back to {null, null}.
+    const clearOut = new MemoryStream();
+    const clearExit = await settingsAiSet({
+      client: makeClient(token),
+      clear: true,
+      json: true,
+      stdout: clearOut,
+      stderr,
+    });
+    expect(clearExit).toBe(EXIT.OK);
+    const cleared = JSON.parse(clearOut.text);
+    expect(cleared.vendor).toBeNull();
+    expect(cleared.model).toBeNull();
   });
 
   it('requires auth', async () => {

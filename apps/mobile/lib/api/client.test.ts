@@ -13,6 +13,12 @@ import {
   resetOnUnauthorizedCallback,
 } from './auth';
 
+const telemetry = vi.hoisted(() => ({
+  captureApiErrorBreadcrumb: vi.fn(),
+}));
+
+vi.mock('@/lib/telemetry/Sentry', () => telemetry);
+
 interface FetchCall {
   url: string;
   init: RequestInit;
@@ -37,6 +43,7 @@ describe('lib/api/client', () => {
   beforeEach(() => {
     resetAuthTokenGetter();
     resetOnUnauthorizedCallback();
+    telemetry.captureApiErrorBreadcrumb.mockClear();
   });
   afterEach(() => {
     vi.unstubAllGlobals();
@@ -146,6 +153,25 @@ describe('lib/api/client', () => {
         expect(e.code).toBe('unauthorized');
         expect(e.status).toBe(401);
         expect(e.requestId).toBe('req-9');
+      }
+    });
+
+    it('preserves top-level requestId and records an API error breadcrumb', async () => {
+      stubFetch(() =>
+        jsonResponse(500, {
+          error: { code: 'internal_error', message: 'Internal server error.' },
+          requestId: 'rid-top-level',
+        }),
+      );
+
+      try {
+        await request('/me', 'get');
+        throw new Error('expected throw');
+      } catch (err) {
+        expect(err).toBeInstanceOf(ApiError);
+        const e = err as ApiError;
+        expect(e.requestId).toBe('rid-top-level');
+        expect(telemetry.captureApiErrorBreadcrumb).toHaveBeenCalledWith(e);
       }
     });
 

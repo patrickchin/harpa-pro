@@ -58,7 +58,7 @@ describe('ProjectHome', () => {
   it('shows edit button when myRole is owner', () => {
     const tree = render(<ProjectHome {...defaults} />);
     expect(() =>
-      tree.root.findByProps({ testID: 'btn-edit-project' }),
+      tree.root.findByProps({ testID: "btn-project-edit" }),
     ).not.toThrow();
   });
 
@@ -66,7 +66,7 @@ describe('ProjectHome', () => {
     const tree = render(
       <ProjectHome {...defaults} project={{ ...baseProject, myRole: 'viewer' }} />,
     );
-    expect(tree.root.findAllByProps({ testID: 'btn-edit-project' })).toHaveLength(0);
+    expect(tree.root.findAllByProps({ testID: "btn-project-edit" })).toHaveLength(0);
   });
 
   it('fires onPressReports when reports row is pressed', () => {

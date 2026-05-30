@@ -60,32 +60,33 @@ const defaults = {
 describe('ProjectMembers', () => {
   it('renders owner-managed view with add-member affordance', () => {
     const tree = render(<ProjectMembers {...defaults} />);
-    expect(() => tree.root.findByProps({ testID: 'btn-add-member' })).not.toThrow();
+    expect(() => tree.root.findByProps({ testID: 'btn-show-add-member' })).not.toThrow();
   });
 
   it('hides add-member affordance for non-owners', () => {
     const tree = render(<ProjectMembers {...defaults} myRole="editor" />);
-    expect(tree.root.findAllByProps({ testID: 'btn-add-member' })).toHaveLength(0);
+    expect(tree.root.findAllByProps({ testID: 'btn-show-add-member' })).toHaveLength(0);
   });
 
   it('renders skeleton while loading', () => {
     const tree = render(<ProjectMembers {...defaults} isLoading />);
-    expect(tree.root.findAllByProps({ testID: 'btn-add-member' })).toHaveLength(0);
+    expect(tree.root.findAllByProps({ testID: 'btn-show-add-member' })).toHaveLength(0);
   });
 
   it('opens the add-member form when the affordance is pressed', () => {
     const tree = render(<ProjectMembers {...defaults} />);
     act(() =>
-      tree.root.findByProps({ testID: 'btn-add-member' }).props.onPress(),
+      tree.root.findByProps({ testID: 'btn-show-add-member' }).props.onPress(),
     );
-    expect(() => tree.root.findByProps({ testID: 'btn-invite-submit' })).not.toThrow();
+    // After toggling, the submit button is now visible inside the form.
+    expect(() => tree.root.findByProps({ testID: "btn-add-member" })).not.toThrow();
   });
 
   it('refuses to submit invite without a phone number', () => {
     const onAdd = vi.fn();
     const tree = render(<ProjectMembers {...defaults} onAddMember={onAdd} />);
-    act(() => tree.root.findByProps({ testID: 'btn-add-member' }).props.onPress());
-    act(() => tree.root.findByProps({ testID: 'btn-invite-submit' }).props.onPress());
+    act(() => tree.root.findByProps({ testID: 'btn-show-add-member' }).props.onPress());
+    act(() => tree.root.findByProps({ testID: "btn-add-member" }).props.onPress());
     expect(onAdd).not.toHaveBeenCalled();
     expect(collectText(tree.toJSON())).toContain('Phone number is required.');
   });
@@ -93,13 +94,13 @@ describe('ProjectMembers', () => {
   it('submits invite with phone + default editor role', () => {
     const onAdd = vi.fn();
     const tree = render(<ProjectMembers {...defaults} onAddMember={onAdd} />);
-    act(() => tree.root.findByProps({ testID: 'btn-add-member' }).props.onPress());
+    act(() => tree.root.findByProps({ testID: 'btn-show-add-member' }).props.onPress());
     act(() =>
       tree.root
-        .findByProps({ testID: 'input-invite-phone' })
+        .findByProps({ testID: "input-member-phone" })
         .props.onChangeText('  +15554443333  '),
     );
-    act(() => tree.root.findByProps({ testID: 'btn-invite-submit' }).props.onPress());
+    act(() => tree.root.findByProps({ testID: "btn-add-member" }).props.onPress());
     expect(onAdd).toHaveBeenCalledWith({ phone: '+15554443333', role: 'editor' });
   });
 
@@ -136,34 +137,36 @@ describe('ProjectMembers', () => {
     const tree = render(
       <ProjectMembers {...defaults} addError="User not found." />,
     );
-    act(() => tree.root.findByProps({ testID: 'btn-add-member' }).props.onPress());
+    act(() => tree.root.findByProps({ testID: 'btn-show-add-member' }).props.onPress());
     act(() =>
       tree.root
-        .findByProps({ testID: 'input-invite-phone' })
+        .findByProps({ testID: "input-member-phone" })
         .props.onChangeText('+15550000999'),
     );
-    act(() => tree.root.findByProps({ testID: 'btn-invite-submit' }).props.onPress());
+    act(() => tree.root.findByProps({ testID: "btn-add-member" }).props.onPress());
     // Form still mounted and error notice still rendered.
     expect(() =>
-      tree.root.findByProps({ testID: 'btn-invite-submit' }),
+      tree.root.findByProps({ testID: "btn-add-member" }),
     ).not.toThrow();
     expect(collectText(tree.toJSON())).toContain('User not found.');
   });
 
   it('closes invite form when addSuccessNonce increments (success)', () => {
     const tree = render(<ProjectMembers {...defaults} />);
-    act(() => tree.root.findByProps({ testID: 'btn-add-member' }).props.onPress());
+    act(() => tree.root.findByProps({ testID: 'btn-show-add-member' }).props.onPress());
     expect(() =>
-      tree.root.findByProps({ testID: 'btn-invite-submit' }),
+      tree.root.findByProps({ testID: "btn-add-member" }),
     ).not.toThrow();
     act(() => {
       tree.update(<ProjectMembers {...defaults} addSuccessNonce={1} />);
     });
+    // Submit btn gone — form collapsed.
     expect(
-      tree.root.findAllByProps({ testID: 'btn-invite-submit' }),
+      tree.root.findAllByProps({ testID: "btn-add-member" }),
     ).toHaveLength(0);
+    // Affordance toggle is back.
     expect(() =>
-      tree.root.findByProps({ testID: 'btn-add-member' }),
+      tree.root.findByProps({ testID: 'btn-show-add-member' }),
     ).not.toThrow();
   });
 });

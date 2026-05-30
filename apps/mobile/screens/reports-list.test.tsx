@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import TestRenderer, { act } from 'react-test-renderer';
 import { ReportsList } from './reports-list';
-import type { ReportListItem } from '@/lib/project-reports-list';
+import type { ReportListItem } from '@/lib/projects/project-reports-list';
 
 function render(el: React.ReactElement): TestRenderer.ReactTestRenderer {
   let tree!: TestRenderer.ReactTestRenderer;
@@ -35,6 +35,10 @@ const final: ReportListItem = {
   updatedAt: '2024-03-10T11:00:00.000Z',
 };
 
+function makeRow(overrides?: Partial<ReportListItem>): ReportListItem {
+  return { ...final, ...overrides };
+}
+
 const defaults = {
   reports: [draft, final],
   projectName: 'Highland Tower',
@@ -49,9 +53,12 @@ const defaults = {
 };
 
 describe('ReportsList', () => {
-  it('renders skeleton when loading', () => {
+  it('renders skeleton when loading but keeps new-report affordance visible (disabled)', () => {
     const tree = render(<ReportsList {...defaults} isLoading />);
-    expect(tree.root.findAllByProps({ testID: 'btn-new-report' })).toHaveLength(0);
+    // The "New report" Pressable must stay mounted across the loading
+    // → loaded transition so the list doesn't shift down on hydrate.
+    const btn = tree.root.findByProps({ testID: 'btn-new-report' });
+    expect(btn.props.disabled).toBe(true);
   });
 
   it('renders new-report affordance when canCreate', () => {
@@ -92,4 +99,26 @@ describe('ReportsList', () => {
     const tree = render(<ReportsList {...defaults} />);
     expect(collectText(tree.toJSON())).toContain('Highland Tower');
   });
+
+  it('accepts an optimistic row in the reports list without throwing', () => {
+    // SectionList renderItem isn't exercised by react-test-renderer
+    // (see the "renders without errors" test above), so we can't
+    // assert on the optimistic row's "Creating…" copy here. The
+    // cache-level optimistic insert is covered in
+    // `lib/api/optimistic.test.tsx`; this test just guards that the
+    // screen tolerates the temp row shape we synthesise.
+    const optimistic: ReportListItem = {
+      id: 'rep_opt0123456789',
+      number: 0,
+      status: 'draft',
+      visitDate: null,
+      createdAt: '2024-03-20T09:00:00.000Z',
+      updatedAt: '2024-03-20T09:00:00.000Z',
+    };
+    const tree = render(
+      <ReportsList {...defaults} reports={[optimistic, final]} />,
+    );
+    expect(tree.toJSON()).toBeTruthy();
+  });
+
 });

@@ -1,0 +1,88 @@
+appId: ${MAESTRO_APP_ID}
+name: "14 — Account screen: view, edit-cancel, edit-save"
+tags:
+  - regression
+  - account
+---
+# Module 14 — Account screen lifecycle
+#
+# Covers:
+#   - navigate from projects index → Profile → Account
+#   - account screen renders (`screen-account`)
+#   - phone, full-name, company-name fields visible
+#   - tap Edit, then Cancel — fields revert to read-only
+#   - tap Edit, type a new full name, Save — name persists,
+#     editor closes back to read-only
+#
+# Pre-condition: alice signed in on empty projects index
+#                (post-condition of module 13).
+# Post-condition: alice on profile screen, signed in.
+
+# --- Open profile → account ------------------------------------------------
+- tapOn:
+    id: "btn-open-profile"
+- extendedWaitUntil:
+    visible:
+      id: "screen-profile"
+    timeout: 10000
+- tapOn:
+    id: "btn-open-account"
+- extendedWaitUntil:
+    visible:
+      id: "screen-account"
+    timeout: 10000
+
+# --- Read-only sanity ------------------------------------------------------
+- assertVisible:
+    id: "input-full-name"
+- assertVisible:
+    id: "input-company-name"
+- assertVisible:
+    id: "btn-edit-profile"
+
+# --- Enter edit mode then cancel — verify editor toggles off ----------------
+- tapOn:
+    id: "btn-edit-profile"
+- extendedWaitUntil:
+    visible:
+      id: "btn-save-profile"
+    timeout: 8000
+- assertVisible:
+    id: "btn-cancel-edit"
+- tapOn:
+    id: "btn-cancel-edit"
+- extendedWaitUntil:
+    visible:
+      id: "btn-edit-profile"
+    timeout: 8000
+
+# --- Edit + save — append a marker, save, confirm editor closes -------------
+- tapOn:
+    id: "btn-edit-profile"
+- extendedWaitUntil:
+    visible:
+      id: "btn-save-profile"
+    timeout: 8000
+- tapOn:
+    id: "input-full-name"
+# Clear field via long-press → Select All → backspace is unreliable on
+# iOS XCTest, so just append. Worst case alice's name grows by a few
+# chars across reruns, which doesn't affect any other assertion.
+- inputText: " Edit"
+- hideKeyboard
+- tapOn:
+    id: "btn-save-profile"
+- extendedWaitUntil:
+    visible:
+      id: "btn-edit-profile"
+    timeout: 10000
+- assertNotVisible:
+    id: "account-save-error"
+
+# --- Back to profile -------------------------------------------------------
+- tapOn:
+    id: "btn-back"
+- extendedWaitUntil:
+    visible:
+      id: "screen-profile"
+    timeout: 10000

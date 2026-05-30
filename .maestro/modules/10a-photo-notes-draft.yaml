@@ -1,0 +1,227 @@
+appId: ${MAESTRO_APP_ID}
+name: "10a — Photo notes (draft): attachment sheet → upload → generated photos → cleanup"
+tags:
+  - regression
+  - photo
+  - upload
+---
+# Module 10a — Photo note draft pipeline
+#
+# Covers:
+#   - open reports list → new report → Generate screen
+#   - tap `btn-attachment` → `btn-attachment-camera` → land on
+#     camera-capture route
+#   - capture a two-photo session, then Done
+#   - back on Generate, timeline renders one image note with two
+#     per-tile photo attachments (`batch-grid-tile-*`)
+#   - generate the report and verify the Report tab's photo strip is
+#     tied to the uploaded photos
+#   - open the generated photo preview
+#   - delete the photo note, then delete the draft so the next module
+#     starts fresh
+#
+# Pre-condition: EXPO_PUBLIC_USE_FIXTURES=true built in (so the camera
+# capture path commits a synthetic image). Camera permission must be
+# granted on the sim (`xcrun simctl privacy booted grant camera <id>`).
+#
+# Pre-condition: alice on project home; no reports.
+# Post-condition: alice on project home; no reports.
+
+# --- Open reports list and create a new draft ------------------------------
+- tapOn:
+    id: "btn-open-reports"
+- extendedWaitUntil:
+    visible:
+      id: "btn-new-report"
+    timeout: 10000
+- tapOn:
+    id: "btn-new-report"
+- extendedWaitUntil:
+    visible:
+      id: "report-row-.*"
+    timeout: 15000
+- tapOn:
+    id: "report-row-.*"
+- extendedWaitUntil:
+    visible:
+      id: "input-note"
+    timeout: 15000
+
+# --- Attachment sheet → camera --------------------------------------------
+- tapOn:
+    id: "btn-attachment"
+- extendedWaitUntil:
+    visible:
+      id: "btn-attachment-camera"
+    timeout: 8000
+- assertVisible:
+    id: "btn-attachment-photo-library"
+- tapOn:
+    id: "btn-attachment-camera"
+
+# --- Camera: capture a two-photo batch → done ------------------------------
+- extendedWaitUntil:
+    visible:
+      id: "btn-camera-shutter"
+    timeout: 15000
+- tapOn:
+    id: "btn-camera-shutter"
+- extendedWaitUntil:
+    visible:
+      id: "btn-camera-thumb-0"
+    timeout: 8000
+- tapOn:
+    id: "btn-camera-shutter"
+- extendedWaitUntil:
+    visible:
+      id: "btn-camera-thumb-1"
+    timeout: 8000
+- tapOn:
+    id: "btn-camera-done"
+
+# --- Back on Generate; timeline mounts one image note with two tiles --------
+- extendedWaitUntil:
+    visible:
+      id: "note-timeline"
+    timeout: 15000
+- extendedWaitUntil:
+    visible:
+      id: "note-row-.*"
+    timeout: 30000
+- extendedWaitUntil:
+    visible:
+      id: "batch-grid-tile-0"
+    timeout: 30000
+- extendedWaitUntil:
+    visible:
+      id: "batch-grid-tile-1"
+    timeout: 30000
+- runFlow:
+    when:
+      visible:
+        id: "batch-grid-tile-0-ring"
+    commands:
+      - assertVisible:
+          id: "batch-grid-tile-0-cancel"
+- extendedWaitUntil:
+    notVisible:
+      id: "batch-grid-tile-0-ring"
+    timeout: 30000
+- extendedWaitUntil:
+    notVisible:
+      id: "batch-grid-tile-0-cancel"
+    timeout: 30000
+- extendedWaitUntil:
+    visible:
+      id: "batch-grid-tile-0-img"
+    timeout: 15000
+- extendedWaitUntil:
+    visible:
+      id: "batch-grid-tile-1-img"
+    timeout: 15000
+- tapOn:
+    id: "batch-grid-tile-0"
+- extendedWaitUntil:
+    visible:
+      id: "image-preview-gallery"
+    timeout: 15000
+- tapOn:
+    id: "btn-close-image-preview"
+
+# --- Generate report; Report tab must carry the uploaded photos ------------
+- extendedWaitUntil:
+    visible:
+      id: "btn-generate-.*report"
+    timeout: 10000
+- tapOn:
+    id: "btn-generate-.*report"
+- tapOn:
+    id: "btn-tab-report"
+- extendedWaitUntil:
+    visible:
+      id: "report-tab-live"
+    timeout: 45000
+- extendedWaitUntil:
+    visible:
+      id: "report-view-.*"
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: "btn-generate-report-photo-.*"
+    direction: DOWN
+    timeout: 60000
+- assertVisible:
+    id: "generate-report-photos"
+- assertVisible:
+    id: "btn-generate-report-photo-.*"
+
+# --- Delete the photo note -------------------------------------------------
+- tapOn:
+    id: "btn-tab-notes"
+- extendedWaitUntil:
+    visible:
+      id: "btn-note-options-.*"
+    timeout: 10000
+- tapOn:
+    id: "btn-note-options-.*"
+- extendedWaitUntil:
+    visible:
+      id: "btn-note-options-delete"
+    timeout: 8000
+- tapOn:
+    id: "btn-note-options-delete"
+- extendedWaitUntil:
+    visible:
+      id: "btn-note-options-confirm-delete"
+    timeout: 8000
+- tapOn:
+    id: "btn-note-options-confirm-delete"
+- extendedWaitUntil:
+    notVisible:
+      id: "batch-grid-tile-0"
+    timeout: 15000
+
+# --- Clean up: delete the draft and return to project home -----------------
+- tapOn:
+    id: "btn-draft-options"
+- extendedWaitUntil:
+    visible:
+      id: "dialog-action-confirm-delete-draft"
+    timeout: 8000
+- tapOn:
+    id: "dialog-action-confirm-delete-draft"
+- extendedWaitUntil:
+    visible:
+      id: "btn-new-report"
+    timeout: 15000
+# After dismissOrReplaceTo from delete-draft, tapping btn-back on
+# reports-list can collapse the stack all the way to the projects
+# index instead of landing on project-home (router stack quirk —
+# observed in three overnight attempts). The robust recovery is to
+# tap the project row from the projects index, which always lands
+# on project-home with btn-project-edit visible.
+- tapOn:
+    id: "btn-back"
+- extendedWaitUntil:
+    visible:
+      id: "btn-project-edit|btn-new-project"
+    timeout: 10000
+- runFlow:
+    when:
+      visible:
+        id: "btn-new-project"
+    commands:
+      - runFlow:
+          when:
+            visible: ".*Regression Test Project.*"
+          commands:
+            - tapOn: "Regression Test Project \\(Edited\\)"
+      - runFlow:
+          when:
+            visible: "${PROJECT_NAME_EDITED}"
+          commands:
+            - tapOn: "${PROJECT_NAME_EDITED}"
+- extendedWaitUntil:
+    visible:
+      id: "btn-project-edit"
+    timeout: 10000

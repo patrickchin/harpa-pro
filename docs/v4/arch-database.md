@@ -70,10 +70,14 @@ and [design-p31-slug-only-ids.md](design-p31-slug-only-ids.md).
 
 Two schemas in the same database:
 
-- `auth` — managed by better-auth (users, sessions, accounts,
-  verification tokens). Drizzle-typed but treated as ~immutable.
+- `auth` — owned by our hand-rolled auth code (users, sessions).
+  Drizzle-managed schema; we did not adopt the `better-auth`
+  library. See [`arch-auth-and-rls.md`](arch-auth-and-rls.md).
 - `app` — everything else: projects, project_members, reports,
-  notes, files, voice_assets, settings.
+  notes, files (voice / image / document / pdf), user_settings,
+  waitlist_signups, llm_usage_events, user_limit_overrides,
+  rate_limit_buckets. Voice and image assets all live in the single
+  `files` table keyed by `file_kind`.
 
 Cross-schema FK: `app.project_members.user_id REFERENCES auth.users(id)`.
 

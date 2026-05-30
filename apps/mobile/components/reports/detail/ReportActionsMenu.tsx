@@ -6,8 +6,10 @@
  */
 import { Modal, Pressable, Text, View } from 'react-native';
 import {
+  Bug,
   Eye,
   FileDown,
+  MessageSquare,
   RotateCcw,
   Share2,
   Trash2,
@@ -25,6 +27,12 @@ interface ReportActionsMenuProps {
   onSharePdf: () => void;
   onUnfinalize: () => void;
   onDelete: () => void;
+  /**
+   * Optional handler for "View Notes". When provided, the menu
+   * surfaces a "View Notes" row. Used by finalised reports — drafts
+   * keep the inline Notes tab and omit this entry.
+   */
+  onViewNotes?: () => void;
   isSaving: boolean;
   isExporting: boolean;
   isUnfinalizing: boolean;
@@ -33,6 +41,15 @@ interface ReportActionsMenuProps {
   canUnfinalize?: boolean;
   /** Hide the Delete row when the current user can't delete (editor/viewer). */
   canDelete?: boolean;
+  /**
+   * P4.8 — show the "Report Debug" entry. Gated by the same
+   * `showDeveloperSection` flag (env.EXPO_PUBLIC_USE_FIXTURES or __DEV__)
+   * that controls the Profile developer section. Hidden in production
+   * builds.
+   */
+  showDeveloperSection?: boolean;
+  /** Invoked when the user taps "Report Debug". */
+  onOpenDebug?: () => void;
 }
 
 export function ReportActionsMenu({
@@ -43,12 +60,15 @@ export function ReportActionsMenu({
   onSharePdf,
   onUnfinalize,
   onDelete,
+  onViewNotes,
   isSaving,
   isExporting,
   isUnfinalizing,
   isDeleting,
   canUnfinalize = true,
   canDelete = true,
+  showDeveloperSection = false,
+  onOpenDebug,
 }: ReportActionsMenuProps) {
   return (
     <Modal
@@ -132,13 +152,31 @@ export function ReportActionsMenu({
               </View>
             </Button>
 
+            {onViewNotes ? (
+              <Button
+                variant="secondary"
+                size="lg"
+                className="justify-start"
+                accessibilityLabel="View source notes"
+                testID="btn-report-view-notes"
+                onPress={onViewNotes}
+              >
+                <View className="flex-row items-center gap-3">
+                  <MessageSquare size={16} color={colors.foreground} />
+                  <Text className="text-base font-semibold text-foreground">
+                    View Notes
+                  </Text>
+                </View>
+              </Button>
+            ) : null}
+
             {canUnfinalize ? (
               <Button
                 variant="secondary"
                 size="lg"
                 className="justify-start"
                 accessibilityLabel="Move report back to draft"
-                testID="btn-report-unfinalize"
+                testID="btn-unfinalize-report"
                 onPress={onUnfinalize}
                 disabled={isUnfinalizing}
               >
@@ -165,6 +203,24 @@ export function ReportActionsMenu({
                   <Trash2 size={16} color={colors.danger.text} />
                   <Text className="text-base font-semibold text-danger-text">
                     {isDeleting ? 'Deleting...' : 'Delete Report'}
+                  </Text>
+                </View>
+              </Button>
+            ) : null}
+
+            {showDeveloperSection && onOpenDebug ? (
+              <Button
+                variant="secondary"
+                size="lg"
+                className="justify-start"
+                accessibilityLabel="Open Report Debug"
+                testID="btn-open-report-debug"
+                onPress={onOpenDebug}
+              >
+                <View className="flex-row items-center gap-3">
+                  <Bug size={16} color={colors.foreground} />
+                  <Text className="text-base font-semibold text-foreground">
+                    Report Debug
                   </Text>
                 </View>
               </Button>

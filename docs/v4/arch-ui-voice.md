@@ -504,7 +504,7 @@ export const demoTranscript = demoTranscriptData;
 export const demoReport = demoReportData as VoiceReport;
 ```
 
-Mobile dev-gallery and marketing demo both:
+Mobile and marketing demo both:
 
 ```ts
 import { demoReport } from '@harpa/ui-voice/fixtures';
@@ -807,28 +807,13 @@ Verify it renders correctly in `pnpm dev` (marketing).
 
 **Commit:** `feat(marketing): use shared VoiceReportView in demo`
 
-### Step 8: Test in mobile dev-gallery
+### Step 8: Wire into mobile
 
-Create `apps/mobile/app/(dev)/voice-report.tsx`:
+Import `VoiceReportView` + `demoReport` from `@harpa/ui-voice` in
+the relevant mobile screen (typically the voice-report route under
+`app/(app)/`), and verify it renders correctly in `pnpm ios`.
 
-```tsx
-import { VoiceReportView } from '@harpa/ui-voice';
-import { demoReport } from '@harpa/ui-voice/fixtures';
-
-export default function VoiceReportDevScreen() {
-  return (
-    <ScrollView className="flex-1 bg-background">
-      <VoiceReportView report={demoReport} watermark="Dev" />
-    </ScrollView>
-  );
-}
-```
-
-Add entry to `apps/mobile/screens/dev-gallery.rows.ts`.
-
-Verify it renders correctly in `pnpm ios`.
-
-**Commit:** `feat(mobile): add VoiceReportView to dev-gallery`
+**Commit:** `feat(mobile): adopt shared VoiceReportView`
 
 ### Step 9: Add integration tests (both apps)
 

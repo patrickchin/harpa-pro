@@ -1,0 +1,70 @@
+appId: ${MAESTRO_APP_ID}
+name: "04 — Members: bob sees project and can edit as editor"
+tags:
+  - regression
+  - members
+---
+# Module 04 — Member permissions (editor)
+#
+# Covers:
+#   - sign out alice → sign in bob
+#   - bob sees the project in his list (alice invited him)
+#   - bob opens the project home
+#   - bob's role badge shows "Editor"
+#   - bob can access the reports screen (editor has reports access)
+#   - sign out bob → sign in alice (restore for next module)
+#
+# Pre-condition: alice is signed in.
+# Post-condition: alice is signed in on project home.
+
+# --- Switch to bob ---------------------------------------------------------
+- runFlow: ../helpers/sign-out.yaml
+- runFlow:
+    file: ../helpers/sign-in.yaml
+    env:
+      PHONE: "5550000002"
+
+# --- Bob sees the project ---------------------------------------------------
+- assertVisible:
+    text: "Regression Test Project \\(Edited\\)"
+- tapOn:
+    text: "Regression Test Project \\(Edited\\)"
+
+# --- Bob's role badge shows Editor -----------------------------------------
+# The role badge lives on the project members screen (one badge per
+# member row, testID `member-role-badge-<userId>`), not on the project
+# home. Navigate there from the "Members" card.
+- extendedWaitUntil:
+    visible:
+      id: "btn-project-edit"
+    timeout: 10000
+- tapOn:
+    id: "link-project-members"
+- extendedWaitUntil:
+    visible:
+      text: "Editor"
+    timeout: 10000
+- tapOn:
+    id: "btn-back"
+
+# --- Bob can open reports ---------------------------------------------------
+- tapOn:
+    id: "btn-open-reports"
+- extendedWaitUntil:
+    visible:
+      id: "btn-new-report"
+    timeout: 10000
+- tapOn:
+    id: "btn-back"
+
+# --- Switch back to alice ---------------------------------------------------
+- tapOn:
+    id: "btn-back"
+- runFlow: ../helpers/sign-out.yaml
+- runFlow:
+    file: ../helpers/sign-in.yaml
+    env:
+      PHONE: "5550000001"
+
+# --- Alice navigates back to project home ----------------------------------
+- runFlow: ../helpers/open-project.yaml

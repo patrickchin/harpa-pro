@@ -110,16 +110,11 @@ describe('errorMapper — property tests', () => {
   it('AiProviderError → 502 + canned message + no provider/fixture/inner leak', async () => {
     const PROVIDER_NAMES = [
       'openai',
-      'anthropic',
-      'google',
       'kimi',
-      'z.ai',
-      'deepseek',
+      'groq',
       'whisper',
       'gpt-4',
       'gpt-3',
-      'claude',
-      'gemini',
     ];
     await fc.assert(
       fc.asyncProperty(fc.string(), fc.string(), async (msg, innerMsg) => {

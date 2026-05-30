@@ -1,29 +1,180 @@
 # Recurring bugs log
 
 > Catalogue of bugs that have bitten us more than once and the
-> patterns (R1, R2, …) that produce them. When you ship a fix for a
-> bug that recurred, that almost-recurred, or that only got caught
-> by manual QA / E2E despite green tests, add an entry below in
-> the same PR.
+> patterns (R1, R2, …) that produce them. The summary below
+> should usually be enough; open the per-entry detail file only
+> when you need the full reasoning, fixtures, or commit pointers.
 >
 > See also:
 > - [`AGENTS.md`](../../AGENTS.md) — hard rules + recurring-bugs reminder.
 > - [`docs/v4/pitfalls.md`](../v4/pitfalls.md) — design-level lessons from the v3 attempt that map 1:1 to the hard rules.
 > - [`docs/v4/architecture.md`](../v4/architecture.md) — system overview.
 
-## Entry template
+## How to add a new entry
 
-```
-### YYYY-MM-DD — short title (Pattern Rn if applicable)
+When you ship a fix for a bug that recurred, almost recurred, or only
+got caught by manual QA / E2E despite green tests:
+
+1. Create a new file in this directory named
+   `YYYY-MM-DD-<short-slug>.md` containing the full write-up using
+   the structure below.
+2. Add a one-line entry to the **Bugs** index in this README,
+   linking to the new file. Keep it to one bullet: date, pattern
+   tag, the smell (what broke + the why in one sentence), the fix
+   in a few words, then the detail link. Readers should only need
+   to open the detail file when they want the full reasoning,
+   fixtures, or commit pointers.
+3. If the bug is a new variant of an existing pattern, tag it
+   `(Pattern Rn)`. If it warrants a new pattern, add it under
+   **Patterns** below and reference it from the entry.
+
+### Detail-file structure
+
+```markdown
+# YYYY-MM-DD — short title (Pattern Rn if applicable)
+
+> See [`README.md`](README.md) for the index of all bug entries and patterns.
 
 **Symptom.** What went wrong (user-visible).
 **Root cause.** Why.
 **Fix.** PR/commit + the change in one sentence.
 **Test.** The new automated test that would have caught it.
-**Pattern.** Which Rn this maps to (or "new pattern Rn — added below").
+**Pattern.** Which Rn this maps to (or "new pattern Rn — added to README").
 ```
 
 ## Patterns
+
+### R1 — Framework swallow: thrown non-Error values bypass middleware
+
+A try/catch in a framework's dispatch loop that does
+`if (err instanceof Error) onError(err, c)` will silently re-throw
+(or propagate up to the runtime as an uncaught exception) for any
+non-Error throw — `throw 'oops'`, `throw 42`, `throw null`,
+`throw { foo: 'bar' }`. The mapper / error-handling middleware
+never runs, so the wire response shape and any leak guarantees
+the mapper enforces are bypassed too. Lint cannot catch this:
+TypeScript permits `throw <unknown>`. Mitigation: keep the codebase
+disciplined to throw Error subclasses, and assert this contract
+narrowly in property tests (don't pretend the framework will save
+you).
+
+### R2 — `.js` extensions in relative TS imports break Metro bundling
+
+Mobile (Expo / Metro) cannot resolve `from './foo.js'` when the
+on-disk file is `foo.ts` / `foo.tsx`. TypeScript happily compiles
+it (it's the recommended ESM import shape and matches our
+`packages/*` style), and Vitest resolves it via tsconfig paths,
+so unit tests stay green while iOS bundling fails the moment
+that module is reached. The recurrence vector is twofold:
+(1) hand-written code mirroring the API package style,
+(2) the `gen-hooks.ts` template which emits `from './client.js'`
+into `lib/api/hooks.ts` on every regen. Mitigation: keep
+`apps/mobile/**/*.{ts,tsx}` free of `.js`-suffixed relative
+imports; fix the generator template too, not just its output.
+
+### R3 — Rules of Hooks violation in expo-router layouts with auth gates
+
+A layout that calls `useAuthSession()` (or any other hook) then
+returns `<Redirect />` early on `loading`/`unauthenticated` and only
+afterwards calls more hooks (`useCallback`, `useEffect`, …) will
+crash with `Rendered fewer hooks than expected` the moment the auth
+state flips. Vitest snapshot tests only render once, never re-render
+across an auth transition, so they catch nothing. The pattern:
+
+  // ❌ BAD — early return between hook calls
+  function Layout() {
+    const { status } = useAuthSession();
+    if (decideRedirect(status)) return <Redirect />;
+    useEffect(...);                // hook count varies between renders
+  }
+
+  // ✅ GOOD — all hooks before any conditional return
+  function Layout() {
+    const { status } = useAuthSession();
+    useEffect(...);
+    if (decideRedirect(status)) return <Redirect />;
+  }
+
+Mitigation: write a re-render test that flips auth state between
+`loading → unauthenticated → authenticated` and asserts the layout
+doesn't throw. Catalogued for all future layouts with auth gates,
+deep-link gates, or feature-flag gates.
+
+### R4 — Test files inside `app/` get bundled into the mobile app
+
+`expo-router` auto-discovers routes by globbing `app/**/*.{ts,tsx}`.
+A colocated `*.test.tsx` inside that tree is therefore treated as a
+route and pulled into the Metro graph at runtime — transitively
+dragging in `vitest`, `@vitest/runner/utils`, `chai`, etc., none of
+which Metro can resolve. The app then explodes at app-open with
+`Unable to resolve "@vitest/runner/utils"`. Vitest itself stays
+green (it picks up the test fine), so CI is no help. Mitigation:
+keep tests outside `app/`. Use `apps/mobile/__tests__/...` (mirror
+the route path under that subtree), or `apps/mobile/screens/` for
+pure screen-body tests. Helper files (`*.ts` without a default
+export) that need to live in `app/` must be prefixed with `_` so
+the route scanner skips them.
+
+### R5 — DI stubs become the spec; default wiring silently broken
+
+Every test injects a "happy" stub for a collaborator
+(`alwaysOkTurnstile()`, `recordingResend()`, `inMemoryRateLimiter()`,
+…). The unit/integration suite goes green even though the **default**
+client returned by the factory (`createTurnstileClient()`,
+`createResendClient()`, …) is broken — the production-fake config
+that `docker compose up`, `:mock` builds, and PR previews actually
+run with is never exercised. Symptoms:
+
+- Form / endpoint returns 2xx in the browser.
+- Server logs look clean.
+- DB / outbound side-effect never happens.
+- No test in the suite ever called the factory without overriding it.
+
+The factory is, in effect, untested. Two recurrence vectors:
+
+1. Helper functions like `setWaitlistClients({ turnstile, resend })`
+   make injection so cheap that every test does it.
+2. Fake-mode helpers (`fakeTurnstile`, `fakeR2`, fake-Twilio) accept
+   only a hand-crafted token shape (`tt-…`, `fake-…`) that real-world
+   widgets never produce, so dev / mock builds silently fail closed.
+
+Mitigation:
+
+- For every collaborator factory, write **at least one integration
+  test that does NOT inject a stub**. Call the route through the
+  default-wired client and assert the real side-effect (a DB row,
+  a queued email, a recorded fixture call). See
+  [arch-testing.md → "Test the default wiring"](../v4/arch-testing.md#test-the-default-wiring).
+- Prefer fake-mode helpers that accept what the real widget /
+  client produces in dev. If you need a "rejected" branch for
+  tests, inject `alwaysFailX()` in that specific test — don't
+  encode rejection into a magic token shape the dev path will
+  trip over.
+- Browser/device E2E (Playwright for the marketing site, Maestro
+  for mobile) hitting the live compose stack closes the residual
+  gap. Treat E2E as the contract for the default wiring.
+
+## Entries
+
+### R6 — owner-demotion via re-invite (implicit upsert on POST /members)
+
+A `POST /projects/{project}/members` handler that uses `INSERT … ON CONFLICT DO
+UPDATE` (upsert) lets an owner call the endpoint with their own phone number
+and a lower role (`viewer`, `editor`), silently demoting themselves. If they
+are the sole owner this locks the project out of all owner-only operations
+(member management, project delete) with no recovery path short of a DB patch.
+
+**Protection.** `app.add_project_member_by_phone` uses an explicit `IF EXISTS`
+guard and raises `23505` ("already_member") mapped to 409 `MEMBER_EXISTS`.
+Role changes must go through `PATCH /projects/{project}/members/{user}` (a
+separate, explicitly guarded endpoint). Full design in
+[`docs/v4/arch-project-members.md`](../v4/arch-project-members.md).
+
+**Test that must exist.** S3 in the members integration suite: owner A calls
+`POST` with their own phone → asserts 409 `MEMBER_EXISTS`, then confirms
+`GET /members` still shows A as `owner`.
+
+---
 
 ### R7 — Health check is a static literal, not a readiness probe
 
@@ -43,335 +194,34 @@ build-time `MIGRATIONS_REQUIRED_HEAD`). Return 503 on any mismatch
 so the LB takes the machine out of rotation and Fly's auto-rollback
 engages. See `docs/v4/arch-cicd-and-migrations.md`.
 
-### R4 — Test files inside `app/` get bundled into the mobile app
-
-- `expo-router` globs `app/**/*.{ts,tsx}`, so a colocated `*.test.tsx` is treated as a route and pulled into the Metro graph.
-- App-open crashes with `Unable to resolve "@vitest/runner/utils"`; Vitest stays green so CI doesn't catch it.
-- Mitigation: keep tests under `apps/mobile/__tests__/...` (mirror the route path) or `apps/mobile/screens/`.
-- Helper files that must live in `app/` need a `_` prefix so the route scanner skips them.
-
-### R3 — Rules of Hooks violation in expo-router layouts with auth gates
-
-- Layout calls `useAuthSession()`, returns `<Redirect />` early on `loading`/`unauthenticated`, then calls more hooks afterwards → `Rendered fewer hooks than expected` when state flips.
-- Single-render Vitest snapshots never cross the transition, so they catch nothing.
-- Rule: every hook call must precede any conditional return.
-- Mitigation: re-render test flipping `loading → unauthenticated → authenticated` for any layout with auth / deep-link / feature-flag gates.
-
-### R2 — `.js` extensions in relative TS imports break Metro bundling
-
-- Metro cannot resolve `from './foo.js'` when the on-disk file is `foo.ts`/`.tsx`. TS + Vitest both resolve it fine, so tests stay green.
-- Recurrence vectors: hand-written code mirroring the API package style; the `gen-hooks.ts` template emitting `from './client.js'` on every regen.
-- Mitigation: no `.js` suffixes in relative imports under `apps/mobile/**/*.{ts,tsx}`. Fix the generator template, not just its output.
-
-### R1 — Framework swallow: thrown non-Error values bypass middleware
-
-- A dispatch loop that does `if (err instanceof Error) onError(err, c)` silently propagates any non-Error throw (`throw 'oops'`, `throw 42`, `throw null`, `throw {}`).
-- The error-mapping middleware never runs, so envelope and leak guarantees are bypassed.
-- Lint can't catch it — TS permits `throw <unknown>`.
-- Mitigation: throw `Error` subclasses only; assert the contract narrowly in property tests.
-
-### R5 — DI stubs become the spec; default wiring silently broken
-
-- Every test injects a happy stub (`alwaysOkTurnstile()`, `recordingResend()`, …); the default `createXClient()` factory is never exercised, so the production-fake config that `docker compose up` / `:mock` builds use rots silently.
-- Symptoms: endpoint 2xx, clean logs, no DB row / no outbound side-effect.
-- Recurrence vectors: cheap injection helpers (`setXClients({…})`); fake-mode helpers gated on magic token shapes (`tt-…`, `fake-…`) the real dev widget can't produce.
-- Mitigation 1 — for every collaborator factory, at least one integration test calls the route WITHOUT injecting that collaborator and asserts the real side-effect. See [arch-testing.md → "Test the default wiring"](../v4/arch-testing.md#test-the-default-wiring).
-- Mitigation 2 — fake-mode helpers accept what the real dev surface produces; use `alwaysFailX()` only in the test that asserts the failure branch.
-- Mitigation 3 — one browser/device E2E (Playwright for marketing, Maestro for mobile) per critical flow, hitting the live compose stack.
-
-## Entries
-
-### 2026-05-20 — prod returned 200 on /healthz while every DB route 500'd (Pattern R7)
-
-**Symptom.** Fly machine `harpa-pro-api` v11 was `started`, 1/1
-health checks passing, image deployed cleanly. But every endpoint
-that touched the DB returned `500 { code: "internal_error" }`.
-Postgres logs showed `42P01 relation "app.waitlist_signups" does
-not exist` for `POST /waitlist`, `relation "auth.verifications"
-does not exist` for `POST /auth/otp/start`, etc.
-
-**Root cause.** Two independent failures:
-1. The Neon prod branch had never had a migration applied.
-   `api-prod.yml` only ran `flyctl deploy`; there was no
-   migration step on the prod path. (`pr-preview.yml` runs
-   `pnpm db:migrate` against the ephemeral PR Neon branch; that
-   workflow is the *only* place migrations had ever run before
-   this incident.)
-2. `/healthz` was a static literal — `c.json({ok:true,...})` with
-   no DB query — so Fly's HTTP check was green regardless of
-   whether the DB schema was usable.
-
-**Fix.** `docs/v4/arch-cicd-and-migrations.md` design + the
-follow-up implementation:
-- Fly `release_command` runs `pnpm --filter @harpa/api db:migrate`
-  in a release machine; Fly only promotes the new image to app
-  machines if it exits 0.
-- New `/readyz` opens a real DB connection AND compares
-  `app._migrations` head to a build-time
-  `MIGRATIONS_REQUIRED_HEAD`. Fly's HTTP check now targets
-  `/readyz`. `/healthz` stays as liveness.
-- Migrator hardened: `pg_advisory_lock` serialises concurrent
-  runs, per-file `BEGIN/COMMIT`, fail-loud logging.
-- New `guard` job in `api-prod.yml` lints migration filenames at
-  PR time; post-deploy step curls `/readyz` so a green workflow
-  proves real traffic was served.
-
-**Test.** Three Testcontainers integration tests under
-`packages/api/src/__tests__/`:
-- `readyz.integration.test.ts` — 503 schema-missing before
-  migrate; 200 after; 503 head-mismatch with a bad
-  `MIGRATIONS_REQUIRED_HEAD`; 503 db-down when pool is gone.
-- `migrate.advisory-lock.integration.test.ts` — two concurrent
-  `migrate()` calls produce exactly one set of `app._migrations`
-  rows with no duplicate-key error.
-- `migrate.failing-file.integration.test.ts` — a fixture dir with
-  a bad SQL in file #3 rolls back the file's tx, leaves files
-  #1+#2 committed, and stops the loop before file #4.
-
-**Pattern.** R7 — Health check is a static literal, not a
-readiness probe (added above).
-
-### 2026-05-17 — invite-member form auto-closes on submit, hiding the API error (Pattern R5)
-
-**Symptom.** A failed `POST /projects/:slug/members` invite (e.g.
-the invited phone has no account → 404 "User not found.") looked
-identical to a successful one from the user's perspective: the
-invite form collapsed back to the "Add member" CTA with no error
-notice visible. The Members list stayed empty and the user had no
-clue why. First caught by `core-end-to-end.yaml` Maestro flow,
-which expected the invited user to show up under "Editor" filter.
-
-**Root cause.** `screens/project-members.tsx` had:
-
-```tsx
-onAdd={(input) => {
-  onAddMember(input);
-  if (!addError) setShowAdd(false);
-}}
-```
-
-`onAddMember` triggers a TanStack mutation (async). `addError` is
-read from the *current* render's props — which is `null` because
-the mutation hasn't completed yet. So the form unconditionally
-closes on submit, hiding the error notice that arrives on the
-next render. Classic stale-state-in-an-event-handler bug.
-
-**Fix.** Drive the close from the *route*, not from inside the
-form. The mutation hook's `onSuccess` increments an
-`addSuccessNonce` counter passed to the screen; an effect there
-closes the form when the nonce changes. On failure, `nonce` does
-not change, the form stays open, and the error notice renders
-normally. Same PR adds two regression tests in
-`screens/project-members.test.tsx`: one for the form-stays-open
-path on error, one for the form-closes path on success.
-
-**Test.** `screens/project-members.test.tsx` —
-"keeps invite form open when the mutation fails (error stays visible)"
-and "closes invite form when addSuccessNonce increments (success)".
-Plus the Maestro `core-end-to-end.yaml` flow that originally
-exposed the bug.
-
-**Pattern.** R5 (default wiring broken, only DI-stubbed tests
-pass). The existing screen-level test asserted the form's
-behaviour with `addError={null}` and never combined it with a
-post-submit close, so the synchronous stale read sailed through.
-
-### 2026-05-17 — `btn-edit-manually` switched tabs but didn't seed the empty report (Pattern R5)
-
-**Symptom.** Tapping "Edit manually" from the Report tab's
-empty-state navigated to the Edit tab but the Edit tab still
-showed *its* empty-state ("Generate a report first to edit"). The
-user could not enter section data manually — which is the whole
-point of the button. First caught by `core-end-to-end.yaml`
-asserting `edit-section-meta` after tapping `btn-edit-manually`.
-
-**Root cause.** `GenerateReportProvider.editManually` falls back
-to `onSetReport(createEmptyReport())` only when the route wired
-`onSetReport`. The real `generate.tsx` route owned a local
-`setGeneratedReport` setter but never passed it as
-`onSetReport={…}` to `<GenerateNotes>`. So the provider's
-fallback short-circuited to a no-op and only `setActiveTab('edit')`
-fired.
-
-**Fix.** Pass `onSetReport={setGeneratedReport}` from the route.
-Now "Edit manually" both creates the empty report skeleton *and*
-switches tabs, exactly as the provider docs claim.
-
-**Test.** Covered by the Maestro `core-end-to-end.yaml` flow
-asserting `edit-section-meta` is visible after the round-trip.
-
-**Pattern.** R5 — the provider unit tests stubbed `onSetReport`,
-so the bug only existed at the wiring layer (Pitfall 13 / Hard
-Rule #5: "test the default wiring").
-
-### 2026-05-15 — lucide icons silently fell back to brand placeholder; `react-native-svg` was never installed (Pattern R5)
-
-**Symptom.** Every ported screen rendered, but every lucide icon
-(MapPin, Calendar, FolderOpen, Pencil, Plus, …) showed as the
-Harpa Pro "U" brand placeholder. Vitest unit snapshots passed
-because they render the JSX tree and never resolve the SVG
-primitives. Coverage was green. Only a manual `simctl io
-screenshot` on the mock build caught it.
-
-**Root cause.** `lucide-react-native` lists `react-native-svg` as a
-peer dependency. We had been adding lucide imports across screens
-through P2 + P3 without ever running `npx expo install
-react-native-svg`. RNSVG was never linked into the iOS Pods, so
-at runtime the bridge fell back to a default Image — which, with
-no source, rendered the brand asset.
-
-**Fix.** [TBD commit] — `apps/mobile/package.json` adds
-`react-native-svg@15.8.0`. Pod reinstall via `expo run:ios` picks
-up `RNSVG` and the icons render.
-
-**Test.** No unit test would have caught this — RNSVG only matters
-on the device. The new tmp `.maestro/tmp-p3-smoke/` flow captures
-screenshots of every ported screen in the mock build so a missing
-native dep is visible immediately. P3.13's `core-end-to-end`
-Maestro flow inherits this guarantee and replaces the tmp folder.
-
-**Pattern.** R5 — the unit/integration suites injected stubs (the
-JSX tree) instead of exercising the real wiring (the native SVG
-runtime). The default wiring was silently broken; only an E2E
-against the live binary surfaced it.
-
-### 2026-05-12 — Hono v4 onError ignores non-Error throws (Pattern R1)
-
-- **Symptom.** Handler that does `throw 'oops'` crashes the worker instead of returning the 500 envelope. Found writing P1.10 property tests.
-- **Root cause.** Hono v4 only invokes `app.onError` for `Error` instances; non-Error throws propagate out of `app.fetch` past `errorMapper`.
-- **Fix.** No code change. Property test (`packages/api/src/__tests__/errorMapper.property.test.ts`) narrows its unhandled-error arbitrary to Error subclasses and pins the limitation in a comment. Future fix if needed: outermost middleware wrapping `await next()` in `try { … } catch (e) { throw e instanceof Error ? e : new Error(String(e)); }`.
-- **Test.** `errorMapper.property.test.ts`.
-- **Pattern.** R1 (new — added above).
-
-### 2026-05-13 — `.js` extensions reappeared in mobile relative imports (Pattern R2)
-
-- **Symptom.** `pnpm --filter @harpa/mobile ios` fails Metro bundling with `Unable to resolve "./session.js"`; Vitest stayed green.
-- **Root cause.** Mobile relative imports written as `./foo.js`. Re-introduced via (1) new P2.4–P2.7 modules mirroring API style, (2) `scripts/gen-hooks.ts` template emitting `from './client.js'`.
-- **Fix.** Stripped `.js` from 24 relative imports under `apps/mobile/**/*.{ts,tsx}`; fixed the generator template too.
-- **Test.** Manual `ios` bundle for now. A CI grep gate for `from '\./[^']+\.js'` is deferred to P4 infra hardening.
-- **Pattern.** R2 (new — added above).
-
-### 2026-05-13 — AppLayout hook-order crash on auth-gate flip (Pattern R3)
-
-- **Symptom.** Cold-launch iOS sim → `Rendered fewer hooks than expected` in `AppLayout`. Vitest stayed green — no test crossed an auth transition.
-- **Root cause.** `app/(app)/_layout.tsx` returned `<Redirect />` early on `loading`/`unauthenticated`, before `useCallback`/`useEffect` ran. Hook count flipped from 3 → 5 between renders.
-- **Fix.** Moved every hook above the conditional return. Verified by stashing the fix and watching the new test fail with the exact error.
-- **Test.** `apps/mobile/__tests__/layouts/app-layout.test.tsx` — "does not throw when status flips" case plus three per-status render assertions.
-- **Pattern.** R3 (new — added above).
-
-### 2026-05-13 — Vitest leaked into mobile bundle via colocated `*.test.tsx` (Pattern R4)
-
-- **Symptom.** Every screen mount errored with `Unable to resolve "@vitest/runner/utils"` after the R3 test was colocated inside `app/(app)/_layout.test.tsx`. Vitest itself ran fine.
-- **Root cause.** `expo-router` globs `app/**/*.{ts,tsx}`; the test file got pulled into the Metro graph and dragged in `vitest` → `@vitest/runner/utils` → `chai`.
-- **Fix.** Moved the test to `apps/mobile/__tests__/layouts/app-layout.test.tsx`. Also renamed `app/(dev)/registry.ts` → `_registry.ts` for the same reason.
-- **Test.** `pnpm --filter @harpa/mobile bundle:smoke` (iOS bundle smoke) run after every commit per `docs/v4/overnight-protocol.md` §5.
-- **Pattern.** R4 (new — added above).
-
-### 2026-05-14 — Waitlist 202s with empty DB; fake-Turnstile required a magic token shape (Pattern R5)
-
-- **Symptom.** Marketing form shows "Check your inbox" against the local compose stack; `app.waitlist_signups` stays empty, no email queued.
-- **Root cause.** `fakeTurnstile()` only accepted `tt-…` tokens. The Cloudflare test-key widget emits real-format tokens (`XXXX.DUMMY.TOKEN.XXXX`), so the route returned the neutral 202 silent-rejection. Every existing test injected `alwaysOkTurnstile()`, so the default factory was untested.
-- **Fix.** `fakeTurnstile()` now accepts any non-empty token (empty still rejected). Marketing form now uses `waitlistSignupRequest.safeParse` + schema-derived `maxLength` attrs from `@harpa/api-contract`.
-- **Test.** `packages/api/src/__tests__/waitlist.integration.test.ts` — "default fakeTurnstile accepts any non-empty token end-to-end" and "default fakeTurnstile rejects empty token" (no DI stub). Marketing Playwright E2E is the longer-term gate.
-- **Pattern.** R5 (new — added above).
-
-### 2026-05-15 — `/auth/logout` deletes the session row but the JWT keeps working (Pattern R5)
-
-- **Symptom.** After `POST /auth/logout` (200 OK), the bearer token continues to authenticate protected routes until JWT `exp` lapses (~7 days). Surfaced by `auth-crud.journey.integration.test.ts`.
-- **Root cause.** `withAuth()` validates only JWT signature + expiry; `withScopedConnection` sets `app.session_id` from the JWT but never checks `auth.sessions` for a live row. No route actually validates the session despite stale header comments. Existing test confirmed DB row deletion but never made a post-logout authenticated request.
-- **Fix.** Pending. Options: (1) `withAuth()` looks up `auth.sessions` by `sid` and 401s on missing/expired row; (2) opaque session tokens (DB-backed) as the bearer envelope, keeping JWT as internal signed payload only.
-- **Test.** Journey suite should add `expect(/me-post-logout).toBe(401)` once the fix lands.
-- **Pattern.** R5 — `signTestToken` became the de-facto spec; full `/auth/otp/verify` → CRUD → `/auth/logout` chain was never exercised end-to-end.
-
-### 2026-05-15 — `auth.test.ts > rejects a tampered token` flakes ~6% (Pattern R6)
-
-**Pattern.** R5 (new — added above).
-
-### 2026-05-15 — `/auth/logout` deletes the session row but the JWT keeps working (Pattern R5)
-
-**Symptom.** After `POST /auth/logout` (200 OK), the bearer token
-that was just "revoked" continues to authenticate every protected
-route — `GET /me`, `POST /projects`, etc — until its JWT `exp`
-naturally lapses (~7 days). Surfaced by the first journey
-integration test
-(`packages/api/src/__tests__/journeys/auth-crud.journey.integration.test.ts`),
-which logs in via the real `/auth/otp/verify` path and then
-expected `GET /me` to 401 post-logout.
-
-**Root cause.** `middleware/auth.ts → withAuth()` validates only the
-JWT signature + expiry. The per-request scope wrapper
-(`db/scope.ts → withScopedConnection`) does `SET LOCAL app.session_id`
-from the JWT's `sid` claim but never checks `auth.sessions` for an
-existing row — so revoked sessions remain authenticated as long as
-the JWT is signature-valid. The header comment in `middleware/auth.ts`
-("Session-row validation … is enforced by route handlers — see e.g.
-`routes/me.ts`") is stale; no route actually validates the session.
-
-The existing `auth.integration.test.ts > logout deletes the session
-row` test confirmed the DB row was gone but never made a
-post-logout authenticated request, so the gap was invisible.
-Classic R5 — the test asserted a side-effect, not the contract.
-
-**Fix.** Pending. Either:
-1. Have `withAuth()` look up `auth.sessions` by `sid` and 401 when
-   the row is missing/expired (one DB roundtrip per authed
-   request). Cache via short-lived in-memory revocation set if
-   needed.
-2. Use opaque session tokens (DB-backed) instead of stateless JWTs
-   for the bearer envelope, keeping the JWT only as an internal
-   signed claim payload.
-
-Pending the fix, `auth-crud.journey.integration.test.ts` asserts
-the DB-row deletion (current behaviour) and links to this entry.
-
-**Test.** The journey suite
-(`packages/api/src/__tests__/journeys/*.journey.integration.test.ts`)
-should add — once the fix lands — `expect(/me-post-logout).toBe(401)`.
-
-**Pattern.** R5 — DI stubs / test helpers (`signTestToken`) became
-the de-facto spec. Every CRUD integration test mints tokens via
-`signTestToken(userId, sessionId)`, so the full
-`/auth/otp/verify` → CRUD → `/auth/logout` chain was never
-exercised end-to-end and the revocation gap stayed invisible.
-
-### 2026-05-15 — `auth.test.ts > rejects a tampered token` flakes ~6% (Pattern R6)
-
-**Symptom.** PR #3 unit job failed with
-`expected 200 to be 401` in
-`packages/api/src/middleware/auth.test.ts:38` on commit `bbcbdfc`
-(a CSS-only change to `apps/marketing`), while the immediately
-preceding commit `b00ce5a` on the same branch was green. The "diff"
-that triggered the failure had no causal relationship to the
-failing test.
-
-**Root cause.** The test "tampered" with the JWT by flipping its
-last base64url character between `'A'` and `'B'`. HS256 signatures
-are 32 bytes → 43 base64url chars; the last char encodes only 4
-significant bits plus 2 padding bits that base64 decoders discard.
-Chars `A`, `B`, `C`, `D` all share top-4 bits `0000`, so swapping
-between them produces an **identical** decoded signature and the
-token still verifies. Whether the flip actually mutates the
-signature depends on the trailing char, which in turn depends on
-the `iat` / `exp` timestamps embedded in the freshly-signed JWT —
-roughly a 6% flake rate (4 of 64 base64url chars are equivalent
-under the A↔B swap).
-
-**Fix.** Tamper with the **payload** segment instead — flipping the
-first payload char (always `e` in jose-issued tokens, since the
-JSON starts with `{"`) to `a`. Any byte change in the
-base64url-encoded payload invalidates the HMAC over
-`header.payload`, so the verification deterministically fails.
-
-**Test.** `packages/api/src/middleware/auth.test.ts > withAuth >
-rejects a tampered token` — same test, deterministic tampering
-strategy. Verified by running it 5× locally post-fix (5/5 green)
-and by reasoning about the algebra of the swap.
-
-**Pattern.** R6 — Probabilistic test inputs derived from
-freshly-minted JWTs / random bytes / timestamps. The naive "flip a
-char" trick is safe for character-aligned encodings (hex) but lossy
-for base64/base64url when the encoding has padding bits. Mitigation:
-when constructing "obviously invalid" variants of signed/encoded
-blobs, mutate bytes in the **decoded** representation (or mutate a
-segment whose every bit is significant — for JWTs, the header or
-payload, not the tail of the signature).
+## Bugs
+
+Most recent first. One line per bug — open the linked file only for the full root-cause / test / commit write-up.
+
+- **2026-05-30** — Voice-note transcript dialog wouldn't scroll: `AppDialogSheet` wrapped its sheet body in a `Pressable` (to absorb backdrop-dismiss taps), and a `Pressable` parent steals pan gestures from a nested `ScrollView` via the responder-capture phase, so the `ScrollView` in the "View transcript" stage in `NoteOptionsSheet` could never scroll long transcripts. Fix: replace the inner `Pressable` with a `View` that uses `onStartShouldSetResponder={() => true}` to consume taps without using capture, plus `nestedScrollEnabled` + `keyboardShouldPersistTaps="handled"` on the transcript `ScrollView`.
+- **2026-05-29** *(R5)* — Mobile AI model picker was UI-only: it persisted `{vendor, model}` to AsyncStorage but never sent it to the API, so `/generate` and `/voice/summarize` always ran the server default regardless of what the user picked. Picker tests mocked AsyncStorage; `/generate` tests always supplied explicit overrides — default wiring untested. Fix: `/settings/ai` becomes the single source of truth (contract whitelist `AI_MODELS`, paired-nullable shape); routes read user pick via `getAiSettings()` and pass `userVendor`/`userModel` into `runGenerate()` + `aiSummarize()`; mobile `useAiProvider` rewritten as TanStack Query reader/writer; Developer screen becomes single-step picker with leading "Default" row that clears the override; live test asserts `result.model === 'gpt-4.1-mini'` end-to-end. [detail](2026-05-29-mobile-model-picker-dead-wired.md)
+- **2026-05-29** *(R5)* — Generate Report on `harpa-pro-api-dev` took 47–87s end-to-end because the canonical was pinned to `kimi-k2.6`, a reasoning model that emits chain-of-thought tokens before the JSON. Bench against the real REPORT_SYSTEM_PROMPT showed gpt-4o p50=5s, groq/llama-3.3-70b p50=1.4s. Fix: pin canonical to `openai/gpt-4o`; update `record.ts` canonical request literals to match; re-record voice-{1..5} fixtures; hand-patch + rehash `generate-report.update.json`; switch the live test from `KIMI_API_KEY` to `OPENAI_API_KEY` and lower `vitest.live.config.ts` timeout from 180s → 60s. [detail](2026-05-29-kimi-k26-too-slow-for-report-generation.md)
+- **2026-05-29** *(R5)* — Generate Report still 502'd after the vendor-routing fix because the canonical model `kimi-k2-0520` isn't on the Moonshot account behind our `KIMI_API_KEY`; logs flipped to `[ai-fixtures:kimi] HTTP 404`. The `/models` probe shows only `kimi-k2.5`, `kimi-k2.6`, `moonshot-v1-*`. Fix: pin canonical to `kimi-k2.6`; fix `record.ts` to hash the canonical vendor/model (was writing `openai`/`gpt-4o` into the request hash, so script and runtime never matched); re-record + rehash the report fixtures. [detail](2026-05-29-kimi-canonical-model-not-on-account.md)
+- **2026-05-29** *(R5)* — Generate Report 502'd in dev: commit `e4c503a` switched the report canonical to `kimi/kimi-k2-0520` but only patched **replay** mode to force `providerVendor = canonicals.vendor`; live mode kept routing to the caller's `settings.vendor` (defaults to `openai`), so OpenAI got the Kimi model name and 404'd. The live test stubbed `vendor: 'kimi'` directly, masking the default-wired path. Fix: pin `providerVendor` to canonicals in both modes; drop the stub from the live test so the default vendor resolution is exercised. [detail](2026-05-29-report-vendor-canonical-mismatch.md)
+- **2026-05-29** — Files RLS too tight: `files_owner_all` blocked cross-member dereference, so teammates 404'd on every attachment they didn't upload themselves. Fix: migration 0011 splits the policy into `files_member_read` + `files_owner_insert` + `files_member_write` / `files_member_delete`; project-scoped files inherit `app.is_member(project_id)` while avatar/scratch (`project_id IS NULL`) stay owner-only. Recurrence guard: any new project-scoped table must split SELECT/INSERT/UPDATE/DELETE rather than reach for `FOR ALL` owner-only.
+- **2026-05-28** *(R5)* — Inverse of 2026-05-23: while realigning prompts to v4, the `meta` envelope (title, summary, visitDate, tags) was dropped from `reportBody`; mobile UI title/summary surfaces silently rendered empty. Fix: restore a slim meta envelope in contract + prompts + drift guard + adapter + UI; expand drift guard to positively require meta keys.
+- **2026-05-28** *(R5)* — Generate Report Debug tab showed "no prompt / no input / no response" on cold load because the route fed `lastGeneration` from a `useState` populated only by the mutation `onSuccess`; persisted `app.reports.last_generation` was never queried in-page. Fix: hydrate via `useReportDebugQuery` (gated on dev flag) + invalidate `reportDebug` on (re)generate. [detail](2026-05-28-debug-tab-lastgeneration-not-hydrated.md)
+- **2026-05-24** — Android back-to-exit fired on every nested screen because layout `useNavigation().canGoBack()` returns the parent navigator. Fix: use `router.canGoBack()`. [detail](2026-05-24-android-back-double-press.md)
+- **2026-05-23** *(R5)* — Generate Report 502'd in dev: prompt still asked for v3 JSON envelope while contract validated unwrapped v4 `reportBody`; replay fixtures masked it. Fix: rewrite both report prompts to v4 field names + add live-LLM CI lane. [detail](2026-05-23-report-prompt-v3-v4-drift.md)
+- **2026-05-22** *(R5)* — `pickStorage()` read raw `process.env.R2_FIXTURE_MODE` while the rest of the module read parsed `env.R2_*`; trapdoor for live-vs-replay drift. Fix: branch on `env.R2_FIXTURE_MODE` + MinIO Testcontainers default-wiring test. [detail](2026-05-22-pickstorage-process-env-trapdoor.md)
+- **2026-05-22** *(R-Maestro1)* — Every `.maestro/*.yaml` hardcoded `appId: com.harpa.pro`, so dev-variant runs would have hit the prod bundle. Fix: parameterise via `${MAESTRO_APP_ID}` + lint guard against literals. [detail](2026-05-22-maestro-appid-hardcoded.md)
+- **2026-05-22** *(R5)* — `AI_LIVE=1` shipped to prod but every call went to replay: `pickMode(fixtureName)` short-circuited whenever the caller passed a derived default name, which every caller did. Fix: only force replay when the *external* caller passes a name. [detail](2026-05-22-ai-live-pickmode-dead-code.md)
+- **2026-05-20** *(R7)* — Prod `/healthz` 200'd while every DB route 500'd: Neon prod branch had never been migrated and the health check was a static literal. Fix: Fly `release_command` runs migrations + `/readyz` opens a real connection and checks migration head. [detail](2026-05-20-healthz-static-literal-prod-down.md)
+- **2026-05-18** *(R5)* — Saved-report route rendered "Failed to load report" because `reportBodyToGeneratedReport()` was applied on the generate route but not the saved-report route. Fix: apply the adapter at every consumer + cover with Maestro flow against the real API. [detail](2026-05-18-saved-report-body-adapter-missing.md)
+- **2026-05-18** — `expo-camera` crashed boot on dev-clients whose native binary predated the JS addition: top-level `requireNativeModule('ExpoCamera')` blew up at module eval. Fix: lazy `lib/native/expo-camera-shim.ts` with fallback UI. [detail](2026-05-18-expo-camera-native-module-missing.md)
+- **2026-05-18** — Maestro tapOn against `Pressable` inside an RN `<Modal>` reports COMPLETED on iOS XCTest but never fires `onPress`. Workaround: assert visibility only; cover the action in a unit test; prefer inline overlays for testable destructive sheets. [detail](2026-05-18-maestro-modal-pressable-tap.md)
+- **2026-05-17** *(R5)* — Invite-member form auto-closed on submit, hiding the API error, because `if (!addError) setShowAdd(false)` read stale state in the event handler. Fix: drive the close from the route via an `addSuccessNonce` effect. [detail](2026-05-17-invite-form-auto-close-on-error.md)
+- **2026-05-17** *(R5)* — "Edit manually" switched tabs but left an empty Edit tab: route never passed `onSetReport`, so `editManually`'s seed-empty-report fallback short-circuited. Fix: wire `onSetReport={setGeneratedReport}` from the route. [detail](2026-05-17-edit-manually-missing-onsetreport.md)
+- **2026-05-15** *(R5)* — Every lucide icon rendered as the brand placeholder because `react-native-svg` peer dep was never installed; unit snapshots passed since SVG primitives aren't resolved. Fix: `expo install react-native-svg` + screenshot smoke flow. [detail](2026-05-15-lucide-icons-react-native-svg-missing.md)
+- **2026-05-15** *(R5)* — `/auth/logout` deletes the session row but the JWT keeps authenticating: `withAuth()` only checks signature/expiry, not `auth.sessions`. Test asserted DB deletion, not the contract. Fix pending: validate `sid` against `auth.sessions` (or move to opaque tokens). [detail](2026-05-15-logout-jwt-not-revoked.md)
+- **2026-05-15** *(R6)* — `auth.test.ts > rejects a tampered token` flaked ~6%: flipping the final base64url char of an HS256 signature is a no-op when chars share top-4 bits (A↔B↔C↔D). Fix: tamper the payload segment instead — every bit is significant. [detail](2026-05-15-auth-tampered-token-base64-flake.md)
+- **2026-05-14** *(R5)* — Waitlist returned 202 with empty DB: `fakeTurnstile()` only accepted `tt-…` tokens while the real widget emits Cloudflare-format tokens; every test stubbed Turnstile so the default factory was untested. Fix: accept any non-empty token + default-wiring integration test. [detail](2026-05-14-fake-turnstile-magic-token.md)
+- **2026-05-13** *(R4)* — Colocating `_layout.test.tsx` inside `app/` pulled `vitest` → `@vitest/runner/utils` → `chai` into the Metro bundle and crashed every screen at runtime. Fix: move tests under `apps/mobile/__tests__/...`; prefix non-route helpers with `_`. [detail](2026-05-13-vitest-leak-via-colocated-tests.md)
+- **2026-05-13** *(R2)* — `.js` extensions in mobile relative TS imports re-broke Metro bundling; reintroduced by hand-written modules mirroring the API style and by the `gen-hooks.ts` template. Fix: strip `.js` everywhere under `apps/mobile/**` + fix the generator. [detail](2026-05-13-mobile-js-extension-relative-imports.md)
+- **2026-05-13** *(R3)* — `AppLayout` crashed with "Rendered fewer hooks than expected" when the auth gate flipped: `useEffect` lived below an early `<Redirect />`. Fix: hoist all hooks above any conditional return + re-render test across auth transitions. [detail](2026-05-13-app-layout-hook-order-auth-gate.md)
+- **2026-05-12** *(R1)* — Hono v4 `onError` only runs for `Error` instances; non-Error throws (`throw 'oops'`, `throw 42`, …) bypass `errorMapper` entirely. Fix: no code change; property test narrows to Error subclasses and pins the limitation. [detail](2026-05-12-hono-onerror-non-error-throws.md)

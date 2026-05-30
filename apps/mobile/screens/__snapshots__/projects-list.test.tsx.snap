@@ -62,7 +62,6 @@ exports[`ProjectsList > does not render ListHeaderComponent when empty 1`] = `
         title="No projects yet"
       />
     }
-    ListHeaderComponent={null}
     contentContainerStyle={
       {
         "gap": 12,
@@ -149,7 +148,6 @@ exports[`ProjectsList > matches snapshot when empty 1`] = `
         title="No projects yet"
       />
     }
-    ListHeaderComponent={null}
     contentContainerStyle={
       {
         "gap": 12,
@@ -213,73 +211,62 @@ exports[`ProjectsList > matches snapshot when loading 1`] = `
     </rn-View>
   </rn-View>
   <rn-View
-    className="flex-1 px-5 pt-4 gap-3"
+    onLayout={[Function]}
+    style={
+      {
+        "paddingHorizontal": 20,
+        "paddingTop": 16,
+      }
+    }
+  >
+    <rn-Pressable
+      accessibilityLabel="Add new project"
+      accessibilityRole="button"
+      onPress={[MockFunction spy]}
+      testID="btn-new-project"
+    >
+      <rn-View
+        className="flex-row items-center gap-3 rounded-lg border border-dashed border-border bg-surface-muted p-4"
+      >
+        <rn-View
+          className="h-10 w-10 items-center justify-center rounded-md border border-border bg-card"
+        >
+          <lucide-Plus
+            color="#2d3a5a"
+            size={20}
+          />
+        </rn-View>
+        <rn-View
+          className="flex-1"
+        >
+          <rn-Text
+            className="text-title-sm text-foreground"
+          >
+            Add new project
+          </rn-Text>
+          <rn-Text
+            className="text-sm text-muted-foreground"
+          >
+            Create a destination for field notes and reports.
+          </rn-Text>
+        </rn-View>
+      </rn-View>
+    </rn-Pressable>
+  </rn-View>
+  <rn-View
+    style={
+      {
+        "gap": 12,
+        "paddingBottom": 16,
+        "paddingHorizontal": 20,
+        "paddingTop": 16,
+      }
+    }
+    testID="projects-list-skeleton"
   >
     <rn-View
-      className="flex-row items-center gap-3 rounded-lg border border-dashed border-border bg-surface-muted p-4"
-    >
-      <rn-View
-        className="bg-muted"
-        style={
-          [
-            {
-              "borderRadius": 8,
-              "height": 40,
-              "width": 40,
-            },
-            {
-              "opacity": 0.35,
-            },
-            undefined,
-          ]
-        }
-      />
-      <rn-View
-        className="flex-1 gap-2"
-      >
-        <rn-View
-          className="bg-muted"
-          style={
-            [
-              {
-                "borderRadius": 6,
-                "height": 16,
-                "width": "45%",
-              },
-              {
-                "opacity": 0.35,
-              },
-              undefined,
-            ]
-          }
-        />
-        <rn-View
-          className="bg-muted"
-          style={
-            [
-              {
-                "borderRadius": 6,
-                "height": 12,
-                "width": "70%",
-              },
-              {
-                "opacity": 0.35,
-              },
-              undefined,
-            ]
-          }
-        />
-      </rn-View>
-    </rn-View>
-    <rn-View
-      style={
-        {
-          "height": 12,
-        }
-      }
-    />
-    <rn-View
-      className="rounded-lg border border-border bg-surface-emphasis p-4 gap-3"
+      className="rounded-lg border border-border bg-card p-4 gap-3"
+      onLayout={[Function]}
     >
       <rn-View
         className="flex-row items-center gap-3"
@@ -391,7 +378,7 @@ exports[`ProjectsList > matches snapshot when loading 1`] = `
       </rn-View>
     </rn-View>
     <rn-View
-      className="rounded-lg border border-border bg-surface-emphasis p-4 gap-3"
+      className="rounded-lg border border-border bg-card p-4 gap-3"
     >
       <rn-View
         className="flex-row items-center gap-3"
@@ -503,7 +490,7 @@ exports[`ProjectsList > matches snapshot when loading 1`] = `
       </rn-View>
     </rn-View>
     <rn-View
-      className="rounded-lg border border-border bg-surface-emphasis p-4 gap-3"
+      className="rounded-lg border border-border bg-card p-4 gap-3"
     >
       <rn-View
         className="flex-row items-center gap-3"
@@ -656,6 +643,49 @@ exports[`ProjectsList > matches snapshot with projects 1`] = `
       </rn-View>
     </rn-View>
   </rn-View>
+  <rn-View
+    onLayout={[Function]}
+    style={
+      {
+        "paddingHorizontal": 20,
+        "paddingTop": 16,
+      }
+    }
+  >
+    <rn-Pressable
+      accessibilityLabel="Add new project"
+      accessibilityRole="button"
+      onPress={[MockFunction spy]}
+      testID="btn-new-project"
+    >
+      <rn-View
+        className="flex-row items-center gap-3 rounded-lg border border-dashed border-border bg-surface-muted p-4"
+      >
+        <rn-View
+          className="h-10 w-10 items-center justify-center rounded-md border border-border bg-card"
+        >
+          <lucide-Plus
+            color="#2d3a5a"
+            size={20}
+          />
+        </rn-View>
+        <rn-View
+          className="flex-1"
+        >
+          <rn-Text
+            className="text-title-sm text-foreground"
+          >
+            Add new project
+          </rn-Text>
+          <rn-Text
+            className="text-sm text-muted-foreground"
+          >
+            Create a destination for field notes and reports.
+          </rn-Text>
+        </rn-View>
+      </rn-View>
+    </rn-Pressable>
+  </rn-View>
   <rn-FlatList
     ListEmptyComponent={
       <EmptyState
@@ -680,49 +710,6 @@ exports[`ProjectsList > matches snapshot with projects 1`] = `
         title="No projects yet"
       />
     }
-    ListHeaderComponent={
-      <RN.View
-        style={
-          {
-            "marginBottom": 12,
-          }
-        }
-      >
-        <RN.Pressable
-          accessibilityLabel="Add new project"
-          accessibilityRole="button"
-          onPress={[MockFunction spy]}
-          testID="btn-new-project"
-        >
-          <RN.View
-            className="flex-row items-center gap-3 rounded-lg border border-dashed border-border bg-surface-muted p-4"
-          >
-            <RN.View
-              className="h-10 w-10 items-center justify-center rounded-md border border-border bg-card"
-            >
-              <lucide.Plus
-                color="#2d3a5a"
-                size={20}
-              />
-            </RN.View>
-            <RN.View
-              className="flex-1"
-            >
-              <RN.Text
-                className="text-title-sm text-foreground"
-              >
-                Add new project
-              </RN.Text>
-              <RN.Text
-                className="text-sm text-muted-foreground"
-              >
-                Create a destination for field notes and reports.
-              </RN.Text>
-            </RN.View>
-          </RN.View>
-        </RN.Pressable>
-      </RN.View>
-    }
     contentContainerStyle={
       {
         "gap": 12,
@@ -735,7 +722,6 @@ exports[`ProjectsList > matches snapshot with projects 1`] = `
       [
         {
           "address": "123 Main St, San Francisco, CA",
-          "id": "123e4567-e89b-12d3-a456-426614174000",
           "name": "Construction Site A",
           "role": "owner",
           "slug": "prj_abc123",
@@ -743,7 +729,6 @@ exports[`ProjectsList > matches snapshot with projects 1`] = `
         },
         {
           "address": null,
-          "id": "223e4567-e89b-12d3-a456-426614174001",
           "name": "Office Building Renovation",
           "role": "editor",
           "slug": "prj_def456",
@@ -751,7 +736,6 @@ exports[`ProjectsList > matches snapshot with projects 1`] = `
         },
         {
           "address": "789 Oak Ave, Palo Alto, CA",
-          "id": "323e4567-e89b-12d3-a456-426614174002",
           "name": "Residential Complex",
           "role": "viewer",
           "slug": "prj_ghj789",
@@ -836,7 +820,6 @@ exports[`ProjectsList > renders EmptyState when no projects 1`] = `
         title="No projects yet"
       />
     }
-    ListHeaderComponent={null}
     contentContainerStyle={
       {
         "gap": 12,
@@ -899,6 +882,49 @@ exports[`ProjectsList > renders address row only when address is non-null 1`] = 
       </rn-View>
     </rn-View>
   </rn-View>
+  <rn-View
+    onLayout={[Function]}
+    style={
+      {
+        "paddingHorizontal": 20,
+        "paddingTop": 16,
+      }
+    }
+  >
+    <rn-Pressable
+      accessibilityLabel="Add new project"
+      accessibilityRole="button"
+      onPress={[MockFunction spy]}
+      testID="btn-new-project"
+    >
+      <rn-View
+        className="flex-row items-center gap-3 rounded-lg border border-dashed border-border bg-surface-muted p-4"
+      >
+        <rn-View
+          className="h-10 w-10 items-center justify-center rounded-md border border-border bg-card"
+        >
+          <lucide-Plus
+            color="#2d3a5a"
+            size={20}
+          />
+        </rn-View>
+        <rn-View
+          className="flex-1"
+        >
+          <rn-Text
+            className="text-title-sm text-foreground"
+          >
+            Add new project
+          </rn-Text>
+          <rn-Text
+            className="text-sm text-muted-foreground"
+          >
+            Create a destination for field notes and reports.
+          </rn-Text>
+        </rn-View>
+      </rn-View>
+    </rn-Pressable>
+  </rn-View>
   <rn-FlatList
     ListEmptyComponent={
       <EmptyState
@@ -923,49 +949,6 @@ exports[`ProjectsList > renders address row only when address is non-null 1`] = 
         title="No projects yet"
       />
     }
-    ListHeaderComponent={
-      <RN.View
-        style={
-          {
-            "marginBottom": 12,
-          }
-        }
-      >
-        <RN.Pressable
-          accessibilityLabel="Add new project"
-          accessibilityRole="button"
-          onPress={[MockFunction spy]}
-          testID="btn-new-project"
-        >
-          <RN.View
-            className="flex-row items-center gap-3 rounded-lg border border-dashed border-border bg-surface-muted p-4"
-          >
-            <RN.View
-              className="h-10 w-10 items-center justify-center rounded-md border border-border bg-card"
-            >
-              <lucide.Plus
-                color="#2d3a5a"
-                size={20}
-              />
-            </RN.View>
-            <RN.View
-              className="flex-1"
-            >
-              <RN.Text
-                className="text-title-sm text-foreground"
-              >
-                Add new project
-              </RN.Text>
-              <RN.Text
-                className="text-sm text-muted-foreground"
-              >
-                Create a destination for field notes and reports.
-              </RN.Text>
-            </RN.View>
-          </RN.View>
-        </RN.Pressable>
-      </RN.View>
-    }
     contentContainerStyle={
       {
         "gap": 12,
@@ -978,7 +961,6 @@ exports[`ProjectsList > renders address row only when address is non-null 1`] = 
       [
         {
           "address": "123 Main St, San Francisco, CA",
-          "id": "123e4567-e89b-12d3-a456-426614174000",
           "name": "Construction Site A",
           "role": "owner",
           "slug": "prj_abc123",
@@ -986,7 +968,6 @@ exports[`ProjectsList > renders address row only when address is non-null 1`] = 
         },
         {
           "address": null,
-          "id": "223e4567-e89b-12d3-a456-426614174001",
           "name": "Office Building Renovation",
           "role": "editor",
           "slug": "prj_def456",
@@ -994,7 +975,6 @@ exports[`ProjectsList > renders address row only when address is non-null 1`] = 
         },
         {
           "address": "789 Oak Ave, Palo Alto, CA",
-          "id": "323e4567-e89b-12d3-a456-426614174002",
           "name": "Residential Complex",
           "role": "viewer",
           "slug": "prj_ghj789",
@@ -1055,6 +1035,49 @@ exports[`ProjectsList > renders role labels correctly 1`] = `
       </rn-View>
     </rn-View>
   </rn-View>
+  <rn-View
+    onLayout={[Function]}
+    style={
+      {
+        "paddingHorizontal": 20,
+        "paddingTop": 16,
+      }
+    }
+  >
+    <rn-Pressable
+      accessibilityLabel="Add new project"
+      accessibilityRole="button"
+      onPress={[MockFunction spy]}
+      testID="btn-new-project"
+    >
+      <rn-View
+        className="flex-row items-center gap-3 rounded-lg border border-dashed border-border bg-surface-muted p-4"
+      >
+        <rn-View
+          className="h-10 w-10 items-center justify-center rounded-md border border-border bg-card"
+        >
+          <lucide-Plus
+            color="#2d3a5a"
+            size={20}
+          />
+        </rn-View>
+        <rn-View
+          className="flex-1"
+        >
+          <rn-Text
+            className="text-title-sm text-foreground"
+          >
+            Add new project
+          </rn-Text>
+          <rn-Text
+            className="text-sm text-muted-foreground"
+          >
+            Create a destination for field notes and reports.
+          </rn-Text>
+        </rn-View>
+      </rn-View>
+    </rn-Pressable>
+  </rn-View>
   <rn-FlatList
     ListEmptyComponent={
       <EmptyState
@@ -1079,49 +1102,6 @@ exports[`ProjectsList > renders role labels correctly 1`] = `
         title="No projects yet"
       />
     }
-    ListHeaderComponent={
-      <RN.View
-        style={
-          {
-            "marginBottom": 12,
-          }
-        }
-      >
-        <RN.Pressable
-          accessibilityLabel="Add new project"
-          accessibilityRole="button"
-          onPress={[MockFunction spy]}
-          testID="btn-new-project"
-        >
-          <RN.View
-            className="flex-row items-center gap-3 rounded-lg border border-dashed border-border bg-surface-muted p-4"
-          >
-            <RN.View
-              className="h-10 w-10 items-center justify-center rounded-md border border-border bg-card"
-            >
-              <lucide.Plus
-                color="#2d3a5a"
-                size={20}
-              />
-            </RN.View>
-            <RN.View
-              className="flex-1"
-            >
-              <RN.Text
-                className="text-title-sm text-foreground"
-              >
-                Add new project
-              </RN.Text>
-              <RN.Text
-                className="text-sm text-muted-foreground"
-              >
-                Create a destination for field notes and reports.
-              </RN.Text>
-            </RN.View>
-          </RN.View>
-        </RN.Pressable>
-      </RN.View>
-    }
     contentContainerStyle={
       {
         "gap": 12,
@@ -1134,7 +1114,6 @@ exports[`ProjectsList > renders role labels correctly 1`] = `
       [
         {
           "address": "123 Main St, San Francisco, CA",
-          "id": "123e4567-e89b-12d3-a456-426614174000",
           "name": "Construction Site A",
           "role": "owner",
           "slug": "prj_abc123",
@@ -1142,7 +1121,6 @@ exports[`ProjectsList > renders role labels correctly 1`] = `
         },
         {
           "address": null,
-          "id": "223e4567-e89b-12d3-a456-426614174001",
           "name": "Office Building Renovation",
           "role": "editor",
           "slug": "prj_def456",
@@ -1150,7 +1128,6 @@ exports[`ProjectsList > renders role labels correctly 1`] = `
         },
         {
           "address": "789 Oak Ave, Palo Alto, CA",
-          "id": "323e4567-e89b-12d3-a456-426614174002",
           "name": "Residential Complex",
           "role": "viewer",
           "slug": "prj_ghj789",

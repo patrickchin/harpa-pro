@@ -26,6 +26,7 @@ export interface ApiErrorEnvelope {
     details?: unknown;
     requestId?: string;
   };
+  requestId?: string;
 }
 
 export class ApiError extends Error {
@@ -77,7 +78,7 @@ export async function apiErrorFromResponse(
       code: env.error.code ?? statusToCode(res.status),
       message: env.error.message ?? `HTTP ${res.status}`,
       status: res.status,
-      requestId: env.error.requestId,
+      requestId: env.error.requestId ?? env.requestId,
       details: env.error.details,
     });
   }

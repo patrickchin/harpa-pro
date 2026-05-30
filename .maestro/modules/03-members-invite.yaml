@@ -1,0 +1,61 @@
+appId: ${MAESTRO_APP_ID}
+name: "03 — Members: alice invites bob as editor"
+tags:
+  - regression
+  - members
+---
+# Module 03 — Members invite
+#
+# Covers:
+#   - alice opens members screen
+#   - shows add-member form
+#   - invites +15550000002 (bob) as editor
+#   - bob's member row appears (member-row-* pattern)
+#
+# Pre-condition: alice is on project home (btn-project-edit visible).
+# Post-condition: alice is back on project home.
+#
+# Note on BOB_USER_ID: Maestro can match element IDs by regex
+# (`id: "member-row-.*"`) so we don't need to extract the raw userId.
+# Modules 05-06 use `id: "btn-remove-member-.*"` etc. to target the
+# first (and only) non-owner member.
+
+# --- Navigate to members ---------------------------------------------------
+- tapOn:
+    id: "link-project-members"
+- extendedWaitUntil:
+    visible:
+      id: "btn-show-add-member"
+    timeout: 10000
+
+# --- Open add-member form ---------------------------------------------------
+- tapOn:
+    id: "btn-show-add-member"
+- extendedWaitUntil:
+    visible:
+      id: "input-member-phone"
+    timeout: 8000
+
+# --- Enter bob's phone + select editor role --------------------------------
+- tapOn:
+    id: "input-member-phone"
+- inputText: "+15550000002"
+- hideKeyboard
+- tapOn:
+    id: "picker-member-role-editor"
+- tapOn:
+    id: "btn-add-member"
+
+# --- Confirm bob appears in the member list --------------------------------
+- extendedWaitUntil:
+    visible:
+      id: "member-row-.*"
+    timeout: 10000
+
+# --- Go back to project home -----------------------------------------------
+- tapOn:
+    id: "btn-back"
+- extendedWaitUntil:
+    visible:
+      id: "btn-project-edit"
+    timeout: 10000

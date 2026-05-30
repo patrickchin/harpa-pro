@@ -7,11 +7,8 @@
  * branch `dev`.
  */
 import { View, Text } from 'react-native';
-import { FileText } from 'lucide-react-native';
 import type { GeneratedSiteReport } from '@harpa/report-core';
 
-import { Card } from '@/components/primitives/Card';
-import { SectionHeader } from '@/components/primitives/SectionHeader';
 import { StatBar } from './StatBar';
 import { WeatherStrip } from './WeatherStrip';
 import { WorkersCard } from './WorkersCard';
@@ -19,32 +16,25 @@ import { MaterialsCard } from './MaterialsCard';
 import { IssuesCard } from './IssuesCard';
 import { NextStepsCard } from './NextStepsCard';
 import { SummarySectionCard } from './SummarySectionCard';
-import { colors } from '@/lib/design-tokens/colors';
+import { SummaryLead } from './detail/SummaryLead';
 
 interface ReportViewProps {
   report: GeneratedSiteReport;
+  /** Per-project report number — used to build testIDs for Maestro selectors. */
+  reportNumber?: number;
 }
 
-export function ReportView({ report }: ReportViewProps) {
+export function ReportView({ report, reportNumber }: ReportViewProps) {
   const { sections } = report.report;
+  const numStr = reportNumber ?? 'x';
 
   return (
-    <View className="gap-3">
+    <View className="gap-3" testID={`report-view-${numStr}`}>
       <StatBar report={report} />
 
       <WeatherStrip report={report} />
 
-      {report.report.meta.summary ? (
-        <Card variant="default" padding="lg">
-          <SectionHeader
-            title="Summary"
-            icon={<FileText size={16} color={colors.foreground} />}
-          />
-          <Text className="mt-4 text-base leading-relaxed text-muted-foreground">
-            {report.report.meta.summary}
-          </Text>
-        </Card>
-      ) : null}
+      <SummaryLead summary={report.report.meta.summary} />
 
       <IssuesCard issues={report.report.issues} />
 
@@ -60,7 +50,12 @@ export function ReportView({ report }: ReportViewProps) {
             Summary Sections
           </Text>
           {sections.map((section, i) => (
-            <SummarySectionCard key={`${section.title}-${i}`} section={section} />
+            <SummarySectionCard
+              key={`${section.title}-${i}`}
+              section={section}
+              reportNumber={reportNumber}
+              sectionIndex={i}
+            />
           ))}
         </View>
       )}

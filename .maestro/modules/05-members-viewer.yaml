@@ -1,0 +1,126 @@
+appId: ${MAESTRO_APP_ID}
+name: "05 — Members: alice removes bob and re-invites as viewer"
+tags:
+  - regression
+  - members
+---
+# Module 05 — Member permissions (viewer)
+#
+# The project-members screen does not currently support changing an
+# existing member's role inline (no role picker on the member row —
+# only a remove button). To exercise the viewer role we remove bob
+# and re-invite him as a viewer. Once an inline role picker lands,
+# replace this with a single role-change tap.
+#
+# Covers:
+#   - alice removes bob (editor)
+#   - alice re-invites bob as viewer
+#   - sign in as bob; bob sees project but cannot create reports
+#   - restore alice on project home
+#
+# Pre-condition: alice is on project home; bob is editor member.
+# Post-condition: alice is on project home; bob is viewer member.
+
+# --- Alice opens members and removes bob -----------------------------------
+- tapOn:
+    id: "link-project-members"
+- extendedWaitUntil:
+    visible:
+      id: "member-row-.*"
+    timeout: 10000
+# The remove button only appears on non-owner rows, so this id matches
+# bob uniquely.
+- tapOn:
+    id: "btn-remove-member-.*"
+# Confirm the remove in the dialog (AppDialogSheet primary action).
+- extendedWaitUntil:
+    visible:
+      id: "confirm-remove-member"
+    timeout: 5000
+- tapOn:
+    id: "confirm-remove-member"
+- extendedWaitUntil:
+    notVisible:
+      id: "btn-remove-member-.*"
+    timeout: 10000
+
+# --- Alice re-invites bob as viewer ----------------------------------------
+# The add-member form is collapsed by default; tap btn-show-add-member
+# to reveal input-member-phone + role picker.
+- tapOn:
+    id: "btn-show-add-member"
+- extendedWaitUntil:
+    visible:
+      id: "input-member-phone"
+    timeout: 8000
+- tapOn:
+    id: "input-member-phone"
+- inputText: "+15550000002"
+- hideKeyboard
+- tapOn:
+    id: "picker-member-role-viewer"
+- tapOn:
+    id: "btn-add-member"
+- extendedWaitUntil:
+    visible:
+      text: "Viewer"
+    timeout: 10000
+
+# --- Go back to project home -----------------------------------------------
+- tapOn:
+    id: "btn-back"
+- extendedWaitUntil:
+    visible:
+      id: "btn-project-edit"
+    timeout: 10000
+
+# --- Switch to bob — verify viewer access ----------------------------------
+- runFlow: ../helpers/sign-out.yaml
+- runFlow:
+    file: ../helpers/sign-in.yaml
+    env:
+      PHONE: "5550000002"
+
+- tapOn:
+    text: "Regression Test Project \\(Edited\\)"
+# Viewers do NOT see btn-project-edit. Wait for the Members card
+# (link-project-members is rendered for all roles) to confirm bob
+# is on the project home.
+- extendedWaitUntil:
+    visible:
+      id: "link-project-members"
+    timeout: 10000
+- assertNotVisible:
+    id: "btn-project-edit"
+
+# Bob's role badge (visible on members screen) shows "Viewer"
+- tapOn:
+    id: "link-project-members"
+- extendedWaitUntil:
+    visible:
+      text: "Viewer"
+    timeout: 10000
+- tapOn:
+    id: "btn-back"
+
+# Viewer can open reports list but cannot create a new report.
+- tapOn:
+    id: "btn-open-reports"
+- extendedWaitUntil:
+    visible:
+      id: "btn-back"
+    timeout: 5000
+- assertNotVisible:
+    id: "btn-new-report"
+- tapOn:
+    id: "btn-back"
+
+# --- Switch back to alice ---------------------------------------------------
+- tapOn:
+    id: "btn-back"
+- runFlow: ../helpers/sign-out.yaml
+- runFlow:
+    file: ../helpers/sign-in.yaml
+    env:
+      PHONE: "5550000001"
+- runFlow: ../helpers/open-project.yaml

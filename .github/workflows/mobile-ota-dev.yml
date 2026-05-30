@@ -30,14 +30,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: pnpm/action-setup@v4
-
-      - uses: actions/setup-node@v4
+      - uses: ./.github/actions/setup-monorepo
         with:
-          node-version: 20
-          cache: pnpm
-
-      - run: pnpm install --frozen-lockfile
+          node-version: '20'
 
       - uses: expo/expo-github-action@v8
         with:
@@ -50,4 +45,4 @@ jobs:
           EXPO_PUBLIC_API_URL: https://harpa-pro-api-dev.fly.dev
           EXPO_PUBLIC_APP_VARIANT: preview
           EXPO_PUBLIC_USE_FIXTURES: "false"
-        run: eas update --channel preview --message "dev deploy $(git rev-parse --short HEAD)" --non-interactive
+        run: eas update --channel preview --environment preview --message "dev deploy $(git rev-parse --short HEAD)" --non-interactive

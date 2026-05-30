@@ -1,0 +1,22 @@
+appId: ${MAESTRO_APP_ID}
+---
+# open-project.yaml — helper: navigate to the regression journey's project
+#
+# Taps the project card by its post-edit name on the projects list.
+# The journey creates exactly one project (module 02), renames it to
+# "Regression Test Project (Edited)", and references it by that text
+# everywhere downstream.
+#
+# Pre-condition: projects list screen is visible (btn-new-project visible).
+# Post-condition: project home screen is visible (btn-project-edit visible).
+#
+# Usage:
+#   - runFlow: .maestro/helpers/open-project.yaml
+- assertVisible:
+    id: "btn-new-project"
+- tapOn:
+    text: "Regression Test Project \\(Edited\\)"
+- extendedWaitUntil:
+    visible:
+      id: "btn-project-edit"
+    timeout: 10000

@@ -1,0 +1,40 @@
+appId: ${MAESTRO_APP_ID}
+name: "03-dev - Members: alice invites bob as editor"
+tags:
+  - regression
+  - members
+  - dev
+---
+# Required env:
+#   DEV_BOB_PHONE_E164
+
+- tapOn:
+    id: "link-project-members"
+- extendedWaitUntil:
+    visible:
+      id: "btn-show-add-member"
+    timeout: 10000
+- tapOn:
+    id: "btn-show-add-member"
+- extendedWaitUntil:
+    visible:
+      id: "input-member-phone"
+    timeout: 8000
+- tapOn:
+    id: "input-member-phone"
+- inputText: "${DEV_BOB_PHONE_E164}"
+- hideKeyboard
+- tapOn:
+    id: "picker-member-role-editor"
+- tapOn:
+    id: "btn-add-member"
+- extendedWaitUntil:
+    visible:
+      id: "member-row-.*"
+    timeout: 10000
+- tapOn:
+    id: "btn-back"
+- extendedWaitUntil:
+    visible:
+      id: "btn-project-edit"
+    timeout: 10000

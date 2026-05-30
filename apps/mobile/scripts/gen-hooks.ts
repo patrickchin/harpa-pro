@@ -50,11 +50,14 @@ const ENDPOINTS: Endpoint[] = [
   // auth
   { method: 'post', path: '/auth/otp/start',  hook: 'useStartOtpMutation',  query: false, hasPathParams: false, hasBody: true },
   { method: 'post', path: '/auth/otp/verify', hook: 'useVerifyOtpMutation', query: false, hasPathParams: false, hasBody: true },
+  { method: 'post', path: '/auth/password/verify', hook: 'useVerifyPasswordMutation', query: false, hasPathParams: false, hasBody: true },
   { method: 'post', path: '/auth/logout',     hook: 'useLogoutMutation',    query: false, hasPathParams: false, hasBody: false },
 
   { method: 'get',   path: '/me',       hook: 'useMeQuery',          query: true,  hasPathParams: false, hasBody: false, queryKeyHead: 'me' },
   { method: 'patch', path: '/me',       hook: 'useUpdateMeMutation', query: false, hasPathParams: false, hasBody: true },
   { method: 'get',   path: '/me/usage', hook: 'useMeUsageQuery',     query: true,  hasPathParams: false, hasBody: false, queryKeyHead: 'meUsage' },
+  { method: 'get',   path: '/me/usage/events', hook: 'useMeUsageEventsQuery', query: true,  hasPathParams: false, hasBody: false, queryKeyHead: 'meUsageEvents' },
+  { method: 'get',   path: '/me/limits', hook: 'useMeLimitsQuery',   query: true,  hasPathParams: false, hasBody: false, queryKeyHead: 'meLimits' },
 
   // projects
   { method: 'get',    path: '/projects',                              hook: 'useListProjectsQuery',         query: true,  hasPathParams: false, hasBody: false, queryKeyHead: 'projects' },
@@ -65,6 +68,7 @@ const ENDPOINTS: Endpoint[] = [
   { method: 'get',    path: '/projects/{project}/members',        hook: 'useProjectMembersQuery',       query: true,  hasPathParams: true,  hasBody: false, queryKeyHead: 'projectMembers' },
   { method: 'post',   path: '/projects/{project}/members',        hook: 'useAddProjectMemberMutation',  query: false, hasPathParams: true,  hasBody: true },
   { method: 'delete', path: '/projects/{project}/members/{user}', hook: 'useRemoveProjectMemberMutation', query: false, hasPathParams: true,  hasBody: false },
+  { method: 'patch',  path: '/projects/{project}/members/{user}', hook: 'useUpdateProjectMemberMutation', query: false, hasPathParams: true,  hasBody: true  },
 
   // reports
   { method: 'get',    path: '/projects/{project}/reports',                          hook: 'useProjectReportsQuery',       query: true,  hasPathParams: true,  hasBody: false, queryKeyHead: 'projectReports' },
@@ -75,7 +79,9 @@ const ENDPOINTS: Endpoint[] = [
   { method: 'post',   path: '/projects/{project}/reports/{number}/generate',        hook: 'useGenerateReportMutation',    query: false, hasPathParams: true,  hasBody: true },
   { method: 'post',   path: '/projects/{project}/reports/{number}/regenerate',      hook: 'useRegenerateReportMutation',  query: false, hasPathParams: true,  hasBody: true },
   { method: 'post',   path: '/projects/{project}/reports/{number}/finalize',        hook: 'useFinalizeReportMutation',    query: false, hasPathParams: true,  hasBody: false },
+  { method: 'post',   path: '/projects/{project}/reports/{number}/unfinalize',      hook: 'useUnfinalizeReportMutation',  query: false, hasPathParams: true,  hasBody: false },
   { method: 'post',   path: '/projects/{project}/reports/{number}/pdf',             hook: 'useReportPdfMutation',         query: false, hasPathParams: true,  hasBody: false },
+  { method: 'get',    path: '/projects/{project}/reports/{number}/debug',           hook: 'useReportDebugQuery',          query: true,  hasPathParams: true,  hasBody: false, queryKeyHead: 'reportDebug' },
 
   // short-URL resolvers (P3.0 Commit 3)
   { method: 'get',    path: '/p/{project}',                       hook: 'useResolveProjectSlugQuery',   query: true,  hasPathParams: true,  hasBody: false, queryKeyHead: 'resolveProjectSlug' },
@@ -85,6 +91,7 @@ const ENDPOINTS: Endpoint[] = [
   { method: 'get',    path: '/reports/{report}/notes',              hook: 'useReportNotesQuery',          query: true,  hasPathParams: true,  hasBody: false, queryKeyHead: 'reportNotes' },
   { method: 'post',   path: '/reports/{report}/notes',              hook: 'useCreateNoteMutation',        query: false, hasPathParams: true,  hasBody: true },
   { method: 'patch',  path: '/notes/{note}',                        hook: 'useUpdateNoteMutation',        query: false, hasPathParams: true,  hasBody: true },
+  { method: 'post',   path: '/notes/{note}/files',                   hook: 'useAppendFilesMutation',       query: false, hasPathParams: true,  hasBody: true },
   { method: 'delete', path: '/notes/{note}',                        hook: 'useDeleteNoteMutation',        query: false, hasPathParams: true,  hasBody: false },
 
   // files
@@ -95,6 +102,7 @@ const ENDPOINTS: Endpoint[] = [
   // voice
   { method: 'post',   path: '/voice/transcribe',                      hook: 'useTranscribeVoiceMutation',   query: false, hasPathParams: false, hasBody: true },
   { method: 'post',   path: '/voice/summarize',                       hook: 'useSummarizeVoiceMutation',    query: false, hasPathParams: false, hasBody: true },
+  { method: 'post',   path: '/reports/{report}/notes/voice',          hook: 'useCreateVoiceNoteMutation',   query: false, hasPathParams: true,  hasBody: true },
 
   // settings
   { method: 'get',    path: '/settings/ai',                           hook: 'useAiSettingsQuery',           query: true,  hasPathParams: false, hasBody: false, queryKeyHead: 'aiSettings' },
@@ -121,6 +129,10 @@ const MOBILE_SKIP_PATHS = new Set<string>([
   'post /waitlist',
   'post /waitlist/confirm',
   'get /readyz',
+  // Universal-link manifests are fetched by the OS (swcd / Android
+  // PackageManager), not by the mobile client. Skip from codegen.
+  'get /.well-known/apple-app-site-association',
+  'get /.well-known/assetlinks.json',
 ]);
 
 // Validate that ENDPOINTS matches the spec exactly. Drift here means
@@ -172,19 +184,27 @@ function emitQueryHook(e: Endpoint): string {
   const path = JSON.stringify(e.path);
   const m = JSON.stringify(e.method);
   const head = JSON.stringify(e.queryKeyHead ?? e.hook);
-  const inputType = e.hasPathParams
+  const baseName = e.hook.replace(/^use/, '').replace(/Query$/, '');
+  const inputTypeName = `${baseName}QueryInput`;
+  const inputTypeBody = e.hasPathParams
     ? `{ params: PathParams<${path}, ${m}>; query?: QueryParams<${path}, ${m}> }`
-    : `{ query?: QueryParams<${path}, ${m}> } | void`;
-  const inputArg = e.hasPathParams ? 'input' : 'input?';
+    : `{ query?: QueryParams<${path}, ${m}> }`;
+  const inputTypeDecl = e.hasPathParams
+    ? `export type ${inputTypeName} = ${inputTypeBody};`
+    : `export type ${inputTypeName} = ${inputTypeBody} | void;`;
+  const inputArg = e.hasPathParams
+    ? `input: ${inputTypeName}`
+    : `input?: ${inputTypeName}`;
   const queryKey = e.hasPathParams
-    ? `[${head}, (input as any).params, (input as any).query] as const`
-    : `[${head}, (input as any)?.query] as const`;
+    ? `[${head}, input.params, input.query] as const`
+    : `[${head}, input?.query] as const`;
   const requestArgs = e.hasPathParams
-    ? `request(${path}, ${m}, { params: (input as any).params, query: (input as any).query, signal })`
-    : `request(${path}, ${m}, { query: (input as any)?.query, signal })`;
+    ? `request(${path}, ${m}, { params: input.params, query: input.query, signal })`
+    : `request(${path}, ${m}, { query: input?.query, signal })`;
   return `
+${inputTypeDecl}
 export function ${e.hook}(
-  ${inputArg}: ${inputType},
+  ${inputArg},
   options?: Omit<UseQueryOptions<ResponseBody<${path}, ${m}>, ApiError>, 'queryKey' | 'queryFn'>,
 ) {
   return useQuery<ResponseBody<${path}, ${m}>, ApiError>({
@@ -199,24 +219,31 @@ export function ${e.hook}(
 function emitMutationHook(e: Endpoint): string {
   const path = JSON.stringify(e.path);
   const m = JSON.stringify(e.method);
-  // Variables shape: { params?, body? } depending on what the op needs.
+  const baseName = e.hook.replace(/^use/, '').replace(/Mutation$/, '');
+  const varsTypeName = `${baseName}MutationVars`;
   const parts: string[] = [];
   if (e.hasPathParams) parts.push(`params: PathParams<${path}, ${m}>`);
   if (e.hasBody) parts.push(`body: RequestBody<${path}, ${m}>`);
-  const varsType = parts.length ? `{ ${parts.join('; ')} }` : 'void';
+  const varsTypeBody = parts.length ? `{ ${parts.join('; ')} }` : 'void';
+  const varsTypeDecl = `export type ${varsTypeName} = ${varsTypeBody};`;
   const requestArgs: string[] = [];
-  if (e.hasPathParams) requestArgs.push(`params: (vars as any).params`);
-  if (e.hasBody) requestArgs.push(`body: (vars as any).body`);
+  if (e.hasPathParams) requestArgs.push(`params: vars.params`);
+  if (e.hasBody) requestArgs.push(`body: vars.body`);
   const reqCall = requestArgs.length
     ? `request(${path}, ${m}, { ${requestArgs.join(', ')} })`
     : `request(${path}, ${m})`;
+  // When `vars` is `void` the mutationFn still takes it as an argument
+  // (TanStack's signature), but we don't read it. Suppress the unused
+  // parameter with a leading underscore for the void case.
+  const fnArg = parts.length ? 'vars' : '_vars';
   return `
+${varsTypeDecl}
 export function ${e.hook}(
-  options?: UseMutationOptions<ResponseBody<${path}, ${m}>, ApiError, ${varsType}>,
+  options?: UseMutationOptions<ResponseBody<${path}, ${m}>, ApiError, ${varsTypeName}>,
 ) {
   const qc = useQueryClient();
-  return useMutation<ResponseBody<${path}, ${m}>, ApiError, ${varsType}>({
-    mutationFn: (vars) => ${reqCall},
+  return useMutation<ResponseBody<${path}, ${m}>, ApiError, ${varsTypeName}>({
+    mutationFn: (${fnArg}) => ${reqCall},
     ...options,
     onSuccess: (...args) => {
       const rule = INVALIDATIONS[${JSON.stringify(e.hook)}];

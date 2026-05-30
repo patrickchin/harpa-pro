@@ -10,13 +10,15 @@
  * Inline AddMemberForm + remove-confirm dialog keep this one body file
  * self-contained (no separate components/members/ tree to port).
  */
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import {
   View,
   Text,
   Pressable,
   ScrollView,
   RefreshControl,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { Crown, Pencil, Eye, Plus, Trash2, Users } from 'lucide-react-native';
 import { SafeAreaView } from '@/components/primitives/SafeAreaView';
@@ -28,8 +30,10 @@ import { Input } from '@/components/primitives/Input';
 import { InlineNotice } from '@/components/primitives/InlineNotice';
 import { ScreenHeader } from '@/components/primitives/ScreenHeader';
 import { ProjectMembersSkeleton } from '@/components/skeletons/ProjectMembersSkeleton';
-import { getRemoveMemberDialogCopy } from '@/lib/app-dialog-copy';
+import { getRemoveMemberDialogCopy } from '@/lib/dialogs/app-dialog-copy';
 import { colors } from '@/lib/design-tokens/colors';
+import { useLayoutShiftProbe } from '@/lib/util/layout-shift-probe';
+import { PROJECT_MEMBERS_LAYOUT } from '@/lib/projects/project-members-layout';
 
 export type MemberRole = 'owner' | 'editor' | 'viewer';
 
@@ -63,6 +67,7 @@ export type ProjectMembersProps = {
   addSuccessNonce: number;
   onRemoveMember: (userId: string) => void;
   isRemovePending: boolean;
+  actions?: ReactNode;
 };
 
 const ROLE_LABELS: Record<MemberRole, string> = {
@@ -77,10 +82,13 @@ const ROLE_ICONS: Record<MemberRole, typeof Crown> = {
   viewer: Eye,
 };
 
-function RoleBadge({ role }: { role: MemberRole }) {
+function RoleBadge({ role, userId }: { role: MemberRole; userId?: string }) {
   const Icon = ROLE_ICONS[role];
   return (
-    <View className="flex-row items-center gap-1 rounded-md border border-border bg-surface-muted px-2 py-0.5">
+    <View
+      className="flex-row items-center gap-1 rounded-md border border-border bg-surface-muted px-2 py-0.5"
+      testID={userId ? `member-role-badge-${userId}` : undefined}
+    >
       <Icon size={12} color={colors.muted.foreground} />
       <Text className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
         {ROLE_LABELS[role]}
@@ -93,14 +101,23 @@ function MemberItem({
   member,
   canRemove,
   onRemove,
+  onLayout,
 }: {
   member: MemberRow;
   canRemove: boolean;
   onRemove?: () => void;
+  onLayout?: import('react-native').ViewProps['onLayout'];
 }) {
   const displayName = member.displayName ?? 'Unknown';
   return (
-    <Card variant="default" padding="md" className="flex-row items-center gap-3">
+    <Card
+      variant="default"
+      padding="md"
+      className="flex-row items-center gap-3"
+      testID={`member-row-${member.userId}`}
+      onLayout={onLayout}
+      style={{ minHeight: PROJECT_MEMBERS_LAYOUT.memberRowHeight }}
+    >
       <View className="h-10 w-10 items-center justify-center rounded-full border border-border bg-surface-muted">
         <Text className="text-sm font-bold text-muted-foreground">
           {displayName.charAt(0).toUpperCase()}
@@ -114,7 +131,7 @@ function MemberItem({
           >
             {displayName}
           </Text>
-          <RoleBadge role={member.role} />
+          <RoleBadge role={member.role} userId={member.userId} />
         </View>
         <Text className="text-sm text-muted-foreground" numberOfLines={1}>
           {member.phone}
@@ -170,9 +187,9 @@ function AddMemberForm({
         }}
         editable={!isPending}
         keyboardType="phone-pad"
-        testID="input-invite-phone"
+        testID="input-member-phone"
       />
-      <View className="flex-row gap-2">
+      <View className="flex-row gap-2" testID="picker-member-role">
         {(['editor', 'viewer'] as const).map((r) => (
           <Button
             key={r}
@@ -180,7 +197,7 @@ function AddMemberForm({
             size="sm"
             onPress={() => setRole(r)}
             disabled={isPending}
-            testID={`btn-invite-role-${r}`}
+            testID={`picker-member-role-${r}`}
           >
             {ROLE_LABELS[r]}
           </Button>
@@ -196,7 +213,7 @@ function AddMemberForm({
         size="default"
         onPress={submit}
         loading={isPending}
-        testID="btn-invite-submit"
+        testID="btn-add-member"
       >
         {isPending ? 'Inviting…' : 'Send invite'}
       </Button>
@@ -219,6 +236,7 @@ export function ProjectMembers({
   addSuccessNonce,
   onRemoveMember,
   isRemovePending,
+  actions,
 }: ProjectMembersProps) {
   const [showAdd, setShowAdd] = useState(false);
 
@@ -229,6 +247,8 @@ export function ProjectMembers({
   const [memberToRemove, setMemberToRemove] = useState<MemberRow | null>(null);
 
   const canManage = myRole === 'owner';
+  const headerProbe = useLayoutShiftProbe('project-members:header');
+  const firstRowProbe = useLayoutShiftProbe('project-members:first-row');
 
   const enriched = useMemo(
     () =>
@@ -270,27 +290,37 @@ export function ProjectMembers({
 
   return (
     <SafeAreaView className="flex-1 bg-background" edges={['top']}>
-      <View className="px-5 pt-4 pb-2">
-        <ScreenHeader title="Members" onBack={onBack} backLabel="Project" />
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        className="flex-1"
+      >
+      <View className="px-5 pt-4 pb-2" onLayout={headerProbe}>
+        <ScreenHeader title="Members" onBack={onBack} backLabel="Project" actions={actions} />
       </View>
 
       {isLoading ? (
-        <ProjectMembersSkeleton />
+        <ProjectMembersSkeleton canManage={canManage} />
       ) : (
         <ScrollView
           className="flex-1"
           contentContainerStyle={{
-            paddingHorizontal: 20,
-            paddingTop: 8,
-            paddingBottom: 16,
-            gap: 12,
+            paddingHorizontal: PROJECT_MEMBERS_LAYOUT.paddingHorizontal,
+            paddingTop: PROJECT_MEMBERS_LAYOUT.paddingTop,
+            paddingBottom: PROJECT_MEMBERS_LAYOUT.paddingBottom,
+            gap: PROJECT_MEMBERS_LAYOUT.gap,
           }}
+          automaticallyAdjustKeyboardInsets
+          keyboardShouldPersistTaps="handled"
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
           }
         >
           {me ? (
-            <MemberItem member={me} canRemove={false} />
+            <MemberItem
+              member={me}
+              canRemove={false}
+              onLayout={firstRowProbe}
+            />
           ) : null}
 
           {canManage ? (
@@ -305,7 +335,7 @@ export function ProjectMembers({
                 onPress={() => setShowAdd(true)}
                 accessibilityRole="button"
                 accessibilityLabel="Add member"
-                testID="btn-add-member"
+                testID="btn-show-add-member"
               >
                 <View className="flex-row items-center gap-3 rounded-lg border border-dashed border-border bg-surface-muted p-3">
                   <View className="h-10 w-10 items-center justify-center rounded-md border border-border bg-card">
@@ -371,18 +401,23 @@ export function ProjectMembers({
             ) : null
           ) : (
             <View className="gap-3">
-              {filtered.map((member) => (
+              {filtered.map((member, index) => (
                 <MemberItem
                   key={member.userId}
                   member={member}
                   canRemove={canManage && member.role !== 'owner'}
                   onRemove={() => setMemberToRemove(member)}
+                  // If the current user isn't in the list (no `me` row),
+                  // the first teammate is the first member row on screen
+                  // and owns the `project-members:first-row` probe.
+                  onLayout={!me && index === 0 ? firstRowProbe : undefined}
                 />
               ))}
             </View>
           )}
         </ScrollView>
       )}
+      </KeyboardAvoidingView>
 
       {removeCopy && memberToRemove ? (
         <AppDialogSheet
@@ -398,6 +433,7 @@ export function ProjectMembers({
               label: isRemovePending ? 'Removing…' : removeCopy.confirmLabel,
               variant: removeCopy.confirmVariant,
               disabled: isRemovePending,
+              testID: 'confirm-remove-member',
               onPress: () => {
                 onRemoveMember(memberToRemove.userId);
                 setMemberToRemove(null);

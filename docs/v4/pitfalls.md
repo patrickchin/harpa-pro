@@ -85,8 +85,8 @@ because of this drift.
 source** at `../haru3-reports/apps/mobile` on branch `dev`. Both
 sides run NativeWind v4 — JSX and Tailwind classes copy across with
 no translation. Visual review is manual (side-by-side with the
-canonical source on the iOS sim, aided by the in-app dev-gallery
-at `app/(dev)/`). Cosmetic drift in later phases is a P0 bug.
+canonical source on the iOS sim). Cosmetic drift in later phases is
+a P0 bug.
 
 There is no automated screenshot-diff gate — the v3 attempt's
 `docs/legacy-v3/screenshots/`, `docs/legacy-v3/realignment/`, and
@@ -97,15 +97,16 @@ context only).
 Tactical sub-rules:
 - Tailwind tokens defined in `apps/mobile/tailwind.config.js` once,
   derived from the canonical source's `tailwind.config.js`. No hex
-  values in screen code (lint guard `check-no-hex-colors.sh`).
+  values in screen code (ESLint rule `no-restricted-syntax` scoped to
+  `components/**` in `apps/mobile/.eslintrc.cjs`).
 - Shared primitives (`Card`, `Input`, `Button`, `IconButton`,
   `ScreenHeader`, `EmptyState`, `Skeleton`, `AppDialogSheet`,
   `StatTile`) ship in P2.2 with snapshot tests. Adding a new
   one-off primitive is a code-review block.
-- Every screen ships **two routes** wrapping a single body component
-  in `apps/mobile/screens/<name>.tsx`: the real route under
-  `(auth)/` or `(app)/` (wired in P3), and a `(dev)/<name>.tsx`
-  mirror with mock props for fast manual visual review.
+- Every screen wraps a single body component in
+  `apps/mobile/screens/<name>.tsx` mounted by its real route under
+  `(auth)/` or `(app)/` (wired in P3). Bodies are props-driven (no
+  API/auth inside) so they are unit-testable in isolation.
 
 ---
 
@@ -124,8 +125,7 @@ Maestro flow**. We do not move to the next screen until the current
 one passes:
 
 - Manual visual review against the matching screen in
-  `../haru3-reports/apps/mobile@dev` (the dev-gallery makes this a
-  side-by-side simulator check).
+  `../haru3-reports/apps/mobile@dev` (side-by-side simulator check).
 - Vitest behaviour test for every interaction the canonical source
   exercises.
 - Maestro flow exercising the screen end-to-end (record + replay
@@ -153,9 +153,9 @@ canonical source at `../haru3-reports/apps/mobile@dev`.
 
 **v4 rule.**
 
-1. better-auth integration ships in P0.6 with a working OTP flow
-   against a Twilio sandbox **before** any other API route. P1's
-   first task is "auth middleware + integration tests".
+1. Auth ships in P0.6 with a working OTP flow against a Twilio
+   sandbox **before** any other API route. P1's first task is "auth
+   middleware + integration tests".
 2. `apps/mobile/lib/env.ts` is a Zod-parsed object loaded at app
    boot. ESLint forbids `process.env.EXPO_PUBLIC_*` outside that
    file. CI runs the parse against a populated `.env.example` to
@@ -328,6 +328,22 @@ The recurring-bugs log entry is the search hit for "I'm about to
 add another stub" — see [docs/bugs/README.md → R5](../bugs/README.md#r5--di-stubs-become-the-spec-default-wiring-silently-broken)
 before you write `setXClients({ … })`.
 
+**Sub-pattern — `pickStorage()` (and other env-derived factory
+selectors) must read the parsed `env` const, not `process.env`
+directly.** During the camera-upload audit we found
+`pickStorage()` was branching on `process.env.R2_FIXTURE_MODE` while
+every other line in the same module read `env.R2_*`. The default
+factory therefore made the live R2 selection on the *raw* env value,
+which silently disagreed with the Zod-parsed view used by
+`R2Storage`'s constructor — a textbook layer-1 trapdoor that no
+unit test would catch. Two defences shipped together:
+`scripts/check-no-process-env-r2.sh` (lint-time grep guard, scoped
+to all of `packages/` + `apps/`) and a MinIO-via-Testcontainers
+integration test (`files.r2-live.integration.test.ts`) that
+exercises the real default wiring against a live S3-compatible
+endpoint — no DI stubs, no fake clients, just the route + its
+collaborators against MinIO.
+
 ---
 
 ## Process pitfalls
@@ -402,6 +418,142 @@ parameter — the default *is* the bug.
 shape (loads `getAiSettings(d, userId)`, forwards `vendor` to
 `aiGenerateReport`). Mirror it for any new "per-user-tunable"
 behaviour.
+
+---
+
+## Pitfall 16 — Derived fallback fixture name silently disables AI_LIVE
+
+**Symptom:** `AI_LIVE=1` ships to prod, secrets are set, deploy is
+green — but no request ever reaches `api.openai.com`. The provider
+keeps replaying canned fixtures.
+
+**Cause:** `packages/api/src/services/ai.ts::pickMode()` took a single
+`fixtureName` argument and short-circuited to `'replay'` whenever any
+fixture name was set. The three callers (`transcribe`, `chat`,
+`generateReport`) each derived a sensible default (`summarize.basic`,
+`transcribe.basic.groq`, …) and passed it in *unconditionally* — so
+the function always saw a fixture name, and `AI_LIVE=1` was dead
+code. A unit-style test that called `chat({ userPrompt: 'x' })`
+without a fixtureName would have caught it; we only had tests that
+asserted *replay* behaviour and passed fixture names through.
+
+**Rule:** When a function takes "the caller's intent" as an argument,
+never mix it with values you derive internally. Either:
+
+- Split into two functions ("did the caller ask for X?" vs "what's the
+  default for X?"), or
+- Pass `undefined` through and only fill the default after the
+  routing decision is made.
+
+**Test rule (Pitfall 13 corollary):** every "AI_LIVE flips the wiring"
+flag needs a positive test that boots the service *without* a caller
+fixture name, stubs `globalThis.fetch`, and asserts the request URL
+hits the live vendor. We added
+`packages/api/src/services/ai.live.test.ts` for exactly this — it
+catches the next regression in this shape.
+
+---
+
+## Pitfall 17 — State-conditional wrappers cause skeleton → content layout shift
+
+**Symptom:** A screen renders a skeleton while `isLoading`, then on
+hydrate the page visibly jumps — the header is in the same place but
+the first row, a CTA, or a section title pops in/out and shoves
+everything down.
+
+**Cause:** The loaded JSX wraps some element in `!isLoading && (…)`
+(or only renders an action button when data is present), but the
+skeleton tree doesn't reserve that space. The classic offender in v4
+was `apps/mobile/screens/reports-list.tsx` rendering the "New report"
+Pressable as `canCreate && !isLoading ? (…)`, so the Pressable
+appeared after load and pushed the list down ~88 px.
+
+**Rule:** A screen's outer scaffold (SafeAreaView, header, list
+container, CTA, surrounding padding) must be **identical** in
+`isLoading` and loaded states. The only thing that swaps is the
+inner content region. If a control must be disabled during load,
+render it disabled — do not unmount it.
+
+**Test rule:** Use `useLayoutShiftProbe` (`apps/mobile/lib/layout-shift-probe.ts`)
+on landmark nodes in both the skeleton and the loaded tree with the
+same id. In dev, set `EXPO_PUBLIC_LAYOUT_PROBE=true` and call
+`dumpShiftReport()` — every landmark must have `maxDeltaY ≤ 2 px`.
+The eight v4 skeletons (`apps/mobile/components/skeletons/*`) and
+their screens follow this pattern; mirror it for any new screen with
+a loading state. See [`arch-mobile-skeletons.md`](./arch-mobile-skeletons.md).
+
+## Testing
+
+- Maestro on Windows / PowerShell 7 against real Android has its own
+  set of host- and CLI-specific pitfalls — see
+  [`pitfalls-maestro-windows.md`](pitfalls-maestro-windows.md).
+
+---
+
+## Pitfall 18 — Timeline rows flicker on pending → saved transition
+
+**What happened.** Photo notes flickered visibly on upload: the
+pending preview card disappeared and a fresh saved card appeared
+~1 frame later. Root cause was React keys changing across the
+transition. `NoteTimeline` keyed image rows by `entry.id`. While
+the upload was in flight, the synthetic `NoteEntry` had id
+`__batch-<key>` (or `__upload-<jobId>`). When the server confirmed
+the note, the saved row arrived with `not_<id>` — a different key,
+so React unmounted the pending card and mounted a new saved card.
+Solo uploads compounded it because the rendered component also
+changed (`PendingPhotoCard` → `PhotoNoteCard`).
+
+Voice notes did not flicker because their synthetic row adopts the
+real `savedNote.id` once known, and the pending row stays mounted
+until `notes` contains a row with the matching id.
+
+**Rule.** Synthetic timeline entries must adopt a stable React key
+that survives the pending → saved transition. Implementation:
+
+1. Plumb the resolved `noteId` through the upload queue as soon as
+   `createNote` / `resolveNote` returns (during `creating_note`,
+   BEFORE `completed`). Surface it on the job snapshot.
+2. The hook that synthesises `NoteEntry` rows owns a session-lived
+   `noteId → syntheticId` map so server rows that arrive on later
+   refetches still resolve to the original key.
+3. Server `NoteEntry` rows carry a separate `reactKey` field — DO
+   NOT overwrite `id`. Downstream mutations (delete, edit, photo
+   gallery indexing) all key on `entry.id`; only the timeline
+   renderer consumes `reactKey`.
+4. One component must handle the full lifecycle (pending →
+   uploading → failed → saved → mixed). Splitting pending and saved
+   into separate components reintroduces the unmount/remount even
+   when the key is stable, because React swaps component types.
+
+**Test rule.** Pin the contract with a key-stability test that
+renders the timeline with a pending row, swaps it for the saved row
+with the same `reactKey`, and asserts the host node identity is
+preserved (`expect(after).toBe(before)`). Include a negative
+control that changes `reactKey` and verifies a new instance is
+created — this catches a future regression in the timeline's key
+selection. See `apps/mobile/components/notes/NoteTimeline.test.tsx`.
+
+---
+
+## Pitfall 19 — Timer-based regen polls waste battery and drift from truth
+
+**What happened.** Early designs proposed a periodic timer that polls
+the server and regenerates if notes have changed. Timers fire
+regardless of actual state (waste), create UX jank if the AI call
+lands while the user is reading, and are hard to test (timing
+non-determinism).
+
+**Rule.** Use the DB-backed `needsRegeneration` flag exposed in the
+report contract. The flag is set server-side by note CRUD (not by a
+timer or a mobile counter); mobile reads it on every React Query
+refetch and fires the hook exactly once. Manual body edits do NOT
+touch `notes_changed_at` so they never trigger auto-regen.
+
+**Test rule.** The `useAutoRegenerate` hook has 6 unit tests (all
+gate conditions) plus a default-wiring screen test that renders the
+provider and asserts the action-row state without stubbing the hook.
+See `apps/mobile/features/generate/useAutoRegenerate.test.tsx` and
+`apps/mobile/screens/generate-report-tab.test.tsx`.
 
 ---
 

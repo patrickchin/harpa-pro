@@ -1,10 +1,26 @@
 name: cli
+
+# Skips when no CLI-relevant paths changed (CLI depends on
+# packages/api + packages/api-contract).
+
 on:
   pull_request:
   push:
     branches: [dev, main]
+
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      cli: ${{ steps.paths.outputs.cli }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: paths
+        uses: ./.github/actions/changed-paths
+
   cli:
+    needs: changes
+    if: needs.changes.outputs.cli == 'true' || github.event_name == 'push'
     runs-on: ubuntu-latest
     env:
       AI_FIXTURE_MODE: replay
@@ -12,11 +28,7 @@ jobs:
       TESTCONTAINERS_RYUK_DISABLED: 'true'
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-        with: { version: 9.12.3 }
-      - uses: actions/setup-node@v4
-        with: { node-version: '22', cache: 'pnpm' }
-      - run: pnpm install --frozen-lockfile
+      - uses: ./.github/actions/setup-monorepo
       - run: pnpm --filter @harpa/api-contract build
       - run: pnpm --filter @harpa/cli typecheck
       - run: pnpm --filter @harpa/cli lint

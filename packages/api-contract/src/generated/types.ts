@@ -27,6 +27,8 @@ export interface paths {
                             /** @enum {string} */
                             service: "api";
                             version: string;
+                            gitCommit: string;
+                            buildTime?: string;
                         };
                     };
                 };
@@ -148,6 +150,21 @@ export interface paths {
                         };
                     };
                 };
+                /** @description Rate limited. */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                            requestId?: string;
+                        };
+                    };
+                };
             };
         };
         delete?: never;
@@ -201,6 +218,118 @@ export interface paths {
                 };
                 /** @description Invalid code. */
                 401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                            requestId?: string;
+                        };
+                    };
+                };
+                /** @description Rate limited. */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                            requestId?: string;
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/password/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Test-account password bypass. Disabled (returns 404) unless TEST_ACCOUNT_PHONES + TEST_ACCOUNT_PASSWORD are configured on the server. See docs/v4/arch-auth-and-rls.md. */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        phone: string;
+                        password: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Verified. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            token: string;
+                            user: {
+                                id: string;
+                                phone: string;
+                                displayName: string | null;
+                                companyName: string | null;
+                                createdAt: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Invalid phone or password. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                            requestId?: string;
+                        };
+                    };
+                };
+                /** @description Feature disabled. */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                            requestId?: string;
+                        };
+                    };
+                };
+                /** @description Rate limited. */
+                429: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -406,8 +535,139 @@ export interface paths {
                         };
                     };
                 };
+                /** @description Rate limited. */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                            requestId?: string;
+                        };
+                    };
+                };
             };
         };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/.well-known/apple-app-site-association": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Apple App Site Association manifest. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            applinks: {
+                                apps: string[];
+                                details: {
+                                    appID: string;
+                                    paths: string[];
+                                }[];
+                            };
+                        };
+                    };
+                };
+                /** @description iOS universal links are not configured on this origin. */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                /** @enum {string} */
+                                code: "not_configured";
+                                message: string;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/.well-known/assetlinks.json": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Android Asset Links manifest. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            relation: string[];
+                            target: {
+                                /** @enum {string} */
+                                namespace: "android_app";
+                                package_name: string;
+                                sha256_cert_fingerprints: string[];
+                            };
+                        }[];
+                    };
+                };
+                /** @description Android app links are not configured on this origin. */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                /** @enum {string} */
+                                code: "not_configured";
+                                message: string;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -597,7 +857,199 @@ export interface paths {
                             totals: {
                                 reports: number;
                                 voiceNotes: number;
+                                inputTokens: number;
+                                outputTokens: number;
+                                cachedTokens: number;
+                                inputSeconds: number;
+                                calls: number;
                             };
+                            usageTokens: {
+                                month: string;
+                                inputTokens: number;
+                                outputTokens: number;
+                                cachedTokens: number;
+                                inputSeconds: number;
+                                calls: number;
+                            }[];
+                            usageByModel: {
+                                vendor: string;
+                                model: string;
+                                /** @enum {string} */
+                                operation: "chat" | "transcribe" | "generate_report";
+                                calls: number;
+                                inputTokens: number;
+                                outputTokens: number;
+                                cachedTokens: number;
+                                inputSeconds: number;
+                            }[];
+                            /** @enum {string} */
+                            plan?: "free" | "pro" | "enterprise";
+                            limits?: {
+                                /** @enum {string} */
+                                kind: "report_generate" | "voice_transcribe" | "voice_summarize" | "ai_input_tokens" | "ai_output_tokens";
+                                limit: number | null;
+                                used: number;
+                                remaining: number | null;
+                                resetAt: string;
+                                /** @enum {string} */
+                                plan: "free" | "pro" | "enterprise";
+                                overridden: boolean;
+                            }[];
+                        };
+                    };
+                };
+                /** @description Unauthorized. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                            requestId?: string;
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/usage/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    cursor?: string;
+                    limit?: number;
+                    operation?: "chat" | "transcribe" | "generate_report";
+                    vendor?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Paginated raw LLM usage events, newest first. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            items: {
+                                id: string;
+                                createdAt: string;
+                                vendor: string;
+                                model: string;
+                                /** @enum {string} */
+                                operation: "chat" | "transcribe" | "generate_report";
+                                inputTokens: number;
+                                outputTokens: number;
+                                cachedTokens: number;
+                                inputSeconds: number | null;
+                                latencyMs: number;
+                                /** @enum {string} */
+                                fixtureMode: "live" | "replay" | "record";
+                                /** @enum {string} */
+                                status: "ok" | "error";
+                                projectId: string | null;
+                                reportId: string | null;
+                            }[];
+                            nextCursor: string | null;
+                        };
+                    };
+                };
+                /** @description Bad request. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                            requestId?: string;
+                        };
+                    };
+                };
+                /** @description Unauthorized. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                            requestId?: string;
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/limits": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Effective limits. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {string} */
+                            plan: "free" | "pro" | "enterprise";
+                            buckets: {
+                                /** @enum {string} */
+                                kind: "report_generate" | "voice_transcribe" | "voice_summarize" | "ai_input_tokens" | "ai_output_tokens";
+                                limit: number | null;
+                                used: number;
+                                remaining: number | null;
+                                resetAt: string;
+                                /** @enum {string} */
+                                plan: "free" | "pro" | "enterprise";
+                                overridden: boolean;
+                            }[];
                         };
                     };
                 };
@@ -1277,7 +1729,107 @@ export interface paths {
         };
         options?: never;
         head?: never;
-        patch?: never;
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    project: string;
+                    user: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        role: "owner" | "editor" | "viewer";
+                    };
+                };
+            };
+            responses: {
+                /** @description Member role updated (or unchanged if already correct). */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            userId: string;
+                            displayName: string | null;
+                            phone: string;
+                            /** @enum {string} */
+                            role: "owner" | "editor" | "viewer";
+                            joinedAt: string;
+                        };
+                    };
+                };
+                /** @description Unauthorized. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                                requestId?: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Not an owner. */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                                requestId?: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Member not found. */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                                requestId?: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Last owner. */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                                requestId?: string;
+                            };
+                        };
+                    };
+                };
+            };
+        };
         trace?: never;
     };
     "/projects/{project}/reports": {
@@ -1316,7 +1868,11 @@ export interface paths {
                                 status: "draft" | "finalized";
                                 visitDate: string | null;
                                 body: {
-                                    visitDate: string | null;
+                                    meta: {
+                                        title: string | null;
+                                        summary: string | null;
+                                        visitDate: string | null;
+                                    };
                                     weather: {
                                         condition: string | null;
                                         temperatureC: number | null;
@@ -1351,7 +1907,9 @@ export interface paths {
                                     }[];
                                 } | null;
                                 notesSinceLastGeneration: number;
+                                notesChangedAt: string | null;
                                 generatedAt: string | null;
+                                needsRegeneration: boolean;
                                 finalizedAt: string | null;
                                 pdfUrl: string | null;
                                 createdAt: string;
@@ -1427,7 +1985,11 @@ export interface paths {
                             status: "draft" | "finalized";
                             visitDate: string | null;
                             body: {
-                                visitDate: string | null;
+                                meta: {
+                                    title: string | null;
+                                    summary: string | null;
+                                    visitDate: string | null;
+                                };
                                 weather: {
                                     condition: string | null;
                                     temperatureC: number | null;
@@ -1462,7 +2024,9 @@ export interface paths {
                                 }[];
                             } | null;
                             notesSinceLastGeneration: number;
+                            notesChangedAt: string | null;
                             generatedAt: string | null;
+                            needsRegeneration: boolean;
                             finalizedAt: string | null;
                             pdfUrl: string | null;
                             createdAt: string;
@@ -1559,7 +2123,11 @@ export interface paths {
                             status: "draft" | "finalized";
                             visitDate: string | null;
                             body: {
-                                visitDate: string | null;
+                                meta: {
+                                    title: string | null;
+                                    summary: string | null;
+                                    visitDate: string | null;
+                                };
                                 weather: {
                                     condition: string | null;
                                     temperatureC: number | null;
@@ -1594,7 +2162,9 @@ export interface paths {
                                 }[];
                             } | null;
                             notesSinceLastGeneration: number;
+                            notesChangedAt: string | null;
                             generatedAt: string | null;
+                            needsRegeneration: boolean;
                             finalizedAt: string | null;
                             pdfUrl: string | null;
                             createdAt: string;
@@ -1707,6 +2277,45 @@ export interface paths {
                 content: {
                     "application/json": {
                         visitDate?: string | null;
+                        body?: {
+                            meta: {
+                                title: string | null;
+                                summary: string | null;
+                                visitDate: string | null;
+                            };
+                            weather: {
+                                condition: string | null;
+                                temperatureC: number | null;
+                                windKph: number | null;
+                                impact: string | null;
+                            } | null;
+                            workers: {
+                                role: string;
+                                count: number;
+                                hours: number | null;
+                                notes: string | null;
+                            }[];
+                            materials: {
+                                name: string;
+                                quantity: number | null;
+                                unit: string | null;
+                                status: string | null;
+                                condition: string | null;
+                                notes: string | null;
+                            }[];
+                            issues: {
+                                title: string;
+                                /** @enum {string} */
+                                severity: "low" | "medium" | "high";
+                                description: string | null;
+                                action: string | null;
+                            }[];
+                            nextSteps: string[];
+                            summarySections: {
+                                title: string;
+                                body: string;
+                            }[];
+                        } | null;
                     };
                 };
             };
@@ -1725,7 +2334,11 @@ export interface paths {
                             status: "draft" | "finalized";
                             visitDate: string | null;
                             body: {
-                                visitDate: string | null;
+                                meta: {
+                                    title: string | null;
+                                    summary: string | null;
+                                    visitDate: string | null;
+                                };
                                 weather: {
                                     condition: string | null;
                                     temperatureC: number | null;
@@ -1760,7 +2373,9 @@ export interface paths {
                                 }[];
                             } | null;
                             notesSinceLastGeneration: number;
+                            notesChangedAt: string | null;
                             generatedAt: string | null;
+                            needsRegeneration: boolean;
                             finalizedAt: string | null;
                             pdfUrl: string | null;
                             createdAt: string;
@@ -1816,8 +2431,123 @@ export interface paths {
                         };
                     };
                 };
+                /** @description Report is finalized. */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                                requestId?: string;
+                            };
+                        };
+                    };
+                };
             };
         };
+        trace?: never;
+    };
+    "/projects/{project}/reports/{number}/debug": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    project: string;
+                    number: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Report debug payload. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            prompt: {
+                                system: string;
+                                user: string;
+                            };
+                            notes: {
+                                id: string;
+                                /** @enum {string} */
+                                kind: "text" | "voice" | "image" | "document";
+                                body: string | null;
+                                transcript: string | null;
+                                createdAt: string;
+                            }[];
+                            lastGeneration: {
+                                requestedAt: string;
+                                finishedAt: string | null;
+                                vendor: string;
+                                model: string;
+                                /** @enum {string} */
+                                fixtureMode: "live" | "replay" | "record";
+                                systemPrompt: string;
+                                userPrompt: string;
+                                response: string;
+                                usage: {
+                                    inputTokens: number;
+                                    outputTokens: number;
+                                    cachedTokens?: number;
+                                } | null;
+                            } | null;
+                        };
+                    };
+                };
+                /** @description Unauthorized. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                                requestId?: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Not found. */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                                requestId?: string;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/projects/{project}/reports/{number}/generate": {
@@ -1862,7 +2592,11 @@ export interface paths {
                                 status: "draft" | "finalized";
                                 visitDate: string | null;
                                 body: {
-                                    visitDate: string | null;
+                                    meta: {
+                                        title: string | null;
+                                        summary: string | null;
+                                        visitDate: string | null;
+                                    };
                                     weather: {
                                         condition: string | null;
                                         temperatureC: number | null;
@@ -1897,11 +2631,20 @@ export interface paths {
                                     }[];
                                 } | null;
                                 notesSinceLastGeneration: number;
+                                notesChangedAt: string | null;
                                 generatedAt: string | null;
+                                needsRegeneration: boolean;
                                 finalizedAt: string | null;
                                 pdfUrl: string | null;
                                 createdAt: string;
                                 updatedAt: string;
+                            };
+                            debug?: {
+                                systemPrompt?: string;
+                                userPrompt?: string;
+                                rawText?: string;
+                                model?: string;
+                                vendor?: string;
                             };
                         };
                     };
@@ -2036,7 +2779,11 @@ export interface paths {
                                 status: "draft" | "finalized";
                                 visitDate: string | null;
                                 body: {
-                                    visitDate: string | null;
+                                    meta: {
+                                        title: string | null;
+                                        summary: string | null;
+                                        visitDate: string | null;
+                                    };
                                     weather: {
                                         condition: string | null;
                                         temperatureC: number | null;
@@ -2071,11 +2818,20 @@ export interface paths {
                                     }[];
                                 } | null;
                                 notesSinceLastGeneration: number;
+                                notesChangedAt: string | null;
                                 generatedAt: string | null;
+                                needsRegeneration: boolean;
                                 finalizedAt: string | null;
                                 pdfUrl: string | null;
                                 createdAt: string;
                                 updatedAt: string;
+                            };
+                            debug?: {
+                                systemPrompt?: string;
+                                userPrompt?: string;
+                                rawText?: string;
+                                model?: string;
+                                vendor?: string;
                             };
                         };
                     };
@@ -2204,7 +2960,11 @@ export interface paths {
                                 status: "draft" | "finalized";
                                 visitDate: string | null;
                                 body: {
-                                    visitDate: string | null;
+                                    meta: {
+                                        title: string | null;
+                                        summary: string | null;
+                                        visitDate: string | null;
+                                    };
                                     weather: {
                                         condition: string | null;
                                         temperatureC: number | null;
@@ -2239,7 +2999,151 @@ export interface paths {
                                     }[];
                                 } | null;
                                 notesSinceLastGeneration: number;
+                                notesChangedAt: string | null;
                                 generatedAt: string | null;
+                                needsRegeneration: boolean;
+                                finalizedAt: string | null;
+                                pdfUrl: string | null;
+                                createdAt: string;
+                                updatedAt: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Unauthorized. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                                requestId?: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Not found. */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                                requestId?: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Conflict. */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                                requestId?: string;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/projects/{project}/reports/{number}/unfinalize": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    project: string;
+                    number: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Unfinalized. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            report: {
+                                id: string;
+                                number: number;
+                                projectId: string;
+                                /** @enum {string} */
+                                status: "draft" | "finalized";
+                                visitDate: string | null;
+                                body: {
+                                    meta: {
+                                        title: string | null;
+                                        summary: string | null;
+                                        visitDate: string | null;
+                                    };
+                                    weather: {
+                                        condition: string | null;
+                                        temperatureC: number | null;
+                                        windKph: number | null;
+                                        impact: string | null;
+                                    } | null;
+                                    workers: {
+                                        role: string;
+                                        count: number;
+                                        hours: number | null;
+                                        notes: string | null;
+                                    }[];
+                                    materials: {
+                                        name: string;
+                                        quantity: number | null;
+                                        unit: string | null;
+                                        status: string | null;
+                                        condition: string | null;
+                                        notes: string | null;
+                                    }[];
+                                    issues: {
+                                        title: string;
+                                        /** @enum {string} */
+                                        severity: "low" | "medium" | "high";
+                                        description: string | null;
+                                        action: string | null;
+                                    }[];
+                                    nextSteps: string[];
+                                    summarySections: {
+                                        title: string;
+                                        body: string;
+                                    }[];
+                                } | null;
+                                notesSinceLastGeneration: number;
+                                notesChangedAt: string | null;
+                                generatedAt: string | null;
+                                needsRegeneration: boolean;
                                 finalizedAt: string | null;
                                 pdfUrl: string | null;
                                 createdAt: string;
@@ -2578,7 +3482,22 @@ export interface paths {
                                 kind: "text" | "voice" | "image" | "document";
                                 body: string | null;
                                 fileId: string | null;
+                                thumbnailFileId: string | null;
+                                /** @default [] */
+                                files: {
+                                    id: string;
+                                    fileId: string;
+                                    thumbnailFileId: string | null;
+                                    position: number;
+                                    caption: string | null;
+                                }[];
                                 transcript: string | null;
+                                title: string | null;
+                                summary: string | null;
+                                durationSec: number | null;
+                                language: string | null;
+                                transcribeProvider: string | null;
+                                transcribedAt: string | null;
                                 createdAt: string;
                                 updatedAt: string;
                             }[];
@@ -2637,7 +3556,14 @@ export interface paths {
                         kind: "text" | "voice" | "image" | "document";
                         body?: string | null;
                         fileId?: string | null;
+                        thumbnailFileId?: string | null;
+                        files?: {
+                            fileId: string;
+                            thumbnailFileId?: string | null;
+                        }[];
                         transcript?: string | null;
+                        title?: string | null;
+                        summary?: string | null;
                     };
                 };
             };
@@ -2656,7 +3582,22 @@ export interface paths {
                             kind: "text" | "voice" | "image" | "document";
                             body: string | null;
                             fileId: string | null;
+                            thumbnailFileId: string | null;
+                            /** @default [] */
+                            files: {
+                                id: string;
+                                fileId: string;
+                                thumbnailFileId: string | null;
+                                position: number;
+                                caption: string | null;
+                            }[];
                             transcript: string | null;
+                            title: string | null;
+                            summary: string | null;
+                            durationSec: number | null;
+                            language: string | null;
+                            transcribeProvider: string | null;
+                            transcribedAt: string | null;
                             createdAt: string;
                             updatedAt: string;
                         };
@@ -2695,6 +3636,92 @@ export interface paths {
                     };
                 };
                 /** @description Report not found. */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                                requestId?: string;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/notes/{note}/files": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    note: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        files: {
+                            fileId: string;
+                            thumbnailFileId?: string | null;
+                        }[];
+                    };
+                };
+            };
+            responses: {
+                /** @description Files appended. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            files: {
+                                id: string;
+                                fileId: string;
+                                thumbnailFileId: string | null;
+                                position: number;
+                                caption: string | null;
+                            }[];
+                        };
+                    };
+                };
+                /** @description Unauthorized. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                                requestId?: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Note not found. */
                 404: {
                     headers: {
                         [name: string]: unknown;
@@ -2794,7 +3821,9 @@ export interface paths {
             requestBody?: {
                 content: {
                     "application/json": {
-                        body: string | null;
+                        body?: string | null;
+                        title?: string | null;
+                        summary?: string | null;
                     };
                 };
             };
@@ -2813,7 +3842,22 @@ export interface paths {
                             kind: "text" | "voice" | "image" | "document";
                             body: string | null;
                             fileId: string | null;
+                            thumbnailFileId: string | null;
+                            /** @default [] */
+                            files: {
+                                id: string;
+                                fileId: string;
+                                thumbnailFileId: string | null;
+                                position: number;
+                                caption: string | null;
+                            }[];
                             transcript: string | null;
+                            title: string | null;
+                            summary: string | null;
+                            durationSec: number | null;
+                            language: string | null;
+                            transcribeProvider: string | null;
+                            transcribedAt: string | null;
                             createdAt: string;
                             updatedAt: string;
                         };
@@ -2891,6 +3935,22 @@ export interface paths {
                 content: {
                     "application/json": {
                         /** @enum {string} */
+                        scope: "project";
+                        projectId: string;
+                        reportId: string;
+                        /** @enum {string} */
+                        kind: "voice" | "image" | "document" | "pdf";
+                        contentType: string;
+                        sizeBytes: number;
+                    } | {
+                        /** @enum {string} */
+                        scope: "avatar";
+                        contentType: string;
+                        sizeBytes: number;
+                    } | {
+                        /** @enum {string} */
+                        scope: "scratch";
+                        /** @enum {string} */
                         kind: "voice" | "image" | "document" | "pdf";
                         contentType: string;
                         sizeBytes: number;
@@ -2908,6 +3968,7 @@ export interface paths {
                             /** Format: uri */
                             uploadUrl: string;
                             fileKey: string;
+                            fileId: string;
                             expiresAt: string;
                         };
                     };
@@ -2930,6 +3991,22 @@ export interface paths {
                 };
                 /** @description Unauthorized. */
                 401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                                requestId?: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Project / report not found or not a member. */
+                404: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -2972,6 +4049,24 @@ export interface paths {
                 content: {
                     "application/json": {
                         /** @enum {string} */
+                        scope: "project";
+                        projectId: string;
+                        reportId: string;
+                        /** @enum {string} */
+                        kind: "voice" | "image" | "document" | "pdf";
+                        fileKey: string;
+                        sizeBytes: number;
+                        contentType: string;
+                    } | {
+                        /** @enum {string} */
+                        scope: "avatar";
+                        fileKey: string;
+                        sizeBytes: number;
+                        contentType: string;
+                    } | {
+                        /** @enum {string} */
+                        scope: "scratch";
+                        /** @enum {string} */
                         kind: "voice" | "image" | "document" | "pdf";
                         fileKey: string;
                         sizeBytes: number;
@@ -2994,11 +4089,13 @@ export interface paths {
                             fileKey: string;
                             sizeBytes: number;
                             contentType: string;
+                            projectId: string | null;
+                            reportId: string | null;
                             createdAt: string;
                         };
                     };
                 };
-                /** @description Bad request — fileKey must start with users/<callerId>/. */
+                /** @description Bad request — fileKey shape / scope mismatch. */
                 400: {
                     headers: {
                         [name: string]: unknown;
@@ -3016,6 +4113,22 @@ export interface paths {
                 };
                 /** @description Unauthorized. */
                 401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                                requestId?: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Project / report not found or not a member. */
+                404: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -3101,7 +4214,7 @@ export interface paths {
                         };
                     };
                 };
-                /** @description Not found or not owned. */
+                /** @description Not found or not visible. */
                 404: {
                     headers: {
                         [name: string]: unknown;
@@ -3121,6 +4234,158 @@ export interface paths {
         };
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/reports/{report}/notes/voice": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    report: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        fileId: string;
+                        language?: string;
+                        durationSec?: number;
+                        fixtureName?: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Voice note created. */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            id: string;
+                            reportId: string;
+                            authorId: string;
+                            /** @enum {string} */
+                            kind: "text" | "voice" | "image" | "document";
+                            body: string | null;
+                            fileId: string | null;
+                            thumbnailFileId: string | null;
+                            /** @default [] */
+                            files: {
+                                id: string;
+                                fileId: string;
+                                thumbnailFileId: string | null;
+                                position: number;
+                                caption: string | null;
+                            }[];
+                            transcript: string | null;
+                            title: string | null;
+                            summary: string | null;
+                            durationSec: number | null;
+                            language: string | null;
+                            transcribeProvider: string | null;
+                            transcribedAt: string | null;
+                            createdAt: string;
+                            updatedAt: string;
+                        };
+                    };
+                };
+                /** @description Bad request. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                                requestId?: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Unauthorized. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                                requestId?: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Report or file not found / not owned. */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                                requestId?: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Recording too long. */
+                413: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                                requestId?: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Upstream AI provider error. */
+                502: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                                requestId?: string;
+                            };
+                        };
+                    };
+                };
+            };
+        };
         delete?: never;
         options?: never;
         head?: never;
@@ -3350,9 +4615,9 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            /** @enum {string} */
-                            vendor: "kimi" | "openai" | "anthropic" | "google" | "zai" | "deepseek";
-                            model: string;
+                            /** @enum {string|null} */
+                            vendor: "openai" | null;
+                            model: string | null;
                         };
                     };
                 };
@@ -3389,9 +4654,9 @@ export interface paths {
             requestBody?: {
                 content: {
                     "application/json": {
-                        /** @enum {string} */
-                        vendor?: "kimi" | "openai" | "anthropic" | "google" | "zai" | "deepseek";
-                        model?: string;
+                        /** @enum {string|null} */
+                        vendor: "openai" | null;
+                        model: string | null;
                     };
                 };
             };
@@ -3403,9 +4668,9 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            /** @enum {string} */
-                            vendor: "kimi" | "openai" | "anthropic" | "google" | "zai" | "deepseek";
-                            model: string;
+                            /** @enum {string|null} */
+                            vendor: "openai" | null;
+                            model: string | null;
                         };
                     };
                 };

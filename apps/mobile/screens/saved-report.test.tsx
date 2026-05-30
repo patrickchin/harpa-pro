@@ -15,18 +15,69 @@
  */
 import { describe, expect, it, vi } from 'vitest';
 import TestRenderer, { act } from 'react-test-renderer';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+
+vi.mock('expo-image', () => ({
+  Image: (props: Record<string, unknown>) => null,
+}));
+
+// `ReportNotesPane` now drives delete through `useOptimisticDeleteNote`,
+// which transitively imports `@/lib/auth` and `@/lib/uuid`. Those touch
+// native modules at init (`expo-secure-store`, `expo-crypto`) that
+// aren't safe under the node vitest env. Stub them the same way
+// `apps/mobile/lib/api/optimistic.test.tsx` does.
+vi.mock('expo-secure-store', () => ({
+  getItemAsync: vi.fn(async () => null),
+  setItemAsync: vi.fn(async () => undefined),
+  deleteItemAsync: vi.fn(async () => undefined),
+}));
+vi.mock('expo-crypto', () => ({
+  randomUUID: () => '00000000-0000-4000-8000-000000000000',
+}));
+vi.mock('@/lib/auth', () => ({
+  useAuthSession: () => ({ user: { id: 'usr_test12345' } }),
+}));
 
 import {
   SavedReport,
   type SavedReportProps,
 } from './saved-report';
 import { SAMPLE_GENERATED_REPORT } from '@/lib/dev-fixtures/sample-report';
-import type { UseReportPdfActionsReturn } from '@/lib/use-report-pdf-actions';
+import type { UseReportPdfActionsReturn } from '@/lib/reports/use-report-pdf-actions';
+import {
+  AudioPlaybackProvider,
+  type PlaybackPlayer,
+} from '@/lib/audio/AudioPlaybackProvider';
+
+// Switching to the Notes tab mounts `ReportNotesPane`, whose voice
+// rows call `useAudioPlayback()` and whose signed-URL chain pulls
+// from React Query. Wrap every render in the real providers
+// (Pitfall 13) with a node-safe `playerFactory` stub.
+function stubPlayerFactory(): PlaybackPlayer {
+  return {
+    play: () => {},
+    pause: () => {},
+    currentTime: 0,
+    duration: 0,
+    playing: false,
+    seekTo: async () => {},
+    remove: () => {},
+  };
+}
 
 function render(el: React.ReactElement): TestRenderer.ReactTestRenderer {
+  const qc = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
   let tree!: TestRenderer.ReactTestRenderer;
   act(() => {
-    tree = TestRenderer.create(el);
+    tree = TestRenderer.create(
+      <QueryClientProvider client={qc}>
+        <AudioPlaybackProvider playerFactory={stubPlayerFactory}>
+          {el}
+        </AudioPlaybackProvider>
+      </QueryClientProvider>,
+    );
   });
   return tree;
 }
@@ -162,6 +213,42 @@ describe('SavedReport', () => {
     ).toHaveLength(0);
   });
 
+  it('hides the Notes tab when the report is finalized', () => {
+    const tree = render(
+      <SavedReport {...baseProps({ reportStatus: 'finalized' })} />,
+    );
+    expect(
+      tree.root.findAllByProps({ testID: 'btn-tab-notes' }),
+    ).toHaveLength(0);
+  });
+
+  it('surfaces "View Notes" in the actions menu when onViewNotes is provided', () => {
+    const onViewNotes = vi.fn();
+    const tree = render(
+      <SavedReport
+        {...baseProps({ reportStatus: 'finalized', onViewNotes })}
+      />,
+    );
+    act(() => {
+      tree.root.findByProps({ testID: 'btn-report-actions' }).props.onPress();
+    });
+    const btn = tree.root.findByProps({ testID: 'btn-report-view-notes' });
+    act(() => {
+      btn.props.onPress();
+    });
+    expect(onViewNotes).toHaveBeenCalledOnce();
+  });
+
+  it('omits "View Notes" from the actions menu when onViewNotes is not provided', () => {
+    const tree = render(<SavedReport {...baseProps()} />);
+    act(() => {
+      tree.root.findByProps({ testID: 'btn-report-actions' }).props.onPress();
+    });
+    expect(
+      tree.root.findAllByProps({ testID: 'btn-report-view-notes' }),
+    ).toHaveLength(0);
+  });
+
   it('bounces from Edit back to Report when the report flips to finalized', () => {
     const props = baseProps({ initialTab: 'edit' });
     const tree = render(<SavedReport {...props} />);
@@ -227,7 +314,7 @@ describe('SavedReport', () => {
     });
     act(() => {
       tree.root
-        .findByProps({ testID: 'btn-report-unfinalize' })
+        .findByProps({ testID: 'btn-unfinalize-report' })
         .props.onPress();
     });
     await act(async () => {
@@ -286,6 +373,51 @@ describe('SavedReport', () => {
     ).toBeGreaterThan(0);
     expect(
       tree.root.findAllByProps({ testID: 'btn-tab-edit' }).length,
+    ).toBeGreaterThan(0);
+  });
+});
+
+const finalizedDefaults = { ...baseProps(), reportStatus: 'finalized' as const };
+
+describe('SavedReport — finalized layout', () => {
+  it('does not render the tab bar when finalized', () => {
+    const tree = render(
+      <SavedReport
+        {...finalizedDefaults}
+        reportStatus="finalized"
+        report={SAMPLE_GENERATED_REPORT}
+      />,
+    );
+    expect(
+      tree.root.findAllByProps({ testID: 'btn-tab-report' }),
+    ).toHaveLength(0);
+    expect(
+      tree.root.findAllByProps({ testID: 'btn-tab-notes' }),
+    ).toHaveLength(0);
+    expect(
+      tree.root.findAllByProps({ testID: 'btn-tab-edit' }),
+    ).toHaveLength(0);
+  });
+
+  it('falls back to "Report #N" when meta.title is empty', () => {
+    const blank = {
+      ...SAMPLE_GENERATED_REPORT,
+      report: {
+        ...SAMPLE_GENERATED_REPORT.report,
+        meta: { ...SAMPLE_GENERATED_REPORT.report.meta, title: '' },
+      },
+    };
+    const tree = render(
+      <SavedReport
+        {...finalizedDefaults}
+        reportStatus="finalized"
+        reportNumber={7}
+        report={blank}
+      />,
+    );
+    // Check that the report pane is still visible
+    expect(
+      tree.root.findAllByProps({ testID: 'saved-report-pane' }).length,
     ).toBeGreaterThan(0);
   });
 });

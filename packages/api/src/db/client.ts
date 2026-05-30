@@ -8,6 +8,19 @@ const { Pool } = pg;
 
 let pool: pg.Pool | null = null;
 
+/**
+ * Server-side cap on any single statement's execution time. Bounds the
+ * blast radius of a runaway query (planner regression, missing index,
+ * pathological input) so a single request can't hold a pool connection
+ * indefinitely and starve healthy traffic. 5 s is comfortably above
+ * the slowest known endpoint p99 and well under the upstream Fly /
+ * load-balancer idle timeout. Applied per session via pg's PoolConfig;
+ * routes that legitimately need longer (none today) would override
+ * with `SET LOCAL statement_timeout` inside their transaction.
+ * See docs/v4/plan-p4-hardening.md §P4.2.
+ */
+const STATEMENT_TIMEOUT_MS = 5_000;
+
 /** Lazy-init pool. Allows tests to set DATABASE_URL after import. */
 export function getPool(connectionString?: string): pg.Pool {
   if (!pool) {
@@ -15,7 +28,11 @@ export function getPool(connectionString?: string): pg.Pool {
     if (!url) {
       throw new Error('[db] DATABASE_URL is not set; cannot create pool.');
     }
-    pool = new Pool({ ...parseConnection(url), max: 10 });
+    pool = new Pool({
+      ...parseConnection(url),
+      max: 10,
+      statement_timeout: STATEMENT_TIMEOUT_MS,
+    });
   }
   return pool;
 }

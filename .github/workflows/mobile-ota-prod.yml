@@ -1,0 +1,51 @@
+name: mobile-ota-prod
+
+# Push an OTA update to the `production` channel on every push to `main`
+# that touches mobile code. Devices with a `production` native build
+# will download the new JS bundle on next launch.
+#
+# `main` pushes happen when `dev` is merged into `main` — so this fires
+# in lockstep with the production API deploy.
+#
+# Requires:
+#   - EXPO_TOKEN repo secret (EAS access token with publish scope)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "apps/mobile/**"
+      - "packages/api-contract/**"
+      - ".github/workflows/mobile-ota-prod.yml"
+      - "pnpm-lock.yaml"
+  workflow_dispatch: {}
+
+concurrency:
+  group: mobile-ota-prod
+  cancel-in-progress: false # never cancel a prod deploy
+
+jobs:
+  ota:
+    name: EAS Update (production)
+    runs-on: ubuntu-latest
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./.github/actions/setup-monorepo
+        with:
+          node-version: '20'
+
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Push OTA update to production channel
+        working-directory: apps/mobile
+        env:
+          EXPO_PUBLIC_API_URL: https://api.harpapro.com
+          EXPO_PUBLIC_APP_VARIANT: production
+          EXPO_PUBLIC_USE_FIXTURES: "false"
+        run: eas update --channel production --environment production --message "main deploy $(git rev-parse --short HEAD)" --non-interactive

@@ -1,0 +1,81 @@
+appId: ${MAESTRO_APP_ID}
+name: "07 — Reports: create a draft, open it, delete it"
+tags:
+  - regression
+  - reports
+---
+# Module 07 — Reports CRUD (draft lifecycle)
+#
+# Covers:
+#   - open the reports list from project home
+#   - create a new draft report (btn-new-report)
+#   - the draft row appears in the list (report-row-* visible)
+#   - open the draft → generate screen loads (input-note-container)
+#   - delete the draft via btn-draft-options →
+#     dialog-action-confirm-delete-draft
+#   - the report list is empty again
+#   - back to project home
+#
+# Finalize + delete-finalized lives in modules 11/12, so this module
+# stays focused on the draft lifecycle.
+#
+# Pre-condition: alice on project home; no existing reports.
+# Post-condition: alice on project home; no reports. Note:
+# `app.projects.next_report_number` is a monotonic counter that does
+# NOT decrement on delete, so module 11's report will be number 3
+# (one bumped here, one in module 08), not 1. Downstream Maestro
+# steps must not hard-code the ordinal.
+
+# --- Open reports list -----------------------------------------------------
+- tapOn:
+    id: "btn-open-reports"
+- extendedWaitUntil:
+    visible:
+      id: "btn-new-report"
+    timeout: 10000
+
+# --- Create a new draft report ---------------------------------------------
+- tapOn:
+    id: "btn-new-report"
+# Tapping btn-new-report calls the create mutation and then router.push
+# onSuccess. The push may race against the list refetch, so we accept
+# either landing on the generate screen OR landing back on the list
+# with a new draft row visible.
+- extendedWaitUntil:
+    visible:
+      id: "report-row-.*"
+    timeout: 15000
+
+# --- Open the draft --------------------------------------------------------
+- tapOn:
+    id: "report-row-.*"
+- extendedWaitUntil:
+    visible:
+      id: "input-note-container"
+    timeout: 15000
+
+# --- Delete the draft via btn-draft-options --------------------------------
+- tapOn:
+    id: "btn-draft-options"
+- extendedWaitUntil:
+    visible:
+      id: "dialog-action-confirm-delete-draft"
+    timeout: 8000
+- tapOn:
+    id: "dialog-action-confirm-delete-draft"
+
+# --- Back on the reports list, drafts list should be empty -----------------
+- extendedWaitUntil:
+    visible:
+      id: "btn-new-report"
+    timeout: 15000
+- assertNotVisible:
+    id: "report-row-.*"
+
+# --- Back to project home --------------------------------------------------
+- tapOn:
+    id: "btn-back"
+- extendedWaitUntil:
+    visible:
+      id: "btn-project-edit"
+    timeout: 10000

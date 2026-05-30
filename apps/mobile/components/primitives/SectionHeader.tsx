@@ -6,7 +6,7 @@
 import { type ReactNode } from 'react';
 import { Text, View } from 'react-native';
 
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/util/utils';
 
 export interface SectionHeaderProps {
   title: string;

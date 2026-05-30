@@ -18,8 +18,8 @@ import { Button } from '@/components/primitives/Button';
 import { Card } from '@/components/primitives/Card';
 import { InlineNotice } from '@/components/primitives/InlineNotice';
 import { colors } from '@/lib/design-tokens/colors';
-import type { SavedReportDetails } from '@/lib/export-report-pdf';
-import type { SavedReportSheetState } from '@/lib/use-report-pdf-actions';
+import type { SavedReportDetails } from '@/lib/reports/export-report-pdf';
+import type { SavedReportSheetState } from '@/lib/reports/use-report-pdf-actions';
 
 interface SavedReportSheetProps {
   state: SavedReportSheetState | null;

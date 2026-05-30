@@ -1,24 +1,49 @@
 /**
  * NoteTimeline — chronological list of notes captured for a report.
  *
- * P3.6 scope: text notes only. Voice + photo + pending-upload rows are
- * deferred to P3.7/P3.8 (the upload pipelines they depend on are not
- * yet ported). The canonical surface
- * (`../haru3-reports/apps/mobile/components/notes/NoteTimeline.tsx`)
- * also handles file rows, pending photos, and pending voice cards —
- * those branches will be re-added when the pipeline hooks land.
+ * P3.6 ported text-only rendering; Phase E (voice pipeline) adds
+ * `VoiceNoteCard` dispatch for `source === 'voice'` rows (covers
+ * in-flight, failed, and saved voice notes). Photo + pending-upload
+ * rows are still deferred to P4.
+ *
+ * Every saved row's ⋯ kebab opens the shared `NoteOptionsSheet`
+ * (Delete, View transcript for voice, Edit for text, metadata) — the
+ * same sheet used on the saved-report Notes pane so both surfaces
+ * present identical UX. Voice rows surface a `Retry` button on the
+ * `failed` state which routes through `onRetryVoice(sourceIndex)`.
+ *
+ * Delete + edit callbacks are sourceIndex-based so the timeline
+ * remains agnostic of persistence — `NotesTabPane` wires them to the
+ * `GenerateReportProvider` mutations (`notes.deleteAt` / `notes.update`).
  */
+import { useMemo, useState } from 'react';
 import { Text, View } from 'react-native';
 
-import type { NoteEntry } from '@/lib/note-entry';
+import { TextNoteCard } from '@/components/notes/TextNoteCard';
+import { PhotoNoteCard } from '@/components/notes/PhotoNoteCard';
+import { NoteOptionsSheet } from '@/components/notes/NoteOptionsSheet';
+import type { NoteOptionsSheetItem } from '@/components/notes/NoteOptionsSheet';
+import { VoiceNoteCard } from '@/components/notes/VoiceNoteCard';
+import type { NoteEntry } from '@/lib/notes/note-entry';
 
 export interface NoteTimelineProps {
   notes: readonly NoteEntry[];
   isLoading?: boolean;
   error?: Error | null;
   memberNames?: ReadonlyMap<string, string>;
-  /** Optional remove handler — wired in P3.7 once persistence lands. */
-  onRemoveNote?: (sourceIndex: number) => void;
+  /** Optional delete handler. Called once the user confirms in the
+   *  shared NoteOptionsSheet — no separate confirm dialog needed. */
+  onDeleteNote?: (sourceIndex: number) => void;
+  /** Optional edit handler. Called with the trimmed new body. */
+  onEditNote?: (sourceIndex: number, nextBody: string) => void;
+  /** Retry handler for failed voice notes. */
+  onRetryVoice?: (sourceIndex: number) => void;
+  /** Open the fullscreen photo gallery focussed on this entry's file. */
+  onOpenPhoto?: (fileId: string, sourceIndex: number) => void;
+  /** Retry a failed image upload job (matches `attachments[].jobId`). */
+  onRetryPhotoUpload?: (jobId: string) => void;
+  /** Cancel/dismiss an in-flight or failed image upload job. */
+  onCancelPhotoUpload?: (jobId: string) => void;
 }
 
 export function NoteTimeline({
@@ -26,7 +51,64 @@ export function NoteTimeline({
   isLoading,
   error,
   memberNames,
+  onDeleteNote,
+  onEditNote,
+  onRetryVoice,
+  onOpenPhoto,
+  onRetryPhotoUpload,
+  onCancelPhotoUpload,
 }: NoteTimelineProps) {
+  const [activeIndex, setActiveIndex] = useState<number | null>(null);
+
+  const activeItem = useMemo<NoteOptionsSheetItem | null>(() => {
+    if (activeIndex === null) return null;
+    const entry = notes[activeIndex];
+    if (!entry) return null;
+    const kind: NoteOptionsSheetItem['kind'] =
+      entry.source === 'voice'
+        ? 'voice'
+        : entry.source === 'image'
+          ? 'photo'
+          : 'text';
+    return {
+      id: entry.id ?? `note-${activeIndex}`,
+      kind,
+      body: entry.text ?? null,
+      title: entry.title ?? null,
+      summary: entry.summary ?? null,
+      transcript: entry.transcript ?? null,
+      authorName: entry.authorId
+        ? memberNames?.get(entry.authorId) ?? null
+        : null,
+      capturedAt: entry.addedAt,
+      durationSec: entry.durationSec ?? null,
+      fileId: entry.fileId ?? null,
+    };
+  }, [activeIndex, notes, memberNames]);
+
+  const handleOpenOptions = (sourceIndex: number) => setActiveIndex(sourceIndex);
+  const handleClose = () => setActiveIndex(null);
+
+  const handleSheetDelete = onDeleteNote
+    ? () => {
+        if (activeIndex === null) return;
+        const idx = activeIndex;
+        // Close the sheet first so the host gets a clean unmount
+        // before the list re-renders without the deleted entry.
+        setActiveIndex(null);
+        onDeleteNote(idx);
+      }
+    : undefined;
+
+  const handleSheetEdit = onEditNote
+    ? (_note: NoteOptionsSheetItem, nextBody: string) => {
+        if (activeIndex === null) return;
+        const idx = activeIndex;
+        setActiveIndex(null);
+        onEditNote(idx, nextBody);
+      }
+    : undefined;
+
   if (isLoading) {
     return (
       <Text className="text-sm text-muted-foreground" testID="note-timeline-loading">
@@ -47,22 +129,55 @@ export function NoteTimeline({
 
   return (
     <View className="gap-2" testID="note-timeline">
-      {notes.map((entry, index) => (
-        <View
-          key={entry.id ?? `note-${index}`}
-          className="rounded-lg border border-border bg-card p-3"
-          testID={`note-row-${index}`}
-        >
-          <Text className="text-base text-foreground" selectable>
-            {entry.text}
-          </Text>
-          {entry.authorId ? (
-            <Text className="mt-1 text-xs text-muted-foreground">
-              {memberNames?.get(entry.authorId) ?? entry.authorId}
-            </Text>
-          ) : null}
-        </View>
-      ))}
+      {notes.map((entry, index) => {
+        const reactKey = entry.reactKey ?? entry.id ?? `note-${index}`;
+        const authorName = entry.authorId
+          ? memberNames?.get(entry.authorId)
+          : undefined;
+        if (entry.source === 'voice') {
+          return (
+            <VoiceNoteCard
+              key={reactKey}
+              entry={entry}
+              sourceIndex={index}
+              authorName={authorName}
+              onRetry={onRetryVoice}
+              onOpenOptions={handleOpenOptions}
+            />
+          );
+        }
+        if (entry.source === 'image') {
+          return (
+            <PhotoNoteCard
+              key={reactKey}
+              entry={entry}
+              sourceIndex={index}
+              authorName={authorName}
+              onOpen={onOpenPhoto}
+              onOpenOptions={handleOpenOptions}
+              onRetryUpload={onRetryPhotoUpload}
+              onCancelUpload={onCancelPhotoUpload}
+            />
+          );
+        }
+        return (
+          <TextNoteCard
+            key={reactKey}
+            entry={entry}
+            sourceIndex={index}
+            authorName={authorName}
+            onOpenOptions={handleOpenOptions}
+          />
+        );
+      })}
+
+      <NoteOptionsSheet
+        visible={activeItem !== null}
+        note={activeItem}
+        onClose={handleClose}
+        onDelete={handleSheetDelete}
+        onEdit={handleSheetEdit}
+      />
     </View>
   );
 }

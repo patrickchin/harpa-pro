@@ -11,38 +11,43 @@ exports[`AppDialogSheet > hides modal content when visible is false 1`] = `
     className="flex-1 justify-end bg-black/40"
     onPress={[Function]}
   >
-    <rn-Pressable
-      className="bg-background pb-10"
-      onPress={[Function]}
-      testID="dialog-sheet"
+    <rn-KeyboardAvoidingView
+      behavior="padding"
     >
       <rn-View
-        className="flex-row items-center justify-between border-b border-border px-5 py-4"
-      >
-        <rn-Text
-          className="text-xl font-bold text-foreground"
-        >
-          Hidden
-        </rn-Text>
-        <rn-Pressable
-          disabled={false}
-          hitSlop={12}
-          onPress={[Function]}
-        >
-          <lucide-X
-            color="#5f5b66"
-            size={20}
-          />
-        </rn-Pressable>
-      </rn-View>
-      <rn-View
-        className="gap-4 px-5 pt-4"
+        className="bg-background pb-10"
+        onResponderRelease={[Function]}
+        onStartShouldSetResponder={[Function]}
+        testID="dialog-sheet"
       >
         <rn-View
-          className="gap-3"
-        />
+          className="flex-row items-center justify-between border-b border-border px-5 py-4"
+        >
+          <rn-Text
+            className="text-xl font-bold text-foreground"
+          >
+            Hidden
+          </rn-Text>
+          <rn-Pressable
+            disabled={false}
+            hitSlop={12}
+            onPress={[Function]}
+          >
+            <lucide-X
+              color="#5f5b66"
+              size={20}
+            />
+          </rn-Pressable>
+        </rn-View>
+        <rn-View
+          className="gap-4 px-5 pt-4"
+        >
+          <rn-View
+            className="gap-3"
+          />
+        </rn-View>
       </rn-View>
-    </rn-Pressable>
+    </rn-KeyboardAvoidingView>
   </rn-Pressable>
 </rn-Modal>
 `;
@@ -58,121 +63,126 @@ exports[`AppDialogSheet > renders the dialog when visible with message + actions
     className="flex-1 justify-end bg-black/40"
     onPress={[Function]}
   >
-    <rn-Pressable
-      className="bg-background pb-10"
-      onPress={[Function]}
-      testID="dialog-sheet"
+    <rn-KeyboardAvoidingView
+      behavior="padding"
     >
       <rn-View
-        className="flex-row items-center justify-between border-b border-border px-5 py-4"
-      >
-        <rn-Text
-          className="text-xl font-bold text-foreground"
-        >
-          Delete Report
-        </rn-Text>
-        <rn-Pressable
-          disabled={false}
-          hitSlop={12}
-          onPress={[Function]}
-        >
-          <lucide-X
-            color="#5f5b66"
-            size={20}
-          />
-        </rn-Pressable>
-      </rn-View>
-      <rn-View
-        className="gap-4 px-5 pt-4"
+        className="bg-background pb-10"
+        onResponderRelease={[Function]}
+        onStartShouldSetResponder={[Function]}
+        testID="dialog-sheet"
       >
         <rn-View
-          className="rounded-md border px-4 py-3 border-danger-border bg-danger-soft"
-          style={
-            {
-              "elevation": 2,
-              "shadowColor": "#1a1a2e",
-              "shadowOffset": {
-                "height": 2,
-                "width": 0,
-              },
-              "shadowOpacity": 0.08,
-              "shadowRadius": 8,
-            }
-          }
+          className="flex-row items-center justify-between border-b border-border px-5 py-4"
         >
           <rn-Text
-            className="mb-1 text-sm font-semibold text-danger-text"
-            selectable={true}
+            className="text-xl font-bold text-foreground"
           >
-            Permanent action
+            Delete Report
           </rn-Text>
-          <rn-Text
-            className="text-sm text-danger-text"
-            selectable={true}
+          <rn-Pressable
+            disabled={false}
+            hitSlop={12}
+            onPress={[Function]}
           >
-            This report will be permanently deleted.
-          </rn-Text>
+            <lucide-X
+              color="#5f5b66"
+              size={20}
+            />
+          </rn-Pressable>
         </rn-View>
         <rn-View
-          className="gap-3"
+          className="gap-4 px-5 pt-4"
         >
-          <rn-Pressable
-            className="flex-row items-center rounded-md border border-danger-border bg-danger-soft active:opacity-85 min-h-touch px-5 py-3.5 justify-center"
-            disabled={false}
-            onPress={[Function]}
+          <rn-View
+            className="rounded-md border px-4 py-3 border-danger-border bg-danger-soft"
             style={
-              [
-                {
-                  "elevation": 2,
-                  "shadowColor": "#1a1a2e",
-                  "shadowOffset": {
-                    "height": 2,
-                    "width": 0,
-                  },
-                  "shadowOpacity": 0.08,
-                  "shadowRadius": 8,
+              {
+                "elevation": 2,
+                "shadowColor": "#1a1a2e",
+                "shadowOffset": {
+                  "height": 2,
+                  "width": 0,
                 },
-                undefined,
-              ]
+                "shadowOpacity": 0.08,
+                "shadowRadius": 8,
+              }
             }
-            testID="btn-delete"
           >
             <rn-Text
-              className="text-danger-text font-semibold text-base"
+              className="mb-1 text-sm font-semibold text-danger-text"
+              selectable={true}
             >
-              Delete
+              Permanent action
             </rn-Text>
-          </rn-Pressable>
-          <rn-Pressable
-            className="flex-row items-center rounded-md border border-border bg-secondary active:opacity-90 min-h-touch px-5 py-3.5 justify-center"
-            disabled={false}
-            onPress={[Function]}
-            style={
-              [
-                {
-                  "elevation": 2,
-                  "shadowColor": "#1a1a2e",
-                  "shadowOffset": {
-                    "height": 2,
-                    "width": 0,
-                  },
-                  "shadowOpacity": 0.08,
-                  "shadowRadius": 8,
-                },
-                undefined,
-              ]
-            }
-            testID="btn-cancel"
-          >
             <rn-Text
-              className="text-foreground font-semibold text-base"
+              className="text-sm text-danger-text"
+              selectable={true}
             >
-              Cancel
+              This report will be permanently deleted.
             </rn-Text>
-          </rn-Pressable>
+          </rn-View>
+          <rn-View
+            className="gap-3"
+          >
+            <rn-Pressable
+              className="flex-row items-center rounded-md border border-danger-border bg-danger-soft active:opacity-85 min-h-touch px-5 py-3.5 justify-center"
+              disabled={false}
+              onPress={[Function]}
+              style={
+                [
+                  {
+                    "elevation": 2,
+                    "shadowColor": "#1a1a2e",
+                    "shadowOffset": {
+                      "height": 2,
+                      "width": 0,
+                    },
+                    "shadowOpacity": 0.08,
+                    "shadowRadius": 8,
+                  },
+                  undefined,
+                ]
+              }
+              testID="btn-delete"
+            >
+              <rn-Text
+                className="text-danger-text font-semibold text-base"
+              >
+                Delete
+              </rn-Text>
+            </rn-Pressable>
+            <rn-Pressable
+              className="flex-row items-center rounded-md border border-border bg-secondary active:opacity-90 min-h-touch px-5 py-3.5 justify-center"
+              disabled={false}
+              onPress={[Function]}
+              style={
+                [
+                  {
+                    "elevation": 2,
+                    "shadowColor": "#1a1a2e",
+                    "shadowOffset": {
+                      "height": 2,
+                      "width": 0,
+                    },
+                    "shadowOpacity": 0.08,
+                    "shadowRadius": 8,
+                  },
+                  undefined,
+                ]
+              }
+              testID="btn-cancel"
+            >
+              <rn-Text
+                className="text-foreground font-semibold text-base"
+              >
+                Cancel
+              </rn-Text>
+            </rn-Pressable>
+          </rn-View>
         </rn-View>
       </rn-View>
-    </rn-Pressable>
+    </rn-KeyboardAvoidingView>
   </rn-Pressable>
 </rn-Modal>
 `;

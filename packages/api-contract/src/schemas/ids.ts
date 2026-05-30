@@ -33,6 +33,8 @@ export const ID_SPEC = {
   not: { currentLen: 10, minLen: 8, maxLen: 16, brand: 'NoteId' },
   fil: { currentLen: 10, minLen: 8, maxLen: 16, brand: 'FileId' },
   wls: { currentLen: 10, minLen: 8, maxLen: 16, brand: 'WaitlistSignupId' },
+  lue: { currentLen: 12, minLen: 8, maxLen: 16, brand: 'LlmUsageEventId' },
+  nfl: { currentLen: 10, minLen: 8, maxLen: 16, brand: 'NoteFileId' },
 } as const satisfies Record<string, IdSpec>;
 
 export type Prefix = keyof typeof ID_SPEC;
@@ -50,6 +52,8 @@ export type VerificationId   = Id<'vrf'>;
 export type NoteId           = Id<'not'>;
 export type FileId           = Id<'fil'>;
 export type WaitlistSignupId = Id<'wls'>;
+export type LlmUsageEventId  = Id<'lue'>;
+export type NoteFileId       = Id<'nfl'>;
 
 /**
  * Build a Zod schema for a given prefix. Accepts the full historical
@@ -80,3 +84,5 @@ export const verificationId   = idSchema('vrf');
 export const noteId           = idSchema('not');
 export const fileId           = idSchema('fil');
 export const waitlistSignupId = idSchema('wls');
+export const llmUsageEventId  = idSchema('lue');
+export const noteFileId       = idSchema('nfl');

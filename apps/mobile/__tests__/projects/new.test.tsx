@@ -11,6 +11,7 @@ const routerSpy = vi.hoisted(() => ({
 
 vi.mock('expo-router', () => ({
   useRouter: () => routerSpy,
+  usePathname: () => '/',
 }));
 
 type MutateArgs = [
@@ -42,7 +43,7 @@ function getBackButton(tree: TestRenderer.ReactTestRenderer) {
 
 function pressSubmit(tree: TestRenderer.ReactTestRenderer, name = 'Test Project') {
   act(() => tree.root.findByProps({ testID: 'input-project-name' }).props.onChangeText(name));
-  act(() => tree.root.findByProps({ testID: 'btn-submit-project' }).props.onPress());
+  act(() => tree.root.findByProps({ testID: "btn-save-project" }).props.onPress());
 }
 
 describe('NewProjectRoute — navigation wiring', () => {

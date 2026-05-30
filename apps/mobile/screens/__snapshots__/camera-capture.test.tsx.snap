@@ -5,73 +5,148 @@ exports[`CameraCapture > matches snapshot — granted, empty 1`] = `
   className="flex-1 bg-black"
   testID="camera-capture-root"
 >
-  <rn-CameraView
-    facing="back"
-    flash="off"
-    mode="picture"
-    pictureSize="1920x1080"
-    responsiveOrientationWhenOrientationLocked={false}
-    style={
+  <rn-GestureDetector
+    gesture={
       {
-        "bottom": 0,
-        "left": 0,
-        "position": "absolute",
-        "right": 0,
-        "top": 0,
+        "__cfg": {
+          "children": [
+            {
+              "__cfg": {
+                "kind": "pinch",
+                "onStart": [Function],
+                "onUpdate": [Function],
+              },
+              "activeOffsetX": [Function],
+              "activeOffsetY": [Function],
+              "cancelsTouchesInView": [Function],
+              "enabled": [Function],
+              "failOffsetX": [Function],
+              "hitSlop": [Function],
+              "maxPointers": [Function],
+              "minDistance": [Function],
+              "minPointers": [Function],
+              "numberOfTaps": [Function],
+              "onBegin": [Function],
+              "onEnd": [Function],
+              "onStart": [Function],
+              "onUpdate": [Function],
+              "requireExternalGestureToFail": [Function],
+              "runOnJS": [Function],
+              "shouldCancelWhenOutside": [Function],
+              "withTestId": [Function],
+            },
+            {
+              "__cfg": {
+                "kind": "tap",
+                "onEnd": [Function],
+              },
+              "activeOffsetX": [Function],
+              "activeOffsetY": [Function],
+              "cancelsTouchesInView": [Function],
+              "enabled": [Function],
+              "failOffsetX": [Function],
+              "hitSlop": [Function],
+              "maxPointers": [Function],
+              "minDistance": [Function],
+              "minPointers": [Function],
+              "numberOfTaps": [Function],
+              "onBegin": [Function],
+              "onEnd": [Function],
+              "onStart": [Function],
+              "onUpdate": [Function],
+              "requireExternalGestureToFail": [Function],
+              "runOnJS": [Function],
+              "shouldCancelWhenOutside": [Function],
+              "withTestId": [Function],
+            },
+          ],
+          "kind": "simultaneous",
+        },
       }
     }
-  />
+  >
+    <rn-View
+      onLayout={[Function]}
+      style={
+        {
+          "bottom": 0,
+          "left": 0,
+          "position": "absolute",
+          "right": 0,
+          "top": 0,
+        }
+      }
+      testID="camera-gesture-surface"
+    >
+      <rn-CameraView
+        facing="back"
+        flash="off"
+        mode="picture"
+        ref={
+          {
+            "current": null,
+          }
+        }
+        responsiveOrientationWhenOrientationLocked={false}
+        style={
+          {
+            "bottom": 0,
+            "left": 0,
+            "position": "absolute",
+            "right": 0,
+            "top": 0,
+          }
+        }
+        zoom={0}
+      />
+    </rn-View>
+  </rn-GestureDetector>
   <rn-SafeAreaView
     className="absolute inset-0 justify-end"
     pointerEvents="box-none"
   >
     <rn-View
-      className="absolute top-0 left-0 right-0 h-14 px-4 flex-row items-center justify-between"
+      className="absolute top-0 left-0 right-0 px-4 flex-row items-center justify-between bg-black/35"
       style={
         {
-          "backgroundColor": "rgba(0,0,0,0.35)",
+          "height": 100,
+          "paddingTop": 44,
         }
       }
     >
       <rn-Pressable
         accessibilityLabel="Cancel"
         accessibilityRole="button"
-        className="w-11 h-11 rounded-full items-center justify-center"
+        className="w-11 h-11 rounded-full items-center justify-center bg-black/35"
         onPress={[Function]}
-        style={
-          {
-            "backgroundColor": "rgba(0,0,0,0.35)",
-          }
-        }
         testID="btn-camera-cancel"
       >
         <lucide-X
-          color="#ffffff"
+          color="#f8f6f1"
           size={24}
         />
       </rn-Pressable>
-      <rn-Pressable
-        accessibilityLabel="Flash off"
-        accessibilityRole="button"
-        className="w-11 h-11 rounded-full items-center justify-center"
-        onPress={[Function]}
-        style={
-          {
-            "backgroundColor": "rgba(0,0,0,0.35)",
-          }
-        }
-        testID="btn-camera-flash"
+      <rn-View
+        className="flex-row items-center gap-2"
       >
-        <lucide-ZapOff
-          color="#ffffff"
-          size={22}
-        />
-        <rn-Text
-          className="text-white text-[9px] mt-0.5 uppercase tracking-wider"
+        <rn-Pressable
+          accessibilityLabel="Flash off"
+          accessibilityRole="button"
+          className="w-11 h-11 rounded-full items-center justify-center bg-black/35"
+          onPress={[Function]}
+          testID="btn-camera-flash"
         >
-          off
-        </rn-Text>
-      </rn-Pressable>
+          <lucide-ZapOff
+            color="#f8f6f1"
+            size={22}
+          />
+          <rn-Text
+            className="text-white text-[9px] mt-0.5 uppercase tracking-wider"
+          >
+            off
+          </rn-Text>
+        </rn-Pressable>
+      </rn-View>
     </rn-View>
     <rn-View
       className="flex-1"
@@ -81,29 +156,19 @@ exports[`CameraCapture > matches snapshot — granted, empty 1`] = `
     >
       <rn-ScrollView
         className="flex-grow-0 flex-shrink"
-        contentContainerStyle={
-          {
-            "alignItems": "center",
-            "gap": 6,
-          }
-        }
+        contentContainerClassName="gap-1.5 items-center"
         horizontal={true}
         showsHorizontalScrollIndicator={false}
       />
       <rn-Pressable
         accessibilityLabel="Flip camera"
         accessibilityRole="button"
-        className="w-11 h-11 rounded-full items-center justify-center ml-auto"
+        className="w-11 h-11 rounded-full items-center justify-center ml-auto bg-black/35"
         onPress={[Function]}
-        style={
-          {
-            "backgroundColor": "rgba(0,0,0,0.35)",
-          }
-        }
         testID="btn-camera-flip"
       >
         <lucide-RefreshCw
-          color="#ffffff"
+          color="#f8f6f1"
           size={22}
         />
       </rn-Pressable>
@@ -114,20 +179,14 @@ exports[`CameraCapture > matches snapshot — granted, empty 1`] = `
       <rn-Pressable
         accessibilityLabel="Take photo"
         accessibilityRole="button"
+        className="w-[78px] h-[78px] rounded-full border-4 border-white items-center justify-center "
         disabled={false}
         onPress={[Function]}
         style={[Function]}
         testID="btn-camera-shutter"
       >
         <rn-View
-          style={
-            {
-              "backgroundColor": "#ffffff",
-              "borderRadius": 30,
-              "height": 60,
-              "width": 60,
-            }
-          }
+          className="w-[60px] h-[60px] rounded-full bg-white"
         />
       </rn-Pressable>
     </rn-View>
@@ -179,115 +238,120 @@ exports[`CameraCapture > matches snapshot — granted, empty 1`] = `
       className="flex-1 justify-end bg-black/40"
       onPress={[Function]}
     >
-      <rn-Pressable
-        className="bg-background pb-10"
-        onPress={[Function]}
-        testID="dialog-sheet"
+      <rn-KeyboardAvoidingView
+        behavior="padding"
       >
         <rn-View
-          className="flex-row items-center justify-between border-b border-border px-5 py-4"
-        >
-          <rn-Text
-            className="text-xl font-bold text-foreground"
-          >
-            Discard photos?
-          </rn-Text>
-          <rn-Pressable
-            disabled={false}
-            hitSlop={12}
-            onPress={[Function]}
-          >
-            <lucide-X
-              color="#5f5b66"
-              size={20}
-            />
-          </rn-Pressable>
-        </rn-View>
-        <rn-View
-          className="gap-4 px-5 pt-4"
+          className="bg-background pb-10"
+          onResponderRelease={[Function]}
+          onStartShouldSetResponder={[Function]}
+          testID="dialog-sheet"
         >
           <rn-View
-            className="rounded-md border px-4 py-3 border-danger-border bg-danger-soft"
-            style={
-              {
-                "elevation": 2,
-                "shadowColor": "#1a1a2e",
-                "shadowOffset": {
-                  "height": 2,
-                  "width": 0,
-                },
-                "shadowOpacity": 0.08,
-                "shadowRadius": 8,
-              }
-            }
+            className="flex-row items-center justify-between border-b border-border px-5 py-4"
           >
             <rn-Text
-              className="text-sm text-danger-text"
-              selectable={true}
+              className="text-xl font-bold text-foreground"
             >
-              You have 0 unsaved photos.
+              Discard photos?
             </rn-Text>
+            <rn-Pressable
+              disabled={false}
+              hitSlop={12}
+              onPress={[Function]}
+            >
+              <lucide-X
+                color="#5f5b66"
+                size={20}
+              />
+            </rn-Pressable>
           </rn-View>
           <rn-View
-            className="gap-3"
+            className="gap-4 px-5 pt-4"
           >
-            <rn-Pressable
-              className="flex-row items-center rounded-md border border-danger-border bg-danger-soft active:opacity-85 min-h-touch px-5 py-3.5 justify-center"
-              disabled={false}
-              onPress={[Function]}
+            <rn-View
+              className="rounded-md border px-4 py-3 border-danger-border bg-danger-soft"
               style={
-                [
-                  {
-                    "elevation": 2,
-                    "shadowColor": "#1a1a2e",
-                    "shadowOffset": {
-                      "height": 2,
-                      "width": 0,
-                    },
-                    "shadowOpacity": 0.08,
-                    "shadowRadius": 8,
+                {
+                  "elevation": 2,
+                  "shadowColor": "#1a1a2e",
+                  "shadowOffset": {
+                    "height": 2,
+                    "width": 0,
                   },
-                  undefined,
-                ]
+                  "shadowOpacity": 0.08,
+                  "shadowRadius": 8,
+                }
               }
-              testID="btn-camera-confirm-discard"
             >
               <rn-Text
-                className="text-danger-text font-semibold text-base"
+                className="text-sm text-danger-text"
+                selectable={true}
               >
-                Discard
+                You have 0 unsaved photos.
               </rn-Text>
-            </rn-Pressable>
-            <rn-Pressable
-              className="flex-row items-center rounded-md bg-transparent active:bg-secondary min-h-touch px-5 py-3.5 justify-center"
-              disabled={false}
-              onPress={[Function]}
-              style={
-                [
-                  {
-                    "elevation": 0,
-                    "shadowColor": "#1a1a2e",
-                    "shadowOffset": {
-                      "height": 0,
-                      "width": 0,
-                    },
-                    "shadowOpacity": 0,
-                    "shadowRadius": 0,
-                  },
-                  undefined,
-                ]
-              }
-              testID="btn-camera-keep-editing"
+            </rn-View>
+            <rn-View
+              className="gap-3"
             >
-              <rn-Text
-                className="text-muted-foreground font-semibold text-base"
+              <rn-Pressable
+                className="flex-row items-center rounded-md border border-danger-border bg-danger-soft active:opacity-85 min-h-touch px-5 py-3.5 justify-center"
+                disabled={false}
+                onPress={[Function]}
+                style={
+                  [
+                    {
+                      "elevation": 2,
+                      "shadowColor": "#1a1a2e",
+                      "shadowOffset": {
+                        "height": 2,
+                        "width": 0,
+                      },
+                      "shadowOpacity": 0.08,
+                      "shadowRadius": 8,
+                    },
+                    undefined,
+                  ]
+                }
+                testID="btn-camera-confirm-discard"
               >
-                Keep editing
-              </rn-Text>
-            </rn-Pressable>
+                <rn-Text
+                  className="text-danger-text font-semibold text-base"
+                >
+                  Discard
+                </rn-Text>
+              </rn-Pressable>
+              <rn-Pressable
+                className="flex-row items-center rounded-md bg-transparent active:bg-secondary min-h-touch px-5 py-3.5 justify-center"
+                disabled={false}
+                onPress={[Function]}
+                style={
+                  [
+                    {
+                      "elevation": 0,
+                      "shadowColor": "#1a1a2e",
+                      "shadowOffset": {
+                        "height": 0,
+                        "width": 0,
+                      },
+                      "shadowOpacity": 0,
+                      "shadowRadius": 0,
+                    },
+                    undefined,
+                  ]
+                }
+                testID="btn-camera-keep-editing"
+              >
+                <rn-Text
+                  className="text-muted-foreground font-semibold text-base"
+                >
+                  Keep editing
+                </rn-Text>
+              </rn-Pressable>
+            </rn-View>
           </rn-View>
         </rn-View>
-      </rn-Pressable>
+      </rn-KeyboardAvoidingView>
     </rn-Pressable>
   </rn-Modal>
 </rn-View>

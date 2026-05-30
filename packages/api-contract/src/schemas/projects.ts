@@ -44,3 +44,7 @@ export const inviteMemberRequest = z.object({
   phone,
   role: projectRole.default('editor'),
 });
+
+export const updateMemberRoleRequest = z.object({
+  role: projectRole,
+});

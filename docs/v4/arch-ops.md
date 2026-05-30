@@ -29,10 +29,10 @@
     with prod so QA can carry both apps.
   - `development` — Metro dev-client. `com.harpa.pro.dev` →
     `http://localhost:8787`.
-  Non-prod variants expose a dev screen (`/(dev)/api-base-url`) that
-  overrides the API base URL at runtime — flip QA between dev / a
-  PR-preview Fly app without a rebuild. Override is hard-disabled in
-  production builds (see `lib/api/base-url.ts`).
+  Non-prod variants expose a runtime API base-URL override
+  (`setApiBaseUrlOverride` in `lib/api/base-url.ts`) so QA can flip
+  between dev / a PR-preview Fly app without a rebuild. Override is
+  hard-disabled in production builds.
 - **Docs site**: Vercel (or Cloudflare Pages — TBD in P0).
 
 ## Secrets
@@ -113,7 +113,21 @@ not by the API at runtime), and a handful of CI-only flags.
 ## Observability
 
 - **Sentry** for crashes, both mobile and API. Same project,
-  different DSNs. Wired in P4.
+  different DSNs. Runtime vars:
+  - API: `SENTRY_DSN`, optional `SENTRY_ENVIRONMENT`, and
+    `SENTRY_TRACES_SAMPLE_RATE`.
+  - Mobile: `EXPO_PUBLIC_SENTRY_DSN` at Metro/EAS build or OTA-update
+    time.
+  - Source maps/native build integration: `SENTRY_ORG`,
+    `SENTRY_PROJECT`, optional `SENTRY_URL`, and `SENTRY_AUTH_TOKEN`
+    with `project:write`.
+  Mobile Sentry values live in EAS project environment variables:
+  `development`, `preview`, and `production`. `apps/mobile/eas.json`
+  pins each build profile to its matching EAS environment, and the
+  OTA workflows pass `eas update --environment <env>` so update
+  bundles receive the same values.
+  The Expo plugin disables auto-upload when `SENTRY_AUTH_TOKEN` is not
+  present so local prebuilds do not fail.
 - **Fly metrics** — built-in for API latency / 5xx rate.
 - **Logs** — Fly log shipping to Better Stack (free tier) for
   search.
@@ -129,10 +143,11 @@ not by the API at runtime), and a handful of CI-only flags.
 
 
 ```
-PR open
+PR open / push (same-repo only, forks skipped)
   ↳ Neon branch pr-<n> (pr-preview.yml)
   ↳ migrations applied to pr-<n>
   ↳ marketing preview deploy to CF Pages (marketing-preview.yml)
+  ↳ EAS Update → `development` channel (mobile-ota-pr.yml)
   ↳ EAS preview build (manual trigger — planned)
 
 Push to dev
@@ -140,14 +155,15 @@ Push to dev
   ↳ migrations applied to `dev`
   ↳ Fly deploy → harpa-pro-api-dev (api-dev.yml)
   ↳ marketing deploy to CF Pages dev branch (marketing-dev.yml)
+  ↳ EAS Update → `preview` channel (mobile-ota-dev.yml)
   ↳ EAS staging build (TestFlight internal — planned)
 
 Push to main (production)
   ↳ migrations applied to Neon `main`
   ↳ Fly deploy → harpa-pro-api (api-prod.yml)
   ↳ marketing deploy to CF Pages production (marketing-prod.yml)
+  ↳ EAS Update → `production` channel (mobile-ota-prod.yml)
   ↳ EAS production build (manual approve — planned)
-  ↳ EAS Update for JS-only patches
 ```
 
 ## Dev environment bootstrap (one-time)
@@ -167,7 +183,7 @@ flyctl secrets set --app harpa-pro-api-dev \
   TWILIO_ACCOUNT_SID=... TWILIO_AUTH_TOKEN=... TWILIO_VERIFY_SID=... \
   R2_ACCOUNT_ID=... R2_ACCESS_KEY_ID=... R2_SECRET_ACCESS_KEY=... \
   R2_BUCKET=harpa-pro-dev \
-  OPENAI_API_KEY=... ANTHROPIC_API_KEY=... # etc.
+  AI_LIVE=1 OPENAI_API_KEY=sk-... GROQ_API_KEY=gsk-... # AI providers
 ```
 
 After bootstrap, every push to `dev` re-uses the same Neon branch

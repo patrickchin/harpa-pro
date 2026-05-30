@@ -4,6 +4,11 @@
  */
 import { z } from 'zod';
 
+const optionalUrl = z.preprocess(
+  (v) => (v === '' ? undefined : v),
+  z.string().url().optional(),
+);
+
 const Env = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PORT: z.coerce.number().int().positive().default(8787),
@@ -17,6 +22,16 @@ const Env = z.object({
   TWILIO_VERIFY_FAKE_CODE: z.string().default('000000'),
   AI_FIXTURE_MODE: z.enum(['replay', 'record', 'live']).default('replay'),
   AI_LIVE: z.enum(['0', '1']).default('0'),
+  // OpenAI is used for voice-note summarization. Required when AI_LIVE=1.
+  OPENAI_API_KEY: z.string().optional(),
+  OPENAI_BASE_URL: z.string().url().optional(),
+  // Groq hosts whisper-large-v3-turbo for transcription. Required when AI_LIVE=1.
+  GROQ_API_KEY: z.string().optional(),
+  GROQ_BASE_URL: z.string().url().optional(),
+  // Kimi (Moonshot) is used for report generation. Not validated at boot —
+  // a missing key surfaces as a 502 on the affected request only.
+  KIMI_API_KEY: z.string().optional(),
+  KIMI_BASE_URL: z.string().url().optional(),
   R2_FIXTURE_MODE: z.enum(['replay', 'live']).default('replay'),
   // Cloudflare R2 (S3-compatible). Required when R2_FIXTURE_MODE=live.
   R2_ACCOUNT_ID: z.string().optional(),
@@ -30,11 +45,33 @@ const Env = z.object({
    */
   R2_ENDPOINT: z.string().url().optional(),
   /**
+   * Optional public URL override for presigned PUT/GET URLs. When set,
+   * the hostname/scheme prefix of `R2_ENDPOINT` is replaced with this
+   * value in URLs returned to clients. Used in local dev with MinIO
+   * where the API talks to `http://minio:9000` over the docker network
+   * but the host-side CLI/browser needs `http://localhost:9000`.
+   * Has no effect when unset or when running against real R2.
+   */
+  R2_PUBLIC_ENDPOINT: z.string().url().optional(),
+  /**
    * TTL (seconds) for presigned PUT/GET URLs. 5 min matches
    * arch-storage.md §Download flow.
    */
   R2_PRESIGN_TTL_SEC: z.coerce.number().int().positive().default(300),
   REQUEST_LOG: z.enum(['true', 'false']).default('false'),
+  /**
+   * Sentry crash reporting. DSN is optional so local/test boots stay
+   * telemetry-free; prod/dev deploys set it through Doppler/Fly.
+   */
+  SENTRY_DSN: optionalUrl,
+  SENTRY_ENVIRONMENT: z.string().min(1).optional(),
+  SENTRY_TRACES_SAMPLE_RATE: z.coerce.number().min(0).max(1).default(0.1),
+  /**
+   * Rate-limit backend selector. `memory` = per-process (dev/test default),
+   * `postgres` = cross-machine via `app.rate_limit_buckets` (prod).
+   * See docs/v4/arch-rate-limiting.md §3.5.
+   */
+  RATE_LIMIT_BACKEND: z.enum(['memory', 'postgres']).default('memory'),
   // Marketing waitlist (M1).
   TURNSTILE_LIVE: z.enum(['0', '1']).default('0'),
   TURNSTILE_SECRET_KEY: z.string().optional(),
@@ -68,9 +105,70 @@ const Env = z.object({
     .string()
     .regex(/^[0-9]+_[a-z0-9_]+\.sql$/, 'must match <digits>_<slug>.sql')
     .optional(),
+  /**
+   * Test-account password bypass for live deployments — see
+   * docs/v4/arch-auth-and-rls.md §Test-account password bypass.
+   *
+   * Comma-separated E.164 phone numbers permitted to authenticate via
+   * `POST /auth/password/verify` instead of an SMS OTP. Real users are
+   * unaffected; non-listed phones get a generic 401 (no enumeration).
+   *
+   * Off-by-default: both vars must be set together, or the route
+   * returns 404. Production must not set these unless intentional.
+   */
+  TEST_ACCOUNT_PHONES: z.string().optional(),
+  /**
+   * Shared password for all phones in TEST_ACCOUNT_PHONES. Hashed once
+   * at boot (scrypt + per-boot random salt). Min 16 chars to make a
+   * leak less catastrophic.
+   */
+  TEST_ACCOUNT_PASSWORD: z.string().min(16).optional(),
+  /**
+   * Universal links — Apple App Site Association.
+   *
+   * Apple Team ID prefix used by the iOS apps (10-char alphanumeric,
+   * e.g. `ABCDE12345`). When unset, `GET /.well-known/apple-app-site-association`
+   * returns 404 so deep-link verification fails closed rather than
+   * advertising an empty manifest. See docs/v4/plan-p4-hardening.md §P4.6.
+   */
+  IOS_APP_ID_PREFIX: z
+    .string()
+    .regex(/^[A-Z0-9]{10}$/, 'must be a 10-char Apple Team ID')
+    .optional(),
+  /**
+   * Comma-separated iOS bundle identifiers permitted to handle
+   * universal links (e.g. `com.harpa.pro,com.harpa.pro.dev`).
+   */
+  IOS_BUNDLE_IDS: z.string().optional(),
+  /**
+   * Universal links — Android Asset Links.
+   *
+   * Comma-separated Android package names (e.g. `com.harpa.pro,com.harpa.pro.dev`).
+   * Empty disables `/.well-known/assetlinks.json` (404).
+   */
+  ANDROID_PACKAGE_NAMES: z.string().optional(),
+  /**
+   * Comma-separated SHA-256 cert fingerprints (uppercase, colon-separated
+   * hex pairs) for each entry in `ANDROID_PACKAGE_NAMES`. Index-aligned;
+   * length must match the package list or `/.well-known/assetlinks.json`
+   * 404s and logs a config error.
+   */
+  ANDROID_CERT_FINGERPRINTS_SHA256: z.string().optional(),
 }).refine(
   (e) => e.NODE_ENV !== 'production' || !!e.MIGRATIONS_REQUIRED_HEAD,
   { path: ['MIGRATIONS_REQUIRED_HEAD'], message: 'required when NODE_ENV=production' },
+).refine(
+  (e) => e.AI_LIVE !== '1' || !!e.OPENAI_API_KEY,
+  { path: ['OPENAI_API_KEY'], message: 'required when AI_LIVE=1 (voice-note summarization)' },
+).refine(
+  (e) => e.AI_LIVE !== '1' || !!e.GROQ_API_KEY,
+  { path: ['GROQ_API_KEY'], message: 'required when AI_LIVE=1 (transcription via whisper-large-v3-turbo)' },
+).refine(
+  (e) => !!e.TEST_ACCOUNT_PHONES === !!e.TEST_ACCOUNT_PASSWORD,
+  {
+    path: ['TEST_ACCOUNT_PASSWORD'],
+    message: 'TEST_ACCOUNT_PHONES and TEST_ACCOUNT_PASSWORD must be set together',
+  },
 );
 
 export const env = Env.parse(process.env);

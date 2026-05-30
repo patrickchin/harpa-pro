@@ -7,7 +7,7 @@
  * is replaced with caller-supplied `onSubmit` + status props so the
  * real route can wire useCreateProjectMutation.
  */
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { View, KeyboardAvoidingView, ScrollView } from 'react-native';
 import { SafeAreaView } from '@/components/primitives/SafeAreaView';
 import { Button } from '@/components/primitives/Button';
@@ -26,9 +26,10 @@ export type ProjectNewProps = {
   errorMessage: string | null;
   onBack: () => void;
   onSubmit: (values: ProjectNewFormValues) => void;
+  actions?: ReactNode;
 };
 
-export function ProjectNew({ isPending, errorMessage, onBack, onSubmit }: ProjectNewProps) {
+export function ProjectNew({ isPending, errorMessage, onBack, onSubmit, actions }: ProjectNewProps) {
   const [name, setName] = useState('');
   const [address, setAddress] = useState('');
   const [client, setClient] = useState('');
@@ -53,7 +54,7 @@ export function ProjectNew({ isPending, errorMessage, onBack, onSubmit }: Projec
     <SafeAreaView className="flex-1 bg-background">
       <KeyboardAvoidingView behavior="padding" className="flex-1">
         <View className="px-5 py-4">
-          <ScreenHeader title="New Project" onBack={onBack} backLabel="Projects" />
+          <ScreenHeader title="New Project" onBack={onBack} backLabel="Projects" actions={actions} />
         </View>
 
         <View className="flex-1">
@@ -95,7 +96,7 @@ export function ProjectNew({ isPending, errorMessage, onBack, onSubmit }: Projec
               <InlineNotice tone="danger">{noticeMessage}</InlineNotice>
             ) : null}
             <Button
-              testID="btn-submit-project"
+              testID="btn-save-project"
               variant="hero"
               size="xl"
               className="w-full"

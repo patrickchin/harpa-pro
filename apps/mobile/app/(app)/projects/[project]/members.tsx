@@ -3,6 +3,7 @@
  */
 import { useState } from 'react';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useQueryClient } from '@tanstack/react-query';
 import { ProjectMembers } from '@/screens/project-members';
 import {
   useProjectQuery,
@@ -11,18 +12,28 @@ import {
   useRemoveProjectMemberMutation,
   useMeQuery,
 } from '@/lib/api/hooks';
-import { useRefresh } from '@/lib/use-refresh';
+import {
+  projectInitialData,
+  projectInitialDataUpdatedAt,
+} from '@/lib/api/initial-data';
+import { useRefresh } from '@/lib/util/use-refresh';
 import { safeBack } from '@/lib/nav/safe-back';
+import { AppHeaderActions } from '@/components/ui/AppHeaderActions';
 
 export default function ProjectMembersRoute() {
   const router = useRouter();
   const { project } = useLocalSearchParams<{ project: string }>();
   const slug = project ?? '';
+  const qc = useQueryClient();
 
   const me = useMeQuery();
   const projectQuery = useProjectQuery(
     { params: { project: slug } },
-    { enabled: slug.length > 0 },
+    {
+      enabled: slug.length > 0,
+      initialData: projectInitialData(qc, slug),
+      initialDataUpdatedAt: projectInitialDataUpdatedAt(qc),
+    },
   );
   const members = useProjectMembersQuery(
     { params: { project: slug } },
@@ -64,6 +75,7 @@ export default function ProjectMembersRoute() {
         remove.mutate({ params: { project: slug, user: userId } })
       }
       isRemovePending={remove.isPending}
+      actions={<AppHeaderActions />}
     />
   );
 }

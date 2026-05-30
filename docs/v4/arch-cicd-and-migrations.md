@@ -42,7 +42,10 @@ build-time manifest for the readiness check.**
   that the latest filename in `packages/api/migrations/` (captured into the
   image at build time as `MIGRATIONS_REQUIRED_HEAD`) is present in
   `app._migrations`. Fly's HTTP check is moved to `/readyz`. `/healthz`
-  stays as cheap liveness (no DB).
+  stays as cheap liveness (no DB) but now also returns `version` /
+  `gitCommit` / `buildTime` from `GIT_COMMIT` + `BUILD_TIME` build-args
+  so the mobile BuildBadge (and ops dashboards) can show which commit
+  is serving traffic.
 
 ### Alternatives rejected
 
@@ -73,7 +76,7 @@ build-time manifest for the readiness check.**
 │                                                                        │
 │   1. CI guard job                                                      │
 │      • verifies every file in packages/api/migrations/ matches         │
-│        YYYYMMDDHHmm_*.sql                                              │
+│        ^[0-9]+_[a-z0-9_]+(\.notx)?\.sql$ (sequential numeric prefix)   │
 │      • verifies the set of files is a strict superset of the previous  │
 │        green main build (no rename, no delete) — uses                  │
 │        actions/cache keyed on "migrations-manifest-prod"               │
@@ -97,7 +100,8 @@ build-time manifest for the readiness check.**
 │               • 200 only if all checks pass                            │
 │           └─ Fly auto-rollback if /readyz fails grace period           │
 │                                                                        │
-│   3. Post-deploy smoke (CI): curl https://api.harpapro.com/readyz      │
+│   3. Post-deploy smoke (CI): curl $API_READY_URL (defaults to          │
+│      https://harpa-pro-api.fly.dev/readyz; override via repo var)      │
 │      from the runner, fail the workflow if it's not 200.               │
 └────────────────────────────────────────────────────────────────────────┘
 ```
@@ -140,13 +144,17 @@ see "Open questions").
 ### `.github/workflows/api-prod.yml`
 
 - Add a `guard` job that runs before `prod`:
-  - lints migration filenames (`^[0-9]{12}_[a-z0-9_]+\.sql$`),
+  - lints migration filenames
+    (`^[0-9]+_[a-z0-9_]+(\.notx)?\.sql$` — sequential numeric prefix,
+    optional `.notx` suffix for files that must run outside a tx),
   - compares the file set against a cached manifest from the last green
     `main` build; fails on rename/delete of an already-shipped file,
   - prints the computed head.
 - The `prod` job depends on `guard`. No `DATABASE_URL` secret added to CI.
-- Add a final step: `curl --fail https://api.harpapro.com/readyz` (URL via
-  workflow env), with retries, so a green workflow means a live healthy prod.
+- Add a final step: `curl --fail "$API_READY_URL"` (defaults to
+  `https://harpa-pro-api.fly.dev/readyz`; overridable via the
+  `API_READY_URL` repo variable when a custom hostname is set up),
+  with retries, so a green workflow means a live healthy prod.
 
 ### `.github/workflows/pr-preview.yml`
 
@@ -322,6 +330,48 @@ For any schema change, in this order, across **separate PRs**:
 
 Renames are split into add-new + dual-write + switch-read + drop-old. Never
 a single `ALTER TABLE … RENAME`.
+
+### Renumbering an applied migration
+
+If a migration file was already applied to a long-lived Neon branch
+(e.g. dev) and then renamed in a later commit — typically to break a
+duplicate numeric prefix collision — the migrator on that branch will
+see the new filename as an unapplied file and re-run it. There is no
+built-in way to rename a row in `app._migrations`.
+
+Recovery procedure (run against the affected branch only — never prod
+unless prod also applied the file under its old name):
+
+1. Make the SQL idempotent. Add `IF NOT EXISTS` to the `ADD COLUMN` /
+   `CREATE INDEX` / `CREATE TABLE` so a re-run is a harmless no-op.
+   This is the safety net if step 2 is skipped — the migrator will
+   succeed and `INSERT` the new row, leaving a duplicate "applied"
+   entry but no schema damage.
+2. Patch `app._migrations` out-of-band via `psql`:
+
+   ```sql
+   BEGIN;
+   DO $$
+   BEGIN
+     IF NOT EXISTS (SELECT 1 FROM app._migrations WHERE name = '<old>.sql') THEN
+       RAISE EXCEPTION 'old row missing — wrong DB?';
+     END IF;
+     IF EXISTS (SELECT 1 FROM app._migrations WHERE name = '<new>.sql') THEN
+       RAISE EXCEPTION 'new row already present — already patched?';
+     END IF;
+   END$$;
+   UPDATE app._migrations
+      SET name = '<new>.sql'
+    WHERE name = '<old>.sql';
+   COMMIT;
+   ```
+
+3. Re-run the deploy. The migrator finds `<new>.sql` already recorded
+   and treats it as applied.
+
+The `Lint migration filenames` CI guard rejects duplicate numeric
+prefixes at PR time, so this should be rare. It exists for the case
+where the duplicate slipped through earlier.
 
 The CI guard's "manifest superset" check enforces that an already-shipped
 migration cannot be renamed or deleted — it can only be superseded by a

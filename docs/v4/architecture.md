@@ -34,7 +34,7 @@ flowchart TB
     subgraph API["REST API (packages/api → Fly.io)"]
         HONO["Hono router"]
         SCOPE["withScopedConnection (per-request PG role)"]
-        BA["better-auth handlers"]
+        BA["Auth handlers (jose JWTs)"]
         DRIZZLE["Drizzle ORM"]
         AISVC["AI service (via ai-fixtures)"]
         OTP["Twilio Verify (record/replay)"]
@@ -42,7 +42,7 @@ flowchart TB
     end
 
     subgraph Neon["Neon Postgres (branched per PR)"]
-        PG[("App schema + better-auth schema")]
+        PG[("App + auth schemas")]
     end
 
     subgraph R2["Cloudflare R2"]
@@ -77,7 +77,7 @@ flowchart TB
 
 | Layer | v3 (deprecated) | v4 (this rewrite) | Why we changed |
 |---|---|---|---|
-| Auth | Supabase Auth (JWT, JWKS) | **better-auth** + Twilio Verify | No Supabase. Self-hosted, easier to test. |
+| Auth | Supabase Auth (JWT, JWKS) | **Hand-rolled (jose + Twilio Verify)** | No Supabase. Self-hosted, easier to test. We deliberately did not adopt `better-auth`. |
 | DB | Supabase Postgres + RLS | **Neon Postgres** + per-request scoped roles | Free PR branching; RLS replaced by API-layer scope (no API service-role bypass risk). |
 | Storage | Supabase Storage | **Cloudflare R2** + signed URLs | No Supabase. R2 has zero egress, S3-compatible. |
 | Mobile styling | Unistyles (P2 onwards) | **NativeWind v4** | v3's switch to Unistyles caused the realignment. NativeWind matches mobile-old's class strings; faster ports. |
@@ -93,9 +93,11 @@ flowchart TB
 | # | Section | File | Description |
 |---|---|---|---|
 | 1 | API design | [arch-api-design.md](arch-api-design.md) | Endpoints, auth model, error format, pagination, rate limiting, OpenAPI strategy |
-| 2 | Auth + per-request scope | [arch-auth-and-rls.md](arch-auth-and-rls.md) | better-auth flow, JWT, Twilio Verify, scoped Postgres roles, RLS replacement, scope tests |
+| 1a | **Rate limiting** | [arch-rate-limiting.md](arch-rate-limiting.md) | **Per-route + shared AI + catch-all budgets; PostgresRateLimiter; SMS-pump protection on /auth/otp/*; multi-machine correctness** |
+| 2 | Auth + per-request scope | [arch-auth-and-rls.md](arch-auth-and-rls.md) | Hand-rolled JWT + OTP flow, Twilio Verify, scoped Postgres roles, RLS replacement, scope tests |
 | 3 | Data layer (mobile) | [arch-data-layer.md](arch-data-layer.md) | Generated client, React Query hooks, optimistic updates, error handling |
 | 4 | Mobile architecture | [arch-mobile.md](arch-mobile.md) | Directory structure, navigation, state, NativeWind tokens, primitives, upload queue, audio |
+| 4a | **Mobile navigation policy** | [arch-mobile-navigation.md](arch-mobile-navigation.md) | **push/replace/back/dismiss policy; per-call audit; back-stack pitfalls and `dismissOrReplaceTo` helper** |
 | 5 | Storage (R2) | [arch-storage.md](arch-storage.md) | R2 buckets, signed URL flow, lifecycle, security, fixture mode |
 | 6 | AI fixtures | [arch-ai-fixtures.md](arch-ai-fixtures.md) | record/replay/live modes, redaction, packaging |
 | 7 | Database (Neon) | [arch-database.md](arch-database.md) | Neon branching per PR, migrations, scoped roles, schema layout |
@@ -107,6 +109,11 @@ flowchart TB
 | 10 | Observability + ops | [arch-ops.md](arch-ops.md) | Fly metrics, Sentry, log shipping, deploy flow |
 | 10a | **CI/CD + migrations** | [arch-cicd-and-migrations.md](arch-cicd-and-migrations.md) | **Release-command migration apply, `/readyz` schema-head check, expand-contract rules, rollback playbook** |
 | 11 | **CLI** | [arch-cli.md](arch-cli.md) | **Debug / API testing / LLM-driven usage tool (`apps/cli`); stateless, env-only, covers all 37 routes** |
+| 12 | **Project members** | [arch-project-members.md](arch-project-members.md) | **Roles, invite (POST), role-change (PATCH), removal (DELETE), owner-demotion guard, error codes, scope tests** |
+| 13 | **Maestro full regression** | [design-maestro-full-regression.md](design-maestro-full-regression.md) | **P4.8 two-actor nightly E2E journey: members permissions, voice/photo/text notes, generate/finalize, Report Debug surface** |
+| 14 | **Usage limits** | [arch-usage-limits.md](arch-usage-limits.md) | **Per-account monthly caps: plan model (free/pro/enterprise) + admin overrides, `enforceUsageLimit` chokepoint, 403 `usage_limit_exceeded` envelope, mobile dialog + near-limit toast** |
+| 15 | **Batch photo notes** | [arch-batch-photo-notes.md](arch-batch-photo-notes.md) | **One note → many photos; `note_files` join table, upload batch coordinator, `PhotoBatchGrid` UI** |
+| 16 | **Report auto-regen** | [arch-report-auto-regen.md](arch-report-auto-regen.md) | **DB-driven dirty flag (`notes_changed_at > generated_at`), race-safe snapshot semantic, mobile `useAutoRegenerate` hook** |
 
 ## Repo layout (target end of P0)
 
@@ -145,7 +152,6 @@ infra/
 scripts/
   check-no-supabase.sh
   check-no-unistyles.sh
-  check-no-alert-alert.sh
 
 docs/
   v4/                     # current
@@ -159,9 +165,9 @@ skills/                   # auto-loaded
 
 | Phase | Name | Exit gate (binding) |
 |---|---|---|
-| P0 | Foundation | All packages scaffold compiles. `ai-fixtures` works (replay + record). better-auth OTP route hits Twilio sandbox + integration test green. Neon branch script tested in CI. |
+| P0 | Foundation | All packages scaffold compiles. `ai-fixtures` works (replay + record). Hand-rolled OTP route hits Twilio sandbox + integration test green. Neon branch script tested in CI. |
 | P1 | API Core | All routes implemented (zero stubs). `pnpm test:api && pnpm test:api:integration` green at ≥90% line coverage. Per-request scope tests cover every authed route. Fixture replay covers every AI route. |
-| P2 | Mobile Shell | Auth + nav + every primitive built. Every auth screen + projects list ported from `../haru3-reports/apps/mobile@dev` and reviewed manually. NativeWind tokens locked in `tailwind.config.js`. Dev-gallery routes (`app/(dev)/`) render every screen with mock props. |
+| P2 | Mobile Shell | Auth + nav + every primitive built. Every auth screen + projects list ported from `../haru3-reports/apps/mobile@dev` and reviewed manually. NativeWind tokens locked in `tailwind.config.js`. Screen bodies in `screens/<name>.tsx` are props-driven and unit-testable in isolation. |
 | P3 | Feature Build | Every screen from `../haru3-reports/apps/mobile@dev` ported, with: behaviour test for each interaction, Maestro flow. No screen is "stubbed" or "TODO redesign". |
 | P4 | E2E + Hardening | Full Maestro journey green on iOS + Android. Sentry wired. Fly + Neon prod deploy green. PDF export bit-for-bit equivalent to mobile-old samples. |
 | P5 | Beta + GA | TestFlight + Play internal track distribution. Rollout monitor. Cutover. |

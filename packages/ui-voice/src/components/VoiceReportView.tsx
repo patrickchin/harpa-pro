@@ -56,7 +56,7 @@ export function VoiceReportView({
   watermark,
   className,
 }: VoiceReportViewProps) {
-  const visitLabel = formatVisitDate(report.visitDate);
+  const visitLabel = formatVisitDate(report.meta?.visitDate ?? null);
   const issueCount = report.issues.length;
   const workerHeadcount = report.workers.reduce((sum, w) => sum + w.count, 0);
 

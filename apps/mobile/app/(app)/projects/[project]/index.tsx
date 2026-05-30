@@ -2,21 +2,37 @@
  * Project home — real route wiring useProjectQuery against the
  * slug-based URL scheme introduced in P3.0.
  */
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter, useLocalSearchParams, type Href } from 'expo-router';
+import { useQueryClient } from '@tanstack/react-query';
 import { ProjectHome } from '@/screens/project-home';
 import { useProjectQuery } from '@/lib/api/hooks';
-import { useRefresh } from '@/lib/use-refresh';
-import { useCopyToClipboard } from '@/lib/use-clipboard';
+import {
+  projectInitialData,
+  projectInitialDataUpdatedAt,
+} from '@/lib/api/initial-data';
+import { useRefresh } from '@/lib/util/use-refresh';
+import { useCopyToClipboard } from '@/lib/util/use-clipboard';
 import { safeBack } from '@/lib/nav/safe-back';
+import { AppHeaderActions } from '@/components/ui/AppHeaderActions';
+import { env } from '@/lib/config/env';
 
 export default function ProjectHomeRoute() {
   const router = useRouter();
   const { project } = useLocalSearchParams<{ project: string }>();
   const slug = project ?? '';
+  const qc = useQueryClient();
 
   const result = useProjectQuery(
     { params: { project: slug } },
-    { enabled: slug.length > 0 },
+    {
+      enabled: slug.length > 0,
+      // Seed from the cached projects list (same row shape). If the
+      // user arrived from /projects we render instantly; the
+      // background refetch still fires because `initialDataUpdatedAt`
+      // reflects how stale the list snapshot is.
+      initialData: projectInitialData(qc, slug),
+      initialDataUpdatedAt: projectInitialDataUpdatedAt(qc),
+    },
   );
   const { refreshing, onRefresh } = useRefresh([result.refetch]);
   const { copiedKey, copy } = useCopyToClipboard();
@@ -42,9 +58,9 @@ export default function ProjectHomeRoute() {
       refreshing={refreshing}
       onRefresh={onRefresh}
       onBack={() => safeBack(router, '/(app)/projects')}
-      onPressEdit={() => router.push(`/projects/${slug}/edit` as never)}
-      onPressReports={() => router.push(`/projects/${slug}/reports` as never)}
-      onPressMembers={() => router.push(`/projects/${slug}/members` as never)}
+      onPressEdit={() => router.push(`/projects/${slug}/edit` as Href)}
+      onPressReports={() => router.push(`/projects/${slug}/reports` as Href)}
+      onPressMembers={() => router.push(`/projects/${slug}/members` as Href)}
       copiedKey={copiedKey}
       onCopy={(value, key) => {
         void copy(value, {
@@ -52,6 +68,8 @@ export default function ProjectHomeRoute() {
           toast: key === 'client' ? 'Client copied' : 'Address copied',
         });
       }}
+      actions={<AppHeaderActions />}
+      showDeveloperSection={env.EXPO_PUBLIC_USE_FIXTURES || __DEV__}
     />
   );
 }

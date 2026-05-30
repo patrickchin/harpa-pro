@@ -121,4 +121,95 @@ describe('Account', () => {
     const tree = render(<Account {...defaults} />);
     expect(tree.toJSON()).toMatchSnapshot();
   });
+
+  it('hides edit button when onSaveProfile is not provided', () => {
+    const tree = render(<Account {...defaults} />);
+    expect(
+      tree.root.findAllByProps({ testID: 'btn-edit-profile' }),
+    ).toHaveLength(0);
+  });
+
+  it('shows Edit button when onSaveProfile is provided', () => {
+    const tree = render(
+      <Account {...defaults} onSaveProfile={vi.fn().mockResolvedValue(undefined)} />,
+    );
+    expect(() =>
+      tree.root.findByProps({ testID: 'btn-edit-profile' }),
+    ).not.toThrow();
+  });
+
+  it('flips Full Name + Company Name to editable when Edit is pressed and calls onSaveProfile on Save', async () => {
+    const onSaveProfile = vi.fn().mockResolvedValue(undefined);
+    const tree = render(
+      <Account {...defaults} onSaveProfile={onSaveProfile} />,
+    );
+
+    // Initially read-only.
+    const initialName = tree.root.findByProps({ testID: 'input-full-name' });
+    expect(initialName.props.editable).toBe(false);
+
+    act(() => {
+      tree.root.findByProps({ testID: 'btn-edit-profile' }).props.onPress();
+    });
+
+    // Now editable.
+    expect(
+      tree.root.findByProps({ testID: 'input-full-name' }).props.editable,
+    ).toBe(true);
+
+    // Change the name + company.
+    act(() => {
+      tree.root
+        .findByProps({ testID: 'input-full-name' })
+        .props.onChangeText('Riley Stone');
+    });
+    act(() => {
+      tree.root
+        .findByProps({ testID: 'input-company-name' })
+        .props.onChangeText('Stone Builders');
+    });
+
+    await act(async () => {
+      await tree.root.findByProps({ testID: 'btn-save-profile' }).props.onPress();
+    });
+
+    expect(onSaveProfile).toHaveBeenCalledWith({
+      displayName: 'Riley Stone',
+      companyName: 'Stone Builders',
+    });
+  });
+
+  it('reverts inputs on Cancel', () => {
+    const tree = render(
+      <Account {...defaults} onSaveProfile={vi.fn().mockResolvedValue(undefined)} />,
+    );
+    act(() => {
+      tree.root.findByProps({ testID: 'btn-edit-profile' }).props.onPress();
+    });
+    act(() => {
+      tree.root
+        .findByProps({ testID: 'input-full-name' })
+        .props.onChangeText('Different');
+    });
+    act(() => {
+      tree.root.findByProps({ testID: 'btn-cancel-edit' }).props.onPress();
+    });
+    expect(
+      tree.root.findByProps({ testID: 'input-full-name' }).props.value,
+    ).toBe('Jordan Sims');
+  });
+
+  it('renders saveError when provided', () => {
+    const tree = render(
+      <Account
+        {...defaults}
+        onSaveProfile={vi.fn().mockResolvedValue(undefined)}
+        saveError="Could not save"
+      />,
+    );
+    expect(() =>
+      tree.root.findByProps({ testID: 'account-save-error' }),
+    ).not.toThrow();
+    expect(collectText(tree.toJSON())).toContain('Could not save');
+  });
 });

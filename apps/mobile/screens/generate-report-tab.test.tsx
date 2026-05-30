@@ -18,6 +18,61 @@
 import { describe, expect, it, vi } from 'vitest';
 import TestRenderer, { act } from 'react-test-renderer';
 
+// See `generate-notes.test.tsx` for rationale — stub the voice +
+// audio hooks the underlying `GenerateReportProvider` always calls so
+// these Report-tab tests don't need to wrap renders in
+// `<QueueProvider>` + `<AudioPlaybackProvider>`. Real wiring is
+// covered by the dedicated integration tests for those hooks.
+vi.mock('@/features/voice/useInlineRecorder', () => ({
+  useInlineRecorder: () => ({
+    isRecording: false,
+    snapshot: { status: 'idle', durationMs: 0, amplitude: 0 },
+    historyBars: [],
+    permission: 'unknown',
+    error: null,
+    start: vi.fn(async () => {}),
+    stopAndCapture: vi.fn(async () => null),
+    cancel: vi.fn(async () => {}),
+    dismissError: vi.fn(),
+  }),
+}));
+vi.mock('@/features/voice/useVoiceNotePipeline', () => ({
+  useVoiceNotePipeline: () => ({
+    state: {
+      step: 'idle',
+      failedStep: null,
+      error: null,
+      note: null,
+      fileId: null,
+      capture: null,
+    },
+    capture: vi.fn(async () => null),
+    retry: vi.fn(async () => null),
+    reset: vi.fn(),
+  }),
+}));
+vi.mock('@/lib/audio/AudioPlaybackProvider', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/audio/AudioPlaybackProvider')>();
+  return {
+    ...actual,
+    useAudioPlayback: () => ({
+      play: vi.fn(async () => {}),
+      pause: vi.fn(),
+      stop: vi.fn(),
+      seek: vi.fn(async () => {}),
+      status: { uri: null, playing: false, positionSec: 0, durationSec: 0 },
+    }),
+  };
+});
+
+vi.mock('@/lib/api/hooks', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/api/hooks')>();
+  return {
+    ...actual,
+    useMeQuery: () => ({ data: { user: { id: 'usr_test' } }, isLoading: false, isError: false }),
+  };
+});
+
 import { GenerateNotes, type GenerateNotesProps } from './generate-notes';
 import { SAMPLE_GENERATED_REPORT } from '@/lib/dev-fixtures/sample-report';
 
@@ -150,5 +205,50 @@ describe('GenerateNotes — Report tab', () => {
         <GenerateNotes {...baseProps} report={SAMPLE_GENERATED_REPORT} />,
       ),
     ).not.toThrow();
+  });
+
+  it('auto-regenerates when needsRegeneration is true (default wiring)', () => {
+    // Pitfall 13 — verify the provider exposes needsRegeneration to
+    // children, enabling the action row to reflect "Update report"
+    // state. The route-level useAutoRegenerate fires onRegenerate
+    // automatically (tested in useAutoRegenerate.test.tsx); here we
+    // verify the provider-to-ActionRow wiring uses needsRegeneration
+    // to show the update button (not the finalize pair).
+    const tree = render(
+      <GenerateNotes
+        {...baseProps}
+        report={SAMPLE_GENERATED_REPORT}
+        needsRegeneration
+        initialTab="report"
+      />,
+    );
+    // When needsRegeneration is true, the action row shows "Update report"
+    // instead of the finalize pair.
+    expect(() =>
+      tree.root.findByProps({ testID: 'btn-generate-update-report' }),
+    ).not.toThrow();
+    // The finalize button is not rendered in this state.
+    expect(
+      tree.root.findAllByProps({ testID: 'btn-finalize-report' }),
+    ).toHaveLength(0);
+  });
+});
+
+describe('GenerateNotes — title fallback', () => {
+  it('falls back to "Report #N" when no title is set', () => {
+    const tree = render(
+      <GenerateNotes {...baseProps} reportTitle={null} reportNumber={7} />,
+    );
+    const json = JSON.stringify(tree.toJSON());
+    expect(json).toContain('Report #7');
+    expect(json).toContain('#7');
+  });
+
+  it('falls back to "New report" when reportNumber is null', () => {
+    const tree = render(
+      <GenerateNotes {...baseProps} reportTitle={null} reportNumber={null} />,
+    );
+    const json = JSON.stringify(tree.toJSON());
+    expect(json).toContain('New report');
   });
 });

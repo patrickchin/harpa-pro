@@ -162,7 +162,7 @@ describe('harpa reports AI commands', () => {
       client,
       project: projectId,
       number,
-      fixtureName: 'generate-report.incomplete',
+      fixtureName: 'generate-report.voice-4',
       json: true,
       stdout: out,
       stderr,

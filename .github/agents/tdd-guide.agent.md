@@ -14,7 +14,10 @@ only after you have written and verified the failing test.
 
 1. `AGENTS.md` — hard rules and exit-gate coverage requirements.
 2. `docs/v4/pitfalls.md` — Pitfalls 1, 4, 8, 10.
-3. `.github/skills/tdd-workflow/SKILL.md`.
+3. The `test-driven-development` superpowers skill (red/green/refactor
+   discipline) and `verification-before-completion` (run the checks
+   before claiming done). Use `systematic-debugging` when a test
+   fails unexpectedly.
 4. The relevant `plan-p*.md` task and any `arch-*.md` doc the
    coordinator linked.
 5. For mobile screens: `docs/v4/prompts/page-template.md` and the

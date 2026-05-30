@@ -1,0 +1,16 @@
+{
+  "vendor": "groq",
+  "model": "whisper-large-v3-turbo",
+  "fixtureName": "transcribe.voice-4",
+  "recordedAt": "2026-05-23T00:00:00.000Z",
+  "requestHash": "sha256:6f4c81a0fb81125732630cd73c074995edcfe44208a54b452c19e1b870e07243",
+  "request": {
+    "kind": "transcribe",
+    "vendor": "groq",
+    "audioUrl": "https://fixtures.harpa.example/voice-4.fixture.m4a"
+  },
+  "response": {
+    "text": "So I just arrived at the site. I'm on site right now. It's 10 a.m. in the morning and it's been raining all night until like this morning also. So yeah so like the the site is quite waterlogged like there is a lot of water and a lot of damper things let's see let me go check on the workers and see if everybody's here because like they're supposed to do like the trench for the foundation and to place like the reinforcement still for the Padfoot Foundation, but based on the current situation on site, I don't know if that can be done today, but I'll go check. So, yes, so I've... Short notes, short notes.",
+    "durationSec": 64.3
+  }
+}

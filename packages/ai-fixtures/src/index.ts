@@ -10,7 +10,7 @@
  */
 export type FixtureMode = 'replay' | 'record' | 'live';
 
-export type Vendor = 'kimi' | 'openai' | 'anthropic' | 'google' | 'zai' | 'deepseek';
+export type Vendor = 'kimi' | 'openai' | 'groq';
 
 export interface ProviderConfig {
   vendor: Vendor;
@@ -26,11 +26,22 @@ export interface ChatRequest {
   userPrompt: string;
   temperature?: number;
   maxTokens?: number;
+  /**
+   * When set, instructs the provider to constrain its response to a
+   * specific format. Currently only `'json_object'` is supported,
+   * mapping to OpenAI's `response_format: { type: 'json_object' }`.
+   * Adapters that do not support this MAY ignore it; the caller
+   * remains responsible for validating the response body.
+   *
+   * Included in the canonical request hash so fixtures recorded
+   * without this flag do not collide with calls that pass it.
+   */
+  responseFormat?: 'json_object';
 }
 
 export interface ChatResponse {
   text: string;
-  usage?: { input: number; output: number };
+  usage?: { input: number; output: number; cached?: number };
 }
 
 export interface TranscribeRequest {
@@ -67,6 +78,26 @@ export class LiveModeForbiddenError extends Error {
   }
 }
 
+/**
+ * Thrown when a real-provider adapter is invoked for a (vendor, kind)
+ * pair that has no implementation. Today:
+ *   - openai.transcribe — transcription is groq-only
+ *   - groq.chat         — chat is openai-only
+ *   - kimi.transcribe   — transcription is groq-only
+ */
+export class LiveAdapterMissingError extends Error {
+  constructor(public vendor: string, public kind: 'chat' | 'transcribe') {
+    super(`[ai-fixtures] no live adapter for vendor="${vendor}" kind="${kind}"`);
+    this.name = 'LiveAdapterMissingError';
+  }
+}
+
 export { createProvider } from './factory.js';
+export { FixtureStore } from './fixture-store.js';
+export type { FixtureFile } from './fixture-store.js';
 export { redact } from './redact.js';
 export { hashRequest } from './hash.js';
+export { createOpenAiProvider } from './providers/openai.js';
+export { createGroqProvider } from './providers/groq.js';
+export { createKimiProvider } from './providers/kimi.js';
+export { realProviderFactoryFromEnv } from './providers/factory-from-env.js';

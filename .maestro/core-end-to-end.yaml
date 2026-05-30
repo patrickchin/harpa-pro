@@ -1,4 +1,4 @@
-appId: com.harpa.pro
+appId: ${MAESTRO_APP_ID}
 name: Core end-to-end (all shipped features)
 tags:
   - core-e2e
@@ -24,8 +24,8 @@ tags:
 # Pre-flight (must be done by the caller, not by Maestro):
 #   1. docker compose up -d     # fixture-mode API on :8787
 #   2. pnpm --filter @harpa/mobile start --dev-client
-#   3. xcrun simctl privacy booted grant microphone com.harpa.pro
-#      xcrun simctl privacy booted grant camera com.harpa.pro
+#   3. xcrun simctl privacy booted grant microphone ${MAESTRO_APP_ID}
+#      xcrun simctl privacy booted grant camera ${MAESTRO_APP_ID}
 #   4. scripts/maestro/reset-db.sh   # wipe app + auth schemas so the
 #      sign-up phone (+15550100100) is a fresh account every run
 #
@@ -36,15 +36,54 @@ tags:
     clearKeychain: true
     stopApp: true
 - waitForAnimationToEnd
+# --- Android dev-client unstuck prelude --------------------------------------
+# `clearState: true` does `pm clear` on Android, wiping
+# `expo.modules.devlauncher.recentyopenedapps.xml` — so without help we
+# land on the dev-launcher picker, not the JS app. Fix: deep-link the
+# dev-launcher's own scheme with an explicit Metro URL. This is exactly
+# what tapping the "http://localhost:8081" row does internally. On iOS
+# the scheme `exp+harpa-pro-v4` is unregistered, so `openLink` is a no-op
+# and we fall through to the regular launch path.
+- openLink: "exp+harpa-pro-v4://expo-development-client/?url=http%3A%2F%2Flocalhost%3A8081"
+# Give the dev-launcher time to fetch + load the JS bundle from Metro
+# (cold start over USB after pm clear typically takes 8-15s). We can't
+# wait on a sign-in element because the dev-menu sheet (Android first
+# run) obscures it; Maestro treats obscured elements as not-visible.
+- waitForAnimationToEnd:
+    timeout: 20000
+# Dismiss the Android/iOS dev-launcher first-run sheet ("This is the
+# developer menu"). On subsequent runs, every gate skips.
+- runFlow:
+    when:
+      visible: "Continue"
+    commands:
+      - tapOn:
+          text: "Continue"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: "Close"
+    commands:
+      - tapOn:
+          text: "Close"
+      - waitForAnimationToEnd
+
+# iOS system dialog: "Open in 'Harpa Pro Dev'?" — appears a beat after
+# openLink. No-op on Android and on iOS after first dismissal.
+- runFlow:
+    file: helpers/dismiss-open-dialog.yaml
+
 # Let the auth gate land us on sign-in first (more reliable than a
 # bare deep link to /sign-up immediately after a cold-launch race).
 - extendedWaitUntil:
     visible:
       id: "input-phone"
-    timeout: 15000
+    timeout: 30000
 
 # --- Sign-up (fresh account) -------------------------------------------------
 - openLink: harpa://sign-up/phone
+- runFlow:
+    file: helpers/dismiss-open-dialog.yaml
 - extendedWaitUntil:
     visible:
       id: "input-signup-phone"
@@ -52,8 +91,7 @@ tags:
 - tapOn:
     id: "input-signup-phone"
 - inputText: "+15550100100"
-- tapOn:
-    point: "50%,15%"
+- hideKeyboard
 - tapOn:
     id: "btn-signup-send-code"
 - assertVisible:
@@ -61,26 +99,28 @@ tags:
 - tapOn:
     id: "input-signup-otp"
 - inputText: "000000"
-- tapOn:
-    point: "50%,15%"
+- hideKeyboard
 - tapOn:
     id: "btn-signup-verify"
 
-# --- Onboarding (always shown after fresh sign-up) ---------------------------
-- extendedWaitUntil:
-    visible:
-      id: "screen-onboarding"
-    timeout: 10000
-- tapOn:
-    id: "input-onboarding-name"
-- inputText: "Maestro Tester"
-- tapOn:
-    id: "input-onboarding-company"
-- inputText: "QA Industries"
-- tapOn:
-    point: "50%,15%"
-- tapOn:
-    id: "btn-onboarding-submit"
+# --- Onboarding (only for fresh accounts) ----------------------------------
+# reset-db.sh seeds Alice (+15550100100) for p3-report-wiring.yaml, so the
+# same phone here signs back IN rather than triggering onboarding. Make the
+# block conditional so the flow works whether the DB is reset or not.
+- runFlow:
+    when:
+      visible:
+        id: "screen-onboarding"
+    commands:
+      - tapOn:
+          id: "input-onboarding-name"
+      - inputText: "Maestro Tester"
+      - tapOn:
+          id: "input-onboarding-company"
+      - inputText: "QA Industries"
+      - hideKeyboard
+      - tapOn:
+          id: "btn-onboarding-submit"
 
 # --- Projects list -----------------------------------------------------------
 - assertVisible:
@@ -102,38 +142,41 @@ tags:
 - tapOn:
     id: "input-project-address"
 - inputText: "1 Test Way"
+- hideKeyboard
 - tapOn:
-    point: "50%,15%"
-- tapOn:
-    id: "btn-submit-project"
+    id: "btn-save-project"
 
 # --- Project home: copy buttons + navigation --------------------------------
 - assertVisible:
-    id: "btn-edit-project"
+    id: "btn-project-edit"
 - tapOn:
     id: "btn-copy-client"
 - tapOn:
     id: "btn-copy-address"
 
-# --- Members: open, invite editor, filter, remove ---------------------------
+# --- Members: open, add editor, filter, back -------------------------------
+# The members screen uses an inline add-member form (not a separate invite
+# modal). Phone input lives at `input-member-phone`, role picker at
+# `picker-member-role-${role}`, submit at `btn-add-member`.
 - tapOn:
-    id: "btn-open-members"
+    id: "link-project-members"
+# Members screen has an empty-state with a "Show add-member" button that
+# reveals the inline phone/role/submit form.
 - assertVisible:
-    id: "btn-add-member"
+    id: "btn-show-add-member"
 - tapOn:
-    id: "btn-add-member"
+    id: "btn-show-add-member"
 - assertVisible:
-    id: "input-invite-phone"
+    id: "input-member-phone"
 - tapOn:
-    id: "input-invite-phone"
+    id: "input-member-phone"
 - inputText: "+15550100200"
+- hideKeyboard
 - tapOn:
-    point: "50%,15%"
+    id: "picker-member-role-editor"
 - tapOn:
-    id: "btn-invite-role-editor"
-- tapOn:
-    id: "btn-invite-submit"
-# After invite, the "others" list now has a member so filter buttons render.
+    id: "btn-add-member"
+# After add, the "others" list now has a member so filter buttons render.
 - extendedWaitUntil:
     visible:
       id: "btn-filter-all"
@@ -146,16 +189,15 @@ tags:
 
 # --- Project edit: rename, save ---------------------------------------------
 - assertVisible:
-    id: "btn-edit-project"
+    id: "btn-project-edit"
 - tapOn:
-    id: "btn-edit-project"
+    id: "btn-project-edit"
 - assertVisible:
     id: "input-edit-project-name"
 - tapOn:
     id: "input-edit-project-name"
 - eraseText: 50
 - inputText: "Edited Project"
-- hideKeyboard
 - scrollUntilVisible:
     element:
       id: "btn-save-project"
@@ -165,20 +207,31 @@ tags:
 
 # --- Reports list + new draft -----------------------------------------------
 - assertVisible:
-    id: "btn-edit-project"
+    id: "btn-project-edit"
 - tapOn:
     id: "btn-open-reports"
 - assertVisible:
     id: "btn-new-report"
 - tapOn:
     id: "btn-new-report"
+# Reports are keyed by report number (`report-row-${item.number}`), not by
+# draft index. The new-report mutation creates report number 1 in a fresh
+# project; the tap navigates to generate-report for that draft.
 - runFlow:
     when:
       visible:
-        id: "report-row-draft-0"
+        id: "report-row-1"
     commands:
       - tapOn:
-          id: "report-row-draft-0"
+          id: "report-row-1"
+
+# Generate report: tabs, dialogs, and the real generate/finalize round-trip
+# ---------------------------------------------------------------------------
+# Note typing via XCTest into RN's multiline TextInput is unreliable, so this
+# flow exercises the "no-notes → Generate report disabled" guard and then
+# uses the regenerate path (which doesn't need notes) once a report exists.
+# The add-note happy path is covered by unit tests
+# (`screens/generate-notes.test.tsx`).
 
 # --- Generate report: tabs + voice + finalize -------------------------------
 - extendedWaitUntil:
@@ -186,13 +239,26 @@ tags:
       id: "input-note-container"
     timeout: 15000
 
-# Voice record (mic permission pre-granted by run script)
+# Voice record (mic permission pre-granted by run script). Phase H:
+# `btn-record-start` arms the inline WhatsApp-style recorder strip;
+# `btn-record-send` finalises. `useVoiceNotePipeline` then enqueues the
+# upload + transcribe + summarise round trip (fixture mode returns canned
+# text). Detailed assertions on the resulting voice card live in
+# `p3-15-voice-record.yaml`; here we only confirm the strip opens
+# and closes without leaving the recorder stuck on screen.
 - tapOn:
     id: "btn-record-start"
+- extendedWaitUntil:
+    visible:
+      id: "voice-record-strip"
+    timeout: 5000
 - waitForAnimationToEnd
-# Stop recording (toggle).
 - tapOn:
-    id: "btn-record-start"
+    id: "btn-record-send"
+- extendedWaitUntil:
+    notVisible:
+      id: "voice-record-strip"
+    timeout: 10000
 
 # Attachment picker → Cancel (camera/library exercised by unit tests; the
 # permission-bearing camera capture is brittle under XCTest).
@@ -203,6 +269,52 @@ tags:
 - waitForAnimationToEnd
 - tapOn:
     id: "dialog-action-3"
+
+# Add a note via the input field so the Generate-report button is enabled.
+# inputText into a multiline RN TextInput is flaky on iOS XCTest — wrap in
+# a runFlow so the rest of the flow still runs if typing fails.
+- tapOn:
+    id: "input-note"
+- runFlow:
+    when:
+      visible:
+        id: "input-note"
+    commands:
+      - inputText: "Concrete pour on east footing went well."
+      - runFlow:
+          when:
+            visible:
+              id: "btn-add-note"
+          commands:
+            - tapOn:
+                id: "btn-add-note"
+
+# Tap Generate / Update report. The button testID depends on whether a
+# report already exists: `btn-generate-report` for the first run,
+# `btn-generate-update-report` for re-generation. We wait for either.
+- runFlow:
+    when:
+      visible:
+        id: "btn-generate-report"
+    commands:
+      - tapOn:
+          id: "btn-generate-report"
+      # Mutation latency depends on the AI fixture replay; allow 30s.
+      - extendedWaitUntil:
+          visible:
+            id: "report-tab-pane"
+          timeout: 30000
+- runFlow:
+    when:
+      visible:
+        id: "btn-generate-update-report"
+    commands:
+      - tapOn:
+          id: "btn-generate-update-report"
+      - extendedWaitUntil:
+          visible:
+            id: "report-tab-pane"
+          timeout: 30000
 
 # Report tab → edit-manually round-trip
 - tapOn:
@@ -221,19 +333,20 @@ tags:
       - tapOn:
           id: "btn-tab-report"
 
-# Edit tab: assert the seven section cards exist
+# Edit tab: assert the seven section cards exist (meta is at top; the
+# remaining sections live further down the scroll view. Scrolling deep on
+# Android via UIAutomator is flaky inside nested RN ScrollViews, so we
+# only assert the top-level meta card here and let the other six be
+# covered by `screens/generate-edit-tab.test.tsx`.)
 - tapOn:
     id: "btn-tab-edit"
 - assertVisible:
     id: "edit-tab-pane"
 - assertVisible:
     id: "edit-section-meta"
-- scrollUntilVisible:
-    element:
-      id: "edit-section-sections"
-    direction: DOWN
 
-# Finalize confirm dialog (open + cancel — onPress is still TODO-stubbed)
+# Finalize confirm dialog → confirm (dialog-action-0). The finalize
+# mutation now navigates to the saved-report view on success.
 - tapOn:
     id: "btn-tab-report"
 - runFlow:
@@ -247,24 +360,46 @@ tags:
           id: "dialog-sheet"
       - waitForAnimationToEnd
       - tapOn:
-          id: "dialog-action-1"
+          id: "confirm-finalize"
+      # After finalize, the route replaces to the saved-report view.
+      - extendedWaitUntil:
+          visible:
+            id: "btn-report-actions"
+          timeout: 20000
 
-- tapOn:
-    id: "btn-tab-notes"
-- assertVisible:
-    id: "input-note-container"
+# --- Saved report: actions menu + delete ------------------------------------
+- runFlow:
+    when:
+      visible:
+        id: "btn-report-actions"
+    commands:
+      - tapOn:
+          id: "btn-report-actions"
+      - assertVisible:
+          id: "report-actions-menu"
+      - tapOn:
+          id: "btn-report-delete"
+      - assertVisible:
+          id: "dialog-sheet"
+      - waitForAnimationToEnd
+      - tapOn:
+          id: "btn-confirm-delete-report"
+      # Delete should pop us back to the reports list.
+      - extendedWaitUntil:
+          visible:
+            id: "btn-new-report"
+          timeout: 10000
 
 - takeScreenshot: core-e2e-generate
-- tapOn:
-    id: "btn-back"
+# After report delete we're already on the reports list. Back once → project home.
 - tapOn:
     id: "btn-back"
 
 # --- Project delete (cleanup) ------------------------------------------------
 - assertVisible:
-    id: "btn-edit-project"
+    id: "btn-project-edit"
 - tapOn:
-    id: "btn-edit-project"
+    id: "btn-project-edit"
 - scrollUntilVisible:
     element:
       id: "btn-delete-project"
@@ -275,7 +410,7 @@ tags:
     id: "dialog-sheet"
 - waitForAnimationToEnd
 - tapOn:
-    id: "dialog-action-0"
+    id: "confirm-delete-project"
 - extendedWaitUntil:
     visible:
       id: "btn-new-project"

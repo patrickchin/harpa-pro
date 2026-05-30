@@ -4,17 +4,24 @@
  * resetRateLimiter() in beforeEach so per-route counters don't leak
  * between cases.
  *
- * The default implementation is in-memory + per-process. That's fine for
- * tests, dev, and a single Fly.io machine. Multi-machine production
- * deployments will swap in an UpstashRateLimiter (TODO) implementing
- * the same interface backed by @upstash/redis. See the carve-out note in
- * docs/v4/plan-p1-api-core.md §P1.9.
+ * Two implementations:
+ *   - `MemoryRateLimiter`  — per-process, dev/test default.
+ *   - `PostgresRateLimiter` — atomic, cross-machine. Backed by
+ *     `app.rate_limit_buckets` (migration 0006). Selected automatically
+ *     in production (or when `RATE_LIMIT_BACKEND=postgres`).
  *
- * Window semantics: fixed window keyed on (key, floor(now/windowMs)). The
- * window resets all at once at the boundary; this is the simplest backend
- * to reason about and matches the per-route budgets in arch-api-design.md
- * (60 RPM shared budgets are enforced per-user, per-window).
+ * Backend selection reads the *parsed* `env` const, NEVER `process.env`
+ * directly — Pitfall 13 (sub-pattern "pickStorage()"). The lint guard
+ * `scripts/check-no-process-env-rate-limit.sh` enforces this.
+ *
+ * Window semantics: fixed window keyed on (key, floor(now/windowMs)).
+ * The window resets all at once at the boundary; this is the simplest
+ * backend to reason about and matches the per-route budgets in
+ * arch-api-design.md.
  */
+import type pg from 'pg';
+import { env } from '../env.js';
+import { getPool } from '../db/client.js';
 
 export interface RateLimiterResult {
   /** True if the request is within budget (was just consumed). */
@@ -64,10 +71,62 @@ export class MemoryRateLimiter implements RateLimiter {
   }
 }
 
+/**
+ * Cross-machine rate limiter backed by `app.rate_limit_buckets`.
+ *
+ * One round-trip per consume:
+ *
+ *   INSERT INTO app.rate_limit_buckets (bucket_key, window_end, count)
+ *   VALUES ($1, to_timestamp($2/1000.0), 1)
+ *   ON CONFLICT (bucket_key) DO UPDATE
+ *     SET count = app.rate_limit_buckets.count + 1
+ *   RETURNING count;
+ *
+ * The `bucket_key` embeds the window-start epoch so a fresh window
+ * always lands on a new row. A periodic GC sweeps stale rows
+ * (see `startRateLimitGc`).
+ */
+export class PostgresRateLimiter implements RateLimiter {
+  constructor(private readonly pool: pg.Pool) {}
+
+  async consume(key: string, limit: number, windowMs: number): Promise<RateLimiterResult> {
+    const now = Date.now();
+    const windowStart = Math.floor(now / windowMs) * windowMs;
+    const resetAt = windowStart + windowMs;
+    const bucketKey = `${key}|${windowStart}`;
+    const { rows } = await this.pool.query<{ count: number }>(
+      `INSERT INTO app.rate_limit_buckets (bucket_key, window_end, count)
+       VALUES ($1, to_timestamp($2 / 1000.0), 1)
+       ON CONFLICT (bucket_key) DO UPDATE
+         SET count = app.rate_limit_buckets.count + 1
+       RETURNING count`,
+      [bucketKey, resetAt],
+    );
+    const count = rows[0]?.count ?? 1;
+    const remaining = Math.max(0, limit - count);
+    return { success: count <= limit, limit, remaining, reset: resetAt };
+  }
+
+  /** Delete rows whose window has fully elapsed. Safe to call from any machine. */
+  async gc(now: number = Date.now()): Promise<number> {
+    const cutoff = new Date(now - 60_000).toISOString();
+    const { rowCount } = await this.pool.query(
+      `DELETE FROM app.rate_limit_buckets WHERE window_end < $1`,
+      [cutoff],
+    );
+    return rowCount ?? 0;
+  }
+}
+
 let _instance: RateLimiter | null = null;
 
 export function getRateLimiter(): RateLimiter {
-  if (!_instance) _instance = new MemoryRateLimiter();
+  if (_instance) return _instance;
+  if (env.RATE_LIMIT_BACKEND === 'postgres') {
+    _instance = new PostgresRateLimiter(getPool());
+  } else {
+    _instance = new MemoryRateLimiter();
+  }
   return _instance;
 }
 
@@ -77,4 +136,33 @@ export function setRateLimiter(r: RateLimiter): void {
 
 export function resetRateLimiter(): void {
   _instance = null;
+}
+
+let _gcTimer: ReturnType<typeof setInterval> | null = null;
+
+/**
+ * Start a periodic GC sweep (every `intervalMs`, default 10 min) when
+ * the active limiter is a PostgresRateLimiter. No-op for memory mode.
+ * Idempotent: calling twice does not double-schedule. Exposed so the
+ * server entry can start it after the pool is initialised.
+ */
+export function startRateLimitGc(intervalMs = 10 * 60_000): void {
+  if (_gcTimer) return;
+  const inst = getRateLimiter();
+  if (!(inst instanceof PostgresRateLimiter)) return;
+  _gcTimer = setInterval(() => {
+    inst.gc().catch((err) => {
+      // eslint-disable-next-line no-console
+      console.warn('[rate-limit] gc failed:', err);
+    });
+  }, intervalMs);
+  // Don't keep the event loop alive solely for GC.
+  if (typeof _gcTimer.unref === 'function') _gcTimer.unref();
+}
+
+export function stopRateLimitGc(): void {
+  if (_gcTimer) {
+    clearInterval(_gcTimer);
+    _gcTimer = null;
+  }
 }

@@ -15,15 +15,16 @@
  * `useReportDraftPersistence`, which land in P3.7.
  */
 import { AppDialogSheet } from '@/components/primitives/AppDialogSheet';
+import { ImagePreviewModal } from '@/components/files/ImagePreviewModal';
 import {
   getActionErrorDialogCopy,
   getDeleteNoteDialogCopy,
   getFinalizeReportDialogCopy,
-} from '@/lib/app-dialog-copy';
-import { useGenerateReport } from './GenerateReportProvider';
+} from '@/lib/dialogs/app-dialog-copy';
+import { useGenerateReport } from '@/features/generate/GenerateReportProvider';
 
 export function GenerateReportDialogs() {
-  const { generation, draft, notes, ui, handlePickAttachment, photo } =
+  const { generation, draft, notes, ui, handlePickAttachment, photo, preview } =
     useGenerateReport();
 
   const hasReport = generation.hasReport;
@@ -65,6 +66,7 @@ export function GenerateReportDialogs() {
             },
             disabled: draft.isFinalizing || !hasReport,
             accessibilityLabel: 'Confirm finalize report',
+            testID: 'confirm-finalize',
           },
           {
             label: finalizeConfirmCopy.cancelLabel ?? 'Cancel',
@@ -89,6 +91,7 @@ export function GenerateReportDialogs() {
             variant: deleteNoteCopy.confirmVariant,
             onPress: notes.confirmDelete,
             accessibilityLabel: 'Confirm delete note',
+            testID: 'dialog-action-confirm-delete-note',
             align: 'start',
           },
           {
@@ -127,15 +130,11 @@ export function GenerateReportDialogs() {
         title="Add attachment"
         onClose={closeAttachmentSheet}
         actions={[
-          {
-            label: 'Document',
-            variant: 'secondary',
-            onPress: () => {
-              closeAttachmentSheet();
-              handlePickAttachment('document');
-            },
-            accessibilityLabel: 'Pick a document',
-          },
+          // Document picker is intentionally not surfaced — the server
+          // pipeline supports `document` notes but the UI slice was
+          // deferred (docs/v4/plan-camera-upload-pipeline.md, "Document
+          // note kind: deferred entirely"). Keep `image`-only here so
+          // the sheet never advertises an unimplemented surface.
           {
             label: 'Photo Library',
             variant: 'secondary',
@@ -144,6 +143,7 @@ export function GenerateReportDialogs() {
               handlePickAttachment('image');
             },
             accessibilityLabel: 'Pick a photo from library',
+            testID: 'btn-attachment-photo-library',
           },
           {
             label: 'Camera',
@@ -153,14 +153,23 @@ export function GenerateReportDialogs() {
               void photo.handleCameraCapture();
             },
             accessibilityLabel: 'Take a photo with the camera',
+            testID: 'btn-attachment-camera',
           },
           {
             label: 'Cancel',
             variant: 'quiet',
             onPress: closeAttachmentSheet,
             accessibilityLabel: 'Cancel attachment picker',
+            testID: 'btn-attachment-cancel',
           },
         ]}
+      />
+
+      <ImagePreviewModal
+        visible={preview.photoIndex !== null}
+        photos={preview.photoGallery}
+        initialIndex={preview.photoIndex ?? 0}
+        onClose={preview.closePhoto}
       />
     </>
   );

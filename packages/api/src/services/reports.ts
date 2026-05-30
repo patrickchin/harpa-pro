@@ -16,6 +16,24 @@ type ReportBody = z.infer<typeof reportSchemas.reportBody>;
 
 export type ReportStatus = 'draft' | 'finalized';
 
+/**
+ * Persisted shape of the `last_generation` jsonb column (migration 0003).
+ * Mirror of the api-contract `reportLastGeneration` schema; kept here as a
+ * service-local type so the schema stays the single source of truth for
+ * the wire format and this type stays the truth for the DB column.
+ */
+export interface ReportLastGeneration {
+  requestedAt: string;
+  finishedAt: string | null;
+  vendor: string;
+  model: string;
+  fixtureMode: 'live' | 'replay' | 'record';
+  systemPrompt: string;
+  userPrompt: string;
+  response: string;
+  usage: { inputTokens: number; outputTokens: number; cachedTokens?: number } | null;
+}
+
 export interface ReportRow {
   id: string;
   number: number;
@@ -23,7 +41,8 @@ export interface ReportRow {
   status: ReportStatus;
   visitDate: string | null;
   body: ReportBody | null;
-  notesSinceLastGeneration: number;
+  notesSinceLastGeneration: number; // kept for dual-read during expand window
+  notesChangedAt: string | null;
   generatedAt: string | null;
   finalizedAt: string | null;
   pdfUrl: string | null;
@@ -39,7 +58,8 @@ interface RawReport {
   status: ReportStatus;
   visit_date: Date | null;
   body: ReportBody | null;
-  notes_since_last_generation: number;
+  notes_since_last_generation: number; // kept for dual-read during expand window
+  notes_changed_at: Date | null;
   generated_at: Date | null;
   finalized_at: Date | null;
   pdf_file_id: string | null;
@@ -55,13 +75,41 @@ function mapReport(r: RawReport): ReportRow {
     status: r.status,
     visitDate: r.visit_date ? new Date(r.visit_date).toISOString() : null,
     body: r.body,
-    notesSinceLastGeneration: Number(r.notes_since_last_generation),
+    notesSinceLastGeneration: Number(r.notes_since_last_generation), // expand window
+    notesChangedAt: r.notes_changed_at ? new Date(r.notes_changed_at).toISOString() : null,
     generatedAt: r.generated_at ? new Date(r.generated_at).toISOString() : null,
     finalizedAt: r.finalized_at ? new Date(r.finalized_at).toISOString() : null,
     pdfUrl: null, // populated by P1.7 (signed URL minted from pdf_file_id)
     createdAt: new Date(r.created_at).toISOString(),
     updatedAt: new Date(r.updated_at).toISOString(),
   };
+}
+
+/**
+ * Dual-read during the expand window: prefer notes_changed_at when set
+ * (new code path); fall back to the legacy counter for rows not yet
+ * touched by new code. The fallback is removed in the contract PR
+ * that drops notes_since_last_generation.
+ *
+ * Compares ISO-8601 strings directly — lexicographic ordering matches
+ * chronological ordering when both timestamps are UTC ISO (which both
+ * sides of `mapReport` guarantee).
+ */
+export function needsRegenerationOf(report: ReportRow): boolean {
+  if (report.notesChangedAt !== null) {
+    if (report.generatedAt === null) return true;
+    return report.notesChangedAt > report.generatedAt;
+  }
+  return report.notesSinceLastGeneration > 0;
+}
+
+/**
+ * Wire-shape projection of a ReportRow. Adds the contract-derived
+ * `needsRegeneration` boolean so every route returns it consistently.
+ * Use this in routes instead of returning `ReportRow` directly.
+ */
+export function toReportResponse(r: ReportRow): ReportRow & { needsRegeneration: boolean } {
+  return { ...r, needsRegeneration: needsRegenerationOf(r) };
 }
 
 function encodeCursor(createdAt: string, id: string): string {
@@ -91,7 +139,7 @@ export async function listReports(
         const { createdAt, id } = decodeCursor(cursor);
         return db.execute<RawReport>(sql`
           SELECT id, number, project_id, status, visit_date, body,
-                 notes_since_last_generation, generated_at, finalized_at,
+                 notes_since_last_generation, notes_changed_at, generated_at, finalized_at,
                  pdf_file_id, created_at, updated_at
           FROM app.reports
           WHERE project_id = ${projectId}
@@ -102,7 +150,7 @@ export async function listReports(
       })()
     : await db.execute<RawReport>(sql`
         SELECT id, number, project_id, status, visit_date, body,
-               notes_since_last_generation, generated_at, finalized_at,
+               notes_since_last_generation, notes_changed_at, generated_at, finalized_at,
                pdf_file_id, created_at, updated_at
         FROM app.reports
         WHERE project_id = ${projectId}
@@ -124,7 +172,7 @@ export async function listReports(
 export async function getReport(db: Db, reportId: string): Promise<ReportRow | null> {
   const r = await db.execute<RawReport>(sql`
     SELECT id, number, project_id, status, visit_date, body,
-           notes_since_last_generation, generated_at, finalized_at,
+           notes_since_last_generation, notes_changed_at, generated_at, finalized_at,
            pdf_file_id, created_at, updated_at
     FROM app.reports
     WHERE id = ${reportId}
@@ -148,7 +196,7 @@ export async function getReportByProjectSlugAndNumber(
 ): Promise<ReportRow | null> {
   const r = await db.execute<RawReport>(sql`
     SELECT r.id, r.number, r.project_id, r.status, r.visit_date, r.body,
-           r.notes_since_last_generation, r.generated_at, r.finalized_at,
+           r.notes_since_last_generation, r.notes_changed_at, r.generated_at, r.finalized_at,
            r.pdf_file_id, r.created_at, r.updated_at
     FROM app.reports r
     JOIN app.projects p ON p.id = r.project_id
@@ -219,7 +267,7 @@ export async function createReport(
         SELECT ${id}, ${projectId}, ${authorId}, ${input.visitDate ?? null}, a.n
         FROM assigned a
         RETURNING id, number, project_id, status, visit_date, body,
-                  notes_since_last_generation, generated_at, finalized_at,
+                  notes_since_last_generation, notes_changed_at, generated_at, finalized_at,
                   pdf_file_id, created_at, updated_at
       `);
       const row = r.rows[0];
@@ -244,16 +292,31 @@ function isPkCollision(err: unknown): boolean {
 export async function updateReport(
   db: Db,
   reportId: string,
-  patch: { visitDate?: string | null },
+  patch: { visitDate?: string | null; body?: ReportBody | null },
 ): Promise<ReportRow | null> {
   const setVisit = Object.prototype.hasOwnProperty.call(patch, 'visitDate');
+  const setBody = Object.prototype.hasOwnProperty.call(patch, 'body');
+  const bodyJson = setBody && patch.body !== null && patch.body !== undefined
+    ? JSON.stringify(patch.body)
+    : null;
+  // body patch flow: we deliberately do NOT touch
+  // `notes_since_last_generation` or `generated_at` here — those belong
+  // to the AI loop (setReportBody). Manual edits round-trip through the
+  // same column without resetting the AI counter, so the action row
+  // can keep showing "Update report (N)" if new notes arrived while
+  // the user was editing.
   const r = await db.execute<RawReport>(sql`
     UPDATE app.reports
     SET visit_date = CASE WHEN ${setVisit} THEN ${patch.visitDate ?? null} ELSE visit_date END,
+        body = CASE
+                 WHEN ${setBody} AND ${bodyJson}::text IS NOT NULL THEN ${bodyJson}::jsonb
+                 WHEN ${setBody} THEN NULL
+                 ELSE body
+               END,
         updated_at = now()
     WHERE id = ${reportId}
     RETURNING id, number, project_id, status, visit_date, body,
-              notes_since_last_generation, generated_at, finalized_at,
+              notes_since_last_generation, notes_changed_at, generated_at, finalized_at,
               pdf_file_id, created_at, updated_at
   `);
   const row = r.rows[0];
@@ -271,33 +334,84 @@ export async function deleteReport(db: Db, reportId: string): Promise<boolean> {
 // AI-generation surface (P1.7).
 // ---------------------------------------------------------------------------
 
+/**
+ * Build the user-prompt payload for `generateReport`.
+ *
+ * Returns a numbered, kind-aware notes block. Text + voice notes carry
+ * their body/transcript verbatim; image/document notes contribute a
+ * `[image N]` / `[document N]` placeholder so the LLM acknowledges the
+ * attachment without seeing its contents. The structure ("NOTES:\n[1]
+ * …") matches the canonical v3 `formatNotes` / `buildPrompt` shape the
+ * SYSTEM_PROMPT references — keep them in sync.
+ */
 export async function collectNotesForGeneration(db: Db, reportId: string): Promise<string> {
-  const r = await db.execute<{ body: string | null; transcript: string | null }>(sql`
-    SELECT body, transcript
+  const r = await db.execute<{
+    kind: 'text' | 'voice' | 'image' | 'document';
+    body: string | null;
+    transcript: string | null;
+  }>(sql`
+    SELECT kind, body, transcript
     FROM app.notes
     WHERE report_id = ${reportId}
     ORDER BY created_at ASC, id ASC
   `);
-  return r.rows
-    .map((n) => n.transcript ?? n.body ?? '')
-    .filter((s) => s.length > 0)
-    .join('\n\n');
+  const counters: Record<'image' | 'document', number> = { image: 0, document: 0 };
+  const lines: string[] = [];
+  for (const note of r.rows) {
+    let content: string;
+    switch (note.kind) {
+      case 'text':
+        content = (note.body ?? '').trim();
+        break;
+      case 'voice':
+        content = (note.transcript ?? note.body ?? '').trim();
+        break;
+      case 'image':
+        content = `[image ${++counters.image}]`;
+        break;
+      case 'document':
+        content = `[document ${++counters.document}]`;
+        break;
+      default:
+        content = (note.body ?? '').trim();
+    }
+    if (content.length === 0) continue;
+    lines.push(`[${lines.length + 1}] ${content}`);
+  }
+  if (lines.length === 0) return '';
+  return `NOTES:\n${lines.join('\n')}`;
 }
 
 export async function setReportBody(
   db: Db,
   reportId: string,
   body: ReportBody,
+  lastGeneration?: ReportLastGeneration,
+  /**
+   * Snapshot of `report.notes_changed_at` taken BEFORE the AI call.
+   * `generated_at` is set to this value (NOT `now()`) so concurrent
+   * note bumps that landed during the multi-second AI call keep
+   * `notes_changed_at > generated_at` and the queue-of-one fires
+   * another regen. Falls back to `now()` when omitted — first-time
+   * generates have no prior snapshot, and manual edits round-trip
+   * through this helper too with no race to defend.
+   */
+  snapshotTs?: string | null,
 ): Promise<ReportRow | null> {
+  const lastGenJson = lastGeneration ? JSON.stringify(lastGeneration) : null;
   const r = await db.execute<RawReport>(sql`
     UPDATE app.reports
     SET body = ${JSON.stringify(body)}::jsonb,
-        generated_at = now(),
+        generated_at = COALESCE(${snapshotTs ?? null}::timestamptz, now()),
         notes_since_last_generation = 0,
+        last_generation = CASE
+          WHEN ${lastGenJson}::text IS NOT NULL THEN ${lastGenJson}::jsonb
+          ELSE last_generation
+        END,
         updated_at = now()
     WHERE id = ${reportId}
     RETURNING id, number, project_id, status, visit_date, body,
-              notes_since_last_generation, generated_at, finalized_at,
+              notes_since_last_generation, notes_changed_at, generated_at, finalized_at,
               pdf_file_id, created_at, updated_at
   `);
   const row = r.rows[0];
@@ -312,7 +426,30 @@ export async function finalizeReport(db: Db, reportId: string): Promise<ReportRo
         updated_at = now()
     WHERE id = ${reportId}
     RETURNING id, number, project_id, status, visit_date, body,
-              notes_since_last_generation, generated_at, finalized_at,
+              notes_since_last_generation, notes_changed_at, generated_at, finalized_at,
+              pdf_file_id, created_at, updated_at
+  `);
+  const row = r.rows[0];
+  return row ? mapReport(row) : null;
+}
+
+/**
+ * Reverse of `finalizeReport`: flips a finalized report back to draft so
+ * the user can edit / regenerate it. Only matches rows that are currently
+ * finalized — callers should 409 if this returns null AND the row exists
+ * (route checks status before calling). RLS still applies via the scoped
+ * Postgres role, so a row the caller can't see is just "not found".
+ */
+export async function unfinalizeReport(db: Db, reportId: string): Promise<ReportRow | null> {
+  const r = await db.execute<RawReport>(sql`
+    UPDATE app.reports
+    SET status = 'draft',
+        finalized_at = NULL,
+        updated_at = now()
+    WHERE id = ${reportId}
+      AND finalized_at IS NOT NULL
+    RETURNING id, number, project_id, status, visit_date, body,
+              notes_since_last_generation, notes_changed_at, generated_at, finalized_at,
               pdf_file_id, created_at, updated_at
   `);
   const row = r.rows[0];
@@ -330,9 +467,94 @@ export async function setReportPdfFileId(
         updated_at = now()
     WHERE id = ${reportId}
     RETURNING id, number, project_id, status, visit_date, body,
-              notes_since_last_generation, generated_at, finalized_at,
+              notes_since_last_generation, notes_changed_at, generated_at, finalized_at,
               pdf_file_id, created_at, updated_at
   `);
   const row = r.rows[0];
   return row ? mapReport(row) : null;
+}
+
+// ---------------------------------------------------------------------------
+// Report Debug surface (P4.8).
+// ---------------------------------------------------------------------------
+
+/**
+ * Shape returned by GET /reports/{number}/debug.
+ *
+ * `prompt.system` / `prompt.user` are surfaced from `last_generation` when
+ * the report has been generated; if it hasn't (draft, never generated),
+ * we still surface the user prompt the API *would* send (the same
+ * `NOTES:` block built by collectNotesForGeneration) so the operator can
+ * inspect the input. `prompt.system` is empty in that case — the
+ * SYSTEM_PROMPT canonical depends on the AI fixture path, which the
+ * service layer doesn't know without actually running the generator.
+ *
+ * RLS: the caller must have already loaded the report under the
+ * per-request scoped handle (route does this via `loadReport`). Notes
+ * inherit the same scope through `app.notes` policies.
+ */
+export interface ReportDebugRow {
+  prompt: { system: string; user: string };
+  notes: Array<{
+    id: string;
+    kind: 'text' | 'voice' | 'image' | 'document';
+    body: string | null;
+    transcript: string | null;
+    createdAt: string;
+  }>;
+  lastGeneration: ReportLastGeneration | null;
+}
+
+export async function getReportDebug(db: Db, reportId: string): Promise<ReportDebugRow | null> {
+  // last_generation column lookup. Existence check is via the same id
+  // — the route loaded the report under scope before calling us, so a
+  // missing row here means the report was deleted between the load and
+  // this query (treat as 404).
+  const r = await db.execute<{ last_generation: ReportLastGeneration | null }>(sql`
+    SELECT last_generation
+    FROM app.reports
+    WHERE id = ${reportId}
+    LIMIT 1
+  `);
+  const row = r.rows[0];
+  if (!row) return null;
+  const lastGeneration = row.last_generation ?? null;
+
+  // Notes — same shape used by NoteTimeline, ordered ascending so the
+  // operator sees them in the order they were composed into the prompt.
+  const notesResult = await db.execute<{
+    id: string;
+    kind: 'text' | 'voice' | 'image' | 'document';
+    body: string | null;
+    transcript: string | null;
+    created_at: Date;
+  }>(sql`
+    SELECT id, kind, body, transcript, created_at
+    FROM app.notes
+    WHERE report_id = ${reportId}
+    ORDER BY created_at ASC, id ASC
+  `);
+  const notes = notesResult.rows.map((n) => ({
+    id: n.id,
+    kind: n.kind,
+    body: n.body,
+    transcript: n.transcript,
+    createdAt: new Date(n.created_at).toISOString(),
+  }));
+
+  // Always rebuild the live `userPrompt` from the current notes so the
+  // operator sees the prompt the next generate call would send — even
+  // when a previous lastGeneration is stored. The persisted
+  // `lastGeneration.userPrompt` is still surfaced separately as a
+  // record of what was last sent.
+  const liveUserPrompt = await collectNotesForGeneration(db, reportId);
+
+  return {
+    prompt: {
+      system: lastGeneration?.systemPrompt ?? '',
+      user: liveUserPrompt,
+    },
+    notes,
+    lastGeneration,
+  };
 }

@@ -7,7 +7,7 @@ import { createApp } from '../app.js';
 import { startPg, type PgFixture } from './setup-pg.js';
 import { resetPool, getPool } from '../db/client.js';
 import { signTestToken } from '../middleware/auth.js';
-import { makeUserId, makeSessionId, makeProjectId, makeReportId } from './factories/index.js';
+import { makeUserId, makeSessionId, makeProjectId, makeReportId, makeFileId } from './factories/index.js';
 
 let fx: PgFixture;
 let alice: string;
@@ -57,6 +57,19 @@ afterAll(async () => {
 }, 60_000);
 
 const headers = (tok: string) => ({ authorization: `Bearer ${tok}`, 'content-type': 'application/json' });
+
+async function readDirty(reportId: string) {
+  const c = await getPool().connect();
+  try {
+    const r = await c.query<{ changed_at: Date | null; generated_at: Date | null }>(
+      `SELECT notes_changed_at AS changed_at, generated_at FROM app.reports WHERE id = $1`,
+      [reportId],
+    );
+    return r.rows[0] ?? { changed_at: null, generated_at: null };
+  } finally {
+    c.release();
+  }
+}
 
 describe('notes CRUD', () => {
   let noteId: string;
@@ -170,5 +183,249 @@ describe('notes CRUD', () => {
     const list = await app.request(`/reports/${report}/notes`, { headers: { authorization: `Bearer ${tok}` } });
     const body = (await list.json()) as { items: Array<{ id: string }> };
     expect(body.items.find((n) => n.id === noteId)).toBeFalsy();
+  });
+
+  it('POST creates a text note and bumps notes_changed_at', async () => {
+    const app = createApp();
+    const tok = await signTestToken(alice, aliceSid);
+    // Reset dirty state so assertion is meaningful.
+    const reset = await getPool().connect();
+    try {
+      await reset.query(
+        `UPDATE app.reports SET notes_changed_at = NULL WHERE id = $1`,
+        [report],
+      );
+    } finally {
+      reset.release();
+    }
+    const before = await readDirty(report);
+    expect(before.changed_at).toBeNull();
+    const res = await app.request(`/reports/${report}/notes`, {
+      method: 'POST',
+      headers: headers(tok),
+      body: JSON.stringify({ kind: 'text', body: 'changed_at observation' }),
+    });
+    expect(res.status).toBe(201);
+    noteId = ((await res.json()) as { id: string }).id;
+    const after = await readDirty(report);
+    expect(after.changed_at).not.toBeNull();
+  });
+
+  it('PATCH note body bumps notes_changed_at', async () => {
+    const app = createApp();
+    const tok = await signTestToken(alice, aliceSid);
+    // Reset dirty bit so the assertion is meaningful.
+    const reset = await getPool().connect();
+    try {
+      await reset.query(
+        `UPDATE app.reports SET notes_changed_at = NULL, generated_at = now() WHERE id = $1`,
+        [report],
+      );
+    } finally {
+      reset.release();
+    }
+    const res = await app.request(`/notes/${noteId}`, {
+      method: 'PATCH',
+      headers: headers(tok),
+      body: JSON.stringify({ body: 'edited observation' }),
+    });
+    expect(res.status).toBe(200);
+    const after = await readDirty(report);
+    expect(after.changed_at).not.toBeNull();
+    expect(new Date(after.changed_at!).getTime()).toBeGreaterThan(
+      new Date(after.generated_at!).getTime(),
+    );
+  });
+
+  it('DELETE note bumps notes_changed_at', async () => {
+    const app = createApp();
+    const tok = await signTestToken(alice, aliceSid);
+    // Reset first.
+    const reset = await getPool().connect();
+    try {
+      await reset.query(
+        `UPDATE app.reports SET notes_changed_at = NULL, generated_at = now() WHERE id = $1`,
+        [report],
+      );
+    } finally {
+      reset.release();
+    }
+    const res = await app.request(`/notes/${noteId}`, {
+      method: 'DELETE',
+      headers: { authorization: `Bearer ${tok}` },
+    });
+    expect(res.status).toBe(204);
+    const after = await readDirty(report);
+    expect(after.changed_at).not.toBeNull();
+  });
+});
+
+describe('batch photo notes', () => {
+  // Dummy file IDs inserted into app.files to satisfy FK constraints.
+  const fileIds: string[] = [];
+
+  beforeAll(async () => {
+    const client = new pg.Client({ connectionString: fx.url });
+    await client.connect();
+    for (let i = 0; i < 5; i++) {
+      const fid = makeFileId();
+      fileIds.push(fid);
+      await client.query(
+        `INSERT INTO app.files(id, owner_id, kind, file_key, size_bytes, content_type)
+         VALUES ($1, $2, 'image', $3, 1024, 'image/jpeg')`,
+        [fid, alice, `test-key-${fid}`],
+      );
+    }
+    await client.end();
+  });
+
+  it('create note with files[] populates note_files join table', async () => {
+    const app = createApp();
+    const tok = await signTestToken(alice, aliceSid);
+    const res = await app.request(`/reports/${report}/notes`, {
+      method: 'POST',
+      headers: headers(tok),
+      body: JSON.stringify({
+        kind: 'image',
+        files: [{ fileId: fileIds[0], thumbnailFileId: null }],
+      }),
+    });
+    expect(res.status).toBe(201);
+    const body = (await res.json()) as { files: Array<{ id: string; fileId: string; position: number }> };
+    expect(body.files).toHaveLength(1);
+    expect(body.files[0]!.id).toMatch(/^nfl_/);
+    expect(body.files[0]!.fileId).toBe(fileIds[0]);
+  });
+
+  it('create note with multiple files', async () => {
+    const app = createApp();
+    const tok = await signTestToken(alice, aliceSid);
+    const res = await app.request(`/reports/${report}/notes`, {
+      method: 'POST',
+      headers: headers(tok),
+      body: JSON.stringify({
+        kind: 'image',
+        files: [
+          { fileId: fileIds[0] },
+          { fileId: fileIds[1] },
+          { fileId: fileIds[2] },
+        ],
+      }),
+    });
+    expect(res.status).toBe(201);
+    const body = (await res.json()) as { files: Array<{ id: string; position: number }> };
+    expect(body.files).toHaveLength(3);
+    expect(body.files.map((f) => f.position)).toEqual([0, 1, 2]);
+  });
+
+  it('append files to existing note bumps notes_changed_at', async () => {
+    const app = createApp();
+    const tok = await signTestToken(alice, aliceSid);
+    // Create a note with 1 file first.
+    const create = await app.request(`/reports/${report}/notes`, {
+      method: 'POST',
+      headers: headers(tok),
+      body: JSON.stringify({
+        kind: 'image',
+        files: [{ fileId: fileIds[0] }],
+      }),
+    });
+    expect(create.status).toBe(201);
+    const created = (await create.json()) as { id: string; files: Array<{ position: number }> };
+    expect(created.files).toHaveLength(1);
+
+    // Reset dirty bit so the append's bump is observable.
+    const reset = await getPool().connect();
+    try {
+      await reset.query(
+        `UPDATE app.reports SET notes_changed_at = NULL, generated_at = now() WHERE id = $1`,
+        [report],
+      );
+    } finally {
+      reset.release();
+    }
+
+    // Append a new file.
+    const append = await app.request(`/notes/${created.id}/files`, {
+      method: 'POST',
+      headers: headers(tok),
+      body: JSON.stringify({ files: [{ fileId: fileIds[3] }] }),
+    });
+    expect(append.status).toBe(200);
+    const appended = (await append.json()) as { files: Array<{ id: string; position: number; fileId: string }> };
+    expect(appended.files).toHaveLength(1);
+    expect(appended.files[0]!.position).toBe(1);
+    expect(appended.files[0]!.fileId).toBe(fileIds[3]);
+
+    // Adding photos is a note-content mutation and must flag the report
+    // dirty so the auto-regenerator picks it up.
+    const after = await readDirty(report);
+    expect(after.changed_at).not.toBeNull();
+    expect(new Date(after.changed_at!).getTime()).toBeGreaterThan(
+      new Date(after.generated_at!).getTime(),
+    );
+  });
+
+  it('list notes returns files array', async () => {
+    const app = createApp();
+    const tok = await signTestToken(alice, aliceSid);
+    // Create a note with 2 files.
+    const create = await app.request(`/reports/${report}/notes`, {
+      method: 'POST',
+      headers: headers(tok),
+      body: JSON.stringify({
+        kind: 'image',
+        files: [{ fileId: fileIds[1] }, { fileId: fileIds[4] }],
+      }),
+    });
+    expect(create.status).toBe(201);
+    const created = (await create.json()) as { id: string };
+
+    // List notes and find the one we just created.
+    const list = await app.request(`/reports/${report}/notes`, {
+      headers: { authorization: `Bearer ${tok}` },
+    });
+    expect(list.status).toBe(200);
+    const body = (await list.json()) as { items: Array<{ id: string; files: Array<{ fileId: string }> }> };
+    const note = body.items.find((n) => n.id === created.id);
+    expect(note).toBeDefined();
+    expect(note!.files).toHaveLength(2);
+  });
+
+  it('back-compat: image note with fileId only routes into note_files', async () => {
+    // Mobile client's first-photo path sends `kind: 'image', fileId, thumbnailFileId`
+    // without an explicit `files[]`. The service should funnel it into
+    // `note_files` so listNotes' join surfaces every photo of a batch
+    // (the first image was previously invisible to the join).
+    const app = createApp();
+    const tok = await signTestToken(alice, aliceSid);
+    const create = await app.request(`/reports/${report}/notes`, {
+      method: 'POST',
+      headers: headers(tok),
+      body: JSON.stringify({
+        kind: 'image',
+        fileId: fileIds[2],
+        thumbnailFileId: null,
+      }),
+    });
+    expect(create.status).toBe(201);
+    const created = (await create.json()) as {
+      id: string;
+      fileId: string | null;
+      files: Array<{ fileId: string; position: number }>;
+    };
+    expect(created.files).toHaveLength(1);
+    expect(created.files[0]!.fileId).toBe(fileIds[2]);
+    expect(created.files[0]!.position).toBe(0);
+    // Legacy column cleared: note_files is canonical for image rows.
+    expect(created.fileId).toBeNull();
+
+    const list = await app.request(`/reports/${report}/notes`, {
+      headers: { authorization: `Bearer ${tok}` },
+    });
+    const body = (await list.json()) as { items: Array<{ id: string; files: Array<{ fileId: string }> }> };
+    const note = body.items.find((n) => n.id === created.id);
+    expect(note!.files).toHaveLength(1);
+    expect(note!.files[0]!.fileId).toBe(fileIds[2]);
   });
 });

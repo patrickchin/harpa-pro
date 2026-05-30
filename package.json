@@ -15,7 +15,7 @@
     "test:api:integration": "pnpm --filter @harpa/api test:integration",
     "test:mobile": "pnpm --filter @harpa/mobile test",
     "test:docs:e2e": "pnpm --filter @harpa/docs test:e2e",
-    "lint": "turbo run lint && bash scripts/check-no-supabase.sh && bash scripts/check-no-unistyles.sh && bash scripts/check-no-alert-alert.sh && bash scripts/check-no-process-env-bang.sh && bash scripts/check-no-hex-colors.sh && bash scripts/check-scope-tests.sh && bash scripts/check-spec-drift.sh",
+    "lint": "turbo run lint && bash scripts/check-no-supabase.sh && bash scripts/check-no-unistyles.sh && bash scripts/check-scope-tests.sh && bash scripts/check-spec-drift.sh && bash scripts/check-maestro-appid.sh && bash scripts/check-no-process-env-r2.sh && bash scripts/check-usage-limit-wiring.sh && bash scripts/check-no-process-env-rate-limit.sh",
     "typecheck": "turbo run typecheck",
     "gen:api": "pnpm --filter @harpa/api-contract gen:types && pnpm --filter @harpa/mobile gen:hooks",
     "spec:emit": "pnpm --filter @harpa/api spec:emit",
@@ -34,7 +34,9 @@
     "secrets:fly:prod": "doppler secrets download --project harpa-pro --config prd --no-file --format docker | xargs flyctl secrets set --app harpa-pro-api",
     "format": "prettier --write .",
     "harpa": "pnpm --filter @harpa/cli dev --",
-    "prepare": "husky"
+    "prepare": "husky",
+    "android": "expo run:android",
+    "ios": "expo run:ios"
   },
   "devDependencies": {
     "@commitlint/cli": "^19.5.0",
@@ -50,8 +52,18 @@
   },
   "pnpm": {
     "patchedDependencies": {
-      "react-native-css-interop@0.2.3": "patches/react-native-css-interop@0.2.3.patch",
-      "expo-modules-core@2.2.3": "patches/expo-modules-core@2.2.3.patch"
+      "react-native-css-interop@0.2.3": "patches/react-native-css-interop@0.2.3.patch"
+    },
+    "overrides": {
+      "@types/react": "^19.2.0",
+      "react": "19.2.0",
+      "react-dom": "19.2.0",
+      "react-test-renderer": "19.2.0"
     }
+  },
+  "dependencies": {
+    "expo": "~55.0.0",
+    "react": "19.2.0",
+    "react-native": "0.83.6"
   }
 }

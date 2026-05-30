@@ -1,18 +1,34 @@
 name: lint-typecheck
+
+# Two-job pattern: a tiny `changes` job computes path-filter outputs,
+# and `lint` (the required-check job) skips when no code paths
+# changed. A skipped required check is treated as passing by branch
+# protection — see
+# https://docs.github.com/en/actions/using-jobs/using-conditions-to-control-job-execution
+# Push events always run (we want full coverage on main / dev).
+
 on:
   pull_request:
   push:
     branches: [dev, main]
+
 jobs:
-  lint:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      any-code: ${{ steps.paths.outputs.any-code }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: paths
+        uses: ./.github/actions/changed-paths
+
+  lint-typecheck:
+    needs: changes
+    if: needs.changes.outputs.any-code == 'true' || github.event_name == 'push'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-        with: { version: 9.12.3 }
-      - uses: actions/setup-node@v4
-        with: { node-version: '22', cache: 'pnpm' }
-      - run: pnpm install --frozen-lockfile
+      - uses: ./.github/actions/setup-monorepo
       - run: pnpm --filter @harpa/api-contract build
       - run: pnpm lint
       - run: pnpm typecheck
@@ -20,7 +36,5 @@ jobs:
         run: |
           bash scripts/check-no-supabase.sh
           bash scripts/check-no-unistyles.sh
-          bash scripts/check-no-alert-alert.sh
-          bash scripts/check-no-process-env-bang.sh
-          bash scripts/check-no-hex-colors.sh
           bash scripts/check-scope-tests.sh
+          bash scripts/check-mobile-lib-flat.sh

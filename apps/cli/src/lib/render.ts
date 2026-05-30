@@ -36,18 +36,62 @@ export interface UsageMonth {
   voiceNotes: number;
 }
 
+export interface UsageTokenMonth {
+  month: string;
+  inputTokens: number;
+  outputTokens: number;
+  cachedTokens: number;
+  calls: number;
+}
+
+export interface UsageByModelRow {
+  vendor: string;
+  model: string;
+  operation: 'chat' | 'transcribe' | 'generate_report';
+  calls: number;
+  inputTokens: number;
+  outputTokens: number;
+  cachedTokens: number;
+}
+
 export interface UsageLike {
   months: UsageMonth[];
-  totals: { reports: number; voiceNotes: number };
+  totals: {
+    reports: number;
+    voiceNotes: number;
+    inputTokens?: number;
+    outputTokens?: number;
+    cachedTokens?: number;
+    calls?: number;
+  };
+  usageTokens?: UsageTokenMonth[];
+  usageByModel?: UsageByModelRow[];
 }
 
 export function renderUsage(usage: UsageLike): string {
-  const header = chalk.bold('Month     Reports  Voice notes');
+  const tokensByMonth = new Map<string, UsageTokenMonth>();
+  for (const t of usage.usageTokens ?? []) tokensByMonth.set(t.month, t);
+
+  const header = chalk.bold('Month     Reports  Voice notes  Calls   In tok   Out tok');
   const rows = usage.months.map((m) => {
-    return `${m.month}   ${pad(m.reports, 7)}  ${pad(m.voiceNotes, 11)}`;
+    const t = tokensByMonth.get(m.month);
+    const calls = t?.calls ?? 0;
+    const inTok = t?.inputTokens ?? 0;
+    const outTok = t?.outputTokens ?? 0;
+    return `${m.month}   ${pad(m.reports, 7)}  ${pad(m.voiceNotes, 11)}  ${pad(calls, 5)}  ${pad(inTok, 7)}  ${pad(outTok, 7)}`;
   });
-  const totals = `${chalk.dim('Total     ')}${pad(usage.totals.reports, 7)}  ${pad(usage.totals.voiceNotes, 11)}`;
-  return [header, ...rows, chalk.dim('—'.repeat(30)), totals].join('\n');
+  const totals = `${chalk.dim('Total     ')}${pad(usage.totals.reports, 7)}  ${pad(usage.totals.voiceNotes, 11)}  ${pad(usage.totals.calls ?? 0, 5)}  ${pad(usage.totals.inputTokens ?? 0, 7)}  ${pad(usage.totals.outputTokens ?? 0, 7)}`;
+  const lines: string[] = [header, ...rows, chalk.dim('—'.repeat(56)), totals];
+  if (usage.usageByModel && usage.usageByModel.length > 0) {
+    lines.push('', chalk.bold('Per-model'));
+    lines.push(chalk.bold('Vendor    Model                Op               Calls   In tok   Out tok'));
+    for (const r of usage.usageByModel) {
+      lines.push(
+        `${pad(r.vendor, 9)} ${pad(r.model, 20)} ${pad(r.operation, 16)} ${pad(r.calls, 5)}  ${pad(r.inputTokens, 7)}  ${pad(r.outputTokens, 7)}`,
+      );
+    }
+  }
+  return lines.join('\n');
 }
 
 export interface ProjectLike {
@@ -220,7 +264,7 @@ export function renderMemberList(page: { items: MemberLike[] }): string {
   return [chalk.bold('Members:'), ...rows].join('\n');
 }
 
-function pad(n: number, width: number): string {
+function pad(n: number | string, width: number): string {
   return String(n).padStart(width, ' ');
 }
 
@@ -246,14 +290,21 @@ export function renderFile(f: FileLike): string {
 }
 
 export interface AiSettingsLike {
-  vendor: string;
-  model: string;
+  vendor: string | null;
+  model: string | null;
 }
 
 export function renderAiSettings(s: AiSettingsLike): string {
+  if (s.vendor === null && s.model === null) {
+    return [
+      `${chalk.bold('AI settings')}`,
+      `  Vendor:  ${chalk.dim('(server default)')}`,
+      `  Model:   ${chalk.dim('(server default)')}`,
+    ].join('\n');
+  }
   return [
     `${chalk.bold('AI settings')}`,
-    `  Vendor:  ${s.vendor}`,
-    `  Model:   ${s.model}`,
+    `  Vendor:  ${s.vendor ?? '(server default)'}`,
+    `  Model:   ${s.model ?? '(server default)'}`,
   ].join('\n');
 }

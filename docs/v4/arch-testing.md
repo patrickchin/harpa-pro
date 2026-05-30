@@ -20,8 +20,8 @@
 ```
 
 > **No automated screenshot diffs.** Visual review is manual against
-> the canonical port source at `../haru3-reports/apps/mobile@dev`,
-> aided by the in-app dev gallery (`app/(dev)/`).
+> the canonical port source at `../haru3-reports/apps/mobile@dev` on
+> the iOS simulator.
 
 ## Per-layer rules
 
@@ -73,8 +73,6 @@ Each AI-touching route has a test that:
 
 - Manual, in the iOS simulator, side-by-side with the canonical
   source at `../haru3-reports/apps/mobile@dev`.
-- The dev gallery (`app/(dev)/`) makes this a tap-through check:
-  no auth, no API, just the screen body with mock props.
 - There is no automated diff and no `pnpm visual:diff` script.
   Cosmetic drift is caught by reviewer eye; it is still a P0 bug.
 
@@ -157,16 +155,39 @@ When the v4 mobile / API replaces a legacy concept, a removal gate
 ensures the legacy path is gone:
 
 - `check-no-supabase.sh` — no `@supabase/*` import or `supabase.*`
-  URL in `apps/`, `packages/`, `infra/`.
+  URL in `apps/`, `packages/`, `infra/`. (Covers JSON / TOML / YAML
+  too, so kept as a grep gate rather than an ESLint rule.)
 - `check-no-unistyles.sh` — no `react-native-unistyles` outside
-  `docs/legacy-v3/`.
-- `check-no-alert-alert.sh` — no `Alert.alert(` outside
-  `apps/mobile/lib/dialogs/`.
+  `docs/legacy-v3/`. Same rationale as above (covers non-JS files).
 - `check-scope-tests.sh` — every authed route has scope tests.
-- `check-no-process-env-bang.sh` — no `process.env.EXPO_PUBLIC_*!`
-  outside `apps/mobile/lib/env.ts`.
-- `check-no-hex-colors.sh` — no `#xxxxxx` literals in
-  `apps/mobile/components/**`.
+- `check-spec-drift.sh` — regenerates the OpenAPI spec + types and
+  fails if anything would change, keeping `api-contract` in sync
+  with `packages/api/src/routes/`.
+- `check-maestro-appid.sh` — Maestro flows must reference
+  `${MAESTRO_APP_ID}` rather than a hardcoded bundle id.
+- `check-no-process-env-r2.sh` — R2 config is read through
+  `env.R2_*` only (Pitfall 13 — no `process.env.R2_*` escape
+  hatches that bypass DI).
+- `check-no-process-env-rate-limit.sh` — same rule for rate-limit
+  config (`env.RATE_LIMIT_*`).
+- `check-usage-limit-wiring.sh` — every usage-limit-gated route
+  has the limit middleware actually mounted (Pitfall 13 — DI stubs
+  must not become the spec).
+
+The full list runs from the root `lint` script in `package.json`
+and is enforced by `lint-typecheck.yml`.
+
+The following gates were migrated to ESLint rules in
+[`apps/mobile/.eslintrc.cjs`](../../apps/mobile/.eslintrc.cjs) so
+they surface as editor squiggles, not just CI failures:
+
+- `Alert.alert` outside `lib/dialogs/` → `no-restricted-imports` on
+  `react-native#Alert` (Pitfall 12 / AGENTS.md hard rule #4).
+- `process.env.EXPO_PUBLIC_*` reads (and `!` non-null assertions)
+  outside `lib/env.ts` → `no-restricted-syntax` (Pitfall 5).
+- Hex color literals (`#abc` / `#abcdef`) under `components/**` →
+  `no-restricted-syntax` on `Literal` + `TemplateElement`
+  (Pitfall 3).
 
 These run in `lint-typecheck.yml`. Adding a new gate is encouraged
 when a new pitfall surfaces.

@@ -21,23 +21,28 @@
  * typed props so this screen can be rendered with canned values from
  * dev mirrors + tests.
  */
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import {
   RefreshControl,
+  KeyboardAvoidingView,
+  Platform,
   ScrollView,
   Text,
   View,
 } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
+import { MoreHorizontal } from 'lucide-react-native';
 
 import { SafeAreaView } from '@/components/primitives/SafeAreaView';
 import { Button } from '@/components/primitives/Button';
 import { ScreenHeader } from '@/components/primitives/ScreenHeader';
+import { Skeleton } from '@/components/primitives/Skeleton';
 import { AppDialogSheet } from '@/components/primitives/AppDialogSheet';
 import { ReportView } from '@/components/reports/ReportView';
 import { ReportEditForm } from '@/components/reports/ReportEditForm';
 import { PdfPreviewModal } from '@/components/reports/PdfPreviewModal';
 import { ImagePreviewModal } from '@/components/files/ImagePreviewModal';
+import { ReportPhotos } from '@/components/reports/detail/ReportPhotos';
 import { ReportDetailHeader } from '@/components/reports/detail/ReportDetailHeader';
 import {
   ReportDetailTabBar,
@@ -50,12 +55,14 @@ import {
 import { ReportActionsMenu } from '@/components/reports/detail/ReportActionsMenu';
 import { SavedReportSheet } from '@/components/reports/detail/SavedReportSheet';
 import { ReportDetailSkeleton } from '@/components/skeletons/ReportDetailSkeleton';
+import { useLayoutShiftProbe } from '@/lib/util/layout-shift-probe';
+import { colors } from '@/lib/design-tokens/colors';
 import {
   getDeleteReportDialogCopy,
   getUnfinalizeReportDialogCopy,
-} from '@/lib/app-dialog-copy';
+} from '@/lib/dialogs/app-dialog-copy';
 import type { GeneratedSiteReport } from '@harpa/report-core';
-import type { UseReportPdfActionsReturn } from '@/lib/use-report-pdf-actions';
+import type { UseReportPdfActionsReturn } from '@/lib/reports/use-report-pdf-actions';
 
 export type SavedReportStatus = 'draft' | 'finalized';
 
@@ -64,12 +71,26 @@ export interface SavedReportProps {
   report: GeneratedSiteReport | null;
   /** Saved-report status — controls Edit tab visibility + read-only chrome. */
   reportStatus: SavedReportStatus | null;
+  /**
+   * Server-side report uuid. Threaded into `ReportNotesPane` so the
+   * optimistic delete mutation can target the correct `reportNotes`
+   * cache page. Optional for backward-compat with dev mirrors that
+   * don't have a server id; when absent the kebab Delete is hidden.
+   */
+  reportId?: string | null;
+  /**
+   * Per-project report number — used to build stable testIDs for Maestro.
+   * Optional for backward-compat with dev mirrors / tests.
+   */
+  reportNumber?: number | null;
   /** Project display name (used as the PDF site name). */
   projectName: string | null;
   /** Source-note rows (text/voice/photo/document) backing the Notes tab. */
   noteRows: ReadonlyArray<ReportNoteRow> | undefined;
   /** Saved-report load state. */
   isLoading: boolean;
+  /** Notes timeline load state — drives the Notes tab skeleton. */
+  notesLoading?: boolean;
   /** Saved-report load error (renders error state when truthy). */
   loadError: Error | null;
   /** Whether we have enough route params to fetch. */
@@ -101,15 +122,39 @@ export interface SavedReportProps {
 
   /** Optional initial tab for dev mirrors + tests. */
   initialTab?: ReportDetailTab;
+
+  /** Profile button slot — rendered in the report detail header. */
+  actions?: ReactNode;
+
+  /**
+   * Invoked from the Actions menu's "View Notes" entry on finalised
+   * reports. When provided, the menu surfaces a "View Notes" row;
+   * tapping it should navigate to the dedicated notes screen.
+   * Omitted (no entry rendered) for drafts — drafts show the Notes
+   * tab inline instead.
+   */
+  onViewNotes?: () => void;
+
+  /**
+   * P4.8 — show the Report Debug entry in the actions menu. Gated by
+   * the same `showDeveloperSection` flag (env.EXPO_PUBLIC_USE_FIXTURES
+   * or __DEV__) that controls the Profile developer section.
+   */
+  showDeveloperSection?: boolean;
+  /** Invoked when the user taps the Report Debug entry. */
+  onOpenDebug?: () => void;
 }
 
 export function SavedReport(props: SavedReportProps) {
   const {
     report,
     reportStatus,
+    reportId = null,
+    reportNumber,
     projectName,
     noteRows,
     isLoading,
+    notesLoading = false,
     loadError,
     hasValidRouteParams,
     refreshing,
@@ -128,13 +173,16 @@ export function SavedReport(props: SavedReportProps) {
     isUnfinalizing,
     pdfActions,
     initialTab,
+    actions,
+    onViewNotes,
+    showDeveloperSection,
+    onOpenDebug,
   } = props;
 
   const [menuVisible, setMenuVisible] = useState(false);
   const [pdfPreviewVisible, setPdfPreviewVisible] = useState(false);
   const [imagePreview, setImagePreview] = useState<{
-    uri: string | null;
-    title?: string;
+    index: number;
   } | null>(null);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [confirmUnfinalizeOpen, setConfirmUnfinalizeOpen] = useState(false);
@@ -145,12 +193,22 @@ export function SavedReport(props: SavedReportProps) {
     initialTab ?? 'report',
   );
 
+  // Layout-shift probes — landmarks that should land at the same Y
+  // when the loading branch swaps to the loaded `ReportDetailHeader`.
+  // Only the loading side records frames today (see
+  // `lib/layout-shift-probe.ts`); the ids match the equivalent
+  // landmarks rendered by `ReportDetailHeader` + `<ReportView />`.
+  const loadingHeaderProbe = useLayoutShiftProbe('report-detail:header');
+  const loadingTitleProbe = useLayoutShiftProbe('report-detail:title-block');
+
   const isFinal = reportStatus === 'finalized';
 
   // Finalized reports are read-only — bounce back to Report tab if the
-  // status flips to finalized while the user is on Edit.
+  // status flips to finalized while the user is on Edit or Notes (the
+  // Notes tab is hidden for finalised reports; access moves to the
+  // Actions menu).
   useEffect(() => {
-    if (isFinal && activeTab === 'edit') {
+    if (isFinal && (activeTab === 'edit' || activeTab === 'notes')) {
       setActiveTab('report');
     }
   }, [isFinal, activeTab]);
@@ -178,6 +236,33 @@ export function SavedReport(props: SavedReportProps) {
   const displayReport = localReport ?? report ?? null;
   const notesCount = (noteRows ?? []).length;
 
+  // Gallery of all photo-notes — drives the swipeable preview modal.
+  // Order matches `noteRows`; both `ReportPhotos` and `ReportNotesPane`
+  // tap-handlers resolve into this same list by `fileId`.
+  const photoGallery = useMemo(
+    () =>
+      (noteRows ?? [])
+        .filter(
+          (n): n is ReportNoteRow & { fileId: string } =>
+            n.kind === 'photo' &&
+            typeof n.fileId === 'string' &&
+            !!n.fileId,
+        )
+        .map((n) => ({
+          fileId: n.fileId,
+          thumbnailFileId: n.thumbnailFileId ?? null,
+          noteId: n.noteId ?? n.id,
+          title: n.body?.trim() || 'Photo',
+          cacheKey: n.fileId,
+        })),
+    [noteRows],
+  );
+
+  const handleOpenPhoto = (input: { fileId: string; title?: string }) => {
+    const idx = photoGallery.findIndex((p) => p.fileId === input.fileId);
+    setImagePreview({ index: idx >= 0 ? idx : 0 });
+  };
+
   const {
     isExporting,
     isOpeningSavedPdf,
@@ -199,14 +284,37 @@ export function SavedReport(props: SavedReportProps) {
   };
 
   if (isLoading) {
+    // Mirror `ReportDetailHeader`'s chrome (px-5 py-4 wrapper +
+    // ScreenHeader with eyebrow supporting row + visit-date pill /
+    // Actions row at mt-3) so the first card under the skeleton
+    // lands on the same Y as `<ReportView />`'s first child once
+    // the report loads. The Actions button is intentionally NOT
+    // mounted during load (the saved-report test guards against
+    // `btn-report-actions` appearing in the skeleton tree); the
+    // placeholder View below keeps the row height stable.
     return (
       <SafeAreaView className="flex-1 bg-background" edges={['top']}>
-        <View className="px-5 pt-4 pb-2">
-          <ScreenHeader
-            title="Report"
-            onBack={onBack}
-            backLabel="Reports"
-          />
+        <View className="px-5 py-4" onLayout={loadingHeaderProbe}>
+          <View onLayout={loadingTitleProbe}>
+            <ScreenHeader
+              title="Report"
+              titleAccessory={<Skeleton width={120} height={12} />}
+              onBack={onBack}
+              backLabel="Reports"
+              actions={actions}
+            />
+          </View>
+
+          <View className="mt-3 flex-row items-center justify-between">
+            <View className="flex-row items-center gap-1 rounded-md border border-border bg-card px-3 py-2">
+              <Skeleton width={14} height={14} circle />
+              <Skeleton width={72} height={14} />
+            </View>
+            <View className="min-h-touch flex-row items-center gap-1.5 rounded-md border border-border bg-secondary px-4 py-3">
+              <MoreHorizontal size={16} color={colors.foreground} />
+              <Skeleton width={48} height={14} />
+            </View>
+          </View>
         </View>
         <ReportDetailSkeleton />
       </SafeAreaView>
@@ -268,9 +376,15 @@ export function SavedReport(props: SavedReportProps) {
 
   return (
     <SafeAreaView className="flex-1 bg-background" edges={['top']}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        className="flex-1"
+      >
       <ScrollView
         className="flex-1"
         contentContainerStyle={{ paddingBottom: 32 }}
+        automaticallyAdjustKeyboardInsets
+        keyboardShouldPersistTaps="handled"
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
@@ -282,16 +396,21 @@ export function SavedReport(props: SavedReportProps) {
           actionsDisabled={
             isSaving || isExporting || isDeleting || isUnfinalizing
           }
+          actions={actions}
+          reportNumber={reportNumber}
         />
 
-        <ReportDetailTabBar
-          activeTab={activeTab}
-          onChange={setActiveTab}
-          notesCount={notesCount}
-          showEditTab={!isFinal}
-        />
+        {!isFinal ? (
+          <ReportDetailTabBar
+            activeTab={activeTab}
+            onChange={setActiveTab}
+            notesCount={notesCount}
+            showEditTab={!isFinal}
+            showNotesTab={!isFinal}
+          />
+        ) : null}
 
-        {activeTab === 'edit' ? (
+        {!isFinal && activeTab === 'edit' ? (
           <View className="flex-row items-center justify-between px-5 pt-1 pb-1">
             <Text className="text-sm font-medium text-muted-foreground">
               Edit report
@@ -305,17 +424,21 @@ export function SavedReport(props: SavedReportProps) {
           </View>
         ) : null}
 
-        {activeTab === 'report' ? (
+        {isFinal || activeTab === 'report' ? (
           <Animated.View
             entering={FadeIn.duration(250)}
             className="px-5"
             testID="saved-report-pane"
           >
-            <ReportView report={displayReport} />
-            {/* TODO(P4): ReportPhotos — lands with the upload pipeline
-                and the photo file_id resolution hooks. */}
+            <ReportView report={displayReport} reportNumber={reportNumber ?? undefined} />
+            <View className="mt-4">
+              <ReportPhotos
+                noteRows={noteRows}
+                onOpenPhoto={handleOpenPhoto}
+              />
+            </View>
           </Animated.View>
-        ) : activeTab === 'edit' ? (
+        ) : !isFinal && activeTab === 'edit' ? (
           <View className="px-5" testID="saved-report-edit-pane">
             <ReportEditForm
               report={displayReport}
@@ -324,10 +447,16 @@ export function SavedReport(props: SavedReportProps) {
           </View>
         ) : (
           <Animated.View entering={FadeIn.duration(250)}>
-            <ReportNotesPane noteRows={noteRows} />
+            <ReportNotesPane
+              noteRows={noteRows}
+              reportId={reportId ?? null}
+              onOpenPhoto={handleOpenPhoto}
+              isLoading={notesLoading}
+            />
           </Animated.View>
         )}
       </ScrollView>
+      </KeyboardAvoidingView>
 
       <ReportActionsMenu
         visible={menuVisible}
@@ -338,6 +467,14 @@ export function SavedReport(props: SavedReportProps) {
           setMenuVisible(false);
           setPdfPreviewVisible(true);
         }}
+        onViewNotes={
+          onViewNotes
+            ? () => {
+                setMenuVisible(false);
+                onViewNotes();
+              }
+            : undefined
+        }
         onSavePdf={async () => {
           setMenuVisible(false);
           await handleSavePdf();
@@ -348,16 +485,30 @@ export function SavedReport(props: SavedReportProps) {
         }}
         onUnfinalize={() => {
           setMenuVisible(false);
-          setConfirmUnfinalizeOpen(true);
+          // iOS RN `Modal` cannot present a second native modal until
+          // the first finishes dismissing. Defer the confirm dialog
+          // so the action sheet has time to drop. Without this the
+          // confirm dialog never appears (Maestro confirmed on iOS
+          // 26.5 / RN 0.75).
+          setTimeout(() => setConfirmUnfinalizeOpen(true), 350);
         }}
         onDelete={() => {
           setMenuVisible(false);
-          setConfirmDeleteOpen(true);
+          setTimeout(() => setConfirmDeleteOpen(true), 350);
         }}
         isSaving={isSaving}
         isExporting={isExporting}
         isUnfinalizing={isUnfinalizing}
         isDeleting={isDeleting}
+        showDeveloperSection={showDeveloperSection}
+        onOpenDebug={
+          onOpenDebug
+            ? () => {
+                setMenuVisible(false);
+                onOpenDebug();
+              }
+            : undefined
+        }
       />
 
       <AppDialogSheet
@@ -437,8 +588,8 @@ export function SavedReport(props: SavedReportProps) {
 
       <ImagePreviewModal
         visible={imagePreview !== null}
-        uri={imagePreview?.uri ?? null}
-        title={imagePreview?.title}
+        photos={photoGallery}
+        initialIndex={imagePreview?.index ?? 0}
         onClose={() => setImagePreview(null)}
       />
 

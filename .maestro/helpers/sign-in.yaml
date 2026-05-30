@@ -1,0 +1,45 @@
+appId: ${MAESTRO_APP_ID}
+---
+# sign-in.yaml — helper: sign in as any E2E user
+#
+# Required env var:
+#   PHONE — national-format digits only (e.g. "5550000001" for Alice,
+#            "5550000002" for Bob).
+#
+# Accepts OTP 000000 in fake-Twilio mode (TWILIO_LIVE=0). The user must
+# already exist in the database.
+#
+# Pre-condition: sign-in screen is visible (input-phone visible).
+# Post-condition: projects list is visible (btn-new-project visible).
+#
+# Usage:
+#   - runFlow:
+#       file: ../helpers/sign-in.yaml
+#       env:
+#         PHONE: "5550000001"
+- runFlow:
+    file: pick-country-us.yaml
+    env:
+      COUNTRY_BUTTON_ID: "btn-country-picker"
+- tapOn:
+    id: "input-phone"
+- eraseText: 50
+- inputText: "${PHONE}"
+- hideKeyboard
+- tapOn:
+    id: "btn-login-send-code"
+- extendedWaitUntil:
+    visible:
+      id: "input-otp"
+    timeout: 10000
+- tapOn:
+    id: "input-otp"
+- inputText: "000000"
+# Android numeric keyboards can ignore Maestro's `hideKeyboard`; the
+# verify button is visible above the IME, so tap it directly.
+- tapOn:
+    id: "btn-verify-code"
+- extendedWaitUntil:
+    visible:
+      id: "btn-new-project"
+    timeout: 15000

@@ -19,7 +19,7 @@ import Animated, {
   interpolate,
 } from 'react-native-reanimated';
 
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/util/utils';
 
 export interface SkeletonProps extends ViewProps {
   /** Width — number (px) or string ("100%"). Defaults to "100%". */

@@ -1,0 +1,93 @@
+name: Detect changed paths
+description: >
+  Compute boolean outputs for each top-level area of the monorepo
+  (api, mobile, marketing, cli, etc.) so heavy CI jobs can
+  short-circuit on PRs that don't touch their code. Required-check
+  jobs gate downstream steps on these outputs instead of using
+  workflow-level `paths:` filters (which would report the workflow as
+  missing and block branch protection).
+
+  Outputs are strings 'true' or 'false'. The `any-code` output is true
+  iff anything under apps/, packages/, scripts/, infra/, or root
+  config files changed.
+outputs:
+  any-code:
+    description: True if any code/infra/config path changed.
+    value: ${{ steps.filter.outputs.any-code }}
+  api:
+    description: True if @harpa/api or its inputs changed.
+    value: ${{ steps.filter.outputs.api }}
+  api-contract:
+    description: True if @harpa/api-contract changed.
+    value: ${{ steps.filter.outputs.api-contract }}
+  ai-fixtures:
+    description: True if @harpa/ai-fixtures changed.
+    value: ${{ steps.filter.outputs.ai-fixtures }}
+  api-migrations:
+    description: True if packages/api migrations or schema changed.
+    value: ${{ steps.filter.outputs.api-migrations }}
+  mobile:
+    description: True if apps/mobile or Maestro E2E flows changed.
+    value: ${{ steps.filter.outputs.mobile }}
+  marketing:
+    description: True if apps/marketing changed.
+    value: ${{ steps.filter.outputs.marketing }}
+  cli:
+    description: True if apps/cli changed.
+    value: ${{ steps.filter.outputs.cli }}
+  docs:
+    description: True if apps/docs changed.
+    value: ${{ steps.filter.outputs.docs }}
+  workflows:
+    description: True if any CI workflow / composite action changed.
+    value: ${{ steps.filter.outputs.workflows }}
+runs:
+  using: composite
+  steps:
+    - uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 # v3.0.2
+      id: filter
+      with:
+        filters: |
+          any-code:
+            - 'apps/**'
+            - 'packages/**'
+            - 'scripts/**'
+            - 'infra/**'
+            - 'package.json'
+            - 'pnpm-lock.yaml'
+            - 'pnpm-workspace.yaml'
+            - 'turbo.json'
+            - 'tsconfig*.json'
+            - '.github/workflows/**'
+            - '.github/actions/**'
+          api:
+            - 'packages/api/**'
+            - 'packages/api-contract/**'
+            - 'packages/ai-fixtures/**'
+            - 'pnpm-lock.yaml'
+            - 'tsconfig*.json'
+          api-contract:
+            - 'packages/api-contract/**'
+          ai-fixtures:
+            - 'packages/ai-fixtures/**'
+          api-migrations:
+            - 'packages/api/migrations/**'
+            - 'packages/api/src/db/**'
+          mobile:
+            - '.maestro/**'
+            - 'apps/mobile/**'
+            - 'packages/api-contract/**'
+            - 'packages/ui-voice/**'
+            - 'packages/report-core/**'
+            - 'pnpm-lock.yaml'
+          marketing:
+            - 'apps/marketing/**'
+          cli:
+            - 'apps/cli/**'
+            - 'packages/api-contract/**'
+            - 'packages/api/**'
+          docs:
+            - 'apps/docs/**'
+          workflows:
+            - '.github/workflows/**'
+            - '.github/actions/**'

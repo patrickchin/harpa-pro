@@ -12,6 +12,7 @@ on:
       - "packages/api-contract/**"
       - "packages/ai-fixtures/**"
       - "infra/fly/**"
+      - "scripts/journeys/**"
       - ".github/workflows/api-prod.yml"
       - "pnpm-lock.yaml"
   # Allow manual re-deploys (e.g. rotating secrets without a code change).
@@ -52,6 +53,11 @@ jobs:
             echo "migration filename lint failed ($bad bad file(s))" >&2
             exit 1
           fi
+          dups=$(ls "$MIG_DIR" | grep -E '\.sql$' | awk -F_ '{print $1}' | sort | uniq -d)
+          if [[ -n "$dups" ]]; then
+            echo "::error::duplicate migration prefix(es): $dups"
+            exit 1
+          fi
           HEAD=$(ls "$MIG_DIR" | grep -E '\.sql$' | sort | tail -1)
           echo "computed MIGRATIONS_REQUIRED_HEAD=$HEAD"
 
@@ -62,10 +68,36 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v4
+        with:
+          lfs: true
 
-      - uses: superfly/flyctl-actions/setup-flyctl@master
+      - uses: ./.github/actions/setup-monorepo
 
       - uses: dopplerhq/cli-action@v3
+
+      - name: Resolve prod DATABASE_URL from Doppler
+        # Prod runs against a long-lived Neon branch (not a per-PR
+        # ensure flow — see api-dev.yml). The connection string is
+        # stored in Doppler `prd`; pull it here so the migrate step
+        # below targets prod instead of inheriting whatever local env
+        # the runner had.
+        env:
+          DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN_PRD }}
+        run: |
+          URI=$(doppler secrets get DATABASE_URL --plain)
+          echo "::add-mask::$URI"
+          echo "DATABASE_URL=$URI" >> "$GITHUB_ENV"
+
+      - name: Apply pending migrations to Neon prod
+        # Must run BEFORE the Fly deploy: a release that depends on a
+        # schema change shipped with the same PR (e.g. P3.15.5
+        # `llm_usage_events`) would 500 on startup if the migration
+        # hasn't landed. Pitfall 11.
+        env:
+          DATABASE_URL: ${{ env.DATABASE_URL }}
+        run: pnpm --filter @harpa/api db:migrate
+
+      - uses: superfly/flyctl-actions/setup-flyctl@1.5
 
       - name: Sync Fly secrets from Doppler
         # See api-dev.yml for rationale. `--stage` defers activation;
@@ -85,14 +117,7 @@ jobs:
       # effort: a snapshot failure does NOT block the deploy, but is
       # surfaced as a workflow warning so it gets noticed.
       # See docs/v4/arch-cicd-and-migrations.md §Failure & rollback.
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 9.12.3
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
+      # (pnpm + node already set up at top of job; node_modules persists.)
       - name: Snapshot prod DB (pre-deploy)
         continue-on-error: true
         env:
@@ -127,3 +152,14 @@ jobs:
           done
           echo "readyz never returned 200 — investigate Fly logs" >&2
           exit 1
+
+      - name: Post-deploy journey tests
+        # Runs curl journey scripts against the just-deployed prod API.
+        # Order: stress (~10s, no AI) → core (~3min, live AI) → extended (~5min, live AI).
+        # On failure the workflow goes red but the deploy is NOT rolled back.
+        # Requires TEST_ACCOUNT_PHONES + TEST_ACCOUNT_PASSWORD in Doppler prd
+        # (so they're synced to the Fly app) and TEST_ACCOUNT_PASSWORD as a
+        # GitHub Actions secret (so this step can authenticate).
+        env:
+          PASSWORD: ${{ secrets.TEST_ACCOUNT_PASSWORD_PRD }}
+        run: bash scripts/journeys/all.sh prod

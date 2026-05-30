@@ -7,13 +7,13 @@
  * Generate / Regenerate / Finalize are wired through the provider's
  * `handleRegenerate` + `draft.finalize` — the route owner (real or
  * dev mirror) supplies the actual mutations. The button branches on
- * `hasReport` + `notesSinceLastGeneration` to switch label / layout.
+ * `hasReport` + `needsRegeneration` to switch label / layout.
  */
 import { Text, View } from 'react-native';
 import { RotateCcw, Sparkles } from 'lucide-react-native';
 
 import { Button } from '@/components/primitives/Button';
-import { useGenerateReport } from './GenerateReportProvider';
+import { useGenerateReport } from '@/features/generate/GenerateReportProvider';
 import { colors } from '@/lib/design-tokens/colors';
 
 export function GenerateReportActionRow() {
@@ -21,20 +21,25 @@ export function GenerateReportActionRow() {
 
   const hasReport = generation.hasReport;
   const hasNotes = timeline.items.length > 0;
-  const upToDate = hasReport && generation.notesSinceLastGeneration === 0;
-  const busy = generation.isUpdating || draft.isFinalizing;
+  const upToDate = hasReport && !generation.needsRegeneration;
+  // Autosave gates finalize. While `isAutoSaving` is true the local
+  // edits haven't been persisted yet; finalizing in that window would
+  // lock whatever stale body is on the server. Disable both Finalize
+  // and Regenerate (regenerate races autosave on the body column).
+  const saving = draft.isAutoSaving;
+  const busy = generation.isUpdating || draft.isFinalizing || saving;
 
   if (!upToDate) {
     const label = generation.isUpdating
       ? 'Generating…'
       : !hasReport
         ? 'Generate report'
-        : `Update report (${generation.notesSinceLastGeneration})`;
+        : 'Update report';
 
     return (
       <View className="mx-5 mt-3">
         <Button
-          testID="btn-generate-update-report"
+          testID={!hasReport ? 'btn-generate-report' : 'btn-generate-update-report'}
           variant="secondary"
           size="default"
           className="w-full"
@@ -80,7 +85,11 @@ export function GenerateReportActionRow() {
             className="text-base font-semibold text-primary-foreground"
             numberOfLines={1}
           >
-            {draft.isFinalizing ? 'Finalizing…' : 'Finalize report'}
+            {draft.isFinalizing
+              ? 'Finalizing…'
+              : saving
+                ? 'Saving…'
+                : 'Finalize report'}
           </Text>
         </Button>
       </View>

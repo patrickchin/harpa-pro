@@ -12,6 +12,7 @@
  * Wired in the respective _layout.tsx files via <Redirect> or
  * router.replace (Pitfall 5: single async flow, no setTimeout chains).
  */
+import type { Href } from 'expo-router';
 import type { AuthStatus } from './session';
 
 /**
@@ -22,9 +23,9 @@ import type { AuthStatus } from './session';
  * @param pathname — expo-router pathname (e.g. `/(auth)/sign-in/phone`)
  * @returns redirect target or null (allow mount)
  */
-export function decideAuthRedirect(status: AuthStatus, pathname: string): string | null {
+export function decideAuthRedirect(status: AuthStatus, pathname: string): Href | null {
   if (status === 'authenticated') {
-    return '/(app)/projects';
+    return '/(app)/projects' as Href;
   }
   // Security review §1 P1: exact match, not includes. expo-router v4
   // `usePathname()` STRIPS route group segments, so the runtime
@@ -33,7 +34,7 @@ export function decideAuthRedirect(status: AuthStatus, pathname: string): string
   // caused an infinite redirect loop (Maximum update depth exceeded)
   // because the gate kept firing after the redirect landed.
   if (status === 'needs-onboarding' && pathname !== '/onboarding') {
-    return '/(auth)/onboarding';
+    return '/(auth)/onboarding' as Href;
   }
   return null;
 }
@@ -45,12 +46,12 @@ export function decideAuthRedirect(status: AuthStatus, pathname: string): string
  * @param status — current auth session status
  * @returns redirect target or null (allow mount)
  */
-export function decideAppRedirect(status: AuthStatus): string | null {
+export function decideAppRedirect(status: AuthStatus): Href | null {
   if (status === 'unauthenticated') {
-    return '/(auth)/sign-in/phone';
+    return '/(auth)/sign-in/phone' as Href;
   }
   if (status === 'needs-onboarding') {
-    return '/(auth)/onboarding';
+    return '/(auth)/onboarding' as Href;
   }
   return null;
 }

@@ -12,7 +12,7 @@ import { toTitleCase } from '@harpa/report-core';
 
 import { Card } from '@/components/primitives/Card';
 import { SectionHeader } from '@/components/primitives/SectionHeader';
-import { getIssueSeverityTone } from '@/lib/mobile-ui';
+import { getIssueSeverityTone } from '@/lib/reports/report-ui';
 import { colors } from '@/lib/design-tokens/colors';
 
 const SEVERITY_STYLES: Record<

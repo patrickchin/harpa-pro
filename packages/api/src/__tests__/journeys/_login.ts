@@ -71,3 +71,32 @@ export async function login(app: App, phone: string): Promise<LoggedIn> {
     headers: { authorization: `Bearer ${body.token}`, 'content-type': 'application/json' },
   };
 }
+
+/**
+ * Test-account password login. Hits POST /auth/password/verify with the
+ * supplied phone + password. Used by the password-journey test to prove
+ * the bypass works end-to-end without touching Twilio at all (real or
+ * fake) — i.e. live dev deployments can have TWILIO_LIVE=1 and this
+ * path still works.
+ */
+export async function loginWithPassword(
+  app: App,
+  phone: string,
+  password: string,
+): Promise<LoggedIn> {
+  const res = await app.request('/auth/password/verify', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ phone, password }),
+  });
+  if (res.status !== 200) {
+    throw new Error(`password/verify failed: ${res.status} ${await res.text()}`);
+  }
+  const body = (await res.json()) as { token: string; user: { id: string; phone: string } };
+  return {
+    token: body.token,
+    userId: body.user.id,
+    phone: body.user.phone,
+    headers: { authorization: `Bearer ${body.token}`, 'content-type': 'application/json' },
+  };
+}

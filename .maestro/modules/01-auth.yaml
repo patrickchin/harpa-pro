@@ -1,0 +1,129 @@
+appId: ${MAESTRO_APP_ID}
+name: "01 — Auth: sign-up alice + sign-in alice"
+tags:
+  - regression
+  - auth
+---
+# Module 01 — Auth
+#
+# Covers:
+#   - fresh sign-up via deep link (harpa://sign-up/phone)
+#   - onboarding form (name + company)
+#   - sign-out
+#   - sign-in (sign-in screen, not sign-up)
+#
+# Pre-condition: app just cold-launched with clearState + clearKeychain.
+# Post-condition: alice is signed in, projects list visible.
+
+# Cold launch with clean state
+- launchApp:
+    clearState: true
+    clearKeychain: true
+    stopApp: true
+- waitForAnimationToEnd
+
+# Android dev-client unstuck prelude: after `clearState: true`, Android
+# lands on the dev-launcher picker, not the JS app. Deep-link the
+# dev-launcher's own scheme with an explicit Metro URL. See
+# `core-end-to-end.yaml` for the full explanation.
+- openLink: "exp+harpa-pro-v4://expo-development-client/?url=http%3A%2F%2Flocalhost%3A8081"
+- extendedWaitUntil:
+    visible: "Continue"
+    timeout: 60000
+
+# The Android dev-launcher first-run sheet ("This is the developer menu")
+# overlays the sign-in screen and obscures `input-phone`. Wait for its
+# "Continue" button before dismissing it; close any dev menu it opens.
+# On iOS and on subsequent Android runs, these gates are no-ops.
+- runFlow:
+    when:
+      visible: "Continue"
+    commands:
+      - tapOn:
+          text: "Continue"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: "Close"
+    commands:
+      - tapOn:
+          text: "Close"
+      - waitForAnimationToEnd
+
+# iOS system dialog: after `clearState: true`, the first `openLink` of
+# the day to `exp+harpa-pro-v4://...` triggers an "Open in 'Harpa Pro
+# Dev'?" confirm sheet. No-op on Android / iOS after first dismissal.
+- runFlow:
+    file: ../helpers/dismiss-open-dialog.yaml
+
+# Land on sign-in first (auth gate) then deep-link to sign-up
+- extendedWaitUntil:
+    visible:
+      id: "input-phone"
+    timeout: 30000
+
+# --- Sign-up alice (fresh account via seed) --------------------------------
+- openLink: harpa://sign-up/phone
+- runFlow:
+    file: ../helpers/dismiss-open-dialog.yaml
+- extendedWaitUntil:
+    visible:
+      id: "input-signup-phone"
+    timeout: 15000
+# Force the country picker to US so a typed national number is stored
+# as +1, not the device-locale default (often +44 on dev hardware).
+- runFlow:
+    file: ../helpers/pick-country-us.yaml
+    env:
+      COUNTRY_BUTTON_ID: "btn-signup-country-picker"
+- tapOn:
+    id: "input-signup-phone"
+- inputText: "5550000001"
+- hideKeyboard
+- tapOn:
+    id: "btn-signup-send-code"
+- extendedWaitUntil:
+    visible:
+      id: "input-signup-otp"
+    timeout: 10000
+- tapOn:
+    id: "input-signup-otp"
+- inputText: "000000"
+- hideKeyboard
+- tapOn:
+    id: "btn-signup-verify"
+
+# --- Onboarding (always shown after fresh sign-up; skipped if the
+#     backend already has an onboarded user for this phone, e.g. a
+#     repeat run on a non-reset DB) ----------------------------------------
+- runFlow:
+    when:
+      visible:
+        id: "screen-onboarding"
+    commands:
+      - tapOn:
+          id: "input-onboarding-name"
+      - inputText: "Alice E2E"
+      - tapOn:
+          id: "input-onboarding-company"
+      - inputText: "E2E Corp"
+      - hideKeyboard
+      - tapOn:
+          id: "btn-onboarding-submit"
+
+# --- Verify projects list ---------------------------------------------------
+- extendedWaitUntil:
+    visible:
+      id: "btn-new-project"
+    timeout: 15000
+
+# --- Sign-out ---------------------------------------------------------------
+- runFlow: ../helpers/sign-out.yaml
+
+# --- Sign-in (round-trip) --------------------------------------------------
+- runFlow:
+    file: ../helpers/sign-in.yaml
+    env:
+      PHONE: "5550000001"
+- assertVisible:
+    id: "btn-new-project"

@@ -1,0 +1,82 @@
+appId: ${MAESTRO_APP_ID}
+name: "13 — Projects delete (teardown)"
+tags:
+  - regression
+  - projects
+---
+# Module 13 — Project delete
+#
+# Covers:
+#   - delete the report from the saved-report screen first (cleanup)
+#   - back to project home
+#   - open project-edit screen
+#   - tap btn-delete-project
+#   - confirm deletion via confirm-delete-project
+#   - confirm project no longer in projects list
+#
+# Pre-condition: alice is on saved-report screen (btn-report-actions visible).
+# Post-condition: alice is on empty projects list.
+
+# --- Delete the report first (cleanup before project delete) ---------------
+- tapOn:
+    id: "btn-report-actions"
+- extendedWaitUntil:
+    visible:
+      id: "btn-report-delete"
+    timeout: 8000
+- tapOn:
+    id: "btn-report-delete"
+- extendedWaitUntil:
+    visible:
+      id: "dialog-sheet"
+    timeout: 8000
+- tapOn:
+    id: "btn-confirm-delete-report"
+- extendedWaitUntil:
+    visible:
+      id: "btn-new-report"
+    timeout: 10000
+
+# --- Back to project home ---------------------------------------------------
+- tapOn:
+    id: "btn-back"
+- extendedWaitUntil:
+    visible:
+      id: "btn-project-edit"
+    timeout: 10000
+
+# --- Open project-edit screen -----------------------------------------------
+- tapOn:
+    id: "btn-project-edit"
+- extendedWaitUntil:
+    visible:
+      id: "btn-delete-project"
+    timeout: 10000
+
+# --- Delete project ----------------------------------------------------------
+- scrollUntilVisible:
+    element:
+      id: "btn-delete-project"
+    direction: DOWN
+- tapOn:
+    id: "btn-delete-project"
+- extendedWaitUntil:
+    visible:
+      id: "confirm-delete-project"
+    timeout: 8000
+- tapOn:
+    id: "confirm-delete-project"
+
+# --- Confirm project list is empty -----------------------------------------
+- extendedWaitUntil:
+    visible:
+      id: "btn-new-project"
+    timeout: 10000
+- assertNotVisible:
+    text: "Regression Test Project \\(Edited\\)"
+- runFlow:
+    when:
+      visible: "${PROJECT_NAME_EDITED}"
+    commands:
+      - assertNotVisible:
+          text: "${PROJECT_NAME_EDITED}"

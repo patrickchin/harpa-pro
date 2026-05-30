@@ -309,6 +309,34 @@ export async function addMemberByPhone(
   };
 }
 
+export async function updateMemberRole(
+  db: Db,
+  projectId: string,
+  targetUserId: string,
+  newRole: ProjectRole,
+): Promise<ProjectMemberRow> {
+  const r = await db.execute<{
+    user_id: string;
+    display_name: string | null;
+    phone: string;
+    role: ProjectRole;
+    joined_at: Date;
+  }>(sql`
+    SELECT * FROM app.update_member_role(
+      ${projectId}, ${targetUserId}, ${newRole}::app.project_role
+    )
+  `);
+  const row = r.rows[0];
+  if (!row) throw new Error('update_member_role returned no row');
+  return {
+    userId: row.user_id,
+    displayName: row.display_name,
+    phone: row.phone,
+    role: row.role,
+    joinedAt: new Date(row.joined_at).toISOString(),
+  };
+}
+
 export async function removeMember(db: Db, projectId: string, userId: string): Promise<boolean> {
   const r = await db.execute<{ remove_project_member: boolean }>(sql`
     SELECT app.remove_project_member(${projectId}, ${userId}) AS remove_project_member

@@ -6,6 +6,7 @@ import { OpenAPIHono } from '@hono/zod-openapi';
 import { cors } from 'hono/cors';
 import { requestId } from './middleware/requestId.js';
 import { errorMapper } from './middleware/errorMapper.js';
+import { globalRateLimit } from './middleware/globalRateLimit.js';
 import { health } from './routes/health.js';
 import { readyz } from './routes/readyz.js';
 import { authRoutes } from './routes/auth.js';
@@ -19,7 +20,9 @@ import { settingsRoutes } from './routes/settings.js';
 import { waitlistRoutes } from './routes/waitlist.js';
 import { adminRoutes } from './routes/admin.js';
 import { resolverRoutes } from './routes/resolvers.js';
+import { wellKnownRoutes } from './routes/well-known.js';
 import { env } from './env.js';
+import { createSentryMiddleware } from './telemetry/sentry.js';
 import type { ScopedDb } from './db/scope.js';
 
 /**
@@ -45,6 +48,13 @@ export function createApp(): OpenAPIHono<AppEnv> {
   const app = new OpenAPIHono<AppEnv>();
 
   app.use('*', requestId());
+  const sentryMiddleware = createSentryMiddleware(app);
+  if (sentryMiddleware) app.use('*', sentryMiddleware);
+  // Global catch-all rate limiter (arch-rate-limiting.md §3.3). Runs
+  // before any route-level middleware so it bounds total traffic per
+  // user / IP — including misbehaving clients hammering unauthed
+  // routes. Per-route + shared-AI buckets remain on the relevant routes.
+  app.use('*', globalRateLimit());
 
   // CORS — limited to /waitlist/* so cross-origin signups from the
   // marketing site (https://harpapro.com → https://api.harpapro.com)
@@ -91,6 +101,7 @@ export function createApp(): OpenAPIHono<AppEnv> {
   app.route('/', readyz);
   app.route('/', authRoutes);
   app.route('/', waitlistRoutes);
+  app.route('/', wellKnownRoutes);
 
   // Authenticated routes
   app.route('/', meRoutes);

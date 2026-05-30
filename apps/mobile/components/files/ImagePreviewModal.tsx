@@ -1,88 +1,355 @@
 /**
- * ImagePreviewModal — fullscreen modal for previewing an image.
+ * ImagePreviewModal — fullscreen modal for previewing photos from R2.
  *
- * Adapted from
- * `../haru3-reports/apps/mobile/components/files/ImagePreviewModal.tsx`
- * on branch `dev`. The canonical version uses `expo-image` +
- * `CachedImage` to support BlurHash placeholders, intrinsic sizing,
- * and adjacent-photo prefetch. v4 hasn't ported the image-cache
- * pipeline yet, so this port renders the plain RN `Image` and
- * surfaces an ActivityIndicator while the URI is null.
- *
- * TODO(P4): port `CachedImage` + `prefetchImages` + the signed-URL
- * fetch hooks once `useFileSignedUrl` / image-cache land.
+ * Twitter/X-inspired: black backdrop, translucent overlay chrome that
+ * fades on tap, PagerView for swipe navigation, pinch-to-zoom via
+ * ZoomableImage, thumbnail placeholders for instant display.
  */
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  Dimensions,
-  Image,
   Modal,
   Pressable,
+  Text,
   View,
+  useWindowDimensions,
 } from 'react-native';
+import PagerView from 'react-native-pager-view';
 import { X } from 'lucide-react-native';
+import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
+import Animated, {
+  runOnJS,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
 import {
   SafeAreaProvider,
   SafeAreaView,
 } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
 
-import { ScreenHeader } from '@/components/primitives/ScreenHeader';
+import { ZoomableImage } from '@/components/files/ZoomableImage';
+import { useFileSignedUrl } from '@/lib/uploads/useFileSignedUrl';
 import { colors } from '@/lib/design-tokens/colors';
+
+export interface ImagePreviewPhoto {
+  fileId?: string | null;
+  thumbnailFileId?: string | null;
+  uri?: string | null;
+  title?: string;
+  cacheKey?: string | null;
+}
 
 interface ImagePreviewModalProps {
   visible: boolean;
-  uri: string | null;
+  /** Pre-resolved signed URL (single-image legacy API). */
+  uri?: string | null;
+  /** R2 file id (single-image legacy API). */
+  fileId?: string | null;
   title?: string;
+  /** Stable cache key for the single-image API. */
+  cacheKey?: string | null;
+  /** Gallery of photos. When set with length > 1, swipe is enabled. */
+  photos?: ReadonlyArray<ImagePreviewPhoto>;
+  /** Index of the photo to show first in gallery mode. */
+  initialIndex?: number;
   onClose: () => void;
 }
-
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 export function ImagePreviewModal({
   visible,
   uri,
+  fileId,
   title = 'Image',
+  cacheKey,
+  photos,
+  initialIndex = 0,
   onClose,
 }: ImagePreviewModalProps) {
+  const resolvedPhotos = useMemo<ReadonlyArray<ImagePreviewPhoto>>(() => {
+    if (photos && photos.length > 0) return photos;
+    return [{ uri, fileId, thumbnailFileId: null, title, cacheKey }];
+  }, [photos, uri, fileId, title, cacheKey]);
+
+  const startIndex = clampIndex(initialIndex, resolvedPhotos.length);
+  const isGallery = resolvedPhotos.length > 1;
+
   return (
     <Modal
       visible={visible}
       animationType="fade"
-      presentationStyle="fullScreen"
+      presentationStyle="overFullScreen"
+      transparent
+      statusBarTranslucent
       onRequestClose={onClose}
     >
       <SafeAreaProvider>
-        <SafeAreaView className="flex-1 bg-black" edges={['top', 'bottom']}>
-          <View className="flex-row items-center justify-between px-4 py-2">
-            <ScreenHeader title={title} />
-            <Pressable
-              onPress={onClose}
-              accessibilityLabel="Close image preview"
-              testID="btn-close-image-preview"
-              className="rounded-full bg-white/20 p-2"
-            >
-              <X size={22} color={colors.primary.foreground} />
-            </Pressable>
-          </View>
-          <View className="flex-1 items-center justify-center px-4">
-            {uri ? (
-              <Image
-                source={{ uri }}
-                style={{ width: SCREEN_WIDTH - 32, height: SCREEN_HEIGHT * 0.7 }}
-                resizeMode="contain"
-                testID="image-preview"
-                accessibilityLabel={title}
+        <GestureHandlerRootView style={{ flex: 1 }}>
+          <View className="flex-1">
+            {visible ? (
+              <PreviewContent
+                photos={resolvedPhotos}
+                startIndex={startIndex}
+                isGallery={isGallery}
+                fallbackTitle={title}
+                onClose={onClose}
               />
-            ) : (
-              <ActivityIndicator
-                size="large"
-                color={colors.primary.foreground}
-                testID="image-preview-loading"
-              />
-            )}
+            ) : null}
           </View>
-        </SafeAreaView>
+        </GestureHandlerRootView>
       </SafeAreaProvider>
     </Modal>
+  );
+}
+
+function clampIndex(index: number, length: number): number {
+  if (length <= 0) return 0;
+  if (!Number.isFinite(index)) return 0;
+  if (index < 0) return 0;
+  if (index >= length) return length - 1;
+  return Math.floor(index);
+}
+
+function PreviewContent({
+  photos,
+  startIndex,
+  isGallery,
+  fallbackTitle,
+  onClose,
+}: {
+  photos: ReadonlyArray<ImagePreviewPhoto>;
+  startIndex: number;
+  isGallery: boolean;
+  fallbackTitle: string;
+  onClose: () => void;
+}) {
+  const { width: screenWidth, height: screenHeight } = useWindowDimensions();
+  const [currentIndex, setCurrentIndex] = useState(startIndex);
+  const [chromeVisible, setChromeVisible] = useState(true);
+  const [anyZoomed, setAnyZoomed] = useState(false);
+  const zoomedSet = useRef<Set<string>>(new Set());
+  const chromeOpacity = useSharedValue(1);
+  const dismissY = useSharedValue(0);
+
+  useEffect(() => {
+    setCurrentIndex(startIndex);
+  }, [startIndex]);
+
+  useEffect(() => {
+    chromeOpacity.value = withTiming(chromeVisible ? 1 : 0, { duration: 150 });
+  }, [chromeOpacity, chromeVisible]);
+
+  // Chrome fades with toggle AND during dismiss drag
+  const chromeStyle = useAnimatedStyle(() => {
+    const dismissFade = Math.min(Math.abs(dismissY.value) / 80, 1);
+    return { opacity: chromeOpacity.value * (1 - dismissFade) };
+  });
+
+  const activePhoto = photos[currentIndex] ?? photos[0]!;
+  const headerTitle = activePhoto.title ?? fallbackTitle;
+  const headerSubtitle = isGallery
+    ? `${currentIndex + 1} / ${photos.length}`
+    : null;
+
+  const toggleChrome = useCallback(() => {
+    setChromeVisible((prev) => !prev);
+  }, []);
+
+  const onChildZoomChange = useCallback((key: string, isZoomed: boolean) => {
+    if (isZoomed) zoomedSet.current.add(key);
+    else zoomedSet.current.delete(key);
+    setAnyZoomed(zoomedSet.current.size > 0);
+  }, []);
+
+  // --- Drag-to-dismiss gesture (iOS Photos style) ---
+  const DISMISS_THRESHOLD = 100;
+
+  const dismissPan = useMemo(
+    () =>
+      Gesture.Pan()
+        .enabled(!anyZoomed)
+        .maxPointers(1)
+        .activeOffsetY([-15, 15])
+        .failOffsetX([-10, 10])
+        .onUpdate((e) => {
+          dismissY.value = e.translationY;
+        })
+        .onEnd(() => {
+          if (Math.abs(dismissY.value) > DISMISS_THRESHOLD) {
+            runOnJS(onClose)();
+          } else {
+            dismissY.value = withTiming(0, { duration: 150 });
+          }
+        }),
+    [anyZoomed, dismissY, onClose],
+  );
+
+  const dismissContentStyle = useAnimatedStyle(() => {
+    const progress = Math.min(Math.abs(dismissY.value) / 300, 1);
+    return {
+      transform: [
+        { translateY: dismissY.value },
+        { scale: 1 - progress * 0.15 },
+      ],
+    };
+  });
+
+  const dismissBackdropStyle = useAnimatedStyle(() => {
+    const progress = Math.min(Math.abs(dismissY.value) / 300, 1);
+    return {
+      backgroundColor: `rgba(0, 0, 0, ${1 - progress * 0.7})`,
+    };
+  });
+
+  return (
+    <GestureDetector gesture={dismissPan}>
+      <Animated.View style={[{ flex: 1 }, dismissBackdropStyle]}>
+        <StatusBar style="light" hidden={!chromeVisible} />
+
+        <SafeAreaView edges={['top', 'bottom']} style={{ flex: 1 }}>
+          {/* Header — in-flow, not overlapping the image */}
+          <Animated.View
+            pointerEvents={chromeVisible ? 'auto' : 'none'}
+            style={chromeStyle}
+            className="bg-black/60"
+          >
+            <View className="flex-row items-center px-4 pb-3 pt-2">
+              <Pressable
+                onPress={onClose}
+                accessibilityLabel="Close image preview"
+                testID="btn-close-image-preview"
+                className="rounded-full bg-white/15 p-2"
+              >
+                <X size={22} color={colors.background} />
+              </Pressable>
+
+              <View className="min-w-0 flex-1 px-3">
+                <Text
+                  accessibilityRole="header"
+                  className="text-sm font-semibold text-white"
+                  numberOfLines={1}
+                >
+                  {headerTitle}
+                </Text>
+                {headerSubtitle ? (
+                  <Text className="mt-0.5 text-xs text-white/50">
+                    {headerSubtitle}
+                  </Text>
+                ) : null}
+              </View>
+
+              {isGallery ? (
+                <Text className="text-xs font-medium text-white/60">
+                  {currentIndex + 1} / {photos.length}
+                </Text>
+              ) : null}
+            </View>
+          </Animated.View>
+
+          {/* Image pager — fills remaining space below the header */}
+          <Animated.View style={[{ flex: 1 }, dismissContentStyle]}>
+            <PagerView
+              initialPage={startIndex}
+              scrollEnabled={isGallery && !anyZoomed}
+              onPageSelected={(e) => setCurrentIndex(e.nativeEvent.position)}
+              style={{ flex: 1 }}
+              testID="image-preview-gallery"
+            >
+              {photos.map((item, index) => {
+                const key = item.fileId ?? item.uri ?? `photo-${index}`;
+                return (
+                  <View
+                    key={key}
+                    className="flex-1 items-center justify-center"
+                  >
+                    <ImagePreviewBody
+                      uri={item.uri ?? null}
+                      fileId={item.fileId ?? null}
+                      thumbnailFileId={item.thumbnailFileId ?? null}
+                      title={item.title ?? fallbackTitle}
+                      cacheKey={item.cacheKey ?? null}
+                      width={screenWidth}
+                      height={screenHeight}
+                      testID={`image-preview-${index}`}
+                      onSingleTap={toggleChrome}
+                      onZoomChange={(z) => onChildZoomChange(key, z)}
+                    />
+                  </View>
+                );
+              })}
+            </PagerView>
+          </Animated.View>
+        </SafeAreaView>
+      </Animated.View>
+    </GestureDetector>
+  );
+}
+
+function ImagePreviewBody({
+  uri,
+  fileId,
+  thumbnailFileId,
+  title,
+  cacheKey,
+  width,
+  height,
+  testID,
+  onSingleTap,
+  onZoomChange,
+}: {
+  uri: string | null;
+  fileId: string | null;
+  thumbnailFileId: string | null;
+  title: string;
+  cacheKey: string | null;
+  width: number;
+  height: number;
+  testID: string;
+  onSingleTap: () => void;
+  onZoomChange: (isZoomed: boolean) => void;
+}) {
+  const { data, isLoading } = useFileSignedUrl(fileId, {
+    enabled: !uri && Boolean(fileId),
+  });
+  const { data: thumbnailData } = useFileSignedUrl(thumbnailFileId, {
+    enabled: !uri && Boolean(thumbnailFileId),
+  });
+  const resolvedUri =
+    uri ?? (data as { url?: string } | undefined)?.url ?? null;
+  const thumbnailUri =
+    (thumbnailData as { url?: string } | undefined)?.url ?? null;
+  const effectiveCacheKey = cacheKey ?? fileId ?? undefined;
+  const effectivePlaceholderCacheKey = thumbnailFileId ?? undefined;
+  const sourceUri = resolvedUri ?? thumbnailUri;
+  const sourceCacheKey = resolvedUri
+    ? effectiveCacheKey
+    : effectivePlaceholderCacheKey;
+
+  if (sourceUri) {
+    return (
+      <ZoomableImage
+        source={{ uri: sourceUri }}
+        placeholder={thumbnailUri ? { uri: thumbnailUri } : undefined}
+        cacheKey={sourceCacheKey}
+        placeholderCacheKey={effectivePlaceholderCacheKey}
+        width={width}
+        height={height}
+        contentFit="contain"
+        testID={testID}
+        accessibilityLabel={title}
+        onSingleTap={onSingleTap}
+        onZoomChange={onZoomChange}
+      />
+    );
+  }
+
+  return (
+    <ActivityIndicator
+      size="large"
+      color={colors.background}
+      testID={isLoading ? 'image-preview-loading' : 'image-preview-loading'}
+    />
   );
 }

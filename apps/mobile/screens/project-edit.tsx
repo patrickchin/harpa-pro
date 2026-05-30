@@ -6,7 +6,7 @@
  * (camelCase) instead of `client_name`. AppDialogSheet handles the
  * destructive delete confirmation (hard rule — no Alert.alert).
  */
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type ReactNode } from 'react';
 import { View, Text, KeyboardAvoidingView, ScrollView } from 'react-native';
 import { Trash2 } from 'lucide-react-native';
 import { SafeAreaView } from '@/components/primitives/SafeAreaView';
@@ -16,12 +16,13 @@ import { Input } from '@/components/primitives/Input';
 import { InlineNotice } from '@/components/primitives/InlineNotice';
 import { ScreenHeader } from '@/components/primitives/ScreenHeader';
 import { EditProjectSkeleton } from '@/components/skeletons/EditProjectSkeleton';
+import { useLayoutShiftProbe } from '@/lib/util/layout-shift-probe';
 import { colors } from '@/lib/design-tokens/colors';
 import {
   type AppDialogCopy,
   getActionErrorDialogCopy,
   getDeleteProjectDialogCopy,
-} from '@/lib/app-dialog-copy';
+} from '@/lib/dialogs/app-dialog-copy';
 
 export type ProjectEditValues = {
   name: string;
@@ -39,6 +40,7 @@ export type ProjectEditProps = {
   onBack: () => void;
   onSubmit: (values: ProjectEditValues) => void;
   onDelete: () => void;
+  actions?: ReactNode;
 };
 
 interface DialogState extends AppDialogCopy {
@@ -55,6 +57,7 @@ export function ProjectEdit({
   onBack,
   onSubmit,
   onDelete,
+  actions,
 }: ProjectEditProps) {
   const [name, setName] = useState('');
   const [address, setAddress] = useState('');
@@ -112,11 +115,16 @@ export function ProjectEdit({
   const errorMessage = validationError ?? updateError;
   const canDismiss = dialog?.kind !== 'confirm-delete' || !isDeleting;
 
+  const onHeaderLayout = useLayoutShiftProbe('edit-project:header');
+  const onFirstFieldLayout = useLayoutShiftProbe('edit-project:first-field');
+  const onLastFieldLayout = useLayoutShiftProbe('edit-project:last-field');
+  const onSubmitLayout = useLayoutShiftProbe('edit-project:submit');
+
   if (isLoading) {
     return (
       <SafeAreaView className="flex-1 bg-background">
-        <View className="px-5 py-4">
-          <ScreenHeader title="Edit Project" onBack={onBack} backLabel="Overview" />
+        <View className="px-5 py-4" onLayout={onHeaderLayout}>
+          <ScreenHeader title="Edit Project" onBack={onBack} backLabel="Overview" actions={actions} />
         </View>
         <EditProjectSkeleton />
       </SafeAreaView>
@@ -126,8 +134,8 @@ export function ProjectEdit({
   return (
     <SafeAreaView className="flex-1 bg-background">
       <KeyboardAvoidingView behavior="padding" className="flex-1">
-        <View className="px-5 py-4">
-          <ScreenHeader title="Edit Project" onBack={onBack} backLabel="Overview" />
+        <View className="px-5 py-4" onLayout={onHeaderLayout}>
+          <ScreenHeader title="Edit Project" onBack={onBack} backLabel="Overview" actions={actions} />
         </View>
 
         <View className="flex-1">
@@ -138,17 +146,19 @@ export function ProjectEdit({
             keyboardDismissMode="interactive"
             keyboardShouldPersistTaps="handled"
           >
-            <Input
-              label="Project Name"
-              placeholder="e.g. Highland Tower Complex"
-              value={name}
-              onChangeText={(v) => {
-                setName(v);
-                setValidationError(null);
-              }}
-              editable={!isUpdating}
-              testID="input-edit-project-name"
-            />
+            <View onLayout={onFirstFieldLayout}>
+              <Input
+                label="Project Name"
+                placeholder="e.g. Highland Tower Complex"
+                value={name}
+                onChangeText={(v) => {
+                  setName(v);
+                  setValidationError(null);
+                }}
+                editable={!isUpdating}
+                testID="input-edit-project-name"
+              />
+            </View>
             <Input
               label="Project Address"
               placeholder="e.g. 2400 Highland Ave, Austin TX"
@@ -157,14 +167,16 @@ export function ProjectEdit({
               editable={!isUpdating}
               testID="input-edit-project-address"
             />
-            <Input
-              label="Client Name"
-              placeholder="e.g. Acme Construction Co."
-              value={client}
-              onChangeText={setClient}
-              editable={!isUpdating}
-              testID="input-edit-client-name"
-            />
+            <View onLayout={onLastFieldLayout}>
+              <Input
+                label="Client Name"
+                placeholder="e.g. Acme Construction Co."
+                value={client}
+                onChangeText={setClient}
+                editable={!isUpdating}
+                testID="input-edit-client-name"
+              />
+            </View>
             {errorMessage ? (
               <InlineNotice tone="danger">{errorMessage}</InlineNotice>
             ) : null}
@@ -196,6 +208,7 @@ export function ProjectEdit({
               onPress={handleSubmit}
               loading={isUpdating}
               testID="btn-save-project"
+              onLayout={onSubmitLayout}
             >
               {isUpdating ? 'Saving…' : 'Save Changes'}
             </Button>
@@ -220,6 +233,7 @@ export function ProjectEdit({
                     disabled: isDeleting,
                     accessibilityLabel: 'Confirm delete project',
                     align: 'start',
+                    testID: 'confirm-delete-project',
                   },
                   {
                     label: dialog.cancelLabel ?? 'Cancel',

@@ -2,73 +2,19 @@
 
 exports[`ProjectListSkeleton > matches snapshot 1`] = `
 <rn-View
-  className="flex-1 px-5 pt-4 gap-3"
+  style={
+    {
+      "gap": 12,
+      "paddingBottom": 16,
+      "paddingHorizontal": 20,
+      "paddingTop": 16,
+    }
+  }
+  testID="projects-list-skeleton"
 >
   <rn-View
-    className="flex-row items-center gap-3 rounded-lg border border-dashed border-border bg-surface-muted p-4"
-  >
-    <rn-View
-      className="bg-muted"
-      style={
-        [
-          {
-            "borderRadius": 8,
-            "height": 40,
-            "width": 40,
-          },
-          {
-            "opacity": 0.35,
-          },
-          undefined,
-        ]
-      }
-    />
-    <rn-View
-      className="flex-1 gap-2"
-    >
-      <rn-View
-        className="bg-muted"
-        style={
-          [
-            {
-              "borderRadius": 6,
-              "height": 16,
-              "width": "45%",
-            },
-            {
-              "opacity": 0.35,
-            },
-            undefined,
-          ]
-        }
-      />
-      <rn-View
-        className="bg-muted"
-        style={
-          [
-            {
-              "borderRadius": 6,
-              "height": 12,
-              "width": "70%",
-            },
-            {
-              "opacity": 0.35,
-            },
-            undefined,
-          ]
-        }
-      />
-    </rn-View>
-  </rn-View>
-  <rn-View
-    style={
-      {
-        "height": 12,
-      }
-    }
-  />
-  <rn-View
-    className="rounded-lg border border-border bg-surface-emphasis p-4 gap-3"
+    className="rounded-lg border border-border bg-card p-4 gap-3"
+    onLayout={[Function]}
   >
     <rn-View
       className="flex-row items-center gap-3"
@@ -180,7 +126,7 @@ exports[`ProjectListSkeleton > matches snapshot 1`] = `
     </rn-View>
   </rn-View>
   <rn-View
-    className="rounded-lg border border-border bg-surface-emphasis p-4 gap-3"
+    className="rounded-lg border border-border bg-card p-4 gap-3"
   >
     <rn-View
       className="flex-row items-center gap-3"
@@ -292,7 +238,7 @@ exports[`ProjectListSkeleton > matches snapshot 1`] = `
     </rn-View>
   </rn-View>
   <rn-View
-    className="rounded-lg border border-border bg-surface-emphasis p-4 gap-3"
+    className="rounded-lg border border-border bg-card p-4 gap-3"
   >
     <rn-View
       className="flex-row items-center gap-3"

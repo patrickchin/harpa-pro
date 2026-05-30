@@ -2,23 +2,35 @@
  * Project edit — real route wiring useProjectQuery /
  * useUpdateProjectMutation / useDeleteProjectMutation.
  */
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter, useLocalSearchParams, type Href } from 'expo-router';
+import { useQueryClient } from '@tanstack/react-query';
 import { ProjectEdit } from '@/screens/project-edit';
 import {
   useProjectQuery,
   useUpdateProjectMutation,
   useDeleteProjectMutation,
 } from '@/lib/api/hooks';
+import {
+  projectInitialData,
+  projectInitialDataUpdatedAt,
+} from '@/lib/api/initial-data';
 import { safeBack } from '@/lib/nav/safe-back';
+import { dismissOrReplaceTo } from '@/lib/nav/dismiss-or-replace';
+import { AppHeaderActions } from '@/components/ui/AppHeaderActions';
 
 export default function ProjectEditRoute() {
   const router = useRouter();
   const { project } = useLocalSearchParams<{ project: string }>();
   const slug = project ?? '';
+  const qc = useQueryClient();
 
   const projectQ = useProjectQuery(
     { params: { project: slug } },
-    { enabled: slug.length > 0 },
+    {
+      enabled: slug.length > 0,
+      initialData: projectInitialData(qc, slug),
+      initialDataUpdatedAt: projectInitialDataUpdatedAt(qc),
+    },
   );
   const update = useUpdateProjectMutation();
   const remove = useDeleteProjectMutation();
@@ -65,11 +77,15 @@ export default function ProjectEditRoute() {
           { params: { project: slug } },
           {
             onSuccess: () => {
-              router.replace('/(app)/projects' as never);
+              // Pop to the projects list already on the stack instead of
+              // replacing the top — otherwise back lands on the deleted
+              // project. See docs/v4/arch-mobile-navigation.md §4.
+              dismissOrReplaceTo(router, '/(app)/projects' as Href);
             },
           },
         );
       }}
+      actions={<AppHeaderActions />}
     />
   );
 }

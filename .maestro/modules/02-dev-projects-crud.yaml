@@ -1,0 +1,57 @@
+appId: ${MAESTRO_APP_ID}
+name: "02-dev - Projects CRUD: create, edit, verify"
+tags:
+  - regression
+  - projects
+  - dev
+---
+# Required env:
+#   PROJECT_NAME
+#   PROJECT_NAME_EDITED
+
+- tapOn:
+    id: "btn-new-project"
+- extendedWaitUntil:
+    visible:
+      id: "input-project-name"
+    timeout: 10000
+- tapOn:
+    id: "input-project-name"
+- inputText: "${PROJECT_NAME}"
+- tapOn:
+    id: "input-client-name"
+- inputText: "Dev Regression Client"
+- tapOn:
+    id: "input-project-address"
+- inputText: "1 Dev Regression Way"
+- hideKeyboard
+- tapOn:
+    id: "btn-save-project"
+
+- extendedWaitUntil:
+    visible:
+      id: "btn-project-edit"
+    timeout: 10000
+
+- tapOn:
+    id: "btn-project-edit"
+- extendedWaitUntil:
+    visible:
+      id: "input-edit-project-name"
+    timeout: 10000
+- tapOn:
+    id: "input-edit-project-name"
+- eraseText: 80
+- inputText: "${PROJECT_NAME_EDITED}"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: "btn-save-project"
+    direction: DOWN
+- tapOn:
+    id: "btn-save-project"
+
+- extendedWaitUntil:
+    visible:
+      id: "btn-project-edit"
+    timeout: 10000

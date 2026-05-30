@@ -11,8 +11,8 @@
  * regression-testing across iOS / Android.
  */
 import { TextInput, View, Text, type TextInputProps } from 'react-native';
-import { cn } from '@/lib/utils';
-import { getSurfaceDepthStyle } from '@/lib/surface-depth';
+import { cn } from '@/lib/util/utils';
+import { getSurfaceDepthStyle } from '@/lib/reports/surface-depth';
 import { colors } from '@/lib/design-tokens/colors';
 
 export interface InputProps extends TextInputProps {
@@ -49,9 +49,10 @@ export function Input({
         )}
         style={[
           getSurfaceDepthStyle(isReadOnly ? 'flat' : 'raised'),
-          // Pitfall v3 `1ec0fc8`: center caret + text against
-          // min-h-touch; do not delete.
-          { textAlignVertical: 'center', paddingTop: 0, paddingBottom: 0 },
+          // textAlignVertical centers on Android; iOS relies on
+          // symmetric py-3 from className — do NOT zero the padding.
+          // lineHeight must match fontSize to prevent iOS text drop.
+          { textAlignVertical: 'center', lineHeight: 16 },
           style,
         ]}
         placeholderTextColor={colors.muted.foreground}

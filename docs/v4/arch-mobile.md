@@ -14,140 +14,89 @@
   source of truth for the design tokens.
 - Expo Router v3 (file-system routing).
 - React Query for server state.
-- legend-state for the upload queue + offline persistence.
+- Hand-rolled `UploadQueue` (`lib/uploads/queue.ts`) for offline-first
+  upload + persistence via AsyncStorage. Legend-state was the v3
+  plan but proved overkill for a queue with a single subscriber;
+  the current queue is ~370 lines, exposes a tiny surface
+  (`enqueue` / `retry` / `remove` / `subscribe` / `rehydrate`), and
+  is fully unit-tested in node. See
+  [`arch-voice-pipeline.md` §D9](arch-voice-pipeline.md#d9-robustness-phase-f)
+  for the persistence + AbortSignal contract.
 - expo-audio for recording + playback (already proven in v3).
 - expo-camera for capture.
 - react-native-pdf (Android) + WKWebView (iOS) for `PdfPreviewModal`.
 - Sentry for crash reporting.
+
+## Folder rule
+
+A file goes in `features/<domain>/` if and only if the domain owns a
+**state machine, a React Context provider with non-trivial reducer
+logic, or a native/external adapter** (recorder, camera session,
+OTP). Pure presentational UI — even when domain-named
+(`VoiceNoteCard`, `PhotoNoteCard`, `ReportView`) — goes in
+`components/<domain>/`. `lib/` holds cross-cutting utilities only
+(api client, env, date, dialogs, telemetry), grouped into subfolders
+by concern; no flat files at the `lib/` root (enforced in CI).
+`screens/` holds props-driven screen bodies; `app/` holds expo-router
+route files that wire data into screens.
 
 ## Directory structure
 
 ```
 apps/mobile/
   app/                                 # expo-router
-    (auth)/
-      _layout.tsx
-      login.tsx                        # thin wrapper around screens/login.tsx
-      verify.tsx
-      onboarding.tsx
-    (app)/
-      _layout.tsx
-      projects/
-        index.tsx                      # thin wrapper around screens/projects-list.tsx
-        new.tsx
-        [projectSlug]/                 # prj_xxxxxx — see arch-ids-and-urls.md
-          index.tsx
-          edit.tsx
-          members.tsx
-          reports/
-            index.tsx
-            generate.tsx          # the big one — Notes/Report/Edit tabs
-            [number].tsx          # saved report — per-project number
-      p/
-        [projectSlug].tsx              # short link → router.replace canonical
-      r/
-        [reportSlug].tsx               # short link → router.replace canonical
-      camera/
-        capture.tsx
-      profile/
-        index.tsx
-        account.tsx
-        usage.tsx
-    (dev)/                             # P2.0b — dev gallery; never in prod
-      _layout.tsx
-      index.tsx                        # screen-list with mock-prop tap-through
-      <one route per screen>.tsx       # mounts the body with canned mock props
-    +not-found.tsx
+    (auth)/  (app)/  (camera)/  ...    # routes do data fetching
     _layout.tsx                        # providers (env, query, queue, dialogs, sentry)
 
-  screens/                             # P2.0b — props-driven screen bodies
-                                       # (no API/auth inside; consumed by
-                                       # both real routes and (dev) mirrors)
+  screens/                             # props-driven screen bodies
+                                       # (no API/auth inside; consumed
+                                       # by the routes in app/)
 
-  components/
-    primitives/                        # P2.1 — locked early, snapshot-tested
-      Card.tsx
-      Input.tsx
-      Button.tsx
-      IconButton.tsx
-      ScreenHeader.tsx
-      EmptyState.tsx
-      Skeleton.tsx
-      AppDialogSheet.tsx
-      StatTile.tsx
-    reports/
-      sections/
-        StatBar.tsx
-        WeatherStrip.tsx
-        SummarySectionCard.tsx
-        IssuesCard.tsx
-        WorkersCard.tsx
-        MaterialsCard.tsx
-        NextStepsCard.tsx
-        CompletenessCard.tsx
-      ReportView.tsx
-      ReportDetailTabBar.tsx
-      ReportActionsMenu.tsx
-      PdfPreviewModal.tsx
-      SavedReportSheet.tsx
-      GenerateReportInputBar.tsx
-      GenerateReportTabBar.tsx
-      GenerateReportActionRow.tsx
+  components/                          # PRESENTATIONAL ONLY
+    primitives/                        # Card, Button, Input, …
     notes/
       NoteTimeline.tsx
-      VoiceNoteCard.tsx
-      ImageNoteCard.tsx
       TextNoteCard.tsx
-      ThreeDotMenu.tsx
-    profile/
-      UsageBarChart.tsx
-
-  features/
-    auth/
-      useAuthSession.ts
-      otpFlow.ts
-    upload/
-      queue.ts                         # legend-state observable queue
-      pipeline.ts                      # presign → PUT → createFile → createNote
-      __tests__/
-    voice/
-      useVoiceNotePipeline.ts
-      useVoiceNotePlayer.ts            # coordinated single-playback
-      useLiveTranscript.ts             # on-device interim transcript
-      AudioPlaybackProvider.tsx
+      PhotoNoteCard.tsx
+      PendingPhotoCard.tsx
+      PhotoBatchGrid.tsx
+      PhotoGridTile.tsx
+      VoiceNoteCard.tsx                # ← lives here, not in features/
+      VoiceCardShell.tsx
+      voiceNoteCardHeader.ts
+      NoteCardHeader.tsx
+      NoteOptionsSheet.tsx
+      NoteOptionsKebab.tsx
     reports/
-      useReportPdfActions.ts
-      useReportGeneration.ts
-      GenerateReportProvider.tsx
-    util/
-      useCopyToClipboard.ts
+      ReportView.tsx
+      ReportEditForm.tsx
+      StatBar.tsx WeatherStrip.tsx SummarySectionCard.tsx
+      IssuesCard.tsx WorkersCard.tsx MaterialsCard.tsx
+      NextStepsCard.tsx CompletenessCard.tsx PdfPreviewModal.tsx
+      detail/                          # saved-report UI pieces
+      generate/                        # generate-report UI pieces
+                                       #   (provider lives in features/generate/)
+    files/  uploads/  account/  skeletons/  ui/
 
-  lib/
-    env.ts                             # Zod-validated EXPO_PUBLIC_*
-    date.ts                            # ISO-8601 + PG textual fallback
-    uuid.ts                            # expo-crypto only
-    dialogs/
-      useAppDialogSheet.ts             # the only place Alert is allowed
-    api/
-      client.ts                        # api-contract typed client
-      auth.ts                          # token getter + onUnauthorized callback
-      errors.ts                        # ApiError envelope
-      hooks.ts                         # generated React Query hooks
-      invalidation.ts                  # mutation→queryKey invalidation map
-    auth/
-      session.tsx                      # AuthSessionProvider + useAuthSession
-      storage.ts                       # SecureStore (session) + AsyncStorage (lastPhone)
-    section-icons.ts
-    report-helpers.ts                  # toTitleCase, getItemMeta only
-    mobile-ui.ts                       # getReportStats, getIssueSeverityTone
+  features/                            # STATE MACHINES + ADAPTERS
+    voice/
+      InlineVoiceRecorder.tsx
+      useInlineRecorder.ts
+      useVoiceNotePipeline.ts
+      expoAudioRecorder.ts
+      fixtureRecorder.ts
+      pickRecorder.ts
+      recorder-types.ts
+    generate/
+      GenerateReportProvider.tsx       # provider + reducer
 
-  tailwind.config.js                   # design tokens
-  global.css
-  app.config.ts
-  babel.config.js
-  metro.config.js
-  .maestro/                            # E2E flows
-  __tests__/
+  lib/                                 # CROSS-CUTTING (subfolders only)
+    api/  auth/  audio/  camera/  config/  dialogs/  files/  nav/
+    native/  notes/  phone/  projects/  reports/  telemetry/  util/
+    ai/  design-tokens/  dev-fixtures/  uploads/
+
+  tailwind.config.js  global.css  app.config.ts  babel.config.js  metro.config.js
+  .maestro/  __tests__/
 ```
 
 ## Navigation
@@ -262,7 +211,7 @@ Token getter wiring (security review §B / §I):
 - Any post-bootstrap 401 (query OR mutation) calls
   `notifyUnauthorized()`, which clears the in-memory token + sets
   status to `unauthenticated`. The route guard in `app/_layout.tsx`
-  redirects to `/(auth)/login`.
+  redirects to `/(auth)/sign-in/phone`.
 
 Sign-out:
 
@@ -284,7 +233,7 @@ What we deliberately do **not** have:
 |---|---|
 | Server state (projects, reports, notes, files) | React Query |
 | Per-screen UI state | `useState` / `useReducer` |
-| Upload queue (offline-first, persisted) | legend-state observable |
+| Upload queue (offline-first, persisted) | Hand-rolled `UploadQueue` (`lib/uploads/queue.ts`) with AsyncStorage persistence + `AbortSignal` cancellation |
 | Audio playback coordination | `AudioPlaybackProvider` (single ref) |
 | Auth session | `useAuthSession` (React Query + secure-store) |
 | Dialogs | `useAppDialogSheet` portal |
@@ -308,32 +257,25 @@ at `../haru3-reports/apps/mobile/tailwind.config.js`.
 **No hex values appear outside the config.** ESLint rule
 `no-restricted-syntax` flags hex literals in `apps/mobile/components/**`.
 
-## Dev gallery (P2.0b)
+## Screens as props-driven bodies (P2.0b)
 
 Every screen the app ships has its body extracted into
 `apps/mobile/screens/<name>.tsx` as a presentational component
 that takes typed props and has **no** API / auth / persistence
-dependencies of its own. Two route files mount it:
+dependencies of its own. The real route at
+`app/(auth|app)/<path>.tsx` wires hooks, auth session, and
+navigation params, then passes them as props.
 
-- `app/(auth|app)/<path>.tsx` — the real route. Wires hooks, auth
-  session, navigation params; passes them as props.
-- `app/(dev)/<name>.tsx` — the dev mirror. Imports the same body
-  with hand-crafted mock props. Modals, sheets, tabs, and
-  back/forward navigation work; nothing else does.
-
-The gallery index at `app/(dev)/index.tsx` lists every dev mirror
-for tap-through manual review. The `(dev)` group is guarded by
-`__DEV__ || env.EXPO_PUBLIC_USE_FIXTURES` so the routes never reach
-a production bundle. This is the canonical workflow for visual
-review against `../haru3-reports/apps/mobile@dev` — there is no
-automated screenshot-diff gate.
+Visual review is manual against `../haru3-reports/apps/mobile@dev`
+on the iOS simulator — there is no automated screenshot-diff gate
+and no in-app gallery. Coverage relies on per-screen behaviour tests
+plus Maestro flows for visual regressions.
 
 ## Primitives (locked in P2.2)
 
 Listed under "primitives" above. Each ships with:
 
 - a Vitest snapshot test,
-- a row in the dev gallery so it can be eyeballed in the simulator,
 - documented props in `// JSDoc` only (no `.md` per primitive).
 
 Adding a new primitive needs the `architect` subagent first. The
@@ -358,18 +300,38 @@ to fix Android image uploads`).
 
 ## Voice note pipeline
 
-Behaviour mirrors the canonical source's notes tab in
-`../haru3-reports/apps/mobile/app/projects/[projectId]/reports/generate.tsx`
-and its imported components. Implementation:
+Full design lives in [`arch-voice-pipeline.md`](arch-voice-pipeline.md);
+delivery checklist in [`plan-voice-pipeline.md`](plan-voice-pipeline.md).
+At a glance:
 
-- `useLiveTranscript` reads on-device speech-to-text *during*
-  recording and streams interim text to the input bar (the
-  "LISTENING" panel).
-- `useVoiceNotePipeline` orchestrates the pending-note state
-  machine (`uploading → transcribing → saved/failed`, with
-  `failedStep` so retry resumes).
-- `AudioPlaybackProvider` ensures only one note plays at a time.
-- `VoiceNoteCard` renders the transcript inline.
+- The mic button on `GenerateReportInputBar` mounts
+  `InlineVoiceRecorder` (`features/voice/InlineVoiceRecorder.tsx`)
+  inline — no route push. `useInlineRecorder` drives the recording
+  side of the state machine; permission denial and recording errors
+  surface through `AppDialogSheet` (Pitfall 12) — never `Alert.alert`.
+- `useVoiceNotePipeline({ reportId })` runs the state machine
+  `idle → recording → uploading → transcribing → saved | failed(step)`.
+  Upload uses the shared `useFileUpload` queue with `kind: 'voice'`
+  but **no** `reportId` — the queue stops after `registerFile`,
+  then the hook calls the server aggregator.
+- The server aggregator `POST /reports/:reportId/notes/voice`
+  (`{ fileId, language?, durationSec? }`) runs transcribe +
+  summarize + insert in one scoped transaction, idempotent on
+  `fileId+reportId`. Mobile never calls `/voice/transcribe` or
+  `/voice/summarize` directly.
+- `AudioPlaybackProvider` is a real single-instance `expo-audio`
+  player — starting note B pauses note A.
+- `VoiceNoteCard` renders three header states (`transcribing… /
+  ready / failed`), summary preview, transcript expander, and a
+  retry CTA on failure.
+- Fixture mode (`EXPO_PUBLIC_USE_FIXTURES=true`) replaces the
+  recorder with a "Save fixture voice note" stub that copies
+  `assets/fixtures/voice-sample.m4a` through the real upload
+  pipeline and aggregator (Pitfall 13 — default wiring exercised).
+- `useLiveTranscript` (Phase F, feature-flagged behind
+  `EXPO_PUBLIC_VOICE_LIVE_TRANSCRIPT`) wraps
+  `expo-speech-recognition` for on-device interim transcript;
+  falls back to a no-op when unavailable.
 
 ## Camera flow
 
@@ -410,7 +372,7 @@ outside `lib/env.ts`.
 | features/* | Vitest + MSW for API | ≥ 90% |
 | Screens | Vitest behaviour test (per-page interactions) | ≥ 80% |
 | End-to-end | Maestro on iOS sim + Android emu | All flows green |
-| Visual | Manual review against `../haru3-reports/apps/mobile@dev` via the dev gallery | n/a (no automated gate) |
+| Visual | Manual review against `../haru3-reports/apps/mobile@dev` on iOS sim | n/a (no automated gate) |
 
 Per-page acceptance is the per-page doc's "Acceptance checklist"
 section.

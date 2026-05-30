@@ -16,6 +16,7 @@ import {
   ActivityIndicator,
   RefreshControl,
 } from 'react-native';
+import type { ReactNode } from 'react';
 import { Plus, FileText, ClipboardList } from 'lucide-react-native';
 import { SafeAreaView } from '@/components/primitives/SafeAreaView';
 import { Card } from '@/components/primitives/Card';
@@ -27,8 +28,9 @@ import {
   buildReportsSections,
   getReportMeta,
   getReportTitle,
+  isOptimisticReportId,
   type ReportListItem,
-} from '@/lib/project-reports-list';
+} from '@/lib/projects/project-reports-list';
 
 export type ReportsListProps = {
   reports: ReadonlyArray<ReportListItem>;
@@ -41,6 +43,13 @@ export type ReportsListProps = {
   onBack: () => void;
   onCreate: () => void;
   onOpenReport: (report: ReportListItem) => void;
+  /**
+   * Best-effort prefetch fired on `onPressIn` for the row, before
+   * `onPress` triggers navigation. Routes pass `usePrefetchReport`.
+   * Optional — dev mirrors can leave it unset.
+   */
+  onPressInReport?: (report: ReportListItem) => void;
+  actions?: ReactNode;
 };
 
 export function ReportsList({
@@ -54,6 +63,8 @@ export function ReportsList({
   onBack,
   onCreate,
   onOpenReport,
+  onPressInReport,
+  actions,
 }: ReportsListProps) {
   const sections = buildReportsSections(reports);
 
@@ -65,33 +76,34 @@ export function ReportsList({
           subtitle={projectName ?? undefined}
           onBack={onBack}
           backLabel="Overview"
+          actions={actions}
         />
       </View>
 
-      {canCreate && !isLoading ? (
+      {canCreate ? (
         <View className="px-5 pt-3">
           <Pressable
             testID="btn-new-report"
             onPress={() => {
-              if (!isCreating) onCreate();
+              if (!isCreating && !isLoading) onCreate();
             }}
-            disabled={isCreating}
+            disabled={isCreating || isLoading}
             accessibilityRole="button"
             accessibilityLabel="Create new report"
           >
             <View
-              className="flex-row items-center gap-3 rounded-lg border border-dashed border-border bg-surface-muted p-3"
-              style={{ opacity: isCreating ? 0.6 : 1 }}
+              className="flex-row items-center gap-3 rounded-lg border border-dashed border-border bg-surface-muted p-4"
+              style={{ opacity: isCreating || isLoading ? 0.6 : 1 }}
             >
               <View className="h-10 w-10 items-center justify-center rounded-md border border-border bg-card">
-                {isCreating ? (
+                {isCreating || isLoading ? (
                   <ActivityIndicator size={16} color={colors.foreground} />
                 ) : (
                   <Plus size={20} color={colors.foreground} />
                 )}
               </View>
               <View className="flex-1">
-                <Text className="text-lg font-semibold text-foreground">
+                <Text className="text-title-sm text-foreground">
                   New report
                 </Text>
                 <Text className="text-sm text-muted-foreground">
@@ -134,20 +146,29 @@ export function ReportsList({
               </View>
             ) : null
           }
-          renderItem={({ item, index }) => (
+          renderItem={({ item, index }) => {
+            const optimistic = isOptimisticReportId(item.id);
+            return (
             <View className="px-5 pt-3">
               <Pressable
-                testID={`report-row-${item.status}-${index}`}
+                testID={optimistic ? 'report-row-optimistic' : `report-row-${item.number}`}
+                onPressIn={() => onPressInReport?.(item)}
                 onPress={() => onOpenReport(item)}
+                disabled={optimistic}
                 accessibilityRole="button"
               >
                 <Card
                   variant={item.status === 'draft' ? 'emphasis' : 'default'}
                   padding="sm"
                   className="flex-row items-center gap-3"
+                  style={optimistic ? { opacity: 0.7 } : undefined}
                 >
                   <View className="h-10 w-10 items-center justify-center rounded-md border border-border bg-card">
-                    <FileText size={20} color={colors.muted.foreground} />
+                    {optimistic ? (
+                      <ActivityIndicator size={16} color={colors.foreground} />
+                    ) : (
+                      <FileText size={20} color={colors.muted.foreground} />
+                    )}
                   </View>
                   <View className="min-w-0 flex-1 gap-1">
                     <View className="min-w-0 flex-row items-start gap-2">
@@ -155,9 +176,9 @@ export function ReportsList({
                         className="flex-1 text-lg font-semibold text-foreground"
                         numberOfLines={2}
                       >
-                        {getReportTitle(item)}
+                        {optimistic ? 'New report' : getReportTitle(item)}
                       </Text>
-                      {item.status === 'draft' ? (
+                      {item.status === 'draft' && !optimistic ? (
                         <View className="mt-0.5 shrink-0 rounded-md border border-warning-border bg-warning-soft px-2 py-1">
                           <Text className="text-xs font-semibold uppercase text-warning-text">
                             Draft
@@ -166,13 +187,14 @@ export function ReportsList({
                       ) : null}
                     </View>
                     <Text className="text-sm text-muted-foreground">
-                      {getReportMeta(item)}
+                      {optimistic ? 'Creating…' : getReportMeta(item)}
                     </Text>
                   </View>
                 </Card>
               </Pressable>
             </View>
-          )}
+            );
+          }}
         />
       )}
     </SafeAreaView>

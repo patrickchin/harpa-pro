@@ -16,8 +16,9 @@ import { Card } from '@/components/primitives/Card';
 import { EmptyState } from '@/components/primitives/EmptyState';
 import { ScreenHeader } from '@/components/primitives/ScreenHeader';
 import { ProjectListSkeleton } from '@/components/skeletons/ProjectListSkeleton';
-import { formatDate } from '@/lib/date';
+import { formatDate } from '@/lib/util/date';
 import { colors } from '@/lib/design-tokens/colors';
+import { useLayoutShiftProbe } from '@/lib/util/layout-shift-probe';
 
 const ROLE_LABELS: Record<'owner' | 'editor' | 'viewer', string> = {
   owner: 'Owner',
@@ -26,7 +27,11 @@ const ROLE_LABELS: Record<'owner' | 'editor' | 'viewer', string> = {
 };
 
 export type ProjectRow = {
-  id: string;
+  /**
+   * Slug-only ID (`prj_…`) — the canonical identifier on the wire AND
+   * in URLs (P3.1, see docs/v4/design-p31-slug-only-ids.md). The
+   * route param `/projects/[project]` receives this exact value.
+   */
   slug: string;
   name: string;
   role: 'owner' | 'editor' | 'viewer';
@@ -40,6 +45,14 @@ export type ProjectsListProps = {
   refreshing: boolean;
   onRefresh: () => void;
   onPressProject: (slug: string) => void;
+  /**
+   * Best-effort prefetch trigger fired on `onPressIn` (before
+   * navigation). Real routes wire `usePrefetchProject` +
+   * `usePrefetchProjectReports` here so the detail GETs are in
+   * flight before the destination screen mounts. Optional so dev
+   * gallery mirrors can skip it.
+   */
+  onPressInProject?: (slug: string) => void;
   onPressNewProject: () => void;
   /**
    * Optional trailing-edge header slot. Real routes pass
@@ -56,21 +69,54 @@ export function ProjectsList({
   refreshing,
   onRefresh,
   onPressProject,
+  onPressInProject,
   onPressNewProject,
   actions,
 }: ProjectsListProps) {
+  const onHeaderLayout = useLayoutShiftProbe('projects-list:header');
+  const onFirstRowLayout = useLayoutShiftProbe('projects-list:first-row');
+  const showNewProjectCard = isLoading || projects.length > 0;
+
   return (
     <SafeAreaView className="flex-1 bg-background" edges={['top']}>
       <View className="px-5 py-4">
         <ScreenHeader title="Projects" actions={actions} />
       </View>
 
+      {showNewProjectCard ? (
+        <View
+          style={{ paddingHorizontal: 20, paddingTop: 16 }}
+          onLayout={onHeaderLayout}
+        >
+          <Pressable
+            testID="btn-new-project"
+            onPress={onPressNewProject}
+            accessibilityRole="button"
+            accessibilityLabel="Add new project"
+          >
+            <View className="flex-row items-center gap-3 rounded-lg border border-dashed border-border bg-surface-muted p-4">
+              <View className="h-10 w-10 items-center justify-center rounded-md border border-border bg-card">
+                <Plus size={20} color={colors.foreground} />
+              </View>
+              <View className="flex-1">
+                <Text className="text-title-sm text-foreground">
+                  Add new project
+                </Text>
+                <Text className="text-sm text-muted-foreground">
+                  Create a destination for field notes and reports.
+                </Text>
+              </View>
+            </View>
+          </Pressable>
+        </View>
+      ) : null}
+
       {isLoading ? (
         <ProjectListSkeleton />
       ) : (
         <FlatList
           data={projects}
-          keyExtractor={(item) => item.id}
+          keyExtractor={(item) => item.slug}
           contentContainerStyle={{
             paddingHorizontal: 20,
             paddingTop: 16,
@@ -82,32 +128,6 @@ export function ProjectsList({
           updateCellsBatchingPeriod={50}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-          }
-          ListHeaderComponent={
-            projects.length === 0 ? null : (
-              <View style={{ marginBottom: 12 }}>
-                <Pressable
-                  testID="btn-new-project"
-                  onPress={onPressNewProject}
-                  accessibilityRole="button"
-                  accessibilityLabel="Add new project"
-                >
-                  <View className="flex-row items-center gap-3 rounded-lg border border-dashed border-border bg-surface-muted p-4">
-                    <View className="h-10 w-10 items-center justify-center rounded-md border border-border bg-card">
-                      <Plus size={20} color={colors.foreground} />
-                    </View>
-                    <View className="flex-1">
-                      <Text className="text-title-sm text-foreground">
-                        Add new project
-                      </Text>
-                      <Text className="text-sm text-muted-foreground">
-                        Create a destination for field notes and reports.
-                      </Text>
-                    </View>
-                  </View>
-                </Pressable>
-              </View>
-            )
           }
           ListEmptyComponent={
             <EmptyState
@@ -128,12 +148,13 @@ export function ProjectsList({
             />
           }
           renderItem={({ item, index }) => (
-            <View>
+            <View onLayout={index === 0 ? onFirstRowLayout : undefined}>
               <Pressable
-                testID={`project-row-${index}`}
+                testID={`project-row-${item.slug}`}
+                onPressIn={() => onPressInProject?.(item.slug)}
                 onPress={() => onPressProject(item.slug)}
               >
-                <Card variant="emphasis" className="gap-3">
+                <Card className="gap-3">
                   <View className="flex-row items-center justify-between">
                     <Text
                       className="min-w-0 flex-1 text-title-sm text-foreground"

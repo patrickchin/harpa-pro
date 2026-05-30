@@ -2,6 +2,21 @@
 
 End-to-end mobile flows run via [Maestro](https://maestro.mobile.dev/).
 
+## App id (`MAESTRO_APP_ID`)
+
+Every flow declares `appId: ${MAESTRO_APP_ID}` instead of a literal
+bundle id. Export the right value before running Maestro:
+
+```bash
+export MAESTRO_APP_ID=com.harpa.pro          # prod / EAS production
+# export MAESTRO_APP_ID=com.harpa.pro.dev    # dev variant (when bumped)
+```
+
+The CI lint job (`scripts/check-maestro-appid.sh`) fails if any
+`.maestro/**/*.yaml` reintroduces a literal `com.harpa.pro`. See
+`docs/bugs/README.md` (R-Maestro1) for the regression that motivated
+the env-var rule.
+
 ## `core-end-to-end.yaml` (canonical full journey)
 
 The P3-exit-gate full-journey flow. Walks every currently-shipped
@@ -22,8 +37,8 @@ user-visible feature on the real `(auth)` + `(app)` routes:
 ```bash
 docker compose up -d
 pnpm --filter @harpa/mobile start --dev-client     # real API mode
-xcrun simctl privacy booted grant microphone com.harpa.pro
-xcrun simctl privacy booted grant camera     com.harpa.pro
+xcrun simctl privacy booted grant microphone "$MAESTRO_APP_ID"
+xcrun simctl privacy booted grant camera     "$MAESTRO_APP_ID"
 ```
 
 **Run:**
@@ -43,79 +58,113 @@ fixture mode). The seeded invite target (`+15550100200`, Bob Editor)
 is reseeded by `reset-db.sh` so the invite step always finds a real
 user. The flow deletes the project at the end.
 
-## `p3-action-buttons.yaml` (legacy, kept for diff context)
+## `regression-journey.yaml` (overnight full-coverage journey)
 
-Predecessor to `core-end-to-end.yaml`. Covers fewer features
-(sign-in only, no invite role filter, no edit-manually). Kept around
-until `core-end-to-end.yaml` is wired into CI; safe to delete after.
+Orchestrator flow that runs every regression module in
+`.maestro/modules/` sequentially against a single signed-up alice
+(no `reset-db.sh` needed — it signs up alice + bob fresh, then
+deletes the project + signs out at the end). Covers:
 
-**Setup (one-time):**
+1. Auth (sign-up alice + sign-out + sign-in)
+2. Sign-up bob
+3. Projects CRUD
+4. Members invite / permissions / viewer / remove
+5. Reports CRUD
+6. Text notes (add/delete)
+7. Voice notes: upload, transcript, summary, playback entry point,
+    delete
+8. Photo notes: attachment sheet, camera upload, generated report
+    photo strip, preview, delete
+9. Finalized photo report: saved-report photo strip and preview
+10. Generate + finalize: add note, generate/update report, finalize,
+   unfinalize, re-finalize
+11. Report Debug: prompt, report notes, LLM response, non-empty state
+12. Project delete teardown
+13. Account view + edit-cancel + edit-save
+14. Usage screen render
+15. Profile identity + nav
+16. Sign out
+
+**Pre-condition:** docker compose stack up, Metro running, app built
+with `EXPO_PUBLIC_USE_FIXTURES=true`. Microphone and camera privacy
+grants are required for modules 09 and 10a.
+
+On Android devices/emulators, reverse every local port used by the
+app and upload pipeline before running. Photo signed URLs point at
+the local MinIO endpoint, so `9000` is required in addition to Metro
+and the API:
 
 ```bash
-# 1. Bring up the local fixture backend (Postgres + Hono API, port 8787).
-docker compose up -d
-
-# 2. Start Metro for the dev-client iOS build (real API mode — no
-#    EXPO_PUBLIC_USE_FIXTURES so the app talks to docker compose).
-pnpm --filter @harpa/mobile start --dev-client
+adb reverse tcp:8081 tcp:8081
+adb reverse tcp:8787 tcp:8787
+adb reverse tcp:9000 tcp:9000
 ```
 
 **Run:**
 
 ```bash
-maestro test .maestro/p3-action-buttons.yaml
+docker compose down -v && docker compose up -d   # fresh DB
+maestro test .maestro/regression-journey.yaml
 ```
 
-For long batched runs, wrap with `gtimeout` to recover from
-occasional XCUITest driver hangs (see "Known infra quirks"):
+Dev-deployment target:
 
-```bash
-# coreutils provides gtimeout (brew install coreutils)
-for i in $(seq 1 N); do
-  gtimeout 240 maestro test .maestro/p3-action-buttons.yaml || {
-    # kill any leftover xcodebuild test-without-building drivers
-    for PID in $(ps aux | grep maestro-driver-ios | grep -v grep | awk '{print $2}'); do
-      kill "$PID" 2>/dev/null
-    done
-    sleep 5
-  }
-done
-```
+- After the local backend run passes, run the same coverage against
+  `https://harpa-pro-api-dev.fly.dev`.
+- Dev auth uses the local CLI auth broker
+  (`scripts/dev-e2e-auth-broker.cjs`) with allowlisted test accounts
+  (`TEST_ACCOUNT_PHONES` + `TEST_ACCOUNT_PASSWORD` in `.env.local` or
+  Doppler `dev`), not fake OTP. Do not pass the password as a Maestro
+  env var or `inputText`: Maestro debug logs evaluated values.
+- On Android, run Metro with `--host lan --port 8082`, reverse
+  `8082`, and use the local API/R2 proxies:
+  `scripts/dev-e2e-api-proxy.cjs` on `8788`,
+  `scripts/dev-e2e-r2-proxy.cjs` on `8791`, plus the auth broker on
+  `8790`.
+- Dev runs must create unique per-run data and clean it up in-flow;
+  they must not truncate the shared dev database.
+- `mo journey --target dev` is the intended future entry point once
+  the orchestrator grows target support.
+- 2026-05-28 status: local Android regression is green with modules
+  09, 10a, 11, 12, and 13 enabled. A clean dev-deployment Android run
+  of `regression-journey-dev.yaml` also passed end to end after the
+  dynamic dev-project recovery fix: modules 01, 01b, 02, 03, 04, 05,
+  06, 07, 08, 09, 10a, 11, 12, 13, 14, 15, 16, and sign-out. R2
+  upload/download traffic went through the local R2 proxy.
+- 2026-05-28 follow-up: module 10b adds finalized saved-report photo
+  coverage. It creates a photo-bearing report, finalizes it, asserts
+  `report-photos`, opens the saved-report image preview by fileId,
+  then deletes the finalized report before the rest of the journey.
+  Focused local Android passed 01/02/10b, the full local regression
+  passed with 10b included, and a clean full dev-deployment Android
+  run passed against `harpa-pro-api-dev` (`gitCommit=9db5b51`).
+- The CI Maestro testID gate is path-filtered on both `apps/mobile/**`
+  and `.maestro/**` so E2E-only flow changes still validate referenced
+  mobile testIDs.
 
-Stability seen locally: ~8/10 runs PASS, 0/10 logic failures,
-~2/10 infra hangs (recovered by killing the leftover xcodebuild
-driver process).
+Modules 14/15/16 navigate to Profile / Account / Usage screens.
 
-The flow uses fake OTP `000000` (via `TWILIO_VERIFY_FAKE_CODE` in
-fixture mode) and creates a fresh project per run that it deletes at
-the end via the real `dialog-action-0` confirm button.
+## `p3-15-upload.yaml` (legacy — superseded by module 10a)
 
-**Coverage:**
+Same photo pipeline as `modules/10a-photo-notes-draft.yaml` but
+signs in as seeded `+15550100100` (requires `reset-db.sh`).
+Kept for one-off iteration on the camera path; safe to delete once
+module 10a is green in CI.
 
-- `(auth)`: `input-phone`, `btn-login-send-code`, `input-otp`, `btn-verify-code`
-- onboarding (conditional): `input-onboarding-name`, `input-onboarding-company`, `btn-onboarding-submit`
-- projects list: `btn-new-project`
-- project new: `input-project-name`, `input-client-name`, `input-project-address`, `btn-submit-project`
-- project home: `btn-copy-client`, `btn-copy-address`, `btn-open-reports`, `btn-open-members`, `btn-edit-project`, `btn-back`
-- members: `btn-add-member`, `input-invite-phone`, `btn-invite-submit`
-- project edit: `input-edit-project-name`, `btn-save-project`, `btn-delete-project`, `dialog-action-0` (confirm delete)
-- reports list: `btn-new-report`, `report-row-draft-0`
-- generate report: `btn-tab-report`, `btn-tab-edit`, `btn-tab-notes`, `btn-attachment`
+## `p3-15-voice-record.yaml` (legacy — superseded by module 09)
 
-**Known gaps (intentionally skipped due to iOS XCTest/RN quirks):**
+Same voice pipeline as `modules/09-voice-notes.yaml` but signs in as
+seeded `+15550100100`. Kept for one-off iteration; safe to delete
+once module 09 is green on CI.
 
-- `input-note` typing: iOS XCTest cannot reliably enter text into RN
-  multiline `TextInput` even with hardware keyboard disabled. The
-  `btn-add-note` add-note path is therefore covered by unit tests
-  (`screens/generate-notes.test.tsx`) rather than Maestro.
-- `dialog-action-1` (Cancel) on `AppDialogSheet`: tap reports
-  COMPLETED but the action's `onPress` doesn't fire — likely an RN
-  `Modal` + XCTest interaction quirk. Covered by
-  `screens/project-edit.test.tsx` unit tests.
-- `btn-record-start` (voice): audio permission popup blocks
-  unattended runs.
+## `p3-14a-usage-limits-card.yaml`, `p3-14b-usage-limit-dialog.yaml`, `p3-14c-near-limit-toast.yaml`
 
-**iOS sim quirks discovered:**
+Phase-3 usage-limits flows. 14a runs today against seeded alice;
+14b/14c are placeholders awaiting a `--seed-at-limit` reset script
+and a near-limit toast UI respectively. See each flow's header for
+status.
+
+## iOS sim quirks
 
 - `clearState: true` does NOT clear iOS Keychain. Must also pass
   `clearKeychain: true` to force-logout (JWT lives in
@@ -126,16 +175,33 @@ the end via the real `dialog-action-0` confirm button.
 - Software keyboard occludes bottom buttons; use `hideKeyboard` +
   `scrollUntilVisible` before tapping `btn-save-project` /
   `btn-delete-project`.
+- `inputText` into RN multiline `TextInput` is unreliable on iOS
+  XCTest — modules 08 + 11 do this for `input-note` and pass, but if
+  this becomes a flake source, move the assertion into unit tests
+  (`screens/generate-notes.test.tsx`).
 
-**Known infra quirks:**
+## Known infra quirks
 
-- XCUITest driver occasionally returns
-  `kAXErrorInvalidUIElement` and Maestro hangs retrying. Mitigation:
-  wrap `maestro test` in `gtimeout 240s` and `kill` the leftover
-  `maestro-driver-ios` xcodebuild process between attempts.
-  Roughly 1-in-5 frequency on iPhone 17 Pro / iOS 26.5 sim.
+- XCUITest driver occasionally returns `kAXErrorInvalidUIElement`
+  and Maestro hangs retrying. Mitigation: wrap `maestro test` in
+  `gtimeout 240s` and `kill` the leftover `maestro-driver-ios`
+  xcodebuild process between attempts. Roughly 1-in-5 frequency on
+  iPhone 17 Pro / iOS 26.5 sim.
+
+```bash
+# coreutils provides gtimeout (brew install coreutils)
+for i in $(seq 1 N); do
+  gtimeout 600 maestro test .maestro/regression-journey.yaml || {
+    for PID in $(ps aux | grep maestro-driver-ios | grep -v grep | awk '{print $2}'); do
+      kill "$PID" 2>/dev/null
+    done
+    sleep 5
+  }
+done
+```
 
 ## `tmp-p3-smoke/`
 
 Throwaway visual smoke flow targeting the `(dev)` gallery from
-P3.1–P3.5. Will be deleted at P3.13.
+P3.1–P3.5. The `(dev)` routes were removed in PR #57 — this folder
+will be deleted at the next cleanup pass.

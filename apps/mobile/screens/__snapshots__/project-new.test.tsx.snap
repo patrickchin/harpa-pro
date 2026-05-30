@@ -112,8 +112,7 @@ exports[`ProjectNew > matches snapshot at default props 1`] = `
                   "shadowRadius": 8,
                 },
                 {
-                  "paddingBottom": 0,
-                  "paddingTop": 0,
+                  "lineHeight": 16,
                   "textAlignVertical": "center",
                 },
                 undefined,
@@ -150,8 +149,7 @@ exports[`ProjectNew > matches snapshot at default props 1`] = `
                   "shadowRadius": 8,
                 },
                 {
-                  "paddingBottom": 0,
-                  "paddingTop": 0,
+                  "lineHeight": 16,
                   "textAlignVertical": "center",
                 },
                 undefined,
@@ -188,8 +186,7 @@ exports[`ProjectNew > matches snapshot at default props 1`] = `
                   "shadowRadius": 8,
                 },
                 {
-                  "paddingBottom": 0,
-                  "paddingTop": 0,
+                  "lineHeight": 16,
                   "textAlignVertical": "center",
                 },
                 undefined,
@@ -218,7 +215,7 @@ exports[`ProjectNew > matches snapshot at default props 1`] = `
               undefined,
             ]
           }
-          testID="btn-submit-project"
+          testID="btn-save-project"
         >
           <rn-Text
             className="text-accent-foreground font-semibold text-lg"

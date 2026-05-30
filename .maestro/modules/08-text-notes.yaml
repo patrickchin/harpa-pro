@@ -1,0 +1,99 @@
+appId: ${MAESTRO_APP_ID}
+name: "08 — Text notes: add and delete"
+tags:
+  - regression
+  - notes
+---
+# Module 08 — Text notes lifecycle
+#
+# Covers:
+#   - open reports list → new report (lands on generate screen)
+#   - add a text note via input-note + btn-add-note
+#   - note appears in note timeline (note-row-*)
+#   - delete the note via btn-note-options-* → btn-note-options-delete
+#   - note disappears from timeline
+#   - delete the draft to leave a clean state for module 11
+#
+# Pre-condition: alice on project home; no reports.
+# Post-condition: alice on project home; no reports.
+
+# --- Open reports list and create a new report ----------------------------
+- tapOn:
+    id: "btn-open-reports"
+- extendedWaitUntil:
+    visible:
+      id: "btn-new-report"
+    timeout: 10000
+- tapOn:
+    id: "btn-new-report"
+# The mutation auto-navigates to /generate on success. If the push
+# races against the refetch we may stay on the list, in which case
+# we tap into the freshly created draft.
+- extendedWaitUntil:
+    visible:
+      id: "report-row-.*"
+    timeout: 15000
+- tapOn:
+    id: "report-row-.*"
+- extendedWaitUntil:
+    visible:
+      id: "input-note"
+    timeout: 15000
+
+# --- Add a text note -------------------------------------------------------
+- tapOn:
+    id: "input-note"
+- inputText: "Foundation inspection complete. No cracks observed."
+- hideKeyboard
+- tapOn:
+    id: "btn-add-note"
+
+# --- Confirm note appears ---------------------------------------------------
+- extendedWaitUntil:
+    visible:
+      id: "note-row-.*"
+    timeout: 10000
+
+# --- Open note options menu and delete the note ----------------------------
+- tapOn:
+    id: "btn-note-options-.*"
+- extendedWaitUntil:
+    visible:
+      id: "btn-note-options-delete"
+    timeout: 8000
+- tapOn:
+    id: "btn-note-options-delete"
+# Tapping delete advances the NoteOptionsSheet to its confirm-delete
+# stage. Confirm to actually remove the note from the timeline.
+- extendedWaitUntil:
+    visible:
+      id: "btn-note-options-confirm-delete"
+    timeout: 8000
+- tapOn:
+    id: "btn-note-options-confirm-delete"
+
+# --- Confirm note is gone from timeline ------------------------------------
+- extendedWaitUntil:
+    notVisible:
+      id: "note-row-.*"
+    timeout: 8000
+
+# --- Clean up: delete the draft and return to project home -----------------
+- tapOn:
+    id: "btn-draft-options"
+- extendedWaitUntil:
+    visible:
+      id: "dialog-action-confirm-delete-draft"
+    timeout: 8000
+- tapOn:
+    id: "dialog-action-confirm-delete-draft"
+- extendedWaitUntil:
+    visible:
+      id: "btn-new-report"
+    timeout: 15000
+- tapOn:
+    id: "btn-back"
+- extendedWaitUntil:
+    visible:
+      id: "btn-project-edit"
+    timeout: 10000

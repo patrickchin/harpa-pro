@@ -1,0 +1,38 @@
+name: main-gate
+
+# Pre-merge gate for PRs targeting `main` (production).
+#
+# Runs the curl journey suite against the live dev deployment to prove
+# the contract still works end-to-end before promoting `dev → main`.
+# Required check on `main`'s branch protection — see
+# docs/v4/arch-cicd-and-migrations.md.
+#
+# Why dev, not a fresh ephemeral env: journeys exercise live AI providers,
+# Twilio Verify (bypassed via test accounts), and R2 — all configured on
+# the dev Fly app. Spinning a parallel env per PR would 10x our infra
+# surface for one check.
+
+on:
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: main-gate-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  journeys:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true # voice samples for core/extended journeys
+
+      - name: Run journeys against dev
+        # Order: stress (~10s, no AI) → core (~3min, live AI) → extended (~5min, live AI).
+        # Tests the dev deployment as-is; assumes `dev` is the merge candidate.
+        env:
+          PASSWORD: ${{ secrets.TEST_ACCOUNT_PASSWORD_DEV }}
+        run: bash scripts/journeys/all.sh dev

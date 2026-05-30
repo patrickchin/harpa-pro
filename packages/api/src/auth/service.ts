@@ -46,6 +46,38 @@ export async function startOtp(
   return { verificationId };
 }
 
+/**
+ * Upsert the user for `phone`, create a session row, and mint a JWT.
+ * Shared by the OTP flow and the test-account password bypass — both
+ * are equivalent once the caller has been authenticated by some other
+ * means (Twilio OTP / shared password / future SSO).
+ */
+export async function issueSessionForPhone(
+  db: Db,
+  phone: string,
+): Promise<VerifyOtpResult> {
+  const existing = await db.select().from(schema.users).where(eq(schema.users.phone, phone)).limit(1);
+  const user =
+    existing[0] ??
+    (await db
+      .insert(schema.users)
+      .values({ id: newId('usr'), phone })
+      .returning()
+      .then((r) => r[0]));
+  if (!user) throw new Error('user upsert failed');
+
+  const expiresAt = new Date(Date.now() + SESSION_TTL_MS);
+  const sessionRows = await db
+    .insert(schema.sessions)
+    .values({ id: newId('ses'), userId: user.id, expiresAt })
+    .returning({ id: schema.sessions.id });
+  const session = sessionRows[0];
+  if (!session) throw new Error('session insert failed');
+
+  const token = await signJwt({ sub: user.id, sid: session.id });
+  return { token, user: toPublicUser(user) };
+}
+
 export async function verifyOtp(
   twilio: TwilioClient,
   db: Db,
@@ -56,17 +88,6 @@ export async function verifyOtp(
   if (!approved) {
     throw new OtpVerificationError('otp_invalid', 'Invalid verification code.');
   }
-
-  // Upsert user by phone.
-  const existing = await db.select().from(schema.users).where(eq(schema.users.phone, phone)).limit(1);
-  const user =
-    existing[0] ??
-    (await db
-      .insert(schema.users)
-      .values({ id: newId('usr'), phone })
-      .returning()
-      .then((r) => r[0]));
-  if (!user) throw new Error('user upsert failed');
 
   // Mark verification consumed (most recent unconsumed row for this phone).
   await db.execute(sql`
@@ -79,20 +100,7 @@ export async function verifyOtp(
     )
   `);
 
-  // Create session row.
-  const expiresAt = new Date(Date.now() + SESSION_TTL_MS);
-  const sessionRows = await db
-    .insert(schema.sessions)
-    .values({ id: newId('ses'), userId: user.id, expiresAt })
-    .returning({ id: schema.sessions.id });
-  const session = sessionRows[0];
-  if (!session) throw new Error('session insert failed');
-
-  const token = await signJwt({ sub: user.id, sid: session.id });
-  return {
-    token,
-    user: toPublicUser(user),
-  };
+  return issueSessionForPhone(db, phone);
 }
 
 export async function logout(db: Db, sessionId: string): Promise<void> {
@@ -139,15 +147,52 @@ export interface UsageMonth {
   voiceNotes: number;
 }
 
+export interface UsageTokenMonth {
+  month: string;
+  inputTokens: number;
+  outputTokens: number;
+  cachedTokens: number;
+  /** Sum of transcribe audio seconds for the month. */
+  inputSeconds: number;
+  calls: number;
+}
+
+export interface UsageByModelRow {
+  vendor: string;
+  model: string;
+  operation: 'chat' | 'transcribe' | 'generate_report';
+  calls: number;
+  inputTokens: number;
+  outputTokens: number;
+  cachedTokens: number;
+  /** Sum of transcribe audio seconds. 0 for non-transcribe rows. */
+  inputSeconds: number;
+}
+
 export interface UsageSummary {
   months: UsageMonth[];
-  totals: { reports: number; voiceNotes: number };
+  totals: {
+    reports: number;
+    voiceNotes: number;
+    inputTokens: number;
+    outputTokens: number;
+    cachedTokens: number;
+    inputSeconds: number;
+    calls: number;
+  };
+  usageTokens: UsageTokenMonth[];
+  usageByModel: UsageByModelRow[];
 }
 
 /**
- * Per-month counts of reports authored + voice notes recorded by the
- * caller. All filters use `author_id = userId` so the RLS path on
- * `app.reports` / `app.notes` is what excludes other actors.
+ * Per-month counts (reports + voice notes) AND per-month LLM token
+ * totals + a per-(vendor,model,operation) breakdown across the full
+ * window. All queries pin on `author_id = userId` / `user_id = userId`;
+ * the RLS path on each table (`app.reports`, `app.notes`,
+ * `app.llm_usage_events`) excludes other actors as defence-in-depth.
+ *
+ * Only `status='ok'` usage events count toward token totals — error
+ * rows are recorded for postmortem visibility but shouldn't bill.
  */
 export async function fetchUsage(db: Db, userId: string): Promise<UsageSummary> {
   const reportsRes = await db.execute<{ month: string; count: string }>(sql`
@@ -164,6 +209,51 @@ export async function fetchUsage(db: Db, userId: string): Promise<UsageSummary> 
     GROUP BY month
     ORDER BY month
   `);
+  const tokensRes = await db.execute<{
+    month: string;
+    input_tokens: string;
+    output_tokens: string;
+    cached_tokens: string;
+    input_seconds: string;
+    calls: string;
+  }>(sql`
+    SELECT
+      to_char(created_at, 'YYYY-MM') AS month,
+      coalesce(sum(input_tokens), 0)::text             AS input_tokens,
+      coalesce(sum(output_tokens), 0)::text            AS output_tokens,
+      coalesce(sum(cached_tokens), 0)::text            AS cached_tokens,
+      coalesce(sum(input_seconds), 0)::text            AS input_seconds,
+      count(*)::text                                   AS calls
+    FROM app.llm_usage_events
+    WHERE user_id = ${userId} AND status = 'ok'
+    GROUP BY month
+    ORDER BY month
+  `);
+  const byModelRes = await db.execute<{
+    vendor: string;
+    model: string;
+    operation: 'chat' | 'transcribe' | 'generate_report';
+    calls: string;
+    input_tokens: string;
+    output_tokens: string;
+    cached_tokens: string;
+    input_seconds: string;
+  }>(sql`
+    SELECT
+      vendor,
+      model,
+      operation,
+      count(*)::text                                   AS calls,
+      coalesce(sum(input_tokens), 0)::text             AS input_tokens,
+      coalesce(sum(output_tokens), 0)::text            AS output_tokens,
+      coalesce(sum(cached_tokens), 0)::text            AS cached_tokens,
+      coalesce(sum(input_seconds), 0)::text            AS input_seconds
+    FROM app.llm_usage_events
+    WHERE user_id = ${userId} AND status = 'ok'
+    GROUP BY vendor, model, operation
+    ORDER BY vendor, model, operation
+  `);
+
   const monthMap = new Map<string, UsageMonth>();
   for (const r of reportsRes.rows) {
     monthMap.set(r.month, { month: r.month, reports: Number(r.count), voiceNotes: 0 });
@@ -174,11 +264,195 @@ export async function fetchUsage(db: Db, userId: string): Promise<UsageSummary> 
     monthMap.set(r.month, existing);
   }
   const months = Array.from(monthMap.values()).sort((a, b) => a.month.localeCompare(b.month));
-  const totals = months.reduce(
-    (acc, m) => ({ reports: acc.reports + m.reports, voiceNotes: acc.voiceNotes + m.voiceNotes }),
-    { reports: 0, voiceNotes: 0 },
-  );
-  return { months, totals };
+
+  const usageTokens: UsageTokenMonth[] = tokensRes.rows.map((r) => ({
+    month: r.month,
+    inputTokens: Number(r.input_tokens),
+    outputTokens: Number(r.output_tokens),
+    cachedTokens: Number(r.cached_tokens),
+    inputSeconds: roundSeconds(r.input_seconds),
+    calls: Number(r.calls),
+  }));
+  const usageByModel: UsageByModelRow[] = byModelRes.rows.map((r) => ({
+    vendor: r.vendor,
+    model: r.model,
+    operation: r.operation,
+    calls: Number(r.calls),
+    inputTokens: Number(r.input_tokens),
+    outputTokens: Number(r.output_tokens),
+    cachedTokens: Number(r.cached_tokens),
+    inputSeconds: roundSeconds(r.input_seconds),
+  }));
+
+  const totals = {
+    reports: months.reduce((a, m) => a + m.reports, 0),
+    voiceNotes: months.reduce((a, m) => a + m.voiceNotes, 0),
+    inputTokens: usageTokens.reduce((a, m) => a + m.inputTokens, 0),
+    outputTokens: usageTokens.reduce((a, m) => a + m.outputTokens, 0),
+    cachedTokens: usageTokens.reduce((a, m) => a + m.cachedTokens, 0),
+    inputSeconds: roundSeconds(usageTokens.reduce((a, m) => a + m.inputSeconds, 0)),
+    calls: usageTokens.reduce((a, m) => a + m.calls, 0),
+  };
+  return { months, totals, usageTokens, usageByModel };
+}
+
+/** Round seconds to 3dp to match the column scale and avoid noisy floats. */
+function roundSeconds(v: number | string): number {
+  const n = typeof v === 'number' ? v : Number(v);
+  if (!Number.isFinite(n) || n <= 0) return 0;
+  return Math.round(n * 1000) / 1000;
+}
+
+export interface UsageEventRow {
+  id: string;
+  createdAt: string;
+  vendor: string;
+  model: string;
+  operation: 'chat' | 'transcribe' | 'generate_report';
+  inputTokens: number;
+  outputTokens: number;
+  cachedTokens: number;
+  inputSeconds: number | null;
+  latencyMs: number;
+  fixtureMode: 'live' | 'replay' | 'record';
+  status: 'ok' | 'error';
+  projectId: string | null;
+  reportId: string | null;
+}
+
+export interface ListUsageEventsInput {
+  cursor?: string;
+  limit: number;
+  operation?: 'chat' | 'transcribe' | 'generate_report';
+  vendor?: string;
+}
+
+function encodeUsageCursor(createdAt: string, id: string): string {
+  return Buffer.from(`${createdAt}|${id}`, 'utf8').toString('base64url');
+}
+
+function decodeUsageCursor(c: string): { createdAt: string; id: string } {
+  const raw = Buffer.from(c, 'base64url').toString('utf8');
+  const [createdAt, id] = raw.split('|');
+  if (!createdAt || !id) throw new Error('invalid cursor');
+  return { createdAt, id };
+}
+
+/**
+ * Raw events timeline for `/me/usage/events` — newest first.
+ *
+ * Pagination is keyset on `(created_at DESC, id DESC)`. RLS on
+ * `app.llm_usage_events` already restricts SELECT to the caller's own
+ * rows; the `user_id = ${userId}` predicate is defence-in-depth so a
+ * mis-scoped handle still returns nothing.
+ *
+ * `status` is not filtered here (unlike `fetchUsage` which sums
+ * `status='ok'` only) — the events feed surfaces failed calls too so
+ * users can see provider blow-ups in the timeline.
+ */
+export async function listUsageEvents(
+  db: Db,
+  userId: string,
+  input: ListUsageEventsInput,
+): Promise<{ items: UsageEventRow[]; nextCursor: string | null }> {
+  const { cursor, limit, operation, vendor } = input;
+  const overFetch = limit + 1;
+
+  const operationFilter = operation
+    ? sql`AND operation = ${operation}::app.llm_operation`
+    : sql``;
+  const vendorFilter = vendor ? sql`AND vendor = ${vendor}` : sql``;
+
+  let result;
+  if (cursor) {
+    const { createdAt, id } = decodeUsageCursor(cursor);
+    result = await db.execute<{
+      id: string;
+      created_at: string;
+      vendor: string;
+      model: string;
+      operation: 'chat' | 'transcribe' | 'generate_report';
+      input_tokens: string;
+      output_tokens: string;
+      cached_tokens: string;
+      input_seconds: string | null;
+      latency_ms: string;
+      fixture_mode: 'live' | 'replay' | 'record';
+      status: 'ok' | 'error';
+      project_id: string | null;
+      report_id: string | null;
+    }>(sql`
+      SELECT id, created_at, vendor, model, operation,
+             input_tokens::text, output_tokens::text, cached_tokens::text,
+             input_seconds::text AS input_seconds,
+             latency_ms::text, fixture_mode, status,
+             project_id, report_id
+      FROM app.llm_usage_events
+      WHERE user_id = ${userId}
+        AND (created_at, id) < (${createdAt}::timestamptz, ${id})
+        ${operationFilter}
+        ${vendorFilter}
+      ORDER BY created_at DESC, id DESC
+      LIMIT ${overFetch}
+    `);
+  } else {
+    result = await db.execute<{
+      id: string;
+      created_at: string;
+      vendor: string;
+      model: string;
+      operation: 'chat' | 'transcribe' | 'generate_report';
+      input_tokens: string;
+      output_tokens: string;
+      cached_tokens: string;
+      input_seconds: string | null;
+      latency_ms: string;
+      fixture_mode: 'live' | 'replay' | 'record';
+      status: 'ok' | 'error';
+      project_id: string | null;
+      report_id: string | null;
+    }>(sql`
+      SELECT id, created_at, vendor, model, operation,
+             input_tokens::text, output_tokens::text, cached_tokens::text,
+             input_seconds::text AS input_seconds,
+             latency_ms::text, fixture_mode, status,
+             project_id, report_id
+      FROM app.llm_usage_events
+      WHERE user_id = ${userId}
+        ${operationFilter}
+        ${vendorFilter}
+      ORDER BY created_at DESC, id DESC
+      LIMIT ${overFetch}
+    `);
+  }
+
+  const rows = result.rows;
+  const hasMore = rows.length > limit;
+  const slice = hasMore ? rows.slice(0, limit) : rows;
+  const last = slice[slice.length - 1];
+  const items: UsageEventRow[] = slice.map((r) => ({
+    id: r.id,
+    createdAt: new Date(r.created_at).toISOString(),
+    vendor: r.vendor,
+    model: r.model,
+    operation: r.operation,
+    inputTokens: Number(r.input_tokens),
+    outputTokens: Number(r.output_tokens),
+    cachedTokens: Number(r.cached_tokens),
+    inputSeconds: r.input_seconds == null ? null : roundSeconds(r.input_seconds),
+    latencyMs: Number(r.latency_ms),
+    fixtureMode: r.fixture_mode,
+    status: r.status,
+    projectId: r.project_id,
+    reportId: r.report_id,
+  }));
+  return {
+    items,
+    nextCursor:
+      hasMore && last
+        ? encodeUsageCursor(new Date(last.created_at).toISOString(), last.id)
+        : null,
+  };
 }
 
 export async function sessionIsValid(db: Db, sessionId: string): Promise<boolean> {

@@ -1,0 +1,28 @@
+name: e2e-maestro-testid-gate
+
+# Mobile/E2E check. Skips when neither mobile code nor Maestro flows changed.
+
+on:
+  pull_request:
+  push:
+    branches: [dev, main]
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      mobile: ${{ steps.paths.outputs.mobile }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: paths
+        uses: ./.github/actions/changed-paths
+
+  testid-gate:
+    needs: changes
+    if: needs.changes.outputs.mobile == 'true' || github.event_name == 'push'
+    name: Maestro testID gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check Maestro testIDs exist in mobile source
+        run: bash scripts/check-maestro-testids.sh

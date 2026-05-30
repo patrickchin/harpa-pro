@@ -22,8 +22,7 @@ exports[`Input > renders a bare input 1`] = `
           "shadowRadius": 8,
         },
         {
-          "paddingBottom": 0,
-          "paddingTop": 0,
+          "lineHeight": 16,
           "textAlignVertical": "center",
         },
         undefined,
@@ -60,8 +59,7 @@ exports[`Input > renders label + hint 1`] = `
           "shadowRadius": 8,
         },
         {
-          "paddingBottom": 0,
-          "paddingTop": 0,
+          "lineHeight": 16,
           "textAlignVertical": "center",
         },
         undefined,
@@ -102,8 +100,7 @@ exports[`Input > renders the error tone 1`] = `
           "shadowRadius": 8,
         },
         {
-          "paddingBottom": 0,
-          "paddingTop": 0,
+          "lineHeight": 16,
           "textAlignVertical": "center",
         },
         undefined,
@@ -145,8 +142,7 @@ exports[`Input > renders the read-only state 1`] = `
           "shadowRadius": 0,
         },
         {
-          "paddingBottom": 0,
-          "paddingTop": 0,
+          "lineHeight": 16,
           "textAlignVertical": "center",
         },
         undefined,

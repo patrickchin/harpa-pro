@@ -5,6 +5,8 @@
     "noUncheckedIndexedAccess": true,
     "module": "ESNext",
     "moduleResolution": "Bundler",
+    "jsx": "react-jsx",
+    "jsxImportSource": "react",
     "paths": {
       "@/*": ["./*"]
     }

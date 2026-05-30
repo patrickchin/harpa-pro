@@ -9,38 +9,69 @@
  * mutations. Text notes round-trip through `useCreateNoteMutation` +
  * `useReportNotesQuery`; the local list is optimistic and gets
  * replaced when the server responds. The camera button pushes the
- * capture modal via the session-registry handoff; uploads themselves
- * land in P4 (we surface a clear "upload pipeline pending" message
- * when the user returns with photos rather than swallowing them
- * silently — see Pitfall 13).
+ * capture modal via the session-registry handoff; on return, captured
+ * URIs are enqueued through the upload pipeline (presign → R2 PUT →
+ * registerFile → createNote) and the notes query is invalidated so
+ * image notes appear in the timeline immediately.
  */
 import { useCallback, useMemo, useState } from 'react';
 import {
   useFocusEffect,
   useLocalSearchParams,
   useRouter,
+  type Href,
 } from 'expo-router';
+import { useQueryClient } from '@tanstack/react-query';
 
 import { GenerateNotes } from '@/screens/generate-notes';
 import {
   useProjectQuery,
+  useProjectMembersQuery,
   useReportQuery,
   useReportNotesQuery,
-  useCreateNoteMutation,
   useGenerateReportMutation,
   useRegenerateReportMutation,
   useFinalizeReportMutation,
+  useDeleteReportMutation,
+  useReportDebugQuery,
 } from '@/lib/api/hooks';
-import type { NoteEntry } from '@/lib/note-entry';
-import { uuid } from '@/lib/uuid';
-import { env } from '@/lib/env';
+import { useDeveloperFlags } from '@/lib/config/dev-flags';
+import {
+  useOptimisticCreateNote,
+  useOptimisticDeleteNote,
+  useOptimisticUpdateNote,
+  isOptimisticNoteId,
+} from '@/lib/api/optimistic';
+import { invalidateAfterFileUpload } from '@/lib/api/invalidation';
+import { useReportBodyAutosave } from '@/lib/reports/use-report-body-autosave';
+import type { NoteEntry } from '@/lib/notes/note-entry';
+import { attachmentFromSavedFile } from '@/lib/notes/attachments';
+import { env } from '@/lib/config/env';
 import type { GeneratedSiteReport } from '@harpa/report-core';
+import { reports } from '@harpa/api-contract';
 import { SAMPLE_GENERATED_REPORT } from '@/lib/dev-fixtures/sample-report';
+import { reportBodyToGeneratedReport } from '@/lib/reports/report-body-adapter';
+import { useAutoRegenerate } from '@/features/generate/useAutoRegenerate';
 import { safeBack } from '@/lib/nav/safe-back';
+import { UsageLimitDialog } from '@/components/account/UsageLimitDialog';
+import { usageLimitFromError, type UsageLimitDetails } from '@/lib/api/usage-limit-error';
+import { dismissOrReplaceTo } from '@/lib/nav/dismiss-or-replace';
 import {
   consumeCameraSession,
   createCameraSession,
-} from '@/lib/camera-session-registry';
+  findCommittedSessionsForReport,
+} from '@/lib/camera/camera-session-registry';
+import { useCameraUploads } from '@/lib/camera/use-camera-uploads';
+import { pickAndEnqueueGalleryImages } from '@/lib/camera/pick-and-enqueue-gallery-images';
+import { AppHeaderActions } from '@/components/ui/AppHeaderActions';
+
+interface ApiNoteFile {
+  id: string;
+  fileId: string;
+  thumbnailFileId: string | null;
+  position: number;
+  caption: string | null;
+}
 
 interface ApiNote {
   id: string;
@@ -48,17 +79,55 @@ interface ApiNote {
   kind: 'text' | 'voice' | 'image' | 'document';
   body: string | null;
   transcript: string | null;
+  title?: string | null;
+  summary?: string | null;
+  fileId?: string | null;
+  thumbnailFileId?: string | null;
+  files?: ApiNoteFile[];
+  durationSec?: number | null;
   createdAt: string;
 }
 
 function noteToEntry(n: ApiNote): NoteEntry {
-  const text = n.body ?? n.transcript ?? '';
+  const isImage = n.kind === 'image';
+  const isVoice = n.kind === 'voice';
+  // For voice rows the `summary` is the canonical short-form body
+  // shown next to the play button; `transcript` is the longer raw
+  // STT output rendered in the expander. We split them onto NoteEntry
+  // so `VoiceNoteCard` doesn't have to re-fetch the row.
+  const text = isImage
+    ? (n.body ?? '')
+    : isVoice
+      ? (n.summary ?? n.body ?? n.transcript ?? '')
+      : (n.body ?? n.transcript ?? '');
+  const imageFiles = isImage ? (n.files ?? []).slice().sort((a, b) => a.position - b.position) : [];
+  const primaryImage = imageFiles[0];
   return {
     id: n.id,
     authorId: n.authorId,
     text,
     addedAt: Date.parse(n.createdAt) || Date.now(),
-    source: n.kind === 'voice' ? 'voice' : 'text',
+    source: isVoice ? 'voice' : isImage ? 'image' : 'text',
+    // Rows whose id was minted by `optimisticNoteId` haven't been
+    // confirmed by the server yet — surface the pending state so the
+    // timeline can show a spinner / disable destructive actions.
+    isPending: isOptimisticNoteId(n.id),
+    ...(isVoice && {
+      fileId: n.fileId ?? null,
+      transcript: n.transcript,
+      title: n.title ?? null,
+      summary: n.summary ?? null,
+      durationSec: n.durationSec ?? null,
+    }),
+    ...(isImage && {
+      // `PhotoNoteCard` single-tile path reads `fileId`/`thumbnailFileId`
+      // directly; populate from the first joined file (preferred) or
+      // the legacy column (back-compat for unmigrated rows).
+      fileId: primaryImage?.fileId ?? n.fileId ?? null,
+      thumbnailFileId:
+        primaryImage?.thumbnailFileId ?? n.thumbnailFileId ?? null,
+      attachments: imageFiles.map((f, idx) => attachmentFromSavedFile(f, idx)),
+    }),
   };
 }
 
@@ -89,73 +158,102 @@ export default function GenerateReportRoute() {
   const reportRow = report.data as
     | {
         id?: string;
-        body?: GeneratedSiteReport | null;
+        body?: reports.ReportBody | null;
         status?: 'draft' | 'finalized';
         notesSinceLastGeneration?: number;
-        meta?: { title?: string | null };
+        needsRegeneration?: boolean;
       }
     | undefined;
   const reportId = reportRow?.id ?? null;
 
-  // Server-backed notes timeline. Optimistic local additions are kept
-  // alongside until the query refetches so the UI stays responsive
-  // without waiting for the round-trip.
+  const membersQuery = useProjectMembersQuery(
+    { params: { project: slug } },
+    { enabled: slug.length > 0 },
+  );
+  const memberNames = useMemo<ReadonlyMap<string, string>>(() => {
+    const items = (membersQuery.data as
+      | { items?: ReadonlyArray<{ userId: string; displayName: string | null; phone?: string }> }
+      | undefined)?.items;
+    const map = new Map<string, string>();
+    if (!items) return map;
+    for (const m of items) {
+      const name = m.displayName?.trim() || m.phone || 'Unknown';
+      map.set(m.userId, name);
+    }
+    return map;
+  }, [membersQuery.data]);
+
+  // Server-backed notes timeline. Optimistic create/update/delete go
+  // through the React Query cache (`lib/api/optimistic.ts`) — the
+  // timeline renders straight from `notesQuery.data`, no parallel
+  // local state needed.
   const notesQuery = useReportNotesQuery(
     { params: { report: reportId ?? '' } },
     { enabled: reportId !== null },
   );
-  const createNote = useCreateNoteMutation();
-  const [pendingNotes, setPendingNotes] = useState<NoteEntry[]>([]);
+  const createNote = useOptimisticCreateNote();
+  const deleteNote = useOptimisticDeleteNote();
+  const updateNote = useOptimisticUpdateNote();
 
-  const serverNotes = useMemo<NoteEntry[]>(() => {
+  const visibleNotes = useMemo<NoteEntry[]>(() => {
     const items = (notesQuery.data as { items?: ApiNote[] } | undefined)?.items;
     if (!items) return [];
-    return items.map(noteToEntry);
+    return items.map(noteToEntry).sort((a, b) => a.addedAt - b.addedAt);
   }, [notesQuery.data]);
 
-  // Drop pending entries that the server has now confirmed (by id).
-  const serverIds = useMemo(
-    () => new Set(serverNotes.map((n) => n.id).filter(Boolean)),
-    [serverNotes],
+  const handleDeleteNote = useCallback(
+    (note: NoteEntry, _sourceIndex: number) => {
+      const noteIdValue = note.id;
+      if (!noteIdValue || !reportId) return;
+      // Optimistic-only rows (never persisted) are removed by the cache
+      // patch the moment we call `mutate`; the request will 404 and
+      // rollback would restore it. Filter those out by checking the
+      // optimistic-id prefix.
+      if (isOptimisticNoteId(noteIdValue)) return;
+      deleteNote.mutate(
+        { params: { note: noteIdValue }, reportId },
+        {
+          onError: () => {
+            setUploadError('Could not delete the note. Please try again.');
+          },
+        },
+      );
+    },
+    [deleteNote, reportId],
   );
-  const visibleNotes = useMemo<NoteEntry[]>(() => {
-    const liveOptimistic = pendingNotes.filter(
-      (n) => !n.id || !serverIds.has(n.id),
-    );
-    return [...serverNotes, ...liveOptimistic].sort(
-      (a, b) => a.addedAt - b.addedAt,
-    );
-  }, [serverNotes, pendingNotes, serverIds]);
+
+  const handleUpdateNote = useCallback(
+    (note: NoteEntry, _sourceIndex: number, nextBody: string) => {
+      const noteIdValue = note.id;
+      if (!noteIdValue || !reportId) return;
+      if (isOptimisticNoteId(noteIdValue)) return;
+      updateNote.mutate(
+        {
+          params: { note: noteIdValue },
+          body: { body: nextBody },
+          reportId,
+        },
+        {
+          onError: () => {
+            setUploadError('Could not update the note. Please try again.');
+          },
+        },
+      );
+    },
+    [updateNote, reportId],
+  );
 
   const handleAddTextNote = useCallback(
     (body: string) => {
       if (!reportId) return;
-      const optimistic: NoteEntry = {
-        id: uuid(),
-        text: body,
-        addedAt: Date.now(),
-        isPending: true,
-        source: 'text',
-      };
-      setPendingNotes((prev) => [...prev, optimistic]);
       createNote.mutate(
         {
           params: { report: reportId },
           body: { kind: 'text', body },
         },
         {
-          onSuccess: (created) => {
-            const realId = (created as { id?: string } | undefined)?.id;
-            // Stamp the server id onto the optimistic entry so the
-            // dedup pass above evicts it once the query refetches.
-            setPendingNotes((prev) =>
-              prev.map((n) =>
-                n === optimistic ? { ...n, id: realId ?? n.id, isPending: false } : n,
-              ),
-            );
-          },
           onError: () => {
-            setPendingNotes((prev) => prev.filter((n) => n !== optimistic));
+            setUploadError('Could not save the note. Please try again.');
           },
         },
       );
@@ -163,7 +261,9 @@ export default function GenerateReportRoute() {
     [reportId, createNote],
   );
 
-  const serverBody = (reportRow?.body ?? null) as GeneratedSiteReport | null;
+  const serverBody: GeneratedSiteReport | null = reportRow?.body
+    ? reportBodyToGeneratedReport(reportRow.body)
+    : null;
 
   const fallbackReport: GeneratedSiteReport | null = env.EXPO_PUBLIC_USE_FIXTURES
     ? SAMPLE_GENERATED_REPORT
@@ -172,15 +272,104 @@ export default function GenerateReportRoute() {
   const [localReport, setLocalReport] = useState<GeneratedSiteReport | null>(
     null,
   );
+  // `userDirty` flips true only when the user edits a field in the
+  // Edit tab — see `handleEditReport` below. Programmatic
+  // setLocalReport calls (e.g. seeding from a regenerate response) do
+  // NOT flip it true. The autosave hook listens to this flag instead
+  // of trying to JSON-diff the local report against the server body
+  // (the inverse adapter is lossy, so the diff was always non-zero
+  // and produced a stuck "Saving…" label + a PATCH-spam loop).
+  const [userDirty, setUserDirty] = useState(false);
   const currentReport = localReport ?? serverBody ?? fallbackReport;
+
+  const handleEditReport = useCallback((next: GeneratedSiteReport) => {
+    setLocalReport(next);
+    setUserDirty(true);
+  }, []);
+
+  const handleAutoSaved = useCallback(() => {
+    setUserDirty(false);
+  }, []);
 
   const [generationError, setGenerationError] = useState<string | null>(null);
   const [finalizeError, setFinalizeError] = useState<string | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [usageLimitHit, setUsageLimitHit] = useState<UsageLimitDetails | null>(null);
+  const [lastGeneration, setLastGeneration] = useState<
+    import('@/features/generate/GenerateReportProvider').GenerationDebug | null
+  >(null);
+
+  // Hydrate `lastGeneration` from the persisted `last_generation` DB
+  // column when the Debug tab is enabled, so opening a previously
+  // generated report (cold load, no in-session generate) still shows
+  // the system prompt, user prompt, and raw response. The persisted
+  // payload is overridden by the in-memory state above as soon as the
+  // user (re)generates in this session.
+  const { showGenerateDebugTab } = useDeveloperFlags();
+  const debugQuery = useReportDebugQuery(
+    {
+      params: {
+        project: slug,
+        number: reportNumber ?? 0,
+      },
+    },
+    {
+      enabled:
+        showGenerateDebugTab && slug.length > 0 && reportNumber !== null,
+    },
+  );
+  const persistedLastGeneration = useMemo<
+    import('@/features/generate/GenerateReportProvider').GenerationDebug | null
+  >(() => {
+    const persisted = (debugQuery.data as
+      | {
+          lastGeneration?: {
+            systemPrompt?: string;
+            userPrompt?: string;
+            response?: string;
+            model?: string;
+            vendor?: string;
+          } | null;
+        }
+      | undefined)?.lastGeneration;
+    if (!persisted) return null;
+    return {
+      systemPrompt: persisted.systemPrompt ?? '',
+      userPrompt: persisted.userPrompt ?? '',
+      rawText: persisted.response ?? '',
+      model: persisted.model ?? '',
+      vendor: persisted.vendor ?? '',
+    };
+  }, [debugQuery.data]);
+  const effectiveLastGeneration = lastGeneration ?? persistedLastGeneration;
 
   const generateMutation = useGenerateReportMutation();
   const regenerateMutation = useRegenerateReportMutation();
   const finalizeMutation = useFinalizeReportMutation();
+
+  // Stable JSON view of the server-side body was removed — the
+  // autosave hook is now driven by `userDirty`, set by
+  // `handleEditReport` only when the user types in the Edit tab. The
+  // hook no longer needs (and never had a way to reliably compute) a
+  // server-shape baseline; the inverse adapter is lossy.
+
+  // Pause autosave while a generate/regenerate is in flight. That
+  // endpoint writes `body` server-side; a concurrent PATCH would race
+  // and could either clobber the AI output or get clobbered itself
+  // depending on timing. React Query already queues mutations sharing
+  // a key, but generate/regenerate are different hooks so we gate
+  // explicitly.
+  const isGenerating =
+    generateMutation.isPending || regenerateMutation.isPending;
+
+  const autosave = useReportBodyAutosave({
+    slug,
+    number: reportNumber,
+    report: localReport,
+    dirty: userDirty,
+    onSaved: handleAutoSaved,
+    paused: isGenerating || finalizeMutation.isPending,
+  });
 
   const handleRegenerate = useCallback(() => {
     if (!slug || reportNumber === null) return;
@@ -190,16 +379,54 @@ export default function GenerateReportRoute() {
       { params: { project: slug, number: reportNumber }, body: {} },
       {
         onSuccess: (data) => {
-          const next = (data as { report?: { body?: GeneratedSiteReport | null } } | undefined)
-            ?.report?.body ?? null;
-          if (next) setLocalReport(next);
+          const payload = data as
+            | {
+                report?: { body?: reports.ReportBody | null };
+                debug?: {
+                  systemPrompt?: string;
+                  userPrompt?: string;
+                  rawText?: string;
+                  model?: string;
+                  vendor?: string;
+                };
+              }
+            | undefined;
+          const nextBody = payload?.report?.body ?? null;
+          if (nextBody) {
+            setLocalReport(reportBodyToGeneratedReport(nextBody));
+          }
+          if (payload?.debug) {
+            setLastGeneration({
+              systemPrompt: payload.debug.systemPrompt ?? '',
+              userPrompt: payload.debug.userPrompt ?? '',
+              rawText: payload.debug.rawText ?? '',
+              model: payload.debug.model ?? '',
+              vendor: payload.debug.vendor ?? '',
+            });
+          }
         },
         onError: (err) => {
+          const limit = usageLimitFromError(err);
+          if (limit) {
+            setUsageLimitHit(limit);
+            return;
+          }
           setGenerationError(err.message ?? 'Generation failed.');
         },
       },
     );
   }, [slug, reportNumber, currentReport, generateMutation, regenerateMutation]);
+
+  // Auto-regenerate when the server signals notes have changed since the
+  // last generation. The hook fires exactly once per dirty transition and
+  // naturally queues a follow-up if a note arrives mid-flight.
+  useAutoRegenerate({
+    needsRegeneration: reportRow?.needsRegeneration ?? false,
+    status: (reportRow?.status as 'draft' | 'finalized') ?? 'draft',
+    isGenerating,
+    generationError,
+    onRegenerate: handleRegenerate,
+  });
 
   const handleFinalize = useCallback(() => {
     if (!slug || reportNumber === null) return;
@@ -209,7 +436,7 @@ export default function GenerateReportRoute() {
       {
         onSuccess: () => {
           router.replace(
-            `/(app)/projects/${slug}/reports/${reportNumber}` as never,
+            `/(app)/projects/${slug}/reports/${reportNumber}` as Href,
           );
         },
         onError: (err) => {
@@ -219,55 +446,133 @@ export default function GenerateReportRoute() {
     );
   }, [slug, reportNumber, finalizeMutation, router]);
 
-  // Camera handoff. Push the capture modal with a session id; on focus
-  // return, drain the URIs. R2 upload + createNote-with-fileId land
-  // with the upload pipeline (P4) — until then we tell the user
-  // honestly that the photos couldn't be attached yet (Pitfall 13).
-  const [cameraSessionId, setCameraSessionId] = useState<string | null>(null);
-  const handleCameraCapture = useCallback(() => {
+  // Delete-draft handler. Routes back to the reports list on success so
+  // the deleted draft isn't in nav history (would 404 on swipe-back).
+  // Error path keeps the dialog open via `isDeletingDraft` staying true
+  // until the mutation settles; a dedicated error dialog ports in P4.
+  const deleteReportMutation = useDeleteReportMutation();
+  const handleDeleteDraft = useCallback(() => {
     if (!slug || reportNumber === null) return;
+    deleteReportMutation.mutate(
+      { params: { project: slug, number: reportNumber } },
+      {
+        onSuccess: () => {
+          // Reports list is already on the stack — pop to it instead of
+          // replacing the top, which would leave two adjacent reports-list
+          // frames. See docs/v4/arch-mobile-navigation.md §4.
+          dismissOrReplaceTo(router, `/(app)/projects/${slug}/reports` as Href);
+        },
+      },
+    );
+  }, [slug, reportNumber, deleteReportMutation, router]);
+
+  // Camera handoff. Push the capture modal with a session id; on focus
+  // return, find any committed sessions for THIS report (the registry
+  // is module-level so it survives the (app) tree remounting — root
+  // uses <Slot/>, so navigating into (camera) unmounts the app tree
+  // and loses local React state). Then enqueue captured URIs through
+  // the upload pipeline (presign → R2 PUT → registerFile → createNote)
+  // and invalidate the notes query so image notes appear in the
+  // timeline immediately.
+  const { enqueueCameraUris } = useCameraUploads();
+  const qc = useQueryClient();
+  const handleCameraCapture = useCallback(() => {
+    if (!slug || reportNumber === null || !reportId) return;
     const sessionId = createCameraSession({
       returnTo: `/(app)/projects/${slug}/reports/${reportNumber}/generate`,
       context: { reportId, projectSlug: slug, reportNumber },
     });
-    setCameraSessionId(sessionId);
     router.push({
       pathname: '/(camera)/capture',
       params: { sessionId },
-    } as never);
+    } as Href);
   }, [slug, reportNumber, reportId, router]);
 
   const handlePickAttachment = useCallback(
-    (_category: 'image' | 'document') => {
-      setUploadError(
-        'File uploads are coming soon. Add a text note for now.',
-      );
+    async (category: 'image' | 'document') => {
+      // Document UI is deferred (plan-camera-upload-pipeline.md). The
+      // attachment sheet only surfaces image + camera actions, so this
+      // branch is unreachable from real UI — kept as a defensive no-op
+      // to keep the prop signature aligned with the provider contract.
+      if (category !== 'image') return;
+      if (!reportId) {
+        setUploadError('Open a saved report before adding photos.');
+        return;
+      }
+      try {
+        const outcome = await pickAndEnqueueGalleryImages({
+          reportId,
+          projectId: slug,
+          enqueueCameraUris,
+        });
+        switch (outcome.kind) {
+          case 'permission-denied':
+            setUploadError(
+              'Photo library access was denied. Enable it in Settings to attach images.',
+            );
+            return;
+          case 'cancelled':
+          case 'empty':
+            return;
+          case 'enqueued': {
+            const failed = outcome.results.filter(
+              (r) => r.status === 'rejected',
+            ).length;
+            if (failed > 0) {
+              setUploadError(
+                `${failed} of ${outcome.total} photo${outcome.total === 1 ? '' : 's'} failed to upload. Open the report queue to retry.`,
+              );
+            }
+            void invalidateAfterFileUpload(qc, { reportId });
+            return;
+          }
+        }
+      } catch (err) {
+        setUploadError(
+          err instanceof Error
+            ? `Could not pick photos: ${err.message}`
+            : 'Could not pick photos.',
+        );
+      }
     },
-    [],
+    [reportId, slug, enqueueCameraUris, qc],
   );
 
   useFocusEffect(
     useCallback(() => {
-      if (!cameraSessionId) return;
-      const uris = consumeCameraSession(cameraSessionId);
-      setCameraSessionId(null);
-      if (uris && uris.length > 0) {
-        setUploadError(
-          `Photo capture works, but uploading the ${uris.length} photo${
-            uris.length === 1 ? '' : 's'
-          } needs the storage pipeline (coming soon).`,
-        );
+      if (!reportId) return;
+      const sessionIds = findCommittedSessionsForReport(reportId);
+      if (sessionIds.length === 0) return;
+      const allUris: string[] = [];
+      for (const sid of sessionIds) {
+        const uris = consumeCameraSession(sid);
+        if (uris && uris.length > 0) allUris.push(...uris);
       }
-    }, [cameraSessionId]),
+      if (allUris.length === 0) return;
+      void enqueueCameraUris(allUris, { reportId, projectId: slug }).then((results) => {
+        const failed = results.filter((r) => r.status === 'rejected').length;
+        if (failed > 0) {
+          setUploadError(
+            `${failed} of ${allUris.length} photo${allUris.length === 1 ? '' : 's'} failed to upload. Open the report queue to retry.`,
+          );
+        }
+        // Invalidate the notes/report queries so uploaded image notes
+        // appear in the timeline immediately after the pipeline completes.
+        invalidateAfterFileUpload(qc, { reportId });
+      });
+    }, [reportId, slug, enqueueCameraUris, qc]),
   );
-
-  const isGenerating =
-    generateMutation.isPending || regenerateMutation.isPending;
 
   const canWrite =
     projectQuery.data?.myRole === 'owner' || projectQuery.data?.myRole === 'editor';
 
-  const reportTitleField = reportRow?.meta?.title;
+  const reportTitleField = reportRow?.body?.meta?.title;
+
+  // Combine autosave + generation errors into the existing surface so
+  // both bubble through `generationError`. Generation errors trump
+  // autosave (the user just tried to regenerate; show them that).
+  const combinedError =
+    generationError ?? autosave.error ?? uploadError;
 
   // Surface upload-pipeline errors via the existing dialog. Wired
   // through the screen's `fileUploadError` UI surface — we mirror it
@@ -275,26 +580,46 @@ export default function GenerateReportRoute() {
   // attachment handler above and clearing it from inside the dialog
   // (AppDialogSheet handles dismissal).
   return (
-    <GenerateNotes
-      project={slug}
-      reportNumber={reportNumber}
-      notes={visibleNotes}
-      notesLoading={report.isLoading || notesQuery.isLoading}
-      onAddTextNote={handleAddTextNote}
-      reportTitle={reportTitleField ?? null}
-      canWrite={canWrite}
-      onBack={() => safeBack(router, `/(app)/projects/${slug}/reports`)}
-      report={currentReport}
-      onSetReport={setLocalReport}
-      isGeneratingReport={isGenerating}
-      generationError={generationError ?? uploadError}
-      onRegenerate={handleRegenerate}
-      notesSinceLastGeneration={reportRow?.notesSinceLastGeneration ?? 0}
-      isFinalizing={finalizeMutation.isPending}
-      finalizeError={finalizeError}
-      onFinalize={handleFinalize}
-      onCameraCapture={handleCameraCapture}
-      onPickAttachment={handlePickAttachment}
-    />
+    <>
+      <GenerateNotes
+        project={slug}
+        reportNumber={reportNumber}
+        reportId={reportId}
+        notes={visibleNotes}
+        memberNames={memberNames}
+        notesLoading={report.isLoading || notesQuery.isLoading}
+        onAddTextNote={handleAddTextNote}
+        onDeleteNote={handleDeleteNote}
+        onUpdateNote={handleUpdateNote}
+        reportTitle={reportTitleField ?? null}
+        canWrite={canWrite}
+        onBack={() => safeBack(router, `/(app)/projects/${slug}/reports`)}
+        report={currentReport}
+        onSetReport={handleEditReport}
+        isGeneratingReport={isGenerating}
+        generationError={combinedError}
+        lastGeneration={effectiveLastGeneration}
+        onRegenerate={handleRegenerate}
+        notesSinceLastGeneration={reportRow?.notesSinceLastGeneration ?? 0}
+        needsRegeneration={reportRow?.needsRegeneration ?? false}
+        isAutoSaving={autosave.isAutoSaving || userDirty}
+        lastSavedAt={autosave.lastSavedAt}
+        isFinalizing={finalizeMutation.isPending}
+        finalizeError={finalizeError}
+        onFinalize={handleFinalize}
+        onCameraCapture={handleCameraCapture}
+        onPickAttachment={handlePickAttachment}
+        onDeleteDraft={
+          reportRow?.status === 'finalized' ? undefined : handleDeleteDraft
+        }
+        isDeletingDraft={deleteReportMutation.isPending}
+        actions={<AppHeaderActions />}
+      />
+      <UsageLimitDialog
+        visible={usageLimitHit !== null}
+        details={usageLimitHit}
+        onClose={() => setUsageLimitHit(null)}
+      />
+    </>
   );
 }

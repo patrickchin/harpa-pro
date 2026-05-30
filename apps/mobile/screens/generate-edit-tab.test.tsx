@@ -7,13 +7,69 @@
  *  - autosave status row → "Saving…" / "Saved" / blank
  *  - onChange propagates immutable patches via the helpers
  *  - "Edit manually" on the empty Report tab lazy-seeds an empty
- *    report via `onSetReport(createEmptyReport())` then switches to Edit
+ *    report in the provider's local state (NOT via onSetReport, so
+ *    the route's dirty flag is not triggered by tab navigation)
  *
  * Tests use `initialTab="edit"` so the Edit pane is mounted + visible
  * on first render. Pitfall R4: tests live in `screens/`, not under `app/`.
  */
 import { describe, expect, it, vi } from 'vitest';
 import TestRenderer, { act } from 'react-test-renderer';
+
+// See `generate-notes.test.tsx` for rationale — stub the voice +
+// audio hooks the underlying `GenerateReportProvider` always calls so
+// these Edit-tab tests don't need to wrap renders in
+// `<QueueProvider>` + `<AudioPlaybackProvider>`. Real wiring is
+// covered by the dedicated integration tests for those hooks.
+vi.mock('@/features/voice/useInlineRecorder', () => ({
+  useInlineRecorder: () => ({
+    isRecording: false,
+    snapshot: { status: 'idle', durationMs: 0, amplitude: 0 },
+    historyBars: [],
+    permission: 'unknown',
+    error: null,
+    start: vi.fn(async () => {}),
+    stopAndCapture: vi.fn(async () => null),
+    cancel: vi.fn(async () => {}),
+    dismissError: vi.fn(),
+  }),
+}));
+vi.mock('@/features/voice/useVoiceNotePipeline', () => ({
+  useVoiceNotePipeline: () => ({
+    state: {
+      step: 'idle',
+      failedStep: null,
+      error: null,
+      note: null,
+      fileId: null,
+      capture: null,
+    },
+    capture: vi.fn(async () => null),
+    retry: vi.fn(async () => null),
+    reset: vi.fn(),
+  }),
+}));
+vi.mock('@/lib/audio/AudioPlaybackProvider', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/audio/AudioPlaybackProvider')>();
+  return {
+    ...actual,
+    useAudioPlayback: () => ({
+      play: vi.fn(async () => {}),
+      pause: vi.fn(),
+      stop: vi.fn(),
+      seek: vi.fn(async () => {}),
+      status: { uri: null, playing: false, positionSec: 0, durationSec: 0 },
+    }),
+  };
+});
+
+vi.mock('@/lib/api/hooks', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/api/hooks')>();
+  return {
+    ...actual,
+    useMeQuery: () => ({ data: { user: { id: 'usr_test' } }, isLoading: false, isError: false }),
+  };
+});
 
 import { GenerateNotes, type GenerateNotesProps } from './generate-notes';
 import { SAMPLE_GENERATED_REPORT } from '@/lib/dev-fixtures/sample-report';
@@ -155,11 +211,12 @@ describe('GenerateNotes — Edit tab', () => {
     expect(next.report.workers).toBe(SAMPLE_GENERATED_REPORT.report.workers);
   });
 
-  it('"Edit manually" on the empty Report tab lazy-seeds a blank report via onSetReport', () => {
+  it('"Edit manually" on the empty Report tab lazy-seeds a blank report without calling onSetReport', () => {
     const onSetReport = vi.fn<(next: GeneratedSiteReport) => void>();
     const tree = render(
       <GenerateNotes
         {...baseProps}
+        report={null}
         initialTab="report"
         onSetReport={onSetReport}
       />,
@@ -168,10 +225,11 @@ describe('GenerateNotes — Edit tab', () => {
     act(() => {
       (editManually.props.onPress as () => void)();
     });
-    expect(onSetReport).toHaveBeenCalledTimes(1);
-    const seeded = onSetReport.mock.calls[0]![0];
-    expect(seeded.report.meta.title).toBe('');
-    expect(seeded.report.meta.reportType).toBe('site_visit');
-    expect(seeded.report.materials).toEqual([]);
+    // The provider now seeds the empty report in its own local state so the
+    // route's dirty flag is NOT triggered by tab navigation.
+    expect(onSetReport).not.toHaveBeenCalled();
+    // The Edit pane should now be visible with a seeded empty form.
+    const editPane = tree.root.findByProps({ testID: 'edit-tab-form' });
+    expect(editPane).toBeTruthy();
   });
 });

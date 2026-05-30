@@ -11,12 +11,12 @@
  * don't collide across renders.
  */
 import { type ReactNode } from 'react';
-import { Modal, Pressable, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Modal, Platform, Pressable, Text, View } from 'react-native';
 import { X } from 'lucide-react-native';
 
 import { Button } from './Button';
 import { InlineNotice, type InlineNoticeTone } from './InlineNotice';
-import type { AppDialogActionVariant } from '@/lib/app-dialog-copy';
+import type { AppDialogActionVariant } from '@/lib/dialogs/app-dialog-copy';
 import { colors } from '@/lib/design-tokens/colors';
 
 export interface AppDialogAction {
@@ -71,11 +71,31 @@ export function AppDialogSheet({
           }
         }}
       >
-        <Pressable
-          onPress={(e) => e.stopPropagation()}
-          className="bg-background pb-10"
-          testID="dialog-sheet"
+        {/*
+          Bottom-anchored sheet: when a child TextInput is focused the
+          keyboard would otherwise overlap the sheet. KeyboardAvoidingView
+          lifts the sheet above the keyboard so the focused input and the
+          action buttons stay visible in the safe area. `behavior="padding"`
+          matches the screen-level convention used elsewhere in the app.
+        */}
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
+          {/*
+            Inner sheet must claim the touch responder so a tap on
+            empty space inside the sheet doesn't bubble to the backdrop
+            Pressable and dismiss the dialog. Using a plain View with
+            `onStartShouldSetResponder` (instead of a Pressable) is
+            critical: a parent Pressable wrapping a ScrollView captures
+            pan gestures during press tracking, which prevents the
+            ScrollView from scrolling (e.g. the transcript view).
+          */}
+          <View
+            onStartShouldSetResponder={() => true}
+            onResponderRelease={() => {}}
+            className="bg-background pb-10"
+            testID="dialog-sheet"
+          >
           <View className="flex-row items-center justify-between border-b border-border px-5 py-4">
             <Text className="text-xl font-bold text-foreground">{title}</Text>
             <Pressable onPress={onClose} hitSlop={12} disabled={!canDismiss}>
@@ -111,7 +131,8 @@ export function AppDialogSheet({
               ))}
             </View>
           </View>
-        </Pressable>
+        </View>
+        </KeyboardAvoidingView>
       </Pressable>
     </Modal>
   );

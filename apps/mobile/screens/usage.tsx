@@ -1,13 +1,9 @@
 /**
  * Usage screen body — props-only, no API coupling.
  *
- * Ported from `../haru3-reports/apps/mobile/app/usage.tsx` on branch
- * `dev`. v3 used Supabase token-usage rollups (input/output/cached
- * tokens, per-event breakdown, per-model aggregation); v4's
- * `/me/usage` returns `{ months: [{ month, reports, voiceNotes }],
- * totals: { reports, voiceNotes } }` — so the per-event timeline and
- * per-model breakdown are deferred to P4. The pricing reference card
- * is ported as static copy (unchanged from canonical).
+ * Wires the v4 `/me/usage` aggregates (monthly rows + per-(vendor,
+ * model,operation) breakdown + totals) and the `/me/usage/events`
+ * raw event feed into a single read-only screen.
  *
  * Monthly rows are expandable in-place. The optional `chart` slot
  * lets the route pass a real `UsageBarChart` once we have token-level
@@ -37,6 +33,7 @@ import { ScreenHeader } from '@/components/primitives/ScreenHeader';
 import { SectionHeader } from '@/components/primitives/SectionHeader';
 import { StatTile } from '@/components/primitives/StatTile';
 import { InlineNotice } from '@/components/primitives/InlineNotice';
+import { UsageLimitsCard, type LimitBucket } from '@/components/account/UsageLimitsCard';
 import { colors } from '@/lib/design-tokens/colors';
 
 export interface UsageMonthlyRow {
@@ -44,16 +41,67 @@ export interface UsageMonthlyRow {
   month: string;
   reportsCount: number;
   voiceNotesCount: number;
+  /** Optional per-month token totals (set when API returns them). */
+  inputTokens?: number;
+  outputTokens?: number;
+  cachedTokens?: number;
+  /** Optional per-month transcribed audio seconds. */
+  inputSeconds?: number;
+  calls?: number;
 }
 
 export interface UsageTotals {
   reports: number;
   voiceNotes: number;
+  inputTokens?: number;
+  outputTokens?: number;
+  cachedTokens?: number;
+  /** Total transcribed audio seconds across the window. */
+  inputSeconds?: number;
+  calls?: number;
+}
+
+export interface UsageByModelRow {
+  vendor: string;
+  model: string;
+  operation: 'chat' | 'transcribe' | 'generate_report';
+  calls: number;
+  inputTokens: number;
+  outputTokens: number;
+  cachedTokens: number;
+  /** Audio seconds for transcribe rows; 0 otherwise. */
+  inputSeconds?: number;
+}
+
+/**
+ * Single LLM call event for the per-event timeline. Mirrors the
+ * `/me/usage/events` row shape, trimmed to the fields the UI shows.
+ * `inputSeconds` is non-null only for transcribe rows.
+ */
+export interface RecentUsageEvent {
+  id: string;
+  createdAt: string;
+  vendor: string;
+  model: string;
+  operation: 'chat' | 'transcribe' | 'generate_report';
+  inputTokens: number;
+  outputTokens: number;
+  cachedTokens: number;
+  inputSeconds: number | null;
+  status: 'ok' | 'error';
 }
 
 export interface UsageScreenProps {
   history: ReadonlyArray<UsageMonthlyRow> | null;
   totals: UsageTotals;
+  /** Optional per-(vendor,model,operation) breakdown card. */
+  byModel?: ReadonlyArray<UsageByModelRow>;
+  /**
+   * Optional newest-first feed of individual LLM calls
+   * (`/me/usage/events`). Renders as a "Recent Activity" card when
+   * non-empty. Includes `status='error'` rows so failed calls show up.
+   */
+  recentEvents?: ReadonlyArray<RecentUsageEvent>;
   isLoading: boolean;
   refreshing: boolean;
   onRefresh: () => void;
@@ -61,6 +109,13 @@ export interface UsageScreenProps {
   /** Optional chart slot (e.g. `<UsageBarChart … />`). Renders only
    * when at least 2 months are present. Set null/undefined to hide. */
   chart?: ReactNode;
+  /** Optional plan + per-bucket monthly limits surfaced by the
+   * `/me/limits` endpoint. When provided, a UsageLimitsCard renders
+   * above the All-Time Summary. */
+  limits?: {
+    plan: 'free' | 'pro' | 'enterprise';
+    buckets: ReadonlyArray<LimitBucket>;
+  };
 }
 
 function parseMonth(iso: string): Date {
@@ -71,6 +126,18 @@ function parseMonth(iso: string): Date {
 function formatMonth(iso: string) {
   const d = parseMonth(iso);
   return d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+}
+
+/** Render seconds as `Hh Mm`, `Mm Ss`, or `Ns` for short clips. */
+function formatSeconds(total: number): string {
+  if (!Number.isFinite(total) || total <= 0) return '0s';
+  const s = Math.round(total);
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
+  if (h > 0) return `${h}h ${m}m`;
+  if (m > 0) return `${m}m ${sec}s`;
+  return `${sec}s`;
 }
 
 function MonthCard({
@@ -120,11 +187,53 @@ function MonthCard({
               className="min-w-[46%]"
             />
           </View>
-          {/* TODO(P4): per-generation event list + per-model breakdown
-              once the v4 API exposes token-level usage. */}
         </View>
       )}
     </Card>
+  );
+}
+
+function formatEventTime(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+function RecentEventRow({ event }: { event: RecentUsageEvent }) {
+  const isTranscribe = event.operation === 'transcribe';
+  const isError = event.status === 'error';
+  const right = isTranscribe
+    ? formatSeconds(event.inputSeconds ?? 0)
+    : `${event.inputTokens + event.outputTokens}`;
+  const rightLabel = isTranscribe ? 'audio' : 'tokens';
+  return (
+    <View
+      className="flex-row items-center justify-between"
+      testID={`usage-event-${event.id}`}
+    >
+      <View className="flex-1 gap-0.5 pr-3">
+        <Text className="text-sm font-medium text-foreground" numberOfLines={1}>
+          {event.model}
+        </Text>
+        <Text className="text-xs text-muted-foreground" numberOfLines={1}>
+          {event.vendor} · {event.operation} · {formatEventTime(event.createdAt)}
+          {isError ? ' · failed' : ''}
+        </Text>
+      </View>
+      <View className="items-end">
+        <Text
+          className={`text-sm ${isError ? 'text-destructive' : 'text-foreground'}`}
+        >
+          {right}
+        </Text>
+        <Text className="text-xs text-muted-foreground">{rightLabel}</Text>
+      </View>
+    </View>
   );
 }
 
@@ -162,11 +271,14 @@ function PricingRow({
 export function Usage({
   history,
   totals,
+  byModel,
+  recentEvents,
   isLoading,
   refreshing,
   onRefresh,
   onBack,
   chart,
+  limits,
 }: UsageScreenProps) {
   const [expandedMonth, setExpandedMonth] = useState<string | null>(null);
 
@@ -204,6 +316,13 @@ export function Usage({
                 <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
               }
             >
+              {/* Plan & limits (per-account monthly caps). Renders
+                  before the All-Time Summary so users see what they
+                  have left at a glance. */}
+              {limits ? (
+                <UsageLimitsCard plan={limits.plan} buckets={limits.buckets} />
+              ) : null}
+
               {/* All-time summary */}
               <SectionHeader
                 title="All-Time Summary"
@@ -222,7 +341,79 @@ export function Usage({
                   compact
                   className="min-w-[46%]"
                 />
+                {(totals.calls ?? 0) > 0 && (
+                  <>
+                    <StatTile
+                      value={totals.calls ?? 0}
+                      label="AI Calls"
+                      compact
+                      className="min-w-[46%]"
+                    />
+                    <StatTile
+                      value={(totals.inputTokens ?? 0) + (totals.outputTokens ?? 0)}
+                      label="Tokens"
+                      compact
+                      className="min-w-[46%]"
+                    />
+                  </>
+                )}
+                {(totals.inputSeconds ?? 0) > 0 && (
+                  <StatTile
+                    value={formatSeconds(totals.inputSeconds ?? 0)}
+                    label="Audio transcribed"
+                    compact
+                    className="min-w-[46%]"
+                  />
+                )}
               </View>
+
+              {byModel && byModel.length > 0 && (
+                <>
+                  <SectionHeader title="Per-model Usage" />
+                  <Card className="gap-3" testID="usage-by-model">
+                    {byModel.map((row) => (
+                      <View
+                        key={`${row.vendor}-${row.model}-${row.operation}`}
+                        className="flex-row items-center justify-between"
+                        testID={`usage-by-model-${row.vendor}-${row.model}-${row.operation}`}
+                      >
+                        <View className="flex-1 gap-0.5">
+                          <Text className="text-sm font-medium text-foreground">{row.model}</Text>
+                          <Text className="text-xs text-muted-foreground">
+                            {row.vendor} · {row.operation}
+                          </Text>
+                        </View>
+                        <View className="flex-row gap-4">
+                          <View className="items-end">
+                            <Text className="text-sm text-foreground">{row.calls}</Text>
+                            <Text className="text-xs text-muted-foreground">calls</Text>
+                          </View>
+                          <View className="items-end">
+                            <Text className="text-sm text-foreground">
+                              {row.inputTokens + row.outputTokens}
+                            </Text>
+                            <Text className="text-xs text-muted-foreground">tokens</Text>
+                          </View>
+                        </View>
+                      </View>
+                    ))}
+                  </Card>
+                </>
+              )}
+
+              {recentEvents && recentEvents.length > 0 && (
+                <>
+                  <SectionHeader
+                    title="Recent Activity"
+                    subtitle="Latest LLM calls (newest first)"
+                  />
+                  <Card className="gap-3" testID="usage-recent-events">
+                    {recentEvents.map((e) => (
+                      <RecentEventRow key={e.id} event={e} />
+                    ))}
+                  </Card>
+                </>
+              )}
 
               {/* Timeline chart (slot) */}
               {chart && history.length > 1 && (

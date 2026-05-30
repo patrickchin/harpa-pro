@@ -1,9 +1,14 @@
 /**
  * Sign-up phone entry — step 1 of sign-up OTP flow.
  *
- * Wires data layer for the screens/sign-up-phone.tsx body component:
+ * Wires the data layer for the screens/auth-phone.tsx body component
+ * in 'signup' mode:
  *   - useStartOtpMutation (POST /auth/otp/start)
  *   - router.push to verify screen on success
+ *
+ * Phone entry uses a country prefix picker (PhoneNumberInput +
+ * CountryPickerModal). Country defaults to device locale via
+ * getInitialPhoneState. Canonical E.164 is computed on submit.
  *
  * Single async flow per Pitfall 5: mutateAsync then router.push. No setTimeout.
  *
@@ -12,24 +17,28 @@
  * displayName + companyName via the onboarding screen post-OTP,
  * which is gated by the auth session's `needs-onboarding` status.
  */
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useRouter, type Href } from 'expo-router';
-import SignUpPhone from '@/screens/sign-up-phone';
+import AuthPhone from '@/screens/auth-phone';
 import { useStartOtpMutation } from '@/lib/api/hooks';
 import {
+  combineCountryAndNational,
+  getInitialPhoneState,
   isValidPhoneNumber,
-  normalizePhoneNumber,
   INVALID_PHONE_NUMBER_MESSAGE,
-} from '@/lib/phone';
+} from '@/lib/phone/phone';
+import { type Country } from '@/lib/phone/countries';
 
 export default function SignUpPhonePage() {
   const router = useRouter();
   const startOtpMutation = useStartOtpMutation();
 
-  const [phone, setPhone] = useState('');
+  const initial = useMemo(() => getInitialPhoneState(null), []);
+  const [country, setCountry] = useState<Country>(initial.country);
+  const [national, setNational] = useState<string>(initial.national);
   const [error, setError] = useState<string | null>(null);
 
-  const normalizedPhone = normalizePhoneNumber(phone);
+  const normalizedPhone = combineCountryAndNational(country, national);
 
   const handleSubmit = async () => {
     if (!isValidPhoneNumber(normalizedPhone)) {
@@ -41,7 +50,6 @@ export default function SignUpPhonePage() {
 
     try {
       await startOtpMutation.mutateAsync({ body: { phone: normalizedPhone } });
-      // expo-router typed-routes regenerates on next `expo start`; cast safe.
       router.push({
         pathname: '/(auth)/sign-up/verify',
         params: { phone: normalizedPhone },
@@ -57,16 +65,15 @@ export default function SignUpPhonePage() {
     router.replace('/(auth)/sign-in/phone' as Href);
   };
 
-  const handleGoToSignIn = () => {
-    router.replace('/(auth)/sign-in/phone' as Href);
-  };
-
   return (
-    <SignUpPhone
-      phone={phone}
-      onChangePhone={setPhone}
+    <AuthPhone
+      mode="signup"
+      country={country}
+      national={national}
+      onChangeCountry={setCountry}
+      onChangeNational={setNational}
       onBack={handleBack}
-      onGoToSignIn={handleGoToSignIn}
+      onGoToSignIn={handleBack}
       error={error}
       isSubmitting={startOtpMutation.isPending}
       onSubmit={handleSubmit}

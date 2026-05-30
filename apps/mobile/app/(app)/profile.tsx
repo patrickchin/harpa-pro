@@ -14,6 +14,7 @@ import { useAuthSession } from '@/lib/auth/session';
 import { useRefresh } from '@/lib/util/use-refresh';
 import { safeBack } from '@/lib/nav/safe-back';
 import { AppHeaderActions } from '@/components/ui/AppHeaderActions';
+import { clearImageCachesOnSignOut } from '@/lib/files/image-cache';
 
 export default function ProfileRoute() {
   const router = useRouter();
@@ -49,7 +50,10 @@ export default function ProfileRoute() {
       }}
       onClearCache={async () => {
         queryClient.clear();
-        await queryClient.refetchQueries({ type: 'active' });
+        await Promise.all([
+          clearImageCachesOnSignOut(),
+          queryClient.refetchQueries({ type: 'active' }),
+        ]);
       }}
       showDeveloperSection
       actions={<AppHeaderActions />}

@@ -1,0 +1,54 @@
+name: version-bump-dev
+
+# Increment the patch version in root package.json and tag on every
+# merge to dev. Uses [skip ci] to avoid re-triggering other workflows.
+
+on:
+  push:
+    branches: [dev]
+
+jobs:
+  bump:
+    # Skip if the push was the version bump commit itself.
+    if: "!contains(github.event.head_commit.message, '[skip ci]')"
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Bump patch version and tag
+        run: |
+          set -euo pipefail
+
+          # Read current version
+          CURRENT=$(node -p "require('./package.json').version")
+          echo "Current version: $CURRENT"
+
+          # Increment patch
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT"
+          PATCH=$((PATCH + 1))
+          NEW_VERSION="${MAJOR}.${MINOR}.${PATCH}"
+          echo "New version: $NEW_VERSION"
+
+          # Update package.json (portable sed)
+          node -e "
+            const fs = require('fs');
+            const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+            pkg.version = '${NEW_VERSION}';
+            fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
+          "
+
+          # Configure git
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          # Commit and tag
+          git add package.json
+          git commit -m "chore(release): v${NEW_VERSION} [skip ci]"
+          git tag -a "v${NEW_VERSION}" -m "v${NEW_VERSION}"
+
+          # Push commit and tag
+          git push origin dev --follow-tags

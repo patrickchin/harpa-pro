@@ -35,7 +35,7 @@
 ## Exit gate (`p4-exit-gate.yml`)
 
 - [ ] Sentry catches crashes in both API and mobile (test crash).
-- [ ] PDF export works end-to-end on mobile (`expo-print` +
+- [x] PDF export works end-to-end on mobile (`expo-print` +
       `expo-sharing`) and renders inline in `PdfPreviewModal`.
       Visual parity with mobile-old samples reviewed manually
       (no byte-equivalence requirement).
@@ -70,20 +70,20 @@ provisioning plus staging test-crash confirmation.
 - [ ] Commit: `perf(mobile,api): cold-start + list virtualization + PG limits`.
 
 ### P4.3 PDF export pipeline
-- [ ] Mobile PDF export: replace the stub
+- [x] Mobile PDF export: replace the stub
       `apps/mobile/lib/export-report-pdf.ts` (currently throws
       "Saving PDFs lands in P4 …") with real `expo-print` +
       `expo-sharing` wiring. `saveReportPdf`, `exportReportPdf`,
       `shareSavedReportPdf`, `openSavedReportPdf` all work against
       a real finalized report.
-- [ ] Inline PDF rendering on mobile (`react-native-webview` or
+- [x] Inline PDF rendering on mobile (`react-native-webview` or
       `react-native-pdf`) for `PdfPreviewModal` — currently ships
       modal chrome only.
-- [ ] Visual review pass against mobile-old samples (manual diff —
+- [x] Visual review pass against mobile-old samples (manual diff —
       headings, layout, image placement). No byte-equivalence test.
-- [ ] Vitest: export pipeline round-trips without throwing on a
+- [x] Vitest: export pipeline round-trips without throwing on a
       populated finalized report fixture.
-- [ ] Commit: `feat(mobile): PDF export + inline preview wired`.
+- [x] Commit: `feat(mobile): PDF export + inline preview wired`.
 
 ### P4.4 Neon prod migration + PITR
 - [ ] Add the `pnpm --filter @harpa/api db:migrate` step to

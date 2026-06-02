@@ -110,7 +110,7 @@ export function createApp(): OpenAPIHono<AppEnv> {
   // Dev-only: `/api/dev/last-otp` for Maestro :mock builds. Never
   // mounted in production (the route module re-asserts this at boot).
   if (env.NODE_ENV !== 'production') {
-    app.route('/', devRoutes);
+    app.route('/api/dev', devRoutes);
   }
 
   // Authenticated routes

@@ -51,5 +51,7 @@ devRoutes.post('/last-otp', async (c) => {
   if (!row) {
     return c.json({ error: { code: 'not_found', message: 'no otp issued' } }, 404);
   }
-  return c.json({ otp: row.value, identifier: row.identifier, expiresAt: row.expires_at });
+  // better-auth stores OTP as "code:attempts" — we only need the code portion
+  const otp = row.value.split(':')[0];
+  return c.json({ otp, identifier: row.identifier, expiresAt: row.expires_at });
 });

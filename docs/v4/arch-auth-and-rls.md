@@ -1,123 +1,153 @@
-# Auth + per-request DB scope (RLS replacement)
+# Auth + per-request DB scope
 
 > Resolves [Pitfall 5](pitfalls.md#pitfall-5--auth-glue-done-late-env-handling-brittle)
 > and [Pitfall 6](pitfalls.md#pitfall-6--per-request-db-scope-rls-replacement-added-late).
 
-## Why this is its own doc
+## Overview
 
-We're moving off Supabase entirely, which means losing two things at
-once:
+Auth is handled by **[better-auth](https://www.better-auth.com)** running
+inside the Hono API. The library manages session issuance, email-OTP
+sign-in, and (in future specs) SIWA + Google Sign-In. It writes into
+four `public.*` tables (`user`, `session`, `account`, `verification`)
+using a Drizzle adapter.
 
-1. **Supabase Auth** — JWT issuance, OTP, session management.
-2. **Postgres RLS as the last line of defence** — Supabase's
-   PostgREST forwards a per-request JWT into PG via `set_config`,
-   so RLS policies see the actual user. With a Hono API connecting
-   as a service role, RLS would be bypassed entirely.
-
-Replacements:
-
-1. **Hand-rolled auth in the Hono API** issues JWTs (via `jose`) and
-   runs the OTP flow (delegating SMS to Twilio Verify). We
-   deliberately did NOT adopt `better-auth` — its abstractions add
-   complexity we don't need. See `packages/api/src/auth/jwt.ts` for
-   the rationale recorded next to the code.
-2. **`withScopedConnection`** wraps every authenticated DB call,
-   acquires a connection from a per-request pool, and runs
-   `SET LOCAL role = '<scoped_role>'` and
-   `SET LOCAL app.user_id = '<jwt sub>'` so PG sees the user. RLS
-   policies use `current_setting('app.user_id')`.
+Separately, every authenticated DB call goes through
+**`withScopedConnection`**, which sets a per-request Postgres role and
+`app.user_id` GUC so RLS policies on `app.*` tables see the correct
+user. These two concerns are independent: better-auth owns the session
+lifecycle; `withScopedConnection` owns query isolation.
 
 ## Auth flow
 
 ```mermaid
 sequenceDiagram
   autonumber
-  participant App as Mobile
-  participant API as Hono API
-  participant T as Twilio Verify
-  participant DB as Neon (Drizzle schema)
+  participant App as Mobile (@better-auth/expo)
+  participant API as Hono API (better-auth handler)
+  participant R as Resend
+  participant DB as Neon
 
-  App->>API: POST /auth/otp/start { phone }
-  API->>T: services.verifications.create({ to, channel: 'sms' })
-  T-->>API: 202 pending
-  API-->>App: 200 { verificationId }
+  App->>API: POST /api/auth/email-otp/send-verification-otp { email }
+  API->>R: emails.send({ to: email, text: otp })
+  R-->>API: 200
+  API-->>App: 200
 
-  App->>API: POST /auth/otp/verify { phone, code }
-  API->>T: services.verificationChecks.create({ to, code })
-  T-->>API: { status: approved }
-  API->>DB: upsert user, create session
+  App->>API: POST /api/auth/sign-in/email-otp { email, otp }
+  API->>DB: verify OTP, create user if new, create session
   API-->>App: 200 { token, user }
 
   App->>API: GET /me  (Authorization: Bearer <token>)
-  API->>API: verifyJwt (jose) → { sub, sid }
-  API->>DB: withScopedConnection(claims, db => db.select(...))
-  DB-->>API: row
+  API->>API: auth.api.getSession({headers}) → { user, session }
+  API->>DB: withScopedConnection(userId, sessionId, fn)
+  DB-->>API: scoped result
   API-->>App: 200 { user }
 ```
 
-### Why Twilio (not Supabase Auth, not in-house SMS)
+## better-auth server config
 
-- Free tier covers dev.
-- Verify is a managed OTP service — no need to roll our own
-  rate-limiting / lockout / replay protection.
-- Has a sandbox mode (`TWILIO_VERIFY_FAKE_CODE=000000`) that we
-  use in tests + `:mock` builds. Real SMS is gated behind
-  `TWILIO_LIVE=1`.
+Location: `packages/api/src/auth/auth.ts`
 
-## Auth implementation
+Key decisions (full rationale in the design spec):
 
-- Routes are mounted directly at `/auth/*` in `packages/api/src/routes/auth.ts`.
-- JWT issue/verify lives in `packages/api/src/auth/jwt.ts` (HS256 via
-  `jose`).
-- Twilio Verify wrapper lives in `packages/api/src/auth/twilio.ts`;
-  the sandbox path returns `TWILIO_VERIFY_FAKE_CODE` so tests + `:mock`
-  builds never hit real SMS.
-- Session lifecycle lives in `packages/api/src/auth/service.ts` —
-  `startOtp` / `verifyOtp` / `issueSessionForPhone`.
-- Schema lives in `packages/api/src/db/schema.ts` (users, sessions),
-  managed by Drizzle migrations.
-- Session model: opaque session IDs in the DB; the issued JWT carries
-  `sub` (user id) and `sid` (session id). The `withAuth` middleware
-  validates the JWT and re-checks `sid` against the DB on each
-  request.
-- Token TTL: 7 days. Logout = delete session row.
+- **Drizzle adapter** (`@better-auth/drizzle-adapter`) pointed at a
+  CLI-generated schema (`packages/api/src/db/auth-schema.ts`). The
+  adapter uses the **unscoped** connection pool (`rawDb()`) — not
+  `withScopedConnection` — because it needs to read sessions before it
+  knows which user to scope to.
+- **`expo()` plugin** (`@better-auth/expo`) manages bearer-token
+  storage and `trustedOrigins` for the Expo client. No separate
+  `bearer` plugin needed.
+- **`emailOTP` plugin** — Resend as transport, 6-digit code, 10-minute
+  expiry, 5 allowed attempts. `disableSignUp: false` — the first
+  verified email creates the user automatically.
+- **`emailAndPassword`** — `enabled: true`, `disableSignUp: true`.
+  Only for test-account smoke tests; a `before` hook 401s any email
+  not in `TEST_ACCOUNT_EMAILS`. Production leaves `TEST_ACCOUNT_EMAILS`
+  unset, making every password attempt fail before the hash compare.
+- **`advanced.database.generateId({model})`** — mints `usr_…` /
+  `ses_…` / `vrf_…` / `idn_…` slugs for each better-auth table via
+  `newId()`. IDs are stored as bare `text`; slug format is enforced at
+  write time, not by a DB domain.
 
-### Test-account password bypass
+## Drizzle schema (CLI-generated)
 
-A second route — `POST /auth/password/verify` — exists for test
-accounts so live deployments (`TWILIO_LIVE=1`) can be exercised
-without hitting Twilio. It is **404 unless both `TEST_ACCOUNT_PHONES`
-and `TEST_ACCOUNT_PASSWORD` are set** (Doppler `dev` only — production
-must leave them unset).
+`packages/api/src/db/auth-schema.ts` is produced by:
 
-- Per-process random salt; password hashed with `scryptSync` and
-  compared with `timingSafeEqual` (no hand-rolled crypto). See
-  `packages/api/src/auth/password.ts`.
-- Phone must appear in the comma-separated `TEST_ACCOUNT_PHONES` list.
-- Rate-limited 10/minute per phone via the `withRateLimit()`
-  middleware (same `getRateLimiter()` backend as the OTP routes).
-- Successful attempts are audit-logged
-  (`msg: 'test_account_password_login'`); failed verifications
-  throw 401 without an audit row.
-- On success the route reuses `issueSessionForPhone(...)` — identical
-  session row + JWT shape as the OTP path.
+```bash
+pnpm exec @better-auth/cli generate --output packages/api/src/db/auth-schema.ts
+```
 
-## Per-request DB scope (RLS replacement)
+Re-run whenever a better-auth plugin is added or removed. Commit the
+output. CI re-runs the generator and verifies no diff (`git diff
+--exit-code`). Do not edit by hand — declare `additionalFields` in
+`auth.ts` and let the CLI pick them up.
 
-### Postgres setup (in `packages/api/migrations/0001_scope.sql`)
+The file is imported by the Drizzle adapter and by the migration
+numbering tool; it is **not** imported directly by route handlers or
+the scope layer.
+
+## Public schema layout
+
+Better-auth tables live in `public` (Postgres default schema):
+
+| Table | Owner | Notes |
+|---|---|---|
+| `public.user` | better-auth | `id text` (slug: `usr_…`) |
+| `public.session` | better-auth | `id text` (slug: `ses_…`) |
+| `public.account` | better-auth | `id text` (slug: `idn_…`), used by SIWA/Google |
+| `public.verification` | better-auth | `id text` (slug: `vrf_…`), OTP store |
+| `app.*` | application | RLS enforced, `app.usr_id` domain on FK cols |
+
+**No RLS on `public.session`, `public.account`, or `public.verification`.**
+The better-auth adapter queries these with the unscoped pool; RLS
+would block its own session lookups.
+
+**`public.user` does have an RLS policy** — see migration snippet
+below. Better-auth's adapter bypasses RLS by setting the unscoped
+role explicitly, but `app_authenticated` queries (i.e. anything that
+reaches `public.user` from a route handler through
+`withScopedConnection`) are restricted to the calling user's row.
+This means accidental `db.select().from(user)` in route code returns
+at most one row instead of leaking the whole user table.
+
+Defence-in-depth controls for these tables:
+
+1. App code never imports `db/auth-schema.ts` directly — `no-restricted-
+   imports` ESLint rule enforced.
+2. `/me` reads the user from `auth.api.getSession()` (returns the user
+   alongside the session), not from a raw `db.select()` call.
+3. The `public.user` RLS policy described above is the last-line
+   defence if (1) and (2) are bypassed.
+
+## Per-request DB scope
+
+### Postgres setup
 
 ```sql
--- Application role with no table grants by default.
+-- Application role (no login, no table grants by default).
 CREATE ROLE app_authenticated NOLOGIN;
-GRANT app_authenticated TO app_api; -- the Fly.io connection role
+GRANT app_authenticated TO app_api;
 
--- Set-and-forget: every authed connection runs SET LOCAL role.
--- Tables grant USAGE/SELECT/INSERT/UPDATE/DELETE to app_authenticated.
 GRANT USAGE ON SCHEMA app TO app_authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA app
   TO app_authenticated;
 
--- RLS policies use the per-request user id.
+-- public.user gets RLS to limit app_authenticated reads to the
+-- caller's own row. Better-auth's adapter uses the unscoped role
+-- and bypasses these policies (BYPASSRLS not granted to that role).
+GRANT SELECT ON public.user TO app_authenticated;
+GRANT UPDATE (display_name, company_name, updated_at) ON public.user
+  TO app_authenticated;
+ALTER TABLE public.user ENABLE ROW LEVEL SECURITY;
+CREATE POLICY user_self_read ON public.user
+  FOR SELECT TO app_authenticated
+  USING (id = current_setting('app.user_id'));
+CREATE POLICY user_self_update ON public.user
+  FOR UPDATE TO app_authenticated
+  USING      (id = current_setting('app.user_id'))
+  WITH CHECK (id = current_setting('app.user_id'));
+
+-- RLS policies on app.* tables read the per-request GUC.
 ALTER TABLE app.projects ENABLE ROW LEVEL SECURITY;
 CREATE POLICY projects_member_read ON app.projects
   FOR SELECT TO app_authenticated
@@ -128,7 +158,7 @@ CREATE POLICY projects_member_read ON app.projects
 -- … and so on per table.
 ```
 
-### `withScopedConnection` (in `packages/api/src/db/scope.ts`)
+### `withScopedConnection` (`packages/api/src/db/scope.ts`)
 
 ```ts
 export async function withScopedConnection<T>(
@@ -153,43 +183,34 @@ export async function withScopedConnection<T>(
 }
 ```
 
-### Auth middleware (in `packages/api/src/middleware/auth.ts`)
+### Auth middleware (`packages/api/src/middleware/auth.ts`)
 
 ```ts
 export function withAuth(): MiddlewareHandler<AppEnv> {
   return async (c, next) => {
-    const auth = c.req.header('authorization');
-    if (!auth?.startsWith('Bearer ')) {
-      throw new HTTPException(401, { message: 'Missing bearer token.' });
+    const session = await auth.api.getSession({ headers: c.req.raw.headers });
+    if (!session?.user || !session?.session) {
+      throw new HTTPException(401, { message: 'Unauthorized.' });
     }
-    const token = auth.slice('Bearer '.length).trim();
-    let claims;
-    try {
-      claims = await verifyJwt(token);
-    } catch {
-      throw new HTTPException(401, { message: 'Invalid token.' });
-    }
-    c.set('userId', claims.sub);
-    c.set('sessionId', claims.sid);
+    c.set('userId', session.user.id);
+    c.set('sessionId', session.session.id);
+    c.set('user', session.user);
     c.set('db', (fn) =>
-      withScopedConnection({ sub: claims.sub, sid: claims.sid }, fn),
+      withScopedConnection({ sub: session.user.id, sid: session.session.id }, fn),
     );
     await next();
   };
 }
 ```
 
-Route handlers use `c.get('db')(fn)` — the raw `db` import is
-ESLint-banned in the routes layer.
+Route handlers use `c.get('db')(fn)`. The raw `db` import is ESLint-
+banned in the routes layer.
 
 ## Files: project-inherited RLS
 
-`app.files` is the one table where row ownership is not strictly
-owner-only — project members need to dereference each other's
-uploads, otherwise teammate B can SELECT the `note_files` row but
-404s on `GET /files/:id/url` for every attachment B didn't upload
-themselves. Migration `0011_files_project_scope.sql` replaces the
-old `files_owner_all` policy with four discriminated policies:
+`app.files` allows project members (not just the owner) to SELECT
+and UPDATE attached files. Migration `0011_files_project_scope.sql`
+defines four discriminated policies:
 
 | Policy | Action | Rule |
 |---|---|---|
@@ -198,109 +219,114 @@ old `files_owner_all` policy with four discriminated policies:
 | `files_member_write` | UPDATE | owner OR `app.is_member(project_id)` |
 | `files_member_delete` | DELETE | owner OR `app.is_member(project_id)` |
 
-The membership leg is gated on `project_id IS NOT NULL`, so it can
-only match for project-scoped rows. Avatar and scratch rows (with
-`project_id IS NULL`) short-circuit the membership branch to false
-and collapse to owner-only — personal scopes inherit nothing from
-any project. INSERT stays owner-only deliberately: you may only
-upload as yourself, even into a project you're a member of (the
-route still checks project membership before minting a presign for
-`scope: 'project'`).
+Personal-scoped files (`project_id IS NULL`) collapse to owner-only
+because the membership branch short-circuits to false.
 
-See [`arch-storage.md` §Security](arch-storage.md#security) for the
-matching key-layout description and
-[`docs/bugs/README.md` R8](../bugs/README.md#bugs) for the recurrence
-note ("files RLS too tight — `files_owner_all` blocked cross-member
-dereference").
+See [`arch-storage.md` §Security](arch-storage.md#security) and
+[`docs/bugs/README.md` R8](../bugs/README.md#bugs).
 
 ## Lint guards
 
-- `no-restricted-imports` for `@/db/client` outside
-  `packages/api/src/db/` — forces use of the scoped accessor.
+- `no-restricted-imports` for `@/db/client` outside `packages/api/src/db/`.
+- `no-restricted-imports` for `@/db/auth-schema` outside
+  `packages/api/src/auth/auth.ts`.
 - `no-restricted-syntax` for `.set('role'` outside the scope module.
 - `no-restricted-syntax` for `setTimeout` inside `apps/mobile/app/(auth)/`.
 
-## Test gates (per Pitfall 1 + 6)
+## Test gates
 
-For each authed route, the integration suite ships **two paired tests**:
+For each authed route the integration suite ships **two paired tests**:
 
 ```ts
 test('actor A reads their own project', async () => { /* expect 200 */ });
 test('actor A cannot read actor B project', async () => { /* expect 404 */ });
 ```
 
-There is also a **negative-control** test per resource that runs the
-same query *without* the scope wrapper and asserts it returns the
-other actor's row — proving the scope wrapper is the thing
-protecting it. These live in `packages/api/src/__tests__/scope/`.
+Plus a **negative-control** test per resource that runs the same query
+without the scope wrapper and asserts it returns the other actor's row —
+proving the wrapper is what protects it. Lives in
+`packages/api/src/__tests__/scope/`. CI enforces coverage via
+`scripts/check-scope-tests.sh`.
 
-CI fails if any new authed route lacks both tests
-(grep gate: `scripts/check-scope-tests.sh`).
+Auth-specific test requirements (Pitfall 13 — test the **default
+wiring**, not a DI stub):
+
+- Email-OTP integration test runs against the **default**
+  `betterAuth({...})` instance with `EMAIL_OTP_LIVE=1`. The real
+  `sendVerificationOTP` callback executes and calls Resend; `nock` (or
+  equivalent) intercepts the outbound HTTPS request and asserts the
+  payload. The `sendVerificationOTP` function is **not** swapped out
+  via DI — that would test a stub, not the wiring.
+- Test-account password tests exercise the real better-auth password
+  compare and real DB lookup — no DI stubs on the hot path.
+
+## Test-account password bypass
+
+For **live-deployment smoke tests** we need a way to log in without
+waiting on email OTP delivery.
+
+**Mechanism:** better-auth's `emailAndPassword` plugin with
+`disableSignUp: true` and a `before` hook that 401s any email not in
+`TEST_ACCOUNT_EMAILS`. The test accounts are seeded at deploy time by
+`packages/api/scripts/seed-test-account.ts`.
+
+Journey scripts authenticate via:
+
+```bash
+curl -X POST "$API/api/auth/sign-in/email" \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"e2e@harpapro.com","password":"…"}'
+```
+
+Then use the returned `token` as `Authorization: Bearer …`.
+
+Env vars (Doppler `dev` only — must be unset on `prd`):
+
+| Var | Purpose |
+|---|---|
+| `TEST_ACCOUNT_EMAILS` | Comma-separated allowlist |
+| `TEST_ACCOUNT_PASSWORD` | Shared password, min 16 chars |
+
+Env-Zod enforces both-or-neither, and that `TEST_ACCOUNT_EMAILS` is
+unset when `NODE_ENV=production`.
 
 ## Env vars
 
 | Var | Where | Purpose |
 |---|---|---|
-| `BETTER_AUTH_SECRET` | API | JWT signing key |
-| `TWILIO_ACCOUNT_SID` | API | Twilio API |
-| `TWILIO_AUTH_TOKEN` | API | Twilio API |
-| `TWILIO_VERIFY_SID` | API | Verify service |
-| `TWILIO_LIVE` | API | `1` to allow real SMS in this env |
-| `TWILIO_VERIFY_FAKE_CODE` | API tests / `:mock` | Bypass code |
+| `BETTER_AUTH_SECRET` | API | Session signing key |
+| `BETTER_AUTH_URL` | API | Base URL for better-auth handler |
+| `RESEND_API_KEY` | API | Resend transport for OTP emails |
+| `EMAIL_OTP_LIVE` | API | `1` = real Resend send; `0` = logs only (dev/test) |
+| `TEST_ACCOUNT_EMAILS` | API (dev only) | Password-bypass allowlist |
+| `TEST_ACCOUNT_PASSWORD` | API (dev only) | Shared smoke-test password |
 | `DATABASE_URL` | API | Neon connection (pooled) |
 | `EXPO_PUBLIC_API_URL` | Mobile | API base URL (validated by `lib/env.ts`) |
 
-## Test-account password bypass (live deployments)
+## Session lifecycle
 
-SMS OTP via Twilio Verify is the only auth path for real users. For
-**live-deployment smoke tests** (`harpa-pro-api-dev`, prod) we need a
-way to log in without paying for / waiting on SMS, without weakening
-auth for real users.
+- **`expiresIn`: 7 days** — total session lifetime. After this point,
+  `auth.api.getSession()` returns null and `withAuth` throws 401,
+  forcing the user to sign in again.
+- **`updateAge`: 1 day** — better-auth bumps `session.expires_at`
+  forward at most once per 24 hours of activity. A user using the app
+  daily holds a rolling 7-day session; a user idle for 7+ days is
+  signed out.
+- **Sign-out** (`POST /api/auth/sign-out`) deletes the session row;
+  the bearer token cannot be reused after.
+- **`@better-auth/expo` client** persists the bearer token in
+  `expo-secure-store` (encrypted at rest on iOS/Android). The session
+  survives app restarts; force-quitting does not log the user out.
 
-Solution: a narrow alternate endpoint **`POST /auth/password/verify`**
-that accepts `{ phone, password }` and, on success, returns the same
-`{ token, user }` payload as `/auth/otp/verify`. Two env vars gate
-it:
+## Out of scope
 
-| Var | Where | Purpose |
-|---|---|---|
-| `TEST_ACCOUNT_PHONES` | API | Comma-separated E.164 allowlist |
-| `TEST_ACCOUNT_PASSWORD` | API | Shared password, min 16 chars |
+The following are deliberately not covered by the current auth
+architecture and have follow-on specs:
 
-Both vars are stored in **Doppler under the `dev` config only** —
-they must never be set on `prd`. Because the CI workflow pipes every
-Doppler secret through `flyctl secrets import` on each deploy (see
-[`docs/v4/arch-ops.md` §CI](arch-ops.md#ci)), adding the two keys in
-Doppler is the only step required to enable the bypass on
-`harpa-pro-api-dev`; removing them disables it on the next deploy.
-
-Rules:
-
-- **Off-by-default**: if either var is missing, the route returns
-  `404 Not Found`. Production must not set them unless intentional.
-  Env-Zod refines "both-or-neither" to prevent half-configured states.
-- **No enumeration**: a non-allow-listed phone gets the same `401`
-  as a wrong password. The scrypt comparison runs unconditionally so
-  timing does not leak allow-list membership either.
-- **Per-boot salt**: the password is hashed once with `scrypt` + a
-  random salt at first use, kept in memory only. A restart re-derives
-  the hash — that's fine because the password itself is the secret.
-- **Rate limit**: 10 attempts per minute per phone (memory-backed,
-  per-process). Generous enough for manual testing; bounds password-
-  guess throughput.
-- **Audit log**: every successful login emits a structured
-  `test_account_password_login` log line with the phone, user id and
-  request id, so Fly logs show exactly who used the bypass and when.
-- **Reuses `issueSessionForPhone`**: the OTP and password paths share
-  the user-upsert + session-insert + JWT-mint helper in
-  `auth/service.ts`. The resulting JWT is indistinguishable from one
-  issued by OTP and goes through the same `withAuth` middleware on
-  subsequent requests.
-
-Pitfall 13 compliance: the integration test for this route exercises
-the **real** scrypt comparator and **real** DB upsert — no DI stubs
-on the hot path. DI stubs would be inappropriate here; the password
-check is the entire reason the route exists.
-
-`apps/mobile/lib/env.ts` is the only place that reads
-`EXPO_PUBLIC_*` — see [Pitfall 5](pitfalls.md#pitfall-5--auth-glue-done-late-env-handling-brittle).
+1. **Sign in with Apple** — better-auth `apple` provider; iOS-only
+   button; required for App Store on apps that offer third-party
+   sign-in.
+2. **Account deletion (`DELETE /me`)** — App Store guideline 5.1.1(v).
+3. **Google Sign-In** — same provider pattern as Apple.
+4. **Phone-OTP reinstatement** — better-auth has a phone plugin if a
+   user segment ever needs SMS sign-in.

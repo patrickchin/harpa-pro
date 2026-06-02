@@ -26,10 +26,10 @@ Routes & edges (→ = link out, ← = enter via):
 
 | Route | Enters from | Exits to |
 |---|---|---|
-| `(auth)/sign-in/phone` | `(app)` auth-gate redirect; `sign-up/phone` (replace) | push `sign-in/verify` |
-| `(auth)/sign-in/verify` | `sign-in/phone` (push) | replace `/` on success; replace `sign-in/phone` on "change number" |
-| `(auth)/sign-up/phone` | `sign-in/phone` (manual `Don't have account?`) | push `sign-up/verify`; replace `sign-in/phone` for "Have account" + back |
-| `(auth)/sign-up/verify` | `sign-up/phone` (push) | replace `/` on success; replace `sign-up/phone` on "change number" |
+| `(auth)/sign-in/email` | `(app)` auth-gate redirect; `sign-up/email` (replace) | push `sign-in/verify` |
+| `(auth)/sign-in/verify` | `sign-in/email` (push) | replace `/` on success; replace `sign-in/email` on "change email" |
+| `(auth)/sign-up/email` | `sign-in/email` (manual `Don't have account?`) | push `sign-up/verify`; replace `sign-in/email` for "Have account" + back |
+| `(auth)/sign-up/verify` | `sign-up/email` (push) | replace `/` on success; replace `sign-up/email` on "change email" |
 | `(auth)/onboarding` | `(app)` auth-gate redirect when status = `needs-onboarding` | replace `/` |
 | `(app)/projects` (list — only Tab screen) | root `/` redirect; sign-in/onboarding success | push `[project]`; push `projects/new`; `AppHeaderActions` → push `/profile` |
 | `projects/new` | list push | replace `projects/[id]` on create; safeBack on cancel |
@@ -82,9 +82,9 @@ Rules of thumb, in priority order:
 6. **Header back / system back → `safeBack(router, parentHref)`.**
    `router.back()` if `canGoBack()`, otherwise `replace(parent)`.
    The fallback exists precisely because of rule 5.
-7. **Auth flow change-number / cross-link → `replace`, not `push`.**
-   Phone → verify is `push` (user wants to back-edit). But verify's
-   "Change number" button must `replace` back to phone, otherwise the
+7. **Auth flow change-email / cross-link → `replace`, not `push`.**
+   Email → verify is `push` (user wants to back-edit). But verify's
+   "Change email" button must `replace` back to the email screen, otherwise the
    verify screen accumulates on every retry.
 8. **`router.dismissAll()` is only for sign-out.** It tears down the
    full stack so the next render starts in `(auth)`. Don't use it
@@ -145,13 +145,13 @@ inconsistent / future-proof; **OK** = matches policy.
 |---|---|---|---|
 | `app/(auth)/onboarding.tsx:47` | `replace('/')` (auto-redirect when complete) | `replace` | **OK** |
 | `app/(auth)/onboarding.tsx:75` | `replace('/')` on submit | `replace` | **OK** |
-| `app/(auth)/sign-in/phone.tsx:87` | `push sign-in/verify` | `push` | **OK** (user wants back to edit phone) |
+| `app/(auth)/sign-in/email.tsx:87` | `push sign-in/verify` | `push` | **OK** (user wants back to edit email) |
 | `app/(auth)/sign-in/verify.tsx:83` | `replace('/')` on verified | `replace` | **OK** (rule 2) |
-| `app/(auth)/sign-in/verify.tsx:108` | `replace sign-in/phone` ("change number") | `back()` if `canGoBack()` else `replace` (i.e. `safeBack`) | **NIT-L5.** Phone is the frame below verify; `back()` is semantically cleaner and avoids `[phone, phone-new]` shape. |
-| `app/(auth)/sign-up/phone.tsx:45` | `push sign-up/verify` | `push` | **OK** |
-| `app/(auth)/sign-up/phone.tsx:57,61` | `replace sign-in/phone` (back / "have account") | `replace` | **OK** — different stack (sign-up vs sign-in entry), rule 5/7. |
+| `app/(auth)/sign-in/verify.tsx:108` | `replace sign-in/email` ("change email") | `back()` if `canGoBack()` else `replace` (i.e. `safeBack`) | **NIT-L5.** Email screen is the frame below verify; `back()` is semantically cleaner and avoids `[email, email-new]` shape. |
+| `app/(auth)/sign-up/email.tsx:45` | `push sign-up/verify` | `push` | **OK** |
+| `app/(auth)/sign-up/email.tsx:57,61` | `replace sign-in/email` (back / "have account") | `replace` | **OK** — different stack (sign-up vs sign-in entry), rule 5/7. |
 | `app/(auth)/sign-up/verify.tsx:88` | `replace('/')` on verified | `replace` | **OK** |
-| `app/(auth)/sign-up/verify.tsx:113` | `replace sign-up/phone` ("change number") | `safeBack` | **NIT-L5** (same as sign-in/verify). |
+| `app/(auth)/sign-up/verify.tsx:113` | `replace sign-up/email` ("change email") | `safeBack` | **NIT-L5** (same as sign-in/verify). |
 
 ### `(camera)` group
 

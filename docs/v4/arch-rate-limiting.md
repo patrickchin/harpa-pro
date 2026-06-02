@@ -14,19 +14,19 @@
 P1.9 shipped a per-process `MemoryRateLimiter` keyed by
 `(routeName, userId)` and wired it into the AI routes
 (`voice.transcribe`, `voice.summarize`, `voice.note`,
-`reports.generate`) plus an ad-hoc per-phone limit on
+`reports.generate`) plus an ad-hoc per-email limit on
 `POST /auth/password/verify` and an inline per-IP limit on
 `POST /waitlist`. Six gaps surfaced as the surface grew:
 
-1. **SMS pumping is unbounded.** `POST /auth/otp/start` (Twilio Verify
-   send) and `POST /auth/otp/verify` have no rate limit. Twilio charges
-   per send; a script can drain the account before a human notices.
+1. **Email-OTP pumping is unbounded.** `POST /api/auth/email-otp/send-verification-otp`
+   (Resend send) has no rate limit. Resend charges per send; a script
+   can drain the quota before a human notices.
 2. **No catch-all per-user limit on authed routes.** Cheap reads
    (`GET /me`, `GET /projects`, `GET /reports/.../debug`) have no
    ceiling — a runaway client can hammer the API and saturate the
    Neon pooler.
 3. **No catch-all per-IP limit on unauthed routes.** Only `/waitlist`
-   has one, hand-rolled inline. `/auth/*` and `/readyz` would all
+   has one, hand-rolled inline. `/api/auth/*` and `/readyz` would all
    benefit from a default ceiling.
 4. **The "shared per-user 60 RPM across voice + generate" budget
    promised by [arch-api-design.md §Rate limiting](arch-api-design.md#rate-limiting)
@@ -41,7 +41,7 @@ P1.9 shipped a per-process `MemoryRateLimiter` keyed by
    shape: integration tests are green with the memory limiter, the
    default-wired production stack quietly violates the spec.
 6. **Client IP extraction is duplicated.** `waitlist.ts::clientIp()`
-   is the only implementation; we need it from `/auth/*` and the
+   is the only implementation; we need it from `/api/auth/*` and the
    global middleware too.
 
 Acceptance contract:
@@ -50,8 +50,8 @@ Acceptance contract:
   covered by a default per-user budget — no authed route is
   rate-limit-free.
 - Every unauthed route has a per-IP budget.
-- `POST /auth/otp/start` and `POST /auth/otp/verify` cannot send
-  more than **3 SMS/15min/phone** + **10 SMS/hour/IP**.
+- `POST /api/auth/email-otp/send-verification-otp` cannot send
+  more than **3 emails/15min/email** + **10 emails/hour/IP**.
 - The "shared across voice + generate" budget is enforced.
 - Production deploys use a single distributed limiter so the budget
   is the budget, regardless of machine count.
@@ -135,14 +135,14 @@ export interface RateLimitOptions {
   limit: number;
   windowMs: number;
   /** Defaults to 'user' (the existing behaviour). */
-  keyBy?: 'user' | 'ip' | 'phone' | ((c: Context<AppEnv>) => string);
+  keyBy?: 'user' | 'ip' | 'email' | ((c: Context<AppEnv>) => string);
 }
 ```
 
 - `keyBy: 'user'` — current behaviour. Key: `${name}:user:${userId ?? 'anon'}`.
 - `keyBy: 'ip'` — for unauthed routes. Key: `${name}:ip:${clientIp(c)}`.
-- `keyBy: 'phone'` — reads `phone` from a Zod-validated body via a
-  small `phoneOf(c)` helper that re-parses the body cheaply (Hono's
+- `keyBy: 'email'` — reads `email` from a Zod-validated body via a
+  small `emailOf(c)` helper that re-parses the body cheaply (Hono's
   `c.req.valid('json')` is cached by `@hono/zod-validator`, so this
   is free after the route's own validator ran).
 - `keyBy: (c) => string` — escape hatch (composite keys, debug).
@@ -161,11 +161,11 @@ Per-route budgets (additive to the existing AI route budgets):
 
 | Route | keyBy | Limit | Window |
 |---|---|---|---|
-| `POST /auth/otp/start` | `phone` | 3 | 15 min |
-| `POST /auth/otp/start` | `ip` | 10 | 1 h |
-| `POST /auth/otp/verify` | `phone` | 10 | 15 min |
-| `POST /auth/otp/verify` | `ip` | 30 | 1 h |
-| `POST /auth/password/verify` | `phone` | 10 | 1 min *(existing, refactored to middleware)* |
+| `POST /api/auth/email-otp/send-verification-otp` | `email` | 3 | 15 min |
+| `POST /api/auth/email-otp/send-verification-otp` | `ip` | 10 | 1 h |
+| `POST /api/auth/sign-in/email-otp` | `email` | 10 | 15 min |
+| `POST /api/auth/sign-in/email-otp` | `ip` | 30 | 1 h |
+| `POST /auth/sign-in/email` | `email` | 10 | 1 min *(test-account bypass, refactored to middleware)* |
 | `POST /waitlist` | `ip` | 5 | 1 h *(existing, refactored)* |
 | `POST /waitlist` | `ip` | 50 | 1 d *(existing, refactored)* |
 | `POST /waitlist/confirm` | `ip` | 30 | 1 h |
@@ -213,7 +213,7 @@ per machine). One machine doing GC is fine; the others no-op via
 `ON CONFLICT DO NOTHING` patterns where applicable.
 
 This bucket table is **outside** the per-request scope wrapper — it
-uses an admin namespace connection, same as `auth.sessions`. No RLS;
+uses an admin namespace connection, same as `public.session`. No RLS;
 no per-user policies needed (the value `count` is never user-visible).
 
 ### 3.5 Backend selection (Pitfall 13)
@@ -268,7 +268,7 @@ and the "test the default wiring" rule:
 - Happy path: N requests, all 2xx, headers count down.
 - Boundary: N+1 → 429 with `Retry-After`.
 - Window reset: advance fake clock, N+1 again, 2xx.
-- `keyBy` variants: user / ip / phone / fn isolate buckets correctly.
+- `keyBy` variants: user / ip / email / fn isolate buckets correctly.
 - `keyBy: 'user'` without prior `withAuth()` → 500 in dev, 401 in prod.
 - Header tightness: two limiters reject → 429, headers show tightest.
 
@@ -276,8 +276,8 @@ and the "test the default wiring" rule:
 Testcontainers Postgres + the `PostgresRateLimiter` chosen by
 `getRateLimiter()` without any DI override):
 
-- `POST /auth/otp/start` 4× same phone in 15min → 4th is 429.
-- `POST /auth/otp/start` 11× same IP in 1h with rotating phones → 11th is 429.
+- `POST /api/auth/email-otp/send-verification-otp` 4× same email in 15min → 4th is 429.
+- `POST /api/auth/email-otp/send-verification-otp` 11× same IP in 1h with rotating emails → 11th is 429.
 - `POST /voice/transcribe` + `POST /voice/summarize` interleaved
   against the same user → shared AI bucket trips at the 61st call.
 - Two concurrent processes (simulated by two clients sharing a DB)
@@ -315,13 +315,13 @@ short version: `apps/mobile/lib/api/client.ts` already reads
   exposes it; the bucket key is salted with `name` so collisions
   across limiters are impossible.
 - **[Pitfall 15](pitfalls.md#pitfall-15--route-handlers-that-ignore-user-settings)**
-  — N/A here (no per-user setting), but the `keyBy: 'phone'` selector
+  — N/A here (no per-user setting), but the `keyBy: 'email'` selector
   reads the validated body explicitly rather than re-parsing
   headers, so the same "use the thing you loaded" pattern holds.
 
 Process pitfall (Subagent over-scoping): commits stay one-thing-each
 per the checklist below. The `PostgresRateLimiter` migration ships
-in its own commit; the SMS-pumping routes follow; the catch-all
+in its own commit; the email-OTP pumping routes follow; the catch-all
 defaults are last so we can land them with the most context.
 
 ## 5. Implementation checklist (commit-by-commit)
@@ -331,7 +331,7 @@ defaults are last so we can land them with the most context.
 1. **`refactor(api): promote clientIp to lib/clientIp.ts`** — extract
    from `waitlist.ts`; add a 4-case unit test; re-import in waitlist.
 2. **`feat(api): rateLimit middleware supports keyBy selector`** —
-   extend `withRateLimit` (user / ip / phone / fn), guard misuse of
+   extend `withRateLimit` (user / ip / email / fn), guard misuse of
    `keyBy: 'user'` without prior `withAuth()`. Unit tests for each
    variant. No route changes yet.
 3. **`feat(db): app.rate_limit_buckets table`** — migration +
@@ -341,8 +341,8 @@ defaults are last so we can land them with the most context.
    integration test exercises atomic `consume` across two concurrent
    clients. `getRateLimiter()` reads `env.RATE_LIMIT_BACKEND` (new
    env var) and `env.NODE_ENV`. Lint guard for `process.env.RATE_LIMIT_*`.
-5. **`feat(api): rate-limit /auth/otp/start and /auth/otp/verify`**
-   — phone + IP limiters per §3.3. Integration tests asserting the
+5. **`feat(api): rate-limit /api/auth/email-otp/send-verification-otp and /api/auth/sign-in/email-otp`**
+   — email + IP limiters per §3.3. Integration tests asserting the
    429 behaviour and `Retry-After` header.
 6. **`refactor(api): port /auth/password/verify and /waitlist to withRateLimit`**
    — replace the two ad-hoc inline calls to `getRateLimiter()` with
@@ -376,11 +376,11 @@ do not merge to `main` without explicit instruction (AGENTS.md rule 2).
 - **Per-project rate limits.** Not in scope — no concrete abuse
   shape today. Carved out to [plan-p4-hardening.md](plan-p4-hardening.md)
   §"Per-project abuse limits" for re-evaluation after Beta.
-- **Body-derived `keyBy: 'phone'` ergonomics.** This relies on the
+- **Body-derived `keyBy: 'email'` ergonomics.** This relies on the
   fact that `@hono/zod-openapi` caches `c.req.valid('json')`. If a
   future Hono upgrade breaks that contract, the helper falls back
   to an explicit second parse. Documented in
-  `lib/clientIp.ts` (next to the `phoneOf` helper) so it is found
+  `lib/clientIp.ts` (next to the `emailOf` helper) so it is found
   on the first grep.
 - **Mobile 429 handling polish.** Out of scope here; see
   [plan-p4-hardening.md](plan-p4-hardening.md) §"429 handling" for

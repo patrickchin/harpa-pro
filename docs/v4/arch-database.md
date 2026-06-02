@@ -79,7 +79,7 @@ Two schemas in the same database:
   rate_limit_buckets. Voice and image assets all live in the single
   `files` table keyed by `file_kind`.
 
-Cross-schema FK: `app.project_members.user_id REFERENCES auth.users(id)`.
+Cross-schema FK: `app.project_members.user_id REFERENCES public."user"(id)`.
 
 ## Connection model
 

@@ -12,7 +12,7 @@
 
 - [x] `pnpm install && pnpm build && pnpm typecheck && pnpm lint && pnpm test` all green at the repo root.
 - [x] `packages/ai-fixtures` ships with at least one recorded fixture (`transcribe.voice-1`) and the replay test is green.
-- [x] `packages/api` exposes `POST /auth/otp/start` + `POST /auth/otp/verify` + `GET /me` against a Twilio sandbox; integration test green.
+- [x] `packages/api` exposes `POST /api/auth/email-otp/send-verification-otp` + `POST /api/auth/sign-in/email-otp` + `GET /me` via better-auth; integration test green.
 - [x] `withScopedConnection` works against Testcontainers Postgres; one paired scope test green.
 - [x] CI workflow `pr-preview.yml` creates a Neon branch, runs migrations, and tears it down on close.
 - [x] All grep-gates from [arch-testing.md](arch-testing.md) §"Removal verification gates" exist and pass.
@@ -42,12 +42,12 @@
 - [x] One smoke test: `GET /healthz`.
 - [x] Commit: `chore(api): scaffold Hono + Drizzle + Testcontainers`.
 
-### P0.4 better-auth + Twilio Verify
-- [x] Mount better-auth at `/auth/*`.
-- [x] OTP service wrapping Twilio Verify; `TWILIO_VERIFY_FAKE_CODE` bypass for tests.
+### P0.4 better-auth + Resend email-OTP
+- [x] Mount better-auth at `/api/auth/*`.
+- [x] `emailOTP` plugin with Resend transport; `EMAIL_OTP_LIVE=0` bypasses real Resend in tests.
 - [x] `GET /me` route.
-- [x] Integration test: start → verify → /me round trip (using sandbox).
-- [x] Commit: `feat(api): better-auth OTP flow with Twilio Verify`.
+- [x] Integration test: send-otp → sign-in-otp → /me round trip (using `EMAIL_OTP_LIVE=0`).
+- [x] Commit: `feat(api): better-auth email-OTP flow with Resend`.
 
 ### P0.5 `packages/ai-fixtures`
 - [x] `createProvider({ vendor, fixtureMode, fixtureName })` API.

@@ -46,7 +46,7 @@ for human readability — see "URL shapes" below.
 - **TypeScript brand:** `Id<P>` from
   `@harpa/api-contract` is a phantom-typed string. The brand is
   applied at trust boundaries (`assertId('usr', value)` in
-  `verifyJwt`, `signTestToken`, etc.) and at insert
+  `auth.api.getSession()` consumers, `signTestSession`, etc.) and at insert
   (`newId('prj')`). Drizzle columns are plain `text()` so
   `eq(col, plainString)` still works.
 
@@ -61,7 +61,7 @@ Two shapes per entity. Both stable, both indefinitely supported.
 
 - **Long URLs** are the canonical address used internally — nav
   stack, analytics, deep-link targets.
-- **Short URLs** are share-link entry points (SMS, push, "Copy
+- **Short URLs** are share-link entry points (push, "Copy
   link", QR). Resolved via `GET /p/:project` / `GET /r/:report`
   which return JSON; the mobile client `router.replace`s to the
   long URL so the back stack stays clean.

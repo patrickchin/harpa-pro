@@ -16,7 +16,7 @@
    Review is manual against that source — there is no automated
    screenshot-diff gate. JSX + Tailwind classes copy across (both
    sides are NativeWind v4); only the data layer changes.
-4. **Fixtures everywhere expensive.** LLMs, Twilio, R2 PUT — every
+4. **Fixtures everywhere expensive.** LLMs, Resend, R2 PUT — every
    external boundary has a record/replay layer baked in from P0.
 
 ## High-level component diagram
@@ -34,10 +34,10 @@ flowchart TB
     subgraph API["REST API (packages/api → Fly.io)"]
         HONO["Hono router"]
         SCOPE["withScopedConnection (per-request PG role)"]
-        BA["Auth handlers (jose JWTs)"]
+        BA["better-auth handler"]
         DRIZZLE["Drizzle ORM"]
         AISVC["AI service (via ai-fixtures)"]
-        OTP["Twilio Verify (record/replay)"]
+        RESEND["Resend (email-OTP)"]
         R2SIGN["R2 signed URL minter"]
     end
 
@@ -70,14 +70,14 @@ flowchart TB
     HONO --> SCOPE --> DRIZZLE --> PG
     HONO --> AISVC --> FIX --> K & OAI & ANT & G & ZAI & DS
     HONO --> R2SIGN
-    BA -- "Phone OTP" --> OTP
+    BA -- "email OTP" --> RESEND
 ```
 
 ## Stack at a glance
 
 | Layer | v3 (deprecated) | v4 (this rewrite) | Why we changed |
 |---|---|---|---|
-| Auth | Supabase Auth (JWT, JWKS) | **Hand-rolled (jose + Twilio Verify)** | No Supabase. Self-hosted, easier to test. We deliberately did not adopt `better-auth`. |
+| Auth | Supabase Auth (JWT, JWKS) | **better-auth (email-OTP via Resend, `@better-auth/expo`)** | No Supabase. Self-hosted, easier to test. better-auth manages session lifecycle, email-OTP, and future SIWA/Google. |
 | DB | Supabase Postgres + RLS | **Neon Postgres** + per-request scoped roles | Free PR branching; RLS replaced by API-layer scope (no API service-role bypass risk). |
 | Storage | Supabase Storage | **Cloudflare R2** + signed URLs | No Supabase. R2 has zero egress, S3-compatible. |
 | Mobile styling | Unistyles (P2 onwards) | **NativeWind v4** | v3's switch to Unistyles caused the realignment. NativeWind matches mobile-old's class strings; faster ports. |
@@ -93,8 +93,8 @@ flowchart TB
 | # | Section | File | Description |
 |---|---|---|---|
 | 1 | API design | [arch-api-design.md](arch-api-design.md) | Endpoints, auth model, error format, pagination, rate limiting, OpenAPI strategy |
-| 1a | **Rate limiting** | [arch-rate-limiting.md](arch-rate-limiting.md) | **Per-route + shared AI + catch-all budgets; PostgresRateLimiter; SMS-pump protection on /auth/otp/*; multi-machine correctness** |
-| 2 | Auth + per-request scope | [arch-auth-and-rls.md](arch-auth-and-rls.md) | Hand-rolled JWT + OTP flow, Twilio Verify, scoped Postgres roles, RLS replacement, scope tests |
+| 1a | **Rate limiting** | [arch-rate-limiting.md](arch-rate-limiting.md) | **Per-route + shared AI + catch-all budgets; PostgresRateLimiter; email-OTP pump protection on /api/auth/email-otp/*; multi-machine correctness** |
+| 2 | Auth + per-request scope | [arch-auth-and-rls.md](arch-auth-and-rls.md) | better-auth (email-OTP via Resend, `@better-auth/expo`), scoped Postgres roles, RLS replacement, scope tests |
 | 3 | Data layer (mobile) | [arch-data-layer.md](arch-data-layer.md) | Generated client, React Query hooks, optimistic updates, error handling |
 | 4 | Mobile architecture | [arch-mobile.md](arch-mobile.md) | Directory structure, navigation, state, NativeWind tokens, primitives, upload queue, audio |
 | 4a | **Mobile navigation policy** | [arch-mobile-navigation.md](arch-mobile-navigation.md) | **push/replace/back/dismiss policy; per-call audit; back-stack pitfalls and `dismissOrReplaceTo` helper** |
@@ -165,7 +165,7 @@ skills/                   # auto-loaded
 
 | Phase | Name | Exit gate (binding) |
 |---|---|---|
-| P0 | Foundation | All packages scaffold compiles. `ai-fixtures` works (replay + record). Hand-rolled OTP route hits Twilio sandbox + integration test green. Neon branch script tested in CI. |
+| P0 | Foundation | All packages scaffold compiles. `ai-fixtures` works (replay + record). better-auth email-OTP flow wired (Resend transport, `EMAIL_OTP_LIVE` gate) + integration test green. Neon branch script tested in CI. |
 | P1 | API Core | All routes implemented (zero stubs). `pnpm test:api && pnpm test:api:integration` green at ≥90% line coverage. Per-request scope tests cover every authed route. Fixture replay covers every AI route. |
 | P2 | Mobile Shell | Auth + nav + every primitive built. Every auth screen + projects list ported from `../haru3-reports/apps/mobile@dev` and reviewed manually. NativeWind tokens locked in `tailwind.config.js`. Screen bodies in `screens/<name>.tsx` are props-driven and unit-testable in isolation. |
 | P3 | Feature Build | Every screen from `../haru3-reports/apps/mobile@dev` ported, with: behaviour test for each interaction, Maestro flow. No screen is "stubbed" or "TODO redesign". |

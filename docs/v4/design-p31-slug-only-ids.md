@@ -43,12 +43,12 @@
 - **Slugs for entities that have no API surface.** `project_members`
   and `user_settings` are addressed by their composite or FK key and
   do not get their own prefix.
-- **Better-auth library adoption.** We continue to hand-manage the
-  `auth.*` tables via Drizzle, as documented in
-  [arch-auth-and-rls.md](arch-auth-and-rls.md) and confirmed in
-  `packages/api/src/auth/service.ts`. The "better-auth" name in
-  AGENTS.md refers to the *flow* (phone OTP + session + JWT), not
-  the npm package. See §7.
+- **Better-auth library adoption.** We migrated to the `better-auth`
+  npm package; the `auth.*` schema was superseded by `public.user`,
+  `public.session`, `public.account`, and `public.verification` tables
+  managed by better-auth. The slug-id conventions below apply to
+  `public.user` (prefix `usr`) and `public.session` (prefix `ses`).
+  See [arch-auth-and-rls.md](arch-auth-and-rls.md).
 
 ---
 
@@ -61,9 +61,9 @@ Birthday-collision 50% threshold ≈ `2^(5·L/2)` rows.
 |---|---|---|---|---|---|---|
 | `app.projects`             | `prj` | **8**  | 8 | 16 | ~1.0M     | Already minted at 8. Moderate volume; mostly enumerated, not guessed. |
 | `app.reports`              | `rpt` | **8**  | 8 | 16 | ~1.0M     | Already minted at 8. Per-project number is the human address; slug is the global key. |
-| `auth.users`               | `usr` | **12** | 8 | 16 | ~1.1B     | Appears in every JWT, every server log, every audit trail. Cheap to make wide; expensive to widen later. Start generous. |
-| `auth.sessions`            | `ses` | **12** | 8 | 16 | ~1.1B     | High churn (one per device per 7 days); user-scoped but reasoned about globally in logs. |
-| `auth.verifications`       | `vrf` | **10** | 8 | 16 | ~33M      | Short-lived, low value, but high enumeration risk from SMS gateway logs. 10 chars = abundant. |
+| `public."user"`            | `usr` | **12** | 8 | 16 | ~1.1B     | Appears in every session token, every server log, every audit trail. Cheap to make wide; expensive to widen later. Start generous. |
+| `public.session`           | `ses` | **12** | 8 | 16 | ~1.1B     | High churn (one per device per 7 days); user-scoped but reasoned about globally in logs. |
+| `public.verification`      | `vrf` | **10** | 8 | 16 | ~33M      | Short-lived, low value, but high enumeration risk from email gateway logs. 10 chars = abundant. |
 | `app.notes`                | `not` | **10** | 8 | 16 | ~33M      | Many per report. Will dominate row count. |
 | `app.files`                | `fil` | **10** | 8 | 16 | ~33M      | One per upload; mirrors `not` cardinality. |
 | `app.waitlist_signups`     | `wls` | **10** | 8 | 16 | ~33M      | Public-form surface; defence against enumeration of who signed up. |
@@ -315,26 +315,23 @@ export async function insertWithGeneratedId<P extends Prefix, R>(
 
 ## 7. Better-auth integration
 
-**Decision: keep our hand-managed `auth.*` tables; switch their PKs
-to `usr_*`/`ses_*`/`vrf_*` like every other entity. No mapping layer.**
+**Decision: migrate to the `better-auth` npm package; `auth.*` tables
+superseded by `public.user/session/account/verification`.**
 
-`packages/api/src/auth/service.ts` is a thin wrapper over Drizzle
-(`startOtp`, `verifyOtp`). It does not use the `better-auth` npm
-package — see the file-level comment ("We deliberately do not pull
-in the `better-auth` package"). The "better-auth" stack mention in
-AGENTS.md refers to the auth pattern (phone OTP + session + JWT),
-not the library.
+`packages/api/src/auth/index.ts` configures better-auth with
+`emailOtp` + `emailAndPassword` plugins. better-auth owns and
+manages the `public.*` auth tables directly.
 
-Concrete changes for auth:
+Concrete changes for auth IDs:
 
-- `auth.users.id` → `app.usr_id` (default `newId('usr')` is set in
+- `public."user".id` typed `usr_id` (default `newId('usr')` set in
   app code, not SQL — the column is `NOT NULL` with no DB default).
-- `auth.sessions.id` / `auth.sessions.user_id` typed `ses_id` /
+- `public.session.id` / `public.session.userId` typed `ses_id` /
   `usr_id`.
-- `auth.verifications.id` typed `vrf_id`.
-- JWT `sub` claim is now a `usr_*` string. `JwtClaims.sub: UserId`
-  (branded). `signJwt` accepts a `UserId`; `verifyJwt` returns one
-  after passing the string through the `userId` Zod schema.
+- `public.verification.id` typed `vrf_id`.
+- Session token is an opaque bearer token returned by better-auth.
+  `auth.api.getSession()` validates the token and returns the session
+  with `userId` as a `usr_*` string branded as `UserId`.
 - `packages/api/src/db/scope.ts::assertUuid` is replaced by
   `assertId('usr', sub)` / `assertId('ses', sid)` using the same
   module that built the Zod schemas — single source of truth.
@@ -342,16 +339,10 @@ Concrete changes for auth:
   escape-protects via the regex assertion; the new regex is
   *stricter* (no `'`, no spaces, no dashes), so injection risk goes
   down, not up.
-- All RLS policies that cast `current_setting('app.user_id')::uuid`
-  change to `::app.usr_id`. (`is_member(p uuid)` → `is_member(p
-  app.prj_id)`.)
 
-**Why not the `better-auth` library?** Pitfall 5 plus the existing
-code comment: the library adds complexity we don't need. Switching
-to it now would conflict with this refactor. If we ever migrate, we
-configure it with custom `generateId` to emit `usr_*` — the library
-supports it via the `advanced.generateId` option — and the wire
-shape stays the same.
+**Note:** This document predates the better-auth npm package adoption.
+The `better-auth` library is now used; see
+[arch-auth-and-rls.md](arch-auth-and-rls.md) for the current system.
 
 ---
 
@@ -403,30 +394,32 @@ DO $$ BEGIN CREATE TYPE app.project_role AS ENUM ('owner','editor','viewer');
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 -- … etc.
 
--- auth.users
-CREATE TABLE IF NOT EXISTS auth.users (
+-- public."user" (managed by better-auth)
+CREATE TABLE IF NOT EXISTS public."user" (
   id            app.usr_id PRIMARY KEY,
-  phone         varchar(32) NOT NULL UNIQUE,
-  display_name  text,
-  company_name  text,
-  is_admin      boolean NOT NULL DEFAULT false,
+  email         text NOT NULL UNIQUE,
+  name          text,
+  email_verified boolean NOT NULL DEFAULT false,
   created_at    timestamptz NOT NULL DEFAULT now(),
   updated_at    timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE TABLE IF NOT EXISTS auth.sessions (
+CREATE TABLE IF NOT EXISTS public.session (
   id          app.ses_id PRIMARY KEY,
-  user_id     app.usr_id NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  user_id     app.usr_id NOT NULL REFERENCES public."user"(id) ON DELETE CASCADE,
   expires_at  timestamptz NOT NULL,
-  created_at  timestamptz NOT NULL DEFAULT now()
+  token       text NOT NULL UNIQUE,
+  created_at  timestamptz NOT NULL DEFAULT now(),
+  updated_at  timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE TABLE IF NOT EXISTS auth.verifications (
-  id                       app.vrf_id PRIMARY KEY,
-  phone                    varchar(32) NOT NULL,
-  twilio_verification_sid  text,
-  consumed_at              timestamptz,
-  created_at               timestamptz NOT NULL DEFAULT now()
+CREATE TABLE IF NOT EXISTS public.verification (
+  id          app.vrf_id PRIMARY KEY,
+  identifier  text NOT NULL,
+  value       text NOT NULL,
+  expires_at  timestamptz NOT NULL,
+  created_at  timestamptz NOT NULL DEFAULT now(),
+  updated_at  timestamptz NOT NULL DEFAULT now()
 );
 
 -- app.projects

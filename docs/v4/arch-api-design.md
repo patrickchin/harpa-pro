@@ -24,13 +24,13 @@
 Frozen at the start of P1. New endpoints require an architecture
 update.
 
-### Auth (`/auth/*`, public)
+### Auth (`/api/auth/*`, public — handled by better-auth)
 
 | Method | Path | Purpose |
 |---|---|---|
-| POST | `/auth/otp/start` | Send OTP via Twilio |
-| POST | `/auth/otp/verify` | Verify code, issue session |
-| POST | `/auth/logout` | Delete session |
+| POST | `/api/auth/email-otp/send-verification-otp` | Send OTP via Resend |
+| POST | `/api/auth/sign-in/email-otp` | Verify code, issue session |
+| POST | `/api/auth/sign-out` | Delete session |
 | GET | `/me` | Current user profile |
 | PATCH | `/me` | Update profile (name, company) |
 | GET | `/me/usage` | Per-month report counts (for usage screen). Includes effective `plan` + `limits` array — see [arch-usage-limits.md](arch-usage-limits.md). |
@@ -46,7 +46,7 @@ update.
 | PATCH | `/projects/:id` | Update project |
 | DELETE | `/projects/:id` | Owner-only |
 | GET | `/projects/:id/members` | List members |
-| POST | `/projects/:id/members` | Invite by phone |
+| POST | `/projects/:id/members` | Invite by email |
 | DELETE | `/projects/:id/members/:userId` | Remove member |
 
 ### Reports (`/projects/:id/reports`, authed)
@@ -94,7 +94,7 @@ update.
 | GET | `/settings/ai` | Per-user AI provider preference |
 | PATCH | `/settings/ai` | Update |
 
-### Admin (`/admin`, authed + `auth.users.is_admin = true`)
+### Admin (`/admin`, authed + `public."user".is_admin = true`)
 
 | Method | Path | Purpose |
 |---|---|---|
@@ -140,15 +140,15 @@ in production (atomic counts across Fly machines) and a
 `MemoryRateLimiter` in dev/test. Three layers:
 
 - **Per-route budgets** declared on each route via `withRateLimit`
-  (keyed by user / ip / phone — see the table in arch-rate-limiting.md).
+  (keyed by user / ip / email — see the table in arch-rate-limiting.md).
 - **Shared per-user AI budget** of 60 RPM across `voice.*` and
   `reports.generate`.
 - **Catch-all defaults** mounted globally: 600/min per user on authed
   traffic, 120/min per IP on unauthed traffic. `/healthz` and
   `/readyz` opt out via a static skip-list.
 
-SMS-pumping protection on `POST /auth/otp/{start,verify}` (per-phone
-+ per-IP) is enforced at the API; clients receive a 429 +
+Email-OTP pumping protection on `POST /api/auth/email-otp/send-verification-otp`
+(per-email + per-IP) is enforced at the API; clients receive a 429 +
 `Retry-After` + `X-RateLimit-*` headers.
 
 ### Idempotency

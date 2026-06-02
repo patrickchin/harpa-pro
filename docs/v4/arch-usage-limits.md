@@ -87,10 +87,10 @@ already consumed what — `llm_usage_events` is.
 
 ## 3. Data model
 
-### 3.1 Plan column on `auth.users`
+### 3.1 Plan column on `public."user"`
 
 ```sql
-ALTER TABLE auth.users
+ALTER TABLE public."user"
   ADD COLUMN plan text NOT NULL DEFAULT 'free'
     CHECK (plan IN ('free', 'pro', 'enterprise'));
 ```
@@ -134,7 +134,7 @@ serialised over the wire as `null` (see §5).
 
 ```sql
 CREATE TABLE app.user_limit_overrides (
-  user_id           text PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  user_id           text PRIMARY KEY REFERENCES public."user"(id) ON DELETE CASCADE,
   -- nullable: only the buckets the admin bumped; otherwise fall through to PLAN_LIMITS.
   report_generate   integer,
   voice_transcribe  integer,
@@ -142,7 +142,7 @@ CREATE TABLE app.user_limit_overrides (
   ai_input_tokens   bigint,
   ai_output_tokens  bigint,
   reason            text NOT NULL,
-  granted_by        text NOT NULL REFERENCES auth.users(id),
+  granted_by        text NOT NULL REFERENCES public."user"(id),
   granted_at        timestamptz NOT NULL DEFAULT now(),
   expires_at        timestamptz   -- nullable = permanent
 );
@@ -202,7 +202,7 @@ export class UsageLimitExceededError extends Error {
 
 /**
  * Called from gated route handlers BEFORE the side-effect. Reads
- * `auth.users.plan` + any row in `app.user_limit_overrides`, computes
+ * `public."user".plan` + any row in `app.user_limit_overrides`, computes
  * current-month `used` from `app.llm_usage_events`, throws
  * `UsageLimitExceededError` if `used + amount > limit`.
  *
@@ -281,7 +281,7 @@ exercise the "limit is 1000" path patches `PLAN_LIMITS` via
 | ------ | --------------------- | ---------------------------------------------------------------- |
 | GET    | `/me/limits`          | Current effective limits + used + remaining + resetAt per bucket |
 | GET    | `/me/usage`           | _extended_ — now also includes `limits` field (§5.3)             |
-| PATCH  | `/admin/users/:id/plan`             | Admin-only — change `auth.users.plan`               |
+| PATCH  | `/admin/users/:id/plan`             | Admin-only — change `public."user".plan`            |
 | PUT    | `/admin/users/:id/limit-overrides`  | Admin-only — upsert overrides row                   |
 | DELETE | `/admin/users/:id/limit-overrides`  | Admin-only — drop overrides                         |
 
@@ -366,7 +366,7 @@ optional field). The usage screen renders the existing month bars
 ## 6. Admin path
 
 `packages/api/src/routes/admin.ts` already mounts under
-`withAdmin` (checks `auth.users.is_admin`). We add three handlers:
+`withAdmin` (checks `public."user".is_admin`). We add three handlers:
 
 - `PATCH /admin/users/:id/plan` — body `{ plan: 'free'|'pro'|'enterprise' }`.
 - `PUT /admin/users/:id/limit-overrides` — upsert one row in
@@ -517,7 +517,7 @@ One item ≈ one commit. Order matters — migration first so the
 service has a column to read; tests + docs land with each step
 (Pitfall 10).
 
-1. `feat(api): add auth.users.plan + app.user_limit_overrides + index`
+1. `feat(api): add public."user".plan + app.user_limit_overrides + index`
    — migration `0007_usage_limits.sql` + Drizzle schema + scope
    policy + scope tests (cross-actor read of override row).
 2. `feat(contract): usage-limit Zod schemas + error code`

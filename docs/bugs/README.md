@@ -134,7 +134,7 @@ The factory is, in effect, untested. Two recurrence vectors:
 
 1. Helper functions like `setWaitlistClients({ turnstile, resend })`
    make injection so cheap that every test does it.
-2. Fake-mode helpers (`fakeTurnstile`, `fakeR2`, fake-Twilio) accept
+2. Fake-mode helpers (`fakeTurnstile`, `fakeR2`, fake-Resend) accept
    only a hand-crafted token shape (`tt-…`, `fake-…`) that real-world
    widgets never produce, so dev / mock builds silently fail closed.
 
@@ -159,19 +159,19 @@ Mitigation:
 ### R6 — owner-demotion via re-invite (implicit upsert on POST /members)
 
 A `POST /projects/{project}/members` handler that uses `INSERT … ON CONFLICT DO
-UPDATE` (upsert) lets an owner call the endpoint with their own phone number
+UPDATE` (upsert) lets an owner call the endpoint with their own email address
 and a lower role (`viewer`, `editor`), silently demoting themselves. If they
 are the sole owner this locks the project out of all owner-only operations
 (member management, project delete) with no recovery path short of a DB patch.
 
-**Protection.** `app.add_project_member_by_phone` uses an explicit `IF EXISTS`
+**Protection.** `app.add_project_member_by_email` uses an explicit `IF EXISTS`
 guard and raises `23505` ("already_member") mapped to 409 `MEMBER_EXISTS`.
 Role changes must go through `PATCH /projects/{project}/members/{user}` (a
 separate, explicitly guarded endpoint). Full design in
 [`docs/v4/arch-project-members.md`](../v4/arch-project-members.md).
 
 **Test that must exist.** S3 in the members integration suite: owner A calls
-`POST` with their own phone → asserts 409 `MEMBER_EXISTS`, then confirms
+`POST` with their own email → asserts 409 `MEMBER_EXISTS`, then confirms
 `GET /members` still shows A as `owner`.
 
 ---
@@ -218,7 +218,7 @@ Most recent first. One line per bug — open the linked file only for the full r
 - **2026-05-17** *(R5)* — Invite-member form auto-closed on submit, hiding the API error, because `if (!addError) setShowAdd(false)` read stale state in the event handler. Fix: drive the close from the route via an `addSuccessNonce` effect. [detail](2026-05-17-invite-form-auto-close-on-error.md)
 - **2026-05-17** *(R5)* — "Edit manually" switched tabs but left an empty Edit tab: route never passed `onSetReport`, so `editManually`'s seed-empty-report fallback short-circuited. Fix: wire `onSetReport={setGeneratedReport}` from the route. [detail](2026-05-17-edit-manually-missing-onsetreport.md)
 - **2026-05-15** *(R5)* — Every lucide icon rendered as the brand placeholder because `react-native-svg` peer dep was never installed; unit snapshots passed since SVG primitives aren't resolved. Fix: `expo install react-native-svg` + screenshot smoke flow. [detail](2026-05-15-lucide-icons-react-native-svg-missing.md)
-- **2026-05-15** *(R5)* — `/auth/logout` deletes the session row but the JWT keeps authenticating: `withAuth()` only checks signature/expiry, not `auth.sessions`. Test asserted DB deletion, not the contract. Fix pending: validate `sid` against `auth.sessions` (or move to opaque tokens). [detail](2026-05-15-logout-jwt-not-revoked.md)
+- **2026-05-15** *(R5)* — `/auth/logout` deleted the session row but a hand-rolled JWT kept authenticating: `withAuth()` only checked signature/expiry, not `auth.sessions`. **Resolved by better-auth migration**: better-auth uses opaque bearer tokens validated against `public.session` via `auth.api.getSession()` — sign-out deletes the `public.session` row and the token immediately becomes invalid. [detail](2026-05-15-logout-jwt-not-revoked.md)
 - **2026-05-15** *(R6)* — `auth.test.ts > rejects a tampered token` flaked ~6%: flipping the final base64url char of an HS256 signature is a no-op when chars share top-4 bits (A↔B↔C↔D). Fix: tamper the payload segment instead — every bit is significant. [detail](2026-05-15-auth-tampered-token-base64-flake.md)
 - **2026-05-14** *(R5)* — Waitlist returned 202 with empty DB: `fakeTurnstile()` only accepted `tt-…` tokens while the real widget emits Cloudflare-format tokens; every test stubbed Turnstile so the default factory was untested. Fix: accept any non-empty token + default-wiring integration test. [detail](2026-05-14-fake-turnstile-magic-token.md)
 - **2026-05-13** *(R4)* — Colocating `_layout.test.tsx` inside `app/` pulled `vitest` → `@vitest/runner/utils` → `chai` into the Metro bundle and crashed every screen at runtime. Fix: move tests under `apps/mobile/__tests__/...`; prefix non-route helpers with `_`. [detail](2026-05-13-vitest-leak-via-colocated-tests.md)

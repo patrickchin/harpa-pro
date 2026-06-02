@@ -17,14 +17,14 @@
 
 The project-members surface has three routes: `GET`, `POST`, and `DELETE`
 on `/projects/{project}/members` / `/projects/{project}/members/{user}`.
-The `POST` route adds a new member **by phone number**.
+The `POST` route adds a new member **by email address**.
 
 The key bug this document was written to prevent: **a project owner can call
-`POST /projects/{project}/members` with their own phone number and a
+`POST /projects/{project}/members` with their own email address and a
 downgraded role (e.g. `viewer`), which—if the handler naively upserted—would
 demote them from `owner`, potentially locking the project out of all
 owner-only operations** (member management, project deletion). The current DB
-helper `app.add_project_member_by_phone` already blocks re-invites with a
+helper `app.add_project_member_by_email` already blocks re-invites with a
 `23505` unique-violation (→ 409), but:
 
 1. The protection is documented only in a SQL comment, not in an API design
@@ -64,7 +64,7 @@ Three roles, enumerated in `app.project_role` (`owner | editor | viewer`).
 ### 3a. POST upserts the role on conflict (rejected)
 
 Make `POST /projects/{project}/members` idempotent by inserting the row or
-updating the role if the phone already matches a member. This removes the 409
+updating the role if the email already matches a member. This removes the 409
 response for re-invites.
 
 **Rejected because** it allows an owner to demote themselves (or another owner)
@@ -112,11 +112,11 @@ defined in `arch-api-design.md`. The stable `code` strings for this surface:
 
 | Code | HTTP | When |
 |------|------|------|
-| `MEMBER_EXISTS` | 409 | POST: the phone already belongs to a project member |
+| `MEMBER_EXISTS` | 409 | POST: the email already belongs to a project member |
 | `MEMBER_NOT_FOUND` | 404 | PATCH / DELETE: target `usr_*` is not a member of this project |
 | `LAST_OWNER` | 409 | PATCH / DELETE: operation would leave zero owners |
 | `NOT_AN_OWNER` | 403 | POST / PATCH / DELETE: caller's role is not `owner` |
-| `USER_NOT_FOUND` | 404 | POST: phone number is not registered |
+| `USER_NOT_FOUND` | 404 | POST: email address is not registered |
 
 These are **additive** to the generic codes (`AUTH_INVALID_TOKEN`,
 `VALIDATION_FAILED`, etc.) already defined in the error mapper
@@ -132,13 +132,13 @@ export const projectRole = z.enum(['owner', 'editor', 'viewer']);
 export const projectMember = z.object({
   userId:      userId,
   displayName: z.string().nullable(),
-  phone,
+  email:       z.string().email(),
   role:        projectRole,
   joinedAt:    isoDateTime,
 });
 
 export const inviteMemberRequest = z.object({
-  phone,
+  email: z.string().email(),
   role: projectRole.default('editor'),
 });
 ```
@@ -163,14 +163,14 @@ export const updateMemberRoleRequest = z.object({
 #### `POST /projects/{project}/members`
 
 - **Auth:** owner only.
-- **Request body:** `{ phone: E.164, role?: 'owner'|'editor'|'viewer' }`.
+- **Request body:** `{ email: string (email), role?: 'owner'|'editor'|'viewer' }`.
   `role` defaults to `'editor'`.
 - **Response 201:** `ProjectMember` — the newly created row.
 - **Response 403:** `NOT_AN_OWNER` — caller's role is not `owner`.
-- **Response 404:** `USER_NOT_FOUND` — no account with that phone.
-- **Response 409:** `MEMBER_EXISTS` — that phone already belongs to a project
+- **Response 404:** `USER_NOT_FOUND` — no account with that email.
+- **Response 409:** `MEMBER_EXISTS` — that email already belongs to a project
   member (any role, including `owner`).
-- **Notes:** DB-level enforcement via `app.add_project_member_by_phone`.
+- **Notes:** DB-level enforcement via `app.add_project_member_by_email`.
   The 409 is **not** an "invite already sent" state — it is a permanent
   "this person is already on the project" response. The mobile client should
   offer the user a direct link to the PATCH flow instead.
@@ -219,11 +219,11 @@ CREATE OR REPLACE FUNCTION app.update_member_role(
 RETURNS TABLE (
   user_id      app.usr_id,
   display_name text,
-  phone        varchar(32),
+  email        text,
   role         app.project_role,
   joined_at    timestamptz
 )
-LANGUAGE plpgsql SECURITY DEFINER SET search_path = app, auth, pg_temp AS $$
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = app, public, pg_temp AS $$
 #variable_conflict use_column
 DECLARE
   v_caller      app.usr_id := current_setting('app.user_id')::app.usr_id;
@@ -270,9 +270,9 @@ BEGIN
   END IF;
 
   RETURN QUERY
-    SELECT pm.user_id, u.display_name, u.phone, pm.role, pm.joined_at
+    SELECT pm.user_id, u.display_name, u.email, pm.role, pm.joined_at
     FROM app.project_members pm
-    JOIN auth.users u ON u.id = pm.user_id
+    JOIN public."user" u ON u.id = pm.user_id
     WHERE pm.project_id = p_project_id AND pm.user_id = p_user_id;
 END;
 $$;
@@ -306,7 +306,7 @@ export async function updateMemberRole(
   const r = await db.execute<{
     user_id: string;
     display_name: string | null;
-    phone: string;
+    email: string;
     role: ProjectRole;
     joined_at: Date;
   }>(sql`
@@ -319,7 +319,7 @@ export async function updateMemberRole(
   return {
     userId:      row.user_id,
     displayName: row.display_name,
-    phone:       row.phone,
+    email:       row.email,
     role:        row.role,
     joinedAt:    new Date(row.joined_at).toISOString(),
   };
@@ -387,8 +387,8 @@ Each test lives in `packages/api/src/__tests__/projects.integration.test.ts`
 | # | Scenario | Actors | Expected |
 |---|----------|--------|----------|
 | S1 | Owner A adds new user B as `editor` | A=owner, B=no existing membership | 201 `{ role: 'editor' }` |
-| S2 | Owner A invites B who is not registered | A=owner, B=no auth.users row | 404 `USER_NOT_FOUND` |
-| S3 | Owner A tries to add themselves (same phone) | A=owner | 409 `MEMBER_EXISTS` |
+| S2 | Owner A invites B who is not registered | A=owner, B=no `public."user"` row | 404 `USER_NOT_FOUND` |
+| S3 | Owner A tries to add themselves (same email) | A=owner | 409 `MEMBER_EXISTS` |
 | S4 | Owner A adds already-member B again | A=owner, B=editor | 409 `MEMBER_EXISTS` |
 | S5 | Editor B tries to add C | B=editor, C=new | 403 `NOT_AN_OWNER` |
 | S6 | Owner A adds B as `owner` (co-owner) | A=owner, B=new | 201 `{ role: 'owner' }` |
@@ -509,6 +509,6 @@ picked up in their named plan tasks:
 | Carve-out | Where to pick up |
 |-----------|-----------------|
 | **Transferring `projects.owner_id`** — the "created by" column is not the same as the `owner` role in `project_members`. Renaming a project's "original creator" is not yet exposed. | Pick up in P3 members screen if the UX requires it; add a `PATCH /projects/{project}` field `ownerId`. |
-| **Invitation flow for unregistered phone** — today POST returns 404 if the phone is not in `auth.users`. A full invitation flow (SMS link, pending invite row) is a separate feature. | Record as a deferred feature in `plan-p5-beta-ga.md §invitations`. |
+| **Invitation flow for unregistered email** — today POST returns 404 if the email is not in `public."user"`. A full invitation flow (email link, pending invite row) is a separate feature. | Record as a deferred feature in `plan-p5-beta-ga.md §invitations`. |
 | **Bulk role changes** — e.g. "promote all editors to owners". Not needed in P3. | Defer to post-GA if ever needed. |
 | **Viewer-can-invite toggle** — a project setting to allow non-owners to invite. | Defer; would require a new `project_settings` row and RLS policy changes. |

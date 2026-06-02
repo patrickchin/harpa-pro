@@ -141,7 +141,7 @@ projects CRUD, members invite/role-change/remove + visibility checks,
 reports CRUD, text notes (add + delete), generate → finalize →
 unfinalize, and a new **Report Debug** surface exposing prompt +
 notes + LLM response. Runs first in **local-fixture mode** against a
-fresh `docker compose` stack using the existing `TWILIO_LIVE=0`
+fresh `docker compose` stack using the existing `EMAIL_OTP_LIVE=0`
 fake-OTP path, then against the **dev deployment** using the gated
 test-account password bypass and non-destructive per-run cleanup.
 Full design + carve-outs + testID inventory + module breakdown:

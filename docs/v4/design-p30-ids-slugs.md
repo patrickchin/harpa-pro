@@ -158,7 +158,7 @@ ALTER TABLE app.reports ADD CONSTRAINT reports_number_unique UNIQUE (project_id,
 -- 6. Switch id defaults to uuid_generate_v7() for new rows.
 ALTER TABLE app.projects ALTER COLUMN id SET DEFAULT uuid_generate_v7();
 ALTER TABLE app.reports ALTER COLUMN id SET DEFAULT uuid_generate_v7();
--- (auth.users/sessions/verifications can migrate in a follow-up; not user-facing.)
+-- (public."user"/session/verification can migrate in a follow-up; not user-facing.)
 
 -- 7. Create indexes for slug lookups.
 CREATE INDEX projects_slug_idx ON app.projects(slug);
@@ -430,7 +430,7 @@ None. **Extend existing** `packages/api/src/__tests__/scope/{projects,reports}.s
 ```ts
 it('alice GET /projects/:projectSlug (by slug) returns her own project', async () => {
   const app = createApp();
-  const token = await signTestToken(alice, aliceSid);
+  const token = await signTestSession(alice, aliceSid);
   const res = await app.request(`/projects/${aliceSlug}`, { headers: { authorization: `Bearer ${token}` } });
   expect(res.status).toBe(200);
   const body = (await res.json()) as { slug: string };
@@ -439,7 +439,7 @@ it('alice GET /projects/:projectSlug (by slug) returns her own project', async (
 
 it('paired — alice GET /projects/:projectSlug of bob returns 404', async () => {
   const app = createApp();
-  const token = await signTestToken(alice, aliceSid);
+  const token = await signTestSession(alice, aliceSid);
   const res = await app.request(`/projects/${bobSlug}`, { headers: { authorization: `Bearer ${token}` } });
   expect(res.status).toBe(404);
 });
@@ -450,14 +450,14 @@ it('paired — alice GET /projects/:projectSlug of bob returns 404', async () =>
 ```ts
 it('alice GET /projects/:projectSlug/reports/:number returns her own report', async () => {
   const app = createApp();
-  const token = await signTestToken(alice, aliceSid);
+  const token = await signTestSession(alice, aliceSid);
   const res = await app.request(`/projects/${aliceProjectSlug}/reports/1`, { headers: { authorization: `Bearer ${token}` } });
   expect(res.status).toBe(200);
 });
 
 it('cross — alice GET /projects/:projectSlug/reports/:number of bob → 404', async () => {
   const app = createApp();
-  const token = await signTestToken(alice, aliceSid);
+  const token = await signTestSession(alice, aliceSid);
   const res = await app.request(`/projects/${bobProjectSlug}/reports/1`, { headers: { authorization: `Bearer ${token}` } });
   expect(res.status).toBe(404);
 });
@@ -469,7 +469,7 @@ it('cross — alice GET /projects/:projectSlug/reports/:number of bob → 404', 
 describe('scope: resolver routes', () => {
   it('alice GET /p/:projectSlug resolves her own project', async () => {
     const app = createApp();
-    const token = await signTestToken(alice, aliceSid);
+    const token = await signTestSession(alice, aliceSid);
     const res = await app.request(`/p/${aliceProjectSlug}`, { headers: { authorization: `Bearer ${token}` } });
     expect(res.status).toBe(200);
     const body = (await res.json()) as { type: string; projectSlug: string };
@@ -478,14 +478,14 @@ describe('scope: resolver routes', () => {
 
   it('alice GET /p/:projectSlug of bob → 404', async () => {
     const app = createApp();
-    const token = await signTestToken(alice, aliceSid);
+    const token = await signTestSession(alice, aliceSid);
     const res = await app.request(`/p/${bobProjectSlug}`, { headers: { authorization: `Bearer ${token}` } });
     expect(res.status).toBe(404);
   });
 
   it('alice GET /r/:reportSlug resolves her own report', async () => {
     const app = createApp();
-    const token = await signTestToken(alice, aliceSid);
+    const token = await signTestSession(alice, aliceSid);
     const res = await app.request(`/r/${aliceReportSlug}`, { headers: { authorization: `Bearer ${token}` } });
     expect(res.status).toBe(200);
     const body = (await res.json()) as { type: string; projectSlug: string; reportNumber: number };
@@ -494,7 +494,7 @@ describe('scope: resolver routes', () => {
 
   it('alice GET /r/:reportSlug of bob → 404', async () => {
     const app = createApp();
-    const token = await signTestToken(alice, aliceSid);
+    const token = await signTestSession(alice, aliceSid);
     const res = await app.request(`/r/${bobReportSlug}`, { headers: { authorization: `Bearer ${token}` } });
     expect(res.status).toBe(404);
   });

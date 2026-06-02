@@ -153,8 +153,8 @@ canonical source at `../haru3-reports/apps/mobile@dev`.
 
 **v4 rule.**
 
-1. Auth ships in P0.6 with a working OTP flow against a Twilio
-   sandbox **before** any other API route. P1's first task is "auth
+1. Auth ships in P0.6 with a working email-OTP flow via Resend
+   (`EMAIL_OTP_LIVE=1`) **before** any other API route. P1's first task is "auth
    middleware + integration tests".
 2. `apps/mobile/lib/env.ts` is a Zod-parsed object loaded at app
    boot. ESLint forbids `process.env.EXPO_PUBLIC_*` outside that
@@ -312,7 +312,7 @@ as [Pattern R5](../bugs/README.md#r5--di-stubs-become-the-spec-default-wiring-si
    real side-effect (DB row, queued email, recorded fixture call).
    The "always-OK" stub is for negative-path tests, not the spec.
 2. **Fake-mode helpers accept what the real dev surface produces.**
-   `fakeTurnstile`, fake-Twilio, fake-R2, fake-Resend should behave
+   `fakeTurnstile`, fake-R2, fake-Resend should behave
    on the inputs the local widget / dev surface actually sends.
    Magic token shapes (`tt-…`) are a test-only convention; if a test
    wants the failure branch, it injects `alwaysFailX()`, not a token
@@ -554,6 +554,42 @@ gate conditions) plus a default-wiring screen test that renders the
 provider and asserts the action-row state without stubbing the hook.
 See `apps/mobile/features/generate/useAutoRegenerate.test.tsx` and
 `apps/mobile/screens/generate-report-tab.test.tsx`.
+
+---
+
+---
+
+## Pitfall 20 — better-auth session validation order in tests
+
+**Symptom.** `withAuth` returns 401 for valid sessions when
+`auth.api.getSession()` is called before the connection pool is
+initialised, or when the bearer token is a refresh token / any
+non-session string.
+
+**Cause.** better-auth validates the token hash against the
+`public.session` table using the unscoped pool (`rawDb()`). If the
+pool is not yet initialised (e.g. `resetPool()` not called before the
+first `signTestSession` in integration tests), `getSession` silently
+returns `null` and `withAuth` throws 401.
+
+**Rules.**
+
+1. In integration test setup always call `resetPool()` **before**
+   using `signTestSession`. The canonical helper order is:
+   ```ts
+   beforeAll(async () => {
+     await resetPool(container.connectionString);
+     token = await signTestSession(userId, sessionId);
+   });
+   ```
+2. `signTestSession` inserts a real row into `public.session` and
+   returns the session token that better-auth minted. Never forge a
+   session by constructing an arbitrary string — better-auth compares
+   the SHA-256 hash of the token against `public.session.token`.
+3. In production, opaque bearer tokens issued by better-auth are
+   self-consistent. Do not attempt to decode or re-sign them with a
+   custom key; only `auth.api.getSession({ headers })` is the
+   authoritative validator.
 
 ---
 

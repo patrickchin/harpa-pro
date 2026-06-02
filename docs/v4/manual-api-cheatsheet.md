@@ -1,7 +1,7 @@
 # Manual API cheatsheet
 
 Curl-driven smoke test of `@harpa/api` running locally in fixture mode.
-No real Twilio, no real AI provider, no R2.
+No real Resend, no real AI provider, no R2.
 
 ## 0. Prereqs (one-time)
 
@@ -28,6 +28,9 @@ Stop later with `docker rm -f harpa-pg`.
 
 ```bash
 DATABASE_URL='postgres://postgres:pg@localhost:5433/harpa' \
+BETTER_AUTH_SECRET=dev-secret \
+BETTER_AUTH_URL=http://127.0.0.1:8787 \
+EMAIL_OTP_LIVE=0 \
 R2_FIXTURE_MODE=replay \
 pnpm --filter @harpa/api dev
 ```
@@ -35,8 +38,8 @@ pnpm --filter @harpa/api dev
 Listens on `:8787`. `R2_FIXTURE_MODE=replay` is **required** — without
 it `pickStorage()` returns `R2Storage`, whose methods all throw.
 
-`TWILIO_LIVE` unset (default) → fake OTP. Any phone works; the accepted
-code is `TWILIO_VERIFY_FAKE_CODE` (default `000000`).
+`EMAIL_OTP_LIVE=0` (default) → OTP is logged to the console instead of
+sent via Resend. Check the server output for the 6-digit code.
 
 ## 3. Curl flow
 
@@ -46,10 +49,14 @@ Run from a second terminal.
 B=http://127.0.0.1:8787
 J='content-type: application/json'
 
-# --- auth ---------------------------------------------------------------
-curl -sX POST $B/auth/otp/start  -H "$J" -d '{"phone":"+15550000001"}'
-TOKEN=$(curl -sX POST $B/auth/otp/verify -H "$J" \
-  -d '{"phone":"+15550000001","code":"000000"}' | jq -r .token)
+# --- auth (email-OTP via better-auth) -----------------------------------
+# Step 1: request OTP (check server console for the code when EMAIL_OTP_LIVE=0)
+curl -sX POST $B/api/auth/email-otp/send-verification-otp -H "$J" \
+  -d '{"email":"test@example.com"}'
+
+# Step 2: sign in with OTP (replace 123456 with the code from the log)
+TOKEN=$(curl -sX POST $B/api/auth/sign-in/email-otp -H "$J" \
+  -d '{"email":"test@example.com","otp":"123456"}' | jq -r .token)
 H="authorization: Bearer $TOKEN"
 
 # --- project + draft report --------------------------------------------

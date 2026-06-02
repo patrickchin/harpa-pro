@@ -4,7 +4,7 @@ import js from "@eslint/js";
 import astro from "eslint-plugin-astro";
 import tseslint from "typescript-eslint";
 
-export default [
+export default tseslint.config(
   {
     ignores: ["dist/**", ".astro/**", "node_modules/**", "coverage/**"],
   },
@@ -20,10 +20,9 @@ export default [
     },
   },
   {
-    // Astro-generated ambient type files use triple-slash refs by design.
     files: ["**/*.d.ts"],
     rules: {
       "@typescript-eslint/triple-slash-reference": "off",
     },
   },
-];
+);

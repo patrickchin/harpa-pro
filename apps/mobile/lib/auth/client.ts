@@ -21,29 +21,23 @@ import { env } from '@/lib/config/env';
 // the iOS Keychain rejects all SecureStore operations with errSecMissingEntitlement.
 // We fall back to an in-memory Map so the auth session stays alive within a
 // single app process (fine for E2E since each run does clearState + clearKeychain).
+// @better-auth/expo's storage interface only requires getItem + setItem.
 const memCache = new Map<string, string>();
 
-const safeSecureStore: typeof SecureStore = {
+const safeSecureStore = {
   ...SecureStore,
-  getItem: (key: string, options?: SecureStore.SecureStoreOptions) => {
+  getItem: (key: string, options?: SecureStore.SecureStoreOptions): string | null => {
     try {
       return SecureStore.getItem(key, options);
     } catch {
       return memCache.get(key) ?? null;
     }
   },
-  setItem: (key: string, value: string, options?: SecureStore.SecureStoreOptions) => {
+  setItem: (key: string, value: string, options?: SecureStore.SecureStoreOptions): void => {
     try {
       SecureStore.setItem(key, value, options);
     } catch {
       memCache.set(key, value);
-    }
-  },
-  deleteItem: (key: string, options?: SecureStore.SecureStoreOptions) => {
-    try {
-      SecureStore.deleteItem(key, options);
-    } catch {
-      memCache.delete(key);
     }
   },
 };

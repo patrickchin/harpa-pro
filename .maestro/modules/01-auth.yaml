@@ -27,15 +27,19 @@ tags:
 # lands on the dev-launcher picker, not the JS app. Deep-link the
 # dev-launcher's own scheme with an explicit Metro URL. See
 # `core-end-to-end.yaml` for the full explanation.
+# On Android: openLink deep-links the dev-launcher to load the Metro bundle.
+# On iOS: the exp+harpa-pro-v4 scheme is unregistered, so this is a no-op;
+# the dev-launcher already remembers the Metro URL from the last run.
 - openLink: "exp+harpa-pro-v4://expo-development-client/?url=http%3A%2F%2Flocalhost%3A8081"
-- extendedWaitUntil:
-    visible: "Continue"
-    timeout: 60000
+# Wait for bundle load / animation. On Android first run the dev-launcher
+# shows a "This is the developer menu" sheet with a "Continue" button.
+# On iOS (and Android subsequent runs), this may not appear — use a timed
+# wait + conditional gates (never unconditional extendedWaitUntil) so iOS
+# doesn't stall for 60 s.
+- waitForAnimationToEnd:
+    timeout: 20000
 
-# The Android dev-launcher first-run sheet ("This is the developer menu")
-# overlays the sign-in screen and obscures `input-email`. Wait for its
-# "Continue" button before dismissing it; close any dev menu it opens.
-# On iOS and on subsequent Android runs, these gates are no-ops.
+# Dismiss the Android/iOS dev-launcher first-run sheet if it appears.
 - runFlow:
     when:
       visible: "Continue"

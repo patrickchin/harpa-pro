@@ -11,7 +11,8 @@ appId: ${MAESTRO_APP_ID}
 #   - adb reverse tcp:8787 tcp:8787 for Android.
 #
 # Pre-condition: sign-in (email) screen is visible (`input-email`).
-# Post-condition: projects list is visible (`btn-new-project`).
+# Post-condition: sign-in screen is no longer visible. Caller is responsible
+# for handling either onboarding (new account) or projects list (returning user).
 #
 # Usage:
 #   - runFlow:
@@ -39,7 +40,9 @@ appId: ${MAESTRO_APP_ID}
 - inputText: "${output.OTP}"
 - tapOn:
     id: "btn-verify-code"
+# Wait until the sign-in screen leaves — new users land on onboarding,
+# returning users land on the projects list. The caller handles both.
 - extendedWaitUntil:
-    visible:
-      id: "btn-new-project"
+    notVisible:
+      id: "input-email"
     timeout: 15000

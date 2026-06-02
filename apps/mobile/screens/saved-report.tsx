@@ -39,7 +39,8 @@ import { ScreenHeader } from '@/components/primitives/ScreenHeader';
 import { Skeleton } from '@/components/primitives/Skeleton';
 import { AppDialogSheet } from '@/components/primitives/AppDialogSheet';
 import { ReportView } from '@/components/reports/ReportView';
-import { ReportEditForm } from '@/components/reports/ReportEditForm';
+import { ReportEditModal } from '@/components/reports/edit/ReportEditModal';
+import type { ReportEditTarget } from '@/components/reports/edit/types';
 import { PdfPreviewModal } from '@/components/reports/PdfPreviewModal';
 import { ImagePreviewModal } from '@/components/files/ImagePreviewModal';
 import { ReportPhotos } from '@/components/reports/detail/ReportPhotos';
@@ -192,6 +193,11 @@ export function SavedReport(props: SavedReportProps) {
   const [activeTab, setActiveTab] = useState<ReportDetailTab>(
     initialTab ?? 'report',
   );
+  // `editing` drives the per-card full-screen edit modal. `null` when
+  // closed; otherwise the slice descriptor for whichever pencil was
+  // tapped. See
+  // `docs/superpowers/specs/2026-06-03-report-edit-modal-redesign-design.md`.
+  const [editing, setEditing] = useState<ReportEditTarget | null>(null);
 
   // Layout-shift probes — landmarks that should land at the same Y
   // when the loading branch swaps to the loaded `ReportDetailHeader`.
@@ -204,11 +210,11 @@ export function SavedReport(props: SavedReportProps) {
   const isFinal = reportStatus === 'finalized';
 
   // Finalized reports are read-only — bounce back to Report tab if the
-  // status flips to finalized while the user is on Edit or Notes (the
-  // Notes tab is hidden for finalised reports; access moves to the
-  // Actions menu).
+  // status flips to finalized while the user is on Notes (the Notes
+  // tab is hidden for finalised reports; access moves to the Actions
+  // menu).
   useEffect(() => {
-    if (isFinal && (activeTab === 'edit' || activeTab === 'notes')) {
+    if (isFinal && activeTab === 'notes') {
       setActiveTab('report');
     }
   }, [isFinal, activeTab]);
@@ -281,6 +287,16 @@ export function SavedReport(props: SavedReportProps) {
   const handleEditChange = (next: GeneratedSiteReport) => {
     setLocalReport(next);
     onChangeReport(next);
+  };
+
+  // Pencil → modal. Editable only when the report is a draft. Finalised
+  // reports hide the tab bar and don't render the editing UI.
+  const handleOpenEdit = (target: ReportEditTarget) => {
+    setEditing(target);
+  };
+
+  const handleEditModalChange = (next: GeneratedSiteReport) => {
+    handleEditChange(next);
   };
 
   if (isLoading) {
@@ -405,23 +421,8 @@ export function SavedReport(props: SavedReportProps) {
             activeTab={activeTab}
             onChange={setActiveTab}
             notesCount={notesCount}
-            showEditTab={!isFinal}
             showNotesTab={!isFinal}
           />
-        ) : null}
-
-        {!isFinal && activeTab === 'edit' ? (
-          <View className="flex-row items-center justify-between px-5 pt-1 pb-1">
-            <Text className="text-sm font-medium text-muted-foreground">
-              Edit report
-            </Text>
-            <Text
-              className="text-xs text-muted-foreground"
-              testID="edit-autosave-status"
-            >
-              {isAutoSaving ? 'Saving…' : lastSavedAt ? 'Saved' : ''}
-            </Text>
-          </View>
         ) : null}
 
         {isFinal || activeTab === 'report' ? (
@@ -430,7 +431,11 @@ export function SavedReport(props: SavedReportProps) {
             className="px-5"
             testID="saved-report-pane"
           >
-            <ReportView report={displayReport} reportNumber={reportNumber ?? undefined} />
+            <ReportView
+              report={displayReport}
+              reportNumber={reportNumber ?? undefined}
+              onEdit={!isFinal ? handleOpenEdit : undefined}
+            />
             <View className="mt-4">
               <ReportPhotos
                 noteRows={noteRows}
@@ -438,13 +443,6 @@ export function SavedReport(props: SavedReportProps) {
               />
             </View>
           </Animated.View>
-        ) : !isFinal && activeTab === 'edit' ? (
-          <View className="px-5" testID="saved-report-edit-pane">
-            <ReportEditForm
-              report={displayReport}
-              onChange={handleEditChange}
-            />
-          </View>
         ) : (
           <Animated.View entering={FadeIn.duration(250)}>
             <ReportNotesPane
@@ -607,6 +605,15 @@ export function SavedReport(props: SavedReportProps) {
           void handleSavePdf();
         }}
       />
+
+      {!isFinal && displayReport ? (
+        <ReportEditModal
+          target={editing}
+          report={displayReport}
+          onClose={() => setEditing(null)}
+          onChange={handleEditModalChange}
+        />
+      ) : null}
     </SafeAreaView>
   );
 }

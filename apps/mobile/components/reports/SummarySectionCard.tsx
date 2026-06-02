@@ -10,6 +10,7 @@ import type { GeneratedReportSection } from '@harpa/report-core';
 
 import { Card } from '@/components/primitives/Card';
 import { SectionHeader } from '@/components/primitives/SectionHeader';
+import { EditPencilButton } from '@/components/reports/edit/EditPencilButton';
 import { SECTION_ICONS } from '@/lib/reports/section-icons';
 import { colors } from '@/lib/design-tokens/colors';
 
@@ -17,9 +18,15 @@ interface SummarySectionCardProps {
   section: GeneratedReportSection;
   reportNumber?: number;
   sectionIndex?: number;
+  onEdit?: () => void;
 }
 
-export function SummarySectionCard({ section, reportNumber, sectionIndex }: SummarySectionCardProps) {
+export function SummarySectionCard({
+  section,
+  reportNumber,
+  sectionIndex,
+  onEdit,
+}: SummarySectionCardProps) {
   const Icon = SECTION_ICONS[section.title] || ClipboardList;
   const numStr = reportNumber ?? 'x';
   const idx = sectionIndex ?? 0;
@@ -29,6 +36,15 @@ export function SummarySectionCard({ section, reportNumber, sectionIndex }: Summ
       <SectionHeader
         title={section.title}
         icon={<Icon size={16} color={colors.foreground} />}
+        trailing={
+          onEdit ? (
+            <EditPencilButton
+              onPress={onEdit}
+              accessibilityLabel={`Edit section ${section.title}`}
+              testID={`btn-edit-section-${idx}`}
+            />
+          ) : undefined
+        }
       />
       <Text
         className="mt-4 text-base leading-relaxed text-muted-foreground"

@@ -9,15 +9,20 @@ import { Cloud, Thermometer, Wind } from 'lucide-react-native';
 import type { GeneratedSiteReport } from '@harpa/report-core';
 
 import { Card } from '@/components/primitives/Card';
+import { EditPencilButton } from '@/components/reports/edit/EditPencilButton';
 import { colors } from '@/lib/design-tokens/colors';
 
 interface WeatherStripProps {
   report: GeneratedSiteReport;
+  onEdit?: () => void;
 }
 
-export function WeatherStrip({ report }: WeatherStripProps) {
+export function WeatherStrip({ report, onEdit }: WeatherStripProps) {
   const weather = report.report.weather;
-  if (!weather) return null;
+  if (!weather && !onEdit) return null;
+  if (!weather) {
+    return null;
+  }
 
   const items = [
     weather.conditions ? { icon: Cloud, text: weather.conditions } : null,
@@ -33,6 +38,15 @@ export function WeatherStrip({ report }: WeatherStripProps) {
 
   return (
     <Card variant="default" padding="md" className="gap-3">
+      {onEdit ? (
+        <View className="flex-row items-center justify-end">
+          <EditPencilButton
+            onPress={onEdit}
+            accessibilityLabel="Edit weather"
+            testID="btn-edit-weather"
+          />
+        </View>
+      ) : null}
       {first
         ? (() => {
             const CondIcon = first.icon;

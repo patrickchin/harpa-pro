@@ -12,6 +12,7 @@ import { toTitleCase } from '@harpa/report-core';
 
 import { Card } from '@/components/primitives/Card';
 import { SectionHeader } from '@/components/primitives/SectionHeader';
+import { EditPencilButton } from '@/components/reports/edit/EditPencilButton';
 import { getIssueSeverityTone } from '@/lib/reports/report-ui';
 import { colors } from '@/lib/design-tokens/colors';
 
@@ -42,9 +43,10 @@ function getSeverityStyle(severity: string) {
 
 interface IssuesCardProps {
   issues: readonly GeneratedReportIssue[];
+  onEditIssue?: (index: number) => void;
 }
 
-export function IssuesCard({ issues }: IssuesCardProps) {
+export function IssuesCard({ issues, onEditIssue }: IssuesCardProps) {
   if (issues.length === 0) return null;
 
   return (
@@ -87,6 +89,13 @@ export function IssuesCard({ issues }: IssuesCardProps) {
                         {toTitleCase(issue.severity)}
                       </Text>
                     </View>
+                    {onEditIssue ? (
+                      <EditPencilButton
+                        onPress={() => onEditIssue(index)}
+                        accessibilityLabel={`Edit issue ${index + 1}`}
+                        testID={`btn-edit-issue-${index}`}
+                      />
+                    ) : null}
                   </View>
                   <Text className="mt-2 text-sm text-muted-foreground">
                     {[issue.category, issue.status]

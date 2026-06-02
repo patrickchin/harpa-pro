@@ -1,5 +1,5 @@
 /**
- * withAdmin — checks `auth.users.is_admin = true` for the caller.
+ * withAdmin — checks `public."user".is_admin = true` for the caller.
  * Mounts on top of `withAuth()` (which has already populated
  * `userId`). On non-admin, returns 403. On no-session, 401 (delegated
  * to withAuth).
@@ -20,7 +20,7 @@ export function withAdmin(): MiddlewareHandler<AppEnv> {
       throw new HTTPException(401, { message: 'Missing bearer token.' });
     }
     const result = await rawDb().execute<{ is_admin: boolean }>(
-      sql`SELECT is_admin FROM auth.users WHERE id = ${userId} LIMIT 1`,
+      sql`SELECT is_admin FROM public."user" WHERE id = ${userId} LIMIT 1`,
     );
     const row = result.rows[0];
     if (!row || row.is_admin !== true) {

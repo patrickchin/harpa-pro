@@ -15,11 +15,22 @@ const Env = z.object({
   DATABASE_URL: z.string().url().or(z.string().startsWith('postgres://')).optional(),
   BETTER_AUTH_SECRET: z.string().min(16).default('dev-only-secret-do-not-use-in-prod'),
   BETTER_AUTH_URL: z.string().url().default('http://localhost:8787'),
-  TWILIO_ACCOUNT_SID: z.string().optional(),
-  TWILIO_AUTH_TOKEN: z.string().optional(),
-  TWILIO_VERIFY_SID: z.string().optional(),
-  TWILIO_LIVE: z.enum(['0', '1']).default('0'),
-  TWILIO_VERIFY_FAKE_CODE: z.string().default('000000'),
+  /**
+   * Test-account password bypass — comma-separated allowlist of emails
+   * permitted to sign in via better-auth's emailAndPassword endpoint.
+   * Doppler `dev` only; production must leave this unset (refine below).
+   * Replaces the legacy TEST_ACCOUNT_PHONES variable.
+   */
+  TEST_ACCOUNT_EMAILS: z.string().optional(),
+  /**
+   * Email-OTP transport switch. `'1'` → real Resend send via better-auth's
+   * `sendVerificationOTP` hook. Default `'0'` logs the OTP to stdout
+   * (development) and is a no-op under test.
+   *
+   * Production must set this to `'1'` (refine below); a missing Doppler
+   * key would otherwise silently downgrade prod to fake mode.
+   */
+  EMAIL_OTP_LIVE: z.enum(['0', '1']).default('0'),
   AI_FIXTURE_MODE: z.enum(['replay', 'record', 'live']).default('replay'),
   AI_LIVE: z.enum(['0', '1']).default('0'),
   // OpenAI is used for voice-note summarization. Required when AI_LIVE=1.
@@ -109,18 +120,9 @@ const Env = z.object({
    * Test-account password bypass for live deployments — see
    * docs/v4/arch-auth-and-rls.md §Test-account password bypass.
    *
-   * Comma-separated E.164 phone numbers permitted to authenticate via
-   * `POST /auth/password/verify` instead of an SMS OTP. Real users are
-   * unaffected; non-listed phones get a generic 401 (no enumeration).
-   *
-   * Off-by-default: both vars must be set together, or the route
-   * returns 404. Production must not set these unless intentional.
-   */
-  TEST_ACCOUNT_PHONES: z.string().optional(),
-  /**
-   * Shared password for all phones in TEST_ACCOUNT_PHONES. Hashed once
-   * at boot (scrypt + per-boot random salt). Min 16 chars to make a
-   * leak less catastrophic.
+   * Shared password for all emails in TEST_ACCOUNT_EMAILS. Min 16
+   * chars to keep a leak less catastrophic. Both vars must be set
+   * together (refine below) — production must leave both unset.
    */
   TEST_ACCOUNT_PASSWORD: z.string().min(16).optional(),
   /**
@@ -164,10 +166,22 @@ const Env = z.object({
   (e) => e.AI_LIVE !== '1' || !!e.GROQ_API_KEY,
   { path: ['GROQ_API_KEY'], message: 'required when AI_LIVE=1 (transcription via whisper-large-v3-turbo)' },
 ).refine(
-  (e) => !!e.TEST_ACCOUNT_PHONES === !!e.TEST_ACCOUNT_PASSWORD,
+  (e) => !!e.TEST_ACCOUNT_EMAILS === !!e.TEST_ACCOUNT_PASSWORD,
   {
     path: ['TEST_ACCOUNT_PASSWORD'],
-    message: 'TEST_ACCOUNT_PHONES and TEST_ACCOUNT_PASSWORD must be set together',
+    message: 'TEST_ACCOUNT_EMAILS and TEST_ACCOUNT_PASSWORD must be set together',
+  },
+).refine(
+  (e) => e.NODE_ENV !== 'production' || !e.TEST_ACCOUNT_EMAILS,
+  {
+    path: ['TEST_ACCOUNT_EMAILS'],
+    message: 'TEST_ACCOUNT_EMAILS must be unset on production',
+  },
+).refine(
+  (e) => e.NODE_ENV !== 'production' || e.EMAIL_OTP_LIVE === '1',
+  {
+    path: ['EMAIL_OTP_LIVE'],
+    message: "EMAIL_OTP_LIVE must be '1' on production (else OTP emails would not send)",
   },
 );
 

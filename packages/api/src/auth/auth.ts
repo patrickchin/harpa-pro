@@ -1,0 +1,136 @@
+/**
+ * better-auth server configuration.
+ *
+ * - Email-OTP via Resend (live or fake based on EMAIL_OTP_LIVE).
+ * - emailAndPassword enabled but gated to TEST_ACCOUNT_EMAILS allowlist
+ *   via a before-hook (test-account smoke-test bypass).
+ * - Custom slug IDs (usr_/ses_/vrf_/idn_) via advanced.database.generateId.
+ * - expo() plugin owns the bearer/cookie storage flow used by the Expo
+ *   client.
+ *
+ * See docs/v4/arch-auth-and-rls.md and
+ * docs/superpowers/specs/2026-06-02-migrate-auth-to-better-auth-design.md.
+ */
+import { betterAuth } from 'better-auth';
+import { drizzleAdapter } from 'better-auth/adapters/drizzle';
+import { emailOTP } from 'better-auth/plugins';
+import { APIError, createAuthMiddleware } from 'better-auth/api';
+import { expo } from '@better-auth/expo';
+import { rawDb } from '../db/client.js';
+import * as authSchema from '../db/auth-schema.js';
+import { env } from '../env.js';
+import { createResendClient } from '../lib/resend.js';
+import { newId } from '../lib/ids.js';
+
+const TEST_EMAILS = (env.TEST_ACCOUNT_EMAILS ?? '')
+  .split(',')
+  .map((s) => s.trim().toLowerCase())
+  .filter(Boolean);
+
+const FROM_EMAIL = 'Harpa Pro <noreply@harpapro.com>';
+const OTP_SUBJECT = 'Your Harpa Pro sign-in code';
+
+const resend = createResendClient();
+
+export const auth = betterAuth({
+  secret: env.BETTER_AUTH_SECRET,
+  baseURL: env.BETTER_AUTH_URL,
+
+  database: drizzleAdapter(rawDb(), {
+    provider: 'pg',
+    schema: authSchema,
+    usePlural: false,
+  }),
+
+  trustedOrigins: [
+    'harpa://',
+    'harpa://*',
+    ...(env.NODE_ENV === 'development'
+      ? ['exp://', 'exp://**', 'exp://192.168.*.*:*/**']
+      : []),
+  ],
+
+  advanced: {
+    database: {
+      generateId: ({ model }) => {
+        if (model === 'user') return newId('usr');
+        if (model === 'session') return newId('ses');
+        if (model === 'verification') return newId('vrf');
+        if (model === 'account') return newId('idn');
+        return crypto.randomUUID();
+      },
+    },
+  },
+
+  session: {
+    expiresIn: 60 * 60 * 24 * 7,
+    updateAge: 60 * 60 * 24,
+  },
+
+  user: {
+    additionalFields: {
+      displayName: { type: 'string', required: false, defaultValue: null },
+      companyName: { type: 'string', required: false, defaultValue: null },
+      isAdmin: { type: 'boolean', required: false, defaultValue: false, input: false },
+      plan: { type: 'string', required: false, defaultValue: 'free', input: false },
+    },
+  },
+
+  emailAndPassword: {
+    enabled: true,
+    disableSignUp: true,
+    autoSignIn: false,
+  },
+
+  databaseHooks: {
+    user: {
+      create: {
+        before: async (_user, ctx) => {
+          if (ctx?.path === '/sign-up/email') {
+            throw new APIError('FORBIDDEN', { message: 'sign-up disabled' });
+          }
+        },
+      },
+    },
+  },
+
+  hooks: {
+    before: createAuthMiddleware(async (ctx) => {
+      if (ctx.path !== '/sign-in/email') return;
+      const body = (ctx.body ?? {}) as { email?: unknown };
+      const email = String(body.email ?? '').toLowerCase();
+      if (TEST_EMAILS.length === 0 || !TEST_EMAILS.includes(email)) {
+        throw new APIError('UNAUTHORIZED', { message: 'Invalid credentials' });
+      }
+      ctx.context.logger?.info?.(`test_account_password_login_attempt email=${email}`);
+    }),
+  },
+
+  plugins: [
+    expo(),
+    emailOTP({
+      otpLength: 6,
+      expiresIn: 10 * 60,
+      allowedAttempts: 5,
+      disableSignUp: false,
+      sendVerificationOTP: async ({ email, otp, type }) => {
+        if (env.EMAIL_OTP_LIVE !== '1') {
+          if (env.NODE_ENV !== 'test') {
+            // eslint-disable-next-line no-console
+            console.log(`[emailOTP/fake] → ${email} (${type}): ${otp}`);
+          }
+          return;
+        }
+        await resend.send({
+          from: FROM_EMAIL,
+          to: email,
+          subject: OTP_SUBJECT,
+          text: `Your sign-in code is: ${otp}\n\nIt expires in 10 minutes.\nIf you didn't request this, you can ignore this email.`,
+          html: `<p>Your sign-in code is: <strong>${otp}</strong></p><p>It expires in 10 minutes.</p><p>If you didn't request this, you can ignore this email.</p>`,
+        });
+      },
+    }),
+  ],
+});
+
+export type Auth = typeof auth;

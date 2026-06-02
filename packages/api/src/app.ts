@@ -9,7 +9,7 @@ import { errorMapper } from './middleware/errorMapper.js';
 import { globalRateLimit } from './middleware/globalRateLimit.js';
 import { health } from './routes/health.js';
 import { readyz } from './routes/readyz.js';
-import { authRoutes } from './routes/auth.js';
+import { auth } from './auth/auth.js';
 import { meRoutes } from './routes/me.js';
 import { projectRoutes } from './routes/projects.js';
 import { reportRoutes } from './routes/reports.js';
@@ -21,6 +21,7 @@ import { waitlistRoutes } from './routes/waitlist.js';
 import { adminRoutes } from './routes/admin.js';
 import { resolverRoutes } from './routes/resolvers.js';
 import { wellKnownRoutes } from './routes/well-known.js';
+import { devRoutes } from './routes/dev.js';
 import { env } from './env.js';
 import { createSentryMiddleware } from './telemetry/sentry.js';
 import type { ScopedDb } from './db/scope.js';
@@ -86,22 +87,31 @@ export function createApp(): OpenAPIHono<AppEnv> {
   );
   app.onError(errorMapper());
 
-  // Register the Bearer security scheme that authed routes reference
-  // via `security: [{ bearerAuth: [] }]`. Without this the emitted
-  // spec is invalid OpenAPI (security requirements pointing at an
-  // undeclared scheme).
+  // Register the Bearer security scheme. Better-auth's expo() plugin
+  // emits an opaque session token; routes reference this via
+  // `security: [{ bearerAuth: [] }]` to mark themselves as authed.
   app.openAPIRegistry.registerComponent('securitySchemes', 'bearerAuth', {
     type: 'http',
     scheme: 'bearer',
-    bearerFormat: 'JWT',
+    bearerFormat: 'better-auth session token',
   });
+
+  // Better-auth handler — owns all `/api/auth/**` routes (sign-in,
+  // sign-out, email-OTP, session lookup, etc.). Mounted at the raw
+  // Hono level so we don't fight the OpenAPI router's path matching.
+  app.on(['GET', 'POST'], '/api/auth/**', (c) => auth.handler(c.req.raw));
 
   // Public routes
   app.route('/', health);
   app.route('/', readyz);
-  app.route('/', authRoutes);
   app.route('/', waitlistRoutes);
   app.route('/', wellKnownRoutes);
+
+  // Dev-only: `/api/dev/last-otp` for Maestro :mock builds. Never
+  // mounted in production (the route module re-asserts this at boot).
+  if (env.NODE_ENV !== 'production') {
+    app.route('/', devRoutes);
+  }
 
   // Authenticated routes
   app.route('/', meRoutes);

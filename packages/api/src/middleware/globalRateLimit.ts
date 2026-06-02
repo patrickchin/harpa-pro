@@ -14,7 +14,7 @@ import type { MiddlewareHandler } from 'hono';
 import type { AppEnv } from '../app.js';
 import { getRateLimiter, type RateLimiterResult } from '../lib/rateLimiter.js';
 import { clientIp } from '../lib/clientIp.js';
-import { verifyJwt } from '../auth/jwt.js';
+import { auth } from '../auth/auth.js';
 
 const MIN = 60_000;
 const USER_LIMIT = 600;
@@ -38,19 +38,18 @@ function attachHeaders(c: Parameters<MiddlewareHandler<AppEnv>>[0], r: RateLimit
 }
 
 /**
- * Non-throwing JWT peek. Returns the userId if the Authorization header
- * carries a valid bearer token; null otherwise. Used so the global
- * rate limiter can pick the right keying strategy (per-user vs per-IP)
- * BEFORE the route-level `withAuth()` runs. `withAuth()` does its own
- * verify + sets the scoped DB accessor — this peek does NOT.
+ * Non-throwing session peek. Returns the userId if the Authorization
+ * header carries a valid better-auth bearer token; null otherwise.
+ * Used so the global rate limiter can pick the right keying strategy
+ * (per-user vs per-IP) BEFORE the route-level `withAuth()` runs.
+ * `withAuth()` does its own getSession + sets the scoped DB accessor
+ * — this peek does NOT.
  */
-async function peekUserId(authHeader: string | undefined): Promise<string | null> {
-  if (!authHeader || !authHeader.startsWith('Bearer ')) return null;
-  const token = authHeader.slice('Bearer '.length).trim();
-  if (!token) return null;
+async function peekUserId(headers: Headers): Promise<string | null> {
+  if (!headers.get('authorization')) return null;
   try {
-    const claims = await verifyJwt(token);
-    return claims.sub;
+    const result = await auth.api.getSession({ headers });
+    return result?.user?.id ?? null;
   } catch {
     return null;
   }
@@ -66,7 +65,7 @@ export function globalRateLimit(): MiddlewareHandler<AppEnv> {
       }
     }
 
-    const userId = c.get('userId') ?? (await peekUserId(c.req.header('authorization')));
+    const userId = c.get('userId') ?? (await peekUserId(c.req.raw.headers));
     const limiter = getRateLimiter();
     const r = userId
       ? await limiter.consume(`global:user:${userId}`, USER_LIMIT, MIN)

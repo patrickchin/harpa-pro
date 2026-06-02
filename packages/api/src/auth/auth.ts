@@ -142,10 +142,38 @@ const options = {
 } satisfies BetterAuthOptions;
 
 /**
- * Lazy singleton: defers `rawDb()` (and thus the DATABASE_URL check) until
- * the first actual auth call. This allows unit tests that import routes/app
- * without a live DB to still collect and run without errors.
+ * Minimal interface for the parts of the better-auth instance we actually
+ * use in this codebase. Using an explicit interface avoids TS2742 — the full
+ * `ReturnType<typeof betterAuth>` references `better-auth/node_modules/zod/v4/core`
+ * which TypeScript cannot name in a composite project's .d.ts output.
  */
+export interface Auth {
+  api: {
+    getSession(opts: {
+      headers: Headers | Record<string, string> | string[][];
+    }): Promise<{
+      user: {
+        id: string;
+        email: string;
+        name: string;
+        image?: string | null;
+        emailVerified: boolean;
+        createdAt: Date;
+        updatedAt: Date;
+        [k: string]: unknown;
+      };
+      session: {
+        id: string;
+        token: string;
+        userId: string;
+        expiresAt: Date;
+        [k: string]: unknown;
+      };
+    } | null>;
+  };
+  handler: (request: Request) => Response | Promise<Response>;
+}
+
 function createAuth() {
   return betterAuth({
     ...options,
@@ -155,10 +183,13 @@ function createAuth() {
 
 let _auth: ReturnType<typeof createAuth> | undefined;
 
-export const auth = new Proxy({} as ReturnType<typeof createAuth>, {
-  get(_target, prop: string | symbol) {
-    if (!_auth) _auth = createAuth();
-    return Reflect.get(_auth, prop) as unknown;
+function getAuth(): ReturnType<typeof createAuth> {
+  if (!_auth) _auth = createAuth();
+  return _auth;
+}
+
+export const auth: Auth = new Proxy({} as Auth, {
+  get(_target, prop: string | symbol): unknown {
+    return Reflect.get(getAuth() as object, prop);
   },
 });
-export type Auth = typeof auth;

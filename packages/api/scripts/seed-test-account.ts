@@ -19,10 +19,9 @@ import * as authSchema from '../src/db/auth-schema.js';
 import { newId } from '../src/lib/ids.js';
 import { env } from '../src/env.js';
 import { eq } from 'drizzle-orm';
-
-// Import bcrypt dynamically — better-auth bundles it and depends on the version
-// matching what auth.ts's emailAndPassword plugin expects.
-const { default: bcrypt } = await import('bcrypt');
+// Use better-auth's own password hasher so the stored hash matches what the
+// emailAndPassword plugin's sign-in path expects (scrypt by default).
+import { hashPassword } from 'better-auth/crypto';
 
 const emails = (env.TEST_ACCOUNT_EMAILS ?? '')
   .split(',')
@@ -42,7 +41,7 @@ if (!password) {
 
 resetPool();
 const db = rawDb();
-const passwordHash = await bcrypt.hash(password, 10);
+const passwordHash = await hashPassword(password);
 
 for (const email of emails) {
   console.log(`Seeding test account: ${email}`);

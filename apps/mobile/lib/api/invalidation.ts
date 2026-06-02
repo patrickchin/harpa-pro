@@ -20,11 +20,6 @@ export const INVALIDATIONS_NONE = Symbol('no invalidation');
 export type InvalidationRule = readonly string[] | typeof INVALIDATIONS_NONE;
 
 export const INVALIDATIONS: Record<string, InvalidationRule> = {
-  // auth
-  useStartOtpMutation: INVALIDATIONS_NONE,
-  useVerifyOtpMutation: ['me'],
-  useVerifyPasswordMutation: ['me'],
-  useLogoutMutation: INVALIDATIONS_NONE,
   useUpdateMeMutation: ['me'],
 
   // projects

@@ -13,6 +13,9 @@ module.exports = {
       // Excluded routes that legitimately bypass the scoped accessor:
       //   - auth.ts: runs before the user has a session; needs rawDb to
       //     upsert auth.users / sessions.
+      //   - dev.ts: testing-only endpoint that reads from DB without a user
+      //     session (last OTP lookup for journey tests). Only registered in
+      //     non-production environments.
       //   - waitlist.ts: public, no JWT; rawDb matches the auth/* pattern.
       //     app_anonymous scoped role is used for scope testing only
       //     (see migrations/202605130002_waitlist.sql).
@@ -24,6 +27,7 @@ module.exports = {
       files: ['src/routes/**/*.ts'],
       excludedFiles: [
         'src/routes/auth.ts',
+        'src/routes/dev.ts',
         'src/routes/health.ts',
         'src/routes/waitlist.ts',
         'src/routes/admin.ts',

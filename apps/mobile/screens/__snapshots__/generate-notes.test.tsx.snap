@@ -205,6 +205,7 @@ exports[`GenerateNotes > matches the empty-state snapshot 1`] = `
               "paddingBottom": 100,
             }
           }
+          keyboardDismissMode="on-drag"
           keyboardShouldPersistTaps="handled"
           ref={[Function]}
         >

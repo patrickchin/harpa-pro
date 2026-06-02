@@ -28,6 +28,19 @@ ALTER TABLE app.user_settings          DROP CONSTRAINT IF EXISTS user_settings_u
 ALTER TABLE app.user_limit_overrides   DROP CONSTRAINT IF EXISTS user_limit_overrides_user_id_fkey;
 ALTER TABLE app.user_limit_overrides   DROP CONSTRAINT IF EXISTS user_limit_overrides_granted_by_fkey;
 
+-- 1b. Wipe rows that referenced auth.users so the post-migration FK
+--     to public."user" can be re-attached cleanly. Per the spec
+--     ("rip-and-replace, no data preservation") this migration
+--     assumes the dev DB is being wiped — but the PR-preview workflow
+--     branches Neon from a parent that may carry stale rows. CASCADE
+--     also clears anything FK-pointing at app.files (note_files,
+--     notes.pdf_file_id, voice_notes.file_id, etc.).
+TRUNCATE TABLE
+  app.files,
+  app.user_settings,
+  app.user_limit_overrides
+CASCADE;
+
 -- 2. Drop phone-coupled functions (they JOIN/SELECT auth.users.phone).
 --    Recreated below against public."user".email.
 DROP FUNCTION IF EXISTS app.add_project_member_by_phone(app.prj_id, varchar, app.project_role);

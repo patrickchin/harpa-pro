@@ -8,7 +8,7 @@ tags:
 #
 # Covers:
 #   - profile screen renders (`screen-profile`)
-#   - identity card shows `profile-display-name` + `profile-phone`
+#   - identity card shows `profile-display-name` + `profile-email`
 #   - the four primary nav targets are visible: account, usage,
 #     sign-out, clear-cache (developer section)
 #
@@ -20,7 +20,7 @@ tags:
 - assertVisible:
     id: "profile-display-name"
 - assertVisible:
-    id: "profile-phone"
+    id: "profile-email"
 - assertVisible:
     id: "btn-open-account"
 - assertVisible:

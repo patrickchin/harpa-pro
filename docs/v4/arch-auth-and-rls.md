@@ -62,8 +62,9 @@ Key decisions (full rationale in the design spec):
   verified email creates the user automatically.
 - **`emailAndPassword`** — `enabled: true`, `disableSignUp: true`.
   Only for test-account smoke tests; a `before` hook 401s any email
-  not in `TEST_ACCOUNT_EMAILS`. Production leaves `TEST_ACCOUNT_EMAILS`
-  unset, making every password attempt fail before the hash compare.
+  not in `TEST_ACCOUNT_EMAILS`. We keep `TEST_ACCOUNT_EMAILS` set on
+  production too so smoke tests run against the live deploy; emails
+  not on the allowlist always fail before the hash compare.
 - **`advanced.database.generateId({model})`** — mints `usr_…` /
   `ses_…` / `vrf_…` / `idn_…` slugs for each better-auth table via
   `newId()`. IDs are stored as bare `text`; slug format is enforced at
@@ -287,8 +288,9 @@ Env vars (Doppler `dev` only — must be unset on `prd`):
 | `TEST_ACCOUNT_EMAILS` | Comma-separated allowlist |
 | `TEST_ACCOUNT_PASSWORD` | Shared password, min 16 chars |
 
-Env-Zod enforces both-or-neither, and that `TEST_ACCOUNT_EMAILS` is
-unset when `NODE_ENV=production`.
+Env-Zod enforces both-or-neither. `TEST_ACCOUNT_EMAILS` is set in
+both `dev` and `prd` so smoke-test logins keep working on the live
+deploy; the before-hook still rejects any email not on the allowlist.
 
 ## Env vars
 
@@ -298,8 +300,8 @@ unset when `NODE_ENV=production`.
 | `BETTER_AUTH_URL` | API | Base URL for better-auth handler |
 | `RESEND_API_KEY` | API | Resend transport for OTP emails |
 | `EMAIL_OTP_LIVE` | API | `1` = real Resend send; `0` = logs only (dev/test) |
-| `TEST_ACCOUNT_EMAILS` | API (dev only) | Password-bypass allowlist |
-| `TEST_ACCOUNT_PASSWORD` | API (dev only) | Shared smoke-test password |
+| `TEST_ACCOUNT_EMAILS` | API | Password-bypass allowlist (set in dev + prd) |
+| `TEST_ACCOUNT_PASSWORD` | API | Shared smoke-test password (set in dev + prd) |
 | `DATABASE_URL` | API | Neon connection (pooled) |
 | `EXPO_PUBLIC_API_URL` | Mobile | API base URL (validated by `lib/env.ts`) |
 

@@ -18,7 +18,8 @@ const Env = z.object({
   /**
    * Test-account password bypass — comma-separated allowlist of emails
    * permitted to sign in via better-auth's emailAndPassword endpoint.
-   * Doppler `dev` only; production must leave this unset (refine below).
+   * Set in both Doppler `dev` and `prd` (we keep test accounts on
+   * production so smoke-test logins keep working there).
    * Replaces the legacy TEST_ACCOUNT_PHONES variable.
    */
   TEST_ACCOUNT_EMAILS: z.string().optional(),
@@ -122,7 +123,7 @@ const Env = z.object({
    *
    * Shared password for all emails in TEST_ACCOUNT_EMAILS. Min 16
    * chars to keep a leak less catastrophic. Both vars must be set
-   * together (refine below) — production must leave both unset.
+   * together (refine below).
    */
   TEST_ACCOUNT_PASSWORD: z.string().min(16).optional(),
   /**
@@ -170,12 +171,6 @@ const Env = z.object({
   {
     path: ['TEST_ACCOUNT_PASSWORD'],
     message: 'TEST_ACCOUNT_EMAILS and TEST_ACCOUNT_PASSWORD must be set together',
-  },
-).refine(
-  (e) => e.NODE_ENV !== 'production' || !e.TEST_ACCOUNT_EMAILS,
-  {
-    path: ['TEST_ACCOUNT_EMAILS'],
-    message: 'TEST_ACCOUNT_EMAILS must be unset on production',
   },
 ).refine(
   (e) => e.NODE_ENV !== 'production' || e.EMAIL_OTP_LIVE === '1',

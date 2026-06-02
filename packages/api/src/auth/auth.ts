@@ -51,8 +51,6 @@ const options = {
   secret: env.BETTER_AUTH_SECRET,
   baseURL: env.BETTER_AUTH_URL,
 
-  database: drizzleAdapter(rawDb(), { provider: 'pg', schema: authSchema }),
-
   trustedOrigins: [
     'harpa://',
     'harpa://*',
@@ -143,5 +141,24 @@ const options = {
   ],
 } satisfies BetterAuthOptions;
 
-export const auth = betterAuth(options);
+/**
+ * Lazy singleton: defers `rawDb()` (and thus the DATABASE_URL check) until
+ * the first actual auth call. This allows unit tests that import routes/app
+ * without a live DB to still collect and run without errors.
+ */
+function createAuth() {
+  return betterAuth({
+    ...options,
+    database: drizzleAdapter(rawDb(), { provider: 'pg', schema: authSchema }),
+  });
+}
+
+let _auth: ReturnType<typeof createAuth> | undefined;
+
+export const auth = new Proxy({} as ReturnType<typeof createAuth>, {
+  get(_target, prop: string | symbol) {
+    if (!_auth) _auth = createAuth();
+    return Reflect.get(_auth, prop) as unknown;
+  },
+});
 export type Auth = typeof auth;

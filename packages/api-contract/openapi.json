@@ -146,516 +146,6 @@
         }
       }
     },
-    "/auth/otp/start": {
-      "post": {
-        "tags": [
-          "auth"
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "phone": {
-                    "type": "string",
-                    "pattern": "^\\+\\d{8,15}$"
-                  }
-                },
-                "required": [
-                  "phone"
-                ]
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "OTP sent.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "verificationId": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "verificationId"
-                  ]
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad request.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "object",
-                      "properties": {
-                        "code": {
-                          "type": "string"
-                        },
-                        "message": {
-                          "type": "string"
-                        }
-                      },
-                      "required": [
-                        "code",
-                        "message"
-                      ]
-                    },
-                    "requestId": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "error"
-                  ]
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "Rate limited.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "object",
-                      "properties": {
-                        "code": {
-                          "type": "string"
-                        },
-                        "message": {
-                          "type": "string"
-                        }
-                      },
-                      "required": [
-                        "code",
-                        "message"
-                      ]
-                    },
-                    "requestId": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "error"
-                  ]
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/auth/otp/verify": {
-      "post": {
-        "tags": [
-          "auth"
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "phone": {
-                    "type": "string",
-                    "pattern": "^\\+\\d{8,15}$"
-                  },
-                  "code": {
-                    "type": "string",
-                    "pattern": "^\\d{4,8}$"
-                  }
-                },
-                "required": [
-                  "phone",
-                  "code"
-                ]
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Verified.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "token": {
-                      "type": "string"
-                    },
-                    "user": {
-                      "type": "object",
-                      "properties": {
-                        "id": {
-                          "type": "string",
-                          "pattern": "^usr_[0-9a-hjkmnp-tv-z]{8,16}$"
-                        },
-                        "phone": {
-                          "type": "string",
-                          "pattern": "^\\+\\d{8,15}$"
-                        },
-                        "displayName": {
-                          "type": "string",
-                          "nullable": true
-                        },
-                        "companyName": {
-                          "type": "string",
-                          "nullable": true
-                        },
-                        "createdAt": {
-                          "type": "string"
-                        }
-                      },
-                      "required": [
-                        "id",
-                        "phone",
-                        "displayName",
-                        "companyName",
-                        "createdAt"
-                      ]
-                    }
-                  },
-                  "required": [
-                    "token",
-                    "user"
-                  ]
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Invalid code.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "object",
-                      "properties": {
-                        "code": {
-                          "type": "string"
-                        },
-                        "message": {
-                          "type": "string"
-                        }
-                      },
-                      "required": [
-                        "code",
-                        "message"
-                      ]
-                    },
-                    "requestId": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "error"
-                  ]
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "Rate limited.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "object",
-                      "properties": {
-                        "code": {
-                          "type": "string"
-                        },
-                        "message": {
-                          "type": "string"
-                        }
-                      },
-                      "required": [
-                        "code",
-                        "message"
-                      ]
-                    },
-                    "requestId": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "error"
-                  ]
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/auth/password/verify": {
-      "post": {
-        "tags": [
-          "auth"
-        ],
-        "description": "Test-account password bypass. Disabled (returns 404) unless TEST_ACCOUNT_PHONES + TEST_ACCOUNT_PASSWORD are configured on the server. See docs/v4/arch-auth-and-rls.md.",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "phone": {
-                    "type": "string",
-                    "pattern": "^\\+\\d{8,15}$"
-                  },
-                  "password": {
-                    "type": "string",
-                    "minLength": 1,
-                    "maxLength": 256
-                  }
-                },
-                "required": [
-                  "phone",
-                  "password"
-                ]
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Verified.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "token": {
-                      "type": "string"
-                    },
-                    "user": {
-                      "type": "object",
-                      "properties": {
-                        "id": {
-                          "type": "string",
-                          "pattern": "^usr_[0-9a-hjkmnp-tv-z]{8,16}$"
-                        },
-                        "phone": {
-                          "type": "string",
-                          "pattern": "^\\+\\d{8,15}$"
-                        },
-                        "displayName": {
-                          "type": "string",
-                          "nullable": true
-                        },
-                        "companyName": {
-                          "type": "string",
-                          "nullable": true
-                        },
-                        "createdAt": {
-                          "type": "string"
-                        }
-                      },
-                      "required": [
-                        "id",
-                        "phone",
-                        "displayName",
-                        "companyName",
-                        "createdAt"
-                      ]
-                    }
-                  },
-                  "required": [
-                    "token",
-                    "user"
-                  ]
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Invalid phone or password.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "object",
-                      "properties": {
-                        "code": {
-                          "type": "string"
-                        },
-                        "message": {
-                          "type": "string"
-                        }
-                      },
-                      "required": [
-                        "code",
-                        "message"
-                      ]
-                    },
-                    "requestId": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "error"
-                  ]
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Feature disabled.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "object",
-                      "properties": {
-                        "code": {
-                          "type": "string"
-                        },
-                        "message": {
-                          "type": "string"
-                        }
-                      },
-                      "required": [
-                        "code",
-                        "message"
-                      ]
-                    },
-                    "requestId": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "error"
-                  ]
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "Rate limited.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "object",
-                      "properties": {
-                        "code": {
-                          "type": "string"
-                        },
-                        "message": {
-                          "type": "string"
-                        }
-                      },
-                      "required": [
-                        "code",
-                        "message"
-                      ]
-                    },
-                    "requestId": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "error"
-                  ]
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/auth/logout": {
-      "post": {
-        "tags": [
-          "auth"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Logged out.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "ok": {
-                      "type": "boolean",
-                      "enum": [
-                        true
-                      ]
-                    }
-                  },
-                  "required": [
-                    "ok"
-                  ]
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "object",
-                      "properties": {
-                        "code": {
-                          "type": "string"
-                        },
-                        "message": {
-                          "type": "string"
-                        }
-                      },
-                      "required": [
-                        "code",
-                        "message"
-                      ]
-                    },
-                    "requestId": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "error"
-                  ]
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/waitlist": {
       "post": {
         "tags": [
@@ -1121,9 +611,9 @@
                           "type": "string",
                           "pattern": "^usr_[0-9a-hjkmnp-tv-z]{8,16}$"
                         },
-                        "phone": {
+                        "email": {
                           "type": "string",
-                          "pattern": "^\\+\\d{8,15}$"
+                          "format": "email"
                         },
                         "displayName": {
                           "type": "string",
@@ -1139,7 +629,7 @@
                       },
                       "required": [
                         "id",
-                        "phone",
+                        "email",
                         "displayName",
                         "companyName",
                         "createdAt"
@@ -1266,9 +756,9 @@
                           "type": "string",
                           "pattern": "^usr_[0-9a-hjkmnp-tv-z]{8,16}$"
                         },
-                        "phone": {
+                        "email": {
                           "type": "string",
-                          "pattern": "^\\+\\d{8,15}$"
+                          "format": "email"
                         },
                         "displayName": {
                           "type": "string",
@@ -1284,7 +774,7 @@
                       },
                       "required": [
                         "id",
-                        "phone",
+                        "email",
                         "displayName",
                         "companyName",
                         "createdAt"
@@ -2920,9 +2410,9 @@
                             "type": "string",
                             "nullable": true
                           },
-                          "phone": {
+                          "email": {
                             "type": "string",
-                            "pattern": "^\\+\\d{8,15}$"
+                            "format": "email"
                           },
                           "role": {
                             "type": "string",
@@ -2939,7 +2429,7 @@
                         "required": [
                           "userId",
                           "displayName",
-                          "phone",
+                          "email",
                           "role",
                           "joinedAt"
                         ]
@@ -3053,9 +2543,9 @@
               "schema": {
                 "type": "object",
                 "properties": {
-                  "phone": {
+                  "email": {
                     "type": "string",
-                    "pattern": "^\\+\\d{8,15}$"
+                    "format": "email"
                   },
                   "role": {
                     "type": "string",
@@ -3068,7 +2558,7 @@
                   }
                 },
                 "required": [
-                  "phone"
+                  "email"
                 ]
               }
             }
@@ -3090,9 +2580,9 @@
                       "type": "string",
                       "nullable": true
                     },
-                    "phone": {
+                    "email": {
                       "type": "string",
-                      "pattern": "^\\+\\d{8,15}$"
+                      "format": "email"
                     },
                     "role": {
                       "type": "string",
@@ -3109,7 +2599,7 @@
                   "required": [
                     "userId",
                     "displayName",
-                    "phone",
+                    "email",
                     "role",
                     "joinedAt"
                   ]
@@ -3368,9 +2858,9 @@
                       "type": "string",
                       "nullable": true
                     },
-                    "phone": {
+                    "email": {
                       "type": "string",
-                      "pattern": "^\\+\\d{8,15}$"
+                      "format": "email"
                     },
                     "role": {
                       "type": "string",
@@ -3387,7 +2877,7 @@
                   "required": [
                     "userId",
                     "displayName",
-                    "phone",
+                    "email",
                     "role",
                     "joinedAt"
                   ]

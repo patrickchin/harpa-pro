@@ -15,6 +15,16 @@ import * as authSchema from '../db/auth-schema.js';
 
 export function withAuth(): MiddlewareHandler<AppEnv> {
   return async (c, next) => {
+    // Fast-path: reject immediately if no auth credential is present.
+    // This avoids initialising the DB pool (rawDb) for public/unauthenticated
+    // requests that happen to hit a protected route — important for unit tests
+    // and for cold-start latency.
+    const hasBearer = c.req.header('authorization')?.startsWith('Bearer ') ?? false;
+    const hasCookie = Boolean(c.req.header('cookie'));
+    if (!hasBearer && !hasCookie) {
+      throw new HTTPException(401, { message: 'Authentication required.' });
+    }
+
     const session = await auth.api.getSession({ headers: c.req.raw.headers });
     if (!session) {
       throw new HTTPException(401, { message: 'Authentication required.' });

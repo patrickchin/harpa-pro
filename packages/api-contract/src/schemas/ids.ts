@@ -30,6 +30,7 @@ export const ID_SPEC = {
   usr: { currentLen: 12, minLen: 8, maxLen: 16, brand: 'UserId' },
   ses: { currentLen: 12, minLen: 8, maxLen: 16, brand: 'SessionId' },
   vrf: { currentLen: 10, minLen: 8, maxLen: 16, brand: 'VerificationId' },
+  idn: { currentLen: 12, minLen: 8, maxLen: 16, brand: 'AccountId' },
   not: { currentLen: 10, minLen: 8, maxLen: 16, brand: 'NoteId' },
   fil: { currentLen: 10, minLen: 8, maxLen: 16, brand: 'FileId' },
   wls: { currentLen: 10, minLen: 8, maxLen: 16, brand: 'WaitlistSignupId' },
@@ -49,6 +50,7 @@ export type ReportId         = Id<'rpt'>;
 export type UserId           = Id<'usr'>;
 export type SessionId        = Id<'ses'>;
 export type VerificationId   = Id<'vrf'>;
+export type AccountId        = Id<'idn'>;
 export type NoteId           = Id<'not'>;
 export type FileId           = Id<'fil'>;
 export type WaitlistSignupId = Id<'wls'>;
@@ -81,6 +83,7 @@ export const reportId         = idSchema('rpt');
 export const userId           = idSchema('usr');
 export const sessionId        = idSchema('ses');
 export const verificationId   = idSchema('vrf');
+export const accountId        = idSchema('idn');
 export const noteId           = idSchema('not');
 export const fileId           = idSchema('fil');
 export const waitlistSignupId = idSchema('wls');

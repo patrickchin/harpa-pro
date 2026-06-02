@@ -15,11 +15,6 @@ const Env = z.object({
   DATABASE_URL: z.string().url().or(z.string().startsWith('postgres://')).optional(),
   BETTER_AUTH_SECRET: z.string().min(16).default('dev-only-secret-do-not-use-in-prod'),
   BETTER_AUTH_URL: z.string().url().default('http://localhost:8787'),
-  TWILIO_ACCOUNT_SID: z.string().optional(),
-  TWILIO_AUTH_TOKEN: z.string().optional(),
-  TWILIO_VERIFY_SID: z.string().optional(),
-  TWILIO_LIVE: z.enum(['0', '1']).default('0'),
-  TWILIO_VERIFY_FAKE_CODE: z.string().default('000000'),
   AI_FIXTURE_MODE: z.enum(['replay', 'record', 'live']).default('replay'),
   AI_LIVE: z.enum(['0', '1']).default('0'),
   // OpenAI is used for voice-note summarization. Required when AI_LIVE=1.
@@ -109,20 +104,33 @@ const Env = z.object({
    * Test-account password bypass for live deployments — see
    * docs/v4/arch-auth-and-rls.md §Test-account password bypass.
    *
-   * Comma-separated E.164 phone numbers permitted to authenticate via
-   * `POST /auth/password/verify` instead of an SMS OTP. Real users are
-   * unaffected; non-listed phones get a generic 401 (no enumeration).
+   * Comma-separated email addresses permitted to authenticate via
+   * `POST /api/auth/sign-in/email` (better-auth's emailAndPassword
+   * provider). Emails not in this allowlist are rejected by a
+   * `before` hook that emits the same 401 shape better-auth returns
+   * for a wrong password — the allowlist itself does not leak.
    *
-   * Off-by-default: both vars must be set together, or the route
-   * returns 404. Production must not set these unless intentional.
+   * Off-by-default: both vars must be set together, or every password
+   * sign-in 401s. Production must leave these unset.
    */
-  TEST_ACCOUNT_PHONES: z.string().optional(),
+  TEST_ACCOUNT_EMAILS: z.string().optional(),
   /**
-   * Shared password for all phones in TEST_ACCOUNT_PHONES. Hashed once
-   * at boot (scrypt + per-boot random salt). Min 16 chars to make a
-   * leak less catastrophic.
+   * Shared password for all emails in TEST_ACCOUNT_EMAILS. Min 16 chars.
+   * Stored in better-auth's `account` table by the seed script
+   * (`packages/api/scripts/seed-test-account.ts`).
    */
   TEST_ACCOUNT_PASSWORD: z.string().min(16).optional(),
+  /**
+   * Email-OTP transport selector.
+   *   `'1'` → real Resend HTTPS request via `lib/resend.ts`.
+   *   `'0'` → fake mode: `sendVerificationOTP` is a no-op (the OTP
+   *           value is still persisted to `public.verification`, so
+   *           `:mock` builds + Maestro can read it via
+   *           `POST /api/dev/last-otp`).
+   * Required `'1'` in production via the refinement below — prevents
+   * a missing Doppler key silently downgrading prod to fake mode.
+   */
+  EMAIL_OTP_LIVE: z.enum(['0', '1']).default('0'),
   /**
    * Universal links — Apple App Site Association.
    *
@@ -164,10 +172,22 @@ const Env = z.object({
   (e) => e.AI_LIVE !== '1' || !!e.GROQ_API_KEY,
   { path: ['GROQ_API_KEY'], message: 'required when AI_LIVE=1 (transcription via whisper-large-v3-turbo)' },
 ).refine(
-  (e) => !!e.TEST_ACCOUNT_PHONES === !!e.TEST_ACCOUNT_PASSWORD,
+  (e) => !!e.TEST_ACCOUNT_EMAILS === !!e.TEST_ACCOUNT_PASSWORD,
   {
     path: ['TEST_ACCOUNT_PASSWORD'],
-    message: 'TEST_ACCOUNT_PHONES and TEST_ACCOUNT_PASSWORD must be set together',
+    message: 'TEST_ACCOUNT_EMAILS and TEST_ACCOUNT_PASSWORD must be set together',
+  },
+).refine(
+  (e) => e.NODE_ENV !== 'production' || !e.TEST_ACCOUNT_EMAILS,
+  {
+    path: ['TEST_ACCOUNT_EMAILS'],
+    message: 'TEST_ACCOUNT_EMAILS must be unset on NODE_ENV=production',
+  },
+).refine(
+  (e) => e.NODE_ENV !== 'production' || e.EMAIL_OTP_LIVE === '1',
+  {
+    path: ['EMAIL_OTP_LIVE'],
+    message: "EMAIL_OTP_LIVE must be '1' when NODE_ENV=production (no silent fake-mode in prod)",
   },
 );
 

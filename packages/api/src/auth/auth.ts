@@ -13,7 +13,7 @@
  */
 import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
-import { emailOTP } from 'better-auth/plugins';
+import { emailOTP, bearer } from 'better-auth/plugins';
 import { APIError, createAuthMiddleware } from 'better-auth/api';
 import { expo } from '@better-auth/expo';
 import { rawDb } from '../db/client.js';
@@ -32,11 +32,17 @@ const OTP_SUBJECT = 'Your Harpa Pro sign-in code';
 
 const resend = createResendClient();
 
+const dbProxy = new Proxy({} as ReturnType<typeof rawDb>, {
+  get(_, prop, receiver) {
+    return Reflect.get(rawDb(), prop, receiver);
+  },
+});
+
 export const auth = betterAuth({
   secret: env.BETTER_AUTH_SECRET,
   baseURL: env.BETTER_AUTH_URL,
 
-  database: drizzleAdapter(rawDb(), {
+  database: drizzleAdapter(dbProxy, {
     provider: 'pg',
     schema: authSchema,
     usePlural: false,
@@ -108,6 +114,7 @@ export const auth = betterAuth({
 
   plugins: [
     expo(),
+    bearer(),
     emailOTP({
       otpLength: 6,
       expiresIn: 10 * 60,

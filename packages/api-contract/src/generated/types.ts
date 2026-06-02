@@ -100,310 +100,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/auth/otp/start": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: {
-                content: {
-                    "application/json": {
-                        phone: string;
-                    };
-                };
-            };
-            responses: {
-                /** @description OTP sent. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            verificationId: string;
-                        };
-                    };
-                };
-                /** @description Bad request. */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                            requestId?: string;
-                        };
-                    };
-                };
-                /** @description Rate limited. */
-                429: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                            requestId?: string;
-                        };
-                    };
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/auth/otp/verify": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: {
-                content: {
-                    "application/json": {
-                        phone: string;
-                        code: string;
-                    };
-                };
-            };
-            responses: {
-                /** @description Verified. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            token: string;
-                            user: {
-                                id: string;
-                                phone: string;
-                                displayName: string | null;
-                                companyName: string | null;
-                                createdAt: string;
-                            };
-                        };
-                    };
-                };
-                /** @description Invalid code. */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                            requestId?: string;
-                        };
-                    };
-                };
-                /** @description Rate limited. */
-                429: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                            requestId?: string;
-                        };
-                    };
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/auth/password/verify": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** @description Test-account password bypass. Disabled (returns 404) unless TEST_ACCOUNT_PHONES + TEST_ACCOUNT_PASSWORD are configured on the server. See docs/v4/arch-auth-and-rls.md. */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: {
-                content: {
-                    "application/json": {
-                        phone: string;
-                        password: string;
-                    };
-                };
-            };
-            responses: {
-                /** @description Verified. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            token: string;
-                            user: {
-                                id: string;
-                                phone: string;
-                                displayName: string | null;
-                                companyName: string | null;
-                                createdAt: string;
-                            };
-                        };
-                    };
-                };
-                /** @description Invalid phone or password. */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                            requestId?: string;
-                        };
-                    };
-                };
-                /** @description Feature disabled. */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                            requestId?: string;
-                        };
-                    };
-                };
-                /** @description Rate limited. */
-                429: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                            requestId?: string;
-                        };
-                    };
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/auth/logout": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Logged out. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            ok: true;
-                        };
-                    };
-                };
-                /** @description Unauthorized. */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            error: {
-                                code: string;
-                                message: string;
-                            };
-                            requestId?: string;
-                        };
-                    };
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/waitlist": {
         parameters: {
             query?: never;
@@ -699,7 +395,8 @@ export interface paths {
                         "application/json": {
                             user: {
                                 id: string;
-                                phone: string;
+                                /** Format: email */
+                                email: string;
                                 displayName: string | null;
                                 companyName: string | null;
                                 createdAt: string;
@@ -769,7 +466,8 @@ export interface paths {
                         "application/json": {
                             user: {
                                 id: string;
-                                phone: string;
+                                /** Format: email */
+                                email: string;
                                 displayName: string | null;
                                 companyName: string | null;
                                 createdAt: string;
@@ -1463,7 +1161,8 @@ export interface paths {
                             items: {
                                 userId: string;
                                 displayName: string | null;
-                                phone: string;
+                                /** Format: email */
+                                email: string;
                                 /** @enum {string} */
                                 role: "owner" | "editor" | "viewer";
                                 joinedAt: string;
@@ -1518,7 +1217,8 @@ export interface paths {
             requestBody?: {
                 content: {
                     "application/json": {
-                        phone: string;
+                        /** Format: email */
+                        email: string;
                         /**
                          * @default editor
                          * @enum {string}
@@ -1537,7 +1237,8 @@ export interface paths {
                         "application/json": {
                             userId: string;
                             displayName: string | null;
-                            phone: string;
+                            /** Format: email */
+                            email: string;
                             /** @enum {string} */
                             role: "owner" | "editor" | "viewer";
                             joinedAt: string;
@@ -1757,7 +1458,8 @@ export interface paths {
                         "application/json": {
                             userId: string;
                             displayName: string | null;
-                            phone: string;
+                            /** Format: email */
+                            email: string;
                             /** @enum {string} */
                             role: "owner" | "editor" | "viewer";
                             joinedAt: string;

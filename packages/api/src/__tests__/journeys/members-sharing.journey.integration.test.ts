@@ -3,7 +3,7 @@
  * phone → B can read project → A removes B → B now 404s.
  *
  * Closes the per-request-scope chain end-to-end: invite path resolves
- * B's userId from auth.users by phone, RLS on app.project_members lets B
+ * B's userId from public."user" by email, RLS on app.project_members lets B
  * see the project, removal flips RLS visibility back.
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
@@ -15,7 +15,7 @@ beforeAll(async () => { j = await bootJourneyPg(); }, 240_000);
 afterAll(async () => { await teardownJourneyPg(j); }, 60_000);
 
 describe('journey: members sharing', () => {
-  it('owner invites by phone, member reads, owner removes, member 404s', async () => {
+  it('owner invites by email, member reads, owner removes, member 404s', async () => {
     const app = createApp();
     const owner = await login(app, '+15550199401');
     const member = await login(app, '+15550199402');
@@ -28,7 +28,7 @@ describe('journey: members sharing', () => {
 
     const inv = await app.request(`/projects/${project.id}/members`, {
       method: 'POST', headers: owner.headers,
-      body: JSON.stringify({ phone: member.phone, role: 'editor' }),
+      body: JSON.stringify({ email: member.email, role: 'editor' }),
     });
     expect(inv.status).toBe(201);
     const memberRow = (await inv.json()) as { userId: string; role: string };

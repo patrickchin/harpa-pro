@@ -30,7 +30,7 @@ export default function AccountRoute() {
 
   const profile: AccountProfile | null = user
     ? {
-        phone: user.phone,
+        email: user.email,
         fullName: user.displayName,
         companyName: user.companyName,
       }

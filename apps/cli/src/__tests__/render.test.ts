@@ -20,7 +20,7 @@ describe('renderUser', () => {
     expect(
       renderUser({
         id: '00000000-0000-0000-0000-000000000001',
-        phone: '+15550100100',
+        email: 'user1@example.com',
         displayName: 'Patrick Chin',
         companyName: 'Harpa Pro Ltd',
         createdAt: '2025-01-15T10:30:00.000Z',
@@ -32,7 +32,7 @@ describe('renderUser', () => {
     expect(
       renderUser({
         id: '00000000-0000-0000-0000-000000000002',
-        phone: '+15550100200',
+        email: 'user2@example.com',
         displayName: null,
         companyName: null,
         createdAt: '2025-01-15T10:30:00.000Z',
@@ -143,7 +143,7 @@ describe('renderMember', () => {
       renderMember({
         userId: '00000000-0000-0000-0000-000000000030',
         displayName: 'Alice',
-        phone: '+15550100300',
+        email: 'alice@example.com',
         role: 'editor',
         joinedAt: '2025-01-15T10:30:00.000Z',
       }),
@@ -155,7 +155,7 @@ describe('renderMember', () => {
       renderMember({
         userId: '00000000-0000-0000-0000-000000000031',
         displayName: null,
-        phone: '+15550100301',
+        email: 'bob@example.com',
         role: 'viewer',
         joinedAt: '2025-01-15T10:30:00.000Z',
       }),
@@ -171,14 +171,14 @@ describe('renderMemberList', () => {
           {
             userId: '00000000-0000-0000-0000-000000000040',
             displayName: 'Owner Person',
-            phone: '+15550100400',
+            email: 'owner@example.com',
             role: 'owner',
             joinedAt: '2025-01-15T10:30:00.000Z',
           },
           {
             userId: '00000000-0000-0000-0000-000000000041',
             displayName: null,
-            phone: '+15550100401',
+            email: 'editor@example.com',
             role: 'editor',
             joinedAt: '2025-01-15T10:30:00.000Z',
           },

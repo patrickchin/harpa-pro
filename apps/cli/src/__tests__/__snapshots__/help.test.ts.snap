@@ -33,39 +33,39 @@ exports[`command tree (help drift gate) > matches the recorded snapshot 1`] = `
           "subCommands": {
             "start": {
               "args": {
+                "email": {
+                  "description": "Email address to send the OTP to.",
+                  "required": true,
+                  "type": "positional",
+                },
                 "json": {
                   "description": "Print raw JSON to stdout.",
                   "type": "boolean",
-                },
-                "phone": {
-                  "description": "E.164 phone number (e.g. +15551234567).",
-                  "required": true,
-                  "type": "positional",
                 },
                 "verbose": {
                   "description": "Print response metadata to stderr.",
                   "type": "boolean",
                 },
               },
-              "description": "Send an OTP to a phone number.",
+              "description": "Send an email OTP to sign in.",
               "name": "start",
               "subCommands": {},
             },
             "verify": {
               "args": {
                 "code": {
-                  "description": "OTP code (4–8 digits).",
+                  "description": "OTP code (6 digits).",
+                  "required": true,
+                  "type": "positional",
+                },
+                "email": {
+                  "description": "Email address that received the OTP.",
                   "required": true,
                   "type": "positional",
                 },
                 "json": {
                   "description": "Print raw JSON to stdout.",
                   "type": "boolean",
-                },
-                "phone": {
-                  "description": "E.164 phone number that received the OTP.",
-                  "required": true,
-                  "type": "positional",
                 },
                 "raw": {
                   "description": "Print only the bearer token to stdout (no formatting).",
@@ -76,7 +76,7 @@ exports[`command tree (help drift gate) > matches the recorded snapshot 1`] = `
                   "type": "boolean",
                 },
               },
-              "description": "Verify an OTP code and mint a bearer token.",
+              "description": "Verify an email OTP code and mint a bearer token.",
               "name": "verify",
               "subCommands": {},
             },
@@ -494,14 +494,14 @@ exports[`command tree (help drift gate) > matches the recorded snapshot 1`] = `
           "subCommands": {
             "add": {
               "args": {
+                "email": {
+                  "description": "Email address to invite.",
+                  "required": true,
+                  "type": "string",
+                },
                 "json": {
                   "description": "Print raw JSON to stdout.",
                   "type": "boolean",
-                },
-                "phone": {
-                  "description": "E.164 phone number to invite.",
-                  "required": true,
-                  "type": "string",
                 },
                 "projectId": {
                   "description": "Project slug (e.g. prj_xxxxxxxx).",
@@ -543,14 +543,14 @@ exports[`command tree (help drift gate) > matches the recorded snapshot 1`] = `
             },
             "remove": {
               "args": {
+                "email": {
+                  "description": "Email address of the member to remove.",
+                  "required": true,
+                  "type": "positional",
+                },
                 "json": {
                   "description": "Print raw JSON to stdout.",
                   "type": "boolean",
-                },
-                "phone": {
-                  "description": "E.164 phone number of the member to remove.",
-                  "required": true,
-                  "type": "positional",
                 },
                 "projectId": {
                   "description": "Project slug (e.g. prj_xxxxxxxx).",

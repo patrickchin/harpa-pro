@@ -6,11 +6,13 @@
  */
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import { Writable } from 'node:stream';
+import pg from 'pg';
 import { createApp } from '../../../../packages/api/src/app.js';
 import { startPg, type PgFixture } from '../../../../packages/api/src/__tests__/setup-pg.js';
 import { resetPool, getPool } from '../../../../packages/api/src/db/client.js';
+import { signTestSession } from '../../../../packages/api/src/middleware/auth.js';
+import { makeUserId } from '../../../../packages/api/src/__tests__/factories/index.js';
 import { createApiClient } from '../lib/client.js';
-import { authOtpStart, authOtpVerify } from '../commands/auth.js';
 import {
   projectsList,
   projectsCreate,
@@ -55,21 +57,18 @@ beforeAll(async () => {
   process.env.DATABASE_URL = fx.url;
   await resetPool();
   getPool(fx.url);
-  app = createApp();
 
-  const phone = '+15551000001';
-  const sink = new MemoryStream();
-  await authOtpStart({ client: makeClient(), phone, stdout: sink, stderr: sink });
-  const verifyOut = new MemoryStream();
-  await authOtpVerify({
-    client: makeClient(),
-    phone,
-    code: '000000',
-    raw: true,
-    stdout: verifyOut,
-    stderr: sink,
-  });
-  token = verifyOut.text.trim();
+  const userId = makeUserId();
+  const admin = new pg.Client({ connectionString: fx.url });
+  await admin.connect();
+  await admin.query(
+    `INSERT INTO "user"(id, name, email, email_verified, display_name, created_at, updated_at) VALUES ($1, 'CLI Projects User', $2, true, 'CLI Projects User', now(), now())`,
+    [userId, 'projects-user@example.com'],
+  );
+  await admin.end();
+
+  app = createApp();
+  ({ token } = await signTestSession(userId));
 }, 120_000);
 
 afterAll(async () => {

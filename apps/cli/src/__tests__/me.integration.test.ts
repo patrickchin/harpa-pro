@@ -7,11 +7,13 @@
  */
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import { Writable } from 'node:stream';
+import pg from 'pg';
 import { createApp } from '../../../../packages/api/src/app.js';
 import { startPg, type PgFixture } from '../../../../packages/api/src/__tests__/setup-pg.js';
 import { resetPool, getPool } from '../../../../packages/api/src/db/client.js';
+import { signTestSession } from '../../../../packages/api/src/middleware/auth.js';
+import { makeUserId } from '../../../../packages/api/src/__tests__/factories/index.js';
 import { createApiClient } from '../lib/client.js';
-import { authOtpStart, authOtpVerify } from '../commands/auth.js';
 import { meGet, meUpdate, meUsage } from '../commands/me.js';
 import { EXIT } from '../lib/error.js';
 import type { CliEnv } from '../lib/env.js';
@@ -50,22 +52,18 @@ beforeAll(async () => {
   process.env.DATABASE_URL = fx.url;
   await resetPool();
   getPool(fx.url);
-  app = createApp();
 
-  // Sign in once for the whole suite.
-  const phone = '+15550900001';
-  const throwaway = new MemoryStream();
-  await authOtpStart({ client: makeClient(), phone, stdout: throwaway, stderr: throwaway });
-  const verifyOut = new MemoryStream();
-  await authOtpVerify({
-    client: makeClient(),
-    phone,
-    code: '000000',
-    raw: true,
-    stdout: verifyOut,
-    stderr: throwaway,
-  });
-  token = verifyOut.text.trim();
+  const userId = makeUserId();
+  const admin = new pg.Client({ connectionString: fx.url });
+  await admin.connect();
+  await admin.query(
+    `INSERT INTO "user"(id, name, email, email_verified, display_name, created_at, updated_at) VALUES ($1, 'CLI Me User', $2, true, 'CLI Me User', now(), now())`,
+    [userId, 'me-user@example.com'],
+  );
+  await admin.end();
+
+  app = createApp();
+  ({ token } = await signTestSession(userId));
 }, 120_000);
 
 afterAll(async () => {
@@ -85,7 +83,7 @@ describe('harpa me get', () => {
     const exitCode = await meGet({ client: makeClient(token), stdout, stderr });
 
     expect(exitCode).toBe(EXIT.OK);
-    expect(stdout.text).toMatch(/\+15550900001/);
+    expect(stdout.text).toMatch(/me-user@example\.com/);
     expect(stdout.text).toMatch(/Joined:/);
   });
 
@@ -101,7 +99,7 @@ describe('harpa me get', () => {
 
     expect(exitCode).toBe(EXIT.OK);
     const parsed = JSON.parse(stdout.text);
-    expect(parsed.user.phone).toBe('+15550900001');
+    expect(parsed.user.email).toBe('me-user@example.com');
   });
 });
 

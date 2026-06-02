@@ -6,11 +6,13 @@
  */
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import { Writable } from 'node:stream';
+import pg from 'pg';
 import { createApp } from '../../../../packages/api/src/app.js';
 import { startPg, type PgFixture } from '../../../../packages/api/src/__tests__/setup-pg.js';
 import { resetPool, getPool } from '../../../../packages/api/src/db/client.js';
+import { signTestSession } from '../../../../packages/api/src/middleware/auth.js';
+import { makeUserId } from '../../../../packages/api/src/__tests__/factories/index.js';
 import { createApiClient } from '../lib/client.js';
-import { authOtpStart, authOtpVerify } from '../commands/auth.js';
 import { projectsCreate } from '../commands/projects.js';
 import { membersList, membersAdd, membersRemove } from '../commands/members.js';
 import { EXIT } from '../lib/error.js';
@@ -48,36 +50,25 @@ function makeClient(t?: string) {
   });
 }
 
-async function signIn(phone: string): Promise<string> {
-  const sink = new MemoryStream();
-  await authOtpStart({ client: makeClient(), phone, stdout: sink, stderr: sink });
-  const out = new MemoryStream();
-  await authOtpVerify({
-    client: makeClient(),
-    phone,
-    code: '000000',
-    raw: true,
-    stdout: out,
-    stderr: sink,
-  });
-  return out.text.trim();
-}
-
 beforeAll(async () => {
   fx = await startPg();
   process.env.DATABASE_URL = fx.url;
   await resetPool();
   getPool(fx.url);
-  app = createApp();
 
-  ownerToken = await signIn('+15551000010');
-  memberToken = await signIn('+15551000011');
-
-  // Decode userId from the JWT payload (sub claim).
-  const payload = JSON.parse(
-    Buffer.from(memberToken.split('.')[1], 'base64url').toString('utf8'),
+  const ownerId = makeUserId();
+  memberUserId = makeUserId();
+  const admin = new pg.Client({ connectionString: fx.url });
+  await admin.connect();
+  await admin.query(
+    `INSERT INTO "user"(id, name, email, email_verified, display_name, created_at, updated_at) VALUES ($1, 'Owner', $2, true, 'Owner', now(), now()), ($3, 'Member', $4, true, 'Member', now(), now())`,
+    [ownerId, 'owner@example.com', memberUserId, 'member@example.com'],
   );
-  memberUserId = payload.sub;
+  await admin.end();
+
+  app = createApp();
+  ({ token: ownerToken } = await signTestSession(ownerId));
+  ({ token: memberToken } = await signTestSession(memberUserId));
 
   // Create a project owned by ownerToken.
   const out = new MemoryStream();
@@ -125,7 +116,7 @@ describe('harpa projects members', () => {
     let exit = await membersAdd({
       client: makeClient(ownerToken),
       projectId,
-      phone: '+15551000011',
+      email: 'member@example.com',
       role: 'editor',
       json: true,
       stdout: addOut,
@@ -164,7 +155,7 @@ describe('harpa projects members', () => {
     exit = await membersRemove({
       client: makeClient(ownerToken),
       projectId,
-      phone: '+15551000011',
+      email: 'member@example.com',
       stdout: removeOut,
       stderr,
     });
@@ -186,7 +177,7 @@ describe('harpa projects members', () => {
     await membersAdd({
       client: makeClient(ownerToken),
       projectId,
-      phone: '+15551000011',
+      email: 'member@example.com',
       role: 'editor',
       stdout: new MemoryStream(),
       stderr: new MemoryStream(),
@@ -195,7 +186,7 @@ describe('harpa projects members', () => {
     const exit = await membersAdd({
       client: makeClient(memberToken),
       projectId,
-      phone: '+15551000099',
+      email: 'other@example.com',
       role: 'editor',
       stdout,
       stderr,
@@ -207,7 +198,7 @@ describe('harpa projects members', () => {
     const exit = await membersAdd({
       client: makeClient(ownerToken),
       projectId,
-      phone: '+15551000022',
+      email: 'another@example.com',
       // @ts-expect-error - intentionally invalid for runtime test
       role: 'admin',
       stdout,

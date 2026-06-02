@@ -2,8 +2,8 @@
  * `harpa projects members` — project membership management.
  *
  *   harpa projects members list   <projectId>                      → GET    /projects/{id}/members
- *   harpa projects members add    <projectId> --phone <p> [--role] → POST   /projects/{id}/members
- *   harpa projects members remove <projectId> <phone>              → GET members → DELETE /projects/{id}/members/{userId}
+ *   harpa projects members add    <projectId> --email <e> [--role] → POST   /projects/{id}/members
+ *   harpa projects members remove <projectId> <email>              → GET members → DELETE /projects/{id}/members/{userId}
  */
 import { defineCommand } from 'citty';
 import chalk from 'chalk';
@@ -68,12 +68,12 @@ export const membersListCommand = defineCommand({
 
 export interface MembersAddArgs extends MembersHandlerOptions {
   projectId: string;
-  phone: string;
+  email: string;
   role?: 'owner' | 'editor' | 'viewer';
 }
 
 export function membersAdd(args: MembersAddArgs): Promise<ExitCode> {
-  const body: { phone: string; role?: 'owner' | 'editor' | 'viewer' } = { phone: args.phone };
+  const body: { email: string; role?: 'owner' | 'editor' | 'viewer' } = { email: args.email };
   if (args.role !== undefined) body.role = args.role;
   return executeRequest({
     json: args.json,
@@ -86,7 +86,7 @@ export function membersAdd(args: MembersAddArgs): Promise<ExitCode> {
         body,
       }),
     format: (data) =>
-      `${chalk.green('✓')} Added member ${chalk.bold(data.displayName ?? data.phone)} ${chalk.dim(`<${data.phone}>`)} as ${data.role}`,
+      `${chalk.green('✓')} Added member ${chalk.bold(data.displayName ?? data.email)} ${chalk.dim(`<${data.email}>`)} as ${data.role}`,
   });
 }
 
@@ -94,7 +94,7 @@ export const membersAddCommand = defineCommand({
   meta: { name: 'add', description: 'Add a member to a project (owner only).' },
   args: {
     projectId: { type: 'positional', required: true, description: 'Project slug (e.g. prj_xxxxxxxx).' },
-    phone: { type: 'string', required: true, description: 'E.164 phone number to invite.' },
+    email: { type: 'string', required: true, description: 'Email address to invite.' },
     role: { type: 'string', description: 'Role: owner | editor | viewer (default editor).' },
     json: { type: 'boolean', description: 'Print raw JSON to stdout.' },
     verbose: { type: 'boolean', description: 'Print response metadata to stderr.' },
@@ -103,8 +103,8 @@ export const membersAddCommand = defineCommand({
     const env = getEnv();
     requireToken(env);
     const client = createApiClient(env);
-    const body: { phone: string; role?: 'owner' | 'editor' | 'viewer' } = {
-      phone: String(args.phone),
+    const body: { email: string; role?: 'owner' | 'editor' | 'viewer' } = {
+      email: String(args.email),
     };
     if (typeof args.role === 'string' && args.role.length > 0) {
       if (args.role !== 'owner' && args.role !== 'editor' && args.role !== 'viewer') {
@@ -124,7 +124,7 @@ export const membersAddCommand = defineCommand({
           body,
         }),
       format: (data) =>
-        `${chalk.green('✓')} Added member ${chalk.bold(data.displayName ?? data.phone)} ${chalk.dim(`<${data.phone}>`)} as ${data.role}`,
+        `${chalk.green('✓')} Added member ${chalk.bold(data.displayName ?? data.email)} ${chalk.dim(`<${data.email}>`)} as ${data.role}`,
     });
   },
 });
@@ -133,11 +133,11 @@ export const membersAddCommand = defineCommand({
 
 export interface MembersRemoveArgs extends MembersHandlerOptions {
   projectId: string;
-  phone: string;
+  email: string;
 }
 
 export async function membersRemove(args: MembersRemoveArgs): Promise<ExitCode> {
-  // Resolve phone → userId by fetching the member list
+  // Resolve email → userId by fetching the member list
   const listRes = await args.client.GET('/projects/{project}/members', {
     params: { path: { project: args.projectId } },
   });
@@ -146,10 +146,10 @@ export async function membersRemove(args: MembersRemoveArgs): Promise<ExitCode> 
     out.write(chalk.red(`Error: could not fetch members for project ${args.projectId}\n`));
     return 1 as ExitCode;
   }
-  const member = listRes.data.items.find((m: { phone: string }) => m.phone === args.phone);
+  const member = listRes.data.items.find((m: { email: string }) => m.email === args.email);
   if (!member) {
     const out = args.stderr ?? process.stderr;
-    out.write(chalk.red(`Error: no member with phone ${args.phone} in project ${args.projectId}\n`));
+    out.write(chalk.red(`Error: no member with email ${args.email} in project ${args.projectId}\n`));
     return 4 as ExitCode;
   }
   return executeRequest({
@@ -162,7 +162,7 @@ export async function membersRemove(args: MembersRemoveArgs): Promise<ExitCode> 
         params: { path: { project: args.projectId, user: member.userId } },
       }),
     format: () =>
-      `${chalk.green('✓')} Removed ${chalk.bold(member.displayName ?? args.phone)} ${chalk.dim(`<${args.phone}>`)} from project ${args.projectId}`,
+      `${chalk.green('✓')} Removed ${chalk.bold(member.displayName ?? args.email)} ${chalk.dim(`<${args.email}>`)} from project ${args.projectId}`,
     formatJson: () => JSON.stringify({ ok: true }, null, 2),
   });
 }
@@ -171,7 +171,7 @@ export const membersRemoveCommand = defineCommand({
   meta: { name: 'remove', description: 'Remove a member from a project (owner only).' },
   args: {
     projectId: { type: 'positional', required: true, description: 'Project slug (e.g. prj_xxxxxxxx).' },
-    phone: { type: 'positional', required: true, description: 'E.164 phone number of the member to remove.' },
+    email: { type: 'positional', required: true, description: 'Email address of the member to remove.' },
     json: { type: 'boolean', description: 'Print raw JSON to stdout.' },
     verbose: { type: 'boolean', description: 'Print response metadata to stderr.' },
   },
@@ -179,7 +179,7 @@ export const membersRemoveCommand = defineCommand({
     const env = getEnv();
     requireToken(env);
     const client = createApiClient(env);
-    // Resolve phone → userId
+    // Resolve email → userId
     const listRes = await client.GET('/projects/{project}/members', {
       params: { path: { project: String(args.projectId) } },
     });
@@ -187,10 +187,10 @@ export const membersRemoveCommand = defineCommand({
       process.stderr.write(chalk.red(`Error: could not fetch members for project ${args.projectId}\n`));
       process.exit(1);
     }
-    const phone = String(args.phone);
-    const member = listRes.data.items.find((m: { phone: string }) => m.phone === phone);
+    const email = String(args.email);
+    const member = listRes.data.items.find((m: { email: string }) => m.email === email);
     if (!member) {
-      process.stderr.write(chalk.red(`Error: no member with phone ${phone} in project ${args.projectId}\n`));
+      process.stderr.write(chalk.red(`Error: no member with email ${email} in project ${args.projectId}\n`));
       process.exit(4);
     }
     await runRequest({
@@ -203,7 +203,7 @@ export const membersRemoveCommand = defineCommand({
           },
         }),
       format: () =>
-        `${chalk.green('✓')} Removed ${chalk.bold(member.displayName ?? phone)} ${chalk.dim(`<${phone}>`)} from project ${args.projectId}`,
+        `${chalk.green('✓')} Removed ${chalk.bold(member.displayName ?? email)} ${chalk.dim(`<${email}>`)} from project ${args.projectId}`,
       formatJson: () => JSON.stringify({ ok: true }, null, 2),
     });
   },

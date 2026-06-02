@@ -7,11 +7,13 @@
  */
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import { Writable } from 'node:stream';
+import pg from 'pg';
 import { createApp } from '../../../../packages/api/src/app.js';
 import { startPg, type PgFixture } from '../../../../packages/api/src/__tests__/setup-pg.js';
 import { resetPool, getPool } from '../../../../packages/api/src/db/client.js';
+import { signTestSession } from '../../../../packages/api/src/middleware/auth.js';
+import { makeUserId } from '../../../../packages/api/src/__tests__/factories/index.js';
 import { createApiClient } from '../lib/client.js';
-import { authOtpStart, authOtpVerify } from '../commands/auth.js';
 import { projectsCreate } from '../commands/projects.js';
 import { reportsCreate } from '../commands/reports.js';
 import {
@@ -60,20 +62,18 @@ beforeAll(async () => {
   delete process.env.AI_LIVE;
   await resetPool();
   getPool(fx.url);
-  app = createApp();
 
-  const sink = new MemoryStream();
-  await authOtpStart({ client: makeClient(), phone: '+15551000030', stdout: sink, stderr: sink });
-  const out = new MemoryStream();
-  await authOtpVerify({
-    client: makeClient(),
-    phone: '+15551000030',
-    code: '000000',
-    raw: true,
-    stdout: out,
-    stderr: sink,
-  });
-  token = out.text.trim();
+  const userId = makeUserId();
+  const admin = new pg.Client({ connectionString: fx.url });
+  await admin.connect();
+  await admin.query(
+    `INSERT INTO "user"(id, name, email, email_verified, display_name, created_at, updated_at) VALUES ($1, 'CLI Reports AI User', $2, true, 'CLI Reports AI User', now(), now())`,
+    [userId, 'reports-ai-user@example.com'],
+  );
+  await admin.end();
+
+  app = createApp();
+  ({ token } = await signTestSession(userId));
 
   const projOut = new MemoryStream();
   await projectsCreate({
@@ -81,7 +81,7 @@ beforeAll(async () => {
     name: 'Reports AI Test Project',
     json: true,
     stdout: projOut,
-    stderr: sink,
+    stderr: new MemoryStream(),
   });
   projectId = JSON.parse(projOut.text).id;
 }, 120_000);

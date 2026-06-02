@@ -11,7 +11,7 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import pg from 'pg';
 import { createApp } from '../app.js';
-import { startPg, type PgFixture } from './setup-pg.js';
+import { startPg, seedAuthUsers, type PgFixture } from './setup-pg.js';
 import { resetPool, getPool } from '../db/client.js';
 import { signTestToken } from '../middleware/auth.js';
 import { newId } from '../lib/ids.js';
@@ -59,23 +59,11 @@ beforeAll(async () => {
   bobSid = makeSessionId();
   adminSid = makeSessionId();
 
-  const admin = new pg.Client({ connectionString: fx.url });
-  await admin.connect();
-  await admin.query(
-    `INSERT INTO auth.users(id, phone, plan, is_admin) VALUES
-       ($1, $2, 'free', false),
-       ($3, $4, 'free', false),
-       ($5, $6, 'pro', true)`,
-    [alice, '+15550700001', bob, '+15550700002', adminUser, '+15550700003'],
-  );
-  await admin.query(
-    `INSERT INTO auth.sessions(id, user_id, expires_at) VALUES
-       ($1, $2, now() + interval '7 days'),
-       ($3, $4, now() + interval '7 days'),
-       ($5, $6, now() + interval '7 days')`,
-    [aliceSid, alice, bobSid, bob, adminSid, adminUser],
-  );
-  await admin.end();
+  await seedAuthUsers(fx.url, [
+    { id: alice, plan: 'free' },
+    { id: bob, plan: 'free' },
+    { id: adminUser, plan: 'pro', isAdmin: true },
+  ]);
 }, 120_000);
 
 afterAll(async () => {
@@ -207,17 +195,7 @@ describe('Phase 2 — token bucket post-hoc enforcement', () => {
   beforeAll(async () => {
     charlie = makeUserId();
     charlieSid = makeSessionId();
-    const admin = new pg.Client({ connectionString: fx.url });
-    await admin.connect();
-    await admin.query(
-      `INSERT INTO auth.users(id, phone, plan, is_admin) VALUES ($1, $2, 'free', false)`,
-      [charlie, '+15550700004'],
-    );
-    await admin.query(
-      `INSERT INTO auth.sessions(id, user_id, expires_at) VALUES ($1, $2, now() + interval '7 days')`,
-      [charlieSid, charlie],
-    );
-    await admin.end();
+    await seedAuthUsers(fx.url, [{ id: charlie, plan: 'free' }]);
   });
 
   it('enforceTokenLimits throws once seeded usage pushes input tokens at/past the free cap', async () => {
@@ -238,16 +216,9 @@ describe('Phase 2 — token bucket post-hoc enforcement', () => {
   it('enforceTokenLimits succeeds when usage is below the cap', async () => {
     const fresh = makeUserId();
     const freshSid = makeSessionId();
+    await seedAuthUsers(fx.url, [{ id: fresh, plan: 'free' }]);
     const admin = new pg.Client({ connectionString: fx.url });
     await admin.connect();
-    await admin.query(
-      `INSERT INTO auth.users(id, phone, plan, is_admin) VALUES ($1, $2, 'free', false)`,
-      [fresh, '+15550700005'],
-    );
-    await admin.query(
-      `INSERT INTO auth.sessions(id, user_id, expires_at) VALUES ($1, $2, now() + interval '7 days')`,
-      [freshSid, fresh],
-    );
     await seedUsageEvents(admin, fresh, 1, 'chat', { input: 1_000, output: 500 });
     await admin.end();
 
@@ -266,16 +237,9 @@ describe('Phase 2 — token bucket post-hoc enforcement', () => {
     // hitting 80% with real seed rows would mean inserting 800+ rows.
     const u = makeUserId();
     const sid = makeSessionId();
+    await seedAuthUsers(fx.url, [{ id: u, plan: 'free' }]);
     const admin = new pg.Client({ connectionString: fx.url });
     await admin.connect();
-    await admin.query(
-      `INSERT INTO auth.users(id, phone, plan, is_admin) VALUES ($1, $2, 'free', false)`,
-      [u, '+15550700006'],
-    );
-    await admin.query(
-      `INSERT INTO auth.sessions(id, user_id, expires_at) VALUES ($1, $2, now() + interval '7 days')`,
-      [sid, u],
-    );
     await admin.query(
       `INSERT INTO app.user_limit_overrides
          (user_id, report_generate, reason, granted_by)
@@ -297,17 +261,7 @@ describe('Phase 2 — token bucket post-hoc enforcement', () => {
   it('attachUsageWarning sets no header when no bucket is near-limit', async () => {
     const u = makeUserId();
     const sid = makeSessionId();
-    const admin = new pg.Client({ connectionString: fx.url });
-    await admin.connect();
-    await admin.query(
-      `INSERT INTO auth.users(id, phone, plan, is_admin) VALUES ($1, $2, 'free', false)`,
-      [u, '+15550700007'],
-    );
-    await admin.query(
-      `INSERT INTO auth.sessions(id, user_id, expires_at) VALUES ($1, $2, now() + interval '7 days')`,
-      [sid, u],
-    );
-    await admin.end();
+    await seedAuthUsers(fx.url, [{ id: u, plan: 'free' }]);
     const captured: Record<string, string> = {};
     await withScopedConnection({ sub: u, sid }, (d) =>
       attachUsageWarning(d, u, (k, v) => {

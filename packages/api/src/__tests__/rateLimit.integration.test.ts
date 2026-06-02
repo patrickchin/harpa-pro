@@ -9,9 +9,8 @@
  * so we can hit the limit without firing 60 requests.
  */
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
-import pg from 'pg';
 import { createApp } from '../app.js';
-import { startPg, type PgFixture } from './setup-pg.js';
+import { startPg, seedAuthUsers, type PgFixture } from './setup-pg.js';
 import { resetPool, getPool } from '../db/client.js';
 import { signTestToken } from '../middleware/auth.js';
 import {
@@ -40,17 +39,7 @@ beforeAll(async () => {
   bob = makeUserId();
   aliceSid = makeSessionId();
   bobSid = makeSessionId();
-  const admin = new pg.Client({ connectionString: fx.url });
-  await admin.connect();
-  await admin.query(
-    `INSERT INTO auth.users(id, phone) VALUES ($1, $2), ($3, $4)`,
-    [alice, '+15551700001', bob, '+15551700002'],
-  );
-  await admin.query(
-    `INSERT INTO auth.sessions(id, user_id, expires_at) VALUES ($1, $2, now() + interval '7 days'), ($3, $4, now() + interval '7 days')`,
-    [aliceSid, alice, bobSid, bob],
-  );
-  await admin.end();
+  await seedAuthUsers(fx.url, [{ id: alice }, { id: bob }]);
 }, 120_000);
 
 afterAll(async () => {

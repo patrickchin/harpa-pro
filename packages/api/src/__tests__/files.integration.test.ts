@@ -5,9 +5,8 @@
  * No R2 calls happen in CI (arch-storage.md §Fixture mode).
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import pg from 'pg';
 import { createApp } from '../app.js';
-import { startPg, type PgFixture } from './setup-pg.js';
+import { startPg, seedAuthUsers, type PgFixture } from './setup-pg.js';
 import { resetPool, getPool } from '../db/client.js';
 import { signTestToken } from '../middleware/auth.js';
 import { makeUserId, makeSessionId, makeFileId } from './factories/index.js';
@@ -24,17 +23,7 @@ beforeAll(async () => {
   getPool(fx.url);
   alice = makeUserId();
   aliceSid = makeSessionId();
-  const admin = new pg.Client({ connectionString: fx.url });
-  await admin.connect();
-  await admin.query(
-    `INSERT INTO auth.users(id, phone) VALUES ($1, $2)`,
-    [alice, '+15551200001'],
-  );
-  await admin.query(
-    `INSERT INTO auth.sessions(id, user_id, expires_at) VALUES ($1, $2, now() + interval '7 days')`,
-    [aliceSid, alice],
-  );
-  await admin.end();
+  await seedAuthUsers(fx.url, [{ id: alice }]);
 }, 120_000);
 
 afterAll(async () => {

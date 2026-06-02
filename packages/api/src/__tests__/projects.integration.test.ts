@@ -4,9 +4,8 @@
  * scope wrapper → SECURITY DEFINER helper path end-to-end.
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import pg from 'pg';
 import { createApp } from '../app.js';
-import { startPg, type PgFixture } from './setup-pg.js';
+import { startPg, seedAuthUsers, type PgFixture } from './setup-pg.js';
 import { resetPool, getPool } from '../db/client.js';
 import { signTestToken } from '../middleware/auth.js';
 import { makeUserId, makeSessionId } from './factories/index.js';
@@ -32,17 +31,11 @@ beforeAll(async () => {
   bobSid = makeSessionId();
   carolSid = makeSessionId();
 
-  const admin = new pg.Client({ connectionString: fx.url });
-  await admin.connect();
-  await admin.query(
-    `INSERT INTO auth.users(id, phone, display_name) VALUES ($1, $2, 'Alice'), ($3, $4, 'Bob'), ($5, $6, 'Carol')`,
-    [alice, '+15550400001', bob, '+15550400002', carol, '+15550400003'],
-  );
-  await admin.query(
-    `INSERT INTO auth.sessions(id, user_id, expires_at) VALUES ($1, $2, now() + interval '7 days'), ($3, $4, now() + interval '7 days'), ($5, $6, now() + interval '7 days')`,
-    [aliceSid, alice, bobSid, bob, carolSid, carol],
-  );
-  await admin.end();
+  await seedAuthUsers(fx.url, [
+    { id: alice, displayName: 'Alice' },
+    { id: bob, displayName: 'Bob' },
+    { id: carol, displayName: 'Carol' },
+  ]);
 }, 120_000);
 
 afterAll(async () => {
@@ -220,7 +213,7 @@ describe('PATCH + DELETE /projects/:id', () => {
     await app.request(`/projects/${slug}/members`, {
       method: 'POST',
       headers: await authed(aliceTok),
-      body: JSON.stringify({ phone: '+15550400002', role: 'editor' }),
+      body: JSON.stringify({ email: `${bob}@test.local`, role: 'editor' }),
     });
     const res = await app.request(`/projects/${slug}`, {
       method: 'DELETE',
@@ -249,10 +242,10 @@ describe('Members', () => {
     const res = await app.request(`/projects/${projectSlug}/members`, {
       method: 'POST',
       headers: await authed(token),
-      body: JSON.stringify({ phone: '+15550400002', role: 'editor' }),
+      body: JSON.stringify({ email: `${bob}@test.local`, role: 'editor' }),
     });
     expect(res.status).toBe(201);
-    const body = (await res.json()) as { userId: string; phone: string; role: string };
+    const body = (await res.json()) as { userId: string; email: string; role: string };
     expect(body.userId).toBe(bob);
     expect(body.role).toBe('editor');
   });
@@ -279,7 +272,7 @@ describe('Members', () => {
     const res = await app.request(`/projects/${projectSlug}/members`, {
       method: 'POST',
       headers: await authed(token),
-      body: JSON.stringify({ phone: '+15550400003', role: 'editor' }),
+      body: JSON.stringify({ email: `${carol}@test.local`, role: 'editor' }),
     });
     expect(res.status).toBe(403);
   });
@@ -290,7 +283,7 @@ describe('Members', () => {
     const res = await app.request(`/projects/${projectSlug}/members`, {
       method: 'POST',
       headers: await authed(token),
-      body: JSON.stringify({ phone: '+15559999999', role: 'editor' }),
+      body: JSON.stringify({ email: 'unknown@test.local', role: 'editor' }),
     });
     expect(res.status).toBe(404);
   });
@@ -329,14 +322,14 @@ describe('Members', () => {
     const first = await app.request(`/projects/${slug}/members`, {
       method: 'POST',
       headers: await authed(aliceTok),
-      body: JSON.stringify({ phone: '+15550400002', role: 'editor' }),
+      body: JSON.stringify({ email: `${bob}@test.local`, role: 'editor' }),
     });
     expect(first.status).toBe(201);
     // Re-invite must NOT silently overwrite role.
     const second = await app.request(`/projects/${slug}/members`, {
       method: 'POST',
       headers: await authed(aliceTok),
-      body: JSON.stringify({ phone: '+15550400002', role: 'viewer' }),
+      body: JSON.stringify({ email: `${bob}@test.local`, role: 'viewer' }),
     });
     expect(second.status).toBe(409);
     // Confirm bob is still editor, not viewer.
@@ -361,7 +354,7 @@ describe('Members', () => {
     const res = await app.request(`/projects/${slug}/members`, {
       method: 'POST',
       headers: await authed(aliceTok),
-      body: JSON.stringify({ phone: '+15550400001', role: 'editor' }),
+      body: JSON.stringify({ email: `${alice}@test.local`, role: 'editor' }),
     });
     expect(res.status).toBe(409);
     // Alice should still be owner.
@@ -389,12 +382,12 @@ describe('PATCH /projects/:id/members/:user', () => {
     await app.request(`/projects/${projectSlug}/members`, {
       method: 'POST',
       headers: await authed(token),
-      body: JSON.stringify({ phone: '+15550400002', role: 'editor' }),
+      body: JSON.stringify({ email: `${bob}@test.local`, role: 'editor' }),
     });
     await app.request(`/projects/${projectSlug}/members`, {
       method: 'POST',
       headers: await authed(token),
-      body: JSON.stringify({ phone: '+15550400003', role: 'editor' }),
+      body: JSON.stringify({ email: `${carol}@test.local`, role: 'editor' }),
     });
   });
 

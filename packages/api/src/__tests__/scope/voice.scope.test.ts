@@ -13,7 +13,7 @@ import pg from 'pg';
 import { sql } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { makeUserId, makeSessionId, makeFileId } from '../factories/index.js';
-import { startPg, type PgFixture } from '../setup-pg.js';
+import { startPg, seedAuthUsers, type PgFixture } from '../setup-pg.js';
 import { createApp } from '../../app.js';
 import { withScopedConnection } from '../../db/scope.js';
 import { signTestToken } from '../../middleware/auth.js';
@@ -36,21 +36,13 @@ beforeAll(async () => {
   delete process.env.AI_LIVE;
   await resetPool();
   getPool(fx.url);
-  const admin = new pg.Client({ connectionString: fx.url });
-  await admin.connect();
   alice = makeUserId();
   bob = makeUserId();
   aliceSid = makeSessionId();
   bobSid = makeSessionId();
-  await admin.query(
-    `INSERT INTO auth.users(id, phone) VALUES ($1, $2), ($3, $4)`,
-    [alice, '+15551500001', bob, '+15551500002'],
-  );
-  await admin.query(
-    `INSERT INTO auth.sessions(id, user_id, expires_at)
-     VALUES ($1, $2, now() + interval '7 days'), ($3, $4, now() + interval '7 days')`,
-    [aliceSid, alice, bobSid, bob],
-  );
+  await seedAuthUsers(fx.url, [{ id: alice }, { id: bob }]);
+  const admin = new pg.Client({ connectionString: fx.url });
+  await admin.connect();
   const afId = makeFileId();
   await admin.query(
     `INSERT INTO app.files(id, owner_id, kind, file_key, size_bytes, content_type)

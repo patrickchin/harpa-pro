@@ -9,7 +9,7 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import pg from 'pg';
 import { createApp } from '../app.js';
-import { startPg, type PgFixture } from './setup-pg.js';
+import { startPg, seedAuthUsers, type PgFixture } from './setup-pg.js';
 import { resetPool, getPool } from '../db/client.js';
 import { signTestToken } from '../middleware/auth.js';
 import { makeUserId, makeSessionId, makeFileId } from './factories/index.js';
@@ -29,16 +29,9 @@ beforeAll(async () => {
   alice = makeUserId();
   aliceSid = makeSessionId();
   aliceFile = makeFileId();
+  await seedAuthUsers(fx.url, [{ id: alice }]);
   const admin = new pg.Client({ connectionString: fx.url });
   await admin.connect();
-  await admin.query(
-    `INSERT INTO auth.users(id, phone) VALUES ($1, $2)`,
-    [alice, '+15551400001'],
-  );
-  await admin.query(
-    `INSERT INTO auth.sessions(id, user_id, expires_at) VALUES ($1, $2, now() + interval '7 days')`,
-    [aliceSid, alice],
-  );
   await admin.query(
     `INSERT INTO app.files(id, owner_id, kind, file_key, size_bytes, content_type)
      VALUES ($1, $2, 'voice', $3, 1024, 'audio/m4a')`,

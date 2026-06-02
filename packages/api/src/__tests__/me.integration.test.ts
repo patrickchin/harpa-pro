@@ -5,7 +5,7 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import pg from 'pg';
 import { createApp } from '../app.js';
-import { startPg, type PgFixture } from './setup-pg.js';
+import { startPg, seedAuthUsers, type PgFixture } from './setup-pg.js';
 import { resetPool, getPool } from '../db/client.js';
 import { signTestToken } from '../middleware/auth.js';
 import { makeUserId, makeSessionId, makeProjectId, makeReportId, makeNoteId } from './factories/index.js';
@@ -28,16 +28,13 @@ beforeAll(async () => {
   aliceSid = makeSessionId();
   bobSid = makeSessionId();
 
+  await seedAuthUsers(fx.url, [
+    { id: alice, displayName: 'Alice' },
+    { id: bob, displayName: 'Bob' },
+  ]);
+
   const admin = new pg.Client({ connectionString: fx.url });
   await admin.connect();
-  await admin.query(
-    `INSERT INTO auth.users(id, phone, display_name) VALUES ($1, $2, 'Alice'), ($3, $4, 'Bob')`,
-    [alice, '+15550300001', bob, '+15550300002'],
-  );
-  await admin.query(
-    `INSERT INTO auth.sessions(id, user_id, expires_at) VALUES ($1, $2, now() + interval '7 days'), ($3, $4, now() + interval '7 days')`,
-    [aliceSid, alice, bobSid, bob],
-  );
 
   // Seed alice with one project, one report, one voice note in 2026-04
   // and another report in 2026-05; bob with a separate project so that

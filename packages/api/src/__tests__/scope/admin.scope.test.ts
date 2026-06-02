@@ -16,7 +16,7 @@ import { sql } from 'drizzle-orm';
 import { startPg, type PgFixture } from '../setup-pg.js';
 import { createApp } from '../../app.js';
 import { withAnonConnection, withScopedConnection } from '../../db/scope.js';
-import { signTestToken } from '../../middleware/auth.js';
+import { signTestSession } from '../../middleware/auth.js';
 import { resetPool, getPool, rawDb } from '../../db/client.js';
 import { makeUserId, makeSessionId } from '../factories/index.js';
 
@@ -40,13 +40,8 @@ beforeAll(async () => {
   const admin = new pg.Client({ connectionString: fx.url });
   await admin.connect();
   await admin.query(
-    `INSERT INTO auth.users(id, phone, is_admin) VALUES ($1, $2, true), ($3, $4, false)`,
-    [adminId, '+15551500001', regularId, '+15551500002'],
-  );
-  await admin.query(
-    `INSERT INTO auth.sessions(id, user_id, expires_at)
-     VALUES ($1, $2, now() + interval '7 days'), ($3, $4, now() + interval '7 days')`,
-    [adminSessionId, adminId, regularSessionId, regularId],
+    `INSERT INTO "user"(id, name, email, email_verified, is_admin, created_at, updated_at) VALUES ($1, 'Admin', $2, true, true, now(), now()), ($3, 'Regular', $4, true, false, now(), now())`,
+    [adminId, 'admin@example.com', regularId, 'regular@example.com'],
   );
   adminSid = adminSessionId;
   regularSid = regularSessionId;
@@ -72,7 +67,7 @@ describe('scope: /admin/waitlist.csv', () => {
 
   it('regular authenticated user → 403 (is_admin = false)', async () => {
     const app = createApp();
-    const tok = await signTestToken(regularId, regularSid);
+    const { token: tok } = await signTestSession(regularId);
     const res = await app.request('/admin/waitlist.csv', {
       headers: { authorization: `Bearer ${tok}` },
     });
@@ -81,7 +76,7 @@ describe('scope: /admin/waitlist.csv', () => {
 
   it('admin user → 200 and CSV includes the seeded signup', async () => {
     const app = createApp();
-    const tok = await signTestToken(adminId, adminSid);
+    const { token: tok } = await signTestSession(adminId);
     const res = await app.request('/admin/waitlist.csv', {
       headers: { authorization: `Bearer ${tok}` },
     });

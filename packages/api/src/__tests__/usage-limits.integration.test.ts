@@ -13,7 +13,7 @@ import pg from 'pg';
 import { createApp } from '../app.js';
 import { startPg, type PgFixture } from './setup-pg.js';
 import { resetPool, getPool } from '../db/client.js';
-import { signTestToken } from '../middleware/auth.js';
+import { signTestSession } from '../middleware/auth.js';
 import { newId } from '../lib/ids.js';
 import { makeUserId, makeSessionId } from './factories/index.js';
 import { withScopedConnection } from '../db/scope.js';
@@ -23,9 +23,6 @@ let fx: PgFixture;
 let alice: string;
 let bob: string;
 let adminUser: string;
-let aliceSid: string;
-let bobSid: string;
-let adminSid: string;
 
 async function seedUsageEvents(
   admin: pg.Client,
@@ -55,25 +52,15 @@ beforeAll(async () => {
   alice = makeUserId();
   bob = makeUserId();
   adminUser = makeUserId();
-  aliceSid = makeSessionId();
-  bobSid = makeSessionId();
-  adminSid = makeSessionId();
 
   const admin = new pg.Client({ connectionString: fx.url });
   await admin.connect();
   await admin.query(
-    `INSERT INTO auth.users(id, phone, plan, is_admin) VALUES
-       ($1, $2, 'free', false),
-       ($3, $4, 'free', false),
-       ($5, $6, 'pro', true)`,
-    [alice, '+15550700001', bob, '+15550700002', adminUser, '+15550700003'],
-  );
-  await admin.query(
-    `INSERT INTO auth.sessions(id, user_id, expires_at) VALUES
-       ($1, $2, now() + interval '7 days'),
-       ($3, $4, now() + interval '7 days'),
-       ($5, $6, now() + interval '7 days')`,
-    [aliceSid, alice, bobSid, bob, adminSid, adminUser],
+    `INSERT INTO "user"(id, name, email, email_verified, plan, is_admin, created_at, updated_at) VALUES
+       ($1, 'Alice', $2, true, 'free', false, now(), now()),
+       ($3, 'Bob', $4, true, 'free', false, now(), now()),
+       ($5, 'Admin', $6, true, 'pro', true, now(), now())`,
+    [alice, 'alice@example.com', bob, 'bob@example.com', adminUser, 'admin@example.com'],
   );
   await admin.end();
 }, 120_000);
@@ -85,7 +72,7 @@ afterAll(async () => {
 describe('GET /me/limits', () => {
   it('returns plan defaults when no override and no usage', async () => {
     const app = createApp();
-    const token = await signTestToken(bob, bobSid);
+    const { token } = await signTestSession(bob);
     const res = await app.request('/me/limits', { headers: { authorization: `Bearer ${token}` } });
     expect(res.status).toBe(200);
     const body = (await res.json()) as {
@@ -108,7 +95,7 @@ describe('GET /me/limits', () => {
     await client.end();
 
     const app = createApp();
-    const token = await signTestToken(alice, aliceSid);
+    const { token } = await signTestSession(alice);
     const res = await app.request('/me/limits', { headers: { authorization: `Bearer ${token}` } });
     const body = (await res.json()) as { buckets: Array<{ kind: string; used: number; remaining: number | null }> };
     const bucket = body.buckets.find((b) => b.kind === 'report_generate')!;
@@ -118,7 +105,7 @@ describe('GET /me/limits', () => {
 
   it('cross-actor isolation: bob still sees zero usage even after alice racks up rows', async () => {
     const app = createApp();
-    const token = await signTestToken(bob, bobSid);
+    const { token } = await signTestSession(bob);
     const res = await app.request('/me/limits', { headers: { authorization: `Bearer ${token}` } });
     const body = (await res.json()) as { buckets: Array<{ kind: string; used: number }> };
     const bucket = body.buckets.find((b) => b.kind === 'report_generate')!;
@@ -135,7 +122,7 @@ describe('GET /me/limits', () => {
 describe('admin overrides', () => {
   it('PUT /admin/users/:id/limit-overrides bumps the cap', async () => {
     const app = createApp();
-    const adminToken = await signTestToken(adminUser, adminSid);
+    const { token: adminToken } = await signTestSession(adminUser);
     // Bump alice's report_generate to 50.
     const put = await app.request(`/admin/users/${alice}/limit-overrides`, {
       method: 'PUT',
@@ -145,7 +132,7 @@ describe('admin overrides', () => {
     expect(put.status).toBe(200);
 
     // Alice should now see limit=50, overridden=true.
-    const aliceToken = await signTestToken(alice, aliceSid);
+    const { token: aliceToken } = await signTestSession(alice);
     const res = await app.request('/me/limits', { headers: { authorization: `Bearer ${aliceToken}` } });
     const body = (await res.json()) as { buckets: Array<{ kind: string; limit: number | null; overridden: boolean }> };
     const bucket = body.buckets.find((b) => b.kind === 'report_generate')!;
@@ -155,14 +142,14 @@ describe('admin overrides', () => {
 
   it('DELETE /admin/users/:id/limit-overrides reverts to plan default', async () => {
     const app = createApp();
-    const adminToken = await signTestToken(adminUser, adminSid);
+    const { token: adminToken } = await signTestSession(adminUser);
     const del = await app.request(`/admin/users/${alice}/limit-overrides`, {
       method: 'DELETE',
       headers: { authorization: `Bearer ${adminToken}` },
     });
     expect(del.status).toBe(200);
 
-    const aliceToken = await signTestToken(alice, aliceSid);
+    const { token: aliceToken } = await signTestSession(alice);
     const res = await app.request('/me/limits', { headers: { authorization: `Bearer ${aliceToken}` } });
     const body = (await res.json()) as { buckets: Array<{ kind: string; limit: number | null; overridden: boolean }> };
     const bucket = body.buckets.find((b) => b.kind === 'report_generate')!;
@@ -172,7 +159,7 @@ describe('admin overrides', () => {
 
   it('non-admin caller gets 403 on admin routes', async () => {
     const app = createApp();
-    const aliceToken = await signTestToken(alice, aliceSid);
+    const { token: aliceToken } = await signTestSession(alice);
     const res = await app.request(`/admin/users/${bob}/limit-overrides`, {
       method: 'PUT',
       headers: { authorization: `Bearer ${aliceToken}`, 'content-type': 'application/json' },
@@ -183,7 +170,7 @@ describe('admin overrides', () => {
 
   it('PATCH /admin/users/:id/plan updates the plan column', async () => {
     const app = createApp();
-    const adminToken = await signTestToken(adminUser, adminSid);
+    const { token: adminToken } = await signTestSession(adminUser);
     const res = await app.request(`/admin/users/${bob}/plan`, {
       method: 'PATCH',
       headers: { authorization: `Bearer ${adminToken}`, 'content-type': 'application/json' },
@@ -191,7 +178,7 @@ describe('admin overrides', () => {
     });
     expect(res.status).toBe(200);
 
-    const bobToken = await signTestToken(bob, bobSid);
+    const { token: bobToken } = await signTestSession(bob);
     const limits = await app.request('/me/limits', { headers: { authorization: `Bearer ${bobToken}` } });
     const body = (await limits.json()) as { plan: string; buckets: Array<{ kind: string; limit: number | null }> };
     expect(body.plan).toBe('enterprise');
@@ -210,12 +197,8 @@ describe('Phase 2 — token bucket post-hoc enforcement', () => {
     const admin = new pg.Client({ connectionString: fx.url });
     await admin.connect();
     await admin.query(
-      `INSERT INTO auth.users(id, phone, plan, is_admin) VALUES ($1, $2, 'free', false)`,
-      [charlie, '+15550700004'],
-    );
-    await admin.query(
-      `INSERT INTO auth.sessions(id, user_id, expires_at) VALUES ($1, $2, now() + interval '7 days')`,
-      [charlieSid, charlie],
+      `INSERT INTO "user"(id, name, email, email_verified, plan, is_admin, created_at, updated_at) VALUES ($1, 'Charlie', $2, true, 'free', false, now(), now())`,
+      [charlie, 'charlie@example.com'],
     );
     await admin.end();
   });
@@ -241,12 +224,8 @@ describe('Phase 2 — token bucket post-hoc enforcement', () => {
     const admin = new pg.Client({ connectionString: fx.url });
     await admin.connect();
     await admin.query(
-      `INSERT INTO auth.users(id, phone, plan, is_admin) VALUES ($1, $2, 'free', false)`,
-      [fresh, '+15550700005'],
-    );
-    await admin.query(
-      `INSERT INTO auth.sessions(id, user_id, expires_at) VALUES ($1, $2, now() + interval '7 days')`,
-      [freshSid, fresh],
+      `INSERT INTO "user"(id, name, email, email_verified, plan, is_admin, created_at, updated_at) VALUES ($1, 'Fresh', $2, true, 'free', false, now(), now())`,
+      [fresh, 'fresh@example.com'],
     );
     await seedUsageEvents(admin, fresh, 1, 'chat', { input: 1_000, output: 500 });
     await admin.end();
@@ -269,12 +248,8 @@ describe('Phase 2 — token bucket post-hoc enforcement', () => {
     const admin = new pg.Client({ connectionString: fx.url });
     await admin.connect();
     await admin.query(
-      `INSERT INTO auth.users(id, phone, plan, is_admin) VALUES ($1, $2, 'free', false)`,
-      [u, '+15550700006'],
-    );
-    await admin.query(
-      `INSERT INTO auth.sessions(id, user_id, expires_at) VALUES ($1, $2, now() + interval '7 days')`,
-      [sid, u],
+      `INSERT INTO "user"(id, name, email, email_verified, plan, is_admin, created_at, updated_at) VALUES ($1, 'User', $2, true, 'free', false, now(), now())`,
+      [u, 'u6@example.com'],
     );
     await admin.query(
       `INSERT INTO app.user_limit_overrides
@@ -300,12 +275,8 @@ describe('Phase 2 — token bucket post-hoc enforcement', () => {
     const admin = new pg.Client({ connectionString: fx.url });
     await admin.connect();
     await admin.query(
-      `INSERT INTO auth.users(id, phone, plan, is_admin) VALUES ($1, $2, 'free', false)`,
-      [u, '+15550700007'],
-    );
-    await admin.query(
-      `INSERT INTO auth.sessions(id, user_id, expires_at) VALUES ($1, $2, now() + interval '7 days')`,
-      [sid, u],
+      `INSERT INTO "user"(id, name, email, email_verified, plan, is_admin, created_at, updated_at) VALUES ($1, 'User', $2, true, 'free', false, now(), now())`,
+      [u, 'u7@example.com'],
     );
     await admin.end();
     const captured: Record<string, string> = {};

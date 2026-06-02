@@ -23,7 +23,7 @@ import pg from 'pg';
 import { createApp } from '../app.js';
 import { startPg, type PgFixture } from './setup-pg.js';
 import { resetPool, getPool } from '../db/client.js';
-import { signTestToken } from '../middleware/auth.js';
+import { signTestSession } from '../middleware/auth.js';
 import {
   makeUserId,
   makeSessionId,
@@ -68,14 +68,8 @@ beforeAll(async () => {
   const admin = new pg.Client({ connectionString: fx.url });
   await admin.connect();
   await admin.query(
-    `INSERT INTO auth.users(id, phone) VALUES ($1, $2), ($3, $4)`,
+    `INSERT INTO "user"(id, name, email, email_verified, created_at, updated_at) VALUES ($1, 'Alice', $2, true, now(), now()), ($3, 'Bob', $4, true, now(), now())`,
     [alice, '+15551600001', bob, '+15551600002'],
-  );
-  await admin.query(
-    `INSERT INTO auth.sessions(id, user_id, expires_at) VALUES
-       ($1, $2, now() + interval '7 days'),
-       ($3, $4, now() + interval '7 days')`,
-    [aliceSid, alice, bobSid, bob],
   );
   await admin.query(
     `INSERT INTO app.projects(id, name, owner_id) VALUES ($1, 'AliceProj', $2), ($3, 'BobProj', $4)`,
@@ -174,7 +168,7 @@ describe('POST /reports/:report/notes/voice — aggregator (Pitfall 13)', () => 
 
   it('happy path: transcribes, summarises, inserts note, records BOTH usage rows scoped to (projectId, reportId, userId)', async () => {
     const app = createApp();
-    const tok = await signTestToken(alice, aliceSid);
+    const { token: tok } = await signTestSession(alice);
     const idem = `voice:${aliceVoiceFile}:${aliceReport}`;
     const res = await app.request(`/reports/${aliceReport}/notes/voice`, {
       method: 'POST',
@@ -238,7 +232,7 @@ describe('POST /reports/:report/notes/voice — aggregator (Pitfall 13)', () => 
 
   it('Idempotency-Key dedupes retries: same noteId, no new usage rows', async () => {
     const app = createApp();
-    const tok = await signTestToken(alice, aliceSid);
+    const { token: tok } = await signTestSession(alice);
     const idem = `voice:${aliceVoiceFile}:${aliceReport}`;
     const before = await selectUsageForReport(aliceReport);
     const beforeNotes = await countNotes(aliceReport);
@@ -260,7 +254,7 @@ describe('POST /reports/:report/notes/voice — aggregator (Pitfall 13)', () => 
 
   it('404 when caller cannot see the report (RLS, Pitfall 6)', async () => {
     const app = createApp();
-    const tok = await signTestToken(bob, bobSid);
+    const { token: tok } = await signTestSession(bob);
     // Bob attempting to attach his own file to Alice's report.
     const res = await app.request(`/reports/${aliceReport}/notes/voice`, {
       method: 'POST',
@@ -272,7 +266,7 @@ describe('POST /reports/:report/notes/voice — aggregator (Pitfall 13)', () => 
 
   it('404 when fileId belongs to another owner (files RLS)', async () => {
     const app = createApp();
-    const tok = await signTestToken(alice, aliceSid);
+    const { token: tok } = await signTestSession(alice);
     const res = await app.request(`/reports/${aliceReport}/notes/voice`, {
       method: 'POST',
       headers: headers(tok),
@@ -283,7 +277,7 @@ describe('POST /reports/:report/notes/voice — aggregator (Pitfall 13)', () => 
 
   it('400 when file kind is not voice', async () => {
     const app = createApp();
-    const tok = await signTestToken(alice, aliceSid);
+    const { token: tok } = await signTestSession(alice);
     const res = await app.request(`/reports/${aliceReport}/notes/voice`, {
       method: 'POST',
       headers: headers(tok),

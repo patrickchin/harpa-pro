@@ -483,7 +483,7 @@ async function loadPlanAndOverride(
   userId: string,
 ): Promise<{ plan: Plan; overrideRow: OverrideRow | null }> {
   const planRes = await db.execute<{ plan: Plan }>(sql`
-    SELECT plan FROM auth.users WHERE id = ${userId} LIMIT 1
+    SELECT plan FROM "user" WHERE id = ${userId} LIMIT 1
   `);
   const planRow = planRes.rows[0];
   if (!planRow) {
@@ -681,6 +681,6 @@ export async function deleteUserLimitOverride(targetUserId: string): Promise<voi
 
 export async function updateUserPlan(targetUserId: string, plan: Plan): Promise<void> {
   await rawDb().execute(sql`
-    UPDATE auth.users SET plan = ${plan}, updated_at = now() WHERE id = ${targetUserId}
+    UPDATE "user" SET plan = ${plan}, updated_at = now() WHERE id = ${targetUserId}
   `);
 }

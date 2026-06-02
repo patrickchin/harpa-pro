@@ -11,12 +11,11 @@ import pg from 'pg';
 import { createApp } from '../app.js';
 import { startPg, type PgFixture } from './setup-pg.js';
 import { resetPool, getPool } from '../db/client.js';
-import { signTestToken } from '../middleware/auth.js';
-import { makeUserId, makeSessionId, makeFileId } from './factories/index.js';
+import { signTestSession } from '../middleware/auth.js';
+import { makeUserId, makeFileId } from './factories/index.js';
 
 let fx: PgFixture;
 let alice: string;
-let aliceSid: string;
 let aliceFile: string;
 
 beforeAll(async () => {
@@ -27,17 +26,12 @@ beforeAll(async () => {
   await resetPool();
   getPool(fx.url);
   alice = makeUserId();
-  aliceSid = makeSessionId();
   aliceFile = makeFileId();
   const admin = new pg.Client({ connectionString: fx.url });
   await admin.connect();
   await admin.query(
-    `INSERT INTO auth.users(id, phone) VALUES ($1, $2)`,
+    `INSERT INTO "user"(id, name, email, email_verified, created_at, updated_at) VALUES ($1, 'Alice', $2, true, now(), now())`,
     [alice, '+15551400001'],
-  );
-  await admin.query(
-    `INSERT INTO auth.sessions(id, user_id, expires_at) VALUES ($1, $2, now() + interval '7 days')`,
-    [aliceSid, alice],
   );
   await admin.query(
     `INSERT INTO app.files(id, owner_id, kind, file_key, size_bytes, content_type)
@@ -59,7 +53,7 @@ const headers = (tok: string) => ({
 describe('/voice/*', () => {
   it('POST /voice/transcribe returns the recorded transcript', async () => {
     const app = createApp();
-    const tok = await signTestToken(alice, aliceSid);
+    const { token: tok } = await signTestSession(alice);
     const res = await app.request('/voice/transcribe', {
       method: 'POST',
       headers: headers(tok),
@@ -72,7 +66,7 @@ describe('/voice/*', () => {
 
   it('POST /voice/summarize returns the recorded summary', async () => {
     const app = createApp();
-    const tok = await signTestToken(alice, aliceSid);
+    const { token: tok } = await signTestSession(alice);
     const res = await app.request('/voice/summarize', {
       method: 'POST',
       headers: headers(tok),
@@ -85,7 +79,7 @@ describe('/voice/*', () => {
 
   it('POST /voice/transcribe 404 on unknown fileId', async () => {
     const app = createApp();
-    const tok = await signTestToken(alice, aliceSid);
+    const { token: tok } = await signTestSession(alice);
     const res = await app.request('/voice/transcribe', {
       method: 'POST',
       headers: headers(tok),
@@ -98,7 +92,7 @@ describe('/voice/*', () => {
 
   it('POST /voice/transcribe 400 on bad body (missing fileId)', async () => {
     const app = createApp();
-    const tok = await signTestToken(alice, aliceSid);
+    const { token: tok } = await signTestSession(alice);
     const res = await app.request('/voice/transcribe', {
       method: 'POST',
       headers: headers(tok),
@@ -109,7 +103,7 @@ describe('/voice/*', () => {
 
   it('POST /voice/summarize 400 on empty transcript', async () => {
     const app = createApp();
-    const tok = await signTestToken(alice, aliceSid);
+    const { token: tok } = await signTestSession(alice);
     const res = await app.request('/voice/summarize', {
       method: 'POST',
       headers: headers(tok),
@@ -120,7 +114,7 @@ describe('/voice/*', () => {
 
   it('POST /voice/transcribe 502 with code=ai_provider_error on unknown fixtureName', async () => {
     const app = createApp();
-    const tok = await signTestToken(alice, aliceSid);
+    const { token: tok } = await signTestSession(alice);
     const res = await app.request('/voice/transcribe', {
       method: 'POST',
       headers: headers(tok),
@@ -136,7 +130,7 @@ describe('/voice/*', () => {
 
   it('POST /voice/summarize 502 with code=ai_provider_error on unknown fixtureName', async () => {
     const app = createApp();
-    const tok = await signTestToken(alice, aliceSid);
+    const { token: tok } = await signTestSession(alice);
     const res = await app.request('/voice/summarize', {
       method: 'POST',
       headers: headers(tok),
@@ -149,7 +143,7 @@ describe('/voice/*', () => {
 
   it('POST /voice/transcribe 400 rejects path-traversal-shaped fixtureName', async () => {
     const app = createApp();
-    const tok = await signTestToken(alice, aliceSid);
+    const { token: tok } = await signTestSession(alice);
     const res = await app.request('/voice/transcribe', {
       method: 'POST',
       headers: headers(tok),

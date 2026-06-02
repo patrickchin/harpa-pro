@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { isoDateTime, phone } from './_shared.js';
+import { isoDateTime } from './_shared.js';
 import { projectId, userId } from './ids.js';
 
 export const projectRole = z.enum(['owner', 'editor', 'viewer']);
@@ -35,13 +35,13 @@ export const updateProjectRequest = createProjectRequest.partial();
 export const projectMember = z.object({
   userId: userId,
   displayName: z.string().nullable(),
-  phone,
+  email: z.string().email(),
   role: projectRole,
   joinedAt: isoDateTime,
 });
 
 export const inviteMemberRequest = z.object({
-  phone,
+  email: z.string().email(),
   role: projectRole.default('editor'),
 });
 

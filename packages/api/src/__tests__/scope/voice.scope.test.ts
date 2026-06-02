@@ -16,7 +16,7 @@ import { makeUserId, makeSessionId, makeFileId } from '../factories/index.js';
 import { startPg, type PgFixture } from '../setup-pg.js';
 import { createApp } from '../../app.js';
 import { withScopedConnection } from '../../db/scope.js';
-import { signTestToken } from '../../middleware/auth.js';
+import { signTestSession } from '../../middleware/auth.js';
 import { resetPool, getPool } from '../../db/client.js';
 import { getFileById } from '../../services/files.js';
 import * as schema from '../../db/schema.js';
@@ -43,13 +43,8 @@ beforeAll(async () => {
   aliceSid = makeSessionId();
   bobSid = makeSessionId();
   await admin.query(
-    `INSERT INTO auth.users(id, phone) VALUES ($1, $2), ($3, $4)`,
+    `INSERT INTO "user"(id, name, email, email_verified, created_at, updated_at) VALUES ($1, 'Alice', $2, true, now(), now()), ($3, 'Bob', $4, true, now(), now())`,
     [alice, '+15551500001', bob, '+15551500002'],
-  );
-  await admin.query(
-    `INSERT INTO auth.sessions(id, user_id, expires_at)
-     VALUES ($1, $2, now() + interval '7 days'), ($3, $4, now() + interval '7 days')`,
-    [aliceSid, alice, bobSid, bob],
   );
   const afId = makeFileId();
   await admin.query(
@@ -75,7 +70,7 @@ afterAll(async () => {
 describe('scope: /voice/*', () => {
   it('alice POST /voice/transcribe for her own file → 200', async () => {
     const app = createApp();
-    const tok = await signTestToken(alice, aliceSid);
+    const { token: tok } = await signTestSession(alice);
     const res = await app.request('/voice/transcribe', {
       method: 'POST',
       headers: { authorization: `Bearer ${tok}`, 'content-type': 'application/json' },
@@ -86,7 +81,7 @@ describe('scope: /voice/*', () => {
 
   it("paired — alice POST /voice/transcribe for bob's file → 404 (RLS hides)", async () => {
     const app = createApp();
-    const tok = await signTestToken(alice, aliceSid);
+    const { token: tok } = await signTestSession(alice);
     const res = await app.request('/voice/transcribe', {
       method: 'POST',
       headers: { authorization: `Bearer ${tok}`, 'content-type': 'application/json' },
@@ -97,7 +92,7 @@ describe('scope: /voice/*', () => {
 
   it("paired — bob POST /voice/transcribe for alice's file → 404 (cross-owner)", async () => {
     const app = createApp();
-    const tok = await signTestToken(bob, bobSid);
+    const { token: tok } = await signTestSession(bob);
     const res = await app.request('/voice/transcribe', {
       method: 'POST',
       headers: { authorization: `Bearer ${tok}`, 'content-type': 'application/json' },

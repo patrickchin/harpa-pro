@@ -8,16 +8,13 @@ import pg from 'pg';
 import { createApp } from '../app.js';
 import { startPg, type PgFixture } from './setup-pg.js';
 import { resetPool, getPool } from '../db/client.js';
-import { signTestToken } from '../middleware/auth.js';
-import { makeUserId, makeSessionId } from './factories/index.js';
+import { signTestSession } from '../middleware/auth.js';
+import { makeUserId } from './factories/index.js';
 
 let fx: PgFixture;
 let alice: string;
 let bob: string;
 let carol: string;
-let aliceSid: string;
-let bobSid: string;
-let carolSid: string;
 
 beforeAll(async () => {
   fx = await startPg();
@@ -28,19 +25,12 @@ beforeAll(async () => {
   alice = makeUserId();
   bob = makeUserId();
   carol = makeUserId();
-  aliceSid = makeSessionId();
-  bobSid = makeSessionId();
-  carolSid = makeSessionId();
 
   const admin = new pg.Client({ connectionString: fx.url });
   await admin.connect();
   await admin.query(
-    `INSERT INTO auth.users(id, phone, display_name) VALUES ($1, $2, 'Alice'), ($3, $4, 'Bob'), ($5, $6, 'Carol')`,
-    [alice, '+15550400001', bob, '+15550400002', carol, '+15550400003'],
-  );
-  await admin.query(
-    `INSERT INTO auth.sessions(id, user_id, expires_at) VALUES ($1, $2, now() + interval '7 days'), ($3, $4, now() + interval '7 days'), ($5, $6, now() + interval '7 days')`,
-    [aliceSid, alice, bobSid, bob, carolSid, carol],
+    `INSERT INTO "user"(id, name, email, email_verified, display_name, created_at, updated_at) VALUES ($1, 'Alice', $2, true, 'Alice', now(), now()), ($3, 'Bob', $4, true, 'Bob', now(), now()), ($5, 'Carol', $6, true, 'Carol', now(), now())`,
+    [alice, 'alice@example.com', bob, 'bob@example.com', carol, 'carol@example.com'],
   );
   await admin.end();
 }, 120_000);
@@ -56,7 +46,7 @@ async function authed(token: string) {
 describe('POST /projects', () => {
   it('creates a project owned by the caller and bootstraps owner membership', async () => {
     const app = createApp();
-    const token = await signTestToken(alice, aliceSid);
+    const { token } = await signTestSession(alice);
     const res = await app.request('/projects', {
       method: 'POST',
       headers: await authed(token),
@@ -90,7 +80,7 @@ describe('POST /projects', () => {
 
   it('rejects 400 for empty name', async () => {
     const app = createApp();
-    const token = await signTestToken(alice, aliceSid);
+    const { token } = await signTestSession(alice);
     const res = await app.request('/projects', {
       method: 'POST',
       headers: await authed(token),
@@ -105,7 +95,7 @@ describe('GET /projects + GET /projects/:id', () => {
 
   beforeAll(async () => {
     const app = createApp();
-    const token = await signTestToken(bob, bobSid);
+    const { token } = await signTestSession(bob);
     const res = await app.request('/projects', {
       method: 'POST',
       headers: await authed(token),
@@ -117,7 +107,7 @@ describe('GET /projects + GET /projects/:id', () => {
 
   it('lists projects for the caller (paginated)', async () => {
     const app = createApp();
-    const token = await signTestToken(bob, bobSid);
+    const { token } = await signTestSession(bob);
     const res = await app.request('/projects?limit=5', { headers: { authorization: `Bearer ${token}` } });
     expect(res.status).toBe(200);
     const body = (await res.json()) as { items: Array<{ id: string }>; nextCursor: string | null };
@@ -127,7 +117,7 @@ describe('GET /projects + GET /projects/:id', () => {
 
   it('cursor pagination round-trips', async () => {
     const app = createApp();
-    const token = await signTestToken(bob, bobSid);
+    const { token } = await signTestSession(bob);
     // Seed 4 more so we can paginate across.
     for (let i = 0; i < 4; i++) {
       await app.request('/projects', {
@@ -150,7 +140,7 @@ describe('GET /projects + GET /projects/:id', () => {
 
   it('GET /projects/:id returns stats', async () => {
     const app = createApp();
-    const token = await signTestToken(bob, bobSid);
+    const { token } = await signTestSession(bob);
     const res = await app.request(`/projects/${projectSlug}`, { headers: { authorization: `Bearer ${token}` } });
     expect(res.status).toBe(200);
     const body = (await res.json()) as { stats?: { totalReports: number } };
@@ -159,7 +149,7 @@ describe('GET /projects + GET /projects/:id', () => {
 
   it('GET /projects/:id 404 when not a member', async () => {
     const app = createApp();
-    const token = await signTestToken(carol, carolSid);
+    const { token } = await signTestSession(carol);
     const res = await app.request(`/projects/${projectSlug}`, { headers: { authorization: `Bearer ${token}` } });
     expect(res.status).toBe(404);
   });
@@ -175,7 +165,7 @@ describe('PATCH + DELETE /projects/:id', () => {
   let projectSlug: string;
   beforeAll(async () => {
     const app = createApp();
-    const token = await signTestToken(alice, aliceSid);
+    const { token } = await signTestSession(alice);
     const res = await app.request('/projects', {
       method: 'POST',
       headers: await authed(token),
@@ -186,7 +176,7 @@ describe('PATCH + DELETE /projects/:id', () => {
 
   it('PATCH updates fields the caller can see', async () => {
     const app = createApp();
-    const token = await signTestToken(alice, aliceSid);
+    const { token } = await signTestSession(alice);
     const res = await app.request(`/projects/${projectSlug}`, {
       method: 'PATCH',
       headers: await authed(token),
@@ -198,7 +188,7 @@ describe('PATCH + DELETE /projects/:id', () => {
 
   it('DELETE returns 204 for owner', async () => {
     const app = createApp();
-    const token = await signTestToken(alice, aliceSid);
+    const { token } = await signTestSession(alice);
     const res = await app.request(`/projects/${projectSlug}`, {
       method: 'DELETE',
       headers: { authorization: `Bearer ${token}` },
@@ -209,8 +199,8 @@ describe('PATCH + DELETE /projects/:id', () => {
   it('DELETE 404 when not owner', async () => {
     // alice creates, bob is invited as editor → cannot delete.
     const app = createApp();
-    const aliceTok = await signTestToken(alice, aliceSid);
-    const bobTok = await signTestToken(bob, bobSid);
+    const { token: aliceTok } = await signTestSession(alice);
+    const { token: bobTok } = await signTestSession(bob);
     const created = await app.request('/projects', {
       method: 'POST',
       headers: await authed(aliceTok),
@@ -220,7 +210,7 @@ describe('PATCH + DELETE /projects/:id', () => {
     await app.request(`/projects/${slug}/members`, {
       method: 'POST',
       headers: await authed(aliceTok),
-      body: JSON.stringify({ phone: '+15550400002', role: 'editor' }),
+      body: JSON.stringify({ email: 'bob@example.com', role: 'editor' }),
     });
     const res = await app.request(`/projects/${slug}`, {
       method: 'DELETE',
@@ -234,7 +224,7 @@ describe('Members', () => {
   let projectSlug: string;
   beforeAll(async () => {
     const app = createApp();
-    const token = await signTestToken(alice, aliceSid);
+    const { token } = await signTestSession(alice);
     const res = await app.request('/projects', {
       method: 'POST',
       headers: await authed(token),
@@ -243,23 +233,23 @@ describe('Members', () => {
     projectSlug = ((await res.json()) as { id: string }).id;
   });
 
-  it('owner invites a member by phone', async () => {
+  it('owner invites a member by email', async () => {
     const app = createApp();
-    const token = await signTestToken(alice, aliceSid);
+    const { token } = await signTestSession(alice);
     const res = await app.request(`/projects/${projectSlug}/members`, {
       method: 'POST',
       headers: await authed(token),
-      body: JSON.stringify({ phone: '+15550400002', role: 'editor' }),
+      body: JSON.stringify({ email: 'bob@example.com', role: 'editor' }),
     });
     expect(res.status).toBe(201);
-    const body = (await res.json()) as { userId: string; phone: string; role: string };
+    const body = (await res.json()) as { userId: string; email: string; role: string };
     expect(body.userId).toBe(bob);
     expect(body.role).toBe('editor');
   });
 
   it('list members visible to a member', async () => {
     const app = createApp();
-    const token = await signTestToken(bob, bobSid);
+    const { token } = await signTestSession(bob);
     const res = await app.request(`/projects/${projectSlug}/members`, { headers: { authorization: `Bearer ${token}` } });
     expect(res.status).toBe(200);
     const body = (await res.json()) as { items: Array<{ userId: string }> };
@@ -268,36 +258,36 @@ describe('Members', () => {
 
   it('list members 404 for non-member', async () => {
     const app = createApp();
-    const token = await signTestToken(carol, carolSid);
+    const { token } = await signTestSession(carol);
     const res = await app.request(`/projects/${projectSlug}/members`, { headers: { authorization: `Bearer ${token}` } });
     expect(res.status).toBe(404);
   });
 
   it('non-owner invite returns 403', async () => {
     const app = createApp();
-    const token = await signTestToken(bob, bobSid);
+    const { token } = await signTestSession(bob);
     const res = await app.request(`/projects/${projectSlug}/members`, {
       method: 'POST',
       headers: await authed(token),
-      body: JSON.stringify({ phone: '+15550400003', role: 'editor' }),
+      body: JSON.stringify({ email: 'carol@example.com', role: 'editor' }),
     });
     expect(res.status).toBe(403);
   });
 
-  it('invite unknown phone returns 404', async () => {
+  it('invite unknown email returns 404', async () => {
     const app = createApp();
-    const token = await signTestToken(alice, aliceSid);
+    const { token } = await signTestSession(alice);
     const res = await app.request(`/projects/${projectSlug}/members`, {
       method: 'POST',
       headers: await authed(token),
-      body: JSON.stringify({ phone: '+15559999999', role: 'editor' }),
+      body: JSON.stringify({ email: 'unknown@example.com', role: 'editor' }),
     });
     expect(res.status).toBe(404);
   });
 
   it('owner removes a member', async () => {
     const app = createApp();
-    const token = await signTestToken(alice, aliceSid);
+    const { token } = await signTestSession(alice);
     const res = await app.request(`/projects/${projectSlug}/members/${bob}`, {
       method: 'DELETE',
       headers: { authorization: `Bearer ${token}` },
@@ -307,7 +297,7 @@ describe('Members', () => {
 
   it('cannot remove the last owner', async () => {
     const app = createApp();
-    const token = await signTestToken(alice, aliceSid);
+    const { token } = await signTestSession(alice);
     const res = await app.request(`/projects/${projectSlug}/members/${alice}`, {
       method: 'DELETE',
       headers: { authorization: `Bearer ${token}` },
@@ -318,7 +308,7 @@ describe('Members', () => {
   it('re-inviting an existing member returns 409 instead of demoting their role', async () => {
     // Fresh project so the test is independent of suite ordering.
     const app = createApp();
-    const aliceTok = await signTestToken(alice, aliceSid);
+    const { token: aliceTok } = await signTestSession(alice);
     const create = await app.request('/projects', {
       method: 'POST',
       headers: await authed(aliceTok),
@@ -329,14 +319,14 @@ describe('Members', () => {
     const first = await app.request(`/projects/${slug}/members`, {
       method: 'POST',
       headers: await authed(aliceTok),
-      body: JSON.stringify({ phone: '+15550400002', role: 'editor' }),
+      body: JSON.stringify({ email: 'bob@example.com', role: 'editor' }),
     });
     expect(first.status).toBe(201);
     // Re-invite must NOT silently overwrite role.
     const second = await app.request(`/projects/${slug}/members`, {
       method: 'POST',
       headers: await authed(aliceTok),
-      body: JSON.stringify({ phone: '+15550400002', role: 'viewer' }),
+      body: JSON.stringify({ email: 'bob@example.com', role: 'viewer' }),
     });
     expect(second.status).toBe(409);
     // Confirm bob is still editor, not viewer.
@@ -350,7 +340,7 @@ describe('Members', () => {
 
   it('re-inviting the owner cannot demote them (last owner protection)', async () => {
     const app = createApp();
-    const aliceTok = await signTestToken(alice, aliceSid);
+    const { token: aliceTok } = await signTestSession(alice);
     const create = await app.request('/projects', {
       method: 'POST',
       headers: await authed(aliceTok),
@@ -361,7 +351,7 @@ describe('Members', () => {
     const res = await app.request(`/projects/${slug}/members`, {
       method: 'POST',
       headers: await authed(aliceTok),
-      body: JSON.stringify({ phone: '+15550400001', role: 'editor' }),
+      body: JSON.stringify({ email: 'alice@example.com', role: 'editor' }),
     });
     expect(res.status).toBe(409);
     // Alice should still be owner.
@@ -378,7 +368,7 @@ describe('PATCH /projects/:id/members/:user', () => {
 
   beforeAll(async () => {
     const app = createApp();
-    const token = await signTestToken(alice, aliceSid);
+    const { token } = await signTestSession(alice);
     const res = await app.request('/projects', {
       method: 'POST',
       headers: await authed(token),
@@ -389,19 +379,19 @@ describe('PATCH /projects/:id/members/:user', () => {
     await app.request(`/projects/${projectSlug}/members`, {
       method: 'POST',
       headers: await authed(token),
-      body: JSON.stringify({ phone: '+15550400002', role: 'editor' }),
+      body: JSON.stringify({ email: 'bob@example.com', role: 'editor' }),
     });
     await app.request(`/projects/${projectSlug}/members`, {
       method: 'POST',
       headers: await authed(token),
-      body: JSON.stringify({ phone: '+15550400003', role: 'editor' }),
+      body: JSON.stringify({ email: 'carol@example.com', role: 'editor' }),
     });
   });
 
   // P1: owner promotes editor to owner
   it('P1 owner promotes editor B to owner', async () => {
     const app = createApp();
-    const token = await signTestToken(alice, aliceSid);
+    const { token } = await signTestSession(alice);
     const res = await app.request(`/projects/${projectSlug}/members/${bob}`, {
       method: 'PATCH',
       headers: await authed(token),
@@ -414,7 +404,7 @@ describe('PATCH /projects/:id/members/:user', () => {
   // P2: owner demotes co-owner (two owners exist)
   it('P2 owner demotes co-owner B when two owners exist', async () => {
     const app = createApp();
-    const token = await signTestToken(alice, aliceSid);
+    const { token } = await signTestSession(alice);
     // At this point alice + bob are both owners.
     const res = await app.request(`/projects/${projectSlug}/members/${bob}`, {
       method: 'PATCH',
@@ -428,7 +418,7 @@ describe('PATCH /projects/:id/members/:user', () => {
   // P3: sole owner tries to demote themselves
   it('P3 sole owner cannot demote themselves', async () => {
     const app = createApp();
-    const token = await signTestToken(alice, aliceSid);
+    const { token } = await signTestSession(alice);
     const res = await app.request(`/projects/${projectSlug}/members/${alice}`, {
       method: 'PATCH',
       headers: await authed(token),
@@ -441,7 +431,7 @@ describe('PATCH /projects/:id/members/:user', () => {
   it('P4 owner cannot demote sole owner even if target is different user', async () => {
     // Make bob the owner again then demote alice, leaving bob as sole owner.
     const app = createApp();
-    const aliceTok = await signTestToken(alice, aliceSid);
+    const { token: aliceTok } = await signTestSession(alice);
     // Promote bob to owner.
     await app.request(`/projects/${projectSlug}/members/${bob}`, {
       method: 'PATCH',
@@ -455,7 +445,7 @@ describe('PATCH /projects/:id/members/:user', () => {
       body: JSON.stringify({ role: 'editor' }),
     });
     // Now bob is sole owner; log in as bob and try to demote himself.
-    const bobTok = await signTestToken(bob, bobSid);
+    const { token: bobTok } = await signTestSession(bob);
     const res = await app.request(`/projects/${projectSlug}/members/${bob}`, {
       method: 'PATCH',
       headers: await authed(bobTok),
@@ -473,7 +463,7 @@ describe('PATCH /projects/:id/members/:user', () => {
   // P5: idempotent same-role patch
   it('P5 same-role PATCH returns 200 unchanged', async () => {
     const app = createApp();
-    const token = await signTestToken(alice, aliceSid);
+    const { token } = await signTestSession(alice);
     // Bob is editor after P2.
     const res = await app.request(`/projects/${projectSlug}/members/${bob}`, {
       method: 'PATCH',
@@ -487,7 +477,7 @@ describe('PATCH /projects/:id/members/:user', () => {
   // P6: non-owner cannot patch
   it('P6 editor cannot patch any member role', async () => {
     const app = createApp();
-    const token = await signTestToken(bob, bobSid); // bob is editor
+    const { token } = await signTestSession(bob); // bob is editor
     const res = await app.request(`/projects/${projectSlug}/members/${carol}`, {
       method: 'PATCH',
       headers: await authed(token),
@@ -499,7 +489,7 @@ describe('PATCH /projects/:id/members/:user', () => {
   // P7: patching a non-member returns 404
   it('P7 patching a non-member returns 404', async () => {
     const app = createApp();
-    const token = await signTestToken(alice, aliceSid);
+    const { token } = await signTestSession(alice);
     const res = await app.request(`/projects/${projectSlug}/members/usr_aaaaaaaaaa`, {
       method: 'PATCH',
       headers: await authed(token),
@@ -512,7 +502,7 @@ describe('PATCH /projects/:id/members/:user', () => {
   it('P8 cross-project patch is 404 (project invisible)', async () => {
     const app = createApp();
     // Bob creates his own project.
-    const bobTok = await signTestToken(bob, bobSid);
+    const { token: bobTok } = await signTestSession(bob);
     const created = await app.request('/projects', {
       method: 'POST',
       headers: await authed(bobTok),
@@ -520,7 +510,7 @@ describe('PATCH /projects/:id/members/:user', () => {
     });
     const bobSlug = ((await created.json()) as { id: string }).id;
     // Alice tries to patch bob's project members — she's not a member.
-    const aliceTok = await signTestToken(alice, aliceSid);
+    const { token: aliceTok } = await signTestSession(alice);
     const res = await app.request(`/projects/${bobSlug}/members/${bob}`, {
       method: 'PATCH',
       headers: await authed(aliceTok),

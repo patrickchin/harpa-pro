@@ -1,7 +1,3 @@
-/**
- * Hono app skeleton. Routes mount here; server entry is src/server.ts.
- * Per-request scoped DB and auth are injected via middleware.
- */
 import { OpenAPIHono } from '@hono/zod-openapi';
 import { cors } from 'hono/cors';
 import { requestId } from './middleware/requestId.js';
@@ -9,7 +5,6 @@ import { errorMapper } from './middleware/errorMapper.js';
 import { globalRateLimit } from './middleware/globalRateLimit.js';
 import { health } from './routes/health.js';
 import { readyz } from './routes/readyz.js';
-import { authRoutes } from './routes/auth.js';
 import { meRoutes } from './routes/me.js';
 import { projectRoutes } from './routes/projects.js';
 import { reportRoutes } from './routes/reports.js';
@@ -21,6 +16,8 @@ import { waitlistRoutes } from './routes/waitlist.js';
 import { adminRoutes } from './routes/admin.js';
 import { resolverRoutes } from './routes/resolvers.js';
 import { wellKnownRoutes } from './routes/well-known.js';
+import { devRoutes } from './routes/dev.js';
+import { auth } from './auth/auth.js';
 import { env } from './env.js';
 import { createSentryMiddleware } from './telemetry/sentry.js';
 import type { ScopedDb } from './db/scope.js';
@@ -39,6 +36,15 @@ export type AppEnv = {
     // Auth-scoped claims, populated by withAuth middleware on protected routes.
     userId?: string;
     sessionId?: string;
+    user?: {
+      id: string;
+      email: string;
+      name: string;
+      displayName: string | null;
+      companyName: string | null;
+      isAdmin: boolean | null;
+      plan: string | null;
+    };
     // Per-request scoped DB accessor; populated by withAuth.
     db?: ScopedDbAccessor;
   };
@@ -99,9 +105,12 @@ export function createApp(): OpenAPIHono<AppEnv> {
   // Public routes
   app.route('/', health);
   app.route('/', readyz);
-  app.route('/', authRoutes);
   app.route('/', waitlistRoutes);
   app.route('/', wellKnownRoutes);
+  if (env.NODE_ENV !== 'production') app.route('/', devRoutes);
+
+  // better-auth handles all /api/auth/** routes (sign-in, OTP, session, etc.)
+  app.on(['GET', 'POST'], '/api/auth/**', (c) => auth.handler(c.req.raw));
 
   // Authenticated routes
   app.route('/', meRoutes);

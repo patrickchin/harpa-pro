@@ -20,9 +20,9 @@ afterAll(async () => { await teardownJourneyPg(j); }, 60_000);
 describe('journey: cross-member project file attachment', () => {
   it('owner uploads, member reads + transcribes, outsider 404s', async () => {
     const app = createApp();
-    const alice = await login(app, '+15550199601');
-    const bob = await login(app, '+15550199602');
-    const carol = await login(app, '+15550199603');
+    const alice = await login(app, 'alice@example.com');
+    const bob = await login(app, 'bob@example.com');
+    const carol = await login(app, 'carol@example.com');
 
     const project = (await (await app.request('/projects', {
       method: 'POST', headers: alice.headers, body: JSON.stringify({ name: 'Shared site' }),
@@ -30,7 +30,7 @@ describe('journey: cross-member project file attachment', () => {
 
     expect((await app.request(`/projects/${project.id}/members`, {
       method: 'POST', headers: alice.headers,
-      body: JSON.stringify({ phone: bob.phone, role: 'editor' }),
+      body: JSON.stringify({ email: bob.email, role: 'editor' }),
     })).status).toBe(201);
 
     const report = (await (await app.request(`/projects/${project.id}/reports`, {

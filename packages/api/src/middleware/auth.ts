@@ -1,47 +1,52 @@
 /**
- * withAuth: requires a valid bearer JWT issued by `auth/jwt.ts`. Sets
- * `userId` (jwt sub) and `sessionId` (jwt sid) on the request context for
- * downstream `withScopedConnection` calls (see docs/v4/arch-auth-and-rls.md).
- *
- * Session-row validation (revocation on logout) is enforced by route
- * handlers — see e.g. `routes/me.ts` — to avoid a hard middleware
- * dependency on the DB for routes that don't need it.
+ * withAuth: requires a valid better-auth session. Sets `userId`,
+ * `sessionId`, `user`, and `db` on the request context for downstream
+ * route handlers. The scoped DB accessor (`c.get('db')`) enforces RLS
+ * via `withScopedConnection`. See docs/v4/arch-auth-and-rls.md.
  */
 import type { MiddlewareHandler } from 'hono';
 import { HTTPException } from 'hono/http-exception';
 import type { AppEnv } from '../app.js';
-import { signJwt, verifyJwt } from '../auth/jwt.js';
+import { auth } from '../auth/auth.js';
 import { withScopedConnection } from '../db/scope.js';
-import { assertId } from '../lib/ids.js';
+import { rawDb } from '../db/client.js';
+import { newId } from '../lib/ids.js';
+import * as authSchema from '../db/auth-schema.js';
 
 export function withAuth(): MiddlewareHandler<AppEnv> {
   return async (c, next) => {
-    const auth = c.req.header('authorization');
-    if (!auth || !auth.startsWith('Bearer ')) {
-      throw new HTTPException(401, { message: 'Missing bearer token.' });
+    const session = await auth.api.getSession({ headers: c.req.raw.headers });
+    if (!session) {
+      throw new HTTPException(401, { message: 'Authentication required.' });
     }
-    const token = auth.slice('Bearer '.length).trim();
-    let claims;
-    try {
-      claims = await verifyJwt(token);
-    } catch {
-      throw new HTTPException(401, { message: 'Invalid token.' });
-    }
-    c.set('userId', claims.sub);
-    c.set('sessionId', claims.sid);
-    c.set('db', (fn) => withScopedConnection({ sub: claims.sub, sid: claims.sid }, fn));
+    c.set('userId', session.user.id);
+    c.set('sessionId', session.session.id);
+    c.set('user', session.user);
+    c.set('db', (fn) =>
+      withScopedConnection({ sub: session.user.id, sid: session.session.id }, fn),
+    );
     await next();
   };
 }
 
 /**
- * Mint a real JWT for tests. Same shape as production tokens — kept
- * exported so integration tests (and the existing unit suite) can
- * construct an authenticated request without going through Twilio.
- * `sub` / `sid` are branded at this trust boundary; pass real slugs
- * (e.g. `usr_abcdef12`, `ses_abcdef12abcd`) — `assertId` rejects malformed
- * values at runtime, matching what `verifyJwt` would do in production.
+ * Test helper: inserts a real better-auth session row into the DB so
+ * that `withAuth` can validate it. Returns the bearer token string to
+ * set on `Authorization: Bearer <token>` headers in integration tests.
+ *
+ * Replaces the old `signTestToken(userId, sessionId)` JWT helper.
+ * The user row must already exist in `public."user"` before calling this.
  */
-export async function signTestToken(sub: string, sid: string): Promise<string> {
-  return signJwt({ sub: assertId('usr', sub, 'signTestToken sub'), sid: assertId('ses', sid, 'signTestToken sid') });
+export async function signTestSession(userId: string): Promise<{ token: string; sessionId: string }> {
+  const sessionId = newId('ses');
+  const token = `test_${sessionId}_${crypto.randomUUID().replace(/-/g, '')}`;
+  await rawDb().insert(authSchema.session).values({
+    id: sessionId,
+    token,
+    userId,
+    expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  });
+  return { token, sessionId };
 }

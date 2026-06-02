@@ -6,14 +6,12 @@ import pg from 'pg';
 import { createApp } from '../app.js';
 import { startPg, type PgFixture } from './setup-pg.js';
 import { resetPool, getPool } from '../db/client.js';
-import { signTestToken } from '../middleware/auth.js';
-import { makeUserId, makeSessionId, makeProjectId } from './factories/index.js';
+import { signTestSession } from '../middleware/auth.js';
+import { makeUserId, makeProjectId } from './factories/index.js';
 
 let fx: PgFixture;
 let alice: string;
 let bob: string;
-let aliceSid: string;
-let bobSid: string;
 let aliceProj: string;
 let bobProj: string;
 let aliceProjSlug: string;
@@ -29,8 +27,6 @@ beforeAll(async () => {
 
   alice = makeUserId();
   bob = makeUserId();
-  aliceSid = makeSessionId();
-  bobSid = makeSessionId();
   aliceProj = makeProjectId();
   bobProj = makeProjectId();
   aliceProjSlug = aliceProj;
@@ -39,12 +35,8 @@ beforeAll(async () => {
   const admin = new pg.Client({ connectionString: fx.url });
   await admin.connect();
   await admin.query(
-    `INSERT INTO auth.users(id, phone) VALUES ($1, $2), ($3, $4)`,
-    [alice, '+15550600001', bob, '+15550600002'],
-  );
-  await admin.query(
-    `INSERT INTO auth.sessions(id, user_id, expires_at) VALUES ($1, $2, now() + interval '7 days'), ($3, $4, now() + interval '7 days')`,
-    [aliceSid, alice, bobSid, bob],
+    `INSERT INTO "user"(id, name, email, email_verified, created_at, updated_at) VALUES ($1, 'Alice', $2, true, now(), now()), ($3, 'Bob', $4, true, now(), now())`,
+    [alice, 'alice@example.com', bob, 'bob@example.com'],
   );
   await admin.query(
     `INSERT INTO app.projects(id, name, owner_id) VALUES ($1, 'A', $2)`,
@@ -73,7 +65,7 @@ describe('reports CRUD', () => {
 
   it('POST creates a draft report under alice project', async () => {
     const app = createApp();
-    const tok = await signTestToken(alice, aliceSid);
+    const { token: tok } = await signTestSession(alice);
     const res = await app.request(`/projects/${aliceProjSlug}/reports`, {
       method: 'POST',
       headers: headers(tok),
@@ -97,7 +89,7 @@ describe('reports CRUD', () => {
 
   it('per-project numbering: a second report in the same project gets number = previous + 1', async () => {
     const app = createApp();
-    const tok = await signTestToken(alice, aliceSid);
+    const { token: tok } = await signTestSession(alice);
     const first = await app.request(`/projects/${aliceProjSlug}/reports`, {
       method: 'POST',
       headers: headers(tok),
@@ -118,7 +110,7 @@ describe('reports CRUD', () => {
 
   it('POST 404 when caller is not member of the project', async () => {
     const app = createApp();
-    const tok = await signTestToken(bob, bobSid);
+    const { token: tok } = await signTestSession(bob);
     const res = await app.request(`/projects/${aliceProjSlug}/reports`, {
       method: 'POST',
       headers: headers(tok),
@@ -139,7 +131,7 @@ describe('reports CRUD', () => {
 
   it('POST 400 on invalid visitDate', async () => {
     const app = createApp();
-    const tok = await signTestToken(alice, aliceSid);
+    const { token: tok } = await signTestSession(alice);
     const res = await app.request(`/projects/${aliceProjSlug}/reports`, {
       method: 'POST',
       headers: headers(tok),
@@ -150,7 +142,7 @@ describe('reports CRUD', () => {
 
   it('GET list under project', async () => {
     const app = createApp();
-    const tok = await signTestToken(alice, aliceSid);
+    const { token: tok } = await signTestSession(alice);
     const res = await app.request(`/projects/${aliceProjSlug}/reports?limit=10`, {
       headers: { authorization: `Bearer ${tok}` },
     });
@@ -161,7 +153,7 @@ describe('reports CRUD', () => {
 
   it('GET list 404 when not member', async () => {
     const app = createApp();
-    const tok = await signTestToken(bob, bobSid);
+    const { token: tok } = await signTestSession(bob);
     const res = await app.request(`/projects/${aliceProjSlug}/reports`, {
       headers: { authorization: `Bearer ${tok}` },
     });
@@ -170,7 +162,7 @@ describe('reports CRUD', () => {
 
   it('GET /reports/:id returns the report', async () => {
     const app = createApp();
-    const tok = await signTestToken(alice, aliceSid);
+    const { token: tok } = await signTestSession(alice);
     const res = await app.request(`/projects/${aliceProjSlug}/reports/${aliceReportNumber}`, { headers: { authorization: `Bearer ${tok}` } });
     expect(res.status).toBe(200);
     const body = (await res.json()) as { id: string };
@@ -179,14 +171,14 @@ describe('reports CRUD', () => {
 
   it('GET /reports/:id 404 for non-member', async () => {
     const app = createApp();
-    const tok = await signTestToken(bob, bobSid);
+    const { token: tok } = await signTestSession(bob);
     const res = await app.request(`/projects/${aliceProjSlug}/reports/${aliceReportNumber}`, { headers: { authorization: `Bearer ${tok}` } });
     expect(res.status).toBe(404);
   });
 
   it('PATCH updates visitDate', async () => {
     const app = createApp();
-    const tok = await signTestToken(alice, aliceSid);
+    const { token: tok } = await signTestSession(alice);
     const res = await app.request(`/projects/${aliceProjSlug}/reports/${aliceReportNumber}`, {
       method: 'PATCH',
       headers: headers(tok),
@@ -199,7 +191,7 @@ describe('reports CRUD', () => {
 
   it('PATCH can clear visitDate (null)', async () => {
     const app = createApp();
-    const tok = await signTestToken(alice, aliceSid);
+    const { token: tok } = await signTestSession(alice);
     const res = await app.request(`/projects/${aliceProjSlug}/reports/${aliceReportNumber}`, {
       method: 'PATCH',
       headers: headers(tok),
@@ -212,7 +204,7 @@ describe('reports CRUD', () => {
 
   it('DELETE returns 204 then GET returns 404', async () => {
     const app = createApp();
-    const tok = await signTestToken(alice, aliceSid);
+    const { token: tok } = await signTestSession(alice);
     const del = await app.request(`/projects/${aliceProjSlug}/reports/${aliceReportNumber}`, {
       method: 'DELETE',
       headers: { authorization: `Bearer ${tok}` },
@@ -241,7 +233,7 @@ describe('reports AI/PDF', () => {
 
   beforeAll(async () => {
     const app = createApp();
-    const tok = await signTestToken(alice, aliceSid);
+    const { token: tok } = await signTestSession(alice);
     const res = await app.request(`/projects/${aliceProjSlug}/reports`, {
       method: 'POST',
       headers: headers(tok),
@@ -255,7 +247,7 @@ describe('reports AI/PDF', () => {
 
   it('POST /reports/:id/generate returns the recorded full body', async () => {
     const app = createApp();
-    const tok = await signTestToken(alice, aliceSid);
+    const { token: tok } = await signTestSession(alice);
     const res = await app.request(`/projects/${aliceProjSlug}/reports/${reportNumber}/generate`, {
       method: 'POST',
       headers: headers(tok),
@@ -276,7 +268,7 @@ describe('reports AI/PDF', () => {
 
   it('POST /reports/:id/regenerate replaces body with the named fixture', async () => {
     const app = createApp();
-    const tok = await signTestToken(alice, aliceSid);
+    const { token: tok } = await signTestSession(alice);
     const res = await app.request(`/projects/${aliceProjSlug}/reports/${reportNumber}/regenerate`, {
       method: 'POST',
       headers: headers(tok),
@@ -298,7 +290,7 @@ describe('reports AI/PDF', () => {
     // The true mid-flight race is tested at the service layer in
     // reports.snapshot.integration.test.ts.
     const app = createApp();
-    const tok = await signTestToken(alice, aliceSid);
+    const { token: tok } = await signTestSession(alice);
 
     // Pin notes_changed_at to a known past value.
     const past = new Date(Date.now() - 60_000).toISOString();
@@ -366,7 +358,7 @@ describe('reports AI/PDF', () => {
 
   it('POST /reports/:id/pdf returns a signed URL pointing at the rendered key', async () => {
     const app = createApp();
-    const tok = await signTestToken(alice, aliceSid);
+    const { token: tok } = await signTestSession(alice);
     const res = await app.request(`/projects/${aliceProjSlug}/reports/${reportNumber}/pdf`, {
       method: 'POST',
       headers: headers(tok),
@@ -382,7 +374,7 @@ describe('reports AI/PDF', () => {
 
   it('POST /reports/:id/finalize freezes the report', async () => {
     const app = createApp();
-    const tok = await signTestToken(alice, aliceSid);
+    const { token: tok } = await signTestSession(alice);
     const res = await app.request(`/projects/${aliceProjSlug}/reports/${reportNumber}/finalize`, {
       method: 'POST',
       headers: headers(tok),
@@ -395,7 +387,7 @@ describe('reports AI/PDF', () => {
 
   it('POST /reports/:id/finalize is idempotent (200 on already-finalized)', async () => {
     const app = createApp();
-    const tok = await signTestToken(alice, aliceSid);
+    const { token: tok } = await signTestSession(alice);
     const res = await app.request(`/projects/${aliceProjSlug}/reports/${reportNumber}/finalize`, {
       method: 'POST',
       headers: headers(tok),
@@ -405,7 +397,7 @@ describe('reports AI/PDF', () => {
 
   it('POST /reports/:id/regenerate 409 once finalized', async () => {
     const app = createApp();
-    const tok = await signTestToken(alice, aliceSid);
+    const { token: tok } = await signTestSession(alice);
     const res = await app.request(`/projects/${aliceProjSlug}/reports/${reportNumber}/regenerate`, {
       method: 'POST',
       headers: headers(tok),
@@ -416,7 +408,7 @@ describe('reports AI/PDF', () => {
 
   it('POST /reports/:id/unfinalize flips a finalized report back to draft', async () => {
     const app = createApp();
-    const tok = await signTestToken(alice, aliceSid);
+    const { token: tok } = await signTestSession(alice);
     const res = await app.request(`/projects/${aliceProjSlug}/reports/${reportNumber}/unfinalize`, {
       method: 'POST',
       headers: headers(tok),
@@ -429,7 +421,7 @@ describe('reports AI/PDF', () => {
 
   it('POST /reports/:id/unfinalize 409 when the report is already a draft', async () => {
     const app = createApp();
-    const tok = await signTestToken(alice, aliceSid);
+    const { token: tok } = await signTestSession(alice);
     // Previous test already unfinalized it; this hits a draft row.
     const res = await app.request(`/projects/${aliceProjSlug}/reports/${reportNumber}/unfinalize`, {
       method: 'POST',
@@ -442,14 +434,14 @@ describe('reports AI/PDF', () => {
     const app = createApp();
     // Re-finalize alice's report so the row exists & is in a finalize-able
     // state, then attempt the unfinalize as bob.
-    const aliceTok = await signTestToken(alice, aliceSid);
+    const { token: aliceTok } = await signTestSession(alice);
     const refinalize = await app.request(`/projects/${aliceProjSlug}/reports/${reportNumber}/finalize`, {
       method: 'POST',
       headers: headers(aliceTok),
     });
     expect(refinalize.status).toBe(200);
 
-    const bobTok = await signTestToken(bob, bobSid);
+    const { token: bobTok } = await signTestSession(bob);
     const res = await app.request(`/projects/${aliceProjSlug}/reports/${reportNumber}/unfinalize`, {
       method: 'POST',
       headers: headers(bobTok),
@@ -459,7 +451,7 @@ describe('reports AI/PDF', () => {
 
   it('POST /reports/:id/finalize 409 when report has no body', async () => {
     const app = createApp();
-    const tok = await signTestToken(alice, aliceSid);
+    const { token: tok } = await signTestSession(alice);
     // Fresh draft, never generated.
     const created = await app.request(`/projects/${aliceProjSlug}/reports`, {
       method: 'POST',
@@ -476,7 +468,7 @@ describe('reports AI/PDF', () => {
 
   it('POST /reports/:id/pdf 409 when report has no body', async () => {
     const app = createApp();
-    const tok = await signTestToken(alice, aliceSid);
+    const { token: tok } = await signTestSession(alice);
     const created = await app.request(`/projects/${aliceProjSlug}/reports`, {
       method: 'POST',
       headers: headers(tok),
@@ -504,7 +496,7 @@ describe('reports AI/PDF', () => {
 
   it('all four endpoints 404 on unknown reportId', async () => {
     const app = createApp();
-    const tok = await signTestToken(alice, aliceSid);
+    const { token: tok } = await signTestSession(alice);
     // valid-shaped slug that does not exist in DB
     for (const path of ['generate', 'regenerate', 'finalize', 'pdf']) {
       const res = await app.request(`/projects/${aliceProjSlug}/reports/9999/${path}`, {
@@ -518,7 +510,7 @@ describe('reports AI/PDF', () => {
 
   it('generate 400 rejects path-traversal-shaped fixtureName at the contract boundary', async () => {
     const app = createApp();
-    const tok = await signTestToken(alice, aliceSid);
+    const { token: tok } = await signTestSession(alice);
     const res = await app.request(`/projects/${aliceProjSlug}/reports/${reportNumber}/generate`, {
       method: 'POST',
       headers: headers(tok),
@@ -529,7 +521,7 @@ describe('reports AI/PDF', () => {
 
   it('generate 502 with code=ai_provider_error on unknown fixtureName (no provider/fixture leak)', async () => {
     const app = createApp();
-    const tok = await signTestToken(alice, aliceSid);
+    const { token: tok } = await signTestSession(alice);
     // Need a fresh draft (current `reportId` is finalized; would 409).
     const created = await app.request(`/projects/${aliceProjSlug}/reports`, {
       method: 'POST',
@@ -562,7 +554,7 @@ describe('GET /reports/:number/debug', () => {
     // Fresh draft owned by alice — keeps these tests independent of the
     // generate/finalize chain above (which leaves its report finalized).
     const app = createApp();
-    const tok = await signTestToken(alice, aliceSid);
+    const { token: tok } = await signTestSession(alice);
     const created = await app.request(`/projects/${aliceProjSlug}/reports`, {
       method: 'POST',
       headers: headers(tok),
@@ -582,7 +574,7 @@ describe('GET /reports/:number/debug', () => {
 
   it('returns empty lastGeneration + live userPrompt for a never-generated draft', async () => {
     const app = createApp();
-    const tok = await signTestToken(alice, aliceSid);
+    const { token: tok } = await signTestSession(alice);
     const res = await app.request(`/projects/${aliceProjSlug}/reports/${debugReportNumber}/debug`, {
       headers: { authorization: `Bearer ${tok}` },
     });
@@ -601,7 +593,7 @@ describe('GET /reports/:number/debug', () => {
 
   it('persists + surfaces lastGeneration after a /generate call', async () => {
     const app = createApp();
-    const tok = await signTestToken(alice, aliceSid);
+    const { token: tok } = await signTestSession(alice);
     const gen = await app.request(`/projects/${aliceProjSlug}/reports/${debugReportNumber}/generate`, {
       method: 'POST',
       headers: headers(tok),
@@ -642,7 +634,7 @@ describe('GET /reports/:number/debug', () => {
 
   it('404 for a non-member (Pitfall 6 scope test)', async () => {
     const app = createApp();
-    const tok = await signTestToken(bob, bobSid);
+    const { token: tok } = await signTestSession(bob);
     const res = await app.request(`/projects/${aliceProjSlug}/reports/${debugReportNumber}/debug`, {
       headers: { authorization: `Bearer ${tok}` },
     });
@@ -662,7 +654,7 @@ describe('GET /reports/:number/debug', () => {
     await admin.end();
 
     const app = createApp();
-    const tok = await signTestToken(bob, bobSid);
+    const { token: tok } = await signTestSession(bob);
     const res = await app.request(`/projects/${aliceProjSlug}/reports/${debugReportNumber}/debug`, {
       headers: { authorization: `Bearer ${tok}` },
     });
@@ -687,7 +679,7 @@ describe('GET /reports/:number/debug', () => {
 
   it('404 for unknown report number under a project the caller owns', async () => {
     const app = createApp();
-    const tok = await signTestToken(alice, aliceSid);
+    const { token: tok } = await signTestSession(alice);
     const res = await app.request(`/projects/${aliceProjSlug}/reports/99999/debug`, {
       headers: { authorization: `Bearer ${tok}` },
     });

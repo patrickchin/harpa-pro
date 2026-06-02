@@ -9,7 +9,7 @@ import { drizzle } from 'drizzle-orm/node-postgres';
 import { startPg, type PgFixture } from '../setup-pg.js';
 import { createApp } from '../../app.js';
 import { withScopedConnection } from '../../db/scope.js';
-import { signTestToken } from '../../middleware/auth.js';
+import { signTestSession } from '../../middleware/auth.js';
 import { resetPool, getPool } from '../../db/client.js';
 import * as schema from '../../db/schema.js';
 import { makeUserId, makeSessionId, makeProjectId } from '../factories/index.js';
@@ -42,12 +42,8 @@ beforeAll(async () => {
   const admin = new pg.Client({ connectionString: fx.url });
   await admin.connect();
   await admin.query(
-    `INSERT INTO auth.users(id, phone) VALUES ($1, $2), ($3, $4)`,
+    `INSERT INTO "user"(id, name, email, email_verified, created_at, updated_at) VALUES ($1, 'Alice', $2, true, now(), now()), ($3, 'Bob', $4, true, now(), now())`,
     [alice, '+15550500001', bob, '+15550500002'],
-  );
-  await admin.query(
-    `INSERT INTO auth.sessions(id, user_id, expires_at) VALUES ($1, $2, now() + interval '7 days'), ($3, $4, now() + interval '7 days')`,
-    [aliceSid, alice, bobSid, bob],
   );
   await admin.query(
     `INSERT INTO app.projects(id, name, owner_id) VALUES ($1, 'alice-proj', $2)`,
@@ -71,7 +67,7 @@ afterAll(async () => {
 describe('scope: /projects', () => {
   it('alice GET /projects/:id returns her own project', async () => {
     const app = createApp();
-    const token = await signTestToken(alice, aliceSid);
+    const { token } = await signTestSession(alice);
     const res = await app.request(`/projects/${aliceProjSlug}`, { headers: { authorization: `Bearer ${token}` } });
     expect(res.status).toBe(200);
     const body = (await res.json()) as { id: string; ownerId: string };
@@ -81,14 +77,14 @@ describe('scope: /projects', () => {
 
   it('paired — alice GET /projects/:id of bob returns 404', async () => {
     const app = createApp();
-    const token = await signTestToken(alice, aliceSid);
+    const { token } = await signTestSession(alice);
     const res = await app.request(`/projects/${bobProjSlug}`, { headers: { authorization: `Bearer ${token}` } });
     expect(res.status).toBe(404);
   });
 
   it('paired write — alice cannot DELETE bob project (RLS denies)', async () => {
     const app = createApp();
-    const token = await signTestToken(alice, aliceSid);
+    const { token } = await signTestSession(alice);
     const res = await app.request(`/projects/${bobProjSlug}`, {
       method: 'DELETE',
       headers: { authorization: `Bearer ${token}` },
@@ -106,7 +102,7 @@ describe('scope: /projects', () => {
 
   it('paired list — alice GET /projects only sees her own row(s)', async () => {
     const app = createApp();
-    const token = await signTestToken(alice, aliceSid);
+    const { token } = await signTestSession(alice);
     const res = await app.request('/projects?limit=100', { headers: { authorization: `Bearer ${token}` } });
     const body = (await res.json()) as { items: Array<{ id: string }> };
     expect(body.items.find((p) => p.id === aliceProj)).toBeTruthy();

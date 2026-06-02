@@ -13,7 +13,7 @@ import pg from 'pg';
 import { createApp } from '../app.js';
 import { startPg, type PgFixture } from './setup-pg.js';
 import { resetPool, getPool } from '../db/client.js';
-import { signTestToken } from '../middleware/auth.js';
+import { signTestSession } from '../middleware/auth.js';
 import {
   MemoryRateLimiter,
   setRateLimiter,
@@ -21,13 +21,11 @@ import {
   type RateLimiter,
 } from '../lib/rateLimiter.js';
 import { resetIdempotencyStore } from '../lib/idempotencyStore.js';
-import { makeUserId, makeSessionId } from './factories/index.js';
+import { makeUserId } from './factories/index.js';
 
 let fx: PgFixture;
 let alice: string;
-let aliceSid: string;
 let bob: string;
-let bobSid: string;
 
 beforeAll(async () => {
   fx = await startPg();
@@ -38,17 +36,11 @@ beforeAll(async () => {
   getPool(fx.url);
   alice = makeUserId();
   bob = makeUserId();
-  aliceSid = makeSessionId();
-  bobSid = makeSessionId();
   const admin = new pg.Client({ connectionString: fx.url });
   await admin.connect();
   await admin.query(
-    `INSERT INTO auth.users(id, phone) VALUES ($1, $2), ($3, $4)`,
+    `INSERT INTO "user"(id, name, email, email_verified, created_at, updated_at) VALUES ($1, 'Alice', $2, true, now(), now()), ($3, 'Bob', $4, true, now(), now())`,
     [alice, '+15551700001', bob, '+15551700002'],
-  );
-  await admin.query(
-    `INSERT INTO auth.sessions(id, user_id, expires_at) VALUES ($1, $2, now() + interval '7 days'), ($3, $4, now() + interval '7 days')`,
-    [aliceSid, alice, bobSid, bob],
   );
   await admin.end();
 }, 120_000);
@@ -87,7 +79,7 @@ describe('rate limit middleware', () => {
     })();
     setRateLimiter(limiter);
 
-    const tok = await signTestToken(alice, aliceSid);
+    const { token: tok } = await signTestSession(alice);
     const r1 = await callSummarize(tok);
     const r2 = await callSummarize(tok);
     const r3 = await callSummarize(tok);
@@ -102,7 +94,7 @@ describe('rate limit middleware', () => {
   });
 
   it('attaches X-RateLimit-* headers on success', async () => {
-    const tok = await signTestToken(alice, aliceSid);
+    const { token: tok } = await signTestSession(alice);
     const res = await callSummarize(tok);
     expect(res.status).toBe(200);
     expect(res.headers.get('x-ratelimit-limit')).toBe('60');
@@ -118,8 +110,8 @@ describe('rate limit middleware', () => {
     })();
     setRateLimiter(limiter);
 
-    const aliceTok = await signTestToken(alice, aliceSid);
-    const bobTok = await signTestToken(bob, bobSid);
+    const { token: aliceTok } = await signTestSession(alice);
+    const { token: bobTok } = await signTestSession(bob);
     const a1 = await callSummarize(aliceTok);
     const a2 = await callSummarize(aliceTok);
     const b1 = await callSummarize(bobTok);
@@ -136,7 +128,7 @@ describe('rate limit middleware', () => {
     })();
     setRateLimiter(limiter);
 
-    const tok = await signTestToken(alice, aliceSid);
+    const { token: tok } = await signTestSession(alice);
     const res = await callSummarize(tok);
     expect(res.status).toBe(429);
     const body = (await res.json()) as { requestId?: string };

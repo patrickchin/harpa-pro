@@ -2,7 +2,7 @@
  * Happy-path journey: real OTP login → project → report → delete both →
  * logout → token rejected.
  *
- * This is the test that closes the "signTestToken is the de-facto spec"
+ * This is the test that closes the "signTestSession is the de-facto spec"
  * gap identified in the P1 audit. Mirrors scripts/journeys/journey.sh.
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
@@ -16,7 +16,7 @@ afterAll(async () => { await teardownJourneyPg(j); }, 60_000);
 describe('journey: auth → project → report → cleanup', () => {
   it('stitches the real OTP-issued token through CRUD and rejects after logout', async () => {
     const app = createApp();
-    const me = await login(app, '+15550199101');
+    const me = await login(app, 'me@example.com');
 
     const meRes = await app.request('/me', { headers: me.headers });
     expect(meRes.status).toBe(200);
@@ -41,17 +41,17 @@ describe('journey: auth → project → report → cleanup', () => {
     expect((await app.request(`/projects/${project.id}/reports/${report.number}`, { method: 'DELETE', headers: me.headers })).status).toBe(204);
     expect((await app.request(`/projects/${project.id}`, { method: 'DELETE', headers: me.headers })).status).toBe(204);
 
-    expect((await app.request('/auth/logout', { method: 'POST', headers: me.headers })).status).toBe(200);
+    expect((await app.request('/api/auth/sign-out', { method: 'POST', headers: me.headers })).status).toBe(200);
 
     // Logout deletes the session row. JWT-only validation in `withAuth`
     // means the token *signature* is still valid until exp — session
     // revocation is currently a documented gap (see docs/bugs/README.md).
-    // Assert what we can: the row is gone from auth.sessions.
+    // Assert what we can: the row is gone from session.
     const { getPool } = await import('../../db/client.js');
     const conn = await getPool().connect();
     try {
       const r = await conn.query<{ n: string }>(
-        `SELECT count(*)::text AS n FROM auth.sessions WHERE user_id = $1`,
+        `SELECT count(*)::text AS n FROM session WHERE user_id = $1`,
         [me.userId],
       );
       expect(r.rows[0]?.n).toBe('0');

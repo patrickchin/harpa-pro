@@ -19,7 +19,7 @@ import { drizzle } from 'drizzle-orm/node-postgres';
 import { startPg, type PgFixture } from '../setup-pg.js';
 import { createApp } from '../../app.js';
 import { withScopedConnection } from '../../db/scope.js';
-import { signTestToken } from '../../middleware/auth.js';
+import { signTestSession } from '../../middleware/auth.js';
 import { resetPool, getPool } from '../../db/client.js';
 import { makeUserId, makeSessionId } from '../factories/index.js';
 import * as schema from '../../db/schema.js';
@@ -44,15 +44,11 @@ beforeAll(async () => {
   const admin = new pg.Client({ connectionString: fx.url });
   await admin.connect();
   await admin.query(
-    `INSERT INTO auth.users(id, phone) VALUES ($1, $2), ($3, $4)`,
-    [alice, '+15550200001', bob, '+15550200002'],
+    `INSERT INTO "user"(id, name, email, email_verified, created_at, updated_at) VALUES ($1, 'Alice', $2, true, now(), now()), ($3, 'Bob', $4, true, now(), now())`,
+    [alice, 'alice@example.com', bob, 'bob@example.com'],
   );
   // Seed sessions for both so JWTs are valid in spirit (we don't enforce
   // session-row presence in withAuth yet — see middleware/auth.ts).
-  await admin.query(
-    `INSERT INTO auth.sessions(id, user_id, expires_at) VALUES ($1, $2, now() + interval '7 days'), ($3, $4, now() + interval '7 days')`,
-    [aliceSid, alice, bobSid, bob],
-  );
   await admin.end();
 }, 120_000);
 
@@ -63,20 +59,20 @@ afterAll(async () => {
 describe('scope: /me', () => {
   it('alice GET /me returns alice', async () => {
     const app = createApp();
-    const token = await signTestToken(alice, aliceSid);
+    const { token } = await signTestSession(alice);
     const res = await app.request('/me', { headers: { authorization: `Bearer ${token}` } });
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { user: { id: string; phone: string } };
+    const body = (await res.json()) as { user: { id: string; email: string } };
     expect(body.user.id).toBe(alice);
-    expect(body.user.phone).toBe('+15550200001');
+    expect(body.user.email).toBe('alice@example.com');
   });
 
   it('bob GET /me returns bob (and never alice)', async () => {
     const app = createApp();
-    const token = await signTestToken(bob, bobSid);
+    const { token } = await signTestSession(bob);
     const res = await app.request('/me', { headers: { authorization: `Bearer ${token}` } });
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { user: { id: string; phone: string } };
+    const body = (await res.json()) as { user: { id: string; email: string } };
     expect(body.user.id).toBe(bob);
     expect(body.user.id).not.toBe(alice);
   });
@@ -100,7 +96,7 @@ describe('scope: /me', () => {
     const conn = await getPool().connect();
     try {
       const result = await drizzle(conn, { schema }).execute(
-        sql`SELECT count(*)::int AS count FROM auth.users`,
+        sql`SELECT count(*)::int AS count FROM "user"`,
       );
       const count = Number((result.rows[0] as { count: number }).count);
       expect(count).toBeGreaterThanOrEqual(2);
@@ -111,7 +107,7 @@ describe('scope: /me', () => {
 
   it('PATCH /me: alice updating self only mutates alice', async () => {
     const app = createApp();
-    const token = await signTestToken(alice, aliceSid);
+    const { token } = await signTestSession(alice);
     const res = await app.request('/me', {
       method: 'PATCH',
       headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
@@ -122,7 +118,7 @@ describe('scope: /me', () => {
     const conn = await getPool().connect();
     try {
       const r = await conn.query<{ display_name: string | null }>(
-        `SELECT display_name FROM auth.users WHERE id = $1`,
+        `SELECT display_name FROM "user" WHERE id = $1`,
         [bob],
       );
       expect(r.rows[0]?.display_name).not.toBe('AliceScopeTest');
@@ -135,7 +131,7 @@ describe('scope: /me', () => {
     // The handler reads userId from the JWT, so a token signed for bob can
     // only ever update bob's row — even if the request body claims otherwise.
     const app = createApp();
-    const token = await signTestToken(bob, bobSid);
+    const { token } = await signTestSession(bob);
     const res = await app.request('/me', {
       method: 'PATCH',
       headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
@@ -154,12 +150,12 @@ describe('scope: /me', () => {
     const conn = await getPool().connect();
     try {
       const r = await conn.query(
-        `UPDATE auth.users SET display_name = 'UNSCOPED' WHERE id = $1 RETURNING id`,
+        `UPDATE "user" SET display_name = 'UNSCOPED' WHERE id = $1 RETURNING id`,
         [bob],
       );
       expect(r.rowCount).toBe(1);
       // Restore so other tests aren't affected.
-      await conn.query(`UPDATE auth.users SET display_name = 'Bob' WHERE id = $1`, [bob]);
+      await conn.query(`UPDATE "user" SET display_name = 'Bob' WHERE id = $1`, [bob]);
     } finally {
       conn.release();
     }

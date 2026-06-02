@@ -8,7 +8,7 @@ import { drizzle } from 'drizzle-orm/node-postgres';
 import { startPg, type PgFixture } from '../setup-pg.js';
 import { createApp } from '../../app.js';
 import { withScopedConnection } from '../../db/scope.js';
-import { signTestToken } from '../../middleware/auth.js';
+import { signTestSession } from '../../middleware/auth.js';
 import { resetPool, getPool } from '../../db/client.js';
 import * as schema from '../../db/schema.js';
 import { makeUserId, makeSessionId, makeProjectId, makeReportId, makeNoteId } from '../factories/index.js';
@@ -47,12 +47,8 @@ beforeAll(async () => {
   const admin = new pg.Client({ connectionString: fx.url });
   await admin.connect();
   await admin.query(
-    `INSERT INTO auth.users(id, phone) VALUES ($1, $2), ($3, $4), ($5, $6)`,
+    `INSERT INTO "user"(id, name, email, email_verified, created_at, updated_at) VALUES ($1, 'Alice', $2, true, now(), now()), ($3, 'Bob', $4, true, now(), now()), ($5, 'Carol', $6, true, now(), now())`,
     [alice, '+15550900001', bob, '+15550900002', carol, '+15550900003'],
-  );
-  await admin.query(
-    `INSERT INTO auth.sessions(id, user_id, expires_at) VALUES ($1, $2, now() + interval '7 days'), ($3, $4, now() + interval '7 days'), ($5, $6, now() + interval '7 days')`,
-    [aliceSid, alice, bobSid, bob, carolSid, carol],
   );
   // Shared project: alice owner, bob editor. Carol is outsider.
   await admin.query(
@@ -100,7 +96,7 @@ afterAll(async () => {
 describe('scope: notes', () => {
   it('member bob can see alice note in shared report', async () => {
     const app = createApp();
-    const tok = await signTestToken(bob, bobSid);
+    const { token: tok } = await signTestSession(bob);
     const res = await app.request(`/reports/${sharedReport}/notes`, { headers: { authorization: `Bearer ${tok}` } });
     expect(res.status).toBe(200);
     const body = (await res.json()) as { items: Array<{ id: string }> };
@@ -109,14 +105,14 @@ describe('scope: notes', () => {
 
   it('non-member carol cannot list notes (404 on report)', async () => {
     const app = createApp();
-    const tok = await signTestToken(carol, carolSid);
+    const { token: tok } = await signTestSession(carol);
     const res = await app.request(`/reports/${sharedReport}/notes`, { headers: { authorization: `Bearer ${tok}` } });
     expect(res.status).toBe(404);
   });
 
   it('paired — bob cannot PATCH alice note (author-only RLS denies)', async () => {
     const app = createApp();
-    const tok = await signTestToken(bob, bobSid);
+    const { token: tok } = await signTestSession(bob);
     const res = await app.request(`/notes/${aliceNote}`, {
       method: 'PATCH',
       headers: { authorization: `Bearer ${tok}`, 'content-type': 'application/json' },
@@ -135,7 +131,7 @@ describe('scope: notes', () => {
 
   it('paired — carol cannot DELETE bob-only note (cross-tenant)', async () => {
     const app = createApp();
-    const tok = await signTestToken(carol, carolSid);
+    const { token: tok } = await signTestSession(carol);
     const res = await app.request(`/notes/${bobOnlyNote}`, {
       method: 'DELETE',
       headers: { authorization: `Bearer ${tok}` },

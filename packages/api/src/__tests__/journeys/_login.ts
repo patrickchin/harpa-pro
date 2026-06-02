@@ -1,12 +1,12 @@
 /**
  * Shared journey helpers.
  *
- * These deliberately do NOT use `signTestToken`. Every token comes from a
- * real POST /auth/otp/start → /auth/otp/verify round-trip through the
- * fake-Twilio path (TWILIO_LIVE=0, TWILIO_VERIFY_FAKE_CODE=000000). That
- * makes the journey suite the executable spec for the auth issuance path —
- * if `signTestToken`'s claim shape drifts from the real issuer, journey
- * tests will fail loudly while per-resource integration tests would not.
+ * These deliberately do NOT use `signTestSession`. Every token comes from a
+ * real POST /api/auth/email-otp/send-verification-otp → /api/auth/email-otp/verify-otp
+ * round-trip through the fake-email path (EMAIL_OTP_LIVE=0). That makes the
+ * journey suite the executable spec for the auth issuance path — if
+ * `signTestSession`'s claim shape drifts from the real issuer, journey tests
+ * will fail loudly while per-resource integration tests would not.
  */
 import { startPg, type PgFixture } from '../setup-pg.js';
 import { resetPool, getPool } from '../../db/client.js';
@@ -14,15 +14,12 @@ import type { createApp } from '../../app.js';
 
 type App = ReturnType<typeof createApp>;
 
-export const FAKE_CODE = '000000';
-
 export interface JourneyFixture {
   fx: PgFixture;
 }
 
 export async function bootJourneyPg(): Promise<JourneyFixture> {
-  process.env.TWILIO_LIVE = '0';
-  process.env.TWILIO_VERIFY_FAKE_CODE = FAKE_CODE;
+  process.env.EMAIL_OTP_LIVE = '0';
   process.env.R2_FIXTURE_MODE = 'replay';
   const fx = await startPg();
   process.env.DATABASE_URL = fx.url;
@@ -38,65 +35,51 @@ export async function teardownJourneyPg(j: JourneyFixture | undefined) {
 export interface LoggedIn {
   token: string;
   userId: string;
-  phone: string;
+  email: string;
   headers: Record<string, string>;
 }
 
 /**
- * Real OTP login. Returns a fresh user the first time `phone` is seen,
+ * Real email-OTP login. Returns a fresh user the first time `email` is seen,
  * then re-issues a token for the same user on subsequent calls.
+ *
+ * In fake mode (EMAIL_OTP_LIVE=0), the OTP is persisted to public.verification
+ * but not sent. POST /api/dev/last-otp reads it back from the DB.
  */
-export async function login(app: App, phone: string): Promise<LoggedIn> {
-  const startRes = await app.request('/auth/otp/start', {
+export async function login(app: App, email: string): Promise<LoggedIn> {
+  const sendRes = await app.request('/api/auth/email-otp/send-verification-otp', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ phone }),
+    body: JSON.stringify({ email }),
   });
-  if (startRes.status !== 200) {
-    throw new Error(`otp/start failed: ${startRes.status} ${await startRes.text()}`);
+  if (sendRes.status !== 200) {
+    throw new Error(`send-verification-otp failed: ${sendRes.status} ${await sendRes.text()}`);
   }
-  const verifyRes = await app.request('/auth/otp/verify', {
+
+  const otpRes = await app.request('/api/dev/last-otp', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ phone, code: FAKE_CODE }),
+    body: JSON.stringify({ email }),
+  });
+  if (otpRes.status !== 200) {
+    throw new Error(`last-otp lookup failed: ${otpRes.status} ${await otpRes.text()}`);
+  }
+  const { otp } = (await otpRes.json()) as { otp: string };
+
+  const verifyRes = await app.request('/api/auth/email-otp/verify-otp', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ email, otp }),
   });
   if (verifyRes.status !== 200) {
-    throw new Error(`otp/verify failed: ${verifyRes.status} ${await verifyRes.text()}`);
+    throw new Error(`verify-otp failed: ${verifyRes.status} ${await verifyRes.text()}`);
   }
-  const body = (await verifyRes.json()) as { token: string; user: { id: string; phone: string } };
+  const body = (await verifyRes.json()) as { token: string; user: { id: string; email: string } };
   return {
     token: body.token,
     userId: body.user.id,
-    phone: body.user.phone,
+    email: body.user.email,
     headers: { authorization: `Bearer ${body.token}`, 'content-type': 'application/json' },
   };
 }
 
-/**
- * Test-account password login. Hits POST /auth/password/verify with the
- * supplied phone + password. Used by the password-journey test to prove
- * the bypass works end-to-end without touching Twilio at all (real or
- * fake) — i.e. live dev deployments can have TWILIO_LIVE=1 and this
- * path still works.
- */
-export async function loginWithPassword(
-  app: App,
-  phone: string,
-  password: string,
-): Promise<LoggedIn> {
-  const res = await app.request('/auth/password/verify', {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ phone, password }),
-  });
-  if (res.status !== 200) {
-    throw new Error(`password/verify failed: ${res.status} ${await res.text()}`);
-  }
-  const body = (await res.json()) as { token: string; user: { id: string; phone: string } };
-  return {
-    token: body.token,
-    userId: body.user.id,
-    phone: body.user.phone,
-    headers: { authorization: `Bearer ${body.token}`, 'content-type': 'application/json' },
-  };
-}

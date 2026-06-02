@@ -25,7 +25,7 @@ import { drizzle } from 'drizzle-orm/node-postgres';
 import { startPg, type PgFixture } from '../setup-pg.js';
 import { createApp } from '../../app.js';
 import { withScopedConnection } from '../../db/scope.js';
-import { signTestToken } from '../../middleware/auth.js';
+import { signTestSession } from '../../middleware/auth.js';
 import { resetPool, getPool } from '../../db/client.js';
 import * as schema from '../../db/schema.js';
 import {
@@ -79,15 +79,8 @@ beforeAll(async () => {
   const admin = new pg.Client({ connectionString: fx.url });
   await admin.connect();
   await admin.query(
-    `INSERT INTO auth.users(id, phone) VALUES ($1, $2), ($3, $4), ($5, $6)`,
+    `INSERT INTO "user"(id, name, email, email_verified, created_at, updated_at) VALUES ($1, 'Alice', $2, true, now(), now()), ($3, 'Bob', $4, true, now(), now()), ($5, 'Carol', $6, true, now(), now())`,
     [alice, '+15551300001', bob, '+15551300002', carol, '+15551300003'],
-  );
-  await admin.query(
-    `INSERT INTO auth.sessions(id, user_id, expires_at) VALUES
-       ($1, $2, now() + interval '7 days'),
-       ($3, $4, now() + interval '7 days'),
-       ($5, $6, now() + interval '7 days')`,
-    [aliceSid, alice, bobSid, bob, carolSid, carol],
   );
 
   // Project P: alice owner, bob editor. Carol is outsider.
@@ -156,7 +149,7 @@ describe('scope: /files/* (project-scoped permissions)', () => {
   // ---------- READ ----------
   it('owner reads own project file → 200', async () => {
     const app = createApp();
-    const tok = await signTestToken(alice, aliceSid);
+    const { token: tok } = await signTestSession(alice);
     const res = await app.request(`/files/${projectFileAlice}/url`, {
       headers: { authorization: `Bearer ${tok}` },
     });
@@ -165,7 +158,7 @@ describe('scope: /files/* (project-scoped permissions)', () => {
 
   it('cross-member read → 200 (bob sees alice file in shared project)', async () => {
     const app = createApp();
-    const tok = await signTestToken(bob, bobSid);
+    const { token: tok } = await signTestSession(bob);
     const res = await app.request(`/files/${projectFileAlice}/url`, {
       headers: { authorization: `Bearer ${tok}` },
     });
@@ -174,7 +167,7 @@ describe('scope: /files/* (project-scoped permissions)', () => {
 
   it('non-member read → 404 (carol cannot see project file)', async () => {
     const app = createApp();
-    const tok = await signTestToken(carol, carolSid);
+    const { token: tok } = await signTestSession(carol);
     const res = await app.request(`/files/${projectFileAlice}/url`, {
       headers: { authorization: `Bearer ${tok}` },
     });
@@ -246,7 +239,7 @@ describe('scope: /files/* (project-scoped permissions)', () => {
     expect(ids).not.toContain(avatarFileAlice);
     // And it's NOT bob-readable via the route either.
     const app = createApp();
-    const tok = await signTestToken(bob, bobSid);
+    const { token: tok } = await signTestSession(bob);
     const res = await app.request(`/files/${avatarFileAlice}/url`, {
       headers: { authorization: `Bearer ${tok}` },
     });
@@ -262,7 +255,7 @@ describe('scope: /files/* (project-scoped permissions)', () => {
     });
     expect(ids).not.toContain(scratchFileAlice);
     const app = createApp();
-    const tok = await signTestToken(bob, bobSid);
+    const { token: tok } = await signTestSession(bob);
     const res = await app.request(`/files/${scratchFileAlice}/url`, {
       headers: { authorization: `Bearer ${tok}` },
     });
@@ -272,7 +265,7 @@ describe('scope: /files/* (project-scoped permissions)', () => {
   // ---------- PRESIGN ----------
   it('presign scope=project requires membership (carol → 404)', async () => {
     const app = createApp();
-    const tok = await signTestToken(carol, carolSid);
+    const { token: tok } = await signTestSession(carol);
     const res = await app.request('/files/presign', {
       method: 'POST',
       headers: { authorization: `Bearer ${tok}`, 'content-type': 'application/json' },
@@ -293,7 +286,7 @@ describe('scope: /files/* (project-scoped permissions)', () => {
     // check passes; the route then asserts report.projectId === body.projectId
     // which catches this mismatch.
     const app = createApp();
-    const tok = await signTestToken(alice, aliceSid);
+    const { token: tok } = await signTestSession(alice);
     const res = await app.request('/files/presign', {
       method: 'POST',
       headers: { authorization: `Bearer ${tok}`, 'content-type': 'application/json' },
@@ -311,7 +304,7 @@ describe('scope: /files/* (project-scoped permissions)', () => {
 
   it('presign scope=avatar rejects non-image content-type → 400', async () => {
     const app = createApp();
-    const tok = await signTestToken(alice, aliceSid);
+    const { token: tok } = await signTestSession(alice);
     const res = await app.request('/files/presign', {
       method: 'POST',
       headers: { authorization: `Bearer ${tok}`, 'content-type': 'application/json' },
@@ -326,7 +319,7 @@ describe('scope: /files/* (project-scoped permissions)', () => {
 
   it('presign scope=project mints a key under projects/<projectId>/reports/<reportId>/', async () => {
     const app = createApp();
-    const tok = await signTestToken(alice, aliceSid);
+    const { token: tok } = await signTestSession(alice);
     const res = await app.request('/files/presign', {
       method: 'POST',
       headers: { authorization: `Bearer ${tok}`, 'content-type': 'application/json' },
@@ -347,7 +340,7 @@ describe('scope: /files/* (project-scoped permissions)', () => {
   // ---------- REGISTER ----------
   it('register: claimed scope must match key prefix (project key + avatar body → 400)', async () => {
     const app = createApp();
-    const tok = await signTestToken(alice, aliceSid);
+    const { token: tok } = await signTestSession(alice);
     const ps = await app.request('/files/presign', {
       method: 'POST',
       headers: { authorization: `Bearer ${tok}`, 'content-type': 'application/json' },
@@ -381,7 +374,7 @@ describe('scope: /files/* (project-scoped permissions)', () => {
     // triple so parseKeyScope succeeds and the id-mismatch branch fires).
     const forged = `projects/${projectQ}/reports/${reportR2}/${makeFileId()}.jpg`;
     const app = createApp();
-    const tok = await signTestToken(alice, aliceSid);
+    const { token: tok } = await signTestSession(alice);
     const res = await app.request('/files', {
       method: 'POST',
       headers: { authorization: `Bearer ${tok}`, 'content-type': 'application/json' },
@@ -401,7 +394,7 @@ describe('scope: /files/* (project-scoped permissions)', () => {
   it('register: scratch key under another user prefix → 400 (prefix-spoof)', async () => {
     const forged = `users/${bob}/scratch/${makeFileId()}.m4a`;
     const app = createApp();
-    const tok = await signTestToken(alice, aliceSid);
+    const { token: tok } = await signTestSession(alice);
     const res = await app.request('/files', {
       method: 'POST',
       headers: { authorization: `Bearer ${tok}`, 'content-type': 'application/json' },

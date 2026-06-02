@@ -8,7 +8,7 @@ import { drizzle } from 'drizzle-orm/node-postgres';
 import { startPg, type PgFixture } from '../setup-pg.js';
 import { createApp } from '../../app.js';
 import { withScopedConnection } from '../../db/scope.js';
-import { signTestToken } from '../../middleware/auth.js';
+import { signTestSession } from '../../middleware/auth.js';
 import { resetPool, getPool } from '../../db/client.js';
 import * as schema from '../../db/schema.js';
 import { makeUserId, makeSessionId, makeProjectId, makeReportId } from '../factories/index.js';
@@ -45,12 +45,8 @@ beforeAll(async () => {
   const admin = new pg.Client({ connectionString: fx.url });
   await admin.connect();
   await admin.query(
-    `INSERT INTO auth.users(id, phone) VALUES ($1, $2), ($3, $4)`,
+    `INSERT INTO "user"(id, name, email, email_verified, created_at, updated_at) VALUES ($1, 'Alice', $2, true, now(), now()), ($3, 'Bob', $4, true, now(), now())`,
     [alice, '+15550700001', bob, '+15550700002'],
-  );
-  await admin.query(
-    `INSERT INTO auth.sessions(id, user_id, expires_at) VALUES ($1, $2, now() + interval '7 days'), ($3, $4, now() + interval '7 days')`,
-    [aliceSid, alice, bobSid, bob],
   );
   await admin.query(
     `INSERT INTO app.projects(id, name, owner_id) VALUES ($1, 'A', $2)`,
@@ -88,21 +84,21 @@ afterAll(async () => {
 describe('scope: reports', () => {
   it('own — alice GET /reports/:id of her own report → 200', async () => {
     const app = createApp();
-    const tok = await signTestToken(alice, aliceSid);
+    const { token: tok } = await signTestSession(alice);
     const res = await app.request(`/projects/${aliceProjSlug}/reports/${aliceReportNumber}`, { headers: { authorization: `Bearer ${tok}` } });
     expect(res.status).toBe(200);
   });
 
   it('cross — alice GET /reports/:id of bob → 404', async () => {
     const app = createApp();
-    const tok = await signTestToken(alice, aliceSid);
+    const { token: tok } = await signTestSession(alice);
     const res = await app.request(`/projects/${bobProjSlug}/reports/${bobReportNumber}`, { headers: { authorization: `Bearer ${tok}` } });
     expect(res.status).toBe(404);
   });
 
   it('cross write — alice DELETE bob report → 404 (RLS denies); row remains', async () => {
     const app = createApp();
-    const tok = await signTestToken(alice, aliceSid);
+    const { token: tok } = await signTestSession(alice);
     const res = await app.request(`/projects/${bobProjSlug}/reports/${bobReportNumber}`, {
       method: 'DELETE',
       headers: { authorization: `Bearer ${tok}` },
@@ -152,7 +148,7 @@ describe('scope: reports', () => {
 describe('scope: reports AI/PDF', () => {
   it('generate — alice own → 200', async () => {
     const app = createApp();
-    const tok = await signTestToken(alice, aliceSid);
+    const { token: tok } = await signTestSession(alice);
     const res = await app.request(`/projects/${aliceProjSlug}/reports/${aliceReportNumber}/generate`, {
       method: 'POST',
       headers: { authorization: `Bearer ${tok}`, 'content-type': 'application/json' },
@@ -163,7 +159,7 @@ describe('scope: reports AI/PDF', () => {
 
   it('generate — alice → bob report → 404 (cross-owner)', async () => {
     const app = createApp();
-    const tok = await signTestToken(alice, aliceSid);
+    const { token: tok } = await signTestSession(alice);
     const res = await app.request(`/projects/${bobProjSlug}/reports/${bobReportNumber}/generate`, {
       method: 'POST',
       headers: { authorization: `Bearer ${tok}`, 'content-type': 'application/json' },
@@ -174,7 +170,7 @@ describe('scope: reports AI/PDF', () => {
 
   it('generate — bob → alice report → 404 (cross-owner, other direction)', async () => {
     const app = createApp();
-    const tok = await signTestToken(bob, bobSid);
+    const { token: tok } = await signTestSession(bob);
     const res = await app.request(`/projects/${aliceProjSlug}/reports/${aliceReportNumber}/generate`, {
       method: 'POST',
       headers: { authorization: `Bearer ${tok}`, 'content-type': 'application/json' },
@@ -189,7 +185,7 @@ describe('scope: reports AI/PDF', () => {
 
   it('regenerate — alice own → 200', async () => {
     const app = createApp();
-    const tok = await signTestToken(alice, aliceSid);
+    const { token: tok } = await signTestSession(alice);
     const res = await app.request(`/projects/${aliceProjSlug}/reports/${aliceReportNumber}/regenerate`, {
       method: 'POST',
       headers: { authorization: `Bearer ${tok}`, 'content-type': 'application/json' },
@@ -200,7 +196,7 @@ describe('scope: reports AI/PDF', () => {
 
   it('regenerate — bob → alice report → 404', async () => {
     const app = createApp();
-    const tok = await signTestToken(bob, bobSid);
+    const { token: tok } = await signTestSession(bob);
     const res = await app.request(`/projects/${aliceProjSlug}/reports/${aliceReportNumber}/regenerate`, {
       method: 'POST',
       headers: { authorization: `Bearer ${tok}`, 'content-type': 'application/json' },
@@ -211,7 +207,7 @@ describe('scope: reports AI/PDF', () => {
 
   it('pdf — alice own → 200 with signed URL keyed under alice', async () => {
     const app = createApp();
-    const tok = await signTestToken(alice, aliceSid);
+    const { token: tok } = await signTestSession(alice);
     const res = await app.request(`/projects/${aliceProjSlug}/reports/${aliceReportNumber}/pdf`, {
       method: 'POST',
       headers: { authorization: `Bearer ${tok}`, 'content-type': 'application/json' },
@@ -228,7 +224,7 @@ describe('scope: reports AI/PDF', () => {
 
   it('pdf — bob → alice report → 404', async () => {
     const app = createApp();
-    const tok = await signTestToken(bob, bobSid);
+    const { token: tok } = await signTestSession(bob);
     const res = await app.request(`/projects/${aliceProjSlug}/reports/${aliceReportNumber}/pdf`, {
       method: 'POST',
       headers: { authorization: `Bearer ${tok}`, 'content-type': 'application/json' },
@@ -238,7 +234,7 @@ describe('scope: reports AI/PDF', () => {
 
   it('finalize — alice own → 200', async () => {
     const app = createApp();
-    const tok = await signTestToken(alice, aliceSid);
+    const { token: tok } = await signTestSession(alice);
     const res = await app.request(`/projects/${aliceProjSlug}/reports/${aliceReportNumber}/finalize`, {
       method: 'POST',
       headers: { authorization: `Bearer ${tok}`, 'content-type': 'application/json' },
@@ -250,7 +246,7 @@ describe('scope: reports AI/PDF', () => {
 
   it('finalize — bob → alice report → 404 (and alice row remains draft-shape under bob scope)', async () => {
     const app = createApp();
-    const tok = await signTestToken(bob, bobSid);
+    const { token: tok } = await signTestSession(bob);
     const res = await app.request(`/projects/${aliceProjSlug}/reports/${aliceReportNumber}/finalize`, {
       method: 'POST',
       headers: { authorization: `Bearer ${tok}`, 'content-type': 'application/json' },
@@ -273,7 +269,7 @@ describe('scope: reports AI/PDF', () => {
 describe('scope: notes_changed_at', () => {
   it('owner note mutation stamps notes_changed_at on their report', async () => {
     const app = createApp();
-    const tok = await signTestToken(alice, aliceSid);
+    const { token: tok } = await signTestSession(alice);
     // Reset dirty state and ensure status=draft (the finalize test above
     // may have changed it) so the assertion is meaningful.
     const conn = await getPool().connect();
@@ -305,7 +301,7 @@ describe('scope: notes_changed_at', () => {
 
   it('non-member cannot stamp notes_changed_at on another project report', async () => {
     const app = createApp();
-    const tok = await signTestToken(alice, aliceSid);
+    const { token: tok } = await signTestSession(alice);
     // Capture current notes_changed_at for bob's report.
     const before = await getPool().connect();
     let beforeTs: Date | null = null;

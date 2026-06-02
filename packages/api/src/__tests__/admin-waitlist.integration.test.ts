@@ -14,14 +14,12 @@ import { sql } from 'drizzle-orm';
 import { startPg, type PgFixture } from './setup-pg.js';
 import { createApp } from '../app.js';
 import { rawDb, resetPool, getPool } from '../db/client.js';
-import { signTestToken } from '../middleware/auth.js';
-import { makeUserId, makeSessionId, makeWaitlistId } from './factories/index.js';
+import { signTestSession } from '../middleware/auth.js';
+import { makeUserId, makeWaitlistId } from './factories/index.js';
 
 let fx: PgFixture;
 let adminId: string;
-let adminSid: string;
 let regularId: string;
-let regularSid: string;
 
 beforeAll(async () => {
   fx = await startPg();
@@ -30,18 +28,11 @@ beforeAll(async () => {
   getPool(fx.url);
   adminId = makeUserId();
   regularId = makeUserId();
-  adminSid = makeSessionId();
-  regularSid = makeSessionId();
   const admin = new pg.Client({ connectionString: fx.url });
   await admin.connect();
   await admin.query(
-    `INSERT INTO auth.users(id, phone, is_admin) VALUES ($1, $2, true), ($3, $4, false)`,
-    [adminId, '+15551400001', regularId, '+15551400002'],
-  );
-  await admin.query(
-    `INSERT INTO auth.sessions(id, user_id, expires_at)
-     VALUES ($1, $2, now() + interval '7 days'), ($3, $4, now() + interval '7 days')`,
-    [adminSid, adminId, regularSid, regularId],
+    `INSERT INTO "user"(id, name, email, email_verified, is_admin, created_at, updated_at) VALUES ($1, 'Admin', $2, true, true, now(), now()), ($3, 'Regular', $4, true, false, now(), now())`,
+    [adminId, 'admin@example.com', regularId, 'regular@example.com'],
   );
   await admin.end();
 }, 120_000);
@@ -63,7 +54,7 @@ describe('GET /admin/waitlist.csv', () => {
 
   it('403 for non-admin authenticated request', async () => {
     const app = createApp();
-    const tok = await signTestToken(regularId, regularSid);
+    const { token: tok } = await signTestSession(regularId);
     const res = await app.request('/admin/waitlist.csv', {
       headers: { authorization: `Bearer ${tok}` },
     });
@@ -79,7 +70,7 @@ describe('GET /admin/waitlist.csv', () => {
         (${idB}, 'b@buildco.com', NULL,      'Super',   NULL,      now() - interval '1 day')
     `);
     const app = createApp();
-    const tok = await signTestToken(adminId, adminSid);
+    const { token: tok } = await signTestSession(adminId);
     const res = await app.request('/admin/waitlist.csv', {
       headers: { authorization: `Bearer ${tok}` },
     });
@@ -105,7 +96,7 @@ describe('GET /admin/waitlist.csv', () => {
       VALUES (${makeWaitlistId()}, 'c@buildco.com', 'Build, Co "Pro"', E'Foreman\nSupervisor')
     `);
     const app = createApp();
-    const tok = await signTestToken(adminId, adminSid);
+    const { token: tok } = await signTestSession(adminId);
     const res = await app.request('/admin/waitlist.csv', {
       headers: { authorization: `Bearer ${tok}` },
     });
@@ -119,7 +110,7 @@ describe('GET /admin/waitlist.csv', () => {
 
   it('returns just the header when table is empty', async () => {
     const app = createApp();
-    const tok = await signTestToken(adminId, adminSid);
+    const { token: tok } = await signTestSession(adminId);
     const res = await app.request('/admin/waitlist.csv', {
       headers: { authorization: `Bearer ${tok}` },
     });

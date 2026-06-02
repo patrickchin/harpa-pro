@@ -6,14 +6,12 @@ import pg from 'pg';
 import { createApp } from '../app.js';
 import { startPg, type PgFixture } from './setup-pg.js';
 import { resetPool, getPool } from '../db/client.js';
-import { signTestToken } from '../middleware/auth.js';
-import { makeUserId, makeSessionId, makeProjectId, makeReportId, makeFileId } from './factories/index.js';
+import { signTestSession } from '../middleware/auth.js';
+import { makeUserId, makeProjectId, makeReportId, makeFileId } from './factories/index.js';
 
 let fx: PgFixture;
 let alice: string;
 let bob: string;
-let aliceSid: string;
-let bobSid: string;
 let report: string;
 
 beforeAll(async () => {
@@ -23,17 +21,11 @@ beforeAll(async () => {
   getPool(fx.url);
   alice = makeUserId();
   bob = makeUserId();
-  aliceSid = makeSessionId();
-  bobSid = makeSessionId();
   const admin = new pg.Client({ connectionString: fx.url });
   await admin.connect();
   await admin.query(
-    `INSERT INTO auth.users(id, phone) VALUES ($1, $2), ($3, $4)`,
+    `INSERT INTO "user"(id, name, email, email_verified, created_at, updated_at) VALUES ($1, 'Alice', $2, true, now(), now()), ($3, 'Bob', $4, true, now(), now())`,
     [alice, '+15550800001', bob, '+15550800002'],
-  );
-  await admin.query(
-    `INSERT INTO auth.sessions(id, user_id, expires_at) VALUES ($1, $2, now() + interval '7 days'), ($3, $4, now() + interval '7 days')`,
-    [aliceSid, alice, bobSid, bob],
   );
   const projId = makeProjectId();
   await admin.query(
@@ -76,7 +68,7 @@ describe('notes CRUD', () => {
 
   it('POST creates a text note and bumps notes_since_last_generation', async () => {
     const app = createApp();
-    const tok = await signTestToken(alice, aliceSid);
+    const { token: tok } = await signTestSession(alice);
     const before = await getPool().connect();
     let beforeCount = 0;
     try {
@@ -114,7 +106,7 @@ describe('notes CRUD', () => {
 
   it('POST 404 when caller cannot see the report', async () => {
     const app = createApp();
-    const tok = await signTestToken(bob, bobSid);
+    const { token: tok } = await signTestSession(bob);
     const res = await app.request(`/reports/${report}/notes`, {
       method: 'POST',
       headers: headers(tok),
@@ -135,7 +127,7 @@ describe('notes CRUD', () => {
 
   it('POST 400 on invalid kind', async () => {
     const app = createApp();
-    const tok = await signTestToken(alice, aliceSid);
+    const { token: tok } = await signTestSession(alice);
     const res = await app.request(`/reports/${report}/notes`, {
       method: 'POST',
       headers: headers(tok),
@@ -146,7 +138,7 @@ describe('notes CRUD', () => {
 
   it('GET timeline list returns notes ascending', async () => {
     const app = createApp();
-    const tok = await signTestToken(alice, aliceSid);
+    const { token: tok } = await signTestSession(alice);
     // Add a second note so we can verify ordering.
     await app.request(`/reports/${report}/notes`, {
       method: 'POST',
@@ -162,7 +154,7 @@ describe('notes CRUD', () => {
 
   it('PATCH updates body for the author', async () => {
     const app = createApp();
-    const tok = await signTestToken(alice, aliceSid);
+    const { token: tok } = await signTestSession(alice);
     const res = await app.request(`/notes/${noteId}`, {
       method: 'PATCH',
       headers: headers(tok),
@@ -174,7 +166,7 @@ describe('notes CRUD', () => {
 
   it('DELETE returns 204 then list no longer contains it', async () => {
     const app = createApp();
-    const tok = await signTestToken(alice, aliceSid);
+    const { token: tok } = await signTestSession(alice);
     const del = await app.request(`/notes/${noteId}`, {
       method: 'DELETE',
       headers: { authorization: `Bearer ${tok}` },
@@ -187,7 +179,7 @@ describe('notes CRUD', () => {
 
   it('POST creates a text note and bumps notes_changed_at', async () => {
     const app = createApp();
-    const tok = await signTestToken(alice, aliceSid);
+    const { token: tok } = await signTestSession(alice);
     // Reset dirty state so assertion is meaningful.
     const reset = await getPool().connect();
     try {
@@ -213,7 +205,7 @@ describe('notes CRUD', () => {
 
   it('PATCH note body bumps notes_changed_at', async () => {
     const app = createApp();
-    const tok = await signTestToken(alice, aliceSid);
+    const { token: tok } = await signTestSession(alice);
     // Reset dirty bit so the assertion is meaningful.
     const reset = await getPool().connect();
     try {
@@ -239,7 +231,7 @@ describe('notes CRUD', () => {
 
   it('DELETE note bumps notes_changed_at', async () => {
     const app = createApp();
-    const tok = await signTestToken(alice, aliceSid);
+    const { token: tok } = await signTestSession(alice);
     // Reset first.
     const reset = await getPool().connect();
     try {
@@ -281,7 +273,7 @@ describe('batch photo notes', () => {
 
   it('create note with files[] populates note_files join table', async () => {
     const app = createApp();
-    const tok = await signTestToken(alice, aliceSid);
+    const { token: tok } = await signTestSession(alice);
     const res = await app.request(`/reports/${report}/notes`, {
       method: 'POST',
       headers: headers(tok),
@@ -299,7 +291,7 @@ describe('batch photo notes', () => {
 
   it('create note with multiple files', async () => {
     const app = createApp();
-    const tok = await signTestToken(alice, aliceSid);
+    const { token: tok } = await signTestSession(alice);
     const res = await app.request(`/reports/${report}/notes`, {
       method: 'POST',
       headers: headers(tok),
@@ -320,7 +312,7 @@ describe('batch photo notes', () => {
 
   it('append files to existing note bumps notes_changed_at', async () => {
     const app = createApp();
-    const tok = await signTestToken(alice, aliceSid);
+    const { token: tok } = await signTestSession(alice);
     // Create a note with 1 file first.
     const create = await app.request(`/reports/${report}/notes`, {
       method: 'POST',
@@ -368,7 +360,7 @@ describe('batch photo notes', () => {
 
   it('list notes returns files array', async () => {
     const app = createApp();
-    const tok = await signTestToken(alice, aliceSid);
+    const { token: tok } = await signTestSession(alice);
     // Create a note with 2 files.
     const create = await app.request(`/reports/${report}/notes`, {
       method: 'POST',
@@ -398,7 +390,7 @@ describe('batch photo notes', () => {
     // `note_files` so listNotes' join surfaces every photo of a batch
     // (the first image was previously invisible to the join).
     const app = createApp();
-    const tok = await signTestToken(alice, aliceSid);
+    const { token: tok } = await signTestSession(alice);
     const create = await app.request(`/reports/${report}/notes`, {
       method: 'POST',
       headers: headers(tok),

@@ -14,7 +14,7 @@ import type { MiddlewareHandler } from 'hono';
 import type { AppEnv } from '../app.js';
 import { getRateLimiter, type RateLimiterResult } from '../lib/rateLimiter.js';
 import { clientIp } from '../lib/clientIp.js';
-import { verifyJwt } from '../auth/jwt.js';
+import { auth } from '../auth/auth.js';
 
 const MIN = 60_000;
 const USER_LIMIT = 600;
@@ -24,6 +24,7 @@ const SKIP_PREFIXES: readonly string[] = [
   '/healthz',
   '/readyz',
   '/openapi.json',
+  '/api/auth/',
   // Apple swcd and Android PackageManager fetch universal-link manifests
   // automatically (e.g. on every app install). They hit from many IPs and
   // don't carry auth headers — exempt to avoid spurious 429s that would
@@ -38,19 +39,16 @@ function attachHeaders(c: Parameters<MiddlewareHandler<AppEnv>>[0], r: RateLimit
 }
 
 /**
- * Non-throwing JWT peek. Returns the userId if the Authorization header
- * carries a valid bearer token; null otherwise. Used so the global
- * rate limiter can pick the right keying strategy (per-user vs per-IP)
- * BEFORE the route-level `withAuth()` runs. `withAuth()` does its own
- * verify + sets the scoped DB accessor — this peek does NOT.
+ * Non-throwing session peek. Returns the userId from a valid better-auth
+ * session, or null if unauthenticated. Used so the global rate limiter
+ * can pick the right keying strategy (per-user vs per-IP) BEFORE the
+ * route-level `withAuth()` runs — `withAuth()` does its own full validate
+ * and sets the scoped DB accessor; this peek does NOT.
  */
-async function peekUserId(authHeader: string | undefined): Promise<string | null> {
-  if (!authHeader || !authHeader.startsWith('Bearer ')) return null;
-  const token = authHeader.slice('Bearer '.length).trim();
-  if (!token) return null;
+async function peekUserId(headers: Headers): Promise<string | null> {
   try {
-    const claims = await verifyJwt(token);
-    return claims.sub;
+    const session = await auth.api.getSession({ headers });
+    return session?.user.id ?? null;
   } catch {
     return null;
   }
@@ -60,13 +58,13 @@ export function globalRateLimit(): MiddlewareHandler<AppEnv> {
   return async (c, next) => {
     const path = c.req.path;
     for (const p of SKIP_PREFIXES) {
-      if (path === p || path.startsWith(`${p}/`)) {
+      if (path === p || path.startsWith(p)) {
         await next();
         return;
       }
     }
 
-    const userId = c.get('userId') ?? (await peekUserId(c.req.header('authorization')));
+    const userId = c.get('userId') ?? (await peekUserId(c.req.raw.headers));
     const limiter = getRateLimiter();
     const r = userId
       ? await limiter.consume(`global:user:${userId}`, USER_LIMIT, MIN)

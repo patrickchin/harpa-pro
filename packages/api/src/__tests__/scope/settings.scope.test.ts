@@ -8,7 +8,7 @@ import { drizzle } from 'drizzle-orm/node-postgres';
 import { startPg, type PgFixture } from '../setup-pg.js';
 import { createApp } from '../../app.js';
 import { withScopedConnection } from '../../db/scope.js';
-import { signTestToken } from '../../middleware/auth.js';
+import { signTestSession } from '../../middleware/auth.js';
 import { resetPool, getPool } from '../../db/client.js';
 import * as schema from '../../db/schema.js';
 import { makeUserId, makeSessionId } from '../factories/index.js';
@@ -33,12 +33,8 @@ beforeAll(async () => {
   const admin = new pg.Client({ connectionString: fx.url });
   await admin.connect();
   await admin.query(
-    `INSERT INTO auth.users(id, phone) VALUES ($1, $2), ($3, $4)`,
+    `INSERT INTO "user"(id, name, email, email_verified, created_at, updated_at) VALUES ($1, 'Alice', $2, true, now(), now()), ($3, 'Bob', $4, true, now(), now())`,
     [alice, '+15551100001', bob, '+15551100002'],
-  );
-  await admin.query(
-    `INSERT INTO auth.sessions(id, user_id, expires_at) VALUES ($1, $2, now() + interval '7 days'), ($3, $4, now() + interval '7 days')`,
-    [aliceSid, alice, bobSid, bob],
   );
   // Seed both alice and bob with rows so the scope tests can prove
   // self-only visibility. Use whitelisted (vendor, model) pairs from
@@ -60,7 +56,7 @@ afterAll(async () => {
 describe('scope: /settings/ai', () => {
   it('alice GET sees her own row, not bob row', async () => {
     const app = createApp();
-    const tok = await signTestToken(alice, aliceSid);
+    const { token: tok } = await signTestSession(alice);
     const res = await app.request('/settings/ai', { headers: { authorization: `Bearer ${tok}` } });
     const body = (await res.json()) as { vendor: string | null; model: string | null };
     expect(body.vendor).toBe('openai');
@@ -69,7 +65,7 @@ describe('scope: /settings/ai', () => {
 
   it('bob GET sees his own row', async () => {
     const app = createApp();
-    const tok = await signTestToken(bob, bobSid);
+    const { token: tok } = await signTestSession(bob);
     const res = await app.request('/settings/ai', { headers: { authorization: `Bearer ${tok}` } });
     const body = (await res.json()) as { vendor: string | null; model: string | null };
     expect(body.vendor).toBe('openai');
@@ -78,7 +74,7 @@ describe('scope: /settings/ai', () => {
 
   it('paired — alice PATCH does not mutate bob row', async () => {
     const app = createApp();
-    const tok = await signTestToken(alice, aliceSid);
+    const { token: tok } = await signTestSession(alice);
     await app.request('/settings/ai', {
       method: 'PATCH',
       headers: { authorization: `Bearer ${tok}`, 'content-type': 'application/json' },

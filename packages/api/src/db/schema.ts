@@ -11,52 +11,31 @@ import {
   index,
   bigint,
   unique,
-  boolean,
   numeric,
   type AnyPgColumn,
 } from 'drizzle-orm/pg-core';
 
 /**
- * `auth` schema — hand-managed users / sessions / verifications.
- * IDs are prefixed slugs (`usr_*`, `ses_*`, `vrf_*`) per P3.1; the app
- * mints them via `lib/ids.ts::newId(...)` and the DB rejects malformed
- * values via per-prefix `app.<prefix>_id` DOMAIN CHECK constraints.
+ * better-auth tables (`public.user`, `public.session`, `public.account`,
+ * `public.verification`). The CLI-generated definitions live in
+ * `./auth-schema.ts` and are re-exported here so drizzle introspection
+ * (and any cross-table query) sees them as part of the project schema.
  *
- * Columns are declared as plain `text` (no `$type<Id<P>>()` branding):
- * branding is a TS-only convention applied at the route + service
- * boundary via `assertId` / `newId`, not at the drizzle column level.
- * See docs/v4/design-p31-slug-only-ids.md §4.1.
+ * Regenerate with:
+ *   DATABASE_URL='postgres://stub@localhost/stub' \
+ *   pnpm exec better-auth generate \
+ *     --output src/db/auth-schema.ts \
+ *     --config src/auth/auth.ts -y
+ *
+ * Slug IDs (`usr_*`, `ses_*`, `vrf_*`, `idn_*`) are minted by
+ * better-auth's `advanced.database.generateId({model})` hook; the DB
+ * does not enforce the slug regex on the better-auth tables. The
+ * `app.usr_id` DOMAIN CHECK at the FK boundary (`app.* → public.user`)
+ * is the on-write guard. See docs/v4/arch-auth-and-rls.md.
  */
-export const authSchema = pgSchema('auth');
-
-export const users = authSchema.table('users', {
-  id: text('id').primaryKey(),
-  phone: varchar('phone', { length: 32 }).notNull().unique(),
-  displayName: text('display_name'),
-  companyName: text('company_name'),
-  isAdmin: boolean('is_admin').notNull().default(false),
-  plan: text('plan').notNull().default('free'),
-  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
-});
-
-export const sessions = authSchema.table('sessions', {
-  id: text('id').primaryKey(),
-  userId: text('user_id')
-    
-    .notNull()
-    .references(() => users.id, { onDelete: 'cascade' }),
-  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
-  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-});
-
-export const verifications = authSchema.table('verifications', {
-  id: text('id').primaryKey(),
-  phone: varchar('phone', { length: 32 }).notNull(),
-  twilioVerificationSid: text('twilio_verification_sid'),
-  consumedAt: timestamp('consumed_at', { withTimezone: true }),
-  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-});
+export * from './auth-schema.js';
+import { user as users } from './auth-schema.js';
+export { users };
 
 /**
  * `app` schema — application data. RLS enforced via per-request scope.

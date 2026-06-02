@@ -31,7 +31,7 @@ beforeAll(async () => {
   reportId = makeReportId();
   // Bypass per-request RLS by using the admin role directly — this file
   // tests the SQL semantic of one helper, not the auth surface.
-  await pool.query(`INSERT INTO auth.users(id, phone) VALUES ($1, '+15550700001')`, [userId]);
+  await pool.query(`INSERT INTO "user"(id, name, email, email_verified, created_at, updated_at) VALUES ($1, 'Alice', 'alice@example.com', true, now(), now())`, [userId]);
   await pool.query(`INSERT INTO app.projects(id, name, owner_id) VALUES ($1, 'snap', $2)`, [projectId, userId]);
   await pool.query(
     `INSERT INTO app.project_members(project_id, user_id, role) VALUES ($1, $2, 'owner')`,

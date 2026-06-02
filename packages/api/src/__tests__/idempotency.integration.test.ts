@@ -11,16 +11,14 @@ import pg from 'pg';
 import { createApp } from '../app.js';
 import { startPg, type PgFixture } from './setup-pg.js';
 import { resetPool, getPool } from '../db/client.js';
-import { signTestToken } from '../middleware/auth.js';
+import { signTestSession } from '../middleware/auth.js';
 import { resetRateLimiter } from '../lib/rateLimiter.js';
 import { resetIdempotencyStore } from '../lib/idempotencyStore.js';
-import { makeUserId, makeSessionId, makeFileId } from './factories/index.js';
+import { makeUserId, makeFileId } from './factories/index.js';
 
 let fx: PgFixture;
 let alice: string;
-let aliceSid: string;
 let bob: string;
-let bobSid: string;
 let aliceFile: string;
 
 beforeAll(async () => {
@@ -32,18 +30,12 @@ beforeAll(async () => {
   getPool(fx.url);
   alice = makeUserId();
   bob = makeUserId();
-  aliceSid = makeSessionId();
-  bobSid = makeSessionId();
   aliceFile = makeFileId();
   const admin = new pg.Client({ connectionString: fx.url });
   await admin.connect();
   await admin.query(
-    `INSERT INTO auth.users(id, phone) VALUES ($1, $2), ($3, $4)`,
+    `INSERT INTO "user"(id, name, email, email_verified, created_at, updated_at) VALUES ($1, 'Alice', $2, true, now(), now()), ($3, 'Bob', $4, true, now(), now())`,
     [alice, '+15551800001', bob, '+15551800002'],
-  );
-  await admin.query(
-    `INSERT INTO auth.sessions(id, user_id, expires_at) VALUES ($1, $2, now() + interval '7 days'), ($3, $4, now() + interval '7 days')`,
-    [aliceSid, alice, bobSid, bob],
   );
   await admin.query(
     `INSERT INTO app.files(id, owner_id, kind, file_key, size_bytes, content_type)
@@ -82,7 +74,7 @@ async function callTranscribe(tok: string, key?: string) {
 
 describe('idempotency middleware', () => {
   it('repeats with same key replay the cached body + status', async () => {
-    const tok = await signTestToken(alice, aliceSid);
+    const { token: tok } = await signTestSession(alice);
     const r1 = await callTranscribe(tok, 'req-abc-001');
     expect(r1.status).toBe(200);
     expect(r1.headers.get('idempotent-replay')).toBeNull();
@@ -96,7 +88,7 @@ describe('idempotency middleware', () => {
   });
 
   it('different keys do not collide', async () => {
-    const tok = await signTestToken(alice, aliceSid);
+    const { token: tok } = await signTestSession(alice);
     const r1 = await callTranscribe(tok, 'req-key-A');
     const r2 = await callTranscribe(tok, 'req-key-B');
     expect(r1.status).toBe(200);
@@ -105,8 +97,8 @@ describe('idempotency middleware', () => {
   });
 
   it('keys are scoped per user — alice key cannot be replayed by bob', async () => {
-    const aliceTok = await signTestToken(alice, aliceSid);
-    const bobTok = await signTestToken(bob, bobSid);
+    const { token: aliceTok } = await signTestSession(alice);
+    const { token: bobTok } = await signTestSession(bob);
     await callTranscribe(aliceTok, 'shared-key-1');
     const bobRes = await callTranscribe(bobTok, 'shared-key-1');
     // Bob doesn't own the file, so this is a fresh call (and 404). The
@@ -116,7 +108,7 @@ describe('idempotency middleware', () => {
   });
 
   it('passes through when no Idempotency-Key header is set', async () => {
-    const tok = await signTestToken(alice, aliceSid);
+    const { token: tok } = await signTestSession(alice);
     const r1 = await callTranscribe(tok);
     const r2 = await callTranscribe(tok);
     expect(r1.status).toBe(200);
@@ -126,7 +118,7 @@ describe('idempotency middleware', () => {
   });
 
   it('rejects malformed Idempotency-Key with 400', async () => {
-    const tok = await signTestToken(alice, aliceSid);
+    const { token: tok } = await signTestSession(alice);
     const res = await callTranscribe(tok, 'has spaces and !@#');
     expect(res.status).toBe(400);
     const body = (await res.json()) as { error: { code: string } };
@@ -134,7 +126,7 @@ describe('idempotency middleware', () => {
   });
 
   it('does not cache 5xx responses (so a transient failure does not pin)', async () => {
-    const tok = await signTestToken(alice, aliceSid);
+    const { token: tok } = await signTestSession(alice);
     // Force a 502 via unknown fixture name → AiProviderError.
     const app = createApp();
     const r1 = await app.request('/voice/transcribe', {

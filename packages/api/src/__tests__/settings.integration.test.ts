@@ -6,12 +6,11 @@ import pg from 'pg';
 import { createApp } from '../app.js';
 import { startPg, type PgFixture } from './setup-pg.js';
 import { resetPool, getPool } from '../db/client.js';
-import { signTestToken } from '../middleware/auth.js';
-import { makeUserId, makeSessionId } from './factories/index.js';
+import { signTestSession } from '../middleware/auth.js';
+import { makeUserId } from './factories/index.js';
 
 let fx: PgFixture;
 let alice: string;
-let aliceSid: string;
 
 beforeAll(async () => {
   fx = await startPg();
@@ -19,16 +18,11 @@ beforeAll(async () => {
   await resetPool();
   getPool(fx.url);
   alice = makeUserId();
-  aliceSid = makeSessionId();
   const admin = new pg.Client({ connectionString: fx.url });
   await admin.connect();
   await admin.query(
-    `INSERT INTO auth.users(id, phone) VALUES ($1, $2)`,
+    `INSERT INTO "user"(id, name, email, email_verified, created_at, updated_at) VALUES ($1, 'Alice', $2, true, now(), now())`,
     [alice, '+15551000001'],
-  );
-  await admin.query(
-    `INSERT INTO auth.sessions(id, user_id, expires_at) VALUES ($1, $2, now() + interval '7 days')`,
-    [aliceSid, alice],
   );
   await admin.end();
 }, 120_000);
@@ -45,7 +39,7 @@ const headers = (tok: string) => ({
 describe('/settings/ai', () => {
   it('GET returns {vendor: null, model: null} when row absent', async () => {
     const app = createApp();
-    const tok = await signTestToken(alice, aliceSid);
+    const { token: tok } = await signTestSession(alice);
     const res = await app.request('/settings/ai', { headers: { authorization: `Bearer ${tok}` } });
     expect(res.status).toBe(200);
     const body = (await res.json()) as { vendor: string | null; model: string | null };
@@ -54,7 +48,7 @@ describe('/settings/ai', () => {
 
   it('PATCH sets vendor + model and persists across GETs', async () => {
     const app = createApp();
-    const tok = await signTestToken(alice, aliceSid);
+    const { token: tok } = await signTestSession(alice);
     const patch = await app.request('/settings/ai', {
       method: 'PATCH',
       headers: headers(tok),
@@ -69,7 +63,7 @@ describe('/settings/ai', () => {
 
   it('PATCH {vendor: null, model: null} clears the row back to default', async () => {
     const app = createApp();
-    const tok = await signTestToken(alice, aliceSid);
+    const { token: tok } = await signTestSession(alice);
     // Set a value first
     const set = await app.request('/settings/ai', {
       method: 'PATCH',
@@ -93,7 +87,7 @@ describe('/settings/ai', () => {
 
   it('PATCH 400 on unknown model id', async () => {
     const app = createApp();
-    const tok = await signTestToken(alice, aliceSid);
+    const { token: tok } = await signTestSession(alice);
     const res = await app.request('/settings/ai', {
       method: 'PATCH',
       headers: headers(tok),
@@ -104,7 +98,7 @@ describe('/settings/ai', () => {
 
   it('PATCH 400 on dropped vendor (kimi)', async () => {
     const app = createApp();
-    const tok = await signTestToken(alice, aliceSid);
+    const { token: tok } = await signTestSession(alice);
     const res = await app.request('/settings/ai', {
       method: 'PATCH',
       headers: headers(tok),
@@ -115,7 +109,7 @@ describe('/settings/ai', () => {
 
   it('PATCH 400 on mixed null/non-null', async () => {
     const app = createApp();
-    const tok = await signTestToken(alice, aliceSid);
+    const { token: tok } = await signTestSession(alice);
     const res = await app.request('/settings/ai', {
       method: 'PATCH',
       headers: headers(tok),

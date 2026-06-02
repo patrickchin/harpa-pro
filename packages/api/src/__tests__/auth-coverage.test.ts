@@ -31,9 +31,9 @@ import { createApp } from '../app.js';
 const PUBLIC_ROUTES: ReadonlyArray<{ method: string; path: string }> = [
   { method: 'GET', path: '/healthz' },
   { method: 'GET', path: '/readyz' },
-  { method: 'POST', path: '/auth/otp/start' },
-  { method: 'POST', path: '/auth/otp/verify' },
-  { method: 'POST', path: '/auth/password/verify' },
+  { method: 'GET', path: '/api/auth/**' },
+  { method: 'POST', path: '/api/auth/**' },
+  { method: 'POST', path: '/api/dev/last-otp' },
   { method: 'POST', path: '/waitlist' },
   { method: 'POST', path: '/waitlist/confirm' },
   // OpenAPI JSON spec — served by @hono/zod-openapi, no auth. Note:

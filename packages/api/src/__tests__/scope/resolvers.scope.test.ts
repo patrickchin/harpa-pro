@@ -10,7 +10,7 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import pg from 'pg';
 import { startPg, type PgFixture } from '../setup-pg.js';
 import { createApp } from '../../app.js';
-import { signTestToken } from '../../middleware/auth.js';
+import { signTestSession } from '../../middleware/auth.js';
 import { resetPool, getPool } from '../../db/client.js';
 import { makeUserId, makeSessionId, makeProjectId, makeReportId } from '../factories/index.js';
 
@@ -46,12 +46,8 @@ beforeAll(async () => {
   const admin = new pg.Client({ connectionString: fx.url });
   await admin.connect();
   await admin.query(
-    `INSERT INTO auth.users(id, phone) VALUES ($1, $2), ($3, $4)`,
+    `INSERT INTO "user"(id, name, email, email_verified, created_at, updated_at) VALUES ($1, 'Alice', $2, true, now(), now()), ($3, 'Bob', $4, true, now(), now())`,
     [alice, '+15551000001', bob, '+15551000002'],
-  );
-  await admin.query(
-    `INSERT INTO auth.sessions(id, user_id, expires_at) VALUES ($1, $2, now() + interval '7 days'), ($3, $4, now() + interval '7 days')`,
-    [aliceSid, alice, bobSid, bob],
   );
   await admin.query(
     `INSERT INTO app.projects(id, name, owner_id) VALUES ($1, 'alice-proj', $2)`,
@@ -83,7 +79,7 @@ afterAll(async () => {
 describe('scope: /p/:projectSlug resolver', () => {
   it('own — alice resolves her own project slug → 200', async () => {
     const app = createApp();
-    const tok = await signTestToken(alice, aliceSid);
+    const { token: tok } = await signTestSession(alice);
     const res = await app.request(`/p/${aliceProjSlug}`, { headers: { authorization: `Bearer ${tok}` } });
     expect(res.status).toBe(200);
     const body = (await res.json()) as { type: string; projectId: string };
@@ -93,14 +89,14 @@ describe('scope: /p/:projectSlug resolver', () => {
 
   it('cross — alice resolves bob project slug → 404', async () => {
     const app = createApp();
-    const tok = await signTestToken(alice, aliceSid);
+    const { token: tok } = await signTestSession(alice);
     const res = await app.request(`/p/${bobProjSlug}`, { headers: { authorization: `Bearer ${tok}` } });
     expect(res.status).toBe(404);
   });
 
   it('cross — bob resolves alice project slug → 404 (other direction)', async () => {
     const app = createApp();
-    const tok = await signTestToken(bob, bobSid);
+    const { token: tok } = await signTestSession(bob);
     const res = await app.request(`/p/${aliceProjSlug}`, { headers: { authorization: `Bearer ${tok}` } });
     expect(res.status).toBe(404);
   });
@@ -115,7 +111,7 @@ describe('scope: /p/:projectSlug resolver', () => {
 describe('scope: /r/:reportSlug resolver', () => {
   it('own — alice resolves her own report slug → 200 with projectSlug + reportNumber', async () => {
     const app = createApp();
-    const tok = await signTestToken(alice, aliceSid);
+    const { token: tok } = await signTestSession(alice);
     const res = await app.request(`/r/${aliceReportSlug}`, { headers: { authorization: `Bearer ${tok}` } });
     expect(res.status).toBe(200);
     const body = (await res.json()) as {
@@ -132,14 +128,14 @@ describe('scope: /r/:reportSlug resolver', () => {
 
   it('cross — alice resolves bob report slug → 404', async () => {
     const app = createApp();
-    const tok = await signTestToken(alice, aliceSid);
+    const { token: tok } = await signTestSession(alice);
     const res = await app.request(`/r/${bobReportSlug}`, { headers: { authorization: `Bearer ${tok}` } });
     expect(res.status).toBe(404);
   });
 
   it('cross — bob resolves alice report slug → 404 (other direction)', async () => {
     const app = createApp();
-    const tok = await signTestToken(bob, bobSid);
+    const { token: tok } = await signTestSession(bob);
     const res = await app.request(`/r/${aliceReportSlug}`, { headers: { authorization: `Bearer ${tok}` } });
     expect(res.status).toBe(404);
   });

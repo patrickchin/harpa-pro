@@ -1,43 +1,16 @@
 import { z } from 'zod';
-import { cursor, isoDateTime, phone } from './_shared.js';
+import { cursor, isoDateTime } from './_shared.js';
 import { projectId, reportId, userId } from './ids.js';
 import { limitState, plan } from './usage-limits.js';
 
-export const otpStartRequest = z.object({ phone });
-export const otpStartResponse = z.object({ verificationId: z.string() });
-
-export const otpVerifyRequest = z.object({
-  phone,
-  code: z.string().regex(/^\d{4,8}$/),
-});
-
 export const userPublic = z.object({
   id: userId,
-  phone,
+  email: z.string().email(),
   displayName: z.string().nullable(),
   companyName: z.string().nullable(),
   createdAt: isoDateTime,
 });
 export type UserPublic = z.infer<typeof userPublic>;
-
-export const otpVerifyResponse = z.object({
-  token: z.string(),
-  user: userPublic,
-});
-
-/**
- * Password verification — test-account bypass for live deployments.
- * See docs/v4/arch-auth-and-rls.md §Test-account password bypass.
- * Response shape mirrors otpVerifyResponse so client wiring is
- * identical once the token is in hand.
- */
-export const passwordVerifyRequest = z.object({
-  phone,
-  password: z.string().min(1).max(256),
-});
-export const passwordVerifyResponse = otpVerifyResponse;
-
-export const logoutResponse = z.object({ ok: z.literal(true) });
 
 export const meResponse = z.object({ user: userPublic });
 

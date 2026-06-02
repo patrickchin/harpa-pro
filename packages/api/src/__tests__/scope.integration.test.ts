@@ -30,11 +30,11 @@ beforeAll(async () => {
   // Seed users + a project for each via a privileged connection (no RLS).
   const admin = new pg.Client({ connectionString: fx.url });
   await admin.connect();
-  await admin.query(`INSERT INTO auth.users(id, phone) VALUES ($1, $2), ($3, $4)`, [
+  await admin.query(`INSERT INTO "user"(id, name, email, email_verified, created_at, updated_at) VALUES ($1, 'Alice', $2, true, now(), now()), ($3, 'Bob', $4, true, now(), now())`, [
     alice,
-    '+15550000001',
+    'alice@example.com',
     bob,
-    '+15550000002',
+    'bob@example.com',
   ]);
   // Insert with explicit ids and memberships (bypassing RLS as superuser).
   await admin.query(

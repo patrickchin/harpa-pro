@@ -22,17 +22,16 @@ import { HeadObjectCommand } from '@aws-sdk/client-s3';
 
 import { startPg, type PgFixture } from './setup-pg.js';
 import { startMinio, type MinioFixture } from './helpers/r2-container.js';
-import { makeUserId, makeSessionId } from './factories/index.js';
+import { makeUserId } from './factories/index.js';
 
 const ENABLED = process.env.CI_R2_LIVE !== '0';
 
 let pgFx: PgFixture;
 let minio: MinioFixture;
 let alice = '';
-let aliceSid = '';
 type FetchApp = { request: (path: string, init?: RequestInit) => Promise<Response> };
 let app: FetchApp;
-let signTestToken: (userId: string, sessionId: string) => Promise<string>;
+let signTestSession: (userId: string) => Promise<{ token: string; sessionId: string }>;
 
 beforeAll(async () => {
   if (!ENABLED) return;
@@ -58,14 +57,9 @@ beforeAll(async () => {
   getPool(pgFx.url);
 
   alice = makeUserId();
-  aliceSid = makeSessionId();
   const admin = new pg.Client({ connectionString: pgFx.url });
   await admin.connect();
-  await admin.query(`INSERT INTO auth.users(id, phone) VALUES ($1, $2)`, [alice, '+15551400001']);
-  await admin.query(
-    `INSERT INTO auth.sessions(id, user_id, expires_at) VALUES ($1, $2, now() + interval '7 days')`,
-    [aliceSid, alice],
-  );
+  await admin.query(`INSERT INTO "user"(id, name, email, email_verified, created_at, updated_at) VALUES ($1, 'Alice', $2, true, now(), now())`, [alice, 'alice@example.com']);
   await admin.end();
 
   // Late, fresh imports so env.ts reparses against the temporary
@@ -73,7 +67,7 @@ beforeAll(async () => {
   // the boot-time env (default replay → FixtureStorage); dynamic
   // imports under `vi.resetModules()` get the live-mode wiring.
   const { createApp } = await import('../app.js');
-  ({ signTestToken } = await import('../middleware/auth.js'));
+  ({ signTestSession } = await import('../middleware/auth.js'));
   app = createApp() as FetchApp;
 }, 180_000);
 
@@ -90,7 +84,7 @@ const headers = (tok: string) => ({
 
 describe.skipIf(!ENABLED)('/files/* against real MinIO (R2_FIXTURE_MODE=live)', () => {
   it('mints a real signed PUT URL, and the PUT lands with the signed Content-Type/Length', async () => {
-    const tok = await signTestToken(alice, aliceSid);
+    const { token: tok } = await signTestSession(alice);
     const body = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3, 4]); // tiny "image"
     const contentType = 'image/jpeg';
 
@@ -135,7 +129,7 @@ describe.skipIf(!ENABLED)('/files/* against real MinIO (R2_FIXTURE_MODE=live)', 
   }, 60_000);
 
   it('rejects a signed PUT whose Content-Type was swapped after the URL was minted', async () => {
-    const tok = await signTestToken(alice, aliceSid);
+    const { token: tok } = await signTestSession(alice);
     const presignRes = await app.request('/files/presign', {
       method: 'POST',
       headers: headers(tok),

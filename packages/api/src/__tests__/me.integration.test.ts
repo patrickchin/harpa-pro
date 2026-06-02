@@ -7,15 +7,13 @@ import pg from 'pg';
 import { createApp } from '../app.js';
 import { startPg, type PgFixture } from './setup-pg.js';
 import { resetPool, getPool } from '../db/client.js';
-import { signTestToken } from '../middleware/auth.js';
-import { makeUserId, makeSessionId, makeProjectId, makeReportId, makeNoteId } from './factories/index.js';
+import { signTestSession } from '../middleware/auth.js';
+import { makeUserId, makeProjectId, makeReportId, makeNoteId } from './factories/index.js';
 import { newId } from '../lib/ids.js';
 
 let fx: PgFixture;
 let alice: string;
 let bob: string;
-let aliceSid: string;
-let bobSid: string;
 
 beforeAll(async () => {
   fx = await startPg();
@@ -25,18 +23,12 @@ beforeAll(async () => {
 
   alice = makeUserId();
   bob = makeUserId();
-  aliceSid = makeSessionId();
-  bobSid = makeSessionId();
 
   const admin = new pg.Client({ connectionString: fx.url });
   await admin.connect();
   await admin.query(
-    `INSERT INTO auth.users(id, phone, display_name) VALUES ($1, $2, 'Alice'), ($3, $4, 'Bob')`,
-    [alice, '+15550300001', bob, '+15550300002'],
-  );
-  await admin.query(
-    `INSERT INTO auth.sessions(id, user_id, expires_at) VALUES ($1, $2, now() + interval '7 days'), ($3, $4, now() + interval '7 days')`,
-    [aliceSid, alice, bobSid, bob],
+    `INSERT INTO "user"(id, name, email, email_verified, display_name, created_at, updated_at) VALUES ($1, 'Alice', $2, true, 'Alice', now(), now()), ($3, 'Bob', $4, true, 'Bob', now(), now())`,
+    [alice, 'alice@example.com', bob, 'bob@example.com'],
   );
 
   // Seed alice with one project, one report, one voice note in 2026-04
@@ -134,7 +126,7 @@ afterAll(async () => {
 describe('PATCH /me', () => {
   it('updates the caller display_name + company_name', async () => {
     const app = createApp();
-    const token = await signTestToken(alice, aliceSid);
+    const { token } = await signTestSession(alice);
     const res = await app.request('/me', {
       method: 'PATCH',
       headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
@@ -158,7 +150,7 @@ describe('PATCH /me', () => {
 
   it('rejects invalid body (400)', async () => {
     const app = createApp();
-    const token = await signTestToken(alice, aliceSid);
+    const { token } = await signTestSession(alice);
     const res = await app.request('/me', {
       method: 'PATCH',
       headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
@@ -171,7 +163,7 @@ describe('PATCH /me', () => {
 describe('GET /me/usage', () => {
   it('returns alice usage filtered to her own author_id (RLS enforced)', async () => {
     const app = createApp();
-    const token = await signTestToken(alice, aliceSid);
+    const { token } = await signTestSession(alice);
     const res = await app.request('/me/usage', { headers: { authorization: `Bearer ${token}` } });
     expect(res.status).toBe(200);
     const body = (await res.json()) as {
@@ -219,7 +211,7 @@ describe('GET /me/usage', () => {
 
   it('bob sees only his own usage', async () => {
     const app = createApp();
-    const token = await signTestToken(bob, bobSid);
+    const { token } = await signTestSession(bob);
     const res = await app.request('/me/usage', { headers: { authorization: `Bearer ${token}` } });
     expect(res.status).toBe(200);
     const body = (await res.json()) as { totals: { reports: number; voiceNotes: number; inputTokens: number; outputTokens: number; calls: number } };
@@ -257,7 +249,7 @@ describe('GET /me/usage/events', () => {
 
   it('returns alice events newest-first, includes ok + error rows', async () => {
     const app = createApp();
-    const token = await signTestToken(alice, aliceSid);
+    const { token } = await signTestSession(alice);
     const res = await app.request('/me/usage/events', { headers: { authorization: `Bearer ${token}` } });
     expect(res.status).toBe(200);
     const body = (await res.json()) as { items: EventItem[]; nextCursor: string | null };
@@ -280,7 +272,7 @@ describe('GET /me/usage/events', () => {
 
   it('isolates rows by RLS — alice never sees bob events', async () => {
     const app = createApp();
-    const token = await signTestToken(alice, aliceSid);
+    const { token } = await signTestSession(alice);
     const res = await app.request('/me/usage/events?limit=200', { headers: { authorization: `Bearer ${token}` } });
     const body = (await res.json()) as { items: EventItem[] };
     expect(body.items.every((e) => e.inputTokens !== 999)).toBe(true);
@@ -288,7 +280,7 @@ describe('GET /me/usage/events', () => {
 
   it('paginates with cursor', async () => {
     const app = createApp();
-    const token = await signTestToken(alice, aliceSid);
+    const { token } = await signTestSession(alice);
     const page1 = await app.request('/me/usage/events?limit=2', { headers: { authorization: `Bearer ${token}` } });
     const b1 = (await page1.json()) as { items: EventItem[]; nextCursor: string | null };
     expect(b1.items).toHaveLength(2);
@@ -305,7 +297,7 @@ describe('GET /me/usage/events', () => {
 
   it('filters by operation=transcribe', async () => {
     const app = createApp();
-    const token = await signTestToken(alice, aliceSid);
+    const { token } = await signTestSession(alice);
     const res = await app.request('/me/usage/events?operation=transcribe', { headers: { authorization: `Bearer ${token}` } });
     const body = (await res.json()) as { items: EventItem[] };
     expect(body.items).toHaveLength(1);
@@ -314,7 +306,7 @@ describe('GET /me/usage/events', () => {
 
   it('filters by vendor=kimi', async () => {
     const app = createApp();
-    const token = await signTestToken(alice, aliceSid);
+    const { token } = await signTestSession(alice);
     const res = await app.request('/me/usage/events?vendor=kimi', { headers: { authorization: `Bearer ${token}` } });
     const body = (await res.json()) as { items: EventItem[] };
     expect(body.items).toHaveLength(1);
@@ -323,7 +315,7 @@ describe('GET /me/usage/events', () => {
 
   it('rejects an invalid cursor with 400', async () => {
     const app = createApp();
-    const token = await signTestToken(alice, aliceSid);
+    const { token } = await signTestSession(alice);
     const res = await app.request('/me/usage/events?cursor=not-a-real-cursor', { headers: { authorization: `Bearer ${token}` } });
     expect(res.status).toBe(400);
   });

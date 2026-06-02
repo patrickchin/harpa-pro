@@ -9,12 +9,11 @@ import pg from 'pg';
 import { createApp } from '../app.js';
 import { startPg, type PgFixture } from './setup-pg.js';
 import { resetPool, getPool } from '../db/client.js';
-import { signTestToken } from '../middleware/auth.js';
-import { makeUserId, makeSessionId, makeFileId } from './factories/index.js';
+import { signTestSession } from '../middleware/auth.js';
+import { makeUserId, makeFileId } from './factories/index.js';
 
 let fx: PgFixture;
 let alice: string;
-let aliceSid: string;
 
 beforeAll(async () => {
   fx = await startPg();
@@ -23,16 +22,11 @@ beforeAll(async () => {
   await resetPool();
   getPool(fx.url);
   alice = makeUserId();
-  aliceSid = makeSessionId();
   const admin = new pg.Client({ connectionString: fx.url });
   await admin.connect();
   await admin.query(
-    `INSERT INTO auth.users(id, phone) VALUES ($1, $2)`,
+    `INSERT INTO "user"(id, name, email, email_verified, created_at, updated_at) VALUES ($1, 'Alice', $2, true, now(), now())`,
     [alice, '+15551200001'],
-  );
-  await admin.query(
-    `INSERT INTO auth.sessions(id, user_id, expires_at) VALUES ($1, $2, now() + interval '7 days')`,
-    [aliceSid, alice],
   );
   await admin.end();
 }, 120_000);
@@ -46,7 +40,7 @@ const headers = (tok: string) => ({ authorization: `Bearer ${tok}`, 'content-typ
 describe('/files/*', () => {
   it('POST /files/presign (scratch) returns server-built key under users/<callerId>/scratch/', async () => {
     const app = createApp();
-    const tok = await signTestToken(alice, aliceSid);
+    const { token: tok } = await signTestSession(alice);
     const res = await app.request('/files/presign', {
       method: 'POST',
       headers: headers(tok),
@@ -62,7 +56,7 @@ describe('/files/*', () => {
 
   it('POST /files (avatar) registers a file and round-trips via GET /files/:id/url', async () => {
     const app = createApp();
-    const tok = await signTestToken(alice, aliceSid);
+    const { token: tok } = await signTestSession(alice);
     // Presign first to get a server-built key.
     const presign = await app.request('/files/presign', {
       method: 'POST',
@@ -94,7 +88,7 @@ describe('/files/*', () => {
 
   it('POST /files 400 when fileKey is not under caller prefix', async () => {
     const app = createApp();
-    const tok = await signTestToken(alice, aliceSid);
+    const { token: tok } = await signTestSession(alice);
     const res = await app.request('/files', {
       method: 'POST',
       headers: headers(tok),
@@ -111,7 +105,7 @@ describe('/files/*', () => {
 
   it('POST /files 409 on duplicate fileKey', async () => {
     const app = createApp();
-    const tok = await signTestToken(alice, aliceSid);
+    const { token: tok } = await signTestSession(alice);
     const presign = await app.request('/files/presign', {
       method: 'POST',
       headers: headers(tok),
@@ -133,7 +127,7 @@ describe('/files/*', () => {
 
   it('GET /files/:id/url 404 on unknown id', async () => {
     const app = createApp();
-    const tok = await signTestToken(alice, aliceSid);
+    const { token: tok } = await signTestSession(alice);
     const res = await app.request('/files/fil_00000000/url', {
       headers: { authorization: `Bearer ${tok}` },
     });

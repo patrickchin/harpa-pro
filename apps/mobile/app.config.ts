@@ -74,6 +74,7 @@ const config: ExpoConfig = {
     bundleIdentifier: BUNDLE_ID,
     supportsTablet: true,
     icon: './assets/icon.png',
+    deploymentTarget: '16.4',
     // Universal Links — iOS verifies via AASA at
     // https://<host>/.well-known/apple-app-site-association.
     // See packages/api/src/routes/well-known.ts.

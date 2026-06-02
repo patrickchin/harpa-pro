@@ -17,13 +17,44 @@ import * as SecureStore from 'expo-secure-store';
 
 import { env } from '@/lib/config/env';
 
+// On unsigned simulator builds (local dev/E2E without a signing certificate)
+// the iOS Keychain rejects all SecureStore operations with errSecMissingEntitlement.
+// We fall back to an in-memory Map so the auth session stays alive within a
+// single app process (fine for E2E since each run does clearState + clearKeychain).
+const memCache = new Map<string, string>();
+
+const safeSecureStore: typeof SecureStore = {
+  ...SecureStore,
+  getItem: (key: string, options?: SecureStore.SecureStoreOptions) => {
+    try {
+      return SecureStore.getItem(key, options);
+    } catch {
+      return memCache.get(key) ?? null;
+    }
+  },
+  setItem: (key: string, value: string, options?: SecureStore.SecureStoreOptions) => {
+    try {
+      SecureStore.setItem(key, value, options);
+    } catch {
+      memCache.set(key, value);
+    }
+  },
+  deleteItem: (key: string, options?: SecureStore.SecureStoreOptions) => {
+    try {
+      SecureStore.deleteItem(key, options);
+    } catch {
+      memCache.delete(key);
+    }
+  },
+};
+
 export const authClient = createAuthClient({
   baseURL: `${env.EXPO_PUBLIC_API_URL}/api/auth`,
   plugins: [
     expoClient({
       scheme: 'harpa',
       storagePrefix: 'harpa',
-      storage: SecureStore,
+      storage: safeSecureStore,
     }),
     emailOTPClient(),
   ],

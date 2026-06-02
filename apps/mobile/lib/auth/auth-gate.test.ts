@@ -8,32 +8,31 @@
  */
 import { describe, it, expect } from 'vitest';
 import { decideAuthRedirect, decideAppRedirect } from './auth-gate';
-import type { AuthStatus } from './session';
 
 describe('lib/auth/auth-gate', () => {
   describe('decideAuthRedirect — (auth) route group gate', () => {
     it('redirects authenticated users to (app)/projects', () => {
-      expect(decideAuthRedirect('authenticated', '/sign-in/phone')).toBe('/(app)/projects');
-      expect(decideAuthRedirect('authenticated', '/sign-up/phone')).toBe('/(app)/projects');
+      expect(decideAuthRedirect('authenticated', '/sign-in/email')).toBe('/(app)/projects');
+      expect(decideAuthRedirect('authenticated', '/sign-in/code')).toBe('/(app)/projects');
       expect(decideAuthRedirect('authenticated', '/onboarding')).toBe('/(app)/projects');
     });
 
     it('redirects needs-onboarding users to onboarding, unless already there', () => {
-      expect(decideAuthRedirect('needs-onboarding', '/sign-in/phone')).toBe('/(auth)/onboarding');
-      expect(decideAuthRedirect('needs-onboarding', '/sign-up/phone')).toBe('/(auth)/onboarding');
+      expect(decideAuthRedirect('needs-onboarding', '/sign-in/email')).toBe('/(auth)/onboarding');
+      expect(decideAuthRedirect('needs-onboarding', '/sign-in/code')).toBe('/(auth)/onboarding');
       // Already on onboarding — no redirect. expo-router strips group
       // segments, so the runtime pathname is `/onboarding`.
       expect(decideAuthRedirect('needs-onboarding', '/onboarding')).toBeNull();
     });
 
     it('allows unauthenticated users to mount any auth screen', () => {
-      expect(decideAuthRedirect('unauthenticated', '/sign-in/phone')).toBeNull();
-      expect(decideAuthRedirect('unauthenticated', '/sign-up/phone')).toBeNull();
+      expect(decideAuthRedirect('unauthenticated', '/sign-in/email')).toBeNull();
+      expect(decideAuthRedirect('unauthenticated', '/sign-in/code')).toBeNull();
       expect(decideAuthRedirect('unauthenticated', '/onboarding')).toBeNull();
     });
 
     it('allows loading status to mount (suppresses flicker)', () => {
-      expect(decideAuthRedirect('loading', '/sign-in/phone')).toBeNull();
+      expect(decideAuthRedirect('loading', '/sign-in/email')).toBeNull();
       expect(decideAuthRedirect('loading', '/onboarding')).toBeNull();
     });
   });
@@ -44,7 +43,7 @@ describe('lib/auth/auth-gate', () => {
     });
 
     it('redirects unauthenticated users to sign-in', () => {
-      expect(decideAppRedirect('unauthenticated')).toBe('/(auth)/sign-in/phone');
+      expect(decideAppRedirect('unauthenticated')).toBe('/(auth)/sign-in/email');
     });
 
     it('redirects needs-onboarding users to onboarding', () => {

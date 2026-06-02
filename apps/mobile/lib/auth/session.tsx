@@ -1,31 +1,25 @@
 /**
- * Auth session: in-memory cache + bootstrap + sign-in / sign-out, plus
- * the React provider + hook the app shell consumes.
+ * Auth session — thin wrapper around `authClient.useSession()` from
+ * better-auth/react.
  *
- * Why this shape:
- *  - **Synchronous token getter**. The API client at
- *    `lib/api/client.ts` reads the bearer via a synchronous getter
- *    (`getAuthToken` from `lib/api/auth.ts`). The provider keeps the
- *    token in a module-level ref so the getter resolves without an
- *    async hop on every request.
- *  - **Bootstrap-gated**. Until bootstrap finishes, the getter returns
- *    `null` (the request goes out unauthenticated; if it gets a 401,
- *    the unauthorized handler ALSO does nothing pre-bootstrap). After
- *    bootstrap the getter returns the cached token (or `null` if the
- *    user isn't signed in). This avoids the race documented in the
- *    P2.4 security review §B / §I — a request that fires before
- *    bootstrap can never silently nuke a valid stored session.
- *  - **Single 401 path**. The provider registers
- *    `setOnUnauthorizedCallback` once. ANY 401 (query OR mutation)
- *    fires `signOutLocal()`, which clears state without trying to call
- *    the API back (the token's already invalid). The route guard in
- *    P2.6 redirects on `status === 'unauthenticated'`.
- *  - **No silent refresh**. Tokens are 7 days. If `/me` returns 401 on
- *    bootstrap we drop the session and stay unauthenticated. Re-OTP.
- *  - **Status, not booleans**. `'loading' | 'unauthenticated' |
- *    'authenticated' | 'needs-onboarding'` — callers branch on a
- *    discriminator instead of correlating two booleans (Pitfall 5:
- *    multi-step async flows with implicit ordering).
+ * Why a wrapper rather than direct `authClient.useSession()` calls in
+ * components:
+ *  - We want a single source of truth for the `status` discriminator
+ *    (`'loading' | 'unauthenticated' | 'authenticated' | 'needs-onboarding'`).
+ *    Callers branch on the discriminator rather than correlating
+ *    multiple booleans (Pitfall 5: implicit ordering).
+ *  - The legacy API (`signIn`, `signOut`, `refresh`) is preserved so
+ *    callers don't all have to change at once.
+ *  - We bridge better-auth's cookie storage (managed by `expoClient`)
+ *    into the existing synchronous bearer getter used by
+ *    `lib/api/client.ts`. Better-auth's expoClient stores the session
+ *    cookie in SecureStore as a JSON blob; we extract just the
+ *    `session_token` value and pass it as `Authorization: Bearer …`.
+ *    The server side accepts both bearer and cookie auth, but bearer
+ *    is what every existing route + test was wired against.
+ *
+ * Persistence is owned entirely by `expoClient` — no SecureStore
+ * reads/writes here.
  */
 import React, {
   createContext,
@@ -33,24 +27,15 @@ import React, {
   useContext,
   useEffect,
   useMemo,
-  useState,
   type ReactNode,
 } from 'react';
-import { request } from '../api/client';
+
 import {
   setAuthTokenGetter,
   setOnUnauthorizedCallback,
 } from '../api/auth';
-import { ApiError } from '../api/errors';
 import { resetQueryCache } from '../api/query-client';
-import {
-  readSession,
-  writeSession,
-  clearSession,
-  writeLastPhone,
-  type PersistedSession,
-  type SessionUser,
-} from './storage';
+import { authClient, type SessionUser } from './client';
 
 export type AuthStatus =
   | 'loading'
@@ -62,293 +47,146 @@ export interface AuthSessionValue {
   status: AuthStatus;
   user: SessionUser | null;
   /**
-   * Persist a fresh `(token, user)` pair after a successful OTP verify.
-   * Side-effects: writes SecureStore, updates the in-memory cache so
-   * the API client picks up the bearer, transitions status.
+   * Refresh the session from `/api/auth/get-session`. Used by screens
+   * that just patched `/me` and need the new displayName/companyName
+   * to land in the cached session. No-op when not signed in.
    */
-  signIn: (input: { token: string; user: SessionUser; phone?: string }) => Promise<void>;
+  refresh: () => Promise<void>;
   /**
-   * Best-effort POST /auth/logout, then clear local state. Always
-   * resolves (does not throw on network failure).
+   * Re-export of `signOut` so existing callers keep working.
+   * `expoClient` clears SecureStore + the in-memory cache; we then
+   * wipe the React Query cache.
    */
   signOut: () => Promise<void>;
-  /** Re-fetch `/me` and merge the result into `user` / `status`. */
-  refresh: () => Promise<void>;
+  /**
+   * Compatibility shim: the new email-OTP screens call
+   * `authClient.signIn.emailOtp()` directly, but we keep `signIn`
+   * here as a no-op `await refresh()` so legacy call sites keep
+   * compiling. After a successful OTP, expoClient has already
+   * persisted the cookie; refreshing pulls the user object into
+   * `useSession()`.
+   */
+  signIn: (input?: { email?: string }) => Promise<void>;
 }
 
 const AuthSessionContext = createContext<AuthSessionValue | undefined>(undefined);
 
-/** Module-level token cache so the synchronous API client getter can
- * resolve without React state. Mutated only via the provider's effects. */
-let cachedToken: string | null = null;
-let bootstrapDone = false;
-
-/** Dev-only multi-mount guard. Security review §A: module-level state
- * (cachedToken, bootstrapDone) is shared across all instances. Mounting
- * this provider more than once will cause races. */
-let mountCount = 0;
+/**
+ * Re-export the user type so consumers can `import { SessionUser }
+ * from '@/lib/auth'`.
+ */
+export type { SessionUser } from './client';
 
 /**
- * Internal — used by the provider to register the synchronous token
- * getter exactly once. Exported only so tests can reset between cases.
+ * Best-effort token getter. Reads the cookie from `authClient.getCookie()`
+ * (sync — backed by SecureStore.getItem), splits it, and returns the
+ * `*.session_token` value.
+ *
+ * Returns `null` when no cookie is stored. Errors are swallowed —
+ * fail-closed so an authenticated request just goes out unauthenticated
+ * and gets a 401, which the unauthorized callback handles.
  */
-export function __resetSessionModule(): void {
-  cachedToken = null;
-  bootstrapDone = false;
-  mountCount = 0;
-}
-
-function deriveStatus(user: SessionUser | null): AuthStatus {
-  if (!user) return 'unauthenticated';
-  if (user.displayName == null || user.companyName == null) {
-    return 'needs-onboarding';
+function readBearerToken(): string | null {
+  try {
+    const cookie = authClient.getCookie();
+    if (!cookie) return null;
+    // Cookie format: `name1=value1; name2=value2`. The session token
+    // cookie name ends in `.session_token` (better-auth's convention).
+    for (const part of cookie.split(';')) {
+      const [name, ...rest] = part.trim().split('=');
+      if (!name) continue;
+      if (name.endsWith('session_token')) {
+        return rest.join('=') || null;
+      }
+    }
+    return null;
+  } catch {
+    return null;
   }
-  return 'authenticated';
 }
 
-/**
- * AuthSessionProvider — mount ONCE at app root.
- *
- * Security constraint (§A from P2.4 security review): module-level
- * state (`cachedToken`, `bootstrapDone`, `mountCount`) is shared across
- * all instances. Mounting this provider more than once will cause races.
- * The app shell design ensures a single mount; if refactoring moves the
- * provider, verify it stays singular.
- *
- * Bootstrap runs ONCE on mount with `[]` deps (§H from P2.4 security
- * review) — the effect closes over the initial `storage` and `api` props
- * from the first render and never re-runs. Callers MUST pass
- * referentially stable refs (e.g. module-level constants, not inline
- * literals) or the provider will ignore prop changes.
- */
 interface ProviderProps {
   children: ReactNode;
-  /** Test seam — inject a fake storage layer. Defaults to the real one.
-   * MUST be referentially stable (module-level constant). */
-  storage?: {
-    readSession: typeof readSession;
-    writeSession: typeof writeSession;
-    clearSession: typeof clearSession;
-    writeLastPhone: typeof writeLastPhone;
-  };
-  /** Test seam — inject a custom `/me` fetcher / logout caller.
-   * MUST be referentially stable (module-level constant). */
-  api?: {
-    fetchMe: () => Promise<{ user: SessionUser }>;
-    postLogout: () => Promise<void>;
-  };
 }
 
-const defaultStorage = {
-  readSession,
-  writeSession,
-  clearSession,
-  writeLastPhone,
-};
+export function AuthSessionProvider({ children }: ProviderProps): React.JSX.Element {
+  const { data, isPending, refetch } = authClient.useSession();
 
-const defaultApi = {
-  fetchMe: () => request('/me', 'get') as Promise<{ user: SessionUser }>,
-  postLogout: async () => {
-    await request('/auth/logout', 'post');
-  },
-};
+  const user = (data?.user ?? null) as SessionUser | null;
+  const status: AuthStatus = isPending
+    ? 'loading'
+    : !user
+      ? 'unauthenticated'
+      : user.displayName == null || user.companyName == null
+        ? 'needs-onboarding'
+        : 'authenticated';
 
-export function AuthSessionProvider({
-  children,
-  storage = defaultStorage,
-  api = defaultApi,
-}: ProviderProps): React.JSX.Element {
-  const [status, setStatus] = useState<AuthStatus>('loading');
-  const [user, setUser] = useState<SessionUser | null>(null);
-
-  // Dev-only multi-mount assertion (§A from P2.4 security review).
+  // Wire the synchronous bearer getter into `lib/api/client.ts`. This
+  // runs on every mount of the provider; setting the getter is
+  // idempotent (it overwrites the previous reference).
   useEffect(() => {
-    mountCount += 1;
-    if (typeof __DEV__ !== 'undefined' && __DEV__ && mountCount > 1) {
-      throw new Error('[auth] AuthSessionProvider mounted more than once. Mount only at the app root.');
-    }
+    setAuthTokenGetter(readBearerToken);
     return () => {
-      mountCount -= 1;
+      setAuthTokenGetter(() => null);
     };
   }, []);
 
-  // Wire the synchronous token getter + 401 callback exactly once,
-  // before any data-fetching child can mount. Effect runs AFTER render
-  // so the very first React Query call could in principle race —
-  // but `cachedToken` starts as `null` and `bootstrapDone` as `false`,
-  // so the API client just sends the request unauthenticated and the
-  // 401 (if any) is suppressed by the pre-bootstrap guard. Once
-  // bootstrap completes, the getter starts returning the real token.
+  // Wire the 401 → sign-out callback. Any unauthenticated response
+  // from the API drops the local session via `authClient.signOut()`
+  // (which clears expoClient's cookie storage) and resets the React
+  // Query cache. The route guards then push the user to sign-in.
   useEffect(() => {
-    setAuthTokenGetter(() => cachedToken);
     setOnUnauthorizedCallback(() => {
-      // Suppress 401s seen during bootstrap — those reflect either an
-      // expired stored token (which the bootstrap routine will handle
-      // explicitly) or a stale query that fired before we attached the
-      // bearer. Once bootstrap is done, any 401 = real session loss.
-      if (!bootstrapDone) return;
-      // Drop local state immediately. We don't await the network
-      // logout from here (it'd just 401 again). The route guard sees
-      // status flip and pushes to /(auth)/login.
-      cachedToken = null;
-      setUser(null);
-      setStatus('unauthenticated');
-      // Best-effort wipe of cached + persisted query data so the next
-      // user (or re-login on this device) never sees the previous
-      // session's rows. Fire-and-forget; failures are swallowed in
-      // `resetQueryCache` itself.
-      void resetQueryCache();
+      void (async () => {
+        try {
+          await authClient.signOut();
+        } catch {
+          // expoClient still wipes its own cookie state on the next
+          // get-session call; swallow.
+        }
+        try {
+          await resetQueryCache();
+        } catch {
+          // Cache reset failure is best-effort.
+        }
+      })();
     });
     return () => {
       setOnUnauthorizedCallback(null);
     };
   }, []);
 
-  // Bootstrap once on mount: read the stored session, verify it with
-  // /me, settle status. Always sets status — never leaves it in
-  // 'loading' (security review §H / §I).
-  //
-  // Deps: [] (§H from P2.4 security review). Bootstrap runs ONCE; the
-  // effect closes over the initial `storage` and `api` props from the
-  // render above and never re-runs. Callers must pass stable refs.
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const stored = await storage.readSession();
-        if (!stored) {
-          if (!cancelled) {
-            cachedToken = null;
-            setUser(null);
-            setStatus('unauthenticated');
-          }
-          return;
-        }
-        // Optimistically install the token so /me carries the bearer.
-        cachedToken = stored.token;
-        try {
-          const fresh = await api.fetchMe();
-          if (cancelled) return;
-          // Merge: keep the stored token (still valid), adopt the
-          // server's view of the user (may have changed since sign-in).
-          await storage.writeSession({ token: stored.token, user: fresh.user });
-          setUser(fresh.user);
-          setStatus(deriveStatus(fresh.user));
-        } catch (err) {
-          if (cancelled) return;
-          // §C from P2.4 security review: treat 404 as invalid session.
-          // The API returns 404 when the user row is deleted. Drop
-          // local state so the auth gate redirects to sign-in.
-          if (err instanceof ApiError && (err.code === 'unauthorized' || err.code === 'not_found')) {
-            // Token rejected — clean up and stay unauthenticated.
-            await storage.clearSession();
-            cachedToken = null;
-            setUser(null);
-            setStatus('unauthenticated');
-            return;
-          }
-          // Network / server error: trust the stored user blob so the
-          // app is usable offline. The next successful /me will reconcile.
-          setUser(stored.user);
-          setStatus(deriveStatus(stored.user));
-        }
-      } catch (err) {
-        // Storage failure (e.g. SecureStore unavailable). Fail closed.
-        if (cancelled) return;
-        // eslint-disable-next-line no-console
-        console.error('[auth] bootstrap failed', err);
-        cachedToken = null;
-        setUser(null);
-        setStatus('unauthenticated');
-      } finally {
-        // Mark bootstrap done LAST so any in-flight pre-bootstrap 401
-        // doesn't tear down the session we just successfully restored.
-        if (!cancelled) bootstrapDone = true;
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-    // Deps: [] (§H from P2.4 security review). Bootstrap runs ONCE on
-    // mount. The effect closes over the `storage` and `api` props from
-    // the first render and never re-runs. If the parent passes unstable
-    // props (inline object literals), the component re-renders but the
-    // bootstrap effect doesn't re-fire.
-  }, []);
-
-  const signIn = useCallback<AuthSessionValue['signIn']>(
-    async ({ token, user: nextUser, phone }) => {
-      cachedToken = token;
-      await storage.writeSession({ token, user: nextUser });
-      if (phone) {
-        try {
-          await storage.writeLastPhone(phone);
-        } catch {
-          // UX hint only — never block sign-in on it.
-        }
-      }
-      setUser(nextUser);
-      setStatus(deriveStatus(nextUser));
-    },
-    [storage],
-  );
+  const refresh = useCallback<AuthSessionValue['refresh']>(async () => {
+    await refetch();
+  }, [refetch]);
 
   const signOut = useCallback<AuthSessionValue['signOut']>(async () => {
-    // Best-effort server logout. Ignore errors: even if the request
-    // fails we MUST still clear local state, otherwise we leak the
-    // session into the next user (security review §D).
-    //
-    // SECURITY: in-memory clear is the source of truth because the API
-    // enforces logout via the `auth.sessions` row — `POST /auth/logout`
-    // deletes the row (`packages/api/src/auth/service.ts:logout`) and
-    // the auth middleware rejects any token whose `sid` no longer
-    // resolves to a row. A stale token surviving in SecureStore after a
-    // failed `clearSession()` therefore returns 401 on the next launch
-    // and the bootstrap path drops the session. Verified by
-    // `packages/api/src/__tests__/auth.integration.test.ts` —
-    // "logout deletes the session row".
     try {
-      await api.postLogout();
+      await authClient.signOut();
     } catch {
-      // swallow — local clear below is what matters
+      // Best-effort: even if the server call fails, expoClient still
+      // clears the cookie locally. Swallow so the UI can complete the
+      // sign-out flow.
     }
     try {
-      await storage.clearSession();
+      await resetQueryCache();
     } catch {
-      // swallow — see SECURITY note above; the next bootstrap self-heals.
+      // Cache reset failure is best-effort.
     }
-    cachedToken = null;
-    setUser(null);
-    setStatus('unauthenticated');
-    // Wipe the query cache + persisted blob so the next signed-in
-    // user on this device never sees the previous user's data. We
-    // await it so callers observing `signOut()` resolution can rely
-    // on the cache being fully cleared (matters for tests + for the
-    // "switch account" flow).
-    await resetQueryCache();
-  }, [api, storage]);
+    await refetch();
+  }, [refetch]);
 
-  const refresh = useCallback<AuthSessionValue['refresh']>(async () => {
-    if (!cachedToken) return;
-    try {
-      const fresh = await api.fetchMe();
-      await storage.writeSession({ token: cachedToken, user: fresh.user });
-      setUser(fresh.user);
-      setStatus(deriveStatus(fresh.user));
-    } catch (err) {
-      if (err instanceof ApiError && err.code === 'unauthorized') {
-        await storage.clearSession();
-        cachedToken = null;
-        setUser(null);
-        setStatus('unauthenticated');
-      }
-      // Other errors are transient; keep current state.
-    }
-  }, [api, storage]);
+  const signIn = useCallback<AuthSessionValue['signIn']>(async () => {
+    // Compatibility shim — the actual sign-in side effect (cookie
+    // persistence) is handled by `authClient.signIn.emailOtp()` inside
+    // the email-code screen. Here we just refetch the session so the
+    // hook picks up the new user immediately.
+    await refetch();
+  }, [refetch]);
 
   const value = useMemo<AuthSessionValue>(
-    () => ({ status, user, signIn, signOut, refresh }),
-    [status, user, signIn, signOut, refresh],
+    () => ({ status, user, refresh, signOut, signIn }),
+    [status, user, refresh, signOut, signIn],
   );
 
   return (
@@ -363,7 +201,7 @@ export function useAuthSession(): AuthSessionValue {
   if (!ctx) {
     throw new Error(
       'useAuthSession must be used within an <AuthSessionProvider>. ' +
-        'Wrap the app shell in app/_layout.tsx (P2.6).',
+        'Wrap the app shell in app/_layout.tsx.',
     );
   }
   return ctx;

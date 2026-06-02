@@ -33,29 +33,15 @@ tags:
     stopApp: true
 - waitForAnimationToEnd
 
-# --- Sign in as the seeded Alice (+15550100100) ----------------------------
+# --- Sign in as the seeded Alice (alice@harpa.test) ------------------------
 - extendedWaitUntil:
     visible:
-      id: "input-phone"
+      id: "input-email"
     timeout: 15000
-- tapOn:
-    id: "input-phone"
-- inputText: "+15550100100"
-- tapOn:
-    id: "btn-login-send-code"
-- extendedWaitUntil:
-    visible:
-      id: "input-otp"
-    timeout: 10000
-- tapOn:
-    id: "input-otp"
-- inputText: "000000"
-- extendedWaitUntil:
-    visible:
-      id: "btn-verify-code"
-    timeout: 5000
-- tapOn:
-    id: "btn-verify-code"
+- runFlow:
+    file: helpers/sign-in.yaml
+    env:
+      EMAIL: "alice@harpa.test"
 
 # --- Open seeded project → reports → seeded draft (Generate screen) -------
 - extendedWaitUntil:

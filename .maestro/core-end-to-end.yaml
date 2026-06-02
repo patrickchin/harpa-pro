@@ -9,7 +9,7 @@ tags:
 # `(auth)` + `(app)` routes (not the `(dev)` gallery).
 #
 # Coverage:
-#   - sign-up flow      (deep link `harpa://sign-up/phone`)
+#   - sign-in flow      (email-OTP via `helpers/sign-in.yaml`)
 #   - onboarding        (conditional)
 #   - sign-out + sign-in round trip
 #   - projects list, new project
@@ -27,7 +27,7 @@ tags:
 #   3. xcrun simctl privacy booted grant microphone ${MAESTRO_APP_ID}
 #      xcrun simctl privacy booted grant camera ${MAESTRO_APP_ID}
 #   4. scripts/maestro/reset-db.sh   # wipe app + auth schemas so the
-#      sign-up phone (+15550100100) is a fresh account every run
+#      seed (alice@harpa.test) is a fresh account every run
 #
 # Run:
 #   maestro test .maestro/core-end-to-end.yaml
@@ -74,38 +74,23 @@ tags:
     file: helpers/dismiss-open-dialog.yaml
 
 # Let the auth gate land us on sign-in first (more reliable than a
-# bare deep link to /sign-up immediately after a cold-launch race).
+# bare deep link to /sign-in immediately after a cold-launch race).
 - extendedWaitUntil:
     visible:
-      id: "input-phone"
+      id: "input-email"
     timeout: 30000
 
-# --- Sign-up (fresh account) -------------------------------------------------
-- openLink: harpa://sign-up/phone
+# --- Sign-in (fresh account) -------------------------------------------------
+# better-auth's emailOtp plugin auto-creates the user on first verify
+# (no separate sign-up screen).
 - runFlow:
-    file: helpers/dismiss-open-dialog.yaml
-- extendedWaitUntil:
-    visible:
-      id: "input-signup-phone"
-    timeout: 15000
-- tapOn:
-    id: "input-signup-phone"
-- inputText: "+15550100100"
-- hideKeyboard
-- tapOn:
-    id: "btn-signup-send-code"
-- assertVisible:
-    id: "input-signup-otp"
-- tapOn:
-    id: "input-signup-otp"
-- inputText: "000000"
-- hideKeyboard
-- tapOn:
-    id: "btn-signup-verify"
+    file: helpers/sign-in.yaml
+    env:
+      EMAIL: "alice@harpa.test"
 
 # --- Onboarding (only for fresh accounts) ----------------------------------
-# reset-db.sh seeds Alice (+15550100100) for p3-report-wiring.yaml, so the
-# same phone here signs back IN rather than triggering onboarding. Make the
+# reset-db.sh seeds Alice (alice@harpa.test) for p3-report-wiring.yaml, so
+# repeated runs sign back IN rather than triggering onboarding. Make the
 # block conditional so the flow works whether the DB is reset or not.
 - runFlow:
     when:
@@ -156,21 +141,21 @@ tags:
 
 # --- Members: open, add editor, filter, back -------------------------------
 # The members screen uses an inline add-member form (not a separate invite
-# modal). Phone input lives at `input-member-phone`, role picker at
+# modal). Email input lives at `input-member-email`, role picker at
 # `picker-member-role-${role}`, submit at `btn-add-member`.
 - tapOn:
     id: "link-project-members"
 # Members screen has an empty-state with a "Show add-member" button that
-# reveals the inline phone/role/submit form.
+# reveals the inline email/role/submit form.
 - assertVisible:
     id: "btn-show-add-member"
 - tapOn:
     id: "btn-show-add-member"
 - assertVisible:
-    id: "input-member-phone"
+    id: "input-member-email"
 - tapOn:
-    id: "input-member-phone"
-- inputText: "+15550100200"
+    id: "input-member-email"
+- inputText: "bob@harpa.test"
 - hideKeyboard
 - tapOn:
     id: "picker-member-role-editor"

@@ -1,18 +1,19 @@
 appId: ${MAESTRO_APP_ID}
-name: "01 — Auth: sign-up alice + sign-in alice"
+name: "01 — Auth: sign-in alice via email-OTP"
 tags:
   - regression
   - auth
 ---
-# Module 01 — Auth
+# Module 01 — Auth (email-OTP)
 #
 # Covers:
-#   - fresh sign-up via deep link (harpa://sign-up/phone)
-#   - onboarding form (name + company)
-#   - sign-out
-#   - sign-in (sign-in screen, not sign-up)
+#   - cold launch with clean state
+#   - sign-in via email-OTP (better-auth emailOtp plugin)
+#   - sign-out + sign-in round trip
 #
-# Pre-condition: app just cold-launched with clearState + clearKeychain.
+# Pre-condition: app just cold-launched with clearState + clearKeychain;
+# alice@harpa.test exists in the database (better-auth creates the user
+# automatically on first verify, so the first run also covers sign-up).
 # Post-condition: alice is signed in, projects list visible.
 
 # Cold launch with clean state
@@ -32,7 +33,7 @@ tags:
     timeout: 60000
 
 # The Android dev-launcher first-run sheet ("This is the developer menu")
-# overlays the sign-in screen and obscures `input-phone`. Wait for its
+# overlays the sign-in screen and obscures `input-email`. Wait for its
 # "Continue" button before dismissing it; close any dev menu it opens.
 # On iOS and on subsequent Android runs, these gates are no-ops.
 - runFlow:
@@ -56,46 +57,20 @@ tags:
 - runFlow:
     file: ../helpers/dismiss-open-dialog.yaml
 
-# Land on sign-in first (auth gate) then deep-link to sign-up
+# Land on sign-in (email) screen.
 - extendedWaitUntil:
     visible:
-      id: "input-phone"
+      id: "input-email"
     timeout: 30000
 
-# --- Sign-up alice (fresh account via seed) --------------------------------
-- openLink: harpa://sign-up/phone
+# --- Sign-in alice (better-auth creates the user on first verify) ---------
 - runFlow:
-    file: ../helpers/dismiss-open-dialog.yaml
-- extendedWaitUntil:
-    visible:
-      id: "input-signup-phone"
-    timeout: 15000
-# Force the country picker to US so a typed national number is stored
-# as +1, not the device-locale default (often +44 on dev hardware).
-- runFlow:
-    file: ../helpers/pick-country-us.yaml
+    file: ../helpers/sign-in.yaml
     env:
-      COUNTRY_BUTTON_ID: "btn-signup-country-picker"
-- tapOn:
-    id: "input-signup-phone"
-- inputText: "5550000001"
-- hideKeyboard
-- tapOn:
-    id: "btn-signup-send-code"
-- extendedWaitUntil:
-    visible:
-      id: "input-signup-otp"
-    timeout: 10000
-- tapOn:
-    id: "input-signup-otp"
-- inputText: "000000"
-- hideKeyboard
-- tapOn:
-    id: "btn-signup-verify"
+      EMAIL: "alice@harpa.test"
 
-# --- Onboarding (always shown after fresh sign-up; skipped if the
-#     backend already has an onboarded user for this phone, e.g. a
-#     repeat run on a non-reset DB) ----------------------------------------
+# --- Onboarding (only on first sign-in for this email; skipped on a
+#     pre-onboarded account) -----------------------------------------------
 - runFlow:
     when:
       visible:
@@ -124,6 +99,6 @@ tags:
 - runFlow:
     file: ../helpers/sign-in.yaml
     env:
-      PHONE: "5550000001"
+      EMAIL: "alice@harpa.test"
 - assertVisible:
     id: "btn-new-project"

@@ -22,7 +22,7 @@ tags:
 - runFlow:
     file: ../helpers/sign-in.yaml
     env:
-      PHONE: "5550000002"
+      EMAIL: "bob@harpa.test"
 
 # --- Bob sees the project ---------------------------------------------------
 - assertVisible:
@@ -64,7 +64,7 @@ tags:
 - runFlow:
     file: ../helpers/sign-in.yaml
     env:
-      PHONE: "5550000001"
+      EMAIL: "alice@harpa.test"
 
 # --- Alice navigates back to project home ----------------------------------
 - runFlow: ../helpers/open-project.yaml

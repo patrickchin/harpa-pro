@@ -25,13 +25,13 @@ tags:
     clearKeychain: true
     stopApp: true
 - waitForAnimationToEnd
-- openLink: harpa://sign-in/phone
+- openLink: harpa://sign-in/email
 - assertVisible:
-    id: "input-phone"
+    id: "input-email"
 - runFlow:
     file: helpers/sign-in.yaml
     env:
-      PHONE: "5550000001"
+      EMAIL: "alice@harpa.test"
 
 # --- Navigate to Usage screen via Profile tab ------------------------------
 - tapOn:

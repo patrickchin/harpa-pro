@@ -8,6 +8,7 @@ import { startPg, type PgFixture } from '../../../../packages/api/src/__tests__/
 import { resetPool, getPool } from '../../../../packages/api/src/db/client.js';
 import { createApiClient } from '../lib/client.js';
 import { authOtpStart, authOtpVerify } from '../commands/auth.js';
+import { readLatestOtp } from './_helpers.js';
 import { projectsCreate } from '../commands/projects.js';
 import { reportsCreate } from '../commands/reports.js';
 import { notesList, notesCreate, notesUpdate, notesDelete } from '../commands/notes.js';
@@ -31,18 +32,18 @@ class MemoryStream extends Writable {
   }
 }
 
+const appFetch: typeof fetch = (input, init) => {
+  const req = input instanceof Request ? input : new Request(input as string, init);
+  return app.fetch(req);
+};
+
 function makeClient(t?: string) {
   const env: CliEnv = {
     HARPA_API_URL: 'http://localhost',
     HARPA_DEBUG: '0',
     ...(t ? { HARPA_TOKEN: t } : {}),
   };
-  return createApiClient(env, {
-    fetch: (input: RequestInfo | URL, init?: RequestInit) => {
-      const req = input instanceof Request ? input : new Request(input, init);
-      return app.fetch(req);
-    },
-  });
+  return createApiClient(env, { fetch: appFetch });
 }
 
 beforeAll(async () => {
@@ -53,12 +54,14 @@ beforeAll(async () => {
   app = createApp();
 
   const sink = new MemoryStream();
-  await authOtpStart({ client: makeClient(), phone: '+15551000040', stdout: sink, stderr: sink });
+  await authOtpStart({ apiUrl: 'http://localhost', fetch: appFetch, email: 'cli-tests-notes@dev.harpa.test', stdout: sink, stderr: sink });
+  const code = await readLatestOtp('cli-tests-notes@dev.harpa.test');
   const out = new MemoryStream();
   await authOtpVerify({
-    client: makeClient(),
-    phone: '+15551000040',
-    code: '000000',
+    apiUrl: 'http://localhost',
+    fetch: appFetch,
+    email: 'cli-tests-notes@dev.harpa.test',
+    code,
     raw: true,
     stdout: out,
     stderr: sink,

@@ -203,7 +203,7 @@ R2 PUT/GET traffic for voice and photos was observed through
 - [ ] `scripts/check-maestro-testids.sh` CI grep gate.
 - [ ] `.github/workflows/e2e-maestro-testid-gate.yml` runs the testID gate on every PR.
 - [ ] CI workflow that actually runs the journey (currently developer-driven on the real device — no CI matrix yet for the Android emulator leg).
-- [x] Dev-deployment E2E pass after local green: same coverage against `harpa-pro-api-dev` using the `POST /auth/password/verify` test-account bypass, dev Neon/R2, and non-destructive per-run cleanup.
+- [x] Dev-deployment E2E pass after local green: same coverage against `harpa-pro-api-dev` using the `POST /api/auth/sign-in/email` test-account bypass, dev Neon/R2, and non-destructive per-run cleanup.
 - [ ] `mo journey` / Maestro target support for `local` vs `dev`, with strict ordering so dev runs only after local passes. This should provide the password-login helper/setup hook for dev.
 - [ ] Remaining uncovered surfaces outside the passing journey: voice-specific debug fields, avatar upload, and deep-link/push flows.
 - [ ] Remaining future-pickup modules (12a voice debug fields, avatar upload) land alongside their feature work — tracked in design doc §7.

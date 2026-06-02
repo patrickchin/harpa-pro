@@ -157,15 +157,24 @@ caller anyway).
 
 ### 3.3 New budgets
 
+> **Update (better-auth migration).** `POST /auth/otp/start`,
+> `POST /auth/otp/verify`, and `POST /auth/password/verify` no longer
+> exist as Hono routes. Email-OTP send/verify is owned by
+> better-auth (`/api/auth/email-otp/send-verification-otp`,
+> `/api/auth/sign-in/email-otp`) and password sign-in by
+> `/api/auth/sign-in/email`; better-auth's built-in limiter keys
+> by IP for those. The catch-all per-IP and per-user limits in this
+> doc still apply on top.
+
 Per-route budgets (additive to the existing AI route budgets):
 
 | Route | keyBy | Limit | Window |
 |---|---|---|---|
-| `POST /auth/otp/start` | `phone` | 3 | 15 min |
-| `POST /auth/otp/start` | `ip` | 10 | 1 h |
-| `POST /auth/otp/verify` | `phone` | 10 | 15 min |
-| `POST /auth/otp/verify` | `ip` | 30 | 1 h |
-| `POST /auth/password/verify` | `phone` | 10 | 1 min *(existing, refactored to middleware)* |
+| `POST /api/auth/email-otp/send-verification-otp` | `email` | 3 | 15 min |
+| `POST /api/auth/email-otp/send-verification-otp` | `ip` | 10 | 1 h |
+| `POST /api/auth/sign-in/email-otp` | `email` | 10 | 15 min |
+| `POST /api/auth/sign-in/email-otp` | `ip` | 30 | 1 h |
+| `POST /api/auth/sign-in/email` | `email` | 10 | 1 min *(existing, refactored to middleware)* |
 | `POST /waitlist` | `ip` | 5 | 1 h *(existing, refactored)* |
 | `POST /waitlist` | `ip` | 50 | 1 d *(existing, refactored)* |
 | `POST /waitlist/confirm` | `ip` | 30 | 1 h |

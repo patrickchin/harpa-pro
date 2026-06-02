@@ -92,7 +92,7 @@ apps/mobile/
 
   lib/                                 # CROSS-CUTTING (subfolders only)
     api/  auth/  audio/  camera/  config/  dialogs/  files/  nav/
-    native/  notes/  phone/  projects/  reports/  telemetry/  util/
+    native/  notes/  projects/  reports/  telemetry/  util/
     ai/  design-tokens/  dev-fixtures/  uploads/
 
   tailwind.config.js  global.css  app.config.ts  babel.config.js  metro.config.js
@@ -211,11 +211,11 @@ Token getter wiring (security review §B / §I):
 - Any post-bootstrap 401 (query OR mutation) calls
   `notifyUnauthorized()`, which clears the in-memory token + sets
   status to `unauthenticated`. The route guard in `app/_layout.tsx`
-  redirects to `/(auth)/sign-in/phone`.
+  redirects to `/(auth)/sign-in/email`.
 
 Sign-out:
 
-- Best-effort `POST /auth/logout`, then clear SecureStore + state +
+- Best-effort `POST /api/auth/sign-out`, then clear SecureStore + state +
   `queryClient.clear()`. Network failure on the POST does **not** stop
   the local clear (we'd otherwise leak a session into a multi-user
   device).

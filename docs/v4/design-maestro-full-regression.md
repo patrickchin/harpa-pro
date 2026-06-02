@@ -392,7 +392,7 @@ the testIDs + product surfaces it depends on.
 2. `feat(mobile): Report Debug screen + actions-menu entry behind showDeveloperSection` — `screens/report-debug.tsx`, `app/(app)/projects/[project]/reports/[number]/debug.tsx`, Vitest cases.
 3. `chore(mobile): testID audit — add testIDs from §3.3 to screens + components` — touches the 20+ files in the inventory; pure additive, no behaviour change.
 4. `feat(mobile): hidden project-slug + bob-user-id chips in dev/fixture builds` — header `Text testID` only mounted when `EXPO_PUBLIC_USE_FIXTURES` or `__DEV__`.
-5. ~~`feat(api): test-account allowlist + magic-OTP backdoor`~~ — **dropped.** No magic OTP backdoor. Local mode uses the existing fake-Twilio path (`TWILIO_LIVE=0` → accepts `TWILIO_VERIFY_FAKE_CODE=000000`), while dev-deployment mode uses the narrower `POST /auth/password/verify` test-account bypass that is already gated by Doppler `dev` secrets.
+5. ~~`feat(api): test-account allowlist + magic-OTP backdoor`~~ — **dropped.** No magic OTP backdoor. Local mode uses the existing fake-Twilio path (`TWILIO_LIVE=0` → accepts `TWILIO_VERIFY_FAKE_CODE=000000`), while dev-deployment mode uses the narrower `POST /api/auth/sign-in/email` test-account bypass that is already gated by Doppler `dev` secrets.
 6. ~~`chore(infra): seed cli command + Doppler dev wiring`~~ — **replaced.** Local mode signs Alice and Bob up via the normal mobile sign-up UI (modules `01-auth.yaml` and `01b-signup-bob.yaml`) and resets with `docker compose down -v`. Dev mode must use allowlisted test accounts and per-run cleanup without truncating the shared dev DB.
 7. `test(mobile): .maestro/helpers/{sign-in-alice,sign-in-bob,sign-out,open-project}.yaml` — shared building blocks. No teardown helper: state reset is `docker compose down -v` locally.
 8. `test(mobile): .maestro/modules/01-auth.yaml + 02-projects-crud.yaml`.
@@ -418,7 +418,7 @@ Future commits / goals (queued in [§7](#7-future-modules-pickup-pointers)):
 |---|---|---|
 | Q1 | Where does this land in the plan tree? | New section **P4.8 — Maestro full regression** in [`plan-p4-hardening.md`](plan-p4-hardening.md). |
 | Q2 | Does the regression journey replace `core-end-to-end.yaml`? | No. `core-end-to-end.yaml` stays as the PR-time smoke flow (≈2 min). The regression journey is the nightly/release gate (≈10 min sans voice/photo, ≈15 min with). |
-| Q3 | How do test accounts get into the `dev` deployment? | Use the existing `POST /auth/password/verify` test-account password bypass, gated by `TEST_ACCOUNT_PHONES` + `TEST_ACCOUNT_PASSWORD` in Doppler `dev`. This avoids magic OTP and real SMS while reusing the normal session/JWT path. Maestro still needs a non-production login helper or setup hook that can use this endpoint. |
+| Q3 | How do test accounts get into the `dev` deployment? | Use the existing `POST /api/auth/sign-in/email` test-account password bypass, gated by `TEST_ACCOUNT_EMAILS` + `TEST_ACCOUNT_PASSWORD` in Doppler `dev`. This avoids magic OTP and real SMS while reusing the normal session/JWT path. Maestro still needs a non-production login helper or setup hook that can use this endpoint. |
 | Q4 | Universal-links cold-tap coverage | Stays in [P4.6](plan-p4-hardening.md#p46-universal-links). |
 | Q5 | Token-event timeline (`GET /me/usage/events`) | Out of scope — stays in [P3.15.5](plan-p3-feature-build.md#p3155--llm-token-accounting) follow-up. |
 | Q6 | Android emu LLM-fixture network surface (local mode) | Verify Android emu can reach the loopback fixture server (`10.0.2.2:<port>`). Surface in step 13. |
@@ -455,9 +455,9 @@ the development deployment:
 - Mobile: preview/development app variant (`com.harpa.pro.dev`)
   pointed at the dev API, either via compile-time
   `EXPO_PUBLIC_API_URL` or the non-production API base URL override.
-- Auth: test-account password bypass (`POST /auth/password/verify`),
+- Auth: test-account password bypass (`POST /api/auth/sign-in/email`),
   not fake OTP and not real SMS. Requires the dev Fly app to have
-  `TEST_ACCOUNT_PHONES` and `TEST_ACCOUNT_PASSWORD` configured from
+  `TEST_ACCOUNT_EMAILS` and `TEST_ACCOUNT_PASSWORD` configured from
   Doppler `dev`. Local Maestro runs should keep that shared password
   in a CLI broker process, not in Maestro env/input values, because
   Maestro logs evaluated commands.

@@ -35,8 +35,10 @@ pnpm --filter @harpa/api dev
 Listens on `:8787`. `R2_FIXTURE_MODE=replay` is **required** — without
 it `pickStorage()` returns `R2Storage`, whose methods all throw.
 
-`TWILIO_LIVE` unset (default) → fake OTP. Any phone works; the accepted
-code is `TWILIO_VERIFY_FAKE_CODE` (default `000000`).
+No Twilio in v4 — auth is email-OTP via better-auth. In dev (NODE_ENV
+!= production) the `POST /api/dev/last-otp` endpoint exposes the most
+recent OTP for an email so curl/Maestro flows can finish the sign-in
+without Resend.
 
 ## 3. Curl flow
 
@@ -47,9 +49,14 @@ B=http://127.0.0.1:8787
 J='content-type: application/json'
 
 # --- auth ---------------------------------------------------------------
-curl -sX POST $B/auth/otp/start  -H "$J" -d '{"phone":"+15550000001"}'
-TOKEN=$(curl -sX POST $B/auth/otp/verify -H "$J" \
-  -d '{"phone":"+15550000001","code":"000000"}' | jq -r .token)
+EMAIL='alice@harpa.test'
+curl -sX POST $B/api/auth/email-otp/send-verification-otp -H "$J" \
+  -d "{\"email\":\"$EMAIL\",\"type\":\"sign-in\"}" | jq
+OTP=$(curl -sX POST $B/api/dev/last-otp -H "$J" \
+  -d "{\"email\":\"$EMAIL\"}" | jq -r .otp)
+TOKEN=$(curl -sD - -X POST $B/api/auth/sign-in/email-otp -H "$J" \
+  -d "{\"email\":\"$EMAIL\",\"otp\":\"$OTP\"}" -o /dev/null \
+  | awk 'tolower($1)=="set-auth-token:" {print $2}' | tr -d '\r\n')
 H="authorization: Bearer $TOKEN"
 
 # --- project + draft report --------------------------------------------
@@ -106,7 +113,7 @@ curl -sX POST $B/voice/summarize -H "$H" -H "$J" \
   -d '{"transcript":"anything"}' | jq
 
 # Logout (revokes current session)
-curl -sX POST $B/auth/logout -H "$H" | jq
+curl -sX POST $B/api/auth/sign-out -H "$H" | jq
 ```
 
 ## Notes / gotchas

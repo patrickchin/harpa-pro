@@ -153,17 +153,17 @@ canonical source at `../haru3-reports/apps/mobile@dev`.
 
 **v4 rule.**
 
-1. Auth ships in P0.6 with a working OTP flow against a Twilio
-   sandbox **before** any other API route. P1's first task is "auth
+1. Auth ships in P0.6 with a working email-OTP flow via better-auth +
+   Resend **before** any other API route. P1's first task is "auth
    middleware + integration tests".
 2. `apps/mobile/lib/env.ts` is a Zod-parsed object loaded at app
    boot. ESLint forbids `process.env.EXPO_PUBLIC_*` outside that
    file. CI runs the parse against a populated `.env.example` to
    catch missing vars before merge.
-3. OTP verify uses a single async function (`await verifyOtp`,
-   `await fetchProfile`, then `router.replace`). No `setTimeout` in
-   auth flows. Lint rule: `no-restricted-syntax` for `setTimeout`
-   inside `app/(auth)/`.
+3. OTP verify uses a single async function (`await
+   authClient.signIn.emailOtp`, then `router.replace`). No
+   `setTimeout` in auth flows. Lint rule: `no-restricted-syntax` for
+   `setTimeout` inside `app/(auth)/`.
 
 ---
 
@@ -312,11 +312,11 @@ as [Pattern R5](../bugs/README.md#r5--di-stubs-become-the-spec-default-wiring-si
    real side-effect (DB row, queued email, recorded fixture call).
    The "always-OK" stub is for negative-path tests, not the spec.
 2. **Fake-mode helpers accept what the real dev surface produces.**
-   `fakeTurnstile`, fake-Twilio, fake-R2, fake-Resend should behave
-   on the inputs the local widget / dev surface actually sends.
-   Magic token shapes (`tt-…`) are a test-only convention; if a test
-   wants the failure branch, it injects `alwaysFailX()`, not a token
-   the dev path can't generate.
+   `fakeTurnstile`, fake-R2, fake-Resend should behave on the inputs
+   the local widget / dev surface actually sends. Magic token shapes
+   (`tt-…`) are a test-only convention; if a test wants the failure
+   branch, it injects `alwaysFailX()`, not a token the dev path can't
+   generate.
 3. **One browser/device E2E per critical user flow.** Playwright
    for `apps/marketing`, Maestro for mobile. Drives the live form
    against the live compose stack, asserts the persisted side-effect

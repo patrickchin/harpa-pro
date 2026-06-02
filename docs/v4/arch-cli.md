@@ -300,19 +300,19 @@ Complete mapping of the frozen OpenAPI spec (37 routes) to CLI commands. Flags u
 
 | API route | CLI command | Flags / Args | Stdin | Stdout |
 |---|---|---|---|---|
-| `POST /auth/otp/start` | `harpa auth otp start <phone>` | | | `{ verificationId }` |
-| `POST /auth/otp/verify` | `harpa auth otp verify <phone> <code>` | `--raw` | | `{ token, user }` (or just token if `--raw`) |
-| `POST /auth/logout` | `harpa auth logout` | | | `{ ok: true }` |
+| `POST /api/auth/email-otp/send-verification-otp` | `harpa auth otp start <email>` | | | `{ ok: true }` |
+| `POST /api/auth/sign-in/email-otp` | `harpa auth otp verify <email> <code>` | `--raw` | | `{ token, user }` (or just token if `--raw`) |
+| `POST /api/auth/sign-out` | `harpa auth logout` | | | `{ ok: true }` |
 
 **Auth flow example:**
 
 ```bash
 # Start OTP
-harpa auth otp start +15551234567
-# prints: OTP sent. Verification ID: abc123
+harpa auth otp start alice@harpa.test
+# prints: OTP sent to alice@harpa.test
 
 # Verify and capture token
-export HARPA_TOKEN=$(harpa auth otp verify +15551234567 000000 --raw | jq -r .token)
+export HARPA_TOKEN=$(harpa auth otp verify alice@harpa.test 123456 --raw | jq -r .token)
 
 # Now all other commands work
 harpa me get
@@ -336,7 +336,7 @@ harpa me get
 | `PATCH /projects/:id` | `harpa projects update <id>` | `--name <n>` `--client-name <cn>` `--address <a>` | | Updated project |
 | `DELETE /projects/:id` | `harpa projects delete <id>` | | | `{ ok: true }` |
 | `GET /projects/:id/members` | `harpa projects members list <projectId>` | | | `{ items }` |
-| `POST /projects/:id/members` | `harpa projects members add <projectId>` | `--phone <p>` | | Member object |
+| `POST /projects/:id/members` | `harpa projects members add <projectId>` | `--email <e>` | | Member object |
 | `DELETE /projects/:id/members/:userId` | `harpa projects members remove <projectId> <userId>` | | | `{ ok: true }` |
 
 ### Reports (`commands/reports.ts`)
@@ -467,15 +467,15 @@ afterAll(async () => {
 }, 60_000);
 
 describe('harpa auth otp start', () => {
-  it('sends OTP and prints verificationId', async () => {
+  it('sends OTP and prints confirmation', async () => {
     const logs: string[] = [];
     const mockLog = (msg: string) => logs.push(msg);
     const app = createApp();
 
-    await otpStartCommand({ phone: '+15550400001' }, { log: mockLog, app });
+    await otpStartCommand({ email: 'alice@harpa.test' }, { log: mockLog, app });
 
     expect(logs).toHaveLength(1);
-    expect(logs[0]).toMatch(/Verification ID:/);
+    expect(logs[0]).toMatch(/OTP sent/);
   });
 });
 
@@ -526,7 +526,7 @@ CI fails if help text drifts without updating snapshots.
 
 ### Fixture mode
 
-All integration tests run with `AI_FIXTURE_MODE=replay` and `R2_FIXTURE_MODE=replay` (inherited from the existing `packages/api` test setup). No real LLM, no real R2, no real Twilio in CI.
+All integration tests run with `AI_FIXTURE_MODE=replay` and `R2_FIXTURE_MODE=replay` (inherited from the existing `packages/api` test setup). No real LLM, no real R2, no real Resend in CI — better-auth's email-OTP transport is stubbed via the dev `/api/dev/last-otp` path that reads OTPs straight from the verification table.
 
 ## Build & dev ergonomics
 
@@ -696,7 +696,7 @@ Wire into root `pnpm lint`:
 
 | Risk | Impact | Mitigation |
 |---|---|---|
-| OTP requires real Twilio in dev | High (breaks local dev) | Test mode (`TWILIO_LIVE=0`) uses fake code `000000` (already implemented in API). CLI integration tests inherit this. |
+| OTP requires real Resend in dev | High (breaks local dev) | Better-auth writes the OTP to `public.verification` regardless of email send. CLI integration tests read the OTP from the dev-only `POST /api/dev/last-otp` endpoint, mounted when `NODE_ENV != production`. |
 | Large file uploads (voice/document) | Medium (timeouts) | `files upload` helper uses streaming PUT via `node:fetch` + `fs.createReadStream()`. No in-memory buffer for files > 10 MB. |
 | `openapi-fetch` types drift from runtime API | High (silent bugs) | Existing `scripts/check-spec-drift.sh` catches this for the API; CLI depends on `@harpa/api-contract`, so drift is compile-time error. |
 | Exit codes inconsistent across commands | Medium (automation breaks) | `lib/error.ts` centralises mapping; property tests ensure every status range maps consistently. |
@@ -915,7 +915,7 @@ Wire into root `pnpm lint`:
 - **Errors:** Stderr, exit codes 0–7, `--verbose` shows headers + request ID
 - **Commands:** All 37 OpenAPI routes covered (see table above)
 - **Helpers:** `files upload --file`, `voice transcribe --file` (chain presign → PUT → transcribe)
-- **Testing:** Unit (env, render, error) + integration (Testcontainers, reuse `setup-pg.ts`, fixture-mode AI/R2/Twilio)
+- **Testing:** Unit (env, render, error) + integration (Testcontainers, reuse `setup-pg.ts`, fixture-mode AI/R2; better-auth OTP read via dev `/api/dev/last-otp`)
 - **CI:** `pnpm test:cli`, coverage gate (≥ 80%), help-drift gate, wired into root `pnpm lint`
 - **Phased:** 12 commits (CLI.1–CLI.12), each = one route group + tests + docs
 

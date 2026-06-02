@@ -12,7 +12,9 @@
 import { Hono } from 'hono';
 import { sql } from 'drizzle-orm';
 import type { AppEnv } from '../app.js';
-import { rawDb } from '../db/client.js';
+// dev-only route reads directly from public.verification; per-request scoped
+// DB doesn't have permission to SELECT auth tables.
+import { rawDb } from '../db/client.js'; // eslint-disable-line no-restricted-imports
 import { env } from '../env.js';
 
 if (env.NODE_ENV === 'production') {

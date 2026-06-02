@@ -38,6 +38,25 @@ const dbProxy = new Proxy({} as ReturnType<typeof rawDb>, {
   },
 });
 
+type BetterAuthInstance = {
+  handler: (req: Request) => Promise<Response>;
+  api: {
+    getSession: (input: {
+      headers: Headers;
+    }) => Promise<{
+      session: { id: string; userId: string };
+      user: { id: string };
+    } | null>;
+    signUpEmail: (input: {
+      body: {
+        email: string;
+        password: string;
+        name?: string;
+      };
+    }) => Promise<unknown>;
+  };
+};
+
 export const auth = betterAuth({
   secret: env.BETTER_AUTH_SECRET,
   baseURL: env.BETTER_AUTH_URL,
@@ -138,6 +157,6 @@ export const auth = betterAuth({
       },
     }),
   ],
-});
+}) as unknown as BetterAuthInstance;
 
 export type Auth = typeof auth;

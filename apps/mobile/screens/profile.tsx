@@ -45,7 +45,7 @@ import { colors } from '@/lib/design-tokens/colors';
 export interface ProfileUser {
   displayName: string | null;
   companyName: string | null;
-  phone: string | null;
+  email: string | null;
 }
 
 export interface ProfileScreenProps {
@@ -112,7 +112,7 @@ export function Profile({
 
   const displayName = user?.displayName?.trim() || 'New User';
   const companyName = user?.companyName?.trim() || 'Add your company details';
-  const phoneNumber = user?.phone?.trim() || 'No phone number on file';
+  const phoneNumber = user?.email?.trim() || 'No email on file';
 
   const sections: SectionLink[] = [
     {

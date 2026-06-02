@@ -37,7 +37,7 @@ function collectText(node: any): string {
 const USER: ProfileUser = {
   displayName: 'Jordan Sims',
   companyName: 'Sims Construction',
-  phone: '+15551234567',
+  email: "test@example.com",
 };
 
 const defaults = {
@@ -55,11 +55,11 @@ const defaults = {
 };
 
 describe('Profile', () => {
-  it('renders display name, phone, company when user is populated', () => {
+  it('renders display name, email, company when user is populated', () => {
     const tree = render(<Profile {...defaults} />);
     const text = collectText(tree.toJSON());
     expect(text).toContain('Jordan Sims');
-    expect(text).toContain('+15551234567');
+    expect(text).toContain('test@example.com');
     expect(text).toContain('Sims Construction');
   });
 
@@ -67,12 +67,12 @@ describe('Profile', () => {
     const tree = render(
       <Profile
         {...defaults}
-        user={{ displayName: null, companyName: null, phone: null }}
+        user={{ displayName: null, companyName: null, email: null }}
       />,
     );
     const text = collectText(tree.toJSON());
     expect(text).toContain('New User');
-    expect(text).toContain('No phone number on file');
+    expect(text).toContain('No email on file');
     expect(text).toContain('Add your company details');
   });
 

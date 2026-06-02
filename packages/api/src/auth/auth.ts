@@ -44,10 +44,7 @@ const allowlistGate = createAuthMiddleware(async (ctx) => {
   if (TEST_EMAILS.length === 0 || !TEST_EMAILS.includes(email)) {
     throw new APIError('UNAUTHORIZED', { message: 'Invalid credentials' });
   }
-  ctx.context.logger?.info?.({
-    msg: 'test_account_password_login_attempt',
-    email,
-  });
+  ctx.context.logger?.info?.(`test_account_password_login_attempt: ${email}`);
 });
 
 const options = {

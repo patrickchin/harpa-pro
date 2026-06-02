@@ -6,10 +6,5 @@ export {
   useAuthSession,
   type AuthStatus,
   type AuthSessionValue,
-} from './session';
-export {
-  readLastPhone,
-  writeLastPhone,
   type SessionUser,
-  type PersistedSession,
-} from './storage';
+} from './session';

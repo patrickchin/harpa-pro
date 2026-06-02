@@ -54,7 +54,7 @@ exports[`AuthVerify (signin) > matches snapshot at default props 1`] = `
               className="text-sm text-muted-foreground"
             >
               Code sent to 
-              +15551234567
+              test@example.com
             </rn-Text>
           </rn-View>
           <rn-View
@@ -152,7 +152,7 @@ exports[`AuthVerify (signin) > matches snapshot at default props 1`] = `
               <rn-Text
                 className="text-foreground font-semibold text-lg"
               >
-                Change Number
+                Change Email
               </rn-Text>
             </rn-Pressable>
           </rn-View>
@@ -256,7 +256,7 @@ exports[`AuthVerify (signup) > matches snapshot at default props 1`] = `
               className="text-sm text-muted-foreground"
             >
               Code sent to 
-              +15551234567
+              test@example.com
             </rn-Text>
           </rn-View>
           <rn-View
@@ -354,7 +354,7 @@ exports[`AuthVerify (signup) > matches snapshot at default props 1`] = `
               <rn-Text
                 className="text-foreground font-semibold text-lg"
               >
-                Change Number
+                Change Email
               </rn-Text>
             </rn-Pressable>
           </rn-View>

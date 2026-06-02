@@ -30,7 +30,7 @@ export default function ProfileRoute() {
           ? {
               displayName: user.displayName,
               companyName: user.companyName,
-              phone: user.phone,
+              email: user.email,
             }
           : null
       }

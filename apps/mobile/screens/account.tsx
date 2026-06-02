@@ -28,7 +28,7 @@ import { colors } from '@/lib/design-tokens/colors';
 import { useLayoutShiftProbe } from '@/lib/util/layout-shift-probe';
 
 export interface AccountProfile {
-  phone: string;
+  email: string;
   fullName: string | null;
   companyName: string | null;
 }
@@ -188,14 +188,14 @@ export function Account({
 
             <View onLayout={onInfoNoticeLayout}>
               <InlineNotice tone="info">
-                Phone numbers are managed through sign-in. Contact support if you need to recover access to a different number.
+                Email addresses are managed through sign-in. Contact support if you need to recover access to a different email.
               </InlineNotice>
             </View>
 
             <View onLayout={onPhoneFieldLayout}>
               <Input
-                label="Phone"
-                value={profile.phone}
+                label="Email"
+                value={profile.email}
                 editable={false}
               />
             </View>

@@ -1,91 +1,77 @@
 /**
- * Sign-up OTP verification — step 2 of sign-up OTP flow.
+ * Sign-up OTP verification — step 2 of the email-OTP sign-up flow.
  *
- * Wires the data layer for the screens/auth-verify.tsx body component
- * in 'signup' mode:
- *   - useLocalSearchParams to read the phone passed from sign-up/phone
- *   - useVerifyOtpMutation (POST /auth/otp/verify)
- *   - useOtpResend (cooldown timer + POST /auth/otp/start for resend)
- *   - useAuthSession — only its signIn(...) method to persist the result
- *   - router.replace('/') after successful verification
+ * Reads the `email` param forwarded by sign-up/email.tsx, calls
+ * authClient.signIn.emailOtp to verify the code, then navigates to
+ * the app root. The (app) auth gate routes to onboarding when
+ * displayName/companyName are missing (needs-onboarding status).
  *
- * Single async flow per Pitfall 5: mutateAsync then session.signIn then
- * router.replace. The (app) auth gate (P2.6) handles needs-onboarding vs
- * authenticated routing.
- *
- * Deliberate v4 simplification: identity (fullName/companyName) is NOT
- * passed through the OTP flow. The auth session's needs-onboarding status
- * (deriveStatus checks displayName == null) routes the user to onboarding
- * via the (app) auth gate (P2.6).
+ * Single async flow per Pitfall 5: verify → router.replace('/').
  */
 import { useCallback, useState } from 'react';
 import { Redirect, useLocalSearchParams, useRouter, type Href } from 'expo-router';
+
 import AuthVerify from '@/screens/auth-verify';
 import { useAuthSession } from '@/lib/auth';
-import { useVerifyOtpMutation } from '@/lib/api/hooks';
+import { authClient } from '@/lib/auth/client';
+import { useEmailResend } from '@/lib/auth/use-email-resend';
 import { safeBack } from '@/lib/nav/safe-back';
-import { useOtpResend } from '@/lib/auth/use-otp-resend';
 
 export default function SignUpVerifyPage() {
   const router = useRouter();
   const session = useAuthSession();
-  const params = useLocalSearchParams<{ phone: string }>();
-  const phone = params.phone ?? '';
-
-  const verifyOtpMutation = useVerifyOtpMutation();
+  const params = useLocalSearchParams<{ email: string }>();
+  const email = params.email ?? '';
 
   const [otp, setOtp] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setSubmitting] = useState(false);
 
-  const isSubmitting =
-    verifyOtpMutation.isPending || session.status === 'loading';
+  const resend = useEmailResend({ email, type: 'email-verification', isSubmitting });
 
-  const resend = useOtpResend({ phone, isSubmitting });
-
-  // Redirect if already authenticated
   if (session.status === 'authenticated') {
     return <Redirect href="/" />;
   }
 
-  // Fallback if phone is missing
-  if (!phone) {
-    return <Redirect href={'/(auth)/sign-up/phone' as Href} />;
+  if (!email) {
+    return <Redirect href={'/(auth)/sign-up/email' as Href} />;
   }
 
   const handleSubmit = async () => {
     setError(null);
     resend.clearMessages();
+    setSubmitting(true);
 
     try {
-      const result = await verifyOtpMutation.mutateAsync({
-        body: { phone, code: otp.trim() },
+      const { error: verifyError } = await authClient.signIn.emailOtp({
+        email,
+        otp: otp.trim(),
       });
-
-      await session.signIn({
-        token: result.token,
-        user: result.user,
-        phone,
-      });
-
+      if (verifyError) {
+        setError(verifyError.message ?? 'Unable to verify your code.');
+        return;
+      }
       router.replace('/' as Href);
     } catch (err) {
       const message =
         err instanceof Error ? err.message : 'Unable to verify your code.';
       setError(message);
+    } finally {
+      setSubmitting(false);
     }
   };
 
-  const handleChangeNumber = useCallback(() => {
-    safeBack(router, '/(auth)/sign-up/phone' as Href);
+  const handleChangeEmail = useCallback(() => {
+    safeBack(router, '/(auth)/sign-up/email' as Href);
   }, [router]);
 
   return (
     <AuthVerify
       mode="signup"
-      phone={phone}
+      email={email}
       otp={otp}
       onChangeOtp={setOtp}
-      onChangeNumber={handleChangeNumber}
+      onChangeEmail={handleChangeEmail}
       onResend={resend.resend}
       resendDisabled={resend.resendDisabled}
       resendCountdownSeconds={resend.resendCountdownSeconds}

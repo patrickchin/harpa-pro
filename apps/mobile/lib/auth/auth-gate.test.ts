@@ -44,7 +44,7 @@ describe('lib/auth/auth-gate', () => {
     });
 
     it('redirects unauthenticated users to sign-in', () => {
-      expect(decideAppRedirect('unauthenticated')).toBe('/(auth)/sign-in/phone');
+      expect(decideAppRedirect('unauthenticated')).toBe('/(auth)/sign-in/email');
     });
 
     it('redirects needs-onboarding users to onboarding', () => {

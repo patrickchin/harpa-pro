@@ -40,10 +40,10 @@ export type AppEnv = {
       id: string;
       email: string;
       name: string;
-      displayName: string | null;
-      companyName: string | null;
-      isAdmin: boolean | null;
-      plan: string | null;
+      displayName?: string | null;
+      companyName?: string | null;
+      isAdmin?: boolean | null;
+      plan?: string | null;
     };
     // Per-request scoped DB accessor; populated by withAuth.
     db?: ScopedDbAccessor;

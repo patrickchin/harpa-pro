@@ -131,7 +131,7 @@ exports[`Account > matches snapshot at default props 1`] = `
                 className="text-sm text-info-text"
                 selectable={true}
               >
-                Phone numbers are managed through sign-in. Contact support if you need to recover access to a different number.
+                Email addresses are managed through sign-in. Contact support if you need to recover access to a different email.
               </rn-Text>
             </rn-View>
           </rn-View>
@@ -144,7 +144,7 @@ exports[`Account > matches snapshot at default props 1`] = `
               <rn-Text
                 className="text-label text-muted-foreground"
               >
-                Phone
+                Email
               </rn-Text>
               <rn-TextInput
                 className="min-h-touch rounded-md border px-4 py-3 text-base border-border bg-surface-muted text-muted-foreground"
@@ -169,7 +169,7 @@ exports[`Account > matches snapshot at default props 1`] = `
                     undefined,
                   ]
                 }
-                value="+15551234567"
+                value="test@example.com"
               />
             </rn-View>
           </rn-View>

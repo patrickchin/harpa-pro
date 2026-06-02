@@ -22,10 +22,10 @@ import { cn } from '../lib/util/utils';
 
 type Props = {
   mode: 'signin' | 'signup';
-  phone: string;
+  email: string;
   otp: string;
   onChangeOtp: (v: string) => void;
-  onChangeNumber: () => void;
+  onChangeEmail: () => void;
   onResend: () => void;
   resendDisabled: boolean;
   resendCountdownSeconds: number | null;
@@ -52,10 +52,10 @@ const SIGNUP_IDS = {
 
 export default function AuthVerify({
   mode,
-  phone,
+  email,
   otp,
   onChangeOtp,
-  onChangeNumber,
+  onChangeEmail,
   onResend,
   resendDisabled,
   resendCountdownSeconds,
@@ -74,7 +74,7 @@ export default function AuthVerify({
         {isSignup && (
           <View className="px-5 pt-3">
             <Pressable
-              onPress={onChangeNumber}
+              onPress={onChangeEmail}
               testID={SIGNUP_IDS.back}
               accessibilityLabel="Back"
               className="flex-row items-center gap-2 py-2"
@@ -103,7 +103,7 @@ export default function AuthVerify({
             <View className="mt-8 gap-4">
               <View>
                 <Text className="text-sm text-muted-foreground">
-                  Code sent to {phone}
+                  Code sent to {email}
                 </Text>
               </View>
 
@@ -141,10 +141,10 @@ export default function AuthVerify({
                   variant="outline"
                   size="xl"
                   className="w-full"
-                  onPress={onChangeNumber}
+                  onPress={onChangeEmail}
                   disabled={isSubmitting}
                 >
-                  Change Number
+                  Change Email
                 </Button>
               </View>
 

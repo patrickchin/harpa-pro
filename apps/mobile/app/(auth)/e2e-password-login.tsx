@@ -2,17 +2,15 @@
  * Dev/test-only password login for live deployment E2E.
  *
  * This route lets Maestro authenticate allowlisted test accounts through a
- * local CLI auth broker when the dev deployment has live Twilio enabled. The
- * broker keeps the shared password out of Maestro env/input logs. It is
+ * local CLI auth broker when the dev deployment has live email OTP enabled.
+ * The broker keeps the shared password out of Maestro env/input logs. It is
  * intentionally unavailable in production builds.
  */
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-native';
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 
-import type { ResponseBody } from '@/lib/api/client';
-import { useVerifyPasswordMutation } from '@/lib/api/hooks';
-import { useAuthSession } from '@/lib/auth';
+import { authClient } from '@/lib/auth/client';
 import { env } from '@/lib/config/env';
 import { colors } from '@/lib/design-tokens/colors';
 
@@ -21,22 +19,14 @@ function firstParam(value: string | string[] | undefined): string {
   return value ?? '';
 }
 
-function normalizePhone(value: string): string {
-  const trimmed = value.trim();
-  if (/^\d+$/.test(trimmed)) return `+${trimmed}`;
-  return trimmed.replace(/^ /, '+');
-}
-
 export default function E2ePasswordLoginPage() {
   const router = useRouter();
   const params = useLocalSearchParams<{
     broker?: string | string[];
-    phone?: string | string[];
+    email?: string | string[];
   }>();
   const broker = firstParam(params.broker);
-  const phone = normalizePhone(firstParam(params.phone));
-  const session = useAuthSession();
-  const verifyPassword = useVerifyPasswordMutation();
+  const email = firstParam(params.email).trim();
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setSubmitting] = useState(false);
@@ -52,7 +42,7 @@ export default function E2ePasswordLoginPage() {
     if (
       env.EXPO_PUBLIC_APP_VARIANT === 'production' ||
       !broker ||
-      !phone ||
+      !email ||
       brokerStartedRef.current
     ) {
       return;
@@ -65,12 +55,13 @@ export default function E2ePasswordLoginPage() {
 
     void (async () => {
       try {
-        const result = await fetchBrokerSession(broker, phone, controller.signal);
-        await session.signIn({
-          token: result.token,
-          user: result.user,
-          phone,
+        const brokerPassword = await fetchBrokerPassword(broker, email, controller.signal);
+        const { error: signInError } = await authClient.signIn.email({
+          email,
+          password: brokerPassword,
+          rememberMe: false,
         });
+        if (signInError) throw new Error(signInError.message ?? 'Sign-in failed.');
         router.replace('/' as Href);
       } catch (err) {
         const message =
@@ -81,21 +72,19 @@ export default function E2ePasswordLoginPage() {
     })();
 
     return () => controller.abort();
-  }, [broker, phone, router, session]);
+  }, [broker, email, router]);
 
   async function handleSubmit() {
-    if (isSubmitting || !phone || !password) return;
+    if (isSubmitting || !email || !password) return;
     setError(null);
     setSubmitting(true);
     try {
-      const result = await verifyPassword.mutateAsync({
-        body: { phone, password },
+      const { error: signInError } = await authClient.signIn.email({
+        email,
+        password,
+        rememberMe: false,
       });
-      await session.signIn({
-        token: result.token,
-        user: result.user,
-        phone,
-      });
+      if (signInError) throw new Error(signInError.message ?? 'Sign-in failed.');
       router.replace('/' as Href);
     } catch (err) {
       const message =
@@ -107,10 +96,9 @@ export default function E2ePasswordLoginPage() {
 
   const disabled =
     env.EXPO_PUBLIC_APP_VARIANT === 'production' ||
-    !phone ||
+    !email ||
     password.length === 0 ||
-    isSubmitting ||
-    verifyPassword.isPending;
+    isSubmitting;
 
   return (
     <View
@@ -124,7 +112,7 @@ export default function E2ePasswordLoginPage() {
         >
           {error}
         </Text>
-      ) : isSubmitting || verifyPassword.isPending ? (
+      ) : isSubmitting ? (
         <>
           <ActivityIndicator color={colors.foreground} />
           <Text
@@ -174,13 +162,17 @@ export default function E2ePasswordLoginPage() {
   );
 }
 
-async function fetchBrokerSession(
+/**
+ * Fetch the test account password from the local CLI broker.
+ * The broker returns `{ password: string }` for the given email.
+ */
+async function fetchBrokerPassword(
   broker: string,
-  phone: string,
+  email: string,
   signal: AbortSignal,
-): Promise<ResponseBody<'/auth/password/verify', 'post'>> {
+): Promise<string> {
   const url = new URL('/session', broker);
-  url.searchParams.set('phone', phone);
+  url.searchParams.set('email', email);
 
   const res = await fetch(url.toString(), {
     headers: { Accept: 'application/json' },
@@ -211,13 +203,11 @@ async function fetchBrokerSession(
   if (
     !body ||
     typeof body !== 'object' ||
-    !('token' in body) ||
-    typeof body.token !== 'string' ||
-    !('user' in body) ||
-    !body.user
+    !('password' in body) ||
+    typeof body.password !== 'string'
   ) {
-    throw new Error('Auth broker returned an invalid session.');
+    throw new Error('Auth broker returned an invalid response (expected { password }).');
   }
 
-  return body as ResponseBody<'/auth/password/verify', 'post'>;
+  return body.password;
 }

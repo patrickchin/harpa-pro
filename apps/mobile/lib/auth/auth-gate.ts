@@ -48,7 +48,7 @@ export function decideAuthRedirect(status: AuthStatus, pathname: string): Href |
  */
 export function decideAppRedirect(status: AuthStatus): Href | null {
   if (status === 'unauthenticated') {
-    return '/(auth)/sign-in/phone' as Href;
+    return '/(auth)/sign-in/email' as Href;
   }
   if (status === 'needs-onboarding') {
     return '/(auth)/onboarding' as Href;

@@ -11,10 +11,10 @@ function render(element: React.ReactElement): TestRenderer.ReactTestRenderer {
 }
 
 const baseProps = {
-  phone: '+15551234567',
+  email: "test@example.com",
   otp: '',
   onChangeOtp: vi.fn(),
-  onChangeNumber: vi.fn(),
+  onChangeEmail: vi.fn(),
   onResend: vi.fn(),
   resendDisabled: false,
   resendCountdownSeconds: null,

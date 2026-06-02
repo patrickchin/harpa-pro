@@ -12,15 +12,15 @@
 #   - Boundary values (empty strings, null fields, huge limits)
 #   - Rate-limit probing (optional)
 #
-# Requires: jq, curl, two test accounts (PHONE, PHONE2 + shared PASSWORD).
+# Requires: jq, curl, two test accounts (EMAIL, EMAIL2 + shared PASSWORD).
 #
 # Usage:
 #   PASSWORD=secret bash scripts/journey-stress.sh
 set -euo pipefail
 
 BASE=${BASE:-https://harpa-pro-api-dev.fly.dev}
-PHONE=${PHONE:-+15550199001}
-PHONE2=${PHONE2:-+15550199002}
+EMAIL=${EMAIL:-alice@dev.harpa.test}
+EMAIL2=${EMAIL2:-bob@dev.harpa.test}
 : "${PASSWORD:?PASSWORD env var is required}"
 
 SAMPLES="$(cd "$(dirname "$0")/../../apps/cli/scripts/samples" && pwd)"
@@ -37,6 +37,16 @@ req() {
   curl -fsS -X "$1" "$BASE$2" "${H[@]}" \
     ${TOKEN:+-H "authorization: Bearer $TOKEN"} \
     ${3:+-d "$3"}
+}
+
+# password_login EMAIL PASSWORD -> echoes the bearer token from the
+# `set-auth-token` response header on POST /api/auth/sign-in/email.
+password_login() {
+  local email="$1" pass="$2"
+  local headers; headers=$(curl -fsS -D - -o /dev/null -X POST \
+    "$BASE/api/auth/sign-in/email" "${H[@]}" \
+    -d "{\"email\":\"$email\",\"password\":\"$pass\"}" 2>/dev/null) || return 1
+  printf '%s' "$headers" | awk 'tolower($1)=="set-auth-token:" {print $2}' | tr -d '\r\n'
 }
 
 # Returns HTTP status + body. Does not fail on 4xx/5xx.
@@ -99,21 +109,21 @@ echo ""
 echo "── A. Authentication failures ──"
 TOKEN=""
 
-check "wrong password" 401 POST /auth/password/verify \
-  "{\"phone\":\"$PHONE\",\"password\":\"wrong_password_123\"}"
+check "wrong password" 401 POST /api/auth/sign-in/email \
+  "{\"email\":\"$EMAIL\",\"password\":\"wrong_password_123\"}"
 
-check "empty phone" 400 POST /auth/password/verify \
-  '{"phone":"","password":"anything"}'
+check "empty email" 400 POST /api/auth/sign-in/email \
+  '{"email":"","password":"anything"}'
 
-check "invalid phone format" 400 POST /auth/password/verify \
-  '{"phone":"not-a-phone","password":"anything"}'
+check "invalid email format" 400 POST /api/auth/sign-in/email \
+  '{"email":"not-an-email","password":"anything"}'
 
-check "missing password field" 400 POST /auth/password/verify \
-  "{\"phone\":\"$PHONE\"}"
+check "missing password field" 400 POST /api/auth/sign-in/email \
+  "{\"email\":\"$EMAIL\"}"
 
-check "empty body" 400 POST /auth/password/verify ''
+check "empty body" 400 POST /api/auth/sign-in/email ''
 
-check "malformed JSON" 400 POST /auth/password/verify \
+check "malformed JSON" 400 POST /api/auth/sign-in/email \
   '{this is not json}'
 
 # ══════════════════════════════════════════════════════════════════════
@@ -140,7 +150,7 @@ TOKEN="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c3JfZmFrZSIsInNpZCI6InNl
 
 check "GET /me with fake token" 401 GET /me ''
 check "POST /projects with fake token" 401 POST /projects '{"name":"x"}'
-check "POST /auth/logout with fake token" 401 POST /auth/logout ''
+check "POST /api/auth/sign-out with fake token" 401 POST /api/auth/sign-out ''
 
 # ══════════════════════════════════════════════════════════════════════
 # SECTION D: Cross-user access (user B trying user A's resources)
@@ -150,8 +160,8 @@ echo ""
 echo "── D. Cross-user access ──"
 
 # Login as user A, create resources
-TOKEN=$(req POST /auth/password/verify \
-  "{\"phone\":\"$PHONE\",\"password\":\"$PASSWORD\"}" | j .token)
+TOKEN=$(password_login "$EMAIL" "$PASSWORD")
+[[ -n "$TOKEN" ]] || { echo "  ✗ no set-auth-token header on sign-in" >&2; exit 1; }
 TOKEN_A="$TOKEN"
 echo "  user A logged in"
 
@@ -171,8 +181,7 @@ echo "  note: $NID_A"
 # Try login as user B
 HAS_USER_B=false
 set +e
-TOKEN_B=$(req POST /auth/password/verify \
-  "{\"phone\":\"$PHONE2\",\"password\":\"$PASSWORD\"}" 2>/dev/null | j .token)
+TOKEN_B=$(password_login "$EMAIL2" "$PASSWORD" 2>/dev/null)
 set -e
 if [[ -n "$TOKEN_B" && "$TOKEN_B" != "null" ]]; then
   HAS_USER_B=true
@@ -190,7 +199,7 @@ if [[ -n "$TOKEN_B" && "$TOKEN_B" != "null" ]]; then
   check "B: generate A's report" 404 POST "/projects/$PID_A/reports/$RNUM_A/generate" '{}'
   check "B: GET A's members" 404 GET "/projects/$PID_A/members" ''
 else
-  echo "  ⚠️  user B unavailable (PHONE2 not in TEST_ACCOUNT_PHONES) — skipping cross-user checks"
+  echo "  ⚠️  user B unavailable (EMAIL2 not in TEST_ACCOUNT_EMAILS) — skipping cross-user checks"
   TOKEN_B=""
 fi
 
@@ -205,7 +214,7 @@ if [[ "$HAS_USER_B" == "true" ]]; then
   # User A adds B as viewer
   TOKEN="$TOKEN_A"
   req POST "/projects/$PID_A/members" \
-    "{\"phone\":\"$PHONE2\",\"role\":\"viewer\"}" >/dev/null
+    "{\"email\":\"$EMAIL2\",\"role\":\"viewer\"}" >/dev/null
   echo "  B added as viewer to A's project"
 
   # User B tries owner operations
@@ -217,7 +226,7 @@ if [[ "$HAS_USER_B" == "true" ]]; then
   check "viewer: PATCH project (allowed — no role gate)" 200 PATCH "/projects/$PID_A" '{"name":"viewer rename"}'
   check "viewer: DELETE project (owner-only)" 404 DELETE "/projects/$PID_A"
   check "viewer: add member" 403 POST "/projects/$PID_A/members" \
-    '{"phone":"+15550199003","role":"editor"}'
+    '{"email":"charlie@harpa.test","role":"editor"}'
   check "viewer: remove member" 403 DELETE "/projects/$PID_A/members/usr_000000000000"
 
   # Viewer CAN read (should get 200)
@@ -336,15 +345,15 @@ check "GET /nonexistent" 404 GET /nonexistent ''
 if [[ "$BASE" != *"harpa-pro-api.fly.dev"* ]]; then
   echo ""
   echo "── J. Rate-limit probe (non-production only) ──"
-  # Use a dummy phone (not PHONE/PHONE2) so we don't burn the real test
-  # accounts' per-phone rate limit budget. The middleware runs before
-  # auth, so any phone trips the limiter.
-  PROBE_PHONE="+15550199099"
+  # Use a dummy email (not EMAIL/EMAIL2) so we don't burn the real test
+  # accounts' per-account rate limit budget. The middleware runs before
+  # auth, so any email trips the limiter.
+  PROBE_EMAIL="probe-rate-limit@harpa.test"
   TOKEN=""
   RATE_LIMITED=false
   for i in $(seq 1 25); do
-    response=$(raw POST /auth/password/verify \
-      "{\"phone\":\"$PROBE_PHONE\",\"password\":\"wrong$i\"}")
+    response=$(raw POST /api/auth/sign-in/email \
+      "{\"email\":\"$PROBE_EMAIL\",\"password\":\"wrong$i\"}")
     status=$(echo "$response" | tail -1)
     if [[ "$status" == "429" ]]; then
       echo "  ✓ rate limited after $i attempts (429)"
@@ -380,10 +389,10 @@ fi
 req DELETE "/projects/$PID_A" >/dev/null
 echo "  ✓ A's resources cleaned"
 
-req POST /auth/logout '' >/dev/null
+req POST /api/auth/sign-out '' >/dev/null
 if [[ "$HAS_USER_B" == "true" && -n "$TOKEN_B" ]]; then
   TOKEN="$TOKEN_B"
-  req POST /auth/logout '' >/dev/null
+  req POST /api/auth/sign-out '' >/dev/null
 fi
 echo "  ✓ logged out"
 

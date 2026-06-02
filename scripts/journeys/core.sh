@@ -18,7 +18,7 @@
 set -euo pipefail
 
 BASE=${BASE:-https://harpa-pro-api-dev.fly.dev}
-PHONE=${PHONE:-+15550199001}
+EMAIL=${EMAIL:-alice@dev.harpa.test}
 : "${PASSWORD:?PASSWORD env var is required}"
 
 SAMPLES="$(cd "$(dirname "$0")/../../apps/cli/scripts/samples" && pwd)"
@@ -40,6 +40,16 @@ req() {
   curl -fsS -X "$1" "$BASE$2" "${H[@]}" \
     ${TOKEN:+-H "authorization: Bearer $TOKEN"} \
     ${3:+-d "$3"}
+}
+
+# password_login EMAIL PASSWORD -> echoes the bearer token from the
+# `set-auth-token` response header on POST /api/auth/sign-in/email.
+password_login() {
+  local email="$1" pass="$2"
+  local headers; headers=$(curl -fsS -D - -o /dev/null -X POST \
+    "$BASE/api/auth/sign-in/email" "${H[@]}" \
+    -d "{\"email\":\"$email\",\"password\":\"$pass\"}")
+  printf '%s' "$headers" | awk 'tolower($1)=="set-auth-token:" {print $2}' | tr -d '\r\n'
 }
 
 # Expect a specific HTTP status (does not fail the script on 4xx/5xx).
@@ -81,16 +91,16 @@ echo "→ readyz";             req GET /readyz  '' >/dev/null
 
 # ── 2. Authentication ─────────────────────────────────────────────────
 
-echo "→ POST /auth/password/verify"
-TOKEN=$(req POST /auth/password/verify \
-  "{\"phone\":\"$PHONE\",\"password\":\"$PASSWORD\"}" | j .token)
+echo "→ POST /api/auth/sign-in/email"
+TOKEN=$(password_login "$EMAIL" "$PASSWORD")
+[[ -n "$TOKEN" ]] || { echo "  ✗ no set-auth-token header on sign-in" >&2; exit 1; }
 echo "  ✓ token acquired"
 
 # ── 3. User profile ──────────────────────────────────────────────────
 
 echo "→ GET /me"
 ME=$(req GET /me '')
-echo "  phone=$(echo "$ME" | j .user.phone)"
+echo "  email=$(echo "$ME" | j .user.email)"
 
 echo "→ PATCH /me (set display name)"
 req PATCH /me '{"displayName":"Core Journey User","companyName":"Journey Testing Ltd"}' >/dev/null
@@ -251,8 +261,8 @@ echo "→ DELETE report"
 req DELETE "/projects/$PID/reports/$RNUM" >/dev/null
 echo "→ DELETE project"
 req DELETE "/projects/$PID" >/dev/null
-echo "→ POST /auth/logout"
-req POST /auth/logout '' >/dev/null
+echo "→ POST /api/auth/sign-out"
+req POST /api/auth/sign-out '' >/dev/null
 
 echo ""
 echo "✓ JOURNEY-CORE complete"

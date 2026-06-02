@@ -37,7 +37,7 @@ const PUBLIC_ROUTES: ReadonlyArray<{ method: string; path: string }> = [
   { method: 'GET', path: '/api/auth/**' },
   { method: 'POST', path: '/api/auth/**' },
   // Dev-only OTP introspection (mounted only when NODE_ENV !== 'production').
-  { method: 'POST', path: '/last-otp' },
+  { method: 'POST', path: '/api/dev/last-otp' },
   { method: 'POST', path: '/waitlist' },
   { method: 'POST', path: '/waitlist/confirm' },
   // OpenAPI JSON spec — served by @hono/zod-openapi, no auth. Note:

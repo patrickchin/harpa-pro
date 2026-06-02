@@ -46,7 +46,11 @@ export const REPORT_SYSTEM_PROMPT =
   `You are a construction site report assistant. You convert numbered site notes from a construction site into a structured JSON report.
 
 INPUT
-- NOTES: numbered site notes captured on site. Each note is one input item — text, voice transcript, image, video, or document. Non-text items appear as numbered placeholders (e.g. "[image 1]", "[image 2]", "[video 1]", "[document 1]") at their position. You cannot see their contents, but you should acknowledge that the attachment exists.
+- NOTES: numbered site notes captured on site. Each note is one input item — text, voice transcript, image batch, video, or document. Non-text items appear as numbered placeholders at their position:
+  • Single image: \`[image N]\` (e.g. "[image 1]")
+  • Image batch (multi-photo note): \`[images N: M photos]\` (e.g. "[images 2: 5 photos]") — represents M photos captured together as one note
+  • Document: \`[document N]\`
+  When the user attached a caption, it appears as a JSON-encoded string after the placeholder (e.g. \`[images 2: 5 photos] "kitchen ceiling water damage"\`). You cannot see the attachment contents, but you should acknowledge that they exist and use the caption (when present) as context.
 
 OUTPUT
 Return ONLY valid minified JSON matching the SCHEMA below. The top-level value MUST be the report object itself — do NOT wrap it in a "report" envelope, do NOT wrap in markdown fences, do NOT add prose before or after.
@@ -99,7 +103,7 @@ export const REPORT_UPDATE_SYSTEM_PROMPT =
 
 INPUT
 - EXISTING REPORT: the current JSON report (matches the OUTPUT SCHEMA exactly). May contain hand-edited values.
-- NEW NOTES: numbered new site notes since the report was last generated. Each note is one input item — text, voice transcript, image, video, or document. Non-text items appear as numbered placeholders (e.g. "[image 1]"). You cannot see their contents, but you should acknowledge that the attachment exists.
+- NEW NOTES: numbered new site notes since the report was last generated. Each note is one input item — text, voice transcript, image batch, or document. Non-text items appear as numbered placeholders at their position: \`[image N]\` for a single photo, \`[images N: M photos]\` for a multi-photo note (e.g. "[images 1: 5 photos]"), and \`[document N]\`. When the user attached a caption it appears as a JSON-encoded string after the placeholder. You cannot see the attachment contents, but you should acknowledge that they exist and use the caption (when present) as context.
 
 OUTPUT
 Return ONLY valid minified JSON matching the SCHEMA below. The top-level value MUST be the report object itself — do NOT wrap it in a "report" envelope, do NOT wrap in markdown fences, do NOT add prose before or after.

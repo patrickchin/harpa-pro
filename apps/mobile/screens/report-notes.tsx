@@ -6,9 +6,8 @@
  *
  * Props-driven so dev mirrors + tests can render canned data.
  */
-import { type ReactNode } from 'react';
+import { type ReactNode, useMemo, useState } from 'react';
 import { RefreshControl, ScrollView, Text, View } from 'react-native';
-import { useState } from 'react';
 
 import { SafeAreaView } from '@/components/primitives/SafeAreaView';
 import { ScreenHeader } from '@/components/primitives/ScreenHeader';
@@ -64,18 +63,46 @@ export function ReportNotes(props: ReportNotesProps) {
     null,
   );
 
-  const photoGallery = (noteRows ?? [])
-    .filter(
-      (n): n is ReportNoteRow & { fileId: string } =>
-        n.kind === 'photo' && typeof n.fileId === 'string' && !!n.fileId,
-    )
-    .map((n) => ({
-      fileId: n.fileId,
-      thumbnailFileId: n.thumbnailFileId ?? null,
-      noteId: n.noteId ?? n.id,
-      title: n.body?.trim() || 'Photo',
-      cacheKey: n.fileId,
-    }));
+  // Photo gallery for the swipeable preview modal — one entry per
+  // joined `note_files` row across every image note, ordered by note
+  // creation then file position. Mirrors the gallery built in
+  // `screens/saved-report.tsx`.
+  const photoGallery = useMemo(() => {
+    const out: Array<{
+      fileId: string;
+      thumbnailFileId: string | null;
+      noteId: string;
+      title: string;
+      cacheKey: string;
+    }> = [];
+    for (const n of noteRows ?? []) {
+      if (n.kind !== 'photo') continue;
+      const title = n.body?.trim() || 'Photo';
+      if (n.files && n.files.length > 0) {
+        const sorted = n.files.slice().sort((a, b) => a.position - b.position);
+        for (const f of sorted) {
+          out.push({
+            fileId: f.fileId,
+            thumbnailFileId: f.thumbnailFileId,
+            noteId: n.id,
+            title,
+            cacheKey: f.fileId,
+          });
+        }
+        continue;
+      }
+      if (n.fileId) {
+        out.push({
+          fileId: n.fileId,
+          thumbnailFileId: n.thumbnailFileId ?? null,
+          noteId: n.id,
+          title,
+          cacheKey: n.fileId,
+        });
+      }
+    }
+    return out;
+  }, [noteRows]);
 
   const handleOpenPhoto = (input: { fileId: string; title?: string }) => {
     const idx = photoGallery.findIndex((p) => p.fileId === input.fileId);

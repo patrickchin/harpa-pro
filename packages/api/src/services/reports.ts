@@ -338,22 +338,35 @@ export async function deleteReport(db: Db, reportId: string): Promise<boolean> {
  * Build the user-prompt payload for `generateReport`.
  *
  * Returns a numbered, kind-aware notes block. Text + voice notes carry
- * their body/transcript verbatim; image/document notes contribute a
- * `[image N]` / `[document N]` placeholder so the LLM acknowledges the
- * attachment without seeing its contents. The structure ("NOTES:\n[1]
- * …") matches the canonical v3 `formatNotes` / `buildPrompt` shape the
- * SYSTEM_PROMPT references — keep them in sync.
+ * their body/transcript verbatim; image notes are batches of one or
+ * more photos via `app.note_files` and contribute a labelled placeholder
+ * such as `[images 1: 5 photos]` (with the user-supplied caption when
+ * present). Document notes work the same way for now (single file, but
+ * the `[document N]` placeholder + caption keeps the wire shape parallel
+ * to images).
+ *
+ * The structure ("NOTES:\n[1] …") matches the canonical v3 `formatNotes`
+ * / `buildPrompt` shape the SYSTEM_PROMPT references — keep them in
+ * sync.
  */
 export async function collectNotesForGeneration(db: Db, reportId: string): Promise<string> {
   const r = await db.execute<{
+    id: string;
     kind: 'text' | 'voice' | 'image' | 'document';
     body: string | null;
     transcript: string | null;
+    file_count: number;
   }>(sql`
-    SELECT kind, body, transcript
-    FROM app.notes
-    WHERE report_id = ${reportId}
-    ORDER BY created_at ASC, id ASC
+    SELECT n.id, n.kind, n.body, n.transcript,
+           COALESCE(nf.file_count, 0) AS file_count
+    FROM app.notes n
+    LEFT JOIN (
+      SELECT note_id, COUNT(*)::int AS file_count
+      FROM app.note_files
+      GROUP BY note_id
+    ) nf ON nf.note_id = n.id
+    WHERE n.report_id = ${reportId}
+    ORDER BY n.created_at ASC, n.id ASC
   `);
   const counters: Record<'image' | 'document', number> = { image: 0, document: 0 };
   const lines: string[] = [];
@@ -366,12 +379,26 @@ export async function collectNotesForGeneration(db: Db, reportId: string): Promi
       case 'voice':
         content = (note.transcript ?? note.body ?? '').trim();
         break;
-      case 'image':
-        content = `[image ${++counters.image}]`;
+      case 'image': {
+        // `note_files.file_count` is the canonical photo count post-0010.
+        // Treat 0 as 1 so legacy unmigrated rows (no join entry) still
+        // surface as a placeholder rather than vanishing.
+        const count = note.file_count > 0 ? note.file_count : 1;
+        const idx = ++counters.image;
+        const head = count === 1
+          ? `[image ${idx}]`
+          : `[images ${idx}: ${count} photos]`;
+        const caption = (note.body ?? '').trim();
+        content = caption ? `${head} ${JSON.stringify(caption)}` : head;
         break;
-      case 'document':
-        content = `[document ${++counters.document}]`;
+      }
+      case 'document': {
+        const idx = ++counters.document;
+        const head = `[document ${idx}]`;
+        const caption = (note.body ?? '').trim();
+        content = caption ? `${head} ${JSON.stringify(caption)}` : head;
         break;
+      }
       default:
         content = (note.body ?? '').trim();
     }
@@ -500,6 +527,13 @@ export interface ReportDebugRow {
     kind: 'text' | 'voice' | 'image' | 'document';
     body: string | null;
     transcript: string | null;
+    files: Array<{
+      id: string;
+      fileId: string;
+      thumbnailFileId: string | null;
+      position: number;
+      caption: string | null;
+    }>;
     createdAt: string;
   }>;
   lastGeneration: ReportLastGeneration | null;
@@ -534,11 +568,53 @@ export async function getReportDebug(db: Db, reportId: string): Promise<ReportDe
     WHERE report_id = ${reportId}
     ORDER BY created_at ASC, id ASC
   `);
+
+  // Image-note attachments via the join table, so the operator can
+  // see how many photos hung off each note (the prompt collapses a
+  // batch to a single placeholder, which is otherwise invisible).
+  const imageNoteIds = notesResult.rows.filter((n) => n.kind === 'image').map((n) => n.id);
+  const filesByNoteId = new Map<
+    string,
+    Array<{ id: string; fileId: string; thumbnailFileId: string | null; position: number; caption: string | null }>
+  >();
+  if (imageNoteIds.length > 0) {
+    const idFragments = imageNoteIds.map((id) => sql`${id}`);
+    const inList = idFragments.reduce<ReturnType<typeof sql>>(
+      (acc, frag, idx) => (idx === 0 ? frag : sql`${acc}, ${frag}`),
+      sql``,
+    );
+    const nfResult = await db.execute<{
+      id: string;
+      note_id: string;
+      file_id: string;
+      thumbnail_file_id: string | null;
+      position: number;
+      caption: string | null;
+    }>(sql`
+      SELECT id, note_id, file_id, thumbnail_file_id, position, caption
+      FROM app.note_files
+      WHERE note_id IN (${inList})
+      ORDER BY note_id, position
+    `);
+    for (const nf of nfResult.rows) {
+      const arr = filesByNoteId.get(nf.note_id) ?? [];
+      arr.push({
+        id: nf.id,
+        fileId: nf.file_id,
+        thumbnailFileId: nf.thumbnail_file_id,
+        position: nf.position,
+        caption: nf.caption,
+      });
+      filesByNoteId.set(nf.note_id, arr);
+    }
+  }
+
   const notes = notesResult.rows.map((n) => ({
     id: n.id,
     kind: n.kind,
     body: n.body,
     transcript: n.transcript,
+    files: filesByNoteId.get(n.id) ?? [],
     createdAt: new Date(n.created_at).toISOString(),
   }));
 

@@ -8,9 +8,10 @@
  * when present, falling back to the full image for legacy notes. Tap
  * a tile to open the fullscreen swipeable gallery.
  *
- * Photos are grouped by `noteId` so batch uploads appear together.
- * The first tile of a multi-photo batch shows a small "+N" stack
- * badge to signal additional images in the group.
+ * Photos are grouped by note: each image note's `files[]` array
+ * forms one batch group, separated by a thin divider. The first
+ * tile of a multi-photo batch shows a small "+N" stack badge to
+ * signal additional images in the group.
  */
 import { useCallback, useMemo, useState } from 'react';
 import { Text, View, type LayoutChangeEvent } from 'react-native';
@@ -30,7 +31,12 @@ export interface ReportPhotosProps {
 
 interface PhotoGroup {
   noteId: string;
-  photos: Array<ReportNoteRow & { fileId: string }>;
+  title: string;
+  photos: ReadonlyArray<{
+    id: string;
+    fileId: string;
+    thumbnailFileId: string | null;
+  }>;
 }
 
 const COLUMNS = 3;
@@ -38,25 +44,42 @@ const GAP = 6;
 
 export function ReportPhotos({ noteRows, onOpenPhoto }: ReportPhotosProps) {
   const groups = useMemo((): PhotoGroup[] => {
-    const photos = (noteRows ?? []).filter(
-      (n): n is ReportNoteRow & { fileId: string } =>
-        n.kind === 'photo' && typeof n.fileId === 'string' && !!n.fileId,
-    );
-
-    // Group by noteId (batch key). Falls back to the row's own id for
-    // legacy single-file notes so they each form their own group.
-    const groupMap = new Map<string, Array<(typeof photos)[number]>>();
-    for (const p of photos) {
-      const key = p.noteId ?? p.id;
-      const group = groupMap.get(key);
-      if (group) group.push(p);
-      else groupMap.set(key, [p]);
+    const out: PhotoGroup[] = [];
+    for (const n of noteRows ?? []) {
+      if (n.kind !== 'photo') continue;
+      const title = n.body?.trim() || 'Photo';
+      // Canonical path: per-file rows from `note_files`.
+      if (n.files && n.files.length > 0) {
+        const photos = n.files
+          .slice()
+          .sort((a, b) => a.position - b.position)
+          .map((f) => ({
+            id: f.id,
+            fileId: f.fileId,
+            thumbnailFileId: f.thumbnailFileId,
+          }));
+        if (photos.length > 0) {
+          out.push({ noteId: n.id, title, photos });
+        }
+        continue;
+      }
+      // Legacy single-file fallback for image notes that pre-date
+      // `note_files` and never got backfilled.
+      if (n.fileId) {
+        out.push({
+          noteId: n.id,
+          title,
+          photos: [
+            {
+              id: n.id,
+              fileId: n.fileId,
+              thumbnailFileId: n.thumbnailFileId ?? null,
+            },
+          ],
+        });
+      }
     }
-
-    return Array.from(groupMap.entries()).map(([noteId, items]) => ({
-      noteId,
-      photos: items,
-    }));
+    return out;
   }, [noteRows]);
 
   const [containerWidth, setContainerWidth] = useState(0);
@@ -92,17 +115,16 @@ export function ReportPhotos({ noteRows, onOpenPhoto }: ReportPhotosProps) {
               )}
               <View className="flex-row flex-wrap" style={{ gap: GAP }}>
                 {group.photos.map((p, idx) => {
-                  const title = p.body?.trim() || 'Photo';
                   const isFirstOfBatch = idx === 0 && group.photos.length > 1;
                   return (
                     <View key={p.id} style={{ width: tileSize, height: tileSize }}>
                       <PhotoTile
                         attachment={attachmentFromSavedFile(
-                          { id: p.id, fileId: p.fileId, thumbnailFileId: p.thumbnailFileId ?? null },
+                          { id: p.id, fileId: p.fileId, thumbnailFileId: p.thumbnailFileId },
                           idx,
                         )}
                         size={tileSize}
-                        onPress={(p.fileId && onOpenPhoto) ? () => onOpenPhoto({ fileId: p.fileId, title }) : undefined}
+                        onPress={onOpenPhoto ? () => onOpenPhoto({ fileId: p.fileId, title: group.title }) : undefined}
                         testID={`btn-report-photo-${p.id}`}
                       />
                       {isFirstOfBatch && (

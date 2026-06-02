@@ -237,26 +237,47 @@ export function SavedReport(props: SavedReportProps) {
   const notesCount = (noteRows ?? []).length;
 
   // Gallery of all photo-notes — drives the swipeable preview modal.
-  // Order matches `noteRows`; both `ReportPhotos` and `ReportNotesPane`
-  // tap-handlers resolve into this same list by `fileId`.
-  const photoGallery = useMemo(
-    () =>
-      (noteRows ?? [])
-        .filter(
-          (n): n is ReportNoteRow & { fileId: string } =>
-            n.kind === 'photo' &&
-            typeof n.fileId === 'string' &&
-            !!n.fileId,
-        )
-        .map((n) => ({
+  // One entry per joined `note_files` row across every image note,
+  // ordered by note creation then file position. Both `ReportPhotos`
+  // and `ReportNotesPane` tap-handlers resolve into this same list
+  // by `fileId`.
+  const photoGallery = useMemo(() => {
+    const out: Array<{
+      fileId: string;
+      thumbnailFileId: string | null;
+      noteId: string;
+      title: string;
+      cacheKey: string;
+    }> = [];
+    for (const n of noteRows ?? []) {
+      if (n.kind !== 'photo') continue;
+      const title = n.body?.trim() || 'Photo';
+      if (n.files && n.files.length > 0) {
+        const sorted = n.files.slice().sort((a, b) => a.position - b.position);
+        for (const f of sorted) {
+          out.push({
+            fileId: f.fileId,
+            thumbnailFileId: f.thumbnailFileId,
+            noteId: n.id,
+            title,
+            cacheKey: f.fileId,
+          });
+        }
+        continue;
+      }
+      // Legacy single-file fallback.
+      if (n.fileId) {
+        out.push({
           fileId: n.fileId,
           thumbnailFileId: n.thumbnailFileId ?? null,
-          noteId: n.noteId ?? n.id,
-          title: n.body?.trim() || 'Photo',
+          noteId: n.id,
+          title,
           cacheKey: n.fileId,
-        })),
-    [noteRows],
-  );
+        });
+      }
+    }
+    return out;
+  }, [noteRows]);
 
   const handleOpenPhoto = (input: { fileId: string; title?: string }) => {
     const idx = photoGallery.findIndex((p) => p.fileId === input.fileId);

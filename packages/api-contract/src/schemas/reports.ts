@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { isoDateTime, reportNumber } from './_shared.js';
 import { noteId, projectId, reportId } from './ids.js';
-import { noteKind } from './notes.js';
+import { noteFile, noteKind } from './notes.js';
 
 export const reportStatus = z.enum(['draft', 'finalized']);
 export type ReportStatus = z.infer<typeof reportStatus>;
@@ -177,6 +177,10 @@ export const reportDebugNote = z.object({
   kind: noteKind,
   body: z.string().nullable(),
   transcript: z.string().nullable(),
+  /** Files attached to this note (only populated for image notes). Mirrors
+   *  the same shape returned by GET /reports/{report}/notes so the debug
+   *  screen can show how many photos are batched on each note. */
+  files: z.array(noteFile).default([]),
   createdAt: isoDateTime,
 });
 

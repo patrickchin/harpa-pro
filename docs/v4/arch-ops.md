@@ -159,7 +159,10 @@ PR open / push (same-repo only, forks skipped)
     ↳ /readyz verified
     ↳ sticky PR comment with preview URL
   ↳ marketing preview deploy to CF Pages (marketing-preview.yml)
-  ↳ EAS Update → `development` channel (mobile-ota-pr.yml)
+  ↳ EAS Update → `development` channel, pinned to PR API (mobile-ota-pr.yml)
+    ↳ bundle's `EXPO_PUBLIC_API_URL` is `harpa-pro-api-pr-<n>.fly.dev`
+    ↳ branch is last-write-wins; engineers select older PR bundles
+      via the dev-client launcher (Updates → development → pick)
   ↳ EAS preview build (manual trigger — planned)
 
 PR close

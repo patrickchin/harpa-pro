@@ -57,8 +57,15 @@ jobs:
 
       - name: Push OTA update to development channel
         working-directory: apps/mobile
+        # `EXPO_PUBLIC_API_URL` is inlined into the JS bundle by Metro at
+        # `eas update` time, so each PR's bundle is hardcoded to its own
+        # Fly preview API (`harpa-pro-api-pr-<n>.fly.dev`, deployed by
+        # pr-preview.yml). The `development` EAS branch holds only the
+        # most recent PR push — engineers select older PR bundles via
+        # the dev-client launcher (Updates → development → pick).
         env:
-          EXPO_PUBLIC_API_URL: https://harpa-pro-api-dev.fly.dev
+          EXPO_PUBLIC_API_URL: https://harpa-pro-api-pr-${{ github.event.pull_request.number }}.fly.dev
+          EXPO_PUBLIC_PR_NUMBER: ${{ github.event.pull_request.number }}
           EXPO_PUBLIC_APP_VARIANT: development
           EXPO_PUBLIC_USE_FIXTURES: "false"
         run: |

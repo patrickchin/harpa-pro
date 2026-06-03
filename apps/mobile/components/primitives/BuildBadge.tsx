@@ -45,7 +45,11 @@ export function BuildBadge({ testID = 'build-badge' }: { testID?: string }) {
     : apiUrl
     ? 'api v?'
     : 'api …';
-  const apiLabel = target ? target.label : '…';
+  const apiLabel = target
+    ? target.label === 'pr' && target.prNumber !== undefined
+      ? `pr-${target.prNumber}`
+      : target.label
+    : '…';
 
   const handleLongPress = async () => {
     const payload = backend

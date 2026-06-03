@@ -21,6 +21,7 @@ export function EditSectionBody({ value, onChange }: Props) {
           value={value.title}
           onChangeText={(v) => onChange({ ...value, title: v })}
           accessibilityLabel="Section heading"
+          testID="input-edit-section-heading"
         />
       </Field>
       <Field label="Body">
@@ -30,6 +31,7 @@ export function EditSectionBody({ value, onChange }: Props) {
           onChangeText={(v) => onChange({ ...value, content: v })}
           multiline
           accessibilityLabel="Section body"
+          testID="input-edit-section-body"
         />
       </Field>
     </View>

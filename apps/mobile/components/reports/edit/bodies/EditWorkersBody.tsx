@@ -34,21 +34,19 @@ export function EditWorkersBody({ value, onChange }: Props) {
         <TextInput
           className={INPUT_CLASS}
           value={numericString(value.totalWorkers)}
-          onChangeText={(v) =>
-            onChange({ ...value, totalWorkers: parseNumeric(v) })
-          }
+          onChangeText={(v) => onChange({ ...value, totalWorkers: parseNumeric(v) })}
           keyboardType="numeric"
           accessibilityLabel="Total workers"
+          testID="input-edit-workers-total"
         />
       </Field>
       <Field label="Worker hours">
         <TextInput
           className={INPUT_CLASS}
           value={nullableString(value.workerHours)}
-          onChangeText={(v) =>
-            onChange({ ...value, workerHours: nullify(v) })
-          }
+          onChangeText={(v) => onChange({ ...value, workerHours: nullify(v) })}
           accessibilityLabel="Worker hours"
+          testID="input-edit-workers-hours"
         />
       </Field>
       <Field label="Notes">
@@ -58,21 +56,16 @@ export function EditWorkersBody({ value, onChange }: Props) {
           onChangeText={(v) => onChange({ ...value, notes: nullify(v) })}
           multiline
           accessibilityLabel="Workers notes"
+          testID="input-edit-workers-notes"
         />
       </Field>
 
       <Text className="mt-2 text-sm font-semibold text-foreground">Roles</Text>
       {roles.length === 0 ? (
-        <Text className="text-sm text-muted-foreground opacity-60">
-          No roles yet
-        </Text>
+        <Text className="text-sm text-muted-foreground opacity-60">No roles yet</Text>
       ) : (
         roles.map((role, idx) => (
-          <View
-            key={`role-${idx}`}
-            className={ROW_CLASS}
-            testID={`edit-role-row-${idx}`}
-          >
+          <View key={`role-${idx}`} className={ROW_CLASS} testID={`edit-role-row-${idx}`}>
             <Field label="Role">
               <TextInput
                 className={INPUT_CLASS}
@@ -83,6 +76,7 @@ export function EditWorkersBody({ value, onChange }: Props) {
                   onChange({ ...value, roles: next });
                 }}
                 accessibilityLabel={`Role ${idx + 1} title`}
+                testID={`input-edit-role-${idx}-title`}
               />
             </Field>
             <Field label="Count">
@@ -96,6 +90,7 @@ export function EditWorkersBody({ value, onChange }: Props) {
                 }}
                 keyboardType="numeric"
                 accessibilityLabel={`Role ${idx + 1} count`}
+                testID={`input-edit-role-${idx}-count`}
               />
             </Field>
             <Field label="Notes">
@@ -108,10 +103,12 @@ export function EditWorkersBody({ value, onChange }: Props) {
                   onChange({ ...value, roles: next });
                 }}
                 accessibilityLabel={`Role ${idx + 1} notes`}
+                testID={`input-edit-role-${idx}-notes`}
               />
             </Field>
             <RemoveRowButton
               label={`Remove role ${idx + 1}`}
+              testID={`btn-edit-role-${idx}-remove`}
               onPress={() =>
                 onChange({
                   ...value,
@@ -124,9 +121,8 @@ export function EditWorkersBody({ value, onChange }: Props) {
       )}
       <AddRowButton
         label="Add role"
-        onPress={() =>
-          onChange({ ...value, roles: [...roles, blankRole()] })
-        }
+        testID="btn-edit-workers-add-role"
+        onPress={() => onChange({ ...value, roles: [...roles, blankRole()] })}
       />
     </View>
   );

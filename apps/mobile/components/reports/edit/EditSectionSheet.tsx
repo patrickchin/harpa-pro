@@ -110,6 +110,7 @@ export function EditSectionSheet<T>({
             <Text
               className="flex-1 px-3 text-center text-lg font-semibold text-foreground"
               numberOfLines={1}
+              testID="report-edit-modal-title"
             >
               {title}
             </Text>
@@ -141,9 +142,7 @@ export function EditSectionSheet<T>({
                 testID="btn-edit-modal-delete"
               >
                 <Trash2 size={16} color={colors.danger.text} />
-                <Text className="text-base font-semibold text-danger-text">
-                  {deleteLabel}
-                </Text>
+                <Text className="text-base font-semibold text-danger-text">{deleteLabel}</Text>
               </Pressable>
             ) : null}
           </ScrollView>

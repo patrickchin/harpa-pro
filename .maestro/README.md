@@ -72,12 +72,12 @@ deletes the project + signs out at the end). Covers:
 5. Reports CRUD
 6. Text notes (add/delete)
 7. Voice notes: upload, transcript, summary, playback entry point,
-    delete
+   delete
 8. Photo notes: attachment sheet, camera upload, generated report
-    photo strip, preview, delete
+   photo strip, preview, delete
 9. Finalized photo report: saved-report photo strip and preview
-10. Generate + finalize: add note, generate/update report, finalize,
-   unfinalize, re-finalize
+10. Generate + finalize: add note, generate/update report, per-card
+    edit modal coverage, finalize, unfinalize, re-finalize
 11. Report Debug: prompt, report notes, LLM response, non-empty state
 12. Project delete teardown
 13. Account view + edit-cancel + edit-save

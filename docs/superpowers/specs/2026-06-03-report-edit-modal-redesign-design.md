@@ -11,7 +11,7 @@ It works, but:
 
 - It's a context switch away from the report you're trying to edit.
 - All sections are visible whether you care about them or not.
-- The same component is gated behind a developer flag in the *generate*
+- The same component is gated behind a developer flag in the _generate_
   flow (`showGenerateEditTab`), so the UX is inconsistent.
 - A previous iteration in v3 used per-card pencil buttons that flipped each
   card into edit mode in place. That got visually noisy and is what we're
@@ -62,15 +62,15 @@ they each get a trailing pencil added to their existing top row.
 
 Mapping (one pencil per row unless noted):
 
-| Read view card | Modal title | What it edits |
-| --- | --- | --- |
-| `SummaryLead` | Summary & meta | `meta.title`, `meta.visitDate`, `meta.summary` |
-| `WeatherStrip` | Weather | `weather.*` |
-| `WorkersCard` | Workers | `workers.totalWorkers` + full `workers.roles` list (add/edit/remove) |
-| `MaterialsCard` | Materials | full `materials` list (add/edit/remove) |
-| `IssuesCard` — **per item** | Issue | one issue (all fields + Delete) |
-| `NextStepsCard` | Next steps | full `nextSteps` list (add/edit/remove) |
-| `SummarySectionCard` — **per item** | Section title | one detailed section (title + content + Delete) |
+| Read view card                      | Modal title    | What it edits                                                        |
+| ----------------------------------- | -------------- | -------------------------------------------------------------------- |
+| `SummaryLead`                       | Summary & meta | `meta.title`, `meta.visitDate`, `meta.summary`                       |
+| `WeatherStrip`                      | Weather        | `weather.*`                                                          |
+| `WorkersCard`                       | Workers        | `workers.totalWorkers` + full `workers.roles` list (add/edit/remove) |
+| `MaterialsCard`                     | Materials      | full `materials` list (add/edit/remove)                              |
+| `IssuesCard` — **per item**         | Issue          | one issue (all fields + Delete)                                      |
+| `NextStepsCard`                     | Next steps     | full `nextSteps` list (add/edit/remove)                              |
+| `SummarySectionCard` — **per item** | Section title  | one detailed section (title + content + Delete)                      |
 
 `StatBar` is derived; no pencil.
 
@@ -137,7 +137,7 @@ where it already lives in the saved-report header chrome — no new wiring).
   - `EditSectionBody.tsx` — single detailed section + **Delete this section**.
 
   Per-item bodies (`EditIssueBody`, `EditSectionBody`) take an `onDelete?: ()
-  => void` so the modal can render Delete in its top bar / body and still flow
+=> void` so the modal can render Delete in its top bar / body and still flow
   through the same Save/Cancel state machine. Delete also closes the modal.
 
 - `apps/mobile/components/reports/edit/types.ts` — discriminated union for
@@ -180,7 +180,7 @@ where it already lives in the saved-report header chrome — no new wiring).
   pencil button when supplied:
   - `apps/mobile/components/reports/IssuesCard.tsx` — per-item: each row gets
     its own pencil; `IssuesCardProps` gains `onEditIssue?: (index: number) =>
-    void`.
+void`.
   - `apps/mobile/components/reports/SummarySectionCard.tsx` — per-item:
     `onEdit?: () => void`.
   - `apps/mobile/components/reports/WorkersCard.tsx`
@@ -264,8 +264,16 @@ Existing tests touched:
   add modal cases.
 - Any snapshot for `ReportDetailTabBar` re-recorded.
 
-Maestro: out of scope for this PR. The flows continue to drive the read view;
-edit interactions don't have an existing Maestro flow.
+Maestro:
+
+- `.maestro/helpers/edit-report-cards.yaml` drives the generated draft through
+  every per-card edit modal body on Android: meta, weather, issue, workers,
+  materials, next steps, and detailed section.
+- `WeatherStrip` keeps rendering an editable empty-state card when `onEdit`
+  is present, so sparse generated drafts can still open the Weather modal.
+- `.maestro/modules/11-generate-finalize.yaml` runs that helper after
+  generation and before finalize, then leaves the report finalized so the
+  debug module's precondition stays intact.
 
 ## Migration notes
 

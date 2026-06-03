@@ -3,13 +3,7 @@
  */
 import { Text, TextInput, View } from 'react-native';
 
-import {
-  AddRowButton,
-  Field,
-  MULTILINE_CLASS,
-  RemoveRowButton,
-  ROW_CLASS,
-} from './fields';
+import { AddRowButton, Field, MULTILINE_CLASS, RemoveRowButton, ROW_CLASS } from './fields';
 
 interface Props {
   value: string[];
@@ -20,16 +14,10 @@ export function EditNextStepsBody({ value, onChange }: Props) {
   return (
     <View className="gap-3">
       {value.length === 0 ? (
-        <Text className="text-sm text-muted-foreground opacity-60">
-          No next steps yet
-        </Text>
+        <Text className="text-sm text-muted-foreground opacity-60">No next steps yet</Text>
       ) : (
         value.map((step, idx) => (
-          <View
-            key={`step-${idx}`}
-            className={ROW_CLASS}
-            testID={`edit-next-step-row-${idx}`}
-          >
+          <View key={`step-${idx}`} className={ROW_CLASS} testID={`edit-next-step-row-${idx}`}>
             <Field label={`Step ${idx + 1}`}>
               <TextInput
                 className={MULTILINE_CLASS}
@@ -41,10 +29,12 @@ export function EditNextStepsBody({ value, onChange }: Props) {
                 }}
                 multiline
                 accessibilityLabel={`Next step ${idx + 1}`}
+                testID={`input-edit-next-step-${idx}`}
               />
             </Field>
             <RemoveRowButton
               label={`Remove next step ${idx + 1}`}
+              testID={`btn-edit-next-step-${idx}-remove`}
               onPress={() => onChange(value.filter((_, i) => i !== idx))}
             />
           </View>
@@ -52,6 +42,7 @@ export function EditNextStepsBody({ value, onChange }: Props) {
       )}
       <AddRowButton
         label="Add next step"
+        testID="btn-edit-next-steps-add"
         onPress={() => onChange([...value, ''])}
       />
     </View>

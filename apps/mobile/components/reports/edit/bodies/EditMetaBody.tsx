@@ -21,6 +21,7 @@ export function EditMetaBody({ value, onChange }: Props) {
           value={value.title}
           onChangeText={(v) => onChange({ ...value, title: v })}
           accessibilityLabel="Report title"
+          testID="input-edit-meta-title"
         />
       </Field>
       <Field label="Visit date">
@@ -30,6 +31,7 @@ export function EditMetaBody({ value, onChange }: Props) {
           onChangeText={(v) => onChange({ ...value, visitDate: nullify(v) })}
           placeholder="YYYY-MM-DD"
           accessibilityLabel="Visit date"
+          testID="input-edit-meta-visit-date"
         />
       </Field>
       <Field label="Summary">
@@ -39,6 +41,7 @@ export function EditMetaBody({ value, onChange }: Props) {
           onChangeText={(v) => onChange({ ...value, summary: v })}
           multiline
           accessibilityLabel="Report summary"
+          testID="input-edit-meta-summary"
         />
       </Field>
     </View>

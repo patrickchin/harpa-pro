@@ -20,6 +20,7 @@ export function EditWeatherBody({ value, onChange }: Props) {
           value={nullableString(value.conditions)}
           onChangeText={(v) => onChange({ ...value, conditions: nullify(v) })}
           accessibilityLabel="Weather conditions"
+          testID="input-edit-weather-conditions"
         />
       </Field>
       <Field label="Temperature">
@@ -28,6 +29,7 @@ export function EditWeatherBody({ value, onChange }: Props) {
           value={nullableString(value.temperature)}
           onChangeText={(v) => onChange({ ...value, temperature: nullify(v) })}
           accessibilityLabel="Weather temperature"
+          testID="input-edit-weather-temperature"
         />
       </Field>
       <Field label="Wind">
@@ -36,6 +38,7 @@ export function EditWeatherBody({ value, onChange }: Props) {
           value={nullableString(value.wind)}
           onChangeText={(v) => onChange({ ...value, wind: nullify(v) })}
           accessibilityLabel="Weather wind"
+          testID="input-edit-weather-wind"
         />
       </Field>
       <Field label="Impact">
@@ -45,6 +48,7 @@ export function EditWeatherBody({ value, onChange }: Props) {
           onChangeText={(v) => onChange({ ...value, impact: nullify(v) })}
           multiline
           accessibilityLabel="Weather impact"
+          testID="input-edit-weather-impact"
         />
       </Field>
     </View>

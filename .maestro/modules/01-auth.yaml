@@ -1,5 +1,5 @@
 appId: ${MAESTRO_APP_ID}
-name: "01 — Auth: sign-up alice + sign-in alice"
+name: '01 — Auth: sign-up alice + sign-in alice'
 tags:
   - regression
   - auth
@@ -26,28 +26,29 @@ tags:
 # lands on the dev-launcher picker, not the JS app. Deep-link the
 # dev-launcher's own scheme with an explicit Metro URL. See
 # `core-end-to-end.yaml` for the full explanation.
-- openLink: "exp+harpa-pro-v4://expo-development-client/?url=http%3A%2F%2Flocalhost%3A8081"
-- extendedWaitUntil:
-    visible: "Continue"
-    timeout: 60000
+- openLink: 'exp+harpa-pro-v4://expo-development-client/?url=http%3A%2F%2Flocalhost%3A8081'
+- waitForAnimationToEnd:
+    timeout: 20000
 
 # The Android dev-launcher first-run sheet ("This is the developer menu")
-# overlays the sign-in screen and obscures `input-phone`. Wait for its
-# "Continue" button before dismissing it; close any dev menu it opens.
-# On iOS and on subsequent Android runs, these gates are no-ops.
+# overlays the sign-in screen and obscures `input-phone`. Dismiss it when
+# present; on iOS and subsequent Android runs these gates are no-ops.
+- extendedWaitUntil:
+    visible: 'Continue'
+    timeout: 60000
 - runFlow:
     when:
-      visible: "Continue"
+      visible: 'Continue'
     commands:
       - tapOn:
-          text: "Continue"
+          text: 'Continue'
       - waitForAnimationToEnd
 - runFlow:
     when:
-      visible: "Close"
+      visible: 'Close'
     commands:
       - tapOn:
-          text: "Close"
+          text: 'Close'
       - waitForAnimationToEnd
 
 # iOS system dialog: after `clearState: true`, the first `openLink` of
@@ -59,7 +60,7 @@ tags:
 # Land on sign-in first (auth gate) then deep-link to sign-up
 - extendedWaitUntil:
     visible:
-      id: "input-phone"
+      id: 'input-phone'
     timeout: 30000
 
 # --- Sign-up alice (fresh account via seed) --------------------------------
@@ -68,30 +69,30 @@ tags:
     file: ../helpers/dismiss-open-dialog.yaml
 - extendedWaitUntil:
     visible:
-      id: "input-signup-phone"
+      id: 'input-signup-phone'
     timeout: 15000
 # Force the country picker to US so a typed national number is stored
 # as +1, not the device-locale default (often +44 on dev hardware).
 - runFlow:
     file: ../helpers/pick-country-us.yaml
     env:
-      COUNTRY_BUTTON_ID: "btn-signup-country-picker"
+      COUNTRY_BUTTON_ID: 'btn-signup-country-picker'
 - tapOn:
-    id: "input-signup-phone"
-- inputText: "5550000001"
+    id: 'input-signup-phone'
+- inputText: '5550000001'
 - hideKeyboard
 - tapOn:
-    id: "btn-signup-send-code"
+    id: 'btn-signup-send-code'
 - extendedWaitUntil:
     visible:
-      id: "input-signup-otp"
+      id: 'input-signup-otp'
     timeout: 10000
 - tapOn:
-    id: "input-signup-otp"
-- inputText: "000000"
+    id: 'input-signup-otp'
+- inputText: '000000'
 - hideKeyboard
 - tapOn:
-    id: "btn-signup-verify"
+    id: 'btn-signup-verify'
 
 # --- Onboarding (always shown after fresh sign-up; skipped if the
 #     backend already has an onboarded user for this phone, e.g. a
@@ -99,22 +100,22 @@ tags:
 - runFlow:
     when:
       visible:
-        id: "screen-onboarding"
+        id: 'screen-onboarding'
     commands:
       - tapOn:
-          id: "input-onboarding-name"
-      - inputText: "Alice E2E"
+          id: 'input-onboarding-name'
+      - inputText: 'Alice E2E'
       - tapOn:
-          id: "input-onboarding-company"
-      - inputText: "E2E Corp"
+          id: 'input-onboarding-company'
+      - inputText: 'E2E Corp'
       - hideKeyboard
       - tapOn:
-          id: "btn-onboarding-submit"
+          id: 'btn-onboarding-submit'
 
 # --- Verify projects list ---------------------------------------------------
 - extendedWaitUntil:
     visible:
-      id: "btn-new-project"
+      id: 'btn-new-project'
     timeout: 15000
 
 # --- Sign-out ---------------------------------------------------------------
@@ -124,6 +125,6 @@ tags:
 - runFlow:
     file: ../helpers/sign-in.yaml
     env:
-      PHONE: "5550000001"
+      PHONE: '5550000001'
 - assertVisible:
-    id: "btn-new-project"
+    id: 'btn-new-project'

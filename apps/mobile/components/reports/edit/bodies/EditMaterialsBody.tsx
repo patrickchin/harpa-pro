@@ -26,16 +26,10 @@ export function EditMaterialsBody({ value, onChange }: Props) {
   return (
     <View className="gap-3">
       {value.length === 0 ? (
-        <Text className="text-sm text-muted-foreground opacity-60">
-          No materials yet
-        </Text>
+        <Text className="text-sm text-muted-foreground opacity-60">No materials yet</Text>
       ) : (
         value.map((mat, idx) => (
-          <View
-            key={`mat-${idx}`}
-            className={ROW_CLASS}
-            testID={`edit-material-row-${idx}`}
-          >
+          <View key={`mat-${idx}`} className={ROW_CLASS} testID={`edit-material-row-${idx}`}>
             <Field label="Name">
               <TextInput
                 className={INPUT_CLASS}
@@ -46,6 +40,7 @@ export function EditMaterialsBody({ value, onChange }: Props) {
                   onChange(next);
                 }}
                 accessibilityLabel={`Material ${idx + 1} name`}
+                testID={`input-edit-material-${idx}-name`}
               />
             </Field>
             <Field label="Quantity">
@@ -58,6 +53,7 @@ export function EditMaterialsBody({ value, onChange }: Props) {
                   onChange(next);
                 }}
                 accessibilityLabel={`Material ${idx + 1} quantity`}
+                testID={`input-edit-material-${idx}-quantity`}
               />
             </Field>
             <Field label="Unit">
@@ -70,6 +66,7 @@ export function EditMaterialsBody({ value, onChange }: Props) {
                   onChange(next);
                 }}
                 accessibilityLabel={`Material ${idx + 1} unit`}
+                testID={`input-edit-material-${idx}-unit`}
               />
             </Field>
             <Field label="Condition">
@@ -82,6 +79,7 @@ export function EditMaterialsBody({ value, onChange }: Props) {
                   onChange(next);
                 }}
                 accessibilityLabel={`Material ${idx + 1} condition`}
+                testID={`input-edit-material-${idx}-condition`}
               />
             </Field>
             <Field label="Status">
@@ -94,6 +92,7 @@ export function EditMaterialsBody({ value, onChange }: Props) {
                   onChange(next);
                 }}
                 accessibilityLabel={`Material ${idx + 1} status`}
+                testID={`input-edit-material-${idx}-status`}
               />
             </Field>
             <Field label="Notes">
@@ -106,10 +105,12 @@ export function EditMaterialsBody({ value, onChange }: Props) {
                   onChange(next);
                 }}
                 accessibilityLabel={`Material ${idx + 1} notes`}
+                testID={`input-edit-material-${idx}-notes`}
               />
             </Field>
             <RemoveRowButton
               label={`Remove material ${idx + 1}`}
+              testID={`btn-edit-material-${idx}-remove`}
               onPress={() => onChange(value.filter((_, i) => i !== idx))}
             />
           </View>
@@ -117,6 +118,7 @@ export function EditMaterialsBody({ value, onChange }: Props) {
       )}
       <AddRowButton
         label="Add material"
+        testID="btn-edit-materials-add"
         onPress={() => onChange([...value, blankMaterial()])}
       />
     </View>

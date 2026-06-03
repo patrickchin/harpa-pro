@@ -1,8 +1,9 @@
 /**
- * Dev-only routes — mounted by `app.ts` only when
- * `env.NODE_ENV !== 'production'`. Importing this module on a
- * production deployment is a hard error so a misconfiguration cannot
- * silently expose internals.
+ * Dev-only routes — mounted by `app.ts` only on non-production
+ * deployments OR per-PR preview builds (where Maestro needs
+ * `/api/dev/last-otp` even though NODE_ENV=production). Importing
+ * this module on a real production deployment is a hard error so a
+ * misconfiguration cannot silently expose internals.
  *
  * Currently only owns `/api/dev/last-otp`, used by Maestro `:mock`
  * builds to read the most recent OTP that better-auth persisted to
@@ -17,8 +18,8 @@ import type { AppEnv } from '../app.js';
 import { rawDb } from '../db/client.js'; // eslint-disable-line no-restricted-imports
 import { env } from '../env.js';
 
-if (env.NODE_ENV === 'production') {
-  throw new Error('routes/dev.ts must not be loaded in production');
+if (env.NODE_ENV === 'production' && env.HARPAPRO_PR_BUILD !== '1') {
+  throw new Error('routes/dev.ts must not be loaded in real production');
 }
 
 export const devRoutes = new Hono<AppEnv>();

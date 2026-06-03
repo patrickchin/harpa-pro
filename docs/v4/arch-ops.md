@@ -8,7 +8,16 @@
   - `harpa-pro-api-dev` (dev) at `https://harpa-pro-api-dev.fly.dev` —
     deployed on push to `dev` by `.github/workflows/api-dev.yml`.
     Sleeps when idle (`min_machines_running = 0`) to save cost.
-  Per-PR ephemeral preview machines (planned).
+  - `harpa-pro-api-pr-<n>` (per-PR preview) at
+    `https://harpa-pro-api-pr-<n>.fly.dev` — created on PR open by
+    `.github/workflows/pr-preview.yml` (job `fly-preview`), destroyed on
+    PR close (job `fly-destroy`). Config:
+    [`infra/fly/fly.preview.toml`](../../infra/fly/fly.preview.toml).
+    Single shared-cpu-1x machine, `min_machines_running = 0`,
+    `auto_stop_machines = "stop"`. Forks skipped (no `FLY_API_TOKEN`).
+    The preview's `DATABASE_URL` points at the matching Neon `pr-<n>`
+    branch; mobile dev/preview builds can flip to the preview URL via
+    `setApiBaseUrlOverride`.
 - **Database**: Neon (managed). Long-lived branches: `main` (prod)
   and `dev`. Per-PR `pr-<n>` branches created/destroyed by
   `.github/workflows/pr-preview.yml`. See
@@ -144,11 +153,18 @@ not by the API at runtime), and a handful of CI-only flags.
 
 ```
 PR open / push (same-repo only, forks skipped)
-  ↳ Neon branch pr-<n> (pr-preview.yml)
-  ↳ migrations applied to pr-<n>
+  ↳ Neon branch pr-<n> (pr-preview.yml: neon-create)
+  ↳ Fly app harpa-pro-api-pr-<n> created/deployed (pr-preview.yml: fly-preview)
+    ↳ release_command applies migrations to pr-<n>
+    ↳ /readyz verified
+    ↳ sticky PR comment with preview URL
   ↳ marketing preview deploy to CF Pages (marketing-preview.yml)
   ↳ EAS Update → `development` channel (mobile-ota-pr.yml)
   ↳ EAS preview build (manual trigger — planned)
+
+PR close
+  ↳ Fly app harpa-pro-api-pr-<n> destroyed (pr-preview.yml: fly-destroy)
+  ↳ Neon branch pr-<n> deleted (pr-preview.yml: neon-destroy)
 
 Push to dev
   ↳ Neon `dev` branch ensured (idempotent, long-lived)

@@ -1,0 +1,55 @@
+# Fly.io app config for @harpa/api (per-PR preview).
+# Deployed by the `fly-preview` job in pr-preview.yml on every push to a PR
+# that touches API code. App name is per-PR (`harpa-pro-api-pr-<n>`) and is
+# passed via `flyctl deploy --app <name>`, so this config intentionally omits
+# `app =`. Destroyed on PR close by the `fly-destroy` job.
+#
+# Trade-offs vs fly.dev.toml:
+#   - `auto_stop_machines = "stop"` (not "suspend"): preview machines may
+#     idle for hours between reviewer touches; full stop is cheaper and
+#     cold-resume latency is acceptable for a manual review session.
+#   - `min_machines_running = 0`: no idle floor — the app sleeps fully
+#     between touches.
+#   - Single VM, no HA. Previews don't need redundancy.
+
+primary_region = "fra"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[deploy]
+  # Apply pending migrations inside the release machine — same mechanism as
+  # dev/prod. Fly only promotes the new image to app machines if this exits 0,
+  # so a broken migration aborts the rollout cleanly. No CI-side migrate step
+  # for previews; release_command is the single source of truth.
+  # See docs/v4/arch-cicd-and-migrations.md.
+  release_command = "pnpm --filter @harpa/api db:migrate"
+
+[env]
+  NODE_ENV = "production"
+  PORT = "8787"
+
+[http_service]
+  internal_port = 8787
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+
+  [http_service.concurrency]
+    type = "requests"
+    soft_limit = 25
+    hard_limit = 50
+
+# Readiness probe — same as dev/prod. Verifies DB reachability and that
+# app._migrations head matches MIGRATIONS_REQUIRED_HEAD baked into the image.
+[[http_service.checks]]
+  grace_period = "15s"
+  interval = "30s"
+  method = "GET"
+  timeout = "5s"
+  path = "/readyz"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"

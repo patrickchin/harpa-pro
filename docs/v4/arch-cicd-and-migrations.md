@@ -63,10 +63,13 @@ build-time manifest for the readiness check.**
 ```
 ┌────────────────────────────────────────────────────────────────────────┐
 │  PR opened / synchronized                                              │
-│   • Neon branch pr-<n> created (or refreshed)                          │
-│   • pnpm --filter @harpa/api db:migrate  ← run in CI (preview path)    │
+│   • Neon branch pr-<n> created (delete-and-recreate from main)         │
+│   • Fly app harpa-pro-api-pr-<n> created/deployed                      │
+│       └─ release_command: pnpm --filter @harpa/api db:migrate          │
+│           applies pending migrations to pr-<n>                         │
+│       └─ /readyz verified post-deploy                                  │
 │   • Integration tests run against pr-<n>                               │
-│   • (future) Fly preview machine deployed with DATABASE_URL=pr-<n>     │
+│   • Sticky PR comment posts the preview URL                            │
 └────────────────────────────────────────────────────────────────────────┘
                                   │
                             merge to main
@@ -106,10 +109,10 @@ build-time manifest for the readiness check.**
 └────────────────────────────────────────────────────────────────────────┘
 ```
 
-Preview and prod use the **same** mechanism for steps 2 + 3. The only
-difference is which Fly app and which Neon branch is targeted (preview keeps
-its CI-side `db:migrate` because the preview Fly machine doesn't exist yet —
-see "Open questions").
+Preview and prod use the **same** mechanism for steps 2 + 3 — Fly's
+`release_command` runs migrations inside the release machine, against
+whatever `DATABASE_URL` is staged on the app. The only difference is
+which Fly app and which Neon branch is targeted.
 
 ---
 
@@ -158,11 +161,21 @@ see "Open questions").
 
 ### `.github/workflows/pr-preview.yml`
 
-- Keep the CI-side `db:migrate` against the PR branch (no Fly app yet).
-- Add the same `guard` job (filename check, no manifest diff — preview is
-  ephemeral). Catching format errors at PR time is cheaper than at prod.
-- Document that once preview machines exist, the `db:migrate` step moves to
-  the preview Fly app's release_command and CI's job becomes a smoke curl.
+- Lifecycle jobs keyed on PR number:
+  - `neon-create` — creates Neon branch `pr-<n>` on open/sync. Does **not**
+    apply migrations (that's `release_command`'s job).
+  - `fly-preview` — creates Fly app `harpa-pro-api-pr-<n>`, stages secrets
+    from Doppler `dev` with `DATABASE_URL` overridden to the PR's Neon URI,
+    and `flyctl deploy`s using [`infra/fly/fly.preview.toml`](../../infra/fly/fly.preview.toml).
+    Verifies `/readyz` and posts a sticky PR comment with the URL.
+  - `fly-destroy` — destroys the Fly app on PR close.
+  - `neon-destroy` — deletes the Neon branch on close, after `fly-destroy`,
+    so the release_command on a now-deleted DB doesn't error during teardown.
+- `guard` job: same migration filename lint as prod (no manifest diff —
+  preview is ephemeral). Catching format errors at PR time is cheaper than
+  at prod.
+- Forks are skipped (no `FLY_API_TOKEN` / `DOPPLER_TOKEN_DEV` /
+  `NEON_API_KEY` available to fork PRs).
 
 ### `packages/api/src/db/migrate.ts`
 
@@ -431,10 +444,12 @@ recurring-bug entry.
   drift check for free. Out of scope for this doc — see `arch-database.md`,
   which currently *says* we use it but we don't. Resolve in a follow-up
   ADR; either adopt drizzle-kit or fix the doc.
-- **Preview Fly machines.** Today PR previews only get a Neon branch, no
-  Fly app. Once preview Fly machines exist, the CI `db:migrate` step moves
-  into their `release_command` and `pr-preview.yml` matches `api-prod.yml`
-  exactly. Tracked alongside the M-series preview-deploy work.
+- **Preview Fly machines.** Implemented — see `pr-preview.yml` jobs
+  `fly-preview` / `fly-destroy` and [`infra/fly/fly.preview.toml`](../../infra/fly/fly.preview.toml).
+  Migration application now lives exclusively in `release_command` (preview,
+  dev, and prod all use the same mechanism). Open follow-ups: cron sweep
+  for orphan preview apps if a `closed` webhook is missed; automated
+  mobile preview builds pinned to the PR's API URL.
 - **Destructive-migration approval gate.** Should `DROP TABLE` /
   `DROP COLUMN` require a manual GitHub Environment approval before
   `flyctl deploy`? Probably yes, but needs product sign-off on the friction.

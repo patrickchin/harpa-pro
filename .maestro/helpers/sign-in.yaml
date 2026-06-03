@@ -2,12 +2,18 @@ appId: ${MAESTRO_APP_ID}
 ---
 # sign-in.yaml — helper: sign in via email-OTP
 #
-# Required env var:
-#   EMAIL — the email of an existing seeded user (e.g. alice@harpa.test).
+# Required env vars:
+#   EMAIL — the email of an existing seeded user. Must end in
+#           @e2e.harpapro.com — the dev API rejects all other domains
+#           with 404 (e.g. alice@e2e.harpapro.com).
+#   DEV_OTP_TOKEN — shared secret (≥32 chars) for the dev OTP introspection
+#           route. Forwarded to last-otp.js as the x-dev-otp-token
+#           header. Source from your shell; reset-db.sh / journeys
+#           scripts set it before invoking maestro.
 #
 # Required runtime services:
 #   - The fixture-mode API on http://127.0.0.1:8787, with `/api/dev/last-otp`
-#     mounted (`NODE_ENV !== 'production'`).
+#     mounted (NODE_ENV !== 'production' AND DEV_OTP_TOKEN set).
 #   - adb reverse tcp:8787 tcp:8787 for Android.
 #
 # Pre-condition: sign-in (email) screen is visible (`input-email`).
@@ -18,7 +24,8 @@ appId: ${MAESTRO_APP_ID}
 #   - runFlow:
 #       file: ../helpers/sign-in.yaml
 #       env:
-#         EMAIL: "alice@harpa.test"
+#         EMAIL: "alice@e2e.harpapro.com"
+#         DEV_OTP_TOKEN: ${DEV_OTP_TOKEN}
 - tapOn:
     id: "input-email"
 - eraseText: 80
@@ -35,6 +42,7 @@ appId: ${MAESTRO_APP_ID}
     file: last-otp.js
     env:
       EMAIL: "${EMAIL}"
+      DEV_OTP_TOKEN: "${DEV_OTP_TOKEN}"
 - tapOn:
     id: "input-otp"
 - inputText: "${output.OTP}"

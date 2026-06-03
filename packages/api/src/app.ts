@@ -107,11 +107,19 @@ export function createApp(): OpenAPIHono<AppEnv> {
   app.route('/', waitlistRoutes);
   app.route('/', wellKnownRoutes);
 
-  // Dev-only: `/api/dev/last-otp` for Maestro :mock builds. Mounted on
-  // non-production deployments and on per-PR preview builds (Maestro
-  // E2E needs OTP introspection even though previews run NODE_ENV=production).
-  // Never mounted on real production. The route module re-asserts this at boot.
-  if (env.NODE_ENV !== 'production' || env.HARPAPRO_PR_BUILD === '1') {
+  // Dev-only: `/api/dev/last-otp` for Maestro :mock builds. Mounted only when
+  // ALL of these hold (defense in depth — see docs/v4/arch-auth-and-rls.md
+  // §Dev OTP introspection):
+  //   - non-production deployment, OR per-PR preview build (Maestro E2E needs
+  //     OTP introspection even though previews run NODE_ENV=production)
+  //   - env.DEV_OTP_TOKEN is set (≥32 chars; required by env refines too).
+  // Never mounted on real production. The route module re-asserts this at
+  // import time and additionally enforces a per-request shared-secret header,
+  // an email-domain allowlist, and an exact-match identifier query.
+  if (
+    (env.NODE_ENV !== 'production' || env.HARPAPRO_PR_BUILD === '1')
+    && !!env.DEV_OTP_TOKEN
+  ) {
     app.route('/api/dev', devRoutes);
   }
 

@@ -71,6 +71,14 @@ beforeAll(async () => {
 
 afterAll(async () => {
   if (!ENABLED) return;
+  // The pool the app actually used lives in the module instance
+  // created after `vi.resetModules()` in beforeAll. `pgFx.stop()`
+  // only drains the static-import copy, so we must end the dynamic
+  // copy here too — otherwise its idle connections raise an
+  // unhandled FATAL `57P01` when the container is killed and fail
+  // the test run despite all assertions passing.
+  const { resetPool } = await import('../db/client.js');
+  await resetPool();
   await pgFx?.stop();
   await minio?.stop();
 }, 60_000);

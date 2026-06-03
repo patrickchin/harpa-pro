@@ -557,6 +557,48 @@ See `apps/mobile/features/generate/useAutoRegenerate.test.tsx` and
 
 ---
 
+## Pitfall 20 — Dev-only routes need defence in depth, not a NODE_ENV gate
+
+**What happened.** `POST /api/dev/last-otp` (the OTP introspection
+that lets Maestro `:mock` builds and the manual curl flow finish a
+sign-in without Resend) was originally guarded only by the app-level
+`if (env.NODE_ENV !== 'production') app.route('/api/dev', devRoutes)`
+mount. PR-preview deployments run with `NODE_ENV=production` plus
+`HARPAPRO_PR_BUILD='1'`, so the gate had to relax for them — and now
+a single mis-set Doppler variable (`HARPAPRO_PR_BUILD='1'` on real
+prod) would expose a route that, for any registered user with a
+guessable email, returns the OTP needed to take over their session.
+The handler also used `identifier LIKE '%email%'`, so a single
+request with `email='%'` would have returned the most recently issued
+OTP across the whole system.
+
+**Rule.** A dev-only route that hands out session-establishing
+material must be defended at every layer that can possibly reject
+the request. `NODE_ENV` is one signal among many; assume each one is
+flipped wrong and the rest still hold. Concretely:
+
+1. **Module-load throw.** `if (env.NODE_ENV === 'production' && env.HARPAPRO_PR_BUILD !== '1') throw …` at the top of the route file. Mis-bundling into prod fails fast at import.
+2. **Mount conditional.** Bind the route only when both the env-shape gate AND a per-deploy secret (`env.DEV_OTP_TOKEN`) are set. Env-Zod refines must reject `DEV_OTP_TOKEN` set on real prod.
+3. **Per-request shared secret.** Header compared with `crypto.timingSafeEqual` over equal-length buffers. Length mismatch is rejected without leaking timing.
+4. **Input allowlist.** Reject any input outside a tiny known shape (here: `^[^@\s]+@e2e\.harpapro\.com$`). Don't trust the consumer to supply something safe.
+5. **Exact-match queries.** `WHERE identifier = $1`, never `LIKE`. Parameterisation does not save you from wildcard injection.
+6. **Indistinguishable failure.** Every reject path returns 404, the same status the router would emit for an unknown URL. A prober gets no oracle.
+7. **Audit log every call.** `{requestId, ip, email, outcome}` at info level so a compromise leaves a trail.
+
+**Test rule.** A new `*.integration.test.ts` per dev-only route
+exercises all reject paths against a real Postgres + the in-process
+app (no DI stubs on the secret-comparison hot path — Pitfall 13).
+Cover at minimum: missing header, single-byte token mismatch, valid
+token + disallowed domain (root domain, suffix attack, wildcard),
+and the route-absent-when-secret-unset case (`vi.resetModules()` +
+re-import after deleting the env var).
+
+See `packages/api/src/__tests__/dev.integration.test.ts`,
+`packages/api/src/routes/dev.ts`, `docs/v4/arch-auth-and-rls.md`
+§Dev OTP introspection.
+
+---
+
 ## How we use this doc
 
 When you finish a task and notice the bug shape matches one of these

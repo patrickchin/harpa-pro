@@ -66,6 +66,11 @@ export interface ReportNoteRow {
    * rows that pre-date the `note_files` migration.
    */
   files?: ReadonlyArray<ReportNoteFile> | null;
+  /**
+   * Stored placement pointer for image-kind notes. Null = unplaced
+   * (default). Optional so non-image rows can omit it without ceremony.
+   */
+  placement?: { kind: 'issue' | 'section'; index: number } | null;
   // ── Voice-only fields (Phase E). Optional so non-voice rows omit them. ──
   transcript?: string | null;
   title?: string | null;

@@ -32,6 +32,8 @@ export interface ApiNoteRowInput {
     position: number;
     caption: string | null;
   }>;
+  /** Stored placement pointer for image notes; null = unplaced. */
+  placement?: { kind: 'issue' | 'section'; index: number } | null;
   createdAt: string;
 }
 
@@ -53,6 +55,7 @@ export function toReportNoteRows(
       fileId: n.fileId ?? null,
       thumbnailFileId: n.thumbnailFileId ?? null,
       files: n.files ?? null,
+      placement: n.kind === 'image' ? n.placement ?? null : null,
       transcript: n.transcript ?? null,
       title: n.title ?? null,
       summary: n.summary ?? null,

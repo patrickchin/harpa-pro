@@ -44,6 +44,7 @@ import type { ReportEditTarget } from '@/components/reports/edit/types';
 import { PdfPreviewModal } from '@/components/reports/PdfPreviewModal';
 import { ImagePreviewModal } from '@/components/files/ImagePreviewModal';
 import { ReportPhotos } from '@/components/reports/detail/ReportPhotos';
+import { PhotoGroupPlacementSheet } from '@/components/reports/detail/PhotoGroupPlacementSheet';
 import { ReportDetailHeader } from '@/components/reports/detail/ReportDetailHeader';
 import {
   ReportDetailTabBar,
@@ -63,6 +64,11 @@ import {
   getDeleteReportDialogCopy,
   getUnfinalizeReportDialogCopy,
 } from '@/lib/dialogs/app-dialog-copy';
+import {
+  groupPhotos,
+  splitPlacements,
+  type PhotoPlacement,
+} from '@/lib/reports/photo-placements';
 import type { GeneratedSiteReport } from '@harpa/report-core';
 import type { UseReportPdfActionsReturn } from '@/lib/reports/use-report-pdf-actions';
 
@@ -145,6 +151,17 @@ export interface SavedReportProps {
   showDeveloperSection?: boolean;
   /** Invoked when the user taps the Report Debug entry. */
   onOpenDebug?: () => void;
+
+  /**
+   * Invoked when the user picks (or clears) a placement from the
+   * `PhotoGroupPlacementSheet`. When omitted, the placement chip and
+   * sheet are not rendered at all (legacy behaviour). The route file
+   * wires this to `useOptimisticPlacePhotoGroup`.
+   */
+  onPlacePhotoGroup?: (input: {
+    noteId: string;
+    placement: PhotoPlacement | null;
+  }) => void | Promise<void>;
 }
 
 export function SavedReport(props: SavedReportProps) {
@@ -179,6 +196,7 @@ export function SavedReport(props: SavedReportProps) {
     onViewNotes,
     showDeveloperSection,
     onOpenDebug,
+    onPlacePhotoGroup,
   } = props;
 
   const [menuVisible, setMenuVisible] = useState(false);
@@ -242,6 +260,54 @@ export function SavedReport(props: SavedReportProps) {
 
   const displayReport = localReport ?? report ?? null;
   const notesCount = (noteRows ?? []).length;
+
+  const placementsEnabled = !!onPlacePhotoGroup;
+
+  // Build a Map<noteId, PhotoPlacement|null> from `noteRows`. Each
+  // image-kind row corresponds to exactly one note (its `id` IS the
+  // note id post-`note_files` migration), so the row carries the
+  // placement directly.
+  const placementsByNoteId = useMemo(() => {
+    const m = new Map<string, PhotoPlacement | null>();
+    for (const r of noteRows ?? []) {
+      if (r.kind !== 'photo') continue;
+      m.set(r.id, r.placement ?? null);
+    }
+    return m;
+  }, [noteRows]);
+
+  const photoGroups = useMemo(
+    () => groupPhotos(noteRows ?? [], placementsByNoteId),
+    [noteRows, placementsByNoteId],
+  );
+
+  const placements = useMemo(
+    () => splitPlacements(photoGroups, displayReport),
+    [photoGroups, displayReport],
+  );
+
+  const [placementSheetNoteId, setPlacementSheetNoteId] = useState<
+    string | null
+  >(null);
+  const placementCurrent = useMemo(() => {
+    if (!placementSheetNoteId) return null;
+    return placementsByNoteId.get(placementSheetNoteId) ?? null;
+  }, [placementSheetNoteId, placementsByNoteId]);
+
+  // Self-heal orphaned placements (target index out of range — usually
+  // caused by an issue/section being deleted on the report). Fire-and-
+  // forget PATCH placement=null per orphan group, debounced via a Set
+  // so we don't spam mutations across renders.
+  const orphanHealedRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    if (!placementsEnabled || !onPlacePhotoGroup) return;
+    if (placements.orphans.length === 0) return;
+    for (const g of placements.orphans) {
+      if (orphanHealedRef.current.has(g.noteId)) continue;
+      orphanHealedRef.current.add(g.noteId);
+      void onPlacePhotoGroup({ noteId: g.noteId, placement: null });
+    }
+  }, [placements.orphans, placementsEnabled, onPlacePhotoGroup]);
 
   // Gallery of all photo-notes — drives the swipeable preview modal.
   // One entry per joined `note_files` row across every image note,
@@ -423,11 +489,23 @@ export function SavedReport(props: SavedReportProps) {
               report={displayReport}
               reportNumber={reportNumber ?? undefined}
               onEdit={!isFinal ? handleOpenEdit : undefined}
+              placements={placementsEnabled ? placements : undefined}
+              onOpenPhoto={handleOpenPhoto}
+              onEditPlacement={
+                placementsEnabled
+                  ? (noteId) => setPlacementSheetNoteId(noteId)
+                  : undefined
+              }
             />
             <View className="mt-4">
               <ReportPhotos
                 noteRows={noteRows}
                 onOpenPhoto={handleOpenPhoto}
+                onOpenPlacementSheet={
+                  placementsEnabled
+                    ? (noteId) => setPlacementSheetNoteId(noteId)
+                    : undefined
+                }
               />
             </View>
           </Animated.View>
@@ -600,6 +678,28 @@ export function SavedReport(props: SavedReportProps) {
           report={displayReport}
           onClose={() => setEditing(null)}
           onChange={handleEditModalChange}
+        />
+      ) : null}
+
+      {placementsEnabled ? (
+        <PhotoGroupPlacementSheet
+          visible={placementSheetNoteId !== null}
+          issues={displayReport?.report.issues ?? []}
+          sections={displayReport?.report.sections ?? []}
+          photoCount={
+            placementSheetNoteId
+              ? photoGroups.find((g) => g.noteId === placementSheetNoteId)
+                  ?.photos.length ?? 0
+              : 0
+          }
+          current={placementCurrent}
+          onSelect={(next) => {
+            const noteId = placementSheetNoteId;
+            setPlacementSheetNoteId(null);
+            if (!noteId || !onPlacePhotoGroup) return;
+            void onPlacePhotoGroup({ noteId, placement: next });
+          }}
+          onClose={() => setPlacementSheetNoteId(null)}
         />
       ) : null}
     </SafeAreaView>

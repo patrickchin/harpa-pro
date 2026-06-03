@@ -4,6 +4,31 @@ import { fileId, noteFileId, noteId, reportId, userId } from './ids.js';
 
 export const noteKind = z.enum(['text', 'voice', 'image', 'document']);
 
+/**
+ * Photo-group placement target. When set on an image note, the
+ * mobile client renders that group inline at the bottom of the
+ * matching `IssuesCard` row (`kind: 'issue'`) or
+ * `SummarySectionCard` (`kind: 'section'`) instead of the bottom
+ * "Photos" card. `index` is the array position within the
+ * generated report's `report.issues[]` / `report.sections[]`. Index
+ * stability across regeneration is handled by self-healing on the
+ * client — see docs/v4/design-photo-placement.md.
+ *
+ * Only valid on `kind === 'image'` notes; the API rejects placement
+ * on other kinds with 400. `null` clears any existing placement.
+ */
+export const notePlacement = z.discriminatedUnion('kind', [
+  z.object({
+    kind: z.literal('issue'),
+    index: z.number().int().min(0),
+  }),
+  z.object({
+    kind: z.literal('section'),
+    index: z.number().int().min(0),
+  }),
+]);
+export type NotePlacement = z.infer<typeof notePlacement>;
+
 export const noteFile = z.object({
   id: noteFileId,
   fileId: fileId,
@@ -49,10 +74,28 @@ export const note = z.object({
   language: z.string().min(2).max(16).nullable(),
   transcribeProvider: z.string().nullable(),
   transcribedAt: isoDateTime.nullable(),
+  /**
+   * Photo-group placement target. Null on every non-image note and
+   * on image notes the user hasn't placed yet. Always present on
+   * the wire (the server returns the key with `null` for unset
+   * values) — see Audit C in docs/v4/arch-data-layer.md.
+   */
+  placement: notePlacement.nullable(),
   createdAt: isoDateTime,
   updatedAt: isoDateTime,
 });
 export type Note = z.infer<typeof note>;
+
+/**
+ * Body of `PATCH /reports/{report}/notes/{note}/placement`.
+ * Pass `placement: null` to clear an existing placement.
+ */
+export const updateNotePlacementRequest = z.object({
+  placement: notePlacement.nullable(),
+});
+export type UpdateNotePlacementRequest = z.infer<
+  typeof updateNotePlacementRequest
+>;
 
 export const createNoteRequest = z.object({
   kind: noteKind,

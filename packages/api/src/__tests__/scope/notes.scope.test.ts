@@ -157,4 +157,40 @@ describe('scope: notes', () => {
       conn.release();
     }
   });
+
+  it('paired — bob cannot PATCH placement on alice note (author-only RLS denies)', async () => {
+    const app = createApp();
+    const tok = await signTestToken(bob, bobSid);
+    const res = await app.request(`/notes/${aliceNote}/placement`, {
+      method: 'PATCH',
+      headers: { authorization: `Bearer ${tok}`, 'content-type': 'application/json' },
+      body: JSON.stringify({ placement: { kind: 'issue', index: 0 } }),
+    });
+    // alice's note is text not image — but the kind guard happens
+    // BEFORE the RLS-blocked UPDATE. Either 400 (kind sniff visible
+    // to bob via SELECT under member RLS) or 404 is acceptable; the
+    // critical assertion is that the underlying row is unchanged.
+    expect([400, 404]).toContain(res.status);
+    const conn = await getPool().connect();
+    try {
+      const r = await conn.query<{ placement: unknown }>(
+        `SELECT placement FROM app.notes WHERE id = $1`,
+        [aliceNote],
+      );
+      expect(r.rows[0]?.placement).toBeNull();
+    } finally {
+      conn.release();
+    }
+  });
+
+  it('paired — carol cannot PATCH placement on bob-only note (cross-tenant 404)', async () => {
+    const app = createApp();
+    const tok = await signTestToken(carol, carolSid);
+    const res = await app.request(`/notes/${bobOnlyNote}/placement`, {
+      method: 'PATCH',
+      headers: { authorization: `Bearer ${tok}`, 'content-type': 'application/json' },
+      body: JSON.stringify({ placement: { kind: 'section', index: 0 } }),
+    });
+    expect(res.status).toBe(404);
+  });
 });

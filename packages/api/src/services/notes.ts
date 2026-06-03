@@ -12,6 +12,10 @@ type Db = NodePgDatabase<typeof schema>;
 
 export type NoteKind = 'text' | 'voice' | 'image' | 'document';
 
+export type NotePlacement =
+  | { kind: 'issue'; index: number }
+  | { kind: 'section'; index: number };
+
 export interface NoteFileRow {
   id: string;
   fileId: string;
@@ -35,6 +39,7 @@ export interface NoteRow {
   language: string | null;
   transcribeProvider: string | null;
   transcribedAt: string | null;
+  placement: NotePlacement | null;
   createdAt: string;
   updatedAt: string;
   files: NoteFileRow[];
@@ -56,6 +61,7 @@ interface RawNote {
   language: string | null;
   transcribe_provider: string | null;
   transcribed_at: Date | null;
+  placement: NotePlacement | null;
   created_at: Date;
   updated_at: Date;
 }
@@ -76,6 +82,7 @@ function mapNote(r: RawNote, files: NoteFileRow[] = []): NoteRow {
     language: r.language,
     transcribeProvider: r.transcribe_provider,
     transcribedAt: r.transcribed_at ? new Date(r.transcribed_at).toISOString() : null,
+    placement: r.placement ?? null,
     createdAt: new Date(r.created_at).toISOString(),
     updatedAt: new Date(r.updated_at).toISOString(),
     files,
@@ -94,7 +101,7 @@ function decodeCursor(cursor: string): { createdAt: string; id: string } {
 
 const NOTE_COLUMNS = sql`id, report_id, author_id, kind, body, file_id,
        thumbnail_file_id, transcript, title, summary, duration_sec, language,
-       transcribe_provider, transcribed_at, created_at, updated_at`;
+       transcribe_provider, transcribed_at, placement, created_at, updated_at`;
 
 /**
  * Mark a draft report's notes as changed. Called from every note
@@ -375,6 +382,50 @@ export async function updateNote(
   if (!row) return null;
   await bumpNotesChangedAt(db, row.report_id);
   return mapNote(row);
+}
+
+export type UpdateNotePlacementResult =
+  | { ok: true; note: NoteRow }
+  | { ok: false; reason: 'not-found' | 'wrong-kind' };
+
+/**
+ * Set or clear the placement target for an image note. Pass `null`
+ * to remove placement and re-float the photo group to the bottom
+ * "Photos" card on the client. Returns a discriminated result so
+ * the route can map `wrong-kind` → 400 and `not-found` → 404.
+ *
+ * The DB CHECK constraint validates the JSON shape; the route
+ * boundary validates the request via Zod. We only need a kind
+ * guard here.
+ *
+ * Bumps `notes_changed_at` on the parent draft report so the
+ * auto-regenerator stays in sync.
+ */
+export async function updateNotePlacement(
+  db: Db,
+  noteId: string,
+  placement: NotePlacement | null,
+): Promise<UpdateNotePlacementResult> {
+  const head = await db.execute<{ kind: NoteKind }>(sql`
+    SELECT kind FROM app.notes WHERE id = ${noteId}
+  `);
+  const headRow = head.rows[0];
+  if (!headRow) return { ok: false, reason: 'not-found' };
+  if (headRow.kind !== 'image') return { ok: false, reason: 'wrong-kind' };
+
+  const placementJson =
+    placement === null ? null : JSON.stringify(placement);
+  const r = await db.execute<RawNote>(sql`
+    UPDATE app.notes
+       SET placement = ${placementJson}::jsonb,
+           updated_at = now()
+     WHERE id = ${noteId}
+    RETURNING ${NOTE_COLUMNS}
+  `);
+  const row = r.rows[0];
+  if (!row) return { ok: false, reason: 'not-found' };
+  await bumpNotesChangedAt(db, row.report_id);
+  return { ok: true, note: mapNote(row) };
 }
 
 export async function deleteNote(db: Db, noteId: string): Promise<boolean> {

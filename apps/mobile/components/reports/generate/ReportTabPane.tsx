@@ -26,9 +26,10 @@ import { createEmptyReport } from '@/lib/reports/report-edit-helpers';
 
 interface ReportTabPaneProps {
   width: number;
+  onEdit?: (target: import('@/components/reports/edit/types').ReportEditTarget) => void;
 }
 
-export function ReportTabPane({ width }: ReportTabPaneProps) {
+export function ReportTabPane({ width, onEdit }: ReportTabPaneProps) {
   const { generation, draft, handleRegenerate, reportNumber, preview } =
     useGenerateReport();
 
@@ -101,7 +102,11 @@ export function ReportTabPane({ width }: ReportTabPaneProps) {
 
             <CompletenessCard report={generation.report} />
 
-            <ReportView report={generation.report} reportNumber={reportNumber ?? undefined} />
+            <ReportView
+              report={generation.report}
+              reportNumber={reportNumber ?? undefined}
+              {...(onEdit ? { onEdit } : {})}
+            />
 
             <ReportPhotosFromGallery
               photos={preview.photoGallery}

@@ -43,6 +43,8 @@ import {
   useGenerateReport,
   type GenerateReportProviderProps,
 } from '@/features/generate/GenerateReportProvider';
+import { ReportEditModal } from '@/components/reports/edit/ReportEditModal';
+import type { ReportEditTarget } from '@/components/reports/edit/types';
 import { GenerateReportTabBar } from '@/components/reports/generate/GenerateReportTabBar';
 import { NotesTabPane } from '@/components/reports/generate/NotesTabPane';
 import { ReportTabPane } from '@/components/reports/generate/ReportTabPane';
@@ -117,9 +119,10 @@ function GenerateNotesLayout({
   isDeletingDraft,
   actions,
 }: LayoutProps) {
-  const { reportTitle, tabs } = useGenerateReport();
+  const { reportTitle, tabs, generation } = useGenerateReport();
   const { width: windowWidth } = useWindowDimensions();
   const [isDeleteConfirmVisible, setIsDeleteConfirmVisible] = useState(false);
+  const [editing, setEditing] = useState<ReportEditTarget | null>(null);
   const deleteDraftCopy = getDeleteDraftDialogCopy();
 
   const showDeleteOption = canWrite && Boolean(onDeleteDraft);
@@ -245,7 +248,12 @@ function GenerateNotesLayout({
         testID="generate-pager"
       >
         <NotesTabPane width={windowWidth} />
-        <ReportTabPane width={windowWidth} />
+        <ReportTabPane
+          width={windowWidth}
+          {...(canWrite && generation.report
+            ? { onEdit: (target: ReportEditTarget) => setEditing(target) }
+            : {})}
+        />
         <EditTabPane width={windowWidth} />
         <DebugTabPane width={windowWidth} />
       </ScrollView>
@@ -253,6 +261,15 @@ function GenerateNotesLayout({
       {canWrite ? <GenerateReportInputBar /> : null}
 
       <GenerateReportDialogs />
+
+      {canWrite && generation.report ? (
+        <ReportEditModal
+          target={editing}
+          report={generation.report}
+          onClose={() => setEditing(null)}
+          onChange={generation.setReport}
+        />
+      ) : null}
 
       <AppDialogSheet
         visible={isDeleteConfirmVisible}

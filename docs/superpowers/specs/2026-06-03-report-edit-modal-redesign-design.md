@@ -28,20 +28,26 @@ should own the screen.
 
 In scope:
 
-- Saved draft reports (`screens/saved-report.tsx`) only.
+- Saved draft reports (`screens/saved-report.tsx`).
+- The generate flow (`screens/generate-notes.tsx`) — same per-card pencil →
+  modal experience on the Report tab. The dev-flagged `Edit` tab on that
+  screen is removed (the `showGenerateEditTab` flag becomes a no-op for the
+  tab bar; cleanup of the flag itself is a follow-up so we don't churn the
+  developer screen).
 - Removing the saved-report `Edit` tab.
 - New full-screen modal shell + per-kind edit bodies that reuse the existing
   immutable edit helpers in `lib/reports/report-edit-helpers.ts`.
 
 Out of scope:
 
-- The generate flow's dev-flagged Edit tab (`showGenerateEditTab`,
-  `EditTabPane`, `ReportEditForm`) stays as-is. We don't delete the form yet
-  because it still backs that flow.
+- Removing the generate flow's `EditTabPane` from the pager / `'edit'` from
+  `TAB_ORDER`. The pane is no longer reachable via the tab bar but is left
+  mounted to keep the provider's well-tested `tabs.openEdit` contract intact.
+  Future PR can clean these up alongside `showGenerateEditTab`.
 - Adding new entries (new issue / new detailed section). The existing
-  whole-form Edit tab was the escape hatch; once the tab is gone, saved
-  reports can only edit and delete existing items in those two lists. A
-  follow-up will add an "Add" affordance.
+  whole-form Edit tab was the escape hatch; once the tab is gone, reports
+  can only edit and delete existing items in those two lists. A follow-up
+  will add an "Add" affordance.
 - Any change to autosave wiring on the saved-report screen — `onChangeReport`
   keeps its current contract.
 

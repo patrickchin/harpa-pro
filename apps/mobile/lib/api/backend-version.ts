@@ -51,6 +51,68 @@ export async function fetchBackendVersion(apiUrl: string): Promise<BackendVersio
 /** Test seam — clears the in-memory cache between tests. */
 export function __resetBackendVersionCache(): void {
   cache.clear();
+  readyzCache.clear();
+}
+
+export type BackendReadyz = {
+  ok: boolean;
+  db?: string;
+  head?: string | null;
+  expected?: string;
+  actual?: string | null;
+  message?: string;
+  status: number;
+};
+
+const readyzCache = new Map<string, Promise<BackendReadyz | null>>();
+
+export async function fetchBackendReadyz(apiUrl: string): Promise<BackendReadyz | null> {
+  const cached = readyzCache.get(apiUrl);
+  if (cached) return cached;
+
+  const promise = (async (): Promise<BackendReadyz | null> => {
+    try {
+      const res = await fetch(`${apiUrl.replace(/\/+$/, '')}/readyz`, {
+        headers: { accept: 'application/json' },
+      });
+      const body = (await res.json().catch(() => null)) as Partial<BackendReadyz> | null;
+      return {
+        status: res.status,
+        ok: Boolean(body?.ok ?? res.ok),
+        db: typeof body?.db === 'string' ? body.db : undefined,
+        head: typeof body?.head === 'string' || body?.head === null ? body?.head : undefined,
+        expected: typeof body?.expected === 'string' ? body.expected : undefined,
+        actual:
+          typeof body?.actual === 'string' || body?.actual === null ? body?.actual : undefined,
+        message: typeof body?.message === 'string' ? body.message : undefined,
+      };
+    } catch {
+      return null;
+    }
+  })();
+
+  readyzCache.set(apiUrl, promise);
+  return promise;
+}
+
+export function useBackendReadyz(apiUrl: string | null): BackendReadyz | null {
+  const [readyz, setReadyz] = useState<BackendReadyz | null>(null);
+
+  useEffect(() => {
+    if (!apiUrl) {
+      setReadyz(null);
+      return;
+    }
+    let cancelled = false;
+    fetchBackendReadyz(apiUrl).then((r) => {
+      if (!cancelled) setReadyz(r);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [apiUrl]);
+
+  return readyz;
 }
 
 /**

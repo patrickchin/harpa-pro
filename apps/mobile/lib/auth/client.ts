@@ -18,29 +18,37 @@ import * as SecureStore from 'expo-secure-store';
 import { env } from '@/lib/config/env';
 
 // On unsigned simulator builds (local dev/E2E without a signing certificate)
-// the iOS Keychain rejects all SecureStore operations with errSecMissingEntitlement.
-// We fall back to an in-memory Map so the auth session stays alive within a
-// single app process (fine for E2E since each run does clearState + clearKeychain).
-// @better-auth/expo's storage interface only requires getItem + setItem.
+// the iOS Keychain rejects all SecureStore operations with
+// errSecMissingEntitlement. We fall back to an in-memory Map so the auth
+// session stays alive within a single app process.
+//
+// Gated on __DEV__ on purpose: in production we want SecureStore failures to
+// surface (e.g. to Sentry / via the auth client's own error handling) rather
+// than silently dropping users into an in-memory session that vanishes on
+// every app restart. @better-auth/expo's storage interface only needs
+// getItem + setItem.
 const memCache = new Map<string, string>();
 
-const safeSecureStore = {
-  ...SecureStore,
-  getItem: (key: string, options?: SecureStore.SecureStoreOptions): string | null => {
-    try {
-      return SecureStore.getItem(key, options);
-    } catch {
-      return memCache.get(key) ?? null;
+const storage = __DEV__
+  ? {
+      getItem: (key: string, options?: SecureStore.SecureStoreOptions): string | null => {
+        try {
+          return SecureStore.getItem(key, options);
+        } catch (err) {
+          console.warn('[auth] SecureStore.getItem failed, using in-memory fallback', err);
+          return memCache.get(key) ?? null;
+        }
+      },
+      setItem: (key: string, value: string, options?: SecureStore.SecureStoreOptions): void => {
+        try {
+          SecureStore.setItem(key, value, options);
+        } catch (err) {
+          console.warn('[auth] SecureStore.setItem failed, using in-memory fallback', err);
+          memCache.set(key, value);
+        }
+      },
     }
-  },
-  setItem: (key: string, value: string, options?: SecureStore.SecureStoreOptions): void => {
-    try {
-      SecureStore.setItem(key, value, options);
-    } catch {
-      memCache.set(key, value);
-    }
-  },
-};
+  : SecureStore;
 
 export const authClient = createAuthClient({
   baseURL: `${env.EXPO_PUBLIC_API_URL}/api/auth`,
@@ -48,7 +56,7 @@ export const authClient = createAuthClient({
     expoClient({
       scheme: 'harpa',
       storagePrefix: 'harpa',
-      storage: safeSecureStore,
+      storage: storage,
     }),
     emailOTPClient(),
   ],

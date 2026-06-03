@@ -313,6 +313,7 @@ export function ProjectMembers({
             gap: PROJECT_MEMBERS_LAYOUT.gap,
           }}
           automaticallyAdjustKeyboardInsets
+          keyboardDismissMode="interactive"
           keyboardShouldPersistTaps="handled"
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />

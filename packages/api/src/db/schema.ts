@@ -126,6 +126,17 @@ export const notes = appSchema.table('notes', {
   language: text('language'),
   transcribeProvider: text('transcribe_provider'),
   transcribedAt: timestamp('transcribed_at', { withTimezone: true }),
+  /**
+   * Photo-group placement target. Null on every non-image note and
+   * on image notes the user hasn't placed yet. Shape is validated
+   * by the `notes_placement_shape_chk` CHECK constraint
+   * (migration 0014):
+   *   { kind: 'issue' | 'section', index: <int >= 0> }
+   * See docs/v4/design-photo-placement.md.
+   */
+  placement: jsonb('placement').$type<
+    { kind: 'issue' | 'section'; index: number } | null
+  >(),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 });

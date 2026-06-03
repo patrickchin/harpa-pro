@@ -26,12 +26,19 @@ const Env = z.object({
   /**
    * Email-OTP transport switch. `'1'` → real Resend send via better-auth's
    * `sendVerificationOTP` hook. Default `'0'` logs the OTP to stdout
-   * (development) and is a no-op under test.
+   * (development/preview) and is a no-op under test.
    *
    * Production must set this to `'1'` (refine below); a missing Doppler
    * key would otherwise silently downgrade prod to fake mode.
+   * PR preview deployments are exempt when HARPA_IS_PREVIEW='1'.
    */
   EMAIL_OTP_LIVE: z.enum(['0', '1']).default('0'),
+  /**
+   * Set to `'1'` in PR preview Fly deployments (fly.preview.toml). Relaxes
+   * production-only refines (e.g. EMAIL_OTP_LIVE) that don't make sense
+   * for short-lived review environments.
+   */
+  HARPA_IS_PREVIEW: z.enum(['0', '1']).default('0'),
   AI_FIXTURE_MODE: z.enum(['replay', 'record', 'live']).default('replay'),
   AI_LIVE: z.enum(['0', '1']).default('0'),
   // OpenAI is used for voice-note summarization. Required when AI_LIVE=1.
@@ -173,10 +180,12 @@ const Env = z.object({
     message: 'TEST_ACCOUNT_EMAILS and TEST_ACCOUNT_PASSWORD must be set together',
   },
 ).refine(
-  (e) => e.NODE_ENV !== 'production' || e.EMAIL_OTP_LIVE === '1',
+  (e) => e.NODE_ENV !== 'production' || e.HARPA_IS_PREVIEW === '1' || e.EMAIL_OTP_LIVE === '1',
   {
     path: ['EMAIL_OTP_LIVE'],
-    message: "EMAIL_OTP_LIVE must be '1' on production (else OTP emails would not send)",
+    message:
+      "EMAIL_OTP_LIVE must be '1' on production (else OTP emails would not send). " +
+      "Set HARPA_IS_PREVIEW='1' to allow fake mode on PR preview deployments.",
   },
 );
 

@@ -12,6 +12,7 @@
  */
 import type { ExpoConfig } from 'expo/config';
 import { execSync } from 'node:child_process';
+import { version } from '../../package.json';
 
 type Variant = 'production' | 'preview' | 'development';
 
@@ -57,7 +58,7 @@ const config: ExpoConfig = {
   name: NAME,
   slug: 'harpa-pro-v4',
   owner: 'harpa-pro',
-  version: '0.0.0',
+  version,
   runtimeVersion: { policy: 'appVersion' },
   updates: { url: 'https://u.expo.dev/3b2f920d-b7ae-4c84-b9e9-b077b49f1602' },
   orientation: 'portrait',

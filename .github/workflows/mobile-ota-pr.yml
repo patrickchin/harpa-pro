@@ -63,6 +63,15 @@ jobs:
         # pr-preview.yml). The `development` EAS branch holds only the
         # most recent PR push — engineers select older PR bundles via
         # the dev-client launcher (Updates → development → pick).
+        #
+        # IMPORTANT: do NOT pass `--environment development` here.
+        # That flag pulls EAS-managed env vars (including a fixed
+        # EXPO_PUBLIC_API_URL pointing at the shared dev Fly app) and
+        # those values *override* the shell env vars below — silently
+        # baking the dev API URL into every PR's bundle. We rely on
+        # workflow-level env only so each PR talks to its own preview
+        # backend. Sentry source-map upload is skipped on PR OTAs by
+        # design (these are ephemeral test bundles).
         env:
           EXPO_PUBLIC_API_URL: https://harpa-pro-api-pr-${{ github.event.pull_request.number }}.fly.dev
           EXPO_PUBLIC_PR_NUMBER: ${{ github.event.pull_request.number }}
@@ -71,6 +80,5 @@ jobs:
         run: |
           eas update \
             --channel development \
-            --environment development \
             --message "PR #${{ github.event.pull_request.number }} (${{ github.event.pull_request.head.ref }}) $(git rev-parse --short HEAD)" \
             --non-interactive

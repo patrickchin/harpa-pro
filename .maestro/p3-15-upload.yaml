@@ -37,7 +37,7 @@ tags:
 - runFlow:
     file: helpers/sign-in.yaml
     env:
-      EMAIL: "alice@harpa.test"
+      EMAIL: "alice@e2e.harpapro.com"
 
 # Open the first project / first report.
 - assertVisible:

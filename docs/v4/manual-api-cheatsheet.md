@@ -49,7 +49,7 @@ B=http://127.0.0.1:8787
 J='content-type: application/json'
 
 # --- auth ---------------------------------------------------------------
-EMAIL='alice@harpa.test'
+EMAIL='alice@e2e.harpapro.com'
 curl -sX POST $B/api/auth/email-otp/send-verification-otp -H "$J" \
   -d "{\"email\":\"$EMAIL\",\"type\":\"sign-in\"}" | jq
 OTP=$(curl -sX POST $B/api/dev/last-otp -H "$J" \

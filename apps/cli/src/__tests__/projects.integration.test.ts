@@ -58,7 +58,7 @@ beforeAll(async () => {
   getPool(fx.url);
   app = createApp();
 
-  const email = 'cli-tests-projects@dev.harpa.test';
+  const email = 'cli-tests-projects@e2e.harpapro.com';
   const sink = new MemoryStream();
   await authOtpStart({ apiUrl: 'http://localhost', fetch: appFetch, email, stdout: sink, stderr: sink });
   const code = await readLatestOtp(email);

@@ -44,8 +44,8 @@ bash scripts/journeys/all.sh prod
 | Var                     | Default                              | Notes                                                              |
 | ----------------------- | ------------------------------------ | ------------------------------------------------------------------ |
 | `PASSWORD`              | —                                    | **Required.** Test-account password.                               |
-| `EMAIL`                 | `alice@dev.harpa.test`               | Primary test account (in dev's `TEST_ACCOUNT_EMAILS`).             |
-| `EMAIL2`                | `bob@dev.harpa.test`                 | Secondary test account for cross-user / member tests.              |
+| `EMAIL`                 | `alice@e2e.harpapro.com`               | Primary test account (in dev's `TEST_ACCOUNT_EMAILS`).             |
+| `EMAIL2`                | `bob@e2e.harpapro.com`                 | Secondary test account for cross-user / member tests.              |
 | `VOICE_M4A`             | `samples/real/rain.m4a`     | Voice sample for `core.sh` / `journey.sh`.                         |
 | `VOICE_DURATION_SEC`    | `10`                                 | Reported duration for the voice aggregator call.                   |
 | `VOICE_LONG`            | `samples/real/framing.m4a` | Longer aggregator sample used by `extended.sh`.                |
@@ -56,8 +56,8 @@ bash scripts/journeys/all.sh prod
 Configured via Doppler in the API project's `dev` config under
 `TEST_ACCOUNT_EMAILS` (CSV) + `TEST_ACCOUNT_PASSWORD`. Currently:
 
-- `alice@dev.harpa.test`
-- `bob@dev.harpa.test`
+- `alice@e2e.harpapro.com`
+- `bob@e2e.harpapro.com`
 
 Production deliberately has no test accounts (`TEST_ACCOUNT_PASSWORD`
 unset), so cross-user steps in `extended.sh` / `stress.sh` skip

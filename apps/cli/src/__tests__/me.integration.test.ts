@@ -22,7 +22,7 @@ let app: ReturnType<typeof createApp>;
 let token: string;
 
 const API_URL = 'http://localhost';
-const EMAIL = 'cli-tests-100@dev.harpa.test';
+const EMAIL = 'cli-tests-100@e2e.harpapro.com';
 
 class MemoryStream extends Writable {
   chunks: string[] = [];

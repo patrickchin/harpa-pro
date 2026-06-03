@@ -19,8 +19,8 @@
 set -euo pipefail
 
 BASE=${BASE:-https://harpa-pro-api-dev.fly.dev}
-EMAIL=${EMAIL:-alice@dev.harpa.test}
-EMAIL2=${EMAIL2:-bob@dev.harpa.test}
+EMAIL=${EMAIL:-alice@e2e.harpapro.com}
+EMAIL2=${EMAIL2:-bob@e2e.harpapro.com}
 : "${PASSWORD:?PASSWORD env var is required}"
 
 SAMPLES="$(cd "$(dirname "$0")/../../apps/cli/scripts/samples" && pwd)"
@@ -226,7 +226,7 @@ if [[ "$HAS_USER_B" == "true" ]]; then
   check "viewer: PATCH project (allowed — no role gate)" 200 PATCH "/projects/$PID_A" '{"name":"viewer rename"}'
   check "viewer: DELETE project (owner-only)" 404 DELETE "/projects/$PID_A"
   check "viewer: add member" 403 POST "/projects/$PID_A/members" \
-    '{"email":"charlie@harpa.test","role":"editor"}'
+    '{"email":"charlie@e2e.harpapro.com","role":"editor"}'
   check "viewer: remove member" 403 DELETE "/projects/$PID_A/members/usr_000000000000"
 
   # Viewer CAN read (should get 200)
@@ -348,7 +348,7 @@ if [[ "$BASE" != *"harpa-pro-api.fly.dev"* ]]; then
   # Use a dummy email (not EMAIL/EMAIL2) so we don't burn the real test
   # accounts' per-account rate limit budget. The middleware runs before
   # auth, so any email trips the limiter.
-  PROBE_EMAIL="probe-rate-limit@harpa.test"
+  PROBE_EMAIL="probe-rate-limit@e2e.harpapro.com"
   TOKEN=""
   RATE_LIMITED=false
   for i in $(seq 1 25); do

@@ -12,7 +12,7 @@ tags:
 #   - sign-out + sign-in round trip
 #
 # Pre-condition: app just cold-launched with clearState + clearKeychain;
-# alice@harpa.test exists in the database (better-auth creates the user
+# alice@e2e.harpapro.com exists in the database (better-auth creates the user
 # automatically on first verify, so the first run also covers sign-up).
 # Post-condition: alice is signed in, projects list visible.
 
@@ -71,7 +71,7 @@ tags:
 - runFlow:
     file: ../helpers/sign-in.yaml
     env:
-      EMAIL: "alice@harpa.test"
+      EMAIL: "alice@e2e.harpapro.com"
 
 # --- Onboarding (only on first sign-in for this email; skipped on a
 #     pre-onboarded account) -----------------------------------------------
@@ -103,6 +103,6 @@ tags:
 - runFlow:
     file: ../helpers/sign-in.yaml
     env:
-      EMAIL: "alice@harpa.test"
+      EMAIL: "alice@e2e.harpapro.com"
 - assertVisible:
     id: "btn-new-project"

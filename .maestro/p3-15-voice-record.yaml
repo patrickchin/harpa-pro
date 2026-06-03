@@ -33,7 +33,7 @@ tags:
     stopApp: true
 - waitForAnimationToEnd
 
-# --- Sign in as the seeded Alice (alice@harpa.test) ------------------------
+# --- Sign in as the seeded Alice (alice@e2e.harpapro.com) ------------------------
 - extendedWaitUntil:
     visible:
       id: "input-email"
@@ -41,7 +41,7 @@ tags:
 - runFlow:
     file: helpers/sign-in.yaml
     env:
-      EMAIL: "alice@harpa.test"
+      EMAIL: "alice@e2e.harpapro.com"
 
 # --- Open seeded project → reports → seeded draft (Generate screen) -------
 - extendedWaitUntil:

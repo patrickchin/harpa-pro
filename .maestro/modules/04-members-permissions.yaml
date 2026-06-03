@@ -22,7 +22,7 @@ tags:
 - runFlow:
     file: ../helpers/sign-in.yaml
     env:
-      EMAIL: "bob@harpa.test"
+      EMAIL: "bob@e2e.harpapro.com"
 
 # --- Bob sees the project ---------------------------------------------------
 - assertVisible:
@@ -64,7 +64,7 @@ tags:
 - runFlow:
     file: ../helpers/sign-in.yaml
     env:
-      EMAIL: "alice@harpa.test"
+      EMAIL: "alice@e2e.harpapro.com"
 
 # --- Alice navigates back to project home ----------------------------------
 - runFlow: ../helpers/open-project.yaml

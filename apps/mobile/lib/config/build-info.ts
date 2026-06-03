@@ -12,10 +12,10 @@
  *    re-evaluates the bundle on every "Reload" (Cmd-R), so this
  *    changes after a fresh JS bundle loads — a quick visual
  *    confirmation that a new commit actually shipped to the simulator.
- *  - `classifyApiTarget()` labels any URL as local / dev / pr / prod /
- *    other so the BuildBadge can highlight which backend the app is
- *    talking to. The `pr` label catches per-PR Fly preview apps
- *    (`harpa-pro-api-pr-<n>.fly.dev`) deployed by `pr-preview.yml`.
+ *  - `classifyApiTarget()` labels any URL as local / dev / prod / other
+ *    so the BuildBadge can highlight which backend the app is talking to.
+ *  - PR identity (`prNumber`) comes from `EXPO_PUBLIC_PR_NUMBER` baked
+ *    into the bundle by `mobile-ota-pr.yml` — no URL parsing required.
  */
 import Constants from 'expo-constants';
 
@@ -49,9 +49,9 @@ export type ApiTargetLabel = 'local' | 'dev' | 'pr' | 'prod' | 'other';
  * BuildBadge can colour-code which environment the app talks to.
  * Matches against the host so manual overrides are classified too.
  *
- * `pr` matches per-PR Fly preview apps deployed by
- * `.github/workflows/pr-preview.yml` (`harpa-pro-api-pr-<n>.fly.dev`).
- * `prNumber` is parsed out so the badge can render `pr-124`.
+ * `pr` is returned when `EXPO_PUBLIC_PR_NUMBER` is set in the bundle
+ * (injected by `mobile-ota-pr.yml`). The `prNumber` field carries the
+ * parsed integer so the badge can render `pr-124`.
  */
 export function classifyApiTarget(url: string): {
   label: ApiTargetLabel;
@@ -70,9 +70,8 @@ export function classifyApiTarget(url: string): {
   ) {
     return { label: 'local', host };
   }
-  const prMatch = host.match(/^harpa-pro-api-pr-(\d+)\.fly\.dev$/);
-  if (prMatch) {
-    return { label: 'pr', host, prNumber: Number(prMatch[1]) };
+  if (env.EXPO_PUBLIC_PR_NUMBER !== undefined) {
+    return { label: 'pr', host, prNumber: env.EXPO_PUBLIC_PR_NUMBER };
   }
   if (host.includes('-dev.') || host.startsWith('dev.') || host.includes('harpa-pro-api-dev')) {
     return { label: 'dev', host };

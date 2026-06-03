@@ -65,6 +65,7 @@ jobs:
         # the dev-client launcher (Updates → development → pick).
         env:
           EXPO_PUBLIC_API_URL: https://harpa-pro-api-pr-${{ github.event.pull_request.number }}.fly.dev
+          EXPO_PUBLIC_PR_NUMBER: ${{ github.event.pull_request.number }}
           EXPO_PUBLIC_APP_VARIANT: development
           EXPO_PUBLIC_USE_FIXTURES: "false"
         run: |

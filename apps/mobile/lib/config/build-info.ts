@@ -12,8 +12,10 @@
  *    re-evaluates the bundle on every "Reload" (Cmd-R), so this
  *    changes after a fresh JS bundle loads — a quick visual
  *    confirmation that a new commit actually shipped to the simulator.
- *  - `classifyApiTarget()` labels any URL as local / dev / prod / other
- *    so the BuildBadge can highlight which backend the app is talking to.
+ *  - `classifyApiTarget()` labels any URL as local / dev / pr / prod /
+ *    other so the BuildBadge can highlight which backend the app is
+ *    talking to. The `pr` label catches per-PR Fly preview apps
+ *    (`harpa-pro-api-pr-<n>.fly.dev`) deployed by `pr-preview.yml`.
  */
 import Constants from 'expo-constants';
 
@@ -40,16 +42,21 @@ function deriveServerLabel(url: string): string {
   return url || 'unknown';
 }
 
-export type ApiTargetLabel = 'local' | 'dev' | 'prod' | 'other';
+export type ApiTargetLabel = 'local' | 'dev' | 'pr' | 'prod' | 'other';
 
 /**
- * Classify any API base URL as local / dev / prod / other so the
+ * Classify any API base URL as local / dev / pr / prod / other so the
  * BuildBadge can colour-code which environment the app talks to.
  * Matches against the host so manual overrides are classified too.
+ *
+ * `pr` matches per-PR Fly preview apps deployed by
+ * `.github/workflows/pr-preview.yml` (`harpa-pro-api-pr-<n>.fly.dev`).
+ * `prNumber` is parsed out so the badge can render `pr-124`.
  */
 export function classifyApiTarget(url: string): {
   label: ApiTargetLabel;
   host: string;
+  prNumber?: number;
 } {
   let host = url;
   try {
@@ -62,6 +69,10 @@ export function classifyApiTarget(url: string): {
     host.endsWith('.local')
   ) {
     return { label: 'local', host };
+  }
+  const prMatch = host.match(/^harpa-pro-api-pr-(\d+)\.fly\.dev$/);
+  if (prMatch) {
+    return { label: 'pr', host, prNumber: Number(prMatch[1]) };
   }
   if (host.includes('-dev.') || host.startsWith('dev.') || host.includes('harpa-pro-api-dev')) {
     return { label: 'dev', host };

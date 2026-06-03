@@ -158,6 +158,7 @@ export function useOptimisticCreateNote() {
         transcribedAt: null,
         createdAt: now,
         updatedAt: now,
+        placement: null,
       };
       updateAllNotesQueries(qc, vars.params.report, (page) => ({
         ...page,

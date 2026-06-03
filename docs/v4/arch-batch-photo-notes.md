@@ -188,3 +188,10 @@ Each `PhotoTile` manages its own visual state:
 
 Full spec:
 `docs/superpowers/specs/2026-05-25-batch-photo-notes-design.md`
+
+## See also
+
+- [`design-photo-placement.md`](design-photo-placement.md) — UI + API
+  for placing a photo group onto a specific issue or summary section
+  (nullable `notes.placement` jsonb, `PATCH /notes/{n}/placement`,
+  `MapPin` chip + `AppDialogSheet` picker).

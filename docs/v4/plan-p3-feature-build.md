@@ -616,3 +616,11 @@ Tracked end-to-end in
 - [ ] All boxes ticked (P3.0 – P3.15). Tag `v0.3.0-features`.
 - [ ] `pnpm --filter @harpa/mobile bundle:smoke` green on the tag SHA
   (see `overnight-protocol.md` §5 — also run per-commit through P3).
+
+### Follow-up: photo placement UI
+
+Photo groups now carry an optional `placement` pointer to a specific
+issue or summary section. Design + implementation notes:
+[`design-photo-placement.md`](design-photo-placement.md). Migration
+0014 + `PATCH /notes/{n}/placement` + the mobile sheet/chip ship as
+a self-contained slice and do not gate P3 exit.

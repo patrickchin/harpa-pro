@@ -1,0 +1,99 @@
+appId: ${MAESTRO_APP_ID}
+name: Photo placement — place a captured photo onto an issue
+tags:
+  - reports
+  - photos
+  - placement
+# Exercises the photo-placement UI added in
+# docs/v4/design-photo-placement.md:
+#   - draft saved-report renders the "Unplaced photos" card with a
+#     `Place into…` chip per photo group
+#   - the placement sheet lists the report's issues + sections
+#   - tapping an issue PATCHes /notes/{n}/placement and the photo
+#     re-renders inline under that issue (`placed-photos-issue-N`)
+#   - the bottom photo strip drops the now-placed group
+#
+# Pre-flight is identical to `p3-15-upload.yaml`: docker compose stack
+# up, fresh DB via `scripts/maestro/reset-db.sh`. The flow assumes a
+# seeded report whose normalized JSON contains at least one issue
+# (the dev-mirror sample report does).
+#
+# Run:
+#   ./scripts/maestro/reset-db.sh
+#   maestro test .maestro/place-photo-on-issue.flow.yml
+---
+- launchApp:
+    clearState: true
+    clearKeychain: true
+    stopApp: true
+- waitForAnimationToEnd
+
+# Sign in.
+- assertVisible:
+    id: 'input-phone'
+- tapOn:
+    id: 'input-phone'
+- inputText: '+15550100100'
+- hideKeyboard
+- tapOn:
+    id: 'btn-login-send-code'
+- assertVisible:
+    id: 'input-otp'
+- tapOn:
+    id: 'input-otp'
+- inputText: '000000'
+- hideKeyboard
+- tapOn:
+    id: 'btn-verify-code'
+
+# Open the first project / first draft report.
+- assertVisible:
+    id: 'btn-open-reports'
+- tapOn:
+    id: 'btn-open-reports'
+- assertVisible:
+    id: 'report-row-draft-0'
+- tapOn:
+    id: 'report-row-draft-0'
+
+# Capture a photo via the same camera + upload pipeline as p3-15.
+- assertVisible:
+    id: 'btn-tab-notes'
+- tapOn:
+    id: 'btn-tab-notes'
+- tapOn:
+    id: 'btn-attachment'
+- tapOn:
+    id: 'btn-attachment-camera'
+- tapOn:
+    id: 'btn-camera-shutter'
+- tapOn:
+    id: 'btn-camera-done'
+
+# Switch to the Report tab — the photo lands in the Unplaced photos
+# card with a `Place into…` chip.
+- tapOn:
+    id: 'btn-tab-report'
+- assertVisible:
+    id: 'report-photos'
+- assertVisible: 'Unplaced photos'
+- assertVisible: 'Place into…'
+
+# Tap the chip to open the placement sheet.
+- tapOn: 'Place into…'
+- assertVisible: 'Place photos'
+
+# Pick the first issue. The sheet's row testIDs follow the
+# `btn-place-issue-{index}` convention from PhotoGroupPlacementSheet.
+- assertVisible:
+    id: 'btn-place-issue-0'
+- tapOn:
+    id: 'btn-place-issue-0'
+
+# Sheet closes; the photo now renders under the first issue.
+- assertVisible:
+    id: 'placed-photos-issue-0'
+
+# And the bottom Unplaced photos card is gone (or empty) — the only
+# group has been moved out of it.
+- assertNotVisible: 'Unplaced photos'

@@ -7921,6 +7921,51 @@
                             "type": "string",
                             "nullable": true
                           },
+                          "placement": {
+                            "oneOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "type": "string",
+                                    "enum": [
+                                      "issue"
+                                    ]
+                                  },
+                                  "index": {
+                                    "type": "integer",
+                                    "minimum": 0
+                                  }
+                                },
+                                "required": [
+                                  "kind",
+                                  "index"
+                                ]
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "type": "string",
+                                    "enum": [
+                                      "section"
+                                    ]
+                                  },
+                                  "index": {
+                                    "type": "integer",
+                                    "minimum": 0
+                                  }
+                                },
+                                "required": [
+                                  "kind",
+                                  "index"
+                                ]
+                              },
+                              {
+                                "nullable": true
+                              }
+                            ]
+                          },
                           "createdAt": {
                             "type": "string"
                           },
@@ -7943,6 +7988,7 @@
                           "language",
                           "transcribeProvider",
                           "transcribedAt",
+                          "placement",
                           "createdAt",
                           "updatedAt"
                         ]
@@ -8239,6 +8285,51 @@
                       "type": "string",
                       "nullable": true
                     },
+                    "placement": {
+                      "oneOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "enum": [
+                                "issue"
+                              ]
+                            },
+                            "index": {
+                              "type": "integer",
+                              "minimum": 0
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "index"
+                          ]
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "enum": [
+                                "section"
+                              ]
+                            },
+                            "index": {
+                              "type": "integer",
+                              "minimum": 0
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "index"
+                          ]
+                        },
+                        {
+                          "nullable": true
+                        }
+                      ]
+                    },
                     "createdAt": {
                       "type": "string"
                     },
@@ -8261,6 +8352,7 @@
                     "language",
                     "transcribeProvider",
                     "transcribedAt",
+                    "placement",
                     "createdAt",
                     "updatedAt"
                   ]
@@ -8719,6 +8811,51 @@
                       "type": "string",
                       "nullable": true
                     },
+                    "placement": {
+                      "oneOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "enum": [
+                                "issue"
+                              ]
+                            },
+                            "index": {
+                              "type": "integer",
+                              "minimum": 0
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "index"
+                          ]
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "enum": [
+                                "section"
+                              ]
+                            },
+                            "index": {
+                              "type": "integer",
+                              "minimum": 0
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "index"
+                          ]
+                        },
+                        {
+                          "nullable": true
+                        }
+                      ]
+                    },
                     "createdAt": {
                       "type": "string"
                     },
@@ -8741,6 +8878,7 @@
                     "language",
                     "transcribeProvider",
                     "transcribedAt",
+                    "placement",
                     "createdAt",
                     "updatedAt"
                   ]
@@ -8881,6 +9019,384 @@
         "responses": {
           "204": {
             "description": "Deleted."
+          },
+          "401": {
+            "description": "Unauthorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "nullable": true
+                        },
+                        "requestId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found or not author.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "nullable": true
+                        },
+                        "requestId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/notes/{note}/placement": {
+      "patch": {
+        "tags": [
+          "notes"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
+            },
+            "required": true,
+            "name": "note",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "placement": {
+                    "oneOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "issue"
+                            ]
+                          },
+                          "index": {
+                            "type": "integer",
+                            "minimum": 0
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "index"
+                        ]
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "section"
+                            ]
+                          },
+                          "index": {
+                            "type": "integer",
+                            "minimum": 0
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "index"
+                        ]
+                      },
+                      {
+                        "nullable": true
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "placement"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Placement updated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
+                    },
+                    "reportId": {
+                      "type": "string",
+                      "pattern": "^rpt_[0-9a-hjkmnp-tv-z]{8,16}$"
+                    },
+                    "authorId": {
+                      "type": "string",
+                      "pattern": "^usr_[0-9a-hjkmnp-tv-z]{8,16}$"
+                    },
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "text",
+                        "voice",
+                        "image",
+                        "document"
+                      ]
+                    },
+                    "body": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "fileId": {
+                      "type": "string",
+                      "nullable": true,
+                      "pattern": "^fil_[0-9a-hjkmnp-tv-z]{8,16}$"
+                    },
+                    "thumbnailFileId": {
+                      "type": "string",
+                      "nullable": true,
+                      "pattern": "^fil_[0-9a-hjkmnp-tv-z]{8,16}$"
+                    },
+                    "files": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "pattern": "^nfl_[0-9a-hjkmnp-tv-z]{8,16}$"
+                          },
+                          "fileId": {
+                            "type": "string",
+                            "pattern": "^fil_[0-9a-hjkmnp-tv-z]{8,16}$"
+                          },
+                          "thumbnailFileId": {
+                            "type": "string",
+                            "nullable": true,
+                            "pattern": "^fil_[0-9a-hjkmnp-tv-z]{8,16}$"
+                          },
+                          "position": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "caption": {
+                            "type": "string",
+                            "nullable": true
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "fileId",
+                          "thumbnailFileId",
+                          "position",
+                          "caption"
+                        ]
+                      },
+                      "default": []
+                    },
+                    "transcript": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "title": {
+                      "type": "string",
+                      "nullable": true,
+                      "maxLength": 200
+                    },
+                    "summary": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "durationSec": {
+                      "type": "integer",
+                      "nullable": true,
+                      "minimum": 0
+                    },
+                    "language": {
+                      "type": "string",
+                      "nullable": true,
+                      "minLength": 2,
+                      "maxLength": 16
+                    },
+                    "transcribeProvider": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "transcribedAt": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "placement": {
+                      "oneOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "enum": [
+                                "issue"
+                              ]
+                            },
+                            "index": {
+                              "type": "integer",
+                              "minimum": 0
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "index"
+                          ]
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "enum": [
+                                "section"
+                              ]
+                            },
+                            "index": {
+                              "type": "integer",
+                              "minimum": 0
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "index"
+                          ]
+                        },
+                        {
+                          "nullable": true
+                        }
+                      ]
+                    },
+                    "createdAt": {
+                      "type": "string"
+                    },
+                    "updatedAt": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "reportId",
+                    "authorId",
+                    "kind",
+                    "body",
+                    "fileId",
+                    "thumbnailFileId",
+                    "transcript",
+                    "title",
+                    "summary",
+                    "durationSec",
+                    "language",
+                    "transcribeProvider",
+                    "transcribedAt",
+                    "placement",
+                    "createdAt",
+                    "updatedAt"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request (e.g. non-image note).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "nullable": true
+                        },
+                        "requestId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
           },
           "401": {
             "description": "Unauthorized.",
@@ -9879,6 +10395,51 @@
                       "type": "string",
                       "nullable": true
                     },
+                    "placement": {
+                      "oneOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "enum": [
+                                "issue"
+                              ]
+                            },
+                            "index": {
+                              "type": "integer",
+                              "minimum": 0
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "index"
+                          ]
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "enum": [
+                                "section"
+                              ]
+                            },
+                            "index": {
+                              "type": "integer",
+                              "minimum": 0
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "index"
+                          ]
+                        },
+                        {
+                          "nullable": true
+                        }
+                      ]
+                    },
                     "createdAt": {
                       "type": "string"
                     },
@@ -9901,6 +10462,7 @@
                     "language",
                     "transcribeProvider",
                     "transcribedAt",
+                    "placement",
                     "createdAt",
                     "updatedAt"
                   ]

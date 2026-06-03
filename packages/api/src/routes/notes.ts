@@ -16,7 +16,7 @@ import {
 } from '@harpa/api-contract';
 import type { AppEnv } from '../app.js';
 import { withAuth } from '../middleware/auth.js';
-import { appendFiles, createNote, deleteNote, listNotes, updateNote } from '../services/notes.js';
+import { appendFiles, createNote, deleteNote, listNotes, updateNote, updateNotePlacement } from '../services/notes.js';
 import { getReport } from '../services/reports.js';
 
 const reportParam = z.object({ report: reportId.openapi({ param: { name: 'report', in: 'path' } }) });
@@ -150,6 +150,43 @@ noteRoutes.openapi(
     const note = await db((d) => updateNote(d, noteId, patch));
     if (!note) throw new HTTPException(404, { message: 'Note not found or not author.' });
     return c.json(note, 200);
+  },
+);
+
+// --------- placement ----------
+//
+// Sub-resource so it stays orthogonal to the main `PATCH /notes/{n}`
+// (which has empty-patch=400 semantics). `placement: null` clears
+// an existing placement; non-image notes are rejected with 400.
+noteRoutes.openapi(
+  createRoute({
+    method: 'patch',
+    path: '/notes/{note}/placement',
+    tags: ['notes'],
+    security: [{ bearerAuth: [] }],
+    middleware: [withAuth()] as const,
+    request: {
+      params: noteParam,
+      body: { content: { 'application/json': { schema: noteSchemas.updateNotePlacementRequest } } },
+    },
+    responses: {
+      200: { description: 'Placement updated.', content: { 'application/json': { schema: noteSchemas.note } } },
+      400: { description: 'Bad request (e.g. non-image note).', content: { 'application/json': { schema: errorEnvelope } } },
+      401: { description: 'Unauthorized.', content: { 'application/json': { schema: errorEnvelope } } },
+      404: { description: 'Not found or not author.', content: { 'application/json': { schema: errorEnvelope } } },
+    },
+  }),
+  async (c) => {
+    const db = c.get('db');
+    if (!db) throw new HTTPException(401);
+    const { note: noteId } = c.req.valid('param');
+    const { placement } = c.req.valid('json');
+    const result = await db((d) => updateNotePlacement(d, noteId, placement));
+    if (result.ok) return c.json(result.note, 200);
+    if (result.reason === 'wrong-kind') {
+      throw new HTTPException(400, { message: 'Placement is only valid on image notes.' });
+    }
+    throw new HTTPException(404, { message: 'Note not found or not author.' });
   },
 );
 

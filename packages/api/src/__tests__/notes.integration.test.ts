@@ -422,3 +422,121 @@ describe('batch photo notes', () => {
     expect(note!.files[0]!.fileId).toBe(fileIds[2]);
   });
 });
+
+describe('PATCH /notes/:note/placement', () => {
+  let imageNote: string;
+  let textNote: string;
+  let placementFileId: string;
+
+  beforeAll(async () => {
+    const client = new pg.Client({ connectionString: fx.url });
+    await client.connect();
+    placementFileId = makeFileId();
+    await client.query(
+      `INSERT INTO app.files(id, owner_id, kind, file_key, size_bytes, content_type)
+       VALUES ($1, $2, 'image', $3, 1024, 'image/jpeg')`,
+      [placementFileId, alice, `placement-key-${placementFileId}`],
+    );
+    await client.end();
+
+    // Seed via the API so we exercise the create→placement flow end-to-end.
+    const app = createApp();
+    const tok = await signTestToken(alice, aliceSid);
+    const imgRes = await app.request(`/reports/${report}/notes`, {
+      method: 'POST',
+      headers: headers(tok),
+      body: JSON.stringify({
+        kind: 'image',
+        files: [{ fileId: placementFileId, thumbnailFileId: null }],
+      }),
+    });
+    imageNote = ((await imgRes.json()) as { id: string }).id;
+
+    const txtRes = await app.request(`/reports/${report}/notes`, {
+      method: 'POST',
+      headers: headers(tok),
+      body: JSON.stringify({ kind: 'text', body: 'placement guard' }),
+    });
+    textNote = ((await txtRes.json()) as { id: string }).id;
+  });
+
+  it('sets placement and returns the updated note', async () => {
+    const app = createApp();
+    const tok = await signTestToken(alice, aliceSid);
+    const res = await app.request(`/notes/${imageNote}/placement`, {
+      method: 'PATCH',
+      headers: headers(tok),
+      body: JSON.stringify({ placement: { kind: 'issue', index: 2 } }),
+    });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { id: string; placement: { kind: string; index: number } | null };
+    expect(body.id).toBe(imageNote);
+    expect(body.placement).toEqual({ kind: 'issue', index: 2 });
+  });
+
+  it('listNotes round-trips placement on the wire', async () => {
+    const app = createApp();
+    const tok = await signTestToken(alice, aliceSid);
+    const res = await app.request(`/reports/${report}/notes`, {
+      headers: { authorization: `Bearer ${tok}` },
+    });
+    const body = (await res.json()) as {
+      items: Array<{ id: string; placement: { kind: string; index: number } | null }>;
+    };
+    const note = body.items.find((n) => n.id === imageNote);
+    expect(note?.placement).toEqual({ kind: 'issue', index: 2 });
+    const txt = body.items.find((n) => n.id === textNote);
+    expect(txt?.placement).toBeNull();
+  });
+
+  it('clears placement with placement: null', async () => {
+    const app = createApp();
+    const tok = await signTestToken(alice, aliceSid);
+    const res = await app.request(`/notes/${imageNote}/placement`, {
+      method: 'PATCH',
+      headers: headers(tok),
+      body: JSON.stringify({ placement: null }),
+    });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { placement: unknown };
+    expect(body.placement).toBeNull();
+  });
+
+  it('rejects placement on non-image notes with 400', async () => {
+    const app = createApp();
+    const tok = await signTestToken(alice, aliceSid);
+    const res = await app.request(`/notes/${textNote}/placement`, {
+      method: 'PATCH',
+      headers: headers(tok),
+      body: JSON.stringify({ placement: { kind: 'issue', index: 0 } }),
+    });
+    expect(res.status).toBe(400);
+  });
+
+  it('returns 400 on malformed placement (negative index)', async () => {
+    const app = createApp();
+    const tok = await signTestToken(alice, aliceSid);
+    const res = await app.request(`/notes/${imageNote}/placement`, {
+      method: 'PATCH',
+      headers: headers(tok),
+      body: JSON.stringify({ placement: { kind: 'issue', index: -1 } }),
+    });
+    expect(res.status).toBe(400);
+  });
+
+  it('bumps notes_changed_at on the parent draft report', async () => {
+    const app = createApp();
+    const tok = await signTestToken(alice, aliceSid);
+    const before = await readDirty(report);
+    // Force a small sleep so the timestamp is observably different.
+    await new Promise((r) => setTimeout(r, 10));
+    const res = await app.request(`/notes/${imageNote}/placement`, {
+      method: 'PATCH',
+      headers: headers(tok),
+      body: JSON.stringify({ placement: { kind: 'section', index: 0 } }),
+    });
+    expect(res.status).toBe(200);
+    const after = await readDirty(report);
+    expect(after.changed_at?.getTime() ?? 0).toBeGreaterThan(before.changed_at?.getTime() ?? 0);
+  });
+});

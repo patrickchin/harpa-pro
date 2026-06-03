@@ -3199,6 +3199,15 @@ export interface paths {
                                 language: string | null;
                                 transcribeProvider: string | null;
                                 transcribedAt: string | null;
+                                placement: {
+                                    /** @enum {string} */
+                                    kind: "issue";
+                                    index: number;
+                                } | {
+                                    /** @enum {string} */
+                                    kind: "section";
+                                    index: number;
+                                } | unknown;
                                 createdAt: string;
                                 updatedAt: string;
                             }[];
@@ -3299,6 +3308,15 @@ export interface paths {
                             language: string | null;
                             transcribeProvider: string | null;
                             transcribedAt: string | null;
+                            placement: {
+                                /** @enum {string} */
+                                kind: "issue";
+                                index: number;
+                            } | {
+                                /** @enum {string} */
+                                kind: "section";
+                                index: number;
+                            } | unknown;
                             createdAt: string;
                             updatedAt: string;
                         };
@@ -3559,12 +3577,155 @@ export interface paths {
                             language: string | null;
                             transcribeProvider: string | null;
                             transcribedAt: string | null;
+                            placement: {
+                                /** @enum {string} */
+                                kind: "issue";
+                                index: number;
+                            } | {
+                                /** @enum {string} */
+                                kind: "section";
+                                index: number;
+                            } | unknown;
                             createdAt: string;
                             updatedAt: string;
                         };
                     };
                 };
                 /** @description Bad request. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                                requestId?: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Unauthorized. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                                requestId?: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Not found or not author. */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                                requestId?: string;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        trace?: never;
+    };
+    "/notes/{note}/placement": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    note: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        placement: {
+                            /** @enum {string} */
+                            kind: "issue";
+                            index: number;
+                        } | {
+                            /** @enum {string} */
+                            kind: "section";
+                            index: number;
+                        } | unknown;
+                    };
+                };
+            };
+            responses: {
+                /** @description Placement updated. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            id: string;
+                            reportId: string;
+                            authorId: string;
+                            /** @enum {string} */
+                            kind: "text" | "voice" | "image" | "document";
+                            body: string | null;
+                            fileId: string | null;
+                            thumbnailFileId: string | null;
+                            /** @default [] */
+                            files: {
+                                id: string;
+                                fileId: string;
+                                thumbnailFileId: string | null;
+                                position: number;
+                                caption: string | null;
+                            }[];
+                            transcript: string | null;
+                            title: string | null;
+                            summary: string | null;
+                            durationSec: number | null;
+                            language: string | null;
+                            transcribeProvider: string | null;
+                            transcribedAt: string | null;
+                            placement: {
+                                /** @enum {string} */
+                                kind: "issue";
+                                index: number;
+                            } | {
+                                /** @enum {string} */
+                                kind: "section";
+                                index: number;
+                            } | unknown;
+                            createdAt: string;
+                            updatedAt: string;
+                        };
+                    };
+                };
+                /** @description Bad request (e.g. non-image note). */
                 400: {
                     headers: {
                         [name: string]: unknown;
@@ -4003,6 +4164,15 @@ export interface paths {
                             language: string | null;
                             transcribeProvider: string | null;
                             transcribedAt: string | null;
+                            placement: {
+                                /** @enum {string} */
+                                kind: "issue";
+                                index: number;
+                            } | {
+                                /** @enum {string} */
+                                kind: "section";
+                                index: number;
+                            } | unknown;
                             createdAt: string;
                             updatedAt: string;
                         };

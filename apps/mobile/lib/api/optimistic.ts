@@ -41,8 +41,10 @@ type Note = NotesPage['items'][number];
 
 type CreateNoteBody = RequestBody<'/reports/{report}/notes', 'post'>;
 type UpdateNoteBody = RequestBody<'/notes/{note}', 'patch'>;
+type UpdateNotePlacementBody = RequestBody<'/notes/{note}/placement', 'patch'>;
 type CreateNoteResponse = ResponseBody<'/reports/{report}/notes', 'post'>;
 type UpdateNoteResponse = ResponseBody<'/notes/{note}', 'patch'>;
+type UpdateNotePlacementResponse = ResponseBody<'/notes/{note}/placement', 'patch'>;
 type DeleteNoteResponse = ResponseBody<'/notes/{note}', 'delete'>;
 
 type ReportsPage = ResponseBody<'/projects/{project}/reports', 'get'>;
@@ -229,6 +231,65 @@ export function useOptimisticUpdateNote() {
     },
     onSettled: () => {
       runInvalidations(qc, 'useUpdateNoteMutation');
+    },
+  });
+}
+
+// ─── useOptimisticPlacePhotoGroup ────────────────────────────
+
+/**
+ * Optimistic wrapper for the note-placement sub-resource.
+ *
+ * Photo groups (a single image-note with N attached files) carry a
+ * nullable `placement` pointer that ties the group to a specific
+ * issue or summary section. Tapping "Place into…" should feel
+ * instant in the UI, so we patch the cached `reportNotes` page
+ * before the server confirms.
+ *
+ * The photo-group concept maps 1:1 to a single `note` row at this
+ * level — the server stores `placement` on the parent note, not on
+ * each file. The mobile UI already groups by `noteId`, so callers
+ * pass the parent note id as `params.note`.
+ */
+export interface OptimisticPlacePhotoGroupVars {
+  params: { note: string };
+  body: UpdateNotePlacementBody;
+  /** Required so we can target the right `reportNotes` page. */
+  reportId: string;
+}
+
+export function useOptimisticPlacePhotoGroup() {
+  const qc = useQueryClient();
+  return useMutation<
+    UpdateNotePlacementResponse,
+    ApiError,
+    OptimisticPlacePhotoGroupVars,
+    { snapshot: NotesSnapshot }
+  >({
+    mutationFn: (vars) =>
+      request('/notes/{note}/placement', 'patch', {
+        params: vars.params,
+        body: vars.body,
+      }),
+    onMutate: async (vars) => {
+      await qc.cancelQueries({ queryKey: REPORT_NOTES_KEY });
+      const snapshot = snapshotNotesQueries(qc);
+      const nextPlacement = vars.body.placement ?? null;
+      updateAllNotesQueries(qc, vars.reportId, (page) => ({
+        ...page,
+        items: page.items.map((n) =>
+          n.id === vars.params.note
+            ? { ...n, placement: nextPlacement }
+            : n,
+        ),
+      }));
+      return { snapshot };
+    },
+    onError: (_err, _vars, context) => {
+      if (context) restoreNotesQueries(qc, context.snapshot);
+    },
+    onSettled: () => {
+      runInvalidations(qc, 'useUpdateNotePlacementMutation');
     },
   });
 }

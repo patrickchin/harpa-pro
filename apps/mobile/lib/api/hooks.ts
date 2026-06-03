@@ -556,6 +556,26 @@ export function useUpdateNoteMutation(
   });
 }
 
+export type UpdateNotePlacementMutationVars = { params: PathParams<"/notes/{note}/placement", "patch">; body: RequestBody<"/notes/{note}/placement", "patch"> };
+export function useUpdateNotePlacementMutation(
+  options?: UseMutationOptions<ResponseBody<"/notes/{note}/placement", "patch">, ApiError, UpdateNotePlacementMutationVars>,
+) {
+  const qc = useQueryClient();
+  return useMutation<ResponseBody<"/notes/{note}/placement", "patch">, ApiError, UpdateNotePlacementMutationVars>({
+    mutationFn: (vars) => request("/notes/{note}/placement", "patch", { params: vars.params, body: vars.body }),
+    ...options,
+    onSuccess: (...args) => {
+      const rule = INVALIDATIONS["useUpdateNotePlacementMutation"];
+      if (rule && rule !== INVALIDATIONS_NONE) {
+        for (const head of rule) {
+          qc.invalidateQueries({ queryKey: [head] });
+        }
+      }
+      return options?.onSuccess?.(...args);
+    },
+  });
+}
+
 export type AppendFilesMutationVars = { params: PathParams<"/notes/{note}/files", "post">; body: RequestBody<"/notes/{note}/files", "post"> };
 export function useAppendFilesMutation(
   options?: UseMutationOptions<ResponseBody<"/notes/{note}/files", "post">, ApiError, AppendFilesMutationVars>,

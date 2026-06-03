@@ -91,6 +91,7 @@ const ENDPOINTS: Endpoint[] = [
   { method: 'get',    path: '/reports/{report}/notes',              hook: 'useReportNotesQuery',          query: true,  hasPathParams: true,  hasBody: false, queryKeyHead: 'reportNotes' },
   { method: 'post',   path: '/reports/{report}/notes',              hook: 'useCreateNoteMutation',        query: false, hasPathParams: true,  hasBody: true },
   { method: 'patch',  path: '/notes/{note}',                        hook: 'useUpdateNoteMutation',        query: false, hasPathParams: true,  hasBody: true },
+  { method: 'patch',  path: '/notes/{note}/placement',              hook: 'useUpdateNotePlacementMutation', query: false, hasPathParams: true,  hasBody: true },
   { method: 'post',   path: '/notes/{note}/files',                   hook: 'useAppendFilesMutation',       query: false, hasPathParams: true,  hasBody: true },
   { method: 'delete', path: '/notes/{note}',                        hook: 'useDeleteNoteMutation',        query: false, hasPathParams: true,  hasBody: false },
 

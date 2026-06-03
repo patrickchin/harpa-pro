@@ -27,6 +27,7 @@ import {
   useOptimisticCreateNote,
   useOptimisticCreateReport,
   useOptimisticDeleteNote,
+  useOptimisticPlacePhotoGroup,
   useOptimisticUpdateNote,
 } from './optimistic';
 
@@ -69,6 +70,7 @@ type NoteRow = {
   transcript: string | null;
   createdAt: string;
   updatedAt: string;
+  placement?: { kind: 'issue' | 'section'; index: number } | null;
 };
 type NotesPage = { items: NoteRow[]; nextCursor: string | null };
 
@@ -274,6 +276,84 @@ describe('useOptimisticUpdateNote', () => {
     });
 
     expect(qc.getQueryData<NotesPage>(NOTES_KEY)!.items[0]!.body).toBe('before');
+  });
+});
+
+describe('useOptimisticPlacePhotoGroup', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('patches placement immediately, rolls back on error', async () => {
+    const qc = makeClient();
+    const photo: NoteRow = {
+      ...seedNote('not_photo00001', null as unknown as string),
+      kind: 'image',
+      body: null,
+      placement: null,
+    };
+    qc.setQueryData<NotesPage>(NOTES_KEY, {
+      items: [photo],
+      nextCursor: null,
+    });
+
+    const gate = defer<Response>();
+    vi.stubGlobal('fetch', vi.fn(async () => gate.promise));
+
+    const hookRef = renderHook(() => useOptimisticPlacePhotoGroup(), qc);
+
+    let promise!: Promise<unknown>;
+    await act(async () => {
+      promise = hookRef.current.mutateAsync({
+        params: { note: 'not_photo00001' },
+        body: { placement: { kind: 'issue', index: 2 } },
+        reportId: REPORT,
+      });
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(qc.getQueryData<NotesPage>(NOTES_KEY)!.items[0]!.placement).toEqual({
+      kind: 'issue',
+      index: 2,
+    });
+
+    gate.resolve(jsonResponse(500, { error: { code: 'i', message: 'x' } }));
+    await act(async () => {
+      await expect(promise).rejects.toBeDefined();
+    });
+
+    expect(qc.getQueryData<NotesPage>(NOTES_KEY)!.items[0]!.placement).toBeNull();
+  });
+
+  it('clears placement when body.placement is null', async () => {
+    const qc = makeClient();
+    const photo: NoteRow = {
+      ...seedNote('not_photo00002', null as unknown as string),
+      kind: 'image',
+      body: null,
+      placement: { kind: 'section', index: 0 },
+    };
+    qc.setQueryData<NotesPage>(NOTES_KEY, {
+      items: [photo],
+      nextCursor: null,
+    });
+
+    const gate = defer<Response>();
+    vi.stubGlobal('fetch', vi.fn(async () => gate.promise));
+
+    const hookRef = renderHook(() => useOptimisticPlacePhotoGroup(), qc);
+
+    await act(async () => {
+      void hookRef.current.mutateAsync({
+        params: { note: 'not_photo00002' },
+        body: { placement: null },
+        reportId: REPORT,
+      });
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(qc.getQueryData<NotesPage>(NOTES_KEY)!.items[0]!.placement).toBeNull();
+    gate.resolve(jsonResponse(200, { id: 'not_photo00002' }));
   });
 });
 

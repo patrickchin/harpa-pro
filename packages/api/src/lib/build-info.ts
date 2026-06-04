@@ -3,10 +3,8 @@
  * mobile BuildBadge can display the backend version alongside the
  * frontend version. Mirrors `apps/mobile/lib/build-info.ts`.
  *
- *  - `version`      — semver constant. Kept in sync with
- *                     `packages/api/package.json` manually (both are
- *                     currently pinned at `0.0.0` during v4
- *                     pre-release; bump together at release time).
+ *  - `version`      — read from the root `package.json` (single source
+ *                     of truth for the monorepo semver).
  *  - `gitCommit`    — short SHA injected at image build time via the
  *                     `GIT_COMMIT` build-arg (see infra/fly/Dockerfile
  *                     + infra/fly/deploy.sh). Falls back to `local` for
@@ -14,7 +12,8 @@
  *  - `buildTime`    — ISO timestamp injected at image build time via
  *                     the `BUILD_TIME` build-arg. Optional.
  */
-const version = '0.0.0';
+import { version } from '../../../../package.json' with { type: 'json' };
+
 const gitCommit = process.env.GIT_COMMIT?.trim() || 'local';
 const buildTime = process.env.BUILD_TIME?.trim() || undefined;
 

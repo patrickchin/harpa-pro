@@ -1,17 +1,36 @@
 name: pr-preview
 
-# Per-PR Neon branch lifecycle. Creates on open/sync, deletes on
-# close. DATABASE_URL secret is set on the PR's preview environment
-# by the create job.
+# Per-PR ephemeral preview environment.
 #
-# Optimisation: only create a Neon branch when the PR actually
-# touches API code or migrations. Docs/marketing/mobile-only PRs
-# don't need a database branch. Close-events still always run so we
-# don't orphan branches that were created earlier in the PR's life.
+# Lifecycle (all keyed on PR number `${{ github.event.pull_request.number }}`):
+#
+#   on open / synchronize / reopen
+#     ├─ neon-create  → Neon branch `pr-<n>` (delete-and-recreate from `main`)
+#     └─ fly-preview  → Fly app `harpa-pro-api-pr-<n>` (create + deploy)
+#                       └─ release_command runs `pnpm db:migrate` against pr-<n>
+#                       └─ /readyz verified after deploy
+#                       └─ sticky PR comment with the preview URL
+#
+#   on close (merged or not)
+#     ├─ fly-destroy  → flyctl apps destroy harpa-pro-api-pr-<n>
+#     └─ neon-destroy → Neon branch `pr-<n>` deleted (after fly-destroy)
+#
+# Optimisation: only run for PRs that touch API code or migrations. Docs /
+# marketing / mobile-only PRs skip both Neon and Fly. Close events always
+# run so we never orphan resources created earlier in the PR's life.
+#
+# Forks are deliberately skipped (no FLY_API_TOKEN / DOPPLER_TOKEN_DEV /
+# NEON_API_KEY available to fork PRs). Same-repo PRs only.
 
 on:
   pull_request:
     types: [opened, synchronize, reopened, closed]
+
+concurrency:
+  # One in-flight preview deploy per PR. A second push cancels the first —
+  # the still-pending Fly deploy would have produced a stale image anyway.
+  group: pr-preview-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
 
 jobs:
   changes:
@@ -25,8 +44,8 @@ jobs:
       - id: paths
         uses: ./.github/actions/changed-paths
 
-  # Migration-filename lint. Cheap; runs whenever any API path
-  # changes so typos are caught at PR time, not prod time.
+  # Migration-filename lint. Cheap; runs whenever any API path changes so
+  # typos are caught at PR time, not prod time.
   guard:
     needs: changes
     if: github.event.action != 'closed' && needs.changes.outputs.api == 'true'
@@ -52,42 +71,173 @@ jobs:
             exit 1
           fi
 
-  branch:
-    # Always run on close (delete the branch if it exists). On
-    # open/sync, only run when API or migration paths changed.
+  # Create the per-PR Neon branch on open/sync. Migrations are NOT applied
+  # here — they run inside the Fly preview's release machine in `fly-preview`
+  # (matches dev/prod, single source of truth for migration application).
+  neon-create:
     needs: changes
     if: |
-      github.event.action == 'closed' ||
-      needs.changes.outputs.api == 'true'
+      github.event.action != 'closed' &&
+      needs.changes.outputs.api == 'true' &&
+      github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup-monorepo
-      - name: Create branch
-        if: github.event.action != 'closed'
+      - name: Create Neon branch
+        env:
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+          NEON_PROJECT_ID: ${{ secrets.NEON_PROJECT_ID }}
+        # `db:branch:create` is delete-and-recreate, so each push gets a
+        # fresh branch from `main`. Migrations apply via Fly release_command.
+        run: pnpm --silent db:branch:create ${{ github.event.pull_request.number }} > /dev/null
+
+  # Deploy a per-PR Fly app. Mirrors api-dev.yml's idioms: Doppler dev →
+  # `flyctl secrets import --stage` → `flyctl deploy`. The PR's Neon URI
+  # overrides DATABASE_URL so the release_command migrates the right branch.
+  fly-preview:
+    needs: [neon-create]
+    if: |
+      github.event.action != 'closed' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write # for the sticky preview-URL comment
+    env:
+      APP_NAME: harpa-pro-api-pr-${{ github.event.pull_request.number }}
+    steps:
+      - uses: actions/checkout@v4
+        with: { lfs: true }
+      - uses: ./.github/actions/setup-monorepo
+
+      - name: Resolve Neon URI for this PR
+        # `ensure` is read-or-create on a branch *name*. The branch was just
+        # made by `neon-create`; ensure returns its URI without recreating.
         env:
           NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
           NEON_PROJECT_ID: ${{ secrets.NEON_PROJECT_ID }}
         run: |
-          # --silent suppresses pnpm's "> harpa-pro@0.0.0 ..." banner
-          # so only the connection URI ends up on stdout / GITHUB_ENV.
-          URI=$(pnpm --silent db:branch:create ${{ github.event.pull_request.number }})
+          URI=$(pnpm --silent db:branch:ensure pr-${{ github.event.pull_request.number }})
           echo "::add-mask::$URI"
           echo "DATABASE_URL=$URI" >> "$GITHUB_ENV"
-      - name: Run migrations
-        if: github.event.action != 'closed'
+
+      - uses: superfly/flyctl-actions/setup-flyctl@1.5
+
+      - name: Ensure Fly app exists
         env:
-          DATABASE_URL: ${{ env.DATABASE_URL }}
-        run: pnpm --filter @harpa/api db:migrate
-      - name: Delete branch
-        if: github.event.action == 'closed'
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        # `flyctl status` exits non-zero if the app doesn't exist; create it
+        # in that case. Idempotent across PR re-pushes.
+        run: |
+          if ! flyctl status -a "$APP_NAME" >/dev/null 2>&1; then
+            flyctl apps create "$APP_NAME" --org personal
+          fi
+
+      - uses: dopplerhq/cli-action@v3
+
+      - name: Stage Fly secrets from Doppler (with PR-specific DATABASE_URL)
+        # Same filter as api-dev.yml; additionally drop DATABASE_URL from the
+        # Doppler stream and append the PR's Neon URI so the release_command
+        # migrates the per-PR branch instead of dev. `--stage` defers
+        # activation; the subsequent deploy flips them on.
+        env:
+          DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN_DEV }}
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: |
+          {
+            doppler secrets download --no-file --format env \
+              | grep -vE '^(DOPPLER_|NEON_|FLY_|CLOUDFLARE_|PUBLIC_|EXPO_PUBLIC_|PAGES_PROJECT|PORT|NODE_ENV|ADMIN_EMAIL|DATABASE_URL)='
+            echo "DATABASE_URL=$DATABASE_URL"
+          } | flyctl secrets import --stage --app "$APP_NAME"
+
+      - name: Deploy to Fly.io (preview)
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: |
+          set -euo pipefail
+          HEAD=$(ls packages/api/migrations | grep -E '\.sql$' | sort | tail -1)
+          if [[ -z "$HEAD" ]]; then
+            echo "ERROR: no .sql files in packages/api/migrations" >&2
+            exit 1
+          fi
+          GIT_COMMIT=$(git rev-parse --short HEAD)
+          BUILD_TIME=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          echo "deploy: app=$APP_NAME head=$HEAD commit=$GIT_COMMIT"
+          flyctl deploy \
+            --app "$APP_NAME" \
+            --config infra/fly/fly.preview.toml \
+            --dockerfile infra/fly/Dockerfile \
+            --build-arg "MIGRATIONS_REQUIRED_HEAD=$HEAD" \
+            --build-arg "GIT_COMMIT=$GIT_COMMIT" \
+            --build-arg "BUILD_TIME=$BUILD_TIME" \
+            --remote-only
+
+      - name: Verify /readyz
+        run: |
+          set -euo pipefail
+          URL="https://${APP_NAME}.fly.dev/readyz"
+          for i in 1 2 3 4 5 6; do
+            if curl --fail --silent --show-error --max-time 8 "$URL"; then
+              echo
+              echo "readyz ok"
+              exit 0
+            fi
+            echo "readyz attempt $i failed, retrying..."
+            sleep 5
+          done
+          echo "readyz never returned 200 — investigate Fly logs:" >&2
+          echo "  flyctl logs -a $APP_NAME" >&2
+          exit 1
+
+      - name: Post preview URL as sticky PR comment
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: fly-preview
+          message: |
+            🚀 **API preview deployed**
+
+            - URL: <https://${{ env.APP_NAME }}.fly.dev>
+            - Readyz: <https://${{ env.APP_NAME }}.fly.dev/readyz>
+            - DB: Neon branch `pr-${{ github.event.pull_request.number }}`
+            - Commit: `${{ github.event.pull_request.head.sha }}`
+
+            To point a dev/preview mobile build at this preview, call
+            `setApiBaseUrlOverride("https://${{ env.APP_NAME }}.fly.dev")`
+            from the in-app dev menu (`lib/api/base-url.ts`).
+
+            This app is automatically destroyed when the PR closes.
+
+  # Destroy the Fly preview app on PR close. Runs before neon-destroy so the
+  # release_command / readyz on a now-deleted DB doesn't error-spam during
+  # teardown. `|| true` so a missing app (docs-only PR, or already destroyed)
+  # is a no-op.
+  fly-destroy:
+    if: |
+      github.event.action == 'closed' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - uses: superfly/flyctl-actions/setup-flyctl@1.5
+      - name: Destroy Fly preview app
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: |
+          flyctl apps destroy "harpa-pro-api-pr-${{ github.event.pull_request.number }}" --yes || true
+
+  # Delete the per-PR Neon branch on close. `if: always()` + `needs:
+  # fly-destroy` so a failed Fly destroy still cleans up Neon (worst case
+  # we orphan a Fly app, which a future cron can sweep — losing the Neon
+  # branch is the more expensive surface).
+  neon-destroy:
+    needs: [fly-destroy]
+    if: always() && github.event.action == 'closed'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-monorepo
+      - name: Delete Neon branch
         env:
           NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
           NEON_PROJECT_ID: ${{ secrets.NEON_PROJECT_ID }}
-        # `|| true` so closing a PR that never had a branch
-        # (docs-only PR) is a no-op rather than a failure.
         run: pnpm db:branch:delete ${{ github.event.pull_request.number }} || true
-# When a Fly preview machine is added, the `Run migrations` step above
-# moves into that machine's release_command and this workflow's last
-# step becomes a `curl --fail $PREVIEW/readyz`. See
-# docs/v4/arch-cicd-and-migrations.md §Open questions.

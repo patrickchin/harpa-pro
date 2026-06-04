@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { version } from '../../../../package.json' with { type: 'json' };
 import { createApp } from '../app.js';
 
 describe('healthz', () => {
@@ -7,7 +8,7 @@ describe('healthz', () => {
     const res = await app.request('/healthz');
     expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body).toEqual({ ok: true, service: 'api', version: '0.0.0', gitCommit: 'local' });
+    expect(body).toEqual({ ok: true, service: 'api', version, gitCommit: 'local' });
     expect(res.headers.get('x-request-id')).toMatch(/^[\w-]{6,}$/);
   });
 

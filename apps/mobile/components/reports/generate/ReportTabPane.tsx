@@ -13,7 +13,7 @@
 import { useMemo } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
-import { Pencil, RotateCcw } from 'lucide-react-native';
+import { RotateCcw } from 'lucide-react-native';
 
 import { Button } from '@/components/primitives/Button';
 import { InlineNotice } from '@/components/primitives/InlineNotice';
@@ -29,16 +29,13 @@ interface ReportTabPaneProps {
 }
 
 export function ReportTabPane({ width }: ReportTabPaneProps) {
-  const { generation, draft, tabs, handleRegenerate, reportNumber, preview } =
+  const { generation, draft, handleRegenerate, reportNumber, preview } =
     useGenerateReport();
 
-  // Skeleton shown on the "no report yet" empty state. Built via
-  // `createEmptyReport()` so the same defaults (e.g. `visitDate` =
-  // today) apply whether the user is staring at the empty Report tab
-  // or has just tapped "Edit manually". Memoized once per mount —
-  // `createEmptyReport` calls `new Date()`, which would otherwise
-  // change identity every render and force CompletenessCard to
-  // re-render.
+  // Skeleton shown on the "no report yet" empty state. Memoized once
+  // per mount — `createEmptyReport` calls `new Date()`, which would
+  // otherwise change identity every render and force CompletenessCard
+  // to re-render.
   const emptyReportSkeleton = useMemo(() => createEmptyReport(), []);
 
   return (
@@ -74,20 +71,6 @@ export function ReportTabPane({ width }: ReportTabPaneProps) {
         {!generation.report && !generation.isUpdating ? (
           <View className="gap-3">
             <CompletenessCard report={emptyReportSkeleton} />
-            <Button
-              testID="btn-edit-manually"
-              variant="secondary"
-              size="default"
-              className="w-full"
-              onPress={tabs.editManually}
-            >
-              <View className="flex-row items-center gap-1.5">
-                <Pencil size={14} color={colors.foreground} />
-                <Text className="text-base font-semibold text-foreground">
-                  Edit manually
-                </Text>
-              </View>
-            </Button>
           </View>
         ) : null}
 

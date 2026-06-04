@@ -14,6 +14,8 @@
  *    confirmation that a new commit actually shipped to the simulator.
  *  - `classifyApiTarget()` labels any URL as local / dev / prod / other
  *    so the BuildBadge can highlight which backend the app is talking to.
+ *  - PR identity (`prNumber`) comes from `EXPO_PUBLIC_PR_NUMBER` baked
+ *    into the bundle by `mobile-ota-pr.yml` — no URL parsing required.
  */
 import Constants from 'expo-constants';
 
@@ -40,16 +42,21 @@ function deriveServerLabel(url: string): string {
   return url || 'unknown';
 }
 
-export type ApiTargetLabel = 'local' | 'dev' | 'prod' | 'other';
+export type ApiTargetLabel = 'local' | 'dev' | 'pr' | 'prod' | 'other';
 
 /**
- * Classify any API base URL as local / dev / prod / other so the
+ * Classify any API base URL as local / dev / pr / prod / other so the
  * BuildBadge can colour-code which environment the app talks to.
  * Matches against the host so manual overrides are classified too.
+ *
+ * `pr` is returned when `EXPO_PUBLIC_PR_NUMBER` is set in the bundle
+ * (injected by `mobile-ota-pr.yml`). The `prNumber` field carries the
+ * parsed integer so the badge can render `pr-124`.
  */
 export function classifyApiTarget(url: string): {
   label: ApiTargetLabel;
   host: string;
+  prNumber?: number;
 } {
   let host = url;
   try {
@@ -62,6 +69,9 @@ export function classifyApiTarget(url: string): {
     host.endsWith('.local')
   ) {
     return { label: 'local', host };
+  }
+  if (env.EXPO_PUBLIC_PR_NUMBER !== undefined) {
+    return { label: 'pr', host, prNumber: env.EXPO_PUBLIC_PR_NUMBER };
   }
   if (host.includes('-dev.') || host.startsWith('dev.') || host.includes('harpa-pro-api-dev')) {
     return { label: 'dev', host };

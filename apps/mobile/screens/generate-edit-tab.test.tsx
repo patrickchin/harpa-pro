@@ -210,26 +210,4 @@ describe('GenerateNotes — Edit tab', () => {
     // Other slices preserved by reference.
     expect(next.report.workers).toBe(SAMPLE_GENERATED_REPORT.report.workers);
   });
-
-  it('"Edit manually" on the empty Report tab lazy-seeds a blank report without calling onSetReport', () => {
-    const onSetReport = vi.fn<(next: GeneratedSiteReport) => void>();
-    const tree = render(
-      <GenerateNotes
-        {...baseProps}
-        report={null}
-        initialTab="report"
-        onSetReport={onSetReport}
-      />,
-    );
-    const editManually = tree.root.findByProps({ testID: 'btn-edit-manually' });
-    act(() => {
-      (editManually.props.onPress as () => void)();
-    });
-    // The provider now seeds the empty report in its own local state so the
-    // route's dirty flag is NOT triggered by tab navigation.
-    expect(onSetReport).not.toHaveBeenCalled();
-    // The Edit pane should now be visible with a seeded empty form.
-    const editPane = tree.root.findByProps({ testID: 'edit-tab-form' });
-    expect(editPane).toBeTruthy();
-  });
 });

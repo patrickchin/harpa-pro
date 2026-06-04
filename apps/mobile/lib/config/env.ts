@@ -45,6 +45,17 @@ const Env = z.object({
     .default('false')
     .transform((v) => v === 'true'),
   EXPO_PUBLIC_SENTRY_DSN: optionalUrl,
+  /**
+   * Set by `mobile-ota-pr.yml` when publishing a PR OTA bundle.
+   * Absent (undefined) in dev, preview, and production builds.
+   * Used by `buildInfo.prNumber` to label the BuildBadge without
+   * parsing the API URL.
+   */
+  EXPO_PUBLIC_PR_NUMBER: z.coerce
+    .number()
+    .int()
+    .positive()
+    .optional(),
 });
 
 /* eslint-disable no-restricted-syntax */
@@ -54,6 +65,7 @@ const rawEnv = {
   EXPO_PUBLIC_APP_VARIANT: process.env.EXPO_PUBLIC_APP_VARIANT,
   EXPO_PUBLIC_LAYOUT_PROBE: process.env.EXPO_PUBLIC_LAYOUT_PROBE,
   EXPO_PUBLIC_SENTRY_DSN: process.env.EXPO_PUBLIC_SENTRY_DSN,
+  EXPO_PUBLIC_PR_NUMBER: process.env.EXPO_PUBLIC_PR_NUMBER,
 };
 /* eslint-enable no-restricted-syntax */
 

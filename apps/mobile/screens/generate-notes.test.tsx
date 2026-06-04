@@ -168,12 +168,11 @@ describe('GenerateNotes', () => {
     expect(text).toContain('Slab pour delayed by rain.');
   });
 
-  it('renders all three tab labels (notes count reflects total)', () => {
+  it('renders the Notes and Report tab labels (notes count reflects total)', () => {
     const tree = render(<GenerateNotes {...baseProps} notes={sampleNotes} />);
     const text = collectText(tree.toJSON());
     expect(text).toContain('Notes (2)');
     expect(text).toContain('Report');
-    expect(text).toContain('Edit');
   });
 
   it('falls back to "Report #N" when reportTitle is empty', () => {

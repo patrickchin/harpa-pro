@@ -261,6 +261,11 @@ fileRoutes.openapi(
     const row = await db((d) => getFileById(d, id));
     if (!row) throw new HTTPException(404, { message: 'File not found.' });
     const out = await pickStorage().signGet(row.fileKey);
-    return c.json(out, 200);
+    return c.json({
+      ...out,
+      sizeBytes: row.sizeBytes,
+      contentType: row.contentType,
+      createdAt: row.createdAt,
+    }, 200);
   },
 );

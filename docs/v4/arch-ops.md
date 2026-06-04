@@ -175,6 +175,7 @@ Push to dev
   ↳ Fly deploy → harpa-pro-api-dev (api-dev.yml)
   ↳ marketing deploy to CF Pages dev branch (marketing-dev.yml)
   ↳ EAS Update → `preview` channel (mobile-ota-dev.yml)
+  ↳ release patch commit + tag added to `dev` (version-bump-dev.yml)
   ↳ EAS staging build (TestFlight internal — planned)
 
 Push to main (production)
@@ -208,6 +209,13 @@ flyctl secrets set --app harpa-pro-api-dev \
 After bootstrap, every push to `dev` re-uses the same Neon branch
 and Fly app — the workflow only runs pending migrations and ships
 new code.
+
+`version-bump-dev.yml` creates the release patch commit and tag on
+`dev` after merge commits land. That commit intentionally does **not**
+use `[skip ci]`; otherwise a later `dev → main` promotion PR can end up
+with a CI-skipped head commit and no required checks. The workflow avoids
+recursive bumps with a job-level guard that skips commits whose message
+starts with `chore(release): v`.
 
 ## Scaling
 

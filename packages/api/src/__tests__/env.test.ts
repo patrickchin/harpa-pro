@@ -15,6 +15,8 @@ const KEYS = [
   'DEV_OTP_TOKEN',
   'EMAIL_OTP_LIVE',
   'MIGRATIONS_REQUIRED_HEAD',
+  'TEST_ACCOUNT_EMAILS',
+  'TEST_ACCOUNT_PASSWORD',
 ] as const;
 
 let snapshot: Record<string, string | undefined>;
@@ -24,6 +26,7 @@ beforeEach(() => {
     string,
     string | undefined
   >;
+  for (const k of KEYS) delete process.env[k];
 });
 
 afterEach(() => {

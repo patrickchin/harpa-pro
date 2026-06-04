@@ -148,6 +148,29 @@ Dev-deployment target:
 
 Modules 14/15/16 navigate to Profile / Account / Usage screens.
 
+## `dev-otp-hardening.yaml` (PR128 focused smoke)
+
+Focused Android/local smoke for the hardened `POST /api/dev/last-otp`
+path. It requests Alice's OTP through the real mobile email sign-in UI,
+then `helpers/assert-dev-otp-hardening.js` proves the dev introspection
+route:
+
+- returns the OTP for the exact allowlisted email with `x-dev-otp-token`;
+- rejects missing / bad tokens with 404;
+- rejects non-allowlisted, suffix-attack, and wildcard-injection emails
+  with 404;
+- still lets the app complete sign-in and land on the projects list.
+
+Run with the local compose API and Metro dev-client bundle:
+
+```bash
+export DEV_OTP_TOKEN=... # >=32 chars; must match the API container env
+export MAESTRO_APP_ID=com.harpa.pro.dev
+adb reverse tcp:8081 tcp:8081
+adb reverse tcp:8787 tcp:8787
+maestro test .maestro/dev-otp-hardening.yaml
+```
+
 ## `p3-15-upload.yaml` (legacy — superseded by module 10a)
 
 Same photo pipeline as `modules/10a-photo-notes-draft.yaml` but

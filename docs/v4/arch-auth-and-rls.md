@@ -300,6 +300,7 @@ deploy; the before-hook still rejects any email not on the allowlist.
 | `BETTER_AUTH_URL` | API | Base URL for better-auth handler |
 | `RESEND_API_KEY` | API | Resend transport for OTP emails |
 | `EMAIL_OTP_LIVE` | API | `1` = real Resend send; `0` = logs only (dev/test) |
+| `DEV_OTP_TOKEN` | API (dev + PR previews only) | ≥32-char shared secret for `/api/dev/last-otp`. Must be UNSET on prod. |
 | `TEST_ACCOUNT_EMAILS` | API | Password-bypass allowlist (set in dev + prd) |
 | `TEST_ACCOUNT_PASSWORD` | API | Shared smoke-test password (set in dev + prd) |
 | `DATABASE_URL` | API | Neon connection (pooled) |
@@ -320,7 +321,69 @@ deploy; the before-hook still rejects any email not on the allowlist.
   `expo-secure-store` (encrypted at rest on iOS/Android). The session
   survives app restarts; force-quitting does not log the user out.
 
-## Out of scope
+## Dev OTP introspection
+
+`POST /api/dev/last-otp` is the bridge that lets Maestro `:mock`
+builds and the manual curl flow log in without Resend: it reads the
+most recent OTP that better-auth wrote to `public.verification` and
+returns it as JSON. It is the **only** unauthenticated route that
+exposes session-establishing material to the network, so it is
+hardened well past the original NODE_ENV gate.
+
+### Layered controls (all enforced — every failure mode returns 404)
+
+| # | Control | Code |
+|---|---|---|
+| 1 | Module-load throw on real production | `packages/api/src/routes/dev.ts` |
+| 2 | Mount only when `NODE_ENV !== 'production' \|\| HARPAPRO_PR_BUILD === '1'` AND `env.DEV_OTP_TOKEN` is set | `packages/api/src/app.ts` |
+| 3 | Per-request `x-dev-otp-token` header, constant-time compared (`crypto.timingSafeEqual`) | `routes/dev.ts` |
+| 4 | Email allowlist regex `^[^@\s]+@e2e\.harpapro\.com$` | `routes/dev.ts` |
+| 5 | Exact identifier SQL: `WHERE identifier = 'sign-in-otp-' \|\| email` (no `LIKE`) | `routes/dev.ts` |
+| 6 | Per-IP global rate limit | `middleware/globalRateLimit.ts` |
+| 7 | Audit log every call (`{requestId, ip, email, outcome}`) | `routes/dev.ts` |
+
+Reject paths return 404, indistinguishable from an unknown URL — a
+prober cannot tell the difference between "route absent" and "wrong
+token". Integration coverage in
+`packages/api/src/__tests__/dev.integration.test.ts` exercises all
+seven failure modes.
+
+### Env vars
+
+| Var | Where | Purpose |
+|---|---|---|
+| `DEV_OTP_TOKEN` | Fly dev + Fly preview app secrets | ≥32-char shared secret. **Must be unset on real production** — env parse fails at boot otherwise. |
+| `HARPA_DEV_OTP_DISABLED` | Local dev shell (optional) | `'1'` opts out of the dev-side refine for developers who never run Maestro E2E. |
+
+### Why exact identifier match (not `LIKE`)
+
+better-auth's emailOtp plugin sets the verification row's
+`identifier` to `${type}-otp-${email}` (see
+`node_modules/better-auth/dist/plugins/email-otp/utils.mjs`). The
+sign-in flow uses `type='sign-in'`, so the column we want is
+exactly `sign-in-otp-<email>`. The previous helper used
+`identifier LIKE '%email%'`, which:
+
+1. matches **every** row when given a wildcard email
+   (`%@e2e.harpapro.com` returns whoever was last to sign in);
+2. is a substring oracle — `alice@e2e.harpapro.com` matches a row
+   whose identifier merely contains alice's email
+   (`sign-in-otp-bob+alice@e2e.harpapro.com.evil`).
+
+The hardened route, plus the `_helpers.ts` / `_login.ts` helpers
+(commit "fix(test): exact identifier match…"), all use `=` against a
+server-constructed identifier so neither failure mode is reachable.
+Logged in `docs/bugs/README.md` as Pattern R8.
+
+### Maestro wiring
+
+`.maestro/helpers/last-otp.js` reads the `DEV_OTP_TOKEN` Maestro env
+global and forwards it as `x-dev-otp-token`. `sign-in.yaml` passes
+the token through to the script via `runScript.env`.
+`scripts/maestro/reset-db.sh` asserts the token is set before
+truncating the dev DB.
+
+
 
 The following are deliberately not covered by the current auth
 architecture and have follow-on specs:

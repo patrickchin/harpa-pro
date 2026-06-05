@@ -194,10 +194,36 @@ build-time `MIGRATIONS_REQUIRED_HEAD`). Return 503 on any mismatch
 so the LB takes the machine out of rotation and Fly's auto-rollback
 engages. See `docs/v4/arch-cicd-and-migrations.md`.
 
+### R8 — Wildcard injection through `LIKE` on user-supplied input
+
+A helper that does `WHERE col LIKE '%' || $1 || '%'` against an input
+that flows straight from a JSON body / query string is a wildcard
+injection vector even though the SQL itself is parameterised:
+parameterisation only stops *syntactic* injection. A single request
+with `$1 = '%'` matches every row; a request with a substring of a
+real value matches any row whose key happens to contain it
+(`alice@e.com` matches `bob+alice@e.com.evil`). Recurrence vectors:
+
+1. Test / dev introspection helpers that reach for `LIKE` because the
+   author has only the email half of the stored key and doesn't know
+   (or hasn't checked) the prefix the framework actually wrote.
+2. "Safe enough" because the route is behind a `NODE_ENV !==
+   'production'` gate — but a single mis-set Doppler variable, a
+   `HARPAPRO_PR_BUILD='1'` typo on prod, or a future build that ships
+   dev code by accident exposes it.
+
+Mitigation: construct the full key server-side and exact-match
+(`WHERE identifier = 'sign-in-otp-' || $1`); if the schema makes that
+impossible, escape `%` and `_` in the input before concatenation AND
+treat the route as if it were public — shared-secret header,
+allowlist regex on the input shape, audit log, uniform 404. See
+[Pitfall 20](../v4/pitfalls.md#pitfall-20--dev-only-routes-need-defence-in-depth-not-a-node_env-gate).
+
 ## Bugs
 
 Most recent first. One line per bug — open the linked file only for the full root-cause / test / commit write-up.
 
+- **2026-06-04** *(R8)* — `POST /api/dev/last-otp` and its in-process CLI/journey twins looked up the latest OTP with `WHERE identifier LIKE '%email%'`. A request with `{"email":"%"}` returned the most recent OTP issued to any registered user — full session takeover for anyone who could reach the route, with `NODE_ENV !== 'production'` as the only gate. Substring oracle on top: `alice@…` matches `bob+alice@….evil`. Fix: rewrite the route with shared-secret header (`x-dev-otp-token`, constant-time compare), `@e2e.harpapro.com` allowlist regex, exact identifier match (`= 'sign-in-otp-' || $1`), audit log, uniform 404; gate mount on `env.DEV_OTP_TOKEN`; env-Zod refines reject the token on prod. Same exact-match fix in `_helpers.ts` + `_login.ts`. New integration test exercises every reject path. [detail](2026-06-04-dev-otp-like-wildcard-oracle.md)
 - **2026-05-30** — Voice-note transcript dialog wouldn't scroll: `AppDialogSheet` wrapped its sheet body in a `Pressable` (to absorb backdrop-dismiss taps), and a `Pressable` parent steals pan gestures from a nested `ScrollView` via the responder-capture phase, so the `ScrollView` in the "View transcript" stage in `NoteOptionsSheet` could never scroll long transcripts. Fix: replace the inner `Pressable` with a `View` that uses `onStartShouldSetResponder={() => true}` to consume taps without using capture, plus `nestedScrollEnabled` + `keyboardShouldPersistTaps="handled"` on the transcript `ScrollView`.
 - **2026-05-29** *(R5)* — Mobile AI model picker was UI-only: it persisted `{vendor, model}` to AsyncStorage but never sent it to the API, so `/generate` and `/voice/summarize` always ran the server default regardless of what the user picked. Picker tests mocked AsyncStorage; `/generate` tests always supplied explicit overrides — default wiring untested. Fix: `/settings/ai` becomes the single source of truth (contract whitelist `AI_MODELS`, paired-nullable shape); routes read user pick via `getAiSettings()` and pass `userVendor`/`userModel` into `runGenerate()` + `aiSummarize()`; mobile `useAiProvider` rewritten as TanStack Query reader/writer; Developer screen becomes single-step picker with leading "Default" row that clears the override; live test asserts `result.model === 'gpt-4.1-mini'` end-to-end. [detail](2026-05-29-mobile-model-picker-dead-wired.md)
 - **2026-05-29** *(R5)* — Generate Report on `harpa-pro-api-dev` took 47–87s end-to-end because the canonical was pinned to `kimi-k2.6`, a reasoning model that emits chain-of-thought tokens before the JSON. Bench against the real REPORT_SYSTEM_PROMPT showed gpt-4o p50=5s, groq/llama-3.3-70b p50=1.4s. Fix: pin canonical to `openai/gpt-4o`; update `record.ts` canonical request literals to match; re-record voice-{1..5} fixtures; hand-patch + rehash `generate-report.update.json`; switch the live test from `KIMI_API_KEY` to `OPENAI_API_KEY` and lower `vitest.live.config.ts` timeout from 180s → 60s. [detail](2026-05-29-kimi-k26-too-slow-for-report-generation.md)

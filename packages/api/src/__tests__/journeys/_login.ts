@@ -47,9 +47,15 @@ function toEmail(identifier: string): string {
 
 async function readLatestOtp(email: string): Promise<string> {
   const pool = getPool();
+  // better-auth's emailOtp plugin sets identifier to `${type}-otp-${email}`.
+  // The sign-in flow below uses type='sign-in', so the row we want has an
+  // exact identifier — `LIKE %email%` here was an oracle (substring match)
+  // and worse, would match any wildcard in `email`. See
+  // docs/bugs/README.md §OTP introspection LIKE wildcard.
+  const identifier = `sign-in-otp-${email}`;
   const r = await pool.query<{ value: string }>(
-    `SELECT value FROM "verification" WHERE identifier LIKE $1 ORDER BY created_at DESC LIMIT 1`,
-    [`%${email}%`],
+    `SELECT value FROM "verification" WHERE identifier = $1 ORDER BY created_at DESC LIMIT 1`,
+    [identifier],
   );
   if (r.rows.length === 0) throw new Error(`no verification row for ${email}`);
   const v = String(r.rows[0]!.value);

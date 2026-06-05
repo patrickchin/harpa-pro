@@ -10,7 +10,20 @@
 #    (the note input bar), so the wiring flow signs IN to this seeded
 #    state and exercises generate → finalize → delete without typing
 #    a note. Note-create wiring itself is covered by unit tests.
+#
+# Required env: DEV_OTP_TOKEN (>=32 chars). Maestro's last-otp.js
+# helper sends this as the x-dev-otp-token header to the dev OTP
+# introspection route. The API also requires it at boot to mount the
+# route, so a Maestro run with DEV_OTP_TOKEN unset would silently
+# 404 on every login. Fail fast here so that's noisy instead.
 set -euo pipefail
+
+: "${DEV_OTP_TOKEN:?DEV_OTP_TOKEN must be set (>=32 chars). Source it from your secrets manager (e.g. \`export DEV_OTP_TOKEN=\$(doppler secrets get DEV_OTP_TOKEN --plain --config dev)\`). Must match the API's DEV_OTP_TOKEN.}"
+if (( ${#DEV_OTP_TOKEN} < 32 )); then
+  echo "DEV_OTP_TOKEN must be at least 32 chars (got ${#DEV_OTP_TOKEN})." >&2
+  exit 1
+fi
+
 docker exec -i harpa-pro-pg psql -U postgres -d harpa -v ON_ERROR_STOP=1 <<'SQL'
 TRUNCATE app.notes, app.files, app.reports, app.project_members,
          app.projects, app.user_settings, app.waitlist_signups,

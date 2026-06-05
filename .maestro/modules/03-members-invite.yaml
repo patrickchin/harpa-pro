@@ -9,7 +9,7 @@ tags:
 # Covers:
 #   - alice opens members screen
 #   - shows add-member form
-#   - invites bob@harpa.test (bob) as editor
+#   - invites bob@e2e.harpapro.com (bob) as editor
 #   - bob's member row appears (member-row-* pattern)
 #
 # Pre-condition: alice is on project home (btn-project-edit visible).
@@ -39,7 +39,7 @@ tags:
 # --- Enter bob's phone + select editor role --------------------------------
 - tapOn:
     id: "input-member-email"
-- inputText: "bob@harpa.test"
+- inputText: "bob@e2e.harpapro.com"
 - hideKeyboard
 - tapOn:
     id: "picker-member-role-editor"

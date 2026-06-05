@@ -39,7 +39,7 @@ tags:
 - runFlow:
     file: helpers/sign-in.yaml
     env:
-      EMAIL: "alice@harpa.test"
+      EMAIL: "alice@e2e.harpapro.com"
 
 # --- Create a project and a draft report ----------------------------------
 - tapOn:

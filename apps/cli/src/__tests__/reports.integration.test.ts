@@ -58,13 +58,13 @@ beforeAll(async () => {
   app = createApp();
 
   const sink = new MemoryStream();
-  await authOtpStart({ apiUrl: 'http://localhost', fetch: appFetch, email: 'cli-tests-reports@dev.harpa.test', stdout: sink, stderr: sink });
-  const code = await readLatestOtp('cli-tests-reports@dev.harpa.test');
+  await authOtpStart({ apiUrl: 'http://localhost', fetch: appFetch, email: 'cli-tests-reports@e2e.harpapro.com', stdout: sink, stderr: sink });
+  const code = await readLatestOtp('cli-tests-reports@e2e.harpapro.com');
   const out = new MemoryStream();
   await authOtpVerify({
     apiUrl: 'http://localhost',
     fetch: appFetch,
-    email: 'cli-tests-reports@dev.harpa.test',
+    email: 'cli-tests-reports@e2e.harpapro.com',
     code,
     raw: true,
     stdout: out,

@@ -27,7 +27,7 @@ tags:
 #
 # Local pre-condition: clean database. Run `docker compose down -v &&
 # docker compose up` locally to reset between runs. Alice
-# (alice@harpa.test) and Bob (bob@harpa.test) are created via the
+# (alice@e2e.harpapro.com) and Bob (bob@e2e.harpapro.com) are created via the
 # normal email-OTP sign-in flow as part of the journey (better-auth's
 # emailOtp plugin auto-creates the user on first verify); no API
 # backdoors needed.

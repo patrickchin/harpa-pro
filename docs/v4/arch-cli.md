@@ -308,11 +308,11 @@ Complete mapping of the frozen OpenAPI spec (37 routes) to CLI commands. Flags u
 
 ```bash
 # Start OTP
-harpa auth otp start alice@harpa.test
-# prints: OTP sent to alice@harpa.test
+harpa auth otp start alice@e2e.harpapro.com
+# prints: OTP sent to alice@e2e.harpapro.com
 
 # Verify and capture token
-export HARPA_TOKEN=$(harpa auth otp verify alice@harpa.test 123456 --raw | jq -r .token)
+export HARPA_TOKEN=$(harpa auth otp verify alice@e2e.harpapro.com 123456 --raw | jq -r .token)
 
 # Now all other commands work
 harpa me get
@@ -472,7 +472,7 @@ describe('harpa auth otp start', () => {
     const mockLog = (msg: string) => logs.push(msg);
     const app = createApp();
 
-    await otpStartCommand({ email: 'alice@harpa.test' }, { log: mockLog, app });
+    await otpStartCommand({ email: 'alice@e2e.harpapro.com' }, { log: mockLog, app });
 
     expect(logs).toHaveLength(1);
     expect(logs[0]).toMatch(/OTP sent/);

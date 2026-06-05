@@ -57,7 +57,7 @@ The flow uses better-auth email-OTP. `helpers/sign-in.yaml` reads the
 most recent OTP that better-auth persisted to `public.verification`
 via the dev-only `POST /api/dev/last-otp` endpoint (mounted whenever
 `NODE_ENV !== 'production'`). The seeded invite target
-(`bob@harpa.test`, Bob Editor) is reseeded by `reset-db.sh` so the
+(`bob@e2e.harpapro.com`, Bob Editor) is reseeded by `reset-db.sh` so the
 invite step always finds a real user. The flow deletes the project
 at the end.
 
@@ -148,17 +148,40 @@ Dev-deployment target:
 
 Modules 14/15/16 navigate to Profile / Account / Usage screens.
 
+## `dev-otp-hardening.yaml` (PR128 focused smoke)
+
+Focused Android/local smoke for the hardened `POST /api/dev/last-otp`
+path. It requests Alice's OTP through the real mobile email sign-in UI,
+then `helpers/assert-dev-otp-hardening.js` proves the dev introspection
+route:
+
+- returns the OTP for the exact allowlisted email with `x-dev-otp-token`;
+- rejects missing / bad tokens with 404;
+- rejects non-allowlisted, suffix-attack, and wildcard-injection emails
+  with 404;
+- still lets the app complete sign-in and land on the projects list.
+
+Run with the local compose API and Metro dev-client bundle:
+
+```bash
+export DEV_OTP_TOKEN=... # >=32 chars; must match the API container env
+export MAESTRO_APP_ID=com.harpa.pro.dev
+adb reverse tcp:8081 tcp:8081
+adb reverse tcp:8787 tcp:8787
+maestro test .maestro/dev-otp-hardening.yaml
+```
+
 ## `p3-15-upload.yaml` (legacy — superseded by module 10a)
 
 Same photo pipeline as `modules/10a-photo-notes-draft.yaml` but
-signs in as seeded `alice@harpa.test` (requires `reset-db.sh`).
+signs in as seeded `alice@e2e.harpapro.com` (requires `reset-db.sh`).
 Kept for one-off iteration on the camera path; safe to delete once
 module 10a is green in CI.
 
 ## `p3-15-voice-record.yaml` (legacy — superseded by module 09)
 
 Same voice pipeline as `modules/09-voice-notes.yaml` but signs in as
-seeded `alice@harpa.test`. Kept for one-off iteration; safe to delete
+seeded `alice@e2e.harpapro.com`. Kept for one-off iteration; safe to delete
 once module 09 is green on CI.
 
 ## `p3-14a-usage-limits-card.yaml`, `p3-14b-usage-limit-dialog.yaml`, `p3-14c-near-limit-toast.yaml`

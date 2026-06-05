@@ -70,7 +70,7 @@ describe('harpa auth otp start', () => {
     const exitCode = await authOtpStart({
       apiUrl: API_URL,
       fetch: appFetch,
-      email: 'cli-tests-001@dev.harpa.test',
+      email: 'cli-tests-001@e2e.harpapro.com',
       stdout,
       stderr,
     });
@@ -99,7 +99,7 @@ describe('harpa auth otp start', () => {
     const exitCode = await authOtpStart({
       apiUrl: API_URL,
       fetch: appFetch,
-      email: 'cli-tests-002@dev.harpa.test',
+      email: 'cli-tests-002@e2e.harpapro.com',
       json: true,
       stdout,
       stderr,
@@ -112,7 +112,7 @@ describe('harpa auth otp start', () => {
 });
 
 describe('harpa auth otp verify', () => {
-  const email = 'cli-tests-010@dev.harpa.test';
+  const email = 'cli-tests-010@e2e.harpapro.com';
 
   beforeEach(async () => {
     await authOtpStart({
@@ -177,7 +177,7 @@ describe('harpa auth otp verify', () => {
 
 describe('harpa auth logout', () => {
   it('revokes the bearer token and reports success', async () => {
-    const email = 'cli-tests-020@dev.harpa.test';
+    const email = 'cli-tests-020@e2e.harpapro.com';
     await authOtpStart({
       apiUrl: API_URL,
       fetch: appFetch,

@@ -38,7 +38,10 @@ it `pickStorage()` returns `R2Storage`, whose methods all throw.
 No Twilio in v4 — auth is email-OTP via better-auth. In dev (NODE_ENV
 != production) the `POST /api/dev/last-otp` endpoint exposes the most
 recent OTP for an email so curl/Maestro flows can finish the sign-in
-without Resend.
+without Resend. The route is locked behind a shared-secret header
+(`x-dev-otp-token`) plus an `@e2e.harpapro.com` domain allowlist —
+see [`arch-auth-and-rls.md`](arch-auth-and-rls.md) §Dev OTP
+introspection.
 
 ## 3. Curl flow
 
@@ -49,10 +52,17 @@ B=http://127.0.0.1:8787
 J='content-type: application/json'
 
 # --- auth ---------------------------------------------------------------
-EMAIL='alice@harpa.test'
+EMAIL='alice@e2e.harpapro.com'
 curl -sX POST $B/api/auth/email-otp/send-verification-otp -H "$J" \
   -d "{\"email\":\"$EMAIL\",\"type\":\"sign-in\"}" | jq
-OTP=$(curl -sX POST $B/api/dev/last-otp -H "$J" \
+# /api/dev/last-otp requires the x-dev-otp-token shared secret (matched
+# constant-time against env.DEV_OTP_TOKEN). Email must end in
+# @e2e.harpapro.com — every other domain returns 404. Export
+# DEV_OTP_TOKEN in your shell before running this; the API also needs
+# it set or the route is not even mounted. See
+# docs/v4/arch-auth-and-rls.md §Dev OTP introspection.
+OTP=$(curl -sX POST $B/api/dev/last-otp \
+  -H "$J" -H "x-dev-otp-token: $DEV_OTP_TOKEN" \
   -d "{\"email\":\"$EMAIL\"}" | jq -r .otp)
 TOKEN=$(curl -sD - -X POST $B/api/auth/sign-in/email-otp -H "$J" \
   -d "{\"email\":\"$EMAIL\",\"otp\":\"$OTP\"}" -o /dev/null \

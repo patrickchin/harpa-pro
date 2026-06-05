@@ -25,9 +25,9 @@ let memberToken: string;
 let memberUserId: string;
 let projectId: string;
 
-const OWNER_EMAIL = 'cli-tests-owner@dev.harpa.test';
-const MEMBER_EMAIL = 'cli-tests-member@dev.harpa.test';
-const OUTSIDER_EMAIL = 'cli-tests-outsider@dev.harpa.test';
+const OWNER_EMAIL = 'cli-tests-owner@e2e.harpapro.com';
+const MEMBER_EMAIL = 'cli-tests-member@e2e.harpapro.com';
+const OUTSIDER_EMAIL = 'cli-tests-outsider@e2e.harpapro.com';
 
 class MemoryStream extends Writable {
   chunks: string[] = [];

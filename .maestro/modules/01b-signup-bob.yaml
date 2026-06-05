@@ -29,7 +29,7 @@ tags:
 - runFlow:
     file: ../helpers/sign-in.yaml
     env:
-      EMAIL: "bob@harpa.test"
+      EMAIL: "bob@e2e.harpapro.com"
 
 # --- Onboarding for bob -----------------------------------------------------
 - runFlow:
@@ -58,4 +58,4 @@ tags:
 - runFlow:
     file: ../helpers/sign-in.yaml
     env:
-      EMAIL: "alice@harpa.test"
+      EMAIL: "alice@e2e.harpapro.com"

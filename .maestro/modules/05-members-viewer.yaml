@@ -55,7 +55,7 @@ tags:
     timeout: 8000
 - tapOn:
     id: "input-member-email"
-- inputText: "bob@harpa.test"
+- inputText: "bob@e2e.harpapro.com"
 - hideKeyboard
 - tapOn:
     id: "picker-member-role-viewer"
@@ -79,7 +79,7 @@ tags:
 - runFlow:
     file: ../helpers/sign-in.yaml
     env:
-      EMAIL: "bob@harpa.test"
+      EMAIL: "bob@e2e.harpapro.com"
 
 - tapOn:
     text: "Regression Test Project \\(Edited\\)"
@@ -122,5 +122,5 @@ tags:
 - runFlow:
     file: ../helpers/sign-in.yaml
     env:
-      EMAIL: "alice@harpa.test"
+      EMAIL: "alice@e2e.harpapro.com"
 - runFlow: ../helpers/open-project.yaml

@@ -77,7 +77,7 @@ describe('harpa auth otp start', () => {
 
     expect(exitCode).toBe(EXIT.OK);
     expect(stdout.text).toMatch(/OTP sent/);
-    expect(stdout.text).toMatch(/cli-tests-001@dev\.harpa\.test/);
+    expect(stdout.text).toMatch(/cli-tests-001@e2e\.harpapro\.com/);
     expect(stderr.text).toBe('');
   });
 

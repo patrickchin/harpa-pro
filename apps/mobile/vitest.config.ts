@@ -54,6 +54,12 @@ export default defineConfig({
         // Maestro, not unit tests. No logic worth covering in node.
         'lib/native/**',
         'features/voice/expoAudioRecorder.ts',
+        // better-auth client wiring (SecureStore-backed cookie storage,
+        // expoClient plugin config). Pure runtime glue — exercised by
+        // Maestro E2E auth flows, not unit tests. Same rationale as
+        // lib/native/**.
+        'lib/auth/client.ts',
+        'lib/auth/index.ts',
       ],
       // Thresholds reflect what unit tests can realistically cover:
       // we exclude auto-generated hooks and native module shims (no

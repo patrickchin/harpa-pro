@@ -68,3 +68,11 @@ test-results/
 .lighthouseci/
 notes-delete-empty.png
 sample-voice-note.m4a
+
+# Ruby / Fastlane
+.bundle/
+/vendor/bundle/
+apps/mobile/fastlane/report.xml
+apps/mobile/fastlane/README.md
+apps/mobile/fastlane/Preview.html
+apps/mobile/fastlane/test_output/

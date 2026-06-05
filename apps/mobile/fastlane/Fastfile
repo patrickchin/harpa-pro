@@ -1,0 +1,179 @@
+# frozen_string_literal: true
+
+require "json"
+
+REPO_ROOT = File.expand_path("../../..", __dir__)
+MOBILE_DIR = File.expand_path("..", __dir__)
+EAS_JSON_PATH = File.join(MOBILE_DIR, "eas.json")
+
+IOS_BUNDLE_IDS = {
+  preview: "com.harpa.pro.dev",
+  production: "com.harpa.pro"
+}.freeze
+
+ANDROID_PACKAGE_NAMES = {
+  preview: "com.harpa.pro.dev",
+  production: "com.harpa.pro"
+}.freeze
+
+IOS_METADATA_PATH = File.join(MOBILE_DIR, "fastlane", "metadata", "ios")
+ANDROID_METADATA_PATH = File.join(MOBILE_DIR, "fastlane", "metadata", "android")
+
+def eas_config
+  JSON.parse(File.read(EAS_JSON_PATH))
+end
+
+def ensure_command!(command)
+  return if system("command -v #{command} >/dev/null 2>&1")
+
+  UI.user_error!("Missing required command: #{command}")
+end
+
+def ensure_eas_profile!(section, profile)
+  profiles = eas_config.fetch(section.to_s, {})
+  return if profiles.key?(profile.to_s)
+
+  UI.user_error!("Missing apps/mobile/eas.json #{section}.#{profile}")
+end
+
+def ensure_file!(path)
+  return if File.file?(path)
+
+  UI.user_error!("Missing required file: #{path.sub("#{REPO_ROOT}/", "")}")
+end
+
+def run_in_mobile!(command)
+  Dir.chdir(MOBILE_DIR) do
+    sh(command)
+  end
+end
+
+def eas_build_command(profile)
+  "pnpm exec eas build --platform all --profile #{profile} --non-interactive"
+end
+
+def eas_submit_command(profile)
+  "pnpm exec eas submit --platform all --profile #{profile} --latest --non-interactive"
+end
+
+def print_eas_command(label, command)
+  UI.message("#{label}: cd apps/mobile && #{command}")
+end
+
+def ensure_metadata_tree!
+  [
+    "ios/en-US/name.txt",
+    "ios/en-US/subtitle.txt",
+    "ios/en-US/description.txt",
+    "ios/en-US/keywords.txt",
+    "ios/en-US/promotional_text.txt",
+    "ios/en-US/support_url.txt",
+    "ios/en-US/marketing_url.txt",
+    "ios/en-US/privacy_url.txt",
+    "android/en-US/title.txt",
+    "android/en-US/short_description.txt",
+    "android/en-US/full_description.txt",
+    "android/en-US/changelogs/default.txt"
+  ].each do |relative_path|
+    ensure_file!(File.join(MOBILE_DIR, "fastlane", "metadata", relative_path))
+  end
+end
+
+def upload_ios_metadata!(track)
+  deliver(
+    app_identifier: IOS_BUNDLE_IDS.fetch(track),
+    metadata_path: IOS_METADATA_PATH,
+    skip_binary_upload: true,
+    skip_screenshots: true,
+    submit_for_review: false,
+    force: true,
+    run_precheck_before_submit: false
+  )
+end
+
+def upload_android_metadata!(track)
+  supply(
+    package_name: ANDROID_PACKAGE_NAMES.fetch(track),
+    track: track == :preview ? "internal" : "production",
+    metadata_path: ANDROID_METADATA_PATH,
+    skip_upload_apk: true,
+    skip_upload_aab: true,
+    skip_upload_images: true,
+    skip_upload_screenshots: true
+  )
+end
+
+desc "Validate Fastlane/EAS release setup without uploading or building"
+lane :doctor do
+  ensure_command!("pnpm")
+  ensure_file!(EAS_JSON_PATH)
+  ensure_metadata_tree!
+
+  %i[preview production].each do |profile|
+    ensure_eas_profile!(:build, profile)
+    ensure_eas_profile!(:submit, profile)
+  end
+
+  run_in_mobile!("pnpm exec eas --version")
+
+  UI.header("Safe Fastlane doctor complete")
+  UI.message("No metadata was uploaded.")
+  UI.message("No EAS build was started.")
+  UI.message("No EAS submit was started.")
+  print_eas_command("Preview build", eas_build_command(:preview))
+  print_eas_command("Preview submit", eas_submit_command(:preview))
+  print_eas_command("Production build", eas_build_command(:production))
+  print_eas_command("Production submit", eas_submit_command(:production))
+end
+
+desc "Upload preview/internal App Store and Play Store metadata"
+lane :metadata_preview do
+  ensure_metadata_tree!
+  upload_ios_metadata!(:preview)
+  upload_android_metadata!(:preview)
+end
+
+desc "Upload production App Store and Play Store metadata"
+lane :metadata_production do
+  ensure_metadata_tree!
+  upload_ios_metadata!(:production)
+  upload_android_metadata!(:production)
+end
+
+desc "Run EAS preview build for iOS and Android"
+lane :build_preview do
+  ensure_eas_profile!(:build, :preview)
+  run_in_mobile!(eas_build_command(:preview))
+end
+
+desc "Submit latest EAS preview build to TestFlight and Play internal"
+lane :submit_preview do
+  ensure_eas_profile!(:submit, :preview)
+  run_in_mobile!(eas_submit_command(:preview))
+end
+
+desc "Upload preview metadata, build, and submit preview binaries"
+lane :beta do
+  metadata_preview
+  build_preview
+  submit_preview
+end
+
+desc "Run EAS production build for iOS and Android"
+lane :build_production do
+  ensure_eas_profile!(:build, :production)
+  run_in_mobile!(eas_build_command(:production))
+end
+
+desc "Submit latest EAS production build to App Store and Play production"
+lane :submit_production do
+  ensure_eas_profile!(:submit, :production)
+  run_in_mobile!(eas_submit_command(:production))
+end
+
+desc "Upload production metadata, build, and submit production binaries"
+lane :release do
+  metadata_production
+  build_production
+  submit_production
+end

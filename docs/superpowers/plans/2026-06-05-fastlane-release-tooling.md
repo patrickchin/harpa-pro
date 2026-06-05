@@ -11,7 +11,7 @@ metadata and wraps the existing Expo/EAS build and submit profiles.
 **Architecture:** Fastlane becomes the release command surface, while EAS stays
 the authority for Expo native builds, signing, binary submission, and OTA
 updates. Store metadata is checked in under `apps/mobile/fastlane/metadata/`,
-and the first safe lane, `mobile doctor`, validates config and prints release
+and the first safe lane, `doctor`, validates config and prints release
 commands without uploading metadata or starting remote builds.
 
 **Tech Stack:** Ruby Bundler, Fastlane, Expo EAS CLI, pnpm, JSON config,
@@ -29,7 +29,7 @@ Markdown docs.
 | `Gemfile` | create | Pin Fastlane through Bundler so every machine uses the same release tooling. |
 | `Gemfile.lock` | create | Generated dependency lockfile from `bundle install`. |
 | `apps/mobile/eas.json` | modify | Add named `preview` submit profile and make production submit intent explicit. |
-| `apps/mobile/fastlane/Fastfile` | create | Define `mobile` lanes for doctor, metadata, EAS build, EAS submit, beta, and release. |
+| `apps/mobile/fastlane/Fastfile` | create | Define Fastlane lanes for doctor, metadata, EAS build, EAS submit, beta, and release. |
 | `apps/mobile/fastlane/metadata/ios/en-US/*.txt` | create | App Store metadata source files managed by Fastlane `deliver`. |
 | `apps/mobile/fastlane/metadata/android/en-US/*.txt` | create | Play Store metadata source files managed by Fastlane `supply`. |
 | `docs/v4/arch-ops.md` | modify | Document Fastlane metadata ownership and EAS build/submit ownership. |
@@ -342,8 +342,6 @@ Create `apps/mobile/fastlane/Fastfile`:
 
 require "json"
 
-default_platform(:mobile)
-
 REPO_ROOT = File.expand_path("../../..", __dir__)
 MOBILE_DIR = File.expand_path("..", __dir__)
 EAS_JSON_PATH = File.join(MOBILE_DIR, "eas.json")
@@ -372,7 +370,7 @@ def ensure_command!(command)
 end
 
 def ensure_eas_profile!(section, profile)
-  profiles = eas_config.fetch(section, {})
+  profiles = eas_config.fetch(section.to_s, {})
   return if profiles.key?(profile.to_s)
 
   UI.user_error!("Missing apps/mobile/eas.json #{section}.#{profile}")
@@ -445,7 +443,6 @@ def upload_android_metadata!(track)
   )
 end
 
-platform :mobile do
   desc "Validate Fastlane/EAS release setup without uploading or building"
   lane :doctor do
     ensure_command!("pnpm")
@@ -520,7 +517,6 @@ platform :mobile do
     build_production
     submit_production
   end
-end
 ```
 
 - [ ] **Step 2: List lanes**
@@ -531,17 +527,16 @@ Run:
 bundle exec fastlane lanes
 ```
 
-Expected: output lists `mobile doctor`, `mobile metadata_preview`,
-`mobile metadata_production`, `mobile build_preview`, `mobile submit_preview`,
-`mobile beta`, `mobile build_production`, `mobile submit_production`, and
-`mobile release`.
+Expected: output lists `doctor`, `metadata_preview`, `metadata_production`,
+`build_preview`, `submit_preview`, `beta`, `build_production`,
+`submit_production`, and `release`.
 
 - [ ] **Step 3: Run the safe lane**
 
 Run:
 
 ```bash
-bundle exec fastlane mobile doctor
+bundle exec fastlane doctor
 ```
 
 Expected:
@@ -591,9 +586,10 @@ In `docs/v4/arch-ops.md`, after the mobile build-profile bullets and before
   Release operators run Fastlane from the repo root:
 
   ```sh
-  bundle exec fastlane mobile doctor
-  bundle exec fastlane mobile beta
-  bundle exec fastlane mobile release
+  bundle install --path vendor/bundle
+  bundle exec fastlane doctor
+  bundle exec fastlane beta
+  bundle exec fastlane release
   ```
 
   `doctor` is safe: it validates Bundler/Fastlane, `pnpm`, EAS config,
@@ -616,7 +612,7 @@ In `docs/v4/arch-ops.md`, replace:
 with:
 
 ```md
-  ↳ Fastlane `mobile beta` (manual): metadata -> EAS preview build -> submit
+  ↳ Fastlane `beta` (manual): metadata -> EAS preview build -> submit
 ```
 
 Replace:
@@ -628,7 +624,7 @@ Replace:
 with:
 
 ```md
-  ↳ Fastlane `mobile release` (manual approve): metadata -> EAS production build -> submit
+  ↳ Fastlane `release` (manual approve): metadata -> EAS production build -> submit
 ```
 
 - [ ] **Step 4: Record the completed P5.1 setup item**
@@ -661,7 +657,7 @@ Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
 Run:
 
 ```bash
-bundle exec fastlane mobile doctor
+bundle exec fastlane doctor
 ```
 
 Expected: same safe output as Task 4. No metadata upload, no EAS build, no EAS

@@ -72,6 +72,10 @@ sample-voice-note.m4a
 # Ruby / Fastlane
 .bundle/
 /vendor/bundle/
+fastlane/report.xml
+fastlane/README.md
+fastlane/Preview.html
+fastlane/test_output/
 apps/mobile/fastlane/report.xml
 apps/mobile/fastlane/README.md
 apps/mobile/fastlane/Preview.html

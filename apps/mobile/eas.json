@@ -45,6 +45,17 @@
     }
   },
   "submit": {
-    "production": {}
+    "preview": {
+      "ios": {},
+      "android": {
+        "track": "internal"
+      }
+    },
+    "production": {
+      "ios": {},
+      "android": {
+        "track": "production"
+      }
+    }
   }
 }

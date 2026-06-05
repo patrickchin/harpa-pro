@@ -31,7 +31,7 @@ signing the Expo app.
 
 ## Lanes
 
-The Fastlane `mobile` platform will expose these lanes:
+Fastlane will expose these top-level lanes:
 
 | Lane | Purpose |
 | --- | --- |
@@ -101,7 +101,7 @@ Docs under `docs/v4/` will describe the release division of responsibility:
 
 The setup is considered complete when:
 
-1. `bundle exec fastlane mobile doctor` succeeds from the repo root.
+1. `bundle exec fastlane doctor` succeeds from the repo root.
 2. The doctor output shows the exact preview and production EAS commands that
    release lanes will run.
 3. No lane run during setup uploads metadata, starts an EAS build, or submits a

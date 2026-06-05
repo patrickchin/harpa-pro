@@ -50,17 +50,17 @@ describe('reportBodyToGeneratedReport — weather mapping', () => {
   it('appends °C / km/h to numeric strings', () => {
     const out = reportBodyToGeneratedReport({
       ...baseBody,
-      weather: { condition: 'wet', temperatureC: '20', windKph: '12.5', impact: null },
+      weather: { condition: 'wet', temperature: '20°C', wind: '12.5 km/h', impact: null },
     });
     expect(out.report.weather!.temperature).toBe('20°C');
     expect(out.report.weather!.wind).toBe('12.5 km/h');
     expect(out.report.weather!.conditions).toBe('wet');
   });
 
-  it('preserves free-text weather strings with units appended', () => {
+  it('passes free-text weather strings through verbatim', () => {
     const out = reportBodyToGeneratedReport({
       ...baseBody,
-      weather: { condition: null, temperatureC: 'around 20', windKph: null, impact: null },
+      weather: { condition: null, temperature: 'around 20°C', wind: null, impact: null },
     });
     expect(out.report.weather!.temperature).toBe('around 20°C');
     expect(out.report.weather!.wind).toBeNull();
@@ -71,10 +71,10 @@ describe('reportBodyToGeneratedReport — weather mapping', () => {
     expect(out.report.weather).toBeNull();
   });
 
-  it('empty-string weather collapses to null after trimming', () => {
+  it('empty-string weather passes through (DB migration handles legacy)', () => {
     const out = reportBodyToGeneratedReport({
       ...baseBody,
-      weather: { condition: null, temperatureC: '   ', windKph: '', impact: null },
+      weather: { condition: null, temperature: null, wind: null, impact: null },
     });
     expect(out.report.weather!.temperature).toBeNull();
     expect(out.report.weather!.wind).toBeNull();
@@ -153,7 +153,7 @@ describe('generatedReportToReportBody — inverse adapter', () => {
     },
   } as any;
 
-  it('strips display suffixes from weather strings', () => {
+  it('passes weather strings through unchanged (units in value)', () => {
     const out = generatedReportToReportBody({
       ...uiBase,
       report: {
@@ -161,8 +161,8 @@ describe('generatedReportToReportBody — inverse adapter', () => {
         weather: { conditions: 'wet', temperature: '20°C', wind: '12.5 km/h', impact: null },
       },
     });
-    expect(out.weather!.temperatureC).toBe('20');
-    expect(out.weather!.windKph).toBe('12.5');
+    expect(out.weather!.temperature).toBe('20°C');
+    expect(out.weather!.wind).toBe('12.5 km/h');
   });
 
   it('preserves free-text user input through the round-trip', () => {
@@ -173,10 +173,7 @@ describe('generatedReportToReportBody — inverse adapter', () => {
         weather: { conditions: null, temperature: 'around 20°C', wind: null, impact: null },
       },
     });
-    // 'around 20°C' starts with a number (no — starts with 'a'). The
-    // stripUnit helper keeps the original string verbatim when no
-    // leading number matches.
-    expect(out.weather!.temperatureC).toBe('around 20°C');
+    expect(out.weather!.temperature).toBe('around 20°C');
   });
 
   it('stringifies UI numeric count back to wire string', () => {

@@ -166,9 +166,13 @@ The permission-denied path opens an `AppDialogSheet` from the
 provider (`Pitfall 12` — no `Alert.alert`). The same dialog scope
 handles `errored` recorder events.
 
-Audio output: `audio/m4a` (AAC-LC), 16 kHz mono, ≤ 50 MB enforced by
-the upload contract. Phase F adds a client-side normalisation step
-to guarantee 16 kHz mono regardless of device defaults.
+Audio output: `audio/m4a` (AAC-LC), 16 kHz mono, ≤ 25 MB enforced
+server-side by `packages/api/src/routes/voice.ts` (matches Groq
+Whisper's 25 MB free-tier ceiling). The mobile recorder hard-stops at
+**15 min** (≈ 3.5 MB at 32 kbps AAC) with a destructive-coloured
+counter from 10 min onwards and a "Max 15:00" hint under the timer
+(`InlineVoiceRecorder.tsx`). Phase F adds a client-side normalisation
+step to guarantee 16 kHz mono regardless of device defaults.
 
 **Historical:** Phase C–G shipped a full-screen `VoiceRecorderModal`
 with explicit Record/Pause/Resume/Save/Discard buttons. Phase H
@@ -500,7 +504,7 @@ the limiter for one user action.
 |---                                 |---         |---             |
 | Mic permission denied              | n/a        | `AppDialogSheet` with Open Settings CTA |
 | Recording shorter than 1 sec       | 400        | Inline toast "Recording too short" |
-| Recording > 50 MB                  | 413        | `AppDialogSheet` "Recording too long" |
+| Recording > 25 MB                  | 413        | `AppDialogSheet` "Recording too long" |
 | R2 PUT 5xx                         | n/a        | Pipeline `failed('upload')` → retry CTA on card |
 | Aggregator 502 (transcribe down)   | 502        | Pipeline `failed('transcribe')` → retry CTA on card |
 | Aggregator 404 (file not found)    | 404        | `AppDialogSheet` "This recording is no longer available" + discard |

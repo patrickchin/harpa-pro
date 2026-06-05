@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { reportBodyToGeneratedReport } from './report-body-adapter';
+import {
+  reportBodyToGeneratedReport,
+  generatedReportToReportBody,
+} from './report-body-adapter';
 
 const emptyMeta = {
   title: null, summary: null, visitDate: null,
@@ -40,5 +43,189 @@ describe('reportBodyToGeneratedReport — meta mapping', () => {
     };
     const out = reportBodyToGeneratedReport(legacyBody);
     expect(out.report.meta.visitDate).toBe('2026-04-01T00:00:00Z');
+  });
+});
+
+describe('reportBodyToGeneratedReport — weather mapping', () => {
+  it('appends °C / km/h to numeric strings', () => {
+    const out = reportBodyToGeneratedReport({
+      ...baseBody,
+      weather: { condition: 'wet', temperatureC: '20', windKph: '12.5', impact: null },
+    });
+    expect(out.report.weather!.temperature).toBe('20°C');
+    expect(out.report.weather!.wind).toBe('12.5 km/h');
+    expect(out.report.weather!.conditions).toBe('wet');
+  });
+
+  it('preserves free-text weather strings with units appended', () => {
+    const out = reportBodyToGeneratedReport({
+      ...baseBody,
+      weather: { condition: null, temperatureC: 'around 20', windKph: null, impact: null },
+    });
+    expect(out.report.weather!.temperature).toBe('around 20°C');
+    expect(out.report.weather!.wind).toBeNull();
+  });
+
+  it('null weather stays null', () => {
+    const out = reportBodyToGeneratedReport(baseBody);
+    expect(out.report.weather).toBeNull();
+  });
+
+  it('empty-string weather collapses to null after trimming', () => {
+    const out = reportBodyToGeneratedReport({
+      ...baseBody,
+      weather: { condition: null, temperatureC: '   ', windKph: '', impact: null },
+    });
+    expect(out.report.weather!.temperature).toBeNull();
+    expect(out.report.weather!.wind).toBeNull();
+  });
+});
+
+describe('reportBodyToGeneratedReport — workers mapping', () => {
+  it('sums numeric workers count + hours into totals', () => {
+    const out = reportBodyToGeneratedReport({
+      ...baseBody,
+      workers: [
+        { role: 'A', count: '4', hours: '8', notes: null },
+        { role: 'B', count: '2', hours: '6.5', notes: null },
+      ],
+    });
+    expect(out.report.workers!.totalWorkers).toBe(6);
+    expect(out.report.workers!.workerHours).toBe('14.5h total');
+    expect(out.report.workers!.roles).toHaveLength(2);
+  });
+
+  it('non-numeric count strings collapse to 0 in totals', () => {
+    const out = reportBodyToGeneratedReport({
+      ...baseBody,
+      workers: [
+        { role: 'A', count: 'a few', hours: null, notes: null },
+        { role: 'B', count: '3', hours: null, notes: null },
+      ],
+    });
+    expect(out.report.workers!.totalWorkers).toBe(3);
+    expect(out.report.workers!.workerHours).toBeNull();
+  });
+
+  it('empty workers array → null workers block', () => {
+    const out = reportBodyToGeneratedReport(baseBody);
+    expect(out.report.workers).toBeNull();
+  });
+});
+
+describe('reportBodyToGeneratedReport — materials & issues', () => {
+  it('passes through material quantity + unit unchanged', () => {
+    const out = reportBodyToGeneratedReport({
+      ...baseBody,
+      materials: [
+        { name: 'Concrete', quantity: '50', unit: 'm³', status: null, condition: null, notes: null },
+      ],
+    });
+    expect(out.report.materials[0]!.quantity).toBe('50');
+    expect(out.report.materials[0]!.quantityUnit).toBe('m³');
+  });
+
+  it('normalises severity — known stays, unknown → medium', () => {
+    const out = reportBodyToGeneratedReport({
+      ...baseBody,
+      issues: [
+        { title: 'A', severity: 'low', description: null, action: null },
+        { title: 'B', severity: 'CRITICAL', description: null, action: null },
+        { title: 'C', severity: null, description: null, action: null },
+      ],
+    });
+    expect(out.report.issues[0]!.severity).toBe('low');
+    expect(out.report.issues[1]!.severity).toBe('medium');
+    expect(out.report.issues[2]!.severity).toBe('medium');
+  });
+});
+
+describe('generatedReportToReportBody — inverse adapter', () => {
+  const uiBase = {
+    report: {
+      meta: { title: '', summary: '', visitDate: null },
+      weather: null,
+      workers: null,
+      materials: [],
+      issues: [],
+      nextSteps: [],
+      sections: [],
+    },
+  } as any;
+
+  it('strips display suffixes from weather strings', () => {
+    const out = generatedReportToReportBody({
+      ...uiBase,
+      report: {
+        ...uiBase.report,
+        weather: { conditions: 'wet', temperature: '20°C', wind: '12.5 km/h', impact: null },
+      },
+    });
+    expect(out.weather!.temperatureC).toBe('20');
+    expect(out.weather!.windKph).toBe('12.5');
+  });
+
+  it('preserves free-text user input through the round-trip', () => {
+    const out = generatedReportToReportBody({
+      ...uiBase,
+      report: {
+        ...uiBase.report,
+        weather: { conditions: null, temperature: 'around 20°C', wind: null, impact: null },
+      },
+    });
+    // 'around 20°C' starts with a number (no — starts with 'a'). The
+    // stripUnit helper keeps the original string verbatim when no
+    // leading number matches.
+    expect(out.weather!.temperatureC).toBe('around 20°C');
+  });
+
+  it('stringifies UI numeric count back to wire string', () => {
+    const out = generatedReportToReportBody({
+      ...uiBase,
+      report: {
+        ...uiBase.report,
+        workers: {
+          headcount: 6,
+          workerHours: null,
+          notes: null,
+          roles: [
+            { role: 'A', count: 4, notes: null },
+            { role: 'B', count: null, notes: 'one' },
+          ],
+        },
+      },
+    });
+    expect(out.workers[0]!.count).toBe('4');
+    expect(out.workers[1]!.count).toBeNull();
+  });
+
+  it('round-trips materials quantity + drops dropped fields', () => {
+    const out = generatedReportToReportBody({
+      ...uiBase,
+      report: {
+        ...uiBase.report,
+        materials: [
+          { name: 'Concrete', quantity: '50', quantityUnit: 'm³', status: null, condition: null, notes: null },
+        ],
+      },
+    });
+    expect(out.materials[0]!).toEqual({
+      name: 'Concrete', quantity: '50', unit: 'm³', status: null, condition: null, notes: null,
+    });
+  });
+
+  it('coerces UI free-text severity to enum default', () => {
+    const out = generatedReportToReportBody({
+      ...uiBase,
+      report: {
+        ...uiBase.report,
+        issues: [
+          { title: 'A', category: 'other', severity: 'high', status: 'open', details: '', actionRequired: null },
+          { title: 'B', category: 'other', severity: 'urgent', status: 'open', details: '', actionRequired: null },
+        ],
+      },
+    });
+    expect(out.issues[0]!.severity).toBe('high');
+    expect(out.issues[1]!.severity).toBe('medium');
   });
 });

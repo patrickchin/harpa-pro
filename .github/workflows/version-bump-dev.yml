@@ -1,7 +1,8 @@
 name: version-bump-dev
 
 # Increment the patch version in root package.json and tag on every
-# merge to dev. Uses [skip ci] to avoid re-triggering other workflows.
+# merge to dev. The release commit stays CI-eligible so dev → main
+# promotion PRs can run required checks.
 
 on:
   push:
@@ -10,7 +11,7 @@ on:
 jobs:
   bump:
     # Skip if the push was the version bump commit itself.
-    if: "!contains(github.event.head_commit.message, '[skip ci]')"
+    if: "!startsWith(github.event.head_commit.message, 'chore(release): v')"
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -47,7 +48,7 @@ jobs:
 
           # Commit and tag
           git add package.json
-          git commit -m "chore(release): v${NEW_VERSION} [skip ci]"
+          git commit -m "chore(release): v${NEW_VERSION}"
           git tag -a "v${NEW_VERSION}" -m "v${NEW_VERSION}"
 
           # Push commit and tag

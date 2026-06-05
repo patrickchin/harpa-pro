@@ -3337,11 +3337,11 @@
                                     "nullable": true
                                   },
                                   "temperatureC": {
-                                    "type": "number",
+                                    "type": "string",
                                     "nullable": true
                                   },
                                   "windKph": {
-                                    "type": "number",
+                                    "type": "string",
                                     "nullable": true
                                   },
                                   "impact": {
@@ -3365,13 +3365,12 @@
                                       "type": "string"
                                     },
                                     "count": {
-                                      "type": "integer",
-                                      "minimum": 0
+                                      "type": "string",
+                                      "nullable": true
                                     },
                                     "hours": {
-                                      "type": "number",
-                                      "nullable": true,
-                                      "minimum": 0
+                                      "type": "string",
+                                      "nullable": true
                                     },
                                     "notes": {
                                       "type": "string",
@@ -3395,7 +3394,7 @@
                                       "type": "string"
                                     },
                                     "quantity": {
-                                      "type": "number",
+                                      "type": "string",
                                       "nullable": true
                                     },
                                     "unit": {
@@ -3435,11 +3434,7 @@
                                     },
                                     "severity": {
                                       "type": "string",
-                                      "enum": [
-                                        "low",
-                                        "medium",
-                                        "high"
-                                      ]
+                                      "nullable": true
                                     },
                                     "description": {
                                       "type": "string",
@@ -3731,11 +3726,11 @@
                               "nullable": true
                             },
                             "temperatureC": {
-                              "type": "number",
+                              "type": "string",
                               "nullable": true
                             },
                             "windKph": {
-                              "type": "number",
+                              "type": "string",
                               "nullable": true
                             },
                             "impact": {
@@ -3759,13 +3754,12 @@
                                 "type": "string"
                               },
                               "count": {
-                                "type": "integer",
-                                "minimum": 0
+                                "type": "string",
+                                "nullable": true
                               },
                               "hours": {
-                                "type": "number",
-                                "nullable": true,
-                                "minimum": 0
+                                "type": "string",
+                                "nullable": true
                               },
                               "notes": {
                                 "type": "string",
@@ -3789,7 +3783,7 @@
                                 "type": "string"
                               },
                               "quantity": {
-                                "type": "number",
+                                "type": "string",
                                 "nullable": true
                               },
                               "unit": {
@@ -3829,11 +3823,7 @@
                               },
                               "severity": {
                                 "type": "string",
-                                "enum": [
-                                  "low",
-                                  "medium",
-                                  "high"
-                                ]
+                                "nullable": true
                               },
                               "description": {
                                 "type": "string",
@@ -4146,11 +4136,11 @@
                               "nullable": true
                             },
                             "temperatureC": {
-                              "type": "number",
+                              "type": "string",
                               "nullable": true
                             },
                             "windKph": {
-                              "type": "number",
+                              "type": "string",
                               "nullable": true
                             },
                             "impact": {
@@ -4174,13 +4164,12 @@
                                 "type": "string"
                               },
                               "count": {
-                                "type": "integer",
-                                "minimum": 0
+                                "type": "string",
+                                "nullable": true
                               },
                               "hours": {
-                                "type": "number",
-                                "nullable": true,
-                                "minimum": 0
+                                "type": "string",
+                                "nullable": true
                               },
                               "notes": {
                                 "type": "string",
@@ -4204,7 +4193,7 @@
                                 "type": "string"
                               },
                               "quantity": {
-                                "type": "number",
+                                "type": "string",
                                 "nullable": true
                               },
                               "unit": {
@@ -4244,11 +4233,7 @@
                               },
                               "severity": {
                                 "type": "string",
-                                "enum": [
-                                  "low",
-                                  "medium",
-                                  "high"
-                                ]
+                                "nullable": true
                               },
                               "description": {
                                 "type": "string",
@@ -4501,11 +4486,11 @@
                             "nullable": true
                           },
                           "temperatureC": {
-                            "type": "number",
+                            "type": "string",
                             "nullable": true
                           },
                           "windKph": {
-                            "type": "number",
+                            "type": "string",
                             "nullable": true
                           },
                           "impact": {
@@ -4529,13 +4514,12 @@
                               "type": "string"
                             },
                             "count": {
-                              "type": "integer",
-                              "minimum": 0
+                              "type": "string",
+                              "nullable": true
                             },
                             "hours": {
-                              "type": "number",
-                              "nullable": true,
-                              "minimum": 0
+                              "type": "string",
+                              "nullable": true
                             },
                             "notes": {
                               "type": "string",
@@ -4559,7 +4543,7 @@
                               "type": "string"
                             },
                             "quantity": {
-                              "type": "number",
+                              "type": "string",
                               "nullable": true
                             },
                             "unit": {
@@ -4599,11 +4583,7 @@
                             },
                             "severity": {
                               "type": "string",
-                              "enum": [
-                                "low",
-                                "medium",
-                                "high"
-                              ]
+                              "nullable": true
                             },
                             "description": {
                               "type": "string",
@@ -4729,11 +4709,11 @@
                               "nullable": true
                             },
                             "temperatureC": {
-                              "type": "number",
+                              "type": "string",
                               "nullable": true
                             },
                             "windKph": {
-                              "type": "number",
+                              "type": "string",
                               "nullable": true
                             },
                             "impact": {
@@ -4757,13 +4737,12 @@
                                 "type": "string"
                               },
                               "count": {
-                                "type": "integer",
-                                "minimum": 0
+                                "type": "string",
+                                "nullable": true
                               },
                               "hours": {
-                                "type": "number",
-                                "nullable": true,
-                                "minimum": 0
+                                "type": "string",
+                                "nullable": true
                               },
                               "notes": {
                                 "type": "string",
@@ -4787,7 +4766,7 @@
                                 "type": "string"
                               },
                               "quantity": {
-                                "type": "number",
+                                "type": "string",
                                 "nullable": true
                               },
                               "unit": {
@@ -4827,11 +4806,7 @@
                               },
                               "severity": {
                                 "type": "string",
-                                "enum": [
-                                  "low",
-                                  "medium",
-                                  "high"
-                                ]
+                                "nullable": true
                               },
                               "description": {
                                 "type": "string",
@@ -5270,6 +5245,43 @@
                             "type": "string",
                             "nullable": true
                           },
+                          "files": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "pattern": "^nfl_[0-9a-hjkmnp-tv-z]{8,16}$"
+                                },
+                                "fileId": {
+                                  "type": "string",
+                                  "pattern": "^fil_[0-9a-hjkmnp-tv-z]{8,16}$"
+                                },
+                                "thumbnailFileId": {
+                                  "type": "string",
+                                  "nullable": true,
+                                  "pattern": "^fil_[0-9a-hjkmnp-tv-z]{8,16}$"
+                                },
+                                "position": {
+                                  "type": "integer",
+                                  "minimum": 0
+                                },
+                                "caption": {
+                                  "type": "string",
+                                  "nullable": true
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "fileId",
+                                "thumbnailFileId",
+                                "position",
+                                "caption"
+                              ]
+                            },
+                            "default": []
+                          },
                           "createdAt": {
                             "type": "string"
                           }
@@ -5555,11 +5567,11 @@
                                   "nullable": true
                                 },
                                 "temperatureC": {
-                                  "type": "number",
+                                  "type": "string",
                                   "nullable": true
                                 },
                                 "windKph": {
-                                  "type": "number",
+                                  "type": "string",
                                   "nullable": true
                                 },
                                 "impact": {
@@ -5583,13 +5595,12 @@
                                     "type": "string"
                                   },
                                   "count": {
-                                    "type": "integer",
-                                    "minimum": 0
+                                    "type": "string",
+                                    "nullable": true
                                   },
                                   "hours": {
-                                    "type": "number",
-                                    "nullable": true,
-                                    "minimum": 0
+                                    "type": "string",
+                                    "nullable": true
                                   },
                                   "notes": {
                                     "type": "string",
@@ -5613,7 +5624,7 @@
                                     "type": "string"
                                   },
                                   "quantity": {
-                                    "type": "number",
+                                    "type": "string",
                                     "nullable": true
                                   },
                                   "unit": {
@@ -5653,11 +5664,7 @@
                                   },
                                   "severity": {
                                     "type": "string",
-                                    "enum": [
-                                      "low",
-                                      "medium",
-                                      "high"
-                                    ]
+                                    "nullable": true
                                   },
                                   "description": {
                                     "type": "string",
@@ -6087,11 +6094,11 @@
                                   "nullable": true
                                 },
                                 "temperatureC": {
-                                  "type": "number",
+                                  "type": "string",
                                   "nullable": true
                                 },
                                 "windKph": {
-                                  "type": "number",
+                                  "type": "string",
                                   "nullable": true
                                 },
                                 "impact": {
@@ -6115,13 +6122,12 @@
                                     "type": "string"
                                   },
                                   "count": {
-                                    "type": "integer",
-                                    "minimum": 0
+                                    "type": "string",
+                                    "nullable": true
                                   },
                                   "hours": {
-                                    "type": "number",
-                                    "nullable": true,
-                                    "minimum": 0
+                                    "type": "string",
+                                    "nullable": true
                                   },
                                   "notes": {
                                     "type": "string",
@@ -6145,7 +6151,7 @@
                                     "type": "string"
                                   },
                                   "quantity": {
-                                    "type": "number",
+                                    "type": "string",
                                     "nullable": true
                                   },
                                   "unit": {
@@ -6185,11 +6191,7 @@
                                   },
                                   "severity": {
                                     "type": "string",
-                                    "enum": [
-                                      "low",
-                                      "medium",
-                                      "high"
-                                    ]
+                                    "nullable": true
                                   },
                                   "description": {
                                     "type": "string",
@@ -6602,11 +6604,11 @@
                                   "nullable": true
                                 },
                                 "temperatureC": {
-                                  "type": "number",
+                                  "type": "string",
                                   "nullable": true
                                 },
                                 "windKph": {
-                                  "type": "number",
+                                  "type": "string",
                                   "nullable": true
                                 },
                                 "impact": {
@@ -6630,13 +6632,12 @@
                                     "type": "string"
                                   },
                                   "count": {
-                                    "type": "integer",
-                                    "minimum": 0
+                                    "type": "string",
+                                    "nullable": true
                                   },
                                   "hours": {
-                                    "type": "number",
-                                    "nullable": true,
-                                    "minimum": 0
+                                    "type": "string",
+                                    "nullable": true
                                   },
                                   "notes": {
                                     "type": "string",
@@ -6660,7 +6661,7 @@
                                     "type": "string"
                                   },
                                   "quantity": {
-                                    "type": "number",
+                                    "type": "string",
                                     "nullable": true
                                   },
                                   "unit": {
@@ -6700,11 +6701,7 @@
                                   },
                                   "severity": {
                                     "type": "string",
-                                    "enum": [
-                                      "low",
-                                      "medium",
-                                      "high"
-                                    ]
+                                    "nullable": true
                                   },
                                   "description": {
                                     "type": "string",
@@ -7025,11 +7022,11 @@
                                   "nullable": true
                                 },
                                 "temperatureC": {
-                                  "type": "number",
+                                  "type": "string",
                                   "nullable": true
                                 },
                                 "windKph": {
-                                  "type": "number",
+                                  "type": "string",
                                   "nullable": true
                                 },
                                 "impact": {
@@ -7053,13 +7050,12 @@
                                     "type": "string"
                                   },
                                   "count": {
-                                    "type": "integer",
-                                    "minimum": 0
+                                    "type": "string",
+                                    "nullable": true
                                   },
                                   "hours": {
-                                    "type": "number",
-                                    "nullable": true,
-                                    "minimum": 0
+                                    "type": "string",
+                                    "nullable": true
                                   },
                                   "notes": {
                                     "type": "string",
@@ -7083,7 +7079,7 @@
                                     "type": "string"
                                   },
                                   "quantity": {
-                                    "type": "number",
+                                    "type": "string",
                                     "nullable": true
                                   },
                                   "unit": {
@@ -7123,11 +7119,7 @@
                                   },
                                   "severity": {
                                     "type": "string",
-                                    "enum": [
-                                      "low",
-                                      "medium",
-                                      "high"
-                                    ]
+                                    "nullable": true
                                   },
                                   "description": {
                                     "type": "string",

@@ -70,6 +70,17 @@ export function NoteTimeline({
         : entry.source === 'image'
           ? 'photo'
           : 'text';
+    // For image entries with multiple attachments (batch capture),
+    // surface every R2 fileId in the sheet's metadata block instead
+    // of just the first one.
+    const files =
+      kind === 'photo' && entry.attachments && entry.attachments.length > 0
+        ? entry.attachments
+            .filter((a): a is typeof a & { fileId: string } =>
+              typeof a.fileId === 'string' && !!a.fileId,
+            )
+            .map((a) => ({ id: a.key, fileId: a.fileId }))
+        : null;
     return {
       id: entry.id ?? `note-${activeIndex}`,
       kind,
@@ -83,6 +94,7 @@ export function NoteTimeline({
       capturedAt: entry.addedAt,
       durationSec: entry.durationSec ?? null,
       fileId: entry.fileId ?? null,
+      files: files && files.length > 0 ? files : null,
     };
   }, [activeIndex, notes, memberNames]);
 

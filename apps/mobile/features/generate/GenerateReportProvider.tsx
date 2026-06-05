@@ -32,6 +32,7 @@ import type { NoteEntry } from '@/lib/notes/note-entry';
 import type { GeneratedSiteReport } from '@harpa/report-core';
 import { buildAttachments, type Attachment } from '@/lib/notes/attachments';
 import { useInlineRecorder } from '@/features/voice/useInlineRecorder';
+import { MAX_DURATION_MS } from '@/features/voice/InlineVoiceRecorder';
 import { useVoiceNotePipeline } from '@/features/voice/useVoiceNotePipeline';
 import { useAudioPlayback } from '@/lib/audio/AudioPlaybackProvider';
 import { useMeQuery } from '@/lib/api/hooks';
@@ -171,6 +172,13 @@ interface VoiceSurface {
   stopAndSend: () => void;
   /** Discard the in-flight recording and return to the input row. */
   cancel: () => void;
+  /**
+   * Phase H+: fires when the inline recorder hits its hard cap
+   * (`MAX_DURATION_MS`, 15 min). The provider surfaces an
+   * `AppDialogSheet` so the user understands the note was sent
+   * automatically.
+   */
+  onMaxDuration: () => void;
   /**
    * Phase D: pipeline state visible to surfaces that want to show a
    * "Transcribing voice note…" indicator after the strip closes.
@@ -500,6 +508,23 @@ export function GenerateReportProvider({
     void inlineRecorder.cancel();
   }, [inlineRecorder]);
 
+  // Phase H+: hard-stop dialog. Fired from `InlineVoiceRecorder` when
+  // `durationMs` crosses `MAX_DURATION_MS`. The recorder also calls
+  // `onSend` in the same tick, so the strip unmounts immediately — we
+  // surface a one-shot alert so the user knows their recording wasn't
+  // silently truncated. Driven by local visible state (matches the
+  // existing permission + recorder-error `AppDialogSheet`s below) so
+  // we don't take a dependency on `DialogSheetProvider` (every screen
+  // test that renders this provider would otherwise need a wrapper).
+  const [maxDurationDialogVisible, setMaxDurationDialogVisible] = useState(false);
+  const handleVoiceMaxDuration = useCallback(() => {
+    setMaxDurationDialogVisible(true);
+  }, []);
+  const dismissMaxDurationDialog = useCallback(() => {
+    setMaxDurationDialogVisible(false);
+  }, []);
+  const maxDurationMin = Math.round(MAX_DURATION_MS / 60_000);
+
   // Phase E: surface the in-flight pipeline as a synthetic NoteEntry so
   // `NoteTimeline` can render the spinner / failure pill the same way it
   // renders saved voice notes. On `step === 'saved'` we keep a synthetic
@@ -813,6 +838,7 @@ export function GenerateReportProvider({
         start: handleVoiceStart,
         stopAndSend: handleVoiceStopAndSend,
         cancel: handleVoiceCancel,
+        onMaxDuration: handleVoiceMaxDuration,
         pipeline: reportId
           ? { step: voicePipeline.state.step, error: voicePipeline.state.error }
           : null,
@@ -886,6 +912,7 @@ export function GenerateReportProvider({
       handleVoiceStart,
       handleVoiceStopAndSend,
       handleVoiceCancel,
+      handleVoiceMaxDuration,
       reportId,
       voicePipeline.state.step,
       voicePipeline.state.error,
@@ -941,6 +968,28 @@ export function GenerateReportProvider({
             onPress: inlineRecorder.dismissError,
             variant: 'secondary',
             testID: 'voice-error-dismiss',
+          },
+        ]}
+      />
+      {/*
+        Phase H+: hard-stop notice. Fires when the inline recorder
+        auto-sends at `MAX_DURATION_MS` so the user understands their
+        note wasn't silently truncated (see HARPA-PRO-D — Groq Whisper
+        rejects oversized files, and the 15 min cap keeps us under
+        Groq's 25 MB free-tier ceiling).
+      */}
+      <AppDialogSheet
+        visible={maxDurationDialogVisible}
+        title="Maximum recording reached"
+        message={`Voice notes are capped at ${maxDurationMin} minutes. Your recording was sent automatically.`}
+        noticeTone="info"
+        onClose={dismissMaxDurationDialog}
+        actions={[
+          {
+            label: 'OK',
+            onPress: dismissMaxDurationDialog,
+            variant: 'secondary',
+            testID: 'voice-max-duration-ok',
           },
         ]}
       />

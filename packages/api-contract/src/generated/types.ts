@@ -1577,19 +1577,19 @@ export interface paths {
                                     };
                                     weather: {
                                         condition: string | null;
-                                        temperatureC: number | null;
-                                        windKph: number | null;
+                                        temperatureC: string | null;
+                                        windKph: string | null;
                                         impact: string | null;
                                     } | null;
                                     workers: {
                                         role: string;
-                                        count: number;
-                                        hours: number | null;
+                                        count: string | null;
+                                        hours: string | null;
                                         notes: string | null;
                                     }[];
                                     materials: {
                                         name: string;
-                                        quantity: number | null;
+                                        quantity: string | null;
                                         unit: string | null;
                                         status: string | null;
                                         condition: string | null;
@@ -1597,8 +1597,7 @@ export interface paths {
                                     }[];
                                     issues: {
                                         title: string;
-                                        /** @enum {string} */
-                                        severity: "low" | "medium" | "high";
+                                        severity: string | null;
                                         description: string | null;
                                         action: string | null;
                                     }[];
@@ -1694,19 +1693,19 @@ export interface paths {
                                 };
                                 weather: {
                                     condition: string | null;
-                                    temperatureC: number | null;
-                                    windKph: number | null;
+                                    temperatureC: string | null;
+                                    windKph: string | null;
                                     impact: string | null;
                                 } | null;
                                 workers: {
                                     role: string;
-                                    count: number;
-                                    hours: number | null;
+                                    count: string | null;
+                                    hours: string | null;
                                     notes: string | null;
                                 }[];
                                 materials: {
                                     name: string;
-                                    quantity: number | null;
+                                    quantity: string | null;
                                     unit: string | null;
                                     status: string | null;
                                     condition: string | null;
@@ -1714,8 +1713,7 @@ export interface paths {
                                 }[];
                                 issues: {
                                     title: string;
-                                    /** @enum {string} */
-                                    severity: "low" | "medium" | "high";
+                                    severity: string | null;
                                     description: string | null;
                                     action: string | null;
                                 }[];
@@ -1832,19 +1830,19 @@ export interface paths {
                                 };
                                 weather: {
                                     condition: string | null;
-                                    temperatureC: number | null;
-                                    windKph: number | null;
+                                    temperatureC: string | null;
+                                    windKph: string | null;
                                     impact: string | null;
                                 } | null;
                                 workers: {
                                     role: string;
-                                    count: number;
-                                    hours: number | null;
+                                    count: string | null;
+                                    hours: string | null;
                                     notes: string | null;
                                 }[];
                                 materials: {
                                     name: string;
-                                    quantity: number | null;
+                                    quantity: string | null;
                                     unit: string | null;
                                     status: string | null;
                                     condition: string | null;
@@ -1852,8 +1850,7 @@ export interface paths {
                                 }[];
                                 issues: {
                                     title: string;
-                                    /** @enum {string} */
-                                    severity: "low" | "medium" | "high";
+                                    severity: string | null;
                                     description: string | null;
                                     action: string | null;
                                 }[];
@@ -1987,19 +1984,19 @@ export interface paths {
                             };
                             weather: {
                                 condition: string | null;
-                                temperatureC: number | null;
-                                windKph: number | null;
+                                temperatureC: string | null;
+                                windKph: string | null;
                                 impact: string | null;
                             } | null;
                             workers: {
                                 role: string;
-                                count: number;
-                                hours: number | null;
+                                count: string | null;
+                                hours: string | null;
                                 notes: string | null;
                             }[];
                             materials: {
                                 name: string;
-                                quantity: number | null;
+                                quantity: string | null;
                                 unit: string | null;
                                 status: string | null;
                                 condition: string | null;
@@ -2007,8 +2004,7 @@ export interface paths {
                             }[];
                             issues: {
                                 title: string;
-                                /** @enum {string} */
-                                severity: "low" | "medium" | "high";
+                                severity: string | null;
                                 description: string | null;
                                 action: string | null;
                             }[];
@@ -2043,19 +2039,19 @@ export interface paths {
                                 };
                                 weather: {
                                     condition: string | null;
-                                    temperatureC: number | null;
-                                    windKph: number | null;
+                                    temperatureC: string | null;
+                                    windKph: string | null;
                                     impact: string | null;
                                 } | null;
                                 workers: {
                                     role: string;
-                                    count: number;
-                                    hours: number | null;
+                                    count: string | null;
+                                    hours: string | null;
                                     notes: string | null;
                                 }[];
                                 materials: {
                                     name: string;
-                                    quantity: number | null;
+                                    quantity: string | null;
                                     unit: string | null;
                                     status: string | null;
                                     condition: string | null;
@@ -2063,8 +2059,7 @@ export interface paths {
                                 }[];
                                 issues: {
                                     title: string;
-                                    /** @enum {string} */
-                                    severity: "low" | "medium" | "high";
+                                    severity: string | null;
                                     description: string | null;
                                     action: string | null;
                                 }[];
@@ -2189,6 +2184,14 @@ export interface paths {
                                 kind: "text" | "voice" | "image" | "document";
                                 body: string | null;
                                 transcript: string | null;
+                                /** @default [] */
+                                files: {
+                                    id: string;
+                                    fileId: string;
+                                    thumbnailFileId: string | null;
+                                    position: number;
+                                    caption: string | null;
+                                }[];
                                 createdAt: string;
                             }[];
                             lastGeneration: {
@@ -2301,19 +2304,19 @@ export interface paths {
                                     };
                                     weather: {
                                         condition: string | null;
-                                        temperatureC: number | null;
-                                        windKph: number | null;
+                                        temperatureC: string | null;
+                                        windKph: string | null;
                                         impact: string | null;
                                     } | null;
                                     workers: {
                                         role: string;
-                                        count: number;
-                                        hours: number | null;
+                                        count: string | null;
+                                        hours: string | null;
                                         notes: string | null;
                                     }[];
                                     materials: {
                                         name: string;
-                                        quantity: number | null;
+                                        quantity: string | null;
                                         unit: string | null;
                                         status: string | null;
                                         condition: string | null;
@@ -2321,8 +2324,7 @@ export interface paths {
                                     }[];
                                     issues: {
                                         title: string;
-                                        /** @enum {string} */
-                                        severity: "low" | "medium" | "high";
+                                        severity: string | null;
                                         description: string | null;
                                         action: string | null;
                                     }[];
@@ -2488,19 +2490,19 @@ export interface paths {
                                     };
                                     weather: {
                                         condition: string | null;
-                                        temperatureC: number | null;
-                                        windKph: number | null;
+                                        temperatureC: string | null;
+                                        windKph: string | null;
                                         impact: string | null;
                                     } | null;
                                     workers: {
                                         role: string;
-                                        count: number;
-                                        hours: number | null;
+                                        count: string | null;
+                                        hours: string | null;
                                         notes: string | null;
                                     }[];
                                     materials: {
                                         name: string;
-                                        quantity: number | null;
+                                        quantity: string | null;
                                         unit: string | null;
                                         status: string | null;
                                         condition: string | null;
@@ -2508,8 +2510,7 @@ export interface paths {
                                     }[];
                                     issues: {
                                         title: string;
-                                        /** @enum {string} */
-                                        severity: "low" | "medium" | "high";
+                                        severity: string | null;
                                         description: string | null;
                                         action: string | null;
                                     }[];
@@ -2669,19 +2670,19 @@ export interface paths {
                                     };
                                     weather: {
                                         condition: string | null;
-                                        temperatureC: number | null;
-                                        windKph: number | null;
+                                        temperatureC: string | null;
+                                        windKph: string | null;
                                         impact: string | null;
                                     } | null;
                                     workers: {
                                         role: string;
-                                        count: number;
-                                        hours: number | null;
+                                        count: string | null;
+                                        hours: string | null;
                                         notes: string | null;
                                     }[];
                                     materials: {
                                         name: string;
-                                        quantity: number | null;
+                                        quantity: string | null;
                                         unit: string | null;
                                         status: string | null;
                                         condition: string | null;
@@ -2689,8 +2690,7 @@ export interface paths {
                                     }[];
                                     issues: {
                                         title: string;
-                                        /** @enum {string} */
-                                        severity: "low" | "medium" | "high";
+                                        severity: string | null;
                                         description: string | null;
                                         action: string | null;
                                     }[];
@@ -2811,19 +2811,19 @@ export interface paths {
                                     };
                                     weather: {
                                         condition: string | null;
-                                        temperatureC: number | null;
-                                        windKph: number | null;
+                                        temperatureC: string | null;
+                                        windKph: string | null;
                                         impact: string | null;
                                     } | null;
                                     workers: {
                                         role: string;
-                                        count: number;
-                                        hours: number | null;
+                                        count: string | null;
+                                        hours: string | null;
                                         notes: string | null;
                                     }[];
                                     materials: {
                                         name: string;
-                                        quantity: number | null;
+                                        quantity: string | null;
                                         unit: string | null;
                                         status: string | null;
                                         condition: string | null;
@@ -2831,8 +2831,7 @@ export interface paths {
                                     }[];
                                     issues: {
                                         title: string;
-                                        /** @enum {string} */
-                                        severity: "low" | "medium" | "high";
+                                        severity: string | null;
                                         description: string | null;
                                         action: string | null;
                                     }[];

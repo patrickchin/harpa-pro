@@ -34,6 +34,7 @@ import {
   reportInitialDataUpdatedAt,
 } from '@/lib/api/initial-data';
 import type { ReportNoteRow } from '@/components/reports/detail/ReportNotesPane';
+import { toReportNoteRows } from '@/lib/api/to-report-note-row';
 import { useRefresh } from '@/lib/util/use-refresh';
 import { useReportPdfActions } from '@/lib/reports/use-report-pdf-actions';
 import { env } from '@/lib/config/env';
@@ -162,49 +163,7 @@ export default function SavedReportRoute() {
           }>;
         }
       | undefined)?.items;
-    if (!items) return [];
-    const rows: ReportNoteRow[] = [];
-    for (const n of items) {
-      const authorName = n.authorId ? memberNames.get(n.authorId) ?? null : null;
-      // Image notes are canonical-via-`note_files`: emit one row per
-      // joined file, all sharing `noteId` so `ReportPhotos` groups
-      // them into a single batch. Fall back to the legacy `fileId`
-      // only when no joined files were returned.
-      if (n.kind === 'image' && n.files && n.files.length > 0) {
-        for (const f of n.files) {
-          rows.push({
-            id: f.id,
-            body: n.body,
-            kind: 'photo',
-            createdAt: n.createdAt ?? null,
-            authorName,
-            fileId: f.fileId,
-            thumbnailFileId: f.thumbnailFileId,
-            noteId: n.id,
-            transcript: null,
-            title: null,
-            summary: null,
-            durationSec: null,
-          });
-        }
-        continue;
-      }
-      rows.push({
-        id: n.id,
-        body: n.body ?? n.transcript ?? null,
-        kind: n.kind === 'image' ? 'photo' : n.kind,
-        createdAt: n.createdAt ?? null,
-        authorName,
-        fileId: n.fileId ?? null,
-        thumbnailFileId: n.thumbnailFileId ?? null,
-        noteId: n.id,
-        transcript: n.transcript ?? null,
-        title: n.title ?? null,
-        summary: n.summary ?? null,
-        durationSec: n.durationSec ?? null,
-      });
-    }
-    return rows;
+    return toReportNoteRows(items, memberNames);
   }, [notesQuery.data, memberNames]);
 
   // Saved (finalized) reports are read-only here — the SavedReport

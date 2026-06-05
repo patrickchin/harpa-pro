@@ -2487,6 +2487,14 @@ export interface paths {
                                 kind: "text" | "voice" | "image" | "document";
                                 body: string | null;
                                 transcript: string | null;
+                                /** @default [] */
+                                files: {
+                                    id: string;
+                                    fileId: string;
+                                    thumbnailFileId: string | null;
+                                    position: number;
+                                    caption: string | null;
+                                }[];
                                 createdAt: string;
                             }[];
                             lastGeneration: {

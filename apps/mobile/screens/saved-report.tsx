@@ -52,6 +52,7 @@ import {
   ReportNotesPane,
   type ReportNoteRow,
 } from '@/components/reports/detail/ReportNotesPane';
+import { flattenPhotoGallery } from '@/lib/api/to-report-note-row';
 import { ReportActionsMenu } from '@/components/reports/detail/ReportActionsMenu';
 import { SavedReportSheet } from '@/components/reports/detail/SavedReportSheet';
 import { ReportDetailSkeleton } from '@/components/skeletons/ReportDetailSkeleton';
@@ -237,26 +238,13 @@ export function SavedReport(props: SavedReportProps) {
   const notesCount = (noteRows ?? []).length;
 
   // Gallery of all photo-notes — drives the swipeable preview modal.
-  // Order matches `noteRows`; both `ReportPhotos` and `ReportNotesPane`
-  // tap-handlers resolve into this same list by `fileId`.
-  const photoGallery = useMemo(
-    () =>
-      (noteRows ?? [])
-        .filter(
-          (n): n is ReportNoteRow & { fileId: string } =>
-            n.kind === 'photo' &&
-            typeof n.fileId === 'string' &&
-            !!n.fileId,
-        )
-        .map((n) => ({
-          fileId: n.fileId,
-          thumbnailFileId: n.thumbnailFileId ?? null,
-          noteId: n.noteId ?? n.id,
-          title: n.body?.trim() || 'Photo',
-          cacheKey: n.fileId,
-        })),
-    [noteRows],
-  );
+  // One entry per joined `note_files` row across every image note,
+  // ordered newest-first to match the timeline. Both `ReportPhotos`
+  // and `ReportNotesPane` tap-handlers resolve into this same list
+  // by `fileId` via `findIndex`, so any iteration order works for
+  // *finding* the index — we sort newest-first only so swiping
+  // forward walks the same direction as reading the timeline.
+  const photoGallery = useMemo(() => flattenPhotoGallery(noteRows), [noteRows]);
 
   const handleOpenPhoto = (input: { fileId: string; title?: string }) => {
     const idx = photoGallery.findIndex((p) => p.fileId === input.fileId);

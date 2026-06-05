@@ -5773,6 +5773,43 @@
                             "type": "string",
                             "nullable": true
                           },
+                          "files": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "pattern": "^nfl_[0-9a-hjkmnp-tv-z]{8,16}$"
+                                },
+                                "fileId": {
+                                  "type": "string",
+                                  "pattern": "^fil_[0-9a-hjkmnp-tv-z]{8,16}$"
+                                },
+                                "thumbnailFileId": {
+                                  "type": "string",
+                                  "nullable": true,
+                                  "pattern": "^fil_[0-9a-hjkmnp-tv-z]{8,16}$"
+                                },
+                                "position": {
+                                  "type": "integer",
+                                  "minimum": 0
+                                },
+                                "caption": {
+                                  "type": "string",
+                                  "nullable": true
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "fileId",
+                                "thumbnailFileId",
+                                "position",
+                                "caption"
+                              ]
+                            },
+                            "default": []
+                          },
                           "createdAt": {
                             "type": "string"
                           }

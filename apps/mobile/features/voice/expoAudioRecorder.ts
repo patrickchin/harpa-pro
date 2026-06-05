@@ -121,7 +121,21 @@ function createExpoAudioHandle(): RecorderHandle {
           // playAndRecord category so the mic actually works. Must
           // happen BEFORE constructing the recorder on iOS.
           await beginRecording();
-          recorder = new AudioModule.AudioRecorder({
+          // CRITICAL: platform-specific options (`android`, `ios`) are
+          // only honoured when passed to `prepareToRecordAsync()`. The
+          // `expo-audio` JS shim runs `createRecordingOptions()` on the
+          // arg there, flattening `{ android: { audioEncoder: 'aac' } }`
+          // to a top-level `audioEncoder` the native module reads. The
+          // `AudioRecorder` constructor receives the object raw — nested
+          // platform blocks are dropped, and the native side falls
+          // through to its own defaults (Android's `MediaRecorder`
+          // default is AMR-NB / 3GPP — see HARPA-PRO-D, where this
+          // produced 8 kHz AMR-NB clips Groq Whisper rejected with 500).
+          // Pass options to `prepareToRecordAsync` so AAC m4a actually
+          // takes effect, matching the `arch-voice-pipeline.md` §D5
+          // contract ("audio/m4a (AAC-LC), 16 kHz mono").
+          recorder = new AudioModule.AudioRecorder({});
+          await recorder.prepareToRecordAsync({
             extension: '.m4a',
             sampleRate: 16000,
             numberOfChannels: 1,
@@ -130,7 +144,6 @@ function createExpoAudioHandle(): RecorderHandle {
             ios: { extension: '.m4a', outputFormat: 'mpeg4aac', audioQuality: 0x40 },
             isMeteringEnabled: true,
           });
-          await recorder.prepareToRecordAsync();
         }
         recorder.record();
         emit({ status: 'recording', error: undefined });

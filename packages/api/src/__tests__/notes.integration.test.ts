@@ -524,11 +524,19 @@ describe('PATCH /notes/:note/placement', () => {
     expect(res.status).toBe(400);
   });
 
-  it('bumps notes_changed_at on the parent draft report', async () => {
+  it('does NOT bump notes_changed_at (placement is a UI-only annotation)', async () => {
     const app = createApp();
     const tok = await signTestToken(alice, aliceSid);
+    // Seed notes_changed_at to a known value so we can detect any bump.
+    const client = new pg.Client({ connectionString: fx.url });
+    await client.connect();
+    const seeded = new Date(Date.now() - 60_000);
+    await client.query(
+      `UPDATE app.reports SET notes_changed_at = $1 WHERE id = $2`,
+      [seeded, report],
+    );
+    await client.end();
     const before = await readDirty(report);
-    // Force a small sleep so the timestamp is observably different.
     await new Promise((r) => setTimeout(r, 10));
     const res = await app.request(`/notes/${imageNote}/placement`, {
       method: 'PATCH',
@@ -537,6 +545,11 @@ describe('PATCH /notes/:note/placement', () => {
     });
     expect(res.status).toBe(200);
     const after = await readDirty(report);
-    expect(after.changed_at?.getTime() ?? 0).toBeGreaterThan(before.changed_at?.getTime() ?? 0);
+    // Placement changes must not trigger auto-regeneration on the
+    // client — otherwise the LLM may reshape issues/sections and
+    // orphan the placement the user just set (split-second revert).
+    expect(after.changed_at?.getTime() ?? 0).toBe(
+      before.changed_at?.getTime() ?? 0,
+    );
   });
 });

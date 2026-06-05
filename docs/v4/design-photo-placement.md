@@ -207,9 +207,16 @@ export async function updateNotePlacement(
 Behaviour:
 - 404 if note not visible under scope.
 - 400 (route layer) if note kind ≠ `image`.
-- Success: writes `placement` JSONB, calls `bumpNotesChangedAt`
-  (placement is a content mutation that affects the rendered
-  report → consistent with arch-report-auto-regen.md).
+- Success: writes `placement` JSONB. **Does NOT call
+  `bumpNotesChangedAt`** — placement is a UI-only annotation
+  (which generated card a photo group anchors to), not a content
+  change to the underlying note. Bumping `notes_changed_at` would
+  fire the client's auto-regenerator after every placement edit;
+  the regen can reshape `issues[]` / `sections[]`, making the
+  just-saved placement index out of range; the orphan-healer in
+  `ReportTabPane` then clears it and the photo "reverts" to the
+  unplaced grid a split second after the user placed it
+  (regression caught against PR #129).
 - Returns the full `NoteRow` so the optimistic mutation can patch
   the cache without re-fetching.
 
@@ -243,7 +250,8 @@ A single `notes.placement.integration.test.ts` that:
 - PATCHes placement to `{ kind: 'issue', index: 0 }`.
 - Re-fetches via `GET /reports/{n}/notes` (real path) and asserts
   the placement comes back through the join + Zod parse.
-- Asserts `notes_changed_at` on the report bumped.
+- Asserts `notes_changed_at` on the report is **unchanged** (see
+  the placement-vs-content note above).
 
 This proves the migration ran, Drizzle row mapping handles JSONB,
 and the OpenAPI/Zod surface preserves the shape end-to-end.
@@ -404,8 +412,10 @@ including the self-healing branch (placement points past
 - `docs/v4/plan-p3-feature-build.md` — add a checkbox under the
   saved-report screen: "Photo-group placement (issues/sections);
   see `design-photo-placement.md`".
-- `docs/v4/arch-report-auto-regen.md` — note that placement
-  PATCH bumps `notes_changed_at` like other note mutations.
+- `docs/v4/arch-report-auto-regen.md` — note that placement PATCH
+  is **deliberately exempt** from the `notes_changed_at` bump
+  (placement is a UI annotation, not a content change — see the
+  service-fn section above).
 
 ## Out of scope (explicit carve-outs)
 
@@ -432,7 +442,8 @@ Recorded here so they cannot be silently lost:
 2. `feat(api): migration 00NN — notes.placement jsonb + check`
    — expand-only migration, no backfill, schema.ts updated.
 3. `feat(api): updateNotePlacement service + scope test pair`
-   — service fn, `bumpNotesChangedAt` call, Pitfall-6 tests.
+   — service fn (no `bumpNotesChangedAt` call: placement is a
+   UI annotation, not a content change), Pitfall-6 tests.
 4. `feat(api): PATCH /notes/{n}/placement route + integration test`
    — default-wiring test (Pitfall 13), 400 on non-image, listNotes
    returns placement.

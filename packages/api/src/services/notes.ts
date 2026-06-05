@@ -424,7 +424,16 @@ export async function updateNotePlacement(
   `);
   const row = r.rows[0];
   if (!row) return { ok: false, reason: 'not-found' };
-  await bumpNotesChangedAt(db, row.report_id);
+  // NOTE: deliberately do NOT call `bumpNotesChangedAt` here. Placement
+  // is a UI-only annotation on which generated card a photo group
+  // anchors to — it doesn't change the report's source content, so it
+  // must not trigger auto-regeneration. Bumping `notes_changed_at`
+  // would cause the client's auto-regenerator to fire after every
+  // placement edit, returning a freshly-shuffled report whose
+  // issue/section indices may no longer match the just-saved
+  // placement. The orphan-healer in `ReportTabPane` then clears it,
+  // making the photo "revert" to the unplaced grid a split second
+  // after the user placed it. See PR #129.
   return { ok: true, note: mapNote(row) };
 }
 

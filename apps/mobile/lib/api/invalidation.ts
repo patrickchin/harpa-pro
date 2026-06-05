@@ -47,7 +47,12 @@ export const INVALIDATIONS: Record<string, InvalidationRule> = {
   // notes
   useCreateNoteMutation: ['reportNotes', 'report'],
   useUpdateNoteMutation: ['reportNotes', 'report'],
-  useUpdateNotePlacementMutation: ['reportNotes', 'report'],
+  // Placement edits do not mutate report content — only the per-note
+  // UI annotation. Invalidate `reportNotes` so the cards re-bucket,
+  // but do NOT invalidate `report` (which would refetch the report
+  // row, possibly trigger the auto-regenerator, and clobber the
+  // just-placed photo when the new report has a different shape).
+  useUpdateNotePlacementMutation: ['reportNotes'],
   useDeleteNoteMutation: ['reportNotes', 'report'],
   useAppendFilesMutation: ['reportNotes'],
 

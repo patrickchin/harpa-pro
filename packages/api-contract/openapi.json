@@ -3864,6 +3864,7 @@
                                     },
                                     "count": {
                                       "type": "integer",
+                                      "nullable": true,
                                       "minimum": 0
                                     },
                                     "hours": {
@@ -4258,6 +4259,7 @@
                               },
                               "count": {
                                 "type": "integer",
+                                "nullable": true,
                                 "minimum": 0
                               },
                               "hours": {
@@ -4673,6 +4675,7 @@
                               },
                               "count": {
                                 "type": "integer",
+                                "nullable": true,
                                 "minimum": 0
                               },
                               "hours": {
@@ -5028,6 +5031,7 @@
                             },
                             "count": {
                               "type": "integer",
+                              "nullable": true,
                               "minimum": 0
                             },
                             "hours": {
@@ -5256,6 +5260,7 @@
                               },
                               "count": {
                                 "type": "integer",
+                                "nullable": true,
                                 "minimum": 0
                               },
                               "hours": {
@@ -6082,6 +6087,7 @@
                                   },
                                   "count": {
                                     "type": "integer",
+                                    "nullable": true,
                                     "minimum": 0
                                   },
                                   "hours": {
@@ -6614,6 +6620,7 @@
                                   },
                                   "count": {
                                     "type": "integer",
+                                    "nullable": true,
                                     "minimum": 0
                                   },
                                   "hours": {
@@ -7129,6 +7136,7 @@
                                   },
                                   "count": {
                                     "type": "integer",
+                                    "nullable": true,
                                     "minimum": 0
                                   },
                                   "hours": {
@@ -7552,6 +7560,7 @@
                                   },
                                   "count": {
                                     "type": "integer",
+                                    "nullable": true,
                                     "minimum": 0
                                   },
                                   "hours": {

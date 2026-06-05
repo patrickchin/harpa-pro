@@ -58,7 +58,7 @@ export function VoiceReportView({
 }: VoiceReportViewProps) {
   const visitLabel = formatVisitDate(report.meta?.visitDate ?? null);
   const issueCount = report.issues.length;
-  const workerHeadcount = report.workers.reduce((sum, w) => sum + w.count, 0);
+  const workerHeadcount = report.workers.reduce((sum, w) => sum + (w.count ?? 0), 0);
 
   return (
     <View
@@ -189,7 +189,7 @@ export function VoiceReportView({
                   ) : null}
                 </View>
                 <Text className="text-sm tabular-nums text-foreground">
-                  {w.count}× · {w.hours != null ? `${w.hours}h` : '—'}
+                  {w.count != null ? `${w.count}× · ` : ''}{w.hours != null ? `${w.hours}h` : '—'}
                 </Text>
               </View>
             ))}

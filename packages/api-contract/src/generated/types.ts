@@ -1881,7 +1881,7 @@ export interface paths {
                                     } | null;
                                     workers: {
                                         role: string;
-                                        count: number;
+                                        count: number | null;
                                         hours: number | null;
                                         notes: string | null;
                                     }[];
@@ -1998,7 +1998,7 @@ export interface paths {
                                 } | null;
                                 workers: {
                                     role: string;
-                                    count: number;
+                                    count: number | null;
                                     hours: number | null;
                                     notes: string | null;
                                 }[];
@@ -2136,7 +2136,7 @@ export interface paths {
                                 } | null;
                                 workers: {
                                     role: string;
-                                    count: number;
+                                    count: number | null;
                                     hours: number | null;
                                     notes: string | null;
                                 }[];
@@ -2291,7 +2291,7 @@ export interface paths {
                             } | null;
                             workers: {
                                 role: string;
-                                count: number;
+                                count: number | null;
                                 hours: number | null;
                                 notes: string | null;
                             }[];
@@ -2347,7 +2347,7 @@ export interface paths {
                                 } | null;
                                 workers: {
                                     role: string;
-                                    count: number;
+                                    count: number | null;
                                     hours: number | null;
                                     notes: string | null;
                                 }[];
@@ -2605,7 +2605,7 @@ export interface paths {
                                     } | null;
                                     workers: {
                                         role: string;
-                                        count: number;
+                                        count: number | null;
                                         hours: number | null;
                                         notes: string | null;
                                     }[];
@@ -2792,7 +2792,7 @@ export interface paths {
                                     } | null;
                                     workers: {
                                         role: string;
-                                        count: number;
+                                        count: number | null;
                                         hours: number | null;
                                         notes: string | null;
                                     }[];
@@ -2973,7 +2973,7 @@ export interface paths {
                                     } | null;
                                     workers: {
                                         role: string;
-                                        count: number;
+                                        count: number | null;
                                         hours: number | null;
                                         notes: string | null;
                                     }[];
@@ -3115,7 +3115,7 @@ export interface paths {
                                     } | null;
                                     workers: {
                                         role: string;
-                                        count: number;
+                                        count: number | null;
                                         hours: number | null;
                                         notes: string | null;
                                     }[];

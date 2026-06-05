@@ -121,8 +121,8 @@ describe('reportBodyToGeneratedReport — materials & issues', () => {
         { name: 'Concrete', quantity: '50', unit: 'm³', status: null, condition: null, notes: null },
       ],
     });
-    expect(out.report.materials[0].quantity).toBe('50');
-    expect(out.report.materials[0].quantityUnit).toBe('m³');
+    expect(out.report.materials[0]!.quantity).toBe('50');
+    expect(out.report.materials[0]!.quantityUnit).toBe('m³');
   });
 
   it('normalises severity — known stays, unknown → medium', () => {
@@ -134,9 +134,9 @@ describe('reportBodyToGeneratedReport — materials & issues', () => {
         { title: 'C', severity: null, description: null, action: null },
       ],
     });
-    expect(out.report.issues[0].severity).toBe('low');
-    expect(out.report.issues[1].severity).toBe('medium');
-    expect(out.report.issues[2].severity).toBe('medium');
+    expect(out.report.issues[0]!.severity).toBe('low');
+    expect(out.report.issues[1]!.severity).toBe('medium');
+    expect(out.report.issues[2]!.severity).toBe('medium');
   });
 });
 
@@ -195,8 +195,8 @@ describe('generatedReportToReportBody — inverse adapter', () => {
         },
       },
     });
-    expect(out.workers[0].count).toBe('4');
-    expect(out.workers[1].count).toBeNull();
+    expect(out.workers[0]!.count).toBe('4');
+    expect(out.workers[1]!.count).toBeNull();
   });
 
   it('round-trips materials quantity + drops dropped fields', () => {
@@ -209,7 +209,7 @@ describe('generatedReportToReportBody — inverse adapter', () => {
         ],
       },
     });
-    expect(out.materials[0]).toEqual({
+    expect(out.materials[0]!).toEqual({
       name: 'Concrete', quantity: '50', unit: 'm³', status: null, condition: null, notes: null,
     });
   });
@@ -225,7 +225,7 @@ describe('generatedReportToReportBody — inverse adapter', () => {
         ],
       },
     });
-    expect(out.issues[0].severity).toBe('high');
-    expect(out.issues[1].severity).toBe('medium');
+    expect(out.issues[0]!.severity).toBe('high');
+    expect(out.issues[1]!.severity).toBe('medium');
   });
 });

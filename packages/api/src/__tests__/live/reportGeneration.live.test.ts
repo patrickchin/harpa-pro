@@ -137,7 +137,12 @@ describeOrSkip('generateReport — live OpenAI', () => {
       expect(Array.isArray(parsed.data.workers)).toBe(true);
       expect(Array.isArray(parsed.data.materials)).toBe(true);
       for (const issue of parsed.data.issues) {
-        expect(['low', 'medium', 'high']).toContain(issue.severity);
+        // Wire is `string | null` post-string-y refactor; the LLM is
+        // asked (but not strictly required) to use low/medium/high.
+        // Allow any string/null — the UI normalises unknown values.
+        if (issue.severity != null) {
+          expect(typeof issue.severity).toBe('string');
+        }
       }
     },
     60_000,

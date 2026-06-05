@@ -103,22 +103,32 @@ jobs:
             --remote-only
 
       - name: Verify /readyz (dev)
-        run: |
-          set -euo pipefail
-          URL="${API_READY_URL_DEV:-https://harpa-pro-api-dev.fly.dev/readyz}"
-          for i in 1 2 3 4 5; do
-            if curl --fail --silent --show-error --max-time 5 "$URL"; then
-              echo
-              echo "readyz ok"
-              exit 0
-            fi
-            echo "readyz attempt $i failed, retrying..."
-            sleep 5
-          done
-          echo "readyz never returned 200 — investigate Fly logs" >&2
-          exit 1
+        # Dev runs with `auto_stop_machines = "suspend"` and
+        # `min_machines_running = 0`, so machines are stopped right
+        # after a deploy and the first request has to wake them. The
+        # cold-start (Linux + Node + DB pool + schema-head check)
+        # routinely exceeds the old 5s curl budget — see
+        # docs/bugs/README.md ("api-dev /readyz verify cold-start").
+        # The shared script bumps the per-attempt timeout and retry
+        # spacing so cold-starts pass without flakes.
         env:
-          API_READY_URL_DEV: ${{ vars.API_READY_URL_DEV }}
+          READYZ_URL: ${{ vars.API_READY_URL_DEV || 'https://harpa-pro-api-dev.fly.dev/readyz' }}
+        run: bash scripts/ci/verify-readyz.sh
+
+      - name: Diagnose readyz failure
+        # Surface Fly machine state + recent logs in the workflow log
+        # so the next regression doesn't require a separate spelunk
+        # through the Fly dashboard. Only runs if /readyz didn't pass.
+        if: failure()
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: |
+          echo "::group::flyctl status"
+          flyctl status --app harpa-pro-api-dev || true
+          echo "::endgroup::"
+          echo "::group::flyctl logs (last 200 lines)"
+          flyctl logs --app harpa-pro-api-dev --no-tail || true
+          echo "::endgroup::"
 
       - name: Post-deploy journey tests
         # Runs curl journey scripts against the just-deployed dev API.

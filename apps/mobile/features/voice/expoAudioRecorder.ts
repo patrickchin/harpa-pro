@@ -121,21 +121,33 @@ function createExpoAudioHandle(): RecorderHandle {
           // playAndRecord category so the mic actually works. Must
           // happen BEFORE constructing the recorder on iOS.
           await beginRecording();
-          // CRITICAL: platform-specific options (`android`, `ios`) are
-          // only honoured when passed to `prepareToRecordAsync()`. The
-          // `expo-audio` JS shim runs `createRecordingOptions()` on the
-          // arg there, flattening `{ android: { audioEncoder: 'aac' } }`
-          // to a top-level `audioEncoder` the native module reads. The
-          // `AudioRecorder` constructor receives the object raw — nested
-          // platform blocks are dropped, and the native side falls
-          // through to its own defaults (Android's `MediaRecorder`
-          // default is AMR-NB / 3GPP — see HARPA-PRO-D, where this
-          // produced 8 kHz AMR-NB clips Groq Whisper rejected with 500).
-          // Pass options to `prepareToRecordAsync` so AAC m4a actually
-          // takes effect, matching the `arch-voice-pipeline.md` §D5
-          // contract ("audio/m4a (AAC-LC), 16 kHz mono").
-          recorder = new AudioModule.AudioRecorder({});
-          await recorder.prepareToRecordAsync({
+          // We pass the same options object to BOTH the constructor
+          // AND `prepareToRecordAsync()`:
+          //
+          //   • The constructor configures the native recorder's
+          //     top-level flags. CRITICAL: `isMeteringEnabled` is
+          //     captured at construction time on BOTH platforms —
+          //     iOS sets `AVAudioRecorder.meteringEnabled = YES`,
+          //     Android stashes it into `AudioRecorder.kt:41
+          //     `private var meteringEnabled = options.isMeteringEnabled`
+          //     (and the prepare path builds a fresh MediaRecorder
+          //     but never re-reads it). `prepareToRecordAsync()`
+          //     therefore can't turn metering on after the fact, and
+          //     without it `status.metering` is undefined and the
+          //     waveform bars stay flat (HARPA-PRO-D follow-up,
+          //     2026-06-06).
+          //
+          //   • `prepareToRecordAsync()` is the only path where the
+          //     `expo-audio` JS shim runs `createRecordingOptions()`,
+          //     flattening `{ android: { audioEncoder: 'aac' } }` to
+          //     a top-level `audioEncoder` the native module reads.
+          //     Without this the Android `MediaRecorder` falls through
+          //     to its `AudioEncoder.DEFAULT` (AMR-NB / 3GPP) and
+          //     Groq Whisper rejects the upload with HTTP 500
+          //     (HARPA-PRO-D, 2026-06-05). Matches the
+          //     `arch-voice-pipeline.md` §D5 contract ("audio/m4a
+          //     (AAC-LC), 16 kHz mono").
+          const recordingOptions = {
             extension: '.m4a',
             sampleRate: 16000,
             numberOfChannels: 1,
@@ -143,7 +155,9 @@ function createExpoAudioHandle(): RecorderHandle {
             android: { outputFormat: 'mpeg4', audioEncoder: 'aac' },
             ios: { extension: '.m4a', outputFormat: 'mpeg4aac', audioQuality: 0x40 },
             isMeteringEnabled: true,
-          });
+          } as const;
+          recorder = new AudioModule.AudioRecorder(recordingOptions);
+          await recorder.prepareToRecordAsync(recordingOptions);
         }
         recorder.record();
         emit({ status: 'recording', error: undefined });

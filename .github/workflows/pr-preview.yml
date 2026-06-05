@@ -141,14 +141,23 @@ jobs:
         # Doppler stream and append the PR's Neon URI so the release_command
         # migrates the per-PR branch instead of dev. `--stage` defers
         # activation; the subsequent deploy flips them on.
+        #
+        # HARPA_DEV_OTP_DISABLED=1 is appended unconditionally for PR
+        # previews: the dev-OTP route requires a shared-secret
+        # DEV_OTP_TOKEN (PR #128) that we don't provision per-PR, and
+        # without it env.ts's refine crashes the app at boot. PR previews
+        # don't run Maestro against the deployed Fly app, so disabling
+        # the route here is correct. Real dev/prod set DEV_OTP_TOKEN via
+        # Doppler and leave HARPA_DEV_OTP_DISABLED unset.
         env:
           DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN_DEV }}
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
         run: |
           {
             doppler secrets download --no-file --format env \
-              | grep -vE '^(DOPPLER_|NEON_|FLY_|CLOUDFLARE_|PUBLIC_|EXPO_PUBLIC_|PAGES_PROJECT|PORT|NODE_ENV|ADMIN_EMAIL|DATABASE_URL)='
+              | grep -vE '^(DOPPLER_|NEON_|FLY_|CLOUDFLARE_|PUBLIC_|EXPO_PUBLIC_|PAGES_PROJECT|PORT|NODE_ENV|ADMIN_EMAIL|DATABASE_URL|DEV_OTP_TOKEN|HARPA_DEV_OTP_DISABLED)='
             echo "DATABASE_URL=$DATABASE_URL"
+            echo "HARPA_DEV_OTP_DISABLED=1"
           } | flyctl secrets import --stage --app "$APP_NAME"
 
       - name: Deploy to Fly.io (preview)

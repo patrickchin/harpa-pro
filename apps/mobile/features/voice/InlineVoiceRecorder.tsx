@@ -127,8 +127,13 @@ const SPRING_CONFIG = {
 
 /**
  * Single animated bar. `useSharedValue` + `useAnimatedStyle` run on the
- * UI thread via Reanimated, so height transitions are always 60 fps even
- * when the JS thread is busy.
+ * UI thread via Reanimated, so height transitions are always 60 fps
+ * even when the JS thread is busy. `useInlineRecorder` pushes a fresh
+ * amplitude sample every ~200 ms, which shifts every bar's `targetHeight`
+ * one slot left; each shift retargets the bar's spring, and the
+ * 60 fps interpolation between consecutive sample heights is what gives
+ * the waveform its smooth Telegram/WhatsApp feel. Plain `<View>`s update
+ * in visible 5 Hz steps and look noticeably janky on a real device.
  */
 function WaveformBar({ targetHeight, hasSignal }: { targetHeight: number; hasSignal: boolean }) {
   const animHeight = useSharedValue(BAR_MIN_HEIGHT);
@@ -159,7 +164,8 @@ function WaveformBar({ targetHeight, hasSignal }: { targetHeight: number; hasSig
  * Right-anchored scrolling waveform. We render exactly HISTORY_SIZE
  * bars (padding empty slots on the left while the buffer fills) so
  * the layout doesn't reflow as samples arrive. Each bar animates its
- * height independently via Reanimated for smooth 60 fps transitions.
+ * height independently via Reanimated for smooth 60 fps transitions
+ * between the 5 Hz amplitude samples coming out of `useInlineRecorder`.
  */
 function Waveform({ bars }: { bars: readonly number[] }) {
   const padded: readonly number[] = bars.length >= HISTORY_SIZE

@@ -32,6 +32,11 @@
  */
 import { useEffect, useRef } from 'react';
 import { Animated, Pressable, Text, View } from 'react-native';
+import Reanimated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+} from 'react-native-reanimated';
 import { AlertTriangle, Send, Trash2 } from 'lucide-react-native';
 
 import { colors } from '@/lib/design-tokens/colors';
@@ -113,21 +118,54 @@ function RecordingDot() {
   );
 }
 
+const SPRING_CONFIG = {
+  damping: 18,
+  stiffness: 220,
+  mass: 0.5,
+  overshootClamping: true,
+} as const;
+
 /**
- * Right-anchored scrolling waveform — matches WhatsApp / Telegram.
- *
- * We render exactly HISTORY_SIZE bars (padding empty slots on the
- * left while the ring buffer fills) so the layout doesn't reflow
- * as samples arrive. Bars are plain `<View>`s whose height is
- * derived directly from the amplitude prop on each re-render;
- * `useInlineRecorder` pushes a fresh sample every ~200 ms, which
- * shifts every bar's amplitude one position left. The re-render
- * itself is the animation — at 5 Hz updates the eye reads it as
- * smooth scrolling. **Do not wrap individual bars in Reanimated
- * springs or timing animations**: with positional `key={idx}` every
- * shifted sample would re-fire the bar's spring from its previous
- * value, producing dozens of overlapping mid-flight tweens and a
- * visibly stuttery "all bars wobble in place" effect.
+ * Single animated bar. `useSharedValue` + `useAnimatedStyle` run on the
+ * UI thread via Reanimated, so height transitions are always 60 fps
+ * even when the JS thread is busy. `useInlineRecorder` pushes a fresh
+ * amplitude sample every ~200 ms, which shifts every bar's `targetHeight`
+ * one slot left; each shift retargets the bar's spring, and the
+ * 60 fps interpolation between consecutive sample heights is what gives
+ * the waveform its smooth Telegram/WhatsApp feel. Plain `<View>`s update
+ * in visible 5 Hz steps and look noticeably janky on a real device.
+ */
+function WaveformBar({ targetHeight, hasSignal }: { targetHeight: number; hasSignal: boolean }) {
+  const animHeight = useSharedValue(BAR_MIN_HEIGHT);
+
+  useEffect(() => {
+    animHeight.value = withSpring(targetHeight, SPRING_CONFIG);
+  }, [animHeight, targetHeight]);
+
+  const animStyle = useAnimatedStyle(() => ({
+    height: animHeight.value,
+  }));
+
+  return (
+    <Reanimated.View
+      style={[
+        {
+          width: BAR_WIDTH,
+          borderRadius: BAR_WIDTH / 2,
+          backgroundColor: hasSignal ? colors.primary.DEFAULT : colors.muted.DEFAULT,
+        },
+        animStyle,
+      ]}
+    />
+  );
+}
+
+/**
+ * Right-anchored scrolling waveform. We render exactly HISTORY_SIZE
+ * bars (padding empty slots on the left while the buffer fills) so
+ * the layout doesn't reflow as samples arrive. Each bar animates its
+ * height independently via Reanimated for smooth 60 fps transitions
+ * between the 5 Hz amplitude samples coming out of `useInlineRecorder`.
  */
 function Waveform({ bars }: { bars: readonly number[] }) {
   const padded: readonly number[] = bars.length >= HISTORY_SIZE
@@ -140,21 +178,9 @@ function Waveform({ bars }: { bars: readonly number[] }) {
       style={{ gap: BAR_GAP }}
     >
       {padded.map((amp, idx) => {
-        const h = Math.max(BAR_MIN_HEIGHT, Math.round(amp * BAR_MAX_HEIGHT));
+        const h = Math.max(BAR_MIN_HEIGHT, amp * BAR_MAX_HEIGHT);
         return (
-          <View
-            // Index is stable here (fixed-length array of bars), so
-            // using it as a key is the correct choice — switching to
-            // amp-as-key would thrash the renderer.
-            key={idx}
-            style={{
-              width: BAR_WIDTH,
-              height: h,
-              borderRadius: BAR_WIDTH / 2,
-              backgroundColor:
-                amp > 0 ? colors.primary.DEFAULT : colors.muted.DEFAULT,
-            }}
-          />
+          <WaveformBar key={idx} targetHeight={h} hasSignal={amp > 0} />
         );
       })}
     </View>

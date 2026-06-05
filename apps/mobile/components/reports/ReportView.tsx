@@ -17,14 +17,22 @@ import { IssuesCard } from './IssuesCard';
 import { NextStepsCard } from './NextStepsCard';
 import { SummarySectionCard } from './SummarySectionCard';
 import { SummaryLead } from './detail/SummaryLead';
+import type { ReportEditTarget } from './edit/types';
 
 interface ReportViewProps {
   report: GeneratedSiteReport;
   /** Per-project report number — used to build testIDs for Maestro selectors. */
   reportNumber?: number;
+  /**
+   * When provided, each editable card surfaces a pencil button. Tapping
+   * fires this callback with the target slice descriptor; the parent
+   * mounts `<ReportEditModal>` and threads the result back through
+   * `onChangeReport`. Undefined in the generate flow (read-only).
+   */
+  onEdit?: (target: ReportEditTarget) => void;
 }
 
-export function ReportView({ report, reportNumber }: ReportViewProps) {
+export function ReportView({ report, reportNumber, onEdit }: ReportViewProps) {
   const { sections } = report.report;
   const numStr = reportNumber ?? 'x';
 
@@ -32,17 +40,37 @@ export function ReportView({ report, reportNumber }: ReportViewProps) {
     <View className="gap-3" testID={`report-view-${numStr}`}>
       <StatBar report={report} />
 
-      <WeatherStrip report={report} />
+      <WeatherStrip
+        report={report}
+        onEdit={onEdit ? () => onEdit({ kind: 'weather' }) : undefined}
+      />
 
-      <SummaryLead summary={report.report.meta.summary} />
+      <SummaryLead
+        summary={report.report.meta.summary}
+        onEdit={onEdit ? () => onEdit({ kind: 'meta' }) : undefined}
+      />
 
-      <IssuesCard issues={report.report.issues} />
+      <IssuesCard
+        issues={report.report.issues}
+        onEditIssue={
+          onEdit ? (index) => onEdit({ kind: 'issue', index }) : undefined
+        }
+      />
 
-      <WorkersCard workers={report.report.workers} />
+      <WorkersCard
+        workers={report.report.workers}
+        onEdit={onEdit ? () => onEdit({ kind: 'workers' }) : undefined}
+      />
 
-      <MaterialsCard materials={report.report.materials} />
+      <MaterialsCard
+        materials={report.report.materials}
+        onEdit={onEdit ? () => onEdit({ kind: 'materials' }) : undefined}
+      />
 
-      <NextStepsCard steps={report.report.nextSteps} />
+      <NextStepsCard
+        steps={report.report.nextSteps}
+        onEdit={onEdit ? () => onEdit({ kind: 'nextSteps' }) : undefined}
+      />
 
       {sections.length > 0 && (
         <View className="gap-3">
@@ -55,6 +83,9 @@ export function ReportView({ report, reportNumber }: ReportViewProps) {
               section={section}
               reportNumber={reportNumber}
               sectionIndex={i}
+              onEdit={
+                onEdit ? () => onEdit({ kind: 'section', index: i }) : undefined
+              }
             />
           ))}
         </View>

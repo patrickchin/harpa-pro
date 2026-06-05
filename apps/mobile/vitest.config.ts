@@ -65,10 +65,16 @@ export default defineConfig({
       //   lines 81.84% · statements 81.84% · branches 79.41% · functions 73%
       // Ratchet up only — never lower these numbers without a
       // documented reason.
+      //
+      // 2026-06: functions threshold lowered 72→71 after the Generate
+      // Report Edit tab was replaced by the per-card edit modal flow
+      // (see docs/superpowers/specs/2026-06-03-report-edit-modal-redesign-design.md).
+      // Removing the Edit tab block / EditTabPane wiring deleted
+      // covered functions, dropping the rate to ~71.9%.
       thresholds: {
         lines: 80,
         statements: 80,
-        functions: 72,
+        functions: 71,
         branches: 79,
       },
     },

@@ -1,5 +1,5 @@
 appId: ${MAESTRO_APP_ID}
-name: "11 — Generate, finalize, and unfinalize a report"
+name: '11 — Generate, finalize, and unfinalize a report'
 tags:
   - regression
   - reports
@@ -23,25 +23,25 @@ tags:
 
 # --- Open reports list and create a new report ----------------------------
 - tapOn:
-    id: "btn-open-reports"
+    id: 'btn-open-reports'
 - extendedWaitUntil:
     visible:
-      id: "btn-new-report"
+      id: 'btn-new-report'
     timeout: 10000
 - tapOn:
-    id: "btn-new-report"
+    id: 'btn-new-report'
 # The mutation auto-navigates to /generate on success. If the push
 # races against the refetch we may stay on the list — tap into the
 # new draft row to land on the generate screen.
 - extendedWaitUntil:
     visible:
-      id: "report-row-.*"
+      id: 'report-row-.*'
     timeout: 15000
 - tapOn:
-    id: "report-row-.*"
+    id: 'report-row-.*'
 - extendedWaitUntil:
     visible:
-      id: "input-note"
+      id: 'input-note'
     timeout: 15000
 
 # Do NOT hard-code the report number here. `app.reports.number` is
@@ -54,14 +54,14 @@ tags:
 
 # --- Add a text note (required to enable Generate button) -----------------
 - tapOn:
-    id: "input-note"
-- inputText: "Structural steel inspection complete. All welds within spec."
+    id: 'input-note'
+- inputText: 'Structural steel inspection complete. All welds within spec.'
 - hideKeyboard
 - tapOn:
-    id: "btn-add-note"
+    id: 'btn-add-note'
 - extendedWaitUntil:
     visible:
-      id: "note-row-.*"
+      id: 'note-row-.*'
     timeout: 8000
 
 # The keyboard was dismissed before tapping Add. A second hideKeyboard
@@ -81,15 +81,15 @@ tags:
 # default ~18s implicit wait.
 - extendedWaitUntil:
     visible:
-      id: "btn-generate-.*report"
+      id: 'btn-generate-.*report'
     timeout: 15000
 - tapOn:
-    id: "btn-generate-.*report"
+    id: 'btn-generate-.*report'
 - tapOn:
-    id: "btn-tab-report"
+    id: 'btn-tab-report'
 - extendedWaitUntil:
     visible:
-      id: "report-tab-pane"
+      id: 'report-tab-pane'
     timeout: 10000
 
 # --- Verify report content visible ----------------------------------------
@@ -98,8 +98,16 @@ tags:
 # is exceeded — that indicates a real generation regression.
 - extendedWaitUntil:
     visible:
-      id: "report-view-.*"
+      id: 'report-view-.*'
     timeout: 60000
+
+# --- Per-card edit modal regression coverage (PR 125) ----------------------
+# Exercise every pencil-backed modal body on the generated draft before
+# finalizing. This keeps the module 12 pre-condition intact while proving the
+# new modal flow works on the same Android device path as the rest of the
+# regression journey.
+- runFlow: ../helpers/edit-report-cards.yaml
+
 # Note: we deliberately do NOT assert on `report-summary-N` here.
 # The Summary `<Text testID="report-summary-N">` in ReportView.tsx
 # is gated on `report.report.meta.summary` being truthy
@@ -122,37 +130,37 @@ tags:
 
 # --- Finalize the report ---------------------------------------------------
 - tapOn:
-    id: "btn-finalize-report"
+    id: 'btn-finalize-report'
 - extendedWaitUntil:
     visible:
-      id: "confirm-finalize"
+      id: 'confirm-finalize'
     timeout: 8000
 - tapOn:
-    id: "confirm-finalize"
+    id: 'confirm-finalize'
 - extendedWaitUntil:
     visible:
-      id: "btn-report-actions"
+      id: 'btn-report-actions'
     timeout: 20000
 
 # Now on saved-report screen — ReportDetailHeader emits the title testID.
 - assertVisible:
-    id: "report-title-.*"
+    id: 'report-title-.*'
 
 # --- Unfinalize to confirm the round-trip ---------------------------------
 - tapOn:
-    id: "btn-report-actions"
+    id: 'btn-report-actions'
 - extendedWaitUntil:
     visible:
-      id: "btn-unfinalize-report"
+      id: 'btn-unfinalize-report'
     timeout: 8000
 - tapOn:
-    id: "btn-unfinalize-report"
+    id: 'btn-unfinalize-report'
 - extendedWaitUntil:
     visible:
-      id: "btn-confirm-unfinalize-report"
+      id: 'btn-confirm-unfinalize-report'
     timeout: 8000
 - tapOn:
-    id: "btn-confirm-unfinalize-report"
+    id: 'btn-confirm-unfinalize-report'
 
 # Unfinalize flips status in place — it does NOT navigate. The user
 # stays on the saved-report screen (apps/mobile/screens/saved-report.tsx)
@@ -167,31 +175,31 @@ tags:
 # /generate), then wait for `btn-finalize-report`.
 - extendedWaitUntil:
     visible:
-      id: "btn-back"
+      id: 'btn-back'
     timeout: 8000
 - tapOn:
-    id: "btn-back"
+    id: 'btn-back'
 - extendedWaitUntil:
     visible:
-      id: "report-row-.*"
+      id: 'report-row-.*'
     timeout: 15000
 - tapOn:
-    id: "report-row-.*"
+    id: 'report-row-.*'
 - extendedWaitUntil:
     visible:
-      id: "btn-finalize-report"
+      id: 'btn-finalize-report'
     timeout: 15000
 
 # --- Re-finalize (leave finalized for module 12) ---------------------------
 - tapOn:
-    id: "btn-finalize-report"
+    id: 'btn-finalize-report'
 - extendedWaitUntil:
     visible:
-      id: "confirm-finalize"
+      id: 'confirm-finalize'
     timeout: 8000
 - tapOn:
-    id: "confirm-finalize"
+    id: 'confirm-finalize'
 - extendedWaitUntil:
     visible:
-      id: "btn-report-actions"
+      id: 'btn-report-actions'
     timeout: 20000

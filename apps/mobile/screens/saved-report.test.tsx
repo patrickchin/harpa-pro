@@ -173,9 +173,6 @@ describe('SavedReport', () => {
     expect(
       tree.root.findAllByProps({ testID: 'saved-report-pane' }).length,
     ).toBeGreaterThan(0);
-    expect(
-      tree.root.findAllByProps({ testID: 'saved-report-edit-pane' }),
-    ).toHaveLength(0);
   });
 
   it('switches to the Notes tab when its tab button is pressed', () => {
@@ -189,25 +186,8 @@ describe('SavedReport', () => {
     ).toBeGreaterThan(0);
   });
 
-  it('switches to the Edit tab on draft reports', () => {
+  it('does not render an Edit tab on draft reports (modal flow)', () => {
     const tree = render(<SavedReport {...baseProps()} />);
-    const editTab = tree.root.findByProps({ testID: 'btn-tab-edit' });
-    act(() => {
-      editTab.props.onPress();
-    });
-    expect(
-      tree.root.findAllByProps({ testID: 'saved-report-edit-pane' }).length,
-    ).toBeGreaterThan(0);
-    // Autosave status row mounts on the Edit tab.
-    expect(
-      tree.root.findAllByProps({ testID: 'edit-autosave-status' }).length,
-    ).toBeGreaterThan(0);
-  });
-
-  it('hides the Edit tab when the report is finalized', () => {
-    const tree = render(
-      <SavedReport {...baseProps({ reportStatus: 'finalized' })} />,
-    );
     expect(
       tree.root.findAllByProps({ testID: 'btn-tab-edit' }),
     ).toHaveLength(0);
@@ -249,18 +229,31 @@ describe('SavedReport', () => {
     ).toHaveLength(0);
   });
 
-  it('bounces from Edit back to Report when the report flips to finalized', () => {
-    const props = baseProps({ initialTab: 'edit' });
+  it('opens the per-card edit modal when a pencil is tapped', () => {
+    const onChangeReport = vi.fn();
+    const tree = render(
+      <SavedReport {...baseProps({ onChangeReport })} />,
+    );
+    // Detailed Sections pencil — `report-edit-modal` mounts when
+    // visible. The first issue pencil also exposes an open path.
+    const pencil = tree.root.findByProps({ testID: 'btn-edit-meta' });
+    act(() => {
+      pencil.props.onPress();
+    });
+    expect(
+      tree.root.findAllByProps({ testID: 'report-edit-modal' }).length,
+    ).toBeGreaterThan(0);
+  });
+
+  it('bounces from Notes back to Report when the report flips to finalized', () => {
+    const props = baseProps({ initialTab: 'notes' });
     const tree = render(<SavedReport {...props} />);
     expect(
-      tree.root.findAllByProps({ testID: 'saved-report-edit-pane' }).length,
+      tree.root.findAllByProps({ testID: 'report-notes-pane' }).length,
     ).toBeGreaterThan(0);
     act(() => {
       tree.update(<SavedReport {...props} reportStatus="finalized" />);
     });
-    expect(
-      tree.root.findAllByProps({ testID: 'saved-report-edit-pane' }),
-    ).toHaveLength(0);
     expect(
       tree.root.findAllByProps({ testID: 'saved-report-pane' }).length,
     ).toBeGreaterThan(0);
@@ -372,7 +365,7 @@ describe('SavedReport', () => {
       tree.root.findAllByProps({ testID: 'saved-report-pane' }).length,
     ).toBeGreaterThan(0);
     expect(
-      tree.root.findAllByProps({ testID: 'btn-tab-edit' }).length,
+      tree.root.findAllByProps({ testID: 'btn-tab-notes' }).length,
     ).toBeGreaterThan(0);
   });
 });
@@ -393,9 +386,6 @@ describe('SavedReport — finalized layout', () => {
     ).toHaveLength(0);
     expect(
       tree.root.findAllByProps({ testID: 'btn-tab-notes' }),
-    ).toHaveLength(0);
-    expect(
-      tree.root.findAllByProps({ testID: 'btn-tab-edit' }),
     ).toHaveLength(0);
   });
 

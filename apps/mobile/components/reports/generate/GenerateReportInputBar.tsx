@@ -36,6 +36,7 @@ export function GenerateReportInputBar() {
             historyBars={voice.historyBars}
             onSend={voice.stopAndSend}
             onCancel={voice.cancel}
+            onMaxDuration={voice.onMaxDuration}
           />
         </View>
       ) : (

@@ -48,6 +48,16 @@ const aggregatorRateLimit = withRateLimit({ name: 'voice.note', limit: 30, windo
 const transcribeIdempotency = withIdempotency({ name: 'voice.transcribe' });
 const aggregatorIdempotency = withIdempotency({ name: 'voice.note' });
 
+/**
+ * Pre-flight cap matching Groq Whisper's 25 MB free-tier ceiling. The
+ * mobile recorder hard-stops at 15 min (≈ 3.5 MB at 32 kbps AAC) so a
+ * voice note from our own client should never trip this — but a third
+ * party uploading a long file via the public API would, and Groq would
+ * otherwise 500 on the transcribe call (Sentry HARPA-PRO-D postmortem).
+ * Matches the upload-contract cap in `packages/api-contract/src/schemas/files.ts`.
+ */
+const MAX_VOICE_BYTES = 25 * 1024 * 1024;
+
 // Shared per-user AI budget — 60 RPM across voice.* + reports.generate
 // (arch-rate-limiting.md §3.3). Mounted alongside the per-route bucket
 // above so a single voice-only abuser still hits the per-route ceiling.
@@ -116,6 +126,9 @@ voiceRoutes.openapi(
     if (!file) throw new HTTPException(404, { message: 'File not found.' });
     if (file.kind !== 'voice') {
       throw new HTTPException(400, { message: 'File is not a voice recording.' });
+    }
+    if (file.sizeBytes > MAX_VOICE_BYTES) {
+      throw new HTTPException(413, { message: 'Recording too long.' });
     }
 
     // Aggregator counts toward BOTH voice buckets — it makes one

@@ -28,14 +28,18 @@ import type { GeneratedSiteReport } from '@harpa/report-core';
 
 type ReportBody = reports.ReportBody;
 
-// Legacy rows stored visitDate at the top level before the meta envelope landed.
-type LegacyBodyShim = ReportBody & { visitDate?: string | null };
+// Legacy rows stored visitDate at the top level before the meta envelope
+// landed. The weather temperatureC/windKph rename is handled in the DB
+// by migration 0014, so no JS-side shim is needed for those keys.
+type LegacyBodyShim = ReportBody & {
+  visitDate?: string | null;
+};
 
 function normaliseLegacy(body: ReportBody | LegacyBodyShim): ReportBody {
   if ((body as ReportBody).meta) return body as ReportBody;
   const legacy = body as LegacyBodyShim;
   return {
-    ...legacy,
+    ...(legacy as ReportBody),
     meta: {
       title: null,
       summary: null,
@@ -45,22 +49,12 @@ function normaliseLegacy(body: ReportBody | LegacyBodyShim): ReportBody {
 }
 
 /**
- * Append a display suffix to a wire-side string (e.g. "20" → "20°C").
- * Wire fields are `string | null` post-HARPA-PRO-6 follow-up so
- * "around 20" / "12.5" / null all round-trip cleanly.
- */
-function appendUnit(s: string | null, suffix: string): string | null {
-  if (s == null) return null;
-  const trimmed = s.trim();
-  return trimmed === '' ? null : `${trimmed}${suffix}`;
-}
-
-/**
- * Inverse of appendUnit — strip a trailing display suffix that the
- * UI may have appended, so the wire value stays canonical. If the
- * string starts with a number we keep the numeric prefix; otherwise
- * we preserve the user-typed text verbatim (the wire accepts free
- * text like "a few" / "around 20").
+ * Strip a trailing display suffix that the UI may have appended, so
+ * the wire value stays canonical (used for `materials[].quantity`
+ * where the UI joins quantity + unit for display). If the string
+ * starts with a number we keep the numeric prefix; otherwise we
+ * preserve the user-typed text verbatim (the wire accepts free text
+ * like "a few" / "around 20").
  */
 function stripUnit(s: string | null): string | null {
   if (s == null) return null;
@@ -119,8 +113,8 @@ export function reportBodyToGeneratedReport(
       weather: body.weather
         ? {
             conditions: body.weather.condition,
-            temperature: appendUnit(body.weather.temperatureC, '°C'),
-            wind: appendUnit(body.weather.windKph, ' km/h'),
+            temperature: body.weather.temperature,
+            wind: body.weather.wind,
             impact: body.weather.impact,
           }
         : null,
@@ -190,8 +184,8 @@ export function generatedReportToReportBody(g: GeneratedSiteReport): ReportBody 
     weather: r.weather
       ? {
           condition: r.weather.conditions ?? null,
-          temperatureC: stripUnit(r.weather.temperature),
-          windKph: stripUnit(r.weather.wind),
+          temperature: r.weather.temperature ?? null,
+          wind: r.weather.wind ?? null,
           impact: r.weather.impact ?? null,
         }
       : null,

@@ -121,14 +121,14 @@ export function VoiceReportView({
                 {report.weather.condition}
               </Text>
             ) : null}
-            {report.weather.temperatureC != null ? (
+            {report.weather.temperature != null ? (
               <Text className="text-sm text-muted-foreground">
-                {report.weather.temperatureC}°C
+                {report.weather.temperature}
               </Text>
             ) : null}
-            {report.weather.windKph != null ? (
+            {report.weather.wind != null ? (
               <Text className="text-sm text-muted-foreground">
-                Wind {report.weather.windKph} km/h
+                Wind {report.weather.wind}
               </Text>
             ) : null}
           </View>

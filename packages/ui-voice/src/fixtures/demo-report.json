@@ -7,8 +7,8 @@
   },
   "weather": {
     "condition": "Dry, light cloud",
-    "temperatureC": "15",
-    "windKph": "12",
+    "temperature": "15°C",
+    "wind": "12 km/h",
     "impact": "No weather-related delays. Conditions favourable for steel erection and exterior work."
   },
   "workers": [

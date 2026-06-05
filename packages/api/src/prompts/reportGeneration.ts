@@ -66,7 +66,7 @@ SCHEMA (top-level keys are exhaustive; types in parens)
     "summary":   str | null,             // one sentence
     "visitDate": ISO-8601 datetime ("YYYY-MM-DDTHH:MM:SSZ") | null
   },
-  "weather":          { "condition": str|null, "temperatureC": str|null, "windKph": str|null, "impact": str|null } | null,
+  "weather":          { "condition": str|null, "temperature": str|null, "wind": str|null, "impact": str|null } | null,
   "workers":          [ { "role": str, "count": str|null, "hours": str|null, "notes": str|null } ],
   "materials":        [ { "name": str, "quantity": str|null, "unit": str|null, "status": str|null, "condition": str|null, "notes": str|null } ],
   "issues":           [ { "title": str, "severity": str|null, "description": str|null, "action": str|null } ],
@@ -78,7 +78,7 @@ RULES
 - "meta.title" — short human title; null only if notes are completely unidentifiable.
 - "meta.summary" — single sentence summarising the visit.
 - "meta.visitDate" — only set if the notes give an explicit date; otherwise null. Always emit a full ISO datetime (use T00:00:00Z if only a date is known).
-- "weather.temperatureC" / "weather.windKph" — short string capturing whatever the notes say ("18", "around 20", "12.5 kph"). Use null if not stated.
+- "weather.temperature" / "weather.wind" — short string capturing whatever the notes say. Include the unit verbatim if the user gave one ("18°C", "75°F", "12 kph", "5 mph", "gale force"); use the bare number if no unit was mentioned. Use null if not stated.
 - "workers" is an array of one entry per role mentioned. Each entry uses the exact field names "role", "count", "hours", "notes". "count" and "hours" are strings — write what the notes say verbatim ("4", "a few", "8h"); use null only when nothing relevant is mentioned.
 - "materials[].quantity" — string capturing the quantity ("50", "12 m³", "a truckload"). Use null if not stated.
 - "materials[].unit" — short SI/imperial unit string ("m³", "kg", "bags"). Use null if not stated or already embedded in quantity.
@@ -87,7 +87,7 @@ RULES
 - NEVER invent data not in the notes. Keep strings concise. Deduplicate facts.
 
 EXAMPLE
-{"meta":{"title":"Site Visit — Wet Weather","summary":"Wet conditions delayed concrete pour.","visitDate":null},"weather":{"condition":"wet","temperatureC":"20","windKph":null,"impact":"Pour delayed by 1 hour"},"workers":[{"role":"Concrete worker","count":"4","hours":"8","notes":null}],"materials":[{"name":"Concrete","quantity":"50","unit":"m³","status":"delivered","condition":null,"notes":null}],"issues":[{"title":"Wet ground","severity":"medium","description":"Overnight rain left site waterlogged.","action":"Reassess drainage."}],"nextSteps":["Order rebar"],"summarySections":[{"title":"Foundation Work","body":"Concrete pour started in zone A despite wet weather."}]}`;
+{"meta":{"title":"Site Visit — Wet Weather","summary":"Wet conditions delayed concrete pour.","visitDate":null},"weather":{"condition":"wet","temperature":"20°C","wind":null,"impact":"Pour delayed by 1 hour"},"workers":[{"role":"Concrete worker","count":"4","hours":"8","notes":null}],"materials":[{"name":"Concrete","quantity":"50","unit":"m³","status":"delivered","condition":null,"notes":null}],"issues":[{"title":"Wet ground","severity":"medium","description":"Overnight rain left site waterlogged.","action":"Reassess drainage."}],"nextSteps":["Order rebar"],"summarySections":[{"title":"Foundation Work","body":"Concrete pour started in zone A despite wet weather."}]}`;
 
 /**
  * Update-path system prompt: merge new notes into an existing report body
@@ -120,7 +120,7 @@ SCHEMA (identical to the cold-start prompt; same field names + types)
     "summary":   str | null,             // one sentence
     "visitDate": ISO-8601 datetime ("YYYY-MM-DDTHH:MM:SSZ") | null
   },
-  "weather":          { "condition": str|null, "temperatureC": str|null, "windKph": str|null, "impact": str|null } | null,
+  "weather":          { "condition": str|null, "temperature": str|null, "wind": str|null, "impact": str|null } | null,
   "workers":          [ { "role": str, "count": str|null, "hours": str|null, "notes": str|null } ],
   "materials":        [ { "name": str, "quantity": str|null, "unit": str|null, "status": str|null, "condition": str|null, "notes": str|null } ],
   "issues":           [ { "title": str, "severity": str|null, "description": str|null, "action": str|null } ],
@@ -133,7 +133,7 @@ RULES
 - "meta.summary" — single sentence summarising the visit.
 - "meta.visitDate" — only set if the notes give an explicit date; otherwise null. Always emit a full ISO datetime (use T00:00:00Z if only a date is known).
 - Preserve existing meta values when new notes are silent. Only overwrite a meta field when new notes explicitly contradict it. Never blank a meta field just because new notes are silent.
-- "weather.temperatureC" / "weather.windKph" — short string capturing whatever the notes say ("18", "around 20", "12.5 kph"). Use null if not stated.
+- "weather.temperature" / "weather.wind" — short string capturing whatever the notes say. Include the unit verbatim if the user gave one ("18°C", "75°F", "12 kph", "5 mph", "gale force"); use the bare number if no unit was mentioned. Use null if not stated.
 - "workers" is an array of one entry per role mentioned. Each entry uses the exact field names "role", "count", "hours", "notes". "count" and "hours" are strings — write what the notes say verbatim ("4", "a few", "8h"); preserve the existing value when the new notes are silent.
 - "materials[].quantity" — string capturing the quantity ("50", "12 m³", "a truckload"). Use null if not stated.
 - "materials[].unit" — short SI/imperial unit string ("m³", "kg", "bags"). Use null if not stated or already embedded in quantity.

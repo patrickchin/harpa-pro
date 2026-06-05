@@ -20,7 +20,7 @@ export type ReportMeta = z.infer<typeof reportMeta>;
  *
  * Wire shape — string|null for every numeric / categorical field
  * (workers[].count, workers[].hours, materials[].quantity,
- * weather.temperatureC, weather.windKph, issues[].severity).
+ * weather.temperature, weather.wind, issues[].severity).
  *
  * Why strings: this is LLM output extracted from voice transcripts.
  * The model frequently sees "a few electricians", "around 20°C",
@@ -31,14 +31,19 @@ export type ReportMeta = z.infer<typeof reportMeta>;
  * the 1–2 consumers that actually need a number. Severity stays
  * advisory low|medium|high but is no longer enforced; the UI maps
  * unknown values to "medium" via normaliseSeverity().
+ *
+ * Weather fields are `temperature` / `wind` (no unit suffix on the
+ * key). Units live in the value itself ("18°C", "75°F", "12 kph",
+ * "5 mph", "20") so the report preserves what the user actually
+ * said. The renderer prints the value verbatim — no conversion.
  */
 export const reportBody = z.object({
   meta: reportMeta,
   weather: z
     .object({
       condition: z.string().nullable(),
-      temperatureC: z.string().nullable(),
-      windKph: z.string().nullable(),
+      temperature: z.string().nullable(),
+      wind: z.string().nullable(),
       impact: z.string().nullable(),
     })
     .nullable(),

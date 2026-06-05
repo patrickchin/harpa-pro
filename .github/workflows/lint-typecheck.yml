@@ -42,3 +42,12 @@ jobs:
         # Self-tests for the shared CI helpers in scripts/ci/. Keeps
         # them honest without spinning up the full integration matrix.
         run: bash scripts/ci/__tests__/verify-readyz.test.sh
+      - name: Shellcheck CI helpers
+        # Lint every shell script under scripts/ci/ so syntactic
+        # regressions in CI glue (e.g. unquoted vars, broken loops)
+        # fail the PR before they ship to dev/main. Scoped to
+        # scripts/ci/ to stay surgical — broader script directories
+        # have pre-existing warnings tracked separately.
+        run: |
+          shellcheck --version
+          find scripts/ci -name '*.sh' -print0 | xargs -0 shellcheck

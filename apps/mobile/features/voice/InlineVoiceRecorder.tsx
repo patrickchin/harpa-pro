@@ -6,13 +6,20 @@
  * Layout (single row, ~68px tall to match the input bar):
  *
  *   ┌─────────────────────────────────────────────────────────────┐
- *   │ [🗑]  ● 0:08  ▁▂▅▇▆▃▁▂▄▆▇▅▃▁▂▄▆ …  [Send ▶]                  │
+ *   │ [🗑]  ● 0:08         ▁▂▅▇▆▃▁▂▄▆▇▅▃▁▂▄▆ …  [Send ▶]           │
+ *   │       Max 15:00                                              │
  *   └─────────────────────────────────────────────────────────────┘
  *
  *   • Trash button (destructive ghost) — cancels and discards local audio.
- *   • Pulsing red dot + monospaced duration counter.
+ *   • Pulsing red dot + monospaced duration counter, with a "Max 15:00"
+ *     hint underneath. Counter turns destructive past WARNING_DURATION_MS
+ *     (10 min) so the user can wrap up before the 15 min hard stop.
  *   • Scrolling waveform — last N amplitude samples rendered as bars.
  *   • Primary Send button — stops, finalises, hands result to onSend.
+ *   • Auto-send: when `durationMs >= MAX_DURATION_MS` we fire `onSend`
+ *     once. 15 min × 32 kbps AAC ≈ 3.5 MB — comfortably under the 25 MB
+ *     server cap (`packages/api/src/routes/voice.ts`) and Groq Whisper's
+ *     25 MB free-tier ceiling. See `docs/v4/arch-voice-pipeline.md` §D5.
  *
  * Pure presentational. State is owned by `useInlineRecorder` (provider).
  * Errors and the permission gate are rendered by the provider as
@@ -45,6 +52,16 @@ const BAR_MIN_HEIGHT = 4;
 const BAR_MAX_HEIGHT = 32;
 const BAR_WIDTH = 3;
 const BAR_GAP = 2;
+
+/**
+ * Hard cap on a single recording. At 32 kbps mono AAC this is ≈ 3.5 MB,
+ * keeping us well under Groq Whisper's 25 MB free-tier limit and our
+ * own 25 MB server cap. Cap is enforced client-side; the server still
+ * 413s on file size as a defence in depth (see HARPA-PRO-D postmortem).
+ */
+export const MAX_DURATION_MS = 15 * 60 * 1000;
+/** Soft warning: counter turns destructive 5 min before the hard stop. */
+export const WARNING_DURATION_MS = 10 * 60 * 1000;
 
 function formatDuration(ms: number): string {
   const totalSec = Math.floor(ms / 1000);
@@ -162,6 +179,17 @@ export function InlineVoiceRecorder({
   onCancel,
   sending = false,
 }: InlineVoiceRecorderProps): React.JSX.Element {
+  const autoSentRef = useRef(false);
+  useEffect(() => {
+    if (autoSentRef.current) return;
+    if (sending) return;
+    if (durationMs >= MAX_DURATION_MS) {
+      autoSentRef.current = true;
+      onSend();
+    }
+  }, [durationMs, sending, onSend]);
+
+  const isWarning = durationMs >= WARNING_DURATION_MS;
   return (
     <View
       testID="voice-record-strip"
@@ -182,12 +210,22 @@ export function InlineVoiceRecorder({
 
       <View className="flex-row items-center gap-2">
         <RecordingDot />
-        <Text
-          testID="voice-record-duration"
-          className="min-w-[36px] text-base font-semibold tabular-nums text-foreground"
-        >
-          {formatDuration(durationMs)}
-        </Text>
+        <View>
+          <Text
+            testID="voice-record-duration"
+            className={`min-w-[36px] text-base font-semibold tabular-nums ${
+              isWarning ? 'text-destructive' : 'text-foreground'
+            }`}
+          >
+            {formatDuration(durationMs)}
+          </Text>
+          <Text
+            testID="voice-record-max"
+            className="text-[10px] text-muted-foreground"
+          >
+            Max {formatDuration(MAX_DURATION_MS)}
+          </Text>
+        </View>
       </View>
 
       <Waveform bars={historyBars} />

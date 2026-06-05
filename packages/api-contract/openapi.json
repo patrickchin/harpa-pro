@@ -3834,11 +3834,11 @@
                                     "type": "string",
                                     "nullable": true
                                   },
-                                  "temperatureC": {
+                                  "temperature": {
                                     "type": "string",
                                     "nullable": true
                                   },
-                                  "windKph": {
+                                  "wind": {
                                     "type": "string",
                                     "nullable": true
                                   },
@@ -3849,8 +3849,8 @@
                                 },
                                 "required": [
                                   "condition",
-                                  "temperatureC",
-                                  "windKph",
+                                  "temperature",
+                                  "wind",
                                   "impact"
                                 ]
                               },
@@ -4223,11 +4223,11 @@
                               "type": "string",
                               "nullable": true
                             },
-                            "temperatureC": {
+                            "temperature": {
                               "type": "string",
                               "nullable": true
                             },
-                            "windKph": {
+                            "wind": {
                               "type": "string",
                               "nullable": true
                             },
@@ -4238,8 +4238,8 @@
                           },
                           "required": [
                             "condition",
-                            "temperatureC",
-                            "windKph",
+                            "temperature",
+                            "wind",
                             "impact"
                           ]
                         },
@@ -4633,11 +4633,11 @@
                               "type": "string",
                               "nullable": true
                             },
-                            "temperatureC": {
+                            "temperature": {
                               "type": "string",
                               "nullable": true
                             },
-                            "windKph": {
+                            "wind": {
                               "type": "string",
                               "nullable": true
                             },
@@ -4648,8 +4648,8 @@
                           },
                           "required": [
                             "condition",
-                            "temperatureC",
-                            "windKph",
+                            "temperature",
+                            "wind",
                             "impact"
                           ]
                         },
@@ -4983,11 +4983,11 @@
                             "type": "string",
                             "nullable": true
                           },
-                          "temperatureC": {
+                          "temperature": {
                             "type": "string",
                             "nullable": true
                           },
-                          "windKph": {
+                          "wind": {
                             "type": "string",
                             "nullable": true
                           },
@@ -4998,8 +4998,8 @@
                         },
                         "required": [
                           "condition",
-                          "temperatureC",
-                          "windKph",
+                          "temperature",
+                          "wind",
                           "impact"
                         ]
                       },
@@ -5206,11 +5206,11 @@
                               "type": "string",
                               "nullable": true
                             },
-                            "temperatureC": {
+                            "temperature": {
                               "type": "string",
                               "nullable": true
                             },
-                            "windKph": {
+                            "wind": {
                               "type": "string",
                               "nullable": true
                             },
@@ -5221,8 +5221,8 @@
                           },
                           "required": [
                             "condition",
-                            "temperatureC",
-                            "windKph",
+                            "temperature",
+                            "wind",
                             "impact"
                           ]
                         },
@@ -6064,11 +6064,11 @@
                                   "type": "string",
                                   "nullable": true
                                 },
-                                "temperatureC": {
+                                "temperature": {
                                   "type": "string",
                                   "nullable": true
                                 },
-                                "windKph": {
+                                "wind": {
                                   "type": "string",
                                   "nullable": true
                                 },
@@ -6079,8 +6079,8 @@
                               },
                               "required": [
                                 "condition",
-                                "temperatureC",
-                                "windKph",
+                                "temperature",
+                                "wind",
                                 "impact"
                               ]
                             },
@@ -6591,11 +6591,11 @@
                                   "type": "string",
                                   "nullable": true
                                 },
-                                "temperatureC": {
+                                "temperature": {
                                   "type": "string",
                                   "nullable": true
                                 },
-                                "windKph": {
+                                "wind": {
                                   "type": "string",
                                   "nullable": true
                                 },
@@ -6606,8 +6606,8 @@
                               },
                               "required": [
                                 "condition",
-                                "temperatureC",
-                                "windKph",
+                                "temperature",
+                                "wind",
                                 "impact"
                               ]
                             },
@@ -7101,11 +7101,11 @@
                                   "type": "string",
                                   "nullable": true
                                 },
-                                "temperatureC": {
+                                "temperature": {
                                   "type": "string",
                                   "nullable": true
                                 },
-                                "windKph": {
+                                "wind": {
                                   "type": "string",
                                   "nullable": true
                                 },
@@ -7116,8 +7116,8 @@
                               },
                               "required": [
                                 "condition",
-                                "temperatureC",
-                                "windKph",
+                                "temperature",
+                                "wind",
                                 "impact"
                               ]
                             },
@@ -7519,11 +7519,11 @@
                                   "type": "string",
                                   "nullable": true
                                 },
-                                "temperatureC": {
+                                "temperature": {
                                   "type": "string",
                                   "nullable": true
                                 },
-                                "windKph": {
+                                "wind": {
                                   "type": "string",
                                   "nullable": true
                                 },
@@ -7534,8 +7534,8 @@
                               },
                               "required": [
                                 "condition",
-                                "temperatureC",
-                                "windKph",
+                                "temperature",
+                                "wind",
                                 "impact"
                               ]
                             },

@@ -1875,8 +1875,8 @@ export interface paths {
                                     };
                                     weather: {
                                         condition: string | null;
-                                        temperatureC: string | null;
-                                        windKph: string | null;
+                                        temperature: string | null;
+                                        wind: string | null;
                                         impact: string | null;
                                     } | null;
                                     workers: {
@@ -1991,8 +1991,8 @@ export interface paths {
                                 };
                                 weather: {
                                     condition: string | null;
-                                    temperatureC: string | null;
-                                    windKph: string | null;
+                                    temperature: string | null;
+                                    wind: string | null;
                                     impact: string | null;
                                 } | null;
                                 workers: {
@@ -2128,8 +2128,8 @@ export interface paths {
                                 };
                                 weather: {
                                     condition: string | null;
-                                    temperatureC: string | null;
-                                    windKph: string | null;
+                                    temperature: string | null;
+                                    wind: string | null;
                                     impact: string | null;
                                 } | null;
                                 workers: {
@@ -2282,8 +2282,8 @@ export interface paths {
                             };
                             weather: {
                                 condition: string | null;
-                                temperatureC: string | null;
-                                windKph: string | null;
+                                temperature: string | null;
+                                wind: string | null;
                                 impact: string | null;
                             } | null;
                             workers: {
@@ -2337,8 +2337,8 @@ export interface paths {
                                 };
                                 weather: {
                                     condition: string | null;
-                                    temperatureC: string | null;
-                                    windKph: string | null;
+                                    temperature: string | null;
+                                    wind: string | null;
                                     impact: string | null;
                                 } | null;
                                 workers: {
@@ -2602,8 +2602,8 @@ export interface paths {
                                     };
                                     weather: {
                                         condition: string | null;
-                                        temperatureC: string | null;
-                                        windKph: string | null;
+                                        temperature: string | null;
+                                        wind: string | null;
                                         impact: string | null;
                                     } | null;
                                     workers: {
@@ -2788,8 +2788,8 @@ export interface paths {
                                     };
                                     weather: {
                                         condition: string | null;
-                                        temperatureC: string | null;
-                                        windKph: string | null;
+                                        temperature: string | null;
+                                        wind: string | null;
                                         impact: string | null;
                                     } | null;
                                     workers: {
@@ -2968,8 +2968,8 @@ export interface paths {
                                     };
                                     weather: {
                                         condition: string | null;
-                                        temperatureC: string | null;
-                                        windKph: string | null;
+                                        temperature: string | null;
+                                        wind: string | null;
                                         impact: string | null;
                                     } | null;
                                     workers: {
@@ -3109,8 +3109,8 @@ export interface paths {
                                     };
                                     weather: {
                                         condition: string | null;
-                                        temperatureC: string | null;
-                                        windKph: string | null;
+                                        temperature: string | null;
+                                        wind: string | null;
                                         impact: string | null;
                                     } | null;
                                     workers: {

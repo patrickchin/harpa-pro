@@ -74,3 +74,15 @@ The complementary live-LLM CI lane (`.github/workflows/ai-live.yml`)
 continues to exercise the cold-start prompt against the real model,
 which is what would have caught a future *value*-shape drift that
 the offline drift guard cannot see.
+
+## Follow-up (2026-06-06): strings on the wire
+
+After landing the narrow fix and reflecting on the recurring R5
+pattern (this is the 4th incident on the report path in two weeks),
+we widened *all* numeric / enum fields in `reportBody` to
+`string | null` — see
+[`2026-06-06-report-body-string-wire.md`](./2026-06-06-report-body-string-wire.md).
+The whole class of "LLM emits free text where we wanted a number /
+enum" bugs is now structurally prevented: the schema accepts
+whatever text the model produced, and the 1–2 consumers that
+actually need a number parse on read.

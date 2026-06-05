@@ -12,14 +12,17 @@
  *
  *   • Trash button (destructive ghost) — cancels and discards local audio.
  *   • Pulsing red dot + monospaced duration counter, with a "Max 15:00"
- *     hint underneath. Counter turns destructive past WARNING_DURATION_MS
- *     (10 min) so the user can wrap up before the 15 min hard stop.
+ *     hint underneath. Once `durationMs ≥ WARNING_DURATION_MS` (10 min),
+ *     the counter flips to destructive colour and the hint becomes a
+ *     "X:XX left" countdown so the user can wrap up before the cap.
  *   • Scrolling waveform — last N amplitude samples rendered as bars.
  *   • Primary Send button — stops, finalises, hands result to onSend.
  *   • Auto-send: when `durationMs >= MAX_DURATION_MS` we fire `onSend`
- *     once. 15 min × 32 kbps AAC ≈ 3.5 MB — comfortably under the 25 MB
- *     server cap (`packages/api/src/routes/voice.ts`) and Groq Whisper's
- *     25 MB free-tier ceiling. See `docs/v4/arch-voice-pipeline.md` §D5.
+ *     once, plus `onMaxDuration` so the provider can surface a dialog
+ *     explaining why the recording was cut off. 15 min × 32 kbps AAC
+ *     ≈ 3.5 MB — comfortably under the 25 MB server cap
+ *     (`packages/api/src/routes/voice.ts`) and Groq Whisper's 25 MB
+ *     free-tier ceiling. See `docs/v4/arch-voice-pipeline.md` §D5.
  *
  * Pure presentational. State is owned by `useInlineRecorder` (provider).
  * Errors and the permission gate are rendered by the provider as
@@ -34,7 +37,7 @@ import Reanimated, {
   useAnimatedStyle,
   withSpring,
 } from 'react-native-reanimated';
-import { Send, Trash2 } from 'lucide-react-native';
+import { AlertTriangle, Send, Trash2 } from 'lucide-react-native';
 
 import { colors } from '@/lib/design-tokens/colors';
 import { HISTORY_SIZE } from './useInlineRecorder';
@@ -44,6 +47,12 @@ export interface InlineVoiceRecorderProps {
   historyBars: readonly number[];
   onSend: () => void;
   onCancel: () => void;
+  /**
+   * Fires exactly once per recording when the hard cap is reached.
+   * Provider uses this to surface an `AppDialogSheet` alert explaining
+   * why the note was sent automatically. `onSend` also fires.
+   */
+  onMaxDuration?: () => void;
   /** Disables Send while the underlying pipeline is finalising. */
   sending?: boolean;
 }
@@ -177,6 +186,7 @@ export function InlineVoiceRecorder({
   historyBars,
   onSend,
   onCancel,
+  onMaxDuration,
   sending = false,
 }: InlineVoiceRecorderProps): React.JSX.Element {
   const autoSentRef = useRef(false);
@@ -185,16 +195,20 @@ export function InlineVoiceRecorder({
     if (sending) return;
     if (durationMs >= MAX_DURATION_MS) {
       autoSentRef.current = true;
+      onMaxDuration?.();
       onSend();
     }
-  }, [durationMs, sending, onSend]);
+  }, [durationMs, sending, onSend, onMaxDuration]);
 
   const isWarning = durationMs >= WARNING_DURATION_MS;
+  const remainingMs = Math.max(0, MAX_DURATION_MS - durationMs);
   return (
     <View
       testID="voice-record-strip"
       accessibilityLabel="Recording voice note"
-      className="min-h-[68px] flex-1 flex-row items-center gap-3 rounded-xl border border-border bg-card px-3 py-2"
+      className={`min-h-[68px] flex-1 flex-row items-center gap-3 rounded-xl border bg-card px-3 py-2 ${
+        isWarning ? 'border-destructive/60' : 'border-border'
+      }`}
     >
       <Pressable
         onPress={onCancel}
@@ -219,12 +233,25 @@ export function InlineVoiceRecorder({
           >
             {formatDuration(durationMs)}
           </Text>
-          <Text
-            testID="voice-record-max"
-            className="text-[10px] text-muted-foreground"
-          >
-            Max {formatDuration(MAX_DURATION_MS)}
-          </Text>
+          {isWarning ? (
+            <View className="flex-row items-center gap-1">
+              <AlertTriangle size={10} color={colors.destructive.DEFAULT} />
+              <Text
+                testID="voice-record-remaining"
+                accessibilityLabel={`${formatDuration(remainingMs)} remaining before automatic stop`}
+                className="text-[10px] font-semibold tabular-nums text-destructive"
+              >
+                {formatDuration(remainingMs)} left
+              </Text>
+            </View>
+          ) : (
+            <Text
+              testID="voice-record-max"
+              className="text-[10px] text-muted-foreground"
+            >
+              Max {formatDuration(MAX_DURATION_MS)}
+            </Text>
+          )}
         </View>
       </View>
 

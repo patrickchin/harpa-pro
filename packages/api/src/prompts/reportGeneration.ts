@@ -63,7 +63,7 @@ SCHEMA (top-level keys are exhaustive; types in parens)
     "visitDate": ISO-8601 datetime ("YYYY-MM-DDTHH:MM:SSZ") | null
   },
   "weather":          { "condition": str|null, "temperatureC": num|null, "windKph": num|null, "impact": str|null } | null,
-  "workers":          [ { "role": str, "count": int>=0, "hours": num>=0|null, "notes": str|null } ],
+  "workers":          [ { "role": str, "count": int>=0|null, "hours": num>=0|null, "notes": str|null } ],
   "materials":        [ { "name": str, "quantity": num|null, "unit": str|null, "status": str|null, "condition": str|null, "notes": str|null } ],
   "issues":           [ { "title": str, "severity": "low"|"medium"|"high", "description": str|null, "action": str|null } ],
   "nextSteps":        [ str ],
@@ -75,7 +75,7 @@ RULES
 - "meta.summary" — single sentence summarising the visit.
 - "meta.visitDate" — only set if the notes give an explicit date; otherwise null. Always emit a full ISO datetime (use T00:00:00Z if only a date is known).
 - "weather.temperatureC" / "weather.windKph" — numeric only (e.g. 18, 12.5). Use null if not stated.
-- "workers" is an array of one entry per role mentioned. Each entry uses the exact field names "role", "count", "hours", "notes".
+- "workers" is an array of one entry per role mentioned. Each entry uses the exact field names "role", "count", "hours", "notes". Use null for "count" when the notes mention a role without a specific headcount (e.g. "a few electricians", "[image 1] shows workers"); do NOT guess a number.
 - "materials[].unit" — short SI/imperial unit string ("m³", "kg", "bags"). Use null if not stated.
 - "issues[].severity" — exactly one of "low", "medium", "high" (lower-case, no other values).
 - "summarySections" — use this exact key for the narrative breakdown (work progress, observations). Each entry has a "title" and a "body" (plain text or markdown).
@@ -116,7 +116,7 @@ SCHEMA (identical to the cold-start prompt; same field names + types)
     "visitDate": ISO-8601 datetime ("YYYY-MM-DDTHH:MM:SSZ") | null
   },
   "weather":          { "condition": str|null, "temperatureC": num|null, "windKph": num|null, "impact": str|null } | null,
-  "workers":          [ { "role": str, "count": int>=0, "hours": num>=0|null, "notes": str|null } ],
+  "workers":          [ { "role": str, "count": int>=0|null, "hours": num>=0|null, "notes": str|null } ],
   "materials":        [ { "name": str, "quantity": num|null, "unit": str|null, "status": str|null, "condition": str|null, "notes": str|null } ],
   "issues":           [ { "title": str, "severity": "low"|"medium"|"high", "description": str|null, "action": str|null } ],
   "nextSteps":        [ str ],
@@ -129,7 +129,7 @@ RULES
 - "meta.visitDate" — only set if the notes give an explicit date; otherwise null. Always emit a full ISO datetime (use T00:00:00Z if only a date is known).
 - Preserve existing meta values when new notes are silent. Only overwrite a meta field when new notes explicitly contradict it. Never blank a meta field just because new notes are silent.
 - "weather.temperatureC" / "weather.windKph" — numeric only (e.g. 18, 12.5). Use null if not stated.
-- "workers" is an array of one entry per role mentioned. Each entry uses the exact field names "role", "count", "hours", "notes".
+- "workers" is an array of one entry per role mentioned. Each entry uses the exact field names "role", "count", "hours", "notes". Use null for "count" when the notes mention a role without a specific headcount; preserve the existing count when the new notes are silent.
 - "materials[].unit" — short SI/imperial unit string ("m³", "kg", "bags"). Use null if not stated.
 - "issues[].severity" — exactly one of "low", "medium", "high" (lower-case, no other values).
 - "summarySections" — use this exact key for the narrative breakdown (work progress, observations). Each entry has a "title" and a "body" (plain text or markdown).

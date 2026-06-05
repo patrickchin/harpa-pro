@@ -77,7 +77,11 @@ const config: ExpoConfig = {
     // Universal Links — iOS verifies via AASA at
     // https://<host>/.well-known/apple-app-site-association.
     // See packages/api/src/routes/well-known.ts.
-    associatedDomains: [`applinks:${UNIVERSAL_LINK_HOST}`],
+    // Omitted in development: associated-domains forces Expo CLI to
+    // require code signing even on simulators (SDK 55+).
+    ...(VARIANT !== 'development' && {
+      associatedDomains: [`applinks:${UNIVERSAL_LINK_HOST}`],
+    }),
     infoPlist: {
       ITSAppUsesNonExemptEncryption: false,
       NSPhotoLibraryAddUsageDescription:

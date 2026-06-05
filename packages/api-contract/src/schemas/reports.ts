@@ -31,7 +31,12 @@ export const reportBody = z.object({
   workers: z.array(
     z.object({
       role: z.string(),
-      count: z.number().int().nonnegative(),
+      // Nullable: the LLM emits null when notes mention a role
+      // without a headcount ("a few electricians", "[image 1]"). A
+      // strict `int().nonnegative()` here caused HARPA-PRO-6 502s on
+      // /reports/:n/regenerate. Mobile renders null as `—`.
+      // See docs/bugs/README.md "workers[].count nullable drift".
+      count: z.number().int().nonnegative().nullable(),
       hours: z.number().nonnegative().nullable(),
       notes: z.string().nullable(),
     }),

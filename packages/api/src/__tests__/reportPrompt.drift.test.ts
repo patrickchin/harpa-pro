@@ -101,6 +101,17 @@ describe('report prompts vs. reportBody schema (offline drift guard)', () => {
       expect(prompt).not.toContain(banned);
     });
 
+    // HARPA-PRO-6 regression guard: the schema allows
+    // `workers[].count: null`, so the prompt must advertise the
+    // nullable form. If this drifts back to a non-nullable hint,
+    // the LLM emits null anyway and the route 502s.
+    it('declares workers[].count as int>=0|null', () => {
+      expect(prompt).toContain('"count": int>=0|null');
+    });
+    it('does NOT advertise workers[].count as strict int>=0', () => {
+      expect(prompt).not.toMatch(/"count": int>=0(?!\|null)/);
+    });
+
     it('explicitly forbids the "report" wrapper', () => {
       // Both prompts must instruct the model to emit the unwrapped
       // body — otherwise GPT-4o re-introduces the v3 envelope.

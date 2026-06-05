@@ -83,7 +83,7 @@ export function reportBodyToGeneratedReport(
 ): GeneratedSiteReport {
   body = normaliseLegacy(body);
   const m = body.meta;
-  const totalWorkers = body.workers.reduce((sum, w) => sum + w.count, 0);
+  const totalWorkers = body.workers.reduce((sum, w) => sum + (w.count ?? 0), 0);
   const totalHours = body.workers.reduce(
     (sum, w) => sum + (w.hours ?? 0),
     0,

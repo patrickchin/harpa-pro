@@ -342,7 +342,21 @@ function PhotoNoteBatchCard({
     [body, onOpenPhoto],
   );
 
-  if (attachments.length === 0) return null;
+  if (attachments.length === 0) {
+    // Should be unreachable: an image-kind note that carries neither
+    // `files[]` nor a top-level `fileId`. Migration 0010 backfilled
+    // every image note into `note_files`, so this branch firing
+    // means we either have a corrupted row or a regression in the
+    // `toReportNoteRows` adapter. Surface it loudly in dev so we
+    // catch it during review instead of silently dropping the card.
+    if (__DEV__) {
+      // eslint-disable-next-line no-console
+      console.warn(
+        `[ReportNotesPane] image note ${note.id} has no files[] and no fileId — skipping render`,
+      );
+    }
+    return null;
+  }
 
   return (
     <View

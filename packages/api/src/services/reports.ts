@@ -578,10 +578,9 @@ export async function getReportDebug(db: Db, reportId: string): Promise<ReportDe
     Array<{ id: string; fileId: string; thumbnailFileId: string | null; position: number; caption: string | null }>
   >();
   if (imageNoteIds.length > 0) {
-    const idFragments = imageNoteIds.map((id) => sql`${id}`);
-    const inList = idFragments.reduce<ReturnType<typeof sql>>(
-      (acc, frag, idx) => (idx === 0 ? frag : sql`${acc}, ${frag}`),
-      sql``,
+    const inList = sql.join(
+      imageNoteIds.map((id) => sql`${id}`),
+      sql`, `,
     );
     const nfResult = await db.execute<{
       id: string;

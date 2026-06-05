@@ -45,8 +45,17 @@ const GAP = 6;
 export function ReportPhotos({ noteRows, onOpenPhoto }: ReportPhotosProps) {
   const groups = useMemo((): PhotoGroup[] => {
     const out: PhotoGroup[] = [];
-    for (const n of noteRows ?? []) {
-      if (n.kind !== 'photo') continue;
+    // Newest-first to match `ReportNotesPane`'s timeline order so the
+    // photo strip reads in the same direction as the notes above it.
+    const sorted = (noteRows ?? [])
+      .filter((n) => n.kind === 'photo')
+      .slice()
+      .sort((a, b) => {
+        const ta = a.createdAt ? Date.parse(a.createdAt) : 0;
+        const tb = b.createdAt ? Date.parse(b.createdAt) : 0;
+        return tb - ta;
+      });
+    for (const n of sorted) {
       const title = n.body?.trim() || 'Photo';
       // Canonical path: per-file rows from `note_files`.
       if (n.files && n.files.length > 0) {

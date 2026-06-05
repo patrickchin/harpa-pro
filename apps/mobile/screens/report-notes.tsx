@@ -16,6 +16,7 @@ import {
   ReportNotesPane,
   type ReportNoteRow,
 } from '@/components/reports/detail/ReportNotesPane';
+import { flattenPhotoGallery } from '@/lib/api/to-report-note-row';
 import { ImagePreviewModal } from '@/components/files/ImagePreviewModal';
 
 export interface ReportNotesProps {
@@ -63,46 +64,10 @@ export function ReportNotes(props: ReportNotesProps) {
     null,
   );
 
-  // Photo gallery for the swipeable preview modal — one entry per
-  // joined `note_files` row across every image note, ordered by note
-  // creation then file position. Mirrors the gallery built in
+  // Photo gallery for the swipeable preview modal — see
+  // `flattenPhotoGallery`. Mirrors the gallery built in
   // `screens/saved-report.tsx`.
-  const photoGallery = useMemo(() => {
-    const out: Array<{
-      fileId: string;
-      thumbnailFileId: string | null;
-      noteId: string;
-      title: string;
-      cacheKey: string;
-    }> = [];
-    for (const n of noteRows ?? []) {
-      if (n.kind !== 'photo') continue;
-      const title = n.body?.trim() || 'Photo';
-      if (n.files && n.files.length > 0) {
-        const sorted = n.files.slice().sort((a, b) => a.position - b.position);
-        for (const f of sorted) {
-          out.push({
-            fileId: f.fileId,
-            thumbnailFileId: f.thumbnailFileId,
-            noteId: n.id,
-            title,
-            cacheKey: f.fileId,
-          });
-        }
-        continue;
-      }
-      if (n.fileId) {
-        out.push({
-          fileId: n.fileId,
-          thumbnailFileId: n.thumbnailFileId ?? null,
-          noteId: n.id,
-          title,
-          cacheKey: n.fileId,
-        });
-      }
-    }
-    return out;
-  }, [noteRows]);
+  const photoGallery = useMemo(() => flattenPhotoGallery(noteRows), [noteRows]);
 
   const handleOpenPhoto = (input: { fileId: string; title?: string }) => {
     const idx = photoGallery.findIndex((p) => p.fileId === input.fileId);

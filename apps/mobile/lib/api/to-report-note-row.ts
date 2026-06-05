@@ -60,3 +60,63 @@ export function toReportNoteRows(
     };
   });
 }
+
+/**
+ * One entry per photo in the swipeable preview gallery — flattened
+ * across every image note's `files[]` (with a legacy single-`fileId`
+ * fallback). Ordered newest-note-first / earliest-position-first so
+ * the gallery walks photos in the same direction the timeline reads.
+ *
+ * Both `screens/saved-report.tsx` and `screens/report-notes.tsx`
+ * resolve a tap on a tile to an index in this list via `findIndex`
+ * by `fileId`, so this is the canonical source of truth for the
+ * fullscreen modal's stride.
+ */
+export interface PhotoGalleryEntry {
+  fileId: string;
+  thumbnailFileId: string | null;
+  noteId: string;
+  title: string;
+  cacheKey: string;
+}
+
+export function flattenPhotoGallery(
+  noteRows: ReadonlyArray<ReportNoteRow> | undefined,
+): ReadonlyArray<PhotoGalleryEntry> {
+  if (!noteRows) return [];
+  const photoNotes = noteRows
+    .filter((n) => n.kind === 'photo')
+    .slice()
+    .sort((a, b) => {
+      const ta = a.createdAt ? Date.parse(a.createdAt) : 0;
+      const tb = b.createdAt ? Date.parse(b.createdAt) : 0;
+      return tb - ta;
+    });
+  const out: PhotoGalleryEntry[] = [];
+  for (const n of photoNotes) {
+    const title = n.body?.trim() || 'Photo';
+    if (n.files && n.files.length > 0) {
+      const sorted = n.files.slice().sort((a, b) => a.position - b.position);
+      for (const f of sorted) {
+        out.push({
+          fileId: f.fileId,
+          thumbnailFileId: f.thumbnailFileId,
+          noteId: n.id,
+          title,
+          cacheKey: f.fileId,
+        });
+      }
+      continue;
+    }
+    if (n.fileId) {
+      out.push({
+        fileId: n.fileId,
+        thumbnailFileId: n.thumbnailFileId ?? null,
+        noteId: n.id,
+        title,
+        cacheKey: n.fileId,
+      });
+    }
+  }
+  return out;
+}

@@ -85,7 +85,7 @@ the development deployment. It must verify:
 ### Mode A — Local backend
 
 - API/storage: local docker-compose stack.
-- Auth: normal OTP UI with fake Twilio code `000000`.
+- Auth: normal OTP UI with fake email-OTP code `000000` (via better-auth dev mode).
 - AI: fixture replay.
 - Reset: local DB/app reset before each run.
 - Build: fixture dev-client (`EXPO_PUBLIC_USE_FIXTURES=true`) so the
@@ -96,13 +96,13 @@ the development deployment. It must verify:
 - API/storage: `https://harpa-pro-api-dev.fly.dev`, dev Neon branch,
   and `harpa-pro-dev` R2 bucket.
 - Auth: test-account password bypass via
-  `POST /auth/password/verify`, gated by `TEST_ACCOUNT_PHONES` and
+  `POST /api/auth/sign-in/email`, gated by `TEST_ACCOUNT_EMAILS` and
   `TEST_ACCOUNT_PASSWORD` in Doppler `dev`.
 - AI: development deployment settings. If `AI_LIVE=1`, this run is a
   true live-provider smoke for voice transcription/summarization; if
   dev is temporarily set to replay, the run still proves deployed API,
   DB, R2, auth, and mobile wiring.
-- Data: use allowlisted Alice/Bob test phones and either create unique
+- Data: use allowlisted Alice/Bob test emails and either create unique
   per-run projects/reports or clean them up at the end. Do not require
   destructive DB truncation on the shared dev branch.
 - Build: preview/development app variant pointed at the dev API,
@@ -124,7 +124,7 @@ second for production-shaped wiring.
 3. Re-enable module 09 in `.maestro/regression-journey.yaml`.
 4. Add a dev-deployment auth/setup path for Maestro. The preferred
    route is a non-production-only helper that signs in allowlisted
-   test accounts through `/auth/password/verify`; it must not affect
+   test accounts through `/api/auth/sign-in/email`; it must not affect
    production builds.
 5. Add a `mo`/Maestro run mode for the dev deployment that sets the
    API base URL to `https://harpa-pro-api-dev.fly.dev`, uses the

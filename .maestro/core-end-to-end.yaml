@@ -9,7 +9,7 @@ tags:
 # `(auth)` + `(app)` routes (not the `(dev)` gallery).
 #
 # Coverage:
-#   - sign-up flow      (deep link `harpa://sign-up/phone`)
+#   - sign-in flow      (email-OTP via `helpers/sign-in.yaml`)
 #   - onboarding        (conditional)
 #   - sign-out + sign-in round trip
 #   - projects list, new project
@@ -27,7 +27,7 @@ tags:
 #   3. xcrun simctl privacy booted grant microphone ${MAESTRO_APP_ID}
 #      xcrun simctl privacy booted grant camera ${MAESTRO_APP_ID}
 #   4. scripts/maestro/reset-db.sh   # wipe app + auth schemas so the
-#      sign-up phone (+15550100100) is a fresh account every run
+#      seed (alice@e2e.harpapro.com) is a fresh account every run
 #
 # Run:
 #   maestro test .maestro/core-end-to-end.yaml
@@ -74,38 +74,23 @@ tags:
     file: helpers/dismiss-open-dialog.yaml
 
 # Let the auth gate land us on sign-in first (more reliable than a
-# bare deep link to /sign-up immediately after a cold-launch race).
+# bare deep link to /sign-in immediately after a cold-launch race).
 - extendedWaitUntil:
     visible:
-      id: "input-phone"
+      id: "input-email"
     timeout: 30000
 
-# --- Sign-up (fresh account) -------------------------------------------------
-- openLink: harpa://sign-up/phone
+# --- Sign-in (fresh account) -------------------------------------------------
+# better-auth's emailOtp plugin auto-creates the user on first verify
+# (no separate sign-up screen).
 - runFlow:
-    file: helpers/dismiss-open-dialog.yaml
-- extendedWaitUntil:
-    visible:
-      id: "input-signup-phone"
-    timeout: 15000
-- tapOn:
-    id: "input-signup-phone"
-- inputText: "+15550100100"
-- hideKeyboard
-- tapOn:
-    id: "btn-signup-send-code"
-- assertVisible:
-    id: "input-signup-otp"
-- tapOn:
-    id: "input-signup-otp"
-- inputText: "000000"
-- hideKeyboard
-- tapOn:
-    id: "btn-signup-verify"
+    file: helpers/sign-in.yaml
+    env:
+      EMAIL: "alice@e2e.harpapro.com"
 
 # --- Onboarding (only for fresh accounts) ----------------------------------
-# reset-db.sh seeds Alice (+15550100100) for p3-report-wiring.yaml, so the
-# same phone here signs back IN rather than triggering onboarding. Make the
+# reset-db.sh seeds Alice (alice@e2e.harpapro.com) for p3-report-wiring.yaml, so
+# repeated runs sign back IN rather than triggering onboarding. Make the
 # block conditional so the flow works whether the DB is reset or not.
 - runFlow:
     when:
@@ -119,14 +104,24 @@ tags:
           id: "input-onboarding-company"
       - inputText: "QA Industries"
       - hideKeyboard
-      - tapOn:
-          id: "btn-onboarding-submit"
+      # Guard: returning users (displayName+companyName already set) trigger
+      # an auto-redirect mid-flow, making the submit button disappear before
+      # we can tap it. Only tap if still visible.
+      - runFlow:
+          when:
+            visible:
+              id: "btn-onboarding-submit"
+          commands:
+            - tapOn:
+                id: "btn-onboarding-submit"
 
 # --- Projects list -----------------------------------------------------------
+- extendedWaitUntil:
+    visible:
+      id: "btn-new-project"
+    timeout: 10000
 - assertVisible:
     text: "Projects"
-- assertVisible:
-    id: "btn-new-project"
 - tapOn:
     id: "btn-new-project"
 
@@ -143,12 +138,20 @@ tags:
     id: "input-project-address"
 - inputText: "1 Test Way"
 - hideKeyboard
-- tapOn:
-    id: "btn-save-project"
+# Guard: on iOS hideKeyboard can trigger form submission before this tap
+- runFlow:
+    when:
+      visible:
+        id: "btn-save-project"
+    commands:
+      - tapOn:
+          id: "btn-save-project"
 
 # --- Project home: copy buttons + navigation --------------------------------
-- assertVisible:
-    id: "btn-project-edit"
+- extendedWaitUntil:
+    visible:
+      id: "btn-project-edit"
+    timeout: 10000
 - tapOn:
     id: "btn-copy-client"
 - tapOn:
@@ -156,31 +159,43 @@ tags:
 
 # --- Members: open, add editor, filter, back -------------------------------
 # The members screen uses an inline add-member form (not a separate invite
-# modal). Phone input lives at `input-member-phone`, role picker at
+# modal). Email input lives at `input-member-email`, role picker at
 # `picker-member-role-${role}`, submit at `btn-add-member`.
 - tapOn:
     id: "link-project-members"
 # Members screen has an empty-state with a "Show add-member" button that
-# reveals the inline phone/role/submit form.
+# reveals the inline email/role/submit form.
 - assertVisible:
     id: "btn-show-add-member"
 - tapOn:
     id: "btn-show-add-member"
 - assertVisible:
-    id: "input-member-phone"
+    id: "input-member-email"
 - tapOn:
-    id: "input-member-phone"
-- inputText: "+15550100200"
+    id: "input-member-email"
+- inputText: "test+2@harpapro.com"
 - hideKeyboard
-- tapOn:
-    id: "picker-member-role-editor"
-- tapOn:
-    id: "btn-add-member"
+# iOS: hideKeyboard may trigger btn-add-member if it sits below the keyboard.
+# Guard picker and submit so they're only tapped if still visible.
+- runFlow:
+    when:
+      visible:
+        id: "picker-member-role-editor"
+    commands:
+      - tapOn:
+          id: "picker-member-role-editor"
+- runFlow:
+    when:
+      visible:
+        id: "btn-add-member"
+    commands:
+      - tapOn:
+          id: "btn-add-member"
 # After add, the "others" list now has a member so filter buttons render.
 - extendedWaitUntil:
     visible:
       id: "btn-filter-all"
-    timeout: 8000
+    timeout: 10000
 - tapOn:
     id: "btn-filter-editor"
 - waitForAnimationToEnd
@@ -198,16 +213,23 @@ tags:
     id: "input-edit-project-name"
 - eraseText: 50
 - inputText: "Edited Project"
-- scrollUntilVisible:
-    element:
-      id: "btn-save-project"
-    direction: DOWN
-- tapOn:
-    id: "btn-save-project"
+# iOS: hideKeyboard submits the form (same as the new-project form).
+# Only tap btn-save-project if it's still visible after dismissal.
+- hideKeyboard
+- runFlow:
+    when:
+      visible:
+        id: "btn-save-project"
+    commands:
+      - tapOn:
+          id: "btn-save-project"
 
 # --- Reports list + new draft -----------------------------------------------
-- assertVisible:
-    id: "btn-project-edit"
+# Save navigates back; give the project home time to settle before asserting.
+- extendedWaitUntil:
+    visible:
+      id: "btn-project-edit"
+    timeout: 10000
 - tapOn:
     id: "btn-open-reports"
 - assertVisible:
@@ -268,7 +290,7 @@ tags:
     id: "dialog-sheet"
 - waitForAnimationToEnd
 - tapOn:
-    id: "dialog-action-3"
+    id: "btn-attachment-cancel"
 
 # Add a note via the input field so the Generate-report button is enabled.
 # inputText into a multiline RN TextInput is flaky on iOS XCTest — wrap in
@@ -288,10 +310,19 @@ tags:
           commands:
             - tapOn:
                 id: "btn-add-note"
+# The generate-notes chrome (tab bar, action row) collapses to height:0 when
+# the keyboard is visible (see generate-notes.tsx `pointerEvents` / `height`
+# animation). Swipe down on the notes list to trigger keyboardDismissMode and
+# let the chrome animate back in before we tap btn-tab-report.
+- swipe:
+    direction: DOWN
+    duration: 500
+- waitForAnimationToEnd
 
-# Tap Generate / Update report. The button testID depends on whether a
-# report already exists: `btn-generate-report` for the first run,
-# `btn-generate-update-report` for re-generation. We wait for either.
+# Tap Generate / Update report. In fixture mode EXPO_PUBLIC_USE_FIXTURES=true
+# the route seeds currentReport = SAMPLE_GENERATED_REPORT so hasReport=true
+# and the ActionRow renders the Finalize button instead — skip generate if
+# neither button is visible and proceed directly to the tabs.
 - runFlow:
     when:
       visible:
@@ -316,28 +347,32 @@ tags:
             id: "report-tab-pane"
           timeout: 30000
 
-# Report tab visible after generation
+# Report tab — fixture mode pre-populates the report, so the tab is ready.
+- extendedWaitUntil:
+    visible:
+      id: "btn-tab-report"
+    timeout: 10000
 - tapOn:
     id: "btn-tab-report"
 - assertVisible:
     id: "report-tab-pane"
 
-# Edit tab: assert the seven section cards exist (meta is at top; the
-# remaining sections live further down the scroll view. Scrolling deep on
-# Android via UIAutomator is flaky inside nested RN ScrollViews, so we
-# only assert the top-level meta card here and let the other six be
-# covered by `screens/generate-edit-tab.test.tsx`.)
-- tapOn:
-    id: "btn-tab-edit"
-- assertVisible:
-    id: "edit-tab-pane"
-- assertVisible:
-    id: "edit-section-meta"
-
-# Finalize confirm dialog → confirm (dialog-action-0). The finalize
-# mutation now navigates to the saved-report view on success.
-- tapOn:
-    id: "btn-tab-report"
+# Edit tab: gated behind a developer flag (showGenerateEditTab defaults off;
+# AsyncStorage is cleared by clearState). Skip if not visible.
+# Full section coverage lives in `screens/generate-edit-tab.test.tsx`.
+- runFlow:
+    when:
+      visible:
+        id: "btn-tab-edit"
+    commands:
+      - tapOn:
+          id: "btn-tab-edit"
+      - assertVisible:
+          id: "edit-tab-pane"
+      - assertVisible:
+          id: "edit-section-meta"
+      - tapOn:
+          id: "btn-tab-report"
 - runFlow:
     when:
       visible:

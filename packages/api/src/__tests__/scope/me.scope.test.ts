@@ -13,10 +13,9 @@
  *      writes (insert) was being applied by the scope, not by chance.
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import pg from 'pg';
 import { sql } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/node-postgres';
-import { startPg, type PgFixture } from '../setup-pg.js';
+import { startPg, seedAuthUsers, type PgFixture } from '../setup-pg.js';
 import { createApp } from '../../app.js';
 import { withScopedConnection } from '../../db/scope.js';
 import { signTestToken } from '../../middleware/auth.js';
@@ -41,19 +40,7 @@ beforeAll(async () => {
   aliceSid = makeSessionId();
   bobSid = makeSessionId();
 
-  const admin = new pg.Client({ connectionString: fx.url });
-  await admin.connect();
-  await admin.query(
-    `INSERT INTO auth.users(id, phone) VALUES ($1, $2), ($3, $4)`,
-    [alice, '+15550200001', bob, '+15550200002'],
-  );
-  // Seed sessions for both so JWTs are valid in spirit (we don't enforce
-  // session-row presence in withAuth yet — see middleware/auth.ts).
-  await admin.query(
-    `INSERT INTO auth.sessions(id, user_id, expires_at) VALUES ($1, $2, now() + interval '7 days'), ($3, $4, now() + interval '7 days')`,
-    [aliceSid, alice, bobSid, bob],
-  );
-  await admin.end();
+  await seedAuthUsers(fx.url, [{ id: alice }, { id: bob }]);
 }, 120_000);
 
 afterAll(async () => {
@@ -66,9 +53,9 @@ describe('scope: /me', () => {
     const token = await signTestToken(alice, aliceSid);
     const res = await app.request('/me', { headers: { authorization: `Bearer ${token}` } });
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { user: { id: string; phone: string } };
+    const body = (await res.json()) as { user: { id: string; email: string } };
     expect(body.user.id).toBe(alice);
-    expect(body.user.phone).toBe('+15550200001');
+    expect(body.user.email).toBe(`${alice}@test.local`);
   });
 
   it('bob GET /me returns bob (and never alice)', async () => {
@@ -76,7 +63,7 @@ describe('scope: /me', () => {
     const token = await signTestToken(bob, bobSid);
     const res = await app.request('/me', { headers: { authorization: `Bearer ${token}` } });
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { user: { id: string; phone: string } };
+    const body = (await res.json()) as { user: { id: string; email: string } };
     expect(body.user.id).toBe(bob);
     expect(body.user.id).not.toBe(alice);
   });
@@ -100,7 +87,7 @@ describe('scope: /me', () => {
     const conn = await getPool().connect();
     try {
       const result = await drizzle(conn, { schema }).execute(
-        sql`SELECT count(*)::int AS count FROM auth.users`,
+        sql`SELECT count(*)::int AS count FROM public."user"`,
       );
       const count = Number((result.rows[0] as { count: number }).count);
       expect(count).toBeGreaterThanOrEqual(2);
@@ -122,7 +109,7 @@ describe('scope: /me', () => {
     const conn = await getPool().connect();
     try {
       const r = await conn.query<{ display_name: string | null }>(
-        `SELECT display_name FROM auth.users WHERE id = $1`,
+        `SELECT display_name FROM public."user" WHERE id = $1`,
         [bob],
       );
       expect(r.rows[0]?.display_name).not.toBe('AliceScopeTest');
@@ -154,12 +141,12 @@ describe('scope: /me', () => {
     const conn = await getPool().connect();
     try {
       const r = await conn.query(
-        `UPDATE auth.users SET display_name = 'UNSCOPED' WHERE id = $1 RETURNING id`,
+        `UPDATE public."user" SET display_name = 'UNSCOPED' WHERE id = $1 RETURNING id`,
         [bob],
       );
       expect(r.rowCount).toBe(1);
       // Restore so other tests aren't affected.
-      await conn.query(`UPDATE auth.users SET display_name = 'Bob' WHERE id = $1`, [bob]);
+      await conn.query(`UPDATE public."user" SET display_name = 'Bob' WHERE id = $1`, [bob]);
     } finally {
       conn.release();
     }

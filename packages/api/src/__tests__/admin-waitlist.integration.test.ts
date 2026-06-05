@@ -9,9 +9,8 @@
  *   - Cache-Control: no-store so signups don't get cached anywhere
  */
 import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest';
-import pg from 'pg';
 import { sql } from 'drizzle-orm';
-import { startPg, type PgFixture } from './setup-pg.js';
+import { startPg, seedAuthUsers, type PgFixture } from './setup-pg.js';
 import { createApp } from '../app.js';
 import { rawDb, resetPool, getPool } from '../db/client.js';
 import { signTestToken } from '../middleware/auth.js';
@@ -32,18 +31,10 @@ beforeAll(async () => {
   regularId = makeUserId();
   adminSid = makeSessionId();
   regularSid = makeSessionId();
-  const admin = new pg.Client({ connectionString: fx.url });
-  await admin.connect();
-  await admin.query(
-    `INSERT INTO auth.users(id, phone, is_admin) VALUES ($1, $2, true), ($3, $4, false)`,
-    [adminId, '+15551400001', regularId, '+15551400002'],
-  );
-  await admin.query(
-    `INSERT INTO auth.sessions(id, user_id, expires_at)
-     VALUES ($1, $2, now() + interval '7 days'), ($3, $4, now() + interval '7 days')`,
-    [adminSid, adminId, regularSid, regularId],
-  );
-  await admin.end();
+  await seedAuthUsers(fx.url, [
+    { id: adminId, isAdmin: true },
+    { id: regularId, isAdmin: false },
+  ]);
 }, 120_000);
 
 afterAll(async () => {

@@ -64,7 +64,7 @@ suite first against the local backend, then against the dev deployment.
   passed with 10b included, and the clean full dev-deployment
   regression passed against `harpa-pro-api-dev` (`gitCommit=9db5b51`,
   project `DevE2E-20260528T204311`, deleted in-flow).
-- Dev deployment should use `/auth/password/verify` test accounts, not
+- Dev deployment should use `/api/auth/sign-in/email` test accounts, not
   fake OTP or real SMS. Keep the password in the CLI/broker; do not
   pass it to Maestro.
 - Verification: focused voice/generate tests pass (`28` tests),

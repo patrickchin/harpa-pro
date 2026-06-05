@@ -17,10 +17,9 @@
  * (CI without docker-in-docker).
  */
 import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
-import pg from 'pg';
 import { HeadObjectCommand } from '@aws-sdk/client-s3';
 
-import { startPg, type PgFixture } from './setup-pg.js';
+import { startPg, seedAuthUsers, type PgFixture } from './setup-pg.js';
 import { startMinio, type MinioFixture } from './helpers/r2-container.js';
 import { makeUserId, makeSessionId } from './factories/index.js';
 
@@ -59,14 +58,7 @@ beforeAll(async () => {
 
   alice = makeUserId();
   aliceSid = makeSessionId();
-  const admin = new pg.Client({ connectionString: pgFx.url });
-  await admin.connect();
-  await admin.query(`INSERT INTO auth.users(id, phone) VALUES ($1, $2)`, [alice, '+15551400001']);
-  await admin.query(
-    `INSERT INTO auth.sessions(id, user_id, expires_at) VALUES ($1, $2, now() + interval '7 days')`,
-    [aliceSid, alice],
-  );
-  await admin.end();
+  await seedAuthUsers(pgFx.url, [{ id: alice }]);
 
   // Late, fresh imports so env.ts reparses against the temporary
   // process.env values above. Crucial: the top-level imports captured
@@ -79,6 +71,14 @@ beforeAll(async () => {
 
 afterAll(async () => {
   if (!ENABLED) return;
+  // The pool the app actually used lives in the module instance
+  // created after `vi.resetModules()` in beforeAll. `pgFx.stop()`
+  // only drains the static-import copy, so we must end the dynamic
+  // copy here too — otherwise its idle connections raise an
+  // unhandled FATAL `57P01` when the container is killed and fail
+  // the test run despite all assertions passing.
+  const { resetPool } = await import('../db/client.js');
+  await resetPool();
   await pgFx?.stop();
   await minio?.stop();
 }, 60_000);

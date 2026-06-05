@@ -30,7 +30,7 @@ describe('journey: cross-member project file attachment', () => {
 
     expect((await app.request(`/projects/${project.id}/members`, {
       method: 'POST', headers: alice.headers,
-      body: JSON.stringify({ phone: bob.phone, role: 'editor' }),
+      body: JSON.stringify({ email: bob.email, role: 'editor' }),
     })).status).toBe(201);
 
     const report = (await (await app.request(`/projects/${project.id}/reports`, {

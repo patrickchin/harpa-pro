@@ -29,10 +29,10 @@ export interface AccountDetailsSkeletonProps {
 const INPUT_HEIGHT = 44;
 // Real text-label token: 0.8125rem / 1rem line height → 16px.
 const LABEL_HEIGHT = 16;
-// Real InlineNotice ("Phone numbers are managed through sign-in…")
-// wraps to ~3 lines of text-sm (lh 20) + py-3 (24) + border (2) on
-// typical phone widths. Set the placeholder to that combined height
-// so the Phone field below doesn't slide up when content arrives.
+// Real InlineNotice ("Email is managed through sign-in…") wraps to
+// ~3 lines of text-sm (lh 20) + py-3 (24) + border (2) on typical
+// phone widths. Set the placeholder to that combined height so the
+// email field below doesn't slide up when content arrives.
 const INFO_NOTICE_HEIGHT = 88;
 // Button size=lg: min-h-touch (44) + py-3.5 (28) + border (2) +
 // text-base lh (~24) clamps to ~54.
@@ -43,7 +43,7 @@ export function AccountDetailsSkeleton({
 }: AccountDetailsSkeletonProps = {}) {
   const onAvatarLayout = useLayoutShiftProbe('account:avatar');
   const onInfoNoticeLayout = useLayoutShiftProbe('account:info-notice');
-  const onPhoneFieldLayout = useLayoutShiftProbe('account:phone-field');
+  const onEmailFieldLayout = useLayoutShiftProbe('account:email-field');
   const onCompanyFieldLayout = useLayoutShiftProbe('account:company-field');
 
   return (
@@ -60,7 +60,7 @@ export function AccountDetailsSkeleton({
         <Skeleton width="100%" height={INFO_NOTICE_HEIGHT} radius={8} />
       </View>
 
-      <View className="gap-2" onLayout={onPhoneFieldLayout}>
+      <View className="gap-2" onLayout={onEmailFieldLayout}>
         <Skeleton width={50} height={LABEL_HEIGHT} />
         <Skeleton width="100%" height={INPUT_HEIGHT} radius={8} />
       </View>

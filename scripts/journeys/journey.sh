@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # End-to-end smoke test for a live API deployment, logging in with the
-# test-account password (`POST /auth/password/verify`). Hits every CRUD
-# surface so a regression in any "boring" endpoint shows up here,
+# test-account password (`POST /api/auth/sign-in/email`). Hits every
+# CRUD surface so a regression in any "boring" endpoint shows up here,
 # including real file uploads (presign → PUT to R2 → register) for an
 # image and a voice recording, plus the voice-note aggregator
 # (transcribe + summarise via live AI).
@@ -15,19 +15,19 @@
 # 1 KB M4A silence).
 #
 # Requires: jq, curl. The target deployment must have
-# `TEST_ACCOUNT_PHONES` and `TEST_ACCOUNT_PASSWORD` set (Doppler `dev`
+# `TEST_ACCOUNT_EMAILS` and `TEST_ACCOUNT_PASSWORD` set (Doppler `dev`
 # does; `prd` does not).
 #
 # Defaults target the dev Fly deployment. Override via env:
 #   BASE=https://harpa-pro-api-dev.fly.dev \
-#   PHONE=+15550199001 \
+#   EMAIL=alice@e2e.harpapro.com \
 #   PASSWORD="$(doppler secrets get TEST_ACCOUNT_PASSWORD \
 #                  --project harpa-pro --config dev --plain)" \
 #     bash scripts/journey.sh
 set -euo pipefail
 
 BASE=${BASE:-https://harpa-pro-api-dev.fly.dev}
-PHONE=${PHONE:-+15550199001}
+EMAIL=${EMAIL:-alice@e2e.harpapro.com}
 : "${PASSWORD:?PASSWORD env var is required (test-account password from Doppler)}"
 
 SAMPLES="$(cd "$(dirname "$0")/../../apps/cli/scripts/samples" && pwd)"
@@ -43,6 +43,16 @@ req() {
   curl -fsS -X "$1" "$BASE$2" "${H[@]}" \
     ${TOKEN:+-H "authorization: Bearer $TOKEN"} \
     ${3:+-d "$3"}
+}
+
+# password_login EMAIL PASSWORD -> echoes the bearer token from the
+# `set-auth-token` response header.
+password_login() {
+  local email="$1" pass="$2"
+  local headers; headers=$(curl -fsS -D - -o /dev/null -X POST \
+    "$BASE/api/auth/sign-in/email" "${H[@]}" \
+    -d "{\"email\":\"$email\",\"password\":\"$pass\"}")
+  printf '%s' "$headers" | awk 'tolower($1)=="set-auth-token:" {print $2}' | tr -d '\r\n'
 }
 
 # upload_file KIND CONTENT_TYPE FILE_PATH
@@ -67,11 +77,11 @@ upload_file() {
 echo "→ healthz";            req GET /healthz '' >/dev/null
 echo "→ readyz";             req GET /readyz  '' >/dev/null
 
-echo "→ password/verify"
-TOKEN=$(req POST /auth/password/verify \
-  "{\"phone\":\"$PHONE\",\"password\":\"$PASSWORD\"}" | j .token)
+echo "→ POST /api/auth/sign-in/email"
+TOKEN=$(password_login "$EMAIL" "$PASSWORD")
+[[ -n "$TOKEN" ]] || { echo "  ✗ no set-auth-token header on sign-in" >&2; exit 1; }
 
-echo "→ GET /me ($(req GET /me '' | j .user.phone))"
+echo "→ GET /me ($(req GET /me '' | j .user.email))"
 echo "→ PATCH /me"
 req PATCH /me '{"displayName":"Journey Bot","companyName":"Journey Co"}' >/dev/null
 echo "→ GET /me/usage";      req GET /me/usage '' >/dev/null
@@ -211,7 +221,7 @@ req DELETE "/projects/$PID/reports/$RNUM" >/dev/null
 echo "→ DELETE /projects/$PID"
 req DELETE "/projects/$PID" >/dev/null
 
-echo "→ POST /auth/logout"
-req POST /auth/logout '' >/dev/null
+echo "→ POST /api/auth/sign-out"
+req POST /api/auth/sign-out '' >/dev/null
 
 echo "✓ done"

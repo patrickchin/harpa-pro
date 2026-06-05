@@ -28,7 +28,7 @@ export interface ProjectRow {
 export interface ProjectMemberRow {
   userId: string;
   displayName: string | null;
-  phone: string;
+  email: string;
   role: ProjectRole;
   joinedAt: string;
 }
@@ -272,38 +272,38 @@ export async function listMembers(db: Db, projectId: string): Promise<ProjectMem
   const r = await db.execute<{
     user_id: string;
     display_name: string | null;
-    phone: string;
+    email: string;
     role: ProjectRole;
     joined_at: Date;
   }>(sql`SELECT * FROM app.list_project_members(${projectId})`);
   return r.rows.map((row) => ({
     userId: row.user_id,
     displayName: row.display_name,
-    phone: row.phone,
+    email: row.email,
     role: row.role,
     joinedAt: new Date(row.joined_at).toISOString(),
   }));
 }
 
-export async function addMemberByPhone(
+export async function addMemberByEmail(
   db: Db,
   projectId: string,
-  phone: string,
+  email: string,
   role: ProjectRole,
 ): Promise<ProjectMemberRow> {
   const r = await db.execute<{
     user_id: string;
     display_name: string | null;
-    phone: string;
+    email: string;
     role: ProjectRole;
     joined_at: Date;
-  }>(sql`SELECT * FROM app.add_project_member_by_phone(${projectId}, ${phone}, ${role}::app.project_role)`);
+  }>(sql`SELECT * FROM app.add_project_member_by_email(${projectId}, ${email}, ${role}::app.project_role)`);
   const row = r.rows[0];
-  if (!row) throw new Error('add_project_member_by_phone returned no row');
+  if (!row) throw new Error('add_project_member_by_email returned no row');
   return {
     userId: row.user_id,
     displayName: row.display_name,
-    phone: row.phone,
+    email: row.email,
     role: row.role,
     joinedAt: new Date(row.joined_at).toISOString(),
   };
@@ -318,7 +318,7 @@ export async function updateMemberRole(
   const r = await db.execute<{
     user_id: string;
     display_name: string | null;
-    phone: string;
+    email: string;
     role: ProjectRole;
     joined_at: Date;
   }>(sql`
@@ -331,7 +331,7 @@ export async function updateMemberRole(
   return {
     userId: row.user_id,
     displayName: row.display_name,
-    phone: row.phone,
+    email: row.email,
     role: row.role,
     joinedAt: new Date(row.joined_at).toISOString(),
   };

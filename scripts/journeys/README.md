@@ -16,8 +16,8 @@ Real binary samples for the voice steps live in
 | Script         | Purpose                                                                                | Live AI  | Cross-user |
 | -------------- | -------------------------------------------------------------------------------------- | -------- | ---------- |
 | `core.sh`      | **Golden happy path** — login → profile → project → report → text/image/voice notes → live transcription (short 10s clip) → generate → finalize → PDF. The one a real user takes on day one. | yes      | no         |
-| `extended.sh`  | **Secondary features + light negatives** — 5 note kinds (text/image/PDF/WAV/M4A), pagination, members invite/role/remove, edit-finalized → 409, 404s on missing resources, project/report slug resolvers, plus a longer live aggregator run on a richer ~4:34 sample. | yes      | yes (PHONE2) |
-| `stress.sh`    | **Abuse & failure modes** — 58 assertions: bad credentials, rate-limit on `/auth/password/verify`, malformed JSON, oversized/zero-byte uploads, cross-user 404s, viewer permission boundaries, double-finalize idempotency, wrong-method 404s, invalid IDs, etc. No live AI. | no       | yes (PHONE2) |
+| `extended.sh`  | **Secondary features + light negatives** — 5 note kinds (text/image/PDF/WAV/M4A), pagination, members invite/role/remove, edit-finalized → 409, 404s on missing resources, project/report slug resolvers, plus a longer live aggregator run on a richer ~4:34 sample. | yes      | yes (EMAIL2) |
+| `stress.sh`    | **Abuse & failure modes** — 58 assertions: bad credentials, rate-limit on `/api/auth/sign-in/email`, malformed JSON, oversized/zero-byte uploads, cross-user 404s, viewer permission boundaries, double-finalize idempotency, wrong-method 404s, invalid IDs, etc. No live AI. | no       | yes (EMAIL2) |
 | `all.sh`       | Runner. Targets `local` / `dev` / `prod` / arbitrary URL. Supports `ONLY=core\|extended\|stress` and `SKIP_STRESS=1`. | — | — |
 | `journey.sh`   | Legacy/reference journey kept for diffing against the newer scripts. Not part of `all.sh`. | yes | no |
 
@@ -44,8 +44,8 @@ bash scripts/journeys/all.sh prod
 | Var                     | Default                              | Notes                                                              |
 | ----------------------- | ------------------------------------ | ------------------------------------------------------------------ |
 | `PASSWORD`              | —                                    | **Required.** Test-account password.                               |
-| `PHONE`                 | `+15550199001`                       | Primary test account (in dev's `TEST_ACCOUNT_PHONES`).             |
-| `PHONE2`                | `+15550199002`                       | Secondary test account for cross-user / member tests.              |
+| `EMAIL`                 | `alice@e2e.harpapro.com`               | Primary test account (in dev's `TEST_ACCOUNT_EMAILS`).             |
+| `EMAIL2`                | `bob@e2e.harpapro.com`                 | Secondary test account for cross-user / member tests.              |
 | `VOICE_M4A`             | `samples/real/rain.m4a`     | Voice sample for `core.sh` / `journey.sh`.                         |
 | `VOICE_DURATION_SEC`    | `10`                                 | Reported duration for the voice aggregator call.                   |
 | `VOICE_LONG`            | `samples/real/framing.m4a` | Longer aggregator sample used by `extended.sh`.                |
@@ -54,14 +54,14 @@ bash scripts/journeys/all.sh prod
 ## Test accounts
 
 Configured via Doppler in the API project's `dev` config under
-`TEST_ACCOUNT_PHONES` (CSV) + `TEST_ACCOUNT_PASSWORD`. Currently:
+`TEST_ACCOUNT_EMAILS` (CSV) + `TEST_ACCOUNT_PASSWORD`. Currently:
 
-- `+15550199001`
-- `+15550199002`
+- `alice@e2e.harpapro.com`
+- `bob@e2e.harpapro.com`
 
 Production deliberately has no test accounts (`TEST_ACCOUNT_PASSWORD`
 unset), so cross-user steps in `extended.sh` / `stress.sh` skip
-gracefully when only one phone resolves.
+gracefully when only one email resolves.
 
 ## Caveats discovered while writing these
 

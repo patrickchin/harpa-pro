@@ -2,7 +2,8 @@
  * CLI.5 — `harpa projects members` integration tests.
  *
  * Default-wiring (Pitfall 13): commands go through the real `createApiClient`
- * + `app.fetch`.
+ * + `app.fetch`. better-auth bearer tokens are opaque, so we resolve member
+ * userIds via `/me` instead of decoding the JWT (which they aren't).
  */
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import { Writable } from 'node:stream';
@@ -15,6 +16,7 @@ import { projectsCreate } from '../commands/projects.js';
 import { membersList, membersAdd, membersRemove } from '../commands/members.js';
 import { EXIT } from '../lib/error.js';
 import type { CliEnv } from '../lib/env.js';
+import { readLatestOtp } from './_helpers.js';
 
 let fx: PgFixture;
 let app: ReturnType<typeof createApp>;
@@ -22,6 +24,10 @@ let ownerToken: string;
 let memberToken: string;
 let memberUserId: string;
 let projectId: string;
+
+const OWNER_EMAIL = 'cli-tests-owner@e2e.harpapro.com';
+const MEMBER_EMAIL = 'cli-tests-member@e2e.harpapro.com';
+const OUTSIDER_EMAIL = 'cli-tests-outsider@e2e.harpapro.com';
 
 class MemoryStream extends Writable {
   chunks: string[] = [];
@@ -34,28 +40,36 @@ class MemoryStream extends Writable {
   }
 }
 
+const appFetch: typeof fetch = (input, init) => {
+  const req = input instanceof Request ? input : new Request(input as string, init);
+  return app.fetch(req);
+};
+
 function makeClient(t?: string) {
   const env: CliEnv = {
     HARPA_API_URL: 'http://localhost',
     HARPA_DEBUG: '0',
     ...(t ? { HARPA_TOKEN: t } : {}),
   };
-  return createApiClient(env, {
-    fetch: (input: RequestInfo | URL, init?: RequestInit) => {
-      const req = input instanceof Request ? input : new Request(input, init);
-      return app.fetch(req);
-    },
-  });
+  return createApiClient(env, { fetch: appFetch });
 }
 
-async function signIn(phone: string): Promise<string> {
+async function signIn(email: string): Promise<string> {
   const sink = new MemoryStream();
-  await authOtpStart({ client: makeClient(), phone, stdout: sink, stderr: sink });
+  await authOtpStart({
+    apiUrl: 'http://localhost',
+    fetch: appFetch,
+    email,
+    stdout: sink,
+    stderr: sink,
+  });
+  const code = await readLatestOtp(email);
   const out = new MemoryStream();
   await authOtpVerify({
-    client: makeClient(),
-    phone,
-    code: '000000',
+    apiUrl: 'http://localhost',
+    fetch: appFetch,
+    email,
+    code,
     raw: true,
     stdout: out,
     stderr: sink,
@@ -70,14 +84,13 @@ beforeAll(async () => {
   getPool(fx.url);
   app = createApp();
 
-  ownerToken = await signIn('+15551000010');
-  memberToken = await signIn('+15551000011');
+  ownerToken = await signIn(OWNER_EMAIL);
+  memberToken = await signIn(MEMBER_EMAIL);
 
-  // Decode userId from the JWT payload (sub claim).
-  const payload = JSON.parse(
-    Buffer.from(memberToken.split('.')[1], 'base64url').toString('utf8'),
-  );
-  memberUserId = payload.sub;
+  // Resolve member's userId via /me (better-auth bearer is opaque, not a JWT).
+  const meRes = await makeClient(memberToken).GET('/me');
+  if (!meRes.data) throw new Error(`failed to load /me for member: ${meRes.response.status}`);
+  memberUserId = meRes.data.user.id;
 
   // Create a project owned by ownerToken.
   const out = new MemoryStream();
@@ -125,7 +138,7 @@ describe('harpa projects members', () => {
     let exit = await membersAdd({
       client: makeClient(ownerToken),
       projectId,
-      phone: '+15551000011',
+      email: MEMBER_EMAIL,
       role: 'editor',
       json: true,
       stdout: addOut,
@@ -148,7 +161,6 @@ describe('harpa projects members', () => {
     const page = JSON.parse(listOut.text);
     expect(page.items.some((m: { userId: string }) => m.userId === memberUserId)).toBe(true);
 
-    // Member can list members of the project they belong to.
     const memberListOut = new MemoryStream();
     exit = await membersList({
       client: makeClient(memberToken),
@@ -159,19 +171,17 @@ describe('harpa projects members', () => {
     });
     expect(exit).toBe(EXIT.OK);
 
-    // Remove (204).
     const removeOut = new MemoryStream();
     exit = await membersRemove({
       client: makeClient(ownerToken),
       projectId,
-      phone: '+15551000011',
+      email: MEMBER_EMAIL,
       stdout: removeOut,
       stderr,
     });
     expect(exit).toBe(EXIT.OK);
     expect(removeOut.text).toMatch(/Removed/);
 
-    // After removal the member can no longer list.
     exit = await membersList({
       client: makeClient(memberToken),
       projectId,
@@ -182,11 +192,10 @@ describe('harpa projects members', () => {
   });
 
   it('non-owner cannot add a member (403 or 404)', async () => {
-    // Re-add the member first so they're inside the project as editor.
     await membersAdd({
       client: makeClient(ownerToken),
       projectId,
-      phone: '+15551000011',
+      email: MEMBER_EMAIL,
       role: 'editor',
       stdout: new MemoryStream(),
       stderr: new MemoryStream(),
@@ -195,7 +204,7 @@ describe('harpa projects members', () => {
     const exit = await membersAdd({
       client: makeClient(memberToken),
       projectId,
-      phone: '+15551000099',
+      email: OUTSIDER_EMAIL,
       role: 'editor',
       stdout,
       stderr,
@@ -207,7 +216,7 @@ describe('harpa projects members', () => {
     const exit = await membersAdd({
       client: makeClient(ownerToken),
       projectId,
-      phone: '+15551000022',
+      email: OUTSIDER_EMAIL,
       // @ts-expect-error - intentionally invalid for runtime test
       role: 'admin',
       stdout,

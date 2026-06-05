@@ -1,114 +1,38 @@
 /**
- * Auth service — phone-OTP flow.
+ * Profile + usage queries for `routes/me.ts`. Carved out of the
+ * pre-better-auth `auth/service.ts` (which conflated OTP/JWT/JWT-flow
+ * with the read paths). The OTP/JWT bits are gone; what remains here
+ * is purely the SELECT/UPDATE surface against `public."user"` and the
+ * usage tables — all of which run through the per-request scoped
+ * accessor (`c.get('db')(fn)`), so RLS is what isolates one user's
+ * rows from another's.
  *
- * `startOtp` and `verifyOtp` are pure functions over a `TwilioClient` and a
- * raw drizzle handle, so they're easy to test without standing up Hono.
- * Route handlers in `src/routes/auth.ts` are thin wrappers around these.
+ * `email` replaces `phone` in `PublicUser` per the better-auth schema.
+ * `displayName`/`companyName` are still user-updatable; `email` /
+ * `is_admin` / `plan` are read-only from the app role's POV (see the
+ * `user_self_update` policy in migration 0014).
  */
 import { eq } from 'drizzle-orm';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { sql } from 'drizzle-orm';
 import * as schema from '../db/schema.js';
-import { newId } from '../lib/ids.js';
-import type { TwilioClient } from './twilio.js';
-import { signJwt } from './jwt.js';
 
 type Db = NodePgDatabase<typeof schema>;
 
-const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
-
 export interface PublicUser {
   id: string;
-  phone: string;
+  email: string;
   displayName: string | null;
   companyName: string | null;
   createdAt: string;
 }
 
-export interface StartOtpResult {
-  verificationId: string;
-}
-
-export interface VerifyOtpResult {
-  token: string;
-  user: PublicUser;
-}
-
-export async function startOtp(
-  twilio: TwilioClient,
-  db: Db,
-  phone: string,
-): Promise<StartOtpResult> {
-  const { verificationId } = await twilio.start(phone);
-  await db
-    .insert(schema.verifications)
-    .values({ id: newId('vrf'), phone, twilioVerificationSid: verificationId });
-  return { verificationId };
-}
-
-/**
- * Upsert the user for `phone`, create a session row, and mint a JWT.
- * Shared by the OTP flow and the test-account password bypass — both
- * are equivalent once the caller has been authenticated by some other
- * means (Twilio OTP / shared password / future SSO).
- */
-export async function issueSessionForPhone(
-  db: Db,
-  phone: string,
-): Promise<VerifyOtpResult> {
-  const existing = await db.select().from(schema.users).where(eq(schema.users.phone, phone)).limit(1);
-  const user =
-    existing[0] ??
-    (await db
-      .insert(schema.users)
-      .values({ id: newId('usr'), phone })
-      .returning()
-      .then((r) => r[0]));
-  if (!user) throw new Error('user upsert failed');
-
-  const expiresAt = new Date(Date.now() + SESSION_TTL_MS);
-  const sessionRows = await db
-    .insert(schema.sessions)
-    .values({ id: newId('ses'), userId: user.id, expiresAt })
-    .returning({ id: schema.sessions.id });
-  const session = sessionRows[0];
-  if (!session) throw new Error('session insert failed');
-
-  const token = await signJwt({ sub: user.id, sid: session.id });
-  return { token, user: toPublicUser(user) };
-}
-
-export async function verifyOtp(
-  twilio: TwilioClient,
-  db: Db,
-  phone: string,
-  code: string,
-): Promise<VerifyOtpResult> {
-  const { approved } = await twilio.check(phone, code);
-  if (!approved) {
-    throw new OtpVerificationError('otp_invalid', 'Invalid verification code.');
-  }
-
-  // Mark verification consumed (most recent unconsumed row for this phone).
-  await db.execute(sql`
-    UPDATE auth.verifications
-    SET consumed_at = now()
-    WHERE id = (
-      SELECT id FROM auth.verifications
-      WHERE phone = ${phone} AND consumed_at IS NULL
-      ORDER BY created_at DESC LIMIT 1
-    )
-  `);
-
-  return issueSessionForPhone(db, phone);
-}
-
-export async function logout(db: Db, sessionId: string): Promise<void> {
-  await db.delete(schema.sessions).where(eq(schema.sessions.id, sessionId));
-}
-
 export async function fetchUser(db: Db, userId: string): Promise<PublicUser | null> {
-  const rows = await db.select().from(schema.users).where(eq(schema.users.id, userId)).limit(1);
+  const rows = await db
+    .select()
+    .from(schema.users)
+    .where(eq(schema.users.id, userId))
+    .limit(1);
   const u = rows[0];
   return u ? toPublicUser(u) : null;
 }
@@ -120,10 +44,10 @@ export interface UpdateUserInput {
 
 /**
  * Self-update for /me. The scope wrapper does not let one user mutate
- * `auth.users` rows other than their own (only SELECT is granted on
- * `auth.users` to `app_authenticated`); this helper runs against a
- * pre-fetched id and returns the row through the scoped handle so the
- * RLS path stays exercised on writes.
+ * `public."user"` rows other than their own — only `display_name` /
+ * `company_name` / `updated_at` are GRANTed to `app_authenticated`,
+ * and the `user_self_update` policy further restricts the set to the
+ * caller's row.
  */
 export async function updateUser(
   db: Db,
@@ -131,7 +55,7 @@ export async function updateUser(
   input: UpdateUserInput,
 ): Promise<PublicUser | null> {
   await db.execute(sql`
-    UPDATE auth.users
+    UPDATE public."user"
     SET
       display_name = COALESCE(${input.displayName ?? null}, display_name),
       company_name = COALESCE(${input.companyName ?? null}, company_name),
@@ -142,7 +66,7 @@ export async function updateUser(
 }
 
 export interface UsageMonth {
-  month: string; // YYYY-MM
+  month: string;
   reports: number;
   voiceNotes: number;
 }
@@ -152,7 +76,6 @@ export interface UsageTokenMonth {
   inputTokens: number;
   outputTokens: number;
   cachedTokens: number;
-  /** Sum of transcribe audio seconds for the month. */
   inputSeconds: number;
   calls: number;
 }
@@ -165,7 +88,6 @@ export interface UsageByModelRow {
   inputTokens: number;
   outputTokens: number;
   cachedTokens: number;
-  /** Sum of transcribe audio seconds. 0 for non-transcribe rows. */
   inputSeconds: number;
 }
 
@@ -184,16 +106,6 @@ export interface UsageSummary {
   usageByModel: UsageByModelRow[];
 }
 
-/**
- * Per-month counts (reports + voice notes) AND per-month LLM token
- * totals + a per-(vendor,model,operation) breakdown across the full
- * window. All queries pin on `author_id = userId` / `user_id = userId`;
- * the RLS path on each table (`app.reports`, `app.notes`,
- * `app.llm_usage_events`) excludes other actors as defence-in-depth.
- *
- * Only `status='ok'` usage events count toward token totals — error
- * rows are recorded for postmortem visibility but shouldn't bill.
- */
 export async function fetchUsage(db: Db, userId: string): Promise<UsageSummary> {
   const reportsRes = await db.execute<{ month: string; count: string }>(sql`
     SELECT to_char(created_at, 'YYYY-MM') AS month, count(*)::text AS count
@@ -296,7 +208,6 @@ export async function fetchUsage(db: Db, userId: string): Promise<UsageSummary> 
   return { months, totals, usageTokens, usageByModel };
 }
 
-/** Round seconds to 3dp to match the column scale and avoid noisy floats. */
 function roundSeconds(v: number | string): number {
   const n = typeof v === 'number' ? v : Number(v);
   if (!Number.isFinite(n) || n <= 0) return 0;
@@ -338,18 +249,6 @@ function decodeUsageCursor(c: string): { createdAt: string; id: string } {
   return { createdAt, id };
 }
 
-/**
- * Raw events timeline for `/me/usage/events` — newest first.
- *
- * Pagination is keyset on `(created_at DESC, id DESC)`. RLS on
- * `app.llm_usage_events` already restricts SELECT to the caller's own
- * rows; the `user_id = ${userId}` predicate is defence-in-depth so a
- * mis-scoped handle still returns nothing.
- *
- * `status` is not filtered here (unlike `fetchUsage` which sums
- * `status='ok'` only) — the events feed surfaces failed calls too so
- * users can see provider blow-ups in the timeline.
- */
 export async function listUsageEvents(
   db: Db,
   userId: string,
@@ -363,25 +262,27 @@ export async function listUsageEvents(
     : sql``;
   const vendorFilter = vendor ? sql`AND vendor = ${vendor}` : sql``;
 
+  type Row = {
+    id: string;
+    created_at: string;
+    vendor: string;
+    model: string;
+    operation: 'chat' | 'transcribe' | 'generate_report';
+    input_tokens: string;
+    output_tokens: string;
+    cached_tokens: string;
+    input_seconds: string | null;
+    latency_ms: string;
+    fixture_mode: 'live' | 'replay' | 'record';
+    status: 'ok' | 'error';
+    project_id: string | null;
+    report_id: string | null;
+  };
+
   let result;
   if (cursor) {
     const { createdAt, id } = decodeUsageCursor(cursor);
-    result = await db.execute<{
-      id: string;
-      created_at: string;
-      vendor: string;
-      model: string;
-      operation: 'chat' | 'transcribe' | 'generate_report';
-      input_tokens: string;
-      output_tokens: string;
-      cached_tokens: string;
-      input_seconds: string | null;
-      latency_ms: string;
-      fixture_mode: 'live' | 'replay' | 'record';
-      status: 'ok' | 'error';
-      project_id: string | null;
-      report_id: string | null;
-    }>(sql`
+    result = await db.execute<Row>(sql`
       SELECT id, created_at, vendor, model, operation,
              input_tokens::text, output_tokens::text, cached_tokens::text,
              input_seconds::text AS input_seconds,
@@ -396,22 +297,7 @@ export async function listUsageEvents(
       LIMIT ${overFetch}
     `);
   } else {
-    result = await db.execute<{
-      id: string;
-      created_at: string;
-      vendor: string;
-      model: string;
-      operation: 'chat' | 'transcribe' | 'generate_report';
-      input_tokens: string;
-      output_tokens: string;
-      cached_tokens: string;
-      input_seconds: string | null;
-      latency_ms: string;
-      fixture_mode: 'live' | 'replay' | 'record';
-      status: 'ok' | 'error';
-      project_id: string | null;
-      report_id: string | null;
-    }>(sql`
+    result = await db.execute<Row>(sql`
       SELECT id, created_at, vendor, model, operation,
              input_tokens::text, output_tokens::text, cached_tokens::text,
              input_seconds::text AS input_seconds,
@@ -455,30 +341,12 @@ export async function listUsageEvents(
   };
 }
 
-export async function sessionIsValid(db: Db, sessionId: string): Promise<boolean> {
-  const rows = await db
-    .select({ id: schema.sessions.id, expiresAt: schema.sessions.expiresAt })
-    .from(schema.sessions)
-    .where(eq(schema.sessions.id, sessionId))
-    .limit(1);
-  const s = rows[0];
-  if (!s) return false;
-  return s.expiresAt.getTime() > Date.now();
-}
-
 function toPublicUser(u: typeof schema.users.$inferSelect): PublicUser {
   return {
     id: u.id,
-    phone: u.phone,
+    email: u.email,
     displayName: u.displayName,
     companyName: u.companyName,
     createdAt: u.createdAt.toISOString(),
   };
-}
-
-export class OtpVerificationError extends Error {
-  constructor(public code: string, message: string) {
-    super(message);
-    this.name = 'OtpVerificationError';
-  }
 }

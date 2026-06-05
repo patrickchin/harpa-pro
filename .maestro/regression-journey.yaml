@@ -6,9 +6,9 @@ tags:
 # Full regression journey
 #
 # Sequence:
-#   1. Auth — sign up alice, sign out, sign in
+#   1. Auth — sign in alice (auto-create + onboard), sign out, sign in
 #   2. Projects CRUD — create, edit
-#   3. Members invite — alice invites bob as Editor (signs bob up too)
+#   3. Members invite — alice invites bob as Editor (creates bob too)
 #   4. Members permissions — bob verifies editor access
 #   5. Members viewer — alice downgrades bob; bob loses edit buttons
 #   6. Members remove — alice removes bob; bob can't see project
@@ -27,22 +27,27 @@ tags:
 #
 # Local pre-condition: clean database. Run `docker compose down -v &&
 # docker compose up` locally to reset between runs. Alice
-# (+15550000001) and Bob (+15550000002) are created via the normal
-# sign-up flow as part of the journey; no API backdoors needed.
+# (alice@e2e.harpapro.com) and Bob (bob@e2e.harpapro.com) are created via the
+# normal email-OTP sign-in flow as part of the journey (better-auth's
+# emailOtp plugin auto-creates the user on first verify); no API
+# backdoors needed.
 #
-# OTP code: `000000` (TWILIO_VERIFY_FAKE_CODE default, accepted when
-# TWILIO_LIVE=0 — the default for local dev).
+# OTP delivery: better-auth persists each OTP to `public.verification`,
+# and `helpers/sign-in.yaml` reads it back via `POST /api/dev/last-otp`
+# (only mounted when `NODE_ENV !== 'production'`). No real email is
+# sent in fixture/dev modes.
 #
 # Dev-deployment target: after local passes, run equivalent coverage
 # against harpa-pro-api-dev using the test-account password bypass
-# (`POST /auth/password/verify`) and non-destructive per-run cleanup.
-# The current sign-up/OTP helpers are local-only until that target mode
-# exists.
+# (`POST /api/auth/sign-in/email` with the allowlisted password) and
+# non-destructive per-run cleanup. The current sign-in/OTP helpers
+# read `/api/dev/last-otp`, which is mounted on the dev deployment
+# too — both paths are wired.
 
-# ── 1. Auth (sign-up alice + sign-out + sign-in) ─────────────────────────
+# ── 1. Auth (sign-in alice + sign-out + sign-in round-trip) ──────────────
 - runFlow: modules/01-auth.yaml
 
-# ── 1b. Sign-up bob (must exist before alice can invite him) ──────────────
+# ── 1b. Create bob (must exist before alice can invite him) ──────────────
 - runFlow: modules/01b-signup-bob.yaml
 
 # ── 2. Projects CRUD ──────────────────────────────────────────────────────

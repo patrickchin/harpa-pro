@@ -14,7 +14,7 @@ import chalk from 'chalk';
 
 export interface UserLike {
   id: string;
-  phone: string;
+  email: string;
   displayName: string | null;
   companyName: string | null;
   createdAt: string;
@@ -24,7 +24,7 @@ export function renderUser(user: UserLike): string {
   const name = user.displayName ?? chalk.dim('(no display name)');
   const company = user.companyName ?? chalk.dim('(no company)');
   return [
-    `${chalk.bold(name)} ${chalk.dim(`<${user.phone}>`)}`,
+    `${chalk.bold(name)} ${chalk.dim(`<${user.email}>`)}`,
     `  Company:   ${company}`,
     `  Joined:    ${user.createdAt}`,
   ].join('\n');
@@ -240,7 +240,7 @@ export function renderNoteList(
 export interface MemberLike {
   userId: string;
   displayName: string | null;
-  phone: string;
+  email: string;
   role: 'owner' | 'editor' | 'viewer';
   joinedAt: string;
 }
@@ -248,7 +248,7 @@ export interface MemberLike {
 export function renderMember(m: MemberLike): string {
   const name = m.displayName ?? chalk.dim('(no display name)');
   return [
-    `${chalk.bold(name)} ${chalk.dim(`<${m.phone}>`)} ${chalk.dim(`(${m.role})`)}`,
+    `${chalk.bold(name)} ${chalk.dim(`<${m.email}>`)} ${chalk.dim(`(${m.role})`)}`,
     `  Joined:   ${m.joinedAt}`,
   ].join('\n');
 }
@@ -259,7 +259,7 @@ export function renderMemberList(page: { items: MemberLike[] }): string {
   }
   const rows = page.items.map((m) => {
     const name = m.displayName ?? chalk.dim('(no name)');
-    return `  ${chalk.bold(name).padEnd(30)}  ${m.role.padEnd(6)}  ${chalk.dim(m.phone)}`;
+    return `  ${chalk.bold(name).padEnd(30)}  ${m.role.padEnd(6)}  ${chalk.dim(m.email)}`;
   });
   return [chalk.bold('Members:'), ...rows].join('\n');
 }

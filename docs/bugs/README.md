@@ -134,7 +134,7 @@ The factory is, in effect, untested. Two recurrence vectors:
 
 1. Helper functions like `setWaitlistClients({ turnstile, resend })`
    make injection so cheap that every test does it.
-2. Fake-mode helpers (`fakeTurnstile`, `fakeR2`, fake-Twilio) accept
+2. Fake-mode helpers (`fakeTurnstile`, `fakeR2`, fake-Resend) accept
    only a hand-crafted token shape (`tt-…`, `fake-…`) that real-world
    widgets never produce, so dev / mock builds silently fail closed.
 
@@ -159,19 +159,19 @@ Mitigation:
 ### R6 — owner-demotion via re-invite (implicit upsert on POST /members)
 
 A `POST /projects/{project}/members` handler that uses `INSERT … ON CONFLICT DO
-UPDATE` (upsert) lets an owner call the endpoint with their own phone number
+UPDATE` (upsert) lets an owner call the endpoint with their own email
 and a lower role (`viewer`, `editor`), silently demoting themselves. If they
 are the sole owner this locks the project out of all owner-only operations
 (member management, project delete) with no recovery path short of a DB patch.
 
-**Protection.** `app.add_project_member_by_phone` uses an explicit `IF EXISTS`
+**Protection.** `app.add_project_member_by_email` uses an explicit `IF EXISTS`
 guard and raises `23505` ("already_member") mapped to 409 `MEMBER_EXISTS`.
 Role changes must go through `PATCH /projects/{project}/members/{user}` (a
 separate, explicitly guarded endpoint). Full design in
 [`docs/v4/arch-project-members.md`](../v4/arch-project-members.md).
 
 **Test that must exist.** S3 in the members integration suite: owner A calls
-`POST` with their own phone → asserts 409 `MEMBER_EXISTS`, then confirms
+`POST` with their own email → asserts 409 `MEMBER_EXISTS`, then confirms
 `GET /members` still shows A as `owner`.
 
 ---
@@ -194,6 +194,31 @@ build-time `MIGRATIONS_REQUIRED_HEAD`). Return 503 on any mismatch
 so the LB takes the machine out of rotation and Fly's auto-rollback
 engages. See `docs/v4/arch-cicd-and-migrations.md`.
 
+### R8 — Wildcard injection through `LIKE` on user-supplied input
+
+A helper that does `WHERE col LIKE '%' || $1 || '%'` against an input
+that flows straight from a JSON body / query string is a wildcard
+injection vector even though the SQL itself is parameterised:
+parameterisation only stops *syntactic* injection. A single request
+with `$1 = '%'` matches every row; a request with a substring of a
+real value matches any row whose key happens to contain it
+(`alice@e.com` matches `bob+alice@e.com.evil`). Recurrence vectors:
+
+1. Test / dev introspection helpers that reach for `LIKE` because the
+   author has only the email half of the stored key and doesn't know
+   (or hasn't checked) the prefix the framework actually wrote.
+2. "Safe enough" because the route is behind a `NODE_ENV !==
+   'production'` gate — but a single mis-set Doppler variable, a
+   `HARPAPRO_PR_BUILD='1'` typo on prod, or a future build that ships
+   dev code by accident exposes it.
+
+Mitigation: construct the full key server-side and exact-match
+(`WHERE identifier = 'sign-in-otp-' || $1`); if the schema makes that
+impossible, escape `%` and `_` in the input before concatenation AND
+treat the route as if it were public — shared-secret header,
+allowlist regex on the input shape, audit log, uniform 404. See
+[Pitfall 20](../v4/pitfalls.md#pitfall-20--dev-only-routes-need-defence-in-depth-not-a-node_env-gate).
+
 ## Bugs
 
 Most recent first. One line per bug — open the linked file only for the full root-cause / test / commit write-up.
@@ -203,6 +228,7 @@ Most recent first. One line per bug — open the linked file only for the full r
 - **2026-06-06** *(R5)* — Structural follow-up to the four R5 incidents on the report path in two weeks: widened every numeric / enum-ish leaf in `reportBody` to `string | null` (`weather.temperatureC`, `weather.windKph`, `workers[].count`, `workers[].hours`, `materials[].quantity`, `issues[].severity`). Data is fundamentally text extracted from a voice transcript; the schema now accepts whatever the LLM emits (`"4"`, `"a few"`, `"around 20"`, `"12 m³"`, `"Critical"`) and the 1–2 consumers that need a number parse on read (`toNum()`, `Number.parseFloat`) with explicit 0-fallback. The PR #133 drift guard auto-adapts (now generates `str|null` assertions); the live lane stays as a value-shape safety net. [detail](2026-06-06-report-body-string-wire.md)
 - **2026-06-05** *(R5)* — Android voice-note recordings produced 8 kHz AMR-NB inside an `.m4a` extension instead of the AAC-LC m4a the `arch-voice-pipeline.md` §D5 contract promises (HARPA-PRO-D in Sentry: Groq Whisper rejected a 2:27 clip with HTTP 500; shorter Android clips happened to "work" by accident on an unsupported codec). `expo-audio`'s nested `{ android: { audioEncoder: 'aac' } }` is only flattened by the JS shim on `prepareToRecordAsync()`; we were passing it to the `AudioRecorder` constructor instead, where the bridge dropped the nested keys and the native side fell through to `MediaRecorder.AudioEncoder.DEFAULT` = AMR-NB. Fixture recorder + iOS-sim coverage masked it — the bug only existed on real Android. Fix: move the platform-options object from the constructor call to `prepareToRecordAsync()` in `expoAudioRecorder.ts`.
 - **2026-06-05** *(R5)* — `workers[].count` was strict `z.number().int().nonnegative()`, so /reports/:n/regenerate 502'd whenever notes mentioned a role without a specific headcount and the LLM emitted `count: null` (HARPA-PRO-6, dev + 1 prod hit on `0.1.5+6dc0bd5`). Replay fixtures all carried integer counts so unit tests stayed green. Fix: widen the contract field to `.nullable()` (mirrors `hours`); update both prompts to advertise `"count": int>=0|null` with an explicit "use null when unknown" rule; extend the offline drift guard to assert the prompt's nullability hint (not just the field name); harden the adapter `totalWorkers` reduction with `?? 0`; rehash report fixtures. **Superseded structurally by the 2026-06-06 entry above.** [detail](2026-06-05-workers-count-non-nullable.md)
+- **2026-06-04** *(R8)* — `POST /api/dev/last-otp` and its in-process CLI/journey twins looked up the latest OTP with `WHERE identifier LIKE '%email%'`. A request with `{"email":"%"}` returned the most recent OTP issued to any registered user — full session takeover for anyone who could reach the route, with `NODE_ENV !== 'production'` as the only gate. Substring oracle on top: `alice@…` matches `bob+alice@….evil`. Fix: rewrite the route with shared-secret header (`x-dev-otp-token`, constant-time compare), `@e2e.harpapro.com` allowlist regex, exact identifier match (`= 'sign-in-otp-' || $1`), audit log, uniform 404; gate mount on `env.DEV_OTP_TOKEN`; env-Zod refines reject the token on prod. Same exact-match fix in `_helpers.ts` + `_login.ts`. New integration test exercises every reject path. [detail](2026-06-04-dev-otp-like-wildcard-oracle.md)
 - **2026-05-30** — Voice-note transcript dialog wouldn't scroll: `AppDialogSheet` wrapped its sheet body in a `Pressable` (to absorb backdrop-dismiss taps), and a `Pressable` parent steals pan gestures from a nested `ScrollView` via the responder-capture phase, so the `ScrollView` in the "View transcript" stage in `NoteOptionsSheet` could never scroll long transcripts. Fix: replace the inner `Pressable` with a `View` that uses `onStartShouldSetResponder={() => true}` to consume taps without using capture, plus `nestedScrollEnabled` + `keyboardShouldPersistTaps="handled"` on the transcript `ScrollView`.
 - **2026-05-29** *(R5)* — Mobile AI model picker was UI-only: it persisted `{vendor, model}` to AsyncStorage but never sent it to the API, so `/generate` and `/voice/summarize` always ran the server default regardless of what the user picked. Picker tests mocked AsyncStorage; `/generate` tests always supplied explicit overrides — default wiring untested. Fix: `/settings/ai` becomes the single source of truth (contract whitelist `AI_MODELS`, paired-nullable shape); routes read user pick via `getAiSettings()` and pass `userVendor`/`userModel` into `runGenerate()` + `aiSummarize()`; mobile `useAiProvider` rewritten as TanStack Query reader/writer; Developer screen becomes single-step picker with leading "Default" row that clears the override; live test asserts `result.model === 'gpt-4.1-mini'` end-to-end. [detail](2026-05-29-mobile-model-picker-dead-wired.md)
 - **2026-05-29** *(R5)* — Generate Report on `harpa-pro-api-dev` took 47–87s end-to-end because the canonical was pinned to `kimi-k2.6`, a reasoning model that emits chain-of-thought tokens before the JSON. Bench against the real REPORT_SYSTEM_PROMPT showed gpt-4o p50=5s, groq/llama-3.3-70b p50=1.4s. Fix: pin canonical to `openai/gpt-4o`; update `record.ts` canonical request literals to match; re-record voice-{1..5} fixtures; hand-patch + rehash `generate-report.update.json`; switch the live test from `KIMI_API_KEY` to `OPENAI_API_KEY` and lower `vitest.live.config.ts` timeout from 180s → 60s. [detail](2026-05-29-kimi-k26-too-slow-for-report-generation.md)
@@ -223,7 +249,7 @@ Most recent first. One line per bug — open the linked file only for the full r
 - **2026-05-17** *(R5)* — Invite-member form auto-closed on submit, hiding the API error, because `if (!addError) setShowAdd(false)` read stale state in the event handler. Fix: drive the close from the route via an `addSuccessNonce` effect. [detail](2026-05-17-invite-form-auto-close-on-error.md)
 - **2026-05-17** *(R5)* — "Edit manually" switched tabs but left an empty Edit tab: route never passed `onSetReport`, so `editManually`'s seed-empty-report fallback short-circuited. Fix: wire `onSetReport={setGeneratedReport}` from the route. [detail](2026-05-17-edit-manually-missing-onsetreport.md)
 - **2026-05-15** *(R5)* — Every lucide icon rendered as the brand placeholder because `react-native-svg` peer dep was never installed; unit snapshots passed since SVG primitives aren't resolved. Fix: `expo install react-native-svg` + screenshot smoke flow. [detail](2026-05-15-lucide-icons-react-native-svg-missing.md)
-- **2026-05-15** *(R5)* — `/auth/logout` deletes the session row but the JWT keeps authenticating: `withAuth()` only checks signature/expiry, not `auth.sessions`. Test asserted DB deletion, not the contract. Fix pending: validate `sid` against `auth.sessions` (or move to opaque tokens). [detail](2026-05-15-logout-jwt-not-revoked.md)
+- **2026-05-15** *(R5)* — `/api/auth/sign-out` deletes the session row but the JWT keeps authenticating: `withAuth()` only checks signature/expiry, not `auth.sessions`. Test asserted DB deletion, not the contract. **Resolved by the better-auth migration** — sessions are now validated against `public.session` on every request, so deleting the session row revokes the bearer immediately. [detail](2026-05-15-logout-jwt-not-revoked.md)
 - **2026-05-15** *(R6)* — `auth.test.ts > rejects a tampered token` flaked ~6%: flipping the final base64url char of an HS256 signature is a no-op when chars share top-4 bits (A↔B↔C↔D). Fix: tamper the payload segment instead — every bit is significant. [detail](2026-05-15-auth-tampered-token-base64-flake.md)
 - **2026-05-14** *(R5)* — Waitlist returned 202 with empty DB: `fakeTurnstile()` only accepted `tt-…` tokens while the real widget emits Cloudflare-format tokens; every test stubbed Turnstile so the default factory was untested. Fix: accept any non-empty token + default-wiring integration test. [detail](2026-05-14-fake-turnstile-magic-token.md)
 - **2026-05-13** *(R4)* — Colocating `_layout.test.tsx` inside `app/` pulled `vitest` → `@vitest/runner/utils` → `chai` into the Metro bundle and crashed every screen at runtime. Fix: move tests under `apps/mobile/__tests__/...`; prefix non-route helpers with `_`. [detail](2026-05-13-vitest-leak-via-colocated-tests.md)

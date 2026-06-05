@@ -18,8 +18,8 @@
 set -euo pipefail
 
 BASE=${BASE:-https://harpa-pro-api-dev.fly.dev}
-PHONE=${PHONE:-+15550199001}
-PHONE2=${PHONE2:-+15550199002}
+EMAIL=${EMAIL:-alice@e2e.harpapro.com}
+EMAIL2=${EMAIL2:-bob@e2e.harpapro.com}
 : "${PASSWORD:?PASSWORD env var is required}"
 
 SAMPLES="$(cd "$(dirname "$0")/../../apps/cli/scripts/samples" && pwd)"
@@ -42,6 +42,16 @@ req() {
   curl -fsS -X "$1" "$BASE$2" "${H[@]}" \
     ${TOKEN:+-H "authorization: Bearer $TOKEN"} \
     ${3:+-d "$3"}
+}
+
+# password_login EMAIL PASSWORD -> echoes the bearer token from the
+# `set-auth-token` response header on POST /api/auth/sign-in/email.
+password_login() {
+  local email="$1" pass="$2"
+  local headers; headers=$(curl -fsS -D - -o /dev/null -X POST \
+    "$BASE/api/auth/sign-in/email" "${H[@]}" \
+    -d "{\"email\":\"$email\",\"password\":\"$pass\"}" 2>/dev/null) || return 1
+  printf '%s' "$headers" | awk 'tolower($1)=="set-auth-token:" {print $2}' | tr -d '\r\n'
 }
 
 # Returns HTTP status code without failing on 4xx/5xx.
@@ -83,26 +93,25 @@ echo "════════════════════════�
 
 # ── 1. Auth ───────────────────────────────────────────────────────────
 
-echo "→ login (user 1: $PHONE)"
-TOKEN=$(req POST /auth/password/verify \
-  "{\"phone\":\"$PHONE\",\"password\":\"$PASSWORD\"}" | j .token)
+echo "→ login (user 1: $EMAIL)"
+TOKEN=$(password_login "$EMAIL" "$PASSWORD")
+[[ -n "$TOKEN" ]] || { echo "  ✗ no set-auth-token header on sign-in" >&2; exit 1; }
 TOKEN1="$TOKEN"
 echo "  ✓ logged in"
 
-# Try to ensure user 2 exists (requires PHONE2 in TEST_ACCOUNT_PHONES)
+# Try to ensure user 2 exists (requires EMAIL2 in TEST_ACCOUNT_EMAILS)
 HAS_USER2=false
-echo "→ login (user 2: $PHONE2 — ensure exists)"
+echo "→ login (user 2: $EMAIL2 — ensure exists)"
 set +e
-TOKEN2=$(req POST /auth/password/verify \
-  "{\"phone\":\"$PHONE2\",\"password\":\"$PASSWORD\"}" 2>/dev/null | j .token)
+TOKEN2=$(password_login "$EMAIL2" "$PASSWORD" 2>/dev/null)
 if [[ -n "$TOKEN2" && "$TOKEN2" != "null" ]]; then
   HAS_USER2=true
   TOKEN="$TOKEN2"
-  req POST /auth/logout '' >/dev/null
+  req POST /api/auth/sign-out '' >/dev/null
   TOKEN="$TOKEN1"
   echo "  ✓ user 2 exists"
 else
-  echo "  ⚠️  user 2 unavailable (PHONE2 not in TEST_ACCOUNT_PHONES) — member tests will be skipped"
+  echo "  ⚠️  user 2 unavailable (EMAIL2 not in TEST_ACCOUNT_EMAILS) — member tests will be skipped"
 fi
 set -e
 
@@ -151,9 +160,9 @@ fi
 # ── 5. Project members (requires user 2) ─────────────────────────────
 
 if [[ "$HAS_USER2" == "true" ]]; then
-  echo "→ POST /projects/$PID_A/members (invite phone2)"
+  echo "→ POST /projects/$PID_A/members (invite email2)"
   req POST "/projects/$PID_A/members" \
-    "{\"phone\":\"$PHONE2\",\"role\":\"editor\"}" >/dev/null
+    "{\"email\":\"$EMAIL2\",\"role\":\"editor\"}" >/dev/null
   echo "  ✓ member invited"
 
   echo "→ GET /projects/$PID_A/members"
@@ -341,7 +350,7 @@ echo "  ✓ report deleted"
 req DELETE "/projects/$PID_A" >/dev/null
 req DELETE "/projects/$PID_B" >/dev/null
 echo "  ✓ projects deleted"
-req POST /auth/logout '' >/dev/null
+req POST /api/auth/sign-out '' >/dev/null
 echo "  ✓ logged out"
 
 echo ""

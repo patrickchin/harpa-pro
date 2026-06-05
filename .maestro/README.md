@@ -22,7 +22,7 @@ the env-var rule.
 The P3-exit-gate full-journey flow. Walks every currently-shipped
 user-visible feature on the real `(auth)` + `(app)` routes:
 
-- sign-up → onboarding (fresh account each run, via `scripts/maestro/reset-db.sh`)
+- sign-in → onboarding (fresh account each run, via `scripts/maestro/reset-db.sh`)
 - projects list, new project, copy buttons
 - members: invite (editor role), filter buttons, back
 - project edit + save
@@ -53,20 +53,24 @@ filter-button hang): **5/5 PASS** in a row. Wrap with `gtimeout 240`
 for longer batches; on a hung XCTest driver, `kill` the leftover
 `maestro-driver-ios` PID and retry.
 
-The flow uses fake OTP `000000` (via `TWILIO_VERIFY_FAKE_CODE` in
-fixture mode). The seeded invite target (`+15550100200`, Bob Editor)
-is reseeded by `reset-db.sh` so the invite step always finds a real
-user. The flow deletes the project at the end.
+The flow uses better-auth email-OTP. `helpers/sign-in.yaml` reads the
+most recent OTP that better-auth persisted to `public.verification`
+via the dev-only `POST /api/dev/last-otp` endpoint (mounted whenever
+`NODE_ENV !== 'production'`). The seeded invite target
+(`bob@e2e.harpapro.com`, Bob Editor) is reseeded by `reset-db.sh` so the
+invite step always finds a real user. The flow deletes the project
+at the end.
 
 ## `regression-journey.yaml` (overnight full-coverage journey)
 
 Orchestrator flow that runs every regression module in
-`.maestro/modules/` sequentially against a single signed-up alice
-(no `reset-db.sh` needed — it signs up alice + bob fresh, then
-deletes the project + signs out at the end). Covers:
+`.maestro/modules/` sequentially against a single signed-in alice
+(no `reset-db.sh` needed — it auto-creates alice + bob via the
+better-auth emailOtp first-verify path, then deletes the project +
+signs out at the end). Covers:
 
-1. Auth (sign-up alice + sign-out + sign-in)
-2. Sign-up bob
+1. Auth (sign-in alice + sign-out + sign-in round-trip)
+2. Create bob
 3. Projects CRUD
 4. Members invite / permissions / viewer / remove
 5. Reports CRUD
@@ -113,8 +117,8 @@ Dev-deployment target:
   `https://harpa-pro-api-dev.fly.dev`.
 - Dev auth uses the local CLI auth broker
   (`scripts/dev-e2e-auth-broker.cjs`) with allowlisted test accounts
-  (`TEST_ACCOUNT_PHONES` + `TEST_ACCOUNT_PASSWORD` in `.env.local` or
-  Doppler `dev`), not fake OTP. Do not pass the password as a Maestro
+  (`TEST_ACCOUNT_EMAILS` + `TEST_ACCOUNT_PASSWORD` in `.env.local` or
+  Doppler `dev`), not email-OTP. Do not pass the password as a Maestro
   env var or `inputText`: Maestro debug logs evaluated values.
 - On Android, run Metro with `--host lan --port 8082`, reverse
   `8082`, and use the local API/R2 proxies:
@@ -144,17 +148,40 @@ Dev-deployment target:
 
 Modules 14/15/16 navigate to Profile / Account / Usage screens.
 
+## `dev-otp-hardening.yaml` (PR128 focused smoke)
+
+Focused Android/local smoke for the hardened `POST /api/dev/last-otp`
+path. It requests Alice's OTP through the real mobile email sign-in UI,
+then `helpers/assert-dev-otp-hardening.js` proves the dev introspection
+route:
+
+- returns the OTP for the exact allowlisted email with `x-dev-otp-token`;
+- rejects missing / bad tokens with 404;
+- rejects non-allowlisted, suffix-attack, and wildcard-injection emails
+  with 404;
+- still lets the app complete sign-in and land on the projects list.
+
+Run with the local compose API and Metro dev-client bundle:
+
+```bash
+export DEV_OTP_TOKEN=... # >=32 chars; must match the API container env
+export MAESTRO_APP_ID=com.harpa.pro.dev
+adb reverse tcp:8081 tcp:8081
+adb reverse tcp:8787 tcp:8787
+maestro test .maestro/dev-otp-hardening.yaml
+```
+
 ## `p3-15-upload.yaml` (legacy — superseded by module 10a)
 
 Same photo pipeline as `modules/10a-photo-notes-draft.yaml` but
-signs in as seeded `+15550100100` (requires `reset-db.sh`).
+signs in as seeded `alice@e2e.harpapro.com` (requires `reset-db.sh`).
 Kept for one-off iteration on the camera path; safe to delete once
 module 10a is green in CI.
 
 ## `p3-15-voice-record.yaml` (legacy — superseded by module 09)
 
 Same voice pipeline as `modules/09-voice-notes.yaml` but signs in as
-seeded `+15550100100`. Kept for one-off iteration; safe to delete
+seeded `alice@e2e.harpapro.com`. Kept for one-off iteration; safe to delete
 once module 09 is green on CI.
 
 ## `p3-14a-usage-limits-card.yaml`, `p3-14b-usage-limit-dialog.yaml`, `p3-14c-near-limit-toast.yaml`

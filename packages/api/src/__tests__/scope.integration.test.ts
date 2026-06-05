@@ -6,7 +6,7 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import pg from 'pg';
 import { sql } from 'drizzle-orm';
-import { startPg, type PgFixture } from './setup-pg.js';
+import { startPg, seedAuthUsers, type PgFixture } from './setup-pg.js';
 import { withScopedConnection } from '../db/scope.js';
 import { resetPool, getPool } from '../db/client.js';
 import { makeUserId, makeSessionId, makeProjectId } from './factories/index.js';
@@ -27,15 +27,10 @@ beforeAll(async () => {
   aliceSid = makeSessionId();
   bobSid = makeSessionId();
 
+  await seedAuthUsers(fx.url, [{ id: alice }, { id: bob }]);
   // Seed users + a project for each via a privileged connection (no RLS).
   const admin = new pg.Client({ connectionString: fx.url });
   await admin.connect();
-  await admin.query(`INSERT INTO auth.users(id, phone) VALUES ($1, $2), ($3, $4)`, [
-    alice,
-    '+15550000001',
-    bob,
-    '+15550000002',
-  ]);
   // Insert with explicit ids and memberships (bypassing RLS as superuser).
   await admin.query(
     `INSERT INTO app.projects(id, name, owner_id) VALUES ($1, 'alice-proj', $2)`,

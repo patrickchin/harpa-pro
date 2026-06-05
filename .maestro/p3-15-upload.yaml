@@ -31,23 +31,13 @@ tags:
     stopApp: true
 - waitForAnimationToEnd
 
-# Sign in with seeded user (fake OTP in fixture mode).
+# Sign in with seeded user (email-OTP via dev/last-otp).
 - assertVisible:
-    id: 'input-phone'
-- tapOn:
-    id: 'input-phone'
-- inputText: '+15550100100'
-- hideKeyboard
-- tapOn:
-    id: 'btn-login-send-code'
-- assertVisible:
-    id: 'input-otp'
-- tapOn:
-    id: 'input-otp'
-- inputText: '000000'
-- hideKeyboard
-- tapOn:
-    id: 'btn-verify-code'
+    id: 'input-email'
+- runFlow:
+    file: helpers/sign-in.yaml
+    env:
+      EMAIL: "alice@e2e.harpapro.com"
 
 # Open the first project / first report.
 - assertVisible:

@@ -47,11 +47,11 @@ const ENDPOINTS: Endpoint[] = [
   // health
   { method: 'get', path: '/healthz', hook: 'useHealthQuery', query: true, hasPathParams: false, hasBody: false, queryKeyHead: 'health' },
 
-  // auth
-  { method: 'post', path: '/auth/otp/start',  hook: 'useStartOtpMutation',  query: false, hasPathParams: false, hasBody: true },
-  { method: 'post', path: '/auth/otp/verify', hook: 'useVerifyOtpMutation', query: false, hasPathParams: false, hasBody: true },
-  { method: 'post', path: '/auth/password/verify', hook: 'useVerifyPasswordMutation', query: false, hasPathParams: false, hasBody: true },
-  { method: 'post', path: '/auth/logout',     hook: 'useLogoutMutation',    query: false, hasPathParams: false, hasBody: false },
+  // auth — better-auth handles all `/api/auth/*` directly through
+  // `authClient`. There are no auto-generated hooks for it; the
+  // mobile screens call `authClient.emailOtp.sendVerificationOtp()`,
+  // `authClient.signIn.emailOtp()`, `authClient.signIn.email()`, and
+  // `authClient.signOut()` directly.
 
   { method: 'get',   path: '/me',       hook: 'useMeQuery',          query: true,  hasPathParams: false, hasBody: false, queryKeyHead: 'me' },
   { method: 'patch', path: '/me',       hook: 'useUpdateMeMutation', query: false, hasPathParams: false, hasBody: true },

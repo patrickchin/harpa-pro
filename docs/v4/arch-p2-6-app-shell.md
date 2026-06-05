@@ -146,7 +146,7 @@ structure to v4.
     - If `status === 'loading'`, show a full-screen activity spinner
       (no redirect — avoid flashes on cold start).
     - If `status === 'unauthenticated'`, ensure we're inside `(auth)`
-      by redirecting to `/(auth)/sign-in/phone` if the current route
+      by redirecting to `/(auth)/sign-in/email` if the current route
       is protected.
     - If `status === 'needs-onboarding'`, redirect to
       `/(auth)/onboarding` unless already there.
@@ -189,7 +189,7 @@ Two route groups:
 - **If `status === 'loading'`**: render a splash (activity indicator +
   logo), no redirect (avoid flash).
 - **If `status === 'unauthenticated'`**: redirect to
-  `/(auth)/sign-in/phone`.
+  `/(auth)/sign-in/email`.
 - **If `status === 'needs-onboarding'`**: redirect to
   `/(auth)/onboarding`.
 - **If `status === 'authenticated'`**: allow mount.
@@ -201,7 +201,7 @@ Two route groups:
       return null; // render splash in-place
     }
     if (status === 'unauthenticated') {
-      return '/(auth)/sign-in/phone';
+      return '/(auth)/sign-in/email';
     }
     if (status === 'needs-onboarding') {
       return '/(auth)/onboarding';
@@ -653,7 +653,7 @@ export default function Index() {
 ```
 
 The auth gate inside `(app)/_layout.tsx` will bounce unauthenticated
-users to `/(auth)/sign-in/phone`.
+users to `/(auth)/sign-in/email`.
 
 ## Files to ship in P2.6
 
@@ -691,16 +691,16 @@ users to `/(auth)/sign-in/phone`.
 ### Tests
 
 1. **`apps/mobile/lib/auth/auth-gate.test.ts`** — decision function tests:
-   - `decideAuthRedirect('authenticated', '/(auth)/sign-in/phone')` →
+   - `decideAuthRedirect('authenticated', '/(auth)/sign-in/email')` →
      `'/(app)/projects'`
-   - `decideAuthRedirect('needs-onboarding', '/(auth)/sign-in/phone')` →
+   - `decideAuthRedirect('needs-onboarding', '/(auth)/sign-in/email')` →
      `'/(auth)/onboarding'`
    - `decideAuthRedirect('needs-onboarding', '/(auth)/onboarding')` →
      `null`
-   - `decideAuthRedirect('unauthenticated', '/(auth)/sign-in/phone')` →
+   - `decideAuthRedirect('unauthenticated', '/(auth)/sign-in/email')` →
      `null`
    - `decideAppRedirect('loading')` → `null`
-   - `decideAppRedirect('unauthenticated')` → `'/(auth)/sign-in/phone'`
+   - `decideAppRedirect('unauthenticated')` → `'/(auth)/sign-in/email'`
    - `decideAppRedirect('needs-onboarding')` → `'/(auth)/onboarding'`
    - `decideAppRedirect('authenticated')` → `null`
 
@@ -806,7 +806,7 @@ users to `/(auth)/sign-in/phone`.
   users away from protected routes, but does NOT yet stash the
   originally requested URL for post-login replay. That lands in P4
   (deep-linking polish). For P2.6, all unauthenticated users land at
-  `/(auth)/sign-in/phone` and all authenticated users land at
+  `/(auth)/sign-in/email` and all authenticated users land at
   `/(app)/projects`.
 
 ---

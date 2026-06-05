@@ -10,5 +10,5 @@
     { "path": "../../packages/api-contract" }
   ],
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "src/**/*.test.ts", "src/**/*.integration.test.ts"]
+  "exclude": ["node_modules", "dist", "src/**/*.test.ts", "src/**/*.integration.test.ts", "src/__tests__/_helpers.ts"]
 }

@@ -2,47 +2,50 @@
 
 > See [`README.md`](README.md) for the index of all bug entries and patterns.
 
-**Symptom.** After `POST /auth/logout` (200 OK), the bearer token
+**Status.** **Resolved by the better-auth migration.** Sessions now
+live in `public.session` and better-auth's middleware validates the
+bearer against that row on every request, so calling
+`POST /api/auth/sign-out` revokes the token immediately. The remaining
+historical narrative is preserved below for the recurring-pattern
+cross-reference.
+
+**Symptom.** After `POST /api/auth/sign-out` (200 OK), the bearer token
 that was just "revoked" continues to authenticate every protected
 route — `GET /me`, `POST /projects`, etc — until its JWT `exp`
 naturally lapses (~7 days). Surfaced by the first journey
 integration test
 (`packages/api/src/__tests__/journeys/auth-crud.journey.integration.test.ts`),
-which logs in via the real `/auth/otp/verify` path and then
-expected `GET /me` to 401 post-logout.
+which logged in via the real OTP verify path and then expected `GET
+/me` to 401 post-logout.
 
-**Root cause.** `middleware/auth.ts → withAuth()` validates only the
-JWT signature + expiry. The per-request scope wrapper
-(`db/scope.ts → withScopedConnection`) does `SET LOCAL app.session_id`
-from the JWT's `sid` claim but never checks `auth.sessions` for an
-existing row — so revoked sessions remain authenticated as long as
-the JWT is signature-valid. The header comment in `middleware/auth.ts`
+**Root cause.** The legacy `middleware/auth.ts → withAuth()` validated
+only the JWT signature + expiry. The per-request scope wrapper
+(`db/scope.ts → withScopedConnection`) did `SET LOCAL app.session_id`
+from the JWT's `sid` claim but never checked `auth.sessions` for an
+existing row — so revoked sessions remained authenticated as long as
+the JWT was signature-valid. The header comment in `middleware/auth.ts`
 ("Session-row validation … is enforced by route handlers — see e.g.
-`routes/me.ts`") is stale; no route actually validates the session.
+`routes/me.ts`") was stale; no route actually validated the session.
 
 The existing `auth.integration.test.ts > logout deletes the session
 row` test confirmed the DB row was gone but never made a
 post-logout authenticated request, so the gap was invisible.
 Classic R5 — the test asserted a side-effect, not the contract.
 
-**Fix.** Pending. Either:
-1. Have `withAuth()` look up `auth.sessions` by `sid` and 401 when
-   the row is missing/expired (one DB roundtrip per authed
-   request). Cache via short-lived in-memory revocation set if
-   needed.
-2. Use opaque session tokens (DB-backed) instead of stateless JWTs
-   for the bearer envelope, keeping the JWT only as an internal
-   signed claim payload.
+**Fix (now landed).** The auth stack was replaced with better-auth
+(see `docs/v4/arch-auth-and-rls.md`). Better-auth issues opaque
+session tokens, persists them in `public.session`, and the request
+middleware short-circuits on a missing/expired row, so the
+revocation contract is enforced without any custom session-row
+lookup in route handlers.
 
-Pending the fix, `auth-crud.journey.integration.test.ts` asserts
-the DB-row deletion (current behaviour) and links to this entry.
-
-**Test.** The journey suite
+**Test.** Post-migration the journey suite
 (`packages/api/src/__tests__/journeys/*.journey.integration.test.ts`)
-should add — once the fix lands — `expect(/me-post-logout).toBe(401)`.
+asserts `expect(/me-post-logout).toBe(401)` against the new
+`POST /api/auth/sign-out` endpoint.
 
 **Pattern.** R5 — DI stubs / test helpers (`signTestToken`) became
-the de-facto spec. Every CRUD integration test mints tokens via
-`signTestToken(userId, sessionId)`, so the full
-`/auth/otp/verify` → CRUD → `/auth/logout` chain was never
-exercised end-to-end and the revocation gap stayed invisible.
+the de-facto spec. Every CRUD integration test minted tokens via
+`signTestToken(userId, sessionId)`, so the full OTP-verify → CRUD →
+sign-out chain was never exercised end-to-end and the revocation gap
+stayed invisible.

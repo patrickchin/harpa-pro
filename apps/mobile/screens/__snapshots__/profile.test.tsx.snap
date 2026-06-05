@@ -121,9 +121,9 @@ exports[`Profile > matches snapshot at default props 1`] = `
             </rn-Text>
             <rn-Text
               className="text-body text-muted-foreground"
-              testID="profile-phone"
+              testID="profile-email"
             >
-              +15551234567
+              jordan@example.com
             </rn-Text>
             <rn-Text
               className="text-sm text-muted-foreground"

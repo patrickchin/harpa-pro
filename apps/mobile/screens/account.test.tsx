@@ -4,7 +4,7 @@
  * Covers the visible states + interactions the canonical
  * `app/account.tsx` exercises:
  *  - skeleton when profile is null (loading)
- *  - read-only form with phone / full name / company filled
+ *  - read-only form with email / full name / company filled
  *  - empty strings rendered for null fullName / companyName
  *  - default avatar placeholder when no slot is passed
  *  - custom avatar slot rendered when provided
@@ -35,7 +35,7 @@ function collectText(node: any): string {
 }
 
 const baseProfile: AccountProfile = {
-  phone: '+15551234567',
+  email: 'jordan@example.com',
   fullName: 'Jordan Sims',
   companyName: 'Sims Construction',
 };
@@ -56,17 +56,17 @@ describe('Account', () => {
     expect(collectText(tree.toJSON())).not.toContain('Jordan Sims');
   });
 
-  it('renders phone / full name / company when loaded', () => {
+  it('renders email / full name / company when loaded', () => {
     const tree = render(<Account {...defaults} />);
     const text = collectText(tree.toJSON());
     expect(text).toContain('Account Details');
-    expect(text).toContain('Phone');
+    expect(text).toContain('Email');
     expect(text).toContain('Full Name');
     expect(text).toContain('Company Name');
     // Input values live in TextInput `value` props, not children:
     const inputs = tree.root.findAllByType('rn-TextInput' as any);
     const values = inputs.map((i) => i.props.value);
-    expect(values).toContain('+15551234567');
+    expect(values).toContain('jordan@example.com');
     expect(values).toContain('Jordan Sims');
     expect(values).toContain('Sims Construction');
   });
@@ -80,7 +80,7 @@ describe('Account', () => {
     );
     const inputs = tree.root.findAllByType('rn-TextInput' as any);
     const values = inputs.map((i) => i.props.value);
-    expect(values).toContain('+15551234567');
+    expect(values).toContain('jordan@example.com');
     // null fullName / companyName surface as '' in the field.
     expect(values.filter((v) => v === '').length).toBeGreaterThanOrEqual(2);
   });

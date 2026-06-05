@@ -17,34 +17,43 @@ export type ReportMeta = z.infer<typeof reportMeta>;
  * Report body — meta envelope first, then matches mobile-old composition order:
  * StatBar / WeatherStrip / Summary / Issues / Workers / Materials / NextSteps / SummarySections.
  * See docs/legacy-v3/realignment/01-investigation.md.
+ *
+ * Wire shape — string|null for every numeric / categorical field
+ * (workers[].count, workers[].hours, materials[].quantity,
+ * weather.temperatureC, weather.windKph, issues[].severity).
+ *
+ * Why strings: this is LLM output extracted from voice transcripts.
+ * The model frequently sees "a few electricians", "around 20°C",
+ * "delivered 30 of cement (no unit)", "critical issue" — all of
+ * which used to 502 against strict number/enum schemas (HARPA-PRO-6
+ * and friends; see docs/bugs/2026-06-06-report-body-string-wire.md).
+ * Strings let us preserve the model's intent and parse on read in
+ * the 1–2 consumers that actually need a number. Severity stays
+ * advisory low|medium|high but is no longer enforced; the UI maps
+ * unknown values to "medium" via normaliseSeverity().
  */
 export const reportBody = z.object({
   meta: reportMeta,
   weather: z
     .object({
       condition: z.string().nullable(),
-      temperatureC: z.number().nullable(),
-      windKph: z.number().nullable(),
+      temperatureC: z.string().nullable(),
+      windKph: z.string().nullable(),
       impact: z.string().nullable(),
     })
     .nullable(),
   workers: z.array(
     z.object({
       role: z.string(),
-      // Nullable: the LLM emits null when notes mention a role
-      // without a headcount ("a few electricians", "[image 1]"). A
-      // strict `int().nonnegative()` here caused HARPA-PRO-6 502s on
-      // /reports/:n/regenerate. Mobile renders null as `—`.
-      // See docs/bugs/README.md "workers[].count nullable drift".
-      count: z.number().int().nonnegative().nullable(),
-      hours: z.number().nonnegative().nullable(),
+      count: z.string().nullable(),
+      hours: z.string().nullable(),
       notes: z.string().nullable(),
     }),
   ),
   materials: z.array(
     z.object({
       name: z.string(),
-      quantity: z.number().nullable(),
+      quantity: z.string().nullable(),
       unit: z.string().nullable(),
       status: z.string().nullable(),
       condition: z.string().nullable(),
@@ -54,7 +63,7 @@ export const reportBody = z.object({
   issues: z.array(
     z.object({
       title: z.string(),
-      severity: z.enum(['low', 'medium', 'high']),
+      severity: z.string().nullable(),
       description: z.string().nullable(),
       action: z.string().nullable(),
     }),

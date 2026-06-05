@@ -142,6 +142,17 @@ export interface GenerateReportProviderProps {
    * + upload pipeline. When omitted this is a no-op.
    */
   onPickAttachment?: (category: 'image' | 'document') => void;
+  /**
+   * Called when the user picks (or clears) a placement target for a
+   * photo group on the Report tab. Route wrapper wires this to
+   * `useOptimisticPlacePhotoGroup`. When omitted the placement chip
+   * is hidden and the photo block falls back to the legacy "stuck at
+   * the bottom" rendering.
+   */
+  onPlacePhotoGroup?: (input: {
+    noteId: string;
+    placement: { kind: 'issue' | 'section'; index: number } | null;
+  }) => void;
   /** Initial tab the screen opens on. Defaults to `notes`. */
   initialTab?: TabKey;
   children: ReactNode;
@@ -327,6 +338,8 @@ interface PreviewSurface {
     noteId: string;
     title: string;
     cacheKey: string;
+    /** Placement of the note this photo belongs to (`null` = unplaced). */
+    placement: { kind: 'issue' | 'section'; index: number } | null;
   }>;
   /** Current photo index when the gallery is open; null when closed. */
   photoIndex: number | null;
@@ -334,6 +347,20 @@ interface PreviewSurface {
   openPhoto: (fileId: string) => void;
   /** Dismiss the gallery. */
   closePhoto: () => void;
+}
+
+/** Surface for editing photo placements from the Report tab. */
+interface PlacementSurface {
+  /**
+   * Called when the user picks (or clears) a placement target for a
+   * photo group. `null` clears the placement (returns to "Unplaced").
+   * `undefined` here means the route did not wire the mutator —
+   * components should hide the placement chip entirely.
+   */
+  onPlacePhotoGroup?: (input: {
+    noteId: string;
+    placement: { kind: 'issue' | 'section'; index: number } | null;
+  }) => void;
 }
 
 export interface GenerateReportContextValue {
@@ -348,6 +375,7 @@ export interface GenerateReportContextValue {
   voice: VoiceSurface;
   photo: PhotoSurface;
   preview: PreviewSurface;
+  placement: PlacementSurface;
   ui: UISurface;
   members: ReadonlyMap<string, string>;
   /** Bubbled up by the Notes input + attachment sheet. P3.8+ wires uploads. */
@@ -439,6 +467,7 @@ export function GenerateReportProvider({
   onOpenFile,
   onCameraCapture,
   onPickAttachment,
+  onPlacePhotoGroup,
   initialTab = 'notes',
   children,
 }: GenerateReportProviderProps) {
@@ -638,10 +667,12 @@ export function GenerateReportProvider({
       noteId: string;
       title: string;
       cacheKey: string;
+      placement: { kind: 'issue' | 'section'; index: number } | null;
     }> = [];
     for (const entry of timelineItems) {
       if (!entry.attachments) continue;
       const noteId = entry.id ?? entry.attachments[0]?.fileId ?? 'unknown';
+      const placement = entry.placement ?? null;
       for (const att of entry.attachments) {
         if (!att.fileId) continue;
         items.push({
@@ -650,6 +681,7 @@ export function GenerateReportProvider({
           noteId,
           title: entry.text?.trim() || 'Photo',
           cacheKey: att.fileId,
+          placement,
         });
       }
     }
@@ -861,6 +893,9 @@ export function GenerateReportProvider({
         openPhoto,
         closePhoto,
       },
+      placement: {
+        onPlacePhotoGroup,
+      },
       ui: {
         attachmentSheetVisible,
         setAttachmentSheetVisible,
@@ -928,6 +963,7 @@ export function GenerateReportProvider({
       closePhoto,
       onCameraCapture,
       onPickAttachment,
+      onPlacePhotoGroup,
       photoUploads.retry,
       photoUploads.cancel,
     ],

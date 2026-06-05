@@ -40,6 +40,7 @@ import {
   useOptimisticCreateNote,
   useOptimisticDeleteNote,
   useOptimisticUpdateNote,
+  useOptimisticPlacePhotoGroup,
   isOptimisticNoteId,
 } from '@/lib/api/optimistic';
 import { invalidateAfterFileUpload } from '@/lib/api/invalidation';
@@ -86,6 +87,7 @@ interface ApiNote {
   files?: ApiNoteFile[];
   durationSec?: number | null;
   createdAt: string;
+  placement?: { kind: 'issue' | 'section'; index: number } | null;
 }
 
 function noteToEntry(n: ApiNote): NoteEntry {
@@ -127,6 +129,7 @@ function noteToEntry(n: ApiNote): NoteEntry {
       thumbnailFileId:
         primaryImage?.thumbnailFileId ?? n.thumbnailFileId ?? null,
       attachments: imageFiles.map((f, idx) => attachmentFromSavedFile(f, idx)),
+      placement: n.placement ?? null,
     }),
   };
 }
@@ -259,6 +262,26 @@ export default function GenerateReportRoute() {
       );
     },
     [reportId, createNote],
+  );
+
+  const placePhotoGroupMutation = useOptimisticPlacePhotoGroup();
+  const handlePlacePhotoGroup = useCallback(
+    async (input: {
+      noteId: string;
+      placement: { kind: 'issue' | 'section'; index: number } | null;
+    }) => {
+      if (!reportId) return;
+      try {
+        await placePhotoGroupMutation.mutateAsync({
+          params: { note: input.noteId },
+          body: { placement: input.placement },
+          reportId,
+        });
+      } catch {
+        // optimistic helper already rolls back on error.
+      }
+    },
+    [placePhotoGroupMutation, reportId],
   );
 
   const serverBody: GeneratedSiteReport | null = reportRow?.body
@@ -609,6 +632,9 @@ export default function GenerateReportRoute() {
         onFinalize={handleFinalize}
         onCameraCapture={handleCameraCapture}
         onPickAttachment={handlePickAttachment}
+        onPlacePhotoGroup={
+          reportId !== null ? handlePlacePhotoGroup : undefined
+        }
         onDeleteDraft={
           reportRow?.status === 'finalized' ? undefined : handleDeleteDraft
         }

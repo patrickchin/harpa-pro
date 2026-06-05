@@ -27,7 +27,6 @@ import {
   useDeleteReportMutation,
   useUnfinalizeReportMutation,
 } from '@/lib/api/hooks';
-import { useOptimisticPlacePhotoGroup } from '@/lib/api/optimistic';
 import {
   projectInitialData,
   projectInitialDataUpdatedAt,
@@ -194,26 +193,6 @@ export default function SavedReportRoute() {
   });
 
   const deleteMutation = useDeleteReportMutation();
-  const placePhotoGroupMutation = useOptimisticPlacePhotoGroup();
-
-  const handlePlacePhotoGroup = useCallback(
-    async (input: {
-      noteId: string;
-      placement: { kind: 'issue' | 'section'; index: number } | null;
-    }) => {
-      if (reportId === null) return;
-      try {
-        await placePhotoGroupMutation.mutateAsync({
-          params: { note: input.noteId },
-          body: { placement: input.placement },
-          reportId,
-        });
-      } catch {
-        // optimistic helper already rolls back on error.
-      }
-    },
-    [placePhotoGroupMutation, reportId],
-  );
 
   const handleConfirmDelete = useCallback(async () => {
     if (!slug || reportNumber === null) return;
@@ -298,9 +277,6 @@ export default function SavedReportRoute() {
                 `/(app)/projects/${slug}/reports/${reportNumber}/debug` as Href,
               )
           : undefined
-      }
-      onPlacePhotoGroup={
-        reportId !== null ? handlePlacePhotoGroup : undefined
       }
     />
   );

@@ -80,4 +80,12 @@ export interface NoteEntry {
    * leave it undefined.
    */
   attachments?: ReadonlyArray<import('./attachments').Attachment>;
+
+  /**
+   * Photo placement target. `undefined` for non-image entries; `null`
+   * for image entries that haven't been placed yet (default), or a
+   * `{ kind, index }` reference into the generated report's issues /
+   * sections array. Mirrors `report_notes.placement`.
+   */
+  placement?: { kind: 'issue' | 'section'; index: number } | null;
 }

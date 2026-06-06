@@ -2,16 +2,16 @@
  * Dev-only routes — mounted by `app.ts` only on non-production
  * deployments OR per-PR preview builds (where Maestro needs
  * `/api/dev/last-otp` even though NODE_ENV=production), AND only when
- * `env.DEV_OTP_TOKEN` is set. Importing this module on a real
- * production deployment is a hard error so a misconfiguration cannot
- * silently expose internals.
+ * `env.DEV_OTP_TOKEN` is set.
  *
  * Currently only owns `/api/dev/last-otp`, used by Maestro `:mock`
  * builds to read the most recent OTP that better-auth persisted to
  * `public.verification` for a given email. Layered controls (in
  * order, all enforced):
- *   1. Module throw at import when NODE_ENV=production && !PR_BUILD.
- *   2. App.ts mount gated on NODE_ENV+PR_BUILD AND DEV_OTP_TOKEN.
+ *   1. env.ts refines fail boot if `DEV_OTP_TOKEN` is set on real
+ *      production (NODE_ENV=production && !HARPAPRO_PR_BUILD).
+ *   2. App.ts mount gated on NODE_ENV+PR_BUILD AND DEV_OTP_TOKEN —
+ *      route is unreachable on real production even if reached.
  *   3. Per-request shared-secret header (constant-time compare).
  *   4. Email allowlist regex — only `*@e2e.harpapro.com`.
  *   5. Exact identifier SQL (no LIKE wildcard).
@@ -21,6 +21,13 @@
  * All failure modes return 404 (indistinguishable from an unknown
  * path) so the surface gives no oracle to a probe. See
  * docs/v4/arch-auth-and-rls.md §Dev OTP introspection.
+ *
+ * Note: this module deliberately has no module-load side effects.
+ * `app.ts` imports `devRoutes` statically (ESM evaluates the body
+ * unconditionally), so a `throw` here would crash boot before the
+ * mount gate ever ran — exactly what happened on `harpa-pro-api-dev`
+ * where NODE_ENV=production and HARPAPRO_PR_BUILD is unset. The
+ * env.ts refines (control #1) cover the misconfig case at boot.
  */
 import { Hono } from 'hono';
 import type { Context } from 'hono';
@@ -31,10 +38,6 @@ import type { AppEnv } from '../app.js';
 // DB doesn't have permission to SELECT auth tables.
 import { rawDb } from '../db/client.js'; // eslint-disable-line no-restricted-imports
 import { env } from '../env.js';
-
-if (env.NODE_ENV === 'production' && env.HARPAPRO_PR_BUILD !== '1') {
-  throw new Error('routes/dev.ts must not be loaded in real production');
-}
 
 /** Hard-coded allowlisted domain for emails passed to `/api/dev/last-otp`. */
 export const ALLOWED_OTP_DOMAIN = 'e2e.harpapro.com';

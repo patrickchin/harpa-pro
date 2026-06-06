@@ -135,14 +135,22 @@ jobs:
         # Order: stress (~10s, no AI) → core (~3min, live AI) → extended (~5min, live AI).
         # On failure the workflow goes red but the deploy is NOT rolled back.
         #
-        # NOTE: Journey scripts default EMAIL=alice@e2e.harpapro.com and
-        # EMAIL2=bob@e2e.harpapro.com. The API gates sign-in to the
-        # comma-separated TEST_ACCOUNT_EMAILS_DEV value on Fly, and
-        # `db:seed-test-account` (chained into release_command) creates
-        # exactly those emails. So Fly's TEST_ACCOUNT_EMAILS_DEV must
-        # include alice@e2e.harpapro.com,bob@e2e.harpapro.com — see
+        # EMAIL / EMAIL2 come from GitHub repo *variables* (not secrets —
+        # the addresses themselves aren't sensitive). They must match
+        # entries in Fly's TEST_ACCOUNT_EMAILS_DEV secret (and are
+        # therefore the addresses `db:seed-test-account` provisions during
+        # release_command). If EMAIL2 isn't a real second account, set
+        # it to the same value as EMAIL — extended/stress gracefully skip
+        # second-user checks when only one user exists. See
         # docs/bugs/2026-06-06-test-accounts-never-seeded-on-dev.md.
         env:
           PASSWORD: ${{ secrets.TEST_ACCOUNT_PASSWORD_DEV }}
-        run: bash scripts/journeys/all.sh dev
+          EMAIL: ${{ vars.TEST_ACCOUNT_EMAIL_DEV }}
+          EMAIL2: ${{ vars.TEST_ACCOUNT_EMAIL2_DEV }}
+        run: |
+          if [[ -z "${EMAIL:-}" ]]; then
+            echo "::error::TEST_ACCOUNT_EMAIL_DEV repo variable is unset; cannot run journeys" >&2
+            exit 1
+          fi
+          bash scripts/journeys/all.sh dev
 

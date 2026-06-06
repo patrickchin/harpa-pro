@@ -115,8 +115,14 @@ echo "════════════════════════�
 # ── 1. Auth ───────────────────────────────────────────────────────────
 
 echo "→ login (user 1: $EMAIL)"
+set +e
 TOKEN=$(password_login "$EMAIL" "$PASSWORD")
-[[ -n "$TOKEN" ]] || { echo "  ✗ no set-auth-token header on sign-in" >&2; exit 1; }
+LOGIN_RC=$?
+set -e
+if [[ $LOGIN_RC -ne 0 || -z "$TOKEN" ]]; then
+  echo "  ✗ no set-auth-token header on sign-in (rc=$LOGIN_RC)" >&2
+  exit 1
+fi
 TOKEN1="$TOKEN"
 echo "  ✓ logged in"
 

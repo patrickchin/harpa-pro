@@ -1,5 +1,11 @@
 # 2026-05-27 overnight voice Maestro run
 
+> **Status:** ✅ Historical run log (2026-05-27). The voice-note E2E
+> path described here is now part of the standard regression journey
+> (`.maestro/modules/09-voice-notes.yaml`). Architecture lives in
+> [`arch-voice-pipeline.md`](arch-voice-pipeline.md). Kept for
+> historical context only.
+
 Goal: complete the voice-note E2E hardening path and run the Maestro
 suite first against the local backend, then against the dev deployment.
 

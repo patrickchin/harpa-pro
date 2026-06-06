@@ -1,6 +1,6 @@
 # Report edit modal redesign
 
-**Status:** approved · **Date:** 2026-06-03 · **Branch:** `agents/report-edit-modal-redesign`
+**Status:** ✅ Shipped (commit f43565e5 + e2e in 4337fd32) · **Date:** 2026-06-03 · **Branch:** `agents/report-edit-modal-redesign`
 
 ## Problem
 

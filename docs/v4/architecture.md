@@ -1,6 +1,8 @@
 # v4 Architecture
 
-> **Status**: planning — the source of truth for the v4 rewrite.
+> **Status**: live — the source of truth for the v4 rewrite. P0 and P1
+> are complete; P2 shipped at `v0.2.0-shell`; P3 (Feature Build) is the
+> active phase. Per-section docs are kept in sync as features land.
 >
 > Read [`pitfalls.md`](pitfalls.md) before this doc. The architecture
 > below is shaped by the lessons recorded there.
@@ -114,6 +116,9 @@ flowchart TB
 | 14 | **Usage limits** | [arch-usage-limits.md](arch-usage-limits.md) | **Per-account monthly caps: plan model (free/pro/enterprise) + admin overrides, `enforceUsageLimit` chokepoint, 403 `usage_limit_exceeded` envelope, mobile dialog + near-limit toast** |
 | 15 | **Batch photo notes** | [arch-batch-photo-notes.md](arch-batch-photo-notes.md) | **One note → many photos; `note_files` join table, upload batch coordinator, `PhotoBatchGrid` UI** |
 | 16 | **Report auto-regen** | [arch-report-auto-regen.md](arch-report-auto-regen.md) | **DB-driven dirty flag (`notes_changed_at > generated_at`), race-safe snapshot semantic, mobile `useAutoRegenerate` hook** |
+| 17 | **Voice pipeline** | [arch-voice-pipeline.md](arch-voice-pipeline.md) | **End-to-end record → upload → transcribe → summarise → render pipeline; mobile recorder + API aggregator route + `VoiceNoteCard` (companion plan: [plan-voice-pipeline.md](plan-voice-pipeline.md))** |
+| 18 | **Mobile skeletons** | [arch-mobile-skeletons.md](arch-mobile-skeletons.md) | **Per-screen skeleton geometry policy to prevent layout-shift on hydrate** |
+| 19 | **App shell (P2.6)** | [arch-p2-6-app-shell.md](arch-p2-6-app-shell.md) | **Root provider tree, auth gate redirect, `(app)` tab/stack shape — design notes for the shell that landed in P2.6** |
 
 ## Repo layout (target end of P0)
 
@@ -155,7 +160,6 @@ scripts/
 
 docs/
   v4/                     # current
-  legacy-v3/              # reference
   bugs/                   # recurring bugs log
 
 skills/                   # auto-loaded

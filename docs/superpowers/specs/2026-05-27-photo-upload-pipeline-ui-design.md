@@ -1,7 +1,8 @@
 # Photo Upload Pipeline UI — Bluesky-inspired refresh
 
 **Date:** 2026-05-27
-**Status:** Design — awaiting plan
+**Status:** ✅ Shipped — see commits matching `photo-upload` and the
+live grid/fullscreen viewer in `apps/mobile`.
 **Author:** Brainstorming session
 **Related:**
 - `docs/v4/arch-batch-photo-notes.md`

@@ -1,6 +1,8 @@
 # Auto-Regenerate Reports — Design
 
-Status: draft
+Status: ✅ Shipped. Live architecture lives in
+[`docs/v4/arch-report-auto-regen.md`](../../v4/arch-report-auto-regen.md);
+this spec is retained as the original design rationale.
 Date: 2026-05-28
 Scope: `apps/mobile`, `packages/api`, `packages/api-contract`
 

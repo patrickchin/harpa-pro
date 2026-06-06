@@ -2,7 +2,7 @@
 
 **Date:** 2026-06-02 (rev 2)
 **Branch:** `agents/migrate-auth-to-better-auth`
-**Status:** Ready for implementation
+**Status:** ✅ Shipped (PR #124, commit 204de204)
 **Related docs:** `docs/v4/arch-auth-and-rls.md` (rewritten by this spec),
 `docs/v4/pitfalls.md`
 

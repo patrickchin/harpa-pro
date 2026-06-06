@@ -18,8 +18,8 @@ pnpm test         # full unit/integration suite
 ## CLI
 
 `apps/cli` (`@harpa/cli`) is the debug / LLM-driven CLI that talks
-to the API. All 37 routes are covered. Set `HARPA_API_URL` and
-(after `harpa auth otp verify`) `HARPA_TOKEN`, then:
+to the API. Every API route has a CLI command. Set `HARPA_API_URL`
+and (after `harpa auth otp verify`) `HARPA_TOKEN`, then:
 
 ```bash
 pnpm harpa auth otp start +15551234567
@@ -34,14 +34,13 @@ pnpm harpa files upload --file ./photo.jpg --kind image
 `--json` returns the raw API response; `--verbose` prints headers
 and the request ID to stderr. See [`docs/v4/arch-cli.md`](docs/v4/arch-cli.md).
 
-(Wire-up happens in P0 — see [`docs/v4/plan-p0-foundation.md`](docs/v4/plan-p0-foundation.md).)
-
 ## Layout
 
 ```
 apps/
   mobile/          # Expo + NativeWind app
   docs/            # in-app guides + visual reference (Next.js)
+  marketing/       # Astro marketing site (Cloudflare Pages)
   cli/             # @harpa/cli — debug / LLM-driven CLI
 packages/
   api/             # Hono REST API (Fly.io)
@@ -52,12 +51,18 @@ packages/
 infra/
   neon/            # Neon branching scripts
   fly/             # Fly.io deployment config
+  r2/              # Cloudflare R2 bucket setup
 docs/
   v4/              # current architecture + plans
-  legacy-v3/       # preserved v3 attempt (reference only)
+  bugs/            # recurring bug log
+  marketing/       # marketing site plans + ops
+  superpowers/     # specs + plans for individual features
 skills/            # auto-loaded coding skills
 ```
 
 ## Status
 
-P0 — scaffolding. See [`docs/v4/implementation-plan.md`](docs/v4/implementation-plan.md).
+P0 (Foundation) and P1 (API Core) complete. P2 (Mobile Shell)
+shipped (`v0.2.0-shell`). P3 (Feature Build) is the active phase —
+see [`docs/v4/implementation-plan.md`](docs/v4/implementation-plan.md)
+and the per-phase plans under [`docs/v4/`](docs/v4/).

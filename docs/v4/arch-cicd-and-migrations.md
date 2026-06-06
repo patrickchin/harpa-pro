@@ -3,8 +3,9 @@
 > Companion: [arch-database.md](arch-database.md), [arch-ops.md](arch-ops.md),
 > [pitfalls.md](pitfalls.md).
 >
-> **Status**: design. Implementation lives in a follow-up PR — this doc is the
-> contract that PR must match.
+> **Status**: live. The Fly `release_command` migration step, advisory-lock
+> loader, `/readyz` schema-head check, and expand-contract rules described
+> below are all implemented. Updates land here when behaviour changes.
 
 ## Why this doc exists
 

@@ -1,9 +1,10 @@
 # Mobile navigation policy (Expo Router)
 
-> Status: design (P3 hardening). Companion to
+> Status: live reference. Companion to
 > [`arch-mobile.md`](arch-mobile.md) and [`pitfalls.md`](pitfalls.md).
 > Source-of-truth for `router.push` / `replace` / `back` / `dismiss*`
-> choices in `apps/mobile/app/`.
+> choices in `apps/mobile/app/`. The `dismissOrReplaceTo` helper and
+> the L1/L2/L3 fixes documented below have shipped.
 
 ## 1. Routing graph
 

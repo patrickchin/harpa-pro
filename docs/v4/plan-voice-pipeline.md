@@ -1,5 +1,11 @@
 # Voice Note Pipeline — Completion Plan
 
+> **Status:** Phases A–D shipped (design, server aggregator, mobile
+> capture, mobile read side). Phases E–G (queue persistence,
+> abort plumbing, on-device interim transcript) remain open and are
+> tracked here. Voice-note E2E is gated by
+> `.maestro/modules/09-voice-notes.yaml` in the regression journey.
+
 ## Problem
 
 The voice-note pipeline is half-built: the API can transcribe and summarise audio, and the upload contract accepts `kind: 'voice'`, but **mobile capture is a no-op stub end-to-end**. There is no recorder, no permission flow, no `useVoiceNotePipeline` hook, no `VoiceNoteCard`, the `AudioPlaybackProvider` throws on `play()`, and `expo-audio` is not installed. AGENTS.md also lies about a fixture-mode simulator stub that doesn't exist. Several P1 correctness bugs (no idempotency on `/voice/summarize`, missing spend attribution, transcript/summary collide in one DB slot) and P2 polish gaps (no queue persistence, no in-flight abort, no on-device interim transcript) compound this.

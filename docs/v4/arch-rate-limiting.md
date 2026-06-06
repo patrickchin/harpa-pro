@@ -6,8 +6,10 @@
 > [Pitfall 13](pitfalls.md#pitfall-13--di-stubs-become-the-spec-default-wiring-silently-broken),
 > [Pitfall 15](pitfalls.md#pitfall-15--route-handlers-that-ignore-user-settings).
 >
-> Status: **design**. Implementation lands behind the checklist at the
-> bottom of this doc; each item ≈ one commit.
+> Status: **live**. Per-route + shared AI + catch-all budgets, the
+> `PostgresRateLimiter`, and SMS-pump protection on
+> `/api/auth/email-otp/*` are all implemented. The checklist at the
+> bottom of this doc remains as the historical roll-out order.
 
 ## 1. Problem
 

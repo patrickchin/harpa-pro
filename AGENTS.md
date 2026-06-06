@@ -1,8 +1,9 @@
 # Project: harpa-pro (v4)
 
 v4 rewrite of the harpa-pro mobile app and API. The previous attempt
-(`../haru3-reports`, branch `mobile-v3`) is preserved under
-[`docs/legacy-v3/`](docs/legacy-v3/) for historical context only.
+lives at `../haru3-reports` (branch `mobile-v3`) and is the canonical
+port source for screens — read JSX + Tailwind classes from there when
+porting in P2/P3.
 
 **Read [`docs/v4/pitfalls.md`](docs/v4/pitfalls.md) before writing
 code.** It captures what went wrong in v3 and the rules we adopt to

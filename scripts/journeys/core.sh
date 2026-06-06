@@ -252,10 +252,10 @@ fi
 echo "→ PATCH report body (ensure finalization works)"
 req PATCH "/projects/$PID/reports/$RNUM" '{
   "body":{
-    "meta":{"title":"Section A Foundation","summary":"Foundation pour completed.","visitDate":"2026-05-20T09:00:00Z","tags":["foundation","concrete"]},
-    "weather":{"condition":"Clear","temperatureC":22,"windKph":5,"impact":null},
-    "workers":[{"role":"Labourer","count":2,"hours":8,"notes":null}],
-    "materials":[{"name":"Concrete","quantity":20,"unit":"m³","status":"delivered","condition":"good","notes":null}],
+    "meta":{"title":"Section A Foundation","summary":"Foundation pour completed.","visitDate":"2026-05-20T09:00:00Z"},
+    "weather":{"condition":"Clear","temperature":"22°C","wind":"5 kph","impact":null},
+    "workers":[{"role":"Labourer","count":"2","hours":"8","notes":null}],
+    "materials":[{"name":"Concrete","quantity":"20","unit":"m³","status":"delivered","condition":"good","notes":null}],
     "issues":[{"title":"Minor crack in form","severity":"low","description":"Small hairline crack","action":"Monitor"}],
     "nextSteps":["Inspect section B tomorrow"],
     "summarySections":[{"title":"Progress","body":"Section A foundation complete."}]

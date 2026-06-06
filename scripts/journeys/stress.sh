@@ -270,29 +270,36 @@ NID_A=$(req POST "/reports/$RID_A/notes" \
   '{"kind":"text","body":"Private note, user A only"}' | j .id)
 echo "  note: $NID_A"
 
-# Try login as user B
+# Try login as user B. When EMAIL2 == EMAIL (single-account dev), the
+# cross-user assertions are nonsensical (alice's session can always
+# see alice's data) so we skip them entirely.
 HAS_USER_B=false
-set +e
-TOKEN_B=$(password_login "$EMAIL2" "$PASSWORD" 2>/dev/null)
-set -e
-if [[ -n "$TOKEN_B" && "$TOKEN_B" != "null" ]]; then
-  HAS_USER_B=true
-  echo "  user B logged in"
-
-  TOKEN="$TOKEN_B"
-  check "B: GET A's project" 404 GET "/projects/$PID_A" ''
-  check "B: PATCH A's project" 404 PATCH "/projects/$PID_A" '{"name":"hacked"}'
-  check "B: DELETE A's project" 404 DELETE "/projects/$PID_A"
-  check "B: GET A's report" 404 GET "/projects/$PID_A/reports/$RNUM_A" ''
-  check "B: GET A's notes" 404 GET "/reports/$RID_A/notes" ''
-  check "B: PATCH A's note" 404 PATCH "/notes/$NID_A" '{"body":"hacked"}'
-  check "B: DELETE A's note" 404 DELETE "/notes/$NID_A"
-  check "B: finalize A's report" 404 POST "/projects/$PID_A/reports/$RNUM_A/finalize" ''
-  check "B: generate A's report" 404 POST "/projects/$PID_A/reports/$RNUM_A/generate" '{}'
-  check "B: GET A's members" 404 GET "/projects/$PID_A/members" ''
-else
-  echo "  ⚠️  user B unavailable (EMAIL2 not in TEST_ACCOUNT_EMAILS) — skipping cross-user checks"
+if [[ "$EMAIL2" == "$EMAIL" ]]; then
+  echo "  ⚠️  user B == user A — skipping cross-user checks"
   TOKEN_B=""
+else
+  set +e
+  TOKEN_B=$(password_login "$EMAIL2" "$PASSWORD" 2>/dev/null)
+  set -e
+  if [[ -n "$TOKEN_B" && "$TOKEN_B" != "null" ]]; then
+    HAS_USER_B=true
+    echo "  user B logged in"
+
+    TOKEN="$TOKEN_B"
+    check "B: GET A's project" 404 GET "/projects/$PID_A" ''
+    check "B: PATCH A's project" 404 PATCH "/projects/$PID_A" '{"name":"hacked"}'
+    check "B: DELETE A's project" 404 DELETE "/projects/$PID_A"
+    check "B: GET A's report" 404 GET "/projects/$PID_A/reports/$RNUM_A" ''
+    check "B: GET A's notes" 404 GET "/reports/$RID_A/notes" ''
+    check "B: PATCH A's note" 404 PATCH "/notes/$NID_A" '{"body":"hacked"}'
+    check "B: DELETE A's note" 404 DELETE "/notes/$NID_A"
+    check "B: finalize A's report" 404 POST "/projects/$PID_A/reports/$RNUM_A/finalize" ''
+    check "B: generate A's report" 404 POST "/projects/$PID_A/reports/$RNUM_A/generate" '{}'
+    check "B: GET A's members" 404 GET "/projects/$PID_A/members" ''
+  else
+    echo "  ⚠️  user B unavailable (EMAIL2 not in TEST_ACCOUNT_EMAILS) — skipping cross-user checks"
+    TOKEN_B=""
+  fi
 fi
 
 # ══════════════════════════════════════════════════════════════════════
@@ -376,14 +383,14 @@ echo "── G. Double operations & state violations ──"
 
 # Set a body and finalize
 req PATCH "/projects/$PID_A/reports/$RNUM_A" '{
-  "body":{"meta":{"title":"X","summary":null,"visitDate":"2026-05-20T09:00:00Z","tags":[]},"weather":null,"workers":[],"materials":[],"issues":[],"nextSteps":[],"summarySections":[{"title":"X","body":"Y"}]}
+  "body":{"meta":{"title":"X","summary":null,"visitDate":"2026-05-20T09:00:00Z"},"weather":null,"workers":[],"materials":[],"issues":[],"nextSteps":[],"summarySections":[{"title":"X","body":"Y"}]}
 }' >/dev/null
 echo "  body set"
 req POST "/projects/$PID_A/reports/$RNUM_A/finalize" '' >/dev/null
 echo "  report finalized"
 
 check "PATCH finalized report" 409 PATCH "/projects/$PID_A/reports/$RNUM_A" \
-  '{"body":{"meta":{"title":"X","summary":null,"visitDate":null,"tags":[]},"weather":null,"workers":[],"materials":[],"issues":[],"nextSteps":[],"summarySections":[{"title":"hacked","body":"x"}]}}'
+  '{"body":{"meta":{"title":"X","summary":null,"visitDate":null},"weather":null,"workers":[],"materials":[],"issues":[],"nextSteps":[],"summarySections":[{"title":"hacked","body":"x"}]}}'
 check "double finalize (idempotent)" 200 POST "/projects/$PID_A/reports/$RNUM_A/finalize" ''
 
 # Unfinalize, then test double unfinalize

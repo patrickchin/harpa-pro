@@ -134,6 +134,14 @@ jobs:
         # Runs curl journey scripts against the just-deployed dev API.
         # Order: stress (~10s, no AI) → core (~3min, live AI) → extended (~5min, live AI).
         # On failure the workflow goes red but the deploy is NOT rolled back.
+        #
+        # NOTE: Journey scripts default EMAIL=alice@e2e.harpapro.com and
+        # EMAIL2=bob@e2e.harpapro.com. The API gates sign-in to the
+        # comma-separated TEST_ACCOUNT_EMAILS_DEV value on Fly, and
+        # `db:seed-test-account` (chained into release_command) creates
+        # exactly those emails. So Fly's TEST_ACCOUNT_EMAILS_DEV must
+        # include alice@e2e.harpapro.com,bob@e2e.harpapro.com — see
+        # docs/bugs/2026-06-06-test-accounts-never-seeded-on-dev.md.
         env:
           PASSWORD: ${{ secrets.TEST_ACCOUNT_PASSWORD_DEV }}
         run: bash scripts/journeys/all.sh dev

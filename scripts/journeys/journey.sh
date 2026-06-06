@@ -222,6 +222,6 @@ echo "→ DELETE /projects/$PID"
 req DELETE "/projects/$PID" >/dev/null
 
 echo "→ POST /api/auth/sign-out"
-req POST /api/auth/sign-out '' >/dev/null
+req POST /api/auth/sign-out '{}' >/dev/null
 
 echo "✓ done"

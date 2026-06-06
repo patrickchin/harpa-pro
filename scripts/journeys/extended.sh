@@ -141,7 +141,7 @@ else
   if [[ -n "$TOKEN2" && "$TOKEN2" != "null" ]]; then
     HAS_USER2=true
     TOKEN="$TOKEN2"
-    req POST /api/auth/sign-out '' >/dev/null
+    req POST /api/auth/sign-out '{}' >/dev/null
     TOKEN="$TOKEN1"
     echo "  ✓ user 2 exists"
   else
@@ -385,7 +385,7 @@ echo "  ✓ report deleted"
 req DELETE "/projects/$PID_A" >/dev/null
 req DELETE "/projects/$PID_B" >/dev/null
 echo "  ✓ projects deleted"
-req POST /api/auth/sign-out '' >/dev/null
+req POST /api/auth/sign-out '{}' >/dev/null
 echo "  ✓ logged out"
 
 echo ""

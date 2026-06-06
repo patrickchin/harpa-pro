@@ -26,7 +26,7 @@ SAMPLES="$(cd "$(dirname "$0")/../../apps/cli/scripts/samples" && pwd)"
 REAL_SAMPLES="$(cd "$(dirname "$0")/../../samples/real" && pwd)"
 IMG="$SAMPLES/sample.png"
 PDF_FILE="$SAMPLES/sample.pdf"
-TXT_FILE="$SAMPLES/sample.txt"
+
 WAV_FILE="$SAMPLES/sample.wav"
 # Longer real voice sample for the aggregator step (~4:34, 4.2 MB).
 # Different domain from journey-core's default so AI output stays diverse.
@@ -66,7 +66,7 @@ assert_status() {
   local expected="$1"; shift
   local got; got=$(status_of "$@")
   if [[ "$got" != "$expected" ]]; then
-    echo "  ✗ expected $expected, got $got ($(echo "$@"))" >&2; exit 1
+    echo "  ✗ expected $expected, got $got ($*)" >&2; exit 1
   fi
   echo "  ✓ $expected"
 }

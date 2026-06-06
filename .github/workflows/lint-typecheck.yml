@@ -43,11 +43,15 @@ jobs:
         # them honest without spinning up the full integration matrix.
         run: bash scripts/ci/__tests__/verify-readyz.test.sh
       - name: Shellcheck CI helpers
-        # Lint every shell script under scripts/ci/ so syntactic
-        # regressions in CI glue (e.g. unquoted vars, broken loops)
-        # fail the PR before they ship to dev/main. Scoped to
-        # scripts/ci/ to stay surgical — broader script directories
-        # have pre-existing warnings tracked separately.
+        # Lint shared shell scripts that ship in CI workflows. Catches
+        # syntactic regressions (unquoted vars, broken loops, useless
+        # echos) at PR time, before they reach dev/main and break a
+        # post-merge-only workflow. Covers:
+        #   - scripts/ci/*.sh           — shared CI helpers (verify-readyz, …)
+        #   - scripts/journeys/*.sh     — post-deploy smoke scripts run
+        #                                 from api-dev / api-prod
+        # See docs/v4/arch-cicd-and-migrations.md "Workflow trigger matrix"
+        # for the post-merge-only blind spot this guards.
         run: |
           shellcheck --version
-          find scripts/ci -name '*.sh' -print0 | xargs -0 shellcheck
+          find scripts/ci scripts/journeys -name '*.sh' -print0 | xargs -0 shellcheck

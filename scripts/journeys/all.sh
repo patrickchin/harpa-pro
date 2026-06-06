@@ -57,13 +57,31 @@ run() {
 
 FAILURES=0
 
+# better-auth ships its own per-IP auth-route rate limiter that the
+# stress journey may exhaust by design. Pause between journeys so
+# the next journey's first sign-in has a clean slate. better-auth's
+# default window is 60s; we wait 75s to be safe. This adds a fixed
+# ~2.5min to every full all.sh run — acceptable for post-deploy CI
+# where the journey total is already several minutes.
+RECOVERY_SLEEP="${JOURNEY_RECOVERY_SLEEP:-75}"
+
 # Run shortest first: stress (~10s) → core (~3min) → extended (~5min)
 if [[ "$ONLY" == "stress" || -z "$ONLY" ]]; then
   run "journey-stress" "$DIR/stress.sh"
+  if [[ -z "$ONLY" ]]; then
+    echo ""
+    echo "  ⏸️  pausing ${RECOVERY_SLEEP}s for better-auth's rate-limit window to reset"
+    sleep "$RECOVERY_SLEEP"
+  fi
 fi
 
 if [[ "$ONLY" == "core" || -z "$ONLY" ]]; then
   run "journey-core" "$DIR/core.sh"
+  if [[ -z "$ONLY" ]]; then
+    echo ""
+    echo "  ⏸️  pausing ${RECOVERY_SLEEP}s for better-auth's rate-limit window to reset"
+    sleep "$RECOVERY_SLEEP"
+  fi
 fi
 
 if [[ "$ONLY" == "extended" || -z "$ONLY" ]]; then

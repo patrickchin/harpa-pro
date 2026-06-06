@@ -113,8 +113,14 @@ echo "→ readyz";             req GET /readyz  '' >/dev/null
 # ── 2. Authentication ─────────────────────────────────────────────────
 
 echo "→ POST /api/auth/sign-in/email"
+set +e
 TOKEN=$(password_login "$EMAIL" "$PASSWORD")
-[[ -n "$TOKEN" ]] || { echo "  ✗ no set-auth-token header on sign-in" >&2; exit 1; }
+LOGIN_RC=$?
+set -e
+if [[ $LOGIN_RC -ne 0 || -z "$TOKEN" ]]; then
+  echo "  ✗ no set-auth-token header on sign-in (rc=$LOGIN_RC)" >&2
+  exit 1
+fi
 echo "  ✓ token acquired"
 
 # ── 3. User profile ──────────────────────────────────────────────────

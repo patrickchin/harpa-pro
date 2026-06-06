@@ -25,16 +25,10 @@ downgraded role (e.g. `viewer`), which—if the handler naively upserted—would
 demote them from `owner`, potentially locking the project out of all
 owner-only operations** (member management, project deletion). The current DB
 helper `app.add_project_member_by_phone` already blocks re-invites with a
-`23505` unique-violation (→ 409), but:
-
-1. The protection is documented only in a SQL comment, not in an API design
-   doc.
-2. There is **no `PATCH /projects/{project}/members/{user}` route** for
-   legitimate role changes, leaving mobile clients no upgrade/downgrade path.
-3. There are no owner-demotion guard tests for the role-change path.
-4. The stable error-code enum for member operations is not specified.
-
-This document closes all four gaps.
+`23505` unique-violation (→ 409), but the protection is documented only in a
+SQL comment, there is no `PATCH /projects/{project}/members/{user}` route for
+legitimate role changes, no owner-demotion guard tests for that path exist,
+and the stable error-code enum is not specified. This doc fills those gaps.
 
 ---
 
@@ -59,47 +53,11 @@ Three roles, enumerated in `app.project_role` (`owner | editor | viewer`).
 
 ---
 
-## 3. Alternatives considered
+## 3. Design notes (rejected alternatives)
 
-### 3a. POST upserts the role on conflict (rejected)
-
-Make `POST /projects/{project}/members` idempotent by inserting the row or
-updating the role if the phone already matches a member. This removes the 409
-response for re-invites.
-
-**Rejected because** it allows an owner to demote themselves (or another owner)
-through the "invite" UX without any safeguard. The "add member" action in the
-mobile UI should not double as a "change role" action—those are distinct
-intents and distinct risk levels. Keeping POST strictly additive (insert-only,
-409 on conflict) means the demote-vector never exists here.
-
-### 3b. Block `owner` in the role field of POST (rejected)
-
-Only allow `editor` and `viewer` in the `POST` body so owners can never be
-added via invite.
-
-**Rejected because** adding a co-owner is a legitimate action. A project can
-have multiple owners (e.g. a manager plus a site lead). Restricting `POST` to
-non-owner roles would require a separate "promote" endpoint. The cleaner split
-is:
-
-- POST = add new member (owner or not). Owner-demotion is impossible because
-  the member doesn't exist yet.
-- PATCH = change role of an existing member, with last-owner guard.
-
-### 3c. Allow PATCH but guard only self-demotion (partially rejected)
-
-Only block `PATCH` when `p_user_id = v_caller` (self-demotion). Allow an
-owner to demote another owner to any role freely.
-
-**Partially rejected.** Self-demotion protection alone is insufficient: if
-Alice (owner) demotes Bob (the only other owner) to `editor`, only Alice is
-left as owner. If Alice then leaves, the project has no owner. The guard must
-count all owners for any owner→non-owner transition, not just when the caller
-is the target.
-
-**Chosen:** Last-owner check fires for any `owner → <lower>` transition,
-regardless of whether the target is the caller or someone else.
+- **POST upserts on conflict (rejected)** — would let an owner self-demote via the "invite" UX. Keep POST insert-only with 409 on conflict; "add" and "change role" stay distinct intents.
+- **Block `owner` in the POST role field (rejected)** — multiple owners is a legitimate setup. Cleaner split: `POST` adds a new member at any role (no demote-vector since the row didn't exist); `PATCH` changes an existing member's role with a last-owner guard.
+- **Self-demotion-only guard (rejected)** — insufficient: Alice could demote Bob (the only other owner) and then leave. The last-owner check fires for **any** `owner → <lower>` transition, regardless of whether the target is the caller.
 
 ---
 

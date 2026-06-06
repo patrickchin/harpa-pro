@@ -488,10 +488,10 @@ fi
 req DELETE "/projects/$PID_A" >/dev/null
 echo "  ✓ A's resources cleaned"
 
-req POST /api/auth/sign-out '' >/dev/null
+req POST /api/auth/sign-out '{}' >/dev/null
 if [[ "$HAS_USER_B" == "true" && -n "$TOKEN_B" ]]; then
   TOKEN="$TOKEN_B"
-  req POST /api/auth/sign-out '' >/dev/null
+  req POST /api/auth/sign-out '{}' >/dev/null
 fi
 echo "  ✓ logged out"
 

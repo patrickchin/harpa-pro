@@ -290,7 +290,7 @@ req DELETE "/projects/$PID/reports/$RNUM" >/dev/null
 echo "→ DELETE project"
 req DELETE "/projects/$PID" >/dev/null
 echo "→ POST /api/auth/sign-out"
-req POST /api/auth/sign-out '' >/dev/null
+req POST /api/auth/sign-out '{}' >/dev/null
 
 echo ""
 echo "✓ JOURNEY-CORE complete"

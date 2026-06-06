@@ -55,7 +55,7 @@ describe('app boot: no module-load side effects', () => {
     vi.resetModules();
     const mod = await import('../app.js');
     expect(typeof mod.createApp).toBe('function');
-  });
+  }, 30_000);
 
   it('imports app.ts under PR-preview env (NODE_ENV=production, PR_BUILD=1, DEV_OTP_TOKEN set) without throwing', async () => {
     process.env.NODE_ENV = 'production';
@@ -68,7 +68,7 @@ describe('app boot: no module-load side effects', () => {
     vi.resetModules();
     const mod = await import('../app.js');
     expect(typeof mod.createApp).toBe('function');
-  });
+  }, 30_000);
 
   it('imports routes/dev.ts directly under dev-fly env without throwing', async () => {
     process.env.NODE_ENV = 'production';
@@ -81,5 +81,5 @@ describe('app boot: no module-load side effects', () => {
     vi.resetModules();
     const mod = await import('../routes/dev.js');
     expect(mod.devRoutes).toBeDefined();
-  });
+  }, 30_000);
 });

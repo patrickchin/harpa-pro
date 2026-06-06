@@ -169,3 +169,29 @@ fly secrets set --app harpa-pro-api-dev \
 (Plus any other test-only emails; comma-separated.) If the Fly
 value drifts from the journey defaults the deploy still succeeds
 but post-deploy journeys fail with "Invalid credentials".
+
+## Followup #2 (2026-06-06) — wire journeys to actual seed targets
+
+PR #152 fixed the seed-script crash. Post-merge api-dev (run
+27060816042) deploy + seed succeeded, but journeys still failed at
+sign-in because the scripts default to `alice@e2e.harpapro.com` /
+`bob@e2e.harpapro.com` while Fly's `TEST_ACCOUNT_EMAILS_DEV`
+contains a different address (`test+1@harpapro.com`).
+
+The cleanest invariant is: **the journey EMAIL must match what the
+seed script created**, which is whatever is in
+`TEST_ACCOUNT_EMAILS_DEV` on Fly. Adding email addresses as
+GitHub *repo variables* (not secrets — emails aren't sensitive)
+gives the workflow the same value:
+
+- `TEST_ACCOUNT_EMAIL_DEV`   → first address from `TEST_ACCOUNT_EMAILS_DEV`
+- `TEST_ACCOUNT_EMAIL2_DEV`  → second address, or same as `EMAIL_DEV`
+  if only one account exists (the journey scripts skip second-user
+  checks gracefully)
+
+The `api-dev.yml` step now reads both variables and exports
+`EMAIL` / `EMAIL2` for the scripts, failing fast if
+`TEST_ACCOUNT_EMAIL_DEV` is unset. Whoever rotates the Fly
+`TEST_ACCOUNT_EMAILS_DEV` value MUST update the matching GitHub
+repo variable; this is the kind of cross-system coupling that
+killed PR #151 + #152 the first two times.

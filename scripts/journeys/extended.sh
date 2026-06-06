@@ -126,21 +126,29 @@ fi
 TOKEN1="$TOKEN"
 echo "  ✓ logged in"
 
-# Try to ensure user 2 exists (requires EMAIL2 in TEST_ACCOUNT_EMAILS)
+# Try to ensure user 2 exists (requires EMAIL2 in TEST_ACCOUNT_EMAILS).
+# When EMAIL2 == EMAIL (single-account dev environments), treat user 2
+# as unavailable so the member-management tests skip gracefully — you
+# can't invite yourself as a member of a project you already own (the
+# API returns 409). See docs/bugs/2026-06-06-test-accounts-never-seeded-on-dev.md.
 HAS_USER2=false
-echo "→ login (user 2: $EMAIL2 — ensure exists)"
-set +e
-TOKEN2=$(password_login "$EMAIL2" "$PASSWORD" 2>/dev/null)
-if [[ -n "$TOKEN2" && "$TOKEN2" != "null" ]]; then
-  HAS_USER2=true
-  TOKEN="$TOKEN2"
-  req POST /api/auth/sign-out '' >/dev/null
-  TOKEN="$TOKEN1"
-  echo "  ✓ user 2 exists"
+if [[ "$EMAIL2" == "$EMAIL" ]]; then
+  echo "→ user 2 same as user 1 — skipping member tests"
 else
-  echo "  ⚠️  user 2 unavailable (EMAIL2 not in TEST_ACCOUNT_EMAILS) — member tests will be skipped"
+  echo "→ login (user 2: $EMAIL2 — ensure exists)"
+  set +e
+  TOKEN2=$(password_login "$EMAIL2" "$PASSWORD" 2>/dev/null)
+  if [[ -n "$TOKEN2" && "$TOKEN2" != "null" ]]; then
+    HAS_USER2=true
+    TOKEN="$TOKEN2"
+    req POST /api/auth/sign-out '' >/dev/null
+    TOKEN="$TOKEN1"
+    echo "  ✓ user 2 exists"
+  else
+    echo "  ⚠️  user 2 unavailable (EMAIL2 not in TEST_ACCOUNT_EMAILS) — member tests will be skipped"
+  fi
+  set -e
 fi
-set -e
 
 # ── 2. Profile edge cases ────────────────────────────────────────────
 
@@ -309,10 +317,10 @@ fi
 echo "→ PATCH report (set body)"
 req PATCH "/projects/$PID_A/reports/$RNUM" '{
   "body":{
-    "meta":{"title":"Daily Report","summary":"Concrete pour completed successfully.","visitDate":"2026-05-18T10:00:00Z","tags":["concrete","section-b"]},
-    "weather":{"condition":"Overcast","temperatureC":18,"windKph":10,"impact":null},
-    "workers":[{"role":"Foreman","count":1,"hours":8,"notes":null},{"role":"Labourer","count":3,"hours":8,"notes":null}],
-    "materials":[{"name":"Concrete","quantity":20,"unit":"m³","status":"poured","condition":"good","notes":null},{"name":"Rebar","quantity":null,"unit":null,"status":"installed","condition":"grade 60","notes":null}],
+    "meta":{"title":"Daily Report","summary":"Concrete pour completed successfully.","visitDate":"2026-05-18T10:00:00Z"},
+    "weather":{"condition":"Overcast","temperature":"18°C","wind":"10 kph","impact":null},
+    "workers":[{"role":"Foreman","count":"1","hours":"8","notes":null},{"role":"Labourer","count":"3","hours":"8","notes":null}],
+    "materials":[{"name":"Concrete","quantity":"20","unit":"m³","status":"poured","condition":"good","notes":null},{"name":"Rebar","quantity":null,"unit":null,"status":"installed","condition":"grade 60","notes":null}],
     "issues":[],
     "nextSteps":["Second pour section B"],
     "summarySections":[{"title":"Daily Summary","body":"Concrete pour completed successfully."}]
@@ -325,7 +333,7 @@ echo "  ✓ finalized"
 
 echo "→ PATCH finalized report (expect 4xx)"
 assert_status 409 PATCH "/projects/$PID_A/reports/$RNUM" '{
-  "body":{"meta":{"title":null,"summary":null,"visitDate":null,"tags":[]},"weather":null,"workers":[],"materials":[],"issues":[],"nextSteps":[],"summarySections":[{"title":"hack","body":"should fail"}]}
+  "body":{"meta":{"title":null,"summary":null,"visitDate":null},"weather":null,"workers":[],"materials":[],"issues":[],"nextSteps":[],"summarySections":[{"title":"hack","body":"should fail"}]}
 }'
 
 echo "→ pdf"

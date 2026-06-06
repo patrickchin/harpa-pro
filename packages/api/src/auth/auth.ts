@@ -38,6 +38,39 @@ const dbProxy = new Proxy({} as ReturnType<typeof rawDb>, {
   },
 });
 
+/**
+ * `$context` exposes better-auth's internal adapter and password
+ * helpers. It is the documented escape hatch (see
+ * `node_modules/better-auth/dist/auth/base.mjs` — the returned
+ * object includes `$context: authContext`) used by deploy-time
+ * scripts (e.g. `scripts/seed-test-account.ts`) that need to create
+ * users while `emailAndPassword.disableSignUp` is `true`.
+ *
+ * We type only the surface we actually use; the runtime object
+ * carries the full `AuthContext`.
+ */
+type AuthInternalContext = {
+  internalAdapter: {
+    findUserByEmail: (
+      email: string,
+    ) => Promise<{ user: { id: string } } | null | undefined>;
+    createUser: (input: {
+      email: string;
+      name: string;
+      emailVerified: boolean;
+    }) => Promise<{ id: string } | null | undefined>;
+    linkAccount: (input: {
+      userId: string;
+      providerId: string;
+      accountId: string;
+      password: string;
+    }) => Promise<unknown>;
+  };
+  password: {
+    hash: (password: string) => Promise<string>;
+  };
+};
+
 type BetterAuthInstance = {
   handler: (req: Request) => Promise<Response>;
   api: {
@@ -55,6 +88,7 @@ type BetterAuthInstance = {
       };
     }) => Promise<unknown>;
   };
+  $context: Promise<AuthInternalContext>;
 };
 
 export const auth = betterAuth({

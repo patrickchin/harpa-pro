@@ -121,3 +121,51 @@ test account silently missing.
 - `packages/api/package.json` — add `db:seed-test-account` script.
 - `infra/fly/fly.dev.toml` — chain seed into `release_command`.
 - `scripts/journeys/stress.sh` — bait-email refactor in section A.
+
+## Followup (2026-06-06, post-merge)
+
+PR #151 wired the script into the release_command, but the script
+itself was *also* broken: it called `auth.api.signUpEmail()`, which
+is unconditionally rejected by better-auth's sign-up route when
+`emailAndPassword.disableSignUp: true`
+(`node_modules/better-auth/dist/api/routes/sign-up.mjs:143`). So the
+seed step ran on dev for the first time and crashed:
+
+```
+[seed-test-account] test+1@harpapro.com: Email and password sign up is not enabled
+```
+
+Fix: the script now resolves `auth.$context` and goes through the
+internal adapter directly:
+
+```
+ctx.password.hash(password)
+  → ctx.internalAdapter.createUser({ email, name, emailVerified: false })
+  → ctx.internalAdapter.linkAccount({ userId, providerId: 'credential', accountId: userId, password })
+```
+
+This mirrors `sign-up.mjs:217-240` (the path the public route takes
+*after* the `disableSignUp` check) and is the documented escape
+hatch — `$context` is a public field on the better-auth instance.
+
+`packages/api/src/auth/auth.ts` casts the instance to a narrow
+`BetterAuthInstance` type that hid `$context`; that type now also
+exposes `$context: Promise<AuthInternalContext>` with the
+`internalAdapter`/`password` surface this script needs.
+
+## Ops requirement
+
+Journey scripts default to `EMAIL=alice@e2e.harpapro.com` and
+`EMAIL2=bob@e2e.harpapro.com`. The API's sign-in allowlist comes
+from the `TEST_ACCOUNT_EMAILS_DEV` Fly secret, and the seed script
+creates exactly those addresses. So the Fly secret **must**
+include both:
+
+```
+fly secrets set --app harpa-pro-api-dev \
+  TEST_ACCOUNT_EMAILS_DEV='alice@e2e.harpapro.com,bob@e2e.harpapro.com'
+```
+
+(Plus any other test-only emails; comma-separated.) If the Fly
+value drifts from the journey defaults the deploy still succeeds
+but post-deploy journeys fail with "Invalid credentials".

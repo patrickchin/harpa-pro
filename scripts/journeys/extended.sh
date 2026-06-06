@@ -46,12 +46,33 @@ req() {
 
 # password_login EMAIL PASSWORD -> echoes the bearer token from the
 # `set-auth-token` response header on POST /api/auth/sign-in/email.
+# Retries on 429 to ride out better-auth's per-IP auth-route rate
+# limiter, which the preceding stress journey may have exhausted.
 password_login() {
   local email="$1" pass="$2"
-  local headers; headers=$(curl -fsS -D - -o /dev/null -X POST \
-    "$BASE/api/auth/sign-in/email" "${H[@]}" \
-    -d "{\"email\":\"$email\",\"password\":\"$pass\"}" 2>/dev/null) || return 1
-  printf '%s' "$headers" | awk 'tolower($1)=="set-auth-token:" {print $2}' | tr -d '\r\n'
+  local attempt=1 status headers backoff
+  while (( attempt <= 6 )); do
+    status=$(curl -sS -D /tmp/journey-login-headers.$$ -o /dev/null \
+      -w '%{http_code}' -X POST \
+      "$BASE/api/auth/sign-in/email" "${H[@]}" \
+      -d "{\"email\":\"$email\",\"password\":\"$pass\"}")
+    if [[ "$status" == "200" ]]; then
+      headers=$(cat /tmp/journey-login-headers.$$)
+      rm -f /tmp/journey-login-headers.$$
+      printf '%s' "$headers" | awk 'tolower($1)=="set-auth-token:" {print $2}' | tr -d '\r\n'
+      return 0
+    fi
+    if [[ "$status" != "429" ]]; then
+      rm -f /tmp/journey-login-headers.$$
+      return 1
+    fi
+    backoff=$((attempt * 10))
+    echo "  ⏳ sign-in rate-limited (HTTP 429); waiting ${backoff}s before retry $((attempt + 1))/6" >&2
+    sleep "$backoff"
+    attempt=$((attempt + 1))
+  done
+  rm -f /tmp/journey-login-headers.$$
+  return 1
 }
 
 # Returns HTTP status code without failing on 4xx/5xx.

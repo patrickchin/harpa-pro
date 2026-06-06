@@ -131,6 +131,16 @@ echo ""
 echo "── A. Authentication failures ──"
 TOKEN=""
 
+# Use a stable fake email for all bad-cred tests so we never touch
+# the real test accounts' failed-attempt counters. The auth.ts hook
+# bounces any sign-in whose email isn't in TEST_ACCOUNT_EMAILS at
+# UNAUTHORIZED *before* the credential check runs, so real accounts
+# never see these attempts and can't be lockout-throttled by stress
+# burning through their attempt budget. (Probing real accounts here
+# is what wedged 3 consecutive post-deploy runs in 2026-06-06; see
+# docs/bugs/2026-06-06-journey-scripts-better-auth-drift.md.)
+BAIT_EMAIL="stress-bait-not-in-allowlist@e2e.harpapro.com"
+
 # better-auth's email/password adapter returns 401 ("Invalid
 # credentials") for any sign-in input it considers a bad credential —
 # wrong password, missing fields, malformed email, empty email — so
@@ -147,7 +157,7 @@ TOKEN=""
 # itself a real test ("the API said no"); the limiter behavior is
 # additionally exercised by the protected-route checks in section C.
 check "wrong password" "401|429" POST /api/auth/sign-in/email \
-  "{\"email\":\"$EMAIL\",\"password\":\"wrong_password_123\"}"
+  "{\"email\":\"$BAIT_EMAIL\",\"password\":\"wrong_password_123\"}"
 sleep 1
 
 check "empty email" "401|429" POST /api/auth/sign-in/email \
@@ -159,7 +169,7 @@ check "invalid email format" "401|429" POST /api/auth/sign-in/email \
 sleep 1
 
 check "missing password field" "401|429" POST /api/auth/sign-in/email \
-  "{\"email\":\"$EMAIL\"}"
+  "{\"email\":\"$BAIT_EMAIL\"}"
 sleep 1
 
 # Empty body and malformed JSON currently 500 (body parser error not

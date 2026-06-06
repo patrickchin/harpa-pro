@@ -195,6 +195,7 @@ echo "→ POST /projects/$PID/reports/$RNUM/generate"
 USAGE_BEFORE_GEN=$(req GET /me/usage '')
 CALLS_BEFORE_GEN=$(echo "$USAGE_BEFORE_GEN" | jq -r '.totals.calls // 0')
 set +e
+# shellcheck disable=SC2034  # captured for future error-detail logging; intentionally unread today
 GEN_RESULT=$(req POST "/projects/$PID/reports/$RNUM/generate" '{}' 2>&1)
 GEN_STATUS=$?
 set -e

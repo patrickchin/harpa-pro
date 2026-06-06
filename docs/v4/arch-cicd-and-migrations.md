@@ -116,6 +116,61 @@ which Fly app and which Neon branch is targeted.
 
 ---
 
+## Workflow trigger matrix
+
+Every workflow file in `.github/workflows/` falls into one of two
+buckets — **PR-gated** (runs on `pull_request` and therefore catches
+regressions before merge) or **post-merge-only** (runs on `push` to
+`dev` / `main` and only fires after merge). Anything in the
+post-merge-only column is a blind spot: a regression in code/scripts
+exclusively exercised by those workflows ships to the target
+environment and only surfaces when the deploy fires.
+
+| Workflow                          | PR-gated | Push (dev / main)     | What it catches |
+| --------------------------------- | :------: | --------------------- | ----------------------------------------------------------------- |
+| `lint-typecheck.yml`              | ✓        | dev + main            | ESLint, TypeScript, removal-verification gates, CI shell self-tests, shellcheck of `scripts/ci/` and `scripts/journeys/` |
+| `unit.yml`                        | ✓        | dev + main            | Vitest unit suites for every package |
+| `api-integration.yml`             | ✓        | dev + main            | `pnpm --filter @harpa/api test:integration` against testcontainers |
+| `cli.yml`                         | ✓        | dev + main            | `apps/cli` typecheck + tests |
+| `e2e-maestro-testid-gate.yml`     | ✓        | dev + main            | Maestro testID accessibility gate |
+| `pr-preview.yml`                  | ✓        | (PR-only)             | Per-PR Neon branch + Fly preview app + post-deploy `/readyz` verify |
+| `mobile-ota-pr.yml`               | ✓        | (PR-only)             | Per-PR Expo OTA preview |
+| `marketing-preview.yml`           | ✓ (→main)| (PR-only)             | Cloudflare Pages preview for marketing |
+| `main-gate.yml`                   | ✓ (→main)| (PR-only)             | Hard-required checks on merges into `main` |
+| `api-dev.yml`                     | ✗        | dev                   | `flyctl deploy` to `harpa-pro-api-dev`, `/readyz` verify, `scripts/journeys/all.sh dev` |
+| `api-prod.yml`                    | ✗        | main                  | `flyctl deploy` to `harpa-pro-api`, `/readyz` verify, `scripts/journeys/all.sh prod` |
+| `marketing-dev.yml`               | ✗        | dev                   | Cloudflare Pages `dev` branch deploy |
+| `marketing-prod.yml`              | ✗        | main                  | Cloudflare Pages prod deploy |
+| `mobile-ota-dev.yml`              | ✗        | dev                   | Expo OTA publish to dev channel |
+| `mobile-ota-prod.yml`             | ✗        | main                  | Expo OTA publish to prod channel |
+| `version-bump-dev.yml`            | ✗        | dev                   | Auto version bump after merge |
+| `ai-live.yml`                     | ✗        | dev + main + dispatch | Live AI provider smoke (no fixtures) |
+| `neon-snapshot-prune.yml`         | ✗        | (cron 04:17 UTC)      | Prune stale Neon branches |
+
+### Closing post-merge blind spots
+
+When a workflow lives only in the post-merge column, the rule is:
+
+1. **Extract the glue into a script** (`scripts/ci/*.sh`,
+   `scripts/journeys/*.sh`) so it can be exercised independently.
+2. **Add a self-test** (`scripts/ci/__tests__/*.test.sh` or a Vitest
+   integration test) that runs the script against a fake or
+   container-bound dependency.
+3. **Wire the self-test into a PR-gated job** — usually
+   `lint-typecheck.yml` for shell glue, `api-integration.yml` for
+   API contract checks, or a workflow with `pull_request:` trigger.
+4. **Run `shellcheck`** on every directory of shell helpers so
+   syntactic drift fails the PR.
+
+The `Verify /readyz (dev)` cold-start regression
+([docs/bugs/2026-06-06-api-dev-readyz-cold-start.md](../bugs/2026-06-06-api-dev-readyz-cold-start.md))
+is the canonical example of this blind spot. The fix established
+the pattern above: `scripts/ci/verify-readyz.sh` with a python-based
+fake-server self-test wired into `lint-typecheck.yml`, plus
+shellcheck of both `scripts/ci/` and `scripts/journeys/`.
+
+---
+
 ## Concrete file changes
 
 > No code in this doc — just paths + intent. The implementation PR writes

@@ -292,9 +292,13 @@ Duration: 123ms
 
 Implementation: read response headers (`x-request-id`, `idempotent-replay`, `x-ratelimit-remaining`, `x-ratelimit-limit`) and print conditionally.
 
-## Command surface (all 37 routes)
+## Command surface
 
-Complete mapping of the frozen OpenAPI spec (37 routes) to CLI commands. Flags use kebab-case, positional args where sensible.
+Every API route has a CLI command. The mapping below covers the
+auth, project, member, report, file, voice, settings, and admin
+surfaces; `apps/cli/src/commands/` is the source of truth and stays
+in sync with `packages/api-contract`. Flags use kebab-case, positional
+args where sensible.
 
 ### Auth (`commands/auth.ts`)
 

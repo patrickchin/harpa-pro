@@ -77,9 +77,8 @@ visual parity:
 - `db0b97c fix(mobile-v3): add small top padding to ScreenHeader`
 - `69ebf4e fix(mobile-v3): add back button to profile and fix onboarding placeholder spacing`
 
-The whole v3 realignment effort
-([`docs/legacy-v3/realignment/`](../legacy-v3/realignment/)) exists
-because of this drift.
+The whole v3 realignment effort — chasing visual drift in a separate
+realignment plan — happened because of this drift.
 
 **v4 rule.** P2 ships screens by **direct port from the canonical
 source** at `../haru3-reports/apps/mobile` on branch `dev`. Both
@@ -89,10 +88,9 @@ canonical source on the iOS sim). Cosmetic drift in later phases is
 a P0 bug.
 
 There is no automated screenshot-diff gate — the v3 attempt's
-`docs/legacy-v3/screenshots/`, `docs/legacy-v3/realignment/`, and
-`docs/legacy-v3/_work/mobile-old-source-dump.md` are explicitly
-**not** used as port sources in v4 (they are kept for historical
-context only).
+screenshot dumps and realignment docs are not part of this repo and
+are explicitly **not** used as port sources in v4. The canonical
+port source is `../haru3-reports/apps/mobile@dev`.
 
 Tactical sub-rules:
 - Tailwind tokens defined in `apps/mobile/tailwind.config.js` once,
@@ -350,12 +348,12 @@ collaborators against MinIO.
 
 ### "Realignment" is the smell
 
-The fact that v3 needed a 17-page realignment plan
-([`docs/legacy-v3/realignment/`](../legacy-v3/realignment/)) means
-we were declaring phases done without a real acceptance contract.
-v4's acceptance contract is the live canonical port source at
-`../haru3-reports/apps/mobile@dev` — read it directly per screen;
-do **not** mine the legacy realignment docs.
+The fact that v3 needed a 17-page realignment plan to chase
+accumulated visual drift means we were declaring phases done without
+a real acceptance contract. v4's acceptance contract is the live
+canonical port source at `../haru3-reports/apps/mobile@dev` — read
+it directly per screen; do **not** invent a separate realignment
+backlog.
 
 ### Subagent over-scoping
 

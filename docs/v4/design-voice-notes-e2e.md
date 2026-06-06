@@ -1,7 +1,9 @@
 # Voice notes E2E goal
 
 **Date:** 2026-05-27
-**Status:** Goal / design
+**Status:** ✅ Shipped — covered by `.maestro/modules/09-voice-notes.yaml`
+in the regression journey. Doc retained as the original goal /
+acceptance contract.
 **Target:** `.maestro/modules/09-voice-notes.yaml` inside
 `.maestro/regression-journey.yaml`
 

@@ -38,3 +38,7 @@ jobs:
           bash scripts/check-no-unistyles.sh
           bash scripts/check-scope-tests.sh
           bash scripts/check-mobile-lib-flat.sh
+      - name: CI shell-script tests
+        # Self-tests for the shared CI helpers in scripts/ci/. Keeps
+        # them honest without spinning up the full integration matrix.
+        run: bash scripts/ci/__tests__/verify-readyz.test.sh

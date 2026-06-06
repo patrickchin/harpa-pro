@@ -183,21 +183,12 @@ jobs:
             --remote-only
 
       - name: Verify /readyz
-        run: |
-          set -euo pipefail
-          URL="https://${APP_NAME}.fly.dev/readyz"
-          for i in 1 2 3 4 5 6; do
-            if curl --fail --silent --show-error --max-time 8 "$URL"; then
-              echo
-              echo "readyz ok"
-              exit 0
-            fi
-            echo "readyz attempt $i failed, retrying..."
-            sleep 5
-          done
-          echo "readyz never returned 200 — investigate Fly logs:" >&2
-          echo "  flyctl logs -a $APP_NAME" >&2
-          exit 1
+        # Per-PR Fly apps run with auto-stop + min_machines_running=0,
+        # same as dev. Share scripts/ci/verify-readyz.sh so cold-start
+        # tolerance stays identical across api-dev / api-prod / preview.
+        env:
+          READYZ_URL: https://${{ env.APP_NAME }}.fly.dev/readyz
+        run: bash scripts/ci/verify-readyz.sh
 
       - name: Post preview URL as sticky PR comment
         uses: marocchino/sticky-pull-request-comment@v2

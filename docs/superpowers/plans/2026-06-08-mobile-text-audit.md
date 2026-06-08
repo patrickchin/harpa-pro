@@ -218,12 +218,14 @@ Rules:
 
 ### Subagent assignments
 
-1. **audit-auth** — `apps/mobile/app/(auth)/**/*.tsx` → goes under `## (auth)`
-2. **audit-account** — `apps/mobile/app/(app)/{account,profile,usage,developer}.tsx` plus `apps/mobile/components/account/**/*.tsx` → goes under `## (app) — account, profile, usage, developer`
-3. **audit-projects** — `apps/mobile/app/(app)/projects/{index,new,_layout}.tsx` and `apps/mobile/app/(app)/projects/[project]/{index,members,edit}.tsx` and `apps/mobile/app/(app)/p/[project].tsx` → goes under `## (app) — projects`
-4. **audit-reports** — `apps/mobile/app/(app)/projects/[project]/reports/**/*.tsx` and `apps/mobile/app/(app)/r/[report].tsx` plus `apps/mobile/components/reports/**/*.tsx` and `apps/mobile/features/generate/GenerateReportProvider.tsx` → goes under `## (app) — reports`
-5. **audit-camera** — `apps/mobile/app/(camera)/**/*.tsx` plus `apps/mobile/components/files/**/*.tsx` (photos/files UI travels with camera) → goes under `## (camera)`
-6. **audit-shared** — everything left under `apps/mobile/components/{ui,primitives,skeletons,notes}/**/*.tsx` and `apps/mobile/features/voice/InlineVoiceRecorder.tsx` and `apps/mobile/app/(app)/_layout.tsx` and `apps/mobile/app/_layout.tsx` and `apps/mobile/app/index.tsx` → goes under `## Shared components`
+> **Routes are wiring-only — most user-facing text lives in `apps/mobile/screens/*` and `apps/mobile/lib/dialogs/app-dialog-copy.ts`.** Each subagent below audits both its route files AND the matching screen body / lib module.
+
+1. **audit-auth** — `apps/mobile/app/(auth)/**/*.tsx` plus `apps/mobile/screens/{onboarding,auth-email,auth-code}.tsx` → goes under `## (auth)`
+2. **audit-account** — `apps/mobile/app/(app)/{account,profile,usage,developer}.tsx`, `apps/mobile/screens/{account,profile,usage,developer}.tsx`, plus `apps/mobile/components/account/**/*.tsx` → goes under `## (app) — account, profile, usage, developer`
+3. **audit-projects** — `apps/mobile/app/(app)/projects/{index,new,_layout}.tsx`, `apps/mobile/app/(app)/projects/[project]/{index,members,edit}.tsx`, `apps/mobile/app/(app)/p/[project].tsx`, plus `apps/mobile/screens/{projects-list,project-new,project-home,project-edit,project-members}.tsx` → goes under `## (app) — projects`
+4. **audit-reports** — `apps/mobile/app/(app)/projects/[project]/reports/**/*.tsx`, `apps/mobile/app/(app)/r/[report].tsx`, `apps/mobile/screens/{reports-list,saved-report,generate-notes,report-notes,report-debug}.tsx`, `apps/mobile/components/reports/**/*.tsx`, plus `apps/mobile/features/generate/GenerateReportProvider.tsx` → goes under `## (app) — reports`
+5. **audit-camera** — `apps/mobile/app/(camera)/**/*.tsx`, `apps/mobile/screens/camera-capture.tsx`, plus `apps/mobile/components/files/**/*.tsx` (photos/files UI travels with camera) → goes under `## (camera)`
+6. **audit-shared** — everything left under `apps/mobile/components/{ui,primitives,skeletons,notes}/**/*.tsx`, `apps/mobile/features/voice/InlineVoiceRecorder.tsx`, `apps/mobile/app/(app)/_layout.tsx`, `apps/mobile/app/_layout.tsx`, `apps/mobile/app/index.tsx`, plus the centralized copy modules: `apps/mobile/lib/dialogs/**/*.ts` and any user-facing strings in `apps/mobile/lib/{api/errors.ts,util/use-clipboard.ts,reports/use-report-pdf-actions.ts,reports/report-ui.ts,uploads/run-upload.ts,uploads/queue.ts,camera/use-camera-uploads.ts,notes/note-entry.ts,api/backend-version.ts}` → goes under `## Shared components`
 
 - [ ] **Step 1: Dispatch all six subagents in one response**
 
@@ -234,8 +236,13 @@ Use `task` with `agent_type: explore` for each. Each prompt = the shared templat
 After all six return, count audited files vs source-of-truth:
 
 ```bash
-cd apps/mobile && find app components features -name '*.tsx' \
-  -not -name '*.test.tsx' -not -path '*/__snapshots__/*' | sort > /tmp/mobile-tsx.txt
+cd apps/mobile && {
+  find app screens components features -name '*.tsx' \
+    -not -name '*.test.tsx' -not -path '*/__snapshots__/*'
+  find lib/dialogs -name '*.ts' -not -name '*.test.ts'
+  # the explicit lib copy files audited by audit-shared
+  printf 'lib/api/errors.ts\nlib/util/use-clipboard.ts\nlib/reports/use-report-pdf-actions.ts\nlib/reports/report-ui.ts\nlib/uploads/run-upload.ts\nlib/uploads/queue.ts\nlib/camera/use-camera-uploads.ts\nlib/notes/note-entry.ts\nlib/api/backend-version.ts\n'
+} | sort -u > /tmp/mobile-tsx.txt
 wc -l /tmp/mobile-tsx.txt
 ```
 
@@ -306,10 +313,10 @@ Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
 - [ ] **Step 1: Grep the mobile app for reserved words and cross-check audit coverage**
 
 ```bash
-cd apps/mobile && grep -rniE --include='*.tsx' \
-  '\b(Oops|Whoops|Sorry|Please)\b|!\s*["'\''`]|Failed to ' \
-  app/ components/ features/ \
-  | grep -v '\.test\.tsx' > /tmp/reserved-hits.txt
+cd apps/mobile && grep -rniE --include='*.ts' --include='*.tsx' \
+  '\b(Oops|Whoops|Sorry|Please)\b|!["'\''`]|Failed to ' \
+  app/ screens/ components/ features/ lib/ \
+  | grep -v '\.test\.' > /tmp/reserved-hits.txt
 wc -l /tmp/reserved-hits.txt
 ```
 

@@ -58,9 +58,17 @@ Per-screen audit. Organized by route group, then by file:
   projects/new, projects/[project]/*, reports/*, p/[project],
   r/[report]
 - `(camera)` — capture
+- **Screen bodies** — `apps/mobile/screens/*` (the props-only
+  bodies that the routes wire into; this is where most user-facing
+  text actually lives — routes are mostly wiring).
 - **Shared components** — dialogs (`AppDialogSheet`, etc.),
   primitives (buttons, inputs, headers), feature components
   (`InlineVoiceRecorder`, generate flow, photo grid, etc.)
+- **Centralized copy modules** —
+  `apps/mobile/lib/dialogs/app-dialog-copy.ts` (dialog title/message
+  factory) and any `apps/mobile/lib/**/*.ts` file that authors
+  user-facing strings (toasts, error mapping, PDF action labels,
+  clipboard feedback).
 
 Each screen/component section contains:
 
@@ -142,7 +150,10 @@ Target length: 1500–2500 lines.
 - Style guide is concrete enough that two reviewers reading the same
   screen would propose the same recommendation.
 - Every user-facing `.tsx` file under `apps/mobile/app/`,
-  `apps/mobile/components/`, and `apps/mobile/features/` has either
+  `apps/mobile/screens/`, `apps/mobile/components/`, and
+  `apps/mobile/features/`, plus every `.ts` file under
+  `apps/mobile/lib/dialogs/` and every `.ts` file under
+  `apps/mobile/lib/` that authors user-facing strings, has either
   a findings table or an explicit "No findings" note.
 - Every recommendation cites a style-guide section.
 - All clearly-missing-context gaps (silent catches, icon-only

@@ -9,7 +9,7 @@ tags:
 #   - draft saved-report renders the "Unplaced photos" card with a
 #     `Place into…` chip per photo group
 #   - the placement sheet lists the report's issues + sections
-#   - tapping an issue PATCHes /notes/{n}/placement and the photo
+#   - tapping an issue PATCHes report.body attachments and the photo
 #     re-renders inline under that issue (`placed-photos-issue-N`)
 #   - the bottom photo strip drops the now-placed group
 #
@@ -84,11 +84,11 @@ tags:
 - assertVisible: 'Place photos'
 
 # Pick the first issue. The sheet's row testIDs follow the
-# `btn-place-issue-{index}` convention from PhotoGroupPlacementSheet.
+# `placement-sheet-issue-{index}` convention from PhotoGroupPlacementSheet.
 - assertVisible:
-    id: 'btn-place-issue-0'
+    id: 'placement-sheet-issue-0'
 - tapOn:
-    id: 'btn-place-issue-0'
+    id: 'placement-sheet-issue-0'
 
 # Sheet closes; the photo now renders under the first issue.
 - assertVisible:

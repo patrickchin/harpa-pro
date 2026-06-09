@@ -229,4 +229,48 @@ describe('ReportTabPane placement pipeline', () => {
       tree.root.findAllByProps({ testID: 'placed-photos-section-1' }).length,
     ).toBeGreaterThan(0);
   });
+
+  it('submits a selected target from the unplaced photo chip', () => {
+    const tree = render();
+    const chip = tree.root.findByProps({
+      testID: 'btn-generate-report-photos-place-n_unplaced',
+    });
+
+    act(() => {
+      chip.props.onPress();
+    });
+
+    const issueTarget = tree.root.findByProps({
+      testID: 'placement-sheet-issue-0',
+    });
+    act(() => {
+      issueTarget.props.onPress();
+    });
+
+    expect(mockCtx.placement.onPlacePhotoGroup).toHaveBeenCalledWith({
+      noteId: 'n_unplaced',
+      placement: { kind: 'issue', index: 0 },
+    });
+  });
+
+  it('submits null when removing an existing placement from the inline strip', () => {
+    const tree = render();
+    const moveChip = tree.root.findByProps({
+      testID: 'btn-move-placed-photo-n_placed',
+    });
+
+    act(() => {
+      moveChip.props.onPress();
+    });
+
+    const remove = tree.root.findByProps({ testID: 'placement-sheet-remove' });
+    act(() => {
+      remove.props.onPress();
+    });
+
+    expect(mockCtx.placement.onPlacePhotoGroup).toHaveBeenCalledWith({
+      noteId: 'n_placed',
+      placement: null,
+    });
+  });
 });

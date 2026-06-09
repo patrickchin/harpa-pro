@@ -253,6 +253,7 @@ describe('PATCH /projects/:project/reports/:number/attachments', () => {
   let reportId: string;
   let reportNumber: number;
   let imageNoteId: string;
+  let documentNoteId: string;
   let textNoteId: string;
   let expectedBodyVersion: string | null;
 
@@ -270,12 +271,18 @@ describe('PATCH /projects/:project/reports/:number/attachments', () => {
     reportNumber = createdBody.number;
 
     const fileId = makeFileId();
+    const documentFileId = makeFileId();
     const client = new pg.Client({ connectionString: fx.url });
     await client.connect();
     await client.query(
       `INSERT INTO app.files(id, owner_id, kind, file_key, size_bytes, content_type)
        VALUES ($1, $2, 'image', $3, 1024, 'image/jpeg')`,
       [fileId, alice, `report-placement-${fileId}`],
+    );
+    await client.query(
+      `INSERT INTO app.files(id, owner_id, kind, file_key, size_bytes, content_type)
+       VALUES ($1, $2, 'document', $3, 2048, 'application/pdf')`,
+      [documentFileId, alice, `report-placement-${documentFileId}.pdf`],
     );
     await client.end();
 
@@ -290,6 +297,19 @@ describe('PATCH /projects/:project/reports/:number/attachments', () => {
     });
     expect(image.status).toBe(201);
     imageNoteId = ((await image.json()) as { id: string }).id;
+
+    const document = await app.request(`/reports/${reportId}/notes`, {
+      method: 'POST',
+      headers: headers(tok),
+      body: JSON.stringify({
+        kind: 'document',
+        fileId: documentFileId,
+        title: 'Marked-up drawing',
+        source: 'upload',
+      }),
+    });
+    expect(document.status).toBe(201);
+    documentNoteId = ((await document.json()) as { id: string }).id;
 
     const text = await app.request(`/reports/${reportId}/notes`, {
       method: 'POST',
@@ -403,6 +423,34 @@ describe('PATCH /projects/:project/reports/:number/attachments', () => {
     };
     expect(body.report.body.issues[0]!.attachments).toBeUndefined();
     expect(body.report.body.summarySections[1]!.attachments).toBeUndefined();
+  });
+
+  it('places a document note in the documents attachment bucket', async () => {
+    const app = createApp();
+    const tok = await signTestToken(alice, aliceSid);
+    const res = await app.request(
+      `/projects/${aliceProjSlug}/reports/${reportNumber}/attachments`,
+      {
+        method: 'PATCH',
+        headers: headers(tok),
+        body: JSON.stringify({
+          noteId: documentNoteId,
+          target: { kind: 'section', index: 0 },
+          expectedBodyVersion,
+        }),
+      },
+    );
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      report: {
+        body: {
+          summarySections: Array<{ attachments?: { documents?: string[] } }>;
+        };
+      };
+    };
+    expect(body.report.body.summarySections[0]!.attachments?.documents).toEqual([
+      documentNoteId,
+    ]);
   });
 
   it('returns 400 for non-image/document notes and out-of-range targets', async () => {
@@ -819,6 +867,81 @@ describe('reports AI/PDF', () => {
     expect(body.error.message).not.toContain('does-not-exist');
     expect(body.error.message).not.toContain('fixture');
     expect(body.error.message).not.toContain('openai');
+  });
+
+  it('regenerate drops attachments for notes deleted since the previous body', async () => {
+    const app = createApp();
+    const tok = await signTestToken(alice, aliceSid);
+    const created = await app.request(`/projects/${aliceProjSlug}/reports`, {
+      method: 'POST',
+      headers: headers(tok),
+      body: JSON.stringify({}),
+    });
+    expect(created.status).toBe(201);
+    const fresh = (await created.json()) as { id: string; number: number };
+
+    const fileId = makeFileId();
+    const client = new pg.Client({ connectionString: fx.url });
+    await client.connect();
+    await client.query(
+      `INSERT INTO app.files(id, owner_id, kind, file_key, size_bytes, content_type)
+       VALUES ($1, $2, 'image', $3, 1024, 'image/jpeg')`,
+      [fileId, alice, `regen-cleanup-${fileId}`],
+    );
+    await client.end();
+
+    const note = await app.request(`/reports/${fresh.id}/notes`, {
+      method: 'POST',
+      headers: headers(tok),
+      body: JSON.stringify({
+        kind: 'image',
+        files: [{ fileId, thumbnailFileId: null }],
+        source: 'camera',
+      }),
+    });
+    expect(note.status).toBe(201);
+    const imageNote = (await note.json()) as { id: string };
+
+    const seed = new pg.Client({ connectionString: fx.url });
+    await seed.connect();
+    await seed.query(
+      `UPDATE app.reports
+          SET body = $1::jsonb,
+              generated_at = $2::timestamptz
+        WHERE id = $3`,
+      [
+        JSON.stringify({
+          ...placementBody,
+          issues: [
+            {
+              ...placementBody.issues[0]!,
+              attachments: { images: [imageNote.id] },
+            },
+          ],
+        }),
+        '2026-06-09T12:00:00.000Z',
+        fresh.id,
+      ],
+    );
+    await seed.end();
+
+    const deleted = await app.request(`/notes/${imageNote.id}`, {
+      method: 'DELETE',
+      headers: { authorization: `Bearer ${tok}` },
+    });
+    expect(deleted.status).toBe(204);
+
+    const regenerated = await app.request(
+      `/projects/${aliceProjSlug}/reports/${fresh.number}/regenerate`,
+      {
+        method: 'POST',
+        headers: headers(tok),
+        body: JSON.stringify({ fixtureName: 'generate-report.voice-4' }),
+      },
+    );
+    expect(regenerated.status).toBe(200);
+    const body = (await regenerated.json()) as { report: { body: unknown } };
+    expect(JSON.stringify(body.report.body)).not.toContain(imageNote.id);
   });
 });
 

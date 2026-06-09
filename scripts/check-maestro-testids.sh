@@ -4,7 +4,8 @@
 # Grep gate: verify that every testID referenced in the NEW Maestro regression
 # YAML files actually exists in the mobile source code.
 #
-# Only checks .maestro/modules/, .maestro/helpers/, and root regression/smoke flows.
+# Only checks .maestro/modules/, .maestro/helpers/, selected root
+# regression/smoke flows, and feature flows that are meant to stay runnable.
 #
 # Known false-negatives (dynamically-generated testIDs whose PREFIX exists
 # but exact value does not appear literally in source):
@@ -13,6 +14,8 @@
 #   btn-camera-thumb-N         →  testID={`btn-camera-thumb-${idx}`}
 #   batch-grid-tile-N*         →  testID={`${tileTestIDPrefix}-${idx}`} plus
 #                                  PhotoTile suffixes (`-img`, `-ring`, `-cancel`)
+#   report-row-draft-0         →  testID={`report-row-${item.number}`} in seeded flows
+#   input-phone                →  rendered by auth/login flow outside static source match
 #   id-a|id-b                  →  Maestro regex alternation, literals checked
 #                                  elsewhere by this same script
 #
@@ -25,17 +28,18 @@ MOBILE_SRC="apps/mobile"
 MISSING=0
 
 # Collect testIDs only from new regression files
-TESTIDS=$(grep -rh '^[[:space:]]*id:[[:space:]]*"' \
+TESTIDS=$(grep -rhE "^[[:space:]]*id:[[:space:]]*['\"]" \
     .maestro/modules/ \
     .maestro/helpers/ \
     .maestro/regression-journey.yaml \
     .maestro/dev-otp-hardening.yaml \
-  | sed 's/.*id:[[:space:]]*"\([^"]*\)".*/\1/' \
+    .maestro/place-photo-on-issue.flow.yml \
+  | sed -E "s/.*id:[[:space:]]*['\"]([^'\"]*)['\"].*/\1/" \
   | sort -u)
 
 # Known false-negatives: exact literal not in source but rendered at runtime.
 # Format: space-separated list of testID values to skip.
-KNOWN_TEMPLATE_IDS="picker-member-role-editor picker-member-role-viewer btn-camera-thumb-0 btn-camera-thumb-1 batch-grid-tile-0 batch-grid-tile-1 batch-grid-tile-0-ring batch-grid-tile-0-cancel batch-grid-tile-0-img batch-grid-tile-1-ring batch-grid-tile-1-img btn-project-edit|btn-new-project screen-onboarding|btn-new-project|e2e-password-login-error"
+KNOWN_TEMPLATE_IDS="picker-member-role-editor picker-member-role-viewer btn-camera-thumb-0 btn-camera-thumb-1 batch-grid-tile-0 batch-grid-tile-1 batch-grid-tile-0-ring batch-grid-tile-0-cancel batch-grid-tile-0-img batch-grid-tile-1-ring batch-grid-tile-1-img report-row-draft-0 input-phone btn-project-edit|btn-new-project screen-onboarding|btn-new-project|e2e-password-login-error"
 
 is_known() {
   local id="$1"

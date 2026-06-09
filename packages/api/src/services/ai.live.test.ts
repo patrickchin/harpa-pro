@@ -104,7 +104,7 @@ describe('AI live default wiring', () => {
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
-  it('generateReport() strips invalid LLM attachment strings before schema validation', async () => {
+  it('generateReport() drops LLM-authored attachments before schema validation', async () => {
     const responseBody = {
       meta: { title: null, summary: null, visitDate: null },
       weather: null,
@@ -150,6 +150,6 @@ describe('AI live default wiring', () => {
     });
 
     expect(fetchSpy).toHaveBeenCalledTimes(1);
-    expect(out.body.summarySections[0]!.attachments?.images).toEqual(['not_12345678']);
+    expect(out.body.summarySections[0]!.attachments).toBeUndefined();
   });
 });

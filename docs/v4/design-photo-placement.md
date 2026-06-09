@@ -1,16 +1,15 @@
 # Design v2 — Attachment placement as a first-class report field
 
-> Status: design (not yet implemented). Supersedes
+> Status: implemented in stages through PR #157; LLM auto-placement is
+> intentionally disabled for now. Supersedes
 > [design-photo-placement-v1.md](design-photo-placement-v1.md), which
 > shipped placement as a per-note `notes.placement` JSONB column +
 > client-side orphan healer. v1 worked but exposed an architectural
 > smell ([R9 — "Two layers, both correct, fight each other"](../bugs/README.md))
 > and made the LLM unaware of user placements during regeneration.
 > v2 moves placement into `report.body` itself, keyed by **note ID**,
-> and restructures the LLM payload as JSON so the model can both
-> respect existing placements and propose new ones from context.
->
-> Targets ~5 PRs in expand-contract sequence (see Migration plan).
+> and restructures generation around the current report body so user
+> placements can be preserved across regeneration.
 
 Cross-links:
 - Replaces [design-photo-placement-v1.md](design-photo-placement-v1.md).
@@ -23,9 +22,10 @@ Cross-links:
   [arch-mobile.md](arch-mobile.md) and the schema docs in
   [arch-database.md](arch-database.md).
 - Auth/scope rules per [arch-auth-and-rls.md](arch-auth-and-rls.md).
-- Closes the v1 Q2 (regen-induced un-place toast) by giving the LLM
-  current placements as input — un-placement becomes near-impossible
-  by design rather than handled at render-time.
+- Closes the v1 Q2 (regen-induced un-place toast) by making current
+  placements part of `report.body` and preserving them server-side
+  across regeneration rather than handling drift with render-time
+  PATCH effects.
 
 ## Motivation
 
@@ -65,36 +65,38 @@ v2 fixes all three by:
   the composed view. No client-side splice. No orphan healer.
 - **Keying placement by `notes.id`** — globally stable, never reused,
   immune to issue/section reshuffles.
-- **Feeding the LLM the current `body` and letting it preserve or
-  propose placements** — placement becomes part of the regen contract
-  instead of fighting it.
+- **Preserving current `body.attachments` through regeneration** —
+  placement becomes part of the report-body contract instead of
+  fighting it.
 
 ## Acceptance contract
 
-1. On a saved report (draft or finalised), every photo note shows
-   a "Place in…" affordance. Tapping it opens an `AppDialogSheet`
-   listing all issues then all detailed sections by title; tapping
-   a row places that note's image batch into the chosen target.
+1. On a saved report (draft or finalised), every unplaced photo group
+   shows a "Place in..." affordance. Tapping it opens an
+   `AppDialogSheet` listing all issues then all detailed sections by
+   title; tapping a row places that note's image batch into the chosen
+   target.
 2. Once placed, the batch renders inline at the bottom of the target
    `IssuesCard` row or `SummarySectionCard`, in the same 3-column
-   tile grid as `ReportPhotos`. A "Move" affordance reopens the same
-   sheet pre-selected on the current target with an extra "Remove
-   from this section" row.
-3. The bottom `ReportPhotos` card filters out placed batches; if all
+   tile grid as `ReportPhotos`. A "Change placement" affordance
+   reopens the same sheet pre-selected on the current target with an
+   extra "Remove placement" row.
+3. Each issue/section also exposes an "Add attachments" affordance
+   that opens a target-first sheet of currently unplaced photo groups.
+   Selecting a group attaches it to that issue/section.
+4. The bottom `ReportPhotos` card filters out placed batches; if all
    batches are placed it returns null.
-4. Placement persists across draft → finalised transitions.
-5. Across **regenerations** the LLM is given the existing `body`
-   (including current placements) and is instructed to preserve any
-   user-placed batch. The LLM **MAY** add `attachments.images` for
-   batches the user has not placed, using note metadata as context.
-   If the LLM emits an unknown batch ID or violates a preserve rule,
-   a server-side validator strips the offending entry post-generation
-   (defense in depth).
-6. If a note is **deleted** between regens, dangling IDs in
+5. Placement persists across draft → finalised transitions.
+6. Across **regenerations**, existing user placements from
+   `currentBody.{issues,sections}[].attachments` are preserved
+   server-side. Model-authored placements are disabled for now:
+   provider output has generated `attachments` stripped before schema
+   validation, so the model cannot place previously unplaced batches.
+7. If a note is **deleted** between regens, dangling IDs in
    `body.attachments.*` are filtered at render-time (cosmetic) and
    removed by the next regen (canonical). No render-time PATCHes.
-7. Read-only members see placements but cannot mutate them.
-8. **Note ordering is preserved end-to-end** (capture order). Notes
+8. Read-only members see placements but cannot mutate them.
+9. **Note ordering is preserved end-to-end** (capture order). Notes
    are never reordered by listing, regen payload assembly, or LLM
    output. Adjacency carries semantic context (e.g. a voice note
    immediately after a photo batch describing it).
@@ -210,20 +212,32 @@ The token cost (note IDs are ~5 tokens vs ~1 for an integer) is
 real but bounded: ~few-hundred tokens per regen for a heavy report.
 Worth it to avoid the entire allocator + counter machinery.
 
-Server-side validator (post-generation):
+Server-side generation guard (current implementation):
+
+```ts
+// packages/api/src/services/ai.ts
+function stripGeneratedAttachments(parsed: unknown): unknown;
+```
+
+`generateReport` strips `attachments` from provider output before
+schema validation. Existing user placements are restored later from
+`currentBody` during regeneration, so manual placements survive while
+new model-authored placements are ignored.
+
+Target-state validator, when LLM auto-placement is re-enabled:
 
 ```ts
 // packages/api/src/services/reports.ts
 function sanitiseAttachments(body: ReportBody, validNoteIds: Set<string>): ReportBody;
 ```
 
-Strips any ID in `body.{issues,sections}[].attachments.{images,documents}`
-that isn't in `validNoteIds` (note exists, kind matches, scope-visible).
-Also de-duplicates: each note ID appears in at most one
-`attachments` array across the entire body. Conflict resolution: the
-**first** occurrence in `body.issues[]` then `body.sections[]` reading
-order wins; later duplicates are dropped. Logged as a warning when it
-fires (LLM violated the preserve rule).
+Strip any ID in
+`body.{issues,sections}[].attachments.{images,documents}` that is not
+in `validNoteIds` (note exists, kind matches, scope-visible). Also
+de-duplicate so each note ID appears in at most one `attachments`
+array across the entire body. Conflict resolution: the **first**
+occurrence in `body.issues[]` then `body.sections[]` reading order
+wins; later duplicates are dropped and logged.
 
 ### Note ordering — invariants
 
@@ -295,10 +309,14 @@ Notes:
 - **`currentBody` is the previous report body verbatim.** On first
   generation it is null; thereafter it's the most recent saved body
   including any user-placed `attachments`.
+- **LLM-authored placement is disabled for now.** The schema still
+  accepts `attachments`, but `generateReport` removes generated
+  `attachments` before validation. Existing user placements are
+  preserved from `currentBody` after generation.
 
 ### System prompt additions
 
-`packages/api/src/prompts/reportGeneration.ts` gets these rules:
+Target-state rules for when auto-placement is re-enabled:
 
 1. *Notes are listed in chronological capture order. Adjacency
    carries context: a voice note may explain the photo batch
@@ -318,9 +336,9 @@ Notes:
    across the entire report body. If you place a batch, it is no
    longer "unplaced" and must not appear elsewhere.*
 
-Server-side validator runs after parse and enforces (3) and (4). Any
-violation is logged + auto-corrected; the user does not see a stuck
-state.
+Until that is re-enabled, server-side generation strips all
+model-authored `attachments` before parse; the user does not see
+auto-placed batches.
 
 ### Output schema (Zod)
 
@@ -495,6 +513,10 @@ there is only one layer.
 
 - `btn-place-photo-{noteId}` — chip on each unplaced batch.
 - `btn-move-placed-photo-{noteId}` — chip on each placed batch.
+- `btn-add-attachments-issue-{i}`,
+  `btn-add-attachments-section-{i}` — target-first entry points.
+- `attachment-picker-sheet`, `attachment-picker-group-{noteId}` —
+  target-first sheet for selecting an unplaced batch.
 - `placement-sheet`, `placement-sheet-issue-{i}`,
   `placement-sheet-section-{i}`, `placement-sheet-remove`.
 - `placed-batch-{noteId}` — wrapper inside the issue/section card.
@@ -505,13 +527,13 @@ there is only one layer.
 |---|---|
 | Note deleted while placed | ID dangles in `body.attachments` until next regen. Render-time filter drops it from view (cosmetic). Next regen rewrites `body` with current valid IDs only (canonical cleanup). |
 | All photos in a batch deleted | Same as above — note row deletes; ID drops out at next regen. |
-| Issue/section deleted by regen | The LLM regenerates `body` from scratch using `currentBody` + new notes. If a target still semantically exists (renamed), the LLM should re-emit the placement under the new title. If the target is genuinely gone (issue deleted), the LLM should re-place to the closest match or omit the placement. The user can re-place with one tap if unhappy. |
+| Issue/section deleted by regen | Existing placements are preserved from `currentBody` when possible. If the generated body no longer has the target, the note returns to the unplaced set and the user can re-place it with one tap. |
 | Issue/section reordered in `ReportEditForm` | Placement endpoint takes `{ kind, index }` against the current body. Manual edits to `body.issues` order automatically carry their `attachments` along (it's the same JSONB object). No drift. |
-| Read-only project member | Chip not rendered (gated on `canEdit`). API 404s under their scope. |
+| Read-only project member | Placement mutation controls are not rendered (gated on `canEdit`). API 404s under their scope. |
 | Finalised report | Placement editable. Finalisation snapshots `body`; placement reshapes the snapshot. |
 | Voice / text note | Chip not rendered; PATCH returns 400. |
 | Concurrent regen during placement | 409 from `expectedBodyVersion`; client refreshes and the user re-picks. Window is single-digit seconds. |
-| LLM violates preserve rule | Server validator strips/repairs after generation; logged as a warning. User sees their placement intact. |
+| LLM emits attachments | Current implementation strips model-authored `attachments` before validation. Existing user placements are restored from `currentBody`; new auto-placements are ignored. |
 
 ## Test plan
 
@@ -568,15 +590,14 @@ deliberately gradual.
 - `report.body` reads tolerate the new optional field.
 - No client UI changes yet; nothing populates `attachments`.
 
-### PR 3 — Structured-JSON LLM payload + LLM placements (LLM may now propose)
+### PR 3 — Structured-JSON LLM payload + preserved placements
 
 - `collectNotesForGeneration` returns `GenerationPayload`.
 - `reportGeneration.ts` system prompt updated; user message takes JSON.
 - LLM output schema includes `attachments`; live tests verify.
-- The LLM may now place batches it has confident context for. The
-  client UI still uses v1 (`notes.placement` JSONB) for user-driven
-  placement — read path unifies both in a follow-on bridge helper
-  for one release.
+- LLM-authored placement is disabled for now: generated attachments
+  are stripped before validation, while existing user placements from
+  `currentBody` are preserved by the report write path.
 
 ### PR 4 — `PATCH /reports/{r}/attachments` + mobile cutover
 
@@ -626,8 +647,9 @@ deliberately gradual.
   controls it on regen, the user can't reorder in v2.
 - **Per-photo caption UI.** Column added (`note_files.caption`); UI
   surfacing is a separate design.
-- **Auto-place-everything pass.** Not yet — start with "LLM places
-  high-confidence batches" and learn from real regens.
+- **Auto-place-everything pass.** Not yet. LLM-authored placements
+  are currently stripped before validation; re-enable only with
+  provenance UI and validator coverage.
 
 ## Implementation checklist (one item ≈ one commit, grouped by PR)
 
@@ -669,7 +691,7 @@ PR 5 (contract):
   proposal: **no** — the preserve rule is absolute, validator
   enforces. We can relax later if real regens show the LLM has
   good reasons to move batches the user pinned.
-- **Q2:** When the LLM places a batch on its own, should the UI
+- **Q2:** If/when the LLM places a batch on its own, should the UI
   visually distinguish "auto-placed" from "user-placed" (e.g.
   subtle badge)? Useful for debugging trust early; can defer.
   Cheap to add later — extend `attachments` to a `{ id, by: 'user' | 'llm' }`

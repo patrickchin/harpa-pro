@@ -5,6 +5,8 @@
  */
 import { describe, expect, it, vi } from 'vitest';
 import TestRenderer, { act } from 'react-test-renderer';
+import { Pressable } from 'react-native';
+import { MapPin } from 'lucide-react-native';
 import type { GeneratedReportIssue, GeneratedReportSection } from '@harpa/report-core';
 
 import { PhotoGroupPlacementSheet } from './PhotoGroupPlacementSheet';
@@ -177,10 +179,26 @@ describe('PhotoPlacementChip', () => {
         testID="chip"
       />,
     );
-    const node = tree.root.findByProps({ testID: 'chip' });
+    const node = tree.root.findByType(Pressable);
     act(() => {
       (node.props.onPress as () => void)();
     });
     expect(onPress).toHaveBeenCalledOnce();
+  });
+
+  it('uses a larger touch treatment for placement actions', () => {
+    const tree = render(
+      <PhotoPlacementChip
+        placedLabel={null}
+        onPress={() => {}}
+        testID="chip"
+      />,
+    );
+    const node = tree.root.findByType(Pressable);
+    const icon = tree.root.findByType(MapPin);
+
+    expect(node.props.hitSlop).toBeGreaterThanOrEqual(10);
+    expect(icon.props.size).toBe(16);
+    expect(JSON.stringify(tree.toJSON())).toContain('text-sm');
   });
 });

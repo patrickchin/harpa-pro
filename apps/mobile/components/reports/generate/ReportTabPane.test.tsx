@@ -253,6 +253,33 @@ describe('ReportTabPane placement pipeline', () => {
     });
   });
 
+  it('places an unplaced photo from a section Add attachments button', () => {
+    const tree = render();
+    const addButton = tree.root.findByProps({
+      testID: 'btn-add-attachments-section-1',
+    });
+
+    act(() => {
+      addButton.props.onPress();
+    });
+
+    expect(
+      tree.root.findAllByProps({ testID: 'attachment-picker-group-n_placed' }),
+    ).toHaveLength(0);
+
+    const photoGroup = tree.root.findByProps({
+      testID: 'attachment-picker-group-n_unplaced',
+    });
+    act(() => {
+      photoGroup.props.onPress();
+    });
+
+    expect(mockCtx.placement.onPlacePhotoGroup).toHaveBeenCalledWith({
+      noteId: 'n_unplaced',
+      placement: { kind: 'section', index: 1 },
+    });
+  });
+
   it('submits null when removing an existing placement from the inline strip', () => {
     const tree = render();
     const moveChip = tree.root.findByProps({

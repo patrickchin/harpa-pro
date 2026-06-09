@@ -13,6 +13,7 @@ import { toTitleCase } from '@harpa/report-core';
 import { Card } from '@/components/primitives/Card';
 import { SectionHeader } from '@/components/primitives/SectionHeader';
 import { EditPencilButton } from '@/components/reports/edit/EditPencilButton';
+import { AddAttachmentsButton } from '@/components/reports/detail/AddAttachmentsButton';
 import { PlacedPhotoStrip } from '@/components/reports/detail/PlacedPhotoStrip';
 import { getIssueSeverityTone } from '@/lib/reports/report-ui';
 import { colors } from '@/lib/design-tokens/colors';
@@ -54,6 +55,7 @@ interface IssuesCardProps {
   placedByIssue?: ReadonlyMap<number, ReadonlyArray<PhotoGroup>>;
   onOpenPhoto?: (input: { fileId: string; title?: string }) => void;
   onEditPlacement?: (noteId: string) => void;
+  onAddAttachmentsToIssue?: (index: number) => void;
 }
 
 export function IssuesCard({
@@ -62,6 +64,7 @@ export function IssuesCard({
   placedByIssue,
   onOpenPhoto,
   onEditPlacement,
+  onAddAttachmentsToIssue,
 }: IssuesCardProps) {
   if (issues.length === 0) return null;
 
@@ -128,6 +131,12 @@ export function IssuesCard({
                         → {issue.actionRequired}
                       </Text>
                     </View>
+                  ) : null}
+                  {onAddAttachmentsToIssue ? (
+                    <AddAttachmentsButton
+                      onPress={() => onAddAttachmentsToIssue(index)}
+                      testID={`btn-add-attachments-issue-${index}`}
+                    />
                   ) : null}
                   {placedByIssue && (placedByIssue.get(index)?.length ?? 0) > 0 ? (
                     <PlacedPhotoStrip

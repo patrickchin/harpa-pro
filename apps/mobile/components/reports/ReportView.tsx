@@ -18,7 +18,10 @@ import { NextStepsCard } from './NextStepsCard';
 import { SummarySectionCard } from './SummarySectionCard';
 import { SummaryLead } from './detail/SummaryLead';
 import type { ReportEditTarget } from './edit/types';
-import type { SplitPlacements } from '@/lib/reports/photo-placements';
+import type {
+  PhotoPlacement,
+  SplitPlacements,
+} from '@/lib/reports/photo-placements';
 
 interface ReportViewProps {
   report: GeneratedSiteReport;
@@ -40,6 +43,7 @@ interface ReportViewProps {
   placements?: SplitPlacements;
   onOpenPhoto?: (input: { fileId: string; title?: string }) => void;
   onEditPlacement?: (noteId: string) => void;
+  onAddAttachmentToTarget?: (placement: PhotoPlacement) => void;
 }
 
 export function ReportView({
@@ -49,6 +53,7 @@ export function ReportView({
   placements,
   onOpenPhoto,
   onEditPlacement,
+  onAddAttachmentToTarget,
 }: ReportViewProps) {
   const { sections } = report.report;
   const numStr = reportNumber ?? 'x';
@@ -75,6 +80,11 @@ export function ReportView({
         placedByIssue={placements?.byIssue}
         onOpenPhoto={onOpenPhoto}
         onEditPlacement={onEditPlacement}
+        onAddAttachmentsToIssue={
+          onAddAttachmentToTarget
+            ? (index) => onAddAttachmentToTarget({ kind: 'issue', index })
+            : undefined
+        }
       />
 
       <WorkersCard
@@ -109,6 +119,11 @@ export function ReportView({
               placedGroups={placements?.bySection.get(i)}
               onOpenPhoto={onOpenPhoto}
               onEditPlacement={onEditPlacement}
+              onAddAttachments={
+                onAddAttachmentToTarget
+                  ? () => onAddAttachmentToTarget({ kind: 'section', index: i })
+                  : undefined
+              }
             />
           ))}
         </View>

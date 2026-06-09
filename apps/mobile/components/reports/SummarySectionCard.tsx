@@ -11,6 +11,7 @@ import type { GeneratedReportSection } from '@harpa/report-core';
 import { Card } from '@/components/primitives/Card';
 import { SectionHeader } from '@/components/primitives/SectionHeader';
 import { EditPencilButton } from '@/components/reports/edit/EditPencilButton';
+import { AddAttachmentsButton } from '@/components/reports/detail/AddAttachmentsButton';
 import { PlacedPhotoStrip } from '@/components/reports/detail/PlacedPhotoStrip';
 import { SECTION_ICONS } from '@/lib/reports/section-icons';
 import { colors } from '@/lib/design-tokens/colors';
@@ -28,6 +29,7 @@ interface SummarySectionCardProps {
   placedGroups?: ReadonlyArray<PhotoGroup>;
   onOpenPhoto?: (input: { fileId: string; title?: string }) => void;
   onEditPlacement?: (noteId: string) => void;
+  onAddAttachments?: () => void;
 }
 
 export function SummarySectionCard({
@@ -38,6 +40,7 @@ export function SummarySectionCard({
   placedGroups,
   onOpenPhoto,
   onEditPlacement,
+  onAddAttachments,
 }: SummarySectionCardProps) {
   const Icon = SECTION_ICONS[section.title] || ClipboardList;
   const numStr = reportNumber ?? 'x';
@@ -64,6 +67,12 @@ export function SummarySectionCard({
       >
         {section.content}
       </Text>
+      {onAddAttachments ? (
+        <AddAttachmentsButton
+          onPress={onAddAttachments}
+          testID={`btn-add-attachments-section-${idx}`}
+        />
+      ) : null}
       {placedGroups && placedGroups.length > 0 ? (
         <PlacedPhotoStrip
           groups={placedGroups}

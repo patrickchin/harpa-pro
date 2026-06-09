@@ -85,15 +85,16 @@ export function PlacedPhotoStrip({
             {onEditPlacement ? (
               <Pressable
                 onPress={() => onEditPlacement(group.noteId)}
-                className="mt-1.5 self-start flex-row items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-2 py-0.5"
+                className="mt-2 self-start flex-row items-center gap-2 rounded-md border border-primary/40 bg-primary/10 px-3.5 py-2"
                 accessibilityRole="button"
                 accessibilityLabel="Change placement"
                 testID={`btn-move-placed-photo-${group.noteId}`}
-                hitSlop={8}
+                hitSlop={10}
+                style={{ minHeight: 40 }}
               >
-                <MapPin size={10} color={colors.primary.DEFAULT} />
-                <Text className="text-[11px] font-medium text-primary">
-                  Change…
+                <MapPin size={16} color={colors.primary.DEFAULT} />
+                <Text className="text-sm font-semibold text-primary">
+                  Change placement
                 </Text>
               </Pressable>
             ) : null}

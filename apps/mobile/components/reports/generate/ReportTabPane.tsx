@@ -23,6 +23,7 @@ import { InlineNotice } from '@/components/primitives/InlineNotice';
 import { CompletenessCard } from '@/components/reports/CompletenessCard';
 import { ReportView } from '@/components/reports/ReportView';
 import { ReportPhotosFromGallery } from '@/components/reports/generate/ReportPhotosFromGallery';
+import { PhotoAttachmentPickerSheet } from '@/components/reports/detail/PhotoAttachmentPickerSheet';
 import { PhotoGroupPlacementSheet } from '@/components/reports/detail/PhotoGroupPlacementSheet';
 import { useGenerateReport } from '@/features/generate/GenerateReportProvider';
 import { colors } from '@/lib/design-tokens/colors';
@@ -30,8 +31,10 @@ import { createEmptyReport } from '@/lib/reports/report-edit-helpers';
 import {
   collectPlacedAttachmentIds,
   placementForNoteId,
+  placementLabel,
   splitAttachments,
   type PhotoGroup,
+  type PhotoPlacement,
 } from '@/lib/reports/photo-placements';
 
 interface ReportTabPaneProps {
@@ -98,6 +101,19 @@ export function ReportTabPane({ width, onEdit }: ReportTabPaneProps) {
 
   const handleOpenPlacementSheet = useCallback(
     (noteId: string) => setPlacementSheetNoteId(noteId),
+    [],
+  );
+  const [attachmentPickerTarget, setAttachmentPickerTarget] =
+    useState<PhotoPlacement | null>(null);
+  const attachmentPickerTargetLabel = useMemo(() => {
+    return (
+      placementLabel(attachmentPickerTarget, generation.report ?? null) ??
+      'this target'
+    );
+  }, [attachmentPickerTarget, generation.report]);
+
+  const handleOpenAttachmentPicker = useCallback(
+    (target: PhotoPlacement) => setAttachmentPickerTarget(target),
     [],
   );
 
@@ -194,6 +210,9 @@ export function ReportTabPane({ width, onEdit }: ReportTabPaneProps) {
               onEditPlacement={
                 placementsEnabled ? handleOpenPlacementSheet : undefined
               }
+              onAddAttachmentToTarget={
+                placementsEnabled ? handleOpenAttachmentPicker : undefined
+              }
             />
 
             <ReportPhotosFromGallery
@@ -238,6 +257,22 @@ export function ReportTabPane({ width, onEdit }: ReportTabPaneProps) {
             onPlace({ noteId, placement: next });
           }}
           onClose={() => setPlacementSheetNoteId(null)}
+        />
+      ) : null}
+
+      {placementsEnabled ? (
+        <PhotoAttachmentPickerSheet
+          visible={attachmentPickerTarget !== null}
+          targetLabel={attachmentPickerTargetLabel}
+          groups={placements.unplaced}
+          onSelect={(noteId) => {
+            const target = attachmentPickerTarget;
+            setAttachmentPickerTarget(null);
+            const onPlace = placement.onPlacePhotoGroup;
+            if (!target || !onPlace) return;
+            onPlace({ noteId, placement: target });
+          }}
+          onClose={() => setAttachmentPickerTarget(null)}
         />
       ) : null}
     </View>

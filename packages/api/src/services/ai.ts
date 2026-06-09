@@ -490,43 +490,18 @@ function cloneJson(value: unknown): unknown {
   return JSON.parse(JSON.stringify(value)) as unknown;
 }
 
-function stripInvalidGeneratedAttachments(
-  parsed: unknown,
-  payload: GenerationPayload,
-): unknown {
+function stripGeneratedAttachments(parsed: unknown): unknown {
   const out = cloneJson(parsed);
   if (!isRecord(out)) return parsed;
 
-  const validImages = new Set(
-    payload.notes.filter((note) => note.kind === 'image').map((note) => note.id),
-  );
-  const validDocuments = new Set(
-    payload.notes.filter((note) => note.kind === 'document').map((note) => note.id),
-  );
-
+  // Photo placement is user-controlled for now. Existing placements are
+  // restored later from currentBody during regeneration; model-authored
+  // attachments are discarded here before schema validation.
   const pruneTargets = (targets: unknown) => {
     if (!Array.isArray(targets)) return;
     for (const target of targets) {
       if (!isRecord(target)) continue;
-      const attachments = target.attachments;
-      if (!isRecord(attachments)) continue;
-
-      const images = Array.isArray(attachments.images)
-        ? attachments.images.filter((id) => typeof id === 'string' && validImages.has(id))
-        : [];
-      const documents = Array.isArray(attachments.documents)
-        ? attachments.documents.filter((id) => typeof id === 'string' && validDocuments.has(id))
-        : [];
-
-      if (images.length === 0 && documents.length === 0) {
-        delete target.attachments;
-        continue;
-      }
-
-      const next: Record<string, unknown> = {};
-      if (images.length > 0) next.images = images;
-      if (documents.length > 0) next.documents = documents;
-      target.attachments = next;
+      delete target.attachments;
     }
   };
 
@@ -614,7 +589,7 @@ export async function generateReport(input: GenerateReportInput): Promise<Genera
     throw new AiProviderError('generateReport: provider response was not valid JSON', err);
   }
   const result = reportSchemas.reportBody.safeParse(
-    stripInvalidGeneratedAttachments(parsed, input.notes),
+    stripGeneratedAttachments(parsed),
   );
   if (!result.success) {
     // Don't leak the failing payload — keep the error surface generic.

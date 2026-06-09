@@ -46,19 +46,20 @@ export function PhotoPlacementChip({
       testID={testID}
       accessibilityRole="button"
       accessibilityLabel={a11y}
-      hitSlop={8}
-      className={`self-start flex-row items-center gap-1.5 rounded-full border px-2.5 py-1 ${
+      hitSlop={10}
+      style={{ minHeight: 40 }}
+      className={`self-start flex-row items-center gap-2 rounded-md border px-3.5 py-2 ${
         isPlaced
           ? 'border-primary/40 bg-primary/10'
           : 'border-border bg-secondary'
       }`}
     >
       <MapPin
-        size={12}
+        size={16}
         color={isPlaced ? colors.primary.DEFAULT : colors.muted.foreground}
       />
       <Text
-        className={`text-xs font-medium ${
+        className={`text-sm font-semibold ${
           isPlaced ? 'text-primary' : 'text-muted-foreground'
         }`}
         numberOfLines={1}

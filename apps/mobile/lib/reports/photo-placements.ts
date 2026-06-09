@@ -156,3 +156,95 @@ export function placementLabel(
   }
   return report.report.sections[placement.index]?.title ?? null;
 }
+
+type AttachmentTarget = {
+  attachments?: {
+    images?: string[];
+    documents?: string[];
+  };
+};
+
+function removeImageAttachment<T extends AttachmentTarget>(
+  target: T,
+  noteId: string,
+): T {
+  const images = target.attachments?.images ?? [];
+  if (!images.includes(noteId)) return target;
+
+  const nextImages = images.filter((id) => id !== noteId);
+  const nextAttachments = { ...(target.attachments ?? {}) };
+  if (nextImages.length > 0) {
+    nextAttachments.images = nextImages;
+  } else {
+    delete nextAttachments.images;
+  }
+
+  if (
+    (nextAttachments.images?.length ?? 0) === 0 &&
+    (nextAttachments.documents?.length ?? 0) === 0
+  ) {
+    const { attachments: _attachments, ...rest } = target;
+    return rest as T;
+  }
+
+  return { ...target, attachments: nextAttachments } as T;
+}
+
+function addImageAttachment<T extends AttachmentTarget>(
+  target: T,
+  noteId: string,
+): T {
+  const images = target.attachments?.images ?? [];
+  if (images.includes(noteId)) return target;
+  return {
+    ...target,
+    attachments: {
+      ...(target.attachments ?? {}),
+      images: [...images, noteId],
+    },
+  };
+}
+
+export function applyPhotoPlacement(
+  report: GeneratedSiteReport,
+  noteId: string,
+  placement: PhotoPlacement | null,
+): GeneratedSiteReport {
+  if (
+    placement?.kind === 'issue' &&
+    report.report.issues[placement.index] === undefined
+  ) {
+    return report;
+  }
+  if (
+    placement?.kind === 'section' &&
+    report.report.sections[placement.index] === undefined
+  ) {
+    return report;
+  }
+
+  const issues = report.report.issues.map((issue) =>
+    removeImageAttachment(issue, noteId),
+  );
+  const sections = report.report.sections.map((section) =>
+    removeImageAttachment(section, noteId),
+  );
+
+  if (placement?.kind === 'issue') {
+    issues[placement.index] = addImageAttachment(issues[placement.index]!, noteId);
+  } else if (placement?.kind === 'section') {
+    sections[placement.index] = addImageAttachment(
+      sections[placement.index]!,
+      noteId,
+    );
+  }
+
+  return {
+    ...report,
+    report: {
+      ...report.report,
+      issues,
+      sections,
+    },
+  };
+}

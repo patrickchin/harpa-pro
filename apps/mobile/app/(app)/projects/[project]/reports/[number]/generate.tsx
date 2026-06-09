@@ -52,6 +52,7 @@ import type { GeneratedSiteReport } from '@harpa/report-core';
 import { reports } from '@harpa/api-contract';
 import { SAMPLE_GENERATED_REPORT } from '@/lib/dev-fixtures/sample-report';
 import { reportBodyToGeneratedReport } from '@/lib/reports/report-body-adapter';
+import { applyPhotoPlacement } from '@/lib/reports/photo-placements';
 import { useAutoRegenerate } from '@/features/generate/useAutoRegenerate';
 import { safeBack } from '@/lib/nav/safe-back';
 import { UsageLimitDialog } from '@/components/account/UsageLimitDialog';
@@ -263,6 +264,19 @@ export default function GenerateReportRoute() {
     [reportId, createNote],
   );
 
+  const [localReport, setLocalReport] = useState<GeneratedSiteReport | null>(
+    null,
+  );
+  // `userDirty` flips true only when the user edits a field in the
+  // Edit tab — see `handleEditReport` below. Programmatic
+  // setLocalReport calls (e.g. seeding from a regenerate response or
+  // applying a photo placement) do NOT flip it true. The autosave hook
+  // listens to this flag instead of trying to JSON-diff the local
+  // report against the server body (the inverse adapter is lossy, so
+  // the diff was always non-zero and produced a stuck "Saving…" label
+  // + a PATCH-spam loop).
+  const [userDirty, setUserDirty] = useState(false);
+
   const placePhotoGroupMutation = usePlaceAttachment();
   const handlePlacePhotoGroup = useCallback(
     async (input: {
@@ -270,6 +284,16 @@ export default function GenerateReportRoute() {
       placement: { kind: 'issue' | 'section'; index: number } | null;
     }) => {
       if (!reportId || reportNumber === null || !slug) return;
+      const previousLocalReport = localReport;
+      if (previousLocalReport) {
+        setLocalReport(
+          applyPhotoPlacement(
+            previousLocalReport,
+            input.noteId,
+            input.placement,
+          ),
+        );
+      }
       try {
         await placePhotoGroupMutation.mutateAsync({
           params: { project: slug, number: reportNumber },
@@ -280,10 +304,20 @@ export default function GenerateReportRoute() {
           },
         });
       } catch {
+        if (previousLocalReport) {
+          setLocalReport(previousLocalReport);
+        }
         // optimistic helper already rolls back on error.
       }
     },
-    [placePhotoGroupMutation, reportId, reportNumber, slug, reportRow?.generatedAt],
+    [
+      localReport,
+      placePhotoGroupMutation,
+      reportId,
+      reportNumber,
+      slug,
+      reportRow?.generatedAt,
+    ],
   );
 
   const serverBody: GeneratedSiteReport | null = reportRow?.body
@@ -294,17 +328,6 @@ export default function GenerateReportRoute() {
     ? SAMPLE_GENERATED_REPORT
     : null;
 
-  const [localReport, setLocalReport] = useState<GeneratedSiteReport | null>(
-    null,
-  );
-  // `userDirty` flips true only when the user edits a field in the
-  // Edit tab — see `handleEditReport` below. Programmatic
-  // setLocalReport calls (e.g. seeding from a regenerate response) do
-  // NOT flip it true. The autosave hook listens to this flag instead
-  // of trying to JSON-diff the local report against the server body
-  // (the inverse adapter is lossy, so the diff was always non-zero
-  // and produced a stuck "Saving…" label + a PATCH-spam loop).
-  const [userDirty, setUserDirty] = useState(false);
   const currentReport = localReport ?? serverBody ?? fallbackReport;
 
   const handleEditReport = useCallback((next: GeneratedSiteReport) => {

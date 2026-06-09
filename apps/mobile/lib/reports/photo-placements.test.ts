@@ -4,6 +4,7 @@ import type { GeneratedSiteReport } from '@harpa/report-core';
 import type { ReportNoteRow } from '@/components/reports/detail/ReportNotesPane';
 import {
   collectPlacedAttachmentIds,
+  applyPhotoPlacement,
   groupPhotos,
   placementForNoteId,
   placementLabel,
@@ -147,5 +148,33 @@ describe('placement helpers', () => {
       'Section 1',
     );
     expect(placementLabel(null, report)).toBeNull();
+  });
+
+  it('moves a photo note to a new target without mutating the original report', () => {
+    const original = makeReport();
+
+    const next = applyPhotoPlacement(original, 'n_issue', {
+      kind: 'section',
+      index: 0,
+    });
+
+    expect(next).not.toBe(original);
+    expect(next.report.issues[0]!.attachments?.images).toEqual(['n_missing']);
+    expect(next.report.sections[0]!.attachments?.images).toEqual(['n_issue']);
+    expect(original.report.issues[0]!.attachments?.images).toEqual([
+      'n_issue',
+      'n_missing',
+    ]);
+  });
+
+  it('clears a photo placement immediately when target is null', () => {
+    const original = makeReport();
+
+    const next = applyPhotoPlacement(original, 'n_section', null);
+
+    expect(next.report.sections[1]!.attachments).toBeUndefined();
+    expect(original.report.sections[1]!.attachments?.images).toEqual([
+      'n_section',
+    ]);
   });
 });

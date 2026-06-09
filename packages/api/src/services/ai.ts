@@ -482,6 +482,59 @@ export interface GenerateReportOutput {
   fixtureMode: 'live' | 'replay' | 'record';
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+function cloneJson(value: unknown): unknown {
+  return JSON.parse(JSON.stringify(value)) as unknown;
+}
+
+function stripInvalidGeneratedAttachments(
+  parsed: unknown,
+  payload: GenerationPayload,
+): unknown {
+  const out = cloneJson(parsed);
+  if (!isRecord(out)) return parsed;
+
+  const validImages = new Set(
+    payload.notes.filter((note) => note.kind === 'image').map((note) => note.id),
+  );
+  const validDocuments = new Set(
+    payload.notes.filter((note) => note.kind === 'document').map((note) => note.id),
+  );
+
+  const pruneTargets = (targets: unknown) => {
+    if (!Array.isArray(targets)) return;
+    for (const target of targets) {
+      if (!isRecord(target)) continue;
+      const attachments = target.attachments;
+      if (!isRecord(attachments)) continue;
+
+      const images = Array.isArray(attachments.images)
+        ? attachments.images.filter((id) => typeof id === 'string' && validImages.has(id))
+        : [];
+      const documents = Array.isArray(attachments.documents)
+        ? attachments.documents.filter((id) => typeof id === 'string' && validDocuments.has(id))
+        : [];
+
+      if (images.length === 0 && documents.length === 0) {
+        delete target.attachments;
+        continue;
+      }
+
+      const next: Record<string, unknown> = {};
+      if (images.length > 0) next.images = images;
+      if (documents.length > 0) next.documents = documents;
+      target.attachments = next;
+    }
+  };
+
+  pruneTargets(out.issues);
+  pruneTargets(out.summarySections);
+  return out;
+}
+
 /**
  * Generate a structured report body from notes via the AI provider.
  *
@@ -560,7 +613,9 @@ export async function generateReport(input: GenerateReportInput): Promise<Genera
   } catch (err) {
     throw new AiProviderError('generateReport: provider response was not valid JSON', err);
   }
-  const result = reportSchemas.reportBody.safeParse(parsed);
+  const result = reportSchemas.reportBody.safeParse(
+    stripInvalidGeneratedAttachments(parsed, input.notes),
+  );
   if (!result.success) {
     // Don't leak the failing payload — keep the error surface generic.
     // BUT do attach Zod issue paths (not values) to the inner cause so

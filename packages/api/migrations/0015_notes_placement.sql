@@ -1,4 +1,4 @@
--- 0014_notes_placement.sql
+-- 0015_notes_placement.sql
 --
 -- Photo-group placement (docs/v4/design-photo-placement.md).
 --

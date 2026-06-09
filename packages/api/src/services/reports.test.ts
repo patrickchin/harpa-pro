@@ -167,6 +167,15 @@ describe('report body attachments helpers', () => {
     expect(cleaned.summarySections[0]!.attachments?.images).toEqual(['not_c']);
   });
 
+  it('does not throw on legacy partial bodies without issue/section arrays', () => {
+    expect(() =>
+      sanitiseAttachments({ sections: [], notes: [] } as never, {
+        images: new Set(),
+        documents: new Set(),
+      }),
+    ).not.toThrow();
+  });
+
   it('preserves an existing user placement when generated output omits it', () => {
     const current = {
       ...body,

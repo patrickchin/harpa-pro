@@ -1,6 +1,6 @@
--- 0017_drop_notes_placement.sql
+-- 0018_drop_notes_placement.sql
 --
--- Contract step for photo placement v2. The backfill in 0016 copied
+-- Contract step for photo placement v2. The backfill in 0017 copied
 -- valid image placements into report.body attachments.
 
 ALTER TABLE app.notes

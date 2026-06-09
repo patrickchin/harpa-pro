@@ -103,4 +103,53 @@ describe('AI live default wiring', () => {
     expect(typeof out.text).toBe('string');
     expect(fetchSpy).not.toHaveBeenCalled();
   });
+
+  it('generateReport() strips invalid LLM attachment strings before schema validation', async () => {
+    const responseBody = {
+      meta: { title: null, summary: null, visitDate: null },
+      weather: null,
+      workers: [],
+      materials: [],
+      issues: [],
+      nextSteps: [],
+      summarySections: [
+        {
+          title: 'Photos',
+          body: 'Image context captured on site.',
+          attachments: { images: ['image 1', 'not_12345678'] },
+        },
+      ],
+    };
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(
+        okJson({ choices: [{ message: { content: JSON.stringify(responseBody) } }] }) as Response,
+      );
+
+    const { generateReport } = await loadAi();
+    const out = await generateReport({
+      notes: {
+        currentBody: null,
+        notes: [
+          {
+            id: 'not_12345678',
+            kind: 'image',
+            body: null,
+            fileId: 'fil_12345678',
+            thumbnailFileId: null,
+            transcript: null,
+            title: null,
+            summary: null,
+            source: 'camera',
+            meta: {},
+            files: [],
+            createdAt: '2026-06-09T12:00:00.000Z',
+          },
+        ],
+      },
+    });
+
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    expect(out.body.summarySections[0]!.attachments?.images).toEqual(['not_12345678']);
+  });
 });

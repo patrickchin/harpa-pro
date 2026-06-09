@@ -351,9 +351,11 @@ function attachmentBucketForKind(kind: NoteKind): 'images' | 'documents' | null 
 }
 
 function attachmentTargets(body: ReportBody) {
+  const issues = body.issues ?? [];
+  const summarySections = body.summarySections ?? [];
   return [
-    ...body.issues.map((target, index) => ({ target, kind: 'issue' as const, index })),
-    ...body.summarySections.map((target, index) => ({
+    ...issues.map((target, index) => ({ target, kind: 'issue' as const, index })),
+    ...summarySections.map((target, index) => ({
       target,
       kind: 'section' as const,
       index,
@@ -462,11 +464,11 @@ export function preserveExistingAttachments(
     }
   };
 
-  current.issues.forEach((issue, index) => {
+  (current.issues ?? []).forEach((issue, index) => {
     append(out.issues[index], 'images', issue.attachments?.images);
     append(out.issues[index], 'documents', issue.attachments?.documents);
   });
-  current.summarySections.forEach((section, index) => {
+  (current.summarySections ?? []).forEach((section, index) => {
     append(out.summarySections[index], 'images', section.attachments?.images);
     append(out.summarySections[index], 'documents', section.attachments?.documents);
   });

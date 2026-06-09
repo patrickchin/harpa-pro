@@ -1,4 +1,4 @@
--- 0016_notes_placement_to_report_attachments.sql
+-- 0017_notes_placement_to_report_attachments.sql
 --
 -- Move v1 image note placement into report.body target attachments.
 -- Invalid stale indices are intentionally skipped; v2 only preserves

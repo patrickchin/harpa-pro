@@ -1,8 +1,8 @@
--- 0015_notes_metadata_and_ordering.sql
+-- 0016_notes_metadata_and_ordering.sql
 --
 -- Photo placement v2 needs stable note ordering and note provenance
 -- in the structured generation payload. Placement itself moves out of
--- app.notes in 0016/0017.
+-- app.notes in 0017/0018.
 
 ALTER TABLE app.notes
   ADD COLUMN IF NOT EXISTS source text;

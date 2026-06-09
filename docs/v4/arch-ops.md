@@ -56,8 +56,9 @@
   `doctor` is safe: it validates Bundler/Fastlane, `pnpm`, EAS config,
   and metadata files, then prints the EAS commands without uploading
   metadata, starting a build, or submitting a binary. `beta` pushes
-  preview/internal store metadata, then calls the `preview` EAS build
-  and submit profiles. `release` does the same for production. Store,
+  preview/internal store metadata, then starts the `preview` EAS build
+  with `--auto-submit-with-profile preview` so EAS submits the binaries
+  produced by that build. `release` does the same for production. Store,
   Expo, Apple, and Google credentials stay outside git and come from
   the authenticated local tools or environment variables. The first
   Play metadata upload may require an existing release on the target
@@ -197,14 +198,14 @@ Push to dev
   ↳ marketing deploy to CF Pages dev branch (marketing-dev.yml)
   ↳ EAS Update → `preview` channel (mobile-ota-dev.yml)
   ↳ release patch commit + tag added to `dev` (version-bump-dev.yml)
-  ↳ Fastlane `beta` (manual): metadata -> EAS preview build -> submit
+  ↳ Fastlane `beta` (manual): metadata -> EAS preview build --auto-submit
 
 Push to main (production)
   ↳ migrations applied to Neon `main`
   ↳ Fly deploy → harpa-pro-api (api-prod.yml)
   ↳ marketing deploy to CF Pages production (marketing-prod.yml)
   ↳ EAS Update → `production` channel (mobile-ota-prod.yml)
-  ↳ Fastlane `release` (manual approve): metadata -> EAS production build -> submit
+  ↳ Fastlane `release` (manual approve): metadata -> EAS production build --auto-submit
 ```
 
 ## Dev environment bootstrap (one-time)

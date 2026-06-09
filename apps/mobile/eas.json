@@ -22,7 +22,7 @@
       "ios": { "simulator": true }
     },
     "preview": {
-      "distribution": "internal",
+      "distribution": "store",
       "channel": "preview",
       "environment": "preview",
       "env": {
@@ -33,6 +33,7 @@
       }
     },
     "production": {
+      "distribution": "store",
       "channel": "production",
       "autoIncrement": true,
       "environment": "production",
@@ -46,13 +47,19 @@
   },
   "submit": {
     "preview": {
-      "ios": {},
+      "ios": {
+        "ascAppId": "6776967689",
+        "bundleIdentifier": "com.harpa.pro.dev"
+      },
       "android": {
         "track": "internal"
       }
     },
     "production": {
-      "ios": {},
+      "ios": {
+        "ascAppId": "6776759817",
+        "bundleIdentifier": "com.harpa.pro"
+      },
       "android": {
         "track": "production"
       }

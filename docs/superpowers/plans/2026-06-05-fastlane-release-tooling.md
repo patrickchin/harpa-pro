@@ -396,6 +396,10 @@ def eas_submit_command(profile)
   "pnpm exec eas submit --platform all --profile #{profile} --latest --non-interactive"
 end
 
+def eas_build_and_submit_command(profile)
+  "pnpm exec eas build --platform all --profile #{profile} --auto-submit-with-profile #{profile} --non-interactive"
+end
+
 def print_eas_command(label, command)
   UI.message("#{label}: cd apps/mobile && #{command}")
 end
@@ -461,9 +465,11 @@ end
     UI.message("No EAS build was started.")
     UI.message("No EAS submit was started.")
     print_eas_command("Preview build", eas_build_command(:preview))
-    print_eas_command("Preview submit", eas_submit_command(:preview))
+    print_eas_command("Preview submit latest", eas_submit_command(:preview))
+    print_eas_command("Preview beta build+submit", eas_build_and_submit_command(:preview))
     print_eas_command("Production build", eas_build_command(:production))
-    print_eas_command("Production submit", eas_submit_command(:production))
+    print_eas_command("Production submit latest", eas_submit_command(:production))
+    print_eas_command("Production release build+submit", eas_build_and_submit_command(:production))
   end
 
   desc "Upload preview/internal App Store and Play Store metadata"
@@ -486,17 +492,18 @@ end
     run_in_mobile!(eas_build_command(:preview))
   end
 
-  desc "Submit latest EAS preview build to TestFlight and Play internal"
+  desc "Submit latest existing EAS preview build to TestFlight and Play internal"
   lane :submit_preview do
     ensure_eas_profile!(:submit, :preview)
     run_in_mobile!(eas_submit_command(:preview))
   end
 
-  desc "Upload preview metadata, build, and submit preview binaries"
+  desc "Upload preview metadata, build, and auto-submit the created preview binaries"
   lane :beta do
     metadata_preview
-    build_preview
-    submit_preview
+    ensure_eas_profile!(:build, :preview)
+    ensure_eas_profile!(:submit, :preview)
+    run_in_mobile!(eas_build_and_submit_command(:preview))
   end
 
   desc "Run EAS production build for iOS and Android"
@@ -505,17 +512,18 @@ end
     run_in_mobile!(eas_build_command(:production))
   end
 
-  desc "Submit latest EAS production build to App Store and Play production"
+  desc "Submit latest existing EAS production build to App Store and Play production"
   lane :submit_production do
     ensure_eas_profile!(:submit, :production)
     run_in_mobile!(eas_submit_command(:production))
   end
 
-  desc "Upload production metadata, build, and submit production binaries"
+  desc "Upload production metadata, build, and auto-submit the created production binaries"
   lane :release do
     metadata_production
-    build_production
-    submit_production
+    ensure_eas_profile!(:build, :production)
+    ensure_eas_profile!(:submit, :production)
+    run_in_mobile!(eas_build_and_submit_command(:production))
   end
 ```
 
@@ -545,7 +553,8 @@ Expected:
 - output includes `No metadata was uploaded.`,
 - output includes `No EAS build was started.`,
 - output includes `No EAS submit was started.`,
-- output prints the four EAS build/submit commands from the spec.
+- output prints the standalone EAS build/submit commands plus the beta/release
+  build+auto-submit commands from the spec.
 
 - [ ] **Step 4: Commit**
 
@@ -595,8 +604,9 @@ In `docs/v4/arch-ops.md`, after the mobile build-profile bullets and before
   `doctor` is safe: it validates Bundler/Fastlane, `pnpm`, EAS config,
   and metadata files, then prints the EAS commands without uploading
   metadata, starting a build, or submitting a binary. `beta` pushes
-  preview/internal store metadata, then calls the `preview` EAS build
-  and submit profiles. `release` does the same for production. Store,
+  preview/internal store metadata, then starts the `preview` EAS build
+  with `--auto-submit-with-profile preview` so EAS submits the binaries
+  produced by that build. `release` does the same for production. Store,
   Expo, Apple, and Google credentials stay outside git and come from the
   authenticated local tools or environment variables.
 ````
@@ -612,7 +622,7 @@ In `docs/v4/arch-ops.md`, replace:
 with:
 
 ```md
-  ↳ Fastlane `beta` (manual): metadata -> EAS preview build -> submit
+  ↳ Fastlane `beta` (manual): metadata -> EAS preview build --auto-submit
 ```
 
 Replace:
@@ -624,7 +634,7 @@ Replace:
 with:
 
 ```md
-  ↳ Fastlane `release` (manual approve): metadata -> EAS production build -> submit
+  ↳ Fastlane `release` (manual approve): metadata -> EAS production build --auto-submit
 ```
 
 - [ ] **Step 4: Record the completed P5.1 setup item**

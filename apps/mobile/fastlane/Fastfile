@@ -56,6 +56,10 @@ def eas_submit_command(profile)
   "pnpm exec eas submit --platform all --profile #{profile} --latest --non-interactive"
 end
 
+def eas_build_and_submit_command(profile)
+  "pnpm exec eas build --platform all --profile #{profile} --auto-submit-with-profile #{profile} --non-interactive"
+end
+
 def print_eas_command(label, command)
   UI.message("#{label}: cd apps/mobile && #{command}")
 end
@@ -121,9 +125,11 @@ lane :doctor do
   UI.message("No EAS build was started.")
   UI.message("No EAS submit was started.")
   print_eas_command("Preview build", eas_build_command(:preview))
-  print_eas_command("Preview submit", eas_submit_command(:preview))
+  print_eas_command("Preview submit latest", eas_submit_command(:preview))
+  print_eas_command("Preview beta build+submit", eas_build_and_submit_command(:preview))
   print_eas_command("Production build", eas_build_command(:production))
-  print_eas_command("Production submit", eas_submit_command(:production))
+  print_eas_command("Production submit latest", eas_submit_command(:production))
+  print_eas_command("Production release build+submit", eas_build_and_submit_command(:production))
 end
 
 desc "Upload preview/internal App Store and Play Store metadata"
@@ -146,17 +152,18 @@ lane :build_preview do
   run_in_mobile!(eas_build_command(:preview))
 end
 
-desc "Submit latest EAS preview build to TestFlight and Play internal"
+desc "Submit latest existing EAS preview build to TestFlight and Play internal"
 lane :submit_preview do
   ensure_eas_profile!(:submit, :preview)
   run_in_mobile!(eas_submit_command(:preview))
 end
 
-desc "Upload preview metadata, build, and submit preview binaries"
+desc "Upload preview metadata, build, and auto-submit the created preview binaries"
 lane :beta do
   metadata_preview
-  build_preview
-  submit_preview
+  ensure_eas_profile!(:build, :preview)
+  ensure_eas_profile!(:submit, :preview)
+  run_in_mobile!(eas_build_and_submit_command(:preview))
 end
 
 desc "Run EAS production build for iOS and Android"
@@ -165,15 +172,16 @@ lane :build_production do
   run_in_mobile!(eas_build_command(:production))
 end
 
-desc "Submit latest EAS production build to App Store and Play production"
+desc "Submit latest existing EAS production build to App Store and Play production"
 lane :submit_production do
   ensure_eas_profile!(:submit, :production)
   run_in_mobile!(eas_submit_command(:production))
 end
 
-desc "Upload production metadata, build, and submit production binaries"
+desc "Upload production metadata, build, and auto-submit the created production binaries"
 lane :release do
   metadata_production
-  build_production
-  submit_production
+  ensure_eas_profile!(:build, :production)
+  ensure_eas_profile!(:submit, :production)
+  run_in_mobile!(eas_build_and_submit_command(:production))
 end

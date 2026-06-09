@@ -154,6 +154,8 @@ export function useOptimisticCreateNote() {
         language: null,
         transcribeProvider: null,
         transcribedAt: null,
+        source: vars.body.source ?? null,
+        meta: vars.body.meta ?? {},
         createdAt: now,
         updatedAt: now,
       };

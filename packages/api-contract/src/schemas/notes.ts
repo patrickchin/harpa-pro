@@ -4,6 +4,24 @@ import { fileId, noteFileId, noteId, reportId, userId } from './ids.js';
 
 export const noteKind = z.enum(['text', 'voice', 'image', 'document']);
 
+/**
+ * Coarse capture-flow hint persisted on every note (`app.notes.source`,
+ * migration 0015). Nullable for legacy rows; the LLM payload omits the
+ * field when null.
+ *
+ * | Value     | Meaning |
+ * |-----------|---------|
+ * | `typed`   | Text body entered via keyboard. |
+ * | `voice`   | Voice note (transcribed by the voice pipeline). |
+ * | `camera`  | Photo(s) captured in-app via camera. |
+ * | `gallery` | Photo(s) chosen from device gallery. |
+ * | `upload`  | File(s) uploaded from outside the app. |
+ *
+ * See docs/v4/design-photo-placement.md §"Data model".
+ */
+export const noteSource = z.enum(['typed', 'voice', 'camera', 'gallery', 'upload']);
+export type NoteSource = z.infer<typeof noteSource>;
+
 export const noteFile = z.object({
   id: noteFileId,
   fileId: fileId,
@@ -49,6 +67,10 @@ export const note = z.object({
   language: z.string().min(2).max(16).nullable(),
   transcribeProvider: z.string().nullable(),
   transcribedAt: isoDateTime.nullable(),
+  /** Coarse capture-flow hint (migration 0015). Null on legacy rows. */
+  source: noteSource.nullable(),
+  /** Open-ended kind-specific metadata. Always an object (defaults to {}). */
+  meta: z.record(z.unknown()).default({}),
   createdAt: isoDateTime,
   updatedAt: isoDateTime,
 });
@@ -71,6 +93,10 @@ export const createNoteRequest = z.object({
   title: z.string().max(200).nullable().optional(),
   /** Optional long-form summary. */
   summary: z.string().nullable().optional(),
+  /** Coarse capture-flow hint (typed | voice | camera | gallery | upload). */
+  source: noteSource.optional(),
+  /** Open-ended kind-specific metadata. */
+  meta: z.record(z.unknown()).optional(),
 });
 
 /**

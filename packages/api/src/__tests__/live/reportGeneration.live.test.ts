@@ -109,7 +109,19 @@ describeOrSkip('generateReport — live OpenAI', () => {
       // `openai`); reports are then routed to canonicals.vendor inside
       // `generateReport`. Stubbing `vendor:` here would mask the
       // mismatch that caused docs/bugs/2026-05-29-report-vendor-canonical-mismatch.md.
-      const result = await generateReport({ notes });
+      const result = await generateReport({
+        payload: {
+          notes: [
+            {
+              kind: 'text',
+              id: 'not_live_smoke_0',
+              body: notes,
+              createdAt: '2026-01-01T00:00:00.000Z',
+            },
+          ],
+          currentBody: null,
+        },
+      });
 
       // The service itself runs safeParse and throws AiProviderError on
       // miss — getting here means the body matched. Re-assert anyway so
@@ -152,7 +164,17 @@ describeOrSkip('generateReport — live OpenAI', () => {
     'honours userModel override (gpt-4.1-nano) when caller passes it',
     async () => {
       const result = await generateReport({
-        notes: SCENARIOS[2]!.notes,
+        payload: {
+          notes: [
+            {
+              kind: 'text',
+              id: 'not_live_smoke_1',
+              body: SCENARIOS[2]!.notes,
+              createdAt: '2026-01-01T00:00:00.000Z',
+            },
+          ],
+          currentBody: null,
+        },
         userVendor: 'openai',
         userModel: 'gpt-4.1-nano',
       });
@@ -174,7 +196,17 @@ describeOrSkip('generateReport — live OpenAI', () => {
     'falls back to LIVE_DEFAULT_MODELS when userVendor/userModel are null',
     async () => {
       const result = await generateReport({
-        notes: SCENARIOS[2]!.notes,
+        payload: {
+          notes: [
+            {
+              kind: 'text',
+              id: 'not_live_smoke_2',
+              body: SCENARIOS[2]!.notes,
+              createdAt: '2026-01-01T00:00:00.000Z',
+            },
+          ],
+          currentBody: null,
+        },
         userVendor: null,
         userModel: null,
       });

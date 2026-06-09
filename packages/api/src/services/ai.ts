@@ -441,26 +441,37 @@ export async function summarize(input: SummarizeInput): Promise<SummarizeOutput>
 
 export type ReportBody = z.infer<typeof reportSchemas.reportBody>;
 
+/**
+ * Structured user-message payload. Mirrors `GenerationPayload` in
+ * services/reports.ts — declared here as a structural type so this
+ * module stays free of a reports↔ai import cycle.
+ */
+export interface ReportGenerationPayload {
+  notes: unknown[];
+  currentBody: ReportBody | null;
+}
+
 export interface GenerateReportInput {
   /**
-   * Concatenated note content to feed the model. Ignored in replay mode
-   * (the canonical user prompt is substituted so the request hash matches
-   * the recorded fixture).
-   */
-  notes: string;
-  /**
-   * Optional existing report body. When provided, switches to the
-   * UPDATE path: uses `REPORT_UPDATE_SYSTEM_PROMPT` and prepends an
-   * `EXISTING REPORT:` block to the user prompt so the model preserves
-   * manual edits rather than regenerating from scratch.
+   * Structured payload fed to the LLM: chronological `notes[]` plus
+   * `currentBody` (the user-edited report so far, null on first gen).
+   * Serialised to JSON before being sent — see
+   * docs/v4/design-photo-placement.md §"LLM payload".
    *
-   * In replay mode the contents of `existingBody` are replaced with
-   * the canonical update payload so the request hash matches the
-   * recorded fixture. A non-null value selects the update fixture
-   * (`generate-report.update.*`); pass `null` (or omit) for the
-   * cold-start path.
+   * Ignored in replay mode (the canonical user prompt is substituted
+   * so the request hash matches the recorded fixture).
    */
-  existingBody?: ReportBody | null;
+  payload: ReportGenerationPayload;
+  /**
+   * Switches to the UPDATE path: uses `REPORT_UPDATE_SYSTEM_PROMPT`
+   * so the model is told to preserve user edits rather than
+   * regenerate from scratch. The `currentBody` carried inside
+   * `payload` is what's actually sent to the model.
+   *
+   * Selects the update fixture (`generate-report.update.*`); pass
+   * `false` (or omit) for the cold-start path.
+   */
+  isUpdate?: boolean;
   fixtureName?: string;
   /**
    * Optional vendor override. Tracked for usage accounting only —
@@ -506,7 +517,7 @@ export interface GenerateReportOutput {
 export async function generateReport(input: GenerateReportInput): Promise<GenerateReportOutput> {
   const canonicals = FIXTURE_CANONICALS.report;
   const vendor: Vendor = input.vendor ?? canonicals.vendor;
-  const isUpdate = input.existingBody != null;
+  const isUpdate = input.isUpdate === true;
   const mode = pickMode(input.fixtureName);
   const scenario =
     (input.fixtureName ? scenarioFromName(input.fixtureName) : null) ??
@@ -525,13 +536,12 @@ export async function generateReport(input: GenerateReportInput): Promise<Genera
   const liveModel = input.userModel ?? LIVE_DEFAULT_MODELS.report.model;
 
   // Build the LIVE user prompt — what we'd send the real provider.
-  // In replay mode this is overridden with the canonical string so the
-  // request hash matches the recorded fixture, but it's still surfaced
-  // back to the caller via the response so the Debug tab shows what
-  // the operator actually fed in.
-  const liveUserPrompt = isUpdate
-    ? `EXISTING REPORT:\n${JSON.stringify(input.existingBody)}\n\nNEW NOTES:\n${input.notes}`
-    : input.notes;
+  // Structured JSON: `{ notes: [...], currentBody: ... | null }`.
+  // In replay mode this is overridden with the canonical string so
+  // the request hash matches the recorded fixture, but it's still
+  // surfaced back to the caller via the response so the Debug tab
+  // shows what the operator actually fed in.
+  const liveUserPrompt = JSON.stringify(input.payload);
 
   // Pick the right system prompt for the LIVE path. Update prompt
   // preserves manual edits; cold-start prompt generates from scratch.

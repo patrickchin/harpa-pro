@@ -149,11 +149,13 @@ export function reportBodyToGeneratedReport(
         status: 'open',
         details: i.description ?? '',
         actionRequired: i.action,
+        attachments: i.attachments,
       })),
       nextSteps: body.nextSteps,
       sections: body.summarySections.map((s) => ({
         title: s.title,
         content: s.body,
+        attachments: s.attachments,
       })),
     },
   };
@@ -214,11 +216,13 @@ export function generatedReportToReportBody(g: GeneratedSiteReport): ReportBody 
       severity: normaliseSeverity(i.severity),
       description: i.details ?? null,
       action: i.actionRequired ?? null,
+      ...(i.attachments ? { attachments: i.attachments } : {}),
     })),
     nextSteps: [...r.nextSteps],
     summarySections: r.sections.map((s) => ({
       title: s.title,
       body: s.content,
+      ...(s.attachments ? { attachments: s.attachments } : {}),
     })),
   };
 }

@@ -1600,11 +1600,19 @@ export interface paths {
                                         severity: string | null;
                                         description: string | null;
                                         action: string | null;
+                                        attachments?: {
+                                            images?: string[];
+                                            documents?: string[];
+                                        };
                                     }[];
                                     nextSteps: string[];
                                     summarySections: {
                                         title: string;
                                         body: string;
+                                        attachments?: {
+                                            images?: string[];
+                                            documents?: string[];
+                                        };
                                     }[];
                                 } | null;
                                 notesSinceLastGeneration: number;
@@ -1716,11 +1724,19 @@ export interface paths {
                                     severity: string | null;
                                     description: string | null;
                                     action: string | null;
+                                    attachments?: {
+                                        images?: string[];
+                                        documents?: string[];
+                                    };
                                 }[];
                                 nextSteps: string[];
                                 summarySections: {
                                     title: string;
                                     body: string;
+                                    attachments?: {
+                                        images?: string[];
+                                        documents?: string[];
+                                    };
                                 }[];
                             } | null;
                             notesSinceLastGeneration: number;
@@ -1853,11 +1869,19 @@ export interface paths {
                                     severity: string | null;
                                     description: string | null;
                                     action: string | null;
+                                    attachments?: {
+                                        images?: string[];
+                                        documents?: string[];
+                                    };
                                 }[];
                                 nextSteps: string[];
                                 summarySections: {
                                     title: string;
                                     body: string;
+                                    attachments?: {
+                                        images?: string[];
+                                        documents?: string[];
+                                    };
                                 }[];
                             } | null;
                             notesSinceLastGeneration: number;
@@ -2007,11 +2031,19 @@ export interface paths {
                                 severity: string | null;
                                 description: string | null;
                                 action: string | null;
+                                attachments?: {
+                                    images?: string[];
+                                    documents?: string[];
+                                };
                             }[];
                             nextSteps: string[];
                             summarySections: {
                                 title: string;
                                 body: string;
+                                attachments?: {
+                                    images?: string[];
+                                    documents?: string[];
+                                };
                             }[];
                         } | null;
                     };
@@ -2062,11 +2094,19 @@ export interface paths {
                                     severity: string | null;
                                     description: string | null;
                                     action: string | null;
+                                    attachments?: {
+                                        images?: string[];
+                                        documents?: string[];
+                                    };
                                 }[];
                                 nextSteps: string[];
                                 summarySections: {
                                     title: string;
                                     body: string;
+                                    attachments?: {
+                                        images?: string[];
+                                        documents?: string[];
+                                    };
                                 }[];
                             } | null;
                             notesSinceLastGeneration: number;
@@ -2327,11 +2367,19 @@ export interface paths {
                                         severity: string | null;
                                         description: string | null;
                                         action: string | null;
+                                        attachments?: {
+                                            images?: string[];
+                                            documents?: string[];
+                                        };
                                     }[];
                                     nextSteps: string[];
                                     summarySections: {
                                         title: string;
                                         body: string;
+                                        attachments?: {
+                                            images?: string[];
+                                            documents?: string[];
+                                        };
                                     }[];
                                 } | null;
                                 notesSinceLastGeneration: number;
@@ -2513,11 +2561,19 @@ export interface paths {
                                         severity: string | null;
                                         description: string | null;
                                         action: string | null;
+                                        attachments?: {
+                                            images?: string[];
+                                            documents?: string[];
+                                        };
                                     }[];
                                     nextSteps: string[];
                                     summarySections: {
                                         title: string;
                                         body: string;
+                                        attachments?: {
+                                            images?: string[];
+                                            documents?: string[];
+                                        };
                                     }[];
                                 } | null;
                                 notesSinceLastGeneration: number;
@@ -2627,6 +2683,261 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/projects/{project}/reports/{number}/attachments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    project: string;
+                    number: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        noteId: string;
+                        target: {
+                            /** @enum {string} */
+                            kind: "issue";
+                            index: number;
+                        } | {
+                            /** @enum {string} */
+                            kind: "section";
+                            index: number;
+                        } | unknown;
+                        expectedBodyVersion: string | null;
+                    };
+                };
+            };
+            responses: {
+                /** @description Placed. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            report: {
+                                id: string;
+                                number: number;
+                                projectId: string;
+                                /** @enum {string} */
+                                status: "draft" | "finalized";
+                                visitDate: string | null;
+                                body: {
+                                    meta: {
+                                        title: string | null;
+                                        summary: string | null;
+                                        visitDate: string | null;
+                                    };
+                                    weather: {
+                                        condition: string | null;
+                                        temperature: string | null;
+                                        wind: string | null;
+                                        impact: string | null;
+                                    } | null;
+                                    workers: {
+                                        role: string;
+                                        count: string | null;
+                                        hours: string | null;
+                                        notes: string | null;
+                                    }[];
+                                    materials: {
+                                        name: string;
+                                        quantity: string | null;
+                                        unit: string | null;
+                                        status: string | null;
+                                        condition: string | null;
+                                        notes: string | null;
+                                    }[];
+                                    issues: {
+                                        title: string;
+                                        severity: string | null;
+                                        description: string | null;
+                                        action: string | null;
+                                        attachments?: {
+                                            images?: string[];
+                                            documents?: string[];
+                                        };
+                                    }[];
+                                    nextSteps: string[];
+                                    summarySections: {
+                                        title: string;
+                                        body: string;
+                                        attachments?: {
+                                            images?: string[];
+                                            documents?: string[];
+                                        };
+                                    }[];
+                                } | null;
+                                notesSinceLastGeneration: number;
+                                notesChangedAt: string | null;
+                                generatedAt: string | null;
+                                needsRegeneration: boolean;
+                                finalizedAt: string | null;
+                                pdfUrl: string | null;
+                                createdAt: string;
+                                updatedAt: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Bad target / wrong note kind. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                                requestId?: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Unauthorized. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                                requestId?: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Report or note not found. */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                                requestId?: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Body changed; client must refresh. */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {string} */
+                            code: "body_version_mismatch";
+                            conflict: {
+                                id: string;
+                                number: number;
+                                projectId: string;
+                                /** @enum {string} */
+                                status: "draft" | "finalized";
+                                visitDate: string | null;
+                                body: {
+                                    meta: {
+                                        title: string | null;
+                                        summary: string | null;
+                                        visitDate: string | null;
+                                    };
+                                    weather: {
+                                        condition: string | null;
+                                        temperature: string | null;
+                                        wind: string | null;
+                                        impact: string | null;
+                                    } | null;
+                                    workers: {
+                                        role: string;
+                                        count: string | null;
+                                        hours: string | null;
+                                        notes: string | null;
+                                    }[];
+                                    materials: {
+                                        name: string;
+                                        quantity: string | null;
+                                        unit: string | null;
+                                        status: string | null;
+                                        condition: string | null;
+                                        notes: string | null;
+                                    }[];
+                                    issues: {
+                                        title: string;
+                                        severity: string | null;
+                                        description: string | null;
+                                        action: string | null;
+                                        attachments?: {
+                                            images?: string[];
+                                            documents?: string[];
+                                        };
+                                    }[];
+                                    nextSteps: string[];
+                                    summarySections: {
+                                        title: string;
+                                        body: string;
+                                        attachments?: {
+                                            images?: string[];
+                                            documents?: string[];
+                                        };
+                                    }[];
+                                } | null;
+                                notesSinceLastGeneration: number;
+                                notesChangedAt: string | null;
+                                generatedAt: string | null;
+                                needsRegeneration: boolean;
+                                finalizedAt: string | null;
+                                pdfUrl: string | null;
+                                createdAt: string;
+                                updatedAt: string;
+                            };
+                        };
+                    };
+                };
+                /** @description Report finalized; placement locked. */
+                423: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                                requestId?: string;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        trace?: never;
+    };
     "/projects/{project}/reports/{number}/finalize": {
         parameters: {
             query?: never;
@@ -2693,11 +3004,19 @@ export interface paths {
                                         severity: string | null;
                                         description: string | null;
                                         action: string | null;
+                                        attachments?: {
+                                            images?: string[];
+                                            documents?: string[];
+                                        };
                                     }[];
                                     nextSteps: string[];
                                     summarySections: {
                                         title: string;
                                         body: string;
+                                        attachments?: {
+                                            images?: string[];
+                                            documents?: string[];
+                                        };
                                     }[];
                                 } | null;
                                 notesSinceLastGeneration: number;
@@ -2834,11 +3153,19 @@ export interface paths {
                                         severity: string | null;
                                         description: string | null;
                                         action: string | null;
+                                        attachments?: {
+                                            images?: string[];
+                                            documents?: string[];
+                                        };
                                     }[];
                                     nextSteps: string[];
                                     summarySections: {
                                         title: string;
                                         body: string;
+                                        attachments?: {
+                                            images?: string[];
+                                            documents?: string[];
+                                        };
                                     }[];
                                 } | null;
                                 notesSinceLastGeneration: number;
@@ -3199,6 +3526,12 @@ export interface paths {
                                 language: string | null;
                                 transcribeProvider: string | null;
                                 transcribedAt: string | null;
+                                /** @enum {string|null} */
+                                source: "typed" | "voice" | "camera" | "gallery" | "upload" | null;
+                                /** @default {} */
+                                meta: {
+                                    [key: string]: unknown;
+                                };
                                 createdAt: string;
                                 updatedAt: string;
                             }[];
@@ -3265,6 +3598,11 @@ export interface paths {
                         transcript?: string | null;
                         title?: string | null;
                         summary?: string | null;
+                        /** @enum {string} */
+                        source?: "typed" | "voice" | "camera" | "gallery" | "upload";
+                        meta?: {
+                            [key: string]: unknown;
+                        };
                     };
                 };
             };
@@ -3299,6 +3637,12 @@ export interface paths {
                             language: string | null;
                             transcribeProvider: string | null;
                             transcribedAt: string | null;
+                            /** @enum {string|null} */
+                            source: "typed" | "voice" | "camera" | "gallery" | "upload" | null;
+                            /** @default {} */
+                            meta: {
+                                [key: string]: unknown;
+                            };
                             createdAt: string;
                             updatedAt: string;
                         };
@@ -3559,6 +3903,12 @@ export interface paths {
                             language: string | null;
                             transcribeProvider: string | null;
                             transcribedAt: string | null;
+                            /** @enum {string|null} */
+                            source: "typed" | "voice" | "camera" | "gallery" | "upload" | null;
+                            /** @default {} */
+                            meta: {
+                                [key: string]: unknown;
+                            };
                             createdAt: string;
                             updatedAt: string;
                         };
@@ -4003,6 +4353,12 @@ export interface paths {
                             language: string | null;
                             transcribeProvider: string | null;
                             transcribedAt: string | null;
+                            /** @enum {string|null} */
+                            source: "typed" | "voice" | "camera" | "gallery" | "upload" | null;
+                            /** @default {} */
+                            meta: {
+                                [key: string]: unknown;
+                            };
                             createdAt: string;
                             updatedAt: string;
                         };

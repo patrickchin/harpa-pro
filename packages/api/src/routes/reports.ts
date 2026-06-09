@@ -45,6 +45,7 @@ import {
   unfinalizeReport,
   setReportPdfFileId,
   toReportResponse,
+  placeNoteInReport,
   type ReportLastGeneration,
   type ReportRow,
 } from '../services/reports.js';
@@ -337,16 +338,16 @@ async function runGenerate(
   // bump that lands while AI is running keeps notes_changed_at >
   // generated_at and the queue-of-one fires another regen.
   const snapshotTs = report.notesChangedAt;
-  const notes = await db((d) => collectNotesForGeneration(d, report.id));
-  // Update path: send current body so the model preserves manual
-  // edits. First-time generate ignores any stale body (there shouldn't
-  // be one) and runs the cold-start prompt.
-  const existingBody =
-    options.mode === 'regenerate' ? report.body : null;
+  const payload = await db((d) => collectNotesForGeneration(d, report.id));
+  // Update path: include the user-edited body so the model preserves
+  // manual edits + user photo placements. First-time generate runs the
+  // cold-start prompt with `currentBody: null`.
+  const isUpdate = options.mode === 'regenerate';
+  if (!isUpdate) payload.currentBody = null;
   const requestedAt = new Date().toISOString();
   const out = await aiGenerateReport({
-    notes,
-    existingBody,
+    payload,
+    isUpdate,
     fixtureName,
     userVendor,
     userModel,
@@ -435,6 +436,61 @@ reportRoutes.openapi(
     const result = await runGenerate(db, userId, report, body.fixtureName, settings.vendor, settings.model, { mode: 'regenerate' });
     await db((d) => attachUsageWarning(d, userId, (k, v) => c.header(k, v)));
     return c.json({ report: toReportResponse(result.report), debug: result.debug }, 200);
+  },
+);
+
+// ---------- PATCH /projects/:project/reports/:number/attachments ----------
+//
+// Move (or unplace) a single batch of attachments (image or document
+// note) into a target issue / summary section. Reshapes presentation
+// of existing content — does NOT bump notes_changed_at, so no regen
+// is queued. See docs/v4/design-photo-placement.md §"API surface".
+reportRoutes.openapi(
+  createRoute({
+    method: 'patch',
+    path: '/projects/{project}/reports/{number}/attachments',
+    tags: ['reports'],
+    security: [{ bearerAuth: [] }],
+    middleware: [withAuth()] as const,
+    request: {
+      params: reportPathParam,
+      body: { content: { 'application/json': { schema: reportSchemas.placeAttachmentRequest } } },
+    },
+    responses: {
+      200: { description: 'Placed.', content: { 'application/json': { schema: reportSchemas.placeAttachmentResponse } } },
+      400: { description: 'Bad target / wrong note kind.', content: { 'application/json': { schema: errorEnvelope } } },
+      401: { description: 'Unauthorized.', content: { 'application/json': { schema: errorEnvelope } } },
+      404: { description: 'Report or note not found.', content: { 'application/json': { schema: errorEnvelope } } },
+      409: { description: 'Body changed; client must refresh.', content: { 'application/json': { schema: reportSchemas.placeAttachmentConflictResponse } } },
+      423: { description: 'Report finalized; placement locked.', content: { 'application/json': { schema: errorEnvelope } } },
+    },
+  }),
+  async (c) => {
+    const db = c.get('db');
+    if (!db) throw new HTTPException(401);
+    const { project: slug, number } = c.req.valid('param');
+    const { noteId, target, expectedBodyVersion } = c.req.valid('json');
+    const report = await loadReport(db, slug, number);
+    const result = await db((d) =>
+      placeNoteInReport(d, report.id, noteId, target ?? null, expectedBodyVersion ?? null),
+    );
+    switch (result.kind) {
+      case 'ok':
+        return c.json({ report: toReportResponse(result.report) }, 200);
+      case 'not_found':
+        throw new HTTPException(404, { message: 'Note not found in this report.' });
+      case 'bad_note_kind':
+        throw new HTTPException(400, { message: 'Only image and document notes can be placed.' });
+      case 'bad_target':
+        throw new HTTPException(400, { message: 'Target index out of range.' });
+      case 'finalized':
+        throw new HTTPException(423, { message: 'Report is finalized; placement is locked.' });
+      case 'conflict':
+        return c.json(
+          { code: 'body_version_mismatch' as const, conflict: toReportResponse(result.report) },
+          409,
+        );
+    }
   },
 );
 

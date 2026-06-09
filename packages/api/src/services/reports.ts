@@ -13,8 +13,21 @@ import { newId } from '../lib/ids.js';
 
 type Db = NodePgDatabase<typeof schema>;
 type ReportBody = z.infer<typeof reportSchemas.reportBody>;
+type ReportAttachments = z.infer<typeof reportSchemas.reportAttachments>;
 
 export type ReportStatus = 'draft' | 'finalized';
+
+export type PlacementTarget =
+  | { kind: 'issue'; index: number }
+  | { kind: 'section'; index: number };
+
+export type PlaceAttachmentResult =
+  | { kind: 'ok'; report: ReportRow }
+  | { kind: 'conflict'; report: ReportRow }
+  | { kind: 'not_found' }
+  | { kind: 'bad_target' }
+  | { kind: 'bad_note_kind' }
+  | { kind: 'finalized' };
 
 /**
  * Persisted shape of the `last_generation` jsonb column (migration 0003).
@@ -335,78 +348,269 @@ export async function deleteReport(db: Db, reportId: string): Promise<boolean> {
 // ---------------------------------------------------------------------------
 
 /**
- * Build the user-prompt payload for `generateReport`.
- *
- * Returns a numbered, kind-aware notes block. Text + voice notes carry
- * their body/transcript verbatim; image notes are batches of one or
- * more photos via `app.note_files` and contribute a labelled placeholder
- * such as `[images 1: 5 photos]` (with the user-supplied caption when
- * present). Document notes work the same way for now (single file, but
- * the `[document N]` placeholder + caption keeps the wire shape parallel
- * to images).
- *
- * The structure ("NOTES:\n[1] …") matches the canonical v3 `formatNotes`
- * / `buildPrompt` shape the SYSTEM_PROMPT references — keep them in
- * sync.
+ * Per-photo metadata surfaced in the LLM payload. Only included when
+ * at least one photo in a batch has a caption (keeps the common-case
+ * prompt small — see docs/v4/design-photo-placement.md §"LLM payload").
  */
-export async function collectNotesForGeneration(db: Db, reportId: string): Promise<string> {
+export type GenerationPhoto = {
+  id: string;
+  caption?: string;
+};
+
+/**
+ * One note in the structured LLM payload. Position in the surrounding
+ * `notes[]` array is the contract — there is intentionally no `n` /
+ * `index` field. Capture order (`created_at ASC, id ASC`) is preserved
+ * end-to-end so the LLM can use adjacency as a semantic signal (e.g.
+ * a voice note describing the photo just captured).
+ */
+export type GenerationNote =
+  | {
+      kind: 'text';
+      id: string;
+      source?: 'typed';
+      body: string;
+      createdAt: string;
+    }
+  | {
+      kind: 'voice';
+      id: string;
+      source?: 'voice';
+      transcript: string;
+      durationSec?: number;
+      createdAt: string;
+    }
+  | {
+      kind: 'image';
+      id: string;
+      source?: 'camera' | 'gallery' | 'upload';
+      photoCount: number;
+      caption?: string;
+      photos?: GenerationPhoto[];
+      createdAt: string;
+    }
+  | {
+      kind: 'document';
+      id: string;
+      source?: 'upload';
+      caption?: string;
+      createdAt: string;
+    };
+
+/**
+ * Structured user-message payload fed to the LLM.
+ *
+ * - `notes` — chronological capture order. Position is the contract.
+ * - `currentBody` — the most recent saved report body, including any
+ *   user-placed `attachments`. Null on first generation. Lets the LLM
+ *   preserve user placements and propose new ones from context.
+ *
+ * See docs/v4/design-photo-placement.md.
+ */
+export interface GenerationPayload {
+  notes: GenerationNote[];
+  currentBody: ReportBody | null;
+}
+
+/**
+ * Build the structured user-prompt payload for `generateReport`.
+ *
+ * Returns a `GenerationPayload` object (notes[] + currentBody). The
+ * AI service JSON-stringifies it into the user message — array
+ * position carries capture order, every note has a stable `id` the
+ * LLM can echo into `attachments.images` / `.documents`.
+ */
+export async function collectNotesForGeneration(
+  db: Db,
+  reportId: string,
+): Promise<GenerationPayload> {
   const r = await db.execute<{
     id: string;
     kind: 'text' | 'voice' | 'image' | 'document';
     body: string | null;
     transcript: string | null;
+    source: string | null;
+    duration_sec: number | null;
+    created_at: Date;
     file_count: number;
+    photos_json: Array<{ id: string; caption: string | null }> | null;
   }>(sql`
-    SELECT n.id, n.kind, n.body, n.transcript,
-           COALESCE(nf.file_count, 0) AS file_count
+    SELECT n.id, n.kind, n.body, n.transcript, n.source,
+           n.duration_sec, n.created_at,
+           COALESCE(nf.file_count, 0) AS file_count,
+           nf.photos_json AS photos_json
     FROM app.notes n
     LEFT JOIN (
-      SELECT note_id, COUNT(*)::int AS file_count
+      SELECT note_id,
+             COUNT(*)::int AS file_count,
+             json_agg(
+               json_build_object('id', id, 'caption', caption)
+               ORDER BY position
+             ) AS photos_json
       FROM app.note_files
       GROUP BY note_id
     ) nf ON nf.note_id = n.id
     WHERE n.report_id = ${reportId}
     ORDER BY n.created_at ASC, n.id ASC
   `);
-  const counters: Record<'image' | 'document', number> = { image: 0, document: 0 };
-  const lines: string[] = [];
-  for (const note of r.rows) {
-    let content: string;
-    switch (note.kind) {
-      case 'text':
-        content = (note.body ?? '').trim();
+
+  const bodyResult = await db.execute<{ body: ReportBody | null }>(sql`
+    SELECT body FROM app.reports WHERE id = ${reportId} LIMIT 1
+  `);
+  const currentBody = bodyResult.rows[0]?.body ?? null;
+
+  const notes: GenerationNote[] = [];
+  for (const n of r.rows) {
+    const createdAt = new Date(n.created_at).toISOString();
+    switch (n.kind) {
+      case 'text': {
+        const body = (n.body ?? '').trim();
+        if (!body) continue;
+        notes.push({
+          kind: 'text',
+          id: n.id,
+          ...(n.source === 'typed' ? { source: 'typed' } : {}),
+          body,
+          createdAt,
+        });
         break;
-      case 'voice':
-        content = (note.transcript ?? note.body ?? '').trim();
+      }
+      case 'voice': {
+        const transcript = (n.transcript ?? n.body ?? '').trim();
+        if (!transcript) continue;
+        notes.push({
+          kind: 'voice',
+          id: n.id,
+          ...(n.source === 'voice' ? { source: 'voice' } : {}),
+          transcript,
+          ...(typeof n.duration_sec === 'number' ? { durationSec: n.duration_sec } : {}),
+          createdAt,
+        });
         break;
+      }
       case 'image': {
-        // `note_files.file_count` is the canonical photo count post-0010.
-        // Treat 0 as 1 so legacy unmigrated rows (no join entry) still
-        // surface as a placeholder rather than vanishing.
-        const count = note.file_count > 0 ? note.file_count : 1;
-        const idx = ++counters.image;
-        const head = count === 1
-          ? `[image ${idx}]`
-          : `[images ${idx}: ${count} photos]`;
-        const caption = (note.body ?? '').trim();
-        content = caption ? `${head} ${JSON.stringify(caption)}` : head;
+        const photoCount = n.file_count > 0 ? n.file_count : 1;
+        const caption = (n.body ?? '').trim();
+        // Only include `photos[]` when at least one per-photo caption
+        // is set (keeps the common-case prompt small).
+        const photos = (n.photos_json ?? [])
+          .filter((p) => p && p.id)
+          .map((p) => ({
+            id: p.id,
+            ...(p.caption ? { caption: p.caption } : {}),
+          }));
+        const anyPhotoCaption = photos.some((p) => 'caption' in p);
+        notes.push({
+          kind: 'image',
+          id: n.id,
+          ...(n.source === 'camera' || n.source === 'gallery' || n.source === 'upload'
+            ? { source: n.source as 'camera' | 'gallery' | 'upload' }
+            : {}),
+          photoCount,
+          ...(caption ? { caption } : {}),
+          ...(anyPhotoCaption ? { photos } : {}),
+          createdAt,
+        });
         break;
       }
       case 'document': {
-        const idx = ++counters.document;
-        const head = `[document ${idx}]`;
-        const caption = (note.body ?? '').trim();
-        content = caption ? `${head} ${JSON.stringify(caption)}` : head;
+        const caption = (n.body ?? '').trim();
+        notes.push({
+          kind: 'document',
+          id: n.id,
+          ...(n.source === 'upload' ? { source: 'upload' } : {}),
+          ...(caption ? { caption } : {}),
+          createdAt,
+        });
         break;
       }
-      default:
-        content = (note.body ?? '').trim();
     }
-    if (content.length === 0) continue;
-    lines.push(`[${lines.length + 1}] ${content}`);
   }
-  if (lines.length === 0) return '';
-  return `NOTES:\n${lines.join('\n')}`;
+
+  return { notes, currentBody };
+}
+
+/**
+ * Format the structured `GenerationPayload` into the literal user
+ * message sent to the LLM. Stable JSON shape — keep in lock-step with
+ * the system prompt in `prompts/reportGeneration.ts`.
+ */
+export function formatGenerationPayload(payload: GenerationPayload): string {
+  return JSON.stringify(payload);
+}
+
+/**
+ * Strip / repair `attachments` on every issue and section of a body
+ * before persisting it. Defense-in-depth around the LLM (which may
+ * hallucinate IDs or violate the "preserve user placements" rule) and
+ * around the placement endpoint (defense against drift).
+ *
+ * Rules:
+ *   1. Drop IDs not in `validNoteIds` (deleted notes, wrong report,
+ *      scope-invisible). Renderer also drops unknowns cosmetically;
+ *      this is the canonical cleanup.
+ *   2. Each ID may appear in at most one `attachments` array across
+ *      the whole body. First occurrence wins (reading
+ *      `body.issues[]` then `body.summarySections[]`, in array order).
+ *   3. Empty `images` / `documents` arrays collapse to undefined;
+ *      empty `attachments` object collapses to undefined.
+ *
+ * Pure function. Always returns a new body — never mutates the input.
+ */
+export function sanitiseAttachments(
+  body: ReportBody,
+  validNoteIds: Set<string>,
+): ReportBody {
+  const seen = new Set<string>();
+
+  function cleanList(ids: string[] | undefined): string[] | undefined {
+    if (!ids || ids.length === 0) return undefined;
+    const out: string[] = [];
+    for (const id of ids) {
+      if (typeof id !== 'string') continue;
+      if (!validNoteIds.has(id)) continue;
+      if (seen.has(id)) continue;
+      seen.add(id);
+      out.push(id);
+    }
+    return out.length > 0 ? out : undefined;
+  }
+
+  function cleanAttachments(a: ReportAttachments | undefined): ReportAttachments | undefined {
+    if (!a) return undefined;
+    const images = cleanList(a.images);
+    const documents = cleanList(a.documents);
+    if (!images && !documents) return undefined;
+    return {
+      ...(images ? { images } : {}),
+      ...(documents ? { documents } : {}),
+    };
+  }
+
+  return {
+    ...body,
+    issues: body.issues.map((i) => {
+      const next = cleanAttachments(i.attachments);
+      const { attachments: _drop, ...rest } = i;
+      return next ? { ...rest, attachments: next } : { ...rest };
+    }),
+    summarySections: body.summarySections.map((s) => {
+      const next = cleanAttachments(s.attachments);
+      const { attachments: _drop, ...rest } = s;
+      return next ? { ...rest, attachments: next } : { ...rest };
+    }),
+  };
+}
+
+/**
+ * Return the set of note IDs visible (under the current scope) on this
+ * report. Used by `sanitiseAttachments` to drop dangling IDs.
+ */
+async function loadValidNoteIds(db: Db, reportId: string): Promise<Set<string>> {
+  const r = await db.execute<{ id: string }>(sql`
+    SELECT id FROM app.notes WHERE report_id = ${reportId}
+  `);
+  return new Set(r.rows.map((row) => row.id));
 }
 
 export async function setReportBody(
@@ -425,10 +629,12 @@ export async function setReportBody(
    */
   snapshotTs?: string | null,
 ): Promise<ReportRow | null> {
+  const validIds = await loadValidNoteIds(db, reportId);
+  const sanitised = sanitiseAttachments(body, validIds);
   const lastGenJson = lastGeneration ? JSON.stringify(lastGeneration) : null;
   const r = await db.execute<RawReport>(sql`
     UPDATE app.reports
-    SET body = ${JSON.stringify(body)}::jsonb,
+    SET body = ${JSON.stringify(sanitised)}::jsonb,
         generated_at = COALESCE(${snapshotTs ?? null}::timestamptz, now()),
         notes_since_last_generation = 0,
         last_generation = CASE
@@ -443,6 +649,139 @@ export async function setReportBody(
   `);
   const row = r.rows[0];
   return row ? mapReport(row) : null;
+}
+
+/**
+ * Move (or unplace) a note's batch into / out of an issue or section.
+ *
+ * - Removes `noteId` from every other `attachments.images` /
+ *   `.documents` array first (idempotent move).
+ * - Adds it to the requested target if `target` is non-null.
+ * - Rejects with `bad_target` when the index is out of range, or
+ *   `bad_note_kind` when the note is not `image` / `document`, or
+ *   `finalized` when the report is finalised.
+ * - Returns `conflict` with the current report when
+ *   `expectedBodyVersion` doesn't match `report.generatedAt`.
+ * - Does NOT call `bumpNotesChangedAt`. Placement reshapes
+ *   presentation of existing content; no regen should be triggered.
+ *
+ * See docs/v4/design-photo-placement.md §"API surface".
+ */
+export async function placeNoteInReport(
+  db: Db,
+  reportId: string,
+  noteId: string,
+  target: PlacementTarget | null,
+  expectedBodyVersion: string | null,
+): Promise<PlaceAttachmentResult> {
+  const report = await getReport(db, reportId);
+  if (!report) return { kind: 'not_found' };
+  if (report.status === 'finalized') return { kind: 'finalized' };
+
+  // Optimistic concurrency. `report.generatedAt` is null on a never-
+  // generated draft — clients send `null` in that case too.
+  if ((expectedBodyVersion ?? null) !== (report.generatedAt ?? null)) {
+    return { kind: 'conflict', report };
+  }
+
+  const noteRes = await db.execute<{ kind: 'text' | 'voice' | 'image' | 'document' }>(sql`
+    SELECT kind FROM app.notes
+    WHERE id = ${noteId} AND report_id = ${reportId}
+    LIMIT 1
+  `);
+  const noteRow = noteRes.rows[0];
+  if (!noteRow) return { kind: 'not_found' };
+  if (noteRow.kind !== 'image' && noteRow.kind !== 'document') {
+    return { kind: 'bad_note_kind' };
+  }
+  const slot: 'images' | 'documents' =
+    noteRow.kind === 'image' ? 'images' : 'documents';
+
+  // Empty body just after creation: there's nothing to attach into.
+  // Treat this as bad_target so the client surfaces "generate first".
+  const body = report.body;
+  if (!body) return { kind: 'bad_target' };
+
+  if (target) {
+    if (target.kind === 'issue' && target.index >= body.issues.length) {
+      return { kind: 'bad_target' };
+    }
+    if (target.kind === 'section' && target.index >= body.summarySections.length) {
+      return { kind: 'bad_target' };
+    }
+  }
+
+  // Remove noteId from every attachments array first.
+  function strip<T extends { attachments?: { images?: string[]; documents?: string[] } }>(
+    item: T,
+  ): T {
+    if (!item.attachments) return item;
+    const a = item.attachments;
+    const images = a.images?.filter((id) => id !== noteId);
+    const documents = a.documents?.filter((id) => id !== noteId);
+    const cleaned: { images?: string[]; documents?: string[] } = {};
+    if (images && images.length > 0) cleaned.images = images;
+    if (documents && documents.length > 0) cleaned.documents = documents;
+    const next = Object.keys(cleaned).length > 0 ? cleaned : undefined;
+    const { attachments: _drop, ...rest } = item;
+    return (next ? { ...rest, attachments: next } : { ...rest }) as T;
+  }
+
+  const stripped: ReportBody = {
+    ...body,
+    issues: body.issues.map(strip),
+    summarySections: body.summarySections.map(strip),
+  };
+
+  // Add to the chosen target.
+  let next: ReportBody = stripped;
+  if (target) {
+    if (target.kind === 'issue') {
+      next = {
+        ...stripped,
+        issues: stripped.issues.map((it, i) => {
+          if (i !== target.index) return it;
+          const current = it.attachments ?? {};
+          const list = [...(current[slot] ?? []), noteId];
+          return {
+            ...it,
+            attachments: { ...current, [slot]: list },
+          };
+        }),
+      };
+    } else {
+      next = {
+        ...stripped,
+        summarySections: stripped.summarySections.map((s, i) => {
+          if (i !== target.index) return s;
+          const current = s.attachments ?? {};
+          const list = [...(current[slot] ?? []), noteId];
+          return {
+            ...s,
+            attachments: { ...current, [slot]: list },
+          };
+        }),
+      };
+    }
+  }
+
+  // Persist via the same UPDATE used by manual edits, but DON'T call
+  // setReportBody — that resets the AI counter and stamps generated_at.
+  // Placement is presentation-only.
+  const validIds = await loadValidNoteIds(db, reportId);
+  const sanitised = sanitiseAttachments(next, validIds);
+  const r = await db.execute<RawReport>(sql`
+    UPDATE app.reports
+    SET body = ${JSON.stringify(sanitised)}::jsonb,
+        updated_at = now()
+    WHERE id = ${reportId}
+    RETURNING id, number, project_id, status, visit_date, body,
+              notes_since_last_generation, notes_changed_at, generated_at, finalized_at,
+              pdf_file_id, created_at, updated_at
+  `);
+  const row = r.rows[0];
+  if (!row) return { kind: 'not_found' };
+  return { kind: 'ok', report: mapReport(row) };
 }
 
 export async function finalizeReport(db: Db, reportId: string): Promise<ReportRow | null> {
@@ -622,7 +961,8 @@ export async function getReportDebug(db: Db, reportId: string): Promise<ReportDe
   // when a previous lastGeneration is stored. The persisted
   // `lastGeneration.userPrompt` is still surfaced separately as a
   // record of what was last sent.
-  const liveUserPrompt = await collectNotesForGeneration(db, reportId);
+  const livePayload = await collectNotesForGeneration(db, reportId);
+  const liveUserPrompt = formatGenerationPayload(livePayload);
 
   return {
     prompt: {

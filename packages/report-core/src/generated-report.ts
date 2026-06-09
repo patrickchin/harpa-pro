@@ -77,6 +77,21 @@ const MaterialSchema = z.object({
   notes: nullableTrimmed,
 });
 
+/**
+ * Photo / document batches placed at this issue or section, keyed by
+ * note ID. Mirrors `api-contract`'s `reportAttachments` shape but
+ * defined here so report-core stays self-contained (no api-contract
+ * dependency). Render-time silently drops unknown IDs.
+ *
+ * See docs/v4/design-photo-placement.md.
+ */
+const AttachmentsSchema = z
+  .object({
+    images: z.array(z.string()).optional(),
+    documents: z.array(z.string()).optional(),
+  })
+  .optional();
+
 const IssueSchema = z.object({
   title: nonEmptyTrimmed,
   category: trimmedString.pipe(z.string().min(1)).catch('other'),
@@ -84,11 +99,13 @@ const IssueSchema = z.object({
   status: trimmedString.pipe(z.string().min(1)).catch('open'),
   details: nonEmptyTrimmed,
   actionRequired: nullableTrimmed,
+  attachments: AttachmentsSchema,
 });
 
 const SectionSchema = z.object({
   title: nonEmptyTrimmed,
   content: nonEmptyTrimmed,
+  attachments: AttachmentsSchema,
 });
 
 const WeatherSchema = z.object({

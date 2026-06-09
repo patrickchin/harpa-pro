@@ -6,6 +6,28 @@ import { noteFile, noteKind } from './notes.js';
 export const reportStatus = z.enum(['draft', 'finalized']);
 export type ReportStatus = z.infer<typeof reportStatus>;
 
+/**
+ * Photo / document batches attached to a specific issue or detailed
+ * section of the report. Keyed by note ID (`not_xxxxxxxxxx`).
+ *
+ * - `images`    — note IDs whose kind is `image`.
+ * - `documents` — reserved for future kind=`document` placement.
+ *
+ * Render-time silently drops unknown IDs (deleted notes); the server's
+ * `sanitiseAttachments` validator strips them on the next `setReportBody`
+ * write. Each note ID may appear in at most one attachments array
+ * across the entire `report.body` (sanitiser de-dupes first-occurrence-wins).
+ *
+ * See docs/v4/design-photo-placement.md.
+ */
+export const reportAttachments = z
+  .object({
+    images: z.array(z.string()).optional(),
+    documents: z.array(z.string()).optional(),
+  })
+  .strict();
+export type ReportAttachments = z.infer<typeof reportAttachments>;
+
 export const reportMeta = z.object({
   title:     z.string().nullable(),
   summary:   z.string().nullable(),
@@ -71,6 +93,7 @@ export const reportBody = z.object({
       severity: z.string().nullable(),
       description: z.string().nullable(),
       action: z.string().nullable(),
+      attachments: reportAttachments.optional(),
     }),
   ),
   nextSteps: z.array(z.string()),
@@ -78,6 +101,7 @@ export const reportBody = z.object({
     z.object({
       title: z.string(),
       body: z.string(),
+      attachments: reportAttachments.optional(),
     }),
   ),
 });
@@ -175,6 +199,46 @@ export const unfinalizeReportResponse = z.object({ report });
 export const renderPdfResponse = z.object({
   url: z.string().url(),
   expiresAt: isoDateTime,
+});
+
+/**
+ * Photo / document placement endpoint
+ * (`PATCH /projects/{project}/reports/{number}/attachments`).
+ *
+ * Moves the batch attached to `noteId` to the chosen `target`, or
+ * unplaces it when `target` is null. Idempotent — the service strips
+ * the noteId from any other attachments array first.
+ *
+ * `expectedBodyVersion` is the client's last-seen `report.generatedAt`
+ * (ISO string). When mismatched (e.g. a regen landed mid-edit), the
+ * server returns 409 with the current report so the client can refresh
+ * and re-pick.
+ *
+ * Per docs/v4/design-photo-placement.md §"API surface".
+ */
+export const placementTarget = z.discriminatedUnion('kind', [
+  z.object({
+    kind: z.literal('issue'),
+    index: z.number().int().min(0),
+  }),
+  z.object({
+    kind: z.literal('section'),
+    index: z.number().int().min(0),
+  }),
+]);
+export type PlacementTarget = z.infer<typeof placementTarget>;
+
+export const placeAttachmentRequest = z.object({
+  noteId,
+  target: placementTarget.nullable(),
+  expectedBodyVersion: isoDateTime.nullable(),
+});
+export type PlaceAttachmentRequest = z.infer<typeof placeAttachmentRequest>;
+
+export const placeAttachmentResponse = z.object({ report });
+export const placeAttachmentConflictResponse = z.object({
+  code: z.literal('body_version_mismatch'),
+  conflict: report,
 });
 
 /**

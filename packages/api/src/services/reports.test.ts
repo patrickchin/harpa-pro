@@ -8,7 +8,13 @@
  * down the pure comparison branches.
  */
 import { describe, it, expect } from 'vitest';
-import { needsRegenerationOf, toReportResponse } from './reports.js';
+import {
+  collectPlacedAttachmentIds,
+  needsRegenerationOf,
+  preserveExistingAttachments,
+  sanitiseAttachments,
+  toReportResponse,
+} from './reports.js';
 
 function row(overrides: Partial<Parameters<typeof needsRegenerationOf>[0]> = {}) {
   return {
@@ -91,5 +97,97 @@ describe('toReportResponse', () => {
   it('decorates the row with a needsRegeneration boolean', () => {
     const r = row({ notesSinceLastGeneration: 2 });
     expect(toReportResponse(r)).toEqual({ ...r, needsRegeneration: true });
+  });
+});
+
+const body = {
+  meta: { title: null, summary: null, visitDate: null },
+  weather: null,
+  workers: [],
+  materials: [],
+  issues: [
+    {
+      title: 'Issue A',
+      severity: 'medium',
+      description: null,
+      action: null,
+    },
+    {
+      title: 'Issue B',
+      severity: 'low',
+      description: null,
+      action: null,
+    },
+  ],
+  nextSteps: [],
+  summarySections: [
+    { title: 'Section A', body: 'A' },
+    { title: 'Section B', body: 'B' },
+  ],
+};
+
+describe('report body attachments helpers', () => {
+  it('collects placed image/document IDs from issues and sections', () => {
+    const ids = collectPlacedAttachmentIds({
+      ...body,
+      issues: [
+        { ...body.issues[0]!, attachments: { images: ['not_a'], documents: ['not_doc'] } },
+        body.issues[1]!,
+      ],
+      summarySections: [
+        body.summarySections[0]!,
+        { ...body.summarySections[1]!, attachments: { images: ['not_b'] } },
+      ],
+    });
+    expect(ids.images).toEqual(new Set(['not_a', 'not_b']));
+    expect(ids.documents).toEqual(new Set(['not_doc']));
+  });
+
+  it('sanitises invalid and duplicate attachment IDs in reading order', () => {
+    const cleaned = sanitiseAttachments(
+      {
+        ...body,
+        issues: [
+          { ...body.issues[0]!, attachments: { images: ['not_a', 'not_missing', 'not_b'] } },
+          { ...body.issues[1]!, attachments: { images: ['not_b'] } },
+        ],
+        summarySections: [
+          { ...body.summarySections[0]!, attachments: { images: ['not_a', 'not_c'] } },
+          body.summarySections[1]!,
+        ],
+      },
+      {
+        images: new Set(['not_a', 'not_b', 'not_c']),
+        documents: new Set(),
+      },
+    );
+
+    expect(cleaned.issues[0]!.attachments?.images).toEqual(['not_a', 'not_b']);
+    expect(cleaned.issues[1]!.attachments).toBeUndefined();
+    expect(cleaned.summarySections[0]!.attachments?.images).toEqual(['not_c']);
+  });
+
+  it('preserves an existing user placement when generated output omits it', () => {
+    const current = {
+      ...body,
+      issues: [
+        { ...body.issues[0]!, attachments: { images: ['not_user'] } },
+        body.issues[1]!,
+      ],
+    };
+    const generated = {
+      ...body,
+      issues: [
+        { ...body.issues[0]!, attachments: { images: ['not_llm'] } },
+        body.issues[1]!,
+      ],
+    };
+
+    const out = preserveExistingAttachments(generated, current, {
+      images: new Set(['not_user', 'not_llm']),
+      documents: new Set(),
+    });
+
+    expect(out.issues[0]!.attachments?.images).toEqual(['not_llm', 'not_user']);
   });
 });

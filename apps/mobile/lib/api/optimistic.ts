@@ -47,6 +47,16 @@ type DeleteNoteResponse = ResponseBody<'/notes/{note}', 'delete'>;
 
 type ReportsPage = ResponseBody<'/projects/{project}/reports', 'get'>;
 type Report = ReportsPage['items'][number];
+type SingleReport = ResponseBody<'/projects/{project}/reports/{number}', 'get'>;
+type ReportBody = NonNullable<SingleReport['body']>;
+type PlaceAttachmentBody = RequestBody<'/projects/{project}/reports/{number}/attachments', 'patch'>;
+type PlaceAttachmentResponse = ResponseBody<'/projects/{project}/reports/{number}/attachments', 'patch'>;
+type AttachmentTarget =
+  | { kind: 'issue'; index: number }
+  | { kind: 'section'; index: number };
+type PlaceAttachmentMutationBody = Omit<PlaceAttachmentBody, 'target'> & {
+  target: AttachmentTarget | null;
+};
 type CreateReportBody = RequestBody<'/projects/{project}/reports', 'post'>;
 type CreateReportResponse = ResponseBody<'/projects/{project}/reports', 'post'>;
 
@@ -54,6 +64,7 @@ type CreateReportResponse = ResponseBody<'/projects/{project}/reports', 'post'>;
 type NotesSnapshot = ReadonlyArray<[QueryKey, NotesPage | undefined]>;
 
 const REPORT_NOTES_KEY = ['reportNotes'] as const;
+const REPORT_KEY = ['report'] as const;
 
 /**
  * `not_` prefix matches the server id shape so prefix-based code (slug
@@ -100,6 +111,12 @@ function updateAllNotesQueries(
     if (items.length > 0 && items[0]!.reportId !== reportId) return page;
     return mutator(page);
   });
+}
+
+function defaultNoteSource(kind: CreateNoteBody['kind']): Note['source'] {
+  if (kind === 'text') return 'typed';
+  if (kind === 'voice') return 'voice';
+  return 'upload';
 }
 
 // ─── useOptimisticCreateNote ─────────────────────────────────
@@ -154,7 +171,7 @@ export function useOptimisticCreateNote() {
         language: null,
         transcribeProvider: null,
         transcribedAt: null,
-        source: vars.body.source ?? null,
+        source: vars.body.source ?? defaultNoteSource(vars.body.kind),
         meta: vars.body.meta ?? {},
         createdAt: now,
         updatedAt: now,
@@ -231,6 +248,134 @@ export function useOptimisticUpdateNote() {
     },
     onSettled: () => {
       runInvalidations(qc, 'useUpdateNoteMutation');
+    },
+  });
+}
+
+// ─── usePlaceAttachment ───────────────────────────────────────
+
+type ReportSnapshot = ReadonlyArray<[QueryKey, SingleReport | undefined]>;
+
+function snapshotReportQueries(qc: ReturnType<typeof useQueryClient>): ReportSnapshot {
+  return qc.getQueriesData<SingleReport>({ queryKey: REPORT_KEY }) as ReportSnapshot;
+}
+
+function restoreReportQueries(
+  qc: ReturnType<typeof useQueryClient>,
+  snapshot: ReportSnapshot,
+): void {
+  for (const [key, data] of snapshot) {
+    qc.setQueryData<SingleReport>(key, data);
+  }
+}
+
+function updateMatchingReportQueries(
+  qc: ReturnType<typeof useQueryClient>,
+  params: PlaceAttachmentVars['params'],
+  mutator: (report: SingleReport) => SingleReport,
+): void {
+  const queries = qc.getQueriesData<SingleReport>({ queryKey: REPORT_KEY });
+  for (const [key, report] of queries) {
+    if (!report) continue;
+    const queryParams = Array.isArray(key) ? key[1] : null;
+    const keyMatches =
+      queryParams &&
+      typeof queryParams === 'object' &&
+      'project' in queryParams &&
+      'number' in queryParams &&
+      queryParams.project === params.project &&
+      queryParams.number === params.number;
+    const rowMatches =
+      report.projectId === params.project && report.number === params.number;
+    if (keyMatches || rowMatches) {
+      qc.setQueryData<SingleReport>(key, mutator(report));
+    }
+  }
+}
+
+function cleanAttachments(
+  target: ReportBody['issues'][number] | ReportBody['summarySections'][number],
+): void {
+  const attachments = target.attachments;
+  if (!attachments) return;
+  if ((attachments.images?.length ?? 0) === 0) delete attachments.images;
+  if ((attachments.documents?.length ?? 0) === 0) delete attachments.documents;
+  if (!attachments.images && !attachments.documents) delete target.attachments;
+}
+
+export function placeAttachmentInReportBody(
+  body: ReportBody,
+  noteId: string,
+  target: AttachmentTarget | null,
+): ReportBody {
+  const next = JSON.parse(JSON.stringify(body)) as ReportBody;
+
+  for (const item of [...next.issues, ...next.summarySections]) {
+    if (item.attachments?.images) {
+      item.attachments.images = item.attachments.images.filter((id) => id !== noteId);
+    }
+    if (item.attachments?.documents) {
+      item.attachments.documents = item.attachments.documents.filter((id) => id !== noteId);
+    }
+    cleanAttachments(item);
+  }
+
+  if (target) {
+    const selected = target.kind === 'issue'
+      ? next.issues[target.index]
+      : next.summarySections[target.index];
+    if (selected) {
+      selected.attachments ??= {};
+      selected.attachments.images ??= [];
+      selected.attachments.images.push(noteId);
+    }
+  }
+
+  return next;
+}
+
+export interface PlaceAttachmentVars {
+  params: { project: string; number: number };
+  body: PlaceAttachmentMutationBody;
+}
+
+export function usePlaceAttachment() {
+  const qc = useQueryClient();
+  return useMutation<
+    PlaceAttachmentResponse,
+    ApiError,
+    PlaceAttachmentVars,
+    { snapshot: ReportSnapshot }
+  >({
+    mutationFn: (vars) =>
+      request('/projects/{project}/reports/{number}/attachments', 'patch', {
+        params: vars.params,
+        body: vars.body,
+      }),
+    onMutate: async (vars) => {
+      await qc.cancelQueries({ queryKey: REPORT_KEY });
+      const snapshot = snapshotReportQueries(qc);
+      updateMatchingReportQueries(qc, vars.params, (report) => {
+        if (!report.body) return report;
+        return {
+          ...report,
+          body: placeAttachmentInReportBody(
+            report.body,
+            vars.body.noteId,
+            vars.body.target,
+          ),
+        };
+      });
+      return { snapshot };
+    },
+    onError: (_err, _vars, context) => {
+      if (context) restoreReportQueries(qc, context.snapshot);
+    },
+    onSuccess: (response, vars) => {
+      updateMatchingReportQueries(qc, vars.params, () => response.report);
+    },
+    onSettled: () => {
+      runInvalidations(qc, 'usePlaceReportAttachmentMutation');
     },
   });
 }

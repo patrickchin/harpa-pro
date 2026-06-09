@@ -1,0 +1,233 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`PhotoGroupPlacementSheet > renders issues and sections when there are targets 1`] = `
+<rn-Modal
+  animationType="slide"
+  onRequestClose={[Function]}
+  transparent={true}
+  visible={true}
+>
+  <rn-Pressable
+    className="flex-1 justify-end bg-black/40"
+    onPress={[Function]}
+  >
+    <rn-KeyboardAvoidingView
+      behavior="padding"
+    >
+      <rn-View
+        className="bg-background pb-10"
+        onResponderRelease={[Function]}
+        onStartShouldSetResponder={[Function]}
+        testID="dialog-sheet"
+      >
+        <rn-View
+          className="flex-row items-center justify-between border-b border-border px-5 py-4"
+        >
+          <rn-Text
+            className="text-xl font-bold text-foreground"
+          >
+            Place photos (3 photos)
+          </rn-Text>
+          <rn-Pressable
+            disabled={false}
+            hitSlop={12}
+            onPress={[Function]}
+          >
+            <lucide-X
+              color="#5f5b66"
+              size={20}
+            />
+          </rn-Pressable>
+        </rn-View>
+        <rn-View
+          className="gap-4 px-5 pt-4"
+        >
+          <rn-View>
+            <rn-View
+              testID="placement-sheet"
+            >
+              <rn-ScrollView
+                className="max-h-96"
+              >
+                <rn-View
+                  className="mb-3"
+                >
+                  <rn-Text
+                    className="mb-1.5 px-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground"
+                  >
+                    Issues
+                  </rn-Text>
+                  <rn-View
+                    className="gap-1"
+                  >
+                    <rn-Pressable
+                      accessibilityRole="button"
+                      accessibilityState={
+                        {
+                          "selected": false,
+                        }
+                      }
+                      className="flex-row items-center gap-2.5 rounded-md border px-3 py-2.5 border-border bg-background"
+                      onPress={[Function]}
+                      testID="placement-sheet-issue-0"
+                    >
+                      <lucide-AlertTriangle
+                        color="#8e510e"
+                        size={16}
+                      />
+                      <rn-View
+                        className="min-w-0 flex-1"
+                      >
+                        <rn-Text
+                          className="text-base font-medium text-foreground"
+                          numberOfLines={1}
+                        >
+                          Cracked beam
+                        </rn-Text>
+                        <rn-Text
+                          className="text-xs text-muted-foreground"
+                          numberOfLines={1}
+                        >
+                          high
+                        </rn-Text>
+                      </rn-View>
+                    </rn-Pressable>
+                    <rn-Pressable
+                      accessibilityRole="button"
+                      accessibilityState={
+                        {
+                          "selected": false,
+                        }
+                      }
+                      className="flex-row items-center gap-2.5 rounded-md border px-3 py-2.5 border-border bg-background"
+                      onPress={[Function]}
+                      testID="placement-sheet-issue-1"
+                    >
+                      <lucide-AlertTriangle
+                        color="#8e510e"
+                        size={16}
+                      />
+                      <rn-View
+                        className="min-w-0 flex-1"
+                      >
+                        <rn-Text
+                          className="text-base font-medium text-foreground"
+                          numberOfLines={1}
+                        >
+                          Loose railing
+                        </rn-Text>
+                        <rn-Text
+                          className="text-xs text-muted-foreground"
+                          numberOfLines={1}
+                        >
+                          medium
+                        </rn-Text>
+                      </rn-View>
+                    </rn-Pressable>
+                  </rn-View>
+                </rn-View>
+                <rn-View
+                  className="mb-3"
+                >
+                  <rn-Text
+                    className="mb-1.5 px-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground"
+                  >
+                    Sections
+                  </rn-Text>
+                  <rn-View
+                    className="gap-1"
+                  >
+                    <rn-Pressable
+                      accessibilityRole="button"
+                      accessibilityState={
+                        {
+                          "selected": false,
+                        }
+                      }
+                      className="flex-row items-center gap-2.5 rounded-md border px-3 py-2.5 border-border bg-background"
+                      onPress={[Function]}
+                      testID="placement-sheet-section-0"
+                    >
+                      <lucide-ClipboardList
+                        color="#2d3a5a"
+                        size={16}
+                      />
+                      <rn-View
+                        className="min-w-0 flex-1"
+                      >
+                        <rn-Text
+                          className="text-base font-medium text-foreground"
+                          numberOfLines={1}
+                        >
+                          Site Conditions
+                        </rn-Text>
+                      </rn-View>
+                    </rn-Pressable>
+                    <rn-Pressable
+                      accessibilityRole="button"
+                      accessibilityState={
+                        {
+                          "selected": false,
+                        }
+                      }
+                      className="flex-row items-center gap-2.5 rounded-md border px-3 py-2.5 border-border bg-background"
+                      onPress={[Function]}
+                      testID="placement-sheet-section-1"
+                    >
+                      <lucide-ClipboardList
+                        color="#2d3a5a"
+                        size={16}
+                      />
+                      <rn-View
+                        className="min-w-0 flex-1"
+                      >
+                        <rn-Text
+                          className="text-base font-medium text-foreground"
+                          numberOfLines={1}
+                        >
+                          Quality Control
+                        </rn-Text>
+                      </rn-View>
+                    </rn-Pressable>
+                  </rn-View>
+                </rn-View>
+              </rn-ScrollView>
+            </rn-View>
+          </rn-View>
+          <rn-View
+            className="gap-3"
+          >
+            <rn-Pressable
+              className="flex-row items-center rounded-md bg-transparent active:bg-secondary min-h-touch px-5 py-3.5 justify-center"
+              disabled={false}
+              onPress={[Function]}
+              style={
+                [
+                  {
+                    "elevation": 0,
+                    "shadowColor": "#1a1a2e",
+                    "shadowOffset": {
+                      "height": 0,
+                      "width": 0,
+                    },
+                    "shadowOpacity": 0,
+                    "shadowRadius": 0,
+                  },
+                  undefined,
+                ]
+              }
+              testID="btn-photo-placement-cancel"
+            >
+              <rn-Text
+                className="text-muted-foreground font-semibold text-base"
+              >
+                Cancel
+              </rn-Text>
+            </rn-Pressable>
+          </rn-View>
+        </rn-View>
+      </rn-View>
+    </rn-KeyboardAvoidingView>
+  </rn-Pressable>
+</rn-Modal>
+`;

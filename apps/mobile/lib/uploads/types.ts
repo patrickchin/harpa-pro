@@ -78,6 +78,8 @@ export interface EnqueueInput {
   uploadScope?: 'avatar' | 'scratch';
   /** Optional transcript for voice notes; ignored for other kinds. */
   transcript?: string;
+  /** Origin stored on the created timeline note when this upload creates one. */
+  noteSource?: 'camera' | 'gallery' | 'upload';
   /** When set, groups this upload into a batch. First-to-complete creates the note; others append. */
   batchKey?: string;
   /**

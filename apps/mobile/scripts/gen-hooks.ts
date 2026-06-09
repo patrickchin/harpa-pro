@@ -82,6 +82,7 @@ const ENDPOINTS: Endpoint[] = [
   { method: 'post',   path: '/projects/{project}/reports/{number}/unfinalize',      hook: 'useUnfinalizeReportMutation',  query: false, hasPathParams: true,  hasBody: false },
   { method: 'post',   path: '/projects/{project}/reports/{number}/pdf',             hook: 'useReportPdfMutation',         query: false, hasPathParams: true,  hasBody: false },
   { method: 'get',    path: '/projects/{project}/reports/{number}/debug',           hook: 'useReportDebugQuery',          query: true,  hasPathParams: true,  hasBody: false, queryKeyHead: 'reportDebug' },
+  { method: 'patch',  path: '/projects/{project}/reports/{number}/attachments',     hook: 'usePlaceReportAttachmentMutation', query: false, hasPathParams: true,  hasBody: true },
 
   // short-URL resolvers (P3.0 Commit 3)
   { method: 'get',    path: '/p/{project}',                       hook: 'useResolveProjectSlugQuery',   query: true,  hasPathParams: true,  hasBody: false, queryKeyHead: 'resolveProjectSlug' },

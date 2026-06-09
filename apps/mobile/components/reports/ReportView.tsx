@@ -18,6 +18,7 @@ import { NextStepsCard } from './NextStepsCard';
 import { SummarySectionCard } from './SummarySectionCard';
 import { SummaryLead } from './detail/SummaryLead';
 import type { ReportEditTarget } from './edit/types';
+import type { SplitPlacements } from '@/lib/reports/photo-placements';
 
 interface ReportViewProps {
   report: GeneratedSiteReport;
@@ -30,9 +31,25 @@ interface ReportViewProps {
    * `onChangeReport`. Undefined in the generate flow (read-only).
    */
   onEdit?: (target: ReportEditTarget) => void;
+  /**
+   * Pre-split placement buckets from `splitPlacements`. When provided,
+   * placed photo groups render inline under their target issue or
+   * section card. Unplaced groups remain the caller's responsibility
+   * (typically `ReportPhotos`).
+   */
+  placements?: SplitPlacements;
+  onOpenPhoto?: (input: { fileId: string; title?: string }) => void;
+  onEditPlacement?: (noteId: string) => void;
 }
 
-export function ReportView({ report, reportNumber, onEdit }: ReportViewProps) {
+export function ReportView({
+  report,
+  reportNumber,
+  onEdit,
+  placements,
+  onOpenPhoto,
+  onEditPlacement,
+}: ReportViewProps) {
   const { sections } = report.report;
   const numStr = reportNumber ?? 'x';
 
@@ -55,6 +72,9 @@ export function ReportView({ report, reportNumber, onEdit }: ReportViewProps) {
         onEditIssue={
           onEdit ? (index) => onEdit({ kind: 'issue', index }) : undefined
         }
+        placedByIssue={placements?.byIssue}
+        onOpenPhoto={onOpenPhoto}
+        onEditPlacement={onEditPlacement}
       />
 
       <WorkersCard
@@ -86,6 +106,9 @@ export function ReportView({ report, reportNumber, onEdit }: ReportViewProps) {
               onEdit={
                 onEdit ? () => onEdit({ kind: 'section', index: i }) : undefined
               }
+              placedGroups={placements?.bySection.get(i)}
+              onOpenPhoto={onOpenPhoto}
+              onEditPlacement={onEditPlacement}
             />
           ))}
         </View>

@@ -27,6 +27,7 @@ import { reports } from '@harpa/api-contract';
 import type { GeneratedSiteReport } from '@harpa/report-core';
 
 type ReportBody = reports.ReportBody;
+type ReportAttachments = reports.ReportAttachments;
 
 // Legacy rows stored visitDate at the top level before the meta envelope
 // landed. The weather temperatureC/windKph rename is handled in the DB
@@ -74,6 +75,20 @@ function toNum(s: string | null): number {
   if (s == null) return 0;
   const n = Number.parseFloat(s);
   return Number.isFinite(n) ? n : 0;
+}
+
+function cloneAttachments(
+  attachments: ReportAttachments | undefined,
+): ReportAttachments | undefined {
+  if (!attachments) return undefined;
+  const out: ReportAttachments = {};
+  if (attachments.images && attachments.images.length > 0) {
+    out.images = [...attachments.images];
+  }
+  if (attachments.documents && attachments.documents.length > 0) {
+    out.documents = [...attachments.documents];
+  }
+  return out.images || out.documents ? out : undefined;
 }
 
 /**
@@ -149,13 +164,13 @@ export function reportBodyToGeneratedReport(
         status: 'open',
         details: i.description ?? '',
         actionRequired: i.action,
-        attachments: i.attachments,
+        attachments: cloneAttachments(i.attachments),
       })),
       nextSteps: body.nextSteps,
       sections: body.summarySections.map((s) => ({
         title: s.title,
         content: s.body,
-        attachments: s.attachments,
+        attachments: cloneAttachments(s.attachments),
       })),
     },
   };
@@ -216,13 +231,13 @@ export function generatedReportToReportBody(g: GeneratedSiteReport): ReportBody 
       severity: normaliseSeverity(i.severity),
       description: i.details ?? null,
       action: i.actionRequired ?? null,
-      ...(i.attachments ? { attachments: i.attachments } : {}),
+      attachments: cloneAttachments(i.attachments),
     })),
     nextSteps: [...r.nextSteps],
     summarySections: r.sections.map((s) => ({
       title: s.title,
       body: s.content,
-      ...(s.attachments ? { attachments: s.attachments } : {}),
+      attachments: cloneAttachments(s.attachments),
     })),
   };
 }

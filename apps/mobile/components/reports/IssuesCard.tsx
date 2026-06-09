@@ -13,8 +13,10 @@ import { toTitleCase } from '@harpa/report-core';
 import { Card } from '@/components/primitives/Card';
 import { SectionHeader } from '@/components/primitives/SectionHeader';
 import { EditPencilButton } from '@/components/reports/edit/EditPencilButton';
+import { PlacedPhotoStrip } from '@/components/reports/detail/PlacedPhotoStrip';
 import { getIssueSeverityTone } from '@/lib/reports/report-ui';
 import { colors } from '@/lib/design-tokens/colors';
+import type { PhotoGroup } from '@/lib/reports/photo-placements';
 
 const SEVERITY_STYLES: Record<
   string,
@@ -44,9 +46,23 @@ function getSeverityStyle(severity: string) {
 interface IssuesCardProps {
   issues: readonly GeneratedReportIssue[];
   onEditIssue?: (index: number) => void;
+  /**
+   * Optional map of issue index → placed photo groups. When set, each
+   * matching issue renders its photos as a small inline strip below
+   * the action-required banner.
+   */
+  placedByIssue?: ReadonlyMap<number, ReadonlyArray<PhotoGroup>>;
+  onOpenPhoto?: (input: { fileId: string; title?: string }) => void;
+  onEditPlacement?: (noteId: string) => void;
 }
 
-export function IssuesCard({ issues, onEditIssue }: IssuesCardProps) {
+export function IssuesCard({
+  issues,
+  onEditIssue,
+  placedByIssue,
+  onOpenPhoto,
+  onEditPlacement,
+}: IssuesCardProps) {
   if (issues.length === 0) return null;
 
   return (
@@ -112,6 +128,14 @@ export function IssuesCard({ issues, onEditIssue }: IssuesCardProps) {
                         → {issue.actionRequired}
                       </Text>
                     </View>
+                  ) : null}
+                  {placedByIssue && (placedByIssue.get(index)?.length ?? 0) > 0 ? (
+                    <PlacedPhotoStrip
+                      groups={placedByIssue.get(index)!}
+                      onOpenPhoto={onOpenPhoto}
+                      onEditPlacement={onEditPlacement}
+                      testID={`placed-photos-issue-${index}`}
+                    />
                   ) : null}
                 </View>
               </View>

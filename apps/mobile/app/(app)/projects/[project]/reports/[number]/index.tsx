@@ -37,6 +37,7 @@ import type { ReportNoteRow } from '@/components/reports/detail/ReportNotesPane'
 import { toReportNoteRows } from '@/lib/api/to-report-note-row';
 import { useRefresh } from '@/lib/util/use-refresh';
 import { useReportPdfActions } from '@/lib/reports/use-report-pdf-actions';
+import { usePlaceAttachment } from '@/lib/api/optimistic';
 import { env } from '@/lib/config/env';
 import { safeBack } from '@/lib/nav/safe-back';
 import { dismissOrReplaceTo } from '@/lib/nav/dismiss-or-replace';
@@ -94,6 +95,7 @@ export default function SavedReportRoute() {
         status?: 'draft' | 'finalized';
         body?: reportSchemas.ReportBody | null;
         visitDate?: string | null;
+        generatedAt?: string | null;
       }
     | undefined;
   const reportStatus = reportRow?.status ?? null;
@@ -229,6 +231,31 @@ export default function SavedReportRoute() {
   const myRole = projectQuery.data?.myRole;
   const canUnfinalize = myRole === 'owner' || myRole === 'editor';
   const canDelete = myRole === 'owner' || myRole === 'editor';
+  const canWrite = myRole === 'owner' || myRole === 'editor';
+  const placeAttachment = usePlaceAttachment();
+
+  const handlePlacePhotoGroup = useCallback(
+    async (input: {
+      noteId: string;
+      placement: { kind: 'issue' | 'section'; index: number } | null;
+    }) => {
+      if (!slug || reportNumber === null || !reportId) return;
+      try {
+        await placeAttachment.mutateAsync({
+          params: { project: slug, number: reportNumber },
+          body: {
+            noteId: input.noteId,
+            target: input.placement,
+            expectedBodyVersion: reportRow?.generatedAt ?? null,
+          },
+        });
+      } catch {
+        // Optimistic helper rolls back on error; route-level error UI
+        // can be added with the shared action-error surface.
+      }
+    },
+    [placeAttachment, reportId, reportNumber, reportRow?.generatedAt, slug],
+  );
 
   return (
     <SavedReport
@@ -276,6 +303,9 @@ export default function SavedReportRoute() {
                 `/(app)/projects/${slug}/reports/${reportNumber}/debug` as Href,
               )
           : undefined
+      }
+      onPlacePhotoGroup={
+        canWrite && reportId !== null ? handlePlacePhotoGroup : undefined
       }
     />
   );

@@ -219,12 +219,38 @@ treat the route as if it were public — shared-secret header,
 allowlist regex on the input shape, audit log, uniform 404. See
 [Pitfall 20](../v4/pitfalls.md#pitfall-20--dev-only-routes-need-defence-in-depth-not-a-node_env-gate).
 
+### R9 — Two layers, both correct, fight each other
+
+Two independently-defensible behaviors compose into a cycle that
+ratchets away user intent. Classic shape: layer A writes a value;
+layer B "self-heals" what it thinks is a stale value; the
+self-heal trigger is fired by A's write, so B undoes A every time.
+Each layer's tests pass in isolation because each is tested
+without the other.
+
+Mitigation:
+- When a UI feature attaches *metadata* to a content row that
+  also drives any "content has changed → regenerate" plumbing,
+  the metadata path **must be explicitly carved out** of that
+  plumbing (no `bumpNotesChangedAt`, no `report` invalidation,
+  etc.). Document the carve-out in the design doc *and* lock it
+  in with an inverse assertion ("does NOT bump …").
+- Any "self-heal" effect that deletes user input on mount must be
+  paired with a render-pipeline test proving it *doesn't* fire
+  on the happy path, not just that it fires on the orphan path.
+- Prefer storing placement in the composed document it affects when
+  the user-visible behavior is document layout. The v2 photo-placement
+  model stores image note ids in `report.body.*.attachments.images[]`
+  and sanitizes invalid ids server-side; the client no longer needs
+  an orphan-clearing effect.
+
 ## Bugs
 
 - **2026-06-06** *(R3)* — After [PR #154] unblocked the report-body wire shape, post-merge api-dev still failed at the very last step of all three journeys: `POST /api/auth/sign-out` returned HTTP 500. Root cause: the journey scripts called sign-out with an empty body (`req POST /api/auth/sign-out '' …`) and `req()` strips the `-d` flag entirely when `$3` is empty, so the request went out with no body. better-auth's sign-out handler 500s instead of accepting empty / returning 400. Same script's deliberate `'{}'` test on stress.sh:219 already proved the fix. Filed API followup for the empty-body → 500 layer. Fix: replace `''` with `'{}'` at all six end-of-journey sign-out call sites. [detail](2026-06-06-journey-sign-out-empty-body-500.md)
 
 Most recent first. One line per bug — open the linked file only for the full root-cause / test / commit write-up.
 
+- **2026-06-06** *(R9)* — Placing a photo group into an issue/section card "worked" for a split second then reverted to the bottom Unplaced grid. `updateNotePlacement` was calling `bumpNotesChangedAt`, which caused `useAutoRegenerate` to fire a fresh LLM regen on every placement edit; the regen reshaped `issues[]`/`sections[]`, `splitPlacements` dropped the just-placed group into `orphans`, and `ReportTabPane`'s orphan-healer fire-and-forgot a `placement=null` PATCH. First fix: carve placement out of `notes_changed_at` and report invalidation. Structural fix: v2 stores placement in `report.body.*.attachments.images[]`, updates it via `PATCH /projects/{project}/reports/{number}/attachments`, and sanitizes invalid attachment ids server-side so the client no longer self-heals user placement away. [detail](2026-06-06-photo-placement-reverts-after-bump-regen-loop.md)
 - **2026-06-06** *(R3)* — After PRs #151–#153 unblocked auth/seed, journeys finally got past sign-in and immediately surfaced two pre-existing bugs that had been hidden for weeks. (1) `core.sh` / `extended.sh` / `stress.sh` PATCHed `reportBody` with the legacy v3 shape (`weather.temperatureC`, `windKph`, numeric `count`/`hours`/`quantity`, `meta.tags[]`) but the schema migrated to string-everywhere ~2 weeks ago (`weather.temperature` + `wind` strings, all counts as strings, no `tags` field). Every journey-core PATCH 400'd. (2) When `EMAIL2 == EMAIL` (single-account dev — the current state), `extended.sh`'s `POST /projects/:id/members` invites the project owner as a member and 409's; `stress.sh`'s cross-user assertions were equally bogus. Fix: align all three scripts to the current wire shape; gate the user-2 / cross-user branches on `EMAIL2 != EMAIL`. [detail](2026-06-06-journeys-report-body-wire-drift.md)
 - **2026-06-06** *(R1 × R3)* — Three consecutive `api-dev` post-deploy runs failed with `✗ no set-auth-token header on sign-in (rc=1)` even after PRs #148–#150 had aligned the journey scripts to better-auth's response shapes. Root cause was much simpler than the rate-limit / lockout symptoms suggested: `packages/api/scripts/seed-test-account.ts` exists to materialise `TEST_ACCOUNT_EMAILS` as better-auth users, but it had no `db:seed-test-account` npm script, no Dockerfile step, no CI step, and was missing from `fly.dev.toml`'s `release_command`. The 2026-06-02 better-auth migration switched journeys from the legacy `/auth/password/verify` (phone) to `/api/auth/sign-in/email` — so every post-migration journey sign-in 401'd because `alice@e2e.harpapro.com` simply didn't exist in dev's DB. The drift hid because api-dev only runs post-merge AND yesterday's last-green api-dev was still on the pre-better-auth journey scripts. Fix: add `db:seed-test-account` to `packages/api/package.json` and chain it into `fly.dev.toml`'s `release_command` after `db:migrate`; the seed script is already idempotent and no-ops when the env vars are unset (so prod is unaffected). Also harden stress.sh section A to use a stable bait email outside `TEST_ACCOUNT_EMAILS` for "wrong password" / "missing password field" checks so we never touch real accounts' (future) attempt budgets. Followups (filed): PR-gated `auth.error-shapes.test.ts` and PR-gated journey-smoke against Testcontainers — both would have caught the seed gap *and* the response-shape drift the day they landed. **Followup #1**: the seed script itself had been crashing because it called `auth.api.signUpEmail()`, which is unconditionally rejected when `disableSignUp: true` — fixed via `auth.$context.internalAdapter` in PR #152. **Followup #2**: even with seeding working, the journeys defaulted to alice/bob while Fly held a different test address; PR #153 wires `EMAIL`/`EMAIL2` to GitHub repo variables that mirror Fly's `TEST_ACCOUNT_EMAILS_DEV`. [detail](2026-06-06-test-accounts-never-seeded-on-dev.md)
 - **2026-06-06** — Post-deploy `scripts/journeys/*.sh` failed on dev after the boot crash (above) was fixed. The stress journey still asserted the pre-better-auth contract: 400 for empty/invalid sign-in fields, 401 for sign-out with a fake bearer. better-auth normalises every credential-shape failure to `401 Invalid email or password` and treats sign-out as idempotent (always 200 even with a fake token); the scripts had not been updated since the 2026-06-02 better-auth migration. A third path — empty body / malformed JSON on `/api/auth/sign-in/email` — currently 500s because there's no error-mapper in front of `auth.handler`; the journey now asserts the current 500 with a comment to flip when the mapper lands. The drift hid because journey scripts only run post-deploy from `api-dev.yml` / `api-prod.yml` and the dev boot crash had been masking every post-deploy run for days. Fix: align stress.sh expectations (401 for invalid creds, 500 for unparseable bodies, 200 for fake-token sign-out), add `sleep 1` between sign-in attempts so GHA runners don't burn through the 120/min per-IP unauthed rate limit. [detail](2026-06-06-journey-scripts-better-auth-drift.md)

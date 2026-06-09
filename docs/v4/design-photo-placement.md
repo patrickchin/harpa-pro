@@ -1,47 +1,95 @@
-# Design — Attachment placement in report.body
+# Design v2 — Attachment placement as a first-class report field
 
-> Status: design (not yet implemented). One PR, no feature flag.
-
-LLMs can't see attached photos or documents, so the report
-generator has no way to bind a photo batch to the issue or section
-it documents. Today every batch lands in a single bottom-of-screen
-"Photos" card on the generated-report screen, regardless of which
-issue or section it relates to.
-
-We need a one-handed UI that lets an editor place each batch into
-a specific issue or detailed section, AND we want the regen pipeline
-to respect those placements (and propose its own when it has strong
-context).
+> Status: design (not yet implemented). Supersedes
+> [design-photo-placement-v1.md](design-photo-placement-v1.md), which
+> shipped placement as a per-note `notes.placement` JSONB column +
+> client-side orphan healer. v1 worked but exposed an architectural
+> smell ([R9 — "Two layers, both correct, fight each other"](../bugs/README.md))
+> and made the LLM unaware of user placements during regeneration.
+> v2 moves placement into `report.body` itself, keyed by **note ID**,
+> and restructures the LLM payload as JSON so the model can both
+> respect existing placements and propose new ones from context.
+>
+> Targets ~5 PRs in expand-contract sequence (see Migration plan).
 
 Cross-links:
+- Replaces [design-photo-placement-v1.md](design-photo-placement-v1.md).
 - Builds on [arch-batch-photo-notes.md](arch-batch-photo-notes.md)
   (`note_files`, `noteId` grouping).
 - Touches [arch-report-auto-regen.md](arch-report-auto-regen.md)
-  (regeneration trigger semantics).
-- Renderer covered by [arch-mobile.md](arch-mobile.md); schema in
+  (regeneration trigger semantics — drops the v1 carve-out for
+  `bumpNotesChangedAt`).
+- Touches the report renderer covered by
+  [arch-mobile.md](arch-mobile.md) and the schema docs in
   [arch-database.md](arch-database.md).
 - Auth/scope rules per [arch-auth-and-rls.md](arch-auth-and-rls.md).
+- Closes the v1 Q2 (regen-induced un-place toast) by giving the LLM
+  current placements as input — un-placement becomes near-impossible
+  by design rather than handled at render-time.
+
+## Motivation
+
+v1 shipped placement as a UI-only annotation on notes:
+
+```sql
+notes.placement jsonb  -- { kind: 'issue' | 'section', index: number }
+```
+
+That worked but had three structural problems:
+
+1. **Reactive reconciliation.** Index-based placement meant any regen
+   that reshaped `report.body.issues[]` could put a placement out of
+   range. The fix was a client-side `useEffect` orphan healer that
+   PATCHed `placement = null`. That healer became the substrate of
+   the R9 bug (placement bump → cache invalidation → auto-regen →
+   reshape → orphan → heal → "split-second revert"). The v1 fix was
+   to carve out `bumpNotesChangedAt` from the placement service, but
+   the substrate (an effect that writes during render) is still there.
+
+2. **Two sources of truth, never reconciled in one place.** Notes
+   own placement; reports own structure. The mobile renderer joined
+   them at render time via `splitPlacements`. The server never saw
+   the composed view, so the LLM never saw user placements during
+   regen — it could (and did) re-author a body that ignored existing
+   placements, leaving the healer to silently un-place things.
+
+3. **Index-coupled to a structure the LLM owns.** `index: 2` is only
+   meaningful relative to the *current* `issues[]` array. The LLM
+   regenerates that array on every run. We were betting that
+   index-stability under "incremental re-author" would hold, and
+   when it didn't (rename, reorder, delete), placement silently broke.
+
+v2 fixes all three by:
+
+- **Storing placement inside `report.body`** — one JSONB column owns
+  the composed view. No client-side splice. No orphan healer.
+- **Keying placement by `notes.id`** — globally stable, never reused,
+  immune to issue/section reshuffles.
+- **Feeding the LLM the current `body` and letting it preserve or
+  propose placements** — placement becomes part of the regen contract
+  instead of fighting it.
 
 ## Acceptance contract
 
-1. On a generated report (draft or finalised), every photo note shows
+1. On a saved report (draft or finalised), every photo note shows
    a "Place in…" affordance. Tapping it opens an `AppDialogSheet`
    listing all issues then all detailed sections by title; tapping
-   a row places that note's batch into the chosen target.
+   a row places that note's image batch into the chosen target.
 2. Once placed, the batch renders inline at the bottom of the target
    `IssuesCard` row or `SummarySectionCard`, in the same 3-column
-   tile grid as the bottom Photos card. A "Move" affordance reopens
-   the same sheet with an extra "Remove from this section" row.
-3. The bottom Photos card filters out placed batches; if every batch
-   is placed it returns null.
+   tile grid as `ReportPhotos`. A "Move" affordance reopens the same
+   sheet pre-selected on the current target with an extra "Remove
+   from this section" row.
+3. The bottom `ReportPhotos` card filters out placed batches; if all
+   batches are placed it returns null.
 4. Placement persists across draft → finalised transitions.
-5. Across regenerations the LLM is given the existing `body`
-   (including current placements) and is instructed to preserve every
+5. Across **regenerations** the LLM is given the existing `body`
+   (including current placements) and is instructed to preserve any
    user-placed batch. The LLM **MAY** add `attachments.images` for
    batches the user has not placed, using note metadata as context.
-   If the LLM emits an unknown batch ID or violates the preserve
-   rule, a server-side validator strips the offending entry
-   post-generation (defense in depth).
+   If the LLM emits an unknown batch ID or violates a preserve rule,
+   a server-side validator strips the offending entry post-generation
+   (defense in depth).
 6. If a note is **deleted** between regens, dangling IDs in
    `body.attachments.*` are filtered at render-time (cosmetic) and
    removed by the next regen (canonical). No render-time PATCHes.
@@ -51,86 +99,12 @@ Cross-links:
    output. Adjacency carries semantic context (e.g. a voice note
    immediately after a photo batch describing it).
 
-## Architecture summary
-
-Three load-bearing decisions:
-
-1. **Placement lives in `report.body`**, not on individual notes.
-   `report.body.{issues,sections}[].attachments.images: string[]`
-   is the single source of truth for what gets rendered where.
-2. **Placement is keyed by note ID** (`not_xxxxxxxxxx`). Globally
-   unique, stable forever, no allocator, no counter. Short enough
-   (~14 chars) that LLMs handle it reliably.
-3. **LLM payload is structured JSON** with `notes[]` (chronological
-   capture order, no `n` field — position is the contract) and
-   `currentBody` (so the LLM can preserve user placements and propose
-   new ones from context).
-
-Together these make placement a first-class property of the composed
-report rather than a per-note annotation reconciled at render-time.
-There is one writer (`setReportBody`), one reader (the renderer maps
-`body` directly), one cache key.
-
-## Alternatives considered
-
-### A. Per-note `notes.placement` JSONB column (rejected)
-
-Stash `{ kind: 'issue' | 'section', index: number }` on each note.
-
-Rejected because:
-- **Index-coupled to a structure the LLM owns.** Every regen
-  reshapes `body.issues[]`; index 2 may point at a different issue
-  after each regen. We'd need a client-side orphan healer (UI clears
-  invalid indices via `PATCH /notes/{n}/placement = null`).
-- **The orphan healer is reactive.** It writes during render, which
-  races against cache invalidation, which races against auto-regen.
-  This is a known anti-pattern category (see
-  [docs/bugs/README.md R9 — "Two layers, both correct, fight each
-  other"](../bugs/README.md)) — placement bump → cache invalidate →
-  regen → reshape → orphan → heal → "split-second revert".
-- **Two sources of truth never reconciled in one place.** Notes own
-  placement, reports own structure, mobile splices them at render.
-  Server never sees the composed view → LLM never sees user
-  placements during regen.
-
-### B. Per-report `seq` counter for short integer IDs (rejected)
-
-Allocate `notes.seq` per-report so the LLM sees `[image 7]` instead
-of `[image not_8h3kq2vp9w]`.
-
-Rejected because:
-- Adds a column, a counter on `app.reports`, and a concurrency-safe
-  `UPDATE … RETURNING next_note_seq` allocator inside the create-note
-  tx — three new things that can be wrong.
-- Token savings (~5 tokens per ID vs 1) are real but bounded:
-  ~few-hundred tokens per regen for a heavy report.
-- LLMs reliably copy 14-char tokens verbatim when the schema is
-  constrained (Zod structured output).
-- Note IDs are already what every other layer speaks. Adding `seq`
-  means every layer learns to translate.
-
-### C. Stable issue/section IDs in `report.body` (deferred)
-
-Issues/sections currently have no stable identity — they're array
-positions. With stable IDs, placement could key by issue ID instead
-of array index, eliminating the "index out of range after regen"
-problem entirely.
-
-This is the right long-term shape but a separate, larger change.
-v2 sidesteps the problem by storing `attachments` *inside* the
-issue/section objects themselves — when `ReportEditForm` reorders
-or rewrites `body.issues[]`, the `attachments` go along automatically
-because they're nested in the same JSONB object.
-
-If stable IDs land later, the placement endpoint's `{ kind, index }`
-target shape switches to `{ targetId }`; `body.attachments` shape is
-unchanged.
-
 ## Data model
 
-### `notes` — metadata
+### `notes` — replace `placement` with metadata
 
 ```sql
+-- Migration NN_01: additive metadata
 ALTER TABLE app.notes
   ADD COLUMN source text,
   ADD COLUMN meta   jsonb NOT NULL DEFAULT '{}'::jsonb;
@@ -142,14 +116,14 @@ ALTER TABLE app.notes
     OR source IN ('typed', 'voice', 'camera', 'gallery', 'upload')
   );
 
--- Capture-order invariants. The `id ASC` tiebreaker handles two
--- notes sharing a millisecond (rare, but possible during fast
--- multi-shot capture).
+-- Capture-order invariants. The `id ASC` tiebreaker prevents
+-- nondeterministic ordering when two notes share a millisecond
+-- (rare, but possible during fast multi-shot capture).
 CREATE INDEX IF NOT EXISTS notes_report_order_idx
   ON app.notes (report_id, created_at ASC, id ASC);
 
--- Defang gross client-clock skew. Offline capture is allowed
--- (timestamps in the past); far-future timestamps are not.
+-- Defang gross client-clock skew. We accept skew up to a day
+-- (offline notes, timezone slop) but not 2099.
 ALTER TABLE app.notes
   ADD CONSTRAINT notes_created_at_sane_chk
   CHECK (created_at <= now() + interval '1 day');
@@ -163,11 +137,14 @@ ALTER TABLE app.notes
 | `voice` | Voice note (transcribed by the voice pipeline). |
 | `camera` | Photo(s) captured in-app via camera. |
 | `gallery` | Photo(s) chosen from device gallery. |
-| `upload` | File(s) uploaded from outside the app. |
+| `upload` | File(s) uploaded from outside the app (existing files). |
 
-`meta` is open-ended JSONB for kind-specific extras (voice
+`meta` is open-ended JSONB for kind-specific extras (e.g. voice
 `durationSec`, original filename for uploads, EXIF). No schema today;
-keys documented in `api-contract` as they're added.
+keys are documented in `api-contract` as they're added.
+
+`notes.placement` is **dropped** at the end of the migration sequence
+(see Migration plan, contract step).
 
 ### `note_files` — per-image caption (forward-prep)
 
@@ -177,7 +154,7 @@ ALTER TABLE app.note_files
 ```
 
 Nullable. Mobile UI does not surface this in v2 — the column exists
-so the future per-image-caption UI doesn't need another migration.
+so the future per-image-caption UI lands without another migration.
 The LLM payload conditionally includes per-photo captions only when
 at least one is set on a batch (keeps the common-case prompt small).
 
@@ -189,7 +166,7 @@ optional `attachments` block at every issue and detailed section:
 ```ts
 type ReportAttachments = {
   // Note IDs whose kind is 'image'. Render-time filters unknown
-  // (deleted) IDs; regen validator strips them on write.
+  // (deleted) IDs; regen output validator strips them.
   images?: string[];
   // Reserved for future use (kind = 'document' / 'video').
   documents?: string[];
@@ -210,66 +187,83 @@ type ReportSection = {
 };
 ```
 
-Why inside `report.body` (not a side table, not on `notes`):
+Why **inside `report.body`** and not a side table:
 
-- One read returns everything mobile needs to render. No splice.
-- Every writer of `body` (manual edit, regen, placement) goes
-  through `setReportBody` — one validation/sanitisation funnel.
-- Atomic with regen by free: a regen that reshapes issues writes
-  the new `attachments` in the same statement.
+- `report.body` is already a JSONB blob versioned via
+  `report.generated_at` / `report.notes_changed_at`. Placement *is*
+  part of the composed report.
+- One read returns everything mobile needs to render. No splice on
+  the client. No `splitPlacements` helper. No "compose the view".
+- Every existing pathway that writes `report.body` (manual edit,
+  regen) writes attachments in the same column. Atomic by free.
 
-Server-side validator runs on every `setReportBody`:
+Why note **IDs** and not a per-report `seq`:
+
+- Note IDs are already short prefixed strings (`not_8h3kq2vp9w` —
+  14 chars). LLMs handle that length reliably.
+- No allocator, no counter column, no migration to seed sequences.
+- Globally unique forever; immune to renumbering.
+- Uniform across kinds — `images: ["not_…"]` and
+  `documents: ["not_…"]` use the same identifier space.
+
+The token cost (note IDs are ~5 tokens vs ~1 for an integer) is
+real but bounded: ~few-hundred tokens per regen for a heavy report.
+Worth it to avoid the entire allocator + counter machinery.
+
+Server-side validator (post-generation):
 
 ```ts
 // packages/api/src/services/reports.ts
-function sanitiseAttachments(
-  body: ReportBody,
-  validNoteIds: Set<string>,
-): ReportBody;
+function sanitiseAttachments(body: ReportBody, validNoteIds: Set<string>): ReportBody;
 ```
 
-- Strips IDs not in `validNoteIds` (deleted notes, wrong report,
-  scope-invisible).
-- De-duplicates: each note ID appears in at most one `attachments`
-  array across the entire body. First occurrence (reading
-  `body.issues[]` then `body.sections[]`) wins.
-- Logged as a warning when a violation fires (LLM ignored the
-  preserve rule).
+Strips any ID in `body.{issues,sections}[].attachments.{images,documents}`
+that isn't in `validNoteIds` (note exists, kind matches, scope-visible).
+Also de-duplicates: each note ID appears in at most one
+`attachments` array across the entire body. Conflict resolution: the
+**first** occurrence in `body.issues[]` then `body.sections[]` reading
+order wins; later duplicates are dropped. Logged as a warning when it
+fires (LLM violated the preserve rule).
 
-## Note ordering — invariants
+### Note ordering — invariants
 
 Capture order is load-bearing for prompt comprehension. Pin it down:
 
-- **Single canonical sort fragment.** All notes-by-report reads use
-  the same Drizzle SQL fragment:
+- **Single canonical sort fragment.** All reads use the same
+  `notesCanonicalOrder` Drizzle SQL fragment:
   ```ts
   // packages/api/src/services/notes.ts
   export const notesCanonicalOrder = sql`n.created_at ASC, n.id ASC`;
   ```
-  Used by `listNotes`, `collectNotesForGeneration`, the regen
-  new-notes slice, and any future read site. Any direct
-  `ORDER BY … created_at …` outside this helper is a review blocker.
-- **Index** (`notes_report_order_idx`) matches the canonical sort.
-- **CHECK constraint** rejects far-future `created_at`.
+  Used by `listNotes`, `collectNotesForGeneration`, the regen new-notes
+  slice, and any future read site. Lint rule: any direct
+  `ORDER BY ... created_at ... notes` outside this helper is a review
+  blocker.
+- **Index** (`notes_report_order_idx`) matches the canonical sort —
+  reads are O(log n) and cannot accidentally sort by a different
+  column.
+- **CHECK constraint** rejects far-future `created_at` values
+  (defangs catastrophic clock skew without breaking offline capture).
 - **Integration test** (`notes.ordering.integration.test.ts`):
-  - 5 notes with mixed kinds and explicit `createdAt`, including two
-    with identical timestamps (verifies `id ASC` tiebreaker).
+  - 5 notes created with mixed kinds and explicit `createdAt` values
+    including two identical timestamps (verifies `id ASC` tiebreaker).
   - `listNotes` returns capture order.
   - Delete the middle note; survivors are still in capture order.
-  - `collectNotesForGeneration`'s JSON `notes[]` matches `listNotes`
-    order.
-  - A backdated note (offline upload) lands in its historical
-    position, not at the end.
+  - `collectNotesForGeneration`'s JSON `notes[]` array order matches
+    `listNotes` order.
+  - A second pass with a backdated note (offline upload) lands in the
+    correct historical position, not at the end.
 
 ## LLM payload — structured JSON
 
-`collectNotesForGeneration` returns a structured object. The prompt
-template stitches it into the user message verbatim as JSON.
+`collectNotesForGeneration` returns a **structured object**, not a
+text string. The prompt template stitches it into the user message
+verbatim as JSON.
 
 ```ts
 type GenerationPayload = {
   // Notes in capture order. Position is the contract — adjacency
-  // carries semantic context. No n / index / order field.
+  // carries semantic context. No `n` / `index` / `order` field.
   notes: GenerationNote[];
 
   // Existing report body (null on first generation). Includes
@@ -284,22 +278,23 @@ type GenerationNote =
   | { kind: 'document'; id: string; source?: 'upload';    filename?: string;  caption?: string;     createdAt: string };
 ```
 
-Design rules:
+Notes:
 
-- **`notes` is always an array.** Never an object map. Array order is
-  the only ordering signal.
-- **No `n` / `index` field.** Position is the contract. Removes
-  ambiguity if the LLM tries to reason about a numeric identifier.
-- **`id` is the note ID.** It's what the LLM emits in
-  `attachments.images`.
-- **`photos[]` is conditional.** Included only when at least one
-  photo in the batch has a caption. Common case is empty → field
-  omitted.
+- **`notes` is always an array.** Never an object map. Array order
+  is the only ordering signal.
+- **No `n` / `index` field.** Position is the contract. Removes any
+  ambiguity if the LLM tries to reason about an indexed identifier.
+- **`id` is the note ID.** It appears in placeholders (legacy text
+  prompt also accepts the same IDs for the transition period) and is
+  what the LLM emits in `attachments.images`.
+- **`photos[]` is conditional.** Included only when at least one photo
+  in the batch has a caption. Common case is empty → field omitted.
 - **`createdAt` is verbatim from the DB.** Lets the LLM reason about
-  time gaps (e.g. "10 seconds apart → likely the same observation").
-- **`currentBody` is the previous report body verbatim.** Null on
-  first generation; thereafter the most recent saved body including
-  user-placed `attachments`.
+  time gaps between notes (e.g. "10 seconds apart → likely the same
+  observation").
+- **`currentBody` is the previous report body verbatim.** On first
+  generation it is null; thereafter it's the most recent saved body
+  including any user-placed `attachments`.
 
 ### System prompt additions
 
@@ -323,7 +318,9 @@ Design rules:
    across the entire report body. If you place a batch, it is no
    longer "unplaced" and must not appear elsewhere.*
 
-`sanitiseAttachments` enforces (3) and (4) as defense in depth.
+Server-side validator runs after parse and enforces (3) and (4). Any
+violation is logged + auto-corrected; the user does not see a stuck
+state.
 
 ### Output schema (Zod)
 
@@ -343,12 +340,12 @@ const sectionSchema = baseSectionSchema.extend({
 });
 ```
 
-Zod is the single source of truth for both the LLM's structured-output
-schema and the server's runtime validation.
+Zod is the single source of truth for both the LLM's
+structured-output schema and the server's runtime validation.
 
 ## API surface
 
-### New: `PATCH /reports/{report}/attachments`
+### Replaced: `PATCH /notes/{n}/placement` → `PATCH /reports/{r}/attachments`
 
 ```
 PATCH /reports/{report}/attachments
@@ -358,11 +355,26 @@ Body: {
     | { kind: 'issue';   index: number }   // current "where in body" handle
     | { kind: 'section'; index: number }
     | null;                                 // unplace
-  expectedBodyVersion: string;              // last-seen generated_at
 }
-Returns: 200 { report: Report }             // full updated report incl. body
-       | 409 { conflict: Report }           // caller is stale; here's current
+Returns: 200 { report: Report }   // full updated report incl. body
 ```
+
+Why a new endpoint:
+- Placement is now a `report.body` mutation. `notes` no longer owns it.
+- One round-trip mutates one JSONB column atomically; client gets the
+  full updated body back so the cache stays consistent without
+  cross-key invalidation.
+
+Why target uses `{ kind, index }` and not `{ targetTitle }`:
+- The mobile UI offers "the section the user is looking at right now"
+  as the choice; the user sees current titles. Index is the natural
+  handle on the *current* body version.
+- If the body changes between fetch and PATCH (e.g. another editor
+  regen'd in the meantime), the server returns 409 + the latest body.
+  Client re-renders the sheet; user picks again. Tiny window in
+  practice.
+- Note IDs go *into* `body.attachments`; they don't drive the
+  endpoint shape.
 
 Service contract:
 
@@ -373,29 +385,38 @@ export async function placeNoteInReport(
   reportId: string,
   noteId: string,
   target: PlacementTarget | null,
-  expectedBodyVersion: string,
-): Promise<{ kind: 'ok' | 'conflict'; report: Report }>;
+  expectedBodyVersion: string,  // last-seen body hash or generated_at
+): Promise<{ report: Report } | { conflict: Report }>;
 ```
 
 Behaviour:
 - 404 if report not visible under scope.
-- 404 if note not visible or not in this report.
+- 404 if note not visible / not in this report.
 - 400 if note kind ∉ {`image`, `document`}.
 - 400 if `target.index` out of range for current body.
 - 409 + current body if `expectedBodyVersion` mismatches (optimistic
-  concurrency — a regen may have landed since the client last read).
-- Success: removes the noteId from any other `attachments` array
-  first (idempotent move), then adds it to the requested target.
-  Writes the entire updated `body` in one statement.
-- **Does NOT call `bumpNotesChangedAt`.** Placement reshapes
-  presentation of existing content; no regen should be triggered.
-  Bump tracks new *content* since last generation; placement is not
-  content. This is structural (placement isn't a `notes` write), not
-  a carve-out.
+  concurrency).
+- Success: writes the entire updated `body` JSONB in one statement
+  using `jsonb_set` or a full replacement; returns the new report.
+  **Removes the noteId from any other `attachments` array first**
+  (idempotent unplace) so a move is exactly-once.
+- **Does NOT call `bumpNotesChangedAt`.** The bump tracks new
+  *content* since last generation. Placement reshapes presentation
+  of existing content; no regen should be triggered by placement
+  alone. (This is the same rule v1 settled on, but in v2 the
+  carve-out is structural — placement isn't even a `notes` write.)
 
 Per-request DB scope: route runs under the standard
-`withScopedConnection({ sub, sid })`. Pitfall-6 paired test: editor
-of project P succeeds; member of project Q gets 404.
+`withScopedConnection({ sub, sid })` like every other report mutation.
+Pitfall-6 paired test: editor of project P succeeds; member of project
+Q gets 404.
+
+### Removed
+
+- `PATCH /notes/{n}/placement` — gone.
+- `notes.placement` field on the note schema — gone.
+- `useUpdateNotePlacementMutation` and the `'reportNotes' / 'report'`
+  cache-invalidation tuple — gone.
 
 ### `collectNotesForGeneration` returns structured payload
 
@@ -408,7 +429,7 @@ export async function collectNotesForGeneration(
 
 `reportGeneration.ts` JSON-stringifies the payload into the user
 message. The legacy text format (`NOTES:\n[1] [images N: M photos]…`)
-is removed.
+is removed in the same release; no flag, no parallel path.
 
 ### Note creation accepts `source` and `meta`
 
@@ -422,38 +443,30 @@ is removed.
 ```
 
 Mobile sends `source` based on which capture flow the user used.
-Existing rows backfill (one-shot script in the migration): text →
-`typed`, voice → `voice`, image/document without further info →
-`upload` (best guess; meta empty).
+Existing rows backfill: text → `typed`, voice → `voice`, image/document
+without further info → `upload` (best-guess; meta empty).
 
 ## Mobile wiring
 
-### Renderer
+### Renderer simplifies dramatically
 
-`ReportView` reads `body` directly. There is no client-side splice
-helper, no orphan healer. Each `IssuesCard` and `SummarySectionCard`
-takes its own `attachments` slice; a small helper resolves IDs to
-`NoteRow`s and silently drops unknowns:
+`splitPlacements` is **deleted**. So is `ReportTabPane`'s orphan-healer
+`useEffect`. The renderer becomes a pure map over `report.body`:
 
 ```tsx
-// pure helper; trivially testable
-function resolveBatches(
-  notes: NoteRow[],
-  ids: string[] | undefined,
-): NoteRow[] {
-  if (!ids?.length) return [];
-  const byId = new Map(notes.map((n) => [n.id, n]));
-  return ids.map((id) => byId.get(id)).filter((n): n is NoteRow => !!n);
-}
-
+// IssuesCard — already gets `issue` from body
 <IssuesCard
-  issue={issue}                                    // includes attachments
+  issue={issue}                         // includes issue.attachments
   placedBatches={resolveBatches(noteRows, issue.attachments?.images)}
 />
+
+// resolveBatches filters unknown IDs (deleted notes) silently.
+// Pure helper; no side effects; trivially testable.
 ```
 
-The bottom Photos card filters out everything placed anywhere in
-`body`:
+`saved-report.tsx` collects all unplaced image notes by computing
+the set difference: `noteRows - all IDs referenced in body.attachments`.
+That same set feeds the bottom `ReportPhotos` card.
 
 ```tsx
 const placedIds = collectPlacedAttachmentIds(report.body);
@@ -462,38 +475,14 @@ const unplacedNotes = noteRows.filter(
 );
 ```
 
-### Components
-
-```
-apps/mobile/components/reports/photo-placement/
-├── PhotoGroupPlacementSheet.tsx   // AppDialogSheet body
-├── PlacedPhotoStrip.tsx            // 3-col grid + "Move" chip
-└── PhotoPlacementChip.tsx          // "Place in…" button
-```
-
-- `PhotoGroupPlacementSheet` — receives `issues`, `sections`,
-  `currentTarget`, `onSelect(target | null)`. Renders two scroll
-  sections ("Issues", "Detailed sections"). Uses the shared
-  `AppDialogSheet` primitive — **no `Alert.alert`**
-  ([Pitfall 12](pitfalls.md#pitfall-12)). One row per target plus a
-  "Remove from current section" row when `currentTarget` is set.
-- `PlacedPhotoStrip` — pure presentational; same 3-column grid as
-  the bottom Photos card. Reuses `PhotoTile`.
-- `PhotoPlacementChip` — small icon button overlaid bottom-right of
-  the batch; tap opens the sheet.
-
-Styling: NativeWind only ([Pitfall 3](pitfalls.md#pitfall-3)). No
-hex literals.
-
 ### Mutation hook
 
 ```ts
 // apps/mobile/lib/api/optimistic.ts
 export function usePlaceAttachment(): UseMutationResult<…> {
-  // Optimistically patch ['report', reportId] cache.
-  // No 'reportNotes' invalidation — note rows didn't change.
-  // On 409: replace local body with server's, reopen the sheet
-  //         pre-selected on the new target.
+  // Optimistically patch the cached `report` (one cache key only).
+  // No `'reportNotes'` invalidation — note rows didn't change.
+  // On 409: replace local body with server's, reopen the sheet.
   // On error: rollback + toast.
 }
 ```
@@ -515,38 +504,35 @@ there is only one layer.
 | Case | Behaviour |
 |---|---|
 | Note deleted while placed | ID dangles in `body.attachments` until next regen. Render-time filter drops it from view (cosmetic). Next regen rewrites `body` with current valid IDs only (canonical cleanup). |
-| All photos in a batch deleted | Same as above. |
-| Issue/section deleted by regen | LLM regenerates `body` from scratch using `currentBody` + new notes. If the target still semantically exists (renamed), the LLM should re-emit the placement. If genuinely gone, the LLM should re-place to the closest match or omit. User can re-place with one tap. |
-| Issue/section reordered in `ReportEditForm` | `attachments` is nested in the issue/section object; reorder carries it along automatically. No drift. |
+| All photos in a batch deleted | Same as above — note row deletes; ID drops out at next regen. |
+| Issue/section deleted by regen | The LLM regenerates `body` from scratch using `currentBody` + new notes. If a target still semantically exists (renamed), the LLM should re-emit the placement under the new title. If the target is genuinely gone (issue deleted), the LLM should re-place to the closest match or omit the placement. The user can re-place with one tap if unhappy. |
+| Issue/section reordered in `ReportEditForm` | Placement endpoint takes `{ kind, index }` against the current body. Manual edits to `body.issues` order automatically carry their `attachments` along (it's the same JSONB object). No drift. |
 | Read-only project member | Chip not rendered (gated on `canEdit`). API 404s under their scope. |
 | Finalised report | Placement editable. Finalisation snapshots `body`; placement reshapes the snapshot. |
 | Voice / text note | Chip not rendered; PATCH returns 400. |
 | Concurrent regen during placement | 409 from `expectedBodyVersion`; client refreshes and the user re-picks. Window is single-digit seconds. |
-| LLM violates preserve rule | `sanitiseAttachments` strips/repairs after generation; logged. User sees their placement intact. |
+| LLM violates preserve rule | Server validator strips/repairs after generation; logged as a warning. User sees their placement intact. |
 
 ## Test plan
 
-- **Vitest unit (api-contract):** `attachments` Zod accepts/rejects
-  shapes; full body round-trips with attachments.
+- **Vitest unit (api-contract):** attachments Zod schema accepts/rejects
+  shapes; body Zod schema with attachments round-trips.
 - **Vitest unit (api):** `sanitiseAttachments` — strips unknown IDs,
   de-dupes across arrays, preserves order otherwise.
 - **Vitest scope (api):** Pitfall-6 paired test for
   `PATCH /reports/{r}/attachments`.
-- **Vitest integration (api):** default-wiring test
-  ([Pitfall 13](pitfalls.md#pitfall-13)) — place a batch, fetch the
-  full report, assert `body.issues[0].attachments.images` contains
-  the note ID; assert `notes_changed_at` unchanged; assert 409 on
-  stale `expectedBodyVersion`.
-- **Vitest integration (api):** ordering test (above).
+- **Vitest integration (api):** default-wiring test that places a
+  batch, fetches the full report, asserts `body.issues[0].attachments.images`
+  contains the note ID; asserts `notes_changed_at` is unchanged;
+  asserts a 409 path on stale `expectedBodyVersion`.
+- **Vitest integration (api):** ordering test described in
+  [Note ordering — invariants](#note-ordering--invariants).
 - **Vitest integration (api):** regen with `currentBody` containing
-  user placements — fixture LLM call returns a body that omits one
-  user-placed batch; assert the validator restores it and logs the
-  violation.
-- **Vitest unit (mobile):** `collectPlacedAttachmentIds` +
-  `resolveBatches` — placed, unplaced, mixed kinds, deleted note
-  dangling in body.
-- **Vitest unit (mobile):** `PhotoGroupPlacementSheet` snapshot +
-  tap → `onSelect`.
+  user placements — asserts the validator strips invalid LLM output
+  and that user-placed batches survive the regen.
+- **Vitest unit (mobile):** `collectPlacedAttachmentIds` + bottom-card
+  filter — placed, unplaced, mixed kinds, deleted note dangling in body.
+- **Vitest unit (mobile):** `resolveBatches` filters unknown IDs.
 - **Maestro flow:** `place-photo-on-issue.flow.yml` —
   1. Open seeded draft report with one photo and ≥1 issue.
   2. Tap `btn-place-photo-{n}` → `placement-sheet-issue-0`.
@@ -559,64 +545,138 @@ there is only one layer.
   [Pitfall 2](pitfalls.md#pitfall-2). The regen step uses a fixture
   that exercises `currentBody` plumbing.
 
+## Migration plan (expand-contract)
+
+Five steps, one PR each. v1 stays live until step 4; the cutover is
+deliberately gradual.
+
+### PR 1 — Additive metadata + ordering invariants
+
+- Migration: `notes.source`, `notes.meta`, `note_files.caption`,
+  `notes_report_order_idx`, sanity CHECK on `created_at`.
+- `notesCanonicalOrder` SQL helper extracted; all read sites use it.
+- `POST /notes` accepts `source` / `meta`; mobile passes them.
+- Backfill `source` for existing rows.
+- Ordering integration test.
+- No behaviour change for placement yet.
+
+### PR 2 — `attachments` field added to `report.body`
+
+- Zod schema: `attachments` optional on issue + section.
+- `sanitiseAttachments` server-side validator + unit tests.
+- `setReportBody` calls `sanitiseAttachments` before write.
+- `report.body` reads tolerate the new optional field.
+- No client UI changes yet; nothing populates `attachments`.
+
+### PR 3 — Structured-JSON LLM payload + LLM placements (LLM may now propose)
+
+- `collectNotesForGeneration` returns `GenerationPayload`.
+- `reportGeneration.ts` system prompt updated; user message takes JSON.
+- LLM output schema includes `attachments`; live tests verify.
+- The LLM may now place batches it has confident context for. The
+  client UI still uses v1 (`notes.placement` JSONB) for user-driven
+  placement — read path unifies both in a follow-on bridge helper
+  for one release.
+
+### PR 4 — `PATCH /reports/{r}/attachments` + mobile cutover
+
+- New endpoint + service + scope + integration tests.
+- Mobile renderer reads `body.attachments` instead of
+  `splitPlacements(notes)`.
+- Mobile chip uses the new endpoint.
+- One-shot data migration: copy every existing `notes.placement`
+  into the corresponding `report.body.attachments`. Idempotent (run
+  once, verify, leave the column readable for one release as a
+  rollback path).
+- v1 endpoint (`PATCH /notes/{n}/placement`) starts returning 410
+  Gone; mobile no longer calls it.
+
+### PR 5 — Drop `notes.placement` (contract)
+
+- Migration: `ALTER TABLE app.notes DROP COLUMN placement;`.
+- `notes.placement` removed from schema, contract, mobile types.
+- v1 endpoint removed (was already 410).
+- Orphan-healer `useEffect` and `useUpdateNotePlacementMutation`
+  deleted from mobile (already unused after PR 4).
+- R9 entry in `docs/bugs/README.md` updated: pattern documented as
+  resolved structurally; the historical instance closed.
+
+## Doc + plan updates
+
+- `design-photo-placement.md` (this file) replaces v1.
+- `design-photo-placement-v1.md` retained as historical record.
+- `docs/v4/architecture.md` index — update row 17 "Photo placement"
+  pointing here.
+- `docs/v4/arch-batch-photo-notes.md` — update "See also" to v2.
+- `docs/v4/arch-report-auto-regen.md` — drop the v1 carve-out
+  language (placement bump exemption); replace with: "Placement is
+  a `report.body` write, not a `notes` write — it bypasses the
+  `notes_changed_at` trigger structurally."
+- `docs/v4/plan-p3-feature-build.md` — replace the v1 checkbox with a
+  v2 sub-tree of 5 PRs.
+- `docs/bugs/README.md` — add a "Resolved" footer to R9 once PR 5
+  lands (keep the pattern definition; the instance is closed).
+
 ## Out of scope (explicit carve-outs)
 
 - **Multi-select / bulk move.** Tracked in plan-p3 follow-ups. The
   underlying mutation is per-note already.
 - **Drag-and-drop reorder of placed batches within a section.**
-  Position within `attachments.images` is array order; the LLM
-  controls it on regen, the user can't reorder in this iteration.
+  Position within `attachments.images` is the array order; the LLM
+  controls it on regen, the user can't reorder in v2.
 - **Per-photo caption UI.** Column added (`note_files.caption`); UI
   surfacing is a separate design.
 - **Auto-place-everything pass.** Not yet — start with "LLM places
   high-confidence batches" and learn from real regens.
-- **Stable issue/section IDs.** Sidestepped by nesting `attachments`
-  inside the issue/section object. Real stable IDs are a future
-  larger change.
 
-## Implementation checklist (single PR, ~one commit per item)
+## Implementation checklist (one item ≈ one commit, grouped by PR)
 
-Schema + ordering:
-1. `feat(api): migration NN_notes_metadata — source, meta, note_files.caption, ordering index + CHECK`
+PR 1 (metadata + ordering):
+1. `feat(api): migration NN_metadata — notes.source/meta, note_files.caption`
 2. `feat(api): notesCanonicalOrder helper + audit read sites`
-3. `feat(api): POST /notes accepts source + meta; backfill existing rows`
-4. `test(api): notes.ordering.integration.test.ts`
-5. `feat(mobile): pass source on each note creation flow`
+3. `feat(api): notes_report_order_idx + created_at sanity CHECK`
+4. `feat(api): POST /notes accepts source + meta; backfill existing rows`
+5. `test(api): notes.ordering.integration.test.ts`
+6. `feat(mobile): pass source on note creation flows`
 
-Attachments in body:
-6. `feat(api-contract): attachments schema on issue + section`
-7. `feat(api): sanitiseAttachments validator + unit tests`
-8. `feat(api): setReportBody runs sanitiseAttachments`
+PR 2 (attachments field):
+7. `feat(api-contract): attachments schema on issue + section`
+8. `feat(api): sanitiseAttachments validator + unit tests`
+9. `feat(api): setReportBody runs sanitiseAttachments`
 
-Structured LLM payload:
-9. `feat(api): collectNotesForGeneration returns GenerationPayload`
-10. `feat(api): reportGeneration prompt switches to JSON; system rules updated`
-11. `feat(api): LLM output schema includes attachments; live fixture updated`
-12. `test(api): regen with currentBody preserves user placements`
+PR 3 (structured LLM payload):
+10. `feat(api): collectNotesForGeneration returns GenerationPayload`
+11. `feat(api): reportGeneration prompt switches to JSON; system rules updated`
+12. `feat(api): LLM output schema includes attachments; live tests`
+13. `test(api): regen with currentBody preserves user placements`
 
-Endpoint + mobile UI:
-13. `feat(api): PATCH /reports/{r}/attachments + service + scope test`
-14. `test(api): default-wiring integration test (Pitfall 13)`
+PR 4 (cutover):
+14. `feat(api): PATCH /reports/{r}/attachments + service + scope + integration`
 15. `feat(mobile): renderer reads body.attachments; bottom card filter`
-16. `feat(mobile): PhotoGroupPlacementSheet + PhotoPlacementChip + PlacedPhotoStrip`
-17. `feat(mobile): usePlaceAttachment hook with 409 handling`
-18. `feat(mobile): wire chip + sheet into ReportView / saved-report screen`
-19. `test(maestro): place-photo-on-issue flow including regen-preserves-placement step`
+16. `feat(mobile): placement sheet calls new endpoint; usePlaceAttachment hook`
+17. `feat(api): one-shot data migration notes.placement → body.attachments`
+18. `chore(api): v1 PATCH /notes/{n}/placement returns 410 Gone`
 
-Docs:
-20. `docs: link design from architecture.md row 17, arch-batch-photo-notes.md, plan-p3`
+PR 5 (contract):
+19. `feat(api): migration NN_drop_placement — DROP COLUMN notes.placement`
+20. `chore: remove v1 placement code from api, contract, mobile`
+21. `docs: archive v1 design; update R9 with resolved-by-structural-fix footer`
 
 ## Open questions
 
 - **Q1:** Should the LLM be allowed to *un*-place a batch on regen
   (as opposed to leaving it placed where the user put it)? Current
-  proposal: **no** — preserve rule is absolute, validator enforces.
-  Relax later if real regens show the LLM has good reasons.
-- **Q2:** Should the UI visually distinguish "auto-placed by LLM"
-  from "user-placed" (subtle badge)? Useful for trust early; defer.
-  Cheap to add later by extending the entry to `{ id, by: 'user' | 'llm' }`.
-- **Q3:** User-driven reorder of batches within a section. Today
-  array order in `attachments.images` is LLM-controlled. Defer.
-- **Q4:** Should the placement endpoint switch to `{ targetId }`
-  once stable issue/section IDs exist? Yes — but stable IDs aren't
-  on the roadmap; defer until they are.
+  proposal: **no** — the preserve rule is absolute, validator
+  enforces. We can relax later if real regens show the LLM has
+  good reasons to move batches the user pinned.
+- **Q2:** When the LLM places a batch on its own, should the UI
+  visually distinguish "auto-placed" from "user-placed" (e.g.
+  subtle badge)? Useful for debugging trust early; can defer.
+  Cheap to add later — extend `attachments` to a `{ id, by: 'user' | 'llm' }`
+  shape if needed (additive).
+- **Q3:** Per-batch position within an issue (e.g. "this batch first,
+  then this one"). Today array order in `attachments.images`. Should
+  the user be able to reorder? Defer; covered by the v1 carve-out.
+- **Q4:** Should placement-target use `{ kind, index }` or
+  `{ targetId }` once we add stable issue/section IDs? Stable IDs
+  aren't on the roadmap; defer until they are.

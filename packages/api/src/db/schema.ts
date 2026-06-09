@@ -126,14 +126,10 @@ export const notes = appSchema.table('notes', {
   language: text('language'),
   transcribeProvider: text('transcribe_provider'),
   transcribedAt: timestamp('transcribed_at', { withTimezone: true }),
-  // Coarse capture-flow hint (migration 0015): typed | voice | camera |
-  // gallery | upload. Nullable for legacy rows. CHECK enforces the enum
-  // in-DB; application code uses TS string literal unions to mirror.
+  // Capture provenance and opaque client/provider metadata
+  // (migration 0015). Placement lives in reports.body attachments.
   source: text('source'),
-  // Open-ended kind-specific metadata (migration 0015). No fixed
-  // schema today; populated by future capture-flow improvements
-  // (EXIF, original filename, voice diagnostics).
-  meta: jsonb('meta').notNull().default(sql`'{}'::jsonb`),
+  meta: jsonb('meta').$type<Record<string, unknown>>().notNull().default({}),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 });

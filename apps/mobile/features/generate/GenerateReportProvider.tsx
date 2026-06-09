@@ -142,6 +142,17 @@ export interface GenerateReportProviderProps {
    * + upload pipeline. When omitted this is a no-op.
    */
   onPickAttachment?: (category: 'image' | 'document') => void;
+  /**
+   * Called when the user picks (or clears) a placement target for a
+   * photo group on the Report tab. Route wrapper wires this to
+   * the report attachment placement mutation. When omitted the placement chip
+   * is hidden and the photo block falls back to the legacy "stuck at
+   * the bottom" rendering.
+   */
+  onPlacePhotoGroup?: (input: {
+    noteId: string;
+    placement: { kind: 'issue' | 'section'; index: number } | null;
+  }) => void;
   /** Initial tab the screen opens on. Defaults to `notes`. */
   initialTab?: TabKey;
   children: ReactNode;
@@ -336,6 +347,20 @@ interface PreviewSurface {
   closePhoto: () => void;
 }
 
+/** Surface for editing photo placements from the Report tab. */
+interface PlacementSurface {
+  /**
+   * Called when the user picks (or clears) a placement target for a
+   * photo group. `null` clears the placement (returns to "Unplaced").
+   * `undefined` here means the route did not wire the mutator —
+   * components should hide the placement chip entirely.
+   */
+  onPlacePhotoGroup?: (input: {
+    noteId: string;
+    placement: { kind: 'issue' | 'section'; index: number } | null;
+  }) => void;
+}
+
 export interface GenerateReportContextValue {
   project: string;
   reportNumber: number | null;
@@ -348,6 +373,7 @@ export interface GenerateReportContextValue {
   voice: VoiceSurface;
   photo: PhotoSurface;
   preview: PreviewSurface;
+  placement: PlacementSurface;
   ui: UISurface;
   members: ReadonlyMap<string, string>;
   /** Bubbled up by the Notes input + attachment sheet. P3.8+ wires uploads. */
@@ -439,6 +465,7 @@ export function GenerateReportProvider({
   onOpenFile,
   onCameraCapture,
   onPickAttachment,
+  onPlacePhotoGroup,
   initialTab = 'notes',
   children,
 }: GenerateReportProviderProps) {
@@ -861,6 +888,9 @@ export function GenerateReportProvider({
         openPhoto,
         closePhoto,
       },
+      placement: {
+        onPlacePhotoGroup,
+      },
       ui: {
         attachmentSheetVisible,
         setAttachmentSheetVisible,
@@ -928,6 +958,7 @@ export function GenerateReportProvider({
       closePhoto,
       onCameraCapture,
       onPickAttachment,
+      onPlacePhotoGroup,
       photoUploads.retry,
       photoUploads.cancel,
     ],

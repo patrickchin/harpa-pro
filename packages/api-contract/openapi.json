@@ -3450,13 +3450,15 @@
                                         "images": {
                                           "type": "array",
                                           "items": {
-                                            "type": "string"
+                                            "type": "string",
+                                            "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
                                           }
                                         },
                                         "documents": {
                                           "type": "array",
                                           "items": {
-                                            "type": "string"
+                                            "type": "string",
+                                            "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
                                           }
                                         }
                                       },
@@ -3494,13 +3496,15 @@
                                         "images": {
                                           "type": "array",
                                           "items": {
-                                            "type": "string"
+                                            "type": "string",
+                                            "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
                                           }
                                         },
                                         "documents": {
                                           "type": "array",
                                           "items": {
-                                            "type": "string"
+                                            "type": "string",
+                                            "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
                                           }
                                         }
                                       },
@@ -3875,13 +3879,15 @@
                                   "images": {
                                     "type": "array",
                                     "items": {
-                                      "type": "string"
+                                      "type": "string",
+                                      "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
                                     }
                                   },
                                   "documents": {
                                     "type": "array",
                                     "items": {
-                                      "type": "string"
+                                      "type": "string",
+                                      "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
                                     }
                                   }
                                 },
@@ -3919,13 +3925,15 @@
                                   "images": {
                                     "type": "array",
                                     "items": {
-                                      "type": "string"
+                                      "type": "string",
+                                      "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
                                     }
                                   },
                                   "documents": {
                                     "type": "array",
                                     "items": {
-                                      "type": "string"
+                                      "type": "string",
+                                      "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
                                     }
                                   }
                                 },
@@ -4321,13 +4329,15 @@
                                   "images": {
                                     "type": "array",
                                     "items": {
-                                      "type": "string"
+                                      "type": "string",
+                                      "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
                                     }
                                   },
                                   "documents": {
                                     "type": "array",
                                     "items": {
-                                      "type": "string"
+                                      "type": "string",
+                                      "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
                                     }
                                   }
                                 },
@@ -4365,13 +4375,15 @@
                                   "images": {
                                     "type": "array",
                                     "items": {
-                                      "type": "string"
+                                      "type": "string",
+                                      "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
                                     }
                                   },
                                   "documents": {
                                     "type": "array",
                                     "items": {
-                                      "type": "string"
+                                      "type": "string",
+                                      "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
                                     }
                                   }
                                 },
@@ -4707,13 +4719,15 @@
                                 "images": {
                                   "type": "array",
                                   "items": {
-                                    "type": "string"
+                                    "type": "string",
+                                    "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
                                   }
                                 },
                                 "documents": {
                                   "type": "array",
                                   "items": {
-                                    "type": "string"
+                                    "type": "string",
+                                    "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
                                   }
                                 }
                               },
@@ -4751,13 +4765,15 @@
                                 "images": {
                                   "type": "array",
                                   "items": {
-                                    "type": "string"
+                                    "type": "string",
+                                    "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
                                   }
                                 },
                                 "documents": {
                                   "type": "array",
                                   "items": {
-                                    "type": "string"
+                                    "type": "string",
+                                    "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
                                   }
                                 }
                               },
@@ -4966,13 +4982,15 @@
                                   "images": {
                                     "type": "array",
                                     "items": {
-                                      "type": "string"
+                                      "type": "string",
+                                      "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
                                     }
                                   },
                                   "documents": {
                                     "type": "array",
                                     "items": {
-                                      "type": "string"
+                                      "type": "string",
+                                      "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
                                     }
                                   }
                                 },
@@ -5010,13 +5028,15 @@
                                   "images": {
                                     "type": "array",
                                     "items": {
-                                      "type": "string"
+                                      "type": "string",
+                                      "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
                                     }
                                   },
                                   "documents": {
                                     "type": "array",
                                     "items": {
-                                      "type": "string"
+                                      "type": "string",
+                                      "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
                                     }
                                   }
                                 },
@@ -5629,6 +5649,848 @@
         }
       }
     },
+    "/projects/{project}/reports/{number}/attachments": {
+      "patch": {
+        "tags": [
+          "reports"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8,16}$"
+            },
+            "required": true,
+            "name": "project",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "exclusiveMinimum": true
+            },
+            "required": true,
+            "name": "number",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "noteId": {
+                    "type": "string",
+                    "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
+                  },
+                  "target": {
+                    "oneOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "issue"
+                            ]
+                          },
+                          "index": {
+                            "type": "integer",
+                            "minimum": 0
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "index"
+                        ]
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "section"
+                            ]
+                          },
+                          "index": {
+                            "type": "integer",
+                            "minimum": 0
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "index"
+                        ]
+                      },
+                      {
+                        "nullable": true
+                      }
+                    ]
+                  },
+                  "expectedBodyVersion": {
+                    "type": "string",
+                    "nullable": true
+                  }
+                },
+                "required": [
+                  "noteId",
+                  "target",
+                  "expectedBodyVersion"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Attachment placement updated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "report": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "pattern": "^rpt_[0-9a-hjkmnp-tv-z]{8,16}$"
+                        },
+                        "number": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "exclusiveMinimum": true
+                        },
+                        "projectId": {
+                          "type": "string",
+                          "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8,16}$"
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "draft",
+                            "finalized"
+                          ]
+                        },
+                        "visitDate": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "body": {
+                          "type": "object",
+                          "nullable": true,
+                          "properties": {
+                            "meta": {
+                              "type": "object",
+                              "properties": {
+                                "title": {
+                                  "type": "string",
+                                  "nullable": true
+                                },
+                                "summary": {
+                                  "type": "string",
+                                  "nullable": true
+                                },
+                                "visitDate": {
+                                  "type": "string",
+                                  "nullable": true
+                                }
+                              },
+                              "required": [
+                                "title",
+                                "summary",
+                                "visitDate"
+                              ]
+                            },
+                            "weather": {
+                              "type": "object",
+                              "nullable": true,
+                              "properties": {
+                                "condition": {
+                                  "type": "string",
+                                  "nullable": true
+                                },
+                                "temperature": {
+                                  "type": "string",
+                                  "nullable": true
+                                },
+                                "wind": {
+                                  "type": "string",
+                                  "nullable": true
+                                },
+                                "impact": {
+                                  "type": "string",
+                                  "nullable": true
+                                }
+                              },
+                              "required": [
+                                "condition",
+                                "temperature",
+                                "wind",
+                                "impact"
+                              ]
+                            },
+                            "workers": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "role": {
+                                    "type": "string"
+                                  },
+                                  "count": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "hours": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "notes": {
+                                    "type": "string",
+                                    "nullable": true
+                                  }
+                                },
+                                "required": [
+                                  "role",
+                                  "count",
+                                  "hours",
+                                  "notes"
+                                ]
+                              }
+                            },
+                            "materials": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "name": {
+                                    "type": "string"
+                                  },
+                                  "quantity": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "unit": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "status": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "condition": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "notes": {
+                                    "type": "string",
+                                    "nullable": true
+                                  }
+                                },
+                                "required": [
+                                  "name",
+                                  "quantity",
+                                  "unit",
+                                  "status",
+                                  "condition",
+                                  "notes"
+                                ]
+                              }
+                            },
+                            "issues": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "title": {
+                                    "type": "string"
+                                  },
+                                  "severity": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "description": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "action": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "attachments": {
+                                    "type": "object",
+                                    "properties": {
+                                      "images": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "string",
+                                          "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
+                                        }
+                                      },
+                                      "documents": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "string",
+                                          "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
+                                        }
+                                      }
+                                    },
+                                    "additionalProperties": false
+                                  }
+                                },
+                                "required": [
+                                  "title",
+                                  "severity",
+                                  "description",
+                                  "action"
+                                ]
+                              }
+                            },
+                            "nextSteps": {
+                              "type": "array",
+                              "items": {
+                                "type": "string"
+                              }
+                            },
+                            "summarySections": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "title": {
+                                    "type": "string"
+                                  },
+                                  "body": {
+                                    "type": "string"
+                                  },
+                                  "attachments": {
+                                    "type": "object",
+                                    "properties": {
+                                      "images": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "string",
+                                          "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
+                                        }
+                                      },
+                                      "documents": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "string",
+                                          "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
+                                        }
+                                      }
+                                    },
+                                    "additionalProperties": false
+                                  }
+                                },
+                                "required": [
+                                  "title",
+                                  "body"
+                                ]
+                              }
+                            }
+                          },
+                          "required": [
+                            "meta",
+                            "weather",
+                            "workers",
+                            "materials",
+                            "issues",
+                            "nextSteps",
+                            "summarySections"
+                          ]
+                        },
+                        "notesSinceLastGeneration": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "notesChangedAt": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "generatedAt": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "needsRegeneration": {
+                          "type": "boolean"
+                        },
+                        "finalizedAt": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "pdfUrl": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "createdAt": {
+                          "type": "string"
+                        },
+                        "updatedAt": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "number",
+                        "projectId",
+                        "status",
+                        "visitDate",
+                        "body",
+                        "notesSinceLastGeneration",
+                        "notesChangedAt",
+                        "generatedAt",
+                        "needsRegeneration",
+                        "finalizedAt",
+                        "pdfUrl",
+                        "createdAt",
+                        "updatedAt"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "report"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "nullable": true
+                        },
+                        "requestId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "nullable": true
+                        },
+                        "requestId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "nullable": true
+                        },
+                        "requestId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Stale report body version.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "report": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "pattern": "^rpt_[0-9a-hjkmnp-tv-z]{8,16}$"
+                        },
+                        "number": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "exclusiveMinimum": true
+                        },
+                        "projectId": {
+                          "type": "string",
+                          "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8,16}$"
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "draft",
+                            "finalized"
+                          ]
+                        },
+                        "visitDate": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "body": {
+                          "type": "object",
+                          "nullable": true,
+                          "properties": {
+                            "meta": {
+                              "type": "object",
+                              "properties": {
+                                "title": {
+                                  "type": "string",
+                                  "nullable": true
+                                },
+                                "summary": {
+                                  "type": "string",
+                                  "nullable": true
+                                },
+                                "visitDate": {
+                                  "type": "string",
+                                  "nullable": true
+                                }
+                              },
+                              "required": [
+                                "title",
+                                "summary",
+                                "visitDate"
+                              ]
+                            },
+                            "weather": {
+                              "type": "object",
+                              "nullable": true,
+                              "properties": {
+                                "condition": {
+                                  "type": "string",
+                                  "nullable": true
+                                },
+                                "temperature": {
+                                  "type": "string",
+                                  "nullable": true
+                                },
+                                "wind": {
+                                  "type": "string",
+                                  "nullable": true
+                                },
+                                "impact": {
+                                  "type": "string",
+                                  "nullable": true
+                                }
+                              },
+                              "required": [
+                                "condition",
+                                "temperature",
+                                "wind",
+                                "impact"
+                              ]
+                            },
+                            "workers": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "role": {
+                                    "type": "string"
+                                  },
+                                  "count": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "hours": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "notes": {
+                                    "type": "string",
+                                    "nullable": true
+                                  }
+                                },
+                                "required": [
+                                  "role",
+                                  "count",
+                                  "hours",
+                                  "notes"
+                                ]
+                              }
+                            },
+                            "materials": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "name": {
+                                    "type": "string"
+                                  },
+                                  "quantity": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "unit": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "status": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "condition": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "notes": {
+                                    "type": "string",
+                                    "nullable": true
+                                  }
+                                },
+                                "required": [
+                                  "name",
+                                  "quantity",
+                                  "unit",
+                                  "status",
+                                  "condition",
+                                  "notes"
+                                ]
+                              }
+                            },
+                            "issues": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "title": {
+                                    "type": "string"
+                                  },
+                                  "severity": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "description": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "action": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "attachments": {
+                                    "type": "object",
+                                    "properties": {
+                                      "images": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "string",
+                                          "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
+                                        }
+                                      },
+                                      "documents": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "string",
+                                          "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
+                                        }
+                                      }
+                                    },
+                                    "additionalProperties": false
+                                  }
+                                },
+                                "required": [
+                                  "title",
+                                  "severity",
+                                  "description",
+                                  "action"
+                                ]
+                              }
+                            },
+                            "nextSteps": {
+                              "type": "array",
+                              "items": {
+                                "type": "string"
+                              }
+                            },
+                            "summarySections": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "title": {
+                                    "type": "string"
+                                  },
+                                  "body": {
+                                    "type": "string"
+                                  },
+                                  "attachments": {
+                                    "type": "object",
+                                    "properties": {
+                                      "images": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "string",
+                                          "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
+                                        }
+                                      },
+                                      "documents": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "string",
+                                          "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
+                                        }
+                                      }
+                                    },
+                                    "additionalProperties": false
+                                  }
+                                },
+                                "required": [
+                                  "title",
+                                  "body"
+                                ]
+                              }
+                            }
+                          },
+                          "required": [
+                            "meta",
+                            "weather",
+                            "workers",
+                            "materials",
+                            "issues",
+                            "nextSteps",
+                            "summarySections"
+                          ]
+                        },
+                        "notesSinceLastGeneration": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "notesChangedAt": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "generatedAt": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "needsRegeneration": {
+                          "type": "boolean"
+                        },
+                        "finalizedAt": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "pdfUrl": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "createdAt": {
+                          "type": "string"
+                        },
+                        "updatedAt": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "number",
+                        "projectId",
+                        "status",
+                        "visitDate",
+                        "body",
+                        "notesSinceLastGeneration",
+                        "notesChangedAt",
+                        "generatedAt",
+                        "needsRegeneration",
+                        "finalizedAt",
+                        "pdfUrl",
+                        "createdAt",
+                        "updatedAt"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "report"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/projects/{project}/reports/{number}/generate": {
       "post": {
         "tags": [
@@ -5860,13 +6722,15 @@
                                       "images": {
                                         "type": "array",
                                         "items": {
-                                          "type": "string"
+                                          "type": "string",
+                                          "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
                                         }
                                       },
                                       "documents": {
                                         "type": "array",
                                         "items": {
-                                          "type": "string"
+                                          "type": "string",
+                                          "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
                                         }
                                       }
                                     },
@@ -5904,13 +6768,15 @@
                                       "images": {
                                         "type": "array",
                                         "items": {
-                                          "type": "string"
+                                          "type": "string",
+                                          "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
                                         }
                                       },
                                       "documents": {
                                         "type": "array",
                                         "items": {
-                                          "type": "string"
+                                          "type": "string",
+                                          "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
                                         }
                                       }
                                     },
@@ -6423,13 +7289,15 @@
                                       "images": {
                                         "type": "array",
                                         "items": {
-                                          "type": "string"
+                                          "type": "string",
+                                          "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
                                         }
                                       },
                                       "documents": {
                                         "type": "array",
                                         "items": {
-                                          "type": "string"
+                                          "type": "string",
+                                          "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
                                         }
                                       }
                                     },
@@ -6467,13 +7335,15 @@
                                       "images": {
                                         "type": "array",
                                         "items": {
-                                          "type": "string"
+                                          "type": "string",
+                                          "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
                                         }
                                       },
                                       "documents": {
                                         "type": "array",
                                         "items": {
-                                          "type": "string"
+                                          "type": "string",
+                                          "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
                                         }
                                       }
                                     },
@@ -6755,883 +7625,6 @@
         }
       }
     },
-    "/projects/{project}/reports/{number}/attachments": {
-      "patch": {
-        "tags": [
-          "reports"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "schema": {
-              "type": "string",
-              "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8,16}$"
-            },
-            "required": true,
-            "name": "project",
-            "in": "path"
-          },
-          {
-            "schema": {
-              "type": "integer",
-              "minimum": 0,
-              "exclusiveMinimum": true
-            },
-            "required": true,
-            "name": "number",
-            "in": "path"
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "noteId": {
-                    "type": "string",
-                    "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
-                  },
-                  "target": {
-                    "oneOf": [
-                      {
-                        "type": "object",
-                        "properties": {
-                          "kind": {
-                            "type": "string",
-                            "enum": [
-                              "issue"
-                            ]
-                          },
-                          "index": {
-                            "type": "integer",
-                            "minimum": 0
-                          }
-                        },
-                        "required": [
-                          "kind",
-                          "index"
-                        ]
-                      },
-                      {
-                        "type": "object",
-                        "properties": {
-                          "kind": {
-                            "type": "string",
-                            "enum": [
-                              "section"
-                            ]
-                          },
-                          "index": {
-                            "type": "integer",
-                            "minimum": 0
-                          }
-                        },
-                        "required": [
-                          "kind",
-                          "index"
-                        ]
-                      },
-                      {
-                        "nullable": true
-                      }
-                    ]
-                  },
-                  "expectedBodyVersion": {
-                    "type": "string",
-                    "nullable": true
-                  }
-                },
-                "required": [
-                  "noteId",
-                  "target",
-                  "expectedBodyVersion"
-                ]
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Placed.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "report": {
-                      "type": "object",
-                      "properties": {
-                        "id": {
-                          "type": "string",
-                          "pattern": "^rpt_[0-9a-hjkmnp-tv-z]{8,16}$"
-                        },
-                        "number": {
-                          "type": "integer",
-                          "minimum": 0,
-                          "exclusiveMinimum": true
-                        },
-                        "projectId": {
-                          "type": "string",
-                          "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8,16}$"
-                        },
-                        "status": {
-                          "type": "string",
-                          "enum": [
-                            "draft",
-                            "finalized"
-                          ]
-                        },
-                        "visitDate": {
-                          "type": "string",
-                          "nullable": true
-                        },
-                        "body": {
-                          "type": "object",
-                          "nullable": true,
-                          "properties": {
-                            "meta": {
-                              "type": "object",
-                              "properties": {
-                                "title": {
-                                  "type": "string",
-                                  "nullable": true
-                                },
-                                "summary": {
-                                  "type": "string",
-                                  "nullable": true
-                                },
-                                "visitDate": {
-                                  "type": "string",
-                                  "nullable": true
-                                }
-                              },
-                              "required": [
-                                "title",
-                                "summary",
-                                "visitDate"
-                              ]
-                            },
-                            "weather": {
-                              "type": "object",
-                              "nullable": true,
-                              "properties": {
-                                "condition": {
-                                  "type": "string",
-                                  "nullable": true
-                                },
-                                "temperature": {
-                                  "type": "string",
-                                  "nullable": true
-                                },
-                                "wind": {
-                                  "type": "string",
-                                  "nullable": true
-                                },
-                                "impact": {
-                                  "type": "string",
-                                  "nullable": true
-                                }
-                              },
-                              "required": [
-                                "condition",
-                                "temperature",
-                                "wind",
-                                "impact"
-                              ]
-                            },
-                            "workers": {
-                              "type": "array",
-                              "items": {
-                                "type": "object",
-                                "properties": {
-                                  "role": {
-                                    "type": "string"
-                                  },
-                                  "count": {
-                                    "type": "string",
-                                    "nullable": true
-                                  },
-                                  "hours": {
-                                    "type": "string",
-                                    "nullable": true
-                                  },
-                                  "notes": {
-                                    "type": "string",
-                                    "nullable": true
-                                  }
-                                },
-                                "required": [
-                                  "role",
-                                  "count",
-                                  "hours",
-                                  "notes"
-                                ]
-                              }
-                            },
-                            "materials": {
-                              "type": "array",
-                              "items": {
-                                "type": "object",
-                                "properties": {
-                                  "name": {
-                                    "type": "string"
-                                  },
-                                  "quantity": {
-                                    "type": "string",
-                                    "nullable": true
-                                  },
-                                  "unit": {
-                                    "type": "string",
-                                    "nullable": true
-                                  },
-                                  "status": {
-                                    "type": "string",
-                                    "nullable": true
-                                  },
-                                  "condition": {
-                                    "type": "string",
-                                    "nullable": true
-                                  },
-                                  "notes": {
-                                    "type": "string",
-                                    "nullable": true
-                                  }
-                                },
-                                "required": [
-                                  "name",
-                                  "quantity",
-                                  "unit",
-                                  "status",
-                                  "condition",
-                                  "notes"
-                                ]
-                              }
-                            },
-                            "issues": {
-                              "type": "array",
-                              "items": {
-                                "type": "object",
-                                "properties": {
-                                  "title": {
-                                    "type": "string"
-                                  },
-                                  "severity": {
-                                    "type": "string",
-                                    "nullable": true
-                                  },
-                                  "description": {
-                                    "type": "string",
-                                    "nullable": true
-                                  },
-                                  "action": {
-                                    "type": "string",
-                                    "nullable": true
-                                  },
-                                  "attachments": {
-                                    "type": "object",
-                                    "properties": {
-                                      "images": {
-                                        "type": "array",
-                                        "items": {
-                                          "type": "string"
-                                        }
-                                      },
-                                      "documents": {
-                                        "type": "array",
-                                        "items": {
-                                          "type": "string"
-                                        }
-                                      }
-                                    },
-                                    "additionalProperties": false
-                                  }
-                                },
-                                "required": [
-                                  "title",
-                                  "severity",
-                                  "description",
-                                  "action"
-                                ]
-                              }
-                            },
-                            "nextSteps": {
-                              "type": "array",
-                              "items": {
-                                "type": "string"
-                              }
-                            },
-                            "summarySections": {
-                              "type": "array",
-                              "items": {
-                                "type": "object",
-                                "properties": {
-                                  "title": {
-                                    "type": "string"
-                                  },
-                                  "body": {
-                                    "type": "string"
-                                  },
-                                  "attachments": {
-                                    "type": "object",
-                                    "properties": {
-                                      "images": {
-                                        "type": "array",
-                                        "items": {
-                                          "type": "string"
-                                        }
-                                      },
-                                      "documents": {
-                                        "type": "array",
-                                        "items": {
-                                          "type": "string"
-                                        }
-                                      }
-                                    },
-                                    "additionalProperties": false
-                                  }
-                                },
-                                "required": [
-                                  "title",
-                                  "body"
-                                ]
-                              }
-                            }
-                          },
-                          "required": [
-                            "meta",
-                            "weather",
-                            "workers",
-                            "materials",
-                            "issues",
-                            "nextSteps",
-                            "summarySections"
-                          ]
-                        },
-                        "notesSinceLastGeneration": {
-                          "type": "integer",
-                          "minimum": 0
-                        },
-                        "notesChangedAt": {
-                          "type": "string",
-                          "nullable": true
-                        },
-                        "generatedAt": {
-                          "type": "string",
-                          "nullable": true
-                        },
-                        "needsRegeneration": {
-                          "type": "boolean"
-                        },
-                        "finalizedAt": {
-                          "type": "string",
-                          "nullable": true
-                        },
-                        "pdfUrl": {
-                          "type": "string",
-                          "nullable": true
-                        },
-                        "createdAt": {
-                          "type": "string"
-                        },
-                        "updatedAt": {
-                          "type": "string"
-                        }
-                      },
-                      "required": [
-                        "id",
-                        "number",
-                        "projectId",
-                        "status",
-                        "visitDate",
-                        "body",
-                        "notesSinceLastGeneration",
-                        "notesChangedAt",
-                        "generatedAt",
-                        "needsRegeneration",
-                        "finalizedAt",
-                        "pdfUrl",
-                        "createdAt",
-                        "updatedAt"
-                      ]
-                    }
-                  },
-                  "required": [
-                    "report"
-                  ]
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad target / wrong note kind.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "object",
-                      "properties": {
-                        "code": {
-                          "type": "string"
-                        },
-                        "message": {
-                          "type": "string"
-                        },
-                        "details": {
-                          "nullable": true
-                        },
-                        "requestId": {
-                          "type": "string"
-                        }
-                      },
-                      "required": [
-                        "code",
-                        "message"
-                      ]
-                    }
-                  },
-                  "required": [
-                    "error"
-                  ]
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "object",
-                      "properties": {
-                        "code": {
-                          "type": "string"
-                        },
-                        "message": {
-                          "type": "string"
-                        },
-                        "details": {
-                          "nullable": true
-                        },
-                        "requestId": {
-                          "type": "string"
-                        }
-                      },
-                      "required": [
-                        "code",
-                        "message"
-                      ]
-                    }
-                  },
-                  "required": [
-                    "error"
-                  ]
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Report or note not found.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "object",
-                      "properties": {
-                        "code": {
-                          "type": "string"
-                        },
-                        "message": {
-                          "type": "string"
-                        },
-                        "details": {
-                          "nullable": true
-                        },
-                        "requestId": {
-                          "type": "string"
-                        }
-                      },
-                      "required": [
-                        "code",
-                        "message"
-                      ]
-                    }
-                  },
-                  "required": [
-                    "error"
-                  ]
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Body changed; client must refresh.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "code": {
-                      "type": "string",
-                      "enum": [
-                        "body_version_mismatch"
-                      ]
-                    },
-                    "conflict": {
-                      "type": "object",
-                      "properties": {
-                        "id": {
-                          "type": "string",
-                          "pattern": "^rpt_[0-9a-hjkmnp-tv-z]{8,16}$"
-                        },
-                        "number": {
-                          "type": "integer",
-                          "minimum": 0,
-                          "exclusiveMinimum": true
-                        },
-                        "projectId": {
-                          "type": "string",
-                          "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8,16}$"
-                        },
-                        "status": {
-                          "type": "string",
-                          "enum": [
-                            "draft",
-                            "finalized"
-                          ]
-                        },
-                        "visitDate": {
-                          "type": "string",
-                          "nullable": true
-                        },
-                        "body": {
-                          "type": "object",
-                          "nullable": true,
-                          "properties": {
-                            "meta": {
-                              "type": "object",
-                              "properties": {
-                                "title": {
-                                  "type": "string",
-                                  "nullable": true
-                                },
-                                "summary": {
-                                  "type": "string",
-                                  "nullable": true
-                                },
-                                "visitDate": {
-                                  "type": "string",
-                                  "nullable": true
-                                }
-                              },
-                              "required": [
-                                "title",
-                                "summary",
-                                "visitDate"
-                              ]
-                            },
-                            "weather": {
-                              "type": "object",
-                              "nullable": true,
-                              "properties": {
-                                "condition": {
-                                  "type": "string",
-                                  "nullable": true
-                                },
-                                "temperature": {
-                                  "type": "string",
-                                  "nullable": true
-                                },
-                                "wind": {
-                                  "type": "string",
-                                  "nullable": true
-                                },
-                                "impact": {
-                                  "type": "string",
-                                  "nullable": true
-                                }
-                              },
-                              "required": [
-                                "condition",
-                                "temperature",
-                                "wind",
-                                "impact"
-                              ]
-                            },
-                            "workers": {
-                              "type": "array",
-                              "items": {
-                                "type": "object",
-                                "properties": {
-                                  "role": {
-                                    "type": "string"
-                                  },
-                                  "count": {
-                                    "type": "string",
-                                    "nullable": true
-                                  },
-                                  "hours": {
-                                    "type": "string",
-                                    "nullable": true
-                                  },
-                                  "notes": {
-                                    "type": "string",
-                                    "nullable": true
-                                  }
-                                },
-                                "required": [
-                                  "role",
-                                  "count",
-                                  "hours",
-                                  "notes"
-                                ]
-                              }
-                            },
-                            "materials": {
-                              "type": "array",
-                              "items": {
-                                "type": "object",
-                                "properties": {
-                                  "name": {
-                                    "type": "string"
-                                  },
-                                  "quantity": {
-                                    "type": "string",
-                                    "nullable": true
-                                  },
-                                  "unit": {
-                                    "type": "string",
-                                    "nullable": true
-                                  },
-                                  "status": {
-                                    "type": "string",
-                                    "nullable": true
-                                  },
-                                  "condition": {
-                                    "type": "string",
-                                    "nullable": true
-                                  },
-                                  "notes": {
-                                    "type": "string",
-                                    "nullable": true
-                                  }
-                                },
-                                "required": [
-                                  "name",
-                                  "quantity",
-                                  "unit",
-                                  "status",
-                                  "condition",
-                                  "notes"
-                                ]
-                              }
-                            },
-                            "issues": {
-                              "type": "array",
-                              "items": {
-                                "type": "object",
-                                "properties": {
-                                  "title": {
-                                    "type": "string"
-                                  },
-                                  "severity": {
-                                    "type": "string",
-                                    "nullable": true
-                                  },
-                                  "description": {
-                                    "type": "string",
-                                    "nullable": true
-                                  },
-                                  "action": {
-                                    "type": "string",
-                                    "nullable": true
-                                  },
-                                  "attachments": {
-                                    "type": "object",
-                                    "properties": {
-                                      "images": {
-                                        "type": "array",
-                                        "items": {
-                                          "type": "string"
-                                        }
-                                      },
-                                      "documents": {
-                                        "type": "array",
-                                        "items": {
-                                          "type": "string"
-                                        }
-                                      }
-                                    },
-                                    "additionalProperties": false
-                                  }
-                                },
-                                "required": [
-                                  "title",
-                                  "severity",
-                                  "description",
-                                  "action"
-                                ]
-                              }
-                            },
-                            "nextSteps": {
-                              "type": "array",
-                              "items": {
-                                "type": "string"
-                              }
-                            },
-                            "summarySections": {
-                              "type": "array",
-                              "items": {
-                                "type": "object",
-                                "properties": {
-                                  "title": {
-                                    "type": "string"
-                                  },
-                                  "body": {
-                                    "type": "string"
-                                  },
-                                  "attachments": {
-                                    "type": "object",
-                                    "properties": {
-                                      "images": {
-                                        "type": "array",
-                                        "items": {
-                                          "type": "string"
-                                        }
-                                      },
-                                      "documents": {
-                                        "type": "array",
-                                        "items": {
-                                          "type": "string"
-                                        }
-                                      }
-                                    },
-                                    "additionalProperties": false
-                                  }
-                                },
-                                "required": [
-                                  "title",
-                                  "body"
-                                ]
-                              }
-                            }
-                          },
-                          "required": [
-                            "meta",
-                            "weather",
-                            "workers",
-                            "materials",
-                            "issues",
-                            "nextSteps",
-                            "summarySections"
-                          ]
-                        },
-                        "notesSinceLastGeneration": {
-                          "type": "integer",
-                          "minimum": 0
-                        },
-                        "notesChangedAt": {
-                          "type": "string",
-                          "nullable": true
-                        },
-                        "generatedAt": {
-                          "type": "string",
-                          "nullable": true
-                        },
-                        "needsRegeneration": {
-                          "type": "boolean"
-                        },
-                        "finalizedAt": {
-                          "type": "string",
-                          "nullable": true
-                        },
-                        "pdfUrl": {
-                          "type": "string",
-                          "nullable": true
-                        },
-                        "createdAt": {
-                          "type": "string"
-                        },
-                        "updatedAt": {
-                          "type": "string"
-                        }
-                      },
-                      "required": [
-                        "id",
-                        "number",
-                        "projectId",
-                        "status",
-                        "visitDate",
-                        "body",
-                        "notesSinceLastGeneration",
-                        "notesChangedAt",
-                        "generatedAt",
-                        "needsRegeneration",
-                        "finalizedAt",
-                        "pdfUrl",
-                        "createdAt",
-                        "updatedAt"
-                      ]
-                    }
-                  },
-                  "required": [
-                    "code",
-                    "conflict"
-                  ]
-                }
-              }
-            }
-          },
-          "423": {
-            "description": "Report finalized; placement locked.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "object",
-                      "properties": {
-                        "code": {
-                          "type": "string"
-                        },
-                        "message": {
-                          "type": "string"
-                        },
-                        "details": {
-                          "nullable": true
-                        },
-                        "requestId": {
-                          "type": "string"
-                        }
-                      },
-                      "required": [
-                        "code",
-                        "message"
-                      ]
-                    }
-                  },
-                  "required": [
-                    "error"
-                  ]
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/projects/{project}/reports/{number}/finalize": {
       "post": {
         "tags": [
@@ -7846,13 +7839,15 @@
                                       "images": {
                                         "type": "array",
                                         "items": {
-                                          "type": "string"
+                                          "type": "string",
+                                          "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
                                         }
                                       },
                                       "documents": {
                                         "type": "array",
                                         "items": {
-                                          "type": "string"
+                                          "type": "string",
+                                          "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
                                         }
                                       }
                                     },
@@ -7890,13 +7885,15 @@
                                       "images": {
                                         "type": "array",
                                         "items": {
-                                          "type": "string"
+                                          "type": "string",
+                                          "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
                                         }
                                       },
                                       "documents": {
                                         "type": "array",
                                         "items": {
-                                          "type": "string"
+                                          "type": "string",
+                                          "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
                                         }
                                       }
                                     },
@@ -8300,13 +8297,15 @@
                                       "images": {
                                         "type": "array",
                                         "items": {
-                                          "type": "string"
+                                          "type": "string",
+                                          "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
                                         }
                                       },
                                       "documents": {
                                         "type": "array",
                                         "items": {
-                                          "type": "string"
+                                          "type": "string",
+                                          "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
                                         }
                                       }
                                     },
@@ -8344,13 +8343,15 @@
                                       "images": {
                                         "type": "array",
                                         "items": {
-                                          "type": "string"
+                                          "type": "string",
+                                          "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
                                         }
                                       },
                                       "documents": {
                                         "type": "array",
                                         "items": {
-                                          "type": "string"
+                                          "type": "string",
+                                          "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
                                         }
                                       }
                                     },

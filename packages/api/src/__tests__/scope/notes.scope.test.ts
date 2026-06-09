@@ -157,4 +157,5 @@ describe('scope: notes', () => {
       conn.release();
     }
   });
+
 });

@@ -1,5 +1,12 @@
 # Project: harpa-pro (v4)
 
+## Session startup
+
+At the start of every session, call `memory:read_graph` to load any stored
+project context. When the user shares preferences, decisions, or facts worth
+retaining across sessions, call `memory:create_entities` / `memory:add_observations`
+to persist them. Check memory before asking the user to re-explain something.
+
 v4 rewrite of the harpa-pro mobile app and API. The previous attempt
 lives at `../haru3-reports` (branch `mobile-v3`) and is the canonical
 port source for screens — read JSX + Tailwind classes from there when

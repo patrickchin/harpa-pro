@@ -40,6 +40,7 @@ import {
   useOptimisticCreateNote,
   useOptimisticDeleteNote,
   useOptimisticUpdateNote,
+  usePlaceAttachment,
   isOptimisticNoteId,
 } from '@/lib/api/optimistic';
 import { invalidateAfterFileUpload } from '@/lib/api/invalidation';
@@ -162,6 +163,7 @@ export default function GenerateReportRoute() {
         status?: 'draft' | 'finalized';
         notesSinceLastGeneration?: number;
         needsRegeneration?: boolean;
+        generatedAt?: string | null;
       }
     | undefined;
   const reportId = reportRow?.id ?? null;
@@ -249,7 +251,7 @@ export default function GenerateReportRoute() {
       createNote.mutate(
         {
           params: { report: reportId },
-          body: { kind: 'text', body },
+          body: { kind: 'text', body, source: 'typed' },
         },
         {
           onError: () => {
@@ -259,6 +261,29 @@ export default function GenerateReportRoute() {
       );
     },
     [reportId, createNote],
+  );
+
+  const placePhotoGroupMutation = usePlaceAttachment();
+  const handlePlacePhotoGroup = useCallback(
+    async (input: {
+      noteId: string;
+      placement: { kind: 'issue' | 'section'; index: number } | null;
+    }) => {
+      if (!reportId || reportNumber === null || !slug) return;
+      try {
+        await placePhotoGroupMutation.mutateAsync({
+          params: { project: slug, number: reportNumber },
+          body: {
+            noteId: input.noteId,
+            target: input.placement,
+            expectedBodyVersion: reportRow?.generatedAt ?? null,
+          },
+        });
+      } catch {
+        // optimistic helper already rolls back on error.
+      }
+    },
+    [placePhotoGroupMutation, reportId, reportNumber, slug, reportRow?.generatedAt],
   );
 
   const serverBody: GeneratedSiteReport | null = reportRow?.body
@@ -609,6 +634,9 @@ export default function GenerateReportRoute() {
         onFinalize={handleFinalize}
         onCameraCapture={handleCameraCapture}
         onPickAttachment={handlePickAttachment}
+        onPlacePhotoGroup={
+          canWrite && reportId !== null ? handlePlacePhotoGroup : undefined
+        }
         onDeleteDraft={
           reportRow?.status === 'finalized' ? undefined : handleDeleteDraft
         }

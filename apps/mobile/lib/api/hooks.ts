@@ -456,6 +456,26 @@ export function useReportDebugQuery(
   });
 }
 
+export type PlaceReportAttachmentMutationVars = { params: PathParams<"/projects/{project}/reports/{number}/attachments", "patch">; body: RequestBody<"/projects/{project}/reports/{number}/attachments", "patch"> };
+export function usePlaceReportAttachmentMutation(
+  options?: UseMutationOptions<ResponseBody<"/projects/{project}/reports/{number}/attachments", "patch">, ApiError, PlaceReportAttachmentMutationVars>,
+) {
+  const qc = useQueryClient();
+  return useMutation<ResponseBody<"/projects/{project}/reports/{number}/attachments", "patch">, ApiError, PlaceReportAttachmentMutationVars>({
+    mutationFn: (vars) => request("/projects/{project}/reports/{number}/attachments", "patch", { params: vars.params, body: vars.body }),
+    ...options,
+    onSuccess: (...args) => {
+      const rule = INVALIDATIONS["usePlaceReportAttachmentMutation"];
+      if (rule && rule !== INVALIDATIONS_NONE) {
+        for (const head of rule) {
+          qc.invalidateQueries({ queryKey: [head] });
+        }
+      }
+      return options?.onSuccess?.(...args);
+    },
+  });
+}
+
 // ─── p ───────────────────────────────────────────
 export type ResolveProjectSlugQueryInput = { params: PathParams<"/p/{project}", "get">; query?: QueryParams<"/p/{project}", "get"> };
 export function useResolveProjectSlugQuery(

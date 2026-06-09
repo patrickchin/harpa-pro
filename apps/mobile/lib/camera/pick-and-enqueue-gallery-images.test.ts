@@ -114,7 +114,7 @@ describe('pickAndEnqueueGalleryImages', () => {
     });
     expect(enqueue).toHaveBeenCalledWith(
       ['file:///tmp/a.jpg', 'file:///tmp/b.jpg'],
-      { reportId: 'rpt_1', projectId: 'prj-test1234' },
+      { reportId: 'rpt_1', projectId: 'prj-test1234', noteSource: 'gallery' },
     );
     expect(outcome).toEqual({
       kind: 'enqueued',

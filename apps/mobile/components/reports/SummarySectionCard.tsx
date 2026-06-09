@@ -11,14 +11,23 @@ import type { GeneratedReportSection } from '@harpa/report-core';
 import { Card } from '@/components/primitives/Card';
 import { SectionHeader } from '@/components/primitives/SectionHeader';
 import { EditPencilButton } from '@/components/reports/edit/EditPencilButton';
+import { PlacedPhotoStrip } from '@/components/reports/detail/PlacedPhotoStrip';
 import { SECTION_ICONS } from '@/lib/reports/section-icons';
 import { colors } from '@/lib/design-tokens/colors';
+import type { PhotoGroup } from '@/lib/reports/photo-placements';
 
 interface SummarySectionCardProps {
   section: GeneratedReportSection;
   reportNumber?: number;
   sectionIndex?: number;
   onEdit?: () => void;
+  /**
+   * Optional photo groups placed onto this section. Renders as an
+   * inline strip below the section content.
+   */
+  placedGroups?: ReadonlyArray<PhotoGroup>;
+  onOpenPhoto?: (input: { fileId: string; title?: string }) => void;
+  onEditPlacement?: (noteId: string) => void;
 }
 
 export function SummarySectionCard({
@@ -26,6 +35,9 @@ export function SummarySectionCard({
   reportNumber,
   sectionIndex,
   onEdit,
+  placedGroups,
+  onOpenPhoto,
+  onEditPlacement,
 }: SummarySectionCardProps) {
   const Icon = SECTION_ICONS[section.title] || ClipboardList;
   const numStr = reportNumber ?? 'x';
@@ -52,6 +64,14 @@ export function SummarySectionCard({
       >
         {section.content}
       </Text>
+      {placedGroups && placedGroups.length > 0 ? (
+        <PlacedPhotoStrip
+          groups={placedGroups}
+          onOpenPhoto={onOpenPhoto}
+          onEditPlacement={onEditPlacement}
+          testID={`placed-photos-section-${idx}`}
+        />
+      ) : null}
     </Card>
   );
 }

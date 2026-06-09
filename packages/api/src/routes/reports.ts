@@ -44,8 +44,8 @@ import {
   finalizeReport,
   unfinalizeReport,
   setReportPdfFileId,
-  toReportResponse,
   placeNoteInReport,
+  toReportResponse,
   type ReportLastGeneration,
   type ReportRow,
 } from '../services/reports.js';
@@ -253,6 +253,64 @@ reportRoutes.openapi(
   },
 );
 
+// --------- attachment placement ----------
+reportRoutes.openapi(
+  createRoute({
+    method: 'patch',
+    path: '/projects/{project}/reports/{number}/attachments',
+    tags: ['reports'],
+    security: [{ bearerAuth: [] }],
+    middleware: [withAuth()] as const,
+    request: {
+      params: reportPathParam,
+      body: { content: { 'application/json': { schema: reportSchemas.placeReportAttachmentRequest } } },
+    },
+    responses: {
+      200: { description: 'Attachment placement updated.', content: { 'application/json': { schema: reportSchemas.placeReportAttachmentResponse } } },
+      400: { description: 'Bad request.', content: { 'application/json': { schema: errorEnvelope } } },
+      401: { description: 'Unauthorized.', content: { 'application/json': { schema: errorEnvelope } } },
+      404: { description: 'Not found.', content: { 'application/json': { schema: errorEnvelope } } },
+      409: { description: 'Stale report body version.', content: { 'application/json': { schema: reportSchemas.placeReportAttachmentResponse } } },
+    },
+  }),
+  async (c) => {
+    const userId = c.get('userId');
+    const db = c.get('db');
+    if (!db || !userId) throw new HTTPException(401);
+    const { project: slug, number } = c.req.valid('param');
+    const body = c.req.valid('json');
+
+    const project = await db((d) => getProjectBySlug(d, userId, slug, false));
+    if (!project || project.myRole === 'viewer') {
+      throw new HTTPException(404, { message: 'Report not found.' });
+    }
+
+    const report = await loadReport(db, slug, number);
+    const result = await db((d) =>
+      placeNoteInReport(
+        d,
+        report.id,
+        body.noteId,
+        body.target,
+        body.expectedBodyVersion,
+      ),
+    );
+    if (result.ok) {
+      return c.json({ report: toReportResponse(result.report) }, 200);
+    }
+    if (result.reason === 'conflict') {
+      return c.json({ report: toReportResponse(result.report) }, 409);
+    }
+    if (result.reason === 'wrong-kind') {
+      throw new HTTPException(400, { message: 'Attachment placement requires an image or document note.' });
+    }
+    if (result.reason === 'bad-target') {
+      throw new HTTPException(400, { message: 'Attachment target is out of range.' });
+    }
+    throw new HTTPException(404, { message: 'Report or note not found.' });
+  },
+);
+
 // --------- delete ----------
 reportRoutes.openapi(
   createRoute({
@@ -311,10 +369,9 @@ const generateResponses = {
  * `setReportBody` so old machines reading the counter see clean
  * state — see docs/superpowers/specs/2026-05-28-auto-regenerate-reports-design.md.
  *
- * Regenerate ALSO forwards the current `report.body` as `existingBody`
- * so the AI preserves any manual edits the user made in the Edit tab
- * since the last generation. Generate (first time) always sends
- * `existingBody: null` — there is nothing to preserve.
+ * The structured generation payload always includes the current
+ * `report.body` (null on first generate) so the model and persistence
+ * layer can preserve manual edits and attachment placement.
  */
 async function runGenerate(
   db: NonNullable<AppEnv['Variables']['db']>,
@@ -323,7 +380,6 @@ async function runGenerate(
   fixtureName: string | undefined,
   userVendor: Parameters<typeof aiGenerateReport>[0]['userVendor'],
   userModel: Parameters<typeof aiGenerateReport>[0]['userModel'],
-  options: { mode: 'generate' | 'regenerate' },
 ) {
   if (report.status === 'finalized') {
     throw new HTTPException(409, { message: 'Report is finalized.' });
@@ -339,15 +395,9 @@ async function runGenerate(
   // generated_at and the queue-of-one fires another regen.
   const snapshotTs = report.notesChangedAt;
   const payload = await db((d) => collectNotesForGeneration(d, report.id));
-  // Update path: include the user-edited body so the model preserves
-  // manual edits + user photo placements. First-time generate runs the
-  // cold-start prompt with `currentBody: null`.
-  const isUpdate = options.mode === 'regenerate';
-  if (!isUpdate) payload.currentBody = null;
   const requestedAt = new Date().toISOString();
   const out = await aiGenerateReport({
-    payload,
-    isUpdate,
+    notes: payload,
     fixtureName,
     userVendor,
     userModel,
@@ -370,7 +420,7 @@ async function runGenerate(
     usage: null,
   };
   const updated = await db((d) =>
-    setReportBody(d, report.id, out.body, lastGeneration, snapshotTs),
+    setReportBody(d, report.id, out.body, lastGeneration, snapshotTs, payload.currentBody),
   );
   if (!updated) throw new HTTPException(404, { message: 'Report not found.' });
   return {
@@ -406,7 +456,7 @@ reportRoutes.openapi(
     const body = c.req.valid('json');
     const report = await loadReport(db, slug, number);
     const settings = await db((d) => getAiSettings(d, userId));
-    const result = await runGenerate(db, userId, report, body.fixtureName, settings.vendor, settings.model, { mode: 'generate' });
+    const result = await runGenerate(db, userId, report, body.fixtureName, settings.vendor, settings.model);
     await db((d) => attachUsageWarning(d, userId, (k, v) => c.header(k, v)));
     return c.json({ report: toReportResponse(result.report), debug: result.debug }, 200);
   },
@@ -433,64 +483,9 @@ reportRoutes.openapi(
     const body = c.req.valid('json');
     const report = await loadReport(db, slug, number);
     const settings = await db((d) => getAiSettings(d, userId));
-    const result = await runGenerate(db, userId, report, body.fixtureName, settings.vendor, settings.model, { mode: 'regenerate' });
+    const result = await runGenerate(db, userId, report, body.fixtureName, settings.vendor, settings.model);
     await db((d) => attachUsageWarning(d, userId, (k, v) => c.header(k, v)));
     return c.json({ report: toReportResponse(result.report), debug: result.debug }, 200);
-  },
-);
-
-// ---------- PATCH /projects/:project/reports/:number/attachments ----------
-//
-// Move (or unplace) a single batch of attachments (image or document
-// note) into a target issue / summary section. Reshapes presentation
-// of existing content — does NOT bump notes_changed_at, so no regen
-// is queued. See docs/v4/design-photo-placement.md §"API surface".
-reportRoutes.openapi(
-  createRoute({
-    method: 'patch',
-    path: '/projects/{project}/reports/{number}/attachments',
-    tags: ['reports'],
-    security: [{ bearerAuth: [] }],
-    middleware: [withAuth()] as const,
-    request: {
-      params: reportPathParam,
-      body: { content: { 'application/json': { schema: reportSchemas.placeAttachmentRequest } } },
-    },
-    responses: {
-      200: { description: 'Placed.', content: { 'application/json': { schema: reportSchemas.placeAttachmentResponse } } },
-      400: { description: 'Bad target / wrong note kind.', content: { 'application/json': { schema: errorEnvelope } } },
-      401: { description: 'Unauthorized.', content: { 'application/json': { schema: errorEnvelope } } },
-      404: { description: 'Report or note not found.', content: { 'application/json': { schema: errorEnvelope } } },
-      409: { description: 'Body changed; client must refresh.', content: { 'application/json': { schema: reportSchemas.placeAttachmentConflictResponse } } },
-      423: { description: 'Report finalized; placement locked.', content: { 'application/json': { schema: errorEnvelope } } },
-    },
-  }),
-  async (c) => {
-    const db = c.get('db');
-    if (!db) throw new HTTPException(401);
-    const { project: slug, number } = c.req.valid('param');
-    const { noteId, target, expectedBodyVersion } = c.req.valid('json');
-    const report = await loadReport(db, slug, number);
-    const result = await db((d) =>
-      placeNoteInReport(d, report.id, noteId, target ?? null, expectedBodyVersion ?? null),
-    );
-    switch (result.kind) {
-      case 'ok':
-        return c.json({ report: toReportResponse(result.report) }, 200);
-      case 'not_found':
-        throw new HTTPException(404, { message: 'Note not found in this report.' });
-      case 'bad_note_kind':
-        throw new HTTPException(400, { message: 'Only image and document notes can be placed.' });
-      case 'bad_target':
-        throw new HTTPException(400, { message: 'Target index out of range.' });
-      case 'finalized':
-        throw new HTTPException(423, { message: 'Report is finalized; placement is locked.' });
-      case 'conflict':
-        return c.json(
-          { code: 'body_version_mismatch' as const, conflict: toReportResponse(result.report) },
-          409,
-        );
-    }
   },
 );
 

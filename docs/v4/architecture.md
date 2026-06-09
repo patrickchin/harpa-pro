@@ -1,6 +1,8 @@
 # v4 Architecture
 
-> **Status**: planning — the source of truth for the v4 rewrite.
+> **Status**: live — the source of truth for the v4 rewrite. P0 and P1
+> are complete; P2 shipped at `v0.2.0-shell`; P3 (Feature Build) is the
+> active phase. Per-section docs are kept in sync as features land.
 >
 > Read [`pitfalls.md`](pitfalls.md) before this doc. The architecture
 > below is shaped by the lessons recorded there.
@@ -16,7 +18,7 @@
    Review is manual against that source — there is no automated
    screenshot-diff gate. JSX + Tailwind classes copy across (both
    sides are NativeWind v4); only the data layer changes.
-4. **Fixtures everywhere expensive.** LLMs, Twilio, R2 PUT — every
+4. **Fixtures everywhere expensive.** LLMs, Resend email, R2 PUT — every
    external boundary has a record/replay layer baked in from P0.
 
 ## High-level component diagram
@@ -34,10 +36,10 @@ flowchart TB
     subgraph API["REST API (packages/api → Fly.io)"]
         HONO["Hono router"]
         SCOPE["withScopedConnection (per-request PG role)"]
-        BA["Auth handlers (jose JWTs)"]
+        BA["better-auth (sessions in public.session)"]
         DRIZZLE["Drizzle ORM"]
         AISVC["AI service (via ai-fixtures)"]
-        OTP["Twilio Verify (record/replay)"]
+        OTP["Resend email-OTP (better-auth)"]
         R2SIGN["R2 signed URL minter"]
     end
 
@@ -77,7 +79,7 @@ flowchart TB
 
 | Layer | v3 (deprecated) | v4 (this rewrite) | Why we changed |
 |---|---|---|---|
-| Auth | Supabase Auth (JWT, JWKS) | **Hand-rolled (jose + Twilio Verify)** | No Supabase. Self-hosted, easier to test. We deliberately did not adopt `better-auth`. |
+| Auth | Supabase Auth (JWT, JWKS) | **better-auth (email-OTP via Resend)**  | No Supabase. Self-hosted, easier to test. Migrated to better-auth in 2026-06 — see [arch-auth-and-rls.md](arch-auth-and-rls.md). |
 | DB | Supabase Postgres + RLS | **Neon Postgres** + per-request scoped roles | Free PR branching; RLS replaced by API-layer scope (no API service-role bypass risk). |
 | Storage | Supabase Storage | **Cloudflare R2** + signed URLs | No Supabase. R2 has zero egress, S3-compatible. |
 | Mobile styling | Unistyles (P2 onwards) | **NativeWind v4** | v3's switch to Unistyles caused the realignment. NativeWind matches mobile-old's class strings; faster ports. |
@@ -93,8 +95,8 @@ flowchart TB
 | # | Section | File | Description |
 |---|---|---|---|
 | 1 | API design | [arch-api-design.md](arch-api-design.md) | Endpoints, auth model, error format, pagination, rate limiting, OpenAPI strategy |
-| 1a | **Rate limiting** | [arch-rate-limiting.md](arch-rate-limiting.md) | **Per-route + shared AI + catch-all budgets; PostgresRateLimiter; SMS-pump protection on /auth/otp/*; multi-machine correctness** |
-| 2 | Auth + per-request scope | [arch-auth-and-rls.md](arch-auth-and-rls.md) | Hand-rolled JWT + OTP flow, Twilio Verify, scoped Postgres roles, RLS replacement, scope tests |
+| 1a | **Rate limiting** | [arch-rate-limiting.md](arch-rate-limiting.md) | **Per-route + shared AI + catch-all budgets; PostgresRateLimiter; SMS-pump protection on /api/auth/email-otp/*; multi-machine correctness** |
+| 2 | Auth + per-request scope | [arch-auth-and-rls.md](arch-auth-and-rls.md) | better-auth email-OTP (via Resend), scoped Postgres roles, RLS replacement, scope tests |
 | 3 | Data layer (mobile) | [arch-data-layer.md](arch-data-layer.md) | Generated client, React Query hooks, optimistic updates, error handling |
 | 4 | Mobile architecture | [arch-mobile.md](arch-mobile.md) | Directory structure, navigation, state, NativeWind tokens, primitives, upload queue, audio |
 | 4a | **Mobile navigation policy** | [arch-mobile-navigation.md](arch-mobile-navigation.md) | **push/replace/back/dismiss policy; per-call audit; back-stack pitfalls and `dismissOrReplaceTo` helper** |
@@ -114,6 +116,9 @@ flowchart TB
 | 14 | **Usage limits** | [arch-usage-limits.md](arch-usage-limits.md) | **Per-account monthly caps: plan model (free/pro/enterprise) + admin overrides, `enforceUsageLimit` chokepoint, 403 `usage_limit_exceeded` envelope, mobile dialog + near-limit toast** |
 | 15 | **Batch photo notes** | [arch-batch-photo-notes.md](arch-batch-photo-notes.md) | **One note → many photos; `note_files` join table, upload batch coordinator, `PhotoBatchGrid` UI** |
 | 16 | **Report auto-regen** | [arch-report-auto-regen.md](arch-report-auto-regen.md) | **DB-driven dirty flag (`notes_changed_at > generated_at`), race-safe snapshot semantic, mobile `useAutoRegenerate` hook** |
+| 17 | **Voice pipeline** | [arch-voice-pipeline.md](arch-voice-pipeline.md) | **End-to-end record → upload → transcribe → summarise → render pipeline; mobile recorder + API aggregator route + `VoiceNoteCard` (companion plan: [plan-voice-pipeline.md](plan-voice-pipeline.md))** |
+| 18 | **Mobile skeletons** | [arch-mobile-skeletons.md](arch-mobile-skeletons.md) | **Per-screen skeleton geometry policy to prevent layout-shift on hydrate** |
+| 19 | **App shell (P2.6)** | [arch-p2-6-app-shell.md](arch-p2-6-app-shell.md) | **Root provider tree, auth gate redirect, `(app)` tab/stack shape — design notes for the shell that landed in P2.6** |
 
 ## Repo layout (target end of P0)
 
@@ -155,7 +160,6 @@ scripts/
 
 docs/
   v4/                     # current
-  legacy-v3/              # reference
   bugs/                   # recurring bugs log
 
 skills/                   # auto-loaded
@@ -165,7 +169,7 @@ skills/                   # auto-loaded
 
 | Phase | Name | Exit gate (binding) |
 |---|---|---|
-| P0 | Foundation | All packages scaffold compiles. `ai-fixtures` works (replay + record). Hand-rolled OTP route hits Twilio sandbox + integration test green. Neon branch script tested in CI. |
+| P0 | Foundation | All packages scaffold compiles. `ai-fixtures` works (replay + record). better-auth email-OTP route hits Resend sandbox + integration test green. Neon branch script tested in CI. |
 | P1 | API Core | All routes implemented (zero stubs). `pnpm test:api && pnpm test:api:integration` green at ≥90% line coverage. Per-request scope tests cover every authed route. Fixture replay covers every AI route. |
 | P2 | Mobile Shell | Auth + nav + every primitive built. Every auth screen + projects list ported from `../haru3-reports/apps/mobile@dev` and reviewed manually. NativeWind tokens locked in `tailwind.config.js`. Screen bodies in `screens/<name>.tsx` are props-driven and unit-testable in isolation. |
 | P3 | Feature Build | Every screen from `../haru3-reports/apps/mobile@dev` ported, with: behaviour test for each interaction, Maestro flow. No screen is "stubbed" or "TODO redesign". |

@@ -29,11 +29,11 @@ tags:
     id: "btn-show-add-member"
 - extendedWaitUntil:
     visible:
-      id: "input-member-phone"
+      id: "input-member-email"
     timeout: 8000
 - tapOn:
-    id: "input-member-phone"
-- inputText: "${DEV_BOB_PHONE_E164}"
+    id: "input-member-email"
+- inputText: "${DEV_BOB_EMAIL}"
 - hideKeyboard
 - tapOn:
     id: "picker-member-role-viewer"

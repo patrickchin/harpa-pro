@@ -70,16 +70,23 @@ and [design-p31-slug-only-ids.md](design-p31-slug-only-ids.md).
 
 Two schemas in the same database:
 
-- `auth` — owned by our hand-rolled auth code (users, sessions).
-  Drizzle-managed schema; we did not adopt the `better-auth`
-  library. See [`arch-auth-and-rls.md`](arch-auth-and-rls.md).
+- `public` — owned by **better-auth** (migrated 2026-06; PR #124).
+  Tables: `user`, `session`, `account`, `verification`. Schema is
+  Drizzle-mirrored at `packages/api/src/db/auth-schema.ts` so it can be
+  joined and FK'd alongside the app tables. See
+  [`arch-auth-and-rls.md`](arch-auth-and-rls.md).
 - `app` — everything else: projects, project_members, reports,
-  notes, files (voice / image / document / pdf), user_settings,
-  waitlist_signups, llm_usage_events, user_limit_overrides,
-  rate_limit_buckets. Voice and image assets all live in the single
-  `files` table keyed by `file_kind`.
+  notes, files (voice / image / document / pdf), note_files,
+  user_settings, waitlist_signups, llm_usage_events,
+  user_limit_overrides, rate_limit_buckets. Voice and image assets
+  all live in the single `files` table keyed by `file_kind`.
 
-Cross-schema FK: `app.project_members.user_id REFERENCES auth.users(id)`.
+Cross-schema FK: `app.project_members.user_id REFERENCES public."user"(id)`.
+
+Historical note: the original `auth` schema (hand-rolled users +
+sessions) was replaced by better-auth's `public` tables in
+migration `0014_better_auth_init.sql`. Older docs and migrations
+that reference `auth.users(id)` describe the pre-migration shape.
 
 ## Connection model
 

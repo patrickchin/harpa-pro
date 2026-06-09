@@ -277,12 +277,12 @@ export interface EffectiveLimits {
 }
 
 /**
- * Load `auth.users.plan` + any `app.user_limit_overrides` row + the
+ * Load `public."user".plan` + any `app.user_limit_overrides` row + the
  * current-month used counts/sums for every bucket. Returns the wire
  * shape for `/me/limits` + the `limits` extension of `/me/usage`.
  *
  * Runs against the scoped DB so RLS pins reads to the caller. The
- * `auth.users.plan` column is readable via the existing
+ * `public."user".plan` column is readable via the existing
  * `users_self_select` policy. The override row read uses the new
  * `user_limit_overrides_self_select` policy.
  */
@@ -483,7 +483,7 @@ async function loadPlanAndOverride(
   userId: string,
 ): Promise<{ plan: Plan; overrideRow: OverrideRow | null }> {
   const planRes = await db.execute<{ plan: Plan }>(sql`
-    SELECT plan FROM auth.users WHERE id = ${userId} LIMIT 1
+    SELECT plan FROM public."user" WHERE id = ${userId} LIMIT 1
   `);
   const planRow = planRes.rows[0];
   if (!planRow) {
@@ -681,6 +681,6 @@ export async function deleteUserLimitOverride(targetUserId: string): Promise<voi
 
 export async function updateUserPlan(targetUserId: string, plan: Plan): Promise<void> {
   await rawDb().execute(sql`
-    UPDATE auth.users SET plan = ${plan}, updated_at = now() WHERE id = ${targetUserId}
+    UPDATE public."user" SET plan = ${plan}, updated_at = now() WHERE id = ${targetUserId}
   `);
 }

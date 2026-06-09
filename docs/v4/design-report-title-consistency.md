@@ -1,6 +1,8 @@
 # Design — Report Title Consistency + Finalized Layout Cleanup
 
-Status: drafted 2026-05-28.
+Status: ✅ **Shipped.** `report.meta.title` is now the single canonical
+title surface (verified via `packages/report-core/src/report-helpers.ts`
+and the generated-report tests). Doc retained for design rationale.
 
 ## Problem
 

@@ -115,7 +115,7 @@ Pipeline section.
 `client.ts` reads the active session token from
 `lib/auth/session` (`useAuthSession`, which mirrors secure-store)
 and attaches it to every request. On 401, it triggers `signOut()`
-and the `(app)` layout redirects to `(auth)/sign-in/phone`.
+and the `(app)` layout redirects to `(auth)/sign-in/email`.
 
 ## Perceived-speed: persistence, prefetch, initialData
 

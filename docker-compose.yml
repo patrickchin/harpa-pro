@@ -109,7 +109,7 @@ services:
       # Dockerfile sets MIGRATIONS_REQUIRED_HEAD="" via empty ARG, which
       # fails env.ts's regex on boot. Pin to the current head so the API
       # starts cleanly in the compose stack. Bump when adding migrations.
-      MIGRATIONS_REQUIRED_HEAD: 0004_notes_voice_columns.sql
+      MIGRATIONS_REQUIRED_HEAD: 0014_better_auth_init.sql
       DATABASE_URL: postgres://postgres:pg@pg:5432/harpa
       # Live storage backed by MinIO (in-network). R2_PUBLIC_ENDPOINT
       # is what the host-side CLI/browser sees in presigned URLs.
@@ -129,6 +129,9 @@ services:
       # makes the compose stack reproducible across machines.
       BETTER_AUTH_SECRET: dev-only-secret-do-not-use-in-prod
       BETTER_AUTH_URL: http://localhost:8787
+      # Required by PR128's hardened dev OTP route. Keep this in sync
+      # with the DEV_OTP_TOKEN exported for Maestro.
+      DEV_OTP_TOKEN: ${DEV_OTP_TOKEN:?DEV_OTP_TOKEN must be set (>=32 chars) for local E2E}
       WAITLIST_IP_HASH_SALT: dev-only-waitlist-salt
       WAITLIST_CONFIRM_BASE_URL: http://localhost:3002/confirm
       # tsx watch needs polling inside Docker on macOS/Windows where

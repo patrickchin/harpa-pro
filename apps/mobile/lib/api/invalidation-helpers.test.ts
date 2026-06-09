@@ -30,8 +30,8 @@ describe('runInvalidations', () => {
 
   it('is a no-op for INVALIDATIONS_NONE rules', () => {
     const { qc, spy } = makeClient();
-    // `useStartOtpMutation` → INVALIDATIONS_NONE
-    runInvalidations(qc, 'useStartOtpMutation');
+    // `usePresignFileMutation` → INVALIDATIONS_NONE
+    runInvalidations(qc, 'usePresignFileMutation');
     expect(spy).not.toHaveBeenCalled();
   });
 

@@ -56,7 +56,7 @@ tags:
 - runFlow:
     file: ../helpers/sign-in.yaml
     env:
-      PHONE: "5550000002"
+      EMAIL: "bob@e2e.harpapro.com"
 
 # Bob's project list should be empty (no project row for alice's project)
 - assertNotVisible:
@@ -67,5 +67,5 @@ tags:
 - runFlow:
     file: ../helpers/sign-in.yaml
     env:
-      PHONE: "5550000001"
+      EMAIL: "alice@e2e.harpapro.com"
 - runFlow: ../helpers/open-project.yaml

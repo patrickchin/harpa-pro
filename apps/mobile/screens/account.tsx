@@ -2,7 +2,7 @@
  * Account screen body — props-only, no API / auth / secure-store coupling.
  *
  * Ported from `../haru3-reports/apps/mobile/app/account.tsx` on branch
- * `dev`. Renders the account details form with an avatar slot, phone
+ * `dev`. Renders the account details form with an avatar slot, email
  * (read-only — managed via OTP) + inline-editable display name +
  * company name.
  *
@@ -28,7 +28,7 @@ import { colors } from '@/lib/design-tokens/colors';
 import { useLayoutShiftProbe } from '@/lib/util/layout-shift-probe';
 
 export interface AccountProfile {
-  phone: string;
+  email: string;
   fullName: string | null;
   companyName: string | null;
 }
@@ -93,7 +93,7 @@ export function Account({
   // moves between the skeleton frame and the loaded frame.
   const onAvatarLayout = useLayoutShiftProbe('account:avatar');
   const onInfoNoticeLayout = useLayoutShiftProbe('account:info-notice');
-  const onPhoneFieldLayout = useLayoutShiftProbe('account:phone-field');
+  const onEmailFieldLayout = useLayoutShiftProbe('account:email-field');
   const onCompanyFieldLayout = useLayoutShiftProbe('account:company-field');
 
   // Reset draft fields whenever the underlying profile changes (e.g.
@@ -188,14 +188,14 @@ export function Account({
 
             <View onLayout={onInfoNoticeLayout}>
               <InlineNotice tone="info">
-                Phone numbers are managed through sign-in. Contact support if you need to recover access to a different number.
+                Email is managed through sign-in. Contact support if you need to recover access to a different address.
               </InlineNotice>
             </View>
 
-            <View onLayout={onPhoneFieldLayout}>
+            <View onLayout={onEmailFieldLayout}>
               <Input
-                label="Phone"
-                value={profile.phone}
+                label="Email"
+                value={profile.email}
                 editable={false}
               />
             </View>

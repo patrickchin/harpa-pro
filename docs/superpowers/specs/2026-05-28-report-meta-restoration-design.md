@@ -1,5 +1,7 @@
 # Report meta restoration — design spec
 
+> **Status:** ✅ Shipped. Report meta fields are back end-to-end.
+
 ## Problem
 
 PR #36 (commit `bf12d35`, 24 May 2026) realigned the report-generation

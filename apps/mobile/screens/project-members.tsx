@@ -5,7 +5,7 @@
  * on branch `dev`. Adapted for v4 contract:
  *   - 3 roles (owner / editor / viewer), not 4 (no admin)
  *   - Owner is computed by Project.ownerId === member.userId
- *   - Member fields: { userId, displayName, phone, role, joinedAt }
+ *   - Member fields: { userId, displayName, email, role, joinedAt }
  *
  * Inline AddMemberForm + remove-confirm dialog keep this one body file
  * self-contained (no separate components/members/ tree to port).
@@ -40,7 +40,7 @@ export type MemberRole = 'owner' | 'editor' | 'viewer';
 export type MemberRow = {
   userId: string;
   displayName: string | null;
-  phone: string;
+  email: string;
   role: MemberRole;
   joinedAt: string;
 };
@@ -54,7 +54,7 @@ export type ProjectMembersProps = {
   refreshing: boolean;
   onRefresh: () => void;
   onBack: () => void;
-  onAddMember: (input: { phone: string; role: 'editor' | 'viewer' }) => void;
+  onAddMember: (input: { email: string; role: 'editor' | 'viewer' }) => void;
   isAddPending: boolean;
   addError: string | null;
   /**
@@ -134,7 +134,7 @@ function MemberItem({
           <RoleBadge role={member.role} userId={member.userId} />
         </View>
         <Text className="text-sm text-muted-foreground" numberOfLines={1}>
-          {member.phone}
+          {member.email}
         </Text>
       </View>
       {canRemove && onRemove ? (
@@ -157,37 +157,40 @@ function AddMemberForm({
   isPending,
   errorMessage,
 }: {
-  onAdd: (input: { phone: string; role: 'editor' | 'viewer' }) => void;
+  onAdd: (input: { email: string; role: 'editor' | 'viewer' }) => void;
   isPending: boolean;
   errorMessage: string | null;
 }) {
-  const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
   const [role, setRole] = useState<'editor' | 'viewer'>('editor');
   const [validation, setValidation] = useState<string | null>(null);
 
   const submit = () => {
-    if (!phone.trim()) {
-      setValidation('Phone number is required.');
+    if (!email.trim()) {
+      setValidation('Email address is required.');
       return;
     }
     setValidation(null);
-    onAdd({ phone: phone.trim(), role });
+    onAdd({ email: email.trim().toLowerCase(), role });
   };
 
   return (
     <Card variant="muted" padding="md" className="gap-3">
       <Text className="text-title-sm text-foreground">Invite a teammate</Text>
       <Input
-        label="Phone number"
-        placeholder="+1 555 123 4567"
-        value={phone}
+        label="Email address"
+        placeholder="teammate@example.com"
+        value={email}
         onChangeText={(v) => {
-          setPhone(v);
+          setEmail(v);
           setValidation(null);
         }}
         editable={!isPending}
-        keyboardType="phone-pad"
-        testID="input-member-phone"
+        keyboardType="email-address"
+        autoCapitalize="none"
+        autoCorrect={false}
+        autoComplete="email"
+        testID="input-member-email"
       />
       <View className="flex-row gap-2" testID="picker-member-role">
         {(['editor', 'viewer'] as const).map((r) => (
@@ -310,6 +313,7 @@ export function ProjectMembers({
             gap: PROJECT_MEMBERS_LAYOUT.gap,
           }}
           automaticallyAdjustKeyboardInsets
+          keyboardDismissMode="interactive"
           keyboardShouldPersistTaps="handled"
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />

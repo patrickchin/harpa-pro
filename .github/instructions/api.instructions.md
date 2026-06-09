@@ -23,10 +23,10 @@ description: "API-specific rules for the Hono REST API. Loads automatically when
 ## Default-wiring rule (Pitfall 13)
 
 - Every collaborator factory (`createTurnstileClient`,
-  `createR2Client`, `createTwilioClient`, AI provider clients, …)
+  `createR2Client`, `createResendClient`, AI provider clients, …)
   needs **at least one integration test that exercises the route
   without stubbing the factory**, asserting the real side-effect
-  (HTTP call, signed URL shape, Twilio Verify payload).
+  (HTTP call, signed URL shape, queued Resend email).
 - DI stubs are for negative-path branches only. Default wiring is
   the spec.
 

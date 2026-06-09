@@ -6,13 +6,23 @@
  * Layout (single row, ~68px tall to match the input bar):
  *
  *   ┌─────────────────────────────────────────────────────────────┐
- *   │ [🗑]  ● 0:08  ▁▂▅▇▆▃▁▂▄▆▇▅▃▁▂▄▆ …  [Send ▶]                  │
+ *   │ [🗑]  ● 0:08         ▁▂▅▇▆▃▁▂▄▆▇▅▃▁▂▄▆ …  [Send ▶]           │
+ *   │       Max 15:00                                              │
  *   └─────────────────────────────────────────────────────────────┘
  *
  *   • Trash button (destructive ghost) — cancels and discards local audio.
- *   • Pulsing red dot + monospaced duration counter.
+ *   • Pulsing red dot + monospaced duration counter, with a "Max 15:00"
+ *     hint underneath. Once `durationMs ≥ WARNING_DURATION_MS` (10 min),
+ *     the counter flips to destructive colour and the hint becomes a
+ *     "X:XX left" countdown so the user can wrap up before the cap.
  *   • Scrolling waveform — last N amplitude samples rendered as bars.
  *   • Primary Send button — stops, finalises, hands result to onSend.
+ *   • Auto-send: when `durationMs >= MAX_DURATION_MS` we fire `onSend`
+ *     once, plus `onMaxDuration` so the provider can surface a dialog
+ *     explaining why the recording was cut off. 15 min × 32 kbps AAC
+ *     ≈ 3.5 MB — comfortably under the 25 MB server cap
+ *     (`packages/api/src/routes/voice.ts`) and Groq Whisper's 25 MB
+ *     free-tier ceiling. See `docs/v4/arch-voice-pipeline.md` §D5.
  *
  * Pure presentational. State is owned by `useInlineRecorder` (provider).
  * Errors and the permission gate are rendered by the provider as
@@ -27,7 +37,7 @@ import Reanimated, {
   useAnimatedStyle,
   withSpring,
 } from 'react-native-reanimated';
-import { Send, Trash2 } from 'lucide-react-native';
+import { AlertTriangle, Send, Trash2 } from 'lucide-react-native';
 
 import { colors } from '@/lib/design-tokens/colors';
 import { HISTORY_SIZE } from './useInlineRecorder';
@@ -37,6 +47,12 @@ export interface InlineVoiceRecorderProps {
   historyBars: readonly number[];
   onSend: () => void;
   onCancel: () => void;
+  /**
+   * Fires exactly once per recording when the hard cap is reached.
+   * Provider uses this to surface an `AppDialogSheet` alert explaining
+   * why the note was sent automatically. `onSend` also fires.
+   */
+  onMaxDuration?: () => void;
   /** Disables Send while the underlying pipeline is finalising. */
   sending?: boolean;
 }
@@ -45,6 +61,16 @@ const BAR_MIN_HEIGHT = 4;
 const BAR_MAX_HEIGHT = 32;
 const BAR_WIDTH = 3;
 const BAR_GAP = 2;
+
+/**
+ * Hard cap on a single recording. At 32 kbps mono AAC this is ≈ 3.5 MB,
+ * keeping us well under Groq Whisper's 25 MB free-tier limit and our
+ * own 25 MB server cap. Cap is enforced client-side; the server still
+ * 413s on file size as a defence in depth (see HARPA-PRO-D postmortem).
+ */
+export const MAX_DURATION_MS = 15 * 60 * 1000;
+/** Soft warning: counter turns destructive 5 min before the hard stop. */
+export const WARNING_DURATION_MS = 10 * 60 * 1000;
 
 function formatDuration(ms: number): string {
   const totalSec = Math.floor(ms / 1000);
@@ -101,8 +127,13 @@ const SPRING_CONFIG = {
 
 /**
  * Single animated bar. `useSharedValue` + `useAnimatedStyle` run on the
- * UI thread via Reanimated, so height transitions are always 60 fps even
- * when the JS thread is busy.
+ * UI thread via Reanimated, so height transitions are always 60 fps
+ * even when the JS thread is busy. `useInlineRecorder` pushes a fresh
+ * amplitude sample every ~200 ms, which shifts every bar's `targetHeight`
+ * one slot left; each shift retargets the bar's spring, and the
+ * 60 fps interpolation between consecutive sample heights is what gives
+ * the waveform its smooth Telegram/WhatsApp feel. Plain `<View>`s update
+ * in visible 5 Hz steps and look noticeably janky on a real device.
  */
 function WaveformBar({ targetHeight, hasSignal }: { targetHeight: number; hasSignal: boolean }) {
   const animHeight = useSharedValue(BAR_MIN_HEIGHT);
@@ -133,7 +164,8 @@ function WaveformBar({ targetHeight, hasSignal }: { targetHeight: number; hasSig
  * Right-anchored scrolling waveform. We render exactly HISTORY_SIZE
  * bars (padding empty slots on the left while the buffer fills) so
  * the layout doesn't reflow as samples arrive. Each bar animates its
- * height independently via Reanimated for smooth 60 fps transitions.
+ * height independently via Reanimated for smooth 60 fps transitions
+ * between the 5 Hz amplitude samples coming out of `useInlineRecorder`.
  */
 function Waveform({ bars }: { bars: readonly number[] }) {
   const padded: readonly number[] = bars.length >= HISTORY_SIZE
@@ -160,13 +192,29 @@ export function InlineVoiceRecorder({
   historyBars,
   onSend,
   onCancel,
+  onMaxDuration,
   sending = false,
 }: InlineVoiceRecorderProps): React.JSX.Element {
+  const autoSentRef = useRef(false);
+  useEffect(() => {
+    if (autoSentRef.current) return;
+    if (sending) return;
+    if (durationMs >= MAX_DURATION_MS) {
+      autoSentRef.current = true;
+      onMaxDuration?.();
+      onSend();
+    }
+  }, [durationMs, sending, onSend, onMaxDuration]);
+
+  const isWarning = durationMs >= WARNING_DURATION_MS;
+  const remainingMs = Math.max(0, MAX_DURATION_MS - durationMs);
   return (
     <View
       testID="voice-record-strip"
       accessibilityLabel="Recording voice note"
-      className="min-h-[68px] flex-1 flex-row items-center gap-3 rounded-xl border border-border bg-card px-3 py-2"
+      className={`min-h-[68px] flex-1 flex-row items-center gap-3 rounded-xl border bg-card px-3 py-2 ${
+        isWarning ? 'border-destructive/60' : 'border-border'
+      }`}
     >
       <Pressable
         onPress={onCancel}
@@ -182,12 +230,35 @@ export function InlineVoiceRecorder({
 
       <View className="flex-row items-center gap-2">
         <RecordingDot />
-        <Text
-          testID="voice-record-duration"
-          className="min-w-[36px] text-base font-semibold tabular-nums text-foreground"
-        >
-          {formatDuration(durationMs)}
-        </Text>
+        <View>
+          <Text
+            testID="voice-record-duration"
+            className={`min-w-[36px] text-base font-semibold tabular-nums ${
+              isWarning ? 'text-destructive' : 'text-foreground'
+            }`}
+          >
+            {formatDuration(durationMs)}
+          </Text>
+          {isWarning ? (
+            <View className="flex-row items-center gap-1">
+              <AlertTriangle size={10} color={colors.destructive.DEFAULT} />
+              <Text
+                testID="voice-record-remaining"
+                accessibilityLabel={`${formatDuration(remainingMs)} remaining before automatic stop`}
+                className="text-[10px] font-semibold tabular-nums text-destructive"
+              >
+                {formatDuration(remainingMs)} left
+              </Text>
+            </View>
+          ) : (
+            <Text
+              testID="voice-record-max"
+              className="text-[10px] text-muted-foreground"
+            >
+              Max {formatDuration(MAX_DURATION_MS)}
+            </Text>
+          )}
+        </View>
       </View>
 
       <Waveform bars={historyBars} />

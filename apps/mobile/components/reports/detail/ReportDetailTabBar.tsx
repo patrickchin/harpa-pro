@@ -1,21 +1,21 @@
 /**
- * ReportDetailTabBar — three-tab bar (Report / Notes / Edit) with an
- * optional notes-count badge. Ported verbatim from
- * `../haru3-reports/apps/mobile/components/reports/detail/ReportDetailTabBar.tsx`
- * on branch `dev`. Edit tab is hidden once the report is finalized.
+ * ReportDetailTabBar — two-tab bar (Report / Notes) with an optional
+ * notes-count badge. Originally three-tab including an Edit tab; the
+ * Edit tab was removed when saved-report editing moved to a per-card
+ * full-screen modal — see
+ * `docs/superpowers/specs/2026-06-03-report-edit-modal-redesign-design.md`.
  */
 import { Pressable, Text, View } from 'react-native';
-import { FileText, MessageSquare, Pencil } from 'lucide-react-native';
+import { FileText, MessageSquare } from 'lucide-react-native';
 
 import { colors } from '@/lib/design-tokens/colors';
 
-export type ReportDetailTab = 'report' | 'notes' | 'edit';
+export type ReportDetailTab = 'report' | 'notes';
 
 interface ReportDetailTabBarProps {
   activeTab: ReportDetailTab;
   onChange: (tab: ReportDetailTab) => void;
   notesCount?: number;
-  showEditTab?: boolean;
   /**
    * Whether the Notes tab is shown inline. Finalised reports hide the
    * Notes tab and surface the notes screen via the Actions menu
@@ -28,7 +28,6 @@ export function ReportDetailTabBar({
   activeTab,
   onChange,
   notesCount,
-  showEditTab = true,
   showNotesTab = true,
 }: ReportDetailTabBarProps) {
   const notesLabel =
@@ -89,34 +88,6 @@ export function ReportDetailTabBar({
             }`}
           >
             {notesLabel}
-          </Text>
-        </Pressable>
-      ) : null}
-      {showEditTab ? (
-        <Pressable
-          testID="btn-tab-edit"
-          onPress={() => onChange('edit')}
-          className={`flex-1 flex-row items-center justify-center gap-2 rounded-md py-3 ${
-            activeTab === 'edit' ? 'bg-foreground' : ''
-          }`}
-        >
-          <Pencil
-            size={16}
-            color={
-              activeTab === 'edit'
-                ? colors.primary.foreground
-                : colors.muted.foreground
-            }
-            style={{ marginTop: 1 }}
-          />
-          <Text
-            className={`text-sm font-semibold ${
-              activeTab === 'edit'
-                ? 'text-primary-foreground'
-                : 'text-muted-foreground'
-            }`}
-          >
-            Edit
           </Text>
         </Pressable>
       ) : null}

@@ -1,6 +1,6 @@
 # Mobile app structure simplification — design
 
-**Status:** Draft (awaiting user review)
+**Status:** ✅ Shipped (PR #84, commit 3a8fbb57)
 **Scope:** `apps/mobile/` directory layout only. No behaviour changes,
 no API changes, no component renames besides one (`mobile-ui.ts` →
 `report-ui.ts`).

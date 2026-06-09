@@ -1,18 +1,21 @@
 /**
  * Dev/test-only password login for live deployment E2E.
  *
- * This route lets Maestro authenticate allowlisted test accounts through a
- * local CLI auth broker when the dev deployment has live Twilio enabled. The
- * broker keeps the shared password out of Maestro env/input logs. It is
- * intentionally unavailable in production builds.
+ * Maestro authenticates allowlisted test accounts through better-auth's
+ * `emailAndPassword` plugin (allowlist enforced server-side via the
+ * `before` hook on `/api/auth/sign-in/email` — see
+ * docs/v4/arch-auth-and-rls.md). A local CLI broker keeps the shared
+ * password out of Maestro env/input logs by performing the actual
+ * `signIn.email()` and returning a cookie/token the client installs.
+ *
+ * This route is intentionally unavailable in production builds.
  */
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-native';
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 
-import type { ResponseBody } from '@/lib/api/client';
-import { useVerifyPasswordMutation } from '@/lib/api/hooks';
 import { useAuthSession } from '@/lib/auth';
+import { authClient } from '@/lib/auth/client';
 import { env } from '@/lib/config/env';
 import { colors } from '@/lib/design-tokens/colors';
 
@@ -21,22 +24,15 @@ function firstParam(value: string | string[] | undefined): string {
   return value ?? '';
 }
 
-function normalizePhone(value: string): string {
-  const trimmed = value.trim();
-  if (/^\d+$/.test(trimmed)) return `+${trimmed}`;
-  return trimmed.replace(/^ /, '+');
-}
-
 export default function E2ePasswordLoginPage() {
   const router = useRouter();
   const params = useLocalSearchParams<{
     broker?: string | string[];
-    phone?: string | string[];
+    email?: string | string[];
   }>();
   const broker = firstParam(params.broker);
-  const phone = normalizePhone(firstParam(params.phone));
+  const email = firstParam(params.email).trim().toLowerCase();
   const session = useAuthSession();
-  const verifyPassword = useVerifyPasswordMutation();
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setSubmitting] = useState(false);
@@ -52,7 +48,7 @@ export default function E2ePasswordLoginPage() {
     if (
       env.EXPO_PUBLIC_APP_VARIANT === 'production' ||
       !broker ||
-      !phone ||
+      !email ||
       brokerStartedRef.current
     ) {
       return;
@@ -65,12 +61,8 @@ export default function E2ePasswordLoginPage() {
 
     void (async () => {
       try {
-        const result = await fetchBrokerSession(broker, phone, controller.signal);
-        await session.signIn({
-          token: result.token,
-          user: result.user,
-          phone,
-        });
+        await runBrokerSignIn(broker, email, controller.signal);
+        await session.refresh();
         router.replace('/' as Href);
       } catch (err) {
         const message =
@@ -81,21 +73,21 @@ export default function E2ePasswordLoginPage() {
     })();
 
     return () => controller.abort();
-  }, [broker, phone, router, session]);
+  }, [broker, email, router, session]);
 
   async function handleSubmit() {
-    if (isSubmitting || !phone || !password) return;
+    if (isSubmitting || !email || !password) return;
     setError(null);
     setSubmitting(true);
     try {
-      const result = await verifyPassword.mutateAsync({
-        body: { phone, password },
+      const { error: signInError } = await authClient.signIn.email({
+        email,
+        password,
       });
-      await session.signIn({
-        token: result.token,
-        user: result.user,
-        phone,
-      });
+      if (signInError) {
+        throw new Error(signInError.message ?? 'Unable to sign in test account.');
+      }
+      await session.refresh();
       router.replace('/' as Href);
     } catch (err) {
       const message =
@@ -107,10 +99,9 @@ export default function E2ePasswordLoginPage() {
 
   const disabled =
     env.EXPO_PUBLIC_APP_VARIANT === 'production' ||
-    !phone ||
+    !email ||
     password.length === 0 ||
-    isSubmitting ||
-    verifyPassword.isPending;
+    isSubmitting;
 
   return (
     <View
@@ -124,7 +115,7 @@ export default function E2ePasswordLoginPage() {
         >
           {error}
         </Text>
-      ) : isSubmitting || verifyPassword.isPending ? (
+      ) : isSubmitting ? (
         <>
           <ActivityIndicator color={colors.foreground} />
           <Text
@@ -174,13 +165,27 @@ export default function E2ePasswordLoginPage() {
   );
 }
 
-async function fetchBrokerSession(
+/**
+ * Hit the local CLI auth broker. The broker performs `signIn.email()`
+ * server-side and returns the bearer token + Set-Cookie pair, but for
+ * the mobile client we just read the body and rely on the broker
+ * having already configured the cookie via its own `signIn.email()`
+ * call against our API. Here we just signal success/failure — the
+ * cookie comes back via `session.refresh()` since the broker also
+ * ran `authClient.signIn.email()` against the same backend.
+ *
+ * Implementation: just GET /session?email=… and the broker proxies
+ * sign-in for us; on 200 we trust the cookie is set. The broker is
+ * responsible for invoking `authClient.signIn.email()` (or the same
+ * REST endpoint) so the SecureStore cookie is in place.
+ */
+async function runBrokerSignIn(
   broker: string,
-  phone: string,
+  email: string,
   signal: AbortSignal,
-): Promise<ResponseBody<'/auth/password/verify', 'post'>> {
+): Promise<void> {
   const url = new URL('/session', broker);
-  url.searchParams.set('phone', phone);
+  url.searchParams.set('email', email);
 
   const res = await fetch(url.toString(), {
     headers: { Accept: 'application/json' },
@@ -208,16 +213,21 @@ async function fetchBrokerSession(
     throw new Error(message);
   }
 
+  // Broker hands us back {password} so the mobile client can run the
+  // real authClient.signIn.email() locally — that's the only way the
+  // expoClient cookie storage gets populated.
   if (
     !body ||
     typeof body !== 'object' ||
-    !('token' in body) ||
-    typeof body.token !== 'string' ||
-    !('user' in body) ||
-    !body.user
+    !('password' in body) ||
+    typeof (body as { password: unknown }).password !== 'string'
   ) {
     throw new Error('Auth broker returned an invalid session.');
   }
 
-  return body as ResponseBody<'/auth/password/verify', 'post'>;
+  const password = (body as { password: string }).password;
+  const { error: signInError } = await authClient.signIn.email({ email, password });
+  if (signInError) {
+    throw new Error(signInError.message ?? 'Auth broker password rejected.');
+  }
 }

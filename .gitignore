@@ -80,3 +80,6 @@ apps/mobile/fastlane/report.xml
 apps/mobile/fastlane/README.md
 apps/mobile/fastlane/Preview.html
 apps/mobile/fastlane/test_output/
+
+# Husky auto-installs hook shims here (e.g. git-lfs). Machine-local, not portable.
+.husky/_/

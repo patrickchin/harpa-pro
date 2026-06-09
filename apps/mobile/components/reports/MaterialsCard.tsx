@@ -11,13 +11,15 @@ import { getItemMeta } from '@harpa/report-core';
 
 import { Card } from '@/components/primitives/Card';
 import { SectionHeader } from '@/components/primitives/SectionHeader';
+import { EditPencilButton } from '@/components/reports/edit/EditPencilButton';
 import { colors } from '@/lib/design-tokens/colors';
 
 interface MaterialsCardProps {
   materials: readonly GeneratedReportMaterial[];
+  onEdit?: () => void;
 }
 
-export function MaterialsCard({ materials }: MaterialsCardProps) {
+export function MaterialsCard({ materials, onEdit }: MaterialsCardProps) {
   if (materials.length === 0) return null;
 
   return (
@@ -26,6 +28,15 @@ export function MaterialsCard({ materials }: MaterialsCardProps) {
         title="Materials"
         subtitle={`${materials.length} material${materials.length === 1 ? '' : 's'} recorded.`}
         icon={<Package size={16} color={colors.foreground} />}
+        trailing={
+          onEdit ? (
+            <EditPencilButton
+              onPress={onEdit}
+              accessibilityLabel="Edit materials"
+              testID="btn-edit-materials"
+            />
+          ) : undefined
+        }
       />
 
       <View className="mt-4 gap-3">

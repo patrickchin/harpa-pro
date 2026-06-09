@@ -137,21 +137,26 @@ jobs:
 
       # Closes the loop on the 2026-05-20 incident: a green workflow now
       # means the new image is up AND able to serve real traffic against
-      # the migrated schema. Retries cover Fly's first-machine warmup.
+      # the migrated schema. Prod runs `min_machines_running = 2` so
+      # machines stay warm, but we share scripts/ci/verify-readyz.sh
+      # with api-dev.yml so the verify behaviour can't drift between
+      # environments. See docs/bugs/README.md.
       - name: Verify /readyz
+        env:
+          READYZ_URL: ${{ env.API_READY_URL }}
+        run: bash scripts/ci/verify-readyz.sh
+
+      - name: Diagnose readyz failure
+        if: failure()
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
         run: |
-          set -euo pipefail
-          for i in 1 2 3 4 5; do
-            if curl --fail --silent --show-error --max-time 5 "$API_READY_URL"; then
-              echo
-              echo "readyz ok"
-              exit 0
-            fi
-            echo "readyz attempt $i failed, retrying..."
-            sleep 5
-          done
-          echo "readyz never returned 200 — investigate Fly logs" >&2
-          exit 1
+          echo "::group::flyctl status"
+          flyctl status --app harpa-pro-api || true
+          echo "::endgroup::"
+          echo "::group::flyctl logs (last 200 lines)"
+          flyctl logs --app harpa-pro-api --no-tail || true
+          echo "::endgroup::"
 
       - name: Post-deploy journey tests
         # Runs curl journey scripts against the just-deployed prod API.

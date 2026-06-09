@@ -3,6 +3,7 @@
 **Date:** 2026-05-28
 **Branch:** `agents/client-side-thumbnail-upload`
 **Revision:** v2.1 (incorporates spec reviews of v1 and v2)
+**Status:** ✅ Shipped
 
 ---
 

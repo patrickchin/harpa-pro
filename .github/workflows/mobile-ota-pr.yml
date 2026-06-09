@@ -57,17 +57,25 @@ jobs:
 
       - name: Push OTA update to development channel
         working-directory: apps/mobile
-        # `EXPO_PUBLIC_API_URL` is inlined into the JS bundle by Metro at
-        # `eas update` time, so each PR's bundle is hardcoded to its own
-        # Fly preview API (`harpa-pro-api-pr-<n>.fly.dev`, deployed by
-        # pr-preview.yml). The `development` EAS branch holds only the
-        # most recent PR push — engineers select older PR bundles via
-        # the dev-client launcher (Updates → development → pick).
+        # Each PR's bundle must talk to its own per-PR Fly preview API
+        # (`harpa-pro-api-pr-<n>.fly.dev`, deployed by pr-preview.yml).
+        # The `development` EAS branch holds only the most recent PR
+        # push — engineers select older PR bundles via the dev-client
+        # launcher (Updates → development → pick).
+        #
+        # Why `EXPO_PUBLIC_API_URL_OVERRIDE` and not just
+        # `EXPO_PUBLIC_API_URL`: passing `--environment development`
+        # pulls EAS-managed env vars (Sentry DSN + auth token used for
+        # source-map upload) and those values *override* the
+        # workflow's shell env when the same key is defined on EAS.
+        # `EXPO_PUBLIC_API_URL` is one of those keys (it's set to the
+        # shared dev Fly app on EAS), so setting it from the shell
+        # silently has no effect. The override key is intentionally
+        # NOT defined on EAS, so the shell value wins; `lib/config/env.ts`
+        # prefers the override when present. See pitfalls.md.
         env:
-          EXPO_PUBLIC_API_URL: https://harpa-pro-api-pr-${{ github.event.pull_request.number }}.fly.dev
+          EXPO_PUBLIC_API_URL_OVERRIDE: https://harpa-pro-api-pr-${{ github.event.pull_request.number }}.fly.dev
           EXPO_PUBLIC_PR_NUMBER: ${{ github.event.pull_request.number }}
-          EXPO_PUBLIC_APP_VARIANT: development
-          EXPO_PUBLIC_USE_FIXTURES: "false"
         run: |
           eas update \
             --channel development \

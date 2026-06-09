@@ -4,7 +4,7 @@
 # Grep gate: verify that every testID referenced in the NEW Maestro regression
 # YAML files actually exists in the mobile source code.
 #
-# Only checks .maestro/modules/, .maestro/helpers/, and regression-journey.yaml.
+# Only checks .maestro/modules/, .maestro/helpers/, and root regression/smoke flows.
 #
 # Known false-negatives (dynamically-generated testIDs whose PREFIX exists
 # but exact value does not appear literally in source):
@@ -29,6 +29,7 @@ TESTIDS=$(grep -rh '^[[:space:]]*id:[[:space:]]*"' \
     .maestro/modules/ \
     .maestro/helpers/ \
     .maestro/regression-journey.yaml \
+    .maestro/dev-otp-hardening.yaml \
   | sed 's/.*id:[[:space:]]*"\([^"]*\)".*/\1/' \
   | sort -u)
 

@@ -22,6 +22,7 @@ import {
   reportInitialDataUpdatedAt,
 } from '@/lib/api/initial-data';
 import type { ReportNoteRow } from '@/components/reports/detail/ReportNotesPane';
+import { toReportNoteRows } from '@/lib/api/to-report-note-row';
 import { useRefresh } from '@/lib/util/use-refresh';
 import { safeBack } from '@/lib/nav/safe-back';
 import { dismissOrReplaceTo } from '@/lib/nav/dismiss-or-replace';
@@ -105,24 +106,18 @@ export default function ReportNotesRoute() {
             durationSec?: number | null;
             fileId: string | null;
             thumbnailFileId?: string | null;
+            files?: ReadonlyArray<{
+              id: string;
+              fileId: string;
+              thumbnailFileId: string | null;
+              position: number;
+              caption: string | null;
+            }>;
             createdAt: string;
           }>;
         }
       | undefined)?.items;
-    if (!items) return [];
-    return items.map((n) => ({
-      id: n.id,
-      body: n.body ?? n.transcript ?? null,
-      kind: n.kind === 'image' ? 'photo' : n.kind,
-      createdAt: n.createdAt ?? null,
-      authorName: n.authorId ? memberNames.get(n.authorId) ?? null : null,
-      fileId: n.fileId ?? null,
-      thumbnailFileId: n.thumbnailFileId ?? null,
-      transcript: n.transcript ?? null,
-      title: n.title ?? null,
-      summary: n.summary ?? null,
-      durationSec: n.durationSec ?? null,
-    }));
+    return toReportNoteRows(items, memberNames);
   }, [notesQuery.data, memberNames]);
 
   return (

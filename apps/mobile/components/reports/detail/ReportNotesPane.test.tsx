@@ -162,8 +162,16 @@ describe('ReportNotesPane', () => {
 
   it('renders a photo row with the open affordance', () => {
     const tree = wrap(<ReportNotesPane noteRows={[photoRow]} />);
+    // Grid is gated on a measured container width — fire onLayout so
+    // the PhotoBatchGrid mounts.
+    const measured = tree.root.findByProps({
+      testID: `report-note-${photoRow.id}-measure`,
+    });
+    act(() => {
+      measured.props.onLayout({ nativeEvent: { layout: { width: 320 } } });
+    });
     expect(
-      tree.root.findAllByProps({ testID: `btn-open-photo-${photoRow.id}` })
+      tree.root.findAllByProps({ testID: `report-photo-${photoRow.id}-0` })
         .length,
     ).toBeGreaterThan(0);
   });
@@ -212,16 +220,76 @@ describe('ReportNotesPane', () => {
     const tree = wrap(
       <ReportNotesPane noteRows={[photoRow]} onOpenPhoto={onOpenPhoto} />,
     );
-    const btn = tree.root.findByProps({
-      testID: `btn-open-photo-${photoRow.id}`,
+    const measured = tree.root.findByProps({
+      testID: `report-note-${photoRow.id}-measure`,
     });
     act(() => {
-      btn.props.onPress();
+      measured.props.onLayout({ nativeEvent: { layout: { width: 320 } } });
+    });
+    // PhotoTile is the host primitive `rn-Pressable` carrying the
+    // tile testID; pick the host (non-function) component.
+    const tile = tree.root
+      .findAllByProps({ testID: `report-photo-${photoRow.id}-0` })
+      .find((n) => typeof n.type !== 'function');
+    expect(tile).toBeDefined();
+    act(() => {
+      tile!.props.onPress();
     });
     expect(onOpenPhoto).toHaveBeenCalledOnce();
     expect(onOpenPhoto.mock.calls[0]![0]).toEqual({
       fileId: 'fil_photo_1',
       title: 'Rebar tied off.',
     });
+  });
+
+  it('renders one tile per file for batch image notes', () => {
+    const batchRow: ReportNoteRow = {
+      id: 'n-photo-batch',
+      kind: 'photo',
+      body: 'Foundation pour — multi angle',
+      createdAt: new Date('2024-05-01T16:00:00Z').toISOString(),
+      authorName: 'Site Lead',
+      fileId: null,
+      files: [
+        {
+          id: 'nfl_1',
+          fileId: 'fil_a',
+          thumbnailFileId: null,
+          position: 0,
+        },
+        {
+          id: 'nfl_2',
+          fileId: 'fil_b',
+          thumbnailFileId: null,
+          position: 1,
+        },
+        {
+          id: 'nfl_3',
+          fileId: 'fil_c',
+          thumbnailFileId: null,
+          position: 2,
+        },
+      ],
+    };
+    const tree = wrap(<ReportNotesPane noteRows={[batchRow]} />);
+    const measured = tree.root.findByProps({
+      testID: `report-note-${batchRow.id}-measure`,
+    });
+    act(() => {
+      measured.props.onLayout({ nativeEvent: { layout: { width: 320 } } });
+    });
+    // 3 tiles: index 0..2.
+    expect(
+      tree.root.findAllByProps({ testID: `report-photo-${batchRow.id}-0` })
+        .length,
+    ).toBeGreaterThan(0);
+    expect(
+      tree.root.findAllByProps({ testID: `report-photo-${batchRow.id}-1` })
+        .length,
+    ).toBeGreaterThan(0);
+    expect(
+      tree.root.findAllByProps({ testID: `report-photo-${batchRow.id}-2` })
+        .length,
+    ).toBeGreaterThan(0);
   });
 });

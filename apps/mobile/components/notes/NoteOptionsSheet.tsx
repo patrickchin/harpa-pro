@@ -60,7 +60,15 @@ export interface NoteOptionsSheetItem {
   /** ISO-8601, epoch ms, or Date. Formatted via `formatCapturedAt`. */
   capturedAt?: string | number | Date | null;
   durationSec?: number | null;
+  /** Single R2 file id (voice / document, or legacy single-file image). */
   fileId?: string | null;
+  /**
+   * For batch image notes: every joined `note_files` row's R2 fileId,
+   * ordered. When set, the sheet renders a multi-line File IDs block
+   * instead of a single `File ID` row. Falls back to `fileId` when
+   * absent.
+   */
+  files?: ReadonlyArray<{ id: string; fileId: string }> | null;
 }
 
 export interface NoteOptionsSheetProps {
@@ -285,7 +293,25 @@ export function NoteOptionsSheet({
         {note.kind === 'voice' && note.durationSec ? (
           <MetaRow label="Duration" value={formatDuration(note.durationSec)} />
         ) : null}
-        {note.fileId ? (
+        {note.files && note.files.length > 0 ? (
+          note.files.length === 1 && note.files[0] ? (
+            <MetaRow label="File ID" value={note.files[0].fileId} mono />
+          ) : (
+            <View className="gap-1">
+              <Text className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                File IDs ({note.files.length})
+              </Text>
+              {note.files.map((f, idx) => (
+                <MetaRow
+                  key={f.id}
+                  label={`#${idx + 1}`}
+                  value={f.fileId}
+                  mono
+                />
+              ))}
+            </View>
+          )
+        ) : note.fileId ? (
           <MetaRow label="File ID" value={note.fileId} mono />
         ) : null}
         <MetaRow label="Note ID" value={note.id} mono />

@@ -18,15 +18,15 @@
 set -euo pipefail
 
 BASE=${BASE:-https://harpa-pro-api-dev.fly.dev}
-PHONE=${PHONE:-+15550199001}
-PHONE2=${PHONE2:-+15550199002}
+EMAIL=${EMAIL:-alice@e2e.harpapro.com}
+EMAIL2=${EMAIL2:-bob@e2e.harpapro.com}
 : "${PASSWORD:?PASSWORD env var is required}"
 
 SAMPLES="$(cd "$(dirname "$0")/../../apps/cli/scripts/samples" && pwd)"
 REAL_SAMPLES="$(cd "$(dirname "$0")/../../samples/real" && pwd)"
 IMG="$SAMPLES/sample.png"
 PDF_FILE="$SAMPLES/sample.pdf"
-TXT_FILE="$SAMPLES/sample.txt"
+
 WAV_FILE="$SAMPLES/sample.wav"
 # Longer real voice sample for the aggregator step (~4:34, 4.2 MB).
 # Different domain from journey-core's default so AI output stays diverse.
@@ -44,6 +44,37 @@ req() {
     ${3:+-d "$3"}
 }
 
+# password_login EMAIL PASSWORD -> echoes the bearer token from the
+# `set-auth-token` response header on POST /api/auth/sign-in/email.
+# Retries on 429 to ride out better-auth's per-IP auth-route rate
+# limiter, which the preceding stress journey may have exhausted.
+password_login() {
+  local email="$1" pass="$2"
+  local attempt=1 status headers backoff
+  while (( attempt <= 6 )); do
+    status=$(curl -sS -D /tmp/journey-login-headers.$$ -o /dev/null \
+      -w '%{http_code}' -X POST \
+      "$BASE/api/auth/sign-in/email" "${H[@]}" \
+      -d "{\"email\":\"$email\",\"password\":\"$pass\"}")
+    if [[ "$status" == "200" ]]; then
+      headers=$(cat /tmp/journey-login-headers.$$)
+      rm -f /tmp/journey-login-headers.$$
+      printf '%s' "$headers" | awk 'tolower($1)=="set-auth-token:" {print $2}' | tr -d '\r\n'
+      return 0
+    fi
+    if [[ "$status" != "429" ]]; then
+      rm -f /tmp/journey-login-headers.$$
+      return 1
+    fi
+    backoff=$((attempt * 10))
+    echo "  ⏳ sign-in rate-limited (HTTP 429); waiting ${backoff}s before retry $((attempt + 1))/6" >&2
+    sleep "$backoff"
+    attempt=$((attempt + 1))
+  done
+  rm -f /tmp/journey-login-headers.$$
+  return 1
+}
+
 # Returns HTTP status code without failing on 4xx/5xx.
 status_of() {
   curl -sS -o /dev/null -w '%{http_code}' -X "$1" "$BASE$2" "${H[@]}" \
@@ -56,7 +87,7 @@ assert_status() {
   local expected="$1"; shift
   local got; got=$(status_of "$@")
   if [[ "$got" != "$expected" ]]; then
-    echo "  ✗ expected $expected, got $got ($(echo "$@"))" >&2; exit 1
+    echo "  ✗ expected $expected, got $got ($*)" >&2; exit 1
   fi
   echo "  ✓ $expected"
 }
@@ -83,28 +114,41 @@ echo "════════════════════════�
 
 # ── 1. Auth ───────────────────────────────────────────────────────────
 
-echo "→ login (user 1: $PHONE)"
-TOKEN=$(req POST /auth/password/verify \
-  "{\"phone\":\"$PHONE\",\"password\":\"$PASSWORD\"}" | j .token)
+echo "→ login (user 1: $EMAIL)"
+set +e
+TOKEN=$(password_login "$EMAIL" "$PASSWORD")
+LOGIN_RC=$?
+set -e
+if [[ $LOGIN_RC -ne 0 || -z "$TOKEN" ]]; then
+  echo "  ✗ no set-auth-token header on sign-in (rc=$LOGIN_RC)" >&2
+  exit 1
+fi
 TOKEN1="$TOKEN"
 echo "  ✓ logged in"
 
-# Try to ensure user 2 exists (requires PHONE2 in TEST_ACCOUNT_PHONES)
+# Try to ensure user 2 exists (requires EMAIL2 in TEST_ACCOUNT_EMAILS).
+# When EMAIL2 == EMAIL (single-account dev environments), treat user 2
+# as unavailable so the member-management tests skip gracefully — you
+# can't invite yourself as a member of a project you already own (the
+# API returns 409). See docs/bugs/2026-06-06-test-accounts-never-seeded-on-dev.md.
 HAS_USER2=false
-echo "→ login (user 2: $PHONE2 — ensure exists)"
-set +e
-TOKEN2=$(req POST /auth/password/verify \
-  "{\"phone\":\"$PHONE2\",\"password\":\"$PASSWORD\"}" 2>/dev/null | j .token)
-if [[ -n "$TOKEN2" && "$TOKEN2" != "null" ]]; then
-  HAS_USER2=true
-  TOKEN="$TOKEN2"
-  req POST /auth/logout '' >/dev/null
-  TOKEN="$TOKEN1"
-  echo "  ✓ user 2 exists"
+if [[ "$EMAIL2" == "$EMAIL" ]]; then
+  echo "→ user 2 same as user 1 — skipping member tests"
 else
-  echo "  ⚠️  user 2 unavailable (PHONE2 not in TEST_ACCOUNT_PHONES) — member tests will be skipped"
+  echo "→ login (user 2: $EMAIL2 — ensure exists)"
+  set +e
+  TOKEN2=$(password_login "$EMAIL2" "$PASSWORD" 2>/dev/null)
+  if [[ -n "$TOKEN2" && "$TOKEN2" != "null" ]]; then
+    HAS_USER2=true
+    TOKEN="$TOKEN2"
+    req POST /api/auth/sign-out '{}' >/dev/null
+    TOKEN="$TOKEN1"
+    echo "  ✓ user 2 exists"
+  else
+    echo "  ⚠️  user 2 unavailable (EMAIL2 not in TEST_ACCOUNT_EMAILS) — member tests will be skipped"
+  fi
+  set -e
 fi
-set -e
 
 # ── 2. Profile edge cases ────────────────────────────────────────────
 
@@ -151,9 +195,9 @@ fi
 # ── 5. Project members (requires user 2) ─────────────────────────────
 
 if [[ "$HAS_USER2" == "true" ]]; then
-  echo "→ POST /projects/$PID_A/members (invite phone2)"
+  echo "→ POST /projects/$PID_A/members (invite email2)"
   req POST "/projects/$PID_A/members" \
-    "{\"phone\":\"$PHONE2\",\"role\":\"editor\"}" >/dev/null
+    "{\"email\":\"$EMAIL2\",\"role\":\"editor\"}" >/dev/null
   echo "  ✓ member invited"
 
   echo "→ GET /projects/$PID_A/members"
@@ -273,10 +317,10 @@ fi
 echo "→ PATCH report (set body)"
 req PATCH "/projects/$PID_A/reports/$RNUM" '{
   "body":{
-    "meta":{"title":"Daily Report","summary":"Concrete pour completed successfully.","visitDate":"2026-05-18T10:00:00Z","tags":["concrete","section-b"]},
-    "weather":{"condition":"Overcast","temperatureC":18,"windKph":10,"impact":null},
-    "workers":[{"role":"Foreman","count":1,"hours":8,"notes":null},{"role":"Labourer","count":3,"hours":8,"notes":null}],
-    "materials":[{"name":"Concrete","quantity":20,"unit":"m³","status":"poured","condition":"good","notes":null},{"name":"Rebar","quantity":null,"unit":null,"status":"installed","condition":"grade 60","notes":null}],
+    "meta":{"title":"Daily Report","summary":"Concrete pour completed successfully.","visitDate":"2026-05-18T10:00:00Z"},
+    "weather":{"condition":"Overcast","temperature":"18°C","wind":"10 kph","impact":null},
+    "workers":[{"role":"Foreman","count":"1","hours":"8","notes":null},{"role":"Labourer","count":"3","hours":"8","notes":null}],
+    "materials":[{"name":"Concrete","quantity":"20","unit":"m³","status":"poured","condition":"good","notes":null},{"name":"Rebar","quantity":null,"unit":null,"status":"installed","condition":"grade 60","notes":null}],
     "issues":[],
     "nextSteps":["Second pour section B"],
     "summarySections":[{"title":"Daily Summary","body":"Concrete pour completed successfully."}]
@@ -289,7 +333,7 @@ echo "  ✓ finalized"
 
 echo "→ PATCH finalized report (expect 4xx)"
 assert_status 409 PATCH "/projects/$PID_A/reports/$RNUM" '{
-  "body":{"meta":{"title":null,"summary":null,"visitDate":null,"tags":[]},"weather":null,"workers":[],"materials":[],"issues":[],"nextSteps":[],"summarySections":[{"title":"hack","body":"should fail"}]}
+  "body":{"meta":{"title":null,"summary":null,"visitDate":null},"weather":null,"workers":[],"materials":[],"issues":[],"nextSteps":[],"summarySections":[{"title":"hack","body":"should fail"}]}
 }'
 
 echo "→ pdf"
@@ -341,7 +385,7 @@ echo "  ✓ report deleted"
 req DELETE "/projects/$PID_A" >/dev/null
 req DELETE "/projects/$PID_B" >/dev/null
 echo "  ✓ projects deleted"
-req POST /auth/logout '' >/dev/null
+req POST /api/auth/sign-out '{}' >/dev/null
 echo "  ✓ logged out"
 
 echo ""

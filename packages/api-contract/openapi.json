@@ -9,7 +9,7 @@
       "bearerAuth": {
         "type": "http",
         "scheme": "bearer",
-        "bearerFormat": "JWT"
+        "bearerFormat": "better-auth session token"
       }
     },
     "schemas": {},
@@ -138,516 +138,6 @@
                   "required": [
                     "ok",
                     "db"
-                  ]
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/auth/otp/start": {
-      "post": {
-        "tags": [
-          "auth"
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "phone": {
-                    "type": "string",
-                    "pattern": "^\\+\\d{8,15}$"
-                  }
-                },
-                "required": [
-                  "phone"
-                ]
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "OTP sent.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "verificationId": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "verificationId"
-                  ]
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad request.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "object",
-                      "properties": {
-                        "code": {
-                          "type": "string"
-                        },
-                        "message": {
-                          "type": "string"
-                        }
-                      },
-                      "required": [
-                        "code",
-                        "message"
-                      ]
-                    },
-                    "requestId": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "error"
-                  ]
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "Rate limited.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "object",
-                      "properties": {
-                        "code": {
-                          "type": "string"
-                        },
-                        "message": {
-                          "type": "string"
-                        }
-                      },
-                      "required": [
-                        "code",
-                        "message"
-                      ]
-                    },
-                    "requestId": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "error"
-                  ]
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/auth/otp/verify": {
-      "post": {
-        "tags": [
-          "auth"
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "phone": {
-                    "type": "string",
-                    "pattern": "^\\+\\d{8,15}$"
-                  },
-                  "code": {
-                    "type": "string",
-                    "pattern": "^\\d{4,8}$"
-                  }
-                },
-                "required": [
-                  "phone",
-                  "code"
-                ]
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Verified.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "token": {
-                      "type": "string"
-                    },
-                    "user": {
-                      "type": "object",
-                      "properties": {
-                        "id": {
-                          "type": "string",
-                          "pattern": "^usr_[0-9a-hjkmnp-tv-z]{8,16}$"
-                        },
-                        "phone": {
-                          "type": "string",
-                          "pattern": "^\\+\\d{8,15}$"
-                        },
-                        "displayName": {
-                          "type": "string",
-                          "nullable": true
-                        },
-                        "companyName": {
-                          "type": "string",
-                          "nullable": true
-                        },
-                        "createdAt": {
-                          "type": "string"
-                        }
-                      },
-                      "required": [
-                        "id",
-                        "phone",
-                        "displayName",
-                        "companyName",
-                        "createdAt"
-                      ]
-                    }
-                  },
-                  "required": [
-                    "token",
-                    "user"
-                  ]
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Invalid code.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "object",
-                      "properties": {
-                        "code": {
-                          "type": "string"
-                        },
-                        "message": {
-                          "type": "string"
-                        }
-                      },
-                      "required": [
-                        "code",
-                        "message"
-                      ]
-                    },
-                    "requestId": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "error"
-                  ]
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "Rate limited.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "object",
-                      "properties": {
-                        "code": {
-                          "type": "string"
-                        },
-                        "message": {
-                          "type": "string"
-                        }
-                      },
-                      "required": [
-                        "code",
-                        "message"
-                      ]
-                    },
-                    "requestId": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "error"
-                  ]
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/auth/password/verify": {
-      "post": {
-        "tags": [
-          "auth"
-        ],
-        "description": "Test-account password bypass. Disabled (returns 404) unless TEST_ACCOUNT_PHONES + TEST_ACCOUNT_PASSWORD are configured on the server. See docs/v4/arch-auth-and-rls.md.",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "phone": {
-                    "type": "string",
-                    "pattern": "^\\+\\d{8,15}$"
-                  },
-                  "password": {
-                    "type": "string",
-                    "minLength": 1,
-                    "maxLength": 256
-                  }
-                },
-                "required": [
-                  "phone",
-                  "password"
-                ]
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Verified.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "token": {
-                      "type": "string"
-                    },
-                    "user": {
-                      "type": "object",
-                      "properties": {
-                        "id": {
-                          "type": "string",
-                          "pattern": "^usr_[0-9a-hjkmnp-tv-z]{8,16}$"
-                        },
-                        "phone": {
-                          "type": "string",
-                          "pattern": "^\\+\\d{8,15}$"
-                        },
-                        "displayName": {
-                          "type": "string",
-                          "nullable": true
-                        },
-                        "companyName": {
-                          "type": "string",
-                          "nullable": true
-                        },
-                        "createdAt": {
-                          "type": "string"
-                        }
-                      },
-                      "required": [
-                        "id",
-                        "phone",
-                        "displayName",
-                        "companyName",
-                        "createdAt"
-                      ]
-                    }
-                  },
-                  "required": [
-                    "token",
-                    "user"
-                  ]
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Invalid phone or password.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "object",
-                      "properties": {
-                        "code": {
-                          "type": "string"
-                        },
-                        "message": {
-                          "type": "string"
-                        }
-                      },
-                      "required": [
-                        "code",
-                        "message"
-                      ]
-                    },
-                    "requestId": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "error"
-                  ]
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Feature disabled.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "object",
-                      "properties": {
-                        "code": {
-                          "type": "string"
-                        },
-                        "message": {
-                          "type": "string"
-                        }
-                      },
-                      "required": [
-                        "code",
-                        "message"
-                      ]
-                    },
-                    "requestId": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "error"
-                  ]
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "Rate limited.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "object",
-                      "properties": {
-                        "code": {
-                          "type": "string"
-                        },
-                        "message": {
-                          "type": "string"
-                        }
-                      },
-                      "required": [
-                        "code",
-                        "message"
-                      ]
-                    },
-                    "requestId": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "error"
-                  ]
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/auth/logout": {
-      "post": {
-        "tags": [
-          "auth"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Logged out.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "ok": {
-                      "type": "boolean",
-                      "enum": [
-                        true
-                      ]
-                    }
-                  },
-                  "required": [
-                    "ok"
-                  ]
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "object",
-                      "properties": {
-                        "code": {
-                          "type": "string"
-                        },
-                        "message": {
-                          "type": "string"
-                        }
-                      },
-                      "required": [
-                        "code",
-                        "message"
-                      ]
-                    },
-                    "requestId": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "error"
                   ]
                 }
               }
@@ -1121,9 +611,11 @@
                           "type": "string",
                           "pattern": "^usr_[0-9a-hjkmnp-tv-z]{8,16}$"
                         },
-                        "phone": {
+                        "email": {
                           "type": "string",
-                          "pattern": "^\\+\\d{8,15}$"
+                          "minLength": 3,
+                          "maxLength": 254,
+                          "format": "email"
                         },
                         "displayName": {
                           "type": "string",
@@ -1139,7 +631,7 @@
                       },
                       "required": [
                         "id",
-                        "phone",
+                        "email",
                         "displayName",
                         "companyName",
                         "createdAt"
@@ -1266,9 +758,11 @@
                           "type": "string",
                           "pattern": "^usr_[0-9a-hjkmnp-tv-z]{8,16}$"
                         },
-                        "phone": {
+                        "email": {
                           "type": "string",
-                          "pattern": "^\\+\\d{8,15}$"
+                          "minLength": 3,
+                          "maxLength": 254,
+                          "format": "email"
                         },
                         "displayName": {
                           "type": "string",
@@ -1284,7 +778,7 @@
                       },
                       "required": [
                         "id",
-                        "phone",
+                        "email",
                         "displayName",
                         "companyName",
                         "createdAt"
@@ -2920,9 +2414,11 @@
                             "type": "string",
                             "nullable": true
                           },
-                          "phone": {
+                          "email": {
                             "type": "string",
-                            "pattern": "^\\+\\d{8,15}$"
+                            "minLength": 3,
+                            "maxLength": 254,
+                            "format": "email"
                           },
                           "role": {
                             "type": "string",
@@ -2939,7 +2435,7 @@
                         "required": [
                           "userId",
                           "displayName",
-                          "phone",
+                          "email",
                           "role",
                           "joinedAt"
                         ]
@@ -3053,9 +2549,11 @@
               "schema": {
                 "type": "object",
                 "properties": {
-                  "phone": {
+                  "email": {
                     "type": "string",
-                    "pattern": "^\\+\\d{8,15}$"
+                    "minLength": 3,
+                    "maxLength": 254,
+                    "format": "email"
                   },
                   "role": {
                     "type": "string",
@@ -3068,7 +2566,7 @@
                   }
                 },
                 "required": [
-                  "phone"
+                  "email"
                 ]
               }
             }
@@ -3090,9 +2588,11 @@
                       "type": "string",
                       "nullable": true
                     },
-                    "phone": {
+                    "email": {
                       "type": "string",
-                      "pattern": "^\\+\\d{8,15}$"
+                      "minLength": 3,
+                      "maxLength": 254,
+                      "format": "email"
                     },
                     "role": {
                       "type": "string",
@@ -3109,7 +2609,7 @@
                   "required": [
                     "userId",
                     "displayName",
-                    "phone",
+                    "email",
                     "role",
                     "joinedAt"
                   ]
@@ -3368,9 +2868,11 @@
                       "type": "string",
                       "nullable": true
                     },
-                    "phone": {
+                    "email": {
                       "type": "string",
-                      "pattern": "^\\+\\d{8,15}$"
+                      "minLength": 3,
+                      "maxLength": 254,
+                      "format": "email"
                     },
                     "role": {
                       "type": "string",
@@ -3387,7 +2889,7 @@
                   "required": [
                     "userId",
                     "displayName",
-                    "phone",
+                    "email",
                     "role",
                     "joinedAt"
                   ]
@@ -3834,12 +3336,12 @@
                                     "type": "string",
                                     "nullable": true
                                   },
-                                  "temperatureC": {
-                                    "type": "number",
+                                  "temperature": {
+                                    "type": "string",
                                     "nullable": true
                                   },
-                                  "windKph": {
-                                    "type": "number",
+                                  "wind": {
+                                    "type": "string",
                                     "nullable": true
                                   },
                                   "impact": {
@@ -3849,8 +3351,8 @@
                                 },
                                 "required": [
                                   "condition",
-                                  "temperatureC",
-                                  "windKph",
+                                  "temperature",
+                                  "wind",
                                   "impact"
                                 ]
                               },
@@ -3863,13 +3365,12 @@
                                       "type": "string"
                                     },
                                     "count": {
-                                      "type": "integer",
-                                      "minimum": 0
+                                      "type": "string",
+                                      "nullable": true
                                     },
                                     "hours": {
-                                      "type": "number",
-                                      "nullable": true,
-                                      "minimum": 0
+                                      "type": "string",
+                                      "nullable": true
                                     },
                                     "notes": {
                                       "type": "string",
@@ -3893,7 +3394,7 @@
                                       "type": "string"
                                     },
                                     "quantity": {
-                                      "type": "number",
+                                      "type": "string",
                                       "nullable": true
                                     },
                                     "unit": {
@@ -3933,11 +3434,7 @@
                                     },
                                     "severity": {
                                       "type": "string",
-                                      "enum": [
-                                        "low",
-                                        "medium",
-                                        "high"
-                                      ]
+                                      "nullable": true
                                     },
                                     "description": {
                                       "type": "string",
@@ -4228,12 +3725,12 @@
                               "type": "string",
                               "nullable": true
                             },
-                            "temperatureC": {
-                              "type": "number",
+                            "temperature": {
+                              "type": "string",
                               "nullable": true
                             },
-                            "windKph": {
-                              "type": "number",
+                            "wind": {
+                              "type": "string",
                               "nullable": true
                             },
                             "impact": {
@@ -4243,8 +3740,8 @@
                           },
                           "required": [
                             "condition",
-                            "temperatureC",
-                            "windKph",
+                            "temperature",
+                            "wind",
                             "impact"
                           ]
                         },
@@ -4257,13 +3754,12 @@
                                 "type": "string"
                               },
                               "count": {
-                                "type": "integer",
-                                "minimum": 0
+                                "type": "string",
+                                "nullable": true
                               },
                               "hours": {
-                                "type": "number",
-                                "nullable": true,
-                                "minimum": 0
+                                "type": "string",
+                                "nullable": true
                               },
                               "notes": {
                                 "type": "string",
@@ -4287,7 +3783,7 @@
                                 "type": "string"
                               },
                               "quantity": {
-                                "type": "number",
+                                "type": "string",
                                 "nullable": true
                               },
                               "unit": {
@@ -4327,11 +3823,7 @@
                               },
                               "severity": {
                                 "type": "string",
-                                "enum": [
-                                  "low",
-                                  "medium",
-                                  "high"
-                                ]
+                                "nullable": true
                               },
                               "description": {
                                 "type": "string",
@@ -4643,12 +4135,12 @@
                               "type": "string",
                               "nullable": true
                             },
-                            "temperatureC": {
-                              "type": "number",
+                            "temperature": {
+                              "type": "string",
                               "nullable": true
                             },
-                            "windKph": {
-                              "type": "number",
+                            "wind": {
+                              "type": "string",
                               "nullable": true
                             },
                             "impact": {
@@ -4658,8 +4150,8 @@
                           },
                           "required": [
                             "condition",
-                            "temperatureC",
-                            "windKph",
+                            "temperature",
+                            "wind",
                             "impact"
                           ]
                         },
@@ -4672,13 +4164,12 @@
                                 "type": "string"
                               },
                               "count": {
-                                "type": "integer",
-                                "minimum": 0
+                                "type": "string",
+                                "nullable": true
                               },
                               "hours": {
-                                "type": "number",
-                                "nullable": true,
-                                "minimum": 0
+                                "type": "string",
+                                "nullable": true
                               },
                               "notes": {
                                 "type": "string",
@@ -4702,7 +4193,7 @@
                                 "type": "string"
                               },
                               "quantity": {
-                                "type": "number",
+                                "type": "string",
                                 "nullable": true
                               },
                               "unit": {
@@ -4742,11 +4233,7 @@
                               },
                               "severity": {
                                 "type": "string",
-                                "enum": [
-                                  "low",
-                                  "medium",
-                                  "high"
-                                ]
+                                "nullable": true
                               },
                               "description": {
                                 "type": "string",
@@ -4998,12 +4485,12 @@
                             "type": "string",
                             "nullable": true
                           },
-                          "temperatureC": {
-                            "type": "number",
+                          "temperature": {
+                            "type": "string",
                             "nullable": true
                           },
-                          "windKph": {
-                            "type": "number",
+                          "wind": {
+                            "type": "string",
                             "nullable": true
                           },
                           "impact": {
@@ -5013,8 +4500,8 @@
                         },
                         "required": [
                           "condition",
-                          "temperatureC",
-                          "windKph",
+                          "temperature",
+                          "wind",
                           "impact"
                         ]
                       },
@@ -5027,13 +4514,12 @@
                               "type": "string"
                             },
                             "count": {
-                              "type": "integer",
-                              "minimum": 0
+                              "type": "string",
+                              "nullable": true
                             },
                             "hours": {
-                              "type": "number",
-                              "nullable": true,
-                              "minimum": 0
+                              "type": "string",
+                              "nullable": true
                             },
                             "notes": {
                               "type": "string",
@@ -5057,7 +4543,7 @@
                               "type": "string"
                             },
                             "quantity": {
-                              "type": "number",
+                              "type": "string",
                               "nullable": true
                             },
                             "unit": {
@@ -5097,11 +4583,7 @@
                             },
                             "severity": {
                               "type": "string",
-                              "enum": [
-                                "low",
-                                "medium",
-                                "high"
-                              ]
+                              "nullable": true
                             },
                             "description": {
                               "type": "string",
@@ -5226,12 +4708,12 @@
                               "type": "string",
                               "nullable": true
                             },
-                            "temperatureC": {
-                              "type": "number",
+                            "temperature": {
+                              "type": "string",
                               "nullable": true
                             },
-                            "windKph": {
-                              "type": "number",
+                            "wind": {
+                              "type": "string",
                               "nullable": true
                             },
                             "impact": {
@@ -5241,8 +4723,8 @@
                           },
                           "required": [
                             "condition",
-                            "temperatureC",
-                            "windKph",
+                            "temperature",
+                            "wind",
                             "impact"
                           ]
                         },
@@ -5255,13 +4737,12 @@
                                 "type": "string"
                               },
                               "count": {
-                                "type": "integer",
-                                "minimum": 0
+                                "type": "string",
+                                "nullable": true
                               },
                               "hours": {
-                                "type": "number",
-                                "nullable": true,
-                                "minimum": 0
+                                "type": "string",
+                                "nullable": true
                               },
                               "notes": {
                                 "type": "string",
@@ -5285,7 +4766,7 @@
                                 "type": "string"
                               },
                               "quantity": {
-                                "type": "number",
+                                "type": "string",
                                 "nullable": true
                               },
                               "unit": {
@@ -5325,11 +4806,7 @@
                               },
                               "severity": {
                                 "type": "string",
-                                "enum": [
-                                  "low",
-                                  "medium",
-                                  "high"
-                                ]
+                                "nullable": true
                               },
                               "description": {
                                 "type": "string",
@@ -5768,6 +5245,43 @@
                             "type": "string",
                             "nullable": true
                           },
+                          "files": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "pattern": "^nfl_[0-9a-hjkmnp-tv-z]{8,16}$"
+                                },
+                                "fileId": {
+                                  "type": "string",
+                                  "pattern": "^fil_[0-9a-hjkmnp-tv-z]{8,16}$"
+                                },
+                                "thumbnailFileId": {
+                                  "type": "string",
+                                  "nullable": true,
+                                  "pattern": "^fil_[0-9a-hjkmnp-tv-z]{8,16}$"
+                                },
+                                "position": {
+                                  "type": "integer",
+                                  "minimum": 0
+                                },
+                                "caption": {
+                                  "type": "string",
+                                  "nullable": true
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "fileId",
+                                "thumbnailFileId",
+                                "position",
+                                "caption"
+                              ]
+                            },
+                            "default": []
+                          },
                           "createdAt": {
                             "type": "string"
                           }
@@ -6052,12 +5566,12 @@
                                   "type": "string",
                                   "nullable": true
                                 },
-                                "temperatureC": {
-                                  "type": "number",
+                                "temperature": {
+                                  "type": "string",
                                   "nullable": true
                                 },
-                                "windKph": {
-                                  "type": "number",
+                                "wind": {
+                                  "type": "string",
                                   "nullable": true
                                 },
                                 "impact": {
@@ -6067,8 +5581,8 @@
                               },
                               "required": [
                                 "condition",
-                                "temperatureC",
-                                "windKph",
+                                "temperature",
+                                "wind",
                                 "impact"
                               ]
                             },
@@ -6081,13 +5595,12 @@
                                     "type": "string"
                                   },
                                   "count": {
-                                    "type": "integer",
-                                    "minimum": 0
+                                    "type": "string",
+                                    "nullable": true
                                   },
                                   "hours": {
-                                    "type": "number",
-                                    "nullable": true,
-                                    "minimum": 0
+                                    "type": "string",
+                                    "nullable": true
                                   },
                                   "notes": {
                                     "type": "string",
@@ -6111,7 +5624,7 @@
                                     "type": "string"
                                   },
                                   "quantity": {
-                                    "type": "number",
+                                    "type": "string",
                                     "nullable": true
                                   },
                                   "unit": {
@@ -6151,11 +5664,7 @@
                                   },
                                   "severity": {
                                     "type": "string",
-                                    "enum": [
-                                      "low",
-                                      "medium",
-                                      "high"
-                                    ]
+                                    "nullable": true
                                   },
                                   "description": {
                                     "type": "string",
@@ -6584,12 +6093,12 @@
                                   "type": "string",
                                   "nullable": true
                                 },
-                                "temperatureC": {
-                                  "type": "number",
+                                "temperature": {
+                                  "type": "string",
                                   "nullable": true
                                 },
-                                "windKph": {
-                                  "type": "number",
+                                "wind": {
+                                  "type": "string",
                                   "nullable": true
                                 },
                                 "impact": {
@@ -6599,8 +6108,8 @@
                               },
                               "required": [
                                 "condition",
-                                "temperatureC",
-                                "windKph",
+                                "temperature",
+                                "wind",
                                 "impact"
                               ]
                             },
@@ -6613,13 +6122,12 @@
                                     "type": "string"
                                   },
                                   "count": {
-                                    "type": "integer",
-                                    "minimum": 0
+                                    "type": "string",
+                                    "nullable": true
                                   },
                                   "hours": {
-                                    "type": "number",
-                                    "nullable": true,
-                                    "minimum": 0
+                                    "type": "string",
+                                    "nullable": true
                                   },
                                   "notes": {
                                     "type": "string",
@@ -6643,7 +6151,7 @@
                                     "type": "string"
                                   },
                                   "quantity": {
-                                    "type": "number",
+                                    "type": "string",
                                     "nullable": true
                                   },
                                   "unit": {
@@ -6683,11 +6191,7 @@
                                   },
                                   "severity": {
                                     "type": "string",
-                                    "enum": [
-                                      "low",
-                                      "medium",
-                                      "high"
-                                    ]
+                                    "nullable": true
                                   },
                                   "description": {
                                     "type": "string",
@@ -7099,12 +6603,12 @@
                                   "type": "string",
                                   "nullable": true
                                 },
-                                "temperatureC": {
-                                  "type": "number",
+                                "temperature": {
+                                  "type": "string",
                                   "nullable": true
                                 },
-                                "windKph": {
-                                  "type": "number",
+                                "wind": {
+                                  "type": "string",
                                   "nullable": true
                                 },
                                 "impact": {
@@ -7114,8 +6618,8 @@
                               },
                               "required": [
                                 "condition",
-                                "temperatureC",
-                                "windKph",
+                                "temperature",
+                                "wind",
                                 "impact"
                               ]
                             },
@@ -7128,13 +6632,12 @@
                                     "type": "string"
                                   },
                                   "count": {
-                                    "type": "integer",
-                                    "minimum": 0
+                                    "type": "string",
+                                    "nullable": true
                                   },
                                   "hours": {
-                                    "type": "number",
-                                    "nullable": true,
-                                    "minimum": 0
+                                    "type": "string",
+                                    "nullable": true
                                   },
                                   "notes": {
                                     "type": "string",
@@ -7158,7 +6661,7 @@
                                     "type": "string"
                                   },
                                   "quantity": {
-                                    "type": "number",
+                                    "type": "string",
                                     "nullable": true
                                   },
                                   "unit": {
@@ -7198,11 +6701,7 @@
                                   },
                                   "severity": {
                                     "type": "string",
-                                    "enum": [
-                                      "low",
-                                      "medium",
-                                      "high"
-                                    ]
+                                    "nullable": true
                                   },
                                   "description": {
                                     "type": "string",
@@ -7522,12 +7021,12 @@
                                   "type": "string",
                                   "nullable": true
                                 },
-                                "temperatureC": {
-                                  "type": "number",
+                                "temperature": {
+                                  "type": "string",
                                   "nullable": true
                                 },
-                                "windKph": {
-                                  "type": "number",
+                                "wind": {
+                                  "type": "string",
                                   "nullable": true
                                 },
                                 "impact": {
@@ -7537,8 +7036,8 @@
                               },
                               "required": [
                                 "condition",
-                                "temperatureC",
-                                "windKph",
+                                "temperature",
+                                "wind",
                                 "impact"
                               ]
                             },
@@ -7551,13 +7050,12 @@
                                     "type": "string"
                                   },
                                   "count": {
-                                    "type": "integer",
-                                    "minimum": 0
+                                    "type": "string",
+                                    "nullable": true
                                   },
                                   "hours": {
-                                    "type": "number",
-                                    "nullable": true,
-                                    "minimum": 0
+                                    "type": "string",
+                                    "nullable": true
                                   },
                                   "notes": {
                                     "type": "string",
@@ -7581,7 +7079,7 @@
                                     "type": "string"
                                   },
                                   "quantity": {
-                                    "type": "number",
+                                    "type": "string",
                                     "nullable": true
                                   },
                                   "unit": {
@@ -7621,11 +7119,7 @@
                                   },
                                   "severity": {
                                     "type": "string",
-                                    "enum": [
-                                      "low",
-                                      "medium",
-                                      "high"
-                                    ]
+                                    "nullable": true
                                   },
                                   "description": {
                                     "type": "string",

@@ -2,8 +2,8 @@
  * CLI.3 — `harpa me` integration tests.
  *
  * Boots a real Postgres + in-process Hono app, mints a bearer via the
- * OTP fake flow, then exercises the `me` commands through the real
- * `openapi-fetch` client (default-wiring, per Pitfall 13).
+ * better-auth email-OTP fake flow, then exercises the `me` commands
+ * through the real `openapi-fetch` client (default-wiring, per Pitfall 13).
  */
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import { Writable } from 'node:stream';
@@ -15,10 +15,14 @@ import { authOtpStart, authOtpVerify } from '../commands/auth.js';
 import { meGet, meUpdate, meUsage } from '../commands/me.js';
 import { EXIT } from '../lib/error.js';
 import type { CliEnv } from '../lib/env.js';
+import { readLatestOtp } from './_helpers.js';
 
 let fx: PgFixture;
 let app: ReturnType<typeof createApp>;
 let token: string;
+
+const API_URL = 'http://localhost';
+const EMAIL = 'cli-tests-100@e2e.harpapro.com';
 
 class MemoryStream extends Writable {
   chunks: string[] = [];
@@ -31,18 +35,18 @@ class MemoryStream extends Writable {
   }
 }
 
+const appFetch: typeof fetch = (input, init) => {
+  const req = input instanceof Request ? input : new Request(input as string, init);
+  return app.fetch(req);
+};
+
 function makeClient(t?: string) {
   const env: CliEnv = {
-    HARPA_API_URL: 'http://localhost',
+    HARPA_API_URL: API_URL,
     HARPA_DEBUG: '0',
     ...(t ? { HARPA_TOKEN: t } : {}),
   };
-  return createApiClient(env, {
-    fetch: (input: RequestInfo | URL, init?: RequestInit) => {
-      const req = input instanceof Request ? input : new Request(input, init);
-      return app.fetch(req);
-    },
-  });
+  return createApiClient(env, { fetch: appFetch });
 }
 
 beforeAll(async () => {
@@ -53,14 +57,21 @@ beforeAll(async () => {
   app = createApp();
 
   // Sign in once for the whole suite.
-  const phone = '+15550900001';
   const throwaway = new MemoryStream();
-  await authOtpStart({ client: makeClient(), phone, stdout: throwaway, stderr: throwaway });
+  await authOtpStart({
+    apiUrl: API_URL,
+    fetch: appFetch,
+    email: EMAIL,
+    stdout: throwaway,
+    stderr: throwaway,
+  });
+  const code = await readLatestOtp(EMAIL);
   const verifyOut = new MemoryStream();
   await authOtpVerify({
-    client: makeClient(),
-    phone,
-    code: '000000',
+    apiUrl: API_URL,
+    fetch: appFetch,
+    email: EMAIL,
+    code,
     raw: true,
     stdout: verifyOut,
     stderr: throwaway,
@@ -85,7 +96,7 @@ describe('harpa me get', () => {
     const exitCode = await meGet({ client: makeClient(token), stdout, stderr });
 
     expect(exitCode).toBe(EXIT.OK);
-    expect(stdout.text).toMatch(/\+15550900001/);
+    expect(stdout.text).toMatch(new RegExp(EMAIL));
     expect(stdout.text).toMatch(/Joined:/);
   });
 
@@ -101,7 +112,7 @@ describe('harpa me get', () => {
 
     expect(exitCode).toBe(EXIT.OK);
     const parsed = JSON.parse(stdout.text);
-    expect(parsed.user.phone).toBe('+15550900001');
+    expect(parsed.user.email).toBe(EMAIL);
   });
 });
 

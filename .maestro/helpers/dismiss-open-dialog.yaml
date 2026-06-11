@@ -1,14 +1,51 @@
 appId: ${MAESTRO_APP_ID}
 ---
-# Dismiss the iOS "Open in 'Harpa Pro Dev'?" system confirm sheet that
-# appears asynchronously after `openLink` to a custom URL scheme (one-time
-# per scheme per device install). No-op on Android and on iOS after the
-# scheme has been approved once.
+# Dismiss post-`openLink` system UI.
+#
+# Android/Samsung: when both prod and dev builds are installed, the
+# resolver sheet asks which app should handle `exp+harpa-pro-v4://`.
+# Select the dev build permanently for this device user.
+#
+# iOS: the "Open in 'Harpa Pro Dev'?" confirm sheet appears
+# asynchronously after the first custom-scheme open per install.
+#
+# Expo dev launcher: the first-run "This is the developer menu" sheet
+# can also appear late, after Android/iOS system UI is dismissed.
 - waitForAnimationToEnd:
     timeout: 3000
+- runFlow:
+    when:
+      visible: "Open with"
+    commands:
+      - tapOn:
+          text: "Harpa Pro Dev"
+      - tapOn:
+          text: "Always"
+      - waitForAnimationToEnd
 - runFlow:
     when:
       visible: "Open"
     commands:
       - tapOn: "Open"
       - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: "Continue"
+    commands:
+      - tapOn:
+          text: "Continue"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: "Close"
+    commands:
+      - tapOn:
+          text: "Close"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: "Ask Gemini"
+    commands:
+      - back
+      - waitForAnimationToEnd:
+          timeout: 3000

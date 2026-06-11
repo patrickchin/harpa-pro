@@ -4,7 +4,8 @@ Brings the local dev stack into "ready to run Maestro" shape:
 
   1. Ensure docker-compose stack (pg/api/minio) is up and `/healthz`
      returns 200.
-  2. Re-establish `adb reverse tcp:8081` + `tcp:8787` if missing.
+  2. Re-establish `adb reverse tcp:8081`, `tcp:8787`, and `tcp:9000`
+     if missing.
   3. Ensure Metro packager is running on :8081 with fixture wiring
      (`EXPO_PUBLIC_USE_FIXTURES=true`,
       `EXPO_PUBLIC_API_BASE_URL=http://localhost:8787`).

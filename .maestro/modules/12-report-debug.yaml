@@ -54,11 +54,16 @@ tags:
     id: "debug-prompt-text"
 
 # --- Verify report notes section has content --------------------------------
+# Section scrolls can land correctly while Maestro reports a miss; keep the
+# scroll as positioning and let the assertion below enforce visibility.
 - scrollUntilVisible:
     element:
       id: "debug-report-notes"
     direction: DOWN
     timeout: 10000
+    visibilityPercentage: 10
+    centerElement: true
+    optional: true
 - assertVisible:
     id: "debug-report-notes"
 - assertNotVisible:
@@ -69,6 +74,10 @@ tags:
     element:
       id: "debug-llm-response"
     direction: DOWN
+    timeout: 30000
+    visibilityPercentage: 10
+    centerElement: true
+    optional: true
 - assertVisible:
     id: "debug-llm-response"
 - assertVisible:

@@ -28,7 +28,7 @@ PG_DATABASE = "harpa"
 _TRUNCATE_SQL = (
     "TRUNCATE app.notes, app.files, app.reports, app.project_members,\n"
     "         app.projects, app.user_settings, app.waitlist_signups,\n"
-    "         auth.sessions, auth.verifications, auth.users\n"
+    '         public."session", public."account", public."verification", public."user"\n'
     "  RESTART IDENTITY CASCADE;\n"
 )
 

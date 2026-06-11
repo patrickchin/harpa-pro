@@ -103,10 +103,35 @@ tags:
     visible:
       id: "btn-generate-.*report"
     timeout: 15000
-- tapOn:
-    id: "btn-generate-.*report"
+- runFlow:
+    when:
+      visible: "^(Generate report|Update report)$"
+    commands:
+      - tapOn: "^(Generate report|Update report)$"
+- extendedWaitUntil:
+    visible:
+      id: "btn-finalize-report"
+    timeout: 60000
+- runFlow:
+    when:
+      visible:
+        id: "confirm-finalize"
+    commands:
+      - tapOn: "Cancel"
+      - extendedWaitUntil:
+          notVisible:
+            id: "confirm-finalize"
+          timeout: 8000
+- extendedWaitUntil:
+    visible:
+      id: "btn-tab-report"
+    timeout: 10000
 - tapOn:
     id: "btn-tab-report"
+- extendedWaitUntil:
+    visible:
+      id: "report-tab-pane"
+    timeout: 10000
 - extendedWaitUntil:
     visible:
       id: "report-view-.*"
@@ -134,6 +159,11 @@ tags:
     timeout: 60000
 - assertVisible:
     id: "report-photos-grid"
+- scrollUntilVisible:
+    element:
+      id: "btn-report-photo-.*"
+    direction: DOWN
+    timeout: 15000
 - assertVisible:
     id: "btn-report-photo-.*"
 - tapOn:
@@ -144,17 +174,20 @@ tags:
     timeout: 15000
 - extendedWaitUntil:
     visible:
-      id: "image-preview"
+      id: "image-preview-0-image"
     timeout: 30000
 - tapOn:
     id: "btn-close-image-preview"
 
 # --- Clean up: delete finalized report and return to project home -----------
+# Maestro can land with the header visible while scrollUntilVisible still
+# reports a miss, so treat this as positioning and require the button below.
 - scrollUntilVisible:
     element:
       id: "btn-report-actions"
     direction: UP
     timeout: 10000
+    optional: true
 - extendedWaitUntil:
     visible:
       id: "btn-report-actions"

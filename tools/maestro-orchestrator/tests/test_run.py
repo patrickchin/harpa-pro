@@ -18,7 +18,7 @@ from pathlib import Path
 import psutil
 import pytest
 
-from maestro_orchestrator import paths, pidfile
+from maestro_orchestrator import device, paths, pidfile
 from maestro_orchestrator.commands import run as run_cmd
 from maestro_orchestrator.config import MoConfig
 
@@ -281,7 +281,13 @@ def test_run_no_maestro_on_path(
 def test_run_passes_device_via_env(
     project_root: Path,
     stub_maestro: tuple[str, list[str]],
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    monkeypatch.setattr(
+        run_cmd.device,
+        "wake_device",
+        lambda *, host_name, device_id: device.DeviceOpResult(ok=True, detail="awake"),
+    )
     opts = run_cmd.RunOptions(flow="regression-journey.yaml", device="emulator-5554")
     code = run_cmd.run_run(_cfg(project_root), opts)
     assert code == run_cmd.EXIT_OK
@@ -289,6 +295,54 @@ def test_run_passes_device_via_env(
     assert record is not None
     assert record.device == "emulator-5554"
     _wait_pid(record.pid, timeout=5.0)
+
+
+def test_run_wakes_target_android_device_before_spawning(
+    project_root: Path,
+    stub_maestro: tuple[str, list[str]],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[dict[str, object]] = []
+
+    def fake_wake(*, host_name: str, device_id: str | None) -> device.DeviceOpResult:
+        calls.append({"host_name": host_name, "device_id": device_id})
+        return device.DeviceOpResult(ok=True, detail="awake")
+
+    monkeypatch.setattr(run_cmd.host, "detect_host", lambda: "windows")
+    monkeypatch.setattr(run_cmd.device, "wake_device", fake_wake)
+
+    opts = run_cmd.RunOptions(flow="regression-journey.yaml", device="emulator-5554")
+    code = run_cmd.run_run(_cfg(project_root), opts)
+    assert code == run_cmd.EXIT_OK
+    assert calls == [{"host_name": "windows", "device_id": "emulator-5554"}]
+
+    record = pidfile.read(paths.pid_file(project_root))
+    if record is not None:
+        _wait_pid(record.pid, timeout=5.0)
+
+
+def test_run_reports_wake_failure_before_spawning(
+    project_root: Path,
+    stub_maestro: tuple[str, list[str]],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(run_cmd.host, "detect_host", lambda: "windows")
+    monkeypatch.setattr(
+        run_cmd.device,
+        "wake_device",
+        lambda *, host_name, device_id: device.DeviceOpResult(
+            ok=False,
+            detail="device offline",
+        ),
+    )
+
+    code = run_cmd.run_run(
+        _cfg(project_root),
+        run_cmd.RunOptions(flow="regression-journey.yaml", device="emulator-5554"),
+    )
+
+    assert code == run_cmd.EXIT_DEVICE_WAKE_FAILED
+    assert pidfile.read(paths.pid_file(project_root)) is None
 
 
 def test_run_forwards_app_id_via_maestro_env_flag(
@@ -320,6 +374,43 @@ def test_run_forwards_app_id_via_maestro_env_flag(
     # The flow path must come after the --env pair, not before.
     flow_idx = next(i for i, a in enumerate(argv) if a.endswith("regression-journey.yaml"))
     assert flow_idx > idx + 1, argv
+
+    rec = pidfile.read(paths.pid_file(project_root))
+    if rec is not None:
+        _wait_pid(rec.pid, timeout=5.0)
+
+
+def test_run_forwards_dev_otp_token_via_maestro_env_flag(
+    project_root: Path,
+    stub_maestro: tuple[str, list[str]],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """`last-otp.js` reads DEV_OTP_TOKEN from Maestro globals. The
+    child process env alone is not enough for `${DEV_OTP_TOKEN}`."""
+    captured: dict[str, list[str]] = {}
+    real_spawn = run_cmd.spawn.spawn_detached
+
+    def capturing_spawn(argv: list[str], **kwargs: object) -> int:
+        captured["argv"] = list(argv)
+        return real_spawn(argv, **kwargs)
+
+    monkeypatch.setenv(
+        "DEV_OTP_TOKEN",
+        "local-e2e-dev-otp-token-000000000000000000000000000000",
+    )
+    monkeypatch.setattr(run_cmd.spawn, "spawn_detached", capturing_spawn)
+
+    code = run_cmd.run_run(
+        _cfg(project_root, app_id="com.harpa.pro.dev"),
+        run_cmd.RunOptions(flow="regression-journey.yaml"),
+    )
+    assert code == run_cmd.EXIT_OK
+
+    argv = captured["argv"]
+    expected = "DEV_OTP_TOKEN=local-e2e-dev-otp-token-000000000000000000000000000000"
+    assert expected in argv, argv
+    flow_idx = next(i for i, a in enumerate(argv) if a.endswith("regression-journey.yaml"))
+    assert argv.index(expected) < flow_idx, argv
 
     rec = pidfile.read(paths.pid_file(project_root))
     if rec is not None:

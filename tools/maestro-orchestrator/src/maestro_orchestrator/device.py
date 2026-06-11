@@ -5,6 +5,9 @@ Two small functions:
 * `clear_app_data(host, app_id, device_id)` — wipe app data on the
   attached device. Android: `adb shell pm clear`. iOS: `xcrun simctl
   uninstall booted <app_id>` (the next dev-client launch reinstalls).
+* `wake_device(host, device_id)` — wake an Android device out of
+  sleep / DreamActivity before Maestro starts, and fail fast if a
+  secure keyguard still blocks automation.
 * `adb_reverse_ports(host, device_id)` — re-establish the loopback
   forwards needed after `pm clear` (Pitfall windows#20). No-op on iOS.
 
@@ -20,6 +23,38 @@ _SUBPROCESS_TIMEOUT = 8.0
 _REVERSE_PORTS: tuple[tuple[str, str], ...] = (
     ("tcp:8081", "tcp:8081"),
     ("tcp:8787", "tcp:8787"),
+    ("tcp:9000", "tcp:9000"),
+)
+_ANDROID_WAKE_COMMANDS: tuple[tuple[str, tuple[str, ...]], ...] = (
+    ("enable stay-awake", ("shell", "svc", "power", "stayon", "true")),
+    (
+        "disable screensaver",
+        ("shell", "settings", "put", "secure", "screensaver_enabled", "0"),
+    ),
+    (
+        "disable sleep dreams",
+        (
+            "shell",
+            "settings",
+            "put",
+            "secure",
+            "screensaver_activate_on_sleep",
+            "0",
+        ),
+    ),
+    (
+        "disable dock dreams",
+        (
+            "shell",
+            "settings",
+            "put",
+            "secure",
+            "screensaver_activate_on_dock",
+            "0",
+        ),
+    ),
+    ("wake device", ("shell", "input", "keyevent", "KEYCODE_WAKEUP")),
+    ("dismiss keyguard", ("shell", "input", "keyevent", "KEYCODE_MENU")),
 )
 
 
@@ -98,13 +133,79 @@ def clear_app_data(
     return _ok(f"cleared {app_id}")
 
 
+def wake_device(*, host_name: str, device_id: str | None) -> DeviceOpResult:
+    """Prepare Android so Maestro does not assert against DreamActivity.
+
+    No-op on macOS (iOS Simulator does not enter Android's dream
+    state). On Android hosts, keep the device awake, disable dream
+    activation, wake it, and press MENU to dismiss non-secure lock
+    screens. If a secure keyguard remains, fail before spawning
+    Maestro with a message the operator can act on.
+    """
+    if host_name == "macos":
+        return _skip("iOS simulator wake not needed")
+    for label, args in _ANDROID_WAKE_COMMANDS:
+        argv = _adb_argv(device_id, *args)
+        try:
+            result = _run(argv)
+        except FileNotFoundError:
+            return _fail("`adb` not on PATH")
+        except subprocess.TimeoutExpired:
+            return _fail(f"`adb` timed out during {label}")
+        if result.returncode != 0:
+            detail = (result.stderr or result.stdout or "").strip()
+            return _fail(
+                f"adb {label} exited {result.returncode}"
+                + (f": {detail}" if detail else "")
+            )
+
+    state = _read_android_window_state(device_id)
+    if not state.ok:
+        return state
+    blocked = _android_window_blocker(state.detail)
+    if blocked is not None:
+        return _fail(blocked)
+    return _ok("device awake; dreams disabled")
+
+
+def _read_android_window_state(device_id: str | None) -> DeviceOpResult:
+    argv = _adb_argv(device_id, "shell", "dumpsys", "window")
+    try:
+        result = _run(argv)
+    except FileNotFoundError:
+        return _fail("`adb` not on PATH")
+    except subprocess.TimeoutExpired:
+        return _fail("`adb` timed out reading window state")
+    if result.returncode != 0:
+        detail = (result.stderr or result.stdout or "").strip()
+        return _fail(
+            f"adb dumpsys window exited {result.returncode}"
+            + (f": {detail}" if detail else "")
+        )
+    return _ok(result.stdout)
+
+
+def _android_window_blocker(window_state: str) -> str | None:
+    if "DreamActivity" in window_state or "mShowingDream=true" in window_state:
+        return "Android dream/screensaver is still focused; wake or unlock device"
+    if "isKeyguardShowing=true" in window_state:
+        return "Android keyguard is still showing; unlock the device before E2E"
+    for line in window_state.splitlines():
+        if (
+            ("mCurrentFocus=" in line or "mFocusedWindow=" in line)
+            and "Bouncer" in line
+        ):
+            return "Android keyguard is still showing; unlock the device before E2E"
+    return None
+
+
 def adb_reverse_ports(
     *, host_name: str, device_id: str | None
 ) -> DeviceOpResult:
-    """Re-establish `adb reverse tcp:8081` and `tcp:8787`.
+    """Re-establish Android loopback forwards for Metro, API, and MinIO.
 
     No-op on macOS (iOS Simulator shares host loopback; no reverse
-    needed). On Android hosts (windows / linux), runs both ports
+    needed). On Android hosts (windows / linux), runs each port
     sequentially. Idempotent — `adb reverse` overwrites any existing
     forward for the same local spec.
     """

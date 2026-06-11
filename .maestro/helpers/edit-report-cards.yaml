@@ -190,6 +190,13 @@ appId: ${MAESTRO_APP_ID}
     notVisible:
       id: 'report-edit-modal'
     timeout: 8000
+- scrollUntilVisible:
+    element:
+      text: 'E2E sealant.*'
+    direction: DOWN
+    timeout: 15000
+    visibilityPercentage: 10
+    centerElement: true
 - assertVisible:
     text: 'E2E sealant.*'
 
@@ -216,6 +223,21 @@ appId: ${MAESTRO_APP_ID}
     notVisible:
       id: 'report-edit-modal'
     timeout: 8000
+- scrollUntilVisible:
+    element:
+      text: 'E2E confirm roof anchors.*'
+    direction: DOWN
+    timeout: 8000
+    visibilityPercentage: 10
+    centerElement: true
+    optional: true
+- scrollUntilVisible:
+    element:
+      text: 'E2E confirm roof anchors.*'
+    direction: UP
+    timeout: 15000
+    visibilityPercentage: 10
+    centerElement: true
 - assertVisible:
     text: 'E2E confirm roof anchors.*'
 
@@ -242,6 +264,21 @@ appId: ${MAESTRO_APP_ID}
     notVisible:
       id: 'report-edit-modal'
     timeout: 8000
+- scrollUntilVisible:
+    element:
+      text: 'E2E section heading.*'
+    direction: DOWN
+    timeout: 8000
+    visibilityPercentage: 10
+    centerElement: true
+    optional: true
+- scrollUntilVisible:
+    element:
+      text: 'E2E section heading.*'
+    direction: UP
+    timeout: 15000
+    visibilityPercentage: 10
+    centerElement: true
 - assertVisible:
     text: 'E2E section heading.*'
 

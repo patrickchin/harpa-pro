@@ -108,12 +108,28 @@ export function IssuesCard({
                         {toTitleCase(issue.severity)}
                       </Text>
                     </View>
-                    {onEditIssue ? (
-                      <EditPencilButton
-                        onPress={() => onEditIssue(index)}
-                        accessibilityLabel={`Edit issue ${index + 1}`}
-                        testID={`btn-edit-issue-${index}`}
-                      />
+                    {onAddAttachmentsToIssue || onEditIssue ? (
+                      <View className="shrink-0 flex-row items-center gap-2">
+                        <View
+                          className="flex-row items-center gap-2"
+                          testID={`report-issue-actions-${index}`}
+                        >
+                          {onAddAttachmentsToIssue ? (
+                            <AddAttachmentsButton
+                              onPress={() => onAddAttachmentsToIssue(index)}
+                              accessibilityLabel={`Add attachments to issue ${index + 1}`}
+                              testID={`btn-add-attachments-issue-${index}`}
+                            />
+                          ) : null}
+                          {onEditIssue ? (
+                            <EditPencilButton
+                              onPress={() => onEditIssue(index)}
+                              accessibilityLabel={`Edit issue ${index + 1}`}
+                              testID={`btn-edit-issue-${index}`}
+                            />
+                          ) : null}
+                        </View>
+                      </View>
                     ) : null}
                   </View>
                   <Text className="mt-2 text-sm text-muted-foreground">
@@ -131,12 +147,6 @@ export function IssuesCard({
                         → {issue.actionRequired}
                       </Text>
                     </View>
-                  ) : null}
-                  {onAddAttachmentsToIssue ? (
-                    <AddAttachmentsButton
-                      onPress={() => onAddAttachmentsToIssue(index)}
-                      testID={`btn-add-attachments-issue-${index}`}
-                    />
                   ) : null}
                   {placedByIssue && (placedByIssue.get(index)?.length ?? 0) > 0 ? (
                     <PlacedPhotoStrip

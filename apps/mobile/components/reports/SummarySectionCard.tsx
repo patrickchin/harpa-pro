@@ -4,7 +4,7 @@
  * `../haru3-reports/apps/mobile/components/reports/SummarySectionCard.tsx`
  * on branch `dev`.
  */
-import { Text } from 'react-native';
+import { Text, View } from 'react-native';
 import { ClipboardList } from 'lucide-react-native';
 import type { GeneratedReportSection } from '@harpa/report-core';
 
@@ -45,6 +45,7 @@ export function SummarySectionCard({
   const Icon = SECTION_ICONS[section.title] || ClipboardList;
   const numStr = reportNumber ?? 'x';
   const idx = sectionIndex ?? 0;
+  const hasHeaderActions = Boolean(onAddAttachments || onEdit);
 
   return (
     <Card variant="default" padding="lg">
@@ -52,12 +53,26 @@ export function SummarySectionCard({
         title={section.title}
         icon={<Icon size={16} color={colors.foreground} />}
         trailing={
-          onEdit ? (
-            <EditPencilButton
-              onPress={onEdit}
-              accessibilityLabel={`Edit section ${section.title}`}
-              testID={`btn-edit-section-${idx}`}
-            />
+          hasHeaderActions ? (
+            <View
+              className="flex-row items-center gap-2"
+              testID={`report-section-actions-${idx}`}
+            >
+              {onAddAttachments ? (
+                <AddAttachmentsButton
+                  onPress={onAddAttachments}
+                  accessibilityLabel={`Add attachments to section ${section.title}`}
+                  testID={`btn-add-attachments-section-${idx}`}
+                />
+              ) : null}
+              {onEdit ? (
+                <EditPencilButton
+                  onPress={onEdit}
+                  accessibilityLabel={`Edit section ${section.title}`}
+                  testID={`btn-edit-section-${idx}`}
+                />
+              ) : null}
+            </View>
           ) : undefined
         }
       />
@@ -67,12 +82,6 @@ export function SummarySectionCard({
       >
         {section.content}
       </Text>
-      {onAddAttachments ? (
-        <AddAttachmentsButton
-          onPress={onAddAttachments}
-          testID={`btn-add-attachments-section-${idx}`}
-        />
-      ) : null}
       {placedGroups && placedGroups.length > 0 ? (
         <PlacedPhotoStrip
           groups={placedGroups}

@@ -18,6 +18,25 @@ ANDROID_PACKAGE_NAMES = {
 
 IOS_METADATA_PATH = File.join(MOBILE_DIR, "fastlane", "metadata", "ios")
 ANDROID_METADATA_PATH = File.join(MOBILE_DIR, "fastlane", "metadata", "android")
+STORE_METADATA_NOTES_PATH = File.join(MOBILE_DIR, "fastlane", "metadata", "README.md")
+
+IOS_PRIMARY_CATEGORY = "Business"
+IOS_SECONDARY_CATEGORY = "Productivity"
+IOS_SCREENSHOTS_PATH = File.join(MOBILE_DIR, "fastlane", "screenshots")
+IOS_APP_STORE_PATH = File.join(MOBILE_DIR, "fastlane", "app_store")
+IOS_APP_PRIVACY_DETAILS_PATH = File.join(IOS_APP_STORE_PATH, "app_privacy_details.json")
+IOS_APP_RATING_CONFIG_PATH = File.join(IOS_APP_STORE_PATH, "age_rating.json")
+
+IMAGE_EXTENSIONS = %w[.png .jpg .jpeg].freeze
+ANDROID_SCREENSHOT_DIRS = %w[
+  phoneScreenshots
+  sevenInchScreenshots
+  tenInchScreenshots
+].freeze
+
+def relative_path(path)
+  path.sub("#{REPO_ROOT}/", "")
+end
 
 def eas_config
   JSON.parse(File.read(EAS_JSON_PATH))
@@ -39,7 +58,60 @@ end
 def ensure_file!(path)
   return if File.file?(path)
 
-  UI.user_error!("Missing required file: #{path.sub("#{REPO_ROOT}/", "")}")
+  UI.user_error!("Missing required file: #{relative_path(path)}")
+end
+
+def ensure_json_file!(path)
+  ensure_file!(path)
+  JSON.parse(File.read(path))
+rescue JSON::ParserError => e
+  UI.user_error!("Invalid JSON in #{relative_path(path)}: #{e.message}")
+end
+
+def image_files_under(path)
+  return [] unless Dir.exist?(path)
+
+  Dir.glob(File.join(path, "**", "*"))
+     .select { |file| File.file?(file) && IMAGE_EXTENSIONS.include?(File.extname(file).downcase) }
+     .sort
+end
+
+def ensure_image_files!(path, label)
+  files = image_files_under(path)
+  return files unless files.empty?
+
+  UI.user_error!("Missing #{label} under #{relative_path(path)}")
+end
+
+def ensure_android_screenshot_files!
+  root = File.join(ANDROID_METADATA_PATH, "en-US", "images")
+  files = ANDROID_SCREENSHOT_DIRS.flat_map do |directory|
+    image_files_under(File.join(root, directory))
+  end
+
+  return files unless files.empty?
+
+  UI.user_error!(
+    "Missing Play Store screenshots under #{relative_path(root)} " \
+    "(expected one of #{ANDROID_SCREENSHOT_DIRS.join(", ")})"
+  )
+end
+
+def ensure_env!(name)
+  value = ENV[name].to_s.strip
+  return value unless value.empty?
+
+  UI.user_error!("Missing required environment variable: #{name}")
+end
+
+def app_store_connect_team_options
+  team_id = ENV["APP_STORE_CONNECT_TEAM_ID"].to_s.strip
+  return { team_id: team_id } unless team_id.empty?
+
+  team_name = ENV["APP_STORE_CONNECT_TEAM_NAME"].to_s.strip
+  return { team_name: team_name } unless team_name.empty?
+
+  {}
 end
 
 def run_in_mobile!(command)
@@ -56,12 +128,16 @@ def eas_submit_command(profile)
   "pnpm exec eas submit --platform all --profile #{profile} --latest --non-interactive"
 end
 
-def eas_build_and_submit_command(profile)
-  "pnpm exec eas build --platform all --profile #{profile} --auto-submit-with-profile #{profile} --non-interactive"
+def eas_build_and_submit_command(profile, submit_profile = profile)
+  "pnpm exec eas build --platform all --profile #{profile} --auto-submit-with-profile #{submit_profile} --non-interactive"
 end
 
 def print_eas_command(label, command)
   UI.message("#{label}: cd apps/mobile && #{command}")
+end
+
+def print_fastlane_command(label, lane)
+  UI.message("#{label}: bundle exec fastlane #{lane}")
 end
 
 def ensure_metadata_tree!
@@ -81,18 +157,38 @@ def ensure_metadata_tree!
   ].each do |relative_path|
     ensure_file!(File.join(MOBILE_DIR, "fastlane", "metadata", relative_path))
   end
+
+  ensure_file!(STORE_METADATA_NOTES_PATH)
 end
 
-def upload_ios_metadata!(track)
-  deliver(
+def ios_deliver_base_options(track)
+  {
     app_identifier: IOS_BUNDLE_IDS.fetch(track),
     metadata_path: IOS_METADATA_PATH,
     skip_binary_upload: true,
-    skip_screenshots: true,
     submit_for_review: false,
     force: true,
     run_precheck_before_submit: false
+  }
+end
+
+def ios_metadata_options(track)
+  options = ios_deliver_base_options(track).merge(
+    skip_screenshots: true,
+    primary_category: IOS_PRIMARY_CATEGORY,
+    secondary_category: IOS_SECONDARY_CATEGORY
   )
+
+  if File.file?(IOS_APP_RATING_CONFIG_PATH)
+    ensure_json_file!(IOS_APP_RATING_CONFIG_PATH)
+    options[:app_rating_config_path] = IOS_APP_RATING_CONFIG_PATH
+  end
+
+  options
+end
+
+def upload_ios_metadata!(track)
+  deliver(**ios_metadata_options(track))
 end
 
 def upload_android_metadata!(track)
@@ -107,14 +203,61 @@ def upload_android_metadata!(track)
   )
 end
 
+def upload_ios_screenshots!(track)
+  ensure_image_files!(IOS_SCREENSHOTS_PATH, "App Store screenshots")
+
+  deliver(
+    **ios_deliver_base_options(track).merge(
+      screenshots_path: IOS_SCREENSHOTS_PATH,
+      skip_metadata: true,
+      skip_screenshots: false,
+      overwrite_screenshots: true
+    )
+  )
+end
+
+def upload_android_screenshots!(track)
+  ensure_android_screenshot_files!
+
+  supply(
+    package_name: ANDROID_PACKAGE_NAMES.fetch(track),
+    track: track == :preview ? "internal" : "production",
+    metadata_path: ANDROID_METADATA_PATH,
+    skip_upload_apk: true,
+    skip_upload_aab: true,
+    skip_upload_metadata: true,
+    skip_upload_changelogs: true,
+    skip_upload_images: true,
+    skip_upload_screenshots: false,
+    sync_image_upload: true
+  )
+end
+
+def upload_ios_privacy_details!(track)
+  ensure_json_file!(IOS_APP_PRIVACY_DETAILS_PATH)
+
+  upload_app_privacy_details_to_app_store(
+    **{
+      username: ensure_env!("APP_STORE_CONNECT_USERNAME"),
+      app_identifier: IOS_BUNDLE_IDS.fetch(track),
+      json_path: IOS_APP_PRIVACY_DETAILS_PATH
+    }.merge(app_store_connect_team_options)
+  )
+end
+
 desc "Validate Fastlane/EAS release setup without uploading or building"
 lane :doctor do
   ensure_command!("pnpm")
   ensure_file!(EAS_JSON_PATH)
   ensure_metadata_tree!
+  ensure_json_file!(IOS_APP_RATING_CONFIG_PATH) if File.file?(IOS_APP_RATING_CONFIG_PATH)
+  ensure_json_file!(IOS_APP_PRIVACY_DETAILS_PATH) if File.file?(IOS_APP_PRIVACY_DETAILS_PATH)
 
   %i[preview production].each do |profile|
     ensure_eas_profile!(:build, profile)
+  end
+
+  %i[preview production-internal production].each do |profile|
     ensure_eas_profile!(:submit, profile)
   end
 
@@ -124,12 +267,25 @@ lane :doctor do
   UI.message("No metadata was uploaded.")
   UI.message("No EAS build was started.")
   UI.message("No EAS submit was started.")
+  UI.message("No screenshots or App Store privacy details were uploaded.")
   print_eas_command("Preview build", eas_build_command(:preview))
   print_eas_command("Preview submit latest", eas_submit_command(:preview))
   print_eas_command("Preview beta build+submit", eas_build_and_submit_command(:preview))
   print_eas_command("Production build", eas_build_command(:production))
+  print_eas_command(
+    "Production smoke submit latest",
+    eas_submit_command(:"production-internal")
+  )
+  print_eas_command(
+    "Production smoke build+submit",
+    eas_build_and_submit_command(:production, :"production-internal")
+  )
   print_eas_command("Production submit latest", eas_submit_command(:production))
   print_eas_command("Production release build+submit", eas_build_and_submit_command(:production))
+  print_fastlane_command("Preview screenshots", "screenshots_preview")
+  print_fastlane_command("Production screenshots", "screenshots_production")
+  print_fastlane_command("Preview App Store privacy", "app_privacy_preview")
+  print_fastlane_command("Production App Store privacy", "app_privacy_production")
 end
 
 desc "Upload preview/internal App Store and Play Store metadata"
@@ -146,24 +302,60 @@ lane :metadata_production do
   upload_android_metadata!(:production)
 end
 
+desc "Upload preview/internal App Store and Play Store screenshots"
+lane :screenshots_preview do
+  upload_ios_screenshots!(:preview)
+  upload_android_screenshots!(:preview)
+end
+
+desc "Upload production App Store and Play Store screenshots"
+lane :screenshots_production do
+  upload_ios_screenshots!(:production)
+  upload_android_screenshots!(:production)
+end
+
+desc "Upload reviewed preview App Store privacy questionnaire JSON"
+lane :app_privacy_preview do
+  upload_ios_privacy_details!(:preview)
+end
+
+desc "Upload reviewed production App Store privacy questionnaire JSON"
+lane :app_privacy_production do
+  upload_ios_privacy_details!(:production)
+end
+
 desc "Run EAS preview build for iOS and Android"
 lane :build_preview do
   ensure_eas_profile!(:build, :preview)
   run_in_mobile!(eas_build_command(:preview))
 end
 
-desc "Submit latest existing EAS preview build to TestFlight and Play internal"
+desc "Submit latest existing EAS preview build to dev TestFlight and Play internal"
 lane :submit_preview do
   ensure_eas_profile!(:submit, :preview)
   run_in_mobile!(eas_submit_command(:preview))
 end
 
-desc "Upload preview metadata, build, and auto-submit the created preview binaries"
+desc "Upload preview metadata, build, and auto-submit the created dev preview binaries"
 lane :beta do
   metadata_preview
   ensure_eas_profile!(:build, :preview)
   ensure_eas_profile!(:submit, :preview)
   run_in_mobile!(eas_build_and_submit_command(:preview))
+end
+
+desc "Submit latest existing EAS production build to TestFlight and Play internal for final smoke"
+lane :submit_production_internal do
+  ensure_eas_profile!(:submit, :"production-internal")
+  run_in_mobile!(eas_submit_command(:"production-internal"))
+end
+
+desc "Upload production metadata, build, and auto-submit production binaries for final smoke"
+lane :beta_production do
+  metadata_production
+  ensure_eas_profile!(:build, :production)
+  ensure_eas_profile!(:submit, :"production-internal")
+  run_in_mobile!(eas_build_and_submit_command(:production, :"production-internal"))
 end
 
 desc "Run EAS production build for iOS and Android"

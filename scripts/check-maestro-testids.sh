@@ -14,6 +14,8 @@
 #   btn-camera-thumb-N         →  testID={`btn-camera-thumb-${idx}`}
 #   batch-grid-tile-N*         →  testID={`${tileTestIDPrefix}-${idx}`} plus
 #                                  PhotoTile suffixes (`-img`, `-ring`, `-cancel`)
+#   attachment-picker-thumbnail-N-image
+#                              →  testID={`attachment-picker-thumbnail-${index}-image`}
 #   report-row-draft-0         →  testID={`report-row-${item.number}`} in seeded flows
 #   input-phone                →  rendered by auth/login flow outside static source match
 #   id-a|id-b                  →  Maestro regex alternation, literals checked
@@ -43,6 +45,7 @@ KNOWN_TEMPLATE_IDS="picker-member-role-editor picker-member-role-viewer btn-came
 
 is_known() {
   local id="$1"
+  [[ "$id" =~ ^attachment-picker-thumbnail-[0-9]+-image$ ]] && return 0
   for known in $KNOWN_TEMPLATE_IDS; do
     [[ "$id" == "$known" ]] && return 0
   done

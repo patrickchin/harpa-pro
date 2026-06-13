@@ -13,7 +13,7 @@
  * Mirrors the saved-report screen's split logic so behaviour stays
  * consistent before/after finalize.
  */
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { RotateCcw } from 'lucide-react-native';
@@ -59,6 +59,8 @@ export function ReportTabPane({ width, onEdit }: ReportTabPaneProps) {
   const emptyReportSkeleton = useMemo(() => createEmptyReport(), []);
 
   const placementsEnabled = !!placement.onPlacePhotoGroup;
+  const placementActionsEnabled =
+    placementsEnabled && placement.canPlacePhotoGroup && !generation.isUpdating;
 
   // Build photo groups directly from the gallery (one entry per
   // `noteId` with N tiles). Mirrors `groupPhotos(noteRows, …)` in the
@@ -100,8 +102,11 @@ export function ReportTabPane({ width, onEdit }: ReportTabPaneProps) {
   }, [placementSheetNoteId, generation.report]);
 
   const handleOpenPlacementSheet = useCallback(
-    (noteId: string) => setPlacementSheetNoteId(noteId),
-    [],
+    (noteId: string) => {
+      if (!placementActionsEnabled) return;
+      setPlacementSheetNoteId(noteId);
+    },
+    [placementActionsEnabled],
   );
   const [attachmentPickerTarget, setAttachmentPickerTarget] =
     useState<PhotoPlacement | null>(null);
@@ -113,9 +118,18 @@ export function ReportTabPane({ width, onEdit }: ReportTabPaneProps) {
   }, [attachmentPickerTarget, generation.report]);
 
   const handleOpenAttachmentPicker = useCallback(
-    (target: PhotoPlacement) => setAttachmentPickerTarget(target),
-    [],
+    (target: PhotoPlacement) => {
+      if (!placementActionsEnabled) return;
+      setAttachmentPickerTarget(target);
+    },
+    [placementActionsEnabled],
   );
+
+  useEffect(() => {
+    if (placementActionsEnabled) return;
+    setPlacementSheetNoteId(null);
+    setAttachmentPickerTarget(null);
+  }, [placementActionsEnabled]);
 
   const handleOpenPhoto = useCallback(
     (input: { fileId: string; title?: string }) => {
@@ -208,10 +222,10 @@ export function ReportTabPane({ width, onEdit }: ReportTabPaneProps) {
               placements={placementsEnabled ? placements : undefined}
               onOpenPhoto={placementsEnabled ? handleOpenPhoto : undefined}
               onEditPlacement={
-                placementsEnabled ? handleOpenPlacementSheet : undefined
+                placementActionsEnabled ? handleOpenPlacementSheet : undefined
               }
               onAddAttachmentToTarget={
-                placementsEnabled ? handleOpenAttachmentPicker : undefined
+                placementActionsEnabled ? handleOpenAttachmentPicker : undefined
               }
             />
 
@@ -219,7 +233,7 @@ export function ReportTabPane({ width, onEdit }: ReportTabPaneProps) {
               photos={unplacedPhotos}
               onOpen={preview.openPhoto}
               onOpenPlacementSheet={
-                placementsEnabled ? handleOpenPlacementSheet : undefined
+                placementActionsEnabled ? handleOpenPlacementSheet : undefined
               }
               report={generation.report}
             />
@@ -237,7 +251,7 @@ export function ReportTabPane({ width, onEdit }: ReportTabPaneProps) {
         ) : null}
       </ScrollView>
 
-      {placementsEnabled ? (
+      {placementActionsEnabled ? (
         <PhotoGroupPlacementSheet
           visible={placementSheetNoteId !== null}
           issues={generation.report?.report.issues ?? []}
@@ -253,14 +267,14 @@ export function ReportTabPane({ width, onEdit }: ReportTabPaneProps) {
             const noteId = placementSheetNoteId;
             setPlacementSheetNoteId(null);
             const onPlace = placement.onPlacePhotoGroup;
-            if (!noteId || !onPlace) return;
+            if (!noteId || !onPlace || !placementActionsEnabled) return;
             onPlace({ noteId, placement: next });
           }}
           onClose={() => setPlacementSheetNoteId(null)}
         />
       ) : null}
 
-      {placementsEnabled ? (
+      {placementActionsEnabled ? (
         <PhotoAttachmentPickerSheet
           visible={attachmentPickerTarget !== null}
           targetLabel={attachmentPickerTargetLabel}
@@ -269,7 +283,7 @@ export function ReportTabPane({ width, onEdit }: ReportTabPaneProps) {
             const target = attachmentPickerTarget;
             setAttachmentPickerTarget(null);
             const onPlace = placement.onPlacePhotoGroup;
-            if (!target || !onPlace) return;
+            if (!target || !onPlace || !placementActionsEnabled) return;
             onPlace({ noteId, placement: target });
           }}
           onClose={() => setAttachmentPickerTarget(null)}

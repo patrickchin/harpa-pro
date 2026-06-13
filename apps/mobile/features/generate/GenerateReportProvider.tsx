@@ -359,6 +359,12 @@ interface PlacementSurface {
     noteId: string;
     placement: { kind: 'issue' | 'section'; index: number } | null;
   }) => void;
+  /**
+   * False while backend generation is replacing report.body. Consumers
+   * should keep existing placement display visible but hide/disable
+   * controls that would write placement changes.
+   */
+  canPlacePhotoGroup: boolean;
 }
 
 export interface GenerateReportContextValue {
@@ -754,25 +760,28 @@ export function GenerateReportProvider({
   );
 
   const openEdit = useCallback(() => {
+    if (isGeneratingReport) return;
     // Lazy-seed locally so the route's dirty flag stays clean.
     if (!report) setLocalSeed(createEmptyReport());
     setActiveTab('edit');
-  }, [report]);
+  }, [isGeneratingReport, report]);
 
   const editManually = useCallback(() => {
+    if (isGeneratingReport) return;
     if (onEditManually) {
       onEditManually();
       return;
     }
     if (!report) setLocalSeed(createEmptyReport());
     setActiveTab('edit');
-  }, [onEditManually, report]);
+  }, [isGeneratingReport, onEditManually, report]);
 
   const setReport = useCallback(
     (next: GeneratedSiteReport) => {
+      if (isGeneratingReport) return;
       onSetReport?.(next);
     },
-    [onSetReport],
+    [isGeneratingReport, onSetReport],
   );
 
   const handlePickAttachment = useCallback(
@@ -890,6 +899,7 @@ export function GenerateReportProvider({
       },
       placement: {
         onPlacePhotoGroup,
+        canPlacePhotoGroup: Boolean(onPlacePhotoGroup) && !isGeneratingReport,
       },
       ui: {
         attachmentSheetVisible,

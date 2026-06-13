@@ -154,6 +154,23 @@ describe('GenerateNotes — Report tab', () => {
     expect(text).toContain('Close east footing pour.');
   });
 
+  it('hides report-card edit actions while report generation is in flight', () => {
+    const tree = render(
+      <GenerateNotes
+        {...baseProps}
+        report={SAMPLE_GENERATED_REPORT}
+        isGeneratingReport
+      />,
+    );
+
+    expect(
+      tree.root.findAllByProps({ testID: 'btn-edit-issue-0' }),
+    ).toHaveLength(0);
+    expect(
+      tree.root.findAllByProps({ testID: 'btn-edit-section-0' }),
+    ).toHaveLength(0);
+  });
+
   it('renders the generation error banner and Retry calls onRegenerate', () => {
     const onRegenerate = vi.fn();
     const tree = render(

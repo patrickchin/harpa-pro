@@ -126,6 +126,13 @@ function GenerateNotesLayout({
   const deleteDraftCopy = getDeleteDraftDialogCopy();
 
   const showDeleteOption = canWrite && Boolean(onDeleteDraft);
+  const canEditReportBody = canWrite && !generation.isUpdating;
+
+  useEffect(() => {
+    if (generation.isUpdating) {
+      setEditing(null);
+    }
+  }, [generation.isUpdating]);
 
   // Slide-collapse the top chrome (header + action row + tab bar)
   // when the keyboard opens so the user has room to see their
@@ -250,7 +257,7 @@ function GenerateNotesLayout({
         <NotesTabPane width={windowWidth} />
         <ReportTabPane
           width={windowWidth}
-          {...(canWrite && generation.report
+          {...(canEditReportBody && generation.report
             ? { onEdit: (target: ReportEditTarget) => setEditing(target) }
             : {})}
         />
@@ -262,7 +269,7 @@ function GenerateNotesLayout({
 
       <GenerateReportDialogs />
 
-      {canWrite && generation.report ? (
+      {canEditReportBody && generation.report ? (
         <ReportEditModal
           target={editing}
           report={generation.report}

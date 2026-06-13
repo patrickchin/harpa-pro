@@ -129,7 +129,7 @@ function buildContext(overrides: Record<string, unknown> = {}) {
       openPhoto: vi.fn(),
       closePhoto: vi.fn(),
     },
-    placement: { onPlacePhotoGroup: vi.fn() },
+    placement: { onPlacePhotoGroup: vi.fn(), canPlacePhotoGroup: true },
     ui: {
       attachmentSheetVisible: false,
       setAttachmentSheetVisible: vi.fn(),
@@ -299,5 +299,35 @@ describe('ReportTabPane placement pipeline', () => {
       noteId: 'n_placed',
       placement: null,
     });
+  });
+
+  it('keeps placements visible but disables placement actions while generating', () => {
+    mockCtx = buildContext({
+      generation: {
+        ...buildContext().generation,
+        isUpdating: true,
+      },
+    });
+
+    const tree = render();
+
+    expect(
+      tree.root.findAllByProps({ testID: 'placed-photos-section-1' }).length,
+    ).toBeGreaterThan(0);
+    expect(
+      tree.root.findAllByProps({ testID: 'btn-placed-photo-fil_placed' }).length,
+    ).toBeGreaterThan(0);
+    expect(
+      tree.root.findAllByProps({ testID: 'btn-generate-report-photo-fil_unplaced' }).length,
+    ).toBeGreaterThan(0);
+    expect(
+      tree.root.findAllByProps({ testID: 'btn-generate-report-photos-place-n_unplaced' }),
+    ).toHaveLength(0);
+    expect(
+      tree.root.findAllByProps({ testID: 'btn-add-attachments-section-1' }),
+    ).toHaveLength(0);
+    expect(
+      tree.root.findAllByProps({ testID: 'btn-move-placed-photo-n_placed' }),
+    ).toHaveLength(0);
   });
 });

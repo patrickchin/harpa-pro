@@ -120,6 +120,29 @@ describe('PlacedPhotoStrip', () => {
     expect(onEditPlacement).toHaveBeenCalledWith('n1');
   });
 
+  it('keeps the edit-placement chip visible but disabled when placement actions are locked', () => {
+    const onEditPlacement = vi.fn();
+    const tree = wrap(
+      <PlacedPhotoStrip
+        groups={[GROUP]}
+        onEditPlacement={onEditPlacement}
+        placementActionsDisabled
+        testID="strip"
+      />,
+    );
+    const chip = tree.root.findByProps({
+      testID: 'btn-move-placed-photo-n1',
+    });
+    expect(chip.props.disabled).toBe(true);
+    expect(chip.props.accessibilityState).toMatchObject({ disabled: true });
+
+    act(() => {
+      chip.props.onPress?.();
+    });
+
+    expect(onEditPlacement).not.toHaveBeenCalled();
+  });
+
   it('omits the edit chip when onEditPlacement is not provided', () => {
     const tree = wrap(<PlacedPhotoStrip groups={[GROUP]} testID="strip" />);
     expect(

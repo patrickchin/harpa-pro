@@ -136,4 +136,28 @@ describe('ReportPhotosFromGallery', () => {
     });
     expect(onOpenSheet).toHaveBeenCalledWith('n1');
   });
+
+  it('keeps placement chips visible but disabled when placement actions are locked', () => {
+    const onOpenSheet = vi.fn();
+    const tree = wrap(
+      <ReportPhotosFromGallery
+        photos={PHOTOS}
+        onOpen={vi.fn()}
+        onOpenPlacementSheet={onOpenSheet}
+        placementActionsDisabled
+        report={REPORT}
+      />,
+    );
+    const chip = tree.root.findByProps({
+      testID: 'btn-generate-report-photos-place-n1',
+    });
+    expect(chip.props.disabled).toBe(true);
+    expect(chip.props.accessibilityState).toMatchObject({ disabled: true });
+
+    act(() => {
+      chip.props.onPress?.();
+    });
+
+    expect(onOpenSheet).not.toHaveBeenCalled();
+  });
 });

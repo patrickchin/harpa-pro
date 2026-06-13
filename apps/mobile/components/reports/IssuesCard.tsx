@@ -55,7 +55,9 @@ interface IssuesCardProps {
   placedByIssue?: ReadonlyMap<number, ReadonlyArray<PhotoGroup>>;
   onOpenPhoto?: (input: { fileId: string; title?: string }) => void;
   onEditPlacement?: (noteId: string) => void;
+  placementActionsDisabled?: boolean;
   onAddAttachmentsToIssue?: (index: number) => void;
+  editActionsDisabled?: boolean;
 }
 
 export function IssuesCard({
@@ -64,7 +66,9 @@ export function IssuesCard({
   placedByIssue,
   onOpenPhoto,
   onEditPlacement,
+  placementActionsDisabled = false,
   onAddAttachmentsToIssue,
+  editActionsDisabled = false,
 }: IssuesCardProps) {
   if (issues.length === 0) return null;
 
@@ -116,14 +120,22 @@ export function IssuesCard({
                         >
                           {onAddAttachmentsToIssue ? (
                             <AddAttachmentsButton
-                              onPress={() => onAddAttachmentsToIssue(index)}
+                              onPress={() => {
+                                if (placementActionsDisabled) return;
+                                onAddAttachmentsToIssue(index);
+                              }}
+                              disabled={placementActionsDisabled}
                               accessibilityLabel={`Add attachments to issue ${index + 1}`}
                               testID={`btn-add-attachments-issue-${index}`}
                             />
                           ) : null}
                           {onEditIssue ? (
                             <EditPencilButton
-                              onPress={() => onEditIssue(index)}
+                              onPress={() => {
+                                if (editActionsDisabled) return;
+                                onEditIssue(index);
+                              }}
+                              disabled={editActionsDisabled}
                               accessibilityLabel={`Edit issue ${index + 1}`}
                               testID={`btn-edit-issue-${index}`}
                             />
@@ -153,6 +165,7 @@ export function IssuesCard({
                       groups={placedByIssue.get(index)!}
                       onOpenPhoto={onOpenPhoto}
                       onEditPlacement={onEditPlacement}
+                      placementActionsDisabled={placementActionsDisabled}
                       testID={`placed-photos-issue-${index}`}
                     />
                   ) : null}

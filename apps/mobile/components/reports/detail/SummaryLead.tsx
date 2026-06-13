@@ -9,9 +9,14 @@ import { colors } from '@/lib/design-tokens/colors';
 interface SummaryLeadProps {
   summary: string | null | undefined;
   onEdit?: () => void;
+  editActionsDisabled?: boolean;
 }
 
-export function SummaryLead({ summary, onEdit }: SummaryLeadProps) {
+export function SummaryLead({
+  summary,
+  onEdit,
+  editActionsDisabled = false,
+}: SummaryLeadProps) {
   const trimmed = summary?.trim();
   if (!trimmed && !onEdit) return null;
 
@@ -23,7 +28,11 @@ export function SummaryLead({ summary, onEdit }: SummaryLeadProps) {
         trailing={
           onEdit ? (
             <EditPencilButton
-              onPress={onEdit}
+              onPress={() => {
+                if (editActionsDisabled) return;
+                onEdit();
+              }}
+              disabled={editActionsDisabled}
               accessibilityLabel="Edit summary and meta"
               testID="btn-edit-meta"
             />

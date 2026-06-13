@@ -154,7 +154,7 @@ describe('GenerateNotes — Report tab', () => {
     expect(text).toContain('Close east footing pour.');
   });
 
-  it('hides report-card edit actions while report generation is in flight', () => {
+  it('keeps report-card edit actions visible but disabled while report generation is in flight', () => {
     const tree = render(
       <GenerateNotes
         {...baseProps}
@@ -163,12 +163,12 @@ describe('GenerateNotes — Report tab', () => {
       />,
     );
 
-    expect(
-      tree.root.findAllByProps({ testID: 'btn-edit-issue-0' }),
-    ).toHaveLength(0);
-    expect(
-      tree.root.findAllByProps({ testID: 'btn-edit-section-0' }),
-    ).toHaveLength(0);
+    const issueEdit = tree.root.findByProps({ testID: 'btn-edit-issue-0' });
+    const sectionEdit = tree.root.findByProps({ testID: 'btn-edit-section-0' });
+    expect(issueEdit.props.disabled).toBe(true);
+    expect(sectionEdit.props.disabled).toBe(true);
+    expect(issueEdit.props.accessibilityState).toMatchObject({ disabled: true });
+    expect(sectionEdit.props.accessibilityState).toMatchObject({ disabled: true });
   });
 
   it('renders the generation error banner and Retry calls onRegenerate', () => {

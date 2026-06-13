@@ -25,6 +25,7 @@ export interface PhotoPlacementChipProps {
   testID?: string;
   /** Optional accessibility label override (defaults to a sensible string). */
   accessibilityLabel?: string;
+  disabled?: boolean;
 }
 
 export function PhotoPlacementChip({
@@ -32,6 +33,7 @@ export function PhotoPlacementChip({
   onPress,
   testID,
   accessibilityLabel,
+  disabled = false,
 }: PhotoPlacementChipProps) {
   const isPlaced = placedLabel !== null;
   const a11y =
@@ -42,17 +44,19 @@ export function PhotoPlacementChip({
 
   return (
     <Pressable
-      onPress={onPress}
+      onPress={disabled ? undefined : onPress}
+      disabled={disabled}
       testID={testID}
       accessibilityRole="button"
       accessibilityLabel={a11y}
+      accessibilityState={{ disabled }}
       hitSlop={10}
       style={{ minHeight: 40 }}
       className={`self-start flex-row items-center gap-2 rounded-md border px-3.5 py-2 ${
         isPlaced
           ? 'border-primary/40 bg-primary/10'
           : 'border-border bg-secondary'
-      }`}
+      } ${disabled ? 'opacity-50' : ''}`}
     >
       <MapPin
         size={16}

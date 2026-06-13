@@ -40,9 +40,14 @@ import {
 interface ReportTabPaneProps {
   width: number;
   onEdit?: (target: import('@/components/reports/edit/types').ReportEditTarget) => void;
+  editActionsDisabled?: boolean;
 }
 
-export function ReportTabPane({ width, onEdit }: ReportTabPaneProps) {
+export function ReportTabPane({
+  width,
+  onEdit,
+  editActionsDisabled = false,
+}: ReportTabPaneProps) {
   const {
     generation,
     draft,
@@ -219,13 +224,15 @@ export function ReportTabPane({ width, onEdit }: ReportTabPaneProps) {
               report={generation.report}
               reportNumber={reportNumber ?? undefined}
               {...(onEdit ? { onEdit } : {})}
+              editActionsDisabled={editActionsDisabled}
               placements={placementsEnabled ? placements : undefined}
               onOpenPhoto={placementsEnabled ? handleOpenPhoto : undefined}
               onEditPlacement={
-                placementActionsEnabled ? handleOpenPlacementSheet : undefined
+                placementsEnabled ? handleOpenPlacementSheet : undefined
               }
+              placementActionsDisabled={!placementActionsEnabled}
               onAddAttachmentToTarget={
-                placementActionsEnabled ? handleOpenAttachmentPicker : undefined
+                placementsEnabled ? handleOpenAttachmentPicker : undefined
               }
             />
 
@@ -233,8 +240,9 @@ export function ReportTabPane({ width, onEdit }: ReportTabPaneProps) {
               photos={unplacedPhotos}
               onOpen={preview.openPhoto}
               onOpenPlacementSheet={
-                placementActionsEnabled ? handleOpenPlacementSheet : undefined
+                placementsEnabled ? handleOpenPlacementSheet : undefined
               }
+              placementActionsDisabled={!placementActionsEnabled}
               report={generation.report}
             />
 

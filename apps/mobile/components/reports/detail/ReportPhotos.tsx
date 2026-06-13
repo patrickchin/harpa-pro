@@ -36,6 +36,8 @@ export interface ReportPhotosProps {
    * Omit to render all groups (legacy behaviour).
    */
   onOpenPlacementSheet?: (noteId: string) => void;
+  /** Filter out groups already placed in the report body without implying editability. */
+  filterPlacedPhotoGroups?: boolean;
   placedNoteIds?: ReadonlySet<string>;
 }
 
@@ -56,6 +58,7 @@ export function ReportPhotos({
   noteRows,
   onOpenPhoto,
   onOpenPlacementSheet,
+  filterPlacedPhotoGroups = false,
   placedNoteIds,
 }: ReportPhotosProps) {
   const groups = useMemo((): PhotoGroup[] => {
@@ -71,7 +74,10 @@ export function ReportPhotos({
         return tb - ta;
       });
     for (const n of sorted) {
-      if (onOpenPlacementSheet && placedNoteIds?.has(n.id)) {
+      if (
+        (filterPlacedPhotoGroups || onOpenPlacementSheet) &&
+        placedNoteIds?.has(n.id)
+      ) {
         continue;
       }
       const title = n.body?.trim() || 'Photo';
@@ -107,7 +113,7 @@ export function ReportPhotos({
       }
     }
     return out;
-  }, [noteRows, onOpenPlacementSheet, placedNoteIds]);
+  }, [noteRows, filterPlacedPhotoGroups, onOpenPlacementSheet, placedNoteIds]);
 
   const [containerWidth, setContainerWidth] = useState(0);
   const onLayout = useCallback(

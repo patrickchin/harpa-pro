@@ -301,7 +301,7 @@ describe('ReportTabPane placement pipeline', () => {
     });
   });
 
-  it('keeps placements visible but disables placement actions while generating', () => {
+  it('keeps placements and placement actions visible but disabled while generating', () => {
     mockCtx = buildContext({
       generation: {
         ...buildContext().generation,
@@ -320,14 +320,33 @@ describe('ReportTabPane placement pipeline', () => {
     expect(
       tree.root.findAllByProps({ testID: 'btn-generate-report-photo-fil_unplaced' }).length,
     ).toBeGreaterThan(0);
+
+    const placeChip = tree.root.findByProps({
+      testID: 'btn-generate-report-photos-place-n_unplaced',
+    });
+    const addButton = tree.root.findByProps({
+      testID: 'btn-add-attachments-section-1',
+    });
+    const moveChip = tree.root.findByProps({
+      testID: 'btn-move-placed-photo-n_placed',
+    });
+
+    expect(placeChip.props.disabled).toBe(true);
+    expect(addButton.props.disabled).toBe(true);
+    expect(moveChip.props.disabled).toBe(true);
+
+    act(() => {
+      placeChip.props.onPress?.();
+      addButton.props.onPress?.();
+      moveChip.props.onPress?.();
+    });
+
+    expect(mockCtx.placement.onPlacePhotoGroup).not.toHaveBeenCalled();
     expect(
-      tree.root.findAllByProps({ testID: 'btn-generate-report-photos-place-n_unplaced' }),
+      tree.root.findAllByProps({ testID: 'placement-sheet-issue-0' }),
     ).toHaveLength(0);
     expect(
-      tree.root.findAllByProps({ testID: 'btn-add-attachments-section-1' }),
-    ).toHaveLength(0);
-    expect(
-      tree.root.findAllByProps({ testID: 'btn-move-placed-photo-n_placed' }),
+      tree.root.findAllByProps({ testID: 'attachment-picker-group-n_unplaced' }),
     ).toHaveLength(0);
   });
 });

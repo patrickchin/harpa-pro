@@ -15,9 +15,14 @@ import { colors } from '@/lib/design-tokens/colors';
 interface WeatherStripProps {
   report: GeneratedSiteReport;
   onEdit?: () => void;
+  editActionsDisabled?: boolean;
 }
 
-export function WeatherStrip({ report, onEdit }: WeatherStripProps) {
+export function WeatherStrip({
+  report,
+  onEdit,
+  editActionsDisabled = false,
+}: WeatherStripProps) {
   const weather = report.report.weather;
   if (!weather && !onEdit) return null;
 
@@ -38,7 +43,11 @@ export function WeatherStrip({ report, onEdit }: WeatherStripProps) {
       {onEdit ? (
         <View className="flex-row items-center justify-end">
           <EditPencilButton
-            onPress={onEdit}
+            onPress={() => {
+              if (editActionsDisabled) return;
+              onEdit();
+            }}
+            disabled={editActionsDisabled}
             accessibilityLabel="Edit weather"
             testID="btn-edit-weather"
           />

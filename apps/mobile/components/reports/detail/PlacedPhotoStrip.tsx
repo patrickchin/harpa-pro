@@ -28,6 +28,7 @@ export interface PlacedPhotoStripProps {
   onOpenPhoto?: (input: { fileId: string; title?: string }) => void;
   /** Tapped to re-open the placement sheet for this group (one entry-point per group). */
   onEditPlacement?: (noteId: string) => void;
+  placementActionsDisabled?: boolean;
   testID?: string;
 }
 
@@ -35,6 +36,7 @@ export function PlacedPhotoStrip({
   groups,
   onOpenPhoto,
   onEditPlacement,
+  placementActionsDisabled = false,
   testID,
 }: PlacedPhotoStripProps) {
   const [containerWidth, setContainerWidth] = useState(0);
@@ -84,10 +86,18 @@ export function PlacedPhotoStrip({
             </View>
             {onEditPlacement ? (
               <Pressable
-                onPress={() => onEditPlacement(group.noteId)}
-                className="mt-2 self-start flex-row items-center gap-2 rounded-md border border-primary/40 bg-primary/10 px-3.5 py-2"
+                onPress={
+                  placementActionsDisabled
+                    ? undefined
+                    : () => onEditPlacement(group.noteId)
+                }
+                disabled={placementActionsDisabled}
+                className={`mt-2 self-start flex-row items-center gap-2 rounded-md border border-primary/40 bg-primary/10 px-3.5 py-2 ${
+                  placementActionsDisabled ? 'opacity-50' : ''
+                }`}
                 accessibilityRole="button"
                 accessibilityLabel="Change placement"
+                accessibilityState={{ disabled: placementActionsDisabled }}
                 testID={`btn-move-placed-photo-${group.noteId}`}
                 hitSlop={10}
                 style={{ minHeight: 40 }}

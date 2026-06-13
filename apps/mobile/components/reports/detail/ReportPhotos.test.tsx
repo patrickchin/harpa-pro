@@ -167,4 +167,23 @@ describe('ReportPhotos', () => {
       tree.root.findAllByProps({ testID: 'btn-place-photo-p2' }).length,
     ).toBeGreaterThan(0);
   });
+
+  it('can filter placed note batches without rendering placement chips', () => {
+    const tree = wrap(
+      <ReportPhotos
+        noteRows={[photo('p1', 'fil_1'), photo('p2', 'fil_2')]}
+        placedNoteIds={new Set(['p1'])}
+        filterPlacedPhotoGroups
+      />,
+    );
+    expect(
+      tree.root.findAllByProps({ testID: 'btn-report-photo-p1' }),
+    ).toHaveLength(0);
+    expect(
+      tree.root.findAllByProps({ testID: 'btn-report-photo-p2' }).length,
+    ).toBeGreaterThan(0);
+    expect(
+      tree.root.findAllByProps({ testID: 'btn-place-photo-p2' }),
+    ).toHaveLength(0);
+  });
 });

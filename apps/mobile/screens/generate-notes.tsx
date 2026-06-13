@@ -13,7 +13,7 @@
  * loading, generated report, callbacks) through provider props; dev
  * mirrors + tests do the same with canned values.
  */
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import {
   Animated,
   Easing,
@@ -133,6 +133,14 @@ function GenerateNotesLayout({
       setEditing(null);
     }
   }, [generation.isUpdating]);
+
+  const handleEditReport = useCallback(
+    (target: ReportEditTarget) => {
+      if (generation.isUpdating) return;
+      setEditing(target);
+    },
+    [generation.isUpdating],
+  );
 
   // Slide-collapse the top chrome (header + action row + tab bar)
   // when the keyboard opens so the user has room to see their
@@ -257,8 +265,11 @@ function GenerateNotesLayout({
         <NotesTabPane width={windowWidth} />
         <ReportTabPane
           width={windowWidth}
-          {...(canEditReportBody && generation.report
-            ? { onEdit: (target: ReportEditTarget) => setEditing(target) }
+          {...(canWrite && generation.report
+            ? {
+                onEdit: handleEditReport,
+                editActionsDisabled: !canEditReportBody,
+              }
             : {})}
         />
         <EditTabPane width={windowWidth} />

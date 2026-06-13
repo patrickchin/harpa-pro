@@ -270,6 +270,7 @@ export function SavedReport(props: SavedReportProps) {
     noteId: string;
     placement: PhotoPlacement | null;
   }) => {
+    if (isFinal) return;
     if (displayReport) {
       setLocalReport(
         applyPhotoPlacement(displayReport, input.noteId, input.placement),
@@ -279,6 +280,7 @@ export function SavedReport(props: SavedReportProps) {
   };
 
   const placementsEnabled = !!onPlacePhotoGroup;
+  const placementActionsEnabled = placementsEnabled && !isFinal;
 
   const photoGroups = useMemo(
     () => groupPhotos(noteRows ?? []),
@@ -306,6 +308,12 @@ export function SavedReport(props: SavedReportProps) {
   const attachmentPickerTargetLabel = useMemo(() => {
     return placementLabel(attachmentPickerTarget, displayReport) ?? 'this target';
   }, [attachmentPickerTarget, displayReport]);
+
+  useEffect(() => {
+    if (placementActionsEnabled) return;
+    setPlacementSheetNoteId(null);
+    setAttachmentPickerTarget(null);
+  }, [placementActionsEnabled]);
 
   // Gallery of all photo-notes — drives the swipeable preview modal.
   // One entry per joined `note_files` row across every image note,
@@ -490,12 +498,12 @@ export function SavedReport(props: SavedReportProps) {
               placements={placementsEnabled ? placements : undefined}
               onOpenPhoto={handleOpenPhoto}
               onEditPlacement={
-                placementsEnabled
+                placementActionsEnabled
                   ? (noteId) => setPlacementSheetNoteId(noteId)
                   : undefined
               }
               onAddAttachmentToTarget={
-                placementsEnabled
+                placementActionsEnabled
                   ? (target) => setAttachmentPickerTarget(target)
                   : undefined
               }
@@ -505,10 +513,11 @@ export function SavedReport(props: SavedReportProps) {
                 noteRows={noteRows}
                 onOpenPhoto={handleOpenPhoto}
                 onOpenPlacementSheet={
-                  placementsEnabled
+                  placementActionsEnabled
                     ? (noteId) => setPlacementSheetNoteId(noteId)
                     : undefined
                 }
+                filterPlacedPhotoGroups={placementsEnabled}
                 placedNoteIds={placedNoteIds}
               />
             </View>
@@ -685,7 +694,7 @@ export function SavedReport(props: SavedReportProps) {
         />
       ) : null}
 
-      {placementsEnabled ? (
+      {placementActionsEnabled ? (
         <PhotoGroupPlacementSheet
           visible={placementSheetNoteId !== null}
           issues={displayReport?.report.issues ?? []}
@@ -707,7 +716,7 @@ export function SavedReport(props: SavedReportProps) {
         />
       ) : null}
 
-      {placementsEnabled ? (
+      {placementActionsEnabled ? (
         <PhotoAttachmentPickerSheet
           visible={attachmentPickerTarget !== null}
           targetLabel={attachmentPickerTargetLabel}

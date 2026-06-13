@@ -39,6 +39,8 @@ interface ReportPhotosFromGalleryProps {
    * (legacy "stuck at the bottom" rendering).
    */
   onOpenPlacementSheet?: (noteId: string) => void;
+  /** Keeps placement chips visible but non-interactive while backend generation owns report.body. */
+  placementActionsDisabled?: boolean;
   /**
    * Live report used to resolve a placement's index → display label.
    * Required when `onOpenPlacementSheet` is set so placed groups can
@@ -54,6 +56,7 @@ export function ReportPhotosFromGallery({
   photos,
   onOpen,
   onOpenPlacementSheet,
+  placementActionsDisabled = false,
 }: ReportPhotosFromGalleryProps) {
   const groups = useMemo(() => {
     const groupMap = new Map<string, GalleryPhoto[]>();
@@ -97,7 +100,11 @@ export function ReportPhotosFromGallery({
                   <View className="mb-2">
                     <PhotoPlacementChip
                       placedLabel={null}
-                      onPress={() => onOpenPlacementSheet(first.noteId)}
+                      onPress={() => {
+                        if (placementActionsDisabled) return;
+                        onOpenPlacementSheet(first.noteId);
+                      }}
+                      disabled={placementActionsDisabled}
                       testID={`btn-generate-report-photos-place-${first.noteId}`}
                     />
                   </View>

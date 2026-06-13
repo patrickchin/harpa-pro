@@ -29,7 +29,9 @@ interface SummarySectionCardProps {
   placedGroups?: ReadonlyArray<PhotoGroup>;
   onOpenPhoto?: (input: { fileId: string; title?: string }) => void;
   onEditPlacement?: (noteId: string) => void;
+  placementActionsDisabled?: boolean;
   onAddAttachments?: () => void;
+  editActionsDisabled?: boolean;
 }
 
 export function SummarySectionCard({
@@ -40,7 +42,9 @@ export function SummarySectionCard({
   placedGroups,
   onOpenPhoto,
   onEditPlacement,
+  placementActionsDisabled = false,
   onAddAttachments,
+  editActionsDisabled = false,
 }: SummarySectionCardProps) {
   const Icon = SECTION_ICONS[section.title] || ClipboardList;
   const numStr = reportNumber ?? 'x';
@@ -60,14 +64,22 @@ export function SummarySectionCard({
             >
               {onAddAttachments ? (
                 <AddAttachmentsButton
-                  onPress={onAddAttachments}
+                  onPress={() => {
+                    if (placementActionsDisabled) return;
+                    onAddAttachments();
+                  }}
+                  disabled={placementActionsDisabled}
                   accessibilityLabel={`Add attachments to section ${section.title}`}
                   testID={`btn-add-attachments-section-${idx}`}
                 />
               ) : null}
               {onEdit ? (
                 <EditPencilButton
-                  onPress={onEdit}
+                  onPress={() => {
+                    if (editActionsDisabled) return;
+                    onEdit();
+                  }}
+                  disabled={editActionsDisabled}
                   accessibilityLabel={`Edit section ${section.title}`}
                   testID={`btn-edit-section-${idx}`}
                 />
@@ -87,6 +99,7 @@ export function SummarySectionCard({
           groups={placedGroups}
           onOpenPhoto={onOpenPhoto}
           onEditPlacement={onEditPlacement}
+          placementActionsDisabled={placementActionsDisabled}
           testID={`placed-photos-section-${idx}`}
         />
       ) : null}

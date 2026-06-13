@@ -13,20 +13,24 @@ interface EditPencilButtonProps {
   onPress: () => void;
   accessibilityLabel: string;
   testID?: string;
+  disabled?: boolean;
 }
 
 export function EditPencilButton({
   onPress,
   accessibilityLabel,
   testID,
+  disabled = false,
 }: EditPencilButtonProps) {
   return (
     <IconButton
       onPress={onPress}
+      disabled={disabled}
       variant="outline"
       size="sm"
       shape="square"
       accessibilityLabel={accessibilityLabel}
+      accessibilityState={{ disabled }}
       testID={testID}
     >
       <Pencil size={14} color={colors.muted.foreground} />

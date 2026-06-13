@@ -1,0 +1,1 @@
+construction,reports,jobsite,voice,photos,PDF,foreman,supervisor,daily,report

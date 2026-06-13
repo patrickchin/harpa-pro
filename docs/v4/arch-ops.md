@@ -28,9 +28,11 @@
   - Production branch `main` → `https://harpapro.com` (and
     `harpa-pro.pages.dev`).
   - Dev branch `dev` → `https://dev.harpa-pro.pages.dev`.
-- **Mobile**: EAS Build + EAS Update for OTA. TestFlight + Play
-  internal track for distribution. Three build profiles in
-  `apps/mobile/eas.json`:
+- **Mobile**: Fastlane + EAS. Fastlane owns checked-in App Store /
+  Play Store metadata and local release lanes; EAS owns Expo native
+  builds, signing, binary submission, and OTA updates. TestFlight +
+  Play internal track remain the beta distribution targets. Three build
+  profiles live in `apps/mobile/eas.json`:
   - `production` — App Store / Play. `com.harpa.pro` →
     `https://api.harpapro.com`.
   - `preview` — internal / TestFlight. `com.harpa.pro.dev` →
@@ -42,6 +44,26 @@
   (`setApiBaseUrlOverride` in `lib/api/base-url.ts`) so QA can flip
   between dev / a PR-preview Fly app without a rebuild. Override is
   hard-disabled in production builds.
+  Release operators run Fastlane from the repo root:
+
+  ```sh
+  bundle install --path vendor/bundle
+  bundle exec fastlane doctor
+  bundle exec fastlane beta
+  bundle exec fastlane release
+  ```
+
+  `doctor` is safe: it validates Bundler/Fastlane, `pnpm`, EAS config,
+  and metadata files, then prints the EAS commands without uploading
+  metadata, starting a build, or submitting a binary. `beta` pushes
+  preview/internal store metadata, then starts the `preview` EAS build
+  with `--auto-submit-with-profile preview` so EAS submits the binaries
+  produced by that build. `release` does the same for production. Store,
+  Expo, Apple, and Google credentials stay outside git and come from
+  the authenticated local tools or environment variables. The first
+  Play metadata upload may require an existing release on the target
+  track; if `supply` reports an empty track, run the EAS submit lane
+  once for that track and re-run the metadata lane.
 - **Docs site**: Vercel (or Cloudflare Pages — TBD in P0).
 
 ## Secrets
@@ -176,14 +198,14 @@ Push to dev
   ↳ marketing deploy to CF Pages dev branch (marketing-dev.yml)
   ↳ EAS Update → `preview` channel (mobile-ota-dev.yml)
   ↳ release patch commit + tag added to `dev` (version-bump-dev.yml)
-  ↳ EAS staging build (TestFlight internal — planned)
+  ↳ Fastlane `beta` (manual): metadata -> EAS preview build --auto-submit
 
 Push to main (production)
   ↳ migrations applied to Neon `main`
   ↳ Fly deploy → harpa-pro-api (api-prod.yml)
   ↳ marketing deploy to CF Pages production (marketing-prod.yml)
   ↳ EAS Update → `production` channel (mobile-ota-prod.yml)
-  ↳ EAS production build (manual approve — planned)
+  ↳ Fastlane `release` (manual approve): metadata -> EAS production build --auto-submit
 ```
 
 ## Dev environment bootstrap (one-time)

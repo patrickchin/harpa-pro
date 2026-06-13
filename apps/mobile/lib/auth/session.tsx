@@ -117,7 +117,7 @@ export function AuthSessionProvider({ children }: ProviderProps): React.JSX.Elem
     ? 'loading'
     : !user
       ? 'unauthenticated'
-      : user.displayName == null || user.companyName == null
+      : user.displayName == null
         ? 'needs-onboarding'
         : 'authenticated';
 

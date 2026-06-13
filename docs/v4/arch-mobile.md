@@ -172,11 +172,15 @@ State machine:
 ```
 loading
   ├─ no stored session                            → unauthenticated
-  ├─ stored session, /me ok, profile complete     → authenticated
-  ├─ stored session, /me ok, profile incomplete   → needs-onboarding
+  ├─ stored session, /me ok, displayName set      → authenticated
+  ├─ stored session, /me ok, displayName missing  → needs-onboarding
   ├─ stored session, /me 401                      → unauthenticated (storage cleared)
   └─ stored session, /me network error            → trust stored user (offline-usable)
 ```
+
+`companyName` is optional at signup/onboarding. When blank, the
+mobile onboarding submit omits it from `PATCH /me`, leaving the user
+authenticated once `displayName` is set.
 
 Bootstrap is idempotent and **always** terminates `loading` — every
 error branch sets a status. Pitfall 5: no implicit ordering, no

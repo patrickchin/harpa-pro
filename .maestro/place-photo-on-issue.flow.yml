@@ -8,10 +8,14 @@ tags:
 # docs/v4/design-photo-placement.md:
 #   - draft saved-report renders the "Unplaced photos" card with a
 #     `Place into…` chip per photo group
+#   - regenerating an existing report keeps placement controls visible
+#     but disabled while the backend write is in flight
 #   - the placement sheet lists the report's issues + sections
 #   - tapping an issue PATCHes report.body attachments and the photo
 #     re-renders inline under that issue (`placed-photos-issue-N`)
 #   - the bottom photo strip drops the now-placed group
+#   - finalized saved-report view keeps the placed photo visible but
+#     does not expose placement or manual-edit controls
 #
 # Pre-flight is identical to `p3-15-upload.yaml`: docker compose stack
 # up, fresh DB via `scripts/maestro/reset-db.sh`. The flow assumes a
@@ -79,6 +83,32 @@ tags:
 - assertVisible: 'Unplaced photos'
 - assertVisible: 'Place into…'
 
+# Regenerate while the existing report remains visible. Placement controls must
+# stay mounted to avoid layout shift, but they must be disabled because the
+# backend response will replace report.body.
+- extendedWaitUntil:
+    visible:
+      id: 'btn-generate-update-report'
+    timeout: 10000
+- tapOn:
+    id: 'btn-generate-update-report'
+- extendedWaitUntil:
+    visible: 'Updating the draft with your newest notes...'
+    timeout: 15000
+- assertVisible:
+    id: 'report-view-.*'
+- scrollUntilVisible:
+    element:
+      id: 'btn-generate-report-photos-place-.*'
+    direction: DOWN
+    timeout: 30000
+- assertVisible:
+    id: 'btn-generate-report-photos-place-.*'
+    enabled: false
+- extendedWaitUntil:
+    notVisible: 'Updating the draft with your newest notes...'
+    timeout: 60000
+
 # Tap the chip to open the placement sheet.
 - tapOn: 'Place into…'
 - assertVisible: 'Place photos'
@@ -97,3 +127,43 @@ tags:
 # And the bottom Unplaced photos card is gone (or empty) — the only
 # group has been moved out of it.
 - assertNotVisible: 'Unplaced photos'
+
+# Finalized saved reports are read-only: the placed photo remains visible,
+# but move/place/add-attachment/manual-edit affordances are absent.
+- scrollUntilVisible:
+    element:
+      id: 'btn-finalize-report'
+    direction: UP
+    timeout: 10000
+    optional: true
+- tapOn:
+    id: 'btn-finalize-report'
+- extendedWaitUntil:
+    visible:
+      id: 'confirm-finalize'
+    timeout: 8000
+- tapOn:
+    id: 'confirm-finalize'
+- extendedWaitUntil:
+    visible:
+      id: 'btn-report-actions'
+    timeout: 20000
+- assertVisible:
+    id: 'report-title-.*'
+- scrollUntilVisible:
+    element:
+      id: 'placed-photos-issue-0'
+    direction: DOWN
+    timeout: 30000
+- assertVisible:
+    id: 'placed-photos-issue-0'
+- assertNotVisible:
+    id: 'btn-move-placed-photo-.*'
+- assertNotVisible:
+    id: 'btn-place-photo-.*'
+- assertNotVisible:
+    id: 'btn-add-attachments-issue-.*'
+- assertNotVisible:
+    id: 'btn-edit-issue-.*'
+- assertNotVisible: 'Change placement'
+- assertNotVisible: 'Place into…'

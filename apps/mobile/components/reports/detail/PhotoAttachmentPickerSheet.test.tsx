@@ -49,6 +49,33 @@ function group(index: number): PhotoGroup {
 }
 
 describe('PhotoAttachmentPickerSheet', () => {
+  it('renders its helper copy as informational, not destructive', () => {
+    const tree = render(
+      <PhotoAttachmentPickerSheet
+        visible
+        onClose={vi.fn()}
+        targetLabel="Roof"
+        groups={[group(0)]}
+        onSelect={vi.fn()}
+      />,
+    );
+
+    expect(
+      tree.root.findAll(
+        (node) =>
+          typeof node.props.className === 'string' &&
+          node.props.className.includes('border-info-border bg-info-soft'),
+      ).length,
+    ).toBeGreaterThan(0);
+    expect(
+      tree.root.findAll(
+        (node) =>
+          typeof node.props.className === 'string' &&
+          node.props.className.includes('border-danger-border bg-danger-soft'),
+      ),
+    ).toHaveLength(0);
+  });
+
   it('renders a first-photo thumbnail for every selectable group', () => {
     const tree = render(
       <PhotoAttachmentPickerSheet

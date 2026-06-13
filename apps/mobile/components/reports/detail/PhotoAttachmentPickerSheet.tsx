@@ -64,6 +64,7 @@ export function PhotoAttachmentPickerSheet({
       visible={visible}
       title="Add attachments"
       message={`Choose a photo group to add to ${targetLabel}.`}
+      noticeTone="info"
       onClose={onClose}
       actions={[
         {

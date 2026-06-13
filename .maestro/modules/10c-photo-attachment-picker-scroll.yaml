@@ -11,6 +11,8 @@ tags:
 #   - create a draft report
 #   - capture eight separate single-photo notes through the fixture camera
 #   - generate the report
+#   - regenerate while photo placement actions are visible and assert they
+#     stay mounted but disabled during the backend write
 #   - open a section Add Attachments action from the card header
 #   - verify picker rows show thumbnails and can scroll to later groups
 #
@@ -65,6 +67,38 @@ tags:
     visible:
       id: "report-tab-live"
     timeout: 45000
+- extendedWaitUntil:
+    visible:
+      id: "report-view-.*"
+    timeout: 15000
+
+# --- Backend generation locks placement edits without hiding them -----------
+- tapOn:
+    id: "btn-generate-update-report"
+- extendedWaitUntil:
+    visible: "Updating the draft with your newest notes..."
+    timeout: 15000
+- assertVisible:
+    id: "report-view-.*"
+- scrollUntilVisible:
+    element:
+      id: "btn-add-attachments-section-.*"
+    direction: DOWN
+    timeout: 60000
+- assertVisible:
+    id: "btn-add-attachments-section-.*"
+    enabled: false
+- scrollUntilVisible:
+    element:
+      id: "btn-generate-report-photos-place-.*"
+    direction: DOWN
+    timeout: 60000
+- assertVisible:
+    id: "btn-generate-report-photos-place-.*"
+    enabled: false
+- extendedWaitUntil:
+    notVisible: "Updating the draft with your newest notes..."
+    timeout: 60000
 - extendedWaitUntil:
     visible:
       id: "report-view-.*"

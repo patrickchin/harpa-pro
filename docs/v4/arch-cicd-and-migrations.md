@@ -63,7 +63,7 @@ build-time manifest for the readiness check.**
 
 ```
 ┌────────────────────────────────────────────────────────────────────────┐
-│  PR opened / synchronized                                              │
+│  API-changing PR opened / synchronized                                 │
 │   • Neon branch pr-<n> created (delete-and-recreate from main)         │
 │   • Fly app harpa-pro-api-pr-<n> created/deployed                      │
 │       └─ release_command: pnpm --filter @harpa/api db:migrate          │
@@ -110,7 +110,7 @@ build-time manifest for the readiness check.**
 └────────────────────────────────────────────────────────────────────────┘
 ```
 
-Preview and prod use the **same** mechanism for steps 2 + 3 — Fly's
+Backend previews and prod use the **same** mechanism for steps 2 + 3 — Fly's
 `release_command` runs migrations inside the release machine, against
 whatever `DATABASE_URL` is staged on the app. The only difference is
 which Fly app and which Neon branch is targeted.
@@ -232,6 +232,11 @@ shellcheck of both `scripts/ci/` and `scripts/journeys/`.
   at prod.
 - Forks are skipped (no `FLY_API_TOKEN` / `DOPPLER_TOKEN_DEV` /
   `NEON_API_KEY` available to fork PRs).
+- Path filter: `neon-create`, `fly-preview`, and `guard` run only for PRs
+  that change API inputs (`packages/api`, `packages/api-contract`,
+  `packages/ai-fixtures`, lockfile, or TS config). Frontend-only PRs use
+  the shared dev API from mobile OTA bundles instead of creating a
+  Fly/Neon preview.
 
 ### `packages/api/src/db/migrate.ts`
 

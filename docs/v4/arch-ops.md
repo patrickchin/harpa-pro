@@ -2,25 +2,28 @@
 
 ## Hosting
 
-- **API**: Fly.io. Two apps:
+- **API**: Fly.io:
   - `harpa-pro-api` (prod) at `https://api.harpapro.com` — deployed on
     push to `main` by `.github/workflows/api-prod.yml`.
   - `harpa-pro-api-dev` (dev) at `https://harpa-pro-api-dev.fly.dev` —
     deployed on push to `dev` by `.github/workflows/api-dev.yml`.
     Sleeps when idle (`min_machines_running = 0`) to save cost.
   - `harpa-pro-api-pr-<n>` (per-PR preview) at
-    `https://harpa-pro-api-pr-<n>.fly.dev` — created on PR open by
-    `.github/workflows/pr-preview.yml` (job `fly-preview`), destroyed on
-    PR close (job `fly-destroy`). Config:
+    `https://harpa-pro-api-pr-<n>.fly.dev` — created by
+    `.github/workflows/pr-preview.yml` (job `fly-preview`) only when
+    the PR changes API inputs (`packages/api`, `packages/api-contract`,
+    `packages/ai-fixtures`, lockfile, or TS config), destroyed on PR
+    close (job `fly-destroy`). Config:
     [`infra/fly/fly.preview.toml`](../../infra/fly/fly.preview.toml).
     Single shared-cpu-1x machine, `min_machines_running = 0`,
     `auto_stop_machines = "stop"`. Forks skipped (no `FLY_API_TOKEN`).
     The preview's `DATABASE_URL` points at the matching Neon `pr-<n>`
-    branch; mobile dev/preview builds can flip to the preview URL via
+    branch; frontend-only PR bundles point at the shared dev API
+    instead. Mobile dev/preview builds can flip to a preview URL via
     `setApiBaseUrlOverride`.
 - **Database**: Neon (managed). Long-lived branches: `main` (prod)
-  and `dev`. Per-PR `pr-<n>` branches created/destroyed by
-  `.github/workflows/pr-preview.yml`. See
+  and `dev`. Per-PR `pr-<n>` branches are created/destroyed by
+  `.github/workflows/pr-preview.yml` for API-changing PRs only. See
   [arch-database.md](arch-database.md).
 - **Storage**: Cloudflare R2. Separate buckets per env
   (`harpa-pro` / `harpa-pro-dev`). See [arch-storage.md](arch-storage.md).
@@ -175,14 +178,17 @@ not by the API at runtime), and a handful of CI-only flags.
 
 ```
 PR open / push (same-repo only, forks skipped)
-  ↳ Neon branch pr-<n> (pr-preview.yml: neon-create)
-  ↳ Fly app harpa-pro-api-pr-<n> created/deployed (pr-preview.yml: fly-preview)
-    ↳ release_command applies migrations to pr-<n>
-    ↳ /readyz verified
-    ↳ sticky PR comment with preview URL
+  ↳ Backend preview (API-changing PRs only):
+    ↳ Neon branch pr-<n> (pr-preview.yml: neon-create)
+    ↳ Fly app harpa-pro-api-pr-<n> created/deployed (pr-preview.yml: fly-preview)
+      ↳ release_command applies migrations to pr-<n>
+      ↳ /readyz verified
+      ↳ sticky PR comment with preview URL
   ↳ marketing preview deploy to CF Pages (marketing-preview.yml)
-  ↳ EAS Update → `development` channel, pinned to PR API (mobile-ota-pr.yml)
-    ↳ bundle's `EXPO_PUBLIC_API_URL` is `harpa-pro-api-pr-<n>.fly.dev`
+  ↳ EAS Update → `development` channel (mobile-ota-pr.yml)
+    ↳ bundle's API override is `harpa-pro-api-pr-<n>.fly.dev`
+      when the PR changes API inputs
+    ↳ otherwise bundle's API override is `harpa-pro-api-dev.fly.dev`
     ↳ branch is last-write-wins; engineers select older PR bundles
       via the dev-client launcher (Updates → development → pick)
   ↳ EAS preview build (manual trigger — planned)

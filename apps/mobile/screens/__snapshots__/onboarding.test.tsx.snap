@@ -106,7 +106,7 @@ exports[`Onboarding > matches snapshot at default props 1`] = `
             <rn-Text
               className="text-label text-muted-foreground"
             >
-              Company Name
+              Company Name (Optional)
             </rn-Text>
             <rn-TextInput
               autoCapitalize="words"

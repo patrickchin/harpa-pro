@@ -66,7 +66,7 @@ export default function Onboarding({
                 testID="input-onboarding-name"
               />
               <Input
-                label="Company Name"
+                label="Company Name (Optional)"
                 placeholder="Smith Construction LLC"
                 value={companyName}
                 onChangeText={onChangeCompanyName}

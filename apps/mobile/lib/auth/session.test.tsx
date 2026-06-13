@@ -74,7 +74,7 @@ describe('useAuthSession', () => {
     expect(value().status).toBe('unauthenticated');
   });
 
-  it('reports needs-onboarding when displayName or companyName is null', () => {
+  it('reports needs-onboarding when displayName is null', () => {
     const { value } = renderWithSession({
       data: { user: { id: 'u1', email: 'a@b.c', displayName: null, companyName: 'Co' } },
       isPending: false,
@@ -82,7 +82,15 @@ describe('useAuthSession', () => {
     expect(value().status).toBe('needs-onboarding');
   });
 
-  it('reports authenticated when profile is complete', () => {
+  it('reports authenticated when displayName exists and companyName is null', () => {
+    const { value } = renderWithSession({
+      data: { user: { id: 'u1', email: 'a@b.c', displayName: 'Alice', companyName: null } },
+      isPending: false,
+    });
+    expect(value().status).toBe('authenticated');
+  });
+
+  it('reports authenticated when displayName and companyName are complete', () => {
     const { value } = renderWithSession({
       data: { user: { id: 'u1', email: 'a@b.c', displayName: 'Alice', companyName: 'Co' } },
       isPending: false,

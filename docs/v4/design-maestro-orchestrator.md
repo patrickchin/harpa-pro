@@ -447,12 +447,12 @@ Snapshot from `test/e2e-maestro-coverage` (Phase 3b). *Dispositions are recommen
 
 | File | Purpose | Called by | Disposition |
 |---|---|---|---|
-| `reset-db.sh` | `docker exec` -> TRUNCATE all `app.*` + better-auth `public."user"/"session"/"account"/"verification"` tables on `harpa-pro-pg`, then re-INSERT seeded Alice (`alice@e2e.harpapro.com`, with seeded project + draft report + 1 text note) and Bob (`bob@e2e.harpapro.com`) | `.maestro/core-end-to-end.yaml`, `p3-14a/b/c-*`, `p3-15-*`, `README.md`, `pitfalls-windows#15` (inlined as raw `docker exec` there) | **absorb into `mo reset`** as default + `--seed legacy` variant; keep file until all callers migrated, delete in 3c |
+| `reset-db.sh` | `docker exec` -> TRUNCATE all `app.*` + better-auth `public."user"/"session"/"account"/"verification"` tables on `harpa-pro-pg`, then re-INSERT seeded Alice (`alice@e2e.harpapro.com`, with seeded project + draft report + 1 text note) and Bob (`bob@e2e.harpapro.com`) | `.maestro/core-end-to-end.yaml`, `.maestro/legacy/*`, `.maestro/pending/*`, `README.md`, `pitfalls-windows#15` (inlined as raw `docker exec` there) | **absorb into `mo reset`** as default + `--seed legacy` variant; keep file until all callers migrated, delete in 3c |
 
 The dir contains **only** `reset-db.sh`. Notably:
 
 - `pitfalls-maestro-mac.md` line 259 references **`scripts/maestro/run.sh`** as "the wrapper that sets `MAESTRO_APP_ID` automatically based on the build profile." **This file does not exist.** Phantom reference — `mo run` should fill the gap; pitfalls doc updated in 3c.
-- `p3-14b-usage-limit-dialog.yaml` line 23 invokes **`./scripts/maestro/reset-db.sh --seed-at-limit`**. The script does not accept arguments — `--seed-at-limit` is silently ignored. Module 14b is therefore effectively a placeholder. `mo reset --seed at-limit` should be a first-class flag.
+- `.maestro/pending/usage-limit-dialog.yaml` invokes the intended **`./scripts/maestro/reset-db.sh --seed-at-limit`** setup in its header. The script does not accept arguments — `--seed-at-limit` is silently ignored. The pending flow is therefore not runnable until `mo reset --seed at-limit` becomes a first-class flag.
 
 ### `scripts/` (E2E-adjacent, top level)
 
@@ -470,11 +470,11 @@ No other top-level scripts are Maestro/E2E/device related.
 |---|---|---|
 | `regression-journey.yaml` | Orchestrator flow: modules 01 → 17, voice/photo/generate-finalize/report-debug/project-delete/profile/account/usage/sign-out. | **target of `mo journey full`** — input config unchanged |
 | `core-end-to-end.yaml` | Older P3-exit-gate single-file journey. Depends on `reset-db.sh` (seeded Bob for invite). | **target of `mo journey legacy`** or `mo run core-end-to-end` |
-| `p3-14a-usage-limits-card.yaml` | Usage card render against seeded Alice. | **target of `mo run`** |
-| `p3-14b-usage-limit-dialog.yaml` | Placeholder — requires non-existent `reset-db.sh --seed-at-limit`. | **needs `mo reset --seed at-limit`** before runnable |
-| `p3-14c-near-limit-toast.yaml` | Placeholder — depends on near-limit toast UI + a `report_generate` cap seed. | **blocked on UI + seed** — out of scope for `mo` initial cut |
-| `p3-15-voice-record.yaml` | Legacy voice flow. README marks superseded by module 09 (currently disabled on iOS). | **delete after `mo` lands and module 09 re-enabled** |
-| `p3-15-upload.yaml` | Legacy photo flow. Superseded by module 10a. | **delete after `mo` lands** |
+| `modules/15-usage.yaml` | Normal-regression usage screen and free-plan limits-card coverage, replacing the old P3.14a standalone flow. | **target of `mo journey full`** |
+| `pending/usage-limit-dialog.yaml` | Placeholder — requires non-existent `reset-db.sh --seed-at-limit`. | **needs `mo reset --seed at-limit`** before runnable |
+| `pending/usage-near-limit-toast.yaml` | Placeholder — depends on near-limit toast UI + a `report_generate` cap seed. | **blocked on UI + seed** — out of scope for `mo` initial cut |
+| `legacy/p3-15-voice-record.yaml` | Legacy seeded voice flow, superseded by module 09. | **historical debugging only** |
+| `legacy/p3-15-upload.yaml` | Legacy seeded photo flow, superseded by modules 10a/10b/10c. | **historical debugging only** |
 | `README.md` | Documents `MAESTRO_APP_ID`, setup, run commands, iOS sim quirks (gtimeout + handle orphan `maestro-driver-ios` PIDs). | **edit in 3c** to point at `mo` |
 
 `.maestro/modules/` (17 files) and `.maestro/helpers/` (5 files: `sign-in`, `sign-out`, `pick-country-us`, `dismiss-open-dialog`, `open-project`) are flow content, untouched by `mo`.
@@ -553,9 +553,9 @@ No workflow currently runs Maestro itself. A future `e2e-maestro-run.yml` (Mac r
 ### Notable findings
 
 1. **`scripts/maestro/run.sh` referenced but missing** — `pitfalls-maestro-mac.md:259`. `mo run` fills this; doc updated in 3c.
-2. **`reset-db.sh --seed-at-limit` referenced but unsupported** — `p3-14b-usage-limit-dialog.yaml:23`. Script ignores all args. Module 14b not runnable as documented. `mo reset --seed at-limit` needed alongside an at-limit seed SQL.
+2. **`reset-db.sh --seed-at-limit` referenced but unsupported** — `.maestro/pending/usage-limit-dialog.yaml`. Script ignores all args. The pending flow is not runnable as documented. `mo reset --seed at-limit` needed alongside an at-limit seed SQL.
 3. **No CI runs Maestro today** — only the testID gate. Mobile E2E is purely local. `mo` becoming the local entry is a prerequisite for a future Mac-runner CI step.
-4. **Two legacy single-purpose flows ready for deletion** — `p3-15-voice-record.yaml` and `p3-15-upload.yaml`, superseded by `modules/09-voice-notes.yaml` and `modules/10a-photo-notes-draft.yaml`. Block on re-enabling module 09 on iOS.
+4. **Two legacy single-purpose flows archived** — `.maestro/legacy/p3-15-voice-record.yaml` and `.maestro/legacy/p3-15-upload.yaml`, superseded by `modules/09-voice-notes.yaml` and the photo modules in the normal regression journey.
 5. **Formerly disabled regression modules now active** — modules 09, 10a, 11, 12, 13 part of passing Android local/dev journeys (2026-05-28). Treat as normal coverage.
 6. **`reset-db.sh` is bash-only** — Windows runs via Git Bash/WSL. `mo reset` should be pure Python so Windows agent can `docker exec` directly without a shell shim.
 7. **Pre-push hook does not run Maestro** — confirms `mo` is developer-driven, on-demand. No need to optimise sub-second startup.

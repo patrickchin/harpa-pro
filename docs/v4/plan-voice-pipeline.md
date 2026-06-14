@@ -48,7 +48,7 @@ Build `VoiceNoteCard` (waveform/scrubber, play/pause, duration, transcript expan
 4. Optional on-device interim transcript via `expo-speech-recognition` behind a feature flag; falls back gracefully when unavailable.
 
 ### Phase G — E2E, doc fixes, false-green removal
-- Real Maestro flow `p3-15-voice-record.yaml` that records via fixture stub and asserts a `note.kind='voice'` row with non-empty transcript + summary appears.
+- Real Maestro module `modules/09-voice-notes.yaml` that records via fixture stub and asserts a `note.kind='voice'` row with non-empty transcript + summary appears.
 - Fix `core-end-to-end.yaml:333-335` so the existing voice step is no longer false-green.
 - Final pass over `arch-mobile.md §State management` (legend-state vs hand-rolled queue drift) and `AGENTS.md` (fixture-stub language now accurate).
 - Tick `plan-p3-feature-build.md §P3.15.6` checkboxes.

@@ -17,7 +17,7 @@ tags:
 #   - finalized saved-report view keeps the placed photo visible but
 #     does not expose placement or manual-edit controls
 #
-# Pre-flight is identical to `p3-15-upload.yaml`: docker compose stack
+# Pre-flight is identical to the photo upload modules: docker compose stack
 # up, fresh DB via `scripts/maestro/reset-db.sh`. The flow assumes a
 # seeded report whose normalized JSON contains at least one issue
 # (the dev-mirror sample report does).
@@ -60,7 +60,7 @@ tags:
 - tapOn:
     id: 'report-row-draft-0'
 
-# Capture a photo via the same camera + upload pipeline as p3-15.
+# Capture a photo via the same camera + upload pipeline as module 10a.
 - assertVisible:
     id: 'btn-tab-notes'
 - tapOn:

@@ -1,7 +1,7 @@
 appId: ${MAESTRO_APP_ID}
-name: P3.14b — Usage-limit dialog on 403 usage_limit_exceeded
+name: Pending — Usage-limit dialog on 403 usage_limit_exceeded
 tags:
-  - p3
+  - pending
   - usage-limits
 # Phase 3 of per-account usage limits (docs/v4/arch-usage-limits.md
 # §11). When the report generate / regenerate route returns 403
@@ -9,7 +9,7 @@ tags:
 # UsageLimitDialog (themed AppDialogSheet — hard rule #4: no
 # Alert.alert).
 #
-# **Status: not yet wired into CI.** Two reasons:
+# **Status: pending; does not pass today.** Two reasons:
 #
 #   1. Reaching the "limit-hit" state deterministically needs a DB
 #      seed step that pre-loads the user's `app.report_usage` rows
@@ -21,7 +21,7 @@ tags:
 #
 # When enabling, expected wiring:
 #   ./scripts/maestro/reset-db.sh --seed-at-limit
-#   maestro test .maestro/p3-14b-usage-limit-dialog.yaml
+#   maestro test .maestro/pending/usage-limit-dialog.yaml
 #
 # The dialog is keyed by:
 #   - title text "Monthly limit reached"

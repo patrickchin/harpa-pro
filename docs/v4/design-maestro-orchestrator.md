@@ -460,6 +460,7 @@ The dir contains **only** `reset-db.sh`. Notably:
 |---|---|---|---|
 | `check-maestro-testids.sh` | Greps every `id:` token in `.maestro/modules/`, `.maestro/helpers/`, and `regression-journey.yaml` against `apps/mobile/**/*.{ts,tsx}`. Honours `KNOWN_TEMPLATE_IDS` allowlist for template-resolved IDs (`picker-member-role-editor/viewer`). Treats `*.` and `${` as prefix-match. Exits 1 on miss. | `.github/workflows/e2e-maestro-testid-gate.yml` (PR + push to dev/main, gated on `apps/mobile/` changes) | **keep, called by `mo`** — wire into `mo doctor` and pre-`mo run` check. CI workflow stays the source of truth. |
 | `check-maestro-appid.sh` | Greps `.maestro/**/*.yaml` for the literal `com.harpa.pro`, fails if found. Enforces use of `${MAESTRO_APP_ID}`. | root `package.json` → `lint` script (chained via `&&`) | **keep standalone** — pure lint, not orchestrator-shaped. `mo run` still sets `MAESTRO_APP_ID` correctly from the build variant. |
+| `check-no-maestro-point-taps.sh` | Greps `.maestro/**/*.yaml` / `.yml` for `point:` keys, fails if found. Enforces semantic taps by text, accessibility labels, or testIDs instead of device-dependent coordinates. | root `package.json` → `lint` script (chained via `&&`); self-tested by `scripts/ci/__tests__/check-no-maestro-point-taps.test.sh` | **keep standalone** — pure lint. `mo run` should inherit the same rule before launching device flows. |
 
 No other top-level scripts are Maestro/E2E/device related.
 
@@ -482,7 +483,7 @@ No other top-level scripts are Maestro/E2E/device related.
 
 | Script | Command | Disposition |
 |---|---|---|
-| `lint` | `turbo run lint && bash scripts/check-no-supabase.sh && … && bash scripts/check-maestro-appid.sh && …` | keep — `check-maestro-appid.sh` chained in |
+| `lint` | `turbo run lint && bash scripts/check-no-supabase.sh && … && bash scripts/check-maestro-appid.sh && bash scripts/check-no-maestro-point-taps.sh && …` | keep — Maestro app-id and no-point-tap checks chained in |
 | `android` | `expo run:android` | keep — `mo run` will not own native builds |
 | `ios` | `expo run:ios` | keep — same |
 
@@ -527,7 +528,7 @@ No workflow currently runs Maestro itself. A future `e2e-maestro-run.yml` (Mac r
 
 | Hook | E2E-relevant lines |
 |---|---|
-| `.husky/pre-push` | `pnpm lint` (chains `check-maestro-appid.sh`); `pnpm typecheck`; `pnpm test`; fixture-hash check; `db:check`; `check-secrets.sh` (skippable via `SKIP_SECRET_CHECK=1` — pitfall-windows#18). **Does not run Maestro.** |
+| `.husky/pre-push` | `pnpm lint` (chains `check-maestro-appid.sh` and `check-no-maestro-point-taps.sh`); `pnpm typecheck`; `pnpm test`; fixture-hash check; `db:check`; `check-secrets.sh` (skippable via `SKIP_SECRET_CHECK=1` — pitfall-windows#18). **Does not run Maestro.** |
 
 ### Pitfalls → `mo` subcommand mapping
 

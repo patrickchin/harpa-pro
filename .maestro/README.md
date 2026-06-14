@@ -17,6 +17,17 @@ The CI lint job (`scripts/check-maestro-appid.sh`) fails if any
 `docs/bugs/README.md` (R-Maestro1) for the regression that motivated
 the env-var rule.
 
+## No coordinate taps
+
+Do not use `tapOn: { point: ... }` or any `point:` key in `.maestro`
+flows. Coordinate taps depend on device size, safe areas, orientation,
+and platform chrome. Tap visible text, accessibility labels, or testIDs
+instead; add a testID to the app if the target has no stable semantic
+selector yet.
+
+The root lint script runs `scripts/check-no-maestro-point-taps.sh`,
+which fails on any `.maestro/**/*.yaml` / `.yml` `point:` key.
+
 ## `core-end-to-end.yaml` (canonical full journey)
 
 The P3-exit-gate full-journey flow. Walks every currently-shipped

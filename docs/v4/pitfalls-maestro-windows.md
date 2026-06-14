@@ -519,3 +519,10 @@ helper now handles both platforms after `openLink`: when Android shows
 shows the custom-scheme confirm sheet, it taps `Open`. It also repeats
 the Expo dev-menu `Continue` / `Close` dismissal after the system UI
 branches, because that sheet can render late after the resolver closes.
+
+Do not solve resolver or dev-menu timing by tapping screen coordinates:
+`tapOn: point` is not portable across Android devices, iOS simulators,
+safe areas, or system chrome. Use visible text/accessibility labels, or
+add an app testID. The root lint script runs
+`scripts/check-no-maestro-point-taps.sh` and fails if any `.maestro`
+flow reintroduces a `point:` key.

@@ -166,6 +166,9 @@ ensures the legacy path is gone:
   with `packages/api/src/routes/`.
 - `check-maestro-appid.sh` — Maestro flows must reference
   `${MAESTRO_APP_ID}` rather than a hardcoded bundle id.
+- `check-no-maestro-point-taps.sh` — Maestro flows must tap text,
+  accessibility labels, or testIDs rather than device-dependent
+  `point:` coordinates.
 - `check-no-process-env-r2.sh` — R2 config is read through
   `env.R2_*` only (Pitfall 13 — no `process.env.R2_*` escape
   hatches that bypass DI).

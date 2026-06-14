@@ -360,20 +360,9 @@
 
 ### `apps/mobile/lib/dialogs/app-dialog-copy.ts`
 
-**Findings**
-
-| Current | Recommended | Reason |
-| --- | --- | --- |
-| `title: 'Delete Draft'` (line 23) | `title: 'Delete draft'` | [Sentence case vs title case](./style-guide.md#sentence-case-vs-title-case) |
-| `title: 'Delete Project'` (line 35) | `title: 'Delete project'` | [Sentence case vs title case](./style-guide.md#sentence-case-vs-title-case) |
-| `title: 'Delete Report'` (line 48) | `title: 'Delete report'` | [Sentence case vs title case](./style-guide.md#sentence-case-vs-title-case) |
-| `title: 'Finalize Report'` (line 60) | `title: 'Finalize report'` | [Sentence case vs title case](./style-guide.md#sentence-case-vs-title-case) |
-| `title: 'Unfinalize Report'` (line 73) | `title: 'Unfinalize report'` | [Sentence case vs title case](./style-guide.md#sentence-case-vs-title-case) |
-| `title: 'Remove Member'` (line 86) | `title: 'Remove member'` | [Sentence case vs title case](./style-guide.md#sentence-case-vs-title-case) |
-| `title: 'Delete Voice Note'` (line 98) | `title: 'Delete voice note'` | [Sentence case vs title case](./style-guide.md#sentence-case-vs-title-case) |
-| `title: 'Delete Note'` (line 110) | `title: 'Delete note'` | [Sentence case vs title case](./style-guide.md#sentence-case-vs-title-case) |
-| `title: 'Delete File'` (line 122) | `title: 'Delete file'` | [Sentence case vs title case](./style-guide.md#sentence-case-vs-title-case) |
-| `confirmLabel: 'Finalize Report'` (in `getFinalizeReportDialogCopy`) | `confirmLabel: 'Finalize report'` | [Button labels](./style-guide.md#button-labels) |
+**No findings.** The sentence-case dialog title and finalize action-label
+recommendations were applied in `apps/mobile/lib/dialogs/app-dialog-copy.ts`
+and covered by `apps/mobile/lib/dialogs/app-dialog-copy.test.ts`.
 
 ### `apps/mobile/lib/dialogs/DialogSheetProvider.tsx`
 

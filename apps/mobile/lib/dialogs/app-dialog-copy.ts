@@ -20,7 +20,7 @@ export interface AppDialogCopy {
 
 export function getDeleteDraftDialogCopy(): AppDialogCopy {
   return {
-    title: 'Delete Draft',
+    title: 'Delete draft',
     message: 'This draft report will be removed. This cannot be undone.',
     tone: 'danger',
     noticeTitle: 'Permanent action',
@@ -32,7 +32,7 @@ export function getDeleteDraftDialogCopy(): AppDialogCopy {
 
 export function getDeleteProjectDialogCopy(): AppDialogCopy {
   return {
-    title: 'Delete Project',
+    title: 'Delete project',
     message:
       'This project and all its reports will be permanently deleted. This cannot be undone.',
     tone: 'danger',
@@ -45,7 +45,7 @@ export function getDeleteProjectDialogCopy(): AppDialogCopy {
 
 export function getDeleteReportDialogCopy(): AppDialogCopy {
   return {
-    title: 'Delete Report',
+    title: 'Delete report',
     message: 'This report will be permanently deleted. This cannot be undone.',
     tone: 'danger',
     noticeTitle: 'Permanent action',
@@ -57,12 +57,12 @@ export function getDeleteReportDialogCopy(): AppDialogCopy {
 
 export function getFinalizeReportDialogCopy(): AppDialogCopy {
   return {
-    title: 'Finalize Report',
+    title: 'Finalize report',
     message:
       'Once finalized, this report will be marked as final and locked from further AI regeneration. You can still export and share it.',
     tone: 'warning',
     noticeTitle: 'Confirm finalization',
-    confirmLabel: 'Finalize Report',
+    confirmLabel: 'Finalize report',
     cancelLabel: 'Cancel',
     confirmVariant: 'default',
   };
@@ -70,7 +70,7 @@ export function getFinalizeReportDialogCopy(): AppDialogCopy {
 
 export function getUnfinalizeReportDialogCopy(): AppDialogCopy {
   return {
-    title: 'Unfinalize Report',
+    title: 'Unfinalize report',
     message:
       'Move this report back to a draft so you can edit and regenerate it. The current contents are preserved — you can finalize again at any time.',
     tone: 'warning',
@@ -83,7 +83,7 @@ export function getUnfinalizeReportDialogCopy(): AppDialogCopy {
 
 export function getRemoveMemberDialogCopy(name: string): AppDialogCopy {
   return {
-    title: 'Remove Member',
+    title: 'Remove member',
     message: `${name} will be removed from this project and will lose access to its reports.`,
     tone: 'danger',
     noticeTitle: 'This cannot be undone',
@@ -95,7 +95,7 @@ export function getRemoveMemberDialogCopy(name: string): AppDialogCopy {
 
 export function getDeleteVoiceNoteDialogCopy(): AppDialogCopy {
   return {
-    title: 'Delete Voice Note',
+    title: 'Delete voice note',
     message: 'Are you sure you want to delete this voice note? This cannot be undone.',
     tone: 'danger',
     noticeTitle: 'Permanent action',
@@ -107,7 +107,7 @@ export function getDeleteVoiceNoteDialogCopy(): AppDialogCopy {
 
 export function getDeleteNoteDialogCopy(): AppDialogCopy {
   return {
-    title: 'Delete Note',
+    title: 'Delete note',
     message: 'Are you sure you want to delete this note? This cannot be undone.',
     tone: 'danger',
     noticeTitle: 'Permanent action',
@@ -119,7 +119,7 @@ export function getDeleteNoteDialogCopy(): AppDialogCopy {
 
 export function getDeleteFileDialogCopy(filename: string): AppDialogCopy {
   return {
-    title: 'Delete File',
+    title: 'Delete file',
     message: `Are you sure you want to delete "${filename}"? This cannot be undone.`,
     tone: 'danger',
     noticeTitle: 'Permanent action',

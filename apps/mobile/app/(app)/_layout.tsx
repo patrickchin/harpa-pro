@@ -70,6 +70,7 @@ export default function AppLayout() {
       <Stack.Screen name="profile" />
       <Stack.Screen name="account" />
       <Stack.Screen name="usage" />
+      <Stack.Screen name="onboarding-lab" />
     </Stack>
   );
 }

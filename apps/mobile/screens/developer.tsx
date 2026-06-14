@@ -15,6 +15,7 @@ import {
   Bot,
   Check,
   ChevronRight,
+  ClipboardList,
   FlaskConical,
   Wrench,
   X,
@@ -52,6 +53,8 @@ export interface DeveloperScreenProps {
   onToggleGenerateDebugTab: (next: boolean) => void;
   showGenerateEditTab: boolean;
   onToggleGenerateEditTab: (next: boolean) => void;
+
+  onPressOnboardingLab: () => void;
 }
 
 function formatCost(cost: number): string {
@@ -74,6 +77,7 @@ export function Developer({
   onToggleGenerateDebugTab,
   showGenerateEditTab,
   onToggleGenerateEditTab,
+  onPressOnboardingLab,
 }: DeveloperScreenProps) {
   const [modalVisible, setModalVisible] = useState(false);
 
@@ -96,7 +100,36 @@ export function Developer({
           <ScreenHeader title="Developer" onBack={onBack} />
         </View>
 
-        <View className="px-5" testID="developer-section">
+        <View className="px-5" testID="developer-section-onboarding">
+          <View className="mb-2 flex-row items-center gap-2">
+            <ClipboardList size={16} color={colors.muted.foreground} />
+            <Text className="text-label text-muted-foreground">Onboarding</Text>
+          </View>
+
+          <Card className="gap-3">
+            <Pressable
+              testID="btn-open-onboarding-lab"
+              onPress={onPressOnboardingLab}
+              accessibilityRole="button"
+              accessibilityLabel="Open onboarding lab"
+            >
+              <View className="flex-row items-center gap-3">
+                <ClipboardList size={18} color={colors.muted.foreground} />
+                <View className="flex-1">
+                  <Text className="text-title-sm text-foreground">
+                    Onboarding Lab
+                  </Text>
+                  <Text className="text-body text-muted-foreground">
+                    Try the three retention-focused first-run paths.
+                  </Text>
+                </View>
+                <ChevronRight size={16} color={colors.muted.foreground} />
+              </View>
+            </Pressable>
+          </Card>
+        </View>
+
+        <View className="px-5 mt-6" testID="developer-section">
           <View className="mb-2 flex-row items-center gap-2">
             <Wrench size={16} color={colors.muted.foreground} />
             <Text className="text-label text-muted-foreground">AI Model</Text>

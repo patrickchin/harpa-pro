@@ -51,6 +51,7 @@ const defaults = {
   onToggleGenerateDebugTab: vi.fn(),
   showGenerateEditTab: true,
   onToggleGenerateEditTab: vi.fn(),
+  onPressOnboardingLab: vi.fn(),
 };
 
 describe('Developer', () => {
@@ -130,5 +131,23 @@ describe('Developer', () => {
         .props.onValueChange(false),
     );
     expect(onToggleGenerateEditTab).toHaveBeenCalledWith(false);
+  });
+
+  it('opens the onboarding lab when the onboarding row is pressed', () => {
+    const onPressOnboardingLab = vi.fn();
+    const tree = render(
+      <Developer
+        {...defaults}
+        onPressOnboardingLab={onPressOnboardingLab}
+      />,
+    );
+
+    act(() =>
+      tree.root
+        .findByProps({ testID: 'btn-open-onboarding-lab' })
+        .props.onPress(),
+    );
+
+    expect(onPressOnboardingLab).toHaveBeenCalledOnce();
   });
 });

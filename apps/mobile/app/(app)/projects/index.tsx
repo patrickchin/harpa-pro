@@ -68,6 +68,9 @@ export default function ProjectsIndex() {
       onPressNewProject={() => {
         router.push('/projects/new' as Href);
       }}
+      onPressOnboardingLab={() => {
+        router.push('/(app)/onboarding-lab' as Href);
+      }}
       actions={<AppHeaderActions />}
     />
   );

@@ -140,6 +140,30 @@ describe('ProjectsList', () => {
     expect(tree!.toJSON()).toMatchSnapshot();
   });
 
+  it('calls onPressOnboardingLab from the optional empty-state CTA', () => {
+    const onPressOnboardingLab = vi.fn();
+    let tree: ReactTestRenderer;
+    act(() => {
+      tree = create(
+        <ProjectsList
+          projects={[]}
+          isLoading={false}
+          refreshing={false}
+          onRefresh={vi.fn()}
+          onPressProject={vi.fn()}
+          onPressNewProject={vi.fn()}
+          onPressOnboardingLab={onPressOnboardingLab}
+        />
+      );
+    });
+
+    act(() => {
+      tree!.root.findByProps({ testID: 'btn-onboarding-lab' }).props.onPress();
+    });
+
+    expect(onPressOnboardingLab).toHaveBeenCalledOnce();
+  });
+
   it('calls onPressProject with correct id when row is pressed', () => {
     const onPressProject = vi.fn();
     let tree: ReactTestRenderer;

@@ -54,6 +54,7 @@ export type ProjectsListProps = {
    */
   onPressInProject?: (slug: string) => void;
   onPressNewProject: () => void;
+  onPressOnboardingLab?: () => void;
   /**
    * Optional trailing-edge header slot. Real routes pass
    * `<AppHeaderActions />` (the profile button); dev mirrors leave it
@@ -71,6 +72,7 @@ export function ProjectsList({
   onPressProject,
   onPressInProject,
   onPressNewProject,
+  onPressOnboardingLab,
   actions,
 }: ProjectsListProps) {
   const onHeaderLayout = useLayoutShiftProbe('projects-list:header');
@@ -135,15 +137,38 @@ export function ProjectsList({
               title="No projects yet"
               description="Create your first project so field notes and daily reports have a clear destination."
               action={
-                <Button
-                  testID="btn-new-project"
-                  variant="hero"
-                  size="lg"
-                  onPress={onPressNewProject}
-                  accessibilityLabel="Add new project"
-                >
-                  Add your first project
-                </Button>
+                onPressOnboardingLab ? (
+                  <View className="gap-3">
+                    <Button
+                      testID="btn-onboarding-lab"
+                      variant="hero"
+                      size="lg"
+                      onPress={onPressOnboardingLab}
+                      accessibilityLabel="Try onboarding lab"
+                    >
+                      Try onboarding lab
+                    </Button>
+                    <Button
+                      testID="btn-new-project"
+                      variant="outline"
+                      size="lg"
+                      onPress={onPressNewProject}
+                      accessibilityLabel="Add new project"
+                    >
+                      Add your first project
+                    </Button>
+                  </View>
+                ) : (
+                  <Button
+                    testID="btn-new-project"
+                    variant="hero"
+                    size="lg"
+                    onPress={onPressNewProject}
+                    accessibilityLabel="Add new project"
+                  >
+                    Add your first project
+                  </Button>
+                )
               }
             />
           }

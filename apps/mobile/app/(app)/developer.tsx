@@ -4,7 +4,7 @@
  * since the catalogue currently only contains OpenAI; vendor selection
  * is implicit. See docs/superpowers/plans/2026-05-29-user-model-selection.md.
  */
-import { useRouter } from 'expo-router';
+import { useRouter, type Href } from 'expo-router';
 
 import { Developer } from '@/screens/developer';
 import { AI_MODELS, useAiProvider } from '@/lib/ai/useAiProvider';
@@ -29,6 +29,9 @@ export default function DeveloperRoute() {
       onToggleGenerateDebugTab={devFlags.setShowGenerateDebugTab}
       showGenerateEditTab={devFlags.showGenerateEditTab}
       onToggleGenerateEditTab={devFlags.setShowGenerateEditTab}
+      onPressOnboardingLab={() => {
+        router.push('/(app)/onboarding-lab' as Href);
+      }}
     />
   );
 }

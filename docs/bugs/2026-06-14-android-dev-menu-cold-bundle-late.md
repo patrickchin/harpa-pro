@@ -13,11 +13,12 @@ cold Metro bundle after `clearState: true`, the dev-menu onboarding sheet
 can appear after that single dismissal pass, making the underlying email
 field not visible to Maestro.
 
-**Fix.** Add an Android-only delayed wait for the intro copy, then tap
-the sheet's close affordance directly before the auth-screen wait. Do not
-tap `Continue`: it opens the full native dev menu and can leave Maestro
-stuck behind another sheet. Apply the same Android-first close behavior
-to the shared post-`openLink` helper and the duplicated auth preludes.
+**Fix.** Add Expo's `disableOnboarding=1` query param to the encoded
+Metro URL inside the dev-client deep link so the native dev-menu
+onboarding sheet is marked complete before the app bundle loads. Keep
+the shared post-`openLink` helper and duplicated auth preludes defensive
+with label-based `Continue` / `Close` fallbacks for older dev-clients or
+system UI, but do not use coordinate taps — they are device-dependent.
 Keep the longer cold-start auth wait in the local regression/core launch
 flows.
 

@@ -9,8 +9,8 @@ appId: ${MAESTRO_APP_ID}
 # iOS: the "Open in 'Harpa Pro Dev'?" confirm sheet appears
 # asynchronously after the first custom-scheme open per install.
 #
-# Expo dev launcher: the first-run "This is the developer menu" sheet
-# can also appear late, after Android/iOS system UI is dismissed.
+# Expo dev launcher: older builds may still show the first-run "This is
+# the developer menu" sheet after Android/iOS system UI is dismissed.
 - waitForAnimationToEnd:
     timeout: 3000
 - runFlow:
@@ -27,14 +27,6 @@ appId: ${MAESTRO_APP_ID}
       visible: "Open"
     commands:
       - tapOn: "Open"
-      - waitForAnimationToEnd
-- runFlow:
-    when:
-      platform: android
-      visible: "This is the developer menu"
-    commands:
-      - tapOn:
-          point: "90%,71%"
       - waitForAnimationToEnd
 - runFlow:
     when:

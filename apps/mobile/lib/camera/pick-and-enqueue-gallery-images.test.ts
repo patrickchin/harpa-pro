@@ -122,4 +122,34 @@ describe('pickAndEnqueueGalleryImages', () => {
       results: settlement,
     });
   });
+
+  it('uses screenshot fixture images without launching the system picker', async () => {
+    const settlement: PromiseSettledResult<UploadResult>[] = [
+      { status: 'fulfilled', value: { file: fakeFile } },
+      { status: 'fulfilled', value: { file: fakeFile } },
+    ];
+    const enqueue = vi.fn(async () => settlement);
+    const outcome = await pickAndEnqueueGalleryImages({
+      reportId: 'rpt_1',
+      projectId: 'prj-test1234',
+      enqueueCameraUris: enqueue,
+      screenshotMode: true,
+      resolveScreenshotFixtureUris: async () => [
+        'file:///fixtures/concrete.jpg',
+        'file:///fixtures/scaffold.jpg',
+      ],
+    });
+
+    expect(ImagePicker.requestMediaLibraryPermissionsAsync).not.toHaveBeenCalled();
+    expect(ImagePicker.launchImageLibraryAsync).not.toHaveBeenCalled();
+    expect(enqueue).toHaveBeenCalledWith(
+      ['file:///fixtures/concrete.jpg', 'file:///fixtures/scaffold.jpg'],
+      { reportId: 'rpt_1', projectId: 'prj-test1234', noteSource: 'gallery' },
+    );
+    expect(outcome).toEqual({
+      kind: 'enqueued',
+      total: 2,
+      results: settlement,
+    });
+  });
 });

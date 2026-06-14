@@ -192,6 +192,40 @@ adb reverse tcp:8787 tcp:8787
 maestro test .maestro/dev-otp-hardening.yaml
 ```
 
+## `store-screenshots.yaml` (App Store / Play Store assets)
+
+Focused flow for generating store-listing screenshots from polished,
+repeatable fixture data. It creates a demo project, attaches bundled
+construction-site photos through the normal Photo Library action, and
+captures:
+
+1. projects list
+2. project overview
+3. field notes with photo attachments
+4. generated report
+5. report photo strip
+
+Run against the local fixture stack and a screenshot-mode Metro bundle:
+
+```bash
+export DEV_OTP_TOKEN=dev-token-at-least-32-characters
+export MAESTRO_APP_ID=com.harpa.pro.dev
+docker compose down -v && docker compose up -d
+adb reverse tcp:8081 tcp:8081
+adb reverse tcp:8787 tcp:8787
+adb reverse tcp:9000 tcp:9000
+EXPO_PUBLIC_API_URL=http://localhost:8787 \
+EXPO_PUBLIC_USE_FIXTURES=true \
+EXPO_PUBLIC_SCREENSHOT_MODE=true \
+pnpm --filter @harpa/mobile start --dev-client
+maestro test .maestro/store-screenshots.yaml
+```
+
+`EXPO_PUBLIC_SCREENSHOT_MODE=true` hides the status bar and makes the
+Photo Library action use the checked-in images documented in
+`apps/mobile/assets/fixtures/store-screenshots.md`, avoiding camera
+hardware, OS picker taps, and unlicensed hotlinks.
+
 ## Archived and pending flows
 
 Top-level `.maestro/*.yaml` files are current entrypoints. Historical

@@ -15,6 +15,8 @@
  * default in `vitest.setup.ts`.
  */
 import type { UploadResult } from '@/lib/uploads/types';
+import { env } from '@/lib/config/env';
+import { resolveScreenshotGalleryFixtureUris } from './screenshot-gallery-fixtures';
 
 export type PickAndEnqueueOutcome =
   | { kind: 'permission-denied' }
@@ -33,11 +35,26 @@ export interface PickAndEnqueueOptions {
     uris: ReadonlyArray<string>,
     opts: { reportId: string; projectId: string; noteSource?: 'camera' | 'gallery' },
   ) => Promise<ReadonlyArray<PromiseSettledResult<UploadResult>>>;
+  screenshotMode?: boolean;
+  resolveScreenshotFixtureUris?: () => Promise<ReadonlyArray<string>>;
 }
 
 export async function pickAndEnqueueGalleryImages(
   options: PickAndEnqueueOptions,
 ): Promise<PickAndEnqueueOutcome> {
+  if (options.screenshotMode ?? env.EXPO_PUBLIC_SCREENSHOT_MODE) {
+    const uris = await (
+      options.resolveScreenshotFixtureUris ?? resolveScreenshotGalleryFixtureUris
+    )();
+    if (uris.length === 0) return { kind: 'empty' };
+    const results = await options.enqueueCameraUris(uris, {
+      reportId: options.reportId,
+      projectId: options.projectId,
+      noteSource: 'gallery',
+    });
+    return { kind: 'enqueued', total: uris.length, results };
+  }
+
   const ImagePicker = await import('expo-image-picker');
   const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
   if (!perm.granted) {

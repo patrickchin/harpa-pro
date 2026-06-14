@@ -13,6 +13,7 @@ describe('lib/env', () => {
     delete process.env.EXPO_PUBLIC_USE_FIXTURES;
     delete process.env.EXPO_PUBLIC_APP_VARIANT;
     delete process.env.EXPO_PUBLIC_LAYOUT_PROBE;
+    delete process.env.EXPO_PUBLIC_SCREENSHOT_MODE;
     delete process.env.EXPO_PUBLIC_SENTRY_DSN;
   });
 
@@ -26,6 +27,7 @@ describe('lib/env', () => {
     expect(env.EXPO_PUBLIC_USE_FIXTURES).toBe(false);
     expect(env.EXPO_PUBLIC_APP_VARIANT).toBe('development');
     expect(env.EXPO_PUBLIC_LAYOUT_PROBE).toBe(false);
+    expect(env.EXPO_PUBLIC_SCREENSHOT_MODE).toBe(false);
     expect(env.EXPO_PUBLIC_SENTRY_DSN).toBeUndefined();
   });
 
@@ -33,6 +35,12 @@ describe('lib/env', () => {
     process.env.EXPO_PUBLIC_LAYOUT_PROBE = 'true';
     const { env } = await import('./env.js');
     expect(env.EXPO_PUBLIC_LAYOUT_PROBE).toBe(true);
+  });
+
+  it('parses SCREENSHOT_MODE as boolean', async () => {
+    process.env.EXPO_PUBLIC_SCREENSHOT_MODE = 'true';
+    const { env } = await import('./env.js');
+    expect(env.EXPO_PUBLIC_SCREENSHOT_MODE).toBe(true);
   });
 
   it('parses USE_FIXTURES as boolean', async () => {

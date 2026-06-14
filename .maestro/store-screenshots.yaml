@@ -1,0 +1,209 @@
+appId: ${MAESTRO_APP_ID}
+name: "Store screenshots: fixture project and report"
+tags:
+  - screenshots
+  - store
+---
+# Captures marketplace screenshots for App Store / Play Store review.
+#
+# Preconditions:
+#   - local compose API is up with DEV_OTP_TOKEN set
+#   - Metro is running with EXPO_PUBLIC_USE_FIXTURES=true and
+#     EXPO_PUBLIC_SCREENSHOT_MODE=true
+#   - Android callers have adb reverse for 8081, 8787, and 9000
+#
+# The Photo Library action is intentionally used here. In screenshot
+# mode it injects bundled construction-site fixtures, avoiding camera
+# hardware and system picker flake while still exercising the upload
+# pipeline.
+
+- launchApp:
+    clearState: true
+    clearKeychain: true
+    stopApp: true
+- waitForAnimationToEnd
+- openLink: "exp+harpa-pro-v4://expo-development-client/?url=http%3A%2F%2Flocalhost%3A8081%3FdisableOnboarding%3D1"
+- waitForAnimationToEnd:
+    timeout: 20000
+- runFlow:
+    when:
+      visible: "Continue"
+    commands:
+      - tapOn:
+          text: "Continue"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: "Close"
+    commands:
+      - tapOn:
+          text: "Close"
+      - waitForAnimationToEnd
+- runFlow:
+    file: helpers/dismiss-open-dialog.yaml
+- extendedWaitUntil:
+    visible:
+      id: "input-email"
+    timeout: 90000
+
+- runFlow:
+    file: helpers/sign-in.yaml
+    env:
+      EMAIL: "store@e2e.harpapro.com"
+      DEV_OTP_TOKEN: "${DEV_OTP_TOKEN}"
+
+- runFlow:
+    when:
+      visible:
+        id: "screen-onboarding"
+    commands:
+      - tapOn:
+          id: "input-onboarding-name"
+      - inputText: "Avery Stone"
+      - tapOn:
+          id: "input-onboarding-company"
+      - inputText: "Harpa Field Ops"
+      - hideKeyboard
+      - tapOn:
+          id: "btn-onboarding-submit"
+
+- extendedWaitUntil:
+    visible:
+      id: "btn-new-project"
+    timeout: 15000
+- tapOn:
+    id: "btn-new-project"
+- extendedWaitUntil:
+    visible:
+      id: "input-project-name"
+    timeout: 10000
+- tapOn:
+    id: "input-project-name"
+- inputText: "Riverside Tower"
+- tapOn:
+    id: "input-client-name"
+- inputText: "Northstar Concrete"
+- tapOn:
+    id: "input-project-address"
+- inputText: "421 Harbor Ave"
+- hideKeyboard
+- tapOn:
+    id: "btn-save-project"
+- extendedWaitUntil:
+    visible:
+      id: "btn-project-edit"
+    timeout: 15000
+- waitForAnimationToEnd
+- takeScreenshot: 02-project-overview
+
+- openLink: "harpa://projects"
+- runFlow:
+    file: helpers/dismiss-open-dialog.yaml
+- extendedWaitUntil:
+    visible:
+      id: "btn-new-project"
+    timeout: 10000
+- extendedWaitUntil:
+    visible: "Riverside Tower"
+    timeout: 10000
+- waitForAnimationToEnd
+- takeScreenshot: 01-projects-list
+
+- tapOn: "Riverside Tower"
+- extendedWaitUntil:
+    visible:
+      id: "btn-project-edit"
+    timeout: 10000
+- tapOn:
+    id: "btn-open-reports"
+- extendedWaitUntil:
+    visible:
+      id: "btn-new-report"
+    timeout: 10000
+- tapOn:
+    id: "btn-new-report"
+- extendedWaitUntil:
+    visible:
+      id: "report-row-.*"
+    timeout: 15000
+- tapOn:
+    id: "report-row-.*"
+- extendedWaitUntil:
+    visible:
+      id: "input-note"
+    timeout: 15000
+
+- tapOn:
+    id: "input-note"
+- inputText: "Level 8 deck pour completed before noon. Rebar inspection passed and west stair formwork is ready for tomorrow."
+- runFlow:
+    when:
+      visible:
+        id: "btn-add-note"
+    commands:
+      - tapOn:
+          id: "btn-add-note"
+- swipe:
+    direction: DOWN
+    duration: 500
+- waitForAnimationToEnd
+
+- tapOn:
+    id: "btn-attachment"
+- extendedWaitUntil:
+    visible:
+      id: "btn-attachment-photo-library"
+    timeout: 8000
+- tapOn:
+    id: "btn-attachment-photo-library"
+- extendedWaitUntil:
+    visible:
+      id: "batch-grid-tile-0-img"
+    timeout: 45000
+- extendedWaitUntil:
+    visible:
+      id: "batch-grid-tile-1-img"
+    timeout: 45000
+- extendedWaitUntil:
+    notVisible:
+      id: "batch-grid-tile-0-ring"
+    timeout: 45000
+- extendedWaitUntil:
+    notVisible:
+      id: "batch-grid-tile-1-ring"
+    timeout: 45000
+- extendedWaitUntil:
+    notVisible:
+      id: "batch-grid-tile-0-cancel"
+    timeout: 45000
+- extendedWaitUntil:
+    notVisible:
+      id: "batch-grid-tile-1-cancel"
+    timeout: 45000
+- waitForAnimationToEnd
+- takeScreenshot: 03-field-notes-photos
+
+- tapOn:
+    id: "btn-tab-report"
+- extendedWaitUntil:
+    visible:
+      id: "report-tab-pane"
+    timeout: 15000
+- extendedWaitUntil:
+    visible:
+      id: "report-view-.*"
+    timeout: 15000
+- waitForAnimationToEnd
+- takeScreenshot: 04-generated-report
+
+- scrollUntilVisible:
+    element:
+      id: "generate-report-photos"
+    direction: DOWN
+    timeout: 60000
+- extendedWaitUntil:
+    visible:
+      id: "btn-generate-report-photo-.*"
+    timeout: 15000
+- waitForAnimationToEnd
+- takeScreenshot: 05-report-photos

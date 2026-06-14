@@ -91,6 +91,10 @@ export interface GenerateReportProviderProps {
   isGeneratingReport?: boolean;
   /** Latest generation error message, or `null`. */
   generationError?: string | null;
+  /** Optional action label for non-generation errors surfaced in the Report tab. */
+  generationErrorActionLabel?: string;
+  /** Optional action handler for non-generation errors surfaced in the Report tab. */
+  onGenerationErrorAction?: () => void;
   /** Debug payload (prompts + raw response) from last (re)generate. */
   lastGeneration?: GenerationDebug | null;
   /** Count of notes added since the last successful generation. @deprecated Use needsRegeneration. */
@@ -287,6 +291,10 @@ interface GenerationSurface {
   isUpdating: boolean;
   /** Latest generation error, or `null`. */
   error: string | null;
+  /** Label for the Report-tab error action. Defaults to Retry. */
+  errorActionLabel: string;
+  /** Handler for the Report-tab error action. Defaults to regenerate. */
+  errorAction: () => void;
   /** Count of notes added since the last successful generation. @deprecated Use needsRegeneration. */
   notesSinceLastGeneration: number;
   /** True when notes have changed since the last generation. */
@@ -457,6 +465,8 @@ export function GenerateReportProvider({
   report = null,
   isGeneratingReport = false,
   generationError = null,
+  generationErrorActionLabel,
+  onGenerationErrorAction,
   lastGeneration = null,
   notesSinceLastGeneration = 0,
   needsRegeneration = notesSinceLastGeneration > 0,
@@ -847,6 +857,8 @@ export function GenerateReportProvider({
         setReport,
         isUpdating: isGeneratingReport,
         error: generationError,
+        errorActionLabel: generationErrorActionLabel ?? 'Retry',
+        errorAction: onGenerationErrorAction ?? handleRegenerate,
         notesSinceLastGeneration,
         needsRegeneration,
         hasReport: report !== null,
@@ -933,6 +945,8 @@ export function GenerateReportProvider({
       setReport,
       isGeneratingReport,
       generationError,
+      generationErrorActionLabel,
+      onGenerationErrorAction,
       lastGeneration,
       notesSinceLastGeneration,
       needsRegeneration,

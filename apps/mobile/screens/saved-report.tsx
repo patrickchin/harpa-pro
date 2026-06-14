@@ -211,6 +211,10 @@ export function SavedReport(props: SavedReportProps) {
   } | null>(null);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [confirmUnfinalizeOpen, setConfirmUnfinalizeOpen] = useState(false);
+  const [actionError, setActionError] = useState<{
+    title: string;
+    message: string;
+  } | null>(null);
   const [localReport, setLocalReport] = useState<GeneratedSiteReport | null>(
     null,
   );
@@ -603,8 +607,16 @@ export function SavedReport(props: SavedReportProps) {
             label: isDeleting ? 'Deleting…' : deleteCopy.confirmLabel,
             variant: deleteCopy.confirmVariant,
             onPress: async () => {
-              await onConfirmDelete();
-              setConfirmDeleteOpen(false);
+              try {
+                await onConfirmDelete();
+                setConfirmDeleteOpen(false);
+              } catch {
+                setConfirmDeleteOpen(false);
+                setActionError({
+                  title: "Couldn't delete report",
+                  message: 'Try again.',
+                });
+              }
             },
             disabled: isDeleting,
             accessibilityLabel: 'Confirm delete report',
@@ -638,8 +650,16 @@ export function SavedReport(props: SavedReportProps) {
               : unfinalizeCopy.confirmLabel,
             variant: unfinalizeCopy.confirmVariant,
             onPress: async () => {
-              await onConfirmUnfinalize();
-              setConfirmUnfinalizeOpen(false);
+              try {
+                await onConfirmUnfinalize();
+                setConfirmUnfinalizeOpen(false);
+              } catch {
+                setConfirmUnfinalizeOpen(false);
+                setActionError({
+                  title: "Couldn't unfinalize report",
+                  message: 'Try again.',
+                });
+              }
             },
             disabled: isUnfinalizing,
             accessibilityLabel: 'Confirm unfinalize report',
@@ -652,6 +672,23 @@ export function SavedReport(props: SavedReportProps) {
             onPress: () => setConfirmUnfinalizeOpen(false),
             disabled: isUnfinalizing,
             accessibilityLabel: 'Cancel unfinalize report',
+          },
+        ]}
+      />
+
+      <AppDialogSheet
+        visible={actionError !== null}
+        title={actionError?.title ?? "Couldn't update report"}
+        message={actionError?.message}
+        noticeTone="danger"
+        noticeTitle="Action failed"
+        onClose={() => setActionError(null)}
+        actions={[
+          {
+            label: 'Done',
+            variant: 'secondary',
+            onPress: () => setActionError(null),
+            testID: 'btn-dismiss-report-action-error',
           },
         ]}
       />

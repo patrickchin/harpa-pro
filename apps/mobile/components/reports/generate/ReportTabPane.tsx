@@ -51,7 +51,6 @@ export function ReportTabPane({
   const {
     generation,
     draft,
-    handleRegenerate,
     reportNumber,
     preview,
     placement,
@@ -173,13 +172,13 @@ export function ReportTabPane({
               <Button
                 variant="secondary"
                 size="sm"
-                onPress={handleRegenerate}
+                onPress={generation.errorAction}
                 testID="btn-report-tab-retry"
               >
                 <View className="flex-row items-center gap-1.5">
                   <RotateCcw size={14} color={colors.foreground} />
                   <Text className="text-base font-semibold text-foreground">
-                    Retry
+                    {generation.errorActionLabel}
                   </Text>
                 </View>
               </Button>

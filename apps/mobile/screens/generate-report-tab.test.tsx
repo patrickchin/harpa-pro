@@ -224,6 +224,29 @@ describe('GenerateNotes — Report tab', () => {
     expect(onRegenerate).toHaveBeenCalledTimes(1);
   });
 
+  it('renders a custom generation error action when provided', () => {
+    const onRegenerate = vi.fn();
+    const onGenerationErrorAction = vi.fn();
+    const props = {
+      ...baseProps,
+      report: null,
+      generationError: "Couldn't save note.",
+      generationErrorActionLabel: 'Try again',
+      onGenerationErrorAction,
+      onRegenerate,
+    };
+    const tree = render(<GenerateNotes {...props} />);
+    expect(reportTabText(tree)).toContain("Couldn't save note.");
+    expect(reportTabText(tree)).toContain('Try again');
+
+    act(() => {
+      tree.root.findByProps({ testID: 'btn-report-tab-retry' }).props.onPress();
+    });
+
+    expect(onGenerationErrorAction).toHaveBeenCalledTimes(1);
+    expect(onRegenerate).not.toHaveBeenCalled();
+  });
+
   it('renders the finalize error banner alongside a populated report', () => {
     const tree = render(
       <GenerateNotes

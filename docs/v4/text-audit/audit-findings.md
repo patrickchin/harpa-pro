@@ -6,8 +6,10 @@
 > Implementation note: the follow-up implementation PR applies the mobile
 > copy-string findings captured here. Tables preserve the original audited text
 > for traceability, and `apps/mobile/lib/text-audit-regressions.test.ts`
-> prevents those strings from returning. Broader UX gaps, such as adding true
-> retry actions where the screen lacks a retry callback, remain documented.
+> prevents those strings from returning. The same PR also closes the behavioral
+> gaps called out below: missing accessibility labels, split empty-state copy,
+> destructive-action notice copy, note error retry actions, saved-report action
+> error surfaces, and permission/settings actions.
 >
 > Format per file:
 >
@@ -217,12 +219,16 @@
 | `'Could not pick photos.'` (line 534) | `"Couldn't pick photos."` | [Error messages](./style-guide.md#error-messages) |
 | `` `${failed} of ${allUris.length} photo${allUris.length === 1 ? '' : 's'} failed to upload. Open the report queue to retry.` `` (line 556) | Hoist ternary into a `pluralize(n, 'photo')` helper; keep the rest. | [Numbers, dates & units](./style-guide.md#numbers-dates--units) |
 
-### `apps/mobile/app/(app)/r/[report].tsx`
+### `apps/mobile/app/(app)/projects/[project]/reports/[number]/index.tsx`
 
 **Gaps**
 
-- `handleConfirmDelete` (line 206) has `catch {}` with `TODO(P4)` — delete failure is silent and the confirm sheet stays open. Surface an inline error or toast. ([Error messages](./style-guide.md#error-messages))
-- `handleConfirmUnfinalize` (line 222) has the same silent-`catch` pattern. ([Error messages](./style-guide.md#error-messages))
+- Original `handleConfirmDelete` swallowed mutation errors, leaving delete
+  failures silent. Surface an inline error or themed dialog. Implemented as
+  `"Couldn't delete report"` + `Try again.` in `SavedReport`. ([Error messages](./style-guide.md#error-messages))
+- Original `handleConfirmUnfinalize` had the same silent-catch pattern.
+  Implemented as `"Couldn't unfinalize report"` + `Try again.` in
+  `SavedReport`. ([Error messages](./style-guide.md#error-messages))
 
 ### `apps/mobile/screens/reports-list.tsx`
 

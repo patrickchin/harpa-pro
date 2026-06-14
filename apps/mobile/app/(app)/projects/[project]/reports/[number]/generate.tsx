@@ -90,6 +90,16 @@ interface ApiNote {
   createdAt: string;
 }
 
+type NoteActionRetry =
+  | { kind: 'delete'; noteId: string }
+  | { kind: 'update'; noteId: string; nextBody: string }
+  | { kind: 'create'; body: string };
+
+interface NoteActionError {
+  message: string;
+  retry: NoteActionRetry;
+}
+
 function formatCount(count: number, noun: string): string {
   return `${count} ${noun}${count === 1 ? '' : 's'}`;
 }
@@ -201,12 +211,81 @@ export default function GenerateReportRoute() {
   const createNote = useOptimisticCreateNote();
   const deleteNote = useOptimisticDeleteNote();
   const updateNote = useOptimisticUpdateNote();
+  const [noteActionError, setNoteActionError] =
+    useState<NoteActionError | null>(null);
 
   const visibleNotes = useMemo<NoteEntry[]>(() => {
     const items = (notesQuery.data as { items?: ApiNote[] } | undefined)?.items;
     if (!items) return [];
     return items.map(noteToEntry).sort((a, b) => a.addedAt - b.addedAt);
   }, [notesQuery.data]);
+
+  const runDeleteNote = useCallback(
+    (noteIdValue: string) => {
+      if (!reportId) return;
+      setNoteActionError(null);
+      deleteNote.mutate(
+        { params: { note: noteIdValue }, reportId },
+        {
+          onSuccess: () => setNoteActionError(null),
+          onError: () => {
+            setNoteActionError({
+              message: "Couldn't delete note.",
+              retry: { kind: 'delete', noteId: noteIdValue },
+            });
+          },
+        },
+      );
+    },
+    [deleteNote, reportId],
+  );
+
+  const runUpdateNote = useCallback(
+    (noteIdValue: string, nextBody: string) => {
+      if (!reportId) return;
+      setNoteActionError(null);
+      updateNote.mutate(
+        {
+          params: { note: noteIdValue },
+          body: { body: nextBody },
+          reportId,
+        },
+        {
+          onSuccess: () => setNoteActionError(null),
+          onError: () => {
+            setNoteActionError({
+              message: "Couldn't update note.",
+              retry: { kind: 'update', noteId: noteIdValue, nextBody },
+            });
+          },
+        },
+      );
+    },
+    [updateNote, reportId],
+  );
+
+  const runCreateTextNote = useCallback(
+    (body: string) => {
+      if (!reportId) return;
+      setNoteActionError(null);
+      createNote.mutate(
+        {
+          params: { report: reportId },
+          body: { kind: 'text', body, source: 'typed' },
+        },
+        {
+          onSuccess: () => setNoteActionError(null),
+          onError: () => {
+            setNoteActionError({
+              message: "Couldn't save note.",
+              retry: { kind: 'create', body },
+            });
+          },
+        },
+      );
+    },
+    [reportId, createNote],
+  );
 
   const handleDeleteNote = useCallback(
     (note: NoteEntry, _sourceIndex: number) => {
@@ -217,16 +296,9 @@ export default function GenerateReportRoute() {
       // rollback would restore it. Filter those out by checking the
       // optimistic-id prefix.
       if (isOptimisticNoteId(noteIdValue)) return;
-      deleteNote.mutate(
-        { params: { note: noteIdValue }, reportId },
-        {
-          onError: () => {
-            setUploadError("Couldn't delete note.");
-          },
-        },
-      );
+      runDeleteNote(noteIdValue);
     },
-    [deleteNote, reportId],
+    [reportId, runDeleteNote],
   );
 
   const handleUpdateNote = useCallback(
@@ -234,38 +306,16 @@ export default function GenerateReportRoute() {
       const noteIdValue = note.id;
       if (!noteIdValue || !reportId) return;
       if (isOptimisticNoteId(noteIdValue)) return;
-      updateNote.mutate(
-        {
-          params: { note: noteIdValue },
-          body: { body: nextBody },
-          reportId,
-        },
-        {
-          onError: () => {
-            setUploadError("Couldn't update note.");
-          },
-        },
-      );
+      runUpdateNote(noteIdValue, nextBody);
     },
-    [updateNote, reportId],
+    [reportId, runUpdateNote],
   );
 
   const handleAddTextNote = useCallback(
     (body: string) => {
-      if (!reportId) return;
-      createNote.mutate(
-        {
-          params: { report: reportId },
-          body: { kind: 'text', body, source: 'typed' },
-        },
-        {
-          onError: () => {
-            setUploadError("Couldn't save note.");
-          },
-        },
-      );
+      runCreateTextNote(body);
     },
-    [reportId, createNote],
+    [runCreateTextNote],
   );
 
   const [localReport, setLocalReport] = useState<GeneratedSiteReport | null>(
@@ -469,6 +519,20 @@ export default function GenerateReportRoute() {
     );
   }, [slug, reportNumber, currentReport, generateMutation, regenerateMutation]);
 
+  const handleRetryNoteActionError = useCallback(() => {
+    const retry = noteActionError?.retry;
+    if (!retry) return;
+    if (retry.kind === 'delete') {
+      runDeleteNote(retry.noteId);
+      return;
+    }
+    if (retry.kind === 'update') {
+      runUpdateNote(retry.noteId, retry.nextBody);
+      return;
+    }
+    runCreateTextNote(retry.body);
+  }, [noteActionError, runCreateTextNote, runDeleteNote, runUpdateNote]);
+
   // Auto-regenerate when the server signals notes have changed since the
   // last generation. The hook fires exactly once per dirty transition and
   // naturally queues a follow-up if a note arrives mid-flight.
@@ -624,7 +688,9 @@ export default function GenerateReportRoute() {
   // both bubble through `generationError`. Generation errors trump
   // autosave (the user just tried to regenerate; show them that).
   const combinedError =
-    generationError ?? autosave.error ?? uploadError;
+    generationError ?? autosave.error ?? noteActionError?.message ?? uploadError;
+  const canRetryNoteAction =
+    generationError === null && !autosave.error && noteActionError !== null;
 
   // Surface upload-pipeline errors via the existing dialog. Wired
   // through the screen's `fileUploadError` UI surface — we mirror it
@@ -650,6 +716,10 @@ export default function GenerateReportRoute() {
         onSetReport={handleEditReport}
         isGeneratingReport={isGenerating}
         generationError={combinedError}
+        generationErrorActionLabel={canRetryNoteAction ? 'Try again' : undefined}
+        onGenerationErrorAction={
+          canRetryNoteAction ? handleRetryNoteActionError : undefined
+        }
         lastGeneration={effectiveLastGeneration}
         onRegenerate={handleRegenerate}
         notesSinceLastGeneration={reportRow?.notesSinceLastGeneration ?? 0}

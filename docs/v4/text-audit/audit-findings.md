@@ -5,7 +5,7 @@
 >
 > Implementation note: the follow-up implementation PR applies the mobile
 > copy-string findings captured here. Tables preserve the original audited text
-> for traceability, and `apps/mobile/lib/text-audit-regressions.test.ts`
+> for traceability, and `apps/mobile/lib/text-audit/text-audit-regressions.test.ts`
 > prevents those strings from returning. The same PR also closes the behavioral
 > gaps called out below: missing accessibility labels, split empty-state copy,
 > destructive-action notice copy, note error retry actions, saved-report action

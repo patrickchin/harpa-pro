@@ -111,7 +111,7 @@ describe('ProjectMembers', () => {
         .findByProps({ testID: `btn-remove-member-${bob.userId}` })
         .props.onPress(),
     );
-    expect(collectText(tree.toJSON())).toContain('Remove Member');
+    expect(collectText(tree.toJSON())).toContain('Remove member');
   });
 
   it('does not render trash icon on owner row', () => {

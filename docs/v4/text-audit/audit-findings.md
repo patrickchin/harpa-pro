@@ -328,8 +328,8 @@
 
 | Original | Recommended | Reason |
 | --- | --- | --- |
-| `'Could not attach the file to this report.'` (line 37) | `"Couldn't attach file."` | [Error messages](./style-guide.md#error-messages) |
-| `'Upload Failed'` | `"Couldn't attach file"` | [Dialog & sheet copy](./style-guide.md#dialog--sheet-copy) |
+| `'Could not attach the file to this report.'` (line 37) | `'Something went wrong while attaching the file.'` | [Error messages](./style-guide.md#error-messages) |
+| `'Upload Failed'` | `'Upload failed'` | [Dialog & sheet copy](./style-guide.md#dialog--sheet-copy) |
 | `'Photo Library'` | `'Photo library'` | [Sentence case vs title case](./style-guide.md#sentence-case-vs-title-case) |
 
 ### `apps/mobile/components/reports/generate/GenerateReportInputBar.tsx`
@@ -423,4 +423,4 @@ and covered by `apps/mobile/lib/dialogs/app-dialog-copy.test.ts`.
 
 | Original | Recommended | Reason |
 | --- | --- | --- |
-| `'Something went wrong'` (line 96) | `"The app hit an error. Pull to retry, or restart the app."` | [Reserved/forbidden words & punctuation](./style-guide.md#reservedforbidden-words--punctuation) |
+| `'Something went wrong'` (line 96) | Keep the familiar title, paired with the existing recovery text. | [Reserved/forbidden words & punctuation](./style-guide.md#reservedforbidden-words--punctuation) |

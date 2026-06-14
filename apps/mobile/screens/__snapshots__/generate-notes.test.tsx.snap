@@ -990,7 +990,7 @@ exports[`GenerateNotes > matches the empty-state snapshot 1`] = `
               <rn-Text
                 className="text-xl font-bold text-foreground"
               >
-                Couldn't attach file
+                Upload failed
               </rn-Text>
               <rn-Pressable
                 disabled={false}

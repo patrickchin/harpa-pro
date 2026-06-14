@@ -93,7 +93,7 @@ class AppErrorBoundary extends Component<
               marginBottom: 8,
             }}
           >
-            The app hit an error
+            Something went wrong
           </Text>
           <Text
             style={{

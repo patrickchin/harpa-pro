@@ -33,8 +33,8 @@ export function GenerateReportDialogs() {
 
   const fileUploadErrorDialog = ui.fileUploadError
     ? getActionErrorDialogCopy({
-        title: "Couldn't attach file",
-        fallbackMessage: 'Try again from the attachment menu.',
+        title: 'Upload failed',
+        fallbackMessage: 'Something went wrong while attaching the file.',
         message: ui.fileUploadError,
       })
     : null;
@@ -105,7 +105,7 @@ export function GenerateReportDialogs() {
 
       <AppDialogSheet
         visible={fileUploadErrorDialog !== null}
-        title={fileUploadErrorDialog?.title ?? "Couldn't attach file"}
+        title={fileUploadErrorDialog?.title ?? 'Upload failed'}
         message={fileUploadErrorDialog?.message ?? ''}
         noticeTone={fileUploadErrorDialog?.tone ?? 'danger'}
         noticeTitle={fileUploadErrorDialog?.noticeTitle}

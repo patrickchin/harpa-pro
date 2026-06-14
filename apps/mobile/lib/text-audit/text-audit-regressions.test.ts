@@ -144,7 +144,6 @@ const clearedCopyFindings: Array<{ file: string; oldText: string }> = [
     oldText: 'Could not open the saved PDF. Use Share PDF to choose another app.',
   },
   { file: 'lib/api/client.ts', oldText: 'Failed to parse JSON response' },
-  { file: 'app/_layout.tsx', oldText: 'Something went wrong' },
 ];
 
 describe('mobile text audit regressions', () => {

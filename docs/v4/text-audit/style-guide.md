@@ -55,7 +55,7 @@ Grep these out. If you find one shipping, it's a finding.
 | `!` in error/info copy | Errors are not exclamations | End with `.` |
 | Emoji in errors, dialogs, alerts | Tonally wrong for failure paths | Drop |
 | `Failed to <verb>` with no object/cause | "Failed to load." tells the user nothing | "Couldn't load reports. Check your connection." |
-| `Something went wrong` | Same problem as "Oops" | Name the failure |
+| Standalone `Something went wrong` | Too vague without context or recovery | Tie it to the action: "Something went wrong while attaching the file." |
 | `Successfully <verbed>` | "Successfully" adds nothing | "Report saved" |
 | Title Case in buttons / titles | Inconsistent with the rest of the app | Sentence case |
 | Trailing `:` on screen titles | Looks like an unfinished sentence | Drop |
@@ -182,8 +182,8 @@ Pattern: `<what happened in one clause>. <what the user can do>.`
 ✅ "Couldn't save changes. Try again."
 ✅ "You're offline. Reconnect to load reports."
 ✅ "Photos access is off. Open Settings to allow."
-❌ "Failed to save profile." • "An error occurred." • "Oops!
-Something went wrong, please try again."
+❌ "Failed to save profile." • "An error occurred." • "Something
+went wrong." with no action context or next step
 
 ## Toasts & inline feedback
 

@@ -24,6 +24,8 @@ const { fixtureRecorderFactory } = await import('./fixtureRecorder');
 const { __resetPickedRecorderForTests, pickRecorderFactory } = await import('./pickRecorder');
 
 beforeEach(() => {
+  delete process.env.EXPO_PUBLIC_USE_FIXTURES;
+  delete process.env.EXPO_PUBLIC_SCREENSHOT_MODE;
   __resetPickedRecorderForTests();
 });
 
@@ -86,6 +88,14 @@ describe('fixtureRecorderFactory', () => {
 describe('pickRecorderFactory', () => {
   it('returns the fixture backend when EXPO_PUBLIC_USE_FIXTURES is true', () => {
     process.env.EXPO_PUBLIC_USE_FIXTURES = 'true';
+    __resetPickedRecorderForTests();
+    const f = pickRecorderFactory();
+    expect(f.name).toBe('fixture');
+  });
+
+  it('returns the fixture backend in screenshot mode without report fixtures', () => {
+    process.env.EXPO_PUBLIC_USE_FIXTURES = 'false';
+    process.env.EXPO_PUBLIC_SCREENSHOT_MODE = 'true';
     __resetPickedRecorderForTests();
     const f = pickRecorderFactory();
     expect(f.name).toBe('fixture');

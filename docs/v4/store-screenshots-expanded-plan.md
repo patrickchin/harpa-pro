@@ -1,0 +1,89 @@
+# Expanded Store Screenshot Plan
+
+## Goal
+
+Update the app-store screenshot flow so the generated images show a fuller, more credible HARPA workspace:
+
+- 3-4 projects on the project list.
+- A richer reports list with draft and finalized reports.
+- A team management screen with 6 members.
+- A live voice note recording state.
+- A finalized report with placed construction photos near relevant issues and sections.
+- A PDF preview of that finalized report.
+- A usage screen with varied, interesting OpenAI/Groq usage.
+- About 6 construction photos total, using online CC0 sources and placing them by issue or section where appropriate.
+
+## Fixture Strategy
+
+Seed the local development database and local object storage before running Maestro. This keeps the screenshots deterministic and avoids long UI setup steps.
+
+1. Add a store screenshot seed script under `scripts/maestro/`.
+2. Seed one owner account plus five team members.
+3. Seed four projects, with the main project containing four reports.
+4. Seed the main project membership so the members management screen shows a six-person team.
+5. Seed a finalized report body with:
+   - several issues,
+   - detailed sections,
+   - workers,
+   - materials,
+   - next steps,
+   - attachment references that place photo notes into the right issue or section.
+6. Seed draft notes for the active report, including text, image, and voice-style notes.
+7. Seed six construction photos in `app.files` and `app.note_files`, and upload matching objects to local MinIO.
+8. Seed `app.llm_usage_events` with OpenAI report/chat rows and Groq transcription rows, plus a limit override so the usage screen has meaningful state.
+
+## Photo Set
+
+Keep the two existing CC0 construction photos and add four more CC0 construction-site images from Wikimedia Commons:
+
+- Overview construction site photo.
+- Residential construction photo.
+- Cement mixer or concrete delivery photo.
+- Construction materials platform photo.
+- Rebar or foundation work photo.
+- Scaffolding or access photo.
+
+Placement target:
+
+- Foundation or rebar photo: issue about water intrusion or slab edge condition.
+- Cement mixer photo: concrete pour or delivery issue.
+- Scaffolding photo: access and safety section.
+- Materials photo: materials or logistics section.
+- Overview/residential photos: unplaced photos strip, so the report screenshot can show review work remaining.
+
+## Maestro Flow
+
+Replace the first-pass flow with a seeded capture flow that produces eight screenshots, which keeps the Play Store set within the common limit:
+
+1. `01_projects_list` - four seeded projects.
+2. `02_reports_list` - fuller report list with finalized and draft reports.
+3. `03_members_team` - member management with six team members.
+4. `04_voice_recording` - active voice note recording UI.
+5. `05_final_report_issues` - finalized report scrolled to issues with placed photos visible.
+6. `06_final_report_sections_unplaced` - finalized report scrolled to detailed sections and unplaced photos.
+7. `07_pdf_preview` - PDF preview for the finalized report.
+8. `08_usage` - usage screen with populated metrics, OpenAI/Groq model mix, and recent events.
+
+## Implementation Steps
+
+1. Add the plan document.
+2. Add four more CC0 fixture photos and update fixture source documentation.
+3. Update the screenshot gallery fixture list to include all six photos.
+4. Add `scripts/maestro/seed-store-screenshots.sh` to seed Postgres and MinIO.
+5. Update `.maestro/store-screenshots.yaml` to use the seeded state and capture the eight screens.
+6. Update `.maestro/README.md` with the seed step.
+7. Run the local API stack, seed fixtures, run Maestro, and regenerate Android/iOS Fastlane screenshots.
+8. Verify dimensions and run focused mobile checks.
+9. Commit, push, and update the existing PR.
+
+## Verification
+
+Run:
+
+- `scripts/maestro/seed-store-screenshots.sh`
+- `maestro test .maestro/store-screenshots.yaml`
+- screenshot dimension validation for Android and iOS Fastlane folders
+- `pnpm --filter @harpa/mobile test:nocoverage -- lib/config/env.test.ts lib/camera/pick-and-enqueue-gallery-images.test.ts`
+- `pnpm --filter @harpa/mobile typecheck`
+- `pnpm --filter @harpa/mobile lint`
+- Maestro guards for app IDs, point taps, and test IDs

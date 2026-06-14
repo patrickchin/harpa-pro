@@ -195,15 +195,18 @@ maestro test .maestro/dev-otp-hardening.yaml
 ## `store-screenshots.yaml` (App Store / Play Store assets)
 
 Focused flow for generating store-listing screenshots from polished,
-repeatable fixture data. It creates a demo project, attaches bundled
-construction-site photos through the normal Photo Library action, and
-captures:
+repeatable fixture data. The flow expects
+`scripts/maestro/seed-store-screenshots.sh` to seed the local Postgres
+database and MinIO bucket first, then captures:
 
 1. projects list
-2. project overview
-3. field notes with photo attachments
-4. generated report
-5. report photo strip
+2. reports list
+3. members management with a six-person team
+4. live voice-note recording state
+5. finalized report issues with placed photos
+6. finalized report detailed sections and unplaced photos
+7. generated PDF preview
+8. usage history with limits, OpenAI/Groq model mix, and recent events
 
 Run against the local fixture stack and a screenshot-mode Metro bundle:
 
@@ -211,20 +214,22 @@ Run against the local fixture stack and a screenshot-mode Metro bundle:
 export DEV_OTP_TOKEN=dev-token-at-least-32-characters
 export MAESTRO_APP_ID=com.harpa.pro.dev
 docker compose down -v && docker compose up -d
+scripts/maestro/seed-store-screenshots.sh
 adb reverse tcp:8081 tcp:8081
 adb reverse tcp:8787 tcp:8787
 adb reverse tcp:9000 tcp:9000
 EXPO_PUBLIC_API_URL=http://localhost:8787 \
-EXPO_PUBLIC_USE_FIXTURES=true \
+EXPO_PUBLIC_USE_FIXTURES=false \
 EXPO_PUBLIC_SCREENSHOT_MODE=true \
 pnpm --filter @harpa/mobile start --dev-client
 maestro test .maestro/store-screenshots.yaml
 ```
 
-`EXPO_PUBLIC_SCREENSHOT_MODE=true` hides the status bar and makes the
-Photo Library action use the checked-in images documented in
-`apps/mobile/assets/fixtures/store-screenshots.md`, avoiding camera
-hardware, OS picker taps, and unlicensed hotlinks.
+`EXPO_PUBLIC_USE_FIXTURES=false` keeps report and usage data backed by
+the seeded API rows. `EXPO_PUBLIC_SCREENSHOT_MODE=true` hides the status
+bar and uses deterministic screenshot-only fixture paths, including the
+voice recorder backend and the checked-in construction images documented
+in `apps/mobile/assets/fixtures/store-screenshots.md`.
 
 ## Archived and pending flows
 

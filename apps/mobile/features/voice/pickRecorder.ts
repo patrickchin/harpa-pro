@@ -1,9 +1,10 @@
 /**
  * Selects the active recorder backend.
  *
- * Honours `EXPO_PUBLIC_USE_FIXTURES === 'true'` — when set, returns the
- * canned `fixtureRecorderFactory` and never loads `expo-audio` (which
- * would require native modules that aren't present in unit-test / node
+ * Honours `EXPO_PUBLIC_USE_FIXTURES === 'true'` and
+ * `EXPO_PUBLIC_SCREENSHOT_MODE === 'true'` — when set, returns the canned
+ * `fixtureRecorderFactory` and never loads `expo-audio` (which would
+ * require native modules that aren't present in unit-test / node
  * environments). This is the runtime end of the AGENTS.md fixture-mode
  * promise; see `docs/v4/arch-voice-pipeline.md §D6`.
  *
@@ -23,7 +24,8 @@ let cached: RecorderFactory | null = null;
 export function pickRecorderFactory(): RecorderFactory {
   if (cached) return cached;
   const useFixtures = process.env.EXPO_PUBLIC_USE_FIXTURES === 'true';
-  if (useFixtures) {
+  const screenshotMode = process.env.EXPO_PUBLIC_SCREENSHOT_MODE === 'true';
+  if (useFixtures || screenshotMode) {
     cached = fixtureRecorderFactory;
     return cached;
   }

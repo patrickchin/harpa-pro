@@ -58,10 +58,10 @@ run_guard() {
 echo "check-no-maestro-point-taps.sh"
 
 BAD_DIR="$TMP/bad/.maestro"
-write_flow "$BAD_DIR" 'appId: ${MAESTRO_APP_ID}
+write_flow "$BAD_DIR" "appId: \${MAESTRO_APP_ID}
 ---
 - tapOn:
-    point: "90%,71%"'
+    point: \"90%,71%\""
 assert_fail "rejects coordinate point taps" "$TMP/bad.log" \
   run_guard "$BAD_DIR"
 if grep -q "point:" "$TMP/bad.log"; then
@@ -73,12 +73,12 @@ else
 fi
 
 GOOD_DIR="$TMP/good/.maestro"
-write_flow "$GOOD_DIR" 'appId: ${MAESTRO_APP_ID}
+write_flow "$GOOD_DIR" "appId: \${MAESTRO_APP_ID}
 ---
 - tapOn:
     id: btn-add-attachments
 - tapOn:
-    text: Add attachments'
+    text: Add attachments"
 assert_pass "allows semantic taps" "$TMP/good.log" \
   run_guard "$GOOD_DIR"
 

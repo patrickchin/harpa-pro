@@ -16,6 +16,9 @@
 #                                  PhotoTile suffixes (`-img`, `-ring`, `-cancel`)
 #   attachment-picker-thumbnail-N-image
 #                              →  testID={`attachment-picker-thumbnail-${index}-image`}
+#   usage-limit-KIND / usage-limit-bar-KIND
+#                              →  testID={`usage-limit-${b.kind}`} and
+#                                  `usage-limit-bar-${b.kind}`
 #   report-row-draft-0         →  testID={`report-row-${item.number}`} in seeded flows
 #   input-phone                →  rendered by auth/login flow outside static source match
 #   id-a|id-b                  →  Maestro regex alternation, literals checked
@@ -46,6 +49,7 @@ KNOWN_TEMPLATE_IDS="picker-member-role-editor picker-member-role-viewer btn-came
 is_known() {
   local id="$1"
   [[ "$id" =~ ^attachment-picker-thumbnail-[0-9]+-image$ ]] && return 0
+  [[ "$id" =~ ^usage-limit(-bar)?-(report_generate|voice_transcribe|voice_summarize|ai_input_tokens|ai_output_tokens)$ ]] && return 0
   for known in $KNOWN_TEMPLATE_IDS; do
     [[ "$id" == "$known" ]] && return 0
   done

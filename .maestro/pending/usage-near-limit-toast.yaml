@@ -1,7 +1,7 @@
 appId: ${MAESTRO_APP_ID}
-name: P3.14c — Near-limit toast from X-Usage-Warning header
+name: Pending — Near-limit toast from X-Usage-Warning header
 tags:
-  - p3
+  - pending
   - usage-limits
 # Phase 3 of per-account usage limits (docs/v4/arch-usage-limits.md
 # §11). When a successful response carries the `X-Usage-Warning:

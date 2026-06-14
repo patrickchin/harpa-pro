@@ -28,10 +28,12 @@ selector yet.
 The root lint script runs `scripts/check-no-maestro-point-taps.sh`,
 which fails on any `.maestro/**/*.yaml` / `.yml` `point:` key.
 
-## `core-end-to-end.yaml` (canonical full journey)
+## `core-end-to-end.yaml` (legacy P3 smoke)
 
-The P3-exit-gate full-journey flow. Walks every currently-shipped
-user-visible feature on the real `(auth)` + `(app)` routes:
+The older P3-exit-gate single-file flow. It still exists as a manual
+smoke target, but the normal full-app Maestro suite is now
+`regression-journey.yaml` plus `.maestro/modules/*`. This flow walks a
+seeded Alice/Bob path on the real `(auth)` + `(app)` routes:
 
 - sign-in → onboarding (fresh account each run, via `scripts/maestro/reset-db.sh`)
 - projects list, new project, copy buttons
@@ -59,10 +61,9 @@ xcrun simctl privacy booted grant camera     "$MAESTRO_APP_ID"
 maestro test .maestro/core-end-to-end.yaml
 ```
 
-Stability seen locally (after fixing the deep-link race and the
-filter-button hang): **5/5 PASS** in a row. Wrap with `gtimeout 240`
-for longer batches; on a hung XCTest driver, `kill` the leftover
-`maestro-driver-ios` PID and retry.
+Wrap with `gtimeout 240` for longer batches; on a hung XCTest driver,
+`kill` the leftover `maestro-driver-ios` PID and retry. Prefer the
+modular regression journey for current coverage.
 
 The flow uses better-auth email-OTP. `helpers/sign-in.yaml` reads the
 most recent OTP that better-auth persisted to `public.verification`
@@ -191,25 +192,28 @@ adb reverse tcp:8787 tcp:8787
 maestro test .maestro/dev-otp-hardening.yaml
 ```
 
-## `p3-15-upload.yaml` (legacy — superseded by module 10a)
+## Archived and pending flows
 
-Same photo pipeline as `modules/10a-photo-notes-draft.yaml` but
-signs in as seeded `alice@e2e.harpapro.com` (requires `reset-db.sh`).
-Kept for one-off iteration on the camera path; safe to delete once
-module 10a is green in CI.
+Top-level `.maestro/*.yaml` files are current entrypoints. Historical
+or blocked scenarios live in explicit subdirectories so broad manual
+runs do not pick them up by accident.
 
-## `p3-15-voice-record.yaml` (legacy — superseded by module 09)
+- `.maestro/legacy/p3-15-upload.yaml`: superseded by modules 10a, 10b,
+  and 10c in the normal regression journey. Keep only for debugging the
+  old seeded Alice camera/upload path.
+- `.maestro/legacy/p3-15-voice-record.yaml`: superseded by
+  `modules/09-voice-notes.yaml`. Keep only for debugging the old seeded
+  Alice voice path.
+- `.maestro/pending/usage-limit-dialog.yaml`: blocked until reset
+  tooling can seed Alice at the free-plan limit without spending AI
+  tokens.
+- `.maestro/pending/usage-near-limit-toast.yaml`: blocked until the
+  mobile client surfaces `X-Usage-Warning` as a near-limit toast and
+  reset tooling can seed the near-limit state.
 
-Same voice pipeline as `modules/09-voice-notes.yaml` but signs in as
-seeded `alice@e2e.harpapro.com`. Kept for one-off iteration; safe to delete
-once module 09 is green on CI.
-
-## `p3-14a-usage-limits-card.yaml`, `p3-14b-usage-limit-dialog.yaml`, `p3-14c-near-limit-toast.yaml`
-
-Phase-3 usage-limits flows. 14a runs today against seeded alice;
-14b/14c are placeholders awaiting a `--seed-at-limit` reset script
-and a near-limit toast UI respectively. See each flow's header for
-status.
+The old P3.14a usage-limits-card flow was folded into
+`modules/15-usage.yaml`, which now asserts the free-plan limits card
+and default buckets as part of `regression-journey.yaml`.
 
 ## iOS sim quirks
 

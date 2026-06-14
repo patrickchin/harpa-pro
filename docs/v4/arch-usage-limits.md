@@ -450,12 +450,12 @@ The following are explicit non-goals here and tracked in
 - **Phase 3** — mobile `UsageLimitsCard` on the Usage screen +
   `UsageLimitDialog` wired into report generate/regenerate and the
   voice-note pipeline. Count + token buckets enforced end-to-end.
-- **Deferred:** Maestro flows landed as placeholders
-  (`.maestro/p3-14a-usage-limits-card.yaml` runs today;
-  `p3-14b-usage-limit-dialog.yaml` needs `reset-db.sh --seed-at-limit`;
-  `p3-14c-near-limit-toast.yaml` needs the `X-Usage-Warning` toast
-  consumer). Not yet in the regression journey. Self-serve upgrades
-  remain Phase 4.
+- **Maestro:** `modules/15-usage.yaml` asserts the limits card and the
+  default free-plan buckets in the normal regression journey. The
+  blocked scenarios live under `.maestro/pending/`:
+  `usage-limit-dialog.yaml` needs deterministic at-limit seeding, and
+  `usage-near-limit-toast.yaml` needs the `X-Usage-Warning` toast
+  consumer. Self-serve upgrades remain Phase 4.
 
 ## 12. Implementation checklist
 

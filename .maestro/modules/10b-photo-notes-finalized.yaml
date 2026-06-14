@@ -190,13 +190,14 @@ tags:
     id: "btn-close-image-preview"
 
 # --- Clean up: delete finalized report and return to project home -----------
-# Maestro can land with the header visible while scrollUntilVisible still
-# reports a miss, so treat this as positioning and require the button below.
+# The saved report can be several screens tall; after closing the image preview
+# the actions button is back at the top, above the generated issue sections.
+# Treat the scroll as positioning and require the button below.
 - scrollUntilVisible:
     element:
       id: "btn-report-actions"
     direction: UP
-    timeout: 10000
+    timeout: 60000
     optional: true
 - extendedWaitUntil:
     visible:

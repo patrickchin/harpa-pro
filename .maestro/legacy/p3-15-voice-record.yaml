@@ -1,10 +1,10 @@
 appId: ${MAESTRO_APP_ID}
-name: P3.15.6 voice note pipeline (fixture mode)
+name: Legacy — voice note pipeline (fixture mode)
 tags:
-  - p3
+  - legacy
   - voice
 ---
-# End-to-end voice note flow exercising the full Phase A–F pipeline:
+# Legacy end-to-end voice note flow exercising the old seeded Alice path:
 #
 #   - Mic button on the input bar arms the inline WhatsApp/Telegram-style
 #     recorder strip (Phase H). No modal is opened.
@@ -20,6 +20,9 @@ tags:
 # Fixture mode (`docker compose up -d`) returns deterministic
 # transcripts + summaries, so this flow can assert on visible
 # strings.
+#
+# Superseded by `modules/09-voice-notes.yaml` in the normal regression
+# journey. Keep only for historical debugging.
 #
 # Pre-flight (same as core-end-to-end.yaml):
 #   1. docker compose up -d

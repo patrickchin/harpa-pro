@@ -491,9 +491,9 @@ the limiter for one user action.
 
 ### E2E (`.maestro/`)
 
-- `p3-15-voice-record.yaml` — boots the app under fixture mode,
-  opens a report, taps the mic, taps the fixture-save button,
-  asserts the new voice card appears with a transcript line.
+- `modules/09-voice-notes.yaml` — boots the app under fixture mode,
+  opens a report, taps the mic, sends the fixture recording, and
+  asserts the new voice card appears with transcript/playback coverage.
 - `core-end-to-end.yaml` voice step — replace the currently
   false-green tap with a real assertion that the voice card
   appears post-record.

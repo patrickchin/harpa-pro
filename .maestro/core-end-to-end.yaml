@@ -288,7 +288,7 @@ tags:
 # `btn-record-send` finalises. `useVoiceNotePipeline` then enqueues the
 # upload + transcribe + summarise round trip (fixture mode returns canned
 # text). Detailed assertions on the resulting voice card live in
-# `p3-15-voice-record.yaml`; here we only confirm the strip opens
+# `modules/09-voice-notes.yaml`; here we only confirm the strip opens
 # and closes without leaving the recorder stuck on screen.
 - tapOn:
     id: "btn-record-start"

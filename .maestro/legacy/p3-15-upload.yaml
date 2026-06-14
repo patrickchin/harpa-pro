@@ -1,10 +1,10 @@
 appId: ${MAESTRO_APP_ID}
-name: P3.15 — Camera capture → upload pipeline → image note
+name: Legacy — Camera capture → upload pipeline → image note
 tags:
-  - p3
+  - legacy
   - camera
   - upload
-# Live end-to-end of the P3.15 camera + R2 upload pipeline. Drives the
+# Legacy one-off flow for the P3.15 camera + R2 upload pipeline. Drives the
 # real `(camera)/capture` route reached from a real report, exercising:
 #   - camera shutter (a synthetic capture committed by the dev-client
 #     `(dev)/camera-capture` mirror in CI, real camera locally)
@@ -17,9 +17,14 @@ tags:
 # Metro dev-client, camera + microphone privacy grants, fresh DB via
 # `scripts/maestro/reset-db.sh`).
 #
-# Run:
+# Superseded by `modules/10a-photo-notes-draft.yaml`,
+# `modules/10b-photo-notes-finalized.yaml`, and
+# `modules/10c-photo-attachment-picker-scroll.yaml` in the normal
+# regression journey. Keep only for historical debugging.
+#
+# Run, if intentionally debugging the legacy seeded path:
 #   ./scripts/maestro/reset-db.sh
-#   maestro test .maestro/p3-15-upload.yaml
+#   maestro test .maestro/legacy/p3-15-upload.yaml
 #
 # Apps/mobile has no `test:e2e` script — Maestro flows run manually
 # (or via the same `gtimeout 240 maestro test ...` wrapper documented

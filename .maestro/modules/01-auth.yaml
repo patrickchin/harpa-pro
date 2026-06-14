@@ -42,6 +42,14 @@ tags:
 # Dismiss the Android/iOS dev-launcher first-run sheet if it appears.
 - runFlow:
     when:
+      platform: android
+      visible: "This is the developer menu"
+    commands:
+      - tapOn:
+          point: "90%,71%"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
       visible: "Continue"
     commands:
       - tapOn:
@@ -61,11 +69,35 @@ tags:
 - runFlow:
     file: ../helpers/dismiss-open-dialog.yaml
 
+# The Expo dev-menu onboarding sheet can appear after the first dismissal
+# pass on freshly reset Android dev clients, especially while Metro is
+# finishing a cold bundle. On Android, close the intro sheet directly;
+# tapping Continue opens the full dev menu and can back the app out.
+- extendedWaitUntil:
+    visible: "This is the developer menu"
+    timeout: 90000
+    optional: true
+- runFlow:
+    when:
+      platform: android
+      visible: "This is the developer menu"
+    commands:
+      - tapOn:
+          point: "90%,71%"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: "Close"
+    commands:
+      - tapOn:
+          text: "Close"
+      - waitForAnimationToEnd
+
 # Land on sign-in (email) screen.
 - extendedWaitUntil:
     visible:
       id: "input-email"
-    timeout: 30000
+    timeout: 90000
 
 # --- Sign-in alice (better-auth creates the user on first verify) ---------
 - runFlow:

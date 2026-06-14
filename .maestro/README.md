@@ -142,12 +142,15 @@ Dev-deployment target:
   Focused local Android passed 01/02/10b, the full local regression
   passed with 10b included, and a clean full dev-deployment Android
   run passed against `harpa-pro-api-dev` (`gitCommit=9db5b51`).
-- 2026-06-14 follow-up: modules 10c and 11 now assert that backend
-  report generation keeps placement/manual edit controls visible but
-  disabled instead of removing them. The standalone
-  `place-photo-on-issue.flow.yml` also finalizes a placed-photo report
-  and asserts the saved-report page keeps the placed photo visible
-  without exposing placement or manual-edit controls.
+- 2026-06-14 follow-up: module 10c exercises the attachment picker with
+  enough photo groups to scroll and asserts first-photo thumbnails are
+  visible. Module 11 verifies regeneration settles with the report still
+  mounted; deterministic unit tests pin the disabled write-lock states
+  because fixture regeneration can finish before Maestro observes the
+  transient lock. The standalone `place-photo-on-issue.flow.yml` also
+  finalizes a placed-photo report and asserts the saved-report page keeps
+  the placed photo visible without exposing placement or manual-edit
+  controls.
 - The CI Maestro testID gate is path-filtered on both `apps/mobile/**`
   and `.maestro/**` so E2E-only flow changes still validate referenced
   mobile testIDs.

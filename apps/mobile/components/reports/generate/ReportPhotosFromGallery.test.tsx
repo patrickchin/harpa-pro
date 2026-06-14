@@ -53,6 +53,18 @@ function wrap(el: React.ReactElement): ReactTestRenderer {
   return tree;
 }
 
+function findRenderedNodeWithDisabledState(
+  tree: ReactTestRenderer,
+  testID: string,
+) {
+  const matches = tree.root.findAllByProps({ testID });
+  const node = matches.find(
+    (match) => match.props.accessibilityState?.disabled !== undefined,
+  );
+  expect(node).toBeDefined();
+  return node!;
+}
+
 const PHOTOS = [
   {
     fileId: 'fa',
@@ -152,7 +164,12 @@ describe('ReportPhotosFromGallery', () => {
       testID: 'btn-generate-report-photos-place-n1',
     });
     expect(chip.props.disabled).toBe(true);
-    expect(chip.props.accessibilityState).toMatchObject({ disabled: true });
+    expect(
+      findRenderedNodeWithDisabledState(
+        tree,
+        'btn-generate-report-photos-place-n1',
+      ).props.accessibilityState,
+    ).toMatchObject({ disabled: true });
 
     act(() => {
       chip.props.onPress?.();

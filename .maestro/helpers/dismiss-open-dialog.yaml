@@ -30,6 +30,14 @@ appId: ${MAESTRO_APP_ID}
       - waitForAnimationToEnd
 - runFlow:
     when:
+      platform: android
+      visible: "This is the developer menu"
+    commands:
+      - tapOn:
+          point: "90%,71%"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
       visible: "Continue"
     commands:
       - tapOn:

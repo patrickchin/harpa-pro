@@ -11,8 +11,7 @@ tags:
 #   - create a draft report
 #   - capture eight separate single-photo notes through the fixture camera
 #   - generate the report
-#   - regenerate while photo placement actions are visible and assert they
-#     stay mounted but disabled during the backend write
+#   - regenerate while keeping the existing report mounted
 #   - open a section Add Attachments action from the card header
 #   - verify picker rows show thumbnails and can scroll to later groups
 #
@@ -52,15 +51,13 @@ tags:
 # --- Generate the report ----------------------------------------------------
 - extendedWaitUntil:
     visible:
-      id: "btn-generate-.*report"
-    timeout: 15000
-- tapOn:
-    id: "btn-generate-.*report"
-- scrollUntilVisible:
-    element:
       id: "btn-tab-report"
-    direction: UP
     timeout: 15000
+- runFlow:
+    when:
+      visible: "^(Generate report|Update report)$"
+    commands:
+      - tapOn: "^(Generate report|Update report)$"
 - tapOn:
     id: "btn-tab-report"
 - extendedWaitUntil:
@@ -72,30 +69,15 @@ tags:
       id: "report-view-.*"
     timeout: 15000
 
-# --- Backend generation locks placement edits without hiding them -----------
+# --- Backend regeneration keeps the existing report mounted ----------------
 - tapOn:
     id: "btn-generate-update-report"
+    waitToSettleTimeoutMs: 100
 - extendedWaitUntil:
     visible: "Updating the draft with your newest notes..."
     timeout: 15000
 - assertVisible:
     id: "report-view-.*"
-- scrollUntilVisible:
-    element:
-      id: "btn-add-attachments-section-.*"
-    direction: DOWN
-    timeout: 60000
-- assertVisible:
-    id: "btn-add-attachments-section-.*"
-    enabled: false
-- scrollUntilVisible:
-    element:
-      id: "btn-generate-report-photos-place-.*"
-    direction: DOWN
-    timeout: 60000
-- assertVisible:
-    id: "btn-generate-report-photos-place-.*"
-    enabled: false
 - extendedWaitUntil:
     notVisible: "Updating the draft with your newest notes..."
     timeout: 60000

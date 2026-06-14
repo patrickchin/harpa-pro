@@ -108,6 +108,16 @@ tags:
       visible: "^(Generate report|Update report)$"
     commands:
       - tapOn: "^(Generate report|Update report)$"
+- runFlow:
+    when:
+      visible:
+        id: "confirm-finalize"
+    commands:
+      - tapOn: "Cancel"
+      - extendedWaitUntil:
+          notVisible:
+            id: "confirm-finalize"
+          timeout: 8000
 - extendedWaitUntil:
     visible:
       id: "btn-finalize-report"

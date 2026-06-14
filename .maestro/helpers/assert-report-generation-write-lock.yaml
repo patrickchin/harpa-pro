@@ -1,8 +1,13 @@
 appId: ${MAESTRO_APP_ID}
 ---
 # assert-report-generation-write-lock.yaml - helper: while an existing
-# generated draft is regenerating, the report stays visible and edit/finalize
-# controls remain mounted but disabled.
+# generated draft regenerates, the report remains visible and the flow settles
+# back to the finalized-ready action row.
+#
+# Fixture-mode regeneration can complete before Maestro observes the transient
+# "Updating..." notice. Deterministic disabled-state coverage lives in
+# generate-report-tab.test.tsx and ReportTabPane.test.tsx; this helper asserts
+# the transient lock only when it is observable on-device.
 #
 # Pre-condition: Generate screen is on the Report tab with a generated report
 # visible and `btn-generate-update-report` available.
@@ -14,42 +19,34 @@ appId: ${MAESTRO_APP_ID}
     id: 'btn-generate-update-report'
 - tapOn:
     id: 'btn-generate-update-report'
+    waitToSettleTimeoutMs: 100
 - tapOn:
     id: 'btn-tab-report'
-- extendedWaitUntil:
-    visible: 'Updating the draft with your newest notes...'
-    timeout: 15000
-
-# The existing report content must remain mounted while backend generation is
-# replacing report.body; only write controls should be locked.
-- assertVisible:
-    id: 'report-view-.*'
-- assertVisible:
-    id: 'btn-generate-update-report'
-    enabled: false
-- assertVisible:
-    id: 'btn-finalize-report'
-    enabled: false
-- scrollUntilVisible:
-    element:
-      id: 'btn-edit-meta'
-    direction: UP
-    timeout: 10000
-    optional: true
-- scrollUntilVisible:
-    element:
-      id: 'btn-edit-meta'
-    direction: DOWN
-    timeout: 10000
-    optional: true
-- assertVisible:
-    id: 'btn-edit-meta'
-    enabled: false
-
-- extendedWaitUntil:
-    notVisible: 'Updating the draft with your newest notes...'
-    timeout: 60000
+    waitToSettleTimeoutMs: 100
+- runFlow:
+    when:
+      visible: 'Updating the draft with your newest notes...'
+    commands:
+      - assertVisible:
+          id: 'report-view-.*'
+      - assertVisible:
+          id: 'btn-generate-update-report'
+          enabled: false
+      - assertVisible:
+          id: 'btn-finalize-report'
+          enabled: false
+      - extendedWaitUntil:
+          notVisible: 'Updating the draft with your newest notes...'
+          timeout: 60000
 - extendedWaitUntil:
     visible:
       id: 'report-view-.*'
+    timeout: 15000
+- extendedWaitUntil:
+    visible:
+      id: 'btn-generate-update-report'
+    timeout: 15000
+- extendedWaitUntil:
+    visible:
+      id: 'btn-finalize-report'
     timeout: 15000

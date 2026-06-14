@@ -27,6 +27,14 @@ tags:
     timeout: 20000
 - runFlow:
     when:
+      platform: android
+      visible: "This is the developer menu"
+    commands:
+      - tapOn:
+          point: "90%,71%"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
       visible: "Continue"
     commands:
       - tapOn:
@@ -44,14 +52,17 @@ tags:
 
 # The Expo dev-menu onboarding sheet can appear after the first dismissal
 # pass on freshly reinstalled dev clients.
-- waitForAnimationToEnd:
-    timeout: 5000
+- extendedWaitUntil:
+    visible: "This is the developer menu"
+    timeout: 90000
+    optional: true
 - runFlow:
     when:
-      visible: "Continue"
+      platform: android
+      visible: "This is the developer menu"
     commands:
       - tapOn:
-          text: "Continue"
+          point: "90%,71%"
       - waitForAnimationToEnd
 - runFlow:
     when:

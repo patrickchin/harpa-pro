@@ -85,6 +85,6 @@ export const SAMPLE_ONBOARDING_REPORT = {
   issueTitle: report.issues[0]?.title ?? 'Issue captured',
   issueDetail: report.issues[0]?.details ?? 'Issue details captured.',
   nextStep: report.nextSteps[0] ?? 'Next action captured.',
-  workerCount: report.workers.totalWorkers,
-  weather: report.weather.conditions,
+  workerCount: report.workers?.totalWorkers ?? 0,
+  weather: report.weather?.conditions ?? 'Weather captured',
 } as const;

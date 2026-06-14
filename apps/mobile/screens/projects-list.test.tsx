@@ -4,7 +4,7 @@
 import React from 'react';
 import { describe, it, expect, vi } from 'vitest';
 import { create, act, type ReactTestRenderer } from 'react-test-renderer';
-import { Pressable } from 'react-native';
+import { FlatList } from 'react-native';
 import { ProjectsList } from './projects-list';
 import type { ProjectRow } from './projects-list';
 
@@ -142,6 +142,7 @@ describe('ProjectsList', () => {
 
   it('calls onPressOnboardingLab from the optional empty-state CTA', () => {
     const onPressOnboardingLab = vi.fn();
+    const onPressNewProject = vi.fn();
     let tree: ReactTestRenderer;
     act(() => {
       tree = create(
@@ -151,17 +152,25 @@ describe('ProjectsList', () => {
           refreshing={false}
           onRefresh={vi.fn()}
           onPressProject={vi.fn()}
-          onPressNewProject={vi.fn()}
+          onPressNewProject={onPressNewProject}
           onPressOnboardingLab={onPressOnboardingLab}
         />
       );
     });
 
-    act(() => {
-      tree!.root.findByProps({ testID: 'btn-onboarding-lab' }).props.onPress();
-    });
+    const emptyState = tree!.root.findByType(FlatList).props
+      .ListEmptyComponent;
+    const action = emptyState.props.action;
 
+    act(() => {
+      action.props.children[0].props.onPress();
+    });
     expect(onPressOnboardingLab).toHaveBeenCalledOnce();
+
+    act(() => {
+      action.props.children[1].props.onPress();
+    });
+    expect(onPressNewProject).toHaveBeenCalledOnce();
   });
 
   it('calls onPressProject with correct id when row is pressed', () => {

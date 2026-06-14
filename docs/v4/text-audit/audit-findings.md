@@ -3,9 +3,15 @@
 > Style guide: [`style-guide.md`](./style-guide.md). Every recommendation in
 > this doc cites a style-guide section by anchor.
 >
+> Implementation note: the follow-up implementation PR applies the mobile
+> copy-string findings captured here. Tables preserve the original audited text
+> for traceability, and `apps/mobile/lib/text-audit-regressions.test.ts`
+> prevents those strings from returning. Broader UX gaps, such as adding true
+> retry actions where the screen lacks a retry callback, remain documented.
+>
 > Format per file:
 >
-> - **Findings** — table with columns `Current` | `Recommended` | `Reason`
+> - **Findings** — table with columns `Original` | `Recommended` | `Reason`
 >   (style-guide anchor).
 > - **Gaps** — bullet list. Flagged only when clearly missing: silent failure
 >   paths, icon-only controls without `accessibilityLabel`, lists without empty
@@ -23,7 +29,7 @@
 
 **Findings**
 
-| Current | Recommended | Reason |
+| Original | Recommended | Reason |
 | --- | --- | --- |
 | `'Please enter your full name.'` | `'Enter your full name.'` | [Reserved/forbidden words & punctuation](./style-guide.md#reservedforbidden-words--punctuation) |
 | `'Please enter your company name.'` | `'Enter your company name.'` | [Reserved/forbidden words & punctuation](./style-guide.md#reservedforbidden-words--punctuation) |
@@ -37,7 +43,7 @@
 
 **Findings**
 
-| Current | Recommended | Reason |
+| Original | Recommended | Reason |
 | --- | --- | --- |
 | `'Please enter a valid email address.'` | `'Enter a valid email address.'` | [Reserved/forbidden words & punctuation](./style-guide.md#reservedforbidden-words--punctuation) |
 
@@ -57,7 +63,7 @@
 
 **Findings**
 
-| Current | Recommended | Reason |
+| Original | Recommended | Reason |
 | --- | --- | --- |
 | `'Saving...'` | `'Saving…'` | [Button labels](./style-guide.md#button-labels) |
 
@@ -75,7 +81,7 @@
 
 **Findings**
 
-| Current | Recommended | Reason |
+| Original | Recommended | Reason |
 | --- | --- | --- |
 | `'Could not save profile.'` (line 48) | `"Couldn't save profile. Try again."` | [Error messages](./style-guide.md#error-messages) |
 
@@ -101,7 +107,7 @@
 
 **Findings**
 
-| Current | Recommended | Reason |
+| Original | Recommended | Reason |
 | --- | --- | --- |
 | `'Loading your account details...'` (line 174) | `'Loading your account details…'` | [Loading & skeleton states](./style-guide.md#loading--skeleton-states) |
 
@@ -121,7 +127,7 @@
 
 **Findings**
 
-| Current | Recommended | Reason |
+| Original | Recommended | Reason |
 | --- | --- | --- |
 | `'Could not upload avatar'` (line 127) | `"Couldn't upload avatar."` | [Error messages](./style-guide.md#error-messages) |
 | `'Photo library permission denied'` (line 89) | `'Photos access is off. Open Settings to allow.'` | [Error messages](./style-guide.md#error-messages) |
@@ -130,7 +136,7 @@
 
 **Findings**
 
-| Current | Recommended | Reason |
+| Original | Recommended | Reason |
 | --- | --- | --- |
 | `"You've used ${usedLimit} ${kindLabel} this month."` (line 56) | `"You've used ${usedLimit} ${kindLabel}."` | [Dialog & sheet copy](./style-guide.md#dialog--sheet-copy) |
 | `'Your limit resets on ${resetLabel}. To keep working before then, please upgrade your plan or contact support.'` (line 59) | `'Your limit resets on ${resetLabel}. Upgrade your plan or contact support to keep working.'` | [Reserved/forbidden words & punctuation](./style-guide.md#reservedforbidden-words--punctuation) |
@@ -145,7 +151,7 @@
 
 **Findings**
 
-| Current | Recommended | Reason |
+| Original | Recommended | Reason |
 | --- | --- | --- |
 | `'Failed to create project.'` (line 15) | `"Couldn't create project. Check your connection."` | [Reserved/forbidden words & punctuation](./style-guide.md#reservedforbidden-words--punctuation) |
 
@@ -153,7 +159,7 @@
 
 **Findings**
 
-| Current | Recommended | Reason |
+| Original | Recommended | Reason |
 | --- | --- | --- |
 | `label="Project Name"` | `label="Project name"` | [Form labels, placeholders & helper text](./style-guide.md#form-labels-placeholders--helper-text) |
 | `label="Project Address"` | `label="Project address"` | [Form labels, placeholders & helper text](./style-guide.md#form-labels-placeholders--helper-text) |
@@ -164,7 +170,7 @@
 
 **Findings**
 
-| Current | Recommended | Reason |
+| Original | Recommended | Reason |
 | --- | --- | --- |
 | `title="Edit Project"` (lines 127, 138) | `title="Edit project"` | [Screen titles & headers](./style-guide.md#screen-titles--headers) |
 | `label="Project Name"` | `label="Project name"` | [Form labels, placeholders & helper text](./style-guide.md#form-labels-placeholders--helper-text) |
@@ -183,7 +189,7 @@
 
 **Findings**
 
-| Current | Recommended | Reason |
+| Original | Recommended | Reason |
 | --- | --- | --- |
 | `accessibilityLabel="Add new project"` | `accessibilityLabel="Add project"` | [Accessibility labels](./style-guide.md#accessibility-labels) |
 | `'Add new project'` (line 103) | `'Add project'` | [Voice & tone](./style-guide.md#voice--tone) |
@@ -202,7 +208,7 @@
 
 **Findings**
 
-| Current | Recommended | Reason |
+| Original | Recommended | Reason |
 | --- | --- | --- |
 | `'Could not delete the note. Please try again.'` (line 217) | `"Couldn't delete note."` + a separate `Try again` action | [Error messages](./style-guide.md#error-messages) |
 | `'Could not update the note. Please try again.'` (line 238) | `"Couldn't update note."` + a separate `Try again` action | [Error messages](./style-guide.md#error-messages) |
@@ -234,7 +240,7 @@
 
 **Findings**
 
-| Current | Recommended | Reason |
+| Original | Recommended | Reason |
 | --- | --- | --- |
 | `'Failed to load notes'` | `"Couldn't load notes"` | [Reserved/forbidden words & punctuation](./style-guide.md#reservedforbidden-words--punctuation) |
 
@@ -242,7 +248,7 @@
 
 **Findings**
 
-| Current | Recommended | Reason |
+| Original | Recommended | Reason |
 | --- | --- | --- |
 | `'Failed to load report'` (line 357) | `"Couldn't load report"` | [Reserved/forbidden words & punctuation](./style-guide.md#reservedforbidden-words--punctuation) |
 
@@ -250,7 +256,7 @@
 
 **Findings**
 
-| Current | Recommended | Reason |
+| Original | Recommended | Reason |
 | --- | --- | --- |
 | `` `Could not load notes: ${error.message}` `` (line 135) | `` `Couldn't load notes: ${error.message}` `` | [Error messages](./style-guide.md#error-messages) |
 
@@ -260,7 +266,7 @@
 
 **Findings**
 
-| Current | Recommended | Reason |
+| Original | Recommended | Reason |
 | --- | --- | --- |
 | `'Failed to load debug data.'` | `"Couldn't load debug data."` | [Reserved/forbidden words & punctuation](./style-guide.md#reservedforbidden-words--punctuation) |
 
@@ -268,7 +274,7 @@
 
 **Findings**
 
-| Current | Recommended | Reason |
+| Original | Recommended | Reason |
 | --- | --- | --- |
 | `` `${materials.length} material${materials.length === 1 ? '' : 's'} recorded.` `` | Hoist ternary into a `pluralize(n, 'material')` helper. | [Numbers, dates & units](./style-guide.md#numbers-dates--units) |
 
@@ -276,7 +282,7 @@
 
 **Findings**
 
-| Current | Recommended | Reason |
+| Original | Recommended | Reason |
 | --- | --- | --- |
 | `'Could not generate PDF.'` (line 75) | `"Couldn't generate PDF."` | [Error messages](./style-guide.md#error-messages) |
 | `'Could not share the PDF.'` (line 98) | `"Couldn't share PDF."` | [Error messages](./style-guide.md#error-messages) |
@@ -289,9 +295,10 @@
 
 **Findings**
 
-| Current | Recommended | Reason |
+| Original | Recommended | Reason |
 | --- | --- | --- |
 | `'Could not generate PDF.'` (line 96) | `"Couldn't generate PDF."` | [Error messages](./style-guide.md#error-messages) |
+| `'PDF Failed'` | `'PDF failed'` | [Sentence case vs title case](./style-guide.md#sentence-case-vs-title-case) |
 | `'Opening PDF...'` | `'Opening PDF…'` | [Button labels](./style-guide.md#button-labels) |
 | `'Sharing PDF...'` | `'Sharing PDF…'` | [Button labels](./style-guide.md#button-labels) |
 
@@ -299,26 +306,31 @@
 
 **Findings**
 
-| Current | Recommended | Reason |
+| Original | Recommended | Reason |
 | --- | --- | --- |
 | `'Saving PDF...'` | `'Saving PDF…'` | [Button labels](./style-guide.md#button-labels) |
 | `'Sharing PDF...'` | `'Sharing PDF…'` | [Button labels](./style-guide.md#button-labels) |
 | `'Unfinalizing...'` | `'Unfinalizing…'` | [Button labels](./style-guide.md#button-labels) |
 | `'Deleting...'` | `'Deleting…'` | [Button labels](./style-guide.md#button-labels) |
+| `'View Notes'` | `'View notes'` | [Sentence case vs title case](./style-guide.md#sentence-case-vs-title-case) |
+| `'Unfinalize Report'` | `'Unfinalize report'` | [Sentence case vs title case](./style-guide.md#sentence-case-vs-title-case) |
+| `'Delete Report'` | `'Delete report'` | [Sentence case vs title case](./style-guide.md#sentence-case-vs-title-case) |
 
 ### `apps/mobile/components/reports/generate/GenerateReportDialogs.tsx`
 
 **Findings**
 
-| Current | Recommended | Reason |
+| Original | Recommended | Reason |
 | --- | --- | --- |
 | `'Could not attach the file to this report.'` (line 37) | `"Couldn't attach file."` | [Error messages](./style-guide.md#error-messages) |
+| `'Upload Failed'` | `"Couldn't attach file"` | [Dialog & sheet copy](./style-guide.md#dialog--sheet-copy) |
+| `'Photo Library'` | `'Photo library'` | [Sentence case vs title case](./style-guide.md#sentence-case-vs-title-case) |
 
 ### `apps/mobile/components/reports/generate/GenerateReportInputBar.tsx`
 
 **Findings**
 
-| Current | Recommended | Reason |
+| Original | Recommended | Reason |
 | --- | --- | --- |
 | `'Type a site note...'` | `'Type a site note…'` | [Form labels, placeholders & helper text](./style-guide.md#form-labels-placeholders--helper-text) |
 
@@ -326,7 +338,7 @@
 
 **Findings**
 
-| Current | Recommended | Reason |
+| Original | Recommended | Reason |
 | --- | --- | --- |
 | `'Generating your report from the notes collected so far...'` | `'Generating your report from the notes collected so far…'` | [Loading & skeleton states](./style-guide.md#loading--skeleton-states) |
 | `'Updating the draft with your newest notes...'` | `'Updating the draft with your newest notes…'` | [Loading & skeleton states](./style-guide.md#loading--skeleton-states) |
@@ -347,7 +359,7 @@
 
 **Findings**
 
-| Current | Recommended | Reason |
+| Original | Recommended | Reason |
 | --- | --- | --- |
 | `accessibilityLabel={`Save to gallery: ${saveToCameraRoll ? 'on' : 'off'}`}` (line 598) | `accessibilityLabel="Save to gallery"` (rely on `accessibilityState={{ checked }}` for state) | [Accessibility labels](./style-guide.md#accessibility-labels) |
 | `'Keep editing'` (line 723) | `'Cancel'` | [Dialog & sheet copy](./style-guide.md#dialog--sheet-copy) |
@@ -368,7 +380,7 @@ and covered by `apps/mobile/lib/dialogs/app-dialog-copy.test.ts`.
 
 **Findings**
 
-| Current | Recommended | Reason |
+| Original | Recommended | Reason |
 | --- | --- | --- |
 | `label: 'OK'` (line 116) | `label: 'Done'` | [Dialog & sheet copy](./style-guide.md#dialog--sheet-copy) |
 
@@ -376,7 +388,7 @@ and covered by `apps/mobile/lib/dialogs/app-dialog-copy.test.ts`.
 
 **Findings**
 
-| Current | Recommended | Reason |
+| Original | Recommended | Reason |
 | --- | --- | --- |
 | `'Could not generate PDF.'` (lines 85, 153, 154) | `"Couldn't generate PDF."` | [Error messages](./style-guide.md#error-messages) |
 | `'Could not open the saved PDF.'` (line 102) | `"Couldn't open the saved PDF."` | [Error messages](./style-guide.md#error-messages) |
@@ -387,7 +399,7 @@ and covered by `apps/mobile/lib/dialogs/app-dialog-copy.test.ts`.
 
 **Findings**
 
-| Current | Recommended | Reason |
+| Original | Recommended | Reason |
 | --- | --- | --- |
 | `'Could not open the saved PDF. Use Share PDF to choose another app.'` (line 30) | `"Couldn't open the saved PDF. Tap Share PDF to choose another app."` | [Error messages](./style-guide.md#error-messages) |
 
@@ -395,7 +407,7 @@ and covered by `apps/mobile/lib/dialogs/app-dialog-copy.test.ts`.
 
 **Findings**
 
-| Current | Recommended | Reason |
+| Original | Recommended | Reason |
 | --- | --- | --- |
 | `message: 'Failed to parse JSON response'` (line 208) | `message: "Couldn't read server response."` (only flag if this message ever surfaces to users via `error.message`; otherwise leave as a developer string) | [Error messages](./style-guide.md#error-messages) |
 
@@ -403,6 +415,6 @@ and covered by `apps/mobile/lib/dialogs/app-dialog-copy.test.ts`.
 
 **Findings**
 
-| Current | Recommended | Reason |
+| Original | Recommended | Reason |
 | --- | --- | --- |
 | `'Something went wrong'` (line 96) | `"The app hit an error. Pull to retry, or restart the app."` | [Reserved/forbidden words & punctuation](./style-guide.md#reservedforbidden-words--punctuation) |

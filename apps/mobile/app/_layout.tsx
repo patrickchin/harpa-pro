@@ -93,7 +93,7 @@ class AppErrorBoundary extends Component<
               marginBottom: 8,
             }}
           >
-            Something went wrong
+            The app hit an error
           </Text>
           <Text
             style={{
@@ -103,7 +103,7 @@ class AppErrorBoundary extends Component<
               marginBottom: 24,
             }}
           >
-            {this.state.error?.message ?? 'An unexpected error occurred.'}
+            {this.state.error?.message ?? 'Pull to retry, or restart the app.'}
           </Text>
           <Pressable
             onPress={() => this.setState({ hasError: false, error: null })}
@@ -115,7 +115,7 @@ class AppErrorBoundary extends Component<
             }}
           >
             <Text style={{ fontSize: 16, fontWeight: '600', color: colors.foreground }}>
-              Try Again
+              Try again
             </Text>
           </Pressable>
         </View>

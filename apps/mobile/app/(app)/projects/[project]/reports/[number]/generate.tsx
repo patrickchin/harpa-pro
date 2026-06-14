@@ -90,6 +90,10 @@ interface ApiNote {
   createdAt: string;
 }
 
+function formatCount(count: number, noun: string): string {
+  return `${count} ${noun}${count === 1 ? '' : 's'}`;
+}
+
 function noteToEntry(n: ApiNote): NoteEntry {
   const isImage = n.kind === 'image';
   const isVoice = n.kind === 'voice';
@@ -217,7 +221,7 @@ export default function GenerateReportRoute() {
         { params: { note: noteIdValue }, reportId },
         {
           onError: () => {
-            setUploadError('Could not delete the note. Please try again.');
+            setUploadError("Couldn't delete note.");
           },
         },
       );
@@ -238,7 +242,7 @@ export default function GenerateReportRoute() {
         },
         {
           onError: () => {
-            setUploadError('Could not update the note. Please try again.');
+            setUploadError("Couldn't update note.");
           },
         },
       );
@@ -256,7 +260,7 @@ export default function GenerateReportRoute() {
         },
         {
           onError: () => {
-            setUploadError('Could not save the note. Please try again.');
+            setUploadError("Couldn't save note.");
           },
         },
       );
@@ -568,7 +572,7 @@ export default function GenerateReportRoute() {
             ).length;
             if (failed > 0) {
               setUploadError(
-                `${failed} of ${outcome.total} photo${outcome.total === 1 ? '' : 's'} failed to upload. Open the report queue to retry.`,
+                `${failed} of ${formatCount(outcome.total, 'photo')} failed to upload. Open the report queue to retry.`,
               );
             }
             void invalidateAfterFileUpload(qc, { reportId });
@@ -578,8 +582,8 @@ export default function GenerateReportRoute() {
       } catch (err) {
         setUploadError(
           err instanceof Error
-            ? `Could not pick photos: ${err.message}`
-            : 'Could not pick photos.',
+            ? `Couldn't pick photos: ${err.message}`
+            : "Couldn't pick photos.",
         );
       }
     },
@@ -601,7 +605,7 @@ export default function GenerateReportRoute() {
         const failed = results.filter((r) => r.status === 'rejected').length;
         if (failed > 0) {
           setUploadError(
-            `${failed} of ${allUris.length} photo${allUris.length === 1 ? '' : 's'} failed to upload. Open the report queue to retry.`,
+            `${failed} of ${formatCount(allUris.length, 'photo')} failed to upload. Open the report queue to retry.`,
           );
         }
         // Invalidate the notes/report queries so uploaded image notes

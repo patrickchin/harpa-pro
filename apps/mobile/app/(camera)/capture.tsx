@@ -16,6 +16,7 @@
  * AppDialogSheet (no `Alert.alert`, hard rule).
  */
 import { useCallback, useEffect, useState } from 'react';
+import { Linking } from 'react-native';
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import * as MediaLibrary from 'expo-media-library';
 
@@ -118,7 +119,16 @@ export default function CaptureRoute() {
         onClose={() => setBlockedDialogOpen(false)}
         actions={[
           {
-            label: 'OK',
+            label: 'Open Settings',
+            variant: 'default',
+            onPress: () => {
+              setBlockedDialogOpen(false);
+              void Linking.openSettings();
+            },
+            testID: 'btn-camera-roll-permission-open-settings',
+          },
+          {
+            label: 'Not now',
             variant: 'quiet',
             onPress: () => setBlockedDialogOpen(false),
             testID: 'btn-camera-roll-permission-dismiss',

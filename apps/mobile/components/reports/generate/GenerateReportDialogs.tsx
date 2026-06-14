@@ -33,8 +33,8 @@ export function GenerateReportDialogs() {
 
   const fileUploadErrorDialog = ui.fileUploadError
     ? getActionErrorDialogCopy({
-        title: 'Upload Failed',
-        fallbackMessage: 'Could not attach the file to this report.',
+        title: "Couldn't attach file",
+        fallbackMessage: 'Try again from the attachment menu.',
         message: ui.fileUploadError,
       })
     : null;
@@ -57,7 +57,7 @@ export function GenerateReportDialogs() {
         actions={[
           {
             label: draft.isFinalizing
-              ? 'Finalizing...'
+              ? 'Finalizing…'
               : finalizeConfirmCopy.confirmLabel,
             variant: finalizeConfirmCopy.confirmVariant,
             onPress: () => {
@@ -105,7 +105,7 @@ export function GenerateReportDialogs() {
 
       <AppDialogSheet
         visible={fileUploadErrorDialog !== null}
-        title={fileUploadErrorDialog?.title ?? 'Upload Failed'}
+        title={fileUploadErrorDialog?.title ?? "Couldn't attach file"}
         message={fileUploadErrorDialog?.message ?? ''}
         noticeTone={fileUploadErrorDialog?.tone ?? 'danger'}
         noticeTitle={fileUploadErrorDialog?.noticeTitle}
@@ -136,7 +136,7 @@ export function GenerateReportDialogs() {
           // note kind: deferred entirely"). Keep `image`-only here so
           // the sheet never advertises an unimplemented surface.
           {
-            label: 'Photo Library',
+            label: 'Photo library',
             variant: 'secondary',
             onPress: () => {
               closeAttachmentSheet();

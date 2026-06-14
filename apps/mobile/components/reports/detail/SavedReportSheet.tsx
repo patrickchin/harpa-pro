@@ -75,7 +75,7 @@ export function SavedReportSheet({
               {isGenerating
                 ? 'Preparing PDF…'
                 : isError
-                  ? 'PDF Failed'
+                  ? 'PDF failed'
                   : (details?.title ?? 'PDF Saved')}
             </Text>
             <Pressable onPress={onClose} hitSlop={12} disabled={!canDismiss}>
@@ -93,7 +93,7 @@ export function SavedReportSheet({
           ) : isError ? (
             <View className="gap-4 px-5 pt-4">
               <InlineNotice tone="danger" title="PDF generation failed">
-                {state?.errorMessage ?? 'Could not generate PDF.'}
+                {state?.errorMessage ?? "Couldn't generate PDF."}
               </InlineNotice>
               <Button variant="secondary" size="lg" onPress={onRetrySave}>
                 Retry
@@ -150,7 +150,7 @@ export function SavedReportSheet({
                   <View className="flex-row items-center gap-3">
                     <FileText size={16} color={colors.primary.foreground} />
                     <Text className="text-base font-semibold text-primary-foreground">
-                      {isOpening ? 'Opening PDF...' : 'Open PDF'}
+                      {isOpening ? 'Opening PDF…' : 'Open PDF'}
                     </Text>
                   </View>
                 </Button>
@@ -166,7 +166,7 @@ export function SavedReportSheet({
                   <View className="flex-row items-center gap-3">
                     <Share2 size={16} color={colors.foreground} />
                     <Text className="text-base font-semibold text-foreground">
-                      {isSharing ? 'Sharing PDF...' : 'Share PDF'}
+                      {isSharing ? 'Sharing PDF…' : 'Share PDF'}
                     </Text>
                   </View>
                 </Button>

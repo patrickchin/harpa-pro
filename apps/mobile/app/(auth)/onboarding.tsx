@@ -52,11 +52,11 @@ export default function OnboardingPage() {
     const trimmedCompany = companyName.trim();
 
     if (trimmedName.length < 2) {
-      setError('Please enter your full name.');
+      setError('Enter your full name.');
       return;
     }
     if (trimmedCompany.length > 0 && trimmedCompany.length < 2) {
-      setError('Please enter at least 2 characters for your company name.');
+      setError('Enter at least 2 characters for your company name.');
       return;
     }
 
@@ -73,7 +73,7 @@ export default function OnboardingPage() {
       await session.refresh();
       router.replace('/' as Href);
     } catch (e) {
-      const message = e instanceof Error ? e.message : 'Failed to save profile.';
+      const message = e instanceof Error ? e.message : "Couldn't save profile. Try again.";
       setError(message);
     }
   }, [fullName, companyName, updateMe, session, router]);

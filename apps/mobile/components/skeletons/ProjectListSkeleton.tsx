@@ -4,7 +4,7 @@
  * Layout-shift policy (see docs/v4/arch-mobile-skeletons.md): this
  * skeleton mirrors the FlatList contentContainerStyle used by
  * `projects-list.tsx` so the first row lands on the same Y when
- * content arrives. The "Add new project" Pressable is rendered by
+ * content arrives. The "Add project" Pressable is rendered by
  * the screen in both states and is not duplicated here.
  */
 import { View } from 'react-native';

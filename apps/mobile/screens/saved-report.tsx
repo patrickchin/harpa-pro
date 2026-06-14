@@ -140,8 +140,8 @@ export interface SavedReportProps {
   actions?: ReactNode;
 
   /**
-   * Invoked from the Actions menu's "View Notes" entry on finalised
-   * reports. When provided, the menu surfaces a "View Notes" row;
+   * Invoked from the Actions menu's "View notes" entry on finalised
+   * reports. When provided, the menu surfaces a "View notes" row;
    * tapping it should navigate to the dedicated notes screen.
    * Omitted (no entry rendered) for drafts — drafts show the Notes
    * tab inline instead.
@@ -426,7 +426,7 @@ export function SavedReport(props: SavedReportProps) {
       <SafeAreaView className="flex-1 bg-background" edges={['top']}>
         <View className="flex-1 items-center justify-center px-5">
           <Text className="text-xl font-semibold text-foreground">
-            Failed to load report
+            Couldn't load report
           </Text>
           <Text className="mt-2 text-center text-base text-muted-foreground">
             {loadError instanceof Error
@@ -600,7 +600,7 @@ export function SavedReport(props: SavedReportProps) {
         canDismiss={!isDeleting}
         actions={[
           {
-            label: isDeleting ? 'Deleting...' : deleteCopy.confirmLabel,
+            label: isDeleting ? 'Deleting…' : deleteCopy.confirmLabel,
             variant: deleteCopy.confirmVariant,
             onPress: async () => {
               await onConfirmDelete();
@@ -634,7 +634,7 @@ export function SavedReport(props: SavedReportProps) {
         actions={[
           {
             label: isUnfinalizing
-              ? 'Unfinalizing...'
+              ? 'Unfinalizing…'
               : unfinalizeCopy.confirmLabel,
             variant: unfinalizeCopy.confirmVariant,
             onPress: async () => {

@@ -53,16 +53,16 @@ export function UsageLimitDialog({ visible, details, onClose }: UsageLimitDialog
       visible={visible}
       title="Monthly limit reached"
       noticeTone="warning"
-      noticeTitle={details ? `You've used ${usedLimit} ${kindLabel} this month.` : undefined}
+      noticeTitle={details ? `You've used ${usedLimit} ${kindLabel}.` : undefined}
       message={
         details
-          ? `Your limit resets on ${resetLabel}. To keep working before then, please upgrade your plan or contact support.`
+          ? `Your limit resets on ${resetLabel}. Upgrade your plan or contact support to keep working.`
           : undefined
       }
       onClose={onClose}
       actions={[
         {
-          label: 'OK',
+          label: 'Done',
           onPress: onClose,
           variant: 'default',
           testID: 'usage-limit-dialog-ok',

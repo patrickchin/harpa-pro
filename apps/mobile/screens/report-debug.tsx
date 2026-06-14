@@ -113,7 +113,7 @@ export function ReportDebug(props: ReportDebugProps) {
             testID="report-debug-error"
           >
             <Text className="text-danger-text">
-              Failed to load debug data.
+              Couldn't load debug data.
             </Text>
             <Text className="mt-2 text-xs text-muted-foreground">
               {loadError.message}

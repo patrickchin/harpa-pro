@@ -31,12 +31,14 @@ def test_truncate_sql_mentions_all_expected_tables() -> None:
         "app.projects",
         "app.user_settings",
         "app.waitlist_signups",
-        "auth.sessions",
-        "auth.verifications",
-        "auth.users",
+        'public."session"',
+        'public."account"',
+        'public."verification"',
+        'public."user"',
     ]
     for table in expected:
         assert table in sql, f"truncate_sql() missing table {table!r}"
+    assert "auth." not in sql
 
 
 def test_truncate_sql_is_a_single_truncate_statement() -> None:
@@ -57,8 +59,8 @@ def test_truncate_sql_matches_legacy_reset_db_sh(
     if not script.exists():
         pytest.skip("legacy reset-db.sh not present (running outside monorepo)")
     text = script.read_text(encoding="utf-8")
-    # Pull every `app.X` and `auth.Y` token referenced by the TRUNCATE
-    # statement in the legacy script.
+    # Pull every table token referenced by the TRUNCATE statement in
+    # the legacy script.
     import re
 
     truncate_block = re.search(
@@ -67,11 +69,12 @@ def test_truncate_sql_matches_legacy_reset_db_sh(
         re.DOTALL | re.IGNORECASE,
     )
     assert truncate_block is not None, "couldn't find TRUNCATE block in legacy script"
-    legacy_tables = set(re.findall(r"(?:app|auth)\.\w+", truncate_block.group(1)))
-    assert legacy_tables, "no app./auth. tables parsed from legacy script"
+    table_pattern = r'(?:app\.\w+|public\."(?:session|account|verification|user)")'
+    legacy_tables = set(re.findall(table_pattern, truncate_block.group(1)))
+    assert legacy_tables, "no reset tables parsed from legacy script"
 
     sql = db.truncate_sql()
-    sql_tables = set(__import__("re").findall(r"(?:app|auth)\.\w+", sql))
+    sql_tables = set(__import__("re").findall(table_pattern, sql))
     missing = legacy_tables - sql_tables
     extra = sql_tables - legacy_tables
     assert not missing and not extra, (

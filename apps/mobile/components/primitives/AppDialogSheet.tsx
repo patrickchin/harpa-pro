@@ -45,7 +45,7 @@ export function AppDialogSheet({
   visible,
   title,
   message,
-  noticeTone = 'danger',
+  noticeTone = 'info',
   noticeTitle,
   onClose,
   canDismiss = true,

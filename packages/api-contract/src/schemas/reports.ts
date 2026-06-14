@@ -13,6 +13,18 @@ export const reportMeta = z.object({
 });
 export type ReportMeta = z.infer<typeof reportMeta>;
 
+export const reportAttachments = z.object({
+  images: z.array(noteId).optional(),
+  documents: z.array(noteId).optional(),
+}).strict();
+export type ReportAttachments = z.infer<typeof reportAttachments>;
+
+export const reportAttachmentTarget = z.discriminatedUnion('kind', [
+  z.object({ kind: z.literal('issue'), index: z.number().int().min(0) }),
+  z.object({ kind: z.literal('section'), index: z.number().int().min(0) }),
+]);
+export type ReportAttachmentTarget = z.infer<typeof reportAttachmentTarget>;
+
 /**
  * Report body — meta envelope first, then matches mobile-old composition order:
  * StatBar / WeatherStrip / Summary / Issues / Workers / Materials / NextSteps / SummarySections.
@@ -71,6 +83,7 @@ export const reportBody = z.object({
       severity: z.string().nullable(),
       description: z.string().nullable(),
       action: z.string().nullable(),
+      attachments: reportAttachments.optional(),
     }),
   ),
   nextSteps: z.array(z.string()),
@@ -78,6 +91,7 @@ export const reportBody = z.object({
     z.object({
       title: z.string(),
       body: z.string(),
+      attachments: reportAttachments.optional(),
     }),
   ),
 });
@@ -168,6 +182,16 @@ export const generateReportResponse = z.object({
 // shape is the same.
 export const regenerateReportRequest = generateReportRequest;
 export const regenerateReportResponse = generateReportResponse;
+
+export const placeReportAttachmentRequest = z.object({
+  noteId,
+  target: reportAttachmentTarget.nullable(),
+  expectedBodyVersion: isoDateTime.nullable(),
+});
+export type PlaceReportAttachmentRequest = z.infer<
+  typeof placeReportAttachmentRequest
+>;
+export const placeReportAttachmentResponse = z.object({ report });
 
 export const finalizeReportResponse = z.object({ report });
 export const unfinalizeReportResponse = z.object({ report });

@@ -17,6 +17,17 @@ The CI lint job (`scripts/check-maestro-appid.sh`) fails if any
 `docs/bugs/README.md` (R-Maestro1) for the regression that motivated
 the env-var rule.
 
+## No coordinate taps
+
+Do not use `tapOn: { point: ... }` or any `point:` key in `.maestro`
+flows. Coordinate taps depend on device size, safe areas, orientation,
+and platform chrome. Tap visible text, accessibility labels, or testIDs
+instead; add a testID to the app if the target has no stable semantic
+selector yet.
+
+The root lint script runs `scripts/check-no-maestro-point-taps.sh`,
+which fails on any `.maestro/**/*.yaml` / `.yml` `point:` key.
+
 ## `core-end-to-end.yaml` (canonical full journey)
 
 The P3-exit-gate full-journey flow. Walks every currently-shipped
@@ -142,6 +153,15 @@ Dev-deployment target:
   Focused local Android passed 01/02/10b, the full local regression
   passed with 10b included, and a clean full dev-deployment Android
   run passed against `harpa-pro-api-dev` (`gitCommit=9db5b51`).
+- 2026-06-14 follow-up: module 10c exercises the attachment picker with
+  enough photo groups to scroll and asserts first-photo thumbnails are
+  visible. Module 11 verifies regeneration settles with the report still
+  mounted; deterministic unit tests pin the disabled write-lock states
+  because fixture regeneration can finish before Maestro observes the
+  transient lock. The standalone `place-photo-on-issue.flow.yml` also
+  finalizes a placed-photo report and asserts the saved-report page keeps
+  the placed photo visible without exposing placement or manual-edit
+  controls.
 - The CI Maestro testID gate is path-filtered on both `apps/mobile/**`
   and `.maestro/**` so E2E-only flow changes still validate referenced
   mobile testIDs.

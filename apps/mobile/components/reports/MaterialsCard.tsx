@@ -17,9 +17,14 @@ import { colors } from '@/lib/design-tokens/colors';
 interface MaterialsCardProps {
   materials: readonly GeneratedReportMaterial[];
   onEdit?: () => void;
+  editActionsDisabled?: boolean;
 }
 
-export function MaterialsCard({ materials, onEdit }: MaterialsCardProps) {
+export function MaterialsCard({
+  materials,
+  onEdit,
+  editActionsDisabled = false,
+}: MaterialsCardProps) {
   if (materials.length === 0) return null;
 
   return (
@@ -31,7 +36,11 @@ export function MaterialsCard({ materials, onEdit }: MaterialsCardProps) {
         trailing={
           onEdit ? (
             <EditPencilButton
-              onPress={onEdit}
+              onPress={() => {
+                if (editActionsDisabled) return;
+                onEdit();
+              }}
+              disabled={editActionsDisabled}
               accessibilityLabel="Edit materials"
               testID="btn-edit-materials"
             />

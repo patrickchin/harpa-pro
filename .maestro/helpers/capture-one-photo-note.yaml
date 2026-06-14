@@ -1,0 +1,42 @@
+appId: ${MAESTRO_APP_ID}
+---
+# capture-one-photo-note.yaml - helper: add one fixture-camera photo note
+#
+# Pre-condition: Generate screen is visible.
+# Post-condition: Generate screen is visible again; the upload has had a
+# chance to settle before the caller continues.
+
+- tapOn:
+    id: "btn-attachment"
+- extendedWaitUntil:
+    visible:
+      id: "btn-attachment-camera"
+    timeout: 8000
+- tapOn:
+    id: "btn-attachment-camera"
+- extendedWaitUntil:
+    visible:
+      id: "btn-camera-shutter"
+    timeout: 15000
+- tapOn:
+    id: "btn-camera-shutter"
+- extendedWaitUntil:
+    visible:
+      id: "btn-camera-thumb-0"
+    timeout: 8000
+- tapOn:
+    id: "btn-camera-done"
+- extendedWaitUntil:
+    visible:
+      id: "input-note"
+    timeout: 15000
+- extendedWaitUntil:
+    visible:
+      id: "batch-grid-tile-0-img"
+    timeout: 30000
+- extendedWaitUntil:
+    notVisible:
+      id: "batch-grid-tile-0-ring"
+    timeout: 30000
+- waitForAnimationToEnd:
+    timeout: 1500

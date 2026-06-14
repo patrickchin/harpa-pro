@@ -711,6 +711,7 @@ export function CameraCapture(props: CameraCaptureProps) {
         visible={confirmDiscardOpen}
         title="Discard photos?"
         message={`You have ${captures.length} unsaved photo${captures.length === 1 ? '' : 's'}.`}
+        noticeTone="danger"
         onClose={() => setConfirmDiscardOpen(false)}
         actions={[
           {
@@ -749,4 +750,3 @@ function resolvePermission(
   if (hook.granted) return { state: 'granted' };
   return { state: 'denied', canAskAgain: hook.canAskAgain };
 }
-

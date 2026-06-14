@@ -17,6 +17,7 @@ tags:
 #   9. Voice notes — record/upload/transcribe/summarize/title/transcript/delete
 #  10a. Photo notes (draft) — attachment sheet/camera upload/generated photos/delete
 #  10b. Photo notes (finalized) — saved-report photo strip and preview
+#  10c. Photo attachment picker — many photo groups force picker scroll
 #  11. Generate + finalize — add note, generate, view report, finalize, unfinalize, re-finalize
 #  12. Report debug — verify debug screen sections
 #  13. Projects delete — delete the project, verify gone
@@ -90,6 +91,11 @@ tags:
 # Pre-condition: alice on project home
 # Requires: same camera/upload fixture setup as 10a.
 - runFlow: modules/10b-photo-notes-finalized.yaml
+
+# ── 10c. Photo attachment picker scroll ───────────────────────────────────
+# Pre-condition: alice on project home
+# Requires: same camera/upload fixture setup as 10a.
+- runFlow: modules/10c-photo-attachment-picker-scroll.yaml
 
 # ── 11. Generate + finalize ───────────────────────────────────────────────
 # Pre-condition: alice on project home

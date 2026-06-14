@@ -43,16 +43,16 @@ tags:
 # dev-launcher's own scheme with an explicit Metro URL. This is exactly
 # what tapping the "http://localhost:8081" row does internally. On iOS
 # the scheme `exp+harpa-pro-v4` is unregistered, so `openLink` is a no-op
-# and we fall through to the regular launch path.
-- openLink: "exp+harpa-pro-v4://expo-development-client/?url=http%3A%2F%2Flocalhost%3A8081"
+# and we fall through to the regular launch path. The encoded
+# `disableOnboarding=1` query param tells Expo not to show the native
+# dev-menu onboarding sheet over the app.
+- openLink: "exp+harpa-pro-v4://expo-development-client/?url=http%3A%2F%2Flocalhost%3A8081%3FdisableOnboarding%3D1"
 # Give the dev-launcher time to fetch + load the JS bundle from Metro
-# (cold start over USB after pm clear typically takes 8-15s). We can't
-# wait on a sign-in element because the dev-menu sheet (Android first
-# run) obscures it; Maestro treats obscured elements as not-visible.
+# (cold start over USB after pm clear typically takes 8-15s).
 - waitForAnimationToEnd:
     timeout: 20000
-# Dismiss the Android/iOS dev-launcher first-run sheet ("This is the
-# developer menu"). On subsequent runs, every gate skips.
+# Dismiss any legacy Android/iOS dev-launcher first-run sheet if an older
+# dev-client ignores `disableOnboarding=1`. On subsequent runs, every gate skips.
 - runFlow:
     when:
       visible: "Continue"
@@ -73,12 +73,34 @@ tags:
 - runFlow:
     file: helpers/dismiss-open-dialog.yaml
 
+# The Expo dev-menu onboarding sheet can appear late while Metro finishes a
+# cold bundle on older dev-clients. Wait once more, but dismiss by visible
+# labels only; coordinate taps are device-dependent.
+- extendedWaitUntil:
+    visible: "This is the developer menu"
+    timeout: 30000
+    optional: true
+- runFlow:
+    when:
+      visible: "Continue"
+    commands:
+      - tapOn:
+          text: "Continue"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: "Close"
+    commands:
+      - tapOn:
+          text: "Close"
+      - waitForAnimationToEnd
+
 # Let the auth gate land us on sign-in first (more reliable than a
 # bare deep link to /sign-in immediately after a cold-launch race).
 - extendedWaitUntil:
     visible:
       id: "input-email"
-    timeout: 30000
+    timeout: 90000
 
 # --- Sign-in (fresh account) -------------------------------------------------
 # better-auth's emailOtp plugin auto-creates the user on first verify

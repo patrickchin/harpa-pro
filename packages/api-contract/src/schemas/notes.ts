@@ -3,6 +3,8 @@ import { isoDateTime } from './_shared.js';
 import { fileId, noteFileId, noteId, reportId, userId } from './ids.js';
 
 export const noteKind = z.enum(['text', 'voice', 'image', 'document']);
+export const noteSource = z.enum(['typed', 'voice', 'camera', 'gallery', 'upload']);
+export type NoteSource = z.infer<typeof noteSource>;
 
 export const noteFile = z.object({
   id: noteFileId,
@@ -49,6 +51,8 @@ export const note = z.object({
   language: z.string().min(2).max(16).nullable(),
   transcribeProvider: z.string().nullable(),
   transcribedAt: isoDateTime.nullable(),
+  source: noteSource.nullable(),
+  meta: z.record(z.unknown()).default({}),
   createdAt: isoDateTime,
   updatedAt: isoDateTime,
 });
@@ -71,6 +75,10 @@ export const createNoteRequest = z.object({
   title: z.string().max(200).nullable().optional(),
   /** Optional long-form summary. */
   summary: z.string().nullable().optional(),
+  /** Capture origin for ordering/debugging. Defaults by kind on the API. */
+  source: noteSource.optional(),
+  /** Client/device/provider metadata. The API stores it as opaque JSON. */
+  meta: z.record(z.unknown()).optional(),
 });
 
 /**

@@ -13,6 +13,9 @@ tags:
 #   - tap Generate report → wait for completion
 #   - report-tab-pane is visible (report content rendered)
 #   - report-view-N is accessible (proves AI generation completed)
+#   - regenerate an existing report and assert the report survives the backend
+#     write; disabled control states are pinned in unit tests because fixture
+#     regeneration can finish before Maestro observes the transient lock
 #   - report-title-N is accessible after finalize (saved-report screen)
 #   - finalize the report → saved-report screen
 #   - unfinalize the report → back on generate screen
@@ -101,6 +104,9 @@ tags:
       id: 'report-view-.*'
     timeout: 60000
 
+# --- Regeneration settle regression coverage -------------------------------
+- runFlow: ../helpers/assert-report-generation-write-lock.yaml
+
 # --- Per-card edit modal regression coverage (PR 125) ----------------------
 # Exercise every pencil-backed modal body on the generated draft before
 # finalizing. This keeps the module 12 pre-condition intact while proving the
@@ -145,6 +151,12 @@ tags:
 # Now on saved-report screen — ReportDetailHeader emits the title testID.
 - assertVisible:
     id: 'report-title-.*'
+- assertNotVisible:
+    id: 'btn-tab-notes'
+- assertNotVisible:
+    id: 'btn-tab-edit'
+- assertNotVisible:
+    id: 'btn-edit-meta'
 
 # --- Unfinalize to confirm the round-trip ---------------------------------
 - tapOn:

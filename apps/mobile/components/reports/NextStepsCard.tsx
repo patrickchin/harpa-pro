@@ -15,9 +15,14 @@ import { colors } from '@/lib/design-tokens/colors';
 interface NextStepsCardProps {
   steps: readonly string[];
   onEdit?: () => void;
+  editActionsDisabled?: boolean;
 }
 
-export function NextStepsCard({ steps, onEdit }: NextStepsCardProps) {
+export function NextStepsCard({
+  steps,
+  onEdit,
+  editActionsDisabled = false,
+}: NextStepsCardProps) {
   if (steps.length === 0) return null;
 
   return (
@@ -33,7 +38,11 @@ export function NextStepsCard({ steps, onEdit }: NextStepsCardProps) {
         trailing={
           onEdit ? (
             <EditPencilButton
-              onPress={onEdit}
+              onPress={() => {
+                if (editActionsDisabled) return;
+                onEdit();
+              }}
+              disabled={editActionsDisabled}
               accessibilityLabel="Edit next steps"
               testID="btn-edit-next-steps"
             />

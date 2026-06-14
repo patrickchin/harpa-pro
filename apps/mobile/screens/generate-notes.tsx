@@ -13,7 +13,7 @@
  * loading, generated report, callbacks) through provider props; dev
  * mirrors + tests do the same with canned values.
  */
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import {
   Animated,
   Easing,
@@ -126,6 +126,21 @@ function GenerateNotesLayout({
   const deleteDraftCopy = getDeleteDraftDialogCopy();
 
   const showDeleteOption = canWrite && Boolean(onDeleteDraft);
+  const canEditReportBody = canWrite && !generation.isUpdating;
+
+  useEffect(() => {
+    if (generation.isUpdating) {
+      setEditing(null);
+    }
+  }, [generation.isUpdating]);
+
+  const handleEditReport = useCallback(
+    (target: ReportEditTarget) => {
+      if (generation.isUpdating) return;
+      setEditing(target);
+    },
+    [generation.isUpdating],
+  );
 
   // Slide-collapse the top chrome (header + action row + tab bar)
   // when the keyboard opens so the user has room to see their
@@ -251,7 +266,10 @@ function GenerateNotesLayout({
         <ReportTabPane
           width={windowWidth}
           {...(canWrite && generation.report
-            ? { onEdit: (target: ReportEditTarget) => setEditing(target) }
+            ? {
+                onEdit: handleEditReport,
+                editActionsDisabled: !canEditReportBody,
+              }
             : {})}
         />
         <EditTabPane width={windowWidth} />
@@ -262,7 +280,7 @@ function GenerateNotesLayout({
 
       <GenerateReportDialogs />
 
-      {canWrite && generation.report ? (
+      {canEditReportBody && generation.report ? (
         <ReportEditModal
           target={editing}
           report={generation.report}

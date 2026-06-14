@@ -22,7 +22,7 @@ tags:
 - waitForAnimationToEnd
 
 # Android dev-client unstuck prelude; mirrors modules/01-auth.yaml.
-- openLink: "exp+harpa-pro-v4://expo-development-client/?url=http%3A%2F%2Flocalhost%3A8081"
+- openLink: "exp+harpa-pro-v4://expo-development-client/?url=http%3A%2F%2Flocalhost%3A8081%3FdisableOnboarding%3D1"
 - waitForAnimationToEnd:
     timeout: 20000
 - runFlow:
@@ -42,10 +42,13 @@ tags:
 - runFlow:
     file: helpers/dismiss-open-dialog.yaml
 
-# The Expo dev-menu onboarding sheet can appear after the first dismissal
-# pass on freshly reinstalled dev clients.
-- waitForAnimationToEnd:
-    timeout: 5000
+# The Expo dev-menu onboarding sheet can appear late while Metro finishes a
+# cold bundle on older dev-clients. Wait once more, but dismiss by visible
+# labels only; coordinate taps are device-dependent.
+- extendedWaitUntil:
+    visible: "This is the developer menu"
+    timeout: 30000
+    optional: true
 - runFlow:
     when:
       visible: "Continue"

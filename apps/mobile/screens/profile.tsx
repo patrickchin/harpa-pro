@@ -263,6 +263,7 @@ export function Profile({
           visible={clearCacheDialogVisible}
           title="Clear cached data?"
           message="This empties the in-memory query cache and refetches the screens you have open. Use this if reports or voice notes look stale or out of place."
+          noticeTone="warning"
           onClose={() => setClearCacheDialogVisible(false)}
           actions={[
             {

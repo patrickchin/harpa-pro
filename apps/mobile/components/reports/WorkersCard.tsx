@@ -16,9 +16,14 @@ import { colors } from '@/lib/design-tokens/colors';
 interface WorkersCardProps {
   workers: GeneratedReportWorkers | null;
   onEdit?: () => void;
+  editActionsDisabled?: boolean;
 }
 
-export function WorkersCard({ workers, onEdit }: WorkersCardProps) {
+export function WorkersCard({
+  workers,
+  onEdit,
+  editActionsDisabled = false,
+}: WorkersCardProps) {
   if (!workers) return null;
 
   const hasRoles = workers.roles.length > 0;
@@ -37,7 +42,11 @@ export function WorkersCard({ workers, onEdit }: WorkersCardProps) {
         trailing={
           onEdit ? (
             <EditPencilButton
-              onPress={onEdit}
+              onPress={() => {
+                if (editActionsDisabled) return;
+                onEdit();
+              }}
+              disabled={editActionsDisabled}
               accessibilityLabel="Edit workers"
               testID="btn-edit-workers"
             />

@@ -29,17 +29,19 @@ tags:
 # `core-end-to-end.yaml` for the full explanation.
 # On Android: openLink deep-links the dev-launcher to load the Metro bundle.
 # On iOS: the exp+harpa-pro-v4 scheme is unregistered, so this is a no-op;
-# the dev-launcher already remembers the Metro URL from the last run.
-- openLink: "exp+harpa-pro-v4://expo-development-client/?url=http%3A%2F%2Flocalhost%3A8081"
-# Wait for bundle load / animation. On Android first run the dev-launcher
-# shows a "This is the developer menu" sheet with a "Continue" button.
-# On iOS (and Android subsequent runs), this may not appear — use a timed
-# wait + conditional gates (never unconditional extendedWaitUntil) so iOS
-# doesn't stall for 60 s.
+# the dev-launcher already remembers the Metro URL from the last run. The
+# encoded `disableOnboarding=1` query param suppresses Expo's native dev-menu
+# onboarding sheet before the app bundle loads.
+- openLink: "exp+harpa-pro-v4://expo-development-client/?url=http%3A%2F%2Flocalhost%3A8081%3FdisableOnboarding%3D1"
+# Wait for bundle load / animation. Older dev-clients may still show a
+# "This is the developer menu" sheet with a "Continue" button, so keep
+# timed fallback gates; never use unconditional extendedWaitUntil here or
+# iOS can stall for 60 s where the scheme is a no-op.
 - waitForAnimationToEnd:
     timeout: 20000
 
-# Dismiss the Android/iOS dev-launcher first-run sheet if it appears.
+# Dismiss any legacy Android/iOS dev-launcher first-run sheet if an older
+# dev-client ignores `disableOnboarding=1`.
 - runFlow:
     when:
       visible: "Continue"
@@ -61,11 +63,33 @@ tags:
 - runFlow:
     file: ../helpers/dismiss-open-dialog.yaml
 
+# The Expo dev-menu onboarding sheet can appear late while Metro finishes a
+# cold bundle on older dev-clients. Wait once more, but dismiss by visible
+# labels only; coordinate taps are device-dependent.
+- extendedWaitUntil:
+    visible: "This is the developer menu"
+    timeout: 30000
+    optional: true
+- runFlow:
+    when:
+      visible: "Continue"
+    commands:
+      - tapOn:
+          text: "Continue"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: "Close"
+    commands:
+      - tapOn:
+          text: "Close"
+      - waitForAnimationToEnd
+
 # Land on sign-in (email) screen.
 - extendedWaitUntil:
     visible:
       id: "input-email"
-    timeout: 30000
+    timeout: 90000
 
 # --- Sign-in alice (better-auth creates the user on first verify) ---------
 - runFlow:

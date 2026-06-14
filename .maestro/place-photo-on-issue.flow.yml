@@ -1,0 +1,169 @@
+appId: ${MAESTRO_APP_ID}
+name: Photo placement — place a captured photo onto an issue
+tags:
+  - reports
+  - photos
+  - placement
+# Exercises the photo-placement UI added in
+# docs/v4/design-photo-placement.md:
+#   - draft saved-report renders the "Unplaced photos" card with a
+#     `Place into…` chip per photo group
+#   - regenerating an existing report keeps placement controls visible
+#     but disabled while the backend write is in flight
+#   - the placement sheet lists the report's issues + sections
+#   - tapping an issue PATCHes report.body attachments and the photo
+#     re-renders inline under that issue (`placed-photos-issue-N`)
+#   - the bottom photo strip drops the now-placed group
+#   - finalized saved-report view keeps the placed photo visible but
+#     does not expose placement or manual-edit controls
+#
+# Pre-flight is identical to `p3-15-upload.yaml`: docker compose stack
+# up, fresh DB via `scripts/maestro/reset-db.sh`. The flow assumes a
+# seeded report whose normalized JSON contains at least one issue
+# (the dev-mirror sample report does).
+#
+# Run:
+#   ./scripts/maestro/reset-db.sh
+#   maestro test .maestro/place-photo-on-issue.flow.yml
+---
+- launchApp:
+    clearState: true
+    clearKeychain: true
+    stopApp: true
+- waitForAnimationToEnd
+
+# Sign in.
+- assertVisible:
+    id: 'input-phone'
+- tapOn:
+    id: 'input-phone'
+- inputText: '+15550100100'
+- hideKeyboard
+- tapOn:
+    id: 'btn-login-send-code'
+- assertVisible:
+    id: 'input-otp'
+- tapOn:
+    id: 'input-otp'
+- inputText: '000000'
+- hideKeyboard
+- tapOn:
+    id: 'btn-verify-code'
+
+# Open the first project / first draft report.
+- assertVisible:
+    id: 'btn-open-reports'
+- tapOn:
+    id: 'btn-open-reports'
+- assertVisible:
+    id: 'report-row-draft-0'
+- tapOn:
+    id: 'report-row-draft-0'
+
+# Capture a photo via the same camera + upload pipeline as p3-15.
+- assertVisible:
+    id: 'btn-tab-notes'
+- tapOn:
+    id: 'btn-tab-notes'
+- tapOn:
+    id: 'btn-attachment'
+- tapOn:
+    id: 'btn-attachment-camera'
+- tapOn:
+    id: 'btn-camera-shutter'
+- tapOn:
+    id: 'btn-camera-done'
+
+# Switch to the Report tab — the photo lands in the Unplaced photos
+# card with a `Place into…` chip.
+- tapOn:
+    id: 'btn-tab-report'
+- assertVisible:
+    id: 'report-photos'
+- assertVisible: 'Unplaced photos'
+- assertVisible: 'Place into…'
+
+# Regenerate while the existing report remains visible. Placement controls must
+# stay mounted to avoid layout shift, but they must be disabled because the
+# backend response will replace report.body.
+- extendedWaitUntil:
+    visible:
+      id: 'btn-generate-update-report'
+    timeout: 10000
+- tapOn:
+    id: 'btn-generate-update-report'
+- extendedWaitUntil:
+    visible: 'Updating the draft with your newest notes...'
+    timeout: 15000
+- assertVisible:
+    id: 'report-view-.*'
+- scrollUntilVisible:
+    element:
+      id: 'btn-generate-report-photos-place-.*'
+    direction: DOWN
+    timeout: 30000
+- assertVisible:
+    id: 'btn-generate-report-photos-place-.*'
+    enabled: false
+- extendedWaitUntil:
+    notVisible: 'Updating the draft with your newest notes...'
+    timeout: 60000
+
+# Tap the chip to open the placement sheet.
+- tapOn: 'Place into…'
+- assertVisible: 'Place photos'
+
+# Pick the first issue. The sheet's row testIDs follow the
+# `placement-sheet-issue-{index}` convention from PhotoGroupPlacementSheet.
+- assertVisible:
+    id: 'placement-sheet-issue-0'
+- tapOn:
+    id: 'placement-sheet-issue-0'
+
+# Sheet closes; the photo now renders under the first issue.
+- assertVisible:
+    id: 'placed-photos-issue-0'
+
+# And the bottom Unplaced photos card is gone (or empty) — the only
+# group has been moved out of it.
+- assertNotVisible: 'Unplaced photos'
+
+# Finalized saved reports are read-only: the placed photo remains visible,
+# but move/place/add-attachment/manual-edit affordances are absent.
+- scrollUntilVisible:
+    element:
+      id: 'btn-finalize-report'
+    direction: UP
+    timeout: 10000
+    optional: true
+- tapOn:
+    id: 'btn-finalize-report'
+- extendedWaitUntil:
+    visible:
+      id: 'confirm-finalize'
+    timeout: 8000
+- tapOn:
+    id: 'confirm-finalize'
+- extendedWaitUntil:
+    visible:
+      id: 'btn-report-actions'
+    timeout: 20000
+- assertVisible:
+    id: 'report-title-.*'
+- scrollUntilVisible:
+    element:
+      id: 'placed-photos-issue-0'
+    direction: DOWN
+    timeout: 30000
+- assertVisible:
+    id: 'placed-photos-issue-0'
+- assertNotVisible:
+    id: 'btn-move-placed-photo-.*'
+- assertNotVisible:
+    id: 'btn-place-photo-.*'
+- assertNotVisible:
+    id: 'btn-add-attachments-issue-.*'
+- assertNotVisible:
+    id: 'btn-edit-issue-.*'
+- assertNotVisible: 'Change placement'
+- assertNotVisible: 'Place into…'

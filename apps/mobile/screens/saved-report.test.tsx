@@ -48,6 +48,7 @@ import {
   AudioPlaybackProvider,
   type PlaybackPlayer,
 } from '@/lib/audio/AudioPlaybackProvider';
+import type { GeneratedSiteReport } from '@harpa/report-core';
 
 // Switching to the Notes tab mounts `ReportNotesPane`, whose voice
 // rows call `useAudioPlayback()` and whose signed-URL chain pulls
@@ -372,6 +373,37 @@ describe('SavedReport', () => {
 
 const finalizedDefaults = { ...baseProps(), reportStatus: 'finalized' as const };
 
+const PHOTO_NOTE_ROWS: SavedReportProps['noteRows'] = [
+  {
+    id: 'n_placed',
+    kind: 'photo',
+    body: 'Placed photo',
+    createdAt: new Date().toISOString(),
+    fileId: 'fil_placed',
+  },
+  {
+    id: 'n_unplaced',
+    kind: 'photo',
+    body: 'Unplaced photo',
+    createdAt: new Date().toISOString(),
+    fileId: 'fil_unplaced',
+  },
+];
+
+const REPORT_WITH_PLACED_PHOTO = {
+  ...SAMPLE_GENERATED_REPORT,
+  report: {
+    ...SAMPLE_GENERATED_REPORT.report,
+    sections: [
+      {
+        ...SAMPLE_GENERATED_REPORT.report.sections[0]!,
+        attachments: { images: ['n_placed'] },
+      },
+      ...SAMPLE_GENERATED_REPORT.report.sections.slice(1),
+    ],
+  },
+} as GeneratedSiteReport;
+
 describe('SavedReport — finalized layout', () => {
   it('does not render the tab bar when finalized', () => {
     const tree = render(
@@ -409,5 +441,31 @@ describe('SavedReport — finalized layout', () => {
     expect(
       tree.root.findAllByProps({ testID: 'saved-report-pane' }).length,
     ).toBeGreaterThan(0);
+  });
+
+  it('does not expose photo placement edits when finalized', () => {
+    const onPlacePhotoGroup = vi.fn();
+    const tree = render(
+      <SavedReport
+        {...finalizedDefaults}
+        report={REPORT_WITH_PLACED_PHOTO}
+        noteRows={PHOTO_NOTE_ROWS}
+        onPlacePhotoGroup={onPlacePhotoGroup}
+      />,
+    );
+
+    expect(
+      tree.root.findAllByProps({ testID: 'placed-photos-section-0' }).length,
+    ).toBeGreaterThan(0);
+    expect(
+      tree.root.findAllByProps({ testID: 'btn-move-placed-photo-n_placed' }),
+    ).toHaveLength(0);
+    expect(
+      tree.root.findAllByProps({ testID: 'btn-add-attachments-section-0' }),
+    ).toHaveLength(0);
+    expect(
+      tree.root.findAllByProps({ testID: 'btn-place-photo-n_unplaced' }),
+    ).toHaveLength(0);
+    expect(onPlacePhotoGroup).not.toHaveBeenCalled();
   });
 });

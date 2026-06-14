@@ -138,6 +138,36 @@ describe('reportBodyToGeneratedReport — materials & issues', () => {
     expect(out.report.issues[1]!.severity).toBe('medium');
     expect(out.report.issues[2]!.severity).toBe('medium');
   });
+
+  it('copies issue and section attachments into the UI report shape', () => {
+    const out = reportBodyToGeneratedReport({
+      ...baseBody,
+      issues: [
+        {
+          title: 'A',
+          severity: 'high',
+          description: 'crack',
+          action: null,
+          attachments: { images: ['not_img_issue'], documents: ['not_doc_issue'] },
+        },
+      ],
+      summarySections: [
+        {
+          title: 'Photos',
+          body: 'Evidence.',
+          attachments: { images: ['not_img_section'] },
+        },
+      ],
+    });
+
+    expect(out.report.issues[0]!.attachments).toEqual({
+      images: ['not_img_issue'],
+      documents: ['not_doc_issue'],
+    });
+    expect(out.report.sections[0]!.attachments).toEqual({
+      images: ['not_img_section'],
+    });
+  });
 });
 
 describe('generatedReportToReportBody — inverse adapter', () => {
@@ -224,5 +254,40 @@ describe('generatedReportToReportBody — inverse adapter', () => {
     });
     expect(out.issues[0]!.severity).toBe('high');
     expect(out.issues[1]!.severity).toBe('medium');
+  });
+
+  it('preserves issue and section attachments when mapping UI edits to the wire body', () => {
+    const out = generatedReportToReportBody({
+      ...uiBase,
+      report: {
+        ...uiBase.report,
+        issues: [
+          {
+            title: 'A',
+            category: 'other',
+            severity: 'high',
+            status: 'open',
+            details: 'crack',
+            actionRequired: null,
+            attachments: { images: ['not_img_issue'], documents: ['not_doc_issue'] },
+          },
+        ],
+        sections: [
+          {
+            title: 'Photos',
+            content: 'Evidence.',
+            attachments: { images: ['not_img_section'] },
+          },
+        ],
+      },
+    });
+
+    expect(out.issues[0]!.attachments).toEqual({
+      images: ['not_img_issue'],
+      documents: ['not_doc_issue'],
+    });
+    expect(out.summarySections[0]!.attachments).toEqual({
+      images: ['not_img_section'],
+    });
   });
 });

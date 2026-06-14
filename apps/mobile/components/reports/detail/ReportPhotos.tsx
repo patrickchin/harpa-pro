@@ -20,6 +20,7 @@ import { Camera } from 'lucide-react-native';
 import { Card } from '@/components/primitives/Card';
 import { SectionHeader } from '@/components/primitives/SectionHeader';
 import { PhotoTile } from '@/components/notes/PhotoTile';
+import { PhotoPlacementChip } from '@/components/reports/detail/PhotoPlacementChip';
 import { attachmentFromSavedFile } from '@/lib/notes/attachments';
 import { colors } from '@/lib/design-tokens/colors';
 import type { ReportNoteRow } from '@/components/reports/detail/ReportNotesPane';
@@ -27,6 +28,17 @@ import type { ReportNoteRow } from '@/components/reports/detail/ReportNotesPane'
 export interface ReportPhotosProps {
   noteRows: ReadonlyArray<ReportNoteRow> | undefined;
   onOpenPhoto?: (input: { fileId: string; title?: string }) => void;
+  /**
+   * When provided, photo groups are filtered to those not present in
+   * the current report-body attachment ids
+   * (unplaced) and each group renders a tap-to-place chip above the grid.
+   * Already-placed groups appear inline under their issue/section in `ReportView`.
+   * Omit to render all groups (legacy behaviour).
+   */
+  onOpenPlacementSheet?: (noteId: string) => void;
+  /** Filter out groups already placed in the report body without implying editability. */
+  filterPlacedPhotoGroups?: boolean;
+  placedNoteIds?: ReadonlySet<string>;
 }
 
 interface PhotoGroup {
@@ -42,7 +54,13 @@ interface PhotoGroup {
 const COLUMNS = 3;
 const GAP = 6;
 
-export function ReportPhotos({ noteRows, onOpenPhoto }: ReportPhotosProps) {
+export function ReportPhotos({
+  noteRows,
+  onOpenPhoto,
+  onOpenPlacementSheet,
+  filterPlacedPhotoGroups = false,
+  placedNoteIds,
+}: ReportPhotosProps) {
   const groups = useMemo((): PhotoGroup[] => {
     const out: PhotoGroup[] = [];
     // Newest-first to match `ReportNotesPane`'s timeline order so the
@@ -56,6 +74,12 @@ export function ReportPhotos({ noteRows, onOpenPhoto }: ReportPhotosProps) {
         return tb - ta;
       });
     for (const n of sorted) {
+      if (
+        (filterPlacedPhotoGroups || onOpenPlacementSheet) &&
+        placedNoteIds?.has(n.id)
+      ) {
+        continue;
+      }
       const title = n.body?.trim() || 'Photo';
       // Canonical path: per-file rows from `note_files`.
       if (n.files && n.files.length > 0) {
@@ -89,7 +113,7 @@ export function ReportPhotos({ noteRows, onOpenPhoto }: ReportPhotosProps) {
       }
     }
     return out;
-  }, [noteRows]);
+  }, [noteRows, filterPlacedPhotoGroups, onOpenPlacementSheet, placedNoteIds]);
 
   const [containerWidth, setContainerWidth] = useState(0);
   const onLayout = useCallback(
@@ -108,7 +132,7 @@ export function ReportPhotos({ noteRows, onOpenPhoto }: ReportPhotosProps) {
   return (
     <Card variant="default" padding="lg" testID="report-photos">
       <SectionHeader
-        title="Photos"
+        title={onOpenPlacementSheet ? 'Unplaced photos' : 'Photos'}
         icon={<Camera size={16} color={colors.foreground} />}
       />
       <View
@@ -122,6 +146,15 @@ export function ReportPhotos({ noteRows, onOpenPhoto }: ReportPhotosProps) {
               {groupIdx > 0 && (
                 <View className="my-2 h-px bg-border" />
               )}
+              {onOpenPlacementSheet ? (
+                <View className="mb-2">
+                  <PhotoPlacementChip
+                    placedLabel={null}
+                    onPress={() => onOpenPlacementSheet(group.noteId)}
+                    testID={`btn-place-photo-${group.noteId}`}
+                  />
+                </View>
+              ) : null}
               <View className="flex-row flex-wrap" style={{ gap: GAP }}>
                 {group.photos.map((p, idx) => {
                   const isFirstOfBatch = idx === 0 && group.photos.length > 1;

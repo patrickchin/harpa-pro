@@ -18,6 +18,10 @@ import { NextStepsCard } from './NextStepsCard';
 import { SummarySectionCard } from './SummarySectionCard';
 import { SummaryLead } from './detail/SummaryLead';
 import type { ReportEditTarget } from './edit/types';
+import type {
+  PhotoPlacement,
+  SplitPlacements,
+} from '@/lib/reports/photo-placements';
 
 interface ReportViewProps {
   report: GeneratedSiteReport;
@@ -27,12 +31,35 @@ interface ReportViewProps {
    * When provided, each editable card surfaces a pencil button. Tapping
    * fires this callback with the target slice descriptor; the parent
    * mounts `<ReportEditModal>` and threads the result back through
-   * `onChangeReport`. Undefined in the generate flow (read-only).
+   * `onChangeReport`.
    */
   onEdit?: (target: ReportEditTarget) => void;
+  /** Keeps editable controls mounted but disabled while writes are locked. */
+  editActionsDisabled?: boolean;
+  /**
+   * Pre-split placement buckets from `splitPlacements`. When provided,
+   * placed photo groups render inline under their target issue or
+   * section card. Unplaced groups remain the caller's responsibility
+   * (typically `ReportPhotos`).
+   */
+  placements?: SplitPlacements;
+  onOpenPhoto?: (input: { fileId: string; title?: string }) => void;
+  onEditPlacement?: (noteId: string) => void;
+  placementActionsDisabled?: boolean;
+  onAddAttachmentToTarget?: (placement: PhotoPlacement) => void;
 }
 
-export function ReportView({ report, reportNumber, onEdit }: ReportViewProps) {
+export function ReportView({
+  report,
+  reportNumber,
+  onEdit,
+  editActionsDisabled = false,
+  placements,
+  onOpenPhoto,
+  onEditPlacement,
+  placementActionsDisabled = false,
+  onAddAttachmentToTarget,
+}: ReportViewProps) {
   const { sections } = report.report;
   const numStr = reportNumber ?? 'x';
 
@@ -43,11 +70,13 @@ export function ReportView({ report, reportNumber, onEdit }: ReportViewProps) {
       <WeatherStrip
         report={report}
         onEdit={onEdit ? () => onEdit({ kind: 'weather' }) : undefined}
+        editActionsDisabled={editActionsDisabled}
       />
 
       <SummaryLead
         summary={report.report.meta.summary}
         onEdit={onEdit ? () => onEdit({ kind: 'meta' }) : undefined}
+        editActionsDisabled={editActionsDisabled}
       />
 
       <IssuesCard
@@ -55,21 +84,34 @@ export function ReportView({ report, reportNumber, onEdit }: ReportViewProps) {
         onEditIssue={
           onEdit ? (index) => onEdit({ kind: 'issue', index }) : undefined
         }
+        placedByIssue={placements?.byIssue}
+        onOpenPhoto={onOpenPhoto}
+        onEditPlacement={onEditPlacement}
+        placementActionsDisabled={placementActionsDisabled}
+        onAddAttachmentsToIssue={
+          onAddAttachmentToTarget
+            ? (index) => onAddAttachmentToTarget({ kind: 'issue', index })
+            : undefined
+        }
+        editActionsDisabled={editActionsDisabled}
       />
 
       <WorkersCard
         workers={report.report.workers}
         onEdit={onEdit ? () => onEdit({ kind: 'workers' }) : undefined}
+        editActionsDisabled={editActionsDisabled}
       />
 
       <MaterialsCard
         materials={report.report.materials}
         onEdit={onEdit ? () => onEdit({ kind: 'materials' }) : undefined}
+        editActionsDisabled={editActionsDisabled}
       />
 
       <NextStepsCard
         steps={report.report.nextSteps}
         onEdit={onEdit ? () => onEdit({ kind: 'nextSteps' }) : undefined}
+        editActionsDisabled={editActionsDisabled}
       />
 
       {sections.length > 0 && (
@@ -86,6 +128,16 @@ export function ReportView({ report, reportNumber, onEdit }: ReportViewProps) {
               onEdit={
                 onEdit ? () => onEdit({ kind: 'section', index: i }) : undefined
               }
+              placedGroups={placements?.bySection.get(i)}
+              onOpenPhoto={onOpenPhoto}
+              onEditPlacement={onEditPlacement}
+              placementActionsDisabled={placementActionsDisabled}
+              onAddAttachments={
+                onAddAttachmentToTarget
+                  ? () => onAddAttachmentToTarget({ kind: 'section', index: i })
+                  : undefined
+              }
+              editActionsDisabled={editActionsDisabled}
             />
           ))}
         </View>

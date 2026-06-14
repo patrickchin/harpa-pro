@@ -85,6 +85,30 @@ const SCENARIOS: Array<{ name: string; notes: string }> = [
   },
 ];
 
+type LiveGenerationPayload = Parameters<typeof generateReport>[0]['notes'];
+
+function notesPayload(body: string): LiveGenerationPayload {
+  return {
+    currentBody: null,
+    notes: [
+      {
+        id: 'not_live1',
+        kind: 'text',
+        body,
+        fileId: null,
+        thumbnailFileId: null,
+        transcript: null,
+        title: null,
+        summary: null,
+        source: 'typed',
+        meta: {},
+        files: [],
+        createdAt: '2026-06-09T12:00:00.000Z',
+      },
+    ],
+  };
+}
+
 describeOrSkip('generateReport — live OpenAI', () => {
   beforeAll(() => {
     if (process.env.AI_LIVE !== '1') {
@@ -109,7 +133,7 @@ describeOrSkip('generateReport — live OpenAI', () => {
       // `openai`); reports are then routed to canonicals.vendor inside
       // `generateReport`. Stubbing `vendor:` here would mask the
       // mismatch that caused docs/bugs/2026-05-29-report-vendor-canonical-mismatch.md.
-      const result = await generateReport({ notes });
+      const result = await generateReport({ notes: notesPayload(notes) });
 
       // The service itself runs safeParse and throws AiProviderError on
       // miss — getting here means the body matched. Re-assert anyway so
@@ -152,7 +176,7 @@ describeOrSkip('generateReport — live OpenAI', () => {
     'honours userModel override (gpt-4.1-nano) when caller passes it',
     async () => {
       const result = await generateReport({
-        notes: SCENARIOS[2]!.notes,
+        notes: notesPayload(SCENARIOS[2]!.notes),
         userVendor: 'openai',
         userModel: 'gpt-4.1-nano',
       });
@@ -174,7 +198,7 @@ describeOrSkip('generateReport — live OpenAI', () => {
     'falls back to LIVE_DEFAULT_MODELS when userVendor/userModel are null',
     async () => {
       const result = await generateReport({
-        notes: SCENARIOS[2]!.notes,
+        notes: notesPayload(SCENARIOS[2]!.notes),
         userVendor: null,
         userModel: null,
       });

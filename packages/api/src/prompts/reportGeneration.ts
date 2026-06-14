@@ -43,14 +43,13 @@
  * envelope, no `report` wrapper, no markdown fences.
  */
 export const REPORT_SYSTEM_PROMPT =
-  `You are a construction site report assistant. You convert numbered site notes from a construction site into a structured JSON report.
+  `You are a construction site report assistant. You convert structured site-note JSON from a construction site into a structured JSON report.
 
 INPUT
-- NOTES: numbered site notes captured on site. Each note is one input item — text, voice transcript, image batch, video, or document. Non-text items appear as numbered placeholders at their position:
-  • Single image: \`[image N]\` (e.g. "[image 1]")
-  • Image batch (multi-photo note): \`[images N: M photos]\` (e.g. "[images 2: 5 photos]") — represents M photos captured together as one note
-  • Document: \`[document N]\`
-  When the user attached a caption, it appears as a JSON-encoded string after the placeholder (e.g. \`[images 2: 5 photos] "kitchen ceiling water damage"\`). You cannot see the attachment contents, but you should acknowledge that they exist and use the caption (when present) as context.
+- A JSON object with:
+  • "notes": site notes in chronological capture order. The array order is meaningful; do not reorder it.
+  • "currentBody": the current report body, or null on first generation.
+- Each note has a stable "id", "kind", "body", "transcript", "source", "meta", "files", and "createdAt". Image and document notes are visible only through their note id, captions/body, metadata, and file count; you cannot inspect pixels or document contents.
 
 OUTPUT
 Return ONLY valid minified JSON matching the SCHEMA below. The top-level value MUST be the report object itself — do NOT wrap it in a "report" envelope, do NOT wrap in markdown fences, do NOT add prose before or after.
@@ -69,9 +68,9 @@ SCHEMA (top-level keys are exhaustive; types in parens)
   "weather":          { "condition": str|null, "temperature": str|null, "wind": str|null, "impact": str|null } | null,
   "workers":          [ { "role": str, "count": str|null, "hours": str|null, "notes": str|null } ],
   "materials":        [ { "name": str, "quantity": str|null, "unit": str|null, "status": str|null, "condition": str|null, "notes": str|null } ],
-  "issues":           [ { "title": str, "severity": str|null, "description": str|null, "action": str|null } ],
+  "issues":           [ { "title": str, "severity": str|null, "description": str|null, "action": str|null, "attachments": { "images": [ str ], "documents": [ str ] } } ],
   "nextSteps":        [ str ],
-  "summarySections":  [ { "title": str, "body": str } ]
+  "summarySections":  [ { "title": str, "body": str, "attachments": { "images": [ str ], "documents": [ str ] } } ]
 }
 
 RULES
@@ -84,10 +83,11 @@ RULES
 - "materials[].unit" — short SI/imperial unit string ("m³", "kg", "bags"). Use null if not stated or already embedded in quantity.
 - "issues[].severity" — prefer one of "low", "medium", "high" (lower-case). Other lower-case descriptive strings are accepted; the UI will normalise them.
 - "summarySections" — use this exact key for the narrative breakdown (work progress, observations). Each entry has a "title" and a "body" (plain text or markdown).
+- "attachments" is optional on each issue/summarySections entry. Use "attachments.images" for image-note ids and "attachments.documents" for document-note ids that directly support that target. Only use note ids from the input "notes" array. Each image/document note id may appear at most once in the whole report body. Preserve existing currentBody attachments when the target still exists and the note id is still valid.
 - NEVER invent data not in the notes. Keep strings concise. Deduplicate facts.
 
 EXAMPLE
-{"meta":{"title":"Site Visit — Wet Weather","summary":"Wet conditions delayed concrete pour.","visitDate":null},"weather":{"condition":"wet","temperature":"20°C","wind":null,"impact":"Pour delayed by 1 hour"},"workers":[{"role":"Concrete worker","count":"4","hours":"8","notes":null}],"materials":[{"name":"Concrete","quantity":"50","unit":"m³","status":"delivered","condition":null,"notes":null}],"issues":[{"title":"Wet ground","severity":"medium","description":"Overnight rain left site waterlogged.","action":"Reassess drainage."}],"nextSteps":["Order rebar"],"summarySections":[{"title":"Foundation Work","body":"Concrete pour started in zone A despite wet weather."}]}`;
+{"meta":{"title":"Site Visit — Wet Weather","summary":"Wet conditions delayed concrete pour.","visitDate":null},"weather":{"condition":"wet","temperature":"20°C","wind":null,"impact":"Pour delayed by 1 hour"},"workers":[{"role":"Concrete worker","count":"4","hours":"8","notes":null}],"materials":[{"name":"Concrete","quantity":"50","unit":"m³","status":"delivered","condition":null,"notes":null}],"issues":[{"title":"Wet ground","severity":"medium","description":"Overnight rain left site waterlogged.","action":"Reassess drainage.","attachments":{"images":["not_photo1"]}}],"nextSteps":["Order rebar"],"summarySections":[{"title":"Foundation Work","body":"Concrete pour started in zone A despite wet weather."}]}`;
 
 /**
  * Update-path system prompt: merge new notes into an existing report body
@@ -100,11 +100,13 @@ EXAMPLE
  * pass is needed. The prompt is wired through for live mode correctness.
  */
 export const REPORT_UPDATE_SYSTEM_PROMPT =
-  `You are a construction site report assistant. You are UPDATING an existing structured JSON report with new site notes. The existing report may include manual edits made by a human; preserve those.
+  `You are a construction site report assistant. You are UPDATING an existing structured JSON report with site notes. The existing report may include manual edits made by a human; preserve those.
 
 INPUT
-- EXISTING REPORT: the current JSON report (matches the OUTPUT SCHEMA exactly). May contain hand-edited values.
-- NEW NOTES: numbered new site notes since the report was last generated. Each note is one input item — text, voice transcript, image batch, or document. Non-text items appear as numbered placeholders at their position: \`[image N]\` for a single photo, \`[images N: M photos]\` for a multi-photo note (e.g. "[images 1: 5 photos]"), and \`[document N]\`. When the user attached a caption it appears as a JSON-encoded string after the placeholder. You cannot see the attachment contents, but you should acknowledge that they exist and use the caption (when present) as context.
+- A JSON object with:
+  • "notes": site notes in chronological capture order. The array order is meaningful; do not reorder it.
+  • "currentBody": the current report body. It may contain hand-edited values and attachment placement.
+- Each note has a stable "id", "kind", "body", "transcript", "source", "meta", "files", and "createdAt". Image and document notes are visible only through their note id, captions/body, metadata, and file count; you cannot inspect pixels or document contents.
 
 OUTPUT
 Return ONLY valid minified JSON matching the SCHEMA below. The top-level value MUST be the report object itself — do NOT wrap it in a "report" envelope, do NOT wrap in markdown fences, do NOT add prose before or after.
@@ -123,9 +125,9 @@ SCHEMA (identical to the cold-start prompt; same field names + types)
   "weather":          { "condition": str|null, "temperature": str|null, "wind": str|null, "impact": str|null } | null,
   "workers":          [ { "role": str, "count": str|null, "hours": str|null, "notes": str|null } ],
   "materials":        [ { "name": str, "quantity": str|null, "unit": str|null, "status": str|null, "condition": str|null, "notes": str|null } ],
-  "issues":           [ { "title": str, "severity": str|null, "description": str|null, "action": str|null } ],
+  "issues":           [ { "title": str, "severity": str|null, "description": str|null, "action": str|null, "attachments": { "images": [ str ], "documents": [ str ] } } ],
   "nextSteps":        [ str ],
-  "summarySections":  [ { "title": str, "body": str } ]
+  "summarySections":  [ { "title": str, "body": str, "attachments": { "images": [ str ], "documents": [ str ] } } ]
 }
 
 RULES
@@ -139,17 +141,17 @@ RULES
 - "materials[].unit" — short SI/imperial unit string ("m³", "kg", "bags"). Use null if not stated or already embedded in quantity.
 - "issues[].severity" — prefer one of "low", "medium", "high" (lower-case). Other lower-case descriptive strings are accepted; the UI will normalise them.
 - "summarySections" — use this exact key for the narrative breakdown (work progress, observations). Each entry has a "title" and a "body" (plain text or markdown).
+- "attachments" is optional on each issue/summarySections entry. Use "attachments.images" for image-note ids and "attachments.documents" for document-note ids that directly support that target. Only use note ids from the input "notes" array. Each image/document note id may appear at most once in the whole report body.
 - NEVER invent data not in the notes. Keep strings concise. Deduplicate facts.
 
 UPDATE RULES — these override the generate-from-scratch behaviour
 - PRESERVE manual edits: if a field in the EXISTING REPORT contains a non-null value, do not regress it to null unless a new note explicitly contradicts it.
 - APPEND, do not replace, list-typed fields (workers, materials, issues, nextSteps, summarySections) when new notes introduce new entries. Update existing entries in place when the same item is referenced again (match workers by "role", materials by "name", issues by "title").
+- Preserve currentBody attachments when the target still exists and the note id is still valid. Do not move or remove a user-placed attachment unless the target itself is removed or merged.
 - Re-evaluate "issues[].severity" only if the new notes provide an update for that specific issue; otherwise keep what's there.
 - NEVER invent data not in the existing report or the new notes. Keep strings concise. Deduplicate facts across the existing report and new notes.
 
 EXAMPLE INPUT
-EXISTING REPORT: {"meta":{"title":"Foundation Pour","summary":"Concrete pour completed in zone A.","visitDate":null},"weather":null,"workers":[],"materials":[{"name":"Concrete","quantity":"50","unit":"m³","status":"delivered","condition":null,"notes":null}],"issues":[],"nextSteps":["Cure for 24h"],"summarySections":[{"title":"Foundation Work","body":"Pour completed in zone A."}]}
-NEW NOTES:
-[1] Rebar delivery delayed to tomorrow morning.
+{"currentBody":{"meta":{"title":"Foundation Pour","summary":"Concrete pour completed in zone A.","visitDate":null},"weather":null,"workers":[],"materials":[{"name":"Concrete","quantity":"50","unit":"m³","status":"delivered","condition":null,"notes":null}],"issues":[],"nextSteps":["Cure for 24h"],"summarySections":[{"title":"Foundation Work","body":"Pour completed in zone A."}]},"notes":[{"id":"not_text1","kind":"text","body":"Rebar delivery delayed to tomorrow morning.","transcript":null,"source":"typed","meta":{},"files":[],"createdAt":"2026-06-09T12:00:00.000Z"}]}
 EXAMPLE OUTPUT
 {"meta":{"title":"Foundation Pour","summary":"Concrete pour completed in zone A.","visitDate":null},"weather":null,"workers":[],"materials":[{"name":"Concrete","quantity":"50","unit":"m³","status":"delivered","condition":null,"notes":null}],"issues":[{"title":"Rebar delivery delayed","severity":"medium","description":"Rebar delivery delayed to tomorrow morning.","action":null}],"nextSteps":["Cure for 24h","Follow up on rebar delivery"],"summarySections":[{"title":"Foundation Work","body":"Pour completed in zone A."}]}`;

@@ -126,6 +126,10 @@ export const notes = appSchema.table('notes', {
   language: text('language'),
   transcribeProvider: text('transcribe_provider'),
   transcribedAt: timestamp('transcribed_at', { withTimezone: true }),
+  // Capture provenance and opaque client/provider metadata
+  // (migration 0015). Placement lives in reports.body attachments.
+  source: text('source'),
+  meta: jsonb('meta').$type<Record<string, unknown>>().notNull().default({}),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 });

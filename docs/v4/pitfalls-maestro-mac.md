@@ -188,7 +188,9 @@ container with a testID) rather than a random coordinate. Never use
 `tapOn: point`.
 
 All instances of `tapOn: point: "50%,15%"` have been removed from
-`.maestro/` as part of PR #42.
+`.maestro/` as part of PR #42. The root lint script now also runs
+`scripts/check-no-maestro-point-taps.sh`, which fails if any Maestro
+flow reintroduces a `point:` key.
 
 ---
 

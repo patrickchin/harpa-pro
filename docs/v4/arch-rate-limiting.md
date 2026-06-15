@@ -35,10 +35,11 @@ P1.9 shipped a per-process `MemoryRateLimiter` keyed by
    is not implemented.** Each route has an independent bucket; a
    client can simultaneously consume 30 transcribes + 60 summarises +
    30 generates per minute on the same user.
-5. **Per-machine counters are silently wrong in prod.** Production
-   runs `min_machines_running = 2` (see [arch-ops.md §Cold starts](arch-ops.md#cold-starts)),
-   and Fly burst-scales up to 6 machines. `MemoryRateLimiter` is
-   per-process, so the effective budget is `2..6×` the configured one.
+5. **Per-machine counters are silently wrong in prod.** Production can
+   run multiple Fly machines under burst scaling (see
+   [arch-ops.md §Cold starts](arch-ops.md#cold-starts)), and Fly
+   burst-scales up to 6 machines. `MemoryRateLimiter` is per-process,
+   so the effective budget is up to `6×` the configured one.
    This is the canonical [Pitfall 13](pitfalls.md#pitfall-13--di-stubs-become-the-spec-default-wiring-silently-broken)
    shape: integration tests are green with the memory limiter, the
    default-wired production stack quietly violates the spec.

@@ -24,16 +24,13 @@ primary_region = "fra"
   force_https = true
   # `suspend` keeps the machine's memory snapshot resident so the
   # next request resumes in <500ms (vs ~3-5s for a cold boot from
-  # `stop`). Combined with min_machines_running ≥ 2 below, this
-  # means we never serve a true cold-start to a real user.
+  # `stop`). For now prod has no warm floor, so it can sleep fully
+  # when idle and pay the resume latency on the next request.
   auto_stop_machines = "suspend"
   auto_start_machines = true
-  # Keep two machines hot at all times:
-  #   - one absorbs the first request after a deploy / failover
-  #   - the other gives us N+1 redundancy when one is restarting
-  # Cost: ~$3.80/mo extra (one shared-cpu-1x 512mb machine).
-  # See docs/v4/arch-ops.md §Scaling.
-  min_machines_running = 2
+  # Temporarily allow full auto-sleep to save cost while main does not
+  # need warm HA. Restore this to 2 when prod should stay hot again.
+  min_machines_running = 0
 
   # Per-machine concurrency triggers. When a machine's in-flight
   # request count exceeds `soft_limit`, Fly wakes / starts another

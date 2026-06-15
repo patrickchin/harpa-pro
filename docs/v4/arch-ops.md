@@ -4,7 +4,9 @@
 
 - **API**: Fly.io:
   - `harpa-pro-api` (prod) at `https://api.harpapro.com` — deployed on
-    push to `main` by `.github/workflows/api-prod.yml`.
+    push to `main` by `.github/workflows/api-prod.yml`. Temporarily
+    sleeps when idle (`min_machines_running = 0`) until production
+    traffic needs the warm HA floor again.
   - `harpa-pro-api-dev` (dev) at `https://harpa-pro-api-dev.fly.dev` —
     deployed on push to `dev` by `.github/workflows/api-dev.yml`.
     Sleeps when idle (`min_machines_running = 0`) to save cost.
@@ -435,26 +437,30 @@ starts with `chore(release): v`.
 
 ## Scaling
 
-The API is sized to **avoid cold starts on the first user request**
-and **absorb spikes** without operator intervention. Tuning lives
-in [`infra/fly/fly.toml`](../../infra/fly/fly.toml).
+The API is currently tuned to **sleep when idle** and **absorb spikes**
+without operator intervention. Tuning lives in
+[`infra/fly/fly.toml`](../../infra/fly/fly.toml). Restore the prod warm
+floor described below when main should stay hot again.
 
 ### Cold starts
 
 | Lever | Prod | Dev |
 |---|---|---|
 | `auto_stop_machines` | `"suspend"` | `"suspend"` |
-| `min_machines_running` | `2` | `0` |
-| Effect on first request | warm (~5ms) | cold-resume (~300-500ms) |
+| `min_machines_running` | `0` | `0` |
+| Effect on first request after idle | cold-resume (~300-500ms) | cold-resume (~300-500ms) |
 
 `"suspend"` keeps the machine's memory snapshot on disk so resume is
 sub-second; `"stop"` would re-boot the container (~3-5s) and re-run
 the readiness probe (+1-2s extra latency until first request).
 
-Prod runs **two** machines at all times — one absorbs traffic if the
-other is restarting or being replaced by a deploy. Single-machine
-prod was the v3 mistake: any restart = a real user saw a connection
-error. Cost delta: ~$3.80/mo for the extra `shared-cpu-1x` machine.
+Prod currently allows full idle sleep while main does not need warm HA.
+The trade-off is that the first request after idle pays resume latency,
+and there is no always-warm standby during deploys or restarts. When
+prod should stay hot again, restore `min_machines_running = 2`: one
+machine absorbs traffic if the other is restarting or being replaced by
+a deploy, avoiding the v3 single-machine restart failure mode. Cost
+delta: ~$3.80/mo for the extra `shared-cpu-1x` machine.
 
 ### Burst scaling
 
@@ -476,8 +482,8 @@ plus headroom for non-DB-bound work (auth, validation, idle).
 fly scale count 6 --max-per-region 6 -a harpa-pro-api
 ```
 
-Steady-state Fly will keep `min_machines_running` (2) hot and let
-the rest stop/suspend when traffic recedes.
+Steady-state Fly will keep `min_machines_running` hot (currently 0 for
+prod) and let the rest stop/suspend when traffic recedes.
 
 ### Multi-region (future)
 
@@ -488,8 +494,8 @@ sticky-session state. Not configured today; flag for P5+.
 
 ### Neon connection pooling
 
-Spike traffic × `min_machines_running` × `pg.Pool.max` can quickly
-exceed Neon's per-compute connection limit. Two safety nets:
+Spike traffic × active machine count × `pg.Pool.max` can quickly exceed
+Neon's per-compute connection limit. Two safety nets:
 
 1. **DATABASE_URL must point at Neon's pooler endpoint** — hostname
    contains `-pooler` (e.g. `ep-foo-bar-pooler.eu-central-1.aws.neon.tech`).

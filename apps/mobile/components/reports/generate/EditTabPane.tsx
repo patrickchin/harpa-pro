@@ -29,7 +29,11 @@ export function EditTabPane({ width }: EditTabPaneProps) {
   return (
     <View style={{ width }} className="flex-1" testID="edit-tab-pane">
       {generation.report ? (
-        <View className="flex-1" testID="edit-tab-form">
+        <View
+          className="flex-1"
+          testID="edit-tab-form"
+          pointerEvents={generation.isUpdating ? 'none' : 'auto'}
+        >
           <View className="flex-row items-center justify-between px-5 pt-2 pb-1">
             <Text className="text-sm font-medium text-muted-foreground">
               Edit report
@@ -38,13 +42,21 @@ export function EditTabPane({ width }: EditTabPaneProps) {
               className="text-xs text-muted-foreground"
               testID="edit-autosave-status"
             >
-              {draft.isAutoSaving ? 'Saving…' : draft.lastSavedAt ? 'Saved' : ''}
+              {generation.isUpdating
+                ? 'Generating…'
+                : draft.isAutoSaving
+                  ? 'Saving…'
+                  : draft.lastSavedAt
+                    ? 'Saved'
+                    : ''}
             </Text>
           </View>
-          <ReportEditForm
-            report={generation.report}
-            onChange={generation.setReport}
-          />
+          <View className={generation.isUpdating ? 'flex-1 opacity-60' : 'flex-1'}>
+            <ReportEditForm
+              report={generation.report}
+              onChange={generation.setReport}
+            />
+          </View>
         </View>
       ) : (
         <ScrollView
@@ -62,4 +74,3 @@ export function EditTabPane({ width }: EditTabPaneProps) {
     </View>
   );
 }
-

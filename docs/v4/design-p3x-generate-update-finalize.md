@@ -1,6 +1,8 @@
 # Design — Generate / Update / Finalize report flow
 
-Status: **proposal**
+Status: ✅ **Shipped.** The Edit-tab persistence, AI-update loop, and
+`finalize` / `unfinalize` routes described below are live in
+`packages/api/src/routes/reports.ts` and the mobile report screens.
 Phase: P3.x (post-P3.8; refines the Edit-tab persistence + AI update
 loop that P3.7 stubbed)
 Touches: `packages/api`, `packages/api-contract`, `packages/ai-fixtures`,

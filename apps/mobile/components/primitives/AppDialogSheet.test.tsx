@@ -18,6 +18,7 @@ describe('AppDialogSheet', () => {
         visible
         title="Delete Report"
         message="This report will be permanently deleted."
+        noticeTone="danger"
         noticeTitle="Permanent action"
         onClose={() => {}}
         actions={[
@@ -27,6 +28,26 @@ describe('AppDialogSheet', () => {
       />,
     );
     expect(tree.toJSON()).toMatchSnapshot();
+  });
+
+  it('defaults message notices to informational tone', () => {
+    const tree = render(
+      <AppDialogSheet
+        visible
+        title="Informational"
+        message="This is helper copy, not a warning."
+        onClose={() => {}}
+        actions={[]}
+      />,
+    );
+
+    expect(
+      tree.root.findAll(
+        (node) =>
+          typeof node.props.className === 'string' &&
+          node.props.className.includes('border-info-border bg-info-soft'),
+      ).length,
+    ).toBeGreaterThan(0);
   });
 
   it('falls back to slot-index keys when no testID provided', () => {

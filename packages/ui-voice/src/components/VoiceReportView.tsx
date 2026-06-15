@@ -18,6 +18,18 @@ const SEVERITY_BADGE: Record<'low' | 'medium' | 'high', string> = {
   high: 'bg-destructive/15 text-destructive',
 };
 
+/**
+ * Wire `issues[].severity` is `string | null` — LLM-provided. Map
+ * anything we don't have a badge for (null, "critical", "minor", …)
+ * to "medium" so the UI keeps rendering. The advisory in the report
+ * prompt asks for low|medium|high so this should rarely fire.
+ */
+function severityKey(s: string | null): 'low' | 'medium' | 'high' {
+  const v = (s ?? '').toLowerCase().trim();
+  if (v === 'low' || v === 'medium' || v === 'high') return v;
+  return 'medium';
+}
+
 function formatVisitDate(iso: string | null): string | null {
   if (!iso) return null;
   const d = new Date(iso);
@@ -58,7 +70,14 @@ export function VoiceReportView({
 }: VoiceReportViewProps) {
   const visitLabel = formatVisitDate(report.meta?.visitDate ?? null);
   const issueCount = report.issues.length;
-  const workerHeadcount = report.workers.reduce((sum, w) => sum + w.count, 0);
+  // workers[].count is `string | null` on the wire (free-text from
+  // the LLM, e.g. "4", "a few", null). Parse for the headcount tile
+  // — non-numeric values contribute 0 but the raw text still shows
+  // in the per-role row below.
+  const workerHeadcount = report.workers.reduce((sum, w) => {
+    const n = w.count == null ? 0 : Number.parseFloat(w.count);
+    return sum + (Number.isFinite(n) ? n : 0);
+  }, 0);
 
   return (
     <View
@@ -102,14 +121,14 @@ export function VoiceReportView({
                 {report.weather.condition}
               </Text>
             ) : null}
-            {report.weather.temperatureC != null ? (
+            {report.weather.temperature != null ? (
               <Text className="text-sm text-muted-foreground">
-                {report.weather.temperatureC}°C
+                {report.weather.temperature}
               </Text>
             ) : null}
-            {report.weather.windKph != null ? (
+            {report.weather.wind != null ? (
               <Text className="text-sm text-muted-foreground">
-                Wind {report.weather.windKph} km/h
+                Wind {report.weather.wind}
               </Text>
             ) : null}
           </View>
@@ -134,16 +153,16 @@ export function VoiceReportView({
                   <View
                     className={cn(
                       'rounded-md px-2 py-0.5',
-                      SEVERITY_BADGE[issue.severity],
+                      SEVERITY_BADGE[severityKey(issue.severity)],
                     )}
                   >
                     <Text
                       className={cn(
                         'text-[10px] font-semibold uppercase tracking-widest',
-                        SEVERITY_BADGE[issue.severity],
+                        SEVERITY_BADGE[severityKey(issue.severity)],
                       )}
                     >
-                      {SEVERITY_LABEL[issue.severity]}
+                      {SEVERITY_LABEL[severityKey(issue.severity)]}
                     </Text>
                   </View>
                   <Text className="flex-1 text-base font-semibold text-foreground">
@@ -189,7 +208,7 @@ export function VoiceReportView({
                   ) : null}
                 </View>
                 <Text className="text-sm tabular-nums text-foreground">
-                  {w.count}× · {w.hours != null ? `${w.hours}h` : '—'}
+                  {w.count ? `${w.count}× · ` : ''}{w.hours ? `${w.hours}h` : '—'}
                 </Text>
               </View>
             ))}

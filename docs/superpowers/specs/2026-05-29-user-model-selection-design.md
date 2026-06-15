@@ -1,5 +1,9 @@
 # User Model Selection — Design
 
+> **Status:** ✅ Shipped. Per-user AI provider/model selection is wired
+> end-to-end (mobile picker → `/settings/ai` → AI service). Kept as
+> the original design rationale.
+
 ## Problem
 
 The mobile app has a model picker in `apps/mobile/app/(app)/developer.tsx`

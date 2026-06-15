@@ -274,7 +274,7 @@ app-clear-only leaves orphaned users in Postgres.
 docker exec -i harpa-pro-pg psql -U postgres -d harpa -c `
   "TRUNCATE app.notes, app.files, app.reports, app.project_members, `
    app.projects, app.user_settings, app.waitlist_signups, `
-   auth.sessions, auth.verifications, auth.users `
+   public.\"session\", public.\"account\", public.\"verification\", public.\"user\" `
    RESTART IDENTITY CASCADE;"
 
 adb -s R3CT7092S2H shell pm clear com.harpa.pro.dev
@@ -443,8 +443,9 @@ Often follows a USB-cable wobble, a device reboot, or a reinstall.
 connection. They survive `pm clear` (which only wipes app sandbox
 data) but not transport-level events: cable disconnect, device
 reboot, `adb kill-server`, or losing USB power-saving on the host.
-Once the reverse is gone, `localhost:8081` (Metro) and
-`localhost:8787` (API) on the device point at nothing.
+Once the reverse is gone, `localhost:8081` (Metro),
+`localhost:8787` (API), and `localhost:9000` (MinIO / signed photo
+URLs) on the device point at nothing.
 
 **Workaround.** After any disconnect/reboot, re-establish both
 reverses before launching the app:
@@ -452,8 +453,76 @@ reverses before launching the app:
 ```powershell
 adb -s R3CT7092S2H reverse tcp:8081 tcp:8081   # Metro
 adb -s R3CT7092S2H reverse tcp:8787 tcp:8787   # API (docker-compose)
+adb -s R3CT7092S2H reverse tcp:9000 tcp:9000   # MinIO / local R2
 ```
 
 Verify with `adb -s R3CT7092S2H reverse --list`. A reset checklist
-between full journeys is: (1) `adb reverse` both ports, (2) DB
+between full journeys is: (1) `adb reverse` all three ports, (2) DB
 truncate, (3) `pm clear` (see Pitfall 15), (4) relaunch app.
+
+---
+
+## Pitfall 21 — Android DreamActivity can hide the app before Maestro asserts
+
+**Symptom.** A journey launches the app, then immediately fails on the
+first selector, such as `input-email`, even though the APK is installed
+and the flow was working in the prior run. Screenshots show only a
+blank device gradient or the Android screensaver, and
+`adb shell dumpsys activity` reports
+`com.android.dreams.basic/android.service.dreams.DreamActivity` as the
+current focus.
+
+**Cause.** A physical Android device can enter dream/screensaver mode
+while the long setup steps are running. Maestro's `launchApp` can
+return before the target app is visibly foregrounded, so the first
+assertion runs against DreamActivity instead of Harpa.
+
+**Workaround.** Keep the selected device awake and disable dream mode
+before launching Maestro:
+
+```powershell
+adb -s R3CT7092S2H shell svc power stayon true
+adb -s R3CT7092S2H shell settings put secure screensaver_enabled 0
+adb -s R3CT7092S2H shell settings put secure screensaver_activate_on_sleep 0
+adb -s R3CT7092S2H shell settings put secure screensaver_activate_on_dock 0
+adb -s R3CT7092S2H shell input keyevent KEYCODE_WAKEUP
+adb -s R3CT7092S2H shell input keyevent KEYCODE_MENU
+```
+
+`mo run` now does this automatically for Android targets selected via
+`--device`, `MAESTRO_DEVICE`, or `.mo.json`, then checks
+`dumpsys window`. If `Bouncer`, `isKeyguardShowing=true`, or
+DreamActivity is still present, the device has a secure lock that adb
+cannot bypass; unlock it manually before running the journey.
+
+---
+
+## Pitfall 22 — Android resolver sheet intercepts dev-client deep links
+
+**Symptom.** Module 01 launches the dev client and opens the Metro
+URL, then fails on `input-email`. The screenshot shows the Expo dev
+launcher dimmed behind Android's "Open with" sheet with both
+`Harpa Pro` and `Harpa Pro Dev` choices, and `dumpsys window` reports
+`android/com.android.internal.app.ResolverActivity` as the current
+focus.
+
+**Cause.** Both prod and dev app variants can be installed on the
+same physical device. The `exp+harpa-pro-v4://...` dev-client URL is
+therefore an implicit intent with more than one matching handler, so
+Android asks the user which app should receive it. Maestro keeps
+running and the auth assertion times out behind the resolver.
+
+**Workaround.** The shared
+[`dismiss-open-dialog.yaml`](../../.maestro/helpers/dismiss-open-dialog.yaml)
+helper now handles both platforms after `openLink`: when Android shows
+`Open with`, it selects `Harpa Pro Dev` and taps `Always`; when iOS
+shows the custom-scheme confirm sheet, it taps `Open`. It also repeats
+the Expo dev-menu `Continue` / `Close` dismissal after the system UI
+branches, because that sheet can render late after the resolver closes.
+
+Do not solve resolver or dev-menu timing by tapping screen coordinates:
+`tapOn: point` is not portable across Android devices, iOS simulators,
+safe areas, or system chrome. Use visible text/accessibility labels, or
+add an app testID. The root lint script runs
+`scripts/check-no-maestro-point-taps.sh` and fails if any `.maestro`
+flow reintroduces a `point:` key.

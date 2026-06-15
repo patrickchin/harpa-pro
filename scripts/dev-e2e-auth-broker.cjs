@@ -4,8 +4,19 @@
  *
  * Maestro writes evaluated env/input values into debug logs, so the shared
  * test-account password must stay in this CLI process instead of being passed
- * to a flow. The mobile app fetches /session over adb reverse, then stores the
- * returned token through the normal auth session code.
+ * to a flow. The mobile app does GET /session?email=<addr>, receives
+ * { password }, then calls authClient.signIn.email({ email, password })
+ * directly so the better-auth cookie lands in expo-secure-store.
+ *
+ * The broker never forwards the password to Maestro — only the mobile app
+ * process sees it at runtime.
+ *
+ * Required env (in .env.local or process.env):
+ *   TEST_ACCOUNT_EMAILS   — comma-separated allowlisted e-mail addresses
+ *   TEST_ACCOUNT_PASSWORD — shared password for all test accounts
+ *
+ * Optional:
+ *   E2E_AUTH_BROKER_PORT  — listen port (default 8790)
  */
 const fs = require('node:fs');
 const http = require('node:http');
@@ -15,20 +26,19 @@ const workspaceRoot = process.cwd();
 const localEnv = readDotEnv(path.join(workspaceRoot, '.env.local'));
 const env = { ...localEnv, ...process.env };
 
-const apiUrl = trimSlash(env.E2E_AUTH_API_URL || 'https://harpa-pro-api-dev.fly.dev');
 const password =
   env.TEST_ACCOUNT_PASSWORD || env.MAESTRO_DEV_TEST_ACCOUNT_PASSWORD || '';
-const allowedPhones = new Set(
-  (env.TEST_ACCOUNT_PHONES || env.MAESTRO_DEV_TEST_ACCOUNT_PHONES || '')
+const allowedEmails = new Set(
+  (env.TEST_ACCOUNT_EMAILS || env.MAESTRO_DEV_TEST_ACCOUNT_EMAILS || '')
     .split(',')
-    .map((phone) => phone.trim())
+    .map((e) => e.trim().toLowerCase())
     .filter(Boolean),
 );
 const port = Number(env.E2E_AUTH_BROKER_PORT || 8790);
 
-if (!password || allowedPhones.size === 0) {
+if (!password || allowedEmails.size === 0) {
   console.error(
-    'dev-e2e-auth-broker requires TEST_ACCOUNT_PHONES and TEST_ACCOUNT_PASSWORD in .env.local or the process env.',
+    'dev-e2e-auth-broker requires TEST_ACCOUNT_EMAILS and TEST_ACCOUNT_PASSWORD in .env.local or the process env.',
   );
   process.exit(1);
 }
@@ -48,29 +58,19 @@ const server = http.createServer(async (req, res) => {
       });
     }
 
-    const phone = normalizePhone(url.searchParams.get('phone') || '');
-    if (!allowedPhones.has(phone)) {
+    const email = (url.searchParams.get('email') || '').trim().toLowerCase();
+    if (!email || !allowedEmails.has(email)) {
       return sendJson(res, 403, {
-        error: { code: 'forbidden', message: 'Phone is not allowlisted for E2E.' },
+        error: { code: 'forbidden', message: 'Email is not allowlisted for E2E.' },
       });
     }
 
-    const started = Date.now();
-    console.log(`${new Date().toISOString()} -> session ${maskPhone(phone)}`);
-    const upstream = await fetch(`${apiUrl}/auth/password/verify`, {
-      method: 'POST',
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ phone, password }),
-    });
-    const text = await upstream.text();
-    console.log(
-      `${new Date().toISOString()} <- ${upstream.status} session ${maskPhone(phone)} ${Date.now() - started}ms`,
-    );
-    res.writeHead(upstream.status);
-    res.end(text);
+    console.log(`${new Date().toISOString()} -> session ${maskEmail(email)}`);
+    // Return the password so the mobile app can call authClient.signIn.email()
+    // itself — that's the only way better-auth populates the expo-secure-store
+    // cookie on the device.
+    sendJson(res, 200, { password });
+    console.log(`${new Date().toISOString()} <- 200 session ${maskEmail(email)}`);
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Auth broker failed.';
     sendJson(res, 502, {
@@ -109,13 +109,8 @@ function trimSlash(value) {
   return value.replace(/\/+$/, '');
 }
 
-function maskPhone(phone) {
-  if (phone.length <= 5) return '***';
-  return `${phone.slice(0, 3)}***${phone.slice(-2)}`;
-}
-
-function normalizePhone(value) {
-  const trimmed = value.trim();
-  if (/^\d+$/.test(trimmed)) return `+${trimmed}`;
-  return trimmed.replace(/^ /, '+');
+function maskEmail(email) {
+  const at = email.indexOf('@');
+  if (at <= 1) return '***@***';
+  return `${email.slice(0, 2)}***${email.slice(at)}`;
 }

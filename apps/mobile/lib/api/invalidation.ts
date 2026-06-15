@@ -20,11 +20,10 @@ export const INVALIDATIONS_NONE = Symbol('no invalidation');
 export type InvalidationRule = readonly string[] | typeof INVALIDATIONS_NONE;
 
 export const INVALIDATIONS: Record<string, InvalidationRule> = {
-  // auth
-  useStartOtpMutation: INVALIDATIONS_NONE,
-  useVerifyOtpMutation: ['me'],
-  useVerifyPasswordMutation: ['me'],
-  useLogoutMutation: INVALIDATIONS_NONE,
+  // auth — better-auth flows are not in this map. The email-OTP
+  // verify and the e2e password sign-in trigger an explicit
+  // `useAuthSession().refresh()` (which refetches `useSession()`)
+  // and `resetQueryCache()` on sign-out.
   useUpdateMeMutation: ['me'],
 
   // projects
@@ -44,6 +43,7 @@ export const INVALIDATIONS: Record<string, InvalidationRule> = {
   useFinalizeReportMutation: ['report', 'projectReports'],
   useUnfinalizeReportMutation: ['report', 'projectReports'],
   useReportPdfMutation: ['report'],
+  usePlaceReportAttachmentMutation: ['report'],
 
   // notes
   useCreateNoteMutation: ['reportNotes', 'report'],

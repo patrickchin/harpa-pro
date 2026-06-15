@@ -79,8 +79,8 @@ export function ProjectEdit({
       setDialog({
         kind: 'error',
         ...getActionErrorDialogCopy({
-          title: 'Delete Failed',
-          fallbackMessage: 'Failed to delete project.',
+          title: "Couldn't delete project",
+          fallbackMessage: "Couldn't delete project. Try again.",
           message: deleteError,
         }),
       });
@@ -124,7 +124,7 @@ export function ProjectEdit({
     return (
       <SafeAreaView className="flex-1 bg-background">
         <View className="px-5 py-4" onLayout={onHeaderLayout}>
-          <ScreenHeader title="Edit Project" onBack={onBack} backLabel="Overview" actions={actions} />
+          <ScreenHeader title="Edit project" onBack={onBack} backLabel="Overview" actions={actions} />
         </View>
         <EditProjectSkeleton />
       </SafeAreaView>
@@ -135,7 +135,7 @@ export function ProjectEdit({
     <SafeAreaView className="flex-1 bg-background">
       <KeyboardAvoidingView behavior="padding" className="flex-1">
         <View className="px-5 py-4" onLayout={onHeaderLayout}>
-          <ScreenHeader title="Edit Project" onBack={onBack} backLabel="Overview" actions={actions} />
+          <ScreenHeader title="Edit project" onBack={onBack} backLabel="Overview" actions={actions} />
         </View>
 
         <View className="flex-1">
@@ -148,7 +148,7 @@ export function ProjectEdit({
           >
             <View onLayout={onFirstFieldLayout}>
               <Input
-                label="Project Name"
+                label="Project name"
                 placeholder="e.g. Highland Tower Complex"
                 value={name}
                 onChangeText={(v) => {
@@ -160,7 +160,7 @@ export function ProjectEdit({
               />
             </View>
             <Input
-              label="Project Address"
+              label="Project address"
               placeholder="e.g. 2400 Highland Ave, Austin TX"
               value={address}
               onChangeText={setAddress}
@@ -169,7 +169,7 @@ export function ProjectEdit({
             />
             <View onLayout={onLastFieldLayout}>
               <Input
-                label="Client Name"
+                label="Client name"
                 placeholder="e.g. Acme Construction Co."
                 value={client}
                 onChangeText={setClient}
@@ -181,9 +181,8 @@ export function ProjectEdit({
               <InlineNotice tone="danger">{errorMessage}</InlineNotice>
             ) : null}
 
-            <InlineNotice tone="warning" title="Use delete carefully">
-              Deleting a project permanently removes the project and all its
-              reports. Save normal detail changes with the primary action below.
+            <InlineNotice tone="warning" title="Heads up">
+              Deleting a project permanently removes the project and all reports.
             </InlineNotice>
 
             <Button
@@ -197,7 +196,7 @@ export function ProjectEdit({
               <View className="flex-row items-center gap-2">
                 <Trash2 size={16} color={colors.danger.text} />
                 <Text className="text-base font-semibold text-danger-text">
-                  {isDeleting ? 'Deleting…' : 'Delete Project'}
+                  {isDeleting ? 'Deleting…' : 'Delete project'}
                 </Text>
               </View>
             </Button>
@@ -210,7 +209,7 @@ export function ProjectEdit({
               testID="btn-save-project"
               onLayout={onSubmitLayout}
             >
-              {isUpdating ? 'Saving…' : 'Save Changes'}
+              {isUpdating ? 'Saving…' : 'Save changes'}
             </Button>
           </ScrollView>
         </View>

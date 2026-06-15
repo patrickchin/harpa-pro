@@ -28,8 +28,8 @@ interface ReportActionsMenuProps {
   onUnfinalize: () => void;
   onDelete: () => void;
   /**
-   * Optional handler for "View Notes". When provided, the menu
-   * surfaces a "View Notes" row. Used by finalised reports — drafts
+   * Optional handler for "View notes". When provided, the menu
+   * surfaces a "View notes" row. Used by finalised reports — drafts
    * keep the inline Notes tab and omit this entry.
    */
   onViewNotes?: () => void;
@@ -130,7 +130,7 @@ export function ReportActionsMenu({
               <View className="flex-row items-center gap-3">
                 <FileDown size={16} color={colors.foreground} />
                 <Text className="text-base font-semibold text-foreground">
-                  {isSaving ? 'Saving PDF...' : 'Save PDF'}
+                  {isSaving ? 'Saving PDF…' : 'Save PDF'}
                 </Text>
               </View>
             </Button>
@@ -147,7 +147,7 @@ export function ReportActionsMenu({
               <View className="flex-row items-center gap-3">
                 <Share2 size={16} color={colors.foreground} />
                 <Text className="text-base font-semibold text-foreground">
-                  {isExporting ? 'Sharing PDF...' : 'Share PDF'}
+                  {isExporting ? 'Sharing PDF…' : 'Share PDF'}
                 </Text>
               </View>
             </Button>
@@ -164,7 +164,7 @@ export function ReportActionsMenu({
                 <View className="flex-row items-center gap-3">
                   <MessageSquare size={16} color={colors.foreground} />
                   <Text className="text-base font-semibold text-foreground">
-                    View Notes
+                    View notes
                   </Text>
                 </View>
               </Button>
@@ -183,7 +183,7 @@ export function ReportActionsMenu({
                 <View className="flex-row items-center gap-3">
                   <RotateCcw size={16} color={colors.foreground} />
                   <Text className="text-base font-semibold text-foreground">
-                    {isUnfinalizing ? 'Unfinalizing...' : 'Unfinalize Report'}
+                    {isUnfinalizing ? 'Unfinalizing…' : 'Unfinalize report'}
                   </Text>
                 </View>
               </Button>
@@ -202,7 +202,7 @@ export function ReportActionsMenu({
                 <View className="flex-row items-center gap-3">
                   <Trash2 size={16} color={colors.danger.text} />
                   <Text className="text-base font-semibold text-danger-text">
-                    {isDeleting ? 'Deleting...' : 'Delete Report'}
+                    {isDeleting ? 'Deleting…' : 'Delete report'}
                   </Text>
                 </View>
               </Button>

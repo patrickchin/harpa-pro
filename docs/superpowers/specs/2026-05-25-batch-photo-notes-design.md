@@ -1,5 +1,9 @@
 # Batch photo notes (one note → many files)
 
+> **Status:** ✅ Shipped. Live architecture lives in
+> [`docs/v4/arch-batch-photo-notes.md`](../../v4/arch-batch-photo-notes.md);
+> this spec is retained as the original design rationale.
+
 ## Problem
 
 A single tap of "Add from gallery" (`pickAndEnqueueGalleryImages`) or a

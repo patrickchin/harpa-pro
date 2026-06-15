@@ -30,7 +30,7 @@ from pathlib import Path
 import psutil
 from rich.console import Console
 
-from .. import paths, pidfile, spawn
+from .. import device, host, paths, pidfile, spawn
 from ..config import MoConfig
 
 # Exit codes (documented above).
@@ -39,6 +39,8 @@ EXIT_FLOW_NOT_FOUND = 1
 EXIT_ALREADY_RUNNING = 2
 EXIT_SPAWN_FAILED = 3
 EXIT_MAESTRO_NOT_FOUND = 4
+EXIT_DEVICE_WAKE_FAILED = 5
+_MAESTRO_ENV_PASSTHROUGH = ("DEV_OTP_TOKEN", "API_BASE_URL")
 
 
 @dataclass(frozen=True)
@@ -138,12 +140,29 @@ def run_run(cfg: MoConfig, opts: RunOptions) -> int:
             "could not locate the `maestro` CLI on PATH or in ~/.maestro/bin",
         )
 
-    # 4. Compute paths + ensure layout.
+    # 4. Wake the target Android device before launching Maestro. A
+    # sleeping / dreaming device can leave the app task hidden while
+    # `launchApp` appears to complete.
+    target_device = opts.device or cfg.device
+    if target_device:
+        wake = device.wake_device(
+            host_name=host.detect_host(),
+            device_id=target_device,
+        )
+        if not wake.ok:
+            return _emit_error(
+                console,
+                opts,
+                EXIT_DEVICE_WAKE_FAILED,
+                f"could not wake device {target_device}: {wake.detail}",
+            )
+
+    # 5. Compute paths + ensure layout.
     paths.ensure_layout(project_root)
     slug = _flow_slug(resolved)
     log_path = paths.runs_dir(project_root) / f"maestro-{slug}-{_timestamp_slug()}.log"
 
-    # 5. Build env (pass through caller's env; surface MAESTRO_APP_ID).
+    # 6. Build env (pass through caller's env; surface MAESTRO_APP_ID).
     env = dict(os.environ)
     if cfg.app_id:
         env.setdefault("MAESTRO_APP_ID", cfg.app_id)
@@ -152,19 +171,24 @@ def run_run(cfg: MoConfig, opts: RunOptions) -> int:
     elif cfg.device:
         env.setdefault("MAESTRO_DEVICE", cfg.device)
 
-    # 6. Spawn detached.
+    # 7. Spawn detached.
     #
     #    Maestro substitutes `${VAR}` placeholders in flow YAMLs only
     #    from values passed via `--env KEY=VALUE`, NOT from the spawned
     #    process environment. Every flow under `.maestro/` declares
     #    `appId: ${MAESTRO_APP_ID}`, so we must forward `cfg.app_id`
     #    through `--env` or Maestro tries to launch the literal app id
-    #    `undefined`. The env var on the child process is still set
-    #    above as a courtesy, but `--env` is what Maestro actually
-    #    reads.
+    #    `undefined`. The same applies to local helper scripts such as
+    #    `last-otp.js`, which read DEV_OTP_TOKEN from Maestro globals.
+    #    The env vars on the child process are still set above as a
+    #    courtesy, but `--env` is what Maestro actually reads.
     argv = [maestro_exe, "test"]
     if cfg.app_id:
         argv += ["--env", f"MAESTRO_APP_ID={cfg.app_id}"]
+    for key in _MAESTRO_ENV_PASSTHROUGH:
+        value = env.get(key)
+        if value:
+            argv += ["--env", f"{key}={value}"]
     argv += [str(resolved)]
     try:
         pid = spawn.spawn_detached(
@@ -181,7 +205,7 @@ def run_run(cfg: MoConfig, opts: RunOptions) -> int:
             f"failed to spawn maestro: {exc}",
         )
 
-    # 7. Capture create_time for recycle-safe PID tracking. The child
+    # 8. Capture create_time for recycle-safe PID tracking. The child
     #    has just spawned; psutil should see it. Tolerate a transient
     #    NoSuchProcess (child crashed instantly) but treat it as failure
     #    because we have no honest PID record to write.
@@ -195,7 +219,7 @@ def run_run(cfg: MoConfig, opts: RunOptions) -> int:
             f"child pid {pid} disappeared before we could record it",
         )
 
-    # 8. Write PID record + point latest-log alias.
+    # 9. Write PID record + point latest-log alias.
     record = pidfile.PidRecord(
         pid=pid,
         create_time=create_time,
@@ -207,7 +231,7 @@ def run_run(cfg: MoConfig, opts: RunOptions) -> int:
     pidfile.write(pid_path, record)
     paths.point_latest_log(project_root, log_path)
 
-    # 9. Tell the user.
+    # 10. Tell the user.
     rel_log = _relative_to_root(log_path, project_root)
     if opts.json_output:
         print(

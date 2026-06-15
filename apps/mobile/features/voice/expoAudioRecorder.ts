@@ -121,7 +121,33 @@ function createExpoAudioHandle(): RecorderHandle {
           // playAndRecord category so the mic actually works. Must
           // happen BEFORE constructing the recorder on iOS.
           await beginRecording();
-          recorder = new AudioModule.AudioRecorder({
+          // We pass the same options object to BOTH the constructor
+          // AND `prepareToRecordAsync()`:
+          //
+          //   • The constructor configures the native recorder's
+          //     top-level flags. CRITICAL: `isMeteringEnabled` is
+          //     captured at construction time on BOTH platforms —
+          //     iOS sets `AVAudioRecorder.meteringEnabled = YES`,
+          //     Android stashes it into `AudioRecorder.kt:41
+          //     `private var meteringEnabled = options.isMeteringEnabled`
+          //     (and the prepare path builds a fresh MediaRecorder
+          //     but never re-reads it). `prepareToRecordAsync()`
+          //     therefore can't turn metering on after the fact, and
+          //     without it `status.metering` is undefined and the
+          //     waveform bars stay flat (HARPA-PRO-D follow-up,
+          //     2026-06-06).
+          //
+          //   • `prepareToRecordAsync()` is the only path where the
+          //     `expo-audio` JS shim runs `createRecordingOptions()`,
+          //     flattening `{ android: { audioEncoder: 'aac' } }` to
+          //     a top-level `audioEncoder` the native module reads.
+          //     Without this the Android `MediaRecorder` falls through
+          //     to its `AudioEncoder.DEFAULT` (AMR-NB / 3GPP) and
+          //     Groq Whisper rejects the upload with HTTP 500
+          //     (HARPA-PRO-D, 2026-06-05). Matches the
+          //     `arch-voice-pipeline.md` §D5 contract ("audio/m4a
+          //     (AAC-LC), 16 kHz mono").
+          const recordingOptions = {
             extension: '.m4a',
             sampleRate: 16000,
             numberOfChannels: 1,
@@ -129,8 +155,9 @@ function createExpoAudioHandle(): RecorderHandle {
             android: { outputFormat: 'mpeg4', audioEncoder: 'aac' },
             ios: { extension: '.m4a', outputFormat: 'mpeg4aac', audioQuality: 0x40 },
             isMeteringEnabled: true,
-          });
-          await recorder.prepareToRecordAsync();
+          } as const;
+          recorder = new AudioModule.AudioRecorder(recordingOptions);
+          await recorder.prepareToRecordAsync(recordingOptions);
         }
         recorder.record();
         emit({ status: 'recording', error: undefined });

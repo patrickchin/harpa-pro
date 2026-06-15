@@ -18,7 +18,7 @@
 set -euo pipefail
 
 BASE=${BASE:-https://harpa-pro-api-dev.fly.dev}
-PHONE=${PHONE:-+15550199001}
+EMAIL=${EMAIL:-alice@e2e.harpapro.com}
 : "${PASSWORD:?PASSWORD env var is required}"
 
 SAMPLES="$(cd "$(dirname "$0")/../../apps/cli/scripts/samples" && pwd)"
@@ -40,6 +40,37 @@ req() {
   curl -fsS -X "$1" "$BASE$2" "${H[@]}" \
     ${TOKEN:+-H "authorization: Bearer $TOKEN"} \
     ${3:+-d "$3"}
+}
+
+# password_login EMAIL PASSWORD -> echoes the bearer token from the
+# `set-auth-token` response header on POST /api/auth/sign-in/email.
+# Retries on 429 to ride out better-auth's per-IP auth-route rate
+# limiter, which the preceding stress journey may have exhausted.
+password_login() {
+  local email="$1" pass="$2"
+  local attempt=1 status headers backoff
+  while (( attempt <= 6 )); do
+    status=$(curl -sS -D /tmp/journey-login-headers.$$ -o /dev/null \
+      -w '%{http_code}' -X POST \
+      "$BASE/api/auth/sign-in/email" "${H[@]}" \
+      -d "{\"email\":\"$email\",\"password\":\"$pass\"}")
+    if [[ "$status" == "200" ]]; then
+      headers=$(cat /tmp/journey-login-headers.$$)
+      rm -f /tmp/journey-login-headers.$$
+      printf '%s' "$headers" | awk 'tolower($1)=="set-auth-token:" {print $2}' | tr -d '\r\n'
+      return 0
+    fi
+    if [[ "$status" != "429" ]]; then
+      rm -f /tmp/journey-login-headers.$$
+      return 1
+    fi
+    backoff=$((attempt * 10))
+    echo "  ⏳ sign-in rate-limited (HTTP 429); waiting ${backoff}s before retry $((attempt + 1))/6" >&2
+    sleep "$backoff"
+    attempt=$((attempt + 1))
+  done
+  rm -f /tmp/journey-login-headers.$$
+  return 1
 }
 
 # Expect a specific HTTP status (does not fail the script on 4xx/5xx).
@@ -81,16 +112,22 @@ echo "→ readyz";             req GET /readyz  '' >/dev/null
 
 # ── 2. Authentication ─────────────────────────────────────────────────
 
-echo "→ POST /auth/password/verify"
-TOKEN=$(req POST /auth/password/verify \
-  "{\"phone\":\"$PHONE\",\"password\":\"$PASSWORD\"}" | j .token)
+echo "→ POST /api/auth/sign-in/email"
+set +e
+TOKEN=$(password_login "$EMAIL" "$PASSWORD")
+LOGIN_RC=$?
+set -e
+if [[ $LOGIN_RC -ne 0 || -z "$TOKEN" ]]; then
+  echo "  ✗ no set-auth-token header on sign-in (rc=$LOGIN_RC)" >&2
+  exit 1
+fi
 echo "  ✓ token acquired"
 
 # ── 3. User profile ──────────────────────────────────────────────────
 
 echo "→ GET /me"
 ME=$(req GET /me '')
-echo "  phone=$(echo "$ME" | j .user.phone)"
+echo "  email=$(echo "$ME" | j .user.email)"
 
 echo "→ PATCH /me (set display name)"
 req PATCH /me '{"displayName":"Core Journey User","companyName":"Journey Testing Ltd"}' >/dev/null
@@ -185,6 +222,7 @@ echo "→ POST /projects/$PID/reports/$RNUM/generate"
 USAGE_BEFORE_GEN=$(req GET /me/usage '')
 CALLS_BEFORE_GEN=$(echo "$USAGE_BEFORE_GEN" | jq -r '.totals.calls // 0')
 set +e
+# shellcheck disable=SC2034  # captured for future error-detail logging; intentionally unread today
 GEN_RESULT=$(req POST "/projects/$PID/reports/$RNUM/generate" '{}' 2>&1)
 GEN_STATUS=$?
 set -e
@@ -214,10 +252,10 @@ fi
 echo "→ PATCH report body (ensure finalization works)"
 req PATCH "/projects/$PID/reports/$RNUM" '{
   "body":{
-    "meta":{"title":"Section A Foundation","summary":"Foundation pour completed.","visitDate":"2026-05-20T09:00:00Z","tags":["foundation","concrete"]},
-    "weather":{"condition":"Clear","temperatureC":22,"windKph":5,"impact":null},
-    "workers":[{"role":"Labourer","count":2,"hours":8,"notes":null}],
-    "materials":[{"name":"Concrete","quantity":20,"unit":"m³","status":"delivered","condition":"good","notes":null}],
+    "meta":{"title":"Section A Foundation","summary":"Foundation pour completed.","visitDate":"2026-05-20T09:00:00Z"},
+    "weather":{"condition":"Clear","temperature":"22°C","wind":"5 kph","impact":null},
+    "workers":[{"role":"Labourer","count":"2","hours":"8","notes":null}],
+    "materials":[{"name":"Concrete","quantity":"20","unit":"m³","status":"delivered","condition":"good","notes":null}],
     "issues":[{"title":"Minor crack in form","severity":"low","description":"Small hairline crack","action":"Monitor"}],
     "nextSteps":["Inspect section B tomorrow"],
     "summarySections":[{"title":"Progress","body":"Section A foundation complete."}]
@@ -251,8 +289,8 @@ echo "→ DELETE report"
 req DELETE "/projects/$PID/reports/$RNUM" >/dev/null
 echo "→ DELETE project"
 req DELETE "/projects/$PID" >/dev/null
-echo "→ POST /auth/logout"
-req POST /auth/logout '' >/dev/null
+echo "→ POST /api/auth/sign-out"
+req POST /api/auth/sign-out '{}' >/dev/null
 
 echo ""
 echo "✓ JOURNEY-CORE complete"

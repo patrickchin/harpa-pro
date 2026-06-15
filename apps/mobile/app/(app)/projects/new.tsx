@@ -12,7 +12,7 @@ export default function NewProjectRoute() {
     <ProjectNew
       isPending={mutation.isPending}
       errorMessage={
-        mutation.error ? mutation.error.message || 'Failed to create project.' : null
+        mutation.error ? mutation.error.message || "Couldn't create project. Check your connection." : null
       }
       onBack={() => safeBack(router, '/(app)/projects')}
       onSubmit={(values) => {

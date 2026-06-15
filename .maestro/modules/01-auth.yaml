@@ -1,18 +1,19 @@
 appId: ${MAESTRO_APP_ID}
-name: "01 — Auth: sign-up alice + sign-in alice"
+name: "01 — Auth: sign-in alice via email-OTP"
 tags:
   - regression
   - auth
 ---
-# Module 01 — Auth
+# Module 01 — Auth (email-OTP)
 #
 # Covers:
-#   - fresh sign-up via deep link (harpa://sign-up/phone)
-#   - onboarding form (name + company)
-#   - sign-out
-#   - sign-in (sign-in screen, not sign-up)
+#   - cold launch with clean state
+#   - sign-in via email-OTP (better-auth emailOtp plugin)
+#   - sign-out + sign-in round trip
 #
-# Pre-condition: app just cold-launched with clearState + clearKeychain.
+# Pre-condition: app just cold-launched with clearState + clearKeychain;
+# alice@e2e.harpapro.com exists in the database (better-auth creates the user
+# automatically on first verify, so the first run also covers sign-up).
 # Post-condition: alice is signed in, projects list visible.
 
 # Cold launch with clean state
@@ -26,15 +27,21 @@ tags:
 # lands on the dev-launcher picker, not the JS app. Deep-link the
 # dev-launcher's own scheme with an explicit Metro URL. See
 # `core-end-to-end.yaml` for the full explanation.
-- openLink: "exp+harpa-pro-v4://expo-development-client/?url=http%3A%2F%2Flocalhost%3A8081"
-- extendedWaitUntil:
-    visible: "Continue"
-    timeout: 60000
+# On Android: openLink deep-links the dev-launcher to load the Metro bundle.
+# On iOS: the exp+harpa-pro-v4 scheme is unregistered, so this is a no-op;
+# the dev-launcher already remembers the Metro URL from the last run. The
+# encoded `disableOnboarding=1` query param suppresses Expo's native dev-menu
+# onboarding sheet before the app bundle loads.
+- openLink: "exp+harpa-pro-v4://expo-development-client/?url=http%3A%2F%2Flocalhost%3A8081%3FdisableOnboarding%3D1"
+# Wait for bundle load / animation. Older dev-clients may still show a
+# "This is the developer menu" sheet with a "Continue" button, so keep
+# timed fallback gates; never use unconditional extendedWaitUntil here or
+# iOS can stall for 60 s where the scheme is a no-op.
+- waitForAnimationToEnd:
+    timeout: 20000
 
-# The Android dev-launcher first-run sheet ("This is the developer menu")
-# overlays the sign-in screen and obscures `input-phone`. Wait for its
-# "Continue" button before dismissing it; close any dev menu it opens.
-# On iOS and on subsequent Android runs, these gates are no-ops.
+# Dismiss any legacy Android/iOS dev-launcher first-run sheet if an older
+# dev-client ignores `disableOnboarding=1`.
 - runFlow:
     when:
       visible: "Continue"
@@ -56,46 +63,42 @@ tags:
 - runFlow:
     file: ../helpers/dismiss-open-dialog.yaml
 
-# Land on sign-in first (auth gate) then deep-link to sign-up
+# The Expo dev-menu onboarding sheet can appear late while Metro finishes a
+# cold bundle on older dev-clients. Wait once more, but dismiss by visible
+# labels only; coordinate taps are device-dependent.
 - extendedWaitUntil:
-    visible:
-      id: "input-phone"
+    visible: "This is the developer menu"
     timeout: 30000
-
-# --- Sign-up alice (fresh account via seed) --------------------------------
-- openLink: harpa://sign-up/phone
+    optional: true
 - runFlow:
-    file: ../helpers/dismiss-open-dialog.yaml
+    when:
+      visible: "Continue"
+    commands:
+      - tapOn:
+          text: "Continue"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: "Close"
+    commands:
+      - tapOn:
+          text: "Close"
+      - waitForAnimationToEnd
+
+# Land on sign-in (email) screen.
 - extendedWaitUntil:
     visible:
-      id: "input-signup-phone"
-    timeout: 15000
-# Force the country picker to US so a typed national number is stored
-# as +1, not the device-locale default (often +44 on dev hardware).
+      id: "input-email"
+    timeout: 90000
+
+# --- Sign-in alice (better-auth creates the user on first verify) ---------
 - runFlow:
-    file: ../helpers/pick-country-us.yaml
+    file: ../helpers/sign-in.yaml
     env:
-      COUNTRY_BUTTON_ID: "btn-signup-country-picker"
-- tapOn:
-    id: "input-signup-phone"
-- inputText: "5550000001"
-- hideKeyboard
-- tapOn:
-    id: "btn-signup-send-code"
-- extendedWaitUntil:
-    visible:
-      id: "input-signup-otp"
-    timeout: 10000
-- tapOn:
-    id: "input-signup-otp"
-- inputText: "000000"
-- hideKeyboard
-- tapOn:
-    id: "btn-signup-verify"
+      EMAIL: "alice@e2e.harpapro.com"
 
-# --- Onboarding (always shown after fresh sign-up; skipped if the
-#     backend already has an onboarded user for this phone, e.g. a
-#     repeat run on a non-reset DB) ----------------------------------------
+# --- Onboarding (only on first sign-in for this email; skipped on a
+#     pre-onboarded account) -----------------------------------------------
 - runFlow:
     when:
       visible:
@@ -124,6 +127,6 @@ tags:
 - runFlow:
     file: ../helpers/sign-in.yaml
     env:
-      PHONE: "5550000001"
+      EMAIL: "alice@e2e.harpapro.com"
 - assertVisible:
     id: "btn-new-project"

@@ -28,6 +28,7 @@ import {
   useOptimisticCreateReport,
   useOptimisticDeleteNote,
   useOptimisticUpdateNote,
+  usePlaceAttachment,
 } from './optimistic';
 
 // Avoid pulling the real native modules transitively through
@@ -69,6 +70,7 @@ type NoteRow = {
   transcript: string | null;
   createdAt: string;
   updatedAt: string;
+  placement?: { kind: 'issue' | 'section'; index: number } | null;
 };
 type NotesPage = { items: NoteRow[]; nextCursor: string | null };
 
@@ -277,6 +279,180 @@ describe('useOptimisticUpdateNote', () => {
   });
 });
 
+// ─── reports ─────────────────────────────────────────────────
+
+type ReportRow = {
+  id: string;
+  number: number;
+  projectId: string;
+  status: 'draft' | 'finalized';
+  visitDate: string | null;
+  body: unknown;
+  notesSinceLastGeneration: number;
+  notesChangedAt: string | null;
+  needsRegeneration: boolean;
+  generatedAt: string | null;
+  finalizedAt: string | null;
+  pdfUrl: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+type ReportsPage = { items: ReportRow[]; nextCursor: string | null };
+
+const PROJECT = 'demo-tower';
+const REPORTS_KEY = ['projectReports', { project: PROJECT }, undefined] as const;
+
+function seedReport(id: string, number: number): ReportRow {
+  const t = new Date().toISOString();
+  return {
+    id,
+    number,
+    projectId: 'prj_demo00000001',
+    status: 'finalized',
+    visitDate: null,
+    body: null,
+    notesSinceLastGeneration: 0,
+    notesChangedAt: null,
+    needsRegeneration: false,
+    generatedAt: null,
+    finalizedAt: t,
+    pdfUrl: null,
+    createdAt: t,
+    updatedAt: t,
+  };
+}
+
+describe('usePlaceAttachment', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('patches the report body immediately and rolls back on error', async () => {
+    const qc = makeClient();
+    const photo: NoteRow = {
+      ...seedNote('not_photo00001', null as unknown as string),
+      kind: 'image',
+      body: null,
+      placement: null,
+    };
+    qc.setQueryData<NotesPage>(NOTES_KEY, {
+      items: [photo],
+      nextCursor: null,
+    });
+    const reportKey = ['report', { project: PROJECT, number: 7 }, undefined] as const;
+    const report = seedReport(REPORT, 7);
+    qc.setQueryData<ReportRow>(reportKey, {
+      ...report,
+      generatedAt: '2026-06-09T12:00:00.000Z',
+      body: {
+        meta: { title: null, summary: null, visitDate: null },
+        weather: null,
+        workers: [],
+        materials: [],
+        issues: [
+          {
+            title: 'Issue',
+            severity: 'medium',
+            description: null,
+            action: null,
+          },
+        ],
+        nextSteps: [],
+        summarySections: [],
+      },
+    });
+
+    const gate = defer<Response>();
+    vi.stubGlobal('fetch', vi.fn(async () => gate.promise));
+
+    const hookRef = renderHook(() => usePlaceAttachment(), qc);
+
+    let promise!: Promise<unknown>;
+    await act(async () => {
+      promise = hookRef.current.mutateAsync({
+        params: { project: PROJECT, number: 7 },
+        body: {
+          noteId: 'not_photo00001',
+          target: { kind: 'issue', index: 0 },
+          expectedBodyVersion: '2026-06-09T12:00:00.000Z',
+        },
+      });
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    const optimistic = qc.getQueryData<ReportRow>(reportKey)!.body as {
+      issues: Array<{ attachments?: { images?: string[] } }>;
+    };
+    expect(optimistic.issues[0]!.attachments?.images).toEqual([
+      'not_photo00001',
+    ]);
+    expect(qc.getQueryData<NotesPage>(NOTES_KEY)!.items[0]!.placement).toBeNull();
+
+    gate.resolve(jsonResponse(500, { error: { code: 'i', message: 'x' } }));
+    await act(async () => {
+      await expect(promise).rejects.toBeDefined();
+    });
+
+    const rolledBack = qc.getQueryData<ReportRow>(reportKey)!.body as {
+      issues: Array<{ attachments?: { images?: string[] } }>;
+    };
+    expect(rolledBack.issues[0]!.attachments).toBeUndefined();
+  });
+
+  it('moves an existing placement out of the previous target', async () => {
+    const qc = makeClient();
+    const reportKey = ['report', { project: PROJECT, number: 7 }, undefined] as const;
+    qc.setQueryData<ReportRow>(reportKey, {
+      ...seedReport(REPORT, 7),
+      generatedAt: '2026-06-09T12:00:00.000Z',
+      body: {
+        meta: { title: null, summary: null, visitDate: null },
+        weather: null,
+        workers: [],
+        materials: [],
+        issues: [
+          {
+            title: 'Issue',
+            severity: 'medium',
+            description: null,
+            action: null,
+            attachments: { images: ['not_photo00002'] },
+          },
+        ],
+        nextSteps: [],
+        summarySections: [{ title: 'Section', body: 'Body' }],
+      },
+    });
+
+    const gate = defer<Response>();
+    vi.stubGlobal('fetch', vi.fn(async () => gate.promise));
+
+    const hookRef = renderHook(() => usePlaceAttachment(), qc);
+
+    await act(async () => {
+      void hookRef.current.mutateAsync({
+        params: { project: PROJECT, number: 7 },
+        body: {
+          noteId: 'not_photo00002',
+          target: { kind: 'section', index: 0 },
+          expectedBodyVersion: '2026-06-09T12:00:00.000Z',
+        },
+      });
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    const optimistic = qc.getQueryData<ReportRow>(reportKey)!.body as {
+      issues: Array<{ attachments?: { images?: string[] } }>;
+      summarySections: Array<{ attachments?: { images?: string[] } }>;
+    };
+    expect(optimistic.issues[0]!.attachments).toBeUndefined();
+    expect(optimistic.summarySections[0]!.attachments?.images).toEqual([
+      'not_photo00002',
+    ]);
+    gate.resolve(jsonResponse(200, qc.getQueryData<ReportRow>(reportKey)!));
+  });
+});
+
 describe('useOptimisticDeleteNote', () => {
   afterEach(() => vi.unstubAllGlobals());
 
@@ -322,49 +498,6 @@ describe('useOptimisticDeleteNote', () => {
     ]);
   });
 });
-
-// ─── reports ─────────────────────────────────────────────────
-
-type ReportRow = {
-  id: string;
-  number: number;
-  projectId: string;
-  status: 'draft' | 'finalized';
-  visitDate: string | null;
-  body: unknown;
-  notesSinceLastGeneration: number;
-  notesChangedAt: string | null;
-  needsRegeneration: boolean;
-  generatedAt: string | null;
-  finalizedAt: string | null;
-  pdfUrl: string | null;
-  createdAt: string;
-  updatedAt: string;
-};
-type ReportsPage = { items: ReportRow[]; nextCursor: string | null };
-
-const PROJECT = 'demo-tower';
-const REPORTS_KEY = ['projectReports', { project: PROJECT }, undefined] as const;
-
-function seedReport(id: string, number: number): ReportRow {
-  const t = new Date().toISOString();
-  return {
-    id,
-    number,
-    projectId: 'prj_demo00000001',
-    status: 'finalized',
-    visitDate: null,
-    body: null,
-    notesSinceLastGeneration: 0,
-    notesChangedAt: null,
-    needsRegeneration: false,
-    generatedAt: null,
-    finalizedAt: t,
-    pdfUrl: null,
-    createdAt: t,
-    updatedAt: t,
-  };
-}
 
 describe('optimisticReportId / isOptimisticReportId', () => {
   it('mints an id with the rep_opt prefix', () => {

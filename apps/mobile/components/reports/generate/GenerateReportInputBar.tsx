@@ -36,6 +36,7 @@ export function GenerateReportInputBar() {
             historyBars={voice.historyBars}
             onSend={voice.stopAndSend}
             onCancel={voice.cancel}
+            onMaxDuration={voice.onMaxDuration}
           />
         </View>
       ) : (
@@ -59,7 +60,7 @@ export function GenerateReportInputBar() {
                 testID="input-note"
                 value={notes.input}
                 onChangeText={notes.setInput}
-                placeholder="Type a site note..."
+                placeholder="Type a site note…"
                 placeholderTextColor={colors.muted.foreground}
                 className="min-h-[44px] flex-1 text-base text-foreground"
                 multiline

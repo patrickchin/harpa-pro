@@ -1,30 +1,35 @@
 appId: ${MAESTRO_APP_ID}
 ---
-# sign-in.yaml — helper: sign in as any E2E user
+# sign-in.yaml — helper: sign in via email-OTP
 #
-# Required env var:
-#   PHONE — national-format digits only (e.g. "5550000001" for Alice,
-#            "5550000002" for Bob).
+# Required env vars:
+#   EMAIL — the email of an existing seeded user. Must end in
+#           @e2e.harpapro.com — the dev API rejects all other domains
+#           with 404 (e.g. alice@e2e.harpapro.com).
+#   DEV_OTP_TOKEN — shared secret (≥32 chars) for the dev OTP introspection
+#           route. Forwarded to last-otp.js as the x-dev-otp-token
+#           header. Source from your shell; reset-db.sh / journeys
+#           scripts set it before invoking maestro.
 #
-# Accepts OTP 000000 in fake-Twilio mode (TWILIO_LIVE=0). The user must
-# already exist in the database.
+# Required runtime services:
+#   - The fixture-mode API on http://127.0.0.1:8787, with `/api/dev/last-otp`
+#     mounted (NODE_ENV !== 'production' AND DEV_OTP_TOKEN set).
+#   - adb reverse tcp:8787 tcp:8787 for Android.
 #
-# Pre-condition: sign-in screen is visible (input-phone visible).
-# Post-condition: projects list is visible (btn-new-project visible).
+# Pre-condition: sign-in (email) screen is visible (`input-email`).
+# Post-condition: sign-in screen is no longer visible. Caller is responsible
+# for handling either onboarding (new account) or projects list (returning user).
 #
 # Usage:
 #   - runFlow:
 #       file: ../helpers/sign-in.yaml
 #       env:
-#         PHONE: "5550000001"
-- runFlow:
-    file: pick-country-us.yaml
-    env:
-      COUNTRY_BUTTON_ID: "btn-country-picker"
+#         EMAIL: "alice@e2e.harpapro.com"
+#         DEV_OTP_TOKEN: ${DEV_OTP_TOKEN}
 - tapOn:
-    id: "input-phone"
-- eraseText: 50
-- inputText: "${PHONE}"
+    id: "input-email"
+- eraseText: 80
+- inputText: "${EMAIL}"
 - hideKeyboard
 - tapOn:
     id: "btn-login-send-code"
@@ -32,14 +37,20 @@ appId: ${MAESTRO_APP_ID}
     visible:
       id: "input-otp"
     timeout: 10000
+# Pull the OTP that better-auth just persisted to public.verification.
+- runScript:
+    file: last-otp.js
+    env:
+      EMAIL: "${EMAIL}"
+      DEV_OTP_TOKEN: "${DEV_OTP_TOKEN}"
 - tapOn:
     id: "input-otp"
-- inputText: "000000"
-# Android numeric keyboards can ignore Maestro's `hideKeyboard`; the
-# verify button is visible above the IME, so tap it directly.
+- inputText: "${output.OTP}"
 - tapOn:
     id: "btn-verify-code"
+# Wait until the sign-in screen leaves — new users land on onboarding,
+# returning users land on the projects list. The caller handles both.
 - extendedWaitUntil:
-    visible:
-      id: "btn-new-project"
+    notVisible:
+      id: "input-email"
     timeout: 15000

@@ -15,6 +15,7 @@
 ## Tasks
 
 ### P5.1 TestFlight / Play internal
+- [x] Fastlane metadata files + EAS release lanes added.
 - [ ] App Store Connect + Play Console set up.
 - [ ] Production build uploaded to both.
 - [ ] 5 internal testers added; smoke test on each.

@@ -31,7 +31,7 @@ signing the Expo app.
 
 ## Lanes
 
-The Fastlane `mobile` platform will expose these lanes:
+Fastlane will expose these top-level lanes:
 
 | Lane | Purpose |
 | --- | --- |
@@ -40,10 +40,10 @@ The Fastlane `mobile` platform will expose these lanes:
 | `metadata_production` | Push checked-in iOS and Android metadata for production app-store targets. |
 | `build_preview` | Run `eas build --platform all --profile preview --non-interactive`. |
 | `submit_preview` | Run `eas submit --platform all --profile preview --latest --non-interactive`. |
-| `beta` | Push preview metadata, then build and submit the latest preview binary. |
+| `beta` | Push preview metadata, then run `eas build --platform all --profile preview --auto-submit-with-profile preview --non-interactive`. |
 | `build_production` | Run `eas build --platform all --profile production --non-interactive`. |
 | `submit_production` | Run `eas submit --platform all --profile production --latest --non-interactive`. |
-| `release` | Push production metadata, then build and submit the latest production binary path. |
+| `release` | Push production metadata, then run `eas build --platform all --profile production --auto-submit-with-profile production --non-interactive`. |
 
 The implementation may split metadata lanes by platform internally, but the
 public lane names above stay stable.
@@ -83,9 +83,10 @@ until they are shipped.
 `apps/mobile/eas.json` already has build profiles for `development`,
 `preview`, and `production`. The implementation will keep the existing
 `production` submit profile and add a `preview` submit profile so Fastlane can
-call named EAS submit profiles for both release tracks. Android preview
-submission targets the internal track. iOS submission uses the App Store
-Connect app configured for the selected bundle identifier.
+call named EAS submit profiles for both release tracks. Preview and production
+build profiles use store distribution; development builds remain internal.
+Android preview submission targets the internal track. iOS submission uses the
+App Store Connect app configured for the selected bundle identifier.
 
 ## Documentation
 
@@ -101,9 +102,9 @@ Docs under `docs/v4/` will describe the release division of responsibility:
 
 The setup is considered complete when:
 
-1. `bundle exec fastlane mobile doctor` succeeds from the repo root.
-2. The doctor output shows the exact preview and production EAS commands that
-   release lanes will run.
+1. `bundle exec fastlane doctor` succeeds from the repo root.
+2. The doctor output shows the exact preview and production EAS commands for
+   standalone build/submit lanes and the beta/release auto-submit lanes.
 3. No lane run during setup uploads metadata, starts an EAS build, or submits a
    binary.
 4. Docs record the new Fastlane + EAS release workflow.

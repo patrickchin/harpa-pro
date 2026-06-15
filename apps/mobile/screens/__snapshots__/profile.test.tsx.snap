@@ -121,9 +121,9 @@ exports[`Profile > matches snapshot at default props 1`] = `
             </rn-Text>
             <rn-Text
               className="text-body text-muted-foreground"
-              testID="profile-phone"
+              testID="profile-email"
             >
-              +15551234567
+              jordan@example.com
             </rn-Text>
             <rn-Text
               className="text-sm text-muted-foreground"
@@ -357,7 +357,7 @@ exports[`Profile > matches snapshot at default props 1`] = `
               className="gap-4 px-5 pt-4"
             >
               <rn-View
-                className="rounded-md border px-4 py-3 border-danger-border bg-danger-soft"
+                className="rounded-md border px-4 py-3 border-warning-border bg-warning-soft"
                 style={
                   {
                     "elevation": 2,
@@ -372,7 +372,7 @@ exports[`Profile > matches snapshot at default props 1`] = `
                 }
               >
                 <rn-Text
-                  className="text-sm text-danger-text"
+                  className="text-sm text-warning-text"
                   selectable={true}
                 >
                   This empties the in-memory query cache and refetches the screens you have open. Use this if reports or voice notes look stale or out of place.

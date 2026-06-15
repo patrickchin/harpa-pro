@@ -40,6 +40,7 @@ import {
   useOptimisticCreateNote,
   useOptimisticDeleteNote,
   useOptimisticUpdateNote,
+  usePlaceAttachment,
   isOptimisticNoteId,
 } from '@/lib/api/optimistic';
 import { invalidateAfterFileUpload } from '@/lib/api/invalidation';
@@ -51,6 +52,7 @@ import type { GeneratedSiteReport } from '@harpa/report-core';
 import { reports } from '@harpa/api-contract';
 import { SAMPLE_GENERATED_REPORT } from '@/lib/dev-fixtures/sample-report';
 import { reportBodyToGeneratedReport } from '@/lib/reports/report-body-adapter';
+import { applyPhotoPlacement } from '@/lib/reports/photo-placements';
 import { useAutoRegenerate } from '@/features/generate/useAutoRegenerate';
 import { safeBack } from '@/lib/nav/safe-back';
 import { UsageLimitDialog } from '@/components/account/UsageLimitDialog';
@@ -86,6 +88,20 @@ interface ApiNote {
   files?: ApiNoteFile[];
   durationSec?: number | null;
   createdAt: string;
+}
+
+type NoteActionRetry =
+  | { kind: 'delete'; noteId: string }
+  | { kind: 'update'; noteId: string; nextBody: string }
+  | { kind: 'create'; body: string };
+
+interface NoteActionError {
+  message: string;
+  retry: NoteActionRetry;
+}
+
+function formatCount(count: number, noun: string): string {
+  return `${count} ${noun}${count === 1 ? '' : 's'}`;
 }
 
 function noteToEntry(n: ApiNote): NoteEntry {
@@ -162,6 +178,7 @@ export default function GenerateReportRoute() {
         status?: 'draft' | 'finalized';
         notesSinceLastGeneration?: number;
         needsRegeneration?: boolean;
+        generatedAt?: string | null;
       }
     | undefined;
   const reportId = reportRow?.id ?? null;
@@ -194,12 +211,81 @@ export default function GenerateReportRoute() {
   const createNote = useOptimisticCreateNote();
   const deleteNote = useOptimisticDeleteNote();
   const updateNote = useOptimisticUpdateNote();
+  const [noteActionError, setNoteActionError] =
+    useState<NoteActionError | null>(null);
 
   const visibleNotes = useMemo<NoteEntry[]>(() => {
     const items = (notesQuery.data as { items?: ApiNote[] } | undefined)?.items;
     if (!items) return [];
     return items.map(noteToEntry).sort((a, b) => a.addedAt - b.addedAt);
   }, [notesQuery.data]);
+
+  const runDeleteNote = useCallback(
+    (noteIdValue: string) => {
+      if (!reportId) return;
+      setNoteActionError(null);
+      deleteNote.mutate(
+        { params: { note: noteIdValue }, reportId },
+        {
+          onSuccess: () => setNoteActionError(null),
+          onError: () => {
+            setNoteActionError({
+              message: "Couldn't delete note.",
+              retry: { kind: 'delete', noteId: noteIdValue },
+            });
+          },
+        },
+      );
+    },
+    [deleteNote, reportId],
+  );
+
+  const runUpdateNote = useCallback(
+    (noteIdValue: string, nextBody: string) => {
+      if (!reportId) return;
+      setNoteActionError(null);
+      updateNote.mutate(
+        {
+          params: { note: noteIdValue },
+          body: { body: nextBody },
+          reportId,
+        },
+        {
+          onSuccess: () => setNoteActionError(null),
+          onError: () => {
+            setNoteActionError({
+              message: "Couldn't update note.",
+              retry: { kind: 'update', noteId: noteIdValue, nextBody },
+            });
+          },
+        },
+      );
+    },
+    [updateNote, reportId],
+  );
+
+  const runCreateTextNote = useCallback(
+    (body: string) => {
+      if (!reportId) return;
+      setNoteActionError(null);
+      createNote.mutate(
+        {
+          params: { report: reportId },
+          body: { kind: 'text', body, source: 'typed' },
+        },
+        {
+          onSuccess: () => setNoteActionError(null),
+          onError: () => {
+            setNoteActionError({
+              message: "Couldn't save note.",
+              retry: { kind: 'create', body },
+            });
+          },
+        },
+      );
+    },
+    [reportId, createNote],
+  );
 
   const handleDeleteNote = useCallback(
     (note: NoteEntry, _sourceIndex: number) => {
@@ -210,16 +296,9 @@ export default function GenerateReportRoute() {
       // rollback would restore it. Filter those out by checking the
       // optimistic-id prefix.
       if (isOptimisticNoteId(noteIdValue)) return;
-      deleteNote.mutate(
-        { params: { note: noteIdValue }, reportId },
-        {
-          onError: () => {
-            setUploadError('Could not delete the note. Please try again.');
-          },
-        },
-      );
+      runDeleteNote(noteIdValue);
     },
-    [deleteNote, reportId],
+    [reportId, runDeleteNote],
   );
 
   const handleUpdateNote = useCallback(
@@ -227,38 +306,72 @@ export default function GenerateReportRoute() {
       const noteIdValue = note.id;
       if (!noteIdValue || !reportId) return;
       if (isOptimisticNoteId(noteIdValue)) return;
-      updateNote.mutate(
-        {
-          params: { note: noteIdValue },
-          body: { body: nextBody },
-          reportId,
-        },
-        {
-          onError: () => {
-            setUploadError('Could not update the note. Please try again.');
-          },
-        },
-      );
+      runUpdateNote(noteIdValue, nextBody);
     },
-    [updateNote, reportId],
+    [reportId, runUpdateNote],
   );
 
   const handleAddTextNote = useCallback(
     (body: string) => {
-      if (!reportId) return;
-      createNote.mutate(
-        {
-          params: { report: reportId },
-          body: { kind: 'text', body },
-        },
-        {
-          onError: () => {
-            setUploadError('Could not save the note. Please try again.');
-          },
-        },
-      );
+      runCreateTextNote(body);
     },
-    [reportId, createNote],
+    [runCreateTextNote],
+  );
+
+  const [localReport, setLocalReport] = useState<GeneratedSiteReport | null>(
+    null,
+  );
+  // `userDirty` flips true only when the user edits a field in the
+  // Edit tab — see `handleEditReport` below. Programmatic
+  // setLocalReport calls (e.g. seeding from a regenerate response or
+  // applying a photo placement) do NOT flip it true. The autosave hook
+  // listens to this flag instead of trying to JSON-diff the local
+  // report against the server body (the inverse adapter is lossy, so
+  // the diff was always non-zero and produced a stuck "Saving…" label
+  // + a PATCH-spam loop).
+  const [userDirty, setUserDirty] = useState(false);
+
+  const placePhotoGroupMutation = usePlaceAttachment();
+  const handlePlacePhotoGroup = useCallback(
+    async (input: {
+      noteId: string;
+      placement: { kind: 'issue' | 'section'; index: number } | null;
+    }) => {
+      if (!reportId || reportNumber === null || !slug) return;
+      const previousLocalReport = localReport;
+      if (previousLocalReport) {
+        setLocalReport(
+          applyPhotoPlacement(
+            previousLocalReport,
+            input.noteId,
+            input.placement,
+          ),
+        );
+      }
+      try {
+        await placePhotoGroupMutation.mutateAsync({
+          params: { project: slug, number: reportNumber },
+          body: {
+            noteId: input.noteId,
+            target: input.placement,
+            expectedBodyVersion: reportRow?.generatedAt ?? null,
+          },
+        });
+      } catch {
+        if (previousLocalReport) {
+          setLocalReport(previousLocalReport);
+        }
+        // optimistic helper already rolls back on error.
+      }
+    },
+    [
+      localReport,
+      placePhotoGroupMutation,
+      reportId,
+      reportNumber,
+      slug,
+      reportRow?.generatedAt,
+    ],
   );
 
   const serverBody: GeneratedSiteReport | null = reportRow?.body
@@ -269,17 +382,6 @@ export default function GenerateReportRoute() {
     ? SAMPLE_GENERATED_REPORT
     : null;
 
-  const [localReport, setLocalReport] = useState<GeneratedSiteReport | null>(
-    null,
-  );
-  // `userDirty` flips true only when the user edits a field in the
-  // Edit tab — see `handleEditReport` below. Programmatic
-  // setLocalReport calls (e.g. seeding from a regenerate response) do
-  // NOT flip it true. The autosave hook listens to this flag instead
-  // of trying to JSON-diff the local report against the server body
-  // (the inverse adapter is lossy, so the diff was always non-zero
-  // and produced a stuck "Saving…" label + a PATCH-spam loop).
-  const [userDirty, setUserDirty] = useState(false);
   const currentReport = localReport ?? serverBody ?? fallbackReport;
 
   const handleEditReport = useCallback((next: GeneratedSiteReport) => {
@@ -417,6 +519,20 @@ export default function GenerateReportRoute() {
     );
   }, [slug, reportNumber, currentReport, generateMutation, regenerateMutation]);
 
+  const handleRetryNoteActionError = useCallback(() => {
+    const retry = noteActionError?.retry;
+    if (!retry) return;
+    if (retry.kind === 'delete') {
+      runDeleteNote(retry.noteId);
+      return;
+    }
+    if (retry.kind === 'update') {
+      runUpdateNote(retry.noteId, retry.nextBody);
+      return;
+    }
+    runCreateTextNote(retry.body);
+  }, [noteActionError, runCreateTextNote, runDeleteNote, runUpdateNote]);
+
   // Auto-regenerate when the server signals notes have changed since the
   // last generation. The hook fires exactly once per dirty transition and
   // naturally queues a follow-up if a note arrives mid-flight.
@@ -520,7 +636,7 @@ export default function GenerateReportRoute() {
             ).length;
             if (failed > 0) {
               setUploadError(
-                `${failed} of ${outcome.total} photo${outcome.total === 1 ? '' : 's'} failed to upload. Open the report queue to retry.`,
+                `${failed} of ${formatCount(outcome.total, 'photo')} failed to upload. Open the report queue to retry.`,
               );
             }
             void invalidateAfterFileUpload(qc, { reportId });
@@ -530,8 +646,8 @@ export default function GenerateReportRoute() {
       } catch (err) {
         setUploadError(
           err instanceof Error
-            ? `Could not pick photos: ${err.message}`
-            : 'Could not pick photos.',
+            ? `Couldn't pick photos: ${err.message}`
+            : "Couldn't pick photos.",
         );
       }
     },
@@ -553,7 +669,7 @@ export default function GenerateReportRoute() {
         const failed = results.filter((r) => r.status === 'rejected').length;
         if (failed > 0) {
           setUploadError(
-            `${failed} of ${allUris.length} photo${allUris.length === 1 ? '' : 's'} failed to upload. Open the report queue to retry.`,
+            `${failed} of ${formatCount(allUris.length, 'photo')} failed to upload. Open the report queue to retry.`,
           );
         }
         // Invalidate the notes/report queries so uploaded image notes
@@ -572,7 +688,9 @@ export default function GenerateReportRoute() {
   // both bubble through `generationError`. Generation errors trump
   // autosave (the user just tried to regenerate; show them that).
   const combinedError =
-    generationError ?? autosave.error ?? uploadError;
+    generationError ?? autosave.error ?? noteActionError?.message ?? uploadError;
+  const canRetryNoteAction =
+    generationError === null && !autosave.error && noteActionError !== null;
 
   // Surface upload-pipeline errors via the existing dialog. Wired
   // through the screen's `fileUploadError` UI surface — we mirror it
@@ -598,6 +716,10 @@ export default function GenerateReportRoute() {
         onSetReport={handleEditReport}
         isGeneratingReport={isGenerating}
         generationError={combinedError}
+        generationErrorActionLabel={canRetryNoteAction ? 'Try again' : undefined}
+        onGenerationErrorAction={
+          canRetryNoteAction ? handleRetryNoteActionError : undefined
+        }
         lastGeneration={effectiveLastGeneration}
         onRegenerate={handleRegenerate}
         notesSinceLastGeneration={reportRow?.notesSinceLastGeneration ?? 0}
@@ -609,6 +731,9 @@ export default function GenerateReportRoute() {
         onFinalize={handleFinalize}
         onCameraCapture={handleCameraCapture}
         onPickAttachment={handlePickAttachment}
+        onPlacePhotoGroup={
+          canWrite && reportId !== null ? handlePlacePhotoGroup : undefined
+        }
         onDeleteDraft={
           reportRow?.status === 'finalized' ? undefined : handleDeleteDraft
         }

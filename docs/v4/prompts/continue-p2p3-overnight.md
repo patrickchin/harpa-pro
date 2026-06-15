@@ -1,5 +1,9 @@
 # Overnight continuation prompt — P2.5 → end of P3
 
+> **Status:** ✅ Historical. P2 has shipped and P3 is well underway;
+> this prompt is kept as a reference template for unattended overnight
+> coordinator runs. Update the "where we are" framing before reusing.
+
 Drop into a fresh agent session. Designed to run unattended; the
 top-level agent is a coordinator that delegates every concrete task to
 a subagent so its own context stays small.

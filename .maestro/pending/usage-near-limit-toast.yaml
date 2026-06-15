@@ -1,0 +1,97 @@
+appId: ${MAESTRO_APP_ID}
+name: Pending — Near-limit toast from X-Usage-Warning header
+tags:
+  - pending
+  - usage-limits
+# Phase 3 of per-account usage limits (docs/v4/arch-usage-limits.md
+# §11). When a successful response carries the `X-Usage-Warning:
+# near-limit; bucket=…; pct=…` header (Phase 2 server-side, emitted
+# at ≥80% used), the mobile client should surface a one-time toast.
+#
+# **Status: PLACEHOLDER — this flow does NOT pass today.** The mobile
+# consumer of `X-Usage-Warning` is intentionally deferred (see
+# docs/v4/arch-usage-limits.md §11.6). `parseUsageWarning()` already
+# exists in `apps/mobile/lib/api/usage-limit-error.ts`, but no UI
+# component is wired to it yet. Steps before this flow can run:
+#
+#   1. Add a toast component (or reuse the existing one if added).
+#   2. Tap into the typed `request()` client in
+#      `apps/mobile/lib/api/client.ts` to read response headers and
+#      dispatch a toast event when `parseUsageWarning(header)` is
+#      non-null.
+#   3. Add testIDs `usage-near-limit-toast` +
+#      `usage-near-limit-toast-bucket` to the toast.
+#   4. Seed Alice's usage to ≥80% (but < 100%) of the free-plan
+#      `report_generate` cap in `scripts/maestro/reset-db.sh`.
+#
+# Once those land, this flow should be enabled in the regression
+# journey alongside 14a/14b.
+---
+- launchApp:
+    clearState: true
+    clearKeychain: true
+    stopApp: true
+- waitForAnimationToEnd
+- openLink: harpa://sign-in/email
+- assertVisible:
+    id: "input-email"
+- runFlow:
+    file: helpers/sign-in.yaml
+    env:
+      EMAIL: "alice@e2e.harpapro.com"
+
+# Create project + report + note (same prelude as 14b).
+- tapOn:
+    id: "btn-new-project"
+- extendedWaitUntil:
+    visible:
+      id: "input-project-name"
+    timeout: 10000
+- tapOn:
+    id: "input-project-name"
+- inputText: "Near Limit Test"
+- hideKeyboard
+- tapOn:
+    id: "btn-create-project"
+- extendedWaitUntil:
+    visible:
+      id: "btn-open-reports"
+    timeout: 10000
+- tapOn:
+    id: "btn-open-reports"
+- tapOn:
+    id: "btn-new-report"
+- extendedWaitUntil:
+    visible:
+      id: "input-note"
+    timeout: 15000
+- tapOn:
+    id: "input-note"
+- inputText: "Near-limit toast regression note."
+- hideKeyboard
+- tapOn:
+    id: "btn-add-note"
+- extendedWaitUntil:
+    visible:
+      id: "note-row-.*"
+    timeout: 8000
+
+# Generate succeeds (we're at ≥80% but < 100%) and the response
+# carries `X-Usage-Warning: near-limit; bucket=report_generate;
+# pct=80`. The toast should appear briefly, mentioning the bucket
+# and the percentage.
+- tapOn:
+    id: "btn-generate-report"
+- extendedWaitUntil:
+    visible:
+      id: "usage-near-limit-toast"
+    timeout: 60000
+- assertVisible:
+    id: "usage-near-limit-toast-bucket"
+
+# Wait for the report to actually render so we know generate
+# completed (toast may auto-dismiss before this).
+- extendedWaitUntil:
+    visible:
+      id: "report-tab-pane"
+    timeout: 60000

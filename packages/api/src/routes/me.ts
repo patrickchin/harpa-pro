@@ -8,7 +8,7 @@ import { HTTPException } from 'hono/http-exception';
 import { auth as authSchemas, usageLimits as usageLimitsSchemas, cursor as cursorSchema } from '@harpa/api-contract';
 import type { AppEnv } from '../app.js';
 import { withAuth } from '../middleware/auth.js';
-import { fetchUser, updateUser, fetchUsage, listUsageEvents } from '../auth/service.js';
+import { fetchUser, updateUser, fetchUsage, listUsageEvents } from '../services/me.js';
 import { getEffectiveLimits } from '../services/usage-limits.js';
 
 const errorBody = z.object({

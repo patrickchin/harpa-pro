@@ -36,6 +36,14 @@ INDEX ON (note_id, position)
 Migration: `packages/api/migrations/0010_note_files.sql` (includes
 backfill of pre-existing image notes).
 
+> **Legacy columns are NULL on migrated image notes.** The migration
+> backfills `app.note_files` from existing `app.notes.file_id` rows
+> and then sets `notes.file_id` / `notes.thumbnail_file_id` to NULL
+> for `kind = 'image'`. Always read photo file ids from the joined
+> `note_files` rows (`files[]` on the API response). Consumers that
+> still read `notes.fileId` directly will see blank thumbnails or
+> drop the row from filters like `kind === 'photo' && n.fileId`.
+
 ## API
 
 | Endpoint | Purpose |
@@ -43,11 +51,29 @@ backfill of pre-existing image notes).
 | `POST /reports/{report}/notes` | Creates note; accepts `files[]` |
 | `POST /notes/{note}/files` | Appends files to existing note |
 | `GET /reports/{report}/notes` | Returns `files[]` on each note |
+| `GET /reports/{report}/debug` | Returns `files[]` per note (parity with /notes) |
 
 Request body for append:
 ```json
 { "files": [{ "fileId": "fil_…", "thumbnailFileId": "fil_…" }] }
 ```
+
+### LLM prompt placeholders
+
+`collectNotesForGeneration` emits a structured placeholder per note
+so the model knows when a single note carries a batch of photos:
+
+| Note shape | Placeholder |
+|------------|-------------|
+| Image note, 1 file | `[image N]` (optionally `[image N] "caption"`) |
+| Image note, M files (M>1) | `[images N: M photos]` (optionally `[images N: M photos] "caption"`) |
+| Document note | `[document N]` (optionally `[document N] "caption"`) |
+
+`N` is the 1-based ordinal across all notes in the report; the
+caption (when present) is the note `body` JSON-encoded so the model
+can treat it as opaque text. The system prompt
+(`packages/api/src/prompts/reportGeneration.ts`) describes this
+shape so the LLM treats `[images N: M photos]` as one batch.
 
 ## Mobile upload queue
 
@@ -162,3 +188,11 @@ Each `PhotoTile` manages its own visual state:
 
 Full spec:
 `docs/superpowers/specs/2026-05-25-batch-photo-notes-design.md`
+
+## See also
+
+- [`design-photo-placement.md`](design-photo-placement.md) — UI + API
+  for placing a photo group onto a specific issue or summary section
+  (`report.body.*.attachments.images[]`,
+  `PATCH /projects/{project}/reports/{number}/attachments`,
+  `MapPin` chip + `AppDialogSheet` picker).

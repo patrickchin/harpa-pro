@@ -52,17 +52,17 @@ describe('Onboarding', () => {
     expect(companyInput.props.editable).toBe(false);
   });
 
-  it('shows Saving... label and loading prop when isPending is true', () => {
+  it('shows Saving… label and loading prop when isPending is true', () => {
     const tree = render(<Onboarding {...defaultProps} isPending={true} />);
     const submitButton = tree.root.findByProps({ testID: 'btn-onboarding-submit' });
 
     expect(submitButton.props.loading).toBe(true);
     const json = JSON.stringify(tree.toJSON());
-    expect(json).toContain('Saving...');
+    expect(json).toContain('Saving…');
   });
 
   it('renders error InlineNotice when error prop is provided', () => {
-    const errorMessage = 'Please enter your full name.';
+    const errorMessage = 'Enter your full name.';
     const tree = render(<Onboarding {...defaultProps} error={errorMessage} />);
 
     const json = JSON.stringify(tree.toJSON());

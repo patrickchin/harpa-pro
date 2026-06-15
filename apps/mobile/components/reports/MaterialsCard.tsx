@@ -11,21 +11,45 @@ import { getItemMeta } from '@harpa/report-core';
 
 import { Card } from '@/components/primitives/Card';
 import { SectionHeader } from '@/components/primitives/SectionHeader';
+import { EditPencilButton } from '@/components/reports/edit/EditPencilButton';
 import { colors } from '@/lib/design-tokens/colors';
 
 interface MaterialsCardProps {
   materials: readonly GeneratedReportMaterial[];
+  onEdit?: () => void;
+  editActionsDisabled?: boolean;
 }
 
-export function MaterialsCard({ materials }: MaterialsCardProps) {
+function formatCount(count: number, noun: string): string {
+  return `${count} ${noun}${count === 1 ? '' : 's'}`;
+}
+
+export function MaterialsCard({
+  materials,
+  onEdit,
+  editActionsDisabled = false,
+}: MaterialsCardProps) {
   if (materials.length === 0) return null;
 
   return (
     <Card variant="default" padding="lg">
       <SectionHeader
         title="Materials"
-        subtitle={`${materials.length} material${materials.length === 1 ? '' : 's'} recorded.`}
+        subtitle={`${formatCount(materials.length, 'material')} recorded.`}
         icon={<Package size={16} color={colors.foreground} />}
+        trailing={
+          onEdit ? (
+            <EditPencilButton
+              onPress={() => {
+                if (editActionsDisabled) return;
+                onEdit();
+              }}
+              disabled={editActionsDisabled}
+              accessibilityLabel="Edit materials"
+              testID="btn-edit-materials"
+            />
+          ) : undefined
+        }
       />
 
       <View className="mt-4 gap-3">

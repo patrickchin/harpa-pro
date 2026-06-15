@@ -45,7 +45,7 @@ import { colors } from '@/lib/design-tokens/colors';
 export interface ProfileUser {
   displayName: string | null;
   companyName: string | null;
-  phone: string | null;
+  email: string | null;
 }
 
 export interface ProfileScreenProps {
@@ -112,7 +112,7 @@ export function Profile({
 
   const displayName = user?.displayName?.trim() || 'New User';
   const companyName = user?.companyName?.trim() || 'Add your company details';
-  const phoneNumber = user?.phone?.trim() || 'No phone number on file';
+  const email = user?.email?.trim() || 'No email on file';
 
   const sections: SectionLink[] = [
     {
@@ -154,8 +154,8 @@ export function Profile({
                 <Text testID="profile-display-name" className="text-title text-foreground">
                   {displayName}
                 </Text>
-                <Text testID="profile-phone" className="text-body text-muted-foreground">
-                  {phoneNumber}
+                <Text testID="profile-email" className="text-body text-muted-foreground">
+                  {email}
                 </Text>
                 <Text testID="profile-company-name" className="text-sm text-muted-foreground">
                   {companyName}
@@ -171,7 +171,7 @@ export function Profile({
             <Card className="flex-row items-center gap-3">
               <ActivityIndicator color={colors.foreground} />
               <Text className="text-base text-muted-foreground">
-                Loading your account details...
+                Loading your account details…
               </Text>
             </Card>
           </View>
@@ -263,6 +263,7 @@ export function Profile({
           visible={clearCacheDialogVisible}
           title="Clear cached data?"
           message="This empties the in-memory query cache and refetches the screens you have open. Use this if reports or voice notes look stale or out of place."
+          noticeTone="warning"
           onClose={() => setClearCacheDialogVisible(false)}
           actions={[
             {

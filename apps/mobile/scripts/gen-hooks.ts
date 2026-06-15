@@ -47,11 +47,11 @@ const ENDPOINTS: Endpoint[] = [
   // health
   { method: 'get', path: '/healthz', hook: 'useHealthQuery', query: true, hasPathParams: false, hasBody: false, queryKeyHead: 'health' },
 
-  // auth
-  { method: 'post', path: '/auth/otp/start',  hook: 'useStartOtpMutation',  query: false, hasPathParams: false, hasBody: true },
-  { method: 'post', path: '/auth/otp/verify', hook: 'useVerifyOtpMutation', query: false, hasPathParams: false, hasBody: true },
-  { method: 'post', path: '/auth/password/verify', hook: 'useVerifyPasswordMutation', query: false, hasPathParams: false, hasBody: true },
-  { method: 'post', path: '/auth/logout',     hook: 'useLogoutMutation',    query: false, hasPathParams: false, hasBody: false },
+  // auth — better-auth handles all `/api/auth/*` directly through
+  // `authClient`. There are no auto-generated hooks for it; the
+  // mobile screens call `authClient.emailOtp.sendVerificationOtp()`,
+  // `authClient.signIn.emailOtp()`, `authClient.signIn.email()`, and
+  // `authClient.signOut()` directly.
 
   { method: 'get',   path: '/me',       hook: 'useMeQuery',          query: true,  hasPathParams: false, hasBody: false, queryKeyHead: 'me' },
   { method: 'patch', path: '/me',       hook: 'useUpdateMeMutation', query: false, hasPathParams: false, hasBody: true },
@@ -82,6 +82,7 @@ const ENDPOINTS: Endpoint[] = [
   { method: 'post',   path: '/projects/{project}/reports/{number}/unfinalize',      hook: 'useUnfinalizeReportMutation',  query: false, hasPathParams: true,  hasBody: false },
   { method: 'post',   path: '/projects/{project}/reports/{number}/pdf',             hook: 'useReportPdfMutation',         query: false, hasPathParams: true,  hasBody: false },
   { method: 'get',    path: '/projects/{project}/reports/{number}/debug',           hook: 'useReportDebugQuery',          query: true,  hasPathParams: true,  hasBody: false, queryKeyHead: 'reportDebug' },
+  { method: 'patch',  path: '/projects/{project}/reports/{number}/attachments',     hook: 'usePlaceReportAttachmentMutation', query: false, hasPathParams: true,  hasBody: true },
 
   // short-URL resolvers (P3.0 Commit 3)
   { method: 'get',    path: '/p/{project}',                       hook: 'useResolveProjectSlugQuery',   query: true,  hasPathParams: true,  hasBody: false, queryKeyHead: 'resolveProjectSlug' },

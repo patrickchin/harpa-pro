@@ -1,19 +1,20 @@
 /**
  * Selects the active recorder backend.
  *
- * Honours `EXPO_PUBLIC_USE_FIXTURES === 'true'` — when set, returns the
- * canned `fixtureRecorderFactory` and never loads `expo-audio` (which
- * would require native modules that aren't present in unit-test / node
- * environments). This is the runtime end of the AGENTS.md fixture-mode
- * promise; see `docs/v4/arch-voice-pipeline.md §D6`.
+ * Honours fixture input mode: `EXPO_PUBLIC_USE_FIXTURES === 'true'` or
+ * `EXPO_PUBLIC_SCREENSHOT_MODE === 'true'`. In either case it returns the
+ * canned `fixtureRecorderFactory` and never loads `expo-audio` (which would
+ * require native modules that aren't present in unit-test / node
+ * environments). Screenshot mode intentionally keeps seeded API data live
+ * while using deterministic native-input replacements.
  *
  * Tests may pass a `factory` option to `useInlineRecorder`
  * directly, in which case this selector is bypassed.
  *
- * NOTE: reads `process.env.EXPO_PUBLIC_USE_FIXTURES` directly (rather
- * than the parsed `lib/env`) because `fixtureRecorder.test.ts` mutates
- * the env var at runtime to exercise both backends from a single test
- * file — `lib/env` is parsed once at module load.
+ * NOTE: reads the screenshot/fixture env flags directly (rather than the
+ * parsed `lib/env`) because `fixtureRecorder.test.ts` mutates them at
+ * runtime to exercise both backends from a single test file — `lib/env`
+ * is parsed once at module load.
  */
 import type { RecorderFactory } from './recorder-types';
 import { fixtureRecorderFactory } from './fixtureRecorder';
@@ -22,8 +23,10 @@ let cached: RecorderFactory | null = null;
 
 export function pickRecorderFactory(): RecorderFactory {
   if (cached) return cached;
-  const useFixtures = process.env.EXPO_PUBLIC_USE_FIXTURES === 'true';
-  if (useFixtures) {
+  const useFixtureInputs =
+    process.env.EXPO_PUBLIC_USE_FIXTURES === 'true' ||
+    process.env.EXPO_PUBLIC_SCREENSHOT_MODE === 'true';
+  if (useFixtureInputs) {
     cached = fixtureRecorderFactory;
     return cached;
   }

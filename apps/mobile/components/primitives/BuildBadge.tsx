@@ -21,7 +21,20 @@ import * as Clipboard from 'expo-clipboard';
 
 import { buildInfo, classifyApiTarget } from '@/lib/config/build-info';
 import { getApiBaseUrl } from '@/lib/api/base-url';
-import { useBackendVersion } from '@/lib/api/backend-version';
+import { useBackendVersion, useBackendReadyz, type BackendReadyz } from '@/lib/api/backend-version';
+
+function formatReadyz(r: BackendReadyz): string {
+  const parts: string[] = [];
+  parts.push(r.ok ? 'ok' : 'fail');
+  if (r.db) parts.push(`db=${r.db}`);
+  if (r.head !== undefined) parts.push(`head=${r.head ?? 'null'}`);
+  if (r.expected) parts.push(`expected=${r.expected}`);
+  if (r.actual !== undefined && r.actual !== r.head) {
+    parts.push(`actual=${r.actual ?? 'null'}`);
+  }
+  if (r.message) parts.push(r.message);
+  return parts.join(' ');
+}
 
 export function BuildBadge({ testID = 'build-badge' }: { testID?: string }) {
   const [apiUrl, setApiUrl] = useState<string | null>(null);
@@ -39,6 +52,8 @@ export function BuildBadge({ testID = 'build-badge' }: { testID?: string }) {
 
   const backend = useBackendVersion(apiUrl);
   const target = apiUrl ? classifyApiTarget(apiUrl) : null;
+  const isPr = target?.label === 'pr';
+  const readyz = useBackendReadyz(isPr ? apiUrl : null);
   const frontLabel = `v${buildInfo.version}+${buildInfo.gitCommit}`;
   const backLabel = backend
     ? `api v${backend.version}+${backend.gitCommit}`
@@ -82,6 +97,26 @@ export function BuildBadge({ testID = 'build-badge' }: { testID?: string }) {
             : `${frontLabel} · ${backLabel} · ${apiLabel}`}
         </Text>
       </Pressable>
+      {isPr && apiUrl ? (
+        <Text
+          className="text-[10px] text-muted-foreground"
+          numberOfLines={1}
+          testID={`${testID}-api-url`}
+        >
+          {apiUrl}
+        </Text>
+      ) : null}
+      {isPr && apiUrl ? (
+        <Text
+          className="text-[10px] text-muted-foreground"
+          numberOfLines={1}
+          testID={`${testID}-readyz`}
+        >
+          {readyz
+            ? `readyz ${readyz.status} ${formatReadyz(readyz)}`
+            : 'readyz …'}
+        </Text>
+      ) : null}
     </View>
   );
 }

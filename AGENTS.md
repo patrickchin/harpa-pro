@@ -1,8 +1,16 @@
 # Project: harpa-pro (v4)
 
+## Session startup
+
+At the start of every session, call `memory:read_graph` to load any stored
+project context. When the user shares preferences, decisions, or facts worth
+retaining across sessions, call `memory:create_entities` / `memory:add_observations`
+to persist them. Check memory before asking the user to re-explain something.
+
 v4 rewrite of the harpa-pro mobile app and API. The previous attempt
-(`../haru3-reports`, branch `mobile-v3`) is preserved under
-[`docs/legacy-v3/`](docs/legacy-v3/) for historical context only.
+lives at `../haru3-reports` (branch `mobile-v3`) and is the canonical
+port source for screens — read JSX + Tailwind classes from there when
+porting in P2/P3.
 
 **Read [`docs/v4/pitfalls.md`](docs/v4/pitfalls.md) before writing
 code.** It captures what went wrong in v3 and the rules we adopt to
@@ -20,12 +28,13 @@ when you fix a recurring bug.
   `packages/api-contract`.
 - **Database:** **Neon Postgres** (serverless, branched per PR).
   RLS-equivalent enforced in the API via per-request scoped Postgres
-  roles (`SET LOCAL` from JWT claims) — see
+  roles (`SET LOCAL` from session claims) — see
   [`docs/v4/arch-auth-and-rls.md`](docs/v4/arch-auth-and-rls.md).
-- **Auth:** Hand-rolled in the Hono API — JWTs via `jose`, phone
-  OTP via Twilio Verify, plus a test-account password bypass for
-  live-deploy testing. See [`docs/v4/arch-auth-and-rls.md`](docs/v4/arch-auth-and-rls.md).
-  We deliberately did not adopt `better-auth`.
+- **Auth:** [better-auth](https://www.better-auth.com) inside the
+  Hono API — email-OTP via Resend, `@better-auth/expo` on mobile,
+  `emailAndPassword` for a test-account smoke-test bypass.
+  SIWA + Google Sign-In are next. See
+  [`docs/v4/arch-auth-and-rls.md`](docs/v4/arch-auth-and-rls.md).
 - **File storage:** Cloudflare R2 (S3-compatible). API mints signed
   URLs; mobile uploads direct to R2.
 - **AI providers:** Kimi, OpenAI, Anthropic, Google, Z.AI, DeepSeek.

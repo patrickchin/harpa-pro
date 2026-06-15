@@ -13,6 +13,9 @@ export const isoDateTime = z
 
 export const phone = z.string().regex(/^\+\d{8,15}$/, 'E.164 phone required');
 
+/** Email address (post-better-auth canonical user identifier). */
+export const email = z.string().email().min(3).max(254).toLowerCase();
+
 export const reportNumber = z.coerce.number().int().positive();
 
 export const cursor = z.string().min(1).max(256);

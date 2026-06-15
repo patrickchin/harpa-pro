@@ -21,7 +21,7 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import pg from 'pg';
 import { createApp } from '../app.js';
-import { startPg, type PgFixture } from './setup-pg.js';
+import { startPg, seedAuthUsers, type PgFixture } from './setup-pg.js';
 import { resetPool, getPool } from '../db/client.js';
 import { signTestToken } from '../middleware/auth.js';
 import {
@@ -41,6 +41,7 @@ let aliceProject: string;
 let aliceReport: string;
 let aliceVoiceFile: string;
 let aliceImageFile: string;
+let aliceLargeVoiceFile: string;
 let bobProject: string;
 let bobReport: string;
 let bobVoiceFile: string;
@@ -63,20 +64,12 @@ beforeAll(async () => {
   bobReport = makeReportId();
   aliceVoiceFile = makeFileId();
   aliceImageFile = makeFileId();
+  aliceLargeVoiceFile = makeFileId();
   bobVoiceFile = makeFileId();
 
+  await seedAuthUsers(fx.url, [{ id: alice }, { id: bob }]);
   const admin = new pg.Client({ connectionString: fx.url });
   await admin.connect();
-  await admin.query(
-    `INSERT INTO auth.users(id, phone) VALUES ($1, $2), ($3, $4)`,
-    [alice, '+15551600001', bob, '+15551600002'],
-  );
-  await admin.query(
-    `INSERT INTO auth.sessions(id, user_id, expires_at) VALUES
-       ($1, $2, now() + interval '7 days'),
-       ($3, $4, now() + interval '7 days')`,
-    [aliceSid, alice, bobSid, bob],
-  );
   await admin.query(
     `INSERT INTO app.projects(id, name, owner_id) VALUES ($1, 'AliceProj', $2), ($3, 'BobProj', $4)`,
     [aliceProject, alice, bobProject, bob],
@@ -97,7 +90,8 @@ beforeAll(async () => {
     `INSERT INTO app.files(id, owner_id, kind, file_key, size_bytes, content_type) VALUES
        ($1, $2, 'voice', $3, 2048, 'audio/m4a'),
        ($4, $2, 'image', $5, 1024, 'image/jpeg'),
-       ($6, $7, 'voice', $8, 2048, 'audio/m4a')`,
+       ($6, $7, 'voice', $8, 2048, 'audio/m4a'),
+       ($9, $2, 'voice', $10, 26214401, 'audio/m4a')`,
     [
       aliceVoiceFile,
       alice,
@@ -107,6 +101,8 @@ beforeAll(async () => {
       bobVoiceFile,
       bob,
       `users/${bob}/voice/agg-bob.m4a`,
+      aliceLargeVoiceFile,
+      `users/${alice}/voice/agg-alice-large.m4a`,
     ],
   );
   await admin.end();
@@ -290,6 +286,17 @@ describe('POST /reports/:report/notes/voice — aggregator (Pitfall 13)', () => 
       body: JSON.stringify({ fileId: aliceImageFile }),
     });
     expect(res.status).toBe(400);
+  });
+
+  it('413 when file exceeds the 25 MB Groq Whisper free-tier ceiling (HARPA-PRO-D guard)', async () => {
+    const app = createApp();
+    const tok = await signTestToken(alice, aliceSid);
+    const res = await app.request(`/reports/${aliceReport}/notes/voice`, {
+      method: 'POST',
+      headers: headers(tok),
+      body: JSON.stringify({ fileId: aliceLargeVoiceFile }),
+    });
+    expect(res.status).toBe(413);
   });
 
   it('401 without auth', async () => {

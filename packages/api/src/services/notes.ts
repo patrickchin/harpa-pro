@@ -11,6 +11,7 @@ import { newId } from '../lib/ids.js';
 type Db = NodePgDatabase<typeof schema>;
 
 export type NoteKind = 'text' | 'voice' | 'image' | 'document';
+export type NoteSource = 'typed' | 'voice' | 'camera' | 'gallery' | 'upload';
 
 export interface NoteFileRow {
   id: string;
@@ -35,6 +36,8 @@ export interface NoteRow {
   language: string | null;
   transcribeProvider: string | null;
   transcribedAt: string | null;
+  source: NoteSource | null;
+  meta: Record<string, unknown>;
   createdAt: string;
   updatedAt: string;
   files: NoteFileRow[];
@@ -56,8 +59,14 @@ interface RawNote {
   language: string | null;
   transcribe_provider: string | null;
   transcribed_at: Date | null;
+  source: NoteSource | null;
+  meta: Record<string, unknown> | null;
   created_at: Date;
   updated_at: Date;
+}
+
+function asNoteMeta(value: Record<string, unknown> | null): Record<string, unknown> {
+  return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
 }
 
 function mapNote(r: RawNote, files: NoteFileRow[] = []): NoteRow {
@@ -76,6 +85,8 @@ function mapNote(r: RawNote, files: NoteFileRow[] = []): NoteRow {
     language: r.language,
     transcribeProvider: r.transcribe_provider,
     transcribedAt: r.transcribed_at ? new Date(r.transcribed_at).toISOString() : null,
+    source: r.source ?? null,
+    meta: asNoteMeta(r.meta),
     createdAt: new Date(r.created_at).toISOString(),
     updatedAt: new Date(r.updated_at).toISOString(),
     files,
@@ -94,7 +105,19 @@ function decodeCursor(cursor: string): { createdAt: string; id: string } {
 
 const NOTE_COLUMNS = sql`id, report_id, author_id, kind, body, file_id,
        thumbnail_file_id, transcript, title, summary, duration_sec, language,
-       transcribe_provider, transcribed_at, created_at, updated_at`;
+       transcribe_provider, transcribed_at, source, meta, created_at, updated_at`;
+
+export function notesCanonicalOrder(alias?: 'n') {
+  return alias === 'n'
+    ? sql`n.created_at ASC, n.id ASC`
+    : sql`created_at ASC, id ASC`;
+}
+
+function defaultSourceForKind(kind: NoteKind): NoteSource {
+  if (kind === 'text') return 'typed';
+  if (kind === 'voice') return 'voice';
+  return 'upload';
+}
 
 /**
  * Mark a draft report's notes as changed. Called from every note
@@ -131,7 +154,7 @@ export async function listNotes(
           FROM app.notes
           WHERE report_id = ${reportId}
             AND (created_at, id) > (${createdAt}::timestamptz, ${id})
-          ORDER BY created_at ASC, id ASC
+          ORDER BY ${notesCanonicalOrder()}
           LIMIT ${overFetch}
         `);
       })()
@@ -139,7 +162,7 @@ export async function listNotes(
         SELECT ${NOTE_COLUMNS}
         FROM app.notes
         WHERE report_id = ${reportId}
-        ORDER BY created_at ASC, id ASC
+        ORDER BY ${notesCanonicalOrder()}
         LIMIT ${overFetch}
       `);
   const rows = result.rows;
@@ -203,6 +226,8 @@ export async function createNote(
     title?: string | null;
     summary?: string | null;
     files?: Array<{ fileId: string; thumbnailFileId?: string | null }>;
+    source?: NoteSource;
+    meta?: Record<string, unknown>;
   },
 ): Promise<NoteRow | null> {
   // For image notes, the join table `app.note_files` is the canonical
@@ -221,10 +246,12 @@ export async function createNote(
   }
 
   const id = newId('not');
+  const source = input.source ?? defaultSourceForKind(input.kind);
+  const metaJson = JSON.stringify(input.meta ?? {});
   const r = await db.execute<RawNote>(sql`
     INSERT INTO app.notes(
       id, report_id, author_id, kind, body, file_id, thumbnail_file_id,
-      transcript, title, summary
+      transcript, title, summary, source, meta
     )
     VALUES (
       ${id},
@@ -236,7 +263,9 @@ export async function createNote(
       ${legacyThumbId},
       ${input.transcript ?? null},
       ${input.title ?? null},
-      ${input.summary ?? null}
+      ${input.summary ?? null},
+      ${source},
+      ${metaJson}::jsonb
     )
     RETURNING ${NOTE_COLUMNS}
   `);
@@ -305,10 +334,14 @@ export async function createVoiceNote(
   },
 ): Promise<NoteRow | null> {
   const id = newId('not');
+  const metaJson = JSON.stringify(
+    input.durationSec ? { durationSec: input.durationSec } : {},
+  );
   const r = await db.execute<RawNote>(sql`
     INSERT INTO app.notes(
       id, report_id, author_id, kind, body, file_id, transcript,
-      title, summary, duration_sec, language, transcribe_provider, transcribed_at
+      title, summary, duration_sec, language, transcribe_provider, transcribed_at,
+      source, meta
     )
     VALUES (
       ${id},
@@ -323,7 +356,9 @@ export async function createVoiceNote(
       ${input.durationSec ?? null},
       ${input.language ?? null},
       ${input.transcribeProvider},
-      now()
+      now(),
+      'voice',
+      ${metaJson}::jsonb
     )
     RETURNING ${NOTE_COLUMNS}
   `);

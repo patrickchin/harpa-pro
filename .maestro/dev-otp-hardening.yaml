@@ -1,0 +1,119 @@
+appId: ${MAESTRO_APP_ID}
+name: "Dev OTP hardening — Android sign-in"
+tags:
+  - regression
+  - auth
+  - dev-otp
+---
+# Focused PR128 smoke:
+#   - launch the Android dev client from a clean app state
+#   - request a real email OTP through the mobile UI
+#   - assert /api/dev/last-otp accepts only the shared token + exact
+#     allowlisted email and rejects the PR128 oracle probes with 404
+#   - finish sign-in with the retrieved OTP and land on projects
+#
+# Pre-condition: local API is running with DEV_OTP_TOKEN set and mounted,
+# Metro is serving the dev-client bundle, and adb reverse includes 8081 + 8787.
+
+- launchApp:
+    clearState: true
+    clearKeychain: true
+    stopApp: true
+- waitForAnimationToEnd
+
+# Android dev-client unstuck prelude; mirrors modules/01-auth.yaml.
+- openLink: "exp+harpa-pro-v4://expo-development-client/?url=http%3A%2F%2Flocalhost%3A8081%3FdisableOnboarding%3D1"
+- waitForAnimationToEnd:
+    timeout: 20000
+- runFlow:
+    when:
+      visible: "Continue"
+    commands:
+      - tapOn:
+          text: "Continue"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: "Close"
+    commands:
+      - tapOn:
+          text: "Close"
+      - waitForAnimationToEnd
+- runFlow:
+    file: helpers/dismiss-open-dialog.yaml
+
+# The Expo dev-menu onboarding sheet can appear late while Metro finishes a
+# cold bundle on older dev-clients. Wait once more, but dismiss by visible
+# labels only; coordinate taps are device-dependent.
+- extendedWaitUntil:
+    visible: "This is the developer menu"
+    timeout: 30000
+    optional: true
+- runFlow:
+    when:
+      visible: "Continue"
+    commands:
+      - tapOn:
+          text: "Continue"
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: "Close"
+    commands:
+      - tapOn:
+          text: "Close"
+      - waitForAnimationToEnd
+
+- extendedWaitUntil:
+    visible:
+      id: "input-email"
+    timeout: 90000
+
+- tapOn:
+    id: "input-email"
+- eraseText: 80
+- inputText: "alice@e2e.harpapro.com"
+- hideKeyboard
+- tapOn:
+    id: "btn-login-send-code"
+- extendedWaitUntil:
+    visible:
+      id: "input-otp"
+    timeout: 10000
+
+- runScript:
+    file: helpers/assert-dev-otp-hardening.js
+    env:
+      EMAIL: "alice@e2e.harpapro.com"
+      DEV_OTP_TOKEN: "${DEV_OTP_TOKEN}"
+
+- tapOn:
+    id: "input-otp"
+- inputText: "${output.OTP}"
+- tapOn:
+    id: "btn-verify-code"
+- extendedWaitUntil:
+    notVisible:
+      id: "input-email"
+    timeout: 15000
+
+- runFlow:
+    when:
+      visible:
+        id: "screen-onboarding"
+    commands:
+      - tapOn:
+          id: "input-onboarding-name"
+      - inputText: "Alice E2E"
+      - tapOn:
+          id: "input-onboarding-company"
+      - inputText: "E2E Corp"
+      - hideKeyboard
+      - tapOn:
+          id: "btn-onboarding-submit"
+
+- extendedWaitUntil:
+    visible:
+      id: "btn-new-project"
+    timeout: 15000
+- runFlow: helpers/sign-out.yaml

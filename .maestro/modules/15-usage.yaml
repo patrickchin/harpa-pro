@@ -11,7 +11,7 @@ tags:
 #   - usage screen renders (`screen-usage`)
 #   - one of {usage-loading → usage-empty / usage-by-model /
 #     usage-recent-events} resolves within a reasonable timeout
-#   - per-account limits card renders (Phase 3 of usage-limits)
+#   - per-account limits card renders with the default free-plan buckets
 #
 # We assert the empty-state path because the regression journey never
 # generates a paid report — alice never crossed any usage threshold.
@@ -62,19 +62,23 @@ tags:
           id: "usage-recent-events"
 
 # --- UsageLimitsCard mounts when /me/limits resolves -----------------------
-# This card is rendered for every signed-in user (plan defaults to
-# `free`). If the API is reachable, the card is visible; otherwise
-# the screen still renders the rest of the surfaces above so we keep
-# this assertion soft via runFlow.
-- runFlow:
-    when:
-      visible:
-        id: "usage-limits-card"
-    commands:
-      - assertVisible:
-          id: "usage-limits-plan"
-      - assertVisible:
-          id: "usage-limit-report_generate"
+# This card is rendered for every signed-in user. The default free-plan
+# buckets are stable enough to assert directly, replacing the old
+# standalone P3.14a flow.
+- extendedWaitUntil:
+    visible:
+      id: "usage-limits-card"
+    timeout: 10000
+- assertVisible:
+    id: "usage-limits-plan"
+- assertVisible:
+    id: "usage-limit-report_generate"
+- assertVisible:
+    id: "usage-limit-bar-report_generate"
+- assertVisible:
+    id: "usage-limit-voice_transcribe"
+- assertVisible:
+    id: "usage-limit-voice_summarize"
 
 # --- Back to profile -------------------------------------------------------
 - tapOn:

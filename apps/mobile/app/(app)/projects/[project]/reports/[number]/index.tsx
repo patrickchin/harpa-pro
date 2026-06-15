@@ -10,9 +10,9 @@
  * fall through to the empty/error state if the API hasn't finished
  * the body → `GeneratedSiteReport` translation yet.
  *
- * Delete + Unfinalize mutations and source-note fetching aren't ported
- * yet (TODO(P4) markers). They surface as no-op confirm flows so the
- * dialog wiring is exercised end-to-end in tests + dev mirrors.
+ * Delete + Unfinalize mutations are wired through the saved-report
+ * confirm dialogs. Failures bubble back to the screen so the user gets
+ * a themed error dialog instead of a silent catch.
  */
 import { useCallback, useMemo, useState } from 'react';
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
@@ -34,8 +34,10 @@ import {
   reportInitialDataUpdatedAt,
 } from '@/lib/api/initial-data';
 import type { ReportNoteRow } from '@/components/reports/detail/ReportNotesPane';
+import { toReportNoteRows } from '@/lib/api/to-report-note-row';
 import { useRefresh } from '@/lib/util/use-refresh';
 import { useReportPdfActions } from '@/lib/reports/use-report-pdf-actions';
+import { usePlaceAttachment } from '@/lib/api/optimistic';
 import { env } from '@/lib/config/env';
 import { safeBack } from '@/lib/nav/safe-back';
 import { dismissOrReplaceTo } from '@/lib/nav/dismiss-or-replace';
@@ -93,6 +95,7 @@ export default function SavedReportRoute() {
         status?: 'draft' | 'finalized';
         body?: reportSchemas.ReportBody | null;
         visitDate?: string | null;
+        generatedAt?: string | null;
       }
     | undefined;
   const reportStatus = reportRow?.status ?? null;
@@ -162,49 +165,7 @@ export default function SavedReportRoute() {
           }>;
         }
       | undefined)?.items;
-    if (!items) return [];
-    const rows: ReportNoteRow[] = [];
-    for (const n of items) {
-      const authorName = n.authorId ? memberNames.get(n.authorId) ?? null : null;
-      // Image notes are canonical-via-`note_files`: emit one row per
-      // joined file, all sharing `noteId` so `ReportPhotos` groups
-      // them into a single batch. Fall back to the legacy `fileId`
-      // only when no joined files were returned.
-      if (n.kind === 'image' && n.files && n.files.length > 0) {
-        for (const f of n.files) {
-          rows.push({
-            id: f.id,
-            body: n.body,
-            kind: 'photo',
-            createdAt: n.createdAt ?? null,
-            authorName,
-            fileId: f.fileId,
-            thumbnailFileId: f.thumbnailFileId,
-            noteId: n.id,
-            transcript: null,
-            title: null,
-            summary: null,
-            durationSec: null,
-          });
-        }
-        continue;
-      }
-      rows.push({
-        id: n.id,
-        body: n.body ?? n.transcript ?? null,
-        kind: n.kind === 'image' ? 'photo' : n.kind,
-        createdAt: n.createdAt ?? null,
-        authorName,
-        fileId: n.fileId ?? null,
-        thumbnailFileId: n.thumbnailFileId ?? null,
-        noteId: n.id,
-        transcript: n.transcript ?? null,
-        title: n.title ?? null,
-        summary: n.summary ?? null,
-        durationSec: n.durationSec ?? null,
-      });
-    }
-    return rows;
+    return toReportNoteRows(items, memberNames);
   }, [notesQuery.data, memberNames]);
 
   // Saved (finalized) reports are read-only here — the SavedReport
@@ -236,40 +197,52 @@ export default function SavedReportRoute() {
 
   const handleConfirmDelete = useCallback(async () => {
     if (!slug || reportNumber === null) return;
-    try {
-      await deleteMutation.mutateAsync({
-        params: { project: slug, number: reportNumber },
-      });
-      // After delete, fall back to the reports list. Pop to the existing
-      // frame instead of replacing the top so we don't leave two adjacent
-      // reports-list frames. See docs/v4/arch-mobile-navigation.md §4.
-      dismissOrReplaceTo(router, `/(app)/projects/${slug}/reports` as Href);
-    } catch {
-      // Error surface: the mutation hook keeps the dialog open via the
-      // `isDeleting` flag; the AppDialogSheet stays mounted. A dedicated
-      // error dialog lands with P4 alongside `useReportNotesMutations`
-      // error routing — for now `deleteMutation.error` is unread.
-    }
+    await deleteMutation.mutateAsync({
+      params: { project: slug, number: reportNumber },
+    });
+    // After delete, fall back to the reports list. Pop to the existing
+    // frame instead of replacing the top so we don't leave two adjacent
+    // reports-list frames. See docs/v4/arch-mobile-navigation.md §4.
+    dismissOrReplaceTo(router, `/(app)/projects/${slug}/reports` as Href);
   }, [slug, reportNumber, deleteMutation, router]);
 
   const unfinalizeMutation = useUnfinalizeReportMutation();
 
   const handleConfirmUnfinalize = useCallback(async () => {
     if (!slug || reportNumber === null) return;
-    try {
-      await unfinalizeMutation.mutateAsync({
-        params: { project: slug, number: reportNumber },
-      });
-    } catch {
-      // Error surface mirrors delete — the screen body keeps the
-      // confirm dialog open via `isUnfinalizing`. A dedicated error
-      // dialog lands alongside the action-error router (P4).
-    }
+    await unfinalizeMutation.mutateAsync({
+      params: { project: slug, number: reportNumber },
+    });
   }, [slug, reportNumber, unfinalizeMutation]);
 
   const myRole = projectQuery.data?.myRole;
   const canUnfinalize = myRole === 'owner' || myRole === 'editor';
   const canDelete = myRole === 'owner' || myRole === 'editor';
+  const canWrite = myRole === 'owner' || myRole === 'editor';
+  const placeAttachment = usePlaceAttachment();
+
+  const handlePlacePhotoGroup = useCallback(
+    async (input: {
+      noteId: string;
+      placement: { kind: 'issue' | 'section'; index: number } | null;
+    }) => {
+      if (!slug || reportNumber === null || !reportId) return;
+      try {
+        await placeAttachment.mutateAsync({
+          params: { project: slug, number: reportNumber },
+          body: {
+            noteId: input.noteId,
+            target: input.placement,
+            expectedBodyVersion: reportRow?.generatedAt ?? null,
+          },
+        });
+      } catch {
+        // Optimistic helper rolls back on error; route-level error UI
+        // can be added with the shared action-error surface.
+      }
+    },
+    [placeAttachment, reportId, reportNumber, reportRow?.generatedAt, slug],
+  );
 
   return (
     <SavedReport
@@ -317,6 +290,9 @@ export default function SavedReportRoute() {
                 `/(app)/projects/${slug}/reports/${reportNumber}/debug` as Href,
               )
           : undefined
+      }
+      onPlacePhotoGroup={
+        canWrite && reportId !== null ? handlePlacePhotoGroup : undefined
       }
     />
   );

@@ -53,7 +53,7 @@ export class MissingTokenError extends Error {
   readonly exitCode = EXIT.AUTH;
   constructor() {
     super(
-      'HARPA_TOKEN is not set. Run `harpa auth otp verify <phone> <code> --raw` ' +
+      'HARPA_TOKEN is not set. Run `harpa auth otp verify <email> <code> --raw` ' +
         'and export the printed token before calling authenticated commands.',
     );
     this.name = 'MissingTokenError';

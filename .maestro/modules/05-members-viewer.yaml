@@ -46,16 +46,16 @@ tags:
 
 # --- Alice re-invites bob as viewer ----------------------------------------
 # The add-member form is collapsed by default; tap btn-show-add-member
-# to reveal input-member-phone + role picker.
+# to reveal input-member-email + role picker.
 - tapOn:
     id: "btn-show-add-member"
 - extendedWaitUntil:
     visible:
-      id: "input-member-phone"
+      id: "input-member-email"
     timeout: 8000
 - tapOn:
-    id: "input-member-phone"
-- inputText: "+15550000002"
+    id: "input-member-email"
+- inputText: "bob@e2e.harpapro.com"
 - hideKeyboard
 - tapOn:
     id: "picker-member-role-viewer"
@@ -79,7 +79,7 @@ tags:
 - runFlow:
     file: ../helpers/sign-in.yaml
     env:
-      PHONE: "5550000002"
+      EMAIL: "bob@e2e.harpapro.com"
 
 - tapOn:
     text: "Regression Test Project \\(Edited\\)"
@@ -122,5 +122,5 @@ tags:
 - runFlow:
     file: ../helpers/sign-in.yaml
     env:
-      PHONE: "5550000001"
+      EMAIL: "alice@e2e.harpapro.com"
 - runFlow: ../helpers/open-project.yaml

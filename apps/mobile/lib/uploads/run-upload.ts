@@ -471,6 +471,7 @@ async function defaultCreateNote(args: {
       fileId: args.file.id,
       thumbnailFileId: args.thumbnailFile?.id ?? null,
       transcript: args.input.transcript ?? null,
+      source: args.input.noteSource ?? 'upload',
     },
     signal: args.signal,
   });

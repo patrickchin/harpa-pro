@@ -2,7 +2,7 @@
  * Root index — redirect to (app) so the auth gate handles routing.
  *
  * The auth gate inside `(app)/_layout.tsx` will bounce unauthenticated
- * users to `/(auth)/sign-in/phone` and needs-onboarding users to
+ * users to `/(auth)/sign-in/email` and needs-onboarding users to
  * `/(auth)/onboarding`.
  */
 import { Redirect, type Href } from 'expo-router';

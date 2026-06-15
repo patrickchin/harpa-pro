@@ -17,6 +17,7 @@
     "lint": "eslint . --max-warnings 0 --ext .ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx src/db/migrate.ts",
+    "db:seed-test-account": "tsx scripts/seed-test-account.ts",
     "spec:emit": "tsx scripts/emit-openapi.ts",
     "r2:rewrite": "tsx scripts/rewrite-r2-keys-to-project-scope.ts",
     "db:check": "drizzle-kit check"
@@ -24,6 +25,8 @@
   "dependencies": {
     "@aws-sdk/client-s3": "^3.665.0",
     "@aws-sdk/s3-request-presigner": "^3.665.0",
+    "@better-auth/cli": "^1.4.21",
+    "@better-auth/expo": "^1.6.13",
     "@harpa/ai-fixtures": "workspace:*",
     "@harpa/api-contract": "workspace:*",
     "@harpa/report-core": "workspace:*",
@@ -31,6 +34,7 @@
     "@hono/zod-openapi": "^0.18.3",
     "@sentry/hono": "^10.55.0",
     "@sentry/node": "^10.55.0",
+    "better-auth": "^1.6.13",
     "drizzle-orm": "^0.36.4",
     "hono": "^4.6.5",
     "jose": "^5.9.6",

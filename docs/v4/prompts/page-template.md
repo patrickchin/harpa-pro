@@ -8,10 +8,9 @@
 > The acceptance contract is the matching screen in
 > `../haru3-reports/apps/mobile` on branch `dev` (Expo SDK 55,
 > expo-router, NativeWind v4). JSX + Tailwind classes copy across
-> with no translation. Screenshots, `docs/legacy-v3/realignment/`,
-> and `docs/legacy-v3/_work/mobile-old-source-dump.md` are **not**
-> used as port sources (see [AGENTS.md](../../../AGENTS.md) hard
-> rule #1).
+> with no translation. Screenshots and any realignment notes from
+> the legacy v3 attempt are **not** used as port sources (see
+> [AGENTS.md](../../../AGENTS.md) hard rule #1).
 
 ---
 

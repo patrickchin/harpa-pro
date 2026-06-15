@@ -6,7 +6,7 @@ appId: ${MAESTRO_APP_ID}
 # then waits for the sign-in screen.
 #
 # Pre-condition: app is logged in (Projects list or any (app) tab visible).
-# Post-condition: sign-in screen (input-phone visible).
+# Post-condition: sign-in screen (input-email visible).
 #
 # Usage:
 #   - runFlow: .maestro/helpers/sign-out.yaml
@@ -20,5 +20,5 @@ appId: ${MAESTRO_APP_ID}
     id: "btn-sign-out"
 - extendedWaitUntil:
     visible:
-      id: "input-phone"
+      id: "input-email"
     timeout: 10000

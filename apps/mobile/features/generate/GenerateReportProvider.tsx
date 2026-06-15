@@ -32,6 +32,7 @@ import type { NoteEntry } from '@/lib/notes/note-entry';
 import type { GeneratedSiteReport } from '@harpa/report-core';
 import { buildAttachments, type Attachment } from '@/lib/notes/attachments';
 import { useInlineRecorder } from '@/features/voice/useInlineRecorder';
+import { MAX_DURATION_MS } from '@/features/voice/InlineVoiceRecorder';
 import { useVoiceNotePipeline } from '@/features/voice/useVoiceNotePipeline';
 import { useAudioPlayback } from '@/lib/audio/AudioPlaybackProvider';
 import { useMeQuery } from '@/lib/api/hooks';
@@ -90,6 +91,10 @@ export interface GenerateReportProviderProps {
   isGeneratingReport?: boolean;
   /** Latest generation error message, or `null`. */
   generationError?: string | null;
+  /** Optional action label for non-generation errors surfaced in the Report tab. */
+  generationErrorActionLabel?: string;
+  /** Optional action handler for non-generation errors surfaced in the Report tab. */
+  onGenerationErrorAction?: () => void;
   /** Debug payload (prompts + raw response) from last (re)generate. */
   lastGeneration?: GenerationDebug | null;
   /** Count of notes added since the last successful generation. @deprecated Use needsRegeneration. */
@@ -141,6 +146,17 @@ export interface GenerateReportProviderProps {
    * + upload pipeline. When omitted this is a no-op.
    */
   onPickAttachment?: (category: 'image' | 'document') => void;
+  /**
+   * Called when the user picks (or clears) a placement target for a
+   * photo group on the Report tab. Route wrapper wires this to
+   * the report attachment placement mutation. When omitted the placement chip
+   * is hidden and the photo block falls back to the legacy "stuck at
+   * the bottom" rendering.
+   */
+  onPlacePhotoGroup?: (input: {
+    noteId: string;
+    placement: { kind: 'issue' | 'section'; index: number } | null;
+  }) => void;
   /** Initial tab the screen opens on. Defaults to `notes`. */
   initialTab?: TabKey;
   children: ReactNode;
@@ -171,6 +187,13 @@ interface VoiceSurface {
   stopAndSend: () => void;
   /** Discard the in-flight recording and return to the input row. */
   cancel: () => void;
+  /**
+   * Phase H+: fires when the inline recorder hits its hard cap
+   * (`MAX_DURATION_MS`, 15 min). The provider surfaces an
+   * `AppDialogSheet` so the user understands the note was sent
+   * automatically.
+   */
+  onMaxDuration: () => void;
   /**
    * Phase D: pipeline state visible to surfaces that want to show a
    * "Transcribing voice note…" indicator after the strip closes.
@@ -268,6 +291,10 @@ interface GenerationSurface {
   isUpdating: boolean;
   /** Latest generation error, or `null`. */
   error: string | null;
+  /** Label for the Report-tab error action. Defaults to Retry. */
+  errorActionLabel: string;
+  /** Handler for the Report-tab error action. Defaults to regenerate. */
+  errorAction: () => void;
   /** Count of notes added since the last successful generation. @deprecated Use needsRegeneration. */
   notesSinceLastGeneration: number;
   /** True when notes have changed since the last generation. */
@@ -328,6 +355,26 @@ interface PreviewSurface {
   closePhoto: () => void;
 }
 
+/** Surface for editing photo placements from the Report tab. */
+interface PlacementSurface {
+  /**
+   * Called when the user picks (or clears) a placement target for a
+   * photo group. `null` clears the placement (returns to "Unplaced").
+   * `undefined` here means the route did not wire the mutator —
+   * components should hide the placement chip entirely.
+   */
+  onPlacePhotoGroup?: (input: {
+    noteId: string;
+    placement: { kind: 'issue' | 'section'; index: number } | null;
+  }) => void;
+  /**
+   * False while backend generation is replacing report.body. Consumers
+   * should keep existing placement display visible but hide/disable
+   * controls that would write placement changes.
+   */
+  canPlacePhotoGroup: boolean;
+}
+
 export interface GenerateReportContextValue {
   project: string;
   reportNumber: number | null;
@@ -340,6 +387,7 @@ export interface GenerateReportContextValue {
   voice: VoiceSurface;
   photo: PhotoSurface;
   preview: PreviewSurface;
+  placement: PlacementSurface;
   ui: UISurface;
   members: ReadonlyMap<string, string>;
   /** Bubbled up by the Notes input + attachment sheet. P3.8+ wires uploads. */
@@ -417,6 +465,8 @@ export function GenerateReportProvider({
   report = null,
   isGeneratingReport = false,
   generationError = null,
+  generationErrorActionLabel,
+  onGenerationErrorAction,
   lastGeneration = null,
   notesSinceLastGeneration = 0,
   needsRegeneration = notesSinceLastGeneration > 0,
@@ -431,6 +481,7 @@ export function GenerateReportProvider({
   onOpenFile,
   onCameraCapture,
   onPickAttachment,
+  onPlacePhotoGroup,
   initialTab = 'notes',
   children,
 }: GenerateReportProviderProps) {
@@ -499,6 +550,23 @@ export function GenerateReportProvider({
   const handleVoiceCancel = useCallback(() => {
     void inlineRecorder.cancel();
   }, [inlineRecorder]);
+
+  // Phase H+: hard-stop dialog. Fired from `InlineVoiceRecorder` when
+  // `durationMs` crosses `MAX_DURATION_MS`. The recorder also calls
+  // `onSend` in the same tick, so the strip unmounts immediately — we
+  // surface a one-shot alert so the user knows their recording wasn't
+  // silently truncated. Driven by local visible state (matches the
+  // existing permission + recorder-error `AppDialogSheet`s below) so
+  // we don't take a dependency on `DialogSheetProvider` (every screen
+  // test that renders this provider would otherwise need a wrapper).
+  const [maxDurationDialogVisible, setMaxDurationDialogVisible] = useState(false);
+  const handleVoiceMaxDuration = useCallback(() => {
+    setMaxDurationDialogVisible(true);
+  }, []);
+  const dismissMaxDurationDialog = useCallback(() => {
+    setMaxDurationDialogVisible(false);
+  }, []);
+  const maxDurationMin = Math.round(MAX_DURATION_MS / 60_000);
 
   // Phase E: surface the in-flight pipeline as a synthetic NoteEntry so
   // `NoteTimeline` can render the spinner / failure pill the same way it
@@ -702,25 +770,28 @@ export function GenerateReportProvider({
   );
 
   const openEdit = useCallback(() => {
+    if (isGeneratingReport) return;
     // Lazy-seed locally so the route's dirty flag stays clean.
     if (!report) setLocalSeed(createEmptyReport());
     setActiveTab('edit');
-  }, [report]);
+  }, [isGeneratingReport, report]);
 
   const editManually = useCallback(() => {
+    if (isGeneratingReport) return;
     if (onEditManually) {
       onEditManually();
       return;
     }
     if (!report) setLocalSeed(createEmptyReport());
     setActiveTab('edit');
-  }, [onEditManually, report]);
+  }, [isGeneratingReport, onEditManually, report]);
 
   const setReport = useCallback(
     (next: GeneratedSiteReport) => {
+      if (isGeneratingReport) return;
       onSetReport?.(next);
     },
-    [onSetReport],
+    [isGeneratingReport, onSetReport],
   );
 
   const handlePickAttachment = useCallback(
@@ -786,6 +857,8 @@ export function GenerateReportProvider({
         setReport,
         isUpdating: isGeneratingReport,
         error: generationError,
+        errorActionLabel: generationErrorActionLabel ?? 'Retry',
+        errorAction: onGenerationErrorAction ?? handleRegenerate,
         notesSinceLastGeneration,
         needsRegeneration,
         hasReport: report !== null,
@@ -813,6 +886,7 @@ export function GenerateReportProvider({
         start: handleVoiceStart,
         stopAndSend: handleVoiceStopAndSend,
         cancel: handleVoiceCancel,
+        onMaxDuration: handleVoiceMaxDuration,
         pipeline: reportId
           ? { step: voicePipeline.state.step, error: voicePipeline.state.error }
           : null,
@@ -834,6 +908,10 @@ export function GenerateReportProvider({
         photoIndex: photoPreviewIndex,
         openPhoto,
         closePhoto,
+      },
+      placement: {
+        onPlacePhotoGroup,
+        canPlacePhotoGroup: Boolean(onPlacePhotoGroup) && !isGeneratingReport,
       },
       ui: {
         attachmentSheetVisible,
@@ -867,6 +945,8 @@ export function GenerateReportProvider({
       setReport,
       isGeneratingReport,
       generationError,
+      generationErrorActionLabel,
+      onGenerationErrorAction,
       lastGeneration,
       notesSinceLastGeneration,
       needsRegeneration,
@@ -886,6 +966,7 @@ export function GenerateReportProvider({
       handleVoiceStart,
       handleVoiceStopAndSend,
       handleVoiceCancel,
+      handleVoiceMaxDuration,
       reportId,
       voicePipeline.state.step,
       voicePipeline.state.error,
@@ -901,6 +982,7 @@ export function GenerateReportProvider({
       closePhoto,
       onCameraCapture,
       onPickAttachment,
+      onPlacePhotoGroup,
       photoUploads.retry,
       photoUploads.cancel,
     ],
@@ -941,6 +1023,28 @@ export function GenerateReportProvider({
             onPress: inlineRecorder.dismissError,
             variant: 'secondary',
             testID: 'voice-error-dismiss',
+          },
+        ]}
+      />
+      {/*
+        Phase H+: hard-stop notice. Fires when the inline recorder
+        auto-sends at `MAX_DURATION_MS` so the user understands their
+        note wasn't silently truncated (see HARPA-PRO-D — Groq Whisper
+        rejects oversized files, and the 15 min cap keeps us under
+        Groq's 25 MB free-tier ceiling).
+      */}
+      <AppDialogSheet
+        visible={maxDurationDialogVisible}
+        title="Maximum recording reached"
+        message={`Voice notes are capped at ${maxDurationMin} minutes. Your recording was sent automatically.`}
+        noticeTone="info"
+        onClose={dismissMaxDurationDialog}
+        actions={[
+          {
+            label: 'OK',
+            onPress: dismissMaxDurationDialog,
+            variant: 'secondary',
+            testID: 'voice-max-duration-ok',
           },
         ]}
       />

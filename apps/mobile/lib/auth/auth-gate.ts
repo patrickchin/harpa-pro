@@ -20,7 +20,7 @@ import type { AuthStatus } from './session';
  * needs-onboarding user should redirect away from a public auth screen.
  *
  * @param status — current auth session status
- * @param pathname — expo-router pathname (e.g. `/(auth)/sign-in/phone`)
+ * @param pathname — expo-router pathname (e.g. `/(auth)/sign-in/email`)
  * @returns redirect target or null (allow mount)
  */
 export function decideAuthRedirect(status: AuthStatus, pathname: string): Href | null {
@@ -48,7 +48,7 @@ export function decideAuthRedirect(status: AuthStatus, pathname: string): Href |
  */
 export function decideAppRedirect(status: AuthStatus): Href | null {
   if (status === 'unauthenticated') {
-    return '/(auth)/sign-in/phone' as Href;
+    return '/(auth)/sign-in/email' as Href;
   }
   if (status === 'needs-onboarding') {
     return '/(auth)/onboarding' as Href;

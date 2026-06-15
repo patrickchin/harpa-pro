@@ -4,31 +4,89 @@
  * `../haru3-reports/apps/mobile/components/reports/SummarySectionCard.tsx`
  * on branch `dev`.
  */
-import { Text } from 'react-native';
+import { Text, View } from 'react-native';
 import { ClipboardList } from 'lucide-react-native';
 import type { GeneratedReportSection } from '@harpa/report-core';
 
 import { Card } from '@/components/primitives/Card';
 import { SectionHeader } from '@/components/primitives/SectionHeader';
+import { EditPencilButton } from '@/components/reports/edit/EditPencilButton';
+import { AddAttachmentsButton } from '@/components/reports/detail/AddAttachmentsButton';
+import { PlacedPhotoStrip } from '@/components/reports/detail/PlacedPhotoStrip';
 import { SECTION_ICONS } from '@/lib/reports/section-icons';
 import { colors } from '@/lib/design-tokens/colors';
+import type { PhotoGroup } from '@/lib/reports/photo-placements';
 
 interface SummarySectionCardProps {
   section: GeneratedReportSection;
   reportNumber?: number;
   sectionIndex?: number;
+  onEdit?: () => void;
+  /**
+   * Optional photo groups placed onto this section. Renders as an
+   * inline strip below the section content.
+   */
+  placedGroups?: ReadonlyArray<PhotoGroup>;
+  onOpenPhoto?: (input: { fileId: string; title?: string }) => void;
+  onEditPlacement?: (noteId: string) => void;
+  placementActionsDisabled?: boolean;
+  onAddAttachments?: () => void;
+  editActionsDisabled?: boolean;
 }
 
-export function SummarySectionCard({ section, reportNumber, sectionIndex }: SummarySectionCardProps) {
+export function SummarySectionCard({
+  section,
+  reportNumber,
+  sectionIndex,
+  onEdit,
+  placedGroups,
+  onOpenPhoto,
+  onEditPlacement,
+  placementActionsDisabled = false,
+  onAddAttachments,
+  editActionsDisabled = false,
+}: SummarySectionCardProps) {
   const Icon = SECTION_ICONS[section.title] || ClipboardList;
   const numStr = reportNumber ?? 'x';
   const idx = sectionIndex ?? 0;
+  const hasHeaderActions = Boolean(onAddAttachments || onEdit);
 
   return (
     <Card variant="default" padding="lg">
       <SectionHeader
         title={section.title}
         icon={<Icon size={16} color={colors.foreground} />}
+        trailing={
+          hasHeaderActions ? (
+            <View
+              className="flex-row items-center gap-2"
+              testID={`report-section-actions-${idx}`}
+            >
+              {onAddAttachments ? (
+                <AddAttachmentsButton
+                  onPress={() => {
+                    if (placementActionsDisabled) return;
+                    onAddAttachments();
+                  }}
+                  disabled={placementActionsDisabled}
+                  accessibilityLabel={`Add attachments to section ${section.title}`}
+                  testID={`btn-add-attachments-section-${idx}`}
+                />
+              ) : null}
+              {onEdit ? (
+                <EditPencilButton
+                  onPress={() => {
+                    if (editActionsDisabled) return;
+                    onEdit();
+                  }}
+                  disabled={editActionsDisabled}
+                  accessibilityLabel={`Edit section ${section.title}`}
+                  testID={`btn-edit-section-${idx}`}
+                />
+              ) : null}
+            </View>
+          ) : undefined
+        }
       />
       <Text
         className="mt-4 text-base leading-relaxed text-muted-foreground"
@@ -36,6 +94,15 @@ export function SummarySectionCard({ section, reportNumber, sectionIndex }: Summ
       >
         {section.content}
       </Text>
+      {placedGroups && placedGroups.length > 0 ? (
+        <PlacedPhotoStrip
+          groups={placedGroups}
+          onOpenPhoto={onOpenPhoto}
+          onEditPlacement={onEditPlacement}
+          placementActionsDisabled={placementActionsDisabled}
+          testID={`placed-photos-section-${idx}`}
+        />
+      ) : null}
     </Card>
   );
 }

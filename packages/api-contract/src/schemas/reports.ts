@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { isoDateTime, reportNumber } from './_shared.js';
 import { noteId, projectId, reportId } from './ids.js';
-import { noteKind } from './notes.js';
+import { noteFile, noteKind } from './notes.js';
 
 export const reportStatus = z.enum(['draft', 'finalized']);
 export type ReportStatus = z.infer<typeof reportStatus>;
@@ -13,33 +13,64 @@ export const reportMeta = z.object({
 });
 export type ReportMeta = z.infer<typeof reportMeta>;
 
+export const reportAttachments = z.object({
+  images: z.array(noteId).optional(),
+  documents: z.array(noteId).optional(),
+}).strict();
+export type ReportAttachments = z.infer<typeof reportAttachments>;
+
+export const reportAttachmentTarget = z.discriminatedUnion('kind', [
+  z.object({ kind: z.literal('issue'), index: z.number().int().min(0) }),
+  z.object({ kind: z.literal('section'), index: z.number().int().min(0) }),
+]);
+export type ReportAttachmentTarget = z.infer<typeof reportAttachmentTarget>;
+
 /**
  * Report body — meta envelope first, then matches mobile-old composition order:
  * StatBar / WeatherStrip / Summary / Issues / Workers / Materials / NextSteps / SummarySections.
  * See docs/legacy-v3/realignment/01-investigation.md.
+ *
+ * Wire shape — string|null for every numeric / categorical field
+ * (workers[].count, workers[].hours, materials[].quantity,
+ * weather.temperature, weather.wind, issues[].severity).
+ *
+ * Why strings: this is LLM output extracted from voice transcripts.
+ * The model frequently sees "a few electricians", "around 20°C",
+ * "delivered 30 of cement (no unit)", "critical issue" — all of
+ * which used to 502 against strict number/enum schemas (HARPA-PRO-6
+ * and friends; see docs/bugs/2026-06-06-report-body-string-wire.md).
+ * Strings let us preserve the model's intent and parse on read in
+ * the 1–2 consumers that actually need a number. Severity stays
+ * advisory low|medium|high but is no longer enforced; the UI maps
+ * unknown values to "medium" via normaliseSeverity().
+ *
+ * Weather fields are `temperature` / `wind` (no unit suffix on the
+ * key). Units live in the value itself ("18°C", "75°F", "12 kph",
+ * "5 mph", "20") so the report preserves what the user actually
+ * said. The renderer prints the value verbatim — no conversion.
  */
 export const reportBody = z.object({
   meta: reportMeta,
   weather: z
     .object({
       condition: z.string().nullable(),
-      temperatureC: z.number().nullable(),
-      windKph: z.number().nullable(),
+      temperature: z.string().nullable(),
+      wind: z.string().nullable(),
       impact: z.string().nullable(),
     })
     .nullable(),
   workers: z.array(
     z.object({
       role: z.string(),
-      count: z.number().int().nonnegative(),
-      hours: z.number().nonnegative().nullable(),
+      count: z.string().nullable(),
+      hours: z.string().nullable(),
       notes: z.string().nullable(),
     }),
   ),
   materials: z.array(
     z.object({
       name: z.string(),
-      quantity: z.number().nullable(),
+      quantity: z.string().nullable(),
       unit: z.string().nullable(),
       status: z.string().nullable(),
       condition: z.string().nullable(),
@@ -49,9 +80,10 @@ export const reportBody = z.object({
   issues: z.array(
     z.object({
       title: z.string(),
-      severity: z.enum(['low', 'medium', 'high']),
+      severity: z.string().nullable(),
       description: z.string().nullable(),
       action: z.string().nullable(),
+      attachments: reportAttachments.optional(),
     }),
   ),
   nextSteps: z.array(z.string()),
@@ -59,6 +91,7 @@ export const reportBody = z.object({
     z.object({
       title: z.string(),
       body: z.string(),
+      attachments: reportAttachments.optional(),
     }),
   ),
 });
@@ -150,6 +183,16 @@ export const generateReportResponse = z.object({
 export const regenerateReportRequest = generateReportRequest;
 export const regenerateReportResponse = generateReportResponse;
 
+export const placeReportAttachmentRequest = z.object({
+  noteId,
+  target: reportAttachmentTarget.nullable(),
+  expectedBodyVersion: isoDateTime.nullable(),
+});
+export type PlaceReportAttachmentRequest = z.infer<
+  typeof placeReportAttachmentRequest
+>;
+export const placeReportAttachmentResponse = z.object({ report });
+
 export const finalizeReportResponse = z.object({ report });
 export const unfinalizeReportResponse = z.object({ report });
 
@@ -172,6 +215,10 @@ export const reportDebugNote = z.object({
   kind: noteKind,
   body: z.string().nullable(),
   transcript: z.string().nullable(),
+  /** Files attached to this note (only populated for image notes). Mirrors
+   *  the same shape returned by GET /reports/{report}/notes so the debug
+   *  screen can show how many photos are batched on each note. */
+  files: z.array(noteFile).default([]),
   createdAt: isoDateTime,
 });
 

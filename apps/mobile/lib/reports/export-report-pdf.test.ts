@@ -286,7 +286,7 @@ describe('openSavedReportPdf', () => {
   it('surfaces a friendly error when openURL fails', async () => {
     openUrlMock.mockRejectedValueOnce(new Error('no app installed'));
     await expect(openSavedReportPdf('file:///x.pdf')).rejects.toThrow(
-      /Could not open the saved PDF/,
+      /Couldn't open the saved PDF/,
     );
   });
 });

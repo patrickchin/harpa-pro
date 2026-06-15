@@ -13,7 +13,8 @@
  *      prompts/services/contract/providers/fixtures)
  *   - manual: `AI_LIVE=1 OPENAI_API_KEY=… pnpm --filter @harpa/api test:live`
  *
- * Expected cost: ~3 short gpt-4o calls per run.
+ * Expected cost: ~6 short gpt-4.1-mini calls per run (3 happy-path
+ * + 3 adversarial). ~$0.006 total.
  *
  * No skip-guard: this file is only loaded by `vitest.live.config.ts`
  * (the `test:live` script). If you run it, you mean it. Missing
@@ -51,7 +52,62 @@ const SCENARIOS: Array<{ name: string; notes: string }> = [
     notes:
       'Quick walk-through. No workers on site (weekend). All materials secure. No issues.',
   },
+  // ── Adversarial scenarios ────────────────────────────────────
+  // Each one probes a failure mode we have actually hit in
+  // Sentry. The assertion is just `reportBody.safeParse` success
+  // — the schema rejects every shape we care about, so there's no
+  // need for bespoke field-level checks here.
+  {
+    // HARPA-PRO-6: vague headcount → model emits `count: null`.
+    // Used to throw `count:invalid_type` before the schema was
+    // widened. Keep as a permanent regression guard.
+    name: 'adversarial-1 — vague headcount (HARPA-PRO-6)',
+    notes:
+      'Site visit. A few electricians wrapping up rebar on the second floor. ' +
+      'Some labourers cleaning the slab. No fixed crew count given. ' +
+      'Weather warm and dry.',
+  },
+  {
+    // Image-only context — the model has to handle placeholder
+    // attachment references without inventing a headcount.
+    name: 'adversarial-2 — image-only attachment',
+    notes:
+      '[image 1] shows the crew on the second floor pouring concrete. ' +
+      '[image 2] shows the rebar storage area. No additional notes from the visit.',
+  },
+  {
+    // Numeric quantity without a unit → `materials[].unit: null`
+    // and `quantity` must still parse as a number.
+    name: 'adversarial-3 — numeric quantity without unit',
+    notes:
+      'Materials log: delivered 30 of cement to north bay. Received 12 of rebar bundles. ' +
+      'Site activity normal, 4 workers on slab prep.',
+  },
 ];
+
+type LiveGenerationPayload = Parameters<typeof generateReport>[0]['notes'];
+
+function notesPayload(body: string): LiveGenerationPayload {
+  return {
+    currentBody: null,
+    notes: [
+      {
+        id: 'not_live1',
+        kind: 'text',
+        body,
+        fileId: null,
+        thumbnailFileId: null,
+        transcript: null,
+        title: null,
+        summary: null,
+        source: 'typed',
+        meta: {},
+        files: [],
+        createdAt: '2026-06-09T12:00:00.000Z',
+      },
+    ],
+  };
+}
 
 describeOrSkip('generateReport — live OpenAI', () => {
   beforeAll(() => {
@@ -77,7 +133,7 @@ describeOrSkip('generateReport — live OpenAI', () => {
       // `openai`); reports are then routed to canonicals.vendor inside
       // `generateReport`. Stubbing `vendor:` here would mask the
       // mismatch that caused docs/bugs/2026-05-29-report-vendor-canonical-mismatch.md.
-      const result = await generateReport({ notes });
+      const result = await generateReport({ notes: notesPayload(notes) });
 
       // The service itself runs safeParse and throws AiProviderError on
       // miss — getting here means the body matched. Re-assert anyway so
@@ -105,7 +161,12 @@ describeOrSkip('generateReport — live OpenAI', () => {
       expect(Array.isArray(parsed.data.workers)).toBe(true);
       expect(Array.isArray(parsed.data.materials)).toBe(true);
       for (const issue of parsed.data.issues) {
-        expect(['low', 'medium', 'high']).toContain(issue.severity);
+        // Wire is `string | null` post-string-y refactor; the LLM is
+        // asked (but not strictly required) to use low/medium/high.
+        // Allow any string/null — the UI normalises unknown values.
+        if (issue.severity != null) {
+          expect(typeof issue.severity).toBe('string');
+        }
       }
     },
     60_000,
@@ -115,7 +176,7 @@ describeOrSkip('generateReport — live OpenAI', () => {
     'honours userModel override (gpt-4.1-nano) when caller passes it',
     async () => {
       const result = await generateReport({
-        notes: SCENARIOS[2]!.notes,
+        notes: notesPayload(SCENARIOS[2]!.notes),
         userVendor: 'openai',
         userModel: 'gpt-4.1-nano',
       });
@@ -137,7 +198,7 @@ describeOrSkip('generateReport — live OpenAI', () => {
     'falls back to LIVE_DEFAULT_MODELS when userVendor/userModel are null',
     async () => {
       const result = await generateReport({
-        notes: SCENARIOS[2]!.notes,
+        notes: notesPayload(SCENARIOS[2]!.notes),
         userVendor: null,
         userModel: null,
       });

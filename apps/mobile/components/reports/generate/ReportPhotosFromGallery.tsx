@@ -16,8 +16,10 @@ import { Camera } from 'lucide-react-native';
 import { Card } from '@/components/primitives/Card';
 import { SectionHeader } from '@/components/primitives/SectionHeader';
 import { PhotoTile } from '@/components/notes/PhotoTile';
+import { PhotoPlacementChip } from '@/components/reports/detail/PhotoPlacementChip';
 import { attachmentFromSavedFile } from '@/lib/notes/attachments';
 import { colors } from '@/lib/design-tokens/colors';
+import type { GeneratedSiteReport } from '@harpa/report-core';
 
 interface GalleryPhoto {
   fileId: string;
@@ -30,6 +32,21 @@ interface GalleryPhoto {
 interface ReportPhotosFromGalleryProps {
   photos: ReadonlyArray<GalleryPhoto>;
   onOpen: (fileId: string) => void;
+  /**
+   * When provided, each photo group renders a placement chip — tapping
+   * it calls this handler with the group's `noteId` so the parent can
+   * mount `PhotoGroupPlacementSheet`. Omit to hide the chip entirely
+   * (legacy "stuck at the bottom" rendering).
+   */
+  onOpenPlacementSheet?: (noteId: string) => void;
+  /** Keeps placement chips visible but non-interactive while backend generation owns report.body. */
+  placementActionsDisabled?: boolean;
+  /**
+   * Live report used to resolve a placement's index → display label.
+   * Required when `onOpenPlacementSheet` is set so placed groups can
+   * show "Placed in: <issue title>" instead of a raw index.
+   */
+  report?: GeneratedSiteReport | null;
 }
 
 const COLUMNS = 3;
@@ -38,6 +55,8 @@ const GAP = 6;
 export function ReportPhotosFromGallery({
   photos,
   onOpen,
+  onOpenPlacementSheet,
+  placementActionsDisabled = false,
 }: ReportPhotosFromGalleryProps) {
   const groups = useMemo(() => {
     const groupMap = new Map<string, GalleryPhoto[]>();
@@ -64,7 +83,7 @@ export function ReportPhotosFromGallery({
   return (
     <Card variant="default" padding="lg" testID="generate-report-photos">
       <SectionHeader
-        title="Photos"
+        title={onOpenPlacementSheet ? 'Unplaced photos' : 'Photos'}
         icon={<Camera size={16} color={colors.foreground} />}
       />
       <View className="mt-3" onLayout={onLayout}>
@@ -77,6 +96,19 @@ export function ReportPhotosFromGallery({
                 {batchIdx > 0 && (
                   <View className="my-2 h-px bg-border" />
                 )}
+                {onOpenPlacementSheet ? (
+                  <View className="mb-2">
+                    <PhotoPlacementChip
+                      placedLabel={null}
+                      onPress={() => {
+                        if (placementActionsDisabled) return;
+                        onOpenPlacementSheet(first.noteId);
+                      }}
+                      disabled={placementActionsDisabled}
+                      testID={`btn-generate-report-photos-place-${first.noteId}`}
+                    />
+                  </View>
+                ) : null}
                 <View
                   className="flex-row flex-wrap"
                   style={{ gap: GAP }}

@@ -575,7 +575,7 @@ phase; checkboxes here mirror the phase boundaries.
       `useLiveTranscript` via `expo-speech-recognition`
       **deferred** (requires native module + permission flow). See
       `arch-voice-pipeline.md §D9` for deferral rationale.
-- [x] **Phase G** — `.maestro/p3-15-voice-record.yaml` records via
+- [x] **Phase G** — `.maestro/modules/09-voice-notes.yaml` records via
       the fixture stub and asserts a `VoiceNoteCard` row with
       transcript expander; `core-end-to-end.yaml` voice step now
       drives the recorder modal Start → Save (replaces the prior
@@ -604,7 +604,7 @@ Tracked end-to-end in
       `runUploadJob`.
 - [x] Phase C — hardening: `expo-image-manipulator` downscale + 50 MB
       guard, post-success source URI cleanup,
-      `.maestro/p3-15-upload.yaml` live round-trip, widened
+      `.maestro/modules/10a-photo-notes-draft.yaml` live round-trip, widened
       `process.env.R2_*` lint guard, doc roundup
       (`arch-storage.md`, `pitfalls.md` Pitfall 13 sub-bullet,
       `docs/bugs/README.md` `pickStorage` trapdoor entry).
@@ -616,3 +616,11 @@ Tracked end-to-end in
 - [ ] All boxes ticked (P3.0 – P3.15). Tag `v0.3.0-features`.
 - [ ] `pnpm --filter @harpa/mobile bundle:smoke` green on the tag SHA
   (see `overnight-protocol.md` §5 — also run per-commit through P3).
+
+### Follow-up: photo placement UI
+
+Photo groups now carry an optional `placement` pointer to a specific
+issue or summary section. Design + implementation notes:
+[`design-photo-placement.md`](design-photo-placement.md). Migration
+0014 + `PATCH /notes/{n}/placement` + the mobile sheet/chip ship as
+a self-contained slice and do not gate P3 exit.

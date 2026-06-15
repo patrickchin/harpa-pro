@@ -303,8 +303,11 @@ export function Usage({
           </View>
         ) : !history?.length ? (
           <View className="flex-1 items-center justify-center px-5" testID="usage-empty">
-            <InlineNotice tone="info">
-              No usage data yet. Generate your first report to see stats here.
+            <InlineNotice
+              tone="info"
+              title="No usage data yet"
+            >
+              Generate your first report to see stats here.
             </InlineNotice>
           </View>
         ) : (

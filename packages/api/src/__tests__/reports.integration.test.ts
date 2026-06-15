@@ -4,10 +4,10 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import pg from 'pg';
 import { createApp } from '../app.js';
-import { startPg, type PgFixture } from './setup-pg.js';
+import { startPg, seedAuthUsers, type PgFixture } from './setup-pg.js';
 import { resetPool, getPool } from '../db/client.js';
 import { signTestToken } from '../middleware/auth.js';
-import { makeUserId, makeSessionId, makeProjectId } from './factories/index.js';
+import { makeUserId, makeSessionId, makeProjectId, makeFileId } from './factories/index.js';
 
 let fx: PgFixture;
 let alice: string;
@@ -36,16 +36,9 @@ beforeAll(async () => {
   aliceProjSlug = aliceProj;
   bobProjSlug = bobProj;
 
+  await seedAuthUsers(fx.url, [{ id: alice }, { id: bob }]);
   const admin = new pg.Client({ connectionString: fx.url });
   await admin.connect();
-  await admin.query(
-    `INSERT INTO auth.users(id, phone) VALUES ($1, $2), ($3, $4)`,
-    [alice, '+15550600001', bob, '+15550600002'],
-  );
-  await admin.query(
-    `INSERT INTO auth.sessions(id, user_id, expires_at) VALUES ($1, $2, now() + interval '7 days'), ($3, $4, now() + interval '7 days')`,
-    [aliceSid, alice, bobSid, bob],
-  );
   await admin.query(
     `INSERT INTO app.projects(id, name, owner_id) VALUES ($1, 'A', $2)`,
     [aliceProj, alice],
@@ -66,6 +59,39 @@ afterAll(async () => {
 }, 60_000);
 
 const headers = (tok: string) => ({ authorization: `Bearer ${tok}`, 'content-type': 'application/json' });
+
+async function readDirty(reportId: string) {
+  const c = await getPool().connect();
+  try {
+    const r = await c.query<{ changed_at: Date | null; generated_at: Date | null }>(
+      `SELECT notes_changed_at AS changed_at, generated_at FROM app.reports WHERE id = $1`,
+      [reportId],
+    );
+    return r.rows[0] ?? { changed_at: null, generated_at: null };
+  } finally {
+    c.release();
+  }
+}
+
+const placementBody = {
+  meta: { title: 'Placement report', summary: 'Placement test.', visitDate: null },
+  weather: null,
+  workers: [],
+  materials: [],
+  issues: [
+    {
+      title: 'Ceiling leak',
+      severity: 'high',
+      description: 'Water ingress above lobby.',
+      action: 'Open ceiling bay.',
+    },
+  ],
+  nextSteps: [],
+  summarySections: [
+    { title: 'Lobby', body: 'Lobby inspected.' },
+    { title: 'Roof', body: 'Roof inspected.' },
+  ],
+};
 
 describe('reports CRUD', () => {
   let aliceReport: string;
@@ -220,6 +246,299 @@ describe('reports CRUD', () => {
     expect(del.status).toBe(204);
     const get = await app.request(`/projects/${aliceProjSlug}/reports/${aliceReportNumber}`, { headers: { authorization: `Bearer ${tok}` } });
     expect(get.status).toBe(404);
+  });
+});
+
+describe('PATCH /projects/:project/reports/:number/attachments', () => {
+  let reportId: string;
+  let reportNumber: number;
+  let imageNoteId: string;
+  let documentNoteId: string;
+  let textNoteId: string;
+  let expectedBodyVersion: string | null;
+
+  beforeAll(async () => {
+    const app = createApp();
+    const tok = await signTestToken(alice, aliceSid);
+    const created = await app.request(`/projects/${aliceProjSlug}/reports`, {
+      method: 'POST',
+      headers: headers(tok),
+      body: JSON.stringify({}),
+    });
+    expect(created.status).toBe(201);
+    const createdBody = (await created.json()) as { id: string; number: number };
+    reportId = createdBody.id;
+    reportNumber = createdBody.number;
+
+    const fileId = makeFileId();
+    const documentFileId = makeFileId();
+    const client = new pg.Client({ connectionString: fx.url });
+    await client.connect();
+    await client.query(
+      `INSERT INTO app.files(id, owner_id, kind, file_key, size_bytes, content_type)
+       VALUES ($1, $2, 'image', $3, 1024, 'image/jpeg')`,
+      [fileId, alice, `report-placement-${fileId}`],
+    );
+    await client.query(
+      `INSERT INTO app.files(id, owner_id, kind, file_key, size_bytes, content_type)
+       VALUES ($1, $2, 'document', $3, 2048, 'application/pdf')`,
+      [documentFileId, alice, `report-placement-${documentFileId}.pdf`],
+    );
+    await client.end();
+
+    const image = await app.request(`/reports/${reportId}/notes`, {
+      method: 'POST',
+      headers: headers(tok),
+      body: JSON.stringify({
+        kind: 'image',
+        files: [{ fileId, thumbnailFileId: null }],
+        source: 'camera',
+      }),
+    });
+    expect(image.status).toBe(201);
+    imageNoteId = ((await image.json()) as { id: string }).id;
+
+    const document = await app.request(`/reports/${reportId}/notes`, {
+      method: 'POST',
+      headers: headers(tok),
+      body: JSON.stringify({
+        kind: 'document',
+        fileId: documentFileId,
+        title: 'Marked-up drawing',
+        source: 'upload',
+      }),
+    });
+    expect(document.status).toBe(201);
+    documentNoteId = ((await document.json()) as { id: string }).id;
+
+    const text = await app.request(`/reports/${reportId}/notes`, {
+      method: 'POST',
+      headers: headers(tok),
+      body: JSON.stringify({ kind: 'text', body: 'text is not placeable' }),
+    });
+    expect(text.status).toBe(201);
+    textNoteId = ((await text.json()) as { id: string }).id;
+
+    expectedBodyVersion = '2026-06-09T12:00:00.000Z';
+    const seededDirtyAt = '2026-06-09T12:05:00.000Z';
+    const seed = new pg.Client({ connectionString: fx.url });
+    await seed.connect();
+    await seed.query(
+      `UPDATE app.reports
+          SET body = $1::jsonb,
+              generated_at = $2::timestamptz,
+              notes_changed_at = $3::timestamptz
+        WHERE id = $4`,
+      [JSON.stringify(placementBody), expectedBodyVersion, seededDirtyAt, reportId],
+    );
+    await seed.end();
+  });
+
+  it('places an image note in an issue without bumping notes_changed_at', async () => {
+    const app = createApp();
+    const tok = await signTestToken(alice, aliceSid);
+    const before = await readDirty(reportId);
+
+    const res = await app.request(
+      `/projects/${aliceProjSlug}/reports/${reportNumber}/attachments`,
+      {
+        method: 'PATCH',
+        headers: headers(tok),
+        body: JSON.stringify({
+          noteId: imageNoteId,
+          target: { kind: 'issue', index: 0 },
+          expectedBodyVersion,
+        }),
+      },
+    );
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      report: {
+        body: {
+          issues: Array<{ attachments?: { images?: string[] } }>;
+          summarySections: Array<{ attachments?: { images?: string[] } }>;
+        };
+      };
+    };
+    expect(body.report.body.issues[0]!.attachments?.images).toEqual([imageNoteId]);
+    expect(body.report.body.summarySections[0]!.attachments).toBeUndefined();
+
+    const after = await readDirty(reportId);
+    expect(after.changed_at?.getTime()).toBe(before.changed_at?.getTime());
+  });
+
+  it('moves the image note to a section exactly once', async () => {
+    const app = createApp();
+    const tok = await signTestToken(alice, aliceSid);
+    const res = await app.request(
+      `/projects/${aliceProjSlug}/reports/${reportNumber}/attachments`,
+      {
+        method: 'PATCH',
+        headers: headers(tok),
+        body: JSON.stringify({
+          noteId: imageNoteId,
+          target: { kind: 'section', index: 1 },
+          expectedBodyVersion,
+        }),
+      },
+    );
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      report: {
+        body: {
+          issues: Array<{ attachments?: { images?: string[] } }>;
+          summarySections: Array<{ attachments?: { images?: string[] } }>;
+        };
+      };
+    };
+    expect(body.report.body.issues[0]!.attachments).toBeUndefined();
+    expect(body.report.body.summarySections[1]!.attachments?.images).toEqual([
+      imageNoteId,
+    ]);
+  });
+
+  it('removes a placed image note when target is null', async () => {
+    const app = createApp();
+    const tok = await signTestToken(alice, aliceSid);
+    const res = await app.request(
+      `/projects/${aliceProjSlug}/reports/${reportNumber}/attachments`,
+      {
+        method: 'PATCH',
+        headers: headers(tok),
+        body: JSON.stringify({
+          noteId: imageNoteId,
+          target: null,
+          expectedBodyVersion,
+        }),
+      },
+    );
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      report: {
+        body: {
+          issues: Array<{ attachments?: { images?: string[] } }>;
+          summarySections: Array<{ attachments?: { images?: string[] } }>;
+        };
+      };
+    };
+    expect(body.report.body.issues[0]!.attachments).toBeUndefined();
+    expect(body.report.body.summarySections[1]!.attachments).toBeUndefined();
+  });
+
+  it('places a document note in the documents attachment bucket', async () => {
+    const app = createApp();
+    const tok = await signTestToken(alice, aliceSid);
+    const res = await app.request(
+      `/projects/${aliceProjSlug}/reports/${reportNumber}/attachments`,
+      {
+        method: 'PATCH',
+        headers: headers(tok),
+        body: JSON.stringify({
+          noteId: documentNoteId,
+          target: { kind: 'section', index: 0 },
+          expectedBodyVersion,
+        }),
+      },
+    );
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      report: {
+        body: {
+          summarySections: Array<{ attachments?: { documents?: string[] } }>;
+        };
+      };
+    };
+    expect(body.report.body.summarySections[0]!.attachments?.documents).toEqual([
+      documentNoteId,
+    ]);
+  });
+
+  it('returns 400 for non-image/document notes and out-of-range targets', async () => {
+    const app = createApp();
+    const tok = await signTestToken(alice, aliceSid);
+    const text = await app.request(
+      `/projects/${aliceProjSlug}/reports/${reportNumber}/attachments`,
+      {
+        method: 'PATCH',
+        headers: headers(tok),
+        body: JSON.stringify({
+          noteId: textNoteId,
+          target: { kind: 'issue', index: 0 },
+          expectedBodyVersion,
+        }),
+      },
+    );
+    expect(text.status).toBe(400);
+
+    const missingTarget = await app.request(
+      `/projects/${aliceProjSlug}/reports/${reportNumber}/attachments`,
+      {
+        method: 'PATCH',
+        headers: headers(tok),
+        body: JSON.stringify({
+          noteId: imageNoteId,
+          target: { kind: 'section', index: 99 },
+          expectedBodyVersion,
+        }),
+      },
+    );
+    expect(missingTarget.status).toBe(400);
+  });
+
+  it('returns 409 with the current report on a stale body version', async () => {
+    const app = createApp();
+    const tok = await signTestToken(alice, aliceSid);
+    const res = await app.request(
+      `/projects/${aliceProjSlug}/reports/${reportNumber}/attachments`,
+      {
+        method: 'PATCH',
+        headers: headers(tok),
+        body: JSON.stringify({
+          noteId: imageNoteId,
+          target: { kind: 'issue', index: 0 },
+          expectedBodyVersion: '2026-06-09T11:00:00.000Z',
+        }),
+      },
+    );
+    expect(res.status).toBe(409);
+    const body = (await res.json()) as { report: { id: string; body: unknown } };
+    expect(body.report.id).toBe(reportId);
+    expect(body.report.body).toBeTruthy();
+  });
+
+  it('returns 404 for a read-only project member', async () => {
+    const admin = new pg.Client({ connectionString: fx.url });
+    await admin.connect();
+    try {
+      await admin.query(
+        `INSERT INTO app.project_members(project_id, user_id, role)
+         VALUES ($1, $2, 'viewer')
+         ON CONFLICT (project_id, user_id) DO UPDATE SET role = 'viewer'`,
+        [aliceProj, bob],
+      );
+
+      const app = createApp();
+      const tok = await signTestToken(bob, bobSid);
+      const res = await app.request(
+        `/projects/${aliceProjSlug}/reports/${reportNumber}/attachments`,
+        {
+          method: 'PATCH',
+          headers: headers(tok),
+          body: JSON.stringify({
+            noteId: imageNoteId,
+            target: { kind: 'issue', index: 0 },
+            expectedBodyVersion,
+          }),
+        },
+      );
+      expect(res.status).toBe(404);
+    } finally {
+      await admin.query(
+        `DELETE FROM app.project_members WHERE project_id = $1 AND user_id = $2`,
+        [aliceProj, bob],
+      );
+      await admin.end();
+    }
   });
 });
 
@@ -548,6 +867,81 @@ describe('reports AI/PDF', () => {
     expect(body.error.message).not.toContain('does-not-exist');
     expect(body.error.message).not.toContain('fixture');
     expect(body.error.message).not.toContain('openai');
+  });
+
+  it('regenerate drops attachments for notes deleted since the previous body', async () => {
+    const app = createApp();
+    const tok = await signTestToken(alice, aliceSid);
+    const created = await app.request(`/projects/${aliceProjSlug}/reports`, {
+      method: 'POST',
+      headers: headers(tok),
+      body: JSON.stringify({}),
+    });
+    expect(created.status).toBe(201);
+    const fresh = (await created.json()) as { id: string; number: number };
+
+    const fileId = makeFileId();
+    const client = new pg.Client({ connectionString: fx.url });
+    await client.connect();
+    await client.query(
+      `INSERT INTO app.files(id, owner_id, kind, file_key, size_bytes, content_type)
+       VALUES ($1, $2, 'image', $3, 1024, 'image/jpeg')`,
+      [fileId, alice, `regen-cleanup-${fileId}`],
+    );
+    await client.end();
+
+    const note = await app.request(`/reports/${fresh.id}/notes`, {
+      method: 'POST',
+      headers: headers(tok),
+      body: JSON.stringify({
+        kind: 'image',
+        files: [{ fileId, thumbnailFileId: null }],
+        source: 'camera',
+      }),
+    });
+    expect(note.status).toBe(201);
+    const imageNote = (await note.json()) as { id: string };
+
+    const seed = new pg.Client({ connectionString: fx.url });
+    await seed.connect();
+    await seed.query(
+      `UPDATE app.reports
+          SET body = $1::jsonb,
+              generated_at = $2::timestamptz
+        WHERE id = $3`,
+      [
+        JSON.stringify({
+          ...placementBody,
+          issues: [
+            {
+              ...placementBody.issues[0]!,
+              attachments: { images: [imageNote.id] },
+            },
+          ],
+        }),
+        '2026-06-09T12:00:00.000Z',
+        fresh.id,
+      ],
+    );
+    await seed.end();
+
+    const deleted = await app.request(`/notes/${imageNote.id}`, {
+      method: 'DELETE',
+      headers: { authorization: `Bearer ${tok}` },
+    });
+    expect(deleted.status).toBe(204);
+
+    const regenerated = await app.request(
+      `/projects/${aliceProjSlug}/reports/${fresh.number}/regenerate`,
+      {
+        method: 'POST',
+        headers: headers(tok),
+        body: JSON.stringify({ fixtureName: 'generate-report.voice-4' }),
+      },
+    );
+    expect(regenerated.status).toBe(200);
+    const body = (await regenerated.json()) as { report: { body: unknown } };
+    expect(JSON.stringify(body.report.body)).not.toContain(imageNote.id);
   });
 });
 

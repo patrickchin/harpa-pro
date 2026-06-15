@@ -1,12 +1,12 @@
 /**
  * Shared journey helpers.
  *
- * These deliberately do NOT use `signTestToken`. Every token comes from a
- * real POST /auth/otp/start → /auth/otp/verify round-trip through the
- * fake-Twilio path (TWILIO_LIVE=0, TWILIO_VERIFY_FAKE_CODE=000000). That
- * makes the journey suite the executable spec for the auth issuance path —
- * if `signTestToken`'s claim shape drifts from the real issuer, journey
- * tests will fail loudly while per-resource integration tests would not.
+ * Real login through better-auth's email-OTP plugin: POST
+ * `/api/auth/email-otp/send-verification-otp` then read the OTP from
+ * the `verification` table and POST it to
+ * `/api/auth/sign-in/email-otp`. The bearer token returned in the
+ * `set-auth-token` response header (better-auth's `bearer()` plugin) is
+ * used for subsequent requests.
  */
 import { startPg, type PgFixture } from '../setup-pg.js';
 import { resetPool, getPool } from '../../db/client.js';
@@ -14,15 +14,12 @@ import type { createApp } from '../../app.js';
 
 type App = ReturnType<typeof createApp>;
 
-export const FAKE_CODE = '000000';
-
 export interface JourneyFixture {
   fx: PgFixture;
 }
 
 export async function bootJourneyPg(): Promise<JourneyFixture> {
-  process.env.TWILIO_LIVE = '0';
-  process.env.TWILIO_VERIFY_FAKE_CODE = FAKE_CODE;
+  process.env.EMAIL_OTP_LIVE = '0';
   process.env.R2_FIXTURE_MODE = 'replay';
   const fx = await startPg();
   process.env.DATABASE_URL = fx.url;
@@ -38,65 +35,91 @@ export async function teardownJourneyPg(j: JourneyFixture | undefined) {
 export interface LoggedIn {
   token: string;
   userId: string;
-  phone: string;
+  email: string;
   headers: Record<string, string>;
 }
 
-/**
- * Real OTP login. Returns a fresh user the first time `phone` is seen,
- * then re-issues a token for the same user on subsequent calls.
- */
-export async function login(app: App, phone: string): Promise<LoggedIn> {
-  const startRes = await app.request('/auth/otp/start', {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ phone }),
-  });
-  if (startRes.status !== 200) {
-    throw new Error(`otp/start failed: ${startRes.status} ${await startRes.text()}`);
-  }
-  const verifyRes = await app.request('/auth/otp/verify', {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ phone, code: FAKE_CODE }),
-  });
-  if (verifyRes.status !== 200) {
-    throw new Error(`otp/verify failed: ${verifyRes.status} ${await verifyRes.text()}`);
-  }
-  const body = (await verifyRes.json()) as { token: string; user: { id: string; phone: string } };
-  return {
-    token: body.token,
-    userId: body.user.id,
-    phone: body.user.phone,
-    headers: { authorization: `Bearer ${body.token}`, 'content-type': 'application/json' },
-  };
+function toEmail(identifier: string): string {
+  if (identifier.includes('@')) return identifier.toLowerCase();
+  const slug = identifier.replace(/[^a-zA-Z0-9]/g, '').toLowerCase() || 'user';
+  return `${slug}@test.local`;
+}
+
+async function readLatestOtp(email: string): Promise<string> {
+  const pool = getPool();
+  // better-auth's emailOtp plugin sets identifier to `${type}-otp-${email}`.
+  // The sign-in flow below uses type='sign-in', so the row we want has an
+  // exact identifier — `LIKE %email%` here was an oracle (substring match)
+  // and worse, would match any wildcard in `email`. See
+  // docs/bugs/README.md §OTP introspection LIKE wildcard.
+  const identifier = `sign-in-otp-${email}`;
+  const r = await pool.query<{ value: string }>(
+    `SELECT value FROM "verification" WHERE identifier = $1 ORDER BY created_at DESC LIMIT 1`,
+    [identifier],
+  );
+  if (r.rows.length === 0) throw new Error(`no verification row for ${email}`);
+  const v = String(r.rows[0]!.value);
+  return v.split(':')[0]!;
 }
 
 /**
- * Test-account password login. Hits POST /auth/password/verify with the
- * supplied phone + password. Used by the password-journey test to prove
- * the bypass works end-to-end without touching Twilio at all (real or
- * fake) — i.e. live dev deployments can have TWILIO_LIVE=1 and this
- * path still works.
+ * Real OTP login via better-auth. Accepts an identifier (phone-like
+ * string, plain slug, or email) and derives a stable email.
+ */
+export async function login(app: App, identifier: string): Promise<LoggedIn> {
+  const email = toEmail(identifier);
+  const sendRes = await app.request('/api/auth/email-otp/send-verification-otp', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ email, type: 'sign-in' }),
+  });
+  if (sendRes.status !== 200) {
+    throw new Error(`send-verification-otp failed: ${sendRes.status} ${await sendRes.text()}`);
+  }
+  const otp = await readLatestOtp(email);
+  const verifyRes = await app.request('/api/auth/sign-in/email-otp', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ email, otp }),
+  });
+  if (verifyRes.status !== 200) {
+    throw new Error(`sign-in/email-otp failed: ${verifyRes.status} ${await verifyRes.text()}`);
+  }
+  const token = verifyRes.headers.get('set-auth-token') ?? '';
+  if (!token) throw new Error('no set-auth-token header on email-otp sign-in');
+  const body = (await verifyRes.json()) as { user: { id: string; email: string } };
+  return {
+    token,
+    userId: body.user.id,
+    email: body.user.email,
+    headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+  };
+}
+/**
+ * Test-account password login via better-auth. Hits POST
+ * `/api/auth/sign-in/email` with email + password; gated server-side
+ * by the before-hook against TEST_ACCOUNT_EMAILS.
  */
 export async function loginWithPassword(
   app: App,
-  phone: string,
+  email: string,
   password: string,
 ): Promise<LoggedIn> {
-  const res = await app.request('/auth/password/verify', {
+  const res = await app.request('/api/auth/sign-in/email', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ phone, password }),
+    body: JSON.stringify({ email, password }),
   });
   if (res.status !== 200) {
-    throw new Error(`password/verify failed: ${res.status} ${await res.text()}`);
+    throw new Error(`sign-in/email failed: ${res.status} ${await res.text()}`);
   }
-  const body = (await res.json()) as { token: string; user: { id: string; phone: string } };
+  const token = res.headers.get('set-auth-token') ?? '';
+  if (!token) throw new Error('no set-auth-token header on password sign-in');
+  const body = (await res.json()) as { user: { id: string; email: string } };
   return {
-    token: body.token,
+    token,
     userId: body.user.id,
-    phone: body.user.phone,
-    headers: { authorization: `Bearer ${body.token}`, 'content-type': 'application/json' },
+    email: body.user.email,
+    headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
   };
 }

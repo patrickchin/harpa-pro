@@ -10,19 +10,19 @@ exports[`renderFile > renders a file record 1`] = `
 `;
 
 exports[`renderMember > renders a fully populated member 1`] = `
-"Alice <+15550100300> (editor)
+"Alice <alice@harpapro.test> (editor)
   Joined:   2025-01-15T10:30:00.000Z"
 `;
 
 exports[`renderMember > renders a member without display name 1`] = `
-"(no display name) <+15550100301> (viewer)
+"(no display name) <noname@harpapro.test> (viewer)
   Joined:   2025-01-15T10:30:00.000Z"
 `;
 
 exports[`renderMemberList > renders a populated list 1`] = `
 "Members:
-  Owner Person                    owner   +15550100400
-  (no name)                       editor  +15550100401"
+  Owner Person                    owner   owner@harpapro.test
+  (no name)                       editor  editor@harpapro.test"
 `;
 
 exports[`renderMemberList > renders an empty member list 1`] = `"No members."`;
@@ -134,13 +134,13 @@ Total          20           78      0        0        0"
 `;
 
 exports[`renderUser > renders a fully populated user 1`] = `
-"Patrick Chin <+15550100100>
+"Patrick Chin <patrick@harpapro.test>
   Company:   Harpa Pro Ltd
   Joined:    2025-01-15T10:30:00.000Z"
 `;
 
 exports[`renderUser > renders a user missing optional fields 1`] = `
-"(no display name) <+15550100200>
+"(no display name) <noname@harpapro.test>
   Company:   (no company)
   Joined:    2025-01-15T10:30:00.000Z"
 `;

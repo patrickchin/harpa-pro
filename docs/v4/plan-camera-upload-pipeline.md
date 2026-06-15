@@ -65,7 +65,7 @@ Tighten the safety net before extending the feature.
     `R2_FIXTURE_MODE=live`, hits `POST /files/presign`, performs the
     real signed PUT against MinIO, then asserts the object exists
     with the signed `Content-Type` and `Content-Length`.
-- **Live-pipeline Maestro flow** `.maestro/p3-15-upload.yaml`:
+- **Live-pipeline Maestro coverage** `modules/10a-photo-notes-draft.yaml`:
   sign in → open report → tap Photo → capture mirror Done → wait for
   the new image note row to render (depends on Phase B `ImageNoteCard`
   landing first — see todo_deps).

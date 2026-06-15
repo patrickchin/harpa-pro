@@ -3,6 +3,7 @@ import { drizzle, type NodePgDatabase } from 'drizzle-orm/node-postgres';
 import * as schema from './schema.js';
 import { env } from '../env.js';
 import { parseConnection } from './connection.js';
+import { captureApiException } from '../telemetry/sentry.js';
 
 const { Pool } = pg;
 
@@ -32,6 +33,24 @@ export function getPool(connectionString?: string): pg.Pool {
       ...parseConnection(url),
       max: 10,
       statement_timeout: STATEMENT_TIMEOUT_MS,
+    });
+    // Swallow async errors emitted on idle pool clients so they don't
+    // surface as `uncaughtException` and crash the worker. Neon kills
+    // idle connections after ~5 min, which makes the underlying TLS
+    // socket emit `read ETIMEDOUT` on the next event-loop tick — pg
+    // re-emits that on the pool, and without a listener Node treats
+    // it as fatal (HARPA-PRO-A in Sentry; transaction tag was
+    // misleading because the next request just happened to be /readyz).
+    // pg removes the broken client from the pool internally; we just
+    // need to acknowledge the error and report it to Sentry so the
+    // signal isn't lost.
+    pool.on('error', (err) => {
+      captureApiException(err, {
+        requestId: 'pool-idle',
+        method: 'DB',
+        route: 'pg.pool.idle-client',
+        status: 0,
+      });
     });
   }
   return pool;

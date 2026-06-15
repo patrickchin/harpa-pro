@@ -21,6 +21,19 @@ const Env = z.object({
     .string()
     .url()
     .default('http://localhost:8787'),
+  /**
+   * Optional shell-level override for `EXPO_PUBLIC_API_URL`. Exists so
+   * the PR-OTA workflow (`mobile-ota-pr.yml`) can keep using
+   * `eas update --environment development` — which is needed to pull
+   * EAS-managed Sentry vars for source-map upload — while still
+   * pointing each PR's bundle at its own per-PR Fly preview app
+   * (`harpa-pro-api-pr-<n>.fly.dev`). EAS-managed vars override the
+   * workflow's shell vars when `--environment` is passed, but only
+   * keys EAS *knows* about; this key is intentionally absent from
+   * the EAS development environment so the shell value always wins.
+   * Empty string is treated as unset.
+   */
+  EXPO_PUBLIC_API_URL_OVERRIDE: optionalUrl,
   EXPO_PUBLIC_USE_FIXTURES: z
     .enum(['true', 'false'])
     .default('false')
@@ -44,6 +57,15 @@ const Env = z.object({
     .enum(['true', 'false'])
     .default('false')
     .transform((v) => v === 'true'),
+  /**
+   * Store screenshot capture mode. Keeps seeded API data live while using
+   * deterministic screenshot-only fixture paths where native device input
+   * would make capture flaky. Intended for local Maestro screenshot runs only.
+   */
+  EXPO_PUBLIC_SCREENSHOT_MODE: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((v) => v === 'true'),
   EXPO_PUBLIC_SENTRY_DSN: optionalUrl,
   /**
    * Set by `mobile-ota-pr.yml` when publishing a PR OTA bundle.
@@ -61,9 +83,11 @@ const Env = z.object({
 /* eslint-disable no-restricted-syntax */
 const rawEnv = {
   EXPO_PUBLIC_API_URL: process.env.EXPO_PUBLIC_API_URL,
+  EXPO_PUBLIC_API_URL_OVERRIDE: process.env.EXPO_PUBLIC_API_URL_OVERRIDE,
   EXPO_PUBLIC_USE_FIXTURES: process.env.EXPO_PUBLIC_USE_FIXTURES,
   EXPO_PUBLIC_APP_VARIANT: process.env.EXPO_PUBLIC_APP_VARIANT,
   EXPO_PUBLIC_LAYOUT_PROBE: process.env.EXPO_PUBLIC_LAYOUT_PROBE,
+  EXPO_PUBLIC_SCREENSHOT_MODE: process.env.EXPO_PUBLIC_SCREENSHOT_MODE,
   EXPO_PUBLIC_SENTRY_DSN: process.env.EXPO_PUBLIC_SENTRY_DSN,
   EXPO_PUBLIC_PR_NUMBER: process.env.EXPO_PUBLIC_PR_NUMBER,
 };
@@ -75,5 +99,10 @@ if (!parsed.success) {
   throw new Error(`[env] invalid environment configuration: ${parsed.error.message}`);
 }
 
-export const env = parsed.data;
+const data = parsed.data;
+if (data.EXPO_PUBLIC_API_URL_OVERRIDE) {
+  data.EXPO_PUBLIC_API_URL = data.EXPO_PUBLIC_API_URL_OVERRIDE;
+}
+
+export const env = data;
 export type AppEnv = typeof env;

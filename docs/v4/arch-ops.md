@@ -32,13 +32,17 @@
     `harpa-pro.pages.dev`).
   - Dev branch `dev` → `https://dev.harpa-pro.pages.dev`.
 - **Mobile**: Fastlane + EAS. Fastlane owns checked-in App Store /
-  Play Store metadata and local release lanes; EAS owns Expo native
-  builds, signing, binary submission, and OTA updates. TestFlight +
-  Play internal track remain the beta distribution targets. Three build
-  profiles live in `apps/mobile/eas.json`:
+  Play Store metadata, guarded screenshot/privacy lanes, and local
+  release orchestration; EAS owns Expo native builds, signing, binary
+  submission, and OTA updates. Internal QA uses the preview/dev
+  bundle/package (`com.harpa.pro.dev`) against the dev backend. The
+  production bundle/package (`com.harpa.pro`) points at production and is
+  reserved for App Review, final smoke checks, and public rollout. Three
+  build profiles live in
+  `apps/mobile/eas.json`:
   - `production` — App Store / Play. `com.harpa.pro` →
     `https://api.harpapro.com`.
-  - `preview` — internal / TestFlight. `com.harpa.pro.dev` →
+  - `preview` — internal dev QA. `com.harpa.pro.dev` →
     `https://harpa-pro-api-dev.fly.dev`. Installable side-by-side
     with prod so QA can carry both apps.
   - `development` — Metro dev-client. `com.harpa.pro.dev` →
@@ -52,22 +56,206 @@
   ```sh
   bundle install --path vendor/bundle
   bundle exec fastlane doctor
-  bundle exec fastlane beta
+  bundle exec fastlane screenshots_preview       # only after assets exist
+  bundle exec fastlane app_privacy_preview       # only after review
+  bundle exec fastlane beta                      # internal QA on dev backend
+  bundle exec fastlane screenshots_production    # only after assets exist
+  bundle exec fastlane app_privacy_production    # only after review
+  bundle exec fastlane beta_production           # final smoke on production backend
   bundle exec fastlane release
   ```
 
   `doctor` is safe: it validates Bundler/Fastlane, `pnpm`, EAS config,
   and metadata files, then prints the EAS commands without uploading
-  metadata, starting a build, or submitting a binary. `beta` pushes
-  preview/internal store metadata, then starts the `preview` EAS build
-  with `--auto-submit-with-profile preview` so EAS submits the binaries
-  produced by that build. `release` does the same for production. Store,
-  Expo, Apple, and Google credentials stay outside git and come from
-  the authenticated local tools or environment variables. The first
+  metadata, screenshots, privacy answers, starting a build, or
+  submitting a binary. `beta` pushes preview/internal store metadata,
+  then starts the `preview` EAS build with
+  `--auto-submit-with-profile preview` so EAS submits the dev-backend
+  binaries produced by that build. `beta_production` pushes production
+  metadata, builds the `production` profile, and auto-submits the
+  resulting `com.harpa.pro` binaries to TestFlight and the Play internal
+  track through the `production-internal` EAS submit profile for final
+  smoke only. `release` builds and submits production binaries to the
+  public store release targets.
+  Store, Expo, Apple, and Google credentials stay outside git and come
+  from authenticated local tools or environment variables. The first
   Play metadata upload may require an existing release on the target
   track; if `supply` reports an empty track, run the EAS submit lane
   once for that track and re-run the metadata lane.
 - **Docs site**: Vercel (or Cloudflare Pages — TBD in P0).
+
+## Mobile store launch workflow
+
+Store launch is a two-layer workflow:
+
+- **Repo-owned and reviewable:** textual metadata, iOS category, optional
+  iOS age-rating JSON, optional App Store privacy JSON, and screenshot
+  upload lanes.
+- **Console-owned and owner-reviewed:** App Store Connect app records,
+  Play Console app records, app availability/pricing, TestFlight groups,
+  Play tester lists, Play content rating, Play data safety, target
+  audience, and final submit/release buttons.
+
+The repo intentionally does not contain store credentials. Local
+operators use existing EAS auth, App Store Connect auth, and Google Play
+auth. Private key files belong outside the repo or under the gitignored
+`fastlane/credentials/` path.
+
+### Store records
+
+Create and keep these store records aligned with
+`apps/mobile/eas.json`:
+
+| Target | iOS bundle id / ASC app id | Android package | Store role |
+| ------ | -------------------------- | --------------- | ---------- |
+| Preview | `com.harpa.pro.dev` / `6776967689` | `com.harpa.pro.dev` | TestFlight + Play internal QA on dev backend |
+| Production | `com.harpa.pro` / `6776759817` | `com.harpa.pro` | App Review, final smoke, App Store + Play production |
+
+This is intentionally a two-environment split for now. A future staging
+environment should add a third store/backend target for production-like QA
+without touching production data.
+
+iOS metadata lanes set the primary category to `Business` and secondary
+category to `Productivity`. Operators still verify category display in
+App Store Connect before review submission. Play Console category remains
+manual and should be set to `Business` unless product positioning changes.
+
+### Compliance setup
+
+Use the shipping app and the hosted privacy policy at
+`https://harpapro.com/privacy` as the source of truth. As of this setup,
+the app has account/auth data, project/report/note content, uploaded
+photos/documents, voice/audio recordings, Sentry diagnostics, and usage
+counters for app functionality and reliability. The app does not wire
+ads, IDFA/ATT tracking, contacts, health, fitness, precise location, or
+media-location extraction.
+
+App Store:
+
+- Answer App Privacy in App Store Connect once with an Apple ID that has
+  owner/admin rights. Fastlane's App Store privacy action cannot use an
+  App Store Connect API key.
+- Save the reviewed JSON to
+  `apps/mobile/fastlane/app_store/app_privacy_details.json`, then run
+  `bundle exec fastlane app_privacy_preview` or
+  `bundle exec fastlane app_privacy_production`.
+- If the account owner chooses to automate age rating, copy Fastlane's
+  `app_rating_config_path` template to
+  `apps/mobile/fastlane/app_store/age_rating.json`. When that file
+  exists, `metadata_preview` / `metadata_production` validate and upload
+  it with the rest of iOS metadata.
+
+Play Store:
+
+- Complete Content rating, Target audience and content, Ads, App access,
+  and Data safety in Play Console. Fastlane `supply` uploads metadata,
+  images, screenshots, and binaries, but these questionnaire flows remain
+  console-owned.
+- Keep the Play privacy-policy URL set to `https://harpapro.com/privacy`.
+- Enable Play App Signing before the first production release.
+
+### Screenshot setup
+
+Store screenshots are captured from real v4 builds with production-like
+sample data. Do not use fixture-only strings, private customer content,
+real emails, phone numbers, secrets, or test-only banners.
+
+Required repo layout is documented in
+`apps/mobile/fastlane/metadata/README.md`. iOS screenshots live under
+`apps/mobile/fastlane/screenshots/en-US/`; Play screenshots live
+under `apps/mobile/fastlane/metadata/android/en-US/images/` using the
+Fastlane `supply` screenshot folders.
+
+After assets are reviewed:
+
+```sh
+bundle exec fastlane screenshots_preview
+bundle exec fastlane screenshots_production
+```
+
+These lanes replace screenshots on the target stores. Run them only when
+the local screenshot set is complete for the locale/device family being
+updated.
+
+### Internal testing
+
+Internal QA uses the dev app identifiers and dev backend. Use this path
+for repeated tester churn, fixture-heavy flows, screenshots, and any test
+that might create noisy or disposable data.
+
+Internal QA flow:
+
+```sh
+bundle install --path vendor/bundle
+FASTLANE_SKIP_UPDATE_CHECK=1 bundle exec fastlane doctor
+FASTLANE_SKIP_UPDATE_CHECK=1 bundle exec fastlane metadata_preview
+FASTLANE_SKIP_UPDATE_CHECK=1 bundle exec fastlane beta
+```
+
+`metadata_preview` pushes checked-in text metadata to the
+`com.harpa.pro.dev` store records. `beta` repeats metadata upload, starts
+the EAS `preview` build for both platforms, and auto-submits the created
+binaries with the EAS `preview` submit profile: App Store
+Connect/TestFlight app `6776967689` and Play internal track for package
+`com.harpa.pro.dev`.
+
+TestFlight operator notes:
+
+- Confirm the build processes in App Store Connect and lands on the
+  internal TestFlight app for `com.harpa.pro.dev`.
+- Add the five internal testers/group for P5.1. Do not invite external
+  testers until the beta-widening checkpoint.
+- Smoke-test sign-in, project creation, voice note, photo note, report
+  generation, PDF export/share, Sentry-free startup, API URL override to
+  the dev backend or a PR preview, and universal links for the dev app.
+
+Play internal operator notes:
+
+- Confirm the `com.harpa.pro.dev` build lands on the Play internal track.
+- Add the same internal tester list or Google Group used for P5.1.
+- If Play blocks metadata upload because the track has no release yet,
+  run `bundle exec fastlane submit_preview` once after an EAS preview
+  build exists, then re-run `metadata_preview` or `beta`.
+- Verify Android install/update, sign-in, voice recording codec, photo
+  upload, report generation, PDF export/share, and links.
+
+### Production smoke
+
+After internal QA sign-off, run a narrow production smoke with the real
+app identifiers and production backend. Keep this to seeded/demo accounts
+and non-destructive checks; do not use production as the everyday QA
+database.
+
+```sh
+FASTLANE_SKIP_UPDATE_CHECK=1 bundle exec fastlane doctor
+FASTLANE_SKIP_UPDATE_CHECK=1 bundle exec fastlane metadata_production
+FASTLANE_SKIP_UPDATE_CHECK=1 bundle exec fastlane beta_production
+```
+
+`beta_production` builds the EAS `production` profile and auto-submits
+the created `com.harpa.pro` binaries with the EAS `production-internal`
+submit profile: production App Store Connect/TestFlight app `6776759817`
+and Play internal track for package `com.harpa.pro`.
+
+### Production release
+
+Production release is manual after production smoke sign-off. Prefer
+promoting the same internally tested build in App Store Connect and Play
+Console when possible. Use the Fastlane production release lane only when
+you intentionally want a fresh production build/submission:
+
+```sh
+FASTLANE_SKIP_UPDATE_CHECK=1 bundle exec fastlane doctor
+FASTLANE_SKIP_UPDATE_CHECK=1 bundle exec fastlane metadata_production
+FASTLANE_SKIP_UPDATE_CHECK=1 bundle exec fastlane release
+```
+
+Run `screenshots_production` and `app_privacy_production` before this
+only when the reviewed local assets/JSON changed. After `release`
+finishes, operators complete the final App Store review submission and
+Play production rollout in the store consoles. Use a phased rollout for
+GA (1% -> 10% -> 50% -> 100%) and watch Sentry crash-free sessions,
+API 5xx rate, auth success, and AI provider errors before each step.
 
 ## Secrets
 

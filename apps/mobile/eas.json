@@ -55,6 +55,15 @@
         "track": "internal"
       }
     },
+    "production-internal": {
+      "ios": {
+        "ascAppId": "6776759817",
+        "bundleIdentifier": "com.harpa.pro"
+      },
+      "android": {
+        "track": "internal"
+      }
+    },
     "production": {
       "ios": {
         "ascAppId": "6776759817",

@@ -113,11 +113,13 @@ export default function AuthCode({
                 disabled={resendDisabled}
                 onPress={onResend}
               >
-                <Text className="text-sm text-muted-foreground">
-                  Didn't get the code?{' '}
+                <View className="flex-row items-center justify-center gap-1">
+                  <Text className="text-sm text-muted-foreground">
+                    Didn't get the code?
+                  </Text>
                   <Text
                     className={cn(
-                      'font-semibold underline',
+                      'text-sm font-semibold underline',
                       resendDisabled ? 'text-muted-foreground' : 'text-foreground',
                     )}
                   >
@@ -125,7 +127,7 @@ export default function AuthCode({
                       ? `Resend in ${resendCountdownSeconds}s`
                       : 'Resend Code'}
                   </Text>
-                </Text>
+                </View>
               </Pressable>
             </View>
           </View>

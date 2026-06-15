@@ -161,17 +161,20 @@ exports[`AuthCode > matches snapshot at default props 1`] = `
             onPress={[MockFunction spy]}
             testID="link-resend-code"
           >
-            <rn-Text
-              className="text-sm text-muted-foreground"
+            <rn-View
+              className="flex-row items-center justify-center gap-1"
             >
-              Didn't get the code?
-
               <rn-Text
-                className="font-semibold underline text-foreground"
+                className="text-sm text-muted-foreground"
+              >
+                Didn't get the code?
+              </rn-Text>
+              <rn-Text
+                className="text-sm font-semibold underline text-foreground"
               >
                 Resend Code
               </rn-Text>
-            </rn-Text>
+            </rn-View>
           </rn-Pressable>
         </rn-View>
       </rn-View>

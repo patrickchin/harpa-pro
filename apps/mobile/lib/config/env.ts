@@ -58,10 +58,9 @@ const Env = z.object({
     .default('false')
     .transform((v) => v === 'true'),
   /**
-   * Store screenshot capture mode. Hides OS chrome such as notification,
-   * clock, and battery icons, and uses deterministic screenshot-only
-   * fixture paths where native device input would make capture flaky.
-   * Intended for local Maestro screenshot runs only.
+   * Store screenshot capture mode. Keeps seeded API data live while using
+   * deterministic screenshot-only fixture paths where native device input
+   * would make capture flaky. Intended for local Maestro screenshot runs only.
    */
   EXPO_PUBLIC_SCREENSHOT_MODE: z
     .enum(['true', 'false'])

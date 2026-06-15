@@ -19,6 +19,8 @@
 #   usage-limit-KIND / usage-limit-bar-KIND
 #                              →  testID={`usage-limit-${b.kind}`} and
 #                                  `usage-limit-bar-${b.kind}`
+#   project-row-SLUG           →  testID={`project-row-${item.slug}`} in
+#                                  seeded flows
 #   report-row-N               →  testID={`report-row-${item.number}`} in seeded flows
 #   report-row-draft-0         →  legacy seeded fixture id
 #   input-phone                →  rendered by auth/login flow outside static source match
@@ -52,6 +54,7 @@ is_known() {
   local id="$1"
   [[ "$id" =~ ^attachment-picker-thumbnail-[0-9]+-image$ ]] && return 0
   [[ "$id" =~ ^usage-limit(-bar)?-(report_generate|voice_transcribe|voice_summarize|ai_input_tokens|ai_output_tokens)$ ]] && return 0
+  [[ "$id" =~ ^project-row-.+$ ]] && return 0
   [[ "$id" =~ ^report-row-[0-9]+$ ]] && return 0
   for known in $KNOWN_TEMPLATE_IDS; do
     [[ "$id" == "$known" ]] && return 0
@@ -77,7 +80,7 @@ grep_src() {
 while IFS= read -r id; do
   # Regex wildcard — extract prefix before '.*'
   if [[ "$id" == *".*"* ]]; then
-    prefix="${id%%\.\*}"
+    prefix="${id%%.*}"
     [ -z "$prefix" ] && continue
     if ! grep_src "${prefix}"; then
       echo "  MISSING (prefix): $id"

@@ -10,9 +10,9 @@
  * fall through to the empty/error state if the API hasn't finished
  * the body → `GeneratedSiteReport` translation yet.
  *
- * Delete + Unfinalize mutations and source-note fetching aren't ported
- * yet (TODO(P4) markers). They surface as no-op confirm flows so the
- * dialog wiring is exercised end-to-end in tests + dev mirrors.
+ * Delete + Unfinalize mutations are wired through the saved-report
+ * confirm dialogs. Failures bubble back to the screen so the user gets
+ * a themed error dialog instead of a silent catch.
  */
 import { useCallback, useMemo, useState } from 'react';
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
@@ -197,35 +197,22 @@ export default function SavedReportRoute() {
 
   const handleConfirmDelete = useCallback(async () => {
     if (!slug || reportNumber === null) return;
-    try {
-      await deleteMutation.mutateAsync({
-        params: { project: slug, number: reportNumber },
-      });
-      // After delete, fall back to the reports list. Pop to the existing
-      // frame instead of replacing the top so we don't leave two adjacent
-      // reports-list frames. See docs/v4/arch-mobile-navigation.md §4.
-      dismissOrReplaceTo(router, `/(app)/projects/${slug}/reports` as Href);
-    } catch {
-      // Error surface: the mutation hook keeps the dialog open via the
-      // `isDeleting` flag; the AppDialogSheet stays mounted. A dedicated
-      // error dialog lands with P4 alongside `useReportNotesMutations`
-      // error routing — for now `deleteMutation.error` is unread.
-    }
+    await deleteMutation.mutateAsync({
+      params: { project: slug, number: reportNumber },
+    });
+    // After delete, fall back to the reports list. Pop to the existing
+    // frame instead of replacing the top so we don't leave two adjacent
+    // reports-list frames. See docs/v4/arch-mobile-navigation.md §4.
+    dismissOrReplaceTo(router, `/(app)/projects/${slug}/reports` as Href);
   }, [slug, reportNumber, deleteMutation, router]);
 
   const unfinalizeMutation = useUnfinalizeReportMutation();
 
   const handleConfirmUnfinalize = useCallback(async () => {
     if (!slug || reportNumber === null) return;
-    try {
-      await unfinalizeMutation.mutateAsync({
-        params: { project: slug, number: reportNumber },
-      });
-    } catch {
-      // Error surface mirrors delete — the screen body keeps the
-      // confirm dialog open via `isUnfinalizing`. A dedicated error
-      // dialog lands alongside the action-error router (P4).
-    }
+    await unfinalizeMutation.mutateAsync({
+      params: { project: slug, number: reportNumber },
+    });
   }, [slug, reportNumber, unfinalizeMutation]);
 
   const myRole = projectQuery.data?.myRole;

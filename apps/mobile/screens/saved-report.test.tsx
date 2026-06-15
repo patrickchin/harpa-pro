@@ -83,6 +83,19 @@ function render(el: React.ReactElement): TestRenderer.ReactTestRenderer {
   return tree;
 }
 
+function collectText(n: unknown): string {
+  if (n == null) return '';
+  if (typeof n === 'string') return n;
+  if (Array.isArray(n)) return n.map(collectText).join(' ');
+  const node = n as { children?: unknown };
+  if (node.children !== undefined) return collectText(node.children);
+  return '';
+}
+
+function treeText(tree: TestRenderer.ReactTestRenderer): string {
+  return collectText(tree.toJSON());
+}
+
 const STUB_PDF_ACTIONS: UseReportPdfActionsReturn = {
   isExporting: false,
   isOpeningSavedPdf: false,
@@ -298,6 +311,29 @@ describe('SavedReport', () => {
     expect(onConfirmDelete).toHaveBeenCalledOnce();
   });
 
+  it('surfaces a delete failure after confirmation', async () => {
+    const onConfirmDelete = vi.fn(async () => {
+      throw new Error('network down');
+    });
+    const tree = render(
+      <SavedReport {...baseProps({ onConfirmDelete })} />,
+    );
+    act(() => {
+      tree.root.findByProps({ testID: 'btn-report-actions' }).props.onPress();
+    });
+    act(() => {
+      tree.root.findByProps({ testID: 'btn-report-delete' }).props.onPress();
+    });
+    await act(async () => {
+      await tree.root
+        .findByProps({ testID: 'btn-confirm-delete-report' })
+        .props.onPress();
+    });
+
+    expect(treeText(tree)).toContain("Couldn't delete report");
+    expect(treeText(tree)).toContain('Try again.');
+  });
+
   it('confirms unfinalize via the confirmation dialog', async () => {
     const onConfirmUnfinalize = vi.fn();
     const tree = render(
@@ -317,6 +353,31 @@ describe('SavedReport', () => {
         .props.onPress();
     });
     expect(onConfirmUnfinalize).toHaveBeenCalledOnce();
+  });
+
+  it('surfaces an unfinalize failure after confirmation', async () => {
+    const onConfirmUnfinalize = vi.fn(async () => {
+      throw new Error('network down');
+    });
+    const tree = render(
+      <SavedReport {...baseProps({ onConfirmUnfinalize })} />,
+    );
+    act(() => {
+      tree.root.findByProps({ testID: 'btn-report-actions' }).props.onPress();
+    });
+    act(() => {
+      tree.root
+        .findByProps({ testID: 'btn-unfinalize-report' })
+        .props.onPress();
+    });
+    await act(async () => {
+      await tree.root
+        .findByProps({ testID: 'btn-confirm-unfinalize-report' })
+        .props.onPress();
+    });
+
+    expect(treeText(tree)).toContain("Couldn't unfinalize report");
+    expect(treeText(tree)).toContain('Try again.');
   });
 
   it('opens the PDF preview modal from "View PDF"', () => {

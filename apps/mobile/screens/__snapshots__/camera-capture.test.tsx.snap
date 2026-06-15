@@ -135,7 +135,7 @@ exports[`CameraCapture > matches snapshot — granted, empty 1`] = `
         className="flex-row items-center gap-2"
       >
         <rn-Pressable
-          accessibilityLabel="Flash off"
+          accessibilityLabel="Flash Off"
           accessibilityRole="button"
           className="w-11 h-11 rounded-full items-center justify-center bg-black/35"
           onPress={[Function]}
@@ -350,7 +350,7 @@ exports[`CameraCapture > matches snapshot — granted, empty 1`] = `
                 <rn-Text
                   className="text-muted-foreground font-semibold text-base"
                 >
-                  Keep editing
+                  Cancel
                 </rn-Text>
               </rn-Pressable>
             </rn-View>

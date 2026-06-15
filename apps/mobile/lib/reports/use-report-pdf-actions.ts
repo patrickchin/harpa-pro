@@ -82,7 +82,7 @@ export function useReportPdfActions({
       setSavedReportSheet({
         status: 'error',
         reportTitle: displayReport.report.meta.title,
-        errorMessage: e instanceof Error ? e.message : 'Could not generate PDF.',
+        errorMessage: e instanceof Error ? e.message : "Couldn't generate PDF.",
       });
     }
   };
@@ -99,7 +99,7 @@ export function useReportPdfActions({
       setSavedReportSheetError(
         error instanceof Error
           ? error.message
-          : 'Could not open the saved PDF.',
+          : "Couldn't open the saved PDF.",
       );
     } finally {
       setIsOpeningSavedPdf(false);
@@ -121,7 +121,7 @@ export function useReportPdfActions({
       setSavedReportSheetError(
         error instanceof Error
           ? error.message
-          : 'Could not share the saved PDF.',
+          : "Couldn't share the saved PDF.",
       );
     } finally {
       setIsSharingSavedPdf(false);
@@ -149,9 +149,9 @@ export function useReportPdfActions({
       onExportError({
         kind: 'error',
         ...getActionErrorDialogCopy({
-          title: 'Export Failed',
-          fallbackMessage: 'Could not generate PDF.',
-          message: e instanceof Error ? e.message : 'Could not generate PDF.',
+          title: "Couldn't export PDF",
+          fallbackMessage: "Couldn't generate PDF.",
+          message: e instanceof Error ? e.message : "Couldn't generate PDF.",
         }),
       });
     } finally {

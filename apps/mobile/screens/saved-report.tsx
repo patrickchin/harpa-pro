@@ -140,8 +140,8 @@ export interface SavedReportProps {
   actions?: ReactNode;
 
   /**
-   * Invoked from the Actions menu's "View Notes" entry on finalised
-   * reports. When provided, the menu surfaces a "View Notes" row;
+   * Invoked from the Actions menu's "View notes" entry on finalised
+   * reports. When provided, the menu surfaces a "View notes" row;
    * tapping it should navigate to the dedicated notes screen.
    * Omitted (no entry rendered) for drafts — drafts show the Notes
    * tab inline instead.
@@ -211,6 +211,10 @@ export function SavedReport(props: SavedReportProps) {
   } | null>(null);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [confirmUnfinalizeOpen, setConfirmUnfinalizeOpen] = useState(false);
+  const [actionError, setActionError] = useState<{
+    title: string;
+    message: string;
+  } | null>(null);
   const [localReport, setLocalReport] = useState<GeneratedSiteReport | null>(
     null,
   );
@@ -426,7 +430,7 @@ export function SavedReport(props: SavedReportProps) {
       <SafeAreaView className="flex-1 bg-background" edges={['top']}>
         <View className="flex-1 items-center justify-center px-5">
           <Text className="text-xl font-semibold text-foreground">
-            Failed to load report
+            Couldn't load report
           </Text>
           <Text className="mt-2 text-center text-base text-muted-foreground">
             {loadError instanceof Error
@@ -600,11 +604,19 @@ export function SavedReport(props: SavedReportProps) {
         canDismiss={!isDeleting}
         actions={[
           {
-            label: isDeleting ? 'Deleting...' : deleteCopy.confirmLabel,
+            label: isDeleting ? 'Deleting…' : deleteCopy.confirmLabel,
             variant: deleteCopy.confirmVariant,
             onPress: async () => {
-              await onConfirmDelete();
-              setConfirmDeleteOpen(false);
+              try {
+                await onConfirmDelete();
+                setConfirmDeleteOpen(false);
+              } catch {
+                setConfirmDeleteOpen(false);
+                setActionError({
+                  title: "Couldn't delete report",
+                  message: 'Try again.',
+                });
+              }
             },
             disabled: isDeleting,
             accessibilityLabel: 'Confirm delete report',
@@ -634,12 +646,20 @@ export function SavedReport(props: SavedReportProps) {
         actions={[
           {
             label: isUnfinalizing
-              ? 'Unfinalizing...'
+              ? 'Unfinalizing…'
               : unfinalizeCopy.confirmLabel,
             variant: unfinalizeCopy.confirmVariant,
             onPress: async () => {
-              await onConfirmUnfinalize();
-              setConfirmUnfinalizeOpen(false);
+              try {
+                await onConfirmUnfinalize();
+                setConfirmUnfinalizeOpen(false);
+              } catch {
+                setConfirmUnfinalizeOpen(false);
+                setActionError({
+                  title: "Couldn't unfinalize report",
+                  message: 'Try again.',
+                });
+              }
             },
             disabled: isUnfinalizing,
             accessibilityLabel: 'Confirm unfinalize report',
@@ -652,6 +672,23 @@ export function SavedReport(props: SavedReportProps) {
             onPress: () => setConfirmUnfinalizeOpen(false),
             disabled: isUnfinalizing,
             accessibilityLabel: 'Cancel unfinalize report',
+          },
+        ]}
+      />
+
+      <AppDialogSheet
+        visible={actionError !== null}
+        title={actionError?.title ?? "Couldn't update report"}
+        message={actionError?.message}
+        noticeTone="danger"
+        noticeTitle="Action failed"
+        onClose={() => setActionError(null)}
+        actions={[
+          {
+            label: 'Done',
+            variant: 'secondary',
+            onPress: () => setActionError(null),
+            testID: 'btn-dismiss-report-action-error',
           },
         ]}
       />

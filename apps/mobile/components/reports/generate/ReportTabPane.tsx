@@ -51,7 +51,6 @@ export function ReportTabPane({
   const {
     generation,
     draft,
-    handleRegenerate,
     reportNumber,
     preview,
     placement,
@@ -173,13 +172,13 @@ export function ReportTabPane({
               <Button
                 variant="secondary"
                 size="sm"
-                onPress={handleRegenerate}
+                onPress={generation.errorAction}
                 testID="btn-report-tab-retry"
               >
                 <View className="flex-row items-center gap-1.5">
                   <RotateCcw size={14} color={colors.foreground} />
                   <Text className="text-base font-semibold text-foreground">
-                    Retry
+                    {generation.errorActionLabel}
                   </Text>
                 </View>
               </Button>
@@ -196,7 +195,7 @@ export function ReportTabPane({
         {generation.isUpdating && !generation.report ? (
           <View className="gap-3" testID="report-tab-generating">
             <InlineNotice tone="info">
-              Generating your report from the notes collected so far...
+              Generating your report from the notes collected so far…
             </InlineNotice>
             {[1, 2, 3, 4].map((i) => (
               <Animated.View
@@ -213,7 +212,7 @@ export function ReportTabPane({
             {generation.isUpdating ? (
               <Animated.View entering={FadeIn}>
                 <InlineNotice tone="info">
-                  Updating the draft with your newest notes...
+                  Updating the draft with your newest notes…
                 </InlineNotice>
               </Animated.View>
             ) : null}

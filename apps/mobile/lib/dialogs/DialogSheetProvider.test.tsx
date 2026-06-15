@@ -146,9 +146,9 @@ describe('lib/dialogs/DialogSheetProvider', () => {
     await flush();
     
     const buttons = tree!.root.findAllByType(Button);
-    expect(buttons.length).toBe(1); // Single OK button
+    expect(buttons.length).toBe(1); // Single Done button
     
-    // Press the OK button
+    // Press the Done button
     act(() => {
       buttons[0]!.props.onPress();
     });

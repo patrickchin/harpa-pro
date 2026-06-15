@@ -67,7 +67,7 @@ export function ProjectNew({ isPending, errorMessage, onBack, onSubmit, actions 
           >
             <Input
               testID="input-project-name"
-              label="Project Name"
+              label="Project name"
               placeholder="e.g. Highland Tower Complex"
               value={name}
               onChangeText={(v) => {
@@ -78,7 +78,7 @@ export function ProjectNew({ isPending, errorMessage, onBack, onSubmit, actions 
             />
             <Input
               testID="input-project-address"
-              label="Project Address"
+              label="Project address"
               placeholder="e.g. 2400 Highland Ave, Austin TX"
               value={address}
               onChangeText={setAddress}
@@ -86,7 +86,7 @@ export function ProjectNew({ isPending, errorMessage, onBack, onSubmit, actions 
             />
             <Input
               testID="input-client-name"
-              label="Client Name"
+              label="Client name"
               placeholder="e.g. Acme Construction Co."
               value={client}
               onChangeText={setClient}
@@ -103,7 +103,7 @@ export function ProjectNew({ isPending, errorMessage, onBack, onSubmit, actions 
               onPress={handleSubmit}
               loading={isPending}
             >
-              {isPending ? 'Creating…' : 'Create Project'}
+              {isPending ? 'Creating…' : 'Create project'}
             </Button>
           </ScrollView>
         </View>

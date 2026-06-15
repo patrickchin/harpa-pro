@@ -188,14 +188,14 @@ describe('CameraCapture', () => {
       />,
     );
     const flashBtn = tree.root.findByProps({ testID: 'btn-camera-flash' });
-    expect(flashBtn.props.accessibilityLabel).toBe('Flash off');
+    expect(flashBtn.props.accessibilityLabel).toBe('Flash Off');
     act(() => {
       flashBtn.props.onPress();
     });
     expect(
       tree.root.findByProps({ testID: 'btn-camera-flash' }).props
         .accessibilityLabel,
-    ).toBe('Flash auto');
+    ).toBe('Flash Auto');
 
     const flipBtn = tree.root.findByProps({ testID: 'btn-camera-flip' });
     expect(flipBtn.props.accessibilityLabel).toBe('Flip camera');

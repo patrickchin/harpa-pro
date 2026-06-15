@@ -86,7 +86,7 @@ export function AvatarUploader({
     setError(null);
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) {
-      setError('Photo library permission denied');
+      setError('Photos access is off. Open Settings to allow.');
       return;
     }
     const picked = await ImagePicker.launchImageLibraryAsync({
@@ -124,7 +124,7 @@ export function AvatarUploader({
       await AsyncStorage.setItem(AVATAR_STORAGE_KEY, newId);
       onUploaded?.(newId);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not upload avatar');
+      setError(err instanceof Error ? err.message : "Couldn't upload avatar.");
     } finally {
       setIsUploading(false);
     }

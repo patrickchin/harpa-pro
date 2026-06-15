@@ -92,7 +92,7 @@ export function ProjectsList({
             testID="btn-new-project"
             onPress={onPressNewProject}
             accessibilityRole="button"
-            accessibilityLabel="Add new project"
+            accessibilityLabel="Add project"
           >
             <View className="flex-row items-center gap-3 rounded-lg border border-dashed border-border bg-surface-muted p-4">
               <View className="h-10 w-10 items-center justify-center rounded-md border border-border bg-card">
@@ -100,7 +100,7 @@ export function ProjectsList({
               </View>
               <View className="flex-1">
                 <Text className="text-title-sm text-foreground">
-                  Add new project
+                  Add project
                 </Text>
                 <Text className="text-sm text-muted-foreground">
                   Create a destination for field notes and reports.
@@ -140,7 +140,7 @@ export function ProjectsList({
                   variant="hero"
                   size="lg"
                   onPress={onPressNewProject}
-                  accessibilityLabel="Add new project"
+                  accessibilityLabel="Add project"
                 >
                   Add your first project
                 </Button>

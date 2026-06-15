@@ -20,6 +20,10 @@ interface MaterialsCardProps {
   editActionsDisabled?: boolean;
 }
 
+function formatCount(count: number, noun: string): string {
+  return `${count} ${noun}${count === 1 ? '' : 's'}`;
+}
+
 export function MaterialsCard({
   materials,
   onEdit,
@@ -31,7 +35,7 @@ export function MaterialsCard({
     <Card variant="default" padding="lg">
       <SectionHeader
         title="Materials"
-        subtitle={`${materials.length} material${materials.length === 1 ? '' : 's'} recorded.`}
+        subtitle={`${formatCount(materials.length, 'material')} recorded.`}
         icon={<Package size={16} color={colors.foreground} />}
         trailing={
           onEdit ? (

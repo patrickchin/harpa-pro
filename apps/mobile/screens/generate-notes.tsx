@@ -301,7 +301,7 @@ function GenerateNotesLayout({
         }}
         actions={[
           {
-            label: isDeletingDraft ? 'Deleting...' : deleteDraftCopy.confirmLabel,
+            label: isDeletingDraft ? 'Deleting…' : deleteDraftCopy.confirmLabel,
             variant: deleteDraftCopy.confirmVariant,
             onPress: () => {
               if (isDeletingDraft) return;

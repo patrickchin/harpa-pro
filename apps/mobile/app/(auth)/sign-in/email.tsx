@@ -33,7 +33,7 @@ export default function SignInEmailPage() {
   const handleSubmit = async () => {
     const trimmed = email.trim().toLowerCase();
     if (!EMAIL_REGEX.test(trimmed)) {
-      setError('Please enter a valid email address.');
+      setError('Enter a valid email address.');
       return;
     }
     setError(null);

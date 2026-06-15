@@ -177,7 +177,7 @@ describe('AvatarUploader', () => {
     await flush();
 
     const err = tree.root.findByProps({ testID: 'avatar-error' });
-    expect(err.props.children).toContain('permission denied');
+    expect(err.props.children).toContain('Photos access is off');
   });
 
   it('hydrates the persisted avatarFileId on mount', async () => {

@@ -103,7 +103,7 @@ export function ReportNotes(props: ReportNotesProps) {
       <SafeAreaView className="flex-1 bg-background" edges={['top']}>
         <View className="flex-1 items-center justify-center px-5">
           <Text className="text-xl font-semibold text-foreground">
-            Failed to load notes
+            Couldn't load notes
           </Text>
           <Text className="mt-2 text-center text-base text-muted-foreground">
             {loadError instanceof Error

@@ -632,7 +632,7 @@ exports[`GenerateNotes > matches the empty-state snapshot 1`] = `
               className="min-h-[44px] flex-1 text-base text-foreground"
               multiline={true}
               onChangeText={[Function]}
-              placeholder="Type a site note..."
+              placeholder="Type a site note…"
               placeholderTextColor="#5f5b66"
               returnKeyType="default"
               testID="input-note"
@@ -722,7 +722,7 @@ exports[`GenerateNotes > matches the empty-state snapshot 1`] = `
               <rn-Text
                 className="text-xl font-bold text-foreground"
               >
-                Finalize Report
+                Finalize report
               </rn-Text>
               <rn-Pressable
                 disabled={false}
@@ -794,7 +794,7 @@ exports[`GenerateNotes > matches the empty-state snapshot 1`] = `
                   <rn-Text
                     className="text-primary-foreground font-semibold text-base"
                   >
-                    Finalize Report
+                    Finalize report
                   </rn-Text>
                 </rn-Pressable>
                 <rn-Pressable
@@ -856,7 +856,7 @@ exports[`GenerateNotes > matches the empty-state snapshot 1`] = `
               <rn-Text
                 className="text-xl font-bold text-foreground"
               >
-                Delete Note
+                Delete note
               </rn-Text>
               <rn-Pressable
                 disabled={false}
@@ -990,7 +990,7 @@ exports[`GenerateNotes > matches the empty-state snapshot 1`] = `
               <rn-Text
                 className="text-xl font-bold text-foreground"
               >
-                Upload Failed
+                Upload failed
               </rn-Text>
               <rn-Pressable
                 disabled={false}
@@ -1083,7 +1083,7 @@ exports[`GenerateNotes > matches the empty-state snapshot 1`] = `
                   <rn-Text
                     className="text-foreground font-semibold text-base"
                   >
-                    Photo Library
+                    Photo library
                   </rn-Text>
                 </rn-Pressable>
                 <rn-Pressable
@@ -1195,7 +1195,7 @@ exports[`GenerateNotes > matches the empty-state snapshot 1`] = `
               <rn-Text
                 className="text-xl font-bold text-foreground"
               >
-                Delete Draft
+                Delete draft
               </rn-Text>
               <rn-Pressable
                 disabled={false}
@@ -1647,7 +1647,7 @@ exports[`GenerateNotes > matches the empty-state snapshot 1`] = `
                   <rn-Text
                     className="text-primary-foreground font-semibold text-base"
                   >
-                    OK
+                    Done
                   </rn-Text>
                 </rn-Pressable>
               </rn-View>

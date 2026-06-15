@@ -76,14 +76,14 @@ describe('UsageLimitDialog', () => {
     expect(text).toContain('custom limit');
   });
 
-  it('invokes onClose when the OK action fires', () => {
+  it('invokes onClose when the Done action fires', () => {
     const onClose = vi.fn();
     const tree = render(
       <UsageLimitDialog visible details={DETAILS} onClose={onClose} />,
     );
-    const ok = tree.root.findByProps({ testID: 'usage-limit-dialog-ok' });
+    const done = tree.root.findByProps({ testID: 'usage-limit-dialog-ok' });
     act(() => {
-      ok.props.onPress();
+      done.props.onPress();
     });
     expect(onClose).toHaveBeenCalled();
   });

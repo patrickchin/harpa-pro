@@ -27,7 +27,7 @@ import { reportToHtml, type PdfBranding } from './report-to-html';
 
 const reportsDir = new Directory(Paths.cache, 'Harpa Pro', 'reports');
 const OPEN_PDF_ERROR_MESSAGE =
-  'Could not open the saved PDF. Use Share PDF to choose another app.';
+  "Couldn't open the saved PDF. Tap Share PDF to choose another app.";
 
 function sanitizeFilename(title: string): string {
   return title

@@ -132,7 +132,7 @@ export function NoteTimeline({
   if (error) {
     return (
       <Text className="text-sm text-danger-foreground" selectable>
-        Could not load notes: {error.message}
+        Couldn't load notes: {error.message}
       </Text>
     );
   }

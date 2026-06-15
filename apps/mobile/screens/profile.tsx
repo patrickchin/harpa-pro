@@ -171,7 +171,7 @@ export function Profile({
             <Card className="flex-row items-center gap-3">
               <ActivityIndicator color={colors.foreground} />
               <Text className="text-base text-muted-foreground">
-                Loading your account details...
+                Loading your account details…
               </Text>
             </Card>
           </View>

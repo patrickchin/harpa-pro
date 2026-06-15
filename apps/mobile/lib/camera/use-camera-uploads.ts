@@ -35,7 +35,7 @@ export interface UseCameraUploadsApi {
    */
   enqueueCameraUris: (
     uris: ReadonlyArray<string>,
-    opts: { reportId: string; projectId: string },
+    opts: { reportId: string; projectId: string; noteSource?: 'camera' | 'gallery' },
   ) => Promise<Array<PromiseSettledResult<UploadResult>>>;
 }
 
@@ -51,7 +51,7 @@ export function useCameraUploads(): UseCameraUploadsApi {
   const enqueueCameraUris = useCallback(
     async (
       uris: ReadonlyArray<string>,
-      opts: { reportId: string; projectId: string },
+      opts: { reportId: string; projectId: string; noteSource?: 'camera' | 'gallery' },
     ): Promise<Array<PromiseSettledResult<UploadResult>>> => {
       if (uris.length === 0) return [];
 
@@ -77,6 +77,7 @@ export function useCameraUploads(): UseCameraUploadsApi {
             sizeBytes: main.sizeBytes,
             reportId: opts.reportId,
             projectId: opts.projectId,
+            noteSource: opts.noteSource ?? 'camera',
             ...(thumbnail
               ? {
                   thumbnail: {

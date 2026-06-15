@@ -6,7 +6,8 @@ Orchestrates the four-step ritual from Pitfall windows#15:
     2. optional device pre-check (only when --device is given)
     3. DB truncate via `docker exec -i harpa-pro-pg psql ...`
     4. App-data clear (Android: `adb shell pm clear`; iOS: `simctl uninstall`)
-    5. adb reverse tcp:8081 + tcp:8787 (Pitfall windows#20; iOS skipped)
+    5. adb reverse tcp:8081 + tcp:8787 + tcp:9000
+       (Pitfall windows#20; iOS skipped)
 
 Each step is independently skippable via `--skip-*` for debugging.
 Output uses the same `rich` style as `mo doctor` so the surface feels

@@ -27,15 +27,20 @@ import { reports } from '@harpa/api-contract';
 import type { GeneratedSiteReport } from '@harpa/report-core';
 
 type ReportBody = reports.ReportBody;
+type ReportAttachments = reports.ReportAttachments;
 
-// Legacy rows stored visitDate at the top level before the meta envelope landed.
-type LegacyBodyShim = ReportBody & { visitDate?: string | null };
+// Legacy rows stored visitDate at the top level before the meta envelope
+// landed. The weather temperatureC/windKph rename is handled in the DB
+// by migration 0014, so no JS-side shim is needed for those keys.
+type LegacyBodyShim = ReportBody & {
+  visitDate?: string | null;
+};
 
 function normaliseLegacy(body: ReportBody | LegacyBodyShim): ReportBody {
   if ((body as ReportBody).meta) return body as ReportBody;
   const legacy = body as LegacyBodyShim;
   return {
-    ...legacy,
+    ...(legacy as ReportBody),
     meta: {
       title: null,
       summary: null,
@@ -44,37 +49,58 @@ function normaliseLegacy(body: ReportBody | LegacyBodyShim): ReportBody {
   };
 }
 
-function num(n: number | null, suffix = ''): string | null {
-  return n == null ? null : `${n}${suffix}`;
-}
-
 /**
- * Parse a leading number out of a free-form display string. Used by the
- * inverse adapter so the API's `reportBody` round-trips through the UI
- * `GeneratedSiteReport` shape without losing the numeric weather/quantity
- * fields. Returns null when the string is empty or doesn't start with a
- * number — matches what the cold-start adapter does with null inputs.
+ * Strip a trailing display suffix that the UI may have appended, so
+ * the wire value stays canonical (used for `materials[].quantity`
+ * where the UI joins quantity + unit for display). If the string
+ * starts with a number we keep the numeric prefix; otherwise we
+ * preserve the user-typed text verbatim (the wire accepts free text
+ * like "a few" / "around 20").
  */
-function parseLeadingNumber(s: string | null): number | null {
+function stripUnit(s: string | null): string | null {
   if (s == null) return null;
   const trimmed = s.trim();
-  if (trimmed.length === 0) return null;
+  if (trimmed === '') return null;
   const m = trimmed.match(/^-?\d+(\.\d+)?/);
-  if (!m) return null;
-  const n = Number.parseFloat(m[0]);
-  return Number.isFinite(n) ? n : null;
+  return m ? m[0] : trimmed;
 }
 
 /**
- * Coerce an arbitrary string into the API's `issues.severity` enum.
- * The UI surface accepts any non-empty string (defaults to 'medium'
- * via the zod `.catch(...)` in report-core), but the API contract
- * rejects anything outside { low, medium, high }. Unknown values
- * collapse to 'medium' — same default the report-core schema uses
- * on the way in.
+ * Parse a wire-side string into a number for UI math (totals,
+ * bar-chart widths). Empty string / null / non-numeric text → 0,
+ * matching the existing `?? 0` semantics callers used to rely on
+ * when count/hours were `number | null`.
  */
-function normaliseSeverity(s: string): 'low' | 'medium' | 'high' {
-  if (s === 'low' || s === 'high' || s === 'medium') return s;
+function toNum(s: string | null): number {
+  if (s == null) return 0;
+  const n = Number.parseFloat(s);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function cloneAttachments(
+  attachments: ReportAttachments | undefined,
+): ReportAttachments | undefined {
+  if (!attachments) return undefined;
+  const out: ReportAttachments = {};
+  if (attachments.images && attachments.images.length > 0) {
+    out.images = [...attachments.images];
+  }
+  if (attachments.documents && attachments.documents.length > 0) {
+    out.documents = [...attachments.documents];
+  }
+  return out.images || out.documents ? out : undefined;
+}
+
+/**
+ * Coerce an arbitrary string into the API's `issues.severity`
+ * preferred vocabulary. The wire now accepts any string, but the UI
+ * still styles only the three known levels — unknown collapses to
+ * 'medium' (the same default `report-core`'s schema uses on the way
+ * in).
+ */
+function normaliseSeverity(s: string | null): 'low' | 'medium' | 'high' {
+  const v = (s ?? '').toLowerCase().trim();
+  if (v === 'low' || v === 'high' || v === 'medium') return v;
   return 'medium';
 }
 
@@ -83,9 +109,12 @@ export function reportBodyToGeneratedReport(
 ): GeneratedSiteReport {
   body = normaliseLegacy(body);
   const m = body.meta;
-  const totalWorkers = body.workers.reduce((sum, w) => sum + w.count, 0);
+  const totalWorkers = body.workers.reduce(
+    (sum, w) => sum + toNum(w.count),
+    0,
+  );
   const totalHours = body.workers.reduce(
-    (sum, w) => sum + (w.hours ?? 0),
+    (sum, w) => sum + toNum(w.hours),
     0,
   );
 
@@ -99,8 +128,8 @@ export function reportBodyToGeneratedReport(
       weather: body.weather
         ? {
             conditions: body.weather.condition,
-            temperature: num(body.weather.temperatureC, '°C'),
-            wind: num(body.weather.windKph, ' km/h'),
+            temperature: body.weather.temperature,
+            wind: body.weather.wind,
             impact: body.weather.impact,
           }
         : null,
@@ -112,14 +141,17 @@ export function reportBodyToGeneratedReport(
               notes: null,
               roles: body.workers.map((w) => ({
                 role: w.role,
-                count: w.count,
+                // UI expects a number — coerce the wire string back.
+                // Non-numeric values ("a few") collapse to 0; the
+                // raw text survives in the notes column when present.
+                count: toNum(w.count),
                 notes: w.notes,
               })),
             }
           : null,
       materials: body.materials.map((m) => ({
         name: m.name,
-        quantity: m.quantity == null ? null : String(m.quantity),
+        quantity: m.quantity,
         quantityUnit: m.unit,
         condition: m.condition,
         status: m.status,
@@ -128,15 +160,17 @@ export function reportBodyToGeneratedReport(
       issues: body.issues.map((i) => ({
         title: i.title,
         category: 'other',
-        severity: i.severity,
+        severity: normaliseSeverity(i.severity),
         status: 'open',
         details: i.description ?? '',
         actionRequired: i.action,
+        attachments: cloneAttachments(i.attachments),
       })),
       nextSteps: body.nextSteps,
       sections: body.summarySections.map((s) => ({
         title: s.title,
         content: s.body,
+        attachments: cloneAttachments(s.attachments),
       })),
     },
   };
@@ -146,11 +180,11 @@ export function reportBodyToGeneratedReport(
  * Inverse adapter: UI `GeneratedSiteReport` → API `reportBody`.
  *
  * Used by the Edit-tab autosave to PATCH manual edits back to the
- * server. Lossy by design — the UI has aggregate-only fields the API
- * doesn't store (workers totals) and the API has numeric fields the UI
- * renders as display strings (temperatureC, windKph, materials.quantity).
- * We parse leading numbers out of the display strings; if a user typed
- * prose the field round-trips as null.
+ * server. The wire is now string|null for every numeric field, so
+ * the round-trip is mostly straight-through: we strip the display
+ * suffixes we added on the way out (temperature "20°C" → "20"),
+ * stringify the UI's numeric count, and normalise severity to one
+ * of the three preferred values.
  *
  * `issues.category` and `issues.status` are dropped (no API field
  * today); category="other" + status="open" survive only on the
@@ -167,15 +201,15 @@ export function generatedReportToReportBody(g: GeneratedSiteReport): ReportBody 
     weather: r.weather
       ? {
           condition: r.weather.conditions ?? null,
-          temperatureC: parseLeadingNumber(r.weather.temperature),
-          windKph: parseLeadingNumber(r.weather.wind),
+          temperature: r.weather.temperature ?? null,
+          wind: r.weather.wind ?? null,
           impact: r.weather.impact ?? null,
         }
       : null,
     workers: r.workers
       ? r.workers.roles.map((role) => ({
           role: role.role,
-          count: role.count ?? 0,
+          count: role.count == null ? null : String(role.count),
           // The UI aggregates worker hours at the workers-level
           // (workers.workerHours), not per role; we don't try to
           // reverse-allocate. Persist null per-role; the AI will
@@ -186,7 +220,7 @@ export function generatedReportToReportBody(g: GeneratedSiteReport): ReportBody 
       : [],
     materials: r.materials.map((m) => ({
       name: m.name,
-      quantity: parseLeadingNumber(m.quantity),
+      quantity: stripUnit(m.quantity),
       unit: m.quantityUnit ?? null,
       status: m.status ?? null,
       condition: m.condition ?? null,
@@ -194,18 +228,16 @@ export function generatedReportToReportBody(g: GeneratedSiteReport): ReportBody 
     })),
     issues: r.issues.map((i) => ({
       title: i.title,
-      // API's severity enum is { low, medium, high }. The UI accepts
-      // any non-empty string (defaulting to 'medium') so users could
-      // type a value the API rejects. Coerce to the nearest enum
-      // member here so autosave doesn't 400.
       severity: normaliseSeverity(i.severity),
       description: i.details ?? null,
       action: i.actionRequired ?? null,
+      attachments: cloneAttachments(i.attachments),
     })),
     nextSteps: [...r.nextSteps],
     summarySections: r.sections.map((s) => ({
       title: s.title,
       body: s.content,
+      attachments: cloneAttachments(s.attachments),
     })),
   };
 }

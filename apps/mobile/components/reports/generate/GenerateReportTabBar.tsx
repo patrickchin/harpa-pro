@@ -10,7 +10,7 @@
  * Tailwind classes copied verbatim (NativeWind v4, Pitfall 3).
  */
 import { ActivityIndicator, Keyboard, Pressable, Text, View } from 'react-native';
-import { Bug, FileText, MessageSquare, Pencil } from 'lucide-react-native';
+import { Bug, FileText, MessageSquare } from 'lucide-react-native';
 
 import { useGenerateReport } from '@/features/generate/GenerateReportProvider';
 import type { TabKey } from './tabs';
@@ -21,7 +21,7 @@ import { useDeveloperFlags } from '@/lib/config/dev-flags';
 export function GenerateReportTabBar() {
   const { tabs, notes, generation } = useGenerateReport();
   const notesCount = notes.totalCount;
-  const { showGenerateDebugTab, showGenerateEditTab } = useDeveloperFlags();
+  const { showGenerateDebugTab } = useDeveloperFlags();
 
   const select = (tab: TabKey) => {
     Keyboard.dismiss();
@@ -73,28 +73,6 @@ export function GenerateReportTabBar() {
           <ActivityIndicator size="small" color={colors.foreground} />
         ) : null}
       </Pressable>
-      {showGenerateEditTab ? (
-        <Pressable
-          testID="btn-tab-edit"
-          onPress={tabs.openEdit}
-          className={`flex-1 flex-row items-center justify-center gap-2 rounded-md py-3 ${
-            tabs.active === 'edit' ? 'bg-secondary border-b-2 border-accent' : ''
-          }`}
-        >
-          <Pencil
-            size={16}
-            color={tabs.active === 'edit' ? colors.foreground : colors.muted.foreground}
-            style={{ marginTop: 1 }}
-          />
-          <Text
-            className={`text-sm font-semibold ${
-              tabs.active === 'edit' ? 'text-foreground' : 'text-muted-foreground'
-            }`}
-          >
-            {getGenerateReportTabLabel('edit', notesCount)}
-          </Text>
-        </Pressable>
-      ) : null}
       {showGenerateDebugTab ? (
         <Pressable
           testID="btn-tab-debug"

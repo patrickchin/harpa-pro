@@ -1,5 +1,5 @@
 /**
- * (auth) group layout — auth flow screens (sign-in/phone, sign-in/verify,
+ * (auth) group layout — auth flow screens (sign-in/email, sign-in/code,
  * etc.). Auth gate redirects authenticated / needs-onboarding users away.
  *
  * If `status === 'authenticated'`, redirect to `/(app)/projects`.

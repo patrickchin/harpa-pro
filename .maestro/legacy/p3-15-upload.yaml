@@ -1,0 +1,88 @@
+appId: ${MAESTRO_APP_ID}
+name: Legacy — Camera capture → upload pipeline → image note
+tags:
+  - legacy
+  - camera
+  - upload
+# Legacy one-off flow for the P3.15 camera + R2 upload pipeline. Drives the
+# real `(camera)/capture` route reached from a real report, exercising:
+#   - camera shutter (a synthetic capture committed by the dev-client
+#     `(dev)/camera-capture` mirror in CI, real camera locally)
+#   - `runUploadJob` against the docker compose stack (Hono presign +
+#     local R2 fixture / MinIO)
+#   - `UploadQueueStrip` showing the active row, then disappearing
+#   - `NoteTimeline` rendering the resulting `ImageNoteCard`
+#
+# Pre-flight is the same as `core-end-to-end.yaml` (docker compose up,
+# Metro dev-client, camera + microphone privacy grants, fresh DB via
+# `scripts/maestro/reset-db.sh`).
+#
+# Superseded by `modules/10a-photo-notes-draft.yaml`,
+# `modules/10b-photo-notes-finalized.yaml`, and
+# `modules/10c-photo-attachment-picker-scroll.yaml` in the normal
+# regression journey. Keep only for historical debugging.
+#
+# Run, if intentionally debugging the legacy seeded path:
+#   ./scripts/maestro/reset-db.sh
+#   maestro test .maestro/legacy/p3-15-upload.yaml
+#
+# Apps/mobile has no `test:e2e` script — Maestro flows run manually
+# (or via the same `gtimeout 240 maestro test ...` wrapper documented
+# in `.maestro/README.md`). CI invocation is identical.
+---
+- launchApp:
+    clearState: true
+    clearKeychain: true
+    stopApp: true
+- waitForAnimationToEnd
+
+# Sign in with seeded user (email-OTP via dev/last-otp).
+- assertVisible:
+    id: 'input-email'
+- runFlow:
+    file: helpers/sign-in.yaml
+    env:
+      EMAIL: "alice@e2e.harpapro.com"
+
+# Open the first project / first report.
+- assertVisible:
+    id: 'btn-new-project'
+- tapOn:
+    id: 'btn-open-reports'
+- assertVisible:
+    id: 'report-row-draft-0'
+- tapOn:
+    id: 'report-row-draft-0'
+
+# Notes tab → attachment → camera.
+- assertVisible:
+    id: 'btn-tab-notes'
+- tapOn:
+    id: 'btn-tab-notes'
+- assertVisible:
+    id: 'btn-attachment'
+- tapOn:
+    id: 'btn-attachment'
+- assertVisible:
+    id: 'btn-attachment-camera'
+- tapOn:
+    id: 'btn-attachment-camera'
+
+# Shutter once, commit via Done.
+- assertVisible:
+    id: 'btn-camera-shutter'
+- tapOn:
+    id: 'btn-camera-shutter'
+- assertVisible:
+    id: 'lbl-camera-count'
+- tapOn:
+    id: 'btn-camera-done'
+
+# Back on the report. The upload-queue strip is visible briefly while
+# the job runs, then disappears once `succeeded` rolls off. Either an
+# active row OR a freshly-rendered image note proves the pipeline
+# reached `completed` and `createNote` returned an `image` kind.
+- assertVisible:
+    id: 'note-timeline'
+- assertVisible:
+    id: 'note-row-0'

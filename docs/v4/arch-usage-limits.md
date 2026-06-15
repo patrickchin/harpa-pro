@@ -13,38 +13,15 @@
 
 ## 1. Problem
 
-We already record per-user usage (`app.llm_usage_events` + the live
-monthly aggregator in `auth/service.ts::fetchUsage`) and surface it
-via `GET /me/usage`. What we don't have is **enforcement** — any
-account can issue unlimited report generations, transcriptions and
-summarisations against live providers, with no upper bound and no
-"upgrade your plan" surface in the mobile app.
+We already record per-user usage (`app.llm_usage_events` + the monthly aggregator in `auth/service.ts::fetchUsage`) and surface it via `GET /me/usage`. What we lack is **enforcement** — any account can issue unlimited generations against live providers, with no cap and no "upgrade" surface on mobile.
 
-This doc designs:
+This doc designs the plan model (free / pro / enterprise + admin override), the counting model, the enforcement point (`enforceUsageLimit` called pre-side-effect), the 403 error envelope + mobile contract, and the admin override path (one-row UPDATE, not a deploy).
 
-1. The **plan model** (free / pro / enterprise + admin override).
-2. The **counting model** (which buckets, what window, where the
-   counts come from).
-3. The **enforcement point** (`enforceUsageLimit` called from each
-   gated route before the costly side-effect).
-4. The **error envelope** + mobile contract for the
-   "limit reached" surface.
-5. The **admin override** path so a real-life "please bump my cap
-   for this month" request is a one-row UPDATE, not a deploy.
+Acceptance: every route consuming paid AI capacity calls `enforceUsageLimit(...)` before the side-effect; at-limit users get 403 with structured details; mobile renders an `AppDialogSheet` with `limit`/`used`/`resetAt`; `GET /me/usage` includes `limits + remaining` for one-round-trip rendering.
 
-Acceptance contract: every route that today consumes paid AI tokens
-(or creates billable artefacts) calls `enforceUsageLimit(...)` before
-the side-effect. A user at-limit gets a 403 with structured details;
-mobile renders an `AppDialogSheet` with the limit, used, and
-`resetAt`; `GET /me/usage` includes `limits + remaining` so the
-usage screen can render progress bars without a second round-trip.
+## 2. Counting model — live count from existing tables
 
-## 2. Alternatives considered
-
-### A. Live count from existing tables (chosen)
-
-Compute `used` for each bucket by querying the source-of-truth tables
-that already power `GET /me/usage`:
+Compute `used` for each bucket by querying the source-of-truth tables that already power `GET /me/usage`:
 
 | Bucket            | Source table            | Predicate                                         |
 | ----------------- | ----------------------- | ------------------------------------------------- |
@@ -54,36 +31,9 @@ that already power `GET /me/usage`:
 | `ai_input_tokens` | `app.llm_usage_events`  | `sum(input_tokens) FILTER (WHERE operation IN ('chat','generate_report'))` — transcribe rows store audio duration in `input_seconds`, not tokens. |
 | `ai_output_tokens`| `app.llm_usage_events`  | `sum(output_tokens) FILTER (WHERE operation IN ('chat','generate_report'))` — same |
 
-**Pros:** one source of truth — the same row that produces the usage
-screen is the row that gates the next call. Zero drift risk
-(Pitfall 8 shape). No background reconciler. No "counter table
-forgotten by a new route" failure mode.
+**Why:** one source of truth — the same row that produces the usage screen gates the next call. No drift, no background reconciler, no "counter table forgotten by a new route" failure mode. Cost: one extra small `count(*)`/`sum()` per gated request, mitigated by a partial index `(user_id, created_at) WHERE status='ok'` on `app.llm_usage_events` (added in the same migration as the limits table).
 
-**Cons:** every gated request pays one extra small `count(*)` /
-`sum()`. Mitigated by a partial index `(user_id, created_at)
-WHERE status='ok'` on `app.llm_usage_events` (added in the same
-migration as the limits table).
-
-### B. Counter table updated on each gated call (rejected)
-
-`app.monthly_usage_counters (user_id, period text, kind text, used int)`
-incremented in the same transaction as the side-effect.
-
-**Rejected because:** dual source-of-truth between `llm_usage_events`
-and the counter is a Pitfall 8 / Pitfall 15 shape — the next route
-to forget the counter update silently grants free quota. The "this
-month I see 12 reports on the usage screen but the counter says 4"
-debugging session is exactly the realignment smell we want to avoid.
-
-### C. Upstash token bucket like rate-limit (rejected)
-
-Reuse the `RateLimiter` interface from P1.9 with a 30-day window.
-
-**Rejected because:** rolling 30-day windows misalign with how users
-think about caps ("I used 5/10 reports this month"). Calendar months
-also align with the existing `to_char(created_at, 'YYYY-MM')` shape
-in `fetchUsage`. Upstash is also not the source-of-truth for who
-already consumed what — `llm_usage_events` is.
+A separate counter table (Pitfall 8 dual-source-of-truth) and an Upstash token bucket (rolling window misaligns with calendar-month plan caps; not source-of-truth for who already consumed what) were both rejected.
 
 ## 3. Data model
 
@@ -490,26 +440,22 @@ The following are explicit non-goals here and tracked in
 4. **Live token-cost dollarization.** We meter input/output tokens,
    not USD. A future "$ this month" view depends on a per-vendor
    price table — out of scope.
-5. ~~**Phase 1 ships count buckets only.**~~ Done — Phase 1 (count
-   buckets) landed via `c0ec709`; Phase 2 wires post-hoc token-bucket
-   enforcement inside `services/ai.ts::withUsageAccounting` plus the
-   `X-Usage-Warning: near-limit` header (PR #38). Phase 3 (mobile UI
-   primitives) ships the `UsageLimitsCard` on the Usage screen and a
-   `UsageLimitDialog` wired into the report generate / regenerate
-   flow and the voice-note pipeline. Count + token buckets are now
-   enforced end-to-end (API + mobile); the only deferred work is the
-   Maestro flows (14a + 14b — separate PR) and self-serve plan
-   upgrades (Phase 4).
-6. ~~**Mobile + Maestro work is deferred** to a follow-up commit
-   (per-screen UI, banners, "limit hit" sheet).~~ Done for the mobile
-   primitives in Phase 3. Maestro flows landed as placeholders in
-   `.maestro/p3-14a-usage-limits-card.yaml` (runnable today),
-   `.maestro/p3-14b-usage-limit-dialog.yaml` (needs `reset-db.sh
-   --seed-at-limit`), and `.maestro/p3-14c-near-limit-toast.yaml`
-   (needs a toast consumer of `X-Usage-Warning` — not yet wired).
-   None are currently in the regression journey; the inbound
-   `X-Usage-Warning` toast consumer itself is still deferred to
-   keep this commit focused.
+
+### Phase status (delivered)
+
+- **Phase 1** (count buckets) — landed via `c0ec709`.
+- **Phase 2** — post-hoc token-bucket enforcement inside
+  `services/ai.ts::withUsageAccounting` + `X-Usage-Warning: near-limit`
+  header (PR #38).
+- **Phase 3** — mobile `UsageLimitsCard` on the Usage screen +
+  `UsageLimitDialog` wired into report generate/regenerate and the
+  voice-note pipeline. Count + token buckets enforced end-to-end.
+- **Maestro:** `modules/15-usage.yaml` asserts the limits card and the
+  default free-plan buckets in the normal regression journey. The
+  blocked scenarios live under `.maestro/pending/`:
+  `usage-limit-dialog.yaml` needs deterministic at-limit seeding, and
+  `usage-near-limit-toast.yaml` needs the `X-Usage-Warning` toast
+  consumer. Self-serve upgrades remain Phase 4.
 
 ## 12. Implementation checklist
 

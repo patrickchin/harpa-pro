@@ -8,9 +8,10 @@
  * when present, falling back to the full image for legacy notes. Tap
  * a tile to open the fullscreen swipeable gallery.
  *
- * Photos are grouped by `noteId` so batch uploads appear together.
- * The first tile of a multi-photo batch shows a small "+N" stack
- * badge to signal additional images in the group.
+ * Photos are grouped by note: each image note's `files[]` array
+ * forms one batch group, separated by a thin divider. The first
+ * tile of a multi-photo batch shows a small "+N" stack badge to
+ * signal additional images in the group.
  */
 import { useCallback, useMemo, useState } from 'react';
 import { Text, View, type LayoutChangeEvent } from 'react-native';
@@ -19,6 +20,7 @@ import { Camera } from 'lucide-react-native';
 import { Card } from '@/components/primitives/Card';
 import { SectionHeader } from '@/components/primitives/SectionHeader';
 import { PhotoTile } from '@/components/notes/PhotoTile';
+import { PhotoPlacementChip } from '@/components/reports/detail/PhotoPlacementChip';
 import { attachmentFromSavedFile } from '@/lib/notes/attachments';
 import { colors } from '@/lib/design-tokens/colors';
 import type { ReportNoteRow } from '@/components/reports/detail/ReportNotesPane';
@@ -26,38 +28,92 @@ import type { ReportNoteRow } from '@/components/reports/detail/ReportNotesPane'
 export interface ReportPhotosProps {
   noteRows: ReadonlyArray<ReportNoteRow> | undefined;
   onOpenPhoto?: (input: { fileId: string; title?: string }) => void;
+  /**
+   * When provided, photo groups are filtered to those not present in
+   * the current report-body attachment ids
+   * (unplaced) and each group renders a tap-to-place chip above the grid.
+   * Already-placed groups appear inline under their issue/section in `ReportView`.
+   * Omit to render all groups (legacy behaviour).
+   */
+  onOpenPlacementSheet?: (noteId: string) => void;
+  /** Filter out groups already placed in the report body without implying editability. */
+  filterPlacedPhotoGroups?: boolean;
+  placedNoteIds?: ReadonlySet<string>;
 }
 
 interface PhotoGroup {
   noteId: string;
-  photos: Array<ReportNoteRow & { fileId: string }>;
+  title: string;
+  photos: ReadonlyArray<{
+    id: string;
+    fileId: string;
+    thumbnailFileId: string | null;
+  }>;
 }
 
 const COLUMNS = 3;
 const GAP = 6;
 
-export function ReportPhotos({ noteRows, onOpenPhoto }: ReportPhotosProps) {
+export function ReportPhotos({
+  noteRows,
+  onOpenPhoto,
+  onOpenPlacementSheet,
+  filterPlacedPhotoGroups = false,
+  placedNoteIds,
+}: ReportPhotosProps) {
   const groups = useMemo((): PhotoGroup[] => {
-    const photos = (noteRows ?? []).filter(
-      (n): n is ReportNoteRow & { fileId: string } =>
-        n.kind === 'photo' && typeof n.fileId === 'string' && !!n.fileId,
-    );
-
-    // Group by noteId (batch key). Falls back to the row's own id for
-    // legacy single-file notes so they each form their own group.
-    const groupMap = new Map<string, Array<(typeof photos)[number]>>();
-    for (const p of photos) {
-      const key = p.noteId ?? p.id;
-      const group = groupMap.get(key);
-      if (group) group.push(p);
-      else groupMap.set(key, [p]);
+    const out: PhotoGroup[] = [];
+    // Newest-first to match `ReportNotesPane`'s timeline order so the
+    // photo strip reads in the same direction as the notes above it.
+    const sorted = (noteRows ?? [])
+      .filter((n) => n.kind === 'photo')
+      .slice()
+      .sort((a, b) => {
+        const ta = a.createdAt ? Date.parse(a.createdAt) : 0;
+        const tb = b.createdAt ? Date.parse(b.createdAt) : 0;
+        return tb - ta;
+      });
+    for (const n of sorted) {
+      if (
+        (filterPlacedPhotoGroups || onOpenPlacementSheet) &&
+        placedNoteIds?.has(n.id)
+      ) {
+        continue;
+      }
+      const title = n.body?.trim() || 'Photo';
+      // Canonical path: per-file rows from `note_files`.
+      if (n.files && n.files.length > 0) {
+        const photos = n.files
+          .slice()
+          .sort((a, b) => a.position - b.position)
+          .map((f) => ({
+            id: f.id,
+            fileId: f.fileId,
+            thumbnailFileId: f.thumbnailFileId,
+          }));
+        if (photos.length > 0) {
+          out.push({ noteId: n.id, title, photos });
+        }
+        continue;
+      }
+      // Legacy single-file fallback for image notes that pre-date
+      // `note_files` and never got backfilled.
+      if (n.fileId) {
+        out.push({
+          noteId: n.id,
+          title,
+          photos: [
+            {
+              id: n.id,
+              fileId: n.fileId,
+              thumbnailFileId: n.thumbnailFileId ?? null,
+            },
+          ],
+        });
+      }
     }
-
-    return Array.from(groupMap.entries()).map(([noteId, items]) => ({
-      noteId,
-      photos: items,
-    }));
-  }, [noteRows]);
+    return out;
+  }, [noteRows, filterPlacedPhotoGroups, onOpenPlacementSheet, placedNoteIds]);
 
   const [containerWidth, setContainerWidth] = useState(0);
   const onLayout = useCallback(
@@ -76,7 +132,7 @@ export function ReportPhotos({ noteRows, onOpenPhoto }: ReportPhotosProps) {
   return (
     <Card variant="default" padding="lg" testID="report-photos">
       <SectionHeader
-        title="Photos"
+        title={onOpenPlacementSheet ? 'Unplaced photos' : 'Photos'}
         icon={<Camera size={16} color={colors.foreground} />}
       />
       <View
@@ -90,19 +146,27 @@ export function ReportPhotos({ noteRows, onOpenPhoto }: ReportPhotosProps) {
               {groupIdx > 0 && (
                 <View className="my-2 h-px bg-border" />
               )}
+              {onOpenPlacementSheet ? (
+                <View className="mb-2">
+                  <PhotoPlacementChip
+                    placedLabel={null}
+                    onPress={() => onOpenPlacementSheet(group.noteId)}
+                    testID={`btn-place-photo-${group.noteId}`}
+                  />
+                </View>
+              ) : null}
               <View className="flex-row flex-wrap" style={{ gap: GAP }}>
                 {group.photos.map((p, idx) => {
-                  const title = p.body?.trim() || 'Photo';
                   const isFirstOfBatch = idx === 0 && group.photos.length > 1;
                   return (
                     <View key={p.id} style={{ width: tileSize, height: tileSize }}>
                       <PhotoTile
                         attachment={attachmentFromSavedFile(
-                          { id: p.id, fileId: p.fileId, thumbnailFileId: p.thumbnailFileId ?? null },
+                          { id: p.id, fileId: p.fileId, thumbnailFileId: p.thumbnailFileId },
                           idx,
                         )}
                         size={tileSize}
-                        onPress={(p.fileId && onOpenPhoto) ? () => onOpenPhoto({ fileId: p.fileId, title }) : undefined}
+                        onPress={onOpenPhoto ? () => onOpenPhoto({ fileId: p.fileId, title: group.title }) : undefined}
                         testID={`btn-report-photo-${p.id}`}
                       />
                       {isFirstOfBatch && (

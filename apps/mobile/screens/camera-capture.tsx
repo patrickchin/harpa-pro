@@ -514,6 +514,7 @@ export function CameraCapture(props: CameraCaptureProps) {
     );
   const nextFlash: FlashMode =
     flash === 'off' ? 'auto' : flash === 'auto' ? 'on' : 'off';
+  const flashLabel = flash === 'off' ? 'Off' : flash === 'auto' ? 'Auto' : 'On';
 
   return (
     <View className="flex-1 bg-black" testID="camera-capture-root">
@@ -595,11 +596,7 @@ export function CameraCapture(props: CameraCaptureProps) {
                 onPress={onToggleSaveToCameraRoll}
                 accessibilityRole="switch"
                 accessibilityState={{ checked: saveToCameraRoll }}
-                accessibilityLabel={
-                  saveToCameraRoll
-                    ? 'Save to gallery: on'
-                    : 'Save to gallery: off'
-                }
+                accessibilityLabel="Save to gallery"
                 testID="btn-camera-save-to-roll"
                 className={`h-11 px-3 rounded-full flex-row items-center ${
                   saveToCameraRoll ? 'bg-accent/85' : 'bg-black/35'
@@ -613,7 +610,7 @@ export function CameraCapture(props: CameraCaptureProps) {
             <Pressable
               onPress={() => setFlash(nextFlash)}
               accessibilityRole="button"
-              accessibilityLabel={`Flash ${flash}`}
+              accessibilityLabel={`Flash ${flashLabel}`}
               testID="btn-camera-flash"
               className="w-11 h-11 rounded-full items-center justify-center bg-black/35"
             >
@@ -711,6 +708,7 @@ export function CameraCapture(props: CameraCaptureProps) {
         visible={confirmDiscardOpen}
         title="Discard photos?"
         message={`You have ${captures.length} unsaved photo${captures.length === 1 ? '' : 's'}.`}
+        noticeTone="danger"
         onClose={() => setConfirmDiscardOpen(false)}
         actions={[
           {
@@ -720,7 +718,7 @@ export function CameraCapture(props: CameraCaptureProps) {
             testID: 'btn-camera-confirm-discard',
           },
           {
-            label: 'Keep editing',
+            label: 'Cancel',
             variant: 'quiet',
             onPress: () => setConfirmDiscardOpen(false),
             testID: 'btn-camera-keep-editing',
@@ -749,4 +747,3 @@ function resolvePermission(
   if (hook.granted) return { state: 'granted' };
   return { state: 'denied', canAskAgain: hook.canAskAgain };
 }
-

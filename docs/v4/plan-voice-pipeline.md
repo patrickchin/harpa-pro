@@ -1,5 +1,11 @@
 # Voice Note Pipeline — Completion Plan
 
+> **Status:** Phases A–D shipped (design, server aggregator, mobile
+> capture, mobile read side). Phases E–G (queue persistence,
+> abort plumbing, on-device interim transcript) remain open and are
+> tracked here. Voice-note E2E is gated by
+> `.maestro/modules/09-voice-notes.yaml` in the regression journey.
+
 ## Problem
 
 The voice-note pipeline is half-built: the API can transcribe and summarise audio, and the upload contract accepts `kind: 'voice'`, but **mobile capture is a no-op stub end-to-end**. There is no recorder, no permission flow, no `useVoiceNotePipeline` hook, no `VoiceNoteCard`, the `AudioPlaybackProvider` throws on `play()`, and `expo-audio` is not installed. AGENTS.md also lies about a fixture-mode simulator stub that doesn't exist. Several P1 correctness bugs (no idempotency on `/voice/summarize`, missing spend attribution, transcript/summary collide in one DB slot) and P2 polish gaps (no queue persistence, no in-flight abort, no on-device interim transcript) compound this.
@@ -42,7 +48,7 @@ Build `VoiceNoteCard` (waveform/scrubber, play/pause, duration, transcript expan
 4. Optional on-device interim transcript via `expo-speech-recognition` behind a feature flag; falls back gracefully when unavailable.
 
 ### Phase G — E2E, doc fixes, false-green removal
-- Real Maestro flow `p3-15-voice-record.yaml` that records via fixture stub and asserts a `note.kind='voice'` row with non-empty transcript + summary appears.
+- Real Maestro module `modules/09-voice-notes.yaml` that records via fixture stub and asserts a `note.kind='voice'` row with non-empty transcript + summary appears.
 - Fix `core-end-to-end.yaml:333-335` so the existing voice step is no longer false-green.
 - Final pass over `arch-mobile.md §State management` (legend-state vs hand-rolled queue drift) and `AGENTS.md` (fixture-stub language now accurate).
 - Tick `plan-p3-feature-build.md §P3.15.6` checkboxes.

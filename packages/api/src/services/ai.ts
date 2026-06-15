@@ -36,6 +36,7 @@ import {
 } from '../prompts/reportGeneration.js';
 import { VOICE_SUMMARY_SYSTEM_PROMPT } from '../prompts/voiceSummary.js';
 import { recordLlmUsage, type LlmOperation } from './ai-usage.js';
+import type { GenerationPayload } from './reports.js';
 import { enforceTokenLimits } from './usage-limits.js';
 
 /**
@@ -443,24 +444,10 @@ export type ReportBody = z.infer<typeof reportSchemas.reportBody>;
 
 export interface GenerateReportInput {
   /**
-   * Concatenated note content to feed the model. Ignored in replay mode
-   * (the canonical user prompt is substituted so the request hash matches
-   * the recorded fixture).
+   * Structured note payload to feed the model. Ignored in replay mode
+   * for provider hashing, but still surfaced in the Debug tab.
    */
-  notes: string;
-  /**
-   * Optional existing report body. When provided, switches to the
-   * UPDATE path: uses `REPORT_UPDATE_SYSTEM_PROMPT` and prepends an
-   * `EXISTING REPORT:` block to the user prompt so the model preserves
-   * manual edits rather than regenerating from scratch.
-   *
-   * In replay mode the contents of `existingBody` are replaced with
-   * the canonical update payload so the request hash matches the
-   * recorded fixture. A non-null value selects the update fixture
-   * (`generate-report.update.*`); pass `null` (or omit) for the
-   * cold-start path.
-   */
-  existingBody?: ReportBody | null;
+  notes: GenerationPayload;
   fixtureName?: string;
   /**
    * Optional vendor override. Tracked for usage accounting only —
@@ -495,6 +482,34 @@ export interface GenerateReportOutput {
   fixtureMode: 'live' | 'replay' | 'record';
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+function cloneJson(value: unknown): unknown {
+  return JSON.parse(JSON.stringify(value)) as unknown;
+}
+
+function stripGeneratedAttachments(parsed: unknown): unknown {
+  const out = cloneJson(parsed);
+  if (!isRecord(out)) return parsed;
+
+  // Photo placement is user-controlled for now. Existing placements are
+  // restored later from currentBody during regeneration; model-authored
+  // attachments are discarded here before schema validation.
+  const pruneTargets = (targets: unknown) => {
+    if (!Array.isArray(targets)) return;
+    for (const target of targets) {
+      if (!isRecord(target)) continue;
+      delete target.attachments;
+    }
+  };
+
+  pruneTargets(out.issues);
+  pruneTargets(out.summarySections);
+  return out;
+}
+
 /**
  * Generate a structured report body from notes via the AI provider.
  *
@@ -506,7 +521,7 @@ export interface GenerateReportOutput {
 export async function generateReport(input: GenerateReportInput): Promise<GenerateReportOutput> {
   const canonicals = FIXTURE_CANONICALS.report;
   const vendor: Vendor = input.vendor ?? canonicals.vendor;
-  const isUpdate = input.existingBody != null;
+  const isUpdate = input.notes.currentBody != null;
   const mode = pickMode(input.fixtureName);
   const scenario =
     (input.fixtureName ? scenarioFromName(input.fixtureName) : null) ??
@@ -529,9 +544,7 @@ export async function generateReport(input: GenerateReportInput): Promise<Genera
   // request hash matches the recorded fixture, but it's still surfaced
   // back to the caller via the response so the Debug tab shows what
   // the operator actually fed in.
-  const liveUserPrompt = isUpdate
-    ? `EXISTING REPORT:\n${JSON.stringify(input.existingBody)}\n\nNEW NOTES:\n${input.notes}`
-    : input.notes;
+  const liveUserPrompt = JSON.stringify(input.notes, null, 2);
 
   // Pick the right system prompt for the LIVE path. Update prompt
   // preserves manual edits; cold-start prompt generates from scratch.
@@ -575,7 +588,9 @@ export async function generateReport(input: GenerateReportInput): Promise<Genera
   } catch (err) {
     throw new AiProviderError('generateReport: provider response was not valid JSON', err);
   }
-  const result = reportSchemas.reportBody.safeParse(parsed);
+  const result = reportSchemas.reportBody.safeParse(
+    stripGeneratedAttachments(parsed),
+  );
   if (!result.success) {
     // Don't leak the failing payload — keep the error surface generic.
     // BUT do attach Zod issue paths (not values) to the inner cause so

@@ -21,21 +21,21 @@ function collectText(n: any): string {
 const owner: MemberRow = {
   userId: 'owner-id',
   displayName: 'Olivia Owner',
-  phone: '+15551111111',
+  email: 'olivia@example.com',
   role: 'owner',
   joinedAt: '2024-01-01T00:00:00.000Z',
 };
 const self: MemberRow = {
   userId: 'self-id',
   displayName: 'Self',
-  phone: '+15552222222',
+  email: 'self@example.com',
   role: 'editor',
   joinedAt: '2024-02-01T00:00:00.000Z',
 };
 const bob: MemberRow = {
   userId: 'bob-id',
   displayName: 'Bob',
-  phone: '+15553333333',
+  email: 'bob@example.com',
   role: 'editor',
   joinedAt: '2024-02-15T00:00:00.000Z',
 };
@@ -82,26 +82,26 @@ describe('ProjectMembers', () => {
     expect(() => tree.root.findByProps({ testID: "btn-add-member" })).not.toThrow();
   });
 
-  it('refuses to submit invite without a phone number', () => {
+  it('refuses to submit invite without an email address', () => {
     const onAdd = vi.fn();
     const tree = render(<ProjectMembers {...defaults} onAddMember={onAdd} />);
     act(() => tree.root.findByProps({ testID: 'btn-show-add-member' }).props.onPress());
     act(() => tree.root.findByProps({ testID: "btn-add-member" }).props.onPress());
     expect(onAdd).not.toHaveBeenCalled();
-    expect(collectText(tree.toJSON())).toContain('Phone number is required.');
+    expect(collectText(tree.toJSON())).toContain('Email address is required.');
   });
 
-  it('submits invite with phone + default editor role', () => {
+  it('submits invite with email + default editor role', () => {
     const onAdd = vi.fn();
     const tree = render(<ProjectMembers {...defaults} onAddMember={onAdd} />);
     act(() => tree.root.findByProps({ testID: 'btn-show-add-member' }).props.onPress());
     act(() =>
       tree.root
-        .findByProps({ testID: "input-member-phone" })
-        .props.onChangeText('  +15554443333  '),
+        .findByProps({ testID: "input-member-email" })
+        .props.onChangeText('  Carol@Example.com  '),
     );
     act(() => tree.root.findByProps({ testID: "btn-add-member" }).props.onPress());
-    expect(onAdd).toHaveBeenCalledWith({ phone: '+15554443333', role: 'editor' });
+    expect(onAdd).toHaveBeenCalledWith({ email: 'carol@example.com', role: 'editor' });
   });
 
   it('opens remove confirmation dialog for non-owner members when manager', () => {
@@ -111,7 +111,7 @@ describe('ProjectMembers', () => {
         .findByProps({ testID: `btn-remove-member-${bob.userId}` })
         .props.onPress(),
     );
-    expect(collectText(tree.toJSON())).toContain('Remove Member');
+    expect(collectText(tree.toJSON())).toContain('Remove member');
   });
 
   it('does not render trash icon on owner row', () => {
@@ -140,8 +140,8 @@ describe('ProjectMembers', () => {
     act(() => tree.root.findByProps({ testID: 'btn-show-add-member' }).props.onPress());
     act(() =>
       tree.root
-        .findByProps({ testID: "input-member-phone" })
-        .props.onChangeText('+15550000999'),
+        .findByProps({ testID: "input-member-email" })
+        .props.onChangeText('newuser@example.com'),
     );
     act(() => tree.root.findByProps({ testID: "btn-add-member" }).props.onPress());
     // Form still mounted and error notice still rendered.

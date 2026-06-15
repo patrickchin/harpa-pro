@@ -8,7 +8,7 @@
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import pg from 'pg';
-import { startPg, type PgFixture } from '../setup-pg.js';
+import { startPg, seedAuthUsers, type PgFixture } from '../setup-pg.js';
 import { createApp } from '../../app.js';
 import { signTestToken } from '../../middleware/auth.js';
 import { resetPool, getPool } from '../../db/client.js';
@@ -43,16 +43,9 @@ beforeAll(async () => {
   aliceReportSlug = aliceReport;
   bobReportSlug = bobReport;
 
+  await seedAuthUsers(fx.url, [{ id: alice }, { id: bob }]);
   const admin = new pg.Client({ connectionString: fx.url });
   await admin.connect();
-  await admin.query(
-    `INSERT INTO auth.users(id, phone) VALUES ($1, $2), ($3, $4)`,
-    [alice, '+15551000001', bob, '+15551000002'],
-  );
-  await admin.query(
-    `INSERT INTO auth.sessions(id, user_id, expires_at) VALUES ($1, $2, now() + interval '7 days'), ($3, $4, now() + interval '7 days')`,
-    [aliceSid, alice, bobSid, bob],
-  );
   await admin.query(
     `INSERT INTO app.projects(id, name, owner_id) VALUES ($1, 'alice-proj', $2)`,
     [aliceProj, alice],

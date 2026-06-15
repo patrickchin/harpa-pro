@@ -7,10 +7,11 @@
  * saved reports never have in-flight notes.
  *
  * Each kind dispatches to a dedicated row component
- * (`PhotoNoteRow` / `VoiceNoteRow` / `DocumentNoteRow` / text inline).
- * Photo + voice + document rows resolve their R2 GET URL via
- * `useFileSignedUrl` (P3.15.1) and render through `CachedImage` for
- * the photo thumbnail.
+ * (inline photo card via `PhotoBatchGrid` / `VoiceNoteRow` /
+ * `DocumentNoteRow` / text inline). Photo cards build attachments
+ * from the note's `files[]` (canonical post-`note_files` migration)
+ * with a single-file fallback for legacy rows. Voice + document
+ * rows resolve their R2 GET URL via `useFileSignedUrl` (P3.15.1).
  *
  * Every row's ⋯ kebab opens a shared `NoteOptionsSheet` rendered at
  * the pane level. The sheet exposes metadata, Delete, and (for voice
@@ -18,20 +19,34 @@
  * `useDeleteNoteMutation`, which auto-invalidates the saved-report
  * notes query so the row disappears once the API confirms.
  */
-import { useMemo, useState } from 'react';
-import { Text, View } from 'react-native';
+import { useCallback, useMemo, useState } from 'react';
+import { Text, View, type LayoutChangeEvent } from 'react-native';
 import { MessageSquare } from 'lucide-react-native';
 
 import { EmptyState } from '@/components/primitives/EmptyState';
 import { Skeleton, SkeletonRow } from '@/components/primitives/Skeleton';
 import { NoteCardHeader } from '@/components/notes/NoteCardHeader';
-import { PhotoNoteRow } from '@/components/reports/detail/PhotoNoteRow';
+import { PhotoBatchGrid } from '@/components/notes/PhotoBatchGrid';
 import { VoiceNoteRow } from '@/components/reports/detail/VoiceNoteRow';
 import { DocumentNoteRow } from '@/components/reports/detail/DocumentNoteRow';
 import { NoteOptionsKebab } from '@/components/notes/NoteOptionsKebab';
 import { NoteOptionsSheet } from '@/components/notes/NoteOptionsSheet';
 import { useOptimisticDeleteNote } from '@/lib/api/optimistic';
+import { attachmentFromSavedFile } from '@/lib/notes/attachments';
 import { colors } from '@/lib/design-tokens/colors';
+
+/**
+ * One joined `note_files` row, as returned by the API. Image notes
+ * carry one of these per attached photo; legacy rows pre-`note_files`
+ * leave `files` undefined and fall back to the top-level `fileId`.
+ */
+export interface ReportNoteFile {
+  id: string;
+  fileId: string;
+  thumbnailFileId: string | null;
+  position: number;
+  caption?: string | null;
+}
 
 export interface ReportNoteRow {
   id: string;
@@ -40,16 +55,17 @@ export interface ReportNoteRow {
   /** ISO-8601 timestamp; rendered as-is for now (formatting in P4). */
   createdAt: string | null;
   authorName?: string | null;
-  /** R2 file id when the note is backed by an upload (voice / photo / document). */
+  /** R2 file id when the note is backed by a single upload (voice / document, or legacy single-file image). */
   fileId?: string | null;
-  /** Thumbnail file id for image notes (small client-generated variant). */
+  /** Thumbnail file id for legacy single-file image notes. */
   thumbnailFileId?: string | null;
   /**
-   * Batch grouping key. When multiple photo rows belong to the same
-   * note (batch upload), they share the same `noteId`. Falls back to
-   * `id` for legacy single-file notes.
+   * For image notes: the canonical `note_files` rows joined to this
+   * note, ordered by `position`. One entry per photo in a batch.
+   * Undefined / empty for non-image notes and legacy single-file
+   * rows that pre-date the `note_files` migration.
    */
-  noteId?: string | null;
+  files?: ReadonlyArray<ReportNoteFile> | null;
   // ── Voice-only fields (Phase E). Optional so non-voice rows omit them. ──
   transcript?: string | null;
   title?: string | null;
@@ -103,6 +119,8 @@ export function ReportNotesPane({
   );
   // Adapt `ReportNoteRow` → generic `NoteOptionsSheetItem`. Most
   // fields line up 1:1; only `createdAt` → `capturedAt` is renamed.
+  // Image notes pass `files[]` so the sheet can list every File ID
+  // in a batch, not just the first one.
   const activeSheetItem = useMemo(
     () =>
       activeNote
@@ -117,6 +135,13 @@ export function ReportNotesPane({
             capturedAt: activeNote.createdAt,
             durationSec: activeNote.durationSec ?? null,
             fileId: activeNote.fileId ?? null,
+            files:
+              activeNote.kind === 'photo' && activeNote.files?.length
+                ? activeNote.files.map((f) => ({
+                    id: f.id,
+                    fileId: f.fileId,
+                  }))
+                : null,
           }
         : null,
     [activeNote],
@@ -170,17 +195,12 @@ export function ReportNotesPane({
   return (
     <View className="px-5 pb-8 pt-2 gap-3" testID="report-notes-pane">
       {sorted.map((note) => {
-        if (note.kind === 'photo' && note.fileId) {
+        if (note.kind === 'photo') {
           return (
-            <PhotoNoteRow
+            <PhotoNoteBatchCard
               key={note.id}
-              noteId={note.id}
-              fileId={note.fileId}
-              thumbnailFileId={note.thumbnailFileId ?? null}
-              body={note.body}
-              authorName={note.authorName ?? null}
-              capturedAt={note.createdAt}
-              onOpen={onOpenPhoto}
+              note={note}
+              onOpenPhoto={onOpenPhoto}
               onOpenOptions={handleOpenOptions}
             />
           );
@@ -252,6 +272,123 @@ export function ReportNotesPane({
         onDelete={handleDelete}
         deleteInFlight={deleteNote.isPending}
       />
+    </View>
+  );
+}
+
+/**
+ * Inline photo-batch card for the read-only saved-report Notes tab.
+ * One card per image note, regardless of how many photos the note
+ * carries — the underlying `PhotoBatchGrid` lays out 1..N tiles in a
+ * 3-column grid (with a "+N" overflow badge past 9). Mirrors
+ * `PhotoNoteCard` from the draft timeline; differs in that it never
+ * renders pending / failed states (saved reports never have in-flight
+ * uploads).
+ */
+function PhotoNoteBatchCard({
+  note,
+  onOpenPhoto,
+  onOpenOptions,
+}: {
+  note: ReportNoteRow;
+  onOpenPhoto?: (input: { fileId: string; title?: string }) => void;
+  onOpenOptions: (id: string) => void;
+}) {
+  const body = note.body?.trim() ?? '';
+  const attachments = useMemo(() => {
+    if (note.files && note.files.length > 0) {
+      return note.files
+        .slice()
+        .sort((a, b) => a.position - b.position)
+        .map((f, idx) =>
+          attachmentFromSavedFile(
+            {
+              id: f.id,
+              fileId: f.fileId,
+              thumbnailFileId: f.thumbnailFileId,
+            },
+            idx,
+          ),
+        );
+    }
+    // Legacy single-file fallback: only used for image notes that
+    // pre-date the `note_files` migration and never got backfilled.
+    if (note.fileId) {
+      return [
+        attachmentFromSavedFile(
+          {
+            id: note.id,
+            fileId: note.fileId,
+            thumbnailFileId: note.thumbnailFileId ?? null,
+          },
+          0,
+        ),
+      ];
+    }
+    return [];
+  }, [note.files, note.fileId, note.thumbnailFileId, note.id]);
+
+  const [containerWidth, setContainerWidth] = useState<number | null>(null);
+  const onLayout = useCallback((ev: LayoutChangeEvent) => {
+    const w = ev.nativeEvent.layout.width;
+    setContainerWidth((prev) => (prev === w ? prev : w));
+  }, []);
+
+  const handleOpen = useCallback(
+    (fileId: string) => {
+      const title = body || 'Photo';
+      onOpenPhoto?.({ fileId, title });
+    },
+    [body, onOpenPhoto],
+  );
+
+  if (attachments.length === 0) {
+    // Should be unreachable: an image-kind note that carries neither
+    // `files[]` nor a top-level `fileId`. Migration 0010 backfilled
+    // every image note into `note_files`, so this branch firing
+    // means we either have a corrupted row or a regression in the
+    // `toReportNoteRows` adapter. Surface it loudly in dev so we
+    // catch it during review instead of silently dropping the card.
+    if (__DEV__) {
+      // eslint-disable-next-line no-console
+      console.warn(
+        `[ReportNotesPane] image note ${note.id} has no files[] and no fileId — skipping render`,
+      );
+    }
+    return null;
+  }
+
+  return (
+    <View
+      className="rounded-lg border border-border bg-card p-3 gap-2"
+      testID={`report-note-${note.id}`}
+    >
+      <NoteCardHeader
+        authorName={note.authorName ?? null}
+        capturedAt={note.createdAt}
+        testIDSuffix={note.id}
+        trailing={
+          <NoteOptionsKebab
+            noteId={note.id}
+            onPress={() => onOpenOptions(note.id)}
+          />
+        }
+      />
+      <View onLayout={onLayout} testID={`report-note-${note.id}-measure`}>
+        {containerWidth !== null ? (
+          <PhotoBatchGrid
+            attachments={attachments}
+            containerWidth={containerWidth}
+            onOpenFile={handleOpen}
+            tileTestIDPrefix={`report-photo-${note.id}`}
+          />
+        ) : null}
+      </View>
+      {body ? (
+        <Text className="text-sm leading-5 text-foreground" selectable>
+          {body}
+        </Text>
+      ) : null}
     </View>
   );
 }

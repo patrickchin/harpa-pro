@@ -54,7 +54,7 @@ export default function Onboarding({
 
             <View className="mt-8 gap-4">
               <Input
-                label="Full Name"
+                label="Full name"
                 placeholder="John Smith"
                 value={fullName}
                 onChangeText={onChangeFullName}
@@ -62,11 +62,12 @@ export default function Onboarding({
                 autoCapitalize="words"
                 editable={!isPending}
                 hint="Use the name teammates will recognize in shared reports."
+                accessibilityLabel="Full name"
                 autoFocus
                 testID="input-onboarding-name"
               />
               <Input
-                label="Company Name"
+                label="Company name (optional)"
                 placeholder="Smith Construction LLC"
                 value={companyName}
                 onChangeText={onChangeCompanyName}
@@ -74,6 +75,7 @@ export default function Onboarding({
                 autoCapitalize="words"
                 editable={!isPending}
                 hint="This shows on profile and exported report details."
+                accessibilityLabel="Company name"
                 testID="input-onboarding-company"
               />
 
@@ -87,7 +89,7 @@ export default function Onboarding({
                 onPress={onSubmit}
                 testID="btn-onboarding-submit"
               >
-                {isPending ? 'Saving...' : 'Get Started'}
+                {isPending ? 'Saving…' : 'Get started'}
               </Button>
             </View>
           </View>

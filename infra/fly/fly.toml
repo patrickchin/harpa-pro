@@ -8,12 +8,13 @@ primary_region = "fra"
   dockerfile = "Dockerfile"
 
 [deploy]
-  # Run pending migrations inside a release machine using the existing
-  # DATABASE_URL secret. Fly promotes the new image to app machines ONLY
-  # if this exits 0 — so a broken migration aborts the rollout instead
-  # of leaving prod with code ahead of schema.
+  # Run pending migrations and seed smoke-test accounts inside a release
+  # machine using the existing DATABASE_URL secret. Fly promotes the new
+  # image to app machines ONLY if this exits 0 — so a broken migration or
+  # broken test-account seed aborts the rollout instead of leaving prod
+  # with code ahead of schema or unverifiable post-deploy journeys.
   # See docs/v4/arch-cicd-and-migrations.md.
-  release_command = "pnpm --filter @harpa/api db:migrate"
+  release_command = "sh -c 'pnpm --filter @harpa/api db:migrate && pnpm --filter @harpa/api db:seed-test-account'"
 
 [env]
   NODE_ENV = "production"
@@ -24,16 +25,13 @@ primary_region = "fra"
   force_https = true
   # `suspend` keeps the machine's memory snapshot resident so the
   # next request resumes in <500ms (vs ~3-5s for a cold boot from
-  # `stop`). Combined with min_machines_running ≥ 2 below, this
-  # means we never serve a true cold-start to a real user.
+  # `stop`). For now prod has no warm floor, so it can sleep fully
+  # when idle and pay the resume latency on the next request.
   auto_stop_machines = "suspend"
   auto_start_machines = true
-  # Keep two machines hot at all times:
-  #   - one absorbs the first request after a deploy / failover
-  #   - the other gives us N+1 redundancy when one is restarting
-  # Cost: ~$3.80/mo extra (one shared-cpu-1x 512mb machine).
-  # See docs/v4/arch-ops.md §Scaling.
-  min_machines_running = 2
+  # Temporarily allow full auto-sleep to save cost while main does not
+  # need warm HA. Restore this to 2 when prod should stay hot again.
+  min_machines_running = 0
 
   # Per-machine concurrency triggers. When a machine's in-flight
   # request count exceeds `soft_limit`, Fly wakes / starts another

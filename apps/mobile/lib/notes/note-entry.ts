@@ -80,4 +80,5 @@ export interface NoteEntry {
    * leave it undefined.
    */
   attachments?: ReadonlyArray<import('./attachments').Attachment>;
+
 }

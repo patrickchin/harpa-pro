@@ -210,4 +210,31 @@ describe('GenerateNotes — Edit tab', () => {
     // Other slices preserved by reference.
     expect(next.report.workers).toBe(SAMPLE_GENERATED_REPORT.report.workers);
   });
+
+  it('does not propagate form edits while report generation is in flight', () => {
+    const onSetReport = vi.fn<(next: GeneratedSiteReport) => void>();
+    const tree = render(
+      <GenerateNotes
+        {...baseProps}
+        report={SAMPLE_GENERATED_REPORT}
+        isGeneratingReport
+        onSetReport={onSetReport}
+      />,
+    );
+
+    const form = tree.root.findByProps({ testID: 'edit-tab-form' });
+    expect(form.props.pointerEvents).toBe('none');
+    const status = tree.root.findByProps({ testID: 'edit-autosave-status' });
+    expect(instanceText(status)).toBe('Generating…');
+
+    const titleInput = tree.root.findByProps({
+      accessibilityLabel: 'Report title',
+    });
+    act(() => {
+      const onChangeText = titleInput.props.onChangeText as (v: string) => void;
+      onChangeText('Should not persist');
+    });
+
+    expect(onSetReport).not.toHaveBeenCalled();
+  });
 });

@@ -5,7 +5,7 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import pg from 'pg';
 import { sql } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/node-postgres';
-import { startPg, type PgFixture } from '../setup-pg.js';
+import { startPg, seedAuthUsers, type PgFixture } from '../setup-pg.js';
 import { createApp } from '../../app.js';
 import { withScopedConnection } from '../../db/scope.js';
 import { signTestToken } from '../../middleware/auth.js';
@@ -30,16 +30,9 @@ beforeAll(async () => {
   aliceSid = makeSessionId();
   bobSid = makeSessionId();
 
+  await seedAuthUsers(fx.url, [{ id: alice }, { id: bob }]);
   const admin = new pg.Client({ connectionString: fx.url });
   await admin.connect();
-  await admin.query(
-    `INSERT INTO auth.users(id, phone) VALUES ($1, $2), ($3, $4)`,
-    [alice, '+15551100001', bob, '+15551100002'],
-  );
-  await admin.query(
-    `INSERT INTO auth.sessions(id, user_id, expires_at) VALUES ($1, $2, now() + interval '7 days'), ($3, $4, now() + interval '7 days')`,
-    [aliceSid, alice, bobSid, bob],
-  );
   // Seed both alice and bob with rows so the scope tests can prove
   // self-only visibility. Use whitelisted (vendor, model) pairs from
   // `AI_MODELS` — the service layer maps any non-whitelisted legacy

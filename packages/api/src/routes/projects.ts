@@ -23,7 +23,7 @@ import {
 import type { AppEnv } from '../app.js';
 import { withAuth } from '../middleware/auth.js';
 import {
-  addMemberByPhone,
+  addMemberByEmail,
   createProject,
   deleteProject,
   getProject,
@@ -250,11 +250,11 @@ projectRoutes.openapi(
     const db = c.get('db');
     if (!userId || !db) throw new HTTPException(401);
     const { project: slug } = c.req.valid('param');
-    const { phone, role } = c.req.valid('json');
+    const { email, role } = c.req.valid('json');
     const existing = await db((d) => getProjectBySlug(d, userId, slug, false));
     if (!existing) throw new HTTPException(404, { message: 'Project not found.' });
     try {
-      const member = await db((d) => addMemberByPhone(d, existing.id, phone, role));
+      const member = await db((d) => addMemberByEmail(d, existing.id, email, role));
       return c.json(member, 201);
     } catch (err) {
       const cat = mapPgError(err);

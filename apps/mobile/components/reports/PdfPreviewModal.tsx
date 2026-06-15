@@ -72,7 +72,7 @@ export function PdfPreviewModal({
       .catch((err) => {
         if (!cancelled) {
           setErrorMessage(
-            err instanceof Error ? err.message : 'Could not generate PDF.',
+            err instanceof Error ? err.message : "Couldn't generate PDF.",
           );
         }
       })
@@ -95,7 +95,7 @@ export function PdfPreviewModal({
       });
     } catch (err) {
       setErrorMessage(
-        err instanceof Error ? err.message : 'Could not share the PDF.',
+        err instanceof Error ? err.message : "Couldn't share PDF.",
       );
     } finally {
       setIsSharing(false);
@@ -111,7 +111,7 @@ export function PdfPreviewModal({
       await openSavedReportPdf(pdfResult.pdfUri);
     } catch (err) {
       setErrorMessage(
-        err instanceof Error ? err.message : 'Could not open the PDF.',
+        err instanceof Error ? err.message : "Couldn't open PDF.",
       );
     }
   };
@@ -145,7 +145,7 @@ export function PdfPreviewModal({
                     <View className="flex-row items-center gap-1.5">
                       <Share2 size={14} color={colors.foreground} />
                       <Text className="text-sm font-semibold text-foreground">
-                        {isSharing ? 'Sharing...' : 'Share'}
+                        {isSharing ? 'Sharing…' : 'Share'}
                       </Text>
                     </View>
                   </Button>
@@ -158,7 +158,7 @@ export function PdfPreviewModal({
             <View className="flex-1 items-center justify-center gap-3">
               <ActivityIndicator size="large" color={colors.foreground} />
               <Text className="text-base text-muted-foreground">
-                Generating PDF...
+                Generating PDF…
               </Text>
             </View>
           ) : errorMessage ? (
@@ -200,7 +200,7 @@ export function PdfPreviewModal({
                     setErrorMessage(
                       err instanceof Error
                         ? err.message
-                        : 'Could not display PDF.',
+                        : "Couldn't display PDF.",
                     );
                   }}
                 />

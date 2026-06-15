@@ -113,7 +113,7 @@ export function useAppDialogSheet(): AppDialogApi {
       await ctx.showDialog('alert', {
         title: opts.title,
         message: opts.message,
-        actions: [{ label: 'OK', onPress: () => {} }],
+        actions: [{ label: 'Done', onPress: () => {} }],
       });
     },
   };

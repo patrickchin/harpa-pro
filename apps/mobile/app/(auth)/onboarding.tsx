@@ -4,7 +4,7 @@
  * Wires data layer for screens/onboarding.tsx:
  *   - useAuthSession to read session.user (for prefill) and session.refresh()
  *   - useUpdateMeMutation (PATCH /me)
- *   - Auto-redirect to / if displayName + companyName already exist
+ *   - Auto-redirect to / if displayName already exists
  *   - Single async flow (Pitfall 5): mutateAsync → session.refresh() →
  *     router.replace('/')
  *
@@ -37,12 +37,11 @@ export default function OnboardingPage() {
     }
   }, [session.user]);
 
-  // Auto-redirect if both displayName and companyName already exist
+  // Auto-redirect if the required profile field already exists.
   useEffect(() => {
     if (
       session.status === 'authenticated' &&
-      session.user?.displayName &&
-      session.user?.companyName
+      session.user?.displayName
     ) {
       router.replace('/' as Href);
     }
@@ -53,11 +52,11 @@ export default function OnboardingPage() {
     const trimmedCompany = companyName.trim();
 
     if (trimmedName.length < 2) {
-      setError('Please enter your full name.');
+      setError('Enter your full name.');
       return;
     }
-    if (trimmedCompany.length < 2) {
-      setError('Please enter your company name.');
+    if (trimmedCompany.length > 0 && trimmedCompany.length < 2) {
+      setError('Enter at least 2 characters for your company name.');
       return;
     }
 
@@ -67,14 +66,14 @@ export default function OnboardingPage() {
       await updateMe.mutateAsync({
         body: {
           displayName: trimmedName,
-          companyName: trimmedCompany,
+          ...(trimmedCompany ? { companyName: trimmedCompany } : {}),
         },
       });
 
       await session.refresh();
       router.replace('/' as Href);
     } catch (e) {
-      const message = e instanceof Error ? e.message : 'Failed to save profile.';
+      const message = e instanceof Error ? e.message : "Couldn't save profile. Try again.";
       setError(message);
     }
   }, [fullName, companyName, updateMe, session, router]);

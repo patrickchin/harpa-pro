@@ -10,9 +10,12 @@ import type { reports as reportSchemas } from '@harpa/api-contract';
 import type { z } from 'zod';
 import * as schema from '../db/schema.js';
 import { newId } from '../lib/ids.js';
+import { notesCanonicalOrder, type NoteKind, type NoteSource } from './notes.js';
 
 type Db = NodePgDatabase<typeof schema>;
 type ReportBody = z.infer<typeof reportSchemas.reportBody>;
+type ReportAttachmentTarget = z.infer<typeof reportSchemas.reportAttachmentTarget>;
+type AttachmentSets = { images: Set<string>; documents: Set<string> };
 
 export type ReportStatus = 'draft' | 'finalized';
 
@@ -296,9 +299,12 @@ export async function updateReport(
 ): Promise<ReportRow | null> {
   const setVisit = Object.prototype.hasOwnProperty.call(patch, 'visitDate');
   const setBody = Object.prototype.hasOwnProperty.call(patch, 'body');
-  const bodyJson = setBody && patch.body !== null && patch.body !== undefined
-    ? JSON.stringify(patch.body)
-    : null;
+  let nextBody: ReportBody | null = null;
+  if (setBody && patch.body !== null && patch.body !== undefined) {
+    const valid = await collectValidReportAttachmentIds(db, reportId);
+    nextBody = sanitiseAttachments(patch.body, valid);
+  }
+  const bodyJson = nextBody ? JSON.stringify(nextBody) : null;
   // body patch flow: we deliberately do NOT touch
   // `notes_since_last_generation` or `generated_at` here — those belong
   // to the AI loop (setReportBody). Manual edits round-trip through the
@@ -331,55 +337,348 @@ export async function deleteReport(db: Db, reportId: string): Promise<boolean> {
 }
 
 // ---------------------------------------------------------------------------
+// Report-body attachment placement.
+// ---------------------------------------------------------------------------
+
+function cloneReportBody(body: ReportBody): ReportBody {
+  return JSON.parse(JSON.stringify(body)) as ReportBody;
+}
+
+function attachmentBucketForKind(kind: NoteKind): 'images' | 'documents' | null {
+  if (kind === 'image') return 'images';
+  if (kind === 'document') return 'documents';
+  return null;
+}
+
+function attachmentTargets(body: ReportBody) {
+  const issues = body.issues ?? [];
+  const summarySections = body.summarySections ?? [];
+  return [
+    ...issues.map((target, index) => ({ target, kind: 'issue' as const, index })),
+    ...summarySections.map((target, index) => ({
+      target,
+      kind: 'section' as const,
+      index,
+    })),
+  ];
+}
+
+export function collectPlacedAttachmentIds(body: ReportBody | null): AttachmentSets {
+  const images = new Set<string>();
+  const documents = new Set<string>();
+  if (!body) return { images, documents };
+  for (const { target } of attachmentTargets(body)) {
+    for (const id of target.attachments?.images ?? []) images.add(id);
+    for (const id of target.attachments?.documents ?? []) documents.add(id);
+  }
+  return { images, documents };
+}
+
+function sanitiseTargetAttachments(
+  target: ReportBody['issues'][number] | ReportBody['summarySections'][number],
+  valid: AttachmentSets,
+  seen: AttachmentSets,
+): void {
+  const attachments = target.attachments;
+  if (!attachments) return;
+
+  const nextImages: string[] = [];
+  for (const id of attachments.images ?? []) {
+    if (!valid.images.has(id) || seen.images.has(id)) continue;
+    seen.images.add(id);
+    nextImages.push(id);
+  }
+
+  const nextDocuments: string[] = [];
+  for (const id of attachments.documents ?? []) {
+    if (!valid.documents.has(id) || seen.documents.has(id)) continue;
+    seen.documents.add(id);
+    nextDocuments.push(id);
+  }
+
+  if (nextImages.length === 0 && nextDocuments.length === 0) {
+    delete target.attachments;
+    return;
+  }
+
+  target.attachments = {};
+  if (nextImages.length > 0) target.attachments.images = nextImages;
+  if (nextDocuments.length > 0) target.attachments.documents = nextDocuments;
+}
+
+export function sanitiseAttachments(body: ReportBody, valid: AttachmentSets): ReportBody {
+  const out = cloneReportBody(body);
+  const seen: AttachmentSets = { images: new Set(), documents: new Set() };
+  for (const { target } of attachmentTargets(out)) {
+    sanitiseTargetAttachments(target, valid, seen);
+  }
+  return out;
+}
+
+function ensureAttachments(
+  target: ReportBody['issues'][number] | ReportBody['summarySections'][number],
+): NonNullable<typeof target.attachments> {
+  target.attachments ??= {};
+  return target.attachments;
+}
+
+function removeAttachmentId(body: ReportBody, noteId: string): void {
+  for (const { target } of attachmentTargets(body)) {
+    const attachments = target.attachments;
+    if (!attachments) continue;
+    attachments.images = attachments.images?.filter((id) => id !== noteId);
+    attachments.documents = attachments.documents?.filter((id) => id !== noteId);
+    if ((attachments.images?.length ?? 0) === 0) delete attachments.images;
+    if ((attachments.documents?.length ?? 0) === 0) delete attachments.documents;
+    if (!attachments.images && !attachments.documents) delete target.attachments;
+  }
+}
+
+function targetAt(body: ReportBody, target: ReportAttachmentTarget) {
+  return target.kind === 'issue'
+    ? body.issues[target.index]
+    : body.summarySections[target.index];
+}
+
+export function preserveExistingAttachments(
+  generated: ReportBody,
+  current: ReportBody | null,
+  valid: AttachmentSets,
+): ReportBody {
+  const out = sanitiseAttachments(generated, valid);
+  if (!current) return out;
+
+  const placed = collectPlacedAttachmentIds(out);
+  const append = (
+    target: ReportBody['issues'][number] | ReportBody['summarySections'][number] | undefined,
+    bucket: 'images' | 'documents',
+    ids: string[] | undefined,
+  ) => {
+    if (!target || !ids) return;
+    for (const id of ids) {
+      if (!valid[bucket].has(id) || placed[bucket].has(id)) continue;
+      const attachments = ensureAttachments(target);
+      attachments[bucket] ??= [];
+      attachments[bucket]!.push(id);
+      placed[bucket].add(id);
+    }
+  };
+
+  (current.issues ?? []).forEach((issue, index) => {
+    append(out.issues[index], 'images', issue.attachments?.images);
+    append(out.issues[index], 'documents', issue.attachments?.documents);
+  });
+  (current.summarySections ?? []).forEach((section, index) => {
+    append(out.summarySections[index], 'images', section.attachments?.images);
+    append(out.summarySections[index], 'documents', section.attachments?.documents);
+  });
+
+  return sanitiseAttachments(out, valid);
+}
+
+async function collectValidReportAttachmentIds(db: Db, reportId: string): Promise<AttachmentSets> {
+  const rows = await db.execute<{ id: string; kind: 'image' | 'document' }>(sql`
+    SELECT id, kind
+    FROM app.notes
+    WHERE report_id = ${reportId}
+      AND kind IN ('image', 'document')
+    ORDER BY ${notesCanonicalOrder()}
+  `);
+  const valid: AttachmentSets = { images: new Set(), documents: new Set() };
+  for (const row of rows.rows) {
+    if (row.kind === 'image') valid.images.add(row.id);
+    if (row.kind === 'document') valid.documents.add(row.id);
+  }
+  return valid;
+}
+
+export type PlaceNoteInReportResult =
+  | { ok: true; report: ReportRow }
+  | { ok: false; reason: 'not-found' | 'wrong-kind' | 'bad-target' }
+  | { ok: false; reason: 'conflict'; report: ReportRow };
+
+export async function placeNoteInReport(
+  db: Db,
+  reportId: string,
+  noteId: string,
+  target: ReportAttachmentTarget | null,
+  expectedBodyVersion: string | null,
+): Promise<PlaceNoteInReportResult> {
+  const report = await getReport(db, reportId);
+  if (!report) return { ok: false, reason: 'not-found' };
+  if (report.generatedAt !== expectedBodyVersion) {
+    return { ok: false, reason: 'conflict', report };
+  }
+
+  const noteRes = await db.execute<{ id: string; kind: NoteKind; report_id: string }>(sql`
+    SELECT id, kind, report_id
+    FROM app.notes
+    WHERE id = ${noteId}
+      AND report_id = ${reportId}
+    LIMIT 1
+  `);
+  const note = noteRes.rows[0];
+  if (!note) return { ok: false, reason: 'not-found' };
+  const bucket = attachmentBucketForKind(note.kind);
+  if (!bucket) return { ok: false, reason: 'wrong-kind' };
+
+  if (!report.body) {
+    return target === null
+      ? { ok: true, report }
+      : { ok: false, reason: 'bad-target' };
+  }
+  if (target && !targetAt(report.body, target)) {
+    return { ok: false, reason: 'bad-target' };
+  }
+
+  const next = cloneReportBody(report.body);
+  removeAttachmentId(next, noteId);
+  if (target) {
+    const selected = targetAt(next, target);
+    if (!selected) return { ok: false, reason: 'bad-target' };
+    const attachments = ensureAttachments(selected);
+    attachments[bucket] ??= [];
+    attachments[bucket]!.push(noteId);
+  }
+
+  const valid = await collectValidReportAttachmentIds(db, reportId);
+  const bodyJson = JSON.stringify(sanitiseAttachments(next, valid));
+  const updated = await db.execute<RawReport>(sql`
+    UPDATE app.reports
+       SET body = ${bodyJson}::jsonb,
+           updated_at = now()
+     WHERE id = ${reportId}
+    RETURNING id, number, project_id, status, visit_date, body,
+              notes_since_last_generation, notes_changed_at, generated_at, finalized_at,
+              pdf_file_id, created_at, updated_at
+  `);
+  const row = updated.rows[0];
+  return row
+    ? { ok: true, report: mapReport(row) }
+    : { ok: false, reason: 'not-found' };
+}
+
+// ---------------------------------------------------------------------------
 // AI-generation surface (P1.7).
 // ---------------------------------------------------------------------------
 
+export interface GenerationNoteFile {
+  id: string;
+  fileId: string;
+  thumbnailFileId: string | null;
+  position: number;
+  caption: string | null;
+}
+
+export interface GenerationNote {
+  id: string;
+  kind: NoteKind;
+  body: string | null;
+  fileId: string | null;
+  thumbnailFileId: string | null;
+  transcript: string | null;
+  title: string | null;
+  summary: string | null;
+  source: NoteSource | null;
+  meta: Record<string, unknown>;
+  files: GenerationNoteFile[];
+  createdAt: string;
+}
+
+export interface GenerationPayload {
+  notes: GenerationNote[];
+  currentBody: ReportBody | null;
+}
+
 /**
- * Build the user-prompt payload for `generateReport`.
+ * Build the structured user-prompt payload for `generateReport`.
  *
- * Returns a numbered, kind-aware notes block. Text + voice notes carry
- * their body/transcript verbatim; image/document notes contribute a
- * `[image N]` / `[document N]` placeholder so the LLM acknowledges the
- * attachment without seeing its contents. The structure ("NOTES:\n[1]
- * …") matches the canonical v3 `formatNotes` / `buildPrompt` shape the
- * SYSTEM_PROMPT references — keep them in sync.
+ * The AI receives ordered note objects plus the current report body.
+ * Note array order is part of the contract: oldest first, then id.
  */
-export async function collectNotesForGeneration(db: Db, reportId: string): Promise<string> {
-  const r = await db.execute<{
-    kind: 'text' | 'voice' | 'image' | 'document';
-    body: string | null;
-    transcript: string | null;
-  }>(sql`
-    SELECT kind, body, transcript
-    FROM app.notes
-    WHERE report_id = ${reportId}
-    ORDER BY created_at ASC, id ASC
+export async function collectNotesForGeneration(db: Db, reportId: string): Promise<GenerationPayload> {
+  const reportRes = await db.execute<{ body: ReportBody | null }>(sql`
+    SELECT body
+    FROM app.reports
+    WHERE id = ${reportId}
+    LIMIT 1
   `);
-  const counters: Record<'image' | 'document', number> = { image: 0, document: 0 };
-  const lines: string[] = [];
-  for (const note of r.rows) {
-    let content: string;
-    switch (note.kind) {
-      case 'text':
-        content = (note.body ?? '').trim();
-        break;
-      case 'voice':
-        content = (note.transcript ?? note.body ?? '').trim();
-        break;
-      case 'image':
-        content = `[image ${++counters.image}]`;
-        break;
-      case 'document':
-        content = `[document ${++counters.document}]`;
-        break;
-      default:
-        content = (note.body ?? '').trim();
+  const currentBody = reportRes.rows[0]?.body ?? null;
+
+  const r = await db.execute<{
+    id: string;
+    kind: NoteKind;
+    body: string | null;
+    file_id: string | null;
+    thumbnail_file_id: string | null;
+    transcript: string | null;
+    title: string | null;
+    summary: string | null;
+    source: NoteSource | null;
+    meta: Record<string, unknown> | null;
+    created_at: Date;
+  }>(sql`
+    SELECT n.id, n.kind, n.body, n.file_id, n.thumbnail_file_id,
+           n.transcript, n.title, n.summary, n.source, n.meta, n.created_at
+    FROM app.notes n
+    WHERE n.report_id = ${reportId}
+    ORDER BY ${notesCanonicalOrder('n')}
+  `);
+
+  const noteIdsWithFiles = r.rows
+    .filter((note) => note.kind === 'image')
+    .map((note) => note.id);
+  const filesByNoteId = new Map<string, GenerationNoteFile[]>();
+  if (noteIdsWithFiles.length > 0) {
+    const inList = sql.join(
+      noteIdsWithFiles.map((id) => sql`${id}`),
+      sql`, `,
+    );
+    const nfResult = await db.execute<{
+      id: string;
+      note_id: string;
+      file_id: string;
+      thumbnail_file_id: string | null;
+      position: number;
+      caption: string | null;
+    }>(sql`
+      SELECT id, note_id, file_id, thumbnail_file_id, position, caption
+      FROM app.note_files
+      WHERE note_id IN (${inList})
+      ORDER BY note_id, position
+    `);
+    for (const nf of nfResult.rows) {
+      const files = filesByNoteId.get(nf.note_id) ?? [];
+      files.push({
+        id: nf.id,
+        fileId: nf.file_id,
+        thumbnailFileId: nf.thumbnail_file_id,
+        position: nf.position,
+        caption: nf.caption,
+      });
+      filesByNoteId.set(nf.note_id, files);
     }
-    if (content.length === 0) continue;
-    lines.push(`[${lines.length + 1}] ${content}`);
   }
-  if (lines.length === 0) return '';
-  return `NOTES:\n${lines.join('\n')}`;
+
+  return {
+    currentBody,
+    notes: r.rows.map((note) => ({
+      id: note.id,
+      kind: note.kind,
+      body: note.body,
+      fileId: note.file_id,
+      thumbnailFileId: note.thumbnail_file_id,
+      transcript: note.transcript,
+      title: note.title,
+      summary: note.summary,
+      source: note.source,
+      meta: note.meta && typeof note.meta === 'object' && !Array.isArray(note.meta)
+        ? note.meta
+        : {},
+      files: filesByNoteId.get(note.id) ?? [],
+      createdAt: new Date(note.created_at).toISOString(),
+    })),
+  };
 }
 
 export async function setReportBody(
@@ -397,11 +696,14 @@ export async function setReportBody(
    * through this helper too with no race to defend.
    */
   snapshotTs?: string | null,
+  preserveAttachmentsFrom?: ReportBody | null,
 ): Promise<ReportRow | null> {
   const lastGenJson = lastGeneration ? JSON.stringify(lastGeneration) : null;
+  const valid = await collectValidReportAttachmentIds(db, reportId);
+  const cleanBody = preserveExistingAttachments(body, preserveAttachmentsFrom ?? null, valid);
   const r = await db.execute<RawReport>(sql`
     UPDATE app.reports
-    SET body = ${JSON.stringify(body)}::jsonb,
+    SET body = ${JSON.stringify(cleanBody)}::jsonb,
         generated_at = COALESCE(${snapshotTs ?? null}::timestamptz, now()),
         notes_since_last_generation = 0,
         last_generation = CASE
@@ -500,6 +802,13 @@ export interface ReportDebugRow {
     kind: 'text' | 'voice' | 'image' | 'document';
     body: string | null;
     transcript: string | null;
+    files: Array<{
+      id: string;
+      fileId: string;
+      thumbnailFileId: string | null;
+      position: number;
+      caption: string | null;
+    }>;
     createdAt: string;
   }>;
   lastGeneration: ReportLastGeneration | null;
@@ -534,11 +843,52 @@ export async function getReportDebug(db: Db, reportId: string): Promise<ReportDe
     WHERE report_id = ${reportId}
     ORDER BY created_at ASC, id ASC
   `);
+
+  // Image-note attachments via the join table, so the operator can
+  // see how many photos hung off each note (the prompt collapses a
+  // batch to a single placeholder, which is otherwise invisible).
+  const imageNoteIds = notesResult.rows.filter((n) => n.kind === 'image').map((n) => n.id);
+  const filesByNoteId = new Map<
+    string,
+    Array<{ id: string; fileId: string; thumbnailFileId: string | null; position: number; caption: string | null }>
+  >();
+  if (imageNoteIds.length > 0) {
+    const inList = sql.join(
+      imageNoteIds.map((id) => sql`${id}`),
+      sql`, `,
+    );
+    const nfResult = await db.execute<{
+      id: string;
+      note_id: string;
+      file_id: string;
+      thumbnail_file_id: string | null;
+      position: number;
+      caption: string | null;
+    }>(sql`
+      SELECT id, note_id, file_id, thumbnail_file_id, position, caption
+      FROM app.note_files
+      WHERE note_id IN (${inList})
+      ORDER BY note_id, position
+    `);
+    for (const nf of nfResult.rows) {
+      const arr = filesByNoteId.get(nf.note_id) ?? [];
+      arr.push({
+        id: nf.id,
+        fileId: nf.file_id,
+        thumbnailFileId: nf.thumbnail_file_id,
+        position: nf.position,
+        caption: nf.caption,
+      });
+      filesByNoteId.set(nf.note_id, arr);
+    }
+  }
+
   const notes = notesResult.rows.map((n) => ({
     id: n.id,
     kind: n.kind,
     body: n.body,
     transcript: n.transcript,
+    files: filesByNoteId.get(n.id) ?? [],
     createdAt: new Date(n.created_at).toISOString(),
   }));
 
@@ -547,7 +897,11 @@ export async function getReportDebug(db: Db, reportId: string): Promise<ReportDe
   // when a previous lastGeneration is stored. The persisted
   // `lastGeneration.userPrompt` is still surfaced separately as a
   // record of what was last sent.
-  const liveUserPrompt = await collectNotesForGeneration(db, reportId);
+  const liveUserPrompt = JSON.stringify(
+    await collectNotesForGeneration(db, reportId),
+    null,
+    2,
+  );
 
   return {
     prompt: {

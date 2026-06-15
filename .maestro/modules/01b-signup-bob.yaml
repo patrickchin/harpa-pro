@@ -1,22 +1,22 @@
 appId: ${MAESTRO_APP_ID}
-name: "01b — Auth: sign-up bob"
+name: "01b — Auth: create bob via email-OTP"
 tags:
   - regression
   - auth
 ---
-# Module 01b — Sign-up bob
+# Module 01b — Create bob
 #
 # Covers:
 #   - sign-out from alice
-#   - sign-up bob via deep link (harpa://sign-up/phone)
-#   - onboarding form
+#   - first sign-in for bob (better-auth auto-creates the user on
+#     verify) + onboarding
 #   - sign-out
 #   - sign back in as alice (ready for module 02)
 #
 # Rationale: bob must exist in the database BEFORE alice can invite him.
-# The add_project_member_by_phone SQL function fails with `user_not_found`
-# if the phone has never signed in. So we sign bob up here, sign him out,
-# then resume the journey as alice.
+# The add_project_member_by_email service errors with `user_not_found`
+# if the email has never signed in. So we sign bob in here (auto-create),
+# sign him out, then resume the journey as alice.
 #
 # Pre-condition: alice is signed in on the projects list.
 # Post-condition: alice is signed in on the projects list (state unchanged
@@ -25,49 +25,27 @@ tags:
 # --- Sign-out from alice ---------------------------------------------------
 - runFlow: ../helpers/sign-out.yaml
 
-# --- Sign-up bob via deep link ---------------------------------------------
-- openLink: harpa://sign-up/phone
+# --- Sign-in bob (better-auth creates the account on first verify) --------
 - runFlow:
-    file: ../helpers/dismiss-open-dialog.yaml
-- extendedWaitUntil:
-    visible:
-      id: "input-signup-phone"
-    timeout: 15000
-- runFlow:
-    file: ../helpers/pick-country-us.yaml
+    file: ../helpers/sign-in.yaml
     env:
-      COUNTRY_BUTTON_ID: "btn-signup-country-picker"
-- tapOn:
-    id: "input-signup-phone"
-- inputText: "5550000002"
-- hideKeyboard
-- tapOn:
-    id: "btn-signup-send-code"
-- extendedWaitUntil:
-    visible:
-      id: "input-signup-otp"
-    timeout: 10000
-- tapOn:
-    id: "input-signup-otp"
-- inputText: "000000"
-- hideKeyboard
-- tapOn:
-    id: "btn-signup-verify"
+      EMAIL: "bob@e2e.harpapro.com"
 
 # --- Onboarding for bob -----------------------------------------------------
-- extendedWaitUntil:
-    visible:
-      id: "screen-onboarding"
-    timeout: 15000
-- tapOn:
-    id: "input-onboarding-name"
-- inputText: "Bob E2E"
-- tapOn:
-    id: "input-onboarding-company"
-- inputText: "E2E Corp"
-- hideKeyboard
-- tapOn:
-    id: "btn-onboarding-submit"
+- runFlow:
+    when:
+      visible:
+        id: "screen-onboarding"
+    commands:
+      - tapOn:
+          id: "input-onboarding-name"
+      - inputText: "Bob E2E"
+      - tapOn:
+          id: "input-onboarding-company"
+      - inputText: "E2E Corp"
+      - hideKeyboard
+      - tapOn:
+          id: "btn-onboarding-submit"
 - extendedWaitUntil:
     visible:
       id: "btn-new-project"
@@ -80,4 +58,4 @@ tags:
 - runFlow:
     file: ../helpers/sign-in.yaml
     env:
-      PHONE: "5550000001"
+      EMAIL: "alice@e2e.harpapro.com"

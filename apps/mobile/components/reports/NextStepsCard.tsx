@@ -9,13 +9,20 @@ import { ClipboardList } from 'lucide-react-native';
 
 import { Card } from '@/components/primitives/Card';
 import { SectionHeader } from '@/components/primitives/SectionHeader';
+import { EditPencilButton } from '@/components/reports/edit/EditPencilButton';
 import { colors } from '@/lib/design-tokens/colors';
 
 interface NextStepsCardProps {
   steps: readonly string[];
+  onEdit?: () => void;
+  editActionsDisabled?: boolean;
 }
 
-export function NextStepsCard({ steps }: NextStepsCardProps) {
+export function NextStepsCard({
+  steps,
+  onEdit,
+  editActionsDisabled = false,
+}: NextStepsCardProps) {
   if (steps.length === 0) return null;
 
   return (
@@ -28,6 +35,19 @@ export function NextStepsCard({ steps }: NextStepsCardProps) {
             : `${steps.length} follow-up actions.`
         }
         icon={<ClipboardList size={16} color={colors.foreground} />}
+        trailing={
+          onEdit ? (
+            <EditPencilButton
+              onPress={() => {
+                if (editActionsDisabled) return;
+                onEdit();
+              }}
+              disabled={editActionsDisabled}
+              accessibilityLabel="Edit next steps"
+              testID="btn-edit-next-steps"
+            />
+          ) : undefined
+        }
       />
       <View className="mt-4 gap-3">
         {steps.map((step, index) => (

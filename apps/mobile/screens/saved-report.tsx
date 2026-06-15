@@ -39,10 +39,13 @@ import { ScreenHeader } from '@/components/primitives/ScreenHeader';
 import { Skeleton } from '@/components/primitives/Skeleton';
 import { AppDialogSheet } from '@/components/primitives/AppDialogSheet';
 import { ReportView } from '@/components/reports/ReportView';
-import { ReportEditForm } from '@/components/reports/ReportEditForm';
+import { ReportEditModal } from '@/components/reports/edit/ReportEditModal';
+import type { ReportEditTarget } from '@/components/reports/edit/types';
 import { PdfPreviewModal } from '@/components/reports/PdfPreviewModal';
 import { ImagePreviewModal } from '@/components/files/ImagePreviewModal';
 import { ReportPhotos } from '@/components/reports/detail/ReportPhotos';
+import { PhotoAttachmentPickerSheet } from '@/components/reports/detail/PhotoAttachmentPickerSheet';
+import { PhotoGroupPlacementSheet } from '@/components/reports/detail/PhotoGroupPlacementSheet';
 import { ReportDetailHeader } from '@/components/reports/detail/ReportDetailHeader';
 import {
   ReportDetailTabBar,
@@ -52,6 +55,7 @@ import {
   ReportNotesPane,
   type ReportNoteRow,
 } from '@/components/reports/detail/ReportNotesPane';
+import { flattenPhotoGallery } from '@/lib/api/to-report-note-row';
 import { ReportActionsMenu } from '@/components/reports/detail/ReportActionsMenu';
 import { SavedReportSheet } from '@/components/reports/detail/SavedReportSheet';
 import { ReportDetailSkeleton } from '@/components/skeletons/ReportDetailSkeleton';
@@ -61,6 +65,15 @@ import {
   getDeleteReportDialogCopy,
   getUnfinalizeReportDialogCopy,
 } from '@/lib/dialogs/app-dialog-copy';
+import {
+  collectPlacedAttachmentIds,
+  applyPhotoPlacement,
+  groupPhotos,
+  placementForNoteId,
+  placementLabel,
+  splitAttachments,
+  type PhotoPlacement,
+} from '@/lib/reports/photo-placements';
 import type { GeneratedSiteReport } from '@harpa/report-core';
 import type { UseReportPdfActionsReturn } from '@/lib/reports/use-report-pdf-actions';
 
@@ -127,8 +140,8 @@ export interface SavedReportProps {
   actions?: ReactNode;
 
   /**
-   * Invoked from the Actions menu's "View Notes" entry on finalised
-   * reports. When provided, the menu surfaces a "View Notes" row;
+   * Invoked from the Actions menu's "View notes" entry on finalised
+   * reports. When provided, the menu surfaces a "View notes" row;
    * tapping it should navigate to the dedicated notes screen.
    * Omitted (no entry rendered) for drafts — drafts show the Notes
    * tab inline instead.
@@ -143,6 +156,17 @@ export interface SavedReportProps {
   showDeveloperSection?: boolean;
   /** Invoked when the user taps the Report Debug entry. */
   onOpenDebug?: () => void;
+
+  /**
+   * Invoked when the user picks (or clears) a placement from the
+   * `PhotoGroupPlacementSheet`. When omitted, the placement chip and
+   * sheet are not rendered at all (legacy behaviour). The route file
+   * wires this to the report attachment placement mutation.
+   */
+  onPlacePhotoGroup?: (input: {
+    noteId: string;
+    placement: PhotoPlacement | null;
+  }) => void | Promise<void>;
 }
 
 export function SavedReport(props: SavedReportProps) {
@@ -177,6 +201,7 @@ export function SavedReport(props: SavedReportProps) {
     onViewNotes,
     showDeveloperSection,
     onOpenDebug,
+    onPlacePhotoGroup,
   } = props;
 
   const [menuVisible, setMenuVisible] = useState(false);
@@ -186,12 +211,21 @@ export function SavedReport(props: SavedReportProps) {
   } | null>(null);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [confirmUnfinalizeOpen, setConfirmUnfinalizeOpen] = useState(false);
+  const [actionError, setActionError] = useState<{
+    title: string;
+    message: string;
+  } | null>(null);
   const [localReport, setLocalReport] = useState<GeneratedSiteReport | null>(
     null,
   );
   const [activeTab, setActiveTab] = useState<ReportDetailTab>(
     initialTab ?? 'report',
   );
+  // `editing` drives the per-card full-screen edit modal. `null` when
+  // closed; otherwise the slice descriptor for whichever pencil was
+  // tapped. See
+  // `docs/superpowers/specs/2026-06-03-report-edit-modal-redesign-design.md`.
+  const [editing, setEditing] = useState<ReportEditTarget | null>(null);
 
   // Layout-shift probes — landmarks that should land at the same Y
   // when the loading branch swaps to the loaded `ReportDetailHeader`.
@@ -204,11 +238,11 @@ export function SavedReport(props: SavedReportProps) {
   const isFinal = reportStatus === 'finalized';
 
   // Finalized reports are read-only — bounce back to Report tab if the
-  // status flips to finalized while the user is on Edit or Notes (the
-  // Notes tab is hidden for finalised reports; access moves to the
-  // Actions menu).
+  // status flips to finalized while the user is on Notes (the Notes
+  // tab is hidden for finalised reports; access moves to the Actions
+  // menu).
   useEffect(() => {
-    if (isFinal && (activeTab === 'edit' || activeTab === 'notes')) {
+    if (isFinal && activeTab === 'notes') {
       setActiveTab('report');
     }
   }, [isFinal, activeTab]);
@@ -236,27 +270,63 @@ export function SavedReport(props: SavedReportProps) {
   const displayReport = localReport ?? report ?? null;
   const notesCount = (noteRows ?? []).length;
 
-  // Gallery of all photo-notes — drives the swipeable preview modal.
-  // Order matches `noteRows`; both `ReportPhotos` and `ReportNotesPane`
-  // tap-handlers resolve into this same list by `fileId`.
-  const photoGallery = useMemo(
-    () =>
-      (noteRows ?? [])
-        .filter(
-          (n): n is ReportNoteRow & { fileId: string } =>
-            n.kind === 'photo' &&
-            typeof n.fileId === 'string' &&
-            !!n.fileId,
-        )
-        .map((n) => ({
-          fileId: n.fileId,
-          thumbnailFileId: n.thumbnailFileId ?? null,
-          noteId: n.noteId ?? n.id,
-          title: n.body?.trim() || 'Photo',
-          cacheKey: n.fileId,
-        })),
+  const placePhotoGroup = (input: {
+    noteId: string;
+    placement: PhotoPlacement | null;
+  }) => {
+    if (isFinal) return;
+    if (displayReport) {
+      setLocalReport(
+        applyPhotoPlacement(displayReport, input.noteId, input.placement),
+      );
+    }
+    void onPlacePhotoGroup?.(input);
+  };
+
+  const placementsEnabled = !!onPlacePhotoGroup;
+  const placementActionsEnabled = placementsEnabled && !isFinal;
+
+  const photoGroups = useMemo(
+    () => groupPhotos(noteRows ?? []),
     [noteRows],
   );
+
+  const placements = useMemo(
+    () => splitAttachments(photoGroups, displayReport),
+    [photoGroups, displayReport],
+  );
+
+  const placedNoteIds = useMemo(
+    () => collectPlacedAttachmentIds(displayReport),
+    [displayReport],
+  );
+
+  const [placementSheetNoteId, setPlacementSheetNoteId] = useState<
+    string | null
+  >(null);
+  const placementCurrent = useMemo(() => {
+    return placementForNoteId(displayReport, placementSheetNoteId);
+  }, [placementSheetNoteId, displayReport]);
+  const [attachmentPickerTarget, setAttachmentPickerTarget] =
+    useState<PhotoPlacement | null>(null);
+  const attachmentPickerTargetLabel = useMemo(() => {
+    return placementLabel(attachmentPickerTarget, displayReport) ?? 'this target';
+  }, [attachmentPickerTarget, displayReport]);
+
+  useEffect(() => {
+    if (placementActionsEnabled) return;
+    setPlacementSheetNoteId(null);
+    setAttachmentPickerTarget(null);
+  }, [placementActionsEnabled]);
+
+  // Gallery of all photo-notes — drives the swipeable preview modal.
+  // One entry per joined `note_files` row across every image note,
+  // ordered newest-first to match the timeline. Both `ReportPhotos`
+  // and `ReportNotesPane` tap-handlers resolve into this same list
+  // by `fileId` via `findIndex`, so any iteration order works for
+  // *finding* the index — we sort newest-first only so swiping
+  // forward walks the same direction as reading the timeline.
+  const photoGallery = useMemo(() => flattenPhotoGallery(noteRows), [noteRows]);
 
   const handleOpenPhoto = (input: { fileId: string; title?: string }) => {
     const idx = photoGallery.findIndex((p) => p.fileId === input.fileId);
@@ -281,6 +351,16 @@ export function SavedReport(props: SavedReportProps) {
   const handleEditChange = (next: GeneratedSiteReport) => {
     setLocalReport(next);
     onChangeReport(next);
+  };
+
+  // Pencil → modal. Editable only when the report is a draft. Finalised
+  // reports hide the tab bar and don't render the editing UI.
+  const handleOpenEdit = (target: ReportEditTarget) => {
+    setEditing(target);
+  };
+
+  const handleEditModalChange = (next: GeneratedSiteReport) => {
+    handleEditChange(next);
   };
 
   if (isLoading) {
@@ -350,7 +430,7 @@ export function SavedReport(props: SavedReportProps) {
       <SafeAreaView className="flex-1 bg-background" edges={['top']}>
         <View className="flex-1 items-center justify-center px-5">
           <Text className="text-xl font-semibold text-foreground">
-            Failed to load report
+            Couldn't load report
           </Text>
           <Text className="mt-2 text-center text-base text-muted-foreground">
             {loadError instanceof Error
@@ -405,23 +485,8 @@ export function SavedReport(props: SavedReportProps) {
             activeTab={activeTab}
             onChange={setActiveTab}
             notesCount={notesCount}
-            showEditTab={!isFinal}
             showNotesTab={!isFinal}
           />
-        ) : null}
-
-        {!isFinal && activeTab === 'edit' ? (
-          <View className="flex-row items-center justify-between px-5 pt-1 pb-1">
-            <Text className="text-sm font-medium text-muted-foreground">
-              Edit report
-            </Text>
-            <Text
-              className="text-xs text-muted-foreground"
-              testID="edit-autosave-status"
-            >
-              {isAutoSaving ? 'Saving…' : lastSavedAt ? 'Saved' : ''}
-            </Text>
-          </View>
         ) : null}
 
         {isFinal || activeTab === 'report' ? (
@@ -430,21 +495,37 @@ export function SavedReport(props: SavedReportProps) {
             className="px-5"
             testID="saved-report-pane"
           >
-            <ReportView report={displayReport} reportNumber={reportNumber ?? undefined} />
+            <ReportView
+              report={displayReport}
+              reportNumber={reportNumber ?? undefined}
+              onEdit={!isFinal ? handleOpenEdit : undefined}
+              placements={placementsEnabled ? placements : undefined}
+              onOpenPhoto={handleOpenPhoto}
+              onEditPlacement={
+                placementActionsEnabled
+                  ? (noteId) => setPlacementSheetNoteId(noteId)
+                  : undefined
+              }
+              onAddAttachmentToTarget={
+                placementActionsEnabled
+                  ? (target) => setAttachmentPickerTarget(target)
+                  : undefined
+              }
+            />
             <View className="mt-4">
               <ReportPhotos
                 noteRows={noteRows}
                 onOpenPhoto={handleOpenPhoto}
+                onOpenPlacementSheet={
+                  placementActionsEnabled
+                    ? (noteId) => setPlacementSheetNoteId(noteId)
+                    : undefined
+                }
+                filterPlacedPhotoGroups={placementsEnabled}
+                placedNoteIds={placedNoteIds}
               />
             </View>
           </Animated.View>
-        ) : !isFinal && activeTab === 'edit' ? (
-          <View className="px-5" testID="saved-report-edit-pane">
-            <ReportEditForm
-              report={displayReport}
-              onChange={handleEditChange}
-            />
-          </View>
         ) : (
           <Animated.View entering={FadeIn.duration(250)}>
             <ReportNotesPane
@@ -523,11 +604,19 @@ export function SavedReport(props: SavedReportProps) {
         canDismiss={!isDeleting}
         actions={[
           {
-            label: isDeleting ? 'Deleting...' : deleteCopy.confirmLabel,
+            label: isDeleting ? 'Deleting…' : deleteCopy.confirmLabel,
             variant: deleteCopy.confirmVariant,
             onPress: async () => {
-              await onConfirmDelete();
-              setConfirmDeleteOpen(false);
+              try {
+                await onConfirmDelete();
+                setConfirmDeleteOpen(false);
+              } catch {
+                setConfirmDeleteOpen(false);
+                setActionError({
+                  title: "Couldn't delete report",
+                  message: 'Try again.',
+                });
+              }
             },
             disabled: isDeleting,
             accessibilityLabel: 'Confirm delete report',
@@ -557,12 +646,20 @@ export function SavedReport(props: SavedReportProps) {
         actions={[
           {
             label: isUnfinalizing
-              ? 'Unfinalizing...'
+              ? 'Unfinalizing…'
               : unfinalizeCopy.confirmLabel,
             variant: unfinalizeCopy.confirmVariant,
             onPress: async () => {
-              await onConfirmUnfinalize();
-              setConfirmUnfinalizeOpen(false);
+              try {
+                await onConfirmUnfinalize();
+                setConfirmUnfinalizeOpen(false);
+              } catch {
+                setConfirmUnfinalizeOpen(false);
+                setActionError({
+                  title: "Couldn't unfinalize report",
+                  message: 'Try again.',
+                });
+              }
             },
             disabled: isUnfinalizing,
             accessibilityLabel: 'Confirm unfinalize report',
@@ -575,6 +672,23 @@ export function SavedReport(props: SavedReportProps) {
             onPress: () => setConfirmUnfinalizeOpen(false),
             disabled: isUnfinalizing,
             accessibilityLabel: 'Cancel unfinalize report',
+          },
+        ]}
+      />
+
+      <AppDialogSheet
+        visible={actionError !== null}
+        title={actionError?.title ?? "Couldn't update report"}
+        message={actionError?.message}
+        noticeTone="danger"
+        noticeTitle="Action failed"
+        onClose={() => setActionError(null)}
+        actions={[
+          {
+            label: 'Done',
+            variant: 'secondary',
+            onPress: () => setActionError(null),
+            testID: 'btn-dismiss-report-action-error',
           },
         ]}
       />
@@ -607,6 +721,52 @@ export function SavedReport(props: SavedReportProps) {
           void handleSavePdf();
         }}
       />
+
+      {!isFinal && displayReport ? (
+        <ReportEditModal
+          target={editing}
+          report={displayReport}
+          onClose={() => setEditing(null)}
+          onChange={handleEditModalChange}
+        />
+      ) : null}
+
+      {placementActionsEnabled ? (
+        <PhotoGroupPlacementSheet
+          visible={placementSheetNoteId !== null}
+          issues={displayReport?.report.issues ?? []}
+          sections={displayReport?.report.sections ?? []}
+          photoCount={
+            placementSheetNoteId
+              ? photoGroups.find((g) => g.noteId === placementSheetNoteId)
+                  ?.photos.length ?? 0
+              : 0
+          }
+          current={placementCurrent}
+          onSelect={(next) => {
+            const noteId = placementSheetNoteId;
+            setPlacementSheetNoteId(null);
+            if (!noteId) return;
+            placePhotoGroup({ noteId, placement: next });
+          }}
+          onClose={() => setPlacementSheetNoteId(null)}
+        />
+      ) : null}
+
+      {placementActionsEnabled ? (
+        <PhotoAttachmentPickerSheet
+          visible={attachmentPickerTarget !== null}
+          targetLabel={attachmentPickerTargetLabel}
+          groups={placements.unplaced}
+          onSelect={(noteId) => {
+            const target = attachmentPickerTarget;
+            setAttachmentPickerTarget(null);
+            if (!target) return;
+            placePhotoGroup({ noteId, placement: target });
+          }}
+          onClose={() => setAttachmentPickerTarget(null)}
+        />
+      ) : null}
     </SafeAreaView>
   );
 }

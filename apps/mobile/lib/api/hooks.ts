@@ -34,87 +34,6 @@ export function useHealthQuery(
   });
 }
 
-// ─── auth ───────────────────────────────────────────
-export type StartOtpMutationVars = { body: RequestBody<"/auth/otp/start", "post"> };
-export function useStartOtpMutation(
-  options?: UseMutationOptions<ResponseBody<"/auth/otp/start", "post">, ApiError, StartOtpMutationVars>,
-) {
-  const qc = useQueryClient();
-  return useMutation<ResponseBody<"/auth/otp/start", "post">, ApiError, StartOtpMutationVars>({
-    mutationFn: (vars) => request("/auth/otp/start", "post", { body: vars.body }),
-    ...options,
-    onSuccess: (...args) => {
-      const rule = INVALIDATIONS["useStartOtpMutation"];
-      if (rule && rule !== INVALIDATIONS_NONE) {
-        for (const head of rule) {
-          qc.invalidateQueries({ queryKey: [head] });
-        }
-      }
-      return options?.onSuccess?.(...args);
-    },
-  });
-}
-
-export type VerifyOtpMutationVars = { body: RequestBody<"/auth/otp/verify", "post"> };
-export function useVerifyOtpMutation(
-  options?: UseMutationOptions<ResponseBody<"/auth/otp/verify", "post">, ApiError, VerifyOtpMutationVars>,
-) {
-  const qc = useQueryClient();
-  return useMutation<ResponseBody<"/auth/otp/verify", "post">, ApiError, VerifyOtpMutationVars>({
-    mutationFn: (vars) => request("/auth/otp/verify", "post", { body: vars.body }),
-    ...options,
-    onSuccess: (...args) => {
-      const rule = INVALIDATIONS["useVerifyOtpMutation"];
-      if (rule && rule !== INVALIDATIONS_NONE) {
-        for (const head of rule) {
-          qc.invalidateQueries({ queryKey: [head] });
-        }
-      }
-      return options?.onSuccess?.(...args);
-    },
-  });
-}
-
-export type VerifyPasswordMutationVars = { body: RequestBody<"/auth/password/verify", "post"> };
-export function useVerifyPasswordMutation(
-  options?: UseMutationOptions<ResponseBody<"/auth/password/verify", "post">, ApiError, VerifyPasswordMutationVars>,
-) {
-  const qc = useQueryClient();
-  return useMutation<ResponseBody<"/auth/password/verify", "post">, ApiError, VerifyPasswordMutationVars>({
-    mutationFn: (vars) => request("/auth/password/verify", "post", { body: vars.body }),
-    ...options,
-    onSuccess: (...args) => {
-      const rule = INVALIDATIONS["useVerifyPasswordMutation"];
-      if (rule && rule !== INVALIDATIONS_NONE) {
-        for (const head of rule) {
-          qc.invalidateQueries({ queryKey: [head] });
-        }
-      }
-      return options?.onSuccess?.(...args);
-    },
-  });
-}
-
-export type LogoutMutationVars = void;
-export function useLogoutMutation(
-  options?: UseMutationOptions<ResponseBody<"/auth/logout", "post">, ApiError, LogoutMutationVars>,
-) {
-  const qc = useQueryClient();
-  return useMutation<ResponseBody<"/auth/logout", "post">, ApiError, LogoutMutationVars>({
-    mutationFn: (_vars) => request("/auth/logout", "post"),
-    ...options,
-    onSuccess: (...args) => {
-      const rule = INVALIDATIONS["useLogoutMutation"];
-      if (rule && rule !== INVALIDATIONS_NONE) {
-        for (const head of rule) {
-          qc.invalidateQueries({ queryKey: [head] });
-        }
-      }
-      return options?.onSuccess?.(...args);
-    },
-  });
-}
-
 // ─── me ───────────────────────────────────────────
 export type MeQueryInput = { query?: QueryParams<"/me", "get"> } | void;
 export function useMeQuery(
@@ -534,6 +453,26 @@ export function useReportDebugQuery(
     queryKey: ["reportDebug", input.params, input.query] as const,
     queryFn: ({ signal }) => request("/projects/{project}/reports/{number}/debug", "get", { params: input.params, query: input.query, signal }),
     ...options,
+  });
+}
+
+export type PlaceReportAttachmentMutationVars = { params: PathParams<"/projects/{project}/reports/{number}/attachments", "patch">; body: RequestBody<"/projects/{project}/reports/{number}/attachments", "patch"> };
+export function usePlaceReportAttachmentMutation(
+  options?: UseMutationOptions<ResponseBody<"/projects/{project}/reports/{number}/attachments", "patch">, ApiError, PlaceReportAttachmentMutationVars>,
+) {
+  const qc = useQueryClient();
+  return useMutation<ResponseBody<"/projects/{project}/reports/{number}/attachments", "patch">, ApiError, PlaceReportAttachmentMutationVars>({
+    mutationFn: (vars) => request("/projects/{project}/reports/{number}/attachments", "patch", { params: vars.params, body: vars.body }),
+    ...options,
+    onSuccess: (...args) => {
+      const rule = INVALIDATIONS["usePlaceReportAttachmentMutation"];
+      if (rule && rule !== INVALIDATIONS_NONE) {
+        for (const head of rule) {
+          qc.invalidateQueries({ queryKey: [head] });
+        }
+      }
+      return options?.onSuccess?.(...args);
+    },
   });
 }
 

@@ -113,7 +113,7 @@ export function ReportDebug(props: ReportDebugProps) {
             testID="report-debug-error"
           >
             <Text className="text-danger-text">
-              Failed to load debug data.
+              Couldn't load debug data.
             </Text>
             <Text className="mt-2 text-xs text-muted-foreground">
               {loadError.message}
@@ -194,6 +194,12 @@ export function ReportDebug(props: ReportDebugProps) {
                     </Text>
                   ) : null}
                 </Section>
+                <Section title="LLM response" testID="debug-llm-response">
+                  <MonoBlock
+                    text={lastGeneration.response}
+                    testID="debug-llm-response-text"
+                  />
+                </Section>
                 <Section
                   title="Last generation — prompt sent"
                   testID="debug-last-prompt"
@@ -206,12 +212,6 @@ export function ReportDebug(props: ReportDebugProps) {
                     user
                   </Text>
                   <MonoBlock text={lastGeneration.userPrompt} />
-                </Section>
-                <Section title="LLM response" testID="debug-llm-response">
-                  <MonoBlock
-                    text={lastGeneration.response}
-                    testID="debug-llm-response-text"
-                  />
                 </Section>
               </>
             ) : (

@@ -15,11 +15,9 @@
 - Expo Router v3 (file-system routing).
 - React Query for server state.
 - Hand-rolled `UploadQueue` (`lib/uploads/queue.ts`) for offline-first
-  upload + persistence via AsyncStorage. Legend-state was the v3
-  plan but proved overkill for a queue with a single subscriber;
-  the current queue is ~370 lines, exposes a tiny surface
-  (`enqueue` / `retry` / `remove` / `subscribe` / `rehydrate`), and
-  is fully unit-tested in node. See
+  upload + AsyncStorage persistence. ~370 lines, tiny surface
+  (`enqueue`/`retry`/`remove`/`subscribe`/`rehydrate`), fully
+  unit-tested in node. See
   [`arch-voice-pipeline.md` §D9](arch-voice-pipeline.md#d9-robustness-phase-f)
   for the persistence + AbortSignal contract.
 - expo-audio for recording + playback (already proven in v3).
@@ -92,7 +90,7 @@ apps/mobile/
 
   lib/                                 # CROSS-CUTTING (subfolders only)
     api/  auth/  audio/  camera/  config/  dialogs/  files/  nav/
-    native/  notes/  phone/  projects/  reports/  telemetry/  util/
+    native/  notes/  projects/  reports/  telemetry/  util/
     ai/  design-tokens/  dev-fixtures/  uploads/
 
   tailwind.config.js  global.css  app.config.ts  babel.config.js  metro.config.js
@@ -110,33 +108,28 @@ No `setTimeout` in auth flows (Pitfall 5).
 
 ### Deep-link readiness
 
-Deep links + universal links are wired in P4. The route shape
-above is already deep-link compatible because Expo Router maps
-files to URLs 1:1 and we use prefixed slugs (see
-[arch-ids-and-urls.md](arch-ids-and-urls.md)). To keep the door
-open without doing the work now, every screen P2/P3 ships must
-follow these rules:
+Deep links + universal links are wired in P4. The route shape above
+is already deep-link compatible (Expo Router maps files to URLs 1:1;
+prefixed slugs per [arch-ids-and-urls.md](arch-ids-and-urls.md)).
+Rules every P2/P3 screen must follow:
 
-1. **URL params are sufficient to mount.** A screen MUST be able
-   to load from a cold start with only its route params \u2014 fetch
-   what it needs via React Query, never assume the previous
+1. **URL params are sufficient to mount.** Cold-start a screen from
+   route params alone — fetch via React Query, never assume a prior
    screen pre-populated a store.
 2. **Navigate by URL, not by ref.** Use
    `router.push('/projects/prj_xxxxxx')`, not
-   `navigation.navigate('ProjectDetail', { id })`. Same code
-   path for in-app taps and deep links.
-3. **Auth gate stashes intent.** When an unauthed user hits a
-   protected URL, `(app)/_layout.tsx` records the intended path
-   and replays it after sign-in (P2.6 wires this).
-4. **Route shape = entity shape.** No funnelling everything
-   through `(app)/index` with local state. File routes only.
-5. **Reserve the scheme now.** `app.json` `scheme` and a
-   placeholder universal-link domain are set in P0 so dev share
-   links resolve.
+   `navigation.navigate('ProjectDetail', { id })`.
+3. **Auth gate stashes intent.** Unauthed users hitting a protected
+   URL → `(app)/_layout.tsx` records the path and replays after
+   sign-in (P2.6).
+4. **Route shape = entity shape.** No funnelling everything through
+   `(app)/index` with local state. File routes only.
+5. **Reserve the scheme now.** `app.json` `scheme` + placeholder
+   universal-link domain set in P0 so dev share links resolve.
 
 Universal Links / App Links infra (`apple-app-site-association`,
-`assetlinks.json`), push \u2192 deep-link routing, and any deferred
-deep-link install handling land in P4.
+`assetlinks.json`), push → deep-link routing, and deferred deep-link
+install handling land in P4.
 
 ## API client (P2.3)
 
@@ -179,11 +172,15 @@ State machine:
 ```
 loading
   ├─ no stored session                            → unauthenticated
-  ├─ stored session, /me ok, profile complete     → authenticated
-  ├─ stored session, /me ok, profile incomplete   → needs-onboarding
+  ├─ stored session, /me ok, displayName set      → authenticated
+  ├─ stored session, /me ok, displayName missing  → needs-onboarding
   ├─ stored session, /me 401                      → unauthenticated (storage cleared)
   └─ stored session, /me network error            → trust stored user (offline-usable)
 ```
+
+`companyName` is optional at signup/onboarding. When blank, the
+mobile onboarding submit omits it from `PATCH /me`, leaving the user
+authenticated once `displayName` is set.
 
 Bootstrap is idempotent and **always** terminates `loading` — every
 error branch sets a status. Pitfall 5: no implicit ordering, no
@@ -211,11 +208,11 @@ Token getter wiring (security review §B / §I):
 - Any post-bootstrap 401 (query OR mutation) calls
   `notifyUnauthorized()`, which clears the in-memory token + sets
   status to `unauthenticated`. The route guard in `app/_layout.tsx`
-  redirects to `/(auth)/sign-in/phone`.
+  redirects to `/(auth)/sign-in/email`.
 
 Sign-out:
 
-- Best-effort `POST /auth/logout`, then clear SecureStore + state +
+- Best-effort `POST /api/auth/sign-out`, then clear SecureStore + state +
   `queryClient.clear()`. Network failure on the POST does **not** stop
   the local clear (we'd otherwise leak a session into a multi-user
   device).
@@ -381,11 +378,9 @@ section.
 
 - `FlashList` for any list >10 items.
 - `React.memo` on list item components by default.
-- `useCallback` for `renderItem`.
-- `useMemo` for filter functions.
+- `useCallback` for `renderItem`; `useMemo` for filter functions.
 
-(These were applied late in v3 as `dbaa4c1`. We apply them as the
-default from P3.)
+(Applied late in v3 as `dbaa4c1`; default from P3.)
 
 ## API client
 

@@ -1,0 +1,52 @@
+appId: ${MAESTRO_APP_ID}
+---
+# assert-report-generation-write-lock.yaml - helper: while an existing
+# generated draft regenerates, the report remains visible and the flow settles
+# back to the finalized-ready action row.
+#
+# Fixture-mode regeneration can complete before Maestro observes the transient
+# "Updating..." notice. Deterministic disabled-state coverage lives in
+# generate-report-tab.test.tsx and ReportTabPane.test.tsx; this helper asserts
+# the transient lock only when it is observable on-device.
+#
+# Pre-condition: Generate screen is on the Report tab with a generated report
+# visible and `btn-generate-update-report` available.
+# Post-condition: Regeneration has settled and the generated report is visible.
+
+- assertVisible:
+    id: 'report-view-.*'
+- assertVisible:
+    id: 'btn-generate-update-report'
+- tapOn:
+    id: 'btn-generate-update-report'
+    waitToSettleTimeoutMs: 100
+- tapOn:
+    id: 'btn-tab-report'
+    waitToSettleTimeoutMs: 100
+- runFlow:
+    when:
+      visible: 'Updating the draft with your newest notes...'
+    commands:
+      - assertVisible:
+          id: 'report-view-.*'
+      - assertVisible:
+          id: 'btn-generate-update-report'
+          enabled: false
+      - assertVisible:
+          id: 'btn-finalize-report'
+          enabled: false
+      - extendedWaitUntil:
+          notVisible: 'Updating the draft with your newest notes...'
+          timeout: 60000
+- extendedWaitUntil:
+    visible:
+      id: 'report-view-.*'
+    timeout: 15000
+- extendedWaitUntil:
+    visible:
+      id: 'btn-generate-update-report'
+    timeout: 15000
+- extendedWaitUntil:
+    visible:
+      id: 'btn-finalize-report'
+    timeout: 15000

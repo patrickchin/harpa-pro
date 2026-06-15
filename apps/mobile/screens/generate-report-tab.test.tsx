@@ -101,6 +101,18 @@ function reportTabText(tree: TestRenderer.ReactTestRenderer): string {
   return collectText(tree.toJSON());
 }
 
+function findRenderedNodeWithDisabledState(
+  tree: TestRenderer.ReactTestRenderer,
+  testID: string,
+) {
+  const matches = tree.root.findAllByProps({ testID });
+  const node = matches.find(
+    (match) => match.props.accessibilityState?.disabled !== undefined,
+  );
+  expect(node).toBeDefined();
+  return node!;
+}
+
 const baseProps: GenerateNotesProps = {
   project: 'prj_test',
   reportNumber: 1,
@@ -154,6 +166,47 @@ describe('GenerateNotes — Report tab', () => {
     expect(text).toContain('Close east footing pour.');
   });
 
+  it('keeps report-card edit actions visible but disabled while report generation is in flight', () => {
+    const tree = render(
+      <GenerateNotes
+        {...baseProps}
+        report={SAMPLE_GENERATED_REPORT}
+        isGeneratingReport
+      />,
+    );
+
+    const issueEdit = tree.root.findByProps({ testID: 'btn-edit-issue-0' });
+    const sectionEdit = tree.root.findByProps({ testID: 'btn-edit-section-0' });
+    expect(issueEdit.props.disabled).toBe(true);
+    expect(sectionEdit.props.disabled).toBe(true);
+    expect(
+      findRenderedNodeWithDisabledState(tree, 'btn-edit-issue-0').props
+        .accessibilityState,
+    ).toMatchObject({ disabled: true });
+    expect(
+      findRenderedNodeWithDisabledState(tree, 'btn-edit-section-0').props
+        .accessibilityState,
+    ).toMatchObject({ disabled: true });
+  });
+
+  it('keeps regenerate and finalize actions visible but disabled while report generation is in flight', () => {
+    const tree = render(
+      <GenerateNotes
+        {...baseProps}
+        report={SAMPLE_GENERATED_REPORT}
+        isGeneratingReport
+      />,
+    );
+
+    const regenerate = tree.root.findByProps({
+      testID: 'btn-generate-update-report',
+    });
+    const finalize = tree.root.findByProps({ testID: 'btn-finalize-report' });
+
+    expect(regenerate.props.disabled).toBe(true);
+    expect(finalize.props.disabled).toBe(true);
+  });
+
   it('renders the generation error banner and Retry calls onRegenerate', () => {
     const onRegenerate = vi.fn();
     const tree = render(
@@ -169,6 +222,29 @@ describe('GenerateNotes — Report tab', () => {
       tree.root.findByProps({ testID: 'btn-report-tab-retry' }).props.onPress();
     });
     expect(onRegenerate).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders a custom generation error action when provided', () => {
+    const onRegenerate = vi.fn();
+    const onGenerationErrorAction = vi.fn();
+    const props = {
+      ...baseProps,
+      report: null,
+      generationError: "Couldn't save note.",
+      generationErrorActionLabel: 'Try again',
+      onGenerationErrorAction,
+      onRegenerate,
+    };
+    const tree = render(<GenerateNotes {...props} />);
+    expect(reportTabText(tree)).toContain("Couldn't save note.");
+    expect(reportTabText(tree)).toContain('Try again');
+
+    act(() => {
+      tree.root.findByProps({ testID: 'btn-report-tab-retry' }).props.onPress();
+    });
+
+    expect(onGenerationErrorAction).toHaveBeenCalledTimes(1);
+    expect(onRegenerate).not.toHaveBeenCalled();
   });
 
   it('renders the finalize error banner alongside a populated report', () => {

@@ -1,0 +1,171 @@
+appId: ${MAESTRO_APP_ID}
+name: "10c - Photo attachment picker scroll"
+tags:
+  - regression
+  - photo
+  - attachment-picker
+---
+# Module 10c - Add Attachments picker with enough photo groups to scroll
+#
+# Covers:
+#   - create a draft report
+#   - capture eight separate single-photo notes through the fixture camera
+#   - generate the report
+#   - regenerate while keeping the existing report mounted
+#   - open a section Add Attachments action from the card header
+#   - verify picker rows show thumbnails and can scroll to later groups
+#
+# Pre-condition: alice on project home.
+# Post-condition: alice on project home; no report from this module remains.
+
+# --- Open reports list and create a new draft ------------------------------
+- tapOn:
+    id: "btn-open-reports"
+- extendedWaitUntil:
+    visible:
+      id: "btn-new-report"
+    timeout: 10000
+- tapOn:
+    id: "btn-new-report"
+- extendedWaitUntil:
+    visible:
+      id: "report-row-.*"
+    timeout: 15000
+- tapOn:
+    id: "report-row-.*"
+- extendedWaitUntil:
+    visible:
+      id: "input-note"
+    timeout: 15000
+
+# --- Capture enough separate groups that the picker must scroll ------------
+- runFlow: ../helpers/capture-one-photo-note.yaml
+- runFlow: ../helpers/capture-one-photo-note.yaml
+- runFlow: ../helpers/capture-one-photo-note.yaml
+- runFlow: ../helpers/capture-one-photo-note.yaml
+- runFlow: ../helpers/capture-one-photo-note.yaml
+- runFlow: ../helpers/capture-one-photo-note.yaml
+- runFlow: ../helpers/capture-one-photo-note.yaml
+- runFlow: ../helpers/capture-one-photo-note.yaml
+
+# --- Generate the report ----------------------------------------------------
+- extendedWaitUntil:
+    visible:
+      id: "btn-tab-report"
+    timeout: 15000
+- runFlow:
+    when:
+      visible: "^(Generate report|Update report)$"
+    commands:
+      - tapOn: "^(Generate report|Update report)$"
+- tapOn:
+    id: "btn-tab-report"
+- extendedWaitUntil:
+    visible:
+      id: "report-tab-live"
+    timeout: 45000
+- extendedWaitUntil:
+    visible:
+      id: "report-view-.*"
+    timeout: 15000
+
+# --- Backend regeneration keeps the existing report mounted ----------------
+- tapOn:
+    id: "btn-generate-update-report"
+    waitToSettleTimeoutMs: 100
+- extendedWaitUntil:
+    visible: "Updating the draft with your newest notes..."
+    timeout: 15000
+- assertVisible:
+    id: "report-view-.*"
+- extendedWaitUntil:
+    notVisible: "Updating the draft with your newest notes..."
+    timeout: 60000
+- extendedWaitUntil:
+    visible:
+      id: "report-view-.*"
+    timeout: 15000
+
+# --- Open the card-header Add Attachments picker and scroll it --------------
+- scrollUntilVisible:
+    element:
+      id: "btn-add-attachments-section-.*"
+    direction: DOWN
+    timeout: 60000
+- assertVisible:
+    id: "btn-add-attachments-section-.*"
+- tapOn:
+    id: "btn-add-attachments-section-.*"
+- extendedWaitUntil:
+    visible:
+      id: "attachment-picker-sheet"
+    timeout: 10000
+- extendedWaitUntil:
+    visible:
+      id: "attachment-picker-thumbnail-0-image"
+    timeout: 30000
+- swipe:
+    start: 50%, 78%
+    end: 50%, 53%
+    duration: 900
+- waitForAnimationToEnd:
+    timeout: 1000
+- swipe:
+    start: 50%, 78%
+    end: 50%, 53%
+    duration: 900
+- extendedWaitUntil:
+    visible:
+      id: "attachment-picker-thumbnail-7-image"
+    timeout: 30000
+- tapOn:
+    id: "btn-attachment-picker-cancel"
+- extendedWaitUntil:
+    notVisible:
+      id: "attachment-picker-sheet"
+    timeout: 8000
+
+# --- Clean up: delete the draft and return to project home -----------------
+- tapOn:
+    id: "btn-tab-notes"
+- extendedWaitUntil:
+    visible:
+      id: "input-note"
+    timeout: 10000
+- tapOn:
+    id: "btn-draft-options"
+- extendedWaitUntil:
+    visible:
+      id: "dialog-action-confirm-delete-draft"
+    timeout: 8000
+- tapOn:
+    id: "dialog-action-confirm-delete-draft"
+- extendedWaitUntil:
+    visible:
+      id: "btn-new-report"
+    timeout: 15000
+- openLink: "harpa://projects"
+- runFlow: ../helpers/dismiss-open-dialog.yaml
+- extendedWaitUntil:
+    visible:
+      id: "btn-new-project"
+    timeout: 10000
+- runFlow:
+    when:
+      visible:
+        id: "btn-new-project"
+    commands:
+      - runFlow:
+          when:
+            visible: ".*Regression Test Project.*"
+          commands:
+            - tapOn: "Regression Test Project \\(Edited\\)"
+      - runFlow:
+          when:
+            visible: "${PROJECT_NAME_EDITED}"
+          commands:
+            - tapOn: "${PROJECT_NAME_EDITED}"
+- extendedWaitUntil:
+    visible:
+      id: "btn-project-edit"
+    timeout: 10000

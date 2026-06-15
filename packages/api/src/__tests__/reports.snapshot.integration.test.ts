@@ -12,7 +12,7 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { sql } from 'drizzle-orm';
 import pg from 'pg';
-import { startPg, type PgFixture } from './setup-pg.js';
+import { startPg, seedAuthUsers, type PgFixture } from './setup-pg.js';
 import * as schema from '../db/schema.js';
 import { setReportBody } from '../services/reports.js';
 import { makeUserId, makeProjectId, makeReportId } from './factories/index.js';
@@ -31,7 +31,7 @@ beforeAll(async () => {
   reportId = makeReportId();
   // Bypass per-request RLS by using the admin role directly — this file
   // tests the SQL semantic of one helper, not the auth surface.
-  await pool.query(`INSERT INTO auth.users(id, phone) VALUES ($1, '+15550700001')`, [userId]);
+  await seedAuthUsers(fx.url, [{ id: userId }]);
   await pool.query(`INSERT INTO app.projects(id, name, owner_id) VALUES ($1, 'snap', $2)`, [projectId, userId]);
   await pool.query(
     `INSERT INTO app.project_members(project_id, user_id, role) VALUES ($1, $2, 'owner')`,

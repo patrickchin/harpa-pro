@@ -199,7 +199,8 @@ relaunch, resume automatically" we wire an MMKV-backed
 ### Pipeline summary (camera + gallery)
 
 End-to-end, a photo travels through these stages — every step has a
-unit/integration test, and the live round-trip is `.maestro/p3-15-upload.yaml`:
+unit/integration test, and the live round-trips are covered by the
+photo modules in `.maestro/regression-journey.yaml`:
 
 1. **Capture / pick.** Camera (`(camera)/capture.tsx`) or gallery
    (`pickAndEnqueueGalleryImages`) produces one or more local file

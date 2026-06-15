@@ -1,0 +1,45 @@
+---
+import Layout from "../layouts/Layout.astro";
+import Header from "../components/landing/Header.astro";
+import Footer from "../components/landing/Footer.astro";
+import Container from "../components/primitives/Container.astro";
+import { PRIVACY_POLICY_URL } from "../lib/legal";
+---
+
+<Layout
+  title="Privacy Policy | Harpa Pro"
+  description="Harpa Pro privacy policy for the website and mobile application."
+>
+  <div class="min-h-screen bg-background text-ink">
+    <Header hideCta />
+    <main>
+      <Container padding="md" class="space-y-6">
+        <div class="space-y-3">
+          <p class="text-sm font-medium uppercase text-accent-ink">
+            Legal
+          </p>
+          <h1 class="text-3xl font-semibold tracking-normal text-ink md:text-4xl">
+            Privacy Policy
+          </h1>
+          <p class="max-w-3xl text-sm leading-6 text-ink-soft">
+            The policy below is hosted by Termly and reflects the current
+            privacy notice for the Harpa Pro website and mobile application.
+          </p>
+          <a
+            href={PRIVACY_POLICY_URL}
+            class="inline-flex text-sm font-medium text-accent-ink hover:text-ink"
+          >
+            Open the hosted policy
+          </a>
+        </div>
+        <iframe
+          src={PRIVACY_POLICY_URL}
+          title="Harpa Pro Privacy Policy"
+          class="h-[72vh] min-h-[680px] w-full rounded-md border border-hairline bg-white"
+          loading="lazy"
+        ></iframe>
+      </Container>
+    </main>
+    <Footer />
+  </div>
+</Layout>

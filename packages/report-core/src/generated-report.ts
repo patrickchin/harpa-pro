@@ -46,6 +46,14 @@ const stringArray = z
       .filter(Boolean),
   );
 
+const attachmentIdArray = z
+  .array(z.unknown())
+  .transform((arr) =>
+    arr
+      .map((v) => (typeof v === 'string' ? v.trim() : ''))
+      .filter(Boolean),
+  );
+
 // ── Schema definitions ─────────────────────────────────────────
 
 // Note: schemas intentionally use the default "strip" mode (no `.strict()`),
@@ -77,6 +85,11 @@ const MaterialSchema = z.object({
   notes: nullableTrimmed,
 });
 
+const AttachmentsSchema = z.object({
+  images: attachmentIdArray.optional(),
+  documents: attachmentIdArray.optional(),
+});
+
 const IssueSchema = z.object({
   title: nonEmptyTrimmed,
   category: trimmedString.pipe(z.string().min(1)).catch('other'),
@@ -84,11 +97,13 @@ const IssueSchema = z.object({
   status: trimmedString.pipe(z.string().min(1)).catch('open'),
   details: nonEmptyTrimmed,
   actionRequired: nullableTrimmed,
+  attachments: AttachmentsSchema.optional(),
 });
 
 const SectionSchema = z.object({
   title: nonEmptyTrimmed,
   content: nonEmptyTrimmed,
+  attachments: AttachmentsSchema.optional(),
 });
 
 const WeatherSchema = z.object({

@@ -44,6 +44,7 @@ import {
   finalizeReport,
   unfinalizeReport,
   setReportPdfFileId,
+  placeNoteInReport,
   toReportResponse,
   type ReportLastGeneration,
   type ReportRow,
@@ -252,6 +253,64 @@ reportRoutes.openapi(
   },
 );
 
+// --------- attachment placement ----------
+reportRoutes.openapi(
+  createRoute({
+    method: 'patch',
+    path: '/projects/{project}/reports/{number}/attachments',
+    tags: ['reports'],
+    security: [{ bearerAuth: [] }],
+    middleware: [withAuth()] as const,
+    request: {
+      params: reportPathParam,
+      body: { content: { 'application/json': { schema: reportSchemas.placeReportAttachmentRequest } } },
+    },
+    responses: {
+      200: { description: 'Attachment placement updated.', content: { 'application/json': { schema: reportSchemas.placeReportAttachmentResponse } } },
+      400: { description: 'Bad request.', content: { 'application/json': { schema: errorEnvelope } } },
+      401: { description: 'Unauthorized.', content: { 'application/json': { schema: errorEnvelope } } },
+      404: { description: 'Not found.', content: { 'application/json': { schema: errorEnvelope } } },
+      409: { description: 'Stale report body version.', content: { 'application/json': { schema: reportSchemas.placeReportAttachmentResponse } } },
+    },
+  }),
+  async (c) => {
+    const userId = c.get('userId');
+    const db = c.get('db');
+    if (!db || !userId) throw new HTTPException(401);
+    const { project: slug, number } = c.req.valid('param');
+    const body = c.req.valid('json');
+
+    const project = await db((d) => getProjectBySlug(d, userId, slug, false));
+    if (!project || project.myRole === 'viewer') {
+      throw new HTTPException(404, { message: 'Report not found.' });
+    }
+
+    const report = await loadReport(db, slug, number);
+    const result = await db((d) =>
+      placeNoteInReport(
+        d,
+        report.id,
+        body.noteId,
+        body.target,
+        body.expectedBodyVersion,
+      ),
+    );
+    if (result.ok) {
+      return c.json({ report: toReportResponse(result.report) }, 200);
+    }
+    if (result.reason === 'conflict') {
+      return c.json({ report: toReportResponse(result.report) }, 409);
+    }
+    if (result.reason === 'wrong-kind') {
+      throw new HTTPException(400, { message: 'Attachment placement requires an image or document note.' });
+    }
+    if (result.reason === 'bad-target') {
+      throw new HTTPException(400, { message: 'Attachment target is out of range.' });
+    }
+    throw new HTTPException(404, { message: 'Report or note not found.' });
+  },
+);
+
 // --------- delete ----------
 reportRoutes.openapi(
   createRoute({
@@ -310,10 +369,9 @@ const generateResponses = {
  * `setReportBody` so old machines reading the counter see clean
  * state — see docs/superpowers/specs/2026-05-28-auto-regenerate-reports-design.md.
  *
- * Regenerate ALSO forwards the current `report.body` as `existingBody`
- * so the AI preserves any manual edits the user made in the Edit tab
- * since the last generation. Generate (first time) always sends
- * `existingBody: null` — there is nothing to preserve.
+ * The structured generation payload always includes the current
+ * `report.body` (null on first generate) so the model and persistence
+ * layer can preserve manual edits and attachment placement.
  */
 async function runGenerate(
   db: NonNullable<AppEnv['Variables']['db']>,
@@ -322,7 +380,6 @@ async function runGenerate(
   fixtureName: string | undefined,
   userVendor: Parameters<typeof aiGenerateReport>[0]['userVendor'],
   userModel: Parameters<typeof aiGenerateReport>[0]['userModel'],
-  options: { mode: 'generate' | 'regenerate' },
 ) {
   if (report.status === 'finalized') {
     throw new HTTPException(409, { message: 'Report is finalized.' });
@@ -337,16 +394,10 @@ async function runGenerate(
   // bump that lands while AI is running keeps notes_changed_at >
   // generated_at and the queue-of-one fires another regen.
   const snapshotTs = report.notesChangedAt;
-  const notes = await db((d) => collectNotesForGeneration(d, report.id));
-  // Update path: send current body so the model preserves manual
-  // edits. First-time generate ignores any stale body (there shouldn't
-  // be one) and runs the cold-start prompt.
-  const existingBody =
-    options.mode === 'regenerate' ? report.body : null;
+  const payload = await db((d) => collectNotesForGeneration(d, report.id));
   const requestedAt = new Date().toISOString();
   const out = await aiGenerateReport({
-    notes,
-    existingBody,
+    notes: payload,
     fixtureName,
     userVendor,
     userModel,
@@ -369,7 +420,7 @@ async function runGenerate(
     usage: null,
   };
   const updated = await db((d) =>
-    setReportBody(d, report.id, out.body, lastGeneration, snapshotTs),
+    setReportBody(d, report.id, out.body, lastGeneration, snapshotTs, payload.currentBody),
   );
   if (!updated) throw new HTTPException(404, { message: 'Report not found.' });
   return {
@@ -405,7 +456,7 @@ reportRoutes.openapi(
     const body = c.req.valid('json');
     const report = await loadReport(db, slug, number);
     const settings = await db((d) => getAiSettings(d, userId));
-    const result = await runGenerate(db, userId, report, body.fixtureName, settings.vendor, settings.model, { mode: 'generate' });
+    const result = await runGenerate(db, userId, report, body.fixtureName, settings.vendor, settings.model);
     await db((d) => attachUsageWarning(d, userId, (k, v) => c.header(k, v)));
     return c.json({ report: toReportResponse(result.report), debug: result.debug }, 200);
   },
@@ -432,7 +483,7 @@ reportRoutes.openapi(
     const body = c.req.valid('json');
     const report = await loadReport(db, slug, number);
     const settings = await db((d) => getAiSettings(d, userId));
-    const result = await runGenerate(db, userId, report, body.fixtureName, settings.vendor, settings.model, { mode: 'regenerate' });
+    const result = await runGenerate(db, userId, report, body.fixtureName, settings.vendor, settings.model);
     await db((d) => attachUsageWarning(d, userId, (k, v) => c.header(k, v)));
     return c.json({ report: toReportResponse(result.report), debug: result.debug }, 200);
   },

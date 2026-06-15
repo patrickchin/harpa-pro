@@ -205,7 +205,7 @@ export async function request<
   } catch {
     throw new ApiError({
       code: 'parse_error',
-      message: 'Failed to parse JSON response',
+      message: "Couldn't read server response.",
       status: res.status,
     });
   }

@@ -1,6 +1,9 @@
 # P3.1 Slug-only IDs — Design
 
-> **Status:** awaiting user approval. No code yet.
+> **Status:** ✅ Shipped in P3.1. The slug-only PK migration, slug
+> generator, deep-link routes, and per-project report numbers
+> described below are live. Doc retained as the design rationale and
+> migration playbook.
 > **Supersedes:** parts of [arch-ids-and-urls.md](arch-ids-and-urls.md)
 > and [design-p30-ids-slugs.md](design-p30-ids-slugs.md) that retain
 > UUID PKs alongside slugs.

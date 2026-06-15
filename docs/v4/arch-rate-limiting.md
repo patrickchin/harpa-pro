@@ -6,8 +6,10 @@
 > [Pitfall 13](pitfalls.md#pitfall-13--di-stubs-become-the-spec-default-wiring-silently-broken),
 > [Pitfall 15](pitfalls.md#pitfall-15--route-handlers-that-ignore-user-settings).
 >
-> Status: **design**. Implementation lands behind the checklist at the
-> bottom of this doc; each item ≈ one commit.
+> Status: **live**. Per-route + shared AI + catch-all budgets, the
+> `PostgresRateLimiter`, and SMS-pump protection on
+> `/api/auth/email-otp/*` are all implemented. The checklist at the
+> bottom of this doc remains as the historical roll-out order.
 
 ## 1. Problem
 
@@ -33,10 +35,11 @@ P1.9 shipped a per-process `MemoryRateLimiter` keyed by
    is not implemented.** Each route has an independent bucket; a
    client can simultaneously consume 30 transcribes + 60 summarises +
    30 generates per minute on the same user.
-5. **Per-machine counters are silently wrong in prod.** Production
-   runs `min_machines_running = 2` (see [arch-ops.md §Cold starts](arch-ops.md#cold-starts)),
-   and Fly burst-scales up to 6 machines. `MemoryRateLimiter` is
-   per-process, so the effective budget is `2..6×` the configured one.
+5. **Per-machine counters are silently wrong in prod.** Production can
+   run multiple Fly machines under burst scaling (see
+   [arch-ops.md §Cold starts](arch-ops.md#cold-starts)), and Fly
+   burst-scales up to 6 machines. `MemoryRateLimiter` is per-process,
+   so the effective budget is up to `6×` the configured one.
    This is the canonical [Pitfall 13](pitfalls.md#pitfall-13--di-stubs-become-the-spec-default-wiring-silently-broken)
    shape: integration tests are green with the memory limiter, the
    default-wired production stack quietly violates the spec.
@@ -157,15 +160,24 @@ caller anyway).
 
 ### 3.3 New budgets
 
+> **Update (better-auth migration).** `POST /auth/otp/start`,
+> `POST /auth/otp/verify`, and `POST /auth/password/verify` no longer
+> exist as Hono routes. Email-OTP send/verify is owned by
+> better-auth (`/api/auth/email-otp/send-verification-otp`,
+> `/api/auth/sign-in/email-otp`) and password sign-in by
+> `/api/auth/sign-in/email`; better-auth's built-in limiter keys
+> by IP for those. The catch-all per-IP and per-user limits in this
+> doc still apply on top.
+
 Per-route budgets (additive to the existing AI route budgets):
 
 | Route | keyBy | Limit | Window |
 |---|---|---|---|
-| `POST /auth/otp/start` | `phone` | 3 | 15 min |
-| `POST /auth/otp/start` | `ip` | 10 | 1 h |
-| `POST /auth/otp/verify` | `phone` | 10 | 15 min |
-| `POST /auth/otp/verify` | `ip` | 30 | 1 h |
-| `POST /auth/password/verify` | `phone` | 10 | 1 min *(existing, refactored to middleware)* |
+| `POST /api/auth/email-otp/send-verification-otp` | `email` | 3 | 15 min |
+| `POST /api/auth/email-otp/send-verification-otp` | `ip` | 10 | 1 h |
+| `POST /api/auth/sign-in/email-otp` | `email` | 10 | 15 min |
+| `POST /api/auth/sign-in/email-otp` | `ip` | 30 | 1 h |
+| `POST /api/auth/sign-in/email` | `email` | 10 | 1 min *(existing, refactored to middleware)* |
 | `POST /waitlist` | `ip` | 5 | 1 h *(existing, refactored)* |
 | `POST /waitlist` | `ip` | 50 | 1 d *(existing, refactored)* |
 | `POST /waitlist/confirm` | `ip` | 30 | 1 h |

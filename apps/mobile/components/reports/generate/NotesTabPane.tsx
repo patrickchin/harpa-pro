@@ -58,6 +58,7 @@ export const NotesTabPane = forwardRef<ScrollView, NotesTabPaneProps>(
           className="flex-1 px-5"
           contentContainerStyle={{ paddingBottom: 100 }}
           keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
         >
           <NoteTimeline
             notes={timeline.items}

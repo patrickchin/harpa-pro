@@ -82,12 +82,12 @@ describe('lib/api/client', () => {
 
     it('serialises JSON body for POST and sets Content-Type', async () => {
       const fetchFn = stubFetch(() =>
-        jsonResponse(200, { verificationId: 'v1' }),
+        jsonResponse(200, { id: 'p1' }),
       );
-      await request('/auth/otp/start', 'post', { body: { phone: '+15551234567' } });
+      await request('/projects', 'post', { body: { name: 'Test Project' } });
       const init = fetchFn.mock.calls[0]![1]!;
       expect(init.method).toBe('POST');
-      expect(init.body).toBe(JSON.stringify({ phone: '+15551234567' }));
+      expect(init.body).toBe(JSON.stringify({ name: 'Test Project' }));
       const headers = init.headers as Record<string, string>;
       expect(headers['Content-Type']).toBe('application/json');
     });

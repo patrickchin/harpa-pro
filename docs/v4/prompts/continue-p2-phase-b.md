@@ -1,5 +1,10 @@
 # Continue P2 — Phase B (P2.3 → P2.8)
 
+> **Status:** ✅ Historical. P2 has shipped (`v0.2.0-shell`); this
+> prompt documents the unattended-run workflow used at the time and
+> is kept for reference only. Don't re-run it as-is — adapt the
+> pattern to the current phase and `plan-p3-feature-build.md`.
+
 ## Where we are
 
 Phase A of P2 is complete on `dev`:

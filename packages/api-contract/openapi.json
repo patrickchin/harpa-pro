@@ -9,7 +9,7 @@
       "bearerAuth": {
         "type": "http",
         "scheme": "bearer",
-        "bearerFormat": "JWT"
+        "bearerFormat": "better-auth session token"
       }
     },
     "schemas": {},
@@ -138,516 +138,6 @@
                   "required": [
                     "ok",
                     "db"
-                  ]
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/auth/otp/start": {
-      "post": {
-        "tags": [
-          "auth"
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "phone": {
-                    "type": "string",
-                    "pattern": "^\\+\\d{8,15}$"
-                  }
-                },
-                "required": [
-                  "phone"
-                ]
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "OTP sent.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "verificationId": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "verificationId"
-                  ]
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad request.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "object",
-                      "properties": {
-                        "code": {
-                          "type": "string"
-                        },
-                        "message": {
-                          "type": "string"
-                        }
-                      },
-                      "required": [
-                        "code",
-                        "message"
-                      ]
-                    },
-                    "requestId": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "error"
-                  ]
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "Rate limited.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "object",
-                      "properties": {
-                        "code": {
-                          "type": "string"
-                        },
-                        "message": {
-                          "type": "string"
-                        }
-                      },
-                      "required": [
-                        "code",
-                        "message"
-                      ]
-                    },
-                    "requestId": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "error"
-                  ]
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/auth/otp/verify": {
-      "post": {
-        "tags": [
-          "auth"
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "phone": {
-                    "type": "string",
-                    "pattern": "^\\+\\d{8,15}$"
-                  },
-                  "code": {
-                    "type": "string",
-                    "pattern": "^\\d{4,8}$"
-                  }
-                },
-                "required": [
-                  "phone",
-                  "code"
-                ]
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Verified.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "token": {
-                      "type": "string"
-                    },
-                    "user": {
-                      "type": "object",
-                      "properties": {
-                        "id": {
-                          "type": "string",
-                          "pattern": "^usr_[0-9a-hjkmnp-tv-z]{8,16}$"
-                        },
-                        "phone": {
-                          "type": "string",
-                          "pattern": "^\\+\\d{8,15}$"
-                        },
-                        "displayName": {
-                          "type": "string",
-                          "nullable": true
-                        },
-                        "companyName": {
-                          "type": "string",
-                          "nullable": true
-                        },
-                        "createdAt": {
-                          "type": "string"
-                        }
-                      },
-                      "required": [
-                        "id",
-                        "phone",
-                        "displayName",
-                        "companyName",
-                        "createdAt"
-                      ]
-                    }
-                  },
-                  "required": [
-                    "token",
-                    "user"
-                  ]
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Invalid code.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "object",
-                      "properties": {
-                        "code": {
-                          "type": "string"
-                        },
-                        "message": {
-                          "type": "string"
-                        }
-                      },
-                      "required": [
-                        "code",
-                        "message"
-                      ]
-                    },
-                    "requestId": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "error"
-                  ]
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "Rate limited.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "object",
-                      "properties": {
-                        "code": {
-                          "type": "string"
-                        },
-                        "message": {
-                          "type": "string"
-                        }
-                      },
-                      "required": [
-                        "code",
-                        "message"
-                      ]
-                    },
-                    "requestId": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "error"
-                  ]
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/auth/password/verify": {
-      "post": {
-        "tags": [
-          "auth"
-        ],
-        "description": "Test-account password bypass. Disabled (returns 404) unless TEST_ACCOUNT_PHONES + TEST_ACCOUNT_PASSWORD are configured on the server. See docs/v4/arch-auth-and-rls.md.",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "phone": {
-                    "type": "string",
-                    "pattern": "^\\+\\d{8,15}$"
-                  },
-                  "password": {
-                    "type": "string",
-                    "minLength": 1,
-                    "maxLength": 256
-                  }
-                },
-                "required": [
-                  "phone",
-                  "password"
-                ]
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Verified.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "token": {
-                      "type": "string"
-                    },
-                    "user": {
-                      "type": "object",
-                      "properties": {
-                        "id": {
-                          "type": "string",
-                          "pattern": "^usr_[0-9a-hjkmnp-tv-z]{8,16}$"
-                        },
-                        "phone": {
-                          "type": "string",
-                          "pattern": "^\\+\\d{8,15}$"
-                        },
-                        "displayName": {
-                          "type": "string",
-                          "nullable": true
-                        },
-                        "companyName": {
-                          "type": "string",
-                          "nullable": true
-                        },
-                        "createdAt": {
-                          "type": "string"
-                        }
-                      },
-                      "required": [
-                        "id",
-                        "phone",
-                        "displayName",
-                        "companyName",
-                        "createdAt"
-                      ]
-                    }
-                  },
-                  "required": [
-                    "token",
-                    "user"
-                  ]
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Invalid phone or password.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "object",
-                      "properties": {
-                        "code": {
-                          "type": "string"
-                        },
-                        "message": {
-                          "type": "string"
-                        }
-                      },
-                      "required": [
-                        "code",
-                        "message"
-                      ]
-                    },
-                    "requestId": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "error"
-                  ]
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Feature disabled.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "object",
-                      "properties": {
-                        "code": {
-                          "type": "string"
-                        },
-                        "message": {
-                          "type": "string"
-                        }
-                      },
-                      "required": [
-                        "code",
-                        "message"
-                      ]
-                    },
-                    "requestId": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "error"
-                  ]
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "Rate limited.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "object",
-                      "properties": {
-                        "code": {
-                          "type": "string"
-                        },
-                        "message": {
-                          "type": "string"
-                        }
-                      },
-                      "required": [
-                        "code",
-                        "message"
-                      ]
-                    },
-                    "requestId": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "error"
-                  ]
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/auth/logout": {
-      "post": {
-        "tags": [
-          "auth"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Logged out.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "ok": {
-                      "type": "boolean",
-                      "enum": [
-                        true
-                      ]
-                    }
-                  },
-                  "required": [
-                    "ok"
-                  ]
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "object",
-                      "properties": {
-                        "code": {
-                          "type": "string"
-                        },
-                        "message": {
-                          "type": "string"
-                        }
-                      },
-                      "required": [
-                        "code",
-                        "message"
-                      ]
-                    },
-                    "requestId": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "error"
                   ]
                 }
               }
@@ -1121,9 +611,11 @@
                           "type": "string",
                           "pattern": "^usr_[0-9a-hjkmnp-tv-z]{8,16}$"
                         },
-                        "phone": {
+                        "email": {
                           "type": "string",
-                          "pattern": "^\\+\\d{8,15}$"
+                          "minLength": 3,
+                          "maxLength": 254,
+                          "format": "email"
                         },
                         "displayName": {
                           "type": "string",
@@ -1139,7 +631,7 @@
                       },
                       "required": [
                         "id",
-                        "phone",
+                        "email",
                         "displayName",
                         "companyName",
                         "createdAt"
@@ -1266,9 +758,11 @@
                           "type": "string",
                           "pattern": "^usr_[0-9a-hjkmnp-tv-z]{8,16}$"
                         },
-                        "phone": {
+                        "email": {
                           "type": "string",
-                          "pattern": "^\\+\\d{8,15}$"
+                          "minLength": 3,
+                          "maxLength": 254,
+                          "format": "email"
                         },
                         "displayName": {
                           "type": "string",
@@ -1284,7 +778,7 @@
                       },
                       "required": [
                         "id",
-                        "phone",
+                        "email",
                         "displayName",
                         "companyName",
                         "createdAt"
@@ -2920,9 +2414,11 @@
                             "type": "string",
                             "nullable": true
                           },
-                          "phone": {
+                          "email": {
                             "type": "string",
-                            "pattern": "^\\+\\d{8,15}$"
+                            "minLength": 3,
+                            "maxLength": 254,
+                            "format": "email"
                           },
                           "role": {
                             "type": "string",
@@ -2939,7 +2435,7 @@
                         "required": [
                           "userId",
                           "displayName",
-                          "phone",
+                          "email",
                           "role",
                           "joinedAt"
                         ]
@@ -3053,9 +2549,11 @@
               "schema": {
                 "type": "object",
                 "properties": {
-                  "phone": {
+                  "email": {
                     "type": "string",
-                    "pattern": "^\\+\\d{8,15}$"
+                    "minLength": 3,
+                    "maxLength": 254,
+                    "format": "email"
                   },
                   "role": {
                     "type": "string",
@@ -3068,7 +2566,7 @@
                   }
                 },
                 "required": [
-                  "phone"
+                  "email"
                 ]
               }
             }
@@ -3090,9 +2588,11 @@
                       "type": "string",
                       "nullable": true
                     },
-                    "phone": {
+                    "email": {
                       "type": "string",
-                      "pattern": "^\\+\\d{8,15}$"
+                      "minLength": 3,
+                      "maxLength": 254,
+                      "format": "email"
                     },
                     "role": {
                       "type": "string",
@@ -3109,7 +2609,7 @@
                   "required": [
                     "userId",
                     "displayName",
-                    "phone",
+                    "email",
                     "role",
                     "joinedAt"
                   ]
@@ -3368,9 +2868,11 @@
                       "type": "string",
                       "nullable": true
                     },
-                    "phone": {
+                    "email": {
                       "type": "string",
-                      "pattern": "^\\+\\d{8,15}$"
+                      "minLength": 3,
+                      "maxLength": 254,
+                      "format": "email"
                     },
                     "role": {
                       "type": "string",
@@ -3387,7 +2889,7 @@
                   "required": [
                     "userId",
                     "displayName",
-                    "phone",
+                    "email",
                     "role",
                     "joinedAt"
                   ]
@@ -3834,12 +3336,12 @@
                                     "type": "string",
                                     "nullable": true
                                   },
-                                  "temperatureC": {
-                                    "type": "number",
+                                  "temperature": {
+                                    "type": "string",
                                     "nullable": true
                                   },
-                                  "windKph": {
-                                    "type": "number",
+                                  "wind": {
+                                    "type": "string",
                                     "nullable": true
                                   },
                                   "impact": {
@@ -3849,8 +3351,8 @@
                                 },
                                 "required": [
                                   "condition",
-                                  "temperatureC",
-                                  "windKph",
+                                  "temperature",
+                                  "wind",
                                   "impact"
                                 ]
                               },
@@ -3863,13 +3365,12 @@
                                       "type": "string"
                                     },
                                     "count": {
-                                      "type": "integer",
-                                      "minimum": 0
+                                      "type": "string",
+                                      "nullable": true
                                     },
                                     "hours": {
-                                      "type": "number",
-                                      "nullable": true,
-                                      "minimum": 0
+                                      "type": "string",
+                                      "nullable": true
                                     },
                                     "notes": {
                                       "type": "string",
@@ -3893,7 +3394,7 @@
                                       "type": "string"
                                     },
                                     "quantity": {
-                                      "type": "number",
+                                      "type": "string",
                                       "nullable": true
                                     },
                                     "unit": {
@@ -3933,11 +3434,7 @@
                                     },
                                     "severity": {
                                       "type": "string",
-                                      "enum": [
-                                        "low",
-                                        "medium",
-                                        "high"
-                                      ]
+                                      "nullable": true
                                     },
                                     "description": {
                                       "type": "string",
@@ -3946,6 +3443,26 @@
                                     "action": {
                                       "type": "string",
                                       "nullable": true
+                                    },
+                                    "attachments": {
+                                      "type": "object",
+                                      "properties": {
+                                        "images": {
+                                          "type": "array",
+                                          "items": {
+                                            "type": "string",
+                                            "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
+                                          }
+                                        },
+                                        "documents": {
+                                          "type": "array",
+                                          "items": {
+                                            "type": "string",
+                                            "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
+                                          }
+                                        }
+                                      },
+                                      "additionalProperties": false
                                     }
                                   },
                                   "required": [
@@ -3972,6 +3489,26 @@
                                     },
                                     "body": {
                                       "type": "string"
+                                    },
+                                    "attachments": {
+                                      "type": "object",
+                                      "properties": {
+                                        "images": {
+                                          "type": "array",
+                                          "items": {
+                                            "type": "string",
+                                            "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
+                                          }
+                                        },
+                                        "documents": {
+                                          "type": "array",
+                                          "items": {
+                                            "type": "string",
+                                            "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
+                                          }
+                                        }
+                                      },
+                                      "additionalProperties": false
                                     }
                                   },
                                   "required": [
@@ -4228,12 +3765,12 @@
                               "type": "string",
                               "nullable": true
                             },
-                            "temperatureC": {
-                              "type": "number",
+                            "temperature": {
+                              "type": "string",
                               "nullable": true
                             },
-                            "windKph": {
-                              "type": "number",
+                            "wind": {
+                              "type": "string",
                               "nullable": true
                             },
                             "impact": {
@@ -4243,8 +3780,8 @@
                           },
                           "required": [
                             "condition",
-                            "temperatureC",
-                            "windKph",
+                            "temperature",
+                            "wind",
                             "impact"
                           ]
                         },
@@ -4257,13 +3794,12 @@
                                 "type": "string"
                               },
                               "count": {
-                                "type": "integer",
-                                "minimum": 0
+                                "type": "string",
+                                "nullable": true
                               },
                               "hours": {
-                                "type": "number",
-                                "nullable": true,
-                                "minimum": 0
+                                "type": "string",
+                                "nullable": true
                               },
                               "notes": {
                                 "type": "string",
@@ -4287,7 +3823,7 @@
                                 "type": "string"
                               },
                               "quantity": {
-                                "type": "number",
+                                "type": "string",
                                 "nullable": true
                               },
                               "unit": {
@@ -4327,11 +3863,7 @@
                               },
                               "severity": {
                                 "type": "string",
-                                "enum": [
-                                  "low",
-                                  "medium",
-                                  "high"
-                                ]
+                                "nullable": true
                               },
                               "description": {
                                 "type": "string",
@@ -4340,6 +3872,26 @@
                               "action": {
                                 "type": "string",
                                 "nullable": true
+                              },
+                              "attachments": {
+                                "type": "object",
+                                "properties": {
+                                  "images": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "string",
+                                      "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
+                                    }
+                                  },
+                                  "documents": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "string",
+                                      "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
+                                    }
+                                  }
+                                },
+                                "additionalProperties": false
                               }
                             },
                             "required": [
@@ -4366,6 +3918,26 @@
                               },
                               "body": {
                                 "type": "string"
+                              },
+                              "attachments": {
+                                "type": "object",
+                                "properties": {
+                                  "images": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "string",
+                                      "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
+                                    }
+                                  },
+                                  "documents": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "string",
+                                      "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
+                                    }
+                                  }
+                                },
+                                "additionalProperties": false
                               }
                             },
                             "required": [
@@ -4643,12 +4215,12 @@
                               "type": "string",
                               "nullable": true
                             },
-                            "temperatureC": {
-                              "type": "number",
+                            "temperature": {
+                              "type": "string",
                               "nullable": true
                             },
-                            "windKph": {
-                              "type": "number",
+                            "wind": {
+                              "type": "string",
                               "nullable": true
                             },
                             "impact": {
@@ -4658,8 +4230,8 @@
                           },
                           "required": [
                             "condition",
-                            "temperatureC",
-                            "windKph",
+                            "temperature",
+                            "wind",
                             "impact"
                           ]
                         },
@@ -4672,13 +4244,12 @@
                                 "type": "string"
                               },
                               "count": {
-                                "type": "integer",
-                                "minimum": 0
+                                "type": "string",
+                                "nullable": true
                               },
                               "hours": {
-                                "type": "number",
-                                "nullable": true,
-                                "minimum": 0
+                                "type": "string",
+                                "nullable": true
                               },
                               "notes": {
                                 "type": "string",
@@ -4702,7 +4273,7 @@
                                 "type": "string"
                               },
                               "quantity": {
-                                "type": "number",
+                                "type": "string",
                                 "nullable": true
                               },
                               "unit": {
@@ -4742,11 +4313,7 @@
                               },
                               "severity": {
                                 "type": "string",
-                                "enum": [
-                                  "low",
-                                  "medium",
-                                  "high"
-                                ]
+                                "nullable": true
                               },
                               "description": {
                                 "type": "string",
@@ -4755,6 +4322,26 @@
                               "action": {
                                 "type": "string",
                                 "nullable": true
+                              },
+                              "attachments": {
+                                "type": "object",
+                                "properties": {
+                                  "images": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "string",
+                                      "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
+                                    }
+                                  },
+                                  "documents": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "string",
+                                      "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
+                                    }
+                                  }
+                                },
+                                "additionalProperties": false
                               }
                             },
                             "required": [
@@ -4781,6 +4368,26 @@
                               },
                               "body": {
                                 "type": "string"
+                              },
+                              "attachments": {
+                                "type": "object",
+                                "properties": {
+                                  "images": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "string",
+                                      "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
+                                    }
+                                  },
+                                  "documents": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "string",
+                                      "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
+                                    }
+                                  }
+                                },
+                                "additionalProperties": false
                               }
                             },
                             "required": [
@@ -4998,12 +4605,12 @@
                             "type": "string",
                             "nullable": true
                           },
-                          "temperatureC": {
-                            "type": "number",
+                          "temperature": {
+                            "type": "string",
                             "nullable": true
                           },
-                          "windKph": {
-                            "type": "number",
+                          "wind": {
+                            "type": "string",
                             "nullable": true
                           },
                           "impact": {
@@ -5013,8 +4620,8 @@
                         },
                         "required": [
                           "condition",
-                          "temperatureC",
-                          "windKph",
+                          "temperature",
+                          "wind",
                           "impact"
                         ]
                       },
@@ -5027,13 +4634,12 @@
                               "type": "string"
                             },
                             "count": {
-                              "type": "integer",
-                              "minimum": 0
+                              "type": "string",
+                              "nullable": true
                             },
                             "hours": {
-                              "type": "number",
-                              "nullable": true,
-                              "minimum": 0
+                              "type": "string",
+                              "nullable": true
                             },
                             "notes": {
                               "type": "string",
@@ -5057,7 +4663,7 @@
                               "type": "string"
                             },
                             "quantity": {
-                              "type": "number",
+                              "type": "string",
                               "nullable": true
                             },
                             "unit": {
@@ -5097,11 +4703,7 @@
                             },
                             "severity": {
                               "type": "string",
-                              "enum": [
-                                "low",
-                                "medium",
-                                "high"
-                              ]
+                              "nullable": true
                             },
                             "description": {
                               "type": "string",
@@ -5110,6 +4712,26 @@
                             "action": {
                               "type": "string",
                               "nullable": true
+                            },
+                            "attachments": {
+                              "type": "object",
+                              "properties": {
+                                "images": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string",
+                                    "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
+                                  }
+                                },
+                                "documents": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string",
+                                    "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
+                                  }
+                                }
+                              },
+                              "additionalProperties": false
                             }
                           },
                           "required": [
@@ -5136,6 +4758,26 @@
                             },
                             "body": {
                               "type": "string"
+                            },
+                            "attachments": {
+                              "type": "object",
+                              "properties": {
+                                "images": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string",
+                                    "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
+                                  }
+                                },
+                                "documents": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string",
+                                    "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
+                                  }
+                                }
+                              },
+                              "additionalProperties": false
                             }
                           },
                           "required": [
@@ -5226,12 +4868,12 @@
                               "type": "string",
                               "nullable": true
                             },
-                            "temperatureC": {
-                              "type": "number",
+                            "temperature": {
+                              "type": "string",
                               "nullable": true
                             },
-                            "windKph": {
-                              "type": "number",
+                            "wind": {
+                              "type": "string",
                               "nullable": true
                             },
                             "impact": {
@@ -5241,8 +4883,8 @@
                           },
                           "required": [
                             "condition",
-                            "temperatureC",
-                            "windKph",
+                            "temperature",
+                            "wind",
                             "impact"
                           ]
                         },
@@ -5255,13 +4897,12 @@
                                 "type": "string"
                               },
                               "count": {
-                                "type": "integer",
-                                "minimum": 0
+                                "type": "string",
+                                "nullable": true
                               },
                               "hours": {
-                                "type": "number",
-                                "nullable": true,
-                                "minimum": 0
+                                "type": "string",
+                                "nullable": true
                               },
                               "notes": {
                                 "type": "string",
@@ -5285,7 +4926,7 @@
                                 "type": "string"
                               },
                               "quantity": {
-                                "type": "number",
+                                "type": "string",
                                 "nullable": true
                               },
                               "unit": {
@@ -5325,11 +4966,7 @@
                               },
                               "severity": {
                                 "type": "string",
-                                "enum": [
-                                  "low",
-                                  "medium",
-                                  "high"
-                                ]
+                                "nullable": true
                               },
                               "description": {
                                 "type": "string",
@@ -5338,6 +4975,26 @@
                               "action": {
                                 "type": "string",
                                 "nullable": true
+                              },
+                              "attachments": {
+                                "type": "object",
+                                "properties": {
+                                  "images": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "string",
+                                      "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
+                                    }
+                                  },
+                                  "documents": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "string",
+                                      "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
+                                    }
+                                  }
+                                },
+                                "additionalProperties": false
                               }
                             },
                             "required": [
@@ -5364,6 +5021,26 @@
                               },
                               "body": {
                                 "type": "string"
+                              },
+                              "attachments": {
+                                "type": "object",
+                                "properties": {
+                                  "images": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "string",
+                                      "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
+                                    }
+                                  },
+                                  "documents": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "string",
+                                      "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
+                                    }
+                                  }
+                                },
+                                "additionalProperties": false
                               }
                             },
                             "required": [
@@ -5768,6 +5445,43 @@
                             "type": "string",
                             "nullable": true
                           },
+                          "files": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "pattern": "^nfl_[0-9a-hjkmnp-tv-z]{8,16}$"
+                                },
+                                "fileId": {
+                                  "type": "string",
+                                  "pattern": "^fil_[0-9a-hjkmnp-tv-z]{8,16}$"
+                                },
+                                "thumbnailFileId": {
+                                  "type": "string",
+                                  "nullable": true,
+                                  "pattern": "^fil_[0-9a-hjkmnp-tv-z]{8,16}$"
+                                },
+                                "position": {
+                                  "type": "integer",
+                                  "minimum": 0
+                                },
+                                "caption": {
+                                  "type": "string",
+                                  "nullable": true
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "fileId",
+                                "thumbnailFileId",
+                                "position",
+                                "caption"
+                              ]
+                            },
+                            "default": []
+                          },
                           "createdAt": {
                             "type": "string"
                           }
@@ -5935,6 +5649,848 @@
         }
       }
     },
+    "/projects/{project}/reports/{number}/attachments": {
+      "patch": {
+        "tags": [
+          "reports"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8,16}$"
+            },
+            "required": true,
+            "name": "project",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "exclusiveMinimum": true
+            },
+            "required": true,
+            "name": "number",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "noteId": {
+                    "type": "string",
+                    "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
+                  },
+                  "target": {
+                    "oneOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "issue"
+                            ]
+                          },
+                          "index": {
+                            "type": "integer",
+                            "minimum": 0
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "index"
+                        ]
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "section"
+                            ]
+                          },
+                          "index": {
+                            "type": "integer",
+                            "minimum": 0
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "index"
+                        ]
+                      },
+                      {
+                        "nullable": true
+                      }
+                    ]
+                  },
+                  "expectedBodyVersion": {
+                    "type": "string",
+                    "nullable": true
+                  }
+                },
+                "required": [
+                  "noteId",
+                  "target",
+                  "expectedBodyVersion"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Attachment placement updated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "report": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "pattern": "^rpt_[0-9a-hjkmnp-tv-z]{8,16}$"
+                        },
+                        "number": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "exclusiveMinimum": true
+                        },
+                        "projectId": {
+                          "type": "string",
+                          "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8,16}$"
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "draft",
+                            "finalized"
+                          ]
+                        },
+                        "visitDate": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "body": {
+                          "type": "object",
+                          "nullable": true,
+                          "properties": {
+                            "meta": {
+                              "type": "object",
+                              "properties": {
+                                "title": {
+                                  "type": "string",
+                                  "nullable": true
+                                },
+                                "summary": {
+                                  "type": "string",
+                                  "nullable": true
+                                },
+                                "visitDate": {
+                                  "type": "string",
+                                  "nullable": true
+                                }
+                              },
+                              "required": [
+                                "title",
+                                "summary",
+                                "visitDate"
+                              ]
+                            },
+                            "weather": {
+                              "type": "object",
+                              "nullable": true,
+                              "properties": {
+                                "condition": {
+                                  "type": "string",
+                                  "nullable": true
+                                },
+                                "temperature": {
+                                  "type": "string",
+                                  "nullable": true
+                                },
+                                "wind": {
+                                  "type": "string",
+                                  "nullable": true
+                                },
+                                "impact": {
+                                  "type": "string",
+                                  "nullable": true
+                                }
+                              },
+                              "required": [
+                                "condition",
+                                "temperature",
+                                "wind",
+                                "impact"
+                              ]
+                            },
+                            "workers": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "role": {
+                                    "type": "string"
+                                  },
+                                  "count": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "hours": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "notes": {
+                                    "type": "string",
+                                    "nullable": true
+                                  }
+                                },
+                                "required": [
+                                  "role",
+                                  "count",
+                                  "hours",
+                                  "notes"
+                                ]
+                              }
+                            },
+                            "materials": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "name": {
+                                    "type": "string"
+                                  },
+                                  "quantity": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "unit": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "status": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "condition": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "notes": {
+                                    "type": "string",
+                                    "nullable": true
+                                  }
+                                },
+                                "required": [
+                                  "name",
+                                  "quantity",
+                                  "unit",
+                                  "status",
+                                  "condition",
+                                  "notes"
+                                ]
+                              }
+                            },
+                            "issues": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "title": {
+                                    "type": "string"
+                                  },
+                                  "severity": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "description": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "action": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "attachments": {
+                                    "type": "object",
+                                    "properties": {
+                                      "images": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "string",
+                                          "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
+                                        }
+                                      },
+                                      "documents": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "string",
+                                          "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
+                                        }
+                                      }
+                                    },
+                                    "additionalProperties": false
+                                  }
+                                },
+                                "required": [
+                                  "title",
+                                  "severity",
+                                  "description",
+                                  "action"
+                                ]
+                              }
+                            },
+                            "nextSteps": {
+                              "type": "array",
+                              "items": {
+                                "type": "string"
+                              }
+                            },
+                            "summarySections": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "title": {
+                                    "type": "string"
+                                  },
+                                  "body": {
+                                    "type": "string"
+                                  },
+                                  "attachments": {
+                                    "type": "object",
+                                    "properties": {
+                                      "images": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "string",
+                                          "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
+                                        }
+                                      },
+                                      "documents": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "string",
+                                          "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
+                                        }
+                                      }
+                                    },
+                                    "additionalProperties": false
+                                  }
+                                },
+                                "required": [
+                                  "title",
+                                  "body"
+                                ]
+                              }
+                            }
+                          },
+                          "required": [
+                            "meta",
+                            "weather",
+                            "workers",
+                            "materials",
+                            "issues",
+                            "nextSteps",
+                            "summarySections"
+                          ]
+                        },
+                        "notesSinceLastGeneration": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "notesChangedAt": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "generatedAt": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "needsRegeneration": {
+                          "type": "boolean"
+                        },
+                        "finalizedAt": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "pdfUrl": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "createdAt": {
+                          "type": "string"
+                        },
+                        "updatedAt": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "number",
+                        "projectId",
+                        "status",
+                        "visitDate",
+                        "body",
+                        "notesSinceLastGeneration",
+                        "notesChangedAt",
+                        "generatedAt",
+                        "needsRegeneration",
+                        "finalizedAt",
+                        "pdfUrl",
+                        "createdAt",
+                        "updatedAt"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "report"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "nullable": true
+                        },
+                        "requestId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "nullable": true
+                        },
+                        "requestId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "nullable": true
+                        },
+                        "requestId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Stale report body version.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "report": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "pattern": "^rpt_[0-9a-hjkmnp-tv-z]{8,16}$"
+                        },
+                        "number": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "exclusiveMinimum": true
+                        },
+                        "projectId": {
+                          "type": "string",
+                          "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8,16}$"
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "draft",
+                            "finalized"
+                          ]
+                        },
+                        "visitDate": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "body": {
+                          "type": "object",
+                          "nullable": true,
+                          "properties": {
+                            "meta": {
+                              "type": "object",
+                              "properties": {
+                                "title": {
+                                  "type": "string",
+                                  "nullable": true
+                                },
+                                "summary": {
+                                  "type": "string",
+                                  "nullable": true
+                                },
+                                "visitDate": {
+                                  "type": "string",
+                                  "nullable": true
+                                }
+                              },
+                              "required": [
+                                "title",
+                                "summary",
+                                "visitDate"
+                              ]
+                            },
+                            "weather": {
+                              "type": "object",
+                              "nullable": true,
+                              "properties": {
+                                "condition": {
+                                  "type": "string",
+                                  "nullable": true
+                                },
+                                "temperature": {
+                                  "type": "string",
+                                  "nullable": true
+                                },
+                                "wind": {
+                                  "type": "string",
+                                  "nullable": true
+                                },
+                                "impact": {
+                                  "type": "string",
+                                  "nullable": true
+                                }
+                              },
+                              "required": [
+                                "condition",
+                                "temperature",
+                                "wind",
+                                "impact"
+                              ]
+                            },
+                            "workers": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "role": {
+                                    "type": "string"
+                                  },
+                                  "count": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "hours": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "notes": {
+                                    "type": "string",
+                                    "nullable": true
+                                  }
+                                },
+                                "required": [
+                                  "role",
+                                  "count",
+                                  "hours",
+                                  "notes"
+                                ]
+                              }
+                            },
+                            "materials": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "name": {
+                                    "type": "string"
+                                  },
+                                  "quantity": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "unit": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "status": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "condition": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "notes": {
+                                    "type": "string",
+                                    "nullable": true
+                                  }
+                                },
+                                "required": [
+                                  "name",
+                                  "quantity",
+                                  "unit",
+                                  "status",
+                                  "condition",
+                                  "notes"
+                                ]
+                              }
+                            },
+                            "issues": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "title": {
+                                    "type": "string"
+                                  },
+                                  "severity": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "description": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "action": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "attachments": {
+                                    "type": "object",
+                                    "properties": {
+                                      "images": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "string",
+                                          "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
+                                        }
+                                      },
+                                      "documents": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "string",
+                                          "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
+                                        }
+                                      }
+                                    },
+                                    "additionalProperties": false
+                                  }
+                                },
+                                "required": [
+                                  "title",
+                                  "severity",
+                                  "description",
+                                  "action"
+                                ]
+                              }
+                            },
+                            "nextSteps": {
+                              "type": "array",
+                              "items": {
+                                "type": "string"
+                              }
+                            },
+                            "summarySections": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "title": {
+                                    "type": "string"
+                                  },
+                                  "body": {
+                                    "type": "string"
+                                  },
+                                  "attachments": {
+                                    "type": "object",
+                                    "properties": {
+                                      "images": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "string",
+                                          "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
+                                        }
+                                      },
+                                      "documents": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "string",
+                                          "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
+                                        }
+                                      }
+                                    },
+                                    "additionalProperties": false
+                                  }
+                                },
+                                "required": [
+                                  "title",
+                                  "body"
+                                ]
+                              }
+                            }
+                          },
+                          "required": [
+                            "meta",
+                            "weather",
+                            "workers",
+                            "materials",
+                            "issues",
+                            "nextSteps",
+                            "summarySections"
+                          ]
+                        },
+                        "notesSinceLastGeneration": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "notesChangedAt": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "generatedAt": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "needsRegeneration": {
+                          "type": "boolean"
+                        },
+                        "finalizedAt": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "pdfUrl": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "createdAt": {
+                          "type": "string"
+                        },
+                        "updatedAt": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "number",
+                        "projectId",
+                        "status",
+                        "visitDate",
+                        "body",
+                        "notesSinceLastGeneration",
+                        "notesChangedAt",
+                        "generatedAt",
+                        "needsRegeneration",
+                        "finalizedAt",
+                        "pdfUrl",
+                        "createdAt",
+                        "updatedAt"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "report"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/projects/{project}/reports/{number}/generate": {
       "post": {
         "tags": [
@@ -6052,12 +6608,12 @@
                                   "type": "string",
                                   "nullable": true
                                 },
-                                "temperatureC": {
-                                  "type": "number",
+                                "temperature": {
+                                  "type": "string",
                                   "nullable": true
                                 },
-                                "windKph": {
-                                  "type": "number",
+                                "wind": {
+                                  "type": "string",
                                   "nullable": true
                                 },
                                 "impact": {
@@ -6067,8 +6623,8 @@
                               },
                               "required": [
                                 "condition",
-                                "temperatureC",
-                                "windKph",
+                                "temperature",
+                                "wind",
                                 "impact"
                               ]
                             },
@@ -6081,13 +6637,12 @@
                                     "type": "string"
                                   },
                                   "count": {
-                                    "type": "integer",
-                                    "minimum": 0
+                                    "type": "string",
+                                    "nullable": true
                                   },
                                   "hours": {
-                                    "type": "number",
-                                    "nullable": true,
-                                    "minimum": 0
+                                    "type": "string",
+                                    "nullable": true
                                   },
                                   "notes": {
                                     "type": "string",
@@ -6111,7 +6666,7 @@
                                     "type": "string"
                                   },
                                   "quantity": {
-                                    "type": "number",
+                                    "type": "string",
                                     "nullable": true
                                   },
                                   "unit": {
@@ -6151,11 +6706,7 @@
                                   },
                                   "severity": {
                                     "type": "string",
-                                    "enum": [
-                                      "low",
-                                      "medium",
-                                      "high"
-                                    ]
+                                    "nullable": true
                                   },
                                   "description": {
                                     "type": "string",
@@ -6164,6 +6715,26 @@
                                   "action": {
                                     "type": "string",
                                     "nullable": true
+                                  },
+                                  "attachments": {
+                                    "type": "object",
+                                    "properties": {
+                                      "images": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "string",
+                                          "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
+                                        }
+                                      },
+                                      "documents": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "string",
+                                          "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
+                                        }
+                                      }
+                                    },
+                                    "additionalProperties": false
                                   }
                                 },
                                 "required": [
@@ -6190,6 +6761,26 @@
                                   },
                                   "body": {
                                     "type": "string"
+                                  },
+                                  "attachments": {
+                                    "type": "object",
+                                    "properties": {
+                                      "images": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "string",
+                                          "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
+                                        }
+                                      },
+                                      "documents": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "string",
+                                          "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
+                                        }
+                                      }
+                                    },
+                                    "additionalProperties": false
                                   }
                                 },
                                 "required": [
@@ -6584,12 +7175,12 @@
                                   "type": "string",
                                   "nullable": true
                                 },
-                                "temperatureC": {
-                                  "type": "number",
+                                "temperature": {
+                                  "type": "string",
                                   "nullable": true
                                 },
-                                "windKph": {
-                                  "type": "number",
+                                "wind": {
+                                  "type": "string",
                                   "nullable": true
                                 },
                                 "impact": {
@@ -6599,8 +7190,8 @@
                               },
                               "required": [
                                 "condition",
-                                "temperatureC",
-                                "windKph",
+                                "temperature",
+                                "wind",
                                 "impact"
                               ]
                             },
@@ -6613,13 +7204,12 @@
                                     "type": "string"
                                   },
                                   "count": {
-                                    "type": "integer",
-                                    "minimum": 0
+                                    "type": "string",
+                                    "nullable": true
                                   },
                                   "hours": {
-                                    "type": "number",
-                                    "nullable": true,
-                                    "minimum": 0
+                                    "type": "string",
+                                    "nullable": true
                                   },
                                   "notes": {
                                     "type": "string",
@@ -6643,7 +7233,7 @@
                                     "type": "string"
                                   },
                                   "quantity": {
-                                    "type": "number",
+                                    "type": "string",
                                     "nullable": true
                                   },
                                   "unit": {
@@ -6683,11 +7273,7 @@
                                   },
                                   "severity": {
                                     "type": "string",
-                                    "enum": [
-                                      "low",
-                                      "medium",
-                                      "high"
-                                    ]
+                                    "nullable": true
                                   },
                                   "description": {
                                     "type": "string",
@@ -6696,6 +7282,26 @@
                                   "action": {
                                     "type": "string",
                                     "nullable": true
+                                  },
+                                  "attachments": {
+                                    "type": "object",
+                                    "properties": {
+                                      "images": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "string",
+                                          "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
+                                        }
+                                      },
+                                      "documents": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "string",
+                                          "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
+                                        }
+                                      }
+                                    },
+                                    "additionalProperties": false
                                   }
                                 },
                                 "required": [
@@ -6722,6 +7328,26 @@
                                   },
                                   "body": {
                                     "type": "string"
+                                  },
+                                  "attachments": {
+                                    "type": "object",
+                                    "properties": {
+                                      "images": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "string",
+                                          "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
+                                        }
+                                      },
+                                      "documents": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "string",
+                                          "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
+                                        }
+                                      }
+                                    },
+                                    "additionalProperties": false
                                   }
                                 },
                                 "required": [
@@ -7099,12 +7725,12 @@
                                   "type": "string",
                                   "nullable": true
                                 },
-                                "temperatureC": {
-                                  "type": "number",
+                                "temperature": {
+                                  "type": "string",
                                   "nullable": true
                                 },
-                                "windKph": {
-                                  "type": "number",
+                                "wind": {
+                                  "type": "string",
                                   "nullable": true
                                 },
                                 "impact": {
@@ -7114,8 +7740,8 @@
                               },
                               "required": [
                                 "condition",
-                                "temperatureC",
-                                "windKph",
+                                "temperature",
+                                "wind",
                                 "impact"
                               ]
                             },
@@ -7128,13 +7754,12 @@
                                     "type": "string"
                                   },
                                   "count": {
-                                    "type": "integer",
-                                    "minimum": 0
+                                    "type": "string",
+                                    "nullable": true
                                   },
                                   "hours": {
-                                    "type": "number",
-                                    "nullable": true,
-                                    "minimum": 0
+                                    "type": "string",
+                                    "nullable": true
                                   },
                                   "notes": {
                                     "type": "string",
@@ -7158,7 +7783,7 @@
                                     "type": "string"
                                   },
                                   "quantity": {
-                                    "type": "number",
+                                    "type": "string",
                                     "nullable": true
                                   },
                                   "unit": {
@@ -7198,11 +7823,7 @@
                                   },
                                   "severity": {
                                     "type": "string",
-                                    "enum": [
-                                      "low",
-                                      "medium",
-                                      "high"
-                                    ]
+                                    "nullable": true
                                   },
                                   "description": {
                                     "type": "string",
@@ -7211,6 +7832,26 @@
                                   "action": {
                                     "type": "string",
                                     "nullable": true
+                                  },
+                                  "attachments": {
+                                    "type": "object",
+                                    "properties": {
+                                      "images": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "string",
+                                          "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
+                                        }
+                                      },
+                                      "documents": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "string",
+                                          "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
+                                        }
+                                      }
+                                    },
+                                    "additionalProperties": false
                                   }
                                 },
                                 "required": [
@@ -7237,6 +7878,26 @@
                                   },
                                   "body": {
                                     "type": "string"
+                                  },
+                                  "attachments": {
+                                    "type": "object",
+                                    "properties": {
+                                      "images": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "string",
+                                          "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
+                                        }
+                                      },
+                                      "documents": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "string",
+                                          "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
+                                        }
+                                      }
+                                    },
+                                    "additionalProperties": false
                                   }
                                 },
                                 "required": [
@@ -7522,12 +8183,12 @@
                                   "type": "string",
                                   "nullable": true
                                 },
-                                "temperatureC": {
-                                  "type": "number",
+                                "temperature": {
+                                  "type": "string",
                                   "nullable": true
                                 },
-                                "windKph": {
-                                  "type": "number",
+                                "wind": {
+                                  "type": "string",
                                   "nullable": true
                                 },
                                 "impact": {
@@ -7537,8 +8198,8 @@
                               },
                               "required": [
                                 "condition",
-                                "temperatureC",
-                                "windKph",
+                                "temperature",
+                                "wind",
                                 "impact"
                               ]
                             },
@@ -7551,13 +8212,12 @@
                                     "type": "string"
                                   },
                                   "count": {
-                                    "type": "integer",
-                                    "minimum": 0
+                                    "type": "string",
+                                    "nullable": true
                                   },
                                   "hours": {
-                                    "type": "number",
-                                    "nullable": true,
-                                    "minimum": 0
+                                    "type": "string",
+                                    "nullable": true
                                   },
                                   "notes": {
                                     "type": "string",
@@ -7581,7 +8241,7 @@
                                     "type": "string"
                                   },
                                   "quantity": {
-                                    "type": "number",
+                                    "type": "string",
                                     "nullable": true
                                   },
                                   "unit": {
@@ -7621,11 +8281,7 @@
                                   },
                                   "severity": {
                                     "type": "string",
-                                    "enum": [
-                                      "low",
-                                      "medium",
-                                      "high"
-                                    ]
+                                    "nullable": true
                                   },
                                   "description": {
                                     "type": "string",
@@ -7634,6 +8290,26 @@
                                   "action": {
                                     "type": "string",
                                     "nullable": true
+                                  },
+                                  "attachments": {
+                                    "type": "object",
+                                    "properties": {
+                                      "images": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "string",
+                                          "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
+                                        }
+                                      },
+                                      "documents": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "string",
+                                          "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
+                                        }
+                                      }
+                                    },
+                                    "additionalProperties": false
                                   }
                                 },
                                 "required": [
@@ -7660,6 +8336,26 @@
                                   },
                                   "body": {
                                     "type": "string"
+                                  },
+                                  "attachments": {
+                                    "type": "object",
+                                    "properties": {
+                                      "images": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "string",
+                                          "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
+                                        }
+                                      },
+                                      "documents": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "string",
+                                          "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
+                                        }
+                                      }
+                                    },
+                                    "additionalProperties": false
                                   }
                                 },
                                 "required": [
@@ -8427,6 +9123,24 @@
                             "type": "string",
                             "nullable": true
                           },
+                          "source": {
+                            "type": "string",
+                            "nullable": true,
+                            "enum": [
+                              "typed",
+                              "voice",
+                              "camera",
+                              "gallery",
+                              "upload"
+                            ]
+                          },
+                          "meta": {
+                            "type": "object",
+                            "additionalProperties": {
+                              "nullable": true
+                            },
+                            "default": {}
+                          },
                           "createdAt": {
                             "type": "string"
                           },
@@ -8449,6 +9163,7 @@
                           "language",
                           "transcribeProvider",
                           "transcribedAt",
+                          "source",
                           "createdAt",
                           "updatedAt"
                         ]
@@ -8624,6 +9339,22 @@
                   "summary": {
                     "type": "string",
                     "nullable": true
+                  },
+                  "source": {
+                    "type": "string",
+                    "enum": [
+                      "typed",
+                      "voice",
+                      "camera",
+                      "gallery",
+                      "upload"
+                    ]
+                  },
+                  "meta": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "nullable": true
+                    }
                   }
                 },
                 "required": [
@@ -8745,6 +9476,24 @@
                       "type": "string",
                       "nullable": true
                     },
+                    "source": {
+                      "type": "string",
+                      "nullable": true,
+                      "enum": [
+                        "typed",
+                        "voice",
+                        "camera",
+                        "gallery",
+                        "upload"
+                      ]
+                    },
+                    "meta": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "nullable": true
+                      },
+                      "default": {}
+                    },
                     "createdAt": {
                       "type": "string"
                     },
@@ -8767,6 +9516,7 @@
                     "language",
                     "transcribeProvider",
                     "transcribedAt",
+                    "source",
                     "createdAt",
                     "updatedAt"
                   ]
@@ -9225,6 +9975,24 @@
                       "type": "string",
                       "nullable": true
                     },
+                    "source": {
+                      "type": "string",
+                      "nullable": true,
+                      "enum": [
+                        "typed",
+                        "voice",
+                        "camera",
+                        "gallery",
+                        "upload"
+                      ]
+                    },
+                    "meta": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "nullable": true
+                      },
+                      "default": {}
+                    },
                     "createdAt": {
                       "type": "string"
                     },
@@ -9247,6 +10015,7 @@
                     "language",
                     "transcribeProvider",
                     "transcribedAt",
+                    "source",
                     "createdAt",
                     "updatedAt"
                   ]
@@ -10385,6 +11154,24 @@
                       "type": "string",
                       "nullable": true
                     },
+                    "source": {
+                      "type": "string",
+                      "nullable": true,
+                      "enum": [
+                        "typed",
+                        "voice",
+                        "camera",
+                        "gallery",
+                        "upload"
+                      ]
+                    },
+                    "meta": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "nullable": true
+                      },
+                      "default": {}
+                    },
                     "createdAt": {
                       "type": "string"
                     },
@@ -10407,6 +11194,7 @@
                     "language",
                     "transcribeProvider",
                     "transcribedAt",
+                    "source",
                     "createdAt",
                     "updatedAt"
                   ]

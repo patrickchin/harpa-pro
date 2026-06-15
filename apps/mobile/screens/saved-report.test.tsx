@@ -48,6 +48,7 @@ import {
   AudioPlaybackProvider,
   type PlaybackPlayer,
 } from '@/lib/audio/AudioPlaybackProvider';
+import type { GeneratedSiteReport } from '@harpa/report-core';
 
 // Switching to the Notes tab mounts `ReportNotesPane`, whose voice
 // rows call `useAudioPlayback()` and whose signed-URL chain pulls
@@ -80,6 +81,19 @@ function render(el: React.ReactElement): TestRenderer.ReactTestRenderer {
     );
   });
   return tree;
+}
+
+function collectText(n: unknown): string {
+  if (n == null) return '';
+  if (typeof n === 'string') return n;
+  if (Array.isArray(n)) return n.map(collectText).join(' ');
+  const node = n as { children?: unknown };
+  if (node.children !== undefined) return collectText(node.children);
+  return '';
+}
+
+function treeText(tree: TestRenderer.ReactTestRenderer): string {
+  return collectText(tree.toJSON());
 }
 
 const STUB_PDF_ACTIONS: UseReportPdfActionsReturn = {
@@ -173,9 +187,6 @@ describe('SavedReport', () => {
     expect(
       tree.root.findAllByProps({ testID: 'saved-report-pane' }).length,
     ).toBeGreaterThan(0);
-    expect(
-      tree.root.findAllByProps({ testID: 'saved-report-edit-pane' }),
-    ).toHaveLength(0);
   });
 
   it('switches to the Notes tab when its tab button is pressed', () => {
@@ -189,25 +200,8 @@ describe('SavedReport', () => {
     ).toBeGreaterThan(0);
   });
 
-  it('switches to the Edit tab on draft reports', () => {
+  it('does not render an Edit tab on draft reports (modal flow)', () => {
     const tree = render(<SavedReport {...baseProps()} />);
-    const editTab = tree.root.findByProps({ testID: 'btn-tab-edit' });
-    act(() => {
-      editTab.props.onPress();
-    });
-    expect(
-      tree.root.findAllByProps({ testID: 'saved-report-edit-pane' }).length,
-    ).toBeGreaterThan(0);
-    // Autosave status row mounts on the Edit tab.
-    expect(
-      tree.root.findAllByProps({ testID: 'edit-autosave-status' }).length,
-    ).toBeGreaterThan(0);
-  });
-
-  it('hides the Edit tab when the report is finalized', () => {
-    const tree = render(
-      <SavedReport {...baseProps({ reportStatus: 'finalized' })} />,
-    );
     expect(
       tree.root.findAllByProps({ testID: 'btn-tab-edit' }),
     ).toHaveLength(0);
@@ -249,18 +243,31 @@ describe('SavedReport', () => {
     ).toHaveLength(0);
   });
 
-  it('bounces from Edit back to Report when the report flips to finalized', () => {
-    const props = baseProps({ initialTab: 'edit' });
+  it('opens the per-card edit modal when a pencil is tapped', () => {
+    const onChangeReport = vi.fn();
+    const tree = render(
+      <SavedReport {...baseProps({ onChangeReport })} />,
+    );
+    // Detailed Sections pencil — `report-edit-modal` mounts when
+    // visible. The first issue pencil also exposes an open path.
+    const pencil = tree.root.findByProps({ testID: 'btn-edit-meta' });
+    act(() => {
+      pencil.props.onPress();
+    });
+    expect(
+      tree.root.findAllByProps({ testID: 'report-edit-modal' }).length,
+    ).toBeGreaterThan(0);
+  });
+
+  it('bounces from Notes back to Report when the report flips to finalized', () => {
+    const props = baseProps({ initialTab: 'notes' });
     const tree = render(<SavedReport {...props} />);
     expect(
-      tree.root.findAllByProps({ testID: 'saved-report-edit-pane' }).length,
+      tree.root.findAllByProps({ testID: 'report-notes-pane' }).length,
     ).toBeGreaterThan(0);
     act(() => {
       tree.update(<SavedReport {...props} reportStatus="finalized" />);
     });
-    expect(
-      tree.root.findAllByProps({ testID: 'saved-report-edit-pane' }),
-    ).toHaveLength(0);
     expect(
       tree.root.findAllByProps({ testID: 'saved-report-pane' }).length,
     ).toBeGreaterThan(0);
@@ -304,6 +311,29 @@ describe('SavedReport', () => {
     expect(onConfirmDelete).toHaveBeenCalledOnce();
   });
 
+  it('surfaces a delete failure after confirmation', async () => {
+    const onConfirmDelete = vi.fn(async () => {
+      throw new Error('network down');
+    });
+    const tree = render(
+      <SavedReport {...baseProps({ onConfirmDelete })} />,
+    );
+    act(() => {
+      tree.root.findByProps({ testID: 'btn-report-actions' }).props.onPress();
+    });
+    act(() => {
+      tree.root.findByProps({ testID: 'btn-report-delete' }).props.onPress();
+    });
+    await act(async () => {
+      await tree.root
+        .findByProps({ testID: 'btn-confirm-delete-report' })
+        .props.onPress();
+    });
+
+    expect(treeText(tree)).toContain("Couldn't delete report");
+    expect(treeText(tree)).toContain('Try again.');
+  });
+
   it('confirms unfinalize via the confirmation dialog', async () => {
     const onConfirmUnfinalize = vi.fn();
     const tree = render(
@@ -323,6 +353,31 @@ describe('SavedReport', () => {
         .props.onPress();
     });
     expect(onConfirmUnfinalize).toHaveBeenCalledOnce();
+  });
+
+  it('surfaces an unfinalize failure after confirmation', async () => {
+    const onConfirmUnfinalize = vi.fn(async () => {
+      throw new Error('network down');
+    });
+    const tree = render(
+      <SavedReport {...baseProps({ onConfirmUnfinalize })} />,
+    );
+    act(() => {
+      tree.root.findByProps({ testID: 'btn-report-actions' }).props.onPress();
+    });
+    act(() => {
+      tree.root
+        .findByProps({ testID: 'btn-unfinalize-report' })
+        .props.onPress();
+    });
+    await act(async () => {
+      await tree.root
+        .findByProps({ testID: 'btn-confirm-unfinalize-report' })
+        .props.onPress();
+    });
+
+    expect(treeText(tree)).toContain("Couldn't unfinalize report");
+    expect(treeText(tree)).toContain('Try again.');
   });
 
   it('opens the PDF preview modal from "View PDF"', () => {
@@ -372,12 +427,43 @@ describe('SavedReport', () => {
       tree.root.findAllByProps({ testID: 'saved-report-pane' }).length,
     ).toBeGreaterThan(0);
     expect(
-      tree.root.findAllByProps({ testID: 'btn-tab-edit' }).length,
+      tree.root.findAllByProps({ testID: 'btn-tab-notes' }).length,
     ).toBeGreaterThan(0);
   });
 });
 
 const finalizedDefaults = { ...baseProps(), reportStatus: 'finalized' as const };
+
+const PHOTO_NOTE_ROWS: SavedReportProps['noteRows'] = [
+  {
+    id: 'n_placed',
+    kind: 'photo',
+    body: 'Placed photo',
+    createdAt: new Date().toISOString(),
+    fileId: 'fil_placed',
+  },
+  {
+    id: 'n_unplaced',
+    kind: 'photo',
+    body: 'Unplaced photo',
+    createdAt: new Date().toISOString(),
+    fileId: 'fil_unplaced',
+  },
+];
+
+const REPORT_WITH_PLACED_PHOTO = {
+  ...SAMPLE_GENERATED_REPORT,
+  report: {
+    ...SAMPLE_GENERATED_REPORT.report,
+    sections: [
+      {
+        ...SAMPLE_GENERATED_REPORT.report.sections[0]!,
+        attachments: { images: ['n_placed'] },
+      },
+      ...SAMPLE_GENERATED_REPORT.report.sections.slice(1),
+    ],
+  },
+} as GeneratedSiteReport;
 
 describe('SavedReport — finalized layout', () => {
   it('does not render the tab bar when finalized', () => {
@@ -393,9 +479,6 @@ describe('SavedReport — finalized layout', () => {
     ).toHaveLength(0);
     expect(
       tree.root.findAllByProps({ testID: 'btn-tab-notes' }),
-    ).toHaveLength(0);
-    expect(
-      tree.root.findAllByProps({ testID: 'btn-tab-edit' }),
     ).toHaveLength(0);
   });
 
@@ -419,5 +502,31 @@ describe('SavedReport — finalized layout', () => {
     expect(
       tree.root.findAllByProps({ testID: 'saved-report-pane' }).length,
     ).toBeGreaterThan(0);
+  });
+
+  it('does not expose photo placement edits when finalized', () => {
+    const onPlacePhotoGroup = vi.fn();
+    const tree = render(
+      <SavedReport
+        {...finalizedDefaults}
+        report={REPORT_WITH_PLACED_PHOTO}
+        noteRows={PHOTO_NOTE_ROWS}
+        onPlacePhotoGroup={onPlacePhotoGroup}
+      />,
+    );
+
+    expect(
+      tree.root.findAllByProps({ testID: 'placed-photos-section-0' }).length,
+    ).toBeGreaterThan(0);
+    expect(
+      tree.root.findAllByProps({ testID: 'btn-move-placed-photo-n_placed' }),
+    ).toHaveLength(0);
+    expect(
+      tree.root.findAllByProps({ testID: 'btn-add-attachments-section-0' }),
+    ).toHaveLength(0);
+    expect(
+      tree.root.findAllByProps({ testID: 'btn-place-photo-n_unplaced' }),
+    ).toHaveLength(0);
+    expect(onPlacePhotoGroup).not.toHaveBeenCalled();
   });
 });

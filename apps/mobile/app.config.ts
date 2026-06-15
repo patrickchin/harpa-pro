@@ -3,7 +3,7 @@
  * the prod and dev backends ship as two side-by-side apps on a device.
  *
  *   APP_VARIANT=production  →  "Harpa Pro"      com.harpa.pro       (App Store)
- *   APP_VARIANT=preview     →  "Harpa Pro Dev"  com.harpa.pro.dev   (TestFlight / internal, dev backend)
+ *   APP_VARIANT=preview     →  "Harpa Pro Dev"  com.harpa.pro.dev   (internal dev QA, dev backend)
  *   APP_VARIANT=development →  "Harpa Pro Dev"  com.harpa.pro.dev   (Metro dev-client)
  *
  * APP_VARIANT is set per-profile in eas.json. Locally, falls back to
@@ -77,7 +77,11 @@ const config: ExpoConfig = {
     // Universal Links — iOS verifies via AASA at
     // https://<host>/.well-known/apple-app-site-association.
     // See packages/api/src/routes/well-known.ts.
-    associatedDomains: [`applinks:${UNIVERSAL_LINK_HOST}`],
+    // Omitted in development: associated-domains forces Expo CLI to
+    // require code signing even on simulators (SDK 55+).
+    ...(VARIANT !== 'development' && {
+      associatedDomains: [`applinks:${UNIVERSAL_LINK_HOST}`],
+    }),
     infoPlist: {
       ITSAppUsesNonExemptEncryption: false,
       NSPhotoLibraryAddUsageDescription:

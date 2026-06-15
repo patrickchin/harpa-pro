@@ -61,9 +61,10 @@ exports[`Onboarding > matches snapshot at default props 1`] = `
             <rn-Text
               className="text-label text-muted-foreground"
             >
-              Full Name
+              Full name
             </rn-Text>
             <rn-TextInput
+              accessibilityLabel="Full name"
               autoCapitalize="words"
               autoComplete="name"
               autoFocus={true}
@@ -106,9 +107,10 @@ exports[`Onboarding > matches snapshot at default props 1`] = `
             <rn-Text
               className="text-label text-muted-foreground"
             >
-              Company Name
+              Company name (optional)
             </rn-Text>
             <rn-TextInput
+              accessibilityLabel="Company name"
               autoCapitalize="words"
               autoComplete="organization"
               className="min-h-touch rounded-md border px-4 py-3 text-base text-foreground border-border bg-card"
@@ -168,7 +170,7 @@ exports[`Onboarding > matches snapshot at default props 1`] = `
             <rn-Text
               className="text-accent-foreground font-semibold text-lg"
             >
-              Get Started
+              Get started
             </rn-Text>
           </rn-Pressable>
         </rn-View>

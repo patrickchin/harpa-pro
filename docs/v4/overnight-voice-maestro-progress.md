@@ -1,5 +1,11 @@
 # 2026-05-27 overnight voice Maestro run
 
+> **Status:** ✅ Historical run log (2026-05-27). The voice-note E2E
+> path described here is now part of the standard regression journey
+> (`.maestro/modules/09-voice-notes.yaml`). Architecture lives in
+> [`arch-voice-pipeline.md`](arch-voice-pipeline.md). Kept for
+> historical context only.
+
 Goal: complete the voice-note E2E hardening path and run the Maestro
 suite first against the local backend, then against the dev deployment.
 
@@ -64,7 +70,7 @@ suite first against the local backend, then against the dev deployment.
   passed with 10b included, and the clean full dev-deployment
   regression passed against `harpa-pro-api-dev` (`gitCommit=9db5b51`,
   project `DevE2E-20260528T204311`, deleted in-flow).
-- Dev deployment should use `/auth/password/verify` test accounts, not
+- Dev deployment should use `/api/auth/sign-in/email` test accounts, not
   fake OTP or real SMS. Keep the password in the CLI/broker; do not
   pass it to Maestro.
 - Verification: focused voice/generate tests pass (`28` tests),

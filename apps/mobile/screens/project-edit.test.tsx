@@ -76,6 +76,6 @@ describe('ProjectEdit', () => {
   it('opens delete confirmation dialog when delete button pressed', () => {
     const tree = render(<ProjectEdit {...defaults} />);
     act(() => tree.root.findByProps({ testID: 'btn-delete-project' }).props.onPress());
-    expect(JSON.stringify(tree.toJSON())).toContain('Delete Project');
+    expect(JSON.stringify(tree.toJSON())).toContain('Delete project');
   });
 });

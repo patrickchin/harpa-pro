@@ -10,13 +10,20 @@ import type { GeneratedReportWorkers } from '@harpa/report-core';
 
 import { Card } from '@/components/primitives/Card';
 import { SectionHeader } from '@/components/primitives/SectionHeader';
+import { EditPencilButton } from '@/components/reports/edit/EditPencilButton';
 import { colors } from '@/lib/design-tokens/colors';
 
 interface WorkersCardProps {
   workers: GeneratedReportWorkers | null;
+  onEdit?: () => void;
+  editActionsDisabled?: boolean;
 }
 
-export function WorkersCard({ workers }: WorkersCardProps) {
+export function WorkersCard({
+  workers,
+  onEdit,
+  editActionsDisabled = false,
+}: WorkersCardProps) {
   if (!workers) return null;
 
   const hasRoles = workers.roles.length > 0;
@@ -32,6 +39,19 @@ export function WorkersCard({ workers }: WorkersCardProps) {
             : 'Crew breakdown recorded.'
         }
         icon={<Users size={16} color={colors.foreground} />}
+        trailing={
+          onEdit ? (
+            <EditPencilButton
+              onPress={() => {
+                if (editActionsDisabled) return;
+                onEdit();
+              }}
+              disabled={editActionsDisabled}
+              accessibilityLabel="Edit workers"
+              testID="btn-edit-workers"
+            />
+          ) : undefined
+        }
       />
 
       {hasRoles && (

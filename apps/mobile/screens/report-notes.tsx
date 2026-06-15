@@ -6,9 +6,8 @@
  *
  * Props-driven so dev mirrors + tests can render canned data.
  */
-import { type ReactNode } from 'react';
+import { type ReactNode, useMemo, useState } from 'react';
 import { RefreshControl, ScrollView, Text, View } from 'react-native';
-import { useState } from 'react';
 
 import { SafeAreaView } from '@/components/primitives/SafeAreaView';
 import { ScreenHeader } from '@/components/primitives/ScreenHeader';
@@ -17,6 +16,7 @@ import {
   ReportNotesPane,
   type ReportNoteRow,
 } from '@/components/reports/detail/ReportNotesPane';
+import { flattenPhotoGallery } from '@/lib/api/to-report-note-row';
 import { ImagePreviewModal } from '@/components/files/ImagePreviewModal';
 
 export interface ReportNotesProps {
@@ -64,18 +64,10 @@ export function ReportNotes(props: ReportNotesProps) {
     null,
   );
 
-  const photoGallery = (noteRows ?? [])
-    .filter(
-      (n): n is ReportNoteRow & { fileId: string } =>
-        n.kind === 'photo' && typeof n.fileId === 'string' && !!n.fileId,
-    )
-    .map((n) => ({
-      fileId: n.fileId,
-      thumbnailFileId: n.thumbnailFileId ?? null,
-      noteId: n.noteId ?? n.id,
-      title: n.body?.trim() || 'Photo',
-      cacheKey: n.fileId,
-    }));
+  // Photo gallery for the swipeable preview modal — see
+  // `flattenPhotoGallery`. Mirrors the gallery built in
+  // `screens/saved-report.tsx`.
+  const photoGallery = useMemo(() => flattenPhotoGallery(noteRows), [noteRows]);
 
   const handleOpenPhoto = (input: { fileId: string; title?: string }) => {
     const idx = photoGallery.findIndex((p) => p.fileId === input.fileId);
@@ -111,7 +103,7 @@ export function ReportNotes(props: ReportNotesProps) {
       <SafeAreaView className="flex-1 bg-background" edges={['top']}>
         <View className="flex-1 items-center justify-center px-5">
           <Text className="text-xl font-semibold text-foreground">
-            Failed to load notes
+            Couldn't load notes
           </Text>
           <Text className="mt-2 text-center text-base text-muted-foreground">
             {loadError instanceof Error

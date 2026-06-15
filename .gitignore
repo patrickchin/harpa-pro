@@ -68,3 +68,26 @@ test-results/
 .lighthouseci/
 notes-delete-empty.png
 sample-voice-note.m4a
+
+# Ruby / Fastlane
+.bundle/
+/vendor/bundle/
+fastlane/report.xml
+fastlane/README.md
+fastlane/Preview.html
+fastlane/test_output/
+apps/mobile/fastlane/report.xml
+apps/mobile/fastlane/README.md
+apps/mobile/fastlane/Preview.html
+apps/mobile/fastlane/test_output/
+fastlane/credentials/
+apps/mobile/fastlane/credentials/
+fastlane/**/google-play*.json
+apps/mobile/fastlane/**/google-play*.json
+fastlane/**/play-store*.json
+apps/mobile/fastlane/**/play-store*.json
+fastlane/**/service-account*.json
+apps/mobile/fastlane/**/service-account*.json
+
+# Husky auto-installs hook shims here (e.g. git-lfs). Machine-local, not portable.
+.husky/_/

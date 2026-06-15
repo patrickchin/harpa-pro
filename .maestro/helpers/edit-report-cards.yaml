@@ -1,0 +1,295 @@
+appId: ${MAESTRO_APP_ID}
+---
+# edit-report-cards.yaml — helper: exercise PR 125 per-card report editing.
+#
+# Pre-condition: the Generate screen is on the Report tab with a generated
+# draft visible (`report-view-*`). The flow edits every modal body type in
+# the order the cards appear, covers dirty-cancel discard, and covers the
+# per-item Delete affordance for both Issues and Detailed Sections.
+# Post-condition: still on the Generate screen's Report tab with a locally
+# edited generated draft.
+
+- assertVisible:
+    id: 'report-view-.*'
+- assertNotVisible:
+    text: 'Edit'
+
+# --- Summary & meta: dirty cancel, then save -------------------------------
+- scrollUntilVisible:
+    element:
+      id: 'btn-edit-meta'
+    direction: DOWN
+    timeout: 10000
+- tapOn:
+    id: 'btn-edit-meta'
+- extendedWaitUntil:
+    visible:
+      id: 'input-edit-meta-summary'
+    timeout: 8000
+- tapOn:
+    id: 'input-edit-meta-summary'
+- eraseText: 200
+- inputText: 'Discarded E2E summary'
+- hideKeyboard
+- tapOn:
+    id: 'btn-edit-modal-cancel'
+- extendedWaitUntil:
+    visible:
+      id: 'btn-edit-modal-discard-confirm'
+    timeout: 8000
+- tapOn:
+    id: 'btn-edit-modal-discard-confirm'
+- extendedWaitUntil:
+    notVisible:
+      id: 'report-edit-modal'
+    timeout: 8000
+
+- tapOn:
+    id: 'btn-edit-meta'
+- extendedWaitUntil:
+    visible:
+      id: 'input-edit-meta-title'
+    timeout: 8000
+- tapOn:
+    id: 'input-edit-meta-title'
+- eraseText: 200
+- inputText: 'E2E report title'
+- hideKeyboard
+- tapOn:
+    id: 'btn-edit-modal-save'
+- extendedWaitUntil:
+    notVisible:
+      id: 'report-edit-modal'
+    timeout: 8000
+- assertVisible:
+    text: 'E2E report title.*'
+
+# --- Weather ---------------------------------------------------------------
+- scrollUntilVisible:
+    element:
+      id: 'btn-edit-weather'
+    direction: UP
+    timeout: 10000
+- tapOn:
+    id: 'btn-edit-weather'
+- extendedWaitUntil:
+    visible:
+      id: 'input-edit-weather-conditions'
+    timeout: 8000
+- tapOn:
+    id: 'input-edit-weather-conditions'
+- eraseText: 100
+- inputText: 'E2E clear skies'
+- hideKeyboard
+- tapOn:
+    id: 'btn-edit-modal-save'
+- extendedWaitUntil:
+    notVisible:
+      id: 'report-edit-modal'
+    timeout: 8000
+- assertVisible:
+    text: 'E2E clear skies.*'
+
+# --- Issue: edit, then delete the per-item entry ---------------------------
+- scrollUntilVisible:
+    element:
+      id: 'btn-edit-issue-.*'
+    direction: DOWN
+    timeout: 10000
+- tapOn:
+    id: 'btn-edit-issue-.*'
+- extendedWaitUntil:
+    visible:
+      id: 'input-edit-issue-title'
+    timeout: 8000
+- tapOn:
+    id: 'input-edit-issue-title'
+- eraseText: 120
+- inputText: 'E2E issue title'
+- hideKeyboard
+- tapOn:
+    id: 'btn-edit-modal-save'
+- extendedWaitUntil:
+    notVisible:
+      id: 'report-edit-modal'
+    timeout: 8000
+- assertVisible:
+    text: 'E2E issue title.*'
+
+- tapOn:
+    id: 'btn-edit-issue-.*'
+- extendedWaitUntil:
+    visible:
+      id: 'btn-edit-modal-delete'
+    timeout: 8000
+- tapOn:
+    id: 'btn-edit-modal-delete'
+- extendedWaitUntil:
+    visible:
+      id: 'btn-edit-modal-delete-confirm'
+    timeout: 8000
+- tapOn:
+    id: 'btn-edit-modal-delete-confirm'
+- extendedWaitUntil:
+    notVisible:
+      id: 'report-edit-modal'
+    timeout: 8000
+- extendedWaitUntil:
+    notVisible:
+      text: 'E2E issue title.*'
+    timeout: 8000
+
+# --- Workers ---------------------------------------------------------------
+- scrollUntilVisible:
+    element:
+      id: 'btn-edit-workers'
+    direction: DOWN
+    timeout: 15000
+    visibilityPercentage: 50
+    centerElement: true
+- tapOn:
+    id: 'btn-edit-workers'
+- extendedWaitUntil:
+    visible:
+      id: 'input-edit-role-.*-title'
+    timeout: 8000
+- tapOn:
+    id: 'input-edit-role-.*-title'
+- eraseText: 100
+- inputText: 'E2E inspector'
+- hideKeyboard
+- tapOn:
+    id: 'btn-edit-modal-save'
+- extendedWaitUntil:
+    notVisible:
+      id: 'report-edit-modal'
+    timeout: 8000
+- assertVisible:
+    text: 'E2E inspector.*'
+
+# --- Materials -------------------------------------------------------------
+- scrollUntilVisible:
+    element:
+      id: 'btn-edit-materials'
+    direction: DOWN
+    timeout: 10000
+- tapOn:
+    id: 'btn-edit-materials'
+- extendedWaitUntil:
+    visible:
+      id: 'input-edit-material-.*-name'
+    timeout: 8000
+- tapOn:
+    id: 'input-edit-material-.*-name'
+- eraseText: 100
+- inputText: 'E2E sealant'
+- hideKeyboard
+- tapOn:
+    id: 'btn-edit-modal-save'
+- extendedWaitUntil:
+    notVisible:
+      id: 'report-edit-modal'
+    timeout: 8000
+- assertVisible:
+    text: 'E2E sealant.*'
+
+# --- Next steps ------------------------------------------------------------
+- scrollUntilVisible:
+    element:
+      id: 'btn-edit-next-steps'
+    direction: DOWN
+    timeout: 10000
+- tapOn:
+    id: 'btn-edit-next-steps'
+- extendedWaitUntil:
+    visible:
+      id: 'input-edit-next-step-.*'
+    timeout: 8000
+- tapOn:
+    id: 'input-edit-next-step-.*'
+- eraseText: 160
+- inputText: 'E2E confirm roof anchors'
+- hideKeyboard
+- tapOn:
+    id: 'btn-edit-modal-save'
+- extendedWaitUntil:
+    notVisible:
+      id: 'report-edit-modal'
+    timeout: 8000
+- scrollUntilVisible:
+    element:
+      text: 'E2E confirm roof anchors.*'
+    direction: DOWN
+    timeout: 8000
+    visibilityPercentage: 10
+    centerElement: false
+    optional: true
+- scrollUntilVisible:
+    element:
+      text: 'E2E confirm roof anchors.*'
+    direction: UP
+    timeout: 15000
+    visibilityPercentage: 10
+    centerElement: false
+- assertVisible:
+    text: 'E2E confirm roof anchors.*'
+
+# --- Detailed section: edit, then delete the per-item entry ----------------
+- scrollUntilVisible:
+    element:
+      id: 'btn-edit-section-.*'
+    direction: DOWN
+    timeout: 10000
+- tapOn:
+    id: 'btn-edit-section-.*'
+- extendedWaitUntil:
+    visible:
+      id: 'input-edit-section-heading'
+    timeout: 8000
+- tapOn:
+    id: 'input-edit-section-heading'
+- eraseText: 100
+- inputText: 'E2E section heading'
+- hideKeyboard
+- tapOn:
+    id: 'btn-edit-modal-save'
+- extendedWaitUntil:
+    notVisible:
+      id: 'report-edit-modal'
+    timeout: 8000
+- scrollUntilVisible:
+    element:
+      text: 'E2E section heading.*'
+    direction: DOWN
+    timeout: 8000
+    visibilityPercentage: 10
+    centerElement: false
+    optional: true
+- scrollUntilVisible:
+    element:
+      text: 'E2E section heading.*'
+    direction: UP
+    timeout: 15000
+    visibilityPercentage: 10
+    centerElement: false
+- assertVisible:
+    text: 'E2E section heading.*'
+
+- tapOn:
+    id: 'btn-edit-section-.*'
+- extendedWaitUntil:
+    visible:
+      id: 'btn-edit-modal-delete'
+    timeout: 8000
+- tapOn:
+    id: 'btn-edit-modal-delete'
+- extendedWaitUntil:
+    visible:
+      id: 'btn-edit-modal-delete-confirm'
+    timeout: 8000
+- tapOn:
+    id: 'btn-edit-modal-delete-confirm'
+- extendedWaitUntil:
+    notVisible:
+      text: 'E2E section heading.*'
+    timeout: 8000

@@ -17,12 +17,25 @@ The CI lint job (`scripts/check-maestro-appid.sh`) fails if any
 `docs/bugs/README.md` (R-Maestro1) for the regression that motivated
 the env-var rule.
 
-## `core-end-to-end.yaml` (canonical full journey)
+## No coordinate taps
 
-The P3-exit-gate full-journey flow. Walks every currently-shipped
-user-visible feature on the real `(auth)` + `(app)` routes:
+Do not use `tapOn: { point: ... }` or any `point:` key in `.maestro`
+flows. Coordinate taps depend on device size, safe areas, orientation,
+and platform chrome. Tap visible text, accessibility labels, or testIDs
+instead; add a testID to the app if the target has no stable semantic
+selector yet.
 
-- sign-up → onboarding (fresh account each run, via `scripts/maestro/reset-db.sh`)
+The root lint script runs `scripts/check-no-maestro-point-taps.sh`,
+which fails on any `.maestro/**/*.yaml` / `.yml` `point:` key.
+
+## `core-end-to-end.yaml` (legacy P3 smoke)
+
+The older P3-exit-gate single-file flow. It still exists as a manual
+smoke target, but the normal full-app Maestro suite is now
+`regression-journey.yaml` plus `.maestro/modules/*`. This flow walks a
+seeded Alice/Bob path on the real `(auth)` + `(app)` routes:
+
+- sign-in → onboarding (fresh account each run, via `scripts/maestro/reset-db.sh`)
 - projects list, new project, copy buttons
 - members: invite (editor role), filter buttons, back
 - project edit + save
@@ -48,36 +61,39 @@ xcrun simctl privacy booted grant camera     "$MAESTRO_APP_ID"
 maestro test .maestro/core-end-to-end.yaml
 ```
 
-Stability seen locally (after fixing the deep-link race and the
-filter-button hang): **5/5 PASS** in a row. Wrap with `gtimeout 240`
-for longer batches; on a hung XCTest driver, `kill` the leftover
-`maestro-driver-ios` PID and retry.
+Wrap with `gtimeout 240` for longer batches; on a hung XCTest driver,
+`kill` the leftover `maestro-driver-ios` PID and retry. Prefer the
+modular regression journey for current coverage.
 
-The flow uses fake OTP `000000` (via `TWILIO_VERIFY_FAKE_CODE` in
-fixture mode). The seeded invite target (`+15550100200`, Bob Editor)
-is reseeded by `reset-db.sh` so the invite step always finds a real
-user. The flow deletes the project at the end.
+The flow uses better-auth email-OTP. `helpers/sign-in.yaml` reads the
+most recent OTP that better-auth persisted to `public.verification`
+via the dev-only `POST /api/dev/last-otp` endpoint (mounted whenever
+`NODE_ENV !== 'production'`). The seeded invite target
+(`bob@e2e.harpapro.com`, Bob Editor) is reseeded by `reset-db.sh` so the
+invite step always finds a real user. The flow deletes the project
+at the end.
 
 ## `regression-journey.yaml` (overnight full-coverage journey)
 
 Orchestrator flow that runs every regression module in
-`.maestro/modules/` sequentially against a single signed-up alice
-(no `reset-db.sh` needed — it signs up alice + bob fresh, then
-deletes the project + signs out at the end). Covers:
+`.maestro/modules/` sequentially against a single signed-in alice
+(no `reset-db.sh` needed — it auto-creates alice + bob via the
+better-auth emailOtp first-verify path, then deletes the project +
+signs out at the end). Covers:
 
-1. Auth (sign-up alice + sign-out + sign-in)
-2. Sign-up bob
+1. Auth (sign-in alice + sign-out + sign-in round-trip)
+2. Create bob
 3. Projects CRUD
 4. Members invite / permissions / viewer / remove
 5. Reports CRUD
 6. Text notes (add/delete)
 7. Voice notes: upload, transcript, summary, playback entry point,
-    delete
+   delete
 8. Photo notes: attachment sheet, camera upload, generated report
-    photo strip, preview, delete
+   photo strip, preview, delete
 9. Finalized photo report: saved-report photo strip and preview
-10. Generate + finalize: add note, generate/update report, finalize,
-   unfinalize, re-finalize
+10. Generate + finalize: add note, generate/update report, per-card
+    edit modal coverage, finalize, unfinalize, re-finalize
 11. Report Debug: prompt, report notes, LLM response, non-empty state
 12. Project delete teardown
 13. Account view + edit-cancel + edit-save
@@ -113,8 +129,8 @@ Dev-deployment target:
   `https://harpa-pro-api-dev.fly.dev`.
 - Dev auth uses the local CLI auth broker
   (`scripts/dev-e2e-auth-broker.cjs`) with allowlisted test accounts
-  (`TEST_ACCOUNT_PHONES` + `TEST_ACCOUNT_PASSWORD` in `.env.local` or
-  Doppler `dev`), not fake OTP. Do not pass the password as a Maestro
+  (`TEST_ACCOUNT_EMAILS` + `TEST_ACCOUNT_PASSWORD` in `.env.local` or
+  Doppler `dev`), not email-OTP. Do not pass the password as a Maestro
   env var or `inputText`: Maestro debug logs evaluated values.
 - On Android, run Metro with `--host lan --port 8082`, reverse
   `8082`, and use the local API/R2 proxies:
@@ -138,31 +154,109 @@ Dev-deployment target:
   Focused local Android passed 01/02/10b, the full local regression
   passed with 10b included, and a clean full dev-deployment Android
   run passed against `harpa-pro-api-dev` (`gitCommit=9db5b51`).
+- 2026-06-14 follow-up: module 10c exercises the attachment picker with
+  enough photo groups to scroll and asserts first-photo thumbnails are
+  visible. Module 11 verifies regeneration settles with the report still
+  mounted; deterministic unit tests pin the disabled write-lock states
+  because fixture regeneration can finish before Maestro observes the
+  transient lock. The standalone `place-photo-on-issue.flow.yml` also
+  finalizes a placed-photo report and asserts the saved-report page keeps
+  the placed photo visible without exposing placement or manual-edit
+  controls.
 - The CI Maestro testID gate is path-filtered on both `apps/mobile/**`
   and `.maestro/**` so E2E-only flow changes still validate referenced
   mobile testIDs.
 
 Modules 14/15/16 navigate to Profile / Account / Usage screens.
 
-## `p3-15-upload.yaml` (legacy — superseded by module 10a)
+## `dev-otp-hardening.yaml` (PR128 focused smoke)
 
-Same photo pipeline as `modules/10a-photo-notes-draft.yaml` but
-signs in as seeded `+15550100100` (requires `reset-db.sh`).
-Kept for one-off iteration on the camera path; safe to delete once
-module 10a is green in CI.
+Focused Android/local smoke for the hardened `POST /api/dev/last-otp`
+path. It requests Alice's OTP through the real mobile email sign-in UI,
+then `helpers/assert-dev-otp-hardening.js` proves the dev introspection
+route:
 
-## `p3-15-voice-record.yaml` (legacy — superseded by module 09)
+- returns the OTP for the exact allowlisted email with `x-dev-otp-token`;
+- rejects missing / bad tokens with 404;
+- rejects non-allowlisted, suffix-attack, and wildcard-injection emails
+  with 404;
+- still lets the app complete sign-in and land on the projects list.
 
-Same voice pipeline as `modules/09-voice-notes.yaml` but signs in as
-seeded `+15550100100`. Kept for one-off iteration; safe to delete
-once module 09 is green on CI.
+Run with the local compose API and Metro dev-client bundle:
 
-## `p3-14a-usage-limits-card.yaml`, `p3-14b-usage-limit-dialog.yaml`, `p3-14c-near-limit-toast.yaml`
+```bash
+export DEV_OTP_TOKEN=... # >=32 chars; must match the API container env
+export MAESTRO_APP_ID=com.harpa.pro.dev
+adb reverse tcp:8081 tcp:8081
+adb reverse tcp:8787 tcp:8787
+maestro test .maestro/dev-otp-hardening.yaml
+```
 
-Phase-3 usage-limits flows. 14a runs today against seeded alice;
-14b/14c are placeholders awaiting a `--seed-at-limit` reset script
-and a near-limit toast UI respectively. See each flow's header for
-status.
+## `store-screenshots.yaml` (App Store / Play Store assets)
+
+Focused flow for generating store-listing screenshots from polished,
+repeatable fixture data. The flow expects
+`scripts/maestro/seed-store-screenshots.sh` to seed the local Postgres
+database and MinIO bucket first, then captures:
+
+1. projects list
+2. reports list
+3. members management with a six-person team
+4. live voice-note recording state
+5. finalized report issues with placed photos
+6. finalized report detailed sections and unplaced photos
+7. generated PDF preview
+8. usage history with limits, OpenAI/Groq model mix, and recent events
+
+Run against the local fixture stack and a screenshot-mode Metro bundle:
+
+```bash
+export DEV_OTP_TOKEN=dev-token-at-least-32-characters
+export MAESTRO_APP_ID=com.harpa.pro.dev
+docker compose down -v && docker compose up -d
+scripts/maestro/seed-store-screenshots.sh
+adb reverse tcp:8081 tcp:8081
+adb reverse tcp:8787 tcp:8787
+adb reverse tcp:9000 tcp:9000
+adb shell settings put global policy_control immersive.full=*
+EXPO_PUBLIC_API_URL=http://localhost:8787 \
+EXPO_PUBLIC_USE_FIXTURES=false \
+EXPO_PUBLIC_SCREENSHOT_MODE=true \
+pnpm --filter @harpa/mobile start --dev-client
+maestro test .maestro/store-screenshots.yaml
+adb shell settings delete global policy_control || true
+```
+
+`EXPO_PUBLIC_USE_FIXTURES=false` keeps report and usage data backed by
+the seeded API rows. `EXPO_PUBLIC_SCREENSHOT_MODE=true` uses
+deterministic screenshot-only input paths such as the canned voice
+recorder backend while leaving system status chrome visible.
+Construction images are not bundled into the app; the seed script
+uploads the checked-in photos documented in
+`apps/mobile/assets/fixtures/store-screenshots.md` to local MinIO.
+
+## Archived and pending flows
+
+Top-level `.maestro/*.yaml` files are current entrypoints. Historical
+or blocked scenarios live in explicit subdirectories so broad manual
+runs do not pick them up by accident.
+
+- `.maestro/legacy/p3-15-upload.yaml`: superseded by modules 10a, 10b,
+  and 10c in the normal regression journey. Keep only for debugging the
+  old seeded Alice camera/upload path.
+- `.maestro/legacy/p3-15-voice-record.yaml`: superseded by
+  `modules/09-voice-notes.yaml`. Keep only for debugging the old seeded
+  Alice voice path.
+- `.maestro/pending/usage-limit-dialog.yaml`: blocked until reset
+  tooling can seed Alice at the free-plan limit without spending AI
+  tokens.
+- `.maestro/pending/usage-near-limit-toast.yaml`: blocked until the
+  mobile client surfaces `X-Usage-Warning` as a near-limit toast and
+  reset tooling can seed the near-limit state.
+
+The old P3.14a usage-limits-card flow was folded into
+`modules/15-usage.yaml`, which now asserts the free-plan limits card
+and default buckets as part of `regression-journey.yaml`.
 
 ## iOS sim quirks
 

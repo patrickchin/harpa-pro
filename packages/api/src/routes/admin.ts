@@ -5,7 +5,8 @@
  * NOT buffer the full set in memory. Columns:
  *   id, email, company, role, source, confirmed_at, created_at
  *
- * Auth: bearer JWT (withAuth) + auth.users.is_admin = true (withAdmin).
+ * Auth: bearer better-auth session token (withAuth) +
+ * `public."user".is_admin = true` (withAdmin).
  * Non-admin → 403. Anonymous → 401.
  *
  * See docs/marketing/plan-m1-waitlist.md §M1.6.

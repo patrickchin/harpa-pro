@@ -157,14 +157,18 @@ ensures the legacy path is gone:
 - `check-no-supabase.sh` — no `@supabase/*` import or `supabase.*`
   URL in `apps/`, `packages/`, `infra/`. (Covers JSON / TOML / YAML
   too, so kept as a grep gate rather than an ESLint rule.)
-- `check-no-unistyles.sh` — no `react-native-unistyles` outside
-  `docs/legacy-v3/`. Same rationale as above (covers non-JS files).
+- `check-no-unistyles.sh` — no `react-native-unistyles` anywhere
+  in `apps/`, `packages/`, or `infra/`. Same rationale as above
+  (covers non-JS files).
 - `check-scope-tests.sh` — every authed route has scope tests.
 - `check-spec-drift.sh` — regenerates the OpenAPI spec + types and
   fails if anything would change, keeping `api-contract` in sync
   with `packages/api/src/routes/`.
 - `check-maestro-appid.sh` — Maestro flows must reference
   `${MAESTRO_APP_ID}` rather than a hardcoded bundle id.
+- `check-no-maestro-point-taps.sh` — Maestro flows must tap text,
+  accessibility labels, or testIDs rather than device-dependent
+  `point:` coordinates.
 - `check-no-process-env-r2.sh` — R2 config is read through
   `env.R2_*` only (Pitfall 13 — no `process.env.R2_*` escape
   hatches that bypass DI).

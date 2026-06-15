@@ -162,9 +162,17 @@ jobs:
         # Runs curl journey scripts against the just-deployed prod API.
         # Order: stress (~10s, no AI) → core (~3min, live AI) → extended (~5min, live AI).
         # On failure the workflow goes red but the deploy is NOT rolled back.
-        # Requires TEST_ACCOUNT_PHONES + TEST_ACCOUNT_PASSWORD in Doppler prd
-        # (so they're synced to the Fly app) and TEST_ACCOUNT_PASSWORD as a
-        # GitHub Actions secret (so this step can authenticate).
+        # Requires TEST_ACCOUNT_EMAILS + TEST_ACCOUNT_PASSWORD in Doppler prd
+        # (so they're synced to the Fly app and seeded by release_command)
+        # and TEST_ACCOUNT_PASSWORD as a GitHub Actions secret (so this
+        # step can authenticate).
         env:
           PASSWORD: ${{ secrets.TEST_ACCOUNT_PASSWORD_PRD }}
-        run: bash scripts/journeys/all.sh prod
+          EMAIL: ${{ vars.TEST_ACCOUNT_EMAIL_PRD }}
+          EMAIL2: ${{ vars.TEST_ACCOUNT_EMAIL2_PRD }}
+        run: |
+          if [[ -z "${EMAIL:-}" ]]; then
+            echo "::error::TEST_ACCOUNT_EMAIL_PRD repo variable is unset; cannot run journeys" >&2
+            exit 1
+          fi
+          bash scripts/journeys/all.sh prod

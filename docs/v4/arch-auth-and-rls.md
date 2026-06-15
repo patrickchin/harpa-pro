@@ -281,7 +281,7 @@ curl -X POST "$API/api/auth/sign-in/email" \
 
 Then use the returned `token` as `Authorization: Bearer …`.
 
-Env vars (Doppler `dev` only — must be unset on `prd`):
+Env vars (Doppler `dev` and `prd`):
 
 | Var | Purpose |
 |---|---|
@@ -289,8 +289,11 @@ Env vars (Doppler `dev` only — must be unset on `prd`):
 | `TEST_ACCOUNT_PASSWORD` | Shared password, min 16 chars |
 
 Env-Zod enforces both-or-neither. `TEST_ACCOUNT_EMAILS` is set in
-both `dev` and `prd` so smoke-test logins keep working on the live
-deploy; the before-hook still rejects any email not on the allowlist.
+both `dev` and `prd` so smoke-test logins keep working on live
+deployments; the before-hook still rejects any email not on the
+allowlist. The deploy seed is credential-level idempotent: if an
+allowlisted user already exists, it creates or refreshes that user's
+`credential` account password instead of assuming the user is ready.
 
 ## Env vars
 

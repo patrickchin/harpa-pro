@@ -24,8 +24,39 @@
  * See docs/superpowers/specs/2026-06-02-migrate-auth-to-better-auth-design.md
  * §Test-account smoke-test path.
  */
+import { sql } from 'drizzle-orm';
 import { auth } from '../src/auth/auth.js';
+import { rawDb } from '../src/db/client.js';
 import { env } from '../src/env.js';
+
+async function ensureCredentialAccount(
+  ctx: Awaited<typeof auth.$context>,
+  userId: string,
+  passwordHash: string,
+): Promise<'created' | 'updated'> {
+  const db = rawDb();
+  const updated = await db.execute(sql`
+    UPDATE public."account"
+    SET
+      account_id = ${userId},
+      password = ${passwordHash},
+      updated_at = now()
+    WHERE user_id = ${userId}
+      AND provider_id = 'credential'
+  `);
+
+  if ((updated.rowCount ?? 0) > 0) {
+    return 'updated';
+  }
+
+  await ctx.internalAdapter.linkAccount({
+    userId,
+    providerId: 'credential',
+    accountId: userId,
+    password: passwordHash,
+  });
+  return 'created';
+}
 
 async function main(): Promise<void> {
   if (!env.TEST_ACCOUNT_EMAILS || !env.TEST_ACCOUNT_PASSWORD) {
@@ -44,12 +75,14 @@ async function main(): Promise<void> {
   for (const email of emails) {
     try {
       const existing = await ctx.internalAdapter.findUserByEmail(email);
+      const passwordHash = await ctx.password.hash(env.TEST_ACCOUNT_PASSWORD);
+
       if (existing?.user) {
-        console.log(`[seed-test-account] ${email} already exists`);
+        const action = await ensureCredentialAccount(ctx, existing.user.id, passwordHash);
+        console.log(`[seed-test-account] ${email} user exists; credential ${action}`);
         continue;
       }
 
-      const passwordHash = await ctx.password.hash(env.TEST_ACCOUNT_PASSWORD);
       const created = await ctx.internalAdapter.createUser({
         email,
         name: email,
@@ -58,13 +91,8 @@ async function main(): Promise<void> {
       if (!created) {
         throw new Error('createUser returned no user');
       }
-      await ctx.internalAdapter.linkAccount({
-        userId: created.id,
-        providerId: 'credential',
-        accountId: created.id,
-        password: passwordHash,
-      });
-      console.log(`[seed-test-account] created ${email}`);
+      await ensureCredentialAccount(ctx, created.id, passwordHash);
+      console.log(`[seed-test-account] created ${email}; credential created`);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       console.error(`[seed-test-account] ${email}: ${msg}`);

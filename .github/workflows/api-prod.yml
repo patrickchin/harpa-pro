@@ -137,10 +137,9 @@ jobs:
 
       # Closes the loop on the 2026-05-20 incident: a green workflow now
       # means the new image is up AND able to serve real traffic against
-      # the migrated schema. Prod runs `min_machines_running = 2` so
-      # machines stay warm, but we share scripts/ci/verify-readyz.sh
-      # with api-dev.yml so the verify behaviour can't drift between
-      # environments. See docs/bugs/README.md.
+      # the migrated schema. Prod currently runs `min_machines_running = 0`,
+      # so this uses the same cold-resume-tolerant verifier as dev and
+      # preview. See docs/bugs/README.md.
       - name: Verify /readyz
         env:
           READYZ_URL: ${{ env.API_READY_URL }}

@@ -192,6 +192,48 @@ adb reverse tcp:8787 tcp:8787
 maestro test .maestro/dev-otp-hardening.yaml
 ```
 
+## `store-screenshots.yaml` (App Store / Play Store assets)
+
+Focused flow for generating store-listing screenshots from polished,
+repeatable fixture data. The flow expects
+`scripts/maestro/seed-store-screenshots.sh` to seed the local Postgres
+database and MinIO bucket first, then captures:
+
+1. projects list
+2. reports list
+3. members management with a six-person team
+4. live voice-note recording state
+5. finalized report issues with placed photos
+6. finalized report detailed sections and unplaced photos
+7. generated PDF preview
+8. usage history with limits, OpenAI/Groq model mix, and recent events
+
+Run against the local fixture stack and a screenshot-mode Metro bundle:
+
+```bash
+export DEV_OTP_TOKEN=dev-token-at-least-32-characters
+export MAESTRO_APP_ID=com.harpa.pro.dev
+docker compose down -v && docker compose up -d
+scripts/maestro/seed-store-screenshots.sh
+adb reverse tcp:8081 tcp:8081
+adb reverse tcp:8787 tcp:8787
+adb reverse tcp:9000 tcp:9000
+adb shell settings put global policy_control immersive.full=*
+EXPO_PUBLIC_API_URL=http://localhost:8787 \
+EXPO_PUBLIC_USE_FIXTURES=false \
+EXPO_PUBLIC_SCREENSHOT_MODE=true \
+pnpm --filter @harpa/mobile start --dev-client
+maestro test .maestro/store-screenshots.yaml
+adb shell settings delete global policy_control || true
+```
+
+`EXPO_PUBLIC_USE_FIXTURES=false` keeps report and usage data backed by
+the seeded API rows. `EXPO_PUBLIC_SCREENSHOT_MODE=true` hides the status
+bar and uses deterministic screenshot-only input paths such as the canned
+voice recorder backend. Construction images are not bundled into the app;
+the seed script uploads the checked-in photos documented in
+`apps/mobile/assets/fixtures/store-screenshots.md` to local MinIO.
+
 ## Archived and pending flows
 
 Top-level `.maestro/*.yaml` files are current entrypoints. Historical

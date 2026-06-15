@@ -19,7 +19,8 @@
 #   usage-limit-KIND / usage-limit-bar-KIND
 #                              →  testID={`usage-limit-${b.kind}`} and
 #                                  `usage-limit-bar-${b.kind}`
-#   report-row-draft-0         →  testID={`report-row-${item.number}`} in seeded flows
+#   report-row-N               →  testID={`report-row-${item.number}`} in seeded flows
+#   report-row-draft-0         →  legacy seeded fixture id
 #   input-phone                →  rendered by auth/login flow outside static source match
 #   id-a|id-b                  →  Maestro regex alternation, literals checked
 #                                  elsewhere by this same script
@@ -39,17 +40,19 @@ TESTIDS=$(grep -rhE "^[[:space:]]*id:[[:space:]]*['\"]" \
     .maestro/regression-journey.yaml \
     .maestro/dev-otp-hardening.yaml \
     .maestro/place-photo-on-issue.flow.yml \
+    .maestro/store-screenshots.yaml \
   | sed -E "s/.*id:[[:space:]]*['\"]([^'\"]*)['\"].*/\1/" \
   | sort -u)
 
 # Known false-negatives: exact literal not in source but rendered at runtime.
 # Format: space-separated list of testID values to skip.
-KNOWN_TEMPLATE_IDS="picker-member-role-editor picker-member-role-viewer btn-camera-thumb-0 btn-camera-thumb-1 batch-grid-tile-0 batch-grid-tile-1 batch-grid-tile-0-ring batch-grid-tile-0-cancel batch-grid-tile-0-img batch-grid-tile-1-ring batch-grid-tile-1-img report-row-draft-0 input-phone btn-project-edit|btn-new-project screen-onboarding|btn-new-project|e2e-password-login-error"
+KNOWN_TEMPLATE_IDS="picker-member-role-editor picker-member-role-viewer btn-camera-thumb-0 btn-camera-thumb-1 batch-grid-tile-0 batch-grid-tile-1 batch-grid-tile-0-ring batch-grid-tile-0-cancel batch-grid-tile-0-img batch-grid-tile-1-ring batch-grid-tile-1-cancel batch-grid-tile-1-img report-row-draft-0 input-phone btn-project-edit|btn-new-project screen-onboarding|btn-new-project|e2e-password-login-error"
 
 is_known() {
   local id="$1"
   [[ "$id" =~ ^attachment-picker-thumbnail-[0-9]+-image$ ]] && return 0
   [[ "$id" =~ ^usage-limit(-bar)?-(report_generate|voice_transcribe|voice_summarize|ai_input_tokens|ai_output_tokens)$ ]] && return 0
+  [[ "$id" =~ ^report-row-[0-9]+$ ]] && return 0
   for known in $KNOWN_TEMPLATE_IDS; do
     [[ "$id" == "$known" ]] && return 0
   done
@@ -61,8 +64,14 @@ echo "Checking Maestro testIDs against mobile source…"
 # Search for a string appearing anywhere in the mobile source
 grep_src() {
   local pattern="$1"
-  grep -qr --include="*.tsx" --include="*.ts" --exclude-dir=node_modules \
-    "${pattern}" "$MOBILE_SRC" 2>/dev/null
+  if command -v rg >/dev/null 2>&1; then
+    rg -q --fixed-strings --glob "*.tsx" --glob "*.ts" "${pattern}" "$MOBILE_SRC"
+  elif command -v rg.exe >/dev/null 2>&1; then
+    rg.exe -q --fixed-strings --glob "*.tsx" --glob "*.ts" "${pattern}" "$MOBILE_SRC"
+  else
+    grep -qr --include="*.tsx" --include="*.ts" --exclude-dir=node_modules \
+      "${pattern}" "$MOBILE_SRC" 2>/dev/null
+  fi
 }
 
 while IFS= read -r id; do

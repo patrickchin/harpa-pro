@@ -35,6 +35,7 @@ import {
 } from '@/lib/telemetry/Sentry';
 import { queryClient, queryPersister } from '@/lib/api/query-client';
 import { shouldDehydrateQuery } from '@/lib/api/query-persister';
+import { env } from '@/lib/config/env';
 
 // Initialize Sentry when EXPO_PUBLIC_SENTRY_DSN is present.
 initSentry();
@@ -136,7 +137,7 @@ export default function RootLayout() {
             persistOptions={persistOptions}
           >
             <AuthSessionProvider>
-              <StatusBar style="dark" />
+              <StatusBar hidden={env.EXPO_PUBLIC_SCREENSHOT_MODE} style="dark" />
               <DialogSheetProvider>
                 <QueueProvider>
                   <AudioPlaybackProvider>

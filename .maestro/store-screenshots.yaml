@@ -15,10 +15,10 @@ tags:
 #   - Android callers enable immersive mode before capture so navigation
 #     chrome is absent from App Store / Play Store screenshots
 #
-# Screenshot mode hides the app-managed status bar and uses the fixture
-# recorder for deterministic voice-recording UI. Report data still comes
-# from the seeded local API, so the finalized report and PDF reflect the
-# store screenshot fixture report body.
+# Screenshot mode uses the fixture recorder for deterministic
+# voice-recording UI. Report data still comes from the seeded local API,
+# so the finalized report and PDF reflect the store screenshot fixture
+# report body.
 
 - launchApp:
     clearState: true
@@ -61,7 +61,8 @@ tags:
       id: "btn-new-project"
     timeout: 15000
 - extendedWaitUntil:
-    visible: "Riverside Tower"
+    visible:
+      id: "project-row-prj_rvrsd000001"
     timeout: 15000
 - extendedWaitUntil:
     visible: "Harbor Point Retrofit"
@@ -69,7 +70,8 @@ tags:
 - waitForAnimationToEnd
 - takeScreenshot: 01_projects_list
 
-- tapOn: "Riverside Tower"
+- tapOn:
+    id: "project-row-prj_rvrsd000001"
 - extendedWaitUntil:
     visible:
       id: "btn-open-reports"
@@ -195,6 +197,12 @@ tags:
 - waitForAnimationToEnd
 - takeScreenshot: 07_pdf_preview
 
+- tapOn:
+    id: "btn-back"
+- extendedWaitUntil:
+    visible:
+      id: "saved-report-pane"
+    timeout: 15000
 - openLink: "harpa://usage"
 - runFlow:
     file: helpers/dismiss-open-dialog.yaml
@@ -202,14 +210,23 @@ tags:
     visible:
       id: "screen-usage"
     timeout: 30000
+- extendedWaitUntil:
+    notVisible:
+      id: "usage-loading"
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: "usage-by-model"
+    direction: DOWN
+    timeout: 60000
+    visibilityPercentage: 10
+    centerElement: false
 - scrollUntilVisible:
     element:
       id: "usage-recent-events"
     direction: DOWN
     timeout: 60000
-- extendedWaitUntil:
-    visible:
-      id: "usage-by-model"
-    timeout: 15000
+    visibilityPercentage: 10
+    centerElement: false
 - waitForAnimationToEnd
 - takeScreenshot: 08_usage

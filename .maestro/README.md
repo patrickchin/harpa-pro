@@ -228,10 +228,11 @@ adb shell settings delete global policy_control || true
 ```
 
 `EXPO_PUBLIC_USE_FIXTURES=false` keeps report and usage data backed by
-the seeded API rows. `EXPO_PUBLIC_SCREENSHOT_MODE=true` hides the status
-bar and uses deterministic screenshot-only input paths such as the canned
-voice recorder backend. Construction images are not bundled into the app;
-the seed script uploads the checked-in photos documented in
+the seeded API rows. `EXPO_PUBLIC_SCREENSHOT_MODE=true` uses
+deterministic screenshot-only input paths such as the canned voice
+recorder backend while leaving system status chrome visible.
+Construction images are not bundled into the app; the seed script
+uploads the checked-in photos documented in
 `apps/mobile/assets/fixtures/store-screenshots.md` to local MinIO.
 
 ## Archived and pending flows

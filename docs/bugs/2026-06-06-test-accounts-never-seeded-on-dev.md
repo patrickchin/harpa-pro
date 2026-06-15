@@ -195,3 +195,26 @@ The `api-dev.yml` step now reads both variables and exports
 `TEST_ACCOUNT_EMAILS_DEV` value MUST update the matching GitHub
 repo variable; this is the kind of cross-system coupling that
 killed PR #151 + #152 the first two times.
+
+## Followup #3 (2026-06-15) — existing users without fresh credentials
+
+The seed script still skipped work when `findUserByEmail()` returned an
+existing user. That is not enough for better-auth password smoke tests:
+an allowlisted user can exist because of OTP sign-in, a previous broken
+seed, or an old password, while still lacking a usable `credential`
+account for the current `TEST_ACCOUNT_PASSWORD`.
+
+Fix: make seeding credential-level idempotent. For every allowlisted
+email, the script now ensures the user exists and then creates or
+updates the `provider_id='credential'` account row with a freshly
+hashed current test password. Production's Fly `release_command` also
+runs the seed because `api-prod` post-deploy journeys authenticate with
+the same test-account path.
+
+Main promotion had a second wiring drift: `api-dev.yml` passed `EMAIL`
+and `EMAIL2` from repo variables, but `main-gate.yml` still used the
+journey defaults (`alice@e2e.harpapro.com` / `bob@e2e.harpapro.com`).
+That made PR-to-main checks fail whenever the seeded Fly allowlist used
+different addresses. `main-gate.yml` now uses the same dev repo
+variables, and `api-prod.yml` requires prod-specific repo variables so
+the post-deploy journey target is explicit.

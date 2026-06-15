@@ -8,12 +8,13 @@ primary_region = "fra"
   dockerfile = "Dockerfile"
 
 [deploy]
-  # Run pending migrations inside a release machine using the existing
-  # DATABASE_URL secret. Fly promotes the new image to app machines ONLY
-  # if this exits 0 — so a broken migration aborts the rollout instead
-  # of leaving prod with code ahead of schema.
+  # Run pending migrations and seed smoke-test accounts inside a release
+  # machine using the existing DATABASE_URL secret. Fly promotes the new
+  # image to app machines ONLY if this exits 0 — so a broken migration or
+  # broken test-account seed aborts the rollout instead of leaving prod
+  # with code ahead of schema or unverifiable post-deploy journeys.
   # See docs/v4/arch-cicd-and-migrations.md.
-  release_command = "pnpm --filter @harpa/api db:migrate"
+  release_command = "sh -c 'pnpm --filter @harpa/api db:migrate && pnpm --filter @harpa/api db:seed-test-account'"
 
 [env]
   NODE_ENV = "production"

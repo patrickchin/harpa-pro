@@ -35,4 +35,11 @@ jobs:
         # Tests the dev deployment as-is; assumes `dev` is the merge candidate.
         env:
           PASSWORD: ${{ secrets.TEST_ACCOUNT_PASSWORD_DEV }}
-        run: bash scripts/journeys/all.sh dev
+          EMAIL: ${{ vars.TEST_ACCOUNT_EMAIL_DEV }}
+          EMAIL2: ${{ vars.TEST_ACCOUNT_EMAIL2_DEV }}
+        run: |
+          if [[ -z "${EMAIL:-}" ]]; then
+            echo "::error::TEST_ACCOUNT_EMAIL_DEV repo variable is unset; cannot run journeys" >&2
+            exit 1
+          fi
+          bash scripts/journeys/all.sh dev

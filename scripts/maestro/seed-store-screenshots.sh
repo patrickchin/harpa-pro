@@ -165,7 +165,7 @@ VALUES
    (TIMESTAMPTZ :'screenshot_now') - interval '20 hours'),
   ('rpt_rvrsd000004', 'prj_rvrsd000001', 'usr_strscrn0001', 4, 'draft',
    (TIMESTAMPTZ :'screenshot_now'),
-   NULL,
+   '{"meta":{"title":"Site Visit — Concrete Pouring and Site Conditions","summary":"Concrete pouring for the second floor is underway with site access and ground conditions documented for follow-up.","visitDate":"2026-06-15"},"weather":null,"workers":[],"materials":[],"issues":[],"nextSteps":[],"summarySections":[]}'::jsonb,
    5, (TIMESTAMPTZ :'screenshot_now') - interval '45 minutes', NULL, NULL,
    (TIMESTAMPTZ :'screenshot_now') - interval '2 hours', (TIMESTAMPTZ :'screenshot_now') - interval '30 minutes'),
   ('rpt_harbp000001', 'prj_harbp000001', 'usr_strscrn0001', 1, 'draft',
@@ -185,7 +185,8 @@ VALUES
   ('fil_rebar000001', 'usr_strscrn0001', 'image', 'projects/prj_rvrsd000001/reports/rpt_rvrsd000003/fil_rebar000001.jpg', 225493, 'image/jpeg', 'prj_rvrsd000001', 'rpt_rvrsd000003', (TIMESTAMPTZ :'screenshot_now') - interval '1 day' + interval '2 hours'),
   ('fil_scaf0000001', 'usr_strscrn0001', 'image', 'projects/prj_rvrsd000001/reports/rpt_rvrsd000003/fil_scaf0000001.jpg', 277449, 'image/jpeg', 'prj_rvrsd000001', 'rpt_rvrsd000003', (TIMESTAMPTZ :'screenshot_now') - interval '1 day' + interval '2 hours'),
   ('fil_area0000001', 'usr_strscrn0001', 'image', 'projects/prj_rvrsd000001/reports/rpt_rvrsd000003/fil_area0000001.jpg', 259997, 'image/jpeg', 'prj_rvrsd000001', 'rpt_rvrsd000003', (TIMESTAMPTZ :'screenshot_now') - interval '1 day' + interval '2 hours'),
-  ('fil_hmse0000001', 'usr_strscrn0001', 'image', 'projects/prj_rvrsd000001/reports/rpt_rvrsd000003/fil_hmse0000001.jpg', 115980, 'image/jpeg', 'prj_rvrsd000001', 'rpt_rvrsd000003', (TIMESTAMPTZ :'screenshot_now') - interval '1 day' + interval '2 hours');
+  ('fil_hmse0000001', 'usr_strscrn0001', 'image', 'projects/prj_rvrsd000001/reports/rpt_rvrsd000003/fil_hmse0000001.jpg', 115980, 'image/jpeg', 'prj_rvrsd000001', 'rpt_rvrsd000003', (TIMESTAMPTZ :'screenshot_now') - interval '1 day' + interval '2 hours'),
+  ('fil_dprep000001', 'usr_strscrn0001', 'image', 'projects/prj_rvrsd000001/reports/rpt_rvrsd000004/fil_dprep000001.jpg', 178001, 'image/jpeg', 'prj_rvrsd000001', 'rpt_rvrsd000004', (TIMESTAMPTZ :'screenshot_now') - interval '80 minutes');
 
 INSERT INTO app.notes
   (id, report_id, author_id, kind, body, transcript, title, summary,
@@ -226,6 +227,11 @@ VALUES
    'North stair opening protected. Crew should recheck the temporary rail after lunch because the drywall delivery will pass through this zone.',
    NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'typed',
    '{}'::jsonb, (TIMESTAMPTZ :'screenshot_now') - interval '90 minutes', (TIMESTAMPTZ :'screenshot_now') - interval '90 minutes'),
+  ('not_dsnap0001', 'rpt_rvrsd000004', 'usr_mbrdax0004', 'image',
+   'Photo note: covered cement board staged on the east platform for tomorrow''s pour prep.',
+   NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'gallery',
+   '{"caption":"Covered cement board staging"}'::jsonb,
+   (TIMESTAMPTZ :'screenshot_now') - interval '80 minutes', (TIMESTAMPTZ :'screenshot_now') - interval '80 minutes'),
   ('not_dtxtb00001', 'rpt_rvrsd000004', 'usr_mbranna0001', 'text',
    'Delivery marshal confirmed tomorrow concrete trucks will stage at the west gate instead of the fire lane.',
    NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'typed',
@@ -246,7 +252,8 @@ VALUES
   ('nfl_rebar000001', 'not_prebar0001', 'fil_rebar000001', 'fil_rebar000001', 0, 'South foundation rebar and waterproofing hold point', (TIMESTAMPTZ :'screenshot_now') - interval '1 day' + interval '2 hours'),
   ('nfl_scaf0000001', 'not_pscaf0001', 'fil_scaf0000001', 'fil_scaf0000001', 0, 'East elevation scaffold access bays', (TIMESTAMPTZ :'screenshot_now') - interval '1 day' + interval '2 hours 15 minutes'),
   ('nfl_area0000001', 'not_parea0001', 'fil_area0000001', 'fil_area0000001', 0, 'Overall site overview', (TIMESTAMPTZ :'screenshot_now') - interval '1 day' + interval '2 hours 30 minutes'),
-  ('nfl_hmse0000001', 'not_phmse0001', 'fil_hmse0000001', 'fil_hmse0000001', 0, 'Exterior progress reference', (TIMESTAMPTZ :'screenshot_now') - interval '1 day' + interval '2 hours 38 minutes');
+  ('nfl_hmse0000001', 'not_phmse0001', 'fil_hmse0000001', 'fil_hmse0000001', 0, 'Exterior progress reference', (TIMESTAMPTZ :'screenshot_now') - interval '1 day' + interval '2 hours 38 minutes'),
+  ('nfl_dprep000001', 'not_dsnap0001', 'fil_dprep000001', 'fil_dprep000001', 0, 'Covered cement board staging', (TIMESTAMPTZ :'screenshot_now') - interval '80 minutes');
 
 INSERT INTO app.llm_usage_events
   (id, user_id, project_id, report_id, vendor, model, operation,
@@ -255,14 +262,14 @@ INSERT INTO app.llm_usage_events
 VALUES
   ('lue_000000000001', 'usr_strscrn0001', 'prj_rvrsd000001', 'rpt_rvrsd000003', 'openai', 'gpt-4.1-mini', 'generate_report', 18420, 3250, 2200, NULL, 5240, 'replay', 'ok', (TIMESTAMPTZ :'screenshot_now') - interval '1 day' + interval '30 minutes'),
   ('lue_000000000002', 'usr_strscrn0001', 'prj_rvrsd000001', 'rpt_rvrsd000004', 'openai', 'gpt-4.1-mini', 'chat', 2410, 680, 310, NULL, 1830, 'replay', 'ok', (TIMESTAMPTZ :'screenshot_now') - interval '3 hours'),
-  ('lue_000000000003', 'usr_strscrn0001', 'prj_rvrsd000001', 'rpt_rvrsd000004', 'groq', 'whisper-large-v3-turbo', 'transcribe', 0, 0, 0, 75600.000, 1280, 'replay', 'ok', (TIMESTAMPTZ :'screenshot_now') - interval '55 minutes'),
+  ('lue_000000000003', 'usr_strscrn0001', 'prj_rvrsd000001', 'rpt_rvrsd000004', 'groq', 'whisper-large-v3-turbo', 'transcribe', 0, 0, 0, 720.000, 1280, 'replay', 'ok', (TIMESTAMPTZ :'screenshot_now') - interval '55 minutes'),
   ('lue_000000000004', 'usr_strscrn0001', 'prj_rvrsd000001', 'rpt_rvrsd000004', 'openai', 'gpt-4.1-mini', 'chat', 1760, 520, 200, NULL, 1160, 'replay', 'ok', (TIMESTAMPTZ :'screenshot_now') - interval '40 minutes'),
   ('lue_000000000005', 'usr_strscrn0001', 'prj_rvrsd000001', 'rpt_rvrsd000002', 'openai', 'gpt-4.1', 'generate_report', 16200, 2890, 1800, NULL, 6020, 'replay', 'ok', (TIMESTAMPTZ :'screenshot_now') - interval '13 days' + interval '45 minutes'),
   ('lue_000000000006', 'usr_strscrn0001', 'prj_centr000001', 'rpt_centr000001', 'openai', 'gpt-4.1-nano', 'generate_report', 14100, 2440, 0, NULL, 7150, 'replay', 'ok', (TIMESTAMPTZ :'screenshot_now') - interval '19 days' + interval '30 minutes'),
   ('lue_000000000007', 'usr_strscrn0001', 'prj_harbp000001', 'rpt_harbp000001', 'openai', 'gpt-4.1-nano', 'chat', 3320, 980, 440, NULL, 2380, 'replay', 'ok', (TIMESTAMPTZ :'screenshot_now') - interval '22 days'),
   ('lue_000000000008', 'usr_strscrn0001', 'prj_rvrsd000001', 'rpt_rvrsd000001', 'openai', 'gpt-4.1-mini', 'generate_report', 12900, 2110, 1250, NULL, 4930, 'replay', 'ok', (TIMESTAMPTZ :'screenshot_now') - interval '36 days'),
   ('lue_000000000009', 'usr_strscrn0001', 'prj_harbp000001', 'rpt_harbp000001', 'openai', 'gpt-4.1-mini', 'chat', 2200, 510, 0, NULL, 2140, 'replay', 'error', (TIMESTAMPTZ :'screenshot_now') - interval '2 hours'),
-  ('lue_000000000010', 'usr_strscrn0001', 'prj_rvrsd000001', 'rpt_rvrsd000003', 'groq', 'whisper-large-v3-turbo', 'transcribe', 0, 0, 0, 80100.000, 1510, 'replay', 'ok', (TIMESTAMPTZ :'screenshot_now') - interval '1 day' + interval '1 hour'),
+  ('lue_000000000010', 'usr_strscrn0001', 'prj_rvrsd000001', 'rpt_rvrsd000003', 'groq', 'whisper-large-v3-turbo', 'transcribe', 0, 0, 0, 840.000, 1510, 'replay', 'ok', (TIMESTAMPTZ :'screenshot_now') - interval '1 day' + interval '1 hour'),
   ('lue_000000000011', 'usr_strscrn0001', 'prj_rvrsd000001', 'rpt_rvrsd000003', 'openai', 'gpt-4.1', 'chat', 3890, 1020, 700, NULL, 1940, 'replay', 'ok', (TIMESTAMPTZ :'screenshot_now') - interval '1 day' + interval '2 hours'),
   ('lue_000000000012', 'usr_strscrn0001', 'prj_wstgt000001', NULL, 'openai', 'gpt-4.1-nano', 'chat', 1180, 340, 0, NULL, 1430, 'replay', 'ok', (TIMESTAMPTZ :'screenshot_now') - interval '45 days');
 
@@ -298,6 +305,7 @@ mc cp /data/store-screenshot-fixtures/store-construction-rebar-foundation.jpg lo
 mc cp /data/store-screenshot-fixtures/store-construction-scaffolding.jpg local/harpa-pro/projects/prj_rvrsd000001/reports/rpt_rvrsd000003/fil_scaf0000001.jpg >/dev/null
 mc cp /data/store-screenshot-fixtures/store-construction-overhead.jpg local/harpa-pro/projects/prj_rvrsd000001/reports/rpt_rvrsd000003/fil_area0000001.jpg >/dev/null
 mc cp /data/store-screenshot-fixtures/store-construction-homes.jpg local/harpa-pro/projects/prj_rvrsd000001/reports/rpt_rvrsd000003/fil_hmse0000001.jpg >/dev/null
+mc cp /data/store-screenshot-fixtures/store-construction-materials-platform.jpg local/harpa-pro/projects/prj_rvrsd000001/reports/rpt_rvrsd000004/fil_dprep000001.jpg >/dev/null
 '
 
 docker exec harpa-pro-minio sh -c "rm -rf /data/store-screenshot-fixtures"

@@ -1,9 +1,9 @@
 # Store Screenshot Photo Fixtures
 
-These construction-site images are bundled for the Maestro
-`store-screenshots.yaml` flow. They are used only when
-`EXPO_PUBLIC_SCREENSHOT_MODE=true`; the normal photo-library path still
-opens the system picker.
+These construction-site images feed the Maestro `store-screenshots.yaml`
+flow. They are not imported by mobile runtime code; the seed script uploads
+the optimized 1280px JPEGs to local MinIO and inserts matching `app.files`
+rows before screenshots are captured.
 
 - `store-construction-overhead.jpg` - "View Above Construction Site
   (Unsplash)" by chuttersnap, published on Wikimedia Commons as CC0.

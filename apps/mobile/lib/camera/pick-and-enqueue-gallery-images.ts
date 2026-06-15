@@ -16,7 +16,6 @@
  */
 import type { UploadResult } from '@/lib/uploads/types';
 import { env } from '@/lib/config/env';
-import { resolveScreenshotGalleryFixtureUris } from './screenshot-gallery-fixtures';
 
 export type PickAndEnqueueOutcome =
   | { kind: 'permission-denied' }
@@ -43,9 +42,7 @@ export async function pickAndEnqueueGalleryImages(
   options: PickAndEnqueueOptions,
 ): Promise<PickAndEnqueueOutcome> {
   if (options.screenshotMode ?? env.EXPO_PUBLIC_SCREENSHOT_MODE) {
-    const uris = await (
-      options.resolveScreenshotFixtureUris ?? resolveScreenshotGalleryFixtureUris
-    )();
+    const uris = (await options.resolveScreenshotFixtureUris?.()) ?? [];
     if (uris.length === 0) return { kind: 'empty' };
     const results = await options.enqueueCameraUris(uris, {
       reportId: options.reportId,

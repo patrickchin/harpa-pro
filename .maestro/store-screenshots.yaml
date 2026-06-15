@@ -12,11 +12,13 @@ tags:
 #   - Metro is running with EXPO_PUBLIC_USE_FIXTURES=false and
 #     EXPO_PUBLIC_SCREENSHOT_MODE=true
 #   - Android callers have adb reverse for 8081, 8787, and 9000
+#   - Android callers enable immersive mode before capture so navigation
+#     chrome is absent from App Store / Play Store screenshots
 #
-# Screenshot mode hides system chrome and uses the fixture recorder for
-# deterministic voice-recording UI. Report data still comes from the
-# seeded local API, so the finalized report and PDF reflect the store
-# screenshot fixture report body.
+# Screenshot mode hides the app-managed status bar and uses the fixture
+# recorder for deterministic voice-recording UI. Report data still comes
+# from the seeded local API, so the finalized report and PDF reflect the
+# store screenshot fixture report body.
 
 - launchApp:
     clearState: true

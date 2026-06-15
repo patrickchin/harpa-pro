@@ -68,7 +68,7 @@ Replace the first-pass flow with a seeded capture flow that produces eight scree
 
 1. Add the plan document.
 2. Add four more CC0 fixture photos and update fixture source documentation.
-3. Update the screenshot gallery fixture list to include all six photos.
+3. Keep all six photos as seed-only MinIO fixtures so they are not bundled into release builds.
 4. Add `scripts/maestro/seed-store-screenshots.sh` to seed Postgres and MinIO.
 5. Update `.maestro/store-screenshots.yaml` to use the seeded state and capture the eight screens.
 6. Update `.maestro/README.md` with the seed step.

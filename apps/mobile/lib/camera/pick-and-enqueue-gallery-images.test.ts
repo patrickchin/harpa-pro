@@ -123,7 +123,7 @@ describe('pickAndEnqueueGalleryImages', () => {
     });
   });
 
-  it('uses screenshot fixture images without launching the system picker', async () => {
+  it('uses an explicit screenshot fixture resolver without launching the system picker', async () => {
     const settlement: PromiseSettledResult<UploadResult>[] = [
       { status: 'fulfilled', value: { file: fakeFile } },
       { status: 'fulfilled', value: { file: fakeFile } },
@@ -151,5 +151,20 @@ describe('pickAndEnqueueGalleryImages', () => {
       total: 2,
       results: settlement,
     });
+  });
+
+  it('returns empty in screenshot mode when no fixture resolver is provided', async () => {
+    const enqueue = vi.fn();
+    const outcome = await pickAndEnqueueGalleryImages({
+      reportId: 'rpt_1',
+      projectId: 'prj-test1234',
+      enqueueCameraUris: enqueue,
+      screenshotMode: true,
+    });
+
+    expect(outcome).toEqual({ kind: 'empty' });
+    expect(enqueue).not.toHaveBeenCalled();
+    expect(ImagePicker.requestMediaLibraryPermissionsAsync).not.toHaveBeenCalled();
+    expect(ImagePicker.launchImageLibraryAsync).not.toHaveBeenCalled();
   });
 });

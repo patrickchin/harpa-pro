@@ -17,6 +17,8 @@ docker inspect harpa-pro-pg >/dev/null
 docker inspect harpa-pro-minio >/dev/null
 
 docker exec -i harpa-pro-pg psql -U postgres -d harpa -v ON_ERROR_STOP=1 <<'SQL'
+\set screenshot_now '2026-06-15 09:00:00+00'
+
 TRUNCATE app.note_files, app.notes, app.files, app.llm_usage_events,
          app.user_limit_overrides, app.rate_limit_buckets, app.reports,
          app.project_members, app.projects, app.user_settings,
@@ -27,32 +29,32 @@ TRUNCATE app.note_files, app.notes, app.files, app.llm_usage_events,
 INSERT INTO public."user"
   (id, name, email, email_verified, display_name, company_name, plan, created_at, updated_at)
 VALUES
-  ('usr_strscrn0001', 'Avery Chen', 'store@e2e.harpapro.com', true, 'Avery Chen', 'HARPA Field Demo', 'pro', now() - interval '12 days', now()),
-  ('usr_mbranna0001', 'Maria Santos', 'maria@e2e.harpapro.com', true, 'Maria Santos', 'Northstar Builders', 'free', now() - interval '11 days', now()),
-  ('usr_mbrbea0002', 'Jamal Reed', 'jamal@e2e.harpapro.com', true, 'Jamal Reed', 'Northstar Builders', 'free', now() - interval '10 days', now()),
-  ('usr_mbrcyra0003', 'Nina Patel', 'nina@e2e.harpapro.com', true, 'Nina Patel', 'Northstar Builders', 'free', now() - interval '9 days', now()),
-  ('usr_mbrdax0004', 'Owen Brooks', 'owen@e2e.harpapro.com', true, 'Owen Brooks', 'Northstar Builders', 'free', now() - interval '8 days', now()),
-  ('usr_mbrvera0005', 'Priya Shah', 'priya@e2e.harpapro.com', true, 'Priya Shah', 'Northstar Builders', 'free', now() - interval '7 days', now());
+  ('usr_strscrn0001', 'Avery Chen', 'store@e2e.harpapro.com', true, 'Avery Chen', 'HARPA Field Demo', 'pro', (TIMESTAMPTZ :'screenshot_now') - interval '12 days', (TIMESTAMPTZ :'screenshot_now')),
+  ('usr_mbranna0001', 'Maria Santos', 'maria@e2e.harpapro.com', true, 'Maria Santos', 'Northstar Builders', 'free', (TIMESTAMPTZ :'screenshot_now') - interval '11 days', (TIMESTAMPTZ :'screenshot_now')),
+  ('usr_mbrbea0002', 'Jamal Reed', 'jamal@e2e.harpapro.com', true, 'Jamal Reed', 'Northstar Builders', 'free', (TIMESTAMPTZ :'screenshot_now') - interval '10 days', (TIMESTAMPTZ :'screenshot_now')),
+  ('usr_mbrcyra0003', 'Nina Patel', 'nina@e2e.harpapro.com', true, 'Nina Patel', 'Northstar Builders', 'free', (TIMESTAMPTZ :'screenshot_now') - interval '9 days', (TIMESTAMPTZ :'screenshot_now')),
+  ('usr_mbrdax0004', 'Owen Brooks', 'owen@e2e.harpapro.com', true, 'Owen Brooks', 'Northstar Builders', 'free', (TIMESTAMPTZ :'screenshot_now') - interval '8 days', (TIMESTAMPTZ :'screenshot_now')),
+  ('usr_mbrvera0005', 'Priya Shah', 'priya@e2e.harpapro.com', true, 'Priya Shah', 'Northstar Builders', 'free', (TIMESTAMPTZ :'screenshot_now') - interval '7 days', (TIMESTAMPTZ :'screenshot_now'));
 
 INSERT INTO app.projects
   (id, name, client_name, address, owner_id, next_report_number, created_at, updated_at)
 VALUES
-  ('prj_rvrsd000001', 'Riverside Tower', 'Riverside Capital', '88 Riverfront Ave, Austin, TX', 'usr_strscrn0001', 5, now() - interval '4 days', now() - interval '1 hour'),
-  ('prj_harbp000001', 'Harbor Point Retrofit', 'Portside Hotels', '212 Pier Market St, Oakland, CA', 'usr_strscrn0001', 2, now() - interval '6 days', now() - interval '5 hours'),
-  ('prj_centr000001', 'Central Clinic Addition', 'CityCare Health', '1440 Grant Road, Denver, CO', 'usr_strscrn0001', 3, now() - interval '8 days', now() - interval '1 day'),
-  ('prj_wstgt000001', 'Westgate Retail Shell', 'Westgate Partners', '700 Westgate Pkwy, Phoenix, AZ', 'usr_strscrn0001', 2, now() - interval '10 days', now() - interval '2 days');
+  ('prj_rvrsd000001', 'Riverside Tower', 'Riverside Capital', '88 Riverfront Ave, Austin, TX', 'usr_strscrn0001', 5, (TIMESTAMPTZ :'screenshot_now') - interval '4 days', (TIMESTAMPTZ :'screenshot_now') - interval '1 hour'),
+  ('prj_harbp000001', 'Harbor Point Retrofit', 'Portside Hotels', '212 Pier Market St, Oakland, CA', 'usr_strscrn0001', 2, (TIMESTAMPTZ :'screenshot_now') - interval '6 days', (TIMESTAMPTZ :'screenshot_now') - interval '5 hours'),
+  ('prj_centr000001', 'Central Clinic Addition', 'CityCare Health', '1440 Grant Road, Denver, CO', 'usr_strscrn0001', 3, (TIMESTAMPTZ :'screenshot_now') - interval '8 days', (TIMESTAMPTZ :'screenshot_now') - interval '1 day'),
+  ('prj_wstgt000001', 'Westgate Retail Shell', 'Westgate Partners', '700 Westgate Pkwy, Phoenix, AZ', 'usr_strscrn0001', 2, (TIMESTAMPTZ :'screenshot_now') - interval '10 days', (TIMESTAMPTZ :'screenshot_now') - interval '2 days');
 
 INSERT INTO app.project_members (project_id, user_id, role, joined_at)
 VALUES
-  ('prj_rvrsd000001', 'usr_strscrn0001', 'owner', now() - interval '4 days'),
-  ('prj_rvrsd000001', 'usr_mbranna0001', 'editor', now() - interval '4 days' + interval '2 hours'),
-  ('prj_rvrsd000001', 'usr_mbrbea0002', 'editor', now() - interval '4 days' + interval '3 hours'),
-  ('prj_rvrsd000001', 'usr_mbrcyra0003', 'viewer', now() - interval '3 days'),
-  ('prj_rvrsd000001', 'usr_mbrdax0004', 'editor', now() - interval '3 days' + interval '1 hour'),
-  ('prj_rvrsd000001', 'usr_mbrvera0005', 'viewer', now() - interval '2 days'),
-  ('prj_harbp000001', 'usr_strscrn0001', 'owner', now() - interval '6 days'),
-  ('prj_centr000001', 'usr_strscrn0001', 'owner', now() - interval '8 days'),
-  ('prj_wstgt000001', 'usr_strscrn0001', 'owner', now() - interval '10 days');
+  ('prj_rvrsd000001', 'usr_strscrn0001', 'owner', (TIMESTAMPTZ :'screenshot_now') - interval '4 days'),
+  ('prj_rvrsd000001', 'usr_mbranna0001', 'editor', (TIMESTAMPTZ :'screenshot_now') - interval '4 days' + interval '2 hours'),
+  ('prj_rvrsd000001', 'usr_mbrbea0002', 'editor', (TIMESTAMPTZ :'screenshot_now') - interval '4 days' + interval '3 hours'),
+  ('prj_rvrsd000001', 'usr_mbrcyra0003', 'viewer', (TIMESTAMPTZ :'screenshot_now') - interval '3 days'),
+  ('prj_rvrsd000001', 'usr_mbrdax0004', 'editor', (TIMESTAMPTZ :'screenshot_now') - interval '3 days' + interval '1 hour'),
+  ('prj_rvrsd000001', 'usr_mbrvera0005', 'viewer', (TIMESTAMPTZ :'screenshot_now') - interval '2 days'),
+  ('prj_harbp000001', 'usr_strscrn0001', 'owner', (TIMESTAMPTZ :'screenshot_now') - interval '6 days'),
+  ('prj_centr000001', 'usr_strscrn0001', 'owner', (TIMESTAMPTZ :'screenshot_now') - interval '8 days'),
+  ('prj_wstgt000001', 'usr_strscrn0001', 'owner', (TIMESTAMPTZ :'screenshot_now') - interval '10 days');
 
 INSERT INTO app.user_limit_overrides
   (user_id, report_generate, voice_transcribe, voice_summarize,
@@ -60,7 +62,7 @@ INSERT INTO app.user_limit_overrides
 VALUES
   ('usr_strscrn0001', 36, 240, 240, 250000, 90000,
    'Store screenshot account with realistic pro usage limits.',
-   'usr_strscrn0001', now() - interval '2 days');
+   'usr_strscrn0001', (TIMESTAMPTZ :'screenshot_now') - interval '2 days');
 
 INSERT INTO app.reports
   (id, project_id, author_id, number, status, visit_date, body,
@@ -68,17 +70,17 @@ INSERT INTO app.reports
    finalized_at, created_at, updated_at)
 VALUES
   ('rpt_rvrsd000001', 'prj_rvrsd000001', 'usr_strscrn0001', 1, 'finalized',
-   now() - interval '35 days',
+   (TIMESTAMPTZ :'screenshot_now') - interval '36 days',
    '{"meta":{"title":"Riverside Tower - Mobilization Report","summary":"Mobilization completed with erosion controls and access gates in place.","visitDate":"2026-05-10"},"weather":{"condition":"Clear","temperature":"23 C","wind":"Light south wind","impact":"No weather delays."},"workers":[{"role":"Superintendent","count":"1","hours":"8","notes":"Site orientation and access review."},{"role":"Laborers","count":"4","hours":"32","notes":"Fence and protection setup."}],"materials":[{"name":"Silt fence","quantity":"480","unit":"ft","status":"installed","condition":"Good","notes":"Installed along river frontage."}],"issues":[],"nextSteps":["Confirm crane delivery window.","Stage erosion control inspection."],"summarySections":[{"title":"Site Setup","body":"Access controls, staging, and temporary protections were established. The site is ready for excavation coordination.","attachments":{}}]}'::jsonb,
-   0, NULL, now() - interval '35 days', now() - interval '34 days',
-   now() - interval '35 days', now() - interval '34 days'),
+   0, NULL, (TIMESTAMPTZ :'screenshot_now') - interval '36 days', (TIMESTAMPTZ :'screenshot_now') - interval '35 days',
+   (TIMESTAMPTZ :'screenshot_now') - interval '36 days', (TIMESTAMPTZ :'screenshot_now') - interval '35 days'),
   ('rpt_rvrsd000002', 'prj_rvrsd000001', 'usr_strscrn0001', 2, 'finalized',
-   now() - interval '12 days',
+   (TIMESTAMPTZ :'screenshot_now') - interval '13 days',
    '{"meta":{"title":"Riverside Tower - Excavation Update","summary":"Excavation progressed on the south bay while utilities were protected at the service lane.","visitDate":"2026-06-02"},"weather":{"condition":"Hot and dry","temperature":"31 C","wind":"8 mph E","impact":"Water truck used for dust control."},"workers":[{"role":"Excavation crew","count":"6","hours":"48","notes":"South bay cut and haul-off."},{"role":"Utility spotter","count":"1","hours":"8","notes":"Observed service lane work."}],"materials":[{"name":"Crushed stone","quantity":"18","unit":"tons","status":"staged","condition":"Dry","notes":"Stored at north laydown."}],"issues":[{"title":"Utility corridor needs revised marking","severity":"medium","description":"Paint marks at the service lane have faded after haul-off traffic.","action":"Surveyor to refresh markings before the next trench shift.","attachments":{}}],"nextSteps":["Refresh utility marks.","Finish south bay proof roll."],"summarySections":[{"title":"Excavation","body":"Cut elevation was achieved in the south bay. North bay excavation remains open pending utility clearance.","attachments":{}}]}'::jsonb,
-   0, NULL, now() - interval '12 days', now() - interval '11 days',
-   now() - interval '12 days', now() - interval '11 days'),
+   0, NULL, (TIMESTAMPTZ :'screenshot_now') - interval '13 days', (TIMESTAMPTZ :'screenshot_now') - interval '12 days',
+   (TIMESTAMPTZ :'screenshot_now') - interval '13 days', (TIMESTAMPTZ :'screenshot_now') - interval '12 days'),
   ('rpt_rvrsd000003', 'prj_rvrsd000001', 'usr_strscrn0001', 3, 'finalized',
-   now() - interval '1 day',
+   (TIMESTAMPTZ :'screenshot_now') - interval '1 day',
    '{
      "meta":{
        "title":"Riverside Tower - Daily Site Report",
@@ -158,32 +160,32 @@ VALUES
        }
      ]
    }'::jsonb,
-   0, NULL, now() - interval '1 day' + interval '1 hour',
-   now() - interval '20 hours', now() - interval '1 day',
-   now() - interval '20 hours'),
+   0, NULL, (TIMESTAMPTZ :'screenshot_now') - interval '1 day' + interval '1 hour',
+   (TIMESTAMPTZ :'screenshot_now') - interval '20 hours', (TIMESTAMPTZ :'screenshot_now') - interval '1 day',
+   (TIMESTAMPTZ :'screenshot_now') - interval '20 hours'),
   ('rpt_rvrsd000004', 'prj_rvrsd000001', 'usr_strscrn0001', 4, 'draft',
-   now(),
+   (TIMESTAMPTZ :'screenshot_now'),
    NULL,
-   5, now() - interval '45 minutes', NULL, NULL,
-   now() - interval '2 hours', now() - interval '30 minutes'),
+   5, (TIMESTAMPTZ :'screenshot_now') - interval '45 minutes', NULL, NULL,
+   (TIMESTAMPTZ :'screenshot_now') - interval '2 hours', (TIMESTAMPTZ :'screenshot_now') - interval '30 minutes'),
   ('rpt_harbp000001', 'prj_harbp000001', 'usr_strscrn0001', 1, 'draft',
-   now() - interval '3 days', NULL, 2, now() - interval '3 days',
-   NULL, NULL, now() - interval '3 days', now() - interval '2 days'),
+   (TIMESTAMPTZ :'screenshot_now') - interval '3 days', NULL, 2, (TIMESTAMPTZ :'screenshot_now') - interval '3 days',
+   NULL, NULL, (TIMESTAMPTZ :'screenshot_now') - interval '3 days', (TIMESTAMPTZ :'screenshot_now') - interval '2 days'),
   ('rpt_centr000001', 'prj_centr000001', 'usr_strscrn0001', 1, 'finalized',
-   now() - interval '18 days',
+   (TIMESTAMPTZ :'screenshot_now') - interval '19 days',
    '{"meta":{"title":"Central Clinic - Steel Review","summary":"Steel delivery and anchor checks completed for the addition.","visitDate":"2026-05-27"},"weather":null,"workers":[{"role":"Steel crew","count":"5","hours":"40","notes":"Set anchor templates."}],"materials":[],"issues":[],"nextSteps":["Schedule inspector walk."],"summarySections":[]}'::jsonb,
-   0, NULL, now() - interval '18 days', now() - interval '17 days',
-   now() - interval '18 days', now() - interval '17 days');
+   0, NULL, (TIMESTAMPTZ :'screenshot_now') - interval '19 days', (TIMESTAMPTZ :'screenshot_now') - interval '18 days',
+   (TIMESTAMPTZ :'screenshot_now') - interval '19 days', (TIMESTAMPTZ :'screenshot_now') - interval '18 days');
 
 INSERT INTO app.files
   (id, owner_id, kind, file_key, size_bytes, content_type, project_id, report_id, created_at)
 VALUES
-  ('fil_cemnt000001', 'usr_strscrn0001', 'image', 'projects/prj_rvrsd000001/reports/rpt_rvrsd000003/fil_cemnt000001.jpg', 979306, 'image/jpeg', 'prj_rvrsd000001', 'rpt_rvrsd000003', now() - interval '1 day' + interval '2 hours'),
-  ('fil_mats0000001', 'usr_strscrn0001', 'image', 'projects/prj_rvrsd000001/reports/rpt_rvrsd000003/fil_mats0000001.jpg', 688037, 'image/jpeg', 'prj_rvrsd000001', 'rpt_rvrsd000003', now() - interval '1 day' + interval '2 hours'),
-  ('fil_rebar000001', 'usr_strscrn0001', 'image', 'projects/prj_rvrsd000001/reports/rpt_rvrsd000003/fil_rebar000001.jpg', 1010586, 'image/jpeg', 'prj_rvrsd000001', 'rpt_rvrsd000003', now() - interval '1 day' + interval '2 hours'),
-  ('fil_scaf0000001', 'usr_strscrn0001', 'image', 'projects/prj_rvrsd000001/reports/rpt_rvrsd000003/fil_scaf0000001.jpg', 1072447, 'image/jpeg', 'prj_rvrsd000001', 'rpt_rvrsd000003', now() - interval '1 day' + interval '2 hours'),
-  ('fil_area0000001', 'usr_strscrn0001', 'image', 'projects/prj_rvrsd000001/reports/rpt_rvrsd000003/fil_area0000001.jpg', 1020828, 'image/jpeg', 'prj_rvrsd000001', 'rpt_rvrsd000003', now() - interval '1 day' + interval '2 hours'),
-  ('fil_hmse0000001', 'usr_strscrn0001', 'image', 'projects/prj_rvrsd000001/reports/rpt_rvrsd000003/fil_hmse0000001.jpg', 580871, 'image/jpeg', 'prj_rvrsd000001', 'rpt_rvrsd000003', now() - interval '1 day' + interval '2 hours');
+  ('fil_cemnt000001', 'usr_strscrn0001', 'image', 'projects/prj_rvrsd000001/reports/rpt_rvrsd000003/fil_cemnt000001.jpg', 191685, 'image/jpeg', 'prj_rvrsd000001', 'rpt_rvrsd000003', (TIMESTAMPTZ :'screenshot_now') - interval '1 day' + interval '2 hours'),
+  ('fil_mats0000001', 'usr_strscrn0001', 'image', 'projects/prj_rvrsd000001/reports/rpt_rvrsd000003/fil_mats0000001.jpg', 178001, 'image/jpeg', 'prj_rvrsd000001', 'rpt_rvrsd000003', (TIMESTAMPTZ :'screenshot_now') - interval '1 day' + interval '2 hours'),
+  ('fil_rebar000001', 'usr_strscrn0001', 'image', 'projects/prj_rvrsd000001/reports/rpt_rvrsd000003/fil_rebar000001.jpg', 225493, 'image/jpeg', 'prj_rvrsd000001', 'rpt_rvrsd000003', (TIMESTAMPTZ :'screenshot_now') - interval '1 day' + interval '2 hours'),
+  ('fil_scaf0000001', 'usr_strscrn0001', 'image', 'projects/prj_rvrsd000001/reports/rpt_rvrsd000003/fil_scaf0000001.jpg', 277449, 'image/jpeg', 'prj_rvrsd000001', 'rpt_rvrsd000003', (TIMESTAMPTZ :'screenshot_now') - interval '1 day' + interval '2 hours'),
+  ('fil_area0000001', 'usr_strscrn0001', 'image', 'projects/prj_rvrsd000001/reports/rpt_rvrsd000003/fil_area0000001.jpg', 259997, 'image/jpeg', 'prj_rvrsd000001', 'rpt_rvrsd000003', (TIMESTAMPTZ :'screenshot_now') - interval '1 day' + interval '2 hours'),
+  ('fil_hmse0000001', 'usr_strscrn0001', 'image', 'projects/prj_rvrsd000001/reports/rpt_rvrsd000003/fil_hmse0000001.jpg', 115980, 'image/jpeg', 'prj_rvrsd000001', 'rpt_rvrsd000003', (TIMESTAMPTZ :'screenshot_now') - interval '1 day' + interval '2 hours');
 
 INSERT INTO app.notes
   (id, report_id, author_id, kind, body, transcript, title, summary,
@@ -194,75 +196,75 @@ VALUES
    'South foundation wall photo showing rebar and damp staining at grid D.',
    NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'gallery',
    '{"caption":"South wall rebar and waterproofing hold point"}'::jsonb,
-   now() - interval '1 day' + interval '2 hours', now() - interval '1 day' + interval '2 hours'),
+   (TIMESTAMPTZ :'screenshot_now') - interval '1 day' + interval '2 hours', (TIMESTAMPTZ :'screenshot_now') - interval '1 day' + interval '2 hours'),
   ('not_pcemnt0001', 'rpt_rvrsd000003', 'usr_mbranna0001', 'image',
    'Concrete truck staging reference near the east gate fire lane.',
    NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'gallery',
    '{"caption":"Concrete delivery staging near east gate"}'::jsonb,
-   now() - interval '1 day' + interval '2 hours 8 minutes', now() - interval '1 day' + interval '2 hours 8 minutes'),
+   (TIMESTAMPTZ :'screenshot_now') - interval '1 day' + interval '2 hours 8 minutes', (TIMESTAMPTZ :'screenshot_now') - interval '1 day' + interval '2 hours 8 minutes'),
   ('not_pscaf0001', 'rpt_rvrsd000003', 'usr_mbrbea0002', 'image',
    'Scaffold access bay photo for safety and access follow-up.',
    NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'gallery',
    '{"caption":"East elevation scaffold bays"}'::jsonb,
-   now() - interval '1 day' + interval '2 hours 15 minutes', now() - interval '1 day' + interval '2 hours 15 minutes'),
+   (TIMESTAMPTZ :'screenshot_now') - interval '1 day' + interval '2 hours 15 minutes', (TIMESTAMPTZ :'screenshot_now') - interval '1 day' + interval '2 hours 15 minutes'),
   ('not_pmats0001', 'rpt_rvrsd000003', 'usr_mbrdax0004', 'image',
    'Material platform and cement board staging for logistics section.',
    NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'gallery',
    '{"caption":"Material staging platform"}'::jsonb,
-   now() - interval '1 day' + interval '2 hours 21 minutes', now() - interval '1 day' + interval '2 hours 21 minutes'),
+   (TIMESTAMPTZ :'screenshot_now') - interval '1 day' + interval '2 hours 21 minutes', (TIMESTAMPTZ :'screenshot_now') - interval '1 day' + interval '2 hours 21 minutes'),
   ('not_parea0001', 'rpt_rvrsd000003', 'usr_strscrn0001', 'image',
    'Aerial overview of active work zones for report review.',
    NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'gallery',
    '{"caption":"Overall site overview"}'::jsonb,
-   now() - interval '1 day' + interval '2 hours 30 minutes', now() - interval '1 day' + interval '2 hours 30 minutes'),
+   (TIMESTAMPTZ :'screenshot_now') - interval '1 day' + interval '2 hours 30 minutes', (TIMESTAMPTZ :'screenshot_now') - interval '1 day' + interval '2 hours 30 minutes'),
   ('not_phmse0001', 'rpt_rvrsd000003', 'usr_mbrvera0005', 'image',
    'Residential-style construction progress reference, left unplaced for review.',
    NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'gallery',
    '{"caption":"Exterior progress reference"}'::jsonb,
-   now() - interval '1 day' + interval '2 hours 38 minutes', now() - interval '1 day' + interval '2 hours 38 minutes'),
+   (TIMESTAMPTZ :'screenshot_now') - interval '1 day' + interval '2 hours 38 minutes', (TIMESTAMPTZ :'screenshot_now') - interval '1 day' + interval '2 hours 38 minutes'),
   ('not_dtxta00001', 'rpt_rvrsd000004', 'usr_strscrn0001', 'text',
    'North stair opening protected. Crew should recheck the temporary rail after lunch because the drywall delivery will pass through this zone.',
    NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'typed',
-   '{}'::jsonb, now() - interval '90 minutes', now() - interval '90 minutes'),
+   '{}'::jsonb, (TIMESTAMPTZ :'screenshot_now') - interval '90 minutes', (TIMESTAMPTZ :'screenshot_now') - interval '90 minutes'),
   ('not_dtxtb00001', 'rpt_rvrsd000004', 'usr_mbranna0001', 'text',
    'Delivery marshal confirmed tomorrow concrete trucks will stage at the west gate instead of the fire lane.',
    NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'typed',
-   '{}'::jsonb, now() - interval '70 minutes', now() - interval '70 minutes'),
+   '{}'::jsonb, (TIMESTAMPTZ :'screenshot_now') - interval '70 minutes', (TIMESTAMPTZ :'screenshot_now') - interval '70 minutes'),
   ('not_dvcea00001', 'rpt_rvrsd000004', 'usr_mbrbea0002', 'voice',
    'Safety officer noted that the east scaffold tags were updated, but the crew still needs to move two material pallets off the walking path.',
    'Safety officer noted that the east scaffold tags were updated, but the crew still needs to move two material pallets off the walking path before the morning crew arrives.',
    'Access path follow-up',
    'Scaffold tags updated; two pallets still need to move off the walking path.',
-   47, 'en', 'fixture', now() - interval '55 minutes', 'voice',
-   '{"fixture":"store-screenshots"}'::jsonb, now() - interval '55 minutes', now() - interval '55 minutes');
+   47, 'en', 'fixture', (TIMESTAMPTZ :'screenshot_now') - interval '55 minutes', 'voice',
+   '{"fixture":"store-screenshots"}'::jsonb, (TIMESTAMPTZ :'screenshot_now') - interval '55 minutes', (TIMESTAMPTZ :'screenshot_now') - interval '55 minutes');
 
 INSERT INTO app.note_files
   (id, note_id, file_id, thumbnail_file_id, position, caption, created_at)
 VALUES
-  ('nfl_cemnt000001', 'not_pcemnt0001', 'fil_cemnt000001', 'fil_cemnt000001', 0, 'Concrete truck staging near east gate', now() - interval '1 day' + interval '2 hours 8 minutes'),
-  ('nfl_mats0000001', 'not_pmats0001', 'fil_mats0000001', 'fil_mats0000001', 0, 'Material staging platform and covered boards', now() - interval '1 day' + interval '2 hours 21 minutes'),
-  ('nfl_rebar000001', 'not_prebar0001', 'fil_rebar000001', 'fil_rebar000001', 0, 'South foundation rebar and waterproofing hold point', now() - interval '1 day' + interval '2 hours'),
-  ('nfl_scaf0000001', 'not_pscaf0001', 'fil_scaf0000001', 'fil_scaf0000001', 0, 'East elevation scaffold access bays', now() - interval '1 day' + interval '2 hours 15 minutes'),
-  ('nfl_area0000001', 'not_parea0001', 'fil_area0000001', 'fil_area0000001', 0, 'Overall site overview', now() - interval '1 day' + interval '2 hours 30 minutes'),
-  ('nfl_hmse0000001', 'not_phmse0001', 'fil_hmse0000001', 'fil_hmse0000001', 0, 'Exterior progress reference', now() - interval '1 day' + interval '2 hours 38 minutes');
+  ('nfl_cemnt000001', 'not_pcemnt0001', 'fil_cemnt000001', 'fil_cemnt000001', 0, 'Concrete truck staging near east gate', (TIMESTAMPTZ :'screenshot_now') - interval '1 day' + interval '2 hours 8 minutes'),
+  ('nfl_mats0000001', 'not_pmats0001', 'fil_mats0000001', 'fil_mats0000001', 0, 'Material staging platform and covered boards', (TIMESTAMPTZ :'screenshot_now') - interval '1 day' + interval '2 hours 21 minutes'),
+  ('nfl_rebar000001', 'not_prebar0001', 'fil_rebar000001', 'fil_rebar000001', 0, 'South foundation rebar and waterproofing hold point', (TIMESTAMPTZ :'screenshot_now') - interval '1 day' + interval '2 hours'),
+  ('nfl_scaf0000001', 'not_pscaf0001', 'fil_scaf0000001', 'fil_scaf0000001', 0, 'East elevation scaffold access bays', (TIMESTAMPTZ :'screenshot_now') - interval '1 day' + interval '2 hours 15 minutes'),
+  ('nfl_area0000001', 'not_parea0001', 'fil_area0000001', 'fil_area0000001', 0, 'Overall site overview', (TIMESTAMPTZ :'screenshot_now') - interval '1 day' + interval '2 hours 30 minutes'),
+  ('nfl_hmse0000001', 'not_phmse0001', 'fil_hmse0000001', 'fil_hmse0000001', 0, 'Exterior progress reference', (TIMESTAMPTZ :'screenshot_now') - interval '1 day' + interval '2 hours 38 minutes');
 
 INSERT INTO app.llm_usage_events
   (id, user_id, project_id, report_id, vendor, model, operation,
    input_tokens, output_tokens, cached_tokens, input_seconds, latency_ms,
    fixture_mode, status, created_at)
 VALUES
-  ('lue_000000000001', 'usr_strscrn0001', 'prj_rvrsd000001', 'rpt_rvrsd000003', 'openai', 'gpt-4.1-mini', 'generate_report', 18420, 3250, 2200, NULL, 5240, 'replay', 'ok', now() - interval '1 day' + interval '30 minutes'),
-  ('lue_000000000002', 'usr_strscrn0001', 'prj_rvrsd000001', 'rpt_rvrsd000004', 'openai', 'gpt-4.1-mini', 'chat', 2410, 680, 310, NULL, 1830, 'replay', 'ok', now() - interval '3 hours'),
-  ('lue_000000000003', 'usr_strscrn0001', 'prj_rvrsd000001', 'rpt_rvrsd000004', 'groq', 'whisper-large-v3-turbo', 'transcribe', 0, 0, 0, 75600.000, 1280, 'replay', 'ok', now() - interval '55 minutes'),
-  ('lue_000000000004', 'usr_strscrn0001', 'prj_rvrsd000001', 'rpt_rvrsd000004', 'openai', 'gpt-4.1-mini', 'chat', 1760, 520, 200, NULL, 1160, 'replay', 'ok', now() - interval '40 minutes'),
-  ('lue_000000000005', 'usr_strscrn0001', 'prj_rvrsd000001', 'rpt_rvrsd000002', 'openai', 'gpt-4.1', 'generate_report', 16200, 2890, 1800, NULL, 6020, 'replay', 'ok', now() - interval '12 days' + interval '45 minutes'),
-  ('lue_000000000006', 'usr_strscrn0001', 'prj_centr000001', 'rpt_centr000001', 'openai', 'gpt-4.1-nano', 'generate_report', 14100, 2440, 0, NULL, 7150, 'replay', 'ok', now() - interval '18 days' + interval '30 minutes'),
-  ('lue_000000000007', 'usr_strscrn0001', 'prj_harbp000001', 'rpt_harbp000001', 'openai', 'gpt-4.1-nano', 'chat', 3320, 980, 440, NULL, 2380, 'replay', 'ok', now() - interval '22 days'),
-  ('lue_000000000008', 'usr_strscrn0001', 'prj_rvrsd000001', 'rpt_rvrsd000001', 'openai', 'gpt-4.1-mini', 'generate_report', 12900, 2110, 1250, NULL, 4930, 'replay', 'ok', now() - interval '35 days'),
-  ('lue_000000000009', 'usr_strscrn0001', 'prj_harbp000001', 'rpt_harbp000001', 'openai', 'gpt-4.1-mini', 'chat', 2200, 510, 0, NULL, 2140, 'replay', 'error', now() - interval '2 hours'),
-  ('lue_000000000010', 'usr_strscrn0001', 'prj_rvrsd000001', 'rpt_rvrsd000003', 'groq', 'whisper-large-v3-turbo', 'transcribe', 0, 0, 0, 80100.000, 1510, 'replay', 'ok', now() - interval '1 day' + interval '1 hour'),
-  ('lue_000000000011', 'usr_strscrn0001', 'prj_rvrsd000001', 'rpt_rvrsd000003', 'openai', 'gpt-4.1', 'chat', 3890, 1020, 700, NULL, 1940, 'replay', 'ok', now() - interval '1 day' + interval '2 hours'),
-  ('lue_000000000012', 'usr_strscrn0001', 'prj_wstgt000001', NULL, 'openai', 'gpt-4.1-nano', 'chat', 1180, 340, 0, NULL, 1430, 'replay', 'ok', now() - interval '45 days');
+  ('lue_000000000001', 'usr_strscrn0001', 'prj_rvrsd000001', 'rpt_rvrsd000003', 'openai', 'gpt-4.1-mini', 'generate_report', 18420, 3250, 2200, NULL, 5240, 'replay', 'ok', (TIMESTAMPTZ :'screenshot_now') - interval '1 day' + interval '30 minutes'),
+  ('lue_000000000002', 'usr_strscrn0001', 'prj_rvrsd000001', 'rpt_rvrsd000004', 'openai', 'gpt-4.1-mini', 'chat', 2410, 680, 310, NULL, 1830, 'replay', 'ok', (TIMESTAMPTZ :'screenshot_now') - interval '3 hours'),
+  ('lue_000000000003', 'usr_strscrn0001', 'prj_rvrsd000001', 'rpt_rvrsd000004', 'groq', 'whisper-large-v3-turbo', 'transcribe', 0, 0, 0, 75600.000, 1280, 'replay', 'ok', (TIMESTAMPTZ :'screenshot_now') - interval '55 minutes'),
+  ('lue_000000000004', 'usr_strscrn0001', 'prj_rvrsd000001', 'rpt_rvrsd000004', 'openai', 'gpt-4.1-mini', 'chat', 1760, 520, 200, NULL, 1160, 'replay', 'ok', (TIMESTAMPTZ :'screenshot_now') - interval '40 minutes'),
+  ('lue_000000000005', 'usr_strscrn0001', 'prj_rvrsd000001', 'rpt_rvrsd000002', 'openai', 'gpt-4.1', 'generate_report', 16200, 2890, 1800, NULL, 6020, 'replay', 'ok', (TIMESTAMPTZ :'screenshot_now') - interval '13 days' + interval '45 minutes'),
+  ('lue_000000000006', 'usr_strscrn0001', 'prj_centr000001', 'rpt_centr000001', 'openai', 'gpt-4.1-nano', 'generate_report', 14100, 2440, 0, NULL, 7150, 'replay', 'ok', (TIMESTAMPTZ :'screenshot_now') - interval '19 days' + interval '30 minutes'),
+  ('lue_000000000007', 'usr_strscrn0001', 'prj_harbp000001', 'rpt_harbp000001', 'openai', 'gpt-4.1-nano', 'chat', 3320, 980, 440, NULL, 2380, 'replay', 'ok', (TIMESTAMPTZ :'screenshot_now') - interval '22 days'),
+  ('lue_000000000008', 'usr_strscrn0001', 'prj_rvrsd000001', 'rpt_rvrsd000001', 'openai', 'gpt-4.1-mini', 'generate_report', 12900, 2110, 1250, NULL, 4930, 'replay', 'ok', (TIMESTAMPTZ :'screenshot_now') - interval '36 days'),
+  ('lue_000000000009', 'usr_strscrn0001', 'prj_harbp000001', 'rpt_harbp000001', 'openai', 'gpt-4.1-mini', 'chat', 2200, 510, 0, NULL, 2140, 'replay', 'error', (TIMESTAMPTZ :'screenshot_now') - interval '2 hours'),
+  ('lue_000000000010', 'usr_strscrn0001', 'prj_rvrsd000001', 'rpt_rvrsd000003', 'groq', 'whisper-large-v3-turbo', 'transcribe', 0, 0, 0, 80100.000, 1510, 'replay', 'ok', (TIMESTAMPTZ :'screenshot_now') - interval '1 day' + interval '1 hour'),
+  ('lue_000000000011', 'usr_strscrn0001', 'prj_rvrsd000001', 'rpt_rvrsd000003', 'openai', 'gpt-4.1', 'chat', 3890, 1020, 700, NULL, 1940, 'replay', 'ok', (TIMESTAMPTZ :'screenshot_now') - interval '1 day' + interval '2 hours'),
+  ('lue_000000000012', 'usr_strscrn0001', 'prj_wstgt000001', NULL, 'openai', 'gpt-4.1-nano', 'chat', 1180, 340, 0, NULL, 1430, 'replay', 'ok', (TIMESTAMPTZ :'screenshot_now') - interval '45 days');
 
 SELECT
   (SELECT count(*) FROM app.projects) AS projects,

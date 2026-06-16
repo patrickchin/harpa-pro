@@ -31,7 +31,10 @@ import { createEmptyReport } from '@/lib/reports/report-edit-helpers';
 import type { NoteEntry } from '@/lib/notes/note-entry';
 import type { GeneratedSiteReport } from '@harpa/report-core';
 import { buildAttachments, type Attachment } from '@/lib/notes/attachments';
-import { useInlineRecorder } from '@/features/voice/useInlineRecorder';
+import {
+  RECORDER_START_FAILED_MESSAGE,
+  useInlineRecorder,
+} from '@/features/voice/useInlineRecorder';
 import { MAX_DURATION_MS } from '@/features/voice/InlineVoiceRecorder';
 import { useVoiceNotePipeline } from '@/features/voice/useVoiceNotePipeline';
 import { useAudioPlayback } from '@/lib/audio/AudioPlaybackProvider';
@@ -1014,7 +1017,11 @@ export function GenerateReportProvider({
       <AppDialogSheet
         visible={inlineRecorder.error !== null}
         title="Recording failed"
-        message={inlineRecorder.error ?? ''}
+        message={
+          inlineRecorder.error !== null
+            ? inlineRecorder.userErrorMessage ?? RECORDER_START_FAILED_MESSAGE
+            : undefined
+        }
         noticeTone="danger"
         onClose={inlineRecorder.dismissError}
         actions={[

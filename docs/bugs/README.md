@@ -154,6 +154,17 @@ Mitigation:
   for mobile) hitting the live compose stack closes the residual
   gap. Treat E2E as the contract for the default wiring.
 
+### R10 — Native-module option literals drift from SDK constants
+
+Handwritten platform-specific option strings can look harmless in JS
+tests while native code interprets them as low-level constants. Fixture
+recorders, simulators, and non-native unit tests stay green because
+they never exercise the actual bridge path. Mitigation: derive native
+option objects from the SDK's presets/constants where possible, export
+and unit-test the final options object, and keep real-device/TestFlight
+smoke coverage for option surfaces that affect native encoders,
+permissions, or audio sessions.
+
 ## Entries
 
 ### R6 — owner-demotion via re-invite (implicit upsert on POST /members)
@@ -250,6 +261,7 @@ Mitigation:
 
 Most recent first. One line per bug — open the linked file only for the full root-cause / test / commit write-up.
 
+- **2026-06-16** *(R10)* — TestFlight iPhone voice recording failed at start with `prepareToRecordAsync` / `Failed to prepare recorder`, then showed the raw native exception in the app sheet. Root cause: the iOS recorder options used handwritten `outputFormat: 'mpeg4aac'`; Expo SDK 55 expects `IOSOutputFormat.MPEG4AAC` (`'aac '`), and iOS converted the bad string into an invalid `AVFormatIDKey`. Fix: derive the options from the Expo preset/constants, keep raw diagnostics for Sentry, and show friendly user copy. [detail](2026-06-16-ios-voice-recorder-invalid-aac-format.md)
 - **2026-06-14** — Local Android regression failed at `input-email` with the auth screen loaded behind Expo's dev-menu onboarding sheet. Root cause: after a cold Metro bundle, the sheet can appear after the single post-`openLink` dismissal pass. Fix: add Expo's `disableOnboarding=1` dev-client URL param and keep label-based fallback dismissals only. [detail](2026-06-14-android-dev-menu-cold-bundle-late.md)
 - **2026-06-14** — Local Android regression failed in 10c at `btn-tab-report` with the Finalize Report sheet open. Root cause: the flow matched a disabled `Generating...` action row, then Maestro tapped the same coordinates after the row had changed to `Finalize report`. Fix: make manual generate/update conditional on visible text, cap regenerate tap settle waits, and leave scrolled disabled-state checks to unit coverage. [detail](2026-06-14-maestro-generate-stale-tap-finalize.md)
 - **2026-06-14** — Local Android regression failed in module 11 after saving `E2E sealant` because `scrollUntilVisible(centerElement: true)` first saw the text, then scrolled it away while trying to center it. Fix: assert already-visible edited text directly and avoid centering on follow-up text assertions. [detail](2026-06-14-maestro-scroll-centers-visible-text-away.md)

@@ -192,6 +192,55 @@ adb reverse tcp:8787 tcp:8787
 maestro test .maestro/dev-otp-hardening.yaml
 ```
 
+## `native-input-smoke.yaml` (real recorder + camera start)
+
+Focused iOS/Android smoke for native input startup. This covers the
+parts that fixture flows deliberately avoid:
+
+- real `expoAudioRecorder` through native microphone permission,
+  `prepareToRecordAsync`, recorder start, visible inline recording
+  state, and cancel teardown
+- real `expo-camera` through camera permission, route mount, shutter,
+  thumbnail render, and discard teardown
+
+It does not tap Send or commit captured photos. `modules/09-voice-notes.yaml`
+and `modules/10a-photo-notes-draft.yaml` keep deterministic upload,
+transcription, summary, playback, image upload, and delete coverage in
+fixture mode.
+
+Run against the local API stack and a non-fixture dev-client bundle:
+
+```bash
+export DEV_OTP_TOKEN=dev-token-at-least-32-characters
+export MAESTRO_APP_ID=com.harpa.pro.dev
+docker compose down -v && docker compose up -d
+EXPO_PUBLIC_USE_FIXTURES=false pnpm --filter @harpa/mobile start --dev-client
+xcrun simctl privacy booted grant microphone "$MAESTRO_APP_ID"
+xcrun simctl privacy booted grant camera     "$MAESTRO_APP_ID"
+maestro test .maestro/native-input-smoke.yaml
+```
+
+On Android, also reverse Metro/API ports before running:
+
+```bash
+adb reverse tcp:8081 tcp:8081
+adb reverse tcp:8787 tcp:8787
+```
+
+## Fixture-gap coverage map
+
+Fixture mode is still the right default for the long regression
+journey, but any path it replaces needs one focused non-fixture guard.
+
+| Surface | What fixtures avoid | Non-fixture guard |
+| --- | --- | --- |
+| Voice recorder | `fixtureRecorder` replaces `expo-audio` in fixture/screenshot builds. | `.maestro/native-input-smoke.yaml` starts/cancels the real recorder; `expoAudioRecorder.test.ts` pins native options. |
+| Camera capture | Fixture camera flows make capture deterministic before upload assertions. | `.maestro/native-input-smoke.yaml` opens the real camera route, taps shutter, waits for a thumbnail, then discards. |
+| Photo library picker | Screenshot mode resolves seeded image URIs instead of opening the system picker. | `pick-and-enqueue-gallery-images.test.ts` verifies the non-screenshot path calls `expo-image-picker`; keep OS-picker Maestro coverage manual unless we add stable picker automation. |
+| R2 storage | API replay mode uses `FixtureStorage` instead of signed object storage. | `files.r2-live.integration.test.ts` runs `/files/presign` plus a real signed PUT against MinIO when `CI_R2_LIVE` is enabled. |
+| AI providers | Normal tests replay `packages/ai-fixtures` instead of calling providers. | `.github/workflows/ai-live.yml` runs `pnpm --filter @harpa/api test:live` with `AI_LIVE=1` on prompt/provider-sensitive changes. |
+| Dev OTP helper | E2E auth uses `/api/dev/last-otp` instead of email delivery. | `.maestro/dev-otp-hardening.yaml` plus API integration tests cover auth-helper gates and exact-match lookup. |
+
 ## `store-screenshots.yaml` (App Store / Play Store assets)
 
 Focused flow for generating store-listing screenshots from polished,

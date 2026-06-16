@@ -8,6 +8,6 @@
 
 **Fix.** `HARPA_RECORDING_OPTIONS` now derives from `RecordingPresets.HIGH_QUALITY` and uses `IOSOutputFormat.MPEG4AAC` plus `AudioQuality.MEDIUM`, while preserving the Android AAC and metering behavior from the prior recorder fixes. `useInlineRecorder` now keeps the raw diagnostic string in `error`, exposes a separate user-safe `userErrorMessage`, and calls `captureRecorderStartFailure()` so initialized Sentry receives the original error and recorder context.
 
-**Test.** Added focused mobile tests for the iOS AAC constant, friendly recorder-start sheet copy with raw native text excluded from UI, raw diagnostic preservation/Sentry capture from `useInlineRecorder.start()`, and Sentry recorder-start capture context.
+**Test.** Added focused mobile tests for the iOS AAC constant, friendly recorder-start sheet copy with raw native text excluded from UI, raw diagnostic preservation/Sentry capture from `useInlineRecorder.start()`, and Sentry recorder-start capture context. Follow-up coverage adds `.maestro/native-input-smoke.yaml`, a non-fixture iOS/Android smoke that starts/cancels the real native recorder and captures/discards one real camera photo without sending either path into the fixture upload/transcription pipeline.
 
 **Pattern.** R10 — native-module option literals drift from SDK constants.

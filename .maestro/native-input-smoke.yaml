@@ -1,0 +1,132 @@
+appId: ${MAESTRO_APP_ID}
+name: "Native input smoke — real recorder and camera start"
+tags:
+  - smoke
+  - voice
+  - camera
+  - native-input
+---
+# Native input smoke.
+#
+# Covers the gap the fixture regression intentionally avoids:
+#   - app is built with EXPO_PUBLIC_USE_FIXTURES=false
+#   - tap `btn-record-start`
+#   - real expoAudioRecorder reaches native prepare/start
+#   - inline `voice-record-strip` and duration appear
+#   - cancel tears down the native recorder handle
+#   - open the camera route through the attachment sheet
+#   - real expo-camera mounts, captures one photo, and renders a thumb
+#   - discard tears down the native camera capture session
+#
+# This flow deliberately cancels/discards instead of sending. Upload,
+# transcription, summary, title, playback, image upload, and delete stay
+# in the fixture regression modules where backend replay is deterministic.
+#
+# Pre-condition: local API stack is up, Metro/dev-client is running
+# with EXPO_PUBLIC_USE_FIXTURES=false, and microphone + camera
+# permissions are granted for MAESTRO_APP_ID.
+# Post-condition: project is deleted and alice is signed out.
+
+# --- Setup: signed-in alice on project home --------------------------------
+- runFlow: modules/01-auth.yaml
+- runFlow: modules/02-projects-crud.yaml
+
+# --- Create and open a draft report ----------------------------------------
+- tapOn:
+    id: "btn-open-reports"
+- extendedWaitUntil:
+    visible:
+      id: "btn-new-report"
+    timeout: 10000
+- tapOn:
+    id: "btn-new-report"
+- extendedWaitUntil:
+    visible:
+      id: "report-row-.*"
+    timeout: 15000
+- tapOn:
+    id: "report-row-.*"
+- extendedWaitUntil:
+    visible:
+      id: "input-note-container"
+    timeout: 15000
+
+# --- Exercise real native recorder start, then cancel ----------------------
+- tapOn:
+    id: "btn-record-start"
+- extendedWaitUntil:
+    visible:
+      id: "voice-record-strip"
+    timeout: 8000
+- extendedWaitUntil:
+    visible:
+      id: "voice-record-duration"
+    timeout: 5000
+- assertNotVisible:
+    id: "voice-error-dismiss"
+- waitForAnimationToEnd
+- tapOn:
+    id: "btn-record-cancel"
+- extendedWaitUntil:
+    notVisible:
+      id: "voice-record-strip"
+    timeout: 8000
+
+# --- Exercise real native camera capture, then discard ---------------------
+- tapOn:
+    id: "btn-attachment"
+- extendedWaitUntil:
+    visible:
+      id: "btn-attachment-camera"
+    timeout: 8000
+- tapOn:
+    id: "btn-attachment-camera"
+- extendedWaitUntil:
+    visible:
+      id: "camera-capture-root"
+    timeout: 15000
+- extendedWaitUntil:
+    visible:
+      id: "btn-camera-shutter"
+    timeout: 8000
+- tapOn:
+    id: "btn-camera-shutter"
+- extendedWaitUntil:
+    visible:
+      id: "btn-camera-thumb-0"
+    timeout: 15000
+- tapOn:
+    id: "btn-camera-cancel"
+- extendedWaitUntil:
+    visible:
+      id: "btn-camera-confirm-discard"
+    timeout: 8000
+- tapOn:
+    id: "btn-camera-confirm-discard"
+- extendedWaitUntil:
+    visible:
+      id: "input-note-container"
+    timeout: 15000
+
+# --- Delete the draft and project ------------------------------------------
+- tapOn:
+    id: "btn-draft-options"
+- extendedWaitUntil:
+    visible:
+      id: "dialog-action-confirm-delete-draft"
+    timeout: 8000
+- tapOn:
+    id: "dialog-action-confirm-delete-draft"
+- extendedWaitUntil:
+    visible:
+      id: "btn-new-report"
+    timeout: 15000
+- tapOn:
+    id: "btn-back"
+- runFlow:
+    file: helpers/delete-current-project.yaml
+    env:
+      PROJECT_NAME_EDITED: "Regression Test Project \\(Edited\\)"
+
+# --- Sign out ---------------------------------------------------------------
+- runFlow: helpers/sign-out.yaml

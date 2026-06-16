@@ -46,8 +46,12 @@ import type {
   RecorderSnapshot,
 } from './recorder-types';
 import { pickRecorderFactory } from './pickRecorder';
+import { captureRecorderStartFailure } from '@/lib/telemetry/Sentry';
 
 export const HISTORY_SIZE = 30;
+export const RECORDER_START_FAILED_MESSAGE = "Couldn't start recording. Please try again.";
+const RECORDER_RUNTIME_FAILED_MESSAGE = 'Recording stopped unexpectedly. Please try again.';
+const RECORDER_SAVE_FAILED_MESSAGE = "Couldn't save recording. Please try again.";
 
 const IDLE_SNAPSHOT: RecorderSnapshot = {
   status: 'idle',
@@ -72,8 +76,10 @@ export interface UseInlineRecorderApi {
   historyBars: readonly number[];
   /** Permission state, updated on every `start()` attempt. */
   permission: PermissionState;
-  /** Set when `start()` throws or the recorder errors mid-capture. */
+  /** Raw diagnostic message when recorder start/capture fails. */
   error: string | null;
+  /** User-safe copy for the visible recorder failure dialog. */
+  userErrorMessage: string | null;
   /**
    * Begin recording. Idempotent — calling while already recording is a
    * no-op. Updates `permission`; if not granted, leaves the recorder
@@ -109,6 +115,7 @@ export function useInlineRecorder(
   const [historyBars, setHistoryBars] = useState<readonly number[]>([]);
   const [permission, setPermission] = useState<PermissionState>('unknown');
   const [error, setError] = useState<string | null>(null);
+  const [userErrorMessage, setUserErrorMessage] = useState<string | null>(null);
 
   // Cleanup on unmount: release handle so native resources don't leak
   // if the provider unmounts mid-recording (e.g. user backs out of the
@@ -134,6 +141,7 @@ export function useInlineRecorder(
   const start = useCallback(async () => {
     if (isRecording) return;
     setError(null);
+    setUserErrorMessage(null);
     setHistoryBars([]);
     setSnapshot(IDLE_SNAPSHOT);
 
@@ -165,6 +173,7 @@ export function useInlineRecorder(
         }
         if (snap.status === 'errored' && snap.error) {
           setError(snap.error);
+          setUserErrorMessage(RECORDER_RUNTIME_FAILED_MESSAGE);
           setIsRecording(false);
         }
       });
@@ -173,7 +182,12 @@ export function useInlineRecorder(
     } catch (err) {
       teardown();
       setIsRecording(false);
+      captureRecorderStartFailure(err, {
+        permission: current,
+        recorderFactory: factory.name,
+      });
       setError(err instanceof Error ? err.message : String(err));
+      setUserErrorMessage(RECORDER_START_FAILED_MESSAGE);
     }
   }, [factory, isRecording]);
 
@@ -191,6 +205,7 @@ export function useInlineRecorder(
       teardown();
       setIsRecording(false);
       setError(err instanceof Error ? err.message : String(err));
+      setUserErrorMessage(RECORDER_SAVE_FAILED_MESSAGE);
       return null;
     }
   }, [isRecording]);
@@ -212,6 +227,7 @@ export function useInlineRecorder(
 
   const dismissError = useCallback(() => {
     setError(null);
+    setUserErrorMessage(null);
   }, []);
 
   return {
@@ -220,6 +236,7 @@ export function useInlineRecorder(
     historyBars,
     permission,
     error,
+    userErrorMessage,
     start,
     stopAndCapture,
     cancel,

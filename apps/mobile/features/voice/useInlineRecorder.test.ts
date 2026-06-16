@@ -20,7 +20,18 @@
  *
  * Refs: docs/v4/arch-voice-pipeline.md §D4–§D6, pitfalls §13.
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import React from 'react';
+import TestRenderer, { act } from 'react-test-renderer';
+import { afterEach, describe, it, expect, vi, beforeEach } from 'vitest';
+
+import type { RecorderFactory, RecorderHandle, RecorderSnapshot } from './recorder-types';
+import type { UseInlineRecorderApi } from './useInlineRecorder';
+
+const sentryMock = vi.hoisted(() => ({
+  captureRecorderStartFailure: vi.fn(),
+}));
+
+vi.mock('@/lib/telemetry/Sentry', () => sentryMock);
 
 vi.mock('expo-asset', () => ({
   Asset: {
@@ -32,12 +43,90 @@ vi.mock('expo-asset', () => ({
 vi.mock('@/assets/fixtures/voice-sample.m4a', () => ({ default: 1 }));
 
 const { fixtureRecorderFactory } = await import('./fixtureRecorder');
-const { HISTORY_SIZE } = await import('./useInlineRecorder');
-import type { RecorderSnapshot } from './recorder-types';
+const {
+  HISTORY_SIZE,
+  RECORDER_START_FAILED_MESSAGE,
+  useInlineRecorder,
+} = await import('./useInlineRecorder');
+
+let tree: TestRenderer.ReactTestRenderer | null = null;
 
 beforeEach(() => {
   vi.clearAllMocks();
 });
+
+afterEach(() => {
+  if (tree) {
+    act(() => {
+      tree!.unmount();
+    });
+    tree = null;
+  }
+});
+
+function failingStartFactory(error: unknown): RecorderFactory {
+  let snapshot: RecorderSnapshot = { status: 'idle', durationMs: 0, amplitude: 0 };
+  let listener: ((snap: RecorderSnapshot) => void) | null = null;
+  const handle: RecorderHandle = {
+    subscribe(l) {
+      listener = l;
+      l(snapshot);
+      return () => {
+        listener = null;
+      };
+    },
+    getSnapshot() {
+      return snapshot;
+    },
+    async start() {
+      snapshot = {
+        status: 'errored',
+        durationMs: 0,
+        amplitude: 0,
+        error: error instanceof Error ? error.message : String(error),
+      };
+      listener?.(snapshot);
+      throw error;
+    },
+    async pause() {},
+    async resume() {},
+    async stop() {
+      throw new Error('stop should not be called');
+    },
+    async cancel() {},
+    release: vi.fn(),
+  };
+
+  return {
+    name: 'expo-audio',
+    async getPermission() {
+      return 'granted';
+    },
+    async requestPermission() {
+      return 'granted';
+    },
+    create() {
+      return handle;
+    },
+  };
+}
+
+function renderInlineRecorder(factory: RecorderFactory): { current: () => UseInlineRecorderApi } {
+  let api: UseInlineRecorderApi | null = null;
+  function Probe() {
+    api = useInlineRecorder({ factory });
+    return null;
+  }
+  act(() => {
+    tree = TestRenderer.create(React.createElement(Probe));
+  });
+  return {
+    current() {
+      if (!api) throw new Error('recorder api not rendered');
+      return api;
+    },
+  };
+}
 
 describe('useInlineRecorder default wiring (recorder factory contract)', () => {
   it('start → stop produces a RecorderResult consumable by the pipeline', async () => {
@@ -98,5 +187,25 @@ describe('useInlineRecorder default wiring (recorder factory contract)', () => {
     expect(Number.isInteger(HISTORY_SIZE)).toBe(true);
     expect(HISTORY_SIZE).toBeGreaterThan(0);
     expect(HISTORY_SIZE).toBeLessThanOrEqual(100);
+  });
+
+  it('maps native start failures to friendly copy while preserving diagnostics', async () => {
+    const nativeError = new Error(
+      "Calling the 'prepareToRecordAsync' function has failed → Caused by: Audio recording error: Failed to prepare recorder",
+    );
+    const probe = renderInlineRecorder(failingStartFactory(nativeError));
+
+    await act(async () => {
+      await probe.current().start();
+    });
+
+    expect(probe.current().isRecording).toBe(false);
+    expect(probe.current().userErrorMessage).toBe(RECORDER_START_FAILED_MESSAGE);
+    expect(probe.current().error).toContain('prepareToRecordAsync');
+    expect(probe.current().error).toContain('Failed to prepare recorder');
+    expect(sentryMock.captureRecorderStartFailure).toHaveBeenCalledWith(nativeError, {
+      permission: 'granted',
+      recorderFactory: 'expo-audio',
+    });
   });
 });

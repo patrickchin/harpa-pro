@@ -8,6 +8,11 @@ type NativeInit = typeof NativeSentry.init;
 type AddBreadcrumb = typeof NativeSentry.addBreadcrumb;
 type CaptureException = typeof NativeSentry.captureException;
 
+interface RecorderStartFailureContext {
+  permission: string;
+  recorderFactory: string;
+}
+
 interface InitSentryOptions {
   dsn?: string;
   appVariant: typeof env.EXPO_PUBLIC_APP_VARIANT;
@@ -78,6 +83,29 @@ export function captureReactError(
     contexts: {
       react: {
         componentStack: info.componentStack,
+      },
+    },
+  });
+}
+
+export function captureRecorderStartFailure(
+  error: unknown,
+  context: RecorderStartFailureContext,
+  captureException: CaptureException = NativeSentry.captureException,
+) {
+  if (!didInit) return;
+
+  const captured = error instanceof Error ? error : new Error(String(error));
+  captureException(captured, {
+    tags: {
+      feature: 'voice-recorder',
+      operation: 'start',
+    },
+    contexts: {
+      recorder: {
+        permission: context.permission,
+        recorderFactory: context.recorderFactory,
+        diagnosticMessage: captured.message,
       },
     },
   });

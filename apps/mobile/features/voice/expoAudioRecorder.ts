@@ -16,13 +16,16 @@
 // public surface we deliberately do not call from this wrapper.
 import {
   createAudioPlayer as _unused,
+  AudioQuality,
   // We instantiate the recorder imperatively (not via the
   // `useAudioRecorder` hook) so the modal can own the lifecycle across
   // mount/unmount without re-creating native resources.
+  IOSOutputFormat,
   RecordingPresets,
   requestRecordingPermissionsAsync,
   getRecordingPermissionsAsync,
   AudioModule,
+  type RecordingOptions,
 } from 'expo-audio';
 import type {
   PermissionState,
@@ -37,6 +40,26 @@ import { beginRecording, endRecording } from '@/lib/audio/audioSession';
 void _unused;
 
 const TICK_MS = 200;
+
+export const HARPA_RECORDING_OPTIONS = {
+  ...RecordingPresets.HIGH_QUALITY,
+  extension: '.m4a',
+  sampleRate: 16000,
+  numberOfChannels: 1,
+  bitRate: 32000,
+  android: {
+    ...RecordingPresets.HIGH_QUALITY.android,
+    outputFormat: 'mpeg4',
+    audioEncoder: 'aac',
+  },
+  ios: {
+    ...RecordingPresets.HIGH_QUALITY.ios,
+    extension: '.m4a',
+    outputFormat: IOSOutputFormat.MPEG4AAC,
+    audioQuality: AudioQuality.MEDIUM,
+  },
+  isMeteringEnabled: true,
+} satisfies RecordingOptions;
 
 /**
  * Read the byte size of a file:// URI without `expo-file-system`
@@ -147,17 +170,8 @@ function createExpoAudioHandle(): RecorderHandle {
           //     (HARPA-PRO-D, 2026-06-05). Matches the
           //     `arch-voice-pipeline.md` §D5 contract ("audio/m4a
           //     (AAC-LC), 16 kHz mono").
-          const recordingOptions = {
-            extension: '.m4a',
-            sampleRate: 16000,
-            numberOfChannels: 1,
-            bitRate: 32000,
-            android: { outputFormat: 'mpeg4', audioEncoder: 'aac' },
-            ios: { extension: '.m4a', outputFormat: 'mpeg4aac', audioQuality: 0x40 },
-            isMeteringEnabled: true,
-          } as const;
-          recorder = new AudioModule.AudioRecorder(recordingOptions);
-          await recorder.prepareToRecordAsync(recordingOptions);
+          recorder = new AudioModule.AudioRecorder(HARPA_RECORDING_OPTIONS);
+          await recorder.prepareToRecordAsync(HARPA_RECORDING_OPTIONS);
         }
         recorder.record();
         emit({ status: 'recording', error: undefined });

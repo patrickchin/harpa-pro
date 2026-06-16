@@ -50,12 +50,14 @@ const voicePipelineMock = vi.hoisted((): {
 // `<QueueProvider>` + `<AudioPlaybackProvider>` and is covered by the
 // dedicated integration tests for those modules.
 vi.mock('@/features/voice/useInlineRecorder', () => ({
+  RECORDER_START_FAILED_MESSAGE: "Couldn't start recording. Please try again.",
   useInlineRecorder: () => ({
     isRecording: false,
     snapshot: { status: 'idle', durationMs: 0, amplitude: 0 },
     historyBars: [],
     permission: 'unknown',
     error: null,
+    userErrorMessage: null,
     start: vi.fn(async () => {}),
     stopAndCapture: vi.fn(async () => null),
     cancel: vi.fn(async () => {}),

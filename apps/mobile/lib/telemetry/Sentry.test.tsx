@@ -6,6 +6,7 @@ import { ApiError } from '@/lib/api/errors';
 import {
   SentryProvider,
   captureApiErrorBreadcrumb,
+  captureRecorderStartFailure,
   captureReactError,
   initSentry,
   resetSentryForTests,
@@ -90,6 +91,41 @@ describe('lib/telemetry/Sentry', () => {
       contexts: {
         react: {
           componentStack: '\n    in ReportScreen',
+        },
+      },
+    });
+  });
+
+  it('captures recorder start failures after native init with diagnostic context', () => {
+    const nativeInit = vi.fn();
+    const captureException = vi.fn();
+    const error = new Error(
+      "Calling the 'prepareToRecordAsync' function has failed -> Caused by: Audio recording error: Failed to prepare recorder",
+    );
+
+    initSentry({
+      dsn: 'https://public@example.ingest.sentry.io/1',
+      appVariant: 'production',
+      displayVersion: '0.0.0+abc123',
+      gitCommit: 'abc123',
+      nativeInit,
+    });
+    captureRecorderStartFailure(
+      error,
+      { permission: 'granted', recorderFactory: 'expo-audio' },
+      captureException,
+    );
+
+    expect(captureException).toHaveBeenCalledWith(error, {
+      tags: {
+        feature: 'voice-recorder',
+        operation: 'start',
+      },
+      contexts: {
+        recorder: {
+          permission: 'granted',
+          recorderFactory: 'expo-audio',
+          diagnosticMessage: error.message,
         },
       },
     });

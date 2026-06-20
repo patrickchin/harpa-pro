@@ -29,7 +29,7 @@ update.
 | Method | Path | Purpose |
 |---|---|---|
 | POST | `/api/auth/email-otp/send-verification-otp` | Send email OTP via Resend |
-| POST | `/api/auth/sign-in/email-otp` | Verify code, issue session |
+| POST | `/api/auth/sign-in/email-otp` | Verify six-digit OTP, or the configured App Review 12-digit code, and issue session |
 | POST | `/api/auth/sign-in/email` | Test-account password sign-in (allow-listed via `TEST_ACCOUNT_EMAILS`) |
 | POST | `/api/auth/sign-out` | Delete session |
 | GET | `/me` | Current user profile |
@@ -151,7 +151,8 @@ in production (atomic counts across Fly machines) and a
 Email-OTP abuse protection on `POST /api/auth/email-otp/send-verification-otp`
 and `POST /api/auth/sign-in/email-otp` (per-email + per-IP) is enforced
 by better-auth's built-in rate limiter; clients receive a 429 +
-`Retry-After` + `X-RateLimit-*` headers.
+`Retry-After` + `X-RateLimit-*` headers. App Review static-code attempts
+still go through this endpoint and rate-limit path.
 
 ### Idempotency
 

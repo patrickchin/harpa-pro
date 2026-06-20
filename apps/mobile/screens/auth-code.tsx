@@ -75,7 +75,7 @@ export default function AuthCode({
                 onChangeText={onChangeOtp}
                 keyboardType="number-pad"
                 autoComplete="one-time-code"
-                maxLength={6}
+                maxLength={12}
                 editable={!isSubmitting}
               />
 

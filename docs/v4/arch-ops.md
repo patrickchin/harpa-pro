@@ -239,6 +239,35 @@ the created `com.harpa.pro` binaries with the EAS `production-internal`
 submit profile: production App Store Connect/TestFlight app `6776759817`
 and Play internal track for package `com.harpa.pro`.
 
+### App Review access
+
+App Store Connect reviewer credentials must use the normal email-code
+flow:
+
+1. Set `APP_REVIEW_EMAIL` on the production API to a stable address
+   shaped like `app-review+<hash>@harpapro.com`.
+2. Generate a static 12-digit review code and store only its SHA-256
+   hex digest in `APP_REVIEW_CODE_SHA256`.
+3. Prepare demo data for that account before submission. The repo does
+   not currently have a production demo-data seed; use the app/API under
+   the stable review account, or add a dedicated seed script before
+   relying on automated setup.
+4. In App Store Connect, enter the reviewer note in this shape:
+
+   ```text
+   Sign in with email:
+   app-review+<hash>@harpapro.com
+
+   On the verification-code screen, enter:
+   <12-digit review code>
+
+   This uses the normal app sign-in flow. No password is required.
+   ```
+
+Do not commit the raw review code. Rotate it by changing the code,
+updating `APP_REVIEW_CODE_SHA256`, and updating the App Store Connect
+review note for the next submission.
+
 ### Production release
 
 Production release is manual after production smoke sign-off. Prefer

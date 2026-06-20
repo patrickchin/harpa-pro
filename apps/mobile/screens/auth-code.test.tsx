@@ -50,6 +50,14 @@ describe('AuthCode', () => {
     expect(btn.props.disabled).toBe(false);
   });
 
+  it('accepts up to 12 digits for App Review codes', () => {
+    const tree = render(<AuthCode {...baseProps} otp="123456789012" />);
+    const input = tree.root.findByProps({ testID: 'input-otp' });
+    const btn = tree.root.findByProps({ testID: 'btn-verify-code' });
+    expect(input.props.maxLength).toBe(12);
+    expect(btn.props.disabled).toBe(false);
+  });
+
   it('shows countdown when resendCountdownSeconds is set', () => {
     const tree = render(
       <AuthCode {...baseProps} resendDisabled resendCountdownSeconds={42} />,

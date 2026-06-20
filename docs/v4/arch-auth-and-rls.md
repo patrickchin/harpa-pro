@@ -60,6 +60,12 @@ Key decisions (full rationale in the design spec):
 - **`emailOTP` plugin** — Resend as transport, 6-digit code, 10-minute
   expiry, 5 allowed attempts. `disableSignUp: false` — the first
   verified email creates the user automatically.
+- **App Store Review access** — the same `/api/auth/sign-in/email-otp`
+  endpoint accepts a configured static 12-digit review code only for
+  the exact `APP_REVIEW_EMAIL`. The submitted code is SHA-256 hashed
+  and constant-time compared with `APP_REVIEW_CODE_SHA256`; on match,
+  the API seeds a one-request better-auth verification row and lets
+  better-auth create the normal session.
 - **`emailAndPassword`** — `enabled: true`, `disableSignUp: true`.
   Only for test-account smoke tests; a `before` hook 401s any email
   not in `TEST_ACCOUNT_EMAILS`. We keep `TEST_ACCOUNT_EMAILS` set on
@@ -295,6 +301,45 @@ allowlist. The deploy seed is credential-level idempotent: if an
 allowlisted user already exists, it creates or refreshes that user's
 `credential` account password instead of assuming the user is ready.
 
+## App Store Review access
+
+Apple reviewers use the normal email + verification-code screens. There
+is no visible password, demo, or reviewer-only button in the mobile app.
+
+The production API may set:
+
+| Var | Purpose |
+|---|---|
+| `APP_REVIEW_EMAIL` | Exact reviewer email, shaped like `app-review+<hash>@harpapro.com` |
+| `APP_REVIEW_CODE_SHA256` | SHA-256 hex digest of the static 12-digit reviewer code |
+
+`APP_REVIEW_EMAIL` and `APP_REVIEW_CODE_SHA256` must be set together.
+The raw 12-digit code is never bundled into mobile code and should not
+be committed. To rotate it, generate a new 12-digit code, store only:
+
+```sh
+printf '%s' "$APP_REVIEW_CODE" | shasum -a 256 | awk '{print $1}'
+```
+
+At verification time, `packages/api/src/auth/auth.ts` hashes the
+submitted code and compares it with `APP_REVIEW_CODE_SHA256` using
+`crypto.timingSafeEqual`. A match seeds a short-lived better-auth
+`public.verification` row for `APP_REVIEW_EMAIL` and then delegates to
+better-auth's normal `/api/auth/sign-in/email-otp` handler. That means
+the resulting reviewer session is a normal better-auth session and all
+authenticated API routes behave the same as they do for a regular user.
+
+Normal users still receive six-digit email OTPs. The mobile input allows
+up to 12 digits for everyone so the review code fits, but the server
+accepts the static 12-digit code only for the exact configured review
+email. Review attempts are logged with `{email, outcome}` and never log
+the submitted code.
+
+There is currently no production demo-data seeding script. Before
+submitting to App Review, create or prepare data under the stable
+`APP_REVIEW_EMAIL` account manually, or add a dedicated seed script in
+the same PR that introduces that data contract.
+
 ## Env vars
 
 | Var | Where | Purpose |
@@ -306,6 +351,8 @@ allowlisted user already exists, it creates or refreshes that user's
 | `DEV_OTP_TOKEN` | API (dev + PR previews only) | ≥32-char shared secret for `/api/dev/last-otp`. Must be UNSET on prod. |
 | `TEST_ACCOUNT_EMAILS` | API | Password-bypass allowlist (set in dev + prd) |
 | `TEST_ACCOUNT_PASSWORD` | API | Shared smoke-test password (set in dev + prd) |
+| `APP_REVIEW_EMAIL` | API | Exact App Store reviewer email |
+| `APP_REVIEW_CODE_SHA256` | API | SHA-256 hex digest of the static 12-digit reviewer code |
 | `DATABASE_URL` | API | Neon connection (pooled) |
 | `EXPO_PUBLIC_API_URL` | Mobile | API base URL (validated by `lib/env.ts`) |
 

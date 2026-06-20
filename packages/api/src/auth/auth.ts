@@ -2,6 +2,9 @@
  * better-auth server configuration.
  *
  * - Email-OTP via Resend (live or fake based on EMAIL_OTP_LIVE).
+ * - App Store Review access uses the same email-OTP sign-in endpoint,
+ *   but only for the exact configured reviewer email + static 12-digit
+ *   code hash.
  * - emailAndPassword enabled but gated to TEST_ACCOUNT_EMAILS allowlist
  *   via a before-hook (test-account smoke-test bypass).
  * - Custom slug IDs (usr_/ses_/vrf_/idn_) via advanced.database.generateId.
@@ -11,6 +14,7 @@
  * See docs/v4/arch-auth-and-rls.md and
  * docs/superpowers/specs/2026-06-02-migrate-auth-to-better-auth-design.md.
  */
+import { createHash, timingSafeEqual } from 'node:crypto';
 import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { emailOTP, bearer } from 'better-auth/plugins';
@@ -29,6 +33,8 @@ const TEST_EMAILS = (env.TEST_ACCOUNT_EMAILS ?? '')
 
 const FROM_EMAIL = 'Harpa Pro <noreply@harpapro.com>';
 const OTP_SUBJECT = 'Your Harpa Pro sign-in code';
+const APP_REVIEW_CODE_LENGTH = 12;
+const APP_REVIEW_OTP_TTL_SECONDS = 60;
 
 const resend = createResendClient();
 
@@ -65,6 +71,12 @@ type AuthInternalContext = {
       accountId: string;
       password: string;
     }) => Promise<unknown>;
+    createVerificationValue: (input: {
+      identifier: string;
+      value: string;
+      expiresAt: Date;
+    }) => Promise<unknown>;
+    deleteVerificationByIdentifier: (identifier: string) => Promise<unknown>;
   };
   password: {
     hash: (password: string) => Promise<string>;
@@ -174,6 +186,10 @@ export const auth = betterAuth({
       allowedAttempts: 5,
       disableSignUp: false,
       sendVerificationOTP: async ({ email, otp, type }) => {
+        if (isConfiguredAppReviewEmail(email)) {
+          logAppReviewAttempt(email, 'send_code_suppressed');
+          return;
+        }
         if (env.EMAIL_OTP_LIVE !== '1') {
           if (env.NODE_ENV !== 'test') {
             // eslint-disable-next-line no-console
@@ -194,3 +210,91 @@ export const auth = betterAuth({
 }) as unknown as BetterAuthInstance;
 
 export type Auth = typeof auth;
+
+export async function handleAuthRequest(req: Request): Promise<Response> {
+  await prepareAppReviewEmailOtp(req);
+  return auth.handler(req);
+}
+
+async function prepareAppReviewEmailOtp(req: Request): Promise<void> {
+  if (!isAppReviewConfigured()) return;
+  if (req.method !== 'POST') return;
+  const url = new URL(req.url);
+  if (!url.pathname.endsWith('/api/auth/sign-in/email-otp')) return;
+
+  const body = await readJsonBody(req);
+  if (!body) return;
+
+  const email = String(body.email ?? '').trim().toLowerCase();
+  const otp = String(body.otp ?? '').trim();
+  const reviewEmail = env.APP_REVIEW_EMAIL!.toLowerCase();
+
+  if (email !== reviewEmail) {
+    if (otp.length === APP_REVIEW_CODE_LENGTH) {
+      logAppReviewAttempt(email, 'email_mismatch');
+    }
+    return;
+  }
+
+  if (!/^\d{12}$/.test(otp)) {
+    logAppReviewAttempt(email, 'invalid_format');
+    return;
+  }
+
+  const expectedHash = env.APP_REVIEW_CODE_SHA256!.toLowerCase();
+  const actualHash = sha256Hex(otp);
+  if (!constantTimeEqual(actualHash, expectedHash)) {
+    logAppReviewAttempt(email, 'wrong_code');
+    return;
+  }
+
+  const ctx = await auth.$context;
+  const identifier = `sign-in-otp-${reviewEmail}`;
+  await ctx.internalAdapter.deleteVerificationByIdentifier(identifier);
+  await ctx.internalAdapter.createVerificationValue({
+    identifier,
+    value: `${otp}:0`,
+    expiresAt: new Date(Date.now() + APP_REVIEW_OTP_TTL_SECONDS * 1000),
+  });
+  logAppReviewAttempt(email, 'accepted');
+}
+
+async function readJsonBody(req: Request): Promise<Record<string, unknown> | null> {
+  try {
+    const parsed = await req.clone().json();
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return null;
+    return parsed as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+}
+
+function isAppReviewConfigured(): boolean {
+  return !!env.APP_REVIEW_EMAIL && !!env.APP_REVIEW_CODE_SHA256;
+}
+
+function isConfiguredAppReviewEmail(email: string): boolean {
+  return isAppReviewConfigured() && email.toLowerCase() === env.APP_REVIEW_EMAIL!.toLowerCase();
+}
+
+function sha256Hex(value: string): string {
+  return createHash('sha256').update(value, 'utf8').digest('hex');
+}
+
+function constantTimeEqual(a: string, b: string): boolean {
+  const aBuf = Buffer.from(a, 'utf8');
+  const bBuf = Buffer.from(b, 'utf8');
+  if (aBuf.length !== bBuf.length) return false;
+  return timingSafeEqual(aBuf, bBuf);
+}
+
+function logAppReviewAttempt(email: string, outcome: string): void {
+  if (env.NODE_ENV === 'test') return;
+  // eslint-disable-next-line no-console
+  console.info(JSON.stringify({
+    level: 'info',
+    msg: 'app_review_sign_in_attempt',
+    email,
+    outcome,
+  }));
+}

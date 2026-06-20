@@ -17,6 +17,8 @@ const KEYS = [
   'MIGRATIONS_REQUIRED_HEAD',
   'TEST_ACCOUNT_EMAILS',
   'TEST_ACCOUNT_PASSWORD',
+  'APP_REVIEW_EMAIL',
+  'APP_REVIEW_CODE_SHA256',
 ] as const;
 
 let snapshot: Record<string, string | undefined>;
@@ -79,5 +81,36 @@ describe('env: DEV_OTP_TOKEN', () => {
     delete process.env.HARPA_DEV_OTP_DISABLED;
     const mod = await freshImportEnv();
     expect(mod.env.DEV_OTP_TOKEN).toBe('a'.repeat(40));
+  });
+});
+
+describe('env: App Review access', () => {
+  it('rejects APP_REVIEW_EMAIL without APP_REVIEW_CODE_SHA256', async () => {
+    process.env.NODE_ENV = 'development';
+    process.env.DEV_OTP_TOKEN = 'a'.repeat(40);
+    process.env.APP_REVIEW_EMAIL = 'app-review+abcdef12@harpapro.com';
+    delete process.env.APP_REVIEW_CODE_SHA256;
+
+    await expect(freshImportEnv()).rejects.toThrow(/APP_REVIEW_CODE_SHA256/);
+  });
+
+  it('accepts App Review email plus code hash', async () => {
+    process.env.NODE_ENV = 'development';
+    process.env.DEV_OTP_TOKEN = 'a'.repeat(40);
+    process.env.APP_REVIEW_EMAIL = 'app-review+abcdef12@harpapro.com';
+    process.env.APP_REVIEW_CODE_SHA256 = 'a'.repeat(64);
+
+    const mod = await freshImportEnv();
+    expect(mod.env.APP_REVIEW_EMAIL).toBe('app-review+abcdef12@harpapro.com');
+    expect(mod.env.APP_REVIEW_CODE_SHA256).toBe('a'.repeat(64));
+  });
+
+  it('rejects App Review emails without the hash suffix shape', async () => {
+    process.env.NODE_ENV = 'development';
+    process.env.DEV_OTP_TOKEN = 'a'.repeat(40);
+    process.env.APP_REVIEW_EMAIL = 'app-review@harpapro.com';
+    process.env.APP_REVIEW_CODE_SHA256 = 'a'.repeat(64);
+
+    await expect(freshImportEnv()).rejects.toThrow(/app-review/);
   });
 });

@@ -24,6 +24,24 @@ const Env = z.object({
    */
   TEST_ACCOUNT_EMAILS: z.string().optional(),
   /**
+   * App Store Review OTP-like access. The review email must be an exact,
+   * unguessable address such as `app-review+<short-hash>@harpapro.com`.
+   * The code is a static 12-digit value known only to App Store Connect
+   * reviewers/operators; store only its SHA-256 hex digest here.
+   */
+  APP_REVIEW_EMAIL: z
+    .string()
+    .email()
+    .regex(
+      /^app-review\+[a-z0-9]{6,20}@harpapro\.com$/i,
+      'must look like app-review+<hash>@harpapro.com',
+    )
+    .optional(),
+  APP_REVIEW_CODE_SHA256: z
+    .string()
+    .regex(/^[a-f0-9]{64}$/i, 'must be a SHA-256 hex digest')
+    .optional(),
+  /**
    * Email-OTP transport switch. `'1'` → real Resend send via better-auth's
    * `sendVerificationOTP` hook. Default `'0'` logs the OTP to stdout
    * (development/preview) and is a no-op under test.
@@ -200,6 +218,12 @@ const Env = z.object({
   {
     path: ['TEST_ACCOUNT_PASSWORD'],
     message: 'TEST_ACCOUNT_EMAILS and TEST_ACCOUNT_PASSWORD must be set together',
+  },
+).refine(
+  (e) => !!e.APP_REVIEW_EMAIL === !!e.APP_REVIEW_CODE_SHA256,
+  {
+    path: ['APP_REVIEW_CODE_SHA256'],
+    message: 'APP_REVIEW_EMAIL and APP_REVIEW_CODE_SHA256 must be set together',
   },
 ).refine(
   (e) => e.NODE_ENV !== 'production' || e.HARPAPRO_PR_BUILD === '1' || e.EMAIL_OTP_LIVE === '1',

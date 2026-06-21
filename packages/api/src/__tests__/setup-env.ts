@@ -7,6 +7,6 @@
  */
 delete process.env.TEST_ACCOUNT_EMAILS;
 delete process.env.TEST_ACCOUNT_PASSWORD;
-delete process.env.APP_REVIEW_EMAIL;
-delete process.env.APP_REVIEW_CODE;
+delete process.env.APP_REVIEW_EMAILS;
+delete process.env.APP_REVIEW_PASSWORD;
 process.env.DEV_OTP_TOKEN ??= 'test-dev-otp-token-AAAAAAAAAAAAAAAAAA'; // 36 chars

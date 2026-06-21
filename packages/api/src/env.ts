@@ -9,6 +9,15 @@ const optionalUrl = z.preprocess(
   z.string().url().optional(),
 );
 
+const appReviewEmailRegex = /^app-review\+[a-z0-9]{6,20}@harpapro\.com$/i;
+
+function splitCsv(value: string): string[] {
+  return value
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
 const Env = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PORT: z.coerce.number().int().positive().default(8787),
@@ -24,24 +33,20 @@ const Env = z.object({
    */
   TEST_ACCOUNT_EMAILS: z.string().optional(),
   /**
-   * App Store Review OTP-like access. The review email must be an exact,
-   * unguessable address such as `app-review+<short-hash>@harpapro.com`.
-   * The code is a static 12-digit value known only to App Store Connect
-   * reviewers/operators. It is a server-side secret only; never bundle it
-   * into mobile code.
+   * App Store Review password access. Review emails must be exact,
+   * unguessable addresses such as `app-review+<short-hash>@harpapro.com`.
+   * The password is a server-side secret only; never bundle it into
+   * mobile code.
    */
-  APP_REVIEW_EMAIL: z
+  APP_REVIEW_EMAILS: z
     .string()
-    .email()
-    .regex(
-      /^app-review\+[a-z0-9]{6,20}@harpapro\.com$/i,
-      'must look like app-review+<hash>@harpapro.com',
+    .refine(
+      (value) => splitCsv(value).length > 0
+        && splitCsv(value).every((email) => appReviewEmailRegex.test(email)),
+      'must be comma-separated app-review+<hash>@harpapro.com emails',
     )
     .optional(),
-  APP_REVIEW_CODE: z
-    .string()
-    .regex(/^\d{12}$/, 'must be a 12-digit code')
-    .optional(),
+  APP_REVIEW_PASSWORD: z.string().min(16).optional(),
   /**
    * Email-OTP transport switch. `'1'` → real Resend send via better-auth's
    * `sendVerificationOTP` hook. Default `'0'` logs the OTP to stdout
@@ -221,10 +226,10 @@ const Env = z.object({
     message: 'TEST_ACCOUNT_EMAILS and TEST_ACCOUNT_PASSWORD must be set together',
   },
 ).refine(
-  (e) => !!e.APP_REVIEW_EMAIL === !!e.APP_REVIEW_CODE,
+  (e) => !!e.APP_REVIEW_EMAILS === !!e.APP_REVIEW_PASSWORD,
   {
-    path: ['APP_REVIEW_CODE'],
-    message: 'APP_REVIEW_EMAIL and APP_REVIEW_CODE must be set together',
+    path: ['APP_REVIEW_PASSWORD'],
+    message: 'APP_REVIEW_EMAILS and APP_REVIEW_PASSWORD must be set together',
   },
 ).refine(
   (e) => e.NODE_ENV !== 'production' || e.HARPAPRO_PR_BUILD === '1' || e.EMAIL_OTP_LIVE === '1',

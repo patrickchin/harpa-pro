@@ -2,8 +2,9 @@
  * Sign-in email-OTP verification — step 2 of the email-OTP flow.
  *
  * Wires `screens/auth-code.tsx` to better-auth:
- *   1. `authClient.signIn.emailOtp({email, otp})` — better-auth's expoClient
- *      persists the cookie on success.
+ *   1. Normal emails use `authClient.signIn.emailOtp({email, otp})`.
+ *      App Review emails use `authClient.signIn.email({email, password})`.
+ *      better-auth's expoClient persists the cookie on success.
  *   2. `session.refresh()` so `useSession()` picks up the new user.
  *   3. `router.replace('/')` — the (app) auth gate then routes the
  *      user to onboarding / projects depending on the user shape.
@@ -16,6 +17,7 @@ import { Redirect, useLocalSearchParams, useRouter, type Href } from 'expo-route
 import AuthCode from '@/screens/auth-code';
 import { useAuthSession } from '@/lib/auth';
 import { authClient } from '@/lib/auth/client';
+import { isAppReviewEmail } from '@/lib/auth/app-review';
 import { safeBack } from '@/lib/nav/safe-back';
 
 const RESEND_COOLDOWN_SECONDS = 30;
@@ -25,6 +27,7 @@ export default function SignInCodePage() {
   const session = useAuthSession();
   const params = useLocalSearchParams<{ email: string }>();
   const email = (params.email ?? '').toLowerCase();
+  const isPasswordMode = isAppReviewEmail(email);
 
   const [otp, setOtp] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -67,12 +70,20 @@ export default function SignInCodePage() {
     setResendError(null);
     setSubmitting(true);
     try {
-      const { error: verifyError } = await authClient.signIn.emailOtp({
-        email,
-        otp: otp.trim(),
-      });
+      const { error: verifyError } = isPasswordMode
+        ? await authClient.signIn.email({
+            email,
+            password: otp.trim(),
+          })
+        : await authClient.signIn.emailOtp({
+            email,
+            otp: otp.trim(),
+          });
       if (verifyError) {
-        throw new Error(verifyError.message ?? 'Unable to verify your code.');
+        throw new Error(
+          verifyError.message
+            ?? (isPasswordMode ? 'Unable to sign in.' : 'Unable to verify your code.'),
+        );
       }
       // expoClient has now persisted the cookie. Refresh useSession()
       // so the auth gate can route us correctly.
@@ -80,7 +91,9 @@ export default function SignInCodePage() {
       router.replace('/');
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : 'Unable to verify your code.';
+        err instanceof Error
+          ? err.message
+          : (isPasswordMode ? 'Unable to sign in.' : 'Unable to verify your code.');
       setError(message);
     } finally {
       setSubmitting(false);
@@ -88,6 +101,7 @@ export default function SignInCodePage() {
   };
 
   const handleResend = async () => {
+    if (isPasswordMode) return;
     if (isResending || (countdown != null && countdown > 0)) return;
     setResendError(null);
     setResendInfo(null);
@@ -114,11 +128,12 @@ export default function SignInCodePage() {
     safeBack(router, '/(auth)/sign-in/email' as Href);
   }, [router]);
 
-  const resendDisabled = isResending || (countdown != null && countdown > 0);
+  const resendDisabled = isPasswordMode || isResending || (countdown != null && countdown > 0);
 
   return (
     <AuthCode
       email={email}
+      mode={isPasswordMode ? 'password' : 'otp'}
       otp={otp}
       onChangeOtp={setOtp}
       onChangeEmail={handleChangeEmail}

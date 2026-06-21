@@ -2,11 +2,10 @@
  * better-auth server configuration.
  *
  * - Email-OTP via Resend (live or fake based on EMAIL_OTP_LIVE).
- * - App Store Review access uses the same email-OTP send + sign-in
- *   endpoints, but the exact configured reviewer email receives a
- *   static server-side 12-digit code.
- * - emailAndPassword enabled but gated to TEST_ACCOUNT_EMAILS allowlist
- *   via a before-hook (test-account smoke-test bypass).
+ * - App Store Review access uses emailAndPassword for exact configured
+ *   reviewer emails; normal users stay on email-OTP.
+ * - emailAndPassword enabled but gated to TEST_ACCOUNT_EMAILS +
+ *   APP_REVIEW_EMAILS via a before-hook.
  * - Custom slug IDs (usr_/ses_/vrf_/idn_) via advanced.database.generateId.
  * - expo() plugin owns the bearer/cookie storage flow used by the Expo
  *   client.
@@ -14,7 +13,6 @@
  * See docs/v4/arch-auth-and-rls.md and
  * docs/superpowers/specs/2026-06-02-migrate-auth-to-better-auth-design.md.
  */
-import { createHash } from 'node:crypto';
 import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { emailOTP, bearer } from 'better-auth/plugins';
@@ -31,10 +29,15 @@ const TEST_EMAILS = (env.TEST_ACCOUNT_EMAILS ?? '')
   .map((s) => s.trim().toLowerCase())
   .filter(Boolean);
 
+const APP_REVIEW_EMAILS = (env.APP_REVIEW_EMAILS ?? '')
+  .split(',')
+  .map((s) => s.trim().toLowerCase())
+  .filter(Boolean);
+
+const PASSWORD_LOGIN_EMAILS = new Set([...TEST_EMAILS, ...APP_REVIEW_EMAILS]);
+
 const FROM_EMAIL = 'Harpa Pro <noreply@harpapro.com>';
 const OTP_SUBJECT = 'Your Harpa Pro sign-in code';
-const APP_REVIEW_CODE_LENGTH = 12;
-const APP_REVIEW_CODE_REGEX = /^\d{12}$/;
 
 const resend = createResendClient();
 
@@ -164,22 +167,15 @@ export const auth = betterAuth({
       if (ctx.path === '/sign-in/email') {
         const body = (ctx.body ?? {}) as { email?: unknown };
         const email = String(body.email ?? '').toLowerCase();
-        if (TEST_EMAILS.length === 0 || !TEST_EMAILS.includes(email)) {
+        if (PASSWORD_LOGIN_EMAILS.size === 0 || !PASSWORD_LOGIN_EMAILS.has(email)) {
           throw new APIError('UNAUTHORIZED', { message: 'Invalid credentials' });
         }
-        ctx.context.logger?.info?.(`test_account_password_login_attempt email=${email}`);
-        return;
-      }
-
-      if (ctx.path === '/sign-in/email-otp') {
-        const body = (ctx.body ?? {}) as { email?: unknown; otp?: unknown };
-        const email = String(body.email ?? '').trim().toLowerCase();
-        const otpLength = String(body.otp ?? '').trim().length;
-        if (isConfiguredAppReviewEmail(email)) {
-          logAppReviewAttempt(email, 'verify_attempt');
-        } else if (otpLength === APP_REVIEW_CODE_LENGTH) {
-          logAppReviewAttempt(email, 'email_mismatch');
+        if (APP_REVIEW_EMAILS.includes(email)) {
+          logAppReviewAttempt(email, 'password_attempt');
+        } else {
+          ctx.context.logger?.info?.(`test_account_password_login_attempt email=${email}`);
         }
+        return;
       }
     }),
   },
@@ -192,27 +188,7 @@ export const auth = betterAuth({
       expiresIn: 10 * 60,
       allowedAttempts: 5,
       disableSignUp: false,
-      generateOTP: ({ email, type }) => {
-        if (type === 'sign-in' && isConfiguredAppReviewEmail(email)) {
-          logAppReviewAttempt(email, 'static_code_generated');
-          return env.APP_REVIEW_CODE;
-        }
-        return undefined;
-      },
-      storeOTP: {
-        hash: async (otp) => {
-          // Better Auth applies storeOTP globally. Keep normal 6-digit OTPs
-          // readable for dev/Maestro introspection, but avoid persisting the
-          // static 12-digit review code in plaintext.
-          if (APP_REVIEW_CODE_REGEX.test(otp)) return sha256Hex(otp);
-          return otp;
-        },
-      },
       sendVerificationOTP: async ({ email, otp, type }) => {
-        if (isConfiguredAppReviewEmail(email)) {
-          logAppReviewAttempt(email, 'send_code_suppressed');
-          return;
-        }
         if (env.EMAIL_OTP_LIVE !== '1') {
           if (env.NODE_ENV !== 'test') {
             // eslint-disable-next-line no-console
@@ -233,19 +209,6 @@ export const auth = betterAuth({
 }) as unknown as BetterAuthInstance;
 
 export type Auth = typeof auth;
-
-function isAppReviewConfigured(): boolean {
-  return !!env.APP_REVIEW_EMAIL && !!env.APP_REVIEW_CODE;
-}
-
-function isConfiguredAppReviewEmail(email: string): boolean {
-  return isAppReviewConfigured()
-    && email.trim().toLowerCase() === env.APP_REVIEW_EMAIL!.toLowerCase();
-}
-
-function sha256Hex(value: string): string {
-  return createHash('sha256').update(value, 'utf8').digest('hex');
-}
 
 function logAppReviewAttempt(email: string, outcome: string): void {
   if (env.NODE_ENV === 'test') return;

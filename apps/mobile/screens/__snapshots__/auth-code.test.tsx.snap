@@ -69,10 +69,11 @@ exports[`AuthCode > matches snapshot at default props 1`] = `
               className="min-h-touch rounded-md border px-4 py-3 text-base text-foreground border-border bg-card"
               editable={true}
               keyboardType="number-pad"
-              maxLength={12}
+              maxLength={6}
               onChangeText={[MockFunction spy]}
               placeholder="123456"
               placeholderTextColor="#5f5b66"
+              secureTextEntry={false}
               style={
                 [
                   {
@@ -92,6 +93,7 @@ exports[`AuthCode > matches snapshot at default props 1`] = `
                   undefined,
                 ]
               }
+              textContentType="oneTimeCode"
               testID="input-otp"
               value=""
             />

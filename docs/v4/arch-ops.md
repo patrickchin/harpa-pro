@@ -241,31 +241,33 @@ and Play internal track for package `com.harpa.pro`.
 
 ### App Review access
 
-App Store Connect reviewer credentials must use the normal email-code
-flow:
+App Store Connect reviewer credentials use the normal email entry screen
+and then a password on the second screen:
 
-1. Set `APP_REVIEW_EMAIL` on the production API to a stable address
-   shaped like `app-review+<hash>@harpapro.com`.
-2. Generate a static 12-digit review code and store it as the
-   server-only production API secret `APP_REVIEW_CODE`. Do not expose it
-   through mobile env or client code.
+1. Set `APP_REVIEW_EMAILS` on the production API to one or more stable
+   addresses shaped like `app-review+<hash>@harpapro.com`.
+2. Generate a reviewer password and store it as the server-only
+   production API secret `APP_REVIEW_PASSWORD`. Do not expose it through
+   mobile env or client code.
 3. Prepare demo data for that account before submission. The repo does
-   not currently have a production demo-data seed; use the app/API under
-   the stable review account, or add a dedicated seed script before
-   relying on automated setup.
+   seed the reviewer credential account, but does not currently have a
+   production demo-data seed. Use the app/API under the stable review
+   account, or add a dedicated seed script before relying on automated
+   setup.
 4. In App Store Connect, enter the reviewer note in this shape:
 
    ```text
    Sign in with email:
    app-review+<hash>@harpapro.com
 
-   On the verification-code screen, enter:
-   <12-digit review code>
+   On the next screen, enter this password:
+   <reviewer password>
 
-   This uses the normal app sign-in flow. No password is required.
+   This uses the normal app sign-in flow. No email OTP is required for
+   the reviewer account.
    ```
 
-Do not commit the review code. Rotate it by changing `APP_REVIEW_CODE`
+Do not commit the reviewer password. Rotate it by changing `APP_REVIEW_PASSWORD`
 and updating the App Store Connect review note for the next submission.
 
 ### Production release

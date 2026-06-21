@@ -2,10 +2,11 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vites
 import type { PgFixture } from './setup-pg.js';
 
 const REVIEW_EMAIL = 'app-review+testhash@harpapro.com';
-const REVIEW_CODE = '123456789012';
+const REVIEW_PASSWORD = 'review-password-12345';
 
 let fx: PgFixture;
 let createApp: typeof import('../app.js').createApp;
+let auth: typeof import('../auth/auth.js').auth;
 let getPool: typeof import('../db/client.js').getPool;
 let resetPool: typeof import('../db/client.js').resetPool;
 
@@ -39,6 +40,18 @@ async function signInEmailOtp(
   });
 }
 
+async function signInPassword(
+  app: ReturnType<typeof createApp>,
+  email: string,
+  password: string,
+): Promise<Response> {
+  return app.request('/api/auth/sign-in/email', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ email, password }),
+  });
+}
+
 async function sendSignInOtp(app: ReturnType<typeof createApp>, email: string): Promise<Response> {
   return app.request('/api/auth/email-otp/send-verification-otp', {
     method: 'POST',
@@ -47,9 +60,28 @@ async function sendSignInOtp(app: ReturnType<typeof createApp>, email: string): 
   });
 }
 
+async function seedPasswordUser(email: string, password: string): Promise<void> {
+  const ctx = await auth.$context;
+  const passwordHash = await ctx.password.hash(password);
+  const existing = await ctx.internalAdapter.findUserByEmail(email);
+  const userId = existing?.user.id
+    ?? (await ctx.internalAdapter.createUser({
+      email,
+      name: email,
+      emailVerified: true,
+    }))?.id;
+  if (!userId) throw new Error(`unable to seed ${email}`);
+  await ctx.internalAdapter.linkAccount({
+    userId,
+    providerId: 'credential',
+    accountId: userId,
+    password: passwordHash,
+  });
+}
+
 beforeAll(async () => {
-  process.env.APP_REVIEW_EMAIL = REVIEW_EMAIL;
-  process.env.APP_REVIEW_CODE = REVIEW_CODE;
+  process.env.APP_REVIEW_EMAILS = REVIEW_EMAIL;
+  process.env.APP_REVIEW_PASSWORD = REVIEW_PASSWORD;
   process.env.EMAIL_OTP_LIVE = '0';
 
   vi.resetModules();
@@ -63,11 +95,12 @@ beforeAll(async () => {
   await resetPool();
   getPool(fx.url);
   ({ createApp } = await import('../app.js'));
+  ({ auth } = await import('../auth/auth.js'));
 }, 120_000);
 
 afterAll(async () => {
-  delete process.env.APP_REVIEW_EMAIL;
-  delete process.env.APP_REVIEW_CODE;
+  delete process.env.APP_REVIEW_EMAILS;
+  delete process.env.APP_REVIEW_PASSWORD;
   await fx?.stop();
 }, 60_000);
 
@@ -79,13 +112,12 @@ beforeEach(async () => {
   await pool.query(`DELETE FROM public."user"`);
 });
 
-describe('App Review email-OTP access', () => {
-  it('signs in the configured review email with the correct 12-digit code', async () => {
+describe('App Review password access', () => {
+  it('signs in the configured review email with the correct password', async () => {
     const app = createApp();
-    const sendRes = await sendSignInOtp(app, REVIEW_EMAIL);
-    expect(sendRes.status).toBe(200);
+    await seedPasswordUser(REVIEW_EMAIL, REVIEW_PASSWORD);
 
-    const res = await signInEmailOtp(app, REVIEW_EMAIL, REVIEW_CODE);
+    const res = await signInPassword(app, REVIEW_EMAIL, REVIEW_PASSWORD);
 
     expect(res.status).toBe(200);
     expect(res.headers.get('set-auth-token')).toBeTruthy();
@@ -99,49 +131,33 @@ describe('App Review email-OTP access', () => {
     expect(me.status).toBe(200);
   });
 
-  it('stores the configured review code hashed, not plaintext', async () => {
+  it('rejects the review password for any other email even if that account exists', async () => {
+    const app = createApp();
+    await seedPasswordUser('not-review@example.com', REVIEW_PASSWORD);
+
+    const res = await signInPassword(app, 'not-review@example.com', REVIEW_PASSWORD);
+
+    expect(res.status).not.toBe(200);
+    expect(res.headers.get('set-auth-token')).toBeNull();
+  });
+
+  it('rejects the review email with a wrong password', async () => {
+    const app = createApp();
+    await seedPasswordUser(REVIEW_EMAIL, REVIEW_PASSWORD);
+
+    const res = await signInPassword(app, REVIEW_EMAIL, 'wrong-password-12345');
+
+    expect(res.status).not.toBe(200);
+    expect(res.headers.get('set-auth-token')).toBeNull();
+  });
+
+  it('leaves the email OTP route on normal 6-digit OTP behavior', async () => {
     const app = createApp();
     const sendRes = await sendSignInOtp(app, REVIEW_EMAIL);
     expect(sendRes.status).toBe(200);
 
-    const storedValue = await readLatestVerificationValue(REVIEW_EMAIL);
-    const [storedOtp, attempts] = storedValue.split(':');
-    expect(storedOtp).not.toBe(REVIEW_CODE);
-    expect(storedOtp).toMatch(/^[a-f0-9]{64}$/);
-    expect(attempts).toBe('0');
-  });
-
-  it('rejects the review code for any other email', async () => {
-    const app = createApp();
-    const sendRes = await sendSignInOtp(app, 'not-review@example.com');
-    expect(sendRes.status).toBe(200);
-
-    const res = await signInEmailOtp(app, 'not-review@example.com', REVIEW_CODE);
-
-    expect(res.status).not.toBe(200);
-    expect(res.headers.get('set-auth-token')).toBeNull();
-  });
-
-  it('rejects the review email with a wrong 12-digit code', async () => {
-    const app = createApp();
-    const sendRes = await sendSignInOtp(app, REVIEW_EMAIL);
-    expect(sendRes.status).toBe(200);
-
-    const res = await signInEmailOtp(app, REVIEW_EMAIL, '999999999999');
-
-    expect(res.status).not.toBe(200);
-    expect(res.headers.get('set-auth-token')).toBeNull();
-  });
-
-  it('rejects a normal user with a random 12-digit code', async () => {
-    const app = createApp();
-    const sendRes = await sendSignInOtp(app, 'alice@example.com');
-    expect(sendRes.status).toBe(200);
-
-    const res = await signInEmailOtp(app, 'alice@example.com', '222222222222');
-
-    expect(res.status).not.toBe(200);
-    expect(res.headers.get('set-auth-token')).toBeNull();
+    const otp = await readLatestOtp(REVIEW_EMAIL);
+    expect(otp).toMatch(/^\d{6}$/);
   });
 
   it('still signs in normal users with a six-digit email OTP', async () => {

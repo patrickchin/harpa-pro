@@ -9,7 +9,7 @@ import { errorMapper } from './middleware/errorMapper.js';
 import { globalRateLimit } from './middleware/globalRateLimit.js';
 import { health } from './routes/health.js';
 import { readyz } from './routes/readyz.js';
-import { handleAuthRequest } from './auth/auth.js';
+import { auth } from './auth/auth.js';
 import { meRoutes } from './routes/me.js';
 import { projectRoutes } from './routes/projects.js';
 import { reportRoutes } from './routes/reports.js';
@@ -99,7 +99,7 @@ export function createApp(): OpenAPIHono<AppEnv> {
   // Better-auth handler — owns all `/api/auth/**` routes (sign-in,
   // sign-out, email-OTP, session lookup, etc.). Mounted at the raw
   // Hono level so we don't fight the OpenAPI router's path matching.
-  app.on(['GET', 'POST'], '/api/auth/**', (c) => handleAuthRequest(c.req.raw));
+  app.on(['GET', 'POST'], '/api/auth/**', (c) => auth.handler(c.req.raw));
 
   // Public routes
   app.route('/', health);

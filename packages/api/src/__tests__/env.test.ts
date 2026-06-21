@@ -18,7 +18,7 @@ const KEYS = [
   'TEST_ACCOUNT_EMAILS',
   'TEST_ACCOUNT_PASSWORD',
   'APP_REVIEW_EMAIL',
-  'APP_REVIEW_CODE_SHA256',
+  'APP_REVIEW_CODE',
 ] as const;
 
 let snapshot: Record<string, string | undefined>;
@@ -85,31 +85,40 @@ describe('env: DEV_OTP_TOKEN', () => {
 });
 
 describe('env: App Review access', () => {
-  it('rejects APP_REVIEW_EMAIL without APP_REVIEW_CODE_SHA256', async () => {
+  it('rejects APP_REVIEW_EMAIL without APP_REVIEW_CODE', async () => {
     process.env.NODE_ENV = 'development';
     process.env.DEV_OTP_TOKEN = 'a'.repeat(40);
     process.env.APP_REVIEW_EMAIL = 'app-review+abcdef12@harpapro.com';
-    delete process.env.APP_REVIEW_CODE_SHA256;
+    delete process.env.APP_REVIEW_CODE;
 
-    await expect(freshImportEnv()).rejects.toThrow(/APP_REVIEW_CODE_SHA256/);
+    await expect(freshImportEnv()).rejects.toThrow(/APP_REVIEW_CODE/);
   });
 
-  it('accepts App Review email plus code hash', async () => {
+  it('accepts App Review email plus 12-digit code', async () => {
     process.env.NODE_ENV = 'development';
     process.env.DEV_OTP_TOKEN = 'a'.repeat(40);
     process.env.APP_REVIEW_EMAIL = 'app-review+abcdef12@harpapro.com';
-    process.env.APP_REVIEW_CODE_SHA256 = 'a'.repeat(64);
+    process.env.APP_REVIEW_CODE = '123456789012';
 
     const mod = await freshImportEnv();
     expect(mod.env.APP_REVIEW_EMAIL).toBe('app-review+abcdef12@harpapro.com');
-    expect(mod.env.APP_REVIEW_CODE_SHA256).toBe('a'.repeat(64));
+    expect(mod.env.APP_REVIEW_CODE).toBe('123456789012');
+  });
+
+  it('rejects App Review codes that are not exactly 12 digits', async () => {
+    process.env.NODE_ENV = 'development';
+    process.env.DEV_OTP_TOKEN = 'a'.repeat(40);
+    process.env.APP_REVIEW_EMAIL = 'app-review+abcdef12@harpapro.com';
+    process.env.APP_REVIEW_CODE = '123456';
+
+    await expect(freshImportEnv()).rejects.toThrow(/12-digit/);
   });
 
   it('rejects App Review emails without the hash suffix shape', async () => {
     process.env.NODE_ENV = 'development';
     process.env.DEV_OTP_TOKEN = 'a'.repeat(40);
     process.env.APP_REVIEW_EMAIL = 'app-review@harpapro.com';
-    process.env.APP_REVIEW_CODE_SHA256 = 'a'.repeat(64);
+    process.env.APP_REVIEW_CODE = '123456789012';
 
     await expect(freshImportEnv()).rejects.toThrow(/app-review/);
   });

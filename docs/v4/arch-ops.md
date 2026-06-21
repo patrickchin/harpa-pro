@@ -246,8 +246,9 @@ flow:
 
 1. Set `APP_REVIEW_EMAIL` on the production API to a stable address
    shaped like `app-review+<hash>@harpapro.com`.
-2. Generate a static 12-digit review code and store only its SHA-256
-   hex digest in `APP_REVIEW_CODE_SHA256`.
+2. Generate a static 12-digit review code and store it as the
+   server-only production API secret `APP_REVIEW_CODE`. Do not expose it
+   through mobile env or client code.
 3. Prepare demo data for that account before submission. The repo does
    not currently have a production demo-data seed; use the app/API under
    the stable review account, or add a dedicated seed script before
@@ -264,9 +265,8 @@ flow:
    This uses the normal app sign-in flow. No password is required.
    ```
 
-Do not commit the raw review code. Rotate it by changing the code,
-updating `APP_REVIEW_CODE_SHA256`, and updating the App Store Connect
-review note for the next submission.
+Do not commit the review code. Rotate it by changing `APP_REVIEW_CODE`
+and updating the App Store Connect review note for the next submission.
 
 ### Production release
 

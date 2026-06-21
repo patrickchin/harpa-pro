@@ -60,12 +60,11 @@ Key decisions (full rationale in the design spec):
 - **`emailOTP` plugin** — Resend as transport, 6-digit code, 10-minute
   expiry, 5 allowed attempts. `disableSignUp: false` — the first
   verified email creates the user automatically.
-- **App Store Review access** — the same `/api/auth/sign-in/email-otp`
-  endpoint accepts a configured static 12-digit review code only for
-  the exact `APP_REVIEW_EMAIL`. The submitted code is SHA-256 hashed
-  and constant-time compared with `APP_REVIEW_CODE_SHA256`; on match,
-  the API seeds a one-request better-auth verification row and lets
-  better-auth create the normal session.
+- **App Store Review access** — the same email-OTP send + sign-in
+  endpoints support a configured static 12-digit review code only for
+  the exact `APP_REVIEW_EMAIL`. Better-auth's `generateOTP` hook returns
+  `APP_REVIEW_CODE` for that email and the API suppresses outbound mail;
+  verification and session creation stay on better-auth's normal path.
 - **`emailAndPassword`** — `enabled: true`, `disableSignUp: true`.
   Only for test-account smoke tests; a `before` hook 401s any email
   not in `TEST_ACCOUNT_EMAILS`. We keep `TEST_ACCOUNT_EMAILS` set on
@@ -311,23 +310,23 @@ The production API may set:
 | Var | Purpose |
 |---|---|
 | `APP_REVIEW_EMAIL` | Exact reviewer email, shaped like `app-review+<hash>@harpapro.com` |
-| `APP_REVIEW_CODE_SHA256` | SHA-256 hex digest of the static 12-digit reviewer code |
+| `APP_REVIEW_CODE` | Server-only static 12-digit reviewer code |
 
-`APP_REVIEW_EMAIL` and `APP_REVIEW_CODE_SHA256` must be set together.
-The raw 12-digit code is never bundled into mobile code and should not
-be committed. To rotate it, generate a new 12-digit code, store only:
+`APP_REVIEW_EMAIL` and `APP_REVIEW_CODE` must be set together. The
+12-digit code is never bundled into mobile code and should not be
+committed.
 
-```sh
-printf '%s' "$APP_REVIEW_CODE" | shasum -a 256 | awk '{print $1}'
-```
-
-At verification time, `packages/api/src/auth/auth.ts` hashes the
-submitted code and compares it with `APP_REVIEW_CODE_SHA256` using
-`crypto.timingSafeEqual`. A match seeds a short-lived better-auth
-`public.verification` row for `APP_REVIEW_EMAIL` and then delegates to
-better-auth's normal `/api/auth/sign-in/email-otp` handler. That means
-the resulting reviewer session is a normal better-auth session and all
-authenticated API routes behave the same as they do for a regular user.
+When the reviewer requests a sign-in OTP, `packages/api/src/auth/auth.ts`
+uses better-auth's `generateOTP` hook to return `APP_REVIEW_CODE` only
+for the exact configured reviewer email and `type='sign-in'`. The
+`sendVerificationOTP` hook suppresses outbound email for that address.
+The 12-digit generated code is SHA-256 hashed before it is persisted in
+`public.verification`; normal six-digit OTPs remain stored in their
+existing dev-readable form so `/api/dev/last-otp` and Maestro fixture
+flows continue to work. Better-auth then verifies the submitted code
+with its normal constant-time OTP comparison and creates the reviewer
+session through the same `/api/auth/sign-in/email-otp` handler used by
+regular users.
 
 Normal users still receive six-digit email OTPs. The mobile input allows
 up to 12 digits for everyone so the review code fits, but the server
@@ -352,7 +351,7 @@ the same PR that introduces that data contract.
 | `TEST_ACCOUNT_EMAILS` | API | Password-bypass allowlist (set in dev + prd) |
 | `TEST_ACCOUNT_PASSWORD` | API | Shared smoke-test password (set in dev + prd) |
 | `APP_REVIEW_EMAIL` | API | Exact App Store reviewer email |
-| `APP_REVIEW_CODE_SHA256` | API | SHA-256 hex digest of the static 12-digit reviewer code |
+| `APP_REVIEW_CODE` | API | Server-only static 12-digit reviewer code |
 | `DATABASE_URL` | API | Neon connection (pooled) |
 | `EXPO_PUBLIC_API_URL` | Mobile | API base URL (validated by `lib/env.ts`) |
 

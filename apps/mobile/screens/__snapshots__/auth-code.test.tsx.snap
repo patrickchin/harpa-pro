@@ -93,8 +93,8 @@ exports[`AuthCode > matches snapshot at default props 1`] = `
                   undefined,
                 ]
               }
-              textContentType="oneTimeCode"
               testID="input-otp"
+              textContentType="oneTimeCode"
               value=""
             />
           </rn-View>

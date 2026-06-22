@@ -60,10 +60,10 @@ Key decisions (full rationale in the design spec):
 - **`emailOTP` plugin** — Resend as transport, 6-digit code, 10-minute
   expiry, 5 allowed attempts. `disableSignUp: false` — the first
   verified email creates the user automatically.
-- **App Store Review access** — app-review-shaped reviewer emails use
-  better-auth's email/password endpoint with exact server-side allowlist
-  checks. Normal users stay on email-OTP, and the email-OTP route keeps
-  its standard six-digit behavior.
+- **App Store Review access** — the stable `app-review@harpapro.com`
+  reviewer email uses better-auth's email/password endpoint with exact
+  server-side allowlist checks. Normal users stay on email-OTP, and the
+  email-OTP route keeps its standard six-digit behavior.
 - **`emailAndPassword`** — `enabled: true`, `disableSignUp: true`.
   Only for test-account smoke tests; a `before` hook 401s any email
   not in `TEST_ACCOUNT_EMAILS`. We keep `TEST_ACCOUNT_EMAILS` set on
@@ -301,21 +301,21 @@ allowlisted user already exists, it creates or refreshes that user's
 
 ## App Store Review access
 
-Apple reviewers use the normal email screen. When the email matches the
-`app-review+<hash>@harpapro.com` shape, mobile skips requesting an OTP
-and the next screen accepts a password instead. There is no visible
-demo or reviewer-only button in the mobile app.
+Apple reviewers use the normal email screen. When the email is
+`app-review@harpapro.com`, mobile skips requesting an OTP and the next
+screen accepts a password instead. There is no visible demo or
+reviewer-only button in the mobile app.
 
 The production API may set:
 
 | Var | Purpose |
 |---|---|
-| `APP_REVIEW_EMAILS` | Comma-separated exact reviewer emails, each shaped like `app-review+<hash>@harpapro.com` |
+| `APP_REVIEW_EMAILS` | Exact reviewer email: `app-review@harpapro.com` |
 | `APP_REVIEW_PASSWORD` | Server-only reviewer password, min 16 chars |
 
 `APP_REVIEW_EMAILS` and `APP_REVIEW_PASSWORD` must be set together.
-The password is never bundled into mobile code and should not be
-committed.
+The reviewer email is not a secret; the strong password is the secret.
+The password is never bundled into mobile code and should not be committed.
 
 `packages/api/src/auth/auth.ts` keeps `emailAndPassword.disableSignUp`
 enabled and uses a before-hook to reject every password sign-in email

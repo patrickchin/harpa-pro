@@ -244,8 +244,8 @@ and Play internal track for package `com.harpa.pro`.
 App Store Connect reviewer credentials use the normal email entry screen
 and then a password on the second screen:
 
-1. Set `APP_REVIEW_EMAILS` on the production API to one or more stable
-   addresses shaped like `app-review+<hash>@harpapro.com`.
+1. Set `APP_REVIEW_EMAILS` on the production API to the stable reviewer
+   address `app-review@harpapro.com`.
 2. Generate a reviewer password and store it as the server-only
    production API secret `APP_REVIEW_PASSWORD`. Do not expose it through
    mobile env or client code.
@@ -258,7 +258,7 @@ and then a password on the second screen:
 
    ```text
    Sign in with email:
-   app-review+<hash>@harpapro.com
+   app-review@harpapro.com
 
    On the next screen, enter this password:
    <reviewer password>

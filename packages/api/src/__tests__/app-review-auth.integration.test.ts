@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { PgFixture } from './setup-pg.js';
 
-const REVIEW_EMAIL = 'app-review+testhash@harpapro.com';
+const REVIEW_EMAIL = 'app-review@harpapro.com';
 const REVIEW_PASSWORD = 'review-password-12345';
 
 let fx: PgFixture;

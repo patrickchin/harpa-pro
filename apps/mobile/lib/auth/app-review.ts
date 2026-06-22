@@ -1,5 +1,5 @@
-const APP_REVIEW_EMAIL_REGEX = /^app-review\+[a-z0-9]{6,20}@harpapro\.com$/i;
+const APP_REVIEW_EMAIL = 'app-review@harpapro.com';
 
 export function isAppReviewEmail(email: string): boolean {
-  return APP_REVIEW_EMAIL_REGEX.test(email.trim());
+  return email.trim().toLowerCase() === APP_REVIEW_EMAIL;
 }

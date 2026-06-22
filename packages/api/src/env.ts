@@ -9,7 +9,7 @@ const optionalUrl = z.preprocess(
   z.string().url().optional(),
 );
 
-const appReviewEmailRegex = /^app-review\+[a-z0-9]{6,20}@harpapro\.com$/i;
+const APP_REVIEW_EMAIL = 'app-review@harpapro.com';
 
 function splitCsv(value: string): string[] {
   return value
@@ -33,17 +33,16 @@ const Env = z.object({
    */
   TEST_ACCOUNT_EMAILS: z.string().optional(),
   /**
-   * App Store Review password access. Review emails must be exact,
-   * unguessable addresses such as `app-review+<short-hash>@harpapro.com`.
-   * The password is a server-side secret only; never bundle it into
-   * mobile code.
+   * App Store Review password access. The reviewer email is intentionally
+   * stable/public (`app-review@harpapro.com`); the strong server-side
+   * password is the secret. Never bundle that password into mobile code.
    */
   APP_REVIEW_EMAILS: z
     .string()
     .refine(
       (value) => splitCsv(value).length > 0
-        && splitCsv(value).every((email) => appReviewEmailRegex.test(email)),
-      'must be comma-separated app-review+<hash>@harpapro.com emails',
+        && splitCsv(value).every((email) => email.toLowerCase() === APP_REVIEW_EMAIL),
+      'must be app-review@harpapro.com',
     )
     .optional(),
   APP_REVIEW_PASSWORD: z.string().min(16).optional(),

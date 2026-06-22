@@ -177,6 +177,17 @@ def check_api(ctx: DoctorContext) -> CheckResult:
     return _fail("api", res.error or f"HTTP {res.status}")
 
 
+def check_auth_broker(ctx: DoctorContext) -> CheckResult:
+    """Auth broker reachable at http://127.0.0.1:8790/healthz."""
+    res = healthcheck.http_get(
+        "http://127.0.0.1:8790/healthz",
+        timeout=HTTP_TIMEOUT_SECONDS,
+    )
+    if res.ok:
+        return _ok("auth_broker", "healthy on :8790")
+    return _fail("auth_broker", res.error or f"HTTP {res.status}")
+
+
 def check_docker_stack(ctx: DoctorContext) -> CheckResult:
     """`docker compose ps --format json` shows pg + api + minio running.
 
@@ -373,11 +384,11 @@ def _parse_reverse_list(output: str) -> set[str]:
     return specs
 
 
-_REVERSE_PORTS = ("tcp:8081", "tcp:8787", "tcp:9000")
+_REVERSE_PORTS = ("tcp:8081", "tcp:8787", "tcp:8790", "tcp:9000")
 
 
 def check_adb_reverse(ctx: DoctorContext) -> CheckResult:
-    """Both tcp:8081 and tcp:8787 forwarded via `adb reverse` (Pitfall #20)."""
+    """Local development ports forwarded via `adb reverse` (Pitfall #20)."""
     if not ctx.resolved_device:
         return _skip("adb_reverse", "no device resolved")
     serial = ctx.resolved_device
@@ -396,7 +407,10 @@ def check_adb_reverse(ctx: DoctorContext) -> CheckResult:
     found = _parse_reverse_list(result.stdout)
     missing = [p for p in _REVERSE_PORTS if p not in found]
     if not missing:
-        return _ok("adb_reverse", "tcp:8081 + tcp:8787 + tcp:9000 forwarded")
+        return _ok(
+            "adb_reverse",
+            "tcp:8081 + tcp:8787 + tcp:8790 + tcp:9000 forwarded",
+        )
     if not ctx.fix:
         return _fail(
             "adb_reverse",

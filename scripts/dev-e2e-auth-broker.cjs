@@ -12,10 +12,11 @@
  * process sees it at runtime.
  *
  * Required env (in .env.local or process.env):
- *   TEST_ACCOUNT_EMAILS   — comma-separated allowlisted e-mail addresses
  *   TEST_ACCOUNT_PASSWORD — shared password for all test accounts
  *
  * Optional:
+ *   TEST_ACCOUNT_EMAILS   — comma-separated allowlisted e-mail addresses
+ *                           (defaults to test/test2/test3@harpapro.com)
  *   E2E_AUTH_BROKER_PORT  — listen port (default 8790)
  */
 const fs = require('node:fs');
@@ -28,8 +29,9 @@ const env = { ...localEnv, ...process.env };
 
 const password =
   env.TEST_ACCOUNT_PASSWORD || env.MAESTRO_DEV_TEST_ACCOUNT_PASSWORD || '';
+const defaultEmails = 'test@harpapro.com,test2@harpapro.com,test3@harpapro.com';
 const allowedEmails = new Set(
-  (env.TEST_ACCOUNT_EMAILS || env.MAESTRO_DEV_TEST_ACCOUNT_EMAILS || '')
+  (env.TEST_ACCOUNT_EMAILS || env.MAESTRO_DEV_TEST_ACCOUNT_EMAILS || defaultEmails)
     .split(',')
     .map((e) => e.trim().toLowerCase())
     .filter(Boolean),
@@ -38,7 +40,7 @@ const port = Number(env.E2E_AUTH_BROKER_PORT || 8790);
 
 if (!password || allowedEmails.size === 0) {
   console.error(
-    'dev-e2e-auth-broker requires TEST_ACCOUNT_EMAILS and TEST_ACCOUNT_PASSWORD in .env.local or the process env.',
+    'dev-e2e-auth-broker requires TEST_ACCOUNT_PASSWORD in .env.local or the process env.',
   );
   process.exit(1);
 }
@@ -103,10 +105,6 @@ function setJsonHeaders(res) {
 function sendJson(res, status, body) {
   res.writeHead(status);
   res.end(JSON.stringify(body));
-}
-
-function trimSlash(value) {
-  return value.replace(/\/+$/, '');
 }
 
 function maskEmail(email) {

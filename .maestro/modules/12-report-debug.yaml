@@ -14,9 +14,9 @@ tags:
 #   - no debug-empty-state (because the report has been generated)
 #   - navigate back to saved-report screen
 #
-# Pre-condition: alice is on the finalized saved-report screen
+# Pre-condition: test is on the finalized saved-report screen
 #   (btn-report-actions visible); REPORT_NUMBER set.
-# Post-condition: alice is back on the saved-report screen.
+# Post-condition: test is back on the saved-report screen.
 #
 # Note: showDeveloperSection is true only in fixture/dev builds
 # (EXPO_PUBLIC_USE_FIXTURES=true || __DEV__). The debug button is

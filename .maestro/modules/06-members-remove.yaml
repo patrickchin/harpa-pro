@@ -1,5 +1,5 @@
 appId: ${MAESTRO_APP_ID}
-name: "06 — Members: alice removes bob; bob no longer sees project"
+name: "06 — Members: test removes test2; test2 no longer sees project"
 tags:
   - regression
   - members
@@ -7,17 +7,17 @@ tags:
 # Module 06 — Member removal
 #
 # Covers:
-#   - alice opens members screen
-#   - taps remove button on bob's row
+#   - test opens members screen
+#   - taps remove button on test2's row
 #   - confirms removal via confirm-remove-member dialog
-#   - bob's row disappears
-#   - sign in as bob: bob's project list does NOT include the project
-#   - restore alice
+#   - test2's row disappears
+#   - sign in as test2: test2's project list does NOT include the project
+#   - restore test
 #
-# Pre-condition: alice on project home; bob is a viewer member.
-# Post-condition: alice on project home; bob is removed.
+# Pre-condition: test on project home; test2 is a viewer member.
+# Post-condition: test on project home; test2 is removed.
 
-# --- Alice opens members ---------------------------------------------------
+# --- Test opens members ---------------------------------------------------
 - tapOn:
     id: "link-project-members"
 - extendedWaitUntil:
@@ -25,7 +25,7 @@ tags:
       id: "member-row-.*"
     timeout: 10000
 
-# --- Remove bob's row -------------------------------------------------------
+# --- Remove test2's row -------------------------------------------------------
 - tapOn:
     id: "btn-remove-member-.*"
 - extendedWaitUntil:
@@ -35,9 +35,9 @@ tags:
 - tapOn:
     id: "confirm-remove-member"
 
-# --- Confirm bob's row is gone ---------------------------------------------
-# `member-row-.*` still matches alice's owner row, so we assert the
-# "Viewer" badge (only bob had it) is gone instead.
+# --- Confirm test2's row is gone ---------------------------------------------
+# `member-row-.*` still matches test's owner row, so we assert the
+# "Viewer" badge (only test2 had it) is gone instead.
 - extendedWaitUntil:
     notVisible:
       text: "Viewer"
@@ -51,21 +51,21 @@ tags:
       id: "btn-project-edit"
     timeout: 10000
 
-# --- Switch to bob — bob no longer sees the project -----------------------
+# --- Switch to test2 — test2 no longer sees the project -----------------------
 - runFlow: ../helpers/sign-out.yaml
 - runFlow:
     file: ../helpers/sign-in.yaml
     env:
-      EMAIL: "bob@e2e.harpapro.com"
+      EMAIL: "test2@harpapro.com"
 
-# Bob's project list should be empty (no project row for alice's project)
+# Test Two's project list should be empty (no project row for test's project)
 - assertNotVisible:
     text: "Regression Test Project \\(Edited\\)"
 
-# --- Switch back to alice ---------------------------------------------------
+# --- Switch back to test ---------------------------------------------------
 - runFlow: ../helpers/sign-out.yaml
 - runFlow:
     file: ../helpers/sign-in.yaml
     env:
-      EMAIL: "alice@e2e.harpapro.com"
+      EMAIL: "test@harpapro.com"
 - runFlow: ../helpers/open-project.yaml

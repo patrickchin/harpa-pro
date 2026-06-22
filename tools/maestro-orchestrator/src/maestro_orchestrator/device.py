@@ -23,6 +23,7 @@ _SUBPROCESS_TIMEOUT = 8.0
 _REVERSE_PORTS: tuple[tuple[str, str], ...] = (
     ("tcp:8081", "tcp:8081"),
     ("tcp:8787", "tcp:8787"),
+    ("tcp:8790", "tcp:8790"),
     ("tcp:9000", "tcp:9000"),
 )
 _ANDROID_WAKE_COMMANDS: tuple[tuple[str, tuple[str, ...]], ...] = (

@@ -50,6 +50,7 @@ def _catalogue(ctx: checks.DoctorContext) -> list[CheckEntry]:
         ("fixture_env", checks.check_fixture_env),
         ("metro", checks.check_metro),
         ("api", checks.check_api),
+        ("auth_broker", checks.check_auth_broker),
         ("orphan_maestro", checks.check_no_orphan_maestro),
     ]
     if ctx.host_name == "macos":
@@ -86,6 +87,7 @@ def _required_check_names(host_name: str) -> set[str]:
         "fixture_env",
         "metro",
         "api",
+        "auth_broker",
     }
     if host_name == "macos":
         return base | {"ios_simulator", "ios_app_installed"}

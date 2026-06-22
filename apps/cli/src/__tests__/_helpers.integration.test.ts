@@ -44,22 +44,22 @@ async function seed(identifier: string, code: string) {
 }
 
 describe('readLatestOtp — exact identifier match (no LIKE oracle)', () => {
-  it("returns alice's OTP, never bob's, even when bob's identifier contains alice's email as a substring", async () => {
-    const aliceEmail = 'alice@e2e.harpapro.com';
-    // bob's identifier is contrived to contain alice's email as a substring,
-    // exactly the sort of payload that `LIKE %email%` would return for alice.
-    await seed(`sign-in-otp-bob+${aliceEmail}@e2e.harpapro.com`, '999999');
-    await seed(`sign-in-otp-${aliceEmail}`, '111111');
+  it("returns test's OTP, never test2's, even when test2's identifier contains test's email as a substring", async () => {
+    const testEmail = 'test@harpapro.com';
+    // test2's identifier is contrived to contain test's email as a substring,
+    // exactly the sort of payload that `LIKE %email%` would return for test.
+    await seed(`sign-in-otp-test2+${testEmail}@harpapro.com`, '999999');
+    await seed(`sign-in-otp-${testEmail}`, '111111');
 
-    const got = await readLatestOtp(aliceEmail);
+    const got = await readLatestOtp(testEmail);
     expect(got).toBe('111111');
   });
 
   it('rejects (throws) when no row matches exactly — wildcard input does not slip through', async () => {
-    await seed('sign-in-otp-alice@e2e.harpapro.com', '111111');
-    // `%@e2e.harpapro.com` would match alice with LIKE; with `=` it
+    await seed('sign-in-otp-test@harpapro.com', '111111');
+    // `%@harpapro.com` would match test with LIKE; with `=` it
     // doesn't match anything and the helper raises.
-    await expect(readLatestOtp('%@e2e.harpapro.com')).rejects.toThrow(
+    await expect(readLatestOtp('%@harpapro.com')).rejects.toThrow(
       /no verification row/,
     );
   });

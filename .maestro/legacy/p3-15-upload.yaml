@@ -36,13 +36,13 @@ tags:
     stopApp: true
 - waitForAnimationToEnd
 
-# Sign in with seeded user (email-OTP via dev/last-otp).
+# Sign in with the seeded password-login test account.
 - assertVisible:
     id: 'input-email'
 - runFlow:
     file: helpers/sign-in.yaml
     env:
-      EMAIL: "alice@e2e.harpapro.com"
+      EMAIL: "test@harpapro.com"
 
 # Open the first project / first report.
 - assertVisible:

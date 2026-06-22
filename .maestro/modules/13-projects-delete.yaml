@@ -14,8 +14,8 @@ tags:
 #   - confirm deletion via confirm-delete-project
 #   - confirm project no longer in projects list
 #
-# Pre-condition: alice is on saved-report screen (btn-report-actions visible).
-# Post-condition: alice is on empty projects list.
+# Pre-condition: test is on saved-report screen (btn-report-actions visible).
+# Post-condition: test is on empty projects list.
 
 # --- Delete the report first (cleanup before project delete) ---------------
 - tapOn:

@@ -1,5 +1,5 @@
 appId: ${MAESTRO_APP_ID}
-name: "05 — Members: alice removes bob and re-invites as viewer"
+name: "05 — Members: test removes test2 and re-invites as viewer"
 tags:
   - regression
   - members
@@ -8,20 +8,20 @@ tags:
 #
 # The project-members screen does not currently support changing an
 # existing member's role inline (no role picker on the member row —
-# only a remove button). To exercise the viewer role we remove bob
+# only a remove button). To exercise the viewer role we remove test2
 # and re-invite him as a viewer. Once an inline role picker lands,
 # replace this with a single role-change tap.
 #
 # Covers:
-#   - alice removes bob (editor)
-#   - alice re-invites bob as viewer
-#   - sign in as bob; bob sees project but cannot create reports
-#   - restore alice on project home
+#   - test removes test2 (editor)
+#   - test re-invites test2 as viewer
+#   - sign in as test2; test2 sees project but cannot create reports
+#   - restore test on project home
 #
-# Pre-condition: alice is on project home; bob is editor member.
-# Post-condition: alice is on project home; bob is viewer member.
+# Pre-condition: test is on project home; test2 is editor member.
+# Post-condition: test is on project home; test2 is viewer member.
 
-# --- Alice opens members and removes bob -----------------------------------
+# --- Test opens members and removes test2 -----------------------------------
 - tapOn:
     id: "link-project-members"
 - extendedWaitUntil:
@@ -29,7 +29,7 @@ tags:
       id: "member-row-.*"
     timeout: 10000
 # The remove button only appears on non-owner rows, so this id matches
-# bob uniquely.
+# test2 uniquely.
 - tapOn:
     id: "btn-remove-member-.*"
 # Confirm the remove in the dialog (AppDialogSheet primary action).
@@ -44,7 +44,7 @@ tags:
       id: "btn-remove-member-.*"
     timeout: 10000
 
-# --- Alice re-invites bob as viewer ----------------------------------------
+# --- Test re-invites test2 as viewer ----------------------------------------
 # The add-member form is collapsed by default; tap btn-show-add-member
 # to reveal input-member-email + role picker.
 - tapOn:
@@ -55,7 +55,7 @@ tags:
     timeout: 8000
 - tapOn:
     id: "input-member-email"
-- inputText: "bob@e2e.harpapro.com"
+- inputText: "test2@harpapro.com"
 - hideKeyboard
 - tapOn:
     id: "picker-member-role-viewer"
@@ -74,17 +74,17 @@ tags:
       id: "btn-project-edit"
     timeout: 10000
 
-# --- Switch to bob — verify viewer access ----------------------------------
+# --- Switch to test2 — verify viewer access ----------------------------------
 - runFlow: ../helpers/sign-out.yaml
 - runFlow:
     file: ../helpers/sign-in.yaml
     env:
-      EMAIL: "bob@e2e.harpapro.com"
+      EMAIL: "test2@harpapro.com"
 
 - tapOn:
     text: "Regression Test Project \\(Edited\\)"
 # Viewers do NOT see btn-project-edit. Wait for the Members card
-# (link-project-members is rendered for all roles) to confirm bob
+# (link-project-members is rendered for all roles) to confirm test2
 # is on the project home.
 - extendedWaitUntil:
     visible:
@@ -93,7 +93,7 @@ tags:
 - assertNotVisible:
     id: "btn-project-edit"
 
-# Bob's role badge (visible on members screen) shows "Viewer"
+# Test Two's role badge (visible on members screen) shows "Viewer"
 - tapOn:
     id: "link-project-members"
 - extendedWaitUntil:
@@ -115,12 +115,12 @@ tags:
 - tapOn:
     id: "btn-back"
 
-# --- Switch back to alice ---------------------------------------------------
+# --- Switch back to test ---------------------------------------------------
 - tapOn:
     id: "btn-back"
 - runFlow: ../helpers/sign-out.yaml
 - runFlow:
     file: ../helpers/sign-in.yaml
     env:
-      EMAIL: "alice@e2e.harpapro.com"
+      EMAIL: "test@harpapro.com"
 - runFlow: ../helpers/open-project.yaml

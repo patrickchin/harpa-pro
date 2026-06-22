@@ -15,8 +15,8 @@ tags:
 #   - open a section Add Attachments action from the card header
 #   - verify picker rows show thumbnails and can scroll to later groups
 #
-# Pre-condition: alice on project home.
-# Post-condition: alice on project home; no report from this module remains.
+# Pre-condition: test on project home.
+# Post-condition: test on project home; no report from this module remains.
 
 # --- Open reports list and create a new draft ------------------------------
 - tapOn:

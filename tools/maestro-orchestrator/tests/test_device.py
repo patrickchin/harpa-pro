@@ -217,8 +217,9 @@ def test_adb_reverse_ports_android_invokes_each_port(
     calls = [c[0][0] for c in spy.call_args_list]
     assert ["adb", "-s", "ABC", "reverse", "tcp:8081", "tcp:8081"] in calls
     assert ["adb", "-s", "ABC", "reverse", "tcp:8787", "tcp:8787"] in calls
+    assert ["adb", "-s", "ABC", "reverse", "tcp:8790", "tcp:8790"] in calls
     assert ["adb", "-s", "ABC", "reverse", "tcp:9000", "tcp:9000"] in calls
-    assert len(calls) == 3
+    assert len(calls) == 4
 
 
 def test_adb_reverse_ports_without_device_omits_serial(
@@ -230,6 +231,7 @@ def test_adb_reverse_ports_without_device_omits_serial(
     assert res.ok, res.detail
     calls = [c[0][0] for c in spy.call_args_list]
     assert ["adb", "reverse", "tcp:8081", "tcp:8081"] in calls
+    assert ["adb", "reverse", "tcp:8790", "tcp:8790"] in calls
 
 
 def test_adb_reverse_ports_failure(monkeypatch: pytest.MonkeyPatch) -> None:

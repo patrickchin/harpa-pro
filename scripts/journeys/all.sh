@@ -11,8 +11,8 @@
 #
 # Env vars:
 #   PASSWORD   — required (test account password, e.g. from Doppler)
-#   EMAIL      — primary test account (default: alice@e2e.harpapro.com)
-#   EMAIL2     — secondary test account (default: bob@e2e.harpapro.com)
+#   EMAIL      — primary test account (default: test@harpapro.com)
+#   EMAIL2     — secondary test account (default: test2@harpapro.com)
 #   VOICE_M4A  — path to real voice sample for core journey (optional)
 set -euo pipefail
 

@@ -7,7 +7,7 @@ tags:
 # Captures marketplace screenshots for App Store / Play Store review.
 #
 # Preconditions:
-#   - local compose API is up with DEV_OTP_TOKEN set
+#   - local compose API and auth broker are up with test accounts seeded
 #   - scripts/maestro/seed-store-screenshots.sh has seeded Postgres + MinIO
 #   - Metro is running with EXPO_PUBLIC_USE_FIXTURES=false and
 #     EXPO_PUBLIC_SCREENSHOT_MODE=true
@@ -38,8 +38,7 @@ tags:
 - runFlow:
     file: helpers/sign-in.yaml
     env:
-      EMAIL: "store@e2e.harpapro.com"
-      DEV_OTP_TOKEN: "${DEV_OTP_TOKEN}"
+      EMAIL: "test3@harpapro.com"
 
 - runFlow:
     when:

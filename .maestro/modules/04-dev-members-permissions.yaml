@@ -1,5 +1,5 @@
 appId: ${MAESTRO_APP_ID}
-name: "04-dev - Members: bob sees project and can edit as editor"
+name: "04-dev - Members: test2 sees project and can edit as editor"
 tags:
   - regression
   - members
@@ -10,8 +10,8 @@ tags:
 - runFlow:
     file: ../helpers/dev-password-login.yaml
     env:
-      PHONE_ENCODED: "%2B15550199002"
-      NAME: "Bob Dev E2E"
+      EMAIL_ENCODED: "test2%40harpapro.com"
+      NAME: "Test Two Dev E2E"
       COMPANY: "Dev E2E Corp"
 
 - assertVisible:
@@ -47,7 +47,7 @@ tags:
 - runFlow:
     file: ../helpers/dev-password-login.yaml
     env:
-      PHONE_ENCODED: "%2B15550199001"
-      NAME: "Alice Dev E2E"
+      EMAIL_ENCODED: "test%40harpapro.com"
+      NAME: "Test Dev E2E"
       COMPANY: "Dev E2E Corp"
 - runFlow: ../helpers/open-project-dev.yaml

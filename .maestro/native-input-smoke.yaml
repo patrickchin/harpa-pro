@@ -25,9 +25,9 @@ tags:
 # Pre-condition: local API stack is up, Metro/dev-client is running
 # with EXPO_PUBLIC_USE_FIXTURES=false, and microphone + camera
 # permissions are granted for MAESTRO_APP_ID.
-# Post-condition: project is deleted and alice is signed out.
+# Post-condition: project is deleted and test is signed out.
 
-# --- Setup: signed-in alice on project home --------------------------------
+# --- Setup: signed-in test on project home --------------------------------
 - runFlow: modules/01-auth.yaml
 - runFlow: modules/02-projects-crud.yaml
 

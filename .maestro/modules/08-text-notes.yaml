@@ -14,8 +14,8 @@ tags:
 #   - note disappears from timeline
 #   - delete the draft to leave a clean state for module 11
 #
-# Pre-condition: alice on project home; no reports.
-# Post-condition: alice on project home; no reports.
+# Pre-condition: test on project home; no reports.
+# Post-condition: test on project home; no reports.
 
 # --- Open reports list and create a new report ----------------------------
 - tapOn:

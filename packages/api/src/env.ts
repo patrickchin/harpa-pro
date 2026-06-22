@@ -31,6 +31,9 @@ const Env = z.object({
   /**
    * Test-account password bypass — comma-separated allowlist of emails
    * permitted to sign in via better-auth's emailAndPassword endpoint.
+   * Use stable public addresses: test@harpapro.com, test2@harpapro.com,
+   * and test3@harpapro.com. The password, not the email address, is
+   * the secret.
    * Set in both Doppler `dev` and `prd` (we keep test accounts on
    * production so smoke-test logins keep working there).
    * Replaces the legacy TEST_ACCOUNT_PHONES variable.
@@ -66,28 +69,6 @@ const Env = z.object({
    * make sense for short-lived review environments.
    */
   HARPAPRO_PR_BUILD: z.enum(['0', '1']).default('0'),
-  /**
-   * Shared secret required by the dev-only `POST /api/dev/last-otp`
-   * route. Header `x-dev-otp-token` on each request is constant-time
-   * compared against this. ≥32 chars to keep brute-forcing impractical.
-   *
-   * Refines below enforce:
-   *  - production (non-PR) deployments: must be UNSET (else boot fails);
-   *    keeps the dev introspection surface off prod even by accident.
-   *  - development (or PR preview): must be SET — else the route is
-   *    dropped from the mount and Maestro flows would silently 404.
-   *    Devs who never run E2E can opt out with HARPA_DEV_OTP_DISABLED='1'.
-   *  - test: no requirement (tests opt in per file).
-   * See docs/v4/arch-auth-and-rls.md §Dev OTP introspection.
-   */
-  DEV_OTP_TOKEN: z.string().min(32).optional(),
-  /**
-   * Escape hatch for developers who never run Maestro E2E and don't
-   * want to set DEV_OTP_TOKEN locally. Set to `'1'` to satisfy the
-   * dev-side refine without setting the token. Has no effect on the
-   * production-must-be-unset rule.
-   */
-  HARPA_DEV_OTP_DISABLED: z.enum(['0', '1']).default('0'),
   AI_FIXTURE_MODE: z.enum(['replay', 'record', 'live']).default('replay'),
   AI_LIVE: z.enum(['0', '1']).default('0'),
   // OpenAI is used for voice-note summarization. Required when AI_LIVE=1.
@@ -241,32 +222,6 @@ const Env = z.object({
     message:
       "EMAIL_OTP_LIVE must be '1' on production (else OTP emails would not send). " +
       "Set HARPAPRO_PR_BUILD='1' to allow fake mode on per-PR preview deployments.",
-  },
-).refine(
-  // Production-non-PR builds must NOT set DEV_OTP_TOKEN — keeps the
-  // dev introspection surface fully unreachable on real prod.
-  (e) => !(e.NODE_ENV === 'production' && e.HARPAPRO_PR_BUILD !== '1' && !!e.DEV_OTP_TOKEN),
-  {
-    path: ['DEV_OTP_TOKEN'],
-    message:
-      'DEV_OTP_TOKEN must be unset on production deployments. ' +
-      "Setting it would mount /api/dev/last-otp; that route is for Maestro E2E only. " +
-      "If this is a PR preview, set HARPAPRO_PR_BUILD='1'.",
-  },
-).refine(
-  // Development (and PR previews) require DEV_OTP_TOKEN unless the dev
-  // explicitly opts out via HARPA_DEV_OTP_DISABLED='1'. Tests are
-  // exempt — they manage env directly.
-  (e) => {
-    if (e.NODE_ENV === 'test') return true;
-    if (e.NODE_ENV === 'production' && e.HARPAPRO_PR_BUILD !== '1') return true;
-    return !!e.DEV_OTP_TOKEN || e.HARPA_DEV_OTP_DISABLED === '1';
-  },
-  {
-    path: ['DEV_OTP_TOKEN'],
-    message:
-      'DEV_OTP_TOKEN must be set in development and PR preview builds (>=32 chars). ' +
-      "Set HARPA_DEV_OTP_DISABLED='1' to opt out if you never run Maestro E2E.",
   },
 );
 

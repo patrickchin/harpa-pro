@@ -4,7 +4,7 @@
 > real Android device `R3CT7092S2H` (`com.harpa.pro.dev`) in
 > fixture-replay mode against the local docker-compose stack.
 > Last verified: 2026-05-24, HEAD `11632dc`, wallclock ~18m21s for
-> the full journey across 01-auth, 01b-signup-bob, 02-projects-crud,
+> the full journey across 01-auth, 01b-signup-test2, 02-projects-crud,
 > 03-members-invite, 04-members-permissions, 05-members-viewer,
 > 06-members-remove, 07-reports-crud, 08-text-notes,
 > 11-generate-finalize, 12-report-debug, 13-projects-delete (plus
@@ -393,8 +393,8 @@ the testIDs + product surfaces it depends on.
 3. `chore(mobile): testID audit — add testIDs from §3.3 to screens + components` — touches the 20+ files in the inventory; pure additive, no behaviour change.
 4. `feat(mobile): hidden project-slug + bob-user-id chips in dev/fixture builds` — header `Text testID` only mounted when `EXPO_PUBLIC_USE_FIXTURES` or `__DEV__`.
 5. ~~`feat(api): test-account allowlist + magic-OTP backdoor`~~ — **dropped.** No magic OTP backdoor. Local mode uses the existing fake-Twilio path (`TWILIO_LIVE=0` → accepts `TWILIO_VERIFY_FAKE_CODE=000000`), while dev-deployment mode uses the narrower `POST /api/auth/sign-in/email` test-account bypass that is already gated by Doppler `dev` secrets.
-6. ~~`chore(infra): seed cli command + Doppler dev wiring`~~ — **replaced.** Local mode signs Alice and Bob up via the normal mobile sign-up UI (modules `01-auth.yaml` and `01b-signup-bob.yaml`) and resets with `docker compose down -v`. Dev mode must use allowlisted test accounts and per-run cleanup without truncating the shared dev DB.
-7. `test(mobile): .maestro/helpers/{sign-in-alice,sign-in-bob,sign-out,open-project}.yaml` — shared building blocks. No teardown helper: state reset is `docker compose down -v` locally.
+6. ~~`chore(infra): seed cli command + Doppler dev wiring`~~ — **replaced.** Local mode uses password-login test accounts (modules `01-auth.yaml` and `01b-signup-test2.yaml`) and resets with `docker compose down -v`. Dev mode must use allowlisted test accounts and per-run cleanup without truncating the shared dev DB.
+7. `test(mobile): .maestro/helpers/{sign-in,sign-out,open-project}.yaml` — shared building blocks. No teardown helper: state reset is `docker compose down -v` locally.
 8. `test(mobile): .maestro/modules/01-auth.yaml + 02-projects-crud.yaml`.
 9. `test(mobile): .maestro/modules/03-members-invite.yaml + 04-members-permissions.yaml + 05-members-viewer.yaml + 06-members-remove.yaml`.
 10. `test(mobile): .maestro/modules/07-reports-crud.yaml + 08-text-notes.yaml`.

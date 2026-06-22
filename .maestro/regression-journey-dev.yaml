@@ -19,7 +19,7 @@ tags:
 # truncated.
 
 - runFlow: modules/01-dev-auth-password.yaml
-- runFlow: modules/01b-dev-password-bob.yaml
+- runFlow: modules/01b-dev-password-test2.yaml
 - runFlow: modules/02-dev-projects-crud.yaml
 - runFlow: modules/03-dev-members-invite.yaml
 - runFlow: modules/04-dev-members-permissions.yaml

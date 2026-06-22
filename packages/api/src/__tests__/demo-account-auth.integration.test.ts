@@ -4,6 +4,8 @@ import type { PgFixture } from './setup-pg.js';
 const DEMO_EMAIL = 'demo@harpapro.com';
 const DEMO_EMAIL_2 = 'demo2@harpapro.com';
 const DEMO_PASSWORD = 'demo-password-12345';
+const TEST_EMAIL = 'test@harpapro.com';
+const TEST_PASSWORD = 'test-password-12345';
 
 let fx: PgFixture;
 let createApp: typeof import('../app.js').createApp;
@@ -81,6 +83,8 @@ async function seedPasswordUser(email: string, password: string): Promise<void> 
 }
 
 beforeAll(async () => {
+  process.env.TEST_ACCOUNT_EMAILS = TEST_EMAIL;
+  process.env.TEST_ACCOUNT_PASSWORD = TEST_PASSWORD;
   process.env.DEMO_ACCOUNT_EMAILS = `${DEMO_EMAIL},${DEMO_EMAIL_2}`;
   process.env.DEMO_ACCOUNT_PASSWORD = DEMO_PASSWORD;
   process.env.EMAIL_OTP_LIVE = '0';
@@ -100,6 +104,8 @@ beforeAll(async () => {
 }, 120_000);
 
 afterAll(async () => {
+  delete process.env.TEST_ACCOUNT_EMAILS;
+  delete process.env.TEST_ACCOUNT_PASSWORD;
   delete process.env.DEMO_ACCOUNT_EMAILS;
   delete process.env.DEMO_ACCOUNT_PASSWORD;
   await fx?.stop();
@@ -113,7 +119,27 @@ beforeEach(async () => {
   await pool.query(`DELETE FROM public."user"`);
 });
 
-describe('Demo account password access', () => {
+describe('Password account access', () => {
+  it('signs in a configured test account with the correct password', async () => {
+    const app = createApp();
+    await seedPasswordUser(TEST_EMAIL, TEST_PASSWORD);
+
+    const res = await signInPassword(app, TEST_EMAIL, TEST_PASSWORD);
+
+    expect(res.status).toBe(200);
+    expect(res.headers.get('set-auth-token')).toBeTruthy();
+  });
+
+  it('rejects the test-account password for an unconfigured test email', async () => {
+    const app = createApp();
+    await seedPasswordUser('test4@harpapro.com', TEST_PASSWORD);
+
+    const res = await signInPassword(app, 'test4@harpapro.com', TEST_PASSWORD);
+
+    expect(res.status).not.toBe(200);
+    expect(res.headers.get('set-auth-token')).toBeNull();
+  });
+
   it('signs in a configured demo email with the correct password', async () => {
     const app = createApp();
     await seedPasswordUser(DEMO_EMAIL, DEMO_PASSWORD);

@@ -213,6 +213,32 @@ def test_check_api_fail(
     assert r.status == "fail"
 
 
+def test_check_auth_broker_ok(
+    fake_project_root: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(
+        healthcheck,
+        "http_get",
+        lambda *a, **kw: healthcheck.HealthResult(ok=True, status=200, error=None),
+    )
+    r = checks.check_auth_broker(_ctx(fake_project_root))
+    assert r.status == "ok"
+
+
+def test_check_auth_broker_fail(
+    fake_project_root: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(
+        healthcheck,
+        "http_get",
+        lambda *a, **kw: healthcheck.HealthResult(
+            ok=False, status=None, error="connect refused"
+        ),
+    )
+    r = checks.check_auth_broker(_ctx(fake_project_root))
+    assert r.status == "fail"
+
+
 # --- check_docker_stack -------------------------------------------------
 _NDJSON_HEALTHY = '\n'.join([
     '{"Service":"pg","State":"running"}',
@@ -503,7 +529,7 @@ def test_check_adb_device_nonzero(
 
 
 # --- adb reverse -------------------------------------------------------
-_REVERSE_OK = "R3CT7092S2H tcp:8081 tcp:8081\nR3CT7092S2H tcp:8787 tcp:8787\nR3CT7092S2H tcp:9000 tcp:9000\n"
+_REVERSE_OK = "R3CT7092S2H tcp:8081 tcp:8081\nR3CT7092S2H tcp:8787 tcp:8787\nR3CT7092S2H tcp:8790 tcp:8790\nR3CT7092S2H tcp:9000 tcp:9000\n"
 _REVERSE_PARTIAL = "R3CT7092S2H tcp:8081 tcp:8081\n"
 
 
@@ -823,6 +849,7 @@ _CHECK_NAME_MAP: dict[str, str] = {
     "check_maestro_on_path": "maestro_cli",
     "check_metro": "metro",
     "check_api": "api",
+    "check_auth_broker": "auth_broker",
     "check_docker_stack": "docker",
     "check_fixture_env": "fixture_env",
     "check_no_orphan_maestro": "orphan_maestro",

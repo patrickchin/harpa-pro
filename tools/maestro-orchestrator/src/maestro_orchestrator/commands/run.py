@@ -40,7 +40,7 @@ EXIT_ALREADY_RUNNING = 2
 EXIT_SPAWN_FAILED = 3
 EXIT_MAESTRO_NOT_FOUND = 4
 EXIT_DEVICE_WAKE_FAILED = 5
-_MAESTRO_ENV_PASSTHROUGH = ("DEV_OTP_TOKEN", "API_BASE_URL")
+_MAESTRO_ENV_PASSTHROUGH = ("API_BASE_URL",)
 
 
 @dataclass(frozen=True)
@@ -178,10 +178,8 @@ def run_run(cfg: MoConfig, opts: RunOptions) -> int:
     #    process environment. Every flow under `.maestro/` declares
     #    `appId: ${MAESTRO_APP_ID}`, so we must forward `cfg.app_id`
     #    through `--env` or Maestro tries to launch the literal app id
-    #    `undefined`. The same applies to local helper scripts such as
-    #    `last-otp.js`, which read DEV_OTP_TOKEN from Maestro globals.
-    #    The env vars on the child process are still set above as a
-    #    courtesy, but `--env` is what Maestro actually reads.
+    #    `undefined`. The env vars on the child process are still set above
+    #    as a courtesy, but `--env` is what Maestro actually reads.
     argv = [maestro_exe, "test"]
     if cfg.app_id:
         argv += ["--env", f"MAESTRO_APP_ID={cfg.app_id}"]

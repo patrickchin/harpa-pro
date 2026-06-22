@@ -29,19 +29,17 @@ Stop later with `docker rm -f harpa-pg`.
 ```bash
 DATABASE_URL='postgres://postgres:pg@localhost:5433/harpa' \
 R2_FIXTURE_MODE=replay \
+TEST_ACCOUNT_EMAILS='test@harpapro.com,test2@harpapro.com,test3@harpapro.com' \
+TEST_ACCOUNT_PASSWORD='replace-with-a-local-16-char-min-password' \
 pnpm --filter @harpa/api dev
 ```
 
 Listens on `:8787`. `R2_FIXTURE_MODE=replay` is **required** — without
 it `pickStorage()` returns `R2Storage`, whose methods all throw.
 
-No Twilio in v4 — auth is email-OTP via better-auth. In dev (NODE_ENV
-!= production) the `POST /api/dev/last-otp` endpoint exposes the most
-recent OTP for an email so curl/Maestro flows can finish the sign-in
-without Resend. The route is locked behind a shared-secret header
-(`x-dev-otp-token`) plus an `@e2e.harpapro.com` domain allowlist —
-see [`arch-auth-and-rls.md`](arch-auth-and-rls.md) §Dev OTP
-introspection.
+No Twilio in v4 — normal auth is email-OTP via better-auth. For manual
+fixture-mode smoke tests, use the configured test-account password path
+so no email delivery or OTP introspection route is needed.
 
 ## 3. Curl flow
 
@@ -50,22 +48,12 @@ Run from a second terminal.
 ```bash
 B=http://127.0.0.1:8787
 J='content-type: application/json'
+TEST_ACCOUNT_PASSWORD='same-local-password-used-to-start-api'
 
 # --- auth ---------------------------------------------------------------
-EMAIL='alice@e2e.harpapro.com'
-curl -sX POST $B/api/auth/email-otp/send-verification-otp -H "$J" \
-  -d "{\"email\":\"$EMAIL\",\"type\":\"sign-in\"}" | jq
-# /api/dev/last-otp requires the x-dev-otp-token shared secret (matched
-# constant-time against env.DEV_OTP_TOKEN). Email must end in
-# @e2e.harpapro.com — every other domain returns 404. Export
-# DEV_OTP_TOKEN in your shell before running this; the API also needs
-# it set or the route is not even mounted. See
-# docs/v4/arch-auth-and-rls.md §Dev OTP introspection.
-OTP=$(curl -sX POST $B/api/dev/last-otp \
-  -H "$J" -H "x-dev-otp-token: $DEV_OTP_TOKEN" \
-  -d "{\"email\":\"$EMAIL\"}" | jq -r .otp)
-TOKEN=$(curl -sD - -X POST $B/api/auth/sign-in/email-otp -H "$J" \
-  -d "{\"email\":\"$EMAIL\",\"otp\":\"$OTP\"}" -o /dev/null \
+EMAIL='test@harpapro.com'
+TOKEN=$(curl -sD - -X POST $B/api/auth/sign-in/email -H "$J" \
+  -d "{\"email\":\"$EMAIL\",\"password\":\"$TEST_ACCOUNT_PASSWORD\"}" -o /dev/null \
   | awk 'tolower($1)=="set-auth-token:" {print $2}' | tr -d '\r\n')
 H="authorization: Bearer $TOKEN"
 

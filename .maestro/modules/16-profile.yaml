@@ -12,8 +12,8 @@ tags:
 #   - the four primary nav targets are visible: account, usage,
 #     sign-out, clear-cache (developer section)
 #
-# Pre-condition: alice on profile screen (post-condition of module 15).
-# Post-condition: alice on profile screen, signed in.
+# Pre-condition: test on profile screen (post-condition of module 15).
+# Post-condition: test on profile screen, signed in.
 
 - assertVisible:
     id: "screen-profile"

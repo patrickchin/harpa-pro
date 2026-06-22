@@ -1,56 +1,33 @@
 appId: ${MAESTRO_APP_ID}
 ---
-# sign-in.yaml — helper: sign in via email-OTP
+# sign-in.yaml — helper: sign in through the local CLI auth broker
 #
 # Required env vars:
-#   EMAIL — the email of an existing seeded user. Must end in
-#           @e2e.harpapro.com — the dev API rejects all other domains
-#           with 404 (e.g. alice@e2e.harpapro.com).
-#   DEV_OTP_TOKEN — shared secret (≥32 chars) for the dev OTP introspection
-#           route. Forwarded to last-otp.js as the x-dev-otp-token
-#           header. Source from your shell; reset-db.sh / journeys
-#           scripts set it before invoking maestro.
+#   EMAIL — the password-login test account email, normally
+#           test@harpapro.com, test2@harpapro.com, or test3@harpapro.com.
 #
 # Required runtime services:
-#   - The fixture-mode API on http://127.0.0.1:8787, with `/api/dev/last-otp`
-#     mounted (NODE_ENV !== 'production' AND DEV_OTP_TOKEN set).
-#   - adb reverse tcp:8787 tcp:8787 for Android.
+#   - The fixture-mode API on http://127.0.0.1:8787.
+#   - The local auth broker on http://127.0.0.1:8790.
 #
-# Pre-condition: sign-in (email) screen is visible (`input-email`).
-# Post-condition: sign-in screen is no longer visible. Caller is responsible
-# for handling either onboarding (new account) or projects list (returning user).
+# Post-condition: either onboarding or the projects list is visible. Caller is
+# responsible for handling both.
 #
 # Usage:
 #   - runFlow:
 #       file: ../helpers/sign-in.yaml
 #       env:
-#         EMAIL: "alice@e2e.harpapro.com"
-#         DEV_OTP_TOKEN: ${DEV_OTP_TOKEN}
-- tapOn:
-    id: "input-email"
-- eraseText: 80
-- inputText: "${EMAIL}"
-- hideKeyboard
-- tapOn:
-    id: "btn-login-send-code"
+#         EMAIL: "test@harpapro.com"
+- openLink: "harpa://e2e-password-login?email=${EMAIL}&broker=http%3A%2F%2F127.0.0.1%3A8790"
+- runFlow:
+    file: dismiss-open-dialog.yaml
 - extendedWaitUntil:
     visible:
-      id: "input-otp"
-    timeout: 10000
-# Pull the OTP that better-auth just persisted to public.verification.
-- runScript:
-    file: last-otp.js
-    env:
-      EMAIL: "${EMAIL}"
-      DEV_OTP_TOKEN: "${DEV_OTP_TOKEN}"
-- tapOn:
-    id: "input-otp"
-- inputText: "${output.OTP}"
-- tapOn:
-    id: "btn-verify-code"
-# Wait until the sign-in screen leaves — new users land on onboarding,
-# returning users land on the projects list. The caller handles both.
+      id: "screen-onboarding|btn-new-project|e2e-password-login-error"
+    timeout: 45000
+- assertNotVisible:
+    id: "e2e-password-login-error"
 - extendedWaitUntil:
-    notVisible:
-      id: "input-email"
+    visible:
+      id: "screen-onboarding|btn-new-project"
     timeout: 15000

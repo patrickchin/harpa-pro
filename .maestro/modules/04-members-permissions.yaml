@@ -1,5 +1,5 @@
 appId: ${MAESTRO_APP_ID}
-name: "04 — Members: bob sees project and can edit as editor"
+name: "04 — Members: test2 sees project and can edit as editor"
 tags:
   - regression
   - members
@@ -7,30 +7,30 @@ tags:
 # Module 04 — Member permissions (editor)
 #
 # Covers:
-#   - sign out alice → sign in bob
-#   - bob sees the project in his list (alice invited him)
-#   - bob opens the project home
-#   - bob's role badge shows "Editor"
-#   - bob can access the reports screen (editor has reports access)
-#   - sign out bob → sign in alice (restore for next module)
+#   - sign out test → sign in test2
+#   - test2 sees the project in his list (test invited him)
+#   - test2 opens the project home
+#   - test2's role badge shows "Editor"
+#   - test2 can access the reports screen (editor has reports access)
+#   - sign out test2 → sign in test (restore for next module)
 #
-# Pre-condition: alice is signed in.
-# Post-condition: alice is signed in on project home.
+# Pre-condition: test is signed in.
+# Post-condition: test is signed in on project home.
 
-# --- Switch to bob ---------------------------------------------------------
+# --- Switch to test2 ---------------------------------------------------------
 - runFlow: ../helpers/sign-out.yaml
 - runFlow:
     file: ../helpers/sign-in.yaml
     env:
-      EMAIL: "bob@e2e.harpapro.com"
+      EMAIL: "test2@harpapro.com"
 
-# --- Bob sees the project ---------------------------------------------------
+# --- Test Two sees the project ---------------------------------------------------
 - assertVisible:
     text: "Regression Test Project \\(Edited\\)"
 - tapOn:
     text: "Regression Test Project \\(Edited\\)"
 
-# --- Bob's role badge shows Editor -----------------------------------------
+# --- Test Two's role badge shows Editor -----------------------------------------
 # The role badge lives on the project members screen (one badge per
 # member row, testID `member-role-badge-<userId>`), not on the project
 # home. Navigate there from the "Members" card.
@@ -47,7 +47,7 @@ tags:
 - tapOn:
     id: "btn-back"
 
-# --- Bob can open reports ---------------------------------------------------
+# --- Test Two can open reports ---------------------------------------------------
 - tapOn:
     id: "btn-open-reports"
 - extendedWaitUntil:
@@ -57,14 +57,14 @@ tags:
 - tapOn:
     id: "btn-back"
 
-# --- Switch back to alice ---------------------------------------------------
+# --- Switch back to test ---------------------------------------------------
 - tapOn:
     id: "btn-back"
 - runFlow: ../helpers/sign-out.yaml
 - runFlow:
     file: ../helpers/sign-in.yaml
     env:
-      EMAIL: "alice@e2e.harpapro.com"
+      EMAIL: "test@harpapro.com"
 
-# --- Alice navigates back to project home ----------------------------------
+# --- Test navigates back to project home ----------------------------------
 - runFlow: ../helpers/open-project.yaml

@@ -39,7 +39,7 @@ tags:
 - runFlow:
     file: helpers/sign-in.yaml
     env:
-      EMAIL: "alice@e2e.harpapro.com"
+      EMAIL: "test@harpapro.com"
 
 # --- Create a project and a draft report ----------------------------------
 - tapOn:
@@ -83,7 +83,7 @@ tags:
       id: "note-row-.*"
     timeout: 8000
 
-# --- Tap Generate. Because Alice is at her per-month report cap, the
+# --- Tap Generate. Because Test is at her per-month report cap, the
 #     route returns 403 usage_limit_exceeded. The mobile error handler
 #     parses the envelope (lib/api/usage-limit-error.ts) and opens
 #     UsageLimitDialog instead of the inline error banner. -----------------

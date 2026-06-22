@@ -2,10 +2,10 @@
  * better-auth server configuration.
  *
  * - Email-OTP via Resend (live or fake based on EMAIL_OTP_LIVE).
- * - App Store Review access uses emailAndPassword for exact configured
- *   reviewer emails; normal users stay on email-OTP.
+ * - Demo account access uses emailAndPassword for exact configured
+ *   demo emails; normal users stay on email-OTP.
  * - emailAndPassword enabled but gated to TEST_ACCOUNT_EMAILS +
- *   APP_REVIEW_EMAILS via a before-hook.
+ *   DEMO_ACCOUNT_EMAILS via a before-hook.
  * - Custom slug IDs (usr_/ses_/vrf_/idn_) via advanced.database.generateId.
  * - expo() plugin owns the bearer/cookie storage flow used by the Expo
  *   client.
@@ -29,12 +29,12 @@ const TEST_EMAILS = (env.TEST_ACCOUNT_EMAILS ?? '')
   .map((s) => s.trim().toLowerCase())
   .filter(Boolean);
 
-const APP_REVIEW_EMAILS = (env.APP_REVIEW_EMAILS ?? '')
+const DEMO_ACCOUNT_EMAILS = (env.DEMO_ACCOUNT_EMAILS ?? '')
   .split(',')
   .map((s) => s.trim().toLowerCase())
   .filter(Boolean);
 
-const PASSWORD_LOGIN_EMAILS = new Set([...TEST_EMAILS, ...APP_REVIEW_EMAILS]);
+const PASSWORD_LOGIN_EMAILS = new Set([...TEST_EMAILS, ...DEMO_ACCOUNT_EMAILS]);
 
 const FROM_EMAIL = 'Harpa Pro <noreply@harpapro.com>';
 const OTP_SUBJECT = 'Your Harpa Pro sign-in code';
@@ -170,8 +170,8 @@ export const auth = betterAuth({
         if (PASSWORD_LOGIN_EMAILS.size === 0 || !PASSWORD_LOGIN_EMAILS.has(email)) {
           throw new APIError('UNAUTHORIZED', { message: 'Invalid credentials' });
         }
-        if (APP_REVIEW_EMAILS.includes(email)) {
-          logAppReviewAttempt(email, 'password_attempt');
+        if (DEMO_ACCOUNT_EMAILS.includes(email)) {
+          logDemoAccountAttempt(email, 'password_attempt');
         } else {
           ctx.context.logger?.info?.(`test_account_password_login_attempt email=${email}`);
         }
@@ -210,12 +210,12 @@ export const auth = betterAuth({
 
 export type Auth = typeof auth;
 
-function logAppReviewAttempt(email: string, outcome: string): void {
+function logDemoAccountAttempt(email: string, outcome: string): void {
   if (env.NODE_ENV === 'test') return;
   // eslint-disable-next-line no-console
   console.info(JSON.stringify({
     level: 'info',
-    msg: 'app_review_sign_in_attempt',
+    msg: 'demo_account_sign_in_attempt',
     email,
     outcome,
   }));

@@ -9,7 +9,11 @@ const optionalUrl = z.preprocess(
   z.string().url().optional(),
 );
 
-const APP_REVIEW_EMAIL = 'app-review@harpapro.com';
+const DEMO_ACCOUNT_EMAILS = new Set([
+  'demo@harpapro.com',
+  'demo2@harpapro.com',
+  'demo3@harpapro.com',
+]);
 
 function splitCsv(value: string): string[] {
   return value
@@ -33,19 +37,19 @@ const Env = z.object({
    */
   TEST_ACCOUNT_EMAILS: z.string().optional(),
   /**
-   * App Store Review password access. The reviewer email is intentionally
-   * stable/public (`app-review@harpapro.com`); the strong server-side
-   * password is the secret. Never bundle that password into mobile code.
+   * Demo account password access. Demo emails are intentionally
+   * stable/public; the strong server-side password is the secret.
+   * Never bundle that password into mobile code.
    */
-  APP_REVIEW_EMAILS: z
+  DEMO_ACCOUNT_EMAILS: z
     .string()
     .refine(
       (value) => splitCsv(value).length > 0
-        && splitCsv(value).every((email) => email.toLowerCase() === APP_REVIEW_EMAIL),
-      'must be app-review@harpapro.com',
+        && splitCsv(value).every((email) => DEMO_ACCOUNT_EMAILS.has(email.toLowerCase())),
+      'must contain only demo@harpapro.com, demo2@harpapro.com, or demo3@harpapro.com',
     )
     .optional(),
-  APP_REVIEW_PASSWORD: z.string().min(16).optional(),
+  DEMO_ACCOUNT_PASSWORD: z.string().min(16).optional(),
   /**
    * Email-OTP transport switch. `'1'` → real Resend send via better-auth's
    * `sendVerificationOTP` hook. Default `'0'` logs the OTP to stdout
@@ -225,10 +229,10 @@ const Env = z.object({
     message: 'TEST_ACCOUNT_EMAILS and TEST_ACCOUNT_PASSWORD must be set together',
   },
 ).refine(
-  (e) => !!e.APP_REVIEW_EMAILS === !!e.APP_REVIEW_PASSWORD,
+  (e) => !!e.DEMO_ACCOUNT_EMAILS === !!e.DEMO_ACCOUNT_PASSWORD,
   {
-    path: ['APP_REVIEW_PASSWORD'],
-    message: 'APP_REVIEW_EMAILS and APP_REVIEW_PASSWORD must be set together',
+    path: ['DEMO_ACCOUNT_PASSWORD'],
+    message: 'DEMO_ACCOUNT_EMAILS and DEMO_ACCOUNT_PASSWORD must be set together',
   },
 ).refine(
   (e) => e.NODE_ENV !== 'production' || e.HARPAPRO_PR_BUILD === '1' || e.EMAIL_OTP_LIVE === '1',

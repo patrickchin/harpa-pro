@@ -60,10 +60,11 @@ Key decisions (full rationale in the design spec):
 - **`emailOTP` plugin** — Resend as transport, 6-digit code, 10-minute
   expiry, 5 allowed attempts. `disableSignUp: false` — the first
   verified email creates the user automatically.
-- **App Store Review access** — the stable `app-review@harpapro.com`
-  reviewer email uses better-auth's email/password endpoint with exact
-  server-side allowlist checks. Normal users stay on email-OTP, and the
-  email-OTP route keeps its standard six-digit behavior.
+- **Demo account access** — public demo emails (`demo@harpapro.com`,
+  `demo2@harpapro.com`, `demo3@harpapro.com`) use better-auth's
+  email/password endpoint with exact server-side allowlist checks.
+  Normal users stay on email-OTP, and the email-OTP route keeps its
+  standard six-digit behavior.
 - **`emailAndPassword`** — `enabled: true`, `disableSignUp: true`.
   Only for test-account smoke tests; a `before` hook 401s any email
   not in `TEST_ACCOUNT_EMAILS`. We keep `TEST_ACCOUNT_EMAILS` set on
@@ -299,42 +300,43 @@ allowlist. The deploy seed is credential-level idempotent: if an
 allowlisted user already exists, it creates or refreshes that user's
 `credential` account password instead of assuming the user is ready.
 
-## App Store Review access
+## Demo account access
 
-Apple reviewers use the normal email screen. When the email is
-`app-review@harpapro.com`, mobile skips requesting an OTP and the next
-screen accepts a password instead. There is no visible demo or
-reviewer-only button in the mobile app.
+Demo users, including App Store reviewers, use the normal email screen.
+When the email is one of `demo@harpapro.com`, `demo2@harpapro.com`, or
+`demo3@harpapro.com`, mobile skips requesting an OTP and the next screen
+accepts a password instead. There is no visible demo or reviewer-only
+button in the mobile app.
 
 The production API may set:
 
 | Var | Purpose |
 |---|---|
-| `APP_REVIEW_EMAILS` | Exact reviewer email: `app-review@harpapro.com` |
-| `APP_REVIEW_PASSWORD` | Server-only reviewer password, min 16 chars |
+| `DEMO_ACCOUNT_EMAILS` | Comma-separated exact demo emails. Supported values: `demo@harpapro.com`, `demo2@harpapro.com`, `demo3@harpapro.com` |
+| `DEMO_ACCOUNT_PASSWORD` | Server-only demo password, min 16 chars |
 
-`APP_REVIEW_EMAILS` and `APP_REVIEW_PASSWORD` must be set together.
-The reviewer email is not a secret; the strong password is the secret.
+`DEMO_ACCOUNT_EMAILS` and `DEMO_ACCOUNT_PASSWORD` must be set together.
+The demo emails are not secrets; the strong password is the secret.
 The password is never bundled into mobile code and should not be committed.
 
 `packages/api/src/auth/auth.ts` keeps `emailAndPassword.disableSignUp`
 enabled and uses a before-hook to reject every password sign-in email
-except the union of `TEST_ACCOUNT_EMAILS` and `APP_REVIEW_EMAILS`.
+except the union of `TEST_ACCOUNT_EMAILS` and `DEMO_ACCOUNT_EMAILS`.
 The deploy seed script (`packages/api/scripts/seed-test-account.ts`)
 creates or refreshes credential accounts for both groups. Successful
-reviewer password sign-in creates a normal better-auth session, so all
+demo password sign-in creates a normal better-auth session, so all
 authenticated API routes behave the same as they do for a regular user.
 
-Normal users still receive and enter six-digit email OTPs. The App
-Review password path does not change the email-OTP route; if that route
-is called directly, better-auth still generates standard six-digit OTPs.
-Review password attempts are logged with `{email, outcome}` and never
-log the password.
+Normal users still receive and enter six-digit email OTPs. The demo
+password path does not change the email-OTP route; if that route is
+called directly, better-auth still generates standard six-digit OTPs.
+Demo password attempts are logged with `{email, outcome}` and never log
+the password.
 
 There is currently no production demo-data seeding script. Before
 submitting to App Review, create or prepare data under the stable
-reviewer account manually, or extend the seed script in the same PR
-that introduces that data contract.
+demo account manually, or extend the seed script in the same PR that
+introduces that data contract.
 
 ## Env vars
 
@@ -347,8 +349,8 @@ that introduces that data contract.
 | `DEV_OTP_TOKEN` | API (dev + PR previews only) | ≥32-char shared secret for `/api/dev/last-otp`. Must be UNSET on prod. |
 | `TEST_ACCOUNT_EMAILS` | API | Password-bypass allowlist (set in dev + prd) |
 | `TEST_ACCOUNT_PASSWORD` | API | Shared smoke-test password (set in dev + prd) |
-| `APP_REVIEW_EMAILS` | API | Comma-separated exact App Store reviewer emails |
-| `APP_REVIEW_PASSWORD` | API | Server-only reviewer password |
+| `DEMO_ACCOUNT_EMAILS` | API | Comma-separated exact demo account emails |
+| `DEMO_ACCOUNT_PASSWORD` | API | Server-only demo password |
 | `DATABASE_URL` | API | Neon connection (pooled) |
 | `EXPO_PUBLIC_API_URL` | Mobile | API base URL (validated by `lib/env.ts`) |
 

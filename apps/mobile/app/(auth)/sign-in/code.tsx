@@ -3,7 +3,7 @@
  *
  * Wires `screens/auth-code.tsx` to better-auth:
  *   1. Normal emails use `authClient.signIn.emailOtp({email, otp})`.
- *      App Review emails use `authClient.signIn.email({email, password})`.
+ *      Demo account emails use `authClient.signIn.email({email, password})`.
  *      better-auth's expoClient persists the cookie on success.
  *   2. `session.refresh()` so `useSession()` picks up the new user.
  *   3. `router.replace('/')` — the (app) auth gate then routes the
@@ -17,7 +17,7 @@ import { Redirect, useLocalSearchParams, useRouter, type Href } from 'expo-route
 import AuthCode from '@/screens/auth-code';
 import { useAuthSession } from '@/lib/auth';
 import { authClient } from '@/lib/auth/client';
-import { isAppReviewEmail } from '@/lib/auth/app-review';
+import { isDemoAccountEmail } from '@/lib/auth/demo-account';
 import { safeBack } from '@/lib/nav/safe-back';
 
 const RESEND_COOLDOWN_SECONDS = 30;
@@ -27,7 +27,7 @@ export default function SignInCodePage() {
   const session = useAuthSession();
   const params = useLocalSearchParams<{ email: string }>();
   const email = (params.email ?? '').toLowerCase();
-  const isPasswordMode = isAppReviewEmail(email);
+  const isPasswordMode = isDemoAccountEmail(email);
 
   const [otp, setOtp] = useState('');
   const [error, setError] = useState<string | null>(null);

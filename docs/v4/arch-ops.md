@@ -239,35 +239,36 @@ the created `com.harpa.pro` binaries with the EAS `production-internal`
 submit profile: production App Store Connect/TestFlight app `6776759817`
 and Play internal track for package `com.harpa.pro`.
 
-### App Review access
+### App Review demo account
 
-App Store Connect reviewer credentials use the normal email entry screen
-and then a password on the second screen:
+App Store Connect reviewer credentials use a demo account through the
+normal email entry screen and then a password on the second screen:
 
-1. Set `APP_REVIEW_EMAILS` on the production API to the stable reviewer
-   address `app-review@harpapro.com`.
-2. Generate a reviewer password and store it as the server-only
-   production API secret `APP_REVIEW_PASSWORD`. Do not expose it through
+1. Set `DEMO_ACCOUNT_EMAILS` on the production API to one or more demo
+   addresses: `demo@harpapro.com`, `demo2@harpapro.com`, or
+   `demo3@harpapro.com`.
+2. Generate a strong demo password and store it as the server-only
+   production API secret `DEMO_ACCOUNT_PASSWORD`. Do not expose it through
    mobile env or client code.
 3. Prepare demo data for that account before submission. The repo does
-   seed the reviewer credential account, but does not currently have a
-   production demo-data seed. Use the app/API under the stable review
+   seed the demo credential account, but does not currently have a
+   production demo-data seed. Use the app/API under the chosen demo
    account, or add a dedicated seed script before relying on automated
    setup.
 4. In App Store Connect, enter the reviewer note in this shape:
 
    ```text
    Sign in with email:
-   app-review@harpapro.com
+   demo@harpapro.com
 
    On the next screen, enter this password:
-   <reviewer password>
+   <demo password>
 
    This uses the normal app sign-in flow. No email OTP is required for
-   the reviewer account.
+   the demo account.
    ```
 
-Do not commit the reviewer password. Rotate it by changing `APP_REVIEW_PASSWORD`
+Do not commit the demo password. Rotate it by changing `DEMO_ACCOUNT_PASSWORD`
 and updating the App Store Connect review note for the next submission.
 
 ### Production release

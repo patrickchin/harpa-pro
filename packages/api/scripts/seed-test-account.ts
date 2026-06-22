@@ -1,7 +1,7 @@
 /**
  * One-shot script to ensure password-login accounts exist:
  * - emails in `TEST_ACCOUNT_EMAILS` use `TEST_ACCOUNT_PASSWORD`
- * - emails in `APP_REVIEW_EMAILS` use `APP_REVIEW_PASSWORD`
+ * - emails in `DEMO_ACCOUNT_EMAILS` use `DEMO_ACCOUNT_PASSWORD`
  *
  * Used by deploys. It no-ops when neither password-login group is
  * configured.
@@ -117,11 +117,11 @@ async function main(): Promise<void> {
     });
   }
 
-  if (env.APP_REVIEW_EMAILS && env.APP_REVIEW_PASSWORD) {
+  if (env.DEMO_ACCOUNT_EMAILS && env.DEMO_ACCOUNT_PASSWORD) {
     groups.push({
-      label: 'app-review',
-      emails: splitCsv(env.APP_REVIEW_EMAILS),
-      password: env.APP_REVIEW_PASSWORD,
+      label: 'demo-account',
+      emails: splitCsv(env.DEMO_ACCOUNT_EMAILS),
+      password: env.DEMO_ACCOUNT_PASSWORD,
       emailVerified: true,
     });
   }

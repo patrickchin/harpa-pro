@@ -1,8 +1,9 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { PgFixture } from './setup-pg.js';
 
-const REVIEW_EMAIL = 'app-review@harpapro.com';
-const REVIEW_PASSWORD = 'review-password-12345';
+const DEMO_EMAIL = 'demo@harpapro.com';
+const DEMO_EMAIL_2 = 'demo2@harpapro.com';
+const DEMO_PASSWORD = 'demo-password-12345';
 
 let fx: PgFixture;
 let createApp: typeof import('../app.js').createApp;
@@ -80,8 +81,8 @@ async function seedPasswordUser(email: string, password: string): Promise<void> 
 }
 
 beforeAll(async () => {
-  process.env.APP_REVIEW_EMAILS = REVIEW_EMAIL;
-  process.env.APP_REVIEW_PASSWORD = REVIEW_PASSWORD;
+  process.env.DEMO_ACCOUNT_EMAILS = `${DEMO_EMAIL},${DEMO_EMAIL_2}`;
+  process.env.DEMO_ACCOUNT_PASSWORD = DEMO_PASSWORD;
   process.env.EMAIL_OTP_LIVE = '0';
 
   vi.resetModules();
@@ -99,8 +100,8 @@ beforeAll(async () => {
 }, 120_000);
 
 afterAll(async () => {
-  delete process.env.APP_REVIEW_EMAILS;
-  delete process.env.APP_REVIEW_PASSWORD;
+  delete process.env.DEMO_ACCOUNT_EMAILS;
+  delete process.env.DEMO_ACCOUNT_PASSWORD;
   await fx?.stop();
 }, 60_000);
 
@@ -112,18 +113,18 @@ beforeEach(async () => {
   await pool.query(`DELETE FROM public."user"`);
 });
 
-describe('App Review password access', () => {
-  it('signs in the configured review email with the correct password', async () => {
+describe('Demo account password access', () => {
+  it('signs in a configured demo email with the correct password', async () => {
     const app = createApp();
-    await seedPasswordUser(REVIEW_EMAIL, REVIEW_PASSWORD);
+    await seedPasswordUser(DEMO_EMAIL, DEMO_PASSWORD);
 
-    const res = await signInPassword(app, REVIEW_EMAIL, REVIEW_PASSWORD);
+    const res = await signInPassword(app, DEMO_EMAIL, DEMO_PASSWORD);
 
     expect(res.status).toBe(200);
     expect(res.headers.get('set-auth-token')).toBeTruthy();
     const body = (await res.json()) as { token: string; user: { email: string } };
     expect(body.token).toBeTruthy();
-    expect(body.user.email).toBe(REVIEW_EMAIL);
+    expect(body.user.email).toBe(DEMO_EMAIL);
 
     const me = await app.request('/me', {
       headers: { authorization: `Bearer ${res.headers.get('set-auth-token')}` },
@@ -131,21 +132,31 @@ describe('App Review password access', () => {
     expect(me.status).toBe(200);
   });
 
-  it('rejects the review password for any other email even if that account exists', async () => {
+  it('signs in a second configured demo email with the same password', async () => {
     const app = createApp();
-    await seedPasswordUser('not-review@example.com', REVIEW_PASSWORD);
+    await seedPasswordUser(DEMO_EMAIL_2, DEMO_PASSWORD);
 
-    const res = await signInPassword(app, 'not-review@example.com', REVIEW_PASSWORD);
+    const res = await signInPassword(app, DEMO_EMAIL_2, DEMO_PASSWORD);
+
+    expect(res.status).toBe(200);
+    expect(res.headers.get('set-auth-token')).toBeTruthy();
+  });
+
+  it('rejects the demo password for any other email even if that account exists', async () => {
+    const app = createApp();
+    await seedPasswordUser('not-demo@example.com', DEMO_PASSWORD);
+
+    const res = await signInPassword(app, 'not-demo@example.com', DEMO_PASSWORD);
 
     expect(res.status).not.toBe(200);
     expect(res.headers.get('set-auth-token')).toBeNull();
   });
 
-  it('rejects the review email with a wrong password', async () => {
+  it('rejects a demo email with a wrong password', async () => {
     const app = createApp();
-    await seedPasswordUser(REVIEW_EMAIL, REVIEW_PASSWORD);
+    await seedPasswordUser(DEMO_EMAIL, DEMO_PASSWORD);
 
-    const res = await signInPassword(app, REVIEW_EMAIL, 'wrong-password-12345');
+    const res = await signInPassword(app, DEMO_EMAIL, 'wrong-password-12345');
 
     expect(res.status).not.toBe(200);
     expect(res.headers.get('set-auth-token')).toBeNull();
@@ -153,10 +164,10 @@ describe('App Review password access', () => {
 
   it('leaves the email OTP route on normal 6-digit OTP behavior', async () => {
     const app = createApp();
-    const sendRes = await sendSignInOtp(app, REVIEW_EMAIL);
+    const sendRes = await sendSignInOtp(app, DEMO_EMAIL);
     expect(sendRes.status).toBe(200);
 
-    const otp = await readLatestOtp(REVIEW_EMAIL);
+    const otp = await readLatestOtp(DEMO_EMAIL);
     expect(otp).toMatch(/^\d{6}$/);
   });
 

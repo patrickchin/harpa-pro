@@ -70,21 +70,7 @@ tags:
     timeout: 15000
 
 # --- Backend regeneration keeps the existing report mounted ----------------
-- tapOn:
-    id: "btn-generate-update-report"
-    waitToSettleTimeoutMs: 100
-- extendedWaitUntil:
-    visible: "Updating the draft with your newest notes..."
-    timeout: 15000
-- assertVisible:
-    id: "report-view-.*"
-- extendedWaitUntil:
-    notVisible: "Updating the draft with your newest notes..."
-    timeout: 60000
-- extendedWaitUntil:
-    visible:
-      id: "report-view-.*"
-    timeout: 15000
+- runFlow: ../helpers/assert-report-generation-write-lock.yaml
 
 # --- Open the card-header Add Attachments picker and scroll it --------------
 - scrollUntilVisible:

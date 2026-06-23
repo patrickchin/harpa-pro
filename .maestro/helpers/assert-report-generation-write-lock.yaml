@@ -25,7 +25,8 @@ appId: ${MAESTRO_APP_ID}
     waitToSettleTimeoutMs: 100
 - runFlow:
     when:
-      visible: 'Updating the draft with your newest notes...'
+      visible:
+        id: 'report-tab-updating-notice'
     commands:
       - assertVisible:
           id: 'report-view-.*'
@@ -36,7 +37,8 @@ appId: ${MAESTRO_APP_ID}
           id: 'btn-finalize-report'
           enabled: false
       - extendedWaitUntil:
-          notVisible: 'Updating the draft with your newest notes...'
+          notVisible:
+            id: 'report-tab-updating-notice'
           timeout: 60000
 - extendedWaitUntil:
     visible:

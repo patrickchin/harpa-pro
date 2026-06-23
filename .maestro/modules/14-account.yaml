@@ -14,9 +14,9 @@ tags:
 #   - tap Edit, type a new full name, Save — name persists,
 #     editor closes back to read-only
 #
-# Pre-condition: alice signed in on empty projects index
+# Pre-condition: test signed in on empty projects index
 #                (post-condition of module 13).
-# Post-condition: alice on profile screen, signed in.
+# Post-condition: test on profile screen, signed in.
 
 # --- Open profile → account ------------------------------------------------
 - tapOn:
@@ -66,7 +66,7 @@ tags:
 - tapOn:
     id: "input-full-name"
 # Clear field via long-press → Select All → backspace is unreliable on
-# iOS XCTest, so just append. Worst case alice's name grows by a few
+# iOS XCTest, so just append. Worst case test's name grows by a few
 # chars across reruns, which doesn't affect any other assertion.
 - inputText: " Edit"
 - hideKeyboard

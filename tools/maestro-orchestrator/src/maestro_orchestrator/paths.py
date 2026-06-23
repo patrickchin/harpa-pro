@@ -53,6 +53,16 @@ def metro_log_file(project_root: Path) -> Path:
     return mo_root(project_root) / "metro.log"
 
 
+def auth_broker_pid_file(project_root: Path) -> Path:
+    """Return `<project_root>/tmp/mo/auth-broker.pid` (managed by `mo up`)."""
+    return mo_root(project_root) / "auth-broker.pid"
+
+
+def auth_broker_log_file(project_root: Path) -> Path:
+    """Return `<project_root>/tmp/mo/auth-broker.log` (managed by `mo up`)."""
+    return mo_root(project_root) / "auth-broker.log"
+
+
 def build_android_pid_file(project_root: Path) -> Path:
     """Return `<project_root>/tmp/mo/build-android.pid`."""
     return mo_root(project_root) / "build-android.pid"

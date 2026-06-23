@@ -60,11 +60,17 @@ Key decisions (full rationale in the design spec):
 - **`emailOTP` plugin** — Resend as transport, 6-digit code, 10-minute
   expiry, 5 allowed attempts. `disableSignUp: false` — the first
   verified email creates the user automatically.
+- **Demo account access** — public demo emails (`demo@harpapro.com`,
+  `demo2@harpapro.com`, `demo3@harpapro.com`) use better-auth's
+  email/password endpoint with exact server-side allowlist checks.
+  Normal users stay on email-OTP, and the email-OTP route keeps its
+  standard six-digit behavior.
 - **`emailAndPassword`** — `enabled: true`, `disableSignUp: true`.
-  Only for test-account smoke tests; a `before` hook 401s any email
-  not in `TEST_ACCOUNT_EMAILS`. We keep `TEST_ACCOUNT_EMAILS` set on
-  production too so smoke tests run against the live deploy; emails
-  not on the allowlist always fail before the hash compare.
+  Only for test-account smoke tests and demo accounts; a `before` hook
+  401s any email not in the union of `TEST_ACCOUNT_EMAILS` and
+  `DEMO_ACCOUNT_EMAILS`. We keep `TEST_ACCOUNT_EMAILS` set on
+  production too so smoke tests run against the live deploy; emails not
+  on the allowlist always fail before the hash compare.
 - **`advanced.database.generateId({model})`** — mints `usr_…` /
   `ses_…` / `vrf_…` / `idn_…` slugs for each better-auth table via
   `newId()`. IDs are stored as bare `text`; slug format is enforced at
@@ -276,7 +282,7 @@ Journey scripts authenticate via:
 ```bash
 curl -X POST "$API/api/auth/sign-in/email" \
   -H 'Content-Type: application/json' \
-  -d '{"email":"e2e@harpapro.com","password":"…"}'
+  -d '{"email":"test@harpapro.com","password":"…"}'
 ```
 
 Then use the returned `token` as `Authorization: Bearer …`.
@@ -285,7 +291,7 @@ Env vars (Doppler `dev` and `prd`):
 
 | Var | Purpose |
 |---|---|
-| `TEST_ACCOUNT_EMAILS` | Comma-separated allowlist |
+| `TEST_ACCOUNT_EMAILS` | Comma-separated allowlist. Use `test@harpapro.com`, `test2@harpapro.com`, and `test3@harpapro.com` |
 | `TEST_ACCOUNT_PASSWORD` | Shared password, min 16 chars |
 
 Env-Zod enforces both-or-neither. `TEST_ACCOUNT_EMAILS` is set in
@@ -295,6 +301,44 @@ allowlist. The deploy seed is credential-level idempotent: if an
 allowlisted user already exists, it creates or refreshes that user's
 `credential` account password instead of assuming the user is ready.
 
+## Demo account access
+
+Demo users, including App Store reviewers, use the normal email screen.
+When the email is one of `demo@harpapro.com`, `demo2@harpapro.com`, or
+`demo3@harpapro.com`, mobile skips requesting an OTP and the next screen
+accepts a password instead. There is no visible demo or reviewer-only
+button in the mobile app.
+
+The production API may set:
+
+| Var | Purpose |
+|---|---|
+| `DEMO_ACCOUNT_EMAILS` | Comma-separated exact demo emails. Supported values: `demo@harpapro.com`, `demo2@harpapro.com`, `demo3@harpapro.com` |
+| `DEMO_ACCOUNT_PASSWORD` | Server-only demo password, min 16 chars |
+
+`DEMO_ACCOUNT_EMAILS` and `DEMO_ACCOUNT_PASSWORD` must be set together.
+The demo emails are not secrets; the strong password is the secret.
+The password is never bundled into mobile code and should not be committed.
+
+`packages/api/src/auth/auth.ts` keeps `emailAndPassword.disableSignUp`
+enabled and uses a before-hook to reject every password sign-in email
+except the union of `TEST_ACCOUNT_EMAILS` and `DEMO_ACCOUNT_EMAILS`.
+The deploy seed script (`packages/api/scripts/seed-test-account.ts`)
+creates or refreshes credential accounts for both groups. Successful
+demo password sign-in creates a normal better-auth session, so all
+authenticated API routes behave the same as they do for a regular user.
+
+Normal users still receive and enter six-digit email OTPs. The demo
+password path does not change the email-OTP route; if that route is
+called directly, better-auth still generates standard six-digit OTPs.
+Demo password attempts are logged with `{email, outcome}` and never log
+the password.
+
+There is currently no production demo-data seeding script. Before
+submitting to App Review, create or prepare data under the stable
+demo account manually, or extend the seed script in the same PR that
+introduces that data contract.
+
 ## Env vars
 
 | Var | Where | Purpose |
@@ -303,9 +347,10 @@ allowlisted user already exists, it creates or refreshes that user's
 | `BETTER_AUTH_URL` | API | Base URL for better-auth handler |
 | `RESEND_API_KEY` | API | Resend transport for OTP emails |
 | `EMAIL_OTP_LIVE` | API | `1` = real Resend send; `0` = logs only (dev/test) |
-| `DEV_OTP_TOKEN` | API (dev + PR previews only) | ≥32-char shared secret for `/api/dev/last-otp`. Must be UNSET on prod. |
 | `TEST_ACCOUNT_EMAILS` | API | Password-bypass allowlist (set in dev + prd) |
 | `TEST_ACCOUNT_PASSWORD` | API | Shared smoke-test password (set in dev + prd) |
+| `DEMO_ACCOUNT_EMAILS` | API | Comma-separated exact demo account emails |
+| `DEMO_ACCOUNT_PASSWORD` | API | Server-only demo password |
 | `DATABASE_URL` | API | Neon connection (pooled) |
 | `EXPO_PUBLIC_API_URL` | Mobile | API base URL (validated by `lib/env.ts`) |
 
@@ -324,67 +369,19 @@ allowlisted user already exists, it creates or refreshes that user's
   `expo-secure-store` (encrypted at rest on iOS/Android). The session
   survives app restarts; force-quitting does not log the user out.
 
-## Dev OTP introspection
+## Maestro password-login wiring
 
-`POST /api/dev/last-otp` is the bridge that lets Maestro `:mock`
-builds and the manual curl flow log in without Resend: it reads the
-most recent OTP that better-auth wrote to `public.verification` and
-returns it as JSON. It is the **only** unauthenticated route that
-exposes session-establishing material to the network, so it is
-hardened well past the original NODE_ENV gate.
+Maestro E2E uses the same `emailAndPassword` better-auth endpoint as
+the smoke-test scripts. `.maestro/helpers/sign-in.yaml` deep-links to
+the dev-only mobile route `harpa://e2e-password-login` with the test
+email and a local broker URL. The broker
+(`scripts/dev-e2e-auth-broker.cjs`) reads `TEST_ACCOUNT_PASSWORD` from
+the developer shell or `.env.local`, returns it only to the mobile app
+process, and never exposes it in Maestro YAML/env logs.
 
-### Layered controls (all enforced — every failure mode returns 404)
-
-| # | Control | Code |
-|---|---|---|
-| 1 | Module-load throw on real production | `packages/api/src/routes/dev.ts` |
-| 2 | Mount only when `NODE_ENV !== 'production' \|\| HARPAPRO_PR_BUILD === '1'` AND `env.DEV_OTP_TOKEN` is set | `packages/api/src/app.ts` |
-| 3 | Per-request `x-dev-otp-token` header, constant-time compared (`crypto.timingSafeEqual`) | `routes/dev.ts` |
-| 4 | Email allowlist regex `^[^@\s]+@e2e\.harpapro\.com$` | `routes/dev.ts` |
-| 5 | Exact identifier SQL: `WHERE identifier = 'sign-in-otp-' \|\| email` (no `LIKE`) | `routes/dev.ts` |
-| 6 | Per-IP global rate limit | `middleware/globalRateLimit.ts` |
-| 7 | Audit log every call (`{requestId, ip, email, outcome}`) | `routes/dev.ts` |
-
-Reject paths return 404, indistinguishable from an unknown URL — a
-prober cannot tell the difference between "route absent" and "wrong
-token". Integration coverage in
-`packages/api/src/__tests__/dev.integration.test.ts` exercises all
-seven failure modes.
-
-### Env vars
-
-| Var | Where | Purpose |
-|---|---|---|
-| `DEV_OTP_TOKEN` | Fly dev + Fly preview app secrets | ≥32-char shared secret. **Must be unset on real production** — env parse fails at boot otherwise. |
-| `HARPA_DEV_OTP_DISABLED` | Local dev shell (optional) | `'1'` opts out of the dev-side refine for developers who never run Maestro E2E. |
-
-### Why exact identifier match (not `LIKE`)
-
-better-auth's emailOtp plugin sets the verification row's
-`identifier` to `${type}-otp-${email}` (see
-`node_modules/better-auth/dist/plugins/email-otp/utils.mjs`). The
-sign-in flow uses `type='sign-in'`, so the column we want is
-exactly `sign-in-otp-<email>`. The previous helper used
-`identifier LIKE '%email%'`, which:
-
-1. matches **every** row when given a wildcard email
-   (`%@e2e.harpapro.com` returns whoever was last to sign in);
-2. is a substring oracle — `alice@e2e.harpapro.com` matches a row
-   whose identifier merely contains alice's email
-   (`sign-in-otp-bob+alice@e2e.harpapro.com.evil`).
-
-The hardened route, plus the `_helpers.ts` / `_login.ts` helpers
-(commit "fix(test): exact identifier match…"), all use `=` against a
-server-constructed identifier so neither failure mode is reachable.
-Logged in `docs/bugs/README.md` as Pattern R8.
-
-### Maestro wiring
-
-`.maestro/helpers/last-otp.js` reads the `DEV_OTP_TOKEN` Maestro env
-global and forwards it as `x-dev-otp-token`. `sign-in.yaml` passes
-the token through to the script via `runScript.env`.
-`scripts/maestro/reset-db.sh` asserts the token is set before
-truncating the dev DB.
+`mo up` starts the broker on `127.0.0.1:8790`; `mo down` stops the
+tracked broker process. The API no longer exposes a `/api/dev/last-otp`
+route, and normal users still use six-digit email OTPs.
 
 
 

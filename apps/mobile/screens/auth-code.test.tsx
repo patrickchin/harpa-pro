@@ -50,6 +50,31 @@ describe('AuthCode', () => {
     expect(btn.props.disabled).toBe(false);
   });
 
+  it('limits OTP input to 6 digits', () => {
+    const tree = render(<AuthCode {...baseProps} otp="123456" />);
+    const input = tree.root.findByProps({ testID: 'input-otp' });
+    const btn = tree.root.findByProps({ testID: 'btn-verify-code' });
+    expect(input.props.maxLength).toBe(6);
+    expect(btn.props.disabled).toBe(false);
+  });
+
+  it('uses a secure password field in password mode', () => {
+    const tree = render(<AuthCode {...baseProps} mode="password" otp="review-password" />);
+    const input = tree.root.findByProps({ testID: 'input-otp' });
+    const btn = tree.root.findByProps({ testID: 'btn-verify-code' });
+    expect(input.props.maxLength).toBeUndefined();
+    expect(input.props.secureTextEntry).toBe(true);
+    expect(input.props.keyboardType).toBe('default');
+    expect(btn.props.disabled).toBe(false);
+    expect(tree.root.findAllByProps({ testID: 'link-resend-code' })).toHaveLength(0);
+  });
+
+  it('disables password submit until a password is entered', () => {
+    const tree = render(<AuthCode {...baseProps} mode="password" otp="" />);
+    const btn = tree.root.findByProps({ testID: 'btn-verify-code' });
+    expect(btn.props.disabled).toBe(true);
+  });
+
   it('shows countdown when resendCountdownSeconds is set', () => {
     const tree = render(
       <AuthCode {...baseProps} resendDisabled resendCountdownSeconds={42} />,

@@ -210,7 +210,10 @@ export function ReportTabPane({
         {generation.report ? (
           <View className="gap-3" testID="report-tab-live">
             {generation.isUpdating ? (
-              <Animated.View entering={FadeIn}>
+              <Animated.View
+                entering={FadeIn}
+                testID="report-tab-updating-notice"
+              >
                 <InlineNotice tone="info">
                   Updating the draft with your newest notes…
                 </InlineNotice>

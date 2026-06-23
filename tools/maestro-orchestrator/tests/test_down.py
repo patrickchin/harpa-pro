@@ -44,6 +44,21 @@ def _write_metro_pid(project_root: Path, pid: int) -> Path:
     return p
 
 
+def _write_auth_broker_pid(project_root: Path, pid: int) -> Path:
+    paths.ensure_layout(project_root)
+    rec = pidfile.PidRecord(
+        pid=pid,
+        create_time=123.0,
+        flow="auth-broker",
+        log=str(paths.auth_broker_log_file(project_root)),
+        started_at=pidfile.now_iso(),
+        device=None,
+    )
+    p = paths.auth_broker_pid_file(project_root)
+    pidfile.write(p, rec)
+    return p
+
+
 # --- metro step ---------------------------------------------------------
 def test_step_metro_skip_when_no_pid_file(project_root: Path) -> None:
     report = down_cmd.DownReport()
@@ -149,6 +164,28 @@ def test_kill_pid_force_kills_on_timeout(monkeypatch: pytest.MonkeyPatch) -> Non
     assert killed == ["kill"]
 
 
+# --- auth broker step ---------------------------------------------------
+def test_step_auth_broker_skip_when_no_pid_file(project_root: Path) -> None:
+    report = down_cmd.DownReport()
+    down_cmd._step_auth_broker(_cfg(project_root), report)
+    assert report.steps[-1]["status"] == "skip"
+    assert "no tracked" in report.steps[-1]["detail"]
+
+
+def test_step_auth_broker_terminates_live_process(
+    monkeypatch: pytest.MonkeyPatch, project_root: Path
+) -> None:
+    _write_auth_broker_pid(project_root, 43)
+    monkeypatch.setattr(down_cmd.pidfile, "is_alive", lambda _r: True)
+    killed: list[int] = []
+    monkeypatch.setattr(down_cmd, "_kill_pid", lambda pid: killed.append(pid))
+    report = down_cmd.DownReport()
+    down_cmd._step_auth_broker(_cfg(project_root), report)
+    assert killed == [43]
+    assert report.steps[-1]["status"] == "ok"
+    assert not paths.auth_broker_pid_file(project_root).exists()
+
+
 # --- docker step --------------------------------------------------------
 def test_step_docker_skip_when_keep_docker(project_root: Path) -> None:
     report = down_cmd.DownReport()
@@ -229,6 +266,7 @@ def test_run_down_happy_path(
     monkeypatch: pytest.MonkeyPatch, project_root: Path
 ) -> None:
     monkeypatch.setattr(down_cmd, "_step_metro", lambda *_a, **_k: None)
+    monkeypatch.setattr(down_cmd, "_step_auth_broker", lambda *_a, **_k: None)
     monkeypatch.setattr(down_cmd, "_step_docker", lambda *_a, **_k: True)
     code = down_cmd.run_down(_cfg(project_root), down_cmd.DownOptions())
     assert code == 0
@@ -238,6 +276,7 @@ def test_run_down_docker_failure_exits_nonzero(
     monkeypatch: pytest.MonkeyPatch, project_root: Path
 ) -> None:
     monkeypatch.setattr(down_cmd, "_step_metro", lambda *_a, **_k: None)
+    monkeypatch.setattr(down_cmd, "_step_auth_broker", lambda *_a, **_k: None)
     monkeypatch.setattr(down_cmd, "_step_docker", lambda *_a, **_k: False)
     code = down_cmd.run_down(_cfg(project_root), down_cmd.DownOptions())
     assert code == down_cmd.EXIT_DOCKER_FAILED
@@ -249,6 +288,7 @@ def test_run_down_json_output(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     monkeypatch.setattr(down_cmd, "_step_metro", lambda *_a, **_k: None)
+    monkeypatch.setattr(down_cmd, "_step_auth_broker", lambda *_a, **_k: None)
     monkeypatch.setattr(down_cmd, "_step_docker", lambda *_a, **_k: True)
     code = down_cmd.run_down(
         _cfg(project_root), down_cmd.DownOptions(json_output=True)

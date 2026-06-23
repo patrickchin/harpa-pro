@@ -1,4 +1,4 @@
-"""`mo down` — stop Metro and the docker-compose stack.
+"""`mo down` — stop Metro, auth broker, and the docker-compose stack.
 
 Counterpart to `mo up`. Idempotent: missing PID files or already-stopped
 containers are not errors. Volumes are preserved (we call
@@ -97,6 +97,27 @@ def _step_metro(cfg: MoConfig, report: DownReport) -> None:
     report.add("metro", "ok", f"terminated pid {record.pid}")
 
 
+# --- auth broker --------------------------------------------------------
+def _step_auth_broker(cfg: MoConfig, report: DownReport) -> None:
+    pid_path = paths.auth_broker_pid_file(cfg.project_root)
+    try:
+        record = pidfile.read(pid_path)
+    except Exception as exc:  # noqa: BLE001 — corrupt PID file
+        report.add("auth_broker", "warn", f"unreadable pid file: {exc}")
+        pidfile.remove(pid_path)
+        return
+    if record is None:
+        report.add("auth_broker", "skip", "no tracked auth broker process")
+        return
+    if not pidfile.is_alive(record):
+        report.add("auth_broker", "skip", f"pid {record.pid} not alive")
+        pidfile.remove(pid_path)
+        return
+    _kill_pid(record.pid)
+    pidfile.remove(pid_path)
+    report.add("auth_broker", "ok", f"terminated pid {record.pid}")
+
+
 # --- docker -------------------------------------------------------------
 def _step_docker(cfg: MoConfig, opts: DownOptions, report: DownReport) -> bool:
     if opts.keep_docker:
@@ -142,6 +163,7 @@ def run_down(
     report = DownReport()
 
     _step_metro(cfg, report)
+    _step_auth_broker(cfg, report)
 
     if not _step_docker(cfg, opts, report):
         report.exit_code = EXIT_DOCKER_FAILED

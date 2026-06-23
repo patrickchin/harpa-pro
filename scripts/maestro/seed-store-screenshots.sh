@@ -1,13 +1,8 @@
 #!/usr/bin/env bash
 # Seed deterministic local data for the store screenshot Maestro flow.
-# Requires the repo docker-compose stack to be running.
+# Requires the repo docker-compose stack to be running with password test
+# accounts configured. The signed-in screenshot user is test3@harpapro.com.
 set -euo pipefail
-
-: "${DEV_OTP_TOKEN:?DEV_OTP_TOKEN must be set (>=32 chars). Must match the API container DEV_OTP_TOKEN.}"
-if (( ${#DEV_OTP_TOKEN} < 32 )); then
-  echo "DEV_OTP_TOKEN must be at least 32 chars (got ${#DEV_OTP_TOKEN})." >&2
-  exit 1
-fi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
@@ -29,7 +24,7 @@ TRUNCATE app.note_files, app.notes, app.files, app.llm_usage_events,
 INSERT INTO public."user"
   (id, name, email, email_verified, display_name, company_name, plan, created_at, updated_at)
 VALUES
-  ('usr_strscrn0001', 'Avery Chen', 'store@e2e.harpapro.com', true, 'Avery Chen', 'HARPA Field Demo', 'pro', (TIMESTAMPTZ :'screenshot_now') - interval '12 days', (TIMESTAMPTZ :'screenshot_now')),
+  ('usr_strscrn0001', 'Avery Chen', 'test3@harpapro.com', true, 'Avery Chen', 'HARPA Field Demo', 'pro', (TIMESTAMPTZ :'screenshot_now') - interval '12 days', (TIMESTAMPTZ :'screenshot_now')),
   ('usr_mbranna0001', 'Maria Santos', 'maria@e2e.harpapro.com', true, 'Maria Santos', 'Northstar Builders', 'free', (TIMESTAMPTZ :'screenshot_now') - interval '11 days', (TIMESTAMPTZ :'screenshot_now')),
   ('usr_mbrbea0002', 'Jamal Reed', 'jamal@e2e.harpapro.com', true, 'Jamal Reed', 'Northstar Builders', 'free', (TIMESTAMPTZ :'screenshot_now') - interval '10 days', (TIMESTAMPTZ :'screenshot_now')),
   ('usr_mbrcyra0003', 'Nina Patel', 'nina@e2e.harpapro.com', true, 'Nina Patel', 'Northstar Builders', 'free', (TIMESTAMPTZ :'screenshot_now') - interval '9 days', (TIMESTAMPTZ :'screenshot_now')),
@@ -281,6 +276,8 @@ SELECT
   (SELECT count(*) FROM app.llm_usage_events) AS usage_events;
 SQL
 
+docker compose exec -T api pnpm --filter @harpa/api db:seed-test-account
+
 docker exec harpa-pro-minio sh -c "rm -rf /data/store-screenshot-fixtures && mkdir -p /data/store-screenshot-fixtures"
 
 copy_fixture() {
@@ -310,4 +307,4 @@ mc cp /data/store-screenshot-fixtures/store-construction-materials-platform.jpg 
 
 docker exec harpa-pro-minio sh -c "rm -rf /data/store-screenshot-fixtures"
 
-echo "Seeded store screenshot data for store@e2e.harpapro.com."
+echo "Seeded store screenshot data for test3@harpapro.com."

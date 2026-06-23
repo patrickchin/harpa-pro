@@ -73,6 +73,7 @@ exports[`AuthCode > matches snapshot at default props 1`] = `
               onChangeText={[MockFunction spy]}
               placeholder="123456"
               placeholderTextColor="#5f5b66"
+              secureTextEntry={false}
               style={
                 [
                   {
@@ -93,6 +94,7 @@ exports[`AuthCode > matches snapshot at default props 1`] = `
                 ]
               }
               testID="input-otp"
+              textContentType="oneTimeCode"
               value=""
             />
           </rn-View>

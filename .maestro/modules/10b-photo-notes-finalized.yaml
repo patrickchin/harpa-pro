@@ -17,8 +17,8 @@ tags:
 #   - open the saved-report image preview, which resolves photos by fileId
 #   - delete the finalized report and return to project home
 #
-# Pre-condition: alice on project home.
-# Post-condition: alice on project home; no report from this module remains.
+# Pre-condition: test on project home.
+# Post-condition: test on project home; no report from this module remains.
 
 # --- Open reports list and create a new draft ------------------------------
 - tapOn:

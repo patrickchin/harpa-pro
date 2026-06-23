@@ -24,8 +24,8 @@ tags:
 # capture path commits a synthetic image). Camera permission must be
 # granted on the sim (`xcrun simctl privacy booted grant camera <id>`).
 #
-# Pre-condition: alice on project home; no reports.
-# Post-condition: alice on project home; no reports.
+# Pre-condition: test on project home; no reports.
+# Post-condition: test on project home; no reports.
 
 # --- Open reports list and create a new draft ------------------------------
 - tapOn:

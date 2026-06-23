@@ -33,7 +33,7 @@ which fails on any `.maestro/**/*.yaml` / `.yml` `point:` key.
 The older P3-exit-gate single-file flow. It still exists as a manual
 smoke target, but the normal full-app Maestro suite is now
 `regression-journey.yaml` plus `.maestro/modules/*`. This flow walks a
-seeded Alice/Bob path on the real `(auth)` + `(app)` routes:
+seeded test-account path on the real `(auth)` + `(app)` routes:
 
 - sign-in → onboarding (fresh account each run, via `scripts/maestro/reset-db.sh`)
 - projects list, new project, copy buttons
@@ -57,7 +57,7 @@ xcrun simctl privacy booted grant camera     "$MAESTRO_APP_ID"
 **Run:**
 
 ```bash
-./scripts/maestro/reset-db.sh                      # wipe + seed user B
+./scripts/maestro/reset-db.sh                      # wipe + seed test users
 maestro test .maestro/core-end-to-end.yaml
 ```
 
@@ -65,24 +65,24 @@ Wrap with `gtimeout 240` for longer batches; on a hung XCTest driver,
 `kill` the leftover `maestro-driver-ios` PID and retry. Prefer the
 modular regression journey for current coverage.
 
-The flow uses better-auth email-OTP. `helpers/sign-in.yaml` reads the
-most recent OTP that better-auth persisted to `public.verification`
-via the dev-only `POST /api/dev/last-otp` endpoint (mounted whenever
-`NODE_ENV !== 'production'`). The seeded invite target
-(`bob@e2e.harpapro.com`, Bob Editor) is reseeded by `reset-db.sh` so the
-invite step always finds a real user. The flow deletes the project
-at the end.
+The flow uses the password-login test accounts
+(`test@harpapro.com`, `test2@harpapro.com`, `test3@harpapro.com`).
+`helpers/sign-in.yaml` talks to the local auth broker on
+`127.0.0.1:8790`, which keeps the shared password out of Maestro logs.
+The seeded invite target (`test2@harpapro.com`) is reseeded by
+`reset-db.sh` so the invite step always finds a real user. The flow
+deletes the project at the end.
 
 ## `regression-journey.yaml` (overnight full-coverage journey)
 
 Orchestrator flow that runs every regression module in
-`.maestro/modules/` sequentially against a single signed-in alice
-(no `reset-db.sh` needed — it auto-creates alice + bob via the
-better-auth emailOtp first-verify path, then deletes the project +
-signs out at the end). Covers:
+`.maestro/modules/` sequentially against a single signed-in test
+account. The API seeds `test@harpapro.com`, `test2@harpapro.com`, and
+`test3@harpapro.com`; the journey deletes the project and signs out at
+the end. Covers:
 
-1. Auth (sign-in alice + sign-out + sign-in round-trip)
-2. Create bob
+1. Auth (sign-in test + sign-out + sign-in round-trip)
+2. Sign in test2
 3. Projects CRUD
 4. Members invite / permissions / viewer / remove
 5. Reports CRUD
@@ -101,9 +101,10 @@ signs out at the end). Covers:
 15. Profile identity + nav
 16. Sign out
 
-**Pre-condition:** docker compose stack up, Metro running, app built
-with `EXPO_PUBLIC_USE_FIXTURES=true`. Microphone and camera privacy
-grants are required for modules 09 and 10a.
+**Pre-condition:** docker compose stack up, auth broker running, Metro
+running, app built with `EXPO_PUBLIC_USE_FIXTURES=true`. Microphone and
+camera privacy grants are required for modules 09 and 10a. `mo up`
+starts the local compose stack, auth broker, and Metro.
 
 On Android devices/emulators, reverse every local port used by the
 app and upload pipeline before running. Photo signed URLs point at
@@ -113,13 +114,15 @@ and the API:
 ```bash
 adb reverse tcp:8081 tcp:8081
 adb reverse tcp:8787 tcp:8787
+adb reverse tcp:8790 tcp:8790
 adb reverse tcp:9000 tcp:9000
 ```
 
 **Run:**
 
 ```bash
-docker compose down -v && docker compose up -d   # fresh DB
+docker compose down -v && docker compose up -d   # fresh DB + seeded test accounts
+node scripts/dev-e2e-auth-broker.cjs             # or use `mo up`
 maestro test .maestro/regression-journey.yaml
 ```
 
@@ -130,7 +133,7 @@ Dev-deployment target:
 - Dev auth uses the local CLI auth broker
   (`scripts/dev-e2e-auth-broker.cjs`) with allowlisted test accounts
   (`TEST_ACCOUNT_EMAILS` + `TEST_ACCOUNT_PASSWORD` in `.env.local` or
-  Doppler `dev`), not email-OTP. Do not pass the password as a Maestro
+  Doppler `dev`), not OTP. Do not pass the password as a Maestro
   env var or `inputText`: Maestro debug logs evaluated values.
 - On Android, run Metro with `--host lan --port 8082`, reverse
   `8082`, and use the local API/R2 proxies:
@@ -169,29 +172,6 @@ Dev-deployment target:
 
 Modules 14/15/16 navigate to Profile / Account / Usage screens.
 
-## `dev-otp-hardening.yaml` (PR128 focused smoke)
-
-Focused Android/local smoke for the hardened `POST /api/dev/last-otp`
-path. It requests Alice's OTP through the real mobile email sign-in UI,
-then `helpers/assert-dev-otp-hardening.js` proves the dev introspection
-route:
-
-- returns the OTP for the exact allowlisted email with `x-dev-otp-token`;
-- rejects missing / bad tokens with 404;
-- rejects non-allowlisted, suffix-attack, and wildcard-injection emails
-  with 404;
-- still lets the app complete sign-in and land on the projects list.
-
-Run with the local compose API and Metro dev-client bundle:
-
-```bash
-export DEV_OTP_TOKEN=... # >=32 chars; must match the API container env
-export MAESTRO_APP_ID=com.harpa.pro.dev
-adb reverse tcp:8081 tcp:8081
-adb reverse tcp:8787 tcp:8787
-maestro test .maestro/dev-otp-hardening.yaml
-```
-
 ## `native-input-smoke.yaml` (real recorder + camera start)
 
 Focused iOS/Android smoke for native input startup. This covers the
@@ -211,9 +191,9 @@ fixture mode.
 Run against the local API stack and a non-fixture dev-client bundle:
 
 ```bash
-export DEV_OTP_TOKEN=dev-token-at-least-32-characters
 export MAESTRO_APP_ID=com.harpa.pro.dev
 docker compose down -v && docker compose up -d
+node scripts/dev-e2e-auth-broker.cjs
 EXPO_PUBLIC_USE_FIXTURES=false pnpm --filter @harpa/mobile start --dev-client
 xcrun simctl privacy booted grant microphone "$MAESTRO_APP_ID"
 xcrun simctl privacy booted grant camera     "$MAESTRO_APP_ID"
@@ -225,6 +205,7 @@ On Android, also reverse Metro/API ports before running:
 ```bash
 adb reverse tcp:8081 tcp:8081
 adb reverse tcp:8787 tcp:8787
+adb reverse tcp:8790 tcp:8790
 ```
 
 ## Fixture-gap coverage map
@@ -239,7 +220,7 @@ journey, but any path it replaces needs one focused non-fixture guard.
 | Photo library picker | Screenshot mode resolves seeded image URIs instead of opening the system picker. | `pick-and-enqueue-gallery-images.test.ts` verifies the non-screenshot path calls `expo-image-picker`; keep OS-picker Maestro coverage manual unless we add stable picker automation. |
 | R2 storage | API replay mode uses `FixtureStorage` instead of signed object storage. | `files.r2-live.integration.test.ts` runs `/files/presign` plus a real signed PUT against MinIO when `CI_R2_LIVE` is enabled. |
 | AI providers | Normal tests replay `packages/ai-fixtures` instead of calling providers. | `.github/workflows/ai-live.yml` runs `pnpm --filter @harpa/api test:live` with `AI_LIVE=1` on prompt/provider-sensitive changes. |
-| Dev OTP helper | E2E auth uses `/api/dev/last-otp` instead of email delivery. | `.maestro/dev-otp-hardening.yaml` plus API integration tests cover auth-helper gates and exact-match lookup. |
+| Auth broker | E2E auth uses the local password broker instead of email delivery. | `mo doctor` checks the broker, and API auth integration tests cover allowlisted password sign-in. |
 
 ## `store-screenshots.yaml` (App Store / Play Store assets)
 
@@ -260,12 +241,13 @@ database and MinIO bucket first, then captures:
 Run against the local fixture stack and a screenshot-mode Metro bundle:
 
 ```bash
-export DEV_OTP_TOKEN=dev-token-at-least-32-characters
 export MAESTRO_APP_ID=com.harpa.pro.dev
 docker compose down -v && docker compose up -d
 scripts/maestro/seed-store-screenshots.sh
+node scripts/dev-e2e-auth-broker.cjs
 adb reverse tcp:8081 tcp:8081
 adb reverse tcp:8787 tcp:8787
+adb reverse tcp:8790 tcp:8790
 adb reverse tcp:9000 tcp:9000
 adb shell settings put global policy_control immersive.full=*
 EXPO_PUBLIC_API_URL=http://localhost:8787 \
@@ -292,12 +274,12 @@ runs do not pick them up by accident.
 
 - `.maestro/legacy/p3-15-upload.yaml`: superseded by modules 10a, 10b,
   and 10c in the normal regression journey. Keep only for debugging the
-  old seeded Alice camera/upload path.
+  old seeded test-account camera/upload path.
 - `.maestro/legacy/p3-15-voice-record.yaml`: superseded by
   `modules/09-voice-notes.yaml`. Keep only for debugging the old seeded
-  Alice voice path.
+  test-account voice path.
 - `.maestro/pending/usage-limit-dialog.yaml`: blocked until reset
-  tooling can seed Alice at the free-plan limit without spending AI
+  tooling can seed the test account at the free-plan limit without spending AI
   tokens.
 - `.maestro/pending/usage-near-limit-toast.yaml`: blocked until the
   mobile client surfaces `X-Usage-Warning` as a near-limit toast and

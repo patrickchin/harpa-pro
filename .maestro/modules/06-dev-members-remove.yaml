@@ -1,5 +1,5 @@
 appId: ${MAESTRO_APP_ID}
-name: "06-dev - Members: alice removes bob; bob no longer sees project"
+name: "06-dev - Members: test removes test2; test2 no longer sees project"
 tags:
   - regression
   - members
@@ -36,8 +36,8 @@ tags:
 - runFlow:
     file: ../helpers/dev-password-login.yaml
     env:
-      PHONE_ENCODED: "%2B15550199002"
-      NAME: "Bob Dev E2E"
+      EMAIL_ENCODED: "test2%40harpapro.com"
+      NAME: "Test Two Dev E2E"
       COMPANY: "Dev E2E Corp"
 
 - assertNotVisible:
@@ -47,7 +47,7 @@ tags:
 - runFlow:
     file: ../helpers/dev-password-login.yaml
     env:
-      PHONE_ENCODED: "%2B15550199001"
-      NAME: "Alice Dev E2E"
+      EMAIL_ENCODED: "test%40harpapro.com"
+      NAME: "Test Dev E2E"
       COMPANY: "Dev E2E Corp"
 - runFlow: ../helpers/open-project-dev.yaml

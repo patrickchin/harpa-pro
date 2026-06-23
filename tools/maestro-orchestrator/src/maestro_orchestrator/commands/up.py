@@ -4,12 +4,13 @@ Brings the local dev stack into "ready to run Maestro" shape:
 
   1. Ensure docker-compose stack (pg/api/minio) is up and `/healthz`
      returns 200.
-  2. Re-establish `adb reverse tcp:8081`, `tcp:8787`, and `tcp:9000`
-     if missing.
-  3. Ensure Metro packager is running on :8081 with fixture wiring
+  2. Re-establish `adb reverse tcp:8081`, `tcp:8787`, `tcp:8790`, and
+     `tcp:9000` if missing.
+  3. Ensure the local auth broker is running on :8790.
+  4. Ensure Metro packager is running on :8081 with fixture wiring
      (`EXPO_PUBLIC_USE_FIXTURES=true`,
       `EXPO_PUBLIC_API_BASE_URL=http://localhost:8787`).
-  4. Run the doctor check catalogue one final time and report.
+  5. Run the doctor check catalogue one final time and report.
 
 Each step is short-circuiting: if a sub-step is already in the
 desired state we don't redo it. Cold start (everything stopped) is
@@ -38,6 +39,7 @@ EXIT_OK = 0
 EXIT_DOCKER_FAILED = 1
 EXIT_METRO_FAILED = 2
 EXIT_DOCTOR_FAILED = 3
+EXIT_AUTH_BROKER_FAILED = 6
 
 # Budgets.
 _DOCKER_POLL_TIMEOUT_SECONDS = 60.0
@@ -47,8 +49,10 @@ _METRO_POLL_INTERVAL = 1.0
 _HTTP_TIMEOUT_SECONDS = 2.0
 
 _API_HEALTH_URL = "http://localhost:8787/healthz"
+_AUTH_BROKER_HEALTH_URL = "http://127.0.0.1:8790/healthz"
 _METRO_STATUS_URL = "http://localhost:8081/status"
 _METRO_STATUS_MARKER = "packager-status:running"
+_DEFAULT_TEST_ACCOUNT_EMAILS = "test@harpapro.com,test2@harpapro.com,test3@harpapro.com"
 
 
 @dataclass(frozen=True)
@@ -166,6 +170,97 @@ def _step_reverse(cfg: MoConfig, opts: UpOptions, report: UpReport) -> None:
     else:
         # Don't fail mo up over a missing device — doctor will catch it.
         report.add("reverse", "warn", res.detail)
+
+
+# --- auth broker --------------------------------------------------------
+def _auth_broker_ready() -> bool:
+    """Auth broker `/healthz` is reachable on localhost:8790."""
+    res = healthcheck.http_get(
+        _AUTH_BROKER_HEALTH_URL,
+        timeout=_HTTP_TIMEOUT_SECONDS,
+    )
+    return res.ok
+
+
+def _tracked_auth_broker_alive(project_root: Path) -> bool:
+    try:
+        record = pidfile.read(paths.auth_broker_pid_file(project_root))
+    except Exception:  # noqa: BLE001 — garbled file == not tracked
+        return False
+    if record is None:
+        return False
+    return pidfile.is_alive(record)
+
+
+def _spawn_auth_broker(cfg: MoConfig) -> tuple[int | None, str]:
+    """Spawn the local auth broker detached. Returns (pid, detail)."""
+    project_root = cfg.project_root
+    paths.ensure_layout(project_root)
+    log_path = paths.auth_broker_log_file(project_root)
+    script = project_root / "scripts" / "dev-e2e-auth-broker.cjs"
+    if not script.exists():
+        return None, f"auth broker script not found: {script}"
+
+    env = dict(os.environ)
+    env.setdefault("TEST_ACCOUNT_EMAILS", _DEFAULT_TEST_ACCOUNT_EMAILS)
+    argv = ["node", str(script)]
+
+    try:
+        pid = spawn.spawn_detached(
+            argv,
+            log_path=log_path,
+            env=env,
+            cwd=project_root,
+        )
+    except OSError as exc:
+        return None, f"failed to spawn auth broker: {exc}"
+
+    try:
+        import psutil
+
+        create_time = psutil.Process(pid).create_time()
+    except Exception:  # noqa: BLE001
+        return None, f"auth broker pid {pid} disappeared immediately"
+
+    record = pidfile.PidRecord(
+        pid=pid,
+        create_time=create_time,
+        flow="auth-broker",
+        log=str(log_path),
+        started_at=pidfile.now_iso(),
+        device=None,
+    )
+    pidfile.write(paths.auth_broker_pid_file(project_root), record)
+    return pid, f"spawned pid {pid}; log: {log_path}"
+
+
+def _poll_auth_broker_ready(*, deadline: float, sleep: Any = time.sleep) -> bool:
+    while time.monotonic() < deadline:
+        if _auth_broker_ready():
+            return True
+        sleep(_DOCKER_POLL_INTERVAL)
+    return False
+
+
+def _step_auth_broker(cfg: MoConfig, opts: UpOptions, report: UpReport) -> bool:
+    if _auth_broker_ready():
+        report.add("auth_broker", "skip", "already running on :8790")
+        return True
+
+    pid, detail = _spawn_auth_broker(cfg)
+    if pid is None:
+        report.add("auth_broker", "fail", detail)
+        return False
+    deadline = time.monotonic() + max(0.0, opts.docker_timeout)
+    if not _poll_auth_broker_ready(deadline=deadline):
+        report.add(
+            "auth_broker",
+            "fail",
+            f"{detail}; /healthz not ready within {opts.docker_timeout:.0f}s",
+        )
+        return False
+    report.add("auth_broker", "ok", detail)
+    return True
 
 
 # --- metro --------------------------------------------------------------
@@ -316,6 +411,10 @@ def run_up(
         return _emit(opts, console, report)
 
     _step_reverse(cfg, opts, report)
+
+    if not _step_auth_broker(cfg, opts, report):
+        report.exit_code = EXIT_AUTH_BROKER_FAILED
+        return _emit(opts, console, report)
 
     if not _step_metro(cfg, opts, report):
         report.exit_code = EXIT_METRO_FAILED

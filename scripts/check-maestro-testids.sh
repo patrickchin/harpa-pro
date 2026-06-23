@@ -41,7 +41,6 @@ TESTIDS=$(grep -rhE "^[[:space:]]*id:[[:space:]]*['\"]" \
     .maestro/helpers/ \
     .maestro/regression-journey.yaml \
     .maestro/native-input-smoke.yaml \
-    .maestro/dev-otp-hardening.yaml \
     .maestro/place-photo-on-issue.flow.yml \
     .maestro/store-screenshots.yaml \
   | sed -E "s/.*id:[[:space:]]*['\"]([^'\"]*)['\"].*/\1/" \
@@ -49,7 +48,7 @@ TESTIDS=$(grep -rhE "^[[:space:]]*id:[[:space:]]*['\"]" \
 
 # Known false-negatives: exact literal not in source but rendered at runtime.
 # Format: space-separated list of testID values to skip.
-KNOWN_TEMPLATE_IDS="picker-member-role-editor picker-member-role-viewer btn-camera-thumb-0 btn-camera-thumb-1 batch-grid-tile-0 batch-grid-tile-1 batch-grid-tile-0-ring batch-grid-tile-0-cancel batch-grid-tile-0-img batch-grid-tile-1-ring batch-grid-tile-1-cancel batch-grid-tile-1-img report-row-draft-0 input-phone btn-project-edit|btn-new-project screen-onboarding|btn-new-project|e2e-password-login-error"
+KNOWN_TEMPLATE_IDS="picker-member-role-editor picker-member-role-viewer btn-camera-thumb-0 btn-camera-thumb-1 batch-grid-tile-0 batch-grid-tile-1 batch-grid-tile-0-ring batch-grid-tile-0-cancel batch-grid-tile-0-img batch-grid-tile-1-ring batch-grid-tile-1-cancel batch-grid-tile-1-img report-row-draft-0 input-phone btn-project-edit|btn-new-project screen-onboarding|btn-new-project screen-onboarding|btn-new-project|e2e-password-login-error"
 
 is_known() {
   local id="$1"

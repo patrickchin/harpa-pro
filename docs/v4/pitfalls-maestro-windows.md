@@ -444,8 +444,9 @@ connection. They survive `pm clear` (which only wipes app sandbox
 data) but not transport-level events: cable disconnect, device
 reboot, `adb kill-server`, or losing USB power-saving on the host.
 Once the reverse is gone, `localhost:8081` (Metro),
-`localhost:8787` (API), and `localhost:9000` (MinIO / signed photo
-URLs) on the device point at nothing.
+`localhost:8787` (API), `localhost:8790` (Maestro auth broker), and
+`localhost:9000` (MinIO / signed photo URLs) on the device point at
+nothing.
 
 **Workaround.** After any disconnect/reboot, re-establish both
 reverses before launching the app:
@@ -453,11 +454,12 @@ reverses before launching the app:
 ```powershell
 adb -s R3CT7092S2H reverse tcp:8081 tcp:8081   # Metro
 adb -s R3CT7092S2H reverse tcp:8787 tcp:8787   # API (docker-compose)
+adb -s R3CT7092S2H reverse tcp:8790 tcp:8790   # Maestro auth broker
 adb -s R3CT7092S2H reverse tcp:9000 tcp:9000   # MinIO / local R2
 ```
 
 Verify with `adb -s R3CT7092S2H reverse --list`. A reset checklist
-between full journeys is: (1) `adb reverse` all three ports, (2) DB
+between full journeys is: (1) `adb reverse` all four ports, (2) DB
 truncate, (3) `pm clear` (see Pitfall 15), (4) relaunch app.
 
 ---

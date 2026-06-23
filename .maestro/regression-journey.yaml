@@ -6,12 +6,12 @@ tags:
 # Full regression journey
 #
 # Sequence:
-#   1. Auth — sign in alice (auto-create + onboard), sign out, sign in
+#   1. Auth — sign in test (auto-create + onboard), sign out, sign in
 #   2. Projects CRUD — create, edit
-#   3. Members invite — alice invites bob as Editor (creates bob too)
-#   4. Members permissions — bob verifies editor access
-#   5. Members viewer — alice downgrades bob; bob loses edit buttons
-#   6. Members remove — alice removes bob; bob can't see project
+#   3. Members invite — test invites test2 as Editor (creates test2 too)
+#   4. Members permissions — test2 verifies editor access
+#   5. Members viewer — test downgrades test2; test2 loses edit buttons
+#   6. Members remove — test removes test2; test2 can't see project
 #   7. Reports CRUD — create, navigate, delete report
 #   8. Text notes — add and delete a text note
 #   9. Voice notes — record/upload/transcribe/summarize/title/transcript/delete
@@ -27,29 +27,19 @@ tags:
 #  17. Sign out cleanly
 #
 # Local pre-condition: clean database. Run `docker compose down -v &&
-# docker compose up` locally to reset between runs. Alice
-# (alice@e2e.harpapro.com) and Bob (bob@e2e.harpapro.com) are created via the
-# normal email-OTP sign-in flow as part of the journey (better-auth's
-# emailOtp plugin auto-creates the user on first verify); no API
-# backdoors needed.
+# docker compose up` locally to reset between runs. The API seeds
+# password-login test accounts from TEST_ACCOUNT_EMAILS and
+# TEST_ACCOUNT_PASSWORD.
 #
-# OTP delivery: better-auth persists each OTP to `public.verification`,
-# and `helpers/sign-in.yaml` reads it back via `POST /api/dev/last-otp`
-# (only mounted when `NODE_ENV !== 'production'`). No real email is
-# sent in fixture/dev modes.
-#
-# Dev-deployment target: after local passes, run equivalent coverage
-# against harpa-pro-api-dev using the test-account password bypass
-# (`POST /api/auth/sign-in/email` with the allowlisted password) and
-# non-destructive per-run cleanup. The current sign-in/OTP helpers
-# read `/api/dev/last-otp`, which is mounted on the dev deployment
-# too — both paths are wired.
+# Auth delivery: `helpers/sign-in.yaml` goes through the local auth broker
+# on 127.0.0.1:8790, which keeps the shared password out of Maestro logs
+# while the mobile client still creates a normal better-auth session.
 
-# ── 1. Auth (sign-in alice + sign-out + sign-in round-trip) ──────────────
+# ── 1. Auth (sign-in test + sign-out + sign-in round-trip) ──────────────
 - runFlow: modules/01-auth.yaml
 
-# ── 1b. Create bob (must exist before alice can invite him) ──────────────
-- runFlow: modules/01b-signup-bob.yaml
+# ── 1b. Create test2 (must exist before test can invite him) ──────────────
+- runFlow: modules/01b-signup-test2.yaml
 
 # ── 2. Projects CRUD ──────────────────────────────────────────────────────
 - runFlow: modules/02-projects-crud.yaml
@@ -67,12 +57,12 @@ tags:
 - runFlow: modules/06-members-remove.yaml
 
 # ── 7. Reports CRUD ───────────────────────────────────────────────────────
-# Module 06 ends with alice signed in on the project home, so we go
+# Module 06 ends with test signed in on the project home, so we go
 # straight into 07 without re-running the sign-in helper.
 - runFlow: modules/07-reports-crud.yaml
 
 # ── 8. Text notes ─────────────────────────────────────────────────────────
-# Pre-condition: alice on project home
+# Pre-condition: test on project home
 - runFlow: modules/08-text-notes.yaml
 
 # ── 9. Voice notes (fixture recorder) ─────────────────────────────────────
@@ -82,43 +72,43 @@ tags:
 - runFlow: modules/09-voice-notes.yaml
 
 # ── 10a. Photo notes (draft): camera → upload pipeline ────────────────────
-# Pre-condition: alice on project home
+# Pre-condition: test on project home
 # Requires: app built with EXPO_PUBLIC_USE_FIXTURES=true; camera
 # privacy grant on the sim.
 - runFlow: modules/10a-photo-notes-draft.yaml
 
 # ── 10b. Photo notes (finalized): saved-report photo strip ────────────────
-# Pre-condition: alice on project home
+# Pre-condition: test on project home
 # Requires: same camera/upload fixture setup as 10a.
 - runFlow: modules/10b-photo-notes-finalized.yaml
 
 # ── 10c. Photo attachment picker scroll ───────────────────────────────────
-# Pre-condition: alice on project home
+# Pre-condition: test on project home
 # Requires: same camera/upload fixture setup as 10a.
 - runFlow: modules/10c-photo-attachment-picker-scroll.yaml
 
 # ── 11. Generate + finalize ───────────────────────────────────────────────
-# Pre-condition: alice on project home
+# Pre-condition: test on project home
 - runFlow: modules/11-generate-finalize.yaml
 
 # ── 12. Report debug ──────────────────────────────────────────────────────
-# Pre-condition: alice on finalized saved-report screen (was 11's post)
+# Pre-condition: test on finalized saved-report screen (was 11's post)
 - runFlow: modules/12-report-debug.yaml
 
 # ── 13. Projects delete ───────────────────────────────────────────────────
-# Pre-condition: alice on saved-report screen (was 12's post)
+# Pre-condition: test on saved-report screen (was 12's post)
 - runFlow: modules/13-projects-delete.yaml
 
 # ── 14. Account screen ────────────────────────────────────────────────────
-# Pre-condition: alice on empty projects index (post-13)
+# Pre-condition: test on empty projects index (post-13)
 - runFlow: modules/14-account.yaml
 
 # ── 15. Usage screen ──────────────────────────────────────────────────────
-# Pre-condition: alice on profile screen (post-14)
+# Pre-condition: test on profile screen (post-14)
 - runFlow: modules/15-usage.yaml
 
 # ── 16. Profile identity + nav surface ────────────────────────────────────
-# Pre-condition: alice on profile screen (post-15)
+# Pre-condition: test on profile screen (post-15)
 - runFlow: modules/16-profile.yaml
 
 # ── 17. Sign out cleanly ──────────────────────────────────────────────────

@@ -115,7 +115,10 @@ Every API route has a CLI command. `apps/cli/src/commands/` is the source of tru
 | `POST /api/auth/sign-out` | `harpa auth logout` | |
 
 ```bash
-export HARPA_TOKEN=$(harpa auth otp verify alice@e2e.harpapro.com 123456 --raw | jq -r .token)
+export HARPA_TOKEN=$(curl -sX POST "$API/api/auth/sign-in/email" \
+  -H 'content-type: application/json' \
+  -d "{\"email\":\"test@harpapro.com\",\"password\":\"$TEST_ACCOUNT_PASSWORD\"}" \
+  | jq -r .token)
 ```
 
 ### Me (`commands/me.ts`)
@@ -229,7 +232,7 @@ it('projects list (default HTTP client)', async () => {
 
 ### Fixture mode
 
-Integration tests inherit `AI_FIXTURE_MODE=replay` and `R2_FIXTURE_MODE=replay`. Better-auth OTP is read via the dev-only `POST /api/dev/last-otp` route (mounted when `NODE_ENV != production`).
+Integration tests inherit `AI_FIXTURE_MODE=replay` and `R2_FIXTURE_MODE=replay`. Auth helpers either seed verification rows directly for OTP-specific tests or use the test-account password path.
 
 ## Build & dev
 
@@ -268,7 +271,7 @@ Production: `pnpm --filter @harpa/cli build` → `dist/index.js` shebang `#!/usr
 
 | Risk | Mitigation |
 |---|---|
-| OTP requires real Resend in dev | Better-auth writes OTP to `public.verification` regardless; tests read via dev-only `/api/dev/last-otp`. |
+| OTP requires real Resend in dev | OTP-specific tests seed `public.verification` directly; smoke tests use the test-account password path. |
 | Large file uploads timeout | `files upload` uses streaming PUT (`fs.createReadStream`). |
 | `openapi-fetch` types drift | `@harpa/api-contract` workspace dep → compile-time error. |
 | `--json` polluted by progress logs | All `console.log` progress gated on `!options.json`. |

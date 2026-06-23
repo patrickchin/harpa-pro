@@ -86,17 +86,7 @@ tags:
 # Regenerate while the existing report remains visible. Placement controls must
 # stay mounted to avoid layout shift, but they must be disabled because the
 # backend response will replace report.body.
-- extendedWaitUntil:
-    visible:
-      id: 'btn-generate-update-report'
-    timeout: 10000
-- tapOn:
-    id: 'btn-generate-update-report'
-- extendedWaitUntil:
-    visible: 'Updating the draft with your newest notes...'
-    timeout: 15000
-- assertVisible:
-    id: 'report-view-.*'
+- runFlow: helpers/assert-report-generation-write-lock.yaml
 - scrollUntilVisible:
     element:
       id: 'btn-generate-report-photos-place-.*'
@@ -105,9 +95,6 @@ tags:
 - assertVisible:
     id: 'btn-generate-report-photos-place-.*'
     enabled: false
-- extendedWaitUntil:
-    notVisible: 'Updating the draft with your newest notes...'
-    timeout: 60000
 
 # Tap the chip to open the placement sheet.
 - tapOn: 'Place into…'

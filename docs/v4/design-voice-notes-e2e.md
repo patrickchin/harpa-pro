@@ -87,7 +87,7 @@ the development deployment. It must verify:
 ### Mode A — Local backend
 
 - API/storage: local docker-compose stack.
-- Auth: normal OTP UI with fake email-OTP code `000000` (via better-auth dev mode).
+- Auth: local auth broker with password-login test accounts.
 - AI: fixture replay.
 - Reset: local DB/app reset before each run.
 - Build: fixture dev-client (`EXPO_PUBLIC_USE_FIXTURES=true`) so the
@@ -104,7 +104,7 @@ the development deployment. It must verify:
   true live-provider smoke for voice transcription/summarization; if
   dev is temporarily set to replay, the run still proves deployed API,
   DB, R2, auth, and mobile wiring.
-- Data: use allowlisted Alice/Bob test emails and either create unique
+- Data: use allowlisted `test@harpapro.com` / `test2@harpapro.com` test emails and either create unique
   per-run projects/reports or clean them up at the end. Do not require
   destructive DB truncation on the shared dev branch.
 - Build: preview/development app variant pointed at the dev API,

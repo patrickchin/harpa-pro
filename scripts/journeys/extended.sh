@@ -18,8 +18,8 @@
 set -euo pipefail
 
 BASE=${BASE:-https://harpa-pro-api-dev.fly.dev}
-EMAIL=${EMAIL:-alice@e2e.harpapro.com}
-EMAIL2=${EMAIL2:-bob@e2e.harpapro.com}
+EMAIL=${EMAIL:-test@harpapro.com}
+EMAIL2=${EMAIL2:-test2@harpapro.com}
 : "${PASSWORD:?PASSWORD env var is required}"
 
 SAMPLES="$(cd "$(dirname "$0")/../../apps/cli/scripts/samples" && pwd)"

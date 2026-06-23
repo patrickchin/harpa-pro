@@ -22,8 +22,8 @@ tags:
 # On iOS sim the microphone privacy grant must be in place
 # (`xcrun simctl privacy booted grant microphone <appId>`).
 #
-# Pre-condition: alice on project home; no reports.
-# Post-condition: alice on project home; no reports.
+# Pre-condition: test on project home; no reports.
+# Post-condition: test on project home; no reports.
 
 # --- Open reports list and create a new draft ------------------------------
 - tapOn:

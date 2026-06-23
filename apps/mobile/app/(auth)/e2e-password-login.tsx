@@ -5,8 +5,9 @@
  * `emailAndPassword` plugin (allowlist enforced server-side via the
  * `before` hook on `/api/auth/sign-in/email` — see
  * docs/v4/arch-auth-and-rls.md). A local CLI broker keeps the shared
- * password out of Maestro env/input logs by performing the actual
- * `signIn.email()` and returning a cookie/token the client installs.
+ * password out of Maestro env/input logs; the mobile client receives
+ * the password at runtime and performs the actual sign-in so the Expo
+ * cookie storage is populated correctly.
  *
  * This route is intentionally unavailable in production builds.
  */
@@ -166,18 +167,11 @@ export default function E2ePasswordLoginPage() {
 }
 
 /**
- * Hit the local CLI auth broker. The broker performs `signIn.email()`
- * server-side and returns the bearer token + Set-Cookie pair, but for
- * the mobile client we just read the body and rely on the broker
- * having already configured the cookie via its own `signIn.email()`
- * call against our API. Here we just signal success/failure — the
- * cookie comes back via `session.refresh()` since the broker also
- * ran `authClient.signIn.email()` against the same backend.
- *
- * Implementation: just GET /session?email=… and the broker proxies
- * sign-in for us; on 200 we trust the cookie is set. The broker is
- * responsible for invoking `authClient.signIn.email()` (or the same
- * REST endpoint) so the SecureStore cookie is in place.
+ * Hit the local CLI auth broker. The broker returns the shared test
+ * password for an allowlisted email, and the mobile client then calls
+ * `authClient.signIn.email()` locally. That keeps the password out of
+ * Maestro logs while still letting better-auth's Expo storage persist
+ * the session on the device.
  */
 async function runBrokerSignIn(
   broker: string,

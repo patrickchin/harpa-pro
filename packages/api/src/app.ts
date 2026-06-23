@@ -21,7 +21,6 @@ import { waitlistRoutes } from './routes/waitlist.js';
 import { adminRoutes } from './routes/admin.js';
 import { resolverRoutes } from './routes/resolvers.js';
 import { wellKnownRoutes } from './routes/well-known.js';
-import { devRoutes } from './routes/dev.js';
 import { env } from './env.js';
 import { createSentryMiddleware } from './telemetry/sentry.js';
 import type { ScopedDb } from './db/scope.js';
@@ -106,22 +105,6 @@ export function createApp(): OpenAPIHono<AppEnv> {
   app.route('/', readyz);
   app.route('/', waitlistRoutes);
   app.route('/', wellKnownRoutes);
-
-  // Dev-only: `/api/dev/last-otp` for Maestro :mock builds. Mounted only when
-  // ALL of these hold (defense in depth — see docs/v4/arch-auth-and-rls.md
-  // §Dev OTP introspection):
-  //   - non-production deployment, OR per-PR preview build (Maestro E2E needs
-  //     OTP introspection even though previews run NODE_ENV=production)
-  //   - env.DEV_OTP_TOKEN is set (≥32 chars; required by env refines too).
-  // Never mounted on real production. The route module re-asserts this at
-  // import time and additionally enforces a per-request shared-secret header,
-  // an email-domain allowlist, and an exact-match identifier query.
-  if (
-    (env.NODE_ENV !== 'production' || env.HARPAPRO_PR_BUILD === '1')
-    && !!env.DEV_OTP_TOKEN
-  ) {
-    app.route('/api/dev', devRoutes);
-  }
 
   // Authenticated routes
   app.route('/', meRoutes);

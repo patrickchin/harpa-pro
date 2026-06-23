@@ -21,8 +21,12 @@ describe('WaitlistFormIsland', () => {
     expect(html).toContain('Email');
     expect(html).not.toContain('Work email');
     expect(html).not.toContain('Company');
-    expect(html).not.toContain('Role');
+    expect(html).not.toContain('<select');
+    expect(html).toContain('About your work');
     expect(html).toContain(
+      'Role, company, jobsite type, or reporting pain points are all optional.',
+    );
+    expect(html).not.toContain(
       'Tell us about your work and what you want Harpa Pro to help with',
     );
   });

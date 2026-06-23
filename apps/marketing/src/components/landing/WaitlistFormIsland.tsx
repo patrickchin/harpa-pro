@@ -50,6 +50,8 @@ const inputCls =
 
 const labelCls =
   'mb-1.5 flex items-center gap-1.5 text-[0.7rem] font-semibold uppercase tracking-wider text-ink-soft';
+const detailsLabelCls =
+  'mb-1 flex items-center gap-1.5 text-sm font-medium text-ink';
 
 export default function WaitlistFormIsland() {
   const env = getPublicEnv();
@@ -170,18 +172,21 @@ export default function WaitlistFormIsland() {
         </label>
 
         <label className="block">
-          <span className={labelCls}>
-            Tell us about your work and what you want Harpa Pro to help with
+          <span className={detailsLabelCls}>
+            About your work
             <span className="rounded-sm bg-secondary px-1 py-px text-[0.6rem] normal-case text-ink-soft">
               Optional
             </span>
+          </span>
+          <span className="mb-2 block text-xs leading-relaxed text-ink-soft">
+            Role, company, jobsite type, or reporting pain points are all optional.
           </span>
           <textarea
             rows={3}
             maxLength={MAX.source}
             value={source}
             onChange={(e) => setSource(e.target.value)}
-            placeholder="Include your role, company, jobsite type, or reporting pain points if useful."
+            placeholder="Anything useful for early access."
             className={inputCls}
             disabled={submitting}
           />

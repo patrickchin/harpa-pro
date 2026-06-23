@@ -25,7 +25,7 @@ const { waitlistSignupRequest } = waitlist;
 // exactly what the server enforces. If the schema changes, the form
 // follows automatically.
 type ZodLike = { _def?: { checks?: { kind: string; value?: number }[] }; unwrap?: () => ZodLike };
-function maxOf(field: 'email' | 'company' | 'role' | 'source'): number {
+function maxOf(field: 'email' | 'source'): number {
   const shape = waitlistSignupRequest.shape;
   const fieldSchema = shape[field] as ZodLike;
   const inner: ZodLike =
@@ -36,8 +36,6 @@ function maxOf(field: 'email' | 'company' | 'role' | 'source'): number {
 }
 const MAX = {
   email: maxOf('email'),
-  company: maxOf('company'),
-  role: maxOf('role'),
   source: maxOf('source'),
 };
 
@@ -60,8 +58,6 @@ export default function WaitlistFormIsland() {
   const [turnstileToken, setTurnstileToken] = useState<string>('');
 
   const [email, setEmail] = useState('');
-  const [company, setCompany] = useState('');
-  const [role, setRole] = useState('Foreman / Site Supervisor');
   const [source, setSource] = useState('');
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -80,8 +76,6 @@ export default function WaitlistFormIsland() {
     // and surfaces the server's own error messages.
     const parsed = waitlistSignupRequest.safeParse({
       email,
-      company: company || undefined,
-      role: role || undefined,
       source: source || undefined,
       turnstileToken,
     });
@@ -91,13 +85,9 @@ export default function WaitlistFormIsland() {
       const label =
         field === 'email'
           ? 'Email'
-          : field === 'company'
-            ? 'Company'
-            : field === 'role'
-              ? 'Role'
-              : field === 'source'
-                ? 'Project description'
-                : 'Form';
+          : field === 'source'
+            ? 'Details'
+            : 'Form';
       setState({
         kind: 'error',
         message: `${label}: ${first?.message ?? 'invalid value'}.`,
@@ -165,7 +155,7 @@ export default function WaitlistFormIsland() {
     >
       <div className="grid gap-3.5">
         <label className="block">
-          <span className={labelCls}>Work email</span>
+          <span className={labelCls}>Email</span>
           <input
             type="email"
             required
@@ -181,42 +171,7 @@ export default function WaitlistFormIsland() {
 
         <label className="block">
           <span className={labelCls}>
-            Company
-            <span className="rounded-sm bg-secondary px-1 py-px text-[0.6rem] normal-case text-ink-soft">
-              Optional
-            </span>
-          </span>
-          <input
-            type="text"
-            autoComplete="organization"
-            maxLength={MAX.company}
-            value={company}
-            onChange={(e) => setCompany(e.target.value)}
-            placeholder="BuildCo Construction"
-            className={inputCls}
-            disabled={submitting}
-          />
-        </label>
-
-        <label className="block">
-          <span className={labelCls}>Role</span>
-          <select
-            value={role}
-            onChange={(e) => setRole(e.target.value)}
-            className={inputCls}
-            disabled={submitting}
-          >
-            <option>Foreman / Site Supervisor</option>
-            <option>Superintendent</option>
-            <option>Project Manager</option>
-            <option>Owner / Operator</option>
-            <option>Other</option>
-          </select>
-        </label>
-
-        <label className="block">
-          <span className={labelCls}>
-            What kind of projects do you run?
+            Tell us about your work and what you want Harpa Pro to help with
             <span className="rounded-sm bg-secondary px-1 py-px text-[0.6rem] normal-case text-ink-soft">
               Optional
             </span>
@@ -226,7 +181,7 @@ export default function WaitlistFormIsland() {
             maxLength={MAX.source}
             value={source}
             onChange={(e) => setSource(e.target.value)}
-            placeholder="e.g. Multifamily wood-frame, light commercial, civil…"
+            placeholder="Include your role, company, jobsite type, or reporting pain points if useful."
             className={inputCls}
             disabled={submitting}
           />

@@ -1,26 +1,11 @@
 /**
- * App boot regression: ensure `app.ts` (which statically imports
- * `routes/dev.js`) does NOT throw at module-load when NODE_ENV is
- * production and HARPAPRO_PR_BUILD is unset — i.e. the env shape of
- * `harpa-pro-api-dev` on Fly.
- *
- * Bug history: docs/bugs/2026-06-06-routes-dev-boot-crash.md.
- * `routes/dev.ts` had a top-level `throw` guarded on
- * `NODE_ENV === 'production' && HARPAPRO_PR_BUILD !== '1'`. ESM
- * evaluates statically-imported modules unconditionally, so the throw
- * fired on every dev boot, before the conditional mount in app.ts had
- * a chance to skip the route. The mount gate + env.ts refines already
- * cover the misconfig case, so the module-level throw was redundant
- * and removed. This test prevents a future top-level side-effect
- * from re-introducing the crash.
+ * App boot regression for Fly-shaped envs plus the retired dev OTP route.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 const KEYS = [
   'NODE_ENV',
   'HARPAPRO_PR_BUILD',
-  'HARPA_DEV_OTP_DISABLED',
-  'DEV_OTP_TOKEN',
   'EMAIL_OTP_LIVE',
   'MIGRATIONS_REQUIRED_HEAD',
 ] as const;
@@ -44,42 +29,41 @@ afterEach(() => {
 });
 
 describe('app boot: no module-load side effects', () => {
-  it('imports app.ts under dev-fly env (NODE_ENV=production, no PR_BUILD, no DEV_OTP_TOKEN) without throwing', async () => {
+  it('imports app.ts under dev-fly env (NODE_ENV=production, no PR_BUILD) without throwing', async () => {
     process.env.NODE_ENV = 'production';
     process.env.HARPAPRO_PR_BUILD = '0';
     process.env.EMAIL_OTP_LIVE = '1';
     process.env.MIGRATIONS_REQUIRED_HEAD = '0000_test.sql';
-    delete process.env.DEV_OTP_TOKEN;
-    process.env.HARPA_DEV_OTP_DISABLED = '1';
 
     vi.resetModules();
     const mod = await import('../app.js');
     expect(typeof mod.createApp).toBe('function');
   }, 30_000);
 
-  it('imports app.ts under PR-preview env (NODE_ENV=production, PR_BUILD=1, DEV_OTP_TOKEN set) without throwing', async () => {
+  it('imports app.ts under PR-preview env without requiring live OTP email transport', async () => {
     process.env.NODE_ENV = 'production';
     process.env.HARPAPRO_PR_BUILD = '1';
     process.env.EMAIL_OTP_LIVE = '0';
     process.env.MIGRATIONS_REQUIRED_HEAD = '0000_test.sql';
-    process.env.DEV_OTP_TOKEN = 'a'.repeat(40);
-    delete process.env.HARPA_DEV_OTP_DISABLED;
 
     vi.resetModules();
     const mod = await import('../app.js');
     expect(typeof mod.createApp).toBe('function');
   }, 30_000);
 
-  it('imports routes/dev.ts directly under dev-fly env without throwing', async () => {
+  it('does not mount the retired dev OTP route', async () => {
     process.env.NODE_ENV = 'production';
-    process.env.HARPAPRO_PR_BUILD = '0';
-    process.env.EMAIL_OTP_LIVE = '1';
+    process.env.HARPAPRO_PR_BUILD = '1';
+    process.env.EMAIL_OTP_LIVE = '0';
     process.env.MIGRATIONS_REQUIRED_HEAD = '0000_test.sql';
-    delete process.env.DEV_OTP_TOKEN;
-    process.env.HARPA_DEV_OTP_DISABLED = '1';
 
     vi.resetModules();
-    const mod = await import('../routes/dev.js');
-    expect(mod.devRoutes).toBeDefined();
+    const { createApp } = await import('../app.js');
+    const res = await createApp().request('/api/dev/last-otp', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ email: 'test@harpapro.com' }),
+    });
+    expect(res.status).toBe(404);
   }, 30_000);
 });

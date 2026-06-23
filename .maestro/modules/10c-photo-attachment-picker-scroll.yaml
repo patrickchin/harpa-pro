@@ -15,8 +15,8 @@ tags:
 #   - open a section Add Attachments action from the card header
 #   - verify picker rows show thumbnails and can scroll to later groups
 #
-# Pre-condition: alice on project home.
-# Post-condition: alice on project home; no report from this module remains.
+# Pre-condition: test on project home.
+# Post-condition: test on project home; no report from this module remains.
 
 # --- Open reports list and create a new draft ------------------------------
 - tapOn:
@@ -70,21 +70,7 @@ tags:
     timeout: 15000
 
 # --- Backend regeneration keeps the existing report mounted ----------------
-- tapOn:
-    id: "btn-generate-update-report"
-    waitToSettleTimeoutMs: 100
-- extendedWaitUntil:
-    visible: "Updating the draft with your newest notes..."
-    timeout: 15000
-- assertVisible:
-    id: "report-view-.*"
-- extendedWaitUntil:
-    notVisible: "Updating the draft with your newest notes..."
-    timeout: 60000
-- extendedWaitUntil:
-    visible:
-      id: "report-view-.*"
-    timeout: 15000
+- runFlow: ../helpers/assert-report-generation-write-lock.yaml
 
 # --- Open the card-header Add Attachments picker and scroll it --------------
 - scrollUntilVisible:

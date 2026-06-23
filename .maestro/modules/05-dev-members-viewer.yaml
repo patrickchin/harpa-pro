@@ -1,5 +1,5 @@
 appId: ${MAESTRO_APP_ID}
-name: "05-dev - Members: alice removes bob and re-invites as viewer"
+name: "05-dev - Members: test removes test2 and re-invites as viewer"
 tags:
   - regression
   - members
@@ -33,7 +33,7 @@ tags:
     timeout: 8000
 - tapOn:
     id: "input-member-email"
-- inputText: "${DEV_BOB_EMAIL}"
+- inputText: "test2@harpapro.com"
 - hideKeyboard
 - tapOn:
     id: "picker-member-role-viewer"
@@ -55,8 +55,8 @@ tags:
 - runFlow:
     file: ../helpers/dev-password-login.yaml
     env:
-      PHONE_ENCODED: "%2B15550199002"
-      NAME: "Bob Dev E2E"
+      EMAIL_ENCODED: "test2%40harpapro.com"
+      NAME: "Test Two Dev E2E"
       COMPANY: "Dev E2E Corp"
 
 - tapOn:
@@ -94,7 +94,7 @@ tags:
 - runFlow:
     file: ../helpers/dev-password-login.yaml
     env:
-      PHONE_ENCODED: "%2B15550199001"
-      NAME: "Alice Dev E2E"
+      EMAIL_ENCODED: "test%40harpapro.com"
+      NAME: "Test Dev E2E"
       COMPANY: "Dev E2E Corp"
 - runFlow: ../helpers/open-project-dev.yaml

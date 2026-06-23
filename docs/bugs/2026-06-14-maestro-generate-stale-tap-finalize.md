@@ -38,3 +38,10 @@ pending state to a different control at the same coordinates.
 before Maestro observes it in module 11. Keep deterministic disabled-state
 coverage in unit tests and make on-device assertions opportunistic for
 the transient notice.
+
+**2026-06-23 follow-up.** Module 10c regressed into the same trap by
+hard-requiring the transient update notice after `btn-generate-update-report`.
+The failure screenshot already showed the settled report with `Finalize report`
+visible. Fix: reuse the opportunistic write-lock helper from module 11 and
+target the notice by stable testID instead of matching punctuation-sensitive
+copy.

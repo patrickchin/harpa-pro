@@ -128,7 +128,7 @@ provisioning plus staging test-crash confirmation.
 **Status:** green on real Android device `R3CT7092S2H`
 (`com.harpa.pro.dev`, fixture-replay mode) as of HEAD `11632dc`
 (2026-05-24). Full journey wallclock ~18m21s across modules 01-auth,
-01b-signup-bob, 02-projects-crud, 03-members-invite,
+01b-signup-test2, 02-projects-crud, 03-members-invite,
 04-members-permissions, 05-members-viewer, 06-members-remove,
 07-reports-crud, 08-text-notes, 11-generate-finalize,
 12-report-debug, 13-projects-delete (plus helpers + sign-out).
@@ -171,9 +171,10 @@ in-flow).
 The full local regression journey then passed with modules 01, 01b,
 02, 03, 04, 05, 06, 07, 08, 09, 10a, 11, 12, 13, 14, 15, 16, and
 final sign-out. A focused follow-up run also passed 01/02/11/12/13.
-Local Android setup needs `adb reverse tcp:9000 tcp:9000` as well as
-Metro/API reverses because photo signed upload URLs target local
-MinIO.
+Local Android setup needs the auth broker reverse
+(`adb reverse tcp:8790 tcp:8790`) plus `adb reverse tcp:9000 tcp:9000`
+in addition to Metro/API reverses because password E2E login and photo
+signed upload URLs target local host services.
 
 **2026-05-28 dev result.** Dev deployment coverage now uses a local
 CLI auth broker plus API/R2 proxies so the device can exercise the

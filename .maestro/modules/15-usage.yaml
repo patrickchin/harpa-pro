@@ -14,12 +14,12 @@ tags:
 #   - per-account limits card renders with the default free-plan buckets
 #
 # We assert the empty-state path because the regression journey never
-# generates a paid report — alice never crossed any usage threshold.
+# generates a paid report — test never crossed any usage threshold.
 # If a future module finalises a real report, swap to assert
 # `usage-by-model` or `usage-recent-events`.
 #
-# Pre-condition: alice signed in on profile screen.
-# Post-condition: alice on profile screen.
+# Pre-condition: test signed in on profile screen.
+# Post-condition: test on profile screen.
 
 # --- Open Usage from Profile -----------------------------------------------
 - tapOn:

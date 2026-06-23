@@ -14,6 +14,7 @@ import { Redirect, useRouter } from 'expo-router';
 import AuthEmail from '@/screens/auth-email';
 import { useAuthSession } from '@/lib/auth';
 import { authClient } from '@/lib/auth/client';
+import { isDemoAccountEmail } from '@/lib/auth/demo-account';
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -39,6 +40,13 @@ export default function SignInEmailPage() {
     setError(null);
     setSubmitting(true);
     try {
+      if (isDemoAccountEmail(trimmed)) {
+        router.push({
+          pathname: '/(auth)/sign-in/code',
+          params: { email: trimmed },
+        });
+        return;
+      }
       const { error: sendError } = await authClient.emailOtp.sendVerificationOtp({
         email: trimmed,
         type: 'sign-in',

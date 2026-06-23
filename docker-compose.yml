@@ -7,6 +7,8 @@
 #   migrate  Runs `pnpm --filter @harpa/api db:migrate` once against pg,
 #            exits 0. Re-runs on every `compose up` (drizzle migrations
 #            are idempotent).
+#   seed-test-accounts
+#            Seeds password-login accounts from TEST_ACCOUNT_EMAILS.
 #   api     `tsx watch src/server.ts` on :8787, fixture-mode (no real
 #            Twilio / AI / R2). Source dirs are bind-mounted so edits
 #            on the host trigger a server restart inside the container.
@@ -93,12 +95,29 @@ services:
     command: ["pnpm", "--filter", "@harpa/api", "db:migrate"]
     restart: "no"
 
-  api:
+  seed-test-accounts:
     build:
       context: .
       dockerfile: infra/fly/Dockerfile
     depends_on:
       migrate:
+        condition: service_completed_successfully
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgres://postgres:pg@pg:5432/harpa
+      BETTER_AUTH_SECRET: dev-only-secret-do-not-use-in-prod
+      BETTER_AUTH_URL: http://localhost:8787
+      TEST_ACCOUNT_EMAILS: ${TEST_ACCOUNT_EMAILS:-test@harpapro.com,test2@harpapro.com,test3@harpapro.com}
+      TEST_ACCOUNT_PASSWORD: ${TEST_ACCOUNT_PASSWORD:?TEST_ACCOUNT_PASSWORD must be set (>=16 chars) for local E2E}
+    command: ["pnpm", "--filter", "@harpa/api", "db:seed-test-account"]
+    restart: "no"
+
+  api:
+    build:
+      context: .
+      dockerfile: infra/fly/Dockerfile
+    depends_on:
+      seed-test-accounts:
         condition: service_completed_successfully
       minio-init:
         condition: service_completed_successfully
@@ -129,9 +148,10 @@ services:
       # makes the compose stack reproducible across machines.
       BETTER_AUTH_SECRET: dev-only-secret-do-not-use-in-prod
       BETTER_AUTH_URL: http://localhost:8787
-      # Required by PR128's hardened dev OTP route. Keep this in sync
-      # with the DEV_OTP_TOKEN exported for Maestro.
-      DEV_OTP_TOKEN: ${DEV_OTP_TOKEN:?DEV_OTP_TOKEN must be set (>=32 chars) for local E2E}
+      # Local E2E password-login accounts. The emails are public and
+      # stable; keep the password in your untracked shell/.env.local.
+      TEST_ACCOUNT_EMAILS: ${TEST_ACCOUNT_EMAILS:-test@harpapro.com,test2@harpapro.com,test3@harpapro.com}
+      TEST_ACCOUNT_PASSWORD: ${TEST_ACCOUNT_PASSWORD:?TEST_ACCOUNT_PASSWORD must be set (>=16 chars) for local E2E}
       WAITLIST_IP_HASH_SALT: dev-only-waitlist-salt
       WAITLIST_CONFIRM_BASE_URL: http://localhost:3002/confirm
       # tsx watch needs polling inside Docker on macOS/Windows where
@@ -139,7 +159,7 @@ services:
       CHOKIDAR_USEPOLLING: "true"
       CHOKIDAR_INTERVAL: "300"
       # E2E/Maestro: disable per-route rate limits so multi-module
-      # journeys can sign the same alice/bob in/out many times. The
+      # journeys can sign the same test accounts in/out many times. The
       # middleware is gated on this env var; it is OFF by default and
       # is only set here in the local compose stack (NODE_ENV=development).
       DISABLE_RATE_LIMIT: "1"

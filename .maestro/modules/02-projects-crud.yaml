@@ -11,8 +11,8 @@ tags:
 #   - edit project name
 #   - project home is accessible (btn-project-edit visible)
 #
-# Pre-condition: alice is signed in (btn-new-project visible).
-# Post-condition: alice is on project home of the renamed project.
+# Pre-condition: test is signed in (btn-new-project visible).
+# Post-condition: test is on project home of the renamed project.
 
 # --- Create project ---------------------------------------------------------
 - tapOn:

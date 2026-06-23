@@ -4,7 +4,7 @@ tags:
   - legacy
   - voice
 ---
-# Legacy end-to-end voice note flow exercising the old seeded Alice path:
+# Legacy end-to-end voice note flow exercising the old seeded Test path:
 #
 #   - Mic button on the input bar arms the inline WhatsApp/Telegram-style
 #     recorder strip (Phase H). No modal is opened.
@@ -36,7 +36,7 @@ tags:
     stopApp: true
 - waitForAnimationToEnd
 
-# --- Sign in as the seeded Alice (alice@e2e.harpapro.com) ------------------------
+# --- Sign in as the seeded Test (test@harpapro.com) ------------------------
 - extendedWaitUntil:
     visible:
       id: "input-email"
@@ -44,7 +44,7 @@ tags:
 - runFlow:
     file: helpers/sign-in.yaml
     env:
-      EMAIL: "alice@e2e.harpapro.com"
+      EMAIL: "test@harpapro.com"
 
 # --- Open seeded project → reports → seeded draft (Generate screen) -------
 - extendedWaitUntil:

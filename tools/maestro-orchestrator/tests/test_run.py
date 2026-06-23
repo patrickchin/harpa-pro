@@ -380,13 +380,12 @@ def test_run_forwards_app_id_via_maestro_env_flag(
         _wait_pid(rec.pid, timeout=5.0)
 
 
-def test_run_forwards_dev_otp_token_via_maestro_env_flag(
+def test_run_forwards_api_base_url_via_maestro_env_flag(
     project_root: Path,
     stub_maestro: tuple[str, list[str]],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """`last-otp.js` reads DEV_OTP_TOKEN from Maestro globals. The
-    child process env alone is not enough for `${DEV_OTP_TOKEN}`."""
+    """Maestro reads YAML/script globals from explicit --env flags."""
     captured: dict[str, list[str]] = {}
     real_spawn = run_cmd.spawn.spawn_detached
 
@@ -394,10 +393,7 @@ def test_run_forwards_dev_otp_token_via_maestro_env_flag(
         captured["argv"] = list(argv)
         return real_spawn(argv, **kwargs)
 
-    monkeypatch.setenv(
-        "DEV_OTP_TOKEN",
-        "local-e2e-dev-otp-token-000000000000000000000000000000",
-    )
+    monkeypatch.setenv("API_BASE_URL", "http://127.0.0.1:8788")
     monkeypatch.setattr(run_cmd.spawn, "spawn_detached", capturing_spawn)
 
     code = run_cmd.run_run(
@@ -407,7 +403,7 @@ def test_run_forwards_dev_otp_token_via_maestro_env_flag(
     assert code == run_cmd.EXIT_OK
 
     argv = captured["argv"]
-    expected = "DEV_OTP_TOKEN=local-e2e-dev-otp-token-000000000000000000000000000000"
+    expected = "API_BASE_URL=http://127.0.0.1:8788"
     assert expected in argv, argv
     flow_idx = next(i for i, a in enumerate(argv) if a.endswith("regression-journey.yaml"))
     assert argv.index(expected) < flow_idx, argv

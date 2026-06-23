@@ -19,8 +19,8 @@
 set -euo pipefail
 
 BASE=${BASE:-https://harpa-pro-api-dev.fly.dev}
-EMAIL=${EMAIL:-alice@e2e.harpapro.com}
-EMAIL2=${EMAIL2:-bob@e2e.harpapro.com}
+EMAIL=${EMAIL:-test@harpapro.com}
+EMAIL2=${EMAIL2:-test2@harpapro.com}
 : "${PASSWORD:?PASSWORD env var is required}"
 
 # ── Helpers ────────────────────────────────────────────────────────────
@@ -271,8 +271,8 @@ NID_A=$(req POST "/reports/$RID_A/notes" \
 echo "  note: $NID_A"
 
 # Try login as user B. When EMAIL2 == EMAIL (single-account dev), the
-# cross-user assertions are nonsensical (alice's session can always
-# see alice's data) so we skip them entirely.
+# cross-user assertions are nonsensical (test's session can always
+# see test's data) so we skip them entirely.
 HAS_USER_B=false
 if [[ "$EMAIL2" == "$EMAIL" ]]; then
   echo "  ⚠️  user B == user A — skipping cross-user checks"

@@ -19,6 +19,7 @@ import { cn } from '../lib/util/utils';
 
 type Props = {
   email: string;
+  mode?: 'otp' | 'password';
   otp: string;
   onChangeOtp: (v: string) => void;
   onChangeEmail: () => void;
@@ -33,6 +34,7 @@ type Props = {
 
 export default function AuthCode({
   email,
+  mode = 'otp',
   otp,
   onChangeOtp,
   onChangeEmail,
@@ -44,6 +46,9 @@ export default function AuthCode({
   isSubmitting,
   onSubmit,
 }: Props) {
+  const isPasswordMode = mode === 'password';
+  const canSubmit = isPasswordMode ? otp.trim().length > 0 : otp.trim().length >= 6;
+
   return (
     <SafeAreaView className="flex-1 bg-background">
       <KeyboardAvoidingView behavior="padding" className="flex-1">
@@ -63,19 +68,21 @@ export default function AuthCode({
             <View className="mt-8 gap-4">
               <View>
                 <Text className="text-sm text-muted-foreground">
-                  {`Code sent to ${email}`}
+                  {isPasswordMode ? `Sign in as ${email}` : `Code sent to ${email}`}
                 </Text>
               </View>
 
               <Input
                 testID="input-otp"
-                label="Verification Code"
-                placeholder="123456"
+                label={isPasswordMode ? 'Password' : 'Verification Code'}
+                placeholder={isPasswordMode ? 'Password' : '123456'}
                 value={otp}
                 onChangeText={onChangeOtp}
-                keyboardType="number-pad"
-                autoComplete="one-time-code"
-                maxLength={6}
+                keyboardType={isPasswordMode ? 'default' : 'number-pad'}
+                autoComplete={isPasswordMode ? undefined : 'one-time-code'}
+                textContentType={isPasswordMode ? 'password' : 'oneTimeCode'}
+                secureTextEntry={isPasswordMode}
+                maxLength={isPasswordMode ? undefined : 6}
                 editable={!isSubmitting}
               />
 
@@ -88,10 +95,12 @@ export default function AuthCode({
                   variant="hero"
                   size="xl"
                   className="w-full"
-                  disabled={isSubmitting || otp.trim().length < 6}
+                  disabled={isSubmitting || !canSubmit}
                   onPress={onSubmit}
                 >
-                  {isSubmitting ? 'Verifying…' : 'Verify Code'}
+                  {isSubmitting
+                    ? (isPasswordMode ? 'Signing in…' : 'Verifying…')
+                    : (isPasswordMode ? 'Sign In' : 'Verify Code')}
                 </Button>
 
                 <Button
@@ -106,27 +115,29 @@ export default function AuthCode({
                 </Button>
               </View>
 
-              <Pressable
-                testID="link-resend-code"
-                accessibilityRole="button"
-                className="items-center py-2"
-                disabled={resendDisabled}
-                onPress={onResend}
-              >
-                <Text className="text-sm text-muted-foreground">
-                  Didn't get the code?{' '}
-                  <Text
-                    className={cn(
-                      'font-semibold underline',
-                      resendDisabled ? 'text-muted-foreground' : 'text-foreground',
-                    )}
-                  >
-                    {resendCountdownSeconds != null
-                      ? `Resend in ${resendCountdownSeconds}s`
-                      : 'Resend Code'}
+              {!isPasswordMode && (
+                <Pressable
+                  testID="link-resend-code"
+                  accessibilityRole="button"
+                  className="items-center py-2"
+                  disabled={resendDisabled}
+                  onPress={onResend}
+                >
+                  <Text className="text-sm text-muted-foreground">
+                    Didn't get the code?{' '}
+                    <Text
+                      className={cn(
+                        'font-semibold underline',
+                        resendDisabled ? 'text-muted-foreground' : 'text-foreground',
+                      )}
+                    >
+                      {resendCountdownSeconds != null
+                        ? `Resend in ${resendCountdownSeconds}s`
+                        : 'Resend Code'}
+                    </Text>
                   </Text>
-                </Text>
-              </Pressable>
+                </Pressable>
+              )}
             </View>
           </View>
         </ScrollView>

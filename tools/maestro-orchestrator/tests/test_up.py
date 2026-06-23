@@ -352,6 +352,70 @@ def test_tracked_metro_alive_handles_missing_file(project_root: Path) -> None:
     assert up_cmd._tracked_metro_alive(project_root) is False
 
 
+# --- step: auth broker --------------------------------------------------
+def test_auth_broker_skip_when_already_running(
+    monkeypatch: pytest.MonkeyPatch, project_root: Path
+) -> None:
+    monkeypatch.setattr(up_cmd, "_auth_broker_ready", lambda: True)
+    report = up_cmd.UpReport()
+    ok = up_cmd._step_auth_broker(_cfg(project_root), up_cmd.UpOptions(), report)
+    assert ok is True
+    assert report.steps[-1]["status"] == "skip"
+
+
+def test_auth_broker_spawns_and_polls_ready(
+    monkeypatch: pytest.MonkeyPatch, project_root: Path
+) -> None:
+    _patch_no_sleep(monkeypatch)
+    state = {"polled": 0}
+
+    def fake_ready() -> bool:
+        state["polled"] += 1
+        return state["polled"] > 1
+
+    monkeypatch.setattr(up_cmd, "_auth_broker_ready", fake_ready)
+    monkeypatch.setattr(
+        up_cmd, "_spawn_auth_broker", lambda _cfg: (12346, "spawned 12346")
+    )
+    report = up_cmd.UpReport()
+    ok = up_cmd._step_auth_broker(
+        _cfg(project_root),
+        up_cmd.UpOptions(docker_timeout=5.0),
+        report,
+    )
+    assert ok is True
+    assert report.steps[-1]["status"] == "ok"
+    assert "12346" in report.steps[-1]["detail"]
+
+
+def test_auth_broker_fails_when_spawn_returns_none(
+    monkeypatch: pytest.MonkeyPatch, project_root: Path
+) -> None:
+    monkeypatch.setattr(up_cmd, "_auth_broker_ready", lambda: False)
+    monkeypatch.setattr(
+        up_cmd, "_spawn_auth_broker", lambda _cfg: (None, "spawn failed: boom")
+    )
+    report = up_cmd.UpReport()
+    ok = up_cmd._step_auth_broker(_cfg(project_root), up_cmd.UpOptions(), report)
+    assert ok is False
+    assert "spawn failed" in report.steps[-1]["detail"]
+
+
+def test_auth_broker_ready_hits_healthz(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    seen: dict[str, object] = {}
+
+    def fake_get(url: str, **kw: object) -> healthcheck.HealthResult:
+        seen["url"] = url
+        seen.update(kw)
+        return healthcheck.HealthResult(ok=True, status=200, error=None)
+
+    monkeypatch.setattr(up_cmd.healthcheck, "http_get", fake_get)
+    assert up_cmd._auth_broker_ready() is True
+    assert seen["url"] == "http://127.0.0.1:8790/healthz"
+
+
 # --- doctor step --------------------------------------------------------
 def test_doctor_step_skipped(
     monkeypatch: pytest.MonkeyPatch, project_root: Path
@@ -397,6 +461,7 @@ def test_run_up_happy_path(
 ) -> None:
     monkeypatch.setattr(up_cmd, "_step_docker", lambda *_a, **_k: True)
     monkeypatch.setattr(up_cmd, "_step_reverse", lambda *_a, **_k: None)
+    monkeypatch.setattr(up_cmd, "_step_auth_broker", lambda *_a, **_k: True)
     monkeypatch.setattr(up_cmd, "_step_metro", lambda *_a, **_k: True)
     monkeypatch.setattr(up_cmd, "_step_doctor", lambda *_a, **_k: True)
     code = up_cmd.run_up(_cfg(project_root), up_cmd.UpOptions())
@@ -424,9 +489,20 @@ def test_run_up_metro_failure(
 ) -> None:
     monkeypatch.setattr(up_cmd, "_step_docker", lambda *_a, **_k: True)
     monkeypatch.setattr(up_cmd, "_step_reverse", lambda *_a, **_k: None)
+    monkeypatch.setattr(up_cmd, "_step_auth_broker", lambda *_a, **_k: True)
     monkeypatch.setattr(up_cmd, "_step_metro", lambda *_a, **_k: False)
     code = up_cmd.run_up(_cfg(project_root), up_cmd.UpOptions())
     assert code == up_cmd.EXIT_METRO_FAILED
+
+
+def test_run_up_auth_broker_failure(
+    monkeypatch: pytest.MonkeyPatch, project_root: Path
+) -> None:
+    monkeypatch.setattr(up_cmd, "_step_docker", lambda *_a, **_k: True)
+    monkeypatch.setattr(up_cmd, "_step_reverse", lambda *_a, **_k: None)
+    monkeypatch.setattr(up_cmd, "_step_auth_broker", lambda *_a, **_k: False)
+    code = up_cmd.run_up(_cfg(project_root), up_cmd.UpOptions())
+    assert code == up_cmd.EXIT_AUTH_BROKER_FAILED
 
 
 def test_run_up_doctor_failure(
@@ -434,6 +510,7 @@ def test_run_up_doctor_failure(
 ) -> None:
     monkeypatch.setattr(up_cmd, "_step_docker", lambda *_a, **_k: True)
     monkeypatch.setattr(up_cmd, "_step_reverse", lambda *_a, **_k: None)
+    monkeypatch.setattr(up_cmd, "_step_auth_broker", lambda *_a, **_k: True)
     monkeypatch.setattr(up_cmd, "_step_metro", lambda *_a, **_k: True)
     monkeypatch.setattr(up_cmd, "_step_doctor", lambda *_a, **_k: False)
     code = up_cmd.run_up(_cfg(project_root), up_cmd.UpOptions())
@@ -447,6 +524,7 @@ def test_run_up_json_output(
 ) -> None:
     monkeypatch.setattr(up_cmd, "_step_docker", lambda *_a, **_k: True)
     monkeypatch.setattr(up_cmd, "_step_reverse", lambda *_a, **_k: None)
+    monkeypatch.setattr(up_cmd, "_step_auth_broker", lambda *_a, **_k: True)
     monkeypatch.setattr(up_cmd, "_step_metro", lambda *_a, **_k: True)
     monkeypatch.setattr(up_cmd, "_step_doctor", lambda *_a, **_k: True)
     code = up_cmd.run_up(

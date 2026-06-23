@@ -21,7 +21,7 @@ tags:
 #      non-null.
 #   3. Add testIDs `usage-near-limit-toast` +
 #      `usage-near-limit-toast-bucket` to the toast.
-#   4. Seed Alice's usage to ≥80% (but < 100%) of the free-plan
+#   4. Seed Test's usage to ≥80% (but < 100%) of the free-plan
 #      `report_generate` cap in `scripts/maestro/reset-db.sh`.
 #
 # Once those land, this flow should be enabled in the regression
@@ -38,7 +38,7 @@ tags:
 - runFlow:
     file: helpers/sign-in.yaml
     env:
-      EMAIL: "alice@e2e.harpapro.com"
+      EMAIL: "test@harpapro.com"
 
 # Create project + report + note (same prelude as 14b).
 - tapOn:

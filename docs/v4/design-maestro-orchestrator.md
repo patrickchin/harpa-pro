@@ -116,12 +116,12 @@ Preflight checklist; exits `0` only if every gate is green. Checks run in parall
 | `EXPO_PUBLIC_USE_FIXTURES=true` in the running Metro env | `GET http://localhost:8081/symbolicate` smoke or parse `tmp/metro.log` for the line | windows#11 |
 | Device attached | Android: `adb devices` non-empty. iOS: `xcrun simctl list devices booted` non-empty. | — |
 | `MAESTRO_APP_ID` resolvable | From env, or derived from `apps/mobile/app.config.ts` reading `APP_VARIANT` | mac#7 |
-| Android ADB reverses set | `adb -s <serial> reverse --list` includes `tcp:8081`, `tcp:8787`, and `tcp:9000` | **windows#20** |
+| Android ADB reverses set | `adb -s <serial> reverse --list` includes `tcp:8081`, `tcp:8787`, `tcp:8790`, and `tcp:9000` | **windows#20** |
 | No orphaned `java` from a previous Maestro run | `psutil.process_iter()` filter for `java.*maestro.jar` whose start-time predates current shell session by >5 min | windows#1, #12 |
 | No orphaned `maestro-driver-ios` | Same, by name | mac (general) |
 | iOS LaunchServices approval (best-effort) | If `MAESTRO_APP_ID` scheme is `harpa`, check the simulator's `schemeapproval.plist` exists and contains the entry; advisory only | **mac#1, #6** |
 
-`--fix` auto-remediates: re-establishes dropped `adb reverse tcp:8081`/`8787`/`9000` (windows#20); terminates orphan `java -jar maestro.jar` and `maestro-driver-ios` older than 10 min whose PID isn't in `tmp/mo/maestro.pid`.
+`--fix` auto-remediates: re-establishes dropped `adb reverse tcp:8081`/`8787`/`8790`/`9000` (windows#20); terminates orphan `java -jar maestro.jar` and `maestro-driver-ios` older than 10 min whose PID isn't in `tmp/mo/maestro.pid`.
 
 Cannot auto-fix (always prompts the operator): docker stack down, Metro not running, no device/simulator, `EXPO_PUBLIC_USE_FIXTURES` missing on the running Metro process (requires a fresh JS bundle — Pitfall windows#11).
 
@@ -142,7 +142,7 @@ Single source of truth for the between-runs reset (Pitfall windows#15). Steps in
 3. **App-data clear** (skipped with `--db-only`):
    - Android: `adb -s <serial> shell pm clear <MAESTRO_APP_ID>`.
    - iOS: `xcrun simctl uninstall booted <MAESTRO_APP_ID>`, then re-install from the most recent `.app` under `apps/mobile/ios/build/Build/Products/Debug-iphonesimulator/`. Don't `simctl erase` (would wipe scheme approval — Pitfall mac#6).
-4. **Re-establish ADB reverses** (Android only, always, even on `--db-only`): `adb -s <serial> reverse tcp:8081 tcp:8081 && tcp:8787 tcp:8787 && tcp:9000 tcp:9000` (windows#20).
+4. **Re-establish ADB reverses** (Android only, always, even on `--db-only`): `adb -s <serial> reverse tcp:8081 tcp:8081 && tcp:8787 tcp:8787 && tcp:8790 tcp:8790 && tcp:9000 tcp:9000` (windows#20).
 
 State: `tmp/mo/reset-last.json` for audit.
 
@@ -164,7 +164,7 @@ Steps:
 4. Compute log paths:
    - `tmp/mo/runs/<flow-slug>-<UTC-timestamp>.log` (stdout)
    - `tmp/mo/runs/<flow-slug>-<UTC-timestamp>.err.log` (stderr)
-5. Spawn `maestro test <abs-flow-path>` with `subprocess.Popen(..., stdout=log, stderr=err, start_new_session=True)` on POSIX or `CREATE_NEW_PROCESS_GROUP | DETACHED_PROCESS` on Windows. Maestro YAML/script globals come from `--env`, not arbitrary child process env, so `mo run` forwards `MAESTRO_APP_ID`, `DEV_OTP_TOKEN`, and optional `API_BASE_URL` as explicit `--env KEY=VALUE` pairs before the flow path.
+5. Spawn `maestro test <abs-flow-path>` with `subprocess.Popen(..., stdout=log, stderr=err, start_new_session=True)` on POSIX or `CREATE_NEW_PROCESS_GROUP | DETACHED_PROCESS` on Windows. Maestro YAML/script globals come from `--env`, not arbitrary child process env, so `mo run` forwards `MAESTRO_APP_ID` and optional `API_BASE_URL` as explicit `--env KEY=VALUE` pairs before the flow path. The local auth broker is managed by `mo up` and is reached over `127.0.0.1:8790`, not by passing password or OTP secrets through Maestro env.
 6. Write `tmp/mo/maestro.pid` containing `{ "pid": ..., "flow": ..., "log": ..., "started": ... }`.
 7. Symlink (or copy on Windows) `tmp/mo/maestro-latest.log` → the new log file.
 8. Print log path + PID + `mo logs --tail 50` hint and **return**. The orchestrator command exits in < 2 s; Maestro runs in the background.
@@ -224,7 +224,7 @@ Detect host once at startup via `platform.system()`, cache in `mo.host.Host` enu
 | Device discovery | `adb devices` | `xcrun simctl list devices booted` | `adb devices` | `adb devices` |
 | Pick device | `MAESTRO_DEVICE` env, else first non-`offline` line | `MAESTRO_DEVICE` env, else first booted UDID | same as win | same as win |
 | App reinstall | `adb shell pm clear <id>` | `xcrun simctl uninstall booted <id>` + reinstall from `.app` | `adb shell pm clear` | `adb shell pm clear` |
-| Re-establish networking after device reset | `adb reverse tcp:8081/8787/9000` (Pitfall windows#20) | n/a — simulator shares host loopback | `adb reverse` | `adb reverse` |
+| Re-establish networking after device reset | `adb reverse tcp:8081/8787/8790/9000` (Pitfall windows#20) | n/a — simulator shares host loopback | `adb reverse` | `adb reverse` |
 | Orphan process scan | `psutil` filter on `java.exe` cmdline ~ `maestro.jar` | `psutil` filter on `java`, `maestro-driver-ios` | both | `java`, `idb_companion` |
 | Process spawn flags | `CREATE_NEW_PROCESS_GROUP \| DETACHED_PROCESS` | `start_new_session=True` | `start_new_session=True` | `start_new_session=True` |
 | Log file path separators | `pathlib.Path` everywhere; never raw `/` | same | same | same |
@@ -336,7 +336,7 @@ project_root = "."             # rare to set
 
 [mo.android]
 device = "R3CT7092S2H"
-adb_reverse_ports = [8081, 8787, 9000]
+adb_reverse_ports = [8081, 8787, 8790, 9000]
 
 [mo.ios]
 udid = "auto"                  # picks first booted simulator
@@ -447,7 +447,7 @@ Snapshot from `test/e2e-maestro-coverage` (Phase 3b). *Dispositions are recommen
 
 | File | Purpose | Called by | Disposition |
 |---|---|---|---|
-| `reset-db.sh` | `docker exec` -> TRUNCATE all `app.*` + better-auth `public."user"/"session"/"account"/"verification"` tables on `harpa-pro-pg`, then re-INSERT seeded Alice (`alice@e2e.harpapro.com`, with seeded project + draft report + 1 text note) and Bob (`bob@e2e.harpapro.com`) | `.maestro/core-end-to-end.yaml`, `.maestro/legacy/*`, `.maestro/pending/*`, `README.md`, `pitfalls-windows#15` (inlined as raw `docker exec` there) | **absorb into `mo reset`** as default + `--seed legacy` variant; keep file until all callers migrated, delete in 3c |
+| `reset-db.sh` | `docker exec` -> TRUNCATE all `app.*` + better-auth `public."user"/"session"/"account"/"verification"` tables on `harpa-pro-pg`, then re-INSERT seeded `test@harpapro.com` (with seeded project + draft report + 1 text note) and `test2@harpapro.com`, then run `db:seed-test-account` to create credential accounts | `.maestro/core-end-to-end.yaml`, `.maestro/legacy/*`, `.maestro/pending/*`, `README.md`, `pitfalls-windows#15` (inlined as raw `docker exec` there) | **absorb into `mo reset`** as default + `--seed legacy` variant; keep file until all callers migrated, delete in 3c |
 
 The dir contains **only** `reset-db.sh`. Notably:
 
@@ -536,7 +536,7 @@ No workflow currently runs Maestro itself. A future `e2e-maestro-run.yml` (Mac r
 |---|---|---|
 | `docker exec -i harpa-pro-pg psql ... TRUNCATE app.* public."user"/"session"/"account"/"verification" RESTART IDENTITY CASCADE` | win-15 | `mo reset` |
 | `adb -s <serial> shell pm clear com.harpa.pro.dev` | win-15 | `mo reset` (Android) |
-| `adb -s <serial> reverse tcp:8081 tcp:8081 && … tcp:8787 tcp:8787 && tcp:9000 tcp:9000` | win-20 | `mo doctor` + `mo run` precondition |
+| `adb -s <serial> reverse tcp:8081 tcp:8081 && … tcp:8787 tcp:8787 && tcp:8790 tcp:8790 && tcp:9000 tcp:9000` | win-20 | `mo doctor` + `mo run` precondition |
 | `adb -s <serial> reverse --list` | win-20 | `mo doctor` |
 | Loop terminating leftover `maestro-driver-ios` processes | mac-README + win-runbook | `mo kill` |
 | `gtimeout 240s maestro test …` wrapper loop | README + win-12 | `mo run --retries N --timeout 240` |

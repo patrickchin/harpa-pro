@@ -1,13 +1,10 @@
 appId: ${MAESTRO_APP_ID}
-name: "03-dev - Members: alice invites bob as editor"
+name: "03-dev - Members: test invites test2 as editor"
 tags:
   - regression
   - members
   - dev
 ---
-# Required env:
-#   DEV_BOB_EMAIL
-
 - tapOn:
     id: "link-project-members"
 - extendedWaitUntil:
@@ -22,7 +19,7 @@ tags:
     timeout: 8000
 - tapOn:
     id: "input-member-email"
-- inputText: "${DEV_BOB_EMAIL}"
+- inputText: "test2@harpapro.com"
 - hideKeyboard
 - tapOn:
     id: "picker-member-role-editor"

@@ -20,14 +20,14 @@
 #
 # Defaults target the dev Fly deployment. Override via env:
 #   BASE=https://harpa-pro-api-dev.fly.dev \
-#   EMAIL=alice@e2e.harpapro.com \
+#   EMAIL=test@harpapro.com \
 #   PASSWORD="$(doppler secrets get TEST_ACCOUNT_PASSWORD \
 #                  --project harpa-pro --config dev --plain)" \
 #     bash scripts/journey.sh
 set -euo pipefail
 
 BASE=${BASE:-https://harpa-pro-api-dev.fly.dev}
-EMAIL=${EMAIL:-alice@e2e.harpapro.com}
+EMAIL=${EMAIL:-test@harpapro.com}
 : "${PASSWORD:?PASSWORD env var is required (test-account password from Doppler)}"
 
 SAMPLES="$(cd "$(dirname "$0")/../../apps/cli/scripts/samples" && pwd)"

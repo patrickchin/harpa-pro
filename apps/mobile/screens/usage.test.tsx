@@ -42,6 +42,38 @@ const HISTORY: ReadonlyArray<UsageMonthlyRow> = [
 ];
 
 const TOTALS = { reports: 35, voiceNotes: 95 };
+const LIMITS = {
+  plan: 'free' as const,
+  buckets: [
+    {
+      kind: 'report_generate' as const,
+      limit: 5,
+      used: 0,
+      remaining: 5,
+      resetAt: '2026-07-01T00:00:00.000Z',
+      plan: 'free' as const,
+      overridden: false,
+    },
+    {
+      kind: 'voice_transcribe' as const,
+      limit: 60,
+      used: 0,
+      remaining: 60,
+      resetAt: '2026-07-01T00:00:00.000Z',
+      plan: 'free' as const,
+      overridden: false,
+    },
+    {
+      kind: 'voice_summarize' as const,
+      limit: 60,
+      used: 0,
+      remaining: 60,
+      resetAt: '2026-07-01T00:00:00.000Z',
+      plan: 'free' as const,
+      overridden: false,
+    },
+  ],
+};
 
 const defaults = {
   history: HISTORY,
@@ -69,6 +101,26 @@ describe('Usage', () => {
       tree.root.findByProps({ testID: 'usage-empty' }),
     ).not.toThrow();
     expect(collectText(tree.toJSON())).toContain('No usage data yet');
+  });
+
+  it('renders usage limits when history is empty', () => {
+    const tree = render(
+      <Usage
+        {...defaults}
+        history={[]}
+        totals={{ reports: 0, voiceNotes: 0 }}
+        limits={LIMITS}
+      />,
+    );
+    expect(() =>
+      tree.root.findByProps({ testID: 'usage-empty' }),
+    ).not.toThrow();
+    expect(() =>
+      tree.root.findByProps({ testID: 'usage-limits-card' }),
+    ).not.toThrow();
+    expect(() =>
+      tree.root.findByProps({ testID: 'usage-limit-report_generate' }),
+    ).not.toThrow();
   });
 
   it('renders all-time summary + monthly rows when populated', () => {

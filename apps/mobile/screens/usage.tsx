@@ -302,14 +302,36 @@ export function Usage({
             <ActivityIndicator size="large" color={colors.foreground} />
           </View>
         ) : !history?.length ? (
-          <View className="flex-1 items-center justify-center px-5" testID="usage-empty">
-            <InlineNotice
-              tone="info"
-              title="No usage data yet"
-            >
-              Generate your first report to see stats here.
-            </InlineNotice>
-          </View>
+          limits ? (
+            <View className="flex-1">
+              <ScrollView
+                className="flex-1"
+                contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40, gap: 16 }}
+                refreshControl={
+                  <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+                }
+              >
+                <UsageLimitsCard plan={limits.plan} buckets={limits.buckets} />
+                <View testID="usage-empty">
+                  <InlineNotice
+                    tone="info"
+                    title="No usage data yet"
+                  >
+                    Generate your first report to see stats here.
+                  </InlineNotice>
+                </View>
+              </ScrollView>
+            </View>
+          ) : (
+            <View className="flex-1 items-center justify-center px-5" testID="usage-empty">
+              <InlineNotice
+                tone="info"
+                title="No usage data yet"
+              >
+                Generate your first report to see stats here.
+              </InlineNotice>
+            </View>
+          )
         ) : (
           <View className="flex-1">
             <ScrollView

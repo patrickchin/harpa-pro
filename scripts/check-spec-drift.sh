@@ -6,7 +6,12 @@ set -euo pipefail
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 cd "$ROOT"
 
-pnpm spec:emit >/dev/null
+(
+  # Local test-account bypass env does not affect OpenAPI shape. Ignore it here
+  # so a partially exported dev auth env cannot break lint or pre-push.
+  unset TEST_ACCOUNT_EMAILS TEST_ACCOUNT_PASSWORD
+  pnpm spec:emit >/dev/null
+)
 pnpm --filter @harpa/api-contract gen:types >/dev/null
 pnpm --filter @harpa/mobile gen:hooks >/dev/null
 

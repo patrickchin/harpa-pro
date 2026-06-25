@@ -11,22 +11,36 @@
  */
 import { useCallback, useState } from 'react';
 import { useRouter, type Href } from 'expo-router';
+import { useQueryClient } from '@tanstack/react-query';
 
 import { Account, type AccountProfile, type AccountSaveValues } from '@/screens/account';
 import { AvatarUploader } from '@/components/account/AvatarUploader';
 import { useAuthSession } from '@/lib/auth/session';
 import { useRefresh } from '@/lib/util/use-refresh';
 import { safeBack } from '@/lib/nav/safe-back';
-import { useUpdateMeMutation } from '@/lib/api/hooks';
+import {
+  useAccountDeletionPreviewQuery,
+  useDeleteMeMutation,
+  useUpdateMeMutation,
+} from '@/lib/api/hooks';
 import { AppHeaderActions } from '@/components/ui/AppHeaderActions';
+import { clearImageCachesOnSignOut } from '@/lib/files/image-cache';
+import { ApiError } from '@/lib/api/errors';
 
 export default function AccountRoute() {
   const router = useRouter();
   const session = useAuthSession();
   const { user, refresh } = session;
   const { refreshing, onRefresh } = useRefresh([refresh]);
+  const queryClient = useQueryClient();
   const updateMe = useUpdateMeMutation();
+  const deleteMe = useDeleteMeMutation();
+  const deletionPreview = useAccountDeletionPreviewQuery(undefined, {
+    enabled: false,
+    retry: false,
+  });
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [deleteAccountError, setDeleteAccountError] = useState<string | null>(null);
 
   const profile: AccountProfile | null = user
     ? {
@@ -53,6 +67,42 @@ export default function AccountRoute() {
     [updateMe, session],
   );
 
+  const handleRequestDeletionPreview = useCallback(async () => {
+    setDeleteAccountError(null);
+    try {
+      const result = await deletionPreview.refetch();
+      if (result.error) throw result.error;
+    } catch (err) {
+      const message =
+        err instanceof Error
+          ? err.message
+          : "Couldn't load deletion details. Try again.";
+      setDeleteAccountError(message);
+    }
+  }, [deletionPreview]);
+
+  const finishDeletedSession = useCallback(async () => {
+    queryClient.clear();
+    await clearImageCachesOnSignOut();
+    await session.signOut();
+  }, [queryClient, session]);
+
+  const handleDeleteAccount = useCallback(async () => {
+    setDeleteAccountError(null);
+    try {
+      await deleteMe.mutateAsync();
+      await finishDeletedSession();
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        await finishDeletedSession();
+        return;
+      }
+      const message =
+        err instanceof Error ? err.message : "Couldn't delete account. Try again.";
+      setDeleteAccountError(message);
+    }
+  }, [deleteMe, finishDeletedSession]);
+
   return (
     <Account
       profile={profile}
@@ -63,6 +113,12 @@ export default function AccountRoute() {
       onSaveProfile={handleSaveProfile}
       isSaving={updateMe.isPending}
       saveError={saveError}
+      deletionPreview={deletionPreview.data ?? null}
+      isDeletionPreviewLoading={deletionPreview.isFetching}
+      isDeletingAccount={deleteMe.isPending}
+      deleteAccountError={deleteAccountError}
+      onRequestDeletionPreview={handleRequestDeletionPreview}
+      onDeleteAccount={handleDeleteAccount}
       actions={<AppHeaderActions />}
     />
   );

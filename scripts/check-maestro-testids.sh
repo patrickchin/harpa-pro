@@ -44,6 +44,7 @@ TESTIDS=$(grep -rhE "^[[:space:]]*id:[[:space:]]*['\"]" \
     .maestro/modules/ \
     .maestro/helpers/ \
     .maestro/regression-journey.yaml \
+    .maestro/account-deletion.yaml \
     .maestro/release-stress-journey.yaml \
     .maestro/native-input-smoke.yaml \
     .maestro/place-photo-on-issue.flow.yml \

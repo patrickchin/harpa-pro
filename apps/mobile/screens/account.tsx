@@ -16,13 +16,14 @@
  */
 import { useEffect, useState, type ReactNode } from 'react';
 import { RefreshControl, KeyboardAvoidingView, Platform, ScrollView, Text, View } from 'react-native';
-import { User } from 'lucide-react-native';
+import { Trash2, User } from 'lucide-react-native';
 
 import { SafeAreaView } from '@/components/primitives/SafeAreaView';
 import { Input } from '@/components/primitives/Input';
 import { Button } from '@/components/primitives/Button';
 import { ScreenHeader } from '@/components/primitives/ScreenHeader';
 import { InlineNotice } from '@/components/primitives/InlineNotice';
+import { AppDialogSheet } from '@/components/primitives/AppDialogSheet';
 import { AccountDetailsSkeleton } from '@/components/skeletons/AccountDetailsSkeleton';
 import { colors } from '@/lib/design-tokens/colors';
 import { useLayoutShiftProbe } from '@/lib/util/layout-shift-probe';
@@ -36,6 +37,24 @@ export interface AccountProfile {
 export interface AccountSaveValues {
   displayName: string;
   companyName: string;
+}
+
+export interface AccountDeletionProject {
+  id: string;
+  name: string;
+}
+
+export interface AccountDeletionTransferProject extends AccountDeletionProject {
+  newOwnerId: string;
+  newOwnerEmail: string;
+}
+
+export interface AccountDeletionPreview {
+  email: string;
+  soloProjectsDeleted: AccountDeletionProject[];
+  sharedProjectsTransferred: AccountDeletionTransferProject[];
+  sharedProjectsLeft: AccountDeletionProject[];
+  personalFilesDeleted: number;
 }
 
 export interface AccountScreenProps {
@@ -59,6 +78,13 @@ export interface AccountScreenProps {
   isSaving?: boolean;
   /** Surfaces a save error inside the form. */
   saveError?: string | null;
+
+  deletionPreview?: AccountDeletionPreview | null;
+  isDeletionPreviewLoading?: boolean;
+  isDeletingAccount?: boolean;
+  deleteAccountError?: string | null;
+  onRequestDeletionPreview?: () => void | Promise<void>;
+  onDeleteAccount?: () => Promise<void>;
   actions?: ReactNode;
 }
 
@@ -82,11 +108,19 @@ export function Account({
   onSaveProfile,
   isSaving = false,
   saveError = null,
+  deletionPreview = null,
+  isDeletionPreviewLoading = false,
+  isDeletingAccount = false,
+  deleteAccountError = null,
+  onRequestDeletionPreview,
+  onDeleteAccount,
   actions,
 }: AccountScreenProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState('');
   const [editCompany, setEditCompany] = useState('');
+  const [deleteDialogVisible, setDeleteDialogVisible] = useState(false);
+  const [deleteConfirmEmail, setDeleteConfirmEmail] = useState('');
 
   // Layout-shift probes — the same ids are attached in
   // `AccountDetailsSkeleton` so we can measure how far each landmark
@@ -122,8 +156,12 @@ export function Account({
   }
 
   const canEdit = typeof onSaveProfile === 'function';
+  const canDeleteAccount = typeof onDeleteAccount === 'function';
   const nameValue = isEditing ? editName : (profile.fullName ?? '');
   const companyValue = isEditing ? editCompany : (profile.companyName ?? '');
+  const expectedDeleteEmail = profile.email.trim().toLowerCase();
+  const deleteEmailMatches =
+    deleteConfirmEmail.trim().toLowerCase() === expectedDeleteEmail;
 
   const handleStartEdit = () => {
     setEditName(profile.fullName ?? '');
@@ -150,6 +188,21 @@ export function Account({
     } catch {
       // The route surfaces `saveError`; keep the editor open.
     }
+  };
+
+  const handleOpenDeleteDialog = async () => {
+    setDeleteConfirmEmail('');
+    setDeleteDialogVisible(true);
+    try {
+      await onRequestDeletionPreview?.();
+    } catch {
+      // Route-owned error state is rendered in the dialog.
+    }
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!onDeleteAccount || !deleteEmailMatches || isDeletingAccount) return;
+    await onDeleteAccount();
   };
 
   return (
@@ -267,10 +320,144 @@ export function Account({
                 </Button>
               </View>
             ) : null}
+
+            {canDeleteAccount ? (
+              <View className="gap-3 border-t border-border pt-2">
+                <InlineNotice tone="warning">
+                  Account deletion is permanent. Solo projects are deleted;
+                  shared projects remain for other members.
+                </InlineNotice>
+                <Button
+                  testID="btn-open-delete-account"
+                  variant="destructive"
+                  size="lg"
+                  onPress={() => {
+                    void handleOpenDeleteDialog();
+                  }}
+                  disabled={isDeletingAccount}
+                >
+                  <View className="flex-row items-center justify-center gap-2">
+                    <Trash2 size={16} color={colors.danger.text} />
+                    <Text className="text-base font-semibold text-danger-text">
+                      Delete account
+                    </Text>
+                  </View>
+                </Button>
+              </View>
+            ) : null}
           </ScrollView>
         </View>
       </View>
       </KeyboardAvoidingView>
+
+      {canDeleteAccount ? (
+        <AppDialogSheet
+          visible={deleteDialogVisible}
+          title="Delete account?"
+          message="This permanently deletes your Harpa Pro account, signs out all devices, and removes personal account data. Shared project records may remain visible to the other members."
+          noticeTone="warning"
+          canDismiss={!isDeletingAccount}
+          onClose={() => {
+            if (!isDeletingAccount) {
+              setDeleteDialogVisible(false);
+            }
+          }}
+          actions={[
+            {
+              testID: 'btn-confirm-delete-account',
+              label: isDeletingAccount ? 'Deleting…' : 'Delete account',
+              variant: 'destructive',
+              disabled:
+                !deleteEmailMatches ||
+                isDeletingAccount ||
+                isDeletionPreviewLoading,
+              onPress: () => {
+                void handleConfirmDelete();
+              },
+            },
+            {
+              testID: 'btn-cancel-delete-account',
+              label: 'Cancel',
+              variant: 'secondary',
+              disabled: isDeletingAccount,
+              onPress: () => setDeleteDialogVisible(false),
+            },
+          ]}
+        >
+          <View className="gap-4">
+            {isDeletionPreviewLoading ? (
+              <Text className="text-body text-muted-foreground">
+                Loading deletion details…
+              </Text>
+            ) : deletionPreview ? (
+              <View className="gap-2">
+                <DeletionPreviewLine
+                  label="Projects deleted"
+                  items={deletionPreview.soloProjectsDeleted}
+                  fallback="None"
+                />
+                <DeletionPreviewLine
+                  label="Ownership transferred"
+                  items={deletionPreview.sharedProjectsTransferred}
+                  fallback="None"
+                  getSuffix={(item) => `to ${item.newOwnerEmail}`}
+                />
+                <DeletionPreviewLine
+                  label="Projects left"
+                  items={deletionPreview.sharedProjectsLeft}
+                  fallback="None"
+                />
+                <Text className="text-sm text-muted-foreground">
+                  {deletionPreview.personalFilesDeleted} file row
+                  {deletionPreview.personalFilesDeleted === 1 ? '' : 's'} owned by
+                  this account will be removed.
+                </Text>
+              </View>
+            ) : (
+              <Text className="text-body text-muted-foreground">
+                Deletion details are unavailable. You can retry or cancel.
+              </Text>
+            )}
+
+            <Input
+              label="Type your email to confirm"
+              testID="input-delete-account-email"
+              value={deleteConfirmEmail}
+              editable={!isDeletingAccount}
+              onChangeText={setDeleteConfirmEmail}
+              autoCapitalize="none"
+              autoCorrect={false}
+              placeholder={profile.email}
+            />
+
+            {deleteAccountError ? (
+              <InlineNotice tone="danger">{deleteAccountError}</InlineNotice>
+            ) : null}
+          </View>
+        </AppDialogSheet>
+      ) : null}
     </SafeAreaView>
+  );
+}
+
+function DeletionPreviewLine<T extends AccountDeletionProject>({
+  label,
+  items,
+  fallback,
+  getSuffix,
+}: {
+  label: string;
+  items: T[];
+  fallback: string;
+  getSuffix?: (item: T) => string;
+}) {
+  const body = items.length
+    ? items.map((item) => `${item.name}${getSuffix ? ` ${getSuffix(item)}` : ''}`).join(', ')
+    : fallback;
+  return (
+    <Text className="text-sm text-muted-foreground">
+      <Text className="font-semibold text-foreground">{label}: </Text>
+      {body}
+    </Text>
   );
 }

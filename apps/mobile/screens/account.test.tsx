@@ -47,6 +47,21 @@ const defaults = {
   onBack: vi.fn(),
 };
 
+const deletionPreview = {
+  email: 'jordan@example.com',
+  soloProjectsDeleted: [{ id: 'prj_1234abcd', name: 'Solo Project' }],
+  sharedProjectsTransferred: [
+    {
+      id: 'prj_2345bcde',
+      name: 'Shared Project',
+      newOwnerId: 'usr_3456cdef',
+      newOwnerEmail: 'owner@example.com',
+    },
+  ],
+  sharedProjectsLeft: [{ id: 'prj_4567defg', name: 'Member Project' }],
+  personalFilesDeleted: 2,
+};
+
 describe('Account', () => {
   it('renders skeleton when profile is null', () => {
     const tree = render(<Account {...defaults} profile={null} />);
@@ -211,5 +226,107 @@ describe('Account', () => {
       tree.root.findByProps({ testID: 'account-save-error' }),
     ).not.toThrow();
     expect(collectText(tree.toJSON())).toContain('Could not save');
+  });
+
+  it('shows Delete account when account deletion props are provided', () => {
+    const tree = render(
+      <Account
+        {...defaults}
+        deletionPreview={deletionPreview}
+        onRequestDeletionPreview={vi.fn()}
+        onDeleteAccount={vi.fn().mockResolvedValue(undefined)}
+      />,
+    );
+
+    expect(() =>
+      tree.root.findByProps({ testID: 'btn-open-delete-account' }),
+    ).not.toThrow();
+    expect(collectText(tree.toJSON())).toContain('Delete account');
+  });
+
+  it('opens the delete dialog and requests the latest preview', async () => {
+    const onRequestDeletionPreview = vi.fn().mockResolvedValue(undefined);
+    const tree = render(
+      <Account
+        {...defaults}
+        deletionPreview={deletionPreview}
+        onRequestDeletionPreview={onRequestDeletionPreview}
+        onDeleteAccount={vi.fn().mockResolvedValue(undefined)}
+      />,
+    );
+
+    await act(async () => {
+      tree.root
+        .findByProps({ testID: 'btn-open-delete-account' })
+        .props.onPress();
+    });
+
+    expect(onRequestDeletionPreview).toHaveBeenCalledTimes(1);
+    expect(collectText(tree.toJSON())).toContain('Solo Project');
+    expect(collectText(tree.toJSON())).toContain('Shared Project');
+  });
+
+  it('requires typing the account email before confirming deletion', async () => {
+    const onDeleteAccount = vi.fn().mockResolvedValue(undefined);
+    const tree = render(
+      <Account
+        {...defaults}
+        deletionPreview={deletionPreview}
+        onRequestDeletionPreview={vi.fn()}
+        onDeleteAccount={onDeleteAccount}
+      />,
+    );
+
+    await act(async () => {
+      tree.root
+        .findByProps({ testID: 'btn-open-delete-account' })
+        .props.onPress();
+    });
+
+    expect(
+      tree.root.findByProps({ testID: 'btn-confirm-delete-account' }).props
+        .disabled,
+    ).toBe(true);
+
+    act(() => {
+      tree.root
+        .findByProps({ testID: 'input-delete-account-email' })
+        .props.onChangeText('jordan@example.com');
+    });
+
+    expect(
+      tree.root.findByProps({ testID: 'btn-confirm-delete-account' }).props
+        .disabled,
+    ).toBe(false);
+
+    await act(async () => {
+      await tree.root
+        .findByProps({ testID: 'btn-confirm-delete-account' })
+        .props.onPress();
+    });
+    expect(onDeleteAccount).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows pending and error states in the delete dialog', async () => {
+    const tree = render(
+      <Account
+        {...defaults}
+        deletionPreview={deletionPreview}
+        onRequestDeletionPreview={vi.fn()}
+        onDeleteAccount={vi.fn().mockResolvedValue(undefined)}
+        isDeletingAccount
+        deleteAccountError="Deletion failed"
+      />,
+    );
+
+    await act(async () => {
+      tree.root
+        .findByProps({ testID: 'btn-open-delete-account' })
+        .props.onPress();
+    });
+
+    const text = collectText(tree.toJSON());
+    expect(text).toContain('Deleting…');
+    expect(text).toContain('Deletion failed');
   });
 });

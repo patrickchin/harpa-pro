@@ -1,5 +1,5 @@
 appId: ${MAESTRO_APP_ID}
-name: "14 — Account screen: view, edit-cancel, edit-save"
+name: "14 — Account screen: view, edit-cancel, edit-save, deletion cancel"
 tags:
   - regression
   - account
@@ -13,6 +13,8 @@ tags:
 #   - tap Edit, then Cancel — fields revert to read-only
 #   - tap Edit, type a new full name, Save — name persists,
 #     editor closes back to read-only
+#   - account deletion entry point is visible, opens a themed dialog,
+#     requires email confirmation, and can be cancelled without signing out
 #
 # Pre-condition: test signed in on empty projects index
 #                (post-condition of module 13).
@@ -78,6 +80,37 @@ tags:
     timeout: 10000
 - assertNotVisible:
     id: "account-save-error"
+
+# --- Account deletion dialog: discoverable + cancellable --------------------
+- scrollUntilVisible:
+    element:
+      id: "btn-open-delete-account"
+    direction: DOWN
+    timeout: 20000
+- tapOn:
+    id: "btn-open-delete-account"
+- extendedWaitUntil:
+    visible:
+      id: "dialog-sheet"
+    timeout: 10000
+- assertVisible: "Delete account?"
+- extendedWaitUntil:
+    visible: "Projects deleted"
+    timeout: 10000
+- assertVisible:
+    id: "input-delete-account-email"
+- tapOn:
+    id: "input-delete-account-email"
+- inputText: "test@harpapro.com"
+- hideKeyboard
+- tapOn:
+    id: "btn-cancel-delete-account"
+- extendedWaitUntil:
+    visible:
+      id: "screen-account"
+    timeout: 10000
+- assertVisible:
+    id: "btn-edit-profile"
 
 # --- Back to profile -------------------------------------------------------
 - tapOn:

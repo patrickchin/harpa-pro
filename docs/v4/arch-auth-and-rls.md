@@ -369,6 +369,37 @@ introduces that data contract.
   `expo-secure-store` (encrypted at rest on iOS/Android). The session
   survives app restarts; force-quitting does not log the user out.
 
+## Account deletion
+
+Mobile exposes account deletion from Account Details, satisfying App
+Store guideline 5.1.1(v)'s requirement that users can initiate
+whole-account deletion in-app. The API surface lives under `/me`:
+
+- `GET /me/deletion-preview` returns the signed-in user's email plus
+  the projects that will be deleted, transferred, or left, and the
+  count of file rows owned by the account.
+- `DELETE /me` deletes the current account and returns `204`.
+
+Both routes use `withAuth()` and the scoped `c.get('db')(fn)` accessor.
+The destructive route calls the SECURITY DEFINER helper
+`app.delete_current_user()`, which reads
+`current_setting('app.user_id')` and performs the deletion in the same
+transaction as the request scope.
+
+Deletion removes the better-auth `public."user"` row. That cascades
+`public."session"`, `public."account"`, `app.user_settings`,
+`app.user_limit_overrides` where the deleted user is the subject, and
+file rows with existing FKs. The helper also deletes the user's
+`app.llm_usage_events` rows and email-OTP verification rows. Since all
+session rows are gone, the bearer token used for the deletion call
+authenticates as 401 on the next request.
+
+Project records follow the collaboration rules in
+[`arch-project-members.md`](arch-project-members.md#account-deletion).
+Solo projects are deleted. Shared projects keep their reports and notes
+for remaining members, while the deleted account is removed from
+membership and ownership is transferred if needed.
+
 ## Maestro password-login wiring
 
 Maestro E2E uses the same `emailAndPassword` better-auth endpoint as
@@ -391,7 +422,6 @@ architecture and have follow-on specs:
 1. **Sign in with Apple** — better-auth `apple` provider; iOS-only
    button; required for App Store on apps that offer third-party
    sign-in.
-2. **Account deletion (`DELETE /me`)** — App Store guideline 5.1.1(v).
-3. **Google Sign-In** — same provider pattern as Apple.
-4. **Phone-OTP reinstatement** — better-auth has a phone plugin if a
+2. **Google Sign-In** — same provider pattern as Apple.
+3. **Phone-OTP reinstatement** — better-auth has a phone plugin if a
    user segment ever needs SMS sign-in.

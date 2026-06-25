@@ -130,7 +130,10 @@ the app has account/auth data, project/report/note content, uploaded
 photos/documents, voice/audio recordings, Sentry diagnostics, and usage
 counters for app functionality and reliability. The app does not wire
 ads, IDFA/ATT tracking, contacts, health, fitness, precise location, or
-media-location extraction.
+media-location extraction. The mobile app exposes the same hosted policy from
+Profile -> Privacy Policy; keep that in-app link, App Store Connect, Play
+Console, and `apps/mobile/fastlane/metadata/ios/en-US/privacy_url.txt`
+aligned.
 
 App Store:
 
@@ -167,6 +170,11 @@ Required repo layout is documented in
 `apps/mobile/fastlane/screenshots/en-US/`; Play screenshots live
 under `apps/mobile/fastlane/metadata/android/en-US/images/` using the
 Fastlane `supply` screenshot folders.
+
+iOS is intentionally phone-only for the initial review build
+(`ios.supportsTablet = false`) because the checked-in screenshot set covers the
+6.9-inch iPhone family only. Re-enable iPad support only after reviewed iPad
+screenshots exist for every submitted locale.
 
 After assets are reviewed:
 

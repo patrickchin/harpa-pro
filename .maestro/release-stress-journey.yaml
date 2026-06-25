@@ -1,0 +1,17 @@
+appId: ${MAESTRO_APP_ID}
+name: "Release stress journey - heavy usage"
+tags:
+  - regression
+  - release
+  - stress
+---
+# Extended release-candidate stress pass.
+#
+# This complements .maestro/regression-journey.yaml. The regular journey
+# checks breadth across features; this flow keeps one project/report alive
+# through heavier repeated use so long lists, scroll position, create races,
+# generation, finalization, and cleanup all run together.
+
+- runFlow: modules/01-auth.yaml
+- runFlow: modules/17-heavy-usage-stress.yaml
+- runFlow: helpers/sign-out.yaml

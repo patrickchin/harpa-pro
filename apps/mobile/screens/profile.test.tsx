@@ -5,6 +5,7 @@
  *  - displayName / email / company fallbacks for null fields
  *  - top user card is a single link to account details
  *  - Usage This Month row pushes onPressUsage
+ *  - Privacy Policy row pushes onPressPrivacyPolicy
  *  - Developer row appears only when showDeveloperSection is true and
  *    pushes onPressDeveloper
  *  - sign-out button invokes onSignOut
@@ -48,6 +49,7 @@ const defaults = {
   onBack: vi.fn(),
   onPressAccount: vi.fn(),
   onPressUsage: vi.fn(),
+  onPressPrivacyPolicy: vi.fn(),
   onPressDeveloper: vi.fn(),
   onSignOut: vi.fn(),
   onClearCache: vi.fn(async () => undefined),
@@ -109,6 +111,17 @@ describe('Profile', () => {
     // No inline usage tile labels.
     expect(text).not.toContain('Reports');
     expect(text).not.toContain('Voice Notes');
+  });
+
+  it('invokes onPressPrivacyPolicy when the Privacy Policy row is pressed', () => {
+    const onPressPrivacyPolicy = vi.fn();
+    const tree = render(
+      <Profile {...defaults} onPressPrivacyPolicy={onPressPrivacyPolicy} />,
+    );
+    act(() =>
+      tree.root.findByProps({ testID: 'btn-open-privacy-policy' }).props.onPress(),
+    );
+    expect(onPressPrivacyPolicy).toHaveBeenCalledTimes(1);
   });
 
   it('hides the Developer row when showDeveloperSection is false', () => {

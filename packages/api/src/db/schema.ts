@@ -230,7 +230,7 @@ export const userLimitOverrides = appSchema.table('user_limit_overrides', {
   aiInputTokens: bigint('ai_input_tokens', { mode: 'number' }),
   aiOutputTokens: bigint('ai_output_tokens', { mode: 'number' }),
   reason: text('reason').notNull(),
-  grantedBy: text('granted_by').notNull(),
+  grantedBy: text('granted_by'),
   grantedAt: timestamp('granted_at', { withTimezone: true }).defaultNow().notNull(),
   expiresAt: timestamp('expires_at', { withTimezone: true }),
 });

@@ -72,7 +72,9 @@ const config: ExpoConfig = {
   },
   ios: {
     bundleIdentifier: BUNDLE_ID,
-    supportsTablet: true,
+    // Initial App Store submission is iPhone-only. Re-enable after reviewed
+    // iPad screenshots exist for every submitted locale.
+    supportsTablet: false,
     icon: './assets/icon.png',
     // Universal Links — iOS verifies via AASA at
     // https://<host>/.well-known/apple-app-site-association.
@@ -125,6 +127,16 @@ const config: ExpoConfig = {
         cameraPermission:
           'Allow Harpa Pro to access your camera to capture site photos for your reports.',
         recordAudioAndroid: false,
+      },
+    ],
+    [
+      'expo-audio',
+      {
+        microphonePermission:
+          'Allow Harpa Pro to record voice notes for your site reports.',
+        recordAudioAndroid: true,
+        enableBackgroundPlayback: false,
+        enableBackgroundRecording: false,
       },
     ],
     [

@@ -55,6 +55,8 @@ const ENDPOINTS: Endpoint[] = [
 
   { method: 'get',   path: '/me',       hook: 'useMeQuery',          query: true,  hasPathParams: false, hasBody: false, queryKeyHead: 'me' },
   { method: 'patch', path: '/me',       hook: 'useUpdateMeMutation', query: false, hasPathParams: false, hasBody: true },
+  { method: 'delete', path: '/me',      hook: 'useDeleteMeMutation', query: false, hasPathParams: false, hasBody: false },
+  { method: 'get',   path: '/me/deletion-preview', hook: 'useAccountDeletionPreviewQuery', query: true, hasPathParams: false, hasBody: false, queryKeyHead: 'accountDeletionPreview' },
   { method: 'get',   path: '/me/usage', hook: 'useMeUsageQuery',     query: true,  hasPathParams: false, hasBody: false, queryKeyHead: 'meUsage' },
   { method: 'get',   path: '/me/usage/events', hook: 'useMeUsageEventsQuery', query: true,  hasPathParams: false, hasBody: false, queryKeyHead: 'meUsageEvents' },
   { method: 'get',   path: '/me/limits', hook: 'useMeLimitsQuery',   query: true,  hasPathParams: false, hasBody: false, queryKeyHead: 'meLimits' },

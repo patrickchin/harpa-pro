@@ -25,6 +25,7 @@ export const INVALIDATIONS: Record<string, InvalidationRule> = {
   // `useAuthSession().refresh()` (which refetches `useSession()`)
   // and `resetQueryCache()` on sign-out.
   useUpdateMeMutation: ['me'],
+  useDeleteMeMutation: INVALIDATIONS_NONE,
 
   // projects
   useCreateProjectMutation: ['projects'],

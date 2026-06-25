@@ -38,6 +38,12 @@ fixture-only copy, private customer data, API keys, emails, phone numbers, or
 anything from an internal account that should not appear publicly. Play
 screenshots are replaced, not appended, when uploaded.
 
+The initial iOS App Store submission is phone-only:
+`apps/mobile/app.config.ts` sets `ios.supportsTablet = false` because the
+checked-in iOS screenshots cover the 6.9-inch iPhone family only. Before
+re-enabling iPad support, add reviewed iPad screenshots for every submitted
+locale and update the native config in the same PR.
+
 Optional Play listing images can live next to the screenshot folders using the
 Fastlane `supply` names `featureGraphic.png`, `icon.png`, and
 `promoGraphic.png`. Keep those source images reviewed with design before an

@@ -7,6 +7,7 @@
  * respectively. This route only needs auth + navigation + cache.
  */
 import { useRouter, type Href } from 'expo-router';
+import * as Linking from 'expo-linking';
 import { useQueryClient } from '@tanstack/react-query';
 
 import { Profile } from '@/screens/profile';
@@ -15,6 +16,8 @@ import { useRefresh } from '@/lib/util/use-refresh';
 import { safeBack } from '@/lib/nav/safe-back';
 import { AppHeaderActions } from '@/components/ui/AppHeaderActions';
 import { clearImageCachesOnSignOut } from '@/lib/files/image-cache';
+
+const PRIVACY_POLICY_URL = 'https://harpapro.com/privacy';
 
 export default function ProfileRoute() {
   const router = useRouter();
@@ -40,6 +43,9 @@ export default function ProfileRoute() {
       onBack={() => safeBack(router, '/(app)/projects')}
       onPressAccount={() => router.push('/(app)/account' as Href)}
       onPressUsage={() => router.push('/(app)/usage' as Href)}
+      onPressPrivacyPolicy={() => {
+        void Linking.openURL(PRIVACY_POLICY_URL);
+      }}
       onPressDeveloper={() => router.push('/(app)/developer' as Href)}
       onSignOut={async () => {
         await signOut();

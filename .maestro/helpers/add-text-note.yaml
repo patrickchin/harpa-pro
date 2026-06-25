@@ -1,0 +1,20 @@
+appId: ${MAESTRO_APP_ID}
+---
+# add-text-note.yaml - helper: add one text note to the current draft report.
+#
+# Required env:
+#   NOTE_INDEX - expected zero-based note row index after the note is saved.
+#   NOTE_TEXT  - note body to type.
+#
+# Pre-condition: current screen is the draft generate Notes tab.
+# Post-condition: the expected note row is visible.
+- tapOn:
+    id: "input-note"
+- inputText: "${NOTE_TEXT}"
+- hideKeyboard
+- tapOn:
+    id: "btn-add-note"
+- extendedWaitUntil:
+    visible:
+      id: "note-row-${NOTE_INDEX}"
+    timeout: 15000

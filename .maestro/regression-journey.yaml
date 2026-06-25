@@ -21,7 +21,7 @@ tags:
 #  11. Generate + finalize — add note, generate, view report, finalize, unfinalize, re-finalize
 #  12. Report debug — verify debug screen sections
 #  13. Projects delete — delete the project, verify gone
-#  14. Account — view profile, edit + cancel, edit + save
+#  14. Account — view profile, edit + cancel, edit + save, deletion cancel
 #  15. Usage — open Usage from Profile, assert screen renders
 #  16. Profile — identity card + nav targets visible
 #  17. Sign out cleanly

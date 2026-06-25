@@ -376,6 +376,7 @@ export function Account({
               },
             },
             {
+              testID: 'btn-cancel-delete-account',
               label: 'Cancel',
               variant: 'secondary',
               disabled: isDeletingAccount,

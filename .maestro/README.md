@@ -96,7 +96,7 @@ the end. Covers:
     edit modal coverage, finalize, unfinalize, re-finalize
 11. Report Debug: prompt, report notes, LLM response, non-empty state
 12. Project delete teardown
-13. Account view + edit-cancel + edit-save
+13. Account view + edit-cancel + edit-save + account-deletion cancel
 14. Usage screen render
 15. Profile identity + nav
 16. Sign out
@@ -265,6 +265,24 @@ recorder backend while leaving system status chrome visible.
 Construction images are not bundled into the app; the seed script
 uploads the checked-in photos documented in
 `apps/mobile/assets/fixtures/store-screenshots.md` to local MinIO.
+
+## `account-deletion.yaml` (focused destructive account deletion)
+
+Focused App Store compliance guard for the destructive success path. The
+normal regression journey opens the Account deletion sheet, verifies the
+preview/confirmation UI, and cancels so the primary journey account stays
+usable. This focused flow signs in as `test3@harpapro.com`, confirms deletion,
+and asserts the app returns to the sign-in screen.
+
+Run only against a fresh local database because it permanently deletes the
+seeded `test3@harpapro.com` account:
+
+```bash
+export MAESTRO_APP_ID=com.harpa.pro.dev
+docker compose down -v && docker compose up -d
+node scripts/dev-e2e-auth-broker.cjs
+maestro test .maestro/account-deletion.yaml
+```
 
 ## Archived and pending flows
 

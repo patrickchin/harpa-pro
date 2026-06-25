@@ -10,6 +10,10 @@ import type { AppEnv } from '../app.js';
 import { withAuth } from '../middleware/auth.js';
 import { fetchUser, updateUser, fetchUsage, listUsageEvents } from '../services/me.js';
 import { getEffectiveLimits } from '../services/usage-limits.js';
+import {
+  deleteCurrentAccount,
+  getAccountDeletionPreview,
+} from '../services/account-deletion.js';
 
 const errorBody = z.object({
   error: z.object({ code: z.string(), message: z.string() }),
@@ -66,6 +70,61 @@ meRoutes.openapi(
     const user = await db((d) => updateUser(d, userId, input));
     if (!user) throw new HTTPException(404, { message: 'User not found.' });
     return c.json({ user }, 200);
+  },
+);
+
+meRoutes.openapi(
+  createRoute({
+    method: 'get',
+    path: '/me/deletion-preview',
+    tags: ['auth'],
+    security: [{ bearerAuth: [] }],
+    middleware: [withAuth()] as const,
+    responses: {
+      200: {
+        description: 'Account deletion consequences for the signed-in user.',
+        content: { 'application/json': { schema: authSchemas.accountDeletionPreviewResponse } },
+      },
+      401: { description: 'Unauthorized.', content: { 'application/json': { schema: errorBody } } },
+      404: { description: 'User not found.', content: { 'application/json': { schema: errorBody } } },
+    },
+  }),
+  async (c) => {
+    const userId = c.get('userId');
+    const db = c.get('db');
+    if (!userId || !db) throw new HTTPException(401);
+    const preview = await db((d) => getAccountDeletionPreview(d, userId));
+    if (!preview) throw new HTTPException(404, { message: 'User not found.' });
+    return c.json(preview, 200);
+  },
+);
+
+meRoutes.openapi(
+  createRoute({
+    method: 'delete',
+    path: '/me',
+    tags: ['auth'],
+    security: [{ bearerAuth: [] }],
+    middleware: [withAuth()] as const,
+    responses: {
+      204: { description: 'Account deleted.' },
+      401: { description: 'Unauthorized.', content: { 'application/json': { schema: errorBody } } },
+      404: { description: 'User not found.', content: { 'application/json': { schema: errorBody } } },
+    },
+  }),
+  async (c) => {
+    const userId = c.get('userId');
+    const db = c.get('db');
+    if (!userId || !db) throw new HTTPException(401);
+    try {
+      await db((d) => deleteCurrentAccount(d));
+    } catch (err) {
+      if ((err as { code?: string })?.code === 'P0002') {
+        throw new HTTPException(404, { message: 'User not found.' });
+      }
+      throw err;
+    }
+    return c.body(null, 204);
   },
 );
 

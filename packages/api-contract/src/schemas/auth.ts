@@ -19,6 +19,27 @@ export const updateMeRequest = z.object({
   companyName: z.string().min(1).max(120).optional(),
 });
 
+const accountDeletionProject = z.object({
+  id: projectId,
+  name: z.string(),
+});
+
+export const accountDeletionPreviewResponse = z.object({
+  email,
+  soloProjectsDeleted: z.array(accountDeletionProject),
+  sharedProjectsTransferred: z.array(
+    accountDeletionProject.extend({
+      newOwnerId: userId,
+      newOwnerEmail: email,
+    }),
+  ),
+  sharedProjectsLeft: z.array(accountDeletionProject),
+  personalFilesDeleted: z.number().int().nonnegative(),
+});
+export type AccountDeletionPreviewResponse = z.infer<
+  typeof accountDeletionPreviewResponse
+>;
+
 export const usageMonth = z.object({
   month: z.string().regex(/^\d{4}-\d{2}$/),
   reports: z.number().int().nonnegative(),

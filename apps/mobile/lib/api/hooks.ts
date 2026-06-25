@@ -67,6 +67,38 @@ export function useUpdateMeMutation(
   });
 }
 
+export type DeleteMeMutationVars = void;
+export function useDeleteMeMutation(
+  options?: UseMutationOptions<ResponseBody<"/me", "delete">, ApiError, DeleteMeMutationVars>,
+) {
+  const qc = useQueryClient();
+  return useMutation<ResponseBody<"/me", "delete">, ApiError, DeleteMeMutationVars>({
+    mutationFn: (_vars) => request("/me", "delete"),
+    ...options,
+    onSuccess: (...args) => {
+      const rule = INVALIDATIONS["useDeleteMeMutation"];
+      if (rule && rule !== INVALIDATIONS_NONE) {
+        for (const head of rule) {
+          qc.invalidateQueries({ queryKey: [head] });
+        }
+      }
+      return options?.onSuccess?.(...args);
+    },
+  });
+}
+
+export type AccountDeletionPreviewQueryInput = { query?: QueryParams<"/me/deletion-preview", "get"> } | void;
+export function useAccountDeletionPreviewQuery(
+  input?: AccountDeletionPreviewQueryInput,
+  options?: Omit<UseQueryOptions<ResponseBody<"/me/deletion-preview", "get">, ApiError>, 'queryKey' | 'queryFn'>,
+) {
+  return useQuery<ResponseBody<"/me/deletion-preview", "get">, ApiError>({
+    queryKey: ["accountDeletionPreview", input?.query] as const,
+    queryFn: ({ signal }) => request("/me/deletion-preview", "get", { query: input?.query, signal }),
+    ...options,
+  });
+}
+
 export type MeUsageQueryInput = { query?: QueryParams<"/me/usage", "get"> } | void;
 export function useMeUsageQuery(
   input?: MeUsageQueryInput,

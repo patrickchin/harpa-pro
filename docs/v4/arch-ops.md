@@ -271,6 +271,20 @@ normal email entry screen and then a password on the second screen:
 Do not commit the demo password. Rotate it by changing `DEMO_ACCOUNT_PASSWORD`
 and updating the App Store Connect review note for the next submission.
 
+### Account deletion review note
+
+Production builds expose account deletion from Profile -> Account
+Details -> Delete account. The flow uses an in-app `AppDialogSheet`,
+loads `GET /me/deletion-preview`, requires the user to type their
+account email, calls `DELETE /me`, clears local caches, and signs out.
+
+Deletion removes the user's auth account, sessions, settings, usage
+events, personal file rows, and solo projects. Shared project records
+remain available to remaining members; if the deleted account was the
+only owner, ownership transfers to the oldest remaining member. Mention
+this shared-record retention in App Review notes or privacy-policy
+updates if reviewers ask how collaborative data is handled.
+
 ### Production release
 
 Production release is manual after production smoke sign-off. Prefer

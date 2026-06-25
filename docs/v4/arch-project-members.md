@@ -53,6 +53,36 @@ Three roles, enumerated in `app.project_role` (`owner | editor | viewer`).
 
 ---
 
+## 2.1 Account deletion
+
+`DELETE /me` must preserve project-owner invariants while deleting the
+current account:
+
+- If the deleting account is the only member of a project, the project
+  is deleted. Existing cascades remove reports, notes, member rows, and
+  project-scoped file rows.
+- If the deleting account owns a shared project and another owner
+  remains, `projects.owner_id` transfers to the oldest remaining owner,
+  then the deleting account's member row is removed.
+- If the deleting account owns a shared project and no other owner
+  remains, `projects.owner_id` transfers to the oldest remaining member
+  and that member is promoted to `owner`.
+- If the deleting account is an editor or viewer, only that member row
+  is removed.
+
+Reports and notes authored by the deleted account remain in shared
+projects as project records for the remaining members. The deleted
+account's profile, email, auth sessions, settings, usage events, and
+owned file rows are removed by the auth/account-deletion path.
+
+The implementation lives in migration
+`packages/api/migrations/0019_account_deletion.sql` as
+`app.delete_current_user()`. The route calls it through the normal
+scoped `/me` accessor so `current_setting('app.user_id')` is the only
+source of account identity.
+
+---
+
 ## 3. Design notes (rejected alternatives)
 
 - **POST upserts on conflict (rejected)** — would let an owner self-demote via the "invite" UX. Keep POST insert-only with 409 on conflict; "add" and "change role" stay distinct intents.

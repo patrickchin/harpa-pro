@@ -22,6 +22,10 @@
 #   project-row-SLUG           →  testID={`project-row-${item.slug}`} in
 #                                  seeded flows
 #   report-row-N               →  testID={`report-row-${item.number}`} in seeded flows
+#   note-row-N                 →  testID={`note-row-${sourceIndex}`} in
+#                                  long-list stress flows
+#   input-note|report-row-N    →  create-report race guard; both sides are
+#                                  checked by existing literal/template rules
 #   report-row-draft-0         →  legacy seeded fixture id
 #   input-phone                →  rendered by auth/login flow outside static source match
 #   id-a|id-b                  →  Maestro regex alternation, literals checked
@@ -41,6 +45,7 @@ TESTIDS=$(grep -rhE "^[[:space:]]*id:[[:space:]]*['\"]" \
     .maestro/helpers/ \
     .maestro/regression-journey.yaml \
     .maestro/account-deletion.yaml \
+    .maestro/release-stress-journey.yaml \
     .maestro/native-input-smoke.yaml \
     .maestro/place-photo-on-issue.flow.yml \
     .maestro/store-screenshots.yaml \
@@ -57,6 +62,8 @@ is_known() {
   [[ "$id" =~ ^usage-limit(-bar)?-(report_generate|voice_transcribe|voice_summarize|ai_input_tokens|ai_output_tokens)$ ]] && return 0
   [[ "$id" =~ ^project-row-.+$ ]] && return 0
   [[ "$id" =~ ^report-row-[0-9]+$ ]] && return 0
+  [[ "$id" =~ ^note-row-[0-9]+$ ]] && return 0
+  [[ "$id" =~ ^input-note\|report-row-[0-9]+$ ]] && return 0
   for known in $KNOWN_TEMPLATE_IDS; do
     [[ "$id" == "$known" ]] && return 0
   done

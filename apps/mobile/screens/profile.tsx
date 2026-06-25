@@ -27,6 +27,7 @@ import {
   Bell,
   ChevronRight,
   LogOut,
+  ShieldCheck,
   Trash2,
   User,
   Wrench,
@@ -58,6 +59,7 @@ export interface ProfileScreenProps {
   onBack: () => void;
   onPressAccount: () => void;
   onPressUsage: () => void;
+  onPressPrivacyPolicy: () => void;
   onPressDeveloper: () => void;
 
   /** Best-effort sign-out invoked from the destructive Sign Out button.
@@ -91,6 +93,7 @@ export function Profile({
   onBack,
   onPressAccount,
   onPressUsage,
+  onPressPrivacyPolicy,
   onPressDeveloper,
   onSignOut,
   onClearCache,
@@ -120,6 +123,12 @@ export function Profile({
       Icon: Zap,
       onPress: onPressUsage,
       testID: 'btn-open-usage',
+    },
+    {
+      label: 'Privacy Policy',
+      Icon: ShieldCheck,
+      onPress: onPressPrivacyPolicy,
+      testID: 'btn-open-privacy-policy',
     },
     { label: 'Notifications', Icon: Bell },
   ];

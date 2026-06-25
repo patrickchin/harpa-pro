@@ -4,3 +4,6 @@ samples/real/*.m4a filter=lfs diff=lfs merge=lfs -text
 samples/real/*.mp4 filter=lfs diff=lfs merge=lfs -text
 samples/real/*.wav filter=lfs diff=lfs merge=lfs -text
 samples/real/*.jpg filter=lfs diff=lfs merge=lfs -text
+
+*.sh text eol=lf
+.husky/* text eol=lf

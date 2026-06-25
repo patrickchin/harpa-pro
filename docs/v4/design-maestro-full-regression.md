@@ -18,6 +18,14 @@
 > using the local CLI auth broker plus API/R2 proxy bridge.
 > Windows-host gotchas hit while getting here are cataloged in
 > [`pitfalls-maestro-windows.md`](pitfalls-maestro-windows.md).
+> **Current 2026-06-25 state:** the normal regression journey now has
+> a heavier companion,
+> [`.maestro/release-stress-journey.yaml`](../../.maestro/release-stress-journey.yaml),
+> for pre-App-Review confidence. It creates a dedicated project,
+> adds twenty text notes through the UI, scrolls the long note
+> timeline, generates/finalizes that report, creates additional draft
+> reports to exercise a mixed reports list, scrolls across the list,
+> then deletes the project to verify cleanup under accumulated data.
 > **Phase:** P4 hardening (extends [P3.14](plan-p3-feature-build.md#p314--maestro-full-journey--shipped) `core-end-to-end.yaml`).
 >
 > Companions:
@@ -505,6 +513,51 @@ design-maestro-full-regression.md §7".
 
 ---
 
+## 7.1 Release stress companion
+
+The standard `regression-journey.yaml` is the breadth pass: one or a
+small number of clean examples for each shipped feature. That is the
+right default for diagnosing regressions, but it does not answer a
+separate release question: does the app still behave when a user keeps
+working in the same project and report for longer than the tidy happy
+path?
+
+Use `release-stress-journey.yaml` as the extended pre-review gate when
+we want broader confidence before App Store submission. It deliberately
+uses the real UI instead of seeded data:
+
+- create one stress project and one primary report;
+- add twenty text notes through `input-note` / `btn-add-note`;
+- scroll the notes timeline from note 20 back to note 1 and down again;
+- generate and finalize from that large note set;
+- create four more draft reports so the reports list mixes drafts and
+  a finalized report;
+- scroll the reports list between the newest draft and finalized row;
+- delete the project, proving cleanup handles the accumulated notes and
+  reports.
+
+This flow complements, rather than replaces, the normal regression
+journey. Run the normal regression first when debugging breadth; run
+the release stress journey after it for heavy-usage confidence before
+submitting an iOS build for review.
+
+Local command sequence on Windows/Android:
+
+```powershell
+uv run --project tools/maestro-orchestrator mo up --device R3CT7092S2H --json
+uv run --project tools/maestro-orchestrator mo reset --device R3CT7092S2H --json
+docker compose run --rm seed-test-accounts
+uv run --project tools/maestro-orchestrator mo reset --device R3CT7092S2H --skip-db --json
+uv run --project tools/maestro-orchestrator mo run release-stress-journey.yaml --json --device R3CT7092S2H
+```
+
+The reseed step is currently required because `mo reset` truncates the
+Better Auth users that password-login Maestro flows depend on. Do not
+skip the final `--skip-db` reset; it clears app/device state without
+removing the freshly seeded test accounts.
+
+---
+
 ## 8. Open scope — uncovered routes and flows
 
 Routes and flows that currently render in the app but are **not**
@@ -512,19 +565,16 @@ asserted by `regression-journey.yaml`. Each is a candidate for a
 follow-up module; flagged here so we don't lose track of the gap
 between "the journey is green" and "the app is covered".
 
-- `apps/mobile/app/(app)/account.tsx` — account screen (settings,
-  sign-out trigger, destructive actions). Sign-out is exercised
-  indirectly via `helpers/sign-out.yaml`, but the rest of the screen
-  is unasserted.
-- `apps/mobile/app/(app)/usage.tsx` — token-usage screen. No
-  module touches it; the `/me/usage/events` endpoint is also out of
-  scope (Q5).
-- `apps/mobile/app/(app)/profile.tsx` — profile screen, including
-  display-name edits, avatar (if/when `AvatarUploader` lands per
-  carve-out), and the dev-section toggles that gate the report-debug
-  entry asserted in module 12. The journey reaches the developer
-  section indirectly (the entry only renders behind
-  `EXPO_PUBLIC_USE_FIXTURES`) but does not assert profile edits.
+- `apps/mobile/app/(app)/account.tsx` — module 14 covers view,
+  edit-cancel, and edit-save. Remaining account work is destructive
+  account actions, if/when those ship.
+- `apps/mobile/app/(app)/usage.tsx` — module 15 covers navigation,
+  steady-state rendering, and free-plan limit buckets. The detailed
+  token-event timeline (`GET /me/usage/events`) remains out of scope
+  until [P3.15.5](plan-p3-feature-build.md#p3155--llm-token-accounting).
+- `apps/mobile/app/(app)/profile.tsx` — module 16 covers identity and
+  primary navigation targets. Avatar upload remains a carve-out until
+  `AvatarUploader` gets canonical camera-roll/R2 coverage.
 - Voice notes — module `09` now covers recording, upload, transcribe,
   summarize, title, transcript viewing, playback entry point, and
   delete. Remaining voice coverage is the saved-report/debug surface

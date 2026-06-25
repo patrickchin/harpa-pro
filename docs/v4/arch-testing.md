@@ -179,7 +179,11 @@ ensures the legacy path is gone:
   must not become the spec).
 
 The full list runs from the root `lint` script in `package.json`
-and is enforced by `lint-typecheck.yml`.
+and is enforced by `lint-typecheck.yml`. On Windows, root lint runs
+the shell gates through `scripts/run-bash-checks.cjs`, which selects
+Git Bash instead of WSL so the checks reuse the Windows `node_modules`
+tree. Keep new shell gates in that wrapper rather than chaining raw
+`bash` from `package.json`.
 
 The following gates were migrated to ESLint rules in
 [`apps/mobile/.eslintrc.cjs`](../../apps/mobile/.eslintrc.cjs) so

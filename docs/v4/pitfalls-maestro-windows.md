@@ -378,14 +378,16 @@ The hook code:
 **Workaround (proper, permanent fix).** Add to `.gitattributes`:
 
 ```
-*.sh text=lf eol=lf
+*.sh text eol=lf
+.husky/* text eol=lf
 ```
 
 Then `git add --renormalize . && git commit` to rewrite the index
 entries with LF. After the rebase/normalize, every Windows checkout
-will materialize `*.sh` files with LF endings regardless of
-`core.autocrlf`. Recommended as a standalone PR — don't mix it into
-unrelated feature branches.
+will materialize `*.sh` files and Husky hooks with LF endings
+regardless of `core.autocrlf`. Root `pnpm lint` should invoke shell
+gates through `scripts/run-bash-checks.cjs` so native Windows shells
+select Git Bash instead of WSL.
 
 ---
 

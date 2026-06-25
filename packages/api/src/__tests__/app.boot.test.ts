@@ -11,6 +11,9 @@ const KEYS = [
 ] as const;
 
 let snapshot: Record<string, string | undefined>;
+// Cold-importing the full route/auth graph can exceed 30s under the parallel
+// root pre-push suite on Windows, even when the import has no live side effects.
+const BOOT_IMPORT_TIMEOUT_MS = 90_000;
 
 beforeEach(() => {
   snapshot = Object.fromEntries(KEYS.map((k) => [k, process.env[k]])) as Record<
@@ -38,7 +41,7 @@ describe('app boot: no module-load side effects', () => {
     vi.resetModules();
     const mod = await import('../app.js');
     expect(typeof mod.createApp).toBe('function');
-  }, 30_000);
+  }, BOOT_IMPORT_TIMEOUT_MS);
 
   it('imports app.ts under PR-preview env without requiring live OTP email transport', async () => {
     process.env.NODE_ENV = 'production';
@@ -49,7 +52,7 @@ describe('app boot: no module-load side effects', () => {
     vi.resetModules();
     const mod = await import('../app.js');
     expect(typeof mod.createApp).toBe('function');
-  }, 30_000);
+  }, BOOT_IMPORT_TIMEOUT_MS);
 
   it('does not mount the retired dev OTP route', async () => {
     process.env.NODE_ENV = 'production';

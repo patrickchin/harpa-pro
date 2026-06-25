@@ -192,6 +192,54 @@ exports[`Profile > matches snapshot at default props 1`] = `
       </rn-View>
       <rn-View>
         <rn-Pressable
+          disabled={false}
+          onPress={[MockFunction spy]}
+          testID="btn-open-privacy-policy"
+        >
+          <rn-View
+            className="rounded-lg border border-border bg-card p-4 flex-row items-center gap-4"
+            style={
+              [
+                {
+                  "elevation": 2,
+                  "shadowColor": "#1a1a2e",
+                  "shadowOffset": {
+                    "height": 2,
+                    "width": 0,
+                  },
+                  "shadowOpacity": 0.08,
+                  "shadowRadius": 8,
+                },
+                undefined,
+              ]
+            }
+          >
+            <rn-View
+              className="h-10 w-10 items-center justify-center rounded-md border border-border bg-card"
+            >
+              <lucide-ShieldCheck
+                color="#5f5b66"
+                size={20}
+              />
+            </rn-View>
+            <rn-View
+              className="flex-1"
+            >
+              <rn-Text
+                className="text-title-sm text-foreground"
+              >
+                Privacy Policy
+              </rn-Text>
+            </rn-View>
+            <lucide-ChevronRight
+              color="#5f5b66"
+              size={16}
+            />
+          </rn-View>
+        </rn-Pressable>
+      </rn-View>
+      <rn-View>
+        <rn-Pressable
           disabled={true}
         >
           <rn-View

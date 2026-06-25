@@ -21,7 +21,7 @@ interface MembershipRow extends Record<string, unknown> {
   owner_id: string;
   role: 'owner' | 'editor' | 'viewer';
   member_count: string;
-  created_at: Date;
+  created_at: Date | string;
 }
 
 interface MemberRow extends Record<string, unknown> {
@@ -29,7 +29,7 @@ interface MemberRow extends Record<string, unknown> {
   display_name: string | null;
   email: string;
   role: 'owner' | 'editor' | 'viewer';
-  joined_at: Date;
+  joined_at: Date | string;
 }
 
 interface CountRow extends Record<string, unknown> {
@@ -123,7 +123,11 @@ function compareOwnerCandidate(a: MemberRow, b: MemberRow): number {
   const aIsOwner = a.role === 'owner';
   const bIsOwner = b.role === 'owner';
   if (aIsOwner !== bIsOwner) return aIsOwner ? -1 : 1;
-  const joined = a.joined_at.getTime() - b.joined_at.getTime();
+  const joined = toMillis(a.joined_at) - toMillis(b.joined_at);
   if (joined !== 0) return joined;
   return a.user_id.localeCompare(b.user_id);
+}
+
+function toMillis(value: Date | string): number {
+  return value instanceof Date ? value.getTime() : new Date(value).getTime();
 }

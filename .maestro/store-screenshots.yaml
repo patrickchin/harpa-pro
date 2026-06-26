@@ -52,8 +52,15 @@ tags:
           id: "input-onboarding-company"
       - inputText: "HARPA Field Demo"
       - hideKeyboard
-      - tapOn:
-          id: "btn-onboarding-submit"
+      # iOS can submit this form while dismissing the keyboard, which
+      # navigates to Projects before Maestro reaches the explicit tap.
+      - runFlow:
+          when:
+            visible:
+              id: "btn-onboarding-submit"
+          commands:
+            - tapOn:
+                id: "btn-onboarding-submit"
 
 - extendedWaitUntil:
     visible:

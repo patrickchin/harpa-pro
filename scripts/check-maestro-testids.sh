@@ -24,6 +24,7 @@
 #   report-row-N               →  testID={`report-row-${item.number}`} in seeded flows
 #   note-row-N                 →  testID={`note-row-${sourceIndex}`} in
 #                                  long-list stress flows
+#   btn-edit-section-N         →  testID={`btn-edit-section-${idx}`}
 #   input-note|report-row-N    →  create-report race guard; both sides are
 #                                  checked by existing literal/template rules
 #   report-row-draft-0         →  legacy seeded fixture id
@@ -63,6 +64,7 @@ is_known() {
   [[ "$id" =~ ^project-row-.+$ ]] && return 0
   [[ "$id" =~ ^report-row-[0-9]+$ ]] && return 0
   [[ "$id" =~ ^note-row-[0-9]+$ ]] && return 0
+  [[ "$id" =~ ^btn-edit-section-[0-9]+$ ]] && return 0
   [[ "$id" =~ ^input-note\|report-row-[0-9]+$ ]] && return 0
   for known in $KNOWN_TEMPLATE_IDS; do
     [[ "$id" == "$known" ]] && return 0

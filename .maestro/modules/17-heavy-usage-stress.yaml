@@ -41,8 +41,15 @@ tags:
     id: "input-project-address"
 - inputText: "99 Stress Test Way"
 - hideKeyboard
-- tapOn:
-    id: "btn-save-project"
+# iOS can submit the form while dismissing the keyboard, so only tap if
+# the button is still on the form after the keyboard closes.
+- runFlow:
+    when:
+      visible:
+        id: "btn-save-project"
+    commands:
+      - tapOn:
+          id: "btn-save-project"
 - extendedWaitUntil:
     visible:
       id: "btn-project-edit"
@@ -173,6 +180,11 @@ tags:
       NOTE_TEXT: "Stress note 20 end of day walkthrough completed"
 
 # --- Scroll the long note timeline both directions -------------------------
+- scrollUntilVisible:
+    element:
+      id: "note-row-19"
+    direction: DOWN
+    timeout: 45000
 - assertVisible:
     id: "note-row-19"
 - scrollUntilVisible:

@@ -44,7 +44,6 @@ tags:
 - tapOn:
     id: "input-note"
 - inputText: "Foundation inspection complete. No cracks observed."
-- hideKeyboard
 - tapOn:
     id: "btn-add-note"
 
@@ -53,6 +52,13 @@ tags:
     visible:
       id: "note-row-.*"
     timeout: 10000
+# XCTest cannot always dismiss the multiline note input with hideKeyboard.
+# Tap Add while it is above the keyboard, then drag the notes list to restore
+# the generate chrome before opening row actions.
+- swipe:
+    direction: DOWN
+    duration: 500
+- waitForAnimationToEnd
 
 # --- Open note options menu and delete the note ----------------------------
 - tapOn:

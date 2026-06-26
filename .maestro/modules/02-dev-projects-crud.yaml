@@ -25,8 +25,15 @@ tags:
     id: "input-project-address"
 - inputText: "1 Dev Regression Way"
 - hideKeyboard
-- tapOn:
-    id: "btn-save-project"
+# iOS can submit the form while dismissing the keyboard, so only tap if
+# the button is still on the form after the keyboard closes.
+- runFlow:
+    when:
+      visible:
+        id: "btn-save-project"
+    commands:
+      - tapOn:
+          id: "btn-save-project"
 
 - extendedWaitUntil:
     visible:
@@ -48,8 +55,13 @@ tags:
     element:
       id: "btn-save-project"
     direction: DOWN
-- tapOn:
-    id: "btn-save-project"
+- runFlow:
+    when:
+      visible:
+        id: "btn-save-project"
+    commands:
+      - tapOn:
+          id: "btn-save-project"
 
 - extendedWaitUntil:
     visible:

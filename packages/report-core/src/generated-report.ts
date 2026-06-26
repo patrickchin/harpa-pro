@@ -40,19 +40,11 @@ const stringArray = z
   .array(z.unknown())
   .optional()
   .default([])
-  .transform((arr) =>
-    arr
-      .map((v) => (typeof v === 'string' ? v.trim() : ''))
-      .filter(Boolean),
-  );
+  .transform((arr) => arr.map((v) => (typeof v === 'string' ? v.trim() : '')).filter(Boolean));
 
 const attachmentIdArray = z
   .array(z.unknown())
-  .transform((arr) =>
-    arr
-      .map((v) => (typeof v === 'string' ? v.trim() : ''))
-      .filter(Boolean),
-  );
+  .transform((arr) => arr.map((v) => (typeof v === 'string' ? v.trim() : '')).filter(Boolean));
 
 // ── Schema definitions ─────────────────────────────────────────
 
@@ -62,7 +54,7 @@ const attachmentIdArray = z
 
 const RoleSchema = z.object({
   role: nonEmptyTrimmed,
-  count: coercedNumber,
+  count: nullableTrimmed,
   notes: nullableTrimmed,
 });
 
@@ -151,9 +143,7 @@ export type GeneratedSiteReport = z.infer<typeof GeneratedSiteReportSchema>;
 
 // ── Public API ─────────────────────────────────────────────────
 
-export function normalizeGeneratedReportPayload(
-  value: unknown,
-): GeneratedSiteReport | null {
+export function normalizeGeneratedReportPayload(value: unknown): GeneratedSiteReport | null {
   const result = GeneratedSiteReportSchema.safeParse(value);
   return result.success ? result.data : null;
 }

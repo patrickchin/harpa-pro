@@ -19,9 +19,7 @@ describe('VoiceReportView', () => {
     expect(screen.getAllByText('Next steps').length).toBeGreaterThan(0);
 
     // Content from fixture
-    expect(
-      screen.getByText('Water ingress on southern wall'),
-    ).toBeTruthy();
+    expect(screen.getByText('Water ingress on southern wall')).toBeTruthy();
     expect(screen.getByText("Steel erectors (Murphy's)")).toBeTruthy();
     expect(screen.getByText('M16 anchor bolts')).toBeTruthy();
   });
@@ -41,6 +39,30 @@ describe('VoiceReportView', () => {
     expect(screen.getByText('Programme')).toBeTruthy();
     expect(screen.getByText('Quality')).toBeTruthy();
     expect(screen.getByText('Safety')).toBeTruthy();
+  });
+
+  it('renders qualitative worker counts in summary fields', () => {
+    render(
+      <VoiceReportView
+        report={{
+          meta: {
+            title: null,
+            summary: null,
+            visitDate: null,
+          },
+          weather: null,
+          workers: [{ role: 'Contractors', count: 'a few', hours: null, notes: null }],
+          materials: [],
+          issues: [],
+          nextSteps: [],
+          summarySections: [],
+        }}
+      />,
+    );
+
+    expect(screen.getByText('a few on site')).toBeTruthy();
+    expect(screen.getAllByText('a few').length).toBeGreaterThan(0);
+    expect(screen.queryByText('0 on site')).toBeNull();
   });
 
   it('handles a minimal report payload without crashing', () => {

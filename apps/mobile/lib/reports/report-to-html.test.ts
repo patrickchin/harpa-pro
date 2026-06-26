@@ -29,7 +29,7 @@ function baseReport(): GeneratedSiteReport {
         totalWorkers: 4,
         workerHours: '32',
         notes: null,
-        roles: [{ role: 'Electrician', count: 2, notes: null }],
+        roles: [{ role: 'Electrician', count: '2', notes: null }],
       },
       materials: [
         {
@@ -80,6 +80,21 @@ describe('reportToHtml', () => {
     expect(html).toContain('Order more cement');
     expect(html).toContain('Progress');
     expect(html).toContain('Walls up.');
+  });
+
+  it('renders qualitative worker counts instead of a zero total', () => {
+    const report = baseReport();
+    report.report.workers = {
+      totalWorkers: null,
+      workerHours: null,
+      notes: null,
+      roles: [{ role: 'Contractors', count: 'a few', notes: null }],
+    };
+
+    const html = reportToHtml(report);
+
+    expect(html).toContain('Personnel on Site</td><td class="num">a few</td>');
+    expect(html).toContain('<td>Contractors</td><td class="num">a few</td>');
   });
 
   it('omits the "Report Type" row that existed in v3', () => {

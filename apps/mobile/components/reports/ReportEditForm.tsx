@@ -45,8 +45,7 @@ export interface ReportEditFormProps {
   onChange: (next: GeneratedSiteReport) => void;
 }
 
-const INPUT_CLASS =
-  'rounded-md border border-border bg-card px-3 py-2 text-base text-foreground';
+const INPUT_CLASS = 'rounded-md border border-border bg-card px-3 py-2 text-base text-foreground';
 const MULTILINE_CLASS = `${INPUT_CLASS} min-h-[88px]`;
 const LABEL_CLASS = 'text-sm font-medium text-muted-foreground';
 const FIELD_CLASS = 'gap-1';
@@ -76,9 +75,7 @@ interface PendingRemoval {
 }
 
 export function ReportEditForm({ report, onChange }: ReportEditFormProps) {
-  const [pendingRemoval, setPendingRemoval] = useState<PendingRemoval | null>(
-    null,
-  );
+  const [pendingRemoval, setPendingRemoval] = useState<PendingRemoval | null>(null);
 
   const r = report.report;
   const meta = r.meta;
@@ -112,9 +109,7 @@ export function ReportEditForm({ report, onChange }: ReportEditFormProps) {
             <TextInput
               className={INPUT_CLASS}
               value={nullableString(meta.visitDate)}
-              onChangeText={(v) =>
-                onChange(updateMeta(report, { visitDate: nullify(v) }))
-              }
+              onChangeText={(v) => onChange(updateMeta(report, { visitDate: nullify(v) }))}
               placeholder="YYYY-MM-DD"
               accessibilityLabel="Visit date"
             />
@@ -139,9 +134,7 @@ export function ReportEditForm({ report, onChange }: ReportEditFormProps) {
             <TextInput
               className={INPUT_CLASS}
               value={nullableString(weather?.conditions)}
-              onChangeText={(v) =>
-                onChange(updateWeather(report, { conditions: nullify(v) }))
-              }
+              onChangeText={(v) => onChange(updateWeather(report, { conditions: nullify(v) }))}
               accessibilityLabel="Weather conditions"
             />
           </Field>
@@ -149,9 +142,7 @@ export function ReportEditForm({ report, onChange }: ReportEditFormProps) {
             <TextInput
               className={INPUT_CLASS}
               value={nullableString(weather?.temperature)}
-              onChangeText={(v) =>
-                onChange(updateWeather(report, { temperature: nullify(v) }))
-              }
+              onChangeText={(v) => onChange(updateWeather(report, { temperature: nullify(v) }))}
               accessibilityLabel="Weather temperature"
             />
           </Field>
@@ -159,9 +150,7 @@ export function ReportEditForm({ report, onChange }: ReportEditFormProps) {
             <TextInput
               className={INPUT_CLASS}
               value={nullableString(weather?.wind)}
-              onChangeText={(v) =>
-                onChange(updateWeather(report, { wind: nullify(v) }))
-              }
+              onChangeText={(v) => onChange(updateWeather(report, { wind: nullify(v) }))}
               accessibilityLabel="Weather wind"
             />
           </Field>
@@ -169,9 +158,7 @@ export function ReportEditForm({ report, onChange }: ReportEditFormProps) {
             <TextInput
               className={MULTILINE_CLASS}
               value={nullableString(weather?.impact)}
-              onChangeText={(v) =>
-                onChange(updateWeather(report, { impact: nullify(v) }))
-              }
+              onChangeText={(v) => onChange(updateWeather(report, { impact: nullify(v) }))}
               multiline
               accessibilityLabel="Weather impact"
             />
@@ -198,9 +185,7 @@ export function ReportEditForm({ report, onChange }: ReportEditFormProps) {
             <TextInput
               className={INPUT_CLASS}
               value={nullableString(workers?.workerHours)}
-              onChangeText={(v) =>
-                onChange(updateWorkers(report, { workerHours: nullify(v) }))
-              }
+              onChangeText={(v) => onChange(updateWorkers(report, { workerHours: nullify(v) }))}
               accessibilityLabel="Worker hours"
             />
           </Field>
@@ -208,28 +193,18 @@ export function ReportEditForm({ report, onChange }: ReportEditFormProps) {
             <TextInput
               className={MULTILINE_CLASS}
               value={nullableString(workers?.notes)}
-              onChangeText={(v) =>
-                onChange(updateWorkers(report, { notes: nullify(v) }))
-              }
+              onChangeText={(v) => onChange(updateWorkers(report, { notes: nullify(v) }))}
               multiline
               accessibilityLabel="Workers notes"
             />
           </Field>
 
-          <Text className="mt-2 text-sm font-semibold text-foreground">
-            Roles
-          </Text>
+          <Text className="mt-2 text-sm font-semibold text-foreground">Roles</Text>
           {roles.length === 0 ? (
-            <Text className="text-sm text-muted-foreground opacity-60">
-              No roles yet
-            </Text>
+            <Text className="text-sm text-muted-foreground opacity-60">No roles yet</Text>
           ) : (
             roles.map((role, idx) => (
-              <View
-                key={`role-${idx}`}
-                className={ROW_CLASS}
-                testID={`role-row-${idx}`}
-              >
+              <View key={`role-${idx}`} className={ROW_CLASS} testID={`role-row-${idx}`}>
                 <Field label="Role">
                   <TextInput
                     className={INPUT_CLASS}
@@ -245,13 +220,12 @@ export function ReportEditForm({ report, onChange }: ReportEditFormProps) {
                 <Field label="Count">
                   <TextInput
                     className={INPUT_CLASS}
-                    value={numericString(role.count)}
+                    value={nullableString(role.count)}
                     onChangeText={(v) => {
                       const next = roles.slice();
-                      next[idx] = { ...next[idx]!, count: parseNumeric(v) };
+                      next[idx] = { ...next[idx]!, count: nullify(v) };
                       onChange(setRoles(report, next));
                     }}
-                    keyboardType="numeric"
                     accessibilityLabel={`Role ${idx + 1} count`}
                   />
                 </Field>
@@ -272,7 +246,10 @@ export function ReportEditForm({ report, onChange }: ReportEditFormProps) {
                   onPress={() =>
                     requestRemove('Remove this worker role?', () => {
                       onChange(
-                        setRoles(report, roles.filter((_, i) => i !== idx)),
+                        setRoles(
+                          report,
+                          roles.filter((_, i) => i !== idx),
+                        ),
                       );
                     })
                   }
@@ -292,16 +269,10 @@ export function ReportEditForm({ report, onChange }: ReportEditFormProps) {
         <SectionHeader title="Materials" />
         <View className="mt-4 gap-3">
           {materials.length === 0 ? (
-            <Text className="text-sm text-muted-foreground opacity-60">
-              No materials yet
-            </Text>
+            <Text className="text-sm text-muted-foreground opacity-60">No materials yet</Text>
           ) : (
             materials.map((mat, idx) => (
-              <View
-                key={`mat-${idx}`}
-                className={ROW_CLASS}
-                testID={`material-row-${idx}`}
-              >
+              <View key={`mat-${idx}`} className={ROW_CLASS} testID={`material-row-${idx}`}>
                 <Field label="Name">
                   <TextInput
                     className={INPUT_CLASS}
@@ -392,9 +363,7 @@ export function ReportEditForm({ report, onChange }: ReportEditFormProps) {
           )}
           <AddRowButton
             label="Add material"
-            onPress={() =>
-              onChange(setMaterials(report, [...materials, blankMaterial()]))
-            }
+            onPress={() => onChange(setMaterials(report, [...materials, blankMaterial()]))}
           />
         </View>
       </Card>
@@ -404,16 +373,10 @@ export function ReportEditForm({ report, onChange }: ReportEditFormProps) {
         <SectionHeader title="Issues" />
         <View className="mt-4 gap-3">
           {issues.length === 0 ? (
-            <Text className="text-sm text-muted-foreground opacity-60">
-              No issues yet
-            </Text>
+            <Text className="text-sm text-muted-foreground opacity-60">No issues yet</Text>
           ) : (
             issues.map((iss, idx) => (
-              <View
-                key={`iss-${idx}`}
-                className={ROW_CLASS}
-                testID={`issue-row-${idx}`}
-              >
+              <View key={`iss-${idx}`} className={ROW_CLASS} testID={`issue-row-${idx}`}>
                 <Field label="Title">
                   <TextInput
                     className={INPUT_CLASS}
@@ -495,7 +458,10 @@ export function ReportEditForm({ report, onChange }: ReportEditFormProps) {
                   onPress={() =>
                     requestRemove('Remove this issue?', () => {
                       onChange(
-                        setIssues(report, issues.filter((_, i) => i !== idx)),
+                        setIssues(
+                          report,
+                          issues.filter((_, i) => i !== idx),
+                        ),
                       );
                     })
                   }
@@ -505,9 +471,7 @@ export function ReportEditForm({ report, onChange }: ReportEditFormProps) {
           )}
           <AddRowButton
             label="Add issue"
-            onPress={() =>
-              onChange(setIssues(report, [...issues, blankIssue()]))
-            }
+            onPress={() => onChange(setIssues(report, [...issues, blankIssue()]))}
           />
         </View>
       </Card>
@@ -517,16 +481,10 @@ export function ReportEditForm({ report, onChange }: ReportEditFormProps) {
         <SectionHeader title="Next Steps" />
         <View className="mt-4 gap-3">
           {nextSteps.length === 0 ? (
-            <Text className="text-sm text-muted-foreground opacity-60">
-              No next steps yet
-            </Text>
+            <Text className="text-sm text-muted-foreground opacity-60">No next steps yet</Text>
           ) : (
             nextSteps.map((step, idx) => (
-              <View
-                key={`step-${idx}`}
-                className={ROW_CLASS}
-                testID={`next-step-row-${idx}`}
-              >
+              <View key={`step-${idx}`} className={ROW_CLASS} testID={`next-step-row-${idx}`}>
                 <Field label={`Step ${idx + 1}`}>
                   <TextInput
                     className={MULTILINE_CLASS}
@@ -573,11 +531,7 @@ export function ReportEditForm({ report, onChange }: ReportEditFormProps) {
             </Text>
           ) : (
             sections.map((sec, idx) => (
-              <View
-                key={`sec-${idx}`}
-                className={ROW_CLASS}
-                testID={`section-row-${idx}`}
-              >
+              <View key={`sec-${idx}`} className={ROW_CLASS} testID={`section-row-${idx}`}>
                 <Field label="Heading">
                   <TextInput
                     className={INPUT_CLASS}
@@ -621,9 +575,7 @@ export function ReportEditForm({ report, onChange }: ReportEditFormProps) {
           )}
           <AddRowButton
             label="Add section"
-            onPress={() =>
-              onChange(setSections(report, [...sections, blankSection()]))
-            }
+            onPress={() => onChange(setSections(report, [...sections, blankSection()]))}
           />
         </View>
       </Card>
@@ -657,13 +609,7 @@ export function ReportEditForm({ report, onChange }: ReportEditFormProps) {
   );
 }
 
-function Field({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <View className={FIELD_CLASS}>
       <Text className={LABEL_CLASS}>{label}</Text>
@@ -672,13 +618,7 @@ function Field({
   );
 }
 
-function AddRowButton({
-  label,
-  onPress,
-}: {
-  label: string;
-  onPress: () => void;
-}) {
+function AddRowButton({ label, onPress }: { label: string; onPress: () => void }) {
   return (
     <Pressable
       onPress={onPress}
@@ -692,13 +632,7 @@ function AddRowButton({
   );
 }
 
-function RemoveRowButton({
-  label,
-  onPress,
-}: {
-  label: string;
-  onPress: () => void;
-}) {
+function RemoveRowButton({ label, onPress }: { label: string; onPress: () => void }) {
   return (
     <Pressable
       onPress={onPress}

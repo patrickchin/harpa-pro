@@ -7,13 +7,11 @@
  * - `getReportStats` produces the StatBar tiles (workers / materials /
  *   issues) shown at the top of the report view.
  */
-import type { GeneratedSiteReport } from '@harpa/report-core';
+import type { GeneratedReportWorkers, GeneratedSiteReport } from '@harpa/report-core';
 
 export type IssueSeverityTone = 'danger' | 'warning' | 'neutral';
 
-export function getIssueSeverityTone(
-  severity: string | null | undefined,
-): IssueSeverityTone {
+export function getIssueSeverityTone(severity: string | null | undefined): IssueSeverityTone {
   switch ((severity ?? '').trim().toLowerCase()) {
     case 'high':
     case 'critical':
@@ -26,13 +24,23 @@ export function getIssueSeverityTone(
 }
 
 export interface ReportStat {
-  value: number;
+  value: string | number;
   label: string;
   tone: 'default' | 'warning';
 }
 
+function workerStatValue(workers: GeneratedReportWorkers | null): string | number {
+  if (!workers) return 0;
+  if (workers.totalWorkers !== null) return workers.totalWorkers;
+  return (
+    workers.roles
+      .map((role) => role.count?.trim())
+      .find((count): count is string => Boolean(count)) ?? 0
+  );
+}
+
 export function getReportStats(report: GeneratedSiteReport): ReportStat[] {
-  const workers = report.report.workers?.totalWorkers ?? 0;
+  const workers = workerStatValue(report.report.workers);
   const materials = report.report.materials.length;
   const issues = report.report.issues.length;
 

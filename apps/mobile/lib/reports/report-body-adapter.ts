@@ -65,16 +65,22 @@ function stripUnit(s: string | null): string | null {
   return m ? m[0] : trimmed;
 }
 
+function textOrNull(s: string | null): string | null {
+  if (s == null) return null;
+  const trimmed = s.trim();
+  return trimmed === '' ? null : trimmed;
+}
+
 /**
  * Parse a wire-side string into a number for UI math (totals,
- * bar-chart widths). Empty string / null / non-numeric text → 0,
- * matching the existing `?? 0` semantics callers used to rely on
- * when count/hours were `number | null`.
+ * bar-chart widths). Empty string / null / non-numeric text → null.
+ * Callers decide whether null contributes 0 or suppresses an aggregate.
  */
-function toNum(s: string | null): number {
-  if (s == null) return 0;
-  const n = Number.parseFloat(s);
-  return Number.isFinite(n) ? n : 0;
+function toNum(s: string | null): number | null {
+  const text = textOrNull(s);
+  if (text == null) return null;
+  const n = Number.parseFloat(text);
+  return Number.isFinite(n) ? n : null;
 }
 
 function cloneAttachments(
@@ -104,19 +110,14 @@ function normaliseSeverity(s: string | null): 'low' | 'medium' | 'high' {
   return 'medium';
 }
 
-export function reportBodyToGeneratedReport(
-  body: ReportBody,
-): GeneratedSiteReport {
+export function reportBodyToGeneratedReport(body: ReportBody): GeneratedSiteReport {
   body = normaliseLegacy(body);
   const m = body.meta;
-  const totalWorkers = body.workers.reduce(
-    (sum, w) => sum + toNum(w.count),
-    0,
-  );
-  const totalHours = body.workers.reduce(
-    (sum, w) => sum + toNum(w.hours),
-    0,
-  );
+  const workerCounts = body.workers.map((w) => toNum(w.count));
+  const totalWorkers = workerCounts.some((count) => count !== null)
+    ? workerCounts.reduce<number>((sum, count) => sum + (count ?? 0), 0)
+    : null;
+  const totalHours = body.workers.reduce((sum, w) => sum + (toNum(w.hours) ?? 0), 0);
 
   return {
     report: {
@@ -141,10 +142,7 @@ export function reportBodyToGeneratedReport(
               notes: null,
               roles: body.workers.map((w) => ({
                 role: w.role,
-                // UI expects a number — coerce the wire string back.
-                // Non-numeric values ("a few") collapse to 0; the
-                // raw text survives in the notes column when present.
-                count: toNum(w.count),
+                count: textOrNull(w.count),
                 notes: w.notes,
               })),
             }
@@ -181,10 +179,10 @@ export function reportBodyToGeneratedReport(
  *
  * Used by the Edit-tab autosave to PATCH manual edits back to the
  * server. The wire is now string|null for every numeric field, so
- * the round-trip is mostly straight-through: we strip the display
- * suffixes we added on the way out (temperature "20°C" → "20"),
- * stringify the UI's numeric count, and normalise severity to one
- * of the three preferred values.
+ * the round-trip is mostly straight-through: worker role counts and
+ * weather strings stay verbatim, material quantities have display
+ * suffixes stripped, and severity normalises to one of the three
+ * preferred values.
  *
  * `issues.category` and `issues.status` are dropped (no API field
  * today); category="other" + status="open" survive only on the

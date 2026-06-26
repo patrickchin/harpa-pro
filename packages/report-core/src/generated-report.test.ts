@@ -39,3 +39,26 @@ describe('GeneratedSiteReportSchema — meta envelope', () => {
     expect((out!.report.meta as Record<string, unknown>).tags).toBeUndefined();
   });
 });
+
+describe('GeneratedSiteReportSchema — workers', () => {
+  it('preserves free-text role counts from generated reports', () => {
+    const out = normalizeGeneratedReportPayload({
+      report: {
+        meta: { title: 'T', summary: '', visitDate: null },
+        weather: null,
+        workers: {
+          totalWorkers: null,
+          workerHours: null,
+          notes: null,
+          roles: [{ role: 'Contractors', count: 'a few', notes: null }],
+        },
+        materials: [],
+        issues: [],
+        nextSteps: [],
+        sections: [],
+      },
+    });
+    expect(out).not.toBeNull();
+    expect(out!.report.workers!.roles[0]!.count).toBe('a few');
+  });
+});

@@ -46,7 +46,7 @@ function makeReport(): GeneratedSiteReport {
         totalWorkers: 4,
         workerHours: '8',
         notes: null,
-        roles: [{ role: 'Electrician', count: 2, notes: null }],
+        roles: [{ role: 'Electrician', count: '2', notes: null }],
       },
       materials: [
         {
@@ -143,7 +143,7 @@ describe('report-edit-helpers', () => {
   it('setRoles seeds workers when null', () => {
     const r = makeReport();
     r.report.workers = null;
-    const next = [{ role: 'Foreman', count: 1, notes: null }];
+    const next = [{ role: 'Foreman', count: '1', notes: null }];
     const out = setRoles(r, next);
     expect(out.report.workers?.roles).toBe(next);
     expect(out.report.workers?.totalWorkers).toBeNull();

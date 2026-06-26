@@ -32,8 +32,8 @@ export const SAMPLE_GENERATED_REPORT: GeneratedSiteReport = {
       workerHours: '40h total',
       notes: 'All crew on site by 7:45 AM.',
       roles: [
-        { role: 'Steel fixer', count: 3, notes: 'East footing rebar' },
-        { role: 'Carpenter', count: 2, notes: 'Formwork prep' },
+        { role: 'Steel fixer', count: '3', notes: 'East footing rebar' },
+        { role: 'Carpenter', count: '2', notes: 'Formwork prep' },
       ],
     },
     materials: [
@@ -60,8 +60,7 @@ export const SAMPLE_GENERATED_REPORT: GeneratedSiteReport = {
         category: 'logistics',
         severity: 'medium',
         status: 'open',
-        details:
-          'Delivery 30 min late; pour pushed back. Supplier confirmed next window.',
+        details: 'Delivery 30 min late; pour pushed back. Supplier confirmed next window.',
         actionRequired: 'Confirm tomorrow’s delivery slot with supplier.',
       },
     ],
@@ -73,8 +72,7 @@ export const SAMPLE_GENERATED_REPORT: GeneratedSiteReport = {
     sections: [
       {
         title: 'Site Conditions',
-        content:
-          'Access road wet but passable. Mud control mats deployed at gate.',
+        content: 'Access road wet but passable. Mud control mats deployed at gate.',
       },
     ],
   },

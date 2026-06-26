@@ -82,13 +82,12 @@ export function EditWorkersBody({ value, onChange }: Props) {
             <Field label="Count">
               <TextInput
                 className={INPUT_CLASS}
-                value={numericString(role.count)}
+                value={nullableString(role.count)}
                 onChangeText={(v) => {
                   const next = roles.slice();
-                  next[idx] = { ...next[idx]!, count: parseNumeric(v) };
+                  next[idx] = { ...next[idx]!, count: nullify(v) };
                   onChange({ ...value, roles: next });
                 }}
-                keyboardType="numeric"
                 accessibilityLabel={`Role ${idx + 1} count`}
                 testID={`input-edit-role-${idx}-count`}
               />

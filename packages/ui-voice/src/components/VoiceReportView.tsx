@@ -53,6 +53,33 @@ function formatVisitDate(iso: string | null): string | null {
   return `${d.getUTCDate()} ${months[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
 }
 
+function workerCountNumber(count: string | null): number | null {
+  if (!count) return null;
+  const n = Number.parseFloat(count);
+  return Number.isFinite(n) ? n : null;
+}
+
+function workerCountSummary(workers: VoiceReportViewProps['report']['workers']): string {
+  const counts = workers.map((worker) => workerCountNumber(worker.count));
+  if (counts.some((count) => count !== null)) {
+    return String(counts.reduce<number>((sum, count) => sum + (count ?? 0), 0));
+  }
+  return (
+    workers
+      .map((worker) => worker.count?.trim())
+      .find((count): count is string => Boolean(count)) ?? '0'
+  );
+}
+
+function workerRoleMeta(worker: VoiceReportViewProps['report']['workers'][number]) {
+  const count = worker.count?.trim();
+  const parts = [
+    count ? (workerCountNumber(count) !== null ? `${count}×` : count) : null,
+    worker.hours ? `${worker.hours}h` : null,
+  ].filter(Boolean);
+  return parts.length > 0 ? parts.join(' · ') : '—';
+}
+
 /**
  * Renders a full voice-generated site report. Pure presentational —
  * no data fetching, no platform branching. The host app supplies the
@@ -63,29 +90,13 @@ function formatVisitDate(iso: string | null): string | null {
  * (AGENTS.md hard rule #1) but drops the icon dependency so this
  * package stays free of `react-native-svg`.
  */
-export function VoiceReportView({
-  report,
-  watermark,
-  className,
-}: VoiceReportViewProps) {
+export function VoiceReportView({ report, watermark, className }: VoiceReportViewProps) {
   const visitLabel = formatVisitDate(report.meta?.visitDate ?? null);
   const issueCount = report.issues.length;
-  // workers[].count is `string | null` on the wire (free-text from
-  // the LLM, e.g. "4", "a few", null). Parse for the headcount tile
-  // — non-numeric values contribute 0 but the raw text still shows
-  // in the per-role row below.
-  const workerHeadcount = report.workers.reduce((sum, w) => {
-    const n = w.count == null ? 0 : Number.parseFloat(w.count);
-    return sum + (Number.isFinite(n) ? n : 0);
-  }, 0);
+  const workerHeadcount = workerCountSummary(report.workers);
 
   return (
-    <View
-      className={cn(
-        'relative gap-6 rounded-xl border border-border bg-card p-6',
-        className,
-      )}
-    >
+    <View className={cn('relative gap-6 rounded-xl border border-border bg-card p-6', className)}>
       {watermark ? (
         <View className="absolute right-4 top-4 rounded-md bg-muted px-2 py-1">
           <Text className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
@@ -96,18 +107,14 @@ export function VoiceReportView({
 
       {/* Header */}
       <View className="gap-1">
-        <Text className="text-lg font-bold text-foreground">
-          Site report
-        </Text>
-        {visitLabel ? (
-          <Text className="text-sm text-muted-foreground">{visitLabel}</Text>
-        ) : null}
+        <Text className="text-lg font-bold text-foreground">Site report</Text>
+        {visitLabel ? <Text className="text-sm text-muted-foreground">{visitLabel}</Text> : null}
       </View>
 
       {/* StatBar — compact metrics */}
       <View className="flex-row flex-wrap gap-3">
         <StatTile label="Issues" value={String(issueCount)} />
-        <StatTile label="Workers" value={String(workerHeadcount)} />
+        <StatTile label="Workers" value={workerHeadcount} />
         <StatTile label="Materials" value={String(report.materials.length)} />
         <StatTile label="Next steps" value={String(report.nextSteps.length)} />
       </View>
@@ -117,19 +124,13 @@ export function VoiceReportView({
         <VoiceReportSection title="Weather">
           <View className="flex-row flex-wrap gap-x-6 gap-y-1">
             {report.weather.condition ? (
-              <Text className="text-sm text-foreground">
-                {report.weather.condition}
-              </Text>
+              <Text className="text-sm text-foreground">{report.weather.condition}</Text>
             ) : null}
             {report.weather.temperature != null ? (
-              <Text className="text-sm text-muted-foreground">
-                {report.weather.temperature}
-              </Text>
+              <Text className="text-sm text-muted-foreground">{report.weather.temperature}</Text>
             ) : null}
             {report.weather.wind != null ? (
-              <Text className="text-sm text-muted-foreground">
-                Wind {report.weather.wind}
-              </Text>
+              <Text className="text-sm text-muted-foreground">Wind {report.weather.wind}</Text>
             ) : null}
           </View>
           {report.weather.impact ? (
@@ -176,9 +177,7 @@ export function VoiceReportView({
                 ) : null}
                 {issue.action ? (
                   <Text className="text-sm leading-relaxed text-muted-foreground">
-                    <Text className="font-semibold text-foreground">
-                      Action.{' '}
-                    </Text>
+                    <Text className="font-semibold text-foreground">Action. </Text>
                     {issue.action}
                   </Text>
                 ) : null}
@@ -198,18 +197,12 @@ export function VoiceReportView({
                 className="flex-row items-baseline justify-between gap-3 border-b border-border/60 pb-2"
               >
                 <View className="flex-1 gap-0.5">
-                  <Text className="text-sm font-semibold text-foreground">
-                    {w.role}
-                  </Text>
+                  <Text className="text-sm font-semibold text-foreground">{w.role}</Text>
                   {w.notes ? (
-                    <Text className="text-xs text-muted-foreground">
-                      {w.notes}
-                    </Text>
+                    <Text className="text-xs text-muted-foreground">{w.notes}</Text>
                   ) : null}
                 </View>
-                <Text className="text-sm tabular-nums text-foreground">
-                  {w.count ? `${w.count}× · ` : ''}{w.hours ? `${w.hours}h` : '—'}
-                </Text>
+                <Text className="text-sm tabular-nums text-foreground">{workerRoleMeta(w)}</Text>
               </View>
             ))}
           </View>
@@ -226,13 +219,9 @@ export function VoiceReportView({
                 className="flex-row items-baseline justify-between gap-3 border-b border-border/60 pb-2"
               >
                 <View className="flex-1 gap-0.5">
-                  <Text className="text-sm font-semibold text-foreground">
-                    {m.name}
-                  </Text>
+                  <Text className="text-sm font-semibold text-foreground">{m.name}</Text>
                   {m.notes ? (
-                    <Text className="text-xs text-muted-foreground">
-                      {m.notes}
-                    </Text>
+                    <Text className="text-xs text-muted-foreground">{m.notes}</Text>
                   ) : null}
                 </View>
                 <View className="items-end gap-0.5">
@@ -263,9 +252,7 @@ export function VoiceReportView({
                 <Text className="w-5 text-sm font-semibold tabular-nums text-accent">
                   {idx + 1}.
                 </Text>
-                <Text className="flex-1 text-sm leading-relaxed text-foreground">
-                  {step}
-                </Text>
+                <Text className="flex-1 text-sm leading-relaxed text-foreground">{step}</Text>
               </View>
             ))}
           </View>
@@ -292,9 +279,7 @@ function StatTile({ label, value }: { label: string; value: string }) {
       <Text className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
         {label}
       </Text>
-      <Text className="text-xl font-bold tabular-nums text-foreground">
-        {value}
-      </Text>
+      <Text className="text-xl font-bold tabular-nums text-foreground">{value}</Text>
     </View>
   );
 }

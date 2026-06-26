@@ -8,9 +8,9 @@
  *      CTA. A bottom composer (text + camera + mic buttons) sits at
  *      the foot of the screen.
  *
- *   2. "Site report" — scrolls the shared `VoiceReportView` from
- *      `@harpa/ui-voice` *inside* the card, so the hero section
- *      keeps its footprint regardless of report length.
+ *   2. "Site report" — scrolls the local marketing preview inside
+ *      the card, so the hero section keeps its footprint regardless
+ *      of report length.
  *
  * No audio capture, no API calls, no persistence — everything is
  * fixture-driven. Plan-m4 will replace the mocked recording with a
@@ -18,8 +18,8 @@
  */
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
-import { VoiceReportView } from '@harpa/ui-voice';
-import { demoReport } from '@harpa/ui-voice/fixtures';
+import { demoReport } from '../fixtures/demoReport';
+import { VoiceReportPreview } from './VoiceReportPreview';
 
 type Screen = 'list' | 'generating' | 'report';
 
@@ -276,7 +276,7 @@ function ReportScreen({ onBack }: { onBack: () => void }) {
         <span className="w-8" aria-hidden />
       </div>
       <div className="flex-1 overflow-y-auto px-4 pb-4 pt-3">
-        <VoiceReportView report={demoReport} />
+        <VoiceReportPreview report={demoReport} />
       </div>
     </>
   );

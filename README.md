@@ -47,7 +47,6 @@ packages/
   api-contract/    # Zod schemas + generated OpenAPI types
   ai-fixtures/     # record/replay layer for every LLM call
   report-core/     # shared report-body Zod schemas + helpers
-  ui-voice/        # shared voice UI components (RNW + NativeWind)
 infra/
   neon/            # Neon branching scripts
   fly/             # Fly.io deployment config

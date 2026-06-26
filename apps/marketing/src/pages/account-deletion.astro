@@ -1,0 +1,82 @@
+---
+import Layout from "../layouts/Layout.astro";
+import Header from "../components/landing/Header.astro";
+import Footer from "../components/landing/Footer.astro";
+import Container from "../components/primitives/Container.astro";
+---
+
+<Layout
+  title="Account deletion | Harpa Pro"
+  description="How to request deletion of a Harpa Pro account and associated app data."
+>
+  <div class="min-h-screen bg-background text-ink">
+    <Header hideCta />
+    <main>
+      <Container padding="md" class="max-w-3xl space-y-8">
+        <div class="space-y-3">
+          <p class="text-sm font-medium uppercase text-accent-ink">
+            Account support
+          </p>
+          <h1 class="text-3xl font-semibold tracking-normal text-ink md:text-4xl">
+            Account deletion
+          </h1>
+          <p class="text-sm leading-6 text-ink-soft">
+            Harpa Pro users can request deletion of their account and
+            associated personal app data even if they no longer have the app
+            installed.
+          </p>
+        </div>
+
+        <section class="space-y-4">
+          <h2 class="text-xl font-semibold text-ink">
+            Delete your account in the app
+          </h2>
+          <p class="text-sm leading-6 text-ink-soft">
+            If you have access to the Harpa Pro app, go to
+            <span class="font-medium text-ink">Profile</span> &gt;
+            <span class="font-medium text-ink">Account Details</span> &gt;
+            <span class="font-medium text-ink">Delete account</span> and
+            follow the prompts.
+          </p>
+        </section>
+
+        <section class="space-y-4">
+          <h2 class="text-xl font-semibold text-ink">
+            Request deletion by email
+          </h2>
+          <p class="text-sm leading-6 text-ink-soft">
+            If you cannot use the app, email
+            <a
+              href="mailto:patrick@harpapro.com?subject=Harpa%20Pro%20account%20deletion%20request"
+              class="font-medium text-accent-ink hover:text-ink"
+            >
+              patrick@harpapro.com
+            </a>
+            from the email address used for your Harpa Pro account. Include
+            that you want your Harpa Pro account deleted. We may ask for
+            additional information if needed to verify account ownership.
+          </p>
+        </section>
+
+        <section class="space-y-4">
+          <h2 class="text-xl font-semibold text-ink">
+            What deletion covers
+          </h2>
+          <p class="text-sm leading-6 text-ink-soft">
+            Account deletion covers the authentication account and associated
+            personal app data and content where applicable, including projects,
+            reports, notes, uploaded files, and generated report content tied
+            to the account.
+          </p>
+          <p class="text-sm leading-6 text-ink-soft">
+            Some records may be retained where required or reasonably necessary
+            for legal compliance, security, fraud prevention, audit purposes,
+            dispute handling, or backup retention. Backup copies are removed or
+            overwritten on the normal backup rotation schedule.
+          </p>
+        </section>
+      </Container>
+    </main>
+    <Footer />
+  </div>
+</Layout>

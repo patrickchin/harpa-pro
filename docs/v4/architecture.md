@@ -106,7 +106,6 @@ flowchart TB
 | 7a | IDs + URL shapes | [arch-ids-and-urls.md](arch-ids-and-urls.md) | Prefixed slugs, UUIDv7 keys, per-project report numbers, long + short URLs, deep-link readiness |
 | 7b | **P3.0 IDs/slugs design** | [design-p30-ids-slugs.md](design-p30-ids-slugs.md) | **Migration plan, slug generator, API routes, scope tests, mobile routing (implementation-ready)** |
 | 8 | Shared packages | [arch-shared-packages.md](arch-shared-packages.md) | api-contract, ai-fixtures, ui (optional) |
-| 8a | **Shared UI (voice)** | [arch-ui-voice.md](arch-ui-voice.md) | **Cross-platform voice-notes + report components (RNW + NativeWind); used by mobile + marketing demo** |
 | 9 | Testing strategy | [arch-testing.md](arch-testing.md) | Test pyramid, Testcontainers, MSW, Maestro behaviour flows, fixture replay |
 | 10 | Observability + ops | [arch-ops.md](arch-ops.md) | Fly metrics, Sentry, log shipping, deploy flow |
 | 10a | **CI/CD + migrations** | [arch-cicd-and-migrations.md](arch-cicd-and-migrations.md) | **Release-command migration apply, `/readyz` schema-head check, expand-contract rules, rollback playbook** |

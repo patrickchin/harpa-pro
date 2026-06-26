@@ -11,10 +11,16 @@ appId: ${MAESTRO_APP_ID}
 - tapOn:
     id: "input-note"
 - inputText: "${NOTE_TEXT}"
-- hideKeyboard
 - tapOn:
     id: "btn-add-note"
 - extendedWaitUntil:
     visible:
       id: "note-row-${NOTE_INDEX}"
     timeout: 15000
+# The multiline RN TextInput is not reliably dismissible via hideKeyboard on
+# iOS XCTest. The Add button sits above the keyboard, so save first, then drag
+# the notes list to restore the generate chrome for the next command.
+- swipe:
+    direction: DOWN
+    duration: 500
+- waitForAnimationToEnd

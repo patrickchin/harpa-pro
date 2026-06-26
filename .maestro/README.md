@@ -318,10 +318,18 @@ and default buckets as part of `regression-journey.yaml`.
 - Software keyboard occludes bottom buttons; use `hideKeyboard` +
   `scrollUntilVisible` before tapping `btn-save-project` /
   `btn-delete-project`.
-- `inputText` into RN multiline `TextInput` is unreliable on iOS
-  XCTest — modules 08 + 11 do this for `input-note` and pass, but if
-  this becomes a flake source, move the assertion into unit tests
-  (`screens/generate-notes.test.tsx`).
+- `inputText` / `hideKeyboard` around RN multiline `TextInput` is
+  unreliable on iOS XCTest. For `input-note`, tap `btn-add-note` while
+  it is visible above the keyboard, then swipe the notes list down to
+  dismiss the keyboard and restore the generate chrome.
+- For full-screen edit modals, do not require `hideKeyboard` before
+  tapping a header action. `btn-edit-modal-save` and
+  `btn-edit-modal-cancel` remain visible above the keyboard, so tap
+  them directly after input.
+- The Generate screen has a sticky note input / voice recorder at the
+  bottom. When tapping report-card controls that scroll near the
+  bottom edge, require full visibility and use `centerElement: true`
+  before `tapOn`; otherwise Maestro can tap the sticky recorder area.
 
 ## Known infra quirks
 

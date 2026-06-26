@@ -199,12 +199,18 @@ tags:
     direction: UP
     timeout: 60000
     optional: true
+    visibilityPercentage: 100
+    centerElement: true
 - extendedWaitUntil:
     visible:
       id: "btn-report-actions"
     timeout: 10000
 - tapOn:
     id: "btn-report-actions"
+- extendedWaitUntil:
+    visible:
+      id: "report-actions-menu"
+    timeout: 8000
 - extendedWaitUntil:
     visible:
       id: "btn-report-delete"

@@ -12,6 +12,23 @@ appId: ${MAESTRO_APP_ID}
 #   - runFlow: .maestro/helpers/sign-out.yaml
 - tapOn:
     id: "btn-open-profile"
+- waitForAnimationToEnd:
+    timeout: 1000
+# iOS XCTest can report the header icon tap as complete while the app remains
+# on Projects. Retry once if the profile icon is still visible.
+- runFlow:
+    when:
+      visible:
+        id: "btn-open-profile"
+    commands:
+      - tapOn:
+          id: "btn-open-profile"
+      - waitForAnimationToEnd:
+          timeout: 1000
+- extendedWaitUntil:
+    visible:
+      id: "screen-profile"
+    timeout: 10000
 - extendedWaitUntil:
     visible:
       id: "btn-sign-out"

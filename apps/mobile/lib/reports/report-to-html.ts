@@ -63,15 +63,12 @@ function createCounter() {
 
 // ── Render helpers ─────────────────────────────────────────────
 
-function renderWorkers(
-  workers: GeneratedReportWorkers | null,
-  heading: string | null,
-): string {
+function renderWorkers(workers: GeneratedReportWorkers | null, heading: string | null): string {
   if (!workers) return '';
   const rows = workers.roles
     .map(
       (r) =>
-        `<tr><td>${esc(r.role)}</td><td class="num">${r.count ?? '\u2014'}</td><td>${esc(r.notes ?? '')}</td></tr>`,
+        `<tr><td>${esc(r.role)}</td><td class="num">${esc(r.count ?? '\u2014')}</td><td>${esc(r.notes ?? '')}</td></tr>`,
     )
     .join('');
 
@@ -89,10 +86,17 @@ function renderWorkers(
     </div>`;
 }
 
-function renderIssueTable(
-  issues: readonly GeneratedReportIssue[],
-  heading: string | null,
-): string {
+function workerFigureValue(workers: GeneratedReportWorkers | null): string {
+  if (!workers) return '0';
+  if (workers.totalWorkers !== null) return String(workers.totalWorkers);
+  return (
+    workers.roles
+      .map((role) => role.count?.trim())
+      .find((count): count is string => Boolean(count)) ?? '0'
+  );
+}
+
+function renderIssueTable(issues: readonly GeneratedReportIssue[], heading: string | null): string {
   if (issues.length === 0) return '';
   const rows = issues
     .map(
@@ -170,13 +174,9 @@ function renderSections(
 
 // ── Main export ────────────────────────────────────────────────
 
-export function reportToHtml(
-  report: GeneratedSiteReport,
-  branding: PdfBranding = {},
-): string {
+export function reportToHtml(report: GeneratedSiteReport, branding: PdfBranding = {}): string {
   const { companyName, logoUrl } = branding;
-  const { meta, weather, workers, materials, issues, nextSteps, sections } =
-    report.report;
+  const { meta, weather, workers, materials, issues, nextSteps, sections } = report.report;
   const counter = createCounter();
 
   // ── Title page / header ──────────────────────────────────────
@@ -210,7 +210,7 @@ export function reportToHtml(
       <table>
         <thead><tr><th>Metric</th><th class="num">Value</th></tr></thead>
         <tbody>
-          <tr><td>Personnel on Site</td><td class="num">${workers?.totalWorkers ?? 0}</td></tr>
+          <tr><td>Personnel on Site</td><td class="num">${esc(workerFigureValue(workers))}</td></tr>
           <tr><td>Materials</td><td class="num">${materials.length}</td></tr>
           <tr><td>Issues Recorded</td><td class="num">${issues.length}</td></tr>
         </tbody>
@@ -267,10 +267,7 @@ export function reportToHtml(
   // ── Next Steps ───────────────────────────────────────────────
 
   const stepsNum = nextSteps.length > 0 ? counter.next() : '';
-  const stepsHtml = renderNextSteps(
-    nextSteps,
-    stepsNum ? `${stepsNum}. Recommended Actions` : '',
-  );
+  const stepsHtml = renderNextSteps(nextSteps, stepsNum ? `${stepsNum}. Recommended Actions` : '');
 
   // ── Additional Sections ──────────────────────────────────────
 

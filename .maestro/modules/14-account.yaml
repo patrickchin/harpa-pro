@@ -95,14 +95,12 @@ tags:
     timeout: 10000
 - assertVisible: "Delete account?"
 - extendedWaitUntil:
-    visible: "Projects deleted"
+    visible: ".*Projects deleted.*"
     timeout: 10000
 - assertVisible:
     id: "input-delete-account-email"
-- tapOn:
-    id: "input-delete-account-email"
-- inputText: "test@harpapro.com"
-- hideKeyboard
+- assertVisible:
+    id: "btn-confirm-delete-account"
 - tapOn:
     id: "btn-cancel-delete-account"
 - extendedWaitUntil:

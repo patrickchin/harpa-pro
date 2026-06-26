@@ -77,7 +77,6 @@ runs:
             - '.maestro/**'
             - 'apps/mobile/**'
             - 'packages/api-contract/**'
-            - 'packages/ui-voice/**'
             - 'packages/report-core/**'
             - 'pnpm-lock.yaml'
           marketing:

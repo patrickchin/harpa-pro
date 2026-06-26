@@ -25,8 +25,8 @@ at.
   `REPORT_UPDATE_SYSTEM_PROMPT`) — schema lines, field guidance, and
   EXAMPLE payload — to instruct the model to *include the unit in
   the value* (e.g. `"20°C"`, `"5 mph"`, `"12 km/h"`).
-- `VoiceReportView` now renders the values verbatim (no hard-coded
-  unit suffix).
+- Report renderers now render the values verbatim (no hard-coded unit
+  suffix).
 - Mobile `report-body-adapter.ts` simplified: weather strings pass
   through both directions. No JS-side backwards-compat shim — the
   migration handles all existing rows in one pass.

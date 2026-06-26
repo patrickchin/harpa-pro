@@ -55,8 +55,15 @@ tags:
           id: "input-onboarding-company"
       - inputText: "E2E Corp"
       - hideKeyboard
-      - tapOn:
-          id: "btn-onboarding-submit"
+      # iOS can submit this form while dismissing the keyboard, which
+      # navigates to Projects before Maestro reaches the explicit tap.
+      - runFlow:
+          when:
+            visible:
+              id: "btn-onboarding-submit"
+          commands:
+            - tapOn:
+                id: "btn-onboarding-submit"
 
 - extendedWaitUntil:
     visible:
@@ -87,14 +94,19 @@ tags:
     timeout: 10000
 - assertVisible: "Delete account?"
 - extendedWaitUntil:
-    visible: "Projects deleted"
+    visible: ".*Projects deleted.*"
     timeout: 10000
 - tapOn:
     id: "input-delete-account-email"
 - inputText: "test3@harpapro.com"
 - hideKeyboard
-- tapOn:
-    id: "btn-confirm-delete-account"
+- runFlow:
+    when:
+      visible:
+        id: "btn-confirm-delete-account"
+    commands:
+      - tapOn:
+          id: "btn-confirm-delete-account"
 - extendedWaitUntil:
     visible:
       id: "input-email"

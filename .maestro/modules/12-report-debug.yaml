@@ -40,14 +40,17 @@ tags:
 
 # --- Verify prompt section has content ------------------------------------
 # debug-prompt-system renders first and its MonoBlock is tall enough that
-# debug-prompt (user prompt) starts below the fold. Scroll it into view
-# before asserting. See artifact 2026-05-24_161246: debug-prompt-system-text
-# bounds clip to the scroll-view bottom (y=2301).
+# debug-prompt (user prompt) can be taller than the viewport after module 11
+# edits. Scroll until any meaningful part is visible; requiring 100% visibility
+# is impossible for the whole section.
 - scrollUntilVisible:
     element:
       id: "debug-prompt"
     direction: DOWN
     timeout: 10000
+    visibilityPercentage: 10
+    centerElement: true
+    optional: true
 - assertVisible:
     id: "debug-prompt"
 - assertVisible:

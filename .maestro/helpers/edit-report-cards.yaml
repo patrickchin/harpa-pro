@@ -8,6 +8,14 @@ appId: ${MAESTRO_APP_ID}
 # per-item Delete affordance for both Issues and Detailed Sections.
 # Post-condition: still on the Generate screen's Report tab with a locally
 # edited generated draft.
+#
+# iOS XCTest intermittently fails `hideKeyboard` for focused modal inputs even
+# when the header action remains visible above the software keyboard. Tap the
+# visible Cancel/Save action directly after text entry.
+#
+# The Generate screen keeps a sticky note input / recorder at the bottom. When
+# scrolling to per-item edit buttons, center the button before tapping so the
+# tap target is not inside that sticky control region.
 
 - assertVisible:
     id: 'report-view-.*'
@@ -30,7 +38,6 @@ appId: ${MAESTRO_APP_ID}
     id: 'input-edit-meta-summary'
 - eraseText: 200
 - inputText: 'Discarded E2E summary'
-- hideKeyboard
 - tapOn:
     id: 'btn-edit-modal-cancel'
 - extendedWaitUntil:
@@ -54,7 +61,6 @@ appId: ${MAESTRO_APP_ID}
     id: 'input-edit-meta-title'
 - eraseText: 200
 - inputText: 'E2E report title'
-- hideKeyboard
 - tapOn:
     id: 'btn-edit-modal-save'
 - extendedWaitUntil:
@@ -80,7 +86,6 @@ appId: ${MAESTRO_APP_ID}
     id: 'input-edit-weather-conditions'
 - eraseText: 100
 - inputText: 'E2E clear skies'
-- hideKeyboard
 - tapOn:
     id: 'btn-edit-modal-save'
 - extendedWaitUntil:
@@ -96,6 +101,8 @@ appId: ${MAESTRO_APP_ID}
       id: 'btn-edit-issue-.*'
     direction: DOWN
     timeout: 10000
+    visibilityPercentage: 100
+    centerElement: true
 - tapOn:
     id: 'btn-edit-issue-.*'
 - extendedWaitUntil:
@@ -106,7 +113,6 @@ appId: ${MAESTRO_APP_ID}
     id: 'input-edit-issue-title'
 - eraseText: 120
 - inputText: 'E2E issue title'
-- hideKeyboard
 - tapOn:
     id: 'btn-edit-modal-save'
 - extendedWaitUntil:
@@ -116,6 +122,13 @@ appId: ${MAESTRO_APP_ID}
 - assertVisible:
     text: 'E2E issue title.*'
 
+- scrollUntilVisible:
+    element:
+      id: 'btn-edit-issue-.*'
+    direction: DOWN
+    timeout: 10000
+    visibilityPercentage: 100
+    centerElement: true
 - tapOn:
     id: 'btn-edit-issue-.*'
 - extendedWaitUntil:
@@ -157,7 +170,6 @@ appId: ${MAESTRO_APP_ID}
     id: 'input-edit-role-.*-title'
 - eraseText: 100
 - inputText: 'E2E inspector'
-- hideKeyboard
 - tapOn:
     id: 'btn-edit-modal-save'
 - extendedWaitUntil:
@@ -183,7 +195,6 @@ appId: ${MAESTRO_APP_ID}
     id: 'input-edit-material-.*-name'
 - eraseText: 100
 - inputText: 'E2E sealant'
-- hideKeyboard
 - tapOn:
     id: 'btn-edit-modal-save'
 - extendedWaitUntil:
@@ -209,7 +220,6 @@ appId: ${MAESTRO_APP_ID}
     id: 'input-edit-next-step-.*'
 - eraseText: 160
 - inputText: 'E2E confirm roof anchors'
-- hideKeyboard
 - tapOn:
     id: 'btn-edit-modal-save'
 - extendedWaitUntil:
@@ -235,13 +245,18 @@ appId: ${MAESTRO_APP_ID}
     text: 'E2E confirm roof anchors.*'
 
 # --- Detailed section: edit, then delete the per-item entry ----------------
+# Use the second section's edit control. The first section can sit clipped
+# under the sticky report tabs after the previous assertions, and XCTest may
+# report the tap as complete without opening the edit sheet.
 - scrollUntilVisible:
     element:
-      id: 'btn-edit-section-.*'
+      id: 'btn-edit-section-1'
     direction: DOWN
     timeout: 10000
+    visibilityPercentage: 100
+    centerElement: true
 - tapOn:
-    id: 'btn-edit-section-.*'
+    id: 'btn-edit-section-1'
 - extendedWaitUntil:
     visible:
       id: 'input-edit-section-heading'
@@ -250,7 +265,6 @@ appId: ${MAESTRO_APP_ID}
     id: 'input-edit-section-heading'
 - eraseText: 100
 - inputText: 'E2E section heading'
-- hideKeyboard
 - tapOn:
     id: 'btn-edit-modal-save'
 - extendedWaitUntil:
@@ -275,8 +289,15 @@ appId: ${MAESTRO_APP_ID}
 - assertVisible:
     text: 'E2E section heading.*'
 
+- scrollUntilVisible:
+    element:
+      id: 'btn-edit-section-1'
+    direction: DOWN
+    timeout: 10000
+    visibilityPercentage: 100
+    centerElement: true
 - tapOn:
-    id: 'btn-edit-section-.*'
+    id: 'btn-edit-section-1'
 - extendedWaitUntil:
     visible:
       id: 'btn-edit-modal-delete'

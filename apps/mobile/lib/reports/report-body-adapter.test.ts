@@ -1,17 +1,20 @@
 import { describe, it, expect } from 'vitest';
-import {
-  reportBodyToGeneratedReport,
-  generatedReportToReportBody,
-} from './report-body-adapter';
+import { reportBodyToGeneratedReport, generatedReportToReportBody } from './report-body-adapter';
 
 const emptyMeta = {
-  title: null, summary: null, visitDate: null,
+  title: null,
+  summary: null,
+  visitDate: null,
 };
 
 const baseBody = {
   meta: emptyMeta,
-  weather: null, workers: [], materials: [], issues: [],
-  nextSteps: [], summarySections: [],
+  weather: null,
+  workers: [],
+  materials: [],
+  issues: [],
+  nextSteps: [],
+  summarySections: [],
 };
 
 describe('reportBodyToGeneratedReport — meta mapping', () => {
@@ -38,8 +41,12 @@ describe('reportBodyToGeneratedReport — meta mapping', () => {
   it('shims a legacy body with top-level visitDate', () => {
     const legacyBody: any = {
       visitDate: '2026-04-01T00:00:00Z',
-      weather: null, workers: [], materials: [], issues: [],
-      nextSteps: [], summarySections: [],
+      weather: null,
+      workers: [],
+      materials: [],
+      issues: [],
+      nextSteps: [],
+      summarySections: [],
     };
     const out = reportBodyToGeneratedReport(legacyBody);
     expect(out.report.meta.visitDate).toBe('2026-04-01T00:00:00Z');
@@ -107,6 +114,15 @@ describe('reportBodyToGeneratedReport — workers mapping', () => {
     expect(out.report.workers!.workerHours).toBeNull();
   });
 
+  it('preserves free-text count strings on the role row', () => {
+    const out = reportBodyToGeneratedReport({
+      ...baseBody,
+      workers: [{ role: 'Contractors', count: 'a few', hours: null, notes: null }],
+    });
+    expect(out.report.workers!.totalWorkers).toBeNull();
+    expect(out.report.workers!.roles[0]!.count).toBe('a few');
+  });
+
   it('empty workers array → null workers block', () => {
     const out = reportBodyToGeneratedReport(baseBody);
     expect(out.report.workers).toBeNull();
@@ -118,7 +134,14 @@ describe('reportBodyToGeneratedReport — materials & issues', () => {
     const out = reportBodyToGeneratedReport({
       ...baseBody,
       materials: [
-        { name: 'Concrete', quantity: '50', unit: 'm³', status: null, condition: null, notes: null },
+        {
+          name: 'Concrete',
+          quantity: '50',
+          unit: 'm³',
+          status: null,
+          condition: null,
+          notes: null,
+        },
       ],
     });
     expect(out.report.materials[0]!.quantity).toBe('50');
@@ -206,7 +229,7 @@ describe('generatedReportToReportBody — inverse adapter', () => {
     expect(out.weather!.temperature).toBe('around 20°C');
   });
 
-  it('stringifies UI numeric count back to wire string', () => {
+  it('preserves UI count strings back to the wire body', () => {
     const out = generatedReportToReportBody({
       ...uiBase,
       report: {
@@ -216,7 +239,7 @@ describe('generatedReportToReportBody — inverse adapter', () => {
           workerHours: null,
           notes: null,
           roles: [
-            { role: 'A', count: 4, notes: null },
+            { role: 'A', count: '4', notes: null },
             { role: 'B', count: null, notes: 'one' },
           ],
         },
@@ -226,18 +249,46 @@ describe('generatedReportToReportBody — inverse adapter', () => {
     expect(out.workers[1]!.count).toBeNull();
   });
 
+  it('preserves free-text role counts back to the wire body', () => {
+    const out = generatedReportToReportBody({
+      ...uiBase,
+      report: {
+        ...uiBase.report,
+        workers: {
+          totalWorkers: null,
+          workerHours: null,
+          notes: null,
+          roles: [{ role: 'Contractors', count: 'a few', notes: null }],
+        },
+      },
+    } as any);
+    expect(out.workers[0]!.count).toBe('a few');
+  });
+
   it('round-trips materials quantity + drops dropped fields', () => {
     const out = generatedReportToReportBody({
       ...uiBase,
       report: {
         ...uiBase.report,
         materials: [
-          { name: 'Concrete', quantity: '50', quantityUnit: 'm³', status: null, condition: null, notes: null },
+          {
+            name: 'Concrete',
+            quantity: '50',
+            quantityUnit: 'm³',
+            status: null,
+            condition: null,
+            notes: null,
+          },
         ],
       },
     });
     expect(out.materials[0]!).toEqual({
-      name: 'Concrete', quantity: '50', unit: 'm³', status: null, condition: null, notes: null,
+      name: 'Concrete',
+      quantity: '50',
+      unit: 'm³',
+      status: null,
+      condition: null,
+      notes: null,
     });
   });
 
@@ -247,8 +298,22 @@ describe('generatedReportToReportBody — inverse adapter', () => {
       report: {
         ...uiBase.report,
         issues: [
-          { title: 'A', category: 'other', severity: 'high', status: 'open', details: '', actionRequired: null },
-          { title: 'B', category: 'other', severity: 'urgent', status: 'open', details: '', actionRequired: null },
+          {
+            title: 'A',
+            category: 'other',
+            severity: 'high',
+            status: 'open',
+            details: '',
+            actionRequired: null,
+          },
+          {
+            title: 'B',
+            category: 'other',
+            severity: 'urgent',
+            status: 'open',
+            details: '',
+            actionRequired: null,
+          },
         ],
       },
     });

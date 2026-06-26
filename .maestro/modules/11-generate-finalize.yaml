@@ -59,7 +59,6 @@ tags:
 - tapOn:
     id: 'input-note'
 - inputText: 'Structural steel inspection complete. All welds within spec.'
-- hideKeyboard
 - tapOn:
     id: 'btn-add-note'
 - extendedWaitUntil:
@@ -67,9 +66,12 @@ tags:
       id: 'note-row-.*'
     timeout: 8000
 
-# The keyboard was dismissed before tapping Add. A second hideKeyboard
-# after the note row appears can send Android's Back event to the router
-# and return to the reports list, so wait for the action row directly.
+# XCTest cannot always dismiss the multiline note input with hideKeyboard.
+# Tap Add while it is above the keyboard, then drag the notes list to restore
+# the generate chrome before waiting for the action row.
+- swipe:
+    direction: DOWN
+    duration: 500
 - waitForAnimationToEnd
 
 # --- Generate the report ---------------------------------------------------

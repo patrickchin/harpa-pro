@@ -157,6 +157,8 @@ Play Store:
   images, screenshots, and binaries, but these questionnaire flows remain
   console-owned.
 - Keep the Play privacy-policy URL set to `https://harpapro.com/privacy`.
+- Keep the Play Data safety account-deletion URL set to
+  `https://harpapro.com/account-deletion`.
 - Enable Play App Signing before the first production release.
 
 ### Screenshot setup

@@ -8,8 +8,8 @@ const { apiBaseUrl } = getPublicEnv();
 ---
 
 <Layout
-  title="Confirming your spot — Harpa Pro"
-  description="Confirming your Harpa Pro waitlist signup."
+  title="Confirming your launch update — Harpa Pro"
+  description="Confirming your Harpa Pro launch-update signup."
 >
   <div class="min-h-dvh bg-background text-ink flex flex-col">
     <Header />
@@ -19,7 +19,7 @@ const { apiBaseUrl } = getPublicEnv();
         class="w-full max-w-md rounded-xl border border-hairline bg-paper-2/70 p-6 sm:p-8 text-center"
       >
         <h1 id="confirm-title" class="text-xl font-semibold text-ink">
-          Confirming your spot…
+          Confirming your email…
         </h1>
         <p id="confirm-message" class="mt-3 text-sm text-ink-soft">
           One moment while we verify your confirmation link.
@@ -150,9 +150,9 @@ const { apiBaseUrl } = getPublicEnv();
 
       if (res.ok) {
         show(
-          "You’re in. 🎉",
-          "Your spot on the Harpa Pro early-access list is locked in.",
-          "We’re lining up a small first wave of foremen and site supervisors to try the beta. When your turn comes up you’ll hear from hello@harpapro.com — nothing else in the meantime. Talk soon.",
+          "You’re confirmed.",
+          "We'll send the Harpa Pro iOS launch update to this email.",
+          "The app is in App Store review now. Once the iOS listing is approved and open, you'll hear from hello@harpapro.com. Android and web updates will follow later.",
         );
         fireConfetti();
         return;
@@ -170,7 +170,7 @@ const { apiBaseUrl } = getPublicEnv();
       show(
         "Something went wrong",
         "We couldn't confirm right now.",
-        "This is on our side, not yours. Try again in a few minutes — your spot in line is safe either way.",
+        "This is on our side, not yours. Try again in a few minutes — your launch-update signup is safe either way.",
       );
     } catch {
       show(

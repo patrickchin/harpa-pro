@@ -36,4 +36,26 @@ describe('marketing claim copy', () => {
     expect(corpus).not.toContain('Analyze across jobs');
     expect(corpus).not.toContain('money across sites');
   });
+
+  it('describes App Store review launch updates instead of a public waitlist', () => {
+    const files = [
+      'components/landing/Header.astro',
+      'components/landing/Hero.astro',
+      'components/landing/WaitlistForm.astro',
+      'components/landing/WaitlistFormIsland.tsx',
+      'content/faq/04-when.mdx',
+      'pages/confirm.astro',
+      'pages/roadmap.astro',
+    ];
+
+    const corpus = files.map((file) => readSource(file)).join('\n');
+
+    expect(corpus).toContain('App Store review');
+    expect(corpus).toContain('Get launch update');
+    expect(corpus).toContain('Notify me when iOS opens');
+    expect(corpus).not.toContain('Join waitlist');
+    expect(corpus).not.toContain('Join the waitlist');
+    expect(corpus).not.toContain('before everyone else');
+    expect(corpus).not.toContain('try the beta');
+  });
 });

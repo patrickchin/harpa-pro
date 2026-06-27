@@ -1,6 +1,6 @@
-You're nearly on the Harpa Pro waitlist.
+You're nearly signed up for Harpa Pro launch updates.
 
-Confirm your spot (link expires in 7 days):
+Confirm your email (link expires in 7 days):
 {{confirmUrl}}
 
 If you didn't sign up, ignore this email.

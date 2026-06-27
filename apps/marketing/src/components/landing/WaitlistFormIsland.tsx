@@ -1,5 +1,5 @@
 /**
- * Marketing waitlist form, mounted as a React island via
+ * Marketing launch-update form, mounted as a React island via
  * `<WaitlistFormIsland client:visible />` from `WaitlistForm.astro`.
  *
  * - Posts directly to `POST {apiBaseUrl}/waitlist` (CORS allowed by
@@ -39,6 +39,13 @@ const MAX = {
   source: maxOf('source'),
 };
 
+export const LAUNCH_UPDATE_SOURCE = 'ios-app-review-launch-update';
+const SOURCE_SEPARATOR = ' | ';
+const DETAILS_MAX = Math.max(
+  0,
+  MAX.source - LAUNCH_UPDATE_SOURCE.length - SOURCE_SEPARATOR.length,
+);
+
 type FormState =
   | { kind: 'idle' }
   | { kind: 'submitting' }
@@ -76,9 +83,14 @@ export default function WaitlistFormIsland() {
     // Validate against the SAME Zod schema the server uses. This
     // catches over-length / malformed inputs before we round-trip
     // and surfaces the server's own error messages.
+    const details = source.trim();
+    const signupSource = details
+      ? `${LAUNCH_UPDATE_SOURCE}${SOURCE_SEPARATOR}${details}`
+      : LAUNCH_UPDATE_SOURCE;
+
     const parsed = waitlistSignupRequest.safeParse({
       email,
-      source: source || undefined,
+      source: signupSource,
       turnstileToken,
     });
     if (!parsed.success) {
@@ -140,8 +152,9 @@ export default function WaitlistFormIsland() {
       >
         <h3 className="text-lg font-semibold text-ink">Check your inbox.</h3>
         <p className="mt-2 text-sm leading-relaxed text-ink-soft">
-          We've sent you a confirmation link. Click it within 7 days to lock
-          in your spot. If it doesn't arrive, check your spam folder.
+          We've sent you a confirmation link. Click it within 7 days so we can
+          send the iOS launch update when Harpa Pro opens. If it doesn't arrive,
+          check your spam folder.
         </p>
       </div>
     );
@@ -153,7 +166,7 @@ export default function WaitlistFormIsland() {
     <form
       onSubmit={onSubmit}
       className="rounded-xl border border-hairline bg-paper-2/70 p-5 sm:p-6"
-      aria-label="Waitlist signup"
+      aria-label="Launch update signup"
     >
       <div className="grid gap-3.5">
         <label className="block">
@@ -179,14 +192,14 @@ export default function WaitlistFormIsland() {
             </span>
           </span>
           <span className="mb-2 block text-xs leading-relaxed text-ink-soft">
-            Role, company, jobsite type, or reporting pain points are all optional.
+            Company, role, jobsite type, or current reporting setup are all optional.
           </span>
           <textarea
             rows={3}
-            maxLength={MAX.source}
+            maxLength={DETAILS_MAX}
             value={source}
             onChange={(e) => setSource(e.target.value)}
-            placeholder="Anything useful for early access."
+            placeholder="Anything useful for launch updates."
             className={inputCls}
             disabled={submitting}
           />
@@ -217,10 +230,11 @@ export default function WaitlistFormIsland() {
           disabled={submitting}
           className="mt-2 inline-flex h-11 items-center justify-center gap-2 rounded-md bg-accent px-5 text-sm font-medium text-accent-foreground shadow-sm hover:brightness-95 ring-focus disabled:cursor-not-allowed disabled:opacity-70"
         >
-          {submitting ? 'Submitting…' : 'Request early access →'}
+          {submitting ? 'Submitting…' : 'Get launch update →'}
         </button>
         <p className="text-xs text-ink-soft">
-          We'll only use your info to coordinate early access. No spam, ever.
+          We'll only use your info for launch updates and early access. No spam,
+          ever.
         </p>
       </div>
     </form>

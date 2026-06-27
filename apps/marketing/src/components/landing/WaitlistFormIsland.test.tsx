@@ -12,22 +12,26 @@ vi.mock('../../lib/env', () => ({
   }),
 }));
 
-import WaitlistFormIsland from './WaitlistFormIsland';
+import WaitlistFormIsland, { LAUNCH_UPDATE_SOURCE } from './WaitlistFormIsland';
 
 describe('WaitlistFormIsland', () => {
-  it('collects email and optional broad early-access details only', () => {
+  it('collects email and optional launch-update details only', () => {
     const html = renderToStaticMarkup(<WaitlistFormIsland />);
 
     expect(html).toContain('Email');
     expect(html).not.toContain('Work email');
-    expect(html).not.toContain('Company');
     expect(html).not.toContain('<select');
     expect(html).toContain('About your work');
     expect(html).toContain(
-      'Role, company, jobsite type, or reporting pain points are all optional.',
+      'Company, role, jobsite type, or current reporting setup are all optional.',
     );
+    expect(html).toContain('Get launch update');
     expect(html).not.toContain(
       'Tell us about your work and what you want Harpa Pro to help with',
     );
+  });
+
+  it('tags submissions as iOS App Review launch updates', () => {
+    expect(LAUNCH_UPDATE_SOURCE).toBe('ios-app-review-launch-update');
   });
 });

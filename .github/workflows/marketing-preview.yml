@@ -7,7 +7,7 @@ name: marketing-preview
 
 on:
   pull_request:
-    branches: [main]
+    branches: [dev, main]
     paths:
       - "apps/marketing/**"
       - ".github/workflows/marketing-preview.yml"

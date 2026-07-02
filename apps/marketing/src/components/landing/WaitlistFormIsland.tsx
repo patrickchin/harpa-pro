@@ -39,6 +39,20 @@ const MAX = {
   source: maxOf('source'),
 };
 
+const PRODUCT_UPDATES_SOURCE = 'product-updates';
+const SOURCE_SEPARATOR = ' | ';
+const DETAILS_MAX = Math.max(
+  0,
+  MAX.source - PRODUCT_UPDATES_SOURCE.length - SOURCE_SEPARATOR.length,
+);
+
+function buildProductUpdatesSource(details: string): string {
+  const trimmed = details.trim();
+  return trimmed
+    ? `${PRODUCT_UPDATES_SOURCE}${SOURCE_SEPARATOR}${trimmed}`
+    : PRODUCT_UPDATES_SOURCE;
+}
+
 type FormState =
   | { kind: 'idle' }
   | { kind: 'submitting' }
@@ -78,7 +92,7 @@ export default function WaitlistFormIsland() {
     // and surfaces the server's own error messages.
     const parsed = waitlistSignupRequest.safeParse({
       email,
-      source: source || undefined,
+      source: buildProductUpdatesSource(source),
       turnstileToken,
     });
     if (!parsed.success) {
@@ -183,7 +197,7 @@ export default function WaitlistFormIsland() {
           </span>
           <textarea
             rows={3}
-            maxLength={MAX.source}
+            maxLength={DETAILS_MAX}
             value={source}
             onChange={(e) => setSource(e.target.value)}
             placeholder="Anything useful for product updates."

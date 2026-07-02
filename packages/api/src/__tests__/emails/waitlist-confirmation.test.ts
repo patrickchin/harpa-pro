@@ -1,5 +1,5 @@
 /**
- * Snapshot test for the waitlist confirmation email.
+ * Snapshot test for the product-updates confirmation email.
  * Guards against silent regressions in the rendered HTML/text the
  * subscriber sees in their inbox.
  */
@@ -12,9 +12,9 @@ describe('renderWaitlistConfirmationEmail', () => {
       confirmUrl: 'https://harpapro.com/confirm?token=DETERMINISTIC_FIXTURE_TOKEN',
     });
     expect(text).toMatchInlineSnapshot(`
-      "You're nearly on the Harpa Pro waitlist.
+      "You're nearly signed up for Harpa Pro product updates.
 
-      Confirm your spot (link expires in 7 days):
+      Confirm your email (link expires in 7 days):
       https://harpapro.com/confirm?token=DETERMINISTIC_FIXTURE_TOKEN
 
       If you didn't sign up, ignore this email.
@@ -23,8 +23,9 @@ describe('renderWaitlistConfirmationEmail', () => {
       "
     `);
     expect(html).toContain('https://harpapro.com/confirm?token=DETERMINISTIC_FIXTURE_TOKEN');
-    expect(html).toContain('Confirm my spot');
-    expect(html).toContain("nearly on the waitlist");
+    expect(html).toContain('Confirm my email');
+    expect(html).toContain('product updates');
+    expect(html).not.toContain('waitlist');
     // No script tags / dangerous attrs in marketing email.
     expect(html).not.toMatch(/<script/i);
     expect(html).not.toMatch(/onerror=/i);

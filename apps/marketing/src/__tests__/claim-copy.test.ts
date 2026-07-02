@@ -48,6 +48,10 @@ describe('marketing claim copy', () => {
     expect(corpus).not.toContain('early-access list');
     expect(corpus).not.toContain('try the beta');
     expect(corpus).not.toContain('Real live demo coming soon');
+    expect(corpus).not.toContain('App Store review');
+    expect(corpus).not.toContain('submitted to the App Store');
+    expect(corpus).not.toContain('when iOS opens');
+    expect(corpus).not.toContain('launch update');
     expect(corpus).not.toContain('status: z.enum(["pilot", "later"])');
     expect(corpus).not.toContain('status: "pilot"');
     expect(corpus).not.toContain('status: "later"');

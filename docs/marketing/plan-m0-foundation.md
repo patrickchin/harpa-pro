@@ -128,7 +128,7 @@ a Cloudflare Pages preview URL with a green Lighthouse score.
       [`docs/marketing/deploy-cloudflare-pages.md`](deploy-cloudflare-pages.md)
       (project create, API token scopes, account ID, GH secrets).
 - [x] GitHub Action `.github/workflows/marketing-preview.yml`:
-      - Triggers on PR to `dev`, path filter `apps/marketing/**`
+      - Triggers on PR to `dev` or `main`, path filter `apps/marketing/**`
         (+ `pnpm-lock.yaml` + the workflow itself).
       - Cancels stale preview builds via `concurrency`.
       - Installs deps, builds, deploys via `cloudflare/wrangler-action@v3`

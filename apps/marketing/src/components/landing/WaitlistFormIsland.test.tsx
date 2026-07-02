@@ -31,4 +31,13 @@ describe('WaitlistFormIsland', () => {
       'Tell us about your work and what you want Harpa Pro to help with',
     );
   });
+
+  it('reserves source capacity for the product-updates tag', () => {
+    const html = renderToStaticMarkup(<WaitlistFormIsland />);
+    const detailsMax =
+      200 - 'product-updates'.length - ' | '.length;
+
+    expect(html).toContain(`maxLength="${detailsMax}"`);
+    expect(html).not.toContain('maxLength="200"');
+  });
 });

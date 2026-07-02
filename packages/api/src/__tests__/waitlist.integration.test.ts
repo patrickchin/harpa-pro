@@ -95,7 +95,7 @@ describe('POST /waitlist', () => {
     // One email sent, to the right address.
     expect(resend.sent).toHaveLength(1);
     expect(resend.sent[0]!.to).toBe('jamie@buildco.com');
-    expect(resend.sent[0]!.subject).toMatch(/confirm/i);
+    expect(resend.sent[0]!.subject).toBe('Confirm your Harpa Pro product updates');
     expect(resend.sent[0]!.html).toContain('?token=');
   });
 

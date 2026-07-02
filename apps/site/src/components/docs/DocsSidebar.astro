@@ -1,0 +1,42 @@
+---
+import type { CollectionEntry } from "astro:content";
+
+import { DOCS_TIERS, guideHref, guideSlug } from "../../lib/docs";
+
+interface Props {
+  guides: CollectionEntry<"docs">[];
+  currentSlug?: string;
+}
+
+const { guides, currentSlug } = Astro.props;
+---
+
+<nav aria-label="Guide sections" class="docs-sidebar-nav">
+  {
+    DOCS_TIERS.map((tier) => {
+      const tierGuides = guides.filter((guide) => guide.data.tier === tier.id);
+      if (tierGuides.length === 0) return null;
+
+      return (
+        <section>
+          <h2>{tier.label}</h2>
+          <ul>
+            {tierGuides.map((guide) => {
+              const slug = guideSlug(guide.id);
+              return (
+                <li>
+                  <a
+                    href={guideHref(guide.id)}
+                    aria-current={slug === currentSlug ? "page" : undefined}
+                  >
+                    {guide.data.title}
+                  </a>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      );
+    })
+  }
+</nav>

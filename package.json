@@ -14,7 +14,7 @@
     "test:api": "pnpm --filter @harpa/api test",
     "test:api:integration": "pnpm --filter @harpa/api test:integration",
     "test:mobile": "pnpm --filter @harpa/mobile test",
-    "test:docs:e2e": "pnpm --filter @harpa/docs test:e2e",
+    "test:docs:e2e": "pnpm --filter @harpa/site test:e2e",
     "lint": "turbo run lint && node scripts/run-bash-checks.cjs scripts/check-no-supabase.sh scripts/check-no-unistyles.sh scripts/check-scope-tests.sh scripts/check-spec-drift.sh scripts/check-maestro-appid.sh scripts/check-no-maestro-point-taps.sh scripts/check-native-input-smoke.sh scripts/check-no-process-env-r2.sh scripts/check-usage-limit-wiring.sh scripts/check-no-process-env-rate-limit.sh",
     "typecheck": "turbo run typecheck",
     "gen:api": "pnpm --filter @harpa/api-contract gen:types && pnpm --filter @harpa/mobile gen:hooks",

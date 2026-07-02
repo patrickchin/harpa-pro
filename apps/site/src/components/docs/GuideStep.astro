@@ -1,0 +1,36 @@
+---
+import type { DocsScreenshotId } from "../../lib/docs";
+import PhoneFrame from "./PhoneFrame.astro";
+
+type WithScreenshot = {
+  screenshot: DocsScreenshotId;
+  screenshotAlt: string;
+};
+
+type WithoutScreenshot = {
+  screenshot?: never;
+  screenshotAlt?: never;
+};
+
+type Props = {
+  number: number;
+  title: string;
+} & (WithScreenshot | WithoutScreenshot);
+
+const { number, title, screenshot, screenshotAlt } = Astro.props;
+---
+
+<section class="docs-step">
+  <div class="docs-step-copy">
+    <header>
+      <span aria-hidden="true">{number}</span>
+      <h2>{title}</h2>
+    </header>
+    <div class="docs-step-body"><slot /></div>
+  </div>
+  {
+    screenshot && screenshotAlt && (
+      <PhoneFrame screenshot={screenshot} alt={screenshotAlt} compact />
+    )
+  }
+</section>

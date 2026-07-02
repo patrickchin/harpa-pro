@@ -2,7 +2,7 @@
  * VoiceCardShell — shared layout primitive for voice-note cards.
  *
  * Layout, sizes and spacing match the marketing `PreviousNoteCard`
- * (apps/marketing/src/components/VoiceDemo.tsx) byte-for-byte so the
+ * (apps/site/src/components/VoiceDemo.tsx) byte-for-byte so the
  * in-app and marketing surfaces stay aligned:
  *
  *   ┌──────────────────────────────────────────┐
@@ -149,4 +149,3 @@ export function VoiceCardShell({
     </View>
   );
 }
-

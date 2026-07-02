@@ -17,7 +17,7 @@ The mobile app track (P2+) is **paused**. Do not touch
 ## Read these first (and only these)
 
 - [`AGENTS.md`](../../AGENTS.md) — repo-wide hard rules. Every rule
-  applies to `apps/marketing/` and `packages/api/` changes
+  applies to `apps/site/` and `packages/api/` changes
   (Conventional Commits, no Supabase, docs-in-same-PR, scope tests
   for every new table, TDD on API code).
 - [`docs/marketing/README.md`](../README.md) — current architecture
@@ -134,7 +134,7 @@ the code work on them — write the code first, ask the operator to
 populate them before M1.10 sign-off.
 
 - `TURNSTILE_SITE_KEY` (public; goes into
-  `apps/marketing/.env` as `PUBLIC_TURNSTILE_SITE_KEY` and into
+  `apps/site/.env` as `PUBLIC_TURNSTILE_SITE_KEY` and into
   Cloudflare Pages env). Create at
   https://dash.cloudflare.com/?to=/:account/turnstile.
 - `TURNSTILE_SECRET_KEY` (Fly secret on `packages/api`).

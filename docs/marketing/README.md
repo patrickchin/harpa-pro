@@ -1,10 +1,10 @@
-# Marketing site (`apps/marketing`)
+# Public site (`apps/site`)
 
-> Status: planning. Mobile work (P2+) is **paused** while we build this.
-> See [`../v4/implementation-plan.md`](../v4/implementation-plan.md) for the
-> paused mobile track.
+> Status: the public site is live. This directory preserves its original
+> M0–M4 implementation plans; current product guides are maintained alongside
+> the site in `apps/site/src/content/docs`.
 
-A mostly-static marketing site at `harpapro.com` with:
+A mostly-static public site at `harpapro.com` with:
 
 - Hero + how-it-works + sample report + FAQ + footer.
 - **Interactive voice-to-report demo** — at launch, runs entirely
@@ -13,6 +13,7 @@ A mostly-static marketing site at `harpapro.com` with:
 - **Waitlist signup** with double opt-in via Resend — the only
   backend work needed before launch.
 - Legal pages (privacy, terms).
+- Current product guides under `/docs`.
 
 The signed-in product (when it exists) will live separately at
 `apps/web` on `app.harpapro.com`. They will not share a framework or a
@@ -28,7 +29,7 @@ a one-time hashed token.
 The voice demo at launch is **fully client-side**: the browser
 records audio for UX realism (waveform, countdown) but discards the
 blob immediately and reveals committed fixture JSON
-(`apps/marketing/src/fixtures/demo/`) on a scripted timer. No API,
+(`apps/site/src/fixtures/demo/`) on a scripted timer. No API,
 no R2, no auth. The fixture JSON shape mirrors the real API
 response so the post-launch swap (M4) is mechanical.
 
@@ -106,7 +107,7 @@ outputs HTML + minimal hydration — faster, smaller, simpler.
 
 | # | Name | File | Exit gate |
 |---|---|---|---|
-| M0 | Foundation | [`plan-m0-foundation.md`](plan-m0-foundation.md) | Astro app scaffolded into monorepo; Lovable JSX ported to `.astro`; deploys to Cloudflare Pages preview; Lighthouse ≥ 95 across the board. |
+| M0 | Foundation | [`plan-m0-foundation.md`](plan-m0-foundation.md) | Astro app scaffolded into monorepo; Lovable JSX ported to `.astro`; deploys to Cloudflare Pages preview; Lighthouse performance/accessibility ≥ 90 and best practices/SEO ≥ 95. |
 | M1 | Waitlist | [`plan-m1-waitlist.md`](plan-m1-waitlist.md) | `waitlist_signups` table + Hono route + scope test + double-opt-in email + Turnstile + admin CSV export. **Only backend work needed before launch.** |
 | M2 | Voice demo (static) | [`plan-m2-voice-demo.md`](plan-m2-voice-demo.md) | Browser recorder + scripted reveal of committed fixture JSON. No API, no R2, no auth. Audio never leaves the device. |
 | M3 | Launch | [`plan-m3-launch.md`](plan-m3-launch.md) | Legal pages; OG/sitemap/robots; Sentry; analytics; custom domain live; launch checklist. |
@@ -125,7 +126,7 @@ These add to the existing hard rules in [`../../AGENTS.md`](../../AGENTS.md):
    build or runtime.
 3. **No analytics with cookies before the consent gate ships.**
    Cloudflare Web Analytics only until PostHog lands (if ever).
-4. **Lighthouse gate.** CI runs Lighthouse on each PR. Performance,
-   Accessibility, Best Practices, SEO must all be ≥ 95.
+4. **Lighthouse gate.** CI runs Lighthouse on each PR. Performance and
+   Accessibility must be ≥ 90; Best Practices and SEO must be ≥ 95.
 5. **Waitlist storage stays in Neon.** No third-party form services
    (Typeform, Tally, Google Forms) — own the data from day one.

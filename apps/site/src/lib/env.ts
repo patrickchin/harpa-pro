@@ -1,5 +1,5 @@
 /**
- * Centralised env access for the marketing site.
+ * Centralised env access for the public site.
  *
  * Astro inlines `import.meta.env.PUBLIC_*` at build time. Reading them
  * through here gives us one typed entry point and avoids
@@ -9,7 +9,7 @@
  * (like Cloudflare's universal test Turnstile key) silently mask
  * misconfigured prod builds; see docs/bugs/README.md (2026-05-14
  * waitlist-shipped-with-test-sitekey). Local dev: copy
- * `apps/marketing/.env.example` to `.env`. CI: workflow injects
+ * `apps/site/.env.example` to `.env`. CI: workflow injects
  * `PUBLIC_*` from GH secrets.
  */
 
@@ -20,7 +20,7 @@ function required(
     .env?.[key];
   if (!v) {
     throw new Error(
-      `[marketing/env] Missing ${key}. Set it in apps/marketing/.env (dev) ` +
+      `[site/env] Missing ${key}. Set it in apps/site/.env (dev) ` +
         `or as a GitHub Actions secret (CI — see .github/workflows/marketing-*.yml).`,
     );
   }

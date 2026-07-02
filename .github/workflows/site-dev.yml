@@ -1,22 +1,22 @@
-name: marketing-dev
+name: site-dev
 
-# Build + deploy apps/marketing to Cloudflare Pages on every push to
+# Build + deploy apps/site to Cloudflare Pages on every push to
 # `dev`. Uses --branch=dev so CF Pages serves it at a stable preview
 # URL (e.g. dev.harpa-pro.pages.dev) rather than overwriting the
-# production deployment. Mirrors marketing-prod.yml.
+# production deployment. Mirrors site-prod.yml.
 
 on:
   push:
     branches: [dev]
     paths:
-      - "apps/marketing/**"
-      - ".github/workflows/marketing-dev.yml"
+      - "apps/site/**"
+      - ".github/workflows/site-dev.yml"
       - "pnpm-lock.yaml"
   # Allow manual re-deploys.
   workflow_dispatch: {}
 
 concurrency:
-  group: marketing-dev
+  group: site-dev
   cancel-in-progress: true # ok to cancel stale dev deploys
 
 jobs:
@@ -30,13 +30,13 @@ jobs:
 
       - uses: ./.github/actions/setup-monorepo
 
-      - name: Build marketing site
+      - name: Build public site
         # PUBLIC_* env vars are inlined by Astro at build time — see
-        # marketing-prod.yml for why they must be set here.
+        # site-prod.yml for why they must be set here.
         env:
           PUBLIC_TURNSTILE_SITE_KEY: ${{ secrets.PUBLIC_TURNSTILE_SITE_KEY }}
           PUBLIC_API_BASE_URL: https://harpa-pro-api-dev.fly.dev
-        run: pnpm --filter @harpa/marketing build
+        run: pnpm --filter @harpa/site build
 
       - name: Deploy to Cloudflare Pages (dev)
         uses: cloudflare/wrangler-action@v3
@@ -46,7 +46,7 @@ jobs:
           # --branch=dev makes CF Pages serve this at a stable dev
           # preview URL instead of overwriting the production deployment.
           command: >-
-            pages deploy apps/marketing/dist
+            pages deploy apps/site/dist
             --project-name=harpa-pro
             --branch=dev
             --commit-dirty=true

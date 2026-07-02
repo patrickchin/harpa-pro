@@ -5,12 +5,12 @@ import { dirname, resolve } from 'node:path';
 
 const here = dirname(fileURLToPath(import.meta.url));
 
-describe('marketing smoke', () => {
-  it('package name is @harpa/marketing', () => {
+describe('site smoke', () => {
+  it('package name is @harpa/site', () => {
     const pkg = JSON.parse(readFileSync(resolve(here, '../../package.json'), 'utf8')) as {
       name: string;
     };
-    expect(pkg.name).toBe('@harpa/marketing');
+    expect(pkg.name).toBe('@harpa/site');
   });
 
   it('astro config targets static output for harpapro.com', () => {

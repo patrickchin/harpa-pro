@@ -1,5 +1,5 @@
 {
-  "name": "@harpa/marketing",
+  "name": "@harpa/site",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -29,6 +29,7 @@
   "devDependencies": {
     "@astrojs/check": "^0.9.4",
     "@eslint/js": "^9.39.4",
+    "@playwright/test": "^1.51.1",
     "@types/node": "^22.7.5",
     "@types/react": "~18.3.12",
     "@types/react-dom": "~18.3.1",

@@ -294,7 +294,7 @@ function formatDuration(s: number): string {
 // ────────────────────────────────────────────────────────────────────
 // Inline icons (lucide paths). Inlined rather than imported so the
 // island stays a single small bundle and matches the existing
-// `apps/marketing/src/components/Icon.astro` style.
+// `apps/site/src/components/Icon.astro` style.
 // ────────────────────────────────────────────────────────────────────
 
 interface IconProps {

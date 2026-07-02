@@ -1,7 +1,7 @@
 name: Detect changed paths
 description: >
   Compute boolean outputs for each top-level area of the monorepo
-  (api, mobile, marketing, cli, etc.) so heavy CI jobs can
+  (api, mobile, site, cli, etc.) so heavy CI jobs can
   short-circuit on PRs that don't touch their code. Required-check
   jobs gate downstream steps on these outputs instead of using
   workflow-level `paths:` filters (which would report the workflow as
@@ -29,15 +29,12 @@ outputs:
   mobile:
     description: True if apps/mobile or Maestro E2E flows changed.
     value: ${{ steps.filter.outputs.mobile }}
-  marketing:
-    description: True if apps/marketing changed.
-    value: ${{ steps.filter.outputs.marketing }}
+  site:
+    description: True if apps/site changed.
+    value: ${{ steps.filter.outputs.site }}
   cli:
     description: True if apps/cli changed.
     value: ${{ steps.filter.outputs.cli }}
-  docs:
-    description: True if apps/docs changed.
-    value: ${{ steps.filter.outputs.docs }}
   workflows:
     description: True if any CI workflow / composite action changed.
     value: ${{ steps.filter.outputs.workflows }}
@@ -79,14 +76,12 @@ runs:
             - 'packages/api-contract/**'
             - 'packages/report-core/**'
             - 'pnpm-lock.yaml'
-          marketing:
-            - 'apps/marketing/**'
+          site:
+            - 'apps/site/**'
           cli:
             - 'apps/cli/**'
             - 'packages/api-contract/**'
             - 'packages/api/**'
-          docs:
-            - 'apps/docs/**'
           workflows:
             - '.github/workflows/**'
             - '.github/actions/**'

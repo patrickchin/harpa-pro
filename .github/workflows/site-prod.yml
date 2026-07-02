@@ -1,23 +1,23 @@
-name: marketing-prod
+name: site-prod
 
-# Build + deploy production marketing site to Cloudflare Pages on
+# Build + deploy the production public site to Cloudflare Pages on
 # every push to `main` (the default branch — see AGENTS.md hard
 # rule #7). M3.1 maps harpapro.com to this project; until then the
-# prod URL is harpa-marketing.pages.dev.
+# prod URL is harpa-pro.pages.dev.
 
 on:
   push:
     branches: [main]
     paths:
-      - "apps/marketing/**"
-      - ".github/workflows/marketing-prod.yml"
+      - "apps/site/**"
+      - ".github/workflows/site-prod.yml"
       - "pnpm-lock.yaml"
   # Allow manual re-deploys (e.g. content-only republish without a
   # code change).
   workflow_dispatch: {}
 
 concurrency:
-  group: marketing-prod
+  group: site-prod
   cancel-in-progress: false # never cancel a prod deploy
 
 jobs:
@@ -31,7 +31,7 @@ jobs:
 
       - uses: ./.github/actions/setup-monorepo
 
-      - name: Build marketing site
+      - name: Build public site
         # PUBLIC_* env vars are inlined by Astro at build time, so they
         # must be present here — setting them in the CF Pages dashboard
         # is a no-op because we upload a pre-built dist/. Site key is
@@ -40,7 +40,7 @@ jobs:
         env:
           PUBLIC_TURNSTILE_SITE_KEY: ${{ secrets.PUBLIC_TURNSTILE_SITE_KEY }}
           PUBLIC_API_BASE_URL: https://api.harpapro.com
-        run: pnpm --filter @harpa/marketing build
+        run: pnpm --filter @harpa/site build
 
       - name: Deploy to Cloudflare Pages (production)
         uses: cloudflare/wrangler-action@v3
@@ -51,7 +51,7 @@ jobs:
           # project's "production branch" become production. Our
           # production branch is `main` (set in the CF dashboard).
           command: >-
-            pages deploy apps/marketing/dist
+            pages deploy apps/site/dist
             --project-name=harpa-pro
             --branch=main
             --commit-dirty=true

@@ -1,4 +1,4 @@
-// Flat ESLint config for the Astro marketing site.
+// Flat ESLint config for the Astro public site.
 // Keeps the config minimal: TypeScript + Astro recommended rules.
 import js from "@eslint/js";
 import astro from "eslint-plugin-astro";

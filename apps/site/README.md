@@ -1,6 +1,7 @@
-# @harpa/marketing
+# @harpa/site
 
-Astro 5 + Tailwind v4 marketing site for `harpapro.com`.
+Astro 5 + Tailwind v4 public site for `harpapro.com`, including marketing,
+legal, roadmap, and product-guide routes.
 
 See [`docs/marketing/`](../../docs/marketing/) for the full plan
 (M0 → M3) and architecture.
@@ -8,9 +9,9 @@ See [`docs/marketing/`](../../docs/marketing/) for the full plan
 ## Develop
 
 ```bash
-pnpm --filter @harpa/marketing dev      # http://localhost:3002
-pnpm --filter @harpa/marketing build
-pnpm --filter @harpa/marketing typecheck
+pnpm --filter @harpa/site dev      # http://localhost:3002
+pnpm --filter @harpa/site build
+pnpm --filter @harpa/site typecheck
 ```
 
 ## Stack

@@ -1,11 +1,7 @@
 ---
 import type { CollectionEntry } from "astro:content";
 
-import {
-  DOCS_CATEGORIES,
-  guideHref,
-  guideSlug,
-} from "../../lib/docs";
+import { DOCS_TIERS, guideHref, guideSlug } from "../../lib/docs";
 
 interface Props {
   guides: CollectionEntry<"docs">[];
@@ -15,19 +11,17 @@ interface Props {
 const { guides, currentSlug } = Astro.props;
 ---
 
-<nav aria-label="Guide categories" class="docs-sidebar-nav">
+<nav aria-label="Guide sections" class="docs-sidebar-nav">
   {
-    DOCS_CATEGORIES.map((category) => {
-      const categoryGuides = guides.filter(
-        (guide) => guide.data.category === category.id,
-      );
-      if (categoryGuides.length === 0) return null;
+    DOCS_TIERS.map((tier) => {
+      const tierGuides = guides.filter((guide) => guide.data.tier === tier.id);
+      if (tierGuides.length === 0) return null;
 
       return (
         <section>
-          <h2>{category.label}</h2>
+          <h2>{tier.label}</h2>
           <ul>
-            {categoryGuides.map((guide) => {
+            {tierGuides.map((guide) => {
               const slug = guideSlug(guide.id);
               return (
                 <li>

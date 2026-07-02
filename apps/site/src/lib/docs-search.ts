@@ -2,8 +2,8 @@ export interface DocsSearchEntry {
   slug: string;
   title: string;
   description: string;
-  category: string;
-  categoryLabel: string;
+  tier: string;
+  tierLabel: string;
   keywords: string[];
 }
 

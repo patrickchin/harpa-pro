@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { DocsSearch } from "./DocsSearch";
 
 describe("DocsSearch", () => {
-  it("server-renders an accessible search field and guide links", () => {
+  it("server-renders an accessible search field without a duplicate guide grid", () => {
     const html = renderToStaticMarkup(
       <DocsSearch
         entries={[
@@ -12,8 +12,8 @@ describe("DocsSearch", () => {
             slug: "getting-started",
             title: "Getting started",
             description: "Install the app and sign in.",
-            category: "start",
-            categoryLabel: "Start here",
+            tier: "setup",
+            tierLabel: "Setup & account",
             keywords: ["install"],
           },
         ]}
@@ -22,7 +22,7 @@ describe("DocsSearch", () => {
 
     expect(html).toContain('for="docs-search"');
     expect(html).toContain('id="docs-search"');
-    expect(html).toContain('href="/docs/guides/getting-started"');
-    expect(html).toContain('aria-live="polite"');
+    expect(html).not.toContain('href="/docs/guides/getting-started"');
+    expect(html).not.toContain('aria-live="polite"');
   });
 });

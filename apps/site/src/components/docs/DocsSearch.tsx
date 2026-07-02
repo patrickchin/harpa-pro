@@ -11,7 +11,11 @@ interface DocsSearchProps {
 
 export function DocsSearch({ entries }: DocsSearchProps) {
   const [query, setQuery] = useState("");
-  const results = useMemo(() => searchGuides(entries, query), [entries, query]);
+  const hasQuery = query.trim().length > 0;
+  const results = useMemo(
+    () => (hasQuery ? searchGuides(entries, query) : []),
+    [entries, hasQuery, query],
+  );
   const resultLabel = `${results.length} ${results.length === 1 ? "guide" : "guides"}`;
 
   return (
@@ -28,36 +32,37 @@ export function DocsSearch({ entries }: DocsSearchProps) {
         />
       </div>
 
-      <p className="docs-search-count" aria-live="polite">
-        {resultLabel}
-      </p>
-
-      {results.length > 0 ? (
-        <div className="docs-guide-grid">
-          {results.map((entry) => (
-            <article className="docs-guide-card" key={entry.slug}>
-              <p>{entry.categoryLabel}</p>
-              <h2>
-                <a href={`/docs/guides/${entry.slug}`}>{entry.title}</a>
-              </h2>
-              <span>{entry.description}</span>
-            </article>
-          ))}
-        </div>
-      ) : (
-        <div className="docs-empty-state">
-          <h2>No matching guides</h2>
-          <p>
-            Try a broader term, browse every category, or email us if you are
-            stuck.
+      {hasQuery && (
+        <>
+          <p className="docs-search-count" aria-live="polite">
+            {resultLabel}
           </p>
-          <div>
-            <button type="button" onClick={() => setQuery("")}>
-              Browse all guides
-            </button>
-            <a href="mailto:patrick@harpapro.com">Contact support</a>
-          </div>
-        </div>
+
+          {results.length > 0 ? (
+            <div className="docs-guide-grid">
+              {results.map((entry) => (
+                <article className="docs-guide-card" key={entry.slug}>
+                  <p>{entry.tierLabel}</p>
+                  <h2>
+                    <a href={`/docs/guides/${entry.slug}`}>{entry.title}</a>
+                  </h2>
+                  <span>{entry.description}</span>
+                </article>
+              ))}
+            </div>
+          ) : (
+            <div className="docs-empty-state">
+              <h2>No matching guides</h2>
+              <p>Try a broader term or email us if you are stuck.</p>
+              <div>
+                <button type="button" onClick={() => setQuery("")}>
+                  Clear search
+                </button>
+                <a href="mailto:patrick@harpapro.com">Contact support</a>
+              </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

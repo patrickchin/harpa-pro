@@ -2,36 +2,105 @@
 import { getCollection } from "astro:content";
 
 import { DocsSearch } from "../../components/docs/DocsSearch";
+import PhoneFrame from "../../components/docs/PhoneFrame.astro";
 import DocsLayout from "../../layouts/DocsLayout.astro";
 import {
-  docsCategoryLabel,
+  docsTierLabel,
+  guideHref,
   guideSlug,
   sortGuides,
 } from "../../lib/docs";
 
 const guides = sortGuides(await getCollection("docs"));
+const coreGuides = guides.filter((guide) => guide.data.tier === "core");
+const everydayGuides = guides.filter((guide) => guide.data.tier === "everyday");
+const setupGuides = guides.filter((guide) => guide.data.tier === "setup");
 const searchEntries = guides.map((guide) => ({
   slug: guideSlug(guide.id),
   title: guide.data.title,
   description: guide.data.description,
-  category: guide.data.category,
-  categoryLabel: docsCategoryLabel(guide.data.category),
+  tier: guide.data.tier,
+  tierLabel: docsTierLabel(guide.data.tier),
   keywords: guide.data.keywords,
 }));
 ---
 
 <DocsLayout
   title="Harpa Pro guides"
-  description="Current guides for capturing site activity and producing reports with Harpa Pro."
+  description="Task-first guides for capturing site activity, producing reports, and sharing PDFs with Harpa Pro."
   guides={guides}
 >
-  <header class="docs-hero">
-    <p>Product guides</p>
-    <h1>Harpa Pro guides</h1>
-    <span>
-      Set up the iPhone app, capture the day, and finish a clear site report.
-    </span>
+  <header class="docs-hero docs-index-hero">
+    <div class="docs-index-hero-copy">
+      <p>Harpa Pro guides</p>
+      <h1>What do you want to do?</h1>
+      <span>
+        Start with a complete workflow or jump to the task in front of you.
+      </span>
+      <DocsSearch entries={searchEntries} client:load />
+    </div>
+    <PhoneFrame
+      screenshot="final-report-issues"
+      alt="Generated Harpa Pro report showing site issues and next actions"
+      priority
+    />
   </header>
 
-  <DocsSearch entries={searchEntries} client:load />
+  <section class="docs-index-section" aria-labelledby="core-workflows-heading">
+    <div class="docs-index-section-heading">
+      <p>Start here</p>
+      <h2 id="core-workflows-heading">Core workflows</h2>
+    </div>
+    <div class="docs-core-grid">
+      {
+        coreGuides.map((guide, index) => (
+          <article class="docs-core-card">
+            <span aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>
+            <div>
+              <h3>
+                <a href={guideHref(guide.id)}>{guide.data.title}</a>
+              </h3>
+              <p>{guide.data.description}</p>
+              <strong>Read the steps →</strong>
+            </div>
+          </article>
+        ))
+      }
+    </div>
+  </section>
+
+  <section class="docs-index-section" aria-labelledby="everyday-tasks-heading">
+    <div class="docs-index-section-heading">
+      <p>Quick answers</p>
+      <h2 id="everyday-tasks-heading">Everyday tasks</h2>
+    </div>
+    <div class="docs-everyday-grid">
+      {
+        everydayGuides.map((guide) => (
+          <article class="docs-everyday-card">
+            <h3>
+              <a href={guideHref(guide.id)}>{guide.data.title}</a>
+            </h3>
+            <p>{guide.data.description}</p>
+          </article>
+        ))
+      }
+    </div>
+  </section>
+
+  <section class="docs-index-section" aria-labelledby="setup-account-heading">
+    <div class="docs-index-section-heading">
+      <p>Essentials</p>
+      <h2 id="setup-account-heading">Setup &amp; account</h2>
+    </div>
+    <ul class="docs-setup-links">
+      {
+        setupGuides.map((guide) => (
+          <li>
+            <a href={guideHref(guide.id)}>{guide.data.title} →</a>
+          </li>
+        ))
+      }
+    </ul>
+  </section>
 </DocsLayout>

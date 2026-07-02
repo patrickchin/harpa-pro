@@ -1,6 +1,10 @@
 import { defineCollection, z } from "astro:content";
 import { glob } from "astro/loaders";
 
+import { DOCS_SCREENSHOT_IDS } from "./lib/docs";
+
+const DOCS_TIERS = ["core", "everyday", "setup"] as const;
+
 const faq = defineCollection({
   loader: glob({ pattern: "**/*.{md,mdx}", base: "./src/content/faq" }),
   schema: z.object({
@@ -33,12 +37,13 @@ const docs = defineCollection({
   schema: z.object({
     title: z.string().min(1),
     description: z.string().min(1),
-    category: z.enum(["start", "reporting", "collaboration", "account"]),
+    tier: z.enum(DOCS_TIERS),
     order: z.number().int().positive(),
     keywords: z.array(z.string().min(1)).min(1),
     lastVerified: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
     related: z.array(z.string()).default([]),
-    screenshot: z.string().startsWith("/").optional(),
+    heroScreenshot: z.enum(DOCS_SCREENSHOT_IDS),
+    heroScreenshotAlt: z.string().min(12),
   }),
 });
 

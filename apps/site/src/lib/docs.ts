@@ -1,23 +1,47 @@
-export const DOCS_CATEGORIES = [
-  { id: "start", label: "Start here" },
-  { id: "reporting", label: "Daily reporting" },
-  { id: "collaboration", label: "Collaboration" },
-  { id: "account", label: "Account and support" },
+export const DOCS_TIERS = [
+  { id: "core", label: "Core workflows" },
+  { id: "everyday", label: "Everyday tasks" },
+  { id: "setup", label: "Setup & account" },
 ] as const;
 
-export type DocsCategory = (typeof DOCS_CATEGORIES)[number]["id"];
+export type DocsTier = (typeof DOCS_TIERS)[number]["id"];
+
+export const DOCS_SCREENSHOT_IDS = [
+  "projects-list",
+  "reports-list",
+  "members-team",
+  "voice-recording",
+  "final-report-issues",
+  "final-report-sections",
+  "pdf-preview",
+  "usage",
+] as const;
+
+export type DocsScreenshotId = (typeof DOCS_SCREENSHOT_IDS)[number];
 
 export const LEGACY_DOC_REDIRECTS = {
-  "/guides/browse-saved-reports": "/docs/guides/projects-and-history",
-  "/guides/capture-notes-voice": "/docs/guides/capturing-notes",
-  "/guides/collaborate-members": "/docs/guides/project-members",
-  "/guides/edit-report-manually": "/docs/guides/editing-reports",
-  "/guides/export-share-pdf": "/docs/guides/finalize-export-share",
-  "/guides/generate-ai-report": "/docs/guides/ai-generation",
+  "/guides/generate-ai-report": "/docs/guides/generate-ai-report",
+  "/guides/export-share-pdf": "/docs/guides/export-share-pdf",
+  "/guides/manage-projects": "/docs/guides/manage-projects",
+  "/guides/capture-notes-voice": "/docs/guides/capture-notes-voice",
+  "/guides/collaborate-members": "/docs/guides/collaborate-members",
+  "/guides/edit-report-manually": "/docs/guides/edit-report-manually",
+  "/guides/browse-saved-reports": "/docs/guides/browse-saved-reports",
   "/guides/getting-started": "/docs/guides/getting-started",
-  "/guides/manage-projects": "/docs/guides/managing-reports",
-  "/guides/your-account": "/docs/guides/account-and-usage",
+  "/guides/your-account": "/docs/guides/your-account",
   "/search": "/docs",
+} as const;
+
+export const FIRST_REVISION_DOC_REDIRECTS = {
+  "/docs/guides/projects-and-history": "/docs/guides/browse-saved-reports",
+  "/docs/guides/managing-reports": "/docs/guides/generate-ai-report",
+  "/docs/guides/capturing-notes": "/docs/guides/capture-notes-voice",
+  "/docs/guides/ai-generation": "/docs/guides/generate-ai-report",
+  "/docs/guides/editing-reports": "/docs/guides/edit-report-manually",
+  "/docs/guides/finalize-export-share": "/docs/guides/export-share-pdf",
+  "/docs/guides/project-members": "/docs/guides/collaborate-members",
+  "/docs/guides/account-and-usage": "/docs/guides/your-account",
+  "/docs/guides/account-deletion-and-help": "/docs/guides/your-account",
 } as const;
 
 export function guideSlug(id: string): string {
@@ -28,29 +52,25 @@ export function guideHref(id: string): string {
   return `/docs/guides/${guideSlug(id)}`;
 }
 
-export function docsCategoryLabel(category: DocsCategory): string {
-  return (
-    DOCS_CATEGORIES.find(({ id }) => id === category)?.label ?? "Guides"
-  );
+export function docsTierLabel(tier: DocsTier): string {
+  return DOCS_TIERS.find(({ id }) => id === tier)?.label ?? "Guides";
 }
 
 interface SortableGuide {
   data: {
-    category: DocsCategory;
+    tier: DocsTier;
     order: number;
   };
 }
 
 export function sortGuides<T extends SortableGuide>(guides: readonly T[]): T[] {
-  const categoryOrder = new Map(
-    DOCS_CATEGORIES.map(({ id }, index) => [id, index]),
-  );
+  const tierOrder = new Map(DOCS_TIERS.map(({ id }, index) => [id, index]));
 
   return [...guides].sort((a, b) => {
-    const categoryDifference =
-      (categoryOrder.get(a.data.category) ?? Number.MAX_SAFE_INTEGER) -
-      (categoryOrder.get(b.data.category) ?? Number.MAX_SAFE_INTEGER);
+    const tierDifference =
+      (tierOrder.get(a.data.tier) ?? Number.MAX_SAFE_INTEGER) -
+      (tierOrder.get(b.data.tier) ?? Number.MAX_SAFE_INTEGER);
 
-    return categoryDifference || a.data.order - b.data.order;
+    return tierDifference || a.data.order - b.data.order;
   });
 }

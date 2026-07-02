@@ -2,9 +2,10 @@
 import { getCollection, render, type CollectionEntry } from "astro:content";
 
 import DocsPager from "../../../components/docs/DocsPager.astro";
+import PhoneFrame from "../../../components/docs/PhoneFrame.astro";
 import DocsLayout from "../../../layouts/DocsLayout.astro";
 import {
-  docsCategoryLabel,
+  docsTierLabel,
   guideHref,
   guideSlug,
   sortGuides,
@@ -49,10 +50,16 @@ const relatedGuides = guide.data.related
   currentTitle={guide.data.title}
 >
   <header class="docs-guide-heading">
-    <p>{docsCategoryLabel(guide.data.category)}</p>
-    <h1>{guide.data.title}</h1>
-    <span>{guide.data.description}</span>
-    <small>Verified {guide.data.lastVerified}</small>
+    <div>
+      <p>{docsTierLabel(guide.data.tier)}</p>
+      <h1>{guide.data.title}</h1>
+      <span>{guide.data.description}</span>
+    </div>
+    <PhoneFrame
+      screenshot={guide.data.heroScreenshot}
+      alt={guide.data.heroScreenshotAlt}
+      priority
+    />
   </header>
 
   <article class="docs-prose">

@@ -28,4 +28,18 @@ const roadmap = defineCollection({
   }),
 });
 
-export const collections = { faq, features, roadmap };
+const docs = defineCollection({
+  loader: glob({ pattern: "**/*.{md,mdx}", base: "./src/content/docs" }),
+  schema: z.object({
+    title: z.string().min(1),
+    description: z.string().min(1),
+    category: z.enum(["start", "reporting", "collaboration", "account"]),
+    order: z.number().int().positive(),
+    keywords: z.array(z.string().min(1)).min(1),
+    lastVerified: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    related: z.array(z.string()).default([]),
+    screenshot: z.string().startsWith("/").optional(),
+  }),
+});
+
+export const collections = { faq, features, roadmap, docs };

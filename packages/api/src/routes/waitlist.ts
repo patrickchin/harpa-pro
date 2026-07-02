@@ -206,7 +206,7 @@ waitlistRoutes.openapi(
       try {
         await getResend().send({
           to: body.email,
-          subject: 'Confirm your spot on the harpapro.com waitlist',
+          subject: 'Confirm your Harpa Pro product updates',
           html: email.html,
           text: email.text,
         });

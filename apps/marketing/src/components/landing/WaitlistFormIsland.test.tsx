@@ -15,7 +15,7 @@ vi.mock('../../lib/env', () => ({
 import WaitlistFormIsland from './WaitlistFormIsland';
 
 describe('WaitlistFormIsland', () => {
-  it('collects email and optional broad early-access details only', () => {
+  it('collects email and optional broad product-update details only', () => {
     const html = renderToStaticMarkup(<WaitlistFormIsland />);
 
     expect(html).toContain('Email');
@@ -24,10 +24,20 @@ describe('WaitlistFormIsland', () => {
     expect(html).not.toContain('<select');
     expect(html).toContain('About your work');
     expect(html).toContain(
-      'Role, company, jobsite type, or reporting pain points are all optional.',
+      'Android, web, team rollout, or reporting pain points are all optional.',
     );
+    expect(html).toContain('Get updates →');
     expect(html).not.toContain(
       'Tell us about your work and what you want Harpa Pro to help with',
     );
+  });
+
+  it('reserves source capacity for the product-updates tag', () => {
+    const html = renderToStaticMarkup(<WaitlistFormIsland />);
+    const detailsMax =
+      200 - 'product-updates'.length - ' | '.length;
+
+    expect(html).toContain(`maxLength="${detailsMax}"`);
+    expect(html).not.toContain('maxLength="200"');
   });
 });

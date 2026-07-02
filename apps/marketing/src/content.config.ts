@@ -23,7 +23,7 @@ const roadmap = defineCollection({
   schema: z.object({
     title: z.string(),
     icon: z.string(),
-    status: z.enum(["pilot", "later"]),
+    status: z.enum(["available", "planned"]),
     order: z.number().default(0),
   }),
 });

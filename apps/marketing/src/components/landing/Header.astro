@@ -1,6 +1,7 @@
 ---
 import Wordmark from "./Wordmark.astro";
 import Icon from "../Icon.astro";
+import { APP_STORE_URL } from "../../lib/links";
 
 interface Props {
   hideCta?: boolean;
@@ -31,10 +32,12 @@ const { hideCta = false } = Astro.props;
       </a>
       {!hideCta && (
         <a
-          href="/#waitlist"
+          href={APP_STORE_URL}
+          target="_blank"
+          rel="noopener noreferrer"
           class="inline-flex h-9 items-center rounded-md border border-primary/30 bg-transparent px-4 text-sm font-medium text-primary transition-colors hover:bg-primary hover:text-primary-foreground ring-focus"
         >
-          Join waitlist
+          Download iOS app
         </a>
       )}
     </nav>
@@ -73,10 +76,12 @@ const { hideCta = false } = Astro.props;
           </a>
           {!hideCta && (
             <a
-              href="/#waitlist"
+              href={APP_STORE_URL}
+              target="_blank"
+              rel="noopener noreferrer"
               class="mt-1 inline-flex h-10 items-center justify-center rounded-md border border-primary/30 bg-transparent px-4 text-sm font-medium text-primary"
             >
-              Join waitlist
+              Download iOS app
             </a>
           )}
         </div>

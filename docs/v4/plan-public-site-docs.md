@@ -63,7 +63,7 @@ The implementation keeps responsibilities separated as follows:
 - Modify: app comments that still point at `apps/marketing`
 - Modify: `pnpm-lock.yaml`
 
-- [ ] **Step 1: Change the smoke assertion first**
+- [x] **Step 1: Change the smoke assertion first**
 
 Update the package-name test to make the rename observable before changing
 the package:
@@ -79,7 +79,7 @@ describe('site smoke', () => {
 });
 ```
 
-- [ ] **Step 2: Run the focused test and confirm the expected failure**
+- [x] **Step 2: Run the focused test and confirm the expected failure**
 
 Run:
 
@@ -89,7 +89,7 @@ corepack pnpm --filter @harpa/marketing test -- src/__tests__/smoke.test.ts
 
 Expected: FAIL because the package is still named `@harpa/marketing`.
 
-- [ ] **Step 3: Rename the app, package, and workflows**
+- [x] **Step 3: Rename the app, package, and workflows**
 
 Use `git mv` for tracked directories/files, remove the seven-file Next.js
 placeholder, and update live references so the supported commands become:
@@ -118,7 +118,7 @@ The changed-path composite action exposes one `site` output matching
 `apps/site/**`; remove the separate placeholder-only `docs` output. Change
 Lighthouse's `staticDistDir` to `apps/site/dist`.
 
-- [ ] **Step 4: Refresh the lockfile with the repository pnpm version**
+- [x] **Step 4: Refresh the lockfile with the repository pnpm version**
 
 Run only after package-install permission is confirmed:
 
@@ -129,7 +129,7 @@ corepack pnpm install --lockfile-only
 Expected: the importer is `apps/site`; there are no `apps/marketing` or
 `apps/docs` importers.
 
-- [ ] **Step 5: Verify the rename**
+- [x] **Step 5: Verify the rename**
 
 Run:
 
@@ -142,7 +142,7 @@ rg -n "apps/marketing|@harpa/marketing|apps/docs|@harpa/docs" \
 
 Expected: the test passes and the search returns no live-code references.
 
-- [ ] **Step 6: Commit the mechanical rename**
+- [x] **Step 6: Commit the mechanical rename**
 
 ```bash
 git add apps package.json pnpm-lock.yaml lighthouserc.json .github \
@@ -158,7 +158,7 @@ git commit -m "refactor(site): unify public web app"
 - Create: `apps/site/src/lib/docs.ts`
 - Create: `apps/site/src/__tests__/docs-content.test.ts`
 
-- [ ] **Step 1: Write failing tests for the documentation model**
+- [x] **Step 1: Write failing tests for the documentation model**
 
 Create tests for category identity, slug normalization, and redirect-map
 uniqueness. Full guide-corpus assertions are added immediately before the
@@ -178,7 +178,7 @@ it('keeps categories and redirect paths unique', () => {
 });
 ```
 
-- [ ] **Step 2: Run the focused test and confirm it fails**
+- [x] **Step 2: Run the focused test and confirm it fails**
 
 Run:
 
@@ -188,7 +188,7 @@ corepack pnpm --filter @harpa/site test -- src/__tests__/docs-content.test.ts
 
 Expected: FAIL because `docs.ts` and the guide collection do not exist.
 
-- [ ] **Step 3: Define categories, slug helpers, and redirects**
+- [x] **Step 3: Define categories, slug helpers, and redirects**
 
 Create the framework-independent model:
 
@@ -219,7 +219,7 @@ export function guideSlug(id: string): string {
 }
 ```
 
-- [ ] **Step 4: Add the Astro collection schema**
+- [x] **Step 4: Add the Astro collection schema**
 
 Add a `docs` glob collection with this contract:
 
@@ -241,7 +241,7 @@ const docs = defineCollection({
 export const collections = { faq, features, roadmap, docs };
 ```
 
-- [ ] **Step 5: Re-run the focused test**
+- [x] **Step 5: Re-run the focused test**
 
 Run:
 
@@ -259,7 +259,7 @@ Expected: PASS for the model and schema helpers.
 - Create: `apps/site/src/lib/docs-search.test.ts`
 - Create: `apps/site/src/components/docs/DocsSearch.tsx`
 
-- [ ] **Step 1: Write ranking and empty-query tests**
+- [x] **Step 1: Write ranking and empty-query tests**
 
 ```ts
 it('returns all guides for an empty query', () => {
@@ -280,7 +280,7 @@ it('matches case-insensitively and returns an empty array for no match', () => {
 });
 ```
 
-- [ ] **Step 2: Run the tests and confirm they fail**
+- [x] **Step 2: Run the tests and confirm they fail**
 
 Run:
 
@@ -290,7 +290,7 @@ corepack pnpm --filter @harpa/site test -- src/lib/docs-search.test.ts
 
 Expected: FAIL because `searchGuides` is missing.
 
-- [ ] **Step 3: Implement the pure search function**
+- [x] **Step 3: Implement the pure search function**
 
 ```ts
 export interface DocsSearchEntry {
@@ -325,7 +325,7 @@ export function searchGuides(
 }
 ```
 
-- [ ] **Step 4: Build the accessible React search island**
+- [x] **Step 4: Build the accessible React search island**
 
 `DocsSearch` renders the full server-side guide list, filters it after
 hydration, associates a visible label with the search input, announces result
@@ -333,7 +333,7 @@ counts using `aria-live="polite"`, and shows links to category navigation plus
 `mailto:patrick@harpapro.com` when no guides match. It does not import or call
 any analytics API.
 
-- [ ] **Step 5: Re-run search tests and commit the model/search unit**
+- [x] **Step 5: Re-run search tests and commit the model/search unit**
 
 ```bash
 corepack pnpm --filter @harpa/site test -- \
@@ -359,7 +359,7 @@ Expected: all current site unit tests pass.
 - Modify: `apps/site/src/components/landing/Footer.astro`
 - Modify: `apps/site/src/styles/globals.css`
 
-- [ ] **Step 1: Add shell assertions before the routes exist**
+- [x] **Step 1: Add shell assertions before the routes exist**
 
 Extend `docs-content.test.ts` to assert that both docs routes and their layout
 exist and that the site header no longer points to the old host:
@@ -372,7 +372,7 @@ expect(readFileSync(resolve(srcRoot, 'components/landing/Header.astro'), 'utf8')
   .not.toContain('https://docs.harpapro.com');
 ```
 
-- [ ] **Step 2: Implement the shared docs layout**
+- [x] **Step 2: Implement the shared docs layout**
 
 `DocsLayout.astro` composes the existing `Layout`, `Header`, and `Footer`, then
 adds breadcrumbs, grouped navigation, and a prose slot. Its props are:
@@ -390,7 +390,7 @@ interface Props {
 The desktop sidebar is sticky below the site header. Mobile uses a native
 `<details>` element so guide navigation remains functional without JavaScript.
 
-- [ ] **Step 3: Implement the index route**
+- [x] **Step 3: Implement the index route**
 
 The index loads and sorts guides, maps them to `DocsSearchEntry`, and renders:
 
@@ -406,25 +406,25 @@ The index loads and sorts guides, maps them to `DocsSearchEntry`, and renders:
 </DocsLayout>
 ```
 
-- [ ] **Step 4: Implement generated guide routes**
+- [x] **Step 4: Implement generated guide routes**
 
 `[...slug].astro` uses `getStaticPaths()` over the docs collection, renders
 the selected MDX entry, and passes adjacent entries to `DocsPager`. Unknown
 slugs fall through to the static 404 page at the host.
 
-- [ ] **Step 5: Add docs styling without changing marketing behavior**
+- [x] **Step 5: Add docs styling without changing marketing behavior**
 
 Add focused component-layer classes for a maximum 72-character reading width,
 visible focus rings, 44-pixel mobile controls, responsive two-column layout,
 ordered steps, callouts, tables, inline code, and screenshots. Reuse only the
 existing semantic color tokens.
 
-- [ ] **Step 6: Point global navigation at the canonical route**
+- [x] **Step 6: Point global navigation at the canonical route**
 
 Both desktop and mobile header links use `/docs`. The footer adds a `/docs`
 link between Roadmap and Privacy.
 
-- [ ] **Step 7: Run type/lint checks for the shell**
+- [x] **Step 7: Run type/lint checks for the shell**
 
 ```bash
 corepack pnpm --filter @harpa/site typecheck
@@ -449,7 +449,7 @@ empty collection only if route typing requires entries.
 - Create: `apps/site/src/content/docs/09-account-and-usage.mdx`
 - Create: `apps/site/src/content/docs/10-account-deletion-and-help.mdx`
 
-- [ ] **Step 1: Add and run the failing guide-corpus contract**
+- [x] **Step 1: Add and run the failing guide-corpus contract**
 
 Extend `docs-content.test.ts` to require ten unique guides, resolve every
 related slug and screenshot, require every legacy redirect target, and reject
@@ -484,7 +484,7 @@ corepack pnpm --filter @harpa/site test -- src/__tests__/docs-content.test.ts
 
 Expected: FAIL because the guide directory is still empty.
 
-- [ ] **Step 2: Use the same validated frontmatter shape in every guide**
+- [x] **Step 2: Use the same validated frontmatter shape in every guide**
 
 Each file uses inline arrays so Astro and the validation tests read the same
 data:
@@ -501,7 +501,7 @@ related: ["projects-and-history", "managing-reports"]
 ---
 ```
 
-- [ ] **Step 3: Write guides against explicit product sources**
+- [x] **Step 3: Write guides against explicit product sources**
 
 Use these required sections and sources; do not copy v3 docs:
 
@@ -522,7 +522,7 @@ Every guide contains a short purpose, numbered steps, a "Good to know" block,
 troubleshooting guidance, and related links. State that Android/web are planned
 where platform availability is relevant.
 
-- [ ] **Step 4: Run the content contract tests**
+- [x] **Step 4: Run the content contract tests**
 
 ```bash
 corepack pnpm --filter @harpa/site test -- src/__tests__/docs-content.test.ts
@@ -531,7 +531,7 @@ corepack pnpm --filter @harpa/site test -- src/__tests__/docs-content.test.ts
 Expected: all ten guides, references, assets, redirects, and prohibited-term
 checks pass.
 
-- [ ] **Step 5: Build the static site and inspect generated routes**
+- [x] **Step 5: Build the static site and inspect generated routes**
 
 ```bash
 corepack pnpm --filter @harpa/site build
@@ -540,7 +540,7 @@ find apps/site/dist/docs -maxdepth 3 -type f | sort
 
 Expected: `/docs/index.html` plus ten guide `index.html` files.
 
-- [ ] **Step 6: Commit the documentation experience**
+- [x] **Step 6: Commit the documentation experience**
 
 ```bash
 git add apps/site/src/content apps/site/src/components/docs \
@@ -560,7 +560,7 @@ git commit -m "feat(site): publish current product guides"
 - Modify: `apps/site/src/layouts/Layout.astro`
 - Modify: `apps/site/src/__tests__/smoke.test.ts`
 
-- [ ] **Step 1: Write failing metadata and redirect assertions**
+- [x] **Step 1: Write failing metadata and redirect assertions**
 
 The smoke test must require the generated routes and every legacy map entry:
 
@@ -576,7 +576,7 @@ it('publishes discovery and compatibility routes', () => {
 });
 ```
 
-- [ ] **Step 2: Run the smoke test and confirm it fails**
+- [x] **Step 2: Run the smoke test and confirm it fails**
 
 ```bash
 corepack pnpm --filter @harpa/site test -- src/__tests__/smoke.test.ts
@@ -584,20 +584,20 @@ corepack pnpm --filter @harpa/site test -- src/__tests__/smoke.test.ts
 
 Expected: FAIL because the discovery routes do not exist.
 
-- [ ] **Step 3: Add discovery and error responses**
+- [x] **Step 3: Add discovery and error responses**
 
 `robots.txt.ts` allows crawling and names
 `https://harpapro.com/sitemap.xml`. `sitemap.xml.ts` emits XML for the static
 public routes and all docs guides using `Astro.site`. `404.astro` uses the
 shared site shell and links to `/`, `/docs`, and email support.
 
-- [ ] **Step 4: Add path redirects and metadata behavior**
+- [x] **Step 4: Add path redirects and metadata behavior**
 
 Generate `public/_redirects` from the approved legacy map. Keep canonical and
 Open Graph URL construction in `Layout.astro`; add an optional `noindex` prop
 used by the 404 page. Do not add query capture or search analytics.
 
-- [ ] **Step 5: Re-run smoke, typecheck, and build**
+- [x] **Step 5: Re-run smoke, typecheck, and build**
 
 ```bash
 corepack pnpm --filter @harpa/site test -- src/__tests__/smoke.test.ts
@@ -620,7 +620,7 @@ Expected: all commands pass and discovery files exist in `apps/site/dist`.
 - Modify: `.github/workflows/site-prod.yml`
 - Modify: `lighthouserc.json`
 
-- [ ] **Step 1: Add the site-scoped Playwright dependency**
+- [x] **Step 1: Add the site-scoped Playwright dependency**
 
 After explicit package-install approval:
 
@@ -635,7 +635,7 @@ Add scripts:
 "test:e2e:headed": "playwright test --headed"
 ```
 
-- [ ] **Step 2: Write browser tests before their final wiring**
+- [x] **Step 2: Write browser tests before their final wiring**
 
 The Playwright suite covers:
 
@@ -666,7 +666,7 @@ Also crawl every same-origin link from `/docs` and assert responses are below
 400; request every image and assert a successful response; verify an unknown
 guide uses the branded 404 page.
 
-- [ ] **Step 3: Configure a production-like local server**
+- [x] **Step 3: Configure a production-like local server**
 
 Use Chromium with `baseURL: http://127.0.0.1:3002`, trace/screenshot on first
 retry, and a web server command that builds then runs `astro preview`:
@@ -680,7 +680,7 @@ webServer: {
 }
 ```
 
-- [ ] **Step 4: Run Playwright**
+- [x] **Step 4: Run Playwright**
 
 ```bash
 corepack pnpm --filter @harpa/site exec playwright install chromium
@@ -690,7 +690,7 @@ corepack pnpm --filter @harpa/site test:e2e
 Expected: all desktop, mobile, search, link, asset, redirect, and 404 tests
 pass.
 
-- [ ] **Step 5: Wire preview and deploy workflows**
+- [x] **Step 5: Wire preview and deploy workflows**
 
 The preview workflow targets pull requests to both `dev` and `main`, filters
 on `apps/site/**`, runs site tests/typecheck/build/Playwright, runs Lighthouse,
@@ -700,7 +700,7 @@ paths, filter/package names, output paths, and workflow concurrency groups.
 Add `/docs/` to Lighthouse's URL list while preserving the current score
 thresholds.
 
-- [ ] **Step 6: Commit the quality gates**
+- [x] **Step 6: Commit the quality gates**
 
 ```bash
 git add apps/site/package.json apps/site/playwright.config.ts \
@@ -732,14 +732,14 @@ git commit -m "test(site): gate docs routes and deployment"
 - Modify: `docs/v4/pitfalls.md`
 - Modify: affected bug-log references
 
-- [ ] **Step 1: Update supported commands and architecture**
+- [x] **Step 1: Update supported commands and architecture**
 
 Document `apps/site`, `@harpa/site`, `/docs`, the one-build topology, the three
 renamed workflows, Playwright coverage, and Cloudflare Pages project
 `harpa-pro`. Historical plan prose may retain the word "marketing" as a product
 area, but no command or current path may point to `apps/marketing`.
 
-- [ ] **Step 2: Write the exact cutover and rollback runbook**
+- [x] **Step 2: Write the exact cutover and rollback runbook**
 
 Use current official Cloudflare documentation to record the supported Single
 Redirect expression or wildcard rule for:
@@ -760,7 +760,7 @@ The runbook must include:
 8. Roll back by restoring the previous Vercel DNS record and disabling the
    redirect rule.
 
-- [ ] **Step 3: Search for stale operational references**
+- [x] **Step 3: Search for stale operational references**
 
 ```bash
 rg -n "apps/marketing|@harpa/marketing|marketing-(preview|dev|prod)\.yml|apps/docs|@harpa/docs|Vercel \(or Cloudflare Pages" \
@@ -770,7 +770,7 @@ rg -n "apps/marketing|@harpa/marketing|marketing-(preview|dev|prod)\.yml|apps/do
 
 Expected: no stale supported paths, commands, workflows, or hosting statements.
 
-- [ ] **Step 4: Commit matching documentation**
+- [x] **Step 4: Commit matching documentation**
 
 ```bash
 git add apps/site/README.md docs .env.example docker-compose.yml \
@@ -784,7 +784,7 @@ git commit -m "docs(site): document unified hosting and cutover"
 
 - Modify: `docs/v4/plan-public-site-docs.md` (check completed tasks)
 
-- [ ] **Step 1: Run focused unit and content tests**
+- [x] **Step 1: Run focused unit and content tests**
 
 ```bash
 corepack pnpm --filter @harpa/site test
@@ -792,7 +792,7 @@ corepack pnpm --filter @harpa/site test
 
 Expected: all site Vitest suites pass.
 
-- [ ] **Step 2: Run static analysis**
+- [x] **Step 2: Run static analysis**
 
 ```bash
 corepack pnpm --filter @harpa/site lint
@@ -801,7 +801,7 @@ corepack pnpm --filter @harpa/site typecheck
 
 Expected: zero errors and zero warnings.
 
-- [ ] **Step 3: Run production build and browser verification**
+- [x] **Step 3: Run production build and browser verification**
 
 ```bash
 corepack pnpm --filter @harpa/site build
@@ -811,7 +811,7 @@ corepack pnpm exec lhci autorun --config=./lighthouserc.json
 
 Expected: static build, Playwright, and Lighthouse thresholds pass.
 
-- [ ] **Step 4: Run repository consistency checks**
+- [x] **Step 4: Run repository consistency checks**
 
 ```bash
 git diff --check
@@ -824,14 +824,14 @@ git status --short
 Expected: no whitespace errors, no stale supported references, and only the
 intended plan-checkbox update remains.
 
-- [ ] **Step 5: Commit the completed plan state**
+- [x] **Step 5: Commit the completed plan state**
 
 ```bash
 git add docs/v4/plan-public-site-docs.md
 git commit -m "docs(site): complete public docs rebuild"
 ```
 
-- [ ] **Step 6: Report release boundaries clearly**
+- [x] **Step 6: Report release boundaries clearly**
 
 Handoff states that code and preview/deploy configuration are complete, but
 production promotion, Cloudflare DNS/redirect changes, and Vercel retirement

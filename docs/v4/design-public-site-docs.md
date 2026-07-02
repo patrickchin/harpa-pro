@@ -1,6 +1,7 @@
 # Public site and documentation design
 
-Status: approved on 2026-07-03.
+Status: approved on 2026-07-03; guide hierarchy and screenshot revision
+approved on 2026-07-03.
 
 ## Context
 
@@ -53,25 +54,43 @@ The documentation uses an Astro content collection rooted at
 `apps/site/src/content/docs`. Each guide has validated metadata for:
 
 - title and description;
-- category and display order;
+- tier and display order;
 - search keywords;
 - last-verified date;
 - optional related-guide slugs;
-- optional reviewed screenshot references.
+- a reviewed hero screenshot and useful alt text.
 
 `/docs` is the searchable guide index. Individual guides use
-`/docs/guides/<slug>`. The first release covers:
+`/docs/guides/<slug>`. The hierarchy follows the original documentation site
+more closely while updating every instruction for v4.
 
-1. Getting started and email OTP.
-2. Projects and report history.
-3. Creating and managing reports.
-4. Text, photo, document, batch-photo, and voice notes.
-5. AI report generation and automatic regeneration.
-6. Editing report cards and unfinalizing reports.
-7. Finalizing, exporting, and sharing on-device PDFs.
-8. Email invitations and Owner, Editor, and Viewer roles.
-9. Account details, usage limits and history, privacy, cache, and sign-out.
-10. Account deletion and troubleshooting.
+### Core workflows
+
+1. Generate an AI report.
+2. Export and share a PDF.
+
+### Everyday tasks
+
+1. Create and manage projects.
+2. Capture notes, photos, and voice notes.
+3. Add members to a project.
+4. Edit a report manually.
+5. Browse and reopen saved reports.
+
+### Setup and account
+
+1. Getting started.
+2. Your account.
+
+Account deletion, usage, privacy, cache controls, and sign-out are concise
+sections inside **Your account**. The dedicated account-deletion legal route
+remains available outside the guide collection.
+
+Core workflow guides contain no more than five steps and 450 words. Smaller
+task guides contain three or four steps and no more than 300 words. Tips and
+troubleshooting appear only when they prevent a likely user failure. Guides do
+not repeat product background, platform caveats, or generic "Good to know"
+material.
 
 Guide copy is verified against the current mobile implementation and v4
 architecture documents. The build rejects stale claims about SMS login,
@@ -82,23 +101,53 @@ PDFs, or public Android availability.
 
 The docs reuse the public site's warm-paper, navy, and orange design tokens,
 Inter typography, wordmark, header, footer, focus treatment, and responsive
-conventions. A documentation layout adds:
+conventions. The index restores the original task-first presentation:
 
-- category navigation on desktop;
+- the heading **What do you want to do?** with a current app screenshot;
+- two large core-workflow cards;
+- smaller everyday-task cards;
+- de-emphasized setup and account links;
+- local search as a supporting control rather than the primary hierarchy.
+
+The documentation layout adds:
+
+- tiered navigation on desktop;
 - accessible mobile navigation;
 - breadcrumbs;
 - previous and next guide links;
 - related guides;
-- readable prose, callout, step, and screenshot styles.
+- numbered step cards and phone-framed screenshots.
 
 The core content and navigation work without JavaScript. Search is a small
 client-side enhancement over a static build-time index. Search terms stay in
 the browser and are not sent to analytics. No-results states suggest browsing
 categories or contacting support.
 
-Only reviewed screenshots from the current v4 app may ship. Existing checked-in
-store screenshots can be reused where they accurately illustrate a guide. Old
-H3/v3 screenshots and generated mockups are excluded.
+Only reviewed screenshots from the current v4 app may ship. The initial
+revision reuses the checked-in App Store screenshots and copies them into the
+site's public assets so the public-site build does not depend on another
+workspace at deploy time. New task-specific captures are deferred until an
+important screen is missing. Old H3/v3 screenshots and generated mockups are
+excluded.
+
+The initial screenshot map is:
+
+| Guide or surface | Screenshot |
+| --- | --- |
+| Docs index | Generated report or notes capture |
+| Generate an AI report | Projects, voice/notes, generated report |
+| Export and share a PDF | PDF preview |
+| Create and manage projects | Projects list |
+| Capture notes, photos, and voice notes | Voice/notes capture |
+| Add members to a project | Members list |
+| Edit a report manually | Closest current generated-report view |
+| Browse and reopen saved reports | Reports list |
+| Getting started | Projects list |
+| Your account | Usage history |
+
+Every image has descriptive alt text, explicit dimensions, and lazy loading
+below the fold. A missing referenced image fails the content contract instead
+of silently rendering a placeholder.
 
 ## Routes, metadata, and compatibility
 
@@ -106,8 +155,12 @@ The site provides canonical URLs, per-page descriptions, Open Graph and
 Twitter metadata, a sitemap, robots rules, and a useful static 404 page.
 Marketing navigation links to `/docs` instead of the old hostname.
 
-Known old documentation paths receive permanent redirects to the closest new
-guide. The Cloudflare hostname rule redirects other
+Canonical guide slugs mirror the original task names where possible, including
+`generate-ai-report`, `export-share-pdf`, `capture-notes-voice`, and
+`browse-saved-reports`. Known old documentation paths receive permanent
+redirects to the matching `/docs/guides/...` route. The temporary slugs from
+the first pull-request revision also redirect so review links remain valid.
+The Cloudflare hostname rule redirects other
 `docs.harpapro.com/<path>` requests to the canonical `/docs` destination. The
 cutover runbook records the exact redirect map and a rollback procedure.
 
@@ -140,7 +193,9 @@ to `main`.
 
 Astro content schemas fail the build for invalid or missing guide metadata.
 Additional tests fail on duplicate slugs, broken related-guide references,
-missing local assets, prohibited stale terminology, or invalid route mappings.
+missing local assets or alt text, prohibited stale terminology, invalid route
+mappings, a guide count other than nine, a core-workflow count other than two,
+or content that exceeds the approved step limits.
 
 The quality gates are:
 
@@ -148,8 +203,9 @@ The quality gates are:
 - Astro type checking;
 - ESLint;
 - a static production build;
-- Playwright coverage for desktop and mobile navigation, guide rendering,
-  local search, empty search results, legacy redirects, and missing routes;
+- Playwright coverage for the three-tier desktop and mobile navigation, guide
+  rendering, screenshots, local search, empty search results, legacy
+  redirects, and missing routes;
 - internal-link, fragment, and asset validation;
 - the existing Lighthouse thresholds for performance, accessibility, best
   practices, and SEO.

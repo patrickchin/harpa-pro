@@ -196,12 +196,12 @@ export.
       fields, all server-validated; a controlled `useState` form is
       ~30 lines less code and one less dep. Server-side Zod (in
       `@harpa/api-contract`) is the source of truth for validation.
-- [x] Created `apps/marketing/src/components/landing/WaitlistFormIsland.tsx`
+- [x] Created `apps/site/src/components/landing/WaitlistFormIsland.tsx`
       — React 19, mounted via `client:only="react"` (the Turnstile
       widget touches browser globals on module init, so SSR is
       impossible). An Astro fallback slot covers the pre-hydration
       flash.
-- [x] Centralised env access in `apps/marketing/src/lib/env.ts`
+- [x] Centralised env access in `apps/site/src/lib/env.ts`
       (`PUBLIC_API_BASE_URL`, `PUBLIC_TURNSTILE_SITE_KEY`). Defaults
       to `https://api.harpapro.com` + Cloudflare's always-passes test
       key (`1x00000000000000000000AA`) so `pnpm dev` works with no
@@ -215,11 +215,11 @@ export.
       "Too many requests from your network" message so users on
       shared networks understand the back-off.
 - [x] Posts to `${apiBaseUrl}/waitlist` (no proxy; CORS direct).
-- [x] Build verified: `pnpm --filter @harpa/marketing build` ships
+- [x] Build verified: `pnpm --filter @harpa/site build` ships
       a ~58 KB gzipped client bundle (React + Turnstile + island).
       Above-the-fold pages remain zero-JS — the form chunk is
       lazy-loaded.
-- [x] Added `apps/marketing/.env.example` documenting the two
+- [x] Added `apps/site/.env.example` documenting the two
       `PUBLIC_*` vars + the always-passes Turnstile test key.
 - [x] Unit test on `getPublicEnv()` defaults; the heavier
       behavioural assertions live on the API side
@@ -269,7 +269,7 @@ export.
 - [x] Quality gates: `check-spec-drift.sh`, `check-no-supabase.sh`,
       `check-no-unistyles.sh` all green; working tree clean.
 - [ ] Form works end-to-end on preview deploy. **(Operator action:
-      deploy `apps/marketing` to Cloudflare Pages preview with
+      deploy `apps/site` to Cloudflare Pages preview with
       `PUBLIC_API_BASE_URL=https://api.harpapro.com` +
       `PUBLIC_TURNSTILE_SITE_KEY` set, then submit a real signup.
       Code-side is complete and tested.)**

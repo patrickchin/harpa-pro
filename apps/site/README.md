@@ -12,6 +12,7 @@ See [`docs/marketing/`](../../docs/marketing/) for the full plan
 pnpm --filter @harpa/site dev      # http://localhost:3002
 pnpm --filter @harpa/site build
 pnpm --filter @harpa/site typecheck
+pnpm --filter @harpa/site test:e2e
 ```
 
 ## Stack
@@ -20,9 +21,12 @@ pnpm --filter @harpa/site typecheck
 - Tailwind v4 via `@tailwindcss/vite`
 - React 19 islands (added in M1/M2)
 - MDX content collections (added in M0.4)
+- Typed product guides under `/docs`
+- Playwright coverage for docs navigation, search, links, and mobile layout
 - Deployed to Cloudflare Pages by uploading `dist/` directly via
   `wrangler pages deploy` (the `@astrojs/cloudflare` adapter is
   intentionally not installed — it's only required for SSR routes).
 
 Hard rules: no JS unless an island needs it; no analytics with
-cookies pre-consent; Lighthouse ≥ 95 across the board.
+cookies pre-consent; Lighthouse performance/accessibility ≥ 90 and best
+practices/SEO ≥ 95.

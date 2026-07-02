@@ -17,7 +17,8 @@
 - [x] CI workflow `pr-preview.yml` creates a Neon branch, runs migrations, and tears it down on close.
 - [x] All grep-gates from [arch-testing.md](arch-testing.md) §"Removal verification gates" exist and pass.
 - [x] `apps/mobile` boots (blank screen) on iOS sim with `pnpm ios`.
-- [x] `apps/docs` builds.
+- [x] Public documentation builds under `apps/site` (the original standalone
+      placeholder was retired on 2026-07-03).
 
 ## Tasks
 
@@ -68,9 +69,10 @@
 - [x] Vitest config (jsdom + react-test-renderer).
 - [x] Commit: `chore(mobile): Expo + NativeWind scaffold with env + lint guards`.
 
-### P0.7 `apps/docs` scaffold
-- [x] Next.js docs site placeholder (will host in-app guides).
-- [x] Commit: `chore(docs): scaffold Next.js docs site`.
+### P0.7 documentation scaffold (superseded)
+- [x] The original Next.js placeholder shipped in P0.
+- [x] Product guides now live in the Astro public site at
+      `apps/site/src/content/docs` and publish under `/docs`.
 
 ### P0.8 Infra scripts
 - [x] `infra/neon/branch.ts` — create/delete branches via Neon API.

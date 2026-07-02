@@ -29,10 +29,15 @@
   [arch-database.md](arch-database.md).
 - **Storage**: Cloudflare R2. Separate buckets per env
   (`harpa-pro` / `harpa-pro-dev`). See [arch-storage.md](arch-storage.md).
-- **Marketing**: Cloudflare Pages project `harpa-pro`.
+- **Public site**: Astro app `apps/site` on Cloudflare Pages project
+  `harpa-pro`. One static deployment serves marketing, roadmap, legal, and
+  product guides at `https://harpapro.com/docs`.
   - Production branch `main` → `https://harpapro.com` (and
     `harpa-pro.pages.dev`).
   - Dev branch `dev` → `https://dev.harpa-pro.pages.dev`.
+  - After cutover, the standalone hostname `docs.harpapro.com` redirects to
+    the canonical `/docs` routes through Cloudflare zone rules. See
+    [the Cloudflare Pages runbook](../marketing/deploy-cloudflare-pages.md).
 - **Mobile**: Fastlane + EAS. Fastlane owns checked-in App Store /
   Play Store metadata, guarded screenshot/privacy lanes, and local
   release orchestration; EAS owns Expo native builds, signing, binary
@@ -84,8 +89,6 @@
   Play metadata upload may require an existing release on the target
   track; if `supply` reports an empty track, run the EAS submit lane
   once for that track and re-run the metadata lane.
-- **Docs site**: Vercel (or Cloudflare Pages — TBD in P0).
-
 ## Mobile store launch workflow
 
 Store launch is a two-layer workflow:
@@ -382,7 +385,7 @@ and stored as GitHub Actions repo secrets.
 The filter pattern excludes vars that don't belong on Fly: Doppler
 metadata, Neon admin credentials (only `DATABASE_URL` is needed on
 the app), Cloudflare deploy tokens, build-time `PUBLIC_*` /
-`EXPO_PUBLIC_*` (consumed by the marketing site / mobile app at build,
+`EXPO_PUBLIC_*` (consumed by the public site / mobile app at build,
 not by the API at runtime), and a handful of CI-only flags.
 
 - `.env.example` at the repo root enumerates every
@@ -430,7 +433,7 @@ PR open / push (same-repo only, forks skipped)
       ↳ release_command applies migrations to pr-<n>
       ↳ /readyz verified
       ↳ sticky PR comment with preview URL
-  ↳ marketing preview deploy to CF Pages (marketing-preview.yml)
+  ↳ public-site preview deploy to CF Pages (site-preview.yml)
   ↳ EAS Update → `development` channel (mobile-ota-pr.yml)
     ↳ bundle's API override is `harpa-pro-api-pr-<n>.fly.dev`
       when the PR changes API inputs
@@ -447,7 +450,7 @@ Push to dev
   ↳ Neon `dev` branch ensured (idempotent, long-lived)
   ↳ migrations applied to `dev`
   ↳ Fly deploy → harpa-pro-api-dev (api-dev.yml)
-  ↳ marketing deploy to CF Pages dev branch (marketing-dev.yml)
+  ↳ public-site deploy to CF Pages dev branch (site-dev.yml)
   ↳ EAS Update → `preview` channel (mobile-ota-dev.yml)
   ↳ release patch commit + tag added to `dev` (version-bump-dev.yml)
   ↳ Fastlane `beta` (manual): metadata -> EAS preview build --auto-submit
@@ -455,7 +458,7 @@ Push to dev
 Push to main (production)
   ↳ migrations applied to Neon `main`
   ↳ Fly deploy → harpa-pro-api (api-prod.yml)
-  ↳ marketing deploy to CF Pages production (marketing-prod.yml)
+  ↳ public-site deploy to CF Pages production (site-prod.yml)
   ↳ EAS Update → `production` channel (mobile-ota-prod.yml)
   ↳ Fastlane `release` (manual approve): metadata -> EAS production build --auto-submit
 ```

@@ -2,7 +2,7 @@
 
 ## What this session is
 
-You are starting work on **`apps/marketing`** — a new mostly-static
+You are starting work on **`apps/site`** — a new mostly-static
 marketing site for harpa.app at `harpapro.com`. The mobile app track
 (P2+) is **paused**. Do not touch `apps/mobile/` or `docs/v4/`.
 
@@ -12,7 +12,7 @@ aggressively to keep this main thread's context small.
 
 ## Read these first (and only these)
 
-- [`AGENTS.md`](../../AGENTS.md) — repo-wide hard rules. Note: `apps/marketing/` is a new
+- [`AGENTS.md`](../../AGENTS.md) — repo-wide hard rules. Note: `apps/site/` is a new
   workspace, but every hard rule still applies (Conventional Commits,
   no Supabase, NativeWind only in mobile, docs-in-same-PR, etc.).
 - [`docs/marketing/README.md`](../README.md) — architecture summary,
@@ -44,13 +44,13 @@ infrastructure you need to know about:
 
 - Domain: **`harpapro.com`** (already registered via Cloudflare Registrar).
 - Subdomains: `harpapro.com` apex (marketing), `app.harpapro.com`
-  (future product, not built yet), `docs.harpapro.com` (`apps/docs`),
+  (future product, not built yet), and product guides under `/docs`,
   `api.harpapro.com` (Fly API).
 - Stack: Astro 5, Tailwind v4, React 19 islands, MDX content
   collections, Cloudflare Pages, pnpm.
 - **Voice demo at launch (M2): static.** Browser records audio for
   UX (waveform, countdown) but discards the blob; canned fixtures
-  in `apps/marketing/src/fixtures/demo/` play out on a scripted
+  in `apps/site/src/fixtures/demo/` play out on a scripted
   timer. No API, no R2, no auth. Audio never leaves the device.
 - **Voice demo (live API) is deferred to M4** — post-launch. Don't
   build any of the demo session JWT / R2 / CORS plumbing during
@@ -110,7 +110,7 @@ a subagent can summarise.
 1. Read `docs/marketing/README.md` and `docs/marketing/plan-m0-foundation.md`
    end-to-end.
 2. Use `manage_todo_list` to mirror the M0 task list (M0.1 through M0.7).
-3. Mark M0.1 in-progress and begin: scaffold `apps/marketing/` as a new
+3. Mark M0.1 in-progress and begin: scaffold `apps/site/` as a new
    pnpm workspace with Astro 5 + Tailwind v4 + the Cloudflare adapter.
 
 ## Out of scope for this session

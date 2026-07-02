@@ -7,6 +7,7 @@ interface Props {
   description?: string;
   image?: string;
   imageAlt?: string;
+  noindex?: boolean;
 }
 
 const {
@@ -14,6 +15,7 @@ const {
   description = "Harpa Pro is now available for iPhone. Create daily construction reports from voice notes, photos, and field updates before leaving the jobsite.",
   image = "/og-image.png",
   imageAlt = "Harpa Pro — Site reports by voice.",
+  noindex = false,
 } = Astro.props;
 
 const canonicalUrl = new URL(Astro.url.pathname, Astro.site);
@@ -26,6 +28,7 @@ const ogImageUrl = new URL(image, Astro.site);
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content={description} />
+    {noindex && <meta name="robots" content="noindex, nofollow" />}
     <meta name="theme-color" content="#e55d22" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="canonical" href={canonicalUrl} />

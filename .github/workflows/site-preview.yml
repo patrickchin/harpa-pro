@@ -11,6 +11,8 @@ on:
     paths:
       - "apps/site/**"
       - ".github/workflows/site-preview.yml"
+      - "lighthouserc.json"
+      - "package.json"
       - "pnpm-lock.yaml"
 
 # Cancel stale builds when a PR gets a new push.
@@ -30,6 +32,15 @@ jobs:
 
       - uses: ./.github/actions/setup-monorepo
 
+      - name: Test public site
+        run: pnpm --filter @harpa/site test
+
+      - name: Lint public site
+        run: pnpm --filter @harpa/site lint
+
+      - name: Typecheck public site
+        run: pnpm --filter @harpa/site typecheck
+
       - name: Build public site
         # See site-prod.yml for why PUBLIC_* must be set HERE
         # (Astro inlines them at build time; CF Pages env vars don't
@@ -39,7 +50,21 @@ jobs:
           PUBLIC_API_BASE_URL: https://api.harpapro.com
         run: pnpm --filter @harpa/site build
 
-      - name: Lighthouse CI (perf/a11y/bp/seo ≥ 0.95)
+      - name: Install Playwright Chromium
+        run: pnpm --filter @harpa/site exec playwright install --with-deps chromium
+
+      - name: Browser-test documentation
+        run: pnpm --filter @harpa/site test:e2e
+
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: site-playwright-report
+          path: apps/site/playwright-report/
+          retention-days: 14
+
+      - name: Lighthouse CI (perf/a11y ≥ 0.90, bp/seo ≥ 0.95)
         run: pnpm exec lhci autorun --config=./lighthouserc.json
         env:
           LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN }}
@@ -58,6 +83,22 @@ jobs:
             --branch=${{ github.head_ref }}
             --commit-dirty=true
 
+      - name: Verify deployed docs redirect
+        if: steps.deploy.outputs.deployment-url
+        shell: bash
+        run: |
+          read -r status location < <(
+            curl --silent --show-error --output /dev/null \
+              --max-redirs 0 \
+              --write-out '%{http_code} %{redirect_url}' \
+              "${{ steps.deploy.outputs.deployment-url }}/guides/getting-started"
+          )
+          test "$status" = "301"
+          case "$location" in
+            */docs/guides/getting-started) ;;
+            *) echo "Unexpected redirect: $location" >&2; exit 1 ;;
+          esac
+
       - name: Comment preview URL on PR
         if: steps.deploy.outputs.deployment-url
         uses: marocchino/sticky-pull-request-comment@v2
@@ -73,8 +114,10 @@ jobs:
 
             <details><summary>What this checks</summary>
 
+            - Site unit tests, lint, and Astro type checking pass
             - Astro build of `apps/site` succeeds
-            - Lighthouse CI (perf/a11y/bp/seo ≥ 0.95) passes
-            - Static output deploys to Cloudflare Pages
+            - Playwright docs navigation, search, links, assets, and mobile checks pass
+            - Lighthouse CI thresholds pass
+            - Static output and legacy redirects work on Cloudflare Pages
 
             </details>

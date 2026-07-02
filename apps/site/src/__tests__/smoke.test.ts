@@ -2,7 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { existsSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
-import { LEGACY_DOC_REDIRECTS } from '../lib/docs';
+import {
+  FIRST_REVISION_DOC_REDIRECTS,
+  LEGACY_DOC_REDIRECTS,
+} from '../lib/docs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 
@@ -27,6 +30,9 @@ describe('site smoke', () => {
 
     const redirects = readFileSync(resolve(here, '../../public/_redirects'), 'utf8');
     for (const [from, to] of Object.entries(LEGACY_DOC_REDIRECTS)) {
+      expect(redirects).toContain(`${from} ${to} 301`);
+    }
+    for (const [from, to] of Object.entries(FIRST_REVISION_DOC_REDIRECTS)) {
       expect(redirects).toContain(`${from} ${to} 301`);
     }
 

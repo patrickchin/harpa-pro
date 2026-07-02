@@ -116,7 +116,7 @@ jobs:
 
             - Site unit tests, lint, and Astro type checking pass
             - Astro build of `apps/site` succeeds
-            - Playwright docs navigation, search, links, assets, and mobile checks pass
+            - Playwright validates the task hierarchy, search, screenshot assets, links, and mobile layout
             - Lighthouse CI thresholds pass
             - Static output and legacy redirects work on Cloudflare Pages
 

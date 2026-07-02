@@ -1,0 +1,78 @@
+---
+import { getCollection, render, type CollectionEntry } from "astro:content";
+
+import DocsPager from "../../../components/docs/DocsPager.astro";
+import DocsLayout from "../../../layouts/DocsLayout.astro";
+import {
+  docsCategoryLabel,
+  guideHref,
+  guideSlug,
+  sortGuides,
+} from "../../../lib/docs";
+
+interface Props {
+  guide: CollectionEntry<"docs">;
+  guides: CollectionEntry<"docs">[];
+  previous?: CollectionEntry<"docs">;
+  next?: CollectionEntry<"docs">;
+}
+
+export async function getStaticPaths() {
+  const guides = sortGuides(await getCollection("docs"));
+
+  return guides.map((guide, index) => ({
+    params: { slug: guideSlug(guide.id) },
+    props: {
+      guide,
+      guides,
+      previous: guides[index - 1],
+      next: guides[index + 1],
+    },
+  }));
+}
+
+const { guide, guides, previous, next } = Astro.props;
+const { Content } = await render(guide);
+const slug = guideSlug(guide.id);
+const relatedGuides = guide.data.related
+  .map((relatedSlug) =>
+    guides.find((candidate) => guideSlug(candidate.id) === relatedSlug),
+  )
+  .filter((candidate): candidate is CollectionEntry<"docs"> => Boolean(candidate));
+---
+
+<DocsLayout
+  title={guide.data.title}
+  description={guide.data.description}
+  guides={guides}
+  currentSlug={slug}
+  currentTitle={guide.data.title}
+>
+  <header class="docs-guide-heading">
+    <p>{docsCategoryLabel(guide.data.category)}</p>
+    <h1>{guide.data.title}</h1>
+    <span>{guide.data.description}</span>
+    <small>Verified {guide.data.lastVerified}</small>
+  </header>
+
+  <article class="docs-prose">
+    <Content />
+  </article>
+
+  {
+    relatedGuides.length > 0 && (
+      <section class="docs-related" aria-labelledby="related-guides-heading">
+        <h2 id="related-guides-heading">Related guides</h2>
+        <ul>
+          {relatedGuides.map((related) => (
+            <li>
+              <a href={guideHref(related.id)}>{related.data.title}</a>
+            </li>
+          ))}
+        </ul>
+      </section>
+    )
+  }
+
+  <DocsPager previous={previous} next={next} />
+</DocsLayout>

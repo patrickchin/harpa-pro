@@ -21,7 +21,7 @@ function required(
   if (!v) {
     throw new Error(
       `[site/env] Missing ${key}. Set it in apps/site/.env (dev) ` +
-        `or as a GitHub Actions secret (CI — see .github/workflows/marketing-*.yml).`,
+        `or as a GitHub Actions secret (CI — see .github/workflows/site-*.yml).`,
     );
   }
   return v;

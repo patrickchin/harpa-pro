@@ -1,0 +1,33 @@
+---
+import type { CollectionEntry } from "astro:content";
+
+import { guideHref } from "../../lib/docs";
+
+interface Props {
+  previous?: CollectionEntry<"docs">;
+  next?: CollectionEntry<"docs">;
+}
+
+const { previous, next } = Astro.props;
+---
+
+<nav aria-label="Guide pagination" class="docs-pager">
+  {
+    previous ? (
+      <a href={guideHref(previous.id)} rel="prev">
+        <span>Previous</span>
+        <strong>{previous.data.title}</strong>
+      </a>
+    ) : (
+      <span />
+    )
+  }
+  {
+    next && (
+      <a href={guideHref(next.id)} rel="next">
+        <span>Next</span>
+        <strong>{next.data.title}</strong>
+      </a>
+    )
+  }
+</nav>

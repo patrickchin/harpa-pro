@@ -1,0 +1,37 @@
+---
+import { getCollection } from "astro:content";
+
+import { DocsSearch } from "../../components/docs/DocsSearch";
+import DocsLayout from "../../layouts/DocsLayout.astro";
+import {
+  docsCategoryLabel,
+  guideSlug,
+  sortGuides,
+} from "../../lib/docs";
+
+const guides = sortGuides(await getCollection("docs"));
+const searchEntries = guides.map((guide) => ({
+  slug: guideSlug(guide.id),
+  title: guide.data.title,
+  description: guide.data.description,
+  category: guide.data.category,
+  categoryLabel: docsCategoryLabel(guide.data.category),
+  keywords: guide.data.keywords,
+}));
+---
+
+<DocsLayout
+  title="Harpa Pro guides"
+  description="Current guides for capturing site activity and producing reports with Harpa Pro."
+  guides={guides}
+>
+  <header class="docs-hero">
+    <p>Product guides</p>
+    <h1>Harpa Pro guides</h1>
+    <span>
+      Set up the iPhone app, capture the day, and finish a clear site report.
+    </span>
+  </header>
+
+  <DocsSearch entries={searchEntries} client:load />
+</DocsLayout>

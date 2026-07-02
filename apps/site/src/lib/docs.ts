@@ -23,3 +23,34 @@ export const LEGACY_DOC_REDIRECTS = {
 export function guideSlug(id: string): string {
   return id.replace(/\.(md|mdx)$/, "").replace(/^\d+-/, "");
 }
+
+export function guideHref(id: string): string {
+  return `/docs/guides/${guideSlug(id)}`;
+}
+
+export function docsCategoryLabel(category: DocsCategory): string {
+  return (
+    DOCS_CATEGORIES.find(({ id }) => id === category)?.label ?? "Guides"
+  );
+}
+
+interface SortableGuide {
+  data: {
+    category: DocsCategory;
+    order: number;
+  };
+}
+
+export function sortGuides<T extends SortableGuide>(guides: readonly T[]): T[] {
+  const categoryOrder = new Map(
+    DOCS_CATEGORIES.map(({ id }, index) => [id, index]),
+  );
+
+  return [...guides].sort((a, b) => {
+    const categoryDifference =
+      (categoryOrder.get(a.data.category) ?? Number.MAX_SAFE_INTEGER) -
+      (categoryOrder.get(b.data.category) ?? Number.MAX_SAFE_INTEGER);
+
+    return categoryDifference || a.data.order - b.data.order;
+  });
+}

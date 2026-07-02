@@ -15,9 +15,9 @@ const entries: DocsSearchEntry[] = [
     keywords: ["install", "email"],
   },
   {
-    slug: "capturing-notes",
-    title: "Capturing notes",
-    description: "Add photos, documents, and field updates.",
+    slug: "capture-notes-voice",
+    title: "Capture notes, photos, and voice notes",
+    description: "Add focused field updates to a draft report.",
     tier: "everyday",
     tierLabel: "Everyday tasks",
     keywords: ["voice", "photo"],
@@ -31,8 +31,8 @@ const entries: DocsSearchEntry[] = [
     keywords: ["recording"],
   },
   {
-    slug: "finalize-export-share",
-    title: "Finalize, export, and share",
+    slug: "export-share-pdf",
+    title: "Export and share a PDF",
     description: "Create and share a file from your device.",
     tier: "core",
     tierLabel: "Core workflows",
@@ -45,17 +45,17 @@ describe("searchGuides", () => {
     expect(searchGuides(entries, "")).toEqual(entries);
   });
 
-  it("ranks title matches before keyword and description matches", () => {
+  it("ranks matches by field and preserves input order for ties", () => {
     expect(searchGuides(entries, "voice").map((entry) => entry.slug)).toEqual([
+      "capture-notes-voice",
       "voice-notes",
-      "capturing-notes",
       "getting-started",
     ]);
   });
 
   it("matches case-insensitively and returns no unrelated guides", () => {
     expect(searchGuides(entries, "PDF")[0]?.slug).toBe(
-      "finalize-export-share",
+      "export-share-pdf",
     );
     expect(searchGuides(entries, "fax machine")).toEqual([]);
   });

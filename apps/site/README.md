@@ -30,3 +30,20 @@ pnpm --filter @harpa/site test:e2e
 Hard rules: no JS unless an island needs it; no analytics with
 cookies pre-consent; Lighthouse performance/accessibility ≥ 90 and best
 practices/SEO ≥ 95.
+
+## Product guides
+
+`/docs` uses a task-first structure designed to keep new users focused:
+
+- two core workflows: generating an AI report and exporting/sharing a PDF;
+- five short everyday-task guides; and
+- two setup/account guides.
+
+Guide content lives in `src/content/docs/`. Current mobile screenshots are
+copied from `apps/mobile/fastlane/screenshots/en-US/` into
+`src/assets/docs/`, then Astro emits responsive WebP variants during the static
+build. Keep the checked-in source images unchanged unless the mobile UI is
+recaptured and reviewed.
+
+Legacy `/guides/*` URLs and slugs from the first unified-site revision are
+preserved in `public/_redirects`.

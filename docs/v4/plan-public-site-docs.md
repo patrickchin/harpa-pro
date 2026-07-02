@@ -1,5 +1,9 @@
 # Unified public site documentation implementation plan
 
+> **Historical plan:** This records the original unified-site implementation.
+> The current nine-guide hierarchy and screenshot revision are specified in
+> [`plan-public-site-docs-task-first.md`](plan-public-site-docs-task-first.md).
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use
 > superpowers:subagent-driven-development (recommended) or
 > superpowers:executing-plans to implement this plan task-by-task. Steps use

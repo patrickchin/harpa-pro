@@ -75,7 +75,7 @@ function guideWordCount(source: string): number {
 describe("docs content model", () => {
   it("normalizes ordered content ids to public slugs", () => {
     expect(guideSlug("01-getting-started.mdx")).toBe("getting-started");
-    expect(guideSlug("project-members.md")).toBe("project-members");
+    expect(guideSlug("manage-projects.md")).toBe("manage-projects");
   });
 
   it("defines the approved task-first tiers", () => {

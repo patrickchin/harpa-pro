@@ -65,7 +65,7 @@ island, Tailwind/CSS, Vitest, Playwright, Lighthouse CI, Cloudflare Pages.
 - Modify: `apps/site/src/__tests__/docs-content.test.ts`
 - Modify: `apps/site/public/_redirects`
 
-- [ ] **Step 1: Write the failing tier, guide, and redirect tests**
+- [x] **Step 1: Write the failing tier, guide, and redirect tests**
 
 Replace the category assertions in `docs-content.test.ts` with these exact
 contracts before changing implementation:
@@ -95,7 +95,7 @@ it("keeps old and first-revision routes compatible", () => {
 Import `DOCS_TIERS` and `FIRST_REVISION_DOC_REDIRECTS` from `../lib/docs`.
 Keep the existing prohibited-copy assertions.
 
-- [ ] **Step 2: Run the focused test and verify the expected failure**
+- [x] **Step 2: Run the focused test and verify the expected failure**
 
 Run:
 
@@ -106,7 +106,7 @@ corepack pnpm --filter @harpa/site test -- src/__tests__/docs-content.test.ts
 Expected: FAIL because `DOCS_TIERS` and `FIRST_REVISION_DOC_REDIRECTS` do not
 exist.
 
-- [ ] **Step 3: Define tiers, screenshot ids, sorting, and canonical redirects**
+- [x] **Step 3: Define tiers, screenshot ids, sorting, and canonical redirects**
 
 Replace the category model in `docs.ts` with:
 
@@ -167,7 +167,7 @@ export function docsTierLabel(tier: DocsTier): string {
 }
 ```
 
-- [ ] **Step 4: Update the Astro guide schema**
+- [x] **Step 4: Update the Astro guide schema**
 
 Import `DOCS_SCREENSHOT_IDS` into `content.config.ts` and use this schema:
 
@@ -191,7 +191,7 @@ Use local tuple aliases before `z.enum` so TypeScript retains the literal tuple:
 const DOCS_TIERS = ["core", "everyday", "setup"] as const;
 ```
 
-- [ ] **Step 5: Replace the checked-in redirects**
+- [x] **Step 5: Replace the checked-in redirects**
 
 Write `apps/site/public/_redirects` with all ten legacy entries followed by the
 nine first-revision aliases. Every line uses `301`. The first two lines are:
@@ -208,14 +208,14 @@ The last two lines are:
 /docs/guides/account-deletion-and-help /docs/guides/your-account 301
 ```
 
-- [ ] **Step 6: Re-run the focused model test**
+- [x] **Step 6: Re-run the focused model test**
 
 Run the Task 1 test again. Expected: the new tier and redirect assertions pass,
 but the complete file remains red because the existing ten-guide corpus still
 uses the old schema and routes. This is an intentional TDD checkpoint; Tasks 3
 and 4 migrate the complete corpus before the first implementation commit.
 
-- [ ] **Step 7: Keep the model changes uncommitted until the corpus is green**
+- [x] **Step 7: Keep the model changes uncommitted until the corpus is green**
 
 Do not create a deliberately broken intermediate commit. Keep these focused
 changes in the worktree and continue directly to Task 2.
@@ -237,7 +237,7 @@ changes in the worktree and continue directly to Task 2.
 - Create: `apps/site/src/components/docs/GuideStep.astro`
 - Modify: `apps/site/src/__tests__/docs-content.test.ts`
 
-- [ ] **Step 1: Write the failing screenshot registry test**
+- [x] **Step 1: Write the failing screenshot registry test**
 
 Add:
 
@@ -260,11 +260,11 @@ it("registers every approved v4 docs screenshot", () => {
 });
 ```
 
-- [ ] **Step 2: Run the focused test and verify it fails**
+- [x] **Step 2: Run the focused test and verify it fails**
 
 Run the content test. Expected: FAIL because `docs-screenshots.ts` is missing.
 
-- [ ] **Step 3: Copy the reviewed screenshots into the site asset graph**
+- [x] **Step 3: Copy the reviewed screenshots into the site asset graph**
 
 Copy, without modifying the source App Store assets:
 
@@ -287,7 +287,7 @@ cp apps/mobile/fastlane/screenshots/en-US/08_usage.png \
   apps/site/src/assets/docs/08-usage.png
 ```
 
-- [ ] **Step 4: Implement the typed screenshot registry**
+- [x] **Step 4: Implement the typed screenshot registry**
 
 `docs-screenshots.ts` statically imports all eight images and exports:
 
@@ -319,7 +319,7 @@ export function docsScreenshot(id: DocsScreenshotId): ImageMetadata {
 }
 ```
 
-- [ ] **Step 5: Implement the shared phone frame**
+- [x] **Step 5: Implement the shared phone frame**
 
 Create `PhoneFrame.astro`:
 
@@ -356,7 +356,7 @@ const image = docsScreenshot(screenshot);
 </figure>
 ```
 
-- [ ] **Step 6: Implement the numbered guide-step component**
+- [x] **Step 6: Implement the numbered guide-step component**
 
 Create `GuideStep.astro` with required `number` and `title`, plus an optional
 screenshot pair. Use this exact prop contract so an image cannot compile
@@ -399,12 +399,12 @@ Render the step copy and image as siblings:
 Reject a screenshot without alt text by typing the props as a discriminated
 union rather than silently omitting the image.
 
-- [ ] **Step 7: Run the screenshot registry test**
+- [x] **Step 7: Run the screenshot registry test**
 
 Run the content test. Expected: the screenshot registry assertion passes; the
 guide corpus remains red until Tasks 3 and 4.
 
-- [ ] **Step 8: Keep the screenshot changes with the pending migration**
+- [x] **Step 8: Keep the screenshot changes with the pending migration**
 
 Do not commit yet because the required screenshot frontmatter has not been
 added to the guide corpus. Continue directly to Task 3.
@@ -426,7 +426,7 @@ added to the guide corpus. Continue directly to Task 3.
 - Create: `apps/site/src/content/docs/01-generate-ai-report.mdx`
 - Create: `apps/site/src/content/docs/02-export-share-pdf.mdx`
 
-- [ ] **Step 1: Add the failing step and word-limit contract**
+- [x] **Step 1: Add the failing step and word-limit contract**
 
 Add helpers to strip frontmatter, imports, and component tags, then count words:
 
@@ -487,17 +487,17 @@ expect(source).toMatch(/^heroScreenshotAlt: ".{12,}"$/m);
 expect(source).not.toContain("## Good to know");
 ```
 
-- [ ] **Step 2: Run the focused test and confirm the old corpus fails**
+- [x] **Step 2: Run the focused test and confirm the old corpus fails**
 
 Expected: FAIL because the old guides do not use `GuideStep`, lack required
 hero screenshot metadata, and total ten rather than nine.
 
-- [ ] **Step 3: Remove the ten first-revision guide files**
+- [x] **Step 3: Remove the ten first-revision guide files**
 
 Delete only the ten files listed above. Do not remove layouts, tests, or
 shared components.
 
-- [ ] **Step 4: Write `01-generate-ai-report.mdx`**
+- [x] **Step 4: Write `01-generate-ai-report.mdx`**
 
 Use this frontmatter:
 
@@ -530,7 +530,7 @@ Import `GuideStep`. Write exactly five steps:
 End with one blockquote: generated output is a draft and must be reviewed.
 Do not add separate tips, platform, or troubleshooting sections.
 
-- [ ] **Step 5: Write `02-export-share-pdf.mdx`**
+- [x] **Step 5: Write `02-export-share-pdf.mdx`**
 
 Use this frontmatter:
 
@@ -560,12 +560,12 @@ Write exactly four `GuideStep` blocks:
 Add one short final sentence: if a correction is needed, return to the report,
 unfinalize if authorized, edit the affected card, and finalize again.
 
-- [ ] **Step 6: Run the focused content test**
+- [x] **Step 6: Run the focused content test**
 
 Expected: screenshot, step, and word-limit checks pass for both core files;
 the suite remains red because the seven smaller guides are not present yet.
 
-- [ ] **Step 7: Keep the core guides with the pending corpus migration**
+- [x] **Step 7: Keep the core guides with the pending corpus migration**
 
 Do not commit the incomplete two-guide corpus. Continue directly to Task 4.
 
@@ -582,7 +582,7 @@ Do not commit the incomplete two-guide corpus. Continue directly to Task 4.
 - Create: `apps/site/src/content/docs/09-your-account.mdx`
 - Modify: `apps/site/src/__tests__/docs-content.test.ts`
 
-- [ ] **Step 1: Write the five everyday-task guides**
+- [x] **Step 1: Write the five everyday-task guides**
 
 Each guide imports `GuideStep`, stays under 300 words, and uses no more than
 four steps. Use these exact contracts:
@@ -610,7 +610,7 @@ Viewer roles. Edit copy must describe per-card pencil controls, never a
 dedicated Edit tab. Capture copy must not claim that the document picker is
 available for new notes.
 
-- [ ] **Step 2: Write `08-getting-started.mdx`**
+- [x] **Step 2: Write `08-getting-started.mdx`**
 
 Use `tier: "setup"`, `order: 1`, and hero screenshot `projects-list`. Write
 three steps only:
@@ -622,7 +622,7 @@ three steps only:
 End with links to Generate an AI report and Create and manage projects. Do not
 repeat voice, editing, export, platform, or troubleshooting details here.
 
-- [ ] **Step 3: Write `09-your-account.mdx`**
+- [x] **Step 3: Write `09-your-account.mdx`**
 
 Use `tier: "setup"`, `order: 2`, and hero screenshot `usage`. Write four short
 steps:
@@ -636,12 +636,12 @@ steps:
 Keep privacy/support copy to one closing sentence with the existing support
 email. Do not create another troubleshooting guide.
 
-- [ ] **Step 4: Complete the related-guide graph**
+- [x] **Step 4: Complete the related-guide graph**
 
 Use only canonical slugs. Every guide has two or three related guides. Ensure
 all references resolve and no guide relates to itself.
 
-- [ ] **Step 5: Run the complete content contract**
+- [x] **Step 5: Run the complete content contract**
 
 ```bash
 corepack pnpm --filter @harpa/site test -- src/__tests__/docs-content.test.ts
@@ -651,7 +651,7 @@ Expected: PASS for nine guides, two core guides, tier ordering, screenshot ids,
 alt text, related links, redirects, step counts, word limits, and prohibited
 v3 terms.
 
-- [ ] **Step 6: Keep the green corpus ready for its consumers**
+- [x] **Step 6: Keep the green corpus ready for its consumers**
 
 The content contract is green, but the index, sidebar, and guide route still
 consume the old category shape. Continue directly to Task 5 before committing.
@@ -668,7 +668,7 @@ consume the old category shape. Continue directly to Task 5 before committing.
 - Modify: `apps/site/src/pages/docs/guides/[...slug].astro`
 - Modify: `apps/site/src/styles/globals.css`
 
-- [ ] **Step 1: Write failing search and shell assertions**
+- [x] **Step 1: Write failing search and shell assertions**
 
 Update `DocsSearch.test.tsx` to require no duplicate guide grid before a query:
 
@@ -689,12 +689,12 @@ expect(screen.getByRole("link", { name: "Generate an AI report" }))
 Add source assertions to `docs-content.test.ts` for the landing heading, tier
 sections, `PhoneFrame`, and guide-page hero screenshot.
 
-- [ ] **Step 2: Run the focused component tests and confirm failure**
+- [x] **Step 2: Run the focused component tests and confirm failure**
 
 Run the search and content tests. Expected: search still renders all guides for
 an empty query and the page sources lack the new tier presentation.
 
-- [ ] **Step 3: Make search a supporting interaction**
+- [x] **Step 3: Make search a supporting interaction**
 
 In `DocsSearch.tsx`, derive:
 
@@ -709,7 +709,7 @@ const results = useMemo(
 Always render the labeled input. Render count, results, and empty state only
 when `hasQuery` is true. Keep the clear button and local-only behavior.
 
-- [ ] **Step 4: Rebuild `/docs` around the three tiers**
+- [x] **Step 4: Rebuild `/docs` around the three tiers**
 
 In `index.astro`:
 
@@ -724,13 +724,13 @@ In `index.astro`:
 The core card link text is **Read the steps →**. Do not add category summaries,
 feature marketing copy, platform badges, or a guide count.
 
-- [ ] **Step 5: Convert sidebar navigation to tiers**
+- [x] **Step 5: Convert sidebar navigation to tiers**
 
 Replace category imports and labels with `DOCS_TIERS`. Use
 `guide.data.tier === tier.id`. Set the navigation label to `Guide sections` and
 keep `aria-current="page"` behavior.
 
-- [ ] **Step 6: Add screenshots to guide headers and steps**
+- [x] **Step 6: Add screenshots to guide headers and steps**
 
 In `[...slug].astro`, replace `docsCategoryLabel` with `docsTierLabel`. Render
 the heading and hero `PhoneFrame` in a two-column header:
@@ -753,7 +753,7 @@ the heading and hero `PhoneFrame` in a two-column header:
 Keep the verified date in page metadata/tests, but remove it from the visible
 hero to reduce noise.
 
-- [ ] **Step 7: Add focused tier, card, step, and phone-frame styles**
+- [x] **Step 7: Add focused tier, card, step, and phone-frame styles**
 
 In `globals.css`:
 
@@ -768,7 +768,7 @@ In `globals.css`:
 - keep every interactive target at least 44px tall;
 - preserve existing focus rings and reduced-motion behavior.
 
-- [ ] **Step 8: Run unit, lint, and type checks**
+- [x] **Step 8: Run unit, lint, and type checks**
 
 ```bash
 corepack pnpm --filter @harpa/site test
@@ -778,7 +778,7 @@ corepack pnpm --filter @harpa/site typecheck
 
 Expected: all site unit/content tests pass; lint and Astro report no errors.
 
-- [ ] **Step 9: Commit the task-first presentation**
+- [x] **Step 9: Commit the task-first presentation**
 
 ```bash
 git add apps/site/src/lib/docs.ts apps/site/src/lib/docs-screenshots.ts \
@@ -799,7 +799,7 @@ git commit -m "feat(site): restore task-first docs with screenshots"
 - Modify: `apps/site/src/pages/sitemap.xml.ts`
 - Modify: `.github/workflows/site-preview.yml`
 
-- [ ] **Step 1: Rewrite browser expectations for the approved structure**
+- [x] **Step 1: Rewrite browser expectations for the approved structure**
 
 Update `docs.spec.ts` to assert:
 
@@ -817,7 +817,7 @@ await expect(page.locator(".docs-setup-links li")).toHaveCount(2);
 Search for `voice` and expect **Capture notes, photos, and voice notes**. Search
 for a nonsense term and retain the no-results/clear behavior.
 
-- [ ] **Step 2: Add screenshot and guide-limit browser checks**
+- [x] **Step 2: Add screenshot and guide-limit browser checks**
 
 From `/docs`, request every image and require status below 400. Open
 `/docs/guides/generate-ai-report` and assert:
@@ -828,26 +828,26 @@ From `/docs`, request every image and require status below 400. Open
 - the page has no horizontal overflow at 390×844;
 - mobile tier navigation exposes Export and share a PDF and Your account.
 
-- [ ] **Step 3: Update pagination and canonical-route expectations**
+- [x] **Step 3: Update pagination and canonical-route expectations**
 
 Pagination from Generate an AI report must lead to Export and share a PDF.
 Direct requests to all nine canonical guides must return below 400. Keep the
 branded unknown-guide 404 assertion.
 
-- [ ] **Step 4: Update sitemap and smoke contracts**
+- [x] **Step 4: Update sitemap and smoke contracts**
 
 The sitemap continues to derive guides from the content collection, so no
 hard-coded nine-route list is added. Update smoke tests to require all legacy
 and first-revision redirect lines in `_redirects` and retain the terminating
 newline assertion for the deployed redirect probe.
 
-- [ ] **Step 5: Verify the deployed redirect against a canonical old path**
+- [x] **Step 5: Verify the deployed redirect against a canonical old path**
 
 Keep the preview workflow probe at `/guides/getting-started`; its expected
 location remains `/docs/guides/getting-started`. No workflow behavior changes
 beyond updated explanatory text if needed.
 
-- [ ] **Step 6: Build and run Playwright in CI mode**
+- [x] **Step 6: Build and run Playwright in CI mode**
 
 ```bash
 PUBLIC_API_BASE_URL=https://api.harpapro.com \
@@ -859,7 +859,7 @@ CI=1 corepack pnpm --filter @harpa/site test:e2e
 Expected: the static build emits `/docs` plus nine guide routes; all Playwright
 tests pass with one Chromium worker.
 
-- [ ] **Step 7: Run Lighthouse against the screenshot-heavy revision**
+- [x] **Step 7: Run Lighthouse against the screenshot-heavy revision**
 
 ```bash
 corepack pnpm exec lhci autorun --config=./lighthouserc.json
@@ -869,7 +869,7 @@ Expected: homepage and `/docs` keep performance/accessibility at or above 0.90
 and best-practices/SEO at or above 0.95. If image weight causes a regression,
 fix `PhoneFrame` image widths/quality rather than lowering thresholds.
 
-- [ ] **Step 8: Commit browser and compatibility coverage**
+- [x] **Step 8: Commit browser and compatibility coverage**
 
 ```bash
 git add apps/site/tests/docs.spec.ts apps/site/src/__tests__/smoke.test.ts \
@@ -887,13 +887,13 @@ git commit -m "test(site): gate task-first docs and screenshots"
   ten-guide structure as current behavior
 - Comment on PR #191 after the implementation is pushed
 
-- [ ] **Step 1: Update supported docs counts and structure**
+- [x] **Step 1: Update supported docs counts and structure**
 
 Document the nine-guide, three-tier structure and the reused v4 screenshot
 source in `apps/site/README.md`. Do not rewrite historical planning prose that
 is already clearly labeled historical.
 
-- [ ] **Step 2: Search for superseded current-state claims**
+- [x] **Step 2: Search for superseded current-state claims**
 
 ```bash
 rg -n "ten guides|10 guides|DOCS_CATEGORIES|category navigation|capturing-notes|ai-generation|editing-reports|finalize-export-share|project-members|account-and-usage|account-deletion-and-help" \
@@ -905,7 +905,7 @@ rg -n "ten guides|10 guides|DOCS_CATEGORIES|category navigation|capturing-notes|
 Expected: no supported code or current architecture document points at the
 superseded corpus. Redirect aliases and explicitly historical text are allowed.
 
-- [ ] **Step 3: Run the complete site verification**
+- [x] **Step 3: Run the complete site verification**
 
 ```bash
 corepack pnpm --filter @harpa/site test
@@ -922,7 +922,7 @@ Expected: unit/content tests, lint, typecheck, 16-page static build (homepage,
 legal/roadmap/discovery pages, `/docs`, and nine guides), Playwright, and all
 Lighthouse assertions pass.
 
-- [ ] **Step 4: Run repository consistency checks**
+- [x] **Step 4: Run repository consistency checks**
 
 ```bash
 git diff --check
@@ -932,7 +932,7 @@ git status --short
 Expected: no whitespace errors and only the intended plan-checkbox/README
 changes remain.
 
-- [ ] **Step 5: Mark this plan complete and commit the handoff state**
+- [x] **Step 5: Mark this plan complete and commit the handoff state**
 
 Change every completed checkbox in this file to `[x]`, then:
 
@@ -942,7 +942,7 @@ git add apps/site/README.md docs/v4/plan-public-site-docs-task-first.md \
 git commit -m "docs(site): complete task-first docs revision"
 ```
 
-- [ ] **Step 6: Push through the repository pre-push gate**
+- [x] **Step 6: Push through the repository pre-push gate**
 
 Use pnpm 9.12.3 from `corepack`; do not bypass hooks:
 
@@ -953,7 +953,7 @@ git push
 Expected: repository lint guards, monorepo typecheck/tests, fixture hashes,
 migration consistency, and secret scan pass before the branch updates.
 
-- [ ] **Step 7: Update PR #191 and monitor CI**
+- [x] **Step 7: Update PR #191 and monitor CI**
 
 Post the implementation summary without overwriting the existing PR body:
 

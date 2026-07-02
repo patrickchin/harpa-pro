@@ -90,7 +90,7 @@ jobs:
           read -r status location < <(
             curl --silent --show-error --output /dev/null \
               --max-redirs 0 \
-              --write-out '%{http_code} %{redirect_url}' \
+              --write-out '%{http_code} %{redirect_url}\n' \
               "${{ steps.deploy.outputs.deployment-url }}/guides/getting-started"
           )
           test "$status" = "301"

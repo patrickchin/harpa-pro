@@ -33,4 +33,15 @@ describe('site smoke', () => {
     const layout = readFileSync(resolve(here, '../layouts/Layout.astro'), 'utf8');
     expect(layout).toContain('noindex');
   });
+
+  it('terminates the deployed redirect probe output for bash read', () => {
+    const workflow = readFileSync(
+      resolve(here, '../../../../.github/workflows/site-preview.yml'),
+      'utf8',
+    );
+
+    expect(workflow).toContain(
+      "--write-out '%{http_code} %{redirect_url}\\n'",
+    );
+  });
 });

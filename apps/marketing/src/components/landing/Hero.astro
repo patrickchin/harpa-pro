@@ -1,6 +1,7 @@
 ---
 import Icon from "../Icon.astro";
 import VoiceDemo from "../VoiceDemo.tsx";
+import { APP_STORE_URL } from "../../lib/links";
 ---
 
 <section id="top" class="relative border-b border-hairline">
@@ -14,16 +15,24 @@ import VoiceDemo from "../VoiceDemo.tsx";
       Site Reports &mdash;<br>you talk, we write.
       </h1>
       <p class="mt-5 max-w-xl text-base leading-relaxed text-ink-soft sm:text-lg">
-        Capture field updates by voice, photo, or typed note. Harpa Pro
-        turns them into review-ready daily reports you can edit, approve,
-        and export.
+        Now available for iPhone. Capture field updates by voice, photo, or
+        typed note. Harpa Pro turns them into review-ready daily reports you
+        can edit, approve, and export.
       </p>
       <div class="mt-8 flex flex-wrap items-center gap-3">
         <a
-          href="#waitlist"
+          href={APP_STORE_URL}
+          target="_blank"
+          rel="noopener noreferrer"
           class="inline-flex h-11 items-center gap-2 rounded-md bg-accent px-5 text-sm font-medium text-accent-foreground shadow-sm hover:brightness-95 ring-focus"
         >
-          Join the waitlist <Icon name="arrow-right" class="h-4 w-4" />
+          Download on the App Store <Icon name="external-link" class="h-4 w-4" />
+        </a>
+        <a
+          href="#waitlist"
+          class="inline-flex h-11 items-center gap-2 rounded-md border border-hairline bg-card px-5 text-sm font-medium text-ink shadow-sm hover:bg-secondary ring-focus"
+        >
+          Android and web updates <Icon name="arrow-right" class="h-4 w-4" />
         </a>
       </div>
       <div

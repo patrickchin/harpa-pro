@@ -1,6 +1,6 @@
 /**
- * Marketing waitlist form, mounted as a React island via
- * `<WaitlistFormIsland client:visible />` from `WaitlistForm.astro`.
+ * Marketing product-updates form, mounted as a React island via
+ * `<WaitlistFormIsland client:only="react" />` from `WaitlistForm.astro`.
  *
  * - Posts directly to `POST {apiBaseUrl}/waitlist` (CORS allowed by
  *   the API for harpapro.com + localhost dev).
@@ -140,8 +140,8 @@ export default function WaitlistFormIsland() {
       >
         <h3 className="text-lg font-semibold text-ink">Check your inbox.</h3>
         <p className="mt-2 text-sm leading-relaxed text-ink-soft">
-          We've sent you a confirmation link. Click it within 7 days to lock
-          in your spot. If it doesn't arrive, check your spam folder.
+          We've sent you a confirmation link. Click it within 7 days to confirm
+          product updates. If it doesn't arrive, check your spam folder.
         </p>
       </div>
     );
@@ -153,7 +153,7 @@ export default function WaitlistFormIsland() {
     <form
       onSubmit={onSubmit}
       className="rounded-xl border border-hairline bg-paper-2/70 p-5 sm:p-6"
-      aria-label="Waitlist signup"
+      aria-label="Product updates signup"
     >
       <div className="grid gap-3.5">
         <label className="block">
@@ -179,14 +179,14 @@ export default function WaitlistFormIsland() {
             </span>
           </span>
           <span className="mb-2 block text-xs leading-relaxed text-ink-soft">
-            Role, company, jobsite type, or reporting pain points are all optional.
+            Android, web, team rollout, or reporting pain points are all optional.
           </span>
           <textarea
             rows={3}
             maxLength={MAX.source}
             value={source}
             onChange={(e) => setSource(e.target.value)}
-            placeholder="Anything useful for early access."
+            placeholder="Anything useful for product updates."
             className={inputCls}
             disabled={submitting}
           />
@@ -217,10 +217,10 @@ export default function WaitlistFormIsland() {
           disabled={submitting}
           className="mt-2 inline-flex h-11 items-center justify-center gap-2 rounded-md bg-accent px-5 text-sm font-medium text-accent-foreground shadow-sm hover:brightness-95 ring-focus disabled:cursor-not-allowed disabled:opacity-70"
         >
-          {submitting ? 'Submitting…' : 'Request early access →'}
+          {submitting ? 'Submitting…' : 'Get updates →'}
         </button>
         <p className="text-xs text-ink-soft">
-          We'll only use your info to coordinate early access. No spam, ever.
+          We'll only use your info to coordinate Harpa Pro updates. No spam, ever.
         </p>
       </div>
     </form>

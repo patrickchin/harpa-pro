@@ -6,6 +6,7 @@ import Footer from "../components/landing/Footer.astro";
 import Section from "../components/primitives/Section.astro";
 import Container from "../components/primitives/Container.astro";
 import Icon from "../components/Icon.astro";
+import { APP_STORE_URL } from "../lib/links";
 
 const entries = (await getCollection("roadmap")).sort(
   (a, b) => a.data.order - b.data.order,
@@ -24,20 +25,20 @@ const items = await Promise.all(
 );
 
 const groups: {
-  id: "pilot" | "later";
+  id: "available" | "planned";
   label: string;
   heading: string;
   blurb: string;
 }[] = [
   {
-    id: "pilot",
-    label: "In the pilot",
-    heading: "What you get on day one.",
+    id: "available",
+    label: "Available now",
+    heading: "What you can use today.",
     blurb:
-      "The pilot is focused on doing one thing well: AI-generated daily site reports.",
+      "The iPhone app focuses on doing one thing well: AI-generated daily site reports.",
   },
   {
-    id: "later",
+    id: "planned",
     label: "Planned",
     heading: "Where it's going.",
     blurb:
@@ -48,7 +49,7 @@ const groups: {
 
 <Layout
   title="Roadmap — Harpa Pro"
-  description="What's next for Harpa Pro: full offline mode, Android pilot, materials, inventory, equipment, people, money, and the insights dashboard."
+  description="What's next for Harpa Pro after the iPhone launch: Android, full offline mode, materials, inventory, equipment, people, money, and the insights dashboard."
 >
   <div class="min-h-screen bg-background text-ink">
     <Header />
@@ -67,13 +68,13 @@ const groups: {
               Where Harpa Pro is going.
             </h1>
             <p class="mt-4 text-base leading-relaxed text-ink-soft">
-              The pilot focuses on one thing: turning voice, photos,
-              and notes into clean AI-generated daily reports.
-              Everything below is built on top of those same
-              captures — so the office gets inventory, equipment,
-              people, money, and cross-project insights without
-              crews doing more work on site. Dates aren't promises;
-              order can shift based on what pilot teams need most.
+              The iPhone app is live with the core workflow: turning
+              voice, photos, and notes into clean AI-generated daily
+              reports. Everything below builds on those same captures
+              — so the office gets inventory, equipment, people,
+              money, and cross-project insights without crews doing
+              more work on site. Dates aren't promises; order can
+              shift based on what teams need most.
             </p>
           </div>
         </Container>
@@ -85,7 +86,7 @@ const groups: {
           if (groupItems.length === 0) return null;
           return (
             <Section
-              tone={group.id === "pilot" ? "paper-2" : "default"}
+              tone={group.id === "available" ? "paper-2" : "default"}
               bordered="top"
             >
               <Container padding="lg">
@@ -127,14 +128,16 @@ const groups: {
             class="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between"
           >
             <p class="text-sm text-ink-soft">
-              Want to shape what ships first? Pilot teams have a direct
-              line to the team building it.
+              Want the current iPhone app? Download it from the App Store.
+              Need Android or web? Join the updates list on the home page.
             </p>
             <a
-              href="/#waitlist"
+              href={APP_STORE_URL}
+              target="_blank"
+              rel="noopener noreferrer"
               class="inline-flex h-10 items-center rounded-md border border-primary/30 bg-transparent px-4 text-sm font-medium text-primary transition-colors hover:bg-primary hover:text-primary-foreground ring-focus"
             >
-              Join the waitlist
+              Download iOS app
             </a>
           </div>
         </Container>

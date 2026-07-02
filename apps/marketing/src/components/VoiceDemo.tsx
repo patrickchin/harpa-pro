@@ -13,8 +13,7 @@
  *      of report length.
  *
  * No audio capture, no API calls, no persistence — everything is
- * fixture-driven. Plan-m4 will replace the mocked recording with a
- * live API hookup.
+ * fixture-driven for the marketing page.
  */
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
@@ -231,7 +230,7 @@ function Composer() {
   return (
     <div className="border-t border-border bg-card/80 backdrop-blur-sm">
       <div className="border-b border-border/60 bg-muted/60 px-3 py-1.5 text-center text-[11px] font-medium text-muted-foreground">
-        Real live demo coming soon!
+        Try the real capture flow in the iPhone app
       </div>
       <div className="px-3 pb-5 pt-4">
         <div className="flex items-stretch gap-2" aria-disabled="true">

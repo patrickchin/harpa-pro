@@ -6,7 +6,7 @@ import WaitlistFormIsland from "./WaitlistFormIsland";
  * M1: the form is now a real React island (`WaitlistFormIsland.tsx`)
  * that posts directly to `POST {PUBLIC_API_BASE_URL}/waitlist`.
  *
- * The placeholder copy + grid layout stay in this Astro file; only
+ * The product-updates copy + grid layout stay in this Astro file; only
  * the inner `<form>` is hydrated. We use `client:only="react"`
  * (not `client:visible`) because `@marsidev/react-turnstile` touches
  * browser globals during module init — SSR is impossible. The
@@ -23,30 +23,29 @@ import WaitlistFormIsland from "./WaitlistFormIsland";
       <span
         class="text-xs font-semibold uppercase tracking-wider text-accent-ink"
       >
-        Early access
+        Product updates
       </span>
       <h2
         class="mt-2 text-3xl font-semibold tracking-tight text-ink sm:text-4xl"
       >
-        Get Harpa Pro before everyone else.
+        Need Android, web, or team rollout updates?
       </h2>
       <p class="mt-4 text-sm leading-relaxed text-ink-soft sm:text-base">
-        Built with field teams. Early users will help shape the reporting
-        workflow — what gets captured, what gets generated, and what your
-        office sees.
+        The iPhone app is live now. Leave your email if you want Android,
+        web, or team workflow updates as they open.
       </p>
       <ul class="mt-6 space-y-2.5 text-sm text-ink">
         <li class="flex items-start gap-2">
           <Icon name="circle-check" class="mt-0.5 h-4 w-4 text-emerald-500" />
-          First access when iOS and Android pilots open
+          Android pilot and web companion updates
+        </li>
+        <li class="flex items-start gap-2">
+          <Icon name="circle-check" class="mt-0.5 h-4 w-4 text-emerald-500" />
+          Notes on team workflows and office-facing features
         </li>
         <li class="flex items-start gap-2">
           <Icon name="circle-check" class="mt-0.5 h-4 w-4 text-emerald-500" />
           Direct line to the team building it
-        </li>
-        <li class="flex items-start gap-2">
-          <Icon name="circle-check" class="mt-0.5 h-4 w-4 text-emerald-500" />
-          Free during the early-access program
         </li>
       </ul>
     </div>

@@ -316,7 +316,7 @@ as [Pattern R5](../bugs/README.md#r5--di-stubs-become-the-spec-default-wiring-si
    branch, it injects `alwaysFailX()`, not a token the dev path can't
    generate.
 3. **One browser/device E2E per critical user flow.** Playwright
-   for `apps/marketing`, Maestro for mobile. Drives the live form
+   for `apps/site`, Maestro for mobile. Drives the live form
    against the live compose stack, asserts the persisted side-effect
    (`SELECT count(*) FROM app.waitlist_signups WHERE email = …`).
    This is the only test type that proves env wiring, CORS, real

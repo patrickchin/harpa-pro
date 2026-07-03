@@ -27,9 +27,10 @@ See [arch-ai-fixtures.md](arch-ai-fixtures.md).
 
 ## `packages/ui` (optional, P2.1+)
 
-Started only if a primitive needs to be shared between
-`apps/mobile` and `apps/docs`. Default: keep primitives inside
-`apps/mobile/components/primitives/` and don't extract.
+Started only if two runtime apps need the same component implementation.
+`apps/site` is Astro/Tailwind and does not share UI primitives with NativeWind
+mobile code. Default: keep primitives inside
+`apps/mobile/components/primitives/` and do not extract them for docs.
 
 ## `packages/api`
 

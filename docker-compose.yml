@@ -145,7 +145,7 @@ services:
       AI_FIXTURE_MODE: replay
       # TWILIO_LIVE unset -> fake OTP; accepted code is TWILIO_VERIFY_FAKE_CODE
       # (default 000000). See packages/api/src/auth/twilio.ts.
-      # Allow the marketing site (`pnpm --filter @harpa/marketing dev`,
+      # Allow the public site (`pnpm --filter @harpa/site dev`,
       # http://localhost:3002) and the Expo dev tools to call /waitlist.
       WAITLIST_CORS_ORIGINS: http://localhost:3002,http://localhost:8081
       # Dev-only secrets. env.ts has defaults but pinning them here

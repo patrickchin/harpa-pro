@@ -70,14 +70,14 @@ Severity guidance shifted from "exactly one of low|medium|high" to
     `parseLeadingNumber` for round-tripping temperature/wind/quantity
     through the UI's display strings
   - `normaliseSeverity()` becomes total over `string | null`
-- `apps/marketing/src/components/VoiceReportPreview.tsx` —
+- `apps/site/src/components/VoiceReportPreview.tsx` —
   - headcount reduce uses `Number.parseFloat`, falls back to 0
   - severity → badge lookup gated through a new `severityKey()`
     helper that collapses unknown values to `"medium"`
   - per-role `count` / `hours` segments render only when the string
     is non-empty (previously gated on `!= null` which now passes
     empty strings through)
-- `apps/marketing/src/fixtures/demoReport.ts` — numeric
+- `apps/site/src/fixtures/demoReport.ts` — numeric
   values quoted to match the new wire shape
 
 **Fixtures:** all 6 `generate-report.*.json` responses updated to

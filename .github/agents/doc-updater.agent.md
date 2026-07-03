@@ -42,7 +42,7 @@ the matching doc updates that must land in the same commit.
    - arch-*.md sections
    - prompt templates
    - bugs log entries
-   - in-app help (apps/docs)
+   - public guides (`apps/site/src/content/docs`)
 3. Make the doc edits.
 4. Re-grep for stale references to anything the diff renamed.
 5. Output the doc-side change list for the commit body.

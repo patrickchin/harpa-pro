@@ -24,15 +24,16 @@ indexable, and ready to drive traffic to.
       - `A` + `AAAA` for `harpapro.com` → Cloudflare Pages IPs.
       - `CNAME app.harpapro.com` → parked / 302 redirect to apex for now
         (future home of `apps/web`).
-      - `CNAME docs.harpapro.com` → wherever `apps/docs` deploys.
+      - Proxied `docs.harpapro.com` record → Cloudflare redirect rules for
+        canonical `harpapro.com/docs` routes.
       - Resend DNS records (DKIM/SPF/DMARC) if not already done in M1.
 - [ ] HSTS preload submission once domain is stable for a week (defer
       until post-launch if time-constrained).
 - [ ] Commit: `docs(marketing): dns + domain setup`.
 
 ### M3.2 Legal pages
-- [ ] Create `apps/marketing/src/pages/privacy.astro` and
-      `apps/marketing/src/pages/terms.astro`.
+- [ ] Create `apps/site/src/pages/privacy.astro` and
+      `apps/site/src/pages/terms.astro`.
 - [ ] Start from a vetted template (Termly, Iubenda, or hand-rolled
       from Cal.com / Resend's public privacy docs). Have a lawyer
       review before paid launch — fine to ship the template at
@@ -73,7 +74,7 @@ indexable, and ready to drive traffic to.
 - [ ] Commit: `feat(marketing): seo + opengraph`.
 
 ### M3.4 Sentry (client side)
-- [ ] Install `@sentry/astro` in `apps/marketing`.
+- [ ] Install `@sentry/astro` in `apps/site`.
 - [ ] Configure `astro.config.mjs`:
       ```ts
       import sentry from '@sentry/astro';
@@ -102,7 +103,7 @@ indexable, and ready to drive traffic to.
 
 ### M3.6 Analytics
 - [ ] Cloudflare Web Analytics snippet in
-      `apps/marketing/src/layouts/Layout.astro` `<head>`:
+      `apps/site/src/layouts/Layout.astro` `<head>`:
       ```html
       <script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "YOUR_TOKEN"}'></script>
       ```

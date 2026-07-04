@@ -115,6 +115,10 @@ bundle exec fastlane doctor
 
 Record the output and Fastlane version here:
 
+- 2026-07-05: blocked before Fastlane started. Bundler could not find the
+  locked `fastlane-2.228.0` gem and its dependencies locally. No gems were
+  installed and no store metadata was uploaded.
+
 ## Production stop conditions
 
 Stop the release if any required check is missing, the hosted policy is stale,

@@ -11,7 +11,7 @@ tags:
 #   - usage screen renders (`screen-usage`)
 #   - one of {usage-loading → usage-empty / usage-by-model /
 #     usage-recent-events} resolves within a reasonable timeout
-#   - per-account limits card renders with the default free-plan buckets
+#   - per-account limits card renders with the weighted AI token buckets
 #
 # We assert the empty-state path because the regression journey never
 # generates a paid report — test never crossed any usage threshold.
@@ -63,7 +63,7 @@ tags:
 
 # --- UsageLimitsCard mounts when /me/limits resolves -----------------------
 # This card is rendered for every signed-in user. The default free-plan
-# buckets are stable enough to assert directly, replacing the old
+# weighted token buckets are stable enough to assert directly, replacing the old
 # standalone P3.14a flow.
 - extendedWaitUntil:
     visible:
@@ -72,13 +72,13 @@ tags:
 - assertVisible:
     id: "usage-limits-plan"
 - assertVisible:
-    id: "usage-limit-report_generate"
+    id: "usage-limit-ai_input_tokens"
 - assertVisible:
-    id: "usage-limit-bar-report_generate"
+    id: "usage-limit-bar-ai_input_tokens"
 - assertVisible:
-    id: "usage-limit-voice_transcribe"
+    id: "usage-limit-ai_output_tokens"
 - assertVisible:
-    id: "usage-limit-voice_summarize"
+    id: "usage-limit-bar-ai_output_tokens"
 
 # --- Back to profile -------------------------------------------------------
 - tapOn:

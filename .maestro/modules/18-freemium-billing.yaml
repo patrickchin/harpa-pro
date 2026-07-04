@@ -1,0 +1,87 @@
+appId: ${MAESTRO_APP_ID}
+name: "18 — Freemium billing: upgrade + account controls"
+tags:
+  - freemium
+  - billing
+  - fixture
+---
+# Focused billing module for a fixture build with both:
+#   EXPO_PUBLIC_USE_FIXTURES=true
+#   EXPO_PUBLIC_BILLING_ENABLED=true
+#
+# The fixture store adapter completes purchase and restore locally. API limits
+# remain server-authoritative; unit and integration tests cover their values and
+# enforcement. Voice notes remain covered by modules/09-voice-notes.yaml.
+#
+# Pre-condition: test signed in on profile screen.
+# Post-condition: test on profile screen with the fixture Pro entitlement.
+
+# --- Free usage limits + upgrade entry point -------------------------------
+- tapOn:
+    id: "btn-open-usage"
+- extendedWaitUntil:
+    visible:
+      id: "screen-usage"
+    timeout: 10000
+- extendedWaitUntil:
+    visible:
+      id: "usage-limits-card"
+    timeout: 10000
+- assertVisible:
+    id: "usage-limits-plan"
+- assertVisible:
+    id: "usage-limit-ai_input_tokens"
+- assertVisible:
+    id: "usage-limit-bar-ai_input_tokens"
+- assertVisible:
+    id: "usage-limit-ai_output_tokens"
+- assertVisible:
+    id: "usage-limit-bar-ai_output_tokens"
+- scrollUntilVisible:
+    element:
+      id: "btn-upgrade-plan"
+    direction: DOWN
+    timeout: 10000
+- tapOn:
+    id: "btn-upgrade-plan"
+
+# --- Fixture entitlement appears in Account -------------------------------
+- tapOn:
+    id: "btn-back"
+- extendedWaitUntil:
+    visible:
+      id: "screen-profile"
+    timeout: 10000
+- tapOn:
+    id: "btn-open-account"
+- extendedWaitUntil:
+    visible:
+      id: "screen-account"
+    timeout: 10000
+- scrollUntilVisible:
+    element:
+      id: "account-billing-section"
+    direction: DOWN
+    timeout: 15000
+- extendedWaitUntil:
+    visible: "Pro subscription active"
+    timeout: 10000
+- assertVisible:
+    id: "btn-manage-subscription"
+- assertVisible:
+    id: "btn-restore-purchases"
+- tapOn:
+    id: "btn-manage-subscription"
+- tapOn:
+    id: "btn-restore-purchases"
+- extendedWaitUntil:
+    visible: "Pro subscription active"
+    timeout: 10000
+
+# --- Back to profile -------------------------------------------------------
+- tapOn:
+    id: "btn-back"
+- extendedWaitUntil:
+    visible:
+      id: "screen-profile"
+    timeout: 10000

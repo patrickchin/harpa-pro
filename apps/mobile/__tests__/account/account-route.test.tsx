@@ -55,6 +55,15 @@ const queryClientSpy = vi.hoisted(() => ({
 
 const clearImageCachesSpy = vi.hoisted(() => vi.fn());
 
+const billingState = vi.hoisted(() => ({
+  enabled: false,
+  status: 'disabled' as const,
+  presentPaywall: vi.fn(),
+  presentCustomerCenter: vi.fn(),
+  restorePurchases: vi.fn(),
+  refresh: vi.fn(),
+}));
+
 const screenState = vi.hoisted(() => ({
   props: null as AccountRouteProps | null,
 }));
@@ -89,6 +98,10 @@ vi.mock('@/lib/api/hooks', () => ({
 
 vi.mock('@/lib/files/image-cache', () => ({
   clearImageCachesOnSignOut: clearImageCachesSpy,
+}));
+
+vi.mock('@/lib/billing', () => ({
+  useBilling: () => billingState,
 }));
 
 vi.mock('@/components/account/AvatarUploader', () => ({
@@ -130,6 +143,9 @@ describe('AccountRoute account deletion wiring', () => {
     sessionState.refresh.mockResolvedValue(undefined);
     sessionState.signOut.mockResolvedValue(undefined);
     clearImageCachesSpy.mockResolvedValue(undefined);
+    billingState.presentCustomerCenter.mockResolvedValue(undefined);
+    billingState.restorePurchases.mockResolvedValue(false);
+    billingState.refresh.mockResolvedValue(undefined);
   });
 
   it('requests the latest deletion preview when the screen opens the dialog', async () => {

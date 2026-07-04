@@ -182,4 +182,18 @@ describe('BillingProvider', () => {
     expect(testState.createFixture).toHaveBeenCalledOnce();
     expect(testState.createRevenueCat).not.toHaveBeenCalled();
   });
+
+  it('uses local fixture entitlement for UI when fixture server sync is unavailable', async () => {
+    const client = makeClient();
+    vi.mocked(client.presentPaywall).mockResolvedValue('purchased');
+    vi.mocked(client.getCustomerInfo).mockResolvedValue({ hasPro: true });
+    testState.env.EXPO_PUBLIC_USE_FIXTURES = true;
+    testState.syncBilling.mockRejectedValue(new Error('billing disabled'));
+    testState.user = { id: 'usr_fixture' };
+    await renderProvider(client);
+
+    await expect(runBooleanAction(() => latest.presentPaywall())).resolves.toBe(true);
+    expect(testState.syncBilling).toHaveBeenCalledOnce();
+    expect(latest.status).toBe('pro');
+  });
 });

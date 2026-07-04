@@ -172,6 +172,29 @@ Dev-deployment target:
 
 Modules 14/15/16 navigate to Profile / Account / Usage screens.
 
+## Freemium billing fixture flow
+
+`modules/18-freemium-billing.yaml` is a focused, standalone check for the
+Free-to-Pro subscription UI. It starts from an authenticated Profile screen,
+asserts the weighted AI input/output allowances, completes a fixture purchase,
+and verifies the Pro status plus manage/restore controls in Account.
+
+Use a fixture dev-client bundle with billing explicitly enabled:
+
+```bash
+export MAESTRO_APP_ID=com.harpa.pro.dev
+EXPO_PUBLIC_USE_FIXTURES=true \
+EXPO_PUBLIC_BILLING_ENABLED=true \
+pnpm --filter @harpa/mobile start --dev-client
+maestro test .maestro/modules/18-freemium-billing.yaml
+```
+
+This module is intentionally not part of the normal regression orchestrators,
+whose builds keep billing disabled. The fixture entitlement proves only the
+mobile UI transition; API unit/integration tests remain the authority for plan
+sync, weighted token limits, and upload-size enforcement. Voice-note continuity
+is covered by `modules/09-voice-notes.yaml`.
+
 ## `native-input-smoke.yaml` (real recorder + camera start)
 
 Focused iOS/Android smoke for native input startup. This covers the
@@ -221,6 +244,7 @@ journey, but any path it replaces needs one focused non-fixture guard.
 | R2 storage | API replay mode uses `FixtureStorage` instead of signed object storage. | `files.r2-live.integration.test.ts` runs `/files/presign` plus a real signed PUT against MinIO when `CI_R2_LIVE` is enabled. |
 | AI providers | Normal tests replay `packages/ai-fixtures` instead of calling providers. | `.github/workflows/ai-live.yml` runs `pnpm --filter @harpa/api test:live` with `AI_LIVE=1` on prompt/provider-sensitive changes. |
 | Auth broker | E2E auth uses the local password broker instead of email delivery. | `mo doctor` checks the broker, and API auth integration tests cover allowlisted password sign-in. |
+| Store billing | Fixture billing completes purchase/restore without App Store or Play Store sandboxes. | `modules/18-freemium-billing.yaml` covers UI state; RevenueCat client tests and API billing integration tests cover server-authoritative sync/webhooks. Run store sandbox purchases before release. |
 
 ## `store-screenshots.yaml` (App Store / Play Store assets)
 

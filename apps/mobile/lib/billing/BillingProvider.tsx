@@ -111,11 +111,24 @@ export function BillingProvider({
   }, [enabled, getClient]);
 
   const verifyServerPlan = useCallback(async (): Promise<boolean> => {
+    if (env.EXPO_PUBLIC_USE_FIXTURES) {
+      try {
+        await syncBilling.mutateAsync();
+      } catch {
+        // Fixture builds intentionally run without live RevenueCat API
+        // credentials. Keep the native-store adapter out of the bundle and
+        // use its local entitlement only for component/Maestro UI coverage.
+      }
+      const info = await getClient().getCustomerInfo();
+      setStatus(statusForCustomer(info.hasPro));
+      return info.hasPro;
+    }
+
     const result = await syncBilling.mutateAsync();
     const isPro = result.plan === 'pro' || result.plan === 'enterprise';
     setStatus(isPro ? 'pro' : 'free');
     return isPro;
-  }, [syncBilling]);
+  }, [getClient, syncBilling]);
 
   const presentPaywall = useCallback(async (): Promise<boolean> => {
     if (!enabled || !activeUserIdRef.current) return false;

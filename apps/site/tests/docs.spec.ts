@@ -35,6 +35,9 @@ test("searches guides locally and stays quiet before a query", async ({
 }) => {
   await page.goto("/docs");
 
+  await expect(
+    page.locator('astro-island[component-export="DocsSearch"]:not([ssr])'),
+  ).toBeAttached();
   const search = page.getByLabel("Search guides");
   await search.fill("voice");
   const results = page.locator(".docs-guide-grid");

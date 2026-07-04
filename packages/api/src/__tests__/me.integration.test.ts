@@ -197,6 +197,7 @@ describe('GET /me/usage', () => {
         outputTokens: number;
         cachedTokens: number;
       }>;
+      fileSizeLimitBytes: number;
     };
     expect(body.totals.reports).toBe(2);
     expect(body.totals.voiceNotes).toBe(2);
@@ -208,6 +209,7 @@ describe('GET /me/usage', () => {
     expect(body.totals.calls).toBe(4);
     expect(Array.isArray(body.usageTokens)).toBe(true);
     expect(Array.isArray(body.usageByModel)).toBe(true);
+    expect(body.fileSizeLimitBytes).toBeGreaterThan(0);
     const m04 = body.months.find((m) => m.month === '2026-04')!;
     const m05 = body.months.find((m) => m.month === '2026-05')!;
     expect(m04).toEqual({ month: '2026-04', reports: 1, voiceNotes: 2 });

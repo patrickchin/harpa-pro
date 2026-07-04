@@ -9,3 +9,5 @@ delete process.env.REVENUECAT_LIVE;
 delete process.env.REVENUECAT_SECRET_API_KEY;
 delete process.env.REVENUECAT_WEBHOOK_AUTH;
 delete process.env.REVENUECAT_BASE_URL;
+delete process.env.FREEMIUM_ENFORCEMENT_ENABLED;
+delete process.env.FREEMIUM_ENFORCEMENT_AT;

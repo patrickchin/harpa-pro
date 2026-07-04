@@ -20,8 +20,11 @@
 import { sql } from 'drizzle-orm';
 import type { ScopedDb } from '../db/scope.js';
 import type { z } from 'zod';
-import { usageLimits } from '@harpa/api-contract';
+import { files, usageLimits } from '@harpa/api-contract';
 import { rawDb } from '../db/client.js';
+import { env } from '../env.js';
+import { effectivePlanFrom } from './plans.js';
+import { weightTokenGroups } from './model-usage.js';
 
 export type LimitKind = z.infer<typeof usageLimits.limitKind>;
 export type LimitState = z.infer<typeof usageLimits.limitState>;
@@ -48,7 +51,7 @@ export interface PlanLimits {
  * `Number.POSITIVE_INFINITY` is the explicit unbounded marker; the
  * wire serialiser (`toWire`) maps it to `null`.
  */
-export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
+export const LEGACY_PLAN_LIMITS: Record<Plan, PlanLimits> = {
   free: {
     report_generate: 1_000,
     voice_transcribe: 1_000,
@@ -71,6 +74,51 @@ export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
     ai_output_tokens: Number.POSITIVE_INFINITY,
   },
 };
+
+export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
+  free: {
+    report_generate: Number.POSITIVE_INFINITY,
+    voice_transcribe: Number.POSITIVE_INFINITY,
+    voice_summarize: Number.POSITIVE_INFINITY,
+    ai_input_tokens: 1_000_000,
+    ai_output_tokens: 100_000,
+  },
+  pro: {
+    report_generate: Number.POSITIVE_INFINITY,
+    voice_transcribe: Number.POSITIVE_INFINITY,
+    voice_summarize: Number.POSITIVE_INFINITY,
+    ai_input_tokens: 10_000_000,
+    ai_output_tokens: 1_000_000,
+  },
+  enterprise: {
+    report_generate: Number.POSITIVE_INFINITY,
+    voice_transcribe: Number.POSITIVE_INFINITY,
+    voice_summarize: Number.POSITIVE_INFINITY,
+    ai_input_tokens: Number.POSITIVE_INFINITY,
+    ai_output_tokens: Number.POSITIVE_INFINITY,
+  },
+};
+
+const FREE_FILE_SIZE_LIMIT_BYTES = 5 * 1024 * 1024;
+
+export function isFreemiumEnforcementActive(now: Date = new Date()): boolean {
+  if (env.FREEMIUM_ENFORCEMENT_ENABLED !== '1' || !env.FREEMIUM_ENFORCEMENT_AT) {
+    return false;
+  }
+  return now.getTime() >= new Date(env.FREEMIUM_ENFORCEMENT_AT).getTime();
+}
+
+export function planLimitsAt(now: Date = new Date()): Record<Plan, PlanLimits> {
+  return isFreemiumEnforcementActive(now) ? PLAN_LIMITS : LEGACY_PLAN_LIMITS;
+}
+
+export function fileSizeLimitBytesForPlan(
+  plan: Plan,
+  now: Date = new Date(),
+): number {
+  if (!isFreemiumEnforcementActive(now)) return files.MAX_FILE_SIZE_BYTES;
+  return plan === 'free' ? FREE_FILE_SIZE_LIMIT_BYTES : files.MAX_FILE_SIZE_BYTES;
+}
 
 export const LIMIT_KINDS: readonly LimitKind[] = [
   'report_generate',
@@ -150,8 +198,9 @@ export function mergeLimits(
   plan: Plan,
   row: OverrideRow | null,
   now: Date = new Date(),
+  planTable: Record<Plan, PlanLimits> = PLAN_LIMITS,
 ): { limits: PlanLimits; overridden: OverriddenFlags } {
-  const base = PLAN_LIMITS[plan];
+  const base = planTable[plan];
   if (!base) {
     throw new Error(`[usage-limits] unknown plan: ${plan}`);
   }
@@ -274,6 +323,7 @@ function overriddenValue(flags: OverriddenFlags, kind: LimitKind): boolean {
 export interface EffectiveLimits {
   plan: Plan;
   buckets: LimitState[];
+  fileSizeLimitBytes: number;
 }
 
 /**
@@ -292,7 +342,7 @@ export async function getEffectiveLimits(
   now: Date = new Date(),
 ): Promise<EffectiveLimits> {
   const { plan, overrideRow } = await loadPlanAndOverride(db, userId);
-  const { limits, overridden } = mergeLimits(plan, overrideRow, now);
+  const { limits, overridden } = mergeLimits(plan, overrideRow, now, planLimitsAt(now));
   const usage = await loadMonthUsage(db, userId, now);
   const resetAt = nextMonthResetAt(now).toISOString();
   const mk = (kind: LimitKind, limit: number, used: number): LimitState => ({
@@ -311,7 +361,11 @@ export async function getEffectiveLimits(
     mk('ai_input_tokens', limits.ai_input_tokens, usage.ai_input_tokens),
     mk('ai_output_tokens', limits.ai_output_tokens, usage.ai_output_tokens),
   ];
-  return { plan, buckets };
+  return {
+    plan,
+    buckets,
+    fileSizeLimitBytes: fileSizeLimitBytesForPlan(plan, now),
+  };
 }
 
 /**
@@ -342,7 +396,7 @@ export async function enforceUsageLimit(
     throw new Error(`[usage-limits] amount must be >= 1 (got ${amount}).`);
   }
   const { plan, overrideRow } = await loadPlanAndOverride(db, userId);
-  const { limits, overridden } = mergeLimits(plan, overrideRow, now);
+  const { limits, overridden } = mergeLimits(plan, overrideRow, now, planLimitsAt(now));
   const usage = await loadMonthUsage(db, userId, now);
   const limit = planLimitValue(limits, check.kind);
   const used = usageValue(usage, check.kind);
@@ -389,7 +443,7 @@ export async function enforceTokenLimits(
   now: Date = new Date(),
 ): Promise<{ inputState: LimitState; outputState: LimitState }> {
   const { plan, overrideRow } = await loadPlanAndOverride(db, userId);
-  const { limits, overridden } = mergeLimits(plan, overrideRow, now);
+  const { limits, overridden } = mergeLimits(plan, overrideRow, now, planLimitsAt(now));
   const usage = await loadMonthUsage(db, userId, now);
   const resetAt = nextMonthResetAt(now).toISOString();
   const mk = (kind: 'ai_input_tokens' | 'ai_output_tokens'): LimitState => {
@@ -482,8 +536,18 @@ async function loadPlanAndOverride(
   db: ScopedDb,
   userId: string,
 ): Promise<{ plan: Plan; overrideRow: OverrideRow | null }> {
-  const planRes = await db.execute<{ plan: Plan }>(sql`
-    SELECT plan FROM public."user" WHERE id = ${userId} LIMIT 1
+  const planRes = await db.execute<{
+    plan: Plan;
+    billing_active: boolean | null;
+    billing_expires_at: Date | string | null;
+  }>(sql`
+    SELECT u.plan,
+           b.active AS billing_active,
+           b.expires_at AS billing_expires_at
+    FROM public."user" u
+    LEFT JOIN app.billing_entitlements b ON b.user_id = u.id
+    WHERE u.id = ${userId}
+    LIMIT 1
   `);
   const planRow = planRes.rows[0];
   if (!planRow) {
@@ -515,7 +579,16 @@ async function loadPlanAndOverride(
         expires_at: row.expires_at,
       }
     : null;
-  return { plan: planRow.plan, overrideRow };
+  const billingExpiresAt = planRow.billing_expires_at === null
+    ? null
+    : new Date(planRow.billing_expires_at);
+  const plan = effectivePlanFrom(
+    planRow.plan,
+    planRow.billing_active === null
+      ? null
+      : { active: planRow.billing_active, expiresAt: billingExpiresAt },
+  );
+  return { plan, overrideRow };
 }
 
 interface UsageCounts {
@@ -537,13 +610,15 @@ async function loadMonthUsage(
 ): Promise<UsageCounts> {
   const monthStart = currentMonthStart(now).toISOString();
   const res = await db.execute<{
+    vendor: string;
+    model: string;
     report_generate: string;
     voice_transcribe: string;
     voice_summarize: string;
     ai_input_tokens: string;
     ai_output_tokens: string;
   }>(sql`
-    SELECT
+    SELECT vendor, model,
       count(*) FILTER (WHERE operation = 'generate_report')::text AS report_generate,
       count(*) FILTER (WHERE operation = 'transcribe')::text       AS voice_transcribe,
       count(*) FILTER (WHERE operation = 'chat')::text             AS voice_summarize,
@@ -555,14 +630,29 @@ async function loadMonthUsage(
     WHERE user_id = ${userId}
       AND status = 'ok'
       AND created_at >= ${monthStart}::timestamptz
+    GROUP BY vendor, model
   `);
-  const row = res.rows[0];
+  const weighted = weightTokenGroups(res.rows.map((row) => ({
+    vendor: row.vendor,
+    model: row.model,
+    inputTokens: Number(row.ai_input_tokens),
+    outputTokens: Number(row.ai_output_tokens),
+  })));
   return {
-    report_generate: Number(row?.report_generate ?? 0),
-    voice_transcribe: Number(row?.voice_transcribe ?? 0),
-    voice_summarize: Number(row?.voice_summarize ?? 0),
-    ai_input_tokens: Number(row?.ai_input_tokens ?? 0),
-    ai_output_tokens: Number(row?.ai_output_tokens ?? 0),
+    report_generate: res.rows.reduce(
+      (sum, row) => sum + Number(row.report_generate),
+      0,
+    ),
+    voice_transcribe: res.rows.reduce(
+      (sum, row) => sum + Number(row.voice_transcribe),
+      0,
+    ),
+    voice_summarize: res.rows.reduce(
+      (sum, row) => sum + Number(row.voice_summarize),
+      0,
+    ),
+    ai_input_tokens: weighted.inputTokens,
+    ai_output_tokens: weighted.outputTokens,
   };
 }
 

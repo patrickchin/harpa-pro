@@ -21,6 +21,8 @@ const KEYS = [
   'REVENUECAT_SECRET_API_KEY',
   'REVENUECAT_WEBHOOK_AUTH',
   'REVENUECAT_BASE_URL',
+  'FREEMIUM_ENFORCEMENT_ENABLED',
+  'FREEMIUM_ENFORCEMENT_AT',
 ] as const;
 
 let snapshot: Record<string, string | undefined>;
@@ -166,5 +168,35 @@ describe('env: RevenueCat', () => {
 
     const mod = await freshImportEnv();
     expect(mod.env.REVENUECAT_LIVE).toBe('1');
+  });
+});
+
+describe('env: freemium enforcement rollout', () => {
+  it('defaults to disabled without an effective date', async () => {
+    const mod = await freshImportEnv();
+
+    expect(mod.env.FREEMIUM_ENFORCEMENT_ENABLED).toBe('0');
+    expect(mod.env.FREEMIUM_ENFORCEMENT_AT).toBeUndefined();
+  });
+
+  it('requires an effective date when enabled', async () => {
+    process.env.FREEMIUM_ENFORCEMENT_ENABLED = '1';
+
+    await expect(freshImportEnv()).rejects.toThrow(/FREEMIUM_ENFORCEMENT_AT/);
+  });
+
+  it('requires the first instant of a UTC month', async () => {
+    process.env.FREEMIUM_ENFORCEMENT_ENABLED = '1';
+    process.env.FREEMIUM_ENFORCEMENT_AT = '2026-08-01T00:00:01.000Z';
+
+    await expect(freshImportEnv()).rejects.toThrow(/UTC month boundary/);
+  });
+
+  it('accepts a UTC month boundary even after that date has passed', async () => {
+    process.env.FREEMIUM_ENFORCEMENT_ENABLED = '1';
+    process.env.FREEMIUM_ENFORCEMENT_AT = '2025-01-01T00:00:00.000Z';
+
+    const mod = await freshImportEnv();
+    expect(mod.env.FREEMIUM_ENFORCEMENT_AT).toBe('2025-01-01T00:00:00.000Z');
   });
 });

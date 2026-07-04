@@ -22,6 +22,16 @@ function splitCsv(value: string): string[] {
     .filter(Boolean);
 }
 
+function isUtcMonthBoundary(value: string): boolean {
+  const date = new Date(value);
+  return !Number.isNaN(date.getTime())
+    && date.getUTCDate() === 1
+    && date.getUTCHours() === 0
+    && date.getUTCMinutes() === 0
+    && date.getUTCSeconds() === 0
+    && date.getUTCMilliseconds() === 0;
+}
+
 const Env = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PORT: z.coerce.number().int().positive().default(8787),
@@ -81,6 +91,8 @@ const Env = z.object({
   REVENUECAT_SECRET_API_KEY: z.string().min(1).optional(),
   REVENUECAT_WEBHOOK_AUTH: z.string().min(16).optional(),
   REVENUECAT_BASE_URL: z.string().url().default('https://api.revenuecat.com/v1'),
+  FREEMIUM_ENFORCEMENT_ENABLED: z.enum(['0', '1']).default('0'),
+  FREEMIUM_ENFORCEMENT_AT: z.string().datetime({ offset: true }).optional(),
   // Kimi (Moonshot) is used for report generation. Not validated at boot —
   // a missing key surfaces as a 502 on the affected request only.
   KIMI_API_KEY: z.string().optional(),
@@ -218,6 +230,18 @@ const Env = z.object({
   {
     path: ['REVENUECAT_WEBHOOK_AUTH'],
     message: 'required when REVENUECAT_LIVE=1',
+  },
+).refine(
+  (e) => e.FREEMIUM_ENFORCEMENT_ENABLED !== '1' || !!e.FREEMIUM_ENFORCEMENT_AT,
+  {
+    path: ['FREEMIUM_ENFORCEMENT_AT'],
+    message: 'required when FREEMIUM_ENFORCEMENT_ENABLED=1',
+  },
+).refine(
+  (e) => !e.FREEMIUM_ENFORCEMENT_AT || isUtcMonthBoundary(e.FREEMIUM_ENFORCEMENT_AT),
+  {
+    path: ['FREEMIUM_ENFORCEMENT_AT'],
+    message: 'must be a UTC month boundary',
   },
 ).refine(
   (e) => !!e.TEST_ACCOUNT_EMAILS === !!e.TEST_ACCOUNT_PASSWORD,

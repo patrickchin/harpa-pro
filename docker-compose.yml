@@ -144,6 +144,7 @@ services:
       R2_SECRET_ACCESS_KEY: minio-dev-secret
       AI_FIXTURE_MODE: replay
       REVENUECAT_LIVE: 0
+      FREEMIUM_ENFORCEMENT_ENABLED: 0
       # TWILIO_LIVE unset -> fake OTP; accepted code is TWILIO_VERIFY_FAKE_CODE
       # (default 000000). See packages/api/src/auth/twilio.ts.
       # Allow the public site (`pnpm --filter @harpa/site dev`,

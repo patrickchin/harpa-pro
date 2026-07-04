@@ -148,7 +148,12 @@ meRoutes.openapi(
       db((d) => fetchUsage(d, userId)),
       db((d) => getEffectiveLimits(d, userId)),
     ]);
-    return c.json({ ...usage, plan: effective.plan, limits: effective.buckets }, 200);
+    return c.json({
+      ...usage,
+      plan: effective.plan,
+      limits: effective.buckets,
+      fileSizeLimitBytes: effective.fileSizeLimitBytes,
+    }, 200);
   },
 );
 
@@ -217,6 +222,10 @@ meRoutes.openapi(
     const db = c.get('db');
     if (!userId || !db) throw new HTTPException(401);
     const out = await db((d) => getEffectiveLimits(d, userId));
-    return c.json({ plan: out.plan, buckets: out.buckets }, 200);
+    return c.json({
+      plan: out.plan,
+      buckets: out.buckets,
+      fileSizeLimitBytes: out.fileSizeLimitBytes,
+    }, 200);
   },
 );

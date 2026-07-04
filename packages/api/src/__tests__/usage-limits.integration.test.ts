@@ -18,6 +18,7 @@ import { newId } from '../lib/ids.js';
 import { makeUserId, makeSessionId } from './factories/index.js';
 import { withScopedConnection } from '../db/scope.js';
 import { enforceTokenLimits, UsageLimitExceededError, attachUsageWarning } from '../services/usage-limits.js';
+import { env } from '../env.js';
 
 let fx: PgFixture;
 let alice: string;
@@ -26,6 +27,8 @@ let adminUser: string;
 let aliceSid: string;
 let bobSid: string;
 let adminSid: string;
+let paidUser: string;
+let paidSid: string;
 
 async function seedUsageEvents(
   admin: pg.Client,
@@ -58,12 +61,28 @@ beforeAll(async () => {
   aliceSid = makeSessionId();
   bobSid = makeSessionId();
   adminSid = makeSessionId();
+  paidUser = makeUserId();
+  paidSid = makeSessionId();
+
+  env.FREEMIUM_ENFORCEMENT_ENABLED = '1';
+  env.FREEMIUM_ENFORCEMENT_AT = '2026-01-01T00:00:00.000Z';
 
   await seedAuthUsers(fx.url, [
     { id: alice, plan: 'free' },
     { id: bob, plan: 'free' },
     { id: adminUser, plan: 'pro', isAdmin: true },
+    { id: paidUser, plan: 'free' },
   ]);
+  const admin = new pg.Client({ connectionString: fx.url });
+  await admin.connect();
+  await admin.query(
+    `INSERT INTO app.billing_entitlements
+       (user_id, provider, entitlement_id, product_id, store, active, expires_at)
+     VALUES ($1, 'revenuecat', 'pro', 'harpa_pro_monthly', 'app_store', true,
+             '2027-01-01T00:00:00Z')`,
+    [paidUser],
+  );
+  await admin.end();
 }, 120_000);
 
 afterAll(async () => {
@@ -78,14 +97,16 @@ describe('GET /me/limits', () => {
     expect(res.status).toBe(200);
     const body = (await res.json()) as {
       plan: string;
+      fileSizeLimitBytes: number;
       buckets: Array<{ kind: string; limit: number | null; used: number; remaining: number | null; plan: string; overridden: boolean }>;
     };
     expect(body.plan).toBe('free');
+    expect(body.fileSizeLimitBytes).toBe(5 * 1024 * 1024);
     const reportBucket = body.buckets.find((b) => b.kind === 'report_generate');
     expect(reportBucket).toBeTruthy();
-    expect(reportBucket!.limit).toBe(1_000);
+    expect(reportBucket!.limit).toBe(null);
     expect(reportBucket!.used).toBe(0);
-    expect(reportBucket!.remaining).toBe(1_000);
+    expect(reportBucket!.remaining).toBe(null);
     expect(reportBucket!.overridden).toBe(false);
   });
 
@@ -101,7 +122,7 @@ describe('GET /me/limits', () => {
     const body = (await res.json()) as { buckets: Array<{ kind: string; used: number; remaining: number | null }> };
     const bucket = body.buckets.find((b) => b.kind === 'report_generate')!;
     expect(bucket.used).toBe(3);
-    expect(bucket.remaining).toBe(997);
+    expect(bucket.remaining).toBe(null);
   });
 
   it('cross-actor isolation: bob still sees zero usage even after alice racks up rows', async () => {
@@ -117,6 +138,63 @@ describe('GET /me/limits', () => {
     const app = createApp();
     const res = await app.request('/me/limits');
     expect(res.status).toBe(401);
+  });
+
+  it('uses a verified paid entitlement over the base Free plan', async () => {
+    const token = await signTestToken(paidUser, paidSid);
+    const res = await createApp().request('/me/limits', {
+      headers: { authorization: `Bearer ${token}` },
+    });
+    const body = (await res.json()) as {
+      plan: string;
+      fileSizeLimitBytes: number;
+      buckets: Array<{ kind: string; limit: number | null }>;
+    };
+
+    expect(body.plan).toBe('pro');
+    expect(body.fileSizeLimitBytes).toBe(50 * 1024 * 1024);
+    expect(body.buckets.find((bucket) => bucket.kind === 'ai_input_tokens')?.limit)
+      .toBe(10_000_000);
+  });
+
+  it('applies model multipliers while preserving raw usage rows', async () => {
+    const weightedUser = makeUserId();
+    const weightedSid = makeSessionId();
+    await seedAuthUsers(fx.url, [{ id: weightedUser, plan: 'free' }]);
+    const admin = new pg.Client({ connectionString: fx.url });
+    await admin.connect();
+    await admin.query(
+      `INSERT INTO app.llm_usage_events
+         (id, user_id, vendor, model, operation, input_tokens, output_tokens,
+          cached_tokens, latency_ms, fixture_mode, status)
+       VALUES
+         ($1, $2, 'openai', 'gpt-4.1-nano', 'chat', 4, 4, 0, 1, 'replay', 'ok'),
+         ($3, $2, 'openai', 'gpt-4.1', 'generate_report', 2, 2, 0, 1, 'replay', 'ok')`,
+      [newId('lue'), weightedUser, newId('lue')],
+    );
+    await admin.end();
+
+    const token = await signTestToken(weightedUser, weightedSid);
+    const res = await createApp().request('/me/limits', {
+      headers: { authorization: `Bearer ${token}` },
+    });
+    const body = (await res.json()) as {
+      buckets: Array<{ kind: string; used: number }>;
+    };
+
+    expect(body.buckets.find((bucket) => bucket.kind === 'ai_input_tokens')?.used)
+      .toBe(11);
+    expect(body.buckets.find((bucket) => bucket.kind === 'ai_output_tokens')?.used)
+      .toBe(11);
+    const raw = await getPool().query<{ input_tokens: number; output_tokens: number }>(
+      `SELECT input_tokens, output_tokens FROM app.llm_usage_events
+       WHERE user_id = $1 ORDER BY model`,
+      [weightedUser],
+    );
+    expect(raw.rows).toEqual([
+      { input_tokens: 2, output_tokens: 2 },
+      { input_tokens: 4, output_tokens: 4 },
+    ]);
   });
 });
 
@@ -154,7 +232,7 @@ describe('admin overrides', () => {
     const res = await app.request('/me/limits', { headers: { authorization: `Bearer ${aliceToken}` } });
     const body = (await res.json()) as { buckets: Array<{ kind: string; limit: number | null; overridden: boolean }> };
     const bucket = body.buckets.find((b) => b.kind === 'report_generate')!;
-    expect(bucket.limit).toBe(1_000);
+    expect(bucket.limit).toBe(null);
     expect(bucket.overridden).toBe(false);
   });
 

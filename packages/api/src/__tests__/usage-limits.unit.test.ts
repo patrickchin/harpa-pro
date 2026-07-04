@@ -6,15 +6,66 @@
  */
 import { describe, it, expect } from 'vitest';
 import {
+  LEGACY_PLAN_LIMITS,
   PLAN_LIMITS,
+  fileSizeLimitBytesForPlan,
   mergeLimits,
   nextMonthResetAt,
   currentMonthStart,
+  planLimitsAt,
   UsageLimitExceededError,
   nearLimitWarning,
   NEAR_LIMIT_THRESHOLD,
 } from '../services/usage-limits.js';
 import type { LimitState } from '../services/usage-limits.js';
+import { env } from '../env.js';
+
+describe('freemium plan defaults', () => {
+  it('uses weighted token caps and leaves count buckets unbounded', () => {
+    expect(PLAN_LIMITS.free).toEqual({
+      report_generate: Number.POSITIVE_INFINITY,
+      voice_transcribe: Number.POSITIVE_INFINITY,
+      voice_summarize: Number.POSITIVE_INFINITY,
+      ai_input_tokens: 1_000_000,
+      ai_output_tokens: 100_000,
+    });
+    expect(PLAN_LIMITS.pro).toEqual({
+      report_generate: Number.POSITIVE_INFINITY,
+      voice_transcribe: Number.POSITIVE_INFINITY,
+      voice_summarize: Number.POSITIVE_INFINITY,
+      ai_input_tokens: 10_000_000,
+      ai_output_tokens: 1_000_000,
+    });
+  });
+
+  it('keeps legacy generous limits before rollout activation', () => {
+    env.FREEMIUM_ENFORCEMENT_ENABLED = '1';
+    env.FREEMIUM_ENFORCEMENT_AT = '2026-08-01T00:00:00.000Z';
+
+    expect(planLimitsAt(new Date('2026-07-31T23:59:59.999Z'))).toBe(
+      LEGACY_PLAN_LIMITS,
+    );
+    expect(fileSizeLimitBytesForPlan(
+      'free',
+      new Date('2026-07-31T23:59:59.999Z'),
+    )).toBe(50 * 1024 * 1024);
+  });
+
+  it('activates Free and Pro limits at the configured boundary', () => {
+    env.FREEMIUM_ENFORCEMENT_ENABLED = '1';
+    env.FREEMIUM_ENFORCEMENT_AT = '2026-08-01T00:00:00.000Z';
+
+    expect(planLimitsAt(new Date('2026-08-01T00:00:00.000Z'))).toBe(PLAN_LIMITS);
+    expect(fileSizeLimitBytesForPlan(
+      'free',
+      new Date('2026-08-01T00:00:00.000Z'),
+    )).toBe(5 * 1024 * 1024);
+    expect(fileSizeLimitBytesForPlan(
+      'pro',
+      new Date('2026-08-01T00:00:00.000Z'),
+    )).toBe(50 * 1024 * 1024);
+  });
+});
 
 describe('mergeLimits', () => {
   it('falls through to plan defaults when override row is null', () => {

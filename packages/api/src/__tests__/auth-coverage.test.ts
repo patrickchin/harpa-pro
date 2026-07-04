@@ -38,6 +38,9 @@ const PUBLIC_ROUTES: ReadonlyArray<{ method: string; path: string }> = [
   { method: 'POST', path: '/api/auth/**' },
   { method: 'POST', path: '/waitlist' },
   { method: 'POST', path: '/waitlist/confirm' },
+  // RevenueCat cannot present a Harpa session. The handler authenticates
+  // the provider's dedicated Authorization value with timingSafeEqual.
+  { method: 'POST', path: '/webhooks/revenuecat' },
   // OpenAPI JSON spec — served by @hono/zod-openapi, no auth. Note:
   // `/openapi.json` is also on the global rate-limit SKIP_PREFIXES.
   { method: 'GET', path: '/openapi.json' },

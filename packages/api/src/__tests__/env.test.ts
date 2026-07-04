@@ -17,6 +17,10 @@ const KEYS = [
   'TEST_ACCOUNT_PASSWORD',
   'DEMO_ACCOUNT_EMAILS',
   'DEMO_ACCOUNT_PASSWORD',
+  'REVENUECAT_LIVE',
+  'REVENUECAT_SECRET_API_KEY',
+  'REVENUECAT_WEBHOOK_AUTH',
+  'REVENUECAT_BASE_URL',
 ] as const;
 
 let snapshot: Record<string, string | undefined>;
@@ -130,5 +134,37 @@ describe('env: demo account access', () => {
     process.env.DEMO_ACCOUNT_PASSWORD = 'demo-password-12345';
 
     await expect(freshImportEnv()).rejects.toThrow(/demo/);
+  });
+});
+
+describe('env: RevenueCat', () => {
+  it('defaults to disabled with the public REST base URL', async () => {
+    const mod = await freshImportEnv();
+
+    expect(mod.env.REVENUECAT_LIVE).toBe('0');
+    expect(mod.env.REVENUECAT_BASE_URL).toBe('https://api.revenuecat.com/v1');
+  });
+
+  it('requires the secret API key when live', async () => {
+    process.env.REVENUECAT_LIVE = '1';
+    process.env.REVENUECAT_WEBHOOK_AUTH = 'Bearer webhook-secret-value';
+
+    await expect(freshImportEnv()).rejects.toThrow(/REVENUECAT_SECRET_API_KEY/);
+  });
+
+  it('requires webhook authorization when live', async () => {
+    process.env.REVENUECAT_LIVE = '1';
+    process.env.REVENUECAT_SECRET_API_KEY = 'sk_live_secret';
+
+    await expect(freshImportEnv()).rejects.toThrow(/REVENUECAT_WEBHOOK_AUTH/);
+  });
+
+  it('accepts live billing with both server secrets', async () => {
+    process.env.REVENUECAT_LIVE = '1';
+    process.env.REVENUECAT_SECRET_API_KEY = 'sk_live_secret';
+    process.env.REVENUECAT_WEBHOOK_AUTH = 'Bearer webhook-secret-value';
+
+    const mod = await freshImportEnv();
+    expect(mod.env.REVENUECAT_LIVE).toBe('1');
   });
 });

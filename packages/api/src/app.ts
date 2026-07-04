@@ -21,6 +21,7 @@ import { waitlistRoutes } from './routes/waitlist.js';
 import { adminRoutes } from './routes/admin.js';
 import { resolverRoutes } from './routes/resolvers.js';
 import { wellKnownRoutes } from './routes/well-known.js';
+import { billingRoutes } from './routes/billing.js';
 import { env } from './env.js';
 import { createSentryMiddleware } from './telemetry/sentry.js';
 import type { ScopedDb } from './db/scope.js';
@@ -116,6 +117,7 @@ export function createApp(): OpenAPIHono<AppEnv> {
   app.route('/', voiceRoutes);
   app.route('/', settingsRoutes);
   app.route('/', adminRoutes);
+  app.route('/', billingRoutes);
 
   // OpenAPI spec
   app.doc('/openapi.json', {

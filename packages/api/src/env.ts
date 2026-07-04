@@ -77,6 +77,10 @@ const Env = z.object({
   // Groq hosts whisper-large-v3-turbo for transcription. Required when AI_LIVE=1.
   GROQ_API_KEY: z.string().optional(),
   GROQ_BASE_URL: z.string().url().optional(),
+  REVENUECAT_LIVE: z.enum(['0', '1']).default('0'),
+  REVENUECAT_SECRET_API_KEY: z.string().min(1).optional(),
+  REVENUECAT_WEBHOOK_AUTH: z.string().min(16).optional(),
+  REVENUECAT_BASE_URL: z.string().url().default('https://api.revenuecat.com/v1'),
   // Kimi (Moonshot) is used for report generation. Not validated at boot —
   // a missing key surfaces as a 502 on the affected request only.
   KIMI_API_KEY: z.string().optional(),
@@ -203,6 +207,18 @@ const Env = z.object({
 ).refine(
   (e) => e.AI_LIVE !== '1' || !!e.GROQ_API_KEY,
   { path: ['GROQ_API_KEY'], message: 'required when AI_LIVE=1 (transcription via whisper-large-v3-turbo)' },
+).refine(
+  (e) => e.REVENUECAT_LIVE !== '1' || !!e.REVENUECAT_SECRET_API_KEY,
+  {
+    path: ['REVENUECAT_SECRET_API_KEY'],
+    message: 'required when REVENUECAT_LIVE=1',
+  },
+).refine(
+  (e) => e.REVENUECAT_LIVE !== '1' || !!e.REVENUECAT_WEBHOOK_AUTH,
+  {
+    path: ['REVENUECAT_WEBHOOK_AUTH'],
+    message: 'required when REVENUECAT_LIVE=1',
+  },
 ).refine(
   (e) => !!e.TEST_ACCOUNT_EMAILS === !!e.TEST_ACCOUNT_PASSWORD,
   {

@@ -21,3 +21,27 @@ describe('account deletion schemas', () => {
     expect(() => auth.accountDeletionPreviewResponse.parse(preview)).not.toThrow();
   });
 });
+
+describe('usage schemas', () => {
+  it('preserves the effective file-size limit for new clients', () => {
+    const parsed = auth.usageResponse.parse({
+      months: [],
+      totals: {
+        reports: 0,
+        voiceNotes: 0,
+        inputTokens: 0,
+        outputTokens: 0,
+        cachedTokens: 0,
+        inputSeconds: 0,
+        calls: 0,
+      },
+      usageTokens: [],
+      usageByModel: [],
+      plan: 'free',
+      limits: [],
+      fileSizeLimitBytes: 5 * 1024 * 1024,
+    });
+
+    expect(parsed.fileSizeLimitBytes).toBe(5 * 1024 * 1024);
+  });
+});

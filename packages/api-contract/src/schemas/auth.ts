@@ -90,6 +90,7 @@ export const usageResponse = z.object({
    */
   plan: plan.optional(),
   limits: z.array(limitState).optional(),
+  fileSizeLimitBytes: z.number().int().positive().optional(),
 });
 
 /**

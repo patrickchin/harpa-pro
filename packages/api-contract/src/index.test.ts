@@ -10,6 +10,7 @@ describe('api-contract', () => {
     expect(schemas.files).toBeDefined();
     expect(schemas.voice).toBeDefined();
     expect(schemas.settings).toBeDefined();
+    expect(schemas.billing).toBeDefined();
   });
 
   it('isoDateTime accepts ISO-8601 and rejects garbage', () => {

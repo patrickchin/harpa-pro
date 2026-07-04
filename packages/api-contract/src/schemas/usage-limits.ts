@@ -38,6 +38,7 @@ export type LimitState = z.infer<typeof limitState>;
 export const limitsResponse = z.object({
   plan,
   buckets: z.array(limitState),
+  fileSizeLimitBytes: z.number().int().positive(),
 });
 export type LimitsResponse = z.infer<typeof limitsResponse>;
 

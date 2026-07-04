@@ -7,6 +7,7 @@ export * as notes from './notes.js';
 export * as files from './files.js';
 export * as voice from './voice.js';
 export * as settings from './settings.js';
+export * as billing from './billing.js';
 export * as waitlist from './waitlist.js';
 export * as resolvers from './resolvers.js';
 export * as usageLimits from './usage-limits.js';

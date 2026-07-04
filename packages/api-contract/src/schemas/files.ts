@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { isoDateTime } from './_shared.js';
 import { fileId, projectId, reportId, userId } from './ids.js';
+import { plan } from './usage-limits.js';
 
 export const fileKind = z.enum(['voice', 'image', 'document', 'pdf']);
 
@@ -17,7 +18,17 @@ export const fileKind = z.enum(['voice', 'image', 'document', 'pdf']);
  *     `users/<userId>/scratch/<fileId>.<ext>`.
  */
 const contentType = z.string().min(1).max(200);
-const sizeBytes = z.number().int().positive().max(50 * 1024 * 1024);
+export const MAX_FILE_SIZE_BYTES = 50 * 1024 * 1024;
+const sizeBytes = z.number().int().positive().max(MAX_FILE_SIZE_BYTES);
+
+export const fileSizeLimitExceededDetails = z.object({
+  sizeBytes: z.number().int().positive(),
+  limitBytes: z.number().int().positive(),
+  plan,
+});
+export type FileSizeLimitExceededDetails = z.infer<
+  typeof fileSizeLimitExceededDetails
+>;
 
 export const presignRequest = z.discriminatedUnion('scope', [
   z.object({
@@ -57,20 +68,20 @@ export const registerFileRequest = z.discriminatedUnion('scope', [
     reportId,
     kind: fileKind,
     fileKey: z.string().min(1),
-    sizeBytes: z.number().int().positive(),
+    sizeBytes,
     contentType: z.string().min(1),
   }),
   z.object({
     scope: z.literal('avatar'),
     fileKey: z.string().min(1),
-    sizeBytes: z.number().int().positive(),
+    sizeBytes,
     contentType: z.string().min(1),
   }),
   z.object({
     scope: z.literal('scratch'),
     kind: fileKind,
     fileKey: z.string().min(1),
-    sizeBytes: z.number().int().positive(),
+    sizeBytes,
     contentType: z.string().min(1),
   }),
 ]);

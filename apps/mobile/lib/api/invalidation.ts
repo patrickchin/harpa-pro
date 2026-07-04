@@ -26,6 +26,7 @@ export const INVALIDATIONS: Record<string, InvalidationRule> = {
   // and `resetQueryCache()` on sign-out.
   useUpdateMeMutation: ['me'],
   useDeleteMeMutation: INVALIDATIONS_NONE,
+  useSyncBillingMutation: ['meLimits', 'meUsage'],
 
   // projects
   useCreateProjectMutation: ['projects'],

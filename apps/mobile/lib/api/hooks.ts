@@ -135,6 +135,26 @@ export function useMeLimitsQuery(
   });
 }
 
+export type SyncBillingMutationVars = void;
+export function useSyncBillingMutation(
+  options?: UseMutationOptions<ResponseBody<"/me/billing/sync", "post">, ApiError, SyncBillingMutationVars>,
+) {
+  const qc = useQueryClient();
+  return useMutation<ResponseBody<"/me/billing/sync", "post">, ApiError, SyncBillingMutationVars>({
+    mutationFn: (_vars) => request("/me/billing/sync", "post"),
+    ...options,
+    onSuccess: (...args) => {
+      const rule = INVALIDATIONS["useSyncBillingMutation"];
+      if (rule && rule !== INVALIDATIONS_NONE) {
+        for (const head of rule) {
+          qc.invalidateQueries({ queryKey: [head] });
+        }
+      }
+      return options?.onSuccess?.(...args);
+    },
+  });
+}
+
 // ─── projects ───────────────────────────────────────────
 export type ListProjectsQueryInput = { query?: QueryParams<"/projects", "get"> } | void;
 export function useListProjectsQuery(

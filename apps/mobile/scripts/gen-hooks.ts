@@ -60,6 +60,7 @@ const ENDPOINTS: Endpoint[] = [
   { method: 'get',   path: '/me/usage', hook: 'useMeUsageQuery',     query: true,  hasPathParams: false, hasBody: false, queryKeyHead: 'meUsage' },
   { method: 'get',   path: '/me/usage/events', hook: 'useMeUsageEventsQuery', query: true,  hasPathParams: false, hasBody: false, queryKeyHead: 'meUsageEvents' },
   { method: 'get',   path: '/me/limits', hook: 'useMeLimitsQuery',   query: true,  hasPathParams: false, hasBody: false, queryKeyHead: 'meLimits' },
+  { method: 'post',  path: '/me/billing/sync', hook: 'useSyncBillingMutation', query: false, hasPathParams: false, hasBody: false },
 
   // projects
   { method: 'get',    path: '/projects',                              hook: 'useListProjectsQuery',         query: true,  hasPathParams: false, hasBody: false, queryKeyHead: 'projects' },
@@ -131,6 +132,7 @@ const spec = JSON.parse(readFileSync(specPath, 'utf8')) as {
 const MOBILE_SKIP_PATHS = new Set<string>([
   'post /waitlist',
   'post /waitlist/confirm',
+  'post /webhooks/revenuecat',
   'get /readyz',
   // Universal-link manifests are fetched by the OS (swcd / Android
   // PackageManager), not by the mobile client. Skip from codegen.

@@ -78,4 +78,11 @@ describe('lib/api/invalidation', () => {
       }
     }
   });
+
+  it('refreshes server-authoritative limits after billing sync', () => {
+    expect(invalidationsFor('useSyncBillingMutation')).toEqual([
+      'meLimits',
+      'meUsage',
+    ]);
+  });
 });

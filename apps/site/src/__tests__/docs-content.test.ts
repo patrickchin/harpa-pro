@@ -250,4 +250,33 @@ describe("docs content model", () => {
       );
     }
   });
+
+  it("documents the shipping Free and Pro subscription model", () => {
+    const account = readFileSync(
+      resolve(docsDir, "09-your-account.mdx"),
+      "utf8",
+    );
+    const cost = readFileSync(
+      resolve(srcRoot, "content/faq/05-cost.mdx"),
+      "utf8",
+    );
+    const publicCopy = `${account}\n${cost}`.replace(/\s+/g, " ");
+
+    expect(publicCopy).toContain("1 million weighted input tokens");
+    expect(publicCopy).toContain("100,000 weighted output tokens");
+    expect(publicCopy).toContain("10 million weighted input tokens");
+    expect(publicCopy).toContain("1 million weighted output tokens");
+    expect(publicCopy).toContain("5 MB");
+    expect(publicCopy).toContain("50 MB");
+    expect(publicCopy).toContain("UTC");
+    expect(publicCopy).toContain("Voice notes remain available on Free");
+    expect(publicCopy).toContain("monthly and annual");
+    expect(publicCopy).toContain("localized price");
+    expect(publicCopy).toContain("There is no free trial");
+    expect(publicCopy).toContain("no report-count limit");
+    expect(publicCopy).toContain("through the end of the paid period");
+    expect(publicCopy).toContain("Manage subscription");
+    expect(publicCopy).toContain("Restore purchases");
+    expect(publicCopy).toContain("does not cancel");
+  });
 });

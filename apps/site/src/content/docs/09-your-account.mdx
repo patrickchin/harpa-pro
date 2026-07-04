@@ -1,10 +1,10 @@
 ---
 title: "Your account"
-description: "Review account details and usage, clear cached data, sign out, or request deletion."
+description: "Review usage, manage a subscription, edit account details, or request deletion."
 tier: "setup"
 order: 2
-keywords: ["profile", "account", "usage", "cache", "sign out", "delete"]
-lastVerified: "2026-07-03"
+keywords: ["profile", "account", "usage", "billing", "subscription", "delete"]
+lastVerified: "2026-07-05"
 related: ["getting-started", "generate-ai-report"]
 heroScreenshot: "usage"
 heroScreenshotAlt: "Harpa Pro Usage History showing account limits and recent activity"
@@ -24,20 +24,33 @@ import GuideStep from "../../components/docs/GuideStep.astro";
   screenshotAlt="Harpa Pro Usage History with monthly totals and recent activity"
 >
   Tap **Usage This Month** to see the limits, current totals, recent AI
-  activity, and reset timing available for the account.
+  activity, and reset timing available for the account. Free includes 1 million
+  weighted input tokens, 100,000 weighted output tokens, and files up to 5 MB.
+  Pro includes 10 million weighted input tokens, 1 million weighted output
+  tokens, and files up to 50 MB. Allowances reset at the start of each UTC
+  calendar month. Voice notes remain available on Free, and there is no
+  report-count limit.
 </GuideStep>
 
-<GuideStep number={3} title="Clear local data or sign out">
-  Use **Clear cached data** if an open screen remains stale after refreshing.
-  This does not delete server records. Use **Sign Out** to remove the active
-  session from the device.
+<GuideStep number={3} title="Manage billing">
+  In **Account Details**, use **Manage subscription** to review or cancel an
+  active store subscription. Use **Restore purchases** after reinstalling or
+  changing devices. Pro is available as monthly and annual subscriptions, and
+  the App Store or Play Store shows the localized price before purchase.
+  Cancelling keeps Pro active through the end of the paid period.
 </GuideStep>
 
 <GuideStep number={4} title="Request account deletion">
   Open Account Details, tap **Delete account**, review the preview, and confirm
-  with your account email. If you cannot access the app, use the
-  [account-deletion page](/account-deletion).
+  with your account email. Deleting Harpa does not cancel an App Store or Play
+  Store subscription; use **Manage subscription** first if you also want to
+  cancel. If you cannot access the app, use the [account-deletion
+  page](/account-deletion).
 </GuideStep>
+
+Use **Clear cached data** if a screen remains stale after refreshing, or use
+**Sign Out** to remove the active session from the device. Neither action
+deletes server records.
 
 For privacy or account help, email
 [patrick@harpapro.com](mailto:patrick@harpapro.com).

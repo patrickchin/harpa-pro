@@ -31,6 +31,7 @@ flowchart TB
         QUEUE["Upload queue (legend-state)"]
         ENV["lib/env.ts (Zod-validated)"]
         APIC["api-contract client (typed)"]
+        BILLING["RevenueCat SDK + native paywall"]
     end
 
     subgraph API["REST API (packages/api → Fly.io)"]
@@ -41,6 +42,7 @@ flowchart TB
         AISVC["AI service (via ai-fixtures)"]
         OTP["Resend email-OTP (better-auth)"]
         R2SIGN["R2 signed URL minter"]
+        BILLSYNC["RevenueCat verification + webhook"]
     end
 
     subgraph Neon["Neon Postgres (branched per PR)"]
@@ -60,18 +62,32 @@ flowchart TB
         DS[DeepSeek]
     end
 
+    subgraph Stores["Subscription stores"]
+        APPSTORE["Apple App Store"]
+        PLAY["Google Play"]
+    end
+
+    subgraph RevenueCat["RevenueCat"]
+        RC["Receipts, entitlements, offerings"]
+    end
+
     subgraph FIX["packages/ai-fixtures"]
         REC["record / replay / live"]
     end
 
     UI --> RQ --> APIC
     UI --> QUEUE
+    UI --> BILLING --> APPSTORE & PLAY
+    BILLING --> RC
     APIC -- "HTTPS + Bearer JWT" --> HONO
     QUEUE -- "PUT (signed)" --> FILES
     HONO --> BA
     HONO --> SCOPE --> DRIZZLE --> PG
     HONO --> AISVC --> FIX --> K & OAI & ANT & G & ZAI & DS
     HONO --> R2SIGN
+    HONO --> BILLSYNC --> RC
+    RC -- "authorized webhook" --> BILLSYNC
+    BILLSYNC --> DRIZZLE
     BA -- "Phone OTP" --> OTP
 ```
 
@@ -88,6 +104,7 @@ flowchart TB
 | LLM mocking | Bolt-on mock-ai (P5.3) | **`ai-fixtures` package, P0** | Fixtures-first per Pitfall 2. |
 | Mobile state | React Query + legend-state | **same** | Worked. |
 | E2E | Maestro | **Maestro behaviour flows** | Per-page interaction tests; no automated visual diff (manual review against canonical port). |
+| Billing | None | **RevenueCat + App Store / Play Store** | Stores localize monthly/annual prices; the API verifies entitlements before authorizing Pro. |
 | CI gates | Coverage at end | **Per-phase gates** | Gates listed in each `plan-p*.md`. |
 
 ## Section index
@@ -112,7 +129,7 @@ flowchart TB
 | 11 | **CLI** | [arch-cli.md](arch-cli.md) | **Debug / API testing / LLM-driven usage tool (`apps/cli`); stateless, env-only, covers all 37 routes** |
 | 12 | **Project members** | [arch-project-members.md](arch-project-members.md) | **Roles, invite (POST), role-change (PATCH), removal (DELETE), owner-demotion guard, error codes, scope tests** |
 | 13 | **Maestro full regression** | [design-maestro-full-regression.md](design-maestro-full-regression.md) | **P4.8 two-actor nightly E2E journey: members permissions, voice/photo/text notes, generate/finalize, Report Debug surface** |
-| 14 | **Usage limits** | [arch-usage-limits.md](arch-usage-limits.md) | **Per-account monthly caps: plan model (free/pro/enterprise) + admin overrides, `enforceUsageLimit` chokepoint, 403 `usage_limit_exceeded` envelope, mobile dialog + near-limit toast** |
+| 14 | **Freemium billing + usage limits** | [arch-usage-limits.md](arch-usage-limits.md) | **RevenueCat verification, weighted monthly AI allowances, per-file ceilings, rollout switch, and mobile paywall entry points** |
 | 15 | **Batch photo notes** | [arch-batch-photo-notes.md](arch-batch-photo-notes.md) | **One note → many photos; `note_files` join table, upload batch coordinator, `PhotoBatchGrid` UI** |
 | 15a | **Photo placement** | [design-photo-placement.md](design-photo-placement.md) | **Lets the user attach a photo group to a specific issue or summary section: `report.body.*.attachments.images[]`, `PATCH /projects/{project}/reports/{number}/attachments`, `MapPin` chip + `AppDialogSheet` picker, server-side attachment sanitization** |
 | 16 | **Report auto-regen** | [arch-report-auto-regen.md](arch-report-auto-regen.md) | **DB-driven dirty flag (`notes_changed_at > generated_at`), race-safe snapshot semantic, mobile `useAutoRegenerate` hook** |

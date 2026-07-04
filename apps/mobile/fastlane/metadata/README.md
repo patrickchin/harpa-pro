@@ -11,6 +11,9 @@ Fastlane paths. Run lanes from the repo root with `bundle exec fastlane ...`.
   `metadata/android/en-US/changelogs/default.txt`.
 - iOS category is set in `Fastfile` as primary `Business` and secondary
   `Productivity`.
+- Subscription copy must describe a useful Free plan and optional monthly and
+  annual Pro allowances. Never copy a converted regional price into metadata;
+  App Store Connect and Play Console own localized storefront prices.
 
 ## Screenshots
 
@@ -72,9 +75,19 @@ Starting inventory for the privacy review:
 - Diagnostics: crash and performance data through Sentry when configured.
 - Product interaction/usage: API requests and AI usage counters used for
   app functionality, support, limits, and reliability.
+- Purchases: purchase history and subscription entitlement state used for app
+  functionality and analytics, linked to the Harpa user id. RevenueCat may
+  process Apple receipt or Google purchase-token data; Harpa does not use this
+  data for advertising tracking.
 - Not currently wired: ads, IDFA/ATT tracking, contacts, health, fitness,
   precise location, or media-location extraction.
 
 Credentials stay out of git. Put local App Store Connect API keys, Google Play
 service-account keys, and other private store files outside the repo or under
 the gitignored `fastlane/credentials/` path.
+
+Do not run `app_privacy_production`, `metadata_production`, or a release lane
+until the legal/privacy and subscription checks in
+`docs/runbooks/freemium-release.md` have evidence and approval. In particular,
+do not generate or upload `app_privacy_details.json` merely from the inventory
+above; an account owner and legal reviewer must approve the exact answers.

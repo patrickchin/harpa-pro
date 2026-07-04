@@ -1,1 +1,1 @@
-Initial Fastlane-managed metadata seed for Harpa Pro internal testing.
+Added optional Pro subscriptions with larger monthly AI and upload allowances. Voice notes and core reporting remain available on Free. Monthly and annual prices are localized by Google Play.

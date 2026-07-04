@@ -108,6 +108,13 @@ beforeAll(async () => {
     [alice],
   );
   await admin.query(
+    `INSERT INTO app.billing_entitlements
+       (user_id, provider, entitlement_id, product_id, store, active, expires_at)
+     VALUES ($1, 'revenuecat', 'pro', 'harpa_pro_monthly', 'app_store', true,
+             '2026-08-01T00:00:00Z')`,
+    [alice],
+  );
+  await admin.query(
     `INSERT INTO app.llm_usage_events
        (id, user_id, vendor, model, operation, input_tokens, output_tokens,
         cached_tokens, latency_ms, fixture_mode, status)
@@ -200,6 +207,11 @@ describe('DELETE /me', () => {
     expect(accounts.rowCount).toBe(0);
     const settings = await admin.query(`SELECT user_id FROM app.user_settings WHERE user_id = $1`, [alice]);
     expect(settings.rowCount).toBe(0);
+    const billing = await admin.query(
+      `SELECT user_id FROM app.billing_entitlements WHERE user_id = $1`,
+      [alice],
+    );
+    expect(billing.rowCount).toBe(0);
     const files = await admin.query(`SELECT id FROM app.files WHERE owner_id = $1`, [alice]);
     expect(files.rowCount).toBe(0);
     const aliceUsage = await admin.query(`SELECT id FROM app.llm_usage_events WHERE user_id = $1`, [alice]);

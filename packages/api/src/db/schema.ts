@@ -15,6 +15,12 @@ import {
   numeric,
   type AnyPgColumn,
 } from 'drizzle-orm/pg-core';
+import {
+  account,
+  session,
+  user,
+  verification,
+} from './auth-schema.js';
 
 /**
  * better-auth tables (`public.user / session / account / verification`)
@@ -32,7 +38,7 @@ export {
   session as sessions,
   account as accounts,
   verification as verifications,
-} from './auth-schema.js';
+};
 
 /**
  * `app` schema — application data. RLS enforced via per-request scope.
@@ -233,6 +239,23 @@ export const userLimitOverrides = appSchema.table('user_limit_overrides', {
   grantedBy: text('granted_by'),
   grantedAt: timestamp('granted_at', { withTimezone: true }).defaultNow().notNull(),
   expiresAt: timestamp('expires_at', { withTimezone: true }),
+});
+
+/** RevenueCat state verified and persisted by the API billing service. */
+export const billingEntitlements = appSchema.table('billing_entitlements', {
+  userId: text('user_id')
+    .primaryKey()
+    .references(() => user.id, { onDelete: 'cascade' }),
+  provider: text('provider').notNull(),
+  entitlementId: text('entitlement_id').notNull(),
+  productId: text('product_id'),
+  store: text('store'),
+  active: boolean('active').notNull().default(false),
+  expiresAt: timestamp('expires_at', { withTimezone: true }),
+  managementUrl: text('management_url'),
+  lastEventId: text('last_event_id').unique(),
+  lastEventAt: timestamp('last_event_at', { withTimezone: true }),
+  syncedAt: timestamp('synced_at', { withTimezone: true }).defaultNow().notNull(),
 });
 
 /**

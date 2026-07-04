@@ -329,4 +329,64 @@ describe('Account', () => {
     expect(text).toContain('Deleting…');
     expect(text).toContain('Deletion failed');
   });
+
+  it('shows accessible subscription management actions when billing is enabled', () => {
+    const onManageSubscription = vi.fn();
+    const onRestorePurchases = vi.fn();
+    const tree = render(
+      <Account
+        {...defaults}
+        billingEnabled
+        billingStatus="free"
+        onManageSubscription={onManageSubscription}
+        onRestorePurchases={onRestorePurchases}
+      />,
+    );
+
+    const manage = tree.root.findByProps({ testID: 'btn-manage-subscription' });
+    const restore = tree.root.findByProps({ testID: 'btn-restore-purchases' });
+    expect(manage.props.accessibilityLabel).toBe('Manage subscription');
+    expect(restore.props.accessibilityLabel).toBe('Restore purchases');
+    act(() => manage.props.onPress());
+    act(() => restore.props.onPress());
+    expect(onManageSubscription).toHaveBeenCalledOnce();
+    expect(onRestorePurchases).toHaveBeenCalledOnce();
+  });
+
+  it('shows billing progress and errors', () => {
+    const tree = render(
+      <Account
+        {...defaults}
+        billingEnabled
+        billingStatus="loading"
+        billingError="Could not restore purchases"
+        onManageSubscription={vi.fn()}
+        onRestorePurchases={vi.fn()}
+      />,
+    );
+    expect(collectText(tree.toJSON())).toContain('Checking subscription…');
+    expect(collectText(tree.toJSON())).toContain('Could not restore purchases');
+  });
+
+  it('warns that deleting Harpa does not cancel the store subscription', async () => {
+    const tree = render(
+      <Account
+        {...defaults}
+        billingEnabled
+        billingStatus="pro"
+        onManageSubscription={vi.fn()}
+        onRestorePurchases={vi.fn()}
+        deletionPreview={deletionPreview}
+        onRequestDeletionPreview={vi.fn()}
+        onDeleteAccount={vi.fn().mockResolvedValue(undefined)}
+      />,
+    );
+    await act(async () => {
+      tree.root.findByProps({ testID: 'btn-open-delete-account' }).props.onPress();
+    });
+    const text = collectText(tree.toJSON());
+    expect(text).toContain('does not cancel');
+    expect(text).toContain('App Store or Play Store');
+    expect(text).toContain('Manage subscription');
+  });
 });

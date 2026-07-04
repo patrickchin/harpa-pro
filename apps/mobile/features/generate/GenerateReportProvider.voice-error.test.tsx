@@ -1,6 +1,7 @@
 import React from 'react';
 import TestRenderer, { act } from 'react-test-renderer';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { UsageLimitDetails } from '@/lib/api/usage-limit-error';
 
 const inlineRecorderMock = vi.hoisted(() => {
   const friendly = "Couldn't start recording. Please try again.";
@@ -29,7 +30,7 @@ const voicePipelineMock = vi.hoisted(() => ({
     note: null,
     fileId: null,
     capture: null,
-    usageLimit: null,
+    usageLimit: null as UsageLimitDetails | null,
   },
   capture: vi.fn(async () => null),
   retry: vi.fn(async () => null),
@@ -83,7 +84,7 @@ import { GenerateReportProvider } from './GenerateReportProvider';
 
 let tree: TestRenderer.ReactTestRenderer | null = null;
 
-function renderProvider() {
+function renderProvider(onUpgrade?: () => void) {
   act(() => {
     tree = TestRenderer.create(
       <GenerateReportProvider
@@ -91,6 +92,7 @@ function renderProvider() {
         reportNumber={1}
         reportId="rep_test"
         notes={[]}
+        onUpgrade={onUpgrade}
       >
         <></>
       </GenerateReportProvider>,
@@ -112,6 +114,7 @@ describe('GenerateReportProvider recorder errors', () => {
   beforeEach(() => {
     inlineRecorderMock.current.error = null;
     inlineRecorderMock.current.userErrorMessage = null;
+    voicePipelineMock.state.usageLimit = null;
     vi.clearAllMocks();
   });
 
@@ -136,5 +139,26 @@ describe('GenerateReportProvider recorder errors', () => {
     expect(text).toContain(inlineRecorderMock.friendly);
     expect(text).not.toContain('prepareToRecordAsync');
     expect(text).not.toContain('Failed to prepare recorder');
+  });
+
+  it('passes the Free quota upgrade action to the usage dialog', () => {
+    const onUpgrade = vi.fn();
+    voicePipelineMock.state.usageLimit = {
+      kind: 'ai_input_tokens',
+      limit: 1_000_000,
+      used: 1_000_000,
+      remaining: 0,
+      resetAt: '2026-08-01T00:00:00.000Z',
+      plan: 'free',
+      overridden: false,
+    };
+
+    const rendered = renderProvider(onUpgrade);
+    act(() => {
+      rendered.root
+        .findByProps({ testID: 'usage-limit-dialog-upgrade' })
+        .props.onPress();
+    });
+    expect(onUpgrade).toHaveBeenCalledOnce();
   });
 });

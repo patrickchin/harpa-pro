@@ -17,6 +17,7 @@
 import { View, Text } from 'react-native';
 
 import { Card } from '@/components/primitives/Card';
+import { Button } from '@/components/primitives/Button';
 
 export interface LimitBucket {
   kind:
@@ -39,14 +40,15 @@ export interface LimitBucket {
 export interface UsageLimitsCardProps {
   plan: 'free' | 'pro' | 'enterprise';
   buckets: ReadonlyArray<LimitBucket>;
+  onUpgrade?: () => void | Promise<void>;
 }
 
 const KIND_LABEL: Record<LimitBucket['kind'], string> = {
   report_generate: 'Reports generated',
   voice_transcribe: 'Voice transcriptions',
   voice_summarize: 'Voice summaries',
-  ai_input_tokens: 'AI input tokens',
-  ai_output_tokens: 'AI output tokens',
+  ai_input_tokens: 'Weighted AI input',
+  ai_output_tokens: 'Weighted AI output',
 };
 
 function formatNumber(n: number): string {
@@ -107,7 +109,7 @@ function BucketRow({ b }: { b: LimitBucket }) {
   );
 }
 
-export function UsageLimitsCard({ plan, buckets }: UsageLimitsCardProps) {
+export function UsageLimitsCard({ plan, buckets, onUpgrade }: UsageLimitsCardProps) {
   const first = buckets[0];
   const resetLabel = first ? formatReset(first.resetAt) : null;
   return (
@@ -135,6 +137,17 @@ export function UsageLimitsCard({ plan, buckets }: UsageLimitsCardProps) {
           <BucketRow key={b.kind} b={b} />
         ))}
       </View>
+      {plan === 'free' && onUpgrade ? (
+        <Button
+          testID="btn-upgrade-plan"
+          accessibilityLabel="Upgrade to Pro"
+          onPress={() => {
+            void onUpgrade();
+          }}
+        >
+          Upgrade to Pro
+        </Button>
+      ) : null}
     </Card>
   );
 }

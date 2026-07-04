@@ -21,6 +21,7 @@ export interface UsageLimitDialogProps {
   visible: boolean;
   details: UsageLimitDetails | null;
   onClose: () => void;
+  onUpgrade?: () => void | Promise<void>;
 }
 
 const KIND_LABEL: Record<UsageLimitKind, string> = {
@@ -38,7 +39,12 @@ function formatReset(iso: string): string {
   return d.toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
 }
 
-export function UsageLimitDialog({ visible, details, onClose }: UsageLimitDialogProps) {
+export function UsageLimitDialog({
+  visible,
+  details,
+  onClose,
+  onUpgrade,
+}: UsageLimitDialogProps) {
   const kindLabel = details ? KIND_LABEL[details.kind] : '';
   const resetLabel = details ? formatReset(details.resetAt) : '';
   const usedLimit =
@@ -47,6 +53,7 @@ export function UsageLimitDialog({ visible, details, onClose }: UsageLimitDialog
       : details
         ? `${details.used}`
         : '';
+  const canUpgrade = details?.plan === 'free' && onUpgrade;
 
   return (
     <AppDialogSheet
@@ -56,11 +63,24 @@ export function UsageLimitDialog({ visible, details, onClose }: UsageLimitDialog
       noticeTitle={details ? `You've used ${usedLimit} ${kindLabel}.` : undefined}
       message={
         details
-          ? `Your limit resets on ${resetLabel}. Upgrade your plan or contact support to keep working.`
+          ? details.plan === 'free'
+            ? `Your limit resets on ${resetLabel}. Upgrade to Pro for a larger monthly allowance.`
+            : `Your limit resets on ${resetLabel}. If this looks wrong, contact support.`
           : undefined
       }
       onClose={onClose}
       actions={[
+        ...(canUpgrade
+          ? [{
+              label: 'Upgrade',
+              onPress: () => {
+                void onUpgrade();
+              },
+              variant: 'default' as const,
+              testID: 'usage-limit-dialog-upgrade',
+              accessibilityLabel: 'Upgrade to Pro',
+            }]
+          : []),
         {
           label: 'Done',
           onPress: onClose,

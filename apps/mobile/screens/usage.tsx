@@ -23,7 +23,6 @@ import {
   BarChart3,
   ChevronDown,
   ChevronUp,
-  DollarSign,
   Zap,
 } from 'lucide-react-native';
 
@@ -116,6 +115,7 @@ export interface UsageScreenProps {
     plan: 'free' | 'pro' | 'enterprise';
     buckets: ReadonlyArray<LimitBucket>;
   };
+  onUpgrade?: () => void | Promise<void>;
 }
 
 function parseMonth(iso: string): Date {
@@ -237,37 +237,6 @@ function RecentEventRow({ event }: { event: RecentUsageEvent }) {
   );
 }
 
-function PricingRow({
-  provider,
-  model,
-  input,
-  output,
-}: {
-  provider: string;
-  model: string;
-  input: string;
-  output: string;
-}) {
-  return (
-    <View className="flex-row items-center justify-between">
-      <View className="flex-1 gap-0.5">
-        <Text className="text-sm font-medium text-foreground">{model}</Text>
-        <Text className="text-xs text-muted-foreground">{provider}</Text>
-      </View>
-      <View className="flex-row gap-4">
-        <View className="items-end">
-          <Text className="text-sm text-foreground">{input}</Text>
-          <Text className="text-xs text-muted-foreground">in</Text>
-        </View>
-        <View className="items-end">
-          <Text className="text-sm text-foreground">{output}</Text>
-          <Text className="text-xs text-muted-foreground">out</Text>
-        </View>
-      </View>
-    </View>
-  );
-}
-
 export function Usage({
   history,
   totals,
@@ -279,6 +248,7 @@ export function Usage({
   onBack,
   chart,
   limits,
+  onUpgrade,
 }: UsageScreenProps) {
   const [expandedMonth, setExpandedMonth] = useState<string | null>(null);
 
@@ -311,7 +281,7 @@ export function Usage({
                   <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
                 }
               >
-                <UsageLimitsCard plan={limits.plan} buckets={limits.buckets} />
+                <UsageLimitsCard plan={limits.plan} buckets={limits.buckets} onUpgrade={onUpgrade} />
                 <View testID="usage-empty">
                   <InlineNotice
                     tone="info"
@@ -345,7 +315,7 @@ export function Usage({
                   before the All-Time Summary so users see what they
                   have left at a glance. */}
               {limits ? (
-                <UsageLimitsCard plan={limits.plan} buckets={limits.buckets} />
+                <UsageLimitsCard plan={limits.plan} buckets={limits.buckets} onUpgrade={onUpgrade} />
               ) : null}
 
               {/* All-time summary */}
@@ -465,28 +435,6 @@ export function Usage({
                   />
                 </View>
               ))}
-
-              {/* Pricing reference */}
-              <SectionHeader
-                title="Token Pricing Reference"
-                subtitle="Cost per 1M tokens (USD)"
-                icon={<DollarSign size={18} color={colors.foreground} />}
-              />
-              <Card className="gap-3">
-                <PricingRow provider="OpenAI" model="GPT-4o Mini" input="$0.15" output="$0.60" />
-                <PricingRow provider="OpenAI" model="GPT-4o" input="$2.50" output="$10.00" />
-                <PricingRow provider="Anthropic" model="Claude Sonnet" input="$3.00" output="$15.00" />
-                <PricingRow provider="Anthropic" model="Claude Haiku" input="$0.25" output="$1.25" />
-                <PricingRow provider="Google" model="Gemini 2.0 Flash" input="$0.10" output="$0.40" />
-                <PricingRow provider="Kimi" model="Moonshot" input="$0.14" output="$0.28" />
-                <PricingRow provider="Kimi" model="K2" input="$0.55" output="$2.19" />
-                <PricingRow provider="DeepSeek" model="DeepSeek-V3" input="$0.27" output="$1.10" />
-                <PricingRow provider="DeepSeek" model="DeepSeek-R1" input="$0.55" output="$2.19" />
-                <PricingRow provider="Z.AI" model="GLM-4.6" input="$1.40" output="$1.40" />
-              </Card>
-              <InlineNotice tone="info">
-                Prices are approximate and may change. Check each provider&apos;s site for current rates.
-              </InlineNotice>
             </ScrollView>
           </View>
         )}

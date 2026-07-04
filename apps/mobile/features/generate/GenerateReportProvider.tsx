@@ -160,6 +160,8 @@ export interface GenerateReportProviderProps {
     noteId: string;
     placement: { kind: 'issue' | 'section'; index: number } | null;
   }) => void;
+  /** Opens the native store paywall after a Free usage limit is reached. */
+  onUpgrade?: () => void | Promise<void>;
   /** Initial tab the screen opens on. Defaults to `notes`. */
   initialTab?: TabKey;
   children: ReactNode;
@@ -485,6 +487,7 @@ export function GenerateReportProvider({
   onCameraCapture,
   onPickAttachment,
   onPlacePhotoGroup,
+  onUpgrade,
   initialTab = 'notes',
   children,
 }: GenerateReportProviderProps) {
@@ -1067,6 +1070,7 @@ export function GenerateReportProvider({
         visible={voicePipeline.state.usageLimit !== null}
         details={voicePipeline.state.usageLimit}
         onClose={voicePipeline.reset}
+        onUpgrade={onUpgrade}
       />
     </GenerateReportContext.Provider>
   );

@@ -26,12 +26,14 @@ import {
 import { AppHeaderActions } from '@/components/ui/AppHeaderActions';
 import { clearImageCachesOnSignOut } from '@/lib/files/image-cache';
 import { ApiError } from '@/lib/api/errors';
+import { useBilling } from '@/lib/billing';
 
 export default function AccountRoute() {
   const router = useRouter();
   const session = useAuthSession();
+  const billing = useBilling();
   const { user, refresh } = session;
-  const { refreshing, onRefresh } = useRefresh([refresh]);
+  const { refreshing, onRefresh } = useRefresh([refresh, billing.refresh]);
   const queryClient = useQueryClient();
   const updateMe = useUpdateMeMutation();
   const deleteMe = useDeleteMeMutation();
@@ -41,6 +43,7 @@ export default function AccountRoute() {
   });
   const [saveError, setSaveError] = useState<string | null>(null);
   const [deleteAccountError, setDeleteAccountError] = useState<string | null>(null);
+  const [billingError, setBillingError] = useState<string | null>(null);
 
   const profile: AccountProfile | null = user
     ? {
@@ -103,6 +106,25 @@ export default function AccountRoute() {
     }
   }, [deleteMe, finishDeletedSession]);
 
+  const handleManageSubscription = useCallback(async () => {
+    setBillingError(null);
+    try {
+      await billing.presentCustomerCenter();
+    } catch (err) {
+      setBillingError(
+        err instanceof Error ? err.message : "Couldn't open subscription management.",
+      );
+    }
+  }, [billing]);
+
+  const handleRestorePurchases = useCallback(async () => {
+    setBillingError(null);
+    const restored = await billing.restorePurchases();
+    if (!restored) {
+      setBillingError('No active subscription was found for this store account.');
+    }
+  }, [billing]);
+
   return (
     <Account
       profile={profile}
@@ -119,6 +141,11 @@ export default function AccountRoute() {
       deleteAccountError={deleteAccountError}
       onRequestDeletionPreview={handleRequestDeletionPreview}
       onDeleteAccount={handleDeleteAccount}
+      billingEnabled={billing.enabled}
+      billingStatus={billing.status}
+      billingError={billingError}
+      onManageSubscription={handleManageSubscription}
+      onRestorePurchases={handleRestorePurchases}
       actions={<AppHeaderActions />}
     />
   );

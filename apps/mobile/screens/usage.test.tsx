@@ -46,28 +46,19 @@ const LIMITS = {
   plan: 'free' as const,
   buckets: [
     {
-      kind: 'report_generate' as const,
-      limit: 5,
-      used: 0,
-      remaining: 5,
+      kind: 'ai_input_tokens' as const,
+      limit: 1_000_000,
+      used: 250_000,
+      remaining: 750_000,
       resetAt: '2026-07-01T00:00:00.000Z',
       plan: 'free' as const,
       overridden: false,
     },
     {
-      kind: 'voice_transcribe' as const,
-      limit: 60,
-      used: 0,
-      remaining: 60,
-      resetAt: '2026-07-01T00:00:00.000Z',
-      plan: 'free' as const,
-      overridden: false,
-    },
-    {
-      kind: 'voice_summarize' as const,
-      limit: 60,
-      used: 0,
-      remaining: 60,
+      kind: 'ai_output_tokens' as const,
+      limit: 100_000,
+      used: 25_000,
+      remaining: 75_000,
       resetAt: '2026-07-01T00:00:00.000Z',
       plan: 'free' as const,
       overridden: false,
@@ -119,7 +110,7 @@ describe('Usage', () => {
       tree.root.findByProps({ testID: 'usage-limits-card' }),
     ).not.toThrow();
     expect(() =>
-      tree.root.findByProps({ testID: 'usage-limit-report_generate' }),
+      tree.root.findByProps({ testID: 'usage-limit-ai_input_tokens' }),
     ).not.toThrow();
   });
 
@@ -131,9 +122,23 @@ describe('Usage', () => {
     expect(text).toContain('November 2024');
     expect(text).toContain('October 2024');
     expect(text).toContain('September 2024');
-    // Totals (35) and pricing reference both visible.
+    // Totals remain visible; stale provider-pricing copy is gone.
     expect(text).toContain('35');
-    expect(text).toContain('Token Pricing Reference');
+    expect(text).not.toContain('Token Pricing Reference');
+  });
+
+  it('shows weighted AI allowances and wires the Free upgrade action', () => {
+    const onUpgrade = vi.fn();
+    const tree = render(
+      <Usage {...defaults} limits={LIMITS} onUpgrade={onUpgrade} />,
+    );
+    const text = collectText(tree.toJSON());
+    expect(text).toContain('Weighted AI input');
+    expect(text).toContain('Weighted AI output');
+    act(() => {
+      tree.root.findByProps({ testID: 'btn-upgrade-plan' }).props.onPress();
+    });
+    expect(onUpgrade).toHaveBeenCalledOnce();
   });
 
   it('expands a month row on press and shows its details', () => {

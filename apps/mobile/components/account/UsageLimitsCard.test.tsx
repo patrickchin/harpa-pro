@@ -9,7 +9,7 @@
  *  - plan badge label tracks the plan prop
  */
 import React from 'react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import TestRenderer, { act } from 'react-test-renderer';
 
 import { UsageLimitsCard, type LimitBucket } from './UsageLimitsCard';
@@ -120,5 +120,21 @@ describe('UsageLimitsCard', () => {
     // 5,000,000 → 5.0M
     expect(text).toContain('5.0M');
     expect(text).toContain('unlimited');
+  });
+
+  it('offers an upgrade only on the Free plan', () => {
+    const onUpgrade = vi.fn();
+    const free = render(
+      <UsageLimitsCard plan="free" buckets={BUCKETS} onUpgrade={onUpgrade} />,
+    );
+    act(() => {
+      free.root.findByProps({ testID: 'btn-upgrade-plan' }).props.onPress();
+    });
+    expect(onUpgrade).toHaveBeenCalledOnce();
+
+    const pro = render(
+      <UsageLimitsCard plan="pro" buckets={BUCKETS} onUpgrade={onUpgrade} />,
+    );
+    expect(pro.root.findAllByProps({ testID: 'btn-upgrade-plan' })).toHaveLength(0);
   });
 });

@@ -17,9 +17,11 @@ import {
 } from '@/lib/api/hooks';
 import { useRefresh } from '@/lib/util/use-refresh';
 import { safeBack } from '@/lib/nav/safe-back';
+import { useBilling } from '@/lib/billing';
 
 export default function UsageRoute() {
   const router = useRouter();
+  const billing = useBilling();
   const usageQuery = useMeUsageQuery();
   const limitsQuery = useMeLimitsQuery();
   // Show the most recent 20 LLM calls. Single page is enough for the
@@ -97,6 +99,7 @@ export default function UsageRoute() {
       onBack={() => safeBack(router, '/(app)/profile' as Href)}
       chart={null}
       limits={limitsQuery.data ? { plan: limitsQuery.data.plan, buckets: limitsQuery.data.buckets } : undefined}
+      onUpgrade={billing.enabled ? billing.presentPaywall : undefined}
     />
   );
 }

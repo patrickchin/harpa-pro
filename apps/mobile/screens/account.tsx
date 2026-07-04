@@ -27,6 +27,7 @@ import { AppDialogSheet } from '@/components/primitives/AppDialogSheet';
 import { AccountDetailsSkeleton } from '@/components/skeletons/AccountDetailsSkeleton';
 import { colors } from '@/lib/design-tokens/colors';
 import { useLayoutShiftProbe } from '@/lib/util/layout-shift-probe';
+import type { BillingStatus } from '@/lib/billing';
 
 export interface AccountProfile {
   email: string;
@@ -85,6 +86,11 @@ export interface AccountScreenProps {
   deleteAccountError?: string | null;
   onRequestDeletionPreview?: () => void | Promise<void>;
   onDeleteAccount?: () => Promise<void>;
+  billingEnabled?: boolean;
+  billingStatus?: BillingStatus;
+  billingError?: string | null;
+  onManageSubscription?: () => void | Promise<void>;
+  onRestorePurchases?: () => void | Promise<void>;
   actions?: ReactNode;
 }
 
@@ -114,6 +120,11 @@ export function Account({
   deleteAccountError = null,
   onRequestDeletionPreview,
   onDeleteAccount,
+  billingEnabled = false,
+  billingStatus = 'disabled',
+  billingError = null,
+  onManageSubscription,
+  onRestorePurchases,
   actions,
 }: AccountScreenProps) {
   const [isEditing, setIsEditing] = useState(false);
@@ -204,6 +215,15 @@ export function Account({
     if (!onDeleteAccount || !deleteEmailMatches || isDeletingAccount) return;
     await onDeleteAccount();
   };
+  const billingStatusLabel = billingStatus === 'loading'
+    ? 'Checking subscription…'
+    : billingStatus === 'pro'
+      ? 'Pro subscription active'
+      : billingStatus === 'free'
+        ? 'Free plan'
+        : billingStatus === 'error'
+          ? 'Subscription status unavailable'
+          : 'Billing unavailable';
 
   return (
     <SafeAreaView className="flex-1 bg-background" testID="screen-account">
@@ -321,11 +341,52 @@ export function Account({
               </View>
             ) : null}
 
+            {billingEnabled ? (
+              <View className="gap-3 border-t border-border pt-4" testID="account-billing-section">
+                <View className="gap-1">
+                  <Text className="text-title-sm text-foreground">Billing</Text>
+                  <Text className="text-sm text-muted-foreground">{billingStatusLabel}</Text>
+                </View>
+                {billingError ? (
+                  <View testID="account-billing-error">
+                    <InlineNotice tone="danger">{billingError}</InlineNotice>
+                  </View>
+                ) : null}
+                <Button
+                  testID="btn-manage-subscription"
+                  accessibilityLabel="Manage subscription"
+                  variant="secondary"
+                  size="lg"
+                  disabled={billingStatus === 'loading' || !onManageSubscription}
+                  onPress={() => {
+                    void onManageSubscription?.();
+                  }}
+                >
+                  Manage subscription
+                </Button>
+                <Button
+                  testID="btn-restore-purchases"
+                  accessibilityLabel="Restore purchases"
+                  variant="outline"
+                  size="lg"
+                  disabled={billingStatus === 'loading' || !onRestorePurchases}
+                  onPress={() => {
+                    void onRestorePurchases?.();
+                  }}
+                >
+                  Restore purchases
+                </Button>
+              </View>
+            ) : null}
+
             {canDeleteAccount ? (
               <View className="gap-3 border-t border-border pt-2">
                 <InlineNotice tone="warning">
                   Account deletion is permanent. Solo projects are deleted;
                   shared projects remain for other members.
+                  {billingEnabled
+                    ? ' Deleting Harpa does not cancel an App Store or Play Store subscription. Use Manage subscription first if you want to cancel.'
+                    : ''}
                 </InlineNotice>
                 <Button
                   testID="btn-open-delete-account"
@@ -354,7 +415,7 @@ export function Account({
         <AppDialogSheet
           visible={deleteDialogVisible}
           title="Delete account?"
-          message="This permanently deletes your Harpa Pro account, signs out all devices, and removes personal account data. Shared project records may remain visible to the other members."
+          message={`This permanently deletes your Harpa Pro account, signs out all devices, and removes personal account data. Shared project records may remain visible to the other members.${billingEnabled ? ' Deleting Harpa does not cancel an App Store or Play Store subscription; use Manage subscription in Billing to cancel it.' : ''}`}
           noticeTone="warning"
           canDismiss={!isDeletingAccount}
           onClose={() => {

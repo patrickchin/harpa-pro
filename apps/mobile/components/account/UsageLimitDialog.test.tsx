@@ -87,4 +87,36 @@ describe('UsageLimitDialog', () => {
     });
     expect(onClose).toHaveBeenCalled();
   });
+
+  it('offers Upgrade for Free and retains the UTC reset date', () => {
+    const onUpgrade = vi.fn();
+    const tree = render(
+      <UsageLimitDialog
+        visible
+        details={DETAILS}
+        onClose={vi.fn()}
+        onUpgrade={onUpgrade}
+      />,
+    );
+    expect(collectText(tree.toJSON())).toContain('July 1');
+    act(() => {
+      tree.root.findByProps({ testID: 'usage-limit-dialog-upgrade' }).props.onPress();
+    });
+    expect(onUpgrade).toHaveBeenCalledOnce();
+  });
+
+  it('keeps Pro on the support and close path without Upgrade', () => {
+    const tree = render(
+      <UsageLimitDialog
+        visible
+        details={{ ...DETAILS, plan: 'pro' }}
+        onClose={vi.fn()}
+        onUpgrade={vi.fn()}
+      />,
+    );
+    expect(
+      tree.root.findAllByProps({ testID: 'usage-limit-dialog-upgrade' }),
+    ).toHaveLength(0);
+    expect(collectText(tree.toJSON())).toContain('contact support');
+  });
 });

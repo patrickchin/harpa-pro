@@ -66,6 +66,7 @@ import {
 import { useCameraUploads } from '@/lib/camera/use-camera-uploads';
 import { pickAndEnqueueGalleryImages } from '@/lib/camera/pick-and-enqueue-gallery-images';
 import { AppHeaderActions } from '@/components/ui/AppHeaderActions';
+import { useBilling } from '@/lib/billing';
 
 interface ApiNoteFile {
   id: string;
@@ -149,6 +150,7 @@ function noteToEntry(n: ApiNote): NoteEntry {
 
 export default function GenerateReportRoute() {
   const router = useRouter();
+  const billing = useBilling();
   const { project, number } = useLocalSearchParams<{
     project: string;
     number: string;
@@ -734,6 +736,7 @@ export default function GenerateReportRoute() {
         onPlacePhotoGroup={
           canWrite && reportId !== null ? handlePlacePhotoGroup : undefined
         }
+        onUpgrade={billing.enabled ? billing.presentPaywall : undefined}
         onDeleteDraft={
           reportRow?.status === 'finalized' ? undefined : handleDeleteDraft
         }
@@ -744,6 +747,7 @@ export default function GenerateReportRoute() {
         visible={usageLimitHit !== null}
         details={usageLimitHit}
         onClose={() => setUsageLimitHit(null)}
+        onUpgrade={billing.enabled ? billing.presentPaywall : undefined}
       />
     </>
   );

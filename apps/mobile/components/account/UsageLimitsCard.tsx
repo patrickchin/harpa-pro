@@ -40,7 +40,7 @@ export interface LimitBucket {
 export interface UsageLimitsCardProps {
   plan: 'free' | 'pro' | 'enterprise';
   buckets: ReadonlyArray<LimitBucket>;
-  onUpgrade?: () => void | Promise<void>;
+  onUpgrade?: () => void | Promise<unknown>;
 }
 
 const KIND_LABEL: Record<LimitBucket['kind'], string> = {

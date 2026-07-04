@@ -21,7 +21,7 @@ export interface UsageLimitDialogProps {
   visible: boolean;
   details: UsageLimitDetails | null;
   onClose: () => void;
-  onUpgrade?: () => void | Promise<void>;
+  onUpgrade?: () => void | Promise<unknown>;
 }
 
 const KIND_LABEL: Record<UsageLimitKind, string> = {

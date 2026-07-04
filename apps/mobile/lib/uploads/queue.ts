@@ -19,6 +19,11 @@ import { runUploadJob, isAbortError, type UploadDeps } from './run-upload';
 import type { FileRecord } from './types';
 import type { PersistedJob, QueuePersistence } from './persistence';
 import { createBatchCoordinator, nextBatchKey } from './batch-coordinator';
+import {
+  uploadFileSizeLimitFor,
+  uploadFileSizeLimitFromError,
+  type UploadFileSizeLimitError,
+} from './file-size-limit-error';
 
 let _jobCounter = 0;
 function nextJobId(): string {
@@ -45,6 +50,10 @@ export interface QueueInternals {
    * driver is kicked.
    */
   initialJobs?: PersistedJob[];
+  /** Latest plan limit. `null` while loading lets the API stay authoritative. */
+  getFileSizeLimitBytes?: () => number | null;
+  /** Called once when a local preflight or server 413 rejects a file. */
+  onFileSizeRejected?: (error: UploadFileSizeLimitError) => void;
 }
 
 export interface UploadQueue {
@@ -64,6 +73,8 @@ interface InternalJob extends UploadJob {
   controller: AbortController;
   /** Batch key carried from input for coordinator lookup. */
   batchKey?: string;
+  /** Typed terminal failure; manual retry remains disabled for this job. */
+  permanentError?: Error;
 }
 
 export function createUploadQueue(
@@ -80,6 +91,20 @@ export function createUploadQueue(
   const sleep = internals.sleep ?? ((ms: number) => new Promise<void>((r) => setTimeout(r, ms)));
   const delay = internals.delayMs ?? backoffMs;
   const persistence = internals.persistence;
+
+  function reportFileSizeRejection(error: UploadFileSizeLimitError): void {
+    internals.onFileSizeRejected?.(error);
+  }
+
+  function validateFileSize(input: EnqueueInput): UploadFileSizeLimitError | null {
+    const limitBytes = internals.getFileSizeLimitBytes?.() ?? null;
+    return (
+      uploadFileSizeLimitFor(input.sizeBytes, limitBytes) ??
+      (input.thumbnail
+        ? uploadFileSizeLimitFor(input.thumbnail.sizeBytes, limitBytes)
+        : null)
+    );
+  }
 
   function notify(): void {
     snapshotDirty = true;
@@ -207,6 +232,16 @@ export function createUploadQueue(
       job.resolve(result);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
+      const sizeError = uploadFileSizeLimitFromError(err);
+      if (sizeError) {
+        job.status = 'failed';
+        job.error = sizeError.message;
+        job.permanentError = sizeError;
+        notify();
+        reportFileSizeRejection(sizeError);
+        job.reject(sizeError);
+        return;
+      }
       // Cancellation short-circuits the retry budget. The job is left
       // in `cancelled` so the UI can render a transient indicator;
       // most callers immediately splice it via `remove(jobId)`.
@@ -241,6 +276,11 @@ export function createUploadQueue(
   }
 
   function enqueue(input: EnqueueInput): Promise<UploadResult> {
+    const sizeError = validateFileSize(input);
+    if (sizeError) {
+      reportFileSizeRejection(sizeError);
+      return Promise.reject(sizeError);
+    }
     return new Promise<UploadResult>((resolve, reject) => {
       // Dedupe by clientId so accidental double-tap on Save doesn't
       // enqueue the same upload twice. Match against any non-completed,
@@ -294,6 +334,14 @@ export function createUploadQueue(
   function enqueueBatch(inputs: EnqueueInput[]): { batchKey: string; promises: Promise<UploadResult>[] } {
     if (inputs.length === 0) return { batchKey: '', promises: [] };
     const batchKey = nextBatchKey();
+    const sizeError = inputs.map(validateFileSize).find((error) => error !== null);
+    if (sizeError) {
+      reportFileSizeRejection(sizeError);
+      return {
+        batchKey,
+        promises: inputs.map(() => Promise.reject(sizeError)),
+      };
+    }
     const jobIds: string[] = [];
     const promises: Promise<UploadResult>[] = [];
 
@@ -333,6 +381,7 @@ export function createUploadQueue(
         new Error(`upload job ${jobId} is not retryable (status=${job.status})`),
       );
     }
+    if (job.permanentError) return Promise.reject(job.permanentError);
     return new Promise<UploadResult>((resolve, reject) => {
       job.status = 'pending';
       job.attempt = 1;

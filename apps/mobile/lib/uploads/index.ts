@@ -15,6 +15,13 @@ export { useFileUpload, type UseFileUploadApi } from './useFileUpload';
 export { useFileSignedUrl } from './useFileSignedUrl';
 
 export {
+  UploadFileSizeLimitError,
+  uploadFileSizeLimitFromError,
+  type UploadFileSizeLimitDetails,
+  type UploadFileSizeLimitPlan,
+} from './file-size-limit-error';
+
+export {
   noteKindForUpload,
   MAX_ATTEMPTS,
   BACKOFF_BASE_MS,

@@ -1,4 +1,5 @@
-export { BillingProvider, useBilling } from './BillingProvider';
+export { BillingProvider } from './BillingProvider';
+export { useBilling, useOptionalBilling } from './context';
 export type {
   BillingClient,
   BillingContextValue,

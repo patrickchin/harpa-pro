@@ -25,6 +25,8 @@ import { createUploadQueue } from './queue';
 import { createInMemoryPersistence, rehydrateJob, type PersistedJob } from './persistence';
 import type { UploadDeps } from './run-upload';
 import type { FileRecord, NoteRecord, EnqueueInput } from './types';
+import { ApiError } from '@/lib/api/errors';
+import { UploadFileSizeLimitError } from './file-size-limit-error';
 
 function fakeFile(id: string): FileRecord {
   return {
@@ -164,6 +166,131 @@ describe('UploadQueue — Phase F persistence', () => {
     const { deps } = makeDeps();
     const q = createUploadQueue(deps, { initialJobs: [] });
     expect(q.getJobs()).toHaveLength(0);
+  });
+});
+
+const baseInput = (overrides: Partial<EnqueueInput> = {}): EnqueueInput => ({
+  sourceUri: 'file:///tmp/upload.bin',
+  kind: 'document',
+  filename: 'upload.bin',
+  contentType: 'application/octet-stream',
+  sizeBytes: 5,
+  reportId: 'rpt_test',
+  ...overrides,
+});
+
+describe('UploadQueue — file-size limits', () => {
+  it('rejects before creating a job and calls the rejection callback once', async () => {
+    const { deps, rec } = makeDeps();
+    const onFileSizeRejected = vi.fn();
+    const queue = createUploadQueue(deps, {
+      getFileSizeLimitBytes: () => 5,
+      onFileSizeRejected,
+    });
+
+    await expect(queue.enqueue(baseInput({ sizeBytes: 6 }))).rejects.toMatchObject({
+      sizeBytes: 6,
+      limitBytes: 5,
+      plan: 'free',
+    });
+    expect(queue.getJobs()).toHaveLength(0);
+    expect(rec.presignCalls).toHaveLength(0);
+    expect(onFileSizeRejected).toHaveBeenCalledOnce();
+  });
+
+  it('allows voice, photo, and paired thumbnails exactly at the limit', async () => {
+    const { deps } = makeDeps();
+    const queue = createUploadQueue(deps, { getFileSizeLimitBytes: () => 5 });
+
+    await queue.enqueue(baseInput({
+      kind: 'voice',
+      contentType: 'audio/m4a',
+      filename: 'voice.m4a',
+    }));
+    await queue.enqueue(baseInput({
+      kind: 'image',
+      contentType: 'image/jpeg',
+      filename: 'photo.jpg',
+      thumbnail: {
+        sourceUri: 'file:///tmp/thumb.jpg',
+        contentType: 'image/jpeg',
+        sizeBytes: 5,
+      },
+    }));
+
+    expect(queue.getJobs()).toHaveLength(2);
+    expect(queue.getJobs().every((job) => job.status === 'completed')).toBe(true);
+  });
+
+  it('rejects a paired thumbnail before creating the main job', async () => {
+    const { deps, rec } = makeDeps();
+    const queue = createUploadQueue(deps, { getFileSizeLimitBytes: () => 5 });
+
+    await expect(queue.enqueue(baseInput({
+      kind: 'image',
+      sizeBytes: 4,
+      thumbnail: {
+        sourceUri: 'file:///tmp/thumb.jpg',
+        contentType: 'image/jpeg',
+        sizeBytes: 6,
+      },
+    }))).rejects.toBeInstanceOf(UploadFileSizeLimitError);
+    expect(queue.getJobs()).toHaveLength(0);
+    expect(rec.presignCalls).toHaveLength(0);
+  });
+
+  it('rejects an entire batch before any job starts', async () => {
+    const { deps, rec } = makeDeps();
+    const onFileSizeRejected = vi.fn();
+    const queue = createUploadQueue(deps, {
+      getFileSizeLimitBytes: () => 5,
+      onFileSizeRejected,
+    });
+    const batch = queue.enqueueBatch([
+      baseInput({ sourceUri: 'file:///tmp/a.jpg', kind: 'image' }),
+      baseInput({ sourceUri: 'file:///tmp/b.jpg', kind: 'image', sizeBytes: 6 }),
+    ]);
+
+    await expect(Promise.all(batch.promises)).rejects.toBeInstanceOf(
+      UploadFileSizeLimitError,
+    );
+    expect(queue.getJobs()).toHaveLength(0);
+    expect(rec.presignCalls).toHaveLength(0);
+    expect(onFileSizeRejected).toHaveBeenCalledOnce();
+  });
+
+  it('lets the API remain authoritative while the limit is unknown', async () => {
+    const { deps, rec } = makeDeps();
+    const queue = createUploadQueue(deps, { getFileSizeLimitBytes: () => null });
+
+    await queue.enqueue(baseInput({ sizeBytes: 99 }));
+    expect(rec.presignCalls).toHaveLength(1);
+  });
+
+  it('treats a server 413 as permanent with no retry/backoff', async () => {
+    const { deps } = makeDeps();
+    deps.presign = vi.fn(async () => {
+      throw new ApiError({
+        status: 413,
+        code: 'file_size_limit_exceeded',
+        message: 'too big',
+        details: { sizeBytes: 6, limitBytes: 5, plan: 'free' },
+      });
+    });
+    const sleep = vi.fn(async () => undefined);
+    const onFileSizeRejected = vi.fn();
+    const queue = createUploadQueue(deps, {
+      getFileSizeLimitBytes: () => null,
+      sleep,
+      onFileSizeRejected,
+    });
+
+    await expect(queue.enqueue(baseInput({ sizeBytes: 6 }))).rejects.toBeInstanceOf(
+      UploadFileSizeLimitError,
+    );
+    expect(sleep).not.toHaveBeenCalled();
+    expect(queue.getJobs()[0]).toMatchObject({ status: 'failed', attempt: 1 });
+    expect(onFileSizeRejected).toHaveBeenCalledOnce();
   });
 });
 

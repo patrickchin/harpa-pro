@@ -1,7 +1,5 @@
 import {
-  createContext,
   useCallback,
-  useContext,
   useEffect,
   useMemo,
   useRef,
@@ -20,8 +18,7 @@ import type {
   BillingContextValue,
   BillingStatus,
 } from './types';
-
-const BillingContext = createContext<BillingContextValue | undefined>(undefined);
+import { BillingContext } from './context';
 
 function defaultClient(): BillingClient {
   if (env.EXPO_PUBLIC_USE_FIXTURES) return createFixtureBillingClient();
@@ -173,10 +170,4 @@ export function BillingProvider({
   return <BillingContext.Provider value={value}>{children}</BillingContext.Provider>;
 }
 
-export function useBilling(): BillingContextValue {
-  const value = useContext(BillingContext);
-  if (!value) {
-    throw new Error('useBilling must be used within a <BillingProvider>');
-  }
-  return value;
-}
+export { useBilling, useOptionalBilling } from './context';

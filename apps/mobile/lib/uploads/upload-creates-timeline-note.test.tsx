@@ -25,6 +25,26 @@ import { Text } from 'react-native';
 import { QueueProvider, useFileUpload } from './index';
 import type { EnqueueInput, UploadResult } from './types';
 
+const limitsState = vi.hoisted(() => ({ fileSizeLimitBytes: 5 * 1024 * 1024 as number | null }));
+
+vi.mock('@/lib/api/hooks', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/api/hooks')>();
+  return {
+    ...actual,
+    useMeLimitsQuery: () => ({
+      data: { plan: 'free', fileSizeLimitBytes: limitsState.fileSizeLimitBytes },
+    }),
+  };
+});
+
+vi.mock('@/lib/billing/context', () => ({
+  useOptionalBilling: () => ({
+    enabled: true,
+    status: 'free',
+    presentPaywall: vi.fn(),
+  }),
+}));
+
 // ─── Fetch stub ────────────────────────────────────────────────
 // A single `fetch` mock covers all four hops because both the API
 // client and the R2 PUT use the same global. The stub also doubles
@@ -173,6 +193,7 @@ async function runEnqueue(input: EnqueueInput): Promise<UploadResult> {
 describe('lib/uploads — upload-creates-timeline-note (Pitfall 8)', () => {
   beforeEach(() => {
     calls = [];
+    limitsState.fileSizeLimitBytes = 5 * 1024 * 1024;
   });
   afterEach(() => {
     vi.unstubAllGlobals();
@@ -314,6 +335,42 @@ describe('lib/uploads — upload-creates-timeline-note (Pitfall 8)', () => {
     expect(rec.register).toBeDefined();
     expect(rec.createNote).toBeUndefined();
     expect(result.noteId).toBeUndefined();
+  });
+
+  it('maps a default-wired server 413 before R2 PUT or registration', async () => {
+    limitsState.fileSizeLimitBytes = null;
+    stubFetch((call) => {
+      if (call.url.endsWith('/files/presign')) {
+        return jsonResponse(413, {
+          error: {
+            code: 'file_size_limit_exceeded',
+            message: 'too large',
+            details: {
+              sizeBytes: 6 * 1024 * 1024,
+              limitBytes: 5 * 1024 * 1024,
+              plan: 'free',
+            },
+          },
+        });
+      }
+      throw new Error(`Unexpected fetch after rejection: ${call.method} ${call.url}`);
+    });
+
+    await expect(runEnqueue({
+      sourceUri: 'file:///tmp/oversized.pdf',
+      kind: 'pdf',
+      filename: 'oversized.pdf',
+      contentType: 'application/pdf',
+      sizeBytes: 6 * 1024 * 1024,
+      reportId: 'rpt_test1234',
+    })).rejects.toMatchObject({ code: 'file_size_limit_exceeded' });
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(calls.filter((call) => call.url.startsWith('https://r2.'))).toHaveLength(0);
+    expect(calls.filter((call) => call.url.endsWith('/files'))).toHaveLength(0);
+    expect(tree?.root.findByProps({ testID: 'file-size-limit-dialog' })).toBeTruthy();
   });
 });
 

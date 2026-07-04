@@ -19,6 +19,7 @@ import type {
   UploadResult,
 } from './types';
 import { noteKindForUpload } from './types';
+import { uploadFileSizeLimitFromError } from './file-size-limit-error';
 
 export type { FileRecord, NoteRecord } from './types';
 
@@ -167,6 +168,8 @@ export async function runUploadJob(
           // aborts; swallow other errors so a flaky thumbnail does
           // not lose the photo.
           if (isAbortError(err)) throw err;
+          const sizeError = uploadFileSizeLimitFromError(err);
+          if (sizeError) throw sizeError;
           return null;
         },
       )

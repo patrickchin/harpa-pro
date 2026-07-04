@@ -115,7 +115,7 @@ export interface UsageScreenProps {
     plan: 'free' | 'pro' | 'enterprise';
     buckets: ReadonlyArray<LimitBucket>;
   };
-  onUpgrade?: () => void | Promise<void>;
+  onUpgrade?: () => void | Promise<unknown>;
 }
 
 function parseMonth(iso: string): Date {

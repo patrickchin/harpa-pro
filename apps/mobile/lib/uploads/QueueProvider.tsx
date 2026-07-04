@@ -16,17 +16,29 @@
  * their own queue via `createUploadQueue()` and pass it as the
  * `value` prop on a manual `<QueueContext.Provider>`.
  */
-import { createContext, useContext, useMemo, type ReactNode } from 'react';
+import {
+  createContext,
+  useContext,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
 import { File as FsFile } from 'expo-file-system';
 
 import { createUploadQueue, type UploadQueue } from './queue';
 import { defaultUploadDeps } from './run-upload';
+import { UploadFileSizeLimitError } from './file-size-limit-error';
 import {
   createMmkvPersistence,
   rehydrateJob,
   type PersistedJob,
   type QueuePersistence,
 } from './persistence';
+import { useMeLimitsQuery } from '@/lib/api/hooks';
+import { useOptionalBilling } from '@/lib/billing/context';
+import type { BillingContextValue } from '@/lib/billing/types';
+import { FileSizeLimitDialog } from '@/components/account/FileSizeLimitDialog';
 
 const QueueContext = createContext<UploadQueue | null>(null);
 
@@ -63,13 +75,78 @@ export function hydratePersistedJobs(
 }
 
 export function QueueProvider({ children, queue }: QueueProviderProps) {
+  const billing = useOptionalBilling();
+  if (queue) {
+    return <QueueContext.Provider value={queue}>{children}</QueueContext.Provider>;
+  }
+  if (billing) {
+    return (
+      <PlanAwareQueueProvider billing={billing}>
+        {children}
+      </PlanAwareQueueProvider>
+    );
+  }
+  return <DefaultQueueProvider>{children}</DefaultQueueProvider>;
+}
+
+function createDefaultQueue() {
+  const persistence = createMmkvPersistence();
+  const initialJobs = hydratePersistedJobs(persistence);
+  return createUploadQueue(defaultUploadDeps, { persistence, initialJobs });
+}
+
+function DefaultQueueProvider({ children }: { children: ReactNode }) {
   const value = useMemo<UploadQueue>(() => {
-    if (queue) return queue;
+    return createDefaultQueue();
+  }, []);
+  return <QueueContext.Provider value={value}>{children}</QueueContext.Provider>;
+}
+
+function PlanAwareQueueProvider({
+  billing,
+  children,
+}: {
+  billing: BillingContextValue;
+  children: ReactNode;
+}) {
+  const limits = useMeLimitsQuery(undefined, {
+    enabled: billing.enabled && billing.status !== 'disabled',
+    retry: false,
+  });
+  const limitRef = useRef<number | null>(null);
+  const planRef = useRef<'free' | 'pro' | 'enterprise' | null>(null);
+  const [rejected, setRejected] = useState<UploadFileSizeLimitError | null>(null);
+
+  limitRef.current = limits.data?.fileSizeLimitBytes ?? null;
+  planRef.current = limits.data?.plan ?? null;
+
+  const value = useMemo<UploadQueue>(() => {
     const persistence = createMmkvPersistence();
     const initialJobs = hydratePersistedJobs(persistence);
-    return createUploadQueue(defaultUploadDeps, { persistence, initialJobs });
-  }, [queue]);
-  return <QueueContext.Provider value={value}>{children}</QueueContext.Provider>;
+    return createUploadQueue(defaultUploadDeps, {
+      persistence,
+      initialJobs,
+      getFileSizeLimitBytes: () => limitRef.current,
+      onFileSizeRejected: (error) => {
+        setRejected(new UploadFileSizeLimitError({
+          sizeBytes: error.sizeBytes,
+          limitBytes: error.limitBytes,
+          plan: planRef.current ?? error.plan,
+        }));
+      },
+    });
+  }, []);
+
+  return (
+    <QueueContext.Provider value={value}>
+      {children}
+      <FileSizeLimitDialog
+        error={rejected}
+        onClose={() => setRejected(null)}
+        onUpgrade={billing.enabled ? billing.presentPaywall : undefined}
+      />
+    </QueueContext.Provider>
+  );
 }
 
 export function useUploadQueueContext(): UploadQueue {

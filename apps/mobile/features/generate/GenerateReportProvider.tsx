@@ -161,7 +161,7 @@ export interface GenerateReportProviderProps {
     placement: { kind: 'issue' | 'section'; index: number } | null;
   }) => void;
   /** Opens the native store paywall after a Free usage limit is reached. */
-  onUpgrade?: () => void | Promise<void>;
+  onUpgrade?: () => void | Promise<unknown>;
   /** Initial tab the screen opens on. Defaults to `notes`. */
   initialTab?: TabKey;
   children: ReactNode;

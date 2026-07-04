@@ -10,10 +10,13 @@ import { startPg, seedAuthUsers, type PgFixture } from './setup-pg.js';
 import { resetPool, getPool } from '../db/client.js';
 import { signTestToken } from '../middleware/auth.js';
 import { makeUserId, makeSessionId, makeFileId } from './factories/index.js';
+import { env } from '../env.js';
 
 let fx: PgFixture;
 let alice: string;
 let aliceSid: string;
+let proUser: string;
+let proSid: string;
 
 beforeAll(async () => {
   fx = await startPg();
@@ -23,7 +26,11 @@ beforeAll(async () => {
   getPool(fx.url);
   alice = makeUserId();
   aliceSid = makeSessionId();
-  await seedAuthUsers(fx.url, [{ id: alice }]);
+  proUser = makeUserId();
+  proSid = makeSessionId();
+  env.FREEMIUM_ENFORCEMENT_ENABLED = '1';
+  env.FREEMIUM_ENFORCEMENT_AT = '2026-01-01T00:00:00.000Z';
+  await seedAuthUsers(fx.url, [{ id: alice }, { id: proUser, plan: 'pro' }]);
 }, 120_000);
 
 afterAll(async () => {
@@ -33,6 +40,126 @@ afterAll(async () => {
 const headers = (tok: string) => ({ authorization: `Bearer ${tok}`, 'content-type': 'application/json' });
 
 describe('/files/*', () => {
+  it('accepts exactly 5 MiB and rejects 5 MiB + 1 for Free presign', async () => {
+    const tok = await signTestToken(alice, aliceSid);
+    const request = (sizeBytes: number) => createApp().request('/files/presign', {
+      method: 'POST',
+      headers: headers(tok),
+      body: JSON.stringify({
+        scope: 'scratch',
+        kind: 'voice',
+        contentType: 'audio/m4a',
+        sizeBytes,
+      }),
+    });
+
+    expect((await request(5 * 1024 * 1024)).status).toBe(200);
+    const rejected = await request(5 * 1024 * 1024 + 1);
+    expect(rejected.status).toBe(413);
+    await expect(rejected.json()).resolves.toMatchObject({
+      error: {
+        code: 'file_size_limit_exceeded',
+        details: {
+          sizeBytes: 5 * 1024 * 1024 + 1,
+          limitBytes: 5 * 1024 * 1024,
+          plan: 'free',
+        },
+      },
+    });
+  });
+
+  it('allows Pro to presign exactly 50 MiB', async () => {
+    const tok = await signTestToken(proUser, proSid);
+    const response = await createApp().request('/files/presign', {
+      method: 'POST',
+      headers: headers(tok),
+      body: JSON.stringify({
+        scope: 'scratch',
+        kind: 'document',
+        contentType: 'application/pdf',
+        sizeBytes: 50 * 1024 * 1024,
+      }),
+    });
+
+    expect(response.status).toBe(200);
+  });
+
+  it('keeps an existing Pro-sized file visible after downgrade', async () => {
+    const app = createApp();
+    const tok = await signTestToken(proUser, proSid);
+    const sizeBytes = 6 * 1024 * 1024;
+    const presign = await app.request('/files/presign', {
+      method: 'POST',
+      headers: headers(tok),
+      body: JSON.stringify({
+        scope: 'scratch',
+        kind: 'document',
+        contentType: 'application/pdf',
+        sizeBytes,
+      }),
+    });
+    expect(presign.status).toBe(200);
+    const { fileKey } = (await presign.json()) as { fileKey: string };
+
+    const register = await app.request('/files', {
+      method: 'POST',
+      headers: headers(tok),
+      body: JSON.stringify({
+        scope: 'scratch',
+        kind: 'document',
+        fileKey,
+        contentType: 'application/pdf',
+        sizeBytes,
+      }),
+    });
+    expect(register.status).toBe(201);
+    const file = (await register.json()) as { id: string };
+
+    await getPool().query(
+      `UPDATE public."user" SET plan = 'free', updated_at = now() WHERE id = $1`,
+      [proUser],
+    );
+
+    const url = await app.request(`/files/${file.id}/url`, {
+      headers: { authorization: `Bearer ${tok}` },
+    });
+    expect(url.status).toBe(200);
+  });
+
+  it('repeats the Free limit check during registration', async () => {
+    const tok = await signTestToken(alice, aliceSid);
+    const presign = await createApp().request('/files/presign', {
+      method: 'POST',
+      headers: headers(tok),
+      body: JSON.stringify({
+        scope: 'scratch',
+        kind: 'document',
+        contentType: 'application/pdf',
+        sizeBytes: 1024,
+      }),
+    });
+    const { fileKey } = (await presign.json()) as { fileKey: string };
+
+    const register = await createApp().request('/files', {
+      method: 'POST',
+      headers: headers(tok),
+      body: JSON.stringify({
+        scope: 'scratch',
+        kind: 'document',
+        fileKey,
+        contentType: 'application/pdf',
+        sizeBytes: 5 * 1024 * 1024 + 1,
+      }),
+    });
+
+    expect(register.status).toBe(413);
+    const rows = await getPool().query(
+      `SELECT id FROM app.files WHERE file_key = $1`,
+      [fileKey],
+    );
+    expect(rows.rowCount).toBe(0);
+  });
+
   it('POST /files/presign (scratch) returns server-built key under users/<callerId>/scratch/', async () => {
     const app = createApp();
     const tok = await signTestToken(alice, aliceSid);

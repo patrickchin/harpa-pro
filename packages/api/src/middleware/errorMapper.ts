@@ -5,6 +5,7 @@ import { ZodError } from 'zod';
 import type { AppEnv } from '../app.js';
 import { AiProviderError } from '../services/ai.js';
 import { UsageLimitExceededError } from '../services/usage-limits.js';
+import { FileSizeLimitExceededError } from '../services/file-limits.js';
 import {
   captureApiException,
   type ApiExceptionContext,
@@ -56,6 +57,20 @@ export function errorMapper(
           requestId,
         },
         403,
+      );
+    }
+
+    if (err instanceof FileSizeLimitExceededError) {
+      return c.json(
+        {
+          error: {
+            code: err.code,
+            message: err.message,
+            details: err.details,
+          },
+          requestId,
+        },
+        413,
       );
     }
 

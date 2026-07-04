@@ -34,6 +34,7 @@ import {
   type FileKind,
   type PresignScope,
 } from '../services/storage.js';
+import { enforceFileSizeLimit } from '../services/file-limits.js';
 
 const fileIdParam = z.object({ id: fileId.openapi({ param: { name: 'id', in: 'path' } }) });
 
@@ -84,6 +85,7 @@ fileRoutes.openapi(
       400: { description: 'Bad request.', content: { 'application/json': { schema: errorEnvelope } } },
       401: { description: 'Unauthorized.', content: { 'application/json': { schema: errorEnvelope } } },
       404: { description: 'Project / report not found or not a member.', content: { 'application/json': { schema: errorEnvelope } } },
+      413: { description: 'File exceeds the effective plan limit.', content: { 'application/json': { schema: errorEnvelope } } },
     },
   }),
   async (c) => {
@@ -91,6 +93,7 @@ fileRoutes.openapi(
     const db = c.get('db');
     if (!userId || !db) throw new HTTPException(401);
     const body = c.req.valid('json');
+    await db((d) => enforceFileSizeLimit(d, userId, body.sizeBytes));
 
     let scope: PresignScope;
     switch (body.scope) {
@@ -147,6 +150,7 @@ fileRoutes.openapi(
       401: { description: 'Unauthorized.', content: { 'application/json': { schema: errorEnvelope } } },
       404: { description: 'Project / report not found or not a member.', content: { 'application/json': { schema: errorEnvelope } } },
       409: { description: 'Conflict — fileKey already registered.', content: { 'application/json': { schema: errorEnvelope } } },
+      413: { description: 'File exceeds the effective plan limit.', content: { 'application/json': { schema: errorEnvelope } } },
     },
   }),
   async (c) => {
@@ -154,6 +158,7 @@ fileRoutes.openapi(
     const db = c.get('db');
     if (!userId || !db) throw new HTTPException(401);
     const body = c.req.valid('json');
+    await db((d) => enforceFileSizeLimit(d, userId, body.sizeBytes));
 
     const parsed = parseKeyScope(body.fileKey);
     if (!parsed) {

@@ -25,6 +25,7 @@ import type { AppEnv } from '../app.js';
 import { requestId } from '../middleware/requestId.js';
 import { errorMapper } from '../middleware/errorMapper.js';
 import { AiProviderError } from '../services/ai.js';
+import { FileSizeLimitExceededError } from '../services/file-limits.js';
 
 function buildApp(thrown: () => never) {
   const app = new OpenAPIHono<AppEnv>();
@@ -59,6 +60,25 @@ function assertEnvelope(body: Body) {
 }
 
 describe('errorMapper — property tests', () => {
+  it('FileSizeLimitExceededError → 413 with stable typed details', async () => {
+    const { status, body } = await fire(() => {
+      throw new FileSizeLimitExceededError({
+        sizeBytes: 5 * 1024 * 1024 + 1,
+        limitBytes: 5 * 1024 * 1024,
+        plan: 'free',
+      });
+    });
+
+    expect(status).toBe(413);
+    expect(body.error.code).toBe('file_size_limit_exceeded');
+    expect(body.error.details).toEqual({
+      sizeBytes: 5 * 1024 * 1024 + 1,
+      limitBytes: 5 * 1024 * 1024,
+      plan: 'free',
+    });
+    assertEnvelope(body);
+  });
+
   it('HTTPException → status preserved + envelope-valid', async () => {
     await fc.assert(
       fc.asyncProperty(

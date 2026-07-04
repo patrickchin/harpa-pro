@@ -31,6 +31,10 @@ async function renderRootLayout({ screenshotMode }: { screenshotMode: boolean })
     DialogSheetProvider: provider('DialogSheetProvider'),
   }));
 
+  vi.doMock('@/lib/billing', () => ({
+    BillingProvider: provider('BillingProvider'),
+  }));
+
   vi.doMock('@/lib/uploads/QueueProvider', () => ({
     QueueProvider: provider('QueueProvider'),
   }));
@@ -77,5 +81,15 @@ describe('RootLayout', () => {
     }
     expect(statusBar.props.hidden).toBe(false);
     expect(statusBar.props.style).toBe('dark');
+  });
+
+  it('mounts billing once between auth and app services', async () => {
+    const tree = await renderRootLayout({ screenshotMode: false });
+    const auth = tree.root.find((node) => String(node.type) === 'AuthSessionProvider');
+    const billing = auth.find((node) => String(node.type) === 'BillingProvider');
+
+    expect(
+      billing.find((node) => String(node.type) === 'DialogSheetProvider'),
+    ).toBeTruthy();
   });
 });

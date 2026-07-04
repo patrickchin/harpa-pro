@@ -10,10 +10,16 @@
  *     them requires a full rebuild, not just a JS reload.
  */
 import { z } from 'zod';
+import { Platform } from 'react-native';
 
 const optionalUrl = z.preprocess(
   (v) => (v === '' ? undefined : v),
   z.string().url().optional(),
+);
+
+const optionalString = z.preprocess(
+  (v) => (v === '' ? undefined : v),
+  z.string().min(1).optional(),
 );
 
 const Env = z.object({
@@ -78,6 +84,12 @@ const Env = z.object({
     .int()
     .positive()
     .optional(),
+  EXPO_PUBLIC_BILLING_ENABLED: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((v) => v === 'true'),
+  EXPO_PUBLIC_REVENUECAT_IOS_API_KEY: optionalString,
+  EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY: optionalString,
 });
 
 /* eslint-disable no-restricted-syntax */
@@ -90,6 +102,9 @@ const rawEnv = {
   EXPO_PUBLIC_SCREENSHOT_MODE: process.env.EXPO_PUBLIC_SCREENSHOT_MODE,
   EXPO_PUBLIC_SENTRY_DSN: process.env.EXPO_PUBLIC_SENTRY_DSN,
   EXPO_PUBLIC_PR_NUMBER: process.env.EXPO_PUBLIC_PR_NUMBER,
+  EXPO_PUBLIC_BILLING_ENABLED: process.env.EXPO_PUBLIC_BILLING_ENABLED,
+  EXPO_PUBLIC_REVENUECAT_IOS_API_KEY: process.env.EXPO_PUBLIC_REVENUECAT_IOS_API_KEY,
+  EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY: process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY,
 };
 /* eslint-enable no-restricted-syntax */
 
@@ -100,6 +115,14 @@ if (!parsed.success) {
 }
 
 const data = parsed.data;
+if (data.EXPO_PUBLIC_BILLING_ENABLED && !data.EXPO_PUBLIC_USE_FIXTURES) {
+  const requiredKey = Platform.OS === 'android'
+    ? 'EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY'
+    : 'EXPO_PUBLIC_REVENUECAT_IOS_API_KEY';
+  if (!data[requiredKey]) {
+    throw new Error(`[env] invalid environment configuration: ${requiredKey} is required when billing is enabled`);
+  }
+}
 if (data.EXPO_PUBLIC_API_URL_OVERRIDE) {
   data.EXPO_PUBLIC_API_URL = data.EXPO_PUBLIC_API_URL_OVERRIDE;
 }

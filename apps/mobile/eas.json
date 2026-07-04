@@ -14,7 +14,8 @@
         "APP_VARIANT": "development",
         "EXPO_PUBLIC_APP_VARIANT": "development",
         "EXPO_PUBLIC_API_URL": "https://harpa-pro-api-dev.fly.dev",
-        "EXPO_PUBLIC_USE_FIXTURES": "false"
+        "EXPO_PUBLIC_USE_FIXTURES": "false",
+        "EXPO_PUBLIC_BILLING_ENABLED": "false"
       }
     },
     "development-simulator": {
@@ -29,7 +30,8 @@
         "APP_VARIANT": "preview",
         "EXPO_PUBLIC_APP_VARIANT": "preview",
         "EXPO_PUBLIC_API_URL": "https://harpa-pro-api-dev.fly.dev",
-        "EXPO_PUBLIC_USE_FIXTURES": "false"
+        "EXPO_PUBLIC_USE_FIXTURES": "false",
+        "EXPO_PUBLIC_BILLING_ENABLED": "true"
       }
     },
     "production": {
@@ -41,7 +43,8 @@
         "APP_VARIANT": "production",
         "EXPO_PUBLIC_APP_VARIANT": "production",
         "EXPO_PUBLIC_API_URL": "https://api.harpapro.com",
-        "EXPO_PUBLIC_USE_FIXTURES": "false"
+        "EXPO_PUBLIC_USE_FIXTURES": "false",
+        "EXPO_PUBLIC_BILLING_ENABLED": "true"
       }
     }
   },

@@ -4,7 +4,7 @@
  * Provider order (top → bottom):
  *   AppErrorBoundary → GestureHandlerRootView → SafeAreaProvider →
  *   PersistQueryClientProvider → AuthSessionProvider → StatusBar →
- *   DialogSheetProvider → QueueProvider → AudioPlaybackProvider →
+ *   BillingProvider → DialogSheetProvider → QueueProvider → AudioPlaybackProvider →
  *   SentryProvider → Slot
  *
  * See docs/v4/arch-p2-6-app-shell.md for rationale.
@@ -25,6 +25,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { colors } from '@/lib/design-tokens/colors';
 import { AuthSessionProvider } from '@/lib/auth/session';
+import { BillingProvider } from '@/lib/billing';
 import { DialogSheetProvider } from '@/lib/dialogs/DialogSheetProvider';
 import { QueueProvider } from '@/lib/uploads/QueueProvider';
 import { AudioPlaybackProvider } from '@/lib/audio/AudioPlaybackProvider';
@@ -136,16 +137,18 @@ export default function RootLayout() {
             persistOptions={persistOptions}
           >
             <AuthSessionProvider>
-              <StatusBar hidden={false} style="dark" />
-              <DialogSheetProvider>
-                <QueueProvider>
-                  <AudioPlaybackProvider>
-                    <SentryProvider>
-                      <Slot />
-                    </SentryProvider>
-                  </AudioPlaybackProvider>
-                </QueueProvider>
-              </DialogSheetProvider>
+              <BillingProvider>
+                <StatusBar hidden={false} style="dark" />
+                <DialogSheetProvider>
+                  <QueueProvider>
+                    <AudioPlaybackProvider>
+                      <SentryProvider>
+                        <Slot />
+                      </SentryProvider>
+                    </AudioPlaybackProvider>
+                  </QueueProvider>
+                </DialogSheetProvider>
+              </BillingProvider>
             </AuthSessionProvider>
           </PersistQueryClientProvider>
         </SafeAreaProvider>

@@ -216,6 +216,119 @@ describe('SavedReport', () => {
     ).toHaveLength(0);
   });
 
+  it('shows Report and Review tabs on a finalized report with Report selected by default', () => {
+    const tree = render(
+      <SavedReport {...baseProps({ reportStatus: 'finalized' })} />,
+    );
+    expect(tree.root.findByProps({ testID: 'btn-tab-report' })).toBeTruthy();
+    expect(tree.root.findByProps({ testID: 'btn-tab-review' })).toBeTruthy();
+    expect(
+      tree.root.findAllByProps({ testID: 'saved-report-pane' }).length,
+    ).toBeGreaterThan(0);
+    expect(
+      tree.root.findAllByProps({ testID: 'report-review-pane' }),
+    ).toHaveLength(0);
+  });
+
+  it('switches to Review and submits a comment without losing the typed text early', async () => {
+    const onAddReviewComment = vi.fn(async () => undefined);
+    const props = {
+      ...baseProps({ reportStatus: 'finalized' }),
+      reviewComments: [
+        {
+          id: 'rcm_8h3kq2vp9w',
+          reportId: 'rpt_8h3kq2vp',
+          authorId: 'usr_8h3kq2vp9w7x',
+          authorDisplayName: 'Alice Owner',
+          body: 'Please verify the delivery count.',
+          createdAt: '2026-07-19T10:30:00.000Z',
+        },
+      ],
+      onAddReviewComment,
+    } as SavedReportProps;
+    const tree = render(<SavedReport {...props} />);
+
+    act(() => {
+      tree.root.findByProps({ testID: 'btn-tab-review' }).props.onPress();
+    });
+    expect(
+      tree.root.findAllByProps({ testID: 'report-review-pane' }).length,
+    ).toBeGreaterThan(0);
+    expect(treeText(tree)).toContain('Alice Owner');
+    expect(treeText(tree)).toContain('Please verify the delivery count.');
+
+    const input = tree.root.findByProps({
+      testID: 'input-report-review-comment',
+    });
+    act(() => {
+      input.props.onChangeText('Count checked. It is correct.');
+    });
+    expect(input.props.value).toBe('Count checked. It is correct.');
+
+    await act(async () => {
+      await tree.root
+        .findByProps({ testID: 'btn-add-report-review-comment' })
+        .props.onPress();
+    });
+    expect(onAddReviewComment).toHaveBeenCalledWith(
+      'Count checked. It is correct.',
+    );
+    expect(
+      tree.root.findByProps({ testID: 'input-report-review-comment' }).props
+        .value,
+    ).toBe('');
+  });
+
+  it('keeps a draft review comment when submission fails', async () => {
+    const onAddReviewComment = vi.fn(async () => {
+      throw new Error('Could not add comment');
+    });
+    const props = {
+      ...baseProps({ reportStatus: 'finalized' }),
+      reviewComments: [],
+      onAddReviewComment,
+    } as SavedReportProps;
+    const tree = render(<SavedReport {...props} />);
+
+    act(() => {
+      tree.root.findByProps({ testID: 'btn-tab-review' }).props.onPress();
+    });
+    act(() => {
+      tree.root
+        .findByProps({ testID: 'input-report-review-comment' })
+        .props.onChangeText('Please retry this comment.');
+    });
+    await act(async () => {
+      await tree.root
+        .findByProps({ testID: 'btn-add-report-review-comment' })
+        .props.onPress();
+    });
+    expect(
+      tree.root.findByProps({ testID: 'input-report-review-comment' }).props
+        .value,
+    ).toBe('Please retry this comment.');
+    expect(treeText(tree)).toContain('Could not add comment');
+  });
+
+  it('renders a long report title on its own full-width row without truncation', () => {
+    const longReport = JSON.parse(
+      JSON.stringify(SAMPLE_GENERATED_REPORT),
+    ) as GeneratedSiteReport;
+    longReport.report.meta.title =
+      'Highland Tower structural inspection and delivery reconciliation report';
+    const tree = render(
+      <SavedReport
+        {...baseProps({ report: longReport, reportStatus: 'finalized' })}
+      />,
+    );
+    const title = tree.root.findByProps({ testID: 'report-title-x' });
+    expect(title.props.numberOfLines).toBeUndefined();
+    expect(title.props.ellipsizeMode).toBeUndefined();
+    expect(
+      tree.root.findByProps({ testID: 'report-title-row' }).props.className,
+    ).toContain('w-full');
+  });
+
   it('surfaces "View Notes" in the actions menu when onViewNotes is provided', () => {
     const onViewNotes = vi.fn();
     const tree = render(

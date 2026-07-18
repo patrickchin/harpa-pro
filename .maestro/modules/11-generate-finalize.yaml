@@ -17,6 +17,7 @@ tags:
 #     write; disabled control states are pinned in unit tests because fixture
 #     regeneration can finish before Maestro observes the transient lock
 #   - report-title-N is accessible after finalize (saved-report screen)
+#   - finalized Report / Review tabs render and a review comment round-trips
 #   - finalize the report → saved-report screen
 #   - unfinalize the report → back on generate screen
 #   - re-finalize (leave finalized for module 12)
@@ -153,12 +154,32 @@ tags:
 # Now on saved-report screen — ReportDetailHeader emits the title testID.
 - assertVisible:
     id: 'report-title-.*'
+- assertVisible:
+    id: 'btn-tab-report'
+- assertVisible:
+    id: 'btn-tab-review'
 - assertNotVisible:
     id: 'btn-tab-notes'
 - assertNotVisible:
     id: 'btn-tab-edit'
 - assertNotVisible:
     id: 'btn-edit-meta'
+
+# --- Add a published-report review comment -------------------------------
+- tapOn:
+    id: 'btn-tab-review'
+- extendedWaitUntil:
+    visible:
+      id: 'input-report-review-comment'
+    timeout: 10000
+- tapOn:
+    id: 'input-report-review-comment'
+- inputText: 'Reviewed on device. Delivery count confirmed.'
+- tapOn:
+    id: 'btn-add-report-review-comment'
+- extendedWaitUntil:
+    visible: 'Reviewed on device. Delivery count confirmed.'
+    timeout: 15000
 
 # --- Unfinalize to confirm the round-trip ---------------------------------
 - tapOn:

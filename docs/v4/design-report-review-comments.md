@@ -103,7 +103,7 @@ The default one-line `ScreenHeader` behavior remains unchanged elsewhere.
 
 - Contract tests cover comment schemas, trimming, and length limits.
 - Testcontainers integration tests prove owner/viewer read-write access,
-  cross-project denial, draft conflict, validation, chronological reads, and
+  non-member denial, draft conflict, validation, chronological reads, and
   the inverse assertion that posting does not dirty or update the report.
 - Mobile behavior tests prove finalized tab defaults and switching, review
   empty/populated/loading/error states, successful and failed submission, and
@@ -113,4 +113,3 @@ The default one-line `ScreenHeader` behavior remains unchanged elsewhere.
 - Run focused mobile/API tests, package typechecks and lint, contract/codegen
   drift checks, and the relevant coverage gates. Maestro is updated but only
   run when the user authorizes the device E2E suite.
-

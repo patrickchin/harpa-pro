@@ -45,6 +45,7 @@ export const INVALIDATIONS: Record<string, InvalidationRule> = {
   useUnfinalizeReportMutation: ['report', 'projectReports'],
   useReportPdfMutation: ['report'],
   usePlaceReportAttachmentMutation: ['report'],
+  useCreateReportCommentMutation: ['reportComments'],
 
   // notes
   useCreateNoteMutation: ['reportNotes', 'report'],

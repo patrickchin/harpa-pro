@@ -24,6 +24,8 @@ import {
   useProjectMembersQuery,
   useReportQuery,
   useReportNotesQuery,
+  useReportCommentsQuery,
+  useCreateReportCommentMutation,
   useDeleteReportMutation,
   useUnfinalizeReportMutation,
 } from '@/lib/api/hooks';
@@ -120,6 +122,11 @@ export default function SavedReportRoute() {
     { enabled: reportId !== null },
   );
 
+  const commentsQuery = useReportCommentsQuery(
+    { params: { project: slug, number: reportNumber ?? 0 } },
+    { enabled: hasValidRouteParams && reportStatus === 'finalized' },
+  );
+
   const membersQuery = useProjectMembersQuery(
     { params: { project: slug } },
     { enabled: slug.length > 0 },
@@ -139,6 +146,7 @@ export default function SavedReportRoute() {
   const { refreshing, onRefresh } = useRefresh([
     () => reportQuery.refetch(),
     () => notesQuery.refetch(),
+    () => reportStatus === 'finalized' ? commentsQuery.refetch() : Promise.resolve(),
   ]);
   const noteRows = useMemo<ReadonlyArray<ReportNoteRow>>(() => {
     const items = (notesQuery.data as
@@ -194,6 +202,15 @@ export default function SavedReportRoute() {
   });
 
   const deleteMutation = useDeleteReportMutation();
+  const createCommentMutation = useCreateReportCommentMutation();
+
+  const handleAddReviewComment = useCallback(async (body: string) => {
+    if (!slug || reportNumber === null) return;
+    await createCommentMutation.mutateAsync({
+      params: { project: slug, number: reportNumber },
+      body: { body },
+    });
+  }, [createCommentMutation, reportNumber, slug]);
 
   const handleConfirmDelete = useCallback(async () => {
     if (!slug || reportNumber === null) return;
@@ -254,6 +271,12 @@ export default function SavedReportRoute() {
       noteRows={noteRows}
       isLoading={reportQuery.isLoading}
       notesLoading={notesQuery.isLoading}
+      reviewComments={commentsQuery.data?.items ?? []}
+      reviewCommentsLoading={commentsQuery.isLoading}
+      reviewCommentsError={commentsQuery.error ?? null}
+      isAddingReviewComment={createCommentMutation.isPending}
+      onRetryReviewComments={() => { void commentsQuery.refetch(); }}
+      onAddReviewComment={handleAddReviewComment}
       loadError={reportQuery.error ?? null}
       hasValidRouteParams={hasValidRouteParams}
       refreshing={refreshing}

@@ -54,6 +54,7 @@ export function ReportDetailHeader({
         backLabel="Reports"
         actions={actions}
         titleTestID={`report-title-${numStr}`}
+        stackedTitle
       />
 
       <View className="mt-3 flex-row items-center justify-end">

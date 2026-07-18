@@ -40,6 +40,8 @@ export interface ScreenHeaderProps {
   actions?: ReactNode;
   /** Override the default `screen-header-title` testID on the title Text. */
   titleTestID?: string;
+  /** Put the title below the controls and allow user-authored text to wrap. */
+  stackedTitle?: boolean;
 }
 
 export function ScreenHeader({
@@ -53,6 +55,7 @@ export function ScreenHeader({
   className,
   actions,
   titleTestID,
+  stackedTitle = false,
 }: ScreenHeaderProps) {
   const hasSupportingRow = Boolean(eyebrow || subtitle || titleAccessory);
 
@@ -74,20 +77,36 @@ export function ScreenHeader({
           </Button>
         ) : null}
 
-        <Text
-          testID={titleTestID ?? 'screen-header-title'}
-          className="min-w-0 flex-1 text-title-sm text-foreground"
-          numberOfLines={1}
-          ellipsizeMode="tail"
-        >
-          {title}
-        </Text>
+        {stackedTitle ? (
+          <View className="min-w-0 flex-1" />
+        ) : (
+          <Text
+            testID={titleTestID ?? 'screen-header-title'}
+            className="min-w-0 flex-1 text-title-sm text-foreground"
+            numberOfLines={1}
+            ellipsizeMode="tail"
+          >
+            {title}
+          </Text>
+        )}
 
         <View className="shrink-0 flex-row items-center gap-2">
           {trailing ? <View>{trailing}</View> : null}
           {actions ? <View>{actions}</View> : null}
         </View>
       </View>
+
+      {stackedTitle ? (
+        <View testID="report-title-row" className="w-full">
+          <Text
+            testID={titleTestID ?? 'screen-header-title'}
+            className="w-full text-title-sm text-foreground"
+            selectable
+          >
+            {title}
+          </Text>
+        </View>
+      ) : null}
 
       {hasSupportingRow ? (
         <View className="gap-1">

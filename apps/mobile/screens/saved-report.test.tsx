@@ -230,6 +230,59 @@ describe('SavedReport', () => {
     ).toHaveLength(0);
   });
 
+  it('shows the empty review state when a finalized report has no comments', () => {
+    const tree = render(
+      <SavedReport {...baseProps({ reportStatus: 'finalized' })} />,
+    );
+    act(() => {
+      tree.root.findByProps({ testID: 'btn-tab-review' }).props.onPress();
+    });
+    expect(treeText(tree)).toContain('No review comments yet');
+  });
+
+  it('shows a review loading state while comments are being fetched', () => {
+    const tree = render(
+      <SavedReport
+        {...baseProps({
+          reportStatus: 'finalized',
+          reviewCommentsLoading: true,
+        })}
+      />,
+    );
+    act(() => {
+      tree.root.findByProps({ testID: 'btn-tab-review' }).props.onPress();
+    });
+    expect(
+      tree.root.findByProps({ testID: 'report-review-loading' }),
+    ).toBeTruthy();
+  });
+
+  it('shows a retryable review error without hiding the composer', () => {
+    const onRetryReviewComments = vi.fn();
+    const tree = render(
+      <SavedReport
+        {...baseProps({
+          reportStatus: 'finalized',
+          reviewCommentsError: new Error('Review unavailable'),
+          onRetryReviewComments,
+        })}
+      />,
+    );
+    act(() => {
+      tree.root.findByProps({ testID: 'btn-tab-review' }).props.onPress();
+    });
+    expect(treeText(tree)).toContain("Couldn't load review comments");
+    expect(
+      tree.root.findByProps({ testID: 'input-report-review-comment' }),
+    ).toBeTruthy();
+    act(() => {
+      tree.root
+        .findByProps({ testID: 'btn-retry-report-review' })
+        .props.onPress();
+    });
+    expect(onRetryReviewComments).toHaveBeenCalledOnce();
+  });
+
   it('switches to Review and submits a comment without losing the typed text early', async () => {
     const onAddReviewComment = vi.fn(async () => undefined);
     const props = {
@@ -372,17 +425,17 @@ describe('SavedReport', () => {
     ).toBeGreaterThan(0);
   });
 
-  it('bounces from Notes back to Report when the report flips to finalized', () => {
+  it('opens Report when finalized with a stale Notes initial tab', () => {
     const props = baseProps({ initialTab: 'notes' });
     const tree = render(<SavedReport {...props} />);
     expect(
       tree.root.findAllByProps({ testID: 'report-notes-pane' }).length,
     ).toBeGreaterThan(0);
-    act(() => {
-      tree.update(<SavedReport {...props} reportStatus="finalized" />);
-    });
+    const finalizedTree = render(
+      <SavedReport {...props} reportStatus="finalized" />,
+    );
     expect(
-      tree.root.findAllByProps({ testID: 'saved-report-pane' }).length,
+      finalizedTree.root.findAllByProps({ testID: 'saved-report-pane' }).length,
     ).toBeGreaterThan(0);
   });
 
@@ -579,7 +632,7 @@ const REPORT_WITH_PLACED_PHOTO = {
 } as GeneratedSiteReport;
 
 describe('SavedReport — finalized layout', () => {
-  it('does not render the tab bar when finalized', () => {
+  it('renders Report and Review tabs when finalized', () => {
     const tree = render(
       <SavedReport
         {...finalizedDefaults}
@@ -589,7 +642,10 @@ describe('SavedReport — finalized layout', () => {
     );
     expect(
       tree.root.findAllByProps({ testID: 'btn-tab-report' }),
-    ).toHaveLength(0);
+    ).not.toHaveLength(0);
+    expect(
+      tree.root.findAllByProps({ testID: 'btn-tab-review' }),
+    ).not.toHaveLength(0);
     expect(
       tree.root.findAllByProps({ testID: 'btn-tab-notes' }),
     ).toHaveLength(0);

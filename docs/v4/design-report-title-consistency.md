@@ -180,3 +180,7 @@ button share one horizontal control row: the tab group flexes to use the
 available width and Actions remains a fixed-width trailing control. This keeps
 all report-level navigation together without constraining or truncating the
 title.
+
+The Review composer sits directly in the pane without an enclosing card, so
+the text field is the only bordered surface. It opens as a four-line textarea
+and keeps the submit action beneath it.

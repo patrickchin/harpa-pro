@@ -96,7 +96,7 @@ export function ReportReviewPane({
         </View>
       )}
 
-      <Card className="gap-3">
+      <View testID="report-review-composer" className="gap-3">
         <Input
           testID="input-report-review-comment"
           label="Add a comment"
@@ -107,9 +107,10 @@ export function ReportReviewPane({
             if (submitError) setSubmitError(null);
           }}
           multiline
+          numberOfLines={4}
           maxLength={2_000}
           editable={!isSubmitting}
-          className="min-h-28"
+          className="h-28"
           style={{ textAlignVertical: 'top', lineHeight: 20 }}
           error={submitError}
         />
@@ -122,7 +123,7 @@ export function ReportReviewPane({
         >
           Add comment
         </Button>
-      </Card>
+      </View>
     </View>
   );
 }

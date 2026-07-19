@@ -32,7 +32,7 @@ export function ReportDetailTabBar({
       : secondaryName;
 
   return (
-    <View className="mx-5 mb-2 flex-row rounded-lg border border-border bg-card p-1">
+    <View className="min-w-0 flex-1 flex-row rounded-lg border border-border bg-card p-1">
       <Pressable
         testID="btn-tab-report"
         onPress={() => onChange('report')}

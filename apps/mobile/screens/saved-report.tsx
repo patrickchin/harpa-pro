@@ -404,10 +404,16 @@ export function SavedReport(props: SavedReportProps) {
             />
           </View>
 
-          <View className="mt-3 flex-row items-center justify-between">
-            <View className="flex-row items-center gap-1 rounded-md border border-border bg-card px-3 py-2">
-              <Skeleton width={14} height={14} circle />
-              <Skeleton width={72} height={14} />
+          <View className="mt-3 flex-row items-center gap-2">
+            <View className="min-w-0 flex-1 flex-row rounded-lg border border-border bg-card p-1">
+              <View className="min-h-touch flex-1 flex-row items-center justify-center gap-2 rounded-md">
+                <Skeleton width={14} height={14} />
+                <Skeleton width={44} height={14} />
+              </View>
+              <View className="min-h-touch flex-1 flex-row items-center justify-center gap-2 rounded-md">
+                <Skeleton width={14} height={14} />
+                <Skeleton width={48} height={14} />
+              </View>
             </View>
             <View className="min-h-touch flex-row items-center gap-1.5 rounded-md border border-border bg-secondary px-4 py-3">
               <MoreHorizontal size={16} color={colors.foreground} />
@@ -495,15 +501,16 @@ export function SavedReport(props: SavedReportProps) {
           actionsDisabled={
             isSaving || isExporting || isDeleting || isUnfinalizing
           }
+          tabs={
+            <ReportDetailTabBar
+              activeTab={activeTab}
+              onChange={setActiveTab}
+              secondaryTab={isFinal ? 'review' : 'notes'}
+              secondaryCount={isFinal ? reviewComments.length : notesCount}
+            />
+          }
           actions={actions}
           reportNumber={reportNumber}
-        />
-
-        <ReportDetailTabBar
-          activeTab={activeTab}
-          onChange={setActiveTab}
-          secondaryTab={isFinal ? 'review' : 'notes'}
-          secondaryCount={isFinal ? reviewComments.length : notesCount}
         />
 
         {activeTab === 'report' ? (

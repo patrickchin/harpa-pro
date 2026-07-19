@@ -171,3 +171,12 @@ surface that needs them.
 
 Full design + decisions in
 [`../superpowers/specs/2026-05-28-report-meta-restoration-design.md`](../superpowers/specs/2026-05-28-report-meta-restoration-design.md).
+
+## Follow-up: published review controls
+
+Published reports now expose two tabs, Report and Review. The title remains a
+full-width wrapping row. Directly below it, the two tab buttons and Actions
+button share one horizontal control row: the tab group flexes to use the
+available width and Actions remains a fixed-width trailing control. This keeps
+all report-level navigation together without constraining or truncating the
+title.

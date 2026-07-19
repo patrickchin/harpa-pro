@@ -24,6 +24,7 @@ interface ReportDetailHeaderProps {
   onBack: () => void;
   onOpenActions: () => void;
   actionsDisabled: boolean;
+  tabs: ReactNode;
   actions?: ReactNode;
   /** Per-project report number — drives the title fallback + testID. */
   reportNumber?: number | null;
@@ -34,6 +35,7 @@ export function ReportDetailHeader({
   onBack,
   onOpenActions,
   actionsDisabled,
+  tabs,
   actions,
   reportNumber,
 }: ReportDetailHeaderProps) {
@@ -57,7 +59,11 @@ export function ReportDetailHeader({
         stackedTitle
       />
 
-      <View className="mt-3 flex-row items-center justify-end">
+      <View
+        testID="report-header-controls"
+        className="mt-3 flex-row items-center gap-2"
+      >
+        {tabs}
         <Button
           variant="secondary"
           size="default"
@@ -65,6 +71,7 @@ export function ReportDetailHeader({
           testID="btn-report-actions"
           onPress={onOpenActions}
           disabled={actionsDisabled}
+          className="shrink-0"
         >
           <View className="flex-row items-center gap-1.5">
             <MoreHorizontal size={16} color={colors.foreground} />

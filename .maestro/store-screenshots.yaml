@@ -261,5 +261,7 @@ tags:
 - extendedWaitUntil:
     visible: "Fire lane staging plan reviewed.*"
     timeout: 15000
+- assertVisible:
+    id: "report-review-composer"
 - waitForAnimationToEnd
 - takeScreenshot: 09_report_review

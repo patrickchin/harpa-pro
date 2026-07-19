@@ -155,6 +155,8 @@ tags:
 - assertVisible:
     id: 'report-title-.*'
 - assertVisible:
+    id: 'report-header-controls'
+- assertVisible:
     id: 'saved-report-pane'
 - assertVisible:
     id: 'btn-tab-report'

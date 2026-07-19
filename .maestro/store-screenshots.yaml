@@ -246,6 +246,8 @@ tags:
       id: "report-title-.*"
     timeout: 30000
 - assertVisible:
+    id: "report-header-controls"
+- assertVisible:
     id: "saved-report-pane"
 - assertVisible:
     id: "btn-tab-report"

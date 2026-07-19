@@ -303,6 +303,27 @@ describe('SavedReport', () => {
     expect(onRetryReviewComments).toHaveBeenCalledOnce();
   });
 
+  it('renders an unwrapped four-line review comment field', () => {
+    const tree = render(
+      <SavedReport {...baseProps({ reportStatus: 'finalized' })} />,
+    );
+    act(() => {
+      tree.root.findByProps({ testID: 'btn-tab-review' }).props.onPress();
+    });
+
+    const composer = tree.root.findByProps({
+      testID: 'report-review-composer',
+    });
+    const input = composer.findByProps({
+      testID: 'input-report-review-comment',
+    });
+
+    expect(composer.props.className).not.toMatch(/border|rounded|bg-card/);
+    expect(input.props.multiline).toBe(true);
+    expect(input.props.numberOfLines).toBe(4);
+    expect(input.props.className).toContain('h-28');
+  });
+
   it('switches to Review and submits a comment without losing the typed text early', async () => {
     const onAddReviewComment = vi.fn(async () => undefined);
     const props = {

@@ -230,6 +230,26 @@ describe('SavedReport', () => {
     ).toHaveLength(0);
   });
 
+  it('places the published report tabs on the same row as Actions', () => {
+    const tree = render(
+      <SavedReport {...baseProps({ reportStatus: 'finalized' })} />,
+    );
+    const controls = tree.root.findByProps({
+      testID: 'report-header-controls',
+    });
+
+    expect(controls.props.className).toContain('flex-row');
+    expect(
+      controls.findByProps({ testID: 'btn-tab-report' }),
+    ).toBeTruthy();
+    expect(
+      controls.findByProps({ testID: 'btn-tab-review' }),
+    ).toBeTruthy();
+    expect(
+      controls.findByProps({ testID: 'btn-report-actions' }),
+    ).toBeTruthy();
+  });
+
   it('shows the empty review state when a finalized report has no comments', () => {
     const tree = render(
       <SavedReport {...baseProps({ reportStatus: 'finalized' })} />,

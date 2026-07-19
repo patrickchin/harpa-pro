@@ -11,6 +11,7 @@ Update the app-store screenshot flow so the generated images show a fuller, more
 - A finalized report with placed construction photos near relevant issues and sections.
 - A PDF preview of that finalized report.
 - A usage screen with varied, interesting OpenAI/Groq usage.
+- A finalized-report review discussion with comments from multiple members.
 - About 6 construction photos total, using online CC0 sources and placing them by issue or section where appropriate.
 
 ## Fixture Strategy
@@ -31,6 +32,7 @@ Seed the local development database and local object storage before running Maes
 6. Seed draft notes for the active report, including text, image, and voice-style notes.
 7. Seed six construction photos in `app.files` and `app.note_files`, and upload matching objects to local MinIO.
 8. Seed `app.llm_usage_events` with OpenAI report/chat rows and Groq transcription rows, plus a limit override so the usage screen has meaningful state.
+9. Seed review comments from multiple project members on the main finalized report.
 
 ## Photo Set
 
@@ -53,7 +55,7 @@ Placement target:
 
 ## Maestro Flow
 
-Replace the first-pass flow with a seeded capture flow that produces eight screenshots, which keeps the Play Store set within the common limit:
+Replace the first-pass flow with a seeded capture flow that produces nine source screenshots. Keep all nine in the iOS inventory and curate the Play Store phone set to eight images:
 
 1. `01_projects_list` - four seeded projects.
 2. `02_reports_list` - fuller report list with finalized and draft reports.
@@ -63,6 +65,7 @@ Replace the first-pass flow with a seeded capture flow that produces eight scree
 6. `06_final_report_sections_unplaced` - finalized report scrolled to detailed sections and unplaced photos.
 7. `07_pdf_preview` - PDF preview for the finalized report.
 8. `08_usage` - usage screen with populated metrics, OpenAI/Groq model mix, and recent events.
+9. `09_report_review` - finalized report review tab with member feedback and the full wrapping title.
 
 ## Implementation Steps
 
@@ -70,7 +73,7 @@ Replace the first-pass flow with a seeded capture flow that produces eight scree
 2. Add four more CC0 fixture photos and update fixture source documentation.
 3. Keep all six photos as seed-only MinIO fixtures so they are not bundled into release builds.
 4. Add `scripts/maestro/seed-store-screenshots.sh` to seed Postgres and MinIO.
-5. Update `.maestro/store-screenshots.yaml` to use the seeded state and capture the eight screens.
+5. Update `.maestro/store-screenshots.yaml` to use the seeded state and capture the nine screens.
 6. Update `.maestro/README.md` with the seed step.
 7. Run the local API stack, seed fixtures, run Maestro, and regenerate Android/iOS Fastlane screenshots.
 8. Verify dimensions and run focused mobile checks.

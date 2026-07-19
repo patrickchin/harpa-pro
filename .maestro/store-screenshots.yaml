@@ -71,7 +71,8 @@ tags:
       id: "project-row-prj_rvrsd000001"
     timeout: 15000
 - extendedWaitUntil:
-    visible: "Harbor Point Retrofit"
+    visible:
+      id: "project-row-prj_harbp000001"
     timeout: 15000
 - waitForAnimationToEnd
 - takeScreenshot: 01_projects_list
@@ -236,3 +237,27 @@ tags:
     centerElement: false
 - waitForAnimationToEnd
 - takeScreenshot: 08_usage
+
+- openLink: "harpa://projects/prj_rvrsd000001/reports/3"
+- runFlow:
+    file: helpers/dismiss-open-dialog.yaml
+- extendedWaitUntil:
+    visible:
+      id: "report-title-.*"
+    timeout: 30000
+- assertVisible:
+    id: "saved-report-pane"
+- assertVisible:
+    id: "btn-tab-report"
+- assertVisible:
+    id: "btn-tab-review"
+- tapOn:
+    id: "btn-tab-review"
+- extendedWaitUntil:
+    visible: "Waterproofing repair details verified.*"
+    timeout: 15000
+- extendedWaitUntil:
+    visible: "Fire lane staging plan reviewed.*"
+    timeout: 15000
+- waitForAnimationToEnd
+- takeScreenshot: 09_report_review

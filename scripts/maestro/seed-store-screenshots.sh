@@ -14,7 +14,7 @@ docker inspect harpa-pro-minio >/dev/null
 docker exec -i harpa-pro-pg psql -U postgres -d harpa -v ON_ERROR_STOP=1 <<'SQL'
 \set screenshot_now '2026-06-15 09:00:00+00'
 
-TRUNCATE app.note_files, app.notes, app.files, app.llm_usage_events,
+TRUNCATE app.report_comments, app.note_files, app.notes, app.files, app.llm_usage_events,
          app.user_limit_overrides, app.rate_limit_buckets, app.reports,
          app.project_members, app.projects, app.user_settings,
          app.waitlist_signups, public."session", public."account",
@@ -78,7 +78,7 @@ VALUES
    (TIMESTAMPTZ :'screenshot_now') - interval '1 day',
    '{
      "meta":{
-       "title":"Riverside Tower - Daily Site Report",
+       "title":"Riverside Tower - Daily Site Inspection and Corrective Action Report",
        "summary":"Level 4 deck prep, south foundation waterproofing, and east access scaffolding were the main focus. Work is generally on track, with three corrective items assigned before the next pour window.",
        "visitDate":"2026-06-14"
      },
@@ -171,6 +171,16 @@ VALUES
    '{"meta":{"title":"Central Clinic - Steel Review","summary":"Steel delivery and anchor checks completed for the addition.","visitDate":"2026-05-27"},"weather":null,"workers":[{"role":"Steel crew","count":"5","hours":"40","notes":"Set anchor templates."}],"materials":[],"issues":[],"nextSteps":["Schedule inspector walk."],"summarySections":[]}'::jsonb,
    0, NULL, (TIMESTAMPTZ :'screenshot_now') - interval '19 days', (TIMESTAMPTZ :'screenshot_now') - interval '18 days',
    (TIMESTAMPTZ :'screenshot_now') - interval '19 days', (TIMESTAMPTZ :'screenshot_now') - interval '18 days');
+
+INSERT INTO app.report_comments
+  (id, report_id, author_id, body, created_at)
+VALUES
+  ('rcm_rvwcmt0001', 'rpt_rvrsd000003', 'usr_mbranna0001',
+   'Waterproofing repair details verified. Keep the grid D hold point open until the inspection photos are attached.',
+   (TIMESTAMPTZ :'screenshot_now') - interval '18 hours'),
+  ('rcm_rvwcmt0002', 'rpt_rvrsd000003', 'usr_mbrcyra0003',
+   'Fire lane staging plan reviewed. Please confirm marshal coverage before the concrete trucks arrive.',
+   (TIMESTAMPTZ :'screenshot_now') - interval '17 hours');
 
 INSERT INTO app.files
   (id, owner_id, kind, file_key, size_bytes, content_type, project_id, report_id, created_at)
@@ -272,6 +282,7 @@ SELECT
   (SELECT count(*) FROM app.projects) AS projects,
   (SELECT count(*) FROM app.reports WHERE project_id = 'prj_rvrsd000001') AS riverside_reports,
   (SELECT count(*) FROM app.project_members WHERE project_id = 'prj_rvrsd000001') AS riverside_members,
+  (SELECT count(*) FROM app.report_comments WHERE report_id = 'rpt_rvrsd000003') AS review_comments,
   (SELECT count(*) FROM app.note_files) AS photo_files,
   (SELECT count(*) FROM app.llm_usage_events) AS usage_events;
 SQL

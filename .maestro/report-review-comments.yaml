@@ -1,0 +1,12 @@
+appId: ${MAESTRO_APP_ID}
+name: 'Published report review comments'
+tags:
+  - reports
+  - review
+---
+# Focused entrypoint for the published-report Review workflow. Reuses the
+# normal auth/project setup and module 11 so the assertions stay identical to
+# the full regression journey while avoiding unrelated member/media modules.
+- runFlow: modules/01-auth.yaml
+- runFlow: modules/02-projects-crud.yaml
+- runFlow: modules/11-generate-finalize.yaml

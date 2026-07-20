@@ -23,18 +23,27 @@ exports[`ProjectsList > does not render ListHeaderComponent when empty 1`] = `
     >
       <rn-View
         className="min-h-touch flex-row items-center gap-3"
+        testID="screen-header-controls"
+      >
+        <rn-View
+          className="min-w-0 flex-1"
+        />
+        <rn-View
+          className="shrink-0 flex-row items-center gap-2"
+        />
+      </rn-View>
+      <rn-View
+        className="w-full"
+        testID="screen-header-title-row"
       >
         <rn-Text
-          className="min-w-0 flex-1 text-title-sm text-foreground"
-          ellipsizeMode="tail"
-          numberOfLines={1}
+          accessibilityRole="header"
+          className="w-full text-title-sm text-foreground"
+          selectable={true}
           testID="screen-header-title"
         >
           Projects
         </rn-Text>
-        <rn-View
-          className="shrink-0 flex-row items-center gap-2"
-        />
       </rn-View>
     </rn-View>
   </rn-View>
@@ -109,18 +118,27 @@ exports[`ProjectsList > matches snapshot when empty 1`] = `
     >
       <rn-View
         className="min-h-touch flex-row items-center gap-3"
+        testID="screen-header-controls"
+      >
+        <rn-View
+          className="min-w-0 flex-1"
+        />
+        <rn-View
+          className="shrink-0 flex-row items-center gap-2"
+        />
+      </rn-View>
+      <rn-View
+        className="w-full"
+        testID="screen-header-title-row"
       >
         <rn-Text
-          className="min-w-0 flex-1 text-title-sm text-foreground"
-          ellipsizeMode="tail"
-          numberOfLines={1}
+          accessibilityRole="header"
+          className="w-full text-title-sm text-foreground"
+          selectable={true}
           testID="screen-header-title"
         >
           Projects
         </rn-Text>
-        <rn-View
-          className="shrink-0 flex-row items-center gap-2"
-        />
       </rn-View>
     </rn-View>
   </rn-View>
@@ -195,18 +213,27 @@ exports[`ProjectsList > matches snapshot when loading 1`] = `
     >
       <rn-View
         className="min-h-touch flex-row items-center gap-3"
+        testID="screen-header-controls"
+      >
+        <rn-View
+          className="min-w-0 flex-1"
+        />
+        <rn-View
+          className="shrink-0 flex-row items-center gap-2"
+        />
+      </rn-View>
+      <rn-View
+        className="w-full"
+        testID="screen-header-title-row"
       >
         <rn-Text
-          className="min-w-0 flex-1 text-title-sm text-foreground"
-          ellipsizeMode="tail"
-          numberOfLines={1}
+          accessibilityRole="header"
+          className="w-full text-title-sm text-foreground"
+          selectable={true}
           testID="screen-header-title"
         >
           Projects
         </rn-Text>
-        <rn-View
-          className="shrink-0 flex-row items-center gap-2"
-        />
       </rn-View>
     </rn-View>
   </rn-View>
@@ -628,18 +655,27 @@ exports[`ProjectsList > matches snapshot with projects 1`] = `
     >
       <rn-View
         className="min-h-touch flex-row items-center gap-3"
+        testID="screen-header-controls"
+      >
+        <rn-View
+          className="min-w-0 flex-1"
+        />
+        <rn-View
+          className="shrink-0 flex-row items-center gap-2"
+        />
+      </rn-View>
+      <rn-View
+        className="w-full"
+        testID="screen-header-title-row"
       >
         <rn-Text
-          className="min-w-0 flex-1 text-title-sm text-foreground"
-          ellipsizeMode="tail"
-          numberOfLines={1}
+          accessibilityRole="header"
+          className="w-full text-title-sm text-foreground"
+          selectable={true}
           testID="screen-header-title"
         >
           Projects
         </rn-Text>
-        <rn-View
-          className="shrink-0 flex-row items-center gap-2"
-        />
       </rn-View>
     </rn-View>
   </rn-View>
@@ -781,18 +817,27 @@ exports[`ProjectsList > renders EmptyState when no projects 1`] = `
     >
       <rn-View
         className="min-h-touch flex-row items-center gap-3"
+        testID="screen-header-controls"
+      >
+        <rn-View
+          className="min-w-0 flex-1"
+        />
+        <rn-View
+          className="shrink-0 flex-row items-center gap-2"
+        />
+      </rn-View>
+      <rn-View
+        className="w-full"
+        testID="screen-header-title-row"
       >
         <rn-Text
-          className="min-w-0 flex-1 text-title-sm text-foreground"
-          ellipsizeMode="tail"
-          numberOfLines={1}
+          accessibilityRole="header"
+          className="w-full text-title-sm text-foreground"
+          selectable={true}
           testID="screen-header-title"
         >
           Projects
         </rn-Text>
-        <rn-View
-          className="shrink-0 flex-row items-center gap-2"
-        />
       </rn-View>
     </rn-View>
   </rn-View>
@@ -867,18 +912,27 @@ exports[`ProjectsList > renders address row only when address is non-null 1`] = 
     >
       <rn-View
         className="min-h-touch flex-row items-center gap-3"
+        testID="screen-header-controls"
+      >
+        <rn-View
+          className="min-w-0 flex-1"
+        />
+        <rn-View
+          className="shrink-0 flex-row items-center gap-2"
+        />
+      </rn-View>
+      <rn-View
+        className="w-full"
+        testID="screen-header-title-row"
       >
         <rn-Text
-          className="min-w-0 flex-1 text-title-sm text-foreground"
-          ellipsizeMode="tail"
-          numberOfLines={1}
+          accessibilityRole="header"
+          className="w-full text-title-sm text-foreground"
+          selectable={true}
           testID="screen-header-title"
         >
           Projects
         </rn-Text>
-        <rn-View
-          className="shrink-0 flex-row items-center gap-2"
-        />
       </rn-View>
     </rn-View>
   </rn-View>
@@ -1020,18 +1074,27 @@ exports[`ProjectsList > renders role labels correctly 1`] = `
     >
       <rn-View
         className="min-h-touch flex-row items-center gap-3"
+        testID="screen-header-controls"
+      >
+        <rn-View
+          className="min-w-0 flex-1"
+        />
+        <rn-View
+          className="shrink-0 flex-row items-center gap-2"
+        />
+      </rn-View>
+      <rn-View
+        className="w-full"
+        testID="screen-header-title-row"
       >
         <rn-Text
-          className="min-w-0 flex-1 text-title-sm text-foreground"
-          ellipsizeMode="tail"
-          numberOfLines={1}
+          accessibilityRole="header"
+          className="w-full text-title-sm text-foreground"
+          selectable={true}
           testID="screen-header-title"
         >
           Projects
         </rn-Text>
-        <rn-View
-          className="shrink-0 flex-row items-center gap-2"
-        />
       </rn-View>
     </rn-View>
   </rn-View>

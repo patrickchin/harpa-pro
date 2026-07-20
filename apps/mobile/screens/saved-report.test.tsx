@@ -146,6 +146,9 @@ describe('SavedReport', () => {
       tree.root.findAllByProps({ testID: 'report-detail-skeleton' }).length,
     ).toBeGreaterThan(0);
     expect(tree.root.findAllByProps({ testID: 'btn-report-actions' })).toHaveLength(0);
+    expect(
+      tree.root.findByProps({ testID: 'screen-header-title-row' }),
+    ).toBeTruthy();
   });
 
   it('renders the invalid-route fallback when hasValidRouteParams=false', () => {
@@ -419,7 +422,7 @@ describe('SavedReport', () => {
     expect(title.props.numberOfLines).toBeUndefined();
     expect(title.props.ellipsizeMode).toBeUndefined();
     expect(
-      tree.root.findByProps({ testID: 'report-title-row' }).props.className,
+      tree.root.findByProps({ testID: 'screen-header-title-row' }).props.className,
     ).toContain('w-full');
   });
 

@@ -94,10 +94,10 @@ retaining draft `Report` / `Notes` behavior. The review pane contains:
 The composer clears only after the add callback succeeds. Mutation errors stay
 visible beside the composer so typed text is not lost.
 
-The saved-report header opts into a stacked `ScreenHeader` layout. Navigation
-and action controls remain on the first row. The title moves to its own row,
-has no `numberOfLines` or tail ellipsis, and occupies the full content width.
-The default one-line `ScreenHeader` behavior remains unchanged elsewhere.
+The saved-report header uses the shared stacked `ScreenHeader` layout.
+Navigation and action controls remain on the first row. The title lives on its
+own row, has no `numberOfLines` or tail ellipsis, and occupies the full content
+width. This matches the app-wide page-title behavior.
 
 ## Verification
 

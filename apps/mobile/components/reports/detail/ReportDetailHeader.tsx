@@ -56,7 +56,6 @@ export function ReportDetailHeader({
         backLabel="Reports"
         actions={actions}
         titleTestID={`report-title-${numStr}`}
-        stackedTitle
       />
 
       <View

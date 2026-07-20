@@ -421,9 +421,7 @@ describe('SavedReport', () => {
     const title = tree.root.findByProps({ testID: 'report-title-x' });
     expect(title.props.numberOfLines).toBeUndefined();
     expect(title.props.ellipsizeMode).toBeUndefined();
-    expect(
-      tree.root.findByProps({ testID: 'screen-header-title-row' }).props.className,
-    ).toContain('w-full');
+    expect(title.parent?.props.className).toContain('w-full');
   });
 
   it('surfaces "View Notes" in the actions menu when onViewNotes is provided', () => {

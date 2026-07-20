@@ -40,7 +40,10 @@ export interface ScreenHeaderProps {
   actions?: ReactNode;
   /** Override the default `screen-header-title` testID on the title Text. */
   titleTestID?: string;
-  /** Put the title below the controls and allow user-authored text to wrap. */
+  /**
+   * Page titles are stacked by default. Set false only for a compact,
+   * non-page embed that intentionally keeps its title beside the controls.
+   */
   stackedTitle?: boolean;
 }
 
@@ -55,14 +58,17 @@ export function ScreenHeader({
   className,
   actions,
   titleTestID,
-  stackedTitle = false,
+  stackedTitle = true,
 }: ScreenHeaderProps) {
   const hasSupportingRow = Boolean(eyebrow || subtitle || titleAccessory);
 
   return (
     <View className={cn('gap-3', className)}>
       {/* Top padding lives in min-h-touch — see Pitfall v3 db0b97c. */}
-      <View className="min-h-touch flex-row items-center gap-3">
+      <View
+        testID="screen-header-controls"
+        className="min-h-touch flex-row items-center gap-3"
+      >
         {onBack ? (
           <Button
             testID="btn-back"
@@ -97,10 +103,11 @@ export function ScreenHeader({
       </View>
 
       {stackedTitle ? (
-        <View testID="report-title-row" className="w-full">
+        <View testID="screen-header-title-row" className="w-full">
           <Text
             testID={titleTestID ?? 'screen-header-title'}
             className="w-full text-title-sm text-foreground"
+            accessibilityRole="header"
             selectable
           >
             {title}

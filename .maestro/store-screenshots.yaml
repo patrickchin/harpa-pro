@@ -74,6 +74,10 @@ tags:
     visible:
       id: "project-row-prj_harbp000001"
     timeout: 15000
+- assertVisible:
+    id: "screen-header-controls"
+- assertVisible:
+    id: "screen-header-title-row"
 - waitForAnimationToEnd
 - takeScreenshot: 01_projects_list
 
@@ -97,6 +101,10 @@ tags:
     visible:
       id: "report-row-3"
     timeout: 15000
+- assertVisible:
+    id: "screen-header-controls"
+- assertVisible:
+    id: "screen-header-title-row"
 - waitForAnimationToEnd
 - takeScreenshot: 02_reports_list
 
@@ -118,6 +126,10 @@ tags:
 - extendedWaitUntil:
     visible: "Priya Shah"
     timeout: 15000
+- assertVisible:
+    id: "screen-header-controls"
+- assertVisible:
+    id: "screen-header-title-row"
 - waitForAnimationToEnd
 - takeScreenshot: 03_members_team
 
@@ -131,6 +143,10 @@ tags:
 - extendedWaitUntil:
     visible: "Access path follow-up"
     timeout: 30000
+- assertVisible:
+    id: "screen-header-controls"
+- assertVisible:
+    id: "screen-header-title-row"
 - tapOn:
     id: "btn-record-start"
 - extendedWaitUntil:
@@ -154,6 +170,10 @@ tags:
     visible:
       id: "saved-report-pane"
     timeout: 30000
+- assertVisible:
+    id: "screen-header-controls"
+- assertVisible:
+    id: "screen-header-title-row"
 - scrollUntilVisible:
     element:
       id: "placed-photos-issue-.*"
@@ -201,6 +221,10 @@ tags:
     visible:
       id: "pdf-preview"
     timeout: 60000
+- assertVisible:
+    id: "screen-header-controls"
+- assertVisible:
+    id: "screen-header-title-row"
 - waitForAnimationToEnd
 - takeScreenshot: 07_pdf_preview
 
@@ -221,6 +245,10 @@ tags:
     notVisible:
       id: "usage-loading"
     timeout: 15000
+- assertVisible:
+    id: "screen-header-controls"
+- assertVisible:
+    id: "screen-header-title-row"
 - scrollUntilVisible:
     element:
       id: "usage-by-model"
@@ -247,6 +275,10 @@ tags:
     timeout: 30000
 - assertVisible:
     id: "report-header-controls"
+- assertVisible:
+    id: "screen-header-controls"
+- assertVisible:
+    id: "screen-header-title-row"
 - assertVisible:
     id: "saved-report-pane"
 - assertVisible:

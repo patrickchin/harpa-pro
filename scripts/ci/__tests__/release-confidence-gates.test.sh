@@ -106,8 +106,8 @@ forbid_fixed ".maestro/ci-launch-smoke.yaml" \
   "optional: true" \
   "Expo app-readiness wait fails closed"
 require_fixed ".maestro/ci-launch-smoke.yaml" \
-  "timeout: 60000" \
-  "Maestro launch flow bounds its Expo app-readiness wait"
+  "timeout: 90000" \
+  "Maestro launch flow allows 90 seconds for Expo app readiness"
 require_fixed ".maestro/ci-launch-smoke.yaml" \
   "timeout: 30000" \
   "Maestro launch flow bounds its final app-control wait"
@@ -124,8 +124,16 @@ require_before ".maestro/ci-launch-smoke.yaml" \
   "Maestro waits for app readiness only after selecting Metro"
 require_before ".maestro/ci-launch-smoke.yaml" \
   "visible: 'Continue|Email'" \
+  "timeout: 90000" \
+  "90-second timeout belongs to the fail-closed app-readiness wait"
+require_before ".maestro/ci-launch-smoke.yaml" \
+  "timeout: 90000" \
   "id: 'input-email'" \
   "bounded app-readiness wait precedes the app-control assertion"
+require_before ".maestro/ci-launch-smoke.yaml" \
+  "id: 'input-email'" \
+  "timeout: 30000" \
+  "30-second timeout belongs to the final app-control wait"
 require_fixed ".github/workflows/e2e-maestro-testid-gate.yml" \
   "timeout-minutes: 30" \
   "Maestro job has a 30-minute GitHub Actions ceiling"
@@ -166,8 +174,8 @@ require_fixed "scripts/ci/run-maestro-launch-smoke.sh" \
   "maestro\" test" \
   "Maestro CLI executes a real flow"
 require_regex "scripts/ci/run-maestro-launch-smoke.sh" \
-  'timeout[[:space:]]+[0-9]+s.*maestro' \
-  "Maestro CLI execution has a shell-level timeout"
+  'timeout[[:space:]]+180s.*maestro' \
+  "Maestro CLI execution keeps its 180-second shell timeout"
 # These are literal runner-script strings, not policy-test expansions.
 # shellcheck disable=SC2016
 require_fixed "scripts/ci/run-maestro-launch-smoke.sh" \

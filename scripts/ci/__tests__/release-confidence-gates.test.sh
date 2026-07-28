@@ -29,6 +29,16 @@ require_fixed() {
   fi
 }
 
+forbid_fixed() {
+  local path="$1" needle="$2" description="$3"
+  if [[ ! -f "$REPO_ROOT/$path" ]] || grep -Fq -- "$needle" "$REPO_ROOT/$path"; then
+    echo "  FAIL - $description"
+    FAIL=$((FAIL + 1))
+  else
+    echo "  ok   - $description"
+  fi
+}
+
 require_regex() {
   local path="$1" pattern="$2" description="$3"
   if [[ -f "$REPO_ROOT/$path" ]] && grep -Eq -- "$pattern" "$REPO_ROOT/$path"; then
@@ -90,11 +100,17 @@ require_regex ".maestro/ci-launch-smoke.yaml" \
   "id:[[:space:]]*['\"]?input-email['\"]?" \
   "Maestro launch flow asserts a rendered app control"
 require_fixed ".maestro/ci-launch-smoke.yaml" \
+  "visible: 'Continue|Email'" \
+  "Maestro waits for either Expo onboarding or rendered app UI"
+forbid_fixed ".maestro/ci-launch-smoke.yaml" \
   "optional: true" \
-  "late Expo developer-menu wait is optional"
+  "Expo app-readiness wait fails closed"
 require_fixed ".maestro/ci-launch-smoke.yaml" \
   "timeout: 60000" \
-  "Maestro launch flow bounds its late developer-menu and app waits"
+  "Maestro launch flow bounds its Expo app-readiness wait"
+require_fixed ".maestro/ci-launch-smoke.yaml" \
+  "timeout: 30000" \
+  "Maestro launch flow bounds its final app-control wait"
 require_fixed ".maestro/ci-launch-smoke.yaml" \
   "visible: 'http://10.0.2.2:8081'" \
   "Maestro launch flow detects the Android emulator's Metro server row"
@@ -104,12 +120,12 @@ require_before ".maestro/ci-launch-smoke.yaml" \
   "Maestro selects the available Metro server before asserting app UI"
 require_before ".maestro/ci-launch-smoke.yaml" \
   "visible: 'http://10.0.2.2:8081'" \
-  "timeout: 60000" \
-  "Maestro waits for the late developer menu only after selecting Metro"
+  "visible: 'Continue|Email'" \
+  "Maestro waits for app readiness only after selecting Metro"
 require_before ".maestro/ci-launch-smoke.yaml" \
-  "timeout: 60000" \
+  "visible: 'Continue|Email'" \
   "id: 'input-email'" \
-  "bounded late developer-menu wait precedes the app-UI assertion"
+  "bounded app-readiness wait precedes the app-control assertion"
 require_fixed ".github/workflows/e2e-maestro-testid-gate.yml" \
   "timeout-minutes: 30" \
   "Maestro job has a 30-minute GitHub Actions ceiling"

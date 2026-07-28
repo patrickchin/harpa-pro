@@ -105,15 +105,17 @@ Each AI-touching route has a test that:
 - `appId` is read from `MAESTRO_APP_ID` (Pitfall 9).
 - Mobile-relevant PRs build and install the Android dev client on a
   real emulator, then run the bounded
-  `.maestro/ci-launch-smoke.yaml` flow. The job has a 20-minute
-  ceiling and the Maestro command has a 180-second ceiling.
+  `.maestro/ci-launch-smoke.yaml` flow. The job has a 30-minute
+  ceiling, emulator boot has a 300-second ceiling, and the Maestro
+  command has a 180-second ceiling.
 - The PR APK targets only the emulator's `x86_64` ABI instead of
   compiling the three unused Android ABIs. Gradle dependencies are
   restored from a cache keyed by the lockfile and mobile prebuild
   inputs.
 - Before the emulator starts, CI applies the runner action's
-  documented `/dev/kvm` udev rule so hosted Ubuntu uses hardware
-  acceleration instead of falling back to `-accel off`.
+  documented world-readable/writable `/dev/kvm` udev rule so hosted
+  Ubuntu uses hardware acceleration instead of falling back to
+  `-accel off`.
 - AI calls go through replay mode automatically — `:mock` build
   ships fixtures.
 - Full regression and native-input flows remain explicit local /

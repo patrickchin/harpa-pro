@@ -13,7 +13,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createUploadQueue } from './queue';
 import {
   createInMemoryPersistence,
+  createMmkvPersistence,
   rehydrateJob,
+  type QueuePersistence,
   type PersistedJob,
 } from './persistence';
 import type { EnqueueInput } from './types';
@@ -135,5 +137,36 @@ describe('upload queue persistence', () => {
     };
     expect(rehydrateJob(completed)).toEqual(completed);
     expect(rehydrateJob(failed)).toEqual(failed);
+  });
+
+  it('isolates persisted jobs by authenticated user id', () => {
+    const createSessionPersistence = createMmkvPersistence as unknown as (
+      userId: string,
+    ) => QueuePersistence;
+    const userA = createSessionPersistence('usr_a');
+    const userB = createSessionPersistence('usr_b');
+    userA.clear();
+    userB.clear();
+
+    userA.save([
+      {
+        id: 'upl_user_a',
+        input: input({ sourceUri: 'file:///tmp/user-a.jpg' }),
+        status: 'pending',
+        progress: 0,
+        attempt: 1,
+      },
+    ]);
+
+    expect(userB.load()).toEqual([]);
+    expect(userA.load()).toEqual([
+      expect.objectContaining({
+        id: 'upl_user_a',
+        input: expect.objectContaining({ sourceUri: 'file:///tmp/user-a.jpg' }),
+      }),
+    ]);
+
+    userA.clear();
+    userB.clear();
   });
 });

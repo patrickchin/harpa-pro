@@ -51,6 +51,7 @@ vi.mock('../env.js', () => ({
     DEMO_ACCOUNT_EMAILS: undefined,
     BETTER_AUTH_SECRET: 'test-secret-at-least-sixteen-characters',
     BETTER_AUTH_URL: 'http://localhost:8787',
+    ADMIN_CORS_ORIGINS: 'http://localhost:3002',
     NODE_ENV: 'development',
     EMAIL_OTP_LIVE: '0',
   },

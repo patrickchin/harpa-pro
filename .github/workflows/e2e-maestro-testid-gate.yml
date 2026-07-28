@@ -94,6 +94,13 @@ jobs:
         working-directory: apps/mobile/android
         run: ./gradlew :app:assembleDebug --no-daemon -PreactNativeArchitectures=x86_64
 
+      - name: Enable KVM group permissions
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0660", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
       - name: Run bounded Maestro launch smoke
         uses: reactivecircus/android-emulator-runner@v2
         with:

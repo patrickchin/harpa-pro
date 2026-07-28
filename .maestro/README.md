@@ -37,7 +37,9 @@ control renders. The job is capped at 20 minutes and the Maestro
 process at 180 seconds so a stuck emulator or driver cannot consume
 an unbounded runner. The APK build targets only the emulator's
 `x86_64` ABI and restores Gradle dependencies from a cache keyed by
-the lockfile and mobile prebuild inputs.
+the lockfile and mobile prebuild inputs. Before launch, CI applies
+the runner action's documented `/dev/kvm` udev rule so the hosted
+Ubuntu emulator uses hardware acceleration.
 
 This does not replace the regression journey. It proves the native
 build, Metro bundle, installation, launch, and first rendered route;

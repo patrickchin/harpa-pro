@@ -111,6 +111,9 @@ Each AI-touching route has a test that:
   compiling the three unused Android ABIs. Gradle dependencies are
   restored from a cache keyed by the lockfile and mobile prebuild
   inputs.
+- Before the emulator starts, CI applies the runner action's
+  documented `/dev/kvm` udev rule so hosted Ubuntu uses hardware
+  acceleration instead of falling back to `-accel off`.
 - AI calls go through replay mode automatically — `:mock` build
   ships fixtures.
 - Full regression and native-input flows remain explicit local /

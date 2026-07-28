@@ -271,6 +271,16 @@ domain before serialization. Console-capture tests use sentinel secrets
 and fail if any appear; richer message assertions stay inside the
 in-process fake record.
 
+### R12 — Membership is mistaken for write authorization
+
+Project membership answers whether a caller can see a row; it does not answer
+whether the caller may mutate it. A policy or route that checks only
+`app.is_member(project_id)` silently collapses `owner`, `editor`, and `viewer`
+into the same write role. Owner/non-member tests stay green while viewers can
+write. Mitigation: keep membership as the row-visibility boundary, apply one
+central owner/writer role guard at every project-content mutation route, and
+test each operation with owner, editor, and viewer actors.
+
 ## Bugs
 
 - **2026-06-06** *(R3)* — After [PR #154] unblocked the report-body wire shape, post-merge api-dev still failed at the very last step of all three journeys: `POST /api/auth/sign-out` returned HTTP 500. Root cause: the journey scripts called sign-out with an empty body (`req POST /api/auth/sign-out '' …`) and `req()` strips the `-d` flag entirely when `$3` is empty, so the request went out with no body. better-auth's sign-out handler 500s instead of accepting empty / returning 400. Same script's deliberate `'{}'` test on stress.sh:219 already proved the fix. Filed API followup for the empty-body → 500 layer. Fix: replace `''` with `'{}'` at all six end-of-journey sign-out call sites. [detail](2026-06-06-journey-sign-out-empty-body-500.md)
@@ -278,6 +288,7 @@ in-process fake record.
 Most recent first. One line per bug — open the linked file only for the full root-cause / test / commit write-up.
 
 - **2026-07-28** *(R5)* — An authenticated `fixtureName` could downgrade `AI_LIVE=1` requests to checked-in replay, while recorder paths could persist customer/site identifiers because redaction was isolated or bypassed. Fix: make mode server-owned, share a cross-context redaction boundary, sanitize fixtures, and add live route plus privacy guards. [detail](2026-07-28-ai-fixture-trust-boundary.md)
+- **2026-07-28** *(R12)* — Project-content routes relied on membership-scoped RLS alone, so viewers could update projects, reports, notes, files, invoke generation, and finalize. Fix: central owner/writer route guards plus a real owner/editor/viewer Testcontainers matrix. [detail](2026-07-28-membership-collapsed-project-roles.md)
 - **2026-07-28** *(R11)* — Fake OTP and fake Resend paths printed full recipients plus OTPs or rendered confirmation messages, putting bearer credentials and personal data into preview/developer logs. Fix: centralize metadata-only email diagnostics and pin both paths with console-capture regressions. [detail](2026-07-28-preview-email-secret-logs.md)
 - **2026-07-28** — The root mobile upload queue persisted every account's jobs under one MMKV key and survived auth teardown, so a queued upload could resume under the next signed-in account. Fix: user-scope persistence, defer hydration until auth resolves, and abort/clear on sign-out, 401, or user-id change. [detail](2026-07-28-upload-queue-cross-session.md)
 - **2026-06-26** — Qualitative worker counts such as `"a few"` survived the API wire shape but disappeared in the rendered report because `report-core` / mobile adapters coerced role counts back to numbers and displayed `0`. Fix: keep role counts as `string | null`, parse only for math, and add report-card/stat/PDF regressions. [detail](2026-06-26-qualitative-worker-count-hidden.md)

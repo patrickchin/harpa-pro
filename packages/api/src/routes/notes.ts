@@ -1,7 +1,7 @@
 /**
  * Notes routes — list/create nested under report; patch/delete by id.
- * RLS in app.notes is the access control: member-of-project SELECT,
- * member + author INSERT, author-only UPDATE/DELETE.
+ * RLS in app.notes provides member visibility and author-only
+ * UPDATE/DELETE. Mutations also require an owner/editor project role.
  */
 import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi';
 import { HTTPException } from 'hono/http-exception';
@@ -15,14 +15,34 @@ import {
   noteId,
 } from '@harpa/api-contract';
 import type { AppEnv } from '../app.js';
+import { requireProjectWriter } from '../lib/project-authorization.js';
 import { withAuth } from '../middleware/auth.js';
-import { appendFiles, createNote, deleteNote, listNotes, updateNote } from '../services/notes.js';
+import {
+  appendFiles,
+  createNote,
+  deleteNote,
+  getNoteAccess,
+  listNotes,
+  updateNote,
+} from '../services/notes.js';
 import { getReport } from '../services/reports.js';
 
 const reportParam = z.object({ report: reportId.openapi({ param: { name: 'report', in: 'path' } }) });
 const noteParam = z.object({ note: noteId.openapi({ param: { name: 'note', in: 'path' } }) });
 
 export const noteRoutes = new OpenAPIHono<AppEnv>();
+
+async function requireWritableOwnNote(
+  db: NonNullable<AppEnv['Variables']['db']>,
+  userId: string,
+  noteId: string,
+): Promise<void> {
+  const access = await db((d) => getNoteAccess(d, noteId));
+  if (!access || access.authorId !== userId) {
+    throw new HTTPException(404, { message: 'Note not found or not author.' });
+  }
+  await requireProjectWriter(db, userId, access.projectId);
+}
 
 // --------- list under report ----------
 noteRoutes.openapi(
@@ -81,6 +101,7 @@ noteRoutes.openapi(
     const body = c.req.valid('json');
     const report = await db((d) => getReport(d, reportId));
     if (!report) throw new HTTPException(404, { message: 'Report not found.' });
+    await requireProjectWriter(db, userId, report.projectId);
     const note = await db((d) => createNote(d, reportId, userId, body));
     if (!note) throw new HTTPException(500, { message: 'create failed' });
     return c.json(note, 201);
@@ -106,10 +127,12 @@ noteRoutes.openapi(
     },
   }),
   async (c) => {
+    const userId = c.get('userId');
     const db = c.get('db');
-    if (!db) throw new HTTPException(401);
+    if (!userId || !db) throw new HTTPException(401);
     const { note: noteId } = c.req.valid('param');
     const { files } = c.req.valid('json');
+    await requireWritableOwnNote(db, userId, noteId);
     const result = await db((d) => appendFiles(d, noteId, files));
     if (!result.length) throw new HTTPException(404, { message: 'Note not found or no files added.' });
     return c.json({ files: result }, 200);
@@ -136,8 +159,9 @@ noteRoutes.openapi(
     },
   }),
   async (c) => {
+    const userId = c.get('userId');
     const db = c.get('db');
-    if (!db) throw new HTTPException(401);
+    if (!userId || !db) throw new HTTPException(401);
     const { note: noteId } = c.req.valid('param');
     const patch = c.req.valid('json');
     if (
@@ -147,6 +171,7 @@ noteRoutes.openapi(
     ) {
       throw new HTTPException(400, { message: 'Empty patch.' });
     }
+    await requireWritableOwnNote(db, userId, noteId);
     const note = await db((d) => updateNote(d, noteId, patch));
     if (!note) throw new HTTPException(404, { message: 'Note not found or not author.' });
     return c.json(note, 200);
@@ -169,9 +194,11 @@ noteRoutes.openapi(
     },
   }),
   async (c) => {
+    const userId = c.get('userId');
     const db = c.get('db');
-    if (!db) throw new HTTPException(401);
+    if (!userId || !db) throw new HTTPException(401);
     const { note: noteId } = c.req.valid('param');
+    await requireWritableOwnNote(db, userId, noteId);
     const ok = await db((d) => deleteNote(d, noteId));
     if (!ok) throw new HTTPException(404, { message: 'Note not found or not author.' });
     return c.body(null, 204);

@@ -16,17 +16,17 @@
  *  - Register parses the key back via `parseKeyScope` and verifies the
  *    embedded scope + ids match the claimed body + caller's userId /
  *    project membership before INSERT.
- *  - Read/write authorization is enforced by `app.files` RLS
- *    (migration 0011): owners always, plus any project member for
- *    files attached to that project.
+ *  - `app.files` RLS (migration 0011) provides project-member reads.
+ *    Project presign/register routes additionally require an
+ *    owner/editor role; avatar and scratch scopes remain personal.
  */
 import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi';
 import { HTTPException } from 'hono/http-exception';
 import { files as fileSchemas, errorEnvelope, fileId } from '@harpa/api-contract';
 import type { AppEnv, ScopedDbAccessor } from '../app.js';
+import { requireProjectWriter } from '../lib/project-authorization.js';
 import { withAuth } from '../middleware/auth.js';
 import { getFileById, registerFile } from '../services/files.js';
-import { getProjectBySlug } from '../services/projects.js';
 import { getReport } from '../services/reports.js';
 import {
   pickStorage,
@@ -40,17 +40,15 @@ const fileIdParam = z.object({ id: fileId.openapi({ param: { name: 'id', in: 'pa
 export const fileRoutes = new OpenAPIHono<AppEnv>();
 
 /**
- * Assert the caller can see `projectId` under their per-request RLS
- * scope. RLS hides cross-member projects, so non-members get the same
- * 404 as truly missing rows (Pitfall 6).
+ * Assert the caller can upload into `projectId`. Viewers can read
+ * project files but cannot mint or register new project objects.
  */
-async function assertProjectMember(
+async function assertProjectWriter(
   db: ScopedDbAccessor,
   userId: string,
   projectId: string,
 ): Promise<void> {
-  const project = await db((d) => getProjectBySlug(d, userId, projectId));
-  if (!project) throw new HTTPException(404, { message: 'Project not found.' });
+  await requireProjectWriter(db, userId, projectId);
 }
 
 /**
@@ -95,7 +93,7 @@ fileRoutes.openapi(
     let scope: PresignScope;
     switch (body.scope) {
       case 'project': {
-        await assertProjectMember(db, userId, body.projectId);
+        await assertProjectWriter(db, userId, body.projectId);
         await assertReportInProject(db, body.reportId, body.projectId);
         scope = {
           kind: 'project',
@@ -177,7 +175,7 @@ fileRoutes.openapi(
             message: 'fileKey ids do not match request projectId / reportId.',
           });
         }
-        await assertProjectMember(db, userId, body.projectId);
+        await assertProjectWriter(db, userId, body.projectId);
         await assertReportInProject(db, body.reportId, body.projectId);
         kind = body.kind as FileKind;
         projectIdValue = body.projectId;

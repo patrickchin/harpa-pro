@@ -6,10 +6,11 @@
  * `/projects/:project/reports/:number`. The per-project number is
  * the user-visible identifier; the report UUID is purely internal.
  *
- * RLS (`reports_member_*` policies on app.reports) does access
- * control: the JOIN-on-slug lookup hides cross-project rows, so a
- * non-owned (slug, number) pair is indistinguishable from a missing
- * one and surfaces as 404 (Pitfall 6).
+ * RLS (`reports_member_*` policies on app.reports) hides cross-project
+ * rows. Mutating handlers additionally use the shared project-role
+ * guard so row visibility is not mistaken for write authorization.
+ * A hidden or role-denied (slug, number) pair surfaces as 404
+ * (Pitfall 6).
  *
  * The internal UUID lookup helper `getReport(db, reportId)` is kept
  * for routes that already received it from a slug→id resolution
@@ -28,6 +29,10 @@ import {
   reportNumber,
 } from '@harpa/api-contract';
 import type { AppEnv } from '../app.js';
+import {
+  requireProjectOwner,
+  requireProjectWriter,
+} from '../lib/project-authorization.js';
 import { withAuth } from '../middleware/auth.js';
 import { withRateLimit } from '../middleware/rateLimit.js';
 import { withIdempotency } from '../middleware/idempotency.js';
@@ -223,8 +228,7 @@ reportRoutes.openapi(
     if (!userId || !db) throw new HTTPException(401);
     const { project: slug } = c.req.valid('param');
     const body = c.req.valid('json');
-    const project = await db((d) => getProjectBySlug(d, userId, slug, false));
-    if (!project) throw new HTTPException(404, { message: 'Project not found.' });
+    const project = await requireProjectWriter(db, userId, slug);
     const report = await db((d) => createReport(d, project.id, userId, body));
     if (!report) throw new HTTPException(500, { message: 'create failed' });
     return c.json(toReportResponse(report), 201);
@@ -310,10 +314,12 @@ reportRoutes.openapi(
     },
   }),
   async (c) => {
+    const userId = c.get('userId');
     const db = c.get('db');
-    if (!db) throw new HTTPException(401);
+    if (!userId || !db) throw new HTTPException(401);
     const { project: slug, number } = c.req.valid('param');
     const body = c.req.valid('json');
+    await requireProjectWriter(db, userId, slug);
     const existing = await loadReport(db, slug, number);
     // Finalized reports are locked: PATCH would silently overwrite the
     // body the user finalized, which is the opposite of what "finalize"
@@ -354,11 +360,7 @@ reportRoutes.openapi(
     const { project: slug, number } = c.req.valid('param');
     const body = c.req.valid('json');
 
-    const project = await db((d) => getProjectBySlug(d, userId, slug, false));
-    if (!project || project.myRole === 'viewer') {
-      throw new HTTPException(404, { message: 'Report not found.' });
-    }
-
+    await requireProjectWriter(db, userId, slug);
     const report = await loadReport(db, slug, number);
     const result = await db((d) =>
       placeNoteInReport(
@@ -401,9 +403,11 @@ reportRoutes.openapi(
     },
   }),
   async (c) => {
+    const userId = c.get('userId');
     const db = c.get('db');
-    if (!db) throw new HTTPException(401);
+    if (!userId || !db) throw new HTTPException(401);
     const { project: slug, number } = c.req.valid('param');
+    await requireProjectWriter(db, userId, slug);
     const existing = await loadReport(db, slug, number);
     const ok = await db((d) => deleteReport(d, existing.id));
     if (!ok) throw new HTTPException(404, { message: 'Report not found.' });
@@ -414,10 +418,10 @@ reportRoutes.openapi(
 // ===========================================================================
 // AI generation / finalize / pdf (P1.7)
 //
-// Ownership: every handler resolves the report under the per-request scoped
-// drizzle handle BEFORE doing anything else; RLS hides cross-project rows so
-// a non-owned (slug, number) pair is indistinguishable from a missing one
-// and surfaces as 404. AI provider failures are wrapped as
+// Authorization: every mutating handler checks the project role, then resolves
+// the report under the per-request scoped drizzle handle before side effects.
+// Missing, cross-project, and role-denied requests surface as 404. AI provider
+// failures are wrapped as
 // `AiProviderError` in services/ai.ts; errorMapper maps them to 502 +
 // code='ai_provider_error' with no provider detail in the envelope or log.
 // ===========================================================================
@@ -528,6 +532,7 @@ reportRoutes.openapi(
     if (!db || !userId) throw new HTTPException(401);
     const { project: slug, number } = c.req.valid('param');
     const body = c.req.valid('json');
+    await requireProjectWriter(db, userId, slug);
     const report = await loadReport(db, slug, number);
     const settings = await db((d) => getAiSettings(d, userId));
     const result = await runGenerate(db, userId, report, body.fixtureName, settings.vendor, settings.model);
@@ -555,6 +560,7 @@ reportRoutes.openapi(
     if (!db || !userId) throw new HTTPException(401);
     const { project: slug, number } = c.req.valid('param');
     const body = c.req.valid('json');
+    await requireProjectWriter(db, userId, slug);
     const report = await loadReport(db, slug, number);
     const settings = await db((d) => getAiSettings(d, userId));
     const result = await runGenerate(db, userId, report, body.fixtureName, settings.vendor, settings.model);
@@ -580,10 +586,12 @@ reportRoutes.openapi(
     },
   }),
   async (c) => {
+    const userId = c.get('userId');
     const db = c.get('db');
-    if (!db) throw new HTTPException(401);
+    if (!userId || !db) throw new HTTPException(401);
     const { project: slug, number } = c.req.valid('param');
 
+    await requireProjectOwner(db, userId, slug);
     const report = await loadReport(db, slug, number);
     if (!report.body) {
       throw new HTTPException(409, { message: 'Report has no body to finalize.' });
@@ -617,10 +625,12 @@ reportRoutes.openapi(
     },
   }),
   async (c) => {
+    const userId = c.get('userId');
     const db = c.get('db');
-    if (!db) throw new HTTPException(401);
+    if (!userId || !db) throw new HTTPException(401);
     const { project: slug, number } = c.req.valid('param');
 
+    await requireProjectWriter(db, userId, slug);
     const report = await loadReport(db, slug, number);
     if (report.status !== 'finalized') {
       throw new HTTPException(409, { message: 'Report is not finalized.' });

@@ -74,7 +74,7 @@ A few API quirks the scripts intentionally assert as-is (rather than
 - Wrong HTTP method on an existing route returns 404, not 405.
 - Double finalize is idempotent (200); double unfinalize → 409.
 - Cross-user access returns 404, not 403 (RLS-style resource hiding).
-- Viewers can `PATCH /projects/:id` (no role gate) — flagged as a
-  likely bug in `stress.sh`.
+- Viewer project-content mutations return 404. Published-report review
+  comments are the deliberate any-member write exception.
 
 When fixing any of these, update the corresponding assertion.

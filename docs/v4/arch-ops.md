@@ -472,7 +472,9 @@ Push to dev
   ↳ Fly deploy → harpa-pro-api-dev (api-dev.yml)
   ↳ public-site deploy to CF Pages dev branch (site-dev.yml)
   ↳ EAS Update → `preview` channel (mobile-ota-dev.yml)
-  ↳ release patch commit + tag added to `dev` (version-bump-dev.yml)
+    ↳ mobile-only change: publish directly
+    ↳ API-dependent change: api-dev calls OTA after deploy + journeys pass
+    ↳ appVersion change: skip until the matching native build exists
   ↳ Fastlane `beta` (manual): metadata -> EAS preview build --auto-submit
 
 PR to main (production gate)
@@ -486,8 +488,75 @@ Push to main (production)
     ↳ release_command applies migrations to Neon `main`
   ↳ public-site deploy to CF Pages production (site-prod.yml)
   ↳ EAS Update → `production` channel (mobile-ota-prod.yml)
+    ↳ mobile-only change: publish directly
+    ↳ API-dependent change: api-prod calls OTA after deploy + journeys pass
+    ↳ appVersion change: skip until the matching native build exists
   ↳ Fastlane `release` (manual approve): metadata -> EAS production build --auto-submit
 ```
+
+### Mobile OTA and native runtime ordering
+
+`apps/mobile/app.config.ts` uses Expo's `appVersion` runtime policy, so the
+root `package.json` version is also the native runtime identifier. Keep that
+version stable for ordinary JS, API, and documentation merges. This lets an
+OTA update target the preview or production binary that is already installed.
+There is no automatic per-merge version bump.
+
+Every OTA also requires an annotated readiness tag for its environment and
+version:
+
+- Preview: `mobile-preview-runtime-v<appVersion>`
+- Production: `mobile-production-runtime-v<appVersion>`
+
+The tag points at the commit used for the native build, and its annotation
+records the EAS build ID or store build reference. It is created only by the
+manual post-build registration job. A version bump alone is not readiness.
+The policy also refuses an existing tag when native-sensitive files changed
+after its tagged commit without another version bump. Conservatively, this
+includes changes to the repository lockfile (`pnpm-lock.yaml`) and native
+package patches (`patches/**`), because either can alter the installed binary.
+
+After that native gate, the OTA workflows have two automatic paths:
+
+1. A mobile-only push publishes its exact push SHA directly.
+2. A push that also changes API inputs does not publish from the push
+   workflow. The matching API workflow calls the reusable OTA workflow only
+   after its deploy, `/readyz` check, and journey tests succeed.
+
+Before either path reaches EAS, `scripts/ci/verify-api-release.sh` checks the
+deployed API SHA from `/healthz` and re-checks `/readyz`. An older deployed SHA
+is accepted only when it is an ancestor of the OTA commit and every commit
+after it is free of API, contract, deployment, and lockfile changes. Otherwise
+the API must report the exact OTA SHA. This full-history check prevents a later
+mobile-only push from publishing after an earlier API-and-mobile deploy failed.
+
+Native changes must include an intentional root `package.json` version bump.
+This includes Expo config/plugin changes and native dependency changes. That
+version change makes automatic OTA publication stop; do not work around the
+gate by reverting the bump. Release in this order:
+
+1. Merge the native change and version bump.
+2. Build, install, and smoke-test the matching binary with Fastlane `beta`
+   (preview) or `beta_production` / `release` (production).
+3. Manually dispatch `mobile-ota-dev` or `mobile-ota-prod` on the same ref,
+   supplying the commit when necessary, confirming `native_runtime_ready`,
+   and recording the EAS/store reference in `native_artifact`.
+
+That dispatch creates the environment/version readiness tag before the OTA
+job evaluates its policy. If publication fails afterward, leave the tag in
+place—it still correctly attests the native artifact—and retry the dispatch.
+Normal rotation is a new app version, native artifact, and new tag. Never
+force-move a readiness tag to a different native commit. If a tag was created
+for the wrong artifact or commit, stop releases and bump the app version to
+produce a corrected artifact/tag; treat deleting the exact bad remote tag as
+an exceptional recovery action requiring owner approval.
+
+Use the same checked-in app version when promoting an already-tested native
+release from `dev` to `main`; do not create a second production-only bump.
+The production artifact gets its own production readiness tag before the
+manual OTA publication. On first adoption, register the already-distributed
+binary for the current version in each environment before expecting automatic
+OTA publication.
 
 ## Dev environment bootstrap (one-time)
 
@@ -519,12 +588,9 @@ After bootstrap, every push to `dev` re-uses the same Neon branch
 and Fly app — the workflow only runs pending migrations and ships
 new code.
 
-`version-bump-dev.yml` creates the release patch commit and tag on
-`dev` after merge commits land. That commit intentionally does **not**
-use `[skip ci]`; otherwise a later `dev → main` promotion PR can end up
-with a CI-skipped head commit and no required checks. The workflow avoids
-recursive bumps with a job-level guard that skips commits whose message
-starts with `chore(release): v`.
+App versions change only in intentional native-release commits, as described
+above. Normal merges to `dev` retain the current version and runtime so the
+installed preview binary remains eligible for OTA updates.
 
 ## Scaling
 

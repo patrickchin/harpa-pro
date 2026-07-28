@@ -149,3 +149,12 @@ jobs:
             exit 1
           fi
           bash scripts/journeys/all.sh prod
+
+  mobile-ota:
+    name: Publish API-dependent mobile OTA
+    needs: prod
+    uses: ./.github/workflows/mobile-ota-prod.yml
+    with:
+      release_sha: ${{ github.sha }}
+      api_deploy_succeeded: true
+    secrets: inherit

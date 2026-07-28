@@ -45,6 +45,8 @@ jobs:
           bash scripts/ci/__tests__/api-prod-policy.test.sh
           bash scripts/ci/__tests__/stress-viewer-policy.test.sh
           bash scripts/ci/__tests__/verify-readyz.test.sh
+          bash scripts/ci/__tests__/verify-api-release.test.sh
+          bash scripts/ci/__tests__/mobile-ota-release-policy.test.sh
           bash scripts/ci/__tests__/check-no-maestro-point-taps.test.sh
           bash scripts/ci/__tests__/verify-deployed-sha.test.sh
           bash scripts/ci/__tests__/release-confidence-gates.test.sh

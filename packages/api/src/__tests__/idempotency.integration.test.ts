@@ -14,6 +14,7 @@ import { resetPool, getPool } from '../db/client.js';
 import { signTestToken } from '../middleware/auth.js';
 import { resetRateLimiter } from '../lib/rateLimiter.js';
 import { resetIdempotencyStore } from '../lib/idempotencyStore.js';
+import { env } from '../env.js';
 import { makeUserId, makeSessionId, makeFileId } from './factories/index.js';
 
 let fx: PgFixture;
@@ -142,5 +143,53 @@ describe('idempotency middleware', () => {
     const r2 = await callTranscribe(tok, 'pin-test-1');
     expect(r2.status).toBe(200);
     expect(r2.headers.get('idempotent-replay')).toBeNull();
+  });
+
+  it('uses the default Postgres wiring to prevent a duplicate AI side-effect', async () => {
+    const runtimeEnv = env as typeof env & {
+      IDEMPOTENCY_BACKEND: 'memory' | 'postgres';
+    };
+    const previousBackend = runtimeEnv.IDEMPOTENCY_BACKEND;
+    runtimeEnv.IDEMPOTENCY_BACKEND = 'postgres';
+    resetIdempotencyStore();
+
+    const admin = new pg.Client({ connectionString: fx.url });
+    await admin.connect();
+    try {
+      const before = await admin.query<{ count: string }>(
+        `SELECT count(*)::text AS count
+         FROM app.llm_usage_events
+         WHERE user_id = $1
+           AND operation = 'transcribe'`,
+        [alice],
+      );
+      const tok = await signTestToken(alice, aliceSid);
+      const first = await callTranscribe(tok, 'postgres-route-once');
+      const second = await callTranscribe(tok, 'postgres-route-once');
+
+      expect(first.status).toBe(200);
+      expect(second.status).toBe(200);
+      expect(second.headers.get('idempotent-replay')).toBe('true');
+
+      const after = await admin.query<{ count: string }>(
+        `SELECT count(*)::text AS count
+         FROM app.llm_usage_events
+         WHERE user_id = $1
+           AND operation = 'transcribe'`,
+        [alice],
+      );
+      expect(Number(after.rows[0]!.count) - Number(before.rows[0]!.count)).toBe(1);
+
+      const persisted = await admin.query<{ count: string }>(
+        `SELECT count(*)::text AS count
+         FROM app.idempotency_keys
+         WHERE state = 'completed'`,
+      );
+      expect(Number(persisted.rows[0]!.count)).toBeGreaterThan(0);
+    } finally {
+      await admin.end();
+      runtimeEnv.IDEMPOTENCY_BACKEND = previousBackend;
+      resetIdempotencyStore();
+    }
   });
 });

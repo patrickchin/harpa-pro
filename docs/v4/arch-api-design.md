@@ -159,10 +159,31 @@ route.
 
 ### Idempotency
 
-- `POST /reports/.../generate` and `POST /voice/transcribe` accept
-  an `Idempotency-Key` header — repeated calls with the same key
-  return the cached response (24 h TTL in Redis). This is what
-  lets the mobile retry-on-network-failure logic work safely.
+- `POST /reports/.../{generate,regenerate}`, `POST /voice/transcribe`,
+  and `POST /reports/.../notes/voice` accept an `Idempotency-Key`.
+- Identity is scoped to route name, user, HTTP method, concrete path,
+  request-body SHA-256, and the client key. Reusing the same client key
+  for a different method, resource, or body starts an independent
+  operation; it never replays another request's response.
+- Production uses `app.idempotency_keys` (migration
+  `0021_idempotency_keys.sql`). One machine owns a renewable 30-second
+  lease while the handler runs; concurrent machines wait and replay the
+  completed response. Completed responses live for 24 hours. A 5xx or
+  thrown handler releases the claim so a later retry can run.
+- Dev and tests use `MemoryIdempotencyStore`, which applies the same
+  replay and in-flight coalescing semantics inside one process.
+- The mobile report client keeps one key and its original
+  generate/regenerate operation across ambiguous transport, 5xx, and
+  response-parse failures. It retires the key after a matching success
+  or definitive 4xx response. The CLI continues to send only an
+  explicitly supplied key.
+
+This prevents live concurrent duplicates across Fly machines. It is
+not an exactly-once job system: if a machine dies after an external AI
+provider accepted work but before the completed response is persisted,
+the expired lease can be reclaimed and the operation may run again.
+Routes that require protection from that crash window must move the
+side effect behind a durable asynchronous job/outbox.
 
 ### OpenAPI strategy
 

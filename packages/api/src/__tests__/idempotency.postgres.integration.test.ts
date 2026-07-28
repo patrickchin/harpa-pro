@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { createHash } from 'node:crypto';
 import pg from 'pg';
 import { env } from '../env.js';
 import {
@@ -19,11 +20,11 @@ type AtomicIdempotencyStore = IdempotencyStore & {
 };
 
 const runtimeEnv = env as typeof env & {
-  IDEMPOTENCY_BACKEND?: 'memory' | 'postgres';
+  IDEMPOTENCY_BACKEND: 'memory' | 'postgres';
 };
 
 let fx: PgFixture;
-let originalBackend: 'memory' | 'postgres' | undefined;
+let originalBackend: 'memory' | 'postgres';
 
 beforeAll(async () => {
   fx = await startPg();
@@ -36,11 +37,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
   resetIdempotencyStore();
-  if (originalBackend === undefined) {
-    delete runtimeEnv.IDEMPOTENCY_BACKEND;
-  } else {
-    runtimeEnv.IDEMPOTENCY_BACKEND = originalBackend;
-  }
+  runtimeEnv.IDEMPOTENCY_BACKEND = originalBackend;
   await fx?.stop();
 }, 60_000);
 
@@ -123,5 +120,58 @@ describe('Postgres idempotency store', () => {
     expect(sideEffects).toBe(1);
     expect([first.replay, second.replay].sort()).toEqual([false, true]);
     expect(first.value).toEqual(second.value);
+  });
+
+  it('reclaims an expired lease left by a crashed machine', async () => {
+    const key = 'abandoned-scope-key';
+    const keyHash = createHash('sha256').update(key, 'utf8').digest('hex');
+    const admin = new pg.Client({ connectionString: fx.url });
+    await admin.connect();
+    try {
+      await admin.query(
+        `INSERT INTO app.idempotency_keys
+           (key_hash, state, owner_token, lease_expires_at, expires_at)
+         VALUES ($1, 'pending', 'dead-machine', now() - interval '1 second',
+                 now() + interval '1 hour')`,
+        [keyHash],
+      );
+    } finally {
+      await admin.end();
+    }
+
+    const store = getIdempotencyStore() as AtomicIdempotencyStore;
+    let sideEffects = 0;
+    const result = await store.getOrExecute(key, 60_000, async () => {
+      sideEffects += 1;
+      return {
+        status: 200,
+        body: '{"recovered":true}',
+        contentType: 'application/json',
+      };
+    });
+
+    expect(sideEffects).toBe(1);
+    expect(result.replay).toBe(false);
+    expect(result.value?.body).toBe('{"recovered":true}');
+  });
+
+  it('releases a failed claim so another machine can retry', async () => {
+    const firstMachine = getIdempotencyStore() as AtomicIdempotencyStore;
+    await expect(
+      firstMachine.getOrExecute('failed-scope-key', 60_000, async () => {
+        throw new Error('producer failed');
+      }),
+    ).rejects.toThrow('producer failed');
+
+    resetIdempotencyStore();
+    const secondMachine = getIdempotencyStore() as AtomicIdempotencyStore;
+    const retried = await secondMachine.getOrExecute('failed-scope-key', 60_000, async () => ({
+      status: 200,
+      body: '{"retried":true}',
+      contentType: 'application/json',
+    }));
+
+    expect(retried.replay).toBe(false);
+    expect(retried.value?.body).toBe('{"retried":true}');
   });
 });

@@ -94,9 +94,12 @@ Each task = one route file + its tests + its api-contract schemas
     `UpstashRateLimiter` implementing the same interface — no caller
     change needed. Avoids requiring a real Upstash/Redis in CI.
 - [x] Idempotency-Key middleware for generate + transcribe.
-  - 24h TTL, per-(route, userId, key), `Idempotent-Replay: true` header
-    on cache hit, never caches 5xx. Same in-house abstraction with a
-    `MemoryIdempotencyStore` default and the same Upstash carve-out.
+  - 24h TTL; scoped by route, user, method, path, body, and client key;
+    `Idempotent-Replay: true` on cache hit; never caches 5xx.
+  - `MemoryIdempotencyStore` coalesces dev/test requests. Production
+    uses renewable claims and durable responses in
+    `app.idempotency_keys` (migration `0021_idempotency_keys.sql`) so
+    concurrent Fly machines cannot both run the AI side effect.
 - [x] Tests covering both.
 - [x] Commit: `feat(api): rate limiting + idempotency middleware`.
 - **Follow-up (post-P1):** full design + multi-machine backend in

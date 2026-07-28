@@ -256,6 +256,8 @@ RATE_LIMIT_BACKEND: z.enum(['memory', 'postgres']).default('memory'),
 
 Production deploys (Fly prod + dev) set `RATE_LIMIT_BACKEND=postgres`
 in Doppler so the path is exercised on `dev` before reaching prod.
+Production-mode API boot rejects the memory backend unless
+`HARPAPRO_PR_BUILD=1` marks a per-PR preview.
 
 Lint guard `scripts/check-no-process-env-rate-limit.sh` mirrors the
 existing R2 guard.

@@ -353,8 +353,8 @@ region    = 'auto'           # R2 ignores region but the SDK requires one
 forcePathStyle = true        # R2 requires path-style addressing
 ```
 
-Required env (asserted at first use, not at boot — fixture mode stays
-free of R2 creds):
+Required env (asserted at API boot whenever live mode is selected;
+fixture mode stays free of R2 creds):
 
 | Env | Notes |
 |---|---|

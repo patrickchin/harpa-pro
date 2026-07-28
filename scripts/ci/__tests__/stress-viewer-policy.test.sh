@@ -27,16 +27,17 @@ fail() {
 
 echo "stress journey viewer authorization policy"
 
-if grep -Eq \
-  'check "viewer: PATCH project[^"]*" 404 PATCH "/projects/\$PID_A"' \
+# The journey source contains a literal $PID_A; expansion is not intended.
+# shellcheck disable=SC2016
+if grep -Eq 'check "viewer: PATCH project[^"]*" 404 PATCH "/projects/\$PID_A"' \
   "$STRESS_JOURNEY"; then
   pass "viewer project rename expects the read-only 404 contract"
 else
   fail "viewer project rename expects the read-only 404 contract"
 fi
 
-if grep -Eq \
-  'check "viewer: PATCH project[^"]*" 200 PATCH "/projects/\$PID_A"' \
+# shellcheck disable=SC2016
+if grep -Eq 'check "viewer: PATCH project[^"]*" 200 PATCH "/projects/\$PID_A"' \
   "$STRESS_JOURNEY"; then
   fail "journey contains no stale viewer project PATCH success expectation"
 else

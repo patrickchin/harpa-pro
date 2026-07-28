@@ -117,12 +117,29 @@ require_fixed ".github/workflows/e2e-maestro-testid-gate.yml" \
 require_regex ".github/workflows/e2e-maestro-testid-gate.yml" \
   'cache:[[:space:]]*gradle|gradle/actions/setup-gradle' \
   "Maestro smoke caches Gradle dependencies"
+require_file "scripts/ci/run-maestro-launch-smoke.sh" \
+  "Maestro smoke has a checked-in shell runner"
 require_fixed ".github/workflows/e2e-maestro-testid-gate.yml" \
+  "bash scripts/ci/run-maestro-launch-smoke.sh" \
+  "Android emulator action invokes the Maestro smoke with Bash"
+require_fixed "scripts/ci/run-maestro-launch-smoke.sh" \
+  "set -euo pipefail" \
+  "Maestro smoke enables strict Bash handling"
+require_fixed "scripts/ci/run-maestro-launch-smoke.sh" \
   "maestro\" test" \
   "Maestro CLI executes a real flow"
-require_regex ".github/workflows/e2e-maestro-testid-gate.yml" \
+require_regex "scripts/ci/run-maestro-launch-smoke.sh" \
   'timeout[[:space:]]+[0-9]+s.*maestro' \
   "Maestro CLI execution has a shell-level timeout"
+require_fixed "scripts/ci/run-maestro-launch-smoke.sh" \
+  'mkdir -p "$MAESTRO_DEBUG_DIR"' \
+  "Maestro smoke creates its diagnostics directory before launch"
+require_fixed "scripts/ci/run-maestro-launch-smoke.sh" \
+  ': > "$METRO_LOG"' \
+  "Maestro smoke creates an uploadable log before fallible commands"
+require_fixed ".github/workflows/e2e-maestro-testid-gate.yml" \
+  "if-no-files-found: error" \
+  "Maestro diagnostic upload fails if the runner produced no files"
 
 # These are literal GitHub expression strings, not shell expansions.
 # shellcheck disable=SC2016

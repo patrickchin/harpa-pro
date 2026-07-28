@@ -204,7 +204,7 @@ no aggregator mocks on the happy path.
 `VoiceNoteCard` (`features/voice/VoiceNoteCard.tsx`) — landed in Phase E:
 
 - Layout matches the marketing-page `PreviousNoteCard`
-  (`apps/marketing/src/components/VoiceDemo.tsx`) via the shared
+  (`apps/site/src/components/VoiceDemo.tsx`) via the shared
   `VoiceCardShell` primitive: round play button on the left, title +
   `author · captured-at` meta line + progress bar + duration in the
   right column, and a 1–2 line summary below with a bold

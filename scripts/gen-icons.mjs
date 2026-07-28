@@ -11,7 +11,7 @@
  *  - apps/mobile/assets/favicon.png       Web favicon (48x48, flattened)
  *
  * Colors are pulled from --accent / --primary in
- * apps/marketing/src/styles/globals.css.
+ * apps/site/src/styles/globals.css.
  */
 import sharp from 'sharp';
 

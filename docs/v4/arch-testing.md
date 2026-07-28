@@ -87,8 +87,11 @@ Each AI-touching route has a test that:
 
 ### Docs site (Playwright)
 
-- Smoke test that the docs site builds and the in-app guides
-  render. Lightweight — a few specs.
+- `apps/site/tests/docs.spec.ts` covers local search, empty results, guide
+  traversal, responsive navigation, internal links, assets, duplicate ids,
+  and the branded 404 against the production static build.
+- `site-preview.yml` also verifies one checked-in legacy redirect after the
+  build is deployed to Cloudflare Pages.
 
 ## Test the default wiring
 
@@ -121,7 +124,7 @@ via a `createXClient()` factory:
 4. **One browser/device E2E per critical user flow.** This is the
    only test type that proves env wiring, CORS, real widget output,
    and the default factory hang together. Playwright for
-   `apps/marketing`, Maestro for `apps/mobile`. The E2E hits the
+   `apps/site`, Maestro for `apps/mobile`. The waitlist E2E hits the
    live compose stack and asserts the persisted side-effect.
 
 Reviewer heuristic: if a PR adds a `setXClients(...)` call without
@@ -138,8 +141,8 @@ Active today:
 | `unit.yml` | every push | `pnpm test` green |
 | `api-integration.yml` | every push | Testcontainers suite green at ≥ 90% line coverage |
 | `pr-preview.yml` | PR open / push | Neon branch lifecycle for previews |
-| `marketing-prod.yml` | push to `main` | Deploy marketing to Cloudflare Pages prod |
-| `marketing-preview.yml` | PR | Deploy per-PR marketing preview |
+| `site-prod.yml` | push to `main` | Deploy the public site to Cloudflare Pages prod |
+| `site-preview.yml` | PR to `dev` or `main` | Test and deploy a per-PR public-site preview |
 
 Deferred (add when the phase actually starts, not before):
 

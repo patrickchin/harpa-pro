@@ -136,12 +136,12 @@ environment and only surfaces when the deploy fires.
 | `e2e-maestro-testid-gate.yml`     | ✓        | dev + main            | Maestro testID accessibility gate |
 | `pr-preview.yml`                  | ✓        | (PR-only)             | Per-PR Neon branch + Fly preview app + post-deploy `/readyz` verify |
 | `mobile-ota-pr.yml`               | ✓        | (PR-only)             | Per-PR Expo OTA preview |
-| `marketing-preview.yml`           | ✓ (→main)| (PR-only)             | Cloudflare Pages preview for marketing |
+| `site-preview.yml`                | ✓ (→dev/main)| (PR-only)          | Tests + Cloudflare Pages preview for the public site |
 | `main-gate.yml`                   | ✓ (→main)| (PR-only)             | Hard-required checks on merges into `main` |
 | `api-dev.yml`                     | ✗        | dev                   | `flyctl deploy` to `harpa-pro-api-dev`, `/readyz` verify, `scripts/journeys/all.sh dev` |
 | `api-prod.yml`                    | ✗        | main                  | `flyctl deploy` to `harpa-pro-api`, `/readyz` verify, `scripts/journeys/all.sh prod` |
-| `marketing-dev.yml`               | ✗        | dev                   | Cloudflare Pages `dev` branch deploy |
-| `marketing-prod.yml`              | ✗        | main                  | Cloudflare Pages prod deploy |
+| `site-dev.yml`                    | ✗        | dev                   | Cloudflare Pages `dev` branch deploy |
+| `site-prod.yml`                   | ✗        | main                  | Cloudflare Pages prod deploy |
 | `mobile-ota-dev.yml`              | ✗        | dev                   | Expo OTA publish to dev channel |
 | `mobile-ota-prod.yml`             | ✗        | main                  | Expo OTA publish to prod channel |
 | `version-bump-dev.yml`            | ✗        | dev                   | Auto version bump after merge |

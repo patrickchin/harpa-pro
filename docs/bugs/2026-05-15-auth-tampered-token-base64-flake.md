@@ -5,7 +5,7 @@
 **Symptom.** PR #3 unit job failed with
 `expected 200 to be 401` in
 `packages/api/src/middleware/auth.test.ts:38` on commit `bbcbdfc`
-(a CSS-only change to `apps/marketing`), while the immediately
+(a CSS-only change to `apps/site`), while the immediately
 preceding commit `b00ce5a` on the same branch was green. The "diff"
 that triggered the failure had no causal relationship to the
 failing test.

@@ -1,0 +1,35 @@
+---
+import { Image } from "astro:assets";
+
+import type { DocsScreenshotId } from "../../lib/docs";
+import { docsScreenshot } from "../../lib/docs-screenshots";
+
+interface Props {
+  screenshot: DocsScreenshotId;
+  alt: string;
+  compact?: boolean;
+  priority?: boolean;
+}
+
+const { screenshot, alt, compact = false, priority = false } = Astro.props;
+const image = docsScreenshot(screenshot);
+---
+
+<figure
+  class:list={["docs-phone-frame", { "docs-phone-frame--compact": compact }]}
+>
+  <div>
+    <Image
+      src={image}
+      alt={alt}
+      widths={[220, 320, 420]}
+      sizes={compact
+        ? "(min-width: 64rem) 200px, 180px"
+        : "(min-width: 64rem) 320px, 240px"}
+      format="webp"
+      quality={82}
+      loading={priority ? "eager" : "lazy"}
+      decoding="async"
+    />
+  </div>
+</figure>

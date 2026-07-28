@@ -125,7 +125,7 @@ const spec = JSON.parse(readFileSync(specPath, 'utf8')) as {
 
 /**
  * Endpoints that exist in the API but are not consumed by the mobile
- * client. The marketing waitlist (M1) lives in apps/marketing and
+ * client. The public-site waitlist (M1) lives in apps/site and
  * posts directly to api.harpapro.com; mobile has no need for a hook.
  * Keep this list explicit so accidental new routes don't silently
  * skip codegen.

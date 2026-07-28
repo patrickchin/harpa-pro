@@ -1,5 +1,5 @@
 ---
-description: "Use when adding or running a Maestro mobile flow or a Playwright docs-site flow. Owns .maestro/, apps/docs Playwright specs, iOS sim and Android emulator runs. Trigger phrases: Maestro, Playwright, E2E, end-to-end, iOS sim, android emulator, core-end-to-end, deep link flow, share link cold start."
+description: "Use when adding or running a Maestro mobile flow or a Playwright public-site flow. Owns .maestro/, apps/site Playwright specs, iOS sim and Android emulator runs. Trigger phrases: Maestro, Playwright, E2E, end-to-end, iOS sim, android emulator, core-end-to-end, deep link flow, share link cold start."
 name: "e2e-runner"
 tools: [read, search, edit, execute]
 user-invocable: false
@@ -35,7 +35,7 @@ mobile app and Playwright specs for the docs site.
    note capture, generate, etc.).
 2. Locate the matching canonical-source journey if one exists.
 3. Author / port the flow file under `.maestro/<journey>.yaml` (or
-   `apps/docs/e2e/<spec>.spec.ts` for Playwright).
+   `apps/site/tests/<spec>.spec.ts` for Playwright).
 4. Run the flow on iOS sim:
    `MAESTRO_APP_ID=com.harpa.pro maestro test .maestro/<journey>.yaml`
 5. Run the flow on Android emulator with the same env.

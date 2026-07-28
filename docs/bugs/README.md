@@ -165,6 +165,16 @@ and unit-test the final options object, and keep real-device/TestFlight
 smoke coverage for option surfaces that affect native encoders,
 permissions, or audio sessions.
 
+### R11 — Membership is mistaken for write authorization
+
+Project membership answers whether a caller can see a row; it does not answer
+whether the caller may mutate it. A policy or route that checks only
+`app.is_member(project_id)` silently collapses `owner`, `editor`, and `viewer`
+into the same write role. Owner/non-member tests stay green while viewers can
+write. Mitigation: keep membership as the row-visibility boundary, apply one
+central owner/writer role guard at every project-content mutation route, and
+test each operation with owner, editor, and viewer actors.
+
 ## Entries
 
 ### R6 — owner-demotion via re-invite (implicit upsert on POST /members)
@@ -261,6 +271,7 @@ Mitigation:
 
 Most recent first. One line per bug — open the linked file only for the full root-cause / test / commit write-up.
 
+- **2026-07-28** *(R11)* — Project-content routes relied on membership-scoped RLS alone, so viewers could update projects, reports, notes, files, invoke generation, and finalize. Fix: central owner/writer route guards plus a real owner/editor/viewer Testcontainers matrix. [detail](2026-07-28-membership-collapsed-project-roles.md)
 - **2026-06-26** — Qualitative worker counts such as `"a few"` survived the API wire shape but disappeared in the rendered report because `report-core` / mobile adapters coerced role counts back to numbers and displayed `0`. Fix: keep role counts as `string | null`, parse only for math, and add report-card/stat/PDF regressions. [detail](2026-06-26-qualitative-worker-count-hidden.md)
 - **2026-06-26** — Local iOS release-stress failed in `modules/17-heavy-usage-stress.yaml` after adding 20 notes; the screenshot showed `Notes (20)` but the viewport was sitting around notes 7-12, so `note-row-19` was offscreen. Fix: scroll to `note-row-19` before asserting it, then continue the oldest/newest scroll coverage. [detail](2026-06-26-maestro-stress-note-row-offscreen.md)
 - **2026-06-26** — Local iOS release-stress failed in `helpers/sign-out.yaml` after `tapOn id: btn-open-profile`; the screenshot stayed on Projects and `btn-sign-out` never appeared. Root cause: XCTest reported the header icon tap complete without navigating. Fix: retry the profile tap once if the Projects header icon is still visible, then assert `screen-profile` before sign-out. [detail](2026-06-26-maestro-profile-tap-no-navigation.md)

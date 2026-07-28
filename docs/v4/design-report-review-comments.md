@@ -95,9 +95,10 @@ The composer clears only after the add callback succeeds. Mutation errors stay
 visible beside the composer so typed text is not lost.
 
 The saved-report header uses the shared stacked `ScreenHeader` layout.
-Navigation and action controls remain on the first row. The title lives on its
-own row, has no `numberOfLines` or tail ellipsis, and occupies the full content
-width. This matches the app-wide page-title behavior.
+Navigation and action controls remain on the first row with a compact
+`Site Visit #N` label. The descriptive report title lives on its own row, has
+no `numberOfLines` or tail ellipsis, and occupies the full content width.
+Other page titles remain inline.
 
 ## Verification
 

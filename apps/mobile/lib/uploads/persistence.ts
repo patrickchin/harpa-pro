@@ -46,19 +46,31 @@ export interface QueuePersistence {
   clear(): void;
 }
 
-const STORAGE_KEY = 'v1';
+const LEGACY_STORAGE_KEY = 'v1';
+
+function storageKeyForUser(userId?: string): string {
+  return userId ? `v2.${userId}` : LEGACY_STORAGE_KEY;
+}
 
 /**
  * MMKV-backed persistence. Constructed lazily by `QueueProvider` at
  * mount; in test environments `react-native-mmkv` is replaced with an
  * in-memory `Map` stub (see `vitest.setup.ts`).
  */
-export function createMmkvPersistence(): QueuePersistence {
+export function createMmkvPersistence(userId?: string): QueuePersistence {
   const storage = createMMKV({ id: 'upload-queue' });
+  const storageKey = storageKeyForUser(userId);
+
+  // The pre-session-scoping blob cannot be attributed safely after an
+  // account change, so discard it instead of migrating it to whichever
+  // user happens to sign in first after the upgrade.
+  if (userId) {
+    storage.remove(LEGACY_STORAGE_KEY);
+  }
 
   return {
     load(): PersistedJob[] {
-      const raw = storage.getString(STORAGE_KEY);
+      const raw = storage.getString(storageKey);
       if (!raw) return [];
       try {
         const parsed = JSON.parse(raw) as unknown;
@@ -66,19 +78,19 @@ export function createMmkvPersistence(): QueuePersistence {
         return parsed as PersistedJob[];
       } catch {
         // Corrupt blob — drop it rather than crash on launch.
-        storage.remove(STORAGE_KEY);
+        storage.remove(storageKey);
         return [];
       }
     },
     save(jobs: PersistedJob[]): void {
       if (jobs.length === 0) {
-        storage.remove(STORAGE_KEY);
+        storage.remove(storageKey);
         return;
       }
-      storage.set(STORAGE_KEY, JSON.stringify(jobs));
+      storage.set(storageKey, JSON.stringify(jobs));
     },
     clear(): void {
-      storage.remove(STORAGE_KEY);
+      storage.remove(storageKey);
     },
   };
 }

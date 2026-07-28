@@ -12,7 +12,7 @@ import {
 } from './index.js';
 import { FixtureStore, type FixtureFile } from './fixture-store.js';
 import { hashRequest } from './hash.js';
-import { redact } from './redact.js';
+import { redactFixture } from './redact.js';
 
 /**
  * Build an AI provider with fixture-mode behaviour.
@@ -80,14 +80,15 @@ export function createProvider(
 
     // record
     const response = await callReal();
+    const redacted = redactFixture({ request: req, response });
     const file: FixtureFile = {
       vendor: cfg.vendor,
       model: 'unknown',
       fixtureName,
       recordedAt: new Date().toISOString(),
       requestHash,
-      request: redact(req),
-      response: redact(response),
+      request: redacted.request,
+      response: redacted.response,
     };
     store.write(fixtureName, file);
     return response;

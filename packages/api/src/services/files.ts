@@ -90,6 +90,191 @@ export async function registerFile(
   return row ? mapFile(row) : null;
 }
 
+export interface FileUploadLeaseInput {
+  fileId: string;
+  fileKey: string;
+  scope: 'project' | 'avatar' | 'scratch';
+  projectId?: string | null;
+  reportId?: string | null;
+  contentType: string;
+  sizeBytes: number;
+  presignExpiresAt: string;
+}
+
+/**
+ * Serialize client upload issuance/registration with account deletion.
+ *
+ * `FOR KEY SHARE` allows concurrent upload requests for the same user while
+ * conflicting with the deleting transaction's `FOR UPDATE` user-row lock.
+ */
+export async function lockFileUploadOwner(db: Db, ownerId: string): Promise<boolean> {
+  const r = await db.execute<{ id: string }>(sql`
+    SELECT id
+    FROM public."user"
+    WHERE id = ${ownerId}
+    FOR KEY SHARE
+  `);
+  return r.rows.length > 0;
+}
+
+/** Persist the exact client-issued PUT capability before returning it. */
+export async function createFileUploadLease(
+  db: Db,
+  ownerId: string,
+  input: FileUploadLeaseInput,
+): Promise<void> {
+  await db.execute(sql`
+    INSERT INTO app.file_upload_leases(
+      file_id,
+      owner_id,
+      file_key,
+      scope,
+      project_id,
+      report_id,
+      content_type,
+      size_bytes,
+      presign_expires_at
+    )
+    VALUES (
+      ${input.fileId},
+      ${ownerId},
+      ${input.fileKey},
+      ${input.scope},
+      ${input.projectId ?? null},
+      ${input.reportId ?? null},
+      ${input.contentType},
+      ${input.sizeBytes}::bigint,
+      ${input.presignExpiresAt}::timestamptz
+    )
+  `);
+}
+
+export async function fileUploadLeasesEnforced(db: Db): Promise<boolean> {
+  const result = await db.execute<{ enforced: boolean }>(sql`
+    SELECT app.file_upload_leases_enforced() AS enforced
+  `);
+  return result.rows[0]?.enforced === true;
+}
+
+export async function hasFileUploadLease(
+  db: Db,
+  ownerId: string,
+  fileId: string,
+  fileKey: string,
+): Promise<boolean> {
+  const result = await db.execute<{ present: boolean }>(sql`
+    SELECT EXISTS (
+      SELECT 1
+      FROM app.file_upload_leases
+      WHERE file_id = ${fileId}
+        AND owner_id = ${ownerId}
+        AND file_key = ${fileKey}
+    ) AS present
+  `);
+  return result.rows[0]?.present === true;
+}
+
+/**
+ * Hold a specific unconsumed upload intent across a server-side object write.
+ *
+ * This prevents expired-lease pruning from deleting the reservation while the
+ * API is putting bytes to R2. Client uploads do not need this helper because
+ * their side effect happens before the registration request starts.
+ */
+export async function lockFileUploadLease(
+  db: Db,
+  ownerId: string,
+  fileId: string,
+  fileKey: string,
+): Promise<boolean> {
+  const result = await db.execute<{ file_id: string }>(sql`
+    SELECT file_id
+    FROM app.file_upload_leases
+    WHERE file_id = ${fileId}
+      AND owner_id = ${ownerId}
+      AND file_key = ${fileKey}
+      AND consumed_at IS NULL
+    FOR UPDATE
+  `);
+  return result.rows.length > 0;
+}
+
+/**
+ * Consume the exact unconsumed presign lease and register its file in one SQL
+ * statement. A missing, already-consumed, or metadata-mismatched lease yields
+ * `null`; no lease mutation survives when the INSERT fails.
+ */
+export async function registerFileFromUploadLease(
+  db: Db,
+  ownerId: string,
+  input: {
+    id: string;
+    kind: FileKind;
+    fileKey: string;
+    scope: 'project' | 'avatar' | 'scratch';
+    sizeBytes: number;
+    contentType: string;
+    projectId?: string | null;
+    reportId?: string | null;
+  },
+): Promise<FileRow | null> {
+  const r = await db.execute<RawFile>(sql`
+    WITH consumed_lease AS (
+      UPDATE app.file_upload_leases
+      SET consumed_at = now()
+      WHERE file_id = ${input.id}
+        AND owner_id = ${ownerId}
+        AND file_key = ${input.fileKey}
+        AND scope = ${input.scope}
+        AND project_id IS NOT DISTINCT FROM ${input.projectId ?? null}::app.prj_id
+        AND report_id IS NOT DISTINCT FROM ${input.reportId ?? null}::app.rpt_id
+        AND content_type = ${input.contentType}
+        AND size_bytes = ${input.sizeBytes}::bigint
+        AND consumed_at IS NULL
+      RETURNING
+        file_id,
+        owner_id,
+        file_key,
+        size_bytes,
+        content_type,
+        project_id,
+        report_id
+    )
+    INSERT INTO app.files(
+      id,
+      owner_id,
+      kind,
+      file_key,
+      size_bytes,
+      content_type,
+      project_id,
+      report_id
+    )
+    SELECT
+      file_id,
+      owner_id,
+      ${input.kind}::app.file_kind,
+      file_key,
+      size_bytes,
+      content_type,
+      project_id,
+      report_id
+    FROM consumed_lease
+    RETURNING
+      id,
+      owner_id,
+      kind,
+      file_key,
+      size_bytes,
+      content_type,
+      project_id,
+      report_id,
+      created_at
+  `);
+  const row = r.rows[0];
+  return row ? mapFile(row) : null;
+}
+
 export async function getFileById(db: Db, fileId: string): Promise<FileRow | null> {
   const r = await db.execute<RawFile>(sql`
     SELECT id, owner_id, kind, file_key, size_bytes, content_type, project_id, report_id, created_at

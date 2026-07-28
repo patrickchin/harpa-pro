@@ -22,9 +22,11 @@
  * share identity.
  */
 import {
+  DeleteObjectsCommand,
   S3Client,
   PutObjectCommand,
   GetObjectCommand,
+  ListObjectsV2Command,
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { env } from '../env.js';
@@ -66,12 +68,20 @@ export interface PutObjectInput {
   scope: PresignScope;
   contentType: string;
   bytes: Uint8Array;
+  /** Preallocated by buildStorageKey() before the durable write intent. */
+  fileKey: string;
+  fileId: string;
 }
 
 export interface PutObjectResult {
   fileKey: string;
   fileId: string;
   sizeBytes: number;
+}
+
+export interface ListPrefixResult {
+  keys: string[];
+  nextCursor: string | null;
 }
 
 export interface Storage {
@@ -83,6 +93,14 @@ export interface Storage {
    * PUT). Server constructs the key — never trust client input.
    */
   putObject(input: PutObjectInput): Promise<PutObjectResult>;
+  /** Idempotently delete objects; missing keys count as success. */
+  deleteObjects(fileKeys: string[]): Promise<void>;
+  /** List one bounded page under a server-selected safe prefix. */
+  listPrefix(
+    prefix: string,
+    cursor?: string,
+    limit?: number,
+  ): Promise<ListPrefixResult>;
 }
 
 const DEFAULT_TTL_SEC = 300; // 5 minutes per arch-storage.md
@@ -99,12 +117,15 @@ function scopeFileKind(scope: PresignScope): FileKind {
   return scope.kind === 'avatar' ? 'image' : scope.fileKind;
 }
 
-interface BuiltKey {
+export interface BuiltStorageKey {
   fileKey: string;
   fileId: string;
 }
 
-function buildKey(scope: PresignScope, contentType: string): BuiltKey {
+export function buildStorageKey(
+  scope: PresignScope,
+  contentType: string,
+): BuiltStorageKey {
   const fileId = newId('fil');
   const fileKind = scopeFileKind(scope);
   const ext = extFor(contentType, fileKind);
@@ -124,7 +145,7 @@ function buildKey(scope: PresignScope, contentType: string): BuiltKey {
 }
 
 /**
- * Inverse of `buildKey` — reads the scope back out of an R2 object
+ * Inverse of `buildStorageKey` — reads the scope back out of an R2 object
  * key. Used by `POST /files` (register) to verify the claimed scope
  * matches the embedded prefix + ids before persisting the row.
  *
@@ -180,7 +201,10 @@ export class FixtureStorage implements Storage {
   constructor(private readonly base = 'https://fixtures.harpa.local') {}
 
   async presign(input: PresignInput): Promise<PresignResult> {
-    const { fileKey, fileId } = buildKey(input.scope, input.contentType);
+    const { fileKey, fileId } = buildStorageKey(
+      input.scope,
+      input.contentType,
+    );
     return {
       uploadUrl: `${this.base}/put/${encodeURIComponent(fileKey)}?expires=${Date.now() + DEFAULT_TTL_SEC * 1000}`,
       fileKey,
@@ -200,8 +224,23 @@ export class FixtureStorage implements Storage {
     // Fixture mode keeps PDF rendering deterministic + network-free in
     // CI: we mint a server-built key but don't touch any blob store.
     // Tests verify the resulting signed GET URL points at the same key.
-    const { fileKey, fileId } = buildKey(input.scope, input.contentType);
-    return { fileKey, fileId, sizeBytes: input.bytes.length };
+    return {
+      fileKey: input.fileKey,
+      fileId: input.fileId,
+      sizeBytes: input.bytes.length,
+    };
+  }
+
+  async deleteObjects(_fileKeys: string[]): Promise<void> {
+    // Replay mode has no backing object store.
+  }
+
+  async listPrefix(
+    _prefix: string,
+    _cursor?: string,
+    _limit?: number,
+  ): Promise<ListPrefixResult> {
+    return { keys: [], nextCursor: null };
   }
 }
 
@@ -243,7 +282,10 @@ export class R2Storage implements Storage {
   }
 
   async presign(input: PresignInput): Promise<PresignResult> {
-    const { fileKey, fileId } = buildKey(input.scope, input.contentType);
+    const { fileKey, fileId } = buildStorageKey(
+      input.scope,
+      input.contentType,
+    );
     const command = new PutObjectCommand({
       Bucket: this.bucket,
       Key: fileKey,
@@ -274,17 +316,63 @@ export class R2Storage implements Storage {
   }
 
   async putObject(input: PutObjectInput): Promise<PutObjectResult> {
-    const { fileKey, fileId } = buildKey(input.scope, input.contentType);
     await this.client.send(
       new PutObjectCommand({
         Bucket: this.bucket,
-        Key: fileKey,
+        Key: input.fileKey,
         Body: input.bytes,
         ContentType: input.contentType,
         ContentLength: input.bytes.length,
       }),
     );
-    return { fileKey, fileId, sizeBytes: input.bytes.length };
+    return {
+      fileKey: input.fileKey,
+      fileId: input.fileId,
+      sizeBytes: input.bytes.length,
+    };
+  }
+
+  async deleteObjects(fileKeys: string[]): Promise<void> {
+    const uniqueKeys = [...new Set(fileKeys)].filter(Boolean);
+    for (let offset = 0; offset < uniqueKeys.length; offset += 1_000) {
+      const chunk = uniqueKeys.slice(offset, offset + 1_000);
+      const result = await this.client.send(
+        new DeleteObjectsCommand({
+          Bucket: this.bucket,
+          Delete: {
+            Objects: chunk.map((Key) => ({ Key })),
+            Quiet: true,
+          },
+        }),
+      );
+      if (result.Errors && result.Errors.length > 0) {
+        throw new Error(
+          `R2 delete failed for ${result.Errors.length} of ${chunk.length} object(s)`,
+        );
+      }
+    }
+  }
+
+  async listPrefix(
+    prefix: string,
+    cursor?: string,
+    limit = 500,
+  ): Promise<ListPrefixResult> {
+    const boundedLimit = Math.max(1, Math.min(1_000, Math.trunc(limit)));
+    const result = await this.client.send(
+      new ListObjectsV2Command({
+        Bucket: this.bucket,
+        Prefix: prefix,
+        ContinuationToken: cursor,
+        MaxKeys: boundedLimit,
+      }),
+    );
+    return {
+      keys: (result.Contents ?? [])
+        .map((object) => object.Key)
+        .filter((key): key is string => Boolean(key)),
+      nextCursor: result.NextContinuationToken ?? null,
+    };
   }
 }
 

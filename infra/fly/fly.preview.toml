@@ -11,6 +11,9 @@
 #   - `min_machines_running = 0`: no idle floor — the app sleeps fully
 #     between touches.
 #   - Single VM, no HA. Previews don't need redundancy.
+#   - No storage-worker process. The deploy arms upload-lease enforcement
+#     but leaves DELETE /me disabled; preview data is disposable and must
+#     not add one continuously billed worker per open PR.
 
 primary_region = "fra"
 

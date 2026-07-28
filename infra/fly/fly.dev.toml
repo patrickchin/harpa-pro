@@ -25,7 +25,12 @@ primary_region = "fra"
   NODE_ENV = "production"
   PORT = "8787"
 
+[processes]
+  app = "pnpm --filter @harpa/api exec tsx src/server.ts"
+  storage-worker = "pnpm --filter @harpa/api storage:worker"
+
 [http_service]
+  processes = ["app"]
   internal_port = 8787
   force_https = true
   # Use `suspend` (not `stop`) so the dev API resumes in <500ms when
@@ -53,5 +58,11 @@ primary_region = "fra"
   path = "/readyz"
 
 [[vm]]
+  processes = ["app"]
   size = "shared-cpu-1x"
   memory = "512mb"
+
+[[vm]]
+  processes = ["storage-worker"]
+  size = "shared-cpu-1x"
+  memory = "256mb"

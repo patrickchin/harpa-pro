@@ -971,6 +971,39 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "Deletion temporarily unavailable during storage-lifecycle rollout.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    },
+                    "requestId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
           }
         }
       }
@@ -11516,7 +11549,7 @@
             }
           },
           "409": {
-            "description": "Conflict — fileKey already registered.",
+            "description": "Conflict — upload lease missing, mismatched, or already consumed.",
             "content": {
               "application/json": {
                 "schema": {

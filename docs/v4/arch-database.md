@@ -57,7 +57,8 @@ its own `app.<prefix>_id` Postgres DOMAIN that enforces the
 ```sql
 CREATE DOMAIN app.prj_id AS text
   CHECK (VALUE ~ '^prj_[0-9a-hjkmnp-tv-z]{8,16}$');
--- …rpt_id, usr_id, ses_id, fil_id, not_id, vrf_id, wls_id, rcm_id
+-- …rpt_id, usr_id, ses_id, fil_id, not_id, vrf_id, wls_id, rcm_id,
+--   aud_id
 ```
 
 IDs are minted in the API (`packages/api/src/lib/ids.ts::newId`)
@@ -77,9 +78,15 @@ Two schemas in the same database:
   [`arch-auth-and-rls.md`](arch-auth-and-rls.md).
 - `app` — everything else: projects, project_members, reports,
   notes, report_comments, files (voice / image / document / pdf), note_files,
-  user_settings, waitlist_signups, llm_usage_events,
+  user_settings, waitlist_signups, llm_usage_events, activity_events,
   user_limit_overrides, rate_limit_buckets. Voice and image assets
   all live in the single `files` table keyed by `file_kind`.
+
+`app.activity_events` is the curated business-activity ledger for the
+admin feed. Authenticated requests have insert-only access under an
+actor-matching RLS policy; normal user scopes cannot read it. The admin
+API reads it only after `withAdmin()` authorization. See
+[design-admin-business-activity.md](design-admin-business-activity.md).
 
 Cross-schema FK: `app.project_members.user_id REFERENCES public."user"(id)`.
 

@@ -78,28 +78,22 @@ describe('activity event storage', () => {
   it('lets a scoped actor insert their own event but not read the table', async () => {
     const projectId = 'prj_12345678';
 
-    await withScopedConnection(
-      { sub: actorUserId, sid: actorSessionId },
-      async (db) => {
-        await recordActivityEvent(db, {
-          eventType: 'project.created',
-          actorUserId,
-          subjectId: projectId,
-          projectId,
-          requestId: null,
-          dedupeKey: `project.created:${projectId}`,
-          metadata: {},
-        });
-      },
-    );
+    await withScopedConnection({ sub: actorUserId, sid: actorSessionId }, async (db) => {
+      await recordActivityEvent(db, {
+        eventType: 'project.created',
+        actorUserId,
+        subjectId: projectId,
+        projectId,
+        requestId: null,
+        dedupeKey: `project.created:${projectId}`,
+        metadata: {},
+      });
+    });
 
     await expect(
-      withScopedConnection(
-        { sub: actorUserId, sid: actorSessionId },
-        async (db) => {
-          await db.execute(sql`SELECT id FROM app.activity_events`);
-        },
-      ),
+      withScopedConnection({ sub: actorUserId, sid: actorSessionId }, async (db) => {
+        await db.execute(sql`SELECT id FROM app.activity_events`);
+      }),
     ).rejects.toThrow(/permission denied/i);
   });
 
@@ -107,20 +101,17 @@ describe('activity event storage', () => {
     const projectId = 'prj_23456789';
 
     await expect(
-      withScopedConnection(
-        { sub: actorUserId, sid: actorSessionId },
-        async (db) => {
-          await recordActivityEvent(db, {
-            eventType: 'project.created',
-            actorUserId: otherUserId,
-            subjectId: projectId,
-            projectId,
-            requestId: null,
-            dedupeKey: `project.created:${projectId}`,
-            metadata: {},
-          });
-        },
-      ),
+      withScopedConnection({ sub: actorUserId, sid: actorSessionId }, async (db) => {
+        await recordActivityEvent(db, {
+          eventType: 'project.created',
+          actorUserId: otherUserId,
+          subjectId: projectId,
+          projectId,
+          requestId: null,
+          dedupeKey: `project.created:${projectId}`,
+          metadata: {},
+        });
+      }),
     ).rejects.toThrow(/row-level security|permission denied/i);
   });
 

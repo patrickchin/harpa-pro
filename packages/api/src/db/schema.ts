@@ -239,6 +239,54 @@ export const llmUsageEvents = appSchema.table('llm_usage_events', {
 });
 
 /**
+ * Curated product-level activity for the private admin feed. This is
+ * intentionally separate from request/debug logs and the LLM usage ledger.
+ * The API stores stable identifiers and joins current display labels at read
+ * time instead of copying personal or project names into the event row.
+ */
+export const activityEvents = appSchema.table(
+  'activity_events',
+  {
+    id: text('id').primaryKey(),
+    occurredAt: timestamp('occurred_at', { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    eventType: text('event_type').notNull(),
+    actorUserId: text('actor_user_id'),
+    subjectType: text('subject_type').notNull(),
+    subjectId: text('subject_id'),
+    projectId: text('project_id'),
+    requestId: text('request_id'),
+    dedupeKey: text('dedupe_key'),
+    metadata: jsonb('metadata')
+      .$type<Record<string, unknown>>()
+      .notNull()
+      .default({}),
+  },
+  (t) => ({
+    occurredIdx: index('activity_events_occurred_idx').on(
+      t.occurredAt,
+      t.id,
+    ),
+    eventOccurredIdx: index('activity_events_event_occurred_idx').on(
+      t.eventType,
+      t.occurredAt,
+      t.id,
+    ),
+    actorOccurredIdx: index('activity_events_actor_occurred_idx').on(
+      t.actorUserId,
+      t.occurredAt,
+      t.id,
+    ),
+    projectOccurredIdx: index('activity_events_project_occurred_idx').on(
+      t.projectId,
+      t.occurredAt,
+      t.id,
+    ),
+  }),
+);
+
+/**
  * Per-user admin-granted limit override. NULL columns fall through to
  * the user's plan in `PLAN_LIMITS`; `-1` is the explicit "unbounded"
  * sentinel (serialised on the wire as `null`). See

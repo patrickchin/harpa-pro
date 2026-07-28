@@ -13,11 +13,10 @@
    functions all run on services we control or can swap.
 2. **Tested-first.** Every layer has its test strategy decided before
    it's built. No phase exits without its coverage gate.
-3. **Visual parity is acceptance.** P2+ ships only what matches the
-   canonical port source at `../haru3-reports/apps/mobile` on `dev`.
-   Review is manual against that source — there is no automated
-   screenshot-diff gate. JSX + Tailwind classes copy across (both
-   sides are NativeWind v4); only the data layer changes.
+3. **Visual acceptance is explicit.** P2+ screens ship only when they
+   satisfy their approved v4 contract and preserve established
+   NativeWind patterns. Review is manual on the iOS simulator; there
+   is no automated screenshot-diff gate.
 4. **Fixtures everywhere expensive.** LLMs, Resend email, R2 PUT — every
    external boundary has a record/replay layer baked in from P0.
 
@@ -120,6 +119,7 @@ flowchart TB
 | 17 | **Voice pipeline** | [arch-voice-pipeline.md](arch-voice-pipeline.md) | **End-to-end record → upload → transcribe → summarise → render pipeline; mobile recorder + API aggregator route + `VoiceNoteCard` (companion plan: [plan-voice-pipeline.md](plan-voice-pipeline.md))** |
 | 18 | **Mobile skeletons** | [arch-mobile-skeletons.md](arch-mobile-skeletons.md) | **Per-screen skeleton geometry policy to prevent layout-shift on hydrate** |
 | 19 | **App shell (P2.6)** | [arch-p2-6-app-shell.md](arch-p2-6-app-shell.md) | **Root provider tree, auth gate redirect, `(app)` tab/stack shape — design notes for the shell that landed in P2.6** |
+| 20 | **Admin business activity (proposed)** | [design-admin-business-activity.md](design-admin-business-activity.md) | **Append-oriented business events, admin-only API, and an admin-authenticated Astro activity page at `admin.harpapro.com`** |
 
 ## Repo layout (target end of P0)
 
@@ -172,8 +172,8 @@ skills/                   # auto-loaded
 |---|---|---|
 | P0 | Foundation | All packages scaffold compiles. `ai-fixtures` works (replay + record). better-auth email-OTP route hits Resend sandbox + integration test green. Neon branch script tested in CI. |
 | P1 | API Core | All routes implemented (zero stubs). `pnpm test:api && pnpm test:api:integration` green at ≥90% line coverage. Per-request scope tests cover every authed route. Fixture replay covers every AI route. |
-| P2 | Mobile Shell | Auth + nav + every primitive built. Every auth screen + projects list ported from `../haru3-reports/apps/mobile@dev` and reviewed manually. NativeWind tokens locked in `tailwind.config.js`. Screen bodies in `screens/<name>.tsx` are props-driven and unit-testable in isolation. |
-| P3 | Feature Build | Every screen from `../haru3-reports/apps/mobile@dev` ported, with: behaviour test for each interaction, Maestro flow. No screen is "stubbed" or "TODO redesign". |
+| P2 | Mobile Shell | Auth + nav + every primitive built. Every auth screen + projects list implemented and reviewed manually against its v4 contract. NativeWind tokens locked in `tailwind.config.js`. Screen bodies in `screens/<name>.tsx` are props-driven and unit-testable in isolation. |
+| P3 | Feature Build | Every approved v4 screen implemented, with a behaviour test for each interaction and a Maestro flow. No screen is "stubbed" or "TODO redesign". |
 | P4 | E2E + Hardening | Full Maestro journey green on iOS + Android. Sentry wired. Fly + Neon prod deploy green. PDF export bit-for-bit equivalent to mobile-old samples. |
 | P5 | Beta + GA | TestFlight + Play internal track distribution. Rollout monitor. Cutover. |
 

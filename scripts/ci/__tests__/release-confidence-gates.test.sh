@@ -89,6 +89,15 @@ require_file ".maestro/ci-launch-smoke.yaml" \
 require_regex ".maestro/ci-launch-smoke.yaml" \
   "id:[[:space:]]*['\"]?input-email['\"]?" \
   "Maestro launch flow asserts a rendered app control"
+require_fixed ".maestro/ci-launch-smoke.yaml" \
+  "This is the developer menu" \
+  "Maestro launch flow waits for a late Expo developer menu"
+require_fixed ".maestro/ci-launch-smoke.yaml" \
+  "optional: true" \
+  "late Expo developer-menu probe is bounded and optional"
+require_fixed ".maestro/ci-launch-smoke.yaml" \
+  "timeout: 90000" \
+  "Maestro launch flow allows a bounded cold bundle load"
 require_fixed ".github/workflows/e2e-maestro-testid-gate.yml" \
   "timeout-minutes: 30" \
   "Maestro job has a 30-minute GitHub Actions ceiling"
@@ -143,6 +152,9 @@ require_fixed "scripts/ci/run-maestro-launch-smoke.sh" \
 require_fixed ".github/workflows/e2e-maestro-testid-gate.yml" \
   "if-no-files-found: error" \
   "Maestro diagnostic upload fails if the runner produced no files"
+require_fixed ".github/workflows/e2e-maestro-testid-gate.yml" \
+  "include-hidden-files: true" \
+  "Maestro diagnostic upload includes hidden UI hierarchy and screenshots"
 
 # These are literal GitHub expression strings, not shell expansions.
 # shellcheck disable=SC2016

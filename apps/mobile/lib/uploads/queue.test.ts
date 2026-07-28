@@ -203,6 +203,39 @@ describe('UploadQueue — Phase F abort + dedupe', () => {
     expect(rec.presignCalls).toHaveLength(1);
   });
 
+  it('clear aborts in-flight work and erases in-memory and persisted jobs', async () => {
+    const persistence = createInMemoryPersistence();
+    const putToR2: UploadDeps['putToR2'] = async (a) => {
+      await new Promise<void>((_resolve, reject) => {
+        a.signal?.addEventListener('abort', () => {
+          const error = new Error('upload queue cleared');
+          error.name = 'AbortError';
+          reject(error);
+        });
+      });
+    };
+    const { deps } = makeDeps({ putToR2 });
+    const q = createUploadQueue(deps, { persistence });
+    const promise = q.enqueue({
+      sourceUri: 'file:///tmp/session-boundary.m4a',
+      kind: 'voice',
+      filename: 'session-boundary.m4a',
+      contentType: 'audio/m4a',
+      sizeBytes: 8,
+    });
+
+    await new Promise((r) => setImmediate(r));
+    await new Promise((r) => setImmediate(r));
+    expect(q.getJobs()[0]?.status).toBe('uploading');
+    expect(persistence.snapshot()).toHaveLength(1);
+
+    q.clear();
+
+    await expect(promise).rejects.toThrow(/cleared/i);
+    expect(q.getJobs()).toEqual([]);
+    expect(persistence.snapshot()).toEqual([]);
+  });
+
   it('dedupes by clientId — second enqueue hijacks the first job', async () => {
     let release: ((v: void) => void) | null = null;
     const block = new Promise<void>((r) => {

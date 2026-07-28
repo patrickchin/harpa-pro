@@ -168,9 +168,11 @@ export const updateReportRequest = z.object({
 });
 
 /**
- * fixtureName is forwarded to @harpa/ai-fixtures FixtureStore which uses
- * `path.join(dir, name + '.json')`. Restrict to a safe charset to prevent
- * path traversal at the contract boundary (mirrors voice schemas).
+ * In server-selected replay mode, fixtureName is forwarded to the
+ * @harpa/ai-fixtures FixtureStore, which uses `path.join(dir, name +
+ * '.json')`. Restrict it to a safe charset to prevent path traversal at
+ * the contract boundary (mirrors voice schemas). It never selects live
+ * versus replay mode.
  */
 const fixtureNameSchema = z
   .string()

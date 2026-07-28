@@ -38,12 +38,18 @@ jobs:
           bash scripts/check-no-unistyles.sh
           bash scripts/check-scope-tests.sh
           bash scripts/check-mobile-lib-flat.sh
-      - name: CI shell-script tests
-        # Self-tests for the shared CI helpers in scripts/ci/. Keeps
-        # them honest without spinning up the full integration matrix.
+      - name: CI shell policy tests
+        # Self-tests and focused policy checks for shell glue. Keeps it
+        # honest without spinning up the full integration matrix.
         run: |
+          bash scripts/ci/__tests__/api-prod-policy.test.sh
+          bash scripts/ci/__tests__/stress-viewer-policy.test.sh
           bash scripts/ci/__tests__/verify-readyz.test.sh
+          bash scripts/ci/__tests__/verify-api-release.test.sh
+          bash scripts/ci/__tests__/mobile-ota-release-policy.test.sh
           bash scripts/ci/__tests__/check-no-maestro-point-taps.test.sh
+          bash scripts/ci/__tests__/verify-deployed-sha.test.sh
+          bash scripts/ci/__tests__/release-confidence-gates.test.sh
       - name: Shellcheck CI helpers
         # Lint shared shell scripts that ship in CI workflows. Catches
         # syntactic regressions (unquoted vars, broken loops, useless

@@ -1,7 +1,7 @@
 /**
- * Notes CRUD service. RLS in app.notes (member-of-project for SELECT/
- * INSERT, author-only for UPDATE/DELETE) does the access control;
- * no SECURITY DEFINER helpers needed.
+ * Notes CRUD service. RLS in app.notes provides member visibility and
+ * author-only UPDATE/DELETE; routes add the owner/editor role decision.
+ * No SECURITY DEFINER helpers are needed.
  */
 import { sql } from 'drizzle-orm';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
@@ -41,6 +41,11 @@ export interface NoteRow {
   createdAt: string;
   updatedAt: string;
   files: NoteFileRow[];
+}
+
+export interface NoteAccess {
+  projectId: string;
+  authorId: string;
 }
 
 interface RawNote {
@@ -111,6 +116,31 @@ export function notesCanonicalOrder(alias?: 'n') {
   return alias === 'n'
     ? sql`n.created_at ASC, n.id ASC`
     : sql`created_at ASC, id ASC`;
+}
+
+/**
+ * Resolve the project + author for a member-visible note. Routes use this
+ * before mutating a note so role checks do not weaken the existing
+ * author-only update/delete contract.
+ */
+export async function getNoteAccess(
+  db: Db,
+  noteId: string,
+): Promise<NoteAccess | null> {
+  const result = await db.execute<{
+    project_id: string;
+    author_id: string;
+  }>(sql`
+    SELECT r.project_id, n.author_id
+      FROM app.notes n
+      JOIN app.reports r ON r.id = n.report_id
+     WHERE n.id = ${noteId}
+     LIMIT 1
+  `);
+  const row = result.rows[0];
+  return row
+    ? { projectId: row.project_id, authorId: row.author_id }
+    : null;
 }
 
 function defaultSourceForKind(kind: NoteKind): NoteSource {

@@ -67,7 +67,7 @@ home, or site trailer after field information has been captured.
 - A viewer cannot mutate projects, reports, notes, or membership through the
   API, even if they bypass the UI.
 - Finalized reports remain read-only until an owner or editor explicitly
-  reopens them as drafts.
+  reopens them as drafts; only owners can finalize.
 - The dashboard can ship without camera, microphone, or browser upload
   permissions.
 
@@ -94,7 +94,7 @@ into a browser.
 | Generate and update a report             | Yes                       | Yes                     | Same API and usage limits                         |
 | Edit report text                         | Yes                       | Yes, desktop-enhanced   | Keyboard-first structured editor                  |
 | Place photos into report sections        | Yes                       | No                      | Defer specialized placement UI                    |
-| Finalize and reopen a report             | Yes                       | Yes                     | Same lifecycle                                    |
+| Finalize and reopen a report             | Yes                       | Yes                     | Owner finalizes; owner/editor reopens             |
 | View/download PDF                        | Yes                       | Yes                     | Browser downloads server-rendered PDF             |
 | Review comments                          | Yes                       | Yes                     | Append-only for all current members               |
 | Developer/debug surface                  | Dev-only                  | No                      | Not a customer dashboard feature                  |
@@ -385,7 +385,9 @@ The API, not the client, is the authorization boundary.
 | Delete project                             |   Yes |     No |     No |
 | Manage membership and roles                |   Yes |     No |     No |
 | Create/edit/delete report                  |   Yes |    Yes |     No |
-| Generate/regenerate/finalize/reopen report |   Yes |    Yes |     No |
+| Generate/regenerate report                 |   Yes |    Yes |     No |
+| Finalize report                            |   Yes |     No |     No |
+| Reopen report                              |   Yes |    Yes |     No |
 | Create a note                              |   Yes |    Yes |     No |
 | Edit/delete own note                       |   Yes |    Yes |     No |
 | Place report attachments                   |   Yes |    Yes |     No |

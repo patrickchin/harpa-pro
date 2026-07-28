@@ -21,7 +21,8 @@ ENV MIGRATIONS_REQUIRED_HEAD=${MIGRATIONS_REQUIRED_HEAD}
 
 # Build-time version metadata surfaced via /healthz so clients (mobile
 # BuildBadge, ops dashboards) can see exactly which commit is serving
-# traffic. Both are passed by infra/fly/deploy.sh.
+# traffic. GIT_COMMIT is the full 40-character SHA; both values are
+# passed by infra/fly/deploy.sh.
 ARG GIT_COMMIT=local
 ENV GIT_COMMIT=${GIT_COMMIT}
 ARG BUILD_TIME

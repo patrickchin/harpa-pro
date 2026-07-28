@@ -91,7 +91,7 @@ jobs:
             exit 1
           fi
           echo "deploy: MIGRATIONS_REQUIRED_HEAD=$HEAD"
-          GIT_COMMIT=$(git rev-parse --short HEAD)
+          GIT_COMMIT=$(git rev-parse HEAD)
           BUILD_TIME=$(date -u +%Y-%m-%dT%H:%M:%SZ)
           echo "deploy: GIT_COMMIT=$GIT_COMMIT BUILD_TIME=$BUILD_TIME"
           flyctl deploy \
@@ -154,3 +154,13 @@ jobs:
           fi
           bash scripts/journeys/all.sh dev
 
+  mobile-ota:
+    name: Publish API-dependent mobile OTA
+    needs: dev
+    permissions:
+      contents: write
+    uses: ./.github/workflows/mobile-ota-dev.yml
+    with:
+      release_sha: ${{ github.sha }}
+      api_deploy_succeeded: true
+    secrets: inherit

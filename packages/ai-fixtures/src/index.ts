@@ -95,7 +95,8 @@ export class LiveAdapterMissingError extends Error {
 export { createProvider } from './factory.js';
 export { FixtureStore } from './fixture-store.js';
 export type { FixtureFile } from './fixture-store.js';
-export { redact } from './redact.js';
+export { redact, redactFixture } from './redact.js';
+export type { FixtureRedactionInput } from './redact.js';
 export { hashRequest } from './hash.js';
 export { createOpenAiProvider } from './providers/openai.js';
 export { createGroqProvider } from './providers/groq.js';

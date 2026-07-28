@@ -47,7 +47,10 @@ with Bash explicitly because the action otherwise evaluates `script:`
 with `/usr/bin/sh`, which does not support `pipefail` on Ubuntu. The
 runner creates its Metro log and Maestro debug directory before
 installing the APK, then captures ADB state and recent logcat output
-on failure. CI uploads those files as
+on failure. The launch flow also checks a second time for Expo's
+developer-menu onboarding after the cold bundle load, then allows up
+to 90 seconds for the sign-in control. CI uploads the runner logs and
+Maestro's hidden UI hierarchy/screenshots as
 `maestro-launch-smoke-diagnostics`.
 
 This does not replace the regression journey. It proves the native

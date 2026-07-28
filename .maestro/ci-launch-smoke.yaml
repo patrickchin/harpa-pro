@@ -23,8 +23,24 @@ tags:
       - tapOn: 'Close'
       - waitForAnimationToEnd
 - extendedWaitUntil:
+    visible: 'This is the developer menu'
+    timeout: 30000
+    optional: true
+- runFlow:
+    when:
+      visible: 'Continue'
+    commands:
+      - tapOn: 'Continue'
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: 'Close'
+    commands:
+      - tapOn: 'Close'
+      - waitForAnimationToEnd
+- extendedWaitUntil:
     visible:
       id: 'input-email'
-    timeout: 60000
+    timeout: 90000
 - assertVisible:
     id: 'input-email'

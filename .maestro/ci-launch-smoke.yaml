@@ -12,6 +12,13 @@ tags:
     timeout: 20000
 - runFlow:
     when:
+      visible: 'http://10.0.2.2:8081'
+    commands:
+      - tapOn: 'http://10.0.2.2:8081'
+      - waitForAnimationToEnd:
+          timeout: 20000
+- runFlow:
+    when:
       visible: 'Continue'
     commands:
       - tapOn: 'Continue'

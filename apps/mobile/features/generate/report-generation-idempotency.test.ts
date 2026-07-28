@@ -1,8 +1,15 @@
 import { describe, expect, it } from 'vitest';
 
+type ReportGenerationOperation = 'generate' | 'regenerate';
+
 interface ReportGenerationIdempotency {
+  attempt(operation: ReportGenerationOperation): {
+    key: string;
+    operation: ReportGenerationOperation;
+  };
   key(): string;
   succeeded(key: string): void;
+  failed(key: string, status: number): void;
 }
 
 type CreateTracker = (
@@ -44,5 +51,24 @@ describe('report generation idempotency key', () => {
     tracker.succeeded(first);
 
     expect(tracker.key()).toBe(second);
+  });
+
+  it('retains ambiguous attempts and their operation, then rotates after a definitive 4xx', async () => {
+    const createTracker = await loadTracker();
+    const minted = ['attempt-one', 'attempt-two'];
+    const tracker = createTracker(() => minted.shift()!);
+
+    const first = tracker.attempt('generate');
+    tracker.failed(first.key, 0);
+    tracker.failed(first.key, 503);
+    tracker.failed(first.key, 200);
+
+    expect(tracker.attempt('regenerate')).toEqual(first);
+
+    tracker.failed(first.key, 409);
+    expect(tracker.attempt('regenerate')).toEqual({
+      key: 'report-generation:attempt-two',
+      operation: 'regenerate',
+    });
   });
 });

@@ -1,9 +1,10 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createHash } from 'node:crypto';
 import pg from 'pg';
 import { env } from '../env.js';
 import {
   getIdempotencyStore,
+  PostgresIdempotencyStore,
   resetIdempotencyStore,
   type CachedResponse,
   type IdempotencyStore,
@@ -173,5 +174,55 @@ describe('Postgres idempotency store', () => {
 
     expect(retried.replay).toBe(false);
     expect(retried.value?.body).toBe('{"retried":true}');
+  });
+
+  it('fails the owner when its lease heartbeat cannot renew', async () => {
+    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] });
+    const store = new PostgresIdempotencyStore(getPool(fx.url));
+    const renewal = vi
+      .spyOn(
+        store as unknown as {
+          renewLease(keyHash: string, ownerToken: string): Promise<void>;
+        },
+        'renewLease',
+      )
+      .mockRejectedValueOnce(new Error('database partition'));
+    const warning = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+
+    let finishProducer!: () => void;
+    const producerFinished = new Promise<void>((resolve) => {
+      finishProducer = resolve;
+    });
+    let producerStarted!: () => void;
+    const started = new Promise<void>((resolve) => {
+      producerStarted = resolve;
+    });
+
+    try {
+      const execution = store.getOrExecute('heartbeat-failure-key', 60_000, async () => {
+        producerStarted();
+        await producerFinished;
+        return {
+          status: 200,
+          body: '{"shouldNotReplay":true}',
+          contentType: 'application/json',
+        };
+      });
+
+      await started;
+      await vi.advanceTimersByTimeAsync(10_000);
+      finishProducer();
+
+      await expect(execution).rejects.toMatchObject({
+        name: 'IdempotencyLeaseLostError',
+        message: 'Idempotency lease renewal failed.',
+        cause: expect.objectContaining({ message: 'database partition' }),
+      });
+      expect(renewal).toHaveBeenCalledOnce();
+      expect(await store.get('heartbeat-failure-key')).toBeNull();
+    } finally {
+      warning.mockRestore();
+      vi.useRealTimers();
+    }
   });
 });

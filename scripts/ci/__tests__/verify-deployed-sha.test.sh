@@ -74,18 +74,21 @@ run_verifier() {
 
 echo "verify-deployed-sha.sh"
 
-assert_pass "accepts the deployed short SHA as a prefix of the PR SHA" "$TMP/t1.log" \
-  run_verifier '{"gitCommit":"abc1234"}' \
-  "abc1234567890abcdef1234567890abcdef12345" "$TMP/t1.count"
+FULL_SHA="abc1234567890abcdef1234567890abcdef12345"
+OTHER_SHA="deadbeef67890abcdef1234567890abcdef12345"
+
+assert_pass "accepts the exact deployed full SHA" "$TMP/t1.log" \
+  run_verifier "{\"gitCommit\":\"$FULL_SHA\"}" \
+  "$FULL_SHA" "$TMP/t1.count"
 
 assert_pass "retries a stale deployment and accepts the expected SHA" "$TMP/t2.log" \
   run_verifier \
-  '{"gitCommit":"deadbee"}|{"gitCommit":"abc1234"}' \
-  "abc1234567890abcdef1234567890abcdef12345" "$TMP/t2.count"
+  "{\"gitCommit\":\"$OTHER_SHA\"}|{\"gitCommit\":\"$FULL_SHA\"}" \
+  "$FULL_SHA" "$TMP/t2.count"
 
 assert_fail "rejects a deployment that stays on another SHA" "$TMP/t3.log" \
-  run_verifier '{"gitCommit":"deadbee"}' \
-  "abc1234567890abcdef1234567890abcdef12345" "$TMP/t3.count"
+  run_verifier "{\"gitCommit\":\"$OTHER_SHA\"}" \
+  "$FULL_SHA" "$TMP/t3.count"
 if grep -q "did not reach expected commit" "$TMP/t3.log"; then
   echo "  ok   - stale deployment failure is diagnostic"
   PASS=$((PASS + 1))
@@ -96,11 +99,26 @@ fi
 
 assert_fail "rejects a malformed health response" "$TMP/t4.log" \
   run_verifier '{"ok":true}' \
-  "abc1234567890abcdef1234567890abcdef12345" "$TMP/t4.count"
+  "$FULL_SHA" "$TMP/t4.count"
 
 assert_fail "requires EXPECTED_GIT_COMMIT" "$TMP/t5.log" \
   env -u EXPECTED_GIT_COMMIT HEALTH_URL="https://example.test/healthz" \
   bash "$SCRIPT"
+
+assert_fail "rejects a matching abbreviated deployed SHA" "$TMP/t6.log" \
+  run_verifier '{"gitCommit":"abc1234"}' \
+  "$FULL_SHA" "$TMP/t6.count"
+
+assert_fail "rejects an abbreviated expected SHA" "$TMP/t7.log" \
+  run_verifier "{\"gitCommit\":\"$FULL_SHA\"}" \
+  "${FULL_SHA:0:12}" "$TMP/t7.count"
+if grep -q "full 40-character hexadecimal SHA" "$TMP/t7.log"; then
+  echo "  ok   - abbreviated expected SHA failure is diagnostic"
+  PASS=$((PASS + 1))
+else
+  echo "  FAIL - abbreviated expected SHA failure lacks a diagnostic"
+  FAIL=$((FAIL + 1))
+fi
 
 echo
 echo "passed: $PASS  failed: $FAIL"

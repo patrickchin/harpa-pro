@@ -67,10 +67,22 @@ require_fixed "packages/api/package.json" '"test:coverage":' \
 require_fixed ".github/workflows/api-integration.yml" \
   "pnpm --filter @harpa/api test:coverage" \
   "API integration CI runs the coverage gate"
+require_fixed ".github/workflows/api-integration.yml" \
+  "permissions:" \
+  "API integration workflow declares explicit permissions"
+require_fixed ".github/workflows/api-integration.yml" \
+  "contents: read" \
+  "API integration workflow grants read-only repository access"
 
 require_fixed ".github/workflows/e2e-maestro-testid-gate.yml" \
   "pnpm --filter @harpa/mobile bundle:smoke" \
   "mobile CI runs the Metro bundle leakage smoke"
+require_fixed ".github/workflows/e2e-maestro-testid-gate.yml" \
+  "permissions:" \
+  "mobile confidence workflow declares explicit permissions"
+require_fixed ".github/workflows/e2e-maestro-testid-gate.yml" \
+  "contents: read" \
+  "mobile confidence workflow grants read-only repository access"
 
 require_file ".maestro/ci-launch-smoke.yaml" \
   "CI has a focused Maestro launch flow"
@@ -105,6 +117,16 @@ require_fixed ".github/workflows/main-gate.yml" \
 require_before ".github/workflows/main-gate.yml" \
   "Verify deployed dev SHA" "Run journeys against dev" \
   "deployed SHA is verified before journeys run"
+
+require_fixed ".github/workflows/api-dev.yml" \
+  "git rev-parse HEAD" \
+  "dev deploy injects the full Git SHA"
+require_fixed ".github/workflows/pr-preview.yml" \
+  "git rev-parse HEAD" \
+  "preview deploy injects the full Git SHA"
+require_fixed "infra/fly/deploy.sh" \
+  "git rev-parse HEAD" \
+  "shared Fly deploy injects the full Git SHA"
 
 require_fixed ".github/workflows/lint-typecheck.yml" \
   "bash scripts/ci/__tests__/release-confidence-gates.test.sh" \

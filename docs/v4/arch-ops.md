@@ -427,12 +427,14 @@ not by the API at runtime), and a handful of CI-only flags.
 
 ## Observability
 
-- **Sentry** for crashes, both mobile and API. Same project,
-  different DSNs. Runtime vars:
+- **Sentry** for crashes in mobile, dashboard, and API. Runtime/build vars:
   - API: `SENTRY_DSN`, optional `SENTRY_ENVIRONMENT`, and
     `SENTRY_TRACES_SAMPLE_RATE`.
   - Mobile: `EXPO_PUBLIC_SENTRY_DSN` at Metro/EAS build or OTA-update
     time.
+  - Dashboard: optional `SENTRY_DASHBOARD_DSN` GitHub secret, compiled as
+    `VITE_SENTRY_DSN`; workflows also compile the environment and commit SHA.
+    When the DSN is absent, the dashboard does not initialize telemetry.
   - Source maps/native build integration: `SENTRY_ORG`,
     `SENTRY_PROJECT`, optional `SENTRY_URL`, and `SENTRY_AUTH_TOKEN`
     with `project:write`.

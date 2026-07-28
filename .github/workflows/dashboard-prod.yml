@@ -32,6 +32,9 @@ jobs:
       deployments: write
     env:
       VITE_API_BASE_URL: https://api.harpapro.com
+      VITE_SENTRY_DSN: ${{ secrets.SENTRY_DASHBOARD_DSN }}
+      VITE_SENTRY_ENVIRONMENT: production
+      VITE_SENTRY_RELEASE: ${{ github.sha }}
     steps:
       - uses: actions/checkout@v4
         with:

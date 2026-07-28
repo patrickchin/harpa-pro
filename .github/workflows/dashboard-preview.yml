@@ -88,9 +88,18 @@ jobs:
       - name: Typecheck dashboard
         run: pnpm --filter @harpa/dashboard typecheck
 
+      - name: Install dashboard browser engines
+        run: pnpm --filter @harpa/dashboard exec playwright install --with-deps chromium firefox webkit msedge
+
+      - name: Test dashboard browser journeys
+        run: pnpm --filter @harpa/dashboard test:e2e
+
       - name: Build dashboard
         env:
           VITE_API_BASE_URL: ${{ steps.api.outputs.base-url }}
+          VITE_SENTRY_DSN: ${{ secrets.SENTRY_DASHBOARD_DSN }}
+          VITE_SENTRY_ENVIRONMENT: preview
+          VITE_SENTRY_RELEASE: ${{ github.sha }}
         run: pnpm --filter @harpa/dashboard build
 
       - name: Assert Cloudflare Pages SPA artifact

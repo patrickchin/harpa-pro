@@ -179,6 +179,23 @@ require_before "$PREVIEW" \
   "pnpm --filter @harpa/dashboard test" \
   "pnpm --filter @harpa/dashboard build" \
   "preview tests dashboard behavior before building"
+require_fixed "$PREVIEW" \
+  "pnpm --filter @harpa/dashboard exec playwright install --with-deps chromium firefox webkit msedge" \
+  "preview installs all supported browser engines"
+require_before "$PREVIEW" \
+  "pnpm --filter @harpa/dashboard test:e2e" \
+  "pnpm --filter @harpa/dashboard build" \
+  "preview runs cross-browser journeys before building"
+
+for workflow in "$PREVIEW" "$DEV" "$PROD"; do
+  label="$(basename "$workflow")"
+  require_fixed "$workflow" \
+    'VITE_SENTRY_DSN: ${{ secrets.SENTRY_DASHBOARD_DSN }}' \
+    "$label injects the optional dashboard Sentry DSN"
+  require_fixed "$workflow" \
+    'VITE_SENTRY_RELEASE: ${{ github.sha }}' \
+    "$label tags dashboard telemetry with the deployed commit"
+done
 
 require_fixed "$DEV" \
   "VITE_API_BASE_URL: https://harpa-pro-api-dev.fly.dev" \

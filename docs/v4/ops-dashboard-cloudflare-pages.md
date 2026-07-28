@@ -74,6 +74,8 @@ configured for the public site:
 
 - `CLOUDFLARE_ACCOUNT_ID`;
 - `CLOUDFLARE_API_TOKEN`, scoped to Account → Cloudflare Pages → Edit.
+- `SENTRY_DASHBOARD_DSN`, optional; when present, the build enables
+  privacy-safe dashboard error and performance telemetry.
 
 The token may be reused because it is account-scoped. No dashboard API URL is a
 secret. Vite inlines `VITE_API_BASE_URL` into the uploaded bundle, so every
@@ -112,7 +114,8 @@ requests.
 
 The browser-auth/CORS allowlist must cover:
 
-- `http://localhost:5173` for local Vite development;
+- `http://localhost:3003` and `http://127.0.0.1:3003` for local Vite and
+  Playwright development;
 - `https://app.harpapro.com`;
 - `https://harpa-pro-dashboard.pages.dev`;
 - `https://dev.harpa-pro-dashboard.pages.dev`;
@@ -164,6 +167,8 @@ VITE_API_BASE_URL=http://localhost:8787 \
   pnpm --filter @harpa/dashboard typecheck
 VITE_API_BASE_URL=http://localhost:8787 \
   pnpm --filter @harpa/dashboard build
+pnpm --filter @harpa/dashboard exec playwright install chromium firefox webkit msedge
+pnpm --filter @harpa/dashboard test:e2e
 bash scripts/ci/__tests__/dashboard-pages-policy.test.sh
 bash scripts/ci/__tests__/verify-dashboard-pages.test.sh
 ```

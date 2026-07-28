@@ -26,7 +26,9 @@ const ENABLED = process.env.CI_R2_LIVE !== '0';
 let pgFx: PgFixture;
 let minio: MinioFixture;
 let admin: pg.Client;
-let app: { request: (path: string, init?: RequestInit) => Promise<Response> };
+let app: {
+  request: (path: string, init?: RequestInit) => Response | Promise<Response>;
+};
 let signTestToken: (userId: string, sessionId: string) => Promise<string>;
 
 let alice = '';
@@ -36,6 +38,8 @@ let soloProject = '';
 let soloReport = '';
 let sharedProject = '';
 let sharedReport = '';
+let lateUploadUrl = '';
+let lateUploadKey = '';
 
 const keys = {
   avatar: '',
@@ -170,8 +174,31 @@ async function expectObjectMissing(Key: string): Promise<void> {
 }
 
 describe.skipIf(!ENABLED)('DELETE /me R2 lifecycle', () => {
-  it('deletes exact owned keys and safe-prefix orphans without sweeping a shared project', async () => {
+  it('deletes exact keys, safe-prefix orphans, and a late PUT without sweeping a shared project', async () => {
     const token = await signTestToken(alice, aliceSid);
+
+    const presignResponse = await app.request('/files/presign', {
+      method: 'POST',
+      headers: {
+        authorization: `Bearer ${token}`,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        scope: 'project',
+        projectId: sharedProject,
+        reportId: sharedReport,
+        kind: 'image',
+        contentType: 'image/jpeg',
+        sizeBytes: 3,
+      }),
+    });
+    expect(presignResponse.status).toBe(200);
+    const presign = (await presignResponse.json()) as {
+      uploadUrl: string;
+      fileKey: string;
+    };
+    lateUploadUrl = presign.uploadUrl;
+    lateUploadKey = presign.fileKey;
 
     const response = await app.request('/me', {
       method: 'DELETE',
@@ -184,6 +211,42 @@ describe.skipIf(!ENABLED)('DELETE /me R2 lifecycle', () => {
     await expectObjectMissing(keys.sharedOwned);
     await expectObjectMissing(keys.scratchOrphan);
     await expectObjectMissing(keys.soloOrphan);
+
+    const aliceRows = await admin.query(
+      `SELECT id FROM app.files WHERE owner_id = $1`,
+      [alice],
+    );
+    expect(aliceRows.rowCount).toBe(0);
+
+    const latePut = await fetch(lateUploadUrl, {
+      method: 'PUT',
+      headers: { 'content-type': 'image/jpeg' },
+      body: new Uint8Array([7, 8, 9]),
+    });
+    expect(latePut.status).toBe(200);
+
+    const lateObject = await minio.client.send(
+      new HeadObjectCommand({
+        Bucket: minio.bucket,
+        Key: lateUploadKey,
+      }),
+    );
+    expect(Number(lateObject.ContentLength)).toBe(3);
+
+    await admin.query(
+      `UPDATE app.storage_delete_jobs
+       SET run_after = now(), locked_at = NULL
+       WHERE user_id = $1
+         AND job_kind = 'account_delete_final'`,
+      [alice],
+    );
+    const { drainStorageDeleteJobs } = await import(
+      '../services/storage-delete-jobs.js'
+    );
+    const drain = await drainStorageDeleteJobs({ maxJobs: 10 });
+    expect(drain.failed).toBe(0);
+    expect(drain.completed).toBeGreaterThanOrEqual(1);
+    await expectObjectMissing(lateUploadKey);
 
     const bobObject = await minio.client.send(
       new HeadObjectCommand({

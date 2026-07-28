@@ -175,6 +175,127 @@ describe('GET /me/deletion-preview', () => {
   });
 });
 
+describe('account deletion cleanup transaction', () => {
+  it('atomically enqueues cleanup and locks membership decisions until commit', async () => {
+    const app = createApp();
+    const token = await signTestToken(alice, aliceSid);
+    const presign = await app.request('/files/presign', {
+      method: 'POST',
+      headers: {
+        authorization: `Bearer ${token}`,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        scope: 'project',
+        projectId: transferProject,
+        reportId: sharedReport,
+        kind: 'image',
+        contentType: 'image/jpeg',
+        sizeBytes: 3,
+      }),
+    });
+    expect(presign.status).toBe(200);
+    const lease = (await presign.json()) as {
+      fileKey: string;
+      expiresAt: string;
+    };
+
+    const deletion = new pg.Client({ connectionString: fx.url });
+    const membershipChange = new pg.Client({ connectionString: fx.url });
+    await deletion.connect();
+    await membershipChange.connect();
+    try {
+      await deletion.query('BEGIN');
+      await deletion.query('SET LOCAL ROLE app_authenticated');
+      await deletion.query(
+        `SELECT set_config('app.user_id', $1, true),
+                set_config('app.session_id', $2, true)`,
+        [alice, aliceSid],
+      );
+      await deletion.query(`SELECT app.delete_current_user()`);
+
+      const jobs = await deletion.query<{
+        job_kind: string;
+        run_after: Date;
+        payload: {
+          userId: string;
+          exactKeys: string[];
+          sweepPrefixes: string[];
+        };
+      }>(
+        `SELECT job_kind, run_after, payload
+         FROM app.storage_delete_jobs
+         WHERE user_id = $1
+         ORDER BY run_after, job_kind`,
+        [alice],
+      );
+      expect(jobs.rows).toHaveLength(2);
+      expect(jobs.rows[0]).toMatchObject({
+        job_kind: 'account_delete_initial',
+        payload: {
+          userId: alice,
+          exactKeys: expect.arrayContaining([
+            'account-delete/personal.jpg',
+            'account-delete/shared.pdf',
+            lease.fileKey,
+          ]),
+          sweepPrefixes: expect.arrayContaining([
+            `users/${alice}/avatar/`,
+            `users/${alice}/scratch/`,
+            `projects/${soloProject}/`,
+          ]),
+        },
+      });
+      expect(jobs.rows[0]?.payload.sweepPrefixes).not.toContain(
+        `projects/${transferProject}/`,
+      );
+      expect(jobs.rows[1]).toMatchObject({
+        job_kind: 'account_delete_final',
+        payload: {
+          userId: alice,
+          exactKeys: [lease.fileKey],
+          sweepPrefixes: [],
+        },
+      });
+      expect(jobs.rows[1]!.run_after.getTime()).toBeGreaterThanOrEqual(
+        Date.parse(lease.expiresAt) + 30_000,
+      );
+
+      await membershipChange.query('BEGIN');
+      await membershipChange.query('SET LOCAL ROLE app_authenticated');
+      await membershipChange.query(
+        `SELECT set_config('app.user_id', $1, true),
+                set_config('app.session_id', $2, true)`,
+        [alice, makeSessionId()],
+      );
+      await membershipChange.query(`SET LOCAL lock_timeout = '150ms'`);
+      await expect(
+        membershipChange.query(
+          `SELECT app.remove_project_member(
+             $1::app.prj_id,
+             $2::app.usr_id
+           )`,
+          [transferProject, carol],
+        ),
+      ).rejects.toMatchObject({ code: '55P03' });
+    } finally {
+      await membershipChange.query('ROLLBACK').catch(() => undefined);
+      await deletion.query('ROLLBACK').catch(() => undefined);
+      await membershipChange.end();
+      await deletion.end();
+    }
+
+    const membership = await admin.query(
+      `SELECT 1
+       FROM app.project_members
+       WHERE project_id = $1
+         AND user_id = $2`,
+      [transferProject, carol],
+    );
+    expect(membership.rowCount).toBe(1);
+  });
+});
+
 describe('DELETE /me', () => {
   it('deletes the caller account, revokes sessions, and preserves shared projects', async () => {
     const app = createApp();

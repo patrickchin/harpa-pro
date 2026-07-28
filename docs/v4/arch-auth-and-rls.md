@@ -345,6 +345,7 @@ introduces that data contract.
 |---|---|---|
 | `BETTER_AUTH_SECRET` | API | Session signing key |
 | `BETTER_AUTH_URL` | API | Base URL for better-auth handler |
+| `ADMIN_CORS_ORIGINS` | API | Exact browser origins trusted for credentialed auth and admin requests |
 | `RESEND_API_KEY` | API | Resend transport for OTP emails |
 | `EMAIL_OTP_LIVE` | API | `1` = real Resend send; `0` = logs only (dev/test) |
 | `TEST_ACCOUNT_EMAILS` | API | Password-bypass allowlist (set in dev + prd) |

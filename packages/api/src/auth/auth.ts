@@ -38,6 +38,10 @@ const DEMO_ACCOUNT_EMAILS = (env.DEMO_ACCOUNT_EMAILS ?? '')
 
 const PASSWORD_LOGIN_EMAILS = new Set([...TEST_EMAILS, ...DEMO_ACCOUNT_EMAILS]);
 
+const ADMIN_WEB_ORIGINS = env.ADMIN_CORS_ORIGINS.split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
 const FROM_EMAIL = 'Harpa Pro <noreply@harpapro.com>';
 const OTP_SUBJECT = 'Your Harpa Pro sign-in code';
 
@@ -62,9 +66,7 @@ const dbProxy = new Proxy({} as ReturnType<typeof rawDb>, {
  */
 type AuthInternalContext = {
   internalAdapter: {
-    findUserByEmail: (
-      email: string,
-    ) => Promise<{ user: { id: string } } | null | undefined>;
+    findUserByEmail: (email: string) => Promise<{ user: { id: string } } | null | undefined>;
     createUser: (input: {
       email: string;
       name: string;
@@ -85,9 +87,7 @@ type AuthInternalContext = {
 type BetterAuthInstance = {
   handler: (req: Request) => Promise<Response>;
   api: {
-    getSession: (input: {
-      headers: Headers;
-    }) => Promise<{
+    getSession: (input: { headers: Headers }) => Promise<{
       session: { id: string; userId: string };
       user: { id: string };
     } | null>;
@@ -115,9 +115,8 @@ export const auth = betterAuth({
   trustedOrigins: [
     'harpa://',
     'harpa://*',
-    ...(env.NODE_ENV === 'development'
-      ? ['exp://', 'exp://**', 'exp://192.168.*.*:*/**']
-      : []),
+    ...ADMIN_WEB_ORIGINS,
+    ...(env.NODE_ENV === 'development' ? ['exp://', 'exp://**', 'exp://192.168.*.*:*/**'] : []),
   ],
 
   advanced: {
@@ -247,10 +246,12 @@ export type Auth = typeof auth;
 function logDemoAccountAttempt(email: string, outcome: string): void {
   if (env.NODE_ENV === 'test') return;
   // eslint-disable-next-line no-console
-  console.info(JSON.stringify({
-    level: 'info',
-    msg: 'demo_account_sign_in_attempt',
-    email,
-    outcome,
-  }));
+  console.info(
+    JSON.stringify({
+      level: 'info',
+      msg: 'demo_account_sign_in_attempt',
+      email,
+      outcome,
+    }),
+  );
 }

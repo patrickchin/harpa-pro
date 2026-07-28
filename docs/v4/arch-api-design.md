@@ -134,7 +134,12 @@ pre-P3.0 shape and will be renamed by the P3.0 migration.
 
 ### Auth header
 
-`Authorization: Bearer <jwt>` only. No cookie auth.
+Expo and API clients use `Authorization: Bearer <better-auth session
+token>`. The browser admin surface uses Better Auth's secure,
+HttpOnly, host-only session cookie with `credentials: 'include'`.
+Credentialed CORS is restricted to exact `ADMIN_CORS_ORIGINS` entries
+on `/api/auth/*` and `/admin/*`; the browser never stores a bearer
+token in JavaScript.
 
 ### Rate limiting
 

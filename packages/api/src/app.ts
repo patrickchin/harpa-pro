@@ -85,6 +85,32 @@ export function createApp(): OpenAPIHono<AppEnv> {
       maxAge: 86400,
     }),
   );
+
+  const adminOrigins = env.ADMIN_CORS_ORIGINS.split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+  const credentialedOrigin = (origin: string) => (adminOrigins.includes(origin) ? origin : null);
+
+  app.use(
+    '/api/auth/*',
+    cors({
+      origin: credentialedOrigin,
+      allowMethods: ['GET', 'POST', 'OPTIONS'],
+      allowHeaders: ['Content-Type', 'X-Request-ID'],
+      credentials: true,
+      maxAge: 86400,
+    }),
+  );
+  app.use(
+    '/admin/*',
+    cors({
+      origin: credentialedOrigin,
+      allowMethods: ['GET', 'OPTIONS'],
+      allowHeaders: ['Content-Type', 'X-Request-ID'],
+      credentials: true,
+      maxAge: 86400,
+    }),
+  );
   app.onError(errorMapper());
 
   // Register the Bearer security scheme. Better-auth's expo() plugin

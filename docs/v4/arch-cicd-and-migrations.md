@@ -143,11 +143,14 @@ environment and only surfaces when the deploy fires.
 | `pr-preview.yml`                  | ✓        | (PR-only)             | Per-PR Neon branch + Fly preview app + post-deploy `/readyz` verify |
 | `mobile-ota-pr.yml`               | ✓        | (PR-only)             | Per-PR Expo OTA preview |
 | `site-preview.yml`                | ✓ (→dev/main)| (PR-only)          | Tests + Cloudflare Pages preview for the public site |
+| `dashboard-preview.yml`           | ✓ (→dev/main)| (PR-only)          | Tests + unique dashboard Pages preview against PR/dev API |
 | `main-gate.yml`                   | ✓ (→main)| (PR-only)             | Verifies dev serves the PR head SHA before running hard-required promotion journeys |
 | `api-dev.yml`                     | ✗        | dev                   | `flyctl deploy` to `harpa-pro-api-dev`, `/readyz` verify, `scripts/journeys/all.sh dev` |
 | `api-prod.yml`                    | ✗        | main                  | `flyctl deploy` to `harpa-pro-api`, `/readyz` verify, `scripts/journeys/all.sh prod` |
 | `site-dev.yml`                    | ✗        | dev                   | Cloudflare Pages `dev` branch deploy |
 | `site-prod.yml`                   | ✗        | main                  | Cloudflare Pages prod deploy |
+| `dashboard-dev.yml`               | ✗        | dev                   | Dashboard Pages `dev` branch deploy after API compatibility check |
+| `dashboard-prod.yml`              | ✗        | main                  | Dashboard Pages production deploy after API compatibility check |
 | `mobile-ota-dev.yml`              | ✗        | dev                   | Preview OTA; API-dependent pushes are called by `api-dev` after deploy |
 | `mobile-ota-prod.yml`             | ✗        | main                  | Production OTA; API-dependent pushes are called by `api-prod` after deploy |
 | `ai-live.yml`                     | ✗        | dev + main + dispatch | Live AI provider smoke (no fixtures) |

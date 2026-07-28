@@ -172,15 +172,18 @@ review note.
 
 Active today:
 
-| Workflow | Trigger | Gate |
-|---|---|---|
-| `lint-typecheck.yml` | every push | ESLint + tsc clean across the workspace |
-| `unit.yml` | every push | `pnpm test` green |
-| `api-integration.yml` | every push | Combined API unit + Testcontainers suite green at ≥ 90% line coverage |
+| Workflow                      | Trigger                   | Gate                                                                                                   |
+| ----------------------------- | ------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `lint-typecheck.yml`          | every push                | ESLint + tsc clean across the workspace                                                                |
+| `unit.yml`                    | every push                | `pnpm test` green                                                                                      |
+| `api-integration.yml`         | every push                | Combined API unit + Testcontainers suite green at ≥ 90% line coverage                                  |
 | `e2e-maestro-testid-gate.yml` | mobile-relevant PR / push | testID policy, Metro bundle leakage, and bounded Android Maestro launch smoke with failure diagnostics |
-| `pr-preview.yml` | PR open / push | Neon branch lifecycle for previews |
-| `site-prod.yml` | push to `main` | Deploy the public site to Cloudflare Pages prod |
-| `site-preview.yml` | PR to `dev` or `main` | Test and deploy a per-PR public-site preview |
+| `pr-preview.yml`              | PR open / push            | Neon branch lifecycle for previews                                                                     |
+| `site-prod.yml`               | push to `main`            | Deploy the public site to Cloudflare Pages prod                                                        |
+| `site-preview.yml`            | PR to `dev` or `main`     | Test and deploy a per-PR public-site preview                                                           |
+| `dashboard-preview.yml`       | PR to `dev` or `main`     | Test and deploy a unique office-dashboard preview                                                      |
+| `dashboard-dev.yml`           | push to `dev`             | Deploy dashboard to the Pages dev branch                                                               |
+| `dashboard-prod.yml`          | push to `main`            | Deploy dashboard to `app.harpapro.com`                                                                 |
 
 Deferred (add when the phase actually starts, not before):
 

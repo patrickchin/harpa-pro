@@ -1,0 +1,162 @@
+name: dashboard-preview
+
+# Test and deploy the office dashboard to a unique Cloudflare Pages preview.
+# API-changing PRs use the matching Fly/Neon preview; frontend-only PRs use the
+# shared dev API. Forks are skipped because Pages credentials are unavailable.
+
+on:
+  pull_request:
+    branches: [dev, main]
+    paths:
+      - 'apps/dashboard/**'
+      - 'packages/api/**'
+      - 'packages/api-contract/**'
+      - 'packages/ai-fixtures/**'
+      - 'packages/report-core/**'
+      - '.github/actions/changed-paths/**'
+      - '.github/workflows/dashboard-*.yml'
+      - 'scripts/ci/ensure-dashboard-pages-project.sh'
+      - 'scripts/ci/verify-dashboard-pages.sh'
+      - 'scripts/ci/__tests__/dashboard-pages-policy.test.sh'
+      - 'scripts/ci/__tests__/ensure-dashboard-pages-project.test.sh'
+      - 'scripts/ci/__tests__/verify-dashboard-pages.test.sh'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - 'turbo.json'
+      - 'tsconfig*.json'
+
+concurrency:
+  group: dashboard-preview-pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      api: ${{ steps.paths.outputs.api }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: paths
+        uses: ./.github/actions/changed-paths
+
+  preview:
+    needs: changes
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      deployments: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: ./.github/actions/setup-monorepo
+
+      - name: Select preview API
+        id: api
+        shell: bash
+        env:
+          API_CHANGED: ${{ needs.changes.outputs.api }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+          if [[ "$API_CHANGED" == "true" ]]; then
+            base_url="https://harpa-pro-api-pr-${PR_NUMBER}.fly.dev"
+          else
+            base_url="https://harpa-pro-api-dev.fly.dev"
+          fi
+          echo "base-url=$base_url" >> "$GITHUB_OUTPUT"
+          echo "VITE_API_BASE_URL=$base_url" >> "$GITHUB_ENV"
+
+      - name: Test dashboard deployment policy
+        run: |
+          bash scripts/ci/__tests__/dashboard-pages-policy.test.sh
+          bash scripts/ci/__tests__/ensure-dashboard-pages-project.test.sh
+          bash scripts/ci/__tests__/verify-dashboard-pages.test.sh
+
+      - name: Test dashboard
+        run: pnpm --filter @harpa/dashboard test
+
+      - name: Lint dashboard
+        run: pnpm --filter @harpa/dashboard lint
+
+      - name: Typecheck dashboard
+        run: pnpm --filter @harpa/dashboard typecheck
+
+      - name: Build dashboard
+        env:
+          VITE_API_BASE_URL: ${{ steps.api.outputs.base-url }}
+        run: pnpm --filter @harpa/dashboard build
+
+      - name: Assert Cloudflare Pages SPA artifact
+        shell: bash
+        run: |
+          test -f apps/dashboard/dist/index.html
+          if [[ -e apps/dashboard/dist/404.html ]]; then
+            echo "::error::A top-level 404.html disables Cloudflare Pages SPA routing"
+            exit 1
+          fi
+
+      - name: Verify compatible preview API
+        env:
+          API_HEALTH_URL: ${{ steps.api.outputs.base-url }}/healthz
+          API_READY_URL: ${{ steps.api.outputs.base-url }}/readyz
+          API_PATH_PATTERN: '^(packages/api/|packages/api-contract/|packages/ai-fixtures/|pnpm-lock\.yaml$|tsconfig.*\.json$)'
+          # pr-preview.yml and this workflow both test GitHub's synthetic
+          # pull-request merge ref, so compatibility must use github.sha.
+          EXPECTED_GIT_COMMIT: ${{ github.sha }}
+          API_RELEASE_ATTEMPTS: 30
+          API_RELEASE_SLEEP: 10
+        run: bash scripts/ci/verify-api-release.sh
+
+      - name: Ensure dashboard Cloudflare Pages project
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: bash scripts/ci/ensure-dashboard-pages-project.sh
+
+      - name: Deploy dashboard preview to Cloudflare Pages
+        id: deploy
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+          wranglerVersion: '3.90.0'
+          packageManager: pnpm
+          command: >-
+            pages deploy apps/dashboard/dist
+            --project-name=harpa-pro-dashboard
+            --branch=pr-${{ github.event.pull_request.number }}
+            --commit-hash=${{ github.sha }}
+            --commit-dirty=true
+
+      - name: Verify deployed dashboard SPA
+        if: steps.deploy.outputs.deployment-url
+        env:
+          DASHBOARD_URL: ${{ steps.deploy.outputs.deployment-url }}
+        run: bash scripts/ci/verify-dashboard-pages.sh
+
+      - name: Comment dashboard preview URLs on PR
+        if: steps.deploy.outputs.deployment-url
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: dashboard-preview
+          message: |
+            ### Office dashboard preview
+
+            - **Test URL (this commit):** ${{ steps.deploy.outputs.deployment-url }}
+            - **PR alias (latest push):** ${{ steps.deploy.outputs.pages-deployment-alias-url }}
+            - **API:** ${{ steps.api.outputs.base-url }}
+            - **Tested merge:** `${{ github.sha }}`
+            - **PR head:** `${{ github.event.pull_request.head.sha }}`
+
+            The immutable test URL and direct client-side route passed the
+            Cloudflare Pages SPA check. API-changing PRs use the matching
+            `harpa-pro-api-pr-${{ github.event.pull_request.number }}` preview;
+            frontend-only PRs use the shared dev API.

@@ -38,6 +38,18 @@
   - After cutover, the standalone hostname `docs.harpapro.com` redirects to
     the canonical `/docs` routes through Cloudflare zone rules. See
     [the Cloudflare Pages runbook](../marketing/deploy-cloudflare-pages.md).
+- **Office dashboard**: React SPA `apps/dashboard` on the separate Cloudflare
+  Pages project `harpa-pro-dashboard`.
+  - Production branch `main` → `https://app.harpapro.com` (and
+    `harpa-pro-dashboard.pages.dev`) against the production API.
+  - Dev branch `dev` → `https://dev.harpa-pro-dashboard.pages.dev` against the
+    dev API.
+  - Pull requests → immutable deployment URL plus the stable
+    `pr-<n>.harpa-pro-dashboard.pages.dev` alias. API-changing pull requests
+    use the matching Fly preview; frontend-only pull requests use the dev API.
+  - Direct client routes are verified after deployment through the Pages SPA
+    fallback. See
+    [the dashboard Pages runbook](ops-dashboard-cloudflare-pages.md).
 - **Mobile**: Fastlane + EAS. Fastlane owns checked-in App Store /
   Play Store metadata, guarded screenshot/privacy lanes, and local
   release orchestration; EAS owns Expo native builds, signing, binary
@@ -454,6 +466,8 @@ PR open / push (same-repo only, forks skipped)
       ↳ /readyz verified
       ↳ sticky PR comment with preview URL
   ↳ public-site preview deploy to CF Pages (site-preview.yml)
+  ↳ dashboard preview deploy to its own CF Pages project
+    (dashboard-preview.yml)
   ↳ EAS Update → `development` channel (mobile-ota-pr.yml)
     ↳ bundle's API override is `harpa-pro-api-pr-<n>.fly.dev`
       when the PR changes API inputs
@@ -471,6 +485,7 @@ Push to dev
   ↳ migrations applied to `dev`
   ↳ Fly deploy → harpa-pro-api-dev (api-dev.yml)
   ↳ public-site deploy to CF Pages dev branch (site-dev.yml)
+  ↳ dashboard deploy to CF Pages dev branch (dashboard-dev.yml)
   ↳ EAS Update → `preview` channel (mobile-ota-dev.yml)
     ↳ mobile-only change: publish directly
     ↳ API-dependent change: api-dev calls OTA after deploy + journeys pass
@@ -487,6 +502,7 @@ Push to main (production)
   ↳ Fly deploy → harpa-pro-api
     ↳ release_command applies migrations to Neon `main`
   ↳ public-site deploy to CF Pages production (site-prod.yml)
+  ↳ dashboard deploy to app.harpapro.com (dashboard-prod.yml)
   ↳ EAS Update → `production` channel (mobile-ota-prod.yml)
     ↳ mobile-only change: publish directly
     ↳ API-dependent change: api-prod calls OTA after deploy + journeys pass

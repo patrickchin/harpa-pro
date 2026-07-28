@@ -2,9 +2,11 @@ import { z } from 'zod';
 import { fileId } from './ids.js';
 
 /**
- * fixtureName is forwarded to @harpa/ai-fixtures FixtureStore which uses
- * `path.join(dir, name + '.json')`. Restrict to a safe charset to prevent
- * path traversal (e.g. `../../etc/secrets`) at the contract boundary.
+ * In server-selected replay mode, fixtureName is forwarded to the
+ * @harpa/ai-fixtures FixtureStore, which uses `path.join(dir, name +
+ * '.json')`. Restrict it to a safe charset to prevent path traversal
+ * (e.g. `../../etc/secrets`) at the contract boundary. It never selects
+ * live versus replay mode.
  */
 const fixtureName = z
   .string()

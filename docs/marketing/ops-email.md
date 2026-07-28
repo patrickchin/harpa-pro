@@ -69,7 +69,10 @@ fly secrets set RESEND_LIVE=1 --app harpa-pro-api
 ```
 
 Until `RESEND_LIVE=1` is set, the API is in fake mode and no real
-emails go out (see `packages/api/src/lib/resend.ts`).
+emails go out (see `packages/api/src/lib/resend.ts`). Fake mode logs
+only the event, fake message id, recipient domain, and available body
+formats. It never logs the full recipient, rendered body, URL, token,
+or OTP. Enable live delivery for manual confirmation flows.
 
 Also set the from-address if you want something other than the
 default (`Harpa Pro <hello@harpapro.com>`):

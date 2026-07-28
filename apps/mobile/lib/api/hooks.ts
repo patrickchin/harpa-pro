@@ -376,13 +376,13 @@ export function useDeleteReportMutation(
   });
 }
 
-export type GenerateReportMutationVars = { params: PathParams<"/projects/{project}/reports/{number}/generate", "post">; body: RequestBody<"/projects/{project}/reports/{number}/generate", "post"> };
+export type GenerateReportMutationVars = { params: PathParams<"/projects/{project}/reports/{number}/generate", "post">; body: RequestBody<"/projects/{project}/reports/{number}/generate", "post">; headers?: Record<string, string> };
 export function useGenerateReportMutation(
   options?: UseMutationOptions<ResponseBody<"/projects/{project}/reports/{number}/generate", "post">, ApiError, GenerateReportMutationVars>,
 ) {
   const qc = useQueryClient();
   return useMutation<ResponseBody<"/projects/{project}/reports/{number}/generate", "post">, ApiError, GenerateReportMutationVars>({
-    mutationFn: (vars) => request("/projects/{project}/reports/{number}/generate", "post", { params: vars.params, body: vars.body }),
+    mutationFn: (vars) => request("/projects/{project}/reports/{number}/generate", "post", { params: vars.params, body: vars.body, ...(vars.headers ? { headers: vars.headers } : {}) }),
     ...options,
     onSuccess: (...args) => {
       const rule = INVALIDATIONS["useGenerateReportMutation"];
@@ -396,13 +396,13 @@ export function useGenerateReportMutation(
   });
 }
 
-export type RegenerateReportMutationVars = { params: PathParams<"/projects/{project}/reports/{number}/regenerate", "post">; body: RequestBody<"/projects/{project}/reports/{number}/regenerate", "post"> };
+export type RegenerateReportMutationVars = { params: PathParams<"/projects/{project}/reports/{number}/regenerate", "post">; body: RequestBody<"/projects/{project}/reports/{number}/regenerate", "post">; headers?: Record<string, string> };
 export function useRegenerateReportMutation(
   options?: UseMutationOptions<ResponseBody<"/projects/{project}/reports/{number}/regenerate", "post">, ApiError, RegenerateReportMutationVars>,
 ) {
   const qc = useQueryClient();
   return useMutation<ResponseBody<"/projects/{project}/reports/{number}/regenerate", "post">, ApiError, RegenerateReportMutationVars>({
-    mutationFn: (vars) => request("/projects/{project}/reports/{number}/regenerate", "post", { params: vars.params, body: vars.body }),
+    mutationFn: (vars) => request("/projects/{project}/reports/{number}/regenerate", "post", { params: vars.params, body: vars.body, ...(vars.headers ? { headers: vars.headers } : {}) }),
     ...options,
     onSuccess: (...args) => {
       const rule = INVALIDATIONS["useRegenerateReportMutation"];

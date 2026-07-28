@@ -28,6 +28,8 @@ interface Endpoint {
   hasPathParams: boolean;
   /** Whether the operation has a request body (any-of any media type). */
   hasBody: boolean;
+  /** Whether mutation variables may include per-call request headers. */
+  hasHeaders?: boolean;
   /** Default React Query queryKey head for queries. */
   queryKeyHead?: string;
   /**
@@ -78,8 +80,8 @@ const ENDPOINTS: Endpoint[] = [
   { method: 'get',    path: '/projects/{project}/reports/{number}',                 hook: 'useReportQuery',               query: true,  hasPathParams: true,  hasBody: false, queryKeyHead: 'report' },
   { method: 'patch',  path: '/projects/{project}/reports/{number}',                 hook: 'useUpdateReportMutation',      query: false, hasPathParams: true,  hasBody: true },
   { method: 'delete', path: '/projects/{project}/reports/{number}',                 hook: 'useDeleteReportMutation',      query: false, hasPathParams: true,  hasBody: false },
-  { method: 'post',   path: '/projects/{project}/reports/{number}/generate',        hook: 'useGenerateReportMutation',    query: false, hasPathParams: true,  hasBody: true },
-  { method: 'post',   path: '/projects/{project}/reports/{number}/regenerate',      hook: 'useRegenerateReportMutation',  query: false, hasPathParams: true,  hasBody: true },
+  { method: 'post',   path: '/projects/{project}/reports/{number}/generate',        hook: 'useGenerateReportMutation',    query: false, hasPathParams: true,  hasBody: true,  hasHeaders: true },
+  { method: 'post',   path: '/projects/{project}/reports/{number}/regenerate',      hook: 'useRegenerateReportMutation',  query: false, hasPathParams: true,  hasBody: true,  hasHeaders: true },
   { method: 'post',   path: '/projects/{project}/reports/{number}/finalize',        hook: 'useFinalizeReportMutation',    query: false, hasPathParams: true,  hasBody: false },
   { method: 'post',   path: '/projects/{project}/reports/{number}/unfinalize',      hook: 'useUnfinalizeReportMutation',  query: false, hasPathParams: true,  hasBody: false },
   { method: 'post',   path: '/projects/{project}/reports/{number}/pdf',             hook: 'useReportPdfMutation',         query: false, hasPathParams: true,  hasBody: false },
@@ -229,18 +231,23 @@ function emitMutationHook(e: Endpoint): string {
   const parts: string[] = [];
   if (e.hasPathParams) parts.push(`params: PathParams<${path}, ${m}>`);
   if (e.hasBody) parts.push(`body: RequestBody<${path}, ${m}>`);
+  const hasVars = parts.length > 0;
+  if (e.hasHeaders) parts.push('headers?: Record<string, string>');
   const varsTypeBody = parts.length ? `{ ${parts.join('; ')} }` : 'void';
   const varsTypeDecl = `export type ${varsTypeName} = ${varsTypeBody};`;
   const requestArgs: string[] = [];
   if (e.hasPathParams) requestArgs.push(`params: vars.params`);
   if (e.hasBody) requestArgs.push(`body: vars.body`);
+  if (e.hasHeaders) {
+    requestArgs.push('...(vars.headers ? { headers: vars.headers } : {})');
+  }
   const reqCall = requestArgs.length
     ? `request(${path}, ${m}, { ${requestArgs.join(', ')} })`
     : `request(${path}, ${m})`;
   // When `vars` is `void` the mutationFn still takes it as an argument
   // (TanStack's signature), but we don't read it. Suppress the unused
   // parameter with a leading underscore for the void case.
-  const fnArg = parts.length ? 'vars' : '_vars';
+  const fnArg = hasVars ? 'vars' : '_vars';
   return `
 ${varsTypeDecl}
 export function ${e.hook}(

@@ -78,8 +78,9 @@ Two schemas in the same database:
 - `app` — everything else: projects, project_members, reports,
   notes, report_comments, files (voice / image / document / pdf), note_files,
   user_settings, waitlist_signups, llm_usage_events,
-  user_limit_overrides, rate_limit_buckets. Voice and image assets
-  all live in the single `files` table keyed by `file_kind`.
+  user_limit_overrides, rate_limit_buckets, idempotency_keys. Voice and
+  image assets all live in the single `files` table keyed by
+  `file_kind`.
 
 Cross-schema FK: `app.project_members.user_id REFERENCES public."user"(id)`.
 

@@ -123,6 +123,11 @@ const Env = z.object({
    * See docs/v4/arch-rate-limiting.md §3.5.
    */
   RATE_LIMIT_BACKEND: z.enum(['memory', 'postgres']).default('memory'),
+  /**
+   * Idempotency response backend. Dev/test default to memory; production
+   * always selects Postgres even when this override is omitted.
+   */
+  IDEMPOTENCY_BACKEND: z.enum(['memory', 'postgres']).default('memory'),
   // Marketing waitlist (M1).
   TURNSTILE_LIVE: z.enum(['0', '1']).default('0'),
   TURNSTILE_SECRET_KEY: z.string().optional(),

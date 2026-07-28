@@ -271,5 +271,23 @@ export const rateLimitBuckets = appSchema.table('rate_limit_buckets', {
   count: integer('count').notNull().default(0),
 });
 
+/**
+ * Durable Idempotency-Key claims and completed responses. Pending rows
+ * are short leases; completed rows are replayable until `expires_at`.
+ * The hot-path SQL lives in `lib/idempotencyStore.ts`.
+ */
+export const idempotencyKeys = appSchema.table('idempotency_keys', {
+  keyHash: text('key_hash').primaryKey(),
+  state: text('state').notNull(),
+  ownerToken: text('owner_token'),
+  leaseExpiresAt: timestamp('lease_expires_at', { withTimezone: true }),
+  status: integer('status'),
+  responseBody: text('response_body'),
+  contentType: text('content_type'),
+  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
 /** Re-export the SQL helper for use in raw policies / migrations. */
 export { sql };

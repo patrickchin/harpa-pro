@@ -129,13 +129,15 @@ export interface ListReportsInput {
   projectId: string;
   cursor?: string;
   limit: number;
+  status?: ReportStatus;
 }
 
 export async function listReports(
   db: Db,
   input: ListReportsInput,
 ): Promise<{ items: ReportRow[]; nextCursor: string | null }> {
-  const { projectId, cursor, limit } = input;
+  const { projectId, cursor, limit, status } = input;
+  const statusFilter = status ?? null;
   const overFetch = limit + 1;
   const result = cursor
     ? await (async () => {
@@ -146,6 +148,8 @@ export async function listReports(
                  pdf_file_id, created_at, updated_at
           FROM app.reports
           WHERE project_id = ${projectId}
+            AND (${statusFilter}::app.report_status IS NULL
+              OR status = ${statusFilter}::app.report_status)
             AND (created_at, id) < (${createdAt}::timestamptz, ${id})
           ORDER BY created_at DESC, id DESC
           LIMIT ${overFetch}
@@ -157,6 +161,8 @@ export async function listReports(
                pdf_file_id, created_at, updated_at
         FROM app.reports
         WHERE project_id = ${projectId}
+          AND (${statusFilter}::app.report_status IS NULL
+            OR status = ${statusFilter}::app.report_status)
         ORDER BY created_at DESC, id DESC
         LIMIT ${overFetch}
       `);
@@ -292,10 +298,26 @@ function isPkCollision(err: unknown): boolean {
   return false;
 }
 
+function reportUpdatedAtPrecondition(expectedUpdatedAt?: string) {
+  const expected = expectedUpdatedAt ?? null;
+  return sql`(
+    ${expected}::timestamptz IS NULL
+    OR date_trunc('milliseconds', updated_at) = ${expected}::timestamptz
+  )`;
+}
+
+function nextReportUpdatedAt() {
+  return sql`GREATEST(
+    date_trunc('milliseconds', clock_timestamp()),
+    date_trunc('milliseconds', updated_at) + interval '1 millisecond'
+  )`;
+}
+
 export async function updateReport(
   db: Db,
   reportId: string,
   patch: { visitDate?: string | null; body?: ReportBody | null },
+  expectedUpdatedAt?: string,
 ): Promise<ReportRow | null> {
   const setVisit = Object.prototype.hasOwnProperty.call(patch, 'visitDate');
   const setBody = Object.prototype.hasOwnProperty.call(patch, 'body');
@@ -319,8 +341,10 @@ export async function updateReport(
                  WHEN ${setBody} THEN NULL
                  ELSE body
                END,
-        updated_at = now()
+        updated_at = ${nextReportUpdatedAt()}
     WHERE id = ${reportId}
+      AND status = 'draft'
+      AND ${reportUpdatedAtPrecondition(expectedUpdatedAt)}
     RETURNING id, number, project_id, status, visit_date, body,
               notes_since_last_generation, notes_changed_at, generated_at, finalized_at,
               pdf_file_id, created_at, updated_at
@@ -697,6 +721,7 @@ export async function setReportBody(
    */
   snapshotTs?: string | null,
   preserveAttachmentsFrom?: ReportBody | null,
+  expectedUpdatedAt?: string,
 ): Promise<ReportRow | null> {
   const lastGenJson = lastGeneration ? JSON.stringify(lastGeneration) : null;
   const valid = await collectValidReportAttachmentIds(db, reportId);
@@ -710,8 +735,10 @@ export async function setReportBody(
           WHEN ${lastGenJson}::text IS NOT NULL THEN ${lastGenJson}::jsonb
           ELSE last_generation
         END,
-        updated_at = now()
+        updated_at = ${nextReportUpdatedAt()}
     WHERE id = ${reportId}
+      AND status = 'draft'
+      AND ${reportUpdatedAtPrecondition(expectedUpdatedAt)}
     RETURNING id, number, project_id, status, visit_date, body,
               notes_since_last_generation, notes_changed_at, generated_at, finalized_at,
               pdf_file_id, created_at, updated_at
@@ -720,13 +747,18 @@ export async function setReportBody(
   return row ? mapReport(row) : null;
 }
 
-export async function finalizeReport(db: Db, reportId: string): Promise<ReportRow | null> {
+export async function finalizeReport(
+  db: Db,
+  reportId: string,
+  expectedUpdatedAt?: string,
+): Promise<ReportRow | null> {
   const r = await db.execute<RawReport>(sql`
     UPDATE app.reports
     SET status = 'finalized',
         finalized_at = COALESCE(finalized_at, now()),
-        updated_at = now()
+        updated_at = ${nextReportUpdatedAt()}
     WHERE id = ${reportId}
+      AND ${reportUpdatedAtPrecondition(expectedUpdatedAt)}
     RETURNING id, number, project_id, status, visit_date, body,
               notes_since_last_generation, notes_changed_at, generated_at, finalized_at,
               pdf_file_id, created_at, updated_at
@@ -742,14 +774,19 @@ export async function finalizeReport(db: Db, reportId: string): Promise<ReportRo
  * (route checks status before calling). RLS still applies via the scoped
  * Postgres role, so a row the caller can't see is just "not found".
  */
-export async function unfinalizeReport(db: Db, reportId: string): Promise<ReportRow | null> {
+export async function unfinalizeReport(
+  db: Db,
+  reportId: string,
+  expectedUpdatedAt?: string,
+): Promise<ReportRow | null> {
   const r = await db.execute<RawReport>(sql`
     UPDATE app.reports
     SET status = 'draft',
         finalized_at = NULL,
-        updated_at = now()
+        updated_at = ${nextReportUpdatedAt()}
     WHERE id = ${reportId}
       AND finalized_at IS NOT NULL
+      AND ${reportUpdatedAtPrecondition(expectedUpdatedAt)}
     RETURNING id, number, project_id, status, visit_date, body,
               notes_since_last_generation, notes_changed_at, generated_at, finalized_at,
               pdf_file_id, created_at, updated_at

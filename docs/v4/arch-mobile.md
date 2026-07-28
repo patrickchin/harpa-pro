@@ -207,15 +207,17 @@ Token getter wiring (security review §B / §I):
 
 - Any post-bootstrap 401 (query OR mutation) calls
   `notifyUnauthorized()`, which clears the in-memory token + sets
-  status to `unauthenticated`. The route guard in `app/_layout.tsx`
-  redirects to `/(auth)/sign-in/email`.
+  status to `unauthenticated`. It also aborts and clears the active
+  user-scoped upload queue before auth teardown. The route guard in
+  `app/_layout.tsx` redirects to `/(auth)/sign-in/email`.
 
 Sign-out:
 
 - Best-effort `POST /api/auth/sign-out`, then clear SecureStore + state +
-  `queryClient.clear()`. Network failure on the POST does **not** stop
-  the local clear (we'd otherwise leak a session into a multi-user
-  device).
+  `queryClient.clear()`. The active upload queue is aborted and cleared
+  before the network call. Network failure on the POST does **not**
+  stop either local clear (we'd otherwise leak session data into a
+  multi-user device).
 
 What we deliberately do **not** have:
 

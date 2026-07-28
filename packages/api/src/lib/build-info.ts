@@ -5,7 +5,7 @@
  *
  *  - `version`      — read from the root `package.json` (single source
  *                     of truth for the monorepo semver).
- *  - `gitCommit`    — short SHA injected at image build time via the
+ *  - `gitCommit`    — full 40-character SHA injected at image build time via the
  *                     `GIT_COMMIT` build-arg (see infra/fly/Dockerfile
  *                     + infra/fly/deploy.sh). Falls back to `local` for
  *                     dev runs and tests.
@@ -14,7 +14,14 @@
  */
 import { version } from '../../../../package.json' with { type: 'json' };
 
-const gitCommit = process.env.GIT_COMMIT?.trim() || 'local';
+const rawGitCommit = process.env.GIT_COMMIT?.trim();
+const gitCommit = (() => {
+  if (!rawGitCommit || rawGitCommit === 'local') return 'local';
+  if (!/^[0-9a-f]{40}$/i.test(rawGitCommit)) {
+    throw new Error('GIT_COMMIT must be a full 40-character hexadecimal SHA');
+  }
+  return rawGitCommit.toLowerCase();
+})();
 const buildTime = process.env.BUILD_TIME?.trim() || undefined;
 
 export const buildInfo = {

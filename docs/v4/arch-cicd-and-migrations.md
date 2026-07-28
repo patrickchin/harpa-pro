@@ -44,7 +44,8 @@ build-time manifest for the readiness check.**
   image at build time as `MIGRATIONS_REQUIRED_HEAD`) is present in
   `app._migrations`. Fly's HTTP check is moved to `/readyz`. `/healthz`
   stays as cheap liveness (no DB) but now also returns `version` /
-  `gitCommit` / `buildTime` from `GIT_COMMIT` + `BUILD_TIME` build-args
+  `gitCommit` / `buildTime` from `GIT_COMMIT` + `BUILD_TIME` build-args.
+  `GIT_COMMIT` is the full 40-character SHA
   so the mobile BuildBadge (and ops dashboards) can show which commit
   is serving traffic.
 
@@ -136,13 +137,13 @@ environment and only surfaces when the deploy fires.
 | --------------------------------- | :------: | --------------------- | ----------------------------------------------------------------- |
 | `lint-typecheck.yml`              | ✓        | dev + main            | ESLint, TypeScript, removal-verification gates, CI shell policy tests, shellcheck of `scripts/ci/` and `scripts/journeys/` |
 | `unit.yml`                        | ✓        | dev + main            | Vitest unit suites for every package |
-| `api-integration.yml`             | ✓        | dev + main            | `pnpm --filter @harpa/api test:integration` against testcontainers |
+| `api-integration.yml`             | ✓        | dev + main            | Combined API unit + Testcontainers run with a hard 90% line-coverage threshold |
 | `cli.yml`                         | ✓        | dev + main            | `apps/cli` typecheck + tests |
-| `e2e-maestro-testid-gate.yml`     | ✓        | dev + main            | Maestro testID accessibility gate |
+| `e2e-maestro-testid-gate.yml`     | ✓        | dev + main            | Maestro testID policy, Metro bundle leakage, and bounded Android launch smoke |
 | `pr-preview.yml`                  | ✓        | (PR-only)             | Per-PR Neon branch + Fly preview app + post-deploy `/readyz` verify |
 | `mobile-ota-pr.yml`               | ✓        | (PR-only)             | Per-PR Expo OTA preview |
 | `site-preview.yml`                | ✓ (→dev/main)| (PR-only)          | Tests + Cloudflare Pages preview for the public site |
-| `main-gate.yml`                   | ✓ (→main)| (PR-only)             | Hard-required checks on merges into `main` |
+| `main-gate.yml`                   | ✓ (→main)| (PR-only)             | Verifies dev serves the PR head SHA before running hard-required promotion journeys |
 | `api-dev.yml`                     | ✗        | dev                   | `flyctl deploy` to `harpa-pro-api-dev`, `/readyz` verify, `scripts/journeys/all.sh dev` |
 | `api-prod.yml`                    | ✗        | main                  | `flyctl deploy` to `harpa-pro-api`, `/readyz` verify, `scripts/journeys/all.sh prod` |
 | `site-dev.yml`                    | ✗        | dev                   | Cloudflare Pages `dev` branch deploy |
@@ -175,6 +176,16 @@ the pattern above: `scripts/ci/verify-readyz.sh` with a python-based
 fake-server self-test wired into `lint-typecheck.yml`, plus
 shellcheck of both `scripts/ci/` and `scripts/journeys/`.
 
+### Main-promotion SHA binding
+
+`main-gate.yml` checks out `github.event.pull_request.head.sha`, then
+polls the dev API's `/healthz` with
+`scripts/ci/verify-deployed-sha.sh`. The reported 40-character
+`gitCommit` must equal that full PR head SHA
+before any journey runs. This prevents a healthy but stale or newer
+shared dev deployment from making an unrelated `main` promotion
+green. Both the poll loop and the surrounding job are bounded.
+
 ---
 
 ## Concrete file changes
@@ -204,6 +215,8 @@ shellcheck of both `scripts/ci/` and `scripts/journeys/`.
 
 - Compute `MIGRATIONS_REQUIRED_HEAD` from `ls packages/api/migrations | sort | tail -1`
   and pass `--build-arg MIGRATIONS_REQUIRED_HEAD=...` to `flyctl deploy`.
+- Compute the full `git rev-parse HEAD` value and pass it as the
+  `GIT_COMMIT` build arg; abbreviated SHAs are not valid deployment identities.
 
 ### `.github/workflows/api-prod.yml`
 

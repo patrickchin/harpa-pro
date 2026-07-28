@@ -28,6 +28,38 @@ selector yet.
 The root lint script runs `scripts/check-no-maestro-point-taps.sh`,
 which fails on any `.maestro/**/*.yaml` / `.yml` `point:` key.
 
+## CI launch smoke
+
+`.maestro/ci-launch-smoke.yaml` is the narrow PR-time device check.
+CI generates and installs the Android debug app, starts fixture-mode
+Metro, opens the dev-client bundle, and asserts the sign-in email
+control renders. The job is capped at 30 minutes, emulator boot at
+300 seconds, and the Maestro process at 180 seconds so a stuck
+emulator or driver cannot consume an unbounded runner. The APK build
+targets only the emulator's `x86_64` ABI and restores Gradle
+dependencies from a cache keyed by the lockfile and mobile prebuild
+inputs. Before launch, CI applies the runner action's documented
+world-readable/writable `/dev/kvm` udev rule so the hosted Ubuntu
+emulator uses hardware acceleration.
+
+The emulator action invokes `scripts/ci/run-maestro-launch-smoke.sh`
+with Bash explicitly because the action otherwise evaluates `script:`
+with `/usr/bin/sh`, which does not support `pipefail` on Ubuntu. The
+runner creates its Metro log and Maestro debug directory before
+installing the APK, then captures ADB state and recent logcat output
+on failure. If Expo registers Metro but leaves the emulator on Dev
+Launcher's Home screen, the flow conditionally selects the green
+`http://10.0.2.2:8081` server row. It then waits up to 60 seconds for
+either the first-run `Continue` action or the rendered `Email` label,
+failing closed if neither appears. After dismissing any developer
+menu, it allows 30 seconds for the sign-in control. CI uploads the
+runner logs and Maestro's hidden UI hierarchy/screenshots as
+`maestro-launch-smoke-diagnostics`.
+
+This does not replace the regression journey. It proves the native
+build, Metro bundle, installation, launch, and first rendered route;
+the larger flows remain explicit local and release checks.
+
 ## `core-end-to-end.yaml` (legacy P3 smoke)
 
 The older P3-exit-gate single-file flow. It still exists as a manual

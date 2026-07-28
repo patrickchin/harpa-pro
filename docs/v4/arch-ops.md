@@ -475,6 +475,11 @@ Push to dev
   ↳ release patch commit + tag added to `dev` (version-bump-dev.yml)
   ↳ Fastlane `beta` (manual): metadata -> EAS preview build --auto-submit
 
+PR to main (production gate)
+  ↳ checkout the PR head SHA, not GitHub's synthetic merge ref
+  ↳ require harpa-pro-api-dev /healthz.gitCommit to equal that full 40-character SHA
+  ↳ run stress/core/extended journeys against that exact dev deploy
+
 Push to main (production)
   ↳ blocking Neon `main` snapshot (api-prod.yml)
   ↳ Fly deploy → harpa-pro-api

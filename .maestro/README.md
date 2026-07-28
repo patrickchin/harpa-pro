@@ -49,12 +49,13 @@ runner creates its Metro log and Maestro debug directory before
 installing the APK, then captures ADB state and recent logcat output
 on failure. If Expo registers Metro but leaves the emulator on Dev
 Launcher's Home screen, the flow conditionally selects the green
-`http://10.0.2.2:8081` server row. It then waits up to 60 seconds for
+`http://10.0.2.2:8081` server row. It then waits up to 90 seconds for
 either the first-run `Continue` action or the rendered `Email` label,
 failing closed if neither appears. After dismissing any developer
-menu, it allows 30 seconds for the sign-in control. CI uploads the
-runner logs and Maestro's hidden UI hierarchy/screenshots as
-`maestro-launch-smoke-diagnostics`.
+menu, it still allows 30 seconds for the sign-in control, while the
+wrapper keeps its independent 180-second ceiling over the entire
+Maestro process. CI uploads the runner logs and Maestro's hidden UI
+hierarchy/screenshots as `maestro-launch-smoke-diagnostics`.
 
 This does not replace the regression journey. It proves the native
 build, Metro bundle, installation, launch, and first rendered route;

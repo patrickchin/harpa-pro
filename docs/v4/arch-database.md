@@ -41,7 +41,7 @@ rules. Summary below.
   Policy-only and data migrations can use reviewed hand-written SQL.
 - Files use `packages/api/migrations/<digits>_<slug>.sql`. The current
   sequence uses four-digit prefixes, such as
-  `0021_project_write_roles.sql`. The loader also accepts older numeric
+  `0023_project_write_roles.sql`. The loader also accepts older numeric
   timestamp prefixes.
 - Applied via `pnpm --filter @harpa/api db:migrate`, which uses
   `drizzle-orm/node-postgres/migrator`.
@@ -123,7 +123,7 @@ edit a migration that has shipped.
 
 ### Project write roles
 
-Migration `0021_project_write_roles.sql` adds
+Migration `0023_project_write_roles.sql` adds
 `app.can_edit_project(project_id)`. The helper checks the current
 `app.user_id` and returns true for owners and editors.
 

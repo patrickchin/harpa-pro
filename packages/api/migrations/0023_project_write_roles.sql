@@ -1,4 +1,4 @@
--- 0021_project_write_roles.sql
+-- 0023_project_write_roles.sql
 --
 -- Defense-in-depth project role enforcement.
 --

@@ -14,6 +14,8 @@ import {
   deleteCurrentAccount,
   getAccountDeletionPreview,
 } from '../services/account-deletion.js';
+import { drainStorageDeleteJobs } from '../services/storage-delete-jobs.js';
+import { captureApiException } from '../telemetry/sentry.js';
 
 const errorBody = z.object({
   error: z.object({ code: z.string(), message: z.string() }),
@@ -110,6 +112,7 @@ meRoutes.openapi(
       204: { description: 'Account deleted.' },
       401: { description: 'Unauthorized.', content: { 'application/json': { schema: errorBody } } },
       404: { description: 'User not found.', content: { 'application/json': { schema: errorBody } } },
+      503: { description: 'Deletion temporarily unavailable during storage-lifecycle rollout.', content: { 'application/json': { schema: errorBody } } },
     },
   }),
   async (c) => {
@@ -122,8 +125,47 @@ meRoutes.openapi(
       if ((err as { code?: string })?.code === 'P0002') {
         throw new HTTPException(404, { message: 'User not found.' });
       }
+      if (
+        (err as { code?: string; message?: string })?.code === '55000' &&
+        /file_upload_lease_rollout_pending/.test(
+          (err as { message?: string }).message ?? '',
+        )
+      ) {
+        throw new HTTPException(503, {
+          message: 'Account deletion is temporarily unavailable.',
+        });
+      }
       throw err;
     }
+
+    const requestId = c.get('requestId');
+    try {
+      const cleanup = await drainStorageDeleteJobs({
+        maxJobs: 1,
+        userId,
+      });
+      if (cleanup.failed > 0) {
+        reportStorageCleanupIncomplete(
+          {
+            userId,
+            requestId,
+            ...cleanup,
+          },
+        );
+      }
+    } catch (error) {
+      reportStorageCleanupIncomplete(
+        {
+          userId,
+          requestId,
+          claimed: 0,
+          completed: 0,
+          failed: 1,
+        },
+        error,
+      );
+    }
+
     return c.body(null, 204);
   },
 );
@@ -151,6 +193,34 @@ meRoutes.openapi(
     return c.json({ ...usage, plan: effective.plan, limits: effective.buckets }, 200);
   },
 );
+
+function reportStorageCleanupIncomplete(
+  input: {
+    userId: string;
+    requestId: string;
+    claimed: number;
+    completed: number;
+    failed: number;
+  },
+  error?: unknown,
+): void {
+  console.warn(
+    JSON.stringify({
+      level: 'warn',
+      event: 'account_storage_cleanup_incomplete',
+      ...input,
+    }),
+  );
+  captureApiException(
+    error ?? new Error('Post-commit account storage cleanup incomplete'),
+    {
+      requestId: input.requestId,
+      method: 'DELETE',
+      route: '/me',
+      status: 204,
+    },
+  );
+}
 
 meRoutes.openapi(
   createRoute({

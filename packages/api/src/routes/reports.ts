@@ -60,8 +60,16 @@ import { createReportComment, listReportComments } from '../services/report-comm
 import { generateReport as aiGenerateReport } from '../services/ai.js';
 import { enforceUsageLimit, attachUsageWarning } from '../services/usage-limits.js';
 import { getAiSettings } from '../services/settings.js';
-import { pickStorage } from '../services/storage.js';
-import { registerFile } from '../services/files.js';
+import {
+  buildStorageKey,
+  pickStorage,
+} from '../services/storage.js';
+import {
+  createFileUploadLease,
+  lockFileUploadLease,
+  lockFileUploadOwner,
+  registerFileFromUploadLease,
+} from '../services/files.js';
 import { renderReportPdf } from '../services/report-pdf.js';
 
 const projectParam = z.object({
@@ -75,6 +83,7 @@ const reportPathParam = z.object({
 
 // AI route budgets (per arch-api-design.md §Rate limiting / §Idempotency).
 const MIN = 60_000;
+const SERVER_PDF_UPLOAD_LEASE_MS = 5 * MIN;
 const generateRateLimit = withRateLimit({ name: 'reports.generate', limit: 30, windowMs: MIN });
 const generateIdempotency = withIdempotency({ name: 'reports.generate' });
 // Shared per-user AI budget — same instance shape as voice.ts so the
@@ -836,32 +845,78 @@ reportRoutes.openapi(
 
     const bytes = renderReportPdf(report);
     const storage = pickStorage();
-    // Server-built key (mirrors files.ts presign — never trust client input).
-    // PDFs render server-side so they always have project + report scope.
-    const put = await storage.putObject({
-      scope: {
-        kind: 'project',
-        userId,
+    const scope = {
+      kind: 'project' as const,
+      userId,
+      projectId: report.projectId,
+      reportId: report.id,
+      fileKind: 'pdf' as const,
+    };
+    const target = buildStorageKey(scope, 'application/pdf');
+
+    // Commit the exact key before R2 sees a side effect. If the process dies
+    // after the PUT but before registration commits, lease GC (or account
+    // deletion) still has a durable key to remove.
+    await db(async (d) => {
+      if (!(await lockFileUploadOwner(d, userId))) {
+        throw new HTTPException(404, { message: 'User not found.' });
+      }
+      await createFileUploadLease(d, userId, {
+        ...target,
+        scope: 'project',
         projectId: report.projectId,
         reportId: report.id,
-        fileKind: 'pdf',
-      },
-      contentType: 'application/pdf',
-      bytes,
+        contentType: 'application/pdf',
+        sizeBytes: bytes.length,
+        presignExpiresAt: new Date(
+          Date.now() + SERVER_PDF_UPLOAD_LEASE_MS,
+        ).toISOString(),
+      });
     });
-    const file = await db((d) =>
-      registerFile(d, userId, {
+
+    const put = await db(async (d) => {
+      // Keep deletion on the other side of this write, and keep lease GC from
+      // claiming the pre-write intent until registration commits or rolls back.
+      if (!(await lockFileUploadOwner(d, userId))) {
+        throw new HTTPException(404, { message: 'User not found.' });
+      }
+      if (
+        !(await lockFileUploadLease(
+          d,
+          userId,
+          target.fileId,
+          target.fileKey,
+        ))
+      ) {
+        throw new HTTPException(409, {
+          message: 'PDF upload reservation expired.',
+        });
+      }
+
+      // Server-built key (mirrors files.ts presign — never trust client input).
+      // PDFs render server-side so they always have project + report scope.
+      const put = await storage.putObject({
+        scope,
+        ...target,
+        contentType: 'application/pdf',
+        bytes,
+      });
+      const file = await registerFileFromUploadLease(d, userId, {
         id: put.fileId,
         kind: 'pdf',
         fileKey: put.fileKey,
+        scope: 'project',
         sizeBytes: put.sizeBytes,
         contentType: 'application/pdf',
         projectId: report.projectId,
         reportId: report.id,
-      }),
-    );
-    if (!file) throw new HTTPException(500, { message: 'pdf register failed' });
-    await db((d) => setReportPdfFileId(d, report.id, file.id));
+      });
+      if (!file) {
+        throw new HTTPException(500, { message: 'pdf register failed' });
+      }
+      await setReportPdfFileId(d, report.id, file.id);
+      return put;
+    });
 
     const signed = await storage.signGet(put.fileKey);
     return c.json({ url: signed.url, expiresAt: signed.expiresAt }, 200);

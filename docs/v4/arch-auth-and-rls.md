@@ -461,9 +461,10 @@ whole-account deletion in-app. The API surface lives under `/me`:
 
 Both routes use `withAuth()` and the scoped `c.get('db')(fn)` accessor.
 The destructive route calls the SECURITY DEFINER helper
-`app.delete_current_user()`, which reads
-`current_setting('app.user_id')` and performs the deletion in the same
-transaction as the request scope.
+`app.delete_current_user()`. It reads `current_setting('app.user_id')`,
+locks the account/project/membership/file/lease rows, creates durable R2
+delete jobs, and performs the database deletion in the same transaction
+as the request scope.
 
 Deletion removes the better-auth `public."user"` row. That cascades
 `public."session"`, `public."account"`, `app.user_settings`,
@@ -478,6 +479,27 @@ Project records follow the collaboration rules in
 Solo projects are deleted. Shared projects keep their reports and notes
 for remaining members, while the deleted account is removed from
 membership and ownership is transferred if needed.
+
+The same transaction persists an immediate and, when live upload leases
+exist, delayed cleanup job in `app.storage_delete_jobs`. After commit
+the route drains one due job; an always-on Fly worker handles retry and
+the final pass after presign expiry. Shared-project prefixes are never
+swept. Storage failures remain durable, emit worker logs/Sentry, and do
+not change the route's `204` because the account deletion already
+committed.
+
+The fast path normally completes immediate cleanup. The worker sleeps until
+the next known due job, capped at a ten-minute idle poll, and prunes expired
+leases hourly. This permits idle gaps for Neon suspension at the cost of up to
+ten minutes of retry latency for a job inserted after sleep begins and up to
+one hour of expired-lease cleanup latency.
+
+The initial lease rollout fails account deletion closed with `503`
+until all URLs minted by old machines have expired. CI arms the
+monotonic grace only after a successful deploy. Preview deployments
+enforce leases but leave account deletion disabled because they do not
+run the worker. See
+[`arch-storage.md`](arch-storage.md#account-deletion-cleanup).
 
 ## Maestro password-login wiring
 

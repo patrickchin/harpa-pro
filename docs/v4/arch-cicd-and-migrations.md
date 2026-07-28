@@ -254,10 +254,15 @@ green. Both the poll loop and the surrounding job are bounded.
 
 ### `infra/fly/deploy.sh`
 
-- Compute `MIGRATIONS_REQUIRED_HEAD` from `ls packages/api/migrations | sort | tail -1`
-  and pass `--build-arg MIGRATIONS_REQUIRED_HEAD=...` to `flyctl deploy`.
+- Compute `MIGRATIONS_REQUIRED_HEAD` from the sorted migration-file glob and
+  pass `--build-arg MIGRATIONS_REQUIRED_HEAD=...` to `flyctl deploy`.
 - Compute the full `git rev-parse HEAD` value and pass it as the
   `GIT_COMMIT` build arg; abbreviated SHAs are not valid deployment identities.
+- Scale the service-less storage worker after deploy, then arm the monotonic
+  upload-lease rollout inside that process group. It inherits Fly's staged
+  `DATABASE_URL`; the production URL remains out of GitHub Actions and manual
+  operator environments. Manual production deploys use the same ordered path
+  as CI.
 
 ### `.github/workflows/api-prod.yml`
 

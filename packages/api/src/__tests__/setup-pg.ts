@@ -23,6 +23,20 @@ export async function startPg(): Promise<PgFixture> {
 
   const url = container.getConnectionUri();
   await migrate(url);
+  const rollout = new pg.Client({ connectionString: url });
+  await rollout.connect();
+  try {
+    await rollout.query(
+      `UPDATE app.storage_lifecycle_rollout
+       SET armed_at = now(),
+           enforce_after = now(),
+           account_delete_enabled = true,
+           updated_at = now()
+       WHERE singleton`,
+    );
+  } finally {
+    await rollout.end();
+  }
 
   return {
     url,

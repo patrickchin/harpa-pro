@@ -55,6 +55,10 @@ import { SAMPLE_GENERATED_REPORT } from '@/lib/dev-fixtures/sample-report';
 import { reportBodyToGeneratedReport } from '@/lib/reports/report-body-adapter';
 import { applyPhotoPlacement } from '@/lib/reports/photo-placements';
 import { useAutoRegenerate } from '@/features/generate/useAutoRegenerate';
+import {
+  acceptReportGenerationSuccess,
+  createReportGenerationIdempotency,
+} from '@/features/generate/report-generation-idempotency';
 import { safeBack } from '@/lib/nav/safe-back';
 import { UsageLimitDialog } from '@/components/account/UsageLimitDialog';
 import { usageLimitFromError, type UsageLimitDetails } from '@/lib/api/usage-limit-error';
@@ -467,6 +471,9 @@ export default function GenerateReportRoute() {
   const generateMutation = useGenerateReportMutation();
   const regenerateMutation = useRegenerateReportMutation();
   const finalizeMutation = useFinalizeReportMutation();
+  const [generationIdempotency] = useState(
+    () => createReportGenerationIdempotency(),
+  );
 
   // Stable JSON view of the server-side body was removed — the
   // autosave hook is now driven by `userDirty`, set by
@@ -500,44 +507,60 @@ export default function GenerateReportRoute() {
       expectedUpdatedAtRef.current ?? reportRow?.updatedAt;
     if (!expectedUpdatedAt) return;
     setGenerationError(null);
-    const mutation = currentReport ? regenerateMutation : generateMutation;
+    const attempt = generationIdempotency.attempt(
+      currentReport ? 'regenerate' : 'generate',
+    );
+    const mutation =
+      attempt.operation === 'regenerate'
+        ? regenerateMutation
+        : generateMutation;
     mutation.mutate(
-      reportMutationInput(slug, reportNumber, expectedUpdatedAt),
+      {
+        ...reportMutationInput(slug, reportNumber, expectedUpdatedAt),
+        headers: { 'Idempotency-Key': attempt.key },
+      },
       {
         onSuccess: (data) => {
-          const payload = data as
-            | {
-                report?: {
-                  body?: reports.ReportBody | null;
-                  updatedAt?: string;
-                };
-                debug?: {
-                  systemPrompt?: string;
-                  userPrompt?: string;
-                  rawText?: string;
-                  model?: string;
-                  vendor?: string;
-                };
+          acceptReportGenerationSuccess(
+            generationIdempotency,
+            attempt.key,
+            () => {
+              const payload = data as
+                | {
+                    report?: {
+                      body?: reports.ReportBody | null;
+                      updatedAt?: string;
+                    };
+                    debug?: {
+                      systemPrompt?: string;
+                      userPrompt?: string;
+                      rawText?: string;
+                      model?: string;
+                      vendor?: string;
+                    };
+                  }
+                | undefined;
+              const nextBody = payload?.report?.body ?? null;
+              if (nextBody) {
+                setLocalReport(reportBodyToGeneratedReport(nextBody));
               }
-            | undefined;
-          const nextBody = payload?.report?.body ?? null;
-          if (nextBody) {
-            setLocalReport(reportBodyToGeneratedReport(nextBody));
-          }
-          if (payload?.report?.updatedAt) {
-            expectedUpdatedAtRef.current = payload.report.updatedAt;
-          }
-          if (payload?.debug) {
-            setLastGeneration({
-              systemPrompt: payload.debug.systemPrompt ?? '',
-              userPrompt: payload.debug.userPrompt ?? '',
-              rawText: payload.debug.rawText ?? '',
-              model: payload.debug.model ?? '',
-              vendor: payload.debug.vendor ?? '',
-            });
-          }
+              if (payload?.report?.updatedAt) {
+                expectedUpdatedAtRef.current = payload.report.updatedAt;
+              }
+              if (payload?.debug) {
+                setLastGeneration({
+                  systemPrompt: payload.debug.systemPrompt ?? '',
+                  userPrompt: payload.debug.userPrompt ?? '',
+                  rawText: payload.debug.rawText ?? '',
+                  model: payload.debug.model ?? '',
+                  vendor: payload.debug.vendor ?? '',
+                });
+              }
+            },
+          );
         },
         onError: (err) => {
+          generationIdempotency.failed(attempt.key, err.status);
           const limit = usageLimitFromError(err);
           if (limit) {
             setUsageLimitHit(limit);
@@ -554,6 +577,7 @@ export default function GenerateReportRoute() {
     currentReport,
     generateMutation,
     regenerateMutation,
+    generationIdempotency,
   ]);
 
   const handleRetryNoteActionError = useCallback(() => {

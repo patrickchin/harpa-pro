@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
-import { getAccountDeletionPreview } from './account-deletion.js';
+import * as accountDeletion from './account-deletion.js';
+import type { Storage } from './storage.js';
 
 describe('getAccountDeletionPreview', () => {
   it('sorts transfer candidates when joined_at is returned as a string', async () => {
@@ -49,7 +50,7 @@ describe('getAccountDeletionPreview', () => {
         rows: [{ count: '0' }],
       });
 
-    const preview = await getAccountDeletionPreview(
+    const preview = await accountDeletion.getAccountDeletionPreview(
       { execute } as never,
       'usr_alice',
     );
@@ -62,5 +63,77 @@ describe('getAccountDeletionPreview', () => {
         newOwnerEmail: 'bob@example.com',
       },
     ]);
+  });
+});
+
+describe('account deletion storage lifecycle', () => {
+  it('bounds each prefix sweep to four 500-key pages and reports truncation', async () => {
+    let scratchPage = 0;
+    const deleteObjects = vi.fn().mockResolvedValue(undefined);
+    const listPrefix = vi.fn(
+      async (prefix: string, _cursor?: string, limit?: number) => {
+        expect(limit).toBe(500);
+        if (prefix.endsWith('/avatar/')) {
+          return { keys: [`${prefix}orphan.jpg`], nextCursor: null };
+        }
+        scratchPage += 1;
+        return {
+          keys: [`${prefix}orphan-${scratchPage}.m4a`],
+          nextCursor: `page-${scratchPage + 1}`,
+        };
+      },
+    );
+    const storage = {
+      deleteObjects,
+      listPrefix,
+    } as unknown as Storage;
+
+    const result = await accountDeletion.executeStorageCleanupPlan(storage, {
+      userId: 'usr_alice',
+      exactKeys: ['users/usr_alice/avatar/fil_exact.jpg'],
+      sweepPrefixes: [
+        'users/usr_alice/avatar/',
+        'users/usr_alice/scratch/',
+      ],
+    });
+
+    expect(listPrefix).toHaveBeenCalledTimes(5);
+    expect(deleteObjects).toHaveBeenCalledTimes(6);
+    expect(result.deletedKeyCount).toBe(6);
+    expect(result.truncatedPrefixes).toEqual(['users/usr_alice/scratch/']);
+    expect(result.failures).toEqual([]);
+  });
+
+  it('keeps cleanup rerunnable by reporting failures without throwing or skipping later prefixes', async () => {
+    const deleteObjects = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('transient delete failure'))
+      .mockResolvedValue(undefined);
+    const listPrefix = vi
+      .fn()
+      .mockResolvedValueOnce({
+        keys: ['users/usr_alice/avatar/orphan.jpg'],
+        nextCursor: null,
+      })
+      .mockResolvedValueOnce({ keys: [], nextCursor: null });
+    const storage = {
+      deleteObjects,
+      listPrefix,
+    } as unknown as Storage;
+
+    const result = await accountDeletion.executeStorageCleanupPlan(storage, {
+      userId: 'usr_alice',
+      exactKeys: ['projects/prj_shared/reports/rpt/fil_exact.jpg'],
+      sweepPrefixes: [
+        'users/usr_alice/avatar/',
+        'users/usr_alice/scratch/',
+      ],
+    });
+
+    expect(listPrefix).toHaveBeenCalledTimes(2);
+    expect(deleteObjects).toHaveBeenCalledTimes(2);
+    expect(result.deletedKeyCount).toBe(1);
+    expect(result.failures).toHaveLength(1);
+    expect(result.failures[0]).toMatchObject({ operation: 'delete_exact' });
   });
 });

@@ -13,9 +13,9 @@
  *    embedded key is `projects/<projectId>/reports/<reportId>/<fileId>.<ext>`
  *    for project scope, `users/<userId>/<avatar|scratch>/<fileId>.<ext>`
  *    for personal scopes.
- *  - Register parses the key back via `parseKeyScope` and verifies the
- *    embedded scope + ids match the claimed body + caller's userId /
- *    project membership before INSERT.
+ *  - Register parses the key back via `parseKeyScope`, verifies the
+ *    embedded scope + ids, and atomically consumes the exact upload
+ *    lease before INSERT.
  *  - `app.files` RLS (migration 0011) provides project-member reads.
  *    Project presign/register routes additionally require an
  *    owner/editor role; avatar and scratch scopes remain personal.
@@ -26,7 +26,15 @@ import { files as fileSchemas, errorEnvelope, fileId } from '@harpa/api-contract
 import type { AppEnv, ScopedDbAccessor } from '../app.js';
 import { requireProjectWriter } from '../lib/project-authorization.js';
 import { withAuth } from '../middleware/auth.js';
-import { getFileById, registerFile } from '../services/files.js';
+import {
+  createFileUploadLease,
+  fileUploadLeasesEnforced,
+  getFileById,
+  hasFileUploadLease,
+  lockFileUploadOwner,
+  registerFile,
+  registerFileFromUploadLease,
+} from '../services/files.js';
 import { getReport } from '../services/reports.js';
 import {
   pickStorage,
@@ -36,6 +44,7 @@ import {
 } from '../services/storage.js';
 
 const fileIdParam = z.object({ id: fileId.openapi({ param: { name: 'id', in: 'path' } }) });
+type ScopedDb = Parameters<Parameters<ScopedDbAccessor>[0]>[0];
 
 export const fileRoutes = new OpenAPIHono<AppEnv>();
 
@@ -44,11 +53,14 @@ export const fileRoutes = new OpenAPIHono<AppEnv>();
  * project files but cannot mint or register new project objects.
  */
 async function assertProjectWriter(
-  db: ScopedDbAccessor,
+  db: ScopedDb,
   userId: string,
   projectId: string,
 ): Promise<void> {
-  await requireProjectWriter(db, userId, projectId);
+  const accessor: ScopedDbAccessor = <T>(
+    fn: (scopedDb: ScopedDb) => Promise<T>,
+  ) => fn(db);
+  await requireProjectWriter(accessor, userId, projectId);
 }
 
 /**
@@ -56,11 +68,11 @@ async function assertProjectWriter(
  * absent / cross-project as a non-member (Pitfall 6).
  */
 async function assertReportInProject(
-  db: ScopedDbAccessor,
+  db: ScopedDb,
   reportId: string,
   projectId: string,
 ): Promise<void> {
-  const report = await db((d) => getReport(d, reportId));
+  const report = await getReport(db, reportId);
   if (!report || report.projectId !== projectId) {
     throw new HTTPException(404, { message: 'Report not found.' });
   }
@@ -90,40 +102,58 @@ fileRoutes.openapi(
     if (!userId || !db) throw new HTTPException(401);
     const body = c.req.valid('json');
 
-    let scope: PresignScope;
-    switch (body.scope) {
-      case 'project': {
-        await assertProjectWriter(db, userId, body.projectId);
-        await assertReportInProject(db, body.reportId, body.projectId);
-        scope = {
-          kind: 'project',
-          userId,
-          projectId: body.projectId,
-          reportId: body.reportId,
-          fileKind: body.kind as FileKind,
-        };
-        break;
+    const out = await db(async (scopedDb) => {
+      if (!(await lockFileUploadOwner(scopedDb, userId))) {
+        throw new HTTPException(401, { message: 'User no longer exists.' });
       }
-      case 'avatar': {
-        if (!body.contentType.startsWith('image/')) {
-          throw new HTTPException(400, {
-            message: 'Avatar content-type must be image/*.',
-          });
-        }
-        scope = { kind: 'avatar', userId };
-        break;
-      }
-      case 'scratch': {
-        scope = { kind: 'scratch', userId, fileKind: body.kind as FileKind };
-        break;
-      }
-    }
 
-    const out = await pickStorage().presign({
-      scope,
-      contentType: body.contentType,
-      sizeBytes: body.sizeBytes,
+      let scope: PresignScope;
+      switch (body.scope) {
+        case 'project': {
+          await assertProjectWriter(scopedDb, userId, body.projectId);
+          await assertReportInProject(scopedDb, body.reportId, body.projectId);
+          scope = {
+            kind: 'project',
+            userId,
+            projectId: body.projectId,
+            reportId: body.reportId,
+            fileKind: body.kind as FileKind,
+          };
+          break;
+        }
+        case 'avatar': {
+          if (!body.contentType.startsWith('image/')) {
+            throw new HTTPException(400, {
+              message: 'Avatar content-type must be image/*.',
+            });
+          }
+          scope = { kind: 'avatar', userId };
+          break;
+        }
+        case 'scratch': {
+          scope = { kind: 'scratch', userId, fileKind: body.kind as FileKind };
+          break;
+        }
+      }
+
+      const signed = await pickStorage().presign({
+        scope,
+        contentType: body.contentType,
+        sizeBytes: body.sizeBytes,
+      });
+      await createFileUploadLease(scopedDb, userId, {
+        fileId: signed.fileId,
+        fileKey: signed.fileKey,
+        scope: body.scope,
+        projectId: body.scope === 'project' ? body.projectId : null,
+        reportId: body.scope === 'project' ? body.reportId : null,
+        contentType: body.contentType,
+        sizeBytes: body.sizeBytes,
+        presignExpiresAt: signed.expiresAt,
+      });
+      return signed;
     });
+
     return c.json(out, 200);
   },
 );
@@ -144,7 +174,7 @@ fileRoutes.openapi(
       400: { description: 'Bad request — fileKey shape / scope mismatch.', content: { 'application/json': { schema: errorEnvelope } } },
       401: { description: 'Unauthorized.', content: { 'application/json': { schema: errorEnvelope } } },
       404: { description: 'Project / report not found or not a member.', content: { 'application/json': { schema: errorEnvelope } } },
-      409: { description: 'Conflict — fileKey already registered.', content: { 'application/json': { schema: errorEnvelope } } },
+      409: { description: 'Conflict — upload lease missing, mismatched, or already consumed.', content: { 'application/json': { schema: errorEnvelope } } },
     },
   }),
   async (c) => {
@@ -175,8 +205,6 @@ fileRoutes.openapi(
             message: 'fileKey ids do not match request projectId / reportId.',
           });
         }
-        await assertProjectWriter(db, userId, body.projectId);
-        await assertReportInProject(db, body.reportId, body.projectId);
         kind = body.kind as FileKind;
         projectIdValue = body.projectId;
         reportIdValue = body.reportId;
@@ -214,8 +242,16 @@ fileRoutes.openapi(
     }
 
     try {
-      const row = await db((d) =>
-        registerFile(d, userId, {
+      const row = await db(async (scopedDb) => {
+        if (!(await lockFileUploadOwner(scopedDb, userId))) {
+          throw new HTTPException(401, { message: 'User no longer exists.' });
+        }
+        if (body.scope === 'project') {
+          await assertProjectWriter(scopedDb, userId, body.projectId);
+          await assertReportInProject(scopedDb, body.reportId, body.projectId);
+        }
+
+        const input = {
           id: parsed.fileId,
           kind,
           fileKey: body.fileKey,
@@ -223,9 +259,34 @@ fileRoutes.openapi(
           contentType: body.contentType,
           projectId: projectIdValue,
           reportId: reportIdValue,
-        }),
-      );
-      if (!row) throw new HTTPException(500, { message: 'register failed' });
+        };
+        const leased = await registerFileFromUploadLease(
+          scopedDb,
+          userId,
+          {
+            ...input,
+            scope: body.scope,
+          },
+        );
+        if (leased) return leased;
+
+        const enforced = await fileUploadLeasesEnforced(scopedDb);
+        const leasePresent = await hasFileUploadLease(
+          scopedDb,
+          userId,
+          parsed.fileId,
+          body.fileKey,
+        );
+        if (!enforced && !leasePresent) {
+          return registerFile(scopedDb, userId, input);
+        }
+        return null;
+      });
+      if (!row) {
+        throw new HTTPException(409, {
+          message: 'Upload lease is missing, mismatched, or already consumed.',
+        });
+      }
       return c.json(row, 201);
     } catch (err) {
       // app.files.file_key has a UNIQUE constraint — surface re-registration as 409.

@@ -484,6 +484,21 @@ export interface paths {
                         };
                     };
                 };
+                /** @description Deletion temporarily unavailable during storage-lifecycle rollout. */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                            requestId?: string;
+                        };
+                    };
+                };
             };
         };
         options?: never;
@@ -4864,7 +4879,7 @@ export interface paths {
                         };
                     };
                 };
-                /** @description Conflict — fileKey already registered. */
+                /** @description Conflict — upload lease missing, mismatched, or already consumed. */
                 409: {
                     headers: {
                         [name: string]: unknown;

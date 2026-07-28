@@ -1,26 +1,30 @@
 // @vitest-environment jsdom
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { activity } from '@harpa/api-contract';
 
-const sendVerificationOtp = vi.fn();
-const signInEmailOtp = vi.fn();
-const signOut = vi.fn();
-const refetchSession = vi.fn();
-
-let sessionState: {
-  data: { user: { email: string } } | null;
-  isPending: boolean;
-  refetch: typeof refetchSession;
-};
+const authMock = vi.hoisted(() => {
+  const refetchSession = vi.fn();
+  return {
+    sendVerificationOtp: vi.fn(),
+    signInEmailOtp: vi.fn(),
+    signOut: vi.fn(),
+    refetchSession,
+    sessionState: {
+      data: null as { user: { email: string } } | null,
+      isPending: true,
+      refetch: refetchSession,
+    },
+  };
+});
 
 vi.mock('../../lib/admin-auth', () => ({
   adminAuthClient: {
-    useSession: () => sessionState,
-    emailOtp: { sendVerificationOtp },
-    signIn: { emailOtp: signInEmailOtp },
-    signOut,
+    useSession: () => authMock.sessionState,
+    emailOtp: { sendVerificationOtp: authMock.sendVerificationOtp },
+    signIn: { emailOtp: authMock.signInEmailOtp },
+    signOut: authMock.signOut,
   },
 }));
 
@@ -74,23 +78,27 @@ function activityResponse(items: activity.Event[], nextCursor: string | null = n
 
 beforeEach(() => {
   vi.restoreAllMocks();
-  sessionState = {
+  authMock.sessionState = {
     data: { user: { email: 'admin@example.com' } },
     isPending: false,
-    refetch: refetchSession,
+    refetch: authMock.refetchSession,
   };
-  sendVerificationOtp.mockReset();
-  signInEmailOtp.mockReset();
-  signOut.mockReset();
-  refetchSession.mockReset();
+  authMock.sendVerificationOtp.mockReset();
+  authMock.signInEmailOtp.mockReset();
+  authMock.signOut.mockReset();
+  authMock.refetchSession.mockReset();
+});
+
+afterEach(() => {
+  cleanup();
 });
 
 describe('AdminActivity', () => {
   it('shows session loading before exposing auth or activity controls', () => {
-    sessionState = {
+    authMock.sessionState = {
       data: null,
       isPending: true,
-      refetch: refetchSession,
+      refetch: authMock.refetchSession,
     };
 
     render(<AdminActivity />);
@@ -101,13 +109,16 @@ describe('AdminActivity', () => {
   });
 
   it('completes the email-OTP sign-in flow without storing a bearer token', async () => {
-    sessionState = {
+    authMock.sessionState = {
       data: null,
       isPending: false,
-      refetch: refetchSession,
+      refetch: authMock.refetchSession,
     };
-    sendVerificationOtp.mockResolvedValue({ data: { success: true }, error: null });
-    signInEmailOtp.mockResolvedValue({
+    authMock.sendVerificationOtp.mockResolvedValue({
+      data: { success: true },
+      error: null,
+    });
+    authMock.signInEmailOtp.mockResolvedValue({
       data: { user: { email: 'admin@example.com' } },
       error: null,
     });
@@ -116,19 +127,19 @@ describe('AdminActivity', () => {
 
     await user.type(screen.getByLabelText('Email'), 'admin@example.com');
     await user.click(screen.getByRole('button', { name: 'Send code' }));
-    expect(sendVerificationOtp).toHaveBeenCalledWith({
+    expect(authMock.sendVerificationOtp).toHaveBeenCalledWith({
       email: 'admin@example.com',
       type: 'sign-in',
     });
 
     await user.type(screen.getByLabelText('Verification code'), '123456');
     await user.click(screen.getByRole('button', { name: 'Verify code' }));
-    expect(signInEmailOtp).toHaveBeenCalledWith({
+    expect(authMock.signInEmailOtp).toHaveBeenCalledWith({
       email: 'admin@example.com',
       otp: '123456',
     });
-    expect(refetchSession).toHaveBeenCalled();
-    expect(localStorage.length).toBe(0);
+    expect(authMock.refetchSession).toHaveBeenCalled();
+    expect(window.localStorage.length).toBe(0);
   });
 
   it('renders, filters, paginates, and inspects the activity feed', async () => {
@@ -162,8 +173,7 @@ describe('AdminActivity', () => {
   });
 
   it('renders empty, forbidden, and retryable failure states', async () => {
-    const fetchMock = vi
-      .spyOn(globalThis, 'fetch')
+    vi.spyOn(globalThis, 'fetch')
       .mockResolvedValueOnce(activityResponse([]))
       .mockResolvedValueOnce(new Response(null, { status: 403 }))
       .mockRejectedValueOnce(new Error('offline'))
@@ -186,13 +196,16 @@ describe('AdminActivity', () => {
 
   it('signs out through Better Auth', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(activityResponse([]));
-    signOut.mockResolvedValue({ data: { success: true }, error: null });
+    authMock.signOut.mockResolvedValue({
+      data: { success: true },
+      error: null,
+    });
     const user = userEvent.setup();
     render(<AdminActivity />);
 
     await user.click(screen.getByRole('button', { name: 'Sign out' }));
 
-    expect(signOut).toHaveBeenCalled();
-    expect(refetchSession).toHaveBeenCalled();
+    expect(authMock.signOut).toHaveBeenCalled();
+    expect(authMock.refetchSession).toHaveBeenCalled();
   });
 });

@@ -12,6 +12,16 @@ export interface ReportGenerationIdempotency {
   failed(key: string, status: number): void;
 }
 
+export function acceptReportGenerationSuccess<T>(
+  tracker: ReportGenerationIdempotency,
+  key: string,
+  accept: () => T,
+): T {
+  const accepted = accept();
+  tracker.succeeded(key);
+  return accepted;
+}
+
 function mintUuid(): string {
   const { uuid } = require('../../lib/util/uuid') as typeof import('../../lib/util/uuid');
   return uuid();

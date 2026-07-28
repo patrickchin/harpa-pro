@@ -13,10 +13,11 @@
    functions all run on services we control or can swap.
 2. **Tested-first.** Every layer has its test strategy decided before
    it's built. No phase exits without its coverage gate.
-3. **Visual acceptance is explicit.** P2+ screens ship only when they
-   satisfy their approved v4 contract and preserve established
-   NativeWind patterns. Review is manual on the iOS simulator; there
-   is no automated screenshot-diff gate.
+3. **Visual acceptance is explicit.** The relevant `design-*.md` or
+   `plan-*.md` file defines a screen specification. If neither
+   exists, the current implementation and tests are the baseline.
+   A design change needs a task-specific design doc. Review is manual
+   on the iOS simulator. There is no automated screenshot-diff gate.
 4. **Fixtures everywhere expensive.** LLMs, Resend email, R2 PUT — every
    external boundary has a record/replay layer baked in from P0.
 
@@ -86,7 +87,7 @@ flowchart TB
 | Contract | Zod + OpenAPI generated types | **same** | Working pattern, keep. |
 | LLM mocking | Bolt-on mock-ai (P5.3) | **`ai-fixtures` package, P0** | Fixtures-first per Pitfall 2. |
 | Mobile state | React Query + legend-state | **same** | Worked. |
-| E2E | Maestro | **Maestro behaviour flows** | Per-page interaction tests; no automated visual diff (manual review against canonical port). |
+| E2E | Maestro | **Maestro behaviour flows** | Per-page interaction tests. No automated visual diff. Manual review uses the relevant v4 spec or current baseline. |
 | CI gates | Coverage at end | **Per-phase gates** | Gates listed in each `plan-p*.md`. |
 
 ## Section index
@@ -119,7 +120,7 @@ flowchart TB
 | 17 | **Voice pipeline** | [arch-voice-pipeline.md](arch-voice-pipeline.md) | **End-to-end record → upload → transcribe → summarise → render pipeline; mobile recorder + API aggregator route + `VoiceNoteCard` (companion plan: [plan-voice-pipeline.md](plan-voice-pipeline.md))** |
 | 18 | **Mobile skeletons** | [arch-mobile-skeletons.md](arch-mobile-skeletons.md) | **Per-screen skeleton geometry policy to prevent layout-shift on hydrate** |
 | 19 | **App shell (P2.6)** | [arch-p2-6-app-shell.md](arch-p2-6-app-shell.md) | **Root provider tree, auth gate redirect, `(app)` tab/stack shape — design notes for the shell that landed in P2.6** |
-| 20 | **Admin business activity (proposed)** | [design-admin-business-activity.md](design-admin-business-activity.md) | **Append-oriented business events, admin-only API, and an admin-authenticated Astro activity page at `admin.harpapro.com`** |
+| 20 | **Admin business activity (approved, in progress)** | [design-admin-business-activity.md](design-admin-business-activity.md) | **Append-oriented business events, an admin-only API, and the shared `apps/site` Astro route at `/admin/activity`, served through the `admin.harpapro.com` hostname** |
 
 ## Repo layout (target end of P0)
 
@@ -172,8 +173,8 @@ skills/                   # auto-loaded
 |---|---|---|
 | P0 | Foundation | All packages scaffold compiles. `ai-fixtures` works (replay + record). better-auth email-OTP route hits Resend sandbox + integration test green. Neon branch script tested in CI. |
 | P1 | API Core | All routes implemented (zero stubs). `pnpm test:api && pnpm test:api:integration` green at ≥90% line coverage. Per-request scope tests cover every authed route. Fixture replay covers every AI route. |
-| P2 | Mobile Shell | Auth + nav + every primitive built. Every auth screen + projects list implemented and reviewed manually against its v4 contract. NativeWind tokens locked in `tailwind.config.js`. Screen bodies in `screens/<name>.tsx` are props-driven and unit-testable in isolation. |
-| P3 | Feature Build | Every approved v4 screen implemented, with a behaviour test for each interaction and a Maestro flow. No screen is "stubbed" or "TODO redesign". |
+| P2 | Mobile Shell | Auth + nav + every primitive built. Every auth screen + projects list implemented and reviewed against its relevant v4 spec. NativeWind tokens locked in `tailwind.config.js`. Screen bodies in `screens/<name>.tsx` are props-driven and unit-testable in isolation. |
+| P3 | Feature Build | Every screen in the relevant v4 plans implemented, with a behaviour test for each interaction and a Maestro flow. No screen is "stubbed" or "TODO redesign". |
 | P4 | E2E + Hardening | Full Maestro journey green on iOS + Android. Sentry wired. Fly + Neon prod deploy green. PDF export bit-for-bit equivalent to mobile-old samples. |
 | P5 | Beta + GA | TestFlight + Play internal track distribution. Rollout monitor. Cutover. |
 

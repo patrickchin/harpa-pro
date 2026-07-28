@@ -16,7 +16,7 @@ Mapping (use proactively, not as a last resort):
 
 | Trigger | Subagent | Notes |
 |---|---|---|
-| Map canonical source for a screen | `Explore` (medium) | One per screen port. |
+| Map the relevant v4 spec and current baseline | `Explore` (medium) | One per screen change. |
 | Multi-screen feature (Generate, Camera, slug migration) | `architect` | Land design as a doc under `docs/v4/` in the same commit. |
 | New non-trivial code path | `tdd-guide` | Failing tests first. |
 | **After every commit** | `code-reviewer` | Non-negotiable. P0/P1 → fix in `fix(scope): address code-review §X` follow-up commit before moving on. |
@@ -60,8 +60,9 @@ Never silently skip work. Never tick a checkbox you didn’t complete.
 The full list lives in `AGENTS.md` and is enforced by `scripts/check-*.sh`.
 The five most-violated in v3 attempts:
 
-1. Canonical port source = `../haru3-reports/apps/mobile@dev`. JSX +
-   Tailwind copy verbatim. Cosmetic drift = P0.
+1. Use the relevant `design-*.md` or `plan-*.md` as the screen spec.
+   If neither exists, current implementation and tests are the
+   baseline. A design change needs a task-specific design doc.
 2. NativeWind only — no Unistyles, no raw hex in `components/**`.
 3. No `Alert.alert` — `AppDialogSheet` only.
 4. No `process.env.EXPO_PUBLIC_*!` — `lib/env.ts` only.

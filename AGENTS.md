@@ -7,10 +7,12 @@ project context. When the user shares preferences, decisions, or facts worth
 retaining across sessions, call `memory:create_entities` / `memory:add_observations`
 to persist them. Check memory before asking the user to re-explain something.
 
-v4 rewrite of the harpa-pro mobile app and API. The previous attempt
-lives at `../haru3-reports` (branch `mobile-v3`) and is the canonical
-port source for screens — read JSX + Tailwind classes from there when
-porting in P2/P3.
+v4 rewrite of the harpa-pro mobile app and API. This repository is the
+source of truth for current product behaviour. For a screen port or
+feature specification, use the relevant `docs/v4/design-*.md` or
+`docs/v4/plan-*.md` file. If neither exists, use the current
+implementation and its tests as the baseline. Add a task-specific
+design doc before making a design change.
 
 **Read [`docs/v4/pitfalls.md`](docs/v4/pitfalls.md) before writing
 code.** It captures what went wrong in v3 and the rules we adopt to

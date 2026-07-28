@@ -18,11 +18,11 @@ only after you have written and verified the failing test.
    discipline) and `verification-before-completion` (run the checks
    before claiming done). Use `systematic-debugging` when a test
    fails unexpectedly.
-4. The relevant `plan-p*.md` task and any `arch-*.md` doc the
-   coordinator linked.
-5. For mobile screens: `docs/v4/prompts/page-template.md` and the
-   matching canonical source under
-   `../haru3-reports/apps/mobile@dev`.
+4. The relevant `docs/v4/design-*.md` or `docs/v4/plan-*.md`
+   specification and any linked `arch-*.md` doc.
+5. For mobile screens: `docs/v4/prompts/page-template.md`. If no
+   task-specific spec exists, use the current implementation and its
+   tests as the baseline.
 
 ## Constraints
 

@@ -24,7 +24,7 @@ READ FIRST (in order, no skipping):
   3. docs/v4/pitfalls.md
   4. docs/v4/plan-p2-mobile-shell.md (P2.5–P2.8)
   5. docs/v4/plan-p3-feature-build.md
-  6. docs/v4/prompts/page-template.md (per-screen porting recipe)
+  6. docs/v4/prompts/page-template.md (per-screen implementation recipe)
   7. docs/bugs/README.md
 
 EXECUTION RULES (full detail in overnight-protocol.md):
@@ -41,9 +41,10 @@ ORDER OF EXECUTION (do not reorder):
   P2.5 — Auth screens, split per route. Per the updated plan there
          are FIVE screens (sign-in-phone, sign-in-verify,
          sign-up-phone, sign-up-verify, onboarding), one commit
-         each. For each: dispatch `Explore` to map the canonical
-         source, then a worker subagent to port body + real route +
-         dev mirror + behaviour tests using
+         each. For each: dispatch `Explore` to map the relevant
+         design or plan and current baseline. Then dispatch a worker
+         to implement the body + real route + dev mirror + behaviour
+         tests using
          `docs/v4/prompts/page-template.md`. Verify screens use a
          single async flow (Pitfall 5); phone number arrives via
          nav param.

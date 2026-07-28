@@ -5,10 +5,10 @@ approved on 2026-07-03.
 
 ## Context
 
-The public documentation at `docs.harpapro.com` is a manually deployed
-Next.js build from the old `patrickchin/haru3-reports` repository. The
-current repository contains only a placeholder under `apps/docs`, so the
-live site has drifted from the v4 product. Its instructions still describe
+The public documentation at `docs.harpapro.com` was a manually deployed
+Next.js build from an older codebase. At the time of this decision, the
+current repository contained only a placeholder under `apps/docs`, so the
+live site had drifted from the v4 product. Its instructions still described
 SMS authentication, Admin roles, a dedicated report Edit tab, manual-only
 regeneration, and server-generated PDFs.
 

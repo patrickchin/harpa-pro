@@ -100,6 +100,28 @@ export const reports = appSchema.table(
   }),
 );
 
+export const reportComments = appSchema.table(
+  'report_comments',
+  {
+    id: text('id').primaryKey(),
+    reportId: text('report_id')
+      .notNull()
+      .references(() => reports.id, { onDelete: 'cascade' }),
+    authorId: text('author_id').notNull(),
+    body: text('body').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => ({
+    reportCreatedIdx: index('report_comments_report_created_idx').on(
+      t.reportId,
+      t.createdAt,
+      t.id,
+    ),
+  }),
+);
+
 export const noteKindEnum = pgEnum('note_kind', ['text', 'voice', 'image', 'document']);
 
 export const notes = appSchema.table('notes', {

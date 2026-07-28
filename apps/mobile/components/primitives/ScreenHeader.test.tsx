@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import TestRenderer, { act } from 'react-test-renderer';
+import { View } from 'react-native';
 
 import { ScreenHeader } from './ScreenHeader';
 
@@ -28,6 +29,47 @@ describe('ScreenHeader', () => {
     const onBack = () => {};
     const tree = render(<ScreenHeader title="Detail" onBack={onBack} backLabel="Projects" />);
     expect(tree.toJSON()).toMatchSnapshot();
+  });
+
+  it('keeps a short page title in the controls row by default', () => {
+    const tree = render(
+      <ScreenHeader
+        title="Projects"
+        onBack={() => {}}
+        actions={<View testID="profile-action" />}
+      />,
+    );
+    const controls = tree.root.findByProps({ testID: 'screen-header-controls' });
+    const title = controls.findByProps({ testID: 'screen-header-title' });
+
+    expect(controls.findByProps({ testID: 'btn-back' })).toBeTruthy();
+    expect(controls.findByProps({ testID: 'profile-action' })).toBeTruthy();
+    expect(
+      tree.root.findAllByProps({ testID: 'screen-header-title-row' }),
+    ).toHaveLength(0);
+    expect(title.props.numberOfLines).toBe(1);
+    expect(title.props.ellipsizeMode).toBe('tail');
+  });
+
+  it('places an explicitly stacked title on a full-width wrapping row', () => {
+    const tree = render(
+      <ScreenHeader
+        title="A long report title that should wrap on a phone"
+        onBack={() => {}}
+        actions={<View testID="profile-action" />}
+        stackedTitle
+      />,
+    );
+    const controls = tree.root.findByProps({ testID: 'screen-header-controls' });
+    const titleRow = tree.root.findByProps({ testID: 'screen-header-title-row' });
+    const title = titleRow.findByProps({ testID: 'screen-header-title' });
+
+    expect(controls.findByProps({ testID: 'btn-back' })).toBeTruthy();
+    expect(controls.findByProps({ testID: 'profile-action' })).toBeTruthy();
+    expect(controls.findAllByProps({ testID: 'screen-header-title' })).toHaveLength(0);
+    expect(title.props.className).toContain('w-full');
+    expect(title.props.numberOfLines).toBeUndefined();
+    expect(title.props.ellipsizeMode).toBeUndefined();
   });
 
   it('hides the actions slot when no actions prop is supplied', () => {

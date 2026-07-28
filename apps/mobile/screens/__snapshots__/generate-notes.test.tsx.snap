@@ -46,6 +46,7 @@ exports[`GenerateNotes > matches the empty-state snapshot 1`] = `
         >
           <rn-View
             className="min-h-touch flex-row items-center gap-3"
+            testID="screen-header-controls"
           >
             <rn-Pressable
               accessibilityLabel="Back to Reports"
@@ -76,16 +77,29 @@ exports[`GenerateNotes > matches the empty-state snapshot 1`] = `
               />
             </rn-Pressable>
             <rn-Text
-              className="min-w-0 flex-1 text-title-sm text-foreground"
+              className="min-w-0 flex-1 text-sm font-semibold text-muted-foreground"
               ellipsizeMode="tail"
               numberOfLines={1}
-              testID="screen-header-title"
+              testID="screen-header-control-title"
             >
-              Highland Tower
+              Site Visit #1
             </rn-Text>
             <rn-View
               className="shrink-0 flex-row items-center gap-2"
             />
+          </rn-View>
+          <rn-View
+            className="w-full"
+            testID="screen-header-title-row"
+          >
+            <rn-Text
+              accessibilityRole="header"
+              className="w-full text-title-sm text-foreground"
+              selectable={true}
+              testID="screen-header-title"
+            >
+              Highland Tower
+            </rn-Text>
           </rn-View>
         </rn-View>
       </rn-View>

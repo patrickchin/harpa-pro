@@ -32,6 +32,10 @@ import { AppDialogSheet } from '@/components/primitives/AppDialogSheet';
 import { SafeAreaView } from '@/components/primitives/SafeAreaView';
 import { ScreenHeader } from '@/components/primitives/ScreenHeader';
 import { colors } from '@/lib/design-tokens/colors';
+import {
+  getReportHeaderControlTitle,
+  getReportHeaderTitle,
+} from '@/lib/reports/report-header-title';
 import { getDeleteDraftDialogCopy } from '@/lib/dialogs/app-dialog-copy';
 import { DebugTabPane } from '@/components/reports/generate/DebugTabPane';
 import { EditTabPane } from '@/components/reports/generate/EditTabPane';
@@ -119,7 +123,7 @@ function GenerateNotesLayout({
   isDeletingDraft,
   actions,
 }: LayoutProps) {
-  const { reportTitle, tabs, generation } = useGenerateReport();
+  const { reportNumber, reportTitle, tabs, generation } = useGenerateReport();
   const { width: windowWidth } = useWindowDimensions();
   const [isDeleteConfirmVisible, setIsDeleteConfirmVisible] = useState(false);
   const [editing, setEditing] = useState<ReportEditTarget | null>(null);
@@ -225,10 +229,12 @@ function GenerateNotesLayout({
       >
         <View className="px-5 pt-4 pb-2">
           <ScreenHeader
-            title={reportTitle}
+            title={getReportHeaderTitle(reportTitle)}
             onBack={onBack}
             backLabel="Reports"
             actions={actions}
+            stackedTitle
+            controlTitle={getReportHeaderControlTitle(reportNumber)}
             trailing={
               showDeleteOption ? (
                 <Pressable

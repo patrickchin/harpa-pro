@@ -40,6 +40,13 @@ export interface ScreenHeaderProps {
   actions?: ReactNode;
   /** Override the default `screen-header-title` testID on the title Text. */
   titleTestID?: string;
+  /**
+   * Opt into a full-width title row below the navigation controls.
+   * Intended for long report titles; ordinary page titles remain inline.
+   */
+  stackedTitle?: boolean;
+  /** Compact label shown in the controls row when the title is stacked. */
+  controlTitle?: string;
 }
 
 export function ScreenHeader({
@@ -53,13 +60,18 @@ export function ScreenHeader({
   className,
   actions,
   titleTestID,
+  stackedTitle = false,
+  controlTitle,
 }: ScreenHeaderProps) {
   const hasSupportingRow = Boolean(eyebrow || subtitle || titleAccessory);
 
   return (
     <View className={cn('gap-3', className)}>
       {/* Top padding lives in min-h-touch — see Pitfall v3 db0b97c. */}
-      <View className="min-h-touch flex-row items-center gap-3">
+      <View
+        testID="screen-header-controls"
+        className="min-h-touch flex-row items-center gap-3"
+      >
         {onBack ? (
           <Button
             testID="btn-back"
@@ -74,20 +86,48 @@ export function ScreenHeader({
           </Button>
         ) : null}
 
-        <Text
-          testID={titleTestID ?? 'screen-header-title'}
-          className="min-w-0 flex-1 text-title-sm text-foreground"
-          numberOfLines={1}
-          ellipsizeMode="tail"
-        >
-          {title}
-        </Text>
+        {stackedTitle ? (
+          controlTitle ? (
+            <Text
+              testID="screen-header-control-title"
+              className="min-w-0 flex-1 text-sm font-semibold text-muted-foreground"
+              numberOfLines={1}
+              ellipsizeMode="tail"
+            >
+              {controlTitle}
+            </Text>
+          ) : (
+            <View className="min-w-0 flex-1" />
+          )
+        ) : (
+          <Text
+            testID={titleTestID ?? 'screen-header-title'}
+            className="min-w-0 flex-1 text-title-sm text-foreground"
+            numberOfLines={1}
+            ellipsizeMode="tail"
+          >
+            {title}
+          </Text>
+        )}
 
         <View className="shrink-0 flex-row items-center gap-2">
           {trailing ? <View>{trailing}</View> : null}
           {actions ? <View>{actions}</View> : null}
         </View>
       </View>
+
+      {stackedTitle ? (
+        <View testID="screen-header-title-row" className="w-full">
+          <Text
+            testID={titleTestID ?? 'screen-header-title'}
+            className="w-full text-title-sm text-foreground"
+            accessibilityRole="header"
+            selectable
+          >
+            {title}
+          </Text>
+        </View>
+      ) : null}
 
       {hasSupportingRow ? (
         <View className="gap-1">

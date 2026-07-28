@@ -171,3 +171,28 @@ surface that needs them.
 
 Full design + decisions in
 [`../superpowers/specs/2026-05-28-report-meta-restoration-design.md`](../superpowers/specs/2026-05-28-report-meta-restoration-design.md).
+
+## Follow-up: published review controls
+
+Published reports now expose two tabs, Report and Review. The title remains a
+full-width wrapping row. Directly below it, the two tab buttons and Actions
+button share one horizontal control row: the tab group flexes to use the
+available width and Actions remains a fixed-width trailing control. This keeps
+all report-level navigation together without constraining or truncating the
+title.
+
+The Review composer sits directly in the pane without an enclosing card, so
+the text field is the only bordered surface. It opens as a four-line textarea
+and keeps the submit action beneath it.
+
+## Follow-up: report-only stacked header
+
+The compact report identity now lives in the controls row as
+`Site Visit #N`. The generated or user-authored descriptive title wraps on the
+full-width row below it. Leading `Site Visit —`, `Site Visit #N —`, and
+`Report #N —` prefixes are removed from that lower row so the two labels do
+not repeat each other.
+
+This is intentionally limited to draft/generated and saved report-detail
+screens. Short page labels such as `Projects`, `Members`, and `PDF Preview`
+remain inline with their Back/Profile/action controls.

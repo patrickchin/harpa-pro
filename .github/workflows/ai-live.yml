@@ -14,7 +14,7 @@ name: ai-live
 #                          Fork PRs are skipped because they cannot
 #                          access secrets.
 #
-# Cost: ~3 short gpt-4o calls per run.
+# Cost: 8 short OpenAI calls per run.
 
 on:
   workflow_dispatch:
@@ -23,6 +23,8 @@ on:
     paths:
       - 'packages/api/src/prompts/**'
       - 'packages/api/src/services/ai.ts'
+      - 'packages/api/src/**/*.live.test.ts'
+      - 'packages/api/vitest.live.config.ts'
       - 'packages/api-contract/src/schemas/reports.ts'
       - 'packages/ai-fixtures/src/providers/**'
       - 'packages/ai-fixtures/fixtures/generate-report.*.json'
@@ -31,6 +33,8 @@ on:
     paths:
       - 'packages/api/src/prompts/**'
       - 'packages/api/src/services/ai.ts'
+      - 'packages/api/src/**/*.live.test.ts'
+      - 'packages/api/vitest.live.config.ts'
       - 'packages/api-contract/src/schemas/reports.ts'
       - 'packages/ai-fixtures/src/providers/**'
       - 'packages/ai-fixtures/fixtures/generate-report.*.json'
@@ -71,4 +75,3 @@ jobs:
           KIMI_API_KEY: ${{ steps.doppler.outputs.KIMI_API_KEY }}
           GROQ_API_KEY: ${{ steps.doppler.outputs.GROQ_API_KEY }}
         run: pnpm --filter @harpa/api test:live
-

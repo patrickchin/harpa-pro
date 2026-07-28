@@ -301,20 +301,37 @@ describe('GenerateNotes — Report tab', () => {
 });
 
 describe('GenerateNotes — title fallback', () => {
-  it('falls back to "Report #N" when no title is set', () => {
+  it('puts the report number in the control label when no title is set', () => {
     const tree = render(
       <GenerateNotes {...baseProps} reportTitle={null} reportNumber={7} />,
     );
-    const json = JSON.stringify(tree.toJSON());
-    expect(json).toContain('Report #7');
-    expect(json).toContain('#7');
+    expect(
+      collectText(
+        tree.root.findByProps({ testID: 'screen-header-control-title' }).props
+          .children,
+      ),
+    ).toBe('Site Visit #7');
+    expect(
+      collectText(
+        tree.root.findByProps({ testID: 'screen-header-title' }).props.children,
+      ),
+    ).toBe('Report');
   });
 
-  it('falls back to "New report" when reportNumber is null', () => {
+  it('uses generic site-visit and new-report labels before a number is assigned', () => {
     const tree = render(
       <GenerateNotes {...baseProps} reportTitle={null} reportNumber={null} />,
     );
-    const json = JSON.stringify(tree.toJSON());
-    expect(json).toContain('New report');
+    expect(
+      collectText(
+        tree.root.findByProps({ testID: 'screen-header-control-title' }).props
+          .children,
+      ),
+    ).toBe('Site Visit');
+    expect(
+      collectText(
+        tree.root.findByProps({ testID: 'screen-header-title' }).props.children,
+      ),
+    ).toBe('New report');
   });
 });

@@ -93,7 +93,8 @@ the end. Covers:
    photo strip, preview, delete
 9. Finalized photo report: saved-report photo strip and preview
 10. Generate + finalize: add note, generate/update report, per-card
-    edit modal coverage, finalize, unfinalize, re-finalize
+    edit modal coverage, finalize, add a published-report review comment,
+    unfinalize, re-finalize, and verify the comment persists
 11. Report Debug: prompt, report notes, LLM response, non-empty state
 12. Project delete teardown
 13. Account view + edit-cancel + edit-save + account-deletion cancel
@@ -172,6 +173,22 @@ Dev-deployment target:
 
 Modules 14/15/16 navigate to Profile / Account / Usage screens.
 
+## `report-review-comments.yaml` (focused published-report review)
+
+Focused iOS/Android entrypoint for the published-report tabs and review
+discussion. It creates a project and report, verifies Report is the default
+tab after finalization, adds a Review comment, then unfinalizes and
+re-finalizes the report to prove the discussion persists independently of
+publication state.
+
+Run against a freshly reset local fixture stack with the auth broker and
+fixture-mode Metro running:
+
+```bash
+scripts/maestro/reset-db.sh
+maestro test .maestro/report-review-comments.yaml
+```
+
 ## `native-input-smoke.yaml` (real recorder + camera start)
 
 Focused iOS/Android smoke for native input startup. This covers the
@@ -237,6 +254,10 @@ database and MinIO bucket first, then captures:
 6. finalized report detailed sections and unplaced photos
 7. generated PDF preview
 8. usage history with limits, OpenAI/Groq model mix, and recent events
+9. finalized-report review discussion with member comments
+
+The ninth capture is included in the iOS App Store inventory. The checked-in
+Play Store phone set remains curated to eight images.
 
 Run against the local fixture stack and a screenshot-mode Metro bundle:
 

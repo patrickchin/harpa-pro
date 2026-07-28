@@ -73,31 +73,22 @@ jobs:
 
       - uses: ./.github/actions/setup-monorepo
 
-      - uses: dopplerhq/cli-action@v3
-
-      - name: Resolve prod DATABASE_URL from Doppler
-        # Prod runs against a long-lived Neon branch (not a per-PR
-        # ensure flow — see api-dev.yml). The connection string is
-        # stored in Doppler `prd`; pull it here so the migrate step
-        # below targets prod instead of inheriting whatever local env
-        # the runner had.
+      # Pre-deploy Neon snapshot named after the commit SHA. Gives us
+      # a copy-on-write rollback target before Fly's release_command
+      # applies any pending migration. This is a blocking safety gate:
+      # missing credentials or a Neon API failure aborts the workflow
+      # before prod schema or data can change.
+      # See docs/v4/arch-cicd-and-migrations.md §Failure & rollback.
+      # (pnpm + node already set up at top of job; node_modules persists.)
+      - name: Snapshot prod DB (pre-deploy)
         env:
-          DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN_PRD }}
-        run: |
-          URI=$(doppler secrets get DATABASE_URL --plain)
-          echo "::add-mask::$URI"
-          echo "DATABASE_URL=$URI" >> "$GITHUB_ENV"
-
-      - name: Apply pending migrations to Neon prod
-        # Must run BEFORE the Fly deploy: a release that depends on a
-        # schema change shipped with the same PR (e.g. P3.15.5
-        # `llm_usage_events`) would 500 on startup if the migration
-        # hasn't landed. Pitfall 11.
-        env:
-          DATABASE_URL: ${{ env.DATABASE_URL }}
-        run: pnpm --filter @harpa/api db:migrate
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+          NEON_PROJECT_ID: ${{ secrets.NEON_PROJECT_ID }}
+        run: pnpm db:branch:snapshot "${GITHUB_SHA}" main
 
       - uses: superfly/flyctl-actions/setup-flyctl@1.5
+
+      - uses: dopplerhq/cli-action@v3
 
       - name: Sync Fly secrets from Doppler
         # See api-dev.yml for rationale. `--stage` defers activation;
@@ -110,27 +101,10 @@ jobs:
             | grep -vE '^(DOPPLER_|NEON_|FLY_|CLOUDFLARE_|PUBLIC_|EXPO_PUBLIC_|PAGES_PROJECT|PORT|NODE_ENV|ADMIN_EMAIL)' \
             | flyctl secrets import --stage --app harpa-pro-api
 
-      # Pre-deploy Neon snapshot named after the commit SHA. Gives us
-      # a copy-on-write rollback target even if a deploy ships a
-      # destructive migration or corrupts data. Independent of Neon's
-      # default PITR window (still available as a fallback). Best-
-      # effort: a snapshot failure does NOT block the deploy, but is
-      # surfaced as a workflow warning so it gets noticed.
-      # See docs/v4/arch-cicd-and-migrations.md §Failure & rollback.
-      # (pnpm + node already set up at top of job; node_modules persists.)
-      - name: Snapshot prod DB (pre-deploy)
-        continue-on-error: true
-        env:
-          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
-          NEON_PROJECT_ID: ${{ secrets.NEON_PROJECT_ID }}
-        run: |
-          if [[ -z "${NEON_API_KEY:-}" || -z "${NEON_PROJECT_ID:-}" ]]; then
-            echo "::warning::NEON_API_KEY / NEON_PROJECT_ID not set; skipping pre-deploy snapshot"
-            exit 0
-          fi
-          pnpm db:branch:snapshot "${GITHUB_SHA}" main
-
       - name: Deploy to Fly.io
+        # Migration application belongs exclusively to fly.toml's
+        # release_command. Fly aborts the rollout if migration or seed
+        # fails, after the blocking snapshot above has succeeded.
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
         run: ./infra/fly/deploy.sh --remote-only

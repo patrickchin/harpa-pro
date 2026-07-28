@@ -88,7 +88,11 @@ build-time manifest for the readiness check.**
 │      • computes MIGRATIONS_REQUIRED_HEAD = last filename               │
 │      • fails build if any check fails                                  │
 │                                                                        │
-│   2. flyctl deploy --build-arg MIGRATIONS_REQUIRED_HEAD=<head>         │
+│   2. Blocking pre-deploy snapshot                                      │
+│      • creates snapshot-<first-12-of-sha> from Neon prod `main`        │
+│      • failure or missing Neon credentials aborts before migrations    │
+│                                                                        │
+│   3. flyctl deploy --build-arg MIGRATIONS_REQUIRED_HEAD=<head>         │
 │      └─ Fly builds image                                               │
 │      └─ Fly starts a release machine                                   │
 │           └─ release_command: pnpm --filter @harpa/api db:migrate      │
@@ -105,16 +109,17 @@ build-time manifest for the readiness check.**
 │               • 200 only if all checks pass                            │
 │           └─ Fly auto-rollback if /readyz fails grace period           │
 │                                                                        │
-│   3. Post-deploy smoke (CI): curl $API_READY_URL (defaults to          │
+│   4. Post-deploy smoke (CI): curl $API_READY_URL (defaults to          │
 │      https://harpa-pro-api.fly.dev/readyz; override via repo var)      │
 │      from the runner, fail the workflow if it's not 200.               │
 └────────────────────────────────────────────────────────────────────────┘
 ```
 
-Backend previews and prod use the **same** mechanism for steps 2 + 3 — Fly's
-`release_command` runs migrations inside the release machine, against
-whatever `DATABASE_URL` is staged on the app. The only difference is
-which Fly app and which Neon branch is targeted.
+Backend previews, dev, and prod use the **same** migration mechanism:
+Fly's `release_command` runs migrations inside the release machine,
+against whatever `DATABASE_URL` is staged on the app. The blocking
+snapshot in step 2 is production-only; it must succeed before prod
+can enter that shared deploy path.
 
 ---
 
@@ -223,6 +228,11 @@ green. Both the poll loop and the surrounding job are bounded.
     `main` build; fails on rename/delete of an already-shipped file,
   - prints the computed head.
 - The `prod` job depends on `guard`. No `DATABASE_URL` secret added to CI.
+- Create a blocking Neon snapshot before `flyctl deploy`. Snapshot
+  failure, including missing Neon credentials, stops the workflow
+  before Fly's release machine can apply a migration.
+- Do not run `db:migrate` from GitHub Actions. Production migration
+  ownership stays with Fly's `release_command`.
 - Add a final step: `curl --fail "$API_READY_URL"` (defaults to
   `https://harpa-pro-api.fly.dev/readyz`; overridable via the
   `API_READY_URL` repo variable when a custom hostname is set up),
@@ -343,9 +353,11 @@ both via Neon's copy-on-write branching:
 
 1. **Per-deploy snapshot** (preferred — bounded, named).
    `api-prod.yml` calls `pnpm db:branch:snapshot $GITHUB_SHA`
-   before every deploy, creating `snapshot-<first-12-of-sha>` off
-   the prod parent. Pruned after 30 days by
-   `neon-snapshot-prune.yml`.
+   as a blocking gate before `flyctl deploy`, creating
+   `snapshot-<first-12-of-sha>` off the prod parent. Fly's
+   `release_command` is the only production migration owner, so no
+   migration can run before this snapshot succeeds. Snapshots are
+   pruned after 30 days by `neon-snapshot-prune.yml`.
 2. **Point-in-time recovery** (fallback — any timestamp in retention).
    Neon retains a continuous history (7 days on Free, 30 on
    Launch/Scale). Use this when the bad state predates the most
@@ -387,6 +399,7 @@ restore against a live compute. Branch-and-swap is the native idiom.
 
 | Scenario | What happens | Manual step |
 |---|---|---|
+| Pre-deploy snapshot fails | `api-prod.yml` exits before `flyctl deploy`; Fly never starts the release machine, so no migration runs and prod is unchanged. | Fix Neon credentials or service availability, then re-run the workflow. Do not bypass the snapshot gate. |
 | Migration syntax error in file N | Release machine exits non-zero, Fly aborts the rollout. App machines keep running the previous image (still compatible with schema up to file N-1, because all prior code must tolerate the prior schema). | Author opens a follow-up PR with the corrected SQL. No DB cleanup — failed file's transaction rolled back. |
 | Non-transactional file (`*.notx.sql`) fails mid-way | Loader has NOT recorded it in `app._migrations`. Partial side-effects (e.g. half-built index) may exist. Release machine exits non-zero, Fly aborts rollout. | Manual: drop the partial object, fix the SQL, re-deploy. Documented inline in the offending file's header comment. Discouraged — prefer transactional files. |
 | Migration succeeds, new code fails `/readyz` (e.g. unrelated runtime bug) | Fly's rolling deploy fails the new machine, auto-rollback to previous image. Previous image MUST be schema-compatible — that's the expand-contract guarantee. | Investigate the runtime bug. Schema is already forward — keep it; ship a fix-forward. |

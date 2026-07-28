@@ -23,6 +23,7 @@ exports[`ProjectsList > does not render ListHeaderComponent when empty 1`] = `
     >
       <rn-View
         className="min-h-touch flex-row items-center gap-3"
+        testID="screen-header-controls"
       >
         <rn-Text
           className="min-w-0 flex-1 text-title-sm text-foreground"
@@ -109,6 +110,7 @@ exports[`ProjectsList > matches snapshot when empty 1`] = `
     >
       <rn-View
         className="min-h-touch flex-row items-center gap-3"
+        testID="screen-header-controls"
       >
         <rn-Text
           className="min-w-0 flex-1 text-title-sm text-foreground"
@@ -195,6 +197,7 @@ exports[`ProjectsList > matches snapshot when loading 1`] = `
     >
       <rn-View
         className="min-h-touch flex-row items-center gap-3"
+        testID="screen-header-controls"
       >
         <rn-Text
           className="min-w-0 flex-1 text-title-sm text-foreground"
@@ -628,6 +631,7 @@ exports[`ProjectsList > matches snapshot with projects 1`] = `
     >
       <rn-View
         className="min-h-touch flex-row items-center gap-3"
+        testID="screen-header-controls"
       >
         <rn-Text
           className="min-w-0 flex-1 text-title-sm text-foreground"
@@ -781,6 +785,7 @@ exports[`ProjectsList > renders EmptyState when no projects 1`] = `
     >
       <rn-View
         className="min-h-touch flex-row items-center gap-3"
+        testID="screen-header-controls"
       >
         <rn-Text
           className="min-w-0 flex-1 text-title-sm text-foreground"
@@ -867,6 +872,7 @@ exports[`ProjectsList > renders address row only when address is non-null 1`] = 
     >
       <rn-View
         className="min-h-touch flex-row items-center gap-3"
+        testID="screen-header-controls"
       >
         <rn-Text
           className="min-w-0 flex-1 text-title-sm text-foreground"
@@ -1020,6 +1026,7 @@ exports[`ProjectsList > renders role labels correctly 1`] = `
     >
       <rn-View
         className="min-h-touch flex-row items-center gap-3"
+        testID="screen-header-controls"
       >
         <rn-Text
           className="min-w-0 flex-1 text-title-sm text-foreground"

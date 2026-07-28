@@ -63,6 +63,8 @@ update.
 | POST | `/reports/:reportId/finalize` | Finalize (frozen) |
 | POST | `/reports/:reportId/regenerate` | Regenerate report body |
 | POST | `/reports/:reportId/pdf` | Render PDF (returns signed URL) |
+| GET | `/projects/:id/reports/:number/comments` | List finalized-report review comments |
+| POST | `/projects/:id/reports/:number/comments` | Add a finalized-report review comment |
 
 ### Notes (`/reports/:reportId/notes`, authed)
 

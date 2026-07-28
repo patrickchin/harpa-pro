@@ -2,8 +2,8 @@
  * ReportDetailHeader — title + Actions button row for the saved-report
  * screen.
  *
- * Title rule (see `docs/v4/design-report-title-consistency.md`):
- *   title = report.meta.title?.trim() || `Report #N`
+ * Report identity stays compact in the controls row (`Site Visit #N`).
+ * The descriptive report title wraps on its own row below it.
  *
  * The finalized header is intentionally lean: no subtitle, no
  * report-type eyebrow, no standalone visit-date pill. The visit date
@@ -17,6 +17,10 @@ import { MoreHorizontal } from 'lucide-react-native';
 import { ScreenHeader } from '@/components/primitives/ScreenHeader';
 import { Button } from '@/components/primitives/Button';
 import { colors } from '@/lib/design-tokens/colors';
+import {
+  getReportHeaderControlTitle,
+  getReportHeaderTitle,
+} from '@/lib/reports/report-header-title';
 import type { GeneratedSiteReport } from '@harpa/report-core';
 
 interface ReportDetailHeaderProps {
@@ -24,6 +28,7 @@ interface ReportDetailHeaderProps {
   onBack: () => void;
   onOpenActions: () => void;
   actionsDisabled: boolean;
+  tabs: ReactNode;
   actions?: ReactNode;
   /** Per-project report number — drives the title fallback + testID. */
   reportNumber?: number | null;
@@ -34,17 +39,12 @@ export function ReportDetailHeader({
   onBack,
   onOpenActions,
   actionsDisabled,
+  tabs,
   actions,
   reportNumber,
 }: ReportDetailHeaderProps) {
   const numStr = reportNumber ?? 'x';
-  const rawTitle = report.report.meta.title?.trim();
-  const title =
-    rawTitle && rawTitle.length > 0
-      ? rawTitle
-      : reportNumber !== null && reportNumber !== undefined
-        ? `Report #${reportNumber}`
-        : 'Report';
+  const title = getReportHeaderTitle(report.report.meta.title);
 
   return (
     <View className="px-5 py-4">
@@ -54,9 +54,15 @@ export function ReportDetailHeader({
         backLabel="Reports"
         actions={actions}
         titleTestID={`report-title-${numStr}`}
+        stackedTitle
+        controlTitle={getReportHeaderControlTitle(reportNumber)}
       />
 
-      <View className="mt-3 flex-row items-center justify-end">
+      <View
+        testID="report-header-controls"
+        className="mt-3 flex-row items-center gap-2"
+      >
+        {tabs}
         <Button
           variant="secondary"
           size="default"
@@ -64,6 +70,7 @@ export function ReportDetailHeader({
           testID="btn-report-actions"
           onPress={onOpenActions}
           disabled={actionsDisabled}
+          className="shrink-0"
         >
           <View className="flex-row items-center gap-1.5">
             <MoreHorizontal size={16} color={colors.foreground} />

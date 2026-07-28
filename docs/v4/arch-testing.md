@@ -69,6 +69,16 @@ Each AI-touching route has a test that:
 2. The route picks up the fixture name (test mode only).
 3. Asserts response matches the recorded fixture.
 
+### Live AI regression lane
+
+- `ai-live.yml` runs the live provider tests when prompts, provider
+  wiring, report schemas, or the live-test harness changes.
+- Each real provider call has a 120-second test budget inside the
+  workflow's 10-minute job budget. Provider timeouts still fail the
+  lane; schema and model-routing assertions are never retried.
+- Run it manually with
+  `AI_LIVE=1 OPENAI_API_KEY=… pnpm --filter @harpa/api test:live`.
+
 ### Mobile visual review
 
 - Manual, in the iOS simulator, side-by-side with the canonical

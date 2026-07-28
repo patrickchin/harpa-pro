@@ -19,18 +19,25 @@ replace store media by accident.
 
 ```text
 apps/mobile/fastlane/screenshots/en-US/
-  01-projects-IPHONE_67.png
-  02-report-IPHONE_67.png
-  03-voice-IPHONE_67.png
-  04-photos-IPHONE_67.png
-  05-pdf-IPHONE_67.png
+  01_projects_list.png
+  02_reports_list.png
+  03_members_team.png
+  04_voice_recording.png
+  05_final_report_issues.png
+  06_final_report_sections_unplaced.png
+  07_pdf_preview.png
+  08_usage.png
+  09_report_review.png
 
 apps/mobile/fastlane/metadata/android/en-US/images/
-  phoneScreenshots/01-projects.png
-  phoneScreenshots/02-report.png
-  phoneScreenshots/03-voice.png
-  sevenInchScreenshots/01-projects.png
-  tenInchScreenshots/01-projects.png
+  phoneScreenshots/01_projects_list.png
+  phoneScreenshots/02_reports_list.png
+  phoneScreenshots/03_members_team.png
+  phoneScreenshots/04_voice_recording.png
+  phoneScreenshots/05_final_report_issues.png
+  phoneScreenshots/06_final_report_sections_unplaced.png
+  phoneScreenshots/07_pdf_preview.png
+  phoneScreenshots/08_usage.png
 ```
 
 Capture screenshots from a real v4 build using production-like data. Do not use

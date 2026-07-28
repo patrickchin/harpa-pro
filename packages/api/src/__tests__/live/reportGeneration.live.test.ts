@@ -13,8 +13,8 @@
  *      prompts/services/contract/providers/fixtures)
  *   - manual: `AI_LIVE=1 OPENAI_API_KEY=… pnpm --filter @harpa/api test:live`
  *
- * Expected cost: ~6 short gpt-4.1-mini calls per run (3 happy-path
- * + 3 adversarial). ~$0.006 total.
+ * Expected cost: 8 short OpenAI calls per run (6 default-model
+ * scenarios + 1 model override + 1 null-settings fallback).
  *
  * No skip-guard: this file is only loaded by `vitest.live.config.ts`
  * (the `test:live` script). If you run it, you mean it. Missing
@@ -169,7 +169,6 @@ describeOrSkip('generateReport — live OpenAI', () => {
         }
       }
     },
-    60_000,
   );
 
   it(
@@ -191,7 +190,6 @@ describeOrSkip('generateReport — live OpenAI', () => {
         throw new Error(`reportBody validation failed: ${issues}`);
       }
     },
-    60_000,
   );
 
   it(
@@ -206,6 +204,5 @@ describeOrSkip('generateReport — live OpenAI', () => {
       expect(result.vendor).toBe('openai');
       expect(result.model).toBe('gpt-4.1-mini');
     },
-    60_000,
   );
 });

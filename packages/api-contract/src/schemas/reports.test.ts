@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import {
+  createReportCommentRequest,
   placeReportAttachmentRequest,
+  reportComment,
   reportBody,
 } from './reports.js';
 
@@ -115,5 +117,36 @@ describe('placeReportAttachmentRequest', () => {
       expectedBodyVersion: '2026-06-09T12:00:00.000Z',
     });
     expect(result.success).toBe(false);
+  });
+});
+
+describe('report review comment contract', () => {
+  it('accepts the response shape returned to project members', () => {
+    const result = reportComment.safeParse({
+      id: 'rcm_8h3kq2vp9w',
+      reportId: 'rpt_8h3kq2vp',
+      authorId: 'usr_8h3kq2vp9w7x',
+      authorDisplayName: 'Alice Owner',
+      body: 'Please verify the delivery count.',
+      createdAt: '2026-07-19T10:30:00.000Z',
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it('trims a valid comment body', () => {
+    const result = createReportCommentRequest.parse({
+      body: '  Count checked.  ',
+    });
+    expect(result.body).toBe('Count checked.');
+  });
+
+  it('rejects whitespace and bodies over 2,000 characters', () => {
+    expect(
+      createReportCommentRequest.safeParse({ body: '   ' }).success,
+    ).toBe(false);
+    expect(
+      createReportCommentRequest.safeParse({ body: 'x'.repeat(2_001) })
+        .success,
+    ).toBe(false);
   });
 });

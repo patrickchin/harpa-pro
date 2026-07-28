@@ -71,13 +71,27 @@ tags:
       id: "project-row-prj_rvrsd000001"
     timeout: 15000
 - extendedWaitUntil:
-    visible: "Harbor Point Retrofit"
+    visible:
+      id: "project-row-prj_harbp000001"
     timeout: 15000
+- assertVisible:
+    id: "screen-header-controls"
+- assertVisible:
+    id: "screen-header-title"
+- assertNotVisible:
+    id: "screen-header-title-row"
 - waitForAnimationToEnd
 - takeScreenshot: 01_projects_list
 
 - tapOn:
     id: "project-row-prj_rvrsd000001"
+- runFlow:
+    when:
+      visible:
+        id: "project-row-prj_rvrsd000001"
+    commands:
+      - tapOn:
+          id: "project-row-prj_rvrsd000001"
 - extendedWaitUntil:
     visible:
       id: "btn-open-reports"
@@ -96,6 +110,12 @@ tags:
     visible:
       id: "report-row-3"
     timeout: 15000
+- assertVisible:
+    id: "screen-header-controls"
+- assertVisible:
+    id: "screen-header-title"
+- assertNotVisible:
+    id: "screen-header-title-row"
 - waitForAnimationToEnd
 - takeScreenshot: 02_reports_list
 
@@ -117,6 +137,12 @@ tags:
 - extendedWaitUntil:
     visible: "Priya Shah"
     timeout: 15000
+- assertVisible:
+    id: "screen-header-controls"
+- assertVisible:
+    id: "screen-header-title"
+- assertNotVisible:
+    id: "screen-header-title-row"
 - waitForAnimationToEnd
 - takeScreenshot: 03_members_team
 
@@ -130,6 +156,11 @@ tags:
 - extendedWaitUntil:
     visible: "Access path follow-up"
     timeout: 30000
+- assertVisible:
+    id: "screen-header-controls"
+- assertVisible:
+    id: "screen-header-title-row"
+- assertVisible: "Site Visit #4"
 - tapOn:
     id: "btn-record-start"
 - extendedWaitUntil:
@@ -153,6 +184,11 @@ tags:
     visible:
       id: "saved-report-pane"
     timeout: 30000
+- assertVisible:
+    id: "screen-header-controls"
+- assertVisible:
+    id: "screen-header-title-row"
+- assertVisible: "Site Visit #3"
 - scrollUntilVisible:
     element:
       id: "placed-photos-issue-.*"
@@ -200,6 +236,12 @@ tags:
     visible:
       id: "pdf-preview"
     timeout: 60000
+- assertVisible:
+    id: "screen-header-controls"
+- assertVisible:
+    id: "screen-header-title"
+- assertNotVisible:
+    id: "screen-header-title-row"
 - waitForAnimationToEnd
 - takeScreenshot: 07_pdf_preview
 
@@ -220,6 +262,12 @@ tags:
     notVisible:
       id: "usage-loading"
     timeout: 15000
+- assertVisible:
+    id: "screen-header-controls"
+- assertVisible:
+    id: "screen-header-title"
+- assertNotVisible:
+    id: "screen-header-title-row"
 - scrollUntilVisible:
     element:
       id: "usage-by-model"
@@ -236,3 +284,36 @@ tags:
     centerElement: false
 - waitForAnimationToEnd
 - takeScreenshot: 08_usage
+
+- openLink: "harpa://projects/prj_rvrsd000001/reports/3"
+- runFlow:
+    file: helpers/dismiss-open-dialog.yaml
+- extendedWaitUntil:
+    visible:
+      id: "report-title-.*"
+    timeout: 30000
+- assertVisible:
+    id: "report-header-controls"
+- assertVisible:
+    id: "screen-header-controls"
+- assertVisible:
+    id: "screen-header-title-row"
+- assertVisible: "Site Visit #3"
+- assertVisible:
+    id: "saved-report-pane"
+- assertVisible:
+    id: "btn-tab-report"
+- assertVisible:
+    id: "btn-tab-review"
+- tapOn:
+    id: "btn-tab-review"
+- extendedWaitUntil:
+    visible: "Waterproofing repair details verified.*"
+    timeout: 15000
+- extendedWaitUntil:
+    visible: "Fire lane staging plan reviewed.*"
+    timeout: 15000
+- assertVisible:
+    id: "report-review-composer"
+- waitForAnimationToEnd
+- takeScreenshot: 09_report_review

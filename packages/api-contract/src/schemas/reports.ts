@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { isoDateTime, reportNumber } from './_shared.js';
-import { noteId, projectId, reportId } from './ids.js';
+import { noteId, projectId, reportCommentId, reportId, userId } from './ids.js';
 import { noteFile, noteKind } from './notes.js';
 
 export const reportStatus = z.enum(['draft', 'finalized']);
@@ -135,6 +135,24 @@ export const report = z.object({
   updatedAt: isoDateTime,
 });
 export type Report = z.infer<typeof report>;
+
+export const reportComment = z.object({
+  id: reportCommentId,
+  reportId,
+  authorId: userId,
+  authorDisplayName: z.string().min(1),
+  body: z.string().min(1).max(2_000),
+  createdAt: isoDateTime,
+});
+export type ReportComment = z.infer<typeof reportComment>;
+
+export const listReportCommentsResponse = z.object({
+  items: z.array(reportComment),
+});
+
+export const createReportCommentRequest = z.object({
+  body: z.string().trim().min(1).max(2_000),
+});
 
 export const createReportRequest = z.object({
   visitDate: isoDateTime.optional(),

@@ -141,11 +141,21 @@ function baseProps(overrides: Partial<SavedReportProps> = {}): SavedReportProps 
 
 describe('SavedReport', () => {
   it('renders the skeleton when isLoading', () => {
-    const tree = render(<SavedReport {...baseProps({ isLoading: true })} />);
+    const tree = render(
+      <SavedReport {...baseProps({ isLoading: true, reportNumber: 4 })} />,
+    );
     expect(
       tree.root.findAllByProps({ testID: 'report-detail-skeleton' }).length,
     ).toBeGreaterThan(0);
     expect(tree.root.findAllByProps({ testID: 'btn-report-actions' })).toHaveLength(0);
+    expect(
+      tree.root.findByProps({ testID: 'screen-header-title-row' }),
+    ).toBeTruthy();
+    expect(
+      collectText(
+        tree.root.findAllByProps({ testID: 'screen-header-controls' })[0],
+      ),
+    ).toContain('Site Visit #4');
   });
 
   it('renders the invalid-route fallback when hasValidRouteParams=false', () => {
@@ -216,6 +226,223 @@ describe('SavedReport', () => {
     ).toHaveLength(0);
   });
 
+  it('shows Report and Review tabs on a finalized report with Report selected by default', () => {
+    const tree = render(
+      <SavedReport {...baseProps({ reportStatus: 'finalized' })} />,
+    );
+    expect(tree.root.findByProps({ testID: 'btn-tab-report' })).toBeTruthy();
+    expect(tree.root.findByProps({ testID: 'btn-tab-review' })).toBeTruthy();
+    expect(
+      tree.root.findAllByProps({ testID: 'saved-report-pane' }).length,
+    ).toBeGreaterThan(0);
+    expect(
+      tree.root.findAllByProps({ testID: 'report-review-pane' }),
+    ).toHaveLength(0);
+  });
+
+  it('places the published report tabs on the same row as Actions', () => {
+    const tree = render(
+      <SavedReport {...baseProps({ reportStatus: 'finalized' })} />,
+    );
+    const controls = tree.root.findByProps({
+      testID: 'report-header-controls',
+    });
+
+    expect(controls.props.className).toContain('flex-row');
+    expect(
+      controls.findByProps({ testID: 'btn-tab-report' }),
+    ).toBeTruthy();
+    expect(
+      controls.findByProps({ testID: 'btn-tab-review' }),
+    ).toBeTruthy();
+    expect(
+      controls.findByProps({ testID: 'btn-report-actions' }),
+    ).toBeTruthy();
+  });
+
+  it('shows the empty review state when a finalized report has no comments', () => {
+    const tree = render(
+      <SavedReport {...baseProps({ reportStatus: 'finalized' })} />,
+    );
+    act(() => {
+      tree.root.findByProps({ testID: 'btn-tab-review' }).props.onPress();
+    });
+    expect(treeText(tree)).toContain('No review comments yet');
+  });
+
+  it('shows a review loading state while comments are being fetched', () => {
+    const tree = render(
+      <SavedReport
+        {...baseProps({
+          reportStatus: 'finalized',
+          reviewCommentsLoading: true,
+        })}
+      />,
+    );
+    act(() => {
+      tree.root.findByProps({ testID: 'btn-tab-review' }).props.onPress();
+    });
+    expect(
+      tree.root.findByProps({ testID: 'report-review-loading' }),
+    ).toBeTruthy();
+  });
+
+  it('shows a retryable review error without hiding the composer', () => {
+    const onRetryReviewComments = vi.fn();
+    const tree = render(
+      <SavedReport
+        {...baseProps({
+          reportStatus: 'finalized',
+          reviewCommentsError: new Error('Review unavailable'),
+          onRetryReviewComments,
+        })}
+      />,
+    );
+    act(() => {
+      tree.root.findByProps({ testID: 'btn-tab-review' }).props.onPress();
+    });
+    expect(treeText(tree)).toContain("Couldn't load review comments");
+    expect(
+      tree.root.findByProps({ testID: 'input-report-review-comment' }),
+    ).toBeTruthy();
+    act(() => {
+      tree.root
+        .findByProps({ testID: 'btn-retry-report-review' })
+        .props.onPress();
+    });
+    expect(onRetryReviewComments).toHaveBeenCalledOnce();
+  });
+
+  it('renders an unwrapped four-line review comment field', () => {
+    const tree = render(
+      <SavedReport {...baseProps({ reportStatus: 'finalized' })} />,
+    );
+    act(() => {
+      tree.root.findByProps({ testID: 'btn-tab-review' }).props.onPress();
+    });
+
+    const composer = tree.root.findByProps({
+      testID: 'report-review-composer',
+    });
+    const input = composer.findByProps({
+      testID: 'input-report-review-comment',
+    });
+
+    expect(composer.props.className).not.toMatch(/border|rounded|bg-card/);
+    expect(input.props.multiline).toBe(true);
+    expect(input.props.numberOfLines).toBe(4);
+    expect(input.props.className).toContain('h-28');
+  });
+
+  it('switches to Review and submits a comment without losing the typed text early', async () => {
+    const onAddReviewComment = vi.fn(async () => undefined);
+    const props = {
+      ...baseProps({ reportStatus: 'finalized' }),
+      reviewComments: [
+        {
+          id: 'rcm_8h3kq2vp9w',
+          reportId: 'rpt_8h3kq2vp',
+          authorId: 'usr_8h3kq2vp9w7x',
+          authorDisplayName: 'Alice Owner',
+          body: 'Please verify the delivery count.',
+          createdAt: '2026-07-19T10:30:00.000Z',
+        },
+      ],
+      onAddReviewComment,
+    } as SavedReportProps;
+    const tree = render(<SavedReport {...props} />);
+
+    act(() => {
+      tree.root.findByProps({ testID: 'btn-tab-review' }).props.onPress();
+    });
+    expect(
+      tree.root.findAllByProps({ testID: 'report-review-pane' }).length,
+    ).toBeGreaterThan(0);
+    expect(treeText(tree)).toContain('Alice Owner');
+    expect(treeText(tree)).toContain('Please verify the delivery count.');
+
+    const input = tree.root.findByProps({
+      testID: 'input-report-review-comment',
+    });
+    act(() => {
+      input.props.onChangeText('Count checked. It is correct.');
+    });
+    expect(input.props.value).toBe('Count checked. It is correct.');
+
+    await act(async () => {
+      await tree.root
+        .findByProps({ testID: 'btn-add-report-review-comment' })
+        .props.onPress();
+    });
+    expect(onAddReviewComment).toHaveBeenCalledWith(
+      'Count checked. It is correct.',
+    );
+    expect(
+      tree.root.findByProps({ testID: 'input-report-review-comment' }).props
+        .value,
+    ).toBe('');
+  });
+
+  it('keeps a draft review comment when submission fails', async () => {
+    const onAddReviewComment = vi.fn(async () => {
+      throw new Error('Could not add comment');
+    });
+    const props = {
+      ...baseProps({ reportStatus: 'finalized' }),
+      reviewComments: [],
+      onAddReviewComment,
+    } as SavedReportProps;
+    const tree = render(<SavedReport {...props} />);
+
+    act(() => {
+      tree.root.findByProps({ testID: 'btn-tab-review' }).props.onPress();
+    });
+    act(() => {
+      tree.root
+        .findByProps({ testID: 'input-report-review-comment' })
+        .props.onChangeText('Please retry this comment.');
+    });
+    await act(async () => {
+      await tree.root
+        .findByProps({ testID: 'btn-add-report-review-comment' })
+        .props.onPress();
+    });
+    expect(
+      tree.root.findByProps({ testID: 'input-report-review-comment' }).props
+        .value,
+    ).toBe('Please retry this comment.');
+    expect(treeText(tree)).toContain('Could not add comment');
+  });
+
+  it('renders the site-visit number above a descriptive wrapping title', () => {
+    const longReport = JSON.parse(
+      JSON.stringify(SAMPLE_GENERATED_REPORT),
+    ) as GeneratedSiteReport;
+    longReport.report.meta.title =
+      'Site Visit — Highland Tower structural inspection and delivery reconciliation report';
+    const tree = render(
+      <SavedReport
+        {...baseProps({
+          report: longReport,
+          reportStatus: 'finalized',
+          reportNumber: 4,
+        })}
+      />,
+    );
+    const title = tree.root.findByProps({ testID: 'report-title-4' });
+    const controls = tree.root.findAllByProps({
+      testID: 'screen-header-controls',
+    })[0];
+
+    expect(collectText(controls)).toContain('Site Visit #4');
+    expect(collectText(title)).toBe(
+      'Highland Tower structural inspection and delivery reconciliation report',
+    );
+    expect(title.props.numberOfLines).toBeUndefined();
+    expect(title.props.ellipsizeMode).toBeUndefined();
+    expect(title.parent?.props.className).toContain('w-full');
+  });
+
   it('surfaces "View Notes" in the actions menu when onViewNotes is provided', () => {
     const onViewNotes = vi.fn();
     const tree = render(
@@ -259,17 +486,17 @@ describe('SavedReport', () => {
     ).toBeGreaterThan(0);
   });
 
-  it('bounces from Notes back to Report when the report flips to finalized', () => {
+  it('opens Report when finalized with a stale Notes initial tab', () => {
     const props = baseProps({ initialTab: 'notes' });
     const tree = render(<SavedReport {...props} />);
     expect(
       tree.root.findAllByProps({ testID: 'report-notes-pane' }).length,
     ).toBeGreaterThan(0);
-    act(() => {
-      tree.update(<SavedReport {...props} reportStatus="finalized" />);
-    });
+    const finalizedTree = render(
+      <SavedReport {...props} reportStatus="finalized" />,
+    );
     expect(
-      tree.root.findAllByProps({ testID: 'saved-report-pane' }).length,
+      finalizedTree.root.findAllByProps({ testID: 'saved-report-pane' }).length,
     ).toBeGreaterThan(0);
   });
 
@@ -466,7 +693,7 @@ const REPORT_WITH_PLACED_PHOTO = {
 } as GeneratedSiteReport;
 
 describe('SavedReport — finalized layout', () => {
-  it('does not render the tab bar when finalized', () => {
+  it('renders Report and Review tabs when finalized', () => {
     const tree = render(
       <SavedReport
         {...finalizedDefaults}
@@ -476,13 +703,16 @@ describe('SavedReport — finalized layout', () => {
     );
     expect(
       tree.root.findAllByProps({ testID: 'btn-tab-report' }),
-    ).toHaveLength(0);
+    ).not.toHaveLength(0);
+    expect(
+      tree.root.findAllByProps({ testID: 'btn-tab-review' }),
+    ).not.toHaveLength(0);
     expect(
       tree.root.findAllByProps({ testID: 'btn-tab-notes' }),
     ).toHaveLength(0);
   });
 
-  it('falls back to "Report #N" when meta.title is empty', () => {
+  it('uses a generic descriptive title when meta.title is empty', () => {
     const blank = {
       ...SAMPLE_GENERATED_REPORT,
       report: {
@@ -502,6 +732,14 @@ describe('SavedReport — finalized layout', () => {
     expect(
       tree.root.findAllByProps({ testID: 'saved-report-pane' }).length,
     ).toBeGreaterThan(0);
+    expect(
+      collectText(
+        tree.root.findAllByProps({ testID: 'screen-header-controls' })[0],
+      ),
+    ).toContain('Site Visit #7');
+    expect(
+      collectText(tree.root.findByProps({ testID: 'report-title-7' })),
+    ).toBe('Report');
   });
 
   it('does not expose photo placement edits when finalized', () => {

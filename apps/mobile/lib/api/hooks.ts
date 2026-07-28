@@ -508,6 +508,38 @@ export function usePlaceReportAttachmentMutation(
   });
 }
 
+export type ReportCommentsQueryInput = { params: PathParams<"/projects/{project}/reports/{number}/comments", "get">; query?: QueryParams<"/projects/{project}/reports/{number}/comments", "get"> };
+export function useReportCommentsQuery(
+  input: ReportCommentsQueryInput,
+  options?: Omit<UseQueryOptions<ResponseBody<"/projects/{project}/reports/{number}/comments", "get">, ApiError>, 'queryKey' | 'queryFn'>,
+) {
+  return useQuery<ResponseBody<"/projects/{project}/reports/{number}/comments", "get">, ApiError>({
+    queryKey: ["reportComments", input.params, input.query] as const,
+    queryFn: ({ signal }) => request("/projects/{project}/reports/{number}/comments", "get", { params: input.params, query: input.query, signal }),
+    ...options,
+  });
+}
+
+export type CreateReportCommentMutationVars = { params: PathParams<"/projects/{project}/reports/{number}/comments", "post">; body: RequestBody<"/projects/{project}/reports/{number}/comments", "post"> };
+export function useCreateReportCommentMutation(
+  options?: UseMutationOptions<ResponseBody<"/projects/{project}/reports/{number}/comments", "post">, ApiError, CreateReportCommentMutationVars>,
+) {
+  const qc = useQueryClient();
+  return useMutation<ResponseBody<"/projects/{project}/reports/{number}/comments", "post">, ApiError, CreateReportCommentMutationVars>({
+    mutationFn: (vars) => request("/projects/{project}/reports/{number}/comments", "post", { params: vars.params, body: vars.body }),
+    ...options,
+    onSuccess: (...args) => {
+      const rule = INVALIDATIONS["useCreateReportCommentMutation"];
+      if (rule && rule !== INVALIDATIONS_NONE) {
+        for (const head of rule) {
+          qc.invalidateQueries({ queryKey: [head] });
+        }
+      }
+      return options?.onSuccess?.(...args);
+    },
+  });
+}
+
 // ─── p ───────────────────────────────────────────
 export type ResolveProjectSlugQueryInput = { params: PathParams<"/p/{project}", "get">; query?: QueryParams<"/p/{project}", "get"> };
 export function useResolveProjectSlugQuery(

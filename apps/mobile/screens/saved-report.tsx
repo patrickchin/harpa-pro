@@ -55,12 +55,17 @@ import {
   ReportNotesPane,
   type ReportNoteRow,
 } from '@/components/reports/detail/ReportNotesPane';
+import {
+  ReportReviewPane,
+  type ReportReviewPaneProps,
+} from '@/components/reports/detail/ReportReviewPane';
 import { flattenPhotoGallery } from '@/lib/api/to-report-note-row';
 import { ReportActionsMenu } from '@/components/reports/detail/ReportActionsMenu';
 import { SavedReportSheet } from '@/components/reports/detail/SavedReportSheet';
 import { ReportDetailSkeleton } from '@/components/skeletons/ReportDetailSkeleton';
 import { useLayoutShiftProbe } from '@/lib/util/layout-shift-probe';
 import { colors } from '@/lib/design-tokens/colors';
+import { getReportHeaderControlTitle } from '@/lib/reports/report-header-title';
 import {
   getDeleteReportDialogCopy,
   getUnfinalizeReportDialogCopy,
@@ -136,6 +141,14 @@ export interface SavedReportProps {
   /** Optional initial tab for dev mirrors + tests. */
   initialTab?: ReportDetailTab;
 
+  /** Finalized-report review discussion. Routes own fetch/mutation I/O. */
+  reviewComments?: ReportReviewPaneProps['comments'];
+  reviewCommentsLoading?: boolean;
+  reviewCommentsError?: Error | null;
+  isAddingReviewComment?: boolean;
+  onRetryReviewComments?: () => void;
+  onAddReviewComment?: (body: string) => void | Promise<void>;
+
   /** Profile button slot — rendered in the report detail header. */
   actions?: ReactNode;
 
@@ -197,6 +210,12 @@ export function SavedReport(props: SavedReportProps) {
     isUnfinalizing,
     pdfActions,
     initialTab,
+    reviewComments = [],
+    reviewCommentsLoading = false,
+    reviewCommentsError = null,
+    isAddingReviewComment = false,
+    onRetryReviewComments,
+    onAddReviewComment,
     actions,
     onViewNotes,
     showDeveloperSection,
@@ -237,12 +256,13 @@ export function SavedReport(props: SavedReportProps) {
 
   const isFinal = reportStatus === 'finalized';
 
-  // Finalized reports are read-only — bounce back to Report tab if the
-  // status flips to finalized while the user is on Notes (the Notes
-  // tab is hidden for finalised reports; access moves to the Actions
-  // menu).
+  // Keep the active tab valid when report publication state changes.
+  // Drafts offer Notes; finalized reports replace it with Review.
   useEffect(() => {
     if (isFinal && activeTab === 'notes') {
+      setActiveTab('report');
+    }
+    if (!isFinal && activeTab === 'review') {
       setActiveTab('report');
     }
   }, [isFinal, activeTab]);
@@ -382,13 +402,21 @@ export function SavedReport(props: SavedReportProps) {
               onBack={onBack}
               backLabel="Reports"
               actions={actions}
+              stackedTitle
+              controlTitle={getReportHeaderControlTitle(reportNumber)}
             />
           </View>
 
-          <View className="mt-3 flex-row items-center justify-between">
-            <View className="flex-row items-center gap-1 rounded-md border border-border bg-card px-3 py-2">
-              <Skeleton width={14} height={14} circle />
-              <Skeleton width={72} height={14} />
+          <View className="mt-3 flex-row items-center gap-2">
+            <View className="min-w-0 flex-1 flex-row rounded-lg border border-border bg-card p-1">
+              <View className="min-h-touch flex-1 flex-row items-center justify-center gap-2 rounded-md">
+                <Skeleton width={14} height={14} />
+                <Skeleton width={44} height={14} />
+              </View>
+              <View className="min-h-touch flex-1 flex-row items-center justify-center gap-2 rounded-md">
+                <Skeleton width={14} height={14} />
+                <Skeleton width={48} height={14} />
+              </View>
             </View>
             <View className="min-h-touch flex-row items-center gap-1.5 rounded-md border border-border bg-secondary px-4 py-3">
               <MoreHorizontal size={16} color={colors.foreground} />
@@ -476,20 +504,19 @@ export function SavedReport(props: SavedReportProps) {
           actionsDisabled={
             isSaving || isExporting || isDeleting || isUnfinalizing
           }
+          tabs={
+            <ReportDetailTabBar
+              activeTab={activeTab}
+              onChange={setActiveTab}
+              secondaryTab={isFinal ? 'review' : 'notes'}
+              secondaryCount={isFinal ? reviewComments.length : notesCount}
+            />
+          }
           actions={actions}
           reportNumber={reportNumber}
         />
 
-        {!isFinal ? (
-          <ReportDetailTabBar
-            activeTab={activeTab}
-            onChange={setActiveTab}
-            notesCount={notesCount}
-            showNotesTab={!isFinal}
-          />
-        ) : null}
-
-        {isFinal || activeTab === 'report' ? (
+        {activeTab === 'report' ? (
           <Animated.View
             entering={FadeIn.duration(250)}
             className="px-5"
@@ -525,6 +552,17 @@ export function SavedReport(props: SavedReportProps) {
                 placedNoteIds={placedNoteIds}
               />
             </View>
+          </Animated.View>
+        ) : activeTab === 'review' && isFinal ? (
+          <Animated.View entering={FadeIn.duration(250)}>
+            <ReportReviewPane
+              comments={reviewComments}
+              isLoading={reviewCommentsLoading}
+              error={reviewCommentsError}
+              isSubmitting={isAddingReviewComment}
+              onRetry={onRetryReviewComments}
+              onAddComment={onAddReviewComment}
+            />
           </Animated.View>
         ) : (
           <Animated.View entering={FadeIn.duration(250)}>

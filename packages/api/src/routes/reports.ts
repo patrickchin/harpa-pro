@@ -50,6 +50,7 @@ import {
   type ReportRow,
 } from '../services/reports.js';
 import { getProjectBySlug } from '../services/projects.js';
+import { createReportComment, listReportComments } from '../services/report-comments.js';
 import { generateReport as aiGenerateReport } from '../services/ai.js';
 import { enforceUsageLimit, attachUsageWarning } from '../services/usage-limits.js';
 import { getAiSettings } from '../services/settings.js';
@@ -121,6 +122,79 @@ reportRoutes.openapi(
     if (!project) throw new HTTPException(404, { message: 'Project not found.' });
     const out = await db((d) => listReports(d, { projectId: project.id, cursor: q.cursor, limit: q.limit ?? 20 }));
     return c.json({ ...out, items: out.items.map(toReportResponse) }, 200);
+  },
+);
+
+// --------- finalized-report review comments ----------
+reportRoutes.openapi(
+  createRoute({
+    method: 'get',
+    path: '/projects/{project}/reports/{number}/comments',
+    tags: ['reports'],
+    security: [{ bearerAuth: [] }],
+    middleware: [withAuth()] as const,
+    request: { params: reportPathParam },
+    responses: {
+      200: {
+        description: 'Published report review comments.',
+        content: { 'application/json': { schema: reportSchemas.listReportCommentsResponse } },
+      },
+      401: { description: 'Unauthorized.', content: { 'application/json': { schema: errorEnvelope } } },
+      404: { description: 'Not found.', content: { 'application/json': { schema: errorEnvelope } } },
+      409: { description: 'Report is not finalized.', content: { 'application/json': { schema: errorEnvelope } } },
+    },
+  }),
+  async (c) => {
+    const db = c.get('db');
+    if (!db) throw new HTTPException(401);
+    const { project: slug, number } = c.req.valid('param');
+    const report = await loadReport(db, slug, number);
+    if (report.status !== 'finalized') {
+      throw new HTTPException(409, { message: 'Report must be finalized before review.' });
+    }
+    const items = await db((d) => listReportComments(d, report.id));
+    return c.json({ items }, 200);
+  },
+);
+
+reportRoutes.openapi(
+  createRoute({
+    method: 'post',
+    path: '/projects/{project}/reports/{number}/comments',
+    tags: ['reports'],
+    security: [{ bearerAuth: [] }],
+    middleware: [withAuth()] as const,
+    request: {
+      params: reportPathParam,
+      body: { content: { 'application/json': { schema: reportSchemas.createReportCommentRequest } } },
+    },
+    responses: {
+      201: {
+        description: 'Review comment created.',
+        content: { 'application/json': { schema: reportSchemas.reportComment } },
+      },
+      400: { description: 'Bad request.', content: { 'application/json': { schema: errorEnvelope } } },
+      401: { description: 'Unauthorized.', content: { 'application/json': { schema: errorEnvelope } } },
+      404: { description: 'Not found.', content: { 'application/json': { schema: errorEnvelope } } },
+      409: { description: 'Report is not finalized.', content: { 'application/json': { schema: errorEnvelope } } },
+    },
+  }),
+  async (c) => {
+    const userId = c.get('userId');
+    const db = c.get('db');
+    if (!userId || !db) throw new HTTPException(401);
+    const { project: slug, number } = c.req.valid('param');
+    const { body } = c.req.valid('json');
+    const report = await loadReport(db, slug, number);
+    if (report.status !== 'finalized') {
+      throw new HTTPException(409, { message: 'Report must be finalized before review.' });
+    }
+    const comment = await db((d) => createReportComment(d, {
+      reportId: report.id,
+      authorId: userId,
+      body,
+    }));
+    return c.json(comment, 201);
   },
 );
 

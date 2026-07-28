@@ -180,9 +180,9 @@ function walk(value: unknown, terms: SensitiveTerms): unknown {
       // Strip auth-y headers entirely.
       if (AUTH_KEY_RE.test(k)) {
         out[k] = '<redacted>';
-      } else if (v != null && ORGANIZATION_KEY_RE.test(k)) {
+      } else if (typeof v === 'string' && ORGANIZATION_KEY_RE.test(k)) {
         out[k] = ORGANIZATION_PLACEHOLDER;
-      } else if (v != null && ADDRESS_KEY_RE.test(k)) {
+      } else if (typeof v === 'string' && ADDRESS_KEY_RE.test(k)) {
         out[k] = ADDRESS_PLACEHOLDER;
       } else {
         out[k] = walk(v, terms);

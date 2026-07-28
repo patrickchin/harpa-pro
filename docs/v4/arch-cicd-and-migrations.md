@@ -44,7 +44,8 @@ build-time manifest for the readiness check.**
   image at build time as `MIGRATIONS_REQUIRED_HEAD`) is present in
   `app._migrations`. Fly's HTTP check is moved to `/readyz`. `/healthz`
   stays as cheap liveness (no DB) but now also returns `version` /
-  `gitCommit` / `buildTime` from `GIT_COMMIT` + `BUILD_TIME` build-args
+  `gitCommit` / `buildTime` from `GIT_COMMIT` + `BUILD_TIME` build-args.
+  `GIT_COMMIT` is the full 40-character SHA
   so the mobile BuildBadge (and ops dashboards) can show which commit
   is serving traffic.
 
@@ -87,7 +88,11 @@ build-time manifest for the readiness check.**
 │      • computes MIGRATIONS_REQUIRED_HEAD = last filename               │
 │      • fails build if any check fails                                  │
 │                                                                        │
-│   2. flyctl deploy --build-arg MIGRATIONS_REQUIRED_HEAD=<head>         │
+│   2. Blocking pre-deploy snapshot                                      │
+│      • creates snapshot-<first-12-of-sha> from Neon prod `main`        │
+│      • failure or missing Neon credentials aborts before migrations    │
+│                                                                        │
+│   3. flyctl deploy --build-arg MIGRATIONS_REQUIRED_HEAD=<head>         │
 │      └─ Fly builds image                                               │
 │      └─ Fly starts a release machine                                   │
 │           └─ release_command: pnpm --filter @harpa/api db:migrate      │
@@ -104,16 +109,17 @@ build-time manifest for the readiness check.**
 │               • 200 only if all checks pass                            │
 │           └─ Fly auto-rollback if /readyz fails grace period           │
 │                                                                        │
-│   3. Post-deploy smoke (CI): curl $API_READY_URL (defaults to          │
+│   4. Post-deploy smoke (CI): curl $API_READY_URL (defaults to          │
 │      https://harpa-pro-api.fly.dev/readyz; override via repo var)      │
 │      from the runner, fail the workflow if it's not 200.               │
 └────────────────────────────────────────────────────────────────────────┘
 ```
 
-Backend previews and prod use the **same** mechanism for steps 2 + 3 — Fly's
-`release_command` runs migrations inside the release machine, against
-whatever `DATABASE_URL` is staged on the app. The only difference is
-which Fly app and which Neon branch is targeted.
+Backend previews, dev, and prod use the **same** migration mechanism:
+Fly's `release_command` runs migrations inside the release machine,
+against whatever `DATABASE_URL` is staged on the app. The blocking
+snapshot in step 2 is production-only; it must succeed before prod
+can enter that shared deploy path.
 
 ---
 
@@ -129,22 +135,21 @@ environment and only surfaces when the deploy fires.
 
 | Workflow                          | PR-gated | Push (dev / main)     | What it catches |
 | --------------------------------- | :------: | --------------------- | ----------------------------------------------------------------- |
-| `lint-typecheck.yml`              | ✓        | dev + main            | ESLint, TypeScript, removal-verification gates, CI shell self-tests, shellcheck of `scripts/ci/` and `scripts/journeys/` |
+| `lint-typecheck.yml`              | ✓        | dev + main            | ESLint, TypeScript, removal-verification gates, CI shell policy tests, shellcheck of `scripts/ci/` and `scripts/journeys/` |
 | `unit.yml`                        | ✓        | dev + main            | Vitest unit suites for every package |
-| `api-integration.yml`             | ✓        | dev + main            | `pnpm --filter @harpa/api test:integration` against testcontainers |
+| `api-integration.yml`             | ✓        | dev + main            | Combined API unit + Testcontainers run with a hard 90% line-coverage threshold |
 | `cli.yml`                         | ✓        | dev + main            | `apps/cli` typecheck + tests |
-| `e2e-maestro-testid-gate.yml`     | ✓        | dev + main            | Maestro testID accessibility gate |
+| `e2e-maestro-testid-gate.yml`     | ✓        | dev + main            | Maestro testID policy, Metro bundle leakage, and bounded Android launch smoke |
 | `pr-preview.yml`                  | ✓        | (PR-only)             | Per-PR Neon branch + Fly preview app + post-deploy `/readyz` verify |
 | `mobile-ota-pr.yml`               | ✓        | (PR-only)             | Per-PR Expo OTA preview |
 | `site-preview.yml`                | ✓ (→dev/main)| (PR-only)          | Tests + Cloudflare Pages preview for the public site |
-| `main-gate.yml`                   | ✓ (→main)| (PR-only)             | Hard-required checks on merges into `main` |
+| `main-gate.yml`                   | ✓ (→main)| (PR-only)             | Verifies dev serves the PR head SHA before running hard-required promotion journeys |
 | `api-dev.yml`                     | ✗        | dev                   | `flyctl deploy` to `harpa-pro-api-dev`, `/readyz` verify, `scripts/journeys/all.sh dev` |
 | `api-prod.yml`                    | ✗        | main                  | `flyctl deploy` to `harpa-pro-api`, `/readyz` verify, `scripts/journeys/all.sh prod` |
 | `site-dev.yml`                    | ✗        | dev                   | Cloudflare Pages `dev` branch deploy |
 | `site-prod.yml`                   | ✗        | main                  | Cloudflare Pages prod deploy |
-| `mobile-ota-dev.yml`              | ✗        | dev                   | Expo OTA publish to dev channel |
-| `mobile-ota-prod.yml`             | ✗        | main                  | Expo OTA publish to prod channel |
-| `version-bump-dev.yml`            | ✗        | dev                   | Auto version bump after merge |
+| `mobile-ota-dev.yml`              | ✗        | dev                   | Preview OTA; API-dependent pushes are called by `api-dev` after deploy |
+| `mobile-ota-prod.yml`             | ✗        | main                  | Production OTA; API-dependent pushes are called by `api-prod` after deploy |
 | `ai-live.yml`                     | ✗        | dev + main + dispatch | Live AI provider smoke (no fixtures) |
 | `neon-snapshot-prune.yml`         | ✗        | (cron 04:17 UTC)      | Prune stale Neon branches |
 
@@ -169,6 +174,55 @@ is the canonical example of this blind spot. The fix established
 the pattern above: `scripts/ci/verify-readyz.sh` with a python-based
 fake-server self-test wired into `lint-typecheck.yml`, plus
 shellcheck of both `scripts/ci/` and `scripts/journeys/`.
+
+### Mobile OTA release ordering
+
+The mobile OTA workflows are both push-triggered and reusable. They inspect
+the push range before publishing:
+
+- Mobile-only changes publish from the push workflow without forcing an API
+  redeploy.
+- When API inputs also changed, the push workflow exits without publishing.
+  The successful `api-dev` or `api-prod` job calls the corresponding reusable
+  OTA workflow with the exact push SHA.
+- Before every update reaches EAS, `scripts/ci/verify-api-release.sh` validates
+  `/healthz.gitCommit` and requires `/readyz` to return 2xx. A deployed
+  ancestor is compatible only when the complete commit range to the OTA has
+  no API, contract, deployment, or lockfile changes; otherwise the deployed
+  SHA must exactly match the OTA SHA.
+- Every update requires an environment/version readiness tag created by the
+  manual post-build job. Its annotation records `native_artifact`, and its
+  commit must be an ancestor with no later native-sensitive changes.
+  `pnpm-lock.yaml` and `patches/**` are treated conservatively as native
+  sensitive because they can change the installed binary.
+- A root app-version change means a new Expo native runtime, so the new tag
+  cannot exist yet. Automated publication stops until the matching binary has
+  been built and the operator confirms `native_runtime_ready` through
+  `workflow_dispatch`.
+
+GitHub caps a reusable workflow's token permissions at the calling job's
+maximum. The `mobile-ota` jobs in `api-dev.yml` and `api-prod.yml` therefore
+grant `contents: write` so the nested registration job can create a readiness
+tag. The called workflows still default to `contents: read`; only
+`register-native-runtime` elevates to write, while release-policy and OTA jobs
+remain read-only.
+
+Normal merges do not change the app version. Native changes bump it
+intentionally in the reviewed change that will produce the binary. The static
+contract in `scripts/ci/__tests__/mobile-ota-release-policy.test.sh` is run by
+`lint-typecheck.yml`, closing the PR-gating blind spot for this release chain.
+See [arch-ops.md](arch-ops.md#mobile-ota-and-native-runtime-ordering) for the
+operator sequence.
+
+### Main-promotion SHA binding
+
+`main-gate.yml` checks out `github.event.pull_request.head.sha`, then
+polls the dev API's `/healthz` with
+`scripts/ci/verify-deployed-sha.sh`. The reported 40-character
+`gitCommit` must equal that full PR head SHA
+before any journey runs. This prevents a healthy but stale or newer
+shared dev deployment from making an unrelated `main` promotion
+green. Both the poll loop and the surrounding job are bounded.
 
 ---
 
@@ -199,6 +253,8 @@ shellcheck of both `scripts/ci/` and `scripts/journeys/`.
 
 - Compute `MIGRATIONS_REQUIRED_HEAD` from `ls packages/api/migrations | sort | tail -1`
   and pass `--build-arg MIGRATIONS_REQUIRED_HEAD=...` to `flyctl deploy`.
+- Compute the full `git rev-parse HEAD` value and pass it as the
+  `GIT_COMMIT` build arg; abbreviated SHAs are not valid deployment identities.
 
 ### `.github/workflows/api-prod.yml`
 
@@ -210,6 +266,11 @@ shellcheck of both `scripts/ci/` and `scripts/journeys/`.
     `main` build; fails on rename/delete of an already-shipped file,
   - prints the computed head.
 - The `prod` job depends on `guard`. No `DATABASE_URL` secret added to CI.
+- Create a blocking Neon snapshot before `flyctl deploy`. Snapshot
+  failure, including missing Neon credentials, stops the workflow
+  before Fly's release machine can apply a migration.
+- Do not run `db:migrate` from GitHub Actions. Production migration
+  ownership stays with Fly's `release_command`.
 - Add a final step: `curl --fail "$API_READY_URL"` (defaults to
   `https://harpa-pro-api.fly.dev/readyz`; overridable via the
   `API_READY_URL` repo variable when a custom hostname is set up),
@@ -330,9 +391,11 @@ both via Neon's copy-on-write branching:
 
 1. **Per-deploy snapshot** (preferred — bounded, named).
    `api-prod.yml` calls `pnpm db:branch:snapshot $GITHUB_SHA`
-   before every deploy, creating `snapshot-<first-12-of-sha>` off
-   the prod parent. Pruned after 30 days by
-   `neon-snapshot-prune.yml`.
+   as a blocking gate before `flyctl deploy`, creating
+   `snapshot-<first-12-of-sha>` off the prod parent. Fly's
+   `release_command` is the only production migration owner, so no
+   migration can run before this snapshot succeeds. Snapshots are
+   pruned after 30 days by `neon-snapshot-prune.yml`.
 2. **Point-in-time recovery** (fallback — any timestamp in retention).
    Neon retains a continuous history (7 days on Free, 30 on
    Launch/Scale). Use this when the bad state predates the most
@@ -374,6 +437,7 @@ restore against a live compute. Branch-and-swap is the native idiom.
 
 | Scenario | What happens | Manual step |
 |---|---|---|
+| Pre-deploy snapshot fails | `api-prod.yml` exits before `flyctl deploy`; Fly never starts the release machine, so no migration runs and prod is unchanged. | Fix Neon credentials or service availability, then re-run the workflow. Do not bypass the snapshot gate. |
 | Migration syntax error in file N | Release machine exits non-zero, Fly aborts the rollout. App machines keep running the previous image (still compatible with schema up to file N-1, because all prior code must tolerate the prior schema). | Author opens a follow-up PR with the corrected SQL. No DB cleanup — failed file's transaction rolled back. |
 | Non-transactional file (`*.notx.sql`) fails mid-way | Loader has NOT recorded it in `app._migrations`. Partial side-effects (e.g. half-built index) may exist. Release machine exits non-zero, Fly aborts rollout. | Manual: drop the partial object, fix the SQL, re-deploy. Documented inline in the offending file's header comment. Discouraged — prefer transactional files. |
 | Migration succeeds, new code fails `/readyz` (e.g. unrelated runtime bug) | Fly's rolling deploy fails the new machine, auto-rollback to previous image. Previous image MUST be schema-compatible — that's the expand-contract guarantee. | Investigate the runtime bug. Schema is already forward — keep it; ship a fix-forward. |

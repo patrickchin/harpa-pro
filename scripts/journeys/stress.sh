@@ -319,10 +319,10 @@ if [[ "$HAS_USER_B" == "true" ]]; then
   # User B tries owner operations
   TOKEN="$TOKEN_B"
 
-  # NOTE: PATCH project by viewer returns 200 — the API does not enforce
-  # owner-only on PATCH /projects/:id. This may be intentional (editors/viewers
-  # can rename) or a bug. Documenting actual behavior here.
-  check "viewer: PATCH project (allowed — no role gate)" 200 PATCH "/projects/$PID_A" '{"name":"viewer rename"}'
+  # Project metadata mutations require a writer role. The route returns 404
+  # for insufficient roles so a viewer cannot distinguish the project from a
+  # missing resource.
+  check "viewer: PATCH project (read-only)" 404 PATCH "/projects/$PID_A" '{"name":"viewer rename"}'
   check "viewer: DELETE project (owner-only)" 404 DELETE "/projects/$PID_A"
   check "viewer: add member" 403 POST "/projects/$PID_A/members" \
     '{"email":"charlie@e2e.harpapro.com","role":"editor"}'

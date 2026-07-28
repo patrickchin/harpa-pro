@@ -12,8 +12,12 @@ on:
 jobs:
   changes:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
     outputs:
       api: ${{ steps.paths.outputs.api }}
+      workflows: ${{ steps.paths.outputs.workflows }}
     steps:
       - uses: actions/checkout@v4
       - id: paths
@@ -21,8 +25,13 @@ jobs:
 
   api-integration:
     needs: changes
-    if: needs.changes.outputs.api == 'true' || github.event_name == 'push'
+    if: >-
+      needs.changes.outputs.api == 'true' ||
+      needs.changes.outputs.workflows == 'true' ||
+      github.event_name == 'push'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     env:
       AI_FIXTURE_MODE: replay
       TESTCONTAINERS_RYUK_DISABLED: 'true'
@@ -30,4 +39,5 @@ jobs:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup-monorepo
       - run: pnpm --filter @harpa/api-contract build
-      - run: pnpm --filter @harpa/api test:integration
+      - name: Test API with 90% line coverage
+        run: pnpm --filter @harpa/api test:coverage

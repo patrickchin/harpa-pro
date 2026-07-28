@@ -419,7 +419,7 @@ behaviour.
 
 ---
 
-## Pitfall 16 — Derived fallback fixture name silently disables AI_LIVE
+## Pitfall 16 — Fixture selection silently disables AI_LIVE
 
 **Symptom:** `AI_LIVE=1` ships to prod, secrets are set, deploy is
 green — but no request ever reaches `api.openai.com`. The provider
@@ -435,20 +435,23 @@ code. A unit-style test that called `chat({ userPrompt: 'x' })`
 without a fixtureName would have caught it; we only had tests that
 asserted *replay* behaviour and passed fixture names through.
 
-**Rule:** When a function takes "the caller's intent" as an argument,
-never mix it with values you derive internally. Either:
+The first repair distinguished caller-supplied names from derived
+defaults, but that still left an authenticated JSON field in control
+of production wiring. A client could include `fixtureName` and
+downgrade an otherwise live request to canned replay.
 
-- Split into two functions ("did the caller ask for X?" vs "what's the
-  default for X?"), or
-- Pass `undefined` through and only fill the default after the
-  routing decision is made.
+**Rule:** Runtime mode is server-owned configuration, never caller
+intent. Select live versus replay from parsed `env` first. Only after
+replay has been selected may a fixture name choose the scenario.
+Neither a caller-supplied name nor an internally derived default may
+override `AI_LIVE=1`.
 
 **Test rule (Pitfall 13 corollary):** every "AI_LIVE flips the wiring"
-flag needs a positive test that boots the service *without* a caller
-fixture name, stubs `globalThis.fetch`, and asserts the request URL
-hits the live vendor. We added
-`packages/api/src/services/ai.live.test.ts` for exactly this — it
-catches the next regression in this shape.
+flag needs positive tests that boot the service both with and without
+a caller fixture name, stub `globalThis.fetch`, and assert the request
+URL hits the live vendor. Also exercise an authenticated route with a
+fixture name so request validation and route forwarding cannot mask a
+downgrade.
 
 ---
 

@@ -8,5 +8,16 @@ export default defineConfig({
     testTimeout: 60_000,
     hookTimeout: 120_000,
     fileParallelism: false,
+    coverage: {
+      provider: 'v8',
+      include: ['src/**/*.ts'],
+      exclude: [
+        'src/**/*.test.ts',
+        'src/**/*.integration.test.ts',
+        'src/**/*.scope.test.ts',
+        'src/**/*.live.test.ts',
+        'src/__tests__/**',
+      ],
+    },
   },
 });

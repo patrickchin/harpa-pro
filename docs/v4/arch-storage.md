@@ -176,10 +176,12 @@ relaunch, resume automatically" we wire an MMKV-backed
 
 - **On every state transition** the queue serialises a `PersistedJob`
   for each row (`id`, `input`, `status`, `attempt`, `progress`,
-  `error`, `fileId`) into the `upload-queue` MMKV instance under
-  key `v1`. MMKV is synchronous so this stays out of the hot path's
-  await graph.
-- **At provider mount** we load the blob, drop jobs whose
+  `error`, `fileId`) into the `upload-queue` MMKV instance under a
+  `v2.<userId>` key. The pre-scoping `v1` blob is discarded because it
+  cannot be attributed safely after an account change. MMKV is
+  synchronous so this stays out of the hot path's await graph.
+- **After auth resolves** `QueueProvider` loads only the current user's
+  blob, drops jobs whose
   `input.sourceUri` no longer resolves via
   `new File(uri).exists` (the OS sweeps temp capture dirs
   aggressively), coerce in-flight statuses
@@ -187,6 +189,11 @@ relaunch, resume automatically" we wire an MMKV-backed
   (presign + R2 PUT are idempotent for our usage — each retry mints
   a fresh key), and hand the survivors to `createUploadQueue` as
   `initialJobs`. The driver kicks immediately.
+- **At an auth boundary** explicit sign-out and the global 401 handler
+  clear the active queue before tearing down auth. A user-id change or
+  passive session loss also clears the old provider instance. Clearing
+  aborts in-flight work and removes both memory and that user's MMKV
+  snapshot.
 - **Promise handles are not persisted.** Rehydrated jobs run
   fire-and-forget; the UI just re-subscribes via `useFileUpload()`
   and observes the new state transitions.
@@ -346,8 +353,8 @@ region    = 'auto'           # R2 ignores region but the SDK requires one
 forcePathStyle = true        # R2 requires path-style addressing
 ```
 
-Required env (asserted at first use, not at boot — fixture mode stays
-free of R2 creds):
+Required env (asserted at API boot whenever live mode is selected;
+fixture mode stays free of R2 creds):
 
 | Env | Notes |
 |---|---|

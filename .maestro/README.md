@@ -47,13 +47,13 @@ with Bash explicitly because the action otherwise evaluates `script:`
 with `/usr/bin/sh`, which does not support `pipefail` on Ubuntu. The
 runner creates its Metro log and Maestro debug directory before
 installing the APK, then captures ADB state and recent logcat output
-on failure. The launch flow also checks a second time for Expo's
-developer-menu onboarding after the cold bundle load, then allows up
-to 90 seconds for the sign-in control. If Expo registers Metro but
-leaves the emulator on Dev Launcher's Home screen, the flow
-conditionally selects the green `http://10.0.2.2:8081` server row
-before those checks. CI uploads the runner logs and Maestro's hidden
-UI hierarchy/screenshots as `maestro-launch-smoke-diagnostics`.
+on failure. If Expo registers Metro but leaves the emulator on Dev
+Launcher's Home screen, the flow conditionally selects the green
+`http://10.0.2.2:8081` server row. It then waits up to 60 seconds for
+the optional first-run `Continue` action after the cold bundle load,
+dismisses the developer menu, and allows another 60 seconds for the
+sign-in control. CI uploads the runner logs and Maestro's hidden UI
+hierarchy/screenshots as `maestro-launch-smoke-diagnostics`.
 
 This does not replace the regression journey. It proves the native
 build, Metro bundle, installation, launch, and first rendered route;

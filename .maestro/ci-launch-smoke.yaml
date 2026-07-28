@@ -17,21 +17,9 @@ tags:
       - tapOn: 'http://10.0.2.2:8081'
       - waitForAnimationToEnd:
           timeout: 20000
-- runFlow:
-    when:
-      visible: 'Continue'
-    commands:
-      - tapOn: 'Continue'
-      - waitForAnimationToEnd
-- runFlow:
-    when:
-      visible: 'Close'
-    commands:
-      - tapOn: 'Close'
-      - waitForAnimationToEnd
 - extendedWaitUntil:
-    visible: 'This is the developer menu'
-    timeout: 30000
+    visible: 'Continue'
+    timeout: 60000
     optional: true
 - runFlow:
     when:
@@ -48,6 +36,6 @@ tags:
 - extendedWaitUntil:
     visible:
       id: 'input-email'
-    timeout: 90000
+    timeout: 60000
 - assertVisible:
     id: 'input-email'

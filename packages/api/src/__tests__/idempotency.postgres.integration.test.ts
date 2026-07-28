@@ -290,4 +290,52 @@ describe('Postgres idempotency store', () => {
       vi.useRealTimers();
     }
   });
+
+  it('reports ownership lost during release before a heartbeat observes it', async () => {
+    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] });
+    const store = new PostgresIdempotencyStore(getPool(fx.url));
+    const key = 'reclaimed-before-heartbeat-key';
+    const keyHash = createHash('sha256').update(key, 'utf8').digest('hex');
+
+    let failProducer!: (error: Error) => void;
+    const producerFinished = new Promise<void>((_resolve, reject) => {
+      failProducer = reject;
+    });
+    let producerStarted!: () => void;
+    const started = new Promise<void>((resolve) => {
+      producerStarted = resolve;
+    });
+
+    const admin = new pg.Client({ connectionString: fx.url });
+    await admin.connect();
+    try {
+      const execution = store.getOrExecute(key, 60_000, async () => {
+        producerStarted();
+        await producerFinished;
+        return {
+          status: 200,
+          body: '{"unreachable":true}',
+          contentType: 'application/json',
+        };
+      });
+
+      await started;
+      await admin.query(
+        `UPDATE app.idempotency_keys
+         SET owner_token = 'replacement-before-heartbeat',
+             lease_expires_at = now() + interval '1 minute'
+         WHERE key_hash = $1`,
+        [keyHash],
+      );
+      failProducer(new Error('producer failed'));
+
+      await expect(execution).rejects.toMatchObject({
+        name: 'IdempotencyLeaseLostError',
+        message: 'Idempotency lease ownership was lost before release.',
+      });
+    } finally {
+      await admin.end();
+      vi.useRealTimers();
+    }
+  });
 });

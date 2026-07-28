@@ -397,9 +397,10 @@ authenticates as 401 on the next request.
 
 Business activity rows are retained, but a privileged database trigger
 nulls any matching `actor_user_id` and user `subject_id` before the user
-row is deleted. Event type, timestamp, and non-user subjects remain for
-aggregate history without retaining a joinable identifier for the
-deleted account.
+row is deleted. It also replaces a signup's user-derived dedupe key with
+`redacted:<activity_event_id>`. Event type, timestamp, and non-user
+subjects remain for aggregate history without retaining the deleted
+account ID.
 
 Project records follow the collaboration rules in
 [`arch-project-members.md`](arch-project-members.md#account-deletion).

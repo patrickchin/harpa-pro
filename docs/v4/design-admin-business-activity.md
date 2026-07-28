@@ -153,10 +153,11 @@ authenticated role may insert only when `actor_user_id` equals the scoped
 rows only after route-level admin authorization.
 
 Account deletion is the one planned redaction exception. A privileged
-database trigger nulls matching actor IDs and user-subject IDs before the
-account row is deleted. The event type and timestamp remain, but the row can
-no longer be joined back to the deleted account. The trigger covers the
-existing account-deletion helper and any future privileged deletion path.
+database trigger nulls matching actor IDs and user-subject IDs and replaces a
+signup's user-derived dedupe key with `redacted:<activity_event_id>` before
+the account row is deleted. The event type and timestamp remain, but the row
+no longer contains the deleted user ID. The trigger covers the existing
+account-deletion helper and any future privileged deletion path.
 This exception is documented alongside
 `docs/v4/arch-auth-and-rls.md#account-deletion`.
 

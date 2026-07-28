@@ -98,6 +98,13 @@ require_fixed ".maestro/ci-launch-smoke.yaml" \
 require_fixed ".maestro/ci-launch-smoke.yaml" \
   "timeout: 90000" \
   "Maestro launch flow allows a bounded cold bundle load"
+require_fixed ".maestro/ci-launch-smoke.yaml" \
+  "visible: 'http://10.0.2.2:8081'" \
+  "Maestro launch flow detects the Android emulator's Metro server row"
+require_before ".maestro/ci-launch-smoke.yaml" \
+  "visible: 'http://10.0.2.2:8081'" \
+  "id: 'input-email'" \
+  "Maestro selects the available Metro server before asserting app UI"
 require_fixed ".github/workflows/e2e-maestro-testid-gate.yml" \
   "timeout-minutes: 30" \
   "Maestro job has a 30-minute GitHub Actions ceiling"

@@ -157,6 +157,8 @@ jobs:
   mobile-ota:
     name: Publish API-dependent mobile OTA
     needs: dev
+    permissions:
+      contents: write
     uses: ./.github/workflows/mobile-ota-dev.yml
     with:
       release_sha: ${{ github.sha }}

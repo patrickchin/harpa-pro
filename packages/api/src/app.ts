@@ -57,10 +57,8 @@ export function createApp(): OpenAPIHono<AppEnv> {
   // routes. Per-route + shared-AI buckets remain on the relevant routes.
   app.use('*', globalRateLimit());
 
-  // CORS — limited to /waitlist/* so cross-origin signups from the
-  // marketing site (https://harpapro.com → https://api.harpapro.com)
-  // work. Every other route stays same-origin only.
-  // Allowlist comes from env (WAITLIST_CORS_ORIGINS, comma-separated).
+  // Public, non-credentialed CORS for marketing waitlist submissions.
+  // Credentialed auth/admin CORS is configured separately below.
   const allowedOrigins = env.WAITLIST_CORS_ORIGINS.split(',')
     .map((o) => o.trim())
     .filter(Boolean);

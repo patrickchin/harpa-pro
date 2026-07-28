@@ -105,10 +105,9 @@ export async function recordActivityEvent(
   const id = newId('aud');
   const occurredAt = event.occurredAt ? sql`${event.occurredAt}` : sql`now()`;
 
-  // Targetless DO NOTHING needs INSERT privilege only. Naming the partial
-  // dedupe index would make Postgres require SELECT on the otherwise
-  // write-only activity table.
-  const result = await db.execute<{ id: string }>(sql`
+  // Targetless DO NOTHING needs INSERT privilege only. A conflict target or
+  // RETURNING clause would require SELECT on the otherwise write-only table.
+  const result = await db.execute(sql`
     INSERT INTO app.activity_events (
       id,
       occurred_at,
@@ -133,10 +132,9 @@ export async function recordActivityEvent(
       ${metadata}::jsonb
     )
     ON CONFLICT DO NOTHING
-    RETURNING id
   `);
 
-  return result.rows.length === 1;
+  return result.rowCount === 1;
 }
 
 /**

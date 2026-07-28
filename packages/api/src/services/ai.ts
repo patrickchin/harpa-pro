@@ -9,7 +9,7 @@
  * client-supplied transcript) without breaking the request-hash
  * lookup in `@harpa/ai-fixtures`.
  *
- * In live mode (future) the inputs flow through unchanged.
+ * In live mode the inputs flow through unchanged.
  *
  * `FixtureMissError` (or any other provider-side failure) is wrapped
  * in `AiProviderError` so the route layer / errorMapper can map it to
@@ -79,8 +79,8 @@ export { REPORT_SYSTEM_PROMPT, REPORT_UPDATE_SYSTEM_PROMPT };
  * fixture request-hash always matches. Update if/when fixtures are
  * re-recorded with different canonicals.
  *
- * Five scenarios — `voice-1` … `voice-5` — each backed by a real
- * site-walk transcript. Source of truth:
+ * Five scenarios — `voice-1` … `voice-5` — each backed by a redacted,
+ * representative site-walk transcript. Source of truth:
  *   packages/ai-fixtures/fixtures/{transcribe,summarize,generate-report}.voice-N.json
  *
  * Per-vendor fixture variants have been removed: a single set of OpenAI
@@ -190,9 +190,8 @@ function scenarioFromName(name: string): ScenarioKey | null {
   return null;
 }
 
-function pickMode(fixtureName?: string): FixtureMode {
-  if (process.env.AI_LIVE === '1' && !fixtureName) return 'live';
-  return 'replay';
+function pickMode(): FixtureMode {
+  return env.AI_LIVE === '1' ? 'live' : 'replay';
 }
 
 function buildProviderWithMode(
@@ -327,7 +326,7 @@ export interface TranscribeOutput {
 }
 
 export async function transcribe(input: TranscribeInput): Promise<TranscribeOutput> {
-  const mode = pickMode(input.fixtureName);
+  const mode = pickMode();
   const scenario =
     (input.fixtureName ? scenarioFromName(input.fixtureName) : null) ??
     FIXTURE_CANONICALS.transcribe.defaultScenario;
@@ -396,7 +395,7 @@ export interface SummarizeOutput {
 }
 
 export async function summarize(input: SummarizeInput): Promise<SummarizeOutput> {
-  const mode = pickMode(input.fixtureName);
+  const mode = pickMode();
   const scenario =
     (input.fixtureName ? scenarioFromName(input.fixtureName) : null) ??
     FIXTURE_CANONICALS.summarize.defaultScenario;
@@ -522,7 +521,7 @@ export async function generateReport(input: GenerateReportInput): Promise<Genera
   const canonicals = FIXTURE_CANONICALS.report;
   const vendor: Vendor = input.vendor ?? canonicals.vendor;
   const isUpdate = input.notes.currentBody != null;
-  const mode = pickMode(input.fixtureName);
+  const mode = pickMode();
   const scenario =
     (input.fixtureName ? scenarioFromName(input.fixtureName) : null) ??
     canonicals.defaultScenario;

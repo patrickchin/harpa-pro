@@ -36,6 +36,7 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createOpenAiProvider } from '../src/providers/openai.js';
 import { hashRequest } from '../src/hash.js';
+import { redactFixture } from '../src/redact.js';
 import type { FixtureFile } from '../src/fixture-store.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -131,14 +132,19 @@ async function recordScenario(scenario: string): Promise<void> {
     userPrompt: canonicalUserPrompt,
     responseFormat: 'json_object' as const,
   };
+  const redacted = redactFixture({
+    request: canonicalRequest,
+    response: { text: out.text, usage: out.usage },
+    privateContext: realUserPrompt,
+  });
   const file: FixtureFile = {
     vendor: 'openai',
     model: 'gpt-4o',
     fixtureName: `generate-report.${scenario}`,
     recordedAt: new Date().toISOString(),
     requestHash: hashRequest(canonicalRequest),
-    request: canonicalRequest,
-    response: { text: out.text, usage: out.usage },
+    request: redacted.request,
+    response: redacted.response,
   };
   const outPath = join(fixturesDir, `generate-report.${scenario}.json`);
   writeFileSync(outPath, JSON.stringify(file, null, 2) + '\n', 'utf8');

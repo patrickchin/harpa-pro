@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createProvider } from './index.js';
@@ -47,5 +47,20 @@ describe('committed fixtures replay end-to-end', () => {
     const parsed = JSON.parse(r.text);
     expect(parsed.title).toMatch(/second floor concrete pour/i);
     expect(parsed.summary).toMatch(/waterlogged/i);
+  });
+});
+
+describe('committed fixture privacy', () => {
+  it('contains no customer/company names or street addresses in free text', () => {
+    const identifiableOrganization =
+      /\b(?:client|customer)\s+(?:from\s+)?(?:the\s+)?[A-Z][\p{L}\p{N}&.'-]*(?:\s+[A-Z][\p{L}\p{N}&.'-]*){0,3}\s+(?:company|construction|developments?|group|ltd|limited|llc|inc|corp(?:oration)?)\b/u;
+    const streetAddress =
+      /\b\d{1,6}\s+(?:[A-Z][\p{L}'-]*\s+){0,5}(?:Road|Street|Avenue|Lane|Drive|Court|Boulevard|Way|Place)\b/u;
+
+    for (const name of readdirSync(fixturesDir).filter((entry) => entry.endsWith('.json'))) {
+      const contents = readFileSync(resolve(fixturesDir, name), 'utf8');
+      expect(contents, name).not.toMatch(identifiableOrganization);
+      expect(contents, name).not.toMatch(streetAddress);
+    }
   });
 });

@@ -522,8 +522,13 @@ After that native gate, the OTA workflows have two automatic paths:
 2. A push that also changes API inputs does not publish from the push
    workflow. The matching API workflow calls the reusable OTA workflow only
    after its deploy, `/readyz` check, and journey tests succeed.
-   `scripts/ci/verify-api-release.sh` then checks that `/healthz` reports the
-   OTA SHA and re-checks `/readyz` before `eas update`.
+
+Before either path reaches EAS, `scripts/ci/verify-api-release.sh` checks the
+deployed API SHA from `/healthz` and re-checks `/readyz`. An older deployed SHA
+is accepted only when it is an ancestor of the OTA commit and every commit
+after it is free of API, contract, deployment, and lockfile changes. Otherwise
+the API must report the exact OTA SHA. This full-history check prevents a later
+mobile-only push from publishing after an earlier API-and-mobile deploy failed.
 
 Native changes must include an intentional root `package.json` version bump.
 This includes Expo config/plugin changes and native dependency changes. That

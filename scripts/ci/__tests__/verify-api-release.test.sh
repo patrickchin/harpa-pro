@@ -99,6 +99,14 @@ git -C "$REPO" add .
 git -C "$REPO" commit -qm "later mobile only"
 RELEASE_SHA="$(git -C "$REPO" rev-parse HEAD)"
 
+printf 'base\n' >"$REPO/packages/api-contract/schema.ts"
+git -C "$REPO" add .
+git -C "$REPO" commit -qm "revert contract"
+printf 'mobile after contract revert\n' >"$REPO/apps/mobile/app.ts"
+git -C "$REPO" add .
+git -C "$REPO" commit -qm "mobile after contract revert"
+REVERTED_RELEASE_SHA="$(git -C "$REPO" rev-parse HEAD)"
+
 git -C "$REPO" switch -q -c divergent "$BASE_SHA"
 printf 'divergent mobile\n' >"$REPO/apps/mobile/app.ts"
 git -C "$REPO" add .
@@ -132,6 +140,12 @@ if grep -Fq "API inputs changed" "$TMP/stale-api.log"; then
 else
   fail "explains why the stale API is unsafe"
 fi
+
+set_health_sha "${MOBILE_SHA:0:12}"
+assert_fail \
+  "rejects API changes anywhere in the range even when later reverted" \
+  "$TMP/reverted-api.log" \
+  verify_release "$REVERTED_RELEASE_SHA"
 
 set_health_sha "${DIVERGENT_SHA:0:12}"
 assert_fail \

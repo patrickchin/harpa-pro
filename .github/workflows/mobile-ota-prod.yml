@@ -118,6 +118,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ needs.release-policy.outputs.release-sha }}
+          fetch-depth: 0
 
       - uses: ./.github/actions/setup-monorepo
         with:
@@ -129,9 +130,9 @@ jobs:
           token: ${{ secrets.EXPO_TOKEN }}
 
       - name: Verify deployed API release
-        if: needs.release-policy.outputs.api-changed == 'true'
         env:
           API_HEALTH_URL: https://api.harpapro.com/healthz
+          API_PATH_PATTERN: '^(packages/api/|packages/api-contract/|packages/ai-fixtures/|infra/fly/|scripts/journeys/|pnpm-lock\.yaml$|\.github/workflows/api-prod\.yml$)'
           API_READY_URL: https://api.harpapro.com/readyz
           EXPECTED_GIT_COMMIT: ${{ needs.release-policy.outputs.release-sha }}
         run: bash scripts/ci/verify-api-release.sh

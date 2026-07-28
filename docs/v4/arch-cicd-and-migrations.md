@@ -185,9 +185,11 @@ the push range before publishing:
 - When API inputs also changed, the push workflow exits without publishing.
   The successful `api-dev` or `api-prod` job calls the corresponding reusable
   OTA workflow with the exact push SHA.
-- Before an API-dependent update reaches EAS,
-  `scripts/ci/verify-api-release.sh` requires `/healthz.gitCommit` to match
-  that SHA and requires `/readyz` to return 2xx.
+- Before every update reaches EAS, `scripts/ci/verify-api-release.sh` validates
+  `/healthz.gitCommit` and requires `/readyz` to return 2xx. A deployed
+  ancestor is compatible only when the complete commit range to the OTA has
+  no API, contract, deployment, or lockfile changes; otherwise the deployed
+  SHA must exactly match the OTA SHA.
 - Every update requires an environment/version readiness tag created by the
   manual post-build job. Its annotation records `native_artifact`, and its
   commit must be an ancestor with no later native-sensitive changes.

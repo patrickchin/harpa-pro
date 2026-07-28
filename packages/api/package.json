@@ -18,6 +18,7 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx src/db/migrate.ts",
     "db:seed-test-account": "tsx scripts/seed-test-account.ts",
+    "activity:reconcile-signups": "tsx scripts/reconcile-signup-activity.ts",
     "spec:emit": "tsx scripts/emit-openapi.ts",
     "r2:rewrite": "tsx scripts/rewrite-r2-keys-to-project-scope.ts",
     "db:check": "drizzle-kit check"

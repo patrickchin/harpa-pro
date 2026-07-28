@@ -159,8 +159,6 @@ describe('signup activity', () => {
       [`user.signed_up:${user.id}`],
     );
     expect(events.rows).toHaveLength(1);
-    expect(events.rows[0]!.occurred_at.getTime()).toBe(
-      events.rows[0]!.created_at.getTime(),
-    );
+    expect(events.rows[0]!.occurred_at.getTime()).toBe(events.rows[0]!.created_at.getTime());
   });
 });

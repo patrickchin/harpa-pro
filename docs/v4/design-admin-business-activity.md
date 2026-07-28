@@ -5,7 +5,7 @@ Status: approved on 2026-07-29. Local implementation is in progress.
 Implementation status:
 
 - [x] Phase 1 — contract, ID family, storage, RLS, and recorder.
-- [ ] Phase 2 — initial event writers (project/report complete; signup remains).
+- [x] Phase 2 — initial signup, project, and report event writers.
 - [ ] Phase 3 — admin read API and browser CORS.
 - [ ] Phase 4 — admin page.
 - [ ] Phase 5 — deployment.
@@ -198,9 +198,13 @@ row. Before implementation, verify Better Auth 1.6.13 hook failure and
 transaction behavior rather than assuming the hook shares the adapter's
 transaction.
 
-If the hook is not transactionally coupled, add a small idempotent
-reconciliation command that can insert missing creation events from source
-rows. Do not add a queue or scheduled worker for the initial volume.
+The hook is not transactionally coupled, so it reports insert failures without
+breaking the completed signup. Repair is explicit and idempotent:
+`pnpm --filter @harpa/api activity:reconcile-signups -- --user-id <usr_id>`
+previews one or more named users, and `--apply` inserts only their missing
+events using the source `created_at`. The command cannot scan or silently
+backfill all historical users. Do not add a queue or scheduled worker for the
+initial volume.
 
 ### Existing rows
 

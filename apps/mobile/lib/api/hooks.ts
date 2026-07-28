@@ -416,13 +416,13 @@ export function useRegenerateReportMutation(
   });
 }
 
-export type FinalizeReportMutationVars = { params: PathParams<"/projects/{project}/reports/{number}/finalize", "post"> };
+export type FinalizeReportMutationVars = { params: PathParams<"/projects/{project}/reports/{number}/finalize", "post">; body: RequestBody<"/projects/{project}/reports/{number}/finalize", "post"> };
 export function useFinalizeReportMutation(
   options?: UseMutationOptions<ResponseBody<"/projects/{project}/reports/{number}/finalize", "post">, ApiError, FinalizeReportMutationVars>,
 ) {
   const qc = useQueryClient();
   return useMutation<ResponseBody<"/projects/{project}/reports/{number}/finalize", "post">, ApiError, FinalizeReportMutationVars>({
-    mutationFn: (vars) => request("/projects/{project}/reports/{number}/finalize", "post", { params: vars.params }),
+    mutationFn: (vars) => request("/projects/{project}/reports/{number}/finalize", "post", { params: vars.params, body: vars.body }),
     ...options,
     onSuccess: (...args) => {
       const rule = INVALIDATIONS["useFinalizeReportMutation"];
@@ -436,13 +436,13 @@ export function useFinalizeReportMutation(
   });
 }
 
-export type UnfinalizeReportMutationVars = { params: PathParams<"/projects/{project}/reports/{number}/unfinalize", "post"> };
+export type UnfinalizeReportMutationVars = { params: PathParams<"/projects/{project}/reports/{number}/unfinalize", "post">; body: RequestBody<"/projects/{project}/reports/{number}/unfinalize", "post"> };
 export function useUnfinalizeReportMutation(
   options?: UseMutationOptions<ResponseBody<"/projects/{project}/reports/{number}/unfinalize", "post">, ApiError, UnfinalizeReportMutationVars>,
 ) {
   const qc = useQueryClient();
   return useMutation<ResponseBody<"/projects/{project}/reports/{number}/unfinalize", "post">, ApiError, UnfinalizeReportMutationVars>({
-    mutationFn: (vars) => request("/projects/{project}/reports/{number}/unfinalize", "post", { params: vars.params }),
+    mutationFn: (vars) => request("/projects/{project}/reports/{number}/unfinalize", "post", { params: vars.params, body: vars.body }),
     ...options,
     onSuccess: (...args) => {
       const rule = INVALIDATIONS["useUnfinalizeReportMutation"];

@@ -1,0 +1,30 @@
+appId: ${MAESTRO_APP_ID}
+name: CI launch smoke
+tags:
+  - ci
+  - smoke
+---
+- launchApp:
+    clearState: true
+    stopApp: true
+- openLink: 'exp+harpa-pro-v4://expo-development-client/?url=http%3A%2F%2Flocalhost%3A8081%3FdisableOnboarding%3D1'
+- waitForAnimationToEnd:
+    timeout: 20000
+- runFlow:
+    when:
+      visible: 'Continue'
+    commands:
+      - tapOn: 'Continue'
+      - waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: 'Close'
+    commands:
+      - tapOn: 'Close'
+      - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: 'input-email'
+    timeout: 60000
+- assertVisible:
+    id: 'input-email'

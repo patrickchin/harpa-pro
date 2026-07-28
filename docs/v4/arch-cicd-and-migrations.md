@@ -131,13 +131,13 @@ environment and only surfaces when the deploy fires.
 | --------------------------------- | :------: | --------------------- | ----------------------------------------------------------------- |
 | `lint-typecheck.yml`              | ✓        | dev + main            | ESLint, TypeScript, removal-verification gates, CI shell self-tests, shellcheck of `scripts/ci/` and `scripts/journeys/` |
 | `unit.yml`                        | ✓        | dev + main            | Vitest unit suites for every package |
-| `api-integration.yml`             | ✓        | dev + main            | `pnpm --filter @harpa/api test:integration` against testcontainers |
+| `api-integration.yml`             | ✓        | dev + main            | Combined API unit + Testcontainers run with a hard 90% line-coverage threshold |
 | `cli.yml`                         | ✓        | dev + main            | `apps/cli` typecheck + tests |
-| `e2e-maestro-testid-gate.yml`     | ✓        | dev + main            | Maestro testID accessibility gate |
+| `e2e-maestro-testid-gate.yml`     | ✓        | dev + main            | Maestro testID policy, Metro bundle leakage, and bounded Android launch smoke |
 | `pr-preview.yml`                  | ✓        | (PR-only)             | Per-PR Neon branch + Fly preview app + post-deploy `/readyz` verify |
 | `mobile-ota-pr.yml`               | ✓        | (PR-only)             | Per-PR Expo OTA preview |
 | `site-preview.yml`                | ✓ (→dev/main)| (PR-only)          | Tests + Cloudflare Pages preview for the public site |
-| `main-gate.yml`                   | ✓ (→main)| (PR-only)             | Hard-required checks on merges into `main` |
+| `main-gate.yml`                   | ✓ (→main)| (PR-only)             | Verifies dev serves the PR head SHA before running hard-required promotion journeys |
 | `api-dev.yml`                     | ✗        | dev                   | `flyctl deploy` to `harpa-pro-api-dev`, `/readyz` verify, `scripts/journeys/all.sh dev` |
 | `api-prod.yml`                    | ✗        | main                  | `flyctl deploy` to `harpa-pro-api`, `/readyz` verify, `scripts/journeys/all.sh prod` |
 | `site-dev.yml`                    | ✗        | dev                   | Cloudflare Pages `dev` branch deploy |
@@ -169,6 +169,16 @@ is the canonical example of this blind spot. The fix established
 the pattern above: `scripts/ci/verify-readyz.sh` with a python-based
 fake-server self-test wired into `lint-typecheck.yml`, plus
 shellcheck of both `scripts/ci/` and `scripts/journeys/`.
+
+### Main-promotion SHA binding
+
+`main-gate.yml` checks out `github.event.pull_request.head.sha`, then
+polls the dev API's `/healthz` with
+`scripts/ci/verify-deployed-sha.sh`. The reported short
+`gitCommit` must be a hexadecimal prefix of that full PR head SHA
+before any journey runs. This prevents a healthy but stale or newer
+shared dev deployment from making an unrelated `main` promotion
+green. Both the poll loop and the surrounding job are bounded.
 
 ---
 

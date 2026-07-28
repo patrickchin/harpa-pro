@@ -28,6 +28,19 @@ selector yet.
 The root lint script runs `scripts/check-no-maestro-point-taps.sh`,
 which fails on any `.maestro/**/*.yaml` / `.yml` `point:` key.
 
+## CI launch smoke
+
+`.maestro/ci-launch-smoke.yaml` is the narrow PR-time device check.
+CI generates and installs the Android debug app, starts fixture-mode
+Metro, opens the dev-client bundle, and asserts the sign-in email
+control renders. The job is capped at 20 minutes and the Maestro
+process at 180 seconds so a stuck emulator or driver cannot consume
+an unbounded runner.
+
+This does not replace the regression journey. It proves the native
+build, Metro bundle, installation, launch, and first rendered route;
+the larger flows remain explicit local and release checks.
+
 ## `core-end-to-end.yaml` (legacy P3 smoke)
 
 The older P3-exit-gate single-file flow. It still exists as a manual

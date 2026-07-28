@@ -40,8 +40,12 @@
   `packages/api/src/__tests__/factories/`.
 - Two test actors per test (`alice`, `bob`) so per-request scope
   tests are always paired.
-- Coverage gate: ≥ 90% lines on `packages/api/src/`.
-- CI matrix runs the suite against Postgres 15 and 16.
+- `test:coverage` collects unit coverage plus two sequential,
+  serial Testcontainers shards, then merges the Vitest blobs so the
+  report includes both pure helpers and database-backed route
+  handlers without retaining every container's coverage map in one
+  process.
+- CI rejects less than 90% line coverage on `packages/api/src/`.
 
 ### Per-request scope tests
 
@@ -86,14 +90,28 @@ Each AI-touching route has a test that:
 - There is no automated diff and no `pnpm visual:diff` script.
   Cosmetic drift is caught by reviewer eye; it is still a P0 bug.
 
+### Metro bundle smoke
+
+- `pnpm --filter @harpa/mobile bundle:smoke` exports a real iOS
+  bundle and checks both Metro's resolver output and exported module
+  metadata for test/Vitest leakage.
+- `e2e-maestro-testid-gate.yml` runs it on every mobile-relevant PR
+  and push. Unit tests alone do not exercise Expo Router's Metro
+  context or native-module resolution.
+
 ### Maestro E2E
 
-- `apps/mobile/.maestro/` contains the flows.
+- `.maestro/` contains the flows.
 - `appId` is read from `MAESTRO_APP_ID` (Pitfall 9).
-- Runs on iOS sim + Android emu in CI matrix.
+- Mobile-relevant PRs build and install the Android dev client on a
+  real emulator, then run the bounded
+  `.maestro/ci-launch-smoke.yaml` flow. The job has a 20-minute
+  ceiling and the Maestro command has a 180-second ceiling.
 - AI calls go through replay mode automatically — `:mock` build
   ships fixtures.
-- All flows pass before P3 exit.
+- Full regression and native-input flows remain explicit local /
+  release checks; the PR smoke proves native build, Metro startup,
+  installation, launch, and a rendered sign-in control.
 
 ### Docs site (Playwright)
 
@@ -149,7 +167,8 @@ Active today:
 |---|---|---|
 | `lint-typecheck.yml` | every push | ESLint + tsc clean across the workspace |
 | `unit.yml` | every push | `pnpm test` green |
-| `api-integration.yml` | every push | Testcontainers suite green at ≥ 90% line coverage |
+| `api-integration.yml` | every push | Combined API unit + Testcontainers suite green at ≥ 90% line coverage |
+| `e2e-maestro-testid-gate.yml` | mobile-relevant PR / push | testID policy, Metro bundle leakage, and bounded Android Maestro launch smoke |
 | `pr-preview.yml` | PR open / push | Neon branch lifecycle for previews |
 | `site-prod.yml` | push to `main` | Deploy the public site to Cloudflare Pages prod |
 | `site-preview.yml` | PR to `dev` or `main` | Test and deploy a per-PR public-site preview |
@@ -157,10 +176,14 @@ Active today:
 Deferred (add when the phase actually starts, not before):
 
 - `contract.yml` — OpenAPI regen + diff. Add in P1 once `spec:emit` is wired.
-- `mobile-build.yml` — Expo prebuild + Metro bundle. Add in P2 when mobile is non-skeleton (today `unit.yml` already covers mobile typecheck + tests).
-- `e2e-maestro.yml` — Maestro flows on iOS + Android. Add in P3.
 - `visual-gate.yml` — screenshot diff. Add in P2 once shared primitives + first screens land.
 - Per-phase exit gates (`p1-exit-gate.yml`, etc.) — prefer GitHub branch-protection required checks over standalone workflows.
+
+`scripts/ci/__tests__/release-confidence-gates.test.sh` statically
+pins these workflow contracts, and
+`scripts/ci/__tests__/verify-deployed-sha.test.sh` exercises the
+main-promotion SHA verifier against fake health responses. Both run
+from the PR-gated `lint-typecheck.yml` job.
 
 ## Removal verification gates
 

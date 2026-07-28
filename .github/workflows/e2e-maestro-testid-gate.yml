@@ -12,6 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       mobile: ${{ steps.paths.outputs.mobile }}
+      workflows: ${{ steps.paths.outputs.workflows }}
     steps:
       - uses: actions/checkout@v4
       - id: paths
@@ -19,10 +20,107 @@ jobs:
 
   testid-gate:
     needs: changes
-    if: needs.changes.outputs.mobile == 'true' || github.event_name == 'push'
+    if: >-
+      needs.changes.outputs.mobile == 'true' ||
+      needs.changes.outputs.workflows == 'true' ||
+      github.event_name == 'push'
     name: Maestro testID gate
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - name: Check Maestro testIDs exist in mobile source
         run: bash scripts/check-maestro-testids.sh
+
+  metro-bundle:
+    needs: changes
+    if: >-
+      needs.changes.outputs.mobile == 'true' ||
+      needs.changes.outputs.workflows == 'true' ||
+      github.event_name == 'push'
+    name: Metro bundle leakage gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-monorepo
+      - name: Export production-shaped mobile bundle
+        run: pnpm --filter @harpa/mobile bundle:smoke
+
+  maestro-smoke:
+    needs: changes
+    if: >-
+      github.event_name == 'pull_request' &&
+      (needs.changes.outputs.mobile == 'true' ||
+      needs.changes.outputs.workflows == 'true')
+    name: Maestro Android launch smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      APP_VARIANT: development
+      EXPO_PUBLIC_APP_VARIANT: development
+      EXPO_PUBLIC_API_URL: http://localhost:8787
+      EXPO_PUBLIC_USE_FIXTURES: 'true'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-monorepo
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Install Maestro CLI
+        run: |
+          curl -Ls "https://get.maestro.mobile.dev" | bash
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+
+      - name: Generate Android project
+        run: pnpm --filter @harpa/mobile exec expo prebuild --platform android --clean --no-install
+
+      - name: Build Android debug APK
+        working-directory: apps/mobile/android
+        run: ./gradlew :app:assembleDebug --no-daemon
+
+      - name: Run bounded Maestro launch smoke
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          profile: pixel_6
+          disable-animations: true
+          script: |
+            set -euo pipefail
+            adb install -r apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk
+            adb reverse tcp:8081 tcp:8081
+
+            pnpm --filter @harpa/mobile exec expo start \
+              --dev-client --port 8081 > "$RUNNER_TEMP/metro.log" 2>&1 &
+            metro_pid=$!
+            trap 'kill "$metro_pid" 2>/dev/null || true' EXIT
+
+            metro_ready=0
+            for _ in $(seq 1 90); do
+              if curl --fail --silent http://127.0.0.1:8081/status \
+                | grep -q "packager-status:running"; then
+                metro_ready=1
+                break
+              fi
+              sleep 1
+            done
+            if [[ "$metro_ready" -ne 1 ]]; then
+              tail -80 "$RUNNER_TEMP/metro.log" >&2
+              exit 1
+            fi
+
+            timeout 180s "$HOME/.maestro/bin/maestro" test \
+              --env MAESTRO_APP_ID=com.harpa.pro.dev \
+              --debug-output "$RUNNER_TEMP/maestro-debug" \
+              .maestro/ci-launch-smoke.yaml
+
+      - name: Upload Maestro diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: maestro-launch-smoke-diagnostics
+          path: |
+            ${{ runner.temp }}/metro.log
+            ${{ runner.temp }}/maestro-debug

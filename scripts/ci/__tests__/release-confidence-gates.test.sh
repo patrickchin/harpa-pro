@@ -74,7 +74,8 @@ require_fixed ".github/workflows/e2e-maestro-testid-gate.yml" \
 
 require_file ".maestro/ci-launch-smoke.yaml" \
   "CI has a focused Maestro launch flow"
-require_fixed ".maestro/ci-launch-smoke.yaml" 'id: "input-email"' \
+require_regex ".maestro/ci-launch-smoke.yaml" \
+  "id:[[:space:]]*['\"]?input-email['\"]?" \
   "Maestro launch flow asserts a rendered app control"
 require_regex ".github/workflows/e2e-maestro-testid-gate.yml" \
   'timeout-minutes:[[:space:]]*[0-9]+' \

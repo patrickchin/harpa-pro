@@ -1,15 +1,11 @@
 import { defineConfig } from 'vitest/config';
 
+/** Final reporter and threshold for the merged unit + integration blobs. */
 export default defineConfig({
   test: {
-    environment: 'node',
-    setupFiles: ['src/__tests__/setup-env.ts'],
-    include: ['src/**/*.integration.test.ts', 'src/**/*.scope.test.ts'],
-    testTimeout: 60_000,
-    hookTimeout: 120_000,
-    fileParallelism: false,
     coverage: {
       provider: 'v8',
+      reporter: ['text', 'json-summary', 'lcov'],
       include: ['src/**/*.ts'],
       exclude: [
         'src/**/*.test.ts',
@@ -18,6 +14,9 @@ export default defineConfig({
         'src/**/*.live.test.ts',
         'src/__tests__/**',
       ],
+      thresholds: {
+        lines: 90,
+      },
     },
   },
 });

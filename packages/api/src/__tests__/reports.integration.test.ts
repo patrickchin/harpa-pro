@@ -60,6 +60,99 @@ afterAll(async () => {
 
 const headers = (tok: string) => ({ authorization: `Bearer ${tok}`, 'content-type': 'application/json' });
 
+interface ReportSnapshot {
+  id: string;
+  number: number;
+  status: 'draft' | 'finalized';
+  visitDate: string | null;
+  body: { meta: { title: string | null } } | null;
+  finalizedAt: string | null;
+  updatedAt: string;
+}
+
+async function seedOwnedProject(projectId: string, ownerId: string) {
+  const admin = new pg.Client({ connectionString: fx.url });
+  await admin.connect();
+  try {
+    await admin.query(
+      `INSERT INTO app.projects(id, name, owner_id)
+       VALUES ($1, 'Phase 0 test project', $2)`,
+      [projectId, ownerId],
+    );
+    await admin.query(
+      `INSERT INTO app.project_members(project_id, user_id, role)
+       VALUES ($1, $2, 'owner')`,
+      [projectId, ownerId],
+    );
+  } finally {
+    await admin.end();
+  }
+}
+
+async function createReportSnapshot(
+  projectSlug: string,
+  token: string,
+  input: Record<string, unknown> = {},
+): Promise<ReportSnapshot> {
+  const res = await createApp().request(`/projects/${projectSlug}/reports`, {
+    method: 'POST',
+    headers: headers(token),
+    body: JSON.stringify(input),
+  });
+  expect(res.status).toBe(201);
+  return (await res.json()) as ReportSnapshot;
+}
+
+async function getReportSnapshot(
+  projectSlug: string,
+  reportNumberValue: number,
+  token: string,
+): Promise<ReportSnapshot> {
+  const res = await createApp().request(`/projects/${projectSlug}/reports/${reportNumberValue}`, {
+    headers: { authorization: `Bearer ${token}` },
+  });
+  expect(res.status).toBe(200);
+  return (await res.json()) as ReportSnapshot;
+}
+
+async function patchReportSnapshot(
+  projectSlug: string,
+  reportNumberValue: number,
+  token: string,
+  patch: Record<string, unknown>,
+): Promise<ReportSnapshot> {
+  const res = await createApp().request(`/projects/${projectSlug}/reports/${reportNumberValue}`, {
+    method: 'PATCH',
+    headers: headers(token),
+    body: JSON.stringify(patch),
+  });
+  expect(res.status).toBe(200);
+  return (await res.json()) as ReportSnapshot;
+}
+
+function reportBodyWithTitle(title: string) {
+  return {
+    ...placementBody,
+    meta: { ...placementBody.meta, title },
+  };
+}
+
+function staleVersionOf(updatedAt: string) {
+  return new Date(new Date(updatedAt).getTime() - 1_000).toISOString();
+}
+
+async function readConflictReport(res: Response, current: ReportSnapshot): Promise<ReportSnapshot> {
+  expect(res.status).toBe(409);
+  const body = (await res.json()) as { report: ReportSnapshot };
+  expect(body.report).toMatchObject({
+    id: current.id,
+    number: current.number,
+    status: current.status,
+    updatedAt: current.updatedAt,
+  });
+  return body.report;
+}
+
 async function readDirty(reportId: string) {
   const c = await getPool().connect();
   try {
@@ -246,6 +339,245 @@ describe('reports CRUD', () => {
     expect(del.status).toBe(204);
     const get = await app.request(`/projects/${aliceProjSlug}/reports/${aliceReportNumber}`, { headers: { authorization: `Bearer ${tok}` } });
     expect(get.status).toBe(404);
+  });
+});
+
+describe('GET /projects/:project/reports status filter', () => {
+  let projectSlug: string;
+  let token: string;
+  let olderDraft: ReportSnapshot;
+  let finalized: ReportSnapshot;
+  let newerDraft: ReportSnapshot;
+
+  beforeAll(async () => {
+    projectSlug = makeProjectId();
+    token = await signTestToken(alice, aliceSid);
+    await seedOwnedProject(projectSlug, alice);
+
+    olderDraft = await createReportSnapshot(projectSlug, token);
+    finalized = await createReportSnapshot(projectSlug, token);
+    newerDraft = await createReportSnapshot(projectSlug, token);
+
+    const admin = new pg.Client({ connectionString: fx.url });
+    await admin.connect();
+    try {
+      await admin.query(
+        `UPDATE app.reports
+         SET created_at = $2::timestamptz, updated_at = $2::timestamptz
+         WHERE id = $1`,
+        [olderDraft.id, '2026-07-29T10:00:00.000Z'],
+      );
+      await admin.query(
+        `UPDATE app.reports
+         SET status = 'finalized',
+             finalized_at = $2::timestamptz,
+             created_at = $2::timestamptz,
+             updated_at = $2::timestamptz
+         WHERE id = $1`,
+        [finalized.id, '2026-07-29T10:01:00.000Z'],
+      );
+      await admin.query(
+        `UPDATE app.reports
+         SET created_at = $2::timestamptz, updated_at = $2::timestamptz
+         WHERE id = $1`,
+        [newerDraft.id, '2026-07-29T10:02:00.000Z'],
+      );
+    } finally {
+      await admin.end();
+    }
+  }, 30_000);
+
+  it('applies the status filter before cursor pagination', async () => {
+    const first = await createApp().request(
+      `/projects/${projectSlug}/reports?status=draft&limit=1`,
+      { headers: { authorization: `Bearer ${token}` } },
+    );
+    expect(first.status).toBe(200);
+    const firstPage = (await first.json()) as {
+      items: ReportSnapshot[];
+      nextCursor: string | null;
+    };
+    expect(firstPage.items.map((report) => report.id)).toEqual([newerDraft.id]);
+    expect(firstPage.items.every((report) => report.status === 'draft')).toBe(true);
+    expect(firstPage.nextCursor).not.toBeNull();
+
+    const second = await createApp().request(
+      `/projects/${projectSlug}/reports?status=draft&limit=1&cursor=${encodeURIComponent(firstPage.nextCursor!)}`,
+      { headers: { authorization: `Bearer ${token}` } },
+    );
+    expect(second.status).toBe(200);
+    const secondPage = (await second.json()) as {
+      items: ReportSnapshot[];
+      nextCursor: string | null;
+    };
+    expect(secondPage.items.map((report) => report.id)).toEqual([olderDraft.id]);
+    expect(secondPage.items.every((report) => report.status === 'draft')).toBe(true);
+    expect(secondPage.nextCursor).toBeNull();
+
+    const finalizedOnly = await createApp().request(
+      `/projects/${projectSlug}/reports?status=finalized&limit=1`,
+      { headers: { authorization: `Bearer ${token}` } },
+    );
+    expect(finalizedOnly.status).toBe(200);
+    const finalizedPage = (await finalizedOnly.json()) as {
+      items: ReportSnapshot[];
+    };
+    expect(finalizedPage.items.map((report) => report.id)).toEqual([finalized.id]);
+    expect(finalizedPage.items.every((report) => report.status === 'finalized')).toBe(true);
+  });
+
+  it('rejects an unknown status filter', async () => {
+    const res = await createApp().request(`/projects/${projectSlug}/reports?status=archived`, {
+      headers: { authorization: `Bearer ${token}` },
+    });
+    expect(res.status).toBe(400);
+  });
+});
+
+describe('Phase 0 report mutation concurrency', () => {
+  let projectSlug: string;
+  let token: string;
+
+  beforeAll(async () => {
+    projectSlug = makeProjectId();
+    token = await signTestToken(alice, aliceSid);
+    await seedOwnedProject(projectSlug, alice);
+  });
+
+  it('PATCH returns 409 plus the current report for a stale editor', async () => {
+    const created = await createReportSnapshot(projectSlug, token);
+    const current = await patchReportSnapshot(projectSlug, created.number, token, {
+      body: reportBodyWithTitle('Saved by editor A'),
+    });
+
+    const res = await createApp().request(`/projects/${projectSlug}/reports/${created.number}`, {
+      method: 'PATCH',
+      headers: headers(token),
+      body: JSON.stringify({
+        body: reportBodyWithTitle('Overwritten by stale editor B'),
+        expectedUpdatedAt: staleVersionOf(current.updatedAt),
+      }),
+    });
+    const conflict = await readConflictReport(res, current);
+    expect(conflict.body?.meta.title).toBe('Saved by editor A');
+
+    const latest = await getReportSnapshot(projectSlug, created.number, token);
+    expect(latest.updatedAt).toBe(current.updatedAt);
+    expect(latest.body?.meta.title).toBe('Saved by editor A');
+  });
+
+  it('generate returns 409 plus the current report for a stale editor', async () => {
+    const created = await createReportSnapshot(projectSlug, token);
+    const current = await patchReportSnapshot(projectSlug, created.number, token, {
+      visitDate: '2026-07-29T11:00:00.000Z',
+    });
+
+    const res = await createApp().request(
+      `/projects/${projectSlug}/reports/${created.number}/generate`,
+      {
+        method: 'POST',
+        headers: headers(token),
+        body: JSON.stringify({
+          expectedUpdatedAt: staleVersionOf(current.updatedAt),
+        }),
+      },
+    );
+    const conflict = await readConflictReport(res, current);
+    expect(conflict.body).toBeNull();
+    expect(conflict.visitDate).toBe('2026-07-29T11:00:00.000Z');
+
+    const latest = await getReportSnapshot(projectSlug, created.number, token);
+    expect(latest.updatedAt).toBe(current.updatedAt);
+    expect(latest.body).toBeNull();
+  });
+
+  it('regenerate returns 409 plus the current report for a stale editor', async () => {
+    const created = await createReportSnapshot(projectSlug, token);
+    const current = await patchReportSnapshot(projectSlug, created.number, token, {
+      body: reportBodyWithTitle('Current manual draft'),
+    });
+
+    const res = await createApp().request(
+      `/projects/${projectSlug}/reports/${created.number}/regenerate`,
+      {
+        method: 'POST',
+        headers: headers(token),
+        body: JSON.stringify({
+          fixtureName: 'generate-report.voice-4',
+          expectedUpdatedAt: staleVersionOf(current.updatedAt),
+        }),
+      },
+    );
+    const conflict = await readConflictReport(res, current);
+    expect(conflict.body?.meta.title).toBe('Current manual draft');
+
+    const latest = await getReportSnapshot(projectSlug, created.number, token);
+    expect(latest.updatedAt).toBe(current.updatedAt);
+    expect(latest.body?.meta.title).toBe('Current manual draft');
+  });
+
+  it('finalize returns 409 plus the current draft for a stale editor', async () => {
+    const created = await createReportSnapshot(projectSlug, token);
+    const current = await patchReportSnapshot(projectSlug, created.number, token, {
+      body: reportBodyWithTitle('Current draft'),
+    });
+
+    const res = await createApp().request(
+      `/projects/${projectSlug}/reports/${created.number}/finalize`,
+      {
+        method: 'POST',
+        headers: headers(token),
+        body: JSON.stringify({
+          expectedUpdatedAt: staleVersionOf(current.updatedAt),
+        }),
+      },
+    );
+    const conflict = await readConflictReport(res, current);
+    expect(conflict.status).toBe('draft');
+    expect(conflict.finalizedAt).toBeNull();
+
+    const latest = await getReportSnapshot(projectSlug, created.number, token);
+    expect(latest.status).toBe('draft');
+    expect(latest.updatedAt).toBe(current.updatedAt);
+  });
+
+  it('unfinalize returns 409 plus the current finalized report for a stale editor', async () => {
+    const created = await createReportSnapshot(projectSlug, token);
+    await patchReportSnapshot(projectSlug, created.number, token, {
+      body: reportBodyWithTitle('Finalized report'),
+    });
+    const finalizedRes = await createApp().request(
+      `/projects/${projectSlug}/reports/${created.number}/finalize`,
+      {
+        method: 'POST',
+        headers: headers(token),
+        body: JSON.stringify({}),
+      },
+    );
+    expect(finalizedRes.status).toBe(200);
+    const current = (
+      (await finalizedRes.json()) as {
+        report: ReportSnapshot;
+      }
+    ).report;
+
+    const res = await createApp().request(
+      `/projects/${projectSlug}/reports/${created.number}/unfinalize`,
+      {
+        method: 'POST',
+        headers: headers(token),
+        body: JSON.stringify({
+          expectedUpdatedAt: staleVersionOf(current.updatedAt),
+        }),
+      },
+    );
+    const conflict = await readConflictReport(res, current);
+    expect(conflict.status).toBe('finalized');
+    expect(conflict.finalizedAt).toBe(current.finalizedAt);
+
+    const latest = await getReportSnapshot(projectSlug, created.number, token);
+    expect(latest.status).toBe('finalized');
+    expect(latest.updatedAt).toBe(current.updatedAt);
   });
 });
 

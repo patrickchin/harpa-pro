@@ -1,7 +1,8 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { createApp } from '../app.js';
 import { auth } from '../auth/auth.js';
-import { getPool, resetPool } from '../db/client.js';
+import { getPool, rawDb, resetPool } from '../db/client.js';
+import { reconcileSignupActivity } from '../services/activity-events.js';
 import { startPg, type PgFixture } from './setup-pg.js';
 
 let fx: PgFixture;
@@ -115,5 +116,51 @@ describe('signup activity', () => {
       [`user.signed_up:${user!.id}`],
     );
     expect(events.rowCount).toBe(0);
+  });
+
+  it('repairs one explicitly selected missing signup event idempotently', async () => {
+    const ctx = await auth.$context;
+    const user = await ctx.internalAdapter.createUser({
+      email: 'repair-signup@example.com',
+      name: 'Repair signup',
+      emailVerified: true,
+    });
+    if (!user) throw new Error('failed to seed repair user');
+
+    const dryRun = await reconcileSignupActivity(rawDb(), user.id, false);
+    expect(dryRun).toEqual({
+      userId: user.id,
+      state: 'missing',
+      inserted: false,
+    });
+
+    const applied = await reconcileSignupActivity(rawDb(), user.id, true);
+    expect(applied).toEqual({
+      userId: user.id,
+      state: 'missing',
+      inserted: true,
+    });
+
+    const repeat = await reconcileSignupActivity(rawDb(), user.id, true);
+    expect(repeat).toEqual({
+      userId: user.id,
+      state: 'present',
+      inserted: false,
+    });
+
+    const events = await getPool().query<{
+      occurred_at: Date;
+      created_at: Date;
+    }>(
+      `SELECT e.occurred_at, u.created_at
+       FROM app.activity_events e
+       JOIN public."user" u ON u.id::text = e.subject_id
+       WHERE e.dedupe_key = $1`,
+      [`user.signed_up:${user.id}`],
+    );
+    expect(events.rows).toHaveLength(1);
+    expect(events.rows[0]!.occurred_at.getTime()).toBe(
+      events.rows[0]!.created_at.getTime(),
+    );
   });
 });

@@ -6,7 +6,7 @@ Implementation status:
 
 - [x] Phase 1 — contract, ID family, storage, RLS, and recorder.
 - [x] Phase 2 — initial signup, project, and report event writers.
-- [ ] Phase 3 — admin read API and browser CORS.
+- [ ] Phase 3 — admin read API complete; browser cookie/CORS remains.
 - [ ] Phase 4 — admin page.
 - [ ] Phase 5 — deployment.
 - [ ] Phase 6 — evaluate before expanding.

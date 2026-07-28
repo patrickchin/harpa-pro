@@ -5,12 +5,7 @@ import { createApp } from '../app.js';
 import { getPool, resetPool } from '../db/client.js';
 import { newId } from '../lib/ids.js';
 import { signTestToken } from '../middleware/auth.js';
-import {
-  makeProjectId,
-  makeReportId,
-  makeSessionId,
-  makeUserId,
-} from './factories/index.js';
+import { makeProjectId, makeReportId, makeSessionId, makeUserId } from './factories/index.js';
 import { seedAuthUsers, startPg, type PgFixture } from './setup-pg.js';
 
 let fx: PgFixture;
@@ -156,10 +151,7 @@ describe('GET /admin/activity', () => {
     expect(response.status).toBe(200);
     expect(response.headers.get('cache-control')).toBe('private, no-store');
     const body = activitySchemas.listResponse.parse(await response.json());
-    expect(body.items.map((item) => item.id)).toEqual([
-      reportEventId,
-      projectEventId,
-    ]);
+    expect(body.items.map((item) => item.id)).toEqual([reportEventId, projectEventId]);
     expect(body.nextCursor).toBeTruthy();
     expect(body.items[0]).toMatchObject({
       occurredAt: '2026-07-29T03:00:00.000Z',
@@ -189,9 +181,7 @@ describe('GET /admin/activity', () => {
       { headers: await adminHeaders() },
     );
     expect(secondResponse.status).toBe(200);
-    const second = activitySchemas.listResponse.parse(
-      await secondResponse.json(),
-    );
+    const second = activitySchemas.listResponse.parse(await secondResponse.json());
 
     expect(first.items.map((item) => item.id)).toEqual([
       reportEventId,
@@ -239,22 +229,16 @@ describe('GET /admin/activity', () => {
 
     expect(ids).toEqual([
       [reportEventId],
-      [
-        reportEventId,
-        projectEventId,
-        signupEventId,
-        deletedProjectEventId,
-      ],
+      [reportEventId, projectEventId, signupEventId, deletedProjectEventId],
       [reportEventId, projectEventId],
       [projectEventId],
     ]);
   });
 
   it('rejects a malformed cursor', async () => {
-    const response = await createApp().request(
-      '/admin/activity?cursor=not-a-valid-cursor',
-      { headers: await adminHeaders() },
-    );
+    const response = await createApp().request('/admin/activity?cursor=not-a-valid-cursor', {
+      headers: await adminHeaders(),
+    });
     expect(response.status).toBe(400);
   });
 });

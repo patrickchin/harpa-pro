@@ -5077,6 +5077,153 @@ export interface paths {
         };
         trace?: never;
     };
+    "/admin/activity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    cursor?: string;
+                    limit?: number;
+                    eventType?: "user.signed_up" | "project.created" | "report.created";
+                    actorUserId?: string;
+                    projectId?: string;
+                    from?: string;
+                    to?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Paginated business activity, newest first. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            items: ({
+                                id: string;
+                                occurredAt: string;
+                                actorUserId: string | null;
+                                actorLabel: string;
+                                /** Format: email */
+                                actorEmail: string | null;
+                                subjectLabel: string;
+                                projectLabel: string | null;
+                                requestId: string | null;
+                                /** @enum {string} */
+                                eventType: "user.signed_up";
+                                /** @enum {string} */
+                                subjectType: "user";
+                                subjectId: string | null;
+                                projectId: unknown;
+                                metadata: {
+                                    /** @enum {string} */
+                                    method: "email_otp";
+                                };
+                            } | {
+                                id: string;
+                                occurredAt: string;
+                                actorUserId: string | null;
+                                actorLabel: string;
+                                /** Format: email */
+                                actorEmail: string | null;
+                                subjectLabel: string;
+                                projectLabel: string | null;
+                                requestId: string | null;
+                                /** @enum {string} */
+                                eventType: "project.created";
+                                /** @enum {string} */
+                                subjectType: "project";
+                                subjectId: string;
+                                projectId: string;
+                                metadata: Record<string, never>;
+                            } | {
+                                id: string;
+                                occurredAt: string;
+                                actorUserId: string | null;
+                                actorLabel: string;
+                                /** Format: email */
+                                actorEmail: string | null;
+                                subjectLabel: string;
+                                projectLabel: string | null;
+                                requestId: string | null;
+                                /** @enum {string} */
+                                eventType: "report.created";
+                                /** @enum {string} */
+                                subjectType: "report";
+                                subjectId: string;
+                                projectId: string;
+                                metadata: {
+                                    reportNumber: number;
+                                };
+                            })[];
+                            nextCursor: string | null;
+                        };
+                    };
+                };
+                /** @description Bad request. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                            requestId?: string;
+                        };
+                    };
+                };
+                /** @description Unauthorized. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                            requestId?: string;
+                        };
+                    };
+                };
+                /** @description Admin access required. */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                            requestId?: string;
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {

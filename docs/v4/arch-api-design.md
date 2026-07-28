@@ -101,6 +101,7 @@ update.
 
 | Method | Path | Purpose |
 |---|---|---|
+| GET | `/admin/activity` | Paginated business activity feed. See [design-admin-business-activity.md](design-admin-business-activity.md). |
 | GET | `/admin/waitlist.csv` | Export waitlist (marketing P1). |
 | PATCH | `/admin/users/:id/plan` | Change a user's plan tier. See [arch-usage-limits.md](arch-usage-limits.md). |
 | PUT | `/admin/users/:id/limit-overrides` | Upsert per-bucket override. See [arch-usage-limits.md](arch-usage-limits.md). |

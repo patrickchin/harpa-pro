@@ -19,6 +19,7 @@ import { voiceRoutes } from './routes/voice.js';
 import { settingsRoutes } from './routes/settings.js';
 import { waitlistRoutes } from './routes/waitlist.js';
 import { adminRoutes } from './routes/admin.js';
+import { adminActivityRoutes } from './routes/admin-activity.js';
 import { resolverRoutes } from './routes/resolvers.js';
 import { wellKnownRoutes } from './routes/well-known.js';
 import { env } from './env.js';
@@ -115,6 +116,7 @@ export function createApp(): OpenAPIHono<AppEnv> {
   app.route('/', fileRoutes);
   app.route('/', voiceRoutes);
   app.route('/', settingsRoutes);
+  app.route('/', adminActivityRoutes);
   app.route('/', adminRoutes);
 
   // OpenAPI spec

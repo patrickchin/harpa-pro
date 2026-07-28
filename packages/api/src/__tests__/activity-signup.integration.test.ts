@@ -119,31 +119,32 @@ describe('signup activity', () => {
   });
 
   it('repairs one explicitly selected missing signup event idempotently', async () => {
-    const ctx = await auth.$context;
-    const user = await ctx.internalAdapter.createUser({
-      email: 'repair-signup@example.com',
-      name: 'Repair signup',
-      emailVerified: true,
-    });
-    if (!user) throw new Error('failed to seed repair user');
+    const email = 'repair-signup@example.com';
+    await sendOtp(email);
+    const signup = await signIn(email, 'repair-signup-request');
+    expect(signup.status).toBe(200);
+    const user = (await signup.json()) as { user: { id: string } };
+    await getPool().query(`DELETE FROM app.activity_events WHERE dedupe_key = $1`, [
+      `user.signed_up:${user.user.id}`,
+    ]);
 
-    const dryRun = await reconcileSignupActivity(rawDb(), user.id, false);
+    const dryRun = await reconcileSignupActivity(rawDb(), user.user.id, false);
     expect(dryRun).toEqual({
-      userId: user.id,
+      userId: user.user.id,
       state: 'missing',
       inserted: false,
     });
 
-    const applied = await reconcileSignupActivity(rawDb(), user.id, true);
+    const applied = await reconcileSignupActivity(rawDb(), user.user.id, true);
     expect(applied).toEqual({
-      userId: user.id,
+      userId: user.user.id,
       state: 'missing',
       inserted: true,
     });
 
-    const repeat = await reconcileSignupActivity(rawDb(), user.id, true);
+    const repeat = await reconcileSignupActivity(rawDb(), user.user.id, true);
     expect(repeat).toEqual({
-      userId: user.id,
+      userId: user.user.id,
       state: 'present',
       inserted: false,
     });
@@ -156,7 +157,7 @@ describe('signup activity', () => {
        FROM app.activity_events e
        JOIN public."user" u ON u.id::text = e.subject_id
        WHERE e.dedupe_key = $1`,
-      [`user.signed_up:${user.id}`],
+      [`user.signed_up:${user.user.id}`],
     );
     expect(events.rows).toHaveLength(1);
     expect(events.rows[0]!.occurred_at.getTime()).toBe(events.rows[0]!.created_at.getTime());

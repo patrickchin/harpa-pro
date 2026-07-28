@@ -1,6 +1,6 @@
 {
   "name": "harpa-pro",
-  "version": "0.1.62",
+  "version": "0.1.63",
   "private": true,
   "packageManager": "pnpm@9.12.3",
   "engines": {

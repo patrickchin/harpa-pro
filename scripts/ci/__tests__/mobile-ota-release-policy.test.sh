@@ -37,6 +37,35 @@ assert_contains() {
   fi
 }
 
+assert_not_contains() {
+  local file="$1"
+  local pattern="$2"
+  local description="$3"
+
+  if grep -Fq -- "$pattern" "$file"; then
+    fail "$description"
+    echo "         unexpected '$pattern' in ${file#"$REPO_ROOT"/}"
+  else
+    pass "$description"
+  fi
+}
+
+assert_count() {
+  local file="$1"
+  local pattern="$2"
+  local expected="$3"
+  local description="$4"
+  local actual
+
+  actual="$(grep -Fc -- "$pattern" "$file" || true)"
+  if [[ "$actual" -eq "$expected" ]]; then
+    pass "$description"
+  else
+    fail "$description"
+    echo "         expected $expected occurrences of '$pattern', found $actual in ${file#"$REPO_ROOT"/}"
+  fi
+}
+
 assert_before() {
   local file="$1"
   local first="$2"
@@ -137,6 +166,20 @@ for environment in dev prod; do
     "$ota_workflow" \
     'EXPECTED_GIT_COMMIT: ${{ needs.release-policy.outputs.release-sha }}' \
     "${environment}: deployed metadata is compared with the OTA SHA"
+  assert_not_contains \
+    "$ota_workflow" \
+    "if: needs.release-policy.outputs.api-changed == 'true'" \
+    "${environment}: every OTA verifies the deployed API"
+  assert_count \
+    "$ota_workflow" \
+    "fetch-depth: 0" \
+    3 \
+    "${environment}: OTA verification has full branch history"
+  assert_count \
+    "$ota_workflow" \
+    "API_PATH_PATTERN:" \
+    2 \
+    "${environment}: API history verifier receives the API path policy"
   assert_before \
     "$ota_workflow" \
     "register-native-runtime:" \
@@ -172,6 +215,18 @@ if [[ -f "$VERIFY_SCRIPT" ]]; then
     "$VERIFY_SCRIPT" \
     'verify-readyz.sh' \
     "API verifier also proves database readiness"
+  assert_contains \
+    "$VERIFY_SCRIPT" \
+    'API_PATH_PATTERN' \
+    "API verifier receives the API path policy"
+  assert_contains \
+    "$VERIFY_SCRIPT" \
+    'git merge-base --is-ancestor' \
+    "API verifier accepts only an ancestor deployment"
+  assert_contains \
+    "$VERIFY_SCRIPT" \
+    'git log --format= --name-only' \
+    "API verifier inspects the full commit range for API changes"
 else
   fail "shared API release verifier exists"
   echo "         missing scripts/ci/verify-api-release.sh"

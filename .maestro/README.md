@@ -35,7 +35,9 @@ CI generates and installs the Android debug app, starts fixture-mode
 Metro, opens the dev-client bundle, and asserts the sign-in email
 control renders. The job is capped at 20 minutes and the Maestro
 process at 180 seconds so a stuck emulator or driver cannot consume
-an unbounded runner.
+an unbounded runner. The APK build targets only the emulator's
+`x86_64` ABI and restores Gradle dependencies from a cache keyed by
+the lockfile and mobile prebuild inputs.
 
 This does not replace the regression journey. It proves the native
 build, Metro bundle, installation, launch, and first rendered route;

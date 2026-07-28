@@ -107,6 +107,10 @@ Each AI-touching route has a test that:
   real emulator, then run the bounded
   `.maestro/ci-launch-smoke.yaml` flow. The job has a 20-minute
   ceiling and the Maestro command has a 180-second ceiling.
+- The PR APK targets only the emulator's `x86_64` ABI instead of
+  compiling the three unused Android ABIs. Gradle dependencies are
+  restored from a cache keyed by the lockfile and mobile prebuild
+  inputs.
 - AI calls go through replay mode automatically — `:mock` build
   ships fixtures.
 - Full regression and native-input flows remain explicit local /

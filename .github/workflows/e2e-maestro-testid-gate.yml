@@ -76,6 +76,11 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
+          cache: gradle
+          cache-dependency-path: |
+            pnpm-lock.yaml
+            apps/mobile/app.config.ts
+            apps/mobile/package.json
 
       - name: Install Maestro CLI
         run: |
@@ -87,7 +92,7 @@ jobs:
 
       - name: Build Android debug APK
         working-directory: apps/mobile/android
-        run: ./gradlew :app:assembleDebug --no-daemon
+        run: ./gradlew :app:assembleDebug --no-daemon -PreactNativeArchitectures=x86_64
 
       - name: Run bounded Maestro launch smoke
         uses: reactivecircus/android-emulator-runner@v2

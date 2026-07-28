@@ -37,15 +37,19 @@ deploy-time apply mechanism (Fly `release_command`), the `/readyz` schema-
 head check, the advisory-lock-protected loader, and the expand-contract
 rules. Summary below.
 
-- Drizzle Kit generates SQL: `pnpm --filter @harpa/api db:generate`.
-- Files: `packages/api/migrations/<timestamp>_<slug>.sql`. Filename
-  format `YYYYMMDDHHmm_description.sql` (matches our convention).
+- Use `pnpm --filter @harpa/api db:generate` for Drizzle schema changes.
+  Policy-only and data migrations can use reviewed hand-written SQL.
+- Files use `packages/api/migrations/<digits>_<slug>.sql`. The current
+  sequence uses four-digit prefixes, such as
+  `0021_project_write_roles.sql`. The loader also accepts older numeric
+  timestamp prefixes.
 - Applied via `pnpm --filter @harpa/api db:migrate`, which uses
   `drizzle-orm/node-postgres/migrator`.
 - A migration MUST be paired with:
-  - the Drizzle schema change in `packages/api/src/db/schema/*.ts`,
-  - a per-request scope test in `__tests__/scope/` if the new
-    table is user-owned (Pitfall 6).
+  - the matching file in `packages/api/src/db/schema/*.ts` when a
+    table or column shape changes;
+  - a per-request scope test in `__tests__/scope/` when a user-owned
+    table or policy changes (Pitfall 6).
 
 ## IDs
 
@@ -106,14 +110,56 @@ that reference `auth.users(id)` describe the pre-migration shape.
 
 ## RLS policies
 
-Every `app.*` user-owned table has RLS enabled and at least:
+Every `app.*` user-owned table has RLS enabled. The common rules are:
 
 - `SELECT` policy gating to project membership.
-- `INSERT` policy checking `user_id = current_setting('app.user_id')`.
-- `UPDATE` / `DELETE` policy checking ownership / role.
+- `INSERT` policy checking the current user and project role.
+- `UPDATE` and `DELETE` policies checking ownership and project role.
 
-Policies live alongside the migration that creates the table — never
-in a separate "policies" migration after the fact.
+Create the baseline policies in the migration that creates a table. If a
+role contract changes later, add a forward-only policy migration. Never
+edit a migration that has shipped.
+
+### Project write roles
+
+Migration `0021_project_write_roles.sql` adds
+`app.can_edit_project(project_id)`. The helper checks the current
+`app.user_id` and returns true for owners and editors.
+
+The migration keeps project content readable by all members and narrows
+writes:
+
+- owners and editors can update project metadata;
+- owners and editors can create, update, and delete reports;
+- owners and editors can create notes;
+- a note author can update or delete the note while they remain a writer;
+- owners and editors can change project-scoped files;
+- viewers remain read-only, except for the narrow PDF export path.
+
+Project deletion and membership changes remain owner-only. A current
+member can render a PDF. The `app.attach_report_pdf` security-definer
+function validates the exact report and generated file before it changes
+only `reports.pdf_file_id`.
+
+### Report concurrency and filtering
+
+Report body and state mutations accept an optional
+`expectedUpdatedAt` ISO timestamp during the mobile compatibility
+window. Dashboard and updated mobile clients send the `updatedAt` value
+they read. The SQL `UPDATE` includes that timestamp in its predicate.
+A stale write changes no row, and the API returns `409` with the current
+report.
+
+The precondition applies to report `PATCH`, generate, regenerate,
+finalize, and unfinalize. The generate path checks it before the AI call
+and again in the final `UPDATE`, so an edit during generation cannot be
+overwritten. Attachment placement keeps its existing
+`expectedBodyVersion` precondition.
+
+`GET /projects/{project}/reports` accepts `status=draft` or
+`status=finalized`. The database applies the status predicate before
+cursor pagination. An invalid status fails request validation with
+`400`.
 
 ## Backups
 

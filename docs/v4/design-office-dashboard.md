@@ -1,7 +1,8 @@
 # Design — Office dashboard
 
-Status: **proposed — product and architecture design; implementation has not
-started.**
+Status: **implemented for PR preview and release testing. Production
+availability still requires successful checks, merge, and an intentional
+production deployment.**
 
 Primary surface: `app.harpapro.com`
 
@@ -35,7 +36,7 @@ not free just because the API exists: each adds browser permissions, upload
 recovery, progress/error states, and another end-to-end path. They can be
 added when desktop demand is demonstrated.
 
-Two backend changes are release blockers:
+The implementation includes two backend safety changes:
 
 1. Enforce the intended `owner | editor | viewer` permissions in the API,
    rather than relying on mobile buttons being hidden.
@@ -82,10 +83,10 @@ into a browser.
 | Sign in with email code                  | Yes                       | Yes                     | Same account and session model                    |
 | List, create, and open projects          | Yes                       | Yes                     | Full parity                                       |
 | Edit project details                     | Owner/editor UI           | Yes                     | Full parity                                       |
-| Delete a project                         | Present in edit flow      | Owner only              | API and both UIs must agree                       |
+| Delete a project                         | Owner only                | Owner only              | API and both UIs agree                            |
 | List and filter members                  | Yes                       | Yes                     | Full parity                                       |
-| Add an existing user by email            | Editor/viewer only        | Owner/editor/viewer     | Add co-owner parity to mobile before dashboard GA |
-| Change member role                       | API exists; mobile UI gap | Yes                     | Add mobile parity before dashboard GA             |
+| Add an existing user by email            | Owner/editor/viewer       | Owner/editor/viewer     | Full parity                                       |
+| Change member role                       | Yes                       | Yes                     | Full parity                                       |
 | Remove a member                          | Owner UI                  | Yes                     | Preserve last-owner protection                    |
 | List and create reports                  | Yes                       | Yes                     | Full parity                                       |
 | View source notes                        | Yes                       | Read-only               | Enough for office review in MVP                   |
@@ -218,8 +219,8 @@ Columns:
 - last updated;
 - row actions allowed by the user's role.
 
-Initial controls are a server-backed status filter and pagination. Add the
-status query to the report-list endpoint with this page; filtering only the
+Initial controls are a server-backed status filter and pagination. The API
+applies `status=draft|finalized` before cursor pagination. Filtering only the
 currently loaded page would be misleading. Title search, arbitrary sorting,
 saved views, and bulk actions should wait for server-backed query support.
 
@@ -338,15 +339,14 @@ until the report is finalized again. Existing comments remain stored.
 
 ## 7. Save and conflict behavior
 
-The current full-body `PATCH` is last-write-wins. That is not safe once a
-phone and browser can edit the same draft.
+A full-body `PATCH` without a precondition would be last-write-wins. That is
+not safe when a phone and browser can edit the same draft.
 
-Add an `expectedUpdatedAt` precondition to report mutations that can replace
-or lock body content:
+The initial implementation adds an `expectedUpdatedAt` precondition to these
+report mutations:
 
 - report body `PATCH`;
 - generate/regenerate;
-- attachment placement;
 - finalize/unfinalize.
 
 The client sends the `updatedAt` value from the report it edited. The SQL
@@ -372,7 +372,9 @@ On `409`, the dashboard:
    `Overwrite with my draft`;
 5. never retries silently.
 
-A full field-by-field merge tool is not required for MVP.
+A full field-by-field merge tool is not required for MVP. The existing
+attachment-placement route keeps its `expectedBodyVersion` precondition.
+Desktop attachment placement remains deferred.
 
 ## 8. Permissions
 
@@ -393,9 +395,9 @@ The API, not the client, is the authorization boundary.
 | Place report attachments                   |   Yes |    Yes |     No |
 | Read/post finalized review comments        |   Yes |    Yes |    Yes |
 
-Before dashboard implementation, add route-level role checks and matching
-Postgres policies for every write row above. Current member-wide policies
-allow several viewer mutations that the mobile UI merely hides.
+The implementation adds route-level role checks and matching Postgres
+policies for every write row above. The checks replace the former
+member-wide policies that allowed viewer mutations.
 
 Required tests include owner, editor, viewer, and non-member cases. Viewer
 denials must hit the real route and database scope, not only a disabled
@@ -405,8 +407,8 @@ button test.
 
 ### 9.1 Application boundary
 
-Create `apps/dashboard` as a React single-page application deployed
-separately at `app.harpapro.com`.
+The implementation creates `apps/dashboard` as a React single-page
+application deployed separately at `app.harpapro.com`.
 
 Keep:
 
@@ -427,15 +429,15 @@ Dashboard environment variables load through a Zod-parsed
 
 Use the browser better-auth client with the existing email OTP flow.
 
-API work:
+API wiring:
 
-- add `https://app.harpapro.com` and local dashboard development to
-  better-auth `trustedOrigins`;
-- add a dedicated dashboard CORS allowlist for auth and authenticated API
+- includes `https://app.harpapro.com`, Cloudflare Pages previews, and local
+  dashboard development in better-auth `trustedOrigins`;
+- uses a dedicated dashboard CORS allowlist for auth and authenticated API
   routes;
-- allow credentials and the required content, authorization, and idempotency
-  headers;
-- keep the waitlist CORS policy separate and public-only.
+- allows credentials and the required content, authorization, and
+  idempotency headers;
+- keeps the waitlist CORS policy separate and public-only.
 
 Do not reuse the Expo auth client or SecureStore code in the browser.
 
@@ -458,13 +460,13 @@ browser-specific.
 
 ### 9.4 API improvements
 
-Required before editor release:
+Included in the editor release:
 
 - role enforcement described in section 8;
 - `expectedUpdatedAt` concurrency on report mutations;
 - browser auth origins and CORS.
 
-Required with the reports-list page:
+Included with the reports-list page:
 
 - a server-backed `status` query parameter that composes with cursor
   pagination.
@@ -519,6 +521,10 @@ Responsive behavior:
 
 ## 11. Delivery plan
 
+This change covers phases 0 through 4 for a PR release candidate. The
+preview is a test surface, not production availability. Production
+promotion remains a separate release gate after the PR passes review.
+
 ### Phase 0 — contracts and safety
 
 - Enforce the role matrix in routes, services/RLS, and integration tests.
@@ -567,8 +573,11 @@ conflict journeys pass.
 - Cross-browser coverage for current Chrome, Safari, Firefox, and Edge.
 - Keyboard and screen-reader review.
 - Performance pass on large reports and long member/report lists.
-- Production deployment, Sentry, readiness checks, and rollback notes.
-- Update public docs and the “Web app for the office” roadmap status.
+- PR-preview deployment, Sentry, readiness checks, and rollback notes.
+- Update public docs and explain the dashboard preview state on the roadmap.
+
+Production deployment runs only after the change passes its release gates.
+Until then, the public roadmap keeps the feature marked as planned.
 
 Field capture, attachment placement, richer comments, bulk work, and insights
 remain separately prioritizable follow-ups.

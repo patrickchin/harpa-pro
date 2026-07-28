@@ -42,6 +42,14 @@ inputs. Before launch, CI applies the runner action's documented
 world-readable/writable `/dev/kvm` udev rule so the hosted Ubuntu
 emulator uses hardware acceleration.
 
+The emulator action invokes `scripts/ci/run-maestro-launch-smoke.sh`
+with Bash explicitly because the action otherwise evaluates `script:`
+with `/usr/bin/sh`, which does not support `pipefail` on Ubuntu. The
+runner creates its Metro log and Maestro debug directory before
+installing the APK, then captures ADB state and recent logcat output
+on failure. CI uploads those files as
+`maestro-launch-smoke-diagnostics`.
+
 This does not replace the regression journey. It proves the native
 build, Metro bundle, installation, launch, and first rendered route;
 the larger flows remain explicit local and release checks.

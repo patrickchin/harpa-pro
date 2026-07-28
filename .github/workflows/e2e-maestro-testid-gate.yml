@@ -109,40 +109,14 @@ jobs:
           profile: pixel_6
           emulator-boot-timeout: 300
           disable-animations: true
-          script: |
-            set -euo pipefail
-            adb install -r apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk
-            adb reverse tcp:8081 tcp:8081
-
-            pnpm --filter @harpa/mobile exec expo start \
-              --dev-client --port 8081 > "$RUNNER_TEMP/metro.log" 2>&1 &
-            metro_pid=$!
-            trap 'kill "$metro_pid" 2>/dev/null || true' EXIT
-
-            metro_ready=0
-            for _ in $(seq 1 90); do
-              if curl --fail --silent http://127.0.0.1:8081/status \
-                | grep -q "packager-status:running"; then
-                metro_ready=1
-                break
-              fi
-              sleep 1
-            done
-            if [[ "$metro_ready" -ne 1 ]]; then
-              tail -80 "$RUNNER_TEMP/metro.log" >&2
-              exit 1
-            fi
-
-            timeout 180s "$HOME/.maestro/bin/maestro" test \
-              --env MAESTRO_APP_ID=com.harpa.pro.dev \
-              --debug-output "$RUNNER_TEMP/maestro-debug" \
-              .maestro/ci-launch-smoke.yaml
+          script: bash scripts/ci/run-maestro-launch-smoke.sh
 
       - name: Upload Maestro diagnostics
         if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: maestro-launch-smoke-diagnostics
+          if-no-files-found: error
           path: |
             ${{ runner.temp }}/metro.log
             ${{ runner.temp }}/maestro-debug

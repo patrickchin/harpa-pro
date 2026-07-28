@@ -131,9 +131,12 @@ require_fixed "scripts/ci/run-maestro-launch-smoke.sh" \
 require_regex "scripts/ci/run-maestro-launch-smoke.sh" \
   'timeout[[:space:]]+[0-9]+s.*maestro' \
   "Maestro CLI execution has a shell-level timeout"
+# These are literal runner-script strings, not policy-test expansions.
+# shellcheck disable=SC2016
 require_fixed "scripts/ci/run-maestro-launch-smoke.sh" \
   'mkdir -p "$MAESTRO_DEBUG_DIR"' \
   "Maestro smoke creates its diagnostics directory before launch"
+# shellcheck disable=SC2016
 require_fixed "scripts/ci/run-maestro-launch-smoke.sh" \
   ': > "$METRO_LOG"' \
   "Maestro smoke creates an uploadable log before fallible commands"

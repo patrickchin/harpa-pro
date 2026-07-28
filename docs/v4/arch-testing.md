@@ -177,7 +177,7 @@ Active today:
 | `lint-typecheck.yml` | every push | ESLint + tsc clean across the workspace |
 | `unit.yml` | every push | `pnpm test` green |
 | `api-integration.yml` | every push | Combined API unit + Testcontainers suite green at ≥ 90% line coverage |
-| `e2e-maestro-testid-gate.yml` | mobile-relevant PR / push | testID policy, Metro bundle leakage, and bounded Android Maestro launch smoke |
+| `e2e-maestro-testid-gate.yml` | mobile-relevant PR / push | testID policy, Metro bundle leakage, and bounded Android Maestro launch smoke with failure diagnostics |
 | `pr-preview.yml` | PR open / push | Neon branch lifecycle for previews |
 | `site-prod.yml` | push to `main` | Deploy the public site to Cloudflare Pages prod |
 | `site-preview.yml` | PR to `dev` or `main` | Test and deploy a per-PR public-site preview |
@@ -189,7 +189,9 @@ Deferred (add when the phase actually starts, not before):
 - Per-phase exit gates (`p1-exit-gate.yml`, etc.) — prefer GitHub branch-protection required checks over standalone workflows.
 
 `scripts/ci/__tests__/release-confidence-gates.test.sh` statically
-pins these workflow contracts, and
+pins these workflow contracts, including the explicit Bash boundary
+and early diagnostic setup in
+`scripts/ci/run-maestro-launch-smoke.sh`, and
 `scripts/ci/__tests__/verify-deployed-sha.test.sh` exercises the
 main-promotion SHA verifier against fake health responses, including
 rejection of matching abbreviated SHAs. Both run from the PR-gated

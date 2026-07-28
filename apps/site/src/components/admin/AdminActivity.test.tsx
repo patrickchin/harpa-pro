@@ -142,6 +142,28 @@ describe('AdminActivity', () => {
     expect(window.localStorage.length).toBe(0);
   });
 
+  it('shows a retryable error when the OTP request cannot reach the API', async () => {
+    authMock.sessionState = {
+      data: null,
+      isPending: false,
+      refetch: authMock.refetchSession,
+    };
+    authMock.sendVerificationOtp.mockRejectedValue(new Error('offline'));
+    const user = userEvent.setup();
+    render(<AdminActivity />);
+
+    await user.type(screen.getByLabelText('Email'), 'admin@example.com');
+    await user.click(screen.getByRole('button', { name: 'Send code' }));
+
+    expect((await screen.findByRole('alert')).textContent).toContain(
+      'Unable to send a code.',
+    );
+    expect(screen.getByRole('button', { name: 'Send code' })).not.toHaveProperty(
+      'disabled',
+      true,
+    );
+  });
+
   it('renders, filters, paginates, and inspects the activity feed', async () => {
     const fetchMock = vi
       .spyOn(globalThis, 'fetch')

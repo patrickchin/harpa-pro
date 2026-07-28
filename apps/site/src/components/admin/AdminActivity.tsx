@@ -58,32 +58,42 @@ function SignIn({ refetchSession }: { refetchSession: () => Promise<unknown> }) 
     event.preventDefault();
     setPending(true);
     setError(null);
-    const result = await adminAuthClient.emailOtp.sendVerificationOtp({
-      email: email.trim().toLowerCase(),
-      type: 'sign-in',
-    });
-    setPending(false);
-    if (result.error) {
-      setError(result.error.message ?? 'Unable to send a code.');
-      return;
+    try {
+      const result = await adminAuthClient.emailOtp.sendVerificationOtp({
+        email: email.trim().toLowerCase(),
+        type: 'sign-in',
+      });
+      if (result.error) {
+        setError(result.error.message ?? 'Unable to send a code.');
+        return;
+      }
+      setCodeSent(true);
+    } catch {
+      setError('Unable to send a code.');
+    } finally {
+      setPending(false);
     }
-    setCodeSent(true);
   }
 
   async function verifyCode(event: React.SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
     setPending(true);
     setError(null);
-    const result = await adminAuthClient.signIn.emailOtp({
-      email: email.trim().toLowerCase(),
-      otp: code.trim(),
-    });
-    setPending(false);
-    if (result.error) {
-      setError(result.error.message ?? 'That code could not be verified.');
-      return;
+    try {
+      const result = await adminAuthClient.signIn.emailOtp({
+        email: email.trim().toLowerCase(),
+        otp: code.trim(),
+      });
+      if (result.error) {
+        setError(result.error.message ?? 'That code could not be verified.');
+        return;
+      }
+      await refetchSession();
+    } catch {
+      setError('That code could not be verified.');
+    } finally {
+      setPending(false);
     }
-    await refetchSession();
   }
 
   return (

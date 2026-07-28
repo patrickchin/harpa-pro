@@ -404,7 +404,7 @@ reportRoutes.openapi(
       400: { description: 'Bad request.', content: { 'application/json': { schema: errorEnvelope } } },
       401: { description: 'Unauthorized.', content: { 'application/json': { schema: errorEnvelope } } },
       404: { description: 'Not found.', content: { 'application/json': { schema: errorEnvelope } } },
-      409: { description: 'Stale report body version.', content: { 'application/json': { schema: reportSchemas.placeReportAttachmentResponse } } },
+      409: { description: 'Report is finalized or has a stale body version.', content: { 'application/json': { schema: reportSchemas.placeReportAttachmentResponse } } },
     },
   }),
   async (c) => {
@@ -416,6 +416,9 @@ reportRoutes.openapi(
 
     await requireProjectWriter(db, userId, slug);
     const report = await loadReport(db, slug, number);
+    if (report.status === 'finalized') {
+      return c.json({ report: toReportResponse(report) }, 409);
+    }
     const result = await db((d) =>
       placeNoteInReport(
         d,
@@ -718,11 +721,20 @@ reportRoutes.openapi(
     if (!report.body) {
       throw new HTTPException(409, { message: 'Report has no body to finalize.' });
     }
+    if (report.status === 'finalized') {
+      return c.json({ report: toReportResponse(report) }, 200);
+    }
     const updated = await db((d) =>
       finalizeReport(d, report.id, body.expectedUpdatedAt),
     );
     if (!updated) {
       const current = await loadReport(db, slug, number);
+      if (
+        current.status === 'finalized'
+        && !reportHasChanged(current, body.expectedUpdatedAt)
+      ) {
+        return c.json({ report: toReportResponse(current) }, 200);
+      }
       return c.json(reportConflict(current), 409);
     }
     return c.json({ report: toReportResponse(updated) }, 200);

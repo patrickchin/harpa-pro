@@ -530,6 +530,9 @@ export async function placeNoteInReport(
 ): Promise<PlaceNoteInReportResult> {
   const report = await getReport(db, reportId);
   if (!report) return { ok: false, reason: 'not-found' };
+  if (report.status === 'finalized') {
+    return { ok: false, reason: 'conflict', report };
+  }
   if (report.generatedAt !== expectedBodyVersion) {
     return { ok: false, reason: 'conflict', report };
   }
@@ -572,13 +575,20 @@ export async function placeNoteInReport(
        SET body = ${bodyJson}::jsonb,
            updated_at = now()
      WHERE id = ${reportId}
+       AND status = 'draft'
+       AND date_trunc('milliseconds', generated_at)
+           IS NOT DISTINCT FROM ${expectedBodyVersion}::timestamptz
+       AND date_trunc('milliseconds', updated_at) = ${report.updatedAt}::timestamptz
     RETURNING id, number, project_id, status, visit_date, body,
               notes_since_last_generation, notes_changed_at, generated_at, finalized_at,
               pdf_file_id, created_at, updated_at
   `);
   const row = updated.rows[0];
-  return row
-    ? { ok: true, report: mapReport(row) }
+  if (row) return { ok: true, report: mapReport(row) };
+
+  const current = await getReport(db, reportId);
+  return current
+    ? { ok: false, reason: 'conflict', report: current }
     : { ok: false, reason: 'not-found' };
 }
 
@@ -758,6 +768,7 @@ export async function finalizeReport(
         finalized_at = COALESCE(finalized_at, now()),
         updated_at = ${nextReportUpdatedAt()}
     WHERE id = ${reportId}
+      AND status = 'draft'
       AND ${reportUpdatedAtPrecondition(expectedUpdatedAt)}
     RETURNING id, number, project_id, status, visit_date, body,
               notes_since_last_generation, notes_changed_at, generated_at, finalized_at,

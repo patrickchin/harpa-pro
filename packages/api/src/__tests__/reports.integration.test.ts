@@ -872,6 +872,50 @@ describe('PATCH /projects/:project/reports/:number/attachments', () => {
       await admin.end();
     }
   });
+
+  it('does not place attachments into a finalized report', async () => {
+    const app = createApp();
+    const tok = await signTestToken(alice, aliceSid);
+    const finalize = await app.request(
+      `/projects/${aliceProjSlug}/reports/${reportNumber}/finalize`,
+      {
+        method: 'POST',
+        headers: headers(tok),
+      },
+    );
+    expect(finalize.status).toBe(200);
+    const frozen = (
+      (await finalize.json()) as {
+        report: { body: unknown; status: string; updatedAt: string };
+      }
+    ).report;
+    expect(frozen.status).toBe('finalized');
+
+    const res = await app.request(
+      `/projects/${aliceProjSlug}/reports/${reportNumber}/attachments`,
+      {
+        method: 'PATCH',
+        headers: headers(tok),
+        body: JSON.stringify({
+          noteId: imageNoteId,
+          target: { kind: 'issue', index: 0 },
+          expectedBodyVersion,
+        }),
+      },
+    );
+    expect(res.status).toBe(409);
+    const conflict = (await res.json()) as {
+      report: { body: unknown; status: string; updatedAt: string };
+    };
+    expect(conflict.report.status).toBe('finalized');
+    expect(conflict.report.updatedAt).toBe(frozen.updatedAt);
+    expect(conflict.report.body).toEqual(frozen.body);
+
+    const latest = await getReportSnapshot(aliceProjSlug, reportNumber, tok);
+    expect(latest.status).toBe('finalized');
+    expect(latest.updatedAt).toBe(frozen.updatedAt);
+    expect(latest.body).toEqual(frozen.body);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -1047,11 +1091,32 @@ describe('reports AI/PDF', () => {
   it('POST /reports/:id/finalize is idempotent (200 on already-finalized)', async () => {
     const app = createApp();
     const tok = await signTestToken(alice, aliceSid);
+    const before = await getReportSnapshot(aliceProjSlug, reportNumber, tok);
     const res = await app.request(`/projects/${aliceProjSlug}/reports/${reportNumber}/finalize`, {
       method: 'POST',
       headers: headers(tok),
     });
     expect(res.status).toBe(200);
+    const body = (await res.json()) as { report: ReportSnapshot };
+    expect(body.report.updatedAt).toBe(before.updatedAt);
+    expect(body.report.finalizedAt).toBe(before.finalizedAt);
+
+    const conditional = await app.request(
+      `/projects/${aliceProjSlug}/reports/${reportNumber}/finalize`,
+      {
+        method: 'POST',
+        headers: headers(tok),
+        body: JSON.stringify({ expectedUpdatedAt: before.updatedAt }),
+      },
+    );
+    expect(conditional.status).toBe(200);
+    const conditionalBody = (await conditional.json()) as { report: ReportSnapshot };
+    expect(conditionalBody.report.updatedAt).toBe(before.updatedAt);
+    expect(conditionalBody.report.finalizedAt).toBe(before.finalizedAt);
+
+    const after = await getReportSnapshot(aliceProjSlug, reportNumber, tok);
+    expect(after.updatedAt).toBe(before.updatedAt);
+    expect(after.finalizedAt).toBe(before.finalizedAt);
   });
 
   it('POST /reports/:id/regenerate 409 once finalized', async () => {

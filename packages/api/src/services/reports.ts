@@ -763,17 +763,11 @@ export async function setReportPdfFileId(
   reportId: string,
   fileId: string,
 ): Promise<ReportRow | null> {
-  const r = await db.execute<RawReport>(sql`
-    UPDATE app.reports
-    SET pdf_file_id = ${fileId},
-        updated_at = now()
-    WHERE id = ${reportId}
-    RETURNING id, number, project_id, status, visit_date, body,
-              notes_since_last_generation, notes_changed_at, generated_at, finalized_at,
-              pdf_file_id, created_at, updated_at
+  const attached = await db.execute<{ attached: boolean }>(sql`
+    SELECT app.attach_report_pdf(${reportId}, ${fileId}) AS attached
   `);
-  const row = r.rows[0];
-  return row ? mapReport(row) : null;
+  if (!attached.rows[0]?.attached) return null;
+  return getReport(db, reportId);
 }
 
 // ---------------------------------------------------------------------------

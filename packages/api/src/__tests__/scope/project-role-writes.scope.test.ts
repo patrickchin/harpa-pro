@@ -233,6 +233,27 @@ describe('scope: viewer project-content writes', () => {
       ),
     ).rejects.toBeTruthy();
 
+    const pdfFileId = makeFileId();
+    const pdfInserted = await asViewer(async (db) => {
+      const result = await db.execute(sql`
+        INSERT INTO app.files(
+          id, owner_id, kind, file_key, size_bytes, content_type,
+          project_id, report_id
+        )
+        VALUES (
+          ${pdfFileId},
+          ${viewerId},
+          'pdf',
+          ${`projects/${projectId}/reports/${reportId}/${pdfFileId}.pdf`},
+          128,
+          'application/pdf',
+          ${projectId},
+          ${reportId}
+        )
+      `);
+      return result.rowCount;
+    });
+
     const changed = await asViewer(async (db) => {
       const projectUpdate = await db.execute<{ id: string }>(sql`
         UPDATE app.files
@@ -263,5 +284,6 @@ describe('scope: viewer project-content writes', () => {
       projectDelete: 0,
       personalUpdate: 1,
     });
+    expect(pdfInserted).toBe(1);
   });
 });

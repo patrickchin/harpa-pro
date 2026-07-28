@@ -55,8 +55,8 @@ const Env = z.object({
   DEMO_ACCOUNT_PASSWORD: z.string().min(16).optional(),
   /**
    * Email-OTP transport switch. `'1'` → real Resend send via better-auth's
-   * `sendVerificationOTP` hook. Default `'0'` logs the OTP to stdout
-   * (development/preview) and is a no-op under test.
+   * `sendVerificationOTP` hook. Default `'0'` logs redacted delivery
+   * metadata only (development/preview) and is a no-op under test.
    *
    * Production must set this to `'1'` (refine below); a missing Doppler
    * key would otherwise silently downgrade prod to fake mode.

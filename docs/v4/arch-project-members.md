@@ -38,9 +38,9 @@ Three roles, enumerated in `app.project_role` (`owner | editor | viewer`).
 
 | Role | Capabilities |
 |------|-------------|
-| `owner` | Full control: manage members (add/update/remove), update project metadata, delete project, finalize reports. At least one owner must exist at all times. |
-| `editor` | Create, edit, and delete own notes; create draft reports; trigger generate/regenerate. Cannot manage members, delete the project, or finalize reports. |
-| `viewer` | Read-only: list reports, view notes, download PDFs. Cannot write anything. |
+| `owner` | Full control: manage members (add/update/remove), update project metadata, delete projects, and create/edit/delete/generate/finalize/reopen reports. At least one owner must exist at all times. |
+| `editor` | Update project metadata; create/edit/delete/generate/finalize/reopen reports; create notes and edit/delete their own notes. Cannot manage members or delete the project. |
+| `viewer` | Read projects, members, reports, notes, and PDFs, and add finalized-report review comments. Cannot change project, report, note, or membership state. |
 
 ### Role hierarchy enforcement summary
 

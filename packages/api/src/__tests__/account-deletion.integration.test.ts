@@ -117,6 +117,30 @@ beforeAll(async () => {
     [newId('lue'), alice, newId('lue'), bob],
   );
   await admin.query(
+    `INSERT INTO app.activity_events
+       (id, event_type, actor_user_id, subject_type, subject_id, project_id,
+        dedupe_key, metadata)
+     VALUES
+       ($1, 'user.signed_up', $2, 'user', $3, NULL, $4, '{"method":"email_otp"}'),
+       ($5, 'project.created', $6, 'project', $7, $8, $9, '{}'),
+       ($10, 'user.signed_up', $11, 'user', $12, NULL, $13, '{"method":"email_otp"}')`,
+    [
+      newId('aud'),
+      alice,
+      alice,
+      `user.signed_up:${alice}`,
+      newId('aud'),
+      alice,
+      transferProject,
+      transferProject,
+      `project.created:${transferProject}`,
+      newId('aud'),
+      bob,
+      bob,
+      `user.signed_up:${bob}`,
+    ],
+  );
+  await admin.query(
     `INSERT INTO public."account"
        (id, account_id, provider_id, user_id, created_at, updated_at)
      VALUES ($1, $2, 'credential', $3, now(), now())`,
@@ -204,6 +228,29 @@ describe('DELETE /me', () => {
     expect(files.rowCount).toBe(0);
     const aliceUsage = await admin.query(`SELECT id FROM app.llm_usage_events WHERE user_id = $1`, [alice]);
     expect(aliceUsage.rowCount).toBe(0);
+    const aliceActivity = await admin.query<{
+      event_type: string;
+      actor_user_id: string | null;
+      subject_id: string | null;
+    }>(
+      `SELECT event_type, actor_user_id, subject_id
+       FROM app.activity_events
+       WHERE dedupe_key IN ($1, $2)
+       ORDER BY event_type`,
+      [`user.signed_up:${alice}`, `project.created:${transferProject}`],
+    );
+    expect(aliceActivity.rows).toEqual([
+      {
+        event_type: 'project.created',
+        actor_user_id: null,
+        subject_id: transferProject,
+      },
+      {
+        event_type: 'user.signed_up',
+        actor_user_id: null,
+        subject_id: null,
+      },
+    ]);
     const aliceVerifications = await admin.query(
       `SELECT id FROM public."verification" WHERE identifier = $1`,
       [`sign-in-otp-${aliceEmail}`],
@@ -243,5 +290,15 @@ describe('DELETE /me', () => {
     expect(bobStillExists.rowCount).toBe(1);
     const bobUsage = await admin.query(`SELECT id FROM app.llm_usage_events WHERE user_id = $1`, [bob]);
     expect(bobUsage.rowCount).toBe(1);
+    const bobActivity = await admin.query<{
+      actor_user_id: string | null;
+      subject_id: string | null;
+    }>(
+      `SELECT actor_user_id, subject_id
+       FROM app.activity_events
+       WHERE dedupe_key = $1`,
+      [`user.signed_up:${bob}`],
+    );
+    expect(bobActivity.rows).toEqual([{ actor_user_id: bob, subject_id: bob }]);
   });
 });

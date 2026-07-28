@@ -31,12 +31,33 @@ describe('ScreenHeader', () => {
     expect(tree.toJSON()).toMatchSnapshot();
   });
 
-  it('places the full-width wrapping title below the controls by default', () => {
+  it('keeps a short page title in the controls row by default', () => {
     const tree = render(
       <ScreenHeader
-        title="A long page title that should wrap on a phone"
+        title="Projects"
         onBack={() => {}}
         actions={<View testID="profile-action" />}
+      />,
+    );
+    const controls = tree.root.findByProps({ testID: 'screen-header-controls' });
+    const title = controls.findByProps({ testID: 'screen-header-title' });
+
+    expect(controls.findByProps({ testID: 'btn-back' })).toBeTruthy();
+    expect(controls.findByProps({ testID: 'profile-action' })).toBeTruthy();
+    expect(
+      tree.root.findAllByProps({ testID: 'screen-header-title-row' }),
+    ).toHaveLength(0);
+    expect(title.props.numberOfLines).toBe(1);
+    expect(title.props.ellipsizeMode).toBe('tail');
+  });
+
+  it('places an explicitly stacked title on a full-width wrapping row', () => {
+    const tree = render(
+      <ScreenHeader
+        title="A long report title that should wrap on a phone"
+        onBack={() => {}}
+        actions={<View testID="profile-action" />}
+        stackedTitle
       />,
     );
     const controls = tree.root.findByProps({ testID: 'screen-header-controls' });

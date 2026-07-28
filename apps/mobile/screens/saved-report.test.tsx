@@ -141,7 +141,9 @@ function baseProps(overrides: Partial<SavedReportProps> = {}): SavedReportProps 
 
 describe('SavedReport', () => {
   it('renders the skeleton when isLoading', () => {
-    const tree = render(<SavedReport {...baseProps({ isLoading: true })} />);
+    const tree = render(
+      <SavedReport {...baseProps({ isLoading: true, reportNumber: 4 })} />,
+    );
     expect(
       tree.root.findAllByProps({ testID: 'report-detail-skeleton' }).length,
     ).toBeGreaterThan(0);
@@ -149,6 +151,11 @@ describe('SavedReport', () => {
     expect(
       tree.root.findByProps({ testID: 'screen-header-title-row' }),
     ).toBeTruthy();
+    expect(
+      collectText(
+        tree.root.findAllByProps({ testID: 'screen-header-controls' })[0],
+      ),
+    ).toContain('Site Visit #4');
   });
 
   it('renders the invalid-route fallback when hasValidRouteParams=false', () => {
@@ -407,18 +414,30 @@ describe('SavedReport', () => {
     expect(treeText(tree)).toContain('Could not add comment');
   });
 
-  it('renders a long report title on its own full-width row without truncation', () => {
+  it('renders the site-visit number above a descriptive wrapping title', () => {
     const longReport = JSON.parse(
       JSON.stringify(SAMPLE_GENERATED_REPORT),
     ) as GeneratedSiteReport;
     longReport.report.meta.title =
-      'Highland Tower structural inspection and delivery reconciliation report';
+      'Site Visit — Highland Tower structural inspection and delivery reconciliation report';
     const tree = render(
       <SavedReport
-        {...baseProps({ report: longReport, reportStatus: 'finalized' })}
+        {...baseProps({
+          report: longReport,
+          reportStatus: 'finalized',
+          reportNumber: 4,
+        })}
       />,
     );
-    const title = tree.root.findByProps({ testID: 'report-title-x' });
+    const title = tree.root.findByProps({ testID: 'report-title-4' });
+    const controls = tree.root.findAllByProps({
+      testID: 'screen-header-controls',
+    })[0];
+
+    expect(collectText(controls)).toContain('Site Visit #4');
+    expect(collectText(title)).toBe(
+      'Highland Tower structural inspection and delivery reconciliation report',
+    );
     expect(title.props.numberOfLines).toBeUndefined();
     expect(title.props.ellipsizeMode).toBeUndefined();
     expect(title.parent?.props.className).toContain('w-full');
@@ -693,7 +712,7 @@ describe('SavedReport — finalized layout', () => {
     ).toHaveLength(0);
   });
 
-  it('falls back to "Report #N" when meta.title is empty', () => {
+  it('uses a generic descriptive title when meta.title is empty', () => {
     const blank = {
       ...SAMPLE_GENERATED_REPORT,
       report: {
@@ -713,6 +732,14 @@ describe('SavedReport — finalized layout', () => {
     expect(
       tree.root.findAllByProps({ testID: 'saved-report-pane' }).length,
     ).toBeGreaterThan(0);
+    expect(
+      collectText(
+        tree.root.findAllByProps({ testID: 'screen-header-controls' })[0],
+      ),
+    ).toContain('Site Visit #7');
+    expect(
+      collectText(tree.root.findByProps({ testID: 'report-title-7' })),
+    ).toBe('Report');
   });
 
   it('does not expose photo placement edits when finalized', () => {

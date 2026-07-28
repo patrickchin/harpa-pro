@@ -177,12 +177,37 @@ describe('GenerateNotes', () => {
     expect(text).toContain('Report');
   });
 
-  it('falls back to "Report #N" when reportTitle is empty', () => {
+  it('uses the site-visit number above the report title', () => {
+    const tree = render(
+      <GenerateNotes
+        {...baseProps}
+        reportTitle="Site Visit — Concrete Pouring"
+        reportNumber={4}
+      />,
+    );
+    const controls = tree.root.findByProps({
+      testID: 'screen-header-controls',
+    });
+    const titleNode = tree.root.findByProps({ testID: 'screen-header-title' });
+
+    expect(collectText(controls)).toContain('Site Visit #4');
+    expect(collectText(titleNode.props.children)).toBe('Concrete Pouring');
+    expect(
+      tree.root.findByProps({ testID: 'screen-header-title-row' }),
+    ).toBeTruthy();
+  });
+
+  it('uses a generic report title when the generated title is empty', () => {
     const tree = render(
       <GenerateNotes {...baseProps} reportTitle={null} reportNumber={1} />,
     );
+    const controls = tree.root.findByProps({
+      testID: 'screen-header-controls',
+    });
     const titleNode = tree.root.findByProps({ testID: 'screen-header-title' });
-    expect(collectText(titleNode.props.children)).toContain('Report #1');
+
+    expect(collectText(controls)).toContain('Site Visit #1');
+    expect(collectText(titleNode.props.children)).toBe('Report');
   });
 
   it('hides the input bar + action row when canWrite=false', () => {

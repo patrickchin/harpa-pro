@@ -98,8 +98,10 @@ Each task = one route file + its tests + its api-contract schemas
     `Idempotent-Replay: true` on cache hit; never caches 5xx.
   - `MemoryIdempotencyStore` coalesces dev/test requests. Production
     uses renewable claims and durable responses in
-    `app.idempotency_keys` (migration `0021_idempotency_keys.sql`) so
-    concurrent Fly machines cannot both run the AI side effect.
+    `app.idempotency_keys` (migration `0021_idempotency_keys.sql`) to
+    coalesce Fly machines while the owner retains its lease. Lease loss
+    is surfaced to the owner; it is not an exactly-once boundary around
+    an external AI side effect.
 - [x] Tests covering both.
 - [x] Commit: `feat(api): rate limiting + idempotency middleware`.
 - **Follow-up (post-P1):** full design + multi-machine backend in

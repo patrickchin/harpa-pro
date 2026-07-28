@@ -176,7 +176,7 @@ describe('Postgres idempotency store', () => {
     expect(retried.value?.body).toBe('{"retried":true}');
   });
 
-  it('fails the owner when its lease heartbeat cannot renew', async () => {
+  it('uses the completion guard after an ambiguous heartbeat failure', async () => {
     vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] });
     const store = new PostgresIdempotencyStore(getPool(fx.url));
     const renewal = vi
@@ -213,13 +213,24 @@ describe('Postgres idempotency store', () => {
       await vi.advanceTimersByTimeAsync(10_000);
       finishProducer();
 
-      await expect(execution).rejects.toMatchObject({
-        name: 'IdempotencyLeaseLostError',
-        message: 'Idempotency lease renewal failed.',
-        cause: expect.objectContaining({ message: 'database partition' }),
+      await expect(execution).resolves.toEqual({
+        replay: false,
+        value: {
+          status: 200,
+          body: '{"shouldNotReplay":true}',
+          contentType: 'application/json',
+        },
       });
       expect(renewal).toHaveBeenCalledOnce();
-      expect(await store.get('heartbeat-failure-key')).toBeNull();
+      expect(warning).toHaveBeenCalledWith(
+        '[idempotency] lease heartbeat was inconclusive:',
+        expect.objectContaining({ message: 'database partition' }),
+      );
+      expect(await store.get('heartbeat-failure-key')).toEqual({
+        status: 200,
+        body: '{"shouldNotReplay":true}',
+        contentType: 'application/json',
+      });
     } finally {
       warning.mockRestore();
       vi.useRealTimers();

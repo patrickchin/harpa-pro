@@ -5,9 +5,10 @@
  * completed responses and coalesces concurrent requests in one process.
  *
  * `PostgresIdempotencyStore` is the production implementation. It uses
- * short, renewable leases in `app.idempotency_keys` so exactly one API
- * machine runs the producer while waiters replay its durable response.
- * No connection or transaction is held during the producer's AI call.
+ * short, renewable leases in `app.idempotency_keys` so one API machine
+ * runs the producer while it retains the lease, and waiters replay its
+ * durable response. No connection or transaction is held during the
+ * producer's AI call.
  */
 import { createHash, randomUUID } from 'node:crypto';
 import type pg from 'pg';
@@ -121,6 +122,14 @@ const LEASE_MS = 30_000;
 const HEARTBEAT_MS = 10_000;
 const INITIAL_POLL_MS = 50;
 const MAX_POLL_MS = 500;
+
+export class IdempotencyLeaseLostError extends Error {
+  override name = 'IdempotencyLeaseLostError';
+
+  constructor(message: string, cause?: unknown) {
+    super(message, { cause });
+  }
+}
 
 function hashKey(key: string): string {
   return createHash('sha256').update(key, 'utf8').digest('hex');
@@ -255,39 +264,60 @@ export class PostgresIdempotencyStore implements IdempotencyStore {
     ttlMs: number,
     producer: () => Promise<CachedResponse | null>,
   ): Promise<IdempotencyExecution> {
-    let heartbeatRunning = false;
+    let heartbeatRunning: Promise<void> | null = null;
+    let leaseFailure: IdempotencyLeaseLostError | null = null;
     const heartbeat = setInterval(() => {
-      if (heartbeatRunning) return;
-      heartbeatRunning = true;
-      this.renewLease(keyHash, ownerToken)
+      if (heartbeatRunning || leaseFailure) return;
+      heartbeatRunning = this.renewLease(keyHash, ownerToken)
         .catch((error) => {
+          if (error instanceof IdempotencyLeaseLostError) {
+            leaseFailure ??= error;
+            return;
+          }
+          // A query error does not prove whether Postgres applied the
+          // renewal. The guarded complete/release below is authoritative.
           // eslint-disable-next-line no-console
-          console.warn('[idempotency] lease heartbeat failed:', error);
+          console.warn('[idempotency] lease heartbeat was inconclusive:', error);
         })
         .finally(() => {
-          heartbeatRunning = false;
+          heartbeatRunning = null;
         });
     }, HEARTBEAT_MS);
     if (typeof heartbeat.unref === 'function') heartbeat.unref();
 
+    let outcome:
+      | { ok: true; value: CachedResponse | null }
+      | { ok: false; error: unknown };
     try {
-      const value = await producer();
-      if (!value) {
-        await this.release(keyHash, ownerToken);
-        return { value: null, replay: false };
-      }
-      await this.complete(keyHash, ownerToken, value, ttlMs);
-      return { value, replay: false };
+      outcome = { ok: true, value: await producer() };
     } catch (error) {
-      await this.release(keyHash, ownerToken).catch(() => undefined);
-      throw error;
-    } finally {
-      clearInterval(heartbeat);
+      outcome = { ok: false, error };
     }
+
+    clearInterval(heartbeat);
+    const finalHeartbeat = heartbeatRunning;
+    if (finalHeartbeat) await finalHeartbeat;
+
+    const lostLease = leaseFailure;
+    if (lostLease) {
+      await this.release(keyHash, ownerToken).catch(() => undefined);
+      throw lostLease;
+    }
+
+    if (!outcome.ok) {
+      await this.release(keyHash, ownerToken);
+      throw outcome.error;
+    }
+    if (!outcome.value) {
+      await this.release(keyHash, ownerToken);
+      return { value: null, replay: false };
+    }
+    await this.complete(keyHash, ownerToken, outcome.value, ttlMs);
+    return { value: outcome.value, replay: false };
   }
 
   private async renewLease(keyHash: string, ownerToken: string): Promise<void> {
-    await this.pool.query(
+    const { rowCount } = await this.pool.query(
       `UPDATE app.idempotency_keys
        SET lease_expires_at =
              now() + ($3::double precision * interval '1 millisecond'),
@@ -297,6 +327,11 @@ export class PostgresIdempotencyStore implements IdempotencyStore {
          AND owner_token = $2`,
       [keyHash, ownerToken, LEASE_MS],
     );
+    if (rowCount !== 1) {
+      throw new IdempotencyLeaseLostError(
+        'Idempotency lease ownership was lost during renewal.',
+      );
+    }
   }
 
   private async complete(
@@ -322,18 +357,25 @@ export class PostgresIdempotencyStore implements IdempotencyStore {
       [keyHash, ownerToken, value.status, value.body, value.contentType, ttlMs],
     );
     if (rowCount !== 1) {
-      throw new Error('Idempotency lease was lost before completion.');
+      throw new IdempotencyLeaseLostError(
+        'Idempotency lease ownership was lost before completion.',
+      );
     }
   }
 
   private async release(keyHash: string, ownerToken: string): Promise<void> {
-    await this.pool.query(
+    const { rowCount } = await this.pool.query(
       `DELETE FROM app.idempotency_keys
        WHERE key_hash = $1
          AND state = 'pending'
          AND owner_token = $2`,
       [keyHash, ownerToken],
     );
+    if (rowCount !== 1) {
+      throw new IdempotencyLeaseLostError(
+        'Idempotency lease ownership was lost before release.',
+      );
+    }
   }
 
   async gc(now: number = Date.now()): Promise<number> {

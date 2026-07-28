@@ -167,9 +167,14 @@ route.
   operation; it never replays another request's response.
 - Production uses `app.idempotency_keys` (migration
   `0021_idempotency_keys.sql`). One machine owns a renewable 30-second
-  lease while the handler runs; concurrent machines wait and replay the
-  completed response. Completed responses live for 24 hours. A 5xx or
-  thrown handler releases the claim so a later retry can run.
+  lease while the handler runs. While that ownership remains healthy,
+  concurrent machines wait and replay the completed response. A
+  zero-row renewal or owner-token mismatch makes the original owner fail
+  with a lease-loss error instead of returning or caching success. A
+  thrown heartbeat query is ambiguous, so the guarded completion or
+  release determines ownership rather than deleting a valid claim.
+  Completed responses live for 24 hours. A 5xx or thrown handler
+  releases a claim it still owns so a later retry can run.
 - Dev and tests use `MemoryIdempotencyStore`, which applies the same
   replay and in-flight coalescing semantics inside one process.
 - The mobile report client keeps one key and its original
@@ -178,12 +183,14 @@ route.
   or definitive 4xx response. The CLI continues to send only an
   explicitly supplied key.
 
-This prevents live concurrent duplicates across Fly machines. It is
-not an exactly-once job system: if a machine dies after an external AI
-provider accepted work but before the completed response is persisted,
-the expired lease can be reclaimed and the operation may run again.
-Routes that require protection from that crash window must move the
-side effect behind a durable asynchronous job/outbox.
+This coalesces concurrent requests only while the owner retains its
+lease. It is not an exactly-once job system: process death, a long
+event-loop pause, suspension, or a DB outage/partition can let the lease
+expire and be reclaimed while the original provider call is still
+running. The original owner reports lease loss when it can observe it,
+but both provider calls may already have happened. Routes that require
+protection from this boundary must move the side effect behind a
+durable asynchronous job/outbox.
 
 ### OpenAPI strategy
 

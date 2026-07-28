@@ -16,12 +16,26 @@ type CreateTracker = (
   mint?: () => string,
 ) => ReportGenerationIdempotency;
 
+type AcceptReportGenerationSuccess = <T>(
+  tracker: ReportGenerationIdempotency,
+  key: string,
+  accept: () => T,
+) => T;
+
 async function loadTracker(): Promise<CreateTracker> {
   const modulePath = './report-generation-idempotency';
   const module = (await import(/* @vite-ignore */ modulePath)) as {
     createReportGenerationIdempotency: CreateTracker;
   };
   return module.createReportGenerationIdempotency;
+}
+
+async function loadSuccessAcceptor(): Promise<AcceptReportGenerationSuccess> {
+  const modulePath = './report-generation-idempotency';
+  const module = (await import(/* @vite-ignore */ modulePath)) as {
+    acceptReportGenerationSuccess: AcceptReportGenerationSuccess;
+  };
+  return module.acceptReportGenerationSuccess;
 }
 
 describe('report generation idempotency key', () => {
@@ -70,5 +84,21 @@ describe('report generation idempotency key', () => {
       key: 'report-generation:attempt-two',
       operation: 'regenerate',
     });
+  });
+
+  it('reuses the attempt when accepting a successful response throws', async () => {
+    const createTracker = await loadTracker();
+    const acceptSuccess = await loadSuccessAcceptor();
+    const minted = ['attempt-one', 'attempt-two'];
+    const tracker = createTracker(() => minted.shift()!);
+    const first = tracker.attempt('generate');
+
+    expect(() =>
+      acceptSuccess(tracker, first.key, () => {
+        throw new Error('response adaptation failed');
+      }),
+    ).toThrow('response adaptation failed');
+
+    expect(tracker.attempt('regenerate')).toEqual(first);
   });
 });

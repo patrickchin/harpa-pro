@@ -50,6 +50,36 @@ describe('redact', () => {
     expect(serialized).not.toMatch(/42 Quarry Road/i);
     expect(serialized).not.toMatch(/BS1 2AB/i);
   });
+
+  it('preserves nested project, site, and address objects while redacting their leaves', () => {
+    const out = redact({
+      project: {
+        id: 'project-1',
+        projectName: 'Northstar Construction Ltd',
+        site: {
+          siteName: 'Northstar Yard',
+          address: {
+            line1: '42 Quarry Road',
+            postCode: 'BS1 2AB',
+          },
+        },
+      },
+    });
+
+    expect(out).toEqual({
+      project: {
+        id: 'project-1',
+        projectName: '<redacted-organization>',
+        site: {
+          siteName: '<redacted-organization>',
+          address: {
+            line1: '<redacted-address>',
+            postCode: '<redacted-address>',
+          },
+        },
+      },
+    });
+  });
 });
 
 describe('createProvider replay', () => {

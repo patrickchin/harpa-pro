@@ -3,13 +3,14 @@
  *
  * - `RESEND_LIVE=1` → real POST https://api.resend.com/emails.
  * - `RESEND_LIVE=0` (default) → fake mode: records the most recent
- *   send in-process so tests can assert on it. Mirrors the Twilio
- *   fake pattern in src/auth/twilio.ts.
+ *   send in-process so tests can assert on it and logs redacted
+ *   delivery metadata only.
  *
  * Subject lines and bodies are produced by callers (see
  * src/emails/waitlist-confirmation.tsx in M1.5).
  */
 import { env } from '../env.js';
+import { logFakeResendSend } from './email-diagnostics.js';
 
 export interface EmailSendParams {
   to: string;
@@ -48,16 +49,17 @@ function fakeResend(): ResendClient {
   return {
     async send(params) {
       fakeRecord.push(params);
-      // In dev (e.g. docker compose) the raw confirm token only exists
-      // inside the email body — log it so the human can click through.
+      const id = `fake-${fakeRecord.length}`;
       // Suppressed under NODE_ENV=test so vitest output stays clean.
       if (env.NODE_ENV !== 'test') {
-        // eslint-disable-next-line no-console
-        console.log(
-          `[fakeResend] → ${params.to} | ${params.subject}\n${params.text ?? params.html}\n`,
-        );
+        logFakeResendSend({
+          recipient: params.to,
+          messageId: id,
+          hasHtml: params.html.length > 0,
+          hasText: Boolean(params.text),
+        });
       }
-      return { id: `fake-${fakeRecord.length}` };
+      return { id };
     },
   };
 }

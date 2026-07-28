@@ -476,8 +476,9 @@ Push to dev
   ↳ Fastlane `beta` (manual): metadata -> EAS preview build --auto-submit
 
 Push to main (production)
-  ↳ migrations applied to Neon `main`
-  ↳ Fly deploy → harpa-pro-api (api-prod.yml)
+  ↳ blocking Neon `main` snapshot (api-prod.yml)
+  ↳ Fly deploy → harpa-pro-api
+    ↳ release_command applies migrations to Neon `main`
   ↳ public-site deploy to CF Pages production (site-prod.yml)
   ↳ EAS Update → `production` channel (mobile-ota-prod.yml)
   ↳ Fastlane `release` (manual approve): metadata -> EAS production build --auto-submit

@@ -90,14 +90,11 @@ require_regex ".maestro/ci-launch-smoke.yaml" \
   "id:[[:space:]]*['\"]?input-email['\"]?" \
   "Maestro launch flow asserts a rendered app control"
 require_fixed ".maestro/ci-launch-smoke.yaml" \
-  "This is the developer menu" \
-  "Maestro launch flow waits for a late Expo developer menu"
-require_fixed ".maestro/ci-launch-smoke.yaml" \
   "optional: true" \
-  "late Expo developer-menu probe is bounded and optional"
+  "late Expo developer-menu wait is optional"
 require_fixed ".maestro/ci-launch-smoke.yaml" \
-  "timeout: 90000" \
-  "Maestro launch flow allows a bounded cold bundle load"
+  "timeout: 60000" \
+  "Maestro launch flow bounds its late developer-menu and app waits"
 require_fixed ".maestro/ci-launch-smoke.yaml" \
   "visible: 'http://10.0.2.2:8081'" \
   "Maestro launch flow detects the Android emulator's Metro server row"
@@ -105,6 +102,14 @@ require_before ".maestro/ci-launch-smoke.yaml" \
   "visible: 'http://10.0.2.2:8081'" \
   "id: 'input-email'" \
   "Maestro selects the available Metro server before asserting app UI"
+require_before ".maestro/ci-launch-smoke.yaml" \
+  "visible: 'http://10.0.2.2:8081'" \
+  "timeout: 60000" \
+  "Maestro waits for the late developer menu only after selecting Metro"
+require_before ".maestro/ci-launch-smoke.yaml" \
+  "timeout: 60000" \
+  "id: 'input-email'" \
+  "bounded late developer-menu wait precedes the app-UI assertion"
 require_fixed ".github/workflows/e2e-maestro-testid-gate.yml" \
   "timeout-minutes: 30" \
   "Maestro job has a 30-minute GitHub Actions ceiling"

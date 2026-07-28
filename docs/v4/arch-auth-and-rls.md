@@ -343,7 +343,7 @@ introduces that data contract.
 
 | Var | Where | Purpose |
 |---|---|---|
-| `BETTER_AUTH_SECRET` | API | Session signing key |
+| `BETTER_AUTH_SECRET` | API | Session signing key; production requires an explicit value of at least 32 characters |
 | `BETTER_AUTH_URL` | API | Base URL for better-auth handler |
 | `RESEND_API_KEY` | API | Resend transport for OTP emails |
 | `EMAIL_OTP_LIVE` | API | `1` = real Resend send; `0` = redacted delivery diagnostics only (dev/test) |

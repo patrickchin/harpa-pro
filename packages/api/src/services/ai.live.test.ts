@@ -91,17 +91,27 @@ describe('AI live default wiring', () => {
     expect(String(url)).toBe('https://api.groq.com/openai/v1/audio/transcriptions');
   });
 
-  it('caller-supplied fixtureName forces replay even with AI_LIVE=1', async () => {
-    const fetchSpy = vi.spyOn(globalThis, 'fetch');
+  it('caller-supplied fixtureName cannot force replay when AI_LIVE=1', async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(
+        okJson({ choices: [{ message: { content: 'live response' } }] }) as Response,
+      );
 
     const { summarize } = await loadAi();
     const out = await summarize({
-      userPrompt: 'whatever',
+      userPrompt: 'current authenticated request',
       fixtureName: 'summarize.voice-1',
     });
 
-    expect(typeof out.text).toBe('string');
-    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(out.text).toBe('live response');
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    const [url, init] = fetchSpy.mock.calls[0] as FetchArgs;
+    expect(String(url)).toBe('https://api.openai.com/v1/chat/completions');
+    const payload = JSON.parse(String(init?.body)) as {
+      messages: Array<{ role: string; content: string }>;
+    };
+    expect(payload.messages.at(-1)?.content).toBe('current authenticated request');
   });
 
   it('generateReport() drops LLM-authored attachments before schema validation', async () => {

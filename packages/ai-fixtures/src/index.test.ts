@@ -34,6 +34,22 @@ describe('redact', () => {
     expect((out.headers as Record<string, string>).Authorization).toBe('<redacted>');
     expect(out.body).toBe('sk-redacted');
   });
+
+  it('redacts identifiable customer and site details from free text and named fields', () => {
+    const out = redact({
+      clientName: 'Northstar Construction Ltd',
+      siteAddress: '42 Quarry Road, Bristol BS1 2AB',
+      transcript:
+        'The modular unit is for a client from the Northstar Construction company at 42 Quarry Road, Bristol BS1 2AB.',
+    }) as Record<string, unknown>;
+    const serialized = JSON.stringify(out);
+
+    expect(out.clientName).toBe('<redacted-organization>');
+    expect(out.siteAddress).toBe('<redacted-address>');
+    expect(serialized).not.toMatch(/Northstar/i);
+    expect(serialized).not.toMatch(/42 Quarry Road/i);
+    expect(serialized).not.toMatch(/BS1 2AB/i);
+  });
 });
 
 describe('createProvider replay', () => {
@@ -113,6 +129,36 @@ describe('createProvider record', () => {
     const written = JSON.parse(readFileSync(join(dir, 'recme.json'), 'utf8'));
     expect(written.response.text).toBe('recorded');
     expect(written.requestHash).toMatch(/^sha256:/);
+  });
+
+  it('uses request context to redact identifiers repeated by the provider response', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'aifx-rec-private-'));
+    const p = createProvider(
+      {
+        vendor: 'openai',
+        fixtureMode: 'record',
+        fixtureName: 'private-context',
+        fixturesDir: dir,
+      },
+      () => ({
+        vendor: 'openai',
+        async chat() {
+          return { text: 'Northstar modular unit is ready.' };
+        },
+        async transcribe() {
+          throw new Error('not used');
+        },
+      }),
+    );
+
+    await p.chat({
+      model: 'test-model',
+      userPrompt: 'This build is for a client from the Northstar company.',
+    });
+
+    const written = readFileSync(join(dir, 'private-context.json'), 'utf8');
+    expect(written).not.toMatch(/Northstar/i);
+    expect(written).toContain('<redacted-organization>');
   });
 });
 

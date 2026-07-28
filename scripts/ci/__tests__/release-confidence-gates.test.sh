@@ -96,6 +96,12 @@ require_regex ".github/workflows/e2e-maestro-testid-gate.yml" \
   'android-emulator-runner|maestro start-device' \
   "Maestro smoke provisions a real Android emulator"
 require_fixed ".github/workflows/e2e-maestro-testid-gate.yml" \
+  "-PreactNativeArchitectures=x86_64" \
+  "Android debug build targets only the emulator ABI"
+require_regex ".github/workflows/e2e-maestro-testid-gate.yml" \
+  'cache:[[:space:]]*gradle|gradle/actions/setup-gradle' \
+  "Maestro smoke caches Gradle dependencies"
+require_fixed ".github/workflows/e2e-maestro-testid-gate.yml" \
   "maestro\" test" \
   "Maestro CLI executes a real flow"
 require_regex ".github/workflows/e2e-maestro-testid-gate.yml" \

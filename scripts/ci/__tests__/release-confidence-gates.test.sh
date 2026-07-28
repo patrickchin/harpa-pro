@@ -96,6 +96,19 @@ require_regex ".github/workflows/e2e-maestro-testid-gate.yml" \
   'android-emulator-runner|maestro start-device' \
   "Maestro smoke provisions a real Android emulator"
 require_fixed ".github/workflows/e2e-maestro-testid-gate.yml" \
+  'KERNEL=="kvm", GROUP="kvm", MODE="0660", OPTIONS+="static_node=kvm"' \
+  "Ubuntu runner grants the documented KVM device permissions"
+require_fixed ".github/workflows/e2e-maestro-testid-gate.yml" \
+  "sudo udevadm control --reload-rules" \
+  "KVM permission setup reloads udev rules"
+require_fixed ".github/workflows/e2e-maestro-testid-gate.yml" \
+  "sudo udevadm trigger --name-match=kvm" \
+  "KVM permission setup applies the kvm rule"
+require_before ".github/workflows/e2e-maestro-testid-gate.yml" \
+  "sudo udevadm trigger --name-match=kvm" \
+  "reactivecircus/android-emulator-runner@v2" \
+  "KVM permissions are applied before the emulator starts"
+require_fixed ".github/workflows/e2e-maestro-testid-gate.yml" \
   "-PreactNativeArchitectures=x86_64" \
   "Android debug build targets only the emulator ABI"
 require_regex ".github/workflows/e2e-maestro-testid-gate.yml" \

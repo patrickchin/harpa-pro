@@ -66,6 +66,28 @@ assert_count() {
   fi
 }
 
+assert_job_contains() {
+  local file="$1"
+  local job="$2"
+  local pattern="$3"
+  local description="$4"
+  local body
+
+  body="$(
+    awk -v header="  ${job}:" '
+      $0 == header { in_job = 1 }
+      in_job && $0 ~ /^  [^[:space:]][^:]*:$/ && $0 != header { exit }
+      in_job { print }
+    ' "$file"
+  )"
+  if grep -Fq -- "$pattern" <<<"$body"; then
+    pass "$description"
+  else
+    fail "$description"
+    echo "         missing '$pattern' in ${job} job of ${file#"$REPO_ROOT"/}"
+  fi
+}
+
 assert_before() {
   local file="$1"
   local first="$2"
@@ -113,6 +135,16 @@ for environment in dev prod; do
     "$api_workflow" \
     "api_deploy_succeeded: true" \
     "${environment}: API chain marks the deploy gate satisfied"
+  assert_job_contains \
+    "$api_workflow" \
+    "mobile-ota" \
+    "contents: write" \
+    "${environment}: reusable OTA caller permits runtime-tag registration"
+  assert_count \
+    "$api_workflow" \
+    "contents: write" \
+    1 \
+    "${environment}: only the reusable OTA caller can grant write scope"
 
   assert_contains \
     "$ota_workflow" \
@@ -134,6 +166,21 @@ for environment in dev prod; do
     "$ota_workflow" \
     "contents: write" \
     "${environment}: only the registration job can create its runtime tag"
+  assert_count \
+    "$ota_workflow" \
+    "contents: write" \
+    1 \
+    "${environment}: registration is the only called job with write scope"
+  assert_count \
+    "$ota_workflow" \
+    "contents: read" \
+    1 \
+    "${environment}: called workflow defaults non-registration jobs to read-only"
+  assert_before \
+    "$ota_workflow" \
+    "contents: read" \
+    "jobs:" \
+    "${environment}: read-only default applies before called jobs are defined"
   assert_contains \
     "$ota_workflow" \
     "$runtime_tag" \

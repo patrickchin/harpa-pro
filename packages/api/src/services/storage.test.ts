@@ -10,8 +10,22 @@
  *      well-formed signed URL and `PutObjectCommand` round-trips.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import {
+  DeleteObjectsCommand,
+  ListObjectsV2Command,
+  PutObjectCommand,
+  S3Client,
+} from '@aws-sdk/client-s3';
 import { FixtureStorage, R2Storage } from './storage.js';
+
+type LifecycleStorage = {
+  deleteObjects(fileKeys: string[]): Promise<void>;
+  listPrefix(
+    prefix: string,
+    cursor?: string,
+    limit?: number,
+  ): Promise<{ keys: string[]; nextCursor: string | null }>;
+};
 
 describe('FixtureStorage', () => {
   const fx = new FixtureStorage();
@@ -115,6 +129,61 @@ describe('R2Storage (with injected S3 client)', () => {
     expect(cmd.input.Key).toBe(out.fileKey);
     expect(cmd.input.ContentType).toBe('application/pdf');
     expect(cmd.input.ContentLength).toBe(3);
+    send.mockRestore();
+  });
+
+  it('deleteObjects chunks requests at the S3 limit and is a no-op for an empty list', async () => {
+    const send = vi.spyOn(client, 'send').mockResolvedValue({} as never);
+    const r2 = new R2Storage({ client, bucket: 'harpa-test' }) as R2Storage &
+      LifecycleStorage;
+    const keys = Array.from({ length: 1_001 }, (_, index) => `objects/${index}`);
+
+    await r2.deleteObjects([]);
+    expect(send).not.toHaveBeenCalled();
+
+    await r2.deleteObjects(keys);
+
+    expect(send).toHaveBeenCalledTimes(2);
+    const first = send.mock.calls[0]?.[0] as DeleteObjectsCommand;
+    const second = send.mock.calls[1]?.[0] as DeleteObjectsCommand;
+    expect(first).toBeInstanceOf(DeleteObjectsCommand);
+    expect(first.input).toMatchObject({
+      Bucket: 'harpa-test',
+      Delete: { Objects: keys.slice(0, 1_000).map((Key) => ({ Key })) },
+    });
+    expect(second.input).toMatchObject({
+      Bucket: 'harpa-test',
+      Delete: { Objects: [{ Key: keys[1_000] }] },
+    });
+    send.mockRestore();
+  });
+
+  it('listPrefix forwards the prefix, cursor, and bounded page size', async () => {
+    const send = vi.spyOn(client, 'send').mockResolvedValue({
+      Contents: [{ Key: 'users/usr_test/scratch/one.jpg' }, {}, { Key: 'two' }],
+      NextContinuationToken: 'next-page',
+    } as never);
+    const r2 = new R2Storage({ client, bucket: 'harpa-test' }) as R2Storage &
+      LifecycleStorage;
+
+    const result = await r2.listPrefix(
+      'users/usr_test/scratch/',
+      'previous-page',
+      500,
+    );
+
+    const command = send.mock.calls[0]?.[0] as ListObjectsV2Command;
+    expect(command).toBeInstanceOf(ListObjectsV2Command);
+    expect(command.input).toMatchObject({
+      Bucket: 'harpa-test',
+      Prefix: 'users/usr_test/scratch/',
+      ContinuationToken: 'previous-page',
+      MaxKeys: 500,
+    });
+    expect(result).toEqual({
+      keys: ['users/usr_test/scratch/one.jpg', 'two'],
+      nextCursor: 'next-page',
+    });
     send.mockRestore();
   });
 });

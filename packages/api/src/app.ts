@@ -56,6 +56,32 @@ export function createApp(): OpenAPIHono<AppEnv> {
   // routes. Per-route + shared-AI buckets remain on the relevant routes.
   app.use('*', globalRateLimit());
 
+  const dashboardOriginPatterns = env.DASHBOARD_CORS_ORIGINS.split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+  const dashboardCors = cors({
+    origin: (origin) =>
+      dashboardOriginPatterns.some((pattern) => originMatchesPattern(origin, pattern))
+        ? origin
+        : null,
+    allowMethods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowHeaders: ['Authorization', 'Content-Type', 'Idempotency-Key', 'X-Requested-With'],
+    exposeHeaders: ['Set-Auth-Token', 'X-Usage-Warning'],
+    credentials: true,
+    maxAge: 86400,
+  });
+  app.use('*', async (c, next) => {
+    // The public waitlist keeps its own non-credentialed allowlist below.
+    if (c.req.path === '/waitlist' || c.req.path.startsWith('/waitlist/')) {
+      return next();
+    }
+    const origin = c.req.header('origin') ?? '';
+    const isDashboardOrigin = dashboardOriginPatterns.some((pattern) =>
+      originMatchesPattern(origin, pattern),
+    );
+    return isDashboardOrigin ? dashboardCors(c, next) : next();
+  });
+
   // CORS — limited to /waitlist/* so cross-origin signups from the
   // marketing site (https://harpapro.com → https://api.harpapro.com)
   // work. Every other route stays same-origin only.
@@ -124,4 +150,13 @@ export function createApp(): OpenAPIHono<AppEnv> {
   });
 
   return app;
+}
+
+function originMatchesPattern(origin: string, pattern: string): boolean {
+  if (!origin || !pattern) return false;
+  const escaped = pattern
+    .split('*')
+    .map((part) => part.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+    .join('[^/]*');
+  return new RegExp(`^${escaped}$`).test(origin);
 }

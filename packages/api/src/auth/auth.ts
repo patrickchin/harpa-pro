@@ -37,6 +37,11 @@ const DEMO_ACCOUNT_EMAILS = (env.DEMO_ACCOUNT_EMAILS ?? '')
 
 const PASSWORD_LOGIN_EMAILS = new Set([...TEST_EMAILS, ...DEMO_ACCOUNT_EMAILS]);
 
+const DASHBOARD_ORIGINS = env.DASHBOARD_CORS_ORIGINS
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
 const FROM_EMAIL = 'Harpa Pro <noreply@harpapro.com>';
 const OTP_SUBJECT = 'Your Harpa Pro sign-in code';
 
@@ -114,6 +119,7 @@ export const auth = betterAuth({
   trustedOrigins: [
     'harpa://',
     'harpa://*',
+    ...DASHBOARD_ORIGINS,
     ...(env.NODE_ENV === 'development'
       ? ['exp://', 'exp://**', 'exp://192.168.*.*:*/**']
       : []),

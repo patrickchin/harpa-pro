@@ -139,6 +139,14 @@ const Env = z.object({
     .string()
     .default('https://harpapro.com,https://www.harpapro.com,http://localhost:3002'),
   /**
+   * Comma-separated browser origins allowed to call authenticated dashboard
+   * and better-auth routes with credentials. `*` supports Cloudflare Pages
+   * preview subdomains.
+   */
+  DASHBOARD_CORS_ORIGINS: z
+    .string()
+    .default('https://app.harpapro.com,https://*.harpa-pro-dashboard.pages.dev,http://localhost:5173'),
+  /**
    * Filename of the last migration this image expects to find applied in
    * `app._migrations`. Baked into the image at build time (see
    * infra/fly/Dockerfile ARG MIGRATIONS_REQUIRED_HEAD). Used by /readyz

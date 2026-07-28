@@ -83,6 +83,22 @@ describe('dashboard browser origin wiring', () => {
     expect(res.headers.get('access-control-allow-credentials')).toBe('true');
   });
 
+  it('allows an immutable Cloudflare Pages preview origin', async () => {
+    const res = await createApp().request('/projects', {
+      method: 'OPTIONS',
+      headers: {
+        origin: 'https://a1b2c3.harpa-pro-dashboard.pages.dev',
+        'access-control-request-method': 'GET',
+      },
+    });
+
+    expect(res.status).toBe(204);
+    expect(res.headers.get('access-control-allow-origin')).toBe(
+      'https://a1b2c3.harpa-pro-dashboard.pages.dev',
+    );
+    expect(res.headers.get('access-control-allow-credentials')).toBe('true');
+  });
+
   it('does not emit dashboard CORS headers for an unknown origin', async () => {
     const res = await createApp().request('/projects', {
       headers: { origin: 'https://evil.example.com' },

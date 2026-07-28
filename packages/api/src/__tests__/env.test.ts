@@ -32,6 +32,7 @@ const KEYS = [
   'TEST_ACCOUNT_PASSWORD',
   'DEMO_ACCOUNT_EMAILS',
   'DEMO_ACCOUNT_PASSWORD',
+  'DASHBOARD_CORS_ORIGINS',
 ] as const;
 
 let snapshot: Record<string, string | undefined>;

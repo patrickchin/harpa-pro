@@ -4,6 +4,7 @@
 export {
   AuthSessionProvider,
   useAuthSession,
+  useOptionalAuthSession,
   type AuthStatus,
   type AuthSessionValue,
   type SessionUser,

@@ -53,8 +53,10 @@ export interface UploadQueue {
   retry: (jobId: string) => Promise<UploadResult>;
   getJobs: () => UploadJob[];
   subscribe: (listener: () => void) => () => void;
-  /** Cancel pending/failed job. In-flight jobs run to completion. */
+  /** Cancel and remove one job. In-flight network work is aborted. */
   remove: (jobId: string) => void;
+  /** Abort and forget every job, including the persisted snapshot. */
+  clear: () => void;
 }
 
 interface InternalJob extends UploadJob {
@@ -72,7 +74,7 @@ export function createUploadQueue(
 ): UploadQueue {
   const jobs: InternalJob[] = [];
   const listeners = new Set<() => void>();
-  const batchCoord = createBatchCoordinator();
+  let batchCoord = createBatchCoordinator();
   let running = false;
   let cachedSnapshot: UploadJob[] = [];
   let snapshotDirty = true;
@@ -365,6 +367,29 @@ export function createUploadQueue(
     notify();
   }
 
+  function clear(): void {
+    const removed = jobs.splice(0, jobs.length);
+    batchCoord = createBatchCoordinator();
+
+    for (const job of removed) {
+      if (
+        job.status === 'completed' ||
+        job.status === 'failed' ||
+        job.status === 'cancelled'
+      ) {
+        continue;
+      }
+      job.controller.abort();
+      const error = new Error('upload queue cleared');
+      error.name = 'AbortError';
+      job.reject(error);
+    }
+
+    persistence?.clear();
+    snapshotDirty = true;
+    for (const fn of listeners) fn();
+  }
+
   // Seed from persistence (`internals.initialJobs`). The caller has
   // already filtered out jobs whose source URI no longer resolves to a
   // readable file. We re-create promise handles as noops because no
@@ -422,5 +447,6 @@ export function createUploadQueue(
       };
     },
     remove,
+    clear,
   };
 }

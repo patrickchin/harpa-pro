@@ -333,6 +333,26 @@ under project `harpa-pro`. Configs:
 variants (`.env.local` / `.env.dev` / `.env.prod`) are gitignored and
 are the local mirror of what's in Doppler.
 
+### API production boot contract
+
+The Fly prod and dev apps both run with `NODE_ENV=production` and
+`HARPAPRO_PR_BUILD=0`. The API fails at boot unless all of the following
+are true:
+
+- `BETTER_AUTH_SECRET` is explicitly set to at least 32 characters and
+  is not the checked-in development fallback.
+- AI is live (`AI_LIVE=1`, `AI_FIXTURE_MODE=live`) with OpenAI and Groq
+  keys.
+- R2 is live with an account ID or explicit endpoint plus both access
+  credentials.
+- Turnstile and Resend are live with their respective secret/API key.
+- `EMAIL_OTP_LIVE=1` and `RATE_LIMIT_BACKEND=postgres`.
+
+Per-PR Fly previews set `HARPAPRO_PR_BUILD=1`, so they may use fixture
+services and the memory rate limiter. They still require an explicit
+production-grade Better Auth secret because preview sessions are signed
+the same way as other production-mode sessions.
+
 ### Day-to-day
 
 ```sh
@@ -476,11 +496,17 @@ URI=$(pnpm db:branch:ensure dev)
 flyctl secrets set --app harpa-pro-api-dev \
   DATABASE_URL="$URI" \
   BETTER_AUTH_SECRET=... \
+  EMAIL_OTP_LIVE=1 \
+  RESEND_LIVE=1 RESEND_API_KEY=... \
+  TURNSTILE_LIVE=1 TURNSTILE_SECRET_KEY=... \
+  RATE_LIMIT_BACKEND=postgres \
   WAITLIST_CORS_ORIGINS="https://dev.harpa-pro.pages.dev" \
   TWILIO_ACCOUNT_SID=... TWILIO_AUTH_TOKEN=... TWILIO_VERIFY_SID=... \
+  R2_FIXTURE_MODE=live \
   R2_ACCOUNT_ID=... R2_ACCESS_KEY_ID=... R2_SECRET_ACCESS_KEY=... \
   R2_BUCKET=harpa-pro-dev \
-  AI_LIVE=1 OPENAI_API_KEY=sk-... GROQ_API_KEY=gsk-... # AI providers
+  AI_FIXTURE_MODE=live AI_LIVE=1 \
+  OPENAI_API_KEY=sk-... GROQ_API_KEY=gsk-... # AI providers
 ```
 
 After bootstrap, every push to `dev` re-uses the same Neon branch

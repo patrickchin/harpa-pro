@@ -225,4 +225,69 @@ describe('Postgres idempotency store', () => {
       vi.useRealTimers();
     }
   });
+
+  it('reports a reclaimed lease instead of masking it with a producer failure', async () => {
+    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] });
+    const store = new PostgresIdempotencyStore(getPool(fx.url));
+    const renewal = vi.spyOn(
+      store as unknown as {
+        renewLease(keyHash: string, ownerToken: string): Promise<void>;
+      },
+      'renewLease',
+    );
+    const key = 'reclaimed-live-owner-key';
+    const keyHash = createHash('sha256').update(key, 'utf8').digest('hex');
+
+    let failProducer!: (error: Error) => void;
+    const producerFinished = new Promise<void>((_resolve, reject) => {
+      failProducer = reject;
+    });
+    let producerStarted!: () => void;
+    const started = new Promise<void>((resolve) => {
+      producerStarted = resolve;
+    });
+
+    const admin = new pg.Client({ connectionString: fx.url });
+    await admin.connect();
+    try {
+      const execution = store.getOrExecute(key, 60_000, async () => {
+        producerStarted();
+        await producerFinished;
+        return {
+          status: 200,
+          body: '{"unreachable":true}',
+          contentType: 'application/json',
+        };
+      });
+
+      await started;
+      await admin.query(
+        `UPDATE app.idempotency_keys
+         SET owner_token = 'replacement-owner',
+             lease_expires_at = now() + interval '1 minute'
+         WHERE key_hash = $1`,
+        [keyHash],
+      );
+      await vi.advanceTimersByTimeAsync(10_000);
+      await vi.waitFor(() => expect(renewal).toHaveBeenCalledOnce());
+      await (renewal.mock.results[0]!.value as Promise<void>).catch(() => undefined);
+      failProducer(new Error('producer failed'));
+
+      await expect(execution).rejects.toMatchObject({
+        name: 'IdempotencyLeaseLostError',
+        message: 'Idempotency lease ownership was lost during renewal.',
+      });
+
+      const row = await admin.query<{ owner_token: string }>(
+        `SELECT owner_token
+         FROM app.idempotency_keys
+         WHERE key_hash = $1`,
+        [keyHash],
+      );
+      expect(row.rows[0]?.owner_token).toBe('replacement-owner');
+    } finally {
+      await admin.end();
+      vi.useRealTimers();
+    }
+  });
 });

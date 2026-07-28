@@ -194,6 +194,39 @@ describe('/files/*', () => {
     expect.soft(persisted.rows[0]?.count).toBe('0');
   });
 
+  it('accepts a lease-less pre-deploy upload only during the rollout grace', async () => {
+    const app = createApp();
+    const tok = await signTestToken(alice, aliceSid);
+    const legacyId = makeFileId();
+    const legacyKey = `users/${alice}/scratch/${legacyId}.jpg`;
+    await admin.query(
+      `UPDATE app.storage_lifecycle_rollout
+       SET enforce_after = NULL, updated_at = now()
+       WHERE singleton`,
+    );
+    try {
+      const response = await app.request('/files', {
+        method: 'POST',
+        headers: headers(tok),
+        body: JSON.stringify({
+          scope: 'scratch',
+          kind: 'image',
+          fileKey: legacyKey,
+          sizeBytes: 3,
+          contentType: 'image/jpeg',
+        }),
+      });
+      expect(response.status).toBe(201);
+    } finally {
+      await admin.query(
+        `UPDATE app.storage_lifecycle_rollout
+         SET enforce_after = now(), updated_at = now()
+         WHERE singleton`,
+      );
+      await admin.query(`DELETE FROM app.files WHERE id = $1`, [legacyId]);
+    }
+  });
+
   it('POST /files 409 on duplicate fileKey', async () => {
     const app = createApp();
     const tok = await signTestToken(alice, aliceSid);

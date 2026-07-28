@@ -108,7 +108,12 @@ const Env = z.object({
    * TTL (seconds) for presigned PUT/GET URLs. 5 min matches
    * arch-storage.md §Download flow.
    */
-  R2_PRESIGN_TTL_SEC: z.coerce.number().int().positive().default(300),
+  R2_PRESIGN_TTL_SEC: z.coerce
+    .number()
+    .int()
+    .positive()
+    .max(300)
+    .default(300),
   REQUEST_LOG: z.enum(['true', 'false']).default('false'),
   /**
    * Sentry crash reporting. DSN is optional so local/test boots stay

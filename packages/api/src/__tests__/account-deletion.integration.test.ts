@@ -9,6 +9,7 @@ import pg from 'pg';
 import { createApp } from '../app.js';
 import { resetPool, getPool } from '../db/client.js';
 import { signTestToken } from '../middleware/auth.js';
+import { armStorageLifecycleRollout } from '../../scripts/arm-storage-lifecycle-rollout.js';
 import { startPg, seedAuthUsers, type PgFixture } from './setup-pg.js';
 import {
   makeFileId,
@@ -26,6 +27,7 @@ let admin: pg.Client;
 let alice: string;
 let bob: string;
 let carol: string;
+let dave: string;
 let aliceSid: string;
 
 let soloProject: string;
@@ -36,6 +38,7 @@ let sharedReport: string;
 const aliceEmail = 'alice-delete@example.com';
 const bobEmail = 'bob-delete@example.com';
 const carolEmail = 'carol-delete@example.com';
+const daveEmail = 'dave-delete@example.com';
 
 beforeAll(async () => {
   fx = await startPg();
@@ -46,12 +49,14 @@ beforeAll(async () => {
   alice = makeUserId();
   bob = makeUserId();
   carol = makeUserId();
+  dave = makeUserId();
   aliceSid = makeSessionId();
 
   await seedAuthUsers(fx.url, [
     { id: alice, email: aliceEmail, displayName: 'Alice Delete' },
     { id: bob, email: bobEmail, displayName: 'Bob Keeper' },
     { id: carol, email: carolEmail, displayName: 'Carol Keeper' },
+    { id: dave, email: daveEmail, displayName: 'Dave Joiner' },
   ]);
 
   admin = new pg.Client({ connectionString: fx.url });
@@ -175,6 +180,128 @@ describe('GET /me/deletion-preview', () => {
   });
 });
 
+describe('storage lifecycle rollout gate', () => {
+  it('arms lease enforcement once without reopening grace on later deploys', async () => {
+    await admin.query(
+      `UPDATE app.storage_lifecycle_rollout
+       SET enforce_after = NULL,
+           armed_at = NULL,
+           account_delete_enabled = false,
+           updated_at = now()
+       WHERE singleton`,
+    );
+    try {
+      const first = await armStorageLifecycleRollout({
+        databaseUrl: fx.url,
+        graceSeconds: 60,
+        accountDeleteEnabled: true,
+      });
+      const second = await armStorageLifecycleRollout({
+        databaseUrl: fx.url,
+        graceSeconds: 330,
+        accountDeleteEnabled: true,
+      });
+      expect(second.toISOString()).toBe(first.toISOString());
+      const state = await admin.query<{
+        account_delete_enabled: boolean;
+      }>(
+        `SELECT account_delete_enabled
+         FROM app.storage_lifecycle_rollout
+         WHERE singleton`,
+      );
+      expect(state.rows[0]?.account_delete_enabled).toBe(true);
+    } finally {
+      await admin.query(
+        `UPDATE app.storage_lifecycle_rollout
+         SET enforce_after = now(),
+             account_delete_enabled = true,
+             updated_at = now()
+         WHERE singleton`,
+      );
+    }
+  });
+
+  it('fails account deletion closed while legacy presigns may still exist', async () => {
+    const app = createApp();
+    const token = await signTestToken(alice, aliceSid);
+    await admin.query(
+      `UPDATE app.storage_lifecycle_rollout
+       SET enforce_after = NULL,
+           account_delete_enabled = false,
+           updated_at = now()
+       WHERE singleton`,
+    );
+    try {
+      const response = await app.request('/me', {
+        method: 'DELETE',
+        headers: { authorization: `Bearer ${token}` },
+      });
+      expect(response.status).toBe(503);
+      const user = await admin.query(
+        `SELECT id FROM public."user" WHERE id = $1`,
+        [alice],
+      );
+      expect(user.rowCount).toBe(1);
+    } finally {
+      await admin.query(
+        `UPDATE app.storage_lifecycle_rollout
+         SET enforce_after = now(),
+             account_delete_enabled = true,
+             updated_at = now()
+         WHERE singleton`,
+      );
+    }
+  });
+
+  it('keeps deletion disabled when a preview arms leases without a worker', async () => {
+    const app = createApp();
+    const token = await signTestToken(alice, aliceSid);
+    await admin.query(
+      `UPDATE app.storage_lifecycle_rollout
+       SET enforce_after = NULL,
+           armed_at = NULL,
+           account_delete_enabled = false,
+           updated_at = now()
+       WHERE singleton`,
+    );
+    try {
+      await armStorageLifecycleRollout({
+        databaseUrl: fx.url,
+        graceSeconds: 0,
+        accountDeleteEnabled: false,
+      });
+      const enforcement = await admin.query<{
+        leases_enforced: boolean;
+        account_delete_enabled: boolean;
+      }>(
+        `SELECT
+           app.file_upload_leases_enforced() AS leases_enforced,
+           account_delete_enabled
+         FROM app.storage_lifecycle_rollout
+         WHERE singleton`,
+      );
+      expect(enforcement.rows[0]).toEqual({
+        leases_enforced: true,
+        account_delete_enabled: false,
+      });
+
+      const response = await app.request('/me', {
+        method: 'DELETE',
+        headers: { authorization: `Bearer ${token}` },
+      });
+      expect(response.status).toBe(503);
+    } finally {
+      await admin.query(
+        `UPDATE app.storage_lifecycle_rollout
+         SET enforce_after = now(),
+             account_delete_enabled = true,
+             updated_at = now()
+         WHERE singleton`,
+      );
+    }
+  });
+});
+
 describe('account deletion cleanup transaction', () => {
   it('atomically enqueues cleanup and locks membership decisions until commit', async () => {
     const app = createApp();
@@ -202,6 +329,9 @@ describe('account deletion cleanup transaction', () => {
 
     const deletion = new pg.Client({ connectionString: fx.url });
     const membershipChange = new pg.Client({ connectionString: fx.url });
+    const safetyLeaseId = makeFileId();
+    const safetyLeaseKey =
+      `users/${alice}/scratch/${safetyLeaseId}.jpg`;
     await deletion.connect();
     await membershipChange.connect();
     try {
@@ -212,7 +342,31 @@ describe('account deletion cleanup transaction', () => {
                 set_config('app.session_id', $2, true)`,
         [alice, aliceSid],
       );
+      // A PUT that began just before signed expiry can finish just after it.
+      // Keep leases through the same 30-second safety window used by pruning.
+      await deletion.query(
+        `INSERT INTO app.file_upload_leases(
+           file_id,
+           owner_id,
+           file_key,
+           scope,
+           content_type,
+           size_bytes,
+           presign_expires_at
+         )
+         VALUES (
+           $1,
+           $2,
+           $3,
+           'scratch',
+           'image/jpeg',
+           3,
+           now() - interval '10 seconds'
+         )`,
+        [safetyLeaseId, alice, safetyLeaseKey],
+      );
       await deletion.query(`SELECT app.delete_current_user()`);
+      await deletion.query('RESET ROLE');
 
       const jobs = await deletion.query<{
         job_kind: string;
@@ -238,6 +392,7 @@ describe('account deletion cleanup transaction', () => {
             'account-delete/personal.jpg',
             'account-delete/shared.pdf',
             lease.fileKey,
+            safetyLeaseKey,
           ]),
           sweepPrefixes: expect.arrayContaining([
             `users/${alice}/avatar/`,
@@ -253,31 +408,59 @@ describe('account deletion cleanup transaction', () => {
         job_kind: 'account_delete_final',
         payload: {
           userId: alice,
-          exactKeys: [lease.fileKey],
+          exactKeys: expect.arrayContaining([
+            lease.fileKey,
+            safetyLeaseKey,
+          ]),
           sweepPrefixes: [],
         },
       });
+      expect(jobs.rows[1]?.payload.exactKeys).toHaveLength(2);
       expect(jobs.rows[1]!.run_after.getTime()).toBeGreaterThanOrEqual(
         Date.parse(lease.expiresAt) + 30_000,
       );
 
-      await membershipChange.query('BEGIN');
-      await membershipChange.query('SET LOCAL ROLE app_authenticated');
-      await membershipChange.query(
-        `SELECT set_config('app.user_id', $1, true),
-                set_config('app.session_id', $2, true)`,
-        [alice, makeSessionId()],
+      const expectMutationBlocked = async (
+        query: string,
+        parameters: unknown[],
+      ): Promise<void> => {
+        await membershipChange.query('BEGIN');
+        await membershipChange.query('SET LOCAL ROLE app_authenticated');
+        await membershipChange.query(
+          `SELECT set_config('app.user_id', $1, true),
+                  set_config('app.session_id', $2, true)`,
+          [alice, makeSessionId()],
+        );
+        await membershipChange.query(`SET LOCAL lock_timeout = '150ms'`);
+        await expect(
+          membershipChange.query(query, parameters),
+        ).rejects.toMatchObject({ code: '55P03' });
+        await membershipChange.query('ROLLBACK');
+      };
+
+      await expectMutationBlocked(
+        `SELECT app.add_project_member_by_email(
+           $1::app.prj_id,
+           $2::text,
+           'viewer'::app.project_role
+         )`,
+        [transferProject, daveEmail],
       );
-      await membershipChange.query(`SET LOCAL lock_timeout = '150ms'`);
-      await expect(
-        membershipChange.query(
-          `SELECT app.remove_project_member(
-             $1::app.prj_id,
-             $2::app.usr_id
-           )`,
-          [transferProject, carol],
-        ),
-      ).rejects.toMatchObject({ code: '55P03' });
+      await expectMutationBlocked(
+        `SELECT app.update_member_role(
+           $1::app.prj_id,
+           $2::app.usr_id,
+           'editor'::app.project_role
+         )`,
+        [transferProject, carol],
+      );
+      await expectMutationBlocked(
+        `SELECT app.remove_project_member(
+           $1::app.prj_id,
+           $2::app.usr_id
+         )`,
+        [transferProject, carol],
+      );
     } finally {
       await membershipChange.query('ROLLBACK').catch(() => undefined);
       await deletion.query('ROLLBACK').catch(() => undefined);
@@ -323,6 +506,16 @@ describe('DELETE /me', () => {
     expect(settings.rowCount).toBe(0);
     const files = await admin.query(`SELECT id FROM app.files WHERE owner_id = $1`, [alice]);
     expect(files.rowCount).toBe(0);
+    const remainingJobs = await admin.query<{ job_kind: string }>(
+      `SELECT job_kind
+       FROM app.storage_delete_jobs
+       WHERE user_id = $1
+       ORDER BY job_kind`,
+      [alice],
+    );
+    expect(remainingJobs.rows).toEqual([
+      { job_kind: 'account_delete_final' },
+    ]);
     const aliceUsage = await admin.query(`SELECT id FROM app.llm_usage_events WHERE user_id = $1`, [alice]);
     expect(aliceUsage.rowCount).toBe(0);
     const aliceVerifications = await admin.query(

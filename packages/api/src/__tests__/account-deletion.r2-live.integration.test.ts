@@ -101,8 +101,10 @@ beforeAll(async () => {
     [soloProject, sharedProject, alice, bob],
   );
   await admin.query(
-    `INSERT INTO app.reports(id, project_id, author_id, number)
-     VALUES ($1, $3, $5, 1), ($2, $4, $5, 1)`,
+    `INSERT INTO app.reports(id, project_id, author_id, number, body)
+     VALUES
+       ($1, $3, $5, 1, '{"summary":"solo"}'::jsonb),
+       ($2, $4, $5, 1, '{"summary":"shared"}'::jsonb)`,
     [soloReport, sharedReport, soloProject, sharedProject, alice],
   );
 
@@ -174,6 +176,90 @@ async function expectObjectMissing(Key: string): Promise<void> {
 }
 
 describe.skipIf(!ENABLED)('DELETE /me R2 lifecycle', () => {
+  it('keeps and prunes the exact PDF key when registration fails after a real PUT', async () => {
+    await admin.query(
+      `CREATE OR REPLACE FUNCTION app.test_fail_pdf_registration()
+       RETURNS trigger
+       LANGUAGE plpgsql
+       AS $$
+       BEGIN
+         IF NEW.kind = 'pdf' THEN
+           RAISE EXCEPTION 'test_pdf_registration_failure';
+         END IF;
+         RETURN NEW;
+       END
+       $$;
+
+       CREATE TRIGGER test_fail_pdf_registration
+       BEFORE INSERT ON app.files
+       FOR EACH ROW
+       EXECUTE FUNCTION app.test_fail_pdf_registration()`,
+    );
+
+    let orphanKey = '';
+    try {
+      const token = await signTestToken(alice, aliceSid);
+      const response = await app.request(
+        `/projects/${sharedProject}/reports/1/pdf`,
+        {
+          method: 'POST',
+          headers: { authorization: `Bearer ${token}` },
+        },
+      );
+      expect(response.status).toBe(500);
+
+      const reservation = await admin.query<{
+        file_id: string;
+        file_key: string;
+      }>(
+        `SELECT file_id, file_key
+         FROM app.file_upload_leases
+         WHERE owner_id = $1
+           AND report_id = $2
+           AND consumed_at IS NULL`,
+        [alice, sharedReport],
+      );
+      expect(reservation.rows).toHaveLength(1);
+      orphanKey = reservation.rows[0]!.file_key;
+
+      const uploaded = await minio.client.send(
+        new HeadObjectCommand({
+          Bucket: minio.bucket,
+          Key: orphanKey,
+        }),
+      );
+      expect(uploaded.ContentType).toBe('application/pdf');
+      expect(Number(uploaded.ContentLength)).toBeGreaterThan(0);
+
+      await admin.query(
+        `UPDATE app.file_upload_leases
+         SET presign_expires_at = now() - interval '31 seconds'
+         WHERE file_id = $1`,
+        [reservation.rows[0]!.file_id],
+      );
+      const { pruneExpiredFileUploadLeases } = await import(
+        '../services/storage-delete-jobs.js'
+      );
+      await expect(pruneExpiredFileUploadLeases()).resolves.toMatchObject({
+        unconsumedLeasesPruned: 1,
+        orphanObjectsDeleted: 1,
+      });
+      await expectObjectMissing(orphanKey);
+    } finally {
+      await admin.query(
+        `DROP TRIGGER IF EXISTS test_fail_pdf_registration ON app.files;
+         DROP FUNCTION IF EXISTS app.test_fail_pdf_registration()`,
+      );
+      await admin.query(
+        `DELETE FROM app.file_upload_leases
+         WHERE owner_id = $1
+           AND report_id = $2
+           AND consumed_at IS NULL`,
+        [alice, sharedReport],
+      );
+    }
+  }, 60_000);
+
   it('deletes exact keys, safe-prefix orphans, and a late PUT without sweeping a shared project', async () => {
     const token = await signTestToken(alice, aliceSid);
 

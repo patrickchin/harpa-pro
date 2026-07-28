@@ -16,7 +16,11 @@ import {
   PutObjectCommand,
   S3Client,
 } from '@aws-sdk/client-s3';
-import { FixtureStorage, R2Storage } from './storage.js';
+import {
+  buildStorageKey,
+  FixtureStorage,
+  R2Storage,
+} from './storage.js';
 
 type LifecycleStorage = {
   deleteObjects(fileKeys: string[]): Promise<void>;
@@ -49,14 +53,16 @@ describe('FixtureStorage', () => {
 
   it('putObject builds a server-side key and reports byte length', async () => {
     const bytes = new Uint8Array([1, 2, 3, 4]);
+    const scope = {
+      kind: 'project' as const,
+      userId: 'usr-2abc234d',
+      projectId: 'prj-1abc234d',
+      reportId: 'rpt-1abc234d',
+      fileKind: 'pdf' as const,
+    };
     const out = await fx.putObject({
-      scope: {
-        kind: 'project',
-        userId: 'usr-2abc234d',
-        projectId: 'prj-1abc234d',
-        reportId: 'rpt-1abc234d',
-        fileKind: 'pdf',
-      },
+      scope,
+      ...buildStorageKey(scope, 'application/pdf'),
       contentType: 'application/pdf',
       bytes,
     });
@@ -108,14 +114,16 @@ describe('R2Storage (with injected S3 client)', () => {
     // network boundary is stubbed.
     const send = vi.spyOn(client, 'send').mockResolvedValue({} as never);
     const r2 = new R2Storage({ client, bucket: 'harpa-test' });
+    const scope = {
+      kind: 'project' as const,
+      userId: 'usr-3abc234d',
+      projectId: 'prj-2abc234d',
+      reportId: 'rpt-2abc234d',
+      fileKind: 'pdf' as const,
+    };
     const out = await r2.putObject({
-      scope: {
-        kind: 'project',
-        userId: 'usr-3abc234d',
-        projectId: 'prj-2abc234d',
-        reportId: 'rpt-2abc234d',
-        fileKind: 'pdf',
-      },
+      scope,
+      ...buildStorageKey(scope, 'application/pdf'),
       contentType: 'application/pdf',
       bytes: new Uint8Array([1, 2, 3]),
     });

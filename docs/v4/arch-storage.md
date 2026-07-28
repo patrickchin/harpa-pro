@@ -338,8 +338,77 @@ so a previous abort does not poison the new attempt. The
   membership leg of every policy short-circuits to false and the
   effective rule collapses to owner-only — personal scopes stay
   personal.
-- Lifecycle: `harpa-voice` and `harpa-images` files referenced from
-  no live note are GC'd after 7 days by an R2 lifecycle rule.
+- Lifecycle: account deletion and expired upload leases are handled by
+  the durable API-owned lifecycle below. Bucket lifecycle expiry remains
+  a residual guardrail, not the source of correctness.
+
+### Account-deletion cleanup
+
+`POST /files/presign` stores the exact key and expiry in
+`app.file_upload_leases` before returning the URL. `POST /files`
+requires the matching unconsumed lease and marks it consumed in the same
+transaction that inserts `app.files`. A consumed lease remains until
+expiry because registration does not revoke the signed URL.
+
+Server-rendered PDFs use the same durable record before their side effect.
+The route first commits an exact-key lease, then in a separate transaction
+locks the user and lease across the R2 PUT, atomic lease consumption,
+`app.files` insert, and report-pointer update. If the process dies or the
+second transaction fails after R2 accepts the bytes, the unconsumed lease
+survives for exact-key orphan cleanup.
+
+`app.delete_current_user()` locks the user, relevant projects, every
+membership row, owned file rows, and upload leases before it decides
+which projects are solo. It then inserts storage jobs and deletes the
+account in the same transaction. Concurrent member add/update/remove,
+client registration, presign, and server-side PDF upload cannot cross
+that decision boundary.
+
+The due-now job contains every owned file key, every lease key, personal
+avatar/scratch prefixes, and only the project prefixes actually deleted
+as solo. A second job is due at the latest relevant presign expiry plus
+30 seconds and repeats every lease key that is unexpired or still inside
+that 30-second in-flight PUT safety window, consumed or not.
+Shared-project prefixes are never swept.
+
+After commit, the route drains the due-now job as a fast path. The
+service-less Fly worker claims durable jobs with `FOR UPDATE SKIP
+LOCKED`, retries failures with capped exponential delay, and removes a
+job only after its exact claim succeeds. A crash after the database
+commit therefore leaves recoverable work in `app.storage_delete_jobs`.
+The route returns `204` once the account is committed away even when
+storage retry remains pending.
+
+Prefix work is bounded to four 500-key pages per attempt, while
+`DeleteObjects` is chunked at 1,000 keys. Truncation is retryable:
+objects already removed disappear from the next listing, so subsequent
+attempts make progress. Failures remain queryable through
+`attempt_count` and `last_error`, and also produce structured worker logs
+and Sentry events.
+
+The same worker bounds lease metadata. After expiry plus the 30-second
+safety window it drops consumed leases, and it row-locks expired
+unconsumed leases while deleting their exact orphan objects before
+removing the rows. R2 failure rolls the transaction back; concurrent
+registration waits and then receives `409` rather than creating a file
+whose object was deleted.
+
+Idle polling is deliberately bounded for Neon cost. The worker sleeps until
+the next known `run_after`, with a ten-minute maximum so a newly inserted job
+cannot be missed indefinitely, and performs lease pruning at most once per
+hour. `DELETE /me` still drains its immediate job after commit. If that
+fast-path fails just after the worker goes to sleep, durable cleanup can lag by
+up to ten minutes; expired lease/orphan cleanup can lag by up to one hour.
+This leaves idle gaps in which Neon may suspend, while the service-less Fly
+Machine remains an explicit always-on cost.
+
+The first rolling deploy is gated by
+`app.storage_lifecycle_rollout`. Account deletion returns `503` until
+old lease-less presigns have expired. Lease enforcement is armed once,
+330 seconds after a successful deploy, and later deploys never reopen
+the grace. See
+[`design-r2-object-lifecycle.md`](design-r2-object-lifecycle.md) for
+the full race analysis and operational queries.
 
 ## Live mode (production)
 
@@ -363,7 +432,7 @@ fixture mode stays free of R2 creds):
 | `R2_SECRET_ACCESS_KEY` | R2 API token secret |
 | `R2_BUCKET` | Defaults to `harpa-pro` |
 | `R2_ENDPOINT` | Optional override for local S3-compatible mocks |
-| `R2_PRESIGN_TTL_SEC` | Defaults to 300 (5 minutes per §Download flow) |
+| `R2_PRESIGN_TTL_SEC` | Defaults to and is capped at 300 seconds; rollout grace is 330 seconds |
 
 `R2Storage` signs `content-type` and `content-length` into every PUT
 URL so a stolen link can't be reused for arbitrary uploads (Pitfall 8).
@@ -376,9 +445,10 @@ When `EXPO_PUBLIC_USE_FIXTURES=true` (mobile) or `R2_FIXTURE_MODE=replay`
 - `POST /files/presign` returns a fake URL pointing at the local
   fixture server (or a public URL in `harpa-fixtures`).
 - The mobile upload queue PUTs to it; in tests we intercept with MSW.
-- `POST /files` accepts a synthetic `fileKey` and stores a row
-  pointing at a public fixture asset.
+- `POST /files` consumes the lease minted by the fixture presign and
+  stores a row pointing at the fixture key.
 - Tests that exercise transcription wire `voice.fixture.m4a` from
   `harpa-fixtures` so the OpenAI fixture replay matches.
 
-This means **no R2 calls in CI**.
+This means normal CI makes **no Cloudflare R2 calls**. The dedicated
+default-wiring lane uses local MinIO to exercise the real S3 client.

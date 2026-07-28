@@ -292,11 +292,20 @@ loads `GET /me/deletion-preview`, requires the user to type their
 account email, calls `DELETE /me`, clears local caches, and signs out.
 
 Deletion removes the user's auth account, sessions, settings, usage
-events, personal file rows, and solo projects. Shared project records
-remain available to remaining members; if the deleted account was the
-only owner, ownership transfers to the oldest remaining member. Mention
-this shared-record retention in App Review notes or privacy-policy
-updates if reviewers ask how collaborative data is handled.
+events, personal file rows, owned R2 objects, safe-prefix R2 orphans,
+and solo projects. Shared project records remain available to remaining
+members; if the deleted account was the only owner, ownership transfers
+to the oldest remaining member. Mention this shared-record retention in
+App Review notes or privacy-policy updates if reviewers ask how
+collaborative data is handled.
+
+The database transaction creates durable immediate and delayed R2 jobs.
+The route attempts immediate cleanup; the storage worker retries failures
+and runs the final exact-key pass after every signed PUT has expired.
+Inspect `app.storage_delete_jobs` for `attempt_count` / `last_error`;
+worker failures also reach structured logs and Sentry. PR preview apps
+return `503` for account deletion because they intentionally have no
+always-on worker.
 
 ### Production release
 
@@ -618,6 +627,55 @@ prod should stay hot again, restore `min_machines_running = 2`: one
 machine absorbs traffic if the other is restarting or being replaced by
 a deploy, avoiding the v3 single-machine restart failure mode. Cost
 delta: ~$3.80/mo for the extra `shared-cpu-1x` machine.
+
+### Storage lifecycle worker
+
+Production and dev each run one `storage-worker` process group in
+addition to the HTTP `app` group:
+
+- `app`: `shared-cpu-1x`, 512 MB, attached to `http_service`, allowed
+  to suspend at zero;
+- `storage-worker`: `shared-cpu-1x`, 256 MB, no service attachment,
+  explicitly kept at count 1 by the deploy workflow.
+
+The worker is not eligible for HTTP auto-stop, so both dev and
+production now carry one continuously billed worker Machine. This cost
+is required for delayed cleanup to run while the API is idle. PR
+previews do not provision workers; their account-deletion gate stays
+closed.
+
+The worker does not continuously pin Neon with five-second polling. It
+sleeps until the next known job is due, capped at ten minutes to discover
+jobs inserted after the sleep was calculated, and prunes expired upload
+leases hourly. The route remains the immediate-delete fast path. If that
+fast path fails just after a sleep starts, cleanup may lag by ten minutes;
+expired lease/orphan cleanup may lag by one hour. These gaps allow an
+otherwise idle Neon compute to suspend when its configured idle threshold
+is shorter than the gap. They do not reduce the continuously billed Fly
+worker cost.
+
+After the first lease-aware deploy completes, the workflow arms a
+one-time 330-second compatibility grace. During the grace, new presigns
+are leased, lease-less registrations from replaced machines remain
+compatible, and account deletion returns `503`. Arming uses
+`COALESCE(enforce_after, ...)`, so subsequent deploys cannot reopen the
+grace. `R2_PRESIGN_TTL_SEC` is capped at 300 seconds; the remaining 30
+seconds is the late-PUT safety window.
+
+`infra/fly/deploy.sh` owns the production order: deploy, scale
+`storage-worker=1`, then arm by running the monotonic rollout command in that
+worker process group. The command inherits the app's staged Fly secrets, so
+neither CI nor manual callers need the production `DATABASE_URL`. The shell
+policy test stubs external commands and executes this sequence so future
+workflow edits cannot silently omit arming.
+
+Operational query:
+
+```sql
+SELECT user_id, job_kind, run_after, attempt_count, locked_at, last_error
+FROM app.storage_delete_jobs
+ORDER BY run_after;
+```
 
 ### Burst scaling
 

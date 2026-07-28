@@ -2,28 +2,6 @@ import { describe, expect, it, vi } from 'vitest';
 import * as accountDeletion from './account-deletion.js';
 import type { Storage } from './storage.js';
 
-interface CleanupPlan {
-  userId: string;
-  exactKeys: string[];
-  sweepPrefixes: string[];
-}
-
-interface CleanupResult {
-  deletedKeyCount: number;
-  truncatedPrefixes: string[];
-  failures: Array<{ operation: string; prefix?: string; error: unknown }>;
-}
-
-type AccountDeletionLifecycle = typeof accountDeletion & {
-  buildStorageCleanupPlan(db: never, userId: string): Promise<CleanupPlan>;
-  executeStorageCleanupPlan(
-    storage: Storage,
-    plan: CleanupPlan,
-  ): Promise<CleanupResult>;
-};
-
-const lifecycle = accountDeletion as AccountDeletionLifecycle;
-
 describe('getAccountDeletionPreview', () => {
   it('sorts transfer candidates when joined_at is returned as a string', async () => {
     const execute = vi
@@ -89,42 +67,6 @@ describe('getAccountDeletionPreview', () => {
 });
 
 describe('account deletion storage lifecycle', () => {
-  it('plans exact owned keys and only safe personal or solo-project prefix sweeps', async () => {
-    const execute = vi
-      .fn()
-      .mockResolvedValueOnce({
-        rows: [
-          { file_key: 'users/usr_alice/avatar/fil_avatar.jpg' },
-          {
-            file_key:
-              'projects/prj_shared/reports/rpt_shared/fil_owned-in-shared.pdf',
-          },
-        ],
-      })
-      .mockResolvedValueOnce({
-        rows: [{ project_id: 'prj_solo' }],
-      });
-
-    const plan = await lifecycle.buildStorageCleanupPlan(
-      { execute } as never,
-      'usr_alice',
-    );
-
-    expect(plan).toEqual({
-      userId: 'usr_alice',
-      exactKeys: [
-        'projects/prj_shared/reports/rpt_shared/fil_owned-in-shared.pdf',
-        'users/usr_alice/avatar/fil_avatar.jpg',
-      ],
-      sweepPrefixes: [
-        'users/usr_alice/avatar/',
-        'users/usr_alice/scratch/',
-        'projects/prj_solo/',
-      ],
-    });
-    expect(plan.sweepPrefixes).not.toContain('projects/prj_shared/');
-  });
-
   it('bounds each prefix sweep to four 500-key pages and reports truncation', async () => {
     let scratchPage = 0;
     const deleteObjects = vi.fn().mockResolvedValue(undefined);
@@ -146,7 +88,7 @@ describe('account deletion storage lifecycle', () => {
       listPrefix,
     } as unknown as Storage;
 
-    const result = await lifecycle.executeStorageCleanupPlan(storage, {
+    const result = await accountDeletion.executeStorageCleanupPlan(storage, {
       userId: 'usr_alice',
       exactKeys: ['users/usr_alice/avatar/fil_exact.jpg'],
       sweepPrefixes: [
@@ -179,7 +121,7 @@ describe('account deletion storage lifecycle', () => {
       listPrefix,
     } as unknown as Storage;
 
-    const result = await lifecycle.executeStorageCleanupPlan(storage, {
+    const result = await accountDeletion.executeStorageCleanupPlan(storage, {
       userId: 'usr_alice',
       exactKeys: ['projects/prj_shared/reports/rpt/fil_exact.jpg'],
       sweepPrefixes: [

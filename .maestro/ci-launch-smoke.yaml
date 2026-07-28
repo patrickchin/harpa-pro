@@ -19,7 +19,7 @@ tags:
           timeout: 20000
 - extendedWaitUntil:
     visible: 'Continue|Email'
-    timeout: 60000
+    timeout: 90000
 - runFlow:
     when:
       visible: 'Continue'

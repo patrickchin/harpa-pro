@@ -49,6 +49,23 @@ require_regex() {
   fi
 }
 
+require_adjacent_fixed() {
+  local path="$1" first="$2" second="$3" description="$4"
+  if [[ -f "$REPO_ROOT/$path" ]] && awk -v first="$first" -v second="$second" '
+    index($0, first) {
+      if ((getline following) > 0 && index(following, second)) {
+        found = 1
+      }
+    }
+    END { exit found ? 0 : 1 }
+  ' "$REPO_ROOT/$path"; then
+    echo "  ok   - $description"
+  else
+    echo "  FAIL - $description"
+    FAIL=$((FAIL + 1))
+  fi
+}
+
 require_before() {
   local path="$1" first="$2" second="$3" description="$4"
   local first_line second_line
@@ -105,12 +122,14 @@ require_fixed ".maestro/ci-launch-smoke.yaml" \
 forbid_fixed ".maestro/ci-launch-smoke.yaml" \
   "optional: true" \
   "Expo app-readiness wait fails closed"
-require_fixed ".maestro/ci-launch-smoke.yaml" \
-  "timeout: 60000" \
-  "Maestro launch flow bounds its Expo app-readiness wait"
-require_fixed ".maestro/ci-launch-smoke.yaml" \
+require_adjacent_fixed ".maestro/ci-launch-smoke.yaml" \
+  "visible: 'Continue|Email'" \
+  "timeout: 90000" \
+  "fail-closed Expo app-readiness wait allows 90 seconds"
+require_adjacent_fixed ".maestro/ci-launch-smoke.yaml" \
+  "id: 'input-email'" \
   "timeout: 30000" \
-  "Maestro launch flow bounds its final app-control wait"
+  "final app-control wait remains 30 seconds"
 require_fixed ".maestro/ci-launch-smoke.yaml" \
   "visible: 'http://10.0.2.2:8081'" \
   "Maestro launch flow detects the Android emulator's Metro server row"
@@ -123,9 +142,17 @@ require_before ".maestro/ci-launch-smoke.yaml" \
   "visible: 'Continue|Email'" \
   "Maestro waits for app readiness only after selecting Metro"
 require_before ".maestro/ci-launch-smoke.yaml" \
-  "visible: 'Continue|Email'" \
+  "timeout: 90000" \
   "id: 'input-email'" \
   "bounded app-readiness wait precedes the app-control assertion"
+require_before ".maestro/ci-launch-smoke.yaml" \
+  "timeout: 30000" \
+  "- assertVisible:" \
+  "final app-control wait precedes its assertion"
+require_adjacent_fixed ".maestro/ci-launch-smoke.yaml" \
+  "- assertVisible:" \
+  "id: 'input-email'" \
+  "launch smoke finishes by asserting the rendered email control"
 require_fixed ".github/workflows/e2e-maestro-testid-gate.yml" \
   "timeout-minutes: 30" \
   "Maestro job has a 30-minute GitHub Actions ceiling"
@@ -166,8 +193,8 @@ require_fixed "scripts/ci/run-maestro-launch-smoke.sh" \
   "maestro\" test" \
   "Maestro CLI executes a real flow"
 require_regex "scripts/ci/run-maestro-launch-smoke.sh" \
-  'timeout[[:space:]]+[0-9]+s.*maestro' \
-  "Maestro CLI execution has a shell-level timeout"
+  'timeout[[:space:]]+180s.*maestro' \
+  "Maestro CLI execution keeps its 180-second shell timeout"
 # These are literal runner-script strings, not policy-test expansions.
 # shellcheck disable=SC2016
 require_fixed "scripts/ci/run-maestro-launch-smoke.sh" \

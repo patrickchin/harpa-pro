@@ -667,7 +667,10 @@ seconds is the late-PUT safety window.
 worker process group. The command inherits the app's staged Fly secrets, so
 neither CI nor manual callers need the production `DATABASE_URL`. The shell
 policy test stubs external commands and executes this sequence so future
-workflow edits cannot silently omit arming.
+workflow edits cannot silently omit arming. Dev and production pass `--yes`
+when converging the worker count: Fly can create a stopped standby during the
+first process-group deploy, making `storage-worker=1` a scale-down operation
+that otherwise prompts and aborts noninteractive CI before arming.
 
 Operational query:
 

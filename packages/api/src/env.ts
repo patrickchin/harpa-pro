@@ -145,7 +145,7 @@ const Env = z.object({
    */
   DASHBOARD_CORS_ORIGINS: z
     .string()
-    .default('https://app.harpapro.com,https://*.harpa-pro-dashboard.pages.dev,http://localhost:3003'),
+    .default('https://app.harpapro.com,https://harpa-pro-dashboard.pages.dev,https://*.harpa-pro-dashboard.pages.dev,http://localhost:3003,http://127.0.0.1:3003'),
   /**
    * Filename of the last migration this image expects to find applied in
    * `app._migrations`. Baked into the image at build time (see

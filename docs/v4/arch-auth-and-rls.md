@@ -234,7 +234,7 @@ banned in the routes layer.
 value is:
 
 ```text
-https://app.harpapro.com,https://*.harpa-pro-dashboard.pages.dev,http://localhost:3003
+https://app.harpapro.com,https://harpa-pro-dashboard.pages.dev,https://*.harpa-pro-dashboard.pages.dev,http://localhost:3003,http://127.0.0.1:3003
 ```
 
 The API uses this same list for better-auth `trustedOrigins` and Hono

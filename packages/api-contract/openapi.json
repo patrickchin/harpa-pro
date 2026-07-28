@@ -3522,6 +3522,18 @@
             "required": false,
             "name": "limit",
             "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "draft",
+                "finalized"
+              ]
+            },
+            "required": false,
+            "name": "status",
+            "in": "query"
           }
         ],
         "responses": {
@@ -5493,6 +5505,9 @@
                       "nextSteps",
                       "summarySections"
                     ]
+                  },
+                  "expectedUpdatedAt": {
+                    "type": "string"
                   }
                 }
               }
@@ -5916,36 +5931,348 @@
             }
           },
           "409": {
-            "description": "Report is finalized.",
+            "description": "Report is finalized or changed elsewhere.",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
+                  "anyOf": [
+                    {
                       "type": "object",
                       "properties": {
-                        "code": {
-                          "type": "string"
-                        },
-                        "message": {
-                          "type": "string"
-                        },
-                        "details": {
-                          "nullable": true
-                        },
-                        "requestId": {
-                          "type": "string"
+                        "report": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "pattern": "^rpt_[0-9a-hjkmnp-tv-z]{8,16}$"
+                            },
+                            "number": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "exclusiveMinimum": true
+                            },
+                            "projectId": {
+                              "type": "string",
+                              "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8,16}$"
+                            },
+                            "status": {
+                              "type": "string",
+                              "enum": [
+                                "draft",
+                                "finalized"
+                              ]
+                            },
+                            "visitDate": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "body": {
+                              "type": "object",
+                              "nullable": true,
+                              "properties": {
+                                "meta": {
+                                  "type": "object",
+                                  "properties": {
+                                    "title": {
+                                      "type": "string",
+                                      "nullable": true
+                                    },
+                                    "summary": {
+                                      "type": "string",
+                                      "nullable": true
+                                    },
+                                    "visitDate": {
+                                      "type": "string",
+                                      "nullable": true
+                                    }
+                                  },
+                                  "required": [
+                                    "title",
+                                    "summary",
+                                    "visitDate"
+                                  ]
+                                },
+                                "weather": {
+                                  "type": "object",
+                                  "nullable": true,
+                                  "properties": {
+                                    "condition": {
+                                      "type": "string",
+                                      "nullable": true
+                                    },
+                                    "temperature": {
+                                      "type": "string",
+                                      "nullable": true
+                                    },
+                                    "wind": {
+                                      "type": "string",
+                                      "nullable": true
+                                    },
+                                    "impact": {
+                                      "type": "string",
+                                      "nullable": true
+                                    }
+                                  },
+                                  "required": [
+                                    "condition",
+                                    "temperature",
+                                    "wind",
+                                    "impact"
+                                  ]
+                                },
+                                "workers": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "role": {
+                                        "type": "string"
+                                      },
+                                      "count": {
+                                        "type": "string",
+                                        "nullable": true
+                                      },
+                                      "hours": {
+                                        "type": "string",
+                                        "nullable": true
+                                      },
+                                      "notes": {
+                                        "type": "string",
+                                        "nullable": true
+                                      }
+                                    },
+                                    "required": [
+                                      "role",
+                                      "count",
+                                      "hours",
+                                      "notes"
+                                    ]
+                                  }
+                                },
+                                "materials": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "name": {
+                                        "type": "string"
+                                      },
+                                      "quantity": {
+                                        "type": "string",
+                                        "nullable": true
+                                      },
+                                      "unit": {
+                                        "type": "string",
+                                        "nullable": true
+                                      },
+                                      "status": {
+                                        "type": "string",
+                                        "nullable": true
+                                      },
+                                      "condition": {
+                                        "type": "string",
+                                        "nullable": true
+                                      },
+                                      "notes": {
+                                        "type": "string",
+                                        "nullable": true
+                                      }
+                                    },
+                                    "required": [
+                                      "name",
+                                      "quantity",
+                                      "unit",
+                                      "status",
+                                      "condition",
+                                      "notes"
+                                    ]
+                                  }
+                                },
+                                "issues": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "title": {
+                                        "type": "string"
+                                      },
+                                      "severity": {
+                                        "type": "string",
+                                        "nullable": true
+                                      },
+                                      "description": {
+                                        "type": "string",
+                                        "nullable": true
+                                      },
+                                      "action": {
+                                        "type": "string",
+                                        "nullable": true
+                                      },
+                                      "attachments": {
+                                        "type": "object",
+                                        "properties": {
+                                          "images": {
+                                            "type": "array",
+                                            "items": {
+                                              "type": "string",
+                                              "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
+                                            }
+                                          },
+                                          "documents": {
+                                            "type": "array",
+                                            "items": {
+                                              "type": "string",
+                                              "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
+                                            }
+                                          }
+                                        },
+                                        "additionalProperties": false
+                                      }
+                                    },
+                                    "required": [
+                                      "title",
+                                      "severity",
+                                      "description",
+                                      "action"
+                                    ]
+                                  }
+                                },
+                                "nextSteps": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string"
+                                  }
+                                },
+                                "summarySections": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "title": {
+                                        "type": "string"
+                                      },
+                                      "body": {
+                                        "type": "string"
+                                      },
+                                      "attachments": {
+                                        "type": "object",
+                                        "properties": {
+                                          "images": {
+                                            "type": "array",
+                                            "items": {
+                                              "type": "string",
+                                              "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
+                                            }
+                                          },
+                                          "documents": {
+                                            "type": "array",
+                                            "items": {
+                                              "type": "string",
+                                              "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
+                                            }
+                                          }
+                                        },
+                                        "additionalProperties": false
+                                      }
+                                    },
+                                    "required": [
+                                      "title",
+                                      "body"
+                                    ]
+                                  }
+                                }
+                              },
+                              "required": [
+                                "meta",
+                                "weather",
+                                "workers",
+                                "materials",
+                                "issues",
+                                "nextSteps",
+                                "summarySections"
+                              ]
+                            },
+                            "notesSinceLastGeneration": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "notesChangedAt": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "generatedAt": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "needsRegeneration": {
+                              "type": "boolean"
+                            },
+                            "finalizedAt": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "pdfUrl": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "createdAt": {
+                              "type": "string"
+                            },
+                            "updatedAt": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "number",
+                            "projectId",
+                            "status",
+                            "visitDate",
+                            "body",
+                            "notesSinceLastGeneration",
+                            "notesChangedAt",
+                            "generatedAt",
+                            "needsRegeneration",
+                            "finalizedAt",
+                            "pdfUrl",
+                            "createdAt",
+                            "updatedAt"
+                          ]
                         }
                       },
                       "required": [
-                        "code",
-                        "message"
+                        "report"
+                      ]
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "error": {
+                          "type": "object",
+                          "properties": {
+                            "code": {
+                              "type": "string"
+                            },
+                            "message": {
+                              "type": "string"
+                            },
+                            "details": {
+                              "nullable": true
+                            },
+                            "requestId": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "code",
+                            "message"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "error"
                       ]
                     }
-                  },
-                  "required": [
-                    "error"
                   ]
                 }
               }
@@ -7230,6 +7557,9 @@
                     "minLength": 1,
                     "maxLength": 128,
                     "pattern": "^[a-zA-Z0-9._-]+$"
+                  },
+                  "expectedUpdatedAt": {
+                    "type": "string"
                   }
                 }
               }
@@ -7685,32 +8015,344 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
+                  "anyOf": [
+                    {
                       "type": "object",
                       "properties": {
-                        "code": {
-                          "type": "string"
-                        },
-                        "message": {
-                          "type": "string"
-                        },
-                        "details": {
-                          "nullable": true
-                        },
-                        "requestId": {
-                          "type": "string"
+                        "report": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "pattern": "^rpt_[0-9a-hjkmnp-tv-z]{8,16}$"
+                            },
+                            "number": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "exclusiveMinimum": true
+                            },
+                            "projectId": {
+                              "type": "string",
+                              "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8,16}$"
+                            },
+                            "status": {
+                              "type": "string",
+                              "enum": [
+                                "draft",
+                                "finalized"
+                              ]
+                            },
+                            "visitDate": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "body": {
+                              "type": "object",
+                              "nullable": true,
+                              "properties": {
+                                "meta": {
+                                  "type": "object",
+                                  "properties": {
+                                    "title": {
+                                      "type": "string",
+                                      "nullable": true
+                                    },
+                                    "summary": {
+                                      "type": "string",
+                                      "nullable": true
+                                    },
+                                    "visitDate": {
+                                      "type": "string",
+                                      "nullable": true
+                                    }
+                                  },
+                                  "required": [
+                                    "title",
+                                    "summary",
+                                    "visitDate"
+                                  ]
+                                },
+                                "weather": {
+                                  "type": "object",
+                                  "nullable": true,
+                                  "properties": {
+                                    "condition": {
+                                      "type": "string",
+                                      "nullable": true
+                                    },
+                                    "temperature": {
+                                      "type": "string",
+                                      "nullable": true
+                                    },
+                                    "wind": {
+                                      "type": "string",
+                                      "nullable": true
+                                    },
+                                    "impact": {
+                                      "type": "string",
+                                      "nullable": true
+                                    }
+                                  },
+                                  "required": [
+                                    "condition",
+                                    "temperature",
+                                    "wind",
+                                    "impact"
+                                  ]
+                                },
+                                "workers": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "role": {
+                                        "type": "string"
+                                      },
+                                      "count": {
+                                        "type": "string",
+                                        "nullable": true
+                                      },
+                                      "hours": {
+                                        "type": "string",
+                                        "nullable": true
+                                      },
+                                      "notes": {
+                                        "type": "string",
+                                        "nullable": true
+                                      }
+                                    },
+                                    "required": [
+                                      "role",
+                                      "count",
+                                      "hours",
+                                      "notes"
+                                    ]
+                                  }
+                                },
+                                "materials": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "name": {
+                                        "type": "string"
+                                      },
+                                      "quantity": {
+                                        "type": "string",
+                                        "nullable": true
+                                      },
+                                      "unit": {
+                                        "type": "string",
+                                        "nullable": true
+                                      },
+                                      "status": {
+                                        "type": "string",
+                                        "nullable": true
+                                      },
+                                      "condition": {
+                                        "type": "string",
+                                        "nullable": true
+                                      },
+                                      "notes": {
+                                        "type": "string",
+                                        "nullable": true
+                                      }
+                                    },
+                                    "required": [
+                                      "name",
+                                      "quantity",
+                                      "unit",
+                                      "status",
+                                      "condition",
+                                      "notes"
+                                    ]
+                                  }
+                                },
+                                "issues": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "title": {
+                                        "type": "string"
+                                      },
+                                      "severity": {
+                                        "type": "string",
+                                        "nullable": true
+                                      },
+                                      "description": {
+                                        "type": "string",
+                                        "nullable": true
+                                      },
+                                      "action": {
+                                        "type": "string",
+                                        "nullable": true
+                                      },
+                                      "attachments": {
+                                        "type": "object",
+                                        "properties": {
+                                          "images": {
+                                            "type": "array",
+                                            "items": {
+                                              "type": "string",
+                                              "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
+                                            }
+                                          },
+                                          "documents": {
+                                            "type": "array",
+                                            "items": {
+                                              "type": "string",
+                                              "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
+                                            }
+                                          }
+                                        },
+                                        "additionalProperties": false
+                                      }
+                                    },
+                                    "required": [
+                                      "title",
+                                      "severity",
+                                      "description",
+                                      "action"
+                                    ]
+                                  }
+                                },
+                                "nextSteps": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string"
+                                  }
+                                },
+                                "summarySections": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "title": {
+                                        "type": "string"
+                                      },
+                                      "body": {
+                                        "type": "string"
+                                      },
+                                      "attachments": {
+                                        "type": "object",
+                                        "properties": {
+                                          "images": {
+                                            "type": "array",
+                                            "items": {
+                                              "type": "string",
+                                              "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
+                                            }
+                                          },
+                                          "documents": {
+                                            "type": "array",
+                                            "items": {
+                                              "type": "string",
+                                              "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
+                                            }
+                                          }
+                                        },
+                                        "additionalProperties": false
+                                      }
+                                    },
+                                    "required": [
+                                      "title",
+                                      "body"
+                                    ]
+                                  }
+                                }
+                              },
+                              "required": [
+                                "meta",
+                                "weather",
+                                "workers",
+                                "materials",
+                                "issues",
+                                "nextSteps",
+                                "summarySections"
+                              ]
+                            },
+                            "notesSinceLastGeneration": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "notesChangedAt": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "generatedAt": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "needsRegeneration": {
+                              "type": "boolean"
+                            },
+                            "finalizedAt": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "pdfUrl": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "createdAt": {
+                              "type": "string"
+                            },
+                            "updatedAt": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "number",
+                            "projectId",
+                            "status",
+                            "visitDate",
+                            "body",
+                            "notesSinceLastGeneration",
+                            "notesChangedAt",
+                            "generatedAt",
+                            "needsRegeneration",
+                            "finalizedAt",
+                            "pdfUrl",
+                            "createdAt",
+                            "updatedAt"
+                          ]
                         }
                       },
                       "required": [
-                        "code",
-                        "message"
+                        "report"
+                      ]
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "error": {
+                          "type": "object",
+                          "properties": {
+                            "code": {
+                              "type": "string"
+                            },
+                            "message": {
+                              "type": "string"
+                            },
+                            "details": {
+                              "nullable": true
+                            },
+                            "requestId": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "code",
+                            "message"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "error"
                       ]
                     }
-                  },
-                  "required": [
-                    "error"
                   ]
                 }
               }
@@ -7797,6 +8439,9 @@
                     "minLength": 1,
                     "maxLength": 128,
                     "pattern": "^[a-zA-Z0-9._-]+$"
+                  },
+                  "expectedUpdatedAt": {
+                    "type": "string"
                   }
                 }
               }
@@ -8252,32 +8897,344 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
+                  "anyOf": [
+                    {
                       "type": "object",
                       "properties": {
-                        "code": {
-                          "type": "string"
-                        },
-                        "message": {
-                          "type": "string"
-                        },
-                        "details": {
-                          "nullable": true
-                        },
-                        "requestId": {
-                          "type": "string"
+                        "report": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "pattern": "^rpt_[0-9a-hjkmnp-tv-z]{8,16}$"
+                            },
+                            "number": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "exclusiveMinimum": true
+                            },
+                            "projectId": {
+                              "type": "string",
+                              "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8,16}$"
+                            },
+                            "status": {
+                              "type": "string",
+                              "enum": [
+                                "draft",
+                                "finalized"
+                              ]
+                            },
+                            "visitDate": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "body": {
+                              "type": "object",
+                              "nullable": true,
+                              "properties": {
+                                "meta": {
+                                  "type": "object",
+                                  "properties": {
+                                    "title": {
+                                      "type": "string",
+                                      "nullable": true
+                                    },
+                                    "summary": {
+                                      "type": "string",
+                                      "nullable": true
+                                    },
+                                    "visitDate": {
+                                      "type": "string",
+                                      "nullable": true
+                                    }
+                                  },
+                                  "required": [
+                                    "title",
+                                    "summary",
+                                    "visitDate"
+                                  ]
+                                },
+                                "weather": {
+                                  "type": "object",
+                                  "nullable": true,
+                                  "properties": {
+                                    "condition": {
+                                      "type": "string",
+                                      "nullable": true
+                                    },
+                                    "temperature": {
+                                      "type": "string",
+                                      "nullable": true
+                                    },
+                                    "wind": {
+                                      "type": "string",
+                                      "nullable": true
+                                    },
+                                    "impact": {
+                                      "type": "string",
+                                      "nullable": true
+                                    }
+                                  },
+                                  "required": [
+                                    "condition",
+                                    "temperature",
+                                    "wind",
+                                    "impact"
+                                  ]
+                                },
+                                "workers": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "role": {
+                                        "type": "string"
+                                      },
+                                      "count": {
+                                        "type": "string",
+                                        "nullable": true
+                                      },
+                                      "hours": {
+                                        "type": "string",
+                                        "nullable": true
+                                      },
+                                      "notes": {
+                                        "type": "string",
+                                        "nullable": true
+                                      }
+                                    },
+                                    "required": [
+                                      "role",
+                                      "count",
+                                      "hours",
+                                      "notes"
+                                    ]
+                                  }
+                                },
+                                "materials": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "name": {
+                                        "type": "string"
+                                      },
+                                      "quantity": {
+                                        "type": "string",
+                                        "nullable": true
+                                      },
+                                      "unit": {
+                                        "type": "string",
+                                        "nullable": true
+                                      },
+                                      "status": {
+                                        "type": "string",
+                                        "nullable": true
+                                      },
+                                      "condition": {
+                                        "type": "string",
+                                        "nullable": true
+                                      },
+                                      "notes": {
+                                        "type": "string",
+                                        "nullable": true
+                                      }
+                                    },
+                                    "required": [
+                                      "name",
+                                      "quantity",
+                                      "unit",
+                                      "status",
+                                      "condition",
+                                      "notes"
+                                    ]
+                                  }
+                                },
+                                "issues": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "title": {
+                                        "type": "string"
+                                      },
+                                      "severity": {
+                                        "type": "string",
+                                        "nullable": true
+                                      },
+                                      "description": {
+                                        "type": "string",
+                                        "nullable": true
+                                      },
+                                      "action": {
+                                        "type": "string",
+                                        "nullable": true
+                                      },
+                                      "attachments": {
+                                        "type": "object",
+                                        "properties": {
+                                          "images": {
+                                            "type": "array",
+                                            "items": {
+                                              "type": "string",
+                                              "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
+                                            }
+                                          },
+                                          "documents": {
+                                            "type": "array",
+                                            "items": {
+                                              "type": "string",
+                                              "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
+                                            }
+                                          }
+                                        },
+                                        "additionalProperties": false
+                                      }
+                                    },
+                                    "required": [
+                                      "title",
+                                      "severity",
+                                      "description",
+                                      "action"
+                                    ]
+                                  }
+                                },
+                                "nextSteps": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string"
+                                  }
+                                },
+                                "summarySections": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "title": {
+                                        "type": "string"
+                                      },
+                                      "body": {
+                                        "type": "string"
+                                      },
+                                      "attachments": {
+                                        "type": "object",
+                                        "properties": {
+                                          "images": {
+                                            "type": "array",
+                                            "items": {
+                                              "type": "string",
+                                              "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
+                                            }
+                                          },
+                                          "documents": {
+                                            "type": "array",
+                                            "items": {
+                                              "type": "string",
+                                              "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
+                                            }
+                                          }
+                                        },
+                                        "additionalProperties": false
+                                      }
+                                    },
+                                    "required": [
+                                      "title",
+                                      "body"
+                                    ]
+                                  }
+                                }
+                              },
+                              "required": [
+                                "meta",
+                                "weather",
+                                "workers",
+                                "materials",
+                                "issues",
+                                "nextSteps",
+                                "summarySections"
+                              ]
+                            },
+                            "notesSinceLastGeneration": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "notesChangedAt": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "generatedAt": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "needsRegeneration": {
+                              "type": "boolean"
+                            },
+                            "finalizedAt": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "pdfUrl": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "createdAt": {
+                              "type": "string"
+                            },
+                            "updatedAt": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "number",
+                            "projectId",
+                            "status",
+                            "visitDate",
+                            "body",
+                            "notesSinceLastGeneration",
+                            "notesChangedAt",
+                            "generatedAt",
+                            "needsRegeneration",
+                            "finalizedAt",
+                            "pdfUrl",
+                            "createdAt",
+                            "updatedAt"
+                          ]
                         }
                       },
                       "required": [
-                        "code",
-                        "message"
+                        "report"
+                      ]
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "error": {
+                          "type": "object",
+                          "properties": {
+                            "code": {
+                              "type": "string"
+                            },
+                            "message": {
+                              "type": "string"
+                            },
+                            "details": {
+                              "nullable": true
+                            },
+                            "requestId": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "code",
+                            "message"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "error"
                       ]
                     }
-                  },
-                  "required": [
-                    "error"
                   ]
                 }
               }
@@ -8353,6 +9310,21 @@
             "in": "path"
           }
         ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "expectedUpdatedAt": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "Finalized.",
@@ -8669,6 +9641,42 @@
               }
             }
           },
+          "400": {
+            "description": "Bad request.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "nullable": true
+                        },
+                        "requestId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
           "401": {
             "description": "Unauthorized.",
             "content": {
@@ -8746,32 +9754,344 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
+                  "anyOf": [
+                    {
                       "type": "object",
                       "properties": {
-                        "code": {
-                          "type": "string"
-                        },
-                        "message": {
-                          "type": "string"
-                        },
-                        "details": {
-                          "nullable": true
-                        },
-                        "requestId": {
-                          "type": "string"
+                        "report": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "pattern": "^rpt_[0-9a-hjkmnp-tv-z]{8,16}$"
+                            },
+                            "number": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "exclusiveMinimum": true
+                            },
+                            "projectId": {
+                              "type": "string",
+                              "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8,16}$"
+                            },
+                            "status": {
+                              "type": "string",
+                              "enum": [
+                                "draft",
+                                "finalized"
+                              ]
+                            },
+                            "visitDate": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "body": {
+                              "type": "object",
+                              "nullable": true,
+                              "properties": {
+                                "meta": {
+                                  "type": "object",
+                                  "properties": {
+                                    "title": {
+                                      "type": "string",
+                                      "nullable": true
+                                    },
+                                    "summary": {
+                                      "type": "string",
+                                      "nullable": true
+                                    },
+                                    "visitDate": {
+                                      "type": "string",
+                                      "nullable": true
+                                    }
+                                  },
+                                  "required": [
+                                    "title",
+                                    "summary",
+                                    "visitDate"
+                                  ]
+                                },
+                                "weather": {
+                                  "type": "object",
+                                  "nullable": true,
+                                  "properties": {
+                                    "condition": {
+                                      "type": "string",
+                                      "nullable": true
+                                    },
+                                    "temperature": {
+                                      "type": "string",
+                                      "nullable": true
+                                    },
+                                    "wind": {
+                                      "type": "string",
+                                      "nullable": true
+                                    },
+                                    "impact": {
+                                      "type": "string",
+                                      "nullable": true
+                                    }
+                                  },
+                                  "required": [
+                                    "condition",
+                                    "temperature",
+                                    "wind",
+                                    "impact"
+                                  ]
+                                },
+                                "workers": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "role": {
+                                        "type": "string"
+                                      },
+                                      "count": {
+                                        "type": "string",
+                                        "nullable": true
+                                      },
+                                      "hours": {
+                                        "type": "string",
+                                        "nullable": true
+                                      },
+                                      "notes": {
+                                        "type": "string",
+                                        "nullable": true
+                                      }
+                                    },
+                                    "required": [
+                                      "role",
+                                      "count",
+                                      "hours",
+                                      "notes"
+                                    ]
+                                  }
+                                },
+                                "materials": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "name": {
+                                        "type": "string"
+                                      },
+                                      "quantity": {
+                                        "type": "string",
+                                        "nullable": true
+                                      },
+                                      "unit": {
+                                        "type": "string",
+                                        "nullable": true
+                                      },
+                                      "status": {
+                                        "type": "string",
+                                        "nullable": true
+                                      },
+                                      "condition": {
+                                        "type": "string",
+                                        "nullable": true
+                                      },
+                                      "notes": {
+                                        "type": "string",
+                                        "nullable": true
+                                      }
+                                    },
+                                    "required": [
+                                      "name",
+                                      "quantity",
+                                      "unit",
+                                      "status",
+                                      "condition",
+                                      "notes"
+                                    ]
+                                  }
+                                },
+                                "issues": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "title": {
+                                        "type": "string"
+                                      },
+                                      "severity": {
+                                        "type": "string",
+                                        "nullable": true
+                                      },
+                                      "description": {
+                                        "type": "string",
+                                        "nullable": true
+                                      },
+                                      "action": {
+                                        "type": "string",
+                                        "nullable": true
+                                      },
+                                      "attachments": {
+                                        "type": "object",
+                                        "properties": {
+                                          "images": {
+                                            "type": "array",
+                                            "items": {
+                                              "type": "string",
+                                              "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
+                                            }
+                                          },
+                                          "documents": {
+                                            "type": "array",
+                                            "items": {
+                                              "type": "string",
+                                              "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
+                                            }
+                                          }
+                                        },
+                                        "additionalProperties": false
+                                      }
+                                    },
+                                    "required": [
+                                      "title",
+                                      "severity",
+                                      "description",
+                                      "action"
+                                    ]
+                                  }
+                                },
+                                "nextSteps": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string"
+                                  }
+                                },
+                                "summarySections": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "title": {
+                                        "type": "string"
+                                      },
+                                      "body": {
+                                        "type": "string"
+                                      },
+                                      "attachments": {
+                                        "type": "object",
+                                        "properties": {
+                                          "images": {
+                                            "type": "array",
+                                            "items": {
+                                              "type": "string",
+                                              "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
+                                            }
+                                          },
+                                          "documents": {
+                                            "type": "array",
+                                            "items": {
+                                              "type": "string",
+                                              "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
+                                            }
+                                          }
+                                        },
+                                        "additionalProperties": false
+                                      }
+                                    },
+                                    "required": [
+                                      "title",
+                                      "body"
+                                    ]
+                                  }
+                                }
+                              },
+                              "required": [
+                                "meta",
+                                "weather",
+                                "workers",
+                                "materials",
+                                "issues",
+                                "nextSteps",
+                                "summarySections"
+                              ]
+                            },
+                            "notesSinceLastGeneration": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "notesChangedAt": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "generatedAt": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "needsRegeneration": {
+                              "type": "boolean"
+                            },
+                            "finalizedAt": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "pdfUrl": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "createdAt": {
+                              "type": "string"
+                            },
+                            "updatedAt": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "number",
+                            "projectId",
+                            "status",
+                            "visitDate",
+                            "body",
+                            "notesSinceLastGeneration",
+                            "notesChangedAt",
+                            "generatedAt",
+                            "needsRegeneration",
+                            "finalizedAt",
+                            "pdfUrl",
+                            "createdAt",
+                            "updatedAt"
+                          ]
                         }
                       },
                       "required": [
-                        "code",
-                        "message"
+                        "report"
+                      ]
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "error": {
+                          "type": "object",
+                          "properties": {
+                            "code": {
+                              "type": "string"
+                            },
+                            "message": {
+                              "type": "string"
+                            },
+                            "details": {
+                              "nullable": true
+                            },
+                            "requestId": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "code",
+                            "message"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "error"
                       ]
                     }
-                  },
-                  "required": [
-                    "error"
                   ]
                 }
               }
@@ -8811,6 +10131,21 @@
             "in": "path"
           }
         ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "expectedUpdatedAt": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "Unfinalized.",
@@ -9127,6 +10462,42 @@
               }
             }
           },
+          "400": {
+            "description": "Bad request.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "nullable": true
+                        },
+                        "requestId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
           "401": {
             "description": "Unauthorized.",
             "content": {
@@ -9204,32 +10575,344 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
+                  "anyOf": [
+                    {
                       "type": "object",
                       "properties": {
-                        "code": {
-                          "type": "string"
-                        },
-                        "message": {
-                          "type": "string"
-                        },
-                        "details": {
-                          "nullable": true
-                        },
-                        "requestId": {
-                          "type": "string"
+                        "report": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "pattern": "^rpt_[0-9a-hjkmnp-tv-z]{8,16}$"
+                            },
+                            "number": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "exclusiveMinimum": true
+                            },
+                            "projectId": {
+                              "type": "string",
+                              "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8,16}$"
+                            },
+                            "status": {
+                              "type": "string",
+                              "enum": [
+                                "draft",
+                                "finalized"
+                              ]
+                            },
+                            "visitDate": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "body": {
+                              "type": "object",
+                              "nullable": true,
+                              "properties": {
+                                "meta": {
+                                  "type": "object",
+                                  "properties": {
+                                    "title": {
+                                      "type": "string",
+                                      "nullable": true
+                                    },
+                                    "summary": {
+                                      "type": "string",
+                                      "nullable": true
+                                    },
+                                    "visitDate": {
+                                      "type": "string",
+                                      "nullable": true
+                                    }
+                                  },
+                                  "required": [
+                                    "title",
+                                    "summary",
+                                    "visitDate"
+                                  ]
+                                },
+                                "weather": {
+                                  "type": "object",
+                                  "nullable": true,
+                                  "properties": {
+                                    "condition": {
+                                      "type": "string",
+                                      "nullable": true
+                                    },
+                                    "temperature": {
+                                      "type": "string",
+                                      "nullable": true
+                                    },
+                                    "wind": {
+                                      "type": "string",
+                                      "nullable": true
+                                    },
+                                    "impact": {
+                                      "type": "string",
+                                      "nullable": true
+                                    }
+                                  },
+                                  "required": [
+                                    "condition",
+                                    "temperature",
+                                    "wind",
+                                    "impact"
+                                  ]
+                                },
+                                "workers": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "role": {
+                                        "type": "string"
+                                      },
+                                      "count": {
+                                        "type": "string",
+                                        "nullable": true
+                                      },
+                                      "hours": {
+                                        "type": "string",
+                                        "nullable": true
+                                      },
+                                      "notes": {
+                                        "type": "string",
+                                        "nullable": true
+                                      }
+                                    },
+                                    "required": [
+                                      "role",
+                                      "count",
+                                      "hours",
+                                      "notes"
+                                    ]
+                                  }
+                                },
+                                "materials": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "name": {
+                                        "type": "string"
+                                      },
+                                      "quantity": {
+                                        "type": "string",
+                                        "nullable": true
+                                      },
+                                      "unit": {
+                                        "type": "string",
+                                        "nullable": true
+                                      },
+                                      "status": {
+                                        "type": "string",
+                                        "nullable": true
+                                      },
+                                      "condition": {
+                                        "type": "string",
+                                        "nullable": true
+                                      },
+                                      "notes": {
+                                        "type": "string",
+                                        "nullable": true
+                                      }
+                                    },
+                                    "required": [
+                                      "name",
+                                      "quantity",
+                                      "unit",
+                                      "status",
+                                      "condition",
+                                      "notes"
+                                    ]
+                                  }
+                                },
+                                "issues": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "title": {
+                                        "type": "string"
+                                      },
+                                      "severity": {
+                                        "type": "string",
+                                        "nullable": true
+                                      },
+                                      "description": {
+                                        "type": "string",
+                                        "nullable": true
+                                      },
+                                      "action": {
+                                        "type": "string",
+                                        "nullable": true
+                                      },
+                                      "attachments": {
+                                        "type": "object",
+                                        "properties": {
+                                          "images": {
+                                            "type": "array",
+                                            "items": {
+                                              "type": "string",
+                                              "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
+                                            }
+                                          },
+                                          "documents": {
+                                            "type": "array",
+                                            "items": {
+                                              "type": "string",
+                                              "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
+                                            }
+                                          }
+                                        },
+                                        "additionalProperties": false
+                                      }
+                                    },
+                                    "required": [
+                                      "title",
+                                      "severity",
+                                      "description",
+                                      "action"
+                                    ]
+                                  }
+                                },
+                                "nextSteps": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string"
+                                  }
+                                },
+                                "summarySections": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "title": {
+                                        "type": "string"
+                                      },
+                                      "body": {
+                                        "type": "string"
+                                      },
+                                      "attachments": {
+                                        "type": "object",
+                                        "properties": {
+                                          "images": {
+                                            "type": "array",
+                                            "items": {
+                                              "type": "string",
+                                              "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
+                                            }
+                                          },
+                                          "documents": {
+                                            "type": "array",
+                                            "items": {
+                                              "type": "string",
+                                              "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
+                                            }
+                                          }
+                                        },
+                                        "additionalProperties": false
+                                      }
+                                    },
+                                    "required": [
+                                      "title",
+                                      "body"
+                                    ]
+                                  }
+                                }
+                              },
+                              "required": [
+                                "meta",
+                                "weather",
+                                "workers",
+                                "materials",
+                                "issues",
+                                "nextSteps",
+                                "summarySections"
+                              ]
+                            },
+                            "notesSinceLastGeneration": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "notesChangedAt": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "generatedAt": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "needsRegeneration": {
+                              "type": "boolean"
+                            },
+                            "finalizedAt": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "pdfUrl": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "createdAt": {
+                              "type": "string"
+                            },
+                            "updatedAt": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "number",
+                            "projectId",
+                            "status",
+                            "visitDate",
+                            "body",
+                            "notesSinceLastGeneration",
+                            "notesChangedAt",
+                            "generatedAt",
+                            "needsRegeneration",
+                            "finalizedAt",
+                            "pdfUrl",
+                            "createdAt",
+                            "updatedAt"
+                          ]
                         }
                       },
                       "required": [
-                        "code",
-                        "message"
+                        "report"
+                      ]
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "error": {
+                          "type": "object",
+                          "properties": {
+                            "code": {
+                              "type": "string"
+                            },
+                            "message": {
+                              "type": "string"
+                            },
+                            "details": {
+                              "nullable": true
+                            },
+                            "requestId": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "code",
+                            "message"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "error"
                       ]
                     }
-                  },
-                  "required": [
-                    "error"
                   ]
                 }
               }

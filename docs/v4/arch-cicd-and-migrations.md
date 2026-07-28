@@ -135,7 +135,7 @@ environment and only surfaces when the deploy fires.
 
 | Workflow                          | PR-gated | Push (dev / main)     | What it catches |
 | --------------------------------- | :------: | --------------------- | ----------------------------------------------------------------- |
-| `lint-typecheck.yml`              | ✓        | dev + main            | ESLint, TypeScript, removal-verification gates, CI shell self-tests, shellcheck of `scripts/ci/` and `scripts/journeys/` |
+| `lint-typecheck.yml`              | ✓        | dev + main            | ESLint, TypeScript, removal-verification gates, CI shell policy tests, shellcheck of `scripts/ci/` and `scripts/journeys/` |
 | `unit.yml`                        | ✓        | dev + main            | Vitest unit suites for every package |
 | `api-integration.yml`             | ✓        | dev + main            | Combined API unit + Testcontainers run with a hard 90% line-coverage threshold |
 | `cli.yml`                         | ✓        | dev + main            | `apps/cli` typecheck + tests |

@@ -200,6 +200,13 @@ the push range before publishing:
   been built and the operator confirms `native_runtime_ready` through
   `workflow_dispatch`.
 
+GitHub caps a reusable workflow's token permissions at the calling job's
+maximum. The `mobile-ota` jobs in `api-dev.yml` and `api-prod.yml` therefore
+grant `contents: write` so the nested registration job can create a readiness
+tag. The called workflows still default to `contents: read`; only
+`register-native-runtime` elevates to write, while release-policy and OTA jobs
+remain read-only.
+
 Normal merges do not change the app version. Native changes bump it
 intentionally in the reviewed change that will produce the binary. The static
 contract in `scripts/ci/__tests__/mobile-ota-release-policy.test.sh` is run by

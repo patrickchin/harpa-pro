@@ -225,4 +225,3 @@ describe('finalized report comments', () => {
     expect(res.status).toBe(401);
   });
 });
-

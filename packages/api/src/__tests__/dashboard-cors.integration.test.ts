@@ -67,7 +67,7 @@ describe('dashboard browser origin wiring', () => {
         method: 'POST',
         headers: {
           'content-type': 'application/json',
-          origin: 'http://localhost:5173',
+          origin: 'http://localhost:3003',
         },
         body: JSON.stringify({
           email: 'dashboard-auth@test.local',
@@ -78,7 +78,7 @@ describe('dashboard browser origin wiring', () => {
 
     expect(res.status).toBe(200);
     expect(res.headers.get('access-control-allow-origin')).toBe(
-      'http://localhost:5173',
+      'http://localhost:3003',
     );
     expect(res.headers.get('access-control-allow-credentials')).toBe('true');
   });

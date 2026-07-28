@@ -41,10 +41,12 @@ export interface ScreenHeaderProps {
   /** Override the default `screen-header-title` testID on the title Text. */
   titleTestID?: string;
   /**
-   * Page titles are stacked by default. Set false only for a compact,
-   * non-page embed that intentionally keeps its title beside the controls.
+   * Opt into a full-width title row below the navigation controls.
+   * Intended for long report titles; ordinary page titles remain inline.
    */
   stackedTitle?: boolean;
+  /** Compact label shown in the controls row when the title is stacked. */
+  controlTitle?: string;
 }
 
 export function ScreenHeader({
@@ -58,7 +60,8 @@ export function ScreenHeader({
   className,
   actions,
   titleTestID,
-  stackedTitle = true,
+  stackedTitle = false,
+  controlTitle,
 }: ScreenHeaderProps) {
   const hasSupportingRow = Boolean(eyebrow || subtitle || titleAccessory);
 
@@ -84,7 +87,18 @@ export function ScreenHeader({
         ) : null}
 
         {stackedTitle ? (
-          <View className="min-w-0 flex-1" />
+          controlTitle ? (
+            <Text
+              testID="screen-header-control-title"
+              className="min-w-0 flex-1 text-sm font-semibold text-muted-foreground"
+              numberOfLines={1}
+              ellipsizeMode="tail"
+            >
+              {controlTitle}
+            </Text>
+          ) : (
+            <View className="min-w-0 flex-1" />
+          )
         ) : (
           <Text
             testID={titleTestID ?? 'screen-header-title'}

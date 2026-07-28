@@ -2,8 +2,8 @@
  * ReportDetailHeader — title + Actions button row for the saved-report
  * screen.
  *
- * Title rule (see `docs/v4/design-report-title-consistency.md`):
- *   title = report.meta.title?.trim() || `Report #N`
+ * Report identity stays compact in the controls row (`Site Visit #N`).
+ * The descriptive report title wraps on its own row below it.
  *
  * The finalized header is intentionally lean: no subtitle, no
  * report-type eyebrow, no standalone visit-date pill. The visit date
@@ -17,6 +17,10 @@ import { MoreHorizontal } from 'lucide-react-native';
 import { ScreenHeader } from '@/components/primitives/ScreenHeader';
 import { Button } from '@/components/primitives/Button';
 import { colors } from '@/lib/design-tokens/colors';
+import {
+  getReportHeaderControlTitle,
+  getReportHeaderTitle,
+} from '@/lib/reports/report-header-title';
 import type { GeneratedSiteReport } from '@harpa/report-core';
 
 interface ReportDetailHeaderProps {
@@ -40,13 +44,7 @@ export function ReportDetailHeader({
   reportNumber,
 }: ReportDetailHeaderProps) {
   const numStr = reportNumber ?? 'x';
-  const rawTitle = report.report.meta.title?.trim();
-  const title =
-    rawTitle && rawTitle.length > 0
-      ? rawTitle
-      : reportNumber !== null && reportNumber !== undefined
-        ? `Report #${reportNumber}`
-        : 'Report';
+  const title = getReportHeaderTitle(report.report.meta.title);
 
   return (
     <View className="px-5 py-4">
@@ -56,6 +54,8 @@ export function ReportDetailHeader({
         backLabel="Reports"
         actions={actions}
         titleTestID={`report-title-${numStr}`}
+        stackedTitle
+        controlTitle={getReportHeaderControlTitle(reportNumber)}
       />
 
       <View

@@ -65,6 +65,7 @@ import { SavedReportSheet } from '@/components/reports/detail/SavedReportSheet';
 import { ReportDetailSkeleton } from '@/components/skeletons/ReportDetailSkeleton';
 import { useLayoutShiftProbe } from '@/lib/util/layout-shift-probe';
 import { colors } from '@/lib/design-tokens/colors';
+import { getReportHeaderControlTitle } from '@/lib/reports/report-header-title';
 import {
   getDeleteReportDialogCopy,
   getUnfinalizeReportDialogCopy,
@@ -401,6 +402,8 @@ export function SavedReport(props: SavedReportProps) {
               onBack={onBack}
               backLabel="Reports"
               actions={actions}
+              stackedTitle
+              controlTitle={getReportHeaderControlTitle(reportNumber)}
             />
           </View>
 

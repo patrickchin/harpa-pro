@@ -42,6 +42,7 @@ jobs:
         # Self-tests for the shared CI helpers in scripts/ci/. Keeps
         # them honest without spinning up the full integration matrix.
         run: |
+          bash scripts/ci/__tests__/api-prod-policy.test.sh
           bash scripts/ci/__tests__/verify-readyz.test.sh
           bash scripts/ci/__tests__/check-no-maestro-point-taps.test.sh
       - name: Shellcheck CI helpers

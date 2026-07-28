@@ -22,9 +22,7 @@
  * reads/writes here.
  */
 import React, {
-  createContext,
   useCallback,
-  useContext,
   useEffect,
   useMemo,
   type ReactNode,
@@ -35,41 +33,20 @@ import {
   setOnUnauthorizedCallback,
 } from '../api/auth';
 import { resetQueryCache } from '../api/query-client';
+import { clearSessionUploadQueue } from '../uploads/session-boundary';
 import { authClient, type SessionUser } from './client';
+import {
+  AuthSessionContext,
+  type AuthSessionValue,
+  type AuthStatus,
+} from './session-context';
 
-export type AuthStatus =
-  | 'loading'
-  | 'unauthenticated'
-  | 'authenticated'
-  | 'needs-onboarding';
-
-export interface AuthSessionValue {
-  status: AuthStatus;
-  user: SessionUser | null;
-  /**
-   * Refresh the session from `/api/auth/get-session`. Used by screens
-   * that just patched `/me` and need the new displayName/companyName
-   * to land in the cached session. No-op when not signed in.
-   */
-  refresh: () => Promise<void>;
-  /**
-   * Re-export of `signOut` so existing callers keep working.
-   * `expoClient` clears SecureStore + the in-memory cache; we then
-   * wipe the React Query cache.
-   */
-  signOut: () => Promise<void>;
-  /**
-   * Compatibility shim: the new email-OTP screens call
-   * `authClient.signIn.emailOtp()` directly, but we keep `signIn`
-   * here as a no-op `await refresh()` so legacy call sites keep
-   * compiling. After a successful OTP, expoClient has already
-   * persisted the cookie; refreshing pulls the user object into
-   * `useSession()`.
-   */
-  signIn: (input?: { email?: string }) => Promise<void>;
-}
-
-const AuthSessionContext = createContext<AuthSessionValue | undefined>(undefined);
+export {
+  useAuthSession,
+  useOptionalAuthSession,
+  type AuthSessionValue,
+  type AuthStatus,
+} from './session-context';
 
 /**
  * Re-export the user type so consumers can `import { SessionUser }
@@ -137,6 +114,7 @@ export function AuthSessionProvider({ children }: ProviderProps): React.JSX.Elem
   // Query cache. The route guards then push the user to sign-in.
   useEffect(() => {
     setOnUnauthorizedCallback(() => {
+      clearSessionUploadQueue();
       void (async () => {
         try {
           await authClient.signOut();
@@ -161,6 +139,7 @@ export function AuthSessionProvider({ children }: ProviderProps): React.JSX.Elem
   }, [refetch]);
 
   const signOut = useCallback<AuthSessionValue['signOut']>(async () => {
+    clearSessionUploadQueue();
     try {
       await authClient.signOut();
     } catch {
@@ -194,15 +173,4 @@ export function AuthSessionProvider({ children }: ProviderProps): React.JSX.Elem
       {children}
     </AuthSessionContext.Provider>
   );
-}
-
-export function useAuthSession(): AuthSessionValue {
-  const ctx = useContext(AuthSessionContext);
-  if (!ctx) {
-    throw new Error(
-      'useAuthSession must be used within an <AuthSessionProvider>. ' +
-        'Wrap the app shell in app/_layout.tsx.',
-    );
-  }
-  return ctx;
 }

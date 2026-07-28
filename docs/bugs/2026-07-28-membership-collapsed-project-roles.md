@@ -1,4 +1,4 @@
-# 2026-07-28 — Membership collapsed project roles (Pattern R11)
+# 2026-07-28 — Membership collapsed project roles (Pattern R12)
 
 > See [`README.md`](README.md) for the index of all bug entries and patterns.
 
@@ -31,7 +31,7 @@ success across every affected surface and the editor finalizing; the GREEN
 checkpoint requires the documented matrix while retaining review/PDF
 exceptions.
 
-**Pattern.** New pattern **R11 — membership is mistaken for write
+**Pattern.** New pattern **R12 — membership is mistaken for write
 authorization**. Every new project-content mutation must state whether it
 requires any member, a writer, or an owner, then include all three roles in its
 integration coverage. Owner-versus-outsider coverage alone is not sufficient.

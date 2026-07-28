@@ -4,6 +4,8 @@
  */
 import { z } from 'zod';
 
+const DEV_BETTER_AUTH_SECRET = 'dev-only-secret-do-not-use-in-prod';
+
 const optionalUrl = z.preprocess(
   (v) => (v === '' ? undefined : v),
   z.string().url().optional(),
@@ -26,7 +28,7 @@ const Env = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PORT: z.coerce.number().int().positive().default(8787),
   DATABASE_URL: z.string().url().or(z.string().startsWith('postgres://')).optional(),
-  BETTER_AUTH_SECRET: z.string().min(16).default('dev-only-secret-do-not-use-in-prod'),
+  BETTER_AUTH_SECRET: z.string().min(16).default(DEV_BETTER_AUTH_SECRET),
   BETTER_AUTH_URL: z.string().url().default('http://localhost:8787'),
   /**
    * Test-account password bypass — comma-separated allowlist of emails
@@ -55,8 +57,8 @@ const Env = z.object({
   DEMO_ACCOUNT_PASSWORD: z.string().min(16).optional(),
   /**
    * Email-OTP transport switch. `'1'` → real Resend send via better-auth's
-   * `sendVerificationOTP` hook. Default `'0'` logs the OTP to stdout
-   * (development/preview) and is a no-op under test.
+   * `sendVerificationOTP` hook. Default `'0'` logs redacted delivery
+   * metadata only (development/preview) and is a no-op under test.
    *
    * Production must set this to `'1'` (refine below); a missing Doppler
    * key would otherwise silently downgrade prod to fake mode.
@@ -223,7 +225,83 @@ const Env = z.object({
       "EMAIL_OTP_LIVE must be '1' on production (else OTP emails would not send). " +
       "Set HARPAPRO_PR_BUILD='1' to allow fake mode on per-PR preview deployments.",
   },
-);
+).superRefine((e, ctx) => {
+  const isProduction = e.NODE_ENV === 'production';
+  const isPrPreview = e.HARPAPRO_PR_BUILD === '1';
+  const isLiveDeployment = isProduction && !isPrPreview;
+
+  if (
+    isProduction
+    && (e.BETTER_AUTH_SECRET === DEV_BETTER_AUTH_SECRET || e.BETTER_AUTH_SECRET.length < 32)
+  ) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['BETTER_AUTH_SECRET'],
+      message: 'production requires an explicit secret of at least 32 characters',
+    });
+  }
+
+  if (isLiveDeployment) {
+    const requirements = [
+      ['AI_FIXTURE_MODE', e.AI_FIXTURE_MODE, 'live'],
+      ['AI_LIVE', e.AI_LIVE, '1'],
+      ['R2_FIXTURE_MODE', e.R2_FIXTURE_MODE, 'live'],
+      ['TURNSTILE_LIVE', e.TURNSTILE_LIVE, '1'],
+      ['RESEND_LIVE', e.RESEND_LIVE, '1'],
+      ['RATE_LIMIT_BACKEND', e.RATE_LIMIT_BACKEND, 'postgres'],
+    ] as const;
+
+    for (const [path, actual, expected] of requirements) {
+      if (actual !== expected) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: [path],
+          message: `must be '${expected}' on production`,
+        });
+      }
+    }
+  }
+
+  if (e.R2_FIXTURE_MODE === 'live') {
+    if (!e.R2_ACCOUNT_ID && !e.R2_ENDPOINT) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['R2_ACCOUNT_ID'],
+        message: 'R2_ACCOUNT_ID or R2_ENDPOINT is required when R2_FIXTURE_MODE=live',
+      });
+    }
+    if (!e.R2_ACCESS_KEY_ID) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['R2_ACCESS_KEY_ID'],
+        message: 'required when R2_FIXTURE_MODE=live',
+      });
+    }
+    if (!e.R2_SECRET_ACCESS_KEY) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['R2_SECRET_ACCESS_KEY'],
+        message: 'required when R2_FIXTURE_MODE=live',
+      });
+    }
+  }
+
+  if (e.TURNSTILE_LIVE === '1' && !e.TURNSTILE_SECRET_KEY) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['TURNSTILE_SECRET_KEY'],
+      message: 'required when TURNSTILE_LIVE=1',
+    });
+  }
+
+  if (e.RESEND_LIVE === '1' && !e.RESEND_API_KEY) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['RESEND_API_KEY'],
+      message: 'required when RESEND_LIVE=1',
+    });
+  }
+});
 
 export const env = Env.parse(process.env);
 export type Env = z.infer<typeof Env>;

@@ -18,9 +18,8 @@ tags:
       - waitForAnimationToEnd:
           timeout: 20000
 - extendedWaitUntil:
-    visible: 'Continue'
+    visible: 'Continue|Email'
     timeout: 60000
-    optional: true
 - runFlow:
     when:
       visible: 'Continue'
@@ -36,6 +35,6 @@ tags:
 - extendedWaitUntil:
     visible:
       id: 'input-email'
-    timeout: 60000
+    timeout: 30000
 - assertVisible:
     id: 'input-email'

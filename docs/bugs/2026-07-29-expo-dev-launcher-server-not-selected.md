@@ -16,10 +16,11 @@ the developer-menu `Continue` modal appeared just after a fixed 30-second
 probe, obscuring the rendered sign-in control.
 
 **Fix.** After the deep link settles, conditionally tap the advertised
-`http://10.0.2.2:8081` row. Then wait up to 60 seconds for the optional
-first-run `Continue` action, dismiss `Continue` / `Close` when present, and
-allow up to 60 seconds for `input-email`. The two waits plus setup remain below
-the wrapper's 180-second Maestro ceiling.
+`http://10.0.2.2:8081` row. Then wait up to 60 seconds for either the
+first-run `Continue` action or the rendered `Email` label, failing if neither
+appears. Dismiss `Continue` / `Close` when present, then allow 30 seconds for
+`input-email`. The two waits plus setup remain below the wrapper's 180-second
+Maestro ceiling.
 
 **Test.** `release-confidence-gates.test.sh` requires the emulator server
 fallback and the bounded post-Metro wait ordering before the app-UI assertion.

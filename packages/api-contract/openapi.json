@@ -7198,7 +7198,7 @@
             }
           },
           "409": {
-            "description": "Stale report body version.",
+            "description": "Report is finalized or has a stale body version.",
             "content": {
               "application/json": {
                 "schema": {

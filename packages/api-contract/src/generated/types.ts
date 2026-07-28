@@ -2846,7 +2846,7 @@ export interface paths {
                         };
                     };
                 };
-                /** @description Stale report body version. */
+                /** @description Report is finalized or has a stale body version. */
                 409: {
                     headers: {
                         [name: string]: unknown;

@@ -21,6 +21,7 @@ import { expo } from '@better-auth/expo';
 import { rawDb } from '../db/client.js';
 import * as authSchema from '../db/auth-schema.js';
 import { env } from '../env.js';
+import { logEmailOtpPreview } from '../lib/email-diagnostics.js';
 import { createResendClient } from '../lib/resend.js';
 import { newId } from '../lib/ids.js';
 
@@ -191,8 +192,7 @@ export const auth = betterAuth({
       sendVerificationOTP: async ({ email, otp, type }) => {
         if (env.EMAIL_OTP_LIVE !== '1') {
           if (env.NODE_ENV !== 'test') {
-            // eslint-disable-next-line no-console
-            console.log(`[emailOTP/fake] → ${email} (${type}): ${otp}`);
+            logEmailOtpPreview({ recipient: email, type });
           }
           return;
         }

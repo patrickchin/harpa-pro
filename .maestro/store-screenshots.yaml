@@ -77,12 +77,21 @@ tags:
 - assertVisible:
     id: "screen-header-controls"
 - assertVisible:
+    id: "screen-header-title"
+- assertNotVisible:
     id: "screen-header-title-row"
 - waitForAnimationToEnd
 - takeScreenshot: 01_projects_list
 
 - tapOn:
     id: "project-row-prj_rvrsd000001"
+- runFlow:
+    when:
+      visible:
+        id: "project-row-prj_rvrsd000001"
+    commands:
+      - tapOn:
+          id: "project-row-prj_rvrsd000001"
 - extendedWaitUntil:
     visible:
       id: "btn-open-reports"
@@ -104,6 +113,8 @@ tags:
 - assertVisible:
     id: "screen-header-controls"
 - assertVisible:
+    id: "screen-header-title"
+- assertNotVisible:
     id: "screen-header-title-row"
 - waitForAnimationToEnd
 - takeScreenshot: 02_reports_list
@@ -129,6 +140,8 @@ tags:
 - assertVisible:
     id: "screen-header-controls"
 - assertVisible:
+    id: "screen-header-title"
+- assertNotVisible:
     id: "screen-header-title-row"
 - waitForAnimationToEnd
 - takeScreenshot: 03_members_team
@@ -147,6 +160,7 @@ tags:
     id: "screen-header-controls"
 - assertVisible:
     id: "screen-header-title-row"
+- assertVisible: "Site Visit #4"
 - tapOn:
     id: "btn-record-start"
 - extendedWaitUntil:
@@ -174,6 +188,7 @@ tags:
     id: "screen-header-controls"
 - assertVisible:
     id: "screen-header-title-row"
+- assertVisible: "Site Visit #3"
 - scrollUntilVisible:
     element:
       id: "placed-photos-issue-.*"
@@ -224,6 +239,8 @@ tags:
 - assertVisible:
     id: "screen-header-controls"
 - assertVisible:
+    id: "screen-header-title"
+- assertNotVisible:
     id: "screen-header-title-row"
 - waitForAnimationToEnd
 - takeScreenshot: 07_pdf_preview
@@ -248,6 +265,8 @@ tags:
 - assertVisible:
     id: "screen-header-controls"
 - assertVisible:
+    id: "screen-header-title"
+- assertNotVisible:
     id: "screen-header-title-row"
 - scrollUntilVisible:
     element:
@@ -279,6 +298,7 @@ tags:
     id: "screen-header-controls"
 - assertVisible:
     id: "screen-header-title-row"
+- assertVisible: "Site Visit #3"
 - assertVisible:
     id: "saved-report-pane"
 - assertVisible:

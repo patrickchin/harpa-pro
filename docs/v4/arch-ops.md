@@ -457,7 +457,7 @@ Push to dev
 
 PR to main (production gate)
   ↳ checkout the PR head SHA, not GitHub's synthetic merge ref
-  ↳ require harpa-pro-api-dev /healthz.gitCommit to match that SHA
+  ↳ require harpa-pro-api-dev /healthz.gitCommit to equal that full 40-character SHA
   ↳ run stress/core/extended journeys against that exact dev deploy
 
 Push to main (production)

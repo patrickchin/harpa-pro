@@ -10,6 +10,9 @@ on:
 jobs:
   changes:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
     outputs:
       mobile: ${{ steps.paths.outputs.mobile }}
       workflows: ${{ steps.paths.outputs.workflows }}
@@ -26,6 +29,8 @@ jobs:
       github.event_name == 'push'
     name: Maestro testID gate
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
       - name: Check Maestro testIDs exist in mobile source
@@ -40,6 +45,8 @@ jobs:
     name: Metro bundle leakage gate
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup-monorepo
@@ -55,6 +62,8 @@ jobs:
     name: Maestro Android launch smoke
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    permissions:
+      contents: read
     env:
       APP_VARIANT: development
       EXPO_PUBLIC_APP_VARIANT: development

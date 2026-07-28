@@ -12,6 +12,9 @@ on:
 jobs:
   changes:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
     outputs:
       api: ${{ steps.paths.outputs.api }}
       workflows: ${{ steps.paths.outputs.workflows }}
@@ -27,6 +30,8 @@ jobs:
       needs.changes.outputs.workflows == 'true' ||
       github.event_name == 'push'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     env:
       AI_FIXTURE_MODE: replay
       TESTCONTAINERS_RYUK_DISABLED: 'true'

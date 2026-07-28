@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # Verify that a deployed API is serving the commit this CI job is testing.
 #
-# The API exposes its build-time short SHA at /healthz.gitCommit. GitHub gives
-# us the full PR head SHA, so a valid deployment value must be a hexadecimal
-# prefix of EXPECTED_GIT_COMMIT. A bounded retry loop tolerates a Fly machine
-# cold start or a deployment that is finishing while the gate begins.
+# The API exposes its full build-time SHA at /healthz.gitCommit. It must equal
+# the full PR head SHA exactly; abbreviated prefixes are intentionally rejected.
+# A bounded retry loop tolerates a Fly machine cold start or a deployment that
+# is finishing while the gate begins.
 set -euo pipefail
 
 URL="${HEALTH_URL:?HEALTH_URL required}"
@@ -14,8 +14,8 @@ TIMEOUT="${DEPLOY_SHA_TIMEOUT:-20}"
 SLEEP_SECS="${DEPLOY_SHA_SLEEP:-10}"
 
 EXPECTED="${EXPECTED,,}"
-if [[ ! "$EXPECTED" =~ ^[0-9a-f]{7,40}$ ]]; then
-  echo "EXPECTED_GIT_COMMIT must be a 7-40 character hexadecimal SHA" >&2
+if [[ ! "$EXPECTED" =~ ^[0-9a-f]{40}$ ]]; then
+  echo "EXPECTED_GIT_COMMIT must be a full 40-character hexadecimal SHA" >&2
   exit 1
 fi
 
@@ -42,14 +42,14 @@ for attempt in $(seq 1 "$ATTEMPTS"); do
   if body="$(curl --fail --silent --show-error --max-time "$TIMEOUT" "$URL")"; then
     actual="$(printf '%s' "$body" | extract_git_commit || true)"
     actual="${actual,,}"
-    if [[ "$actual" =~ ^[0-9a-f]{7,40}$ && "$EXPECTED" == "$actual"* ]]; then
-      echo "deployed commit $actual matches expected PR head ${EXPECTED:0:${#actual}}"
+    if [[ "$actual" =~ ^[0-9a-f]{40}$ && "$actual" == "$EXPECTED" ]]; then
+      echo "deployed commit $actual exactly matches expected PR head"
       exit 0
     fi
     if [[ -n "$actual" ]]; then
       echo "deployment reports $actual; waiting for expected ${EXPECTED:0:12}"
     else
-      echo "health response did not contain a valid gitCommit"
+      echo "health response did not contain a full 40-character gitCommit"
     fi
   else
     echo "health check attempt $attempt failed"

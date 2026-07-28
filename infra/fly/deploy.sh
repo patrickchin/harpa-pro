@@ -20,7 +20,7 @@ if [[ -z "$HEAD" ]]; then
 fi
 echo "deploy: MIGRATIONS_REQUIRED_HEAD=$HEAD"
 
-GIT_COMMIT=$(git rev-parse --short HEAD)
+GIT_COMMIT=$(git rev-parse HEAD)
 BUILD_TIME=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 echo "deploy: GIT_COMMIT=$GIT_COMMIT BUILD_TIME=$BUILD_TIME"
 

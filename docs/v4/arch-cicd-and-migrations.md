@@ -44,7 +44,8 @@ build-time manifest for the readiness check.**
   image at build time as `MIGRATIONS_REQUIRED_HEAD`) is present in
   `app._migrations`. Fly's HTTP check is moved to `/readyz`. `/healthz`
   stays as cheap liveness (no DB) but now also returns `version` /
-  `gitCommit` / `buildTime` from `GIT_COMMIT` + `BUILD_TIME` build-args
+  `gitCommit` / `buildTime` from `GIT_COMMIT` + `BUILD_TIME` build-args.
+  `GIT_COMMIT` is the full 40-character SHA
   so the mobile BuildBadge (and ops dashboards) can show which commit
   is serving traffic.
 
@@ -174,8 +175,8 @@ shellcheck of both `scripts/ci/` and `scripts/journeys/`.
 
 `main-gate.yml` checks out `github.event.pull_request.head.sha`, then
 polls the dev API's `/healthz` with
-`scripts/ci/verify-deployed-sha.sh`. The reported short
-`gitCommit` must be a hexadecimal prefix of that full PR head SHA
+`scripts/ci/verify-deployed-sha.sh`. The reported 40-character
+`gitCommit` must equal that full PR head SHA
 before any journey runs. This prevents a healthy but stale or newer
 shared dev deployment from making an unrelated `main` promotion
 green. Both the poll loop and the surrounding job are bounded.
@@ -209,6 +210,8 @@ green. Both the poll loop and the surrounding job are bounded.
 
 - Compute `MIGRATIONS_REQUIRED_HEAD` from `ls packages/api/migrations | sort | tail -1`
   and pass `--build-arg MIGRATIONS_REQUIRED_HEAD=...` to `flyctl deploy`.
+- Compute the full `git rev-parse HEAD` value and pass it as the
+  `GIT_COMMIT` build arg; abbreviated SHAs are not valid deployment identities.
 
 ### `.github/workflows/api-prod.yml`
 

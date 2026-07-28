@@ -182,8 +182,9 @@ Deferred (add when the phase actually starts, not before):
 `scripts/ci/__tests__/release-confidence-gates.test.sh` statically
 pins these workflow contracts, and
 `scripts/ci/__tests__/verify-deployed-sha.test.sh` exercises the
-main-promotion SHA verifier against fake health responses. Both run
-from the PR-gated `lint-typecheck.yml` job.
+main-promotion SHA verifier against fake health responses, including
+rejection of matching abbreviated SHAs. Both run from the PR-gated
+`lint-typecheck.yml` job.
 
 ## Removal verification gates
 

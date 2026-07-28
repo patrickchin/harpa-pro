@@ -394,6 +394,12 @@ file rows with existing FKs. The helper also deletes the user's
 session rows are gone, the bearer token used for the deletion call
 authenticates as 401 on the next request.
 
+Business activity rows are retained, but a privileged database trigger
+nulls any matching `actor_user_id` and user `subject_id` before the user
+row is deleted. Event type, timestamp, and non-user subjects remain for
+aggregate history without retaining a joinable identifier for the
+deleted account.
+
 Project records follow the collaboration rules in
 [`arch-project-members.md`](arch-project-members.md#account-deletion).
 Solo projects are deleted. Shared projects keep their reports and notes

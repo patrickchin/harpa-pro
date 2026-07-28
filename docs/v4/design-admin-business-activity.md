@@ -5,7 +5,7 @@ Status: approved on 2026-07-29. Local implementation is in progress.
 Implementation status:
 
 - [x] Phase 1 — contract, ID family, storage, RLS, and recorder.
-- [ ] Phase 2 — initial event writers.
+- [ ] Phase 2 — initial event writers (project/report complete; signup remains).
 - [ ] Phase 3 — admin read API and browser CORS.
 - [ ] Phase 4 — admin page.
 - [ ] Phase 5 — deployment.
@@ -152,11 +152,12 @@ authenticated role may insert only when `actor_user_id` equals the scoped
 `app.user_id`; the raw API role may insert the auth-created event and select
 rows only after route-level admin authorization.
 
-Account deletion is the one planned redaction exception. The existing
-privileged account-deletion helper nulls matching user identifiers in
-activity rows before deleting the user. The event type and timestamp remain,
-but the row can no longer be joined back to the deleted account. This
-exception must be documented alongside
+Account deletion is the one planned redaction exception. A privileged
+database trigger nulls matching actor IDs and user-subject IDs before the
+account row is deleted. The event type and timestamp remain, but the row can
+no longer be joined back to the deleted account. The trigger covers the
+existing account-deletion helper and any future privileged deletion path.
+This exception is documented alongside
 `docs/v4/arch-auth-and-rls.md#account-deletion`.
 
 No automatic retention job is needed at the current scale. Retention must be

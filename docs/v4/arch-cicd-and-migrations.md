@@ -148,9 +148,8 @@ environment and only surfaces when the deploy fires.
 | `api-prod.yml`                    | ✗        | main                  | `flyctl deploy` to `harpa-pro-api`, `/readyz` verify, `scripts/journeys/all.sh prod` |
 | `site-dev.yml`                    | ✗        | dev                   | Cloudflare Pages `dev` branch deploy |
 | `site-prod.yml`                   | ✗        | main                  | Cloudflare Pages prod deploy |
-| `mobile-ota-dev.yml`              | ✗        | dev                   | Expo OTA publish to dev channel |
-| `mobile-ota-prod.yml`             | ✗        | main                  | Expo OTA publish to prod channel |
-| `version-bump-dev.yml`            | ✗        | dev                   | Auto version bump after merge |
+| `mobile-ota-dev.yml`              | ✗        | dev                   | Preview OTA; API-dependent pushes are called by `api-dev` after deploy |
+| `mobile-ota-prod.yml`             | ✗        | main                  | Production OTA; API-dependent pushes are called by `api-prod` after deploy |
 | `ai-live.yml`                     | ✗        | dev + main + dispatch | Live AI provider smoke (no fixtures) |
 | `neon-snapshot-prune.yml`         | ✗        | (cron 04:17 UTC)      | Prune stale Neon branches |
 
@@ -175,6 +174,36 @@ is the canonical example of this blind spot. The fix established
 the pattern above: `scripts/ci/verify-readyz.sh` with a python-based
 fake-server self-test wired into `lint-typecheck.yml`, plus
 shellcheck of both `scripts/ci/` and `scripts/journeys/`.
+
+### Mobile OTA release ordering
+
+The mobile OTA workflows are both push-triggered and reusable. They inspect
+the push range before publishing:
+
+- Mobile-only changes publish from the push workflow without forcing an API
+  redeploy.
+- When API inputs also changed, the push workflow exits without publishing.
+  The successful `api-dev` or `api-prod` job calls the corresponding reusable
+  OTA workflow with the exact push SHA.
+- Before an API-dependent update reaches EAS,
+  `scripts/ci/verify-api-release.sh` requires `/healthz.gitCommit` to match
+  that SHA and requires `/readyz` to return 2xx.
+- Every update requires an environment/version readiness tag created by the
+  manual post-build job. Its annotation records `native_artifact`, and its
+  commit must be an ancestor with no later native-sensitive changes.
+  `pnpm-lock.yaml` and `patches/**` are treated conservatively as native
+  sensitive because they can change the installed binary.
+- A root app-version change means a new Expo native runtime, so the new tag
+  cannot exist yet. Automated publication stops until the matching binary has
+  been built and the operator confirms `native_runtime_ready` through
+  `workflow_dispatch`.
+
+Normal merges do not change the app version. Native changes bump it
+intentionally in the reviewed change that will produce the binary. The static
+contract in `scripts/ci/__tests__/mobile-ota-release-policy.test.sh` is run by
+`lint-typecheck.yml`, closing the PR-gating blind spot for this release chain.
+See [arch-ops.md](arch-ops.md#mobile-ota-and-native-runtime-ordering) for the
+operator sequence.
 
 ### Main-promotion SHA binding
 

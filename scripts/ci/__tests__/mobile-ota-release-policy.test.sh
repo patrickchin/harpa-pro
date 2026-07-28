@@ -6,9 +6,9 @@
 #   mobile-only push -> OTA directly
 #   API + mobile push -> successful API deploy -> exact-SHA check -> OTA
 #   appVersion change -> matching native build -> manual OTA dispatch
-set -euo pipefail
 # GitHub expressions below are intentionally literal static-test patterns.
 # shellcheck disable=SC2016
+set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
 PASS=0
@@ -62,6 +62,11 @@ for environment in dev prod; do
   api_workflow="$REPO_ROOT/.github/workflows/api-${environment}.yml"
   ota_workflow="$REPO_ROOT/.github/workflows/mobile-ota-${environment}.yml"
   api_job="$environment"
+  if [[ "$environment" == "dev" ]]; then
+    runtime_tag="mobile-preview-runtime-v"
+  else
+    runtime_tag="mobile-production-runtime-v"
+  fi
 
   assert_contains \
     "$api_workflow" \
@@ -90,6 +95,30 @@ for environment in dev prod; do
     "${environment}: manual dispatch records native-runtime readiness"
   assert_contains \
     "$ota_workflow" \
+    "native_artifact:" \
+    "${environment}: runtime registration records the distributed artifact"
+  assert_contains \
+    "$ota_workflow" \
+    "register-native-runtime:" \
+    "${environment}: native readiness is a separate manual registration job"
+  assert_contains \
+    "$ota_workflow" \
+    "contents: write" \
+    "${environment}: only the registration job can create its runtime tag"
+  assert_contains \
+    "$ota_workflow" \
+    "$runtime_tag" \
+    "${environment}: readiness tag is scoped by environment and appVersion"
+  assert_contains \
+    "$ota_workflow" \
+    "needs: register-native-runtime" \
+    "${environment}: release policy waits for manual runtime registration"
+  assert_contains \
+    "$ota_workflow" \
+    "runtime-ready:" \
+    "${environment}: every OTA requires the registered native runtime"
+  assert_contains \
+    "$ota_workflow" \
     "runtime-changed:" \
     "${environment}: policy detects appVersion/runtime changes"
   assert_contains \
@@ -108,6 +137,11 @@ for environment in dev prod; do
     "$ota_workflow" \
     'EXPECTED_GIT_COMMIT: ${{ needs.release-policy.outputs.release-sha }}' \
     "${environment}: deployed metadata is compared with the OTA SHA"
+  assert_before \
+    "$ota_workflow" \
+    "register-native-runtime:" \
+    "eas update" \
+    "${environment}: native artifact registration precedes OTA publication"
   assert_before \
     "$ota_workflow" \
     "bash scripts/ci/verify-api-release.sh" \
@@ -141,6 +175,31 @@ if [[ -f "$VERIFY_SCRIPT" ]]; then
 else
   fail "shared API release verifier exists"
   echo "         missing scripts/ci/verify-api-release.sh"
+fi
+
+REGISTER_SCRIPT="$REPO_ROOT/scripts/ci/register-native-runtime.sh"
+RESOLVE_SCRIPT="$REPO_ROOT/scripts/ci/resolve-mobile-ota-release.sh"
+if [[ -f "$REGISTER_SCRIPT" && -f "$RESOLVE_SCRIPT" ]]; then
+  pass "shared native registration and OTA policy helpers exist"
+  assert_contains \
+    "$REGISTER_SCRIPT" \
+    'git tag -a' \
+    "native registration creates an annotated readiness tag"
+  assert_contains \
+    "$REGISTER_SCRIPT" \
+    'Artifact: $ARTIFACT' \
+    "native readiness tag records the distributed artifact"
+  assert_contains \
+    "$RESOLVE_SCRIPT" \
+    'pnpm-lock\.yaml$' \
+    "lockfile changes invalidate native runtime readiness"
+  assert_contains \
+    "$RESOLVE_SCRIPT" \
+    'patches/' \
+    "repository patch changes invalidate native runtime readiness"
+else
+  fail "shared native registration and OTA policy helpers exist"
+  echo "         missing native runtime release helper"
 fi
 
 echo

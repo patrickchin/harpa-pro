@@ -17,7 +17,7 @@ lib/api/
   errors.ts            # ApiError + classify(error)
   invalidation.ts      # cross-resource invalidation rules + helpers
   optimistic.ts        # case-by-case optimistic wrappers (notes CRUD today)
-  query-client.ts      # singleton QueryClient + resetQueryCache
+  query-client.ts      # per-scope QueryClient factory + active registry
   session-query-provider.tsx
                        # auth gate + user-scoped persister selection
   query-persister.ts   # MMKV-backed persister + dehydrate allowlist
@@ -122,7 +122,7 @@ and the `(app)` layout redirects to `(auth)/sign-in/email`.
 ## Perceived-speed: persistence, prefetch, initialData
 
 Three orthogonal layers on top of the generated hooks make the app
-feel instant. They all use the same singleton `QueryClient` in
+feel instant. Each settled auth scope gets a fresh `QueryClient` from
 `lib/api/query-client.ts`.
 
 ### 1. Persistent cache (MMKV)
@@ -149,11 +149,11 @@ background, without hydrating data before the principal is known.
   optimistic `not_opt…` ids are also skipped so we don't restore
   pending state across launches.
 - **Auth boundary:** while auth is loading or the user id changes,
-  descendants are withheld and the shared in-memory `QueryClient` is
-  cleared before the new scope mounts. Resolving to unauthenticated,
+  descendants are withheld and a fresh in-memory `QueryClient` is
+  mounted for the new scope. An old asynchronous restore can therefore
+  mutate only an unreachable old client. Resolving to unauthenticated,
   explicit `signOut`, and the 401 handler also clear every persisted
-  user snapshot. Thus session expiry and direct account switching are
-  protected even when the explicit logout callback did not run.
+  user snapshot; teardown clears the currently registered client.
 
 ### 2. Prefetch on press intent
 

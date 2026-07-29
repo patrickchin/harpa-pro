@@ -221,8 +221,9 @@ Sign-out:
 
 `SessionQueryProvider` sits below auth and withholds the rest of the
 app until a stable user id is available. Persisted query snapshots are
-keyed by user id; passive session loss and direct account switches clear
-the shared in-memory client before descendants can render.
+keyed by user id; passive session loss and direct account switches mount
+a fresh client before descendants can render. A delayed restore from the
+old scope cannot reach the new account's client.
 
 What we deliberately do **not** have:
 

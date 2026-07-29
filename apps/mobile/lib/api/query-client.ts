@@ -1,11 +1,10 @@
 /**
- * Singleton `QueryClient`.
+ * QueryClient factory + active auth-scope registry.
  *
- * Lives in its own module (rather than `_layout.tsx`) so non-React
- * call sites — the auth session's logout / 401 handlers — can import
- * the same instance to clear cached state without a circular dep. The
- * authenticated user's persister is selected by
- * `SessionQueryProvider` only after auth resolves.
+ * `SessionQueryProvider` creates a fresh client for every authenticated
+ * or anonymous scope. The registry lets non-React session teardown
+ * paths clear whichever client is currently reachable without sharing
+ * one client across user identities.
  *
  * Defaults match canonical TanStack Query v5: `staleTime: 30s`,
  * `gcTime: 5min`, `refetchOnWindowFocus: false`, `refetchOnReconnect:
@@ -15,17 +14,30 @@
 import { QueryClient } from '@tanstack/react-query';
 import { clearPersistedQueryCaches } from './query-persister';
 
-export const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 30_000,
-      gcTime: 5 * 60_000,
-      refetchOnWindowFocus: false,
-      refetchOnReconnect: true,
-      retry: 1,
+export function createMobileQueryClient(): QueryClient {
+  return new QueryClient({
+    defaultOptions: {
+      queries: {
+        staleTime: 30_000,
+        gcTime: 5 * 60_000,
+        refetchOnWindowFocus: false,
+        refetchOnReconnect: true,
+        retry: 1,
+      },
     },
-  },
-});
+  });
+}
+
+let activeQueryClient: QueryClient | null = null;
+
+export function registerActiveQueryClient(client: QueryClient): () => void {
+  activeQueryClient = client;
+  return () => {
+    if (activeQueryClient === client) {
+      activeQueryClient = null;
+    }
+  };
+}
 
 /**
  * Drop every in-memory query AND every persisted user snapshot. Called from:
@@ -37,7 +49,7 @@ export const queryClient = new QueryClient({
  * before any refetch fires.
  */
 export async function resetQueryCache(): Promise<void> {
-  queryClient.clear();
+  activeQueryClient?.clear();
   try {
     clearPersistedQueryCaches();
   } catch {

@@ -1,6 +1,10 @@
 import React from 'react';
 import { act, create } from 'react-test-renderer';
-import { QueryClient, useQuery, type QueryClient as QueryClientType } from '@tanstack/react-query';
+import {
+  QueryClient,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query';
 import {
   persistQueryClientRestore,
   persistQueryClientSave,
@@ -9,7 +13,6 @@ import { createMMKV } from 'react-native-mmkv';
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import { AuthSessionContext, type AuthSessionValue } from '../auth/session-context';
-import { queryClient } from './query-client';
 import { createQueryPersister, shouldDehydrateQuery } from './query-persister';
 import { SessionQueryProvider } from './session-query-provider';
 
@@ -59,32 +62,45 @@ async function seedProjects(
   });
 }
 
-function CacheProbe({ onRender }: { onRender: (value: unknown) => void }): null {
+function CacheProbe({
+  onRender,
+}: {
+  onRender: (client: QueryClient, value: unknown) => void;
+}): null {
+  const client = useQueryClient();
   const { data } = useQuery({
     queryKey: ['projects'],
     queryFn: async () => [],
     enabled: false,
   });
-  onRender(data);
+  onRender(client, data);
   return null;
 }
 
 async function flushCacheRestore(
   expected: unknown,
-  client: QueryClientType = queryClient,
+  getClient: () => QueryClient | null,
 ): Promise<void> {
   for (let attempt = 0; attempt < 10; attempt += 1) {
     await act(async () => {
       await new Promise((resolve) => setTimeout(resolve, 0));
     });
-    if (JSON.stringify(client.getQueryData(['projects'])) === JSON.stringify(expected)) {
+    const client = getClient();
+    if (
+      client &&
+      JSON.stringify(client.getQueryData(['projects'])) ===
+        JSON.stringify(expected)
+    ) {
       return;
     }
   }
 }
 
+function projectsFrom(client: QueryClient | null): unknown {
+  return client?.getQueryData(['projects']);
+}
+
 beforeEach(() => {
-  queryClient.clear();
   createMMKV({ id: 'rq-cache' }).clearAll();
 });
 
@@ -92,33 +108,45 @@ describe('SessionQueryProvider', () => {
   it('never renders a previous account snapshot during cold restore', async () => {
     await seedProjects('usr_alice', aliceProjects);
     const observed: unknown[] = [];
+    let activeClient: QueryClient | null = null;
 
     let tree!: ReturnType<typeof create>;
     await act(async () => {
       tree = create(
         <AuthSessionContext.Provider value={sessionFor('usr_bob')}>
           <SessionQueryProvider fallback={null}>
-            <CacheProbe onRender={(value) => observed.push(value)} />
+            <CacheProbe
+              onRender={(client, value) => {
+                activeClient = client;
+                observed.push(value);
+              }}
+            />
           </SessionQueryProvider>
         </AuthSessionContext.Provider>,
       );
     });
-    await flushCacheRestore(undefined);
+    await flushCacheRestore(undefined, () => activeClient);
 
     expect(observed).not.toContainEqual(aliceProjects);
-    expect(queryClient.getQueryData(['projects'])).toBeUndefined();
-    tree.unmount();
+    expect(projectsFrom(activeClient)).toBeUndefined();
+    act(() => tree.unmount());
   });
 
   it('blocks old data while switching accounts, then restores only the new account', async () => {
     await seedProjects('usr_alice', aliceProjects);
     await seedProjects('usr_bob', bobProjects);
     const observed: unknown[] = [];
+    let activeClient: QueryClient | null = null;
     let activeSession = sessionFor('usr_alice');
     const element = () => (
       <AuthSessionContext.Provider value={activeSession}>
         <SessionQueryProvider fallback={null}>
-          <CacheProbe onRender={(value) => observed.push(value)} />
+          <CacheProbe
+            onRender={(client, value) => {
+              activeClient = client;
+              observed.push(value);
+            }}
+          />
         </SessionQueryProvider>
       </AuthSessionContext.Provider>
     );
@@ -127,29 +155,35 @@ describe('SessionQueryProvider', () => {
     await act(async () => {
       tree = create(element());
     });
-    await flushCacheRestore(aliceProjects);
-    expect(queryClient.getQueryData(['projects'])).toEqual(aliceProjects);
+    await flushCacheRestore(aliceProjects, () => activeClient);
+    expect(projectsFrom(activeClient)).toEqual(aliceProjects);
 
     const switchRenderStart = observed.length;
     activeSession = sessionFor('usr_bob');
     await act(async () => {
       tree.update(element());
     });
-    await flushCacheRestore(bobProjects);
+    await flushCacheRestore(bobProjects, () => activeClient);
 
     expect(observed.slice(switchRenderStart)).not.toContainEqual(aliceProjects);
-    expect(queryClient.getQueryData(['projects'])).toEqual(bobProjects);
-    tree.unmount();
+    expect(projectsFrom(activeClient)).toEqual(bobProjects);
+    act(() => tree.unmount());
   });
 
   it('clears memory and persisted snapshots when a session expires', async () => {
     await seedProjects('usr_alice', aliceProjects);
     const observed: unknown[] = [];
+    let activeClient: QueryClient | null = null;
     let activeSession = sessionFor('usr_alice');
     const element = () => (
       <AuthSessionContext.Provider value={activeSession}>
         <SessionQueryProvider fallback={null}>
-          <CacheProbe onRender={(value) => observed.push(value)} />
+          <CacheProbe
+            onRender={(client, value) => {
+              activeClient = client;
+              observed.push(value);
+            }}
+          />
         </SessionQueryProvider>
       </AuthSessionContext.Provider>
     );
@@ -158,17 +192,17 @@ describe('SessionQueryProvider', () => {
     await act(async () => {
       tree = create(element());
     });
-    await flushCacheRestore(aliceProjects);
+    await flushCacheRestore(aliceProjects, () => activeClient);
 
     const expiryRenderStart = observed.length;
     activeSession = unauthenticatedSession();
     await act(async () => {
       tree.update(element());
     });
-    await flushCacheRestore(undefined);
+    await flushCacheRestore(undefined, () => activeClient);
 
     expect(observed.slice(expiryRenderStart)).not.toContainEqual(aliceProjects);
-    expect(queryClient.getQueryData(['projects'])).toBeUndefined();
+    expect(projectsFrom(activeClient)).toBeUndefined();
 
     const alice = createQueryPersister('usr_alice');
     const restoredAfterExpiry = new QueryClient();
@@ -179,6 +213,6 @@ describe('SessionQueryProvider', () => {
       maxAge: alice.maxAge,
     });
     expect(restoredAfterExpiry.getQueryData(['projects'])).toBeUndefined();
-    tree.unmount();
+    act(() => tree.unmount());
   });
 });

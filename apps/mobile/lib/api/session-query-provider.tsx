@@ -1,9 +1,12 @@
-import { QueryClientProvider } from '@tanstack/react-query';
+import { QueryClientProvider, type QueryClient } from '@tanstack/react-query';
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import { useEffect, useState, type ReactNode } from 'react';
 
 import { useAuthSession } from '../auth/session-context';
-import { queryClient } from './query-client';
+import {
+  createMobileQueryClient,
+  registerActiveQueryClient,
+} from './query-client';
 import {
   clearPersistedQueryCaches,
   createQueryPersister,
@@ -13,6 +16,7 @@ import {
 
 interface ActiveScope {
   userId: string | null;
+  queryClient: QueryClient;
   persister: QueryPersister | null;
 }
 
@@ -24,7 +28,8 @@ interface SessionQueryProviderProps {
 /**
  * Mount React Query only after auth has resolved. Persisted server
  * state is namespaced by user id; transitions withhold descendants
- * while the shared in-memory client is cleared.
+ * while swapping to a fresh in-memory client. A late restore from the
+ * previous scope can therefore mutate only an unreachable old client.
  */
 export function SessionQueryProvider({
   children,
@@ -40,7 +45,6 @@ export function SessionQueryProvider({
   useEffect(() => {
     if (targetUserId === undefined || scopeMatches) return;
 
-    queryClient.clear();
     if (targetUserId === null) {
       try {
         clearPersistedQueryCaches();
@@ -52,10 +56,16 @@ export function SessionQueryProvider({
 
     setActiveScope({
       userId: targetUserId,
+      queryClient: createMobileQueryClient(),
       persister:
         targetUserId === null ? null : createQueryPersister(targetUserId),
     });
   }, [scopeMatches, targetUserId]);
+
+  useEffect(() => {
+    if (!scopeMatches || activeScope === null) return undefined;
+    return registerActiveQueryClient(activeScope.queryClient);
+  }, [activeScope, scopeMatches]);
 
   if (targetUserId === undefined || !scopeMatches || activeScope === null) {
     return fallback;
@@ -63,14 +73,16 @@ export function SessionQueryProvider({
 
   if (activeScope.persister === null) {
     return (
-      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+      <QueryClientProvider client={activeScope.queryClient}>
+        {children}
+      </QueryClientProvider>
     );
   }
 
   return (
     <PersistQueryClientProvider
       key={activeScope.userId}
-      client={queryClient}
+      client={activeScope.queryClient}
       persistOptions={{
         persister: activeScope.persister.persister,
         maxAge: activeScope.persister.maxAge,

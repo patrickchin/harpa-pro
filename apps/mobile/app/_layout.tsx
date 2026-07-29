@@ -11,7 +11,7 @@
  *
  * `SessionQueryProvider` waits for auth, then rehydrates only that
  * user's TanStack Query cache from MMKV. During user-id transitions it
- * withholds descendants while clearing the shared in-memory client.
+ * withholds descendants while swapping to a fresh in-memory client.
  */
 import '../global.css';
 import { Component, type ReactNode } from 'react';

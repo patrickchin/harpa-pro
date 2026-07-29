@@ -94,6 +94,10 @@ async function flush(): Promise<void> {
   });
 }
 
+function projectsFrom(client: QueryClient | null): unknown {
+  return client?.getQueryData(['projects']);
+}
+
 beforeEach(() => {
   restoreByUser.clear();
 });
@@ -140,7 +144,7 @@ describe('SessionQueryProvider restore isolation', () => {
       tree.update(element());
     });
     await flush();
-    expect(activeClient?.getQueryData(['projects'])).toEqual(bobProjects);
+    expect(projectsFrom(activeClient)).toEqual(bobProjects);
 
     const lateRestoreStart = observed.length;
     await act(async () => {
@@ -149,7 +153,7 @@ describe('SessionQueryProvider restore isolation', () => {
     });
 
     expect(observed.slice(lateRestoreStart)).not.toContainEqual(aliceProjects);
-    expect(activeClient?.getQueryData(['projects'])).toEqual(bobProjects);
+    expect(projectsFrom(activeClient)).toEqual(bobProjects);
     tree.unmount();
   });
 });

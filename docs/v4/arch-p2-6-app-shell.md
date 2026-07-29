@@ -59,7 +59,7 @@ group has one hidden Projects tab. P2.6 also disposes of §A
 | `GestureHandlerRootView` | RN-Gesture requirement, must wrap everything using gesture primitives. |
 | `SafeAreaProvider` | Provides `useSafeAreaInsets`. Sits before QueryClient so a query-error fallback can still read insets. |
 | `AuthSessionProvider` | Mounts once, reads SecureStore, calls `/me`, settles `status` to `loading` → `authenticated`/`needs-onboarding`/`unauthenticated`. Children call `useAuthSession()`. |
-| `SessionQueryProvider` | Waits for a settled auth identity, selects that user's MMKV cache, and blocks descendants while clearing the singleton `QueryClient` on user-id transitions. Anonymous sessions receive a non-persisted `QueryClientProvider`. Query defaults: `staleTime: 30_000`, `gcTime: 5 * 60_000`, `refetchOnWindowFocus: false`, `refetchOnReconnect: true`, `retry: 1`. |
+| `SessionQueryProvider` | Waits for a settled auth identity, selects that user's MMKV cache, and gives every user-id or anonymous scope a fresh `QueryClient`. Descendants stay blocked during transitions, so a late restore can mutate only the unreachable previous client. Query defaults: `staleTime: 30_000`, `gcTime: 5 * 60_000`, `refetchOnWindowFocus: false`, `refetchOnReconnect: true`, `retry: 1`. |
 | `StatusBar` | `expo-status-bar` styled `"dark"` for the light theme. |
 | `DialogSheetProvider` | Hosts `<DialogSheetHost />` at root with imperative `showDialog`/`closeDialog` context. |
 | `QueueProvider` | **Stub.** Real upload queue lands in P3; stub `enqueue` throws. Locks provider order. |

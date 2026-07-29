@@ -151,20 +151,28 @@ when both lanes are empty, and gracefully no-ops when no
 
 ### Gallery attachment sheet (mobile)
 
-The attachment sheet on the report Notes tab offers two categories:
+The attachment sheet on the report Notes tab is platform-aware:
 
-- **Photo** → routed to `pickAndEnqueueGalleryImages` in
+- **Android photo library** → routed to `pickAndEnqueueGalleryImages` in
   `apps/mobile/lib/camera/pick-and-enqueue-gallery-images.ts`. It
   requests `MediaLibraryPermissions`, launches
   `ImagePicker.launchImageLibraryAsync({ allowsMultipleSelection })`,
   and pipes the chosen URIs through the same `enqueueCameraUris`
   entry point the camera flow uses. The helper returns a discriminated
-  union (`permission-denied` / `cancelled` / `empty` / `enqueued`)
-  so the route can surface the upload-error banner without duplicating
-  copy.
-- **Document** → currently surfaces a "Coming soon" banner. The note
-  kind enum + server-side pipeline already accept `document`/`pdf`,
-  but the UI is deferred (see `plan-camera-upload-pipeline.md`).
+  union (`unavailable` / `permission-denied` / `cancelled` / `empty` /
+  `enqueued`) so the route can surface the upload-error banner without
+  duplicating copy.
+- **iOS** → camera capture only. Photo-library picking and avatar
+  upload controls are intentionally hidden; the shared platform policy
+  also returns before importing or calling `expo-image-picker`.
+
+Camera capture and in-app previews of already-uploaded photos remain
+available on both platforms. See
+[`design-ios-photo-library-disablement.md`](design-ios-photo-library-disablement.md).
+
+The note kind enum + server-side pipeline already accept
+`document`/`pdf`, but document picking remains deferred (see
+`plan-camera-upload-pipeline.md`).
 
 ### Upload queue persistence (mobile)
 
@@ -203,15 +211,15 @@ relaunch, resume automatically" we wire an MMKV-backed
   factory in `vitest.setup.ts` — the queue + persistence code path
   runs unchanged.
 
-### Pipeline summary (camera + gallery)
+### Pipeline summary (camera + Android photo library)
 
 End-to-end, a photo travels through these stages — every step has a
 unit/integration test, and the live round-trips are covered by the
 photo modules in `.maestro/regression-journey.yaml`:
 
-1. **Capture / pick.** Camera (`(camera)/capture.tsx`) or gallery
-   (`pickAndEnqueueGalleryImages`) produces one or more local file
-   URIs.
+1. **Capture / pick.** Camera (`(camera)/capture.tsx`) on both
+   platforms, or Android photo-library picking
+   (`pickAndEnqueueGalleryImages`), produces one or more local file URIs.
 2. **Process.** `processImageForUpload` re-encodes to ≤ 2 MB / ≤ 2048 px
    JPEG via `expo-image-manipulator`. The post-encode `sizeBytes` is
    what flows downstream — presign body, R2 `Content-Length`, and the

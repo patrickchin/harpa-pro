@@ -16,8 +16,10 @@
  */
 import type { UploadResult } from '@/lib/uploads/types';
 import { env } from '@/lib/config/env';
+import { isPhotoLibraryPickingEnabled } from './photo-library-policy';
 
 export type PickAndEnqueueOutcome =
+  | { kind: 'unavailable' }
   | { kind: 'permission-denied' }
   | { kind: 'cancelled' }
   | { kind: 'empty' }
@@ -41,6 +43,10 @@ export interface PickAndEnqueueOptions {
 export async function pickAndEnqueueGalleryImages(
   options: PickAndEnqueueOptions,
 ): Promise<PickAndEnqueueOutcome> {
+  if (!isPhotoLibraryPickingEnabled()) {
+    return { kind: 'unavailable' };
+  }
+
   if (options.screenshotMode ?? env.EXPO_PUBLIC_SCREENSHOT_MODE) {
     const uris = (await options.resolveScreenshotFixtureUris?.()) ?? [];
     if (uris.length === 0) return { kind: 'empty' };

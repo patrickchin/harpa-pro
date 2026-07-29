@@ -177,7 +177,7 @@ describe('AvatarUploader', () => {
     await act(async () => {
       tree.root.findByProps({ testID: 'btn-avatar-upload' }).props.onPress();
     });
-    await flush();
+    await flush(8);
 
     const err = tree.root.findByProps({ testID: 'avatar-error' });
     expect(err.props.children).toContain('Photos access is off');

@@ -21,7 +21,6 @@
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
 import { File as FsFile } from 'expo-file-system';
 import { User } from 'lucide-react-native';
@@ -29,6 +28,7 @@ import { User } from 'lucide-react-native';
 import { CachedImage } from '@/components/ui/CachedImage';
 import { useFileUpload, useFileSignedUrl } from '@/lib/uploads';
 import { colors } from '@/lib/design-tokens/colors';
+import { isPhotoLibraryPickingEnabled } from '@/lib/camera/photo-library-policy';
 
 const AVATAR_STORAGE_KEY = 'harpa.avatarFileId.v1';
 
@@ -83,7 +83,10 @@ export function AvatarUploader({
   const signedUrl = useFileSignedUrl(fileId);
 
   const handlePick = async () => {
+    if (!isPhotoLibraryPickingEnabled()) return;
+
     setError(null);
+    const ImagePicker = await import('expo-image-picker');
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) {
       setError('Photos access is off. Open Settings to allow.');
@@ -131,38 +134,54 @@ export function AvatarUploader({
   };
 
   const url = signedUrl.data?.url ?? null;
+  const canPickFromLibrary = isPhotoLibraryPickingEnabled();
+  const avatar = isUploading ? (
+    <ActivityIndicator size="small" color={colors.foreground} />
+  ) : url ? (
+    <CachedImage
+      testID="avatar-image"
+      source={{ uri: url }}
+      cacheKey={fileId ?? undefined}
+      style={{ width: size, height: size }}
+      accessibilityLabel="Profile picture"
+    />
+  ) : (
+    <User size={Math.round(size * 0.42)} color={colors.muted.foreground} />
+  );
 
   return (
     <View className="items-center gap-2" testID="avatar-uploader">
-      <Pressable
-        testID="btn-avatar-upload"
-        onPress={() => {
-          void handlePick();
-        }}
-        disabled={isUploading}
-        accessibilityRole="button"
-        accessibilityLabel="Change profile picture"
-        style={{ width: size, height: size, borderRadius: size / 2 }}
-        className="items-center justify-center overflow-hidden border border-border bg-card"
-      >
-        {isUploading ? (
-          <ActivityIndicator size="small" color={colors.foreground} />
-        ) : url ? (
-          <CachedImage
-            testID="avatar-image"
-            source={{ uri: url }}
-            cacheKey={fileId ?? undefined}
-            style={{ width: size, height: size }}
-            accessibilityLabel="Profile picture"
-          />
-        ) : (
-          <User size={Math.round(size * 0.42)} color={colors.muted.foreground} />
-        )}
-      </Pressable>
-      <Text className="text-xs text-muted-foreground">
-        {isUploading ? 'Uploading…' : 'Tap to change'}
-      </Text>
-      {error ? (
+      {canPickFromLibrary ? (
+        <Pressable
+          testID="btn-avatar-upload"
+          onPress={() => {
+            void handlePick();
+          }}
+          disabled={isUploading}
+          accessibilityRole="button"
+          accessibilityLabel="Change profile picture"
+          style={{ width: size, height: size, borderRadius: size / 2 }}
+          className="items-center justify-center overflow-hidden border border-border bg-card"
+        >
+          {avatar}
+        </Pressable>
+      ) : (
+        <View
+          testID="avatar-display"
+          accessibilityRole="image"
+          accessibilityLabel="Profile picture"
+          style={{ width: size, height: size, borderRadius: size / 2 }}
+          className="items-center justify-center overflow-hidden border border-border bg-card"
+        >
+          {avatar}
+        </View>
+      )}
+      {canPickFromLibrary ? (
+        <Text className="text-xs text-muted-foreground">
+          {isUploading ? 'Uploading…' : 'Tap to change'}
+        </Text>
+      ) : null}
+      {canPickFromLibrary && error ? (
         <Text testID="avatar-error" className="text-xs text-danger-text">
           {error}
         </Text>

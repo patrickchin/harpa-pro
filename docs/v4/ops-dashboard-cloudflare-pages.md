@@ -152,7 +152,10 @@ Every dashboard workflow therefore:
 
 `scripts/ci/verify-dashboard-pages.sh` owns the deployed check, and
 `scripts/ci/__tests__/verify-dashboard-pages.test.sh` covers the successful SPA,
-deep-link `404`, and wrong-document cases with a fake HTTP server.
+deployment propagation, deep-link `404`, and wrong-document cases with a fake
+HTTP server. The verifier allows up to 18 attempts at five-second intervals so
+transient `522` responses during a new Pages deployment do not create a false
+negative.
 
 ## Local and diagnostic commands
 

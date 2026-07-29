@@ -44,10 +44,18 @@ mode = sys.argv[2]
 root = b"<!doctype html><html><body><div id='root'></div></body></html>"
 
 class Handler(http.server.BaseHTTPRequestHandler):
+    requests = 0
+
     def do_GET(self):
-        if self.path == "/":
+        Handler.requests += 1
+
+        if mode == "warming" and Handler.requests <= 12:
+            status, body = 522, b"deployment is still propagating"
+        elif self.path == "/":
             status, body = 200, root
         elif mode == "spa":
+            status, body = 200, root
+        elif mode == "warming":
             status, body = 200, root
         elif mode == "missing":
             status, body = 404, b"not found"
@@ -108,6 +116,16 @@ run_verifier() {
     bash "$SCRIPT"
 }
 
+run_verifier_with_default_attempts() {
+  local url="$1"
+
+  env \
+    DASHBOARD_URL="$url" \
+    DASHBOARD_TIMEOUT=2 \
+    DASHBOARD_SLEEP=0 \
+    bash "$SCRIPT"
+}
+
 echo "verify-dashboard-pages.sh"
 
 PORT="$(pick_port)"
@@ -117,6 +135,16 @@ assert_pass \
   "accepts a deep route served by the SPA entry document" \
   "$TMP/spa.log" \
   run_verifier "http://127.0.0.1:$PORT/"
+kill "$SERVER_PID" 2>/dev/null || true
+wait "$SERVER_PID" 2>/dev/null || true
+
+PORT="$(pick_port)"
+SERVER_PID="$(start_server "$PORT" warming)"
+sleep 1
+assert_pass \
+  "allows the Pages deployment propagation window to settle" \
+  "$TMP/warming.log" \
+  run_verifier_with_default_attempts "http://127.0.0.1:$PORT/"
 kill "$SERVER_PID" 2>/dev/null || true
 wait "$SERVER_PID" 2>/dev/null || true
 

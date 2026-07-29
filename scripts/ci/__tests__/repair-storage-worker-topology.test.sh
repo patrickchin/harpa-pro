@@ -11,6 +11,18 @@ trap 'rm -rf "$TMP"' EXIT
   echo "FAIL - missing executable worker-topology repair: $REPAIR_SCRIPT"
   exit 1
 }
+grep -Fq \
+  'START_MAX_ATTEMPTS="${STORAGE_WORKER_START_MAX_ATTEMPTS:-10}"' \
+  "$REPAIR_SCRIPT" || {
+  echo "FAIL - repair must bound start polling to 10 attempts by default"
+  exit 1
+}
+grep -Fq \
+  'START_POLL_SECONDS="${STORAGE_WORKER_START_POLL_SECONDS:-3}"' \
+  "$REPAIR_SCRIPT" || {
+  echo "FAIL - repair must space default start polls by 3 seconds"
+  exit 1
+}
 
 mkdir -p "$TMP/bin"
 cat > "$TMP/bin/flyctl" <<'SH'

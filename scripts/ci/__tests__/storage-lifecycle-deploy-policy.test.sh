@@ -4,6 +4,7 @@ set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
 DEPLOY_SCRIPT="$REPO_ROOT/infra/fly/deploy.sh"
+DEV_WORKFLOW="$REPO_ROOT/.github/workflows/api-dev.yml"
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 
@@ -12,6 +13,10 @@ mkdir -p "$TMP/bin"
 cat > "$TMP/bin/flyctl" <<'SH'
 #!/usr/bin/env bash
 printf 'flyctl %s\n' "$*" >> "$POLICY_LOG"
+if [[ "$*" == "machines list --app harpa-pro-api --json" ]]; then
+  printf '%s\n' \
+    '[{"state":"started","config":{"metadata":{"fly_process_group":"storage-worker"}}}]'
+fi
 SH
 
 chmod +x "$TMP/bin/flyctl"
@@ -27,17 +32,39 @@ mapfile -t WORKER_SCALE_COMMANDS < <(
     "$REPO_ROOT/infra/fly" \
     "$REPO_ROOT/.github/workflows"
 )
-if [[ "${#WORKER_SCALE_COMMANDS[@]}" -eq 0 ]]; then
-  echo "  FAIL - no storage-worker scale commands found"
+if [[ "${#WORKER_SCALE_COMMANDS[@]}" -ne 0 ]]; then
+  echo "  FAIL - explicit storage-worker scaling can destroy either Fly Machine"
+  printf '    %s\n' "${WORKER_SCALE_COMMANDS[@]}"
   exit 1
 fi
-for command in "${WORKER_SCALE_COMMANDS[@]}"; do
-  if [[ "$command" != *" --yes"* ]]; then
-    echo "  FAIL - storage-worker scale can prompt in CI: $command"
-    exit 1
-  fi
-done
-echo "  ok   - storage-worker scale commands confirm noninteractively"
+echo "  ok   - Fly owns the service-less worker's active/standby pair"
+
+DEV_DEPLOY_LINE=$(
+  grep -n -m1 -E '^[[:space:]]+flyctl deploy \\$' "$DEV_WORKFLOW" \
+    | cut -d: -f1 \
+    || true
+)
+DEV_VERIFY_LINE=$(
+  grep -n -m1 -F \
+    'bash scripts/ci/verify-storage-worker-started.sh harpa-pro-api-dev' \
+    "$DEV_WORKFLOW" \
+    | cut -d: -f1 \
+    || true
+)
+DEV_ARM_LINE=$(
+  grep -n -m1 -F \
+    'pnpm --filter @harpa/api storage:arm-leases' \
+    "$DEV_WORKFLOW" \
+    | cut -d: -f1 \
+    || true
+)
+if [[ -z "$DEV_DEPLOY_LINE" || -z "$DEV_VERIFY_LINE" || -z "$DEV_ARM_LINE" ||
+      "$DEV_DEPLOY_LINE" -ge "$DEV_VERIFY_LINE" ||
+      "$DEV_VERIFY_LINE" -ge "$DEV_ARM_LINE" ]]; then
+  echo "  FAIL - dev must deploy, verify a started worker, then arm"
+  exit 1
+fi
+echo "  ok   - dev deploy verifies a started worker before arming"
 
 POLICY_LOG="$TMP/actions.log" \
 PATH="$TMP/bin:$PATH" \
@@ -55,17 +82,17 @@ fi
   exit 1
 }
 [[ "${ACTIONS[1]}" == \
-  "flyctl scale count storage-worker=1 --app harpa-pro-api --yes" ]] || {
-  echo "  FAIL - worker scaling does not follow deploy"
+  "flyctl machines list --app harpa-pro-api --json" ]] || {
+  echo "  FAIL - started-worker verification does not follow deploy"
   exit 1
 }
 [[ "${ACTIONS[2]}" == \
   "flyctl ssh console --app harpa-pro-api --process-group storage-worker --pty=false --command STORAGE_LEASE_ROLLOUT_GRACE_SEC=330 STORAGE_ACCOUNT_DELETE_ENABLED=true pnpm --filter @harpa/api storage:arm-leases" ]] || {
-  echo "  FAIL - remote lifecycle arming does not follow worker scaling"
+  echo "  FAIL - remote lifecycle arming does not follow worker verification"
   exit 1
 }
 
-echo "  ok   - deploy, worker scale, and remote monotonic arming run in order"
+echo "  ok   - deploy, started-worker verification, and arming run in order"
 echo "  ok   - production DATABASE_URL stays inside Fly"
 
 grep -q 'STORAGE_ACCOUNT_DELETE_ENABLED=false' \

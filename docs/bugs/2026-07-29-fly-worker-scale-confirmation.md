@@ -1,4 +1,4 @@
-# 2026-07-29 — Fly worker scale confirmation skipped lifecycle arming
+# 2026-07-29 — Fly worker scale-down removed the active worker
 
 > See [`README.md`](README.md) for the index of all bug entries and patterns.
 
@@ -10,21 +10,28 @@ storage-lifecycle arming never ran.
 
 **Root cause.** The Fly deploy created one active `storage-worker` Machine and
 one stopped standby. The following `flyctl scale count storage-worker=1`
-therefore planned to remove one Machine. Current `flyctl` requires `--yes` for
-that scale-down in a noninteractive runner. Because the shell used
-`set -euo pipefail`, the prompt failure stopped execution before
+therefore planned to remove one member of the pair, without preferring the
+active Machine. Because the shell used
+`set -euo pipefail`, Fly's confirmation prompt stopped execution before
 `storage:arm-leases`.
 
-**Fix.** Pass `--yes` to both the dev workflow and production deploy script
-when converging `storage-worker` to one Machine. This preserves the required
-order: deploy, converge the worker count, then arm the monotonic rollout.
+**Correction to #210.** Adding `--yes` made CI noninteractive but confirmed the
+scale-down. In the observed dev deployment, Fly destroyed the active worker and
+retained the stopped standby. The process group was already owned by Fly's
+deployment; the extra scale command was both unnecessary and harmful.
 
-**Test.** `storage-lifecycle-deploy-policy.test.sh` enumerates every
-storage-worker scale command under the Fly and workflow deployment surfaces,
-requires explicit noninteractive confirmation, and still executes the
-production sequence through its fake `flyctl`.
+**Fix.** Remove explicit worker scaling from dev and production. The required
+order is deploy, verify that Fly reports a started worker, then arm the
+monotonic rollout in that process group. The verifier fails closed and never
+mutates Machines.
 
-**Pattern.** A deployment command that may reduce resources must encode its
-confirmation policy in source. A fake CLI that records arguments will not
-reproduce a real provider's interactive prompt, so the policy test must assert
-the noninteractive flag explicitly.
+**Test.** `storage-lifecycle-deploy-policy.test.sh` forbids explicit
+`storage-worker` scale commands under the Fly and workflow deployment
+surfaces, then executes the production deploy through its fake `flyctl` and
+asserts the deploy-to-verify-to-arm order.
+`verify-storage-worker-started.test.sh` uses zero-Machine, stopped-only, and
+started-worker inventories to pin the fail-closed state check.
+
+**Pattern.** A provider confirmation prompt can identify a destructive
+assumption rather than missing automation. Service-less process groups may
+have provider-managed standbys; do not normalize their count after deploy.

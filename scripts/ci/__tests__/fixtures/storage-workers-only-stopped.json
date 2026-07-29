@@ -1,0 +1,20 @@
+[
+  {
+    "id": "worker-stopped",
+    "state": "stopped",
+    "config": {
+      "metadata": {
+        "fly_process_group": "storage-worker"
+      }
+    }
+  },
+  {
+    "id": "http-started",
+    "state": "started",
+    "config": {
+      "metadata": {
+        "fly_process_group": "app"
+      }
+    }
+  }
+]

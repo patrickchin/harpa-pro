@@ -554,6 +554,10 @@ gate by reverting the bump. Release in this order:
 That dispatch creates the environment/version readiness tag before the OTA
 job evaluates its policy. If publication fails afterward, leave the tag in
 place—it still correctly attests the native artifact—and retry the dispatch.
+Only a direct dispatch of the mobile OTA workflow performs this registration.
+A manually dispatched API deployment may call the reusable OTA workflow after
+its gates pass, but it remains an automatic policy evaluation and does not
+consume the native registration inputs.
 Normal rotation is a new app version, native artifact, and new tag. Never
 force-move a readiness tag to a different native commit. If a tag was created
 for the wrong artifact or commit, stop releases and bump the app version to

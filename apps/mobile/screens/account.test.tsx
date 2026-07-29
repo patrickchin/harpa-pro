@@ -6,16 +6,13 @@
  *  - skeleton when profile is null (loading)
  *  - read-only form with email / full name / company filled
  *  - empty strings rendered for null fullName / companyName
- *  - default avatar placeholder when no slot is passed
- *  - custom avatar slot rendered when provided
+ *  - no avatar controls or imagery
  *  - back button invokes onBack
  *  - snapshot of the loaded layout
  */
 import React from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import TestRenderer, { act } from 'react-test-renderer';
-import { View } from 'react-native';
-
 import { Account, type AccountProfile } from './account';
 
 function render(el: React.ReactElement): TestRenderer.ReactTestRenderer {
@@ -100,26 +97,16 @@ describe('Account', () => {
     expect(values.filter((v) => v === '').length).toBeGreaterThanOrEqual(2);
   });
 
-  it('renders the default avatar placeholder when no slot is passed', () => {
+  it('does not render avatar controls or imagery', () => {
     const tree = render(<Account {...defaults} />);
-    expect(() =>
-      tree.root.findByProps({ testID: 'account-avatar-placeholder' }),
-    ).not.toThrow();
-  });
-
-  it('renders a custom avatar slot when provided', () => {
-    const tree = render(
-      <Account
-        {...defaults}
-        avatarSlot={<View testID="custom-avatar" />}
-      />,
-    );
-    expect(() =>
-      tree.root.findByProps({ testID: 'custom-avatar' }),
-    ).not.toThrow();
-    // Default placeholder must not also render.
     expect(
       tree.root.findAllByProps({ testID: 'account-avatar-placeholder' }),
+    ).toHaveLength(0);
+    expect(
+      tree.root.findAllByProps({ testID: 'btn-avatar-upload' }),
+    ).toHaveLength(0);
+    expect(
+      tree.root.findAllByProps({ testID: 'avatar-image' }),
     ).toHaveLength(0);
   });
 

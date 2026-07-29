@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import TestRenderer, { act } from 'react-test-renderer';
 
 type AccountRouteProps = {
+  avatarSlot?: unknown;
   deletionPreview: unknown;
   isDeletionPreviewLoading: boolean;
   isDeletingAccount: boolean;
@@ -130,6 +131,12 @@ describe('AccountRoute account deletion wiring', () => {
     sessionState.refresh.mockResolvedValue(undefined);
     sessionState.signOut.mockResolvedValue(undefined);
     clearImageCachesSpy.mockResolvedValue(undefined);
+  });
+
+  it('does not wire avatar upload or rendering into the account screen', () => {
+    renderRoute();
+
+    expect(screenState.props).not.toHaveProperty('avatarSlot');
   });
 
   it('requests the latest deletion preview when the screen opens the dialog', async () => {

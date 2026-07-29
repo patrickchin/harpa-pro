@@ -12692,6 +12692,484 @@
           }
         }
       }
+    },
+    "/admin/activity": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "required": false,
+            "name": "cursor",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "user.signed_up",
+                "project.created",
+                "report.created"
+              ]
+            },
+            "required": false,
+            "name": "eventType",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^usr_[0-9a-hjkmnp-tv-z]{8,16}$"
+            },
+            "required": false,
+            "name": "actorUserId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8,16}$"
+            },
+            "required": false,
+            "name": "projectId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "from",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "to",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated business activity, newest first.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "oneOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "pattern": "^aud_[0-9a-hjkmnp-tv-z]{8,16}$"
+                              },
+                              "occurredAt": {
+                                "type": "string"
+                              },
+                              "actorUserId": {
+                                "type": "string",
+                                "nullable": true,
+                                "pattern": "^usr_[0-9a-hjkmnp-tv-z]{8,16}$"
+                              },
+                              "actorLabel": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "actorEmail": {
+                                "type": "string",
+                                "nullable": true,
+                                "format": "email"
+                              },
+                              "subjectLabel": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "projectLabel": {
+                                "type": "string",
+                                "nullable": true,
+                                "minLength": 1
+                              },
+                              "requestId": {
+                                "type": "string",
+                                "nullable": true,
+                                "minLength": 6,
+                                "maxLength": 128
+                              },
+                              "eventType": {
+                                "type": "string",
+                                "enum": [
+                                  "user.signed_up"
+                                ]
+                              },
+                              "subjectType": {
+                                "type": "string",
+                                "enum": [
+                                  "user"
+                                ]
+                              },
+                              "subjectId": {
+                                "type": "string",
+                                "nullable": true,
+                                "pattern": "^usr_[0-9a-hjkmnp-tv-z]{8,16}$"
+                              },
+                              "projectId": {
+                                "nullable": true
+                              },
+                              "metadata": {
+                                "type": "object",
+                                "properties": {
+                                  "method": {
+                                    "type": "string",
+                                    "enum": [
+                                      "email_otp"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "method"
+                                ],
+                                "additionalProperties": false
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "occurredAt",
+                              "actorUserId",
+                              "actorLabel",
+                              "actorEmail",
+                              "subjectLabel",
+                              "projectLabel",
+                              "requestId",
+                              "eventType",
+                              "subjectType",
+                              "subjectId",
+                              "projectId",
+                              "metadata"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "pattern": "^aud_[0-9a-hjkmnp-tv-z]{8,16}$"
+                              },
+                              "occurredAt": {
+                                "type": "string"
+                              },
+                              "actorUserId": {
+                                "type": "string",
+                                "nullable": true,
+                                "pattern": "^usr_[0-9a-hjkmnp-tv-z]{8,16}$"
+                              },
+                              "actorLabel": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "actorEmail": {
+                                "type": "string",
+                                "nullable": true,
+                                "format": "email"
+                              },
+                              "subjectLabel": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "projectLabel": {
+                                "type": "string",
+                                "nullable": true,
+                                "minLength": 1
+                              },
+                              "requestId": {
+                                "type": "string",
+                                "nullable": true,
+                                "minLength": 6,
+                                "maxLength": 128
+                              },
+                              "eventType": {
+                                "type": "string",
+                                "enum": [
+                                  "project.created"
+                                ]
+                              },
+                              "subjectType": {
+                                "type": "string",
+                                "enum": [
+                                  "project"
+                                ]
+                              },
+                              "subjectId": {
+                                "type": "string",
+                                "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8,16}$"
+                              },
+                              "projectId": {
+                                "type": "string",
+                                "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8,16}$"
+                              },
+                              "metadata": {
+                                "type": "object",
+                                "properties": {},
+                                "additionalProperties": false
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "occurredAt",
+                              "actorUserId",
+                              "actorLabel",
+                              "actorEmail",
+                              "subjectLabel",
+                              "projectLabel",
+                              "requestId",
+                              "eventType",
+                              "subjectType",
+                              "subjectId",
+                              "projectId",
+                              "metadata"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "pattern": "^aud_[0-9a-hjkmnp-tv-z]{8,16}$"
+                              },
+                              "occurredAt": {
+                                "type": "string"
+                              },
+                              "actorUserId": {
+                                "type": "string",
+                                "nullable": true,
+                                "pattern": "^usr_[0-9a-hjkmnp-tv-z]{8,16}$"
+                              },
+                              "actorLabel": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "actorEmail": {
+                                "type": "string",
+                                "nullable": true,
+                                "format": "email"
+                              },
+                              "subjectLabel": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "projectLabel": {
+                                "type": "string",
+                                "nullable": true,
+                                "minLength": 1
+                              },
+                              "requestId": {
+                                "type": "string",
+                                "nullable": true,
+                                "minLength": 6,
+                                "maxLength": 128
+                              },
+                              "eventType": {
+                                "type": "string",
+                                "enum": [
+                                  "report.created"
+                                ]
+                              },
+                              "subjectType": {
+                                "type": "string",
+                                "enum": [
+                                  "report"
+                                ]
+                              },
+                              "subjectId": {
+                                "type": "string",
+                                "pattern": "^rpt_[0-9a-hjkmnp-tv-z]{8,16}$"
+                              },
+                              "projectId": {
+                                "type": "string",
+                                "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8,16}$"
+                              },
+                              "metadata": {
+                                "type": "object",
+                                "properties": {
+                                  "reportNumber": {
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "exclusiveMinimum": true
+                                  }
+                                },
+                                "required": [
+                                  "reportNumber"
+                                ],
+                                "additionalProperties": false
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "occurredAt",
+                              "actorUserId",
+                              "actorLabel",
+                              "actorEmail",
+                              "subjectLabel",
+                              "projectLabel",
+                              "requestId",
+                              "eventType",
+                              "subjectType",
+                              "subjectId",
+                              "projectId",
+                              "metadata"
+                            ],
+                            "additionalProperties": false
+                          }
+                        ]
+                      }
+                    },
+                    "nextCursor": {
+                      "type": "string",
+                      "nullable": true,
+                      "minLength": 1,
+                      "maxLength": 256
+                    }
+                  },
+                  "required": [
+                    "items",
+                    "nextCursor"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    },
+                    "requestId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    },
+                    "requestId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Admin access required.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    },
+                    "requestId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
     }
   }
 }

@@ -15,8 +15,9 @@ mobile app and Playwright specs for the docs site.
 2. `docs/v4/pitfalls.md` — Pitfalls 4, 9.
 3. `.github/skills/e2e-testing/SKILL.md`.
 4. `apps/mobile/scripts/` and `.maestro/` for existing flow shape.
-5. The matching canonical source flow under
-   `../haru3-reports/apps/mobile@dev` if porting an existing journey.
+5. The relevant `docs/v4/design-*.md` or `docs/v4/plan-*.md` spec
+   and the matching flow under `.maestro/`. If no spec exists, use
+   the current flow and its tests as the baseline.
 
 ## Constraints
 
@@ -33,8 +34,10 @@ mobile app and Playwright specs for the docs site.
 
 1. Identify the user journey (cold-start, sign-in, project create,
    note capture, generate, etc.).
-2. Locate the matching canonical-source journey if one exists.
-3. Author / port the flow file under `.maestro/<journey>.yaml` (or
+2. Locate the relevant design or plan and the matching current
+   journey. If the task changes the design, require a task-specific
+   design doc.
+3. Author or update the flow under `.maestro/<journey>.yaml` (or
    `apps/site/tests/<spec>.spec.ts` for Playwright).
 4. Run the flow on iOS sim:
    `MAESTRO_APP_ID=com.harpa.pro maestro test .maestro/<journey>.yaml`

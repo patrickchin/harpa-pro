@@ -19,6 +19,7 @@ import { voiceRoutes } from './routes/voice.js';
 import { settingsRoutes } from './routes/settings.js';
 import { waitlistRoutes } from './routes/waitlist.js';
 import { adminRoutes } from './routes/admin.js';
+import { adminActivityRoutes } from './routes/admin-activity.js';
 import { resolverRoutes } from './routes/resolvers.js';
 import { wellKnownRoutes } from './routes/well-known.js';
 import { env } from './env.js';
@@ -56,10 +57,8 @@ export function createApp(): OpenAPIHono<AppEnv> {
   // routes. Per-route + shared-AI buckets remain on the relevant routes.
   app.use('*', globalRateLimit());
 
-  // CORS — limited to /waitlist/* so cross-origin signups from the
-  // marketing site (https://harpapro.com → https://api.harpapro.com)
-  // work. Every other route stays same-origin only.
-  // Allowlist comes from env (WAITLIST_CORS_ORIGINS, comma-separated).
+  // Public, non-credentialed CORS for marketing waitlist submissions.
+  // Credentialed auth/admin CORS is configured separately below.
   const allowedOrigins = env.WAITLIST_CORS_ORIGINS.split(',')
     .map((o) => o.trim())
     .filter(Boolean);
@@ -81,6 +80,32 @@ export function createApp(): OpenAPIHono<AppEnv> {
       allowMethods: ['POST', 'OPTIONS'],
       allowHeaders: ['Content-Type'],
       credentials: false,
+      maxAge: 86400,
+    }),
+  );
+
+  const adminOrigins = env.ADMIN_CORS_ORIGINS.split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+  const credentialedOrigin = (origin: string) => (adminOrigins.includes(origin) ? origin : null);
+
+  app.use(
+    '/api/auth/*',
+    cors({
+      origin: credentialedOrigin,
+      allowMethods: ['GET', 'POST', 'OPTIONS'],
+      allowHeaders: ['Content-Type', 'X-Request-ID'],
+      credentials: true,
+      maxAge: 86400,
+    }),
+  );
+  app.use(
+    '/admin/*',
+    cors({
+      origin: credentialedOrigin,
+      allowMethods: ['GET', 'OPTIONS'],
+      allowHeaders: ['Content-Type', 'X-Request-ID'],
+      credentials: true,
       maxAge: 86400,
     }),
   );
@@ -115,6 +140,7 @@ export function createApp(): OpenAPIHono<AppEnv> {
   app.route('/', fileRoutes);
   app.route('/', voiceRoutes);
   app.route('/', settingsRoutes);
+  app.route('/', adminActivityRoutes);
   app.route('/', adminRoutes);
 
   // OpenAPI spec

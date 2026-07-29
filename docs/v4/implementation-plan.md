@@ -12,8 +12,8 @@
 |---|---|---|---|
 | P0 | [Foundation](plan-p0-foundation.md) | Monorepo, packages, CI, fixtures, auth, Neon branching | All scaffolds compile; `ai-fixtures` works; hand-rolled OTP integration test green; Neon branch script tested in CI; visual gate workflow exists. |
 | P1 | [API Core](plan-p1-api-core.md) | All REST endpoints **with tests + scope + fixtures** | 100% routes implemented; ≥ 90% line coverage; per-request scope tests for every authed route; fixture replay covers every AI route; OpenAPI ↔ code in sync. |
-| P2 | [Mobile Shell](plan-p2-mobile-shell.md) | Auth, nav, NativeWind tokens, primitives, **screen ports from `../haru3-reports/apps/mobile@dev`** | Auth flow + projects list ported and reviewed manually against canonical source; primitives locked + snapshot-tested; screen bodies in `screens/<name>.tsx` props-driven and unit-testable; `lib/env.ts` + lint guards in place. |
-| P3 | [Feature Build](plan-p3-feature-build.md) | Every screen from `../haru3-reports/apps/mobile@dev` ported, each with tests + Maestro flow | Every screen ports cleanly with manual visual review; Maestro full journey green; upload + voice + camera + PDF pipelines working end-to-end through fixtures. |
+| P2 | [Mobile Shell](plan-p2-mobile-shell.md) | Auth, nav, NativeWind tokens, primitives, and the core screens in the P2 plan | Auth flow + projects list implemented and reviewed manually against the P2 plan. Primitives locked + snapshot-tested. Screen bodies in `screens/<name>.tsx` props-driven and unit-testable. `lib/env.ts` + lint guards in place. |
+| P3 | [Feature Build](plan-p3-feature-build.md) | Every screen in the P3 plan implemented with tests + a Maestro flow | Every screen passes its behaviour and manual visual review. Maestro full journey green. Upload + voice + camera + PDF pipelines working end-to-end through fixtures. |
 | P4 | [Hardening](plan-p4-hardening.md) | Sentry, perf, deploy, prod migrations | Fly prod + Neon prod live; Sentry catching test crashes; PDF byte-equivalent to mobile-old reference samples; cold-start < 2 s; bundle ≤ v3 baseline. |
 | P5 | [Beta + GA](plan-p5-beta-ga.md) | TestFlight, Play internal, gradual rollout | App store builds approved; rollout monitor wired; cutover. |
 
@@ -44,12 +44,11 @@ build — all screens and domain logic` are not allowed.
 
 ## Acceptance contract
 
-For P3, each screen's acceptance is the matching screen in
-`../haru3-reports/apps/mobile` on branch `dev`. Read the JSX +
-Tailwind classes from there and port them directly (both apps run
-NativeWind v4 — the markup copies across). Only the data layer
-changes (legacy Supabase queries → v4 API contract hooks).
-Visual review is manual against the canonical source.
+For P3, the relevant `design-*.md` or `plan-*.md` file is the
+specification source. If neither exists, the current implementation
+and tests are the baseline. Read the existing JSX and NativeWind
+classes before editing. Add a task-specific design doc before
+making a design change. Visual review is manual on the iOS simulator.
 
 ## Success metrics
 
@@ -58,7 +57,7 @@ Visual review is manual against the canonical source.
 | Source files (excl. tests) | ≤ 200 across `apps/mobile/src/` + `packages/api/src/` | `find … -name '*.ts' -o -name '*.tsx' \| grep -v __tests__ \| wc -l` |
 | Test coverage | ≥ 90% API, ≥ 80% mobile | `pnpm test -- --coverage` |
 | Maestro flows | All green on iOS + Android | `pnpm test:e2e` |
-| Visual diff | n/a — manual review against `../haru3-reports/apps/mobile@dev` | manual |
+| Visual diff | n/a — manual review against the relevant v4 spec or current baseline | manual |
 | API p95 latency | < 200 ms | Fly metrics |
 | Cold start | < 2 s | Maestro `assertVisible` timing |
 | Bundle size | ≤ v3 baseline | EAS build artifacts |
@@ -71,7 +70,7 @@ Visual review is manual against the canonical source.
 |---|---|
 | OpenAPI drift | `p1-exit-gate.yml` regen + diff |
 | RLS bypass | per-request scope tests + lint guard on raw `db` import |
-| Visual drift | manual review against `../haru3-reports/apps/mobile@dev` per screen on the iOS sim |
+| Visual drift | manual review against the relevant v4 spec or current baseline on the iOS simulator |
 | LLM costs in CI | fixtures-first, `AI_LIVE` unset in CI, audit gate |
 | Hermes runtime gaps (`crypto`) | `lib/uuid.ts` central + lint guard |
 | Forgotten timeline note on uploads | integration test per upload kind |

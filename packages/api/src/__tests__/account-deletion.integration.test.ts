@@ -34,6 +34,9 @@ let soloProject: string;
 let transferProject: string;
 let memberProject: string;
 let sharedReport: string;
+let aliceSignupActivity: string;
+let aliceProjectActivity: string;
+let bobSignupActivity: string;
 
 const aliceEmail = 'alice-delete@example.com';
 const bobEmail = 'bob-delete@example.com';
@@ -66,6 +69,9 @@ beforeAll(async () => {
   transferProject = makeProjectId();
   memberProject = makeProjectId();
   sharedReport = makeReportId();
+  aliceSignupActivity = newId('aud');
+  aliceProjectActivity = newId('aud');
+  bobSignupActivity = newId('aud');
 
   await admin.query(
     `INSERT INTO app.projects(id, name, owner_id)
@@ -120,6 +126,30 @@ beforeAll(async () => {
        ($1, $2, 'openai', 'gpt-4o', 'chat', 10, 5, 0, 100, 'replay', 'ok'),
        ($3, $4, 'openai', 'gpt-4o', 'chat', 20, 10, 0, 100, 'replay', 'ok')`,
     [newId('lue'), alice, newId('lue'), bob],
+  );
+  await admin.query(
+    `INSERT INTO app.activity_events
+       (id, event_type, actor_user_id, subject_type, subject_id, project_id,
+        dedupe_key, metadata)
+     VALUES
+       ($1, 'user.signed_up', $2, 'user', $3, NULL, $4, '{"method":"email_otp"}'),
+       ($5, 'project.created', $6, 'project', $7, $8, $9, '{}'),
+       ($10, 'user.signed_up', $11, 'user', $12, NULL, $13, '{"method":"email_otp"}')`,
+    [
+      aliceSignupActivity,
+      alice,
+      alice,
+      `user.signed_up:${alice}`,
+      aliceProjectActivity,
+      alice,
+      transferProject,
+      transferProject,
+      `project.created:${transferProject}`,
+      bobSignupActivity,
+      bob,
+      bob,
+      `user.signed_up:${bob}`,
+    ],
   );
   await admin.query(
     `INSERT INTO public."account"
@@ -518,6 +548,44 @@ describe('DELETE /me', () => {
     ]);
     const aliceUsage = await admin.query(`SELECT id FROM app.llm_usage_events WHERE user_id = $1`, [alice]);
     expect(aliceUsage.rowCount).toBe(0);
+    const aliceActivity = await admin.query<{
+      id: string;
+      event_type: string;
+      actor_user_id: string | null;
+      subject_id: string | null;
+      dedupe_key: string;
+    }>(
+      `SELECT id, event_type, actor_user_id, subject_id, dedupe_key
+       FROM app.activity_events
+       WHERE id IN ($1, $2)
+       ORDER BY event_type`,
+      [aliceSignupActivity, aliceProjectActivity],
+    );
+    expect(aliceActivity.rows).toEqual([
+      {
+        id: aliceProjectActivity,
+        event_type: 'project.created',
+        actor_user_id: null,
+        subject_id: transferProject,
+        dedupe_key: `project.created:${transferProject}`,
+      },
+      {
+        id: aliceSignupActivity,
+        event_type: 'user.signed_up',
+        actor_user_id: null,
+        subject_id: null,
+        dedupe_key: `redacted:${aliceSignupActivity}`,
+      },
+    ]);
+    const leakedActivityId = await admin.query(
+      `SELECT id
+       FROM app.activity_events
+       WHERE actor_user_id::text = $1
+          OR subject_id = $1
+          OR dedupe_key LIKE '%' || $1 || '%'`,
+      [alice],
+    );
+    expect(leakedActivityId.rowCount).toBe(0);
     const aliceVerifications = await admin.query(
       `SELECT id FROM public."verification" WHERE identifier = $1`,
       [`sign-in-otp-${aliceEmail}`],
@@ -557,5 +625,15 @@ describe('DELETE /me', () => {
     expect(bobStillExists.rowCount).toBe(1);
     const bobUsage = await admin.query(`SELECT id FROM app.llm_usage_events WHERE user_id = $1`, [bob]);
     expect(bobUsage.rowCount).toBe(1);
+    const bobActivity = await admin.query<{
+      actor_user_id: string | null;
+      subject_id: string | null;
+    }>(
+      `SELECT actor_user_id, subject_id
+       FROM app.activity_events
+       WHERE dedupe_key = $1`,
+      [`user.signed_up:${bob}`],
+    );
+    expect(bobActivity.rows).toEqual([{ actor_user_id: bob, subject_id: bob }]);
   });
 });

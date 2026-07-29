@@ -28,7 +28,8 @@ The API deletes the better-auth `public."user"` row, which cascades
 auth sessions, linked auth accounts, user settings, user limit override
 rows, and personal file rows with existing foreign keys. It also
 deletes the user's LLM usage events and verification rows for that
-email.
+email. Business activity rows remain, but their matching actor and user
+subject identifiers are nulled before the account row is deleted.
 
 Project data is handled to preserve shared work and owner invariants:
 
@@ -65,8 +66,9 @@ Errors stay in the themed sheet and let the user retry or cancel.
 ## Test plan
 
 API tests cover preview output, solo-project deletion, shared-project
-ownership transfer, editor/member removal, session revocation, and a
-scope pair proving `DELETE /me` only affects the caller.
+ownership transfer, editor/member removal, session revocation, activity
+identifier redaction, and a scope pair proving `DELETE /me` only affects
+the caller.
 
 Mobile tests cover the destructive entry point, email confirmation gate,
 success callback, pending copy, and themed error state.

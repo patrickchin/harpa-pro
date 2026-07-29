@@ -25,9 +25,10 @@ invoke them.
    (`arch-mobile.md`, `arch-api-design.md`, `arch-database.md`,
    `arch-auth-and-rls.md`, `arch-storage.md`, `arch-ai-fixtures.md`,
    `arch-ids-and-urls.md`, `arch-ops.md`).
-5. The current `plan-p*.md` task you are designing for.
-6. The canonical port source under
-   `../haru3-reports/apps/mobile@dev` for any mobile design.
+5. The relevant `docs/v4/design-*.md` or `docs/v4/plan-*.md`
+   specification, if one exists.
+6. The current implementation and tests for the affected mobile
+   surface. They are the baseline when no task-specific spec exists.
 
 ## Constraints
 
@@ -44,8 +45,8 @@ invoke them.
 
 ## Approach
 
-1. State the design problem in one paragraph: what surface, what
-   acceptance contract, which canonical-source files.
+1. State the design problem in one paragraph. Name the affected
+   surface, existing specification, implementation, and tests.
 2. Enumerate alternatives considered (≥ 2 — at least one rejected).
 3. Pick one. Justify against the rules + pitfalls.
 4. Spell out the contract: types/Zod schemas, route shapes, hooks,

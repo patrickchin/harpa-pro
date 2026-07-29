@@ -72,8 +72,13 @@ export function createApp(): OpenAPIHono<AppEnv> {
     maxAge: 86400,
   });
   app.use('*', async (c, next) => {
-    // The public waitlist keeps its own non-credentialed allowlist below.
-    if (c.req.path === '/waitlist' || c.req.path.startsWith('/waitlist/')) {
+    // Public waitlist and admin routes keep their own narrower allowlists below.
+    const hasDedicatedCors =
+      c.req.path === '/waitlist' ||
+      c.req.path.startsWith('/waitlist/') ||
+      c.req.path === '/admin' ||
+      c.req.path.startsWith('/admin/');
+    if (hasDedicatedCors) {
       return next();
     }
     const origin = c.req.header('origin') ?? '';

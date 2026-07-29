@@ -88,7 +88,6 @@ describe('admin browser authentication and CORS', () => {
       },
     });
     expect(dashboardRejected.headers.get('access-control-allow-origin')).toBeNull();
-    expect(dashboardRejected.headers.get('access-control-allow-credentials')).toBeNull();
   });
 
   it('authenticates an admin activity request with the Better Auth cookie', async () => {

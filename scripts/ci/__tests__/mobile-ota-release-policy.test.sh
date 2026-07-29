@@ -164,6 +164,22 @@ for environment in dev prod; do
     "${environment}: native readiness is a separate manual registration job"
   assert_contains \
     "$ota_workflow" \
+    "if: github.event_name == 'workflow_dispatch' && inputs.api_deploy_succeeded != true" \
+    "${environment}: reusable API dispatch skips native registration"
+  assert_contains \
+    "$ota_workflow" \
+    "EVENT_NAME: \${{ inputs.api_deploy_succeeded == true && 'workflow_call' || github.event_name }}" \
+    "${environment}: reusable API dispatch is not treated as a manual OTA release"
+  assert_contains \
+    "$ota_workflow" \
+    "inputs.api_deploy_succeeded != true" \
+    "${environment}: direct OTA dispatch still reaches native registration"
+  assert_contains \
+    "$ota_workflow" \
+    "|| github.event_name" \
+    "${environment}: direct OTA dispatch preserves manual release policy"
+  assert_contains \
+    "$ota_workflow" \
     "contents: write" \
     "${environment}: only the registration job can create its runtime tag"
   assert_count \

@@ -207,6 +207,15 @@ tag. The called workflows still default to `contents: read`; only
 `register-native-runtime` elevates to write, while release-policy and OTA jobs
 remain read-only.
 
+Reusable workflows also retain the caller's event context. A manually
+dispatched API workflow therefore reaches the called OTA workflow with
+`github.event_name == 'workflow_dispatch'`; that does not make it a direct OTA
+registration request. The called workflow uses the successful API-deploy input
+to skip native registration and evaluates release policy with effective
+`workflow_call` semantics. Only a direct `mobile-ota-dev` or
+`mobile-ota-prod` dispatch registers a native artifact and enables the manual
+OTA path.
+
 Normal merges do not change the app version. Native changes bump it
 intentionally in the reviewed change that will produce the binary. The static
 contract in `scripts/ci/__tests__/mobile-ota-release-policy.test.sh` is run by

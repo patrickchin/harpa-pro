@@ -9,7 +9,7 @@
 ## Stack
 
 - Expo SDK (latest stable that supports our nativewind + expo-audio
-  + expo-camera versions). Dev client + EAS for prod builds.
+  - expo-camera versions). Dev client + EAS for prod builds.
 - **NativeWind v4** for styling. Tailwind config is the single
   source of truth for the design tokens.
 - Expo Router v3 (file-system routing).
@@ -145,7 +145,7 @@ Surface:
   serialises query, attaches `Authorization: Bearer <token>` from
   `lib/api/auth.ts:getAuthToken()`, and maps non-2xx + transport
   failures into a single `ApiError` envelope `{ code, message, status,
-  requestId?, details? }`.
+requestId?, details? }`.
 - `lib/api/hooks.ts` — generated React Query hooks (one per
   operationId). Mutations wire `onSuccess` into the central
   `INVALIDATIONS` map in `lib/api/invalidation.ts`. The generator
@@ -188,10 +188,10 @@ error branch sets a status. Pitfall 5: no implicit ordering, no
 
 Storage split (`lib/auth/storage.ts`):
 
-| Data | Backend | Why |
-|---|---|---|
-| `{ token, user }` (the credential) | `expo-secure-store` (Keychain on iOS, EncryptedSharedPreferences on Android) | 7-day JWT — must be encrypted at rest. |
-| `lastPhone` (UX hint) | `AsyncStorage` | Not a credential; SecureStore would be overkill. Survives sign-out so the next login pre-fills. |
+| Data                               | Backend                                                                      | Why                                                                                             |
+| ---------------------------------- | ---------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `{ token, user }` (the credential) | `expo-secure-store` (Keychain on iOS, EncryptedSharedPreferences on Android) | 7-day JWT — must be encrypted at rest.                                                          |
+| `lastPhone` (UX hint)              | `AsyncStorage`                                                               | Not a credential; SecureStore would be overkill. Survives sign-out so the next login pre-fills. |
 
 Token getter wiring (security review §B / §I):
 
@@ -214,10 +214,15 @@ Token getter wiring (security review §B / §I):
 Sign-out:
 
 - Best-effort `POST /api/auth/sign-out`, then clear SecureStore + state +
-  `queryClient.clear()`. The active upload queue is aborted and cleared
-  before the network call. Network failure on the POST does **not**
-  stop either local clear (we'd otherwise leak session data into a
-  multi-user device).
+  the in-memory and persisted query caches. The active upload queue is
+  aborted and cleared before the network call. Network failure on the
+  POST does **not** stop either local clear (we'd otherwise leak session
+  data into a multi-user device).
+
+`SessionQueryProvider` sits below auth and withholds the rest of the
+app until a stable user id is available. Persisted query snapshots are
+keyed by user id; passive session loss and direct account switches clear
+the shared in-memory client before descendants can render.
 
 What we deliberately do **not** have:
 
@@ -228,14 +233,14 @@ What we deliberately do **not** have:
 
 ## State management
 
-| Concern | Tool |
-|---|---|
-| Server state (projects, reports, notes, files) | React Query |
-| Per-screen UI state | `useState` / `useReducer` |
-| Upload queue (offline-first, persisted) | Hand-rolled `UploadQueue` (`lib/uploads/queue.ts`) with AsyncStorage persistence + `AbortSignal` cancellation |
-| Audio playback coordination | `AudioPlaybackProvider` (single ref) |
-| Auth session | `useAuthSession` (React Query + secure-store) |
-| Dialogs | `useAppDialogSheet` portal |
+| Concern                                        | Tool                                                                                                          |
+| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| Server state (projects, reports, notes, files) | React Query                                                                                                   |
+| Per-screen UI state                            | `useState` / `useReducer`                                                                                     |
+| Upload queue (offline-first, persisted)        | Hand-rolled `UploadQueue` (`lib/uploads/queue.ts`) with AsyncStorage persistence + `AbortSignal` cancellation |
+| Audio playback coordination                    | `AudioPlaybackProvider` (single ref)                                                                          |
+| Auth session                                   | `useAuthSession` (React Query + secure-store)                                                                 |
+| Dialogs                                        | `useAppDialogSheet` portal                                                                                    |
 
 ## Design tokens (NativeWind)
 
@@ -323,7 +328,7 @@ At a glance:
 - `AudioPlaybackProvider` is a real single-instance `expo-audio`
   player — starting note B pauses note A.
 - `VoiceNoteCard` renders three header states (`transcribing… /
-  ready / failed`), summary preview, transcript expander, and a
+ready / failed`), summary preview, transcript expander, and a
   retry CTA on failure.
 - Fixture mode (`EXPO_PUBLIC_USE_FIXTURES=true`) replaces the
   recorder with a "Save fixture voice note" stub that copies
@@ -367,13 +372,13 @@ outside `lib/env.ts`.
 
 ## Tests
 
-| Layer | Tool | Coverage gate |
-|---|---|---|
-| Primitives | Vitest snapshot + behaviour | 100% |
-| features/* | Vitest + MSW for API | ≥ 90% |
-| Screens | Vitest behaviour test (per-page interactions) | ≥ 80% |
-| End-to-end | Maestro on iOS sim + Android emu | All flows green |
-| Visual | Manual review against the relevant v4 spec or current baseline on iOS sim | n/a (no automated gate) |
+| Layer       | Tool                                                                      | Coverage gate           |
+| ----------- | ------------------------------------------------------------------------- | ----------------------- |
+| Primitives  | Vitest snapshot + behaviour                                               | 100%                    |
+| features/\* | Vitest + MSW for API                                                      | ≥ 90%                   |
+| Screens     | Vitest behaviour test (per-page interactions)                             | ≥ 80%                   |
+| End-to-end  | Maestro on iOS sim + Android emu                                          | All flows green         |
+| Visual      | Manual review against the relevant v4 spec or current baseline on iOS sim | n/a (no automated gate) |
 
 Per-page acceptance comes from the relevant `design-*.md` or
 `plan-*.md` file. If neither exists, current implementation and tests
@@ -449,9 +454,9 @@ of strings or the explicit `INVALIDATIONS_NONE` opt-out.
 
 ## Build modes
 
-| Mode | Command | Purpose |
-|---|---|---|
-| dev (live API) | `pnpm ios` | Hits the Fly preview API |
-| dev (fixtures) | `pnpm ios:mock` | Inlines `EXPO_PUBLIC_USE_FIXTURES=true`, fixtures everywhere |
-| release (mock) | `pnpm ios:mock:release` | Same as `:mock` but Hermes release |
-| release (live) | EAS build profile `production` | Real API |
+| Mode           | Command                        | Purpose                                                      |
+| -------------- | ------------------------------ | ------------------------------------------------------------ |
+| dev (live API) | `pnpm ios`                     | Hits the Fly preview API                                     |
+| dev (fixtures) | `pnpm ios:mock`                | Inlines `EXPO_PUBLIC_USE_FIXTURES=true`, fixtures everywhere |
+| release (mock) | `pnpm ios:mock:release`        | Same as `:mock` but Hermes release                           |
+| release (live) | EAS build profile `production` | Real API                                                     |

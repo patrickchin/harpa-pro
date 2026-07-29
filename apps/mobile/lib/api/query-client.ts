@@ -1,9 +1,11 @@
 /**
- * Singleton `QueryClient` + persister.
+ * Singleton `QueryClient`.
  *
  * Lives in its own module (rather than `_layout.tsx`) so non-React
  * call sites — the auth session's logout / 401 handlers — can import
- * the same instance to clear cached state without a circular dep.
+ * the same instance to clear cached state without a circular dep. The
+ * authenticated user's persister is selected by
+ * `SessionQueryProvider` only after auth resolves.
  *
  * Defaults match canonical TanStack Query v5: `staleTime: 30s`,
  * `gcTime: 5min`, `refetchOnWindowFocus: false`, `refetchOnReconnect:
@@ -11,7 +13,7 @@
  * data instantly while a background refetch revalidates.
  */
 import { QueryClient } from '@tanstack/react-query';
-import { createQueryPersister, type QueryPersister } from './query-persister';
+import { clearPersistedQueryCaches } from './query-persister';
 
 export const queryClient = new QueryClient({
   defaultOptions: {
@@ -25,10 +27,8 @@ export const queryClient = new QueryClient({
   },
 });
 
-export const queryPersister: QueryPersister = createQueryPersister();
-
 /**
- * Drop every in-memory query AND the persisted blob. Called from:
+ * Drop every in-memory query AND every persisted user snapshot. Called from:
  *   - `AuthSessionProvider.signOut` (explicit user logout)
  *   - the `setOnUnauthorizedCallback` handler (401 = session lost)
  *
@@ -39,11 +39,11 @@ export const queryPersister: QueryPersister = createQueryPersister();
 export async function resetQueryCache(): Promise<void> {
   queryClient.clear();
   try {
-    await queryPersister.persister.removeClient();
+    clearPersistedQueryCaches();
   } catch {
-    // Storage errors here mean the persisted blob may survive — but
-    // the in-memory clear above is the user-facing source of truth,
-    // and the next bootstrap's `buster` check will catch a stale blob
-    // on the following app version. Never block logout on it.
+    // Storage errors here mean a user-scoped snapshot may survive, but
+    // the in-memory clear above is the user-facing source of truth and
+    // the auth-scoped bootstrap will never restore it for another user.
+    // Never block logout on storage cleanup.
   }
 }

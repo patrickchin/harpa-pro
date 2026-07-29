@@ -39,17 +39,41 @@ load_inventory() {
 resolve_deployed_identity() {
   if ! DEPLOYED_IDENTITY=$(
     jq -ce '
-      def identity:
-        {
-          release_id: .config.metadata.fly_release_id,
-          release_version: .config.metadata.fly_release_version,
-          image: .config.image
-        };
+      def image_identity:
+        if type == "string"
+          and test("^[^/@:[:space:]]+(?::[0-9]+)?(?:/[^/@:[:space:]]+)+:[^/@:[:space:]]+(?:@sha256:[0-9a-f]{64})?$")
+        then
+          split("@")
+          | {
+              image: .[0],
+              digest: (.[1] // null)
+            }
+        else
+          {
+            image: null,
+            digest: null
+          }
+        end;
+      def machine_identity:
+        (.config.image | image_identity) as $image
+        | {
+            release_id: .config.metadata.fly_release_id,
+            release_version: .config.metadata.fly_release_version,
+            image: $image.image,
+            digest: $image.digest
+          };
       [
         .[]
         | select(.config.metadata.fly_process_group == "app")
-        | identity
-      ] as $identities
+        | machine_identity
+      ] as $machine_identities
+      | ($machine_identities | map(del(.digest))) as $identities
+      | (
+          $machine_identities
+          | map(.digest)
+          | map(select(. != null))
+          | unique
+        ) as $digests
       | if
           ($identities | length) == 0
           or any(
@@ -62,6 +86,7 @@ resolve_deployed_identity() {
             or (.image | length) == 0
           )
           or ($identities | unique | length) != 1
+          or ($digests | length) > 1
         then
           error("missing or ambiguous app release identity")
         else
@@ -79,12 +104,29 @@ validate_deployed_identity() {
   local worker_identity_summary
 
   if jq -e --argjson deployed "$DEPLOYED_IDENTITY" '
-    def identity:
-      {
-        release_id: .config.metadata.fly_release_id,
-        release_version: .config.metadata.fly_release_version,
-        image: .config.image
-      };
+    def image_identity:
+      if type == "string"
+        and test("^[^/@:[:space:]]+(?::[0-9]+)?(?:/[^/@:[:space:]]+)+:[^/@:[:space:]]+(?:@sha256:[0-9a-f]{64})?$")
+      then
+        split("@")
+        | {
+            image: .[0],
+            digest: (.[1] // null)
+          }
+      else
+        {
+          image: null,
+          digest: null
+        }
+      end;
+    def machine_identity:
+      (.config.image | image_identity) as $image
+      | {
+          release_id: .config.metadata.fly_release_id,
+          release_version: .config.metadata.fly_release_version,
+          image: $image.image,
+          digest: $image.digest
+        };
     [
       .[]
       | select(.config.metadata.fly_process_group == "app")
@@ -93,9 +135,19 @@ validate_deployed_identity() {
         .[]
         | select(.config.metadata.fly_process_group == "storage-worker")
       ] as $workers
+    | (($apps + $workers) | map(machine_identity)) as $machine_identities
+    | (
+        $machine_identities
+        | map(.digest)
+        | map(select(. != null))
+        | unique
+      ) as $digests
     | ($apps | length) > 0
-      and all($apps[]; identity == $deployed)
-      and all($workers[]; identity == $deployed)
+      and all(
+        $machine_identities[];
+        (. | del(.digest)) == $deployed
+      )
+      and ($digests | length) <= 1
   ' <<< "$inventory_json" >/dev/null; then
     return 0
   fi

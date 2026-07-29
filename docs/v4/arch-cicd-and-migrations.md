@@ -268,12 +268,18 @@ green. Both the poll loop and the surrounding job are bounded.
   skips the redundant start. Both paths list Machines again and succeed only
   when the exact healthy pair is present.
 - Every Machine used by repair must match one unambiguous `app` identity on
-  nonempty Fly release id, release version, and image. Zero, stale,
-  transitional, or ambiguous initial inventories fail before mutation; no
-  process-count scaling is allowed. Each update/start transition also proves
-  the candidate id, singleton topology, empty services, and empty standbys. If
-  clearing succeeds but later work fails, exact singleton stopped/no-standby
-  and started/no-standby states are retry-safe; all other drift fails closed.
+  nonempty Fly release id, release version, and valid full tagged image. The
+  image comparison removes only an optional validated
+  `@sha256:<64 lowercase hex>` suffix, because Fly can attach it to one
+  representation of the same deployment tag; repository, tag, and release
+  metadata remain exact. Tag-only Machines may coexist with at most one
+  distinct explicit digest; conflicting non-null digests fail closed. Untagged,
+  digest-only, malformed, stale, transitional, or ambiguous initial inventories
+  fail before mutation; no process-count scaling is allowed. Each update/start
+  transition also proves the candidate id, singleton topology, empty services,
+  and empty standbys. If clearing succeeds but later work fails, exact singleton
+  stopped/no-standby and started/no-standby states are retry-safe; all other
+  drift fails closed.
 - Run the read-only started-worker verifier again, then arm the monotonic
   upload-lease rollout inside that process group. Arming inherits Fly's staged
   `DATABASE_URL`, so the production URL remains out of GitHub Actions and

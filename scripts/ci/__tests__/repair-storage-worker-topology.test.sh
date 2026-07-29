@@ -326,10 +326,74 @@ healthy_output=$(run_repair "storage-workers-started.json")
 assert_no_mutation
 echo "  ok   - exact healthy pair is a no-op"
 
+reset_case
+digest_standby_output=$(run_repair "storage-workers-started-digest-standby.json")
+[[ "$digest_standby_output" == *"storage-worker topology already healthy"* ]] || {
+  echo "FAIL - Fly's tag@digest standby representation was not accepted"
+  echo "$digest_standby_output"
+  exit 1
+}
+assert_no_mutation
+echo "  ok   - a tag@digest standby matches the same full tagged image"
+
+reset_case
+digest_app_output=$(run_repair "storage-workers-started-digest-app-host-port.json")
+[[ "$digest_app_output" == *"storage-worker topology already healthy"* ]] || {
+  echo "FAIL - Fly's tag@digest app representation was not accepted"
+  echo "$digest_app_output"
+  exit 1
+}
+assert_no_mutation
+echo "  ok   - tag@digest matching is bidirectional and preserves registry ports"
+
 expect_failure_without_mutation \
   "a stale started worker fails closed" \
   "storage-workers-started-stale.json" \
   "does not match the deployed app release"
+expect_failure_without_mutation \
+  "the same tag in a different repository fails closed" \
+  "storage-workers-started-different-repository.json" \
+  "does not match the deployed app release"
+expect_failure_without_mutation \
+  "a different deployment tag fails closed" \
+  "storage-workers-started-different-tag.json" \
+  "does not match the deployed app release"
+expect_failure_without_mutation \
+  "the same canonical image with a different release id fails closed" \
+  "storage-workers-started-different-release-id.json" \
+  "does not match the deployed app release"
+expect_failure_without_mutation \
+  "the same canonical image with a different release version fails closed" \
+  "storage-workers-started-different-release-version.json" \
+  "does not match the deployed app release"
+expect_failure_without_mutation \
+  "an app and worker with conflicting explicit digests fail closed" \
+  "storage-workers-started-conflicting-worker-digest.json" \
+  "does not match the deployed app release"
+expect_failure_without_mutation \
+  "two app Machines with conflicting explicit digests fail closed" \
+  "storage-workers-two-app-digests.json" \
+  "cannot determine one complete deployed app release"
+expect_failure_without_mutation \
+  "an active and standby with conflicting explicit digests fail closed" \
+  "storage-workers-started-conflicting-pair-digests.json" \
+  "does not match the deployed app release"
+expect_failure_without_mutation \
+  "an untagged image is not a complete release identity" \
+  "storage-workers-started-untagged-image.json" \
+  "cannot determine one complete deployed app release"
+expect_failure_without_mutation \
+  "a digest-only image is not a complete release identity" \
+  "storage-workers-started-digest-only-image.json" \
+  "cannot determine one complete deployed app release"
+expect_failure_without_mutation \
+  "a malformed image digest fails closed" \
+  "storage-workers-started-malformed-digest.json" \
+  "does not match the deployed app release"
+expect_failure_without_mutation \
+  "identical malformed image references do not become valid" \
+  "storage-workers-started-identical-malformed-digest.json" \
+  "cannot determine one complete deployed app release"
 expect_failure_without_mutation \
   "an incomplete started-worker identity is not trusted" \
   "storage-workers-started-missing-identity.json" \

@@ -35,6 +35,17 @@ The fresh-inventory guard then correctly blocked the clone, arming, journeys,
 and API-dependent OTA. A successful `machine update` therefore does not prove
 that a previously stopped Machine was started.
 
+**Follow-up after #214.** Manually dispatched `api-dev` run
+`30417267939` deployed exact SHA `6eed645d`, explicitly started Machine
+`d8939d9c344038`, and cloned its standby. The final identity proof then rejected
+the clone because Fly returned the same deployment image as
+`registry.fly.io/harpa-pro-api-dev:deployment-01KYNVPCTJ1AGN528H1J0KE29D@sha256:…`
+while the app and active worker used the tag without the digest. All Machines
+still had exact release id `rel_v6gwzpgjq9x7z9ok`, release version `100`, and
+the same full repository and deployment tag. The fail-closed guard again kept
+arming and journeys blocked, but its raw-string image comparison was stricter
+than Fly's equivalent image representations.
+
 **Fix.** Remove broad worker scaling from dev and production. The required
 order is deploy, narrow topology repair, read-only started-worker verification,
 then monotonic arming. Repair is a no-op only for the exact healthy pair: one
@@ -53,10 +64,16 @@ state starts it; a retry from the exact singleton started/no-standby state
 clones it.
 
 Every Machine must match the deployed app Machines on nonempty Fly release id,
-release version, and image. Each transition also proves the candidate id,
-singleton topology, empty services, and empty standbys. Both mutating branches
-list Machines again and succeed only after observing the exact healthy pair;
-other initial or transitional topologies fail closed.
+release version, and one valid full tagged image. The jq identity helper
+canonicalizes only Fly's observed optional `@sha256:<64 lowercase hex>` suffix;
+the repository and tag remain exact, and at most one distinct non-null digest
+may appear across the app and worker Machines. Tag-only plus one observed digest
+is valid; two conflicting explicit digests fail closed. Untagged, digest-only,
+malformed, different repository/tag, or mismatched release metadata still fail
+closed. Each transition also proves the candidate id, singleton topology, empty
+services, and empty standbys. Both mutating branches list Machines again and
+succeed only after observing the exact healthy pair; other initial or
+transitional topologies fail closed.
 
 **Test.** `storage-lifecycle-deploy-policy.test.sh` forbids explicit
 `storage-worker` scale commands under the Fly and workflow deployment
@@ -66,8 +83,11 @@ asserts the deploy-to-repair-to-verify-to-arm order.
 singleton active and singleton standby recovery, zero/ambiguous/transitional
 inventories, stale or incomplete release identity, exact-candidate proofs
 before cloning and after update/start, bounded start polling, stopped/started
-partial retries, verify-before-clone, and fresh-inventory verification after
-cloning with fake Fly commands.
+partial retries, verify-before-clone, fresh-inventory verification after
+cloning, both directions of tag-versus-tag-with-digest comparison (including a
+registry port), conflicting digests across app Machines or workers, and
+fail-closed malformed/tag/repository/release-metadata cases with fake Fly
+commands.
 `verify-storage-worker-started.test.sh` keeps the final read-only state check.
 
 **Pattern.** A provider confirmation prompt can identify a destructive
@@ -77,4 +97,8 @@ Recovery must prove an exact current-release Machine identity before changing
 standby configuration. Provider update success does not prove a stopped Machine
 started; use an explicit start plus fresh exact-candidate inventory checks. A
 clone command is not success until a fresh inventory proves the active/standby
-relationship.
+relationship. Provider APIs may render the same tagged image with an attached
+content digest, so compare a narrowly validated canonical tag alongside exact
+release metadata instead of comparing the raw image strings. Preserve the
+explicit digest evidence and reject an inventory that claims two distinct
+digests for that identity.

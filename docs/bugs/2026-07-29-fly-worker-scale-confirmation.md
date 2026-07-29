@@ -21,13 +21,16 @@ retained the stopped standby. The process group was already owned by Fly's
 deployment; the extra scale command was both unnecessary and harmful.
 
 **Fix.** Remove explicit worker scaling from dev and production. The required
-order is deploy, then arm the monotonic rollout in the deployed worker process
-group. Fly retains its active Machine and stopped standby.
+order is deploy, verify that Fly reports a started worker, then arm the
+monotonic rollout in that process group. The verifier fails closed and never
+mutates Machines.
 
 **Test.** `storage-lifecycle-deploy-policy.test.sh` forbids explicit
 `storage-worker` scale commands under the Fly and workflow deployment
 surfaces, then executes the production deploy through its fake `flyctl` and
-asserts the deploy-to-arm order.
+asserts the deploy-to-verify-to-arm order.
+`verify-storage-worker-started.test.sh` uses zero-Machine, stopped-only, and
+started-worker inventories to pin the fail-closed state check.
 
 **Pattern.** A provider confirmation prompt can identify a destructive
 assumption rather than missing automation. Service-less process groups may

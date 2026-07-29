@@ -255,11 +255,12 @@ green. Both the poll loop and the surrounding job are bounded.
   pass `--build-arg MIGRATIONS_REQUIRED_HEAD=...` to `flyctl deploy`.
 - Compute the full `git rev-parse HEAD` value and pass it as the
   `GIT_COMMIT` build arg; abbreviated SHAs are not valid deployment identities.
-- Scale the service-less storage worker after deploy, then arm the monotonic
-  upload-lease rollout inside that process group. It inherits Fly's staged
-  `DATABASE_URL`; the production URL remains out of GitHub Actions and manual
-  operator environments. Manual production deploys use the same ordered path
-  as CI.
+- Verify that Fly reports at least one started service-less storage worker
+  after deploy, then arm the monotonic upload-lease rollout inside that process
+  group. The check is read-only and fails closed; it never scales or repairs
+  Machines. Arming inherits Fly's staged `DATABASE_URL`, so the production URL
+  remains out of GitHub Actions and manual operator environments. Manual
+  production deploys use the same ordered path as CI.
 
 ### `.github/workflows/api-prod.yml`
 

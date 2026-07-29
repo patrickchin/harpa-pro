@@ -662,11 +662,17 @@ compatible, and account deletion returns `503`. Arming uses
 grace. `R2_PRESIGN_TTL_SEC` is capped at 300 seconds; the remaining 30
 seconds is the late-PUT safety window.
 
-`infra/fly/deploy.sh` owns the production order: deploy, then arm by running the
-monotonic rollout command in the worker process group. The command inherits the
-app's staged Fly secrets, so neither CI nor manual callers need the production
-`DATABASE_URL`. The shell policy test stubs external commands, executes this
-sequence, and forbids explicit `storage-worker` scale commands.
+`infra/fly/deploy.sh` owns the production order: deploy, verify at least one
+Machine has state `started` and metadata process group `storage-worker`, then
+arm by running the monotonic rollout command in that group. The command
+inherits the app's staged Fly secrets, so neither CI nor manual callers need
+the production `DATABASE_URL`. The shell policy test stubs external commands,
+executes this sequence, and forbids explicit `storage-worker` scale commands.
+
+The shared verifier calls `flyctl machines list --json` and fails closed when
+the group is absent or only stopped. It is deliberately diagnostic-only: it
+does not start, clone, scale, or otherwise repair Machines. A green deploy must
+prove Fly produced a running executor rather than conceal a broken topology.
 
 Fly can create a stopped standby for the service-less process group. An
 explicit `storage-worker=1` command therefore collapses the pair without

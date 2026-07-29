@@ -33,12 +33,15 @@ flyctl deploy \
   --build-arg "BUILD_TIME=$BUILD_TIME" \
   "$@"
 
-# Arm only after deploy succeeds. Run inside the service-less worker so CI and
-# manual callers never need the production DATABASE_URL; the command inherits
-# the app's staged Fly secrets. The update is monotonic, so later deploys cannot
-# reopen the first-rollout compatibility grace. Fly owns the process group's
-# active Machine and stopped standby; an explicit scale-down can remove either
-# one.
+# Fail closed unless Fly reports a started service-less worker. This check is
+# deliberately read-only: deploy owns the active/standby pair, and CI must not
+# mutate Machines to conceal a broken rollout.
+bash scripts/ci/verify-storage-worker-started.sh harpa-pro-api
+
+# Arm only after deploy and worker verification succeed. Run inside the worker
+# so CI and manual callers never need the production DATABASE_URL; the command
+# inherits the app's staged Fly secrets. The update is monotonic, so later
+# deploys cannot reopen the first-rollout compatibility grace.
 flyctl ssh console \
   --app harpa-pro-api \
   --process-group storage-worker \

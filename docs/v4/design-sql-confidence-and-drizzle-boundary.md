@@ -1,6 +1,6 @@
 # Design — SQL confidence and Drizzle boundary
 
-Status: accepted for staged implementation.
+Status: first slice implemented.
 
 ## Problem
 
@@ -9,9 +9,10 @@ runs through a scoped Drizzle handle, and PostgreSQL enforces access control
 through `SET LOCAL` role/session state plus RLS. The problem is lower-level
 confidence.
 
-- The current `dev` snapshot contains 64 authored SQL-through-Drizzle call
-  sites outside tests. Some are ordinary CRUD that Drizzle's builder can
-  express more clearly; others are intentionally PostgreSQL-native.
+- At branch point `537d1b0f`, the `dev` snapshot contained 90 authored
+  SQL-through-Drizzle `.execute` call sites outside tests. Some were ordinary
+  CRUD that Drizzle's builder could express more clearly; others are
+  intentionally PostgreSQL-native.
 - `app.note_files` is a live table in migration `0010_note_files.sql` and in
   runtime queries, but it has no Drizzle model in `db/schema.ts`.
 - Deploy-critical SQL in `scripts/seed-test-account.ts` is exercised only on
@@ -59,6 +60,8 @@ behavior:
 - `packages/api/src/services/me.ts`
   - `updateUser`
   - `fetchUser` already uses the builder and stays as the reference shape
+- `packages/api/scripts/seed-test-account.ts`
+  - existing credential update, after the CLI integration proof is in place
 
 The upload-lease helpers in `files.ts` stay SQL-first. They use row locks,
 database functions, or an atomic `UPDATE ... RETURNING` plus
@@ -145,6 +148,7 @@ Recommended order:
 1. `settings.ts`
 2. `files.ts` registration and lookup only
 3. `me.ts` self-update
+4. `seed-test-account.ts` credential update
 
 That order starts with the smallest, lowest-risk surfaces. Project reads and
 writes remain a separately reviewable follow-up.
@@ -189,13 +193,29 @@ justified for:
 - Existing route behavior, RLS behavior, and response shapes remain unchanged.
 - Complex SQL called out in "Out of scope" remains untouched in this refactor.
 
+## First-slice result
+
+This slice removes six authored `.execute` call sites, reducing the branch
+snapshot from 90 to 84:
+
+- settings read and upsert
+- file registration and lookup
+- profile self-update
+- test-account credential update
+
+It also adds the missing `noteFiles` model and real-Postgres regression tests
+for the deploy seeder and migrations 0010/0011 with representative legacy
+rows. The remaining SQL is not assumed safe merely because it remains; later
+slices should follow the boundary and proof requirements above.
+
 ## Rollout and rollback
 
 Ship this as short slices, not one broad rewrite:
 
 1. proof harnesses
 2. `noteFiles` schema addition
-3. settings, file registration/lookup, and self-profile CRUD
+3. settings, file registration/lookup, self-profile CRUD, and the typed
+   credential update
 4. project CRUD as a separately reviewed follow-up
 
 Rollback is straightforward because the database contract does not change in

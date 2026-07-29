@@ -143,14 +143,15 @@ describe('legacy migration backfills', () => {
        FROM app.note_files`,
     );
     expect(noteFiles.rows).toHaveLength(1);
-    expect(noteFiles.rows[0]).toMatchObject({
+    const noteFile = noteFiles.rows[0]!;
+    expect(noteFile).toMatchObject({
       note_id: imageNoteId,
       file_id: imageFileId,
       thumbnail_file_id: thumbnailFileId,
       position: 0,
     });
-    expect(noteFiles.rows[0].id).toMatch(/^nfl_[0-9a-f]{10}$/);
-    expect(noteFiles.rows[0].created_at.toISOString()).toBe(imageCreatedAt.toISOString());
+    expect(noteFile.id).toMatch(/^nfl_[0-9a-f]{10}$/);
+    expect(noteFile.created_at.toISOString()).toBe(imageCreatedAt.toISOString());
 
     const notesAfter0010 = await client.query<{
       id: string;

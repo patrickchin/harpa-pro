@@ -28,11 +28,11 @@ mapfile -t WORKER_SCALE_COMMANDS < <(
     "$REPO_ROOT/.github/workflows"
 )
 if [[ "${#WORKER_SCALE_COMMANDS[@]}" -ne 0 ]]; then
-  echo "  FAIL - explicit storage-worker scaling removes Fly's standby"
+  echo "  FAIL - explicit storage-worker scaling can destroy either Fly Machine"
   printf '    %s\n' "${WORKER_SCALE_COMMANDS[@]}"
   exit 1
 fi
-echo "  ok   - Fly owns the service-less storage-worker standby"
+echo "  ok   - Fly owns the service-less worker's active/standby pair"
 
 POLICY_LOG="$TMP/actions.log" \
 PATH="$TMP/bin:$PATH" \

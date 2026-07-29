@@ -102,7 +102,6 @@ jobs:
             --build-arg "GIT_COMMIT=$GIT_COMMIT" \
             --build-arg "BUILD_TIME=$BUILD_TIME" \
             --remote-only
-          flyctl scale count storage-worker=1 --app harpa-pro-api-dev --yes
           STORAGE_LEASE_ROLLOUT_GRACE_SEC=330 \
             pnpm --filter @harpa/api storage:arm-leases
 

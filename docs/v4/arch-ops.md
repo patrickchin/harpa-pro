@@ -636,13 +636,13 @@ addition to the HTTP `app` group:
 - `app`: `shared-cpu-1x`, 512 MB, attached to `http_service`, allowed
   to suspend at zero;
 - `storage-worker`: `shared-cpu-1x`, 256 MB, no service attachment,
-  explicitly kept at count 1 by the deploy workflow.
+  with its active Machine and stopped standby owned by Fly deploys.
 
-The worker is not eligible for HTTP auto-stop, so both dev and
-production now carry one continuously billed worker Machine. This cost
-is required for delayed cleanup to run while the API is idle. PR
-previews do not provision workers; their account-deletion gate stays
-closed.
+The active worker is not eligible for HTTP auto-stop, so both dev and
+production carry one continuously billed worker Machine. Fly also preserves a
+stopped standby for deploys and restarts. This cost is required for delayed
+cleanup to run while the API is idle. PR previews do not provision workers;
+their account-deletion gate stays closed.
 
 The worker does not continuously pin Neon with five-second polling. It
 sleeps until the next known job is due, capped at ten minutes to discover
@@ -662,15 +662,18 @@ compatible, and account deletion returns `503`. Arming uses
 grace. `R2_PRESIGN_TTL_SEC` is capped at 300 seconds; the remaining 30
 seconds is the late-PUT safety window.
 
-`infra/fly/deploy.sh` owns the production order: deploy, scale
-`storage-worker=1`, then arm by running the monotonic rollout command in that
-worker process group. The command inherits the app's staged Fly secrets, so
-neither CI nor manual callers need the production `DATABASE_URL`. The shell
-policy test stubs external commands and executes this sequence so future
-workflow edits cannot silently omit arming. Dev and production pass `--yes`
-when converging the worker count: Fly can create a stopped standby during the
-first process-group deploy, making `storage-worker=1` a scale-down operation
-that otherwise prompts and aborts noninteractive CI before arming.
+`infra/fly/deploy.sh` owns the production order: deploy, then arm by running the
+monotonic rollout command in the worker process group. The command inherits the
+app's staged Fly secrets, so neither CI nor manual callers need the production
+`DATABASE_URL`. The shell policy test stubs external commands, executes this
+sequence, and forbids explicit `storage-worker` scale commands.
+
+Fly can create a stopped standby for the service-less process group. An
+explicit `storage-worker=1` command therefore collapses the pair without
+preferring the active Machine. After #210 added `--yes`, Fly destroyed the
+active worker and retained the stopped standby. The earlier confirmation prompt
+was a safety signal, not a reason to auto-confirm the scale-down; dev and
+production leave the pair under Fly's deploy lifecycle.
 
 Operational query:
 

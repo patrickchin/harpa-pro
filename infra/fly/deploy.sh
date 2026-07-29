@@ -33,15 +33,12 @@ flyctl deploy \
   --build-arg "BUILD_TIME=$BUILD_TIME" \
   "$@"
 
-# The HTTP app group may suspend at zero when idle, but delayed R2 cleanup
-# must still run after presigned URLs expire. Keep one service-less worker
-# machine running so the durable job table always has an executor.
-flyctl scale count storage-worker=1 --app harpa-pro-api --yes
-
-# Arm only after deploy and worker scaling succeed. Run inside the service-less
-# worker so CI and manual callers never need the production DATABASE_URL; the
-# command inherits the app's staged Fly secrets. The update is monotonic, so
-# later deploys cannot reopen the first-rollout compatibility grace.
+# Arm only after deploy succeeds. Run inside the service-less worker so CI and
+# manual callers never need the production DATABASE_URL; the command inherits
+# the app's staged Fly secrets. The update is monotonic, so later deploys cannot
+# reopen the first-rollout compatibility grace. Fly owns the process group's
+# active Machine and stopped standby; an explicit scale-down can remove either
+# one.
 flyctl ssh console \
   --app harpa-pro-api \
   --process-group storage-worker \

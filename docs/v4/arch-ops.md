@@ -685,10 +685,12 @@ and clones only after exact `started` proof. Both mutating paths list Machines
 again and succeed only after observing the exact healthy pair.
 
 Every app and worker Machine used by the decision must match one complete,
-unambiguous identity: nonempty `fly_release_id`, `fly_release_version`, and
-`config.image`. Zero workers, multiple workers, transitional states,
-incomplete metadata, stale images, or mixed releases fail before mutation. If
-standby clearing succeeds but later work fails, an exact singleton
+unambiguous identity: nonempty `fly_release_id`, `fly_release_version`, and a
+valid full tagged `config.image`. Fly may return the same tag with an optional
+`@sha256:<64 lowercase hex>` suffix, so repair strips only that validated suffix
+before comparison; repository, tag, release id, and release version remain
+exact. Untagged, digest-only, malformed, stale, or mixed identities fail before
+mutation. If standby clearing succeeds but later work fails, an exact singleton
 stopped/no-standby retry starts then verifies the candidate, while an exact
 singleton started/no-standby retry clones it. Id, identity, service, standby, or
 topology drift during any pre-clone re-list or polling fails before cloning.
@@ -706,7 +708,9 @@ exists only for singleton current-release active, stopped/no-standby, or
 standby states. Fly later confirmed in its deploy log that updating a
 previously non-started Machine can leave the new version stopped, which is why
 repair uses an explicit start and does not treat update success as running
-proof.
+proof. Fly also rendered a cloned standby's image as the same full deployment
+tag with an attached digest, so repair removes only a validated digest suffix
+and keeps the repository, tag, release id, and release version exact.
 
 Operational query:
 

@@ -359,6 +359,14 @@ expect_failure_without_mutation \
   "storage-workers-started-different-tag.json" \
   "does not match the deployed app release"
 expect_failure_without_mutation \
+  "the same canonical image with a different release id fails closed" \
+  "storage-workers-started-different-release-id.json" \
+  "does not match the deployed app release"
+expect_failure_without_mutation \
+  "the same canonical image with a different release version fails closed" \
+  "storage-workers-started-different-release-version.json" \
+  "does not match the deployed app release"
+expect_failure_without_mutation \
   "an untagged image is not a complete release identity" \
   "storage-workers-started-untagged-image.json" \
   "cannot determine one complete deployed app release"
@@ -370,6 +378,10 @@ expect_failure_without_mutation \
   "a malformed image digest fails closed" \
   "storage-workers-started-malformed-digest.json" \
   "does not match the deployed app release"
+expect_failure_without_mutation \
+  "identical malformed image references do not become valid" \
+  "storage-workers-started-identical-malformed-digest.json" \
+  "cannot determine one complete deployed app release"
 expect_failure_without_mutation \
   "an incomplete started-worker identity is not trusted" \
   "storage-workers-started-missing-identity.json" \

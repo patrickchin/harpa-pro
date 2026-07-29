@@ -39,11 +39,19 @@ load_inventory() {
 resolve_deployed_identity() {
   if ! DEPLOYED_IDENTITY=$(
     jq -ce '
+      def canonical_image:
+        if type == "string"
+          and test("^[^/@:[:space:]]+(?::[0-9]+)?(?:/[^/@:[:space:]]+)+:[^/@:[:space:]]+(?:@sha256:[0-9a-f]{64})?$")
+        then
+          split("@")[0]
+        else
+          null
+        end;
       def identity:
         {
           release_id: .config.metadata.fly_release_id,
           release_version: .config.metadata.fly_release_version,
-          image: .config.image
+          image: (.config.image | canonical_image)
         };
       [
         .[]
@@ -79,11 +87,19 @@ validate_deployed_identity() {
   local worker_identity_summary
 
   if jq -e --argjson deployed "$DEPLOYED_IDENTITY" '
+    def canonical_image:
+      if type == "string"
+        and test("^[^/@:[:space:]]+(?::[0-9]+)?(?:/[^/@:[:space:]]+)+:[^/@:[:space:]]+(?:@sha256:[0-9a-f]{64})?$")
+      then
+        split("@")[0]
+      else
+        null
+      end;
     def identity:
       {
         release_id: .config.metadata.fly_release_id,
         release_version: .config.metadata.fly_release_version,
-        image: .config.image
+        image: (.config.image | canonical_image)
       };
     [
       .[]

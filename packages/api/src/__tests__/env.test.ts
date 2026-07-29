@@ -13,6 +13,9 @@ const KEYS = [
   'HARPAPRO_PR_BUILD',
   'EMAIL_OTP_LIVE',
   'MIGRATIONS_REQUIRED_HEAD',
+  'ADMIN_MIGRATIONS_REQUIRED_HEAD',
+  'DATABASE_URL',
+  'ADMIN_DATABASE_URL',
   'BETTER_AUTH_SECRET',
   'BETTER_AUTH_URL',
   'ADMIN_CORS_ORIGINS',
@@ -65,6 +68,9 @@ function setValidProductionEnv(): void {
     HARPAPRO_PR_BUILD: '0',
     EMAIL_OTP_LIVE: '1',
     MIGRATIONS_REQUIRED_HEAD: '0000_test.sql',
+    ADMIN_MIGRATIONS_REQUIRED_HEAD: '0001_admin_auth.sql',
+    DATABASE_URL: 'postgres://app:test@localhost:5432/harpa',
+    ADMIN_DATABASE_URL: 'postgres://admin:test@localhost:5433/harpa_admin',
     BETTER_AUTH_SECRET: 'test-only-production-auth-secret-over-32-chars',
     AI_FIXTURE_MODE: 'live',
     AI_LIVE: '1',
@@ -97,6 +103,8 @@ describe('env: email OTP transport', () => {
     process.env.HARPAPRO_PR_BUILD = '1';
     process.env.EMAIL_OTP_LIVE = '0';
     process.env.MIGRATIONS_REQUIRED_HEAD = '0000_test.sql';
+    process.env.ADMIN_MIGRATIONS_REQUIRED_HEAD = '0001_admin_auth.sql';
+    process.env.ADMIN_DATABASE_URL = 'postgres://admin:test@localhost:5433/harpa_admin';
     process.env.BETTER_AUTH_SECRET = 'test-only-preview-auth-secret-over-32-chars';
 
     const mod = await freshImportEnv();
@@ -181,6 +189,8 @@ describe('env: production services fail closed', () => {
       HARPAPRO_PR_BUILD: '1',
       EMAIL_OTP_LIVE: '0',
       MIGRATIONS_REQUIRED_HEAD: '0000_test.sql',
+      ADMIN_MIGRATIONS_REQUIRED_HEAD: '0001_admin_auth.sql',
+      ADMIN_DATABASE_URL: 'postgres://admin:test@localhost:5433/harpa_admin',
       BETTER_AUTH_SECRET: 'test-only-preview-auth-secret-over-32-chars',
       AI_FIXTURE_MODE: 'replay',
       AI_LIVE: '0',
@@ -193,6 +203,105 @@ describe('env: production services fail closed', () => {
     const mod = await freshImportEnv();
 
     expect(mod.env.HARPAPRO_PR_BUILD).toBe('1');
+  });
+
+  it('requires the independent admin database in production', async () => {
+    setValidProductionEnv();
+    delete process.env.ADMIN_DATABASE_URL;
+
+    await expect(freshImportEnv()).rejects.toThrow(/ADMIN_DATABASE_URL/);
+  });
+
+  it('requires the admin migration head in production', async () => {
+    setValidProductionEnv();
+    delete process.env.ADMIN_MIGRATIONS_REQUIRED_HEAD;
+
+    await expect(freshImportEnv()).rejects.toThrow(/ADMIN_MIGRATIONS_REQUIRED_HEAD/);
+  });
+
+  it('rejects an identical app and admin database URL in production', async () => {
+    setValidProductionEnv();
+    process.env.ADMIN_DATABASE_URL = process.env.DATABASE_URL;
+
+    await expect(freshImportEnv()).rejects.toThrow(/ADMIN_DATABASE_URL/);
+  });
+
+  it('rejects direct and pooled forms of the same Neon endpoint', async () => {
+    setValidProductionEnv();
+    process.env.DATABASE_URL =
+      'postgres://app:test@ep-example-pooler.eu-central-1.aws.neon.tech/harpa';
+    process.env.ADMIN_DATABASE_URL =
+      'postgres://admin:test@ep-example.eu-central-1.aws.neon.tech/harpa_admin';
+
+    await expect(freshImportEnv()).rejects.toThrow(/ADMIN_DATABASE_URL/);
+  });
+});
+
+describe('env: admin database isolation', () => {
+  it.each(['development', 'test'] as const)('rejects the app endpoint in %s', async (nodeEnv) => {
+    process.env.NODE_ENV = nodeEnv;
+    process.env.DATABASE_URL =
+      'postgres://app:test@ep-example-pooler.eu-central-1.aws.neon.tech/harpa';
+    process.env.ADMIN_DATABASE_URL =
+      'postgres://admin:test@ep-example.eu-central-1.aws.neon.tech/harpa_admin';
+
+    await expect(freshImportEnv()).rejects.toThrow(/same Postgres endpoint/);
+  });
+
+  it('accepts separate Testcontainers endpoints', async () => {
+    process.env.NODE_ENV = 'test';
+    process.env.DATABASE_URL = 'postgres://test:test@127.0.0.1:54320/harpa';
+    process.env.ADMIN_DATABASE_URL = 'postgres://test:test@127.0.0.1:54321/harpa_admin';
+
+    const mod = await freshImportEnv();
+
+    expect(mod.env.DATABASE_URL).toBe(process.env.DATABASE_URL);
+    expect(mod.env.ADMIN_DATABASE_URL).toBe(process.env.ADMIN_DATABASE_URL);
+  });
+});
+
+describe('env: Postgres connection URLs', () => {
+  it.each(['DATABASE_URL', 'ADMIN_DATABASE_URL'] as const)(
+    'rejects a non-Postgres %s',
+    async (key) => {
+      process.env.NODE_ENV = 'test';
+      process.env[key] = 'https://example.com/database';
+
+      await expect(freshImportEnv()).rejects.toThrow(new RegExp(key));
+    },
+  );
+
+  it.each(['DATABASE_URL', 'ADMIN_DATABASE_URL'] as const)(
+    'rejects a malformed %s that only has a Postgres prefix',
+    async (key) => {
+      process.env.NODE_ENV = 'test';
+      process.env[key] = 'postgres://';
+
+      await expect(freshImportEnv()).rejects.toThrow(new RegExp(key));
+    },
+  );
+
+  it.each([
+    ['DATABASE_URL', 'postgres://user:pw@database-host'],
+    ['DATABASE_URL', 'postgres://user:pw@database-host/'],
+    ['ADMIN_DATABASE_URL', 'postgresql://user:pw@admin-host'],
+    ['ADMIN_DATABASE_URL', 'postgresql://user:pw@admin-host/'],
+  ] as const)('rejects %s without a database pathname', async (key, value) => {
+    process.env.NODE_ENV = 'test';
+    process.env[key] = value;
+
+    await expect(freshImportEnv()).rejects.toThrow(new RegExp(key));
+  });
+
+  it('accepts both Postgres URL schemes', async () => {
+    process.env.NODE_ENV = 'test';
+    process.env.DATABASE_URL = 'postgresql://app:test@app-db:5432/harpa';
+    process.env.ADMIN_DATABASE_URL = 'postgres://admin:test@admin-db:5432/harpa_admin';
+
+    const mod = await freshImportEnv();
+
+    expect(mod.env.DATABASE_URL).toBe(process.env.DATABASE_URL);
+    expect(mod.env.ADMIN_DATABASE_URL).toBe(process.env.ADMIN_DATABASE_URL);
   });
 });
 

@@ -96,9 +96,26 @@ describe('AdminActivity', () => {
     expect(screen.queryByRole('table')).toBeNull();
   });
 
+  it('shows a retryable unavailable state when the session check fails', async () => {
+    authMock.getSession.mockRejectedValueOnce(new Error('offline')).mockResolvedValueOnce(null);
+    const user = userEvent.setup();
+
+    render(<AdminActivity />);
+
+    expect(await screen.findByText('Admin sign-in is unavailable.')).toBeTruthy();
+    expect(screen.queryByLabelText('Email')).toBeNull();
+    expect(screen.queryByLabelText('Password')).toBeNull();
+
+    await user.click(screen.getByRole('button', { name: 'Retry' }));
+
+    await waitFor(() => expect(authMock.getSession).toHaveBeenCalledTimes(2));
+    expect(await screen.findByLabelText('Email')).toBeTruthy();
+  });
+
   it('signs in through the visible email/password form without using browser storage', async () => {
-    authMock.getSession.mockResolvedValue(null);
+    authMock.getSession.mockResolvedValueOnce(null).mockResolvedValueOnce(adminSession);
     authMock.login.mockResolvedValue(adminSession);
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(activityResponse([]));
     const user = userEvent.setup();
     render(<AdminActivity />);
 
@@ -128,16 +145,20 @@ describe('AdminActivity', () => {
       password: 'correct horse battery staple 123',
     });
     await waitFor(() => expect(authMock.getSession).toHaveBeenCalledTimes(2));
-    expect(password.value).toBe('');
+    expect(
+      await screen.findByText(`Signed in as ${adminSession.email}.`, { exact: false }),
+    ).toBeTruthy();
+    expect(screen.queryByLabelText('Password')).toBeNull();
     expect(window.localStorage.length).toBe(0);
     expect(window.sessionStorage.length).toBe(0);
   });
 
   it('shows a generic error and clears the password after a failed login', async () => {
     authMock.getSession.mockResolvedValue(null);
-    authMock.login.mockRejectedValue(
-      new Error('disabled identity admin@harpapro.com does not exist'),
-    );
+    authMock.login.mockRejectedValue({
+      code: 'invalid_credentials',
+      message: 'disabled identity admin@harpapro.com does not exist',
+    });
     const user = userEvent.setup();
     render(<AdminActivity />);
 
@@ -152,6 +173,51 @@ describe('AdminActivity', () => {
     expect(screen.getByRole('button', { name: 'Sign in' })).not.toHaveProperty('disabled', true);
     expect(window.localStorage.length).toBe(0);
     expect(window.sessionStorage.length).toBe(0);
+  });
+
+  it('distinguishes rate limiting and service failures from invalid credentials', async () => {
+    authMock.getSession.mockResolvedValue(null);
+    authMock.login
+      .mockRejectedValueOnce({ code: 'rate_limited' })
+      .mockRejectedValueOnce(new Error('network unavailable'));
+    const user = userEvent.setup();
+    render(<AdminActivity />);
+
+    await user.type(await screen.findByLabelText('Email'), adminSession.email);
+    const password = screen.getByLabelText('Password');
+    await user.type(password, 'a sufficiently long admin password');
+    await user.click(screen.getByRole('button', { name: 'Sign in' }));
+
+    expect((await screen.findByRole('alert')).textContent).toBe(
+      'Too many sign-in attempts. Wait a few minutes and try again.',
+    );
+
+    await user.type(password, 'another sufficiently long password');
+    await user.click(screen.getByRole('button', { name: 'Sign in' }));
+
+    await waitFor(() =>
+      expect(screen.getByRole('alert').textContent).toBe(
+        'Admin sign-in is unavailable. Please try again.',
+      ),
+    );
+  });
+
+  it('requires the login cookie to establish a confirmed admin session', async () => {
+    authMock.getSession.mockResolvedValue(null);
+    authMock.login.mockResolvedValue(adminSession);
+    const user = userEvent.setup();
+    render(<AdminActivity />);
+
+    await user.type(await screen.findByLabelText('Email'), adminSession.email);
+    const password = screen.getByLabelText('Password') as HTMLInputElement;
+    await user.type(password, 'correct horse battery staple 123');
+    await user.click(screen.getByRole('button', { name: 'Sign in' }));
+
+    expect((await screen.findByRole('alert')).textContent).toBe(
+      'Sign-in could not establish an admin session. Check that cookies are enabled and try again.',
+    );
+    expect(authMock.getSession).toHaveBeenCalledTimes(2);
+    expect(password.value).toBe('');
   });
 
   it('renders, filters, paginates, and inspects the activity feed', async () => {

@@ -17,21 +17,21 @@ async function call(app: ReturnType<typeof buildApp>, headers: Record<string, st
 describe('clientIp', () => {
   const app = buildApp();
 
-  it('prefers cf-connecting-ip over everything', async () => {
+  it('prefers the Fly-authenticated address over spoofable forwarding headers', async () => {
     const out = await call(app, {
       'cf-connecting-ip': '1.1.1.1',
       'fly-client-ip': '2.2.2.2',
       'x-forwarded-for': '3.3.3.3, 4.4.4.4',
     });
-    expect(out.ip).toBe('1.1.1.1');
+    expect(out.ip).toBe('2.2.2.2');
   });
 
-  it('falls back to fly-client-ip when cf is missing', async () => {
+  it('falls back to cf-connecting-ip when Fly metadata is missing', async () => {
     const out = await call(app, {
-      'fly-client-ip': '2.2.2.2',
+      'cf-connecting-ip': '1.1.1.1',
       'x-forwarded-for': '3.3.3.3',
     });
-    expect(out.ip).toBe('2.2.2.2');
+    expect(out.ip).toBe('1.1.1.1');
   });
 
   it('uses first hop of x-forwarded-for when cf/fly are missing', async () => {
@@ -41,6 +41,15 @@ describe('clientIp', () => {
 
   it("returns 'unknown' when no proxy header is set", async () => {
     const out = await call(app, {});
+    expect(out.ip).toBe('unknown');
+  });
+
+  it('rejects invalid or oversized header values instead of using them as keys', async () => {
+    const out = await call(app, {
+      'fly-client-ip': 'not-an-ip',
+      'cf-connecting-ip': 'also-not-an-ip',
+      'x-forwarded-for': `${'1'.repeat(300)}, 3.3.3.3`,
+    });
     expect(out.ip).toBe('unknown');
   });
 });

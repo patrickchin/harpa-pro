@@ -1,7 +1,10 @@
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { createApp } from '../app.js';
+import { getAdminPool } from '../db/admin-client.js';
 import { getPool, resetPool } from '../db/client.js';
-import { hashAdminPassword } from '../services/admin-auth.js';
+import { resetAdminRateLimiter } from '../lib/adminRateLimiter.js';
+import { authenticateAdmin, hashAdminPassword, setAdminPassword } from '../services/admin-auth.js';
+import { startAdminPg, type AdminPgFixture } from './setup-admin-pg.js';
 import { startPg, type PgFixture } from './setup-pg.js';
 
 const ADMIN_ORIGIN = 'http://localhost:3002';
@@ -9,6 +12,7 @@ const ADMIN_EMAIL = 'browser-admin@harpapro.com';
 const ADMIN_PASSWORD = 'correct horse battery staple admin password';
 
 let fx: PgFixture;
+let adminFx: AdminPgFixture;
 
 function cookiePair(response: Response): string {
   const setCookie = response.headers.get('set-cookie');
@@ -32,21 +36,27 @@ async function login(
 }
 
 beforeAll(async () => {
-  fx = await startPg();
+  [fx, adminFx] = await Promise.all([startPg(), startAdminPg()]);
   process.env.DATABASE_URL = fx.url;
+  process.env.ADMIN_DATABASE_URL = adminFx.url;
   await resetPool();
   getPool(fx.url);
+  getAdminPool(adminFx.url);
 
-  await getPool().query(
-    `INSERT INTO app.admin_identities (id, email, password_hash)
+  await getAdminPool().query(
+    `INSERT INTO admin.identities (id, email, password_hash)
      VALUES ($1, $2, $3)`,
     ['adm_0123456789ab', ADMIN_EMAIL, await hashAdminPassword(ADMIN_PASSWORD)],
   );
 }, 120_000);
 
 afterAll(async () => {
-  await fx?.stop();
+  await Promise.all([fx?.stop(), adminFx?.stop()]);
 }, 60_000);
+
+beforeEach(() => {
+  resetAdminRateLimiter();
+});
 
 describe('dedicated admin browser authentication', () => {
   it('allows credentialed admin preflights only from the configured origin', async () => {
@@ -83,6 +93,82 @@ describe('dedicated admin browser authentication', () => {
       },
     });
     expect(rejected.headers.get('access-control-allow-origin')).toBeNull();
+  });
+
+  it('rejects oversized login bodies before rate limiting or authentication', async () => {
+    const email = 'body-limit@harpapro.com';
+    const password = 'body limit admin password deliberately long';
+    await setAdminPassword(email, password);
+    const oversizedBody = JSON.stringify({
+      email,
+      password,
+      padding: 'x'.repeat(8 * 1024),
+    });
+    const byteLength = Buffer.byteLength(oversizedBody);
+    expect(byteLength).toBeGreaterThan(8 * 1024);
+
+    const app = createApp();
+    const untrustedOriginResponse = await app.request('/admin/auth/login', {
+      method: 'POST',
+      headers: {
+        'content-length': String(byteLength),
+        'content-type': 'application/json',
+        origin: 'https://evil.example.com',
+      },
+      body: oversizedBody,
+    });
+    expect(untrustedOriginResponse.status).toBe(403);
+
+    const contentLengthResponse = await app.request('/admin/auth/login', {
+      method: 'POST',
+      headers: {
+        'content-length': String(byteLength),
+        'content-type': 'application/json',
+        origin: ADMIN_ORIGIN,
+      },
+      body: oversizedBody,
+    });
+
+    const streamedResponses: Response[] = [];
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      const request = new Request('http://localhost/admin/auth/login', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          origin: ADMIN_ORIGIN,
+        },
+        body: oversizedBody,
+      });
+      expect(request.headers.has('content-length')).toBe(false);
+      streamedResponses.push(await app.request(request));
+    }
+
+    for (const response of [contentLengthResponse, ...streamedResponses]) {
+      expect(response.status).toBe(413);
+      expect(response.headers.get('cache-control')).toContain('no-store');
+      await expect(response.json()).resolves.toEqual({
+        error: {
+          code: 'payload_too_large',
+          message: 'Request body is too large.',
+        },
+        requestId: expect.any(String),
+      });
+    }
+
+    const beforeValidLogin = await getAdminPool().query<{ count: number }>(
+      `SELECT count(*)::int AS count
+       FROM admin.sessions AS session
+       JOIN admin.identities AS identity
+         ON identity.id = session.admin_identity_id
+       WHERE identity.email = $1`,
+      [email],
+    );
+    expect(beforeValidLogin.rows).toEqual([{ count: 0 }]);
+
+    // Four oversized attempts would exhaust the three-per-minute burst
+    // bucket if any rate-limit middleware had run.
+    const validLogin = await login(email, password);
+    expect(validLogin.status).toBe(200);
   });
 
   it('sets only the dedicated HttpOnly cookie and reads the session', async () => {
@@ -123,6 +209,47 @@ describe('dedicated admin browser authentication', () => {
     expect(new Set(bodies).size).toBe(1);
     expect(bodies[0]).not.toContain(ADMIN_EMAIL);
     expect(bodies[0]).not.toMatch(/unknown|domain|disabled/i);
+  });
+
+  it('does not create a session from a password verified before rotation', async () => {
+    const email = 'password-race@harpapro.com';
+    const oldPassword = 'old admin password deliberately long enough';
+    const newPassword = 'new admin password deliberately long enough';
+    await setAdminPassword(email, oldPassword);
+
+    let markVerified!: () => void;
+    const verified = new Promise<void>((resolve) => {
+      markVerified = resolve;
+    });
+    let releaseVerification!: () => void;
+    const rotationCommitted = new Promise<void>((resolve) => {
+      releaseVerification = resolve;
+    });
+
+    const inFlightLogin = authenticateAdmin(email, oldPassword, {
+      testOnlyAfterPasswordVerified: async () => {
+        markVerified();
+        await rotationCommitted;
+      },
+    });
+
+    await verified;
+    try {
+      await setAdminPassword(email, newPassword);
+    } finally {
+      releaseVerification();
+    }
+
+    await expect(inFlightLogin).resolves.toBeNull();
+    const sessionCount = await getAdminPool().query<{ count: number }>(
+      `SELECT count(*)::int AS count
+       FROM admin.sessions AS session
+       JOIN admin.identities AS identity
+         ON identity.id = session.admin_identity_id
+       WHERE identity.email = $1`,
+      [email],
+    );
+    expect(sessionCount.rows).toEqual([{ count: 0 }]);
   });
 
   it('requires an exact trusted Origin for login', async () => {

@@ -73,17 +73,20 @@ Canonical-source files:
 ## 2. Alternatives considered
 
 ### A. **Adopt `@upstash/ratelimit` directly, drop the in-house abstraction.**
+
 Pros: zero in-house code, well-tested sliding-window algorithm.
 Cons: requires Upstash in CI (or a mock — Pitfall 13 again), couples
 test ergonomics to a vendor lib, and the existing `RateLimiter`
-interface already abstracts the right shape. *Rejected.*
+interface already abstracts the right shape. _Rejected._
 
 ### B. **Continue with `MemoryRateLimiter` everywhere, add per-machine budget = configured/N.**
+
 Pros: no new dependency. Cons: needs to read `fly scale show` at boot,
 breaks under autoscale-up between reads, and divides the budget
-poorly when traffic is sticky on one machine. *Rejected.*
+poorly when traffic is sticky on one machine. _Rejected._
 
 ### C. **(Chosen)** Keep the `RateLimiter` interface; ship a
+
 **`PostgresRateLimiter`** that uses the existing Neon connection
 plus an `app.rate_limit_buckets` table. Add a thin
 **`UpstashRateLimiter`** sibling later if/when Upstash is introduced
@@ -118,13 +121,18 @@ prod silently broken" regression.
 ```ts
 export function clientIp(c: Context<AppEnv>): string {
   return (
-    c.req.header('cf-connecting-ip') ??
     c.req.header('fly-client-ip') ??
+    c.req.header('cf-connecting-ip') ??
     (c.req.header('x-forwarded-for') ?? '').split(',')[0]?.trim() ??
     'unknown'
   );
 }
 ```
+
+The implementation accepts only syntactically valid IPv4/IPv6 values. Fly is
+first because deployed browser traffic reaches the API directly through Fly;
+an external caller can spoof `CF-Connecting-IP`, but cannot override Fly's
+platform-provided `Fly-Client-IP`.
 
 `waitlist.ts` re-uses this helper instead of redefining it.
 
@@ -171,19 +179,19 @@ caller anyway).
 
 Per-route budgets (additive to the existing AI route budgets):
 
-| Route | keyBy | Limit | Window |
-|---|---|---|---|
-| `POST /api/auth/email-otp/send-verification-otp` | `email` | 3 | 15 min |
-| `POST /api/auth/email-otp/send-verification-otp` | `ip` | 10 | 1 h |
-| `POST /api/auth/sign-in/email-otp` | `email` | 10 | 15 min |
-| `POST /api/auth/sign-in/email-otp` | `ip` | 30 | 1 h |
-| `POST /api/auth/sign-in/email` | `email` | 10 | 1 min *(existing, refactored to middleware)* |
-| `POST /waitlist` | `ip` | 5 | 1 h *(existing, refactored)* |
-| `POST /waitlist` | `ip` | 50 | 1 d *(existing, refactored)* |
-| `POST /waitlist/confirm` | `ip` | 30 | 1 h |
-| **default (catch-all authed)** | `user` | 600 | 1 min |
-| **default (catch-all unauthed)** | `ip` | 120 | 1 min |
-| **shared AI** (`ai.user`) | `user` | 60 | 1 min |
+| Route                                            | keyBy   | Limit | Window                                       |
+| ------------------------------------------------ | ------- | ----- | -------------------------------------------- |
+| `POST /api/auth/email-otp/send-verification-otp` | `email` | 3     | 15 min                                       |
+| `POST /api/auth/email-otp/send-verification-otp` | `ip`    | 10    | 1 h                                          |
+| `POST /api/auth/sign-in/email-otp`               | `email` | 10    | 15 min                                       |
+| `POST /api/auth/sign-in/email-otp`               | `ip`    | 30    | 1 h                                          |
+| `POST /api/auth/sign-in/email`                   | `email` | 10    | 1 min _(existing, refactored to middleware)_ |
+| `POST /waitlist`                                 | `ip`    | 5     | 1 h _(existing, refactored)_                 |
+| `POST /waitlist`                                 | `ip`    | 50    | 1 d _(existing, refactored)_                 |
+| `POST /waitlist/confirm`                         | `ip`    | 30    | 1 h                                          |
+| **default (catch-all authed)**                   | `user`  | 600   | 1 min                                        |
+| **default (catch-all unauthed)**                 | `ip`    | 120   | 1 min                                        |
+| **shared AI** (`ai.user`)                        | `user`  | 60    | 1 min                                        |
 
 The shared AI budget is implemented as a **second** middleware mounted
 alongside each per-route AI limit. Both must pass; the per-route one
@@ -194,6 +202,32 @@ auth middleware resolves `userId` for the request — i.e. as an
 `app.use('*', ...)`. Routes that opt out (e.g. `/healthz`, `/readyz`)
 do so by appearing in a small static skip-list inside the global
 middleware.
+
+The dedicated admin browser surface uses separate budgets and the limiter
+stored in `ADMIN_DATABASE_URL`:
+
+| Route                                     | keyBy                    | Limit | Window |
+| ----------------------------------------- | ------------------------ | ----- | ------ |
+| all `/admin/auth/*` and `/admin/activity` | trusted Fly client IP    | 120   | 1 min  |
+| `POST /admin/auth/login`                  | trusted Fly client IP    | 3     | 1 min  |
+| `POST /admin/auth/login`                  | trusted Fly client IP    | 20    | 15 min |
+| `POST /admin/auth/login`                  | canonical email          | 5     | 15 min |
+| `GET /admin/activity`                     | admin identity + session | 120   | 1 min  |
+
+The shared trusted-IP gate protects admin-session database lookups,
+including invalid-cookie probes to the activity route. The two login IP
+limits reject before password verification. The canonical-email bucket
+counts every attempt but rejects only an invalid login after uniform
+password verification; valid credentials still succeed when only that
+bucket is exhausted. The activity-specific limiter runs after
+`withAdminSession()`, so anonymous traffic behind a shared NAT cannot consume
+an administrator's activity budget.
+
+`/admin/auth/*`, `/admin/activity`, and `/admin/readyz` skip the application
+catch-all limiter. Admin auth and activity use the admin-database limiter;
+admin readiness uses neither limiter. Concurrent readiness requests share
+one probe, with successful results cached for two seconds and failures for
+one second.
 
 ### 3.4 Backend: `PostgresRateLimiter`
 
@@ -227,6 +261,13 @@ per machine). One machine doing GC is fine; the others no-op via
 This bucket table is **outside** the per-request scope wrapper — it
 uses an admin namespace connection, same as `auth.sessions`. No RLS;
 no per-user policies needed (the value `count` is never user-visible).
+
+The separate admin-auth database has a sibling
+`admin.rate_limit_buckets` table, its own pool and migration stream, and its
+own GC timer. It is reached only through `ADMIN_DATABASE_URL`; admin browser
+limits never read or write `app.rate_limit_buckets`. The admin table revokes
+`PUBLIC` privileges and enables RLS without policies as a fail-closed
+boundary.
 
 ### 3.5 Backend selection (Pitfall 13)
 
@@ -270,6 +311,11 @@ headers. When multiple limiters reject the same request (e.g. shared
 AI + per-route AI), the headers reflect the **shortest** reset
 (soonest the client can retry) and the lower `Limit`. A small helper
 `pickTightest(results)` makes this explicit.
+
+One intentional admin-login exception is that a verified login can return
+`200` with `X-RateLimit-Remaining: 0` when only the canonical-email bucket is
+exhausted. This prevents an attacker rotating IPs from locking out a known
+administrator address.
 
 ### 3.7 Test inventory
 

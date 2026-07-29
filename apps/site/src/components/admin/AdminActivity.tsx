@@ -8,9 +8,17 @@ import {
 import { activity as activitySchemas } from '@harpa/api-contract';
 import type { activity } from '@harpa/api-contract';
 import { adminAuthClient } from '../../lib/admin-auth';
+import type { AdminSession } from '../../lib/admin-auth';
 import { getPublicEnv } from '../../lib/env';
 
 type FeedState = 'loading' | 'ready' | 'forbidden' | 'error';
+type SessionState =
+  | { status: 'loading' }
+  | { status: 'unavailable' }
+  | { status: 'signed-out' }
+  | { status: 'signed-in'; session: AdminSession };
+
+type RefetchSession = () => Promise<AdminSession | null>;
 
 interface Filters {
   eventType: '' | activity.EventType;
@@ -47,51 +55,43 @@ function toIso(value: string): string | null {
   return Number.isNaN(date.getTime()) ? null : date.toISOString();
 }
 
-function SignIn({ refetchSession }: { refetchSession: () => Promise<unknown> }) {
-  const [email, setEmail] = useState('');
-  const [code, setCode] = useState('');
-  const [codeSent, setCodeSent] = useState(false);
-  const [pending, setPending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  async function sendCode(event: React.SubmitEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setPending(true);
-    setError(null);
-    try {
-      const result = await adminAuthClient.emailOtp.sendVerificationOtp({
-        email: email.trim().toLowerCase(),
-        type: 'sign-in',
-      });
-      if (result.error) {
-        setError(result.error.message ?? 'Unable to send a code.');
-        return;
-      }
-      setCodeSent(true);
-    } catch {
-      setError('Unable to send a code.');
-    } finally {
-      setPending(false);
+function signInErrorMessage(error: unknown): string {
+  if (typeof error === 'object' && error !== null && 'code' in error) {
+    if (error.code === 'invalid_credentials') return 'Invalid email or password.';
+    if (error.code === 'rate_limited') {
+      return 'Too many sign-in attempts. Wait a few minutes and try again.';
     }
   }
 
-  async function verifyCode(event: React.SubmitEvent<HTMLFormElement>) {
+  return 'Admin sign-in is unavailable. Please try again.';
+}
+
+const SESSION_NOT_ESTABLISHED =
+  'Sign-in could not establish an admin session. Check that cookies are enabled and try again.';
+
+function SignIn({ refetchSession }: { refetchSession: RefetchSession }) {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function signIn(event: React.SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
     setPending(true);
     setError(null);
+    let loginSucceeded = false;
     try {
-      const result = await adminAuthClient.signIn.emailOtp({
+      await adminAuthClient.login({
         email: email.trim().toLowerCase(),
-        otp: code.trim(),
+        password,
       });
-      if (result.error) {
-        setError(result.error.message ?? 'That code could not be verified.');
-        return;
-      }
-      await refetchSession();
-    } catch {
-      setError('That code could not be verified.');
+      loginSucceeded = true;
+      const confirmedSession = await refetchSession();
+      if (!confirmedSession) setError(SESSION_NOT_ESTABLISHED);
+    } catch (cause) {
+      setError(loginSucceeded ? SESSION_NOT_ESTABLISHED : signInErrorMessage(cause));
     } finally {
+      setPassword('');
       setPending(false);
     }
   }
@@ -101,55 +101,41 @@ function SignIn({ refetchSession }: { refetchSession: () => Promise<unknown> }) 
       <p className="text-xs font-bold uppercase tracking-[0.16em] text-accent-ink">Private admin</p>
       <h1 className="mt-2 text-2xl font-semibold text-ink">Sign in to activity</h1>
       <p className="mt-2 text-sm leading-relaxed text-ink-soft">
-        Use the email address on your Harpa Pro admin account.
+        Use your provisioned @harpapro.com admin email and password.
       </p>
 
-      {!codeSent ? (
-        <form className="mt-6 grid gap-4" onSubmit={sendCode}>
-          <label className="grid gap-1.5 text-sm font-medium text-ink">
-            Email
-            <input
-              className={inputClass}
-              type="email"
-              autoComplete="email"
-              required
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-            />
-          </label>
-          <button className={primaryButtonClass} disabled={pending} type="submit">
-            {pending ? 'Sending…' : 'Send code'}
-          </button>
-        </form>
-      ) : (
-        <form className="mt-6 grid gap-4" onSubmit={verifyCode}>
-          <label className="grid gap-1.5 text-sm font-medium text-ink">
-            Verification code
-            <input
-              className={inputClass}
-              inputMode="numeric"
-              autoComplete="one-time-code"
-              required
-              value={code}
-              onChange={(event) => setCode(event.target.value)}
-            />
-          </label>
-          <button className={primaryButtonClass} disabled={pending} type="submit">
-            {pending ? 'Verifying…' : 'Verify code'}
-          </button>
-          <button
-            className="text-sm text-ink-soft underline underline-offset-4"
-            type="button"
-            onClick={() => {
-              setCodeSent(false);
-              setCode('');
-              setError(null);
-            }}
-          >
-            Use a different email
-          </button>
-        </form>
-      )}
+      <form className="mt-6 grid gap-4" onSubmit={signIn}>
+        <label className="grid gap-1.5 text-sm font-medium text-ink">
+          Email
+          <input
+            className={inputClass}
+            type="email"
+            autoComplete="username"
+            autoCapitalize="none"
+            pattern="[^\s@]+@harpapro\.com"
+            required
+            spellCheck={false}
+            value={email}
+            onChange={(event) => setEmail(event.target.value.toLowerCase())}
+          />
+        </label>
+        <label className="grid gap-1.5 text-sm font-medium text-ink">
+          Password
+          <input
+            className={inputClass}
+            type="password"
+            autoComplete="current-password"
+            minLength={20}
+            maxLength={128}
+            required
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+          />
+        </label>
+        <button className={primaryButtonClass} disabled={pending} type="submit">
+          {pending ? 'Signing in…' : 'Sign in'}
+        </button>
+      </form>
 
       {error && (
         <p className="mt-4 text-sm text-red-700" role="alert">
@@ -167,7 +153,7 @@ function ActivityFeed({
   refetchSession,
 }: {
   email: string;
-  refetchSession: () => Promise<unknown>;
+  refetchSession: RefetchSession;
 }) {
   const { apiBaseUrl } = getPublicEnv();
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
@@ -280,8 +266,11 @@ function ActivityFeed({
   });
 
   async function signOut() {
-    await adminAuthClient.signOut();
-    await refetchSession();
+    try {
+      await adminAuthClient.logout();
+    } finally {
+      await refetchSession();
+    }
   }
 
   return (
@@ -530,16 +519,50 @@ function ActivityFeed({
 }
 
 export default function AdminActivity() {
-  const session = adminAuthClient.useSession();
+  const [sessionState, setSessionState] = useState<SessionState>({ status: 'loading' });
 
-  if (session.isPending) {
+  const refetchSession = useCallback(async () => {
+    const next = await adminAuthClient.getSession();
+    setSessionState(next ? { status: 'signed-in', session: next } : { status: 'signed-out' });
+    return next;
+  }, []);
+
+  const checkSession = useCallback(async () => {
+    setSessionState({ status: 'loading' });
+    try {
+      await refetchSession();
+    } catch {
+      setSessionState({ status: 'unavailable' });
+    }
+  }, [refetchSession]);
+
+  useEffect(() => {
+    void checkSession();
+  }, [checkSession]);
+
+  if (sessionState.status === 'loading') {
     return (
       <div className="rounded-xl border border-hairline bg-card p-10 text-center text-sm text-ink-soft">
         Checking admin session…
       </div>
     );
   }
-  if (!session.data) return <SignIn refetchSession={session.refetch} />;
+  if (sessionState.status === 'unavailable') {
+    return (
+      <section className="mx-auto max-w-md rounded-2xl border border-hairline bg-card p-6 text-center shadow-sm">
+        <h1 className="text-xl font-semibold text-ink">Admin sign-in is unavailable.</h1>
+        <p className="mt-2 text-sm text-ink-soft">
+          The admin session could not be checked. Try again when the service is available.
+        </p>
+        <button className={`${buttonClass} mt-4`} type="button" onClick={() => void checkSession()}>
+          Retry
+        </button>
+      </section>
+    );
+  }
+  if (sessionState.status === 'signed-out') {
+    return <SignIn refetchSession={refetchSession} />;
+  }
 
-  return <ActivityFeed email={session.data.user.email} refetchSession={session.refetch} />;
+  return <ActivityFeed email={sessionState.session.email} refetchSession={refetchSession} />;
 }

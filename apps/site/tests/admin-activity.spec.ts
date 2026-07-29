@@ -1,7 +1,9 @@
 import { expect, test } from '@playwright/test';
 
-const API_BASE_URL = 'http://localhost:8787';
-const SITE_ORIGIN = 'http://localhost:3002';
+const API_PORT = process.env.ADMIN_E2E_API_PORT ?? '8787';
+const SITE_PORT = process.env.ADMIN_E2E_SITE_PORT ?? '3002';
+const API_BASE_URL = `http://localhost:${API_PORT}`;
+const SITE_ORIGIN = `http://localhost:${SITE_PORT}`;
 const ADMIN_EMAIL = 'admin-activity@harpapro.com';
 const ADMIN_PASSWORD = 'admin-activity-e2e-password';
 
@@ -86,6 +88,8 @@ test('signs in through the visible admin form and signs out', async ({ context, 
   await expect(detail).toBeVisible();
   await expect(detail.getByText('request-admin-activity-e2e', { exact: true })).toBeVisible();
   await expect(detail.locator('pre')).toContainText('"reportNumber": 7');
+  await detail.getByRole('button', { name: 'Close' }).click();
+  await expect(detail).toBeHidden();
 
   const logoutResponsePromise = page.waitForResponse((response) => {
     const url = new URL(response.url());

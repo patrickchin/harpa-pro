@@ -8,12 +8,14 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { sql } from 'drizzle-orm';
 import { createApp } from '../../app.js';
+import { getAdminPool } from '../../db/admin-client.js';
 import { getPool, rawDb, resetPool } from '../../db/client.js';
 import { withAnonConnection, withScopedConnection } from '../../db/scope.js';
 import { newId } from '../../lib/ids.js';
 import { signTestToken } from '../../middleware/auth.js';
 import { hashAdminPassword } from '../../services/admin-auth.js';
 import { makeSessionId, makeUserId } from '../factories/index.js';
+import { startAdminPg, type AdminPgFixture } from '../setup-admin-pg.js';
 import { seedAuthUsers, startPg, type PgFixture } from '../setup-pg.js';
 
 const ADMIN_ORIGIN = 'http://localhost:3002';
@@ -21,6 +23,7 @@ const CONSOLE_EMAIL = 'activity-scope@harpapro.com';
 const CONSOLE_PASSWORD = 'activity scope password is deliberately long';
 
 let fx: PgFixture;
+let adminFx: AdminPgFixture;
 let legacyAdminId: string;
 let legacyAdminSessionId: string;
 let regularId: string;
@@ -29,10 +32,12 @@ let activityId: string;
 let adminCookie: string;
 
 beforeAll(async () => {
-  fx = await startPg();
+  [fx, adminFx] = await Promise.all([startPg(), startAdminPg()]);
   process.env.DATABASE_URL = fx.url;
+  process.env.ADMIN_DATABASE_URL = adminFx.url;
   await resetPool();
   getPool(fx.url);
+  getAdminPool(adminFx.url);
 
   legacyAdminId = makeUserId();
   legacyAdminSessionId = makeSessionId();
@@ -54,8 +59,8 @@ beforeAll(async () => {
     },
   ]);
 
-  await getPool().query(
-    `INSERT INTO app.admin_identities (id, email, password_hash)
+  await getAdminPool().query(
+    `INSERT INTO admin.identities (id, email, password_hash)
      VALUES ($1, $2, $3)`,
     ['adm_123456789abc', CONSOLE_EMAIL, await hashAdminPassword(CONSOLE_PASSWORD)],
   );
@@ -88,7 +93,7 @@ beforeAll(async () => {
 }, 120_000);
 
 afterAll(async () => {
-  await fx?.stop();
+  await Promise.all([fx?.stop(), adminFx?.stop()]);
 }, 60_000);
 
 describe('scope: GET /admin/activity', () => {
@@ -126,31 +131,71 @@ describe('scope: GET /admin/activity', () => {
     expect(body.items.map((item) => item.id)).toContain(activityId);
   });
 
-  it.each(['admin_identities', 'admin_sessions'])(
-    'keeps app.%s unreadable to anonymous DB scope',
-    async (table) => {
-      await expect(
-        withAnonConnection(async (db) => {
-          await db.execute(sql.raw(`SELECT id FROM app.${table}`));
-        }),
-      ).rejects.toThrow(/permission denied/i);
-    },
-  );
+  it('keeps activity events unreadable to anonymous DB scope', async () => {
+    await expect(
+      withAnonConnection(async (db) => {
+        await db.execute(sql`SELECT id FROM app.activity_events`);
+      }),
+    ).rejects.toThrow(/permission denied/i);
+  });
 
-  it.each(['admin_identities', 'admin_sessions'])(
-    'keeps app.%s unreadable to app-user DB scope',
-    async (table) => {
-      await expect(
-        withScopedConnection({ sub: regularId, sid: regularSessionId }, async (db) => {
-          await db.execute(sql.raw(`SELECT id FROM app.${table}`));
-        }),
-      ).rejects.toThrow(/permission denied/i);
-    },
-  );
+  it('keeps activity events unreadable to app-user DB scope', async () => {
+    await expect(
+      withScopedConnection({ sub: regularId, sid: regularSessionId }, async (db) => {
+        await db.execute(sql`SELECT id FROM app.activity_events`);
+      }),
+    ).rejects.toThrow(/permission denied/i);
+  });
+
+  it('does not create admin-auth tables in the application database', async () => {
+    const result = await rawDb().execute<{
+      identities: string | null;
+      sessions: string | null;
+    }>(sql`
+      SELECT
+        to_regclass('admin.identities')::text AS identities,
+        to_regclass('admin.sessions')::text AS sessions
+    `);
+    expect(result.rows).toEqual([{ identities: null, sessions: null }]);
+  });
+
+  it('does not grant PUBLIC access to the admin schema or tables', async () => {
+    await getAdminPool().query('CREATE ROLE admin_auth_privilege_probe NOLOGIN');
+    const result = await getAdminPool().query<{
+      schema_usage: boolean;
+      identities_select: boolean;
+      sessions_select: boolean;
+    }>(
+      `SELECT
+         has_schema_privilege(
+           'admin_auth_privilege_probe',
+           'admin',
+           'USAGE'
+         ) AS schema_usage,
+         has_table_privilege(
+           'admin_auth_privilege_probe',
+           'admin.identities',
+           'SELECT'
+         ) AS identities_select,
+         has_table_privilege(
+           'admin_auth_privilege_probe',
+           'admin.sessions',
+           'SELECT'
+         ) AS sessions_select`,
+    );
+    expect(result.rows).toEqual([
+      {
+        schema_usage: false,
+        identities_select: false,
+        sessions_select: false,
+      },
+    ]);
+  });
 
   it('negative control: superuser scope can read the dedicated identity', async () => {
-    const result = await rawDb().execute<{ email: string }>(
-      sql`SELECT email::text AS email FROM app.admin_identities WHERE email = ${CONSOLE_EMAIL}`,
+    const result = await getAdminPool().query<{ email: string }>(
+      `SELECT email FROM admin.identities WHERE email = $1`,
+      [CONSOLE_EMAIL],
     );
     expect(result.rows).toEqual([{ email: CONSOLE_EMAIL }]);
   });

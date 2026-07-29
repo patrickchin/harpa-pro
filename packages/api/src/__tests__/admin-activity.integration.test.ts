@@ -1,17 +1,33 @@
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import pg from 'pg';
 import { activity as activitySchemas } from '@harpa/api-contract';
 import { createApp } from '../app.js';
+import { getAdminPool, resetAdminPool } from '../db/admin-client.js';
 import { getPool, resetPool } from '../db/client.js';
+import { ADMIN_SESSION_COOKIE_NAME } from '../lib/admin-cookie.js';
+import { resetAdminRateLimiter, setAdminRateLimiter } from '../lib/adminRateLimiter.js';
 import { newId } from '../lib/ids.js';
+import {
+  MemoryRateLimiter,
+  resetRateLimiter,
+  setRateLimiter,
+  type RateLimiter,
+  type RateLimiterResult,
+} from '../lib/rateLimiter.js';
 import { signTestToken } from '../middleware/auth.js';
+import { setAdminPassword } from '../services/admin-auth.js';
 import { makeProjectId, makeReportId, makeSessionId, makeUserId } from './factories/index.js';
+import { startAdminPg, type AdminPgFixture } from './setup-admin-pg.js';
 import { seedAuthUsers, startPg, type PgFixture } from './setup-pg.js';
 
+const ADMIN_ORIGIN = 'http://localhost:3002';
+const ADMIN_EMAIL = 'activity-list@harpapro.com';
+const ADMIN_PASSWORD = 'activity list admin password deliberately long';
+
 let fx: PgFixture;
+let adminFx: AdminPgFixture;
 let db: pg.Client;
-let adminId: string;
-let adminSessionId: string;
+let adminCookie: string;
 let regularId: string;
 let regularSessionId: string;
 let actorId: string;
@@ -24,21 +40,65 @@ let signupEventId: string;
 let deletedProjectEventId: string;
 let deletedUserEventId: string;
 
+class RecordingRateLimiter implements RateLimiter {
+  readonly calls: Array<{
+    key: string;
+    limit: number;
+    windowMs: number;
+  }> = [];
+
+  async consume(key: string, limit: number, windowMs: number): Promise<RateLimiterResult> {
+    this.calls.push({ key, limit, windowMs });
+    return {
+      success: true,
+      limit,
+      remaining: Math.max(0, limit - 1),
+      reset: Date.now() + windowMs,
+    };
+  }
+}
+
+class FailingAppRateLimiter implements RateLimiter {
+  calls = 0;
+
+  async consume(): Promise<RateLimiterResult> {
+    this.calls += 1;
+    throw new Error('application database limiter must not run');
+  }
+}
+
+class OneActivityRequestRateLimiter extends MemoryRateLimiter {
+  override consume(key: string, _limit: number, windowMs: number) {
+    const limit = key.startsWith('admin.activity.read.1m:') ? 1 : 120;
+    return super.consume(key, limit, windowMs);
+  }
+}
+
+class OneRequestRateLimiter extends MemoryRateLimiter {
+  override consume(key: string, _limit: number, windowMs: number) {
+    return super.consume(key, 1, windowMs);
+  }
+}
+
 async function adminHeaders(): Promise<Record<string, string>> {
-  const token = await signTestToken(adminId, adminSessionId);
-  return { authorization: `Bearer ${token}` };
+  return {
+    cookie: adminCookie,
+    origin: ADMIN_ORIGIN,
+  };
 }
 
 beforeAll(async () => {
-  fx = await startPg();
+  [fx, adminFx] = await Promise.all([startPg(), startAdminPg()]);
   process.env.DATABASE_URL = fx.url;
+  process.env.ADMIN_DATABASE_URL = adminFx.url;
   await resetPool();
+  await resetAdminPool();
   getPool(fx.url);
+  getAdminPool(adminFx.url);
+  resetRateLimiter();
 
-  adminId = makeUserId();
   regularId = makeUserId();
   actorId = makeUserId();
-  adminSessionId = makeSessionId();
   regularSessionId = makeSessionId();
   projectId = makeProjectId();
   reportId = makeReportId();
@@ -50,12 +110,6 @@ beforeAll(async () => {
   deletedUserEventId = newId('aud');
 
   await seedAuthUsers(fx.url, [
-    {
-      id: adminId,
-      email: 'admin-activity@example.com',
-      displayName: 'Activity Admin',
-      isAdmin: true,
-    },
     {
       id: regularId,
       email: 'regular-activity@example.com',
@@ -123,15 +177,39 @@ beforeAll(async () => {
       `project.created:${deletedProjectId}`,
     ],
   );
+
+  await setAdminPassword(ADMIN_EMAIL, ADMIN_PASSWORD);
+  const login = await createApp().request('/admin/auth/login', {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      origin: ADMIN_ORIGIN,
+    },
+    body: JSON.stringify({
+      email: ADMIN_EMAIL,
+      password: ADMIN_PASSWORD,
+    }),
+  });
+  if (login.status !== 200) {
+    throw new Error(`dedicated admin login failed with ${login.status}`);
+  }
+  const setCookie = login.headers.get('set-cookie');
+  if (!setCookie) throw new Error('dedicated admin login did not set a cookie');
+  adminCookie = setCookie.split(';')[0]!;
 }, 120_000);
 
 afterAll(async () => {
   await db?.end();
-  await fx?.stop();
+  await Promise.all([fx?.stop(), adminFx?.stop()]);
 }, 60_000);
 
+beforeEach(() => {
+  resetRateLimiter();
+  resetAdminRateLimiter();
+});
+
 describe('GET /admin/activity', () => {
-  it('requires an authenticated admin', async () => {
+  it('requires a dedicated authenticated admin', async () => {
     const app = createApp();
     const anonymous = await app.request('/admin/activity');
     expect(anonymous.status).toBe(401);
@@ -140,7 +218,7 @@ describe('GET /admin/activity', () => {
     const regular = await app.request('/admin/activity', {
       headers: { authorization: `Bearer ${token}` },
     });
-    expect(regular.status).toBe(403);
+    expect(regular.status).toBe(401);
   });
 
   it('returns display-ready events newest first without caching', async () => {
@@ -240,5 +318,84 @@ describe('GET /admin/activity', () => {
       headers: await adminHeaders(),
     });
     expect(response.status).toBe(400);
+  });
+
+  it('authenticates before consuming the dedicated activity bucket', async () => {
+    const appLimiter = new FailingAppRateLimiter();
+    const adminLimiter = new RecordingRateLimiter();
+    setRateLimiter(appLimiter);
+    setAdminRateLimiter(adminLimiter);
+
+    const anonymous = await Promise.all(
+      Array.from({ length: 3 }, () =>
+        createApp().request('/admin/activity', {
+          headers: { 'fly-client-ip': '203.0.113.90' },
+        }),
+      ),
+    );
+    expect(anonymous.map((response) => response.status)).toEqual([401, 401, 401]);
+    expect(adminLimiter.calls).toHaveLength(3);
+    expect(
+      adminLimiter.calls.filter((call) => call.key.startsWith('admin.activity.read.1m:')),
+    ).toEqual([]);
+
+    const authenticated = await createApp().request('/admin/activity', {
+      headers: {
+        ...(await adminHeaders()),
+        'fly-client-ip': '203.0.113.90',
+      },
+    });
+    expect(authenticated.status).toBe(200);
+    expect(appLimiter.calls).toBe(0);
+    expect(adminLimiter.calls).toHaveLength(5);
+    expect(adminLimiter.calls[3]).toMatchObject({
+      key: 'admin.auth.ip.1m:fn:203.0.113.90',
+      limit: 120,
+      windowMs: 60_000,
+    });
+    expect(adminLimiter.calls[4]).toMatchObject({
+      limit: 120,
+      windowMs: 60_000,
+    });
+    expect(adminLimiter.calls[4]?.key).toMatch(
+      /^admin[.]activity[.]read[.]1m:fn:adm_[^:]+:ads_[^:]+$/,
+    );
+  });
+
+  it('rate limits repeated invalid-cookie database probes by trusted Fly IP', async () => {
+    const appLimiter = new FailingAppRateLimiter();
+    setRateLimiter(appLimiter);
+    setAdminRateLimiter(new OneRequestRateLimiter());
+    const headers = {
+      cookie: `${ADMIN_SESSION_COOKIE_NAME}=${'a'.repeat(43)}`,
+      'fly-client-ip': '203.0.113.91',
+    };
+
+    const rejected = await createApp().request('/admin/activity', { headers });
+    const limited = await createApp().request('/admin/activity', { headers });
+
+    expect(rejected.status).toBe(401);
+    expect(limited.status).toBe(429);
+    expect(limited.headers.get('x-ratelimit-limit')).toBe('1');
+    expect(appLimiter.calls).toBe(0);
+  });
+
+  it('returns 429 after the authenticated activity bucket is exhausted', async () => {
+    const appLimiter = new FailingAppRateLimiter();
+    setRateLimiter(appLimiter);
+    setAdminRateLimiter(new OneActivityRequestRateLimiter());
+    const headers = await adminHeaders();
+
+    const first = await createApp().request('/admin/activity', {
+      headers,
+    });
+    const limited = await createApp().request('/admin/activity', {
+      headers,
+    });
+
+    expect(first.status).toBe(200);
+    expect(limited.status).toBe(429);
+    expect(limited.headers.get('x-ratelimit-limit')).toBe('1');
+    expect(appLimiter.calls).toBe(0);
   });
 });

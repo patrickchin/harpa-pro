@@ -26,86 +26,121 @@ update.
 
 ### Auth (`/api/auth/*`, public — handled by better-auth)
 
-| Method | Path | Purpose |
-|---|---|---|
-| POST | `/api/auth/email-otp/send-verification-otp` | Send email OTP via Resend |
-| POST | `/api/auth/sign-in/email-otp` | Verify six-digit OTP and issue session |
-| POST | `/api/auth/sign-in/email` | Test-account and demo-account password sign-in (allow-listed via `TEST_ACCOUNT_EMAILS` / `DEMO_ACCOUNT_EMAILS`) |
-| POST | `/api/auth/sign-out` | Delete session |
-| GET | `/me` | Current user profile |
-| PATCH | `/me` | Update profile (name, company) |
-| GET | `/me/usage` | Per-month report counts (for usage screen). Includes effective `plan` + `limits` array — see [arch-usage-limits.md](arch-usage-limits.md). |
-| GET | `/me/limits` | Effective per-bucket caps + current usage. See [arch-usage-limits.md §5.4](arch-usage-limits.md). |
+| Method | Path                                        | Purpose                                                                                                                                    |
+| ------ | ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| POST   | `/api/auth/email-otp/send-verification-otp` | Send email OTP via Resend                                                                                                                  |
+| POST   | `/api/auth/sign-in/email-otp`               | Verify six-digit OTP and issue session                                                                                                     |
+| POST   | `/api/auth/sign-in/email`                   | Test-account and demo-account password sign-in (allow-listed via `TEST_ACCOUNT_EMAILS` / `DEMO_ACCOUNT_EMAILS`)                            |
+| POST   | `/api/auth/sign-out`                        | Delete session                                                                                                                             |
+| GET    | `/me`                                       | Current user profile                                                                                                                       |
+| PATCH  | `/me`                                       | Update profile (name, company)                                                                                                             |
+| GET    | `/me/usage`                                 | Per-month report counts (for usage screen). Includes effective `plan` + `limits` array — see [arch-usage-limits.md](arch-usage-limits.md). |
+| GET    | `/me/limits`                                | Effective per-bucket caps + current usage. See [arch-usage-limits.md §5.4](arch-usage-limits.md).                                          |
 
 ### Projects (`/projects`, authed)
 
-| Method | Path | Purpose |
-|---|---|---|
-| GET | `/projects` | List projects user is member of |
-| POST | `/projects` | Create project |
-| GET | `/projects/:id` | Get project + stats |
-| PATCH | `/projects/:id` | Update project |
-| DELETE | `/projects/:id` | Owner-only |
-| GET | `/projects/:id/members` | List members |
-| POST | `/projects/:id/members` | Invite by email |
-| DELETE | `/projects/:id/members/:userId` | Remove member |
+| Method | Path                            | Purpose                         |
+| ------ | ------------------------------- | ------------------------------- |
+| GET    | `/projects`                     | List projects user is member of |
+| POST   | `/projects`                     | Create project                  |
+| GET    | `/projects/:id`                 | Get project + stats             |
+| PATCH  | `/projects/:id`                 | Update project                  |
+| DELETE | `/projects/:id`                 | Owner-only                      |
+| GET    | `/projects/:id/members`         | List members                    |
+| POST   | `/projects/:id/members`         | Invite by email                 |
+| DELETE | `/projects/:id/members/:userId` | Remove member                   |
 
 ### Reports (`/projects/:id/reports`, authed)
 
-| Method | Path | Purpose |
-|---|---|---|
-| GET | `/projects/:id/reports` | List |
-| POST | `/projects/:id/reports` | Create draft |
-| GET | `/reports/:reportId` | Get with notes |
-| PATCH | `/reports/:reportId` | Update fields |
-| DELETE | `/reports/:reportId` | Delete |
-| POST | `/reports/:reportId/generate` | LLM generate report from notes |
-| POST | `/reports/:reportId/finalize` | Finalize (frozen) |
-| POST | `/reports/:reportId/regenerate` | Regenerate report body |
-| POST | `/reports/:reportId/pdf` | Render PDF (returns signed URL) |
-| GET | `/projects/:id/reports/:number/comments` | List finalized-report review comments |
-| POST | `/projects/:id/reports/:number/comments` | Add a finalized-report review comment |
+| Method | Path                                     | Purpose                               |
+| ------ | ---------------------------------------- | ------------------------------------- |
+| GET    | `/projects/:id/reports`                  | List                                  |
+| POST   | `/projects/:id/reports`                  | Create draft                          |
+| GET    | `/reports/:reportId`                     | Get with notes                        |
+| PATCH  | `/reports/:reportId`                     | Update fields                         |
+| DELETE | `/reports/:reportId`                     | Delete                                |
+| POST   | `/reports/:reportId/generate`            | LLM generate report from notes        |
+| POST   | `/reports/:reportId/finalize`            | Finalize (frozen)                     |
+| POST   | `/reports/:reportId/regenerate`          | Regenerate report body                |
+| POST   | `/reports/:reportId/pdf`                 | Render PDF (returns signed URL)       |
+| GET    | `/projects/:id/reports/:number/comments` | List finalized-report review comments |
+| POST   | `/projects/:id/reports/:number/comments` | Add a finalized-report review comment |
 
 ### Notes (`/reports/:reportId/notes`, authed)
 
-| Method | Path | Purpose |
-|---|---|---|
-| GET | `/reports/:reportId/notes` | Timeline |
-| POST | `/reports/:reportId/notes` | Create text/voice/image note |
-| PATCH | `/notes/:noteId` | Edit text body |
-| DELETE | `/notes/:noteId` | Delete |
+| Method | Path                       | Purpose                      |
+| ------ | -------------------------- | ---------------------------- |
+| GET    | `/reports/:reportId/notes` | Timeline                     |
+| POST   | `/reports/:reportId/notes` | Create text/voice/image note |
+| PATCH  | `/notes/:noteId`           | Edit text body               |
+| DELETE | `/notes/:noteId`           | Delete                       |
 
 ### Files (`/files`, authed)
 
-| Method | Path | Purpose |
-|---|---|---|
-| POST | `/files/presign` | Mint R2 signed PUT |
-| POST | `/files` | Register uploaded file (after PUT) |
-| GET | `/files/:id/url` | Signed GET URL |
+| Method | Path             | Purpose                            |
+| ------ | ---------------- | ---------------------------------- |
+| POST   | `/files/presign` | Mint R2 signed PUT                 |
+| POST   | `/files`         | Register uploaded file (after PUT) |
+| GET    | `/files/:id/url` | Signed GET URL                     |
 
 ### Voice (`/voice`, authed)
 
-| Method | Path | Purpose |
-|---|---|---|
-| POST | `/voice/transcribe` | Transcribe (file id → transcript) |
-| POST | `/voice/summarize` | Summarise transcript → note body |
+| Method | Path                | Purpose                           |
+| ------ | ------------------- | --------------------------------- |
+| POST   | `/voice/transcribe` | Transcribe (file id → transcript) |
+| POST   | `/voice/summarize`  | Summarise transcript → note body  |
 
 ### Settings (`/settings`, authed)
 
-| Method | Path | Purpose |
-|---|---|---|
-| GET | `/settings/ai` | Per-user AI provider preference |
-| PATCH | `/settings/ai` | Update |
+| Method | Path           | Purpose                         |
+| ------ | -------------- | ------------------------------- |
+| GET    | `/settings/ai` | Per-user AI provider preference |
+| PATCH  | `/settings/ai` | Update                          |
 
-### Admin (`/admin`, authed + `auth.users.is_admin = true`)
+### Admin browser authentication (`/admin/auth`, dedicated)
 
-| Method | Path | Purpose |
-|---|---|---|
-| GET | `/admin/activity` | Paginated business activity feed. See [design-admin-business-activity.md](design-admin-business-activity.md). |
-| GET | `/admin/waitlist.csv` | Export waitlist (marketing P1). |
-| PATCH | `/admin/users/:id/plan` | Change a user's plan tier. See [arch-usage-limits.md](arch-usage-limits.md). |
-| PUT | `/admin/users/:id/limit-overrides` | Upsert per-bucket override. See [arch-usage-limits.md](arch-usage-limits.md). |
-| DELETE | `/admin/users/:id/limit-overrides` | Drop the override row. |
+These routes use the independent `harpa-pro-admin` Neon database. They do
+not use Better Auth or app user rows.
+
+| Method | Path                  | Purpose                                                                                     |
+| ------ | --------------------- | ------------------------------------------------------------------------------------------- |
+| POST   | `/admin/auth/login`   | Verify an explicitly provisioned `@harpapro.com` identity and issue an opaque admin cookie. |
+| GET    | `/admin/auth/session` | Validate the dedicated admin session.                                                       |
+| POST   | `/admin/auth/logout`  | Revoke the server-side session and clear the cookie.                                        |
+
+### Admin business activity (`/admin`, dedicated admin session)
+
+| Method | Path              | Purpose                                                                                                       |
+| ------ | ----------------- | ------------------------------------------------------------------------------------------------------------- |
+| GET    | `/admin/activity` | Paginated business activity feed. See [design-admin-business-activity.md](design-admin-business-activity.md). |
+
+`GET /admin/activity` authenticates through `withAdminSession()`, then reads
+`app.activity_events` from the application database. App bearer tokens and
+Better Auth cookies cannot authorize this route, including for an app user
+whose `public."user".is_admin` flag is true.
+
+### Admin readiness
+
+| Method | Path            | Purpose                                                             |
+| ------ | --------------- | ------------------------------------------------------------------- |
+| GET    | `/admin/readyz` | Check the admin database connection and independent migration head. |
+
+This post-deploy probe is separate from Fly's application `/readyz` health
+check. An admin database incident must not remove the otherwise healthy
+mobile/product API from Fly routing.
+
+### Programmatic admin (`/admin`, app admin authorization)
+
+The existing non-browser admin routes temporarily retain Better Auth plus
+the app user's `public."user".is_admin` flag. They have app-user audit
+foreign keys and are outside the business-activity page cutover.
+
+| Method | Path                               | Purpose                                                                       |
+| ------ | ---------------------------------- | ----------------------------------------------------------------------------- |
+| GET    | `/admin/waitlist.csv`              | Export waitlist (marketing P1).                                               |
+| PATCH  | `/admin/users/:id/plan`            | Change a user's plan tier. See [arch-usage-limits.md](arch-usage-limits.md).  |
+| PUT    | `/admin/users/:id/limit-overrides` | Upsert per-bucket override. See [arch-usage-limits.md](arch-usage-limits.md). |
+| DELETE | `/admin/users/:id/limit-overrides` | Drop the override row.                                                        |
 
 ## Conventions
 
@@ -132,14 +167,18 @@ pre-P3.0 shape and will be renamed by the P3.0 migration.
   matches semantically. `code` is a stable string enum
   (`AUTH_INVALID_TOKEN`, `RATE_LIMITED`, `VALIDATION_FAILED`, …).
 
-### Auth header
+### Authentication transport
 
-Expo and API clients use `Authorization: Bearer <better-auth session
-token>`. The browser admin surface uses Better Auth's secure,
-HttpOnly, host-only session cookie with `credentials: 'include'`.
-Credentialed CORS is restricted to exact `ADMIN_CORS_ORIGINS` entries
-on `/api/auth/*` and `/admin/*`; the browser never stores a bearer
-token in JavaScript.
+Expo and ordinary API clients use
+`Authorization: Bearer <better-auth session token>`.
+
+The browser admin surface uses a separate secure, HttpOnly, host-only
+`__Host-harpa_admin_session` cookie with `credentials: 'include'`. The raw
+opaque token exists only in the cookie; the admin database stores its
+SHA-256 hash. Credentialed CORS is restricted to exact
+`ADMIN_CORS_ORIGINS` entries on `/admin/*`. Better Auth's `/api/auth/*`
+routes are not exposed to the admin browser, and app sessions cannot be
+exchanged for an admin session.
 
 ### Rate limiting
 
@@ -162,6 +201,12 @@ by better-auth's built-in rate limiter; clients receive a 429 +
 `Retry-After` + `X-RateLimit-*` headers. Demo account password sign-in
 uses better-auth's email/password endpoint and does not alter the OTP
 route.
+
+Admin password login has independent IP, canonical-email, and short-burst
+budgets. Unknown email, wrong domain, disabled identity, and wrong password
+perform uniform password verification and return the same `401` response.
+See
+[design-separate-admin-auth.md](design-separate-admin-auth.md#abuse-and-csrf-controls).
 
 ### Idempotency
 

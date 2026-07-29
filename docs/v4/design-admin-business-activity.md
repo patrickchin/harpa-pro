@@ -1,6 +1,8 @@
 # Design — Admin business activity
 
-Status: approved on 2026-07-29. Local implementation is in progress.
+Status: approved on 2026-07-29. The separate admin-auth cutover is in
+progress; see
+[Separate admin console authentication](design-separate-admin-auth.md).
 
 Implementation status:
 
@@ -34,9 +36,11 @@ This design deliberately separates:
 
 ## Goals
 
-- Record a small set of high-signal business events in Neon.
+- Record a small set of high-signal business events in the application Neon
+  project.
 - Show them newest-first at `admin.harpapro.com`.
-- Use the existing Better Auth session and `is_admin` authorization.
+- Require the dedicated admin identity and session system. App users, Better
+  Auth sessions, and `public."user".is_admin` do not authorize this page.
 - Keep the first version inside the existing Astro site and Cloudflare Pages
   deployment.
 - Preserve a request ID where one exists so an activity row can later link to
@@ -62,6 +66,11 @@ The page uses TanStack Table for table state and rendering. Filtering and
 pagination remain server-side. The API is the only data source; the browser
 never connects to Neon directly.
 
+Business events remain in the application Neon project. Administrator
+identities and sessions live in the independent `harpa-pro-admin` Neon
+project. The API authenticates against the admin database before reading the
+business feed from the application database; the databases are never joined.
+
 The implementation stays in `apps/site` while this remains one or two admin
 pages. A separate `apps/admin` application and Pages project would add
 duplicate environment, deployment, and styling work without improving the
@@ -73,8 +82,9 @@ flowchart LR
   mutation["Authenticated mutation"] --> event["app.activity_events"]
   signup["Better Auth user creation"] --> event
   browser["Admin React island"] --> api["GET /admin/activity"]
-  api --> admin["withAuth + withAdmin"]
-  admin --> event
+  api --> auth["withAdminSession"]
+  auth --> adminDb[("harpa-pro-admin")]
+  auth --> event
   mutation -. request_id .-> telemetry["Future operational logs / Sentry"]
 ```
 
@@ -224,10 +234,10 @@ Add:
 GET /admin/activity
 ```
 
-Authentication and authorization remain:
+Authentication and authorization use the dedicated admin session:
 
 ```text
-withAuth() -> withAdmin() -> admin activity handler
+withAdminSession() -> admin activity handler
 ```
 
 Supported query fields:
@@ -251,30 +261,37 @@ Items are display-ready and contain current actor/project labels when they
 still exist. The endpoint has fixed newest-first ordering; the first release
 does not expose arbitrary server sorting or a total row count.
 
-Responses include `Cache-Control: private, no-store`. Anonymous callers get
-`401`; authenticated non-admins get `403`. The route uses an unscoped read
-service only after `withAdmin()` re-checks `public."user".is_admin`.
+Responses include `Cache-Control: private, no-store`. Callers without a valid
+dedicated admin session get `401`. An app bearer token or Better Auth cookie
+does not authorize the route, even when the app user has
+`public."user".is_admin = true`. The route uses an unscoped application
+database read service only after `withAdminSession()` validates the cookie
+against the independent admin database.
 
 Contract schemas live in `packages/api-contract`, and timestamps use the
 shared ISO-8601 transform from Pitfall 7.
 
 ## Browser authentication and CORS
 
-The browser uses Better Auth's normal secure, HttpOnly cookie session. It
-does not store an API bearer token in `localStorage`, session storage, or
-JavaScript state.
+The browser uses the separate admin-auth service described in
+[design-separate-admin-auth.md](design-separate-admin-auth.md). An exact,
+pre-provisioned `@harpapro.com` address and long password create a revocable
+server-side session. Better Auth email OTP and app sessions are not accepted.
+The browser stores only an opaque, secure, HttpOnly cookie; it does not store
+a bearer token or password in `localStorage`, session storage, or JavaScript
+state after an attempt completes.
 
 `admin.harpapro.com` and `api.harpapro.com` are separate origins but the same
-HTTPS site. Browser requests use `credentials: 'include'`; the auth cookie
-remains host-only to `api.harpapro.com`. Do not enable parent-domain
-`crossSubDomainCookies`, because the public marketing host does not need the
-admin session cookie.
+HTTPS site. Browser requests use `credentials: 'include'`; the dedicated
+admin cookie remains host-only to `api.harpapro.com`. Do not enable a
+parent-domain cookie, because the public marketing host does not need the
+admin session.
 
 API changes:
 
-- add `https://admin.harpapro.com` to Better Auth `trustedOrigins`;
-- add explicit per-environment admin web origins through parsed API env;
-- mount credentialed CORS only on `/api/auth/*` and `/admin/*`;
+- remove admin browser origins from Better Auth `trustedOrigins`;
+- add exact per-environment admin web origins through parsed API env;
+- mount credentialed CORS only on `/admin/*`, not `/api/auth/*`;
 - echo only an exact configured origin, never `*`;
 - allow only required methods and headers; and
 - cover successful and rejected preflights with integration tests.
@@ -286,8 +303,8 @@ hostname.
 The React island provides:
 
 1. session-loading state;
-2. email entry and email-OTP verification;
-3. non-admin denial state;
+2. email and password sign-in;
+3. generic invalid-credentials state;
 4. activity loading/error/empty/table states; and
 5. sign-out.
 
@@ -324,19 +341,22 @@ Reuse the current `@harpa/site` static build, Pages project, and workflows:
 - a host-specific Cloudflare redirect sends the admin hostname root to
   `/admin/activity`.
 
-No separate preview, database, Fly app, or Pages project is created.
+Admin authentication does use its own Neon project and database. It does not
+require a separate Fly app, API service, or Pages project. Development uses
+the long-lived `dev` branch in `harpa-pro-admin`; production uses `main`.
+API-changing previews use matching per-PR branches in both Neon projects.
 
 Because all custom domains serve the same static build, the empty page shell is
 also addressable at `/admin/activity` on the apex and Pages hostnames. It
-contains no activity data in its HTML; Better Auth plus `withAdmin()` protects
+contains no activity data in its HTML; the dedicated API session protects
 every data request. If hiding even the shell becomes a requirement, add
 host/path Access rules or split the admin site into its own Pages project.
 
 Cloudflare Access may protect the complete admin hostname as a perimeter
 gate. It is defense in depth, not the application authorization source. The
-API must still require Better Auth plus `withAdmin()`. Because Access and
-Better Auth can create a double-login experience, enable it as an explicit
-deployment choice after the app-auth flow is verified.
+API must still require `withAdminSession()`. Because Access and dedicated
+admin authentication can create a double-login experience, enable it as an
+explicit deployment choice after the password flow is verified.
 
 If the admin surface later exceeds two screens or needs Pages Functions,
 extract it to `apps/admin` and a separate Pages project in its own design.
@@ -362,16 +382,17 @@ extract it to `apps/admin` and a separate Pages project in its own design.
 - Integration tests prove project and report creation write exactly one event
   and failed mutations write none.
 - A real Better Auth email-OTP integration test proves signup recording.
-- Admin API tests cover `401`, `403`, admin success, every filter, stable
-  cursor pagination, deleted-label fallback, ISO dates, and `no-store`.
+- Admin API tests prove app sessions cannot authorize the feed, then cover
+  admin-session success, every filter, stable cursor pagination,
+  deleted-label fallback, ISO dates, and `no-store`.
 - Account-deletion tests prove user identifiers are redacted from retained
   events.
 - Contract/code-generation drift checks remain green.
 
 ### Site
 
-- Component tests cover auth, loading, failure, empty, populated, pagination,
-  filters, deleted entities, and the detail drawer.
+- Component tests cover password auth, loading, generic failure, empty,
+  populated, pagination, filters, deleted entities, and the detail drawer.
 - A Playwright smoke covers the local admin page against the real API/default
   wiring, including CORS and a persisted event (Pitfall 13).
 - Run the existing site typecheck, lint, unit, build, and focused Playwright
@@ -400,21 +421,24 @@ before being treated as complete.
 
 - Add the display read model and cursor encoding.
 - Add `GET /admin/activity`.
-- Add exact-origin auth/admin CORS and trusted-origin configuration.
+- Add exact-origin `/admin/*` CORS and remove admin origins from Better Auth.
 - Add admin, scope, filter, pagination, and cache-header tests.
 - Regenerate OpenAPI/types and update API/auth/database docs.
 
 ### Phase 4 — Admin page
 
-- Add the web Better Auth client and OTP states.
+- Add the dedicated admin-auth fetch client and password states.
 - Add TanStack Table and the activity island.
 - Add the Astro route, noindex/sitemap exclusions, tests, and responsive
   styling.
 
 ### Phase 5 — Deployment
 
+- Ensure and migrate the independent admin `dev` branch, configure
+  `ADMIN_DATABASE_URL`, and provision the development administrator.
 - Deploy and verify the stable development route.
-- Configure the production API origin allowlist.
+- Configure the production API origin allowlist and migrate the independent
+  admin `main` database before provisioning production.
 - Attach `admin.harpapro.com` and configure the root redirect.
 - Decide whether to enable Cloudflare Access.
 - Run a production smoke: sign up, create project, create report, and verify
@@ -451,7 +475,7 @@ Revisit when the admin surface materially grows.
 ### Trust Cloudflare Access without app authorization
 
 Rejected. Access is a useful outer gate, but app-level authorization must
-continue to re-check `is_admin` at the API boundary.
+continue to validate the dedicated admin session at the API boundary.
 
 ## Documentation affected during implementation
 
@@ -468,6 +492,8 @@ continue to re-check `is_admin` at the API boundary.
 Unless the user changes them before implementation:
 
 - use the existing `apps/site` and Pages project;
+- keep admin identities and sessions in the independent `harpa-pro-admin`
+  Neon project;
 - track only the three initial creation events;
 - do not backfill old rows;
 - use HttpOnly cookie auth, not a browser-stored bearer token;

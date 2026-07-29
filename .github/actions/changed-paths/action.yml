@@ -69,6 +69,7 @@ runs:
             - 'packages/ai-fixtures/**'
           api-migrations:
             - 'packages/api/migrations/**'
+            - 'packages/api/admin-migrations/**'
             - 'packages/api/src/db/**'
           mobile:
             - '.maestro/**'

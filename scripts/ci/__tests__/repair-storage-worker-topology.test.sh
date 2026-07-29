@@ -367,6 +367,18 @@ expect_failure_without_mutation \
   "storage-workers-started-different-release-version.json" \
   "does not match the deployed app release"
 expect_failure_without_mutation \
+  "an app and worker with conflicting explicit digests fail closed" \
+  "storage-workers-started-conflicting-worker-digest.json" \
+  "does not match the deployed app release"
+expect_failure_without_mutation \
+  "two app Machines with conflicting explicit digests fail closed" \
+  "storage-workers-two-app-digests.json" \
+  "cannot determine one complete deployed app release"
+expect_failure_without_mutation \
+  "an active and standby with conflicting explicit digests fail closed" \
+  "storage-workers-started-conflicting-pair-digests.json" \
+  "does not match the deployed app release"
+expect_failure_without_mutation \
   "an untagged image is not a complete release identity" \
   "storage-workers-started-untagged-image.json" \
   "cannot determine one complete deployed app release"

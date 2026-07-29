@@ -122,6 +122,7 @@ flowchart TB
 | 19 | **App shell (P2.6)** | [arch-p2-6-app-shell.md](arch-p2-6-app-shell.md) | **Root provider tree, auth gate redirect, `(app)` tab/stack shape — design notes for the shell that landed in P2.6** |
 | 20 | **Office dashboard** | [design-office-dashboard.md](design-office-dashboard.md) | **Project/member/report management companion with keyboard-first report editing and mobile-first field capture** |
 | 21 | **Admin business activity (approved, in progress)** | [design-admin-business-activity.md](design-admin-business-activity.md) | **Append-oriented business events, an admin-only API, and the shared `apps/site` Astro route at `/admin/activity`, served through the `admin.harpapro.com` hostname** |
+| 22 | **Cross-surface visual system** | [design-cross-surface-visual-system.md](design-cross-surface-visual-system.md) | **Mobile-authored colour, type, spacing, control, and shape contract shared by the office dashboard, marketing site, and docs site** |
 
 ## Repo layout (target end of P0)
 

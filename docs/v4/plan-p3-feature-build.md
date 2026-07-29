@@ -21,13 +21,15 @@
 - [x] Upload pipeline integration test green for `image`, `voice`, `document` (Pitfall 8).
 - [x] No `// TODO` / "Coming soon" / `Alert.alert` outside dialogs.
 
-## Scope (canonical source: `../haru3-reports/apps/mobile/app/`)
+## Scope
 
-Enumerate the screens to port from the canonical source's `app/`
-tree at the start of P3 and check them off here. Each row maps a
-canonical-source path → v4 destination (`screens/<name>.tsx` body +
-`app/(app|auth)/<route>.tsx` real route). Suggested grouping (one
-screen per commit):
+This plan and its linked `design-*.md` files are the specification
+sources for the P3 screen set. If no task-specific spec applies to an
+existing screen, its current implementation and tests are the
+baseline. A design change needs a task-specific design doc. Each row
+maps a screen specification to its v4 destination
+(`screens/<name>.tsx` body plus an
+`app/(app|auth)/<route>.tsx` real route).
 
 - new project / edit project
 - project home
@@ -35,37 +37,33 @@ screen per commit):
 - reports list
 - generate — notes / report / edit tabs (the big one)
 - saved report + actions menu + PDF preview
-- files  — no canonical screen exists (see P3.11 below); marked N/A
+- files — no standalone screen in the v4 spec (see P3.11), marked N/A
 - camera  ✅ shipped (P3.12)
 - profile / account / usage  ✅ shipped (P3.13)
 - feature completion + upload wiring (P3.15)
 
-## Section card port
+## Shared report components
 
-All components import from `../haru3-reports/apps/mobile/components/`
-on branch `dev`. NativeWind classes copy directly — no Unistyles to
-translate (Pitfall 3 — we chose NativeWind specifically so the port
-is a copy, not a translation). Map per component, e.g.:
+All shared report components live under `apps/mobile/components/`.
+NativeWind classes and shared primitives remain consistent across
+screens. Do not introduce Unistyles (Pitfall 3). Component locations:
 
-| Card | Canonical source | v4 destination |
-|---|---|---|
-| `StatBar` | `components/reports/sections/StatBar.tsx` | same path |
-| `WeatherStrip` | `components/reports/sections/WeatherStrip.tsx` | same path |
-| `SummarySectionCard` | `components/reports/sections/SummarySectionCard.tsx` | same |
-| `IssuesCard` | `components/reports/sections/IssuesCard.tsx` | same |
-| `WorkersCard` | `components/reports/sections/WorkersCard.tsx` | same |
-| `MaterialsCard` | `components/reports/sections/MaterialsCard.tsx` | same |
-| `NextStepsCard` | `components/reports/sections/NextStepsCard.tsx` | same |
-| `CompletenessCard` | `components/reports/sections/CompletenessCard.tsx` | same |
-| `ReportView` | `components/reports/ReportView.tsx` | same |
-| `PdfPreviewModal` | `components/reports/PdfPreviewModal.tsx` | same |
-| `ReportActionsMenu` | `components/reports/ReportActionsMenu.tsx` | same |
-| `SavedReportSheet` | `components/reports/SavedReportSheet.tsx` | same |
-| `ReportDetailTabBar` | `components/reports/ReportDetailTabBar.tsx` | same |
-| `useReportPdfActions` | `features/reports/useReportPdfActions.ts` | same |
-
-(Confirm exact paths against the canonical source at port time —
-this table is illustrative.)
+| Component | Current location |
+|---|---|
+| `StatBar` | `apps/mobile/components/reports/StatBar.tsx` |
+| `WeatherStrip` | `apps/mobile/components/reports/WeatherStrip.tsx` |
+| `SummarySectionCard` | `apps/mobile/components/reports/SummarySectionCard.tsx` |
+| `IssuesCard` | `apps/mobile/components/reports/IssuesCard.tsx` |
+| `WorkersCard` | `apps/mobile/components/reports/WorkersCard.tsx` |
+| `MaterialsCard` | `apps/mobile/components/reports/MaterialsCard.tsx` |
+| `NextStepsCard` | `apps/mobile/components/reports/NextStepsCard.tsx` |
+| `CompletenessCard` | `apps/mobile/components/reports/CompletenessCard.tsx` |
+| `ReportView` | `apps/mobile/components/reports/ReportView.tsx` |
+| `PdfPreviewModal` | `apps/mobile/components/reports/PdfPreviewModal.tsx` |
+| `ReportActionsMenu` | `apps/mobile/components/reports/detail/ReportActionsMenu.tsx` |
+| `SavedReportSheet` | `apps/mobile/components/reports/detail/SavedReportSheet.tsx` |
+| `ReportDetailTabBar` | `apps/mobile/components/reports/detail/ReportDetailTabBar.tsx` |
+| `useReportPdfActions` | `apps/mobile/lib/reports/use-report-pdf-actions.ts` |
 
 ## Maestro gate (all sections and subsections)
 
@@ -88,22 +86,23 @@ this table is illustrative.)
 
 For each screen in the scope list:
 
-1. Read the matching file(s) under `../haru3-reports/apps/mobile/app/`
-   and `components/` on `dev`.
+1. Read this plan, any linked task-specific design doc, and the
+   matching current files under `apps/mobile/`.
 2. Build the screen body in `apps/mobile/screens/<name>.tsx`,
-   plus the components it needs (port classes verbatim where the
-   primitive matches).
+   plus the components it needs. Preserve established classes unless
+   the specification changes them.
 3. Wire the real route under `(auth)/` or `(app)/` with hooks +
    navigation params.
-4. Behaviour tests for every interaction the canonical source
-   exercises.
-6. Write a new `.maestro/p3-<section>.yaml` flow scoped to this
+4. Add behaviour tests for every interaction in the specification.
+   If no task-specific spec exists, preserve the current tests.
+5. Write a new `.maestro/p3-<section>.yaml` flow scoped to this
    section only (see [Maestro gate](#maestro-gate-all-sections-and-subsections)
    above). It will be collated later into the full E2E journey.
-7. **Run `maestro test .maestro/p3-<section>.yaml` — must be green.**
-8. Manual visual review side-by-side with the canonical source on
-   the iOS sim.
-9. Commit: `feat(mobile): <screen> ported from canonical source with tests + flow`.
+6. **Run `maestro test .maestro/p3-<section>.yaml` — must be green.**
+7. Manually review against the specification on the iOS simulator.
+   If no task-specific spec exists, compare the current implementation
+   and tests.
+8. Commit: `feat(mobile): implement <screen> with tests and flow`.
 
 Suggested order (parallelisable across agents once primitives lock):
 
@@ -119,7 +118,7 @@ P3.7  Generate – Notes tab          ┐ Agent B (the big one)
 P3.8  Generate – Report tab         │
 P3.9  Generate – Edit tab           ┘
 P3.10 Saved report + actions + PDF   ✅ shipped
-P3.11 Files screen                   ⊘ no canonical (N/A)
+P3.11 Files screen                   ⊘ no standalone v4 screen (N/A)
 P3.12 Camera                        ✅ shipped
 P3.13 Profile / Account / Usage      ✅ shipped
 P3.14 Maestro full-journey           ✅ shipped (core-end-to-end.yaml)
@@ -167,13 +166,13 @@ hook + `ReportPhotos` rendering remain deferred.
 
 Shipped: new `packages/report-core` (Zod schemas +
 `normalizeGeneratedReportPayload` + helpers — shared by mobile + api);
-9 rendering primitives ported verbatim under `components/reports/`
+9 rendering primitives implemented under `components/reports/`
 (`StatBar`, `WeatherStrip`, `SummarySectionCard`, `IssuesCard`,
 `WorkersCard`, `MaterialsCard`, `NextStepsCard`, `CompletenessCard`,
 `ReportView`) plus `SectionHeader` + `mobile-ui` / `section-icons`;
 provider extended with real `generation` / `draft` / `tabs.editManually`
 / `preview.openFile` / `handleRegenerate` + `initialTab` prop;
-`ReportTabPane` fully ported (error banner + Retry, empty + Edit
+`ReportTabPane` fully implemented (error banner + Retry, empty + Edit
 manually CTA, shimmer, live ReportView, finalize-error banner;
 ReportPhotos slot reserved); fixture mode seeds
 `SAMPLE_GENERATED_REPORT`; dev mirror `(dev)/generate-report.tsx`;
@@ -190,7 +189,7 @@ autosave hook deferred (provider forwards `isAutoSaving` /
 
 Shipped: `lib/report-edit-helpers.ts` (slice patches + whole-array
 setters + blank-row factories, all immutable, new wrapper + inner refs
-per call) with 23 test cases; `ReportEditForm.tsx` ported verbatim
+per call) with 23 test cases. `ReportEditForm.tsx` implemented
 (7 section cards + shared `Field` / `AddRowButton` / `RemoveRowButton`
 + `AppDialogSheet` destructive confirm — Pitfall: no `Alert.alert`);
 `EditTabPane` (empty state + inline form + autosave status row);
@@ -222,11 +221,10 @@ design; `issues.severity` collapses to API enum via
 
 ### P3.10 — Saved report + actions + PDF (✅ shipped)
 
-Ports the saved-report detail screen from canonical
-`app/projects/[projectId]/reports/[reportId].tsx` into v4 at
-`app/(app)/projects/[project]/reports/[number]/index.tsx`. Body is
-props-only; PDF export, `ReportPhotos`, and the rich note timeline
-deferred to P3.15 / P4 behind clearly-marked stubs.
+Implements the saved-report detail screen at
+`app/(app)/projects/[project]/reports/[number]/index.tsx`. The body
+is props-only. PDF export, `ReportPhotos`, and the rich note timeline
+were deferred to P3.15 and P4 behind clearly marked stubs.
 
 Shipped: `screens/saved-report.tsx` owns tab + menu + dialog state
 (Report always / Notes drafts-only — finalised reports surface notes
@@ -235,9 +233,9 @@ dedicated `screens/report-notes.tsx` page / Edit drafts-only with
 auto-bounce to Report on finalize) + canonical reconciliation
 pattern preserving local edits across refetches; real route wires
 `useProjectQuery` / `useReportQuery` / `useReportPdfActions` /
-`useRefresh` with slug params + invalid-route fallback; dev mirror
-(loading / error / draft-populated / finalized); components ported
-verbatim (`ReportActionsMenu`, `ReportDetailHeader`,
+`useRefresh` with slug params + invalid-route fallback. Dev mirror
+(loading / error / draft-populated / finalized). Components
+implemented (`ReportActionsMenu`, `ReportDetailHeader`,
 `ReportDetailTabBar`, text-only `ReportNotesPane`,
 `SavedReportSheet`, `ReportDetailSkeleton`);
 `ImagePreviewModal` simplified to RN `Image` (signed URLs deferred);
@@ -256,8 +254,8 @@ inline rendering → P4.3
 
 ### P3.12 — Camera (✅ shipped)
 
-Ports the full-screen burst camera from canonical
-`app/(camera)/capture.tsx`. Body is props-only with injection seams
+Implements the full-screen burst camera at
+`app/(camera)/capture.tsx`. The body is props-only with injection seams
 (`renderPreview`, `takePicture`, `permissionOverride`, `onOpenSettings`,
 `deleteFile`) so dev mirror + Vitest run without native modules.
 
@@ -274,8 +272,7 @@ populated) using a `<View />` preview stub + synthesised
 plugin in `app.config.ts`, NSCameraUsageDescription, Android audio
 opt-out, `expo-camera@~16` + `expo-file-system@~18` installed);
 11 Vitest cases + 1 snapshot, `expo-camera` / `expo-file-system`
-mocked locally. Commit:
-`feat(mobile): P3.12 — Camera capture screen ported from canonical source`.
+mocked locally. Shipped in `bc20ac10`.
 
 **Follow-ups → [P3.15](#p315--feature-completion--upload-wiring):**
 upload-on-Done handoff, `expo-media-library` save-to-roll,
@@ -285,10 +282,10 @@ pinch-zoom + tap-focus. iOS prebuild already landed
 
 ### P3.13 — Profile / Account / Usage (✅ shipped)
 
-Ports the three account-area screens (`profile`, `account`, `usage`)
-from canonical to v4 routes under `(app)/`. Bodies are props-only;
-v3 token-usage rollups, `AvatarUploader`, and AI provider
-availability check deferred to P3.15 / P4 behind clearly-marked stubs.
+Implements the three account-area screens (`profile`, `account`,
+`usage`) as routes under `(app)/`. The bodies are props-only. v3
+token-usage rollups, `AvatarUploader`, and AI provider availability
+checks were deferred to P3.15 and P4 behind clearly marked stubs.
 
 Shipped: `screens/profile.tsx` owns AI provider/model picker modal +
 clear-cache confirm (`AppDialogSheet`) with `showDeveloperSection`
@@ -298,7 +295,7 @@ expand state + pricing-reference card + optional `chart` slot; real
 routes wire `useAuthSession` / `useMeUsageQuery` / API
 `signOut` / `queryClient.clear()` with `safeBack` fallbacks; dev
 mirrors with hand-crafted mock states for every visible state (Profile
-mirror passes the canonical AI provider catalogue: Kimi, OpenAI);
+mirror passes the configured AI provider catalogue: Kimi, OpenAI).
 `components/skeletons/AccountDetailsSkeleton.tsx`
 verbatim; `lib/build-info.ts` adapted to read Fly API base URL from
 `lib/env.ts` (preserves `displayVersion` / `serverLabel` shape);
@@ -315,14 +312,14 @@ Notifications row + language toggle stay out of scope.
 
 ### P3.11 — Files screen (⊘ N/A)
 
-No standalone "files" screen exists in the canonical source
-(`../haru3-reports/apps/mobile/app/` on `dev` — verified at P3
-close-out). File interactions live inside the report-detail Notes
-pane (`ReportNotesPane` — landed in P3.10) and the camera capture
-flow (P3.12); both already have their canonical surfaces ported.
+No standalone "files" screen exists in the current v4 route map
+(verified at P3 close-out). File interactions live inside the
+report-detail Notes pane (`ReportNotesPane` — landed in P3.10) and
+the camera capture flow (P3.12). Both already have their intended v4
+surfaces implemented.
 
 This task is intentionally left out of scope for P3; if a dedicated
-files browser ships in canonical later, it lands as a P4 add-on with
+files browser ships later, it lands as a P4 add-on with
 its own subsection here. The P3 scope list above is marked accordingly.
 
 ### P3.14 — Maestro full-journey (✅ shipped)
@@ -417,7 +414,7 @@ token-level usage UI in P3.15.4 — land it before extending
       `GET /files/{id}/url`) already shipped in P2 — wire the mobile
       side.
 - [x] `useFileSignedUrl(fileId)` resolver (cached) for read-back.
-- [x] `CachedImage` + `prefetchImages` ported from canonical
+- [x] `CachedImage` + `prefetchImages` implemented for v4
       (FS cache + BlurHash placeholder).
 - [x] Integration test: image / voice / document each round-trip
       through the queue end-to-end (Pitfall 8).

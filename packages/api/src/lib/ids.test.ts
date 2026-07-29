@@ -15,6 +15,11 @@ describe('newId', () => {
     expect(id).toMatch(/^usr_[0-9a-hjkmnp-tv-z]{12}$/);
   });
 
+  it('mints aud_ activity event slugs of 12 chars', () => {
+    const id = newId('aud');
+    expect(id).toMatch(/^aud_[0-9a-hjkmnp-tv-z]{12}$/);
+  });
+
   it('mints not_ / fil_ / vrf_ / wls_ slugs of 10 chars', () => {
     for (const p of ['not', 'fil', 'vrf', 'wls'] as const) {
       expect(newId(p)).toMatch(new RegExp(`^${p}_[0-9a-hjkmnp-tv-z]{10}$`));

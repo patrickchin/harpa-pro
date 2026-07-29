@@ -572,6 +572,10 @@ gate by reverting the bump. Release in this order:
 That dispatch creates the environment/version readiness tag before the OTA
 job evaluates its policy. If publication fails afterward, leave the tag in
 place—it still correctly attests the native artifact—and retry the dispatch.
+Only a direct dispatch of the mobile OTA workflow performs this registration.
+A manually dispatched API deployment may call the reusable OTA workflow after
+its gates pass, but it remains an automatic policy evaluation and does not
+consume the native registration inputs.
 Normal rotation is a new app version, native artifact, and new tag. Never
 force-move a readiness tag to a different native commit. If a tag was created
 for the wrong artifact or commit, stop releases and bump the app version to
@@ -654,13 +658,13 @@ addition to the HTTP `app` group:
 - `app`: `shared-cpu-1x`, 512 MB, attached to `http_service`, allowed
   to suspend at zero;
 - `storage-worker`: `shared-cpu-1x`, 256 MB, no service attachment,
-  explicitly kept at count 1 by the deploy workflow.
+  with its active Machine and stopped standby owned by Fly deploys.
 
-The worker is not eligible for HTTP auto-stop, so both dev and
-production now carry one continuously billed worker Machine. This cost
-is required for delayed cleanup to run while the API is idle. PR
-previews do not provision workers; their account-deletion gate stays
-closed.
+The active worker is not eligible for HTTP auto-stop, so both dev and
+production carry one continuously billed worker Machine. Fly also preserves a
+stopped standby for deploys and restarts. This cost is required for delayed
+cleanup to run while the API is idle. PR previews do not provision workers;
+their account-deletion gate stays closed.
 
 The worker does not continuously pin Neon with five-second polling. It
 sleeps until the next known job is due, capped at ten minutes to discover
@@ -680,12 +684,58 @@ compatible, and account deletion returns `503`. Arming uses
 grace. `R2_PRESIGN_TTL_SEC` is capped at 300 seconds; the remaining 30
 seconds is the late-PUT safety window.
 
-`infra/fly/deploy.sh` owns the production order: deploy, scale
-`storage-worker=1`, then arm by running the monotonic rollout command in that
-worker process group. The command inherits the app's staged Fly secrets, so
-neither CI nor manual callers need the production `DATABASE_URL`. The shell
-policy test stubs external commands and executes this sequence so future
-workflow edits cannot silently omit arming.
+`infra/fly/deploy.sh` owns the production order: deploy, narrowly repair the
+known exact singleton states, verify at least one Machine has state
+`started` and metadata process group `storage-worker`, then arm by running the
+monotonic rollout command in that group. The command inherits the app's staged
+Fly secrets, so neither CI nor manual callers need the production
+`DATABASE_URL`. The shell policy test stubs external commands, executes this
+sequence, and forbids explicit `storage-worker` scale commands.
+
+The shared repair is a no-op only for an exact healthy pair: one
+current-release active worker and one current-release stopped, service-less
+standby whose sole `config.standbys` entry is that active Machine's id. A
+singleton current-release active worker is freshly re-listed and must remain
+the same sole started/no-standby id before it gets exactly one standby clone. A
+singleton current-release stopped standby first has its standby configuration
+cleared. A fresh inventory must then prove that the same id remains the sole
+current-release, service-less worker with no standby configuration. If stopped,
+repair runs `flyctl machine start ID --app APP`; if already started, it skips
+the redundant start. It polls at most ten fresh inventories three seconds apart,
+allowing only that same candidate in `stopped`, `starting`, or `started` state,
+and clones only after exact `started` proof. Both mutating paths list Machines
+again and succeed only after observing the exact healthy pair.
+
+Every app and worker Machine used by the decision must match one complete,
+unambiguous identity: nonempty `fly_release_id`, `fly_release_version`, and a
+valid full tagged `config.image`. Fly may return the same tag with an optional
+`@sha256:<64 lowercase hex>` suffix, so repair strips only that validated suffix
+before comparison; repository, tag, release id, and release version remain
+exact. Tag-only Machines may coexist with one observed explicit digest, but more
+than one distinct non-null digest across the app and worker Machines fails
+closed. Untagged, digest-only, malformed, stale, or mixed identities fail before
+mutation. If standby clearing succeeds but later work fails, an exact singleton
+stopped/no-standby retry starts then verifies the candidate, while an exact
+singleton started/no-standby retry clones it. Id, identity, service, standby, or
+topology drift during any pre-clone re-list or polling fails before cloning.
+
+The verifier remains diagnostic-only. The workflow calls it again after
+repair and before arming, so a green deploy proves a running executor exists.
+
+Fly can create a stopped standby for the service-less process group. An
+explicit `storage-worker=1` command therefore collapses the pair without
+preferring the active Machine. After #210 added `--yes`, Fly destroyed the
+active worker and retained the stopped standby. The earlier confirmation prompt
+was a safety signal, not a reason to auto-confirm the scale-down; dev and
+production never use broad process-count repair. The narrow recovery above
+exists only for singleton current-release active, stopped/no-standby, or
+standby states. Fly later confirmed in its deploy log that updating a
+previously non-started Machine can leave the new version stopped, which is why
+repair uses an explicit start and does not treat update success as running
+proof. Fly also rendered a cloned standby's image as the same full deployment
+tag with an attached digest, so repair removes only a validated digest suffix
+for tag comparison, keeps the repository, tag, release id, and release version
+exact, and rejects conflicting explicit digests.
 
 Operational query:
 

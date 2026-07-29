@@ -1,8 +1,8 @@
 # v4 Pitfalls — what went wrong in the v3 attempt and the rules we adopt
 
 > **Read this first.** Every rule below maps to a specific painful
-> commit on the `mobile-v3` branch of `../haru3-reports`. The whole
-> point of the v4 rewrite is to not repeat these.
+> commit from the earlier mobile implementation. The whole point of
+> the v4 rewrite is to not repeat these mistakes.
 
 This document is the source for the "Hard rules" section in
 [`AGENTS.md`](../../AGENTS.md). Keep them in sync — a new pitfall
@@ -80,23 +80,22 @@ visual parity:
 The whole v3 realignment effort — chasing visual drift in a separate
 realignment plan — happened because of this drift.
 
-**v4 rule.** P2 ships screens by **direct port from the canonical
-source** at `../haru3-reports/apps/mobile` on branch `dev`. Both
-sides run NativeWind v4 — JSX and Tailwind classes copy across with
-no translation. Visual review is manual (side-by-side with the
-canonical source on the iOS sim). Cosmetic drift in later phases is
-a P0 bug.
+**v4 rule.** The relevant `design-*.md` or `plan-*.md` file is the
+specification source for a screen. If neither exists, the checked-in
+implementation and its tests are the baseline. A task that changes
+that design must first add a task-specific design doc. Screens use
+shared NativeWind tokens and primitives. Visual review is manual on
+the iOS simulator. Unrequested cosmetic drift is a P0 bug.
 
-There is no automated screenshot-diff gate — the v3 attempt's
-screenshot dumps and realignment docs are not part of this repo and
-are explicitly **not** used as port sources in v4. The canonical
-port source is `../haru3-reports/apps/mobile@dev`.
+There is no automated screenshot-diff gate. Historical screenshot
+dumps and realignment docs are not part of this repository and are
+explicitly **not** acceptance sources in v4.
 
 Tactical sub-rules:
-- Tailwind tokens defined in `apps/mobile/tailwind.config.js` once,
-  derived from the canonical source's `tailwind.config.js`. No hex
-  values in screen code (ESLint rule `no-restricted-syntax` scoped to
-  `components/**` in `apps/mobile/.eslintrc.cjs`).
+- Tailwind tokens are defined once in
+  `apps/mobile/tailwind.config.js`. No hex values in screen code
+  (ESLint rule `no-restricted-syntax` scoped to `components/**` in
+  `apps/mobile/.eslintrc.cjs`).
 - Shared primitives (`Card`, `Input`, `Button`, `IconButton`,
   `ScreenHeader`, `EmptyState`, `Skeleton`, `AppDialogSheet`,
   `StatTile`) ship in P2.2 with snapshot tests. Adding a new
@@ -122,15 +121,16 @@ restore full v3 report note-taking parity` after a manual gap audit.
 Maestro flow**. We do not move to the next screen until the current
 one passes:
 
-- Manual visual review against the matching screen in
-  `../haru3-reports/apps/mobile@dev` (side-by-side simulator check).
-- Vitest behaviour test for every interaction the canonical source
-  exercises.
+- Manual visual review against the relevant v4 design or plan. If
+  neither exists, review against the current implementation.
+- Vitest behaviour test for every interaction in the specification.
+  If no specification exists, preserve the current tests.
 - Maestro flow exercising the screen end-to-end (record + replay
   fixtures for any AI call).
 
-The acceptance contract for P3 is the matching screen in the
-canonical source at `../haru3-reports/apps/mobile@dev`.
+The acceptance contract for P3 is the relevant `design-*.md` or
+`plan-*.md` file. If neither exists, it is the checked-in
+implementation and tests.
 
 ---
 
@@ -350,10 +350,10 @@ collaborators against MinIO.
 
 The fact that v3 needed a 17-page realignment plan to chase
 accumulated visual drift means we were declaring phases done without
-a real acceptance contract. v4's acceptance contract is the live
-canonical port source at `../haru3-reports/apps/mobile@dev` — read
-it directly per screen; do **not** invent a separate realignment
-backlog.
+a real acceptance contract. v4 uses the relevant `design-*.md` or
+`plan-*.md` file as the specification. If neither exists, the current
+implementation and tests are the baseline. A design change needs a
+task-specific design doc, not a separate realignment backlog.
 
 ### Subagent over-scoping
 

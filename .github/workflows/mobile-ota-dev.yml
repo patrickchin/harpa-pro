@@ -55,7 +55,7 @@ permissions:
 jobs:
   register-native-runtime:
     name: Register distributed preview native runtime
-    if: github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'workflow_dispatch' && inputs.api_deploy_succeeded != true
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -100,7 +100,7 @@ jobs:
           API_DEPLOY_SUCCEEDED: ${{ inputs.api_deploy_succeeded || false }}
           API_PATH_PATTERN: '^(packages/api/|packages/api-contract/|packages/ai-fixtures/|infra/fly/|infra/neon/|scripts/journeys/|pnpm-lock\.yaml$|\.github/workflows/api-dev\.yml$)'
           API_WORKFLOW_NAME: api-dev
-          EVENT_NAME: ${{ github.event_name }}
+          EVENT_NAME: ${{ inputs.api_deploy_succeeded == true && 'workflow_call' || github.event_name }}
           MOBILE_PATH_PATTERN: '^(apps/mobile/|packages/api-contract/|packages/report-core/|pnpm-lock\.yaml$|\.github/workflows/mobile-ota-dev\.yml$)'
           PUSH_BEFORE: ${{ github.event.before }}
           REQUESTED_SHA: ${{ inputs.release_sha }}

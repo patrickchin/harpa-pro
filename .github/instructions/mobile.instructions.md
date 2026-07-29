@@ -40,8 +40,11 @@ description: "Mobile-specific rules for the Expo / NativeWind app. Loads automat
 - Body components in `apps/mobile/screens/<name>.tsx` do **not** call
   the API or touch the network. Data fetching lives in the route per
   the page template (`docs/v4/prompts/page-template.md`).
-- For mobile screen ports the canonical source is
-  `../haru3-reports/apps/mobile@dev` — match it pixel-for-pixel.
+- For a screen port or feature specification, use the relevant
+  `docs/v4/design-*.md` or `docs/v4/plan-*.md` file. If neither
+  exists, use the current `apps/mobile` implementation and its tests
+  as the baseline. Add a task-specific design doc before making a
+  design change.
 
 ## Auth flows
 

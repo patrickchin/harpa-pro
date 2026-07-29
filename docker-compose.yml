@@ -107,7 +107,7 @@ services:
       # Dockerfile sets MIGRATIONS_REQUIRED_HEAD="" via empty ARG, which
       # fails env.ts's regex when seed scripts import the shared env parser.
       # Pin to the current local migration head. Bump when adding migrations.
-      MIGRATIONS_REQUIRED_HEAD: 0022_r2_object_lifecycle.sql
+      MIGRATIONS_REQUIRED_HEAD: 0025_activity_event_dedupe_redaction.sql
       DATABASE_URL: postgres://postgres:pg@pg:5432/harpa
       BETTER_AUTH_SECRET: dev-only-secret-do-not-use-in-prod
       BETTER_AUTH_URL: http://localhost:8787
@@ -132,7 +132,7 @@ services:
       # Dockerfile sets MIGRATIONS_REQUIRED_HEAD="" via empty ARG, which
       # fails env.ts's regex on boot. Pin to the current head so the API
       # starts cleanly in the compose stack. Bump when adding migrations.
-      MIGRATIONS_REQUIRED_HEAD: 0022_r2_object_lifecycle.sql
+      MIGRATIONS_REQUIRED_HEAD: 0025_activity_event_dedupe_redaction.sql
       DATABASE_URL: postgres://postgres:pg@pg:5432/harpa
       # Live storage backed by MinIO (in-network). R2_PUBLIC_ENDPOINT
       # is what the host-side CLI/browser sees in presigned URLs.

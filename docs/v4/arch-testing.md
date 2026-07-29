@@ -19,9 +19,9 @@
                     ▼
 ```
 
-> **No automated screenshot diffs.** Visual review is manual against
-> the canonical port source at `../haru3-reports/apps/mobile@dev` on
-> the iOS simulator.
+> **No automated screenshot diffs.** Visual review uses the relevant
+> `design-*.md` or `plan-*.md` spec. If neither exists, it uses the
+> current implementation and tests as the baseline.
 
 ## Per-layer rules
 
@@ -85,10 +85,12 @@ Each AI-touching route has a test that:
 
 ### Mobile visual review
 
-- Manual, in the iOS simulator, side-by-side with the canonical
-  source at `../haru3-reports/apps/mobile@dev`.
+- Manual, in the iOS simulator, against the relevant `design-*.md`
+  or `plan-*.md` spec. If neither exists, compare the current
+  implementation and tests.
 - There is no automated diff and no `pnpm visual:diff` script.
   Cosmetic drift is caught by reviewer eye; it is still a P0 bug.
+- Add a task-specific design doc before making a design change.
 
 ### Metro bundle smoke
 

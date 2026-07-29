@@ -57,6 +57,7 @@ import {
 } from '../services/reports.js';
 import { getProjectBySlug } from '../services/projects.js';
 import { createReportComment, listReportComments } from '../services/report-comments.js';
+import { recordActivityEvent } from '../services/activity-events.js';
 import { generateReport as aiGenerateReport } from '../services/ai.js';
 import { enforceUsageLimit, attachUsageWarning } from '../services/usage-limits.js';
 import { getAiSettings } from '../services/settings.js';
@@ -276,7 +277,22 @@ reportRoutes.openapi(
     const { project: slug } = c.req.valid('param');
     const body = c.req.valid('json');
     const project = await requireProjectWriter(db, userId, slug);
-    const report = await db((d) => createReport(d, project.id, userId, body));
+    const requestId = c.get('requestId');
+    const report = await db(async (d) => {
+      const created = await createReport(d, project.id, userId, body);
+      if (created) {
+        await recordActivityEvent(d, {
+          eventType: 'report.created',
+          actorUserId: userId,
+          subjectId: created.id,
+          projectId: project.id,
+          requestId,
+          dedupeKey: `report.created:${created.id}`,
+          metadata: { reportNumber: created.number },
+        });
+      }
+      return created;
+    });
     if (!report) throw new HTTPException(500, { message: 'create failed' });
     return c.json(toReportResponse(report), 201);
   },

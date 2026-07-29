@@ -245,8 +245,9 @@ so no duplicate forms.
 
 ## 5. Maestro coverage additions
 
-Existing flows live in `apps/mobile/.maestro/` (port from canonical).
-Augment with a "back-button after X" step on these:
+Existing flows live in `.maestro/`. This design and the current flows
+define the required navigation behaviour. Add a "back-button after X"
+step to these:
 
 - `report-finalize.yaml` (or equivalent): after finalize → assert
   saved-report → tap back → assert reports list → tap back → assert

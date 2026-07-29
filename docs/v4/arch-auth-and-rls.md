@@ -261,7 +261,7 @@ origin receives no dashboard CORS headers.
 
 ## Project role RLS
 
-Migration `0023_project_write_roles.sql` adds
+Migration `0026_project_write_roles.sql` adds
 `app.can_edit_project(project_id)`. It returns true only for the current
 project owner or editor. The project, report, note, note-file, and file
 write policies use this helper.
@@ -279,7 +279,7 @@ write.
 ## Files: project-inherited RLS
 
 `app.files` lets every current project member read attached files.
-Migration `0023_project_write_roles.sql` narrows all other file actions:
+Migration `0026_project_write_roles.sql` narrows all other file actions:
 
 | Action | Rule |
 |---|---|
@@ -420,6 +420,7 @@ introduces that data contract.
 |---|---|---|
 | `BETTER_AUTH_SECRET` | API | Session signing key; production requires an explicit value of at least 32 characters |
 | `BETTER_AUTH_URL` | API | Base URL for better-auth handler |
+| `ADMIN_CORS_ORIGINS` | API | Exact browser origins trusted for credentialed auth and admin requests |
 | `RESEND_API_KEY` | API | Resend transport for OTP emails |
 | `EMAIL_OTP_LIVE` | API | `1` = real Resend send; `0` = redacted delivery diagnostics only (dev/test) |
 | `TEST_ACCOUNT_EMAILS` | API | Password-bypass allowlist (set in dev + prd) |
@@ -473,6 +474,13 @@ file rows with existing FKs. The helper also deletes the user's
 `app.llm_usage_events` rows and email-OTP verification rows. Since all
 session rows are gone, the bearer token used for the deletion call
 authenticates as 401 on the next request.
+
+Business activity rows are retained, but a privileged database trigger
+nulls any matching `actor_user_id` and user `subject_id` before the user
+row is deleted. It also replaces a signup's user-derived dedupe key with
+`redacted:<activity_event_id>`. Event type, timestamp, and non-user
+subjects remain for aggregate history without retaining the deleted
+account ID.
 
 Project records follow the collaboration rules in
 [`arch-project-members.md`](arch-project-members.md#account-deletion).

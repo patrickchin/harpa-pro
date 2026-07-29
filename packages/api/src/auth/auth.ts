@@ -24,6 +24,8 @@ import { env } from '../env.js';
 import { logEmailOtpPreview } from '../lib/email-diagnostics.js';
 import { createResendClient } from '../lib/resend.js';
 import { newId } from '../lib/ids.js';
+import { recordActivityEvent } from '../services/activity-events.js';
+import { captureApiException } from '../telemetry/sentry.js';
 
 const TEST_EMAILS = (env.TEST_ACCOUNT_EMAILS ?? '')
   .split(',')
@@ -37,8 +39,11 @@ const DEMO_ACCOUNT_EMAILS = (env.DEMO_ACCOUNT_EMAILS ?? '')
 
 const PASSWORD_LOGIN_EMAILS = new Set([...TEST_EMAILS, ...DEMO_ACCOUNT_EMAILS]);
 
-const DASHBOARD_ORIGINS = env.DASHBOARD_CORS_ORIGINS
-  .split(',')
+const DASHBOARD_ORIGINS = env.DASHBOARD_CORS_ORIGINS.split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
+const ADMIN_WEB_ORIGINS = env.ADMIN_CORS_ORIGINS.split(',')
   .map((origin) => origin.trim())
   .filter(Boolean);
 
@@ -142,6 +147,7 @@ export const auth = betterAuth({
     'harpa://',
     'harpa://*',
     ...DASHBOARD_ORIGINS,
+    ...ADMIN_WEB_ORIGINS,
     ...(env.NODE_ENV === 'development'
       ? ['exp://', 'exp://**', 'exp://192.168.*.*:*/**']
       : []),
@@ -186,6 +192,38 @@ export const auth = betterAuth({
         before: async (_user, ctx) => {
           if (ctx?.path === '/sign-up/email') {
             throw new APIError('FORBIDDEN', { message: 'sign-up disabled' });
+          }
+        },
+        after: async (user, ctx) => {
+          if (ctx?.path !== '/sign-in/email-otp') return;
+
+          const incomingRequestId = ctx.request?.headers.get('x-request-id') ?? null;
+          const requestId =
+            incomingRequestId && /^[\w-]{6,128}$/.test(incomingRequestId)
+              ? incomingRequestId
+              : null;
+
+          try {
+            await recordActivityEvent(rawDb(), {
+              eventType: 'user.signed_up',
+              actorUserId: user.id,
+              subjectId: user.id,
+              projectId: null,
+              requestId,
+              dedupeKey: `user.signed_up:${user.id}`,
+              metadata: { method: 'email_otp' },
+            });
+          } catch (error) {
+            ctx.context.logger.error('Failed to record signup activity', error, {
+              userId: user.id,
+              requestId,
+            });
+            captureApiException(error, {
+              requestId: requestId ?? 'signup-activity-hook',
+              method: 'AUTH',
+              route: 'user.create.after',
+              status: 0,
+            });
           }
         },
       },

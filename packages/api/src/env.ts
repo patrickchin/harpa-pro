@@ -11,6 +11,24 @@ const optionalUrl = z.preprocess(
   z.string().url().optional(),
 );
 
+const exactHttpOrigins = z.string().refine(
+  (value) => {
+    const origins = splitCsv(value);
+    return origins.length > 0
+      && origins.every((origin) => {
+        try {
+          const url = new URL(origin);
+          return (url.protocol === 'http:' || url.protocol === 'https:')
+            && url.origin === origin
+            && !origin.includes('*');
+        } catch {
+          return false;
+        }
+      });
+  },
+  'must be a comma-separated list of exact HTTP(S) origins',
+);
+
 const DEMO_ACCOUNT_EMAILS = new Set([
   'demo@harpapro.com',
   'demo2@harpapro.com',
@@ -157,6 +175,16 @@ const Env = z.object({
     .string()
     .default('https://app.harpapro.com,https://harpa-pro-dashboard.pages.dev,https://*.harpa-pro-dashboard.pages.dev,http://localhost:3003,http://127.0.0.1:3003'),
   /**
+   * Exact browser origins allowed to send credentialed Better Auth and
+   * `/admin/*` requests. Production defaults to the dedicated admin
+   * hostname; local/test defaults to the Astro dev server.
+   */
+  ADMIN_CORS_ORIGINS: exactHttpOrigins.default(
+     process.env.NODE_ENV === 'production'
+       ? 'https://admin.harpapro.com'
+       : 'http://localhost:3002',
+  ),
+  /**
    * Filename of the last migration this image expects to find applied in
    * `app._migrations`. Baked into the image at build time (see
    * infra/fly/Dockerfile ARG MIGRATIONS_REQUIRED_HEAD). Used by /readyz
@@ -260,6 +288,21 @@ const Env = z.object({
   }
 
   if (isLiveDeployment) {
+    const adminOriginsAreSafe = splitCsv(e.ADMIN_CORS_ORIGINS).every(
+      (origin) =>
+        origin.startsWith('https://')
+        && !origin.includes('localhost')
+        && !origin.endsWith('.pages.dev'),
+    );
+    if (!adminOriginsAreSafe) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['ADMIN_CORS_ORIGINS'],
+        message:
+          'production admin origins must use HTTPS and exclude localhost and Pages preview hosts',
+      });
+    }
+
     const requirements = [
       ['AI_FIXTURE_MODE', e.AI_FIXTURE_MODE, 'live'],
       ['AI_LIVE', e.AI_LIVE, '1'],

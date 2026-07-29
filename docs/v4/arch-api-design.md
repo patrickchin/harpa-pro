@@ -101,6 +101,7 @@ update.
 
 | Method | Path | Purpose |
 |---|---|---|
+| GET | `/admin/activity` | Paginated business activity feed. See [design-admin-business-activity.md](design-admin-business-activity.md). |
 | GET | `/admin/waitlist.csv` | Export waitlist (marketing P1). |
 | PATCH | `/admin/users/:id/plan` | Change a user's plan tier. See [arch-usage-limits.md](arch-usage-limits.md). |
 | PUT | `/admin/users/:id/limit-overrides` | Upsert per-bucket override. See [arch-usage-limits.md](arch-usage-limits.md). |
@@ -133,7 +134,12 @@ pre-P3.0 shape and will be renamed by the P3.0 migration.
 
 ### Auth header
 
-`Authorization: Bearer <jwt>` only. No cookie auth.
+Expo and API clients use `Authorization: Bearer <better-auth session
+token>`. The browser admin surface uses Better Auth's secure,
+HttpOnly, host-only session cookie with `credentials: 'include'`.
+Credentialed CORS is restricted to exact `ADMIN_CORS_ORIGINS` entries
+on `/api/auth/*` and `/admin/*`; the browser never stores a bearer
+token in JavaScript.
 
 ### Rate limiting
 

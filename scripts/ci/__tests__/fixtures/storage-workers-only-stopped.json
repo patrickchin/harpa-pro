@@ -1,0 +1,28 @@
+[
+  {
+    "id": "worker-stopped",
+    "state": "stopped",
+    "config": {
+      "image": "registry.fly.io/harpa-test:deployment-current",
+      "metadata": {
+        "fly_process_group": "storage-worker",
+        "fly_release_id": "rel-current",
+        "fly_release_version": "42"
+      },
+      "services": [],
+      "standbys": []
+    }
+  },
+  {
+    "id": "http-started",
+    "state": "started",
+    "config": {
+      "image": "registry.fly.io/harpa-test:deployment-current",
+      "metadata": {
+        "fly_process_group": "app",
+        "fly_release_id": "rel-current",
+        "fly_release_version": "42"
+      }
+    }
+  }
+]

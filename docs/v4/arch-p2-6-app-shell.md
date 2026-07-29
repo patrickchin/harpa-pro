@@ -8,7 +8,14 @@
 
 ## Scope
 
-P2.6 ships the foundational shell every later screen mounts inside: the provider tree (gesture, safe area, error boundary, React Query, auth, dialogs, uploads, audio, telemetry); the auth gate redirect logic between `(auth)` and `(app)` route groups; the tab/stack shape inside `(app)` — porting `../haru3-reports/apps/mobile/app/_layout.tsx` and `app/(tabs)/_layout.tsx` (single Projects tab, tab bar hidden) into v4. Also disposes of §A (multi-mount race), §C (deleted-account fallback), and §H (provider prop-stability) from the P2.4 security review.
+P2.6 ships the foundational shell every later screen mounts inside:
+the provider tree, the auth gate, and the navigation shape. The
+provider tree includes gesture, safe area, error boundary, React
+Query, auth, dialogs, uploads, audio, and telemetry. The auth gate
+redirects between the `(auth)` and `(app)` route groups. The `(app)`
+group has one hidden Projects tab. P2.6 also disposes of §A
+(multi-mount race), §C (deleted-account fallback), and §H
+(provider prop-stability) from the P2.4 security review.
 
 ## Constraints (pitfalls + hard rules)
 

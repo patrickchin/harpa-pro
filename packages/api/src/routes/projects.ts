@@ -39,6 +39,7 @@ import {
   updateMemberRole,
   updateProject,
 } from '../services/projects.js';
+import { recordActivityEvent } from '../services/activity-events.js';
 
 const projectParam = z.object({
   project: projectId.openapi({ param: { name: 'project', in: 'path' } }),
@@ -94,7 +95,20 @@ projectRoutes.openapi(
     const db = c.get('db');
     if (!userId || !db) throw new HTTPException(401);
     const body = c.req.valid('json');
-    const id = await db((d) => createProject(d, body));
+    const requestId = c.get('requestId');
+    const id = await db(async (d) => {
+      const projectId = await createProject(d, body);
+      await recordActivityEvent(d, {
+        eventType: 'project.created',
+        actorUserId: userId,
+        subjectId: projectId,
+        projectId,
+        requestId,
+        dedupeKey: `project.created:${projectId}`,
+        metadata: {},
+      });
+      return projectId;
+    });
     const project = await db((d) => getProject(d, userId, id));
     if (!project) throw new HTTPException(500, { message: 'created project not found' });
     return c.json(project, 201);

@@ -112,14 +112,21 @@ describe('ReportWorkspacePage draft editing', () => {
     });
     const key = reportDraftStorageKey('highland-tower', 7);
 
-    await change(field(rendered.container, 'Summary'), 'First keystroke');
-    expect(sessionStorage.getItem(key)).toBeNull();
-    await change(field(rendered.container, 'Summary'), 'Latest draft value');
-    expect(sessionStorage.getItem(key)).toBeNull();
+    vi.useFakeTimers();
+    try {
+      await change(field(rendered.container, 'Summary'), 'First keystroke');
+      expect(sessionStorage.getItem(key)).toBeNull();
+      await change(field(rendered.container, 'Summary'), 'Latest draft value');
+      expect(sessionStorage.getItem(key)).toBeNull();
 
-    await waitMs(35);
-    expect(sessionStorage.getItem(key)).toContain('Latest draft value');
-    expect(sessionStorage.getItem(key)).not.toContain('First keystroke');
+      vi.advanceTimersByTime(24);
+      expect(sessionStorage.getItem(key)).toBeNull();
+      vi.advanceTimersByTime(1);
+      expect(sessionStorage.getItem(key)).toContain('Latest draft value');
+      expect(sessionStorage.getItem(key)).not.toContain('First keystroke');
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('preserves a stale local draft, stops autosave, and requires an explicit overwrite', async () => {

@@ -99,9 +99,12 @@ PDFs, or public Android availability.
 
 ## User experience
 
-The docs reuse the public site's warm-paper, navy, and orange design tokens,
-Inter typography, wordmark, header, footer, focus treatment, and responsive
-conventions. The index restores the original task-first presentation:
+The docs and public site consume the mobile-authored tokens defined by
+[the cross-surface visual system](design-cross-surface-visual-system.md):
+warm paper, softened navy, restrained orange, the native system typeface, and
+the mobile 4 px spacing and 6/8/12 px shape scales. They share the wordmark,
+header, footer, focus treatment, and responsive conventions. The index restores
+the original task-first presentation:
 
 - the heading **What do you want to do?** with a current app screenshot;
 - two large core-workflow cards;

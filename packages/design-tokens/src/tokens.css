@@ -1,0 +1,137 @@
+/*
+ * Web mirror of the mobile visual system.
+ *
+ * apps/mobile/lib/design-tokens/colors.ts and apps/mobile/tailwind.config.js
+ * are normative. scripts/ci/__tests__/web-visual-contract.test.sh prevents
+ * the web mirror from drifting.
+ */
+
+:root {
+  color-scheme: light;
+
+  /* Typography */
+  --font-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-size-display: 2.125rem;
+  --line-height-display: 2.5rem;
+  --font-size-title: 1.625rem;
+  --line-height-title: 2rem;
+  --font-size-title-sm: 1.25rem;
+  --line-height-title-sm: 1.625rem;
+  --font-size-metric: 2rem;
+  --line-height-metric: 2.25rem;
+  --font-size-body-lg: 1.125rem;
+  --line-height-body-lg: 1.625rem;
+  --font-size-body: 1rem;
+  --line-height-body: 1.5rem;
+  --font-size-meta: 0.875rem;
+  --line-height-meta: 1.25rem;
+  --font-size-label: 0.8125rem;
+  --line-height-label: 1rem;
+  --letter-spacing-label: 0.08em;
+
+  /* Mobile-authored colour roles */
+  --background: #f8f6f1;
+  --foreground: #2d3a5a;
+  --card: #ffffff;
+  --card-foreground: #2d3a5a;
+  --popover: #ffffff;
+  --popover-foreground: #2d3a5a;
+  --surface-muted: #f1eee6;
+  --surface-emphasis: #fffdf8;
+  --surface-shadow: #1a1a2e;
+  --primary: #2d3a5a;
+  --primary-foreground: #f8f6f1;
+  --primary-alpha-30: rgb(45 58 90 / 30%);
+  --secondary: #ece8df;
+  --secondary-foreground: #2d3a5a;
+  --muted: #ebe7dd;
+  --muted-foreground: #5f5b66;
+  --muted-disabled: #8a8693;
+  --accent: #ea580c;
+  --accent-foreground: #ffffff;
+  --accent-ink: #9a3412;
+  --destructive: #b91c1c;
+  --destructive-foreground: #ffffff;
+  --border: #b9b4a8;
+  --input: #b9b4a8;
+  --ring: #2d3a5a;
+
+  /* Status roles */
+  --success: #2f6f48;
+  --success-soft: #edf7ef;
+  --success-text: #245338;
+  --success-border: #8fc2a0;
+  --warning: #b66916;
+  --warning-soft: #fff4e5;
+  --warning-text: #8e510e;
+  --warning-border: #e3b16e;
+  --danger: #b91c1c;
+  --danger-soft: #fdecea;
+  --danger-text: #8f1d18;
+  --danger-border: #e0a6a1;
+  --info: #2a5a9f;
+  --info-soft: #edf4ff;
+  --info-text: #244b82;
+  --info-border: #9fb7df;
+
+  /* Shape and depth */
+  --radius-sm: 4px;
+  --radius-control: 6px;
+  --radius-md: 6px;
+  --radius-card: 8px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+  --border-width: 1px;
+  --shadow-raised: 0 2px 8px rgb(26 26 46 / 8%);
+  --shadow-floating: 0 4px 14px rgb(26 26 46 / 12%);
+  --focus-outline: 3px solid rgb(45 58 90 / 30%);
+
+  /* Spacing and sizing */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --control-height: 44px;
+  --control-height-lg: 52px;
+  --icon-tile: 40px;
+  --page-gutter: 20px;
+  --page-gutter-wide: 32px;
+  --sidebar-width: 268px;
+  --content-max: 72rem;
+  --reading-max: 45rem;
+  --app-max: 86.25rem;
+
+  /* Existing semantic aliases, kept so surface code remains readable. */
+  --ink: var(--foreground);
+  --ink-soft: var(--muted-foreground);
+  --paper: var(--background);
+  --paper-deep: var(--surface-muted);
+  --surface: var(--card);
+  --surface-muted-web: var(--surface-muted);
+  --line: var(--border);
+  --line-strong: var(--border);
+  --accent-dark: var(--accent-ink);
+  --accent-soft: var(--warning-soft);
+  --shadow: var(--shadow-raised);
+
+  /* Tailwind/site semantic aliases. */
+  --chart-1: var(--primary);
+  --chart-2: var(--success);
+  --chart-3: var(--info);
+  --chart-4: var(--warning);
+  --chart-5: var(--accent);
+  --sidebar: var(--surface-emphasis);
+  --sidebar-foreground: var(--foreground);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: var(--surface-muted);
+  --sidebar-accent-foreground: var(--foreground);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--ring);
+}

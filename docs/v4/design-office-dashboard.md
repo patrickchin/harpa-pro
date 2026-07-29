@@ -488,13 +488,21 @@ Not required for MVP:
 
 ## 10. Visual and interaction language
 
-Carry the existing “warm paper + navy ink” browser palette into the dashboard:
+The binding values and measurements live in
+[the cross-surface visual system](design-cross-surface-visual-system.md).
+The mobile app is the visual source of truth; desktop adds room and keyboard
+reach, not a separate palette or component grammar. Carry its “warm paper +
+navy ink” language into the dashboard:
 
 - warm neutral page background;
-- pale cards and table surfaces;
+- white, bordered cards and table surfaces with 8 px radii;
 - navy primary text/actions;
 - orange accent for focus and one primary action;
-- restrained borders instead of heavy shadows.
+- restrained raised shadows and one-pixel borders;
+- 44 px controls, 20–32 px page gutters, and the mobile system type scale.
+
+The report workspace may own its responsive editor/preview grid, but it must
+not define a second set of colours, fields, buttons, tabs, or radii.
 
 Do not use the current light-on-orange combination for normal-size body text;
 the public-site token documentation already records that it misses WCAG AA.

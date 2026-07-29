@@ -10,6 +10,14 @@ site_css="$repo_root/apps/site/src/styles/globals.css"
 site_layout="$repo_root/apps/site/src/layouts/Layout.astro"
 site_package="$repo_root/apps/site/package.json"
 mobile_colors="$repo_root/apps/mobile/lib/design-tokens/colors.ts"
+deploy_workflows=(
+  "$repo_root/.github/workflows/dashboard-preview.yml"
+  "$repo_root/.github/workflows/dashboard-dev.yml"
+  "$repo_root/.github/workflows/dashboard-prod.yml"
+  "$repo_root/.github/workflows/site-preview.yml"
+  "$repo_root/.github/workflows/site-dev.yml"
+  "$repo_root/.github/workflows/site-prod.yml"
+)
 
 fail() {
   printf 'FAIL: %s\n' "$1" >&2
@@ -74,5 +82,10 @@ expect_not_contains "$dashboard_reports_css" '--reports-paper:'
 expect_not_contains "$dashboard_reports_css" '--reports-ink:'
 expect_not_contains "$site_css" '--background: oklch'
 expect_not_contains "$site_layout" '@fontsource-variable/inter'
+
+# Token-only changes must rebuild every browser deployment target.
+for workflow in "${deploy_workflows[@]}"; do
+  expect_contains "$workflow" 'packages/design-tokens/**'
+done
 
 printf 'PASS: web surfaces share the mobile visual contract\n'

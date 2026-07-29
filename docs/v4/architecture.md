@@ -151,6 +151,7 @@ packages/
     fly.toml
   api-contract/           # Zod schemas + generated OpenAPI types
   ai-fixtures/            # record/replay/live providers + fixtures
+  design-tokens/          # mobile-authored CSS tokens for dashboard + site
   ui/                     # shared primitives (P2.1; optional split later)
 
 infra/

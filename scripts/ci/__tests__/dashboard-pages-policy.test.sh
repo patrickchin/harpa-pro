@@ -128,6 +128,9 @@ for workflow in "$PREVIEW" "$DEV" "$PROD"; do
   forbid_fixed "$workflow" \
     "--project-name=harpa-pro " \
     "$label cannot deploy into the public-site Pages project"
+  forbid_fixed "$workflow" \
+    "wranglerVersion:" \
+    "$label reuses the workspace Wrangler version"
 done
 
 require_fixed "$PREVIEW" \

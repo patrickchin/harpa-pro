@@ -44,6 +44,13 @@ DEV_DEPLOY_LINE=$(
     | cut -d: -f1 \
     || true
 )
+DEV_REPAIR_LINE=$(
+  grep -n -m1 -F \
+    'bash scripts/ci/repair-storage-worker-topology.sh harpa-pro-api-dev' \
+    "$DEV_WORKFLOW" \
+    | cut -d: -f1 \
+    || true
+)
 DEV_VERIFY_LINE=$(
   grep -n -m1 -F \
     'bash scripts/ci/verify-storage-worker-started.sh harpa-pro-api-dev' \
@@ -58,21 +65,23 @@ DEV_ARM_LINE=$(
     | cut -d: -f1 \
     || true
 )
-if [[ -z "$DEV_DEPLOY_LINE" || -z "$DEV_VERIFY_LINE" || -z "$DEV_ARM_LINE" ||
-      "$DEV_DEPLOY_LINE" -ge "$DEV_VERIFY_LINE" ||
+if [[ -z "$DEV_DEPLOY_LINE" || -z "$DEV_REPAIR_LINE" ||
+      -z "$DEV_VERIFY_LINE" || -z "$DEV_ARM_LINE" ||
+      "$DEV_DEPLOY_LINE" -ge "$DEV_REPAIR_LINE" ||
+      "$DEV_REPAIR_LINE" -ge "$DEV_VERIFY_LINE" ||
       "$DEV_VERIFY_LINE" -ge "$DEV_ARM_LINE" ]]; then
-  echo "  FAIL - dev must deploy, verify a started worker, then arm"
+  echo "  FAIL - dev must deploy, narrowly repair, verify, then arm"
   exit 1
 fi
-echo "  ok   - dev deploy verifies a started worker before arming"
+echo "  ok   - dev deploy repairs narrowly and verifies before arming"
 
 POLICY_LOG="$TMP/actions.log" \
 PATH="$TMP/bin:$PATH" \
   env -u DATABASE_URL bash "$DEPLOY_SCRIPT" --remote-only >/dev/null
 
 mapfile -t ACTIONS < "$TMP/actions.log"
-if [[ "${#ACTIONS[@]}" -ne 3 ]]; then
-  printf '  FAIL - expected 3 deploy actions, got %s\n' "${#ACTIONS[@]}"
+if [[ "${#ACTIONS[@]}" -ne 4 ]]; then
+  printf '  FAIL - expected 4 deploy actions, got %s\n' "${#ACTIONS[@]}"
   printf '    %s\n' "${ACTIONS[@]}"
   exit 1
 fi
@@ -83,16 +92,21 @@ fi
 }
 [[ "${ACTIONS[1]}" == \
   "flyctl machines list --app harpa-pro-api --json" ]] || {
-  echo "  FAIL - started-worker verification does not follow deploy"
+  echo "  FAIL - narrow worker repair does not follow deploy"
   exit 1
 }
 [[ "${ACTIONS[2]}" == \
+  "flyctl machines list --app harpa-pro-api --json" ]] || {
+  echo "  FAIL - started-worker verification does not follow repair"
+  exit 1
+}
+[[ "${ACTIONS[3]}" == \
   "flyctl ssh console --app harpa-pro-api --process-group storage-worker --pty=false --command STORAGE_LEASE_ROLLOUT_GRACE_SEC=330 STORAGE_ACCOUNT_DELETE_ENABLED=true pnpm --filter @harpa/api storage:arm-leases" ]] || {
   echo "  FAIL - remote lifecycle arming does not follow worker verification"
   exit 1
 }
 
-echo "  ok   - deploy, started-worker verification, and arming run in order"
+echo "  ok   - deploy, narrow repair, verification, and arming run in order"
 echo "  ok   - production DATABASE_URL stays inside Fly"
 
 grep -q 'STORAGE_ACCOUNT_DELETE_ENABLED=false' \

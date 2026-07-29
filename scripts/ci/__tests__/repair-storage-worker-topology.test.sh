@@ -12,13 +12,13 @@ trap 'rm -rf "$TMP"' EXIT
   exit 1
 }
 grep -Fq \
-  'START_MAX_ATTEMPTS="${STORAGE_WORKER_START_MAX_ATTEMPTS:-10}"' \
+  "START_MAX_ATTEMPTS=\"\${STORAGE_WORKER_START_MAX_ATTEMPTS:-10}\"" \
   "$REPAIR_SCRIPT" || {
   echo "FAIL - repair must bound start polling to 10 attempts by default"
   exit 1
 }
 grep -Fq \
-  'START_POLL_SECONDS="${STORAGE_WORKER_START_POLL_SECONDS:-3}"' \
+  "START_POLL_SECONDS=\"\${STORAGE_WORKER_START_POLL_SECONDS:-3}\"" \
   "$REPAIR_SCRIPT" || {
   echo "FAIL - repair must space default start polls by 3 seconds"
   exit 1
@@ -232,6 +232,31 @@ expect_failure_after_start_before_clone() {
   echo "  ok   - $name"
 }
 
+expect_started_retry_failure_before_clone() {
+  local name="$1"
+  local before_clone="$2"
+  local output
+  local status
+
+  reset_case
+  set +e
+  output=$(
+    run_repair \
+      "storage-workers-started-no-standby.json" \
+      "$before_clone"
+  )
+  status=$?
+  set -e
+
+  [[ "$status" -ne 0 ]] || {
+    echo "FAIL - $name unexpectedly passed"
+    echo "$output"
+    exit 1
+  }
+  assert_no_clone
+  echo "  ok   - $name"
+}
+
 echo "storage-worker topology repair"
 
 reset_case
@@ -320,6 +345,16 @@ expect_failure_after_start_before_clone \
   "release drift after start blocks cloning" \
   "storage-workers-started-no-standby-stale-transition.json"
 
+expect_started_retry_failure_before_clone \
+  "a replacement candidate blocks a started retry clone" \
+  "storage-workers-started-no-standby-replacement-current.json"
+expect_started_retry_failure_before_clone \
+  "another worker blocks a started retry clone" \
+  "storage-workers-started-no-standby-extra.json"
+expect_started_retry_failure_before_clone \
+  "release drift blocks a started retry clone" \
+  "storage-workers-started-stale.json"
+
 reset_case
 stopped_retry_output=$(
   run_repair \
@@ -358,6 +393,7 @@ reset_case
 started_recovery_output=$(
   run_repair \
     "storage-workers-started-no-standby.json" \
+    "storage-workers-started-no-standby.json" \
     "storage-workers-started.json"
 )
 [[ "$started_recovery_output" == *"storage-worker topology repaired"* ]] || {
@@ -366,8 +402,8 @@ started_recovery_output=$(
   exit 1
 }
 mapfile -t STARTED_RECOVERY_ACTIONS < "$TMP/flyctl.log"
-[[ "${#STARTED_RECOVERY_ACTIONS[@]}" -eq 3 ]] || {
-  printf 'FAIL - expected 3 missing-standby recovery actions, got %s\n' \
+[[ "${#STARTED_RECOVERY_ACTIONS[@]}" -eq 4 ]] || {
+  printf 'FAIL - expected 4 missing-standby recovery actions, got %s\n' \
     "${#STARTED_RECOVERY_ACTIONS[@]}"
   printf '  %s\n' "${STARTED_RECOVERY_ACTIONS[@]}"
   exit 1
@@ -375,8 +411,10 @@ mapfile -t STARTED_RECOVERY_ACTIONS < "$TMP/flyctl.log"
 [[ "${STARTED_RECOVERY_ACTIONS[0]}" == \
   "machines|list|--app|harpa-test|--json" ]]
 [[ "${STARTED_RECOVERY_ACTIONS[1]}" == \
-  "machine|clone|worker-started|--app|harpa-test|--standby-for=source" ]]
+  "machines|list|--app|harpa-test|--json" ]]
 [[ "${STARTED_RECOVERY_ACTIONS[2]}" == \
+  "machine|clone|worker-started|--app|harpa-test|--standby-for=source" ]]
+[[ "${STARTED_RECOVERY_ACTIONS[3]}" == \
   "machines|list|--app|harpa-test|--json" ]]
 echo "  ok   - current singleton worker gets one verified standby clone"
 
@@ -384,6 +422,7 @@ reset_case
 set +e
 failed_clone_verify_output=$(
   run_repair \
+    "storage-workers-started-no-standby.json" \
     "storage-workers-started-no-standby.json" \
     "storage-workers-started-no-standby.json"
 )

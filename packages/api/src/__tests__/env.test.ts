@@ -33,6 +33,7 @@ const KEYS = [
   'DEMO_ACCOUNT_EMAILS',
   'DEMO_ACCOUNT_PASSWORD',
   'DASHBOARD_CORS_ORIGINS',
+  'ADMIN_CORS_ORIGINS',
 ] as const;
 
 let snapshot: Record<string, string | undefined>;

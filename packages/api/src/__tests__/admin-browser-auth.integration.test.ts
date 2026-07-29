@@ -4,6 +4,7 @@ import { getPool, resetPool } from '../db/client.js';
 import { startPg, type PgFixture } from './setup-pg.js';
 
 const ADMIN_ORIGIN = 'http://localhost:3002';
+const DASHBOARD_ORIGIN = 'https://app.harpapro.com';
 let fx: PgFixture;
 
 async function readOtp(email: string): Promise<string> {
@@ -78,6 +79,16 @@ describe('admin browser authentication and CORS', () => {
       },
     });
     expect(rejected.headers.get('access-control-allow-origin')).toBeNull();
+
+    const dashboardRejected = await app.request('/admin/activity', {
+      method: 'OPTIONS',
+      headers: {
+        origin: DASHBOARD_ORIGIN,
+        'access-control-request-method': 'GET',
+      },
+    });
+    expect(dashboardRejected.headers.get('access-control-allow-origin')).toBeNull();
+    expect(dashboardRejected.headers.get('access-control-allow-credentials')).toBeNull();
   });
 
   it('authenticates an admin activity request with the Better Auth cookie', async () => {

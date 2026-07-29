@@ -292,11 +292,20 @@ loads `GET /me/deletion-preview`, requires the user to type their
 account email, calls `DELETE /me`, clears local caches, and signs out.
 
 Deletion removes the user's auth account, sessions, settings, usage
-events, personal file rows, and solo projects. Shared project records
-remain available to remaining members; if the deleted account was the
-only owner, ownership transfers to the oldest remaining member. Mention
-this shared-record retention in App Review notes or privacy-policy
-updates if reviewers ask how collaborative data is handled.
+events, personal file rows, owned R2 objects, safe-prefix R2 orphans,
+and solo projects. Shared project records remain available to remaining
+members; if the deleted account was the only owner, ownership transfers
+to the oldest remaining member. Mention this shared-record retention in
+App Review notes or privacy-policy updates if reviewers ask how
+collaborative data is handled.
+
+The database transaction creates durable immediate and delayed R2 jobs.
+The route attempts immediate cleanup; the storage worker retries failures
+and runs the final exact-key pass after every signed PUT has expired.
+Inspect `app.storage_delete_jobs` for `attempt_count` / `last_error`;
+worker failures also reach structured logs and Sentry. PR preview apps
+return `503` for account deletion because they intentionally have no
+always-on worker.
 
 ### Production release
 
@@ -545,6 +554,10 @@ gate by reverting the bump. Release in this order:
 That dispatch creates the environment/version readiness tag before the OTA
 job evaluates its policy. If publication fails afterward, leave the tag in
 place—it still correctly attests the native artifact—and retry the dispatch.
+Only a direct dispatch of the mobile OTA workflow performs this registration.
+A manually dispatched API deployment may call the reusable OTA workflow after
+its gates pass, but it remains an automatic policy evaluation and does not
+consume the native registration inputs.
 Normal rotation is a new app version, native artifact, and new tag. Never
 force-move a readiness tag to a different native commit. If a tag was created
 for the wrong artifact or commit, stop releases and bump the app version to
@@ -618,6 +631,101 @@ prod should stay hot again, restore `min_machines_running = 2`: one
 machine absorbs traffic if the other is restarting or being replaced by
 a deploy, avoiding the v3 single-machine restart failure mode. Cost
 delta: ~$3.80/mo for the extra `shared-cpu-1x` machine.
+
+### Storage lifecycle worker
+
+Production and dev each run one `storage-worker` process group in
+addition to the HTTP `app` group:
+
+- `app`: `shared-cpu-1x`, 512 MB, attached to `http_service`, allowed
+  to suspend at zero;
+- `storage-worker`: `shared-cpu-1x`, 256 MB, no service attachment,
+  with its active Machine and stopped standby owned by Fly deploys.
+
+The active worker is not eligible for HTTP auto-stop, so both dev and
+production carry one continuously billed worker Machine. Fly also preserves a
+stopped standby for deploys and restarts. This cost is required for delayed
+cleanup to run while the API is idle. PR previews do not provision workers;
+their account-deletion gate stays closed.
+
+The worker does not continuously pin Neon with five-second polling. It
+sleeps until the next known job is due, capped at ten minutes to discover
+jobs inserted after the sleep was calculated, and prunes expired upload
+leases hourly. The route remains the immediate-delete fast path. If that
+fast path fails just after a sleep starts, cleanup may lag by ten minutes;
+expired lease/orphan cleanup may lag by one hour. These gaps allow an
+otherwise idle Neon compute to suspend when its configured idle threshold
+is shorter than the gap. They do not reduce the continuously billed Fly
+worker cost.
+
+After the first lease-aware deploy completes, the workflow arms a
+one-time 330-second compatibility grace. During the grace, new presigns
+are leased, lease-less registrations from replaced machines remain
+compatible, and account deletion returns `503`. Arming uses
+`COALESCE(enforce_after, ...)`, so subsequent deploys cannot reopen the
+grace. `R2_PRESIGN_TTL_SEC` is capped at 300 seconds; the remaining 30
+seconds is the late-PUT safety window.
+
+`infra/fly/deploy.sh` owns the production order: deploy, narrowly repair the
+known exact singleton states, verify at least one Machine has state
+`started` and metadata process group `storage-worker`, then arm by running the
+monotonic rollout command in that group. The command inherits the app's staged
+Fly secrets, so neither CI nor manual callers need the production
+`DATABASE_URL`. The shell policy test stubs external commands, executes this
+sequence, and forbids explicit `storage-worker` scale commands.
+
+The shared repair is a no-op only for an exact healthy pair: one
+current-release active worker and one current-release stopped, service-less
+standby whose sole `config.standbys` entry is that active Machine's id. A
+singleton current-release active worker is freshly re-listed and must remain
+the same sole started/no-standby id before it gets exactly one standby clone. A
+singleton current-release stopped standby first has its standby configuration
+cleared. A fresh inventory must then prove that the same id remains the sole
+current-release, service-less worker with no standby configuration. If stopped,
+repair runs `flyctl machine start ID --app APP`; if already started, it skips
+the redundant start. It polls at most ten fresh inventories three seconds apart,
+allowing only that same candidate in `stopped`, `starting`, or `started` state,
+and clones only after exact `started` proof. Both mutating paths list Machines
+again and succeed only after observing the exact healthy pair.
+
+Every app and worker Machine used by the decision must match one complete,
+unambiguous identity: nonempty `fly_release_id`, `fly_release_version`, and a
+valid full tagged `config.image`. Fly may return the same tag with an optional
+`@sha256:<64 lowercase hex>` suffix, so repair strips only that validated suffix
+before comparison; repository, tag, release id, and release version remain
+exact. Tag-only Machines may coexist with one observed explicit digest, but more
+than one distinct non-null digest across the app and worker Machines fails
+closed. Untagged, digest-only, malformed, stale, or mixed identities fail before
+mutation. If standby clearing succeeds but later work fails, an exact singleton
+stopped/no-standby retry starts then verifies the candidate, while an exact
+singleton started/no-standby retry clones it. Id, identity, service, standby, or
+topology drift during any pre-clone re-list or polling fails before cloning.
+
+The verifier remains diagnostic-only. The workflow calls it again after
+repair and before arming, so a green deploy proves a running executor exists.
+
+Fly can create a stopped standby for the service-less process group. An
+explicit `storage-worker=1` command therefore collapses the pair without
+preferring the active Machine. After #210 added `--yes`, Fly destroyed the
+active worker and retained the stopped standby. The earlier confirmation prompt
+was a safety signal, not a reason to auto-confirm the scale-down; dev and
+production never use broad process-count repair. The narrow recovery above
+exists only for singleton current-release active, stopped/no-standby, or
+standby states. Fly later confirmed in its deploy log that updating a
+previously non-started Machine can leave the new version stopped, which is why
+repair uses an explicit start and does not treat update success as running
+proof. Fly also rendered a cloned standby's image as the same full deployment
+tag with an attached digest, so repair removes only a validated digest suffix
+for tag comparison, keeps the repository, tag, release id, and release version
+exact, and rejects conflicting explicit digests.
+
+Operational query:
+
+```sql
+SELECT user_id, job_kind, run_after, attempt_count, locked_at, last_error
+FROM app.storage_delete_jobs
+ORDER BY run_after;
+```
 
 ### Burst scaling
 

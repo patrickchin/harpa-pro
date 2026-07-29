@@ -22,6 +22,8 @@
     "activity:reconcile-signups": "tsx scripts/reconcile-signup-activity.ts",
     "spec:emit": "tsx scripts/emit-openapi.ts",
     "r2:rewrite": "tsx scripts/rewrite-r2-keys-to-project-scope.ts",
+    "storage:arm-leases": "tsx scripts/arm-storage-lifecycle-rollout.ts",
+    "storage:worker": "tsx src/workers/storage-delete.ts",
     "db:check": "drizzle-kit check"
   },
   "dependencies": {

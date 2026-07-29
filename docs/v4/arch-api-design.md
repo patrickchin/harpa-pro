@@ -165,10 +165,38 @@ route.
 
 ### Idempotency
 
-- `POST /reports/.../generate` and `POST /voice/transcribe` accept
-  an `Idempotency-Key` header — repeated calls with the same key
-  return the cached response (24 h TTL in Redis). This is what
-  lets the mobile retry-on-network-failure logic work safely.
+- `POST /reports/.../{generate,regenerate}`, `POST /voice/transcribe`,
+  and `POST /reports/.../notes/voice` accept an `Idempotency-Key`.
+- Identity is scoped to route name, user, HTTP method, concrete path,
+  request-body SHA-256, and the client key. Reusing the same client key
+  for a different method, resource, or body starts an independent
+  operation; it never replays another request's response.
+- Production uses `app.idempotency_keys` (migration
+  `0021_idempotency_keys.sql`). One machine owns a renewable 30-second
+  lease while the handler runs. While that ownership remains healthy,
+  concurrent machines wait and replay the completed response. A
+  zero-row renewal or owner-token mismatch makes the original owner fail
+  with a lease-loss error instead of returning or caching success. A
+  thrown heartbeat query is ambiguous, so the guarded completion or
+  release determines ownership rather than deleting a valid claim.
+  Completed responses live for 24 hours. A 5xx or thrown handler
+  releases a claim it still owns so a later retry can run.
+- Dev and tests use `MemoryIdempotencyStore`, which applies the same
+  replay and in-flight coalescing semantics inside one process.
+- The mobile report client keeps one key and its original
+  generate/regenerate operation across ambiguous transport, 5xx, and
+  response-parse failures. It retires the key after a matching success
+  or definitive 4xx response. The CLI continues to send only an
+  explicitly supplied key.
+
+This coalesces concurrent requests only while the owner retains its
+lease. It is not an exactly-once job system: process death, a long
+event-loop pause, suspension, or a DB outage/partition can let the lease
+expire and be reclaimed while the original provider call is still
+running. The original owner reports lease loss when it can observe it,
+but both provider calls may already have happened. Routes that require
+protection from this boundary must move the side effect behind a
+durable asynchronous job/outbox.
 
 ### OpenAPI strategy
 

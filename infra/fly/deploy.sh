@@ -13,11 +13,12 @@ HERE=$(cd "$(dirname "$0")" && pwd)
 cd "$HERE/../.."
 
 MIGRATIONS_DIR="packages/api/migrations"
-HEAD=$(ls "$MIGRATIONS_DIR" | grep -E '\.sql$' | sort | tail -1)
-if [[ -z "$HEAD" ]]; then
+MIGRATION_FILES=("$MIGRATIONS_DIR"/*.sql)
+if [[ ! -e "${MIGRATION_FILES[0]}" ]]; then
   echo "ERROR: no .sql files found in $MIGRATIONS_DIR" >&2
   exit 1
 fi
+HEAD=$(printf '%s\n' "${MIGRATION_FILES[@]##*/}" | LC_ALL=C sort | tail -1)
 echo "deploy: MIGRATIONS_REQUIRED_HEAD=$HEAD"
 
 GIT_COMMIT=$(git rev-parse HEAD)
@@ -31,3 +32,23 @@ flyctl deploy \
   --build-arg "GIT_COMMIT=$GIT_COMMIT" \
   --build-arg "BUILD_TIME=$BUILD_TIME" \
   "$@"
+
+# Repair only a current-release singleton active or singleton standby, after
+# proving its Fly release metadata and image match the deployed app Machines.
+# Success requires a fresh inventory with one active and one valid standby.
+bash scripts/ci/repair-storage-worker-topology.sh harpa-pro-api
+
+# Fail closed unless Fly now reports a started service-less worker.
+bash scripts/ci/verify-storage-worker-started.sh harpa-pro-api
+
+# Arm only after deploy, narrow repair, and worker verification succeed. Run
+# inside the worker so CI and manual callers never need the production
+# DATABASE_URL; the command inherits the app's staged Fly secrets. The update
+# is monotonic, so later deploys cannot reopen the first-rollout compatibility
+# grace.
+flyctl ssh console \
+  --app harpa-pro-api \
+  --process-group storage-worker \
+  --pty=false \
+  --command \
+  'STORAGE_LEASE_ROLLOUT_GRACE_SEC=330 STORAGE_ACCOUNT_DELETE_ENABLED=true pnpm --filter @harpa/api storage:arm-leases'

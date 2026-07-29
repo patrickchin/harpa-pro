@@ -1,4 +1,4 @@
--- 0021_activity_events.sql
+-- 0023_activity_events.sql
 --
 -- Curated, product-level activity for the private admin feed. This is an
 -- append-oriented business ledger, not a request/debug log. Labels and other
@@ -65,6 +65,9 @@ CREATE UNIQUE INDEX IF NOT EXISTS activity_events_dedupe_key_unique
 GRANT INSERT ON app.activity_events TO app_authenticated;
 
 ALTER TABLE app.activity_events ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS activity_events_self_insert
+  ON app.activity_events;
 
 CREATE POLICY activity_events_self_insert
   ON app.activity_events FOR INSERT TO app_authenticated

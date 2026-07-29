@@ -365,7 +365,13 @@ describe('note and project-file role mutation matrix', () => {
       }),
     });
 
-    const fileId = makeFileId();
+    const presigned =
+      presign.status === 200
+        ? ((await presign.json()) as { fileKey: string })
+        : null;
+    const fileKey =
+      presigned?.fileKey ??
+      `projects/${projectId}/reports/${report.id}/${makeFileId()}.jpg`;
     const register = await app.request('/files', {
       method: 'POST',
       headers: headers(role),
@@ -374,7 +380,7 @@ describe('note and project-file role mutation matrix', () => {
         projectId,
         reportId: report.id,
         kind: 'image',
-        fileKey: `projects/${projectId}/reports/${report.id}/${fileId}.jpg`,
+        fileKey,
         contentType: 'image/jpeg',
         sizeBytes: 2048,
       }),

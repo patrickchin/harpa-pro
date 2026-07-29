@@ -1,4 +1,5 @@
 import { sql } from 'drizzle-orm';
+import { user as authUsers } from './auth-schema.js';
 import {
   pgSchema,
   text,
@@ -13,6 +14,7 @@ import {
   unique,
   boolean,
   numeric,
+  check,
   type AnyPgColumn,
 } from 'drizzle-orm/pg-core';
 
@@ -172,6 +174,114 @@ export const files = appSchema.table('files', {
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 });
 
+export type FileUploadScope = 'project' | 'avatar' | 'scratch';
+
+export const fileUploadLeases = appSchema.table(
+  'file_upload_leases',
+  {
+    fileId: text('file_id').primaryKey(),
+    ownerId: text('owner_id')
+      .notNull()
+      .references(() => authUsers.id, { onDelete: 'cascade' }),
+    fileKey: text('file_key').notNull().unique(),
+    scope: text('scope').$type<FileUploadScope>().notNull(),
+    projectId: text('project_id').references(() => projects.id, {
+      onDelete: 'set null',
+    }),
+    reportId: text('report_id').references(() => reports.id, {
+      onDelete: 'set null',
+    }),
+    contentType: text('content_type').notNull(),
+    sizeBytes: bigint('size_bytes', { mode: 'number' }).notNull(),
+    presignExpiresAt: timestamp('presign_expires_at', {
+      withTimezone: true,
+    }).notNull(),
+    consumedAt: timestamp('consumed_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => ({
+    ownerIdx: index('file_upload_leases_owner_idx').on(t.ownerId),
+    expiryIdx: index('file_upload_leases_expiry_idx').on(
+      t.presignExpiresAt,
+    ),
+    scopeCheck: check(
+      'file_upload_leases_scope_check',
+      sql`${t.scope} IN ('project', 'avatar', 'scratch')`,
+    ),
+    sizeCheck: check(
+      'file_upload_leases_size_bytes_check',
+      sql`${t.sizeBytes} >= 0`,
+    ),
+  }),
+);
+
+export type StorageDeleteJobKind =
+  | 'account_delete_initial'
+  | 'account_delete_final';
+
+export interface StorageDeleteJobPayload {
+  userId: string;
+  exactKeys: string[];
+  sweepPrefixes: string[];
+}
+
+export const storageDeleteJobs = appSchema.table(
+  'storage_delete_jobs',
+  {
+    userId: text('user_id').notNull(),
+    jobKind: text('job_kind').$type<StorageDeleteJobKind>().notNull(),
+    runAfter: timestamp('run_after', { withTimezone: true }).notNull(),
+    payload: jsonb('payload').$type<StorageDeleteJobPayload>().notNull(),
+    attemptCount: integer('attempt_count').notNull().default(0),
+    lockedAt: timestamp('locked_at', { withTimezone: true }),
+    lastError: text('last_error'),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => ({
+    pk: primaryKey({ columns: [t.userId, t.jobKind] }),
+    dueIdx: index('storage_delete_jobs_due_idx').on(
+      t.runAfter,
+      t.lockedAt,
+    ),
+    kindCheck: check(
+      'storage_delete_jobs_job_kind_check',
+      sql`${t.jobKind} IN ('account_delete_initial', 'account_delete_final')`,
+    ),
+    attemptCountCheck: check(
+      'storage_delete_jobs_attempt_count_check',
+      sql`${t.attemptCount} >= 0`,
+    ),
+  }),
+);
+
+export const storageLifecycleRollout = appSchema.table(
+  'storage_lifecycle_rollout',
+  {
+    singleton: boolean('singleton').primaryKey().default(true),
+    enforceAfter: timestamp('enforce_after', { withTimezone: true }),
+    accountDeleteEnabled: boolean('account_delete_enabled')
+      .default(false)
+      .notNull(),
+    armedAt: timestamp('armed_at', { withTimezone: true }),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => ({
+    singletonCheck: check(
+      'storage_lifecycle_rollout_singleton_check',
+      sql`${t.singleton}`,
+    ),
+  }),
+);
+
 export const userSettings = appSchema.table('user_settings', {
   userId: text('user_id').primaryKey(),
   aiVendor: varchar('ai_vendor', { length: 32 }),
@@ -317,6 +427,24 @@ export const rateLimitBuckets = appSchema.table('rate_limit_buckets', {
   bucketKey: text('bucket_key').primaryKey(),
   windowEnd: timestamp('window_end', { withTimezone: true }).notNull(),
   count: integer('count').notNull().default(0),
+});
+
+/**
+ * Durable Idempotency-Key claims and completed responses. Pending rows
+ * are short leases; completed rows are replayable until `expires_at`.
+ * The hot-path SQL lives in `lib/idempotencyStore.ts`.
+ */
+export const idempotencyKeys = appSchema.table('idempotency_keys', {
+  keyHash: text('key_hash').primaryKey(),
+  state: text('state').notNull(),
+  ownerToken: text('owner_token'),
+  leaseExpiresAt: timestamp('lease_expires_at', { withTimezone: true }),
+  status: integer('status'),
+  responseBody: text('response_body'),
+  contentType: text('content_type'),
+  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 });
 
 /** Re-export the SQL helper for use in raw policies / migrations. */

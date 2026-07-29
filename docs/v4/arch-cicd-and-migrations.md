@@ -207,6 +207,15 @@ tag. The called workflows still default to `contents: read`; only
 `register-native-runtime` elevates to write, while release-policy and OTA jobs
 remain read-only.
 
+Reusable workflows also retain the caller's event context. A manually
+dispatched API workflow therefore reaches the called OTA workflow with
+`github.event_name == 'workflow_dispatch'`; that does not make it a direct OTA
+registration request. The called workflow uses the successful API-deploy input
+to skip native registration and evaluates release policy with effective
+`workflow_call` semantics. Only a direct `mobile-ota-dev` or
+`mobile-ota-prod` dispatch registers a native artifact and enables the manual
+OTA path.
+
 Normal merges do not change the app version. Native changes bump it
 intentionally in the reviewed change that will produce the binary. The static
 contract in `scripts/ci/__tests__/mobile-ota-release-policy.test.sh` is run by
@@ -251,10 +260,40 @@ green. Both the poll loop and the surrounding job are bounded.
 
 ### `infra/fly/deploy.sh`
 
-- Compute `MIGRATIONS_REQUIRED_HEAD` from `ls packages/api/migrations | sort | tail -1`
-  and pass `--build-arg MIGRATIONS_REQUIRED_HEAD=...` to `flyctl deploy`.
+- Compute `MIGRATIONS_REQUIRED_HEAD` from the sorted migration-file glob and
+  pass `--build-arg MIGRATIONS_REQUIRED_HEAD=...` to `flyctl deploy`.
 - Compute the full `git rev-parse HEAD` value and pass it as the
   `GIT_COMMIT` build arg; abbreviated SHAs are not valid deployment identities.
+- After deploy, run the shared storage-worker topology repair. It is a no-op
+  only for exactly one current-release active worker plus exactly one
+  current-release stopped, service-less standby watching that active Machine.
+  A singleton active worker is freshly re-listed and must remain the same sole
+  started/no-standby id before it gets one standby clone. A singleton stopped
+  standby has its standby configuration cleared, then the same exact candidate
+  must be freshly proved as the sole service-less worker without a standby.
+  Repair explicitly starts it if stopped, polls at most ten fresh inventories
+  three seconds apart through only safe stopped/starting states, and clones only
+  after that exact id is started. An update that already started the candidate
+  skips the redundant start. Both paths list Machines again and succeed only
+  when the exact healthy pair is present.
+- Every Machine used by repair must match one unambiguous `app` identity on
+  nonempty Fly release id, release version, and valid full tagged image. The
+  image comparison removes only an optional validated
+  `@sha256:<64 lowercase hex>` suffix, because Fly can attach it to one
+  representation of the same deployment tag; repository, tag, and release
+  metadata remain exact. Tag-only Machines may coexist with at most one
+  distinct explicit digest; conflicting non-null digests fail closed. Untagged,
+  digest-only, malformed, stale, transitional, or ambiguous initial inventories
+  fail before mutation; no process-count scaling is allowed. Each update/start
+  transition also proves the candidate id, singleton topology, empty services,
+  and empty standbys. If clearing succeeds but later work fails, exact singleton
+  stopped/no-standby and started/no-standby states are retry-safe; all other
+  drift fails closed.
+- Run the read-only started-worker verifier again, then arm the monotonic
+  upload-lease rollout inside that process group. Arming inherits Fly's staged
+  `DATABASE_URL`, so the production URL remains out of GitHub Actions and
+  manual operator environments. Manual production deploys use the same
+  deploy-to-repair-to-verify-to-arm path as CI.
 
 ### `.github/workflows/api-prod.yml`
 

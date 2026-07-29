@@ -85,11 +85,12 @@ jobs:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
         run: |
           set -euo pipefail
-          HEAD=$(ls packages/api/migrations | grep -E '\.sql$' | sort | tail -1)
-          if [[ -z "$HEAD" ]]; then
+          MIGRATION_FILES=(packages/api/migrations/*.sql)
+          if [[ ! -e "${MIGRATION_FILES[0]}" ]]; then
             echo "ERROR: no .sql files in packages/api/migrations" >&2
             exit 1
           fi
+          HEAD=$(printf '%s\n' "${MIGRATION_FILES[@]##*/}" | LC_ALL=C sort | tail -1)
           echo "deploy: MIGRATIONS_REQUIRED_HEAD=$HEAD"
           GIT_COMMIT=$(git rev-parse HEAD)
           BUILD_TIME=$(date -u +%Y-%m-%dT%H:%M:%SZ)
@@ -101,6 +102,10 @@ jobs:
             --build-arg "GIT_COMMIT=$GIT_COMMIT" \
             --build-arg "BUILD_TIME=$BUILD_TIME" \
             --remote-only
+          bash scripts/ci/repair-storage-worker-topology.sh harpa-pro-api-dev
+          bash scripts/ci/verify-storage-worker-started.sh harpa-pro-api-dev
+          STORAGE_LEASE_ROLLOUT_GRACE_SEC=330 \
+            pnpm --filter @harpa/api storage:arm-leases
 
       - name: Verify /readyz (dev)
         # Dev runs with `auto_stop_machines = "suspend"` and
@@ -153,7 +158,6 @@ jobs:
             exit 1
           fi
           bash scripts/journeys/all.sh dev
-
   mobile-ota:
     name: Publish API-dependent mobile OTA
     needs: dev

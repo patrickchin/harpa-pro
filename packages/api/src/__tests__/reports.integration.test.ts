@@ -7,6 +7,8 @@ import { createApp } from '../app.js';
 import { startPg, seedAuthUsers, type PgFixture } from './setup-pg.js';
 import { resetPool, getPool } from '../db/client.js';
 import { signTestToken } from '../middleware/auth.js';
+import { pruneExpiredFileUploadLeases } from '../services/storage-delete-jobs.js';
+import { FixtureStorage } from '../services/storage.js';
 import { makeUserId, makeSessionId, makeProjectId, makeFileId } from './factories/index.js';
 
 let fx: PgFixture;
@@ -697,6 +699,111 @@ describe('reports AI/PDF', () => {
     expect(body.url).toContain(encodeURIComponent(`projects/${aliceProjSlug}/reports/`));
     expect(body.url).toContain('.pdf');
     expect(new Date(body.expiresAt).getTime()).toBeGreaterThan(Date.now());
+
+    const lifecycle = await getPool().query<{
+      file_key: string;
+      consumed_at: Date;
+    }>(
+      `SELECT f.file_key, lease.consumed_at
+       FROM app.reports report
+       JOIN app.files f ON f.id = report.pdf_file_id
+       JOIN app.file_upload_leases lease
+         ON lease.file_id = f.id
+        AND lease.file_key = f.file_key
+       WHERE report.id = $1`,
+      [reportId],
+    );
+    expect(lifecycle.rows).toHaveLength(1);
+    expect(lifecycle.rows[0]?.file_key).toContain(
+      `projects/${aliceProjSlug}/reports/`,
+    );
+    expect(lifecycle.rows[0]?.consumed_at).toBeInstanceOf(Date);
+  });
+
+  it('keeps a durable PDF key when registration fails after the object write', async () => {
+    const pool = getPool();
+    await pool.query(
+      `CREATE OR REPLACE FUNCTION app.test_fail_pdf_registration()
+       RETURNS trigger
+       LANGUAGE plpgsql
+       AS $$
+       BEGIN
+         IF NEW.kind = 'pdf' THEN
+           RAISE EXCEPTION 'test_pdf_registration_failure';
+         END IF;
+         RETURN NEW;
+       END
+       $$;
+
+       CREATE TRIGGER test_fail_pdf_registration
+       BEFORE INSERT ON app.files
+       FOR EACH ROW
+       EXECUTE FUNCTION app.test_fail_pdf_registration()`,
+    );
+
+    try {
+      const app = createApp();
+      const token = await signTestToken(alice, aliceSid);
+      const response = await app.request(
+        `/projects/${aliceProjSlug}/reports/${reportNumber}/pdf`,
+        {
+          method: 'POST',
+          headers: headers(token),
+        },
+      );
+      expect(response.status).toBe(500);
+
+      const reservation = await pool.query<{
+        file_id: string;
+        file_key: string;
+      }>(
+        `SELECT file_id, file_key
+         FROM app.file_upload_leases
+         WHERE owner_id = $1
+           AND report_id = $2
+           AND consumed_at IS NULL`,
+        [alice, reportId],
+      );
+      expect(reservation.rows).toHaveLength(1);
+      expect(reservation.rows[0]?.file_key).toContain(
+        `projects/${aliceProjSlug}/reports/${reportId}/`,
+      );
+      expect(
+        (
+          await pool.query(`SELECT 1 FROM app.files WHERE id = $1`, [
+            reservation.rows[0]!.file_id,
+          ])
+        ).rowCount,
+      ).toBe(0);
+
+      await pool.query(
+        `UPDATE app.file_upload_leases
+         SET presign_expires_at = now() - interval '31 seconds'
+         WHERE file_id = $1`,
+        [reservation.rows[0]!.file_id],
+      );
+      await expect(
+        pruneExpiredFileUploadLeases({
+          maxLeases: 10,
+          storage: new FixtureStorage(),
+        }),
+      ).resolves.toMatchObject({
+        unconsumedLeasesPruned: 1,
+        orphanObjectsDeleted: 1,
+      });
+    } finally {
+      await pool.query(
+        `DROP TRIGGER IF EXISTS test_fail_pdf_registration ON app.files;
+         DROP FUNCTION IF EXISTS app.test_fail_pdf_registration()`,
+      );
+      await pool.query(
+        `DELETE FROM app.file_upload_leases
+         WHERE owner_id = $1
+           AND report_id = $2
+           AND consumed_at IS NULL`,
+        [alice, reportId],
+      );
+    }
   });
 
   it('POST /reports/:id/finalize freezes the report', async () => {

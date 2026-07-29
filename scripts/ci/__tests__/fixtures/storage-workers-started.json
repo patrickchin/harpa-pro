@@ -1,0 +1,20 @@
+[
+  {
+    "id": "worker-started",
+    "state": "started",
+    "config": {
+      "metadata": {
+        "fly_process_group": "storage-worker"
+      }
+    }
+  },
+  {
+    "id": "worker-standby",
+    "state": "stopped",
+    "config": {
+      "metadata": {
+        "fly_process_group": "storage-worker"
+      }
+    }
+  }
+]

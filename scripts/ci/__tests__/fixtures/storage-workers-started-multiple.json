@@ -12,7 +12,7 @@
     }
   },
   {
-    "id": "worker-started",
+    "id": "worker-started-a",
     "state": "started",
     "config": {
       "image": "registry.fly.io/harpa-test:current",
@@ -25,8 +25,8 @@
     }
   },
   {
-    "id": "worker-standby",
-    "state": "stopped",
+    "id": "worker-started-b",
+    "state": "started",
     "config": {
       "image": "registry.fly.io/harpa-test:current",
       "metadata": {
@@ -34,10 +34,7 @@
         "fly_release_id": "rel-current",
         "fly_release_version": "42"
       },
-      "services": [],
-      "standbys": [
-        "worker-started"
-      ]
+      "services": []
     }
   }
 ]

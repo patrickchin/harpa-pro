@@ -34,11 +34,17 @@ case "${1:-} ${2:-}" in
     fi
     call_count=$((call_count + 1))
     printf '%s\n' "$call_count" > "$FLYCTL_COUNT"
-    if [[ "$call_count" -eq 1 || -z "${FLY_MACHINE_AFTER:-}" ]]; then
-      cat "$FLY_MACHINE_INITIAL"
-    else
-      cat "$FLY_MACHINE_AFTER"
-    fi
+    case "$call_count" in
+      1)
+        cat "$FLY_MACHINE_INITIAL"
+        ;;
+      2)
+        cat "${FLY_MACHINE_SECOND:-$FLY_MACHINE_INITIAL}"
+        ;;
+      *)
+        cat "${FLY_MACHINE_THIRD:-${FLY_MACHINE_SECOND:-$FLY_MACHINE_INITIAL}}"
+        ;;
+    esac
     ;;
   "machine update")
     [[ "$*" == \
@@ -49,7 +55,9 @@ case "${1:-} ${2:-}" in
     ;;
   "machine clone")
     [[ "$*" == \
-      "machine clone worker-standby --app harpa-test --standby-for=source" ]] || {
+      "machine clone worker-standby --app harpa-test --standby-for=source" || \
+      "$*" == \
+      "machine clone worker-started --app harpa-test --standby-for=source" ]] || {
       echo "unexpected flyctl clone arguments: $*" >&2
       exit 64
     }
@@ -69,12 +77,14 @@ reset_case() {
 
 run_repair() {
   local initial="$1"
-  local after="${2:-}"
+  local second="${2:-}"
+  local third="${3:-}"
 
   FLYCTL_LOG="$TMP/flyctl.log" \
     FLYCTL_COUNT="$TMP/flyctl.count" \
     FLY_MACHINE_INITIAL="$FIXTURES/$initial" \
-    FLY_MACHINE_AFTER="${after:+$FIXTURES/$after}" \
+    FLY_MACHINE_SECOND="${second:+$FIXTURES/$second}" \
+    FLY_MACHINE_THIRD="${third:+$FIXTURES/$third}" \
     PATH="$TMP/bin:$PATH" \
     bash "$REPAIR_SCRIPT" harpa-test 2>&1
 }
@@ -125,6 +135,23 @@ healthy_output=$(run_repair "storage-workers-started.json")
 }
 assert_no_mutation
 echo "  ok   - started worker is a no-op"
+
+expect_failure_without_mutation \
+  "a stale started worker fails closed" \
+  "storage-workers-started-stale.json" \
+  "does not match the deployed app release"
+expect_failure_without_mutation \
+  "an incomplete started-worker identity is not trusted" \
+  "storage-workers-started-missing-identity.json" \
+  "does not match the deployed app release"
+expect_failure_without_mutation \
+  "multiple started workers without a standby are ambiguous" \
+  "storage-workers-started-multiple.json" \
+  "cannot safely repair storage-worker topology"
+expect_failure_without_mutation \
+  "a stale standby makes a started topology unsafe" \
+  "storage-workers-started-stale-standby.json" \
+  "does not match the deployed app release"
 
 expect_failure_without_mutation \
   "zero workers fail closed" \
@@ -178,10 +205,58 @@ fi
 echo "  ok   - failed started-worker verification blocks cloning"
 
 reset_case
+started_recovery_output=$(
+  run_repair \
+    "storage-workers-started-no-standby.json" \
+    "storage-workers-started.json"
+)
+[[ "$started_recovery_output" == *"storage-worker topology repaired"* ]] || {
+  echo "FAIL - missing-standby recovery omitted completion evidence"
+  echo "$started_recovery_output"
+  exit 1
+}
+mapfile -t STARTED_RECOVERY_ACTIONS < "$TMP/flyctl.log"
+[[ "${#STARTED_RECOVERY_ACTIONS[@]}" -eq 3 ]] || {
+  printf 'FAIL - expected 3 missing-standby recovery actions, got %s\n' \
+    "${#STARTED_RECOVERY_ACTIONS[@]}"
+  printf '  %s\n' "${STARTED_RECOVERY_ACTIONS[@]}"
+  exit 1
+}
+[[ "${STARTED_RECOVERY_ACTIONS[0]}" == \
+  "machines|list|--app|harpa-test|--json" ]]
+[[ "${STARTED_RECOVERY_ACTIONS[1]}" == \
+  "machine|clone|worker-started|--app|harpa-test|--standby-for=source" ]]
+[[ "${STARTED_RECOVERY_ACTIONS[2]}" == \
+  "machines|list|--app|harpa-test|--json" ]]
+echo "  ok   - current singleton worker gets one verified standby clone"
+
+reset_case
+set +e
+failed_clone_verify_output=$(
+  run_repair \
+    "storage-workers-started-no-standby.json" \
+    "storage-workers-started-no-standby.json"
+)
+failed_clone_verify_status=$?
+set -e
+[[ "$failed_clone_verify_status" -ne 0 ]] || {
+  echo "FAIL - recovery passed without observing the cloned standby"
+  echo "$failed_clone_verify_output"
+  exit 1
+}
+[[ "$(grep -c '^machine|clone|' "$TMP/flyctl.log")" -eq 1 ]] || {
+  echo "FAIL - recovery did not clone exactly once"
+  cat "$TMP/flyctl.log"
+  exit 1
+}
+echo "  ok   - clone result must contain a healthy standby"
+
+reset_case
 repair_output=$(
   run_repair \
     "storage-workers-repairable.json" \
-    "storage-workers-repaired.json"
+    "storage-workers-repaired.json" \
+    "storage-workers-repair-complete.json"
 )
 [[ "$repair_output" == *"storage-worker topology repaired"* ]] || {
   echo "FAIL - successful repair omitted completion evidence"
@@ -189,8 +264,8 @@ repair_output=$(
   exit 1
 }
 mapfile -t REPAIR_ACTIONS < "$TMP/flyctl.log"
-[[ "${#REPAIR_ACTIONS[@]}" -eq 4 ]] || {
-  printf 'FAIL - expected 4 repair actions, got %s\n' "${#REPAIR_ACTIONS[@]}"
+[[ "${#REPAIR_ACTIONS[@]}" -eq 5 ]] || {
+  printf 'FAIL - expected 5 repair actions, got %s\n' "${#REPAIR_ACTIONS[@]}"
   printf '  %s\n' "${REPAIR_ACTIONS[@]}"
   exit 1
 }
@@ -202,4 +277,6 @@ mapfile -t REPAIR_ACTIONS < "$TMP/flyctl.log"
   "machines|list|--app|harpa-test|--json" ]]
 [[ "${REPAIR_ACTIONS[3]}" == \
   "machine|clone|worker-standby|--app|harpa-test|--standby-for=source" ]]
+[[ "${REPAIR_ACTIONS[4]}" == \
+  "machines|list|--app|harpa-test|--json" ]]
 echo "  ok   - exact standby is promoted, verified, then cloned"

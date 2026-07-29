@@ -69,6 +69,7 @@ describe('ReportWorkspacePage draft editing', () => {
 
     const preview = rendered.container.querySelector('[data-testid="report-preview"]');
     expect(preview?.textContent).toContain('Keyboard revised progress report');
+    expect(rendered.container.textContent).toContain('Unsaved changes');
     expect(button(rendered.container, 'Finalize').disabled).toBe(true);
 
     await waitMs(125);

@@ -4,6 +4,7 @@ set -euo pipefail
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 tokens="$repo_root/packages/design-tokens/src/tokens.css"
 dashboard_css="$repo_root/apps/dashboard/src/styles.css"
+dashboard_index="$repo_root/apps/dashboard/index.html"
 dashboard_reports_css="$repo_root/apps/dashboard/src/features/reports/reports.css"
 dashboard_package="$repo_root/apps/dashboard/package.json"
 site_css="$repo_root/apps/site/src/styles/globals.css"
@@ -74,6 +75,8 @@ expect_contains "$dashboard_package" '"@harpa/design-tokens"'
 expect_contains "$site_package" '"@harpa/design-tokens"'
 expect_contains "$dashboard_css" '@import "@harpa/design-tokens/tokens.css";'
 expect_contains "$site_css" '@import "@harpa/design-tokens/tokens.css";'
+expect_contains "$dashboard_index" 'name="theme-color" content="#ea580c"'
+expect_contains "$site_layout" 'name="theme-color" content="#ea580c"'
 
 # Prevent the known design-system forks from returning.
 expect_not_contains "$dashboard_css" '--paper:'

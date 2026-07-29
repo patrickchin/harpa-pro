@@ -40,12 +40,12 @@ vi.mock('@/features/projects/data-api', () => ({
 vi.mock('@/features/reports', () => {
   return {
     ReportsListPage: () => null,
-    ReportWorkspacePage: () => null,
+    ReportWorkspacePage: () => <section data-testid="report-workspace" />,
     reportsApi: reportsApiMocks,
   };
 });
 
-import { ProjectOverviewRoute, SignInRoute } from './route-pages';
+import { ProjectOverviewRoute, ProjectReportWorkspaceRoute, SignInRoute } from './route-pages';
 
 const project: projects.Project = {
   id: 'prj_01234567',
@@ -204,5 +204,21 @@ describe('ProjectOverviewRoute', () => {
       expect(reportsApiMocks.createReport).toHaveBeenCalledWith(project.id);
     });
     expect(await screen.findByText('Current URL: /projects/prj_01234567/reports/8')).toBeVisible();
+  });
+});
+
+describe('ProjectReportWorkspaceRoute', () => {
+  it('uses the shared page gutters around the report workspace', () => {
+    render(
+      <MemoryRouter initialEntries={['/projects/prj_01234567/reports/7']}>
+        <Routes>
+          <Route path="/projects/:project" element={<Outlet context={{ project }} />}>
+            <Route path="reports/:number" element={<ProjectReportWorkspaceRoute />} />
+          </Route>
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByTestId('report-workspace').parentElement).toHaveClass('page');
   });
 });

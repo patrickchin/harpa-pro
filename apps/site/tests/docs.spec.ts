@@ -30,6 +30,20 @@ test("presents two core workflows and concise supporting tasks", async ({
   await expect(page.locator(".docs-guide-grid")).toHaveCount(0);
 });
 
+test("keeps the guide heading close to its breadcrumb", async ({ page }) => {
+  await page.goto("/docs");
+
+  const breadcrumb = await page.locator(".docs-breadcrumbs").boundingBox();
+  const heading = await page
+    .getByRole("heading", { level: 1, name: "What do you want to do?" })
+    .boundingBox();
+
+  expect(breadcrumb).not.toBeNull();
+  expect(heading).not.toBeNull();
+  const gap = heading!.y - (breadcrumb!.y + breadcrumb!.height);
+  expect(gap).toBeLessThanOrEqual(64);
+});
+
 test("searches guides locally and stays quiet before a query", async ({
   page,
 }) => {

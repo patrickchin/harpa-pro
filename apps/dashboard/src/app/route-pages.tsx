@@ -356,13 +356,15 @@ export function ProjectReportWorkspaceRoute(): React.JSX.Element {
   }
 
   return (
-    <ReportWorkspacePage
-      api={reportsApi}
-      onDeleted={() => navigate('..', { relative: 'path', replace: true })}
-      projectSlug={project.id}
-      reportNumber={reportNumber}
-      role={project.myRole}
-    />
+    <div className="page">
+      <ReportWorkspacePage
+        api={reportsApi}
+        onDeleted={() => navigate('..', { relative: 'path', replace: true })}
+        projectSlug={project.id}
+        reportNumber={reportNumber}
+        role={project.myRole}
+      />
+    </div>
   );
 }
 

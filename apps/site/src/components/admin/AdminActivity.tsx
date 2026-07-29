@@ -29,11 +29,11 @@ const EMPTY_FILTERS: Filters = {
 };
 
 const inputClass =
-  'h-10 rounded-md border border-hairline bg-card px-3 text-sm text-ink outline-none ring-focus';
+  'min-h-11 rounded-md border border-hairline bg-card px-4 text-base leading-6 text-ink outline-none ring-focus';
 const buttonClass =
-  'inline-flex h-10 items-center justify-center rounded-md border border-hairline bg-card px-4 text-sm font-medium text-ink shadow-sm transition hover:bg-secondary ring-focus disabled:cursor-not-allowed disabled:opacity-60';
+  'inline-flex min-h-11 items-center justify-center rounded-md border border-hairline bg-card px-4 text-base font-bold text-ink transition hover:bg-secondary ring-focus disabled:cursor-not-allowed disabled:opacity-60';
 const primaryButtonClass =
-  'inline-flex h-10 items-center justify-center rounded-md bg-accent px-4 text-sm font-semibold text-accent-foreground shadow-sm transition hover:brightness-95 ring-focus disabled:cursor-not-allowed disabled:opacity-60';
+  'inline-flex min-h-11 items-center justify-center rounded-md bg-primary px-4 text-base font-bold text-primary-foreground shadow-[var(--shadow-raised)] transition hover:brightness-95 ring-focus disabled:cursor-not-allowed disabled:opacity-60';
 
 function eventLabel(eventType: activity.EventType): string {
   if (eventType === 'user.signed_up') return 'Signed up';
@@ -97,16 +97,16 @@ function SignIn({ refetchSession }: { refetchSession: () => Promise<unknown> }) 
   }
 
   return (
-    <section className="mx-auto max-w-md rounded-2xl border border-hairline bg-card p-6 shadow-sm">
-      <p className="text-xs font-bold uppercase tracking-[0.16em] text-accent-ink">Private admin</p>
-      <h1 className="mt-2 text-2xl font-semibold text-ink">Sign in to activity</h1>
-      <p className="mt-2 text-sm leading-relaxed text-ink-soft">
+    <section className="mx-auto max-w-md rounded-lg border border-hairline bg-card p-5 shadow-[var(--shadow-raised)]">
+      <p className="site-eyebrow">Private admin</p>
+      <h1 className="site-page-title mt-2 text-ink">Sign in to activity</h1>
+      <p className="mt-2 text-base leading-6 text-ink-soft">
         Use the email address on your Harpa Pro admin account.
       </p>
 
       {!codeSent ? (
         <form className="mt-6 grid gap-4" onSubmit={sendCode}>
-          <label className="grid gap-1.5 text-sm font-medium text-ink">
+          <label className="grid gap-2 text-sm font-bold text-ink">
             Email
             <input
               className={inputClass}
@@ -123,7 +123,7 @@ function SignIn({ refetchSession }: { refetchSession: () => Promise<unknown> }) 
         </form>
       ) : (
         <form className="mt-6 grid gap-4" onSubmit={verifyCode}>
-          <label className="grid gap-1.5 text-sm font-medium text-ink">
+          <label className="grid gap-2 text-sm font-bold text-ink">
             Verification code
             <input
               className={inputClass}
@@ -138,7 +138,7 @@ function SignIn({ refetchSession }: { refetchSession: () => Promise<unknown> }) 
             {pending ? 'Verifying…' : 'Verify code'}
           </button>
           <button
-            className="text-sm text-ink-soft underline underline-offset-4"
+            className="min-h-11 rounded-md px-3 text-sm font-bold text-ink-soft underline underline-offset-4 ring-focus"
             type="button"
             onClick={() => {
               setCodeSent(false);
@@ -152,7 +152,7 @@ function SignIn({ refetchSession }: { refetchSession: () => Promise<unknown> }) 
       )}
 
       {error && (
-        <p className="mt-4 text-sm text-red-700" role="alert">
+        <p className="mt-4 text-sm text-destructive" role="alert">
           {error}
         </p>
       )}
@@ -261,7 +261,7 @@ function ActivityFeed({
         header: 'Subject',
         cell: (info) => (
           <button
-            className="font-medium text-accent-ink underline decoration-transparent underline-offset-4 hover:decoration-current ring-focus"
+            className="inline-flex min-h-11 items-center rounded-md font-bold text-accent-ink underline decoration-transparent underline-offset-4 hover:decoration-current ring-focus"
             type="button"
             onClick={() => setSelected(info.row.original)}
           >
@@ -286,15 +286,11 @@ function ActivityFeed({
 
   return (
     <section>
-      <div className="flex flex-col gap-4 border-b border-hairline pb-5 sm:flex-row sm:items-end sm:justify-between">
+      <div className="flex flex-col gap-4 border-b border-hairline pb-6 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="text-xs font-bold uppercase tracking-[0.16em] text-accent-ink">
-            Business activity
-          </p>
-          <h1 className="mt-1 text-3xl font-semibold tracking-tight text-ink">
-            Harpa Pro activity
-          </h1>
-          <p className="mt-2 text-sm text-ink-soft">
+          <p className="site-eyebrow">Business activity</p>
+          <h1 className="site-page-title mt-1 text-ink">Harpa Pro activity</h1>
+          <p className="mt-2 text-base leading-6 text-ink-soft">
             Signed in as {email}. Activity is recorded from this feature's deployment onward.
           </p>
         </div>
@@ -304,14 +300,14 @@ function ActivityFeed({
       </div>
 
       <form
-        className="my-5 grid gap-3 rounded-xl border border-hairline bg-card p-4 md:grid-cols-4"
+        className="my-6 grid gap-3 rounded-lg border border-hairline bg-card p-4 shadow-[var(--shadow-raised)] md:grid-cols-4"
         onSubmit={(event) => {
           event.preventDefault();
           setSelected(null);
           setAppliedFilters({ ...filters });
         }}
       >
-        <label className="grid gap-1 text-xs font-semibold uppercase tracking-wide text-ink-soft">
+        <label className="grid gap-2 text-[length:var(--font-size-label)] font-bold uppercase tracking-[var(--letter-spacing-label)] leading-[var(--line-height-label)] text-ink-soft">
           Event type
           <select
             className={inputClass}
@@ -329,7 +325,7 @@ function ActivityFeed({
             <option value="report.created">Report created</option>
           </select>
         </label>
-        <label className="grid gap-1 text-xs font-semibold uppercase tracking-wide text-ink-soft">
+        <label className="grid gap-2 text-[length:var(--font-size-label)] font-bold uppercase tracking-[var(--letter-spacing-label)] leading-[var(--line-height-label)] text-ink-soft">
           From
           <input
             className={inputClass}
@@ -340,7 +336,7 @@ function ActivityFeed({
             }
           />
         </label>
-        <label className="grid gap-1 text-xs font-semibold uppercase tracking-wide text-ink-soft">
+        <label className="grid gap-2 text-[length:var(--font-size-label)] font-bold uppercase tracking-[var(--letter-spacing-label)] leading-[var(--line-height-label)] text-ink-soft">
           To
           <input
             className={inputClass}
@@ -374,12 +370,12 @@ function ActivityFeed({
       </form>
 
       {state === 'loading' && (
-        <div className="rounded-xl border border-hairline bg-card p-10 text-center text-sm text-ink-soft">
+        <div className="rounded-lg border border-hairline bg-card p-8 text-center text-sm text-ink-soft">
           Loading activity…
         </div>
       )}
       {state === 'forbidden' && (
-        <div className="rounded-xl border border-hairline bg-card p-10 text-center">
+        <div className="rounded-lg border border-hairline bg-card p-8 text-center">
           <h2 className="font-semibold text-ink">This account is not an admin.</h2>
           <p className="mt-2 text-sm text-ink-soft">
             Sign out and use an account with Harpa Pro admin access.
@@ -387,7 +383,7 @@ function ActivityFeed({
         </div>
       )}
       {state === 'error' && (
-        <div className="rounded-xl border border-hairline bg-card p-10 text-center">
+        <div className="rounded-lg border border-hairline bg-card p-8 text-center">
           <h2 className="font-semibold text-ink">The activity feed is unavailable.</h2>
           <button
             className={`${buttonClass} mt-4`}
@@ -399,15 +395,15 @@ function ActivityFeed({
         </div>
       )}
       {state === 'ready' && items.length === 0 && (
-        <div className="rounded-xl border border-hairline bg-card p-10 text-center text-sm text-ink-soft">
+        <div className="rounded-lg border border-hairline bg-card p-8 text-center text-sm text-ink-soft">
           No activity matches these filters.
         </div>
       )}
       {state === 'ready' && items.length > 0 && (
         <>
-          <div className="overflow-x-auto rounded-xl border border-hairline bg-card shadow-sm">
+          <div className="overflow-x-auto rounded-lg border border-hairline bg-card shadow-[var(--shadow-raised)]">
             <table className="w-full min-w-[760px] border-collapse text-left text-sm">
-              <thead className="bg-secondary text-xs uppercase tracking-wide text-ink-soft">
+              <thead className="bg-secondary text-[length:var(--font-size-label)] uppercase tracking-[var(--letter-spacing-label)] text-ink-soft">
                 {table.getHeaderGroups().map((headerGroup) => (
                   <tr key={headerGroup.id}>
                     {headerGroup.headers.map((header) => (
@@ -457,12 +453,10 @@ function ActivityFeed({
             if (event.currentTarget === event.target) setSelected(null);
           }}
         >
-          <section className="max-h-[88vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-hairline bg-card p-5 shadow-xl">
+          <section className="max-h-[88vh] w-full max-w-lg overflow-y-auto rounded-xl border border-hairline bg-card p-5 shadow-[var(--shadow-floating)]">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <p className="text-xs font-bold uppercase tracking-wide text-accent-ink">
-                  {eventLabel(selected.eventType)}
-                </p>
+                <p className="site-eyebrow">{eventLabel(selected.eventType)}</p>
                 <h2 className="mt-1 text-xl font-semibold text-ink" id="activity-detail-title">
                   {selected.subjectLabel}
                 </h2>
@@ -534,7 +528,7 @@ export default function AdminActivity() {
 
   if (session.isPending) {
     return (
-      <div className="rounded-xl border border-hairline bg-card p-10 text-center text-sm text-ink-soft">
+      <div className="rounded-lg border border-hairline bg-card p-8 text-center text-sm text-ink-soft">
         Checking admin session…
       </div>
     );

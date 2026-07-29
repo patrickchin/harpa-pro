@@ -12,6 +12,7 @@ on:
       - 'packages/api/**'
       - 'packages/api-contract/**'
       - 'packages/ai-fixtures/**'
+      - 'packages/design-tokens/**'
       - 'packages/report-core/**'
       - '.github/actions/changed-paths/**'
       - '.github/workflows/dashboard-*.yml'

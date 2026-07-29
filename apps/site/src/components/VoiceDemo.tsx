@@ -61,7 +61,7 @@ function DemoCard({ children }: { children: ReactNode }) {
   return (
     <div className="mx-auto w-full max-w-[480px]">
       <div
-        className="relative flex flex-col overflow-hidden rounded-2xl border border-hairline bg-card shadow-xl"
+        className="relative flex flex-col overflow-hidden rounded-xl border border-hairline bg-card shadow-[var(--shadow-floating)]"
         style={{ height: 640 }}
       >
         {children}
@@ -85,7 +85,7 @@ function ListScreen({ elapsedSec, generating, onGenerate }: ListScreenProps) {
         </div>
         <button
           type="button"
-          className="flex h-7 w-7 items-center justify-center rounded-full bg-muted text-muted-foreground"
+          className="flex h-11 w-11 items-center justify-center rounded-lg bg-muted text-muted-foreground ring-focus"
           aria-label="Settings"
         >
           <DotsIcon className="h-4 w-4" />
@@ -107,7 +107,7 @@ function ListScreen({ elapsedSec, generating, onGenerate }: ListScreenProps) {
           type="button"
           onClick={onGenerate}
           disabled={generating}
-          className="mt-3 inline-flex h-10 w-full items-center justify-center gap-1.5 rounded-lg bg-accent px-3 text-sm font-semibold text-accent-foreground transition hover:opacity-90 disabled:cursor-default disabled:opacity-80"
+          className="mt-3 inline-flex min-h-13 w-full items-center justify-center gap-1.5 rounded-md bg-accent px-5 text-lg font-bold text-accent-foreground shadow-[var(--shadow-raised)] transition hover:brightness-95 ring-focus disabled:cursor-default disabled:opacity-80"
         >
           {generating ? (
             <>
@@ -134,7 +134,7 @@ interface VoiceNoteCardProps {
 
 function VoiceNoteCard({ elapsedSec }: VoiceNoteCardProps) {
   return (
-    <div className="rounded-2xl border border-border bg-card p-3 shadow-sm">
+    <div className="rounded-lg border border-border bg-card p-3 shadow-[var(--shadow-raised)]">
       <div className="flex items-center gap-3">
         <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/15">
           <span className="absolute inset-0 animate-ping rounded-full bg-primary/30" />
@@ -172,19 +172,17 @@ function PreviousNoteCard({
   duration: string;
 }) {
   return (
-    <div className="rounded-2xl border border-border bg-card p-3 shadow-sm">
+    <div className="rounded-lg border border-border bg-card p-3 shadow-[var(--shadow-raised)]">
       <div className="flex items-center gap-3">
         <button
           type="button"
           aria-label="Play voice note"
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm transition hover:opacity-90"
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-[var(--shadow-raised)] transition hover:opacity-90 ring-focus"
         >
           <PlayIcon className="h-4 w-4" />
         </button>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold text-foreground">
-            {title}
-          </p>
+          <p className="truncate text-sm font-semibold text-foreground">{title}</p>
           <p className="truncate text-[11px] text-muted-foreground">
             {author} · {recordedAt}
           </p>
@@ -192,9 +190,7 @@ function PreviousNoteCard({
             <div className="h-2 flex-1 overflow-hidden rounded-full bg-muted">
               <div className="h-full w-0 rounded-full bg-primary" />
             </div>
-            <span className="text-[11px] tabular-nums text-muted-foreground">
-              {duration}
-            </span>
+            <span className="text-[11px] tabular-nums text-muted-foreground">{duration}</span>
           </div>
         </div>
       </div>
@@ -234,14 +230,14 @@ function Composer() {
       </div>
       <div className="px-3 pb-5 pt-4">
         <div className="flex items-stretch gap-2" aria-disabled="true">
-          <div className="flex flex-1 cursor-not-allowed items-center truncate rounded-xl border border-border bg-background px-4 text-sm text-muted-foreground opacity-60">
+          <div className="flex min-h-13 flex-1 cursor-not-allowed items-center truncate rounded-md border border-border bg-background px-4 text-sm text-muted-foreground opacity-60">
             Add a note…
           </div>
           <button
             type="button"
             disabled
             aria-label="Take a photo"
-            className="flex h-14 w-14 shrink-0 cursor-not-allowed items-center justify-center rounded-xl border border-border bg-background text-foreground opacity-60"
+            className="flex h-13 w-13 shrink-0 cursor-not-allowed items-center justify-center rounded-md border border-border bg-background text-foreground opacity-60"
           >
             <CameraIcon className="h-6 w-6" />
           </button>
@@ -249,7 +245,7 @@ function Composer() {
             type="button"
             disabled
             aria-label="Record voice note"
-            className="flex h-14 w-14 shrink-0 cursor-not-allowed items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm opacity-60"
+            className="flex h-13 w-13 shrink-0 cursor-not-allowed items-center justify-center rounded-md bg-primary text-primary-foreground shadow-[var(--shadow-raised)] opacity-60"
           >
             <MicIcon className="h-6 w-6" />
           </button>
@@ -266,7 +262,7 @@ function ReportScreen({ onBack }: { onBack: () => void }) {
         <button
           type="button"
           onClick={onBack}
-          className="inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-xs font-semibold text-primary transition hover:bg-primary/10"
+          className="inline-flex min-h-11 items-center gap-1 rounded-md px-3 text-sm font-bold text-primary transition hover:bg-primary/10 ring-focus"
         >
           <ChevronLeftIcon className="h-3.5 w-3.5" />
           Reports
@@ -375,12 +371,7 @@ function ChevronLeftIcon({ className }: IconProps) {
 
 function PlayIcon({ className }: IconProps) {
   return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="currentColor"
-      className={className}
-      aria-hidden
-    >
+    <svg viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden>
       <path d="M8 5.14v13.72a1 1 0 0 0 1.55.83l10.4-6.86a1 1 0 0 0 0-1.66L9.55 4.31A1 1 0 0 0 8 5.14Z" />
     </svg>
   );
@@ -388,12 +379,7 @@ function PlayIcon({ className }: IconProps) {
 
 function DotsIcon({ className }: IconProps) {
   return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="currentColor"
-      className={className}
-      aria-hidden
-    >
+    <svg viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden>
       <circle cx="5" cy="12" r="1.5" />
       <circle cx="12" cy="12" r="1.5" />
       <circle cx="19" cy="12" r="1.5" />

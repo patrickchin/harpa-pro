@@ -1,5 +1,7 @@
 ---
 import Icon from "../Icon.astro";
+import Container from "../primitives/Container.astro";
+import Section from "../primitives/Section.astro";
 
 const steps = [
   {
@@ -20,34 +22,36 @@ const steps = [
 ];
 ---
 
-<section id="how" class="mx-auto max-w-6xl px-4 py-14 sm:px-6 md:py-16">
+<Section id="how">
+  <Container>
   <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
     <div class="max-w-2xl">
-      <span class="text-xs font-semibold uppercase tracking-wider text-accent-ink">
+      <span class="site-eyebrow">
         How it works
       </span>
-      <h2 class="mt-2 text-3xl font-semibold tracking-tight text-ink sm:text-4xl">
+      <h2 class="site-section-title mt-2 text-ink">
         Three steps from boots to report.
       </h2>
     </div>
   </div>
 
   <ol
-    class="mt-10 grid gap-px overflow-hidden rounded-xl border border-hairline bg-border sm:grid-cols-3"
+    class="mt-8 grid gap-3 sm:grid-cols-3"
   >
     {
       steps.map((s, i) => (
-        <li class="bg-card p-6">
+        <li class="rounded-lg border border-hairline bg-card p-5 shadow-[var(--shadow-raised)]">
           <div class="flex items-center justify-between">
-            <span class="grid h-9 w-9 place-items-center rounded-md bg-primary text-primary-foreground">
+            <span class="grid h-10 w-10 place-items-center rounded-lg bg-primary text-primary-foreground">
               <Icon name={s.icon} class="h-4 w-4" />
             </span>
             <span class="font-mono text-xs text-ink-soft">0{i + 1}</span>
           </div>
-          <h3 class="mt-5 text-lg font-semibold text-ink">{s.title}</h3>
-          <p class="mt-2 text-sm leading-relaxed text-ink-soft">{s.body}</p>
+          <h3 class="mt-4 text-base font-bold leading-6 text-ink">{s.title}</h3>
+          <p class="mt-2 text-sm leading-5 text-ink-soft">{s.body}</p>
         </li>
       ))
     }
   </ol>
-</section>
+  </Container>
+</Section>

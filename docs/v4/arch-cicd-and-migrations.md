@@ -156,6 +156,11 @@ environment and only surfaces when the deploy fires.
 | `ai-live.yml`                     | ✗        | dev + main + dispatch | Live AI provider smoke (no fixtures) |
 | `neon-snapshot-prune.yml`         | ✗        | (cron 04:17 UTC)      | Prune stale Neon branches |
 
+The dashboard and site preview/dev/production workflows include
+`packages/design-tokens/**` in their path filters. A shared visual-token change
+therefore rebuilds both browser surfaces even when neither app directory
+changes.
+
 ### Closing post-merge blind spots
 
 When a workflow lives only in the post-merge column, the rule is:

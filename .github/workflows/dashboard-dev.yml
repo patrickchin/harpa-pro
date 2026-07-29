@@ -9,6 +9,7 @@ on:
     paths:
       - 'apps/dashboard/**'
       - 'packages/api-contract/**'
+      - 'packages/design-tokens/**'
       - 'packages/report-core/**'
       - '.github/workflows/dashboard-*.yml'
       - 'scripts/ci/ensure-dashboard-pages-project.sh'

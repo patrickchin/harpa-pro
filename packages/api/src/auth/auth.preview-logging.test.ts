@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 
 type SendVerificationOtp = (input: {
   email: string;
@@ -70,6 +70,10 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
+beforeAll(async () => {
+  await import('./auth.js');
+});
+
 describe('preview email OTP diagnostics', () => {
   it('does not log the OTP or full recipient address', async () => {
     const logSpy = vi.spyOn(console, 'log').mockImplementation(() => undefined);
@@ -77,7 +81,6 @@ describe('preview email OTP diagnostics', () => {
     const email = 'private.person+preview@example.com';
     const otp = '817263';
 
-    await import('./auth.js');
     expect(captured.sendVerificationOTP).toBeTypeOf('function');
 
     await captured.sendVerificationOTP?.({ email, otp, type: 'sign-in' });

@@ -53,28 +53,7 @@ function LoadFailure({
 }
 
 function AuthCanvas({ children }: { children: React.ReactNode }) {
-  return (
-    <main className="auth-canvas">
-      <div className="auth-context">
-        <p className="eyebrow">Reports made clear</p>
-        <h2>Field context in. Professional reporting out.</h2>
-        <p>
-          Review projects, manage the team, and finish structured reports with the room and keyboard
-          of your office.
-        </p>
-        <div className="auth-context-card" aria-hidden="true">
-          <span>Site Visit #24</span>
-          <strong>West elevation progress</strong>
-          <div>
-            <i />
-            <i />
-            <i />
-          </div>
-        </div>
-      </div>
-      {children}
-    </main>
-  );
+  return <main className="auth-canvas">{children}</main>;
 }
 
 export function SignInRoute(): React.JSX.Element {

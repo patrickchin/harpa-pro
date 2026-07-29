@@ -10,6 +10,7 @@ on:
     branches: [dev]
     paths:
       - "apps/site/**"
+      - "packages/design-tokens/**"
       - ".github/workflows/site-dev.yml"
       - "pnpm-lock.yaml"
   # Allow manual re-deploys.

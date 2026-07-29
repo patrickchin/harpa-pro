@@ -14,6 +14,8 @@ const KEYS = [
   'EMAIL_OTP_LIVE',
   'MIGRATIONS_REQUIRED_HEAD',
   'BETTER_AUTH_SECRET',
+  'BETTER_AUTH_URL',
+  'ADMIN_CORS_ORIGINS',
   'AI_FIXTURE_MODE',
   'AI_LIVE',
   'OPENAI_API_KEY',
@@ -139,16 +141,15 @@ describe('env: production services fail closed', () => {
     await expect(freshImportEnv()).rejects.toThrow(new RegExp(key));
   });
 
-  it.each([
-    'R2_ACCOUNT_ID',
-    'R2_ACCESS_KEY_ID',
-    'R2_SECRET_ACCESS_KEY',
-  ] as const)('rejects live R2 without %s', async (key) => {
-    setValidProductionEnv();
-    delete process.env[key];
+  it.each(['R2_ACCOUNT_ID', 'R2_ACCESS_KEY_ID', 'R2_SECRET_ACCESS_KEY'] as const)(
+    'rejects live R2 without %s',
+    async (key) => {
+      setValidProductionEnv();
+      delete process.env[key];
 
-    await expect(freshImportEnv()).rejects.toThrow(new RegExp(key));
-  });
+      await expect(freshImportEnv()).rejects.toThrow(new RegExp(key));
+    },
+  );
 
   it('accepts an explicit R2 endpoint instead of an account ID', async () => {
     setValidProductionEnv();
@@ -195,6 +196,44 @@ describe('env: production services fail closed', () => {
   });
 });
 
+describe('env: admin browser origins', () => {
+  it('accepts the dedicated production admin origin for the production API', async () => {
+    setValidProductionEnv();
+    process.env.BETTER_AUTH_URL = 'https://api.harpapro.com';
+    process.env.ADMIN_CORS_ORIGINS = 'https://admin.harpapro.com';
+
+    const mod = await freshImportEnv();
+
+    expect(mod.env.ADMIN_CORS_ORIGINS).toBe('https://admin.harpapro.com');
+  });
+
+  it('accepts only the stable Pages origin for the development API', async () => {
+    setValidProductionEnv();
+    process.env.BETTER_AUTH_URL = 'https://harpa-pro-api-dev.fly.dev';
+    process.env.ADMIN_CORS_ORIGINS = 'https://dev.harpa-pro.pages.dev';
+
+    const mod = await freshImportEnv();
+
+    expect(mod.env.ADMIN_CORS_ORIGINS).toBe('https://dev.harpa-pro.pages.dev');
+  });
+
+  it('rejects a Pages origin for the production API', async () => {
+    setValidProductionEnv();
+    process.env.BETTER_AUTH_URL = 'https://api.harpapro.com';
+    process.env.ADMIN_CORS_ORIGINS = 'https://dev.harpa-pro.pages.dev';
+
+    await expect(freshImportEnv()).rejects.toThrow(/ADMIN_CORS_ORIGINS|Pages/);
+  });
+
+  it('rejects arbitrary Pages preview origins for the development API', async () => {
+    setValidProductionEnv();
+    process.env.BETTER_AUTH_URL = 'https://harpa-pro-api-dev.fly.dev';
+    process.env.ADMIN_CORS_ORIGINS = 'https://random-preview.harpa-pro.pages.dev';
+
+    await expect(freshImportEnv()).rejects.toThrow(/ADMIN_CORS_ORIGINS|Pages/);
+  });
+});
+
 describe('env: test account access', () => {
   it('rejects TEST_ACCOUNT_EMAILS without TEST_ACCOUNT_PASSWORD', async () => {
     process.env.NODE_ENV = 'development';
@@ -206,8 +245,7 @@ describe('env: test account access', () => {
 
   it('accepts stable test emails plus password', async () => {
     process.env.NODE_ENV = 'development';
-    process.env.TEST_ACCOUNT_EMAILS =
-      'test@harpapro.com, test2@harpapro.com, test3@harpapro.com';
+    process.env.TEST_ACCOUNT_EMAILS = 'test@harpapro.com, test2@harpapro.com, test3@harpapro.com';
     process.env.TEST_ACCOUNT_PASSWORD = 'test-password-12345';
 
     const mod = await freshImportEnv();
@@ -237,8 +275,7 @@ describe('env: demo account access', () => {
 
   it('accepts configured demo emails plus password', async () => {
     process.env.NODE_ENV = 'development';
-    process.env.DEMO_ACCOUNT_EMAILS =
-      'demo@harpapro.com, demo2@harpapro.com, demo3@harpapro.com';
+    process.env.DEMO_ACCOUNT_EMAILS = 'demo@harpapro.com, demo2@harpapro.com, demo3@harpapro.com';
     process.env.DEMO_ACCOUNT_PASSWORD = 'demo-password-12345';
 
     const mod = await freshImportEnv();

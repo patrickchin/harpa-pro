@@ -5,27 +5,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { activity } from '@harpa/api-contract';
 
 const authMock = vi.hoisted(() => {
-  const refetchSession = vi.fn();
   return {
-    sendVerificationOtp: vi.fn(),
-    signInEmailOtp: vi.fn(),
-    signOut: vi.fn(),
-    refetchSession,
-    sessionState: {
-      data: null as { user: { email: string } } | null,
-      isPending: true,
-      refetch: refetchSession,
-    },
+    getSession: vi.fn(),
+    login: vi.fn(),
+    logout: vi.fn(),
   };
 });
 
 vi.mock('../../lib/admin-auth', () => ({
-  adminAuthClient: {
-    useSession: () => authMock.sessionState,
-    emailOtp: { sendVerificationOtp: authMock.sendVerificationOtp },
-    signIn: { emailOtp: authMock.signInEmailOtp },
-    signOut: authMock.signOut,
-  },
+  adminAuthClient: authMock,
 }));
 
 vi.mock('../../lib/env', () => ({
@@ -36,6 +24,11 @@ vi.mock('../../lib/env', () => ({
 }));
 
 import AdminActivity from './AdminActivity';
+
+const adminSession = {
+  authenticated: true as const,
+  email: 'admin@harpapro.com',
+};
 
 const reportEvent: activity.Event = {
   id: 'aud_0123456789ab',
@@ -78,15 +71,12 @@ function activityResponse(items: activity.Event[], nextCursor: string | null = n
 
 beforeEach(() => {
   vi.restoreAllMocks();
-  authMock.sessionState = {
-    data: { user: { email: 'admin@example.com' } },
-    isPending: false,
-    refetch: authMock.refetchSession,
-  };
-  authMock.sendVerificationOtp.mockReset();
-  authMock.signInEmailOtp.mockReset();
-  authMock.signOut.mockReset();
-  authMock.refetchSession.mockReset();
+  authMock.getSession.mockReset();
+  authMock.getSession.mockResolvedValue(adminSession);
+  authMock.login.mockReset();
+  authMock.logout.mockReset();
+  window.localStorage.clear();
+  window.sessionStorage.clear();
 });
 
 afterEach(() => {
@@ -95,73 +85,73 @@ afterEach(() => {
 
 describe('AdminActivity', () => {
   it('shows session loading before exposing auth or activity controls', () => {
-    authMock.sessionState = {
-      data: null,
-      isPending: true,
-      refetch: authMock.refetchSession,
-    };
+    authMock.getSession.mockImplementation(() => new Promise(() => {}));
 
     render(<AdminActivity />);
 
+    expect(authMock.getSession).toHaveBeenCalledOnce();
     expect(screen.getByText('Checking admin session…')).toBeTruthy();
     expect(screen.queryByLabelText('Email')).toBeNull();
+    expect(screen.queryByLabelText('Password')).toBeNull();
     expect(screen.queryByRole('table')).toBeNull();
   });
 
-  it('completes the email-OTP sign-in flow without storing a bearer token', async () => {
-    authMock.sessionState = {
-      data: null,
-      isPending: false,
-      refetch: authMock.refetchSession,
-    };
-    authMock.sendVerificationOtp.mockResolvedValue({
-      data: { success: true },
-      error: null,
-    });
-    authMock.signInEmailOtp.mockResolvedValue({
-      data: { user: { email: 'admin@example.com' } },
-      error: null,
-    });
+  it('signs in through the visible email/password form without using browser storage', async () => {
+    authMock.getSession.mockResolvedValue(null);
+    authMock.login.mockResolvedValue(adminSession);
     const user = userEvent.setup();
     render(<AdminActivity />);
 
-    await user.type(screen.getByLabelText('Email'), 'admin@example.com');
-    await user.click(screen.getByRole('button', { name: 'Send code' }));
-    expect(authMock.sendVerificationOtp).toHaveBeenCalledWith({
-      email: 'admin@example.com',
-      type: 'sign-in',
-    });
+    const email = (await screen.findByLabelText('Email')) as HTMLInputElement;
+    const password = screen.getByLabelText('Password') as HTMLInputElement;
 
-    await user.type(screen.getByLabelText('Verification code'), '123456');
-    await user.click(screen.getByRole('button', { name: 'Verify code' }));
-    expect(authMock.signInEmailOtp).toHaveBeenCalledWith({
-      email: 'admin@example.com',
-      otp: '123456',
+    expect(password.type).toBe('password');
+    expect(password.autocomplete).toBe('current-password');
+    expect(screen.getAllByRole('button', { name: 'Sign in' })).toHaveLength(1);
+    expect(screen.queryByRole('button', { name: 'Send code' })).toBeNull();
+    expect(screen.queryByLabelText('Verification code')).toBeNull();
+
+    await user.type(email, 'admin@example.com');
+    expect(email.checkValidity()).toBe(false);
+    await user.clear(email);
+    await user.type(email, 'admin@harpapro.com.evil');
+    expect(email.checkValidity()).toBe(false);
+    await user.clear(email);
+    await user.type(email, adminSession.email);
+    expect(email.checkValidity()).toBe(true);
+
+    await user.type(password, 'correct horse battery staple 123');
+    await user.click(screen.getByRole('button', { name: 'Sign in' }));
+
+    expect(authMock.login).toHaveBeenCalledWith({
+      email: adminSession.email,
+      password: 'correct horse battery staple 123',
     });
-    expect(authMock.refetchSession).toHaveBeenCalled();
+    await waitFor(() => expect(authMock.getSession).toHaveBeenCalledTimes(2));
+    expect(password.value).toBe('');
     expect(window.localStorage.length).toBe(0);
+    expect(window.sessionStorage.length).toBe(0);
   });
 
-  it('shows a retryable error when the OTP request cannot reach the API', async () => {
-    authMock.sessionState = {
-      data: null,
-      isPending: false,
-      refetch: authMock.refetchSession,
-    };
-    authMock.sendVerificationOtp.mockRejectedValue(new Error('offline'));
+  it('shows a generic error and clears the password after a failed login', async () => {
+    authMock.getSession.mockResolvedValue(null);
+    authMock.login.mockRejectedValue(
+      new Error('disabled identity admin@harpapro.com does not exist'),
+    );
     const user = userEvent.setup();
     render(<AdminActivity />);
 
-    await user.type(screen.getByLabelText('Email'), 'admin@example.com');
-    await user.click(screen.getByRole('button', { name: 'Send code' }));
+    await user.type(await screen.findByLabelText('Email'), adminSession.email);
+    const password = screen.getByLabelText('Password') as HTMLInputElement;
+    await user.type(password, 'wrong password that must disappear');
+    await user.click(screen.getByRole('button', { name: 'Sign in' }));
 
-    expect((await screen.findByRole('alert')).textContent).toContain(
-      'Unable to send a code.',
-    );
-    expect(screen.getByRole('button', { name: 'Send code' })).not.toHaveProperty(
-      'disabled',
-      true,
-    );
+    expect((await screen.findByRole('alert')).textContent).toBe('Invalid email or password.');
+    expect(screen.getByRole('alert').textContent).not.toContain('disabled');
+    expect(password.value).toBe('');
+    expect(screen.getByRole('button', { name: 'Sign in' })).not.toHaveProperty('disabled', true);
+    expect(window.localStorage.length).toBe(0);
+    expect(window.sessionStorage.length).toBe(0);
   });
 
   it('renders, filters, paginates, and inspects the activity feed', async () => {
@@ -216,18 +206,18 @@ describe('AdminActivity', () => {
     expect(await screen.findByText('Tower Refurbishment')).toBeTruthy();
   });
 
-  it('signs out through Better Auth', async () => {
+  it('revokes the dedicated admin session and returns to the sign-in form', async () => {
+    authMock.getSession.mockResolvedValueOnce(adminSession).mockResolvedValueOnce(null);
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(activityResponse([]));
-    authMock.signOut.mockResolvedValue({
-      data: { success: true },
-      error: null,
-    });
+    authMock.logout.mockResolvedValue(undefined);
     const user = userEvent.setup();
     render(<AdminActivity />);
 
-    await user.click(screen.getByRole('button', { name: 'Sign out' }));
+    await user.click(await screen.findByRole('button', { name: 'Sign out' }));
 
-    expect(authMock.signOut).toHaveBeenCalled();
-    expect(authMock.refetchSession).toHaveBeenCalled();
+    expect(authMock.logout).toHaveBeenCalledOnce();
+    await waitFor(() => expect(authMock.getSession).toHaveBeenCalledTimes(2));
+    expect(await screen.findByLabelText('Email')).toBeTruthy();
+    expect(screen.getByLabelText('Password')).toBeTruthy();
   });
 });

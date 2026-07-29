@@ -101,6 +101,8 @@ work.
 Large empty bands are not a substitute for hierarchy. Marketing sections use
 64 px vertical padding on wide screens and 48 px on small screens. Docs use a
 24 px page start, 32 px between major groups, and 16 px within a group.
+Browser application roots reserve a stable vertical scrollbar gutter so
+classic desktop scrollbars do not create a horizontal shift at narrow widths.
 
 ### 3.4 Shape, border, and depth
 

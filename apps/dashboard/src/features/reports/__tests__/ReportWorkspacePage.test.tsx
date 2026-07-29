@@ -1,10 +1,11 @@
 // @vitest-environment jsdom
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { act } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ReportConflictError } from '../api';
 import { ReportWorkspacePage, reportDraftStorageKey } from '../ReportWorkspacePage';
-import { button, change, click, field, flush, keydown, render, waitMs } from './dom';
+import { button, change, click, field, flush, keydown, render } from './dom';
 import { commentFixture, fakeReportsApi, reportFixture } from './fixtures';
 
 const cleanups: Array<() => Promise<void>> = [];
@@ -65,15 +66,21 @@ describe('ReportWorkspacePage draft editing', () => {
       autosaveDelayMs: 100,
     });
 
-    await change(field(rendered.container, 'Report title'), 'Keyboard revised progress report');
+    vi.useFakeTimers();
+    try {
+      await change(field(rendered.container, 'Report title'), 'Keyboard revised progress report');
 
-    const preview = rendered.container.querySelector('[data-testid="report-preview"]');
-    expect(preview?.textContent).toContain('Keyboard revised progress report');
-    expect(rendered.container.textContent).toContain('Unsaved changes');
-    expect(button(rendered.container, 'Finalize').disabled).toBe(true);
+      const preview = rendered.container.querySelector('[data-testid="report-preview"]');
+      expect(preview?.textContent).toContain('Keyboard revised progress report');
+      expect(rendered.container.textContent).toContain('Unsaved changes');
+      expect(button(rendered.container, 'Finalize').disabled).toBe(true);
 
-    await waitMs(125);
-    await flush();
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(100);
+      });
+    } finally {
+      vi.useRealTimers();
+    }
 
     expect(updateReport).toHaveBeenCalledTimes(1);
     expect(updateReport.mock.calls[0]?.[2]).toMatchObject({

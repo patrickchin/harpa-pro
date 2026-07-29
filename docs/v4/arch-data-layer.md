@@ -205,6 +205,8 @@ hooks are unchanged; this is call-site wiring only.
   detail GETs into one).
 - Broader optimistic coverage beyond notes.
 
+
+
 Three automated gates keep the data-layer contract honest. Each one
 catches a class of "silent escape" we don't want to discover in
 production:
@@ -223,7 +225,7 @@ production:
   generated mutation without the matching cache-invalidation rule
   fails this test.
 
-Zod / OpenAPI / Drizzle drift on _response_ shapes is partially
+Zod / OpenAPI / Drizzle drift on *response* shapes is partially
 guarded by the contract test (Zod → OpenAPI → committed spec → mobile
 types) — but the Drizzle column → Zod schema link is hand-written.
 When you add a nullable column, the Zod field is `.nullable()` (not

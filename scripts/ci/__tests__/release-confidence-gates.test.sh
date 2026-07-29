@@ -122,7 +122,7 @@ forbid_fixed ".github/dependabot.yml" \
 require_file ".github/workflows/dependency-review.yml" \
   "pull requests have a dependency-review workflow"
 require_fixed ".github/workflows/dependency-review.yml" \
-  "actions/dependency-review-action@v4" \
+  "actions/dependency-review-action@v5" \
   "dependency review uses the supported action"
 require_fixed ".github/workflows/dependency-review.yml" \
   "fail-on-severity: high" \

@@ -689,7 +689,9 @@ unambiguous identity: nonempty `fly_release_id`, `fly_release_version`, and a
 valid full tagged `config.image`. Fly may return the same tag with an optional
 `@sha256:<64 lowercase hex>` suffix, so repair strips only that validated suffix
 before comparison; repository, tag, release id, and release version remain
-exact. Untagged, digest-only, malformed, stale, or mixed identities fail before
+exact. Tag-only Machines may coexist with one observed explicit digest, but more
+than one distinct non-null digest across the app and worker Machines fails
+closed. Untagged, digest-only, malformed, stale, or mixed identities fail before
 mutation. If standby clearing succeeds but later work fails, an exact singleton
 stopped/no-standby retry starts then verifies the candidate, while an exact
 singleton started/no-standby retry clones it. Id, identity, service, standby, or
@@ -710,7 +712,8 @@ previously non-started Machine can leave the new version stopped, which is why
 repair uses an explicit start and does not treat update success as running
 proof. Fly also rendered a cloned standby's image as the same full deployment
 tag with an attached digest, so repair removes only a validated digest suffix
-and keeps the repository, tag, release id, and release version exact.
+for tag comparison, keeps the repository, tag, release id, and release version
+exact, and rejects conflicting explicit digests.
 
 Operational query:
 

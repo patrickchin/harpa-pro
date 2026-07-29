@@ -66,12 +66,14 @@ clones it.
 Every Machine must match the deployed app Machines on nonempty Fly release id,
 release version, and one valid full tagged image. The jq identity helper
 canonicalizes only Fly's observed optional `@sha256:<64 lowercase hex>` suffix;
-the repository and tag remain exact. Untagged, digest-only, malformed, different
-repository/tag, or mismatched release metadata still fail closed. Each
-transition also proves the candidate id, singleton topology, empty services,
-and empty standbys. Both mutating branches list Machines again and succeed only
-after observing the exact healthy pair; other initial or transitional
-topologies fail closed.
+the repository and tag remain exact, and at most one distinct non-null digest
+may appear across the app and worker Machines. Tag-only plus one observed digest
+is valid; two conflicting explicit digests fail closed. Untagged, digest-only,
+malformed, different repository/tag, or mismatched release metadata still fail
+closed. Each transition also proves the candidate id, singleton topology, empty
+services, and empty standbys. Both mutating branches list Machines again and
+succeed only after observing the exact healthy pair; other initial or
+transitional topologies fail closed.
 
 **Test.** `storage-lifecycle-deploy-policy.test.sh` forbids explicit
 `storage-worker` scale commands under the Fly and workflow deployment
@@ -83,8 +85,9 @@ inventories, stale or incomplete release identity, exact-candidate proofs
 before cloning and after update/start, bounded start polling, stopped/started
 partial retries, verify-before-clone, fresh-inventory verification after
 cloning, both directions of tag-versus-tag-with-digest comparison (including a
-registry port), and fail-closed malformed/tag/repository/release-metadata cases
-with fake Fly commands.
+registry port), conflicting digests across app Machines or workers, and
+fail-closed malformed/tag/repository/release-metadata cases with fake Fly
+commands.
 `verify-storage-worker-started.test.sh` keeps the final read-only state check.
 
 **Pattern.** A provider confirmation prompt can identify a destructive
@@ -96,4 +99,6 @@ started; use an explicit start plus fresh exact-candidate inventory checks. A
 clone command is not success until a fresh inventory proves the active/standby
 relationship. Provider APIs may render the same tagged image with an attached
 content digest, so compare a narrowly validated canonical tag alongside exact
-release metadata instead of comparing the raw image strings.
+release metadata instead of comparing the raw image strings. Preserve the
+explicit digest evidence and reject an inventory that claims two distinct
+digests for that identity.

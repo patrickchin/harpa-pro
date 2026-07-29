@@ -80,7 +80,7 @@ run_repair() {
 }
 
 assert_no_mutation() {
-  if grep -Eq '^machine\\|(update|clone)\\|' "$TMP/flyctl.log"; then
+  if grep -Eq '^machine\|(update|clone)\|' "$TMP/flyctl.log"; then
     echo "FAIL - fail-closed case mutated Fly Machines"
     cat "$TMP/flyctl.log"
     exit 1
@@ -145,6 +145,10 @@ expect_failure_without_mutation \
 expect_failure_without_mutation \
   "a stale standby is not started" \
   "storage-workers-stale.json" \
+  "does not match the deployed app release"
+expect_failure_without_mutation \
+  "an incomplete standby identity is not trusted" \
+  "storage-workers-missing-identity.json" \
   "does not match the deployed app release"
 
 reset_case

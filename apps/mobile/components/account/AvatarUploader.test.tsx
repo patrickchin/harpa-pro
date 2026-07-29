@@ -20,10 +20,15 @@ import TestRenderer, { act } from 'react-test-renderer';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import * as ImagePicker from 'expo-image-picker';
-import { Platform } from 'react-native';
 
 import { AvatarUploader } from './AvatarUploader';
 import { QueueProvider } from '@/lib/uploads';
+
+const photoLibraryPolicyMock = vi.hoisted(() => ({ enabled: true }));
+
+vi.mock('@/lib/camera/photo-library-policy', () => ({
+  isPhotoLibraryPickingEnabled: () => photoLibraryPolicyMock.enabled,
+}));
 
 interface RecordedCall {
   url: string;
@@ -123,14 +128,13 @@ async function flush(times = 4) {
 
 beforeEach(async () => {
   calls = [];
-  Platform.OS = 'android';
+  photoLibraryPolicyMock.enabled = true;
   await AsyncStorage.clear();
   vi.stubGlobal('fetch', defaultFetch());
   vi.clearAllMocks();
 });
 
 afterEach(() => {
-  Platform.OS = 'ios';
   vi.unstubAllGlobals();
 });
 
@@ -150,7 +154,7 @@ describe('AvatarUploader', () => {
     await flush();
 
     await act(async () => {
-      tree.root.findByProps({ testID: 'btn-avatar-upload' }).props.onPress();
+      await tree.root.findByProps({ testID: 'btn-avatar-upload' }).props.onPress();
     });
     await flush(8);
 
@@ -175,7 +179,7 @@ describe('AvatarUploader', () => {
     const tree = renderWithProviders(<AvatarUploader />);
     await flush();
     await act(async () => {
-      tree.root.findByProps({ testID: 'btn-avatar-upload' }).props.onPress();
+      await tree.root.findByProps({ testID: 'btn-avatar-upload' }).props.onPress();
     });
     await flush(8);
 
@@ -195,7 +199,7 @@ describe('AvatarUploader', () => {
   });
 
   it('renders an existing avatar without an upload control on iOS', async () => {
-    Platform.OS = 'ios';
+    photoLibraryPolicyMock.enabled = false;
     await AsyncStorage.setItem('harpa.avatarFileId.v1', 'fil_existing0002');
 
     const tree = renderWithProviders(<AvatarUploader />);
@@ -220,7 +224,7 @@ describe('AvatarUploader', () => {
     const tree = renderWithProviders(<AvatarUploader />);
     await flush();
     await act(async () => {
-      tree.root.findByProps({ testID: 'btn-avatar-upload' }).props.onPress();
+      await tree.root.findByProps({ testID: 'btn-avatar-upload' }).props.onPress();
     });
     await flush();
     // No upload hops fired.

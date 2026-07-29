@@ -154,9 +154,7 @@ export function AvatarUploader({
       {canPickFromLibrary ? (
         <Pressable
           testID="btn-avatar-upload"
-          onPress={() => {
-            void handlePick();
-          }}
+          onPress={handlePick}
           disabled={isUploading}
           accessibilityRole="button"
           accessibilityLabel="Change profile picture"

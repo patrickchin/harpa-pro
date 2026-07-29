@@ -7,10 +7,15 @@
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import * as ImagePicker from 'expo-image-picker';
-import { Platform } from 'react-native';
 
 import { pickAndEnqueueGalleryImages } from './pick-and-enqueue-gallery-images';
 import type { UploadResult } from '@/lib/uploads/types';
+
+const photoLibraryPolicyMock = vi.hoisted(() => ({ enabled: true }));
+
+vi.mock('./photo-library-policy', () => ({
+  isPhotoLibraryPickingEnabled: () => photoLibraryPolicyMock.enabled,
+}));
 
 const PERM_DENIED = {
   granted: false,
@@ -27,7 +32,7 @@ const fakeFile = { id: 'fil_1' } as unknown as UploadResult['file'];
 
 describe('pickAndEnqueueGalleryImages', () => {
   beforeEach(() => {
-    Platform.OS = 'android';
+    photoLibraryPolicyMock.enabled = true;
     vi.clearAllMocks();
     vi.mocked(ImagePicker.requestMediaLibraryPermissionsAsync).mockResolvedValue(
       PERM_GRANTED as never,
@@ -56,12 +61,11 @@ describe('pickAndEnqueueGalleryImages', () => {
   });
 
   afterEach(() => {
-    Platform.OS = 'ios';
     vi.restoreAllMocks();
   });
 
   it('does not request photo-library access on iOS', async () => {
-    Platform.OS = 'ios';
+    photoLibraryPolicyMock.enabled = false;
     const enqueue = vi.fn();
 
     const outcome = await pickAndEnqueueGalleryImages({

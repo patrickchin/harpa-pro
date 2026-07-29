@@ -14,7 +14,6 @@
  */
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
 import TestRenderer, { act } from 'react-test-renderer';
-import { Platform } from 'react-native';
 
 const voicePipelineMock = vi.hoisted((): {
   state: {
@@ -42,6 +41,12 @@ const voicePipelineMock = vi.hoisted((): {
   capture: vi.fn(async () => null),
   retry: vi.fn(async () => null),
   reset: vi.fn(),
+}));
+
+const photoLibraryPolicyMock = vi.hoisted(() => ({ enabled: false }));
+
+vi.mock('@/lib/camera/photo-library-policy', () => ({
+  isPhotoLibraryPickingEnabled: () => photoLibraryPolicyMock.enabled,
 }));
 
 // `GenerateReportProvider` consumes the inline recorder + voice
@@ -128,6 +133,7 @@ const sampleNotes: NoteEntry[] = [
 
 describe('GenerateNotes', () => {
   beforeEach(() => {
+    photoLibraryPolicyMock.enabled = false;
     vi.useFakeTimers();
     voicePipelineMock.state = {
       step: 'idle',
@@ -143,7 +149,6 @@ describe('GenerateNotes', () => {
     voicePipelineMock.reset.mockClear();
   });
   afterEach(() => {
-    Platform.OS = 'ios';
     vi.useRealTimers();
   });
   it('renders the empty state when there are no notes', () => {
@@ -260,7 +265,7 @@ describe('GenerateNotes', () => {
   });
 
   it('opens the attachment sheet with stable photo action testIDs', () => {
-    Platform.OS = 'android';
+    photoLibraryPolicyMock.enabled = true;
     const tree = render(<GenerateNotes {...baseProps} />);
     act(() => {
       tree.root.findByProps({ testID: 'btn-attachment' }).props.onPress();
@@ -277,7 +282,7 @@ describe('GenerateNotes', () => {
   });
 
   it('keeps camera capture but hides photo-library picking on iOS', () => {
-    Platform.OS = 'ios';
+    photoLibraryPolicyMock.enabled = false;
     const tree = render(<GenerateNotes {...baseProps} />);
 
     act(() => {

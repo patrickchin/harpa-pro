@@ -200,10 +200,14 @@ customizations apply only to routine version updates. The configuration does
 not become active until it reaches `main`.
 
 The `dependency-review` workflow uses GitHub's dependency graph to reject
-pull requests that introduce high or critical vulnerabilities. Keep its
-`dependency-review` job required in `main` branch protection. Existing
-vulnerabilities are tracked by Dependabot alerts and security-update pull
-requests rather than failing every unrelated change.
+pull requests that introduce high or critical vulnerabilities. Once this
+workflow has reached default branch `main` and its check has run successfully,
+make the `dependency-review` job required in both `dev` and `main` branch
+protection. Do not add the required check before then: routine version-update
+pull requests target `dev`, while security-update pull requests target `main`,
+and both paths need the workflow to be active first. Existing vulnerabilities
+are tracked by Dependabot alerts and security-update pull requests rather than
+failing every unrelated change.
 
 Deferred (add when the phase actually starts, not before):
 

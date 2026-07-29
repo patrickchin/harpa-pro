@@ -59,8 +59,11 @@ case "${1:-} ${2:-}" in
       4)
         cat "${FLY_MACHINE_FOURTH:-${FLY_MACHINE_THIRD:-${FLY_MACHINE_SECOND:-$FLY_MACHINE_INITIAL}}}"
         ;;
-      *)
+      5)
         cat "${FLY_MACHINE_FIFTH:-${FLY_MACHINE_FOURTH:-${FLY_MACHINE_THIRD:-${FLY_MACHINE_SECOND:-$FLY_MACHINE_INITIAL}}}}"
+        ;;
+      *)
+        cat "${FLY_MACHINE_SIXTH:-${FLY_MACHINE_FIFTH:-${FLY_MACHINE_FOURTH:-${FLY_MACHINE_THIRD:-${FLY_MACHINE_SECOND:-$FLY_MACHINE_INITIAL}}}}}"
         ;;
     esac
     ;;
@@ -106,6 +109,7 @@ run_repair() {
   local third="${3:-}"
   local fourth="${4:-}"
   local fifth="${5:-}"
+  local sixth="${6:-}"
 
   FLYCTL_LOG="$TMP/flyctl.log" \
     FLYCTL_COUNT="$TMP/flyctl.count" \
@@ -114,6 +118,7 @@ run_repair() {
     FLY_MACHINE_THIRD="${third:+$FIXTURES/$third}" \
     FLY_MACHINE_FOURTH="${fourth:+$FIXTURES/$fourth}" \
     FLY_MACHINE_FIFTH="${fifth:+$FIXTURES/$fifth}" \
+    FLY_MACHINE_SIXTH="${sixth:+$FIXTURES/$sixth}" \
     STORAGE_WORKER_START_MAX_ATTEMPTS=2 \
     STORAGE_WORKER_START_POLL_SECONDS=0 \
     PATH="$TMP/bin:$PATH" \
@@ -257,6 +262,58 @@ expect_started_retry_failure_before_clone() {
   echo "  ok   - $name"
 }
 
+expect_post_poll_failure_before_clone() {
+  local name="$1"
+  local path="$2"
+  local before_clone="$3"
+  local output
+  local status
+
+  reset_case
+  set +e
+  case "$path" in
+    stopped-retry)
+      output=$(
+        run_repair \
+          "storage-workers-stopped-no-standby.json" \
+          "storage-workers-repaired.json" \
+          "$before_clone"
+      )
+      ;;
+    standby-clear)
+      output=$(
+        run_repair \
+          "storage-workers-repairable.json" \
+          "storage-workers-stopped-no-standby.json" \
+          "storage-workers-repaired.json" \
+          "$before_clone"
+      )
+      ;;
+    update-started)
+      output=$(
+        run_repair \
+          "storage-workers-repairable.json" \
+          "storage-workers-repaired.json" \
+          "$before_clone"
+      )
+      ;;
+    *)
+      echo "FAIL - unknown post-poll test path: $path"
+      exit 64
+      ;;
+  esac
+  status=$?
+  set -e
+
+  [[ "$status" -ne 0 ]] || {
+    echo "FAIL - $name unexpectedly passed"
+    echo "$output"
+    exit 1
+  }
+  assert_no_clone
+  echo "  ok   - $name"
+}
+
 echo "storage-worker topology repair"
 
 reset_case
@@ -355,11 +412,25 @@ expect_started_retry_failure_before_clone \
   "release drift blocks a started retry clone" \
   "storage-workers-started-stale.json"
 
+expect_post_poll_failure_before_clone \
+  "an extra worker after a successful stopped retry poll blocks cloning" \
+  "stopped-retry" \
+  "storage-workers-started-extra-worker.json"
+expect_post_poll_failure_before_clone \
+  "a replacement after a successful standby-clear poll blocks cloning" \
+  "standby-clear" \
+  "storage-workers-started-no-standby-replacement.json"
+expect_post_poll_failure_before_clone \
+  "release drift after an update-started proof blocks cloning" \
+  "update-started" \
+  "storage-workers-started-no-standby-stale-transition.json"
+
 reset_case
 stopped_retry_output=$(
   run_repair \
     "storage-workers-stopped-no-standby.json" \
     "storage-workers-starting-no-standby.json" \
+    "storage-workers-repaired.json" \
     "storage-workers-repaired.json" \
     "storage-workers-repair-complete.json"
 )
@@ -369,8 +440,8 @@ stopped_retry_output=$(
   exit 1
 }
 mapfile -t STOPPED_RETRY_ACTIONS < "$TMP/flyctl.log"
-[[ "${#STOPPED_RETRY_ACTIONS[@]}" -eq 6 ]] || {
-  printf 'FAIL - expected 6 stopped retry actions, got %s\n' \
+[[ "${#STOPPED_RETRY_ACTIONS[@]}" -eq 7 ]] || {
+  printf 'FAIL - expected 7 stopped retry actions, got %s\n' \
     "${#STOPPED_RETRY_ACTIONS[@]}"
   printf '  %s\n' "${STOPPED_RETRY_ACTIONS[@]}"
   exit 1
@@ -384,8 +455,10 @@ mapfile -t STOPPED_RETRY_ACTIONS < "$TMP/flyctl.log"
 [[ "${STOPPED_RETRY_ACTIONS[3]}" == \
   "machines|list|--app|harpa-test|--json" ]]
 [[ "${STOPPED_RETRY_ACTIONS[4]}" == \
-  "machine|clone|worker-standby|--app|harpa-test|--standby-for=source" ]]
+  "machines|list|--app|harpa-test|--json" ]]
 [[ "${STOPPED_RETRY_ACTIONS[5]}" == \
+  "machine|clone|worker-standby|--app|harpa-test|--standby-for=source" ]]
+[[ "${STOPPED_RETRY_ACTIONS[6]}" == \
   "machines|list|--app|harpa-test|--json" ]]
 echo "  ok   - stopped/no-standby retry starts, polls, then clones"
 
@@ -445,6 +518,7 @@ auto_started_repair_output=$(
   run_repair \
     "storage-workers-repairable.json" \
     "storage-workers-repaired.json" \
+    "storage-workers-repaired.json" \
     "storage-workers-repair-complete.json"
 )
 [[ "$auto_started_repair_output" == *"storage-worker topology repaired"* ]] || {
@@ -453,8 +527,8 @@ auto_started_repair_output=$(
   exit 1
 }
 mapfile -t AUTO_STARTED_REPAIR_ACTIONS < "$TMP/flyctl.log"
-[[ "${#AUTO_STARTED_REPAIR_ACTIONS[@]}" -eq 5 ]] || {
-  printf 'FAIL - expected 5 auto-started repair actions, got %s\n' \
+[[ "${#AUTO_STARTED_REPAIR_ACTIONS[@]}" -eq 6 ]] || {
+  printf 'FAIL - expected 6 auto-started repair actions, got %s\n' \
     "${#AUTO_STARTED_REPAIR_ACTIONS[@]}"
   printf '  %s\n' "${AUTO_STARTED_REPAIR_ACTIONS[@]}"
   exit 1
@@ -466,8 +540,10 @@ mapfile -t AUTO_STARTED_REPAIR_ACTIONS < "$TMP/flyctl.log"
 [[ "${AUTO_STARTED_REPAIR_ACTIONS[2]}" == \
   "machines|list|--app|harpa-test|--json" ]]
 [[ "${AUTO_STARTED_REPAIR_ACTIONS[3]}" == \
-  "machine|clone|worker-standby|--app|harpa-test|--standby-for=source" ]]
+  "machines|list|--app|harpa-test|--json" ]]
 [[ "${AUTO_STARTED_REPAIR_ACTIONS[4]}" == \
+  "machine|clone|worker-standby|--app|harpa-test|--standby-for=source" ]]
+[[ "${AUTO_STARTED_REPAIR_ACTIONS[5]}" == \
   "machines|list|--app|harpa-test|--json" ]]
 echo "  ok   - an update-started candidate is not started redundantly"
 
@@ -478,6 +554,7 @@ repair_output=$(
     "storage-workers-stopped-no-standby.json" \
     "storage-workers-starting-no-standby.json" \
     "storage-workers-repaired.json" \
+    "storage-workers-repaired.json" \
     "storage-workers-repair-complete.json"
 )
 [[ "$repair_output" == *"storage-worker topology repaired"* ]] || {
@@ -486,8 +563,8 @@ repair_output=$(
   exit 1
 }
 mapfile -t REPAIR_ACTIONS < "$TMP/flyctl.log"
-[[ "${#REPAIR_ACTIONS[@]}" -eq 8 ]] || {
-  printf 'FAIL - expected 8 explicit-start repair actions, got %s\n' \
+[[ "${#REPAIR_ACTIONS[@]}" -eq 9 ]] || {
+  printf 'FAIL - expected 9 explicit-start repair actions, got %s\n' \
     "${#REPAIR_ACTIONS[@]}"
   printf '  %s\n' "${REPAIR_ACTIONS[@]}"
   exit 1
@@ -505,7 +582,9 @@ mapfile -t REPAIR_ACTIONS < "$TMP/flyctl.log"
 [[ "${REPAIR_ACTIONS[5]}" == \
   "machines|list|--app|harpa-test|--json" ]]
 [[ "${REPAIR_ACTIONS[6]}" == \
-  "machine|clone|worker-standby|--app|harpa-test|--standby-for=source" ]]
+  "machines|list|--app|harpa-test|--json" ]]
 [[ "${REPAIR_ACTIONS[7]}" == \
+  "machine|clone|worker-standby|--app|harpa-test|--standby-for=source" ]]
+[[ "${REPAIR_ACTIONS[8]}" == \
   "machines|list|--app|harpa-test|--json" ]]
 echo "  ok   - exact standby is cleared, started, proved, then cloned"

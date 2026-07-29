@@ -36,7 +36,7 @@ flyctl deploy \
 # The HTTP app group may suspend at zero when idle, but delayed R2 cleanup
 # must still run after presigned URLs expire. Keep one service-less worker
 # machine running so the durable job table always has an executor.
-flyctl scale count storage-worker=1 --app harpa-pro-api
+flyctl scale count storage-worker=1 --app harpa-pro-api --yes
 
 # Arm only after deploy and worker scaling succeed. Run inside the service-less
 # worker so CI and manual callers never need the production DATABASE_URL; the

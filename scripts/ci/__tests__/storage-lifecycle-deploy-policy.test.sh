@@ -18,6 +18,27 @@ chmod +x "$TMP/bin/flyctl"
 
 echo "storage-lifecycle deploy policy"
 
+mapfile -t WORKER_SCALE_COMMANDS < <(
+  grep -RFnH \
+    --include='*.sh' \
+    --include='*.yml' \
+    --include='*.yaml' \
+    'flyctl scale count storage-worker=' \
+    "$REPO_ROOT/infra/fly" \
+    "$REPO_ROOT/.github/workflows"
+)
+if [[ "${#WORKER_SCALE_COMMANDS[@]}" -eq 0 ]]; then
+  echo "  FAIL - no storage-worker scale commands found"
+  exit 1
+fi
+for command in "${WORKER_SCALE_COMMANDS[@]}"; do
+  if [[ "$command" != *" --yes"* ]]; then
+    echo "  FAIL - storage-worker scale can prompt in CI: $command"
+    exit 1
+  fi
+done
+echo "  ok   - storage-worker scale commands confirm noninteractively"
+
 POLICY_LOG="$TMP/actions.log" \
 PATH="$TMP/bin:$PATH" \
   env -u DATABASE_URL bash "$DEPLOY_SCRIPT" --remote-only >/dev/null
@@ -34,7 +55,7 @@ fi
   exit 1
 }
 [[ "${ACTIONS[1]}" == \
-  "flyctl scale count storage-worker=1 --app harpa-pro-api" ]] || {
+  "flyctl scale count storage-worker=1 --app harpa-pro-api --yes" ]] || {
   echo "  FAIL - worker scaling does not follow deploy"
   exit 1
 }

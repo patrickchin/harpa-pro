@@ -258,15 +258,22 @@ green. Both the poll loop and the surrounding job are bounded.
 - After deploy, run the shared storage-worker topology repair. It is a no-op
   only for exactly one current-release active worker plus exactly one
   current-release stopped, service-less standby watching that active Machine.
-  A singleton active worker gets one standby clone. A singleton stopped
-  standby is promoted, verified started, then cloned. Both paths list Machines
-  again and succeed only when the exact healthy pair is present.
+  A singleton active worker is freshly re-listed and must remain the same sole
+  started/no-standby id before it gets one standby clone. A singleton stopped
+  standby has its standby configuration cleared, then the same exact candidate
+  must be freshly proved as the sole service-less worker without a standby.
+  Repair explicitly starts it if stopped, polls at most ten fresh inventories
+  three seconds apart through only safe stopped/starting states, and clones only
+  after that exact id is started. An update that already started the candidate
+  skips the redundant start. Both paths list Machines again and succeed only
+  when the exact healthy pair is present.
 - Every Machine used by repair must match one unambiguous `app` identity on
   nonempty Fly release id, release version, and image. Zero, stale,
   transitional, or ambiguous initial inventories fail before mutation; no
-  process-count scaling is allowed. If a promotion succeeds but its later
-  verification or clone fails, the singleton-active path makes the next run
-  retry-safe.
+  process-count scaling is allowed. Each update/start transition also proves
+  the candidate id, singleton topology, empty services, and empty standbys. If
+  clearing succeeds but later work fails, exact singleton stopped/no-standby
+  and started/no-standby states are retry-safe; all other drift fails closed.
 - Run the read-only started-worker verifier again, then arm the monotonic
   upload-lease rollout inside that process group. Arming inherits Fly's staged
   `DATABASE_URL`, so the production URL remains out of GitHub Actions and

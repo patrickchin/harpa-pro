@@ -162,12 +162,14 @@ The attachment sheet on the report Notes tab is platform-aware:
   union (`unavailable` / `permission-denied` / `cancelled` / `empty` /
   `enqueued`) so the route can surface the upload-error banner without
   duplicating copy.
-- **iOS** → camera capture only. Photo-library picking and avatar
-  upload controls are intentionally hidden; the shared platform policy
-  also returns before importing or calling `expo-image-picker`.
+- **iOS** → camera capture only. Photo-library picking is intentionally
+  hidden; the shared platform policy also returns before importing or
+  calling `expo-image-picker`.
 
 Camera capture and in-app previews of already-uploaded photos remain
-available on both platforms. See
+available on both platforms. Avatar UI is absent on both platforms;
+the avatar API/storage scope remains compatible but has no mobile entry
+point. See
 [`design-ios-photo-library-disablement.md`](design-ios-photo-library-disablement.md).
 
 The note kind enum + server-side pipeline already accept

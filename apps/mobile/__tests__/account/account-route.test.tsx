@@ -2,7 +2,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import TestRenderer, { act } from 'react-test-renderer';
 
 type AccountRouteProps = {
-  avatarSlot?: unknown;
   deletionPreview: unknown;
   isDeletionPreviewLoading: boolean;
   isDeletingAccount: boolean;
@@ -90,10 +89,6 @@ vi.mock('@/lib/api/hooks', () => ({
 
 vi.mock('@/lib/files/image-cache', () => ({
   clearImageCachesOnSignOut: clearImageCachesSpy,
-}));
-
-vi.mock('@/components/account/AvatarUploader', () => ({
-  AvatarUploader: () => null,
 }));
 
 vi.mock('@/components/ui/AppHeaderActions', () => ({

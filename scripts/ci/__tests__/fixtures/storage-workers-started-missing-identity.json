@@ -10,5 +10,15 @@
         "fly_release_version": "42"
       }
     }
+  },
+  {
+    "id": "worker-started",
+    "state": "started",
+    "config": {
+      "metadata": {
+        "fly_process_group": "storage-worker"
+      },
+      "services": []
+    }
   }
 ]

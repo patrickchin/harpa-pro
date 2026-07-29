@@ -1,42 +1,42 @@
 [
   {
-    "id": "app-current",
+    "id": "app-started",
     "state": "started",
     "config": {
-      "image": "registry.fly.io/harpa-test:current",
+      "image": "registry.fly.io/harpa-test:deployment-current",
       "metadata": {
         "fly_process_group": "app",
         "fly_release_id": "rel-current",
         "fly_release_version": "42"
-      }
+      },
+      "standbys": []
     }
   },
   {
-    "id": "worker-started",
-    "state": "started",
+    "id": "app-stopped",
+    "state": "stopped",
     "config": {
-      "image": "registry.fly.io/harpa-test:current",
+      "image": "registry.fly.io/harpa-test:deployment-current",
       "metadata": {
-        "fly_process_group": "storage-worker",
+        "fly_process_group": "app",
         "fly_release_id": "rel-current",
         "fly_release_version": "42"
       },
-      "services": []
+      "standbys": []
     }
   },
   {
     "id": "worker-standby",
     "state": "stopped",
     "config": {
-      "image": "registry.fly.io/harpa-test:current",
+      "image": "registry.fly.io/harpa-test:deployment-current",
       "metadata": {
         "fly_process_group": "storage-worker",
         "fly_release_id": "rel-current",
         "fly_release_version": "42"
       },
-      "services": [],
       "standbys": [
-        "worker-started"
+        "worker-retired"
       ]
     }
   }

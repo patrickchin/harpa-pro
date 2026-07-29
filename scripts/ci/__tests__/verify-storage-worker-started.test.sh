@@ -70,6 +70,6 @@ run_case() {
 }
 
 echo "storage-worker started verifier"
-run_case "zero Machines fails" "storage-workers-zero.json" "fail"
+run_case "zero workers fails" "storage-workers-zero.json" "fail"
 run_case "only a stopped worker fails" "storage-workers-only-stopped.json" "fail"
 run_case "a started worker passes" "storage-workers-started.json" "pass"

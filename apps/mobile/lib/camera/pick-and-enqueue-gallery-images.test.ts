@@ -7,6 +7,7 @@
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import * as ImagePicker from 'expo-image-picker';
+import { Platform } from 'react-native';
 
 import { pickAndEnqueueGalleryImages } from './pick-and-enqueue-gallery-images';
 import type { UploadResult } from '@/lib/uploads/types';
@@ -26,6 +27,8 @@ const fakeFile = { id: 'fil_1' } as unknown as UploadResult['file'];
 
 describe('pickAndEnqueueGalleryImages', () => {
   beforeEach(() => {
+    Platform.OS = 'android';
+    vi.clearAllMocks();
     vi.mocked(ImagePicker.requestMediaLibraryPermissionsAsync).mockResolvedValue(
       PERM_GRANTED as never,
     );
@@ -53,7 +56,24 @@ describe('pickAndEnqueueGalleryImages', () => {
   });
 
   afterEach(() => {
+    Platform.OS = 'ios';
     vi.restoreAllMocks();
+  });
+
+  it('does not request photo-library access on iOS', async () => {
+    Platform.OS = 'ios';
+    const enqueue = vi.fn();
+
+    const outcome = await pickAndEnqueueGalleryImages({
+      reportId: 'rpt_1',
+      projectId: 'prj-test1234',
+      enqueueCameraUris: enqueue,
+    });
+
+    expect(outcome).toEqual({ kind: 'unavailable' });
+    expect(enqueue).not.toHaveBeenCalled();
+    expect(ImagePicker.requestMediaLibraryPermissionsAsync).not.toHaveBeenCalled();
+    expect(ImagePicker.launchImageLibraryAsync).not.toHaveBeenCalled();
   });
 
   it('returns permission-denied without launching the picker', async () => {

@@ -14,6 +14,7 @@
  */
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
 import TestRenderer, { act } from 'react-test-renderer';
+import { Platform } from 'react-native';
 
 const voicePipelineMock = vi.hoisted((): {
   state: {
@@ -142,6 +143,7 @@ describe('GenerateNotes', () => {
     voicePipelineMock.reset.mockClear();
   });
   afterEach(() => {
+    Platform.OS = 'ios';
     vi.useRealTimers();
   });
   it('renders the empty state when there are no notes', () => {
@@ -258,6 +260,7 @@ describe('GenerateNotes', () => {
   });
 
   it('opens the attachment sheet with stable photo action testIDs', () => {
+    Platform.OS = 'android';
     const tree = render(<GenerateNotes {...baseProps} />);
     act(() => {
       tree.root.findByProps({ testID: 'btn-attachment' }).props.onPress();
@@ -265,6 +268,25 @@ describe('GenerateNotes', () => {
     expect(() =>
       tree.root.findByProps({ testID: 'btn-attachment-photo-library' }),
     ).not.toThrow();
+    expect(() =>
+      tree.root.findByProps({ testID: 'btn-attachment-camera' }),
+    ).not.toThrow();
+    expect(() =>
+      tree.root.findByProps({ testID: 'btn-attachment-cancel' }),
+    ).not.toThrow();
+  });
+
+  it('keeps camera capture but hides photo-library picking on iOS', () => {
+    Platform.OS = 'ios';
+    const tree = render(<GenerateNotes {...baseProps} />);
+
+    act(() => {
+      tree.root.findByProps({ testID: 'btn-attachment' }).props.onPress();
+    });
+
+    expect(
+      tree.root.findAllByProps({ testID: 'btn-attachment-photo-library' }),
+    ).toHaveLength(0);
     expect(() =>
       tree.root.findByProps({ testID: 'btn-attachment-camera' }),
     ).not.toThrow();

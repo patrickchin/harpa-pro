@@ -20,6 +20,7 @@ import TestRenderer, { act } from 'react-test-renderer';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import * as ImagePicker from 'expo-image-picker';
+import { Platform } from 'react-native';
 
 import { AvatarUploader } from './AvatarUploader';
 import { QueueProvider } from '@/lib/uploads';
@@ -122,12 +123,14 @@ async function flush(times = 4) {
 
 beforeEach(async () => {
   calls = [];
+  Platform.OS = 'android';
   await AsyncStorage.clear();
   vi.stubGlobal('fetch', defaultFetch());
   vi.clearAllMocks();
 });
 
 afterEach(() => {
+  Platform.OS = 'ios';
   vi.unstubAllGlobals();
 });
 
@@ -189,6 +192,23 @@ describe('AvatarUploader', () => {
       /\/files\/fil_existing0002\/url$/.test(c.url),
     );
     expect(hits.length).toBeGreaterThan(0);
+  });
+
+  it('renders an existing avatar without an upload control on iOS', async () => {
+    Platform.OS = 'ios';
+    await AsyncStorage.setItem('harpa.avatarFileId.v1', 'fil_existing0002');
+
+    const tree = renderWithProviders(<AvatarUploader />);
+    await flush(12);
+
+    expect(
+      tree.root.findAllByProps({ testID: 'avatar-image' }).length,
+    ).toBeGreaterThan(0);
+    expect(
+      tree.root.findAllByProps({ testID: 'btn-avatar-upload' }),
+    ).toHaveLength(0);
+    expect(ImagePicker.requestMediaLibraryPermissionsAsync).not.toHaveBeenCalled();
+    expect(ImagePicker.launchImageLibraryAsync).not.toHaveBeenCalled();
   });
 
   it('does nothing when the picker is canceled', async () => {

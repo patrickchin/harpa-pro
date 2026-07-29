@@ -27,25 +27,20 @@ mapfile -t WORKER_SCALE_COMMANDS < <(
     "$REPO_ROOT/infra/fly" \
     "$REPO_ROOT/.github/workflows"
 )
-if [[ "${#WORKER_SCALE_COMMANDS[@]}" -eq 0 ]]; then
-  echo "  FAIL - no storage-worker scale commands found"
+if [[ "${#WORKER_SCALE_COMMANDS[@]}" -ne 0 ]]; then
+  echo "  FAIL - explicit storage-worker scaling removes Fly's standby"
+  printf '    %s\n' "${WORKER_SCALE_COMMANDS[@]}"
   exit 1
 fi
-for command in "${WORKER_SCALE_COMMANDS[@]}"; do
-  if [[ "$command" != *" --yes"* ]]; then
-    echo "  FAIL - storage-worker scale can prompt in CI: $command"
-    exit 1
-  fi
-done
-echo "  ok   - storage-worker scale commands confirm noninteractively"
+echo "  ok   - Fly owns the service-less storage-worker standby"
 
 POLICY_LOG="$TMP/actions.log" \
 PATH="$TMP/bin:$PATH" \
   env -u DATABASE_URL bash "$DEPLOY_SCRIPT" --remote-only >/dev/null
 
 mapfile -t ACTIONS < "$TMP/actions.log"
-if [[ "${#ACTIONS[@]}" -ne 3 ]]; then
-  printf '  FAIL - expected 3 deploy actions, got %s\n' "${#ACTIONS[@]}"
+if [[ "${#ACTIONS[@]}" -ne 2 ]]; then
+  printf '  FAIL - expected 2 deploy actions, got %s\n' "${#ACTIONS[@]}"
   printf '    %s\n' "${ACTIONS[@]}"
   exit 1
 fi
@@ -55,17 +50,12 @@ fi
   exit 1
 }
 [[ "${ACTIONS[1]}" == \
-  "flyctl scale count storage-worker=1 --app harpa-pro-api --yes" ]] || {
-  echo "  FAIL - worker scaling does not follow deploy"
-  exit 1
-}
-[[ "${ACTIONS[2]}" == \
   "flyctl ssh console --app harpa-pro-api --process-group storage-worker --pty=false --command STORAGE_LEASE_ROLLOUT_GRACE_SEC=330 STORAGE_ACCOUNT_DELETE_ENABLED=true pnpm --filter @harpa/api storage:arm-leases" ]] || {
-  echo "  FAIL - remote lifecycle arming does not follow worker scaling"
+  echo "  FAIL - remote lifecycle arming does not follow deploy"
   exit 1
 }
 
-echo "  ok   - deploy, worker scale, and remote monotonic arming run in order"
+echo "  ok   - deploy and remote monotonic arming run in order"
 echo "  ok   - production DATABASE_URL stays inside Fly"
 
 grep -q 'STORAGE_ACCOUNT_DELETE_ENABLED=false' \

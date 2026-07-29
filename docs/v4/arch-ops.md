@@ -662,24 +662,39 @@ compatible, and account deletion returns `503`. Arming uses
 grace. `R2_PRESIGN_TTL_SEC` is capped at 300 seconds; the remaining 30
 seconds is the late-PUT safety window.
 
-`infra/fly/deploy.sh` owns the production order: deploy, verify at least one
-Machine has state `started` and metadata process group `storage-worker`, then
-arm by running the monotonic rollout command in that group. The command
-inherits the app's staged Fly secrets, so neither CI nor manual callers need
-the production `DATABASE_URL`. The shell policy test stubs external commands,
-executes this sequence, and forbids explicit `storage-worker` scale commands.
+`infra/fly/deploy.sh` owns the production order: deploy, narrowly repair the
+two known recoverable topologies, verify at least one Machine has state
+`started` and metadata process group `storage-worker`, then arm by running the
+monotonic rollout command in that group. The command inherits the app's staged
+Fly secrets, so neither CI nor manual callers need the production
+`DATABASE_URL`. The shell policy test stubs external commands, executes this
+sequence, and forbids explicit `storage-worker` scale commands.
 
-The shared verifier calls `flyctl machines list --json` and fails closed when
-the group is absent or only stopped. It is deliberately diagnostic-only: it
-does not start, clone, scale, or otherwise repair Machines. A green deploy must
-prove Fly produced a running executor rather than conceal a broken topology.
+The shared repair is a no-op only for an exact healthy pair: one
+current-release active worker and one current-release stopped, service-less
+standby whose sole `config.standbys` entry is that active Machine's id. A
+singleton current-release active worker gets exactly one standby clone. A
+singleton current-release stopped standby is promoted by clearing its standby
+configuration, verified started, then cloned. Both mutating paths list
+Machines again and succeed only after observing the exact healthy pair.
+
+Every app and worker Machine used by the decision must match one complete,
+unambiguous identity: nonempty `fly_release_id`, `fly_release_version`, and
+`config.image`. Zero workers, multiple workers, transitional states,
+incomplete metadata, stale images, or mixed releases fail before mutation. If
+promotion succeeds but verification or cloning fails, the resulting singleton
+active state can safely retry only the clone on the next run.
+
+The verifier remains diagnostic-only. The workflow calls it again after
+repair and before arming, so a green deploy proves a running executor exists.
 
 Fly can create a stopped standby for the service-less process group. An
 explicit `storage-worker=1` command therefore collapses the pair without
 preferring the active Machine. After #210 added `--yes`, Fly destroyed the
 active worker and retained the stopped standby. The earlier confirmation prompt
 was a safety signal, not a reason to auto-confirm the scale-down; dev and
-production leave the pair under Fly's deploy lifecycle.
+production never use broad process-count repair. The narrow recovery above
+exists only for singleton current-release active or standby states.
 
 Operational query:
 

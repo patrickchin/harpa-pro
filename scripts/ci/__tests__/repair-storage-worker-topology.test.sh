@@ -128,13 +128,13 @@ echo "storage-worker topology repair"
 
 reset_case
 healthy_output=$(run_repair "storage-workers-started.json")
-[[ "$healthy_output" == *"storage-worker topology already has a started worker"* ]] || {
+[[ "$healthy_output" == *"storage-worker topology already healthy"* ]] || {
   echo "FAIL - healthy topology omitted no-op evidence"
   echo "$healthy_output"
   exit 1
 }
 assert_no_mutation
-echo "  ok   - started worker is a no-op"
+echo "  ok   - exact healthy pair is a no-op"
 
 expect_failure_without_mutation \
   "a stale started worker fails closed" \

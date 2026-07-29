@@ -15,7 +15,7 @@ cat > "$TMP/bin/flyctl" <<'SH'
 printf 'flyctl %s\n' "$*" >> "$POLICY_LOG"
 if [[ "$*" == "machines list --app harpa-pro-api --json" ]]; then
   printf '%s\n' \
-    '[{"state":"started","config":{"metadata":{"fly_process_group":"storage-worker"}}}]'
+    '[{"id":"app-current","state":"started","config":{"image":"registry.fly.io/harpa-pro-api:current","metadata":{"fly_process_group":"app","fly_release_id":"rel-current","fly_release_version":"42"}}},{"id":"worker-started","state":"started","config":{"image":"registry.fly.io/harpa-pro-api:current","metadata":{"fly_process_group":"storage-worker","fly_release_id":"rel-current","fly_release_version":"42"},"services":[],"standbys":[]}},{"id":"worker-standby","state":"stopped","config":{"image":"registry.fly.io/harpa-pro-api:current","metadata":{"fly_process_group":"storage-worker","fly_release_id":"rel-current","fly_release_version":"42"},"services":[],"standbys":["worker-started"]}}]'
 fi
 SH
 

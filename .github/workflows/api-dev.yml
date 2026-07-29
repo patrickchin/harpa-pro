@@ -102,6 +102,7 @@ jobs:
             --build-arg "GIT_COMMIT=$GIT_COMMIT" \
             --build-arg "BUILD_TIME=$BUILD_TIME" \
             --remote-only
+          bash scripts/ci/repair-storage-worker-topology.sh harpa-pro-api-dev
           bash scripts/ci/verify-storage-worker-started.sh harpa-pro-api-dev
           STORAGE_LEASE_ROLLOUT_GRACE_SEC=330 \
             pnpm --filter @harpa/api storage:arm-leases

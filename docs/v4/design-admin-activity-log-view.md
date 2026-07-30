@@ -72,8 +72,9 @@ The second row is always visible and contains:
 - Filter project.
 
 There is no event-type filter. The level and time-period choices expose all
-options without opening a menu, use `aria-pressed` to identify the active
-choice, and apply immediately. The remaining native selects use the same
+options without opening a menu and apply immediately. They look like segmented
+buttons but use native radio-group semantics so Tab enters each group once and
+arrow keys move the checked choice. The remaining native selects use the same
 rounded surface, deliberate hover/focus states, and custom chevron treatment.
 
 Actor and project choices are collected from events returned during the
@@ -146,6 +147,7 @@ Component tests cover:
 
 - single-line row hierarchy and decorative event/context icon mapping;
 - immediate button-driven level and time filtering;
+- radio-group keyboard behavior and narrow-width horizontal reachability;
 - styled actor, exclusion, and project selects;
 - multiple removable actor exclusions;
 - out-of-order request protection;

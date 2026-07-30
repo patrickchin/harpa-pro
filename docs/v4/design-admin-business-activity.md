@@ -359,7 +359,8 @@ The presentation and interaction model is refined by
 [Dense admin activity log view](design-admin-activity-log-view.md). The page
 includes:
 
-- immediately applied level, event-type, and simple time-range filters;
+- immediately applied button-style level and simple time-range filters, with no
+  separate event-type control;
 - always-visible actor, actor-exclusion, and project filters;
 - multiple removable excluded-actor chips;
 - dense, non-wrapping log lines with clear information hierarchy;

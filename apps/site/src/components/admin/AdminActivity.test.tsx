@@ -435,12 +435,14 @@ describe('AdminActivity', () => {
     await screen.findByText('No activity matches these filters.');
     const level = screen.getByRole('group', { name: 'Detail level' });
     const period = screen.getByRole('group', { name: 'Time period' });
-    expect(
-      within(level).getByRole('button', { name: 'Milestones' }).getAttribute('aria-pressed'),
-    ).toBe('true');
-    expect(
-      within(period).getByRole('button', { name: 'Past month' }).getAttribute('aria-pressed'),
-    ).toBe('true');
+    expect(within(level).getByRole('radio', { name: 'Milestones' })).toHaveProperty(
+      'checked',
+      true,
+    );
+    expect(within(period).getByRole('radio', { name: 'Past month' })).toHaveProperty(
+      'checked',
+      true,
+    );
     expect(screen.queryByLabelText('From')).toBeNull();
     expect(screen.queryByLabelText('To')).toBeNull();
 
@@ -458,7 +460,7 @@ describe('AdminActivity', () => {
 
     for (const preset of presets) {
       const callsBefore = fetchMock.mock.calls.length;
-      await user.click(within(period).getByRole('button', { name: preset.label }));
+      await user.click(within(period).getByRole('radio', { name: preset.label }));
       const beforeApply = new Date();
       await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(callsBefore + 1));
 
@@ -471,7 +473,7 @@ describe('AdminActivity', () => {
     }
 
     const callsBeforeAll = fetchMock.mock.calls.length;
-    await user.click(within(period).getByRole('button', { name: 'All time' }));
+    await user.click(within(period).getByRole('radio', { name: 'All time' }));
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(callsBeforeAll + 1));
     expect(lastActivityUrl(fetchMock).searchParams.has('from')).toBe(false);
     expect(lastActivityUrl(fetchMock).searchParams.has('to')).toBe(false);
@@ -484,20 +486,21 @@ describe('AdminActivity', () => {
 
     await screen.findByText('No activity matches these filters.');
     const level = screen.getByRole('group', { name: 'Detail level' });
-    const milestones = within(level).getByRole('button', { name: 'Milestones' });
-    const detailed = within(level).getByRole('button', { name: 'Detailed activity' });
-    const all = within(level).getByRole('button', { name: 'All activity' });
+    const milestones = within(level).getByRole('radio', { name: 'Milestones' });
+    const detailed = within(level).getByRole('radio', { name: 'Detailed activity' });
+    const all = within(level).getByRole('radio', { name: 'All activity' });
 
-    expect(milestones.getAttribute('aria-pressed')).toBe('true');
-    await user.click(detailed);
+    expect(milestones).toHaveProperty('checked', true);
+    milestones.focus();
+    await user.keyboard('{ArrowRight}');
     await waitFor(() =>
       expect(lastActivityUrl(fetchMock).searchParams.get('level')).toBe('detail'),
     );
-    expect(detailed.getAttribute('aria-pressed')).toBe('true');
+    expect(detailed).toHaveProperty('checked', true);
 
-    await user.click(all);
+    await user.keyboard('{ArrowRight}');
     await waitFor(() => expect(lastActivityUrl(fetchMock).searchParams.get('level')).toBe('all'));
-    expect(all.getAttribute('aria-pressed')).toBe('true');
+    expect(all).toHaveProperty('checked', true);
   });
 
   it('does not expose or send an event-type filter', async () => {
@@ -510,7 +513,7 @@ describe('AdminActivity', () => {
     expect(lastActivityUrl(fetchMock).searchParams.has('eventType')).toBe(false);
 
     await user.click(
-      within(screen.getByRole('group', { name: 'Detail level' })).getByRole('button', {
+      within(screen.getByRole('group', { name: 'Detail level' })).getByRole('radio', {
         name: 'All activity',
       }),
     );
@@ -527,7 +530,7 @@ describe('AdminActivity', () => {
 
     await screen.findByText('No activity matches these filters.');
     await user.click(
-      within(screen.getByRole('group', { name: 'Detail level' })).getByRole('button', {
+      within(screen.getByRole('group', { name: 'Detail level' })).getByRole('radio', {
         name: 'All activity',
       }),
     );
@@ -672,7 +675,7 @@ describe('AdminActivity', () => {
     expect(refresh).toHaveProperty('disabled', true);
 
     await user.click(
-      within(screen.getByRole('group', { name: 'Time period' })).getByRole('button', {
+      within(screen.getByRole('group', { name: 'Time period' })).getByRole('radio', {
         name: 'Past week',
       }),
     );
@@ -699,7 +702,7 @@ describe('AdminActivity', () => {
     render(<AdminActivity />);
 
     await user.click(
-      within(await screen.findByRole('group', { name: 'Detail level' })).getByRole('button', {
+      within(await screen.findByRole('group', { name: 'Detail level' })).getByRole('radio', {
         name: 'Detailed activity',
       }),
     );
@@ -748,7 +751,7 @@ describe('AdminActivity', () => {
 
     expect(await screen.findByRole('link', { name: 'Open as text' })).toBeTruthy();
     await user.click(
-      within(screen.getByRole('group', { name: 'Time period' })).getByRole('button', {
+      within(screen.getByRole('group', { name: 'Time period' })).getByRole('radio', {
         name: 'Past week',
       }),
     );

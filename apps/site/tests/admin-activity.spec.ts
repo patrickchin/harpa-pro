@@ -79,14 +79,8 @@ test('signs in through the visible admin form and signs out', async ({ context, 
   ).toEqual({ localStorage: 0, sessionStorage: 0 });
 
   await expect(page.getByRole('heading', { level: 1, name: 'Harpa Pro activity' })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Milestones' })).toHaveAttribute(
-    'aria-pressed',
-    'true',
-  );
-  await expect(page.getByRole('button', { name: 'Past month' })).toHaveAttribute(
-    'aria-pressed',
-    'true',
-  );
+  await expect(page.getByRole('radio', { name: 'Milestones' })).toBeChecked();
+  await expect(page.getByRole('radio', { name: 'Past month' })).toBeChecked();
   await expect(page.getByLabel('Event type')).toHaveCount(0);
   await expect(page.getByLabel('From', { exact: true })).toHaveCount(0);
   await expect(page.getByLabel('To', { exact: true })).toHaveCount(0);
@@ -98,6 +92,21 @@ test('signs in through the visible admin form and signs out', async ({ context, 
   await expect(page.locator('[data-select-chevron]')).toHaveCount(3);
   await expect(page.getByRole('button', { name: 'Refresh' })).toBeVisible();
   await expect(page.getByRole('link', { name: 'Open as text' })).toBeVisible();
+
+  const desktopViewport = page.viewportSize();
+  expect(desktopViewport).not.toBeNull();
+  await page.setViewportSize({ width: 320, height: 800 });
+  const timePeriodScroller = page.getByTestId('time-period-options');
+  const timePeriodWidths = await timePeriodScroller.evaluate((element) => ({
+    clientWidth: element.clientWidth,
+    scrollWidth: element.scrollWidth,
+  }));
+  expect(timePeriodWidths.scrollWidth).toBeGreaterThan(timePeriodWidths.clientWidth);
+  await timePeriodScroller.evaluate((element) => {
+    element.scrollLeft = element.scrollWidth;
+  });
+  await expect(page.getByText('All time', { exact: true })).toBeInViewport();
+  await page.setViewportSize(desktopViewport!);
 
   const feed = page.getByRole('list', { name: 'Activity events' });
   const rows = feed.locator('[data-testid^="activity-row-"]');
@@ -141,7 +150,7 @@ test('signs in through the visible admin form and signs out', async ({ context, 
       url.searchParams.get('level') === 'detail'
     );
   });
-  await page.getByRole('button', { name: 'Detailed activity' }).click();
+  await page.getByRole('radio', { name: 'Detailed activity' }).click();
   expect((await detailResponsePromise).status()).toBe(200);
 
   const detailRows = feed.locator('[data-testid^="activity-row-"]');
@@ -167,7 +176,7 @@ test('signs in through the visible admin form and signs out', async ({ context, 
       url.searchParams.has('from')
     );
   });
-  await page.getByRole('button', { name: 'Past week' }).click();
+  await page.getByRole('radio', { name: 'Past week' }).click();
   expect((await weekResponsePromise).status()).toBe(200);
 
   const actorUserId = (await page
@@ -254,7 +263,7 @@ test('signs in through the visible admin form and signs out', async ({ context, 
       !url.searchParams.has('eventType')
     );
   });
-  await page.getByRole('button', { name: 'Milestones' }).click();
+  await page.getByRole('radio', { name: 'Milestones' }).click();
   expect((await milestoneResponsePromise).status()).toBe(200);
 
   const existingRow = feed.locator('[data-testid^="activity-row-"]').first();

@@ -491,14 +491,13 @@ describe('AdminActivity', () => {
     const all = within(level).getByRole('radio', { name: 'All activity' });
 
     expect(milestones).toHaveProperty('checked', true);
-    milestones.focus();
-    await user.keyboard('{ArrowRight}');
+    await user.click(detailed);
     await waitFor(() =>
       expect(lastActivityUrl(fetchMock).searchParams.get('level')).toBe('detail'),
     );
     expect(detailed).toHaveProperty('checked', true);
 
-    await user.keyboard('{ArrowRight}');
+    await user.click(all);
     await waitFor(() => expect(lastActivityUrl(fetchMock).searchParams.get('level')).toBe('all'));
     expect(all).toHaveProperty('checked', true);
   });

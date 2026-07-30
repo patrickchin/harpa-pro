@@ -87,7 +87,7 @@ const TIME_PERIOD_OPTIONS = [
 ] satisfies ReadonlyArray<{ value: TimePeriod; label: string }>;
 
 function filterChoiceClass(selected: boolean): string {
-  return `h-8 rounded-md px-2.5 text-xs font-semibold whitespace-nowrap transition ring-focus ${
+  return `flex h-8 w-full items-center justify-center rounded-md px-2.5 text-xs font-semibold whitespace-nowrap transition peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-accent ${
     selected
       ? 'bg-accent text-accent-foreground shadow-sm'
       : 'text-ink-soft hover:bg-card hover:text-ink'
@@ -699,26 +699,28 @@ function ActivityFeed({
             <legend className="text-xs font-semibold uppercase tracking-wide text-ink-soft">
               Detail level
             </legend>
-            <div className="overflow-x-auto rounded-lg">
+            <div className="overflow-x-auto rounded-lg" data-testid="detail-level-options">
               <div className="grid min-w-[20rem] grid-cols-3 gap-1 rounded-lg border border-hairline bg-secondary/40 p-1 shadow-inner">
                 {DETAIL_LEVEL_OPTIONS.map((option) => {
                   const selected = filters.level === option.value;
                   return (
-                    <button
-                      aria-pressed={selected}
-                      className={filterChoiceClass(selected)}
-                      key={option.value}
-                      type="button"
-                      onClick={() =>
-                        setFilters((current) =>
-                          current.level === option.value
-                            ? current
-                            : { ...current, level: option.value },
-                        )
-                      }
-                    >
-                      {option.label}
-                    </button>
+                    <label className="block cursor-pointer" key={option.value}>
+                      <input
+                        checked={selected}
+                        className="peer sr-only"
+                        name="activity-detail-level"
+                        type="radio"
+                        value={option.value}
+                        onChange={() =>
+                          setFilters((current) =>
+                            current.level === option.value
+                              ? current
+                              : { ...current, level: option.value },
+                          )
+                        }
+                      />
+                      <span className={filterChoiceClass(selected)}>{option.label}</span>
+                    </label>
                   );
                 })}
               </div>
@@ -728,26 +730,28 @@ function ActivityFeed({
             <legend className="text-xs font-semibold uppercase tracking-wide text-ink-soft">
               Time period
             </legend>
-            <div className="overflow-x-auto rounded-lg">
+            <div className="overflow-x-auto rounded-lg" data-testid="time-period-options">
               <div className="grid min-w-[31rem] grid-cols-5 gap-1 rounded-lg border border-hairline bg-secondary/40 p-1 shadow-inner">
                 {TIME_PERIOD_OPTIONS.map((option) => {
                   const selected = filters.timePeriod === option.value;
                   return (
-                    <button
-                      aria-pressed={selected}
-                      className={filterChoiceClass(selected)}
-                      key={option.value}
-                      type="button"
-                      onClick={() =>
-                        setFilters((current) =>
-                          current.timePeriod === option.value
-                            ? current
-                            : { ...current, timePeriod: option.value },
-                        )
-                      }
-                    >
-                      {option.label}
-                    </button>
+                    <label className="block cursor-pointer" key={option.value}>
+                      <input
+                        checked={selected}
+                        className="peer sr-only"
+                        name="activity-time-period"
+                        type="radio"
+                        value={option.value}
+                        onChange={() =>
+                          setFilters((current) =>
+                            current.timePeriod === option.value
+                              ? current
+                              : { ...current, timePeriod: option.value },
+                          )
+                        }
+                      />
+                      <span className={filterChoiceClass(selected)}>{option.label}</span>
+                    </label>
                   );
                 })}
               </div>

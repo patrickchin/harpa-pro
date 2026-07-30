@@ -150,8 +150,10 @@ test('signs in through the visible admin form and signs out', async ({ context, 
       url.searchParams.get('level') === 'detail'
     );
   });
-  await page.getByRole('radio', { name: 'Detailed activity' }).click();
+  await page.getByRole('radio', { name: 'Milestones' }).focus();
+  await page.keyboard.press('ArrowRight');
   expect((await detailResponsePromise).status()).toBe(200);
+  await expect(page.getByRole('radio', { name: 'Detailed activity' })).toBeChecked();
 
   const detailRows = feed.locator('[data-testid^="activity-row-"]');
   await expect(detailRows).toHaveCount(4);
@@ -176,7 +178,7 @@ test('signs in through the visible admin form and signs out', async ({ context, 
       url.searchParams.has('from')
     );
   });
-  await page.getByRole('radio', { name: 'Past week' }).click();
+  await page.getByText('Past week', { exact: true }).click();
   expect((await weekResponsePromise).status()).toBe(200);
 
   const actorUserId = (await page
@@ -263,7 +265,7 @@ test('signs in through the visible admin form and signs out', async ({ context, 
       !url.searchParams.has('eventType')
     );
   });
-  await page.getByRole('radio', { name: 'Milestones' }).click();
+  await page.getByText('Milestones', { exact: true }).click();
   expect((await milestoneResponsePromise).status()).toBe(200);
 
   const existingRow = feed.locator('[data-testid^="activity-row-"]').first();

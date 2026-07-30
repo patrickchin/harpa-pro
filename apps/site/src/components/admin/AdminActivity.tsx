@@ -12,6 +12,8 @@ import type { AdminSession } from '../../lib/admin-auth';
 import { getPublicEnv } from '../../lib/env';
 
 type FeedState = 'loading' | 'ready' | 'forbidden' | 'error';
+type ActivityLevel = 'milestone' | 'detail' | 'all';
+type TimePeriod = 'week' | 'month' | 'six_months' | 'year' | 'all';
 type SessionState =
   | { status: 'loading' }
   | { status: 'unavailable' }
@@ -20,21 +22,30 @@ type SessionState =
 
 type RefetchSession = () => Promise<AdminSession | null>;
 
+interface ActorExclusion {
+  id: string;
+  label: string;
+}
+
 interface Filters {
+  level: ActivityLevel;
+  timePeriod: TimePeriod;
   eventType: '' | activity.EventType;
-  from: string;
-  to: string;
   actorUserId: string;
   projectId: string;
+  excludedActors: ActorExclusion[];
 }
 
 const EMPTY_FILTERS: Filters = {
+  level: 'milestone',
+  timePeriod: 'month',
   eventType: '',
-  from: '',
-  to: '',
   actorUserId: '',
   projectId: '',
+  excludedActors: [],
 };
+
+const MAX_EXCLUDED_ACTORS = 20;
 
 const inputClass =
   'h-10 rounded-md border border-hairline bg-card px-3 text-sm text-ink outline-none ring-focus';
@@ -43,16 +54,40 @@ const buttonClass =
 const primaryButtonClass =
   'inline-flex h-10 items-center justify-center rounded-md bg-accent px-4 text-sm font-semibold text-accent-foreground shadow-sm transition hover:brightness-95 ring-focus disabled:cursor-not-allowed disabled:opacity-60';
 
-function eventLabel(eventType: activity.EventType): string {
-  if (eventType === 'user.signed_up') return 'Signed up';
-  if (eventType === 'project.created') return 'Project created';
-  return 'Report created';
+const EVENT_LABELS = {
+  'user.signed_up': 'Signed up',
+  'project.created': 'Project created',
+  'report.created': 'Report created',
+  'note.text_created': 'Text note added',
+  'note.voice_created': 'Voice note added',
+  'note.image_created': 'Image uploaded',
+  'note.document_created': 'Document uploaded',
+} satisfies Record<activity.EventType, string>;
+
+const EVENT_OPTIONS = activitySchemas.eventTypes.map((value) => ({
+  value,
+  label: EVENT_LABELS[value],
+  level: activitySchemas.eventRegistry[value].level,
+}));
+
+function eventOptionsForLevel(level: ActivityLevel) {
+  if (level === 'all') return EVENT_OPTIONS;
+  return EVENT_OPTIONS.filter((option) => option.level === level);
 }
 
-function toIso(value: string): string | null {
-  if (!value) return null;
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? null : date.toISOString();
+function eventLabel(eventType: activity.EventType): string {
+  return EVENT_LABELS[eventType];
+}
+
+function fromForTimePeriod(period: TimePeriod, now = new Date()): string | null {
+  if (period === 'all') return null;
+
+  const from = new Date(now);
+  if (period === 'week') from.setDate(from.getDate() - 7);
+  if (period === 'month') from.setMonth(from.getMonth() - 1);
+  if (period === 'six_months') from.setMonth(from.getMonth() - 6);
+  if (period === 'year') from.setFullYear(from.getFullYear() - 1);
+  return from.toISOString();
 }
 
 function signInErrorMessage(error: unknown): string {
@@ -169,19 +204,24 @@ function ActivityFeed({
       try {
         const params = new URLSearchParams({ limit: '50' });
         if (cursor) params.set('cursor', cursor);
+        params.set('level', appliedFilters.level);
         if (appliedFilters.eventType) {
           params.set('eventType', appliedFilters.eventType);
         }
         if (appliedFilters.actorUserId) {
           params.set('actorUserId', appliedFilters.actorUserId);
         }
+        if (appliedFilters.excludedActors.length > 0) {
+          params.set(
+            'excludeActorUserIds',
+            appliedFilters.excludedActors.map((actor) => actor.id).join(','),
+          );
+        }
         if (appliedFilters.projectId) {
           params.set('projectId', appliedFilters.projectId);
         }
-        const from = toIso(appliedFilters.from);
-        const to = toIso(appliedFilters.to);
+        const from = fromForTimePeriod(appliedFilters.timePeriod);
         if (from) params.set('from', from);
-        if (to) params.set('to', to);
 
         const response = await fetch(`${apiBaseUrl}/admin/activity?${params.toString()}`, {
           credentials: 'include',
@@ -208,6 +248,45 @@ function ActivityFeed({
     },
     [apiBaseUrl, appliedFilters, refetchSession],
   );
+
+  function addExcludedActor(actor: ActorExclusion) {
+    const add = (current: Filters): Filters => {
+      if (
+        current.excludedActors.length >= MAX_EXCLUDED_ACTORS ||
+        current.excludedActors.some((excluded) => excluded.id === actor.id)
+      ) {
+        return current;
+      }
+      return {
+        ...current,
+        excludedActors: [...current.excludedActors, actor],
+      };
+    };
+
+    setFilters(add);
+    setAppliedFilters(add);
+    setSelected(null);
+  }
+
+  function removeExcludedActor(actorUserId: string) {
+    const remove = (current: Filters): Filters => ({
+      ...current,
+      excludedActors: current.excludedActors.filter((actor) => actor.id !== actorUserId),
+    });
+
+    setFilters(remove);
+    setAppliedFilters(remove);
+  }
+
+  function clearExcludedActors() {
+    const clear = (current: Filters): Filters => ({
+      ...current,
+      excludedActors: [],
+    });
+
+    setFilters(clear);
+    setAppliedFilters(clear);
+  }
 
   useEffect(() => {
     void load(null, false);
@@ -258,6 +337,7 @@ function ActivityFeed({
     ],
     [],
   );
+  const visibleEventOptions = useMemo(() => eventOptionsForLevel(filters.level), [filters.level]);
   const table = useReactTable({
     data: items,
     columns,
@@ -301,6 +381,33 @@ function ActivityFeed({
         }}
       >
         <label className="grid gap-1 text-xs font-semibold uppercase tracking-wide text-ink-soft">
+          Detail level
+          <select
+            className={inputClass}
+            value={filters.level}
+            onChange={(event) =>
+              setFilters((current) => {
+                const level = event.target.value as ActivityLevel;
+                const nextEventOptions = eventOptionsForLevel(level);
+                const eventType =
+                  current.eventType &&
+                  !nextEventOptions.some((option) => option.value === current.eventType)
+                    ? ''
+                    : current.eventType;
+                return {
+                  ...current,
+                  level,
+                  eventType,
+                };
+              })
+            }
+          >
+            <option value="milestone">Milestones</option>
+            <option value="detail">Detailed activity</option>
+            <option value="all">All activity</option>
+          </select>
+        </label>
+        <label className="grid gap-1 text-xs font-semibold uppercase tracking-wide text-ink-soft">
           Event type
           <select
             className={inputClass}
@@ -313,30 +420,48 @@ function ActivityFeed({
             }
           >
             <option value="">All events</option>
-            <option value="user.signed_up">Signed up</option>
-            <option value="project.created">Project created</option>
-            <option value="report.created">Report created</option>
+            {(filters.level === 'milestone' || filters.level === 'all') && (
+              <optgroup label="Milestones">
+                {visibleEventOptions
+                  .filter((option) => option.level === 'milestone')
+                  .map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+              </optgroup>
+            )}
+            {(filters.level === 'detail' || filters.level === 'all') && (
+              <optgroup label="Detailed activity">
+                {visibleEventOptions
+                  .filter((option) => option.level === 'detail')
+                  .map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+              </optgroup>
+            )}
           </select>
         </label>
         <label className="grid gap-1 text-xs font-semibold uppercase tracking-wide text-ink-soft">
-          From
-          <input
+          Time period
+          <select
             className={inputClass}
-            type="datetime-local"
-            value={filters.from}
+            value={filters.timePeriod}
             onChange={(event) =>
-              setFilters((current) => ({ ...current, from: event.target.value }))
+              setFilters((current) => ({
+                ...current,
+                timePeriod: event.target.value as TimePeriod,
+              }))
             }
-          />
-        </label>
-        <label className="grid gap-1 text-xs font-semibold uppercase tracking-wide text-ink-soft">
-          To
-          <input
-            className={inputClass}
-            type="datetime-local"
-            value={filters.to}
-            onChange={(event) => setFilters((current) => ({ ...current, to: event.target.value }))}
-          />
+          >
+            <option value="week">Past week</option>
+            <option value="month">Past month</option>
+            <option value="six_months">Past 6 months</option>
+            <option value="year">Past year</option>
+            <option value="all">All time</option>
+          </select>
         </label>
         <div className="flex items-end gap-2">
           <button className={primaryButtonClass} type="submit">
@@ -346,8 +471,8 @@ function ActivityFeed({
             className={buttonClass}
             type="button"
             onClick={() => {
-              setFilters(EMPTY_FILTERS);
-              setAppliedFilters(EMPTY_FILTERS);
+              setFilters({ ...EMPTY_FILTERS, excludedActors: [] });
+              setAppliedFilters({ ...EMPTY_FILTERS, excludedActors: [] });
               setSelected(null);
             }}
           >
@@ -358,6 +483,36 @@ function ActivityFeed({
           <div className="md:col-span-4 flex flex-wrap gap-2 text-xs text-ink-soft">
             {filters.actorUserId && <span>Actor: {filters.actorUserId}</span>}
             {filters.projectId && <span>Project: {filters.projectId}</span>}
+          </div>
+        )}
+        {filters.excludedActors.length > 0 && (
+          <div className="flex flex-wrap items-center gap-2 md:col-span-4">
+            <span className="text-xs font-semibold uppercase tracking-wide text-ink-soft">
+              Excluded actors
+            </span>
+            {filters.excludedActors.map((actor) => (
+              <span
+                className="inline-flex h-8 items-center gap-1 rounded-full border border-hairline bg-secondary pl-3 pr-1 text-xs font-medium text-ink"
+                key={actor.id}
+              >
+                {actor.label}
+                <button
+                  aria-label={`Remove ${actor.label} exclusion`}
+                  className="inline-flex size-6 items-center justify-center rounded-full text-ink-soft hover:bg-card hover:text-ink ring-focus"
+                  type="button"
+                  onClick={() => removeExcludedActor(actor.id)}
+                >
+                  ×
+                </button>
+              </span>
+            ))}
+            <button
+              className="text-xs font-medium text-accent-ink underline underline-offset-4 ring-focus"
+              type="button"
+              onClick={clearExcludedActors}
+            >
+              Clear excluded actors
+            </button>
           </div>
         )}
       </form>
@@ -477,21 +632,39 @@ function ActivityFeed({
             </pre>
             <div className="mt-5 flex flex-wrap gap-2">
               {selected.actorUserId && (
-                <button
-                  className={buttonClass}
-                  type="button"
-                  onClick={() => {
-                    const next = {
-                      ...filters,
-                      actorUserId: selected.actorUserId ?? '',
-                    };
-                    setFilters(next);
-                    setAppliedFilters(next);
-                    setSelected(null);
-                  }}
-                >
-                  Filter by actor
-                </button>
+                <>
+                  <button
+                    className={buttonClass}
+                    type="button"
+                    onClick={() => {
+                      const next = {
+                        ...filters,
+                        actorUserId: selected.actorUserId ?? '',
+                      };
+                      setFilters(next);
+                      setAppliedFilters(next);
+                      setSelected(null);
+                    }}
+                  >
+                    Filter by actor
+                  </button>
+                  <button
+                    className={buttonClass}
+                    disabled={
+                      filters.excludedActors.length >= MAX_EXCLUDED_ACTORS ||
+                      filters.excludedActors.some((actor) => actor.id === selected.actorUserId)
+                    }
+                    type="button"
+                    onClick={() =>
+                      addExcludedActor({
+                        id: selected.actorUserId!,
+                        label: selected.actorLabel,
+                      })
+                    }
+                  >
+                    Exclude actor
+                  </button>
+                </>
               )}
               {selected.projectId && (
                 <button

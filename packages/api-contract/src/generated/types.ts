@@ -5434,8 +5434,10 @@ export interface paths {
                 query?: {
                     cursor?: string;
                     limit?: number;
-                    eventType?: "user.signed_up" | "project.created" | "report.created";
+                    level?: ("milestone" | "detail") | "all";
+                    eventType?: "user.signed_up" | "project.created" | "report.created" | "note.text_created" | "note.voice_created" | "note.image_created" | "note.document_created";
                     actorUserId?: string;
+                    excludeActorUserIds?: string;
                     projectId?: string;
                     from?: string;
                     to?: string;
@@ -5464,6 +5466,8 @@ export interface paths {
                                 projectLabel: string | null;
                                 requestId: string | null;
                                 /** @enum {string} */
+                                level: "milestone";
+                                /** @enum {string} */
                                 eventType: "user.signed_up";
                                 /** @enum {string} */
                                 subjectType: "user";
@@ -5484,6 +5488,8 @@ export interface paths {
                                 projectLabel: string | null;
                                 requestId: string | null;
                                 /** @enum {string} */
+                                level: "milestone";
+                                /** @enum {string} */
                                 eventType: "project.created";
                                 /** @enum {string} */
                                 subjectType: "project";
@@ -5501,6 +5507,8 @@ export interface paths {
                                 projectLabel: string | null;
                                 requestId: string | null;
                                 /** @enum {string} */
+                                level: "milestone";
+                                /** @enum {string} */
                                 eventType: "report.created";
                                 /** @enum {string} */
                                 subjectType: "report";
@@ -5509,6 +5517,82 @@ export interface paths {
                                 metadata: {
                                     reportNumber: number;
                                 };
+                            } | {
+                                id: string;
+                                occurredAt: string;
+                                actorUserId: string | null;
+                                actorLabel: string;
+                                /** Format: email */
+                                actorEmail: string | null;
+                                subjectLabel: string;
+                                projectLabel: string | null;
+                                requestId: string | null;
+                                /** @enum {string} */
+                                level: "detail";
+                                /** @enum {string} */
+                                eventType: "note.text_created";
+                                /** @enum {string} */
+                                subjectType: "note";
+                                subjectId: string;
+                                projectId: string;
+                                metadata: Record<string, never>;
+                            } | {
+                                id: string;
+                                occurredAt: string;
+                                actorUserId: string | null;
+                                actorLabel: string;
+                                /** Format: email */
+                                actorEmail: string | null;
+                                subjectLabel: string;
+                                projectLabel: string | null;
+                                requestId: string | null;
+                                /** @enum {string} */
+                                level: "detail";
+                                /** @enum {string} */
+                                eventType: "note.voice_created";
+                                /** @enum {string} */
+                                subjectType: "note";
+                                subjectId: string;
+                                projectId: string;
+                                metadata: Record<string, never>;
+                            } | {
+                                id: string;
+                                occurredAt: string;
+                                actorUserId: string | null;
+                                actorLabel: string;
+                                /** Format: email */
+                                actorEmail: string | null;
+                                subjectLabel: string;
+                                projectLabel: string | null;
+                                requestId: string | null;
+                                /** @enum {string} */
+                                level: "detail";
+                                /** @enum {string} */
+                                eventType: "note.image_created";
+                                /** @enum {string} */
+                                subjectType: "note";
+                                subjectId: string;
+                                projectId: string;
+                                metadata: Record<string, never>;
+                            } | {
+                                id: string;
+                                occurredAt: string;
+                                actorUserId: string | null;
+                                actorLabel: string;
+                                /** Format: email */
+                                actorEmail: string | null;
+                                subjectLabel: string;
+                                projectLabel: string | null;
+                                requestId: string | null;
+                                /** @enum {string} */
+                                level: "detail";
+                                /** @enum {string} */
+                                eventType: "note.document_created";
+                                /** @enum {string} */
+                                subjectType: "note";
+                                subjectId: string;
+                                projectId: string;
+                                metadata: Record<string, never>;
                             })[];
                             nextCursor: string | null;
                         };

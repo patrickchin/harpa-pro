@@ -76,7 +76,19 @@ async function seedAppActivity(databaseUrl: string): Promise<void> {
 
   const projectId = newId('prj');
   const reportId = newId('rpt');
-  const eventId = newId('aud');
+  const reportEventId = newId('aud');
+  const noteIds = {
+    text: newId('not'),
+    voice: newId('not'),
+    image: newId('not'),
+    document: newId('not'),
+  };
+  const noteEventIds = {
+    text: newId('aud'),
+    voice: newId('aud'),
+    image: newId('aud'),
+    document: newId('aud'),
+  };
   const client = new pg.Client({ connectionString: databaseUrl });
   await client.connect();
   try {
@@ -103,13 +115,48 @@ async function seedAppActivity(databaseUrl: string): Promise<void> {
       [reportId, projectId, user.id],
     );
     await client.query(
+      `INSERT INTO app.notes (id, report_id, author_id, kind, body)
+       VALUES
+         ($1, $5, $6, 'text', 'Completed the north elevation inspection.'),
+         ($2, $5, $6, 'voice', NULL),
+         ($3, $5, $6, 'image', NULL),
+         ($4, $5, $6, 'document', NULL)`,
+      [noteIds.text, noteIds.voice, noteIds.image, noteIds.document, reportId, user.id],
+    );
+    await client.query(
       `INSERT INTO app.activity_events
          (id, occurred_at, event_type, actor_user_id, subject_type, subject_id,
           project_id, request_id, dedupe_key, metadata)
        VALUES
          ($1, '2026-07-29T04:00:00Z', 'report.created', $2, 'report', $3,
-          $4, 'request-admin-activity-e2e', $5, '{"reportNumber":7}')`,
-      [eventId, user.id, reportId, projectId, `report.created:${reportId}`],
+          $4, 'request-admin-activity-e2e', $5, '{"reportNumber":7}'),
+         ($6, '2026-07-29T04:04:00Z', 'note.text_created', $2, 'note', $10,
+          $4, 'request-note-text-e2e', $14, '{}'),
+         ($7, '2026-07-29T04:03:00Z', 'note.voice_created', $2, 'note', $11,
+          $4, 'request-note-voice-e2e', $15, '{}'),
+         ($8, '2026-07-29T04:02:00Z', 'note.image_created', $2, 'note', $12,
+          $4, 'request-note-image-e2e', $16, '{}'),
+         ($9, '2026-07-29T04:01:00Z', 'note.document_created', $2, 'note', $13,
+          $4, 'request-note-document-e2e', $17, '{}')`,
+      [
+        reportEventId,
+        user.id,
+        reportId,
+        projectId,
+        `report.created:${reportId}`,
+        noteEventIds.text,
+        noteEventIds.voice,
+        noteEventIds.image,
+        noteEventIds.document,
+        noteIds.text,
+        noteIds.voice,
+        noteIds.image,
+        noteIds.document,
+        `note.text_created:${noteIds.text}`,
+        `note.voice_created:${noteIds.voice}`,
+        `note.image_created:${noteIds.image}`,
+        `note.document_created:${noteIds.document}`,
+      ],
     );
     await client.query('COMMIT');
   } catch (error) {

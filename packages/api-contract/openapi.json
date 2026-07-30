@@ -13275,11 +13275,38 @@
           },
           {
             "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "enum": [
+                    "milestone",
+                    "detail"
+                  ]
+                },
+                {
+                  "type": "string",
+                  "enum": [
+                    "all"
+                  ]
+                }
+              ],
+              "default": "milestone"
+            },
+            "required": false,
+            "name": "level",
+            "in": "query"
+          },
+          {
+            "schema": {
               "type": "string",
               "enum": [
                 "user.signed_up",
                 "project.created",
-                "report.created"
+                "report.created",
+                "note.text_created",
+                "note.voice_created",
+                "note.image_created",
+                "note.document_created"
               ]
             },
             "required": false,
@@ -13293,6 +13320,15 @@
             },
             "required": false,
             "name": "actorUserId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "maxLength": 512
+            },
+            "required": false,
+            "name": "excludeActorUserIds",
             "in": "query"
           },
           {
@@ -13372,6 +13408,12 @@
                                 "minLength": 6,
                                 "maxLength": 128
                               },
+                              "level": {
+                                "type": "string",
+                                "enum": [
+                                  "milestone"
+                                ]
+                              },
                               "eventType": {
                                 "type": "string",
                                 "enum": [
@@ -13417,6 +13459,7 @@
                               "subjectLabel",
                               "projectLabel",
                               "requestId",
+                              "level",
                               "eventType",
                               "subjectType",
                               "subjectId",
@@ -13463,6 +13506,12 @@
                                 "nullable": true,
                                 "minLength": 6,
                                 "maxLength": 128
+                              },
+                              "level": {
+                                "type": "string",
+                                "enum": [
+                                  "milestone"
+                                ]
                               },
                               "eventType": {
                                 "type": "string",
@@ -13499,6 +13548,7 @@
                               "subjectLabel",
                               "projectLabel",
                               "requestId",
+                              "level",
                               "eventType",
                               "subjectType",
                               "subjectId",
@@ -13545,6 +13595,12 @@
                                 "nullable": true,
                                 "minLength": 6,
                                 "maxLength": 128
+                              },
+                              "level": {
+                                "type": "string",
+                                "enum": [
+                                  "milestone"
+                                ]
                               },
                               "eventType": {
                                 "type": "string",
@@ -13590,6 +13646,363 @@
                               "subjectLabel",
                               "projectLabel",
                               "requestId",
+                              "level",
+                              "eventType",
+                              "subjectType",
+                              "subjectId",
+                              "projectId",
+                              "metadata"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "pattern": "^aud_[0-9a-hjkmnp-tv-z]{8,16}$"
+                              },
+                              "occurredAt": {
+                                "type": "string"
+                              },
+                              "actorUserId": {
+                                "type": "string",
+                                "nullable": true,
+                                "pattern": "^usr_[0-9a-hjkmnp-tv-z]{8,16}$"
+                              },
+                              "actorLabel": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "actorEmail": {
+                                "type": "string",
+                                "nullable": true,
+                                "format": "email"
+                              },
+                              "subjectLabel": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "projectLabel": {
+                                "type": "string",
+                                "nullable": true,
+                                "minLength": 1
+                              },
+                              "requestId": {
+                                "type": "string",
+                                "nullable": true,
+                                "minLength": 6,
+                                "maxLength": 128
+                              },
+                              "level": {
+                                "type": "string",
+                                "enum": [
+                                  "detail"
+                                ]
+                              },
+                              "eventType": {
+                                "type": "string",
+                                "enum": [
+                                  "note.text_created"
+                                ]
+                              },
+                              "subjectType": {
+                                "type": "string",
+                                "enum": [
+                                  "note"
+                                ]
+                              },
+                              "subjectId": {
+                                "type": "string",
+                                "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
+                              },
+                              "projectId": {
+                                "type": "string",
+                                "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8,16}$"
+                              },
+                              "metadata": {
+                                "type": "object",
+                                "properties": {},
+                                "additionalProperties": false
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "occurredAt",
+                              "actorUserId",
+                              "actorLabel",
+                              "actorEmail",
+                              "subjectLabel",
+                              "projectLabel",
+                              "requestId",
+                              "level",
+                              "eventType",
+                              "subjectType",
+                              "subjectId",
+                              "projectId",
+                              "metadata"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "pattern": "^aud_[0-9a-hjkmnp-tv-z]{8,16}$"
+                              },
+                              "occurredAt": {
+                                "type": "string"
+                              },
+                              "actorUserId": {
+                                "type": "string",
+                                "nullable": true,
+                                "pattern": "^usr_[0-9a-hjkmnp-tv-z]{8,16}$"
+                              },
+                              "actorLabel": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "actorEmail": {
+                                "type": "string",
+                                "nullable": true,
+                                "format": "email"
+                              },
+                              "subjectLabel": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "projectLabel": {
+                                "type": "string",
+                                "nullable": true,
+                                "minLength": 1
+                              },
+                              "requestId": {
+                                "type": "string",
+                                "nullable": true,
+                                "minLength": 6,
+                                "maxLength": 128
+                              },
+                              "level": {
+                                "type": "string",
+                                "enum": [
+                                  "detail"
+                                ]
+                              },
+                              "eventType": {
+                                "type": "string",
+                                "enum": [
+                                  "note.voice_created"
+                                ]
+                              },
+                              "subjectType": {
+                                "type": "string",
+                                "enum": [
+                                  "note"
+                                ]
+                              },
+                              "subjectId": {
+                                "type": "string",
+                                "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
+                              },
+                              "projectId": {
+                                "type": "string",
+                                "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8,16}$"
+                              },
+                              "metadata": {
+                                "type": "object",
+                                "properties": {},
+                                "additionalProperties": false
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "occurredAt",
+                              "actorUserId",
+                              "actorLabel",
+                              "actorEmail",
+                              "subjectLabel",
+                              "projectLabel",
+                              "requestId",
+                              "level",
+                              "eventType",
+                              "subjectType",
+                              "subjectId",
+                              "projectId",
+                              "metadata"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "pattern": "^aud_[0-9a-hjkmnp-tv-z]{8,16}$"
+                              },
+                              "occurredAt": {
+                                "type": "string"
+                              },
+                              "actorUserId": {
+                                "type": "string",
+                                "nullable": true,
+                                "pattern": "^usr_[0-9a-hjkmnp-tv-z]{8,16}$"
+                              },
+                              "actorLabel": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "actorEmail": {
+                                "type": "string",
+                                "nullable": true,
+                                "format": "email"
+                              },
+                              "subjectLabel": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "projectLabel": {
+                                "type": "string",
+                                "nullable": true,
+                                "minLength": 1
+                              },
+                              "requestId": {
+                                "type": "string",
+                                "nullable": true,
+                                "minLength": 6,
+                                "maxLength": 128
+                              },
+                              "level": {
+                                "type": "string",
+                                "enum": [
+                                  "detail"
+                                ]
+                              },
+                              "eventType": {
+                                "type": "string",
+                                "enum": [
+                                  "note.image_created"
+                                ]
+                              },
+                              "subjectType": {
+                                "type": "string",
+                                "enum": [
+                                  "note"
+                                ]
+                              },
+                              "subjectId": {
+                                "type": "string",
+                                "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
+                              },
+                              "projectId": {
+                                "type": "string",
+                                "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8,16}$"
+                              },
+                              "metadata": {
+                                "type": "object",
+                                "properties": {},
+                                "additionalProperties": false
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "occurredAt",
+                              "actorUserId",
+                              "actorLabel",
+                              "actorEmail",
+                              "subjectLabel",
+                              "projectLabel",
+                              "requestId",
+                              "level",
+                              "eventType",
+                              "subjectType",
+                              "subjectId",
+                              "projectId",
+                              "metadata"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "pattern": "^aud_[0-9a-hjkmnp-tv-z]{8,16}$"
+                              },
+                              "occurredAt": {
+                                "type": "string"
+                              },
+                              "actorUserId": {
+                                "type": "string",
+                                "nullable": true,
+                                "pattern": "^usr_[0-9a-hjkmnp-tv-z]{8,16}$"
+                              },
+                              "actorLabel": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "actorEmail": {
+                                "type": "string",
+                                "nullable": true,
+                                "format": "email"
+                              },
+                              "subjectLabel": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "projectLabel": {
+                                "type": "string",
+                                "nullable": true,
+                                "minLength": 1
+                              },
+                              "requestId": {
+                                "type": "string",
+                                "nullable": true,
+                                "minLength": 6,
+                                "maxLength": 128
+                              },
+                              "level": {
+                                "type": "string",
+                                "enum": [
+                                  "detail"
+                                ]
+                              },
+                              "eventType": {
+                                "type": "string",
+                                "enum": [
+                                  "note.document_created"
+                                ]
+                              },
+                              "subjectType": {
+                                "type": "string",
+                                "enum": [
+                                  "note"
+                                ]
+                              },
+                              "subjectId": {
+                                "type": "string",
+                                "pattern": "^not_[0-9a-hjkmnp-tv-z]{8,16}$"
+                              },
+                              "projectId": {
+                                "type": "string",
+                                "pattern": "^prj_[0-9a-hjkmnp-tv-z]{8,16}$"
+                              },
+                              "metadata": {
+                                "type": "object",
+                                "properties": {},
+                                "additionalProperties": false
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "occurredAt",
+                              "actorUserId",
+                              "actorLabel",
+                              "actorEmail",
+                              "subjectLabel",
+                              "projectLabel",
+                              "requestId",
+                              "level",
                               "eventType",
                               "subjectType",
                               "subjectId",

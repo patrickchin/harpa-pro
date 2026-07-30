@@ -62,6 +62,10 @@ test('signs in through the visible admin form and signs out', async ({ context, 
   const activityResponse = await activityResponsePromise;
 
   expect(activityResponse.status()).toBe(200);
+  const activityUrl = new URL(activityResponse.url());
+  expect(activityUrl.searchParams.get('level')).toBe('milestone');
+  expect(activityUrl.searchParams.get('from')).toBeTruthy();
+  expect(activityUrl.searchParams.has('to')).toBe(false);
   expect(activityResponse.headers()['access-control-allow-origin']).toBe(SITE_ORIGIN);
   expect(activityResponse.headers()['access-control-allow-credentials']).toBe('true');
   expect((await activityResponse.request().allHeaders()).cookie).toContain(
@@ -75,6 +79,10 @@ test('signs in through the visible admin form and signs out', async ({ context, 
   ).toEqual({ localStorage: 0, sessionStorage: 0 });
 
   await expect(page.getByRole('heading', { level: 1, name: 'Harpa Pro activity' })).toBeVisible();
+  await expect(page.getByLabel('Detail level')).toHaveValue('milestone');
+  await expect(page.getByLabel('Time period')).toHaveValue('month');
+  await expect(page.getByLabel('From', { exact: true })).toHaveCount(0);
+  await expect(page.getByLabel('To', { exact: true })).toHaveCount(0);
 
   const row = page.locator('tbody tr');
   await expect(row).toHaveCount(1);
@@ -90,6 +98,43 @@ test('signs in through the visible admin form and signs out', async ({ context, 
   await expect(detail.locator('pre')).toContainText('"reportNumber": 7');
   await detail.getByRole('button', { name: 'Close' }).click();
   await expect(detail).toBeHidden();
+
+  const detailResponsePromise = page.waitForResponse((response) => {
+    const url = new URL(response.url());
+    return (
+      url.origin === API_BASE_URL &&
+      url.pathname === '/admin/activity' &&
+      url.searchParams.get('level') === 'detail'
+    );
+  });
+  await page.getByLabel('Detail level').selectOption('detail');
+  await page.getByRole('button', { name: 'Apply filters' }).click();
+  expect((await detailResponsePromise).status()).toBe(200);
+
+  const detailRows = page.locator('tbody tr');
+  await expect(detailRows).toHaveCount(4);
+  await expect(detailRows).toContainText([
+    'Text note added',
+    'Voice note added',
+    'Image uploaded',
+    'Document uploaded',
+  ]);
+
+  await page.getByRole('button', { name: 'Voice note' }).click();
+  const exclusionResponsePromise = page.waitForResponse((response) => {
+    const url = new URL(response.url());
+    return (
+      url.origin === API_BASE_URL &&
+      url.pathname === '/admin/activity' &&
+      url.searchParams.has('excludeActorUserIds')
+    );
+  });
+  await page.getByRole('dialog').getByRole('button', { name: 'Exclude actor' }).click();
+  expect((await exclusionResponsePromise).status()).toBe(200);
+  await expect(page.getByText('No activity matches these filters.')).toBeVisible();
+  await expect(
+    page.getByRole('button', { name: 'Remove Admin Activity E2E exclusion' }),
+  ).toBeVisible();
 
   const logoutResponsePromise = page.waitForResponse((response) => {
     const url = new URL(response.url());

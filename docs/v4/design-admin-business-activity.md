@@ -1,7 +1,7 @@
 # Design — Admin business activity
 
-Status: approved on 2026-07-29. The separate admin-auth cutover is in
-progress; see
+Status: approved on 2026-07-29. The first detail-level expansion was approved
+on 2026-07-30. The separate admin-auth cutover is in progress; see
 [Separate admin console authentication](design-separate-admin-auth.md).
 
 Implementation status:
@@ -11,7 +11,7 @@ Implementation status:
 - [x] Phase 3 — admin read API and credentialed browser CORS.
 - [x] Phase 4 — admin page.
 - [ ] Phase 5 — deployment.
-- [ ] Phase 6 — evaluate before expanding.
+- [x] Phase 6 — detail levels and advanced filtering.
 
 ## Problem
 
@@ -36,8 +36,8 @@ This design deliberately separates:
 
 ## Goals
 
-- Record a small set of high-signal business events in the application Neon
-  project.
+- Record curated business events at two levels in the application Neon
+  project: high-signal milestones and lower-level product details.
 - Show them newest-first at `admin.harpapro.com`.
 - Require the dedicated admin identity and session system. App users, Better
   Auth sessions, and `public."user".is_admin` do not authorize this page.
@@ -88,41 +88,55 @@ flowchart LR
   mutation -. request_id .-> telemetry["Future operational logs / Sentry"]
 ```
 
-## Initial event taxonomy
+## Curated event taxonomy
 
-The first release records exactly three events:
+The feed has two derived levels. `milestone` is the quiet default view for
+major business events. `detail` contains successful user-facing product
+actions that are useful when investigating what happened within a project.
+The level comes from the typed event registry rather than a stored database
+column.
 
-| Event             | Actor         | Subject | Additional metadata   |
-| ----------------- | ------------- | ------- | --------------------- |
-| `user.signed_up`  | New user      | User    | Authentication method |
-| `project.created` | Project owner | Project | None                  |
-| `report.created`  | Report author | Report  | Report number         |
+| Level       | Event                   | Actor         | Subject | Metadata              |
+| ----------- | ----------------------- | ------------- | ------- | --------------------- |
+| `milestone` | `user.signed_up`        | New user      | User    | Authentication method |
+| `milestone` | `project.created`       | Project owner | Project | None                  |
+| `milestone` | `report.created`        | Report author | Report  | Report number         |
+| `detail`    | `note.text_created`     | Note author   | Note    | None                  |
+| `detail`    | `note.voice_created`    | Note author   | Note    | None                  |
+| `detail`    | `note.image_created`    | Note author   | Note    | None                  |
+| `detail`    | `note.document_created` | Note author   | Note    | None                  |
+
+An image or document event means that the upload became a note in a report
+timeline. Raw `POST /files` registration is deliberately not an activity
+event: thumbnails, abandoned uploads, and objects not yet attached to report
+content would otherwise create misleading noise. A multi-file image note
+produces one creation event for the note, not one event per stored object.
 
 Waitlist confirmation, report generation/finalization, membership, comments,
-email delivery, and admin changes are useful candidates, but they stay out of
-the first release. Event coverage expands only after the initial feed proves
-useful.
+email delivery, later files appended to an existing note, and admin changes
+remain candidates. Add them only when they answer a recurring operator
+question.
 
 `app.llm_usage_events` remains a separate usage ledger. It must not be copied
 row-for-row into business activity.
 
 ## Data model
 
-The next migration adds the reserved `aud_*` ID family and
+The ledger uses the reserved `aud_*` ID family and
 `app.activity_events` with:
 
-| Column          | Shape                 | Notes                                    |
-| --------------- | --------------------- | ---------------------------------------- |
-| `id`            | `app.aud_id`          | API-minted primary key                   |
-| `occurred_at`   | `timestamptz`         | Database default `now()`                 |
-| `event_type`    | `text`                | Constrained to the curated registry      |
-| `actor_user_id` | nullable `app.usr_id` | No cascading foreign key                 |
-| `subject_type`  | `text`                | Initially `user`, `project`, or `report` |
-| `subject_id`    | nullable `text`       | Preserved across normal entity deletion  |
-| `project_id`    | nullable `app.prj_id` | Context for project/report filtering     |
-| `request_id`    | nullable `text`       | Validated request ID, when available     |
-| `dedupe_key`    | nullable `text`       | Unique idempotency key                   |
-| `metadata`      | `jsonb` object        | Event-specific, schema-validated values  |
+| Column          | Shape                 | Notes                                   |
+| --------------- | --------------------- | --------------------------------------- |
+| `id`            | `app.aud_id`          | API-minted primary key                  |
+| `occurred_at`   | `timestamptz`         | Database default `now()`                |
+| `event_type`    | `text`                | Constrained to the curated registry     |
+| `actor_user_id` | nullable `app.usr_id` | No cascading foreign key                |
+| `subject_type`  | `text`                | `user`, `project`, `report`, or `note`  |
+| `subject_id`    | nullable `text`       | Preserved across normal entity deletion |
+| `project_id`    | nullable `app.prj_id` | Context for project/report filtering    |
+| `request_id`    | nullable `text`       | Validated request ID, when available    |
+| `dedupe_key`    | nullable `text`       | Unique idempotency key                  |
+| `metadata`      | `jsonb` object        | Event-specific, schema-validated values |
 
 Indexes cover:
 
@@ -138,22 +152,23 @@ without duplicating the activity row.
 ### Data minimization
 
 The event row does not copy email addresses, display names, project names,
-report bodies, client names, addresses, AI prompts, or other free-form
-content. The admin read query left-joins current labels from their source
-tables. If an entity has been deleted, the UI displays its stable ID and a
-`Deleted user/project/report` label.
+report or note bodies, transcripts, filenames, client names, addresses, AI
+prompts, or other free-form content. The admin read query left-joins current
+labels from their source tables. If an entity has been deleted, the UI
+displays its stable ID and a `Deleted user/project/report/note` label.
 
 This trades perfect historical labels for less duplicated personal and client
 data. Historical label snapshots can be added later only with an explicit
 retention and erasure policy.
 
 `metadata` is not an arbitrary caller-supplied object. A discriminated Zod
-union defines the permitted shape for every event type. The first release
-allows only:
+union defines the permitted shape for every event type. The registry allows
+only:
 
 - `{ method: 'email_otp' }` for `user.signed_up`;
-- `{}` for `project.created`; and
-- `{ reportNumber: number }` for `report.created`.
+- `{}` for `project.created`;
+- `{ reportNumber: number }` for `report.created`; and
+- `{}` for each `note.*_created` event.
 
 ### Append behavior and deletion
 
@@ -176,8 +191,7 @@ revisited before the activity feed stores broader or more sensitive events.
 
 ## Recording events
 
-Add one service, tentatively
-`packages/api/src/services/activity-events.ts`, which:
+`packages/api/src/services/activity-events.ts`:
 
 - accepts a Drizzle handle rather than importing a route-level raw database;
 - accepts a typed event union;
@@ -195,6 +209,21 @@ commit together; a failed transaction leaves neither.
 The current project route performs creation and reload in separate scoped
 callbacks. Implementation should combine the creation and event write into
 one callback while preserving the response reload behavior.
+
+### Note creation
+
+Every successful note creation records one detail event inside the same
+scoped database callback:
+
+- the generic note route maps the validated `text`, `voice`, `image`, or
+  `document` note kind to its matching event type; and
+- the voice aggregation route records `note.voice_created` after
+  transcription and summarization have succeeded.
+
+The note and activity row commit together. The event stores only the note ID,
+project context, actor, request ID, and strict empty metadata. It does not
+copy note contents, AI output, filenames, storage keys, or provider details.
+The dedupe key is `<event_type>:<note_id>`.
 
 ### User signup
 
@@ -242,14 +271,25 @@ withAdminSession() -> admin activity handler
 
 Supported query fields:
 
-| Field         | Purpose                           |
-| ------------- | --------------------------------- |
-| `cursor`      | Opaque `(occurred_at, id)` cursor |
-| `limit`       | Default 50, maximum 100           |
-| `eventType`   | Exact curated event type          |
-| `actorUserId` | Exact actor                       |
-| `projectId`   | Exact project context             |
-| `from` / `to` | Optional ISO-8601 time window     |
+| Field                 | Purpose                               |
+| --------------------- | ------------------------------------- |
+| `cursor`              | Opaque `(occurred_at, id)` cursor     |
+| `limit`               | Default 50, maximum 100               |
+| `level`               | `milestone`, `detail`, or `all`       |
+| `eventType`           | Exact curated event type              |
+| `actorUserId`         | Exact actor                           |
+| `excludeActorUserIds` | Comma-separated actor IDs, maximum 20 |
+| `projectId`           | Exact project context                 |
+| `from` / `to`         | Optional ISO-8601 time window         |
+
+`level` defaults to `milestone`, preserving the original quiet feed. An exact
+`eventType` takes precedence over `level`. Excluding actors retains redacted
+events whose `actor_user_id` is `NULL`; it hides only rows whose current actor
+ID appears in the exclusion list.
+
+The API keeps exact `from` and `to` fields for compatibility and automation.
+The admin UI exposes only Past week, Past month, Past 6 months, Past year, and
+All time. It converts the chosen preset to `from` and leaves `to` unset.
 
 The response follows the existing envelope:
 
@@ -317,8 +357,9 @@ tentatively `apps/site/src/components/admin/AdminActivity.tsx`.
 
 The page includes:
 
-- event-type and date filters;
+- a level filter, an event-type filter, and simple time-range presets;
 - optional actor/project filters selected from a row;
+- multiple removable excluded-actor chips;
 - columns for time, event, actor, project/report, and subject;
 - a `Load older` cursor action;
 - a row detail drawer showing IDs, request ID, and safe metadata; and
@@ -364,9 +405,11 @@ extract it to `apps/admin` and a separate Pages project in its own design.
 ## Failure behavior
 
 - A failed project/report event insert rolls back the originating mutation.
+- A failed note event insert rolls back the originating note creation.
 - A failed auth event insert is reported and repaired idempotently if Better
   Auth cannot make it transactional.
-- A missing current actor/project label does not fail the feed.
+- A missing current actor, project, report, or note label does not fail the
+  feed.
 - A malformed cursor or filter returns `400`.
 - An unavailable API renders a retryable error without exposing cached rows.
 - The browser never falls back to direct database access.
@@ -381,10 +424,12 @@ extract it to `apps/admin` and a separate Pages project in its own design.
   cannot select the activity table.
 - Integration tests prove project and report creation write exactly one event
   and failed mutations write none.
+- Integration tests prove each note kind writes one detail event in the same
+  transaction, with no content copied into metadata.
 - A real Better Auth email-OTP integration test proves signup recording.
 - Admin API tests prove app sessions cannot authorize the feed, then cover
-  admin-session success, every filter, stable cursor pagination,
-  deleted-label fallback, ISO dates, and `no-store`.
+  admin-session success, level and actor-exclusion filters, stable cursor
+  pagination, deleted-label fallback, ISO dates, and `no-store`.
 - Account-deletion tests prove user identifiers are redacted from retained
   events.
 - Contract/code-generation drift checks remain green.
@@ -392,7 +437,8 @@ extract it to `apps/admin` and a separate Pages project in its own design.
 ### Site
 
 - Component tests cover password auth, loading, generic failure, empty,
-  populated, pagination, filters, deleted entities, and the detail drawer.
+  populated, pagination, level and time presets, multiple actor exclusions,
+  deleted entities, and the detail drawer.
 - A Playwright smoke covers the local admin page against the real API/default
   wiring, including CORS and a persisted event (Pitfall 13).
 - Run the existing site typecheck, lint, unit, build, and focused Playwright
@@ -441,15 +487,21 @@ before being treated as complete.
   admin `main` database before provisioning production.
 - Attach `admin.harpapro.com` and configure the root redirect.
 - Decide whether to enable Cloudflare Access.
-- Run a production smoke: sign up, create project, create report, and verify
-  three rows with request IDs where available.
+- Run a production smoke: sign up, create a project and report, add selected
+  note kinds, and verify both milestone and detail rows with request IDs where
+  available.
 
-### Phase 6 — Evaluate before expanding
+### Phase 6 — Detail levels and advanced filtering
 
-Use the initial feed before adding more events. The next candidates are
-waitlist confirmation, report generation/finalization, membership changes,
-and existing admin mutations. Add only events that answer a recurring
-operator question.
+- Derive `milestone` and `detail` from a central curated registry.
+- Default the feed to milestone events and allow milestone, detail, or all.
+- Replace exact date controls with Past week, Past month, Past 6 months, Past
+  year, and All time presets.
+- Allow up to 20 actor IDs to be excluded at once while retaining redacted
+  actor rows.
+- Record text, voice, image, and document note creation transactionally.
+- Keep raw file-registration traffic out of the business feed.
+- Re-evaluate additional event types only after operators use this layer.
 
 ## Alternatives considered
 
@@ -494,7 +546,8 @@ Unless the user changes them before implementation:
 - use the existing `apps/site` and Pages project;
 - keep admin identities and sessions in the independent `harpa-pro-admin`
   Neon project;
-- track only the three initial creation events;
+- default to the three milestone events and keep note creation in the optional
+  detail level;
 - do not backfill old rows;
 - use HttpOnly cookie auth, not a browser-stored bearer token;
 - keep current labels out of stored activity rows;

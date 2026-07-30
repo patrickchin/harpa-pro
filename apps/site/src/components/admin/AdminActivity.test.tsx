@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { activity } from '@harpa/api-contract';
@@ -153,7 +153,7 @@ function activityResponse(items: activity.Event[], nextCursor: string | null = n
   });
 }
 
-function lastActivityUrl(fetchMock: ReturnType<typeof vi.spyOn>): URL {
+function lastActivityUrl(fetchMock: { mock: { calls: Array<Array<unknown>> } }): URL {
   const request = fetchMock.mock.calls.at(-1)?.[0];
   if (!request) throw new Error('expected an activity request');
   return new URL(String(request));
@@ -431,6 +431,24 @@ describe('AdminActivity', () => {
     await waitFor(() => expect(lastActivityUrl(fetchMock).searchParams.get('level')).toBe('all'));
   });
 
+  it('clears incompatible event types when the detail level changes', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(activityResponse([]));
+    const user = userEvent.setup();
+    render(<AdminActivity />);
+
+    await screen.findByText('No activity matches these filters.');
+    const level = screen.getByLabelText('Detail level');
+    const eventType = screen.getByLabelText('Event type');
+
+    await user.selectOptions(level, screen.getByRole('option', { name: 'All activity' }));
+    await user.selectOptions(eventType, screen.getByRole('option', { name: 'Voice note added' }));
+    expect((eventType as HTMLSelectElement).value).toBe('note.voice_created');
+
+    await user.selectOptions(level, screen.getByRole('option', { name: 'Milestones' }));
+    expect((eventType as HTMLSelectElement).value).toBe('');
+    expect(screen.queryByRole('option', { name: 'Voice note added' })).toBeNull();
+  });
+
   it('shows all curated detail event labels and event-type options', async () => {
     vi.spyOn(globalThis, 'fetch')
       .mockResolvedValueOnce(activityResponse([]))
@@ -439,29 +457,30 @@ describe('AdminActivity', () => {
     render(<AdminActivity />);
 
     await screen.findByText('No activity matches these filters.');
+    await user.selectOptions(
+      screen.getByLabelText('Detail level'),
+      screen.getByRole('option', { name: 'All activity' }),
+    );
     const eventType = screen.getByLabelText('Event type');
     expect(screen.getByRole('option', { name: 'Text note added' })).toBeTruthy();
     expect(screen.getByRole('option', { name: 'Voice note added' })).toBeTruthy();
     expect(screen.getByRole('option', { name: 'Image uploaded' })).toBeTruthy();
     expect(screen.getByRole('option', { name: 'Document uploaded' })).toBeTruthy();
 
-    await user.selectOptions(
-      screen.getByLabelText('Detail level'),
-      screen.getByRole('option', { name: 'All activity' }),
-    );
     await user.selectOptions(eventType, screen.getByRole('option', { name: 'All events' }));
     await user.click(screen.getByRole('button', { name: 'Apply filters' }));
 
-    expect(await screen.findByText('Text note added')).toBeTruthy();
-    expect(screen.getByText('Voice note added')).toBeTruthy();
-    expect(screen.getByText('Image uploaded')).toBeTruthy();
-    expect(screen.getByText('Document uploaded')).toBeTruthy();
+    const table = await screen.findByRole('table');
+    expect(within(table).getByText('Text note added')).toBeTruthy();
+    expect(within(table).getByText('Voice note added')).toBeTruthy();
+    expect(within(table).getByText('Image uploaded')).toBeTruthy();
+    expect(within(table).getByText('Document uploaded')).toBeTruthy();
   });
 
   it('excludes multiple actors with removable chips and clears all exclusions', async () => {
     const fetchMock = vi
       .spyOn(globalThis, 'fetch')
-      .mockResolvedValue(activityResponse([reportEvent, secondReportEvent]));
+      .mockImplementation(async () => activityResponse([reportEvent, secondReportEvent]));
     const user = userEvent.setup();
     render(<AdminActivity />);
 

@@ -330,7 +330,7 @@ origin receives no dashboard CORS headers.
 
 ## Project role RLS
 
-Migration `0026_project_write_roles.sql` adds
+Migration `0027_project_write_roles.sql` adds
 `app.can_edit_project(project_id)`. It returns true only for the current
 project owner or editor. The project, report, note, note-file, and file
 write policies use this helper.
@@ -348,7 +348,7 @@ write.
 ## Files: project-inherited RLS
 
 `app.files` lets every current project member read attached files.
-Migration `0026_project_write_roles.sql` narrows all other file actions:
+Migration `0027_project_write_roles.sql` narrows all other file actions:
 
 | Action | Rule |
 |---|---|

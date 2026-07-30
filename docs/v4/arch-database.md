@@ -66,7 +66,7 @@ rules. Summary below.
   `pnpm --filter @harpa/api db:generate`; policy-only and data migrations
   can use reviewed hand-written SQL. Committed files use
   `<digits>_<slug>.sql`. The current sequence uses four-digit prefixes,
-  such as `0026_project_write_roles.sql`, while the loader also accepts
+  such as `0027_project_write_roles.sql`, while the loader also accepts
   older numeric timestamp prefixes.
 - Admin SQL lives under `packages/api/admin-migrations` and is applied with
   `pnpm --filter @harpa/api db:migrate:admin` against
@@ -200,7 +200,7 @@ edit a migration that has shipped.
 
 ### Project write roles
 
-Migration `0026_project_write_roles.sql` adds
+Migration `0027_project_write_roles.sql` adds
 `app.can_edit_project(project_id)`. The helper checks the current
 `app.user_id` and returns true for owners and editors.
 

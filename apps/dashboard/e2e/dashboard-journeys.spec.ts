@@ -109,12 +109,16 @@ test.describe('office dashboard journeys', () => {
       });
       await page.setViewportSize({ width: 390, height: 844 });
       const overflow = await page.evaluate(() => {
-        // Linux Chromium excludes its classic vertical scrollbar from clientWidth.
-        // innerWidth is the layout viewport, so this still catches content overflow
-        // without treating browser chrome as page content.
-        return document.documentElement.scrollWidth - window.innerWidth;
+        const workspace = document.querySelector<HTMLElement>('.reports-workspace');
+        if (!workspace) throw new Error('Report workspace not found');
+
+        return {
+          page: document.body.scrollWidth - document.body.clientWidth,
+          workspace: workspace.scrollWidth - workspace.clientWidth,
+        };
       });
-      expect(overflow).toBeLessThanOrEqual(1);
+      expect(overflow.page).toBeLessThanOrEqual(1);
+      expect(overflow.workspace).toBeLessThanOrEqual(1);
       await page.screenshot({
         path: testInfo.outputPath('viewer-narrow.png'),
         fullPage: true,

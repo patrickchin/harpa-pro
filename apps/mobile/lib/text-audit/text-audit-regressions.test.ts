@@ -16,11 +16,6 @@ const clearedCopyFindings: Array<{ file: string; oldText: string }> = [
     file: 'screens/usage.tsx',
     oldText: 'No usage data yet. Generate your first report to see stats here.',
   },
-  { file: 'components/account/AvatarUploader.tsx', oldText: 'Could not upload avatar' },
-  {
-    file: 'components/account/AvatarUploader.tsx',
-    oldText: 'Photo library permission denied',
-  },
   {
     file: 'components/account/UsageLimitDialog.tsx',
     oldText: "You've used ${usedLimit} ${kindLabel} this month.",

@@ -43,6 +43,12 @@ const voicePipelineMock = vi.hoisted((): {
   reset: vi.fn(),
 }));
 
+const photoLibraryPolicyMock = vi.hoisted(() => ({ enabled: false }));
+
+vi.mock('@/lib/camera/photo-library-policy', () => ({
+  isPhotoLibraryPickingEnabled: () => photoLibraryPolicyMock.enabled,
+}));
+
 // `GenerateReportProvider` consumes the inline recorder + voice
 // pipeline + audio playback hooks. None of them are exercised by the
 // Notes-tab UI assertions below, so stub them out — exercising the
@@ -127,6 +133,7 @@ const sampleNotes: NoteEntry[] = [
 
 describe('GenerateNotes', () => {
   beforeEach(() => {
+    photoLibraryPolicyMock.enabled = false;
     vi.useFakeTimers();
     voicePipelineMock.state = {
       step: 'idle',
@@ -258,6 +265,7 @@ describe('GenerateNotes', () => {
   });
 
   it('opens the attachment sheet with stable photo action testIDs', () => {
+    photoLibraryPolicyMock.enabled = true;
     const tree = render(<GenerateNotes {...baseProps} />);
     act(() => {
       tree.root.findByProps({ testID: 'btn-attachment' }).props.onPress();
@@ -265,6 +273,25 @@ describe('GenerateNotes', () => {
     expect(() =>
       tree.root.findByProps({ testID: 'btn-attachment-photo-library' }),
     ).not.toThrow();
+    expect(() =>
+      tree.root.findByProps({ testID: 'btn-attachment-camera' }),
+    ).not.toThrow();
+    expect(() =>
+      tree.root.findByProps({ testID: 'btn-attachment-cancel' }),
+    ).not.toThrow();
+  });
+
+  it('keeps camera capture but hides photo-library picking on iOS', () => {
+    photoLibraryPolicyMock.enabled = false;
+    const tree = render(<GenerateNotes {...baseProps} />);
+
+    act(() => {
+      tree.root.findByProps({ testID: 'btn-attachment' }).props.onPress();
+    });
+
+    expect(
+      tree.root.findAllByProps({ testID: 'btn-attachment-photo-library' }),
+    ).toHaveLength(0);
     expect(() =>
       tree.root.findByProps({ testID: 'btn-attachment-camera' }),
     ).not.toThrow();

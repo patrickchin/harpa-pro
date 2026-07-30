@@ -20,6 +20,8 @@ import { settingsRoutes } from './routes/settings.js';
 import { waitlistRoutes } from './routes/waitlist.js';
 import { adminRoutes } from './routes/admin.js';
 import { adminActivityRoutes } from './routes/admin-activity.js';
+import { adminAuthRoutes } from './routes/admin-auth.js';
+import { adminReadyz } from './routes/admin-readyz.js';
 import { resolverRoutes } from './routes/resolvers.js';
 import { wellKnownRoutes } from './routes/well-known.js';
 import { env } from './env.js';
@@ -40,6 +42,10 @@ export type AppEnv = {
     // Auth-scoped claims, populated by withAuth middleware on protected routes.
     userId?: string;
     sessionId?: string;
+    // Separate browser-admin claims, populated only by withAdminSession.
+    adminIdentityId?: string;
+    adminSessionId?: string;
+    adminEmail?: string;
     // Per-request scoped DB accessor; populated by withAuth.
     db?: ScopedDbAccessor;
   };
@@ -121,20 +127,10 @@ export function createApp(): OpenAPIHono<AppEnv> {
   const credentialedOrigin = (origin: string) => (adminOrigins.includes(origin) ? origin : null);
 
   app.use(
-    '/api/auth/*',
-    cors({
-      origin: credentialedOrigin,
-      allowMethods: ['GET', 'POST', 'OPTIONS'],
-      allowHeaders: ['Content-Type', 'X-Request-ID'],
-      credentials: true,
-      maxAge: 86400,
-    }),
-  );
-  app.use(
     '/admin/*',
     cors({
       origin: credentialedOrigin,
-      allowMethods: ['GET', 'OPTIONS'],
+      allowMethods: ['GET', 'POST', 'OPTIONS'],
       allowHeaders: ['Content-Type', 'X-Request-ID'],
       credentials: true,
       maxAge: 86400,
@@ -150,6 +146,12 @@ export function createApp(): OpenAPIHono<AppEnv> {
     scheme: 'bearer',
     bearerFormat: 'better-auth session token',
   });
+  app.openAPIRegistry.registerComponent('securitySchemes', 'adminSession', {
+    type: 'apiKey',
+    in: 'cookie',
+    name: '__Host-harpa_admin_session',
+    description: 'Dedicated HttpOnly administrator session cookie.',
+  });
 
   // Better-auth handler — owns all `/api/auth/**` routes (sign-in,
   // sign-out, email-OTP, session lookup, etc.). Mounted at the raw
@@ -159,6 +161,7 @@ export function createApp(): OpenAPIHono<AppEnv> {
   // Public routes
   app.route('/', health);
   app.route('/', readyz);
+  app.route('/', adminReadyz);
   app.route('/', waitlistRoutes);
   app.route('/', wellKnownRoutes);
 
@@ -171,6 +174,7 @@ export function createApp(): OpenAPIHono<AppEnv> {
   app.route('/', fileRoutes);
   app.route('/', voiceRoutes);
   app.route('/', settingsRoutes);
+  app.route('/', adminAuthRoutes);
   app.route('/', adminActivityRoutes);
   app.route('/', adminRoutes);
 

@@ -112,12 +112,13 @@ afterAll(async () => {
   await fx?.stop();
 }, 60_000);
 
-const headers = (tok: string, idempKey?: string) => {
+const headers = (tok: string, idempKey?: string, requestId?: string) => {
   const h: Record<string, string> = {
     authorization: `Bearer ${tok}`,
     'content-type': 'application/json',
   };
   if (idempKey) h['Idempotency-Key'] = idempKey;
+  if (requestId) h['x-request-id'] = requestId;
   return h;
 };
 
@@ -165,6 +166,41 @@ async function countNotes(reportId: string): Promise<number> {
   }
 }
 
+async function selectNoteActivity(noteId: string): Promise<
+  Array<{
+    event_type: string;
+    actor_user_id: string;
+    subject_type: string;
+    subject_id: string;
+    project_id: string;
+    request_id: string;
+    metadata: Record<string, unknown>;
+  }>
+> {
+  const admin = new pg.Client({ connectionString: fx.url });
+  await admin.connect();
+  try {
+    const res = await admin.query<{
+      event_type: string;
+      actor_user_id: string;
+      subject_type: string;
+      subject_id: string;
+      project_id: string;
+      request_id: string;
+      metadata: Record<string, unknown>;
+    }>(
+      `SELECT event_type, actor_user_id, subject_type, subject_id,
+              project_id, request_id, metadata
+       FROM app.activity_events
+       WHERE dedupe_key = $1`,
+      [`note.voice_created:${noteId}`],
+    );
+    return res.rows;
+  } finally {
+    await admin.end();
+  }
+}
+
 describe('POST /reports/:report/notes/voice — aggregator (Pitfall 13)', () => {
   let firstNoteId: string;
 
@@ -174,7 +210,7 @@ describe('POST /reports/:report/notes/voice — aggregator (Pitfall 13)', () => 
     const idem = `voice:${aliceVoiceFile}:${aliceReport}`;
     const res = await app.request(`/reports/${aliceReport}/notes/voice`, {
       method: 'POST',
-      headers: headers(tok, idem),
+      headers: headers(tok, idem, 'rid-voice-note-activity'),
       body: JSON.stringify({ fileId: aliceVoiceFile, durationSec: 12 }),
     });
     expect(res.status).toBe(201);
@@ -230,9 +266,21 @@ describe('POST /reports/:report/notes/voice — aggregator (Pitfall 13)', () => 
     expect(transcribeRow.output_tokens).toBe(0);
     expect(transcribeRow.input_seconds).not.toBeNull();
     expect(Number(transcribeRow.input_seconds)).toBeGreaterThan(0);
+
+    expect(await selectNoteActivity(note.id)).toEqual([
+      {
+        event_type: 'note.voice_created',
+        actor_user_id: alice,
+        subject_type: 'note',
+        subject_id: note.id,
+        project_id: aliceProject,
+        request_id: 'rid-voice-note-activity',
+        metadata: {},
+      },
+    ]);
   });
 
-  it('Idempotency-Key dedupes retries: same noteId, no new usage rows', async () => {
+  it('Idempotency-Key dedupes retries: same noteId, no new usage rows or activity events', async () => {
     const app = createApp();
     const tok = await signTestToken(alice, aliceSid);
     const idem = `voice:${aliceVoiceFile}:${aliceReport}`;
@@ -241,7 +289,7 @@ describe('POST /reports/:report/notes/voice — aggregator (Pitfall 13)', () => 
 
     const res = await app.request(`/reports/${aliceReport}/notes/voice`, {
       method: 'POST',
-      headers: headers(tok, idem),
+      headers: headers(tok, idem, 'rid-voice-note-retry'),
       body: JSON.stringify({ fileId: aliceVoiceFile, durationSec: 12 }),
     });
     expect(res.status).toBe(201);
@@ -252,6 +300,7 @@ describe('POST /reports/:report/notes/voice — aggregator (Pitfall 13)', () => 
     const afterNotes = await countNotes(aliceReport);
     expect(after.length).toBe(before.length);
     expect(afterNotes).toBe(beforeNotes);
+    expect(await selectNoteActivity(firstNoteId)).toHaveLength(1);
   });
 
   it('404 when caller cannot see the report (RLS, Pitfall 6)', async () => {

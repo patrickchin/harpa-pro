@@ -29,6 +29,20 @@ require_fixed() {
   fi
 }
 
+require_fixed_count() {
+  local path="$1" needle="$2" expected="$3" description="$4"
+  local actual=0
+  if [[ -f "$REPO_ROOT/$path" ]]; then
+    actual="$(grep -Fc -- "$needle" "$REPO_ROOT/$path" || true)"
+  fi
+  if [[ "$actual" -eq "$expected" ]]; then
+    echo "  ok   - $description"
+  else
+    echo "  FAIL - $description (expected $expected, found $actual)"
+    FAIL=$((FAIL + 1))
+  fi
+}
+
 forbid_fixed() {
   local path="$1" needle="$2" description="$3"
   if [[ ! -f "$REPO_ROOT/$path" ]] || grep -Fq -- "$needle" "$REPO_ROOT/$path"; then
@@ -80,6 +94,42 @@ require_before() {
 }
 
 echo "release confidence gates"
+
+require_file ".github/dependabot.yml" \
+  "Dependabot version-update policy is checked in"
+require_fixed ".github/dependabot.yml" \
+  "package-ecosystem: 'npm'" \
+  "Dependabot scans the pnpm workspace through the npm ecosystem"
+require_fixed ".github/dependabot.yml" \
+  "package-ecosystem: 'github-actions'" \
+  "Dependabot scans GitHub Actions"
+require_fixed_count ".github/dependabot.yml" \
+  "target-branch: 'dev'" 2 \
+  "routine dependency updates target dev"
+require_fixed_count ".github/dependabot.yml" \
+  "interval: 'weekly'" 2 \
+  "dependency update checks use a controlled weekly cadence"
+require_fixed ".github/dependabot.yml" \
+  "production-minor-patch:" \
+  "production minor and patch updates are grouped"
+require_fixed ".github/dependabot.yml" \
+  "development-minor-patch:" \
+  "development minor and patch updates are grouped"
+forbid_fixed ".github/dependabot.yml" \
+  "include: 'scope'" \
+  "explicit conventional prefixes are not given a duplicate dependency scope"
+
+require_file ".github/workflows/dependency-review.yml" \
+  "pull requests have a dependency-review workflow"
+require_regex ".github/workflows/dependency-review.yml" \
+  'actions/dependency-review-action@v[1-9][0-9]*$' \
+  "dependency review pins an explicit numeric action major"
+require_fixed ".github/workflows/dependency-review.yml" \
+  "fail-on-severity: high" \
+  "dependency review rejects newly introduced high and critical vulnerabilities"
+require_fixed ".github/workflows/dependency-review.yml" \
+  "contents: read" \
+  "dependency review keeps repository permissions read-only"
 
 require_file "packages/api/vitest.coverage.config.ts" \
   "API has a combined coverage configuration"

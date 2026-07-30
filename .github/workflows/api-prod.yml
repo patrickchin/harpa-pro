@@ -8,13 +8,14 @@ on:
   push:
     branches: [main]
     paths:
-      - "packages/api/**"
-      - "packages/api-contract/**"
-      - "packages/ai-fixtures/**"
-      - "infra/fly/**"
-      - "scripts/journeys/**"
-      - ".github/workflows/api-prod.yml"
-      - "pnpm-lock.yaml"
+      - 'packages/api/**'
+      - 'packages/api-contract/**'
+      - 'packages/ai-fixtures/**'
+      - 'infra/fly/**'
+      - 'infra/neon/**'
+      - 'scripts/journeys/**'
+      - '.github/workflows/api-prod.yml'
+      - 'pnpm-lock.yaml'
   # Allow manual re-deploys (e.g. rotating secrets without a code change).
   workflow_dispatch: {}
 
@@ -67,6 +68,32 @@ jobs:
           HEAD=$(printf '%s\n' "${MIGRATION_NAMES[@]}" | LC_ALL=C sort | tail -1)
           echo "computed MIGRATIONS_REQUIRED_HEAD=$HEAD"
 
+          ADMIN_MIG_DIR=packages/api/admin-migrations
+          ADMIN_MIGRATION_FILES=("$ADMIN_MIG_DIR"/*.sql)
+          if [[ ! -e "${ADMIN_MIGRATION_FILES[0]}" ]]; then
+            echo "::error::no .sql files in $ADMIN_MIG_DIR"
+            exit 1
+          fi
+          ADMIN_MIGRATION_NAMES=("${ADMIN_MIGRATION_FILES[@]##*/}")
+          bad=0
+          for f in "${ADMIN_MIGRATION_NAMES[@]}"; do
+            if ! echo "$f" | grep -qE '^[0-9]+_[a-z0-9_]+\.sql$'; then
+              echo "::error file=$ADMIN_MIG_DIR/$f::filename must match <digits>_<slug>.sql"
+              bad=$((bad+1))
+            fi
+          done
+          if [[ "$bad" -gt 0 ]]; then
+            echo "admin migration filename lint failed ($bad bad file(s))" >&2
+            exit 1
+          fi
+          dups=$(printf '%s\n' "${ADMIN_MIGRATION_NAMES[@]}" | awk -F_ '{print $1}' | sort | uniq -d)
+          if [[ -n "$dups" ]]; then
+            echo "::error::duplicate admin migration prefix(es): $dups"
+            exit 1
+          fi
+          ADMIN_HEAD=$(printf '%s\n' "${ADMIN_MIGRATION_NAMES[@]}" | LC_ALL=C sort | tail -1)
+          echo "computed ADMIN_MIGRATIONS_REQUIRED_HEAD=$ADMIN_HEAD"
+
   prod:
     needs: guard
     runs-on: ubuntu-latest
@@ -79,6 +106,20 @@ jobs:
 
       - uses: ./.github/actions/setup-monorepo
 
+      - name: Resolve admin Neon `main` URI
+        # The admin project's main branch is independent from the app project.
+        # Resolve a direct URI; pooled connections are not safe for the admin
+        # migrator's session advisory lock.
+        env:
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+          NEON_PROJECT_ID: ${{ vars.NEON_ADMIN_PROJECT_ID }}
+          NEON_DATABASE_NAME: harpa_admin
+          NEON_ROLE_NAME: harpa_admin_owner
+        run: |
+          URI=$(pnpm --silent db:branch:ensure main)
+          echo "::add-mask::$URI"
+          echo "ADMIN_DATABASE_URL=$URI" >> "$GITHUB_ENV"
+
       # Pre-deploy Neon snapshot named after the commit SHA. Gives us
       # a copy-on-write rollback target before Fly's release_command
       # applies any pending migration. This is a blocking safety gate:
@@ -86,11 +127,27 @@ jobs:
       # before prod schema or data can change.
       # See docs/v4/arch-cicd-and-migrations.md §Failure & rollback.
       # (pnpm + node already set up at top of job; node_modules persists.)
-      - name: Snapshot prod DB (pre-deploy)
+      - name: Prune and snapshot prod DB (pre-deploy)
         env:
           NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
           NEON_PROJECT_ID: ${{ secrets.NEON_PROJECT_ID }}
-        run: pnpm db:branch:snapshot "${GITHUB_SHA}" main
+        run: |
+          set -euo pipefail
+          # Cap at two before creation so the new snapshot becomes the third.
+          pnpm db:branch:prune-snapshots 30 2
+          pnpm db:branch:snapshot "${GITHUB_SHA}" main
+
+      - name: Prune and snapshot admin prod DB (pre-deploy)
+        # A separate snapshot in the admin project preserves its independent
+        # rollback boundary before db:migrate:admin runs. The same 2 + 1 cap
+        # reserves at least five PR branch slots beside main and dev.
+        env:
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+          NEON_PROJECT_ID: ${{ vars.NEON_ADMIN_PROJECT_ID }}
+        run: |
+          set -euo pipefail
+          pnpm db:branch:prune-snapshots 30 2
+          pnpm db:branch:snapshot "${GITHUB_SHA}" main
 
       - uses: superfly/flyctl-actions/setup-flyctl@1.5
 
@@ -103,9 +160,19 @@ jobs:
           DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN_PRD }}
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
         run: |
-          doppler secrets download --no-file --format env \
-            | grep -vE '^(DOPPLER_|NEON_|FLY_|CLOUDFLARE_|PUBLIC_|EXPO_PUBLIC_|PAGES_PROJECT|PORT|NODE_ENV|ADMIN_EMAIL)' \
-            | flyctl secrets import --stage --app harpa-pro-api
+          set -euo pipefail
+          FLY_SECRET_LIST=$(flyctl secrets list --app harpa-pro-api)
+          if printf '%s\n' "$FLY_SECRET_LIST" \
+            | awk 'NR > 1 { print $1 }' \
+            | grep -qx ADMIN_CORS_ORIGINS; then
+            flyctl secrets unset ADMIN_CORS_ORIGINS \
+              --stage --app harpa-pro-api
+          fi
+          {
+            doppler secrets download --no-file --format env \
+              | grep -vE '^(DOPPLER_|NEON_|FLY_|CLOUDFLARE_|PUBLIC_|EXPO_PUBLIC_|PAGES_PROJECT|PORT|NODE_ENV|ADMIN_EMAIL|ADMIN_DATABASE_URL=|ADMIN_CORS_ORIGINS=)'
+            echo "ADMIN_DATABASE_URL=$ADMIN_DATABASE_URL"
+          } | flyctl secrets import --stage --app harpa-pro-api
 
       - name: Deploy to Fly.io
         # Migration application belongs exclusively to fly.toml's
@@ -123,6 +190,13 @@ jobs:
       - name: Verify /readyz
         env:
           READYZ_URL: ${{ env.API_READY_URL }}
+        run: bash scripts/ci/verify-readyz.sh
+
+      - name: Verify /admin/readyz
+        # Deliberately post-deploy: admin DB health must not control Fly's
+        # routing health for the application API.
+        env:
+          READYZ_URL: https://harpa-pro-api.fly.dev/admin/readyz
         run: bash scripts/ci/verify-readyz.sh
 
       - name: Diagnose readyz failure

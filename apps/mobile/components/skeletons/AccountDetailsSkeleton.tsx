@@ -3,11 +3,10 @@
  *
  * Layout-shift policy (see docs/v4/arch-mobile-skeletons.md): this
  * skeleton mirrors the ScrollView content in `screens/account.tsx`
- * (px-5, gap: 20, paddingBottom: 40, `items-center pt-2` avatar
- * slot) so the avatar / info notice / form fields land on the same
- * Y when the profile arrives. Probes share `account:*` ids with the
- * loaded screen so `useLayoutShiftProbe` records before/after frames
- * for each landmark.
+ * (px-5, gap: 20, paddingBottom: 40) so the info notice / form fields
+ * land on the same Y when the profile arrives. Probes share
+ * `account:*` ids with the loaded screen so `useLayoutShiftProbe`
+ * records before/after frames for each landmark.
  */
 import { View } from 'react-native';
 
@@ -41,7 +40,6 @@ const BUTTON_HEIGHT = 54;
 export function AccountDetailsSkeleton({
   canEdit = false,
 }: AccountDetailsSkeletonProps = {}) {
-  const onAvatarLayout = useLayoutShiftProbe('account:avatar');
   const onInfoNoticeLayout = useLayoutShiftProbe('account:info-notice');
   const onEmailFieldLayout = useLayoutShiftProbe('account:email-field');
   const onCompanyFieldLayout = useLayoutShiftProbe('account:company-field');
@@ -52,10 +50,6 @@ export function AccountDetailsSkeleton({
       className="flex-1 px-5"
       style={{ gap: 20, paddingBottom: 40 }}
     >
-      <View className="items-center pt-2" onLayout={onAvatarLayout}>
-        <Skeleton width={96} height={96} circle />
-      </View>
-
       <View onLayout={onInfoNoticeLayout}>
         <Skeleton width="100%" height={INFO_NOTICE_HEIGHT} radius={8} />
       </View>

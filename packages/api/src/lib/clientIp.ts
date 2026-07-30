@@ -4,8 +4,8 @@
  * caller IP.
  *
  * Header precedence (matches docs/v4/arch-rate-limiting.md §3.1):
- *   1. `CF-Connecting-IP` — Cloudflare proxy.
- *   2. `Fly-Client-IP`    — Fly.io proxy.
+ *   1. `Fly-Client-IP`    — authenticated Fly.io proxy metadata.
+ *   2. `CF-Connecting-IP` — Cloudflare proxy fallback outside Fly.
  *   3. `X-Forwarded-For`  — generic reverse proxy / local dev.
  *
  * Falls back to the literal string `'unknown'` so the caller never has
@@ -14,13 +14,19 @@
  */
 import type { Context } from 'hono';
 import type { AppEnv } from '../app.js';
+import { isIP } from 'node:net';
 import { z } from 'zod';
 
+function validIp(value: string | undefined): string | null {
+  const candidate = value?.trim();
+  return candidate && isIP(candidate) !== 0 ? candidate : null;
+}
+
 export function clientIp(c: Context<AppEnv>): string {
-  const cf = c.req.header('cf-connecting-ip');
-  const fly = c.req.header('fly-client-ip');
+  const fly = validIp(c.req.header('fly-client-ip'));
+  const cf = validIp(c.req.header('cf-connecting-ip'));
   const xff = (c.req.header('x-forwarded-for') ?? '').split(',')[0]?.trim();
-  return cf ?? fly ?? (xff && xff.length > 0 ? xff : 'unknown');
+  return fly ?? cf ?? validIp(xff) ?? 'unknown';
 }
 
 /**

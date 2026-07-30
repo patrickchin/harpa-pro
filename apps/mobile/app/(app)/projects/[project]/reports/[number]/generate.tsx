@@ -692,6 +692,8 @@ export default function GenerateReportRoute() {
           enqueueCameraUris,
         });
         switch (outcome.kind) {
+          case 'unavailable':
+            return;
           case 'permission-denied':
             setUploadError(
               'Photo library access was denied. Enable it in Settings to attach images.',

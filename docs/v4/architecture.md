@@ -33,18 +33,27 @@ flowchart TB
         APIC["api-contract client (typed)"]
     end
 
+    subgraph Site["Site (apps/site → Cloudflare Pages)"]
+        ADMINUI["Admin activity console"]
+    end
+
     subgraph API["REST API (packages/api → Fly.io)"]
         HONO["Hono router"]
         SCOPE["withScopedConnection (per-request PG role)"]
         BA["better-auth (sessions in public.session)"]
+        ADMINAUTH["Dedicated admin auth"]
         DRIZZLE["Drizzle ORM"]
         AISVC["AI service (via ai-fixtures)"]
         OTP["Resend email-OTP (better-auth)"]
         R2SIGN["R2 signed URL minter"]
     end
 
-    subgraph Neon["Neon Postgres (branched per PR)"]
-        PG[("App + auth schemas")]
+    subgraph Neon["Application Neon project"]
+        PG[("App + Better Auth schemas")]
+    end
+
+    subgraph AdminNeon["harpa-pro-admin Neon project"]
+        ADMINPG[("Admin identities + sessions")]
     end
 
     subgraph R2["Cloudflare R2"]
@@ -66,29 +75,31 @@ flowchart TB
 
     UI --> RQ --> APIC
     UI --> QUEUE
-    APIC -- "HTTPS + Bearer JWT" --> HONO
+    APIC -- "HTTPS + bearer session" --> HONO
+    ADMINUI -- "HTTPS + admin cookie" --> HONO
     QUEUE -- "PUT (signed)" --> FILES
     HONO --> BA
+    HONO --> ADMINAUTH --> ADMINPG
     HONO --> SCOPE --> DRIZZLE --> PG
     HONO --> AISVC --> FIX --> K & OAI & ANT & G & ZAI & DS
     HONO --> R2SIGN
-    BA -- "Phone OTP" --> OTP
+    BA -- "Email OTP" --> OTP
 ```
 
 ## Stack at a glance
 
-| Layer | v3 (deprecated) | v4 (this rewrite) | Why we changed |
-|---|---|---|---|
-| Auth | Supabase Auth (JWT, JWKS) | **better-auth (email-OTP via Resend)**  | No Supabase. Self-hosted, easier to test. Migrated to better-auth in 2026-06 — see [arch-auth-and-rls.md](arch-auth-and-rls.md). |
-| DB | Supabase Postgres + RLS | **Neon Postgres** + per-request scoped roles | Free PR branching; RLS replaced by API-layer scope (no API service-role bypass risk). |
-| Storage | Supabase Storage | **Cloudflare R2** + signed URLs | No Supabase. R2 has zero egress, S3-compatible. |
-| Mobile styling | Unistyles (P2 onwards) | **NativeWind v4** | v3's switch to Unistyles caused the realignment. NativeWind matches mobile-old's class strings; faster ports. |
-| API | Hono + Drizzle | **same** | Working pattern, keep. |
-| Contract | Zod + OpenAPI generated types | **same** | Working pattern, keep. |
-| LLM mocking | Bolt-on mock-ai (P5.3) | **`ai-fixtures` package, P0** | Fixtures-first per Pitfall 2. |
-| Mobile state | React Query + legend-state | **same** | Worked. |
-| E2E | Maestro | **Maestro behaviour flows** | Per-page interaction tests. No automated visual diff. Manual review uses the relevant v4 spec or current baseline. |
-| CI gates | Coverage at end | **Per-phase gates** | Gates listed in each `plan-p*.md`. |
+| Layer          | v3 (deprecated)               | v4 (this rewrite)                                                         | Why we changed                                                                                                     |
+| -------------- | ----------------------------- | ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| Auth           | Supabase Auth (JWT, JWKS)     | **Better Auth for the app; isolated password auth for the admin console** | App and admin identities cannot authorize each other. See [arch-auth-and-rls.md](arch-auth-and-rls.md).            |
+| DB             | Supabase Postgres + RLS       | **Independent app and admin Neon projects**                               | App data keeps per-request scoped roles; admin credentials have an independent restore boundary.                   |
+| Storage        | Supabase Storage              | **Cloudflare R2** + signed URLs                                           | No Supabase. R2 has zero egress, S3-compatible.                                                                    |
+| Mobile styling | Unistyles (P2 onwards)        | **NativeWind v4**                                                         | v3's switch to Unistyles caused the realignment. NativeWind matches mobile-old's class strings; faster ports.      |
+| API            | Hono + Drizzle                | **same**                                                                  | Working pattern, keep.                                                                                             |
+| Contract       | Zod + OpenAPI generated types | **same**                                                                  | Working pattern, keep.                                                                                             |
+| LLM mocking    | Bolt-on mock-ai (P5.3)        | **`ai-fixtures` package, P0**                                             | Fixtures-first per Pitfall 2.                                                                                      |
+| Mobile state   | React Query + legend-state    | **same**                                                                  | Worked.                                                                                                            |
+| E2E            | Maestro                       | **Maestro behaviour flows**                                               | Per-page interaction tests. No automated visual diff. Manual review uses the relevant v4 spec or current baseline. |
+| CI gates       | Coverage at end               | **Per-phase gates**                                                       | Gates listed in each `plan-p*.md`.                                                                                 |
 
 ## Section index
 
@@ -96,13 +107,13 @@ flowchart TB
 |---|---|---|---|
 | 1 | API design | [arch-api-design.md](arch-api-design.md) | Endpoints, auth model, error format, pagination, rate limiting, OpenAPI strategy |
 | 1a | **Rate limiting** | [arch-rate-limiting.md](arch-rate-limiting.md) | **Per-route + shared AI + catch-all budgets; PostgresRateLimiter; SMS-pump protection on /api/auth/email-otp/*; multi-machine correctness** |
-| 2 | Auth + per-request scope | [arch-auth-and-rls.md](arch-auth-and-rls.md) | better-auth email-OTP (via Resend), scoped Postgres roles, RLS replacement, scope tests |
+| 2 | Auth + per-request scope | [arch-auth-and-rls.md](arch-auth-and-rls.md) | Better Auth email OTP, isolated admin password auth, scoped Postgres roles, and scope tests |
 | 3 | Data layer (mobile) | [arch-data-layer.md](arch-data-layer.md) | Generated client, React Query hooks, optimistic updates, error handling |
 | 4 | Mobile architecture | [arch-mobile.md](arch-mobile.md) | Directory structure, navigation, state, NativeWind tokens, primitives, upload queue, audio |
 | 4a | **Mobile navigation policy** | [arch-mobile-navigation.md](arch-mobile-navigation.md) | **push/replace/back/dismiss policy; per-call audit; back-stack pitfalls and `dismissOrReplaceTo` helper** |
 | 5 | Storage (R2) | [arch-storage.md](arch-storage.md) | R2 buckets, signed URL flow, lifecycle, security, fixture mode |
 | 6 | AI fixtures | [arch-ai-fixtures.md](arch-ai-fixtures.md) | record/replay/live modes, redaction, packaging |
-| 7 | Database (Neon) | [arch-database.md](arch-database.md) | Neon branching per PR, migrations, scoped roles, schema layout |
+| 7 | Databases (Neon) | [arch-database.md](arch-database.md) | Independent application and admin projects, branching, migrations, roles, and restore boundaries |
 | 7a | IDs + URL shapes | [arch-ids-and-urls.md](arch-ids-and-urls.md) | Prefixed slugs, UUIDv7 keys, per-project report numbers, long + short URLs, deep-link readiness |
 | 7b | **P3.0 IDs/slugs design** | [design-p30-ids-slugs.md](design-p30-ids-slugs.md) | **Migration plan, slug generator, API routes, scope tests, mobile routing (implementation-ready)** |
 | 8 | Shared packages | [arch-shared-packages.md](arch-shared-packages.md) | api-contract, ai-fixtures, ui (optional) |
@@ -120,9 +131,10 @@ flowchart TB
 | 17 | **Voice pipeline** | [arch-voice-pipeline.md](arch-voice-pipeline.md) | **End-to-end record → upload → transcribe → summarise → render pipeline; mobile recorder + API aggregator route + `VoiceNoteCard` (companion plan: [plan-voice-pipeline.md](plan-voice-pipeline.md))** |
 | 18 | **Mobile skeletons** | [arch-mobile-skeletons.md](arch-mobile-skeletons.md) | **Per-screen skeleton geometry policy to prevent layout-shift on hydrate** |
 | 19 | **App shell (P2.6)** | [arch-p2-6-app-shell.md](arch-p2-6-app-shell.md) | **Root provider tree, auth gate redirect, `(app)` tab/stack shape — design notes for the shell that landed in P2.6** |
-| 20 | **Office dashboard** | [design-office-dashboard.md](design-office-dashboard.md) | **Project/member/report management companion with keyboard-first report editing and mobile-first field capture** |
-| 21 | **Admin business activity (approved, in progress)** | [design-admin-business-activity.md](design-admin-business-activity.md) | **Append-oriented business events, an admin-only API, and the shared `apps/site` Astro route at `/admin/activity`, served through the `admin.harpapro.com` hostname** |
-| 22 | **Dashboard visual system** | [design-dashboard-visual-system.md](design-dashboard-visual-system.md) | **Mobile-authored colour, type, spacing, control, and shape contract for the office dashboard** |
+| 20 | **Admin business activity (implemented)** | [design-admin-business-activity.md](design-admin-business-activity.md) | **Append-oriented business events, an admin-only API, and the shared `apps/site` Astro route at `/admin/activity`, served through the `admin.harpapro.com` hostname** |
+| 20a | **Separate admin authentication (rollout pending)** | [design-separate-admin-auth.md](design-separate-admin-auth.md) | **Dedicated `@harpapro.com` identities, long-password login, opaque browser sessions, and an independent Neon project** |
+| 21 | **Office dashboard** | [design-office-dashboard.md](design-office-dashboard.md) | **Project/member/report management companion with keyboard-first report editing and mobile-first field capture** |
+| 21a | **Dashboard visual system** | [design-dashboard-visual-system.md](design-dashboard-visual-system.md) | **Mobile-authored colour, type, spacing, control, and shape contract for the office dashboard only** |
 
 ## Repo layout (target end of P0)
 
@@ -138,11 +150,12 @@ apps/
 
 packages/
   api/                    # Hono REST API
+    admin-migrations/     # isolated harpa-pro-admin migration stream
     src/
       routes/             # one file per resource
       middleware/         # auth, scope, rate-limit, request-id
       services/           # ai, files, otp, …
-      db/                 # Drizzle schema + migrations
+      db/                 # app/admin clients, schemas, scope + migrators
       __tests__/
         integration/      # Testcontainers
         scope/            # per-request scope (RLS replacement)
@@ -172,14 +185,14 @@ skills/                   # auto-loaded
 
 ## Phases
 
-| Phase | Name | Exit gate (binding) |
-|---|---|---|
-| P0 | Foundation | All packages scaffold compiles. `ai-fixtures` works (replay + record). better-auth email-OTP route hits Resend sandbox + integration test green. Neon branch script tested in CI. |
-| P1 | API Core | All routes implemented (zero stubs). `pnpm test:api && pnpm test:api:integration` green at ≥90% line coverage. Per-request scope tests cover every authed route. Fixture replay covers every AI route. |
-| P2 | Mobile Shell | Auth + nav + every primitive built. Every auth screen + projects list implemented and reviewed against its relevant v4 spec. NativeWind tokens locked in `tailwind.config.js`. Screen bodies in `screens/<name>.tsx` are props-driven and unit-testable in isolation. |
-| P3 | Feature Build | Every screen in the relevant v4 plans implemented, with a behaviour test for each interaction and a Maestro flow. No screen is "stubbed" or "TODO redesign". |
-| P4 | E2E + Hardening | Full Maestro journey green on iOS + Android. Sentry wired. Fly + Neon prod deploy green. PDF export bit-for-bit equivalent to mobile-old samples. |
-| P5 | Beta + GA | TestFlight + Play internal track distribution. Rollout monitor. Cutover. |
+| Phase | Name            | Exit gate (binding)                                                                                                                                                                                                                                                   |
+| ----- | --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| P0    | Foundation      | All packages scaffold compiles. `ai-fixtures` works (replay + record). better-auth email-OTP route hits Resend sandbox + integration test green. Neon branch script tested in CI.                                                                                     |
+| P1    | API Core        | All routes implemented (zero stubs). `pnpm test:api && pnpm test:api:integration` green at ≥90% line coverage. Per-request scope tests cover every authed route. Fixture replay covers every AI route.                                                                |
+| P2    | Mobile Shell    | Auth + nav + every primitive built. Every auth screen + projects list implemented and reviewed against its relevant v4 spec. NativeWind tokens locked in `tailwind.config.js`. Screen bodies in `screens/<name>.tsx` are props-driven and unit-testable in isolation. |
+| P3    | Feature Build   | Every screen in the relevant v4 plans implemented, with a behaviour test for each interaction and a Maestro flow. No screen is "stubbed" or "TODO redesign".                                                                                                          |
+| P4    | E2E + Hardening | Full Maestro journey green on iOS + Android. Sentry wired. Fly + Neon prod deploy green. PDF export bit-for-bit equivalent to mobile-old samples.                                                                                                                     |
+| P5    | Beta + GA       | TestFlight + Play internal track distribution. Rollout monitor. Cutover.                                                                                                                                                                                              |
 
 Each phase's exit gate is enforced by a single CI workflow named
 after the phase (e.g. `.github/workflows/p1-exit-gate.yml`). PRs
@@ -189,5 +202,5 @@ See [`implementation-plan.md`](implementation-plan.md).
 
 ---
 
-*All deeper detail lives in the per-section docs above. This page
-stays short on purpose.*
+_All deeper detail lives in the per-section docs above. This page
+stays short on purpose._

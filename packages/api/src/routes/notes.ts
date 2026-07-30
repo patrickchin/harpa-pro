@@ -17,6 +17,7 @@ import {
 import type { AppEnv } from '../app.js';
 import { requireProjectWriter } from '../lib/project-authorization.js';
 import { withAuth } from '../middleware/auth.js';
+import { recordActivityEvent } from '../services/activity-events.js';
 import {
   appendFiles,
   createNote,
@@ -29,6 +30,13 @@ import { getReport } from '../services/reports.js';
 
 const reportParam = z.object({ report: reportId.openapi({ param: { name: 'report', in: 'path' } }) });
 const noteParam = z.object({ note: noteId.openapi({ param: { name: 'note', in: 'path' } }) });
+
+const NOTE_CREATED_EVENT_TYPES = {
+  text: 'note.text_created',
+  voice: 'note.voice_created',
+  image: 'note.image_created',
+  document: 'note.document_created',
+} as const;
 
 export const noteRoutes = new OpenAPIHono<AppEnv>();
 
@@ -102,7 +110,23 @@ noteRoutes.openapi(
     const report = await db((d) => getReport(d, reportId));
     if (!report) throw new HTTPException(404, { message: 'Report not found.' });
     await requireProjectWriter(db, userId, report.projectId);
-    const note = await db((d) => createNote(d, reportId, userId, body));
+    const requestId = c.get('requestId');
+    const note = await db(async (d) => {
+      const created = await createNote(d, reportId, userId, body);
+      if (created) {
+        const eventType = NOTE_CREATED_EVENT_TYPES[created.kind];
+        await recordActivityEvent(d, {
+          eventType,
+          actorUserId: userId,
+          subjectId: created.id,
+          projectId: report.projectId,
+          requestId,
+          dedupeKey: `${eventType}:${created.id}`,
+          metadata: {},
+        });
+      }
+      return created;
+    });
     if (!note) throw new HTTPException(500, { message: 'create failed' });
     return c.json(note, 201);
   },

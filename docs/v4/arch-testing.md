@@ -186,6 +186,31 @@ Active today:
 | `dashboard-preview.yml`       | PR to `dev` or `main`     | Test and deploy a unique office-dashboard preview                                                      |
 | `dashboard-dev.yml`           | push to `dev`             | Deploy dashboard to the Pages dev branch                                                               |
 | `dashboard-prod.yml`          | push to `main`            | Deploy dashboard to `app.harpapro.com`                                                                 |
+| `dependency-review.yml`       | every PR                  | Reject newly introduced high or critical dependency vulnerabilities                                   |
+
+### Dependency security automation
+
+GitHub reads [`.github/dependabot.yml`](../../.github/dependabot.yml) from
+the repository's default branch, `main`. It checks the root pnpm workspace
+and GitHub Actions weekly. Routine version-update pull requests target
+`dev`; minor and patch updates are grouped by risk, while major updates
+remain separate for focused review.
+
+Dependabot security updates are enabled separately under **Settings → Code
+security and analysis**. They are advisory-driven rather than scheduled and
+always target the default branch, `main`; the `target-branch: dev`
+customizations apply only to routine version updates. The configuration does
+not become active until it reaches `main`.
+
+The `dependency-review` workflow uses GitHub's dependency graph to reject
+pull requests that introduce high or critical vulnerabilities. Once this
+workflow has reached default branch `main` and its check has run successfully,
+make the `dependency-review` job required in both `dev` and `main` branch
+protection. Do not add the required check before then: routine version-update
+pull requests target `dev`, while security-update pull requests target `main`,
+and both paths need the workflow to be active first. Existing vulnerabilities
+are tracked by Dependabot alerts and security-update pull requests rather than
+failing every unrelated change.
 
 Deferred (add when the phase actually starts, not before):
 

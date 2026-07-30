@@ -5,15 +5,19 @@ name: pr-preview
 # Lifecycle (all keyed on PR number `${{ github.event.pull_request.number }}`):
 #
 #   on open / synchronize / reopen
-#     ├─ neon-create  → Neon branch `pr-<n>` (delete-and-recreate from `main`)
-#     └─ fly-preview  → Fly app `harpa-pro-api-pr-<n>` (create + deploy)
-#                       └─ release_command runs `pnpm db:migrate` against pr-<n>
+#     ├─ neon-create        → app Neon `pr-<n>` from app `dev`
+#     ├─ admin-neon-create  → admin Neon `pr-<n>` from admin `dev`
+#     └─ fly-preview        → Fly app `harpa-pro-api-pr-<n>` (create + deploy)
+#                       └─ release_command migrates both isolated branches
 #                       └─ /readyz verified after deploy
+#                       └─ /admin/readyz verified separately after deploy
+#                       └─ both DB branches expire automatically after 7 days
 #                       └─ sticky PR comment with the preview URL
 #
 #   on close (merged or not)
 #     ├─ fly-destroy  → flyctl apps destroy harpa-pro-api-pr-<n>
-#     └─ neon-destroy → Neon branch `pr-<n>` deleted (after fly-destroy)
+#     ├─ neon-destroy       → app Neon branch deleted (after fly-destroy)
+#     └─ admin-neon-destroy → admin Neon branch deleted (after fly-destroy)
 #
 # Optimisation: only run for PRs that touch API code or migrations. Docs /
 # marketing / mobile-only PRs skip both Neon and Fly. Close events always
@@ -77,11 +81,32 @@ jobs:
             exit 1
           fi
 
+          ADMIN_MIG_DIR=packages/api/admin-migrations
+          ADMIN_MIGRATION_FILES=("$ADMIN_MIG_DIR"/*.sql)
+          if [[ ! -e "${ADMIN_MIGRATION_FILES[0]}" ]]; then
+            echo "::error::no .sql files in $ADMIN_MIG_DIR"
+            exit 1
+          fi
+          ADMIN_MIGRATION_NAMES=("${ADMIN_MIGRATION_FILES[@]##*/}")
+          bad=0
+          for f in "${ADMIN_MIGRATION_NAMES[@]}"; do
+            if ! echo "$f" | grep -qE '^[0-9]+_[a-z0-9_]+\.sql$'; then
+              echo "::error file=$ADMIN_MIG_DIR/$f::filename must match <digits>_<slug>.sql"
+              bad=$((bad+1))
+            fi
+          done
+          if [[ "$bad" -gt 0 ]]; then exit 1; fi
+          dups=$(printf '%s\n' "${ADMIN_MIGRATION_NAMES[@]}" | awk -F_ '{print $1}' | sort | uniq -d)
+          if [[ -n "$dups" ]]; then
+            echo "::error::duplicate admin migration prefix(es): $dups"
+            exit 1
+          fi
+
   # Create the per-PR Neon branch on open/sync. Migrations are NOT applied
   # here — they run inside the Fly preview's release machine in `fly-preview`
   # (matches dev/prod, single source of truth for migration application).
   neon-create:
-    needs: changes
+    needs: [changes, guard]
     if: |
       github.event.action != 'closed' &&
       needs.changes.outputs.api == 'true' &&
@@ -95,14 +120,38 @@ jobs:
           NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
           NEON_PROJECT_ID: ${{ secrets.NEON_PROJECT_ID }}
         # `db:branch:create` is delete-and-recreate, so each push gets a
-        # fresh branch from `main`. Migrations apply via Fly release_command.
-        run: pnpm --silent db:branch:create ${{ github.event.pull_request.number }} > /dev/null
+        # fresh branch from `dev` with a seven-day expiry. Migrations apply via
+        # Fly release_command.
+        run: pnpm --silent db:branch:create ${{ github.event.pull_request.number }} dev > /dev/null
+
+  # Create the matching branch in the isolated admin project. It is based on
+  # admin `dev` so preview credentials can be provisioned independently from
+  # production while remaining stable across the preview fleet.
+  admin-neon-create:
+    needs: [changes, guard]
+    if: |
+      github.event.action != 'closed' &&
+      needs.changes.outputs.api == 'true' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-monorepo
+      - name: Create admin Neon branch
+        env:
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+          NEON_PROJECT_ID: ${{ vars.NEON_ADMIN_PROJECT_ID }}
+          NEON_DATABASE_NAME: harpa_admin
+          NEON_ROLE_NAME: harpa_admin_owner
+        run: |
+          pnpm --silent db:branch:create \
+            ${{ github.event.pull_request.number }} dev > /dev/null
 
   # Deploy a per-PR Fly app. Mirrors api-dev.yml's idioms: Doppler dev →
   # `flyctl secrets import --stage` → `flyctl deploy`. The PR's Neon URI
   # overrides DATABASE_URL so the release_command migrates the right branch.
   fly-preview:
-    needs: [neon-create]
+    needs: [guard, neon-create, admin-neon-create]
     if: |
       github.event.action != 'closed' &&
       github.event.pull_request.head.repo.full_name == github.repository
@@ -120,13 +169,28 @@ jobs:
       - name: Resolve Neon URI for this PR
         # `ensure` is read-or-create on a branch *name*. The branch was just
         # made by `neon-create`; ensure returns its URI without recreating.
+        # Preview runtime deliberately shares this direct URI with migrations:
+        # traffic is small and a second pooled credential adds little value.
         env:
           NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
           NEON_PROJECT_ID: ${{ secrets.NEON_PROJECT_ID }}
         run: |
-          URI=$(pnpm --silent db:branch:ensure pr-${{ github.event.pull_request.number }})
+          URI=$(pnpm --silent db:branch:ensure pr-${{ github.event.pull_request.number }} dev)
           echo "::add-mask::$URI"
           echo "DATABASE_URL=$URI" >> "$GITHUB_ENV"
+
+      - name: Resolve admin Neon URI for this PR
+        # Direct URI only: db:migrate:admin takes a session advisory lock.
+        # It is deliberately also the low-volume preview runtime URI.
+        env:
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+          NEON_PROJECT_ID: ${{ vars.NEON_ADMIN_PROJECT_ID }}
+          NEON_DATABASE_NAME: harpa_admin
+          NEON_ROLE_NAME: harpa_admin_owner
+        run: |
+          URI=$(pnpm --silent db:branch:ensure pr-${{ github.event.pull_request.number }} dev)
+          echo "::add-mask::$URI"
+          echo "ADMIN_DATABASE_URL=$URI" >> "$GITHUB_ENV"
 
       - uses: superfly/flyctl-actions/setup-flyctl@1.5
 
@@ -143,18 +207,26 @@ jobs:
       - uses: dopplerhq/cli-action@v3
 
       - name: Stage Fly secrets from Doppler (with PR-specific DATABASE_URL)
-        # Same filter as api-dev.yml; additionally drop DATABASE_URL from the
-        # Doppler stream and append the PR's Neon URI so the release_command
-        # migrates the per-PR branch instead of dev. `--stage` defers
-        # activation; the subsequent deploy flips them on.
+        # Same filter as api-dev.yml; drop both database URLs from Doppler and
+        # append the two PR-specific direct URIs. `--stage` defers activation;
+        # the subsequent deploy flips them on.
         env:
           DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN_DEV }}
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
         run: |
+          set -euo pipefail
+          FLY_SECRET_LIST=$(flyctl secrets list --app "$APP_NAME")
+          if printf '%s\n' "$FLY_SECRET_LIST" \
+            | awk 'NR > 1 { print $1 }' \
+            | grep -qx ADMIN_CORS_ORIGINS; then
+            flyctl secrets unset ADMIN_CORS_ORIGINS \
+              --stage --app "$APP_NAME"
+          fi
           {
             doppler secrets download --no-file --format env \
-              | grep -vE '^(DOPPLER_|NEON_|FLY_|CLOUDFLARE_|PUBLIC_|EXPO_PUBLIC_|PAGES_PROJECT|PORT|NODE_ENV|ADMIN_EMAIL|DATABASE_URL)='
+              | grep -vE '^(DOPPLER_|NEON_|FLY_|CLOUDFLARE_|PUBLIC_|EXPO_PUBLIC_|PAGES_PROJECT|PORT|NODE_ENV|ADMIN_EMAIL|DATABASE_URL=|ADMIN_DATABASE_URL=|ADMIN_CORS_ORIGINS=)'
             echo "DATABASE_URL=$DATABASE_URL"
+            echo "ADMIN_DATABASE_URL=$ADMIN_DATABASE_URL"
           } | flyctl secrets import --stage --app "$APP_NAME"
 
       - name: Deploy to Fly.io (preview)
@@ -168,14 +240,21 @@ jobs:
             exit 1
           fi
           HEAD=$(printf '%s\n' "${MIGRATION_FILES[@]##*/}" | LC_ALL=C sort | tail -1)
+          ADMIN_MIGRATION_FILES=(packages/api/admin-migrations/*.sql)
+          if [[ ! -e "${ADMIN_MIGRATION_FILES[0]}" ]]; then
+            echo "ERROR: no .sql files in packages/api/admin-migrations" >&2
+            exit 1
+          fi
+          ADMIN_HEAD=$(printf '%s\n' "${ADMIN_MIGRATION_FILES[@]##*/}" | LC_ALL=C sort | tail -1)
           GIT_COMMIT=$(git rev-parse HEAD)
           BUILD_TIME=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-          echo "deploy: app=$APP_NAME head=$HEAD commit=$GIT_COMMIT"
+          echo "deploy: app=$APP_NAME head=$HEAD admin_head=$ADMIN_HEAD commit=$GIT_COMMIT"
           flyctl deploy \
             --app "$APP_NAME" \
             --config infra/fly/fly.preview.toml \
             --dockerfile infra/fly/Dockerfile \
             --build-arg "MIGRATIONS_REQUIRED_HEAD=$HEAD" \
+            --build-arg "ADMIN_MIGRATIONS_REQUIRED_HEAD=$ADMIN_HEAD" \
             --build-arg "GIT_COMMIT=$GIT_COMMIT" \
             --build-arg "BUILD_TIME=$BUILD_TIME" \
             --remote-only
@@ -193,6 +272,12 @@ jobs:
           READYZ_URL: https://${{ env.APP_NAME }}.fly.dev/readyz
         run: bash scripts/ci/verify-readyz.sh
 
+      - name: Verify /admin/readyz
+        # Post-deploy only: admin health must not gate application routing.
+        env:
+          READYZ_URL: https://${{ env.APP_NAME }}.fly.dev/admin/readyz
+        run: bash scripts/ci/verify-readyz.sh
+
       - name: Post preview URL as sticky PR comment
         uses: marocchino/sticky-pull-request-comment@v2
         with:
@@ -202,7 +287,9 @@ jobs:
 
             - URL: <https://${{ env.APP_NAME }}.fly.dev>
             - Readyz: <https://${{ env.APP_NAME }}.fly.dev/readyz>
-            - DB: Neon branch `pr-${{ github.event.pull_request.number }}`
+            - Admin readyz: <https://${{ env.APP_NAME }}.fly.dev/admin/readyz>
+            - App DB: Neon branch `pr-${{ github.event.pull_request.number }}`
+            - Admin DB: Neon branch `pr-${{ github.event.pull_request.number }}`
             - Commit: `${{ github.event.pull_request.head.sha }}`
 
             To point a dev/preview mobile build at this preview, call
@@ -234,7 +321,10 @@ jobs:
   # branch is the more expensive surface).
   neon-destroy:
     needs: [fly-destroy]
-    if: always() && github.event.action == 'closed'
+    if: |
+      always() &&
+      github.event.action == 'closed' &&
+      github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -243,4 +333,24 @@ jobs:
         env:
           NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
           NEON_PROJECT_ID: ${{ secrets.NEON_PROJECT_ID }}
-        run: pnpm db:branch:delete ${{ github.event.pull_request.number }} || true
+        run: pnpm db:branch:delete ${{ github.event.pull_request.number }}
+
+  # Delete the matching branch from the independent admin project. This runs
+  # alongside the app DB cleanup after the Fly app teardown completes.
+  admin-neon-destroy:
+    needs: [fly-destroy]
+    if: |
+      always() &&
+      github.event.action == 'closed' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-monorepo
+      - name: Delete admin Neon branch
+        env:
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+          NEON_PROJECT_ID: ${{ vars.NEON_ADMIN_PROJECT_ID }}
+          NEON_DATABASE_NAME: harpa_admin
+          NEON_ROLE_NAME: harpa_admin_owner
+        run: pnpm db:branch:delete ${{ github.event.pull_request.number }}

@@ -1,14 +1,36 @@
 import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi';
+import type { Context } from 'hono';
 import { HTTPException } from 'hono/http-exception';
 import { activity as activitySchemas } from '@harpa/api-contract';
 import type { AppEnv } from '../app.js';
-import { withAdmin } from '../middleware/admin.js';
-import { withAuth } from '../middleware/auth.js';
+import { getAdminRateLimiter } from '../lib/adminRateLimiter.js';
+import { adminAuthIpWindow } from '../middleware/admin-rate-limit.js';
+import { withAdminSession } from '../middleware/admin-session.js';
+import { withRateLimit } from '../middleware/rateLimit.js';
 import { listAdminActivity } from '../services/admin-activity.js';
+
+const MINUTE_MS = 60_000;
 
 const errorBody = z.object({
   error: z.object({ code: z.string(), message: z.string() }),
   requestId: z.string().optional(),
+});
+
+function adminActivityRateLimitKey(c: Context<AppEnv>): string {
+  const identityId = c.get('adminIdentityId');
+  const sessionId = c.get('adminSessionId');
+  if (!identityId || !sessionId) {
+    throw new HTTPException(401, { message: 'Unauthorized.' });
+  }
+  return `${identityId}:${sessionId}`;
+}
+
+const adminActivityRateLimit = withRateLimit({
+  name: 'admin.activity.read.1m',
+  keyBy: adminActivityRateLimitKey,
+  limit: 120,
+  windowMs: MINUTE_MS,
+  getLimiter: getAdminRateLimiter,
 });
 
 export const adminActivityRoutes = new OpenAPIHono<AppEnv>();
@@ -18,8 +40,10 @@ adminActivityRoutes.openapi(
     method: 'get',
     path: '/admin/activity',
     tags: ['admin'],
-    security: [{ bearerAuth: [] }],
-    middleware: [withAuth(), withAdmin()] as const,
+    security: [{ adminSession: [] }],
+    // Gate random-token database probes by trusted Fly IP, then authenticate
+    // before consuming the identity-and-session activity bucket.
+    middleware: [adminAuthIpWindow, withAdminSession(), adminActivityRateLimit] as const,
     request: {
       query: activitySchemas.listQuery,
     },
@@ -38,8 +62,8 @@ adminActivityRoutes.openapi(
         description: 'Unauthorized.',
         content: { 'application/json': { schema: errorBody } },
       },
-      403: {
-        description: 'Admin access required.',
+      429: {
+        description: 'Rate limited.',
         content: { 'application/json': { schema: errorBody } },
       },
     },

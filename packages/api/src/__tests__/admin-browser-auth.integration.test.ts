@@ -1,65 +1,68 @@
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { createApp } from '../app.js';
+import { getAdminPool } from '../db/admin-client.js';
 import { getPool, resetPool } from '../db/client.js';
+import { resetAdminRateLimiter } from '../lib/adminRateLimiter.js';
+import { authenticateAdmin, hashAdminPassword, setAdminPassword } from '../services/admin-auth.js';
+import { startAdminPg, type AdminPgFixture } from './setup-admin-pg.js';
 import { startPg, type PgFixture } from './setup-pg.js';
 
 const ADMIN_ORIGIN = 'http://localhost:3002';
 const DASHBOARD_ORIGIN = 'https://app.harpapro.com';
-let fx: PgFixture;
+const ADMIN_EMAIL = 'browser-admin@harpapro.com';
+const ADMIN_PASSWORD = 'correct horse battery staple admin password';
 
-async function readOtp(email: string): Promise<string> {
-  const result = await getPool().query<{ value: string }>(
-    `SELECT value
-     FROM public.verification
-     WHERE identifier = $1
-     ORDER BY created_at DESC
-     LIMIT 1`,
-    [`sign-in-otp-${email}`],
-  );
-  const value = result.rows[0]?.value;
-  if (!value) throw new Error(`no OTP found for ${email}`);
-  return value.split(':')[0]!;
+let fx: PgFixture;
+let adminFx: AdminPgFixture;
+
+function cookiePair(response: Response): string {
+  const setCookie = response.headers.get('set-cookie');
+  if (!setCookie) throw new Error('admin auth response did not set a cookie');
+  return setCookie.split(';')[0]!;
 }
 
-function cookieHeader(response: Response): string {
-  const setCookie = response.headers.get('set-cookie');
-  if (!setCookie) throw new Error('auth response did not set a cookie');
-  return setCookie
-    .split(/,(?=[^;,]+=)/)
-    .map((cookie) => cookie.split(';')[0]!)
-    .join('; ');
+async function login(
+  email = ADMIN_EMAIL,
+  password = ADMIN_PASSWORD,
+  origin = ADMIN_ORIGIN,
+): Promise<Response> {
+  return createApp().request('/admin/auth/login', {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      origin,
+    },
+    body: JSON.stringify({ email, password }),
+  });
 }
 
 beforeAll(async () => {
-  process.env.EMAIL_OTP_LIVE = '0';
-  fx = await startPg();
+  [fx, adminFx] = await Promise.all([startPg(), startAdminPg()]);
   process.env.DATABASE_URL = fx.url;
+  process.env.ADMIN_DATABASE_URL = adminFx.url;
   await resetPool();
   getPool(fx.url);
+  getAdminPool(adminFx.url);
+
+  await getAdminPool().query(
+    `INSERT INTO admin.identities (id, email, password_hash)
+     VALUES ($1, $2, $3)`,
+    ['adm_0123456789ab', ADMIN_EMAIL, await hashAdminPassword(ADMIN_PASSWORD)],
+  );
 }, 120_000);
 
 afterAll(async () => {
-  await fx?.stop();
+  await Promise.all([fx?.stop(), adminFx?.stop()]);
 }, 60_000);
 
-describe('admin browser authentication and CORS', () => {
-  it('allows credentialed preflights only from the configured admin origin', async () => {
-    const app = createApp();
-    const adminPreflight = await app.request('/admin/activity', {
-      method: 'OPTIONS',
-      headers: {
-        origin: ADMIN_ORIGIN,
-        'access-control-request-method': 'GET',
-        'access-control-request-headers': 'content-type',
-      },
-    });
-    expect(adminPreflight.status).toBeGreaterThanOrEqual(200);
-    expect(adminPreflight.status).toBeLessThan(300);
-    expect(adminPreflight.headers.get('access-control-allow-origin')).toBe(ADMIN_ORIGIN);
-    expect(adminPreflight.headers.get('access-control-allow-credentials')).toBe('true');
-    expect(adminPreflight.headers.get('access-control-allow-methods')).toMatch(/GET/);
+beforeEach(() => {
+  resetAdminRateLimiter();
+});
 
-    const authPreflight = await app.request('/api/auth/sign-in/email-otp', {
+describe('dedicated admin browser authentication', () => {
+  it('allows credentialed admin preflights only from the configured origin', async () => {
+    const app = createApp();
+    const loginPreflight = await app.request('/admin/auth/login', {
       method: 'OPTIONS',
       headers: {
         origin: ADMIN_ORIGIN,
@@ -67,63 +70,234 @@ describe('admin browser authentication and CORS', () => {
         'access-control-request-headers': 'content-type',
       },
     });
-    expect(authPreflight.headers.get('access-control-allow-origin')).toBe(ADMIN_ORIGIN);
-    expect(authPreflight.headers.get('access-control-allow-credentials')).toBe('true');
-    expect(authPreflight.headers.get('access-control-allow-methods')).toMatch(/POST/);
+    expect(loginPreflight.status).toBeGreaterThanOrEqual(200);
+    expect(loginPreflight.status).toBeLessThan(300);
+    expect(loginPreflight.headers.get('access-control-allow-origin')).toBe(ADMIN_ORIGIN);
+    expect(loginPreflight.headers.get('access-control-allow-credentials')).toBe('true');
+    expect(loginPreflight.headers.get('access-control-allow-methods')).toMatch(/POST/);
 
-    const rejected = await app.request('/admin/activity', {
+    const appAuthPreflight = await app.request('/api/auth/sign-in/email', {
       method: 'OPTIONS',
       headers: {
-        origin: 'https://evil.example.com',
-        'access-control-request-method': 'GET',
+        origin: ADMIN_ORIGIN,
+        'access-control-request-method': 'POST',
       },
     });
-    expect(rejected.headers.get('access-control-allow-origin')).toBeNull();
+    expect(appAuthPreflight.headers.get('access-control-allow-origin')).toBeNull();
+    expect(appAuthPreflight.headers.get('access-control-allow-credentials')).toBeNull();
 
-    const dashboardRejected = await app.request('/admin/activity', {
+    const dashboardRejected = await app.request('/admin/auth/login', {
       method: 'OPTIONS',
       headers: {
         origin: DASHBOARD_ORIGIN,
-        'access-control-request-method': 'GET',
+        'access-control-request-method': 'POST',
       },
     });
     expect(dashboardRejected.headers.get('access-control-allow-origin')).toBeNull();
+
+    const rejected = await app.request('/admin/auth/login', {
+      method: 'OPTIONS',
+      headers: {
+        origin: 'https://evil.example.com',
+        'access-control-request-method': 'POST',
+      },
+    });
+    expect(rejected.headers.get('access-control-allow-origin')).toBeNull();
   });
 
-  it('authenticates an admin activity request with the Better Auth cookie', async () => {
-    const email = 'cookie-admin@example.com';
+  it('rejects oversized login bodies before rate limiting or authentication', async () => {
+    const email = 'body-limit@harpapro.com';
+    const password = 'body limit admin password deliberately long';
+    await setAdminPassword(email, password);
+    const oversizedBody = JSON.stringify({
+      email,
+      password,
+      padding: 'x'.repeat(8 * 1024),
+    });
+    const byteLength = Buffer.byteLength(oversizedBody);
+    expect(byteLength).toBeGreaterThan(8 * 1024);
+
     const app = createApp();
-    const send = await app.request('/api/auth/email-otp/send-verification-otp', {
+    const untrustedOriginResponse = await app.request('/admin/auth/login', {
       method: 'POST',
       headers: {
+        'content-length': String(byteLength),
+        'content-type': 'application/json',
+        origin: 'https://evil.example.com',
+      },
+      body: oversizedBody,
+    });
+    expect(untrustedOriginResponse.status).toBe(403);
+
+    const contentLengthResponse = await app.request('/admin/auth/login', {
+      method: 'POST',
+      headers: {
+        'content-length': String(byteLength),
         'content-type': 'application/json',
         origin: ADMIN_ORIGIN,
       },
-      body: JSON.stringify({ email, type: 'sign-in' }),
+      body: oversizedBody,
     });
-    expect(send.status).toBe(200);
 
-    const verify = await app.request('/api/auth/sign-in/email-otp', {
+    const streamedResponses: Response[] = [];
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      const request = new Request('http://localhost/admin/auth/login', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          origin: ADMIN_ORIGIN,
+        },
+        body: oversizedBody,
+      });
+      expect(request.headers.has('content-length')).toBe(false);
+      streamedResponses.push(await app.request(request));
+    }
+
+    for (const response of [contentLengthResponse, ...streamedResponses]) {
+      expect(response.status).toBe(413);
+      expect(response.headers.get('cache-control')).toContain('no-store');
+      await expect(response.json()).resolves.toEqual({
+        error: {
+          code: 'payload_too_large',
+          message: 'Request body is too large.',
+        },
+        requestId: expect.any(String),
+      });
+    }
+
+    const beforeValidLogin = await getAdminPool().query<{ count: number }>(
+      `SELECT count(*)::int AS count
+       FROM admin.sessions AS session
+       JOIN admin.identities AS identity
+         ON identity.id = session.admin_identity_id
+       WHERE identity.email = $1`,
+      [email],
+    );
+    expect(beforeValidLogin.rows).toEqual([{ count: 0 }]);
+
+    // Four oversized attempts would exhaust the three-per-minute burst
+    // bucket if any rate-limit middleware had run.
+    const validLogin = await login(email, password);
+    expect(validLogin.status).toBe(200);
+  });
+
+  it('sets only the dedicated HttpOnly cookie and reads the session', async () => {
+    const loginResponse = await login();
+    expect(loginResponse.status).toBe(200);
+    await expect(loginResponse.json()).resolves.toEqual({
+      authenticated: true,
+      email: ADMIN_EMAIL,
+    });
+    expect(loginResponse.headers.get('cache-control')).toContain('no-store');
+    expect(loginResponse.headers.get('set-cookie')).toMatch(
+      /^harpa_admin_session=[^;]+;.*HttpOnly/i,
+    );
+    expect(loginResponse.headers.get('set-cookie')).not.toContain('session_token');
+
+    const session = await createApp().request('/admin/auth/session', {
+      headers: {
+        cookie: cookiePair(loginResponse),
+        origin: ADMIN_ORIGIN,
+      },
+    });
+    expect(session.status).toBe(200);
+    await expect(session.json()).resolves.toEqual({
+      authenticated: true,
+      email: ADMIN_EMAIL,
+    });
+  });
+
+  it('returns the same generic failure for every invalid credential class', async () => {
+    const responses = await Promise.all([
+      login(ADMIN_EMAIL, 'incorrect password long enough to submit'),
+      login('unknown@harpapro.com', ADMIN_PASSWORD),
+      login('browser-admin@example.com', ADMIN_PASSWORD),
+    ]);
+
+    expect(responses.map((response) => response.status)).toEqual([401, 401, 401]);
+    const bodies = await Promise.all(responses.map((response) => response.text()));
+    expect(new Set(bodies).size).toBe(1);
+    expect(bodies[0]).not.toContain(ADMIN_EMAIL);
+    expect(bodies[0]).not.toMatch(/unknown|domain|disabled/i);
+  });
+
+  it('does not create a session from a password verified before rotation', async () => {
+    const email = 'password-race@harpapro.com';
+    const oldPassword = 'old admin password deliberately long enough';
+    const newPassword = 'new admin password deliberately long enough';
+    await setAdminPassword(email, oldPassword);
+
+    let markVerified!: () => void;
+    const verified = new Promise<void>((resolve) => {
+      markVerified = resolve;
+    });
+    let releaseVerification!: () => void;
+    const rotationCommitted = new Promise<void>((resolve) => {
+      releaseVerification = resolve;
+    });
+
+    const inFlightLogin = authenticateAdmin(email, oldPassword, {
+      testOnlyAfterPasswordVerified: async () => {
+        markVerified();
+        await rotationCommitted;
+      },
+    });
+
+    await verified;
+    try {
+      await setAdminPassword(email, newPassword);
+    } finally {
+      releaseVerification();
+    }
+
+    await expect(inFlightLogin).resolves.toBeNull();
+    const sessionCount = await getAdminPool().query<{ count: number }>(
+      `SELECT count(*)::int AS count
+       FROM admin.sessions AS session
+       JOIN admin.identities AS identity
+         ON identity.id = session.admin_identity_id
+       WHERE identity.email = $1`,
+      [email],
+    );
+    expect(sessionCount.rows).toEqual([{ count: 0 }]);
+  });
+
+  it('requires an exact trusted Origin for login', async () => {
+    const missing = await createApp().request('/admin/auth/login', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ email: ADMIN_EMAIL, password: ADMIN_PASSWORD }),
+    });
+    const untrusted = await login(
+      ADMIN_EMAIL,
+      ADMIN_PASSWORD,
+      'https://admin.harpapro.com.evil.example',
+    );
+
+    expect(missing.status).toBe(403);
+    expect(untrusted.status).toBe(403);
+  });
+
+  it('revokes the server session on logout and clears the cookie', async () => {
+    const loginResponse = await login();
+    const cookie = cookiePair(loginResponse);
+    const logout = await createApp().request('/admin/auth/logout', {
       method: 'POST',
       headers: {
-        'content-type': 'application/json',
+        cookie,
         origin: ADMIN_ORIGIN,
       },
-      body: JSON.stringify({ email, otp: await readOtp(email) }),
     });
-    expect(verify.status).toBe(200);
-    const body = (await verify.json()) as { user: { id: string } };
-    await getPool().query(`UPDATE public."user" SET is_admin = true WHERE id = $1`, [body.user.id]);
+    expect(logout.status).toBe(200);
+    expect(logout.headers.get('set-cookie')).toMatch(/^harpa_admin_session=;.*Max-Age=0/i);
 
-    const activity = await app.request('/admin/activity', {
+    const session = await createApp().request('/admin/auth/session', {
       headers: {
-        cookie: cookieHeader(verify),
+        cookie,
         origin: ADMIN_ORIGIN,
       },
     });
-    expect(activity.status).toBe(200);
-    expect(activity.headers.get('access-control-allow-origin')).toBe(ADMIN_ORIGIN);
-    expect(activity.headers.get('access-control-allow-credentials')).toBe('true');
+    expect(session.status).toBe(401);
   });
 
   it('does not add admin CORS headers to unrelated routes', async () => {

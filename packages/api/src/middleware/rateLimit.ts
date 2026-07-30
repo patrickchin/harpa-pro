@@ -24,7 +24,7 @@
 import type { Context, MiddlewareHandler } from 'hono';
 import { HTTPException } from 'hono/http-exception';
 import type { AppEnv } from '../app.js';
-import { getRateLimiter, type RateLimiterResult } from '../lib/rateLimiter.js';
+import { getRateLimiter, type RateLimiter, type RateLimiterResult } from '../lib/rateLimiter.js';
 import { clientIp, phoneOf } from '../lib/clientIp.js';
 
 export type RateLimitKeyBy =
@@ -42,6 +42,8 @@ export interface RateLimitOptions {
   windowMs: number;
   /** How to extract the per-request bucket key. Defaults to 'user'. */
   keyBy?: RateLimitKeyBy;
+  /** Optional isolated backend. Defaults to the application limiter. */
+  getLimiter?: () => RateLimiter;
 }
 
 async function resolveKey(
@@ -76,7 +78,7 @@ function attachHeaders(c: Context<AppEnv>, r: RateLimiterResult): void {
   c.header('X-RateLimit-Reset', String(Math.ceil(r.reset / 1000)));
 }
 
-function rejectJson(c: Context<AppEnv>, r: RateLimiterResult) {
+export function rejectRateLimit(c: Context<AppEnv>, r: RateLimiterResult) {
   const retryAfter = Math.max(1, Math.ceil((r.reset - Date.now()) / 1000));
   const requestId = c.get('requestId');
   return c.json(
@@ -94,20 +96,38 @@ function rejectJson(c: Context<AppEnv>, r: RateLimiterResult) {
   );
 }
 
-export function withRateLimit(opts: RateLimitOptions): MiddlewareHandler<AppEnv> {
+/**
+ * Consume one configured bucket and attach its informational headers without
+ * deciding whether the request should short-circuit.
+ *
+ * This is used when the caller must complete another security decision before
+ * acting on an exhausted bucket, such as verifying an admin password before
+ * returning an email-keyed 429.
+ */
+export async function consumeRateLimit(
+  c: Context<AppEnv>,
+  opts: RateLimitOptions,
+): Promise<RateLimiterResult | null> {
+  if (process.env.DISABLE_RATE_LIMIT === '1') return null;
   const keyBy: RateLimitKeyBy = opts.keyBy ?? 'user';
+  const key = await resolveKey(c, opts.name, keyBy);
+  const result = await (opts.getLimiter?.() ?? getRateLimiter()).consume(
+    key,
+    opts.limit,
+    opts.windowMs,
+  );
+  attachHeaders(c, result);
+  return result;
+}
+
+export function withRateLimit(opts: RateLimitOptions): MiddlewareHandler<AppEnv> {
   return async (c, next) => {
-    // E2E/test seam: when DISABLE_RATE_LIMIT=1 the middleware is a no-op.
-    // This is gated by an env var (defaulted off) so it cannot accidentally
-    // ship in production builds — see packages/api/src/env.ts.
-    if (process.env.DISABLE_RATE_LIMIT === '1') {
+    const result = await consumeRateLimit(c, opts);
+    if (!result) {
       await next();
       return;
     }
-    const key = await resolveKey(c, opts.name, keyBy);
-    const r = await getRateLimiter().consume(key, opts.limit, opts.windowMs);
-    attachHeaders(c, r);
-    if (!r.success) return rejectJson(c, r);
+    if (!result.success) return rejectRateLimit(c, result);
     await next();
   };
 }

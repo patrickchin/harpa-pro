@@ -127,7 +127,7 @@ landmarks per screen:
 | `report-detail` | `header`, `title-block`, `summary-card`, `workers-card` |
 | `project-members` | `header`, `first-row` |
 | `edit-project` | `header`, `first-field`, `last-field`, `submit` |
-| `account` | `avatar`, `info-notice`, `phone-field`, `company-field` |
+| `account` | `info-notice`, `email-field`, `company-field` |
 | `image-note-card` | `slot` |
 
 Add a `testID="<screen-name>-skeleton"` on the skeleton's outer

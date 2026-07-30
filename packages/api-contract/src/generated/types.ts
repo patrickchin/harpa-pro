@@ -100,6 +100,63 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/readyz": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The isolated admin service database is ready. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            ok: true;
+                            /** @enum {string} */
+                            db: "up";
+                            head: string | null;
+                        };
+                    };
+                };
+                /** @description The isolated admin database or schema is not ready. */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            ok: false;
+                            /** @enum {string} */
+                            db: "down" | "schema-missing" | "head-mismatch";
+                            expected?: string;
+                            actual?: string | null;
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/waitlist": {
         parameters: {
             query?: never;
@@ -5455,6 +5512,279 @@ export interface paths {
         };
         trace?: never;
     };
+    "/admin/auth/login": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        email: string;
+                        password: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Dedicated admin session created. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            authenticated: true;
+                            email: string;
+                        };
+                    };
+                };
+                /** @description Bad request. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                            requestId?: string;
+                        };
+                    };
+                };
+                /** @description Invalid credentials. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                            requestId?: string;
+                        };
+                    };
+                };
+                /** @description Untrusted browser origin. */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                            requestId?: string;
+                        };
+                    };
+                };
+                /** @description Request body exceeds 8 KiB. */
+                413: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                            requestId?: string;
+                        };
+                    };
+                };
+                /** @description Rate limited. */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                            requestId?: string;
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/auth/session": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Current dedicated admin session. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            authenticated: true;
+                            email: string;
+                        };
+                    };
+                };
+                /** @description No valid admin session. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                            requestId?: string;
+                        };
+                    };
+                };
+                /** @description Rate limited. */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                            requestId?: string;
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/auth/logout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Admin session revoked. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            authenticated: false;
+                        };
+                    };
+                };
+                /** @description No valid admin session. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                            requestId?: string;
+                        };
+                    };
+                };
+                /** @description Untrusted browser origin. */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                            requestId?: string;
+                        };
+                    };
+                };
+                /** @description Rate limited. */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                            };
+                            requestId?: string;
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/activity": {
         parameters: {
             query?: never;
@@ -5467,8 +5797,10 @@ export interface paths {
                 query?: {
                     cursor?: string;
                     limit?: number;
-                    eventType?: "user.signed_up" | "project.created" | "report.created";
+                    level?: ("milestone" | "detail") | "all";
+                    eventType?: "user.signed_up" | "project.created" | "report.created" | "note.text_created" | "note.voice_created" | "note.image_created" | "note.document_created";
                     actorUserId?: string;
+                    excludeActorUserIds?: string;
                     projectId?: string;
                     from?: string;
                     to?: string;
@@ -5497,6 +5829,8 @@ export interface paths {
                                 projectLabel: string | null;
                                 requestId: string | null;
                                 /** @enum {string} */
+                                level: "milestone";
+                                /** @enum {string} */
                                 eventType: "user.signed_up";
                                 /** @enum {string} */
                                 subjectType: "user";
@@ -5517,6 +5851,8 @@ export interface paths {
                                 projectLabel: string | null;
                                 requestId: string | null;
                                 /** @enum {string} */
+                                level: "milestone";
+                                /** @enum {string} */
                                 eventType: "project.created";
                                 /** @enum {string} */
                                 subjectType: "project";
@@ -5534,6 +5870,8 @@ export interface paths {
                                 projectLabel: string | null;
                                 requestId: string | null;
                                 /** @enum {string} */
+                                level: "milestone";
+                                /** @enum {string} */
                                 eventType: "report.created";
                                 /** @enum {string} */
                                 subjectType: "report";
@@ -5542,6 +5880,82 @@ export interface paths {
                                 metadata: {
                                     reportNumber: number;
                                 };
+                            } | {
+                                id: string;
+                                occurredAt: string;
+                                actorUserId: string | null;
+                                actorLabel: string;
+                                /** Format: email */
+                                actorEmail: string | null;
+                                subjectLabel: string;
+                                projectLabel: string | null;
+                                requestId: string | null;
+                                /** @enum {string} */
+                                level: "detail";
+                                /** @enum {string} */
+                                eventType: "note.text_created";
+                                /** @enum {string} */
+                                subjectType: "note";
+                                subjectId: string;
+                                projectId: string;
+                                metadata: Record<string, never>;
+                            } | {
+                                id: string;
+                                occurredAt: string;
+                                actorUserId: string | null;
+                                actorLabel: string;
+                                /** Format: email */
+                                actorEmail: string | null;
+                                subjectLabel: string;
+                                projectLabel: string | null;
+                                requestId: string | null;
+                                /** @enum {string} */
+                                level: "detail";
+                                /** @enum {string} */
+                                eventType: "note.voice_created";
+                                /** @enum {string} */
+                                subjectType: "note";
+                                subjectId: string;
+                                projectId: string;
+                                metadata: Record<string, never>;
+                            } | {
+                                id: string;
+                                occurredAt: string;
+                                actorUserId: string | null;
+                                actorLabel: string;
+                                /** Format: email */
+                                actorEmail: string | null;
+                                subjectLabel: string;
+                                projectLabel: string | null;
+                                requestId: string | null;
+                                /** @enum {string} */
+                                level: "detail";
+                                /** @enum {string} */
+                                eventType: "note.image_created";
+                                /** @enum {string} */
+                                subjectType: "note";
+                                subjectId: string;
+                                projectId: string;
+                                metadata: Record<string, never>;
+                            } | {
+                                id: string;
+                                occurredAt: string;
+                                actorUserId: string | null;
+                                actorLabel: string;
+                                /** Format: email */
+                                actorEmail: string | null;
+                                subjectLabel: string;
+                                projectLabel: string | null;
+                                requestId: string | null;
+                                /** @enum {string} */
+                                level: "detail";
+                                /** @enum {string} */
+                                eventType: "note.document_created";
+                                /** @enum {string} */
+                                subjectType: "note";
+                                subjectId: string;
+                                projectId: string;
+                                metadata: Record<string, never>;
                             })[];
                             nextCursor: string | null;
                         };
@@ -5577,8 +5991,8 @@ export interface paths {
                         };
                     };
                 };
-                /** @description Admin access required. */
-                403: {
+                /** @description Rate limited. */
+                429: {
                     headers: {
                         [name: string]: unknown;
                     };

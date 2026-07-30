@@ -3,7 +3,7 @@ import { sql } from 'drizzle-orm';
 import { rawDb, getPool, resetPool } from '../db/client.js';
 import { withScopedConnection } from '../db/scope.js';
 import { recordActivityEvent } from '../services/activity-events.js';
-import { makeSessionId, makeUserId } from './factories/index.js';
+import { makeNoteId, makeProjectId, makeSessionId, makeUserId } from './factories/index.js';
 import { seedAuthUsers, startPg, type PgFixture } from './setup-pg.js';
 
 let fx: PgFixture;
@@ -126,6 +126,80 @@ describe('activity event storage', () => {
         dedupeKey: 'report.created:rpt_01234567',
         metadata: { reportNumber: 0 },
       }),
+    ).rejects.toThrow();
+  });
+
+  it.each([
+    'note.text_created',
+    'note.voice_created',
+    'note.image_created',
+    'note.document_created',
+  ] as const)(
+    'records and deduplicates %s with note subject and empty metadata',
+    async (eventType) => {
+      const subjectId = makeNoteId();
+      const projectId = makeProjectId();
+      const input = {
+        eventType,
+        actorUserId,
+        subjectId,
+        projectId,
+        requestId: `req-${eventType.replaceAll('.', '-')}`,
+        dedupeKey: `${eventType}:${subjectId}`,
+        metadata: {},
+      } as unknown as Parameters<typeof recordActivityEvent>[1];
+
+      await recordActivityEvent(rawDb(), input);
+      await recordActivityEvent(rawDb(), input);
+
+      const result = await rawDb().execute<{
+        event_type: string;
+        actor_user_id: string;
+        subject_type: string;
+        subject_id: string;
+        project_id: string;
+        request_id: string;
+        metadata: Record<string, unknown>;
+      }>(sql`
+        SELECT event_type, actor_user_id, subject_type, subject_id,
+               project_id, request_id, metadata
+        FROM app.activity_events
+        WHERE dedupe_key = ${input.dedupeKey}
+      `);
+
+      expect(result.rows).toEqual([
+        {
+          event_type: eventType,
+          actor_user_id: actorUserId,
+          subject_type: 'note',
+          subject_id: subjectId,
+          project_id: projectId,
+          request_id: input.requestId,
+          metadata: {},
+        },
+      ]);
+    },
+  );
+
+  it('rejects note content and file details in activity metadata', async () => {
+    const subjectId = makeNoteId();
+    const eventType = 'note.voice_created';
+
+    await expect(
+      recordActivityEvent(rawDb(), {
+        eventType,
+        actorUserId,
+        subjectId,
+        projectId: makeProjectId(),
+        requestId: 'req-private-voice',
+        dedupeKey: `${eventType}:${subjectId}`,
+        metadata: {
+          title: 'Customer complaint',
+          transcript: 'Sensitive transcript',
+          fileName: 'private-recording.m4a',
+          durationSec: 42,
+        },
+      } as unknown as Parameters<typeof recordActivityEvent>[1]),
     ).rejects.toThrow();
   });
 });

@@ -14,7 +14,10 @@
  * delete-error dialog — those depend on `useImagePreviewProps` and
  * `useReportDraftPersistence`, which land in P3.7.
  */
-import { AppDialogSheet } from '@/components/primitives/AppDialogSheet';
+import {
+  AppDialogSheet,
+  type AppDialogAction,
+} from '@/components/primitives/AppDialogSheet';
 import { ImagePreviewModal } from '@/components/files/ImagePreviewModal';
 import {
   getActionErrorDialogCopy,
@@ -22,6 +25,7 @@ import {
   getFinalizeReportDialogCopy,
 } from '@/lib/dialogs/app-dialog-copy';
 import { useGenerateReport } from '@/features/generate/GenerateReportProvider';
+import { isPhotoLibraryPickingEnabled } from '@/lib/camera/photo-library-policy';
 
 export function GenerateReportDialogs() {
   const { generation, draft, notes, ui, handlePickAttachment, photo, preview } =
@@ -41,6 +45,40 @@ export function GenerateReportDialogs() {
 
   const closeAttachmentSheet = () => ui.setAttachmentSheetVisible(false);
   const cancelFinalize = () => draft.setIsFinalizeConfirmVisible(false);
+  const attachmentActions: AppDialogAction[] = [];
+
+  if (isPhotoLibraryPickingEnabled()) {
+    attachmentActions.push({
+      label: 'Photo library',
+      variant: 'secondary',
+      onPress: () => {
+        closeAttachmentSheet();
+        handlePickAttachment('image');
+      },
+      accessibilityLabel: 'Pick a photo from library',
+      testID: 'btn-attachment-photo-library',
+    });
+  }
+
+  attachmentActions.push(
+    {
+      label: 'Camera',
+      variant: 'secondary',
+      onPress: () => {
+        closeAttachmentSheet();
+        void photo.handleCameraCapture();
+      },
+      accessibilityLabel: 'Take a photo with the camera',
+      testID: 'btn-attachment-camera',
+    },
+    {
+      label: 'Cancel',
+      variant: 'quiet',
+      onPress: closeAttachmentSheet,
+      accessibilityLabel: 'Cancel attachment picker',
+      testID: 'btn-attachment-cancel',
+    },
+  );
 
   return (
     <>
@@ -129,40 +167,7 @@ export function GenerateReportDialogs() {
         visible={ui.attachmentSheetVisible}
         title="Add attachment"
         onClose={closeAttachmentSheet}
-        actions={[
-          // Document picker is intentionally not surfaced — the server
-          // pipeline supports `document` notes but the UI slice was
-          // deferred (docs/v4/plan-camera-upload-pipeline.md, "Document
-          // note kind: deferred entirely"). Keep `image`-only here so
-          // the sheet never advertises an unimplemented surface.
-          {
-            label: 'Photo library',
-            variant: 'secondary',
-            onPress: () => {
-              closeAttachmentSheet();
-              handlePickAttachment('image');
-            },
-            accessibilityLabel: 'Pick a photo from library',
-            testID: 'btn-attachment-photo-library',
-          },
-          {
-            label: 'Camera',
-            variant: 'secondary',
-            onPress: () => {
-              closeAttachmentSheet();
-              void photo.handleCameraCapture();
-            },
-            accessibilityLabel: 'Take a photo with the camera',
-            testID: 'btn-attachment-camera',
-          },
-          {
-            label: 'Cancel',
-            variant: 'quiet',
-            onPress: closeAttachmentSheet,
-            accessibilityLabel: 'Cancel attachment picker',
-            testID: 'btn-attachment-cancel',
-          },
-        ]}
+        actions={attachmentActions}
       />
 
       <ImagePreviewModal

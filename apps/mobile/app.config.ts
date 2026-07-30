@@ -86,6 +86,9 @@ const config: ExpoConfig = {
     }),
     infoPlist: {
       ITSAppUsesNonExemptEncryption: false,
+      // iOS currently permits only add-only camera-roll saves. Device
+      // photo-library picking is hidden and guarded in mobile code; do
+      // not add read permission copy without re-enabling that policy.
       NSPhotoLibraryAddUsageDescription:
         'Allow Harpa Pro to save captured site photos to your camera roll.',
     },

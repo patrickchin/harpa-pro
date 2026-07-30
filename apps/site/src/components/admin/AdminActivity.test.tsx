@@ -414,6 +414,11 @@ describe('AdminActivity', () => {
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3));
     expect(String(fetchMock.mock.calls[2]?.[0])).toContain('cursor=next-page-cursor');
     expect((await screen.findAllByText('Deleted user')).length).toBeGreaterThan(0);
+    expect(
+      within(screen.getByTestId(`activity-row-${deletedEvent.id}`)).getByTestId(
+        'event-icon-user.signed_up',
+      ),
+    ).toHaveAttribute('data-icon', 'user-plus');
 
     await user.click(screen.getByTestId(`activity-row-${reportEvent.id}`));
     expect(screen.getByRole('dialog').textContent).toContain('request-report-1');
@@ -634,6 +639,10 @@ describe('AdminActivity', () => {
 
     const newEntry = await screen.findByTestId(`activity-row-${projectEvent.id}`);
     expect(within(newEntry).getByText('New')).toBeTruthy();
+    expect(within(newEntry).getByTestId('event-icon-project.created')).toHaveAttribute(
+      'data-icon',
+      'folder-plus',
+    );
     expect(
       within(screen.getByTestId(`activity-row-${reportEvent.id}`)).queryByText('New'),
     ).toBeNull();

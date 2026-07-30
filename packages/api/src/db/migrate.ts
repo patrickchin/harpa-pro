@@ -34,12 +34,275 @@ const MIGRATIONS_DIR = resolve(here, '../../migrations');
  * parameter binding is not involved.
  */
 const MIGRATION_LOCK_KEY = '5215575670466301233'; // 0x4861727061504d31
+const LEGACY_OUTER_TRANSACTION_WRAPPERS = new Set([
+  '0014_better_auth_init.sql',
+  '0019_account_deletion.sql',
+  '0022_r2_object_lifecycle.sql',
+]);
+
+type TransactionControlKind = 'begin' | 'commit' | 'rollback';
+
+interface SqlStatementRange {
+  start: number;
+  end: number;
+  text: string;
+}
 
 /** Read + sort migration filenames. Exposed so /readyz tests can re-use. */
 export function listMigrationFiles(dir: string = MIGRATIONS_DIR): string[] {
   return readdirSync(dir)
     .filter((f) => f.endsWith('.sql'))
     .sort();
+}
+
+function splitTopLevelStatements(sql: string): SqlStatementRange[] {
+  const statements: SqlStatementRange[] = [];
+  let statementStart = 0;
+  let index = 0;
+  let blockCommentDepth = 0;
+  let quote: "'" | '"' | null = null;
+  let dollarQuoteTag: string | null = null;
+
+  while (index < sql.length) {
+    const char = sql[index]!;
+    const next = sql[index + 1];
+
+    if (quote) {
+      if (char === quote) {
+        if (quote === "'" && next === "'") {
+          index += 2;
+          continue;
+        }
+        quote = null;
+      }
+      index += 1;
+      continue;
+    }
+
+    if (dollarQuoteTag) {
+      if (sql.startsWith(dollarQuoteTag, index)) {
+        index += dollarQuoteTag.length;
+        dollarQuoteTag = null;
+      } else {
+        index += 1;
+      }
+      continue;
+    }
+
+    if (blockCommentDepth > 0) {
+      if (char === '/' && next === '*') {
+        blockCommentDepth += 1;
+        index += 2;
+        continue;
+      }
+      if (char === '*' && next === '/') {
+        blockCommentDepth -= 1;
+        index += 2;
+        continue;
+      }
+      index += 1;
+      continue;
+    }
+
+    if (char === '-' && next === '-') {
+      const newline = sql.indexOf('\n', index + 2);
+      index = newline === -1 ? sql.length : newline + 1;
+      continue;
+    }
+
+    if (char === '/' && next === '*') {
+      blockCommentDepth += 1;
+      index += 2;
+      continue;
+    }
+
+    if (char === "'" || char === '"') {
+      quote = char;
+      index += 1;
+      continue;
+    }
+
+    if (char === '$') {
+      const match = /^\$[A-Za-z_][A-Za-z0-9_]*\$|^\$\$/.exec(sql.slice(index));
+      if (match) {
+        dollarQuoteTag = match[0];
+        index += dollarQuoteTag.length;
+        continue;
+      }
+    }
+
+    if (char === ';') {
+      statements.push({
+        start: statementStart,
+        end: index + 1,
+        text: sql.slice(statementStart, index + 1),
+      });
+      statementStart = index + 1;
+    }
+
+    index += 1;
+  }
+
+  if (statementStart < sql.length) {
+    statements.push({
+      start: statementStart,
+      end: sql.length,
+      text: sql.slice(statementStart),
+    });
+  }
+
+  return statements.filter((statement) => statement.text.trim().length > 0);
+}
+
+function extractStatementWords(sql: string): string[] {
+  const words: string[] = [];
+  let current = '';
+  let index = 0;
+  let blockCommentDepth = 0;
+  let quote: "'" | '"' | null = null;
+  let dollarQuoteTag: string | null = null;
+
+  const flushCurrent = () => {
+    if (current) {
+      words.push(current.toLowerCase());
+      current = '';
+    }
+  };
+
+  while (index < sql.length) {
+    const char = sql[index]!;
+    const next = sql[index + 1];
+
+    if (quote) {
+      if (char === quote) {
+        if (quote === "'" && next === "'") {
+          index += 2;
+          continue;
+        }
+        quote = null;
+      }
+      index += 1;
+      continue;
+    }
+
+    if (dollarQuoteTag) {
+      if (sql.startsWith(dollarQuoteTag, index)) {
+        index += dollarQuoteTag.length;
+        dollarQuoteTag = null;
+      } else {
+        index += 1;
+      }
+      continue;
+    }
+
+    if (blockCommentDepth > 0) {
+      if (char === '/' && next === '*') {
+        blockCommentDepth += 1;
+        index += 2;
+        continue;
+      }
+      if (char === '*' && next === '/') {
+        blockCommentDepth -= 1;
+        index += 2;
+        continue;
+      }
+      index += 1;
+      continue;
+    }
+
+    if (char === '-' && next === '-') {
+      flushCurrent();
+      const newline = sql.indexOf('\n', index + 2);
+      index = newline === -1 ? sql.length : newline + 1;
+      continue;
+    }
+
+    if (char === '/' && next === '*') {
+      flushCurrent();
+      blockCommentDepth += 1;
+      index += 2;
+      continue;
+    }
+
+    if (char === "'" || char === '"') {
+      flushCurrent();
+      quote = char;
+      index += 1;
+      continue;
+    }
+
+    if (char === '$') {
+      const match = /^\$[A-Za-z_][A-Za-z0-9_]*\$|^\$\$/.exec(sql.slice(index));
+      if (match) {
+        flushCurrent();
+        dollarQuoteTag = match[0];
+        index += dollarQuoteTag.length;
+        continue;
+      }
+    }
+
+    if (/[A-Za-z]/.test(char)) {
+      current += char;
+    } else {
+      flushCurrent();
+    }
+
+    index += 1;
+  }
+
+  flushCurrent();
+  return words;
+}
+
+function classifyTransactionControlStatement(sql: string): TransactionControlKind | null {
+  const words = extractStatementWords(sql);
+  if (words.length === 1 && words[0] === 'begin') return 'begin';
+  if (words.length === 2 && words[0] === 'begin' && words[1] === 'transaction') return 'begin';
+  if (words.length === 2 && words[0] === 'start' && words[1] === 'transaction') return 'begin';
+  if (words.length === 1 && words[0] === 'commit') return 'commit';
+  if (words.length === 1 && words[0] === 'rollback') return 'rollback';
+  return null;
+}
+
+function normalizeMigrationSql(file: string, sql: string): string {
+  const statements = splitTopLevelStatements(sql);
+  const transactionStatements = statements
+    .map((statement, index) => ({
+      ...statement,
+      index,
+      kind: classifyTransactionControlStatement(statement.text),
+    }))
+    .filter(
+      (
+        statement,
+      ): statement is SqlStatementRange & { index: number; kind: TransactionControlKind } =>
+        statement.kind !== null,
+    );
+
+  if (transactionStatements.length === 0) return sql;
+
+  if (LEGACY_OUTER_TRANSACTION_WRAPPERS.has(file)) {
+    const first = transactionStatements[0];
+    const last = transactionStatements[transactionStatements.length - 1];
+    const isExpectedWrapper =
+      transactionStatements.length === 2 &&
+      first?.index === 0 &&
+      first.kind === 'begin' &&
+      last?.index === statements.length - 1 &&
+      last.kind === 'commit';
+
+    if (!isExpectedWrapper) {
+      throw new Error(
+        `[migrate] ${file} uses unsupported transaction control beyond the known outer BEGIN/COMMIT wrapper`,
+      );
+    }
+
+    return sql.slice(first.end, last.start);
+  }
+
+  throw new Error(
+    `[migrate] ${file} contains top-level transaction control; use the runner-owned transaction or rename true non-transactional files to *.notx.sql`,
+  );
 }
 
 export async function migrate(
@@ -68,7 +331,7 @@ export async function migrate(
       const newly: string[] = [];
       for (const f of files) {
         if (applied.has(f)) continue;
-        const sql = readFileSync(join(dir, f), 'utf8');
+        const sql = normalizeMigrationSql(f, readFileSync(join(dir, f), 'utf8'));
         const startedAt = Date.now();
         // eslint-disable-next-line no-console
         console.log(`[migrate] applying ${f}`);

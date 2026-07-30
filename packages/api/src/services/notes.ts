@@ -457,6 +457,15 @@ export async function appendFiles(
   noteId: string,
   files: Array<{ fileId: string; thumbnailFileId?: string | null }>,
 ): Promise<NoteFileRow[]> {
+  const ownerRes = await db.execute<{ report_id: string }>(sql`
+    SELECT report_id
+      FROM app.notes
+     WHERE id = ${noteId}
+     FOR UPDATE
+  `);
+  const reportId = ownerRes.rows[0]?.report_id;
+  if (!reportId) return [];
+
   const maxPos = await db.execute<{ max_pos: number | null }>(sql`
     SELECT MAX(position) as max_pos FROM app.note_files WHERE note_id = ${noteId}
   `);
@@ -481,14 +490,6 @@ export async function appendFiles(
     VALUES ${valuesList}
     RETURNING id, file_id, thumbnail_file_id, position, caption
   `);
-  // Appending photos to a batch note is a note-content mutation and must
-  // flag the report dirty so the auto-regenerator picks it up. Look up
-  // the owning report from the note (single round-trip; appendFiles is
-  // called on the photo-upload-complete path which is already async).
-  const ownerRes = await db.execute<{ report_id: string }>(sql`
-    SELECT report_id FROM app.notes WHERE id = ${noteId}
-  `);
-  const reportId = ownerRes.rows[0]?.report_id;
   if (reportId) {
     // Dual-write: keep counter in lockstep with timestamp during the
     // expand-contract window (see arch-cicd-and-migrations.md §318).

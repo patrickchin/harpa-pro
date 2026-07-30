@@ -100,8 +100,9 @@ Why Postgres:
   cheap (<1ms on Neon's pooler), and replicates "across machines" by
   definition.
 - No new infra cost. No new secret. No new CI dependency.
-- A nightly `DELETE FROM app.rate_limit_buckets WHERE window_end < now()`
-  keeps the table bounded.
+- A per-process GC sweep deletes expired `app.rate_limit_buckets` rows every
+  10 minutes during server boot, keeping the table bounded without adding
+  separate cron infrastructure.
 
 Cost ceiling: the AI route budgets cap at ~30 RPM/user. Even at 1000
 concurrent users that's ~500 RPS of rate-limit queries — well inside
@@ -253,10 +254,11 @@ ON CONFLICT (bucket_key) DO UPDATE
 RETURNING count, window_end;
 ```
 
-GC: cron-style `DELETE FROM app.rate_limit_buckets WHERE window_end < now() - interval '1 hour'`
-runs on an interval timer in the API process (every 10 min, jittered
-per machine). One machine doing GC is fine; the others no-op via
-`ON CONFLICT DO NOTHING` patterns where applicable.
+GC: `DELETE FROM app.rate_limit_buckets WHERE window_end < now() - interval '1 hour'`
+runs on an interval timer in the API process. `src/server.ts` starts the
+scheduler during boot, and each process sweeps every 10 minutes. Multiple
+machines may race the same delete safely; no dedicated cron worker is
+required.
 
 This bucket table is **outside** the per-request scope wrapper — it
 uses an admin namespace connection, same as `auth.sessions`. No RLS;

@@ -418,11 +418,12 @@ describe('batch photo notes', () => {
           ORDER BY position`,
         [created.id],
       );
-      expect(rows.rows).toEqual([
-        { file_id: fileIds[0], position: 0 },
-        { file_id: fileIds[3], position: 1 },
-        { file_id: fileIds[4], position: 2 },
-      ]);
+      expect(rows.rows[0]).toEqual({ file_id: fileIds[0], position: 0 });
+      expect(rows.rows.slice(1)).toHaveLength(2);
+      expect(rows.rows.slice(1).map((row) => row.position)).toEqual([1, 2]);
+      expect(rows.rows.slice(1).map((row) => row.file_id).sort()).toEqual(
+        [fileIds[3], fileIds[4]].sort(),
+      );
     } finally {
       await admin.query(`
         DROP TRIGGER IF EXISTS test_delay_note_file_insert ON app.note_files;

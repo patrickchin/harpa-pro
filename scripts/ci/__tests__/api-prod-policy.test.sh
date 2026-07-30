@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # Production deployment policy regression test.
 #
-# As an operator, I want a guaranteed snapshot of production before Fly's
-# release command applies migrations, so a bad migration always has a
-# pre-change rollback point.
+# As an operator, I want guaranteed snapshots of both production databases
+# before Fly's release command applies migrations, so a bad migration always
+# has pre-change rollback points.
 #
 # Run directly:
 #   bash scripts/ci/__tests__/api-prod-policy.test.sh
@@ -45,13 +45,18 @@ else
   fail "Fly release_command owns production migration application"
 fi
 
-snapshot_line="$(line_of "- name: Snapshot prod DB (pre-deploy)" "$WORKFLOW" || true)"
+app_snapshot_line="$(line_of "- name: Prune and snapshot prod DB (pre-deploy)" "$WORKFLOW" || true)"
+admin_snapshot_line="$(line_of "- name: Prune and snapshot admin prod DB (pre-deploy)" "$WORKFLOW" || true)"
 deploy_line="$(line_of "- name: Deploy to Fly.io" "$WORKFLOW" || true)"
 
-if [[ -n "$snapshot_line" && -n "$deploy_line" && "$snapshot_line" -lt "$deploy_line" ]]; then
-  pass "snapshot runs before the Fly deploy and its release command"
+if [[ -n "$app_snapshot_line" &&
+      -n "$admin_snapshot_line" &&
+      -n "$deploy_line" &&
+      "$app_snapshot_line" -lt "$deploy_line" &&
+      "$admin_snapshot_line" -lt "$deploy_line" ]]; then
+  pass "app and admin snapshots run before the Fly deploy and its release command"
 else
-  fail "snapshot runs before the Fly deploy and its release command"
+  fail "app and admin snapshots run before the Fly deploy and its release command"
 fi
 
 if grep -qF -- "continue-on-error: true" "$WORKFLOW"; then

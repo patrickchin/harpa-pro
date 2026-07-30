@@ -31,6 +31,10 @@ import { createApp } from '../app.js';
 const PUBLIC_ROUTES: ReadonlyArray<{ method: string; path: string }> = [
   { method: 'GET', path: '/healthz' },
   { method: 'GET', path: '/readyz' },
+  { method: 'GET', path: '/admin/readyz' },
+  // Dedicated admin login is intentionally public but exact-Origin guarded.
+  // It never accepts an application bearer session.
+  { method: 'POST', path: '/admin/auth/login' },
   // better-auth wildcard mount — owns its own auth (sign-in/sign-up/etc).
   // The `app.on(['GET','POST'], '/api/auth/**', …)` registration shows up
   // as two routes; both are public.
@@ -85,9 +89,16 @@ describe('auth coverage', () => {
         continue;
       }
 
+      const headers: Record<string, string> = {
+        'x-forwarded-for': nextIp(),
+      };
+      if (method === 'POST' && r.path === '/admin/auth/logout') {
+        headers.origin = 'http://localhost:3002';
+      }
+
       const res = await app.request(concreteUrl(r.path), {
         method,
-        headers: { 'x-forwarded-for': nextIp() },
+        headers,
       });
       if (res.status !== 401) {
         violations.push(
@@ -105,9 +116,7 @@ describe('auth coverage', () => {
 
   it('every entry on PUBLIC_ROUTES exists in app.routes', () => {
     const app = createApp();
-    const registered = new Set(
-      app.routes.map((r) => `${r.method.toUpperCase()} ${r.path}`),
-    );
+    const registered = new Set(app.routes.map((r) => `${r.method.toUpperCase()} ${r.path}`));
     for (const p of PUBLIC_ROUTES) {
       expect(
         registered.has(`${p.method.toUpperCase()} ${p.path}`),

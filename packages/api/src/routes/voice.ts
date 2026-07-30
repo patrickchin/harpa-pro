@@ -37,6 +37,7 @@ import { transcribe as aiTranscribe, summarize as aiSummarize } from '../service
 import { enforceUsageLimit, attachUsageWarning } from '../services/usage-limits.js';
 import { getReport } from '../services/reports.js';
 import { createVoiceNote } from '../services/notes.js';
+import { recordActivityEvent } from '../services/activity-events.js';
 import { getAiSettings } from '../services/settings.js';
 import { voiceSummarySystemPrompt, parseVoiceSummaryResponse } from '../prompts/voiceSummary.js';
 
@@ -182,8 +183,9 @@ voiceRoutes.openapi(
     // Step 3 — insert. `body` mirrors `summary` so legacy readers
     // (P3.10 `ReportNotesPane`, etc.) keep working until they migrate
     // to the new `summary` field.
-    const note = await db((d) =>
-      createVoiceNote(d, report.id, userId, {
+    const requestId = c.get('requestId');
+    const note = await db(async (d) => {
+      const created = await createVoiceNote(d, report.id, userId, {
         fileId: file.id,
         title,
         summary,
@@ -191,8 +193,20 @@ voiceRoutes.openapi(
         durationSec: body.durationSec ?? transcribed.durationSec ?? null,
         language: body.language ?? null,
         transcribeProvider,
-      }),
-    );
+      });
+      if (created) {
+        await recordActivityEvent(d, {
+          eventType: 'note.voice_created',
+          actorUserId: userId,
+          subjectId: created.id,
+          projectId: report.projectId,
+          requestId,
+          dedupeKey: `note.voice_created:${created.id}`,
+          metadata: {},
+        });
+      }
+      return created;
+    });
     if (!note) {
       // RLS would have already 404'd a non-member; a null here means
       // INSERT was rejected. Surface as 500 — there's no path the

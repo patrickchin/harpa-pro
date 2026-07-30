@@ -4,7 +4,7 @@
  * branch `dev`.
  *
  * The camera lives in its own route group because it is launched from
- * many places (report screen, AvatarUploader, future "add icon"). A
+ * many places (report screen, future "add icon"). A
  * full-screen modal presentation keeps it visually independent of the
  * caller and lets us lock orientation without leaking that lock into
  * the parent stack.

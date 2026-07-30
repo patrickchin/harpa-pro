@@ -1,6 +1,8 @@
 # Design — Admin business activity
 
-Status: approved on 2026-07-29. Local implementation is in progress.
+Status: approved on 2026-07-29. The first detail-level expansion was approved
+on 2026-07-30. The separate admin-auth cutover is in progress; see
+[Separate admin console authentication](design-separate-admin-auth.md).
 
 Implementation status:
 
@@ -9,7 +11,7 @@ Implementation status:
 - [x] Phase 3 — admin read API and credentialed browser CORS.
 - [x] Phase 4 — admin page.
 - [ ] Phase 5 — deployment.
-- [ ] Phase 6 — evaluate before expanding.
+- [x] Phase 6 — detail levels and advanced filtering.
 
 ## Problem
 
@@ -34,9 +36,11 @@ This design deliberately separates:
 
 ## Goals
 
-- Record a small set of high-signal business events in Neon.
+- Record curated business events at two levels in the application Neon
+  project: high-signal milestones and lower-level product details.
 - Show them newest-first at `admin.harpapro.com`.
-- Use the existing Better Auth session and `is_admin` authorization.
+- Require the dedicated admin identity and session system. App users, Better
+  Auth sessions, and `public."user".is_admin` do not authorize this page.
 - Keep the first version inside the existing Astro site and Cloudflare Pages
   deployment.
 - Preserve a request ID where one exists so an activity row can later link to
@@ -62,6 +66,11 @@ The page uses TanStack Table for table state and rendering. Filtering and
 pagination remain server-side. The API is the only data source; the browser
 never connects to Neon directly.
 
+Business events remain in the application Neon project. Administrator
+identities and sessions live in the independent `harpa-pro-admin` Neon
+project. The API authenticates against the admin database before reading the
+business feed from the application database; the databases are never joined.
+
 The implementation stays in `apps/site` while this remains one or two admin
 pages. A separate `apps/admin` application and Pages project would add
 duplicate environment, deployment, and styling work without improving the
@@ -73,46 +82,61 @@ flowchart LR
   mutation["Authenticated mutation"] --> event["app.activity_events"]
   signup["Better Auth user creation"] --> event
   browser["Admin React island"] --> api["GET /admin/activity"]
-  api --> admin["withAuth + withAdmin"]
-  admin --> event
+  api --> auth["withAdminSession"]
+  auth --> adminDb[("harpa-pro-admin")]
+  auth --> event
   mutation -. request_id .-> telemetry["Future operational logs / Sentry"]
 ```
 
-## Initial event taxonomy
+## Curated event taxonomy
 
-The first release records exactly three events:
+The feed has two derived levels. `milestone` is the quiet default view for
+major business events. `detail` contains successful user-facing product
+actions that are useful when investigating what happened within a project.
+The level comes from the typed event registry rather than a stored database
+column.
 
-| Event             | Actor         | Subject | Additional metadata   |
-| ----------------- | ------------- | ------- | --------------------- |
-| `user.signed_up`  | New user      | User    | Authentication method |
-| `project.created` | Project owner | Project | None                  |
-| `report.created`  | Report author | Report  | Report number         |
+| Level       | Event                   | Actor         | Subject | Metadata              |
+| ----------- | ----------------------- | ------------- | ------- | --------------------- |
+| `milestone` | `user.signed_up`        | New user      | User    | Authentication method |
+| `milestone` | `project.created`       | Project owner | Project | None                  |
+| `milestone` | `report.created`        | Report author | Report  | Report number         |
+| `detail`    | `note.text_created`     | Note author   | Note    | None                  |
+| `detail`    | `note.voice_created`    | Note author   | Note    | None                  |
+| `detail`    | `note.image_created`    | Note author   | Note    | None                  |
+| `detail`    | `note.document_created` | Note author   | Note    | None                  |
+
+An image or document event means that the upload became a note in a report
+timeline. Raw `POST /files` registration is deliberately not an activity
+event: thumbnails, abandoned uploads, and objects not yet attached to report
+content would otherwise create misleading noise. A multi-file image note
+produces one creation event for the note, not one event per stored object.
 
 Waitlist confirmation, report generation/finalization, membership, comments,
-email delivery, and admin changes are useful candidates, but they stay out of
-the first release. Event coverage expands only after the initial feed proves
-useful.
+email delivery, later files appended to an existing note, and admin changes
+remain candidates. Add them only when they answer a recurring operator
+question.
 
 `app.llm_usage_events` remains a separate usage ledger. It must not be copied
 row-for-row into business activity.
 
 ## Data model
 
-The next migration adds the reserved `aud_*` ID family and
+The ledger uses the reserved `aud_*` ID family and
 `app.activity_events` with:
 
-| Column          | Shape                 | Notes                                    |
-| --------------- | --------------------- | ---------------------------------------- |
-| `id`            | `app.aud_id`          | API-minted primary key                   |
-| `occurred_at`   | `timestamptz`         | Database default `now()`                 |
-| `event_type`    | `text`                | Constrained to the curated registry      |
-| `actor_user_id` | nullable `app.usr_id` | No cascading foreign key                 |
-| `subject_type`  | `text`                | Initially `user`, `project`, or `report` |
-| `subject_id`    | nullable `text`       | Preserved across normal entity deletion  |
-| `project_id`    | nullable `app.prj_id` | Context for project/report filtering     |
-| `request_id`    | nullable `text`       | Validated request ID, when available     |
-| `dedupe_key`    | nullable `text`       | Unique idempotency key                   |
-| `metadata`      | `jsonb` object        | Event-specific, schema-validated values  |
+| Column          | Shape                 | Notes                                   |
+| --------------- | --------------------- | --------------------------------------- |
+| `id`            | `app.aud_id`          | API-minted primary key                  |
+| `occurred_at`   | `timestamptz`         | Database default `now()`                |
+| `event_type`    | `text`                | Constrained to the curated registry     |
+| `actor_user_id` | nullable `app.usr_id` | No cascading foreign key                |
+| `subject_type`  | `text`                | `user`, `project`, `report`, or `note`  |
+| `subject_id`    | nullable `text`       | Preserved across normal entity deletion |
+| `project_id`    | nullable `app.prj_id` | Context for project/report filtering    |
+| `request_id`    | nullable `text`       | Validated request ID, when available    |
+| `dedupe_key`    | nullable `text`       | Unique idempotency key                  |
+| `metadata`      | `jsonb` object        | Event-specific, schema-validated values |
 
 Indexes cover:
 
@@ -128,22 +152,23 @@ without duplicating the activity row.
 ### Data minimization
 
 The event row does not copy email addresses, display names, project names,
-report bodies, client names, addresses, AI prompts, or other free-form
-content. The admin read query left-joins current labels from their source
-tables. If an entity has been deleted, the UI displays its stable ID and a
-`Deleted user/project/report` label.
+report or note bodies, transcripts, filenames, client names, addresses, AI
+prompts, or other free-form content. The admin read query left-joins current
+labels from their source tables. If an entity has been deleted, the UI
+displays its stable ID and a `Deleted user/project/report/note` label.
 
 This trades perfect historical labels for less duplicated personal and client
 data. Historical label snapshots can be added later only with an explicit
 retention and erasure policy.
 
 `metadata` is not an arbitrary caller-supplied object. A discriminated Zod
-union defines the permitted shape for every event type. The first release
-allows only:
+union defines the permitted shape for every event type. The registry allows
+only:
 
 - `{ method: 'email_otp' }` for `user.signed_up`;
-- `{}` for `project.created`; and
-- `{ reportNumber: number }` for `report.created`.
+- `{}` for `project.created`;
+- `{ reportNumber: number }` for `report.created`; and
+- `{}` for each `note.*_created` event.
 
 ### Append behavior and deletion
 
@@ -166,8 +191,7 @@ revisited before the activity feed stores broader or more sensitive events.
 
 ## Recording events
 
-Add one service, tentatively
-`packages/api/src/services/activity-events.ts`, which:
+`packages/api/src/services/activity-events.ts`:
 
 - accepts a Drizzle handle rather than importing a route-level raw database;
 - accepts a typed event union;
@@ -185,6 +209,21 @@ commit together; a failed transaction leaves neither.
 The current project route performs creation and reload in separate scoped
 callbacks. Implementation should combine the creation and event write into
 one callback while preserving the response reload behavior.
+
+### Note creation
+
+Every successful note creation records one detail event inside the same
+scoped database callback:
+
+- the generic note route maps the validated `text`, `voice`, `image`, or
+  `document` note kind to its matching event type; and
+- the voice aggregation route records `note.voice_created` after
+  transcription and summarization have succeeded.
+
+The note and activity row commit together. The event stores only the note ID,
+project context, actor, request ID, and strict empty metadata. It does not
+copy note contents, AI output, filenames, storage keys, or provider details.
+The dedupe key is `<event_type>:<note_id>`.
 
 ### User signup
 
@@ -224,22 +263,33 @@ Add:
 GET /admin/activity
 ```
 
-Authentication and authorization remain:
+Authentication and authorization use the dedicated admin session:
 
 ```text
-withAuth() -> withAdmin() -> admin activity handler
+withAdminSession() -> admin activity handler
 ```
 
 Supported query fields:
 
-| Field         | Purpose                           |
-| ------------- | --------------------------------- |
-| `cursor`      | Opaque `(occurred_at, id)` cursor |
-| `limit`       | Default 50, maximum 100           |
-| `eventType`   | Exact curated event type          |
-| `actorUserId` | Exact actor                       |
-| `projectId`   | Exact project context             |
-| `from` / `to` | Optional ISO-8601 time window     |
+| Field                 | Purpose                               |
+| --------------------- | ------------------------------------- |
+| `cursor`              | Opaque `(occurred_at, id)` cursor     |
+| `limit`               | Default 50, maximum 100               |
+| `level`               | `milestone`, `detail`, or `all`       |
+| `eventType`           | Exact curated event type              |
+| `actorUserId`         | Exact actor                           |
+| `excludeActorUserIds` | Comma-separated actor IDs, maximum 20 |
+| `projectId`           | Exact project context                 |
+| `from` / `to`         | Optional ISO-8601 time window         |
+
+`level` defaults to `milestone`, preserving the original quiet feed. An exact
+`eventType` takes precedence over `level`. Excluding actors retains redacted
+events whose `actor_user_id` is `NULL`; it hides only rows whose current actor
+ID appears in the exclusion list.
+
+The API keeps exact `from` and `to` fields for compatibility and automation.
+The admin UI exposes only Past week, Past month, Past 6 months, Past year, and
+All time. It converts the chosen preset to `from` and leaves `to` unset.
 
 The response follows the existing envelope:
 
@@ -251,30 +301,37 @@ Items are display-ready and contain current actor/project labels when they
 still exist. The endpoint has fixed newest-first ordering; the first release
 does not expose arbitrary server sorting or a total row count.
 
-Responses include `Cache-Control: private, no-store`. Anonymous callers get
-`401`; authenticated non-admins get `403`. The route uses an unscoped read
-service only after `withAdmin()` re-checks `public."user".is_admin`.
+Responses include `Cache-Control: private, no-store`. Callers without a valid
+dedicated admin session get `401`. An app bearer token or Better Auth cookie
+does not authorize the route, even when the app user has
+`public."user".is_admin = true`. The route uses an unscoped application
+database read service only after `withAdminSession()` validates the cookie
+against the independent admin database.
 
 Contract schemas live in `packages/api-contract`, and timestamps use the
 shared ISO-8601 transform from Pitfall 7.
 
 ## Browser authentication and CORS
 
-The browser uses Better Auth's normal secure, HttpOnly cookie session. It
-does not store an API bearer token in `localStorage`, session storage, or
-JavaScript state.
+The browser uses the separate admin-auth service described in
+[design-separate-admin-auth.md](design-separate-admin-auth.md). An exact,
+pre-provisioned `@harpapro.com` address and long password create a revocable
+server-side session. Better Auth email OTP and app sessions are not accepted.
+The browser stores only an opaque, secure, HttpOnly cookie; it does not store
+a bearer token or password in `localStorage`, session storage, or JavaScript
+state after an attempt completes.
 
 `admin.harpapro.com` and `api.harpapro.com` are separate origins but the same
-HTTPS site. Browser requests use `credentials: 'include'`; the auth cookie
-remains host-only to `api.harpapro.com`. Do not enable parent-domain
-`crossSubDomainCookies`, because the public marketing host does not need the
-admin session cookie.
+HTTPS site. Browser requests use `credentials: 'include'`; the dedicated
+admin cookie remains host-only to `api.harpapro.com`. Do not enable a
+parent-domain cookie, because the public marketing host does not need the
+admin session.
 
 API changes:
 
-- add `https://admin.harpapro.com` to Better Auth `trustedOrigins`;
-- add explicit per-environment admin web origins through parsed API env;
-- mount credentialed CORS only on `/api/auth/*` and `/admin/*`;
+- remove admin browser origins from Better Auth `trustedOrigins`;
+- add exact per-environment admin web origins through parsed API env;
+- mount credentialed CORS only on `/admin/*`, not `/api/auth/*`;
 - echo only an exact configured origin, never `*`;
 - allow only required methods and headers; and
 - cover successful and rejected preflights with integration tests.
@@ -286,8 +343,8 @@ hostname.
 The React island provides:
 
 1. session-loading state;
-2. email entry and email-OTP verification;
-3. non-admin denial state;
+2. email and password sign-in;
+3. generic invalid-credentials state;
 4. activity loading/error/empty/table states; and
 5. sign-out.
 
@@ -300,8 +357,9 @@ tentatively `apps/site/src/components/admin/AdminActivity.tsx`.
 
 The page includes:
 
-- event-type and date filters;
+- a level filter, an event-type filter, and simple time-range presets;
 - optional actor/project filters selected from a row;
+- multiple removable excluded-actor chips;
 - columns for time, event, actor, project/report, and subject;
 - a `Load older` cursor action;
 - a row detail drawer showing IDs, request ID, and safe metadata; and
@@ -324,19 +382,22 @@ Reuse the current `@harpa/site` static build, Pages project, and workflows:
 - a host-specific Cloudflare redirect sends the admin hostname root to
   `/admin/activity`.
 
-No separate preview, database, Fly app, or Pages project is created.
+Admin authentication does use its own Neon project and database. It does not
+require a separate Fly app, API service, or Pages project. Development uses
+the long-lived `dev` branch in `harpa-pro-admin`; production uses `main`.
+API-changing previews use matching per-PR branches in both Neon projects.
 
 Because all custom domains serve the same static build, the empty page shell is
 also addressable at `/admin/activity` on the apex and Pages hostnames. It
-contains no activity data in its HTML; Better Auth plus `withAdmin()` protects
+contains no activity data in its HTML; the dedicated API session protects
 every data request. If hiding even the shell becomes a requirement, add
 host/path Access rules or split the admin site into its own Pages project.
 
 Cloudflare Access may protect the complete admin hostname as a perimeter
 gate. It is defense in depth, not the application authorization source. The
-API must still require Better Auth plus `withAdmin()`. Because Access and
-Better Auth can create a double-login experience, enable it as an explicit
-deployment choice after the app-auth flow is verified.
+API must still require `withAdminSession()`. Because Access and dedicated
+admin authentication can create a double-login experience, enable it as an
+explicit deployment choice after the password flow is verified.
 
 If the admin surface later exceeds two screens or needs Pages Functions,
 extract it to `apps/admin` and a separate Pages project in its own design.
@@ -344,9 +405,11 @@ extract it to `apps/admin` and a separate Pages project in its own design.
 ## Failure behavior
 
 - A failed project/report event insert rolls back the originating mutation.
+- A failed note event insert rolls back the originating note creation.
 - A failed auth event insert is reported and repaired idempotently if Better
   Auth cannot make it transactional.
-- A missing current actor/project label does not fail the feed.
+- A missing current actor, project, report, or note label does not fail the
+  feed.
 - A malformed cursor or filter returns `400`.
 - An unavailable API renders a retryable error without exposing cached rows.
 - The browser never falls back to direct database access.
@@ -361,17 +424,21 @@ extract it to `apps/admin` and a separate Pages project in its own design.
   cannot select the activity table.
 - Integration tests prove project and report creation write exactly one event
   and failed mutations write none.
+- Integration tests prove each note kind writes one detail event in the same
+  transaction, with no content copied into metadata.
 - A real Better Auth email-OTP integration test proves signup recording.
-- Admin API tests cover `401`, `403`, admin success, every filter, stable
-  cursor pagination, deleted-label fallback, ISO dates, and `no-store`.
+- Admin API tests prove app sessions cannot authorize the feed, then cover
+  admin-session success, level and actor-exclusion filters, stable cursor
+  pagination, deleted-label fallback, ISO dates, and `no-store`.
 - Account-deletion tests prove user identifiers are redacted from retained
   events.
 - Contract/code-generation drift checks remain green.
 
 ### Site
 
-- Component tests cover auth, loading, failure, empty, populated, pagination,
-  filters, deleted entities, and the detail drawer.
+- Component tests cover password auth, loading, generic failure, empty,
+  populated, pagination, level and time presets, multiple actor exclusions,
+  deleted entities, and the detail drawer.
 - A Playwright smoke covers the local admin page against the real API/default
   wiring, including CORS and a persisted event (Pitfall 13).
 - Run the existing site typecheck, lint, unit, build, and focused Playwright
@@ -400,32 +467,41 @@ before being treated as complete.
 
 - Add the display read model and cursor encoding.
 - Add `GET /admin/activity`.
-- Add exact-origin auth/admin CORS and trusted-origin configuration.
+- Add exact-origin `/admin/*` CORS and remove admin origins from Better Auth.
 - Add admin, scope, filter, pagination, and cache-header tests.
 - Regenerate OpenAPI/types and update API/auth/database docs.
 
 ### Phase 4 — Admin page
 
-- Add the web Better Auth client and OTP states.
+- Add the dedicated admin-auth fetch client and password states.
 - Add TanStack Table and the activity island.
 - Add the Astro route, noindex/sitemap exclusions, tests, and responsive
   styling.
 
 ### Phase 5 — Deployment
 
+- Ensure and migrate the independent admin `dev` branch, configure
+  `ADMIN_DATABASE_URL`, and provision the development administrator.
 - Deploy and verify the stable development route.
-- Configure the production API origin allowlist.
+- Configure the production API origin allowlist and migrate the independent
+  admin `main` database before provisioning production.
 - Attach `admin.harpapro.com` and configure the root redirect.
 - Decide whether to enable Cloudflare Access.
-- Run a production smoke: sign up, create project, create report, and verify
-  three rows with request IDs where available.
+- Run a production smoke: sign up, create a project and report, add selected
+  note kinds, and verify both milestone and detail rows with request IDs where
+  available.
 
-### Phase 6 — Evaluate before expanding
+### Phase 6 — Detail levels and advanced filtering
 
-Use the initial feed before adding more events. The next candidates are
-waitlist confirmation, report generation/finalization, membership changes,
-and existing admin mutations. Add only events that answer a recurring
-operator question.
+- Derive `milestone` and `detail` from a central curated registry.
+- Default the feed to milestone events and allow milestone, detail, or all.
+- Replace exact date controls with Past week, Past month, Past 6 months, Past
+  year, and All time presets.
+- Allow up to 20 actor IDs to be excluded at once while retaining redacted
+  actor rows.
+- Record text, voice, image, and document note creation transactionally.
+- Keep raw file-registration traffic out of the business feed.
+- Re-evaluate additional event types only after operators use this layer.
 
 ## Alternatives considered
 
@@ -451,7 +527,7 @@ Revisit when the admin surface materially grows.
 ### Trust Cloudflare Access without app authorization
 
 Rejected. Access is a useful outer gate, but app-level authorization must
-continue to re-check `is_admin` at the API boundary.
+continue to validate the dedicated admin session at the API boundary.
 
 ## Documentation affected during implementation
 
@@ -468,7 +544,10 @@ continue to re-check `is_admin` at the API boundary.
 Unless the user changes them before implementation:
 
 - use the existing `apps/site` and Pages project;
-- track only the three initial creation events;
+- keep admin identities and sessions in the independent `harpa-pro-admin`
+  Neon project;
+- default to the three milestone events and keep note creation in the optional
+  detail level;
 - do not backfill old rows;
 - use HttpOnly cookie auth, not a browser-stored bearer token;
 - keep current labels out of stored activity rows;

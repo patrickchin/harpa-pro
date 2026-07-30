@@ -18,6 +18,8 @@
     "lint": "eslint . --max-warnings 0 --ext .ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx src/db/migrate.ts",
+    "db:migrate:admin": "tsx src/db/admin-migrate.ts",
+    "admin:set-password": "tsx scripts/set-admin-password.ts",
     "db:seed-test-account": "tsx scripts/seed-test-account.ts",
     "activity:reconcile-signups": "tsx scripts/reconcile-signup-activity.ts",
     "spec:emit": "tsx scripts/emit-openapi.ts",

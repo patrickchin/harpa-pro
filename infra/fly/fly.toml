@@ -14,11 +14,12 @@ primary_region = "fra"
   # broken test-account seed aborts the rollout instead of leaving prod
   # with code ahead of schema or unverifiable post-deploy journeys.
   # See docs/v4/arch-cicd-and-migrations.md.
-  release_command = "sh -c 'pnpm --filter @harpa/api db:migrate && pnpm --filter @harpa/api db:seed-test-account'"
+  release_command = "sh -c 'pnpm --filter @harpa/api db:migrate && pnpm --filter @harpa/api db:migrate:admin && pnpm --filter @harpa/api db:seed-test-account'"
 
 [env]
   NODE_ENV = "production"
   PORT = "8787"
+  ADMIN_CORS_ORIGINS = "https://admin.harpapro.com"
 
 [processes]
   app = "pnpm --filter @harpa/api exec tsx src/server.ts"
@@ -49,9 +50,10 @@ primary_region = "fra"
     soft_limit = 25
     hard_limit = 50
 
-# Readiness probe: opens a real DB connection and checks app._migrations
-# head matches MIGRATIONS_REQUIRED_HEAD (baked into the image). A new
-# machine must pass this before Fly routes traffic to it.
+# Primary readiness remains app-only: it opens the application DB and checks
+# app._migrations against MIGRATIONS_REQUIRED_HEAD. Admin DB readiness is
+# verified post-deploy by CI at /admin/readyz, so an admin outage cannot
+# remove the otherwise healthy application API from Fly's routing pool.
 [[http_service.checks]]
   grace_period = "15s"
   interval = "30s"

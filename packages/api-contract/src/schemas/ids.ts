@@ -25,10 +25,12 @@ interface IdSpec {
 }
 
 export const ID_SPEC = {
-  prj: { currentLen: 8,  minLen: 8, maxLen: 16, brand: 'ProjectId' },
-  rpt: { currentLen: 8,  minLen: 8, maxLen: 16, brand: 'ReportId' },
+  prj: { currentLen: 8, minLen: 8, maxLen: 16, brand: 'ProjectId' },
+  rpt: { currentLen: 8, minLen: 8, maxLen: 16, brand: 'ReportId' },
   usr: { currentLen: 12, minLen: 8, maxLen: 16, brand: 'UserId' },
   ses: { currentLen: 12, minLen: 8, maxLen: 16, brand: 'SessionId' },
+  adm: { currentLen: 12, minLen: 8, maxLen: 16, brand: 'AdminIdentityId' },
+  ads: { currentLen: 12, minLen: 8, maxLen: 16, brand: 'AdminSessionId' },
   vrf: { currentLen: 10, minLen: 8, maxLen: 16, brand: 'VerificationId' },
   idn: { currentLen: 12, minLen: 8, maxLen: 16, brand: 'AccountIdentityId' },
   not: { currentLen: 10, minLen: 8, maxLen: 16, brand: 'NoteId' },
@@ -47,19 +49,21 @@ export type Id<P extends Prefix> = string & {
   readonly __brand: (typeof ID_SPEC)[P]['brand'];
 };
 
-export type ProjectId        = Id<'prj'>;
-export type ReportId         = Id<'rpt'>;
-export type UserId           = Id<'usr'>;
-export type SessionId        = Id<'ses'>;
-export type VerificationId   = Id<'vrf'>;
+export type ProjectId = Id<'prj'>;
+export type ReportId = Id<'rpt'>;
+export type UserId = Id<'usr'>;
+export type SessionId = Id<'ses'>;
+export type AdminIdentityId = Id<'adm'>;
+export type AdminSessionId = Id<'ads'>;
+export type VerificationId = Id<'vrf'>;
 export type AccountIdentityId = Id<'idn'>;
-export type NoteId           = Id<'not'>;
-export type FileId           = Id<'fil'>;
+export type NoteId = Id<'not'>;
+export type FileId = Id<'fil'>;
 export type WaitlistSignupId = Id<'wls'>;
-export type LlmUsageEventId  = Id<'lue'>;
-export type NoteFileId       = Id<'nfl'>;
-export type ReportCommentId  = Id<'rcm'>;
-export type ActivityEventId  = Id<'aud'>;
+export type LlmUsageEventId = Id<'lue'>;
+export type NoteFileId = Id<'nfl'>;
+export type ReportCommentId = Id<'rcm'>;
+export type ActivityEventId = Id<'aud'>;
 
 /**
  * Build a Zod schema for a given prefix. Accepts the full historical
@@ -82,16 +86,18 @@ export function idSchema<P extends Prefix>(prefix: P) {
     .transform((s) => s.toLowerCase());
 }
 
-export const projectId        = idSchema('prj');
-export const reportId         = idSchema('rpt');
-export const userId           = idSchema('usr');
-export const sessionId        = idSchema('ses');
-export const verificationId   = idSchema('vrf');
+export const projectId = idSchema('prj');
+export const reportId = idSchema('rpt');
+export const userId = idSchema('usr');
+export const sessionId = idSchema('ses');
+export const adminIdentityId = idSchema('adm');
+export const adminSessionId = idSchema('ads');
+export const verificationId = idSchema('vrf');
 export const accountIdentityId = idSchema('idn');
-export const noteId           = idSchema('not');
-export const fileId           = idSchema('fil');
+export const noteId = idSchema('not');
+export const fileId = idSchema('fil');
 export const waitlistSignupId = idSchema('wls');
-export const llmUsageEventId  = idSchema('lue');
-export const noteFileId       = idSchema('nfl');
-export const reportCommentId  = idSchema('rcm');
-export const activityEventId  = idSchema('aud');
+export const llmUsageEventId = idSchema('lue');
+export const noteFileId = idSchema('nfl');
+export const reportCommentId = idSchema('rcm');
+export const activityEventId = idSchema('aud');

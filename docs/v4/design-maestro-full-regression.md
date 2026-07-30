@@ -79,7 +79,6 @@ section is the queue.
 |---|---|---|
 | Voice note debug fields (transcript, summary, playback) in Report Debug | Module 09 covers the draft-side voice lifecycle and module 12 covers the current debug surface. Voice-specific debug fields need API + UI support before Maestro can assert them. | Track after the debug payload expands. |
 | Push notifications / universal links cold-tap | Tracked in [P4.6](plan-p4-hardening.md#p46-universal-links). Different harness. | [P4.6] — separate flow `share-link-cold-start.yaml`. |
-| Avatar upload (`AvatarUploader`) | Depends on R2 upload pipeline + camera roll — partly merged but no canonical Maestro coverage yet. | Add as `12a-avatar-upload.yaml` after photo modules unblock. |
 
 ---
 
@@ -504,7 +503,6 @@ clear merge-trigger so we don't drift back into Pitfall 4.
 | 10a | `10a-photo-notes-draft.yaml` — `btn-attachment` → camera → Done → two-tile photo row appears on Notes timeline → generate → Report tab photo strip → preview → delete | Photo upload UI redesign landed on `dev` (`5173049`) | Re-enabled in `regression-journey.yaml`; passed focused local Android, full local regression, and clean full dev-deployment regression on 2026-05-28. |
 | 10b | `10b-photo-notes-finalized.yaml` — open finalized report → ReportPhotos block renders → ImagePreviewModal opens via signed URL | Add a photo-bearing finalized-report path after the draft-side upload lifecycle | Added to local/dev journeys after module 10a; passed focused local Android, full local regression, and clean full dev-deployment regression on 2026-05-28. |
 | 12a | `12-report-debug.yaml` voice fields | Add `voiceTranscripts` + `voiceSummaries` arrays to `GET /reports/{n}/debug` and to the debug screen | Bundled with F4 in §4 after the debug payload expands. |
-| 14 | `14-avatar-upload.yaml` | Avatar upload needs its own camera-roll/R2 assertions | Add to P4 list as a separate upload-pipeline follow-up. |
 
 If a feature lands on `dev` but its module is **not** added in the
 same PR, the PR is blocked. The merge-checklist for any branch in
@@ -573,8 +571,8 @@ between "the journey is green" and "the app is covered".
   token-event timeline (`GET /me/usage/events`) remains out of scope
   until [P3.15.5](plan-p3-feature-build.md#p3155--llm-token-accounting).
 - `apps/mobile/app/(app)/profile.tsx` — module 16 covers identity and
-  primary navigation targets. Avatar upload remains a carve-out until
-  `AvatarUploader` gets canonical camera-roll/R2 coverage.
+  primary navigation targets. Avatar UI is intentionally absent on
+  both platforms.
 - Voice notes — module `09` now covers recording, upload, transcribe,
   summarize, title, transcript viewing, playback entry point, and
   delete. Remaining voice coverage is the saved-report/debug surface

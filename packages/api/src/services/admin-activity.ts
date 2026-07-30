@@ -9,11 +9,11 @@ type ListResponse = z.infer<typeof activitySchemas.listResponse>;
 interface ActivityRow extends Record<string, unknown> {
   id: string;
   occurred_at: string;
-  event_type: 'user.signed_up' | 'project.created' | 'report.created';
+  event_type: z.infer<typeof activitySchemas.eventType>;
   actor_user_id: string | null;
   actor_label: string;
   actor_email: string | null;
-  subject_type: 'user' | 'project' | 'report';
+  subject_type: 'user' | 'project' | 'report' | 'note';
   subject_id: string | null;
   subject_label: string;
   project_id: string | null;
@@ -55,9 +55,30 @@ export async function listAdminActivity(input: ListQuery): Promise<ListResponse>
   }
   if (input.eventType) {
     filters.push(sql`e.event_type = ${input.eventType}`);
+  } else if (input.level !== 'all') {
+    const eventTypes = activitySchemas.eventTypes.filter(
+      (eventType) => activitySchemas.eventRegistry[eventType].level === input.level,
+    );
+    filters.push(
+      sql`e.event_type IN (${sql.join(
+        eventTypes.map((eventType) => sql`${eventType}`),
+        sql`, `,
+      )})`,
+    );
   }
   if (input.actorUserId) {
     filters.push(sql`e.actor_user_id = ${input.actorUserId}`);
+  }
+  if (input.excludeActorUserIds?.length) {
+    filters.push(
+      sql`(
+        e.actor_user_id IS NULL
+        OR e.actor_user_id NOT IN (${sql.join(
+          input.excludeActorUserIds.map((actorUserId) => sql`${actorUserId}`),
+          sql`, `,
+        )})
+      )`,
+    );
   }
   if (input.projectId) {
     filters.push(sql`e.project_id = ${input.projectId}`);
@@ -97,6 +118,13 @@ export async function listAdminActivity(input: ListQuery): Promise<ListResponse>
           WHEN subject_report.id IS NULL THEN 'Deleted report'
           ELSE 'Report #' || subject_report.number::text
         END
+        WHEN 'note' THEN CASE
+          WHEN subject_note.id IS NULL THEN 'Deleted note'
+          WHEN subject_note.kind = 'text' THEN 'Text note'
+          WHEN subject_note.kind = 'voice' THEN 'Voice note'
+          WHEN subject_note.kind = 'image' THEN 'Image note'
+          WHEN subject_note.kind = 'document' THEN 'Document note'
+        END
       END AS subject_label,
       e.project_id,
       CASE
@@ -117,6 +145,9 @@ export async function listAdminActivity(input: ListQuery): Promise<ListResponse>
     LEFT JOIN app.reports subject_report
       ON e.subject_type = 'report'
      AND subject_report.id::text = e.subject_id
+    LEFT JOIN app.notes subject_note
+      ON e.subject_type = 'note'
+     AND subject_note.id::text = e.subject_id
     LEFT JOIN app.projects project
       ON project.id = e.project_id
     WHERE ${sql.join(filters, sql` AND `)}
@@ -129,6 +160,7 @@ export async function listAdminActivity(input: ListQuery): Promise<ListResponse>
   const items = rows.map((row) => ({
     id: row.id,
     occurredAt: new Date(row.occurred_at).toISOString(),
+    level: activitySchemas.eventRegistry[row.event_type].level,
     eventType: row.event_type,
     actorUserId: row.actor_user_id,
     actorLabel: row.actor_label,

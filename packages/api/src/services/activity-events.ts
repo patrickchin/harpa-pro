@@ -1,6 +1,12 @@
 import { sql } from 'drizzle-orm';
 import { z } from 'zod';
-import { projectId, reportId, userId } from '@harpa/api-contract';
+import {
+  activity as activitySchemas,
+  noteId,
+  projectId,
+  reportId,
+  userId,
+} from '@harpa/api-contract';
 import type { ScopedDb } from '../db/scope.js';
 import { newId } from '../lib/ids.js';
 
@@ -53,6 +59,42 @@ const inputSchema = z
           .strict(),
       })
       .strict(),
+    z
+      .object({
+        ...common,
+        eventType: z.literal('note.text_created'),
+        subjectId: noteId,
+        projectId,
+        metadata: z.object({}).strict(),
+      })
+      .strict(),
+    z
+      .object({
+        ...common,
+        eventType: z.literal('note.voice_created'),
+        subjectId: noteId,
+        projectId,
+        metadata: z.object({}).strict(),
+      })
+      .strict(),
+    z
+      .object({
+        ...common,
+        eventType: z.literal('note.image_created'),
+        subjectId: noteId,
+        projectId,
+        metadata: z.object({}).strict(),
+      })
+      .strict(),
+    z
+      .object({
+        ...common,
+        eventType: z.literal('note.document_created'),
+        subjectId: noteId,
+        projectId,
+        metadata: z.object({}).strict(),
+      })
+      .strict(),
   ])
   .superRefine((value, ctx) => {
     if (value.dedupeKey !== `${value.eventType}:${value.subjectId}`) {
@@ -86,12 +128,6 @@ export interface SignupActivityReconciliation {
   inserted: boolean;
 }
 
-const SUBJECT_TYPES = {
-  'user.signed_up': 'user',
-  'project.created': 'project',
-  'report.created': 'report',
-} as const;
-
 /**
  * Record one curated activity event. Callers pass their existing scoped
  * Drizzle handle so entity creation and its event can share one transaction.
@@ -124,7 +160,7 @@ export async function recordActivityEvent(
       ${occurredAt},
       ${event.eventType},
       ${event.actorUserId},
-      ${SUBJECT_TYPES[event.eventType]},
+      ${activitySchemas.eventRegistry[event.eventType].subjectType},
       ${event.subjectId},
       ${event.projectId ?? null},
       ${event.requestId},

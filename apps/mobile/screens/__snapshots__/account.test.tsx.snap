@@ -97,20 +97,6 @@ exports[`Account > matches snapshot at default props 1`] = `
           }
         >
           <rn-View
-            className="items-center pt-2"
-            onLayout={[Function]}
-          >
-            <rn-View
-              className="h-24 w-24 items-center justify-center rounded-full border border-border bg-card"
-              testID="account-avatar-placeholder"
-            >
-              <lucide-User
-                color="#5f5b66"
-                size={40}
-              />
-            </rn-View>
-          </rn-View>
-          <rn-View
             onLayout={[Function]}
           >
             <rn-View

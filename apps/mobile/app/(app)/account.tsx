@@ -2,19 +2,14 @@
  * Account route — wires the auth session into the props-only
  * `Account` body.
  *
- * P3.15.4 wiring:
- *  - `useUpdateMeMutation` powers the inline editor (Save → PATCH /me
- *    → session.refresh()).
- *  - `<AvatarUploader />` is injected as the avatar slot. The fileId
- *    is persisted to AsyncStorage from inside the uploader (no
- *    backend route yet — see NOTE in AvatarUploader; P4).
+ * `useUpdateMeMutation` powers the inline editor (Save → PATCH /me
+ * → session.refresh()). Avatar UI is intentionally absent.
  */
 import { useCallback, useState } from 'react';
 import { useRouter, type Href } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
 
 import { Account, type AccountProfile, type AccountSaveValues } from '@/screens/account';
-import { AvatarUploader } from '@/components/account/AvatarUploader';
 import { useAuthSession } from '@/lib/auth/session';
 import { useRefresh } from '@/lib/util/use-refresh';
 import { safeBack } from '@/lib/nav/safe-back';
@@ -109,7 +104,6 @@ export default function AccountRoute() {
       refreshing={refreshing}
       onRefresh={onRefresh}
       onBack={() => safeBack(router, '/(app)/profile' as Href)}
-      avatarSlot={<AvatarUploader />}
       onSaveProfile={handleSaveProfile}
       isSaving={updateMe.isPending}
       saveError={saveError}

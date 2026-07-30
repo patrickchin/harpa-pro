@@ -254,11 +254,10 @@ ON CONFLICT (bucket_key) DO UPDATE
 RETURNING count, window_end;
 ```
 
-GC: `DELETE FROM app.rate_limit_buckets WHERE window_end < now() - interval '1 hour'`
-runs on an interval timer in the API process. `src/server.ts` starts the
-scheduler during boot, and each process sweeps every 10 minutes. Multiple
-machines may race the same delete safely; no dedicated cron worker is
-required.
+GC deletes buckets whose window ended more than one minute ago. It runs on an
+interval timer in the API process: `src/server.ts` starts the scheduler during
+boot, and each process sweeps every 10 minutes. Multiple machines may race the
+same parameterized `DELETE` safely; no dedicated cron worker is required.
 
 This bucket table is **outside** the per-request scope wrapper — it
 uses an admin namespace connection, same as `auth.sessions`. No RLS;

@@ -208,6 +208,20 @@ for the deploy seeder and migrations 0010/0011 with representative legacy
 rows. The remaining SQL is not assumed safe merely because it remains; later
 slices should follow the boundary and proof requirements above.
 
+## Correctness follow-up
+
+The repo-wide review found three SQL boundaries that needed direct repair:
+
+- Concurrent note-file appends now lock the parent report before the note,
+  preserving report-delete lock order while serializing position allocation.
+  Real-Postgres tests cover append-versus-append and append-versus-delete.
+- API startup now starts the application Postgres rate-limit GC scheduler.
+  Tests cover boot wiring, cross-pool atomic consumption, and stale-row cleanup.
+- The migration runner owns transaction boundaries. It removes the known outer
+  wrapper from migrations 0014, 0019, and 0022 without modifying those applied
+  files, keeps each body and ledger write atomic, and rejects transaction
+  control in future migration files.
+
 ## Rollout and rollback
 
 Ship this as short slices, not one broad rewrite:

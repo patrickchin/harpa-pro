@@ -295,6 +295,11 @@ pin high-risk authorization expectations with a focused PR-gated policy test.
 
 Most recent first. One line per bug — open the linked file only for the full root-cause / test / commit write-up.
 
+- **2026-07-31** *(R5)* — The application PostgreSQL rate limiter implemented
+  periodic stale-bucket cleanup, but `server.ts` never started it, so production
+  rows could grow indefinitely while middleware tests stayed green. Fix: start
+  GC at boot and cover the server entry point plus real-Postgres
+  concurrency/cleanup. [detail](2026-07-31-app-rate-limit-gc-not-started.md)
 - **2026-07-29** — A manually dispatched API workflow called reusable mobile OTA with inherited `workflow_dispatch` context, so the callee tried blank native registration and could force redundant manual publication. Fix: discriminate successful API calls with their call-only input, skip registration, and evaluate them with effective `workflow_call` policy semantics. [detail](2026-07-29-reusable-ota-dispatch-context.md)
 - **2026-07-29** — The first `api-dev` deploy after PR #205 stopped before lifecycle arming when `storage-worker=1` tried to collapse Fly's active/standby pair; later recovery proved Fly can leave an updated Machine stopped and render the clone's same tagged image as `tag@digest`. Fix: remove broad scaling, explicitly start only the exact stopped/no-standby candidate, and compare a narrowly validated canonical tag, at most one explicit digest, and exact release metadata at every fresh proof. [detail](2026-07-29-fly-worker-scale-confirmation.md)
 - **2026-07-29** — The first `api-dev` push after PR #202 failed before creating any jobs because its reusable OTA caller was capped at `contents: read` while the nested runtime-registration job requested `contents: write`. Fix: grant write only on the reusable-call jobs, preserve the called workflows' read-only default, and add a scoped policy regression. [detail](2026-07-29-reusable-workflow-permission-ceiling.md)

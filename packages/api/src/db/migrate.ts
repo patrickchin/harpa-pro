@@ -10,11 +10,15 @@
  *     for the first, then no-ops.
  *   - Each *.sql file runs inside its own BEGIN/COMMIT. Failure aborts
  *     the file's transaction and exits non-zero with the filename in
- *     stderr; no half-applied file is recorded in app._migrations.
+ *     stderr; no half-applied file is recorded in app._migrations. The
+ *     runner strips the outer wrapper from three known historical files
+ *     and rejects transaction control in new migration files.
  *   - Files whose statements cannot run in a transaction (e.g.
  *     `CREATE INDEX CONCURRENTLY`) must be named `<head>.notx.sql`. The
  *     loader runs them WITHOUT a wrapping transaction; the author is
  *     responsible for the cleanup story documented in the file's header.
+ *     These files must not manage transactions themselves; split any
+ *     transactional setup into a preceding normal migration.
  *   - Logs `applying <file>` BEFORE every query so a hang/crash names
  *     the offender.
  */
@@ -256,11 +260,11 @@ function extractStatementWords(sql: string): string[] {
 
 function classifyTransactionControlStatement(sql: string): TransactionControlKind | null {
   const words = extractStatementWords(sql);
-  if (words.length === 1 && words[0] === 'begin') return 'begin';
-  if (words.length === 2 && words[0] === 'begin' && words[1] === 'transaction') return 'begin';
-  if (words.length === 2 && words[0] === 'start' && words[1] === 'transaction') return 'begin';
-  if (words.length === 1 && words[0] === 'commit') return 'commit';
-  if (words.length === 1 && words[0] === 'rollback') return 'rollback';
+  const first = words[0];
+  if (first === 'begin') return 'begin';
+  if (first === 'start' && words[1] === 'transaction') return 'begin';
+  if (first === 'commit' || first === 'end') return 'commit';
+  if (first === 'rollback' || first === 'abort') return 'rollback';
   return null;
 }
 
@@ -300,9 +304,10 @@ function normalizeMigrationSql(file: string, sql: string): string {
     return sql.slice(first.end, last.start);
   }
 
-  throw new Error(
-    `[migrate] ${file} contains top-level transaction control; use the runner-owned transaction or rename true non-transactional files to *.notx.sql`,
-  );
+  const guidance = file.endsWith('.notx.sql')
+    ? 'split transactional setup into a preceding normal migration'
+    : 'use the runner-owned transaction or rename true non-transactional files to *.notx.sql';
+  throw new Error(`[migrate] ${file} contains top-level transaction control; ${guidance}`);
 }
 
 export async function migrate(

@@ -457,14 +457,27 @@ export async function appendFiles(
   noteId: string,
   files: Array<{ fileId: string; thumbnailFileId?: string | null }>,
 ): Promise<NoteFileRow[]> {
+  // Match the parent-to-child lock order used by report deletion:
+  // protect the report from DELETE first, then serialize appends on the note.
+  // KEY SHARE still allows the later non-key report timestamp/counter update.
   const ownerRes = await db.execute<{ report_id: string }>(sql`
-    SELECT report_id
-      FROM app.notes
-     WHERE id = ${noteId}
-     FOR UPDATE
+    SELECT n.report_id
+      FROM app.notes AS n
+      JOIN app.reports AS r ON r.id = n.report_id
+     WHERE n.id = ${noteId}
+     FOR KEY SHARE OF r
   `);
   const reportId = ownerRes.rows[0]?.report_id;
   if (!reportId) return [];
+
+  const noteLock = await db.execute<{ id: string }>(sql`
+    SELECT id
+      FROM app.notes
+     WHERE id = ${noteId}
+       AND report_id = ${reportId}
+     FOR UPDATE
+  `);
+  if (!noteLock.rows[0]) return [];
 
   const maxPos = await db.execute<{ max_pos: number | null }>(sql`
     SELECT MAX(position) as max_pos FROM app.note_files WHERE note_id = ${noteId}

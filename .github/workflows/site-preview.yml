@@ -9,11 +9,19 @@ on:
   pull_request:
     branches: [dev, main]
     paths:
-      - "apps/site/**"
-      - ".github/workflows/site-preview.yml"
-      - "lighthouserc.json"
-      - "package.json"
-      - "pnpm-lock.yaml"
+      - 'apps/site/**'
+      - 'packages/api/admin-migrations/**'
+      - 'packages/api/scripts/start-admin-activity-e2e.ts'
+      - 'packages/api/src/app.ts'
+      - 'packages/api/src/db/admin-*.ts'
+      - 'packages/api/src/lib/admin-*.ts'
+      - 'packages/api/src/middleware/admin-*.ts'
+      - 'packages/api/src/routes/admin-*.ts'
+      - 'packages/api/src/services/admin-*.ts'
+      - '.github/workflows/site-preview.yml'
+      - 'lighthouserc.json'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
 
 # Cancel stale builds when a PR gets a new push.
 concurrency:
@@ -56,12 +64,17 @@ jobs:
       - name: Browser-test documentation
         run: pnpm --filter @harpa/site test:e2e
 
+      - name: Browser-test dedicated admin authentication
+        run: pnpm --filter @harpa/site test:e2e:admin
+
       - name: Upload Playwright report
         if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: site-playwright-report
-          path: apps/site/playwright-report/
+          path: |
+            apps/site/playwright-report/
+            apps/site/test-results/
           retention-days: 14
 
       - name: Lighthouse CI (perf/a11y ≥ 0.90, bp/seo ≥ 0.95)

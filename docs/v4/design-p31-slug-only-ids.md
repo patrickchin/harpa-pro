@@ -23,7 +23,7 @@
    the `app` and `auth` schemas entirely.
 2. **Branded type safety.** A `ProjectId` cannot be passed where a
    `ReportId` is expected — TS compile error, not a runtime check.
-3. **Growable keyspace, frozen on-disk.** A given prefix's *current*
+3. **Growable keyspace, frozen on-disk.** A given prefix's _current_
    length can be increased over time without breaking IDs that were
    minted at the old length. Validators accept a closed range
    `[MIN_LEN, MAX_LEN]` per prefix; generators emit at `CURRENT_LEN`.
@@ -42,7 +42,7 @@
   expendable. We do not preserve UUIDs as alternates.
 - **Tracking historical lengths in the DB.** The `MIN_LEN` per
   prefix is a constant in code, append-only forever. We never
-  *shrink* `MIN_LEN`; that is the contract we owe old IDs.
+  _shrink_ `MIN_LEN`; that is the contract we owe old IDs.
 - **Slugs for entities that have no API surface.** `project_members`
   and `user_settings` are addressed by their composite or FK key and
   do not get their own prefix.
@@ -50,7 +50,7 @@
   `auth.*` tables via Drizzle, as documented in
   [arch-auth-and-rls.md](arch-auth-and-rls.md) and confirmed in
   `packages/api/src/auth/service.ts`. The "better-auth" name in
-  AGENTS.md refers to the *flow* (phone OTP + session + JWT), not
+  AGENTS.md refers to the _flow_ (phone OTP + session + JWT), not
   the npm package. See §7.
 
 ---
@@ -60,16 +60,18 @@
 Crockford base32 (`0-9a-hjkmnp-tv-z`, 32 symbols, 5 bits/char).
 Birthday-collision 50% threshold ≈ `2^(5·L/2)` rows.
 
-| Table | Prefix | `CURRENT_LEN` | `MIN_LEN` | `MAX_LEN` | Birthday-50% at CURRENT | Rationale |
-|---|---|---|---|---|---|---|
-| `app.projects`             | `prj` | **8**  | 8 | 16 | ~1.0M     | Already minted at 8. Moderate volume; mostly enumerated, not guessed. |
-| `app.reports`              | `rpt` | **8**  | 8 | 16 | ~1.0M     | Already minted at 8. Per-project number is the human address; slug is the global key. |
-| `auth.users`               | `usr` | **12** | 8 | 16 | ~1.1B     | Appears in every JWT, every server log, every audit trail. Cheap to make wide; expensive to widen later. Start generous. |
-| `auth.sessions`            | `ses` | **12** | 8 | 16 | ~1.1B     | High churn (one per device per 7 days); user-scoped but reasoned about globally in logs. |
-| `auth.verifications`       | `vrf` | **10** | 8 | 16 | ~33M      | Short-lived, low value, but high enumeration risk from SMS gateway logs. 10 chars = abundant. |
-| `app.notes`                | `not` | **10** | 8 | 16 | ~33M      | Many per report. Will dominate row count. |
-| `app.files`                | `fil` | **10** | 8 | 16 | ~33M      | One per upload; mirrors `not` cardinality. |
-| `app.waitlist_signups`     | `wls` | **10** | 8 | 16 | ~33M      | Public-form surface; defence against enumeration of who signed up. |
+| Table                  | Prefix | `CURRENT_LEN` | `MIN_LEN` | `MAX_LEN` | Birthday-50% at CURRENT | Rationale                                                                                                                |
+| ---------------------- | ------ | ------------- | --------- | --------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `app.projects`         | `prj`  | **8**         | 8         | 16        | ~1.0M                   | Already minted at 8. Moderate volume; mostly enumerated, not guessed.                                                    |
+| `app.reports`          | `rpt`  | **8**         | 8         | 16        | ~1.0M                   | Already minted at 8. Per-project number is the human address; slug is the global key.                                    |
+| `auth.users`           | `usr`  | **12**        | 8         | 16        | ~1.1B                   | Appears in every JWT, every server log, every audit trail. Cheap to make wide; expensive to widen later. Start generous. |
+| `auth.sessions`        | `ses`  | **12**        | 8         | 16        | ~1.1B                   | High churn (one per device per 7 days); user-scoped but reasoned about globally in logs.                                 |
+| `admin.identities`     | `adm`  | **12**        | 8         | 16        | ~1.1B                   | Separate admin-database identity; deliberately incompatible with application user IDs.                                   |
+| `admin.sessions`       | `ads`  | **12**        | 8         | 16        | ~1.1B                   | Dedicated admin session; deliberately incompatible with application sessions.                                            |
+| `auth.verifications`   | `vrf`  | **10**        | 8         | 16        | ~33M                    | Short-lived, low value, but high enumeration risk from SMS gateway logs. 10 chars = abundant.                            |
+| `app.notes`            | `not`  | **10**        | 8         | 16        | ~33M                    | Many per report. Will dominate row count.                                                                                |
+| `app.files`            | `fil`  | **10**        | 8         | 16        | ~33M                    | One per upload; mirrors `not` cardinality.                                                                               |
+| `app.waitlist_signups` | `wls`  | **10**        | 8         | 16        | ~33M                    | Public-form surface; defence against enumeration of who signed up.                                                       |
 
 **Hard ceiling**: `MAX_LEN = 16` across the board. With prefix +
 underscore + 16 chars = 20 chars total → fits a `varchar(24)` if we
@@ -89,11 +91,13 @@ will be added when those features land, following the same template.
 `prj` and `rpt` already exist in dev DBs at 8 chars; widening them
 now wastes a migration. Birthday-50% at ~1M rows is uncomfortable
 for high-write tables (`not`, `fil`, `ses`) where retries become
-common past ~100k rows; widening *those* now is free.
+common past ~100k rows; widening _those_ now is free.
 
-`usr` and `ses` are deliberately the widest because (a) they appear
-in logs/tokens forever, and (b) they are linked to PII — narrow
-keyspaces invite enumeration.
+`usr`, `ses`, `adm`, and `ads` are deliberately the widest because
+(a) they appear in logs or tokens, and (b) the identity IDs are linked
+to PII — narrow keyspaces invite enumeration. The `adm` and `ads`
+families live in the separate admin database; keeping them here still
+gives every TypeScript consumer one ID contract.
 
 ---
 
@@ -128,13 +132,15 @@ const CB32 = '0-9a-hjkmnp-tv-z';
  * `minLen` alone.
  */
 export const ID_SPEC = {
-  prj: { currentLen: 8,  minLen: 8, maxLen: 16, brand: 'ProjectId' },
-  rpt: { currentLen: 8,  minLen: 8, maxLen: 16, brand: 'ReportId'  },
-  usr: { currentLen: 12, minLen: 8, maxLen: 16, brand: 'UserId'    },
+  prj: { currentLen: 8, minLen: 8, maxLen: 16, brand: 'ProjectId' },
+  rpt: { currentLen: 8, minLen: 8, maxLen: 16, brand: 'ReportId' },
+  usr: { currentLen: 12, minLen: 8, maxLen: 16, brand: 'UserId' },
   ses: { currentLen: 12, minLen: 8, maxLen: 16, brand: 'SessionId' },
+  adm: { currentLen: 12, minLen: 8, maxLen: 16, brand: 'AdminIdentityId' },
+  ads: { currentLen: 12, minLen: 8, maxLen: 16, brand: 'AdminSessionId' },
   vrf: { currentLen: 10, minLen: 8, maxLen: 16, brand: 'VerificationId' },
-  not: { currentLen: 10, minLen: 8, maxLen: 16, brand: 'NoteId'    },
-  fil: { currentLen: 10, minLen: 8, maxLen: 16, brand: 'FileId'    },
+  not: { currentLen: 10, minLen: 8, maxLen: 16, brand: 'NoteId' },
+  fil: { currentLen: 10, minLen: 8, maxLen: 16, brand: 'FileId' },
   wls: { currentLen: 10, minLen: 8, maxLen: 16, brand: 'WaitlistSignupId' },
 } as const satisfies Record<string, IdSpec>;
 
@@ -153,46 +159,49 @@ function idSchema<P extends Prefix>(prefix: P) {
   return z
     .string()
     .regex(re, `invalid ${prefix}_ id`)
-    .transform((s) => s.toLowerCase()) as unknown as
-    z.ZodType<Id<P>, z.ZodTypeDef, string>;
+    .transform((s) => s.toLowerCase()) as unknown as z.ZodType<Id<P>, z.ZodTypeDef, string>;
 }
 
 /** Branded string type per prefix. Compile-time disjoint. */
 export type Id<P extends Prefix> = string & {
-  readonly __brand: typeof ID_SPEC[P]['brand'];
+  readonly __brand: (typeof ID_SPEC)[P]['brand'];
 };
 
-export type ProjectId         = Id<'prj'>;
-export type ReportId          = Id<'rpt'>;
-export type UserId            = Id<'usr'>;
-export type SessionId         = Id<'ses'>;
-export type VerificationId    = Id<'vrf'>;
-export type NoteId            = Id<'not'>;
-export type FileId            = Id<'fil'>;
-export type WaitlistSignupId  = Id<'wls'>;
+export type ProjectId = Id<'prj'>;
+export type ReportId = Id<'rpt'>;
+export type UserId = Id<'usr'>;
+export type SessionId = Id<'ses'>;
+export type AdminIdentityId = Id<'adm'>;
+export type AdminSessionId = Id<'ads'>;
+export type VerificationId = Id<'vrf'>;
+export type NoteId = Id<'not'>;
+export type FileId = Id<'fil'>;
+export type WaitlistSignupId = Id<'wls'>;
 
-export const projectId         = idSchema('prj');
-export const reportId          = idSchema('rpt');
-export const userId            = idSchema('usr');
-export const sessionId         = idSchema('ses');
-export const verificationId    = idSchema('vrf');
-export const noteId            = idSchema('not');
-export const fileId            = idSchema('fil');
-export const waitlistSignupId  = idSchema('wls');
+export const projectId = idSchema('prj');
+export const reportId = idSchema('rpt');
+export const userId = idSchema('usr');
+export const sessionId = idSchema('ses');
+export const adminIdentityId = idSchema('adm');
+export const adminSessionId = idSchema('ads');
+export const verificationId = idSchema('vrf');
+export const noteId = idSchema('not');
+export const fileId = idSchema('fil');
+export const waitlistSignupId = idSchema('wls');
 ```
 
 ### 4.2 Path-param naming
 
 To keep route handlers obvious, path params use the bare name
-(Stripe-style: `:project`, `:report`, …) — they *are* the ID now;
+(Stripe-style: `:project`, `:report`, …) — they _are_ the ID now;
 "slug" is no longer a distinct concept. Route shapes:
 
-| Before (P3.0)                                          | After (P3.1)                                       |
-|---                                                     |---                                                 |
-| `GET /projects/:projectSlug`                           | `GET /projects/:project`                            |
-| `GET /projects/:projectSlug/reports/:number`           | `GET /projects/:project/reports/:number`            |
-| `GET /r/:reportSlug` → 308                             | `GET /r/:report` → 308 to long URL                  |
-| `GET /p/:projectSlug` → 308                            | `GET /p/:project` → 308 to long URL                 |
+| Before (P3.0)                                | After (P3.1)                             |
+| -------------------------------------------- | ---------------------------------------- |
+| `GET /projects/:projectSlug`                 | `GET /projects/:project`                 |
+| `GET /projects/:projectSlug/reports/:number` | `GET /projects/:project/reports/:number` |
+| `GET /r/:reportSlug` → 308                   | `GET /r/:report` → 308 to long URL       |
+| `GET /p/:projectSlug` → 308                  | `GET /p/:project` → 308 to long URL      |
 
 The short-URL resolvers stay. Per-project report number stays.
 
@@ -343,11 +352,11 @@ Concrete changes for auth:
   module that built the Zod schemas — single source of truth.
 - The `SET LOCAL app.user_id = '<sub>'` interpolation already
   escape-protects via the regex assertion; the new regex is
-  *stricter* (no `'`, no spaces, no dashes), so injection risk goes
+  _stricter_ (no `'`, no spaces, no dashes), so injection risk goes
   down, not up.
 - All RLS policies that cast `current_setting('app.user_id')::uuid`
   change to `::app.usr_id`. (`is_member(p uuid)` → `is_member(p
-  app.prj_id)`.)
+app.prj_id)`.)
 
 **Why not the `better-auth` library?** Pitfall 5 plus the existing
 code comment: the library adds complexity we don't need. Switching
@@ -480,7 +489,7 @@ $$;
 - All eight current migration files (`202605120001` …
   `202605170001`).
 - `app.random_slug()` function (no longer called).
-- The `slug` column from `app.projects` and `app.reports` (id *is*
+- The `slug` column from `app.projects` and `app.reports` (id _is_
   the slug now).
 - Every `uuid` / `gen_random_uuid()` from app + auth schemas.
 
@@ -490,14 +499,14 @@ Every FK that used to reference a `uuid` PK now references the
 corresponding `*_id` domain, preserving the existing `ON DELETE`
 behaviour from `202605120001_init.sql`:
 
-| FK | Target | ON DELETE |
-|---|---|---|
-| `sessions.user_id` → `users.id` | `usr_id` | CASCADE |
-| `project_members.project_id` → `projects.id` | `prj_id` | CASCADE |
-| `reports.project_id` → `projects.id` | `prj_id` | CASCADE |
-| `notes.report_id` → `reports.id` | `rpt_id` | CASCADE |
-| `notes.file_id` → `files.id` | `fil_id` | SET NULL (new; today the column is just `uuid` with no FK — fixing that bug here) |
-| `files.owner_id` → `users.id` | `usr_id` | SET NULL or CASCADE — **DECISION**: CASCADE (files belong to the user) |
+| FK                                                                       | Target   | ON DELETE                                                                                                              |
+| ------------------------------------------------------------------------ | -------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `sessions.user_id` → `users.id`                                          | `usr_id` | CASCADE                                                                                                                |
+| `project_members.project_id` → `projects.id`                             | `prj_id` | CASCADE                                                                                                                |
+| `reports.project_id` → `projects.id`                                     | `prj_id` | CASCADE                                                                                                                |
+| `notes.report_id` → `reports.id`                                         | `rpt_id` | CASCADE                                                                                                                |
+| `notes.file_id` → `files.id`                                             | `fil_id` | SET NULL (new; today the column is just `uuid` with no FK — fixing that bug here)                                      |
+| `files.owner_id` → `users.id`                                            | `usr_id` | SET NULL or CASCADE — **DECISION**: CASCADE (files belong to the user)                                                 |
 | `reports.author_id`, `notes.author_id`, `projects.owner_id` → `users.id` | `usr_id` | no FK today; **add NO ACTION** (do not orphan reports if a user is deleted — admin-only operation will reassign first) |
 
 `files.id` PK referenced by `notes.file_id` and
@@ -599,19 +608,19 @@ unchanged. `reports_number_unique` (`project_id, number`) unchanged.
 Each phase ends with `pnpm test:api` green (or, for Phases A/B,
 build green). Dev DBs are wiped between Phase C and D.
 
-| # | Commit (Conventional) | Stopping point |
-|---|---|---|
-| 1 | `chore(api-contract): add ids.ts skeleton, no consumers` | Module exists, exported, unused. `pnpm -r build` green. |
-| 2 | `refactor(api-contract): replace uuid + slug schemas with branded ids` | All schemas import from `ids.ts`. CLI/API still compile because TS doesn't check at this layer yet. |
-| 3 | `refactor(api): replace lib/slug.ts with lib/ids.ts (newId, insertWithGeneratedId)` | New generator in place; old `app.random_slug` still callable but unused. |
-| 4 | `refactor(api): drizzle schema → text-typed slug IDs` | `pnpm --filter @harpa/api build` green. Migrations still old; integration tests broken (expected). |
-| 5 | `refactor(api): collapse migrations into slug-native init` | Wipe dev DB. `pnpm --filter @harpa/api db:migrate` green. `pnpm test:api:integration` green. |
-| 6 | `refactor(api): scope.ts and jwt.ts use usr_/ses_ ids` | Auth integration tests green. |
-| 7 | `refactor(api): route params projectSlug→projectId etc.` | API tests green; OpenAPI spec regen committed in same commit. |
-| 8 | `refactor(api-contract): regenerate openapi types` | `pnpm --filter @harpa/api-contract gen:types` clean. |
-| 9 | `refactor(cli): consume new branded ids; drop uuid arg validators` | CLI builds, smoke commands green. |
-| 10 | `refactor(mobile): expo-router params projectId/reportId; types from api-contract` | iOS sim build green; Maestro flows updated. |
-| 11 | `docs(v4): rewrite arch-ids-and-urls; mark design-p30 superseded; add this design as accepted` | All cross-links resolve. |
+| #   | Commit (Conventional)                                                                          | Stopping point                                                                                      |
+| --- | ---------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| 1   | `chore(api-contract): add ids.ts skeleton, no consumers`                                       | Module exists, exported, unused. `pnpm -r build` green.                                             |
+| 2   | `refactor(api-contract): replace uuid + slug schemas with branded ids`                         | All schemas import from `ids.ts`. CLI/API still compile because TS doesn't check at this layer yet. |
+| 3   | `refactor(api): replace lib/slug.ts with lib/ids.ts (newId, insertWithGeneratedId)`            | New generator in place; old `app.random_slug` still callable but unused.                            |
+| 4   | `refactor(api): drizzle schema → text-typed slug IDs`                                          | `pnpm --filter @harpa/api build` green. Migrations still old; integration tests broken (expected).  |
+| 5   | `refactor(api): collapse migrations into slug-native init`                                     | Wipe dev DB. `pnpm --filter @harpa/api db:migrate` green. `pnpm test:api:integration` green.        |
+| 6   | `refactor(api): scope.ts and jwt.ts use usr_/ses_ ids`                                         | Auth integration tests green.                                                                       |
+| 7   | `refactor(api): route params projectSlug→projectId etc.`                                       | API tests green; OpenAPI spec regen committed in same commit.                                       |
+| 8   | `refactor(api-contract): regenerate openapi types`                                             | `pnpm --filter @harpa/api-contract gen:types` clean.                                                |
+| 9   | `refactor(cli): consume new branded ids; drop uuid arg validators`                             | CLI builds, smoke commands green.                                                                   |
+| 10  | `refactor(mobile): expo-router params projectId/reportId; types from api-contract`             | iOS sim build green; Maestro flows updated.                                                         |
+| 11  | `docs(v4): rewrite arch-ids-and-urls; mark design-p30 superseded; add this design as accepted` | All cross-links resolve.                                                                            |
 
 Each commit is reviewable in isolation. Stopping after any commit
 ≥ 5 leaves the system runnable end-to-end.
@@ -620,16 +629,16 @@ Each commit is reviewable in isolation. Stopping after any commit
 
 ## 11. Risks + mitigations
 
-| Risk | Likelihood | Impact | Mitigation |
-|---|---|---|---|
-| Forgetting an RLS policy cast; per-request scope silently fails open | Medium | Critical | Pitfall 6's "X can/cannot read Y" pair runs for every authed route; the collapsed init.sql is reviewed line-by-line against the existing `202605120001_init.sql`'s policy block. |
-| Drizzle's `text().$type<Brand>()` brand evaporates at runtime | Low | Low | Brands are compile-time only; runtime safety comes from the DB domain CHECK and the Zod parse at the route boundary. Documented in `ids.ts`. |
-| `MIN_LEN` accidentally decreased in a later refactor → existing IDs become invalid in code while still present in DB | Low | High | Lint rule: a `MIN_LEN` decrease in `ID_SPEC` is a CI failure (script reads previous commit's value via git). |
-| `MAX_LEN` raised in code without raising the DB domain CHECK → DB rejects new IDs | Low | High | Same lint rule, in reverse: `MAX_LEN` increase requires a migration file matching pattern `*_grow_<prefix>_id.sql`. |
-| Better-auth library brought in later, requires UUID PKs | Low | Medium | Library supports `advanced.generateId`. Documented in §7. |
-| Birthday collisions in `prj`/`rpt` at 8 chars under heavy seeding | Low | Low | `insertWithGeneratedId` retries 3×; integration test seeds < 1k rows per project — far below threshold. If seeding ever crosses ~50k of a type, bump `currentLen` to 10. |
-| SQL injection via `SET LOCAL app.user_id` interpolation | Negligible | Critical | The new regex is *stricter* than the old UUID regex (smaller charset, narrower length). Existing defence-in-depth holds. |
-| Dev contributor on PG < 17 | N/A | N/A | We no longer depend on `uuidv7()` or `gen_random_uuid()`. No PG-version constraint from this design. |
+| Risk                                                                                                                 | Likelihood | Impact   | Mitigation                                                                                                                                                                       |
+| -------------------------------------------------------------------------------------------------------------------- | ---------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Forgetting an RLS policy cast; per-request scope silently fails open                                                 | Medium     | Critical | Pitfall 6's "X can/cannot read Y" pair runs for every authed route; the collapsed init.sql is reviewed line-by-line against the existing `202605120001_init.sql`'s policy block. |
+| Drizzle's `text().$type<Brand>()` brand evaporates at runtime                                                        | Low        | Low      | Brands are compile-time only; runtime safety comes from the DB domain CHECK and the Zod parse at the route boundary. Documented in `ids.ts`.                                     |
+| `MIN_LEN` accidentally decreased in a later refactor → existing IDs become invalid in code while still present in DB | Low        | High     | Lint rule: a `MIN_LEN` decrease in `ID_SPEC` is a CI failure (script reads previous commit's value via git).                                                                     |
+| `MAX_LEN` raised in code without raising the DB domain CHECK → DB rejects new IDs                                    | Low        | High     | Same lint rule, in reverse: `MAX_LEN` increase requires a migration file matching pattern `*_grow_<prefix>_id.sql`.                                                              |
+| Better-auth library brought in later, requires UUID PKs                                                              | Low        | Medium   | Library supports `advanced.generateId`. Documented in §7.                                                                                                                        |
+| Birthday collisions in `prj`/`rpt` at 8 chars under heavy seeding                                                    | Low        | Low      | `insertWithGeneratedId` retries 3×; integration test seeds < 1k rows per project — far below threshold. If seeding ever crosses ~50k of a type, bump `currentLen` to 10.         |
+| SQL injection via `SET LOCAL app.user_id` interpolation                                                              | Negligible | Critical | The new regex is _stricter_ than the old UUID regex (smaller charset, narrower length). Existing defence-in-depth holds.                                                         |
+| Dev contributor on PG < 17                                                                                           | N/A        | N/A      | We no longer depend on `uuidv7()` or `gen_random_uuid()`. No PG-version constraint from this design.                                                                             |
 
 ---
 

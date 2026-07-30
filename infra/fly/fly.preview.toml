@@ -26,13 +26,17 @@ primary_region = "fra"
   # so a broken migration aborts the rollout cleanly. No CI-side migrate step
   # for previews; release_command is the single source of truth.
   # See docs/v4/arch-cicd-and-migrations.md.
-  release_command = "pnpm --filter @harpa/api db:migrate"
+  release_command = "sh -c 'pnpm --filter @harpa/api db:migrate && pnpm --filter @harpa/api db:migrate:admin'"
 
 [env]
   NODE_ENV = "production"
   PORT = "8787"
   HARPAPRO_PR_BUILD = "1"
   EMAIL_OTP_LIVE = "0"
+  # Hosted PR site origins are dynamic and cannot satisfy the exact-origin
+  # cookie policy. Browser admin auth is intentionally disabled in hosted
+  # previews; the two-database Playwright flow is the preview gate.
+  ADMIN_CORS_ORIGINS = "https://admin-preview.invalid"
 
 [http_service]
   internal_port = 8787
@@ -46,8 +50,8 @@ primary_region = "fra"
     soft_limit = 25
     hard_limit = 50
 
-# Readiness probe — same as dev/prod. Verifies DB reachability and that
-# app._migrations head matches MIGRATIONS_REQUIRED_HEAD baked into the image.
+# Application DB readiness probe — same as dev/prod. Admin DB readiness is
+# checked separately after deployment at /admin/readyz.
 [[http_service.checks]]
   grace_period = "15s"
   interval = "30s"

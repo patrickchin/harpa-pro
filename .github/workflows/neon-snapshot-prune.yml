@@ -1,15 +1,14 @@
 name: neon-snapshot-prune
 
-# Delete `snapshot-<sha>` branches older than KEEP_DAYS so storage
-# doesn't accumulate forever. Per-deploy snapshots are copy-on-write
-# (cheap) but not free. 30 days is plenty: any rollback older than
-# that should be done with Neon's PITR window from the console.
+# Delete `snapshot-<sha>` branches older than KEEP_DAYS and retain at most
+# MAX_SNAPSHOTS per project. With main + dev, a cap of three reserves at
+# least five of the ten Free-plan branch slots for concurrent PR previews.
 #
 # See docs/v4/arch-cicd-and-migrations.md §Failure & rollback playbook.
 
 on:
   schedule:
-    - cron: "17 4 * * *" # 04:17 UTC daily
+    - cron: '17 4 * * *' # 04:17 UTC daily
   workflow_dispatch: {}
 
 concurrency:
@@ -17,7 +16,8 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  KEEP_DAYS: "30"
+  KEEP_DAYS: '30'
+  MAX_SNAPSHOTS: '3'
 
 jobs:
   prune:
@@ -27,8 +27,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup-monorepo
-      - name: Prune stale snapshots
+      - name: Prune stale app snapshots
         env:
           NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
           NEON_PROJECT_ID: ${{ secrets.NEON_PROJECT_ID }}
-        run: pnpm db:branch:prune-snapshots "$KEEP_DAYS"
+        run: pnpm db:branch:prune-snapshots "$KEEP_DAYS" "$MAX_SNAPSHOTS"
+
+      - name: Prune stale admin snapshots
+        env:
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+          NEON_PROJECT_ID: ${{ vars.NEON_ADMIN_PROJECT_ID }}
+        run: pnpm db:branch:prune-snapshots "$KEEP_DAYS" "$MAX_SNAPSHOTS"

@@ -394,16 +394,17 @@ describe('AdminActivity', () => {
     expect(within(entry).getByText('Alice Activity')).toBeTruthy();
     expect(within(entry).getByText('Report #7')).toBeTruthy();
     expect(within(entry).getByText('Tower Refurbishment')).toBeTruthy();
-    expect(within(entry).getByTestId('event-icon-report.created')).toHaveAttribute(
-      'data-icon',
+    expect(within(entry).getByTestId('event-icon-report.created').getAttribute('data-icon')).toBe(
       'file-plus-2',
     );
-    expect(within(entry).getByTestId('event-icon-report.created')).toHaveAttribute(
-      'aria-hidden',
+    expect(within(entry).getByTestId('event-icon-report.created').getAttribute('aria-hidden')).toBe(
       'true',
     );
-    expect(within(entry).getByTestId('actor-icon')).toHaveAttribute('data-icon', 'user');
-    expect(within(entry).getByTestId('project-icon')).toHaveAttribute('data-icon', 'folder');
+    expect(within(entry).getByTestId('actor-icon').getAttribute('data-icon')).toBe('user');
+    expect(within(entry).getByTestId('project-icon').getAttribute('data-icon')).toBe('folder');
+    expect(entry.getAttribute('aria-label') ?? '').toContain(
+      'Event: Report created. Actor: Alice Activity. Subject: Report #7. Project: Tower Refurbishment.',
+    );
     expect(screen.queryByRole('columnheader', { name: 'Actor' })).toBeNull();
 
     await user.selectOptions(screen.getByLabelText('Event type'), 'report.created');
@@ -414,11 +415,14 @@ describe('AdminActivity', () => {
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3));
     expect(String(fetchMock.mock.calls[2]?.[0])).toContain('cursor=next-page-cursor');
     expect((await screen.findAllByText('Deleted user')).length).toBeGreaterThan(0);
+    const deletedEntry = screen.getByTestId(`activity-row-${deletedEvent.id}`);
     expect(
-      within(screen.getByTestId(`activity-row-${deletedEvent.id}`)).getByTestId(
-        'event-icon-user.signed_up',
-      ),
-    ).toHaveAttribute('data-icon', 'user-plus');
+      within(deletedEntry).getByTestId('event-icon-user.signed_up').getAttribute('data-icon'),
+    ).toBe('user-plus');
+    expect(within(deletedEntry).getByTestId('project-icon').getAttribute('data-icon')).toBe(
+      'folder',
+    );
+    expect(deletedEntry.getAttribute('aria-label') ?? '').toContain('Project: No project.');
 
     await user.click(screen.getByTestId(`activity-row-${reportEvent.id}`));
     expect(screen.getByRole('dialog').textContent).toContain('request-report-1');
@@ -537,22 +541,18 @@ describe('AdminActivity', () => {
     expect(within(feed).getByText('Voice note added')).toBeTruthy();
     expect(within(feed).getByText('Image uploaded')).toBeTruthy();
     expect(within(feed).getByText('Document uploaded')).toBeTruthy();
-    expect(within(feed).getByTestId('event-icon-note.text_created')).toHaveAttribute(
-      'data-icon',
+    expect(within(feed).getByTestId('event-icon-note.text_created').getAttribute('data-icon')).toBe(
       'message-square-text',
     );
-    expect(within(feed).getByTestId('event-icon-note.voice_created')).toHaveAttribute(
-      'data-icon',
-      'mic',
-    );
-    expect(within(feed).getByTestId('event-icon-note.image_created')).toHaveAttribute(
-      'data-icon',
-      'image',
-    );
-    expect(within(feed).getByTestId('event-icon-note.document_created')).toHaveAttribute(
-      'data-icon',
-      'file-text',
-    );
+    expect(
+      within(feed).getByTestId('event-icon-note.voice_created').getAttribute('data-icon'),
+    ).toBe('mic');
+    expect(
+      within(feed).getByTestId('event-icon-note.image_created').getAttribute('data-icon'),
+    ).toBe('image');
+    expect(
+      within(feed).getByTestId('event-icon-note.document_created').getAttribute('data-icon'),
+    ).toBe('file-text');
   });
 
   it('keeps actor and project filters visible and applies actor choices without opening a row', async () => {
@@ -639,10 +639,9 @@ describe('AdminActivity', () => {
 
     const newEntry = await screen.findByTestId(`activity-row-${projectEvent.id}`);
     expect(within(newEntry).getByText('New')).toBeTruthy();
-    expect(within(newEntry).getByTestId('event-icon-project.created')).toHaveAttribute(
-      'data-icon',
-      'folder-plus',
-    );
+    expect(
+      within(newEntry).getByTestId('event-icon-project.created').getAttribute('data-icon'),
+    ).toBe('folder-plus');
     expect(
       within(screen.getByTestId(`activity-row-${reportEvent.id}`)).queryByText('New'),
     ).toBeNull();

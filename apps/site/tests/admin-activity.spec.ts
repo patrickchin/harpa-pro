@@ -101,6 +101,9 @@ test('signs in through the visible admin form and signs out', async ({ context, 
   await expect(row.locator('[data-icon="file-plus-2"]')).toBeVisible();
   await expect(row.locator('[data-icon="user"]')).toBeVisible();
   await expect(row.locator('[data-icon="folder"]')).toBeVisible();
+  await expect(row).toHaveAccessibleName(
+    /Event: Report created\. Actor: Admin Activity E2E\. Subject: Report #7\. Project: Admin Activity E2E Project\. Occurred at .+\./,
+  );
   expect(await row.evaluate((element) => getComputedStyle(element).whiteSpace)).toBe('nowrap');
   expect((await row.boundingBox())?.height).toBeLessThanOrEqual(48);
   const [eventWeight, projectWeight] = await Promise.all([

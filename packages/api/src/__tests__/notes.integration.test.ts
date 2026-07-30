@@ -359,6 +359,79 @@ describe('batch photo notes', () => {
     );
   });
 
+  it('serializes concurrent file appends without collisions or lost positions', async () => {
+    const app = createApp();
+    const tok = await signTestToken(alice, aliceSid);
+    const create = await app.request(`/reports/${report}/notes`, {
+      method: 'POST',
+      headers: headers(tok),
+      body: JSON.stringify({
+        kind: 'image',
+        files: [{ fileId: fileIds[0] }],
+      }),
+    });
+    expect(create.status).toBe(201);
+    const created = (await create.json()) as { id: string };
+
+    // Widen the window between each append's MAX(position) read and INSERT.
+    // This keeps the reproducer deterministic while still exercising two
+    // independent scoped transactions against real Postgres.
+    const admin = new pg.Client({ connectionString: fx.url });
+    await admin.connect();
+    await admin.query(`
+      CREATE FUNCTION app.test_delay_note_file_insert()
+      RETURNS trigger
+      LANGUAGE plpgsql
+      AS $$
+      BEGIN
+        PERFORM pg_sleep(0.75);
+        RETURN NEW;
+      END;
+      $$;
+
+      CREATE TRIGGER test_delay_note_file_insert
+      BEFORE INSERT ON app.note_files
+      FOR EACH ROW
+      EXECUTE FUNCTION app.test_delay_note_file_insert();
+    `);
+
+    try {
+      const responses = await Promise.all([
+        app.request(`/notes/${created.id}/files`, {
+          method: 'POST',
+          headers: headers(tok),
+          body: JSON.stringify({ files: [{ fileId: fileIds[3] }] }),
+        }),
+        app.request(`/notes/${created.id}/files`, {
+          method: 'POST',
+          headers: headers(tok),
+          body: JSON.stringify({ files: [{ fileId: fileIds[4] }] }),
+        }),
+      ]);
+
+      expect(responses.map((response) => response.status)).toEqual([200, 200]);
+
+      const rows = await admin.query<{ file_id: string; position: number }>(
+        `SELECT file_id, position
+           FROM app.note_files
+          WHERE note_id = $1
+          ORDER BY position`,
+        [created.id],
+      );
+      expect(rows.rows).toEqual([
+        { file_id: fileIds[0], position: 0 },
+        { file_id: fileIds[3], position: 1 },
+        { file_id: fileIds[4], position: 2 },
+      ]);
+    } finally {
+      await admin.query(`
+        DROP TRIGGER IF EXISTS test_delay_note_file_insert ON app.note_files;
+        DROP FUNCTION IF EXISTS app.test_delay_note_file_insert();
+      `);
+      await admin.end();
+    }
+  });
+
   it('list notes returns files array', async () => {
     const app = createApp();
     const tok = await signTestToken(alice, aliceSid);

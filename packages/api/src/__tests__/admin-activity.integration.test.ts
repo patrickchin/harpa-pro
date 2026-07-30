@@ -16,7 +16,13 @@ import {
 } from '../lib/rateLimiter.js';
 import { signTestToken } from '../middleware/auth.js';
 import { setAdminPassword } from '../services/admin-auth.js';
-import { makeProjectId, makeReportId, makeSessionId, makeUserId } from './factories/index.js';
+import {
+  makeNoteId,
+  makeProjectId,
+  makeReportId,
+  makeSessionId,
+  makeUserId,
+} from './factories/index.js';
 import { startAdminPg, type AdminPgFixture } from './setup-admin-pg.js';
 import { seedAuthUsers, startPg, type PgFixture } from './setup-pg.js';
 
@@ -233,6 +239,7 @@ describe('GET /admin/activity', () => {
     expect(body.nextCursor).toBeTruthy();
     expect(body.items[0]).toMatchObject({
       occurredAt: '2026-07-29T03:00:00.000Z',
+      level: 'milestone',
       eventType: 'report.created',
       actorUserId: actorId,
       actorLabel: 'Alice Activity',
@@ -311,6 +318,198 @@ describe('GET /admin/activity', () => {
       [reportEventId, projectEventId],
       [projectEventId],
     ]);
+  });
+
+  it('filters milestone, detail, and all activity and returns curated note shapes', async () => {
+    const noteIds = {
+      text: makeNoteId(),
+      voice: makeNoteId(),
+      image: makeNoteId(),
+      document: makeNoteId(),
+    };
+    const eventIds = {
+      text: newId('aud'),
+      voice: newId('aud'),
+      image: newId('aud'),
+      document: newId('aud'),
+    };
+
+    try {
+      await db.query(
+        `INSERT INTO app.notes (id, report_id, author_id, kind, body)
+         VALUES
+           ($1, $5, $6, 'text', 'Daily progress'),
+           ($2, $5, $6, 'voice', NULL),
+           ($3, $5, $6, 'image', NULL),
+           ($4, $5, $6, 'document', NULL)`,
+        [noteIds.text, noteIds.voice, noteIds.image, noteIds.document, reportId, actorId],
+      );
+      await db.query(
+        `INSERT INTO app.activity_events
+           (id, occurred_at, event_type, actor_user_id, subject_type, subject_id,
+            project_id, request_id, dedupe_key, metadata)
+         VALUES
+           ($1, '2026-07-29T07:00:00Z', 'note.text_created', $9, 'note', $5, $10,
+            'request-note-text', $11, '{}'),
+           ($2, '2026-07-29T06:00:00Z', 'note.voice_created', $9, 'note', $6, $10,
+            'request-note-voice', $12, '{}'),
+           ($3, '2026-07-29T05:00:00Z', 'note.image_created', $9, 'note', $7, $10,
+            'request-note-image', $13, '{}'),
+           ($4, '2026-07-29T04:00:00Z', 'note.document_created', $9, 'note', $8, $10,
+            'request-note-document', $14, '{}')`,
+        [
+          eventIds.text,
+          eventIds.voice,
+          eventIds.image,
+          eventIds.document,
+          noteIds.text,
+          noteIds.voice,
+          noteIds.image,
+          noteIds.document,
+          actorId,
+          projectId,
+          `note.text_created:${noteIds.text}`,
+          `note.voice_created:${noteIds.voice}`,
+          `note.image_created:${noteIds.image}`,
+          `note.document_created:${noteIds.document}`,
+        ],
+      );
+
+      const headers = await adminHeaders();
+      const milestoneResponse = await createApp().request('/admin/activity?level=milestone', {
+        headers,
+      });
+      const detailResponse = await createApp().request('/admin/activity?level=detail', {
+        headers,
+      });
+      const allResponse = await createApp().request('/admin/activity?level=all', {
+        headers,
+      });
+      const exactVoiceResponse = await createApp().request(
+        '/admin/activity?eventType=note.voice_created',
+        { headers },
+      );
+
+      expect([
+        milestoneResponse.status,
+        detailResponse.status,
+        allResponse.status,
+        exactVoiceResponse.status,
+      ]).toEqual([200, 200, 200, 200]);
+
+      const milestone = activitySchemas.listResponse.parse(await milestoneResponse.json());
+      const detail = activitySchemas.listResponse.parse(await detailResponse.json());
+      const all = activitySchemas.listResponse.parse(await allResponse.json());
+      const exactVoice = activitySchemas.listResponse.parse(await exactVoiceResponse.json());
+
+      expect(milestone.items.map((item) => item.id)).toEqual([
+        reportEventId,
+        projectEventId,
+        signupEventId,
+        deletedProjectEventId,
+        deletedUserEventId,
+      ]);
+      expect(detail.items).toMatchObject([
+        {
+          id: eventIds.text,
+          level: 'detail',
+          eventType: 'note.text_created',
+          subjectType: 'note',
+          subjectId: noteIds.text,
+          subjectLabel: 'Text note',
+          projectId,
+          projectLabel: 'Tower Refurbishment',
+          metadata: {},
+        },
+        {
+          id: eventIds.voice,
+          level: 'detail',
+          eventType: 'note.voice_created',
+          subjectType: 'note',
+          subjectId: noteIds.voice,
+          subjectLabel: 'Voice note',
+          metadata: {},
+        },
+        {
+          id: eventIds.image,
+          level: 'detail',
+          eventType: 'note.image_created',
+          subjectType: 'note',
+          subjectId: noteIds.image,
+          subjectLabel: 'Image note',
+          metadata: {},
+        },
+        {
+          id: eventIds.document,
+          level: 'detail',
+          eventType: 'note.document_created',
+          subjectType: 'note',
+          subjectId: noteIds.document,
+          subjectLabel: 'Document note',
+          metadata: {},
+        },
+      ]);
+      expect(all.items.map((item) => item.id)).toEqual([
+        eventIds.text,
+        eventIds.voice,
+        eventIds.image,
+        eventIds.document,
+        reportEventId,
+        projectEventId,
+        signupEventId,
+        deletedProjectEventId,
+        deletedUserEventId,
+      ]);
+      expect(exactVoice.items).toHaveLength(1);
+      expect(exactVoice.items[0]).toMatchObject({
+        id: eventIds.voice,
+        level: 'detail',
+        eventType: 'note.voice_created',
+      });
+    } finally {
+      await db.query(
+        `DELETE FROM app.activity_events
+          WHERE id IN ($1, $2, $3, $4)`,
+        [eventIds.text, eventIds.voice, eventIds.image, eventIds.document],
+      );
+      await db.query(
+        `DELETE FROM app.notes
+          WHERE id IN ($1, $2, $3, $4)`,
+        [noteIds.text, noteIds.voice, noteIds.image, noteIds.document],
+      );
+    }
+  });
+
+  it('excludes multiple actors while retaining redacted null actors', async () => {
+    const regularEventId = newId('aud');
+    try {
+      await db.query(
+        `INSERT INTO app.activity_events
+           (id, occurred_at, event_type, actor_user_id, subject_type, subject_id,
+            project_id, request_id, dedupe_key, metadata)
+         VALUES
+           ($1, '2026-07-29T04:00:00Z', 'user.signed_up', $2, 'user', $3,
+            NULL, 'request-regular-signup', $4, '{"method":"email_otp"}')`,
+        [regularEventId, regularId, regularId, `user.signed_up:${regularId}`],
+      );
+
+      const exclusions = encodeURIComponent(`${actorId},${regularId}`);
+      const response = await createApp().request(
+        `/admin/activity?excludeActorUserIds=${exclusions}`,
+        { headers: await adminHeaders() },
+      );
+
+      expect(response.status).toBe(200);
+      const body = activitySchemas.listResponse.parse(await response.json());
+      expect(body.items.map((item) => item.id)).toEqual([deletedUserEventId]);
+      expect(body.items[0]).toMatchObject({
+        level: 'milestone',
+        actorUserId: null,
+        actorLabel: 'Deleted user',
+      });
+    } finally {
+      await db.query(`DELETE FROM app.activity_events WHERE id = $1`, [regularEventId]);
+    }
   });
 
   it('rejects a malformed cursor', async () => {

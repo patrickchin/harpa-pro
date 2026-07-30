@@ -30,9 +30,10 @@ const adminSession = {
   email: 'admin@harpapro.com',
 };
 
-const reportEvent: activity.Event = {
+const reportEvent = {
   id: 'aud_0123456789ab',
   occurredAt: '2026-07-29T03:00:00.000Z',
+  level: 'milestone',
   eventType: 'report.created',
   actorUserId: 'usr_0123456789ab',
   actorLabel: 'Alice Activity',
@@ -44,11 +45,12 @@ const reportEvent: activity.Event = {
   projectLabel: 'Tower Refurbishment',
   requestId: 'request-report-1',
   metadata: { reportNumber: 7 },
-};
+} as unknown as activity.Event;
 
-const deletedEvent: activity.Event = {
+const deletedEvent = {
   id: 'aud_123456789abc',
   occurredAt: '2026-07-29T02:00:00.000Z',
+  level: 'milestone',
   eventType: 'user.signed_up',
   actorUserId: null,
   actorLabel: 'Deleted user',
@@ -60,13 +62,114 @@ const deletedEvent: activity.Event = {
   projectLabel: null,
   requestId: null,
   metadata: { method: 'email_otp' },
-};
+} as unknown as activity.Event;
+
+const secondReportEvent = {
+  ...reportEvent,
+  id: 'aud_23456789abcd',
+  occurredAt: '2026-07-29T01:00:00.000Z',
+  actorUserId: 'usr_123456789abc',
+  actorLabel: 'Bob Builder',
+  actorEmail: 'bob@example.com',
+  subjectId: 'rpt_12345678',
+  subjectLabel: 'Report #8',
+  projectId: 'prj_12345678',
+  projectLabel: 'Riverside Offices',
+  requestId: 'request-report-2',
+  metadata: { reportNumber: 8 },
+} as unknown as activity.Event;
+
+const detailEvents = [
+  {
+    id: 'aud_3456789abcde',
+    occurredAt: '2026-07-29T00:04:00.000Z',
+    level: 'detail',
+    eventType: 'note.text_created',
+    actorUserId: 'usr_0123456789ab',
+    actorLabel: 'Alice Activity',
+    actorEmail: 'alice@example.com',
+    subjectType: 'note',
+    subjectId: 'not_0123456789',
+    subjectLabel: 'Text note',
+    projectId: 'prj_01234567',
+    projectLabel: 'Tower Refurbishment',
+    requestId: 'request-note-text',
+    metadata: {},
+  },
+  {
+    id: 'aud_456789abcdef',
+    occurredAt: '2026-07-29T00:03:00.000Z',
+    level: 'detail',
+    eventType: 'note.voice_created',
+    actorUserId: 'usr_0123456789ab',
+    actorLabel: 'Alice Activity',
+    actorEmail: 'alice@example.com',
+    subjectType: 'note',
+    subjectId: 'not_123456789a',
+    subjectLabel: 'Voice note',
+    projectId: 'prj_01234567',
+    projectLabel: 'Tower Refurbishment',
+    requestId: 'request-note-voice',
+    metadata: {},
+  },
+  {
+    id: 'aud_56789abcdef0',
+    occurredAt: '2026-07-29T00:02:00.000Z',
+    level: 'detail',
+    eventType: 'note.image_created',
+    actorUserId: 'usr_0123456789ab',
+    actorLabel: 'Alice Activity',
+    actorEmail: 'alice@example.com',
+    subjectType: 'note',
+    subjectId: 'not_23456789ab',
+    subjectLabel: 'Image note',
+    projectId: 'prj_01234567',
+    projectLabel: 'Tower Refurbishment',
+    requestId: 'request-note-image',
+    metadata: {},
+  },
+  {
+    id: 'aud_6789abcdef01',
+    occurredAt: '2026-07-29T00:01:00.000Z',
+    level: 'detail',
+    eventType: 'note.document_created',
+    actorUserId: 'usr_0123456789ab',
+    actorLabel: 'Alice Activity',
+    actorEmail: 'alice@example.com',
+    subjectType: 'note',
+    subjectId: 'not_3456789abc',
+    subjectLabel: 'Document note',
+    projectId: 'prj_01234567',
+    projectLabel: 'Tower Refurbishment',
+    requestId: 'request-note-document',
+    metadata: {},
+  },
+] as unknown as activity.Event[];
 
 function activityResponse(items: activity.Event[], nextCursor: string | null = null): Response {
   return new Response(JSON.stringify({ items, nextCursor }), {
     status: 200,
     headers: { 'content-type': 'application/json' },
   });
+}
+
+function lastActivityUrl(fetchMock: ReturnType<typeof vi.spyOn>): URL {
+  const request = fetchMock.mock.calls.at(-1)?.[0];
+  if (!request) throw new Error('expected an activity request');
+  return new URL(String(request));
+}
+
+function expectFromNear(actual: string | null, expected: Date): void {
+  expect(actual).not.toBeNull();
+  expect(Math.abs(new Date(actual!).getTime() - expected.getTime())).toBeLessThan(10_000);
+}
+
+function subtractCalendar(now: Date, amount: number, unit: 'day' | 'month' | 'year'): Date {
+  const result = new Date(now);
+  if (unit === 'day') result.setDate(result.getDate() - amount);
+  if (unit === 'month') result.setMonth(result.getMonth() - amount);
+  if (unit === 'year') result.setFullYear(result.getFullYear() - amount);
+  return result;
 }
 
 beforeEach(() => {
@@ -230,7 +333,12 @@ describe('AdminActivity', () => {
     render(<AdminActivity />);
 
     expect(await screen.findByText('Tower Refurbishment')).toBeTruthy();
-    expect(fetchMock.mock.calls[0]?.[0]).toBe('https://api.example.test/admin/activity?limit=50');
+    const initialUrl = new URL(String(fetchMock.mock.calls[0]?.[0]));
+    expect(initialUrl.origin + initialUrl.pathname).toBe('https://api.example.test/admin/activity');
+    expect(initialUrl.searchParams.get('limit')).toBe('50');
+    expect(initialUrl.searchParams.get('level')).toBe('milestone');
+    expect(initialUrl.searchParams.get('from')).not.toBeNull();
+    expect(initialUrl.searchParams.has('to')).toBe(false);
     expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({
       credentials: 'include',
     });
@@ -248,6 +356,152 @@ describe('AdminActivity', () => {
     await user.click(screen.getByRole('button', { name: /Report #7/ }));
     expect(screen.getByRole('dialog').textContent).toContain('request-report-1');
     expect(screen.getByRole('dialog').textContent).toContain('"reportNumber": 7');
+  });
+
+  it('defaults to milestones from the past calendar month and offers simpler ranges', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(activityResponse([]));
+    const user = userEvent.setup();
+    const beforeRender = new Date();
+
+    render(<AdminActivity />);
+
+    await screen.findByText('No activity matches these filters.');
+    const level = screen.getByLabelText('Detail level') as HTMLSelectElement;
+    const period = screen.getByLabelText('Time period') as HTMLSelectElement;
+    expect(level.value).toBe('milestone');
+    expect(period.value).toBe('month');
+    expect(screen.queryByLabelText('From')).toBeNull();
+    expect(screen.queryByLabelText('To')).toBeNull();
+
+    const initialUrl = lastActivityUrl(fetchMock);
+    expect(initialUrl.searchParams.get('level')).toBe('milestone');
+    expectFromNear(initialUrl.searchParams.get('from'), subtractCalendar(beforeRender, 1, 'month'));
+    expect(initialUrl.searchParams.has('to')).toBe(false);
+
+    const presets = [
+      { label: 'Past week', amount: 7, unit: 'day' },
+      { label: 'Past month', amount: 1, unit: 'month' },
+      { label: 'Past 6 months', amount: 6, unit: 'month' },
+      { label: 'Past year', amount: 1, unit: 'year' },
+    ] as const;
+
+    for (const preset of presets) {
+      const callsBefore = fetchMock.mock.calls.length;
+      await user.selectOptions(period, screen.getByRole('option', { name: preset.label }));
+      const beforeApply = new Date();
+      await user.click(screen.getByRole('button', { name: 'Apply filters' }));
+      await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(callsBefore + 1));
+
+      const url = lastActivityUrl(fetchMock);
+      expectFromNear(
+        url.searchParams.get('from'),
+        subtractCalendar(beforeApply, preset.amount, preset.unit),
+      );
+      expect(url.searchParams.has('to')).toBe(false);
+    }
+
+    const callsBeforeAll = fetchMock.mock.calls.length;
+    await user.selectOptions(period, screen.getByRole('option', { name: 'All time' }));
+    await user.click(screen.getByRole('button', { name: 'Apply filters' }));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(callsBeforeAll + 1));
+    expect(lastActivityUrl(fetchMock).searchParams.has('from')).toBe(false);
+    expect(lastActivityUrl(fetchMock).searchParams.has('to')).toBe(false);
+  });
+
+  it('switches between milestone, detailed, and all activity levels', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(activityResponse([]));
+    const user = userEvent.setup();
+    render(<AdminActivity />);
+
+    await screen.findByText('No activity matches these filters.');
+    const level = screen.getByLabelText('Detail level');
+
+    expect(screen.getByRole('option', { name: 'Milestones' })).toBeTruthy();
+    expect(screen.getByRole('option', { name: 'Detailed activity' })).toBeTruthy();
+    expect(screen.getByRole('option', { name: 'All activity' })).toBeTruthy();
+
+    await user.selectOptions(level, screen.getByRole('option', { name: 'Detailed activity' }));
+    await user.click(screen.getByRole('button', { name: 'Apply filters' }));
+    await waitFor(() =>
+      expect(lastActivityUrl(fetchMock).searchParams.get('level')).toBe('detail'),
+    );
+
+    await user.selectOptions(level, screen.getByRole('option', { name: 'All activity' }));
+    await user.click(screen.getByRole('button', { name: 'Apply filters' }));
+    await waitFor(() => expect(lastActivityUrl(fetchMock).searchParams.get('level')).toBe('all'));
+  });
+
+  it('shows all curated detail event labels and event-type options', async () => {
+    vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(activityResponse([]))
+      .mockResolvedValueOnce(activityResponse(detailEvents));
+    const user = userEvent.setup();
+    render(<AdminActivity />);
+
+    await screen.findByText('No activity matches these filters.');
+    const eventType = screen.getByLabelText('Event type');
+    expect(screen.getByRole('option', { name: 'Text note added' })).toBeTruthy();
+    expect(screen.getByRole('option', { name: 'Voice note added' })).toBeTruthy();
+    expect(screen.getByRole('option', { name: 'Image uploaded' })).toBeTruthy();
+    expect(screen.getByRole('option', { name: 'Document uploaded' })).toBeTruthy();
+
+    await user.selectOptions(
+      screen.getByLabelText('Detail level'),
+      screen.getByRole('option', { name: 'All activity' }),
+    );
+    await user.selectOptions(eventType, screen.getByRole('option', { name: 'All events' }));
+    await user.click(screen.getByRole('button', { name: 'Apply filters' }));
+
+    expect(await screen.findByText('Text note added')).toBeTruthy();
+    expect(screen.getByText('Voice note added')).toBeTruthy();
+    expect(screen.getByText('Image uploaded')).toBeTruthy();
+    expect(screen.getByText('Document uploaded')).toBeTruthy();
+  });
+
+  it('excludes multiple actors with removable chips and clears all exclusions', async () => {
+    const fetchMock = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(activityResponse([reportEvent, secondReportEvent]));
+    const user = userEvent.setup();
+    render(<AdminActivity />);
+
+    await screen.findByRole('button', { name: 'Report #7' });
+    await user.click(screen.getByRole('button', { name: 'Report #7' }));
+    await user.click(screen.getByRole('button', { name: 'Exclude actor' }));
+    expect(
+      await screen.findByRole('button', { name: 'Remove Alice Activity exclusion' }),
+    ).toBeTruthy();
+    await waitFor(() =>
+      expect(lastActivityUrl(fetchMock).searchParams.get('excludeActorUserIds')).toBe(
+        'usr_0123456789ab',
+      ),
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Report #8' }));
+    await user.click(screen.getByRole('button', { name: 'Exclude actor' }));
+    expect(
+      await screen.findByRole('button', { name: 'Remove Bob Builder exclusion' }),
+    ).toBeTruthy();
+    await waitFor(() =>
+      expect(
+        lastActivityUrl(fetchMock).searchParams.get('excludeActorUserIds')?.split(','),
+      ).toEqual(['usr_0123456789ab', 'usr_123456789abc']),
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Remove Alice Activity exclusion' }));
+    await waitFor(() =>
+      expect(lastActivityUrl(fetchMock).searchParams.get('excludeActorUserIds')).toBe(
+        'usr_123456789abc',
+      ),
+    );
+    expect(screen.queryByRole('button', { name: 'Remove Alice Activity exclusion' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Remove Bob Builder exclusion' })).toBeTruthy();
+
+    await user.click(screen.getByRole('button', { name: 'Clear excluded actors' }));
+    await waitFor(() =>
+      expect(lastActivityUrl(fetchMock).searchParams.has('excludeActorUserIds')).toBe(false),
+    );
+    expect(screen.queryByRole('button', { name: /exclusion$/ })).toBeNull();
   });
 
   it('renders empty, forbidden, and retryable failure states', async () => {

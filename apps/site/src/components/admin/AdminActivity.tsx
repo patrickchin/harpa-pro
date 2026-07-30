@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { ReactNode } from 'react';
 import { activity as activitySchemas } from '@harpa/api-contract';
 import type { activity } from '@harpa/api-contract';
 import { adminAuthClient } from '../../lib/admin-auth';
@@ -92,6 +93,130 @@ const EVENT_ROW_ACCENTS = {
   'note.document_created': 'border-l-chart-4/70',
 } satisfies Record<activity.EventType, string>;
 
+type ActivityIconName =
+  | 'user-plus'
+  | 'folder-plus'
+  | 'file-plus-2'
+  | 'message-square-text'
+  | 'mic'
+  | 'image'
+  | 'file-text'
+  | 'user'
+  | 'folder';
+
+const EVENT_ICON_NAMES = {
+  'user.signed_up': 'user-plus',
+  'project.created': 'folder-plus',
+  'report.created': 'file-plus-2',
+  'note.text_created': 'message-square-text',
+  'note.voice_created': 'mic',
+  'note.image_created': 'image',
+  'note.document_created': 'file-text',
+} satisfies Record<activity.EventType, ActivityIconName>;
+
+const EVENT_ICON_TONES = {
+  'user.signed_up': 'text-chart-4',
+  'project.created': 'text-chart-2',
+  'report.created': 'text-chart-3',
+  'note.text_created': 'text-primary/70',
+  'note.voice_created': 'text-chart-5',
+  'note.image_created': 'text-chart-2',
+  'note.document_created': 'text-chart-4',
+} satisfies Record<activity.EventType, string>;
+
+const ACTIVITY_ICON_GLYPHS = {
+  'user-plus': (
+    <>
+      <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+      <circle cx="9" cy="7" r="4" />
+      <line x1="19" x2="19" y1="8" y2="14" />
+      <line x1="22" x2="16" y1="11" y2="11" />
+    </>
+  ),
+  'folder-plus': (
+    <>
+      <path d="M12 10v6" />
+      <path d="M9 13h6" />
+      <path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z" />
+    </>
+  ),
+  'file-plus-2': (
+    <>
+      <path d="M4 22h14a2 2 0 0 0 2-2V7l-5-5H6a2 2 0 0 0-2 2v4" />
+      <path d="M14 2v4a2 2 0 0 0 2 2h4" />
+      <path d="M3 15h6" />
+      <path d="M6 12v6" />
+    </>
+  ),
+  'message-square-text': (
+    <>
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+      <path d="M13 8H7" />
+      <path d="M17 12H7" />
+    </>
+  ),
+  mic: (
+    <>
+      <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
+      <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+      <line x1="12" x2="12" y1="19" y2="22" />
+    </>
+  ),
+  image: (
+    <>
+      <rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
+      <circle cx="9" cy="9" r="2" />
+      <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />
+    </>
+  ),
+  'file-text': (
+    <>
+      <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" />
+      <path d="M14 2v4a2 2 0 0 0 2 2h4" />
+      <path d="M10 9H8" />
+      <path d="M16 13H8" />
+      <path d="M16 17H8" />
+    </>
+  ),
+  user: (
+    <>
+      <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+      <circle cx="12" cy="7" r="4" />
+    </>
+  ),
+  folder: (
+    <path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z" />
+  ),
+} satisfies Record<ActivityIconName, ReactNode>;
+
+function ActivityIcon({
+  name,
+  className,
+  testId,
+}: {
+  name: ActivityIconName;
+  className: string;
+  testId: string;
+}) {
+  return (
+    <svg
+      aria-hidden="true"
+      className={className}
+      data-icon={name}
+      data-testid={testId}
+      fill="none"
+      focusable="false"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="2"
+      viewBox="0 0 24 24"
+    >
+      {ACTIVITY_ICON_GLYPHS[name]}
+    </svg>
+  );
+}
+
 function fromForTimePeriod(period: TimePeriod, now = new Date()): string | null {
   if (period === 'all') return null;
 
@@ -110,6 +235,19 @@ function displayTime(value: string): string {
     hour: '2-digit',
     minute: '2-digit',
   }).format(new Date(value));
+}
+
+function activityRowLabel(event: activity.Event, isNew: boolean): string {
+  return [
+    isNew ? 'New activity.' : null,
+    `Event: ${eventLabel(event.eventType)}.`,
+    `Actor: ${event.actorLabel}.`,
+    `Subject: ${event.subjectLabel}.`,
+    `Project: ${event.projectLabel ?? 'No project'}.`,
+    `Occurred at ${displayTime(event.occurredAt)}.`,
+  ]
+    .filter((part): part is string => part !== null)
+    .join(' ');
 }
 
 function oneLineField(value: string | null): string {
@@ -769,6 +907,7 @@ function ActivityFeed({
                     key={event.id}
                   >
                     <button
+                      aria-label={activityRowLabel(event, isNew)}
                       className="grid min-h-9 w-full min-w-[920px] grid-cols-[3rem_8.5rem_10.5rem_12rem_12rem_minmax(12rem,1fr)] items-center gap-3 whitespace-nowrap px-3 py-1.5 text-left text-xs transition hover:bg-secondary/70 ring-focus"
                       data-testid={`activity-row-${event.id}`}
                       type="button"
@@ -786,18 +925,30 @@ function ActivityFeed({
                       >
                         {displayTime(event.occurredAt)}
                       </time>
-                      <span className="font-semibold text-ink">{eventLabel(event.eventType)}</span>
-                      <span className="font-semibold text-ink">{event.actorLabel}</span>
+                      <span className="inline-flex items-center gap-1.5 font-semibold text-ink">
+                        <ActivityIcon
+                          className={`size-3.5 shrink-0 ${EVENT_ICON_TONES[event.eventType]}`}
+                          name={EVENT_ICON_NAMES[event.eventType]}
+                          testId={`event-icon-${event.eventType}`}
+                        />
+                        {eventLabel(event.eventType)}
+                      </span>
+                      <span className="inline-flex items-center gap-1.5 font-semibold text-ink">
+                        <ActivityIcon
+                          className="size-3.5 shrink-0 text-ink-soft"
+                          name="user"
+                          testId="actor-icon"
+                        />
+                        {event.actorLabel}
+                      </span>
                       <span className="font-medium text-accent-ink">{event.subjectLabel}</span>
-                      <span className="text-ink-soft">
-                        {event.projectLabel ? (
-                          <>
-                            <span aria-hidden="true">in </span>
-                            <span>{event.projectLabel}</span>
-                          </>
-                        ) : (
-                          '—'
-                        )}
+                      <span className="inline-flex items-center gap-1.5 text-ink-soft">
+                        <ActivityIcon
+                          className="size-3.5 shrink-0"
+                          name="folder"
+                          testId="project-icon"
+                        />
+                        <span>{event.projectLabel ?? '—'}</span>
                       </span>
                     </button>
                   </li>

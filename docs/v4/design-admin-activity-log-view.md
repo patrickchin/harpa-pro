@@ -44,9 +44,11 @@ different event types are visually distinct when scanning vertically.
 The event label begins with a small type-specific icon: user, project, report,
 text note, voice note, image, and document events each have a distinct
 silhouette. The actor and project columns use consistent user and folder icons
-to make their boundaries recognizable without reading every label. Icons are
-decorative and `aria-hidden`; the complete text labels remain the accessible
-name and the source of truth.
+to make their boundaries recognizable without reading every label. The folder
+icon remains visible beside the placeholder when an event has no project.
+Icons are decorative and `aria-hidden`; each row exposes an explicit accessible
+name with event, actor, subject, project, and occurrence-time labels, while the
+complete visible text remains the source of truth.
 
 Selecting a row still opens the detail drawer for IDs, request ID, and strict
 metadata. Filtering actions are removed from the drawer because the filter bar

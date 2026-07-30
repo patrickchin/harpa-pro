@@ -5,7 +5,6 @@ import Header from "../components/landing/Header.astro";
 import Footer from "../components/landing/Footer.astro";
 import Section from "../components/primitives/Section.astro";
 import Container from "../components/primitives/Container.astro";
-import Button from "../components/primitives/Button.astro";
 import Icon from "../components/Icon.astro";
 import { APP_STORE_URL } from "../lib/links";
 
@@ -58,13 +57,17 @@ const groups: {
       <Section bordered="top">
         <Container padding="lg">
           <div class="max-w-2xl">
-            <span class="site-eyebrow">
+            <span
+              class="text-xs font-semibold uppercase tracking-wider text-accent-ink"
+            >
               Roadmap
             </span>
-            <h1 class="site-page-title mt-2 text-ink">
+            <h1
+              class="mt-2 text-3xl font-semibold tracking-tight text-ink sm:text-4xl"
+            >
               Where Harpa Pro is going.
             </h1>
-            <p class="mt-4 max-w-[68ch] text-base leading-6 text-ink-soft">
+            <p class="mt-4 text-base leading-relaxed text-ink-soft">
               The iPhone app is live with the core workflow: turning
               voice, photos, and notes into clean AI-generated daily
               reports. Everything below builds on those same captures
@@ -88,26 +91,26 @@ const groups: {
             >
               <Container padding="lg">
                 <div class="max-w-2xl">
-                  <span class="site-eyebrow">
+                  <span class="text-xs font-semibold uppercase tracking-wider text-accent-ink">
                     {group.label}
                   </span>
-                  <h2 class="site-section-title mt-2 text-ink">
+                  <h2 class="mt-2 text-2xl font-semibold tracking-tight text-ink sm:text-3xl">
                     {group.heading}
                   </h2>
-                  <p class="mt-3 text-base leading-6 text-ink-soft">
+                  <p class="mt-3 text-sm leading-relaxed text-ink-soft sm:text-base">
                     {group.blurb}
                   </p>
                 </div>
-                <div class="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                <div class="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                   {groupItems.map(({ title, icon, Content }) => (
-                    <div class="rounded-lg border border-hairline bg-card p-5 shadow-[var(--shadow-raised)]">
-                      <span class="grid h-10 w-10 place-items-center rounded-lg border border-hairline bg-paper-2 text-ink">
+                    <div class="rounded-xl border border-hairline bg-card p-5">
+                      <span class="grid h-9 w-9 place-items-center rounded-md border border-hairline bg-paper-2 text-ink">
                         <Icon name={icon} class="h-4 w-4" />
                       </span>
-                      <h3 class="mt-4 text-base font-bold leading-6 text-ink">
+                      <h3 class="mt-4 text-base font-semibold text-ink">
                         {title}
                       </h3>
-                      <div class="mt-1 text-sm leading-5 text-ink-soft prose-p:m-0">
+                      <div class="mt-1.5 text-sm leading-relaxed text-ink-soft prose-p:m-0">
                         <Content />
                       </div>
                     </div>
@@ -128,14 +131,14 @@ const groups: {
               Want the current iPhone app? Download it from the App Store.
               Need Android or web? Join the updates list on the home page.
             </p>
-            <Button
+            <a
               href={APP_STORE_URL}
               target="_blank"
               rel="noopener noreferrer"
-              variant="ghost"
+              class="inline-flex h-10 items-center rounded-md border border-primary/30 bg-transparent px-4 text-sm font-medium text-primary transition-colors hover:bg-primary hover:text-primary-foreground ring-focus"
             >
               Download iOS app
-            </Button>
+            </a>
           </div>
         </Container>
       </Section>

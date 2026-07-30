@@ -2,8 +2,6 @@
 import Footer from "../components/landing/Footer.astro";
 import Header from "../components/landing/Header.astro";
 import Layout from "../layouts/Layout.astro";
-import Button from "../components/primitives/Button.astro";
-import Container from "../components/primitives/Container.astro";
 ---
 
 <Layout
@@ -13,30 +11,37 @@ import Container from "../components/primitives/Container.astro";
 >
   <div class="min-h-screen bg-background text-ink">
     <Header hideCta />
-    <main>
-      <Container padding="lg" class="flex max-w-3xl flex-col">
-        <p class="site-eyebrow">
-          Error 404
-        </p>
-        <h1 class="site-page-title mt-2">
-          That page is not here.
-        </h1>
-        <p class="mt-4 max-w-xl text-base leading-6 text-ink-soft">
-          The link may be old, or the page may have moved into the Harpa Pro
-          guides.
-        </p>
-        <div class="mt-8 flex flex-wrap gap-3">
-          <Button href="/docs" variant="primary">
-            Browse guides
-          </Button>
-          <Button href="/" variant="ghost">
-            Go to Harpa Pro
-          </Button>
-          <Button href="mailto:patrick@harpapro.com" variant="ghost">
-            Contact support
-          </Button>
-        </div>
-      </Container>
+    <main class="mx-auto flex max-w-3xl flex-col px-4 py-20 sm:px-6 sm:py-28">
+      <p class="text-xs font-bold uppercase tracking-wider text-accent-ink">
+        Error 404
+      </p>
+      <h1 class="mt-3 text-4xl font-semibold tracking-tight sm:text-5xl">
+        That page is not here.
+      </h1>
+      <p class="mt-5 max-w-xl text-base leading-relaxed text-ink-soft">
+        The link may be old, or the page may have moved into the Harpa Pro
+        guides.
+      </p>
+      <div class="mt-8 flex flex-wrap gap-3">
+        <a
+          href="/docs"
+          class="inline-flex min-h-11 items-center rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground ring-focus"
+        >
+          Browse guides
+        </a>
+        <a
+          href="/"
+          class="inline-flex min-h-11 items-center rounded-md border border-border px-4 text-sm font-semibold ring-focus"
+        >
+          Go to Harpa Pro
+        </a>
+        <a
+          href="mailto:patrick@harpapro.com"
+          class="inline-flex min-h-11 items-center rounded-md border border-border px-4 text-sm font-semibold ring-focus"
+        >
+          Contact support
+        </a>
+      </div>
     </main>
     <Footer />
   </div>

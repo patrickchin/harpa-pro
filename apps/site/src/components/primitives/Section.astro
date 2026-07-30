@@ -3,9 +3,16 @@ import type { HTMLAttributes } from "astro/types";
 
 interface Props extends HTMLAttributes<"section"> {
   id?: string;
-  /** A muted band may separate adjacent content groups. */
+  /**
+   * Background tone. `paper-2` matches the source's secondary band
+   * sections (ProblemSection, Features) used to break up the page.
+   */
   tone?: "default" | "paper-2";
-  /** Optional structural boundary. */
+  /**
+   * Whether to draw top + bottom hairline borders (matches the
+   * source's "border-y border-hairline bg-paper-2/60" wrapping
+   * pattern when combined with `tone="paper-2"`).
+   */
   bordered?: boolean | "top" | "y";
 }
 
@@ -17,7 +24,7 @@ const {
   ...rest
 } = Astro.props;
 
-const toneCls = tone === "paper-2" ? "bg-paper-2" : "";
+const toneCls = tone === "paper-2" ? "bg-paper-2/60" : "";
 
 const borderCls =
   bordered === true || bordered === "y"

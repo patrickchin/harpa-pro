@@ -1,44 +1,42 @@
 ---
 import Icon from "../Icon.astro";
 import VoiceDemo from "../VoiceDemo.tsx";
-import Button from "../primitives/Button.astro";
-import Container from "../primitives/Container.astro";
-import Section from "../primitives/Section.astro";
 import { APP_STORE_URL } from "../../lib/links";
 ---
 
-<Section id="top" class="relative" bordered="y">
-  <Container class="grid gap-8 lg:grid-cols-2 lg:gap-12">
+<section id="top" class="relative border-b border-hairline">
+  <div
+    class="mx-auto grid max-w-6xl gap-12 px-4 py-14 sm:px-6 md:py-16 lg:grid-cols-2 lg:gap-12"
+  >
     <div class="flex flex-col justify-center">
       <h1
-        class="text-[length:var(--font-size-display)] font-bold leading-[var(--line-height-display)] text-ink"
+        class="mt-5 text-4xl font-semibold tracking-tight text-ink sm:text-5xl lg:text-[3.4rem] lg:leading-[1.05]"
       >
-        Site reports &mdash; you talk, we write.
+      Site Reports &mdash;<br>you talk, we write.
       </h1>
-      <p class="site-body-large mt-4">
+      <p class="mt-5 max-w-xl text-base leading-relaxed text-ink-soft sm:text-lg">
         Now available for iPhone. Capture field updates by voice, photo, or
         typed note. Harpa Pro turns them into review-ready daily reports you
         can edit, approve, and export.
       </p>
       <div class="mt-8 flex flex-wrap items-center gap-3">
-        <Button
+        <a
           href={APP_STORE_URL}
           target="_blank"
           rel="noopener noreferrer"
-          variant="accent"
-          size="lg"
+          class="inline-flex h-11 items-center gap-2 rounded-md bg-accent px-5 text-sm font-medium text-accent-foreground shadow-sm hover:brightness-95 ring-focus"
         >
           Download on the App Store <Icon name="external-link" class="h-4 w-4" />
-        </Button>
-        <Button
+        </a>
+        <a
           href="#waitlist"
-          variant="ghost"
+          class="inline-flex h-11 items-center gap-2 rounded-md border border-hairline bg-card px-5 text-sm font-medium text-ink shadow-sm hover:bg-secondary ring-focus"
         >
           Android and web updates <Icon name="arrow-right" class="h-4 w-4" />
-        </Button>
+        </a>
       </div>
       <div
-        class="mt-6 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm leading-5 text-ink-soft"
+        class="mt-8 flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-ink-soft"
       >
         <span class="inline-flex items-center gap-1.5">
           <Icon name="circle-check" class="h-3.5 w-3.5 text-ink" />
@@ -62,5 +60,5 @@ import { APP_STORE_URL } from "../../lib/links";
     <div class="relative min-h-[640px] lg:pl-6">
       <VoiceDemo client:only="react" />
     </div>
-  </Container>
-</Section>
+  </div>
+</section>

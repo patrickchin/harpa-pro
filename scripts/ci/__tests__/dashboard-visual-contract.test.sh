@@ -7,17 +7,11 @@ dashboard_css="$repo_root/apps/dashboard/src/styles.css"
 dashboard_index="$repo_root/apps/dashboard/index.html"
 dashboard_reports_css="$repo_root/apps/dashboard/src/features/reports/reports.css"
 dashboard_package="$repo_root/apps/dashboard/package.json"
-site_css="$repo_root/apps/site/src/styles/globals.css"
-site_layout="$repo_root/apps/site/src/layouts/Layout.astro"
-site_package="$repo_root/apps/site/package.json"
 mobile_colors="$repo_root/apps/mobile/lib/design-tokens/colors.ts"
 deploy_workflows=(
   "$repo_root/.github/workflows/dashboard-preview.yml"
   "$repo_root/.github/workflows/dashboard-dev.yml"
   "$repo_root/.github/workflows/dashboard-prod.yml"
-  "$repo_root/.github/workflows/site-preview.yml"
-  "$repo_root/.github/workflows/site-dev.yml"
-  "$repo_root/.github/workflows/site-prod.yml"
 )
 
 fail() {
@@ -70,25 +64,20 @@ expect_contains "$mobile_colors" "foreground: '#2d3a5a'"
 expect_contains "$mobile_colors" "DEFAULT: '#ea580c'"
 expect_contains "$mobile_colors" "border: '#b9b4a8'"
 
-# Both web surfaces consume the same package.
+# The dashboard consumes the mobile-authored CSS mirror.
 expect_contains "$dashboard_package" '"@harpa/design-tokens"'
-expect_contains "$site_package" '"@harpa/design-tokens"'
 expect_contains "$dashboard_css" '@import "@harpa/design-tokens/tokens.css";'
-expect_contains "$site_css" '@import "@harpa/design-tokens/tokens.css";'
 expect_contains "$dashboard_index" 'name="theme-color" content="#ea580c"'
-expect_contains "$site_layout" 'name="theme-color" content="#ea580c"'
 
-# Prevent the known design-system forks from returning.
+# Prevent dashboard-local design-system forks from returning.
 expect_not_contains "$dashboard_css" '--paper:'
 expect_not_contains "$dashboard_css" '--ink:'
 expect_not_contains "$dashboard_reports_css" '--reports-paper:'
 expect_not_contains "$dashboard_reports_css" '--reports-ink:'
-expect_not_contains "$site_css" '--background: oklch'
-expect_not_contains "$site_layout" '@fontsource-variable/inter'
 
-# Token-only changes must rebuild every browser deployment target.
+# Token-only changes must rebuild every dashboard deployment target.
 for workflow in "${deploy_workflows[@]}"; do
   expect_contains "$workflow" 'packages/design-tokens/**'
 done
 
-printf 'PASS: web surfaces share the mobile visual contract\n'
+printf 'PASS: dashboard follows the mobile visual contract\n'

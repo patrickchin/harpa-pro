@@ -60,11 +60,12 @@ type FormState =
   | { kind: 'error'; message: string };
 
 const inputCls =
-  'min-h-11 w-full rounded-md border border-hairline bg-card px-4 py-2 text-base leading-6 text-ink placeholder:text-ink-soft/70 outline-none ring-focus transition disabled:cursor-not-allowed disabled:opacity-70';
+  'w-full rounded-md border border-hairline bg-card px-3 py-2 text-sm text-ink placeholder:text-ink-soft/70 outline-none focus:border-accent focus:ring-2 focus:ring-accent/30 transition disabled:cursor-not-allowed disabled:opacity-70';
 
 const labelCls =
-  'mb-2 flex items-center gap-1.5 text-[length:var(--font-size-label)] font-bold uppercase tracking-[var(--letter-spacing-label)] leading-[var(--line-height-label)] text-ink-soft';
-const detailsLabelCls = 'mb-1 flex items-center gap-1.5 text-base font-bold leading-6 text-ink';
+  'mb-1.5 flex items-center gap-1.5 text-[0.7rem] font-semibold uppercase tracking-wider text-ink-soft';
+const detailsLabelCls =
+  'mb-1 flex items-center gap-1.5 text-sm font-medium text-ink';
 
 export default function WaitlistFormIsland() {
   const env = getPublicEnv();
@@ -97,7 +98,12 @@ export default function WaitlistFormIsland() {
     if (!parsed.success) {
       const first = parsed.error.issues[0];
       const field = first?.path[0];
-      const label = field === 'email' ? 'Email' : field === 'source' ? 'Details' : 'Form';
+      const label =
+        field === 'email'
+          ? 'Email'
+          : field === 'source'
+            ? 'Details'
+            : 'Form';
       setState({
         kind: 'error',
         message: `${label}: ${first?.message ?? 'invalid value'}.`,
@@ -142,11 +148,14 @@ export default function WaitlistFormIsland() {
 
   if (state.kind === 'success') {
     return (
-      <div role="status" className="rounded-lg border border-hairline bg-paper-2 p-5">
-        <h3 className="text-xl font-bold leading-[1.625rem] text-ink">Check your inbox.</h3>
-        <p className="mt-2 text-sm leading-5 text-ink-soft">
-          We've sent you a confirmation link. Click it within 7 days to confirm product updates. If
-          it doesn't arrive, check your spam folder.
+      <div
+        role="status"
+        className="rounded-xl border border-hairline bg-paper-2/70 p-5 sm:p-6"
+      >
+        <h3 className="text-lg font-semibold text-ink">Check your inbox.</h3>
+        <p className="mt-2 text-sm leading-relaxed text-ink-soft">
+          We've sent you a confirmation link. Click it within 7 days to confirm
+          product updates. If it doesn't arrive, check your spam folder.
         </p>
       </div>
     );
@@ -157,10 +166,10 @@ export default function WaitlistFormIsland() {
   return (
     <form
       onSubmit={onSubmit}
-      className="rounded-lg border border-hairline bg-paper-2 p-5"
+      className="rounded-xl border border-hairline bg-paper-2/70 p-5 sm:p-6"
       aria-label="Product updates signup"
     >
-      <div className="grid gap-4">
+      <div className="grid gap-3.5">
         <label className="block">
           <span className={labelCls}>Email</span>
           <input
@@ -179,11 +188,11 @@ export default function WaitlistFormIsland() {
         <label className="block">
           <span className={detailsLabelCls}>
             About your work
-            <span className="rounded-sm bg-secondary px-1 py-px text-xs font-normal normal-case tracking-normal text-ink-soft">
+            <span className="rounded-sm bg-secondary px-1 py-px text-[0.6rem] normal-case text-ink-soft">
               Optional
             </span>
           </span>
-          <span className="mb-2 block text-sm leading-5 text-ink-soft">
+          <span className="mb-2 block text-xs leading-relaxed text-ink-soft">
             Android, web, team rollout, or reporting pain points are all optional.
           </span>
           <textarea
@@ -204,12 +213,15 @@ export default function WaitlistFormIsland() {
             onSuccess={(t) => setTurnstileToken(t)}
             onError={() => setTurnstileToken('')}
             onExpire={() => setTurnstileToken('')}
-            options={{ theme: 'light', size: 'flexible' }}
+            options={{ theme: 'light' }}
           />
         </div>
 
         {state.kind === 'error' && (
-          <p role="alert" className="text-sm text-destructive">
+          <p
+            role="alert"
+            className="text-sm text-red-700 dark:text-red-400"
+          >
             {state.message}
           </p>
         )}
@@ -217,7 +229,7 @@ export default function WaitlistFormIsland() {
         <button
           type="submit"
           disabled={submitting}
-          className="mt-2 inline-flex min-h-13 items-center justify-center gap-2 rounded-md bg-accent px-5 text-lg font-bold text-accent-foreground shadow-[var(--shadow-raised)] hover:brightness-95 ring-focus disabled:cursor-not-allowed disabled:opacity-70"
+          className="mt-2 inline-flex h-11 items-center justify-center gap-2 rounded-md bg-accent px-5 text-sm font-medium text-accent-foreground shadow-sm hover:brightness-95 ring-focus disabled:cursor-not-allowed disabled:opacity-70"
         >
           {submitting ? 'Submitting…' : 'Get updates →'}
         </button>

@@ -1,13 +1,8 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
 
-const turnstileOptions = vi.hoisted(() => vi.fn());
-
 vi.mock('@marsidev/react-turnstile', () => ({
-  Turnstile: ({ options }: { options?: { size?: string } }) => {
-    turnstileOptions(options);
-    return <div data-testid="turnstile" />;
-  },
+  Turnstile: () => <div data-testid="turnstile" />,
 }));
 
 vi.mock('../../lib/env', () => ({
@@ -44,13 +39,5 @@ describe('WaitlistFormIsland', () => {
 
     expect(html).toContain(`maxLength="${detailsMax}"`);
     expect(html).not.toContain('maxLength="200"');
-  });
-
-  it('uses the responsive Turnstile size', () => {
-    renderToStaticMarkup(<WaitlistFormIsland />);
-
-    expect(turnstileOptions).toHaveBeenCalledWith(
-      expect.objectContaining({ size: 'flexible' }),
-    );
   });
 });

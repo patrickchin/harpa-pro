@@ -1,8 +1,6 @@
 ---
 import Icon from "../Icon.astro";
 import WaitlistFormIsland from "./WaitlistFormIsland";
-import Container from "../primitives/Container.astro";
-import Section from "../primitives/Section.astro";
 
 /*
  * M1: the form is now a real React island (`WaitlistFormIsland.tsx`)
@@ -17,47 +15,49 @@ import Section from "../primitives/Section.astro";
  */
 ---
 
-<Section id="waitlist">
-  <Container>
-    <div
-      class="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-8 rounded-xl border border-hairline bg-card p-5 shadow-[var(--shadow-raised)] sm:p-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)]"
-    >
-      <div class="min-w-0">
-        <span class="site-eyebrow">
-          Product updates
-        </span>
-        <h2 class="site-section-title mt-2 text-ink">
-          Need Android, web, or team rollout updates?
-        </h2>
-        <p class="mt-4 text-base leading-6 text-ink-soft">
-          The iPhone app is live now. Leave your email if you want Android,
-          web, or team workflow updates as they open.
-        </p>
-        <ul class="mt-5 space-y-3 text-sm leading-5 text-ink">
-          <li class="flex items-start gap-2">
-            <Icon name="circle-check" class="mt-0.5 h-4 w-4 text-emerald-500" />
-            Android pilot and web companion updates
-          </li>
-          <li class="flex items-start gap-2">
-            <Icon name="circle-check" class="mt-0.5 h-4 w-4 text-emerald-500" />
-            Notes on team workflows and office-facing features
-          </li>
-          <li class="flex items-start gap-2">
-            <Icon name="circle-check" class="mt-0.5 h-4 w-4 text-emerald-500" />
-            Direct line to the team building it
-          </li>
-        </ul>
-      </div>
-
-      <WaitlistFormIsland client:only="react">
-        <div
-          slot="fallback"
-          class="min-w-0 rounded-lg border border-hairline bg-paper-2 p-5 text-sm text-ink-soft"
-          aria-busy="true"
-        >
-          Loading signup form…
-        </div>
-      </WaitlistFormIsland>
+<section id="waitlist" class="mx-auto max-w-6xl px-4 py-14 sm:px-6 md:py-16">
+  <div
+    class="grid gap-10 rounded-2xl border border-hairline bg-card p-6 sm:p-10 lg:grid-cols-[1fr_1.05fr] lg:gap-14"
+  >
+    <div>
+      <span
+        class="text-xs font-semibold uppercase tracking-wider text-accent-ink"
+      >
+        Product updates
+      </span>
+      <h2
+        class="mt-2 text-3xl font-semibold tracking-tight text-ink sm:text-4xl"
+      >
+        Need Android, web, or team rollout updates?
+      </h2>
+      <p class="mt-4 text-sm leading-relaxed text-ink-soft sm:text-base">
+        The iPhone app is live now. Leave your email if you want Android,
+        web, or team workflow updates as they open.
+      </p>
+      <ul class="mt-6 space-y-2.5 text-sm text-ink">
+        <li class="flex items-start gap-2">
+          <Icon name="circle-check" class="mt-0.5 h-4 w-4 text-emerald-500" />
+          Android pilot and web companion updates
+        </li>
+        <li class="flex items-start gap-2">
+          <Icon name="circle-check" class="mt-0.5 h-4 w-4 text-emerald-500" />
+          Notes on team workflows and office-facing features
+        </li>
+        <li class="flex items-start gap-2">
+          <Icon name="circle-check" class="mt-0.5 h-4 w-4 text-emerald-500" />
+          Direct line to the team building it
+        </li>
+      </ul>
     </div>
-  </Container>
-</Section>
+
+    <WaitlistFormIsland client:only="react">
+      <div
+        slot="fallback"
+        class="rounded-xl border border-hairline bg-paper-2/70 p-5 sm:p-6 text-sm text-ink-soft"
+        aria-busy="true"
+      >
+        Loading signup form…
+      </div>
+    </WaitlistFormIsland>
+  </div>
+</section>

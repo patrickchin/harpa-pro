@@ -1,9 +1,9 @@
 /*
- * Web mirror of the mobile visual system.
+ * Dashboard mirror of the mobile visual system.
  *
  * apps/mobile/lib/design-tokens/colors.ts and apps/mobile/tailwind.config.js
- * are normative. scripts/ci/__tests__/web-visual-contract.test.sh prevents
- * the web mirror from drifting.
+ * are normative. scripts/ci/__tests__/dashboard-visual-contract.test.sh
+ * prevents the dashboard mirror from drifting.
  */
 
 :root {

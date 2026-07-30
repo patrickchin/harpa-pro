@@ -489,7 +489,7 @@ Not required for MVP:
 ## 10. Visual and interaction language
 
 The binding values and measurements live in
-[the cross-surface visual system](design-cross-surface-visual-system.md).
+[the dashboard visual system](design-dashboard-visual-system.md).
 The mobile app is the visual source of truth; desktop adds room and keyboard
 reach, not a separate palette or component grammar. Carry its “warm paper +
 navy ink” language into the dashboard:

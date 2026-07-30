@@ -56,9 +56,9 @@ export function VoiceReportPreview({ report }: VoiceReportPreviewProps) {
   }, 0);
 
   return (
-    <article className="relative space-y-5 rounded-lg border border-border bg-card p-4 shadow-[var(--shadow-raised)]">
+    <article className="relative space-y-6 rounded-xl border border-border bg-card p-6">
       <header className="space-y-1">
-        <h3 className="text-xl font-bold leading-[1.625rem] text-foreground">Site report</h3>
+        <h3 className="text-lg font-bold text-foreground">Site report</h3>
         {visitLabel ? <p className="text-sm text-muted-foreground">{visitLabel}</p> : null}
       </header>
 

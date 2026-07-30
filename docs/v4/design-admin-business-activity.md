@@ -355,19 +355,22 @@ The existing Expo bearer flow remains unchanged.
 Add `apps/site/src/pages/admin/activity.astro` and a single React island,
 tentatively `apps/site/src/components/admin/AdminActivity.tsx`.
 
-The page includes:
+The presentation and interaction model is refined by
+[Dense admin activity log view](design-admin-activity-log-view.md). The page
+includes:
 
-- a level filter, an event-type filter, and simple time-range presets;
-- optional actor/project filters selected from a row;
+- immediately applied level, event-type, and simple time-range filters;
+- always-visible actor, actor-exclusion, and project filters;
 - multiple removable excluded-actor chips;
-- columns for time, event, actor, project/report, and subject;
+- dense, non-wrapping log lines with clear information hierarchy;
+- local refresh baselines and `New` markers;
+- a browser-local plain-text view of the currently loaded rows;
 - a `Load older` cursor action;
 - a row detail drawer showing IDs, request ID, and safe metadata; and
 - clear deleted-entity and tracking-started states.
 
-TanStack Table runs in manual-pagination mode. Sorting remains fixed on the
-server. TanStack Virtual, TanStack Query, a JSON viewer, charts, CSV export,
-and live updates are all deferred.
+Sorting remains fixed on the server. TanStack Virtual, TanStack Query, a JSON
+viewer, charts, persisted exports, and live updates are all deferred.
 
 The route has `noindex` metadata, does not enter the public sitemap or
 navigation, and remains useful at narrow desktop/tablet widths. The activity
@@ -438,6 +441,7 @@ extract it to `apps/admin` and a separate Pages project in its own design.
 
 - Component tests cover password auth, loading, generic failure, empty,
   populated, pagination, level and time presets, multiple actor exclusions,
+  immediate actor/project filters, refresh/new markers, plain-text output,
   deleted entities, and the detail drawer.
 - A Playwright smoke covers the local admin page against the real API/default
   wiring, including CORS and a persisted event (Pitfall 13).

@@ -1,10 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import {
-  createColumnHelper,
-  flexRender,
-  getCoreRowModel,
-  useReactTable,
-} from '@tanstack/react-table';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { activity as activitySchemas } from '@harpa/api-contract';
 import type { activity } from '@harpa/api-contract';
 import { adminAuthClient } from '../../lib/admin-auth';
@@ -23,6 +17,15 @@ type SessionState =
 type RefetchSession = () => Promise<AdminSession | null>;
 
 interface ActorExclusion {
+  id: string;
+  label: string;
+}
+
+interface ActorOption extends ActorExclusion {
+  email: string | null;
+}
+
+interface ProjectOption {
   id: string;
   label: string;
 }
@@ -79,6 +82,16 @@ function eventLabel(eventType: activity.EventType): string {
   return EVENT_LABELS[eventType];
 }
 
+const EVENT_ROW_ACCENTS = {
+  'user.signed_up': 'border-l-chart-4',
+  'project.created': 'border-l-chart-2',
+  'report.created': 'border-l-chart-3',
+  'note.text_created': 'border-l-primary/35',
+  'note.voice_created': 'border-l-chart-5',
+  'note.image_created': 'border-l-chart-2/60',
+  'note.document_created': 'border-l-chart-4/70',
+} satisfies Record<activity.EventType, string>;
+
 function fromForTimePeriod(period: TimePeriod, now = new Date()): string | null {
   if (period === 'all') return null;
 
@@ -88,6 +101,40 @@ function fromForTimePeriod(period: TimePeriod, now = new Date()): string | null 
   if (period === 'six_months') from.setMonth(from.getMonth() - 6);
   if (period === 'year') from.setFullYear(from.getFullYear() - 1);
   return from.toISOString();
+}
+
+function displayTime(value: string): string {
+  return new Intl.DateTimeFormat(undefined, {
+    day: '2-digit',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(new Date(value));
+}
+
+function oneLineField(value: string | null): string {
+  return (value ?? '').replace(/[\t\r\n]+/g, ' ').trim();
+}
+
+function activityTextLine(event: activity.Event): string {
+  return [
+    event.occurredAt,
+    event.eventType,
+    oneLineField(event.actorLabel),
+    oneLineField(event.actorEmail),
+    oneLineField(event.projectLabel),
+    oneLineField(event.subjectLabel),
+    event.id,
+    event.actorUserId ?? '',
+    event.projectId ?? '',
+    event.subjectId ?? '',
+    event.requestId ?? '',
+    JSON.stringify(event.metadata),
+  ].join('\t');
+}
+
+function actorOptionLabel(actor: ActorOption): string {
+  return actor.email ? `${actor.label} — ${actor.email}` : actor.label;
 }
 
 function signInErrorMessage(error: unknown): string {
@@ -181,8 +228,6 @@ function SignIn({ refetchSession }: { refetchSession: RefetchSession }) {
   );
 }
 
-const columnHelper = createColumnHelper<activity.Event>();
-
 function ActivityFeed({
   email,
   refetchSession,
@@ -192,43 +237,98 @@ function ActivityFeed({
 }) {
   const { apiBaseUrl } = getPublicEnv();
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
-  const [appliedFilters, setAppliedFilters] = useState<Filters>(EMPTY_FILTERS);
   const [items, setItems] = useState<activity.Event[]>([]);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [state, setState] = useState<FeedState>('loading');
   const [selected, setSelected] = useState<activity.Event | null>(null);
+  const [knownActors, setKnownActors] = useState<ActorOption[]>([]);
+  const [knownProjects, setKnownProjects] = useState<ProjectOption[]>([]);
+  const [newEventIds, setNewEventIds] = useState<Set<string>>(() => new Set());
+  const [refreshing, setRefreshing] = useState(false);
+  const [refreshMessage, setRefreshMessage] = useState<string | null>(null);
+  const [textUrl, setTextUrl] = useState<string | null>(null);
+  const requestSequenceRef = useRef(0);
+  const activeRefreshSequenceRef = useRef<number | null>(null);
+  const baselineEventIdsRef = useRef<Set<string>>(new Set());
+  const selectedTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const closeDetailsRef = useRef<HTMLButtonElement | null>(null);
+
+  const rememberFilterOptions = useCallback((events: activity.Event[]) => {
+    setKnownActors((current) => {
+      const byId = new Map(current.map((actor) => [actor.id, actor]));
+      for (const event of events) {
+        if (!event.actorUserId) continue;
+        byId.set(event.actorUserId, {
+          id: event.actorUserId,
+          label: event.actorLabel,
+          email: event.actorEmail,
+        });
+      }
+      return [...byId.values()].sort((left, right) => left.label.localeCompare(right.label));
+    });
+    setKnownProjects((current) => {
+      const byId = new Map(current.map((project) => [project.id, project]));
+      for (const event of events) {
+        if (!event.projectId || !event.projectLabel) continue;
+        byId.set(event.projectId, {
+          id: event.projectId,
+          label: event.projectLabel,
+        });
+      }
+      return [...byId.values()].sort((left, right) => left.label.localeCompare(right.label));
+    });
+  }, []);
 
   const load = useCallback(
-    async (cursor: string | null, append: boolean) => {
-      if (!append) setState('loading');
+    async (mode: 'replace' | 'append' | 'refresh', cursor: string | null) => {
+      const requestSequence = ++requestSequenceRef.current;
+      if (mode === 'replace') {
+        setState('loading');
+        setItems([]);
+        setNextCursor(null);
+        setNewEventIds(new Set());
+        setRefreshMessage(null);
+      }
+      if (mode !== 'refresh') {
+        activeRefreshSequenceRef.current = null;
+        setRefreshing(false);
+      }
+      if (mode === 'refresh') {
+        activeRefreshSequenceRef.current = requestSequence;
+        setRefreshing(true);
+        setRefreshMessage(null);
+      }
+
       try {
         const params = new URLSearchParams({ limit: '50' });
         if (cursor) params.set('cursor', cursor);
-        params.set('level', appliedFilters.level);
-        if (appliedFilters.eventType) {
-          params.set('eventType', appliedFilters.eventType);
+        params.set('level', filters.level);
+        if (filters.eventType) {
+          params.set('eventType', filters.eventType);
         }
-        if (appliedFilters.actorUserId) {
-          params.set('actorUserId', appliedFilters.actorUserId);
+        if (filters.actorUserId) {
+          params.set('actorUserId', filters.actorUserId);
         }
-        if (appliedFilters.excludedActors.length > 0) {
+        if (filters.excludedActors.length > 0) {
           params.set(
             'excludeActorUserIds',
-            appliedFilters.excludedActors.map((actor) => actor.id).join(','),
+            filters.excludedActors.map((actor) => actor.id).join(','),
           );
         }
-        if (appliedFilters.projectId) {
-          params.set('projectId', appliedFilters.projectId);
+        if (filters.projectId) {
+          params.set('projectId', filters.projectId);
         }
-        const from = fromForTimePeriod(appliedFilters.timePeriod);
+        const from = fromForTimePeriod(filters.timePeriod);
         if (from) params.set('from', from);
 
         const response = await fetch(`${apiBaseUrl}/admin/activity?${params.toString()}`, {
           credentials: 'include',
           cache: 'no-store',
         });
+        if (requestSequence !== requestSequenceRef.current) return;
         if (response.status === 401) {
           await refetchSession();
+          if (requestSequence !== requestSequenceRef.current) return;
           setState('error');
           return;
         }
@@ -239,14 +339,51 @@ function ActivityFeed({
         if (!response.ok) throw new Error(`activity request ${response.status}`);
 
         const parsed = activitySchemas.listResponse.parse(await response.json());
-        setItems((current) => (append ? [...current, ...parsed.items] : parsed.items));
+        if (requestSequence !== requestSequenceRef.current) return;
+        rememberFilterOptions(parsed.items);
+
+        if (mode === 'append') {
+          setItems((current) => {
+            const existingIds = new Set(current.map((event) => event.id));
+            return [...current, ...parsed.items.filter((event) => !existingIds.has(event.id))];
+          });
+          baselineEventIdsRef.current = new Set([
+            ...baselineEventIdsRef.current,
+            ...parsed.items.map((event) => event.id),
+          ]);
+        } else {
+          const incomingIds = new Set(parsed.items.map((event) => event.id));
+          if (mode === 'refresh') {
+            const nextNewIds = new Set(
+              parsed.items
+                .filter((event) => !baselineEventIdsRef.current.has(event.id))
+                .map((event) => event.id),
+            );
+            setNewEventIds(nextNewIds);
+            setRefreshMessage(
+              nextNewIds.size === 0
+                ? 'No new events since last refresh.'
+                : `${nextNewIds.size} new event${nextNewIds.size === 1 ? '' : 's'} since last refresh.`,
+            );
+          } else {
+            setNewEventIds(new Set());
+          }
+          baselineEventIdsRef.current = incomingIds;
+          setItems(parsed.items);
+        }
+
         setNextCursor(parsed.nextCursor);
         setState('ready');
       } catch {
-        setState('error');
+        if (requestSequence === requestSequenceRef.current) setState('error');
+      } finally {
+        if (mode === 'refresh' && activeRefreshSequenceRef.current === requestSequence) {
+          activeRefreshSequenceRef.current = null;
+          setRefreshing(false);
+        }
       }
     },
-    [apiBaseUrl, appliedFilters, refetchSession],
+    [apiBaseUrl, filters, refetchSession, rememberFilterOptions],
   );
 
   function addExcludedActor(actor: ActorExclusion) {
@@ -264,8 +401,6 @@ function ActivityFeed({
     };
 
     setFilters(add);
-    setAppliedFilters(add);
-    setSelected(null);
   }
 
   function removeExcludedActor(actorUserId: string) {
@@ -275,7 +410,6 @@ function ActivityFeed({
     });
 
     setFilters(remove);
-    setAppliedFilters(remove);
   }
 
   function clearExcludedActors() {
@@ -285,65 +419,62 @@ function ActivityFeed({
     });
 
     setFilters(clear);
-    setAppliedFilters(clear);
   }
 
   useEffect(() => {
-    void load(null, false);
+    setSelected(null);
+    void load('replace', null);
   }, [load]);
 
-  const columns = useMemo(
-    () => [
-      columnHelper.accessor('occurredAt', {
-        header: 'Time',
-        cell: (info) =>
-          new Intl.DateTimeFormat(undefined, {
-            dateStyle: 'medium',
-            timeStyle: 'short',
-          }).format(new Date(info.getValue())),
-      }),
-      columnHelper.accessor('eventType', {
-        header: 'Event',
-        cell: (info) => eventLabel(info.getValue()),
-      }),
-      columnHelper.accessor('actorLabel', {
-        header: 'Actor',
-        cell: (info) => (
-          <span>
-            <span className="block font-medium text-ink">{info.getValue()}</span>
-            {info.row.original.actorEmail && (
-              <span className="block text-xs text-ink-soft">{info.row.original.actorEmail}</span>
-            )}
-          </span>
-        ),
-      }),
-      columnHelper.display({
-        id: 'project',
-        header: 'Project',
-        cell: (info) => info.row.original.projectLabel ?? '—',
-      }),
-      columnHelper.accessor('subjectLabel', {
-        header: 'Subject',
-        cell: (info) => (
-          <button
-            className="font-medium text-accent-ink underline decoration-transparent underline-offset-4 hover:decoration-current ring-focus"
-            type="button"
-            onClick={() => setSelected(info.row.original)}
-          >
-            {info.getValue()}
-          </button>
-        ),
-      }),
-    ],
-    [],
-  );
+  useEffect(() => {
+    if (!selected) return;
+
+    const trigger = selectedTriggerRef.current;
+    const keepFocusInside = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        setSelected(null);
+      } else if (event.key === 'Tab') {
+        event.preventDefault();
+        closeDetailsRef.current?.focus();
+      }
+    };
+
+    closeDetailsRef.current?.focus();
+    document.addEventListener('keydown', keepFocusInside);
+    return () => {
+      document.removeEventListener('keydown', keepFocusInside);
+      if (trigger?.isConnected) trigger.focus();
+    };
+  }, [selected]);
+
   const visibleEventOptions = useMemo(() => eventOptionsForLevel(filters.level), [filters.level]);
-  const table = useReactTable({
-    data: items,
-    columns,
-    getCoreRowModel: getCoreRowModel(),
-    manualPagination: true,
-  });
+  const availableActorExclusions = useMemo(
+    () =>
+      knownActors.filter(
+        (actor) => !filters.excludedActors.some((excluded) => excluded.id === actor.id),
+      ),
+    [filters.excludedActors, knownActors],
+  );
+  const textContents = useMemo(
+    () => (state === 'ready' ? items.map(activityTextLine).join('\n') : ''),
+    [items, state],
+  );
+
+  useEffect(() => {
+    if (!textContents) {
+      setTextUrl(null);
+      return;
+    }
+
+    const url = URL.createObjectURL(
+      new Blob([textContents], {
+        type: 'text/plain;charset=utf-8',
+      }),
+    );
+    setTextUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [textContents]);
 
   async function signOut() {
     try {
@@ -367,126 +498,196 @@ function ActivityFeed({
             Signed in as {email}. Activity is recorded from this feature's deployment onward.
           </p>
         </div>
-        <button className={buttonClass} type="button" onClick={signOut}>
-          Sign out
-        </button>
-      </div>
-
-      <form
-        className="my-5 grid gap-3 rounded-xl border border-hairline bg-card p-4 md:grid-cols-4"
-        onSubmit={(event) => {
-          event.preventDefault();
-          setSelected(null);
-          setAppliedFilters({ ...filters });
-        }}
-      >
-        <label className="grid gap-1 text-xs font-semibold uppercase tracking-wide text-ink-soft">
-          Detail level
-          <select
-            className={inputClass}
-            value={filters.level}
-            onChange={(event) =>
-              setFilters((current) => {
-                const level = event.target.value as ActivityLevel;
-                const nextEventOptions = eventOptionsForLevel(level);
-                const eventType =
-                  current.eventType &&
-                  !nextEventOptions.some((option) => option.value === current.eventType)
-                    ? ''
-                    : current.eventType;
-                return {
-                  ...current,
-                  level,
-                  eventType,
-                };
-              })
-            }
-          >
-            <option value="milestone">Milestones</option>
-            <option value="detail">Detailed activity</option>
-            <option value="all">All activity</option>
-          </select>
-        </label>
-        <label className="grid gap-1 text-xs font-semibold uppercase tracking-wide text-ink-soft">
-          Event type
-          <select
-            className={inputClass}
-            value={filters.eventType}
-            onChange={(event) =>
-              setFilters((current) => ({
-                ...current,
-                eventType: event.target.value as Filters['eventType'],
-              }))
-            }
-          >
-            <option value="">All events</option>
-            {(filters.level === 'milestone' || filters.level === 'all') && (
-              <optgroup label="Milestones">
-                {visibleEventOptions
-                  .filter((option) => option.level === 'milestone')
-                  .map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-              </optgroup>
-            )}
-            {(filters.level === 'detail' || filters.level === 'all') && (
-              <optgroup label="Detailed activity">
-                {visibleEventOptions
-                  .filter((option) => option.level === 'detail')
-                  .map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-              </optgroup>
-            )}
-          </select>
-        </label>
-        <label className="grid gap-1 text-xs font-semibold uppercase tracking-wide text-ink-soft">
-          Time period
-          <select
-            className={inputClass}
-            value={filters.timePeriod}
-            onChange={(event) =>
-              setFilters((current) => ({
-                ...current,
-                timePeriod: event.target.value as TimePeriod,
-              }))
-            }
-          >
-            <option value="week">Past week</option>
-            <option value="month">Past month</option>
-            <option value="six_months">Past 6 months</option>
-            <option value="year">Past year</option>
-            <option value="all">All time</option>
-          </select>
-        </label>
-        <div className="flex items-end gap-2">
-          <button className={primaryButtonClass} type="submit">
-            Apply filters
-          </button>
+        <div className="flex flex-wrap gap-2">
+          {state === 'ready' && textUrl && (
+            <a
+              className={buttonClass}
+              href={textUrl}
+              rel="noreferrer"
+              target="_blank"
+              type="text/plain"
+            >
+              Open as text
+            </a>
+          )}
           <button
             className={buttonClass}
+            disabled={refreshing || state === 'loading'}
             type="button"
-            onClick={() => {
-              setFilters({ ...EMPTY_FILTERS, excludedActors: [] });
-              setAppliedFilters({ ...EMPTY_FILTERS, excludedActors: [] });
-              setSelected(null);
-            }}
+            onClick={() => void load('refresh', null)}
           >
-            Clear
+            {refreshing ? 'Refreshing…' : 'Refresh'}
+          </button>
+          <button className={buttonClass} type="button" onClick={signOut}>
+            Sign out
           </button>
         </div>
-        {(filters.actorUserId || filters.projectId) && (
-          <div className="md:col-span-4 flex flex-wrap gap-2 text-xs text-ink-soft">
-            {filters.actorUserId && <span>Actor: {filters.actorUserId}</span>}
-            {filters.projectId && <span>Project: {filters.projectId}</span>}
+      </div>
+
+      <section className="my-4 rounded-xl border border-hairline bg-card p-3">
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-[repeat(3,minmax(0,1fr))_auto]">
+          <label className="grid gap-1 text-xs font-semibold uppercase tracking-wide text-ink-soft">
+            Detail level
+            <select
+              className={inputClass}
+              value={filters.level}
+              onChange={(event) =>
+                setFilters((current) => {
+                  const level = event.target.value as ActivityLevel;
+                  if (current.level === level) return current;
+                  const nextEventOptions = eventOptionsForLevel(level);
+                  const eventType =
+                    current.eventType &&
+                    !nextEventOptions.some((option) => option.value === current.eventType)
+                      ? ''
+                      : current.eventType;
+                  return {
+                    ...current,
+                    level,
+                    eventType,
+                  };
+                })
+              }
+            >
+              <option value="milestone">Milestones</option>
+              <option value="detail">Detailed activity</option>
+              <option value="all">All activity</option>
+            </select>
+          </label>
+          <label className="grid gap-1 text-xs font-semibold uppercase tracking-wide text-ink-soft">
+            Event type
+            <select
+              className={inputClass}
+              value={filters.eventType}
+              onChange={(event) => {
+                const eventType = event.target.value as Filters['eventType'];
+                setFilters((current) =>
+                  current.eventType === eventType ? current : { ...current, eventType },
+                );
+              }}
+            >
+              <option value="">All events</option>
+              {(filters.level === 'milestone' || filters.level === 'all') && (
+                <optgroup label="Milestones">
+                  {visibleEventOptions
+                    .filter((option) => option.level === 'milestone')
+                    .map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                </optgroup>
+              )}
+              {(filters.level === 'detail' || filters.level === 'all') && (
+                <optgroup label="Detailed activity">
+                  {visibleEventOptions
+                    .filter((option) => option.level === 'detail')
+                    .map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                </optgroup>
+              )}
+            </select>
+          </label>
+          <label className="grid gap-1 text-xs font-semibold uppercase tracking-wide text-ink-soft">
+            Time period
+            <select
+              className={inputClass}
+              value={filters.timePeriod}
+              onChange={(event) => {
+                const timePeriod = event.target.value as TimePeriod;
+                setFilters((current) =>
+                  current.timePeriod === timePeriod ? current : { ...current, timePeriod },
+                );
+              }}
+            >
+              <option value="week">Past week</option>
+              <option value="month">Past month</option>
+              <option value="six_months">Past 6 months</option>
+              <option value="year">Past year</option>
+              <option value="all">All time</option>
+            </select>
+          </label>
+          <div className="flex items-end">
+            <button
+              className={buttonClass}
+              type="button"
+              onClick={() => setFilters({ ...EMPTY_FILTERS, excludedActors: [] })}
+            >
+              Clear
+            </button>
           </div>
-        )}
+        </div>
+
+        <div className="mt-3 grid gap-3 border-t border-hairline pt-3 md:grid-cols-3">
+          <label className="grid gap-1 text-xs font-semibold uppercase tracking-wide text-ink-soft">
+            Filter actor
+            <select
+              className={inputClass}
+              value={filters.actorUserId}
+              onChange={(event) => {
+                const actorUserId = event.target.value;
+                setFilters((current) =>
+                  current.actorUserId === actorUserId ? current : { ...current, actorUserId },
+                );
+              }}
+            >
+              <option value="">All actors</option>
+              {knownActors.map((actor) => (
+                <option key={actor.id} value={actor.id}>
+                  {actorOptionLabel(actor)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="grid gap-1 text-xs font-semibold uppercase tracking-wide text-ink-soft">
+            Exclude actor
+            <select
+              className={inputClass}
+              disabled={
+                filters.excludedActors.length >= MAX_EXCLUDED_ACTORS ||
+                availableActorExclusions.length === 0
+              }
+              value=""
+              onChange={(event) => {
+                const actor = knownActors.find((option) => option.id === event.target.value);
+                if (actor) addExcludedActor(actor);
+              }}
+            >
+              <option value="">Choose actor…</option>
+              {availableActorExclusions.map((actor) => (
+                <option key={actor.id} value={actor.id}>
+                  {actorOptionLabel(actor)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="grid gap-1 text-xs font-semibold uppercase tracking-wide text-ink-soft">
+            Filter project
+            <select
+              className={inputClass}
+              value={filters.projectId}
+              onChange={(event) => {
+                const projectId = event.target.value;
+                setFilters((current) =>
+                  current.projectId === projectId ? current : { ...current, projectId },
+                );
+              }}
+            >
+              <option value="">All projects</option>
+              {knownProjects.map((project) => (
+                <option key={project.id} value={project.id}>
+                  {project.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+
         {filters.excludedActors.length > 0 && (
-          <div className="flex flex-wrap items-center gap-2 md:col-span-4">
+          <div className="mt-3 flex flex-wrap items-center gap-2">
             <span className="text-xs font-semibold uppercase tracking-wide text-ink-soft">
               Excluded actors
             </span>
@@ -515,7 +716,14 @@ function ActivityFeed({
             </button>
           </div>
         )}
-      </form>
+        <p className="mt-3 text-xs text-ink-soft">Selections apply immediately.</p>
+      </section>
+
+      {refreshMessage && (
+        <p className="mb-3 text-xs font-medium text-ink-soft" role="status">
+          {refreshMessage}
+        </p>
+      )}
 
       {state === 'loading' && (
         <div className="rounded-xl border border-hairline bg-card p-10 text-center text-sm text-ink-soft">
@@ -536,7 +744,7 @@ function ActivityFeed({
           <button
             className={`${buttonClass} mt-4`}
             type="button"
-            onClick={() => void load(null, false)}
+            onClick={() => void load('replace', null)}
           >
             Retry
           </button>
@@ -550,39 +758,59 @@ function ActivityFeed({
       {state === 'ready' && items.length > 0 && (
         <>
           <div className="overflow-x-auto rounded-xl border border-hairline bg-card shadow-sm">
-            <table className="w-full min-w-[760px] border-collapse text-left text-sm">
-              <thead className="bg-secondary text-xs uppercase tracking-wide text-ink-soft">
-                {table.getHeaderGroups().map((headerGroup) => (
-                  <tr key={headerGroup.id}>
-                    {headerGroup.headers.map((header) => (
-                      <th className="border-b border-hairline px-4 py-3" key={header.id}>
-                        {header.isPlaceholder
-                          ? null
-                          : flexRender(header.column.columnDef.header, header.getContext())}
-                      </th>
-                    ))}
-                  </tr>
-                ))}
-              </thead>
-              <tbody>
-                {table.getRowModel().rows.map((row) => (
-                  <tr className="border-b border-hairline last:border-0" key={row.id}>
-                    {row.getVisibleCells().map((cell) => (
-                      <td className="px-4 py-3 align-top text-ink-soft" key={cell.id}>
-                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <ul aria-label="Activity events">
+              {items.map((event) => {
+                const isNew = newEventIds.has(event.id);
+                return (
+                  <li
+                    className={`border-b border-l-4 border-hairline last:border-b-0 ${EVENT_ROW_ACCENTS[event.eventType]} ${
+                      isNew ? 'bg-accent/10' : ''
+                    }`}
+                    key={event.id}
+                  >
+                    <button
+                      className="grid min-h-9 w-full min-w-[920px] grid-cols-[3rem_8.5rem_10.5rem_12rem_12rem_minmax(12rem,1fr)] items-center gap-3 whitespace-nowrap px-3 py-1.5 text-left text-xs transition hover:bg-secondary/70 ring-focus"
+                      data-testid={`activity-row-${event.id}`}
+                      type="button"
+                      onClick={(clickEvent) => {
+                        selectedTriggerRef.current = clickEvent.currentTarget;
+                        setSelected(event);
+                      }}
+                    >
+                      <span className="text-[10px] font-bold uppercase tracking-wide text-accent-ink">
+                        {isNew ? 'New' : ''}
+                      </span>
+                      <time
+                        className="font-mono text-[11px] tabular-nums text-ink-soft"
+                        dateTime={event.occurredAt}
+                      >
+                        {displayTime(event.occurredAt)}
+                      </time>
+                      <span className="font-semibold text-ink">{eventLabel(event.eventType)}</span>
+                      <span className="font-semibold text-ink">{event.actorLabel}</span>
+                      <span className="font-medium text-accent-ink">{event.subjectLabel}</span>
+                      <span className="text-ink-soft">
+                        {event.projectLabel ? (
+                          <>
+                            <span aria-hidden="true">in </span>
+                            <span>{event.projectLabel}</span>
+                          </>
+                        ) : (
+                          '—'
+                        )}
+                      </span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
           </div>
           {nextCursor && (
             <div className="mt-4 flex justify-center">
               <button
                 className={buttonClass}
                 type="button"
-                onClick={() => void load(nextCursor, true)}
+                onClick={() => void load('append', nextCursor)}
               >
                 Load older
               </button>
@@ -611,13 +839,26 @@ function ActivityFeed({
                   {selected.subjectLabel}
                 </h2>
               </div>
-              <button className={buttonClass} type="button" onClick={() => setSelected(null)}>
+              <button
+                className={buttonClass}
+                ref={closeDetailsRef}
+                type="button"
+                onClick={() => setSelected(null)}
+              >
                 Close
               </button>
             </div>
             <dl className="mt-5 grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm">
               <dt className="font-medium text-ink">Event ID</dt>
               <dd className="break-all text-ink-soft">{selected.id}</dd>
+              <dt className="font-medium text-ink">Occurred</dt>
+              <dd className="break-all text-ink-soft">{selected.occurredAt}</dd>
+              <dt className="font-medium text-ink">Actor</dt>
+              <dd className="break-all text-ink-soft">
+                {selected.actorEmail
+                  ? `${selected.actorLabel} — ${selected.actorEmail}`
+                  : selected.actorLabel}
+              </dd>
               <dt className="font-medium text-ink">Actor ID</dt>
               <dd className="break-all text-ink-soft">{selected.actorUserId ?? 'Deleted'}</dd>
               <dt className="font-medium text-ink">Subject ID</dt>
@@ -630,60 +871,6 @@ function ActivityFeed({
             <pre className="mt-5 overflow-x-auto rounded-lg bg-secondary p-4 text-xs text-ink">
               {JSON.stringify(selected.metadata, null, 2)}
             </pre>
-            <div className="mt-5 flex flex-wrap gap-2">
-              {selected.actorUserId && (
-                <>
-                  <button
-                    className={buttonClass}
-                    type="button"
-                    onClick={() => {
-                      const next = {
-                        ...filters,
-                        actorUserId: selected.actorUserId ?? '',
-                      };
-                      setFilters(next);
-                      setAppliedFilters(next);
-                      setSelected(null);
-                    }}
-                  >
-                    Filter by actor
-                  </button>
-                  <button
-                    className={buttonClass}
-                    disabled={
-                      filters.excludedActors.length >= MAX_EXCLUDED_ACTORS ||
-                      filters.excludedActors.some((actor) => actor.id === selected.actorUserId)
-                    }
-                    type="button"
-                    onClick={() =>
-                      addExcludedActor({
-                        id: selected.actorUserId!,
-                        label: selected.actorLabel,
-                      })
-                    }
-                  >
-                    Exclude actor
-                  </button>
-                </>
-              )}
-              {selected.projectId && (
-                <button
-                  className={buttonClass}
-                  type="button"
-                  onClick={() => {
-                    const next = {
-                      ...filters,
-                      projectId: selected.projectId ?? '',
-                    };
-                    setFilters(next);
-                    setAppliedFilters(next);
-                    setSelected(null);
-                  }}
-                >
-                  Filter by project
-                </button>
-              )}
-            </div>
           </section>
         </div>
       )}

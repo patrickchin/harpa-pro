@@ -83,15 +83,34 @@ test('signs in through the visible admin form and signs out', async ({ context, 
   await expect(page.getByLabel('Time period')).toHaveValue('month');
   await expect(page.getByLabel('From', { exact: true })).toHaveCount(0);
   await expect(page.getByLabel('To', { exact: true })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Apply filters' })).toHaveCount(0);
+  await expect(page.getByLabel('Filter actor')).toBeVisible();
+  await expect(page.getByLabel('Exclude actor')).toBeVisible();
+  await expect(page.getByLabel('Filter project')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Refresh' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Open as text' })).toBeVisible();
 
-  const row = page.locator('tbody tr');
-  await expect(row).toHaveCount(1);
+  const feed = page.getByRole('list', { name: 'Activity events' });
+  const rows = feed.locator('[data-testid^="activity-row-"]');
+  await expect(rows).toHaveCount(1);
+  const row = rows.first();
   await expect(row).toContainText('Report created');
   await expect(row).toContainText('Admin Activity E2E');
   await expect(row).toContainText('Admin Activity E2E Project');
   await expect(row).toContainText('Report #7');
+  expect(await row.evaluate((element) => getComputedStyle(element).whiteSpace)).toBe('nowrap');
+  expect((await row.boundingBox())?.height).toBeLessThanOrEqual(48);
+  const [eventWeight, projectWeight] = await Promise.all([
+    row
+      .getByText('Report created', { exact: true })
+      .evaluate((element) => Number(getComputedStyle(element).fontWeight)),
+    row
+      .getByText('Admin Activity E2E Project', { exact: true })
+      .evaluate((element) => Number(getComputedStyle(element).fontWeight)),
+  ]);
+  expect(eventWeight).toBeGreaterThan(projectWeight);
 
-  await row.getByRole('button', { name: 'Report #7' }).click();
+  await row.click();
   const detail = page.getByRole('dialog', { name: 'Report #7' });
   await expect(detail).toBeVisible();
   await expect(detail.getByText('request-admin-activity-e2e', { exact: true })).toBeVisible();
@@ -108,10 +127,9 @@ test('signs in through the visible admin form and signs out', async ({ context, 
     );
   });
   await page.getByLabel('Detail level').selectOption('detail');
-  await page.getByRole('button', { name: 'Apply filters' }).click();
   expect((await detailResponsePromise).status()).toBe(200);
 
-  const detailRows = page.locator('tbody tr');
+  const detailRows = feed.locator('[data-testid^="activity-row-"]');
   await expect(detailRows).toHaveCount(4);
   await expect(detailRows).toContainText([
     'Text note added',
@@ -120,21 +138,190 @@ test('signs in through the visible admin form and signs out', async ({ context, 
     'Document uploaded',
   ]);
 
-  await page.getByRole('button', { name: 'Voice note' }).click();
+  const voiceResponsePromise = page.waitForResponse((response) => {
+    const url = new URL(response.url());
+    return (
+      url.origin === API_BASE_URL &&
+      url.pathname === '/admin/activity' &&
+      url.searchParams.get('eventType') === 'note.voice_created'
+    );
+  });
+  await page.getByLabel('Event type').selectOption('note.voice_created');
+  expect((await voiceResponsePromise).status()).toBe(200);
+  await expect(detailRows).toHaveCount(1);
+  await expect(detailRows.first()).toContainText('Voice note added');
+
+  const weekResponsePromise = page.waitForResponse((response) => {
+    const url = new URL(response.url());
+    return (
+      url.origin === API_BASE_URL &&
+      url.pathname === '/admin/activity' &&
+      url.searchParams.get('eventType') === 'note.voice_created' &&
+      url.searchParams.has('from')
+    );
+  });
+  await page.getByLabel('Time period').selectOption('week');
+  expect((await weekResponsePromise).status()).toBe(200);
+
+  const actorUserId = (await page
+    .getByLabel('Filter actor')
+    .locator('option')
+    .nth(1)
+    .getAttribute('value'))!;
+  const projectId = (await page
+    .getByLabel('Filter project')
+    .locator('option')
+    .nth(1)
+    .getAttribute('value'))!;
+
+  const actorResponsePromise = page.waitForResponse((response) => {
+    const url = new URL(response.url());
+    return (
+      url.origin === API_BASE_URL &&
+      url.pathname === '/admin/activity' &&
+      url.searchParams.get('actorUserId') === actorUserId
+    );
+  });
+  await page.getByLabel('Filter actor').selectOption(actorUserId);
+  expect((await actorResponsePromise).status()).toBe(200);
+
+  const projectResponsePromise = page.waitForResponse((response) => {
+    const url = new URL(response.url());
+    return (
+      url.origin === API_BASE_URL &&
+      url.pathname === '/admin/activity' &&
+      url.searchParams.get('actorUserId') === actorUserId &&
+      url.searchParams.get('projectId') === projectId
+    );
+  });
+  await page.getByLabel('Filter project').selectOption(projectId);
+  expect((await projectResponsePromise).status()).toBe(200);
+
   const exclusionResponsePromise = page.waitForResponse((response) => {
     const url = new URL(response.url());
     return (
       url.origin === API_BASE_URL &&
       url.pathname === '/admin/activity' &&
-      url.searchParams.has('excludeActorUserIds')
+      url.searchParams.get('excludeActorUserIds') === actorUserId
     );
   });
-  await page.getByRole('dialog').getByRole('button', { name: 'Exclude actor' }).click();
+  await page.getByLabel('Exclude actor').selectOption(actorUserId);
   expect((await exclusionResponsePromise).status()).toBe(200);
   await expect(page.getByText('No activity matches these filters.')).toBeVisible();
   await expect(
     page.getByRole('button', { name: 'Remove Admin Activity E2E exclusion' }),
   ).toBeVisible();
+
+  const removeExclusionResponsePromise = page.waitForResponse((response) => {
+    const url = new URL(response.url());
+    return (
+      url.origin === API_BASE_URL &&
+      url.pathname === '/admin/activity' &&
+      url.searchParams.get('actorUserId') === actorUserId &&
+      !url.searchParams.has('excludeActorUserIds')
+    );
+  });
+  await page.getByRole('button', { name: 'Remove Admin Activity E2E exclusion' }).click();
+  expect((await removeExclusionResponsePromise).status()).toBe(200);
+  await expect(detailRows).toHaveCount(1);
+
+  const textLink = page.getByRole('link', { name: 'Open as text' });
+  await expect(textLink).toHaveAttribute('target', '_blank');
+  await expect(textLink).toHaveAttribute('type', 'text/plain');
+  const textPagePromise = page.waitForEvent('popup');
+  await textLink.click();
+  const textPage = await textPagePromise;
+  await textPage.waitForLoadState('domcontentloaded');
+  await expect(textPage.locator('body')).toContainText('note.voice_created');
+  await expect(textPage.locator('body')).toContainText('Admin Activity E2E');
+  await expect(textPage.locator('body')).toContainText('Admin Activity E2E Project');
+  await expect(textPage.locator('body')).toContainText('Voice note');
+  await textPage.close();
+
+  const milestoneResponsePromise = page.waitForResponse((response) => {
+    const url = new URL(response.url());
+    return (
+      url.origin === API_BASE_URL &&
+      url.pathname === '/admin/activity' &&
+      url.searchParams.get('level') === 'milestone' &&
+      !url.searchParams.has('eventType')
+    );
+  });
+  await page.getByLabel('Detail level').selectOption('milestone');
+  expect((await milestoneResponsePromise).status()).toBe(200);
+
+  const existingRow = feed.locator('[data-testid^="activity-row-"]').first();
+  await expect(existingRow).toContainText('Report created');
+  const existingRowTestId = await existingRow.getAttribute('data-testid');
+  expect(existingRowTestId).toBeTruthy();
+
+  const newEventId = 'aud_000000000000';
+  await page.route(
+    (url) => url.origin === API_BASE_URL && url.pathname === '/admin/activity',
+    async (route) => {
+      const response = await route.fetch();
+      const body = (await response.json()) as {
+        items: Array<Record<string, unknown>>;
+        nextCursor: string | null;
+      };
+      const source = body.items[0];
+      if (!source) {
+        await route.fulfill({ response });
+        return;
+      }
+
+      await route.fulfill({
+        response,
+        json: {
+          ...body,
+          items: [
+            {
+              ...source,
+              id: newEventId,
+              occurredAt: '2026-07-30T04:00:00.000Z',
+              subjectId: 'rpt_00000000',
+              subjectLabel: 'Report #8',
+              requestId: 'request-admin-activity-refresh-e2e',
+              metadata: { reportNumber: 8 },
+            },
+            ...body.items,
+          ],
+        },
+      });
+    },
+  );
+
+  const refreshResponsePromise = page.waitForResponse((response) => {
+    const url = new URL(response.url());
+    return (
+      url.origin === API_BASE_URL &&
+      url.pathname === '/admin/activity' &&
+      response.request().method() === 'GET'
+    );
+  });
+  await page.getByRole('button', { name: 'Refresh' }).click();
+  expect((await refreshResponsePromise).status()).toBe(200);
+
+  const newRow = page.getByTestId(`activity-row-${newEventId}`);
+  await expect(newRow).toContainText('Report #8');
+  await expect(newRow.getByText('New', { exact: true })).toBeVisible();
+  await expect(page.locator(`[data-testid="${existingRowTestId}"]`).getByText('New')).toHaveCount(
+    0,
+  );
+  await expect(page.getByRole('status')).toHaveText('1 new event since last refresh.');
+
+  const secondRefreshResponsePromise = page.waitForResponse((response) => {
+    const url = new URL(response.url());
+    return (
+      url.origin === API_BASE_URL &&
+      url.pathname === '/admin/activity' &&
+      response.request().method() === 'GET'
+    );
+  });
+  await page.getByRole('button', { name: 'Refresh' }).click();
+  expect((await secondRefreshResponsePromise).status()).toBe(200);
+  await expect(newRow.getByText('New', { exact: true })).toHaveCount(0);
+  await expect(page.getByRole('status')).toHaveText('No new events since last refresh.');
 
   const logoutResponsePromise = page.waitForResponse((response) => {
     const url = new URL(response.url());

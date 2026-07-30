@@ -170,6 +170,26 @@ function activityResponse(items: activity.Event[], nextCursor: string | null = n
   });
 }
 
+function deferredResponse(): {
+  promise: Promise<Response>;
+  resolve: (response: Response) => void;
+} {
+  let resolve!: (response: Response) => void;
+  const promise = new Promise<Response>((next) => {
+    resolve = next;
+  });
+  return { promise, resolve };
+}
+
+function readBlobText(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.addEventListener('load', () => resolve(String(reader.result ?? '')));
+    reader.addEventListener('error', () => reject(reader.error ?? new Error('blob read failed')));
+    reader.readAsText(blob);
+  });
+}
+
 function lastActivityUrl(fetchMock: { mock: { calls: Array<Array<unknown>> } }): URL {
   const request = fetchMock.mock.calls.at(-1)?.[0];
   if (!request) throw new Error('expected an activity request');
@@ -357,7 +377,7 @@ describe('AdminActivity', () => {
     const user = userEvent.setup();
     render(<AdminActivity />);
 
-    expect(await screen.findByText('Tower Refurbishment')).toBeTruthy();
+    expect(await screen.findByTestId(`activity-row-${reportEvent.id}`)).toBeTruthy();
     const initialUrl = new URL(String(fetchMock.mock.calls[0]?.[0]));
     expect(initialUrl.origin + initialUrl.pathname).toBe('https://api.example.test/admin/activity');
     expect(initialUrl.searchParams.get('limit')).toBe('50');
@@ -602,6 +622,54 @@ describe('AdminActivity', () => {
     expect(screen.queryByText('New')).toBeNull();
   });
 
+  it('reenables refresh when an automatic filter request supersedes it', async () => {
+    const pendingRefresh = deferredResponse();
+    const nextRefresh = deferredResponse();
+    const fetchMock = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(activityResponse([reportEvent]))
+      .mockReturnValueOnce(pendingRefresh.promise)
+      .mockResolvedValueOnce(activityResponse([reportEvent]))
+      .mockReturnValueOnce(nextRefresh.promise);
+    const user = userEvent.setup();
+    render(<AdminActivity />);
+
+    await screen.findByTestId(`activity-row-${reportEvent.id}`);
+    const refresh = screen.getByRole('button', { name: 'Refresh' });
+    await user.click(refresh);
+    expect(refresh).toHaveProperty('disabled', true);
+
+    await user.selectOptions(screen.getByLabelText('Time period'), 'week');
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3));
+    await screen.findByTestId(`activity-row-${reportEvent.id}`);
+    expect(refresh).toHaveProperty('disabled', false);
+
+    await user.click(refresh);
+    expect(refresh).toHaveProperty('disabled', true);
+    pendingRefresh.resolve(activityResponse([projectEvent, reportEvent]));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(4));
+    expect(refresh).toHaveProperty('disabled', true);
+
+    nextRefresh.resolve(activityResponse([reportEvent]));
+    await waitFor(() => expect(refresh).toHaveProperty('disabled', false));
+  });
+
+  it('ignores a stale response after a newer automatic filter request finishes', async () => {
+    const pendingInitial = deferredResponse();
+    vi.spyOn(globalThis, 'fetch')
+      .mockReturnValueOnce(pendingInitial.promise)
+      .mockResolvedValueOnce(activityResponse(detailEvents));
+    const user = userEvent.setup();
+    render(<AdminActivity />);
+
+    await user.selectOptions(await screen.findByLabelText('Detail level'), 'detail');
+    expect(await screen.findByTestId(`activity-row-${detailEvents[0]!.id}`)).toBeTruthy();
+
+    pendingInitial.resolve(activityResponse([reportEvent]));
+    await waitFor(() => expect(screen.queryByTestId(`activity-row-${reportEvent.id}`)).toBeNull());
+    expect(screen.getByTestId(`activity-row-${detailEvents[0]!.id}`)).toBeTruthy();
+  });
+
   it('opens the currently loaded filtered events as a plain-text browser document', async () => {
     const createObjectUrl = vi.mocked(URL.createObjectURL);
     createObjectUrl.mockReturnValue('blob:https://admin.example.test/activity-text');
@@ -618,7 +686,7 @@ describe('AdminActivity', () => {
 
     const blob = createObjectUrl.mock.calls[0]?.[0] as Blob;
     expect(blob.type).toBe('text/plain;charset=utf-8');
-    const text = await blob.text();
+    const text = await readBlobText(blob);
     expect(text).toContain(
       '2026-07-29T03:00:00.000Z\treport.created\tAlice Activity\talice@example.com',
     );
@@ -627,6 +695,49 @@ describe('AdminActivity', () => {
 
     view.unmount();
     expect(revokeObjectUrl).toHaveBeenCalledWith('blob:https://admin.example.test/activity-text');
+  });
+
+  it('hides and revokes a stale text export while replacement filters load', async () => {
+    const pendingFilter = deferredResponse();
+    const revokeObjectUrl = vi.mocked(URL.revokeObjectURL);
+    vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(activityResponse([reportEvent]))
+      .mockReturnValueOnce(pendingFilter.promise);
+    const user = userEvent.setup();
+    render(<AdminActivity />);
+
+    expect(await screen.findByRole('link', { name: 'Open as text' })).toBeTruthy();
+    await user.selectOptions(screen.getByLabelText('Time period'), 'week');
+
+    expect(screen.queryByRole('link', { name: 'Open as text' })).toBeNull();
+    await waitFor(() =>
+      expect(revokeObjectUrl).toHaveBeenCalledWith(
+        'blob:https://admin.example.test/activity-text-default',
+      ),
+    );
+
+    pendingFilter.resolve(activityResponse([projectEvent]));
+    expect(await screen.findByRole('link', { name: 'Open as text' })).toBeTruthy();
+  });
+
+  it('keeps keyboard focus inside event details and returns it to the row', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(activityResponse([reportEvent]));
+    const user = userEvent.setup();
+    render(<AdminActivity />);
+
+    const row = await screen.findByTestId(`activity-row-${reportEvent.id}`);
+    await user.click(row);
+
+    const dialog = await screen.findByRole('dialog');
+    const close = within(dialog).getByRole('button', { name: 'Close' });
+    await waitFor(() => expect(document.activeElement).toBe(close));
+
+    await user.tab();
+    expect(document.activeElement).toBe(close);
+
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(document.activeElement).toBe(row);
   });
 
   it('renders empty, forbidden, and retryable failure states', async () => {
@@ -648,7 +759,7 @@ describe('AdminActivity', () => {
     render(<AdminActivity />);
     expect(await screen.findByText('The activity feed is unavailable.')).toBeTruthy();
     await user.click(screen.getByRole('button', { name: 'Retry' }));
-    expect(await screen.findByText('Tower Refurbishment')).toBeTruthy();
+    expect(await screen.findByTestId(`activity-row-${reportEvent.id}`)).toBeTruthy();
   });
 
   it('revokes the dedicated admin session and returns to the sign-in form', async () => {

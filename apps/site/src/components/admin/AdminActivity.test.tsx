@@ -372,7 +372,6 @@ describe('AdminActivity', () => {
     const fetchMock = vi
       .spyOn(globalThis, 'fetch')
       .mockResolvedValueOnce(activityResponse([reportEvent], 'next-page-cursor'))
-      .mockResolvedValueOnce(activityResponse([reportEvent], 'next-page-cursor'))
       .mockResolvedValueOnce(activityResponse([deletedEvent]));
     const user = userEvent.setup();
     render(<AdminActivity />);
@@ -406,14 +405,11 @@ describe('AdminActivity', () => {
       'Event: Report created. Actor: Alice Activity. Subject: Report #7. Project: Tower Refurbishment.',
     );
     expect(screen.queryByRole('columnheader', { name: 'Actor' })).toBeNull();
-
-    await user.selectOptions(screen.getByLabelText('Event type'), 'report.created');
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
-    expect(String(fetchMock.mock.calls[1]?.[0])).toContain('eventType=report.created');
+    expect(screen.queryByLabelText('Event type')).toBeNull();
 
     fireEvent.click(screen.getByRole('button', { name: 'Load older' }));
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3));
-    expect(String(fetchMock.mock.calls[2]?.[0])).toContain('cursor=next-page-cursor');
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    expect(String(fetchMock.mock.calls[1]?.[0])).toContain('cursor=next-page-cursor');
     expect((await screen.findAllByText('Deleted user')).length).toBeGreaterThan(0);
     const deletedEntry = screen.getByTestId(`activity-row-${deletedEvent.id}`);
     expect(
@@ -437,10 +433,14 @@ describe('AdminActivity', () => {
     render(<AdminActivity />);
 
     await screen.findByText('No activity matches these filters.');
-    const level = screen.getByLabelText('Detail level') as HTMLSelectElement;
-    const period = screen.getByLabelText('Time period') as HTMLSelectElement;
-    expect(level.value).toBe('milestone');
-    expect(period.value).toBe('month');
+    const level = screen.getByRole('group', { name: 'Detail level' });
+    const period = screen.getByRole('group', { name: 'Time period' });
+    expect(
+      within(level).getByRole('button', { name: 'Milestones' }).getAttribute('aria-pressed'),
+    ).toBe('true');
+    expect(
+      within(period).getByRole('button', { name: 'Past month' }).getAttribute('aria-pressed'),
+    ).toBe('true');
     expect(screen.queryByLabelText('From')).toBeNull();
     expect(screen.queryByLabelText('To')).toBeNull();
 
@@ -458,7 +458,7 @@ describe('AdminActivity', () => {
 
     for (const preset of presets) {
       const callsBefore = fetchMock.mock.calls.length;
-      await user.selectOptions(period, screen.getByRole('option', { name: preset.label }));
+      await user.click(within(period).getByRole('button', { name: preset.label }));
       const beforeApply = new Date();
       await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(callsBefore + 1));
 
@@ -471,7 +471,7 @@ describe('AdminActivity', () => {
     }
 
     const callsBeforeAll = fetchMock.mock.calls.length;
-    await user.selectOptions(period, screen.getByRole('option', { name: 'All time' }));
+    await user.click(within(period).getByRole('button', { name: 'All time' }));
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(callsBeforeAll + 1));
     expect(lastActivityUrl(fetchMock).searchParams.has('from')).toBe(false);
     expect(lastActivityUrl(fetchMock).searchParams.has('to')).toBe(false);
@@ -483,40 +483,42 @@ describe('AdminActivity', () => {
     render(<AdminActivity />);
 
     await screen.findByText('No activity matches these filters.');
-    const level = screen.getByLabelText('Detail level');
+    const level = screen.getByRole('group', { name: 'Detail level' });
+    const milestones = within(level).getByRole('button', { name: 'Milestones' });
+    const detailed = within(level).getByRole('button', { name: 'Detailed activity' });
+    const all = within(level).getByRole('button', { name: 'All activity' });
 
-    expect(screen.getByRole('option', { name: 'Milestones' })).toBeTruthy();
-    expect(screen.getByRole('option', { name: 'Detailed activity' })).toBeTruthy();
-    expect(screen.getByRole('option', { name: 'All activity' })).toBeTruthy();
-
-    await user.selectOptions(level, screen.getByRole('option', { name: 'Detailed activity' }));
+    expect(milestones.getAttribute('aria-pressed')).toBe('true');
+    await user.click(detailed);
     await waitFor(() =>
       expect(lastActivityUrl(fetchMock).searchParams.get('level')).toBe('detail'),
     );
+    expect(detailed.getAttribute('aria-pressed')).toBe('true');
 
-    await user.selectOptions(level, screen.getByRole('option', { name: 'All activity' }));
+    await user.click(all);
     await waitFor(() => expect(lastActivityUrl(fetchMock).searchParams.get('level')).toBe('all'));
+    expect(all.getAttribute('aria-pressed')).toBe('true');
   });
 
-  it('clears incompatible event types when the detail level changes', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(activityResponse([]));
+  it('does not expose or send an event-type filter', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(activityResponse([]));
     const user = userEvent.setup();
     render(<AdminActivity />);
 
     await screen.findByText('No activity matches these filters.');
-    const level = screen.getByLabelText('Detail level');
-    const eventType = screen.getByLabelText('Event type');
+    expect(screen.queryByLabelText('Event type')).toBeNull();
+    expect(lastActivityUrl(fetchMock).searchParams.has('eventType')).toBe(false);
 
-    await user.selectOptions(level, screen.getByRole('option', { name: 'All activity' }));
-    await user.selectOptions(eventType, screen.getByRole('option', { name: 'Voice note added' }));
-    expect((eventType as HTMLSelectElement).value).toBe('note.voice_created');
-
-    await user.selectOptions(level, screen.getByRole('option', { name: 'Milestones' }));
-    expect((eventType as HTMLSelectElement).value).toBe('');
-    expect(screen.queryByRole('option', { name: 'Voice note added' })).toBeNull();
+    await user.click(
+      within(screen.getByRole('group', { name: 'Detail level' })).getByRole('button', {
+        name: 'All activity',
+      }),
+    );
+    await waitFor(() => expect(lastActivityUrl(fetchMock).searchParams.get('level')).toBe('all'));
+    expect(lastActivityUrl(fetchMock).searchParams.has('eventType')).toBe(false);
   });
 
-  it('shows all curated detail event labels and event-type options', async () => {
+  it('shows all curated detail event labels', async () => {
     vi.spyOn(globalThis, 'fetch')
       .mockResolvedValueOnce(activityResponse([]))
       .mockResolvedValueOnce(activityResponse(detailEvents));
@@ -524,17 +526,11 @@ describe('AdminActivity', () => {
     render(<AdminActivity />);
 
     await screen.findByText('No activity matches these filters.');
-    await user.selectOptions(
-      screen.getByLabelText('Detail level'),
-      screen.getByRole('option', { name: 'All activity' }),
+    await user.click(
+      within(screen.getByRole('group', { name: 'Detail level' })).getByRole('button', {
+        name: 'All activity',
+      }),
     );
-    const eventType = screen.getByLabelText('Event type');
-    expect(screen.getByRole('option', { name: 'Text note added' })).toBeTruthy();
-    expect(screen.getByRole('option', { name: 'Voice note added' })).toBeTruthy();
-    expect(screen.getByRole('option', { name: 'Image uploaded' })).toBeTruthy();
-    expect(screen.getByRole('option', { name: 'Document uploaded' })).toBeTruthy();
-
-    await user.selectOptions(eventType, screen.getByRole('option', { name: 'All events' }));
 
     const feed = await screen.findByRole('list', { name: 'Activity events' });
     expect(within(feed).getByText('Text note added')).toBeTruthy();
@@ -568,6 +564,8 @@ describe('AdminActivity', () => {
     const actorExclusion = screen.getByLabelText('Exclude actor');
 
     expect(screen.queryByRole('dialog')).toBeNull();
+    expect(actorFilter.className).toContain('appearance-none');
+    expect(document.querySelectorAll('[data-select-chevron]')).toHaveLength(3);
     expect(
       within(actorFilter).getByRole('option', {
         name: 'Alice Activity — alice@example.com',
@@ -673,7 +671,11 @@ describe('AdminActivity', () => {
     await user.click(refresh);
     expect(refresh).toHaveProperty('disabled', true);
 
-    await user.selectOptions(screen.getByLabelText('Time period'), 'week');
+    await user.click(
+      within(screen.getByRole('group', { name: 'Time period' })).getByRole('button', {
+        name: 'Past week',
+      }),
+    );
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3));
     await screen.findByTestId(`activity-row-${reportEvent.id}`);
     expect(refresh).toHaveProperty('disabled', false);
@@ -696,7 +698,11 @@ describe('AdminActivity', () => {
     const user = userEvent.setup();
     render(<AdminActivity />);
 
-    await user.selectOptions(await screen.findByLabelText('Detail level'), 'detail');
+    await user.click(
+      within(await screen.findByRole('group', { name: 'Detail level' })).getByRole('button', {
+        name: 'Detailed activity',
+      }),
+    );
     expect(await screen.findByTestId(`activity-row-${detailEvents[0]!.id}`)).toBeTruthy();
 
     pendingInitial.resolve(activityResponse([reportEvent]));
@@ -741,7 +747,11 @@ describe('AdminActivity', () => {
     render(<AdminActivity />);
 
     expect(await screen.findByRole('link', { name: 'Open as text' })).toBeTruthy();
-    await user.selectOptions(screen.getByLabelText('Time period'), 'week');
+    await user.click(
+      within(screen.getByRole('group', { name: 'Time period' })).getByRole('button', {
+        name: 'Past week',
+      }),
+    );
 
     expect(screen.queryByRole('link', { name: 'Open as text' })).toBeNull();
     await waitFor(() =>

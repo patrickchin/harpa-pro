@@ -79,14 +79,23 @@ test('signs in through the visible admin form and signs out', async ({ context, 
   ).toEqual({ localStorage: 0, sessionStorage: 0 });
 
   await expect(page.getByRole('heading', { level: 1, name: 'Harpa Pro activity' })).toBeVisible();
-  await expect(page.getByLabel('Detail level')).toHaveValue('milestone');
-  await expect(page.getByLabel('Time period')).toHaveValue('month');
+  await expect(page.getByRole('button', { name: 'Milestones' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+  await expect(page.getByRole('button', { name: 'Past month' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+  await expect(page.getByLabel('Event type')).toHaveCount(0);
   await expect(page.getByLabel('From', { exact: true })).toHaveCount(0);
   await expect(page.getByLabel('To', { exact: true })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Apply filters' })).toHaveCount(0);
   await expect(page.getByLabel('Filter actor')).toBeVisible();
   await expect(page.getByLabel('Exclude actor')).toBeVisible();
   await expect(page.getByLabel('Filter project')).toBeVisible();
+  await expect(page.getByLabel('Filter actor')).toHaveCSS('appearance', 'none');
+  await expect(page.locator('[data-select-chevron]')).toHaveCount(3);
   await expect(page.getByRole('button', { name: 'Refresh' })).toBeVisible();
   await expect(page.getByRole('link', { name: 'Open as text' })).toBeVisible();
 
@@ -132,7 +141,7 @@ test('signs in through the visible admin form and signs out', async ({ context, 
       url.searchParams.get('level') === 'detail'
     );
   });
-  await page.getByLabel('Detail level').selectOption('detail');
+  await page.getByRole('button', { name: 'Detailed activity' }).click();
   expect((await detailResponsePromise).status()).toBe(200);
 
   const detailRows = feed.locator('[data-testid^="activity-row-"]');
@@ -148,29 +157,17 @@ test('signs in through the visible admin form and signs out', async ({ context, 
   await expect(feed.locator('[data-icon="image"]')).toBeVisible();
   await expect(feed.locator('[data-icon="file-text"]')).toBeVisible();
 
-  const voiceResponsePromise = page.waitForResponse((response) => {
-    const url = new URL(response.url());
-    return (
-      url.origin === API_BASE_URL &&
-      url.pathname === '/admin/activity' &&
-      url.searchParams.get('eventType') === 'note.voice_created'
-    );
-  });
-  await page.getByLabel('Event type').selectOption('note.voice_created');
-  expect((await voiceResponsePromise).status()).toBe(200);
-  await expect(detailRows).toHaveCount(1);
-  await expect(detailRows.first()).toContainText('Voice note added');
-
   const weekResponsePromise = page.waitForResponse((response) => {
     const url = new URL(response.url());
     return (
       url.origin === API_BASE_URL &&
       url.pathname === '/admin/activity' &&
-      url.searchParams.get('eventType') === 'note.voice_created' &&
+      url.searchParams.get('level') === 'detail' &&
+      !url.searchParams.has('eventType') &&
       url.searchParams.has('from')
     );
   });
-  await page.getByLabel('Time period').selectOption('week');
+  await page.getByRole('button', { name: 'Past week' }).click();
   expect((await weekResponsePromise).status()).toBe(200);
 
   const actorUserId = (await page
@@ -233,7 +230,7 @@ test('signs in through the visible admin form and signs out', async ({ context, 
   });
   await page.getByRole('button', { name: 'Remove Admin Activity E2E exclusion' }).click();
   expect((await removeExclusionResponsePromise).status()).toBe(200);
-  await expect(detailRows).toHaveCount(1);
+  await expect(detailRows).toHaveCount(4);
 
   const textLink = page.getByRole('link', { name: 'Open as text' });
   await expect(textLink).toHaveAttribute('target', '_blank');
@@ -257,7 +254,7 @@ test('signs in through the visible admin form and signs out', async ({ context, 
       !url.searchParams.has('eventType')
     );
   });
-  await page.getByLabel('Detail level').selectOption('milestone');
+  await page.getByRole('button', { name: 'Milestones' }).click();
   expect((await milestoneResponsePromise).status()).toBe(200);
 
   const existingRow = feed.locator('[data-testid^="activity-row-"]').first();

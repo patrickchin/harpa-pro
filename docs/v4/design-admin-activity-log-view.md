@@ -61,9 +61,8 @@ separate draft-filter state.
 
 The first filter row contains:
 
-- detail level;
-- event type;
-- time period; and
+- a segmented detail-level button group;
+- a segmented time-period button group; and
 - Clear.
 
 The second row is always visible and contains:
@@ -71,6 +70,11 @@ The second row is always visible and contains:
 - Filter actor;
 - Exclude actor; and
 - Filter project.
+
+There is no event-type filter. The level and time-period choices expose all
+options without opening a menu, use `aria-pressed` to identify the active
+choice, and apply immediately. The remaining native selects use the same
+rounded surface, deliberate hover/focus states, and custom chevron treatment.
 
 Actor and project choices are collected from events returned during the
 current browser session. The option cache keeps labels available after a
@@ -141,7 +145,8 @@ content, transcripts, filenames, storage keys, or other excluded data.
 Component tests cover:
 
 - single-line row hierarchy and decorative event/context icon mapping;
-- immediate level, event, time, actor, exclusion, and project filtering;
+- immediate button-driven level and time filtering;
+- styled actor, exclusion, and project selects;
 - multiple removable actor exclusions;
 - out-of-order request protection;
 - refresh baselines and local `New` markers;

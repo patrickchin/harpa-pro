@@ -98,6 +98,9 @@ test('signs in through the visible admin form and signs out', async ({ context, 
   await expect(row).toContainText('Admin Activity E2E');
   await expect(row).toContainText('Admin Activity E2E Project');
   await expect(row).toContainText('Report #7');
+  await expect(row.locator('[data-icon="file-plus-2"]')).toBeVisible();
+  await expect(row.locator('[data-icon="user"]')).toBeVisible();
+  await expect(row.locator('[data-icon="folder"]')).toBeVisible();
   expect(await row.evaluate((element) => getComputedStyle(element).whiteSpace)).toBe('nowrap');
   expect((await row.boundingBox())?.height).toBeLessThanOrEqual(48);
   const [eventWeight, projectWeight] = await Promise.all([
@@ -137,6 +140,10 @@ test('signs in through the visible admin form and signs out', async ({ context, 
     'Image uploaded',
     'Document uploaded',
   ]);
+  await expect(feed.locator('[data-icon="message-square-text"]')).toBeVisible();
+  await expect(feed.locator('[data-icon="mic"]')).toBeVisible();
+  await expect(feed.locator('[data-icon="image"]')).toBeVisible();
+  await expect(feed.locator('[data-icon="file-text"]')).toBeVisible();
 
   const voiceResponsePromise = page.waitForResponse((response) => {
     const url = new URL(response.url());

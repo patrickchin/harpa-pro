@@ -41,6 +41,13 @@ Event, actor, and subject use medium or semibold weight. Timestamp and project
 context use the softer ink token. The event label occupies a stable width so
 different event types are visually distinct when scanning vertically.
 
+The event label begins with a small type-specific icon: user, project, report,
+text note, voice note, image, and document events each have a distinct
+silhouette. The actor and project columns use consistent user and folder icons
+to make their boundaries recognizable without reading every label. Icons are
+decorative and `aria-hidden`; the complete text labels remain the accessible
+name and the source of truth.
+
 Selecting a row still opens the detail drawer for IDs, request ID, and strict
 metadata. Filtering actions are removed from the drawer because the filter bar
 is the primary control surface.
@@ -131,7 +138,7 @@ content, transcripts, filenames, storage keys, or other excluded data.
 
 Component tests cover:
 
-- single-line row hierarchy;
+- single-line row hierarchy and decorative event/context icon mapping;
 - immediate level, event, time, actor, exclusion, and project filtering;
 - multiple removable actor exclusions;
 - out-of-order request protection;
@@ -139,6 +146,6 @@ Component tests cover:
 - cursor pagination; and
 - the generated plain-text Blob.
 
-The admin Playwright smoke covers the visible controls, dense row geometry,
-immediate filter requests, refresh markers, the text view, detail inspection,
-and sign-out against the real local API wiring.
+The admin Playwright smoke covers the visible controls, icon rendering, dense
+row geometry, immediate filter requests, refresh markers, the text view, detail
+inspection, and sign-out against the real local API wiring.

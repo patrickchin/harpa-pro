@@ -394,6 +394,16 @@ describe('AdminActivity', () => {
     expect(within(entry).getByText('Alice Activity')).toBeTruthy();
     expect(within(entry).getByText('Report #7')).toBeTruthy();
     expect(within(entry).getByText('Tower Refurbishment')).toBeTruthy();
+    expect(within(entry).getByTestId('event-icon-report.created')).toHaveAttribute(
+      'data-icon',
+      'file-plus-2',
+    );
+    expect(within(entry).getByTestId('event-icon-report.created')).toHaveAttribute(
+      'aria-hidden',
+      'true',
+    );
+    expect(within(entry).getByTestId('actor-icon')).toHaveAttribute('data-icon', 'user');
+    expect(within(entry).getByTestId('project-icon')).toHaveAttribute('data-icon', 'folder');
     expect(screen.queryByRole('columnheader', { name: 'Actor' })).toBeNull();
 
     await user.selectOptions(screen.getByLabelText('Event type'), 'report.created');
@@ -522,6 +532,22 @@ describe('AdminActivity', () => {
     expect(within(feed).getByText('Voice note added')).toBeTruthy();
     expect(within(feed).getByText('Image uploaded')).toBeTruthy();
     expect(within(feed).getByText('Document uploaded')).toBeTruthy();
+    expect(within(feed).getByTestId('event-icon-note.text_created')).toHaveAttribute(
+      'data-icon',
+      'message-square-text',
+    );
+    expect(within(feed).getByTestId('event-icon-note.voice_created')).toHaveAttribute(
+      'data-icon',
+      'mic',
+    );
+    expect(within(feed).getByTestId('event-icon-note.image_created')).toHaveAttribute(
+      'data-icon',
+      'image',
+    );
+    expect(within(feed).getByTestId('event-icon-note.document_created')).toHaveAttribute(
+      'data-icon',
+      'file-text',
+    );
   });
 
   it('keeps actor and project filters visible and applies actor choices without opening a row', async () => {

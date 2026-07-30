@@ -40,7 +40,7 @@ export default defineConfig({
   webServer: [
     {
       command: 'corepack pnpm --filter @harpa/api exec tsx scripts/start-admin-activity-e2e.ts',
-      url: `${apiBaseUrl}/healthz`,
+      url: `${apiBaseUrl}/admin/readyz`,
       reuseExistingServer: false,
       // The harness starts and migrates independent app and admin Postgres
       // containers so it exercises the production database boundary.

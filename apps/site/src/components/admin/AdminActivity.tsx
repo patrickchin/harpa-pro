@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { ReactNode } from 'react';
+import type { ComponentPropsWithoutRef, ReactNode } from 'react';
 import { activity as activitySchemas } from '@harpa/api-contract';
 import type { activity } from '@harpa/api-contract';
 import { adminAuthClient } from '../../lib/admin-auth';
@@ -34,7 +34,6 @@ interface ProjectOption {
 interface Filters {
   level: ActivityLevel;
   timePeriod: TimePeriod;
-  eventType: '' | activity.EventType;
   actorUserId: string;
   projectId: string;
   excludedActors: ActorExclusion[];
@@ -43,7 +42,6 @@ interface Filters {
 const EMPTY_FILTERS: Filters = {
   level: 'milestone',
   timePeriod: 'month',
-  eventType: '',
   actorUserId: '',
   projectId: '',
   excludedActors: [],
@@ -53,6 +51,8 @@ const MAX_EXCLUDED_ACTORS = 20;
 
 const inputClass =
   'h-10 rounded-md border border-hairline bg-card px-3 text-sm text-ink outline-none ring-focus';
+const selectClass =
+  'peer h-10 w-full appearance-none rounded-lg border border-hairline bg-secondary/30 px-3 pr-9 text-sm font-medium text-ink shadow-sm outline-none transition hover:border-accent/40 hover:bg-secondary/60 focus:border-accent ring-focus disabled:cursor-not-allowed disabled:opacity-60';
 const buttonClass =
   'inline-flex h-10 items-center justify-center rounded-md border border-hairline bg-card px-4 text-sm font-medium text-ink shadow-sm transition hover:bg-secondary ring-focus disabled:cursor-not-allowed disabled:opacity-60';
 const primaryButtonClass =
@@ -68,19 +68,54 @@ const EVENT_LABELS = {
   'note.document_created': 'Document uploaded',
 } satisfies Record<activity.EventType, string>;
 
-const EVENT_OPTIONS = activitySchemas.eventTypes.map((value) => ({
-  value,
-  label: EVENT_LABELS[value],
-  level: activitySchemas.eventRegistry[value].level,
-}));
-
-function eventOptionsForLevel(level: ActivityLevel) {
-  if (level === 'all') return EVENT_OPTIONS;
-  return EVENT_OPTIONS.filter((option) => option.level === level);
-}
-
 function eventLabel(eventType: activity.EventType): string {
   return EVENT_LABELS[eventType];
+}
+
+const DETAIL_LEVEL_OPTIONS = [
+  { value: 'milestone', label: 'Milestones' },
+  { value: 'detail', label: 'Detailed activity' },
+  { value: 'all', label: 'All activity' },
+] satisfies ReadonlyArray<{ value: ActivityLevel; label: string }>;
+
+const TIME_PERIOD_OPTIONS = [
+  { value: 'week', label: 'Past week' },
+  { value: 'month', label: 'Past month' },
+  { value: 'six_months', label: 'Past 6 months' },
+  { value: 'year', label: 'Past year' },
+  { value: 'all', label: 'All time' },
+] satisfies ReadonlyArray<{ value: TimePeriod; label: string }>;
+
+function filterChoiceClass(selected: boolean): string {
+  return `h-8 rounded-md px-2.5 text-xs font-semibold whitespace-nowrap transition ring-focus ${
+    selected
+      ? 'bg-accent text-accent-foreground shadow-sm'
+      : 'text-ink-soft hover:bg-card hover:text-ink'
+  }`;
+}
+
+function StyledSelect({ className = '', children, ...props }: ComponentPropsWithoutRef<'select'>) {
+  return (
+    <span className="relative block">
+      <select className={`${selectClass} ${className}`} {...props}>
+        {children}
+      </select>
+      <svg
+        aria-hidden="true"
+        className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-ink-soft transition peer-disabled:opacity-40"
+        data-select-chevron
+        fill="none"
+        focusable="false"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="2"
+        viewBox="0 0 24 24"
+      >
+        <path d="m6 9 6 6 6-6" />
+      </svg>
+    </span>
+  );
 }
 
 const EVENT_ROW_ACCENTS = {
@@ -441,9 +476,6 @@ function ActivityFeed({
         const params = new URLSearchParams({ limit: '50' });
         if (cursor) params.set('cursor', cursor);
         params.set('level', filters.level);
-        if (filters.eventType) {
-          params.set('eventType', filters.eventType);
-        }
         if (filters.actorUserId) {
           params.set('actorUserId', filters.actorUserId);
         }
@@ -586,7 +618,6 @@ function ActivityFeed({
     };
   }, [selected]);
 
-  const visibleEventOptions = useMemo(() => eventOptionsForLevel(filters.level), [filters.level]);
   const availableActorExclusions = useMemo(
     () =>
       knownActors.filter(
@@ -663,91 +694,65 @@ function ActivityFeed({
       </div>
 
       <section className="my-4 rounded-xl border border-hairline bg-card p-3">
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-[repeat(3,minmax(0,1fr))_auto]">
-          <label className="grid gap-1 text-xs font-semibold uppercase tracking-wide text-ink-soft">
-            Detail level
-            <select
-              className={inputClass}
-              value={filters.level}
-              onChange={(event) =>
-                setFilters((current) => {
-                  const level = event.target.value as ActivityLevel;
-                  if (current.level === level) return current;
-                  const nextEventOptions = eventOptionsForLevel(level);
-                  const eventType =
-                    current.eventType &&
-                    !nextEventOptions.some((option) => option.value === current.eventType)
-                      ? ''
-                      : current.eventType;
-                  return {
-                    ...current,
-                    level,
-                    eventType,
-                  };
-                })
-              }
-            >
-              <option value="milestone">Milestones</option>
-              <option value="detail">Detailed activity</option>
-              <option value="all">All activity</option>
-            </select>
-          </label>
-          <label className="grid gap-1 text-xs font-semibold uppercase tracking-wide text-ink-soft">
-            Event type
-            <select
-              className={inputClass}
-              value={filters.eventType}
-              onChange={(event) => {
-                const eventType = event.target.value as Filters['eventType'];
-                setFilters((current) =>
-                  current.eventType === eventType ? current : { ...current, eventType },
-                );
-              }}
-            >
-              <option value="">All events</option>
-              {(filters.level === 'milestone' || filters.level === 'all') && (
-                <optgroup label="Milestones">
-                  {visibleEventOptions
-                    .filter((option) => option.level === 'milestone')
-                    .map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                </optgroup>
-              )}
-              {(filters.level === 'detail' || filters.level === 'all') && (
-                <optgroup label="Detailed activity">
-                  {visibleEventOptions
-                    .filter((option) => option.level === 'detail')
-                    .map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                </optgroup>
-              )}
-            </select>
-          </label>
-          <label className="grid gap-1 text-xs font-semibold uppercase tracking-wide text-ink-soft">
-            Time period
-            <select
-              className={inputClass}
-              value={filters.timePeriod}
-              onChange={(event) => {
-                const timePeriod = event.target.value as TimePeriod;
-                setFilters((current) =>
-                  current.timePeriod === timePeriod ? current : { ...current, timePeriod },
-                );
-              }}
-            >
-              <option value="week">Past week</option>
-              <option value="month">Past month</option>
-              <option value="six_months">Past 6 months</option>
-              <option value="year">Past year</option>
-              <option value="all">All time</option>
-            </select>
-          </label>
+        <div className="grid gap-3 xl:grid-cols-[minmax(0,3fr)_minmax(0,5fr)_auto]">
+          <fieldset className="grid min-w-0 gap-1">
+            <legend className="text-xs font-semibold uppercase tracking-wide text-ink-soft">
+              Detail level
+            </legend>
+            <div className="overflow-x-auto rounded-lg">
+              <div className="grid min-w-[20rem] grid-cols-3 gap-1 rounded-lg border border-hairline bg-secondary/40 p-1 shadow-inner">
+                {DETAIL_LEVEL_OPTIONS.map((option) => {
+                  const selected = filters.level === option.value;
+                  return (
+                    <button
+                      aria-pressed={selected}
+                      className={filterChoiceClass(selected)}
+                      key={option.value}
+                      type="button"
+                      onClick={() =>
+                        setFilters((current) =>
+                          current.level === option.value
+                            ? current
+                            : { ...current, level: option.value },
+                        )
+                      }
+                    >
+                      {option.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </fieldset>
+          <fieldset className="grid min-w-0 gap-1">
+            <legend className="text-xs font-semibold uppercase tracking-wide text-ink-soft">
+              Time period
+            </legend>
+            <div className="overflow-x-auto rounded-lg">
+              <div className="grid min-w-[31rem] grid-cols-5 gap-1 rounded-lg border border-hairline bg-secondary/40 p-1 shadow-inner">
+                {TIME_PERIOD_OPTIONS.map((option) => {
+                  const selected = filters.timePeriod === option.value;
+                  return (
+                    <button
+                      aria-pressed={selected}
+                      className={filterChoiceClass(selected)}
+                      key={option.value}
+                      type="button"
+                      onClick={() =>
+                        setFilters((current) =>
+                          current.timePeriod === option.value
+                            ? current
+                            : { ...current, timePeriod: option.value },
+                        )
+                      }
+                    >
+                      {option.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </fieldset>
           <div className="flex items-end">
             <button
               className={buttonClass}
@@ -762,8 +767,7 @@ function ActivityFeed({
         <div className="mt-3 grid gap-3 border-t border-hairline pt-3 md:grid-cols-3">
           <label className="grid gap-1 text-xs font-semibold uppercase tracking-wide text-ink-soft">
             Filter actor
-            <select
-              className={inputClass}
+            <StyledSelect
               value={filters.actorUserId}
               onChange={(event) => {
                 const actorUserId = event.target.value;
@@ -778,12 +782,11 @@ function ActivityFeed({
                   {actorOptionLabel(actor)}
                 </option>
               ))}
-            </select>
+            </StyledSelect>
           </label>
           <label className="grid gap-1 text-xs font-semibold uppercase tracking-wide text-ink-soft">
             Exclude actor
-            <select
-              className={inputClass}
+            <StyledSelect
               disabled={
                 filters.excludedActors.length >= MAX_EXCLUDED_ACTORS ||
                 availableActorExclusions.length === 0
@@ -800,12 +803,11 @@ function ActivityFeed({
                   {actorOptionLabel(actor)}
                 </option>
               ))}
-            </select>
+            </StyledSelect>
           </label>
           <label className="grid gap-1 text-xs font-semibold uppercase tracking-wide text-ink-soft">
             Filter project
-            <select
-              className={inputClass}
+            <StyledSelect
               value={filters.projectId}
               onChange={(event) => {
                 const projectId = event.target.value;
@@ -820,7 +822,7 @@ function ActivityFeed({
                   {project.label}
                 </option>
               ))}
-            </select>
+            </StyledSelect>
           </label>
         </div>
 

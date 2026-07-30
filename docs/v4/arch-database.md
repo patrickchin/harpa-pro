@@ -121,7 +121,9 @@ The application database contains two schemas:
 admin feed. Authenticated requests have insert-only access under an
 actor-matching RLS policy; normal user scopes cannot read it. The admin API
 reads it only after `withAdminSession()` validates a dedicated session
-against the separate admin database. See
+against the separate admin database. Its constrained registry contains
+signup, project, and report milestones plus text, voice, image, and document
+note details. Event level is derived in the API and is not stored. See
 [design-admin-business-activity.md](design-admin-business-activity.md).
 
 Cross-schema FK: `app.project_members.user_id REFERENCES public."user"(id)`.

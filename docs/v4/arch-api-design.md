@@ -117,7 +117,9 @@ not use Better Auth or app user rows.
 `GET /admin/activity` authenticates through `withAdminSession()`, then reads
 `app.activity_events` from the application database. App bearer tokens and
 Better Auth cookies cannot authorize this route, including for an app user
-whose `public."user".is_admin` flag is true.
+whose `public."user".is_admin` flag is true. The feed defaults to milestone
+events; callers may request detail or all events, select one exact event type,
+and exclude up to 20 actor IDs while retaining redacted actor rows.
 
 ### Admin readiness
 

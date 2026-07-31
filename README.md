@@ -10,6 +10,9 @@ architecture and phased plan.
 ## Quick start
 
 ```bash
+nvm install       # reads the exact release from .nvmrc
+nvm use
+corepack enable
 pnpm install
 pnpm dev          # turbo dev — API + mobile + docs
 pnpm test         # full unit/integration suite

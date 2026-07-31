@@ -1,5 +1,17 @@
 # Observability + Ops
 
+## Node runtime
+
+The repository uses Node `24.18.1` everywhere: local NVM selection,
+GitHub Actions, the Fly API image, and EAS native builds. `.nvmrc` is the
+local source of truth; `package.json` plus `.npmrc` reject other Node majors,
+and the CI policy test prevents workflow-local overrides. Upgrade these pins
+together in one reviewed change so local tools, OTA publication, builds, and
+the deployed API exercise the same runtime.
+
+Homebrew-installed tools may carry their own Node dependency. That installation
+does not define this repository's runtime; `nvm use` does.
+
 ## Hosting
 
 - **API**: Fly.io:
@@ -360,6 +372,11 @@ An administrator's login password is not a deployment secret. The
 admin database, and the operator stores the original in a password manager.
 Before hashing or writing, the command rejects a matching application
 endpoint and a connected target containing `app._migrations`.
+The one-off command also disables Node's network-family autoselection before
+opening the pool. On dual-stack DNS networks without a working IPv6 route,
+Node 22 and 24 can otherwise spend the entire five-second pool timeout racing
+an unreachable address. This setting is scoped to the provisioning process
+and does not change the deployed API pool.
 
 ### API production boot contract
 

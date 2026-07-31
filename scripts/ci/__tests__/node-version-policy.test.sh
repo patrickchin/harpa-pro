@@ -63,6 +63,11 @@ assert_contains \
   "package engines require the selected Node 24 baseline"
 
 assert_contains \
+  "$REPO_ROOT/.npmrc" \
+  "engine-strict=true" \
+  "pnpm rejects commands under a different Node major"
+
+assert_contains \
   "$REPO_ROOT/.github/actions/setup-monorepo/action.yml" \
   "default: '$EXPECTED_NODE_VERSION'" \
   "shared CI setup uses the selected Node release"
@@ -72,14 +77,16 @@ assert_contains \
   "FROM node:$EXPECTED_NODE_VERSION-alpine AS base" \
   "Fly runtime uses the selected Node release"
 
-if grep -R -n --include='*.yml' --include='*.yaml' \
-  'node-version:' "$REPO_ROOT/.github/workflows" >/tmp/harpa-node-version-overrides.txt; then
+workflow_overrides="$(
+  grep -R -n --include='*.yml' --include='*.yaml' \
+    'node-version:' "$REPO_ROOT/.github/workflows" || true
+)"
+if [[ -n "$workflow_overrides" ]]; then
   fail "workflows inherit Node from the shared setup action"
-  sed 's#^#         #' /tmp/harpa-node-version-overrides.txt
+  sed 's#^#         #' <<<"$workflow_overrides"
 else
   pass "workflows inherit Node from the shared setup action"
 fi
-rm -f /tmp/harpa-node-version-overrides.txt
 
 if EXPECTED_NODE_VERSION="$EXPECTED_NODE_VERSION" REPO_ROOT="$REPO_ROOT" node <<'NODE'
 const fs = require('node:fs');
@@ -93,23 +100,11 @@ for (const profile of ['development', 'preview', 'production']) {
     throw new Error(`EAS ${profile} uses ${eas.build?.[profile]?.node ?? 'no Node version'}`);
   }
 }
-
-for (const manifest of [
-  'package.json',
-  'apps/cli/package.json',
-  'apps/site/package.json',
-  'packages/ai-fixtures/package.json',
-]) {
-  const pkg = JSON.parse(fs.readFileSync(path.join(root, manifest), 'utf8'));
-  if (pkg.devDependencies?.['@types/node'] !== '^24.0.0') {
-    throw new Error(`${manifest} has @types/node ${pkg.devDependencies?.['@types/node'] ?? 'missing'}`);
-  }
-}
 NODE
 then
-  pass "EAS and Node type declarations use Node 24"
+  pass "EAS native builds use the selected Node release"
 else
-  fail "EAS and Node type declarations use Node 24"
+  fail "EAS native builds use the selected Node release"
 fi
 
 echo

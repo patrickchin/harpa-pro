@@ -10,6 +10,7 @@
  *       --email person@harpapro.com --password-stdin
  */
 import { readFileSync } from 'node:fs';
+import { configureAdminCliNetwork } from './admin-cli-network.js';
 import {
   assertAdminDatabaseIsolated,
   assertNoApplicationMigrationLedger,
@@ -73,6 +74,7 @@ async function main(): Promise<void> {
     process.env.DATABASE_URL,
     'administrator provisioning',
   );
+  configureAdminCliNetwork();
 
   // Load env-dependent database modules only after the CLI-specific isolation
   // guard has run, so this protection does not depend on application boot.

@@ -1,8 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import {
-  getDefaultAutoSelectFamily,
-  setDefaultAutoSelectFamily,
-} from 'node:net';
+import { getDefaultAutoSelectFamily, setDefaultAutoSelectFamily } from 'node:net';
 import { configureAdminCliNetwork } from '../../scripts/admin-cli-network.js';
 
 const originalAutoSelectFamily = getDefaultAutoSelectFamily();

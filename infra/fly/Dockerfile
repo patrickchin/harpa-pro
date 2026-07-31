@@ -1,7 +1,7 @@
 # Image for @harpa/api. Runs TS directly via tsx so workspace packages
 # can keep `"main": "./src/index.ts"` (dev/test/prod use the same files).
 
-FROM node:22-alpine AS base
+FROM node:24.18.1-alpine AS base
 RUN corepack enable
 WORKDIR /app
 

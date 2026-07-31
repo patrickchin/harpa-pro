@@ -379,9 +379,9 @@ embedded in the static HTML.
 ## Domain and deployment
 
 The admin console uses `apps/admin` and the independent `harpa-pro-admin`
-Cloudflare Pages project. `admin.harpapro.com` renders the console at `/`, and
-the old `/admin/activity` path redirects to `/` only on the admin host. The
-public `apps/site` artifact has no admin route.
+Cloudflare Pages project. `admin.harpapro.com` renders the console only at `/`;
+there is no browser compatibility alias. `/admin/activity` remains the API
+resource path, and the public `apps/site` artifact has no admin route.
 
 Admin authentication uses its own Neon project and database. The Hono API
 service remains shared, but its browser-origin allowlist trusts only the exact

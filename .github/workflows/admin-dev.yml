@@ -107,24 +107,4 @@ jobs:
             rm -f -- "$remote_html"
           }
 
-          verify_legacy_redirect() {
-            local result status location
-            if ! result="$(
-              curl --fail --silent --show-error \
-                --connect-timeout 10 --max-time 30 --max-redirs 0 \
-                --output /dev/null \
-                --write-out '%{http_code} %{redirect_url}\n' \
-                "${ADMIN_ORIGIN}/admin/activity"
-            )"; then
-              return 1
-            fi
-            read -r status location <<<"$result"
-            if [[ "$status" == "308" && "$location" == "${ADMIN_ORIGIN}/" ]]; then
-              return 0
-            fi
-            echo "Unexpected legacy redirect: status=$status location=$location" >&2
-            return 1
-          }
-
           retry "Stable admin root did not serve the deployed console" verify_root
-          retry "Legacy admin activity URL did not redirect to the root" verify_legacy_redirect

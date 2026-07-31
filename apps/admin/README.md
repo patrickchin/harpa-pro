@@ -14,5 +14,5 @@ pnpm --filter @harpa/admin test
 pnpm --filter @harpa/admin test:e2e  # Docker-backed API and databases
 ```
 
-The root route renders the business activity console. Cloudflare Pages
-redirects the old `/admin/activity` bookmark to `/`.
+The root route is the only browser route and renders the business activity
+console. `/admin/activity` remains the API resource path, not a page URL.

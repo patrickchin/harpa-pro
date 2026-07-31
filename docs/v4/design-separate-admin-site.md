@@ -37,13 +37,14 @@ admin database and credentials remain unchanged.
 ## Routes
 
 - `https://admin.harpapro.com/` renders the activity console directly.
-- `https://admin.harpapro.com/admin/activity` redirects to `/` for old bookmarks.
 - `https://harpapro.com/admin/activity` and
   `https://www.harpapro.com/admin/activity` return the public site's normal 404.
 - Every admin document is `noindex`; `robots.txt` disallows the whole admin host.
 
 Rendering the console at `/` avoids a provider-only root redirect and keeps
-local, preview, development, and production routing identical.
+local, preview, development, and production routing identical. No browser-route
+alias is published; `/admin/activity` is only the API resource path on the API
+origin.
 
 ## Deployments
 
@@ -96,8 +97,8 @@ Automated checks must prove:
 
 1. `apps/site` has no `/admin` source route and its built artifact has no
    `dist/admin` path.
-2. `apps/admin` renders the console at `/`, redirects the legacy path, and
-   blocks search discovery.
+2. `apps/admin` renders the console only at `/`, publishes no compatibility
+   redirect, and blocks search discovery.
 3. Public and admin workflows use different workspace filters, output
    directories, and Pages project names.
 4. Unit tests retain activity filtering, refresh markers, text export, sign-in,
@@ -108,8 +109,8 @@ Automated checks must prove:
    admin origins while rejecting public-site and lookalike origins.
 
 After deployment, probe the public hosts for a 404, the admin root for a 200,
-the legacy admin path for its redirect, and complete one real sign-in/activity
-load/sign-out flow on development before production cutover.
+and complete one real sign-in/activity load/sign-out flow on development before
+production cutover.
 
 ## Rollout and rollback
 

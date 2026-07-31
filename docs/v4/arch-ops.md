@@ -50,9 +50,10 @@
   - PR branch `pr-<n>` →
     `https://pr-<n>.harpa-pro-admin.pages.dev`, built against the matching
     `harpa-pro-api-pr-<n>` Fly app.
-  - The root renders the activity console; the legacy `/admin/activity` path
-    redirects to `/`. Data requests require the dedicated API admin session.
-    See [Separate admin site](design-separate-admin-site.md).
+  - The root is the only browser route and renders the activity console.
+    `/admin/activity` remains an API resource path. Data requests require the
+    dedicated API admin session. See
+    [Separate admin site](design-separate-admin-site.md).
 - **Mobile**: Fastlane + EAS. Fastlane owns checked-in App Store /
   Play Store metadata, guarded screenshot/privacy lanes, and local
   release orchestration; EAS owns Expo native builds, signing, binary

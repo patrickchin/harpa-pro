@@ -49,6 +49,15 @@ require_before() {
   fi
 }
 
+forbid_fixed() {
+  local workflow="$1" needle="$2" description="$3"
+  if grep -Fq -- "$needle" "$REPO_ROOT/$workflow"; then
+    fail "$description"
+  else
+    pass "$description"
+  fi
+}
+
 echo "admin deploy smoke policy"
 
 for environment in dev prod; do
@@ -107,21 +116,15 @@ for environment in dev prod; do
   require_fixed "$workflow" \
     'cmp -s apps/admin/dist/index.html "$remote_html"' \
     "$environment proves the stable root matches the built artifact"
-  require_fixed "$workflow" \
+  forbid_fixed "$workflow" \
     '"${ADMIN_ORIGIN}/admin/activity"' \
-    "$environment requests the legacy activity bookmark"
-  require_fixed "$workflow" \
-    '--max-redirs 0' \
-    "$environment inspects the redirect instead of following it"
-  require_fixed "$workflow" \
-    '[[ "$status" == "308" && "$location" == "${ADMIN_ORIGIN}/" ]]' \
-    "$environment requires the permanent redirect to the same host root"
+    "$environment does not request a legacy browser route"
+  forbid_fixed "$workflow" \
+    'verify_legacy_redirect' \
+    "$environment has no legacy redirect verifier"
   require_fixed "$workflow" \
     'retry "Stable admin root did not serve the deployed console" verify_root' \
     "$environment retries the root verifier"
-  require_fixed "$workflow" \
-    'retry "Legacy admin activity URL did not redirect to the root" verify_legacy_redirect' \
-    "$environment retries the redirect verifier"
 done
 
 require_fixed ".github/workflows/admin-preview.yml" \

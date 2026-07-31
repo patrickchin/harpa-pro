@@ -31,10 +31,8 @@ describe('admin site smoke', () => {
     expect(robots).toContain("'User-agent: *\\nDisallow: /\\n'");
   });
 
-  it('redirects only the legacy activity bookmark', () => {
-    const redirects = readFileSync(resolve(here, '../../public/_redirects'), 'utf8');
-
-    expect(redirects.trim()).toBe('/admin/activity / 308');
+  it('does not publish a legacy browser route', () => {
+    expect(existsSync(resolve(here, '../../public/_redirects'))).toBe(false);
     expect(existsSync(resolve(here, '../pages/admin/activity.astro'))).toBe(false);
   });
 });

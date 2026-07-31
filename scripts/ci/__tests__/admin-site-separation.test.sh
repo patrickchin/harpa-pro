@@ -20,10 +20,10 @@ fail() {
 
 [[ -f apps/admin/src/pages/index.astro ]] \
   || fail "apps/admin must render the console at its root"
-[[ -f apps/admin/public/_redirects ]] \
-  || fail "apps/admin must preserve the legacy activity URL"
-grep -Fqx '/admin/activity / 308' apps/admin/public/_redirects \
-  || fail "legacy admin activity route must redirect to /"
+[[ ! -e apps/admin/public/_redirects ]] \
+  || fail "apps/admin must not publish a legacy activity redirect"
+[[ ! -e apps/admin/src/pages/admin/activity.astro ]] \
+  || fail "apps/admin must not publish a legacy activity page"
 
 grep -Eq "site:[[:space:]]*['\"]https://admin\.harpapro\.com['\"]" \
   apps/admin/astro.config.mjs \

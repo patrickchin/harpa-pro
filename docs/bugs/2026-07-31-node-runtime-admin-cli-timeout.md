@@ -11,12 +11,13 @@ image used Node 22, and three OTA workflows used Node 20. NVM therefore kept
 Node 22 active while Homebrew installed Node 26 as a `neonctl` dependency.
 On this network, Node 22 and 24's default network-family autoselection stalled
 when Neon returned both IPv4 and IPv6 addresses but IPv6 was unreachable.
-Direct IPv4 TLS connections worked, and disabling autoselection made five
-consecutive Node 24 queries pass.
+Direct IPv4 TLS connections worked; selecting IPv4 first and disabling
+autoselection made five consecutive Node 24 queries pass.
 
 **Fix.** Standardize local development, CI, Fly, EAS, and engines on Node
-24.18.1. Make the provisioning CLI disable network-family autoselection only
-for its short-lived process, leaving the deployed API default unchanged.
+24.18.1. Make the provisioning CLI select IPv4 first and disable
+network-family autoselection only for its short-lived process, leaving the
+deployed API default unchanged.
 
 **Test.** `scripts/ci/__tests__/node-version-policy.test.sh` prevents runtime
 pin drift, and `admin-cli-network.test.ts` verifies the provisioning process

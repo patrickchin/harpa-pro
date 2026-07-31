@@ -372,11 +372,11 @@ An administrator's login password is not a deployment secret. The
 admin database, and the operator stores the original in a password manager.
 Before hashing or writing, the command rejects a matching application
 endpoint and a connected target containing `app._migrations`.
-The one-off command also disables Node's network-family autoselection before
-opening the pool. On dual-stack DNS networks without a working IPv6 route,
-Node 22 and 24 can otherwise spend the entire five-second pool timeout racing
-an unreachable address. This setting is scoped to the provisioning process
-and does not change the deployed API pool.
+The one-off command also selects IPv4 first and disables Node's network-family
+autoselection before importing the pool. On dual-stack DNS networks without a
+working IPv6 route, Node 22 and 24 can otherwise spend the entire five-second
+pool timeout racing an unreachable address. These settings are scoped to the
+provisioning process and do not change the deployed API pool.
 
 ### API production boot contract
 

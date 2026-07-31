@@ -10,7 +10,7 @@
  *       --email person@harpapro.com --password-stdin
  */
 import { readFileSync } from 'node:fs';
-import { configureAdminCliNetwork } from './admin-cli-network.js';
+import { loadAfterAdminCliNetworkConfigured } from './admin-cli-network.js';
 import {
   assertAdminDatabaseIsolated,
   assertNoApplicationMigrationLedger,
@@ -74,11 +74,13 @@ async function main(): Promise<void> {
     process.env.DATABASE_URL,
     'administrator provisioning',
   );
-  configureAdminCliNetwork();
 
   // Load env-dependent database modules only after the CLI-specific isolation
-  // guard has run, so this protection does not depend on application boot.
-  const { getAdminPool, resetAdminPool } = await import('../src/db/admin-client.js');
+  // and network guards have run, so these protections do not depend on
+  // application boot or module import order.
+  const { getAdminPool, resetAdminPool } = await loadAfterAdminCliNetworkConfigured(
+    () => import('../src/db/admin-client.js'),
+  );
   try {
     await assertNoApplicationMigrationLedger(
       (sql) => getAdminPool().query<{ application_migration_ledger: string | null }>(sql),

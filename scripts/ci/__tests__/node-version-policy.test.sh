@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Keep local development, CI, Fly, EAS, and Node type declarations on one
-# reviewed Node release. A broad engines range or workflow-local override can
-# otherwise make the same command run under different majors.
+# Keep local development, CI, Fly, and EAS on one reviewed Node release.
+# A broad engines range or workflow-local override can otherwise make the same
+# command run under different majors.
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"

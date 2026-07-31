@@ -120,9 +120,10 @@ Deployments never auto-seed a real administrator; provisioning is an explicit
 operator mutation after the admin migration succeeds. The provisioning CLI
 checks both endpoint identity and the absence of the application
 `app._migrations` ledger before it hashes or writes the password.
-It disables Node's network-family autoselection inside this one-off process,
-avoiding connection stalls on machines whose DNS advertises IPv6 but whose
-network has no usable IPv6 route. The deployed API keeps the runtime default.
+It selects IPv4 first and disables Node's network-family autoselection inside
+this one-off process, avoiding connection stalls on machines whose DNS
+advertises IPv6 but whose network has no usable IPv6 route. The deployed API
+keeps the runtime default.
 
 ### Session boundary
 

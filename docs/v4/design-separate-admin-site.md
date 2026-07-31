@@ -39,6 +39,7 @@ admin database and credentials remain unchanged.
 - `https://admin.harpapro.com/` renders the activity console directly.
 - `https://harpapro.com/admin/activity` and
   `https://www.harpapro.com/admin/activity` return the public site's normal 404.
+- Unknown admin-host paths return a static 404 instead of the console shell.
 - Every admin document is `noindex`; `robots.txt` disallows the whole admin host.
 
 Rendering the console at `/` avoids a provider-only root redirect and keeps
@@ -97,8 +98,8 @@ Automated checks must prove:
 
 1. `apps/site` has no `/admin` source route and its built artifact has no
    `dist/admin` path.
-2. `apps/admin` renders the console only at `/`, publishes no compatibility
-   redirect, and blocks search discovery.
+2. `apps/admin` renders the console only at `/`, publishes a real static 404
+   rather than an SPA fallback, and blocks search discovery.
 3. Public and admin workflows use different workspace filters, output
    directories, and Pages project names.
 4. Unit tests retain activity filtering, refresh markers, text export, sign-in,
@@ -108,9 +109,9 @@ Automated checks must prove:
 6. API origin tests accept the exact production, development, and PR-preview
    admin origins while rejecting public-site and lookalike origins.
 
-After deployment, probe the public hosts for a 404, the admin root for a 200,
-and complete one real sign-in/activity load/sign-out flow on development before
-production cutover.
+After deployment, probe the public hosts and a generic missing admin-host path
+for a 404, the admin root for a 200, and complete one real
+sign-in/activity-load/sign-out flow on development before production cutover.
 
 ## Rollout and rollback
 

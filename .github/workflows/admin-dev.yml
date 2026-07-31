@@ -107,4 +107,23 @@ jobs:
             rm -f -- "$remote_html"
           }
 
+          verify_missing_route() {
+            local status
+            if ! status="$(
+              curl --silent --show-error \
+                --connect-timeout 10 --max-time 30 \
+                --output /dev/null \
+                --write-out '%{http_code}' \
+                "${ADMIN_ORIGIN}/__missing_admin_route__"
+            )"; then
+              return 1
+            fi
+            if [[ "$status" == "404" ]]; then
+              return 0
+            fi
+            echo "Unexpected missing-route status: $status" >&2
+            return 1
+          }
+
           retry "Stable admin root did not serve the deployed console" verify_root
+          retry "Stable admin host did not return 404 for an unknown route" verify_missing_route

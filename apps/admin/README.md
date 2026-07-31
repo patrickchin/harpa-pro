@@ -15,4 +15,5 @@ pnpm --filter @harpa/admin test:e2e  # Docker-backed API and databases
 ```
 
 The root route is the only browser route and renders the business activity
-console. `/admin/activity` remains the API resource path, not a page URL.
+console. Unknown browser paths return a static 404 instead of falling back to
+the console. `/admin/activity` remains the API resource path, not a page URL.

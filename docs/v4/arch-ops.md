@@ -50,9 +50,9 @@
   - PR branch `pr-<n>` →
     `https://pr-<n>.harpa-pro-admin.pages.dev`, built against the matching
     `harpa-pro-api-pr-<n>` Fly app.
-  - The root is the only browser route and renders the activity console.
-    `/admin/activity` remains an API resource path. Data requests require the
-    dedicated API admin session. See
+  - The root is the only browser route and renders the activity console;
+    unknown browser paths return a static 404. `/admin/activity` remains an API
+    resource path. Data requests require the dedicated API admin session. See
     [Separate admin site](design-separate-admin-site.md).
 - **Mobile**: Fastlane + EAS. Fastlane owns checked-in App Store /
   Play Store metadata, guarded screenshot/privacy lanes, and local

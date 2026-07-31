@@ -103,6 +103,21 @@ jobs:
           --retry 24 --retry-all-errors --retry-delay 5 --retry-max-time 180
           "${ADMIN_PREVIEW_ORIGIN}/" > /dev/null
 
+      - name: Verify missing admin preview route
+        run: |
+          status="$(
+            curl --silent --show-error \
+              --connect-timeout 10 --max-time 30 \
+              --output /dev/null \
+              --write-out '%{http_code}' \
+              "${ADMIN_PREVIEW_ORIGIN}/__missing_admin_route__"
+          )"
+          if [[ "$status" == "404" ]]; then
+            exit 0
+          fi
+          echo "::error::Unexpected missing-route status: $status" >&2
+          exit 1
+
       - name: Comment admin preview URL on PR
         uses: marocchino/sticky-pull-request-comment@v2
         with:

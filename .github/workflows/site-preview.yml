@@ -106,7 +106,7 @@ jobs:
 
       - name: Comment preview URL on PR
         if: steps.deploy.outputs.deployment-url
-        uses: marocchino/sticky-pull-request-comment@v2
+        uses: marocchino/sticky-pull-request-comment@v3
         with:
           header: site-preview
           message: |

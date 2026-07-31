@@ -278,7 +278,7 @@ jobs:
         run: bash scripts/ci/verify-readyz.sh
 
       - name: Post preview URL as sticky PR comment
-        uses: marocchino/sticky-pull-request-comment@v2
+        uses: marocchino/sticky-pull-request-comment@v3
         with:
           header: fly-preview
           message: |

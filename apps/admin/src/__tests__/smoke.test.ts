@@ -9,10 +9,14 @@ describe('admin site smoke', () => {
   it('is a static application for the dedicated admin origin', () => {
     const pkg = JSON.parse(readFileSync(resolve(here, '../../package.json'), 'utf8')) as {
       name: string;
+      dependencies: Record<string, string>;
+      devDependencies: Record<string, string>;
     };
     const config = readFileSync(resolve(here, '../../astro.config.mjs'), 'utf8');
 
     expect(pkg.name).toBe('@harpa/admin');
+    expect(pkg.dependencies).not.toHaveProperty('astro');
+    expect(pkg.devDependencies.astro).toBe('^5.1.1');
     expect(config).toMatch(/site:\s*['"]https:\/\/admin\.harpapro\.com['"]/);
     expect(config).toMatch(/output:\s*['"]static['"]/);
   });

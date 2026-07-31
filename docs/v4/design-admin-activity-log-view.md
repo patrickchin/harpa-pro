@@ -37,6 +37,12 @@ The line has a consistent scanning order:
 5. subject label; and
 6. project context.
 
+A compact header strip uses the same grid and labels those positions `New`,
+`Time`, `Event`, `Actor`, `Subject`, and `Project`. It scrolls horizontally with
+the rows so the labels stay aligned. The feed retains list-and-button semantics
+because every row opens its detail drawer; each button's complete accessible
+name remains self-contained rather than relying on ARIA table semantics.
+
 Event, actor, and subject use medium or semibold weight. Timestamp and project
 context use the softer ink token. The event label occupies a stable width so
 different event types are visually distinct when scanning vertically.
@@ -145,6 +151,7 @@ content, transcripts, filenames, storage keys, or other excluded data.
 
 Component tests cover:
 
+- aligned visible column headers without changing the interactive list semantics;
 - single-line row hierarchy and decorative event/context icon mapping;
 - immediate button-driven level and time filtering;
 - radio-group keyboard behavior and narrow-width horizontal reachability;

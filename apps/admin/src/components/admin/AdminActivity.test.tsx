@@ -439,7 +439,16 @@ describe('AdminActivity', () => {
     expect(entry.getAttribute('aria-label') ?? '').toContain(
       'Event: Report created. Actor: Alice Activity. Subject: Report #7. Project: Tower Refurbishment.',
     );
-    expect(screen.queryByRole('columnheader', { name: 'Actor' })).toBeNull();
+    const columnHeaders = screen.getByTestId('activity-column-headers');
+    expect(Array.from(columnHeaders.children, (header) => header.textContent)).toEqual([
+      'New',
+      'Time',
+      'Event',
+      'Actor',
+      'Subject',
+      'Project',
+    ]);
+    expect(screen.queryByRole('columnheader')).toBeNull();
     expect(screen.queryByLabelText('Event type')).toBeNull();
 
     fireEvent.click(screen.getByRole('button', { name: 'Load older' }));

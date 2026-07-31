@@ -109,6 +109,16 @@ test('signs in through the visible admin form and signs out', async ({ context, 
   await page.setViewportSize(desktopViewport!);
 
   const feed = page.getByRole('list', { name: 'Activity events' });
+  const columnHeaders = page.getByTestId('activity-column-headers');
+  await expect(columnHeaders).toBeVisible();
+  await expect(columnHeaders.locator(':scope > span')).toHaveText([
+    'New',
+    'Time',
+    'Event',
+    'Actor',
+    'Subject',
+    'Project',
+  ]);
   const rows = feed.locator('[data-testid^="activity-row-"]');
   await expect(rows).toHaveCount(1);
   const row = rows.first();

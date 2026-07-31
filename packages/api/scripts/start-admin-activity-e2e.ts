@@ -16,7 +16,7 @@ function portFromEnv(name: string, fallback: number): number {
 }
 
 const API_PORT = portFromEnv('ADMIN_E2E_API_PORT', 8787);
-const SITE_PORT = portFromEnv('ADMIN_E2E_SITE_PORT', 3002);
+const SITE_PORT = portFromEnv('ADMIN_E2E_SITE_PORT', 3102);
 const API_BASE_URL = `http://localhost:${API_PORT}`;
 const SITE_ORIGIN = `http://localhost:${SITE_PORT}`;
 const ACTOR_EMAIL = 'activity-actor@e2e.harpapro.com';

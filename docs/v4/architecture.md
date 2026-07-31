@@ -33,7 +33,11 @@ flowchart TB
         APIC["api-contract client (typed)"]
     end
 
-    subgraph Site["Site (apps/site → Cloudflare Pages)"]
+    subgraph Site["Public site (apps/site → Cloudflare Pages)"]
+        PUBLICUI["Marketing, docs, legal"]
+    end
+
+    subgraph AdminSite["Admin site (apps/admin → separate Cloudflare Pages project)"]
         ADMINUI["Admin activity console"]
     end
 
@@ -131,8 +135,9 @@ flowchart TB
 | 17  | **Voice pipeline**                                  | [arch-voice-pipeline.md](arch-voice-pipeline.md)                       | **End-to-end record → upload → transcribe → summarise → render pipeline; mobile recorder + API aggregator route + `VoiceNoteCard` (companion plan: [plan-voice-pipeline.md](plan-voice-pipeline.md))**                                                      |
 | 18  | **Mobile skeletons**                                | [arch-mobile-skeletons.md](arch-mobile-skeletons.md)                   | **Per-screen skeleton geometry policy to prevent layout-shift on hydrate**                                                                                                                                                                                  |
 | 19  | **App shell (P2.6)**                                | [arch-p2-6-app-shell.md](arch-p2-6-app-shell.md)                       | **Root provider tree, auth gate redirect, `(app)` tab/stack shape — design notes for the shell that landed in P2.6**                                                                                                                                        |
-| 20  | **Admin business activity (implemented)**           | [design-admin-business-activity.md](design-admin-business-activity.md) | **Append-oriented business events, an admin-only API, and the shared `apps/site` Astro route at `/admin/activity`, served through the `admin.harpapro.com` hostname**                                                                                       |
+| 20  | **Admin business activity (implemented)**           | [design-admin-business-activity.md](design-admin-business-activity.md) | **Append-oriented business events, an admin-only API, and the activity console**                                                                                                                                                                            |
 | 20a | **Separate admin authentication (rollout pending)** | [design-separate-admin-auth.md](design-separate-admin-auth.md)         | **Dedicated `@harpapro.com` identities, long-password login, opaque browser sessions, and an independent Neon project**                                                                                                                                     |
+| 20b | **Separate admin site**                             | [design-separate-admin-site.md](design-separate-admin-site.md)         | **Independent `apps/admin` static artifact, Pages project, exact browser origins, and deployment workflows for `admin.harpapro.com`**                                                                                                                       |
 
 ## Repo layout (target end of P0)
 

@@ -24,7 +24,7 @@ primary_region = "fra"
 [env]
   NODE_ENV = "production"
   PORT = "8787"
-  ADMIN_CORS_ORIGINS = "https://dev.harpa-pro.pages.dev"
+  ADMIN_CORS_ORIGINS = "https://dev.harpa-pro-admin.pages.dev"
 
 [processes]
   app = "pnpm --filter @harpa/api exec tsx src/server.ts"

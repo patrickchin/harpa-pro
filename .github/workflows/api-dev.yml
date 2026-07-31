@@ -106,8 +106,9 @@ jobs:
           fi
           {
             doppler secrets download --no-file --format env \
-              | grep -vE '^(DOPPLER_|NEON_|FLY_|CLOUDFLARE_|PUBLIC_|EXPO_PUBLIC_|PAGES_PROJECT|PORT|NODE_ENV|ADMIN_EMAIL|ADMIN_DATABASE_URL=|ADMIN_CORS_ORIGINS=)'
+              | grep -vE '^(DOPPLER_|NEON_|FLY_|CLOUDFLARE_|PUBLIC_|EXPO_PUBLIC_|PAGES_PROJECT|PORT|NODE_ENV|ADMIN_EMAIL|ADMIN_DATABASE_URL=|ADMIN_CORS_ORIGINS=|BETTER_AUTH_URL=)'
             echo "ADMIN_DATABASE_URL=$ADMIN_DATABASE_URL"
+            echo "BETTER_AUTH_URL=https://harpa-pro-api-dev.fly.dev"
           } | flyctl secrets import --stage --app harpa-pro-api-dev
 
       - name: Deploy to Fly.io (dev)

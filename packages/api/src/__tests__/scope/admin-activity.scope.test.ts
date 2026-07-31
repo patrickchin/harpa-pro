@@ -18,7 +18,7 @@ import { makeSessionId, makeUserId } from '../factories/index.js';
 import { startAdminPg, type AdminPgFixture } from '../setup-admin-pg.js';
 import { seedAuthUsers, startPg, type PgFixture } from '../setup-pg.js';
 
-const ADMIN_ORIGIN = 'http://localhost:3002';
+const ADMIN_ORIGIN = 'http://localhost:3102';
 const CONSOLE_EMAIL = 'activity-scope@harpapro.com';
 const CONSOLE_PASSWORD = 'activity scope password is deliberately long';
 

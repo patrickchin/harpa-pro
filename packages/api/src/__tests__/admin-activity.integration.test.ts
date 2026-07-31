@@ -26,7 +26,7 @@ import {
 import { startAdminPg, type AdminPgFixture } from './setup-admin-pg.js';
 import { seedAuthUsers, startPg, type PgFixture } from './setup-pg.js';
 
-const ADMIN_ORIGIN = 'http://localhost:3002';
+const ADMIN_ORIGIN = 'http://localhost:3102';
 const ADMIN_EMAIL = 'activity-list@harpapro.com';
 const ADMIN_PASSWORD = 'activity list admin password deliberately long';
 

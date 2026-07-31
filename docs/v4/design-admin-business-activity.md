@@ -41,8 +41,8 @@ This design deliberately separates:
 - Show them newest-first at `admin.harpapro.com`.
 - Require the dedicated admin identity and session system. App users, Better
   Auth sessions, and `public."user".is_admin` do not authorize this page.
-- Keep the first version inside the existing Astro site and Cloudflare Pages
-  deployment.
+- Keep the admin browser artifact and deployment separate from the public
+  Astro site.
 - Preserve a request ID where one exists so an activity row can later link to
   operational telemetry.
 - Make event writes synchronous and testable at the existing mutation
@@ -71,11 +71,10 @@ identities and sessions live in the independent `harpa-pro-admin` Neon
 project. The API authenticates against the admin database before reading the
 business feed from the application database; the databases are never joined.
 
-The implementation stays in `apps/site` while this remains one or two admin
-pages. A separate `apps/admin` application and Pages project would add
-duplicate environment, deployment, and styling work without improving the
-API security boundary. Split it later only if the admin surface needs an
-independent release cadence, server-side proxy, or several workflows.
+The browser implementation now lives in the independent `apps/admin`
+application and Cloudflare Pages project. This supersedes the original shared
+public-site deployment decision; see
+[Separate admin site](design-separate-admin-site.md).
 
 ```mermaid
 flowchart LR
@@ -352,8 +351,8 @@ The existing Expo bearer flow remains unchanged.
 
 ## Admin page
 
-Add `apps/site/src/pages/admin/activity.astro` and a single React island,
-tentatively `apps/site/src/components/admin/AdminActivity.tsx`.
+Render `apps/admin/src/pages/index.astro` with a single React island at
+`apps/admin/src/components/admin/AdminActivity.tsx`.
 
 The presentation and interaction model is refined by
 [Dense admin activity log view](design-admin-activity-log-view.md). The page
@@ -373,38 +372,28 @@ includes:
 Sorting remains fixed on the server. TanStack Virtual, TanStack Query, a JSON
 viewer, charts, persisted exports, and live updates are all deferred.
 
-The route has `noindex` metadata, does not enter the public sitemap or
-navigation, and remains useful at narrow desktop/tablet widths. The activity
-data is not embedded in the static HTML.
+The route has `noindex` metadata, the admin host disallows crawling, and the
+page remains useful at narrow desktop/tablet widths. The activity data is not
+embedded in the static HTML.
 
 ## Domain and deployment
 
-Reuse the current `@harpa/site` static build, Pages project, and workflows:
+The admin console uses `apps/admin` and the independent `harpa-pro-admin`
+Cloudflare Pages project. `admin.harpapro.com` renders the console at `/`, and
+the old `/admin/activity` path redirects to `/` only on the admin host. The
+public `apps/site` artifact has no admin route.
 
-- local/dev verification uses `/admin/activity` on the existing site host;
-- production adds `admin.harpapro.com` as another Pages custom domain; and
-- a host-specific Cloudflare redirect sends the admin hostname root to
-  `/admin/activity`.
-
-Admin authentication does use its own Neon project and database. It does not
-require a separate Fly app, API service, or Pages project. Development uses
-the long-lived `dev` branch in `harpa-pro-admin`; production uses `main`.
-API-changing previews use matching per-PR branches in both Neon projects.
-
-Because all custom domains serve the same static build, the empty page shell is
-also addressable at `/admin/activity` on the apex and Pages hostnames. It
-contains no activity data in its HTML; the dedicated API session protects
-every data request. If hiding even the shell becomes a requirement, add
-host/path Access rules or split the admin site into its own Pages project.
+Admin authentication uses its own Neon project and database. The Hono API
+service remains shared, but its browser-origin allowlist trusts only the exact
+admin origin for each environment. Development uses the long-lived `dev`
+branch in the admin Neon project; production uses `main`. Admin PRs use
+matching per-PR branches in both Neon projects and a matching Fly preview app.
 
 Cloudflare Access may protect the complete admin hostname as a perimeter
 gate. It is defense in depth, not the application authorization source. The
 API must still require `withAdminSession()`. Because Access and dedicated
 admin authentication can create a double-login experience, enable it as an
 explicit deployment choice after the password flow is verified.
-
-If the admin surface later exceeds two screens or needs Pages Functions,
-extract it to `apps/admin` and a separate Pages project in its own design.
 
 ## Failure behavior
 
@@ -438,7 +427,7 @@ extract it to `apps/admin` and a separate Pages project in its own design.
   events.
 - Contract/code-generation drift checks remain green.
 
-### Site
+### Admin site
 
 - Component tests cover password auth, loading, generic failure, empty,
   populated, pagination, level and time presets, multiple actor exclusions,
@@ -446,8 +435,8 @@ extract it to `apps/admin` and a separate Pages project in its own design.
   deleted entities, and the detail drawer.
 - A Playwright smoke covers the local admin page against the real API/default
   wiring, including CORS and a persisted event (Pitfall 13).
-- Run the existing site typecheck, lint, unit, build, and focused Playwright
-  checks.
+- Run the admin workspace typecheck, lint, unit, build, and focused Playwright
+  checks, plus the public-site guard that proves no admin artifact is emitted.
 
 Cloudflare hostname, redirect, and Access changes are verified manually
 before being treated as complete.
@@ -480,7 +469,7 @@ before being treated as complete.
 
 - Add the dedicated admin-auth fetch client and password states.
 - Add TanStack Table and the activity island.
-- Add the Astro route, noindex/sitemap exclusions, tests, and responsive
+- Add the Astro route, noindex/robots exclusions, tests, and responsive
   styling.
 
 ### Phase 5 — Deployment
@@ -490,7 +479,8 @@ before being treated as complete.
 - Deploy and verify the stable development route.
 - Configure the production API origin allowlist and migrate the independent
   admin `main` database before provisioning production.
-- Attach `admin.harpapro.com` and configure the root redirect.
+- Attach `admin.harpapro.com` to the independent Pages project and verify the
+  root console plus legacy-path redirect.
 - Decide whether to enable Cloudflare Access.
 - Run a production smoke: sign up, create a project and report, add selected
   note kinds, and verify both milestone and detail rows with request IDs where
@@ -523,11 +513,12 @@ This gives a convenient interface but couples durable product history to
 retention and vendor availability. These systems may receive a mirrored
 structured event later, but Neon remains authoritative.
 
-### Create `apps/admin` immediately
+### Keep the admin route in `apps/site`
 
-This gives cleaner deployment isolation but duplicates a static app,
-environment handling, workflow, Pages project, and styling for one page.
-Revisit when the admin surface materially grows.
+Rejected after the initial implementation. It minimizes deployment work but
+lets every public-site artifact serve the admin shell and couples marketing
+and admin releases. The accepted split is documented in
+[Separate admin site](design-separate-admin-site.md).
 
 ### Trust Cloudflare Access without app authorization
 
@@ -548,7 +539,8 @@ continue to validate the dedicated admin session at the API boundary.
 
 Unless the user changes them before implementation:
 
-- use the existing `apps/site` and Pages project;
+- use the independent `apps/admin` application and `harpa-pro-admin` Pages
+  project;
 - keep admin identities and sessions in the independent `harpa-pro-admin`
   Neon project;
 - default to the three milestone events and keep note creation in the optional

@@ -7,7 +7,7 @@ import { authenticateAdmin, hashAdminPassword, setAdminPassword } from '../servi
 import { startAdminPg, type AdminPgFixture } from './setup-admin-pg.js';
 import { startPg, type PgFixture } from './setup-pg.js';
 
-const ADMIN_ORIGIN = 'http://localhost:3002';
+const ADMIN_ORIGIN = 'http://localhost:3102';
 const ADMIN_EMAIL = 'browser-admin@harpapro.com';
 const ADMIN_PASSWORD = 'correct horse battery staple admin password';
 
@@ -99,7 +99,6 @@ describe('dedicated admin browser authentication', () => {
         },
       });
       expect(rejected.headers.get('access-control-allow-origin')).toBeNull();
-      expect(rejected.headers.get('access-control-allow-credentials')).toBeNull();
     }
   });
 

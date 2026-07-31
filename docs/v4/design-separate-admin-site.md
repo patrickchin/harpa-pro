@@ -1,6 +1,6 @@
 # Separate admin site
 
-**Status:** Approved for implementation (2026-08-01)
+**Status:** Implemented; production rollout and custom-domain cutover pending
 
 ## Problem
 
@@ -20,10 +20,10 @@ web artifact and deployment as well.
 Create a standalone Astro workspace at `apps/admin` and deploy it to a second
 Cloudflare Pages project named `harpa-pro-admin`.
 
-| Surface | Workspace | Pages project | Canonical production URL |
-| --- | --- | --- | --- |
-| Public website | `apps/site` | `harpa-pro` | `https://harpapro.com` |
-| Admin console | `apps/admin` | `harpa-pro-admin` | `https://admin.harpapro.com` |
+| Surface        | Workspace    | Pages project     | Canonical production URL     |
+| -------------- | ------------ | ----------------- | ---------------------------- |
+| Public website | `apps/site`  | `harpa-pro`       | `https://harpapro.com`       |
+| Admin console  | `apps/admin` | `harpa-pro-admin` | `https://admin.harpapro.com` |
 
 The public build must contain no admin page, admin component, or admin auth
 client. The admin build owns those files and contains no marketing or
@@ -126,4 +126,3 @@ Rollback reattaches no admin hostname to the public project. If the new admin
 deployment is unhealthy, leave `admin.harpapro.com` detached or roll the
 `harpa-pro-admin` project back to its previous deployment while the API remains
 unchanged.
-

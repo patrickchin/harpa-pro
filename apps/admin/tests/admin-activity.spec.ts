@@ -1,14 +1,14 @@
 import { expect, test } from '@playwright/test';
 
 const API_PORT = process.env.ADMIN_E2E_API_PORT ?? '8787';
-const SITE_PORT = process.env.ADMIN_E2E_SITE_PORT ?? '3002';
+const ADMIN_PORT = process.env.ADMIN_E2E_SITE_PORT ?? '3102';
 const API_BASE_URL = `http://localhost:${API_PORT}`;
-const SITE_ORIGIN = `http://localhost:${SITE_PORT}`;
+const ADMIN_ORIGIN = `http://localhost:${ADMIN_PORT}`;
 const ADMIN_EMAIL = 'admin-activity@harpapro.com';
 const ADMIN_PASSWORD = 'admin-activity-e2e-password';
 
 test('signs in through the visible admin form and signs out', async ({ context, page }) => {
-  await page.goto('/admin/activity');
+  await page.goto('/');
 
   const email = page.getByLabel('Email');
   const password = page.getByLabel('Password');
@@ -66,7 +66,7 @@ test('signs in through the visible admin form and signs out', async ({ context, 
   expect(activityUrl.searchParams.get('level')).toBe('milestone');
   expect(activityUrl.searchParams.get('from')).toBeTruthy();
   expect(activityUrl.searchParams.has('to')).toBe(false);
-  expect(activityResponse.headers()['access-control-allow-origin']).toBe(SITE_ORIGIN);
+  expect(activityResponse.headers()['access-control-allow-origin']).toBe(ADMIN_ORIGIN);
   expect(activityResponse.headers()['access-control-allow-credentials']).toBe('true');
   expect((await activityResponse.request().allHeaders()).cookie).toContain(
     `${sessionCookie!.name}=`,

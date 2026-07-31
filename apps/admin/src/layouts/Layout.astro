@@ -1,0 +1,27 @@
+---
+import '@fontsource-variable/inter';
+import '../styles/globals.css';
+
+interface Props {
+  title: string;
+}
+
+const { title } = Astro.props;
+const canonicalUrl = new URL(Astro.url.pathname, Astro.site);
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="Private Harpa Pro business activity." />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="theme-color" content="#e55d22" />
+    <link rel="canonical" href={canonicalUrl} />
+    <title>{title}</title>
+  </head>
+  <body class="min-h-screen bg-background text-foreground antialiased">
+    <slot />
+  </body>
+</html>

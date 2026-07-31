@@ -19,8 +19,9 @@ name: pr-preview
 #     ├─ neon-destroy       → app Neon branch deleted (after fly-destroy)
 #     └─ admin-neon-destroy → admin Neon branch deleted (after fly-destroy)
 #
-# Optimisation: only run for PRs that touch API code or migrations. Docs /
-# marketing / mobile-only PRs skip both Neon and Fly. Close events always
+# Optimisation: run for PRs that touch API code/migrations or the standalone
+# admin site. Admin changes need an exact-origin API preview for browser auth.
+# Docs / marketing / mobile-only PRs skip Neon and Fly. Close events always
 # run so we never orphan resources created earlier in the PR's life.
 #
 # Forks are deliberately skipped (no FLY_API_TOKEN / DOPPLER_TOKEN_DEV /
@@ -42,17 +43,20 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       api: ${{ steps.paths.outputs.api }}
+      admin: ${{ steps.paths.outputs.admin }}
       api-migrations: ${{ steps.paths.outputs.api-migrations }}
     steps:
       - uses: actions/checkout@v4
       - id: paths
         uses: ./.github/actions/changed-paths
 
-  # Migration-filename lint. Cheap; runs whenever any API path changes so
-  # typos are caught at PR time, not prod time.
+  # Migration-filename lint. Cheap; runs whenever an API or admin-site change
+  # needs a preview so typos are caught at PR time, not prod time.
   guard:
     needs: changes
-    if: github.event.action != 'closed' && needs.changes.outputs.api == 'true'
+    if: >-
+      github.event.action != 'closed' &&
+      (needs.changes.outputs.api == 'true' || needs.changes.outputs.admin == 'true')
     runs-on: ubuntu-latest
     permissions: { contents: read }
     steps:
@@ -109,7 +113,7 @@ jobs:
     needs: [changes, guard]
     if: |
       github.event.action != 'closed' &&
-      needs.changes.outputs.api == 'true' &&
+      (needs.changes.outputs.api == 'true' || needs.changes.outputs.admin == 'true') &&
       github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     steps:
@@ -131,7 +135,7 @@ jobs:
     needs: [changes, guard]
     if: |
       github.event.action != 'closed' &&
-      needs.changes.outputs.api == 'true' &&
+      (needs.changes.outputs.api == 'true' || needs.changes.outputs.admin == 'true') &&
       github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     steps:
@@ -206,27 +210,22 @@ jobs:
 
       - uses: dopplerhq/cli-action@v3
 
-      - name: Stage Fly secrets from Doppler (with PR-specific DATABASE_URL)
-        # Same filter as api-dev.yml; drop both database URLs from Doppler and
-        # append the two PR-specific direct URIs. `--stage` defers activation;
-        # the subsequent deploy flips them on.
+      - name: Stage Fly secrets from Doppler (with PR-specific URLs)
+        # Same filter as api-dev.yml; replace database and auth URLs from
+        # Doppler with the PR-specific values and exact stable Pages origin.
+        # `--stage` defers activation; the subsequent deploy flips them on.
         env:
           DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN_DEV }}
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
         run: |
           set -euo pipefail
-          FLY_SECRET_LIST=$(flyctl secrets list --app "$APP_NAME")
-          if printf '%s\n' "$FLY_SECRET_LIST" \
-            | awk 'NR > 1 { print $1 }' \
-            | grep -qx ADMIN_CORS_ORIGINS; then
-            flyctl secrets unset ADMIN_CORS_ORIGINS \
-              --stage --app "$APP_NAME"
-          fi
           {
             doppler secrets download --no-file --format env \
-              | grep -vE '^(DOPPLER_|NEON_|FLY_|CLOUDFLARE_|PUBLIC_|EXPO_PUBLIC_|PAGES_PROJECT|PORT|NODE_ENV|ADMIN_EMAIL|DATABASE_URL=|ADMIN_DATABASE_URL=|ADMIN_CORS_ORIGINS=)'
+              | grep -vE '^(DOPPLER_|NEON_|FLY_|CLOUDFLARE_|PUBLIC_|EXPO_PUBLIC_|PAGES_PROJECT|PORT|NODE_ENV|ADMIN_EMAIL|DATABASE_URL=|ADMIN_DATABASE_URL=|ADMIN_CORS_ORIGINS=|BETTER_AUTH_URL=)'
             echo "DATABASE_URL=$DATABASE_URL"
             echo "ADMIN_DATABASE_URL=$ADMIN_DATABASE_URL"
+            echo "ADMIN_CORS_ORIGINS=https://pr-${{ github.event.pull_request.number }}.harpa-pro-admin.pages.dev"
+            echo "BETTER_AUTH_URL=https://harpa-pro-api-pr-${{ github.event.pull_request.number }}.fly.dev"
           } | flyctl secrets import --stage --app "$APP_NAME"
 
       - name: Deploy to Fly.io (preview)
@@ -288,6 +287,7 @@ jobs:
             - URL: <https://${{ env.APP_NAME }}.fly.dev>
             - Readyz: <https://${{ env.APP_NAME }}.fly.dev/readyz>
             - Admin readyz: <https://${{ env.APP_NAME }}.fly.dev/admin/readyz>
+            - Admin origin: <https://pr-${{ github.event.pull_request.number }}.harpa-pro-admin.pages.dev>
             - App DB: Neon branch `pr-${{ github.event.pull_request.number }}`
             - Admin DB: Neon branch `pr-${{ github.event.pull_request.number }}`
             - Commit: `${{ github.event.pull_request.head.sha }}`

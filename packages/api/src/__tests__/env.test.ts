@@ -72,6 +72,8 @@ function setValidProductionEnv(): void {
     DATABASE_URL: 'postgres://app:test@localhost:5432/harpa',
     ADMIN_DATABASE_URL: 'postgres://admin:test@localhost:5433/harpa_admin',
     BETTER_AUTH_SECRET: 'test-only-production-auth-secret-over-32-chars',
+    BETTER_AUTH_URL: 'https://api.harpapro.com',
+    ADMIN_CORS_ORIGINS: 'https://admin.harpapro.com',
     AI_FIXTURE_MODE: 'live',
     AI_LIVE: '1',
     OPENAI_API_KEY: 'test-openai-key',
@@ -314,6 +316,14 @@ describe('env: admin browser origins', () => {
   const developmentAdminOrigin = 'https://dev.harpa-pro-admin.pages.dev';
   const previewAdminOrigin = 'https://pr-42.harpa-pro-admin.pages.dev';
 
+  it('defaults local admin browser access to the standalone admin app', async () => {
+    process.env.NODE_ENV = 'development';
+
+    const mod = await freshImportEnv();
+
+    expect(mod.env.ADMIN_CORS_ORIGINS).toBe('http://localhost:3102');
+  });
+
   it('accepts the dedicated production admin origin for the production API', async () => {
     setValidProductionEnv();
     process.env.BETTER_AUTH_URL = 'https://api.harpapro.com';
@@ -345,27 +355,25 @@ describe('env: admin browser origins', () => {
     expect(mod.env.ADMIN_CORS_ORIGINS).toBe(previewAdminOrigin);
   });
 
+  it('rejects an unrecognized deployed Better Auth URL', async () => {
+    setValidProductionEnv();
+    process.env.BETTER_AUTH_URL = 'https://unexpected-api.example.com';
+    process.env.ADMIN_CORS_ORIGINS = productionAdminOrigin;
+
+    await expect(freshImportEnv()).rejects.toThrow(/BETTER_AUTH_URL|deployed API URL/);
+  });
+
   it.each([
     ['production API', 'https://api.harpapro.com', '0', developmentAdminOrigin],
     ['production API public host', 'https://api.harpapro.com', '0', 'https://harpapro.com'],
-    [
-      'production API public www host',
-      'https://api.harpapro.com',
-      '0',
-      'https://www.harpapro.com',
-    ],
+    ['production API public www host', 'https://api.harpapro.com', '0', 'https://www.harpapro.com'],
     [
       'development API legacy public Pages host',
       'https://harpa-pro-api-dev.fly.dev',
       '0',
       'https://dev.harpa-pro.pages.dev',
     ],
-    [
-      'development API preview host',
-      'https://harpa-pro-api-dev.fly.dev',
-      '0',
-      previewAdminOrigin,
-    ],
+    ['development API preview host', 'https://harpa-pro-api-dev.fly.dev', '0', previewAdminOrigin],
     [
       'PR preview with another PR number',
       'https://harpa-pro-api-pr-42.fly.dev',

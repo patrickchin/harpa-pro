@@ -60,6 +60,8 @@ function setLiveDeploymentEnv(): void {
     DATABASE_URL: 'postgres://app:test@localhost:5432/harpa',
     ADMIN_DATABASE_URL: 'postgres://admin:test@localhost:5433/harpa_admin',
     BETTER_AUTH_SECRET: 'test-only-production-auth-secret-over-32-chars',
+    BETTER_AUTH_URL: 'https://harpa-pro-api-dev.fly.dev',
+    ADMIN_CORS_ORIGINS: 'https://dev.harpa-pro-admin.pages.dev',
     AI_FIXTURE_MODE: 'live',
     AI_LIVE: '1',
     OPENAI_API_KEY: 'test-openai-key',

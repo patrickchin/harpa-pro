@@ -208,7 +208,7 @@ jobs:
             flyctl apps create "$APP_NAME" --org personal
           fi
 
-      - uses: dopplerhq/cli-action@v3
+      - uses: dopplerhq/cli-action@v4
 
       - name: Stage Fly secrets from Doppler (with PR-specific URLs)
         # Same filter as api-dev.yml; replace database and auth URLs from

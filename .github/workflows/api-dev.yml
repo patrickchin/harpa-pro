@@ -84,7 +84,7 @@ jobs:
 
       - uses: superfly/flyctl-actions/setup-flyctl@1.5
 
-      - uses: dopplerhq/cli-action@v3
+      - uses: dopplerhq/cli-action@v4
 
       - name: Sync Fly secrets from Doppler
         # Pulls the `dev` config and stages it onto the Fly app. Filters

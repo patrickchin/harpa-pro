@@ -145,6 +145,12 @@ require_fixed ".github/workflows/admin-preview.yml" \
 require_fixed ".github/workflows/admin-preview.yml" \
   '[[ "$status" == "404" ]]' \
   "preview requires the generic missing route to return 404"
+require_fixed ".github/workflows/admin-preview.yml" \
+  'deadline=$((SECONDS + 180))' \
+  "preview bounds missing-route propagation retries to three minutes"
+require_fixed ".github/workflows/admin-preview.yml" \
+  'if (( SECONDS >= deadline )); then' \
+  "preview stops retrying the missing route at its deadline"
 
 echo
 echo "failed: $FAIL"

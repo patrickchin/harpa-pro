@@ -28,7 +28,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: ${{ github.event.pull_request.head.sha }}
           lfs: true # voice samples for core/extended journeys
+
+      - name: Verify deployed dev SHA
+        env:
+          HEALTH_URL: ${{ vars.API_HEALTH_URL_DEV || 'https://harpa-pro-api-dev.fly.dev/healthz' }}
+          EXPECTED_GIT_COMMIT: ${{ github.event.pull_request.head.sha }}
+        run: bash scripts/ci/verify-deployed-sha.sh
 
       - name: Run journeys against dev
         # Order: stress (~10s, no AI) → core (~3min, live AI) → extended (~5min, live AI).

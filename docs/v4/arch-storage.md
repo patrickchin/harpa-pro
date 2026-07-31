@@ -151,20 +151,30 @@ when both lanes are empty, and gracefully no-ops when no
 
 ### Gallery attachment sheet (mobile)
 
-The attachment sheet on the report Notes tab offers two categories:
+The attachment sheet on the report Notes tab is platform-aware:
 
-- **Photo** → routed to `pickAndEnqueueGalleryImages` in
+- **Android photo library** → routed to `pickAndEnqueueGalleryImages` in
   `apps/mobile/lib/camera/pick-and-enqueue-gallery-images.ts`. It
   requests `MediaLibraryPermissions`, launches
   `ImagePicker.launchImageLibraryAsync({ allowsMultipleSelection })`,
   and pipes the chosen URIs through the same `enqueueCameraUris`
   entry point the camera flow uses. The helper returns a discriminated
-  union (`permission-denied` / `cancelled` / `empty` / `enqueued`)
-  so the route can surface the upload-error banner without duplicating
-  copy.
-- **Document** → currently surfaces a "Coming soon" banner. The note
-  kind enum + server-side pipeline already accept `document`/`pdf`,
-  but the UI is deferred (see `plan-camera-upload-pipeline.md`).
+  union (`unavailable` / `permission-denied` / `cancelled` / `empty` /
+  `enqueued`) so the route can surface the upload-error banner without
+  duplicating copy.
+- **iOS** → camera capture only. Photo-library picking is intentionally
+  hidden; the shared platform policy also returns before importing or
+  calling `expo-image-picker`.
+
+Camera capture and in-app previews of already-uploaded photos remain
+available on both platforms. Avatar UI is absent on both platforms;
+the avatar API/storage scope remains compatible but has no mobile entry
+point. See
+[`design-ios-photo-library-disablement.md`](design-ios-photo-library-disablement.md).
+
+The note kind enum + server-side pipeline already accept
+`document`/`pdf`, but document picking remains deferred (see
+`plan-camera-upload-pipeline.md`).
 
 ### Upload queue persistence (mobile)
 
@@ -176,10 +186,12 @@ relaunch, resume automatically" we wire an MMKV-backed
 
 - **On every state transition** the queue serialises a `PersistedJob`
   for each row (`id`, `input`, `status`, `attempt`, `progress`,
-  `error`, `fileId`) into the `upload-queue` MMKV instance under
-  key `v1`. MMKV is synchronous so this stays out of the hot path's
-  await graph.
-- **At provider mount** we load the blob, drop jobs whose
+  `error`, `fileId`) into the `upload-queue` MMKV instance under a
+  `v2.<userId>` key. The pre-scoping `v1` blob is discarded because it
+  cannot be attributed safely after an account change. MMKV is
+  synchronous so this stays out of the hot path's await graph.
+- **After auth resolves** `QueueProvider` loads only the current user's
+  blob, drops jobs whose
   `input.sourceUri` no longer resolves via
   `new File(uri).exists` (the OS sweeps temp capture dirs
   aggressively), coerce in-flight statuses
@@ -187,6 +199,11 @@ relaunch, resume automatically" we wire an MMKV-backed
   (presign + R2 PUT are idempotent for our usage — each retry mints
   a fresh key), and hand the survivors to `createUploadQueue` as
   `initialJobs`. The driver kicks immediately.
+- **At an auth boundary** explicit sign-out and the global 401 handler
+  clear the active queue before tearing down auth. A user-id change or
+  passive session loss also clears the old provider instance. Clearing
+  aborts in-flight work and removes both memory and that user's MMKV
+  snapshot.
 - **Promise handles are not persisted.** Rehydrated jobs run
   fire-and-forget; the UI just re-subscribes via `useFileUpload()`
   and observes the new state transitions.
@@ -196,15 +213,15 @@ relaunch, resume automatically" we wire an MMKV-backed
   factory in `vitest.setup.ts` — the queue + persistence code path
   runs unchanged.
 
-### Pipeline summary (camera + gallery)
+### Pipeline summary (camera + Android photo library)
 
 End-to-end, a photo travels through these stages — every step has a
 unit/integration test, and the live round-trips are covered by the
 photo modules in `.maestro/regression-journey.yaml`:
 
-1. **Capture / pick.** Camera (`(camera)/capture.tsx`) or gallery
-   (`pickAndEnqueueGalleryImages`) produces one or more local file
-   URIs.
+1. **Capture / pick.** Camera (`(camera)/capture.tsx`) on both
+   platforms, or Android photo-library picking
+   (`pickAndEnqueueGalleryImages`), produces one or more local file URIs.
 2. **Process.** `processImageForUpload` re-encodes to ≤ 2 MB / ≤ 2048 px
    JPEG via `expo-image-manipulator`. The post-encode `sizeBytes` is
    what flows downstream — presign body, R2 `Content-Length`, and the
@@ -331,8 +348,77 @@ so a previous abort does not poison the new attempt. The
   membership leg of every policy short-circuits to false and the
   effective rule collapses to owner-only — personal scopes stay
   personal.
-- Lifecycle: `harpa-voice` and `harpa-images` files referenced from
-  no live note are GC'd after 7 days by an R2 lifecycle rule.
+- Lifecycle: account deletion and expired upload leases are handled by
+  the durable API-owned lifecycle below. Bucket lifecycle expiry remains
+  a residual guardrail, not the source of correctness.
+
+### Account-deletion cleanup
+
+`POST /files/presign` stores the exact key and expiry in
+`app.file_upload_leases` before returning the URL. `POST /files`
+requires the matching unconsumed lease and marks it consumed in the same
+transaction that inserts `app.files`. A consumed lease remains until
+expiry because registration does not revoke the signed URL.
+
+Server-rendered PDFs use the same durable record before their side effect.
+The route first commits an exact-key lease, then in a separate transaction
+locks the user and lease across the R2 PUT, atomic lease consumption,
+`app.files` insert, and report-pointer update. If the process dies or the
+second transaction fails after R2 accepts the bytes, the unconsumed lease
+survives for exact-key orphan cleanup.
+
+`app.delete_current_user()` locks the user, relevant projects, every
+membership row, owned file rows, and upload leases before it decides
+which projects are solo. It then inserts storage jobs and deletes the
+account in the same transaction. Concurrent member add/update/remove,
+client registration, presign, and server-side PDF upload cannot cross
+that decision boundary.
+
+The due-now job contains every owned file key, every lease key, personal
+avatar/scratch prefixes, and only the project prefixes actually deleted
+as solo. A second job is due at the latest relevant presign expiry plus
+30 seconds and repeats every lease key that is unexpired or still inside
+that 30-second in-flight PUT safety window, consumed or not.
+Shared-project prefixes are never swept.
+
+After commit, the route drains the due-now job as a fast path. The
+service-less Fly worker claims durable jobs with `FOR UPDATE SKIP
+LOCKED`, retries failures with capped exponential delay, and removes a
+job only after its exact claim succeeds. A crash after the database
+commit therefore leaves recoverable work in `app.storage_delete_jobs`.
+The route returns `204` once the account is committed away even when
+storage retry remains pending.
+
+Prefix work is bounded to four 500-key pages per attempt, while
+`DeleteObjects` is chunked at 1,000 keys. Truncation is retryable:
+objects already removed disappear from the next listing, so subsequent
+attempts make progress. Failures remain queryable through
+`attempt_count` and `last_error`, and also produce structured worker logs
+and Sentry events.
+
+The same worker bounds lease metadata. After expiry plus the 30-second
+safety window it drops consumed leases, and it row-locks expired
+unconsumed leases while deleting their exact orphan objects before
+removing the rows. R2 failure rolls the transaction back; concurrent
+registration waits and then receives `409` rather than creating a file
+whose object was deleted.
+
+Idle polling is deliberately bounded for Neon cost. The worker sleeps until
+the next known `run_after`, with a ten-minute maximum so a newly inserted job
+cannot be missed indefinitely, and performs lease pruning at most once per
+hour. `DELETE /me` still drains its immediate job after commit. If that
+fast-path fails just after the worker goes to sleep, durable cleanup can lag by
+up to ten minutes; expired lease/orphan cleanup can lag by up to one hour.
+This leaves idle gaps in which Neon may suspend, while the service-less Fly
+Machine remains an explicit always-on cost.
+
+The first rolling deploy is gated by
+`app.storage_lifecycle_rollout`. Account deletion returns `503` until
+old lease-less presigns have expired. Lease enforcement is armed once,
+330 seconds after a successful deploy, and later deploys never reopen
+the grace. See
+[`design-r2-object-lifecycle.md`](design-r2-object-lifecycle.md) for
+the full race analysis and operational queries.
 
 ## Live mode (production)
 
@@ -346,8 +432,8 @@ region    = 'auto'           # R2 ignores region but the SDK requires one
 forcePathStyle = true        # R2 requires path-style addressing
 ```
 
-Required env (asserted at first use, not at boot — fixture mode stays
-free of R2 creds):
+Required env (asserted at API boot whenever live mode is selected;
+fixture mode stays free of R2 creds):
 
 | Env | Notes |
 |---|---|
@@ -356,7 +442,7 @@ free of R2 creds):
 | `R2_SECRET_ACCESS_KEY` | R2 API token secret |
 | `R2_BUCKET` | Defaults to `harpa-pro` |
 | `R2_ENDPOINT` | Optional override for local S3-compatible mocks |
-| `R2_PRESIGN_TTL_SEC` | Defaults to 300 (5 minutes per §Download flow) |
+| `R2_PRESIGN_TTL_SEC` | Defaults to and is capped at 300 seconds; rollout grace is 330 seconds |
 
 `R2Storage` signs `content-type` and `content-length` into every PUT
 URL so a stolen link can't be reused for arbitrary uploads (Pitfall 8).
@@ -369,9 +455,10 @@ When `EXPO_PUBLIC_USE_FIXTURES=true` (mobile) or `R2_FIXTURE_MODE=replay`
 - `POST /files/presign` returns a fake URL pointing at the local
   fixture server (or a public URL in `harpa-fixtures`).
 - The mobile upload queue PUTs to it; in tests we intercept with MSW.
-- `POST /files` accepts a synthetic `fileKey` and stores a row
-  pointing at a public fixture asset.
+- `POST /files` consumes the lease minted by the fixture presign and
+  stores a row pointing at the fixture key.
 - Tests that exercise transcription wire `voice.fixture.m4a` from
   `harpa-fixtures` so the OpenAI fixture replay matches.
 
-This means **no R2 calls in CI**.
+This means normal CI makes **no Cloudflare R2 calls**. The dedicated
+default-wiring lane uses local MinIO to exercise the real S3 client.

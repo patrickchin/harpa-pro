@@ -21,8 +21,11 @@ import { expo } from '@better-auth/expo';
 import { rawDb } from '../db/client.js';
 import * as authSchema from '../db/auth-schema.js';
 import { env } from '../env.js';
+import { logEmailOtpPreview } from '../lib/email-diagnostics.js';
 import { createResendClient } from '../lib/resend.js';
 import { newId } from '../lib/ids.js';
+import { recordActivityEvent } from '../services/activity-events.js';
+import { captureApiException } from '../telemetry/sentry.js';
 
 const TEST_EMAILS = (env.TEST_ACCOUNT_EMAILS ?? '')
   .split(',')
@@ -60,9 +63,7 @@ const dbProxy = new Proxy({} as ReturnType<typeof rawDb>, {
  */
 type AuthInternalContext = {
   internalAdapter: {
-    findUserByEmail: (
-      email: string,
-    ) => Promise<{ user: { id: string } } | null | undefined>;
+    findUserByEmail: (email: string) => Promise<{ user: { id: string } } | null | undefined>;
     createUser: (input: {
       email: string;
       name: string;
@@ -83,9 +84,7 @@ type AuthInternalContext = {
 type BetterAuthInstance = {
   handler: (req: Request) => Promise<Response>;
   api: {
-    getSession: (input: {
-      headers: Headers;
-    }) => Promise<{
+    getSession: (input: { headers: Headers }) => Promise<{
       session: { id: string; userId: string };
       user: { id: string };
     } | null>;
@@ -113,9 +112,7 @@ export const auth = betterAuth({
   trustedOrigins: [
     'harpa://',
     'harpa://*',
-    ...(env.NODE_ENV === 'development'
-      ? ['exp://', 'exp://**', 'exp://192.168.*.*:*/**']
-      : []),
+    ...(env.NODE_ENV === 'development' ? ['exp://', 'exp://**', 'exp://192.168.*.*:*/**'] : []),
   ],
 
   advanced: {
@@ -158,6 +155,38 @@ export const auth = betterAuth({
             throw new APIError('FORBIDDEN', { message: 'sign-up disabled' });
           }
         },
+        after: async (user, ctx) => {
+          if (ctx?.path !== '/sign-in/email-otp') return;
+
+          const incomingRequestId = ctx.request?.headers.get('x-request-id') ?? null;
+          const requestId =
+            incomingRequestId && /^[\w-]{6,128}$/.test(incomingRequestId)
+              ? incomingRequestId
+              : null;
+
+          try {
+            await recordActivityEvent(rawDb(), {
+              eventType: 'user.signed_up',
+              actorUserId: user.id,
+              subjectId: user.id,
+              projectId: null,
+              requestId,
+              dedupeKey: `user.signed_up:${user.id}`,
+              metadata: { method: 'email_otp' },
+            });
+          } catch (error) {
+            ctx.context.logger.error('Failed to record signup activity', error, {
+              userId: user.id,
+              requestId,
+            });
+            captureApiException(error, {
+              requestId: requestId ?? 'signup-activity-hook',
+              method: 'AUTH',
+              route: 'user.create.after',
+              status: 0,
+            });
+          }
+        },
       },
     },
   },
@@ -191,8 +220,7 @@ export const auth = betterAuth({
       sendVerificationOTP: async ({ email, otp, type }) => {
         if (env.EMAIL_OTP_LIVE !== '1') {
           if (env.NODE_ENV !== 'test') {
-            // eslint-disable-next-line no-console
-            console.log(`[emailOTP/fake] → ${email} (${type}): ${otp}`);
+            logEmailOtpPreview({ recipient: email, type });
           }
           return;
         }
@@ -213,10 +241,12 @@ export type Auth = typeof auth;
 function logDemoAccountAttempt(email: string, outcome: string): void {
   if (env.NODE_ENV === 'test') return;
   // eslint-disable-next-line no-console
-  console.info(JSON.stringify({
-    level: 'info',
-    msg: 'demo_account_sign_in_attempt',
-    email,
-    outcome,
-  }));
+  console.info(
+    JSON.stringify({
+      level: 'info',
+      msg: 'demo_account_sign_in_attempt',
+      email,
+      outcome,
+    }),
+  );
 }

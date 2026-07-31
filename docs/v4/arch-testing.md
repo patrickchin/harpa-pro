@@ -19,9 +19,9 @@
                     ▼
 ```
 
-> **No automated screenshot diffs.** Visual review is manual against
-> the canonical port source at `../haru3-reports/apps/mobile@dev` on
-> the iOS simulator.
+> **No automated screenshot diffs.** Visual review uses the relevant
+> `design-*.md` or `plan-*.md` spec. If neither exists, it uses the
+> current implementation and tests as the baseline.
 
 ## Per-layer rules
 
@@ -40,8 +40,12 @@
   `packages/api/src/__tests__/factories/`.
 - Two test actors per test (`alice`, `bob`) so per-request scope
   tests are always paired.
-- Coverage gate: ≥ 90% lines on `packages/api/src/`.
-- CI matrix runs the suite against Postgres 15 and 16.
+- `test:coverage` collects unit coverage plus two sequential,
+  serial Testcontainers shards, then merges the Vitest blobs so the
+  report includes both pure helpers and database-backed route
+  handlers without retaining every container's coverage map in one
+  process.
+- CI rejects less than 90% line coverage on `packages/api/src/`.
 
 ### Per-request scope tests
 
@@ -81,19 +85,44 @@ Each AI-touching route has a test that:
 
 ### Mobile visual review
 
-- Manual, in the iOS simulator, side-by-side with the canonical
-  source at `../haru3-reports/apps/mobile@dev`.
+- Manual, in the iOS simulator, against the relevant `design-*.md`
+  or `plan-*.md` spec. If neither exists, compare the current
+  implementation and tests.
 - There is no automated diff and no `pnpm visual:diff` script.
   Cosmetic drift is caught by reviewer eye; it is still a P0 bug.
+- Add a task-specific design doc before making a design change.
+
+### Metro bundle smoke
+
+- `pnpm --filter @harpa/mobile bundle:smoke` exports a real iOS
+  bundle and checks both Metro's resolver output and exported module
+  metadata for test/Vitest leakage.
+- `e2e-maestro-testid-gate.yml` runs it on every mobile-relevant PR
+  and push. Unit tests alone do not exercise Expo Router's Metro
+  context or native-module resolution.
 
 ### Maestro E2E
 
-- `apps/mobile/.maestro/` contains the flows.
+- `.maestro/` contains the flows.
 - `appId` is read from `MAESTRO_APP_ID` (Pitfall 9).
-- Runs on iOS sim + Android emu in CI matrix.
+- Mobile-relevant PRs build and install the Android dev client on a
+  real emulator, then run the bounded
+  `.maestro/ci-launch-smoke.yaml` flow. The job has a 30-minute
+  ceiling, emulator boot has a 300-second ceiling, and the Maestro
+  command has a 180-second ceiling.
+- The PR APK targets only the emulator's `x86_64` ABI instead of
+  compiling the three unused Android ABIs. Gradle dependencies are
+  restored from a cache keyed by the lockfile and mobile prebuild
+  inputs.
+- Before the emulator starts, CI applies the runner action's
+  documented world-readable/writable `/dev/kvm` udev rule so hosted
+  Ubuntu uses hardware acceleration instead of falling back to
+  `-accel off`.
 - AI calls go through replay mode automatically — `:mock` build
   ships fixtures.
-- All flows pass before P3 exit.
+- Full regression and native-input flows remain explicit local /
+  release checks; the PR smoke proves native build, Metro startup,
+  installation, launch, and a rendered sign-in control.
 
 ### Docs site (Playwright)
 
@@ -149,18 +178,51 @@ Active today:
 |---|---|---|
 | `lint-typecheck.yml` | every push | ESLint + tsc clean across the workspace |
 | `unit.yml` | every push | `pnpm test` green |
-| `api-integration.yml` | every push | Testcontainers suite green at ≥ 90% line coverage |
+| `api-integration.yml` | every push | Combined API unit + Testcontainers suite green at ≥ 90% line coverage |
+| `e2e-maestro-testid-gate.yml` | mobile-relevant PR / push | testID policy, Metro bundle leakage, and bounded Android Maestro launch smoke with failure diagnostics |
+| `dependency-review.yml` | every PR | Reject newly introduced high or critical dependency vulnerabilities |
 | `pr-preview.yml` | PR open / push | Neon branch lifecycle for previews |
 | `site-prod.yml` | push to `main` | Deploy the public site to Cloudflare Pages prod |
 | `site-preview.yml` | PR to `dev` or `main` | Test and deploy a per-PR public-site preview |
 
+### Dependency security automation
+
+GitHub reads [`.github/dependabot.yml`](../../.github/dependabot.yml) from
+the repository's default branch, `main`. It checks the root pnpm workspace
+and GitHub Actions weekly. Routine version-update pull requests target
+`dev`; minor and patch updates are grouped by risk, while major updates
+remain separate for focused review.
+
+Dependabot security updates are enabled separately under **Settings → Code
+security and analysis**. They are advisory-driven rather than scheduled and
+always target the default branch, `main`; the `target-branch: dev`
+customizations apply only to routine version updates. The configuration does
+not become active until it reaches `main`.
+
+The `dependency-review` workflow uses GitHub's dependency graph to reject
+pull requests that introduce high or critical vulnerabilities. Once this
+workflow has reached default branch `main` and its check has run successfully,
+make the `dependency-review` job required in both `dev` and `main` branch
+protection. Do not add the required check before then: routine version-update
+pull requests target `dev`, while security-update pull requests target `main`,
+and both paths need the workflow to be active first. Existing vulnerabilities
+are tracked by Dependabot alerts and security-update pull requests rather than
+failing every unrelated change.
+
 Deferred (add when the phase actually starts, not before):
 
 - `contract.yml` — OpenAPI regen + diff. Add in P1 once `spec:emit` is wired.
-- `mobile-build.yml` — Expo prebuild + Metro bundle. Add in P2 when mobile is non-skeleton (today `unit.yml` already covers mobile typecheck + tests).
-- `e2e-maestro.yml` — Maestro flows on iOS + Android. Add in P3.
 - `visual-gate.yml` — screenshot diff. Add in P2 once shared primitives + first screens land.
 - Per-phase exit gates (`p1-exit-gate.yml`, etc.) — prefer GitHub branch-protection required checks over standalone workflows.
+
+`scripts/ci/__tests__/release-confidence-gates.test.sh` statically
+pins these workflow contracts, including the explicit Bash boundary
+and early diagnostic setup in
+`scripts/ci/run-maestro-launch-smoke.sh`, and
+`scripts/ci/__tests__/verify-deployed-sha.test.sh` exercises the
+main-promotion SHA verifier against fake health responses, including
+rejection of matching abbreviated SHAs. Both run from the PR-gated
+`lint-typecheck.yml` job.
 
 ## Removal verification gates
 

@@ -207,15 +207,17 @@ Token getter wiring (security review §B / §I):
 
 - Any post-bootstrap 401 (query OR mutation) calls
   `notifyUnauthorized()`, which clears the in-memory token + sets
-  status to `unauthenticated`. The route guard in `app/_layout.tsx`
-  redirects to `/(auth)/sign-in/email`.
+  status to `unauthenticated`. It also aborts and clears the active
+  user-scoped upload queue before auth teardown. The route guard in
+  `app/_layout.tsx` redirects to `/(auth)/sign-in/email`.
 
 Sign-out:
 
 - Best-effort `POST /api/auth/sign-out`, then clear SecureStore + state +
-  `queryClient.clear()`. Network failure on the POST does **not** stop
-  the local clear (we'd otherwise leak a session into a multi-user
-  device).
+  `queryClient.clear()`. The active upload queue is aborted and cleared
+  before the network call. Network failure on the POST does **not**
+  stop either local clear (we'd otherwise leak session data into a
+  multi-user device).
 
 What we deliberately do **not** have:
 
@@ -249,8 +251,8 @@ What we deliberately do **not** have:
 - Typography: a single scale (`text-xs`–`text-3xl`) — Pitfall ref:
   v3 needed `0f3db66 refactor(mobile): tighten typography scale`.
 
-These values come from the canonical source's `tailwind.config.js`
-at `../haru3-reports/apps/mobile/tailwind.config.js`.
+These values are defined in the checked-in
+`apps/mobile/tailwind.config.js`.
 **No hex values appear outside the config.** ESLint rule
 `no-restricted-syntax` flags hex literals in `apps/mobile/components/**`.
 
@@ -263,10 +265,12 @@ dependencies of its own. The real route at
 `app/(auth|app)/<path>.tsx` wires hooks, auth session, and
 navigation params, then passes them as props.
 
-Visual review is manual against `../haru3-reports/apps/mobile@dev`
-on the iOS simulator — there is no automated screenshot-diff gate
-and no in-app gallery. Coverage relies on per-screen behaviour tests
-plus Maestro flows for visual regressions.
+Visual review is manual against the relevant `design-*.md` or
+`plan-*.md` specification. If neither exists, reviewers use the
+current implementation and tests as the baseline. Review runs on the
+iOS simulator. There is no automated screenshot-diff gate or in-app
+gallery. Coverage relies on per-screen behaviour tests plus Maestro
+flows for visual regressions.
 
 ## Primitives (locked in P2.2)
 
@@ -332,8 +336,8 @@ At a glance:
 
 ## Camera flow
 
-Mirrors the canonical source's camera screen in
-`../haru3-reports/apps/mobile/app/(camera)/capture.tsx`.
+The camera screen lives at
+`apps/mobile/app/(camera)/capture.tsx`.
 Uses `AppDialogSheet` for discard confirmation (Pitfall 12).
 Three-column thumbnail strip; shutter haptic; session commit
 back to the report.
@@ -369,10 +373,11 @@ outside `lib/env.ts`.
 | features/* | Vitest + MSW for API | ≥ 90% |
 | Screens | Vitest behaviour test (per-page interactions) | ≥ 80% |
 | End-to-end | Maestro on iOS sim + Android emu | All flows green |
-| Visual | Manual review against `../haru3-reports/apps/mobile@dev` on iOS sim | n/a (no automated gate) |
+| Visual | Manual review against the relevant v4 spec or current baseline on iOS sim | n/a (no automated gate) |
 
-Per-page acceptance is the per-page doc's "Acceptance checklist"
-section.
+Per-page acceptance comes from the relevant `design-*.md` or
+`plan-*.md` file. If neither exists, current implementation and tests
+are the baseline.
 
 ## Performance defaults
 

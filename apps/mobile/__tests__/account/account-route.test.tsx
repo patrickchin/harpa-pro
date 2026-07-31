@@ -91,10 +91,6 @@ vi.mock('@/lib/files/image-cache', () => ({
   clearImageCachesOnSignOut: clearImageCachesSpy,
 }));
 
-vi.mock('@/components/account/AvatarUploader', () => ({
-  AvatarUploader: () => null,
-}));
-
 vi.mock('@/components/ui/AppHeaderActions', () => ({
   AppHeaderActions: () => null,
 }));
@@ -130,6 +126,12 @@ describe('AccountRoute account deletion wiring', () => {
     sessionState.refresh.mockResolvedValue(undefined);
     sessionState.signOut.mockResolvedValue(undefined);
     clearImageCachesSpy.mockResolvedValue(undefined);
+  });
+
+  it('does not wire avatar upload or rendering into the account screen', () => {
+    renderRoute();
+
+    expect(screenState.props).not.toHaveProperty('avatarSlot');
   });
 
   it('requests the latest deletion preview when the screen opens the dialog', async () => {

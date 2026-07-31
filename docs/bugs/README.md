@@ -255,12 +255,62 @@ Mitigation:
   and sanitizes invalid ids server-side; the client no longer needs
   an orphan-clearing effect.
 
+### R11 — Fake-mode convenience logs leak bearer secrets
+
+Preview and fake transports often dump payloads to stdout to make
+manual testing convenient. Email OTPs and confirmation URLs are bearer
+credentials, while full recipients and rendered bodies contain personal
+data. A non-production label does not make aggregated preview, CI, or
+developer logs a safe secret store.
+
+Mitigation: fake transports log only a stable event name, fake message
+id, recipient domain, and non-sensitive channel metadata. Their logging
+APIs must not accept OTPs, tokens, URLs, bodies, subjects, or full
+addresses as log fields; recipient inputs are reduced to a validated
+domain before serialization. Console-capture tests use sentinel secrets
+and fail if any appear; richer message assertions stay inside the
+in-process fake record.
+
+### R12 — Membership is mistaken for write authorization
+
+Project membership answers whether a caller can see a row; it does not answer
+whether the caller may mutate it. A policy or route that checks only
+`app.is_member(project_id)` silently collapses `owner`, `editor`, and `viewer`
+into the same write role. Owner/non-member tests stay green while viewers can
+write. Mitigation: keep membership as the row-visibility boundary, apply one
+central owner/writer role guard at every project-content mutation route, and
+test each operation with owner, editor, and viewer actors.
+
+### R13 — Black-box journey expectations drift after API policy changes
+
+Post-deploy journeys encode observable API status contracts, but shellcheck
+only proves that their shell syntax is valid. When an API policy changes
+without updating the journey, the first semantic failure occurs after merge.
+Mitigation: update black-box assertions and journey docs in the policy PR, then
+pin high-risk authorization expectations with a focused PR-gated policy test.
+
 ## Bugs
 
 - **2026-06-06** *(R3)* — After [PR #154] unblocked the report-body wire shape, post-merge api-dev still failed at the very last step of all three journeys: `POST /api/auth/sign-out` returned HTTP 500. Root cause: the journey scripts called sign-out with an empty body (`req POST /api/auth/sign-out '' …`) and `req()` strips the `-d` flag entirely when `$3` is empty, so the request went out with no body. better-auth's sign-out handler 500s instead of accepting empty / returning 400. Same script's deliberate `'{}'` test on stress.sh:219 already proved the fix. Filed API followup for the empty-body → 500 layer. Fix: replace `''` with `'{}'` at all six end-of-journey sign-out call sites. [detail](2026-06-06-journey-sign-out-empty-body-500.md)
 
 Most recent first. One line per bug — open the linked file only for the full root-cause / test / commit write-up.
 
+- **2026-07-29** — A manually dispatched API workflow called reusable mobile OTA with inherited `workflow_dispatch` context, so the callee tried blank native registration and could force redundant manual publication. Fix: discriminate successful API calls with their call-only input, skip registration, and evaluate them with effective `workflow_call` policy semantics. [detail](2026-07-29-reusable-ota-dispatch-context.md)
+- **2026-07-29** — The first `api-dev` deploy after PR #205 stopped before lifecycle arming when `storage-worker=1` tried to collapse Fly's active/standby pair; later recovery proved Fly can leave an updated Machine stopped and render the clone's same tagged image as `tag@digest`. Fix: remove broad scaling, explicitly start only the exact stopped/no-standby candidate, and compare a narrowly validated canonical tag, at most one explicit digest, and exact release metadata at every fresh proof. [detail](2026-07-29-fly-worker-scale-confirmation.md)
+- **2026-07-29** — The first `api-dev` push after PR #202 failed before creating any jobs because its reusable OTA caller was capped at `contents: read` while the nested runtime-registration job requested `contents: write`. Fix: grant write only on the reusable-call jobs, preserve the called workflows' read-only default, and add a scoped policy regression. [detail](2026-07-29-reusable-workflow-permission-ceiling.md)
+- **2026-07-29** — PR-time Android smoke first stayed on Expo Dev Launcher's Home screen, then a later run exhausted its 60-second readiness wait with the cold bundle still at 90 percent. Fix: select the green `http://10.0.2.2:8081` row, wait fail-closed for `Continue|Email` for 90 seconds, and retain hidden Maestro UI diagnostics. [detail](2026-07-29-expo-dev-launcher-server-not-selected.md)
+- **2026-07-29** *(R13)* — The stress journey still expected a viewer project rename to return 200 after the API made viewers read-only, so a correct post-deploy 404 would fail the journey. Fix: align the assertion and README with the reviewed contract and add a PR-gated shell policy check. [detail](2026-07-29-stress-viewer-policy-drift.md)
+- **2026-07-28** — API idempotency was a process-local check-then-act
+  cache: concurrent requests and retries routed to another Fly machine
+  could duplicate AI calls, report mutations sent no stable key, and
+  one key could collide across method/path/body. Fix: scoped request
+  hashes, in-flight memory coalescing, durable Postgres leases/responses,
+  and stable mobile retry keys. [detail](2026-07-28-idempotency-process-local-race.md)
+- **2026-07-28** *(R5)* — `DELETE /me` removed account/file rows but could leave registered, orphaned, or late-presigned R2 objects because cleanup was neither default-wired nor durable. Fix: upload leases, atomic delete jobs, a scheduled retry worker, safe-prefix reconciliation, and a real late-PUT MinIO proof. [detail](2026-07-28-account-delete-left-r2-objects.md)
+- **2026-07-28** *(R5)* — An authenticated `fixtureName` could downgrade `AI_LIVE=1` requests to checked-in replay, while recorder paths could persist customer/site identifiers because redaction was isolated or bypassed. Fix: make mode server-owned, share a cross-context redaction boundary, sanitize fixtures, and add live route plus privacy guards. [detail](2026-07-28-ai-fixture-trust-boundary.md)
+- **2026-07-28** *(R12)* — Project-content routes relied on membership-scoped RLS alone, so viewers could update projects, reports, notes, files, invoke generation, and finalize. Fix: central owner/writer route guards plus a real owner/editor/viewer Testcontainers matrix. [detail](2026-07-28-membership-collapsed-project-roles.md)
+- **2026-07-28** *(R11)* — Fake OTP and fake Resend paths printed full recipients plus OTPs or rendered confirmation messages, putting bearer credentials and personal data into preview/developer logs. Fix: centralize metadata-only email diagnostics and pin both paths with console-capture regressions. [detail](2026-07-28-preview-email-secret-logs.md)
+- **2026-07-28** — The root mobile upload queue persisted every account's jobs under one MMKV key and survived auth teardown, so a queued upload could resume under the next signed-in account. Fix: user-scope persistence, defer hydration until auth resolves, and abort/clear on sign-out, 401, or user-id change. [detail](2026-07-28-upload-queue-cross-session.md)
 - **2026-06-26** — Qualitative worker counts such as `"a few"` survived the API wire shape but disappeared in the rendered report because `report-core` / mobile adapters coerced role counts back to numbers and displayed `0`. Fix: keep role counts as `string | null`, parse only for math, and add report-card/stat/PDF regressions. [detail](2026-06-26-qualitative-worker-count-hidden.md)
 - **2026-06-26** — Local iOS release-stress failed in `modules/17-heavy-usage-stress.yaml` after adding 20 notes; the screenshot showed `Notes (20)` but the viewport was sitting around notes 7-12, so `note-row-19` was offscreen. Fix: scroll to `note-row-19` before asserting it, then continue the oldest/newest scroll coverage. [detail](2026-06-26-maestro-stress-note-row-offscreen.md)
 - **2026-06-26** — Local iOS release-stress failed in `helpers/sign-out.yaml` after `tapOn id: btn-open-profile`; the screenshot stayed on Projects and `btn-sign-out` never appeared. Root cause: XCTest reported the header icon tap complete without navigating. Fix: retry the profile tap once if the Projects header icon is still visible, then assert `screen-profile` before sign-out. [detail](2026-06-26-maestro-profile-tap-no-navigation.md)

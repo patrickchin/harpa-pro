@@ -1,16 +1,16 @@
-# Per-page port prompt — template
+# Per-page implementation prompt — template
 
-> Reusable prompt for porting one screen from the canonical source
-> into v4. Instantiate one file per screen at
+> Reusable prompt for implementing or changing one v4 screen.
+> Instantiate one file per screen at
 > `docs/v4/prompts/p2-<name>.md` or `p3-<name>.md`, fill in the
 > placeholders, hand it to a subagent (or run it inline).
 >
-> The acceptance contract is the matching screen in
-> `../haru3-reports/apps/mobile` on branch `dev` (Expo SDK 55,
-> expo-router, NativeWind v4). JSX + Tailwind classes copy across
-> with no translation. Screenshots and any realignment notes from
-> the legacy v3 attempt are **not** used as port sources (see
-> [AGENTS.md](../../../AGENTS.md) hard rule #1).
+> Use the relevant `docs/v4/design-*.md` or `docs/v4/plan-*.md`
+> file as the specification source. If neither exists, use the
+> current implementation and tests as the baseline. Add a
+> task-specific design doc before making a design change.
+> Historical screenshots and realignment notes are not acceptance
+> sources (see [AGENTS.md](../../../AGENTS.md)).
 
 ---
 
@@ -20,8 +20,9 @@
 |---|---|
 | Page name | `<name>` (e.g. `login`, `projects-list`) |
 | Plan task | `P2.<n>` / `P3.<n>` |
-| Canonical source — route | `../haru3-reports/apps/mobile/app/<route>.tsx` |
-| Canonical source — components | `../haru3-reports/apps/mobile/components/<paths>` |
+| Specification | `docs/v4/design-<task>.md` or `docs/v4/plan-p<n>-<phase>.md` |
+| Current route | `apps/mobile/app/<route>.tsx` |
+| Current components | `apps/mobile/components/<paths>` |
 | v4 body component | `apps/mobile/screens/<name>.tsx` |
 | v4 real route | `apps/mobile/app/(auth\|app)/<route>.tsx` |
 | Required primitives | `Card`, `Input`, `Button`, … (from `apps/mobile/components/primitives/`) |
@@ -29,20 +30,27 @@
 
 ## Read first
 
-1. `../haru3-reports/apps/mobile/app/<route>.tsx` — the canonical JSX.
-2. Any `components/**` it imports, recursively, until you reach
+1. The relevant `design-*.md` or `plan-*.md` specification. If none
+   exists, record that the current implementation and tests are the
+   baseline.
+2. `apps/mobile/app/<route>.tsx` — the current route and wiring, if
+   the screen exists.
+3. Any `components/**` it imports, recursively, until you reach
    primitives that already exist in `apps/mobile/components/primitives/`.
-3. `../haru3-reports/apps/mobile/tailwind.config.js` — verify every
-   class used resolves against tokens already present in
-   `apps/mobile/tailwind.config.js`. Add any missing token to the
-   v4 config in the same commit (no hex literals — `check-no-hex-colors.sh`).
-4. The v4 [arch-mobile.md](../arch-mobile.md) §"Screens as
+4. `apps/mobile/tailwind.config.js` — verify every class resolves.
+   Add a token only when the specification requires it. Keep the
+   current tokens when no task-specific spec exists. Do not add hex
+   literals (`check-no-hex-colors.sh`).
+5. The v4 [arch-mobile.md](../arch-mobile.md) §"Screens as
    props-driven bodies" so the `screens/` pattern is fresh.
 
 ## Build
 
 1. **Body component** at `apps/mobile/screens/<name>.tsx`:
-   - Port JSX + Tailwind classes verbatim from the canonical source.
+   - Implement the specification. If no task-specific spec exists,
+     preserve the current JSX, NativeWind classes, and behaviour
+     tests.
+   - Add a task-specific design doc before making a design change.
    - All data, callbacks, and navigation params arrive as **typed
      props**. No API calls, no `useAuthSession`, no
      `expo-secure-store`, no `useRouter().push` for primary
@@ -61,15 +69,14 @@
      navigation params) and passes them as props.
    - This is the only file that touches the network or secure store.
 
-3. **Tailwind tokens.** If the canonical source uses any class that
-   doesn't resolve in v4, extend `apps/mobile/tailwind.config.js` in
-   this commit (token name copied from the canonical config).
+3. **Tailwind tokens.** If the design requires a class that does not
+   resolve, extend `apps/mobile/tailwind.config.js` in this commit.
 
 ## Tests required this commit
 
 - Snapshot test for the body at default mock props
   (`<name>.test.tsx`).
-- Behaviour test per interaction the canonical source exercises
+- Behaviour test for every interaction required by the screen
   (each tab switch, modal open/close, form-local state change,
   back-nav).
 - No test that requires the real API, real auth, or real fixtures.
@@ -87,22 +94,23 @@
 
 - Run `pnpm ios:mock` on the iOS simulator.
 - Navigate to the screen via the real route.
-- Side-by-side with the canonical source running from
-  `../haru3-reports/apps/mobile` on the same simulator (or on a
-  second simulator window).
+- Compare the screen with its specification. If no task-specific spec
+  exists, compare the current implementation and tests.
 - Eyeball: layout, spacing, typography, colors, hit targets,
   modal presentation. Cosmetic drift is a P0 bug (Pitfall 3).
 
 ## Commit
 
 ```
-feat(mobile): <name> ported from canonical source (P<n>.<m>)
+feat(mobile): implement <name> screen (P<n>.<m>)
 ```
 
 Body must include:
-- Canonical source path that was ported.
-- v4 body / real route / dev mirror paths created.
+- Specification source, or a note that current code and tests are the
+  baseline.
+- Current route and component paths reviewed.
+- Body / real route / dev mirror paths created.
 - Test counts.
 - `pnpm typecheck` + `pnpm lint` results.
-- Any tailwind tokens added (with their canonical-source line).
+- Any Tailwind tokens added and why.
 - "Deferred to P3:" line listing the unwired data-layer pieces.

@@ -11,6 +11,12 @@ import * as ImagePicker from 'expo-image-picker';
 import { pickAndEnqueueGalleryImages } from './pick-and-enqueue-gallery-images';
 import type { UploadResult } from '@/lib/uploads/types';
 
+const photoLibraryPolicyMock = vi.hoisted(() => ({ enabled: true }));
+
+vi.mock('./photo-library-policy', () => ({
+  isPhotoLibraryPickingEnabled: () => photoLibraryPolicyMock.enabled,
+}));
+
 const PERM_DENIED = {
   granted: false,
   canAskAgain: false,
@@ -26,6 +32,8 @@ const fakeFile = { id: 'fil_1' } as unknown as UploadResult['file'];
 
 describe('pickAndEnqueueGalleryImages', () => {
   beforeEach(() => {
+    photoLibraryPolicyMock.enabled = true;
+    vi.clearAllMocks();
     vi.mocked(ImagePicker.requestMediaLibraryPermissionsAsync).mockResolvedValue(
       PERM_GRANTED as never,
     );
@@ -54,6 +62,22 @@ describe('pickAndEnqueueGalleryImages', () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+  });
+
+  it('does not request photo-library access on iOS', async () => {
+    photoLibraryPolicyMock.enabled = false;
+    const enqueue = vi.fn();
+
+    const outcome = await pickAndEnqueueGalleryImages({
+      reportId: 'rpt_1',
+      projectId: 'prj-test1234',
+      enqueueCameraUris: enqueue,
+    });
+
+    expect(outcome).toEqual({ kind: 'unavailable' });
+    expect(enqueue).not.toHaveBeenCalled();
+    expect(ImagePicker.requestMediaLibraryPermissionsAsync).not.toHaveBeenCalled();
+    expect(ImagePicker.launchImageLibraryAsync).not.toHaveBeenCalled();
   });
 
   it('returns permission-denied without launching the picker', async () => {

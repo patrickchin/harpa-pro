@@ -23,6 +23,11 @@ const IP_LIMIT = 120;
 const SKIP_PREFIXES: readonly string[] = [
   '/healthz',
   '/readyz',
+  // The admin auth surface has its own limiter in the physically separate
+  // admin database. Its readiness probe must not touch either limiter.
+  '/admin/auth',
+  '/admin/activity',
+  '/admin/readyz',
   '/openapi.json',
   // Apple swcd and Android PackageManager fetch universal-link manifests
   // automatically (e.g. on every app install). They hit from many IPs and

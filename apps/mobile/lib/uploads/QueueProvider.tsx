@@ -16,9 +16,16 @@
  * their own queue via `createUploadQueue()` and pass it as the
  * `value` prop on a manual `<QueueContext.Provider>`.
  */
-import { createContext, useContext, useMemo, type ReactNode } from 'react';
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  type ReactNode,
+} from 'react';
 import { File as FsFile } from 'expo-file-system';
 
+import { useOptionalAuthSession } from '../auth/session-context';
 import { createUploadQueue, type UploadQueue } from './queue';
 import { defaultUploadDeps } from './run-upload';
 import {
@@ -27,6 +34,7 @@ import {
   type PersistedJob,
   type QueuePersistence,
 } from './persistence';
+import { registerSessionUploadQueue } from './session-boundary';
 
 const QueueContext = createContext<UploadQueue | null>(null);
 
@@ -63,12 +71,40 @@ export function hydratePersistedJobs(
 }
 
 export function QueueProvider({ children, queue }: QueueProviderProps) {
+  const authSession = useOptionalAuthSession();
+  const isAuthScoped = authSession !== undefined;
+  const sessionUserId =
+    authSession && authSession.status !== 'loading'
+      ? authSession.user?.id ?? null
+      : null;
+
   const value = useMemo<UploadQueue>(() => {
     if (queue) return queue;
-    const persistence = createMmkvPersistence();
+
+    // The root provider mounts while better-auth is still loading. Do
+    // not rehydrate or run a previous user's jobs until a stable user
+    // identity is available.
+    if (isAuthScoped && !sessionUserId) {
+      return createUploadQueue(defaultUploadDeps);
+    }
+
+    const persistence = createMmkvPersistence(sessionUserId ?? undefined);
     const initialJobs = hydratePersistedJobs(persistence);
     return createUploadQueue(defaultUploadDeps, { persistence, initialJobs });
-  }, [queue]);
+  }, [isAuthScoped, queue, sessionUserId]);
+
+  useEffect(() => registerSessionUploadQueue(value), [value]);
+
+  // A user-id transition (including sign-out/session loss) replaces
+  // the root queue. Clear the old instance so its in-flight work and
+  // user-scoped persisted snapshot cannot survive the boundary.
+  useEffect(() => {
+    if (!isAuthScoped) return undefined;
+    return () => {
+      value.clear();
+    };
+  }, [isAuthScoped, sessionUserId, value]);
+
   return <QueueContext.Provider value={value}>{children}</QueueContext.Provider>;
 }
 

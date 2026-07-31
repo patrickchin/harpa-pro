@@ -13,6 +13,7 @@ pnpm --filter @harpa/site dev      # http://localhost:3002
 pnpm --filter @harpa/site build
 pnpm --filter @harpa/site typecheck
 pnpm --filter @harpa/site test:e2e
+pnpm --filter @harpa/site test:e2e:admin # Docker-backed real API smoke
 ```
 
 ## Stack
@@ -22,7 +23,8 @@ pnpm --filter @harpa/site test:e2e
 - React 19 islands (added in M1/M2)
 - MDX content collections (added in M0.4)
 - Typed product guides under `/docs`
-- Playwright coverage for docs navigation, search, links, and mobile layout
+- Playwright coverage for docs navigation, search, links, mobile layout, and
+  the real cookie-authenticated admin activity path
 - Deployed to Cloudflare Pages by uploading `dist/` directly via
   `wrangler pages deploy` (the `@astrojs/cloudflare` adapter is
   intentionally not installed — it's only required for SSR routes).

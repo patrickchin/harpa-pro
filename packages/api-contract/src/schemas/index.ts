@@ -10,3 +10,4 @@ export * as settings from './settings.js';
 export * as waitlist from './waitlist.js';
 export * as resolvers from './resolvers.js';
 export * as usageLimits from './usage-limits.js';
+export * as activity from './activity.js';

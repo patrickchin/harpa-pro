@@ -1,11 +1,11 @@
 name: mobile-ota-dev
 
-# Push an OTA update to the `preview` channel on every push to `dev`
-# that touches mobile code. Devices with a `preview` native build
-# will download the new JS bundle on next launch.
-#
-# Requires:
-#   - EXPO_TOKEN repo secret (EAS access token with publish scope)
+# Publish JS-only changes to the installed preview runtime. A push that also
+# changes the API waits for api-dev.yml to call this workflow after its deploy,
+# journeys, and exact-SHA health checks succeed. A root appVersion change is a
+# new native runtime: automation stops until that binary exists and an operator
+# registers its build reference with workflow_dispatch. Every publish requires
+# the resulting environment/version readiness tag.
 
 on:
   push:
@@ -13,22 +13,112 @@ on:
     paths:
       - "apps/mobile/**"
       - "packages/api-contract/**"
+      - "packages/report-core/**"
       - ".github/workflows/mobile-ota-dev.yml"
       - "pnpm-lock.yaml"
-  workflow_dispatch: {}
+  workflow_call:
+    inputs:
+      release_sha:
+        description: Commit deployed by the calling API workflow.
+        required: true
+        type: string
+      api_deploy_succeeded:
+        description: True only after api-dev has completed successfully.
+        required: true
+        type: boolean
+    secrets:
+      EXPO_TOKEN:
+        required: true
+  workflow_dispatch:
+    inputs:
+      release_sha:
+        description: Commit to publish; defaults to the selected ref.
+        required: false
+        type: string
+      native_runtime_ready:
+        description: Confirm the matching preview binary was built and distributed.
+        required: true
+        default: false
+        type: boolean
+      native_artifact:
+        description: EAS build ID or store build reference for a new runtime.
+        required: false
+        type: string
 
 concurrency:
   group: mobile-ota-dev
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
+  register-native-runtime:
+    name: Register distributed preview native runtime
+    if: github.event_name == 'workflow_dispatch' && inputs.api_deploy_succeeded != true
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.release_sha || github.sha }}
+          fetch-depth: 0
+
+      - name: Create native runtime readiness tag
+        env:
+          NATIVE_ARTIFACT: ${{ inputs.native_artifact }}
+          NATIVE_RUNTIME_READY: ${{ inputs.native_runtime_ready }}
+          RUNTIME_ENVIRONMENT: preview
+          RUNTIME_TAG_PREFIX: mobile-preview-runtime-v
+          TARGET_BRANCH: dev
+        run: bash scripts/ci/register-native-runtime.sh
+
+  release-policy:
+    name: Resolve preview OTA release policy
+    needs: register-native-runtime
+    if: >-
+      always() &&
+      (needs.register-native-runtime.result == 'success' ||
+       needs.register-native-runtime.result == 'skipped')
+    runs-on: ubuntu-latest
+    outputs:
+      release-sha: ${{ steps.release-policy.outputs.release-sha }}
+      api-changed: ${{ steps.release-policy.outputs.api-changed }}
+      runtime-changed: ${{ steps.release-policy.outputs.runtime-changed }}
+      runtime-ready: ${{ steps.release-policy.outputs.runtime-ready }}
+      publish: ${{ steps.release-policy.outputs.publish }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.release_sha || github.sha }}
+          fetch-depth: 0
+
+      - name: Resolve release policy
+        id: release-policy
+        env:
+          API_DEPLOY_SUCCEEDED: ${{ inputs.api_deploy_succeeded || false }}
+          API_PATH_PATTERN: '^(packages/api/|packages/api-contract/|packages/ai-fixtures/|infra/fly/|infra/neon/|scripts/journeys/|pnpm-lock\.yaml$|\.github/workflows/api-dev\.yml$)'
+          API_WORKFLOW_NAME: api-dev
+          EVENT_NAME: ${{ inputs.api_deploy_succeeded == true && 'workflow_call' || github.event_name }}
+          MOBILE_PATH_PATTERN: '^(apps/mobile/|packages/api-contract/|packages/report-core/|pnpm-lock\.yaml$|\.github/workflows/mobile-ota-dev\.yml$)'
+          PUSH_BEFORE: ${{ github.event.before }}
+          REQUESTED_SHA: ${{ inputs.release_sha }}
+          RUNTIME_TAG_PREFIX: mobile-preview-runtime-v
+        run: bash scripts/ci/resolve-mobile-ota-release.sh
+
   ota:
     name: EAS Update (preview)
+    needs: release-policy
+    if: needs.release-policy.outputs.publish == 'true'
     runs-on: ubuntu-latest
     env:
       EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.release-policy.outputs.release-sha }}
+          fetch-depth: 0
 
       - uses: ./.github/actions/setup-monorepo
         with:
@@ -38,6 +128,14 @@ jobs:
         with:
           eas-version: latest
           token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Verify deployed API release
+        env:
+          API_HEALTH_URL: https://harpa-pro-api-dev.fly.dev/healthz
+          API_PATH_PATTERN: '^(packages/api/|packages/api-contract/|packages/ai-fixtures/|infra/fly/|infra/neon/|scripts/journeys/|pnpm-lock\.yaml$|\.github/workflows/api-dev\.yml$)'
+          API_READY_URL: https://harpa-pro-api-dev.fly.dev/readyz
+          EXPECTED_GIT_COMMIT: ${{ needs.release-policy.outputs.release-sha }}
+        run: bash scripts/ci/verify-api-release.sh
 
       - name: Push OTA update to preview channel
         working-directory: apps/mobile

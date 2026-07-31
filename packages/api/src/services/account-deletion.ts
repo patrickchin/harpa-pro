@@ -9,6 +9,7 @@ import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { auth as authSchemas } from '@harpa/api-contract';
 import type { z } from 'zod';
 import * as schema from '../db/schema.js';
+import type { Storage } from './storage.js';
 
 type Db = NodePgDatabase<typeof schema>;
 type AccountDeletionPreviewResponse = z.infer<
@@ -34,6 +35,95 @@ interface MemberRow extends Record<string, unknown> {
 
 interface CountRow extends Record<string, unknown> {
   count: string;
+}
+
+export interface StorageCleanupPlan {
+  userId: string;
+  exactKeys: string[];
+  sweepPrefixes: string[];
+}
+
+export type StorageCleanupFailure = {
+  operation: 'delete_exact' | 'list_prefix' | 'delete_prefix';
+  prefix?: string;
+  error: unknown;
+};
+
+export interface StorageCleanupResult {
+  deletedKeyCount: number;
+  truncatedPrefixes: string[];
+  failures: StorageCleanupFailure[];
+}
+
+const CLEANUP_PAGE_SIZE = 500;
+const MAX_CLEANUP_PAGES_PER_PREFIX = 4;
+
+/**
+ * Execute idempotent post-commit cleanup without throwing. The caller
+ * reports failures/truncation but must not imply the committed account
+ * deletion rolled back.
+ */
+export async function executeStorageCleanupPlan(
+  storage: Storage,
+  plan: StorageCleanupPlan,
+): Promise<StorageCleanupResult> {
+  let deletedKeyCount = 0;
+  const failures: StorageCleanupFailure[] = [];
+  const truncatedPrefixes: string[] = [];
+
+  const exactKeys = [...new Set(plan.exactKeys)].filter(Boolean);
+  if (exactKeys.length > 0) {
+    try {
+      await storage.deleteObjects(exactKeys);
+      deletedKeyCount += exactKeys.length;
+    } catch (error) {
+      failures.push({ operation: 'delete_exact', error });
+    }
+  }
+
+  for (const prefix of [...new Set(plan.sweepPrefixes)].filter(Boolean)) {
+    let cursor: string | undefined;
+    let hasMore = true;
+
+    for (
+      let pageIndex = 0;
+      pageIndex < MAX_CLEANUP_PAGES_PER_PREFIX;
+      pageIndex += 1
+    ) {
+      let page;
+      try {
+        page = await storage.listPrefix(
+          prefix,
+          cursor,
+          CLEANUP_PAGE_SIZE,
+        );
+      } catch (error) {
+        failures.push({ operation: 'list_prefix', prefix, error });
+        hasMore = false;
+        break;
+      }
+
+      const pageKeys = [...new Set(page.keys)].filter(Boolean);
+      if (pageKeys.length > 0) {
+        try {
+          await storage.deleteObjects(pageKeys);
+          deletedKeyCount += pageKeys.length;
+        } catch (error) {
+          failures.push({ operation: 'delete_prefix', prefix, error });
+        }
+      }
+
+      if (!page.nextCursor) {
+        hasMore = false;
+        break;
+      }
+      cursor = page.nextCursor;
+    }
+
+    if (hasMore) truncatedPrefixes.push(prefix);
+  }
+
+  return { deletedKeyCount, truncatedPrefixes, failures };
 }
 
 export async function getAccountDeletionPreview(

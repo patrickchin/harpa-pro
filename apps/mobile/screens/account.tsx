@@ -2,9 +2,8 @@
  * Account screen body — props-only, no API / auth / secure-store coupling.
  *
  * Ported from `../haru3-reports/apps/mobile/app/account.tsx` on branch
- * `dev`. Renders the account details form with an avatar slot, email
- * (read-only — managed via OTP) + inline-editable display name +
- * company name.
+ * `dev`. Renders the account details form with email (read-only —
+ * managed via OTP) + inline-editable display name + company name.
  *
  * Editing model:
  *  - The form starts read-only with an "Edit" affordance.
@@ -16,7 +15,7 @@
  */
 import { useEffect, useState, type ReactNode } from 'react';
 import { RefreshControl, KeyboardAvoidingView, Platform, ScrollView, Text, View } from 'react-native';
-import { Trash2, User } from 'lucide-react-native';
+import { Trash2 } from 'lucide-react-native';
 
 import { SafeAreaView } from '@/components/primitives/SafeAreaView';
 import { Input } from '@/components/primitives/Input';
@@ -63,12 +62,6 @@ export interface AccountScreenProps {
   onRefresh: () => void;
   onBack: () => void;
   /**
-   * Avatar slot — rendered above the form. Optional so the dev mirror /
-   * tests can inject a placeholder; the real route passes
-   * `<AvatarUploader />`.
-   */
-  avatarSlot?: ReactNode;
-  /**
    * Persist edited values. The route is expected to call
    * `useUpdateMeMutation` optimistically and resolve / reject this
    * promise. When unset, the inline editor is hidden (read-only mode).
@@ -88,23 +81,11 @@ export interface AccountScreenProps {
   actions?: ReactNode;
 }
 
-function DefaultAvatarPlaceholder() {
-  return (
-    <View
-      testID="account-avatar-placeholder"
-      className="h-24 w-24 items-center justify-center rounded-full border border-border bg-card"
-    >
-      <User size={40} color={colors.muted.foreground} />
-    </View>
-  );
-}
-
 export function Account({
   profile,
   refreshing,
   onRefresh,
   onBack,
-  avatarSlot,
   onSaveProfile,
   isSaving = false,
   saveError = null,
@@ -125,7 +106,6 @@ export function Account({
   // Layout-shift probes — the same ids are attached in
   // `AccountDetailsSkeleton` so we can measure how far each landmark
   // moves between the skeleton frame and the loaded frame.
-  const onAvatarLayout = useLayoutShiftProbe('account:avatar');
   const onInfoNoticeLayout = useLayoutShiftProbe('account:info-notice');
   const onEmailFieldLayout = useLayoutShiftProbe('account:email-field');
   const onCompanyFieldLayout = useLayoutShiftProbe('account:company-field');
@@ -232,13 +212,6 @@ export function Account({
                 <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
               }
             >
-            <View
-              className="items-center pt-2"
-              onLayout={onAvatarLayout}
-            >
-              {avatarSlot ?? <DefaultAvatarPlaceholder />}
-            </View>
-
             <View onLayout={onInfoNoticeLayout}>
               <InlineNotice tone="info">
                 Email is managed through sign-in. Contact support if you need to recover access to a different address.

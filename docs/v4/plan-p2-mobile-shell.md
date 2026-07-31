@@ -11,20 +11,21 @@
 >
 > See [Pitfall 3](pitfalls.md#pitfall-3--mobile-shell-drifted-from-the-visual-design)
 > — P2 is the phase where v3 went off the rails. v4 avoids that by
-> porting JSX directly from `../haru3-reports/apps/mobile@dev` (both
-> sides are NativeWind v4) and reviewing visually by hand against
-> the canonical source.
+> using this plan and any linked `design-*.md` files as the screen
+> specifications. If neither applies, current implementation and
+> tests are the baseline. A design change needs a task-specific
+> design doc.
 
 ## Exit gate (`p2-exit-gate.yml`)
 
-- [x] Auth flow (login → verify → onboarding) ported from canonical
-      source and reviewed manually.
-- [x] Projects list ported and reviewed manually.
+- [x] Auth flow (login → verify → onboarding) implemented from this
+      plan and reviewed manually.
+- [x] Projects list implemented and reviewed manually.
 - [x] All primitives built with snapshot tests at ≥ 100% coverage:
       `Card`, `Input`, `Button`, `IconButton`, `ScreenHeader`,
       `EmptyState`, `Skeleton`, `AppDialogSheet`, `StatTile`.
-- [x] `tailwind.config.js` tokens locked, derived from the canonical
-      source's `tailwind.config.js`; no hex literals in
+- [x] `tailwind.config.js` tokens locked as specified by this plan.
+      No hex literals in
       `apps/mobile/components/**`.
 - [x] `lib/env.ts` Zod-parsed at boot; ESLint rule live.
 - [x] Generated React Query hooks for every endpoint
@@ -39,14 +40,16 @@
 
 ## Tasks
 
-### P2.0a Per-page prompt template + canonical source precedence
+### P2.0a Per-page prompt template + acceptance precedence
 - [x] `docs/v4/prompts/page-template.md` — reusable per-screen prompt
-      (canonical source path, primitives to use, dual-route + body
+      (current paths, primitives to use, dual-route + body
       component pattern, behaviour-only scope, deferred wiring).
-- [x] One-paragraph note in this file's header: canonical port source
-      is `../haru3-reports/apps/mobile@dev`. Screenshots, realignment
-      docs, and the source dump are explicitly **not** used.
-- [x] Commit: `docs(plan): P2.0a per-page prompt template + canonical source precedence`.
+- [x] One-paragraph note in the header: the relevant
+      `design-*.md` or `plan-*.md` file defines acceptance. Current
+      implementation and tests are the fallback baseline. Historical
+      screenshots, realignment docs, and source dumps are **not**
+      acceptance sources.
+- [x] Shipped in `e695292e`.
 
 ### P2.0b Dev gallery + screens/ pattern
 - [x] `apps/mobile/screens/` directory established (one body component
@@ -61,10 +64,10 @@
 - [x] Commit: `feat(mobile): P2.0b dev gallery scaffold + screens/ body-component pattern`.
 
 ### P2.1 Tailwind tokens + NativeWind setup
-- [x] Token table copied from `../haru3-reports/apps/mobile/tailwind.config.js`.
+- [x] Token table established in `apps/mobile/tailwind.config.js`.
 - [x] `tailwind.config.js` ships every token; `global.css` imports.
 - [x] Lint guard `check-no-hex-colors.sh` passes (skips: no `components/` yet).
-- [x] Commit: `feat(mobile): tailwind tokens locked from canonical port source`.
+- [x] Shipped in `645c0b70`.
 
 ### P2.2 Primitives
 - [x] One commit per primitive: file + snapshot test + dev-gallery row.
@@ -95,24 +98,20 @@
 
 ### P2.5 Auth screens (phone / OTP / onboarding — split per route)
 
-The canonical source (`../haru3-reports/apps/mobile/app/index.tsx` for
-sign-in and `app/signup.tsx` for sign-up) keeps phone-number entry
-**and** OTP entry inside a single screen with internal `step` state.
-v4 **splits each into its own route** so navigation stack, back button,
-deep-linking, and behaviour tests have a single responsibility per
+The initial auth interaction kept phone-number entry **and** OTP entry
+inside a single screen with internal `step` state. This plan
+**splits each into its own route** so the navigation stack, back
+button, deep-linking, and behaviour tests have one responsibility per
 screen. Phone entry pushes to its OTP screen with the phone number as
-a navigation param; OTP screen owns resend + verify only.
+a navigation param. The OTP screen owns resend and verification.
 
 Bodies (one commit each):
 - [x] `screens/sign-in-phone.tsx` — phone-number entry for existing
-      users (port from `app/index.tsx` step-1 JSX + Tailwind).
-- [x] `screens/sign-in-verify.tsx` — OTP entry + resend for sign-in
-      (port from `app/index.tsx` step-2 JSX + Tailwind).
-- [x] `screens/sign-up-phone.tsx` — phone-number entry for new users
-      (port from `app/signup.tsx` step-1).
-- [x] `screens/sign-up-verify.tsx` — OTP entry + resend for sign-up
-      (port from `app/signup.tsx` step-2).
-- [x] `screens/onboarding.tsx` — port from `app/onboarding.tsx`.
+      users.
+- [x] `screens/sign-in-verify.tsx` — OTP entry + resend for sign-in.
+- [x] `screens/sign-up-phone.tsx` — phone-number entry for new users.
+- [x] `screens/sign-up-verify.tsx` — OTP entry + resend for sign-up.
+- [x] `screens/onboarding.tsx` — onboarding details.
 
 Real routes mirror the bodies one-to-one:
 - [x] `app/(auth)/sign-in/phone.tsx`, `app/(auth)/sign-in/verify.tsx`
@@ -136,12 +135,10 @@ Behaviour rules:
       `useLocalSearchParams()` and renders it read-only.
 - [x] No `Alert.alert` — error envelopes render through
       `AppDialogSheet` or inline error rows.
-- [x] Behaviour tests for each interaction the canonical source
-      exercises (input validation, error rendering, loading, resend).
-- [x] Commit per body+route+mirror trio:
-      `feat(mobile): <screen> ported from canonical source` (one of
-      `sign-in-phone`, `sign-in-verify`, `sign-up-phone`,
-      `sign-up-verify`, `onboarding`).
+- [x] Behaviour tests for each interaction this plan requires (input
+      validation, error rendering, loading, resend).
+- [x] One commit per body, route, and mirror trio: `2896f8ee`,
+      `edb5c1be`, `c4778e4e`, `9788c777`, and `523a428a`.
 
 ### P2.6 App shell (`(app)/_layout.tsx`)
 - [x] Tab + stack navigation.
@@ -150,11 +147,11 @@ Behaviour rules:
 - [x] Commit: `feat(mobile): app shell with provider tree and auth gate`.
 
 ### P2.7 Projects list
-- [x] `screens/projects-list.tsx` ported from
-      `../haru3-reports/apps/mobile/app/(tabs)/projects.tsx`.
+- [x] `screens/projects-list.tsx` implemented from this plan and its
+      linked v4 requirements.
 - [x] Real route: `app/(app)/projects/index.tsx`.
 - [x] Dev mirror: `app/(dev)/projects.tsx` with mock data.
-- [x] Commit: `feat(mobile): projects list ported from canonical source`.
+- [x] Shipped in `f4f74ab4`.
 
 ### P2.8 P2 exit gate
 - [x] All boxes ticked. Tag `v0.2.0-shell`.

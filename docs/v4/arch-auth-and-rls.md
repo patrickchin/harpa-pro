@@ -5,17 +5,28 @@
 
 ## Overview
 
-Auth is handled by **[better-auth](https://www.better-auth.com)** running
-inside the Hono API. The library manages session issuance, email-OTP
-sign-in, and (in future specs) SIWA + Google Sign-In. It writes into
-four `public.*` tables (`user`, `session`, `account`, `verification`)
-using a Drizzle adapter.
+Mobile application auth is handled by
+**[better-auth](https://www.better-auth.com)** running inside the Hono API.
+The library manages session issuance, email-OTP sign-in, and (in future
+specs) SIWA + Google Sign-In. It writes into four `public.*` tables
+(`user`, `session`, `account`, `verification`) using a Drizzle adapter.
+
+The browser admin console deliberately does not use Better Auth. Its
+explicitly provisioned identities and revocable sessions live in the
+independent `harpa-pro-admin` Neon project, reached through
+`ADMIN_DATABASE_URL`. An app user or session never grants access to the
+business-activity console.
 
 Separately, every authenticated DB call goes through
 **`withScopedConnection`**, which sets a per-request Postgres role and
 `app.user_id` GUC so RLS policies on `app.*` tables see the correct
 user. These two concerns are independent: better-auth owns the session
 lifecycle; `withScopedConnection` owns query isolation.
+
+Admin authentication is a third, isolated concern. `withAdminSession`
+validates the dedicated browser cookie against the admin database before
+`GET /admin/activity` reads the application database. The two databases have
+no joins or cross-database foreign keys.
 
 ## Auth flow
 
@@ -55,8 +66,8 @@ Key decisions (full rationale in the design spec):
   `withScopedConnection` — because it needs to read sessions before it
   knows which user to scope to.
 - **`expo()` plugin** (`@better-auth/expo`) manages bearer-token
-  storage and `trustedOrigins` for the Expo client. No separate
-  `bearer` plugin needed.
+  storage and `trustedOrigins` for the Expo client. Admin browser origins are
+  intentionally absent. No separate `bearer` plugin is needed.
 - **`emailOTP` plugin** — Resend as transport, 6-digit code, 10-minute
   expiry, 5 allowed attempts. `disableSignUp: false` — the first
   verified email creates the user automatically.
@@ -75,6 +86,61 @@ Key decisions (full rationale in the design spec):
   `ses_…` / `vrf_…` / `idn_…` slugs for each better-auth table via
   `newId()`. IDs are stored as bare `text`; slug format is enforced at
   write time, not by a DB domain.
+
+## Admin console authentication
+
+The dedicated browser-admin design is specified in
+[design-separate-admin-auth.md](design-separate-admin-auth.md).
+
+### Identity and password boundary
+
+- The Neon project is `harpa-pro-admin`; `main` serves production and the
+  long-lived `dev` branch serves development.
+- `ADMIN_DATABASE_URL` points at database `harpa_admin`. In every
+  environment it must not identify the same Postgres endpoint as
+  `DATABASE_URL`.
+- `admin.identities` accepts only lowercase, explicitly provisioned
+  `@harpapro.com` addresses. There is no signup endpoint.
+- Passwords are 20–128 characters; operators should generate at least 32
+  random characters and store them in a password manager.
+- The database stores only versioned, salted scrypt hashes. Provisioning
+  reads the password from standard input:
+
+  ```sh
+  read -rs HARPA_ADMIN_PASSWORD
+  printf '%s' "$HARPA_ADMIN_PASSWORD" | \
+    pnpm --filter @harpa/api admin:set-password \
+    --email person@harpapro.com --password-stdin
+  unset HARPA_ADMIN_PASSWORD
+  ```
+
+The password is not a Doppler or Fly secret. The database connection string
+is. `ADMIN_DATABASE_URL` must already select the intended migrated branch.
+Deployments never auto-seed a real administrator; provisioning is an explicit
+operator mutation after the admin migration succeeds. The provisioning CLI
+checks both endpoint identity and the absence of the application
+`app._migrations` ledger before it hashes or writes the password.
+
+### Session boundary
+
+`POST /admin/auth/login` verifies the dedicated identity and stores a
+SHA-256 hash of a random 256-bit session token in `admin.sessions`.
+`GET /admin/auth/session` validates it, and
+`POST /admin/auth/logout` revokes it. Password reset revokes all sessions for
+that identity.
+
+The production browser receives a host-only,
+`HttpOnly; Secure; Path=/; SameSite=Strict` cookie named
+`__Host-harpa_admin_session`. Local HTTP uses an unprefixed non-secure cookie.
+The stable cross-site development origin uses
+`SameSite=None; Secure; Partitioned`. No password or raw session token enters
+browser storage, URLs, application logs, or the application database.
+
+`withAdminSession()` is the sole authorization middleware for
+`GET /admin/activity`. It does not inspect `public."user".is_admin` and
+rejects Better Auth bearer tokens and cookies. Existing programmatic admin
+routes retain their app-admin authorization until their app-user audit
+foreign keys receive a separate design and migration.
 
 ## Drizzle schema (CLI-generated)
 
@@ -97,13 +163,13 @@ the scope layer.
 
 Better-auth tables live in `public` (Postgres default schema):
 
-| Table | Owner | Notes |
-|---|---|---|
-| `public.user` | better-auth | `id text` (slug: `usr_…`) |
-| `public.session` | better-auth | `id text` (slug: `ses_…`) |
-| `public.account` | better-auth | `id text` (slug: `idn_…`), used by SIWA/Google |
-| `public.verification` | better-auth | `id text` (slug: `vrf_…`), OTP store |
-| `app.*` | application | RLS enforced, `app.usr_id` domain on FK cols |
+| Table                 | Owner       | Notes                                          |
+| --------------------- | ----------- | ---------------------------------------------- |
+| `public.user`         | better-auth | `id text` (slug: `usr_…`)                      |
+| `public.session`      | better-auth | `id text` (slug: `ses_…`)                      |
+| `public.account`      | better-auth | `id text` (slug: `idn_…`), used by SIWA/Google |
+| `public.verification` | better-auth | `id text` (slug: `vrf_…`), OTP store           |
+| `app.*`               | application | RLS enforced, `app.usr_id` domain on FK cols   |
 
 **No RLS on `public.session`, `public.account`, or `public.verification`.**
 The better-auth adapter queries these with the unscoped pool; RLS
@@ -120,7 +186,7 @@ at most one row instead of leaking the whole user table.
 Defence-in-depth controls for these tables:
 
 1. App code never imports `db/auth-schema.ts` directly — `no-restricted-
-   imports` ESLint rule enforced.
+imports` ESLint rule enforced.
 2. `/me` reads the user from `auth.api.getSession()` (returns the user
    alongside the session), not from a raw `db.select()` call.
 3. The `public.user` RLS policy described above is the last-line
@@ -219,12 +285,12 @@ banned in the routes layer.
 and UPDATE attached files. Migration `0011_files_project_scope.sql`
 defines four discriminated policies:
 
-| Policy | Action | Rule |
-|---|---|---|
-| `files_member_read` | SELECT | owner OR `app.is_member(project_id)` |
-| `files_owner_insert` | INSERT | `owner_id = current_setting('app.user_id')` |
-| `files_member_write` | UPDATE | owner OR `app.is_member(project_id)` |
-| `files_member_delete` | DELETE | owner OR `app.is_member(project_id)` |
+| Policy                | Action | Rule                                        |
+| --------------------- | ------ | ------------------------------------------- |
+| `files_member_read`   | SELECT | owner OR `app.is_member(project_id)`        |
+| `files_owner_insert`  | INSERT | `owner_id = current_setting('app.user_id')` |
+| `files_member_write`  | UPDATE | owner OR `app.is_member(project_id)`        |
+| `files_member_delete` | DELETE | owner OR `app.is_member(project_id)`        |
 
 Personal-scoped files (`project_id IS NULL`) collapse to owner-only
 because the membership branch short-circuits to false.
@@ -245,8 +311,12 @@ See [`arch-storage.md` §Security](arch-storage.md#security) and
 For each authed route the integration suite ships **two paired tests**:
 
 ```ts
-test('actor A reads their own project', async () => { /* expect 200 */ });
-test('actor A cannot read actor B project', async () => { /* expect 404 */ });
+test('actor A reads their own project', async () => {
+  /* expect 200 */
+});
+test('actor A cannot read actor B project', async () => {
+  /* expect 404 */
+});
 ```
 
 Plus a **negative-control** test per resource that runs the same query
@@ -289,10 +359,10 @@ Then use the returned `token` as `Authorization: Bearer …`.
 
 Env vars (Doppler `dev` and `prd`):
 
-| Var | Purpose |
-|---|---|
-| `TEST_ACCOUNT_EMAILS` | Comma-separated allowlist. Use `test@harpapro.com`, `test2@harpapro.com`, and `test3@harpapro.com` |
-| `TEST_ACCOUNT_PASSWORD` | Shared password, min 16 chars |
+| Var                     | Purpose                                                                                            |
+| ----------------------- | -------------------------------------------------------------------------------------------------- |
+| `TEST_ACCOUNT_EMAILS`   | Comma-separated allowlist. Use `test@harpapro.com`, `test2@harpapro.com`, and `test3@harpapro.com` |
+| `TEST_ACCOUNT_PASSWORD` | Shared password, min 16 chars                                                                      |
 
 Env-Zod enforces both-or-neither. `TEST_ACCOUNT_EMAILS` is set in
 both `dev` and `prd` so smoke-test logins keep working on live
@@ -311,10 +381,10 @@ button in the mobile app.
 
 The production API may set:
 
-| Var | Purpose |
-|---|---|
-| `DEMO_ACCOUNT_EMAILS` | Comma-separated exact demo emails. Supported values: `demo@harpapro.com`, `demo2@harpapro.com`, `demo3@harpapro.com` |
-| `DEMO_ACCOUNT_PASSWORD` | Server-only demo password, min 16 chars |
+| Var                     | Purpose                                                                                                              |
+| ----------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| `DEMO_ACCOUNT_EMAILS`   | Comma-separated exact demo emails. Supported values: `demo@harpapro.com`, `demo2@harpapro.com`, `demo3@harpapro.com` |
+| `DEMO_ACCOUNT_PASSWORD` | Server-only demo password, min 16 chars                                                                              |
 
 `DEMO_ACCOUNT_EMAILS` and `DEMO_ACCOUNT_PASSWORD` must be set together.
 The demo emails are not secrets; the strong password is the secret.
@@ -341,20 +411,23 @@ introduces that data contract.
 
 ## Env vars
 
-| Var | Where | Purpose |
-|---|---|---|
-| `BETTER_AUTH_SECRET` | API | Session signing key |
-| `BETTER_AUTH_URL` | API | Base URL for better-auth handler |
-| `RESEND_API_KEY` | API | Resend transport for OTP emails |
-| `EMAIL_OTP_LIVE` | API | `1` = real Resend send; `0` = logs only (dev/test) |
-| `TEST_ACCOUNT_EMAILS` | API | Password-bypass allowlist (set in dev + prd) |
-| `TEST_ACCOUNT_PASSWORD` | API | Shared smoke-test password (set in dev + prd) |
-| `DEMO_ACCOUNT_EMAILS` | API | Comma-separated exact demo account emails |
-| `DEMO_ACCOUNT_PASSWORD` | API | Server-only demo password |
-| `DATABASE_URL` | API | Neon connection (pooled) |
-| `EXPO_PUBLIC_API_URL` | Mobile | API base URL (validated by `lib/env.ts`) |
+| Var                              | Where     | Purpose                                                                              |
+| -------------------------------- | --------- | ------------------------------------------------------------------------------------ |
+| `BETTER_AUTH_SECRET`             | API       | Session signing key; production requires an explicit value of at least 32 characters |
+| `BETTER_AUTH_URL`                | API       | Base URL for better-auth handler                                                     |
+| `ADMIN_CORS_ORIGINS`             | API       | Exact browser origins trusted only for credentialed `/admin/*` requests              |
+| `ADMIN_DATABASE_URL`             | API       | Direct Neon connection to the independent `harpa_admin` database                     |
+| `ADMIN_MIGRATIONS_REQUIRED_HEAD` | API image | Admin migration filename expected by `/admin/readyz`                                 |
+| `RESEND_API_KEY`                 | API       | Resend transport for OTP emails                                                      |
+| `EMAIL_OTP_LIVE`                 | API       | `1` = real Resend send; `0` = redacted delivery diagnostics only (dev/test)          |
+| `TEST_ACCOUNT_EMAILS`            | API       | Password-bypass allowlist (set in dev + prd)                                         |
+| `TEST_ACCOUNT_PASSWORD`          | API       | Shared smoke-test password (set in dev + prd)                                        |
+| `DEMO_ACCOUNT_EMAILS`            | API       | Comma-separated exact demo account emails                                            |
+| `DEMO_ACCOUNT_PASSWORD`          | API       | Server-only demo password                                                            |
+| `DATABASE_URL`                   | API       | Application Neon connection (pooled)                                                 |
+| `EXPO_PUBLIC_API_URL`            | Mobile    | API base URL (validated by `lib/env.ts`)                                             |
 
-## Session lifecycle
+## App session lifecycle
 
 - **`expiresIn`: 7 days** — total session lifetime. After this point,
   `auth.api.getSession()` returns null and `withAuth` throws 401,
@@ -369,6 +442,18 @@ introduces that data contract.
   `expo-secure-store` (encrypted at rest on iOS/Android). The session
   survives app restarts; force-quitting does not log the user out.
 
+## Admin session lifecycle
+
+- **Absolute expiry: 12 hours.** The server will not extend it.
+- **Idle expiry: 2 hours.** Valid activity advances the idle deadline only
+  inside the fixed absolute window.
+- **Logout:** revokes the matching `admin.sessions` row before clearing the
+  browser cookie.
+- **Password reset:** revokes every session for the identity.
+- **Database restore:** an admin-database restore can change credential and
+  session state without rolling back application data. An application
+  database restore cannot restore or revoke admin sessions.
+
 ## Account deletion
 
 Mobile exposes account deletion from Account Details, satisfying App
@@ -382,9 +467,10 @@ whole-account deletion in-app. The API surface lives under `/me`:
 
 Both routes use `withAuth()` and the scoped `c.get('db')(fn)` accessor.
 The destructive route calls the SECURITY DEFINER helper
-`app.delete_current_user()`, which reads
-`current_setting('app.user_id')` and performs the deletion in the same
-transaction as the request scope.
+`app.delete_current_user()`. It reads `current_setting('app.user_id')`,
+locks the account/project/membership/file/lease rows, creates durable R2
+delete jobs, and performs the database deletion in the same transaction
+as the request scope.
 
 Deletion removes the better-auth `public."user"` row. That cascades
 `public."session"`, `public."account"`, `app.user_settings`,
@@ -394,11 +480,44 @@ file rows with existing FKs. The helper also deletes the user's
 session rows are gone, the bearer token used for the deletion call
 authenticates as 401 on the next request.
 
+Account deletion cannot delete or alter an administrator identity. Admin
+identities have no app-user foreign key and live in a different Neon project.
+Disabling an administrator or changing an admin password is a separate
+operator action.
+
+Business activity rows are retained, but a privileged database trigger
+nulls any matching `actor_user_id` and user `subject_id` before the user
+row is deleted. It also replaces a signup's user-derived dedupe key with
+`redacted:<activity_event_id>`. Event type, timestamp, and non-user
+subjects remain for aggregate history without retaining the deleted
+account ID.
+
 Project records follow the collaboration rules in
 [`arch-project-members.md`](arch-project-members.md#account-deletion).
 Solo projects are deleted. Shared projects keep their reports and notes
 for remaining members, while the deleted account is removed from
 membership and ownership is transferred if needed.
+
+The same transaction persists an immediate and, when live upload leases
+exist, delayed cleanup job in `app.storage_delete_jobs`. After commit
+the route drains one due job; an always-on Fly worker handles retry and
+the final pass after presign expiry. Shared-project prefixes are never
+swept. Storage failures remain durable, emit worker logs/Sentry, and do
+not change the route's `204` because the account deletion already
+committed.
+
+The fast path normally completes immediate cleanup. The worker sleeps until
+the next known due job, capped at a ten-minute idle poll, and prunes expired
+leases hourly. This permits idle gaps for Neon suspension at the cost of up to
+ten minutes of retry latency for a job inserted after sleep begins and up to
+one hour of expired-lease cleanup latency.
+
+The initial lease rollout fails account deletion closed with `503`
+until all URLs minted by old machines have expired. CI arms the
+monotonic grace only after a successful deploy. Preview deployments
+enforce leases but leave account deletion disabled because they do not
+run the worker. See
+[`arch-storage.md`](arch-storage.md#account-deletion-cleanup).
 
 ## Maestro password-login wiring
 
@@ -413,8 +532,6 @@ process, and never exposes it in Maestro YAML/env logs.
 `mo up` starts the broker on `127.0.0.1:8790`; `mo down` stops the
 tracked broker process. The API no longer exposes a `/api/dev/last-otp`
 route, and normal users still use six-digit email OTPs.
-
-
 
 The following are deliberately not covered by the current auth
 architecture and have follow-on specs:

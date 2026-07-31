@@ -19,13 +19,19 @@ primary_region = "fra"
   # against the Neon dev branch from CI as a pre-flight — release_command
   # is the belt to that braces. See docs/v4/arch-cicd-and-migrations.md
   # and docs/bugs/2026-06-06-test-accounts-never-seeded-on-dev.md.
-  release_command = "sh -c 'pnpm --filter @harpa/api db:migrate && pnpm --filter @harpa/api db:seed-test-account'"
+  release_command = "sh -c 'pnpm --filter @harpa/api db:migrate && pnpm --filter @harpa/api db:migrate:admin && pnpm --filter @harpa/api db:seed-test-account'"
 
 [env]
   NODE_ENV = "production"
   PORT = "8787"
+  ADMIN_CORS_ORIGINS = "https://dev.harpa-pro.pages.dev"
+
+[processes]
+  app = "pnpm --filter @harpa/api exec tsx src/server.ts"
+  storage-worker = "pnpm --filter @harpa/api storage:worker"
 
 [http_service]
+  processes = ["app"]
   internal_port = 8787
   force_https = true
   # Use `suspend` (not `stop`) so the dev API resumes in <500ms when
@@ -44,7 +50,8 @@ primary_region = "fra"
     soft_limit = 25
     hard_limit = 50
 
-# Readiness probe (DB + schema head). Matches prod.
+# Application DB readiness probe. Admin DB readiness is checked separately
+# after deployment at /admin/readyz.
 [[http_service.checks]]
   grace_period = "15s"
   interval = "30s"
@@ -53,5 +60,11 @@ primary_region = "fra"
   path = "/readyz"
 
 [[vm]]
+  processes = ["app"]
   size = "shared-cpu-1x"
   memory = "512mb"
+
+[[vm]]
+  processes = ["storage-worker"]
+  size = "shared-cpu-1x"
+  memory = "256mb"

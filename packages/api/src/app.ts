@@ -19,6 +19,9 @@ import { voiceRoutes } from './routes/voice.js';
 import { settingsRoutes } from './routes/settings.js';
 import { waitlistRoutes } from './routes/waitlist.js';
 import { adminRoutes } from './routes/admin.js';
+import { adminActivityRoutes } from './routes/admin-activity.js';
+import { adminAuthRoutes } from './routes/admin-auth.js';
+import { adminReadyz } from './routes/admin-readyz.js';
 import { resolverRoutes } from './routes/resolvers.js';
 import { wellKnownRoutes } from './routes/well-known.js';
 import { env } from './env.js';
@@ -39,6 +42,10 @@ export type AppEnv = {
     // Auth-scoped claims, populated by withAuth middleware on protected routes.
     userId?: string;
     sessionId?: string;
+    // Separate browser-admin claims, populated only by withAdminSession.
+    adminIdentityId?: string;
+    adminSessionId?: string;
+    adminEmail?: string;
     // Per-request scoped DB accessor; populated by withAuth.
     db?: ScopedDbAccessor;
   };
@@ -56,10 +63,8 @@ export function createApp(): OpenAPIHono<AppEnv> {
   // routes. Per-route + shared-AI buckets remain on the relevant routes.
   app.use('*', globalRateLimit());
 
-  // CORS — limited to /waitlist/* so cross-origin signups from the
-  // marketing site (https://harpapro.com → https://api.harpapro.com)
-  // work. Every other route stays same-origin only.
-  // Allowlist comes from env (WAITLIST_CORS_ORIGINS, comma-separated).
+  // Public, non-credentialed CORS for marketing waitlist submissions.
+  // Credentialed auth/admin CORS is configured separately below.
   const allowedOrigins = env.WAITLIST_CORS_ORIGINS.split(',')
     .map((o) => o.trim())
     .filter(Boolean);
@@ -84,6 +89,22 @@ export function createApp(): OpenAPIHono<AppEnv> {
       maxAge: 86400,
     }),
   );
+
+  const adminOrigins = env.ADMIN_CORS_ORIGINS.split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+  const credentialedOrigin = (origin: string) => (adminOrigins.includes(origin) ? origin : null);
+
+  app.use(
+    '/admin/*',
+    cors({
+      origin: credentialedOrigin,
+      allowMethods: ['GET', 'POST', 'OPTIONS'],
+      allowHeaders: ['Content-Type', 'X-Request-ID'],
+      credentials: true,
+      maxAge: 86400,
+    }),
+  );
   app.onError(errorMapper());
 
   // Register the Bearer security scheme. Better-auth's expo() plugin
@@ -94,6 +115,12 @@ export function createApp(): OpenAPIHono<AppEnv> {
     scheme: 'bearer',
     bearerFormat: 'better-auth session token',
   });
+  app.openAPIRegistry.registerComponent('securitySchemes', 'adminSession', {
+    type: 'apiKey',
+    in: 'cookie',
+    name: '__Host-harpa_admin_session',
+    description: 'Dedicated HttpOnly administrator session cookie.',
+  });
 
   // Better-auth handler — owns all `/api/auth/**` routes (sign-in,
   // sign-out, email-OTP, session lookup, etc.). Mounted at the raw
@@ -103,6 +130,7 @@ export function createApp(): OpenAPIHono<AppEnv> {
   // Public routes
   app.route('/', health);
   app.route('/', readyz);
+  app.route('/', adminReadyz);
   app.route('/', waitlistRoutes);
   app.route('/', wellKnownRoutes);
 
@@ -115,6 +143,8 @@ export function createApp(): OpenAPIHono<AppEnv> {
   app.route('/', fileRoutes);
   app.route('/', voiceRoutes);
   app.route('/', settingsRoutes);
+  app.route('/', adminAuthRoutes);
+  app.route('/', adminActivityRoutes);
   app.route('/', adminRoutes);
 
   // OpenAPI spec

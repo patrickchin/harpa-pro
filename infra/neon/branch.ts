@@ -2,24 +2,50 @@
  * Neon branching API wrapper.
  *
  * Usage:
- *   pnpm db:branch:create <pr-number>
+ *   pnpm db:branch:create <pr-number> [parent]
  *   pnpm db:branch:delete <pr-number>
- *   pnpm db:branch:ensure <branch-name>   # idempotent: returns URI of an
- *                                         # existing branch or creates one if
- *                                         # absent. Used by api-dev.yml for
- *                                         # the long-lived `dev` branch.
+ *   pnpm db:branch:ensure <branch-name> [parent]
+ *   pnpm db:branch:prune-snapshots <keep-days> [max-count]
  *
- * Reads NEON_API_KEY + NEON_PROJECT_ID from env. The CI workflow
+ * Reads NEON_API_KEY + NEON_PROJECT_ID from env. Connection URIs default to
+ * the app project's `neondb` / `neondb_owner`; set NEON_DATABASE_NAME and
+ * NEON_ROLE_NAME for projects with different names (for example the isolated
+ * admin project).
+ *
+ * `create` and `ensure` accept an optional parent branch name. The CI workflow
  * `pr-preview.yml` (P0.10) calls create/delete on PR open / close so
  * each PR gets its own isolated DB. `api-dev.yml` calls ensure so the
  * long-lived `dev` branch persists across deploys — per docs/v4/arch-ops.md.
  */
 const NEON_API = 'https://console.neon.tech/api/v2';
+const PR_BRANCH_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 interface BranchResponse {
   branch: { id: string; name: string };
-  endpoints: Array<{ host: string }>;
-  connection_uris?: Array<{ connection_uri: string }>;
+  endpoints: NeonEndpoint[];
+}
+
+interface BranchList {
+  branches: NeonBranch[];
+  pagination?: { next?: string };
+}
+
+interface NeonBranch {
+  id: string;
+  name: string;
+  created_at: string;
+}
+
+interface NeonEndpoint {
+  id: string;
+  host: string;
+  type: 'read_only' | 'read_write';
+}
+
+function requiredEnv(name: 'NEON_DATABASE_NAME' | 'NEON_ROLE_NAME', fallback: string): string {
+  const value = process.env[name] ?? fallback;
+  if (!value.trim()) throw new Error(`${name} must not be empty`);
+  return value;
 }
 
 async function neonFetch(path: string, init?: RequestInit): Promise<Response> {
@@ -40,16 +66,111 @@ async function neonFetch(path: string, init?: RequestInit): Promise<Response> {
   });
 }
 
-async function createBranch(prNumber: string): Promise<void> {
+async function listBranches(): Promise<BranchList['branches']> {
+  const branches: NeonBranch[] = [];
+  const seenCursors = new Set<string>();
+  let cursor: string | undefined;
+
+  do {
+    const params = new URLSearchParams({
+      limit: '100',
+      sort_by: 'created_at',
+      sort_order: 'asc',
+    });
+    if (cursor) params.set('cursor', cursor);
+    const res = await neonFetch(`/branches?${params.toString()}`);
+    if (!res.ok) {
+      throw new Error(`neon branch list failed (${res.status}): ${await res.text()}`);
+    }
+    const page = (await res.json()) as BranchList;
+    branches.push(...page.branches);
+    cursor = page.pagination?.next;
+    if (cursor && seenCursors.has(cursor)) {
+      throw new Error('neon branch pagination returned a repeated cursor');
+    }
+    if (cursor) seenCursors.add(cursor);
+  } while (cursor);
+
+  return branches;
+}
+
+function expiresInSevenDays(): string {
+  const expiresAt = new Date(Date.now() + PR_BRANCH_TTL_MS);
+  expiresAt.setMilliseconds(0);
+  return expiresAt.toISOString().replace('.000Z', 'Z');
+}
+
+function branchCreateFields(
+  name: string,
+  parentId?: string,
+): { name: string; parent_id?: string; expires_at?: string } {
+  return {
+    name,
+    ...(parentId ? { parent_id: parentId } : {}),
+    ...(name.startsWith('pr-') ? { expires_at: expiresInSevenDays() } : {}),
+  };
+}
+
+async function deleteBranchById(id: string, name: string): Promise<void> {
+  const res = await neonFetch(`/branches/${id}`, { method: 'DELETE' });
+  if (!res.ok) {
+    throw new Error(`neon branch delete failed for '${name}' (${res.status}): ${await res.text()}`);
+  }
+}
+
+async function parentIdFor(name?: string): Promise<string | undefined> {
+  if (!name) return undefined;
+  const parent = (await listBranches()).find((branch) => branch.name === name);
+  if (!parent) throw new Error(`neon parent branch '${name}' not found`);
+  return parent.id;
+}
+
+async function connectionUri(
+  branchId: string,
+  responseEndpoints: NeonEndpoint[] = [],
+): Promise<string> {
+  let endpoint = responseEndpoints.find((candidate) => candidate.type === 'read_write');
+  if (!endpoint) {
+    const epRes = await neonFetch(`/branches/${branchId}/endpoints`);
+    if (!epRes.ok) {
+      throw new Error(`neon endpoint list failed (${epRes.status}): ${await epRes.text()}`);
+    }
+    const epBody = (await epRes.json()) as {
+      endpoints: NeonEndpoint[];
+    };
+    endpoint = epBody.endpoints.find((candidate) => candidate.type === 'read_write');
+  }
+  if (!endpoint) throw new Error(`neon branch '${branchId}' has no read_write endpoint`);
+
+  const params = new URLSearchParams({
+    branch_id: branchId,
+    endpoint_id: endpoint.id,
+    database_name: requiredEnv('NEON_DATABASE_NAME', 'neondb'),
+    role_name: requiredEnv('NEON_ROLE_NAME', 'neondb_owner'),
+  });
+  // Intentionally omit `pooled=true`: migrators require session semantics.
+  // Preview deployments deliberately reuse this direct URI at runtime because
+  // their traffic is low; splitting migration/runtime URLs is deferred.
+  const uriRes = await neonFetch(`/connection_uri?${params.toString()}`);
+  if (!uriRes.ok) {
+    throw new Error(`neon connection_uri failed (${uriRes.status}): ${await uriRes.text()}`);
+  }
+  const uriBody = (await uriRes.json()) as { uri: string };
+  if (!uriBody.uri) throw new Error('neon response did not include a connection URI');
+  return uriBody.uri;
+}
+
+async function createBranch(prNumber: string, parent?: string): Promise<void> {
   const name = `pr-${prNumber}`;
   // Idempotent: if a branch with this name already exists (PR was
   // pushed to again), delete it first so the new branch is created
-  // from the latest `main` data.
+  // from the latest parent data.
   await deleteBranchIfExists(name);
+  const parentId = await parentIdFor(parent);
   const res = await neonFetch('/branches', {
     method: 'POST',
     body: JSON.stringify({
-      branch: { name },
+      branch: branchCreateFields(name, parentId),
       endpoints: [{ type: 'read_write' }],
     }),
   });
@@ -57,79 +178,44 @@ async function createBranch(prNumber: string): Promise<void> {
     throw new Error(`neon branch create failed (${res.status}): ${await res.text()}`);
   }
   const body = (await res.json()) as BranchResponse;
-  const uri = body.connection_uris?.[0]?.connection_uri;
-  if (!uri) throw new Error('neon response did not include a connection_uri');
+  const uri = await connectionUri(body.branch.id, body.endpoints);
   // Emit a single line for CI consumption (set as DATABASE_URL secret).
   console.log(uri);
 }
 
 async function deleteBranchIfExists(name: string): Promise<void> {
-  const listRes = await neonFetch('/branches');
-  if (!listRes.ok) {
-    throw new Error(`neon branch list failed (${listRes.status}): ${await listRes.text()}`);
-  }
-  const list = (await listRes.json()) as { branches: Array<{ id: string; name: string }> };
-  const target = list.branches.find((b) => b.name === name);
+  const target = (await listBranches()).find((branch) => branch.name === name);
   if (!target) return;
-  const delRes = await neonFetch(`/branches/${target.id}`, { method: 'DELETE' });
-  if (!delRes.ok) {
-    throw new Error(`neon branch delete failed (${delRes.status}): ${await delRes.text()}`);
-  }
+  await deleteBranchById(target.id, name);
   console.error(`[neon] deleted stale branch ${name} before recreate`);
 }
 
 async function deleteBranch(prNumber: string): Promise<void> {
   const name = `pr-${prNumber}`;
-  const listRes = await neonFetch('/branches');
-  if (!listRes.ok) {
-    throw new Error(`neon branch list failed (${listRes.status}): ${await listRes.text()}`);
-  }
-  const list = (await listRes.json()) as { branches: Array<{ id: string; name: string }> };
-  const target = list.branches.find((b) => b.name === name);
+  const target = (await listBranches()).find((branch) => branch.name === name);
   if (!target) {
     console.error(`[neon] branch '${name}' not found — skipping delete`);
     return;
   }
-  const delRes = await neonFetch(`/branches/${target.id}`, { method: 'DELETE' });
-  if (!delRes.ok) {
-    throw new Error(`neon branch delete failed (${delRes.status}): ${await delRes.text()}`);
-  }
+  await deleteBranchById(target.id, name);
   console.error(`[neon] deleted branch ${name}`);
 }
 
-async function ensureBranch(name: string): Promise<void> {
+async function ensureBranch(name: string, parent?: string): Promise<void> {
   // Idempotent: if the named branch already exists, fetch its connection
   // URI; otherwise create it. Used for long-lived branches like `dev`
   // that must NOT be recreated on every deploy (that would wipe seeded
   // data and break referential integrity with R2 objects).
-  const listRes = await neonFetch('/branches');
-  if (!listRes.ok) {
-    throw new Error(`neon branch list failed (${listRes.status}): ${await listRes.text()}`);
-  }
-  const list = (await listRes.json()) as { branches: Array<{ id: string; name: string }> };
-  const existing = list.branches.find((b) => b.name === name);
+  const existing = (await listBranches()).find((branch) => branch.name === name);
   if (existing) {
-    const epRes = await neonFetch(`/branches/${existing.id}/endpoints`);
-    if (!epRes.ok) {
-      throw new Error(`neon endpoint list failed (${epRes.status}): ${await epRes.text()}`);
-    }
-    const epBody = (await epRes.json()) as { endpoints: Array<{ id: string; host: string }> };
-    const ep = epBody.endpoints[0];
-    if (!ep) throw new Error(`neon branch '${name}' has no endpoints`);
-    const uriRes = await neonFetch(
-      `/connection_uri?branch_id=${existing.id}&endpoint_id=${ep.id}&database_name=neondb&role_name=neondb_owner`,
-    );
-    if (!uriRes.ok) {
-      throw new Error(`neon connection_uri failed (${uriRes.status}): ${await uriRes.text()}`);
-    }
-    const uriBody = (await uriRes.json()) as { uri: string };
-    console.log(uriBody.uri);
+    console.log(await connectionUri(existing.id));
     return;
   }
+  const parentId = await parentIdFor(parent);
   const res = await neonFetch('/branches', {
     method: 'POST',
     body: JSON.stringify({
-      branch: { name },
+      branch: branchCreateFields(name, parentId),
       endpoints: [{ type: 'read_write' }],
     }),
   });
@@ -137,9 +223,7 @@ async function ensureBranch(name: string): Promise<void> {
     throw new Error(`neon branch create failed (${res.status}): ${await res.text()}`);
   }
   const body = (await res.json()) as BranchResponse;
-  const uri = body.connection_uris?.[0]?.connection_uri;
-  if (!uri) throw new Error('neon response did not include a connection_uri');
-  console.log(uri);
+  console.log(await connectionUri(body.branch.id, body.endpoints));
 }
 
 /**
@@ -162,16 +246,12 @@ async function ensureBranch(name: string): Promise<void> {
  */
 async function snapshotBranch(sha: string, parent = 'main'): Promise<void> {
   const name = `snapshot-${sha.slice(0, 12)}`;
-  const listRes = await neonFetch('/branches');
-  if (!listRes.ok) {
-    throw new Error(`neon branch list failed (${listRes.status}): ${await listRes.text()}`);
-  }
-  const list = (await listRes.json()) as { branches: Array<{ id: string; name: string }> };
-  if (list.branches.find((b) => b.name === name)) {
+  const branches = await listBranches();
+  if (branches.find((branch) => branch.name === name)) {
     console.error(`[neon] snapshot '${name}' already exists — skipping`);
     return;
   }
-  const parentBranch = list.branches.find((b) => b.name === parent);
+  const parentBranch = branches.find((branch) => branch.name === parent);
   if (!parentBranch) throw new Error(`neon parent branch '${parent}' not found`);
   const res = await neonFetch('/branches', {
     method: 'POST',
@@ -187,50 +267,53 @@ async function snapshotBranch(sha: string, parent = 'main'): Promise<void> {
 }
 
 /**
- * Delete `snapshot-*` branches older than `keepDays` days. Snapshot
- * storage on Neon is cheap (copy-on-write) but not free; keeping a
- * rolling window is the right trade-off. Called by a cron in
- * api-prod.yml or out-of-band by ops.
+ * Delete `snapshot-*` branches older than `keepDays` days and cap the
+ * remaining newest snapshots at `maxCount`. The count bound protects branch
+ * capacity even when frequent deploys create several snapshots inside the
+ * age window.
  */
-async function pruneSnapshots(keepDays: string): Promise<void> {
+async function pruneSnapshots(keepDays: string, maxCount = '3'): Promise<void> {
   const days = Number(keepDays);
-  if (!Number.isFinite(days) || days < 1) {
+  const count = Number(maxCount);
+  if (!Number.isInteger(days) || days < 1) {
     throw new Error('keepDays must be a positive integer');
   }
-  const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
-  const listRes = await neonFetch('/branches');
-  if (!listRes.ok) {
-    throw new Error(`neon branch list failed (${listRes.status}): ${await listRes.text()}`);
+  if (!Number.isInteger(count) || count < 0) {
+    throw new Error('maxCount must be a non-negative integer');
   }
-  const list = (await listRes.json()) as {
-    branches: Array<{ id: string; name: string; created_at: string }>;
-  };
+  const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
+  const snapshots = (await listBranches())
+    .filter((branch) => branch.name.startsWith('snapshot-'))
+    .sort(
+      (left, right) => new Date(right.created_at).getTime() - new Date(left.created_at).getTime(),
+    );
+  const targets = snapshots.filter(
+    (branch, index) => index >= count || new Date(branch.created_at).getTime() <= cutoff,
+  );
   let deleted = 0;
-  for (const b of list.branches) {
-    if (!b.name.startsWith('snapshot-')) continue;
-    if (new Date(b.created_at).getTime() > cutoff) continue;
-    const delRes = await neonFetch(`/branches/${b.id}`, { method: 'DELETE' });
-    if (!delRes.ok) {
-      console.error(`[neon] failed to delete ${b.name}: ${delRes.status}`);
-      continue;
-    }
-    console.error(`[neon] pruned snapshot ${b.name}`);
+  for (const branch of targets) {
+    await deleteBranchById(branch.id, branch.name);
+    console.error(`[neon] pruned snapshot ${branch.name}`);
     deleted += 1;
   }
-  console.error(`[neon] pruned ${deleted} snapshot(s) older than ${days}d`);
+  console.error(
+    `[neon] pruned ${deleted} snapshot(s); retaining at most ${count} younger than ${days}d`,
+  );
 }
 
 async function main(): Promise<void> {
-  const [, , cmd, arg, parent] = process.argv;
+  const [, , cmd, arg, option] = process.argv;
   if (!cmd || !arg) {
-    console.error('usage: branch.ts <create|delete|ensure|snapshot|prune-snapshots> <arg> [parent]');
+    console.error(
+      'usage: branch.ts <create|delete|ensure|snapshot|prune-snapshots> <arg> [option]',
+    );
     process.exit(2);
   }
-  if (cmd === 'create') return createBranch(arg);
+  if (cmd === 'create') return createBranch(arg, option);
   if (cmd === 'delete') return deleteBranch(arg);
-  if (cmd === 'ensure') return ensureBranch(arg);
-  if (cmd === 'snapshot') return snapshotBranch(arg, parent);
-  if (cmd === 'prune-snapshots') return pruneSnapshots(arg);
+  if (cmd === 'ensure') return ensureBranch(arg, option);
+  if (cmd === 'snapshot') return snapshotBranch(arg, option);
+  if (cmd === 'prune-snapshots') return pruneSnapshots(arg, option);
   console.error(`unknown command: ${cmd}`);
   process.exit(2);
 }

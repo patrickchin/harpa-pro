@@ -28,6 +28,39 @@ selector yet.
 The root lint script runs `scripts/check-no-maestro-point-taps.sh`,
 which fails on any `.maestro/**/*.yaml` / `.yml` `point:` key.
 
+## CI launch smoke
+
+`.maestro/ci-launch-smoke.yaml` is the narrow PR-time device check.
+CI generates and installs the Android debug app, starts fixture-mode
+Metro, opens the dev-client bundle, and asserts the sign-in email
+control renders. The job is capped at 30 minutes, emulator boot at
+300 seconds, and the Maestro process at 180 seconds so a stuck
+emulator or driver cannot consume an unbounded runner. The APK build
+targets only the emulator's `x86_64` ABI and restores Gradle
+dependencies from a cache keyed by the lockfile and mobile prebuild
+inputs. Before launch, CI applies the runner action's documented
+world-readable/writable `/dev/kvm` udev rule so the hosted Ubuntu
+emulator uses hardware acceleration.
+
+The emulator action invokes `scripts/ci/run-maestro-launch-smoke.sh`
+with Bash explicitly because the action otherwise evaluates `script:`
+with `/usr/bin/sh`, which does not support `pipefail` on Ubuntu. The
+runner creates its Metro log and Maestro debug directory before
+installing the APK, then captures ADB state and recent logcat output
+on failure. If Expo registers Metro but leaves the emulator on Dev
+Launcher's Home screen, the flow conditionally selects the green
+`http://10.0.2.2:8081` server row. It then waits up to 90 seconds for
+either the first-run `Continue` action or the rendered `Email` label,
+failing closed if neither appears. After dismissing any developer
+menu, it still allows 30 seconds for the sign-in control, while the
+wrapper keeps its independent 180-second ceiling over the entire
+Maestro process. CI uploads the runner logs and Maestro's hidden UI
+hierarchy/screenshots as `maestro-launch-smoke-diagnostics`.
+
+This does not replace the regression journey. It proves the native
+build, Metro bundle, installation, launch, and first rendered route;
+the larger flows remain explicit local and release checks.
+
 ## `core-end-to-end.yaml` (legacy P3 smoke)
 
 The older P3-exit-gate single-file flow. It still exists as a manual
@@ -234,7 +267,7 @@ journey, but any path it replaces needs one focused non-fixture guard.
 | --- | --- | --- |
 | Voice recorder | `fixtureRecorder` replaces `expo-audio` in fixture/screenshot builds. | `.maestro/native-input-smoke.yaml` starts/cancels the real recorder; `expoAudioRecorder.test.ts` pins native options. |
 | Camera capture | Fixture camera flows make capture deterministic before upload assertions. | `.maestro/native-input-smoke.yaml` opens the real camera route, taps shutter, waits for a thumbnail, then discards. |
-| Photo library picker | Screenshot mode resolves seeded image URIs instead of opening the system picker. | `pick-and-enqueue-gallery-images.test.ts` verifies the non-screenshot path calls `expo-image-picker`; keep OS-picker Maestro coverage manual unless we add stable picker automation. |
+| Photo library picker (Android only) | Screenshot mode resolves seeded image URIs instead of opening the system picker. iOS intentionally exposes camera capture only. | `pick-and-enqueue-gallery-images.test.ts` verifies Android calls `expo-image-picker` and iOS returns before either native picker API; keep Android OS-picker Maestro coverage manual unless we add stable picker automation. |
 | R2 storage | API replay mode uses `FixtureStorage` instead of signed object storage. | `files.r2-live.integration.test.ts` runs `/files/presign` plus a real signed PUT against MinIO when `CI_R2_LIVE` is enabled. |
 | AI providers | Normal tests replay `packages/ai-fixtures` instead of calling providers. | `.github/workflows/ai-live.yml` runs `pnpm --filter @harpa/api test:live` with `AI_LIVE=1` on prompt/provider-sensitive changes. |
 | Auth broker | E2E auth uses the local password broker instead of email delivery. | `mo doctor` checks the broker, and API auth integration tests cover allowlisted password sign-in. |

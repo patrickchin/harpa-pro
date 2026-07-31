@@ -40,6 +40,20 @@ describe('site smoke', () => {
     expect(layout).toContain('noindex');
   });
 
+  it('keeps the private activity page out of search discovery', () => {
+    const adminPage = readFileSync(
+      resolve(here, '../pages/admin/activity.astro'),
+      'utf8',
+    );
+    expect(adminPage).toContain('noindex');
+
+    const sitemap = readFileSync(
+      resolve(here, '../pages/sitemap.xml.ts'),
+      'utf8',
+    );
+    expect(sitemap).not.toContain('/admin/activity');
+  });
+
   it('terminates the deployed redirect probe output for bash read', () => {
     const workflow = readFileSync(
       resolve(here, '../../../../.github/workflows/site-preview.yml'),

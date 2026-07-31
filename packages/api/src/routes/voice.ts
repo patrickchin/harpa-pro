@@ -27,6 +27,7 @@ import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi';
 import { HTTPException } from 'hono/http-exception';
 import { voice as voiceSchemas, notes as noteSchemas, errorEnvelope, reportId as reportIdSchema } from '@harpa/api-contract';
 import type { AppEnv } from '../app.js';
+import { requireProjectWriter } from '../lib/project-authorization.js';
 import { withAuth } from '../middleware/auth.js';
 import { withRateLimit } from '../middleware/rateLimit.js';
 import { withIdempotency } from '../middleware/idempotency.js';
@@ -36,6 +37,7 @@ import { transcribe as aiTranscribe, summarize as aiSummarize } from '../service
 import { enforceUsageLimit, attachUsageWarning } from '../services/usage-limits.js';
 import { getReport } from '../services/reports.js';
 import { createVoiceNote } from '../services/notes.js';
+import { recordActivityEvent } from '../services/activity-events.js';
 import { getAiSettings } from '../services/settings.js';
 import { voiceSummarySystemPrompt, parseVoiceSummaryResponse } from '../prompts/voiceSummary.js';
 
@@ -73,6 +75,8 @@ export const voiceRoutes = new OpenAPIHono<AppEnv>();
 // in one scoped transaction sharing one `usageContext` so both AI
 // calls are attributed to (projectId, reportId, userId) — fixing
 // the v3 spend-attribution blind spot.
+// Project membership makes the report/file visible; owner/editor role
+// is required before either AI call or note insertion.
 //
 // Idempotency: caller sends `Idempotency-Key: voice:<fileId>:<reportId>`
 // (mobile constructs this automatically). The middleware caches the
@@ -118,6 +122,7 @@ voiceRoutes.openapi(
     // (Pitfall 6).
     const report = await db((d) => getReport(d, reportId));
     if (!report) throw new HTTPException(404, { message: 'Report not found.' });
+    await requireProjectWriter(db, userId, report.projectId);
 
     // File ownership is enforced by `app.files` RLS; a non-owned file
     // returns null. Also require `kind='voice'` so the aggregator
@@ -178,8 +183,9 @@ voiceRoutes.openapi(
     // Step 3 — insert. `body` mirrors `summary` so legacy readers
     // (P3.10 `ReportNotesPane`, etc.) keep working until they migrate
     // to the new `summary` field.
-    const note = await db((d) =>
-      createVoiceNote(d, report.id, userId, {
+    const requestId = c.get('requestId');
+    const note = await db(async (d) => {
+      const created = await createVoiceNote(d, report.id, userId, {
         fileId: file.id,
         title,
         summary,
@@ -187,8 +193,20 @@ voiceRoutes.openapi(
         durationSec: body.durationSec ?? transcribed.durationSec ?? null,
         language: body.language ?? null,
         transcribeProvider,
-      }),
-    );
+      });
+      if (created) {
+        await recordActivityEvent(d, {
+          eventType: 'note.voice_created',
+          actorUserId: userId,
+          subjectId: created.id,
+          projectId: report.projectId,
+          requestId,
+          dedupeKey: `note.voice_created:${created.id}`,
+          metadata: {},
+        });
+      }
+      return created;
+    });
     if (!note) {
       // RLS would have already 404'd a non-member; a null here means
       // INSERT was rejected. Surface as 500 — there's no path the

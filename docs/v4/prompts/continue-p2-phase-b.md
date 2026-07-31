@@ -18,10 +18,11 @@ Phase A of P2 is complete on `dev`:
 
 Read [`AGENTS.md`](../../../AGENTS.md), [`docs/v4/pitfalls.md`](../pitfalls.md),
 and [`docs/v4/plan-p2-mobile-shell.md`](../plan-p2-mobile-shell.md) before
-writing any code. **Hard rule #1 (canonical port source)** governs every
-remaining task: JSX + Tailwind classes copy directly from
-`../haru3-reports/apps/mobile` on branch `dev`. Only the data layer
-changes (legacy Supabase → v4 API contract).
+writing any code. The P2 plan and any linked `design-*.md` file are
+the specification sources. If neither applies, current implementation
+and tests are the baseline. Add a task-specific design doc before
+making a design change. Only the data layer changes when replacing
+legacy Supabase access with v4 API contract hooks.
 
 ## Tasks (in order, one commit per task minimum)
 
@@ -53,26 +54,28 @@ changes (legacy Supabase → v4 API contract).
 - Commit: `feat(mobile): auth session with secure-store + auto sign-out on 401`.
 
 ### P2.5 — Auth screens (login / verify / onboarding)
-For each of the three screens, follow [`page-template.md`](page-template.md):
+For each screen, follow [`page-template.md`](page-template.md):
 
-1. Open the canonical source under `../haru3-reports/apps/mobile/app/`
-   for that screen. Read it end-to-end before porting.
+1. Read the matching task in the P2 plan, any linked design doc, and
+   the current `apps/mobile` patterns before implementing it.
 2. Create `apps/mobile/screens/<name>.tsx` — pure body component,
    props-driven, no API or auth deps inside.
 3. Real route at `app/(auth)/<name>.tsx` (thin wrapper that pulls
    data + passes props).
 4. Dev mirror at `app/(dev)/<name>.tsx` with mock props + a registry
    entry in `app/(dev)/registry.ts`.
-5. Behaviour tests for each interaction the canonical source exercises.
+5. Behaviour tests for each interaction that the specification
+   requires. If no task-specific spec exists, preserve current tests.
 6. **`verify` MUST use a single async flow — no `setTimeout`** (Pitfall 5).
 7. Visual review: run `pnpm --filter @harpa/mobile ios`, navigate to
-   `/(dev)/<name>`, side-by-side with the canonical screen running
-   from haru3-reports. Cosmetic drift = P0 bug.
-8. Commit per screen: `feat(mobile): <screen> ported from canonical source`.
+   `/(dev)/<name>`, and compare it with the relevant specification.
+   If no task-specific spec exists, compare the current implementation
+   and tests. Unrequested cosmetic drift is a P0 bug.
+8. Commit per screen: `feat(mobile): implement <screen>`.
 
 ### P2.6 — App shell `(app)/_layout.tsx`
-- Tab + stack navigation matching the canonical source's
-  `app/(tabs)/_layout.tsx` and root layout.
+- Tab + stack navigation matching the P2 plan and
+  `arch-p2-6-app-shell.md`.
 - Auth gate: redirect to `(auth)/login` if no session; otherwise render.
 - Provider tree (in this order, top to bottom): env, QueryClientProvider,
   queue provider stub, AppDialogSheet host, audio provider stub,
@@ -82,12 +85,12 @@ For each of the three screens, follow [`page-template.md`](page-template.md):
 - Commit: `feat(mobile): app shell with provider tree and auth gate`.
 
 ### P2.7 — Projects list
-- Port `../haru3-reports/apps/mobile/app/(tabs)/projects.tsx`.
+- Implement the projects-list requirements in the P2 plan.
 - `screens/projects-list.tsx` body, `app/(app)/projects/index.tsx`
   real route, `app/(dev)/projects.tsx` dev mirror with mock data.
 - Wire the real route to the generated `useListProjectsQuery` hook
   from P2.3.
-- Commit: `feat(mobile): projects list ported from canonical source`.
+- Commit: `feat(mobile): implement projects list`.
 
 ### P2.8 — P2 exit gate
 - Tick every box in [`plan-p2-mobile-shell.md`](../plan-p2-mobile-shell.md)
@@ -97,9 +100,11 @@ For each of the three screens, follow [`page-template.md`](page-template.md):
 
 ## Hard constraints (re-read before each task)
 
-1. **Canonical port source only.** No realignment docs, screenshots,
-   or source dump. JSX + Tailwind classes copy across; only the data
-   layer changes.
+1. **Use the v4 specification only.** Use the relevant
+   `design-*.md` or `plan-*.md` file. If neither exists, current
+   implementation and tests are the baseline. A design change needs
+   a task-specific design doc. Do not use historical realignment
+   docs, screenshots, or source dumps.
 2. **No Supabase imports** — `check-no-supabase.sh` must stay green.
 3. **NativeWind only** — no Unistyles, ever.
 4. **No `Alert.alert`** — use `AppDialogSheet`.

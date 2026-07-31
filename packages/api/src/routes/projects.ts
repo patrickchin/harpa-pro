@@ -21,6 +21,10 @@ import {
   userId,
 } from '@harpa/api-contract';
 import type { AppEnv } from '../app.js';
+import {
+  requireProjectOwner,
+  requireProjectWriter,
+} from '../lib/project-authorization.js';
 import { withAuth } from '../middleware/auth.js';
 import {
   addMemberByEmail,
@@ -35,6 +39,7 @@ import {
   updateMemberRole,
   updateProject,
 } from '../services/projects.js';
+import { recordActivityEvent } from '../services/activity-events.js';
 
 const projectParam = z.object({
   project: projectId.openapi({ param: { name: 'project', in: 'path' } }),
@@ -90,7 +95,20 @@ projectRoutes.openapi(
     const db = c.get('db');
     if (!userId || !db) throw new HTTPException(401);
     const body = c.req.valid('json');
-    const id = await db((d) => createProject(d, body));
+    const requestId = c.get('requestId');
+    const id = await db(async (d) => {
+      const projectId = await createProject(d, body);
+      await recordActivityEvent(d, {
+        eventType: 'project.created',
+        actorUserId: userId,
+        subjectId: projectId,
+        projectId,
+        requestId,
+        dedupeKey: `project.created:${projectId}`,
+        metadata: {},
+      });
+      return projectId;
+    });
     const project = await db((d) => getProject(d, userId, id));
     if (!project) throw new HTTPException(500, { message: 'created project not found' });
     return c.json(project, 201);
@@ -147,10 +165,7 @@ projectRoutes.openapi(
     if (!userId || !db) throw new HTTPException(401);
     const { project: slug } = c.req.valid('param');
     const body = c.req.valid('json');
-    // Resolve slug → row under the caller's scope first (so the UPDATE
-    // never touches a row the caller can't see).
-    const existing = await db((d) => getProjectBySlug(d, userId, slug, false));
-    if (!existing) throw new HTTPException(404, { message: 'Project not found.' });
+    const existing = await requireProjectWriter(db, userId, slug);
     const ok = await db((d) => updateProject(d, existing.id, body));
     if (!ok) throw new HTTPException(404, { message: 'Project not found.' });
     const project = await db((d) => getProject(d, userId, existing.id));
@@ -159,7 +174,7 @@ projectRoutes.openapi(
   },
 );
 
-// --------- delete (owner-only via RLS) ----------
+// --------- delete (owner-only) ----------
 projectRoutes.openapi(
   createRoute({
     method: 'delete',
@@ -179,8 +194,7 @@ projectRoutes.openapi(
     const db = c.get('db');
     if (!userId || !db) throw new HTTPException(401);
     const { project: slug } = c.req.valid('param');
-    const existing = await db((d) => getProjectBySlug(d, userId, slug, false));
-    if (!existing) throw new HTTPException(404, { message: 'Project not found or not owner.' });
+    const existing = await requireProjectOwner(db, userId, slug);
     const ok = await db((d) => deleteProject(d, existing.id));
     if (!ok) throw new HTTPException(404, { message: 'Project not found or not owner.' });
     return c.body(null, 204);

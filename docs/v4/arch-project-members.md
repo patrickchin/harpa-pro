@@ -38,11 +38,35 @@ Three roles, enumerated in `app.project_role` (`owner | editor | viewer`).
 
 | Role | Capabilities |
 |------|-------------|
-| `owner` | Full control: manage members (add/update/remove), update project metadata, delete project, finalize reports. At least one owner must exist at all times. |
-| `editor` | Create, edit, and delete own notes; create draft reports; trigger generate/regenerate. Cannot manage members, delete the project, or finalize reports. |
-| `viewer` | Read-only: list reports, view notes, download PDFs. Cannot write anything. |
+| `owner` | Full control: all editor capabilities, plus member management, project deletion, and report finalization. At least one owner must exist at all times. |
+| `editor` | Update project metadata; create, edit, and delete draft reports; create, edit, and delete own notes; upload project files; trigger generate/regenerate; unfinalize reports. Cannot manage members, delete the project, or finalize reports. |
+| `viewer` | Read-only project access: list reports, view notes, and export/download PDFs. The published-report review design separately allows any member to add an append-only review comment; otherwise viewers cannot write project content. |
 
-### Role hierarchy enforcement summary
+### Project-content enforcement summary
+
+Content routes return `404` for missing projects, non-members, and members
+whose role is insufficient. Keeping those cases indistinguishable prevents a
+mutation endpoint from becoming a project-existence oracle.
+
+| Operation | Allowed caller roles |
+|-----------|----------------------|
+| Update project metadata | `owner`, `editor` |
+| Delete project | `owner` |
+| Create/update/delete draft report | `owner`, `editor` |
+| Create/update/delete/append files to own note | `owner`, `editor` |
+| Presign/register project-scoped upload | `owner`, `editor` |
+| Generate/regenerate report | `owner`, `editor` |
+| Finalize report | `owner` |
+| Unfinalize report | `owner`, `editor` |
+| Export/download report PDF | any member |
+| Read/add published-report review comment | any member |
+
+The API centralizes these checks in
+`packages/api/src/lib/project-authorization.ts`. Database scope still hides
+non-member rows; the route guard narrows visible members to the roles allowed
+for each mutation.
+
+### Member-management enforcement summary
 
 | Operation | Minimum caller role |
 |-----------|-------------------|

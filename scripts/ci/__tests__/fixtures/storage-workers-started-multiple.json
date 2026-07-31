@@ -1,0 +1,40 @@
+[
+  {
+    "id": "app-current",
+    "state": "started",
+    "config": {
+      "image": "registry.fly.io/harpa-test:current",
+      "metadata": {
+        "fly_process_group": "app",
+        "fly_release_id": "rel-current",
+        "fly_release_version": "42"
+      }
+    }
+  },
+  {
+    "id": "worker-started-a",
+    "state": "started",
+    "config": {
+      "image": "registry.fly.io/harpa-test:current",
+      "metadata": {
+        "fly_process_group": "storage-worker",
+        "fly_release_id": "rel-current",
+        "fly_release_version": "42"
+      },
+      "services": []
+    }
+  },
+  {
+    "id": "worker-started-b",
+    "state": "started",
+    "config": {
+      "image": "registry.fly.io/harpa-test:current",
+      "metadata": {
+        "fly_process_group": "storage-worker",
+        "fly_release_id": "rel-current",
+        "fly_release_version": "42"
+      },
+      "services": []
+    }
+  }
+]

@@ -8,6 +8,23 @@ const KEYS = [
   'HARPAPRO_PR_BUILD',
   'EMAIL_OTP_LIVE',
   'MIGRATIONS_REQUIRED_HEAD',
+  'ADMIN_MIGRATIONS_REQUIRED_HEAD',
+  'DATABASE_URL',
+  'ADMIN_DATABASE_URL',
+  'BETTER_AUTH_SECRET',
+  'AI_FIXTURE_MODE',
+  'AI_LIVE',
+  'OPENAI_API_KEY',
+  'GROQ_API_KEY',
+  'R2_FIXTURE_MODE',
+  'R2_ACCOUNT_ID',
+  'R2_ACCESS_KEY_ID',
+  'R2_SECRET_ACCESS_KEY',
+  'TURNSTILE_LIVE',
+  'TURNSTILE_SECRET_KEY',
+  'RESEND_LIVE',
+  'RESEND_API_KEY',
+  'RATE_LIMIT_BACKEND',
 ] as const;
 
 let snapshot: Record<string, string | undefined>;
@@ -31,34 +48,71 @@ afterEach(() => {
   vi.resetModules();
 });
 
+function setLiveDeploymentEnv(): void {
+  Object.assign(process.env, {
+    NODE_ENV: 'production',
+    HARPAPRO_PR_BUILD: '0',
+    EMAIL_OTP_LIVE: '1',
+    MIGRATIONS_REQUIRED_HEAD: '0000_test.sql',
+    ADMIN_MIGRATIONS_REQUIRED_HEAD: '0001_admin_auth.sql',
+    DATABASE_URL: 'postgres://app:test@localhost:5432/harpa',
+    ADMIN_DATABASE_URL: 'postgres://admin:test@localhost:5433/harpa_admin',
+    BETTER_AUTH_SECRET: 'test-only-production-auth-secret-over-32-chars',
+    AI_FIXTURE_MODE: 'live',
+    AI_LIVE: '1',
+    OPENAI_API_KEY: 'test-openai-key',
+    GROQ_API_KEY: 'test-groq-key',
+    R2_FIXTURE_MODE: 'live',
+    R2_ACCOUNT_ID: 'test-r2-account',
+    R2_ACCESS_KEY_ID: 'test-r2-access-key',
+    R2_SECRET_ACCESS_KEY: 'test-r2-secret-key',
+    TURNSTILE_LIVE: '1',
+    TURNSTILE_SECRET_KEY: 'test-turnstile-secret',
+    RESEND_LIVE: '1',
+    RESEND_API_KEY: 'test-resend-key',
+    RATE_LIMIT_BACKEND: 'postgres',
+  });
+}
+
 describe('app boot: no module-load side effects', () => {
-  it('imports app.ts under dev-fly env (NODE_ENV=production, no PR_BUILD) without throwing', async () => {
-    process.env.NODE_ENV = 'production';
-    process.env.HARPAPRO_PR_BUILD = '0';
-    process.env.EMAIL_OTP_LIVE = '1';
-    process.env.MIGRATIONS_REQUIRED_HEAD = '0000_test.sql';
+  it(
+    'imports app.ts under dev-fly env (NODE_ENV=production, no PR_BUILD) without throwing',
+    async () => {
+      setLiveDeploymentEnv();
 
-    vi.resetModules();
-    const mod = await import('../app.js');
-    expect(typeof mod.createApp).toBe('function');
-  }, BOOT_IMPORT_TIMEOUT_MS);
+      vi.resetModules();
+      const mod = await import('../app.js');
+      expect(typeof mod.createApp).toBe('function');
+    },
+    BOOT_IMPORT_TIMEOUT_MS,
+  );
 
-  it('imports app.ts under PR-preview env without requiring live OTP email transport', async () => {
-    process.env.NODE_ENV = 'production';
-    process.env.HARPAPRO_PR_BUILD = '1';
-    process.env.EMAIL_OTP_LIVE = '0';
-    process.env.MIGRATIONS_REQUIRED_HEAD = '0000_test.sql';
+  it(
+    'imports app.ts under PR-preview env without requiring live OTP email transport',
+    async () => {
+      process.env.NODE_ENV = 'production';
+      process.env.HARPAPRO_PR_BUILD = '1';
+      process.env.EMAIL_OTP_LIVE = '0';
+      process.env.MIGRATIONS_REQUIRED_HEAD = '0000_test.sql';
+      process.env.ADMIN_MIGRATIONS_REQUIRED_HEAD = '0001_admin_auth.sql';
+      process.env.ADMIN_DATABASE_URL = 'postgres://admin:test@localhost:5433/harpa_admin';
+      process.env.BETTER_AUTH_SECRET = 'test-only-preview-auth-secret-over-32-chars';
 
-    vi.resetModules();
-    const mod = await import('../app.js');
-    expect(typeof mod.createApp).toBe('function');
-  }, BOOT_IMPORT_TIMEOUT_MS);
+      vi.resetModules();
+      const mod = await import('../app.js');
+      expect(typeof mod.createApp).toBe('function');
+    },
+    BOOT_IMPORT_TIMEOUT_MS,
+  );
 
   it('does not mount the retired dev OTP route', async () => {
     process.env.NODE_ENV = 'production';
     process.env.HARPAPRO_PR_BUILD = '1';
     process.env.EMAIL_OTP_LIVE = '0';
     process.env.MIGRATIONS_REQUIRED_HEAD = '0000_test.sql';
+    process.env.ADMIN_MIGRATIONS_REQUIRED_HEAD = '0001_admin_auth.sql';
+    process.env.ADMIN_DATABASE_URL = 'postgres://admin:test@localhost:5433/harpa_admin';
+    process.env.BETTER_AUTH_SECRET = 'test-only-preview-auth-secret-over-32-chars';
 
     vi.resetModules();
     const { createApp } = await import('../app.js');

@@ -35,21 +35,21 @@ packages/ai-fixtures/
     redact.ts          # PII redaction
     hash.ts            # canonical-json hash for fixture lookup
   fixtures/
-    transcribe.voice-{1..5}.json        # five real site-walk transcripts
+    transcribe.voice-{1..5}.json        # five redacted site-walk scenarios
     summarize.voice-{1..5}.json         # title + summary per transcript
     generate-report.voice-{1..5}.json   # full report body per transcript
     …
   package.json
 ```
 
-Five scenarios — `voice-1` … `voice-5` — each backed by a single
-real construction-site voice memo. `voice-1` is the rich default; `voice-4`
-is the sparse case (empty `workers`/`materials`, one summary section)
-exercised by the regenerate test. Per-vendor fixture variants were
-removed: a single set of OpenAI fixtures covers every scenario in
-replay mode. The per-user `AiVendor` preference is still tracked for
-live-mode routing and accounting; it no longer steers fixture
-selection.
+Five scenarios — `voice-1` … `voice-5` — each backed by a redacted,
+representative construction-site voice memo. `voice-1` is the rich
+default; `voice-4` is the sparse case (empty `workers`/`materials`,
+one summary section) exercised by the regenerate test. Per-vendor
+fixture variants were removed: a single set of OpenAI fixtures covers
+every scenario in replay mode. The per-user `AiVendor` preference is
+still tracked for live-mode routing and accounting; it no longer
+steers fixture selection.
 
 ## Modes
 
@@ -58,7 +58,7 @@ type FixtureMode = 'replay' | 'record' | 'live';
 
 const provider = createProvider({
   vendor: 'openai',
-  fixtureMode: process.env.AI_FIXTURE_MODE as FixtureMode,
+  fixtureMode: env.AI_FIXTURE_MODE as FixtureMode,
   fixtureName: 'transcribe.basic', // declared by caller
 });
 ```
@@ -70,6 +70,12 @@ const provider = createProvider({
 | `live` | Hit the real provider with no fixture interaction. **Only enabled when `AI_LIVE=1`.** Production deploys set this. |
 
 CI asserts `AI_FIXTURE_MODE=replay` and `AI_LIVE` unset.
+
+The API service owns this mode decision. `env.AI_LIVE === '1'`
+always selects `live`, even if an authenticated request contains a
+`fixtureName`. A fixture name selects a deterministic scenario only
+after the server has selected replay mode; request data cannot
+downgrade a live deployment to checked-in replay.
 
 ## Hashing
 
@@ -91,7 +97,17 @@ Before writing a fixture:
 - Replace phone numbers with `+10000000000`.
 - Replace email addresses with `redacted@example.com`.
 - Replace UUIDs in user content with `00000000-0000-0000-0000-000000000000`.
-- Truncate file URLs to host + last path segment.
+- Replace customer, company, project, and site names with
+  `<redacted-organization>`.
+- Replace street addresses and postcodes with `<redacted-address>`.
+
+`redactFixture()` discovers identifiers across the request, provider
+response, and optional private source context, then writes only the
+redacted request and response. This matters when a canonical replay
+request omits the real transcript but the provider repeats a customer
+name from that transcript. The private context is used only to find
+terms; it is never returned or stored. Both the generic record-mode
+provider and the dedicated report recorder use this boundary.
 
 A fixture file:
 
@@ -114,20 +130,15 @@ A fixture file:
 
 ```ts
 // packages/api/src/services/ai.ts
-import { createProvider } from '@harpa/ai-fixtures';
-
-export const transcribe = (audioUrl: string) =>
-  createProvider({
-    vendor: 'openai',
-    fixtureMode: env.AI_FIXTURE_MODE,
-    fixtureName: 'transcribe.voice-1',
-  }).transcribe({ audioUrl });
+function pickMode(): FixtureMode {
+  return env.AI_LIVE === '1' ? 'live' : 'replay';
+}
 ```
 
-Route handlers pick the fixture name based on a deterministic
-mapping (e.g. by report id in `:mock` builds, or by an explicit
-header `X-Fixture-Name` accepted only when
-`AI_FIXTURE_MODE !== 'live'`).
+Route handlers may forward a fixture name from the test harness.
+`services/ai.ts` honours it only after parsed server configuration
+has selected replay mode. In live mode the real request body flows to
+the provider and no fixture store read occurs.
 
 ## Recording a new fixture
 
@@ -135,7 +146,8 @@ header `X-Fixture-Name` accepted only when
 # 1. Set creds, set mode, run a single test that exercises the path.
 AI_FIXTURE_MODE=record OPENAI_API_KEY=… pnpm test:api -- transcribe.voice-1
 
-# 2. Inspect, commit.
+# 2. Inspect the redacted request and response, then commit.
+rg -n -i 'customer-name|site-address' packages/ai-fixtures/fixtures
 git add packages/ai-fixtures/fixtures/transcribe.voice-1.json
 git commit -m "test(ai-fixtures): record transcribe.voice-1"
 ```
@@ -155,6 +167,11 @@ in one pass, using the recorded `transcribe.voice-N.json`
 transcripts as the realistic notes payload and writing back the
 canonical placeholder user prompt (`<notes payload voice-N>`) so
 replay-mode lookup still hits the file.
+
+Before writing, the recorder passes the canonical request, provider
+response, and private transcript through `redactFixture()`. The
+transcript supplies cross-response identifiers for redaction but is
+not persisted in the report fixture.
 
 ```bash
 AI_LIVE=1 OPENAI_API_KEY=sk-… pnpm --filter @harpa/ai-fixtures record

@@ -105,16 +105,23 @@ jobs:
 
       - name: Verify missing admin preview route
         run: |
-          status="$(
-            curl --silent --show-error \
-              --connect-timeout 10 --max-time 30 \
-              --output /dev/null \
-              --write-out '%{http_code}' \
-              "${ADMIN_PREVIEW_ORIGIN}/__missing_admin_route__"
-          )"
-          if [[ "$status" == "404" ]]; then
-            exit 0
-          fi
+          deadline=$((SECONDS + 180))
+          status=000
+          while true; do
+            if status="$(
+              curl --silent --show-error \
+                --connect-timeout 10 --max-time 30 \
+                --output /dev/null \
+                --write-out '%{http_code}' \
+                "${ADMIN_PREVIEW_ORIGIN}/__missing_admin_route__"
+            )" && [[ "$status" == "404" ]]; then
+              exit 0
+            fi
+            if (( SECONDS >= deadline )); then
+              break
+            fi
+            sleep 5
+          done
           echo "::error::Unexpected missing-route status: $status" >&2
           exit 1
 

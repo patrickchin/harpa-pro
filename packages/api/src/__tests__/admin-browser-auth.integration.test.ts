@@ -85,14 +85,22 @@ describe('dedicated admin browser authentication', () => {
     expect(appAuthPreflight.headers.get('access-control-allow-origin')).toBeNull();
     expect(appAuthPreflight.headers.get('access-control-allow-credentials')).toBeNull();
 
-    const rejected = await app.request('/admin/auth/login', {
-      method: 'OPTIONS',
-      headers: {
-        origin: 'https://evil.example.com',
-        'access-control-request-method': 'POST',
-      },
-    });
-    expect(rejected.headers.get('access-control-allow-origin')).toBeNull();
+    for (const origin of [
+      'https://evil.example.com',
+      'https://harpapro.com',
+      'https://www.harpapro.com',
+      'https://dev.harpa-pro.pages.dev',
+    ]) {
+      const rejected = await app.request('/admin/auth/login', {
+        method: 'OPTIONS',
+        headers: {
+          origin,
+          'access-control-request-method': 'POST',
+        },
+      });
+      expect(rejected.headers.get('access-control-allow-origin')).toBeNull();
+      expect(rejected.headers.get('access-control-allow-credentials')).toBeNull();
+    }
   });
 
   it('rejects oversized login bodies before rate limiting or authentication', async () => {
@@ -258,14 +266,17 @@ describe('dedicated admin browser authentication', () => {
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ email: ADMIN_EMAIL, password: ADMIN_PASSWORD }),
     });
-    const untrusted = await login(
-      ADMIN_EMAIL,
-      ADMIN_PASSWORD,
-      'https://admin.harpapro.com.evil.example',
+    const untrusted = await Promise.all(
+      [
+        'https://admin.harpapro.com.evil.example',
+        'https://harpapro.com',
+        'https://www.harpapro.com',
+        'https://dev.harpa-pro.pages.dev',
+      ].map((origin) => login(ADMIN_EMAIL, ADMIN_PASSWORD, origin)),
     );
 
     expect(missing.status).toBe(403);
-    expect(untrusted.status).toBe(403);
+    expect(untrusted.map((response) => response.status)).toEqual([403, 403, 403, 403]);
   });
 
   it('revokes the server session on logout and clears the cookie', async () => {

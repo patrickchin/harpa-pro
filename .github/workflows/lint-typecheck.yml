@@ -53,6 +53,7 @@ jobs:
           bash scripts/ci/__tests__/verify-storage-worker-started.test.sh
           bash scripts/ci/__tests__/verify-deployed-sha.test.sh
           bash scripts/ci/__tests__/release-confidence-gates.test.sh
+          bash scripts/ci/__tests__/node-version-policy.test.sh
       - name: Shellcheck CI helpers
         # Lint shared shell scripts that ship in CI workflows. Catches
         # syntactic regressions (unquoted vars, broken loops, useless

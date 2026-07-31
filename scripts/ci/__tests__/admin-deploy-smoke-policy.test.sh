@@ -123,6 +123,12 @@ for environment in dev prod; do
     'verify_legacy_redirect' \
     "$environment has no legacy redirect verifier"
   require_fixed "$workflow" \
+    '"${ADMIN_ORIGIN}/__missing_admin_route__"' \
+    "$environment probes a generic missing route"
+  require_fixed "$workflow" \
+    'retry "Stable admin host did not return 404 for an unknown route" verify_missing_route' \
+    "$environment requires the generic missing route to remain absent"
+  require_fixed "$workflow" \
     'retry "Stable admin root did not serve the deployed console" verify_root' \
     "$environment retries the root verifier"
 done
@@ -133,6 +139,12 @@ require_fixed ".github/workflows/admin-preview.yml" \
 require_fixed ".github/workflows/admin-preview.yml" \
   '--retry-max-time 180' \
   "preview keeps propagation retries bounded"
+require_fixed ".github/workflows/admin-preview.yml" \
+  '"${ADMIN_PREVIEW_ORIGIN}/__missing_admin_route__"' \
+  "preview probes a generic missing route"
+require_fixed ".github/workflows/admin-preview.yml" \
+  '[[ "$status" == "404" ]]' \
+  "preview requires the generic missing route to return 404"
 
 echo
 echo "failed: $FAIL"

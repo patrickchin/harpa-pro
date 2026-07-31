@@ -35,4 +35,11 @@ describe('admin site smoke', () => {
     expect(existsSync(resolve(here, '../../public/_redirects'))).toBe(false);
     expect(existsSync(resolve(here, '../pages/admin/activity.astro'))).toBe(false);
   });
+
+  it('publishes a real 404 document instead of falling back to the console', () => {
+    const notFound = readFileSync(resolve(here, '../pages/404.astro'), 'utf8');
+
+    expect(notFound).toContain('Page not found');
+    expect(notFound).not.toContain('AdminActivity');
+  });
 });

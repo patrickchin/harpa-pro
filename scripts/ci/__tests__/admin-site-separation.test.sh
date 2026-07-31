@@ -24,6 +24,8 @@ fail() {
   || fail "apps/admin must not publish a legacy activity redirect"
 [[ ! -e apps/admin/src/pages/admin/activity.astro ]] \
   || fail "apps/admin must not publish a legacy activity page"
+[[ -f apps/admin/src/pages/404.astro ]] \
+  || fail "apps/admin must publish a real 404 document instead of using SPA fallback"
 
 grep -Eq "site:[[:space:]]*['\"]https://admin\.harpapro\.com['\"]" \
   apps/admin/astro.config.mjs \

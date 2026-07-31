@@ -57,6 +57,8 @@ const buttonClass =
   'inline-flex h-10 items-center justify-center rounded-md border border-hairline bg-card px-4 text-sm font-medium text-ink shadow-sm transition hover:bg-secondary ring-focus disabled:cursor-not-allowed disabled:opacity-60';
 const primaryButtonClass =
   'inline-flex h-10 items-center justify-center rounded-md bg-accent px-4 text-sm font-semibold text-accent-foreground shadow-sm transition hover:brightness-95 ring-focus disabled:cursor-not-allowed disabled:opacity-60';
+const activityColumnsClass =
+  'grid w-full min-w-[920px] grid-cols-[3rem_8.5rem_10.5rem_12rem_12rem_minmax(12rem,1fr)] items-center gap-3 px-3';
 
 const EVENT_LABELS = {
   'user.signed_up': 'Signed up',
@@ -905,6 +907,18 @@ function ActivityFeed({
       {state === 'ready' && items.length > 0 && (
         <>
           <div className="overflow-x-auto rounded-xl border border-hairline bg-card shadow-sm">
+            <div
+              aria-hidden="true"
+              className={`${activityColumnsClass} h-7 border-b border-l-4 border-hairline border-l-transparent bg-secondary/40 text-[10px] font-bold uppercase tracking-wide text-ink-soft`}
+              data-testid="activity-column-headers"
+            >
+              <span>New</span>
+              <span>Time</span>
+              <span>Event</span>
+              <span>Actor</span>
+              <span>Subject</span>
+              <span>Project</span>
+            </div>
             <ul aria-label="Activity events">
               {items.map((event) => {
                 const isNew = newEventIds.has(event.id);
@@ -917,7 +931,7 @@ function ActivityFeed({
                   >
                     <button
                       aria-label={activityRowLabel(event, isNew)}
-                      className="grid min-h-9 w-full min-w-[920px] grid-cols-[3rem_8.5rem_10.5rem_12rem_12rem_minmax(12rem,1fr)] items-center gap-3 whitespace-nowrap px-3 py-1.5 text-left text-xs transition hover:bg-secondary/70 ring-focus"
+                      className={`${activityColumnsClass} min-h-9 whitespace-nowrap py-1.5 text-left text-xs transition hover:bg-secondary/70 ring-focus`}
                       data-testid={`activity-row-${event.id}`}
                       type="button"
                       onClick={(clickEvent) => {

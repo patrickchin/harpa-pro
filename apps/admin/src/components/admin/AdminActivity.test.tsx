@@ -448,6 +448,13 @@ describe('AdminActivity', () => {
       'Subject',
       'Project',
     ]);
+    expect(columnHeaders.getAttribute('aria-hidden')).toBe('true');
+    expect(columnHeaders.className).toContain(
+      'grid-cols-[3rem_8.5rem_10.5rem_12rem_12rem_minmax(12rem,1fr)]',
+    );
+    expect(entry.className).toContain(
+      'grid-cols-[3rem_8.5rem_10.5rem_12rem_12rem_minmax(12rem,1fr)]',
+    );
     expect(screen.queryByRole('columnheader')).toBeNull();
     expect(screen.queryByLabelText('Event type')).toBeNull();
 
@@ -677,7 +684,8 @@ describe('AdminActivity', () => {
     render(<AdminActivity />);
 
     await screen.findByTestId(`activity-row-${reportEvent.id}`);
-    expect(screen.queryByText('New')).toBeNull();
+    const feed = screen.getByRole('list', { name: 'Activity events' });
+    expect(within(feed).queryByText('New')).toBeNull();
 
     await user.click(screen.getByRole('button', { name: 'Refresh' }));
 
@@ -697,7 +705,7 @@ describe('AdminActivity', () => {
     await waitFor(() =>
       expect(screen.getByRole('status').textContent).toBe('No new events since last refresh.'),
     );
-    expect(screen.queryByText('New')).toBeNull();
+    expect(within(feed).queryByText('New')).toBeNull();
   });
 
   it('reenables refresh when an automatic filter request supersedes it', async () => {

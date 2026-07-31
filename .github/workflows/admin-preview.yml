@@ -100,7 +100,7 @@ jobs:
       - name: Verify stable admin preview URL
         run: >-
           curl --fail --silent --show-error
-          --retry 6 --retry-all-errors --retry-delay 5
+          --retry 24 --retry-all-errors --retry-delay 5 --retry-max-time 180
           "${ADMIN_PREVIEW_ORIGIN}/" > /dev/null
 
       - name: Comment admin preview URL on PR

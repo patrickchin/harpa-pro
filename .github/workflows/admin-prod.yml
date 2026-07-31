@@ -70,14 +70,15 @@ jobs:
           retry() {
             local description="$1"
             shift
-            local attempt
-            for attempt in {1..6}; do
+            local deadline=$((SECONDS + 180))
+            while true; do
               if "$@"; then
                 return 0
               fi
-              if (( attempt < 6 )); then
-                sleep 5
+              if (( SECONDS >= deadline )); then
+                break
               fi
+              sleep 5
             done
             echo "::error::$description" >&2
             return 1

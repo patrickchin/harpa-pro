@@ -93,8 +93,8 @@ for environment in dev prod; do
     "- name: Verify stable admin Pages host" \
     "$environment verifies only after deployment"
   require_fixed_count "$workflow" \
-    'for attempt in {1..6}; do' 1 \
-    "$environment retries transient Pages propagation failures"
+    'local deadline=$((SECONDS + 180))' 1 \
+    "$environment bounds Pages propagation retries to three minutes"
   require_fixed "$workflow" \
     'curl --fail --silent --show-error' \
     "$environment fails closed when the root is unavailable"
@@ -123,6 +123,13 @@ for environment in dev prod; do
     'retry "Legacy admin activity URL did not redirect to the root" verify_legacy_redirect' \
     "$environment retries the redirect verifier"
 done
+
+require_fixed ".github/workflows/admin-preview.yml" \
+  '--retry 24' \
+  "preview tolerates first-deployment Pages propagation"
+require_fixed ".github/workflows/admin-preview.yml" \
+  '--retry-max-time 180' \
+  "preview keeps propagation retries bounded"
 
 echo
 echo "failed: $FAIL"

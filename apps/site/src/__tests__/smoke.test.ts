@@ -40,18 +40,10 @@ describe('site smoke', () => {
     expect(layout).toContain('noindex');
   });
 
-  it('keeps the private activity page out of search discovery', () => {
-    const adminPage = readFileSync(
-      resolve(here, '../pages/admin/activity.astro'),
-      'utf8',
-    );
-    expect(adminPage).toContain('noindex');
-
-    const sitemap = readFileSync(
-      resolve(here, '../pages/sitemap.xml.ts'),
-      'utf8',
-    );
-    expect(sitemap).not.toContain('/admin/activity');
+  it('does not ship the separate admin application', () => {
+    expect(existsSync(resolve(here, '../pages/admin/activity.astro'))).toBe(false);
+    expect(existsSync(resolve(here, '../components/admin/AdminActivity.tsx'))).toBe(false);
+    expect(existsSync(resolve(here, '../lib/admin-auth.ts'))).toBe(false);
   });
 
   it('terminates the deployed redirect probe output for bash read', () => {

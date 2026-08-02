@@ -10,14 +10,6 @@ on:
     branches: [dev, main]
     paths:
       - 'apps/site/**'
-      - 'packages/api/admin-migrations/**'
-      - 'packages/api/scripts/start-admin-activity-e2e.ts'
-      - 'packages/api/src/app.ts'
-      - 'packages/api/src/db/admin-*.ts'
-      - 'packages/api/src/lib/admin-*.ts'
-      - 'packages/api/src/middleware/admin-*.ts'
-      - 'packages/api/src/routes/admin-*.ts'
-      - 'packages/api/src/services/admin-*.ts'
       - '.github/workflows/site-preview.yml'
       - 'lighthouserc.json'
       - 'package.json'
@@ -58,14 +50,14 @@ jobs:
           PUBLIC_API_BASE_URL: https://api.harpapro.com
         run: pnpm --filter @harpa/site build
 
+      - name: Verify public build excludes admin routes
+        run: test ! -e apps/site/dist/admin
+
       - name: Install Playwright Chromium
         run: pnpm --filter @harpa/site exec playwright install --with-deps chromium
 
       - name: Browser-test documentation
         run: pnpm --filter @harpa/site test:e2e
-
-      - name: Browser-test dedicated admin authentication
-        run: pnpm --filter @harpa/site test:e2e:admin
 
       - name: Upload Playwright report
         if: failure()

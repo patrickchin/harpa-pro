@@ -1,7 +1,7 @@
 import type { Context } from 'hono';
 import { deleteCookie, getCookie, setCookie } from 'hono/cookie';
 import type { AppEnv } from '../app.js';
-import { env } from '../env.js';
+import { env, isCrossSiteAdminOrigin } from '../env.js';
 
 export const ADMIN_SESSION_COOKIE_NAME = 'harpa_admin_session';
 export const ADMIN_SESSION_COOKIE_MAX_AGE_SECONDS = 12 * 60 * 60;
@@ -13,7 +13,8 @@ function isDeployed(): boolean {
 }
 
 function needsPartitionedCookie(c: Context<AppEnv>): boolean {
-  return c.req.header('origin') === 'https://dev.harpa-pro.pages.dev';
+  const origin = c.req.header('origin');
+  return origin !== undefined && isCrossSiteAdminOrigin(origin);
 }
 
 function cookieOptions(c: Context<AppEnv>): CookieOptions {

@@ -10,7 +10,11 @@ in the repository's Git history and tags.
 
 ## [Unreleased]
 
-No user-facing changes have been recorded yet.
+### Changed
+
+- Separated the private administration console from the public website so it
+  can be deployed and verified independently before the
+  `admin.harpapro.com` cutover.
 
 ## [0.1.65] - 2026-07-31
 

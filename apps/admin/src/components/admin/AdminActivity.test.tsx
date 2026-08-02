@@ -19,7 +19,6 @@ vi.mock('../../lib/admin-auth', () => ({
 vi.mock('../../lib/env', () => ({
   getPublicEnv: () => ({
     apiBaseUrl: 'https://api.example.test',
-    turnstileSiteKey: 'test-site-key',
   }),
 }));
 

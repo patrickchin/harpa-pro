@@ -93,7 +93,7 @@ describe('auth coverage', () => {
         'x-forwarded-for': nextIp(),
       };
       if (method === 'POST' && r.path === '/admin/auth/logout') {
-        headers.origin = 'http://localhost:3002';
+        headers.origin = 'http://localhost:3102';
       }
 
       const res = await app.request(concreteUrl(r.path), {

@@ -143,15 +143,17 @@ The production cookie is host-only and named
 
 Local HTTP tests use an unprefixed, non-secure `harpa_admin_session` cookie.
 
-The stable development site currently runs on `pages.dev` while the API runs
-on `fly.dev`. That is cross-site. For this one explicitly configured
+The stable development admin site runs on `pages.dev` while the API runs on
+`fly.dev`. That is cross-site. For explicitly configured
 development origin, the API uses `SameSite=None; Secure; Partitioned` with a
 `__Host-` cookie. Partitioning follows
 [MDN's CHIPS guidance](https://developer.mozilla.org/en-US/docs/Web/Privacy/Guides/Third-party_cookies/Partitioned_cookies)
 and prevents the cookie being reused under another top-level site.
 
 Production never permits a `pages.dev` admin origin. Development permits only
-the exact stable URL `https://dev.harpa-pro.pages.dev`, never a wildcard.
+the exact stable URL `https://dev.harpa-pro-admin.pages.dev`, never a wildcard.
+PR preview APIs trust only their matching
+`https://pr-<n>.harpa-pro-admin.pages.dev` origin.
 
 ## Routes
 
@@ -308,7 +310,7 @@ unchanged.
 
 ### Site and browser
 
-- Component tests cover session loading, password login, generic failure,
+- Component tests in `apps/admin` cover session loading, password login, generic failure,
   password clearing, feed states, and logout.
 - Playwright signs in through the visible form, observes an HttpOnly cookie,
   loads a persisted event, confirms browser storage is empty, and signs out.

@@ -1,0 +1,143 @@
+name: admin-preview
+
+# Build, browser-test, and deploy the standalone admin console for a pull
+# request. The PR number is the single identifier shared by the Pages branch,
+# Fly app, and both Neon branches, so browser auth can use an exact origin.
+
+on:
+  pull_request:
+    branches: [dev, main]
+    paths:
+      - 'apps/admin/**'
+      - 'packages/api-contract/**'
+      # The browser flow crosses the whole API process (routing, global
+      # middleware, app data, and dedicated admin auth), so do not try to
+      # maintain a brittle list of admin-looking filenames here.
+      - 'packages/api/**'
+      - '.github/actions/changed-paths/**'
+      - '.github/actions/setup-monorepo/**'
+      - '.github/workflows/admin-preview.yml'
+      - '.github/workflows/pr-preview.yml'
+      - 'infra/fly/fly.preview.toml'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - 'tsconfig.base.json'
+
+concurrency:
+  group: admin-preview-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  preview:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      deployments: write
+    env:
+      ADMIN_BRANCH: pr-${{ github.event.pull_request.number }}
+      ADMIN_PREVIEW_ORIGIN: https://pr-${{ github.event.pull_request.number }}.harpa-pro-admin.pages.dev
+      API_PREVIEW_ORIGIN: https://harpa-pro-api-pr-${{ github.event.pull_request.number }}.fly.dev
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./.github/actions/setup-monorepo
+
+      - name: Test admin site
+        run: pnpm --filter @harpa/admin test
+
+      - name: Lint admin site
+        run: pnpm --filter @harpa/admin lint
+
+      - name: Typecheck admin site
+        run: pnpm --filter @harpa/admin typecheck
+
+      - name: Install Playwright Chromium
+        run: pnpm --filter @harpa/admin exec playwright install --with-deps chromium
+
+      - name: Browser-test dedicated admin authentication
+        run: pnpm --filter @harpa/admin test:e2e
+
+      - name: Upload Playwright artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: admin-playwright-artifacts
+          path: |
+            apps/admin/playwright-report/
+            apps/admin/test-results/
+          retention-days: 14
+
+      # Playwright builds with its local Testcontainers API. Rebuild after it
+      # finishes so the uploaded static artifact contains the matching Fly URL.
+      - name: Build admin site for the matching API preview
+        env:
+          PUBLIC_API_BASE_URL: ${{ env.API_PREVIEW_ORIGIN }}
+        run: pnpm --filter @harpa/admin build
+
+      - name: Verify matching API URL is inlined
+        run: |
+          grep -R -Fq --include='*.js' "$API_PREVIEW_ORIGIN" apps/admin/dist
+          if grep -R -Fq --include='*.js' 'http://localhost:8787' apps/admin/dist; then
+            echo "::error::admin preview artifact still points at the local E2E API" >&2
+            exit 1
+          fi
+
+      - name: Deploy admin preview to Cloudflare Pages
+        id: deploy
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: >-
+            pages deploy apps/admin/dist
+            --project-name=harpa-pro-admin
+            --branch=${{ env.ADMIN_BRANCH }}
+            --commit-dirty=true
+
+      - name: Verify stable admin preview URL
+        run: >-
+          curl --fail --silent --show-error
+          --retry 24 --retry-all-errors --retry-delay 5 --retry-max-time 180
+          "${ADMIN_PREVIEW_ORIGIN}/" > /dev/null
+
+      - name: Verify missing admin preview route
+        run: |
+          deadline=$((SECONDS + 180))
+          status=000
+          while true; do
+            if status="$(
+              curl --silent --show-error \
+                --connect-timeout 10 --max-time 30 \
+                --output /dev/null \
+                --write-out '%{http_code}' \
+                "${ADMIN_PREVIEW_ORIGIN}/__missing_admin_route__"
+            )" && [[ "$status" == "404" ]]; then
+              exit 0
+            fi
+            if (( SECONDS >= deadline )); then
+              break
+            fi
+            sleep 5
+          done
+          echo "::error::Unexpected missing-route status: $status" >&2
+          exit 1
+
+      - name: Comment admin preview URL on PR
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: admin-preview
+          message: |
+            ### Admin console preview
+
+            **Preview URL:** ${{ env.ADMIN_PREVIEW_ORIGIN }}
+
+            - API: ${{ env.API_PREVIEW_ORIGIN }}
+            - Pages branch: `${{ env.ADMIN_BRANCH }}`
+            - Commit: `${{ github.event.pull_request.head.sha }}`
+
+            The matching `pr-preview` workflow provisions the Fly app and
+            isolated app/admin Neon branches. Browser authentication accepts
+            only the stable Pages branch origin linked above.

@@ -12,9 +12,9 @@ function portFromEnv(name: string, fallback: number): number {
 }
 
 const apiPort = portFromEnv('ADMIN_E2E_API_PORT', 8787);
-const sitePort = portFromEnv('ADMIN_E2E_SITE_PORT', 3002);
+const adminPort = portFromEnv('ADMIN_E2E_SITE_PORT', 3102);
 const apiBaseUrl = `http://localhost:${apiPort}`;
-const siteOrigin = `http://localhost:${sitePort}`;
+const adminOrigin = `http://localhost:${adminPort}`;
 
 export default defineConfig({
   testDir: './tests',
@@ -26,7 +26,7 @@ export default defineConfig({
   reporter: 'line',
   outputDir: 'test-results/admin-activity',
   use: {
-    baseURL: siteOrigin,
+    baseURL: adminOrigin,
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
@@ -39,7 +39,9 @@ export default defineConfig({
   ],
   webServer: [
     {
-      command: 'corepack pnpm --filter @harpa/api exec tsx scripts/start-admin-activity-e2e.ts',
+      command:
+        `ADMIN_E2E_SITE_PORT=${adminPort} ` +
+        'corepack pnpm --filter @harpa/api exec tsx scripts/start-admin-activity-e2e.ts',
       url: `${apiBaseUrl}/admin/readyz`,
       reuseExistingServer: false,
       // The harness starts and migrates independent app and admin Postgres
@@ -49,9 +51,8 @@ export default defineConfig({
     {
       command:
         `PUBLIC_API_BASE_URL=${apiBaseUrl} ` +
-        'PUBLIC_TURNSTILE_SITE_KEY=1x00000000000000000000AA ' +
-        `corepack pnpm build && corepack pnpm exec astro preview --host localhost --port ${sitePort}`,
-      url: `${siteOrigin}/admin/activity`,
+        `corepack pnpm build && corepack pnpm exec astro preview --host localhost --port ${adminPort}`,
+      url: `${adminOrigin}/`,
       reuseExistingServer: false,
       timeout: 120_000,
     },

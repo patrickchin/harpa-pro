@@ -1,6 +1,8 @@
 import { useId, useState } from 'react';
 import type { reports } from '@harpa/api-contract';
 
+import { Button, Field, Textarea } from '@/components/ui';
+
 import { errorMessage } from './api';
 import { formatDateTime } from './format';
 
@@ -39,51 +41,63 @@ export function ReportReview({
   };
 
   return (
-    <section className="reports-review" aria-labelledby={`${id}-heading`}>
-      <header>
-        <p className="reports-eyebrow">Append-only discussion</p>
-        <h2 id={`${id}-heading`}>Review</h2>
+    <section
+      className="mx-auto grid max-w-[52rem] gap-4 rounded-card-ui border border-border bg-card p-4 shadow-raised-ui"
+      aria-labelledby={`${id}-heading`}
+    >
+      <header className="grid gap-2">
+        <p className="text-label font-bold tracking-label text-accent-ink uppercase">
+          Append-only discussion
+        </p>
+        <h2 className="text-title-sm font-bold" id={`${id}-heading`}>
+          Review
+        </h2>
       </header>
 
       {isLoading ? (
-        <p role="status">Loading review comments…</p>
+        <p className="text-muted-foreground" role="status">
+          Loading review comments…
+        </p>
       ) : error ? (
-        <div className="reports-inline-error" role="alert">
+        <div
+          className="grid gap-3 rounded-card-ui border border-danger-border bg-danger-soft p-4 text-danger-text"
+          role="alert"
+        >
           <p>Couldn&apos;t load review comments. {error.message}</p>
           {onRetry ? (
-            <button
-              type="button"
-              className="reports-button reports-button--secondary"
-              onClick={onRetry}
-            >
+            <Button className="justify-self-start" variant="secondary" onClick={onRetry}>
               Retry comments
-            </button>
+            </Button>
           ) : null}
         </div>
       ) : comments.length === 0 ? (
-        <p className="reports-empty-copy">
+        <p className="px-4 py-8 text-center text-muted-foreground">
           No review comments yet. Add the first comment about this finalized report.
         </p>
       ) : (
-        <ol className="reports-comment-list">
+        <ol className="grid list-none gap-3 p-0">
           {comments.map((comment) => (
             <li key={comment.id}>
-              <article>
-                <header>
+              <article className="grid gap-2 rounded-card-ui border border-border bg-surface-emphasis p-3">
+                <header className="flex flex-wrap items-start justify-between gap-2">
                   <strong>{comment.authorDisplayName}</strong>
-                  <time dateTime={comment.createdAt}>{formatDateTime(comment.createdAt)}</time>
+                  <time
+                    className="whitespace-nowrap text-meta text-muted-foreground"
+                    dateTime={comment.createdAt}
+                  >
+                    {formatDateTime(comment.createdAt)}
+                  </time>
                 </header>
-                <p>{comment.body}</p>
+                <p className="whitespace-pre-wrap">{comment.body}</p>
               </article>
             </li>
           ))}
         </ol>
       )}
 
-      <form className="reports-comment-form" onSubmit={submit}>
-        <label className="reports-field" htmlFor={`${id}-comment`}>
-          <span>Add a comment</span>
-          <textarea
+      <form className="grid gap-3 border-t border-border pt-5" onSubmit={submit}>
+        <Field htmlFor={`${id}-comment`} label="Add a comment">
+          <Textarea
             id={`${id}-comment`}
             rows={4}
             maxLength={2_000}
@@ -95,19 +109,15 @@ export function ReportReview({
               setSubmitError(null);
             }}
           />
-        </label>
-        <div className="reports-comment-form__actions">
+        </Field>
+        <div className="flex flex-wrap items-center justify-between gap-3 text-meta text-muted-foreground">
           <span>{draft.length}/2,000</span>
-          <button
-            type="submit"
-            className="reports-button reports-button--primary"
-            disabled={!trimmed || isSubmitting}
-          >
+          <Button type="submit" disabled={!trimmed || isSubmitting}>
             {isSubmitting ? 'Adding comment…' : 'Add comment'}
-          </button>
+          </Button>
         </div>
         {submitError ? (
-          <p className="reports-field-error" role="alert">
+          <p className="text-meta text-danger-text" role="alert">
             {submitError}
           </p>
         ) : null}

@@ -1,6 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 import type { notes } from '@harpa/api-contract';
 
+import { Badge, Button } from '@/components/ui';
+
 import type { ReportsApi } from './api';
 import { formatDateTime } from './format';
 
@@ -12,12 +14,19 @@ function NoteImage({ api, fileId, alt }: { api: ReportsApi; fileId: string; alt:
   });
 
   if (query.isError) {
-    return <span className="reports-muted">Photo unavailable</span>;
+    return <span className="text-meta text-muted-foreground">Photo unavailable</span>;
   }
   if (!query.data) {
-    return <span className="reports-muted">Loading photo…</span>;
+    return <span className="text-meta text-muted-foreground">Loading photo…</span>;
   }
-  return <img src={query.data.url} alt={alt} loading="lazy" />;
+  return (
+    <img
+      className="aspect-4/3 w-full rounded-card-ui object-cover"
+      src={query.data.url}
+      alt={alt}
+      loading="lazy"
+    />
+  );
 }
 
 function SourceNote({ api, note }: { api: ReportsApi; note: notes.Note }) {
@@ -32,23 +41,28 @@ function SourceNote({ api, note }: { api: ReportsApi; note: notes.Note }) {
           : [];
 
   return (
-    <article className="reports-note">
-      <header>
+    <article className="grid gap-3 rounded-card-ui border border-border bg-surface-emphasis p-3">
+      <header className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="reports-note__kind">{note.kind}</p>
-          {note.title ? <h4>{note.title}</h4> : null}
+          <Badge tone="info">{note.kind}</Badge>
+          {note.title ? <h4 className="mt-2 font-bold">{note.title}</h4> : null}
         </div>
-        <time dateTime={note.createdAt}>{formatDateTime(note.createdAt)}</time>
+        <time
+          className="whitespace-nowrap text-meta text-muted-foreground"
+          dateTime={note.createdAt}
+        >
+          {formatDateTime(note.createdAt)}
+        </time>
       </header>
-      <p>{noteText}</p>
+      <p className="whitespace-pre-wrap">{noteText}</p>
       {note.summary && note.transcript ? (
-        <details>
-          <summary>Transcript</summary>
-          <p>{note.transcript}</p>
+        <details className="rounded-control-ui border border-border bg-card p-3">
+          <summary className="cursor-pointer font-bold">Transcript</summary>
+          <p className="mt-3 whitespace-pre-wrap text-muted-foreground">{note.transcript}</p>
         </details>
       ) : null}
       {imageFileIds.length > 0 ? (
-        <div className="reports-note__images">
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(8rem,1fr))] gap-2">
           {imageFileIds.map((fileId, index) => (
             <NoteImage
               key={`${fileId}-${index}`}
@@ -60,7 +74,7 @@ function SourceNote({ api, note }: { api: ReportsApi; note: notes.Note }) {
         </div>
       ) : null}
       {note.kind === 'document' && note.fileId ? (
-        <p className="reports-note__document">Attached document</p>
+        <p className="text-meta font-medium text-muted-foreground">Attached document</p>
       ) : null}
     </article>
   );
@@ -82,33 +96,41 @@ export function SourceNotesPanel({
   onRetry,
 }: SourceNotesPanelProps) {
   return (
-    <aside className="reports-source-notes" aria-labelledby="source-notes-heading">
-      <div className="reports-section-heading">
+    <aside
+      className="grid min-w-0 gap-4 rounded-card-ui border border-border bg-card p-4 shadow-raised-ui"
+      aria-labelledby="source-notes-heading"
+    >
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="reports-eyebrow">Read-only evidence</p>
-          <h2 id="source-notes-heading">Source notes</h2>
+          <p className="text-label font-bold tracking-label text-accent-ink uppercase">
+            Read-only evidence
+          </p>
+          <h2 className="mt-2 text-title-sm font-bold" id="source-notes-heading">
+            Source notes
+          </h2>
         </div>
-        <span className="reports-badge reports-badge--neutral">Read only</span>
+        <Badge>Read only</Badge>
       </div>
       {isLoading ? (
-        <p role="status">Loading source notes…</p>
+        <p className="text-muted-foreground" role="status">
+          Loading source notes…
+        </p>
       ) : error ? (
-        <div className="reports-inline-error" role="alert">
+        <div
+          className="grid gap-3 rounded-card-ui border border-danger-border bg-danger-soft p-4 text-danger-text"
+          role="alert"
+        >
           <p>Couldn&apos;t load source notes. {error.message}</p>
           {onRetry ? (
-            <button
-              type="button"
-              className="reports-button reports-button--secondary"
-              onClick={onRetry}
-            >
+            <Button className="justify-self-start" variant="secondary" onClick={onRetry}>
               Retry source notes
-            </button>
+            </Button>
           ) : null}
         </div>
       ) : rows.length === 0 ? (
-        <p className="reports-muted">No source notes were captured.</p>
+        <p className="text-muted-foreground">No source notes were captured.</p>
       ) : (
-        <div className="reports-note-list">
+        <div className="grid gap-3">
           {rows.map((note) => (
             <SourceNote key={note.id} api={api} note={note} />
           ))}

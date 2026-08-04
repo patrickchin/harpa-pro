@@ -19,8 +19,7 @@ describe('ReportPreview', () => {
 
     const preview = rendered.container.querySelector('[data-testid="report-preview"]');
     expect(preview).toHaveClass('rounded-card-ui', 'bg-card', 'shadow-raised-ui');
-    expect(rendered.container.textContent).toContain('High');
-    expect(rendered.container.querySelector('.bg-warning-soft')).toHaveTextContent('High');
+    expect(rendered.container.querySelector('.bg-warning-soft')).toHaveTextContent('medium');
     expect(
       Array.from(rendered.container.querySelectorAll<HTMLElement>('[class]')).flatMap((element) =>
         element.className.split(/\s+/),

@@ -21,9 +21,7 @@ describe('ReportBodyEditor', () => {
     cleanups.push(rendered.cleanup);
 
     const editor = rendered.container.querySelector('[aria-label="Structured report editor"]');
-    const sectionNavigation = rendered.container.querySelector(
-      'nav[aria-label="Report sections"]',
-    );
+    const sectionNavigation = rendered.container.querySelector('nav[aria-label="Report sections"]');
 
     expect(editor).toHaveClass('grid', 'gap-4');
     expect(sectionNavigation).toHaveClass('overflow-x-auto', 'bg-surface-muted');

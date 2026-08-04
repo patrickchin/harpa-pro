@@ -1,7 +1,17 @@
 import { useId } from 'react';
 import type { reports } from '@harpa/api-contract';
 
+import { Button, Field as FormField, Input, Textarea } from '@/components/ui';
+
 import { dateInputValue, isoDateFromInput, updateReportBody } from './report-body';
+
+const editorSectionClassName =
+  'grid scroll-mt-4 gap-4 rounded-card-ui border border-border bg-card p-4 shadow-raised-ui';
+const sectionHeadingClassName = 'flex flex-wrap items-start justify-between gap-3';
+const fieldGridClassName = 'grid gap-3 sm:grid-cols-2';
+const repeatableCardClassName =
+  'grid gap-3 rounded-card-ui border border-border bg-surface-emphasis p-3';
+const mutedCopyClassName = 'text-muted-foreground';
 
 export interface ReportBodyEditorProps {
   body: reports.ReportBody;
@@ -33,10 +43,9 @@ function Field({
   type = 'text',
 }: FieldProps) {
   return (
-    <label className="reports-field" htmlFor={id}>
-      <span>{label}</span>
+    <FormField className="min-w-0" htmlFor={id} label={label}>
       {multiline ? (
-        <textarea
+        <Textarea
           id={id}
           value={value ?? ''}
           onChange={(event) => onChange(event.currentTarget.value)}
@@ -44,7 +53,7 @@ function Field({
           rows={5}
         />
       ) : (
-        <input
+        <Input
           id={id}
           type={type}
           value={value ?? ''}
@@ -52,7 +61,7 @@ function Field({
           disabled={disabled}
         />
       )}
-    </label>
+    </FormField>
   );
 }
 
@@ -68,17 +77,18 @@ function RowHeader({
   disabled: boolean;
 }) {
   return (
-    <div className="reports-repeatable__header">
-      <h4>{title}</h4>
-      <button
+    <div className="flex flex-wrap items-start justify-between gap-3">
+      <h4 className="text-body font-bold">{title}</h4>
+      <Button
         type="button"
-        className="reports-button reports-button--quiet reports-button--danger"
+        size="small"
+        variant="destructive"
         aria-label={removeLabel}
         onClick={onRemove}
         disabled={disabled}
       >
         Remove
-      </button>
+      </Button>
     </div>
   );
 }
@@ -90,8 +100,14 @@ export function ReportBodyEditor({ body, onChange, disabled = false }: ReportBod
   };
 
   return (
-    <div className="reports-editor" aria-label="Structured report editor">
-      <nav className="reports-section-nav" aria-label="Report sections">
+    <div
+      className="grid min-w-0 items-start gap-4 lg:grid-cols-[10rem_minmax(0,1fr)]"
+      aria-label="Structured report editor"
+    >
+      <nav
+        className="flex min-w-0 gap-1 overflow-x-auto rounded-card-ui border border-border bg-surface-muted p-2 lg:sticky lg:top-4 lg:grid"
+        aria-label="Report sections"
+      >
         {[
           ['overview', 'Overview'],
           ['weather', 'Weather'],
@@ -101,15 +117,25 @@ export function ReportBodyEditor({ body, onChange, disabled = false }: ReportBod
           ['next-steps', 'Next steps'],
           ['other-sections', 'Other sections'],
         ].map(([target, label]) => (
-          <a key={target} href={`#${rootId}-${target}`}>
+          <a
+            className="inline-flex min-h-11 shrink-0 items-center whitespace-nowrap rounded-control-ui px-3 text-meta font-bold text-foreground no-underline hover:bg-card"
+            key={target}
+            href={`#${rootId}-${target}`}
+          >
             {label}
           </a>
         ))}
       </nav>
 
-      <div className="reports-editor__sections">
-        <section id={`${rootId}-overview`} aria-labelledby={`${rootId}-overview-heading`}>
-          <h3 id={`${rootId}-overview-heading`}>Overview</h3>
+      <div className="grid min-w-0 gap-4">
+        <section
+          className={editorSectionClassName}
+          id={`${rootId}-overview`}
+          aria-labelledby={`${rootId}-overview-heading`}
+        >
+          <h3 className="text-title-sm font-bold" id={`${rootId}-overview-heading`}>
+            Overview
+          </h3>
           <Field
             id={`${rootId}-title`}
             label="Report title"
@@ -147,13 +173,20 @@ export function ReportBodyEditor({ body, onChange, disabled = false }: ReportBod
           />
         </section>
 
-        <section id={`${rootId}-weather`} aria-labelledby={`${rootId}-weather-heading`}>
-          <div className="reports-section-heading">
-            <h3 id={`${rootId}-weather-heading`}>Weather</h3>
+        <section
+          className={editorSectionClassName}
+          id={`${rootId}-weather`}
+          aria-labelledby={`${rootId}-weather-heading`}
+        >
+          <div className={sectionHeadingClassName}>
+            <h3 className="text-title-sm font-bold" id={`${rootId}-weather-heading`}>
+              Weather
+            </h3>
             {body.weather ? (
-              <button
+              <Button
                 type="button"
-                className="reports-button reports-button--quiet reports-button--danger"
+                size="small"
+                variant="destructive"
                 onClick={() =>
                   change((draft) => {
                     draft.weather = null;
@@ -162,11 +195,12 @@ export function ReportBodyEditor({ body, onChange, disabled = false }: ReportBod
                 disabled={disabled}
               >
                 Remove weather
-              </button>
+              </Button>
             ) : (
-              <button
+              <Button
                 type="button"
-                className="reports-button reports-button--secondary"
+                size="small"
+                variant="secondary"
                 onClick={() =>
                   change((draft) => {
                     draft.weather = {
@@ -180,11 +214,11 @@ export function ReportBodyEditor({ body, onChange, disabled = false }: ReportBod
                 disabled={disabled}
               >
                 Add weather
-              </button>
+              </Button>
             )}
           </div>
           {body.weather ? (
-            <div className="reports-field-grid">
+            <div className={fieldGridClassName}>
               {(
                 [
                   ['condition', 'Condition'],
@@ -211,16 +245,23 @@ export function ReportBodyEditor({ body, onChange, disabled = false }: ReportBod
               ))}
             </div>
           ) : (
-            <p className="reports-muted">No weather details recorded.</p>
+            <p className={mutedCopyClassName}>No weather details recorded.</p>
           )}
         </section>
 
-        <section id={`${rootId}-workers`} aria-labelledby={`${rootId}-workers-heading`}>
-          <div className="reports-section-heading">
-            <h3 id={`${rootId}-workers-heading`}>Workers</h3>
-            <button
+        <section
+          className={editorSectionClassName}
+          id={`${rootId}-workers`}
+          aria-labelledby={`${rootId}-workers-heading`}
+        >
+          <div className={sectionHeadingClassName}>
+            <h3 className="text-title-sm font-bold" id={`${rootId}-workers-heading`}>
+              Workers
+            </h3>
+            <Button
               type="button"
-              className="reports-button reports-button--secondary"
+              size="small"
+              variant="secondary"
               onClick={() =>
                 change((draft) => {
                   draft.workers.push({
@@ -234,10 +275,10 @@ export function ReportBodyEditor({ body, onChange, disabled = false }: ReportBod
               disabled={disabled}
             >
               Add worker
-            </button>
+            </Button>
           </div>
           {body.workers.map((worker, index) => (
-            <div className="reports-repeatable" key={`worker-${index}`}>
+            <div className={repeatableCardClassName} key={`worker-${index}`}>
               <RowHeader
                 title={`Worker ${index + 1}`}
                 removeLabel={`Remove worker ${index + 1}`}
@@ -248,7 +289,7 @@ export function ReportBodyEditor({ body, onChange, disabled = false }: ReportBod
                 }
                 disabled={disabled}
               />
-              <div className="reports-field-grid">
+              <div className={fieldGridClassName}>
                 <Field
                   id={`${rootId}-worker-${index}-role`}
                   label={`Worker role ${index + 1}`}
@@ -297,15 +338,24 @@ export function ReportBodyEditor({ body, onChange, disabled = false }: ReportBod
               </div>
             </div>
           ))}
-          {body.workers.length === 0 ? <p className="reports-muted">No workers recorded.</p> : null}
+          {body.workers.length === 0 ? (
+            <p className={mutedCopyClassName}>No workers recorded.</p>
+          ) : null}
         </section>
 
-        <section id={`${rootId}-materials`} aria-labelledby={`${rootId}-materials-heading`}>
-          <div className="reports-section-heading">
-            <h3 id={`${rootId}-materials-heading`}>Materials</h3>
-            <button
+        <section
+          className={editorSectionClassName}
+          id={`${rootId}-materials`}
+          aria-labelledby={`${rootId}-materials-heading`}
+        >
+          <div className={sectionHeadingClassName}>
+            <h3 className="text-title-sm font-bold" id={`${rootId}-materials-heading`}>
+              Materials
+            </h3>
+            <Button
               type="button"
-              className="reports-button reports-button--secondary"
+              size="small"
+              variant="secondary"
               onClick={() =>
                 change((draft) => {
                   draft.materials.push({
@@ -321,10 +371,10 @@ export function ReportBodyEditor({ body, onChange, disabled = false }: ReportBod
               disabled={disabled}
             >
               Add material
-            </button>
+            </Button>
           </div>
           {body.materials.map((material, index) => (
-            <div className="reports-repeatable" key={`material-${index}`}>
+            <div className={repeatableCardClassName} key={`material-${index}`}>
               <RowHeader
                 title={`Material ${index + 1}`}
                 removeLabel={`Remove material ${index + 1}`}
@@ -335,7 +385,7 @@ export function ReportBodyEditor({ body, onChange, disabled = false }: ReportBod
                 }
                 disabled={disabled}
               />
-              <div className="reports-field-grid">
+              <div className={fieldGridClassName}>
                 {(
                   [
                     ['name', 'Name'],
@@ -368,16 +418,23 @@ export function ReportBodyEditor({ body, onChange, disabled = false }: ReportBod
             </div>
           ))}
           {body.materials.length === 0 ? (
-            <p className="reports-muted">No materials recorded.</p>
+            <p className={mutedCopyClassName}>No materials recorded.</p>
           ) : null}
         </section>
 
-        <section id={`${rootId}-issues`} aria-labelledby={`${rootId}-issues-heading`}>
-          <div className="reports-section-heading">
-            <h3 id={`${rootId}-issues-heading`}>Issues</h3>
-            <button
+        <section
+          className={editorSectionClassName}
+          id={`${rootId}-issues`}
+          aria-labelledby={`${rootId}-issues-heading`}
+        >
+          <div className={sectionHeadingClassName}>
+            <h3 className="text-title-sm font-bold" id={`${rootId}-issues-heading`}>
+              Issues
+            </h3>
+            <Button
               type="button"
-              className="reports-button reports-button--secondary"
+              size="small"
+              variant="secondary"
               onClick={() =>
                 change((draft) => {
                   draft.issues.push({
@@ -391,10 +448,10 @@ export function ReportBodyEditor({ body, onChange, disabled = false }: ReportBod
               disabled={disabled}
             >
               Add issue
-            </button>
+            </Button>
           </div>
           {body.issues.map((issue, index) => (
-            <div className="reports-repeatable" key={`issue-${index}`}>
+            <div className={repeatableCardClassName} key={`issue-${index}`}>
               <RowHeader
                 title={`Issue ${index + 1}`}
                 removeLabel={`Remove issue ${index + 1}`}
@@ -405,7 +462,7 @@ export function ReportBodyEditor({ body, onChange, disabled = false }: ReportBod
                 }
                 disabled={disabled}
               />
-              <div className="reports-field-grid">
+              <div className={fieldGridClassName}>
                 {(
                   [
                     ['title', 'Title'],
@@ -435,15 +492,24 @@ export function ReportBodyEditor({ body, onChange, disabled = false }: ReportBod
               </div>
             </div>
           ))}
-          {body.issues.length === 0 ? <p className="reports-muted">No issues recorded.</p> : null}
+          {body.issues.length === 0 ? (
+            <p className={mutedCopyClassName}>No issues recorded.</p>
+          ) : null}
         </section>
 
-        <section id={`${rootId}-next-steps`} aria-labelledby={`${rootId}-next-steps-heading`}>
-          <div className="reports-section-heading">
-            <h3 id={`${rootId}-next-steps-heading`}>Next steps</h3>
-            <button
+        <section
+          className={editorSectionClassName}
+          id={`${rootId}-next-steps`}
+          aria-labelledby={`${rootId}-next-steps-heading`}
+        >
+          <div className={sectionHeadingClassName}>
+            <h3 className="text-title-sm font-bold" id={`${rootId}-next-steps-heading`}>
+              Next steps
+            </h3>
+            <Button
               type="button"
-              className="reports-button reports-button--secondary"
+              size="small"
+              variant="secondary"
               onClick={() =>
                 change((draft) => {
                   draft.nextSteps.push('');
@@ -452,10 +518,13 @@ export function ReportBodyEditor({ body, onChange, disabled = false }: ReportBod
               disabled={disabled}
             >
               Add next step
-            </button>
+            </Button>
           </div>
           {body.nextSteps.map((step, index) => (
-            <div className="reports-inline-row" key={`next-step-${index}`}>
+            <div
+              className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end"
+              key={`next-step-${index}`}
+            >
               <Field
                 id={`${rootId}-next-step-${index}`}
                 label={`Next step ${index + 1}`}
@@ -467,9 +536,10 @@ export function ReportBodyEditor({ body, onChange, disabled = false }: ReportBod
                 }
                 disabled={disabled}
               />
-              <button
+              <Button
                 type="button"
-                className="reports-button reports-button--quiet reports-button--danger"
+                size="small"
+                variant="destructive"
                 aria-label={`Remove next step ${index + 1}`}
                 onClick={() =>
                   change((draft) => {
@@ -479,23 +549,27 @@ export function ReportBodyEditor({ body, onChange, disabled = false }: ReportBod
                 disabled={disabled}
               >
                 Remove
-              </button>
+              </Button>
             </div>
           ))}
           {body.nextSteps.length === 0 ? (
-            <p className="reports-muted">No next steps recorded.</p>
+            <p className={mutedCopyClassName}>No next steps recorded.</p>
           ) : null}
         </section>
 
         <section
+          className={editorSectionClassName}
           id={`${rootId}-other-sections`}
           aria-labelledby={`${rootId}-other-sections-heading`}
         >
-          <div className="reports-section-heading">
-            <h3 id={`${rootId}-other-sections-heading`}>Other sections</h3>
-            <button
+          <div className={sectionHeadingClassName}>
+            <h3 className="text-title-sm font-bold" id={`${rootId}-other-sections-heading`}>
+              Other sections
+            </h3>
+            <Button
               type="button"
-              className="reports-button reports-button--secondary"
+              size="small"
+              variant="secondary"
               onClick={() =>
                 change((draft) => {
                   draft.summarySections.push({ title: '', body: '' });
@@ -504,10 +578,10 @@ export function ReportBodyEditor({ body, onChange, disabled = false }: ReportBod
               disabled={disabled}
             >
               Add other section
-            </button>
+            </Button>
           </div>
           {body.summarySections.map((section, index) => (
-            <div className="reports-repeatable" key={`section-${index}`}>
+            <div className={repeatableCardClassName} key={`section-${index}`}>
               <RowHeader
                 title={`Other section ${index + 1}`}
                 removeLabel={`Remove other section ${index + 1}`}
@@ -544,7 +618,7 @@ export function ReportBodyEditor({ body, onChange, disabled = false }: ReportBod
             </div>
           ))}
           {body.summarySections.length === 0 ? (
-            <p className="reports-muted">No additional sections recorded.</p>
+            <p className={mutedCopyClassName}>No additional sections recorded.</p>
           ) : null}
         </section>
       </div>

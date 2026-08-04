@@ -132,25 +132,24 @@ for workflow in admin-preview site-preview; do
     "$workflow verification does not depend on repository secrets"
   forbid_job_fixed "$path" verify "pull-requests: write" \
     "$workflow verification cannot comment on pull requests"
-  require_job_fixed "$path" deploy "needs: verify" \
-    "$workflow deploy waits for verification"
-  require_job_fixed "$path" deploy "$AUTHOR_GUARD" \
-    "$workflow deploy excludes Dependabot by PR author"
-  require_job_fixed "$path" deploy "$REPOSITORY_GUARD" \
-    "$workflow deploy excludes fork-controlled code"
-  require_job_fixed "$path" deploy "pull-requests: write" \
-    "$workflow keeps comment permission inside the privileged job"
+  require_job_fixed "$path" deployment "needs: verify" \
+    "$workflow deployment check waits for verification"
+  require_job_fixed "$path" deployment "$AUTHOR_GUARD" \
+    "$workflow deployment check excludes Dependabot by PR author"
+  require_job_fixed "$path" deployment "$REPOSITORY_GUARD" \
+    "$workflow deployment check excludes fork-controlled code"
+  require_job_fixed "$path" deployment "pull-requests: write" \
+    "$workflow keeps comment permission inside the guarded job"
+  forbid_job_fixed "$path" deployment '${{ secrets.' \
+    "$workflow deployment check is credential-free"
 done
 
 require_job_fixed ".github/workflows/admin-preview.yml" verify \
   "pnpm --filter @harpa/admin test:e2e" \
   "admin verification keeps browser coverage"
-require_job_fixed ".github/workflows/admin-preview.yml" deploy \
-  "cloudflare/wrangler-action" \
-  "admin Cloudflare publication stays in the privileged job"
-require_job_fixed ".github/workflows/admin-preview.yml" deploy \
-  "uses: ./.github/actions/setup-monorepo" \
-  "admin deployment keeps pnpm available to Wrangler Action"
+require_job_fixed ".github/workflows/admin-preview.yml" deployment \
+  "bash scripts/ci/verify-pages-deployment.sh" \
+  "admin deployment check waits for the native Cloudflare Git build"
 
 require_job_fixed ".github/workflows/site-preview.yml" verify \
   "PUBLIC_TURNSTILE_SITE_KEY: 1x00000000000000000000AA" \
@@ -158,18 +157,9 @@ require_job_fixed ".github/workflows/site-preview.yml" verify \
 forbid_job_fixed ".github/workflows/site-preview.yml" verify \
   "LHCI_GITHUB_APP_TOKEN" \
   "site Lighthouse verification does not require upload credentials"
-require_job_fixed ".github/workflows/site-preview.yml" deploy \
-  "cloudflare/wrangler-action" \
-  "site Cloudflare publication stays in the privileged job"
-require_job_fixed ".github/workflows/site-preview.yml" deploy \
-  'PUBLIC_TURNSTILE_SITE_KEY: ${{ secrets.PUBLIC_TURNSTILE_SITE_KEY }}' \
-  "site deploy rebuild keeps the real public key inside the privileged job"
-require_job_fixed ".github/workflows/site-preview.yml" deploy \
-  "pnpm --filter @harpa/site test:e2e" \
-  "site deploy browser-tests the exact real-key build"
-require_job_fixed ".github/workflows/site-preview.yml" deploy \
-  "pnpm exec lhci autorun --config=./lighthouserc.json" \
-  "site deploy runs Lighthouse on the exact real-key build"
+require_job_fixed ".github/workflows/site-preview.yml" deployment \
+  "bash scripts/ci/verify-pages-deployment.sh" \
+  "site deployment check waits for the native Cloudflare Git build"
 
 PR_PREVIEW=".github/workflows/pr-preview.yml"
 for job in \
@@ -206,6 +196,7 @@ require_fixed_count "$MAIN_GATE" "$AUTHOR_GUARD" 3 \
 
 for workflow in \
   .github/workflows/admin-preview.yml \
+  .github/workflows/pages-preview-ref.yml \
   .github/workflows/site-preview.yml \
   .github/workflows/pr-preview.yml \
   .github/workflows/mobile-ota-pr.yml \

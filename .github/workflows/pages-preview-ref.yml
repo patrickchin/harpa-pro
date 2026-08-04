@@ -1,0 +1,60 @@
+name: pages-preview-ref
+
+# Cloudflare Git builds use the exact pr-N branch alias already shared by the
+# Pages, Fly, and Neon preview environments. This job never checks out or
+# executes pull-request code while holding contents:write.
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+
+concurrency:
+  group: pages-preview-ref-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  sync:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.user.login != 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Create, update, or delete the exact preview ref
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const number = context.payload.pull_request.number;
+            const shortRef = `heads/pr-${number}`;
+            const fullRef = `refs/${shortRef}`;
+
+            let exists = true;
+            try {
+              await github.rest.git.getRef({ owner, repo, ref: shortRef });
+            } catch (error) {
+              if (error.status !== 404) throw error;
+              exists = false;
+            }
+
+            if (context.payload.action === 'closed') {
+              if (exists) {
+                await github.rest.git.deleteRef({ owner, repo, ref: shortRef });
+              }
+              return;
+            }
+
+            const sha = context.payload.pull_request.head.sha;
+            if (exists) {
+              await github.rest.git.updateRef({
+                owner,
+                repo,
+                ref: shortRef,
+                sha,
+                force: true,
+              });
+            } else {
+              await github.rest.git.createRef({ owner, repo, ref: fullRef, sha });
+            }

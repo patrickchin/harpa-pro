@@ -1,6 +1,6 @@
 # Separate admin site
 
-**Status:** Implemented; production rollout and custom-domain cutover pending
+**Status:** Implemented
 
 ## Problem
 
@@ -52,23 +52,25 @@ origin.
 
 ## Deployments
 
-The admin app has independent preview, development, and production workflows.
-Every relevant pull request runs credential-free tests and a build; only
-human-owned same-repository pull requests publish a preview:
+The admin app uses the independent `harpa-pro-admin` Git-connected Pages
+project. Every relevant pull request runs credential-free tests and a build;
+only human-owned same-repository pull requests receive a hosted preview:
 
-- Eligible pull requests deploy `apps/admin/dist` to branch `pr-<number>` of
-  `harpa-pro-admin`. The stable browser origin is therefore
+- A credential-free workflow mirrors eligible pull request heads to the exact
+  Git branch `pr-<number>`. Cloudflare builds that branch, so the stable origin is
   `https://pr-<number>.harpa-pro-admin.pages.dev`.
-- Pushes to `dev` deploy branch `dev`, served at
+- Pushes to `dev` trigger the Git preview branch, served at
   `https://dev.harpa-pro-admin.pages.dev`.
-- Pushes to `main` deploy the Pages production branch and serve
+- Pushes to `main` trigger the Pages production branch and serve
   `https://admin.harpapro.com` after the custom domain is attached.
 
 Admin-only changes must also create the existing per-PR Fly and Neon preview
 environment. Its exact `ADMIN_CORS_ORIGINS` value is the stable `pr-<number>`
 Pages origin, and the admin preview is built against
-`https://harpa-pro-api-pr-<number>.fly.dev`. Using the PR number avoids duplicate
-branch-name sanitisation logic across Cloudflare and GitHub Actions.
+`https://harpa-pro-api-pr-<number>.fly.dev`. Using the generated PR-number Git
+ref avoids duplicate branch-name sanitisation logic across Cloudflare and
+GitHub Actions. See
+[design-cloudflare-pages-git-deployments.md](design-cloudflare-pages-git-deployments.md).
 
 The development API trusts only
 `https://dev.harpa-pro-admin.pages.dev`. Production trusts only

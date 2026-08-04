@@ -3,8 +3,8 @@
 
 set -euo pipefail
 
-REPO_ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)
-cd "$REPO_ROOT"
+repo_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)
+cd "$repo_root"
 
 fail() {
   echo "admin-site-separation: $*" >&2
@@ -25,26 +25,33 @@ fail() {
 [[ ! -e apps/admin/src/pages/admin/activity.astro ]] \
   || fail "apps/admin must not publish a legacy activity page"
 [[ -f apps/admin/src/pages/404.astro ]] \
-  || fail "apps/admin must publish a real 404 document instead of using SPA fallback"
+  || fail "apps/admin must publish a real 404 document"
 
 grep -Eq "site:[[:space:]]*['\"]https://admin\.harpapro\.com['\"]" \
   apps/admin/astro.config.mjs \
-  || fail "the admin Astro build must use the admin canonical origin"
+  || fail "the admin Astro build must use the canonical admin origin"
+
+grep -Fq 'output_dir=apps/site/dist' scripts/ci/build-cloudflare-pages.sh \
+  || fail "the Pages builder must keep the public output isolated"
+grep -Fq 'output_dir=apps/admin/dist' scripts/ci/build-cloudflare-pages.sh \
+  || fail "the Pages builder must keep the admin output isolated"
+grep -Fq 'pnpm --filter @harpa/site build' scripts/ci/build-cloudflare-pages.sh \
+  || fail "the Pages builder must target the public workspace"
+grep -Fq 'pnpm --filter @harpa/admin build' scripts/ci/build-cloudflare-pages.sh \
+  || fail "the Pages builder must target the admin workspace"
 
 for environment in preview dev prod; do
   workflow=".github/workflows/admin-${environment}.yml"
   [[ -f "$workflow" ]] || fail "missing $workflow"
-  grep -Fq -- '--project-name=harpa-pro-admin' "$workflow" \
-    || fail "$workflow does not target harpa-pro-admin"
-  grep -Fq 'apps/admin/dist' "$workflow" \
-    || fail "$workflow does not deploy the admin artifact"
+  grep -Fq 'harpa-pro-admin.pages.dev' "$workflow" \
+    || fail "$workflow does not verify the admin Pages project"
 done
 
 for workflow in .github/workflows/site-preview.yml \
   .github/workflows/site-dev.yml \
   .github/workflows/site-prod.yml; do
   if grep -Fq 'harpa-pro-admin' "$workflow"; then
-    fail "$workflow must not deploy the admin Pages project"
+    fail "$workflow must not target the admin Pages project"
   fi
 done
 

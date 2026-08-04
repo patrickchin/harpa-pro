@@ -87,7 +87,8 @@ describe('DashboardShell', () => {
       '/projects/harbor-house/settings',
     );
     const primaryNavigation = screen.getByRole('navigation', { name: 'Primary' });
-    expect(primaryNavigation).toHaveClass('overflow-x-auto', 'lg:flex-col');
+    expect(primaryNavigation).toHaveClass('grid', 'grid-cols-4', 'lg:flex', 'lg:flex-col');
+    expect(primaryNavigation).not.toHaveClass('overflow-x-auto');
     expect(primaryNavigation.parentElement).toHaveClass('flex-wrap', 'lg:flex-nowrap');
 
     await interaction.click(screen.getByRole('button', { name: 'Open account menu' }));

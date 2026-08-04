@@ -63,10 +63,10 @@ Cloudflare Git builds the stable `pr-N.harpa-pro-admin.pages.dev` alias against
 `harpa-pro-api-pr-N.fly.dev`. The PR gate also runs the full admin browser flow
 locally against two independent Testcontainers databases.
 
-The dashboard uses the same exact head-SHA `pr-N` Pages contract after its
-approved Git-project recreation. Its live browser lane runs on the stable
-branch alias. The matching Fly preview separately verifies GitHub's synthetic
-merge SHA before the browser lane starts.
+The dashboard uses the same exact head-SHA `pr-N` Pages contract. Cloudflare
+connected the existing project to `patrickchin/harpa-pro` in place on
+2026-08-05. Its live browser lane runs on the stable branch alias. The matching
+Fly preview separately verifies GitHub's synthetic merge SHA first.
 
 ### Alternatives rejected
 
@@ -186,9 +186,8 @@ environment and only surfaces when the deploy fires.
 The dashboard preview/dev/production workflows include
 `packages/design-tokens/**` in their path filters. A dashboard token change
 therefore rebuilds that browser surface even when `apps/dashboard` itself does
-not change. Cloudflare publishes the resulting artifact after the approved
-dashboard project recreation. The public site keeps its independent visual
-system.
+not change. Cloudflare publishes the resulting artifact from the connected
+project. The public site keeps its independent visual system.
 
 ### Pull-request automation trust boundary
 

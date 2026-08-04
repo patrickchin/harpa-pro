@@ -3,35 +3,19 @@
 This runbook covers the React SPA at `apps/dashboard`. Its dedicated
 Cloudflare Pages project name is `harpa-pro-dashboard`.
 
-## Provider status and approval boundary
+## Verified provider state
 
-The pre-cutover provider snapshot on 2026-08-05 shows seven preview
-deployments. It shows no production deployment and no custom domain.
+On 2026-08-05, the Cloudflare UI connected the existing Direct Upload project
+to `patrickchin/harpa-pro` in place. Cloudflare preserved all seven existing
+preview deployments. No project deletion or recreation occurred.
 
-The current project uses Direct Upload. Cloudflare does not support converting
-that project to Git integration. Cloudflare requires a new Git-integrated
-project, as stated in its
-[Direct Upload documentation](https://developers.cloudflare.com/pages/get-started/direct-upload/).
-
-Deleting or replacing the current project is an external destructive action.
-It also removes the seven preview deployment records and their URLs. An
-operator must approve that exact action before the provider cutover.
-
-Until that approval and recreation finish:
-
-- do not claim that dashboard Git deployment is active;
-- do not claim that a dashboard production deployment exists;
-- do not claim that `app.harpapro.com` is attached to Pages; and
-- treat dashboard verification timeouts as a provider setup gap.
-
-The minimal cutover recreates the Git-integrated project with the same
-`harpa-pro-dashboard` name. If Cloudflare cannot preserve that name, stop.
-A new hostname also changes API CORS, tests, workflows, and documentation.
+The project has no production deployment or custom domain. Its production
+branch is `main`, but automatic production deployments remain disabled.
 
 ## Target deployment topology
 
-The following table is the post-cutover contract. It does not describe the
-current external project before recreation.
+The following table describes the Git deployment contract. The `main` row
+remains inactive while automatic production deployments are disabled.
 
 | Git source | Pages origin                           | API target                     |
 | ---------- | -------------------------------------- | ------------------------------ |
@@ -46,19 +30,17 @@ Cloudflare Git publishes each static artifact. GitHub Actions tests the source
 and verifies the deployed artifact. GitHub Actions does not upload the
 dashboard or hold Cloudflare credentials.
 
-## Project recreation
+## Pages Git configuration
 
-After explicit approval, configure the replacement project as follows:
+The verified project configuration is:
 
-1. Connect `patrickchin/harpa-pro` through Cloudflare Pages Git integration.
-2. Keep the project name `harpa-pro-dashboard`.
-3. Set the repository root as the build root.
-4. Set the build command to
-   `bash scripts/ci/build-cloudflare-pages.sh dashboard`.
-5. Set the output directory to `apps/dashboard/dist`.
-6. Set `main` as the production branch.
-7. Restrict preview builds to `dev` and `pr-*` branches.
-8. Keep production builds disabled until production activation is approved.
+1. Git repository: `patrickchin/harpa-pro`.
+2. Build command: `bash scripts/ci/build-cloudflare-pages.sh dashboard`.
+3. Output directory: `apps/dashboard/dist`.
+4. Production branch: `main`.
+5. Automatic production deployments: disabled.
+6. Preview branch mode: custom branches.
+7. Preview custom branches: `dev` and `pr-*`.
 
 Build watch paths must include `apps/dashboard`, its workspace dependencies,
 the root workspace files, and `scripts/ci/build-cloudflare-pages.sh`.
@@ -155,8 +137,8 @@ The tokenless workflows verify stable aliases. They do not publish artifacts.
 - `dashboard-prod.yml` checks API compatibility and verifies the exact `main`
   SHA on each configured production hostname.
 
-Do not enable dashboard production builds during the preview-only cutover.
-Production activation requires a separate approval after `apps/dashboard`
+Do not enable dashboard production builds during the current preview-only
+state. Production activation requires separate approval after `apps/dashboard`
 reaches `main` and the production API compatibility gate passes.
 
 Do not create only a DNS record for `app.harpapro.com`. A later production
@@ -188,9 +170,9 @@ bash scripts/ci/__tests__/verify-dashboard-pages.test.sh
 
 ## Rollback
 
-The current external project has no production deployment to roll back. A
-failed preview cutover rolls forward through a corrected `pr-<n>` commit or
-pauses Git builds while the provider configuration is fixed.
+The current project has no production deployment to roll back. Fix a failed
+preview through a corrected `pr-<n>` commit, or pause Git builds while the
+provider configuration is fixed.
 
 After production activation, use the Cloudflare Pages production rollback
 control for a bad static artifact. Then verify the exact selected artifact,

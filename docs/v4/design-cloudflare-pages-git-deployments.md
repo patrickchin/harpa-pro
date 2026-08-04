@@ -1,6 +1,6 @@
 # Cloudflare Pages Git deployments
 
-**Status:** Implemented for public/admin; dashboard provider cutover pending
+**Status:** Implemented; dashboard production builds remain disabled
 
 ## Problem
 
@@ -8,20 +8,20 @@ Historical GitHub Actions workflows built each static application and
 published it with Cloudflare credentials. The public and admin projects now
 use Cloudflare Git, so GitHub only tests and verifies those deployments.
 
-The dashboard still has a Direct Upload project. Cloudflare does not support
-converting it to Git integration. The provider cutover therefore requires an
-explicitly approved project recreation, not another workflow upload path.
+On 2026-08-05, the Cloudflare UI connected the existing
+`harpa-pro-dashboard` Direct Upload project to `patrickchin/harpa-pro` in
+place. Cloudflare preserved all seven existing deployments. No project
+deletion or recreation occurred.
 
 ## Decision
 
-Cloudflare Git is the only publisher for `harpa-pro` and `harpa-pro-admin`.
-It becomes the only publisher for `harpa-pro-dashboard` after the approved
-provider recreation. GitHub Actions verifies deployments but does not call the
-Cloudflare API.
+Cloudflare Git is the only publisher for `harpa-pro`, `harpa-pro-admin`, and
+`harpa-pro-dashboard`. GitHub Actions verifies deployments but does not call
+the Cloudflare API.
 
-The production branch remains `main`. Automatic preview builds are restricted
-to `dev` and ephemeral `pr-*` branches. Build watch paths keep each monorepo
-project isolated.
+The production branch remains `main`. Dashboard automatic production builds
+remain disabled. Dashboard preview builds use the custom branches `dev` and
+`pr-*`. Build watch paths keep each monorepo project isolated.
 
 ### Stable pull request branches
 
@@ -40,8 +40,7 @@ system:
 
 - `https://pr-<number>.harpa-pro.pages.dev`;
 - `https://pr-<number>.harpa-pro-admin.pages.dev`; and
-- `https://pr-<number>.harpa-pro-dashboard.pages.dev` after the dashboard
-  project recreation.
+- `https://pr-<number>.harpa-pro-dashboard.pages.dev`.
 
 This preserves `https://harpa-pro-api-pr-<number>.fly.dev`, the two Neon
 `pr-<number>` branches, and the admin API's exact `ADMIN_CORS_ORIGINS` value.
@@ -92,34 +91,35 @@ No Pages workflow may reference `CLOUDFLARE_API_TOKEN`,
 upload after the migration. Delete the two Cloudflare repository secrets only
 after all workflow and branch checks satisfy that invariant.
 
-## Dashboard boundary
+## Dashboard provider outcome
 
-The current `harpa-pro-dashboard` project cannot be connected in place. The
-[Cloudflare Direct Upload documentation](https://developers.cloudflare.com/pages/get-started/direct-upload/)
-requires a new Git-integrated project.
+The 2026-08-05 provider verification records this configuration:
 
-The provider snapshot on 2026-08-05 contains seven preview deployments. It has
-no production deployment and no custom domain. Recreating the project deletes
-those records and URLs, so an operator must approve the exact provider action.
+- project: `harpa-pro-dashboard`;
+- Git repository: `patrickchin/harpa-pro`;
+- build command: `bash scripts/ci/build-cloudflare-pages.sh dashboard`;
+- output directory: `apps/dashboard/dist`;
+- production branch: `main`;
+- automatic production deployments: disabled; and
+- preview custom branches: `dev` and `pr-*`.
 
-The minimal migration recreates the same project name, restricts preview builds
-to `dev` and `pr-*`, and keeps automatic production builds disabled.
-Production and `app.harpapro.com` activation require separate approval.
+Cloudflare preserved the seven existing preview deployments during the
+in-place connection. The project has no production deployment or custom
+domain. Production and `app.harpapro.com` activation require separate
+approval.
 
 ## Verification and rollback
 
-Before removing the GitHub secrets:
+Verify the tokenless deployment contract as follows:
 
 1. Run the shell policy suite and application builds locally.
-2. Merge through `dev` and verify exact-SHA `dev` Pages deployments.
+2. Confirm the Cloudflare build command, output directory, and branch controls.
 3. Verify an eligible pull request builds from `pr-<number>` at the exact head
    SHA and points at the matching Fly preview.
-4. Promote through the protected `main` workflow and verify the exact SHA on
-   every Pages and custom production hostname.
-5. Confirm the repository and open deployment branches contain no Cloudflare
-   credential references, then delete the two repository secrets.
+4. Merge through `dev` and verify the exact-SHA `dev` Pages deployment.
+5. Confirm no Pages workflow or open branch contains Cloudflare credentials.
 
 Rollback uses the Cloudflare Pages production rollback control for an active
 production project. The current dashboard project has no production deployment
-to roll back. Pause Git builds or push a correction if its preview cutover
-fails. Do not restore credentialed uploads.
+to roll back. Push a correction or pause Git builds if a preview fails. Do not
+restore credentialed uploads.

@@ -70,9 +70,10 @@
     Fly/Neon preview.
   - GitHub verifies the alias serves the pull request head SHA before SPA and
     live browser checks.
-  - The current Direct Upload project has seven preview deployments, no
-    production deployment, and no custom domain. Cloudflare requires an
-    approved project recreation before this Git contract becomes active. See
+  - On 2026-08-05, Cloudflare connected the existing Direct Upload project to
+    `patrickchin/harpa-pro` in place and preserved all seven preview
+    deployments. Automatic production deployments remain disabled. No custom
+    domain is attached. See
     [the dashboard Pages runbook](ops-dashboard-cloudflare-pages.md).
 - **Mobile**: Fastlane + EAS. Fastlane owns checked-in App Store /
   Play Store metadata, guarded screenshot/privacy lanes, and local
@@ -467,8 +468,7 @@ The `api-dev` and `api-prod` workflows sync Doppler → Fly secrets
 Deployment workflows use action releases that run on Node 24. Cloudflare Pages
 publishes Git-connected browser applications through its GitHub App. GitHub
 Actions retains tests and exact-SHA HTTP verification but holds no Cloudflare
-credential. The dashboard contract starts after its approved project
-recreation.
+credential.
 
 `--stage` defers activation; the subsequent `flyctl deploy` flips the
 secrets on — so code + secrets ship in a single transaction. To rotate

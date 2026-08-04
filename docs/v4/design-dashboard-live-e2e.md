@@ -32,10 +32,10 @@ The two SHA checks are intentionally distinct. The backend validates GitHub's
 tested merge. The static artifact validates the exact head mirrored to
 `refs/heads/pr-<number>`.
 
-This lane becomes active after the approved dashboard Pages project
-recreation. The pre-cutover project has seven preview deployments, no
-production deployment, and no custom domain. It cannot adopt Git integration
-in place.
+On 2026-08-05, the Cloudflare UI connected the existing dashboard project to
+`patrickchin/harpa-pro` in place. The seven existing preview deployments were
+preserved. Automatic production deployments remain disabled, and the project
+has no custom domain.
 
 ## Dashboard-capable parity
 

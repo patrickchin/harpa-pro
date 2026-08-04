@@ -30,6 +30,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+    env:
+      PUBLIC_DASHBOARD_URL: https://pr-${{ github.event.pull_request.number }}.harpa-pro-dashboard.pages.dev
     steps:
       - uses: actions/checkout@v4
 
@@ -51,7 +53,6 @@ jobs:
         env:
           PUBLIC_TURNSTILE_SITE_KEY: 1x00000000000000000000AA
           PUBLIC_API_BASE_URL: https://api.harpapro.com
-          PUBLIC_DASHBOARD_URL: https://pr-${{ github.event.pull_request.number }}.harpa-pro-dashboard.pages.dev
         run: pnpm --filter @harpa/site build
 
       - name: Verify public build excludes admin routes

@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 
-const dashboardUrl = "http://127.0.0.1:3003";
+const dashboardUrl =
+  process.env.PUBLIC_DASHBOARD_URL ?? "http://127.0.0.1:3003";
 
 test("opens the dashboard from the public header on desktop and mobile", async ({
   page,

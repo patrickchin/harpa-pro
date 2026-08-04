@@ -55,6 +55,7 @@
     "overrides": {
       "@types/react": "^19.2.0",
       "react": "19.2.0",
+      "react-devtools-core>shell-quote": "1.10.0",
       "react-dom": "19.2.0",
       "react-test-renderer": "19.2.0"
     }

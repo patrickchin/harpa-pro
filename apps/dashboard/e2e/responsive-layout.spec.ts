@@ -6,7 +6,7 @@ const routes = [
   { heading: 'Projects', path: '/projects' },
   { heading: 'Members', path: '/projects/prj_01234567/members' },
   { heading: 'Reports', path: '/projects/prj_01234567/reports' },
-  { heading: 'Site Visit #7', path: '/projects/prj_01234567/reports/7' },
+  { heading: 'Harbor House progress report', path: '/projects/prj_01234567/reports/7' },
 ] as const;
 
 const viewports = [

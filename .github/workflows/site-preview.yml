@@ -76,8 +76,9 @@ jobs:
 
       - name: Deploy preview to Cloudflare Pages
         id: deploy
-        uses: cloudflare/wrangler-action@v3
+        uses: cloudflare/wrangler-action@v4
         with:
+          wranglerVersion: '3.114.17'
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           # Branch name in CF must be lowercase + safe for URLs;
@@ -106,7 +107,7 @@ jobs:
 
       - name: Comment preview URL on PR
         if: steps.deploy.outputs.deployment-url
-        uses: marocchino/sticky-pull-request-comment@v2
+        uses: marocchino/sticky-pull-request-comment@v3
         with:
           header: site-preview
           message: |

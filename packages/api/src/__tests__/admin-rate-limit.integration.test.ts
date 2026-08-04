@@ -20,7 +20,7 @@ import { resetAdminReadyzCache } from '../routes/admin-readyz.js';
 import { setAdminPassword } from '../services/admin-auth.js';
 import { startAdminPg, type AdminPgFixture } from './setup-admin-pg.js';
 
-const ADMIN_ORIGIN = 'http://localhost:3002';
+const ADMIN_ORIGIN = 'http://localhost:3102';
 const ADMIN_EMAIL = 'rate-limit-admin@harpapro.com';
 const ADMIN_PASSWORD = 'a deliberately long admin rate limit password';
 const MINUTE_MS = 60_000;

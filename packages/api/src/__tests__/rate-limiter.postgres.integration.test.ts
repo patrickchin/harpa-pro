@@ -25,6 +25,11 @@ beforeEach(async () => {
 });
 
 describe('PostgresRateLimiter', () => {
+  it('observes errors from both test-created pools', () => {
+    expect(firstMachinePool.listenerCount('error')).toBeGreaterThan(0);
+    expect(secondMachinePool.listenerCount('error')).toBeGreaterThan(0);
+  });
+
   it('atomically enforces one budget across independent application instances', async () => {
     const firstMachine = new PostgresRateLimiter(firstMachinePool);
     const secondMachine = new PostgresRateLimiter(secondMachinePool);

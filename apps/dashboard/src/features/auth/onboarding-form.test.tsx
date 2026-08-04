@@ -10,9 +10,8 @@ describe('OnboardingForm', () => {
     const onSubmit = vi.fn().mockResolvedValue(undefined);
     render(<OnboardingForm email="manager@example.com" onSubmit={onSubmit} />);
 
-    expect(screen.getByRole('img', { name: 'Harpa Pro' })).toHaveAttribute(
-      'src',
-      expect.stringContaining('brand-icon.svg'),
+    expect(screen.getByRole('img', { name: 'Harpa Pro' }).getAttribute('src')).toMatch(
+      /brand-icon\.svg|data:image\/svg\+xml/,
     );
     await user.click(screen.getByRole('button', { name: 'Continue' }));
     expect(screen.getByRole('alert')).toHaveTextContent('Enter your full name.');

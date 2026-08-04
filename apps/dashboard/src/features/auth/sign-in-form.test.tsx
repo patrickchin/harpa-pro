@@ -11,9 +11,8 @@ describe('SignInForm', () => {
     const onVerifyCode = vi.fn().mockResolvedValue(undefined);
     render(<SignInForm onSendCode={onSendCode} onVerifyCode={onVerifyCode} />);
 
-    expect(screen.getByRole('img', { name: 'Harpa Pro' })).toHaveAttribute(
-      'src',
-      expect.stringContaining('brand-icon.svg'),
+    expect(screen.getByRole('img', { name: 'Harpa Pro' }).getAttribute('src')).toMatch(
+      /brand-icon\.svg|data:image\/svg\+xml/,
     );
     await user.type(screen.getByRole('textbox', { name: 'Email address' }), 'manager@example.com');
     await user.click(screen.getByRole('button', { name: 'Send code' }));

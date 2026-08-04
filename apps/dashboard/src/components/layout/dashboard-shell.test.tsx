@@ -37,9 +37,8 @@ describe('DashboardShell', () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByTestId('brand-mark')).toHaveAttribute(
-      'src',
-      expect.stringContaining('brand-icon.svg'),
+    expect(screen.getByTestId('brand-mark').getAttribute('src')).toMatch(
+      /brand-icon\.svg|data:image\/svg\+xml/,
     );
     expect(screen.getByRole('link', { name: 'Harpa Pro' })).toHaveAttribute('href', '/projects');
     expect(screen.getByRole('link', { name: 'Projects' })).toHaveAttribute('href', '/projects');

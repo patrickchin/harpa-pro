@@ -1,23 +1,7 @@
-import { useEffect, useLayoutEffect, useRef, type ReactNode, type RefObject } from 'react';
+import { Dialog, DialogBackdrop, DialogPanel, DialogTitle } from '@headlessui/react';
+import { Children, isValidElement, type ReactNode, type RefObject } from 'react';
 
-const FOCUSABLE_SELECTOR = [
-  'a[href]',
-  'button:not([disabled])',
-  'input:not([disabled]):not([type="hidden"])',
-  'select:not([disabled])',
-  'textarea:not([disabled])',
-  '[contenteditable="true"]',
-  '[tabindex]:not([tabindex="-1"])',
-].join(',');
-
-function focusableElements(container: HTMLElement): HTMLElement[] {
-  return [...container.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)].filter(
-    (element) =>
-      element.tabIndex >= 0 &&
-      !element.closest('[aria-hidden="true"]') &&
-      !element.closest('[inert]'),
-  );
-}
+import { cn } from '@/lib/cn';
 
 export interface ModalProps {
   ariaLabelledBy: string;
@@ -31,89 +15,61 @@ export interface ModalProps {
   role?: 'alertdialog' | 'dialog';
 }
 
+function findDialogLabel(node: ReactNode, labelledBy: string): ReactNode | undefined {
+  let label: ReactNode | undefined;
+
+  Children.forEach(node, (child) => {
+    if (label !== undefined || !isValidElement<{ children?: ReactNode; id?: string }>(child)) return;
+    if (child.props.id === labelledBy) {
+      label = child.props.children;
+      return;
+    }
+    label = findDialogLabel(child.props.children, labelledBy);
+  });
+
+  return label;
+}
+
 export function Modal({
   ariaLabelledBy,
   ariaDescribedBy,
-  backdropClassName = 'modal-backdrop',
+  backdropClassName,
   children,
   closeOnEscape = true,
-  dialogClassName = 'modal',
+  dialogClassName,
   initialFocusRef,
   onClose,
   role = 'dialog',
 }: ModalProps): React.JSX.Element {
-  const dialogRef = useRef<HTMLElement>(null);
-  const restoreFocusRef = useRef<HTMLElement | null>(
-    typeof document !== 'undefined' && document.activeElement instanceof HTMLElement
-      ? document.activeElement
-      : null,
-  );
-
-  useLayoutEffect(() => {
-    const dialog = dialogRef.current;
-    if (!dialog) return;
-    const restoreFocus = restoreFocusRef.current;
-
-    const initialFocus = initialFocusRef?.current ?? focusableElements(dialog)[0] ?? dialog;
-    initialFocus.focus();
-
-    return () => {
-      if (restoreFocus?.isConnected) restoreFocus.focus();
-    };
-  }, [initialFocusRef]);
-
-  useEffect(() => {
-    function handleKeyDown(event: KeyboardEvent) {
-      const dialog = dialogRef.current;
-      if (!dialog) return;
-
-      if (event.key === 'Escape') {
-        if (!closeOnEscape) return;
-        event.preventDefault();
-        event.stopPropagation();
-        onClose();
-        return;
-      }
-
-      if (event.key !== 'Tab') return;
-
-      const focusable = focusableElements(dialog);
-      const first = focusable[0] ?? dialog;
-      const last = focusable.at(-1) ?? dialog;
-      const activeElement = document.activeElement;
-
-      if (!dialog.contains(activeElement)) {
-        event.preventDefault();
-        (event.shiftKey ? last : first).focus();
-      } else if (event.shiftKey && activeElement === first) {
-        event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && activeElement === last) {
-        event.preventDefault();
-        first.focus();
-      } else if (focusable.length === 0) {
-        event.preventDefault();
-        dialog.focus();
-      }
-    }
-
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [closeOnEscape, onClose]);
+  const accessibleTitle = findDialogLabel(children, ariaLabelledBy);
 
   return (
-    <div className={backdropClassName}>
-      <section
-        aria-describedby={ariaDescribedBy}
-        aria-labelledby={ariaLabelledBy}
-        aria-modal="true"
-        className={dialogClassName}
-        ref={dialogRef}
-        role={role}
-        tabIndex={-1}
-      >
-        {children}
-      </section>
-    </div>
+    <Dialog
+      aria-describedby={ariaDescribedBy}
+      className="relative z-50"
+      initialFocus={initialFocusRef}
+      onClose={closeOnEscape ? onClose : () => undefined}
+      open
+      role={role}
+    >
+      {accessibleTitle !== undefined ? (
+        <DialogTitle className="sr-only">{accessibleTitle}</DialogTitle>
+      ) : null}
+      <DialogBackdrop
+        className={cn('fixed inset-0 bg-primary/50 backdrop-blur-[1px]', backdropClassName)}
+      />
+      <div className="fixed inset-0 overflow-y-auto p-4">
+        <div className="grid min-h-full place-items-center">
+          <DialogPanel
+            className={cn(
+              'w-full max-w-lg rounded-panel-ui border border-border bg-card p-5 shadow-floating-ui',
+              dialogClassName,
+            )}
+          >
+            {children}
+          </DialogPanel>
+        </div>
+      </div>
+    </Dialog>
   );
 }

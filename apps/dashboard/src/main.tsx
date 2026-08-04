@@ -6,7 +6,7 @@ import { App } from '@/app/app';
 import { AppProviders } from '@/app/providers';
 import { env } from '@/lib/env';
 import { initializeDashboardTelemetry } from '@/lib/telemetry/sentry';
-import '@/styles.css';
+import '@/globals.css';
 
 initializeDashboardTelemetry({
   apiBaseUrl: env.VITE_API_BASE_URL,

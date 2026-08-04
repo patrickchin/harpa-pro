@@ -33,7 +33,7 @@ describe('admin site smoke', () => {
     });
     expect(pkg.devDependencies).toMatchObject({
       '@tailwindcss/vite': '^4.3.3',
-      '@types/react': '^19.2.14',
+      '@types/react': '^19.2.0',
       '@types/react-dom': '~19.2.3',
       tailwindcss: '^4.3.3',
       vite: '6.4.3',

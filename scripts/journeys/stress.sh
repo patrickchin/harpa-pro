@@ -172,18 +172,16 @@ check "missing password field" "401|429" POST /api/auth/sign-in/email \
   "{\"email\":\"$BAIT_EMAIL\"}"
 sleep 1
 
-# Empty body and malformed JSON currently 500 (body parser error not
-# mapped). When the error mapper learns to translate JSON parse
-# errors to 400, flip these expectations. Tolerate 429 because by
-# this point in the journey better-auth's built-in per-IP auth-route
-# rate limiter (separate from our global limiter) may have tripped
-# from the previous bad sign-in attempts; either response is
-# acceptable for the contract being tested here ("API rejects
-# garbage without crashing").
-check "empty body" "500|429" POST /api/auth/sign-in/email ''
+# Empty bodies and malformed JSON are client errors and the API maps
+# both to 400. Tolerate 429 because by this point in the journey
+# better-auth's built-in per-IP auth-route rate limiter (separate from
+# our global limiter) may have tripped from the previous bad sign-in
+# attempts; either response is acceptable for the contract being
+# tested here ("API rejects garbage without crashing").
+check "empty body" "400|429" POST /api/auth/sign-in/email ''
 sleep 1
 
-check "malformed JSON" "500|429" POST /api/auth/sign-in/email \
+check "malformed JSON" "400|429" POST /api/auth/sign-in/email \
   '{this is not json}'
 
 # ══════════════════════════════════════════════════════════════════════

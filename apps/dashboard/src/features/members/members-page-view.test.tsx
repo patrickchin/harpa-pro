@@ -24,6 +24,27 @@ const members: Array<z.infer<typeof projects.projectMember>> = [
 ];
 
 describe('MembersPageView', () => {
+  it('uses a desktop table and stacked member cards below the large breakpoint', () => {
+    render(
+      <MembersPageView
+        members={members}
+        myRole="viewer"
+        currentUserId="usr_viewer"
+        onAddMember={vi.fn()}
+        onChangeRole={vi.fn()}
+        onRemoveMember={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByTestId('members-desktop-table')).toHaveClass('hidden', 'lg:block');
+    expect(screen.getByTestId('members-mobile-list')).toHaveClass(
+      'grid',
+      'gap-3',
+      'lg:hidden',
+    );
+    expect(screen.getAllByTestId('member-mobile-card')).toHaveLength(members.length);
+  });
+
   it('lets every member read the team without leaking owner controls', () => {
     render(
       <MembersPageView
@@ -36,8 +57,12 @@ describe('MembersPageView', () => {
       />,
     );
 
-    expect(screen.getByRole('columnheader', { name: 'Name' })).toBeVisible();
-    expect(screen.getByText('Riley Chen')).toBeVisible();
+    const desktopTable = within(screen.getByTestId('members-desktop-table'));
+    const mobileList = within(screen.getByTestId('members-mobile-list'));
+
+    expect(desktopTable.getByRole('columnheader', { name: 'Name' })).toBeVisible();
+    expect(desktopTable.getByText('Riley Chen')).toBeVisible();
+    expect(mobileList.getByText('Riley Chen')).toBeVisible();
     expect(screen.queryByRole('button', { name: 'Add member' })).not.toBeInTheDocument();
     expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Remove/ })).not.toBeInTheDocument();
@@ -94,7 +119,7 @@ describe('MembersPageView', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(addTrigger).toHaveFocus();
 
-    const removeTrigger = screen.getByRole('button', {
+    const removeTrigger = within(screen.getByTestId('members-desktop-table')).getByRole('button', {
       name: 'Remove Riley Chen',
     });
     await user.click(removeTrigger);
@@ -116,9 +141,11 @@ describe('MembersPageView', () => {
       />,
     );
 
-    expect(screen.getByRole('combobox', { name: 'Change role for Morgan Lee' })).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'Remove Morgan Lee' })).toBeDisabled();
-    expect(screen.getByText(/add another owner first/i)).toBeVisible();
+    const desktopTable = within(screen.getByTestId('members-desktop-table'));
+
+    expect(desktopTable.getByRole('combobox', { name: 'Change role for Morgan Lee' })).toBeDisabled();
+    expect(desktopTable.getByRole('button', { name: 'Remove Morgan Lee' })).toBeDisabled();
+    expect(desktopTable.getByText(/add another owner first/i)).toBeVisible();
   });
 
   it('changes roles and removes non-owner members', async () => {
@@ -136,13 +163,15 @@ describe('MembersPageView', () => {
       />,
     );
 
+    const mobileList = within(screen.getByTestId('members-mobile-list'));
+
     await user.selectOptions(
-      screen.getByRole('combobox', { name: 'Change role for Riley Chen' }),
+      mobileList.getByRole('combobox', { name: 'Change role for Riley Chen' }),
       'viewer',
     );
     expect(onChangeRole).toHaveBeenCalledWith('usr_editor', 'viewer');
 
-    await user.click(screen.getByRole('button', { name: 'Remove Riley Chen' }));
+    await user.click(mobileList.getByRole('button', { name: 'Remove Riley Chen' }));
     expect(screen.getByRole('dialog', { name: 'Remove Riley Chen' })).toBeVisible();
     await user.click(screen.getByRole('button', { name: 'Confirm removal' }));
     expect(onRemoveMember).toHaveBeenCalledWith('usr_editor');

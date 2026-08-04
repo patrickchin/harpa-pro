@@ -109,7 +109,7 @@ test.describe('office dashboard journeys', () => {
       });
       await page.setViewportSize({ width: 390, height: 844 });
       const workspaceOverflow = await page.evaluate(() => {
-        const workspace = document.querySelector<HTMLElement>('.reports-workspace');
+        const workspace = document.querySelector<HTMLElement>('[data-testid="report-workspace"]');
         if (!workspace) throw new Error('Report workspace not found');
 
         return workspace.scrollWidth - workspace.clientWidth;

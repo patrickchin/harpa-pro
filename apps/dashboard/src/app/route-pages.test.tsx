@@ -40,8 +40,21 @@ vi.mock('@/features/projects/data-api', () => ({
 vi.mock('@/features/reports', () => {
   return {
     ReportsListPage: () => null,
-    ReportWorkspacePage: ({ initialFinalizedTab }: { initialFinalizedTab?: string }) => (
-      <section data-initial-tab={initialFinalizedTab} data-testid="report-workspace" />
+    ReportWorkspacePage: ({
+      initialFinalizedTab,
+      onFinalizedTabChange,
+    }: {
+      initialFinalizedTab?: string;
+      onFinalizedTabChange?: (tab: 'report' | 'review') => void;
+    }) => (
+      <section data-initial-tab={initialFinalizedTab} data-testid="report-workspace">
+        <button onClick={() => onFinalizedTabChange?.('report')} type="button">
+          Select report tab
+        </button>
+        <button onClick={() => onFinalizedTabChange?.('review')} type="button">
+          Select review tab
+        </button>
+      </section>
     ),
     reportsApi: reportsApiMocks,
   };
@@ -224,11 +237,20 @@ describe('ProjectReportWorkspaceRoute', () => {
     expect(screen.getByTestId('report-workspace').parentElement).not.toHaveClass('px-5');
   });
 
-  it('passes a shared review link through to the finalized report tabs', () => {
+  it('passes shared tab links through and keeps the URL synchronized', async () => {
+    const user = userEvent.setup();
     render(
       <MemoryRouter initialEntries={['/projects/prj_01234567/reports/7?tab=review']}>
         <Routes>
-          <Route path="/projects/:project" element={<Outlet context={{ project }} />}>
+          <Route
+            path="/projects/:project"
+            element={
+              <>
+                <Outlet context={{ project }} />
+                <LocationProbe />
+              </>
+            }
+          >
             <Route path="reports/:number" element={<ProjectReportWorkspaceRoute />} />
           </Route>
         </Routes>
@@ -236,5 +258,11 @@ describe('ProjectReportWorkspaceRoute', () => {
     );
 
     expect(screen.getByTestId('report-workspace')).toHaveAttribute('data-initial-tab', 'review');
+    await user.click(screen.getByRole('button', { name: 'Select report tab' }));
+    expect(screen.getByText('Current URL: /projects/prj_01234567/reports/7')).toBeVisible();
+    await user.click(screen.getByRole('button', { name: 'Select review tab' }));
+    expect(
+      screen.getByText('Current URL: /projects/prj_01234567/reports/7?tab=review'),
+    ).toBeVisible();
   });
 });

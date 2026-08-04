@@ -188,6 +188,9 @@ require_fixed ".maestro/ci-launch-smoke.yaml" \
 require_fixed ".maestro/ci-launch-smoke.yaml" \
   'visible: "Quickstep isn'\''t responding|Development Build"' \
   "Maestro accepts the recoverable Quickstep dialog at launcher readiness"
+require_fixed ".maestro/ci-launch-smoke.yaml" \
+  'visible: "Quickstep isn'\''t responding|http://10.0.2.2:8081|Continue|Email"' \
+  "Maestro observes late Quickstep interception during post-link loading"
 require_fixed_count ".maestro/ci-launch-smoke.yaml" \
   'visible: "Quickstep isn'\''t responding"' 2 \
   "Maestro checks for the Quickstep dialog around both launcher transitions"
@@ -201,6 +204,10 @@ require_adjacent_fixed ".maestro/ci-launch-smoke.yaml" \
   'visible: "Quickstep isn'\''t responding|Development Build"' \
   "timeout: 30000" \
   "launcher or Quickstep readiness remains bounded to 30 seconds"
+require_adjacent_fixed ".maestro/ci-launch-smoke.yaml" \
+  'visible: "Quickstep isn'\''t responding|http://10.0.2.2:8081|Continue|Email"' \
+  "timeout: 90000" \
+  "post-link launcher or app readiness retains the 90-second cold-bundle budget"
 require_adjacent_fixed ".maestro/ci-launch-smoke.yaml" \
   "visible: 'Development Build'" \
   "timeout: 30000" \
@@ -232,6 +239,14 @@ require_before ".maestro/ci-launch-smoke.yaml" \
   "visible: 'Development Build'" \
   "- openLink:" \
   "Maestro waits for the Expo Dev Launcher before opening Metro"
+require_occurrence_before ".maestro/ci-launch-smoke.yaml" \
+  "- openLink:" 1 \
+  'visible: "Quickstep isn'\''t responding|http://10.0.2.2:8081|Continue|Email"' 1 \
+  "Maestro starts bounded post-link observation after opening Metro"
+require_occurrence_before ".maestro/ci-launch-smoke.yaml" \
+  'visible: "Quickstep isn'\''t responding|http://10.0.2.2:8081|Continue|Email"' 1 \
+  'visible: "Quickstep isn'\''t responding"' 2 \
+  "Maestro observes late Quickstep before its second recovery action"
 require_occurrence_before ".maestro/ci-launch-smoke.yaml" \
   "- openLink:" 1 \
   'visible: "Quickstep isn'\''t responding"' 2 \
@@ -300,8 +315,8 @@ require_fixed "scripts/ci/run-maestro-launch-smoke.sh" \
   "maestro\" test" \
   "Maestro CLI executes a real flow"
 require_regex "scripts/ci/run-maestro-launch-smoke.sh" \
-  'timeout[[:space:]]+180s.*maestro' \
-  "Maestro CLI execution keeps its 180-second shell timeout"
+  'timeout[[:space:]]+420s.*maestro' \
+  "Maestro CLI execution budgets 420 seconds for bounded recovery"
 # These are literal runner-script strings, not policy-test expansions.
 # shellcheck disable=SC2016
 require_fixed "scripts/ci/run-maestro-launch-smoke.sh" \

@@ -26,18 +26,27 @@ jobs:
     permissions:
       contents: read
     steps:
+      - name: Reject direct Dependabot production promotions
+        if: github.event.pull_request.user.login == 'dependabot[bot]'
+        run: |
+          echo "::error::Port the dependency update through dev in a coordinated, human-owned PR before promoting it to main." >&2
+          exit 1
+
       - uses: actions/checkout@v4
+        if: github.event.pull_request.user.login != 'dependabot[bot]'
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           lfs: true # voice samples for core/extended journeys
 
       - name: Verify deployed dev SHA
+        if: github.event.pull_request.user.login != 'dependabot[bot]'
         env:
           HEALTH_URL: ${{ vars.API_HEALTH_URL_DEV || 'https://harpa-pro-api-dev.fly.dev/healthz' }}
           EXPECTED_GIT_COMMIT: ${{ github.event.pull_request.head.sha }}
         run: bash scripts/ci/verify-deployed-sha.sh
 
       - name: Run journeys against dev
+        if: github.event.pull_request.user.login != 'dependabot[bot]'
         # Order: stress (~10s, no AI) → core (~3min, live AI) → extended (~5min, live AI).
         # Tests the dev deployment as-is; assumes `dev` is the merge candidate.
         env:

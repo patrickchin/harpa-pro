@@ -1,9 +1,8 @@
 name: site-preview
 
-# Build + deploy a per-PR preview of apps/site to Cloudflare
-# Pages, then comment the unique preview URL on the PR. See
-# docs/marketing/deploy-cloudflare-pages.md for the one-time CF
-# setup.
+# Build and verify apps/site for every PR. Human-owned same-repository PRs also
+# deploy to Cloudflare Pages and receive a preview comment. See
+# docs/marketing/deploy-cloudflare-pages.md for the one-time CF setup.
 
 on:
   pull_request:
@@ -21,12 +20,10 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  preview:
+  verify:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      pull-requests: write
-      deployments: write
     steps:
       - uses: actions/checkout@v4
 
@@ -46,7 +43,7 @@ jobs:
         # (Astro inlines them at build time; CF Pages env vars don't
         # apply to pre-built dist/ uploads).
         env:
-          PUBLIC_TURNSTILE_SITE_KEY: ${{ secrets.PUBLIC_TURNSTILE_SITE_KEY }}
+          PUBLIC_TURNSTILE_SITE_KEY: 1x00000000000000000000AA
           PUBLIC_API_BASE_URL: https://api.harpapro.com
         run: pnpm --filter @harpa/site build
 
@@ -71,8 +68,42 @@ jobs:
 
       - name: Lighthouse CI (perf/a11y ≥ 0.90, bp/seo ≥ 0.95)
         run: pnpm exec lhci autorun --config=./lighthouserc.json
+
+  deploy:
+    needs: verify
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.user.login != 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      deployments: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./.github/actions/setup-monorepo
+
+      # Verification uses Cloudflare's public test key so Dependabot remains
+      # credential-free. Rebuild only inside the guarded job so a deployed
+      # preview keeps the real public-site key.
+      - name: Build public site for deployment
         env:
-          LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN }}
+          PUBLIC_TURNSTILE_SITE_KEY: ${{ secrets.PUBLIC_TURNSTILE_SITE_KEY }}
+          PUBLIC_API_BASE_URL: https://api.harpapro.com
+        run: pnpm --filter @harpa/site build
+
+      - name: Verify deploy build excludes admin routes
+        run: test ! -e apps/site/dist/admin
+
+      - name: Install Playwright Chromium for deploy build
+        run: pnpm --filter @harpa/site exec playwright install --with-deps chromium
+
+      - name: Browser-test deploy build
+        run: pnpm --filter @harpa/site test:e2e
+
+      - name: Lighthouse CI on deploy build
+        run: pnpm exec lhci autorun --config=./lighthouserc.json
 
       - name: Deploy preview to Cloudflare Pages
         id: deploy

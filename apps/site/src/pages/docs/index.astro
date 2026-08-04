@@ -1,8 +1,8 @@
 ---
 import { getCollection } from "astro:content";
 
+import DocsMontage from "../../components/docs/DocsMontage.astro";
 import { DocsSearch } from "../../components/docs/DocsSearch";
-import PhoneFrame from "../../components/docs/PhoneFrame.astro";
 import DocsLayout from "../../layouts/DocsLayout.astro";
 import {
   docsTierLabel,
@@ -39,11 +39,7 @@ const searchEntries = guides.map((guide) => ({
       </span>
       <DocsSearch entries={searchEntries} client:load />
     </div>
-    <PhoneFrame
-      screenshot="final-report-issues"
-      alt="Generated Harpa Pro report showing site issues and next actions"
-      priority
-    />
+    <DocsMontage />
   </header>
 
   <section class="docs-index-section" aria-labelledby="core-workflows-heading">

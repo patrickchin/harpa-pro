@@ -10,17 +10,22 @@ import usage from "../assets/docs/08-usage.png";
 import voiceRecording from "../assets/docs/04-voice-recording.png";
 import type { DocsScreenshotId } from "./docs";
 
-export const DOCS_SCREENSHOTS = {
-  "projects-list": projectsList,
-  "reports-list": reportsList,
-  "members-team": membersTeam,
-  "voice-recording": voiceRecording,
-  "final-report-issues": finalReportIssues,
-  "final-report-sections": finalReportSections,
-  "pdf-preview": pdfPreview,
-  "usage": usage,
-} satisfies Record<DocsScreenshotId, ImageMetadata>;
+interface DocsScreenshot {
+  image: ImageMetadata;
+  focus: `${number}% ${number}%`;
+}
 
-export function docsScreenshot(id: DocsScreenshotId): ImageMetadata {
+export const DOCS_SCREENSHOTS = {
+  "projects-list": { image: projectsList, focus: "50% 20%" },
+  "reports-list": { image: reportsList, focus: "50% 22%" },
+  "members-team": { image: membersTeam, focus: "50% 27%" },
+  "voice-recording": { image: voiceRecording, focus: "50% 45%" },
+  "final-report-issues": { image: finalReportIssues, focus: "50% 30%" },
+  "final-report-sections": { image: finalReportSections, focus: "50% 38%" },
+  "pdf-preview": { image: pdfPreview, focus: "50% 28%" },
+  "usage": { image: usage, focus: "50% 30%" },
+} satisfies Record<DocsScreenshotId, DocsScreenshot>;
+
+export function docsScreenshot(id: DocsScreenshotId): DocsScreenshot {
   return DOCS_SCREENSHOTS[id];
 }

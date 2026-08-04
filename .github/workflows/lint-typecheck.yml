@@ -45,6 +45,7 @@ jobs:
           node scripts/ci/__tests__/shell-quote-security-policy.test.cjs
           bash scripts/ci/__tests__/api-prod-policy.test.sh
           bash scripts/ci/__tests__/stress-viewer-policy.test.sh
+          bash scripts/ci/__tests__/stress-auth-error-policy.test.sh
           bash scripts/ci/__tests__/verify-readyz.test.sh
           bash scripts/ci/__tests__/verify-api-release.test.sh
           bash scripts/ci/__tests__/mobile-ota-release-policy.test.sh

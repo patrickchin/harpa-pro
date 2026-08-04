@@ -3,10 +3,13 @@ set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 tokens="$repo_root/packages/design-tokens/src/tokens.css"
-dashboard_css="$repo_root/apps/dashboard/src/styles.css"
+dashboard_css="$repo_root/apps/dashboard/src/globals.css"
 dashboard_index="$repo_root/apps/dashboard/index.html"
-dashboard_reports_css="$repo_root/apps/dashboard/src/features/reports/reports.css"
 dashboard_package="$repo_root/apps/dashboard/package.json"
+dashboard_vite="$repo_root/apps/dashboard/vite.config.ts"
+dashboard_main="$repo_root/apps/dashboard/src/main.tsx"
+dashboard_brand="$repo_root/apps/dashboard/src/assets/brand-icon.svg"
+mobile_brand="$repo_root/apps/mobile/assets/icon.svg"
 mobile_colors="$repo_root/apps/mobile/lib/design-tokens/colors.ts"
 deploy_workflows=(
   "$repo_root/.github/workflows/dashboard-preview.yml"
@@ -38,6 +41,8 @@ expect_not_contains() {
 }
 
 expect_file "$tokens"
+expect_file "$dashboard_css"
+expect_file "$dashboard_brand"
 
 # Mobile-authored colour, type, shape, and sizing values.
 expect_contains "$tokens" '--background: #f8f6f1;'
@@ -66,14 +71,29 @@ expect_contains "$mobile_colors" "border: '#b9b4a8'"
 
 # The dashboard consumes the mobile-authored CSS mirror.
 expect_contains "$dashboard_package" '"@harpa/design-tokens"'
+expect_contains "$dashboard_package" '"@headlessui/react"'
+expect_contains "$dashboard_package" '"clsx"'
+expect_contains "$dashboard_package" '"lucide-react"'
+expect_contains "$dashboard_package" '"tailwind-merge"'
+expect_contains "$dashboard_package" '"@tailwindcss/vite"'
+expect_contains "$dashboard_package" '"tailwindcss"'
 expect_contains "$dashboard_css" '@import "@harpa/design-tokens/tokens.css";'
+expect_contains "$dashboard_css" '@import "tailwindcss";'
+expect_contains "$dashboard_css" '@theme inline'
+expect_contains "$dashboard_vite" "import tailwindcss from '@tailwindcss/vite';"
+expect_contains "$dashboard_vite" 'plugins: [react(), tailwindcss()]'
+expect_contains "$dashboard_main" "import '@/globals.css';"
 expect_contains "$dashboard_index" 'name="theme-color" content="#ea580c"'
+
+cmp -s "$mobile_brand" "$dashboard_brand" || fail 'dashboard brand icon must match mobile icon.svg'
+
+if rg -n --glob '*.tsx' '>\s*HP\s*<' "$repo_root/apps/dashboard/src" >/dev/null; then
+  fail 'textual HP placeholder remains in dashboard UI'
+fi
 
 # Prevent dashboard-local design-system forks from returning.
 expect_not_contains "$dashboard_css" '--paper:'
 expect_not_contains "$dashboard_css" '--ink:'
-expect_not_contains "$dashboard_reports_css" '--reports-paper:'
-expect_not_contains "$dashboard_reports_css" '--reports-ink:'
 
 # Token-only changes must rebuild every dashboard deployment target.
 for workflow in "${deploy_workflows[@]}"; do

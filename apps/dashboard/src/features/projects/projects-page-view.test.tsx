@@ -4,7 +4,6 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 import { describe, expect, it, vi } from 'vitest';
 
-import dashboardStyles from '../../styles.css?raw';
 import { ProjectsPageView } from './projects-page-view';
 
 const projects: projectContract.Project[] = [
@@ -82,18 +81,21 @@ describe('ProjectsPageView', () => {
   });
 
   it('switches from the table to cards below 1024px', () => {
-    const wideStyles = dashboardStyles.slice(
-      0,
-      dashboardStyles.indexOf('@media (max-width: 1023px)'),
-    );
-    const narrowBreakpoint = dashboardStyles.slice(
-      dashboardStyles.indexOf('@media (max-width: 1023px)'),
-      dashboardStyles.indexOf('@media (max-width: 720px)'),
+    render(
+      <MemoryRouter>
+        <ProjectsPageView projects={projects} onCreateProject={vi.fn()} />
+      </MemoryRouter>,
     );
 
-    expect(wideStyles).toMatch(/\.project-card-list\s*\{\s*display:\s*none;/);
-    expect(narrowBreakpoint).toMatch(/\.desktop-table\s*\{\s*display:\s*none;/);
-    expect(narrowBreakpoint).toMatch(/\.project-card-list\s*\{\s*display:\s*grid;/);
+    expect(screen.getByRole('table', { name: 'Projects' }).parentElement).toHaveClass(
+      'hidden',
+      'lg:block',
+    );
+    expect(screen.getByRole('list', { name: 'Projects' })).toHaveClass(
+      'grid',
+      'gap-3',
+      'lg:hidden',
+    );
   });
 
   it('creates a project from the primary action', async () => {

@@ -7,6 +7,9 @@ tags:
 - launchApp:
     clearState: true
     stopApp: true
+- extendedWaitUntil:
+    visible: 'Development Build'
+    timeout: 30000
 - openLink: 'exp+harpa-pro-v4://expo-development-client/?url=http%3A%2F%2Flocalhost%3A8081%3FdisableOnboarding%3D1'
 - waitForAnimationToEnd:
     timeout: 20000

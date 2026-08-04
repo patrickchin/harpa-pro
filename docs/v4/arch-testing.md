@@ -110,6 +110,10 @@ Each AI-touching route has a test that:
   `.maestro/ci-launch-smoke.yaml` flow. The job has a 30-minute
   ceiling, emulator boot has a 300-second ceiling, and the Maestro
   command has a 180-second ceiling.
+- After clearing app state, the flow waits up to 30 seconds for the
+  Expo Dev Launcher home screen before opening the Metro deep link.
+  This prevents the initial Android `ACTION_MAIN` launch from racing
+  the development-client URL and discarding it.
 - The PR APK targets only the emulator's `x86_64` ABI instead of
   compiling the three unused Android ABIs. Gradle dependencies are
   restored from a cache keyed by the lockfile and mobile prebuild

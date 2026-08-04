@@ -57,7 +57,10 @@ export function SignInForm({
   const [otp, setOtp] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [pendingAction, setPendingAction] = useState<
+    'send-code' | 'verify-code' | 'sign-in' | 'fallback-code' | null
+  >(null);
+  const isSubmitting = pendingAction !== null;
 
   async function sendCode(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -67,7 +70,7 @@ export function SignInForm({
       return;
     }
     setError(null);
-    setIsSubmitting(true);
+    setPendingAction('send-code');
     try {
       if (isDemoAccountEmail(normalizedEmail)) {
         setEmail(normalizedEmail);
@@ -80,7 +83,7 @@ export function SignInForm({
     } catch (sendError) {
       setError(errorMessage(sendError));
     } finally {
-      setIsSubmitting(false);
+      setPendingAction(null);
     }
   }
 
@@ -91,13 +94,13 @@ export function SignInForm({
       return;
     }
     setError(null);
-    setIsSubmitting(true);
+    setPendingAction('verify-code');
     try {
       await onVerifyCode({ email, otp });
     } catch (verifyError) {
       setError(errorMessage(verifyError));
     } finally {
-      setIsSubmitting(false);
+      setPendingAction(null);
     }
   }
 
@@ -109,13 +112,28 @@ export function SignInForm({
       return;
     }
     setError(null);
-    setIsSubmitting(true);
+    setPendingAction('sign-in');
     try {
       await onSignInWithPassword({ email, password: normalizedPassword });
     } catch (signInError) {
       setError(errorMessage(signInError));
     } finally {
-      setIsSubmitting(false);
+      setPendingAction(null);
+    }
+  }
+
+  async function useEmailCode() {
+    setError(null);
+    setPendingAction('fallback-code');
+    try {
+      await onSendCode(email);
+      setOtp('');
+      setPassword('');
+      setStep('code');
+    } catch (sendError) {
+      setError(errorMessage(sendError));
+    } finally {
+      setPendingAction(null);
     }
   }
 
@@ -160,7 +178,17 @@ export function SignInForm({
               type="submit"
               variant="hero"
             >
-              {isSubmitting ? 'Signing in…' : 'Sign in'}
+              {pendingAction === 'sign-in' ? 'Signing in…' : 'Sign in'}
+            </Button>
+            <Button
+              className="w-full"
+              disabled={isSubmitting}
+              onClick={useEmailCode}
+              size="large"
+              type="button"
+              variant="quiet"
+            >
+              {pendingAction === 'fallback-code' ? 'Sending…' : 'Use email code instead'}
             </Button>
             <Button
               className="w-full"
@@ -207,7 +235,7 @@ export function SignInForm({
           {error ? <AuthError>{error}</AuthError> : null}
           <div className="flex flex-col gap-3">
             <Button className="w-full" disabled={isSubmitting} size="large" type="submit" variant="hero">
-              {isSubmitting ? 'Verifying…' : 'Verify code'}
+              {pendingAction === 'verify-code' ? 'Verifying…' : 'Verify code'}
             </Button>
             <Button
               className="w-full"
@@ -250,7 +278,7 @@ export function SignInForm({
         </Field>
         {error ? <AuthError>{error}</AuthError> : null}
         <Button className="w-full" disabled={isSubmitting} size="large" type="submit" variant="hero">
-          {isSubmitting ? 'Sending…' : 'Send code'}
+          {pendingAction === 'send-code' ? 'Sending…' : 'Send code'}
         </Button>
       </form>
       <p className="mt-4 text-meta text-muted-foreground">
